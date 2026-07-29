@@ -1,0 +1,105 @@
+{
+  "$comment": "Gate registry — ARCHITECTURE.md §7. Every executable gate (class A and B) is registered from day one and changes activation state as the milestone advances; it never appears or disappears. Class-C evidence (peer review, sign-off) is deliberately absent: it lives in the phase-exit checklist, not in a runner.",
+  "milestones": ["P0", "P1-baseline", "P1-completion", "P2", "P3", "P4"],
+  "currentMilestone": "P0",
+  "gates": [
+    {
+      "id": "types",
+      "class": "A",
+      "activatesAt": "P0",
+      "run": "pnpm typecheck",
+      "description": "tsc --noEmit under strict settings"
+    },
+    {
+      "id": "lint",
+      "class": "A",
+      "activatesAt": "P0",
+      "run": "pnpm lint",
+      "description": "Biome check (lint + format)"
+    },
+    {
+      "id": "boundaries",
+      "class": "A",
+      "activatesAt": "P0",
+      "run": "pnpm boundaries",
+      "description": "dependency-cruiser: the seven layering rules of §3"
+    },
+    {
+      "id": "unit-tests",
+      "class": "A",
+      "activatesAt": "P0",
+      "run": "pnpm test",
+      "description": "Vitest suite, including the pegkit conformance suite"
+    },
+    {
+      "id": "package-isolation",
+      "class": "A",
+      "activatesAt": "P0",
+      "run": "pnpm gate:package",
+      "description": "Packed-artifact assertions over every published subpath, plus publint and attw"
+    },
+    {
+      "id": "runtime-boundary",
+      "class": "A",
+      "activatesAt": "P1-baseline",
+      "run": "pnpm test -- runtime-boundary",
+      "description": "Unknown kind and malformed known kind raise RenderError; valid structural objects render"
+    },
+    {
+      "id": "unsupported-fallback",
+      "class": "A",
+      "activatesAt": "P1-baseline",
+      "run": "pnpm test -- unsupported",
+      "description": "Deferred-construct text fallback, diagnostics, dedup, and original-input offsets"
+    },
+    {
+      "id": "corpus-conformance",
+      "class": "A",
+      "activatesAt": "P1-baseline",
+      "run": "pnpm test -- corpus",
+      "description": "Parse tree, normalized model and every landed renderer match the Ruby-generated expectations"
+    },
+    {
+      "id": "payload-validation",
+      "class": "A",
+      "activatesAt": "P1-baseline",
+      "run": "pnpm test -- payload",
+      "description": "Generated payloads validate against their schema and manifest hashes"
+    },
+    {
+      "id": "negative-parity",
+      "class": "A",
+      "activatesAt": "P1-completion",
+      "run": "pnpm test -- rejection",
+      "description": "Inputs the gem rejects are rejected here"
+    },
+    {
+      "id": "symbol-context-matrix",
+      "class": "A",
+      "activatesAt": "P1-completion",
+      "run": "pnpm test -- symbol-context",
+      "description": "Behavioural probe matrix for context-dependent symbols"
+    },
+    {
+      "id": "adversarial-inputs",
+      "class": "A",
+      "activatesAt": "P1-completion",
+      "run": "pnpm test -- adversarial",
+      "description": "Deep nesting, unmatched fences and long token runs fail cleanly in bounded time"
+    },
+    {
+      "id": "oracle-regeneration",
+      "class": "B",
+      "activatesAt": "P1-baseline",
+      "run": "scripts/oracle regenerate --check",
+      "description": "Regenerate corpus and data from a clean gem checkout; diff must be empty"
+    },
+    {
+      "id": "differential-runner",
+      "class": "B",
+      "activatesAt": "P1-completion",
+      "run": "scripts/oracle differential",
+      "description": "Seeded bounded input generator compared live against the gem"
+    }
+  ]
+}

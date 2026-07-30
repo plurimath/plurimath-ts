@@ -82,12 +82,16 @@ function combineSeq(left: ParseValue, right: ParseValue): ParseValue {
     }
     return merged;
   }
+  // Parslet hoists a named result into an adjacent repetition rather than
+  // merging or discarding it, verified against parslet 2.0.0:
+  //   str("a").as(:item).repeat(1) >> str("b").as(:tail)
+  //     => [{item: "a"}, {item: "a"}, {tail: "b"}]
   if (leftIsHash) {
-    if (Array.isArray(right)) throw new Error("pegkit: hash >> array sequence is not supported");
-    return left;
+    if (Array.isArray(right)) return [left, ...right];
+    return left; // a slice beside named content is dropped
   }
   if (rightIsHash) {
-    if (Array.isArray(left)) throw new Error("pegkit: array >> hash sequence is not supported");
+    if (Array.isArray(left)) return [...left, right];
     return right;
   }
   if (Array.isArray(left) || Array.isArray(right)) {

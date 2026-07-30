@@ -73,6 +73,26 @@ describe("sequence flattening", () => {
     });
   });
 
+  it("hoists a named result into an adjacent repetition (array >> hash)", () => {
+    // Verified against parslet 2.0.0:
+    //   str("a").as(:item).repeat(1) >> str("b").as(:tail)
+    //     => [{item: "a"@0}, {item: "a"@1}, {tail: "b"@2}]
+    // ARCHITECTURE.md §6 requires this hoisting; it used to raise instead.
+    expect(seq(str("a").as("item").repeat(1), str("b").as("tail")).parse("aab")).toEqual([
+      { item: new Slice("a", 0) },
+      { item: new Slice("a", 1) },
+      { tail: new Slice("b", 2) },
+    ]);
+  });
+
+  it("hoists a named result into an adjacent repetition (hash >> array)", () => {
+    expect(seq(str("b").as("tail"), str("a").as("item").repeat(1)).parse("baa")).toEqual([
+      { tail: new Slice("b", 0) },
+      { item: new Slice("a", 1) },
+      { item: new Slice("a", 2) },
+    ]);
+  });
+
   it("keeps the later value when a key repeats, rather than raising", () => {
     // Parslet warns and keeps the last value; it does not fail the parse.
     expect(seq(str("a").as("k"), str("b").as("k")).parse("ab")).toEqual({

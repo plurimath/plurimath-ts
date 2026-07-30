@@ -1,0 +1,5 @@
+# Runtime pins. Node 22.18+ is required to *run* the build (tsdown 0.22.14
+# declares `^22.18.0 || >=24.11.0`); the published package supports Node >= 20
+# at runtime — see package.json#engines and ARCHITECTURE.md §8.
+[tools]
+node = "24"

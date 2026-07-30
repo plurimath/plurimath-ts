@@ -24,12 +24,12 @@ function preprocess(input: string): { text: string; map: SourceMap } {
   outer: while (index < input.length) {
     for (const [from, to] of rewrites) {
       if (input.startsWith(from, index)) {
-        segments.push({ originStart: index, output: to });
+        segments.push({ originStart: index, originLength: from.length, output: to });
         index += from.length;
         continue outer;
       }
     }
-    segments.push({ originStart: index, output: input[index] as string });
+    segments.push({ originStart: index, originLength: 1, output: input[index] as string });
     index += 1;
   }
   return {
@@ -67,8 +67,17 @@ describe("SourceMap", () => {
     expect(map.toOriginal(1)).toBe(2); // x  → after the digraph
   });
 
-  it("clamps an offset past the end instead of returning undefined", () => {
+  it("clamps an offset past the end to the end of the original input", () => {
     const { text, map } = preprocess("{:x");
     expect(map.toOriginal(text.length)).toBe(3);
+  });
+
+  it("clamps past the end correctly when the input ENDS in a rewritten digraph", () => {
+    // Regression: clamping to "start of the last segment + 1" lands in the
+    // middle of the original token. For "{:" -> "ℒ" that reported 1 instead
+    // of 2, so an end-of-input error pointed between the two characters.
+    const { text, map } = preprocess("{:");
+    expect(text).toBe("ℒ");
+    expect(map.toOriginal(text.length)).toBe(2);
   });
 });

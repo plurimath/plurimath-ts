@@ -24,6 +24,7 @@ import {
   scope,
   seq,
   str,
+  tokenChoice,
 } from "../../src/pegkit/index";
 
 describe("literals and character matching", () => {
@@ -166,6 +167,38 @@ describe("ordered choice", () => {
     expect(String(ambiguous.parse("a"))).toBe("a");
     // "ab" cannot parse: the first alternative wins and leaves "b" behind.
     expect(() => ambiguous.parse("ab")).toThrow(ParseFailed);
+  });
+});
+
+describe("failure positions", () => {
+  it("tokenChoice records its position when no bucket matches", () => {
+    // Regression: with no bucket for the current character, no inner atom runs,
+    // so nothing advanced maxPos and ParseFailed.index pointed at an earlier
+    // position than the real failure.
+    const grammar = seq(
+      str("a"),
+      tokenChoice([
+        ["b", str("b")],
+        ["c", str("c")],
+      ]),
+    );
+    try {
+      grammar.parse("az");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ParseFailed);
+      expect((error as ParseFailed).index).toBe(1); // at "z", not back at 0
+    }
+  });
+
+  it("tokenChoice records its position when the bucket exists but all fail", () => {
+    const grammar = seq(str("a"), tokenChoice([["b", str("bb")]]));
+    try {
+      grammar.parse("ab");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect((error as ParseFailed).index).toBe(1);
+    }
   });
 });
 

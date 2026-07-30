@@ -524,11 +524,16 @@ export function tokenChoice(entries: ReadonlyArray<readonly [key: string, atom: 
   class TokenChoiceAtom extends Atom {
     tryParse(pos: number, ctx: ParseContext): ParseResult {
       const bucket = buckets.get(ctx.input[pos] ?? "");
-      if (!bucket) return FAIL;
-      for (const atom of bucket) {
-        const result = atom.apply(pos, ctx);
-        if (result.ok) return result;
+      if (bucket) {
+        for (const atom of bucket) {
+          const result = atom.apply(pos, ctx);
+          if (result.ok) return result;
+        }
       }
+      // Record the position like every other leaf atom: with no bucket, no
+      // inner atom runs, so nothing else would advance maxPos and the reported
+      // failure index could point earlier than the real one.
+      if (pos > ctx.maxPos) ctx.maxPos = pos;
       return FAIL;
     }
   }

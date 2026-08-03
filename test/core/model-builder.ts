@@ -219,7 +219,10 @@ function isSerializedNode(value: YamlValue): value is SerializedNode {
   );
 }
 
-export function buildNode(model: SerializedNode, aliases: ReadonlyMap<string, string>): ConstructedMathNode {
+export function buildNode(
+  model: SerializedNode,
+  aliases: ReadonlyMap<string, string>,
+): ConstructedMathNode {
   const target = aliases.get(model.class);
   if (target === undefined) throw new Error(`census does not know class ${model.class}`);
   const kind = KIND_BY_RUBY_CLASS.get(target);

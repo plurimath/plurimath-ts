@@ -11,7 +11,6 @@ import { describe, expect, it } from "vitest";
 import { EQUALITY_FIELDS, equals } from "../../src/core/equality";
 import {
   BinaryFunctionNode,
-  type ConstructedMathNode,
   FontStyleNode,
   FormulaNode,
   FracNode,

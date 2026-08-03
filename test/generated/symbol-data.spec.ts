@@ -123,4 +123,13 @@ describe("generated provenance", () => {
     // Ox is the canonical engine; Oga is a parity check only (§7).
     expect(GENERATED_PROVENANCE.xmlEngine).toContain("Ox");
   });
+
+  it("was generated from clean checkouts, so the slices may be committed", () => {
+    // §7: `--allow-dirty` output is non-committable and CI rejects it. Asserting
+    // the flags' shape without asserting their value let exactly that state
+    // reach a commit. The same assertion guards `src/core/generated`.
+    expect(GENERATED_PROVENANCE.oracleClean).toBe(true);
+    expect(GENERATED_PROVENANCE.generatorClean).toBe(true);
+    expect(GENERATED_PROVENANCE.committable).toBe(true);
+  });
 });

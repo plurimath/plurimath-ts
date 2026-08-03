@@ -19,10 +19,18 @@ import {
   UnaryFunctionNode,
 } from "../../src/core/nodes";
 import { NODE_SPECS, normalize, rubyClassName } from "../../src/core/normalize";
-import { aliasIndex, buildNode, readCensus, readCorpusCases } from "./model-builder";
+import {
+  aliasIndex,
+  buildNode,
+  type CorpusCase,
+  readCensus,
+  readCorpusCases,
+  type SerializedNode,
+} from "./model-builder";
 
 const cases = readCorpusCases();
-const aliases = aliasIndex(readCensus());
+const census = readCensus();
+const aliases = aliasIndex(census);
 
 describe("round trip against the Ruby-generated corpus", () => {
   it("reads every case the corpus ships", () => {
@@ -64,16 +72,54 @@ describe("round trip against the Ruby-generated corpus", () => {
   });
 });
 
+// Expectations are written as entry lists rather than object literals: the
+// Ruby field names are snake_case, which the lint rules reject as property
+// names (the same reason `NODE_SPECS` uses tuples). Order is asserted for
+// free, which is what `variables.sort` guarantees.
+const fieldEntries = (node: MathNode): readonly (readonly [string, unknown])[] =>
+  Object.entries(normalize(node).fields);
+
 describe("field presence", () => {
-  it("omits a field Ruby never assigned and emits one Ruby set to nil", () => {
-    expect(normalize(new NumberNode({ value: "2" }))).toStrictEqual({
-      class: "Math::Number",
-      fields: { value: "2" },
-    });
-    expect(normalize(new NumberNode({ value: "2", base: null }))).toStrictEqual({
-      class: "Math::Number",
-      fields: { base: null, value: "2" },
-    });
+  it("emits every field Ruby's `initialize` assigns, including the nils", () => {
+    // `Plurimath::Math::Number.new("2")` assigns all four instance variables —
+    // `@base` to nil, both mini-sizing flags to false — so all four serialize.
+    // Passing only `value` must reproduce that, not a one-field node.
+    expect(fieldEntries(new NumberNode({ value: "2" }))).toStrictEqual([
+      ["base", null],
+      ["mini_sub_sized", false],
+      ["mini_sup_sized", false],
+      ["value", "2"],
+    ]);
+  });
+
+  it("omits a field Ruby's `initialize` never assigns", () => {
+    // `Symbol#initialize` guards every assignment but `@value`: `slashed` is
+    // stored only when truthy, the mini-sizing flags only when true, `options`
+    // only when non-empty. A bare symbol therefore has one instance variable.
+    const plus = normalize(new SymbolNode({ id: "Plus" }));
+    expect(plus.class).toBe("Math::Symbols::Plus");
+    expect(Object.entries(plus.fields)).toStrictEqual([["value", null]]);
+    // And `Formula.new` never touches `@input_string` — the parser sets it
+    // afterwards — so a hand-built formula omits it where a parsed one has it.
+    expect(Object.keys(normalize(new FormulaNode()).fields)).toStrictEqual([
+      "displaystyle",
+      "left_right_wrapper",
+      "value",
+    ]);
+  });
+
+  it("still tells an explicit nil apart from an unassigned field", () => {
+    // `hide_function_name` is in every function's field list and in no
+    // constructor, so it is the honest test of the distinction.
+    expect(fieldEntries(new FracNode({ parameterOne: null }))).toStrictEqual([
+      ["parameter_one", null],
+      ["parameter_two", null],
+    ]);
+    expect(fieldEntries(new FracNode({ hideFunctionName: false }))).toStrictEqual([
+      ["hide_function_name", false],
+      ["parameter_one", null],
+      ["parameter_two", null],
+    ]);
   });
 
   it("emits fields in Ruby's `variables.sort` order", () => {
@@ -95,6 +141,70 @@ describe("field presence", () => {
     const node = new TableNode({ value: [], options: { rowlines: "solid", columnalign: "left" } });
     const fields = normalize(node).fields as { options: Record<string, unknown> };
     expect(Object.keys(fields.options)).toStrictEqual(["columnalign", "rowlines"]);
+  });
+});
+
+/**
+ * The census records, per class, what Ruby's `initialize` assigns when it is
+ * called with nothing — measured by the generator instantiating the class, not
+ * read off its source. A node built with no arguments must serialize to
+ * exactly that, or every hand-built tree is a field or two away from Ruby's.
+ */
+describe("Ruby's constructor defaults, class by class", () => {
+  const implemented = census.classes.filter((entry) => entry.disposition === "implemented");
+
+  it("has a measured default set for every implemented class", () => {
+    expect(implemented.length).toBe(census.summary.implemented);
+    expect(implemented.filter((entry) => entry.defaults === undefined)).toStrictEqual([]);
+  });
+
+  for (const entry of implemented) {
+    const defaults = entry.defaults;
+    it(`builds ${entry.name} exactly as Ruby's argument-free constructor does`, () => {
+      expect(defaults).toBeDefined();
+      const node = buildNode({ class: entry.name, fields: {} }, aliases);
+      const serialized = normalize(node);
+      expect(serialized).toStrictEqual({ class: entry.name, fields: defaults?.assigned });
+      // Stated separately because the two states are not each other's absence:
+      // a field Ruby assigned nil is emitted as null, one it never touched is
+      // gone. Collapsing them is the bug this whole block exists to catch.
+      for (const field of defaults?.unassigned ?? []) {
+        expect(Object.keys(serialized.fields), `${entry.name}.${field}`).not.toContain(field);
+      }
+    });
+  }
+});
+
+describe("against the corpus `model:` blocks the gem wrote", () => {
+  const numberInteger = cases.find((entry) => entry.id === "number-integer") as CorpusCase;
+
+  it("reads the case it compares against", () => {
+    expect(numberInteger).toBeDefined();
+    expect(numberInteger.input).toBe("2");
+  });
+
+  it("reproduces the gem's Number for `2` from `value` alone", () => {
+    const value = numberInteger.model.fields.value as readonly SerializedNode[];
+    // No expectation restated here: this is the block the gem serialized.
+    expect(normalize(new NumberNode({ value: "2" }))).toStrictEqual(value[0]);
+  });
+
+  it("reproduces the gem's Formula for `2` from its value and input string", () => {
+    // `input_string` has to be supplied because `Formula#initialize` does not
+    // set it — the parser does, afterwards. Everything else is a default.
+    const formula = new FormulaNode({
+      value: [new NumberNode({ value: "2" })],
+      inputString: "2",
+    });
+    expect(normalize(formula)).toStrictEqual(numberInteger.model);
+  });
+
+  it("would not reproduce it if the defaults were dropped", () => {
+    // The guard against this test passing vacuously: the pre-fix shape, one
+    // field per node, is not what the gem recorded.
+    expect(Object.keys(normalize(new NumberNode({ value: "2" })).fields)).not.toStrictEqual([
+      "value",
+    ]);
   });
 });
 

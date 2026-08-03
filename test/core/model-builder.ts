@@ -13,7 +13,10 @@
  */
 
 import { readdirSync, readFileSync } from "node:fs";
-import type { MathNode, NodeKind } from "../../src/core/nodes";
+// Every factory here calls a constructor, so what comes back is an instance
+// carrying `equals`, not bare node data. Declaring `MathNode` would widen that
+// away and make `.equals` untypeable at the call sites (ARCHITECTURE.md §4).
+import type { ConstructedMathNode, NodeKind } from "../../src/core/nodes";
 import {
   type AbsInit,
   AbsNode,
@@ -53,6 +56,7 @@ import {
   MrowNode,
   type NaryInit,
   NaryNode,
+  NODE_KINDS,
   type NormInit,
   NormNode,
   type NumberInit,
@@ -97,7 +101,7 @@ import { parseYaml, type YamlValue } from "./corpus-yaml";
 
 type Init = Record<string, unknown>;
 
-const FACTORIES: { readonly [K in NodeKind]: (init: Init) => MathNode } = {
+const FACTORIES: { readonly [K in NodeKind]: (init: Init) => ConstructedMathNode } = {
   abs: (init) => new AbsNode(init as unknown as AbsInit),
   bar: (init) => new BarNode(init as unknown as BarInit),
   base: (init) => new BaseNode(init as unknown as BaseInit),
@@ -139,6 +143,31 @@ const FACTORIES: { readonly [K in NodeKind]: (init: Init) => MathNode } = {
   vec: (init) => new VecNode(init as unknown as VecInit),
 };
 
+/**
+ * One freshly built node of every kind, for the tests that must cover the
+ * whole union rather than a sample of it.
+ *
+ * `name` is supplied because the three abstract carriers require it; the
+ * classes that have no such field ignore it, exactly as they ignore any other
+ * key their constructor does not read.
+ */
+export function oneOfEachKind(): readonly (readonly [NodeKind, ConstructedMathNode])[] {
+  return NODE_KINDS.map((kind) => [kind, FACTORIES[kind]({ name: "Sample" })] as const);
+}
+
+/**
+ * What a class's `initialize` assigns when called with no arguments, measured
+ * by the generator instantiating the class (`policy.defaults` in the census).
+ *
+ * `assigned` is a mapping because a nil value in it is a real assigned nil,
+ * which Ruby serializes; `unassigned` lists the declared fields the
+ * constructor never touches, which Ruby omits. The two are different states.
+ */
+export interface CensusDefaults {
+  readonly assigned: { readonly [field: string]: YamlValue };
+  readonly unassigned: readonly string[];
+}
+
 export interface CensusEntry {
   readonly name: string;
   readonly parent: string;
@@ -147,6 +176,8 @@ export interface CensusEntry {
   readonly fields?: readonly string[];
   readonly aliases?: string;
   readonly equality?: { readonly fields: readonly string[] };
+  /** Absent on a deferred class, and on an aliased one that adds no override. */
+  readonly defaults?: CensusDefaults;
 }
 
 export interface Census {
@@ -188,7 +219,7 @@ function isSerializedNode(value: YamlValue): value is SerializedNode {
   );
 }
 
-export function buildNode(model: SerializedNode, aliases: ReadonlyMap<string, string>): MathNode {
+export function buildNode(model: SerializedNode, aliases: ReadonlyMap<string, string>): ConstructedMathNode {
   const target = aliases.get(model.class);
   if (target === undefined) throw new Error(`census does not know class ${model.class}`);
   const kind = KIND_BY_RUBY_CLASS.get(target);

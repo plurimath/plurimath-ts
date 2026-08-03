@@ -8,10 +8,14 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { EQUALITY_FIELDS } from "../../src/core/equality";
+import { EQUALITY_FIELDS, equals } from "../../src/core/equality";
 import {
+  BinaryFunctionNode,
+  type ConstructedMathNode,
+  FontStyleNode,
   FormulaNode,
   FracNode,
+  HatNode,
   isMathNode,
   type MathNode,
   NODE_KINDS,
@@ -23,8 +27,14 @@ import {
   TextNode,
   UnaryFunctionNode,
 } from "../../src/core/nodes";
-import { NODE_SPECS, rubyClassName } from "../../src/core/normalize";
-import { readCensus } from "./model-builder";
+import { NODE_SPECS, normalize, rubyClassName } from "../../src/core/normalize";
+import {
+  aliasIndex,
+  buildNode,
+  type CensusDefaults,
+  oneOfEachKind,
+  readCensus,
+} from "./model-builder";
 
 const census = readCensus();
 const implemented = census.classes.filter((entry) => entry.disposition === "implemented");
@@ -120,7 +130,8 @@ describe("construction", () => {
 
   it("validates nothing — an empty or nonsensical node builds fine", () => {
     const empty = new FracNode();
-    expect(empty.parameterOne).toBeUndefined();
+    // `Frac.new` in Ruby assigns both parameters, to nil.
+    expect(empty.parameterOne).toBeNull();
     // A string where a node belongs is accepted; it fails at render, not here.
     expect(new FracNode({ parameterOne: "not a node" }).parameterOne).toBe("not a node");
   });
@@ -142,8 +153,182 @@ describe("construction", () => {
   });
 
   it("keeps `undefined` (Ruby never assigned) apart from `null` (Ruby assigned nil)", () => {
-    expect(new NumberNode({ value: "2" }).base).toBeUndefined();
-    expect(new NumberNode({ value: "2", base: null }).base).toBeNull();
+    // `Symbol#initialize` assigns `@value` unconditionally and guards the
+    // rest, so one bare symbol shows both states at once.
+    const symbol = new SymbolNode({ id: "Plus" });
+    expect(symbol.value).toBeNull();
+    expect(symbol.slashed).toBeUndefined();
+    expect(symbol.options).toBeUndefined();
+    expect(symbol.miniSubSized).toBeUndefined();
+    // No function's constructor sets `hide_function_name`; a transform does.
+    expect(new FracNode({ parameterOne: null }).hideFunctionName).toBeUndefined();
+  });
+
+  it("materializes Ruby's constructor defaults rather than leaving fields unset", () => {
+    // `Number.new("2")` assigns all four ivars. Anything less and the node is
+    // a field short of the tree the gem serializes (see normalize.spec.ts,
+    // which checks all 38 classes against the census).
+    const number = new NumberNode({ value: "2" });
+    expect(number.base).toBeNull();
+    expect(number.miniSubSized).toBe(false);
+    expect(number.miniSupSized).toBe(false);
+    // `Formula.new` assigns three of its five, and `Text#initialize` is the
+    // one constructor whose default is not nil.
+    const formula = new FormulaNode();
+    expect(formula.value).toStrictEqual([]);
+    expect(formula.leftRightWrapper).toBe(true);
+    expect(formula.displaystyle).toBe(true);
+    expect(formula.inputString).toBeUndefined();
+    expect(new TextNode().parameterOne).toBe("");
+  });
+
+  it("gives each node its own default hash and list", () => {
+    // The defaults are built per call, so two nodes never share one object.
+    expect(new HatNode().attributes).not.toBe(new HatNode().attributes);
+    expect(new FormulaNode().value).not.toBe(new FormulaNode().value);
+  });
+});
+
+/**
+ * 21 of the 1,552 aliased classes override `initialize` with defaults their
+ * carrier does not have — `FontStyle::Bold.new(nil)` comes out with
+ * `parameter_two: "bold"`, `Table::Matrix.new` with round parens. The carrier
+ * node is one class for all of them, so it looks the alias up by identity.
+ *
+ * The expectations are the census's `defaults.assigned`, which the generator
+ * measured by instantiating each class — not read off the Ruby source, which
+ * would get `Table::Matrix` wrong: its `initialize` defaults the parens to the
+ * strings `"("` and `")"`, and `Table#initialize` coerces them into
+ * `Paren::Lround`/`Paren::Rround` nodes on the way in.
+ */
+describe("constructor defaults an aliased class brings with it", () => {
+  const aliases = aliasIndex(census);
+  const aliased = census.classes.filter((entry) => entry.disposition === "aliased");
+  const diverging = aliased.filter((entry) => entry.defaults !== undefined);
+  const defaultsOf = (name: string): CensusDefaults | undefined =>
+    census.classes.find((entry) => entry.name === name)?.defaults;
+
+  it("finds every aliased class the census says diverges", () => {
+    // The census records `defaults` on an aliased entry only when they differ
+    // from its carrier's, so this set is exactly the divergent one.
+    expect(diverging.map((entry) => entry.name).sort()).toStrictEqual(
+      [
+        "Math::Function::FontStyle::Bold",
+        "Math::Function::FontStyle::DoubleStruck",
+        "Math::Function::FontStyle::Fraktur",
+        "Math::Function::FontStyle::Italic",
+        "Math::Function::FontStyle::Monospace",
+        "Math::Function::FontStyle::Normal",
+        "Math::Function::FontStyle::SansSerif",
+        "Math::Function::FontStyle::Script",
+        "Math::Function::Mglyph",
+        "Math::Function::Table::Align",
+        "Math::Function::Table::Array",
+        "Math::Function::Table::Bmatrix",
+        "Math::Function::Table::Cases",
+        "Math::Function::Table::Eqarray",
+        "Math::Function::Table::Matrix",
+        "Math::Function::Table::Multline",
+        "Math::Function::Table::Pmatrix",
+        "Math::Function::Table::Split",
+        "Math::Function::Table::Vmatrix",
+        "Math::Function::Td",
+        "Math::Function::Tr",
+      ].sort(),
+    );
+  });
+
+  for (const entry of diverging) {
+    it(`builds ${entry.name} exactly as Ruby's constructor does`, () => {
+      const node = buildNode({ class: entry.name, fields: {} }, aliases);
+      const serialized = normalize(node);
+      expect(serialized).toStrictEqual({ class: entry.name, fields: entry.defaults?.assigned });
+      for (const field of entry.defaults?.unassigned ?? []) {
+        expect(Object.keys(serialized.fields), `${entry.name}.${field}`).not.toContain(field);
+      }
+    });
+  }
+
+  it("leaves every other aliased class on its carrier's defaults", () => {
+    // The complement, all 1,531 of it: materializing a default where Ruby has
+    // none would be the same bug in the other direction.
+    const unchanged = aliased.filter((entry) => entry.defaults === undefined);
+    expect(unchanged.length).toBe(aliased.length - diverging.length);
+    let checked = 0;
+    for (const entry of unchanged) {
+      const carrier = defaultsOf(entry.aliases as string);
+      if (carrier === undefined) continue;
+      expect(
+        normalize(buildNode({ class: entry.name, fields: {} }, aliases)),
+        entry.name,
+      ).toStrictEqual({
+        class: entry.name,
+        fields: carrier.assigned,
+      });
+      checked += 1;
+    }
+    expect(checked).toBe(unchanged.length);
+  });
+
+  it("keys the lookup by kind *and* name, never by name alone", () => {
+    // `Td` is a BinaryFunction alias and `Tr` a UnaryFunction one. A node of
+    // the other carrier with the same name is a different Ruby class and gets
+    // nothing.
+    expect(new BinaryFunctionNode({ name: "Td" }).parameterOne).toStrictEqual([]);
+    expect(new UnaryFunctionNode({ name: "Td" }).parameterOne).toBeNull();
+    expect(new UnaryFunctionNode({ name: "Tr" }).parameterOne).toStrictEqual([]);
+    expect(new BinaryFunctionNode({ name: "Tr" }).parameterOne).toBeNull();
+  });
+
+  it("keeps the carrier's own defaults for a name the gem does not have", () => {
+    // Construction stays permissive (§5): an unknown name is not an error.
+    expect(new TableNode({ name: "Nosuch" }).openParen).toBeNull();
+    expect(new TableNode({ name: "Nosuch" }).value).toBeNull();
+    expect(new FontStyleNode({ name: "Nosuch" }).parameterTwo).toBeNull();
+    expect(new TableNode().openParen).toBeNull();
+    expect(new FontStyleNode().parameterTwo).toBeNull();
+    expect(new UnaryFunctionNode({ name: "Sin" }).parameterOne).toBeNull();
+  });
+
+  it("materializes what the caller omitted and nothing else", () => {
+    // An explicit value wins, including the falsy ones a `??` would swallow.
+    expect(new FontStyleNode({ name: "Bold", parameterTwo: null }).parameterTwo).toBeNull();
+    expect(new FontStyleNode({ name: "Bold", parameterTwo: "bf" }).parameterTwo).toBe("bf");
+    expect(new TableNode({ name: "Matrix", openParen: null }).openParen).toBeNull();
+    expect(new TableNode({ name: "Matrix", value: null }).value).toBeNull();
+    expect(new TableNode({ name: "Matrix", value: [] }).value).toStrictEqual([]);
+    expect(new TableNode({ name: "Matrix", options: {} }).options).toStrictEqual({});
+    expect(new UnaryFunctionNode({ name: "Tr", parameterOne: null }).parameterOne).toBeNull();
+    expect(new UnaryFunctionNode({ name: "Mglyph", parameterOne: null }).parameterOne).toBeNull();
+  });
+
+  it("allocates fresh values per construction, never a shared table", () => {
+    const first = new TableNode({ name: "Matrix" });
+    const second = new TableNode({ name: "Matrix" });
+    expect(first.openParen).not.toBe(second.openParen);
+    expect(first.closeParen).not.toBe(second.closeParen);
+    expect(first.value).not.toBe(second.value);
+    expect(first.options).not.toBe(second.options);
+    // Two `Vert` parens on one node must also be two objects.
+    const vmatrix = new TableNode({ name: "Vmatrix" });
+    expect(vmatrix.openParen).not.toBe(vmatrix.closeParen);
+    expect(new UnaryFunctionNode({ name: "Tr" }).parameterOne).not.toBe(
+      new UnaryFunctionNode({ name: "Tr" }).parameterOne,
+    );
+    expect(new UnaryFunctionNode({ name: "Mglyph" }).parameterOne).not.toBe(
+      new UnaryFunctionNode({ name: "Mglyph" }).parameterOne,
+    );
+    expect(new BinaryFunctionNode({ name: "Td" }).parameterOne).not.toBe(
+      new BinaryFunctionNode({ name: "Td" }).parameterOne,
+    );
+  });
+
+  it("hands out a materialized default the caller can safely mutate", () => {
+    // The fresh-per-construction rule is only worth anything if a caller
+    // reaching into one node's default cannot reach the next node's.
+    const row = new UnaryFunctionNode({ name: "Tr" });
+    (row.parameterOne as MathNode[]).push(new SymbolNode({ value: "a" }));
+    expect(new UnaryFunctionNode({ name: "Tr" }).parameterOne).toStrictEqual([]);
   });
 });
 
@@ -191,6 +376,54 @@ describe("immutability", () => {
     const inner = new SymbolNode({ value: "x" });
     const outer = new FracNode({ parameterOne: inner });
     expect(outer.parameterOne).toBe(inner);
+  });
+});
+
+/**
+ * ARCHITECTURE.md §4 promises `node.equals(other)` as a method, not only as
+ * the module function `equals(a, b)`. It used to exist as the function alone,
+ * so `new AbsNode().equals(x)` threw `TypeError`.
+ */
+describe("equals as a method", () => {
+  // `oneOfEachKind` builds through the constructors, so it returns the class
+  // union and `.equals` is reachable without a cast. The structural `MathNode`
+  // deliberately has no `equals`; that contract is proven in `node-types.spec.ts`.
+  const kinds = oneOfEachKind();
+  const twins = oneOfEachKind();
+
+  it("exists on every node class in the union", () => {
+    expect(kinds).toHaveLength(NODE_KINDS.length);
+    for (const [kind, node] of kinds) {
+      expect(typeof node.equals, kind).toBe("function");
+    }
+  });
+
+  it("gives the same answer as the module function, kind by kind", () => {
+    for (const [index, entry] of kinds.entries()) {
+      const [kind, node] = entry;
+      const twin = (twins[index] as readonly [NodeKind, MathNode])[1];
+      expect(node.equals(twin), kind).toBe(true);
+      expect(node.equals(twin), kind).toBe(equals(node, twin));
+      expect(node.equals(null), kind).toBe(false);
+      expect(node.equals("not a node"), kind).toBe(false);
+    }
+  });
+
+  it("compares deeply through the method, as the function does", () => {
+    const left = new FracNode({ parameterOne: new SymbolNode({ id: "Plus" }) });
+    const right = new FracNode({ parameterOne: new SymbolNode({ id: "Plus", value: "+" }) });
+    expect(left.equals(right)).toBe(true);
+    expect(left.equals(new FracNode({ parameterOne: new SymbolNode({ id: "Minus" }) }))).toBe(
+      false,
+    );
+  });
+
+  it("adds no field to a node, only a prototype method", () => {
+    // A base carrying state would put an instance variable on every node that
+    // Ruby does not have, which `normalize` would then have to know about.
+    const node = new SymbolNode({ id: "Plus" });
+    expect(Object.hasOwn(node, "equals")).toBe(false);
+    expect(Object.keys(node)).not.toContain("equals");
   });
 });
 

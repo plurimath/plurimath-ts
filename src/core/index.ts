@@ -29,6 +29,7 @@ export type {
   BinaryFunctionInit,
   CeilInit,
   ColorInit,
+  ConstructedMathNode,
   DdotInit,
   DotInit,
   FencedInit,

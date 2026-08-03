@@ -190,7 +190,47 @@ const SIMPLE_ESCAPES: ReadonlyMap<string, string> = new Map([
   ["\\", "\\"],
   ["/", "/"],
   [" ", " "],
+  // The four remaining escapes Psych accepts, checked against Psych 5.4.0 on
+  // Ruby 4.0.1. None appears in the corpus today, but `\_` (a non-breaking
+  // space) is a plausible symbol value, and rejecting it would be a false
+  // alarm. Written as code points, not escape sequences, because a scripted
+  // edit has twice put a literal control byte into a source file here.
+  ["N", String.fromCodePoint(0x85)],
+  ["_", String.fromCodePoint(0xa0)],
+  ["L", String.fromCodePoint(0x2028)],
+  ["P", String.fromCodePoint(0x2029)],
 ]);
+
+/**
+ * The escapes that introduce a fixed-width hex code, and how many digits each
+ * one needs. Psych demands exactly that many, all of them hex: `"\u12zz"`
+ * raises `Psych::SyntaxError` ("did not find expected hexdecimal number")
+ * rather than reading U+0012 and carrying on. `Number.parseInt` is the
+ * opposite — it stops at the first character it cannot use and keeps what it
+ * has — so the digits are validated before it ever sees them.
+ */
+const HEX_ESCAPE_WIDTHS: ReadonlyMap<string, number> = new Map([
+  ["x", 2],
+  ["u", 4],
+  ["U", 8],
+]);
+
+/** Anchored both ends, so `parseInt`'s tolerance for signs and trailing junk cannot apply. */
+const HEX_DIGITS = /^[0-9a-fA-F]+$/;
+
+/**
+ * A hex escape must name a Unicode *scalar* value. `\U00110000` is past the
+ * end, and `\uD83D` is half a surrogate pair; Psych raises "found invalid
+ * Unicode character escape code" for both, and so does this reader rather than
+ * emitting a lone surrogate nothing else can read back.
+ */
+const MAX_CODE_POINT = 0x10ffff;
+const FIRST_SURROGATE = 0xd800;
+const LAST_SURROGATE = 0xdfff;
+
+function isScalarValue(code: number): boolean {
+  return code <= MAX_CODE_POINT && (code < FIRST_SURROGATE || code > LAST_SURROGATE);
+}
 
 function parseDoubleQuoted(text: string): string {
   if (!text.endsWith('"') || text.length < 2) throw new Error(`unterminated scalar: ${text}`);
@@ -209,10 +249,19 @@ function parseDoubleQuoted(text: string): string {
       result += simple;
       continue;
     }
-    const width = marker === "x" ? 2 : marker === "u" ? 4 : marker === "U" ? 8 : 0;
-    if (width === 0) throw new Error(`unsupported escape \\${marker} in ${text}`);
-    const code = Number.parseInt(inner.slice(index + 1, index + 1 + width), 16);
-    if (Number.isNaN(code)) throw new Error(`bad escape \\${marker} in ${text}`);
+    const width = HEX_ESCAPE_WIDTHS.get(marker);
+    if (width === undefined) throw new Error(`unsupported escape \\${marker} in ${text}`);
+    const digits = inner.slice(index + 1, index + 1 + width);
+    if (digits.length !== width || !HEX_DIGITS.test(digits)) {
+      throw new Error(
+        `malformed escape \\${marker}${digits} in ${text}: ` +
+          `\\${marker} takes exactly ${width} hex digits`,
+      );
+    }
+    const code = Number.parseInt(digits, 16);
+    if (!isScalarValue(code)) {
+      throw new Error(`escape \\${marker}${digits} in ${text} is not a Unicode scalar value`);
+    }
     result += String.fromCodePoint(code);
     index += width;
   }

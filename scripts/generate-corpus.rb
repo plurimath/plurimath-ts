@@ -45,7 +45,8 @@ module CorpusGenerator
   GENERATOR_PATH = "scripts/generate-corpus.rb"
 
   CORPUS_SCHEMA = "plurimath-corpus/asciimath/1"
-  CENSUS_SCHEMA = "plurimath-corpus/census/1"
+  # 2 adds `defaults` (constructor-assigned field values) to each class entry.
+  CENSUS_SCHEMA = "plurimath-corpus/census/2"
   EXCLUSIONS_SCHEMA = "plurimath-corpus/exclusions/1"
   MANIFEST_SCHEMA = "plurimath-corpus/manifest/1"
 
@@ -660,6 +661,63 @@ module CorpusGenerator
     fields.uniq.sort
   end
 
+  # How many positional arguments a class's `initialize` demands. Everything
+  # else has a default, which is exactly what the probe below is measuring.
+  def required_argument_count(klass)
+    klass.instance_method(:initialize).parameters.count { |kind, _| kind == :req }
+  end
+
+  # What `initialize` assigns when it is given nothing, **measured** by
+  # instantiating the class and reading `variables`.
+  #
+  # Reading the source instead would get this wrong: assignment is routinely
+  # conditional (`@options = options unless options.empty?`, `@slashed =
+  # slashed if slashed`), the initializer is often inherited, and two sibling
+  # classes guard the same field differently — `Overset` skips an empty
+  # options hash where `Underset` stores it.
+  #
+  # The result keeps "never assigned" and "assigned nil" apart, because the
+  # model does: Ruby serializes `instance_variables`, so an unassigned ivar is
+  # absent from a node's serialization while an assigned nil is present.
+  # `assigned` is therefore a mapping (a nil value is a real, emitted nil) and
+  # `unassigned` the complementary list of declared fields.
+  def construction_defaults(klass, fields)
+    arity = required_argument_count(klass)
+    key = class_key(klass)
+
+    begin
+      instance = klass.new(*::Array.new(arity, nil))
+    rescue StandardError, ScriptError => e
+      raise Error, <<~MESSAGE
+        #{key}.new(#{(['nil'] * arity).join(', ')}) raised #{e.class}: #{e.message}.
+        The census records each class's constructor defaults by instantiating it,
+        so an implemented class the generator cannot build has no measurable
+        default set. Either the class is not implementable as modelled, or it
+        belongs in DEFERRED_CLASSES.
+      MESSAGE
+    end
+
+    assigned = instance.variables.sort.to_h do |ivar|
+      field = ivar.to_s.delete_prefix("@")
+      [field, serialize_value(instance.get(ivar), "#{key}.#{field}")]
+    end
+
+    unknown = assigned.keys - fields
+    unless unknown.empty?
+      raise Error, <<~MESSAGE
+        #{key}.new assigns #{unknown.join(', ')}, which `declared_fields` did not
+        find. The field scanner and the constructor probe disagree, so one of
+        them is wrong; fix the scanner rather than widening this check.
+      MESSAGE
+    end
+
+    {
+      "required_arguments" => arity,
+      "assigned" => assigned,
+      "unassigned" => (fields - assigned.keys).sort,
+    }
+  end
+
   def equality_owner(klass)
     owner = klass.instance_method(:==).owner
     owner < Plurimath::Math::Core || owner == Plurimath::Math::Core ? owner : nil
@@ -807,6 +865,15 @@ module CorpusGenerator
       end
     end
 
+    all_fields = descendants.to_h do |klass|
+      [klass, (own_fields.fetch(klass) + inherited_fields.call(klass)).uniq.sort]
+    end
+
+    # Deferred classes are not probed: the port does not model them, and
+    # `Unitsml.new(nil)` raises inside the upstream parser.
+    defaults = descendants.reject { |klass| DEFERRED_CLASSES.include?(class_key(klass)) }
+      .to_h { |klass| [klass, construction_defaults(klass, all_fields.fetch(klass))] }
+
     entries = descendants.sort_by(&:name).map do |klass|
       disposition = disposition_of.call(klass)
       entry = {
@@ -821,14 +888,22 @@ module CorpusGenerator
         target = klass.superclass
         target = target.superclass while disposition_of.call(target) == "aliased"
         entry["aliases"] = class_key(target)
+        # An aliased class adds no field and no equality, but it may still
+        # override `initialize` — `FontStyle::Bold` defaults parameter_two to
+        # "bold", `Table::Matrix` to round parens. The port folds these classes
+        # into their alias target, so a diverging default set is recorded here
+        # rather than assumed away.
+        own = defaults[klass]
+        entry["defaults"] = own if own && own != defaults[target]
       else
         owner = equality_owner(klass)
-        entry["fields"] = (own_fields.fetch(klass) + inherited_fields.call(klass)).uniq.sort
+        entry["fields"] = all_fields.fetch(klass)
         entry["own_fields"] = new_fields.fetch(klass)
         entry["equality"] = {
           "defined_by" => class_key(owner),
           "fields" => definitions.fetch(class_key(owner))["fields"],
         }
+        entry["defaults"] = defaults[klass] if defaults.key?(klass)
       end
 
       entry
@@ -848,6 +923,24 @@ module CorpusGenerator
           "deferred" => "Deliberately not implemented (ARCHITECTURE.md §5). " \
                         "A deferred class may not appear in any generated case.",
         },
+        "defaults" => {
+          "measured_by" => "instantiating the class with no arguments (nil for " \
+                           "each required positional) and reading `variables`",
+          "assigned" => "field => the value `initialize` assigned. A field " \
+                        "present with a nil value was assigned nil and is " \
+                        "serialized; a field absent from this mapping was never " \
+                        "assigned and is omitted from a node's serialization. " \
+                        "The two are different states and must not be collapsed.",
+          "unassigned" => "the declared fields `initialize` never touches, listed " \
+                          "so the distinction above is explicit rather than " \
+                          "inferred from an absent key",
+          "required_arguments" => "positional arguments `initialize` demands; the " \
+                                  "probe passes nil for each",
+          "on_aliased_entries" => "present only when the aliased class's own " \
+                                  "`initialize` produces a different default set " \
+                                  "from its alias target's",
+          "not_recorded_for" => "deferred classes, which the port does not model",
+        },
         "fails_generation_on" => [
           "a direct Math::Core descendant that is not a declared family root",
           "a declared-abstract class that has no subclasses or is instantiated " \
@@ -855,6 +948,9 @@ module CorpusGenerator
           "a class whose source, fields or `==` cannot be read",
           "an `==` helper applied to the whole operand that is not classified",
           "a deferred class appearing in a generated corpus case",
+          "a non-deferred class that cannot be instantiated for the " \
+          "constructor-default probe",
+          "a constructor assigning an instance variable the field scanner missed",
         ],
         "family_roots" => FAMILY_ROOTS,
         "abstract" => ABSTRACT_CLASSES,

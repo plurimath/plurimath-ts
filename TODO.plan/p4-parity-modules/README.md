@@ -1,22 +1,33 @@
 # P4 — The remaining parity modules
 
-**Status: planned.** What is left of the gem once every format is ported:
-number formatting with locales, expression evaluation, and MathML/OMML *input*.
+**Status: planned.** What is left of the gem once every format is ported: the
+number-formatter modes nothing earlier exercises, expression evaluation, and
+MathML/OMML *input*.
 
 Numbered work items are added to this directory when the phase opens.
 
 ## What it delivers
 
-**Number formatting and locales.** `src/formatting/` exists from P1, but only
-as minimal normalization. This phase completes it: locale-aware decimal and
-grouping separators, significant-digit and precision handling, scientific and
-engineering notation, and base notation (hex, binary, octal).
+**What number formatting is left.** Less than this phase used to claim. The
+formatter contract, the per-renderer adapter seam and the no-formatter
+passthrough land in P1 with the renderers that route through them; each
+parser's `locale` behaviour lands with that parser (AsciiMath in P1; LaTeX,
+UnicodeMath and HTML in P3), because the decimal marker is read by the
+*grammar* — each of those `parse.rb` files builds it from
+`Plurimath.configuration.decimal`. Scheduling all of it here would have put it
+after every renderer that depends on it and after every parser whose `locale`
+option depends on it.
 
-The gem routes **every** numeric render through `Formatter::Numbers` (~2k
-lines), which is why the seam is created early even though the implementation
-lands late — retrofitting it afterwards would touch every renderer. Locale data
-sits behind its own subpath, so a consumer who never formats localized numbers
-does not download the tables; the isolation gate proves it.
+What genuinely remains is the `NumberFormatter` behaviour no earlier phase
+exercises: full locale tables (grouping separators and their digit groups),
+significant digits and precision, scientific and engineering notation, base
+notation, and the configurable formatter object itself. It is invisible until
+then by construction — `Plurimath.configuration.number_formatter` is nil by
+default, and the pinned corpus is generated with `configuration: {}`, so every
+number in it renders as its raw value.
+
+Locale data sits behind its own subpath, so a consumer who never formats
+localized numbers does not download the tables; the isolation gate proves it.
 
 **Evaluation.** `src/evaluation/` — numeric evaluation of a formula against
 variable bindings, including bounded iteration for sums and products with a
@@ -32,10 +43,10 @@ JavaScript release, or defer further.
 
 ## Why here
 
-Each is genuinely cross-cutting, which makes it cheapest once the things it
-cuts across exist. Formatting touches every renderer; evaluation needs the
-whole node model; MathML/OMML input needs the model *and* a settled dependency
-strategy.
+Evaluation needs the whole node model. MathML/OMML input needs the model *and*
+a settled dependency strategy. Formatting is here only for what is left over:
+because it touches every renderer and four of the parsers, the parts they use
+land with them, and only the unused modes wait for a phase of their own.
 
 ## Risks and notes
 
@@ -46,11 +57,22 @@ strategy.
   would it yield this project's native model or an Opal one?
 - **Locale data volume.** Keeping it out of unrelated bundles is an isolation
   assertion, not a hope.
+- **No unit data is produced here.** UnitsML is deferred (§5): there is no
+  `unitsml` module, no subpath and no tables, so this phase has nothing of that
+  kind to isolate. The criterion that once asked for it was checking something
+  that cannot exist.
 
 ## Exit criteria
 
-- [ ] Corpus slices for each module.
-- [ ] Isolation assertions proving locale and unit data stay out of unrelated
-      subpaths.
+- [ ] Formatting: cases for each mode this phase adds — locale grouping,
+      significant digits, precision, scientific, engineering, base notation —
+      with a nonzero count asserted per mode, so a mode with no case fails
+      rather than passing quietly.
+- [ ] Evaluation: cases pairing a formula and bindings with the gem's result,
+      count asserted nonzero, including one that hits the iteration cap — with
+      the cap lowered for the test, not by running 100,000 iterations.
+- [ ] MathML/OMML input, if it is built here: parse-direction cases for both,
+      each with a nonzero count.
+- [ ] Isolation assertions proving locale data stays out of unrelated subpaths.
 - [ ] MathML/OMML input strategy decided and recorded before implementation.
 - [ ] Review round with findings resolved, and sign-off recorded.

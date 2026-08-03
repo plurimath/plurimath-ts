@@ -12,7 +12,7 @@ Nothing here blocks the active phase.
 | npm package name and release line | maintainer | before first publish |
 | Compat `data` property | maintainer | before P2 |
 | Bundle budgets | maintainer | during P1, from real numbers |
-| Shared-repo extraction and naming | maintainer | after P1 |
+| Symbol data as shared data | maintainer + gem | after P1 |
 | MathML/OMML input strategy | maintainer | P4 planning |
 
 ## UnitsML, and what it means for 1.0
@@ -45,13 +45,21 @@ Deferred on purpose: ceilings set before the first real measurement would be
 invented. Once P1 produces `/asciimath`, `/mathml` and `/latex`, the isolation
 gate reports actual sizes and the budgets can be set from evidence.
 
-## Shared-repo extraction and naming
+## Symbol data as shared data
 
-Corpus first, symbol data later ([cross-cutting](cross-cutting.md)). Naming
-candidates follow the organisation's conventions: `plurimath-testsuite` matches
-the existing `-testsuite` repositories and the maintainer's own phrasing;
-`plurimath-spec` or `plurimath-data` would cover symbol data too if the two
-ever share a repository.
+The corpus half of this question is **settled**: the shared repository exists,
+it is named `plurimath-testsuite`, and this package consumes it as a submodule
+([cross-cutting](cross-cutting.md)).
+
+What is still open is the bigger half. Making symbol data authoritative means
+the Ruby gem generating its symbol classes from it, so it needs the
+maintainer's agreement and gem work, not just a repository. Two sub-questions
+travel with it: whether symbol data shares `plurimath-testsuite` or gets its
+own repository, and who governs symbol ids once two implementations depend on
+them.
+
+Nothing blocks the port meanwhile: symbol data is generated straight into this
+repository as TypeScript.
 
 ## MathML/OMML input strategy
 

@@ -91,6 +91,9 @@ src/
                      Imports: nothing internal.
   core/              Formula + node model, format-blind. No render logic,
                      no parse logic. Imports: nothing internal.
+    generated/       Core's own data, part of the layer (rule 1): the entity
+                     table and the canonical symbol values Ruby's `==` reads.
+                     Never edited by hand.
   formats/
     asciimath/       parse (grammar + transform) → Formula.
                      Imports: pegkit, core, its own data slice.
@@ -120,14 +123,22 @@ src/
     mathml/          Output descriptors for the mathml renderer (own file).
     ...              One physical file set per format. Never one merged blob,
                      never edited by hand.
-scripts/             Ruby extraction: corpus + per-format symbol data.
+scripts/             Ruby extraction: corpus + per-format symbol data
+                     (generate-corpus.rb), and core's own data
+                     (generate-core-data.rb). One generator per owned
+                     directory, each recording its own provenance.
 test/                Corpus conformance, pegkit conformance, unit tests,
                      package-isolation tests.
 ```
 
 **Dependency rules** (machine-enforced, §8):
 
-1. `pegkit`, `core`, and `xml` import nothing from `src/`.
+1. `pegkit`, `core`, and `xml` import nothing from **other `src/` layers**.
+   Generated data a layer owns, under that layer's own directory, is part of
+   the layer — `core/generated/` is core, and reading it is not a cross-layer
+   import. The rule exists to keep layer 1 free of upward dependencies, not to
+   deny a layer its own data. Layer 1 still may not import `src/generated/`,
+   which is format-owned.
 2. **Leaf services** import only `core` and their own data, and are the sole
    modules a format may import besides the layer-1 modules. Today that is
    `formatting`; `unitsml` joins this tier if and when it is built (§5).
@@ -189,6 +200,31 @@ does exactly this — one tsup entry, one JSON blob). Therefore:
 A format subpath exports every function that format owns — parsing *and*
 rendering when both exist. Subpaths appear only when their implementation
 lands; an unimplemented format has no subpath (not a throwing stub).
+
+**Two node types, and which one a signature takes** (decided 2026-08-03; §5
+has the model view). `/core` exports both:
+
+```ts
+type ConstructedMathNode = FracNode | NumberNode | ...;  // instances, carry equals()
+type MathNode            = /* the same union minus `equals` */;  // the data shape
+```
+
+`MathNode` is what every public signature takes — renderers, `normalize`,
+`isMathNode`, and the module function `equals(a, b)` — because §5's dispatch
+is structural: an object with a known `kind` and a valid shape is a node
+whatever produced it, so a caller may hand over a plain object built by JSON,
+a test fixture, or another library. `ConstructedMathNode` is what a
+constructor returns and the only type on which `node.equals(other)` — the
+method §4 promises — is reachable.
+
+One type cannot be both, and the attempt was a real regression: giving the
+classes an `equals` method made every plain object stop being a `MathNode`
+(`Property 'equals' is missing … but required in type 'NumberNode'`) while the
+whole suite stayed green, because nothing tested assignability. The split
+follows Ruby, where the node's `==` belongs to the instance and a same-shape
+Hash does not get it (verified: `hash.method(:==).owner` is `Hash`, and
+`hash.value` raises `NoMethodError`), rather than inventing a TypeScript
+convention.
 
 Modern surface (per-format modules) — **every** renderer takes an options
 object (§5 convention), even where it is currently empty, so adding an option
@@ -269,11 +305,27 @@ entry — one more API shape than users need (D3, over-implementation guard).
 `"number"`, `"symbol"`, `"frac"`, ...). They hold structure only: parameters,
 values, equality. No `toX` methods, no render or parse imports.
 
-**The union is closed.** `MathNode` is a discriminated union of the concrete
-node classes. No `kind: string` escape hatch, no generic base-node type, no
-runtime-registered node kinds — `assertNever` exhaustiveness is a design
-guard only while the union stays closed. Structural kinds (frac, power, table)
-are distinct from symbol/operation **ids** carried as data on symbol nodes.
+**The union is closed, and there are two of it** (decided 2026-08-03; §4 has
+the API view). `ConstructedMathNode` is the discriminated union of the node
+*classes* — instances, which carry `equals()`. `MathNode` is the same union as
+**data**, derived from it by dropping that one member, and it is the type
+every structural surface takes: renderers, `normalize`, `isMathNode` and the
+module function `equals(a, b)`. A plain object with a known `kind` and a valid
+shape is a `MathNode` and needs no constructor, which is what the runtime
+boundary below already promised; a union of classes cannot say that, because
+it rejects the object for want of `equals`. Both are closed: no `kind: string`
+escape hatch, no generic base-node type, no runtime-registered node kinds —
+`assertNever` exhaustiveness is a design guard only while they stay closed.
+Structural kinds (frac, power, table) are distinct from symbol/operation
+**ids** carried as data on symbol nodes.
+
+Deriving `MathNode` from `ConstructedMathNode` rather than declaring the two
+side by side is deliberate: a field added to a class cannot drift out of the
+data shape, and a kind added to one union is a kind in the other. The
+compile-time fixture is `test/core/node-types.spec.ts`, which asserts both
+directions — a plain object *is* assignable, `new FracNode().equals(x)`
+typechecks, and a wrong shape still fails — because no runtime test can see
+either promise break.
 
 **Union membership is census-driven, and locks late.** Widening an exported
 exhaustive union after publication breaks consumers, and later input formats
@@ -283,10 +335,13 @@ Two safeguards, not one:
 
 - A **generated model schema** — not merely a list of kind names — is emitted
   from the gem: for every node class, its concrete/abstract status, aliases,
-  field names and shapes, and equality fields. (Ruby constructor arity is
-  deliberately excluded — TS constructors diverge by design, so it would have
-  no consumer.) Every discovered class is classified **implemented / aliased /
-  explicitly deferred**; the deferred set is audited and named (today:
+  field names and shapes, equality fields, and the **constructor defaults**
+  (below). (Ruby constructor *signatures* stay excluded — TS constructors take
+  one options object by design, so parameter order and keyword-versus-
+  positional have no consumer. The count of required positionals is recorded
+  only as provenance for the default probe: it is what the probe passed.)
+  Every discovered class is classified **implemented / aliased / explicitly
+  deferred**; the deferred set is audited and named (today:
   `Math::Function::Unitsml`), so a deferred class cannot silently enter the
   union, and a newly appearing unclassified class fails generation. The union
   and the equality projection are declared from the implemented set.
@@ -356,6 +411,20 @@ Ruby-derived equal/unequal pairs — *not* against the normalized-model
 comparison, which is a different, stricter equivalence. Canonical
 serialization stays internal; it is not the public equality.
 
+Mirroring the gem includes mirroring where it **fails** (2026-08-03).
+`Symbols::Symbol#==` decodes both values through `HTMLEntities`, whose
+`codepoint.chr(Encoding::UTF_8)` raises `RangeError` above U+10FFFF and on a
+surrogate, and the gem lets that out of `==`: `Symbol.new("&#xD800;") ==
+Symbol.new("&#xD800;")` raises rather than answering. So does this. The
+earlier position — "an equality predicate must not throw", answering `true`
+instead — was a nicety the contract does not allow; the gem is the oracle, and
+being more sensible than it is a divergence. It is JavaScript's own
+`RangeError`, **not** a `PlurimathError`: the package codes name package
+operations, and this is the language failing to build a string. Half of it
+comes free (`String.fromCodePoint` raises above U+10FFFF); the surrogate half
+is thrown explicitly, because JavaScript will happily hand back a lone
+surrogate where Ruby has no such string.
+
 **Errors (decided 2026-07-28).** A `PlurimathError` base with subclasses
 `ParseError { input, format, index }`, `UnsupportedFormatError { format }`,
 `MissingSymbolDataError { symbolId, format }`, `RenderError { format, kind }` —
@@ -372,9 +441,57 @@ programmatically is a supported use. They do not *validate* — an invalid
 hand-built tree fails at render with `RenderError`, never a raw `TypeError`.
 This is an intentional divergence from Ruby, whose constructors coerce and
 run side effects (`Parslet::Slice` to string, `validate_left_right`); the TS
-constructors only defensively copy (see draft/finalize above).
-Construction-time validation stays YAGNI. Constructor signatures are
-experimental through `0.x` and become stable API at the `1.0` model lock (§9).
+constructors defensively copy (see draft/finalize above) and materialize
+defaults (below), and do nothing else. Construction-time validation stays
+YAGNI. Constructor signatures are experimental through `0.x` and become
+stable API at the `1.0` model lock (§9).
+
+**Constructor defaults (decided 2026-07-30).** A TS constructor assigns
+exactly the fields Ruby's `initialize` assigns, with Ruby's values.
+`new NumberNode({ value: "2" })` carries `base: null`, `miniSubSized: false`
+and `miniSupSized: false`, because `Math::Number.new("2")` assigns all four
+instance variables — a node that omitted them would serialize three fields
+short of the corpus. A field the Ruby constructor never touches stays
+`undefined`: `hide_function_name` on every function, `input_string` on a
+formula (the parser sets it afterwards), everything but `value` on a symbol.
+The types carry the distinction — an always-assigned field has no
+`| undefined` in its declaration.
+
+The default set is **measured, not read**: the generator instantiates each
+class and inspects `instance_variables`. Source-reading would get it wrong,
+because assignment is routinely conditional and inconsistent between
+siblings (`Underset` stores an empty options hash; `Overset`, same signature,
+skips it). It lands in the census under each class's `defaults` key, split
+into `assigned` and `unassigned`, and the suite checks every implemented
+class against it.
+
+**Aliased classes carry their own defaults, and the carrier materializes
+them** (decided 2026-08-03). 21 of the 1,552 aliased classes override
+`initialize`: eight `FontStyle::*` put their family name in `parameter_two`
+(`Bold` → `"bold"`, `Normal` → `"rm"`), ten `Table::*` bring a bracket pair,
+`Td` and `Tr` start `parameter_one` at `[]`, and `Mglyph` starts it at `{}`.
+The port folds all of them into one carrier node, so the carrier looks the
+alias up by its full identity — `(kind, name)`, never `name` alone, since
+alias names are not unique across carriers — and assigns what Ruby would have.
+Four rules:
+
+- materialize **only** where the caller omitted the field, so an explicit
+  `null`, `false`, `[]` or `{}` survives;
+- allocate **fresh** arrays, objects and nested nodes per construction
+  (`Matrix`'s parens are nodes, `Td`/`Tr` need their own `[]`), because a
+  shared table would leak state between nodes;
+- an **unknown name keeps the carrier's own defaults** — construction stays
+  permissive and never throws;
+- the values are the census's measured `defaults.assigned`, transcribed.
+
+Measurement matters more here than anywhere else: `Table::Matrix#initialize`
+reads `open_paren = "("`, a **string**, and `Table#initialize` then runs it
+through `Utility.symbols_class`, so what the object actually holds is a
+`Paren::Lround` node. A port written from the source would have stored `"("`.
+
+Nothing is claimed about parsed trees. The AsciiMath transform does not exist
+yet, so "the transform always passes the value" — which this section used to
+say — is unfounded; when a transform lands, its own tests decide.
 
 **Renderer options (decided 2026-07-28).** One convention for every renderer:
 options are typed exactly, so unknown keys are rejected on fresh object

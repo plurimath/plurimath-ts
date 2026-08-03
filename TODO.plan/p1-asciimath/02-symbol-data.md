@@ -10,13 +10,17 @@ single merged blob would put every format's output strings into every bundle
 and quietly break the isolation guarantee (§3).
 
 ## Scope
-- Extend `scripts/generate-corpus.rb` (TODO 1) to emit, from the gem:
+- `scripts/generate-corpus.rb` — this repository's own generator, not the
+  shared one. It emits TypeScript, so the testsuite cannot host it: TypeScript
+  is useless to the Ruby gem or a future Python port. Generators that write
+  shared data live in the testsuite; this one does not
+  ([cross-cutting](../cross-cutting.md)). From the gem it emits:
   - `src/generated/asciimath/input.ts` — input string → symbol id, plus the
     ordered literal list the grammar dispatches on (longest-first).
   - `src/generated/<format>/symbols.ts` — symbol id → **static representation
     descriptor** for that format only.
-- Emit TypeScript, not JSON: the generator is ours, and `.ts` keeps the data
-  type-checked and lets the build treat it like any other module.
+- Emit TypeScript, not JSON: `.ts` keeps the data type-checked and lets the
+  build treat it like any other module.
 - Symbol ids are the Ruby class keys (`Sigma`, `Paren::Lround`). Treat them as
   schema values: a rename upstream requires an alias entry, never a silent
   change (§7).
@@ -33,7 +37,7 @@ implementation. They are hand-ported (§10).
 
 ## Done when
 
-- [ ] Every symbol the seed corpus touches resolves through generated data.
+- [ ] Every symbol the pinned corpus touches resolves through generated data.
 - [ ] The probe output names the context-dependent symbols, and the list matches
   what the gem actually does rather than a hand-written guess.
 - [ ] A symbol id missing from a renderer slice raises `MissingSymbolDataError`.

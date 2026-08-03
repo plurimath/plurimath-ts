@@ -504,7 +504,7 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
+      parameter_one:
     unassigned:
     - close_paren
     - hide_function_name
@@ -552,7 +552,7 @@ classes:
     required_arguments: 0
     assigned:
       attributes: {}
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Function::Base
@@ -576,8 +576,8 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
-      parameter_two: 
+      parameter_one:
+      parameter_two:
     unassigned:
     - hide_function_name
     - options
@@ -602,8 +602,8 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
-      parameter_two: 
+      parameter_one:
+      parameter_two:
     unassigned:
     - hide_function_name
 - name: Math::Function::Cancel
@@ -632,7 +632,7 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
+      parameter_one:
     unassigned:
     - close_paren
     - hide_function_name
@@ -657,8 +657,8 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
-      parameter_two: 
+      parameter_one:
+      parameter_two:
     unassigned:
     - hide_function_name
     - options
@@ -717,7 +717,7 @@ classes:
     required_arguments: 0
     assigned:
       attributes: {}
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Function::Deg
@@ -757,7 +757,7 @@ classes:
     required_arguments: 0
     assigned:
       attributes: {}
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Function::Exp
@@ -790,9 +790,9 @@ classes:
     required_arguments: 0
     assigned:
       options: {}
-      parameter_one: 
-      parameter_three: 
-      parameter_two: 
+      parameter_one:
+      parameter_three:
+      parameter_two:
     unassigned:
     - hide_function_name
 - name: Math::Function::Floor
@@ -815,7 +815,7 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
+      parameter_one:
     unassigned:
     - close_paren
     - hide_function_name
@@ -838,8 +838,8 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
-      parameter_two: 
+      parameter_one:
+      parameter_two:
     unassigned:
     - hide_function_name
 - name: Math::Function::FontStyle::Bold
@@ -851,7 +851,7 @@ classes:
   defaults:
     required_arguments: 1
     assigned:
-      parameter_one: 
+      parameter_one:
       parameter_two: bold
     unassigned:
     - hide_function_name
@@ -888,7 +888,7 @@ classes:
   defaults:
     required_arguments: 1
     assigned:
-      parameter_one: 
+      parameter_one:
       parameter_two: double-struck
     unassigned:
     - hide_function_name
@@ -901,7 +901,7 @@ classes:
   defaults:
     required_arguments: 1
     assigned:
-      parameter_one: 
+      parameter_one:
       parameter_two: fraktur
     unassigned:
     - hide_function_name
@@ -914,7 +914,7 @@ classes:
   defaults:
     required_arguments: 1
     assigned:
-      parameter_one: 
+      parameter_one:
       parameter_two: italic
     unassigned:
     - hide_function_name
@@ -927,7 +927,7 @@ classes:
   defaults:
     required_arguments: 1
     assigned:
-      parameter_one: 
+      parameter_one:
       parameter_two: monospace
     unassigned:
     - hide_function_name
@@ -940,7 +940,7 @@ classes:
   defaults:
     required_arguments: 1
     assigned:
-      parameter_one: 
+      parameter_one:
       parameter_two: rm
     unassigned:
     - hide_function_name
@@ -953,7 +953,7 @@ classes:
   defaults:
     required_arguments: 1
     assigned:
-      parameter_one: 
+      parameter_one:
       parameter_two: sans-serif
     unassigned:
     - hide_function_name
@@ -978,7 +978,7 @@ classes:
   defaults:
     required_arguments: 1
     assigned:
-      parameter_one: 
+      parameter_one:
       parameter_two: script
     unassigned:
     - hide_function_name
@@ -1003,8 +1003,8 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
-      parameter_two: 
+      parameter_one:
+      parameter_two:
     unassigned:
     - hide_function_name
     - options
@@ -1039,7 +1039,7 @@ classes:
     required_arguments: 0
     assigned:
       attributes: {}
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Function::Hom
@@ -1077,9 +1077,9 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
-      parameter_three: 
-      parameter_two: 
+      parameter_one:
+      parameter_three:
+      parameter_two:
     unassigned:
     - hide_function_name
     - options
@@ -1157,7 +1157,7 @@ classes:
     required_arguments: 0
     assigned:
       attributes: {}
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Function::Ln
@@ -1257,7 +1257,7 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
     - options
@@ -1314,10 +1314,10 @@ classes:
     required_arguments: 0
     assigned:
       options: {}
-      parameter_four: 
-      parameter_one: 
-      parameter_three: 
-      parameter_two: 
+      parameter_four:
+      parameter_one:
+      parameter_three:
+      parameter_two:
     unassigned: []
 - name: Math::Function::None
   parent: Math::Function::UnaryFunction
@@ -1345,7 +1345,7 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
+      parameter_one:
     unassigned:
     - close_paren
     - hide_function_name
@@ -1369,7 +1369,7 @@ classes:
     required_arguments: 0
     assigned:
       attributes: {}
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Function::Oint
@@ -1395,9 +1395,9 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
-      parameter_three: 
-      parameter_two: 
+      parameter_one:
+      parameter_three:
+      parameter_two:
     unassigned:
     - hide_function_name
     - options
@@ -1426,7 +1426,7 @@ classes:
     required_arguments: 0
     assigned:
       attributes: {}
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Function::Overset
@@ -1449,8 +1449,8 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
-      parameter_two: 
+      parameter_one:
+      parameter_two:
     unassigned:
     - hide_function_name
     - options
@@ -1495,9 +1495,9 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
-      parameter_three: 
-      parameter_two: 
+      parameter_one:
+      parameter_three:
+      parameter_two:
     unassigned:
     - hide_function_name
     - options
@@ -1579,7 +1579,7 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
     - options
@@ -1618,9 +1618,9 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
-      parameter_three: 
-      parameter_two: 
+      parameter_one:
+      parameter_three:
+      parameter_two:
     unassigned:
     - hide_function_name
     - options
@@ -1655,10 +1655,10 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      close_paren: 
-      open_paren: 
+      close_paren:
+      open_paren:
       options: {}
-      value: 
+      value:
     unassigned: []
 - name: Math::Function::Table::Align
   parent: Math::Function::Table
@@ -1672,13 +1672,13 @@ classes:
       close_paren:
         class: Math::Symbols::Paren::Rsquare
         fields:
-          value: 
+          value:
       open_paren:
         class: Math::Symbols::Paren::Lsquare
         fields:
-          value: 
+          value:
       options: {}
-      value: 
+      value:
     unassigned: []
 - name: Math::Function::Table::Array
   parent: Math::Function::Table
@@ -1692,11 +1692,11 @@ classes:
       close_paren:
         class: Math::Symbols::Paren::Rsquare
         fields:
-          value: 
+          value:
       open_paren:
         class: Math::Symbols::Paren::Lsquare
         fields:
-          value: 
+          value:
       options: {}
       value: []
     unassigned: []
@@ -1712,13 +1712,13 @@ classes:
       close_paren:
         class: Math::Symbols::Paren::Rsquare
         fields:
-          value: 
+          value:
       open_paren:
         class: Math::Symbols::Paren::Lsquare
         fields:
-          value: 
+          value:
       options: {}
-      value: 
+      value:
     unassigned: []
 - name: Math::Function::Table::Cases
   parent: Math::Function::Table
@@ -1736,7 +1736,7 @@ classes:
       open_paren:
         class: Math::Symbols::Paren::Lcurly
         fields:
-          value: 
+          value:
       options: {}
       value: []
     unassigned: []
@@ -1772,11 +1772,11 @@ classes:
       close_paren:
         class: Math::Symbols::Paren::Rround
         fields:
-          value: 
+          value:
       open_paren:
         class: Math::Symbols::Paren::Lround
         fields:
-          value: 
+          value:
       options: {}
       value: []
     unassigned: []
@@ -1792,13 +1792,13 @@ classes:
       close_paren:
         class: Math::Symbols::Paren::Rsquare
         fields:
-          value: 
+          value:
       open_paren:
         class: Math::Symbols::Paren::Lsquare
         fields:
-          value: 
+          value:
       options: {}
-      value: 
+      value:
     unassigned: []
 - name: Math::Function::Table::Pmatrix
   parent: Math::Function::Table
@@ -1812,13 +1812,13 @@ classes:
       close_paren:
         class: Math::Symbols::Paren::Rround
         fields:
-          value: 
+          value:
       open_paren:
         class: Math::Symbols::Paren::Lround
         fields:
-          value: 
+          value:
       options: {}
-      value: 
+      value:
     unassigned: []
 - name: Math::Function::Table::Split
   parent: Math::Function::Table
@@ -1832,13 +1832,13 @@ classes:
       close_paren:
         class: Math::Symbols::Paren::Rsquare
         fields:
-          value: 
+          value:
       open_paren:
         class: Math::Symbols::Paren::Lsquare
         fields:
-          value: 
+          value:
       options: {}
-      value: 
+      value:
     unassigned: []
 - name: Math::Function::Table::Vmatrix
   parent: Math::Function::Table
@@ -1852,13 +1852,13 @@ classes:
       close_paren:
         class: Math::Symbols::Paren::Vert
         fields:
-          value: 
+          value:
       open_paren:
         class: Math::Symbols::Paren::Vert
         fields:
-          value: 
+          value:
       options: {}
-      value: 
+      value:
     unassigned: []
 - name: Math::Function::Tan
   parent: Math::Function::UnaryFunction
@@ -1882,7 +1882,7 @@ classes:
     required_arguments: 0
     assigned:
       parameter_one: []
-      parameter_two: 
+      parameter_two:
     unassigned:
     - hide_function_name
 - name: Math::Function::TernaryFunction
@@ -1909,9 +1909,9 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
-      parameter_three: 
-      parameter_two: 
+      parameter_one:
+      parameter_three:
+      parameter_two:
     unassigned:
     - hide_function_name
 - name: Math::Function::Text
@@ -1932,7 +1932,7 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      lang: 
+      lang:
       parameter_one: ''
     unassigned:
     - hide_function_name
@@ -1955,7 +1955,7 @@ classes:
     required_arguments: 0
     assigned:
       attributes: {}
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Function::Tr
@@ -1989,7 +1989,7 @@ classes:
     required_arguments: 0
     assigned:
       attributes: {}
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Function::Ul
@@ -2011,7 +2011,7 @@ classes:
     required_arguments: 0
     assigned:
       attributes: {}
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Function::UnaryFunction
@@ -2032,7 +2032,7 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Function::Underover
@@ -2062,8 +2062,8 @@ classes:
     required_arguments: 0
     assigned:
       options: {}
-      parameter_one: 
-      parameter_two: 
+      parameter_one:
+      parameter_two:
     unassigned:
     - hide_function_name
 - name: Math::Function::Unitsml
@@ -2100,7 +2100,7 @@ classes:
     required_arguments: 0
     assigned:
       attributes: {}
-      parameter_one: 
+      parameter_one:
     unassigned:
     - hide_function_name
 - name: Math::Number
@@ -2128,10 +2128,10 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      base: 
+      base:
       mini_sub_sized: false
       mini_sup_sized: false
-      value: 
+      value:
     unassigned: []
 - name: Math::Symbols::Aa
   parent: Math::Symbols::Symbol
@@ -9439,7 +9439,7 @@ classes:
   defaults:
     required_arguments: 0
     assigned:
-      value: 
+      value:
     unassigned:
     - mini_sub_sized
     - mini_sup_sized

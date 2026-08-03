@@ -123,8 +123,47 @@ export const RUBY_ABSTRACT_CLASSES = [
  * the argument leaves the field `undefined`, which `./normalize` omits.
  * Shallow-copies a list argument so a caller's later `push` cannot reach in.
  */
+/**
+ * A value that carries node behaviour, as opposed to node-shaped data.
+ *
+ * Tests for the method rather than the prototype. `instanceof` answers "was
+ * this built by *this* copy of the module", which is not the question — a node
+ * from a second copy of the package, or another realm, is still a node, and
+ * spreading it into a plain object would strip its prototype and its
+ * `equals`. Shape cannot decide either: `kind` is a real `mglyph` attribute
+ * (`<mglyph kind="decorative"/>` renders fine in the gem), so an attributes
+ * hash and plain node data are indistinguishable by their keys.
+ */
+function isConstructedNode(value: object): boolean {
+  return typeof (value as { equals?: unknown }).equals === "function";
+}
+
+/**
+ * Shallow-copies anything a caller may still hold a reference to: every list
+ * and every object except a constructed node, which is immutable and whose
+ * identity is worth keeping.
+ *
+ * **This copying is a deliberate divergence from the gem** (§5). Ruby copies
+ * nothing — `Formula.new(array).value.equal?(array)` is `true`, and a caller's
+ * later `push` reaches straight into the node. Ruby can afford that because its
+ * nodes are mutable by design; ours are `readonly`, and a `readonly` field a
+ * caller can still change through their own reference is a promise we would be
+ * breaking silently. No output can tell the two apart, so parity is unaffected.
+ *
+ * The copy is one level deep, as §5 states: a caller mutating something nested
+ * inside what they passed is out of contract.
+ */
+function copySlot(value: NodeParameter): NodeParameter {
+  if (Array.isArray(value)) return [...value];
+  if (typeof value === "object" && value !== null && !isConstructedNode(value)) {
+    return { ...(value as NodeOptions) };
+  }
+  return value;
+}
+
+/** A slot Ruby's `initialize` leaves alone when it is not given one. */
 function copyParameter(value: NodeParameter | undefined): NodeParameter | undefined {
-  return Array.isArray(value) ? [...value] : value;
+  return value === undefined ? undefined : copySlot(value);
 }
 
 function copyOptions(value: NodeOptions | undefined): NodeOptions | undefined {
@@ -141,8 +180,7 @@ function assignedParameter(
   value: NodeParameter | undefined,
   fallback: NodeParameter = null,
 ): NodeParameter {
-  if (value === undefined) return fallback;
-  return Array.isArray(value) ? [...value] : value;
+  return copySlot(value === undefined ? fallback : value);
 }
 
 /** A hash slot Ruby's `initialize` assigns unconditionally, defaulting to `{}`. */

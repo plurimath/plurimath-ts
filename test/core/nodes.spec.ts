@@ -10,6 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { EQUALITY_FIELDS, equals } from "../../src/core/equality";
 import {
+  AbsNode,
   BinaryFunctionNode,
   FontStyleNode,
   FormulaNode,
@@ -344,6 +345,64 @@ describe("immutability", () => {
     const row = new UnaryFunctionNode({ name: "Tr", parameterOne: cells });
     cells.push(new SymbolNode({ value: "b" }));
     expect(row.parameterOne).toHaveLength(1);
+  });
+
+  it("shallow-copies a hash handed to a parameter slot", () => {
+    // `Mglyph` is the only class whose parameter slot holds an attribute hash
+    // rather than a node or a list, so widening `NodeParameter` to admit one
+    // left it as the single slot the copy helpers did not cover.
+    const attributes: Record<string, unknown> = { alt: "before" };
+    const glyph = new UnaryFunctionNode({ name: "Mglyph", parameterOne: attributes });
+    attributes.alt = "after";
+    expect(glyph.parameterOne).toEqual({ alt: "before" });
+  });
+
+  it("copies that hash even when it carries a `kind` key", () => {
+    // `kind` is a real mglyph attribute — the gem renders
+    // `<mglyph kind="decorative"/>` — so a hash and plain node data cannot be
+    // told apart by shape. Which slot it is decides, not what it looks like.
+    const attributes: Record<string, unknown> = { kind: "decorative", alt: "before" };
+    const glyph = new UnaryFunctionNode({ name: "Mglyph", parameterOne: attributes });
+    attributes.alt = "after";
+    expect(glyph.parameterOne).toEqual({ kind: "decorative", alt: "before" });
+  });
+
+  it("does not clone a node handed to a node slot", () => {
+    const inner = new SymbolNode({ value: "x" });
+    const sin = new UnaryFunctionNode({ name: "Sin", parameterOne: inner });
+    expect(sin.parameterOne).toBe(inner);
+  });
+
+  it("keeps a node built by another copy of the module intact", () => {
+    // A node from a second copy of the package, or another realm, fails
+    // `instanceof` while being a perfectly good node. Spreading it would strip
+    // its prototype and its `equals`, so recognition is by the method.
+    const foreign = Object.create(Object.getPrototypeOf(new SymbolNode({ value: "x" }))) as {
+      kind: string;
+      value: string;
+      equals: unknown;
+    };
+    Object.assign(foreign, { kind: "symbol", value: "x" });
+    const sin = new UnaryFunctionNode({ name: "Sin", parameterOne: foreign as never });
+    expect(sin.parameterOne).toBe(foreign);
+    expect(typeof (sin.parameterOne as { equals?: unknown }).equals).toBe("function");
+  });
+
+  it("copies a hash handed to a slot Ruby never assigns", () => {
+    // These four paren slots have no default to consult, but the public type
+    // accepts a hash through `NodeParameter`, so a caller can pass one. Ruby's
+    // own constructors never do — the exposure is ours, not the gem's.
+    const attributes: Record<string, unknown> = { alt: "before" };
+    const node = new AbsNode({ openParen: attributes });
+    attributes.alt = "after";
+    expect(node.openParen).toEqual({ alt: "before" });
+  });
+
+  it("gives each node its own copy of a hash default", () => {
+    const first = new UnaryFunctionNode({ name: "Mglyph" });
+    const second = new UnaryFunctionNode({ name: "Mglyph" });
+    (first.parameterOne as Record<string, unknown>).alt = "leaked";
+    expect(second.parameterOne).toEqual({});
   });
 
   it("shallow-copies an options object, so a later key assignment cannot reach in", () => {

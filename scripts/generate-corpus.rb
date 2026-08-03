@@ -1876,6 +1876,12 @@ module CorpusGenerator
     # references by design — so rebuild the structure to break identity.
     data = unshare(data)
     yaml = Psych.dump(data, line_width: -1)
+    # Psych writes a nil value as `key: `, with a trailing space. Parsers do not
+    # care, but it is generated output, so every regeneration would reintroduce
+    # whitespace a linter or reviewer flags. Stripping it is safe only because
+    # the round-trip below verifies it: had it altered anything real — content
+    # inside a block scalar, say — the payload would no longer match.
+    yaml = yaml.gsub(/[ \t]+$/, "")
     round_trip = Psych.safe_load(yaml, aliases: false)
     raise Error, "YAML round-trip changed the payload" unless round_trip == data
 

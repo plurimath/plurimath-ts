@@ -404,6 +404,23 @@ a finished node. Nested objects the caller placed inside are not deep-cloned —
 mutating those is out of contract and unsupported. (Nodes themselves are
 immutable, so a tree of nodes has no mutable interior.)
 
+**This copying is a deliberate divergence from the gem (decided 2026-08-03),
+and the only one in the node model.** Ruby copies nothing:
+`Formula.new(array).value.equal?(array)` is `true`, and mutating `array`
+afterwards changes the node. Ruby can afford that because its nodes carry
+`attr_accessor` and were never immutable; ours are `readonly`, and a `readonly`
+field a caller can still change through their own reference is a promise broken
+silently. The divergence is invisible to every output — parse and render are
+identical either way, and the corpus passes with or without it — so it costs no
+parity. It is recorded here rather than left implicit because a port accretes
+divergences one reasonable decision at a time, and an unnamed one is the kind
+that is discovered rather than chosen.
+
+A constructed node is recognised by carrying `equals` as a method, not by
+`instanceof`: a node from a second copy of the package, or another realm, is
+still a node, and spreading it into a plain object would strip its prototype.
+Shape cannot decide it either — `kind` is a legitimate `mglyph` attribute.
+
 **Equality (decided 2026-07-28).** Nodes expose structural `equals()`
 mirroring Ruby's `==` per kind, using the generated equality projection above
 (bookkeeping excluded exactly where Ruby excludes it). It is tested against

@@ -124,18 +124,13 @@ export const RUBY_ABSTRACT_CLASSES = [
  * Shallow-copies a list argument so a caller's later `push` cannot reach in.
  */
 /**
- * A value that carries node behaviour, as opposed to node-shaped data.
+ * A node this package constructed, as opposed to node-shaped data.
  *
- * Tests for the method rather than the prototype. `instanceof` answers "was
- * this built by *this* copy of the module", which is not the question — a node
- * from a second copy of the package, or another realm, is still a node, and
- * spreading it into a plain object would strip its prototype and its
- * `equals`. Shape cannot decide either: `kind` is a real `mglyph` attribute
- * (`<mglyph kind="decorative"/>` renders fine in the gem), so an attributes
- * hash and plain node data are indistinguishable by their keys.
+ * Reads the brand a constructor set (see `NODE_BRAND`) rather than testing
+ * shape or prototype, both of which a caller's value can imitate.
  */
 function isConstructedNode(value: object): boolean {
-  return typeof (value as { equals?: unknown }).equals === "function";
+  return (value as { [NODE_BRAND]?: unknown })[NODE_BRAND] === true;
 }
 
 /**
@@ -368,7 +363,25 @@ function aliasDefaults(kind: NodeKind, name: string | undefined): AliasConstruct
  * Extending it is what makes a class a `ConstructedMathNode`; everything that
  * only needs the fields takes `MathNode` instead.
  */
+/**
+ * Marks an object as built by a node constructor.
+ *
+ * From the global registry, so it is the same symbol in a second copy of the
+ * package and in another realm — the case `instanceof` gets wrong. And because
+ * it is a symbol, data decoded from YAML or JSON cannot carry it: those produce
+ * string keys only, which is what makes it unspoofable by an options hash.
+ *
+ * Three narrower tests were tried and each was defeated. `instanceof` fails
+ * across module copies. Testing for a `kind` key fails because `kind` is a real
+ * `mglyph` attribute. Testing for an `equals` method fails because
+ * `NodeOptions` admits arbitrary values, a function among them.
+ */
+const NODE_BRAND: unique symbol = Symbol.for("@plurimath/plurimath-ts#node") as never;
+
 class NodeBase {
+  /** @internal Not part of the public shape; see `NODE_BRAND`. */
+  readonly [NODE_BRAND] = true as const;
+
   equals(other: unknown): boolean {
     return nodeEquals(this as unknown as MathNode, other);
   }
@@ -1502,7 +1515,7 @@ export type ConstructedMathNode =
  * discriminated union that `switch (node.kind)` narrows and `assertNever`
  * closes.
  */
-type NodeData<T> = T extends unknown ? Omit<T, "equals"> : never;
+type NodeData<T> = T extends unknown ? Omit<T, "equals" | typeof NODE_BRAND> : never;
 
 /**
  * The closed discriminated union of every concrete node kind, as **data**

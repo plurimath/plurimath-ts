@@ -374,18 +374,32 @@ describe("immutability", () => {
   });
 
   it("keeps a node built by another copy of the module intact", () => {
-    // A node from a second copy of the package, or another realm, fails
-    // `instanceof` while being a perfectly good node. Spreading it would strip
-    // its prototype and its `equals`, so recognition is by the method.
-    const foreign = Object.create(Object.getPrototypeOf(new SymbolNode({ value: "x" }))) as {
-      kind: string;
-      value: string;
-      equals: unknown;
-    };
-    Object.assign(foreign, { kind: "symbol", value: "x" });
+    // A second copy of the package has its own classes, so this object fails
+    // `instanceof` against ours while being a real node. It carries the brand
+    // because that symbol comes from the global registry, which is shared.
+    // Built without our prototype on purpose: with it, the test would pass
+    // under `instanceof` too and prove nothing.
+    const brand = Symbol.for("@plurimath/plurimath-ts#node");
+    const foreign = { kind: "symbol", value: "x", [brand]: true };
+    expect(foreign instanceof SymbolNode).toBe(false);
+
     const sin = new UnaryFunctionNode({ name: "Sin", parameterOne: foreign as never });
     expect(sin.parameterOne).toBe(foreign);
-    expect(typeof (sin.parameterOne as { equals?: unknown }).equals).toBe("function");
+  });
+
+  it("copies an options hash even when it carries an `equals` function", () => {
+    // `NodeOptions` is `Record<string, unknown>`, so a function is a legal
+    // value. Recognising nodes by their `equals` method therefore mistook a
+    // hash like this for a node and left it aliased.
+    const attributes: Record<string, unknown> = {
+      alt: "before",
+      equals() {
+        return false;
+      },
+    };
+    const glyph = new UnaryFunctionNode({ name: "Mglyph", parameterOne: attributes });
+    attributes.alt = "after";
+    expect((glyph.parameterOne as Record<string, unknown>).alt).toBe("before");
   });
 
   it("copies a hash handed to a slot Ruby never assigns", () => {

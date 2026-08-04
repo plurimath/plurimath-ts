@@ -408,9 +408,17 @@ immutable, so a tree of nodes has no mutable interior.)
 and the only one in the node model.** Ruby copies nothing:
 `Formula.new(array).value.equal?(array)` is `true`, and mutating `array`
 afterwards changes the node. Ruby can afford that because its nodes carry
-`attr_accessor` and were never immutable; ours are `readonly`, and a `readonly`
-field a caller can still change through their own reference is a promise broken
-silently. The divergence is invisible to every output — parse and render are
+`attr_accessor` and were never immutable.
+
+Stated precisely, because the looser version is wrong: `readonly` does not
+*require* this. It is compile-time only and shallow, so it would happily
+coexist with an aliased array. What we are doing is **choosing a stronger
+guarantee than `readonly` gives** — that a finished node cannot change at all,
+including through a reference the caller kept — and copying is what makes that
+true. The alternative was to keep `readonly` as decoration, which is worse than
+either honest position.
+
+The divergence is invisible to every output — parse and render are
 identical either way, and the corpus passes with or without it — so it costs no
 parity. It is recorded here rather than left implicit because a port accretes
 divergences one reasonable decision at a time, and an unnamed one is the kind

@@ -16,7 +16,12 @@ jobs:
   gates:
     runs-on: ubuntu-latest
     steps:
+      # The conformance cases live in the plurimath-testsuite submodule. Without
+      # this the reader finds nothing — and fails loudly rather than passing an
+      # empty suite, but the job would fail for the wrong reason.
       - uses: actions/checkout@v5
+        with:
+          submodules: true
 
       - uses: pnpm/action-setup@v4
 
@@ -40,7 +45,12 @@ jobs:
       matrix:
         node-version: [20, 22, 24]
     steps:
+      # The conformance cases live in the plurimath-testsuite submodule. Without
+      # this the reader finds nothing — and fails loudly rather than passing an
+      # empty suite, but the job would fail for the wrong reason.
       - uses: actions/checkout@v5
+        with:
+          submodules: true
 
       - uses: pnpm/action-setup@v4
 

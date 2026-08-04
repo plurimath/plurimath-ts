@@ -1,8 +1,21 @@
 # frozen_string_literal: true
 
-# Generates the AsciiMath conformance corpus, the node census and the
+# Generates the node census, the deferred-feature exclusion list and the
 # per-format symbol data from the Ruby plurimath gem, which is the oracle
 # (ARCHITECTURE.md §1).
+#
+# It does NOT generate the conformance cases. Those are shared with every other
+# implementation and are owned by the `plurimath-testsuite` repository, whose
+# own copy of this generator writes them; this repository consumes them through
+# the submodule at submodules/plurimath-testsuite and reads them in TypeScript
+# (TODO.plan/cross-cutting.md). Two generators for one payload is how the two
+# drift apart. What is generated here is what the shared repository does not
+# own: the census and the exclusion list classify the gem's classes against
+# *this port's* roadmap, and the symbol data is TypeScript.
+#
+# The pinned cases are still read, to check what is generated here against them:
+# a case in the pin that uses a deferred construct must be in the exclusion
+# list, and every symbol the pin uses must have a generated descriptor.
 #
 # Usage, from the plurimath-ts repository root:
 #
@@ -19,10 +32,9 @@
 #   --help
 #
 # Outputs (payload + sidecar manifest per payload, §7):
-#   corpus/asciimath/<group>.yaml   conformance cases, grouped by feature
 #   corpus/census.yaml              every Math::Core descendant, classified
 #   corpus/exclusions.yaml          cases withheld because of a deferred feature
-#   corpus/**/<payload>.manifest.yaml
+#   corpus/<payload>.manifest.yaml
 #
 # Symbol data (TypeScript, one file set per format — never one merged blob, so
 # a renderer can bundle only its own slice, §3/§5):
@@ -44,7 +56,6 @@ module CorpusGenerator
   REPO_ROOT = File.expand_path("..", __dir__)
   GENERATOR_PATH = "scripts/generate-corpus.rb"
 
-  CORPUS_SCHEMA = "plurimath-corpus/asciimath/1"
   # 2 adds `defaults` (constructor-assigned field values) to each class entry.
   CENSUS_SCHEMA = "plurimath-corpus/census/2"
   EXCLUSIONS_SCHEMA = "plurimath-corpus/exclusions/1"
@@ -52,6 +63,14 @@ module CorpusGenerator
 
   INPUT_FORMAT = "asciimath"
   TARGET_FORMATS = %w[asciimath latex mathml].freeze
+
+  # --- the pinned shared corpus --------------------------------------------
+
+  # The submodule declared in .gitmodules. The cases it holds are read, never
+  # written: plurimath-testsuite owns them.
+  PIN_RELATIVE_PATH = "submodules/plurimath-testsuite"
+  PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2"
+  SUBMODULE_FIX = "git submodule update --init --recursive"
 
   # --- symbol data ---------------------------------------------------------
 
@@ -171,9 +190,17 @@ module CorpusGenerator
   NON_FIELD_IVAR_PREFIXES = %w[@__ @lutaml].freeze
   NON_FIELD_IVARS = %w[@using_default].freeze
 
-  # Seed corpus. Ids are stable and hand-assigned: they are the join key
-  # between the payload, the exclusion manifest, and the TypeScript suite, so
-  # they must not move when a case is inserted.
+  # The seed inputs, mirroring the list plurimath-testsuite generates its cases
+  # from. Only the withheld ones are used here — an input matching a deferred
+  # pattern becomes an entry in `corpus/exclusions.yaml` — but the whole list is
+  # kept because the exclusions must name the invalid inputs too, and those
+  # produce no case in the pin: the gem raises while building the node, so there
+  # is nothing there to withhold. `assert_pin_exclusions_complete!` checks this
+  # list against the pin, so the two cannot drift apart silently.
+  #
+  # Ids are stable and hand-assigned: they are the join key between the shared
+  # payload, the exclusion manifest, and the TypeScript suite, so they must not
+  # move when a case is inserted.
   GROUPS = [
     ["numbers", "Integer and decimal literals", [
       ["number-integer", "2"],
@@ -511,86 +538,108 @@ module CorpusGenerator
     { "class" => name, "fields" => fields }
   end
 
-  def serialize_tree(node, path)
-    case node
-    when nil, true, false, ::String, ::Integer, ::Float then node
-    when ::Symbol then node.to_s
-    when ::Parslet::Slice then node.to_s
-    when ::Array then node.each_with_index.map { |n, i| serialize_tree(n, "#{path}[#{i}]") }
-    when ::Hash
-      node.to_h { |key, value| [key.to_s, serialize_tree(value, "#{path}.#{key}")] }
-    else
-      raise Error, "cannot serialize parse tree node #{node.class} at #{path}"
-    end
-  end
-
-  def node_classes(value, acc = [])
+  # The Ruby class names in a `model:` block read back out of the pinned corpus.
+  # A node is a mapping with a "class" and a "fields"; everything else is walked
+  # through.
+  def model_classes(value, acc = [])
     case value
-    when Plurimath::Math::Core
-      acc << class_key(value.class)
-      value.variables.each { |ivar| node_classes(value.get(ivar), acc) }
-    when ::Array then value.each { |v| node_classes(v, acc) }
-    when ::Hash then value.each_value { |v| node_classes(v, acc) }
+    when ::Hash
+      acc << value["class"] if value["class"].is_a?(::String) && value.key?("fields")
+      value.each_value { |v| model_classes(v, acc) }
+    when ::Array then value.each { |v| model_classes(v, acc) }
     end
     acc
   end
 
-  # --- corpus --------------------------------------------------------------
+  # --- exclusions ----------------------------------------------------------
 
-  def build_case(id, input)
-    formula = Plurimath::Math.parse(input, INPUT_FORMAT.to_sym)
-    preprocessed = Plurimath::Asciimath::Parser.new(input).text
-    tree = Plurimath::Asciimath::Parse.new.parse(preprocessed)
+  def build_exclusions
+    GROUPS.flat_map do |name, _description, cases|
+      cases.filter_map do |id, input|
+        feature = deferred_feature_for(input)
+        next unless feature
 
-    {
-      "id" => id,
-      "input" => input,
-      "input_format" => INPUT_FORMAT,
-      "preprocessed" => preprocessed,
-      "expected" => {
-        "asciimath" => formula.to_asciimath,
-        "latex" => formula.to_latex,
-        "mathml" => formula.to_mathml,
-      },
-      "parse_tree" => serialize_tree(tree, id),
-      "model" => serialize_node(formula, id),
-      "_classes" => node_classes(formula).uniq.sort,
-    }
+        {
+          "id" => id,
+          "group" => name,
+          "input" => input,
+          "input_format" => INPUT_FORMAT,
+          "feature" => feature,
+          "matched" => DEFERRED_INPUT_PATTERNS.fetch(feature).source,
+          "reason" => "#{feature} is deferred (ARCHITECTURE.md §5); matched " \
+                      "on the input text, since the gem raises for invalid " \
+                      "#{feature} and produces no formula to inspect",
+        }
+      end
+    end
   end
 
-  def build_corpus
-    groups = []
-    exclusions = []
+  # --- the pinned shared corpus, read-only ---------------------------------
 
-    GROUPS.each do |name, description, cases|
-      built = cases.filter_map do |id, input|
-        feature = deferred_feature_for(input)
-        if feature
-          exclusions << {
-            "id" => id,
-            "group" => name,
-            "input" => input,
-            "input_format" => INPUT_FORMAT,
-            "feature" => feature,
-            "matched" => DEFERRED_INPUT_PATTERNS.fetch(feature).source,
-            "reason" => "#{feature} is deferred (ARCHITECTURE.md §5); matched " \
-                        "on the input text, since the gem raises for invalid " \
-                        "#{feature} and produces no formula to inspect",
-          }
-          next
-        end
+  def pin_root
+    File.join(REPO_ROOT, PIN_RELATIVE_PATH)
+  end
 
-        begin
-          build_case(id, input)
-        rescue StandardError => e
-          raise Error, "case #{id} (#{input.inspect}) failed: #{e.class}: #{e.message}"
-        end
-      end
+  def missing_pin!(detail)
+    raise Error, <<~MESSAGE
+      The pinned corpus is not readable: #{detail}
+      The shared conformance cases live in the #{PIN_RELATIVE_PATH} submodule,
+      which this checkout has not initialised. Run: #{SUBMODULE_FIX}
+    MESSAGE
+  end
 
-      groups << [name, description, built]
+  # Reads every case in the pin, verifying each payload against the bytes and
+  # digest `corpus/provenance.yaml` records. An uninitialised submodule raises
+  # here rather than yielding an empty list, which would make every check below
+  # pass while inspecting nothing.
+  def read_pin_cases
+    provenance_path = File.join(pin_root, "corpus", "provenance.yaml")
+    missing_pin!("#{provenance_path} does not exist") unless File.exist?(provenance_path)
+
+    provenance = YAML.safe_load(File.read(provenance_path), aliases: false)
+    schema = provenance["schema"]
+    unless schema == PIN_PROVENANCE_SCHEMA
+      raise Error, "#{provenance_path}: schema is #{schema.inspect}, expected " \
+                   "#{PIN_PROVENANCE_SCHEMA.inspect}"
+    end
+    unless provenance["committable"] == true
+      raise Error, "#{provenance_path}: the pin is marked committable: false; it was " \
+                   "not generated the canonical way (§7)"
+    end
+    unless provenance["xml_engine"] == "Plurimath::XmlEngine::OxEngine"
+      raise Error, "#{provenance_path}: generated with #{provenance['xml_engine']}, " \
+                   "not Ox (§7)"
     end
 
-    [groups, exclusions]
+    payloads = provenance["payloads"] || []
+    raise Error, "#{provenance_path} lists no payloads" if payloads.empty?
+
+    cases = payloads.flat_map { |entry| read_pin_payload(entry) }
+    raise Error, "the pin at #{pin_root} contains no cases" if cases.empty?
+
+    cases
+  end
+
+  def read_pin_payload(entry)
+    path = File.join(pin_root, "corpus", entry.fetch("path"))
+    missing_pin!("#{path} is listed in corpus/provenance.yaml but is not on disk") unless
+      File.exist?(path)
+
+    bytes = File.binread(path)
+    if bytes.bytesize != entry.fetch("bytes") || sha256(bytes) != entry.fetch("sha256")
+      raise Error, "#{path} does not match corpus/provenance.yaml; the pinned corpus " \
+                   "was edited in place. Restore it with " \
+                   "`git -C #{PIN_RELATIVE_PATH} checkout .`"
+    end
+
+    document = YAML.safe_load(bytes, aliases: false)
+    group = document["group"]
+    raise Error, "#{path} declares no group" if group.nil? || group.empty?
+
+    cases = document["cases"] || []
+    raise Error, "#{path} has no cases" if cases.empty?
+
+    cases.map { |kase| kase.merge("group" => group) }
   end
 
   # --- census --------------------------------------------------------------
@@ -1817,11 +1866,12 @@ module CorpusGenerator
     }
   end
 
-  # Every symbol the seed corpus touches must resolve through the generated
+  # Every symbol the pinned corpus touches must resolve through the generated
   # data. This is the check that keeps the slices honest against the oracle.
-  def assert_corpus_symbols_covered!(groups, data)
-    ids = groups.flat_map { |_name, _description, cases| cases }
-      .flat_map { |kase| kase["_classes"] }
+  def assert_corpus_symbols_covered!(pin_cases, exclusions, data)
+    withheld = exclusions.map { |entry| entry["id"] }
+    ids = pin_cases.reject { |kase| withheld.include?(kase["id"]) }
+      .flat_map { |kase| model_classes(kase["model"]) }
       .select { |key| key.start_with?(SYMBOL_NAMESPACE) }
       .map { |key| key.delete_prefix(SYMBOL_NAMESPACE) }.uniq.sort
     # A check that matched nothing would pass while proving nothing, which is
@@ -2038,15 +2088,45 @@ module CorpusGenerator
     }
   end
 
-  def assert_no_deferred_classes!(groups)
-    deferred = groups.flat_map { |_name, _description, cases| cases }
-      .flat_map { |kase| kase["_classes"].map { |k| [kase["id"], k] } }
+  # The exclusion list is built from the seed inputs above; the cases are built
+  # in another repository. These two checks are what stops the two lists from
+  # drifting apart without anyone noticing.
+  def assert_pin_exclusions_complete!(pin_cases, exclusions)
+    withheld = exclusions.to_h { |entry| [entry["id"], entry] }
+
+    unclassified = pin_cases.select do |kase|
+      deferred_feature_for(kase["input"]) && !withheld.key?(kase["id"])
+    end
+    unless unclassified.empty?
+      raise Error, <<~MESSAGE
+        The pin has cases using a deferred construct that corpus/exclusions.yaml does
+        not withhold: #{unclassified.map { |k| "#{k['id']} (#{k['input'].inspect})" }.join(', ')}.
+        Add them to GROUPS here, or widen DEFERRED_INPUT_PATTERNS (§5).
+      MESSAGE
+    end
+
+    leaked = pin_cases.reject { |kase| withheld.key?(kase["id"]) }
+      .flat_map { |kase| model_classes(kase["model"]).map { |key| [kase["id"], key] } }
       .select { |_id, key| DEFERRED_CLASSES.include?(key) }
-    return if deferred.empty?
+    unless leaked.empty?
+      raise Error, <<~MESSAGE
+        Deferred classes reach cases the port does not withhold: #{leaked.map { |id, k| "#{id}=>#{k}" }.join(', ')}.
+        The deferred-feature classifier matches input text; widen it (§5).
+      MESSAGE
+    end
+
+    mismatched = pin_cases.filter_map do |kase|
+      entry = withheld[kase["id"]]
+      next if entry.nil? || entry["input"] == kase["input"]
+
+      "#{kase['id']}: pin has #{kase['input'].inspect}, exclusions say #{entry['input'].inspect}"
+    end
+    return if mismatched.empty?
 
     raise Error, <<~MESSAGE
-      Deferred classes reached the corpus: #{deferred.map { |id, k| "#{id}=>#{k}" }.join(', ')}.
-      The deferred-feature classifier matches input text; widen it (§5).
+      Exclusion ids no longer name the same inputs as the pin:
+        #{mismatched.join("\n  ")}
+      Ids are the join key between the pin and this repository; they must not move.
     MESSAGE
   end
 
@@ -2065,28 +2145,15 @@ module CorpusGenerator
     load_model_classes!(gem_dir)
 
     provenance = build_provenance(gem_dir, dirty, options[:allow_dirty])
-    groups, exclusions = build_corpus
-    assert_no_deferred_classes!(groups)
+    pin_cases = read_pin_cases
+    exclusions = build_exclusions
+    assert_pin_exclusions_complete!(pin_cases, exclusions)
     census = build_census(gem_dir)
     symbols = build_symbol_data
-    assert_corpus_symbols_covered!(groups, symbols)
+    assert_corpus_symbols_covered!(pin_cases, exclusions, symbols)
 
     out_root = options[:out]
     written = []
-
-    groups.each do |name, description, cases|
-      payload = {
-        "schema" => CORPUS_SCHEMA,
-        "group" => name,
-        "description" => description,
-        "input_format" => INPUT_FORMAT,
-        "targets" => TARGET_FORMATS,
-        "cases" => cases.map { |kase| kase.reject { |key, _| key == "_classes" } },
-      }
-      path = File.join(out_root, "asciimath", "#{name}.yaml")
-      bytes = write_payload(path, payload_header("AsciiMath conformance cases: #{name}."), payload)
-      written << [path, write_manifest(path, bytes, out_root, provenance)]
-    end
 
     exclusions_payload = {
       "schema" => EXCLUSIONS_SCHEMA,
@@ -2107,14 +2174,13 @@ module CorpusGenerator
 
     emitted = write_symbol_data(options[:symbols_out], symbols, provenance)
 
-    case_count = groups.sum { |_name, _description, cases| cases.length }
     written.each do |payload_path, manifest_path|
       puts "  #{relative(payload_path, REPO_ROOT)}"
       puts "  #{relative(manifest_path, REPO_ROOT)}"
     end
     emitted.sort.each { |path| puts "  #{relative(path, REPO_ROOT)}" }
-    puts "#{case_count} cases in #{groups.length} groups, " \
-         "#{exclusions.length} excluded, #{census['summary']['total']} classes"
+    puts "pin #{PIN_RELATIVE_PATH}: #{pin_cases.length} cases read, " \
+         "#{exclusions.length} withheld, #{census['summary']['total']} classes censused"
     probe = symbols["probe"]
     puts "#{symbols['static'].length} symbols across #{SYMBOL_FORMATS.join(', ')}; " \
          "#{symbols['tables']['counts']['merged']} inputs, " \

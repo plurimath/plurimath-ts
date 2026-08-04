@@ -9,8 +9,9 @@
  */
 
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
+import { loadPinnedCorpus, PINNED_CORPUS_ROOT, REPO_ROOT } from "./corpus-pin";
 import { parseYaml, type YamlValue } from "./corpus-yaml";
 
 /** Wraps a fragment in the smallest document the reader will start on. */
@@ -22,11 +23,12 @@ function value(body: string): YamlValue {
   return (read(body) as { readonly a: YamlValue }).a;
 }
 
-function corpusFiles(directory = "corpus"): readonly string[] {
+/** Every `*.yaml` under `directory`, recursively, as absolute paths. */
+function yamlFiles(directory: string): readonly string[] {
   const found: string[] = [];
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name);
-    if (entry.isDirectory()) found.push(...corpusFiles(path));
+    if (entry.isDirectory()) found.push(...yamlFiles(path));
     else if (entry.name.endsWith(".yaml")) found.push(path);
   }
   return found.sort();
@@ -102,14 +104,40 @@ describe("malformed escapes are rejected, not guessed", () => {
   });
 });
 
+/**
+ * The corpus is split across two roots now: the shared cases come from the
+ * `plurimath-testsuite` submodule, and only the census and the exclusion list —
+ * which encode this port's roadmap, not the gem's behaviour — stay here.
+ */
 describe("the corpus itself", () => {
-  const files = corpusFiles();
+  const local = yamlFiles(join(REPO_ROOT, "corpus"));
+  const pinned = yamlFiles(join(PINNED_CORPUS_ROOT, "corpus"));
 
-  it("finds every corpus document", () => {
-    expect(files.length).toBe(30);
+  it("keeps exactly the two payloads this repository still owns", () => {
+    // Named rather than counted: a stray `corpus/asciimath/` copy coming back
+    // is the failure this asserts against, and a count would not name it.
+    expect(local.map((path) => relative(REPO_ROOT, path))).toStrictEqual([
+      join("corpus", "census.manifest.yaml"),
+      join("corpus", "census.yaml"),
+      join("corpus", "exclusions.manifest.yaml"),
+      join("corpus", "exclusions.yaml"),
+    ]);
+  });
+
+  it("finds every document the pin ships", () => {
+    const corpus = loadPinnedCorpus();
+    const expected = [
+      ...corpus.provenance.payloads.map((payload) => `corpus/${payload.path}`),
+      "corpus/provenance.yaml",
+    ].sort();
+    const found = pinned.map((path) => relative(PINNED_CORPUS_ROOT, path).split("\\").join("/"));
+    expect(found).toStrictEqual(expected);
+    expect(found.length).toBe(14);
   });
 
   it("reads all of them to a mapping", () => {
+    const files = [...local, ...pinned];
+    expect(files.length).toBe(18);
     for (const file of files) {
       const document = parseYaml(readFileSync(file, "utf8"));
       expect(typeof document, file).toBe("object");
@@ -121,7 +149,8 @@ describe("the corpus itself", () => {
   it("keeps decoding the escape the corpus actually uses", () => {
     // Every double-quoted scalar in the corpus is a LaTeX string, and the only
     // escape in them is `\\`. If strictness ever reached that path, this breaks.
-    const document = parseYaml(readFileSync("corpus/asciimath/frac.yaml", "utf8")) as {
+    const path = join(PINNED_CORPUS_ROOT, "corpus", "asciimath", "frac.yaml");
+    const document = parseYaml(readFileSync(path, "utf8")) as {
       readonly cases: readonly {
         readonly id: string;
         readonly expected: { readonly latex: string };

@@ -55,7 +55,8 @@ describe("generated symbol slices", () => {
   });
 
   it("reproduce what the corpus records for the symbols it covers", () => {
-    // corpus/asciimath/symbols.yaml, case `symbol-infinity`.
+    // submodules/plurimath-testsuite/corpus/asciimath/symbols.yaml,
+    // case `symbol-infinity`.
     expect(ASCIIMATH_SYMBOLS.get("Oo")).toBe("oo");
     expect(LATEX_SYMBOLS.get("Oo")).toBe("\\infty");
     expect(MATHML_SYMBOLS.get("Oo")).toEqual({ tag: "mo", text: "&#x221e;" });

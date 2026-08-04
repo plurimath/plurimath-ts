@@ -1,7 +1,8 @@
 /**
  * The normalized model against Ruby's.
  *
- * Every `model:` block in `corpus/asciimath/*.yaml` was serialized by the gem.
+ * Every `model:` block in the pinned corpus (`submodules/plurimath-testsuite/
+ * corpus/asciimath/*.yaml`) was serialized by the gem.
  * Rebuilding a node tree from one and normalizing it back must reproduce that
  * block exactly — same class names, same field sets, same nil-versus-absent
  * distinction. This is the strict projection: any tree difference shows up.

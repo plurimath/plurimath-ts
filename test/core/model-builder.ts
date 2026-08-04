@@ -12,7 +12,8 @@
  * independent source.
  */
 
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 // Every factory here calls a constructor, so what comes back is an instance
 // carrying `equals`, not bare node data. Declaring `MathNode` would widen that
 // away and make `.equals` untypeable at the call sites (ARCHITECTURE.md §4).
@@ -97,6 +98,7 @@ import {
   VecNode,
 } from "../../src/core/nodes";
 import { NODE_SPECS } from "../../src/core/normalize";
+import { loadPinnedCorpus, PINNED_CORPUS_ROOT, REPO_ROOT, readExclusions } from "./corpus-pin";
 import { parseYaml, type YamlValue } from "./corpus-yaml";
 
 type Init = Record<string, unknown>;
@@ -186,7 +188,12 @@ export interface Census {
   readonly classes: readonly CensusEntry[];
 }
 
-export function readCensus(path = "corpus/census.yaml"): Census {
+/**
+ * The census stays in **this** repository: it classifies the gem's classes
+ * against this port's roadmap rather than describing the gem, which is why the
+ * shared testsuite dropped it (`TODO.plan/cross-cutting.md`).
+ */
+export function readCensus(path = join(REPO_ROOT, "corpus", "census.yaml")): Census {
   return parseYaml(readFileSync(path, "utf8")) as unknown as Census;
 }
 
@@ -261,18 +268,32 @@ export interface CorpusCase {
   readonly model: SerializedNode;
 }
 
-export function readCorpusCases(directory = "corpus/asciimath"): readonly CorpusCase[] {
-  const files = readdirSync(directory)
-    .filter((name) => name.endsWith(".yaml") && !name.endsWith(".manifest.yaml"))
-    .sort();
+/**
+ * The pinned cases this port is expected to reproduce: every case in the
+ * `plurimath-testsuite` submodule, minus the ones `corpus/exclusions.yaml`
+ * withholds because their input uses a deferred construct (ARCHITECTURE.md §5).
+ *
+ * The pin is verified before a single case is returned — see `corpus-pin.ts`.
+ * An uninitialised submodule throws here rather than yielding an empty list,
+ * which is the difference between a failing suite and a suite that passes while
+ * checking nothing.
+ */
+export function readCorpusCases(root: string = PINNED_CORPUS_ROOT): readonly CorpusCase[] {
+  const corpus = loadPinnedCorpus(root);
+  const withheld = new Set(readExclusions().map((entry) => entry.id));
   const cases: CorpusCase[] = [];
-  for (const file of files) {
-    const document = parseYaml(readFileSync(`${directory}/${file}`, "utf8")) as unknown as {
-      readonly cases: readonly { id: string; input: string; model: SerializedNode }[];
-    };
-    for (const entry of document.cases) {
-      cases.push({ id: entry.id, input: entry.input, model: entry.model });
+  for (const entry of corpus.cases) {
+    if (withheld.has(entry.id)) continue;
+    if (!isSerializedNode(entry.model)) {
+      throw new Error(`case ${entry.id}: "model" is not a serialized node`);
     }
+    cases.push({ id: entry.id, input: entry.input, model: entry.model });
+  }
+  if (cases.length === 0) {
+    throw new Error(
+      `${corpus.root}: all ${corpus.cases.length} pinned cases are withheld by ` +
+        "corpus/exclusions.yaml, so there is nothing to check against.",
+    );
   }
   return cases;
 }

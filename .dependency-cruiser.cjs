@@ -30,8 +30,12 @@ module.exports = {
         // has always allowed layer 1 to do (`src/core/index.ts` imports
         // `./errors` and is not a violation). Splitting a leaf service into
         // more than one file is not a layering breach.
+        // `src/generated/` is deliberately NOT allowed here. It holds
+        // format-owned data, and §3 rule 2 gives a leaf service `core` plus its
+        // own files and nothing else — so `formatting/` reaching into
+        // `generated/asciimath/` is the leak this rule exists to catch.
         path: "^src/",
-        pathNot: "^src/(core|generated)/|^src/$1/",
+        pathNot: "^src/core/|^src/$1/",
       },
     },
     {

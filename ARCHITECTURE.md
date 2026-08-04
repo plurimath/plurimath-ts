@@ -200,7 +200,7 @@ does exactly this — one tsup entry, one JSON blob). Therefore:
 @plurimath/plurimath/mathml        → toMathml (parser when ported)
 @plurimath/plurimath/latex         → toLatex (parser when ported)
 @plurimath/plurimath/core          → Formula, node types, errors
-@plurimath/plurimath/formatting    → number/locale formatting policy
+@plurimath/plurimath/formatting    → (NOT YET PUBLISHED — see below)
 @plurimath/plurimath/evaluation    → evaluate
 @plurimath/plurimath/unitsml       → (FUTURE — not published; UnitsML is deferred, §5)
 ...one subpath per format
@@ -209,6 +209,14 @@ does exactly this — one tsup entry, one JSON blob). Therefore:
 A format subpath exports every function that format owns — parsing *and*
 rendering when both exist. Subpaths appear only when their implementation
 lands; an unimplemented format has no subpath (not a throwing stub).
+
+`/formatting` follows that rule rather than being an exception to it. The
+module exists — `src/formatting/` resolves a decimal marker from a locale,
+because the AsciiMath `number` rule reads one at parse time — but that is a
+fraction of what the subpath will eventually mean, since number normalization
+(the `Formatter::Numbers` cross-cut) lands in P4. Publishing now would fix an
+API surface around a tenth of the feature. The grammar imports it internally;
+consumers get it when it is whole.
 
 **Two node types, and which one a signature takes** (decided 2026-08-03; §5
 has the model view). `/core` exports both:

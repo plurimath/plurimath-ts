@@ -14,7 +14,7 @@
  */
 
 import { RenderError } from "./errors";
-import { isMathNode, type MathNode, type NodeKind } from "./nodes";
+import { hasNodeKind, type MathNode, type NodeKind } from "./nodes";
 
 export type NormalizedValue =
   | null
@@ -389,6 +389,16 @@ export const NODE_SPECS: { readonly [K in NodeKind]: NodeSpec } = {
   },
 };
 
+// Frozen for the same reason as `EQUALITY_FIELDS`: `readonly` stops the
+// compiler, not a consumer. Deleting a kind's `fields` here would make
+// `normalize` emit an empty Ruby model that no gem output can match.
+for (const spec of Object.values(NODE_SPECS)) {
+  Object.freeze(spec.fields);
+  for (const pair of spec.fields) Object.freeze(pair);
+  Object.freeze(spec);
+}
+Object.freeze(NODE_SPECS);
+
 /** The Ruby class a node serializes as, alias name folded back in. */
 export function rubyClassName(node: MathNode): string {
   const spec = NODE_SPECS[node.kind];
@@ -428,7 +438,10 @@ function normalizeValue(value: unknown, path: string): NormalizedValue {
       normalizeValue(item, `${path}[${index}]`),
     );
   }
-  if (isMathNode(value)) return normalize(value);
+  // `hasNodeKind` deliberately does not narrow — it checks the discriminant and
+  // nothing else. Here the value came out of a node the model built, so the
+  // cast states what this call site knows and the guard does not.
+  if (hasNodeKind(value)) return normalize(value as MathNode);
   if (typeof value === "object" && typeof (value as { kind?: unknown }).kind === "string") {
     // Something node-shaped carrying a kind the union does not declare: a
     // forged or stale node. Serializing it as a plain hash would let a broken

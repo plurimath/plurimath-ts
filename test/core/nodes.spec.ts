@@ -16,7 +16,7 @@ import {
   FormulaNode,
   FracNode,
   HatNode,
-  isMathNode,
+  hasNodeKind,
   type MathNode,
   NODE_KINDS,
   type NodeKind,
@@ -373,18 +373,22 @@ describe("immutability", () => {
     expect(sin.parameterOne).toBe(inner);
   });
 
-  it("keeps a node built by another copy of the module intact", () => {
-    // A second copy of the package has its own classes, so this object fails
-    // `instanceof` against ours while being a real node. It carries the brand
-    // because that symbol comes from the global registry, which is shared.
-    // Built without our prototype on purpose: with it, the test would pass
-    // under `instanceof` too and prove nothing.
-    const brand = Symbol.for("@plurimath/plurimath-ts#node");
-    const foreign = { kind: "symbol", value: "x", [brand]: true };
-    expect(foreign instanceof SymbolNode).toBe(false);
-
+  it("copies a node it cannot recognise, rather than trusting it", () => {
+    // A node from a second copy of the package carries that copy's private
+    // brand, so this one does not recognise it. The safe direction is to copy:
+    // the result is structurally identical and `normalize`/`equals` cannot tell
+    // the difference, whereas trusting an unrecognised value would let a caller
+    // reach into a finished node. The brand is deliberately NOT `Symbol.for`,
+    // which any caller could read and set.
+    const foreign = { kind: "symbol", value: "x" };
     const sin = new UnaryFunctionNode({ name: "Sin", parameterOne: foreign as never });
-    expect(sin.parameterOne).toBe(foreign);
+
+    expect(sin.parameterOne).not.toBe(foreign);
+    expect(sin.parameterOne).toStrictEqual(foreign);
+
+    // And the copy is genuinely detached.
+    (foreign as { value: string }).value = "mutated";
+    expect((sin.parameterOne as { value: string }).value).toBe("x");
   });
 
   it("copies an options hash even when it carries an `equals` function", () => {
@@ -501,15 +505,15 @@ describe("equals as a method", () => {
 
 describe("structural dispatch", () => {
   it("accepts any object carrying a known kind, whatever produced it", () => {
-    expect(isMathNode({ kind: "frac", parameterOne: null })).toBe(true);
-    expect(isMathNode(new TextNode({ parameterOne: "hi" }))).toBe(true);
+    expect(hasNodeKind({ kind: "frac", parameterOne: null })).toBe(true);
+    expect(hasNodeKind(new TextNode({ parameterOne: "hi" }))).toBe(true);
   });
 
   it("rejects an unknown kind and non-objects", () => {
-    expect(isMathNode({ kind: "unitsml" })).toBe(false);
-    expect(isMathNode({ kind: 7 })).toBe(false);
-    expect(isMathNode({})).toBe(false);
-    expect(isMathNode(null)).toBe(false);
-    expect(isMathNode("frac")).toBe(false);
+    expect(hasNodeKind({ kind: "unitsml" })).toBe(false);
+    expect(hasNodeKind({ kind: 7 })).toBe(false);
+    expect(hasNodeKind({})).toBe(false);
+    expect(hasNodeKind(null)).toBe(false);
+    expect(hasNodeKind("frac")).toBe(false);
   });
 });

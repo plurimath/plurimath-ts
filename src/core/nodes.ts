@@ -366,17 +366,23 @@ function aliasDefaults(kind: NodeKind, name: string | undefined): AliasConstruct
 /**
  * Marks an object as built by a node constructor.
  *
- * From the global registry, so it is the same symbol in a second copy of the
- * package and in another realm — the case `instanceof` gets wrong. And because
- * it is a symbol, data decoded from YAML or JSON cannot carry it: those produce
- * string keys only, which is what makes it unspoofable by an options hash.
+ * Module-private, and deliberately not from the global registry. A
+ * `Symbol.for()` key is readable by anyone, so a caller could set it on an
+ * ordinary hash and have that hash treated as a node — which is the guarantee
+ * this exists to provide, handed straight back.
  *
- * Three narrower tests were tried and each was defeated. `instanceof` fails
- * across module copies. Testing for a `kind` key fails because `kind` is a real
- * `mglyph` attribute. Testing for an `equals` method fails because
- * `NodeOptions` admits arbitrary values, a function among them.
+ * The cost is that a node built by a *second copy* of this package carries a
+ * different symbol and is not recognised, so it gets copied rather than kept by
+ * reference. That is the safe direction to fail: an unnecessary shallow copy
+ * behaves identically, whereas trusting an unrecognised value would let a
+ * caller reach into a finished node.
+ *
+ * Four narrower tests were tried and each was defeated. `instanceof` fails
+ * across module copies. A `kind` key fails because `kind` is a real `mglyph`
+ * attribute. An `equals` method fails because `NodeOptions` admits arbitrary
+ * values, a function among them. A global symbol fails as above.
  */
-const NODE_BRAND: unique symbol = Symbol.for("@plurimath/plurimath-ts#node") as never;
+const NODE_BRAND: unique symbol = Symbol("plurimath.node") as never;
 
 class NodeBase {
   /** @internal Not part of the public shape; see `NODE_BRAND`. */
@@ -1578,11 +1584,30 @@ export const NODE_KINDS = [
 const KIND_SET: ReadonlySet<string> = new Set(NODE_KINDS);
 
 /**
- * Structural, not nominal: any object carrying a known `kind` is a node,
- * whatever produced it. Nominal branding would break across the ESM/CJS
- * boundary that the error `code` contract already routes around (§5).
+ * Whether a value carries a `kind` this model knows.
+ *
+ * Deliberately NOT a `value is MathNode` type guard. It inspects the
+ * discriminant and nothing else, so an object with the right `kind` and no
+ * fields would pass — and asserting `MathNode` for that would hand the compiler
+ * a guarantee this cannot make. `normalize` would then emit a Ruby model with
+ * an empty `fields`, which is not a thing the gem can produce.
+ *
+ * Callers that need certainty should construct through a node class, which is
+ * the only path that establishes shape.
  */
-export function isMathNode(value: unknown): value is MathNode {
+export function hasNodeKind(value: unknown): boolean {
+  return kindIsKnown(value);
+}
+
+/**
+ * The same check, narrowing, for use inside this module and `./normalize`.
+ *
+ * Sound here in a way it is not at the boundary: these callers compare or
+ * serialize a value the model itself produced, so shape is already established.
+ * A public guard has no such context, which is why the exported form promises
+ * only what it verifies.
+ */
+function kindIsKnown(value: unknown): value is MathNode {
   return (
     typeof value === "object" &&
     value !== null &&
@@ -1612,6 +1637,14 @@ export function isMathNode(value: unknown): value is MathNode {
  * taken from `equality.fields` in `corpus/census.yaml`. The suite checks this
  * table against the census, so a drifting entry fails rather than silently
  * loosening equality.
+ */
+/**
+ * Which fields each kind's `==` compares, projected from the gem.
+ *
+ * Frozen, and every list with it: `readonly` is compile-time only, so without
+ * this a consumer could write `EQUALITY_FIELDS.number = []` and make every
+ * number equal to every other, everywhere in the process. An exported table
+ * that decides core behaviour has to be immutable at runtime too.
  */
 export const EQUALITY_FIELDS: { readonly [K in NodeKind]: readonly string[] } = {
   abs: ["parameterOne"],
@@ -1653,6 +1686,9 @@ export const EQUALITY_FIELDS: { readonly [K in NodeKind]: readonly string[] } = 
   underset: ["parameterOne", "parameterTwo"],
   vec: ["parameterOne"],
 };
+
+for (const list of Object.values(EQUALITY_FIELDS)) Object.freeze(list);
+Object.freeze(EQUALITY_FIELDS);
 
 /**
  * `Utility::FONT_STYLES` — `FontStyle#==` folds a font-family alias to the
@@ -1865,8 +1901,8 @@ function valueEquals(left: unknown, right: unknown): boolean {
   const a = left === undefined ? null : left;
   const b = right === undefined ? null : right;
   if (a === null || b === null) return a === b;
-  if (isMathNode(a) || isMathNode(b)) {
-    return isMathNode(a) && isMathNode(b) && nodeEquals(a, b);
+  if (kindIsKnown(a) || kindIsKnown(b)) {
+    return kindIsKnown(a) && kindIsKnown(b) && nodeEquals(a, b);
   }
   if (Array.isArray(a) || Array.isArray(b)) {
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
@@ -1899,7 +1935,7 @@ const SYMBOL_PLAIN_FIELDS = EQUALITY_FIELDS.symbol.filter((field) => field !== "
  * Every rule here is symmetric, so argument order does not change the answer.
  */
 export function nodeEquals(node: MathNode, other: unknown): boolean {
-  if (!isMathNode(other)) return false;
+  if (!kindIsKnown(other)) return false;
   switch (node.kind) {
     // `Formula#==` checks `respond_to?(:value)` and `respond_to?(:left_right_wrapper)`
     // rather than the class, so a formula and an mrow with the same value are

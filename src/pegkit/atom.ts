@@ -227,6 +227,32 @@ class StrAtom extends Atom {
 }
 
 /**
+ * How many UTF-16 code units the character at `pos` occupies: 2 for a surrogate
+ * pair, 1 otherwise.
+ *
+ * Ruby strings are sequences of code points, so Parslet's `source.consume(1)`
+ * (`/(.|$){1}/m`) takes a whole character however many bytes it needs — verified
+ * against parslet 2.0.0, where `Parslet.any.parse("𝑥")` succeeds and
+ * `(Parslet.any >> Parslet.any).parse("𝑥")` fails. JavaScript strings are
+ * sequences of UTF-16 units, so "one character" has to be computed.
+ *
+ * Offsets stay UTF-16 throughout (`Slice.offset`, `ParseFailed.index`,
+ * `SourceMap`) because callers index JavaScript strings with them; only the
+ * consumption step is code-point aware.
+ *
+ * An unpaired surrogate is one unit. Ruby cannot represent one, so there is no
+ * gem behaviour to match; consuming it alone keeps the parser total.
+ */
+function charWidth(input: string, pos: number): number {
+  const unit = input.charCodeAt(pos);
+  if (unit >= 0xd800 && unit <= 0xdbff && pos + 1 < input.length) {
+    const next = input.charCodeAt(pos + 1);
+    if (next >= 0xdc00 && next <= 0xdfff) return 2;
+  }
+  return 1;
+}
+
+/**
  * Parslet's `match`: the pattern is a predicate on the current position, and
  * exactly ONE character is consumed on success — even for a pattern like
  * `/\s+/`. Verified against parslet 2.0.0.
@@ -243,8 +269,15 @@ class ReAtom extends Atom {
     if (pos < ctx.input.length) {
       this.regex.lastIndex = pos;
       const match = this.regex.exec(ctx.input);
+      // A `u` regex snaps lastIndex back to a code-point boundary, so a start
+      // inside a surrogate pair reports `index < pos`; that is not a match here.
       if (match && match.index === pos) {
-        return { ok: true, pos: pos + 1, value: new Slice(ctx.input[pos] as string, pos) };
+        const width = charWidth(ctx.input, pos);
+        return {
+          ok: true,
+          pos: pos + width,
+          value: new Slice(ctx.input.slice(pos, pos + width), pos),
+        };
       }
     }
     if (pos > ctx.maxPos) ctx.maxPos = pos;
@@ -256,7 +289,12 @@ class ReAtom extends Atom {
 class AnyAtom extends Atom {
   tryParse(pos: number, ctx: ParseContext): ParseResult {
     if (pos < ctx.input.length) {
-      return { ok: true, pos: pos + 1, value: new Slice(ctx.input[pos] as string, pos) };
+      const width = charWidth(ctx.input, pos);
+      return {
+        ok: true,
+        pos: pos + width,
+        value: new Slice(ctx.input.slice(pos, pos + width), pos),
+      };
     }
     if (pos > ctx.maxPos) ctx.maxPos = pos;
     return FAIL;

@@ -24,8 +24,14 @@ module.exports = {
       severity: "error",
       from: { path: "^src/(formatting|unitsml)/" },
       to: {
+        // `^src/$1/` is the leaf service's own directory, via the capture group
+        // above — the same backreference rule 4 uses. Without it this rule
+        // forbade a leaf service from importing its own files, which rule 1
+        // has always allowed layer 1 to do (`src/core/index.ts` imports
+        // `./errors` and is not a violation). Splitting a leaf service into
+        // more than one file is not a layering breach.
         path: "^src/",
-        pathNot: "^src/(core|generated)/",
+        pathNot: "^src/(core|generated)/|^src/$1/",
       },
     },
     {

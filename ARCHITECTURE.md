@@ -105,11 +105,20 @@ src/
     ...              Every format module is independent of every other.
   xml/               XML element tree + Ox-compatible serializer.
                      Imports: nothing internal.
-  formatting/        Format-neutral number normalization + locale policy
+  formatting/        Format-neutral number + locale policy. Two halves, and
+                     only one is a renderer concern. (a) Locale -> decimal
+                     marker, which is a PARSE-time input: the gem builds the
+                     AsciiMath `number` rule from
+                     `Plurimath.configuration.decimal` (`asciimath/parse.rb`,
+                     defined at :204, read at :18 and :86), so a comma-decimal
+                     locale changes how commas parse, not only how numbers
+                     render. A grammar takes the marker as a parameter from
+                     here instead of hardcoding ".". (b) Number normalization
                      (the Ruby `Formatter::Numbers` cross-cut: every renderer
-                     formats numbers). Exposes normalized result types;
-                     each renderer keeps a private adapter that turns them
-                     into its own output. Imports: nothing internal.
+                     formats numbers) — exposes normalized result types, each
+                     renderer keeping a private adapter that turns them into
+                     its own output. (a) exists; (b) plus the wider locale
+                     surface are P4 (§9). Imports: nothing internal.
   evaluation/        evaluate(formula, bindings, options). Imports: core.
   unitsml/           DEFERRED (decided 2026-07-29, §5) — not built until the
                      approach is settled with the maintainer. When it lands it

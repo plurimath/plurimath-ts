@@ -39,6 +39,7 @@
 # Symbol data (TypeScript, one file set per format — never one merged blob, so
 # a renderer can bundle only its own slice, §3/§5):
 #   src/generated/asciimath/input.ts       input text -> symbol id + literals
+#   src/generated/asciimath/grammar.ts     the rule alternatives parse.rb builds
 #   src/generated/<format>/symbols.ts      symbol id -> static descriptor
 #   src/generated/<format>/exceptions.ts   the context-axis exception matrix
 #   src/generated/context-axes.ts          the probe manifest and its results
@@ -1353,6 +1354,128 @@ module CorpusGenerator
     }
   end
 
+  # --- asciimath grammar tables --------------------------------------------
+
+  # The five `Asciimath::Constants` that `Asciimath::Parse` turns into rule
+  # alternatives. Twenty entries in total — which is exactly why they are
+  # generated rather than typed: grammar-shaping data comes from the oracle, and
+  # twenty hand-typed entries drift silently the first time upstream edits one.
+  #
+  # Every check below is a property the grammar depends on, so an upstream
+  # change that breaks one stops generation instead of producing a grammar that
+  # parses differently.
+  GRAMMAR_CLASS_CONSTANTS = {
+    "ternaryClasses" => :TERNARY_CLASSES,
+    "binaryClasses" => :BINARY_CLASSES,
+    "subSupClasses" => :SUB_SUP_CLASSES,
+  }.freeze
+
+  GRAMMAR_PAREN_CONSTANTS = {
+    "tableParenthesis" => :TABLE_PARENTHESIS,
+    "parenthesis" => :PARENTHESIS,
+  }.freeze
+
+  def asciimath_grammar_tables
+    constants = Plurimath::Asciimath::Constants
+    classes = GRAMMAR_CLASS_CONSTANTS.transform_values do |name|
+      grammar_class_list(name, constants.const_get(name))
+    end
+    parens = GRAMMAR_PAREN_CONSTANTS.transform_values do |name|
+      grammar_paren_pairs(name, constants.const_get(name))
+    end
+
+    assert_grammar_classes_disjoint!(classes)
+    assert_table_parens_agree!(parens)
+
+    tables = classes.merge(parens)
+    tables.merge("counts" => tables.transform_values(&:length))
+  end
+
+  # `power_base_rules` reduces the three class lists into one ordered choice
+  # (`sub_sup_classes | binary_classes | ternary_classes`, parse.rb:82-84), so
+  # order inside a list is behaviour and the emitted array preserves the gem's
+  # insertion order rather than sorting it.
+  def grammar_class_list(name, list)
+    raise Error, "#{name} is #{list.class}; expected an Array" unless list.is_a?(::Array)
+    raise Error, "#{name} is empty; the grammar rule it builds would match nothing" if list.empty?
+
+    wrong = list.reject { |entry| entry.is_a?(::String) }
+    raise Error, "#{name} holds non-strings: #{wrong.inspect}" unless wrong.empty?
+
+    duplicates = list.tally.select { |_, count| count > 1 }.keys
+    unless duplicates.empty?
+      raise Error, "#{name} repeats #{duplicates.join(', ')}; an ordered choice would never reach the second one"
+    end
+
+    list.dup
+  end
+
+  # Emitted as ordered pairs, never as separate key and value lists. `open_table`
+  # reads the keys and `close_table` the values (parse.rb:47-52), but `read_text`
+  # looks the closing paren up *by* the captured opening one at parse time
+  # (parse.rb:181) — split the hash in two and that mapping is gone, and the two
+  # halves are free to drift.
+  def grammar_paren_pairs(name, hash)
+    raise Error, "#{name} is #{hash.class}; expected a Hash" unless hash.is_a?(::Hash)
+    raise Error, "#{name} is empty; the grammar rule it builds would match nothing" if hash.empty?
+
+    pairs = hash.map do |open, close|
+      unless open.is_a?(::Symbol) && close.is_a?(::String)
+        raise Error, "#{name} pair #{open.inspect} => #{close.inspect} is not Symbol => String"
+      end
+
+      [open.to_s, close]
+    end
+
+    # `read_text` builds `match("[^#{rparen}]")` — a character class. A closing
+    # paren of any other length silently becomes a different class.
+    long = pairs.map(&:last).reject { |close| close.length == 1 }
+    unless long.empty?
+      raise Error, <<~MESSAGE
+        #{name} has multi-character closing parens (#{long.inspect}).
+        `Parse#read_text` interpolates one into `match("[^...]")`, so a longer
+        close would change that character class instead of matching literally.
+      MESSAGE
+    end
+
+    %w[opening closing].zip([pairs.map(&:first), pairs.map(&:last)]).each do |side, values|
+      duplicates = values.tally.select { |_, count| count > 1 }.keys
+      next if duplicates.empty?
+
+      raise Error, "#{name} repeats the #{side} paren #{duplicates.join(', ')}; the pairing is ambiguous"
+    end
+
+    pairs
+  end
+
+  def assert_grammar_classes_disjoint!(classes)
+    shared = classes.keys.combination(2).flat_map do |left, right|
+      (classes[left] & classes[right]).map { |entry| "#{entry} (#{left}, #{right})" }
+    end
+    return if shared.empty?
+
+    raise Error, <<~MESSAGE
+      The grammar class lists overlap: #{shared.join(', ')}.
+      `power_base_rules` reduces all three into one ordered choice
+      (parse.rb:82-84), so a shared entry makes the later list unreachable.
+    MESSAGE
+  end
+
+  def assert_table_parens_agree!(parens)
+    all = parens.fetch("parenthesis").to_h
+    disagreeing = parens.fetch("tableParenthesis").reject do |open, close|
+      all.fetch(open, close) == close
+    end
+    return if disagreeing.empty?
+
+    raise Error, <<~MESSAGE
+      TABLE_PARENTHESIS and PARENTHESIS disagree on #{disagreeing.map(&:first).join(', ')}.
+      A table's parens are matched from the first table and read back through the
+      second (parse.rb:47-52 and :181), so the two must map an opening paren to
+      the same closing one.
+    MESSAGE
+  end
+
   # --- TypeScript emission -------------------------------------------------
 
   # Biome's string rule: the configured quote wins unless the other one needs
@@ -1674,6 +1797,62 @@ module CorpusGenerator
     write_ts(File.join(out_root, INPUT_FORMAT, "input.ts"), sections)
   end
 
+  def emit_grammar_file(out_root, tables)
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        AsciiMath grammar tables: the alternatives `Asciimath::Parse` builds its
+        rules from, consumed by `src/formats/asciimath/grammar.ts`.
+
+        Order is behaviour. Parslet's `|` is an ordered choice and
+        `power_base_rules` reduces the three class lists into one of them
+        (`asciimath/parse.rb:82-84`), so these arrays keep the gem's insertion
+        order — they are never sorted, even where today's entries could not
+        overlap.
+      TEXT
+      ts_const(
+        "ASCIIMATH_TERNARY_CLASSES",
+        "readonly string[]",
+        tables.fetch("ternaryClasses"),
+        doc: "`ternary_classes`: a function taking a base, a power and an\noptional third value.",
+      ),
+      ts_const(
+        "ASCIIMATH_BINARY_CLASSES",
+        "readonly string[]",
+        tables.fetch("binaryClasses"),
+        doc: "`binary_classes`: a function taking a base value and a power value.",
+      ),
+      ts_const(
+        "ASCIIMATH_SUB_SUP_CLASSES",
+        "readonly string[]",
+        tables.fetch("subSupClasses"),
+        doc: "`sub_sup_classes`: tagged `:binary_class` like the list above, but\n" \
+             "tried first and followed by a single `power_base`.",
+      ),
+      [
+        ts_doc("An opening paren and the closing one that matches it. The two are\n" \
+               "kept paired because the grammar resolves one from the other at\n" \
+               "parse time (`read_text`, `asciimath/parse.rb:181`)."),
+        "export type AsciimathParenPair = readonly [open: string, close: string];",
+      ].join("\n"),
+      ts_tuple_list(
+        "ASCIIMATH_TABLE_PARENTHESIS",
+        "readonly AsciimathParenPair[]",
+        tables.fetch("tableParenthesis"),
+        doc: "`open_table` matches the opening parens, `close_table` the closing\n" \
+             "ones. `ᑕ ᑐ ℒ ℛ` are the preprocessing substitutions for `(: :) {: :}`.",
+      ),
+      ts_tuple_list(
+        "ASCIIMATH_PARENTHESIS",
+        "readonly AsciimathParenPair[]",
+        tables.fetch("parenthesis"),
+        doc: "`lparen` matches the opening parens and `rparen` the closing ones;\n" \
+             "`read_text` reads the closing one back from the captured opening one.",
+      ),
+    ]
+
+    write_ts(File.join(out_root, INPUT_FORMAT, "grammar.ts"), sections)
+  end
+
   def emit_context_axes_file(out_root, probe)
     sections = [
       ts_header(<<~TEXT.chomp),
@@ -1863,6 +2042,7 @@ module CorpusGenerator
         },
       },
       "tables" => asciimath_input_tables(classes),
+      "grammar" => asciimath_grammar_tables,
     }
   end
 
@@ -1891,8 +2071,12 @@ module CorpusGenerator
   end
 
   def write_symbol_data(out_root, data, provenance)
-    written = [File.join(out_root, INPUT_FORMAT, "input.ts")]
+    written = [
+      File.join(out_root, INPUT_FORMAT, "input.ts"),
+      File.join(out_root, INPUT_FORMAT, "grammar.ts"),
+    ]
     emit_input_file(out_root, data["tables"])
+    emit_grammar_file(out_root, data["grammar"])
 
     SYMBOL_FORMATS.each do |format|
       emit_symbols_file(out_root, format, data["static"])
@@ -2185,6 +2369,8 @@ module CorpusGenerator
     puts "#{symbols['static'].length} symbols across #{SYMBOL_FORMATS.join(', ')}; " \
          "#{symbols['tables']['counts']['merged']} inputs, " \
          "#{symbols['tables']['counts']['literals']} literals"
+    puts "grammar tables: " \
+         "#{symbols['grammar']['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
     puts "context-dependent: " \
          "#{probe['context_dependent'].map { |e| e['id'] }.join(', ')}"
     probe["dynamic"].each do |entry|

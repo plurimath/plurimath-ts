@@ -803,6 +803,6 @@ export function asciimathGrammar(options?: LocaleOptions | null): AsciimathGramm
  * turning it into a `ParseError`, is the format entry point's job — it owns the
  * `SourceMap` that `preprocess` returns (ARCHITECTURE.md §5).
  */
-export function parseAsciimath(preprocessed: string, options?: LocaleOptions | null) {
+export function parseAsciimathPreprocessed(preprocessed: string, options?: LocaleOptions | null) {
   return asciimathGrammar(options).root.parse(preprocessed);
 }

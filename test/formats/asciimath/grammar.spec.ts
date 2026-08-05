@@ -40,7 +40,7 @@ import { describe, expect, it } from "vitest";
 import {
   asciimathGrammar,
   createAsciimathGrammar,
-  parseAsciimath,
+  parseAsciimathPreprocessed,
 } from "../../../src/formats/asciimath/grammar";
 import { ParseFailed, type ParseValue, Slice } from "../../../src/pegkit/index";
 import { loadPinnedCorpus, readExclusions } from "../../core/corpus-pin";
@@ -619,10 +619,10 @@ describe("the rule inventory", () => {
   });
 
   it("parses through the convenience entry, which resolves the locale itself", () => {
-    expect(plain(parseAsciimath("2.5"))).toStrictEqual(
+    expect(plain(parseAsciimathPreprocessed("2.5"))).toStrictEqual(
       JSON.parse('{"expr":{"sequence":{"number":"2.5"}}}'),
     );
-    expect(plain(parseAsciimath("1,5", { locale: "de" }))).toStrictEqual(
+    expect(plain(parseAsciimathPreprocessed("1,5", { locale: "de" }))).toStrictEqual(
       JSON.parse('{"expr":{"sequence":{"number":"1,5"}}}'),
     );
   });

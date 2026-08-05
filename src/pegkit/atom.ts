@@ -84,9 +84,10 @@ type ParseResult =
        *   str('a').repeat.parse('')         => ""
        * It rides on the *result*, not the value, because it must survive the
        * wrappers that pass a child result through untouched (alternative,
-       * entity, dynamic) and vanish through the ones that rebuild it
-       * (sequence, maybe) — exactly the shape Parslet's deferred `flatten`
-       * gives it.
+       * dynamic) and vanish through the ones that rebuild it (sequence,
+       * maybe) — exactly the shape Parslet's deferred `flatten` gives it.
+       * (Parslet's `entity` wrapper behaves like the pass-through group;
+       * pegkit has no such atom, its `rule()` closures fill that role.)
        */
       emptyRepetition?: true;
     }
@@ -146,8 +147,14 @@ export abstract class Atom {
    * (`(w >> str('q')) | w` on `"a"`, where alternative 1 applies `w` without
    * `consume_all` and alternative 2 applies the same object with it):
    *
+   * In Parslet's taxonomy (measured there; pegkit implements the subset it
+   * needs — there is no `Ignored` or `Entity` atom here):
+   *
    *   Named, Capture, Ignored, Scope, Dynamic  -> parse succeeds  (not cached)
    *   Entity, Alternative                      -> parse fails     (cached)
+   *
+   * pegkit's equivalents: `AsAtom` (Named) and `dynamic` are uncacheable;
+   * everything else caches.
    */
   protected cacheable(): boolean {
     return true;

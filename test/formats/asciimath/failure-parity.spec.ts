@@ -38,17 +38,25 @@
  * `{ } ( ) [ ] : | / ^ _ , " x 1 <space>` — 4,368 inputs — was run through the
  * gem the same way and classified (`sweep.rb`, `sweep-ts.ts`):
  *
- *   identical verdict and tree                              2,910
- *   gem accepts, this port rejects (consume_all)            1,434
- *     ...of those with no closing paren in the text             0
+ *   identical verdict and tree                              4,368
+ *   gem accepts, this port rejects                              0
  *   gem REJECTS, this port ACCEPTS                              0
- *   tree differs by an empty named repetition                  24
- *   tree differs any other way                                  0
+ *   tree differs, in any way at all                             0
  *
- * The third line is the one that matters: there is no input in that space the
- * gem refuses and this port waves through. Both divergence classes are the
- * pegkit gaps `grammar.ts` already documents, and neither has a third variant.
+ * That is the whole space: every input agrees on both the verdict and the tree.
+ * It was not always so — the sweep first found 1,434 inputs the gem accepts and
+ * this port rejected, and 24 whose tree differed, both of them pegkit gaps
+ * (`consume_all` and the empty named repetition). Both are now implemented, and
+ * the eighteen candidates below that used to sit in those classes are named in
+ * `FORMER_DIVERGENCES` so a regression cannot go quiet.
  * Preprocessing was re-checked on all 4,368 as a side effect and agreed.
+ *
+ * A second, seeded sweep of 1,500 LONGER inputs (4-26 characters, over the same
+ * alphabet plus whole keywords — `sweep2.rb`, `sweep2-ts.ts`) says the same:
+ * 1,500 of 1,500 identical. It was run because length 1-3 barely exercises the
+ * packrat cache being reached at one position in both `consume_all` modes, and
+ * it found both divergence classes independently on the pre-fix code (548
+ * rejected, 11 trees differing) before finding none after.
  *
  * ## Positions: what the gem exposes, measured
  *
@@ -771,50 +779,40 @@ const ACCEPTANCES: readonly Acceptance[] = [
 ];
 
 /**
- * The gem accepts these; this port rejects them, for want of Parslet's
- * `consume_all` retry. Every one is an unmatched CLOSING paren, which reaches
- * `expression`'s sixth alternative in the gem and is unreachable here — the
- * divergence `src/formats/asciimath/grammar.ts` documents at `parse.rb:157-167`
- * and `grammar.spec.ts` pins for six of them.
+ * The eighteen the two pegkit divergences used to claim, kept as a named list
+ * because they are the sharpest regression guard in this file.
  *
- * Recorded with the index this port reports, so the day pegkit grows
- * `consume_all` these tests fail loudly instead of quietly starting to pass.
+ * The first fourteen are unmatched CLOSING parens, which reach `expression`'s
+ * sixth alternative only through Parslet's `consume_all` retry; the last four
+ * are empty named repetitions, `[]` to Parslet's `flatten_repetition`. Both are
+ * now implemented in pegkit, so all eighteen go through the ordinary
+ * gem-tree assertions above — this list only asserts that they are *in* those
+ * assertions rather than quietly skipped.
  */
-const CONSUME_ALL_DIVERGENCE: ReadonlyArray<readonly [id: string, index: number]> = [
-  ["fence-rparen", 0],
-  ["fence-a-rparen", 1],
-  ["fence-rbracket", 0],
-  ["fence-a-rbracket", 1],
-  ["fence-rbrace", 0],
-  ["fence-a-rbrace", 1],
-  ["fence-double-close", 3],
-  ["fence-trailing-rparen", 4],
-  ["fence-rparen-x", 0],
-  ["fence-2-rparen", 1],
-  ["fence-nested-close", 0],
+const FORMER_DIVERGENCES: readonly string[] = [
+  "fence-rparen",
+  "fence-a-rparen",
+  "fence-rbracket",
+  "fence-a-rbracket",
+  "fence-rbrace",
+  "fence-a-rbrace",
+  "fence-double-close",
+  "fence-trailing-rparen",
+  "fence-rparen-x",
+  "fence-2-rparen",
+  "fence-nested-close",
   // `:}` and `:)` preprocess to `ℛ` and `ᑐ`, which are closing parens, so a
-  // bare preprocessing token lands in the same divergence.
-  ["prep-brace-close", 0],
-  ["prep-paren-close", 0],
-  ["prep-x-brace-close", 2],
-];
-
-/**
- * The gem accepts these and so does this port, but the tree differs: an empty
- * named repetition is `[]` to Parslet and an empty slice here. The other pegkit
- * divergence `grammar.spec.ts` documents; recorded again because the sweep
- * reached it independently.
- */
-const EMPTY_REPETITION_DIVERGENCE: ReadonlyArray<readonly [id: string, here: string]> = [
-  ["quote-triple", '{"expr":{"sequence":{"text":""},"expr":{"sequence":{"text":""}}}}'],
-  ["quote-empty", '{"expr":{"sequence":{"text":""}}}'],
-  ["text-open", '{"expr":{"sequence":{"intermediate_exp":{"text":""}}}}'],
-  ["text-empty", '{"expr":{"sequence":{"intermediate_exp":{"text":""}}}}'],
+  // bare preprocessing token lands in the same family.
+  "prep-brace-close",
+  "prep-paren-close",
+  "prep-x-brace-close",
+  "quote-triple",
+  "quote-empty",
+  "text-open",
+  "text-empty",
 ];
 
 const INPUT_BY_ID = new Map(CANDIDATES.map(([id, input]) => [id, input]));
-const CONSUME_ALL_IDS = new Set(CONSUME_ALL_DIVERGENCE.map(([id]) => id));
-const EMPTY_REPETITION_BY_ID = new Map(EMPTY_REPETITION_DIVERGENCE);
 
 function inputFor(id: string): string {
   const input = INPUT_BY_ID.get(id);
@@ -903,25 +901,22 @@ describe("what the gem rejects, this port rejects", () => {
 
   it("rejects all 26 and no more", () => {
     const rejected = CANDIDATES.filter(([, input]) => rejectionOf(input) !== null);
-    // The 26 the gem refuses, plus the 14 unmatched-closing-paren inputs this
-    // port cannot reach without `consume_all`. Any other number is a new
-    // divergence, in either direction.
-    expect(rejected.length).toBe(REJECTIONS.length + CONSUME_ALL_DIVERGENCE.length);
+    // Exactly the 26 the gem refuses. Any other number is a divergence, in
+    // either direction. This used to allow 14 more — the unmatched closing
+    // parens pegkit could not reach before it grew `consume_all`.
+    expect(rejected.length).toBe(REJECTIONS.length);
   });
 });
 
 describe("what the gem accepts, this port accepts and shapes the same", () => {
-  const reachable = ACCEPTANCES.filter(([id]) => !CONSUME_ALL_IDS.has(id));
-
-  it("has the acceptances that are not a known divergence", () => {
-    expect(reachable.length).toBe(116);
+  it("has every acceptance the sweep found", () => {
+    expect(ACCEPTANCES.length).toBe(130);
   });
 
-  it.each(reachable.map(([id, , gemTree]) => [id, gemTree] as const))(
+  it.each(ACCEPTANCES.map(([id, , gemTree]) => [id, gemTree] as const))(
     "%s parses to the tree Parslet produced",
     (id, gemTree) => {
-      const here = EMPTY_REPETITION_BY_ID.get(id);
-      expect(parseInput(inputFor(id))).toStrictEqual(JSON.parse(here ?? gemTree));
+      expect(parseInput(inputFor(id))).toStrictEqual(JSON.parse(gemTree));
     },
   );
 });
@@ -1083,33 +1078,40 @@ describe("the position the gem exposes", () => {
   );
 });
 
-describe("known divergences, recorded so they cannot go quiet", () => {
-  it("has the divergence counts the sweep found", () => {
-    expect(CONSUME_ALL_DIVERGENCE.length).toBe(14);
-    expect(EMPTY_REPETITION_DIVERGENCE.length).toBe(4);
-    // Both sets are drawn from what the gem accepts.
+/**
+ * There is no divergence left in this sweep. What used to be recorded here as
+ * two families of accepted-difference is now closed in pegkit, so the guard
+ * flips: these eighteen must be *accepted* and must carry the gem's tree.
+ */
+describe("the two former pegkit divergences", () => {
+  it("still counts eighteen, all of them accepted by the gem", () => {
+    expect(FORMER_DIVERGENCES.length).toBe(18);
     const acceptedIds = new Set(ACCEPTANCES.map(([id]) => id));
-    for (const [id] of [...CONSUME_ALL_DIVERGENCE, ...EMPTY_REPETITION_DIVERGENCE]) {
+    for (const id of FORMER_DIVERGENCES) {
       expect(acceptedIds.has(id), id).toBe(true);
     }
   });
 
-  it.each(CONSUME_ALL_DIVERGENCE)(
-    "%s parses in the gem but is rejected here, at index %i",
-    (id, index) => {
-      const error = rejectionOf(inputFor(id));
-      expect(error, id).not.toBeNull();
-      expect((error as ParseError).index).toBe(index);
+  it.each(FORMER_DIVERGENCES.map((id) => [id] as const))(
+    "%s is accepted, with the tree Parslet produced",
+    (id) => {
+      const gemTree = ACCEPTANCES.find(([candidate]) => candidate === id)?.[2] as string;
+      expect(rejectionOf(inputFor(id)), id).toBeNull();
+      expect(parseInput(inputFor(id))).toStrictEqual(JSON.parse(gemTree));
     },
   );
 
-  it.each(EMPTY_REPETITION_DIVERGENCE.map(([id]) => [id] as const))(
-    "%s parses, with an empty slice where Parslet gives an empty array",
-    (id) => {
-      const gemTree = ACCEPTANCES.find(([candidate]) => candidate === id)?.[2] as string;
-      const here = EMPTY_REPETITION_BY_ID.get(id) as string;
-      expect(here).not.toBe(gemTree);
-      expect(parseInput(inputFor(id))).toStrictEqual(JSON.parse(here));
-    },
-  );
+  it("keeps an empty NAMED repetition an empty array, not an empty string", () => {
+    // `flatten_repetition`'s `return [] if named && list.empty?`. The four
+    // inputs that reach it, and the shape that used to be wrong here.
+    expect(parseInput('""')).toStrictEqual(JSON.parse('{"expr":{"sequence":{"text":[]}}}'));
+    expect(parseInput("text(")).toStrictEqual(
+      JSON.parse('{"expr":{"sequence":{"intermediate_exp":{"text":[]}}}}'),
+    );
+  });
+
+  it("reaches expression's alternative 6 for an unmatched closing paren", () => {
+    // The alternative that was dead code before `consume_all`.
+    expect(parseInput(")")).toStrictEqual(JSON.parse('{"expr":[{"rparen":")"}]}'));
+  });
 });

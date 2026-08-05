@@ -391,72 +391,60 @@ describe("Ruby's whitespace, not JavaScript's", () => {
 });
 
 /**
- * Divergences from the gem that this grammar cannot fix, asserted so they are
- * visible rather than merely absent.
- *
- * Both live in pegkit, not in these rules, and `src/pegkit/` is outside this
- * item's scope. Each test records what the gem says and what this port says, so
- * it fails loudly the day pegkit changes — which is the point of writing it
- * down instead of leaving a gap.
+ * The two constructs that used to diverge from the gem, kept as tests because
+ * they are the sharpest regression guard this file has. Both were pegkit's, and
+ * both are now implemented there; every tree below is the gem's, measured with
+ * `bundle exec ruby tree-probe.rb '""' '"""' 'text()' … ')' 'x)' '2)' ']' '}' ')x'`.
  */
-describe("known divergences (pegkit, not the grammar)", () => {
+describe("the two constructs that used to diverge", () => {
   // Parslet's `flatten_repetition(list, named)` returns `[]` for an empty list
-  // under `.as(...)`; pegkit's RepeatAtom joins its (zero) slices into an empty
-  // Slice. Two constructs in this grammar have a named repetition that can
-  // match zero times, and both differ — the gem says `[]`, this says `""`:
+  // under `.as(...)` and an empty string without one. Two constructs in this
+  // grammar have a named repetition that can match zero times:
   //
-  //   quoted_text alt 2 (parse.rb:77)   `""`      -> {"text":[]}
+  //   quoted_text alt 1 (parse.rb:76)   `""`      -> {"text":[]}
   //   read_text via .as(:text) (:128)   `text()`  -> {"text":[]}
   //
-  // Measured with `bundle exec ruby tree.rb '""' '"""' 'text()' 'text(' 'text[]'`.
-  // No corpus case reaches either.
+  // No corpus case reaches either. Note `"""`: the SECOND quote runs out of
+  // input and takes `quoted_text`'s alternative 2, which is `str("").as(:text)`
+  // — a named empty *string*, not a repetition, so it stays `""`. The two
+  // shapes sitting side by side in one tree is why this is worth pinning.
   it.each([
-    ['""', '{"expr":{"sequence":{"text":""}}}'],
-    ['"""', '{"expr":{"sequence":{"text":""},"expr":{"sequence":{"text":""}}}}'],
-    ["text()", '{"expr":{"sequence":{"intermediate_exp":{"text":""}}}}'],
-    ["text(", '{"expr":{"sequence":{"intermediate_exp":{"text":""}}}}'],
-    ["text[]", '{"expr":{"sequence":{"intermediate_exp":{"text":""}}}}'],
-  ])("%j gives an empty named repetition a slice where Parslet gives an array", (input, here) => {
-    expect(tree(input)).toStrictEqual(JSON.parse(here));
+    ['""', '{"expr":{"sequence":{"text":[]}}}'],
+    ['"""', '{"expr":{"sequence":{"text":[]},"expr":{"sequence":{"text":""}}}}'],
+    ["text()", '{"expr":{"sequence":{"intermediate_exp":{"text":[]}}}}'],
+    ["text(", '{"expr":{"sequence":{"intermediate_exp":{"text":[]}}}}'],
+    ["text[]", '{"expr":{"sequence":{"intermediate_exp":{"text":[]}}}}'],
+  ])("%j gives an empty named repetition an empty array, as Parslet does", (input, gem) => {
+    expect(tree(input)).toStrictEqual(JSON.parse(gem));
   });
 
-  // The bigger one, and the only divergence here that changes whether an input
-  // parses at all.
-  //
-  // Parslet threads `consume_all` into every alternative and into the last
-  // element of a sequence, so an alternative that succeeds but leaves input
-  // behind is turned into a failure *inside* the alternative loop and the next
-  // alternative is tried. pegkit checks only once, at the top (`Atom#parse`).
+  // The bigger one, and the only one here that changed whether an input parses
+  // at all.
   //
   // `expression`'s alternative 5 is `str("")`, which always succeeds and
-  // consumes nothing — so in the gem it is rejected by the `consume_all` retry
-  // and alternatives 6-9 are reached, while here the parse stops there and
-  // fails. Alternative 6 is the one that matters:
+  // consumes nothing, so alternatives 6-9 are reachable only through Parslet's
+  // `consume_all` retry: an alternative that succeeds while leaving input
+  // behind is turned into a failure inside the alternative loop, and the next
+  // alternative is tried. Alternative 6 is the one that matters:
   //
   //   (rparen.as(:rparen) >> space? >> controversial_symbols >>
   //      comma.as(:comma).maybe >> expression).repeat(1).as(:expr)
   //
-  // so any input with a closing paren that no opening paren claimed parses in
-  // the gem and is rejected here. Measured with
-  // `bundle exec ruby tree.rb ')' 'x)' '2)' ']' '}' ')x'` — all six succeed.
-  //
-  // This cannot be fixed in this file. `consume_all` is a parameter of
-  // `Atom#apply`, and a grammar-level emulation would need a parallel copy of
-  // every rule on the rightmost spine — which is nearly all of them, since most
-  // end in a recursive reference — and would still not match Parslet, whose
-  // packrat cache is keyed on (atom, position) with `consume_all` *excluded*,
-  // so whichever mode reaches a position first decides it for the other.
-  // It belongs in pegkit.
-  it.each([[")"], ["x)"], ["2)"], ["]"], ["}"], [")x"]])(
-    "%j parses in the gem but is rejected here, for want of consume_all",
-    (input) => {
-      expect(() => grammar.root.parse(input)).toThrow(ParseFailed);
-    },
-  );
+  // so any input with a closing paren that no opening paren claimed reaches it.
+  it.each([
+    [")", '{"expr":[{"rparen":")"}]}'],
+    ["x)", '{"expr":{"sequence":{"symbol":"x"},"expr":[{"rparen":")"}]}}'],
+    ["2)", '{"expr":{"sequence":{"number":"2"},"expr":[{"rparen":")"}]}}'],
+    ["]", '{"expr":[{"rparen":"]"}]}'],
+    ["}", '{"expr":[{"rparen":"}"}]}'],
+    [")x", '{"expr":[{"rparen":")","expr":{"sequence":{"symbol":"x"}}}]}'],
+  ])("%j reaches expression's alternative 6, as it does in the gem", (input, gem) => {
+    expect(tree(input)).toStrictEqual(JSON.parse(gem));
+  });
 
-  it("reaches none of expression's alternatives 6-9", () => {
-    // The empty input is the one case where alternative 5 is also the gem's
-    // answer, so the two agree.
+  it("still stops at alternative 5 for the empty input", () => {
+    // The one case where alternative 5 is the gem's answer too: there is no
+    // leftover input, so nothing turns its success into a failure.
     expect(tree("")).toStrictEqual("");
   });
 });

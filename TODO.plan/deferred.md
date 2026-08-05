@@ -95,6 +95,20 @@ Hex is the gem's canonical form: across all 1,461 symbol classes there are 8,718
 hex entities, 0 decimal, and 27 named — the named ones confined to six classes
 (`Times`, `Cdot`, `Greater`, `Gt`, `Less`, `Lt`) as hand-added aliases.
 
+### The locale table is hand-typed
+
+**Trigger: before P1-completion, or the first gem bump — whichever comes
+first.**
+
+`src/formatting/locales.ts` holds the gem's 96 locale → decimal-marker entries,
+transcribed by hand and verified against the gem once (all 96, plus 14 edge
+inputs, 2026-08-04). Nothing re-checks it on a gem update — the same drift
+argument that got 20 grammar constants generated applies with more force to 96
+entries. The fix is a small `generate-formatting-data.rb` with the usual
+provenance discipline; the module's shape does not change, only where its data
+comes from. Placement (here vs a shared data repo) is a separate,
+already-deferred question for Ronald — this entry is only about generation.
+
 ### Standalone entity package
 
 If the 253-entry table proves useful outside this repository, it could ship as

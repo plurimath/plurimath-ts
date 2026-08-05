@@ -210,15 +210,20 @@ describe("repeated binding names", () => {
     // must ask the object, not compare identity. Review finding on PR #7.
     const t = new Transform();
     t.rule({ a: simple("v"), b: simple("v") }, () => "matched");
-    const equalNotIdentical = {
-      kind: "number",
-      value: "2",
-      equals(other: unknown) {
-        return (other as { value?: unknown }).value === "2";
-      },
-    };
-    const twin = { ...equalNotIdentical };
-    expect(t.apply({ a: equalNotIdentical as never, b: twin as never })).toBe("matched");
+    // A class instance, not an object literal: a literal is a hash to the
+    // engine and `simple` rightly rejects it — the first draft of this test
+    // failed for exactly that reason. Model nodes are instances.
+    class EqualsByValue {
+      constructor(readonly value: string) {}
+      equals(other: unknown): boolean {
+        return other instanceof EqualsByValue && other.value === this.value;
+      }
+    }
+    const left = new EqualsByValue("2");
+    const right = new EqualsByValue("2");
+    expect(Object.is(left, right)).toBe(false);
+    expect(t.apply({ a: left as never, b: right as never })).toBe("matched");
+    expect(t.apply({ a: left as never, b: new EqualsByValue("3") as never })).not.toBe("matched");
   });
 
   it("keeps Ruby's numeric equality, not Object.is", () => {

@@ -382,7 +382,7 @@ function aliasDefaults(kind: NodeKind, name: string | undefined): AliasConstruct
  * attribute. An `equals` method fails because `NodeOptions` admits arbitrary
  * values, a function among them. A global symbol fails as above.
  */
-const NODE_BRAND: unique symbol = Symbol("plurimath.node") as never;
+const NODE_BRAND: unique symbol = Symbol("plurimath.node");
 
 class NodeBase {
   /** @internal Not part of the public shape; see `NODE_BRAND`. */

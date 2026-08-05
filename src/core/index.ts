@@ -8,7 +8,7 @@
 
 export type { DeferredFeature, OnUnsupported, UnsupportedDiagnostic } from "./diagnostics";
 export { reportUnsupported, resetUnsupportedWarnings } from "./diagnostics";
-export { EQUALITY_FIELDS, equals } from "./equality";
+export { equals } from "./equality";
 export type { PlurimathErrorCode } from "./errors";
 export {
   MissingSymbolDataError,
@@ -97,7 +97,6 @@ export {
   OverleftrightarrowNode,
   OversetNode,
   ProdNode,
-  RUBY_ABSTRACT_CLASSES,
   SqrtNode,
   SumNode,
   SymbolNode,
@@ -111,5 +110,5 @@ export {
   UndersetNode,
   VecNode,
 } from "./nodes";
-export type { NodeSpec, NormalizedNode, NormalizedValue } from "./normalize";
-export { NODE_SPECS, normalize, rubyClassName } from "./normalize";
+export type { NormalizedNode, NormalizedValue } from "./normalize";
+export { normalize } from "./normalize";

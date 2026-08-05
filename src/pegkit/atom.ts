@@ -516,7 +516,16 @@ class AbsentAtom extends Atom {
   }
 
   tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
+    // The inner parse is speculation: whatever it does, this atom consumes
+    // nothing. `consumeAll` still reaches it (Parslet propagates the flag to
+    // the looked-at atom, and cache parity depends on that), but the
+    // `unconsumed` watermark — "the first code unit the parser could not
+    // consume" — must not move for input only a lookahead touched. Restoring
+    // it makes the speculation traceless without hiding recordings made
+    // outside this window.
+    const unconsumedBefore = ctx.unconsumed;
     const result = this.inner.apply(pos, ctx, consumeAll);
+    ctx.unconsumed = unconsumedBefore;
     if (result.ok) {
       if (pos > ctx.maxPos) ctx.maxPos = pos;
       return FAIL;
@@ -531,7 +540,11 @@ class PresentAtom extends Atom {
   }
 
   tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
+    // Same traceless-speculation rule as `AbsentAtom`, and for the same
+    // reason: a positive lookahead consumes nothing either.
+    const unconsumedBefore = ctx.unconsumed;
     const result = this.inner.apply(pos, ctx, consumeAll);
+    ctx.unconsumed = unconsumedBefore;
     if (!result.ok) return FAIL;
     return { ok: true, pos, value: null };
   }

@@ -473,6 +473,43 @@ describe("failure positions", () => {
       expect((error as ParseFailed).index).toBe(1);
     }
   });
+
+  it("a negative lookahead's speculation does not move the unconsumed index", () => {
+    // Regression: `absent()` passes `consumeAll` into its inner atom (as
+    // Parslet does), and the inner match's leftover conversion recorded a
+    // watermark for input the lookahead never consumed. `ParseFailed.index`
+    // is "the first code unit the parser could not consume" — a lookahead
+    // consumes nothing, so index must stay at the composite's own position.
+    try {
+      str("a").absent().parse("ab");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect((error as ParseFailed).index).toBe(0); // was 1: the leak
+    }
+  });
+
+  it("the same, in sequence tail position", () => {
+    try {
+      seq(str("x"), str("a").absent()).parse("xab");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect((error as ParseFailed).index).toBe(1); // was 2: the leak
+    }
+  });
+
+  it("a recording made before the lookahead survives its restore", () => {
+    // The restore must be a snapshot of the speculation window, not a reset.
+    // The first branch matches "ab" of "abz" and fails the consume-all check,
+    // honestly recording index 2; the second branch's lookahead speculation
+    // must not erase that on its way through.
+    const grammar = choice([seq(str("a"), str("b")), seq(str("a"), str("z").absent())]);
+    try {
+      grammar.parse("abz");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect((error as ParseFailed).index).toBe(2); // the first branch's honest mark
+    }
+  });
 });
 
 describe("packrat memoisation", () => {

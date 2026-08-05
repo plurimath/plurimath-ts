@@ -19,6 +19,14 @@ This was parked in `deferred.md` until P5. It moves here because
 that ships without it accepts input the gem refuses — a divergence nobody
 measures until a document breaks.
 
+**Status: the in-repo half landed with the grammar** (PR #4,
+`test/formats/asciimath/failure-parity.spec.ts`): 156 candidates probed
+against the gem, the 26 it rejects pinned with mapped positions, and the two
+sweeps showing zero accept/reject disagreement. What remains here is the
+**shared** half — the schema shape for a rejection case in the testsuite, the
+cases themselves, and wiring the `negative-parity` gate to read them — plus
+everything below that the local spec does not cover.
+
 Ownership follows the usual split: the **testsuite** defines the failure cases
 and the schema that holds them; **this repository** writes the reader and the
 assertions. The shared case schema has no shape for a rejection today —

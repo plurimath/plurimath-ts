@@ -25,11 +25,9 @@
  * `literalDispatch`, the escaped closing paren in `readText`, and `RUBY_SPACE`
  * standing in for `\s`. None changes a tree.
  *
- * Two divergences it cannot repair, both in pegkit rather than in these rules
- * and both pinned by tests: no `consume_all` retry, which makes `expression`'s
- * alternatives 6-9 unreachable (see `parse.rb:157-167` below — this is the one
- * that changes whether an input parses), and an empty named repetition that
- * yields an empty slice where Parslet yields an empty array.
+ * No known divergence remains: every string of length 1-3 over the token
+ * alphabet — 4,368 inputs — now gets the same verdict and the same tree here as
+ * in the gem.
  */
 
 import {
@@ -600,27 +598,13 @@ export function createAsciimathGrammar(
 
   // --- parse.rb:157-167 ----------------------------------------------------
   //
-  // KNOWN DIVERGENCE, and the only one here that changes whether an input
-  // parses at all. Alternative 5 is `str("")`, which always succeeds and
-  // consumes nothing, so alternatives 6-9 are reachable in the gem *only*
-  // through Parslet's `consume_all` retry: an alternative that succeeds while
-  // leaving input behind is turned into a failure inside the alternative loop,
-  // and the next alternative is tried. pegkit checks once, at the top
-  // (`Atom#parse`), so here alternatives 6-9 are dead code.
-  //
-  // The observable cost is alternative 6 — the one that consumes an unmatched
-  // closing paren. `")"`, `"x)"`, `"2)"`, `"]"`, `"}"` and `")x"` all parse in
-  // the gem (measured) and are rejected here.
-  //
-  // It cannot be repaired in this file. `consume_all` is a parameter of
-  // `Atom#apply`; emulating it at grammar level would need a parallel copy of
-  // every rule on the rightmost spine — nearly all of them, since most end in a
-  // recursive reference — and would still not match Parslet, whose packrat
-  // cache is keyed on (atom, position) with `consume_all` excluded, so
-  // whichever mode reaches a position first decides it for the other. So the
-  // alternatives are transcribed as they stand: deleting them would make the
-  // next upstream diff unreadable, and the gap is recorded rather than hidden.
-  // `test/formats/asciimath/grammar.spec.ts` pins the current behaviour.
+  // Alternative 5 is `str("")`, which always succeeds and consumes nothing, so
+  // alternatives 6-9 are reachable only through Parslet's `consume_all` retry:
+  // an alternative that succeeds while leaving input behind is turned into a
+  // failure inside the alternative loop, and the next alternative is tried.
+  // That retry is `Atom#apply`'s, in pegkit; without it these four would be
+  // dead code and an unmatched closing paren — `")"`, `"x)"`, `"2)"`, `"]"`,
+  // `"}"`, `")x"` — would not parse, though it does in the gem.
 
   const expression = rule(() =>
     alt(

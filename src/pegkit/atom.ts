@@ -41,6 +41,7 @@ interface CacheEntry {
   readonly ok: boolean;
   readonly advance: number;
   readonly value: ParseValue;
+  readonly emptyRepetition: boolean;
 }
 
 export interface ParseContext {
@@ -49,7 +50,17 @@ export interface ParseContext {
   captures: Map<string, string>[];
   /** Deepest position reached, for error reporting. */
   maxPos: number;
-  /** Packrat cache, keyed by (atom, position) as in Parslet's Atoms::Context. */
+  /**
+   * The furthest position at which an atom succeeded but left input behind
+   * under `consumeAll` — Parslet's `offending_pos` in `Atoms::Base#apply`.
+   * `-1` when no such check ever failed. See `Atom#parse` for why this, and
+   * not `maxPos`, is the index a caller wants.
+   */
+  unconsumed: number;
+  /**
+   * Packrat cache, keyed by (atom, position) as in Parslet's Atoms::Context —
+   * with `consume_all` deliberately EXCLUDED from the key, see `Atom#apply`.
+   */
   cache: Map<Atom, Map<number, CacheEntry>>;
   depth: number;
 }
@@ -60,7 +71,27 @@ export interface ParseContext {
  */
 const MAX_DEPTH = 20_000;
 
-type ParseResult = { ok: true; pos: number; value: ParseValue } | { ok: false };
+type ParseResult =
+  | {
+      ok: true;
+      pos: number;
+      value: ParseValue;
+      /**
+       * Set by a repetition that matched nothing, so that `.as(...)` can yield
+       * `[]` where an ordinary empty match yields `""` — Parslet's
+       * `flatten_repetition`'s `return [] if named && list.empty?`. Measured:
+       *   str('a').repeat.as(:t).parse('')  => {t: []}
+       *   str('a').repeat.parse('')         => ""
+       * It rides on the *result*, not the value, because it must survive the
+       * wrappers that pass a child result through untouched (alternative,
+       * dynamic) and vanish through the ones that rebuild it (sequence,
+       * maybe) — exactly the shape Parslet's deferred `flatten` gives it.
+       * (Parslet's `entity` wrapper behaves like the pass-through group;
+       * pegkit has no such atom, its `rule()` closures fill that role.)
+       */
+      emptyRepetition?: true;
+    }
+  | { ok: false };
 const FAIL: ParseResult = { ok: false };
 
 /**
@@ -102,29 +133,76 @@ function combineSeq(left: ParseValue, right: ParseValue): ParseValue {
 }
 
 export abstract class Atom {
-  abstract tryParse(pos: number, ctx: ParseContext): ParseResult;
+  /**
+   * `consumeAll` is Parslet's `consume_all` (`Atoms::Base#try`): true when this
+   * atom is required to swallow the rest of the input by itself. Leaf atoms
+   * ignore it and may omit the parameter.
+   */
+  abstract tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult;
 
-  /** Parslet's `cached?`: Dynamic and Scope opt out, everything else caches. */
+  /**
+   * Parslet's `cached?` plus the wrappers that never consult the cache because
+   * they override `#apply` outright. Measured on parslet 2.0.0 with an
+   * uncacheable inner atom, so only the wrapper itself could hold an entry
+   * (`(w >> str('q')) | w` on `"a"`, where alternative 1 applies `w` without
+   * `consume_all` and alternative 2 applies the same object with it):
+   *
+   * In Parslet's taxonomy (measured there; pegkit implements the subset it
+   * needs — there is no `Ignored` or `Entity` atom here):
+   *
+   *   Named, Capture, Ignored, Scope, Dynamic  -> parse succeeds  (not cached)
+   *   Entity, Alternative                      -> parse fails     (cached)
+   *
+   * pegkit's equivalents: `AsAtom` (Named) and `dynamic` are uncacheable;
+   * everything else caches.
+   */
   protected cacheable(): boolean {
     return true;
   }
 
   /**
-   * Parslet's `Context#try_with_cache`. Cached values are shared by reference
-   * exactly as in Parslet: at most one occurrence survives into the final
-   * tree, so sharing is safe.
+   * Parslet's `Atoms::Base#apply`, which is two steps, in this order:
+   *
+   * 1. `Context#try_with_cache` — memoised on **(atom, position) only**. The
+   *    `consume_all` flag is deliberately not part of the key, so whichever
+   *    mode reaches a position first decides it for the other. Parslet really
+   *    does this, and it really is observable there: three grammars that share
+   *    ONE atom object between two branches parse differently from the same
+   *    grammars written out twice, and `test/pegkit/conformance.spec.ts` pins
+   *    all three with the parslet expression each was measured with. Keying on
+   *    the flag as well was tried here and changed no verdict and no tree over
+   *    5,868 swept AsciiMath inputs — it is not reachable through *that*
+   *    grammar — but "unobservable so far" is not a reason to diverge from the
+   *    oracle on purpose, and the next grammar is where it would surface.
+   * 2. The leftover check — a success that does not reach the end of the input
+   *    is turned into a *failure*, which is what makes an alternative that
+   *    matched too little fall through to the next one. This runs on the
+   *    **cached** value too, and the cache stores the raw step-1 answer rather
+   *    than this verdict (measured: `s | (s >> str('b'))` parses `"ab"`, so
+   *    alternative 2 sees the success alternative 1 turned into a failure).
+   *
+   * Cached values are shared by reference exactly as in Parslet: at most one
+   * occurrence survives into the final tree, so sharing is safe.
    */
-  apply(pos: number, ctx: ParseContext): ParseResult {
+  apply(pos: number, ctx: ParseContext, consumeAll = false): ParseResult {
     let byPosition = ctx.cache.get(this);
     const hit = byPosition?.get(pos);
+    let result: ParseResult;
     if (hit !== undefined) {
-      return hit.ok ? { ok: true, pos: pos + hit.advance, value: hit.value } : FAIL;
-    }
-    if (++ctx.depth > MAX_DEPTH) {
-      throw new ParseFailed("Input is nested too deeply to parse", pos);
-    }
-    try {
-      const result = this.tryParse(pos, ctx);
+      result = hit.ok
+        ? hit.emptyRepetition
+          ? { ok: true, pos: pos + hit.advance, value: hit.value, emptyRepetition: true }
+          : { ok: true, pos: pos + hit.advance, value: hit.value }
+        : FAIL;
+    } else {
+      if (++ctx.depth > MAX_DEPTH) {
+        throw new ParseFailed("Input is nested too deeply to parse", pos);
+      }
+      try {
+        result = this.tryParse(pos, ctx, consumeAll);
+      } finally {
+        ctx.depth--;
+      }
       if (this.cacheable()) {
         if (!byPosition) {
           byPosition = new Map();
@@ -133,14 +211,21 @@ export abstract class Atom {
         byPosition.set(
           pos,
           result.ok
-            ? { ok: true, advance: result.pos - pos, value: result.value }
-            : { ok: false, advance: 0, value: null },
+            ? {
+                ok: true,
+                advance: result.pos - pos,
+                value: result.value,
+                emptyRepetition: result.emptyRepetition === true,
+              }
+            : { ok: false, advance: 0, value: null, emptyRepetition: false },
         );
       }
-      return result;
-    } finally {
-      ctx.depth--;
     }
+    if (result.ok && consumeAll && result.pos < ctx.input.length) {
+      if (result.pos > ctx.unconsumed) ctx.unconsumed = result.pos;
+      return FAIL;
+    }
+    return result;
   }
 
   /** Parslet `>>` */
@@ -183,17 +268,30 @@ export abstract class Atom {
     return new CaptureAtom(this, name);
   }
 
+  /**
+   * Parslet's `Atoms::Base#parse` without the `prefix:` option: the root is
+   * applied with `consume_all` true, so a partial match is a failure rather
+   * than something to detect afterwards.
+   *
+   * The reported index keeps its contract — *the first code unit the parser
+   * could not consume*. Under `consume_all` that is `ctx.unconsumed`, the
+   * furthest point some atom reached before the leftover check rejected it,
+   * not `ctx.maxPos`, which is the deepest position a leaf was *tried* at and
+   * is usually end-of-input. `maxPos` remains the answer when nothing ever
+   * matched a prefix (`str("a").parse("b")` still reports 0).
+   */
   parse(input: string): ParseValue {
     const ctx: ParseContext = {
       input,
       captures: [new Map()],
       maxPos: 0,
+      unconsumed: -1,
       cache: new Map(),
       depth: 0,
     };
     let result: ParseResult;
     try {
-      result = this.apply(0, ctx);
+      result = this.apply(0, ctx, true);
     } catch (error) {
       // Grammar recursion can still outrun the JS stack before MAX_DEPTH on
       // some engines; the per-parse context is discarded, so unwinding is safe.
@@ -202,9 +300,10 @@ export abstract class Atom {
       }
       throw error;
     }
-    if (result.ok && result.pos === input.length) return result.value;
+    // `consume_all` guarantees a successful root reached the end of the input.
+    if (result.ok) return result.value;
 
-    const at = result.ok ? result.pos : ctx.maxPos;
+    const at = ctx.unconsumed >= 0 ? ctx.unconsumed : ctx.maxPos;
     throw new ParseFailed(
       `Failed to match at index ${at}: ${JSON.stringify(input.slice(at, at + 12))}...`,
       at,
@@ -309,10 +408,17 @@ class SeqAtom extends Atom {
     super();
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
-    const left = this.left.apply(pos, ctx);
+  /**
+   * `Sequence#try` hands `consume_all` to its LAST element only
+   * (`consume_all && idx == parslets.size-1`). Parslet flattens `a >> b >> c`
+   * into one three-element Sequence while `seq(...)` here nests to the left,
+   * but both put exactly one atom — the rightmost leaf — in charge of reaching
+   * the end of the input, so the two agree.
+   */
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
+    const left = this.left.apply(pos, ctx, false);
     if (!left.ok) return FAIL;
-    const right = this.right.apply(left.pos, ctx);
+    const right = this.right.apply(left.pos, ctx, consumeAll);
     if (!right.ok) return FAIL;
     return { ok: true, pos: right.pos, value: combineSeq(left.value, right.value) };
   }
@@ -326,21 +432,39 @@ class AltAtom extends Atom {
     super();
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
-    const left = this.left.apply(pos, ctx);
+  /**
+   * `Alternative#try` passes `consume_all` to every branch unchanged. That is
+   * the retry this whole flag exists for: a branch that matches but strands
+   * input fails in `Atom#apply`, and the next branch gets its turn. Measured:
+   * `(str("") | str("a")).parse("a")` succeeds through the second branch.
+   */
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
+    const left = this.left.apply(pos, ctx, consumeAll);
     if (left.ok) return left;
-    return this.right.apply(pos, ctx);
+    return this.right.apply(pos, ctx, consumeAll);
   }
 }
 
+/**
+ * Parslet's `.maybe` is `Repetition(atom, 0, 1, :maybe)`, and the difference
+ * from a plain repetition is observable: reaching `max` returns success
+ * *immediately*, skipping the "extra input after last repetition" check, while
+ * matching nothing falls through to it. Measured, with one shared atom:
+ *
+ *   m  = str('a').maybe ;  m  | (m  >> str('b'))  parses "ab"  (cached success)
+ *   m2 = str('z').maybe ;  m2 | (m2 >> str('b'))  FAILS on "b" (cached failure)
+ */
 class MaybeAtom extends Atom {
   constructor(private readonly inner: Atom) {
     super();
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
-    const result = this.inner.apply(pos, ctx);
-    if (result.ok) return result;
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
+    const result = this.inner.apply(pos, ctx, false);
+    // Rebuilt rather than returned: `flatten` re-folds a `:maybe` around its
+    // child, so an empty repetition inside one is no longer a bare `[]`.
+    if (result.ok) return { ok: true, pos: result.pos, value: result.value };
+    if (consumeAll && pos < ctx.input.length) return FAIL;
     return { ok: true, pos, value: null };
   }
 }
@@ -353,17 +477,27 @@ class RepeatAtom extends Atom {
     super();
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
+  /**
+   * `Repetition#try` applies its inner atom with `consume_all` **false** every
+   * round — measured: `(str('a')|str('aa')).as(:c).repeat(1)` on `"aa"` yields
+   * two one-character matches, not one two-character match — and then fails
+   * itself if it stopped short of the end while `consume_all` is set.
+   */
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
     const values: ParseValue[] = [];
     let cursor = pos;
     for (;;) {
-      const result = this.inner.apply(cursor, ctx);
+      const result = this.inner.apply(cursor, ctx, false);
       if (!result.ok) break;
       if (result.pos === cursor) break; // zero-width match: stop, do not livelock
       values.push(result.value);
       cursor = result.pos;
     }
     if (values.length < this.min) return FAIL;
+    if (consumeAll && cursor < ctx.input.length) return FAIL;
+    if (values.length === 0) {
+      return { ok: true, pos: cursor, value: new Slice("", pos), emptyRepetition: true };
+    }
     if (values.every((value) => value instanceof Slice || value === null)) {
       const text = values.map((value) => (value === null ? "" : (value as Slice).text)).join("");
       return { ok: true, pos: cursor, value: new Slice(text, pos) };
@@ -372,13 +506,33 @@ class RepeatAtom extends Atom {
   }
 }
 
+/**
+ * `Lookahead#try` passes `consume_all` straight to the atom it looks at, so a
+ * lookahead in tail position demands that its target could finish the input.
+ * Measured, with one shared `str('b').present?`:
+ *
+ *   (str('a') >> look)                    -- fails on "abc": `look` must reach
+ *                                            the end and only reaches "b"
+ *   (str('a') >> look >> str('bc'))       -- succeeds on "abc" on its own
+ *   their alternation                     -- FAILS, because the first branch
+ *                                            cached the failure at that position
+ */
 class AbsentAtom extends Atom {
   constructor(private readonly inner: Atom) {
     super();
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
-    const result = this.inner.apply(pos, ctx);
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
+    // The inner parse is speculation: whatever it does, this atom consumes
+    // nothing. `consumeAll` still reaches it (Parslet propagates the flag to
+    // the looked-at atom, and cache parity depends on that), but the
+    // `unconsumed` watermark — "the first code unit the parser could not
+    // consume" — must not move for input only a lookahead touched. Restoring
+    // it makes the speculation traceless without hiding recordings made
+    // outside this window.
+    const unconsumedBefore = ctx.unconsumed;
+    const result = this.inner.apply(pos, ctx, consumeAll);
+    ctx.unconsumed = unconsumedBefore;
     if (result.ok) {
       if (pos > ctx.maxPos) ctx.maxPos = pos;
       return FAIL;
@@ -392,8 +546,12 @@ class PresentAtom extends Atom {
     super();
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
-    const result = this.inner.apply(pos, ctx);
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
+    // Same traceless-speculation rule as `AbsentAtom`, and for the same
+    // reason: a positive lookahead consumes nothing either.
+    const unconsumedBefore = ctx.unconsumed;
+    const result = this.inner.apply(pos, ctx, consumeAll);
+    ctx.unconsumed = unconsumedBefore;
     if (!result.ok) return FAIL;
     return { ok: true, pos, value: null };
   }
@@ -407,10 +565,17 @@ class AsAtom extends Atom {
     super();
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
-    const result = this.inner.apply(pos, ctx);
+  protected override cacheable(): boolean {
+    return false; // Parslet's Named overrides #apply and never sees the cache
+  }
+
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
+    const result = this.inner.apply(pos, ctx, consumeAll);
     if (!result.ok) return FAIL;
-    return { ok: true, pos: result.pos, value: { [this.name]: result.value } };
+    // `flatten(value, named: true)`: a repetition that matched nothing keeps an
+    // empty list under a name instead of collapsing to an empty string.
+    const value = result.emptyRepetition ? [] : result.value;
+    return { ok: true, pos: result.pos, value: { [this.name]: value } };
   }
 }
 
@@ -426,8 +591,8 @@ class CaptureAtom extends Atom {
     return false; // writes context state; caching would hide the write
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
-    const result = this.inner.apply(pos, ctx);
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
+    const result = this.inner.apply(pos, ctx, consumeAll);
     if (!result.ok) return FAIL;
     const scope = ctx.captures[ctx.captures.length - 1] as Map<string, string>;
     scope.set(this.name, ctx.input.slice(pos, result.pos));
@@ -448,10 +613,10 @@ class ScopeAtom extends Atom {
     return false; // result depends on surrounding capture state
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
     ctx.captures.push(new Map(ctx.captures[ctx.captures.length - 1]));
     try {
-      return this.inner.apply(pos, ctx);
+      return this.inner.apply(pos, ctx, consumeAll);
     } finally {
       ctx.captures.pop();
     }
@@ -467,8 +632,8 @@ class DynamicAtom extends Atom {
     return false; // the atom itself varies with captured state
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
-    return this.build(ctx).apply(pos, ctx);
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
+    return this.build(ctx).apply(pos, ctx, consumeAll);
   }
 }
 
@@ -479,9 +644,9 @@ class LazyAtom extends Atom {
     super();
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
     if (!this.resolved) this.resolved = this.thunk();
-    return this.resolved.apply(pos, ctx);
+    return this.resolved.apply(pos, ctx, consumeAll);
   }
 }
 
@@ -490,9 +655,9 @@ class ChoiceAtom extends Atom {
     super();
   }
 
-  tryParse(pos: number, ctx: ParseContext): ParseResult {
+  tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
     for (const atom of this.atoms) {
-      const result = atom.apply(pos, ctx);
+      const result = atom.apply(pos, ctx, consumeAll);
       if (result.ok) return result;
     }
     return FAIL;
@@ -564,11 +729,11 @@ export function tokenChoice(entries: ReadonlyArray<readonly [key: string, atom: 
   }
 
   class TokenChoiceAtom extends Atom {
-    tryParse(pos: number, ctx: ParseContext): ParseResult {
+    tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
       const bucket = buckets.get(ctx.input[pos] ?? "");
       if (bucket) {
         for (const atom of bucket) {
-          const result = atom.apply(pos, ctx);
+          const result = atom.apply(pos, ctx, consumeAll);
           if (result.ok) return result;
         }
       }

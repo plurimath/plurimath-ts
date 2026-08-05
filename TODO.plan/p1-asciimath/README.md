@@ -43,8 +43,10 @@ AsciiMath goes first because it is the smallest complete grammar in the gem
 
 ## Risks and notes
 
-- **The transform is the bulk.** `transform.rb` is ~95 pattern rules and the
-  largest single piece of AsciiMath logic; expect item 5 to dominate.
+- **The transform is the bulk.** `transform.rb` is 149 pattern rules (plus 3
+  from the number-prefix mixin) and the largest single piece of AsciiMath
+  logic; expect item 5 to dominate. The corpus fires only 45 of the 152, so
+  item 5 carries its own differential sweep.
 - **Rule order is behaviour.** Parslet uses ordered choice and reverse-order
   transform matching, so moving an alternative changes what parses. Only the
   first is pinned: the pegkit conformance suite has one ordered-choice test and

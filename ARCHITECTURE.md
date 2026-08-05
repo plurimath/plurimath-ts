@@ -708,9 +708,21 @@ render-time conversion, separate parser entry point) is what gets built.
 Ported from the POC, where its architecture passed adversarial review
 (Codex, 2026-07-23: "lock with conditions"). It replicates Parslet 2.0.0
 semantics verified against the vendored gem source: sequence flattening,
-slice/hash/array result trees, packrat memoization keyed (atom, position) with
-Dynamic atoms uncached, one-character `match` consumption, reverse-definition-
-order transform rules, exact-key-set patterns.
+slice/hash/array result trees, packrat memoization, whole-code-point `match`
+consumption, reverse-definition-order transform rules, exact-key-set patterns.
+
+**The cache, stated precisely, because two of its properties look like bugs.**
+The key is (atom, position) and deliberately **excludes `consumeAll`**, matching
+Parslet, where the leftover-input check runs *after* the cache and on the cached
+value. One consequence, measured: a grammar that shares one atom object between
+two branches parses differently from the same grammar written out twice —
+`(a >> str("q")) | a` fails on `"a"` where `a` alone succeeds. Adding the flag to
+the key would fix that, and would make pegkit *more consistent than the oracle*,
+which §1 defines as a defect. In Parslet, the uncached set is `Dynamic` plus
+the wrappers it gives their own `#apply` and never memoizes — `Named`,
+`Capture`, `Ignored`, `Scope`. pegkit implements the subset it needs: its
+uncached atoms are `dynamic` and `AsAtom` (the `Named` equivalent); it has no
+`Ignored`, `Capture`, `Scope` or `Entity` atoms at all.
 
 Lock conditions, owed in Phase 0:
 

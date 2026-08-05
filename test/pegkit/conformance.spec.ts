@@ -221,6 +221,33 @@ describe("repeat", () => {
   it("stops on a zero-width match instead of looping forever", () => {
     expect(String(seq(str("x").maybe().repeat(0), str("y")).parse("y"))).toBe("y");
   });
+
+  /**
+   * `flatten_repetition`'s `return [] if named && list.empty?`: a repetition
+   * that matched nothing keeps an empty list under a name, and collapses to an
+   * empty string without one. Measured on parslet 2.0.0:
+   *   str('a').repeat.as(:t).parse('')                  => {t: []}
+   *   str('a').repeat.parse('')                         => ""
+   *   (str('x').as(:k) >> str('a').repeat).parse('x')   => {k: "x"@0}
+   *   str('a').maybe.as(:t).parse('')                   => {t: nil}
+   */
+  it("yields an empty array for a NAMED repetition that matched nothing", () => {
+    expect(str("a").repeat(0).as("t").parse("")).toEqual({ t: [] });
+  });
+
+  it("yields an empty slice for an unnamed one, which then vanishes", () => {
+    expect(str("a").repeat(0).parse("")).toEqual(new Slice("", 0));
+    // An adjacent named result still wins over it, as an empty string does.
+    expect(seq(str("x").as("k"), str("a").repeat(0)).parse("x")).toEqual({
+      k: new Slice("x", 0),
+    });
+  });
+
+  it("keeps a named `maybe` at null rather than an empty array", () => {
+    expect(str("a").maybe().as("t").parse("")).toEqual({ t: null });
+    // A repetition nested in a `maybe` is re-folded, so it is not a bare [].
+    expect(str("a").repeat(0).maybe().as("t").parse("")).toEqual({ t: new Slice("", 0) });
+  });
 });
 
 describe("lookahead", () => {
@@ -272,11 +299,147 @@ describe("capture, dynamic and scope", () => {
 });
 
 describe("ordered choice", () => {
-  it("takes the first alternative that matches, not the longest", () => {
+  it("takes the first alternative that matches to the end, not the longest", () => {
     const ambiguous = choice([str("a"), str("ab")]);
     expect(String(ambiguous.parse("a"))).toBe("a");
-    // "ab" cannot parse: the first alternative wins and leaves "b" behind.
-    expect(() => ambiguous.parse("ab")).toThrow(ParseFailed);
+    // The first alternative matches but strands "b", so `consume_all` turns it
+    // into a failure and the second alternative gets its turn. Measured:
+    //   (str('a') | str('ab')).parse("ab")               => "ab"@0
+    //   (str('a') | str('ab')).parse("ab", prefix: true) => "a"@0
+    // This assertion used to require a ParseFailed here, which was wrong: it
+    // described a parser without the retry, not parslet.
+    expect(String(ambiguous.parse("ab"))).toBe("ab");
+  });
+
+  it("still fails when no alternative reaches the end", () => {
+    expect(() => choice([str("a"), str("ab")]).parse("abc")).toThrow(ParseFailed);
+  });
+});
+
+/**
+ * `consume_all` — the flag that decides whether an input parses at all.
+ *
+ * Parslet's `Atoms::Base#apply` turns a success that leaves input behind into a
+ * failure, *inside* whatever loop is running, so an alternative that matched
+ * too little falls through to the next one. Every expectation below was first
+ * measured on parslet 2.0.0 (probe scripts in the session scratchpad); the
+ * comment on each one gives the atom expression that was run.
+ */
+describe("consume_all", () => {
+  it("retries an alternative that matched but left input behind", () => {
+    //   (str('') | str('a')).parse("a")  => "a"@0
+    expect(String(choice([str(""), str("a")]).parse("a"))).toBe("a");
+  });
+
+  it("hands the flag to the last element of a sequence only", () => {
+    // If the FIRST element carried it, str('a') would have to swallow "ab".
+    //   (str('a') >> str('b')).parse("ab")               => "ab"@0
+    expect(String(seq(str("a"), str("b")).parse("ab"))).toBe("ab");
+    // The last element IS retried:
+    //   (str('a') >> (str('') | str('b'))).parse("ab")   => "ab"@0
+    expect(String(seq(str("a"), choice([str(""), str("b")])).parse("ab"))).toBe("ab");
+    // ... and a non-last element is not, so it keeps its short match and the
+    // rest of the sequence starves:
+    //   ((str('') | str('a')) >> str('a')).parse("a")    => "a"@0
+    expect(String(seq(choice([str(""), str("a")]), str("a")).parse("a"))).toBe("a");
+  });
+
+  it("hands the flag to a repetition but never to what it repeats", () => {
+    //   (str('a')|str('aa')).as(:c).repeat(1).parse("aa")
+    //     => [{c: "a"@0}, {c: "a"@1}]     -- two rounds, not one greedy match
+    expect(
+      choice([str("a"), str("aa")])
+        .as("c")
+        .repeat(1)
+        .parse("aa"),
+    ).toEqual([{ c: new Slice("a", 0) }, { c: new Slice("a", 1) }]);
+    //   str('a').repeat(0).parse("b")  => Extra input after last repetition
+    expect(() => str("a").repeat(0).parse("b")).toThrow(ParseFailed);
+    //   str('a').maybe.parse("b")      => Extra input after last repetition
+    expect(() => str("a").maybe().parse("b")).toThrow(ParseFailed);
+  });
+
+  it("hands the flag to the atom a lookahead looks at", () => {
+    // `str('b').present?` at index 1 of "abc" must itself reach the end under
+    // consume_all, and cannot, so the lookahead fails and the alternation
+    // falls through:
+    //   ((str('a') >> str('b').present?) | str('abc')).parse("abc") => "abc"@0
+    const look = str("b").present();
+    expect(String(choice([seq(str("a"), look), str("abc")]).parse("abc"))).toBe("abc");
+    // A lookahead that is not last in its sequence gets `false` and succeeds:
+    //   ((str('a') >> str('b').present? >> str('bc')) | str('zzz')).parse("abc")
+    expect(String(seq(str("a"), str("b").present(), str("bc")).parse("abc"))).toBe("abc");
+  });
+});
+
+/**
+ * The packrat cache is keyed on (atom, position) with `consume_all` EXCLUDED,
+ * so whichever mode reaches a position first decides it for the other. Each
+ * case below shares ONE atom object between two branches, and that sharing is
+ * the whole mechanism: written out twice, the same grammars parse.
+ *
+ * These four are the only tests that distinguish the two keyings. Keying on the
+ * flag as well was tried against the gem over 5,868 AsciiMath inputs and
+ * changed no verdict and no tree — it is simply not reachable through *that*
+ * grammar — so without this block the divergence would be silent, and would
+ * surface on some later grammar instead.
+ */
+describe("packrat and consume_all interact", () => {
+  it("lets a non-consume_all answer decide a later consume_all use", () => {
+    //   a = str('') | str('a')
+    //   ((a >> str('q')) | a).parse("a")  => FAIL
+    //   a.parse("a")                      => "a"@0
+    const a = choice([str(""), str("a")]);
+    expect(() => choice([seq(a, str("q")), a]).parse("a")).toThrow(ParseFailed);
+    expect(String(choice([str(""), str("a")]).parse("a"))).toBe("a");
+  });
+
+  it("lets a consume_all failure decide a later non-consume_all use", () => {
+    //   r = str('a').repeat(0)
+    //   (r | (r >> str('b'))).parse("b")  => FAIL
+    //   (str('a').repeat(0) >> str('b')).parse("b") => "b"@0
+    const r = str("a").repeat(0);
+    expect(() => choice([r, seq(r, str("b"))]).parse("b")).toThrow(ParseFailed);
+    expect(String(seq(str("a").repeat(0), str("b")).parse("b"))).toBe("b");
+  });
+
+  it("does the same through a shared lookahead", () => {
+    //   look = str('b').present?
+    //   ((str('a') >> look) | (str('a') >> look >> str('bc'))).parse("abc") => FAIL
+    const look = str("b").present();
+    expect(() =>
+      choice([seq(str("a"), look), seq(str("a"), look, str("bc"))]).parse("abc"),
+    ).toThrow(ParseFailed);
+  });
+
+  it("caches the raw answer, not the consume_all verdict", () => {
+    // Branch 1 applies `s` under consume_all and sees it turned into a
+    // failure; branch 2 reuses the same position without the flag and must
+    // still find the SUCCESS in the cache.
+    //   s = str('a') ;  (s | (s >> str('b'))).parse("ab")  => "ab"@0
+    const s = str("a");
+    expect(String(choice([s, seq(s, str("b"))]).parse("ab"))).toBe("ab");
+  });
+
+  it("does not cache the wrappers parslet resolves through #apply", () => {
+    // Named, capture, scope and dynamic override #apply in parslet and never
+    // reach the cache. Measured with an uncacheable inner atom, so only the
+    // wrapper itself could hold an entry:
+    //   n = dynamic { str('') | str('a') }.as(:v)
+    //   ((n >> str('q')) | n).parse("a")  => {v: "a"@0}
+    const fresh = () => dynamic(() => choice([str(""), str("a")]));
+    for (const wrap of [
+      (inner: import("../../src/pegkit/index").Atom) => inner.as("v"),
+      (inner: import("../../src/pegkit/index").Atom) => inner.capture("v"),
+      (inner: import("../../src/pegkit/index").Atom) => scope(inner),
+      (inner: import("../../src/pegkit/index").Atom) => inner,
+    ]) {
+      const wrapped = wrap(fresh());
+      expect(() => choice([seq(wrapped, str("q")), wrapped]).parse("a")).not.toThrow();
+    }
+    // The control: an alternative IS cached, so the same shape fails.
+    const cached = choice([str(""), str("a")]);
+    expect(() => choice([seq(cached, str("q")), cached]).parse("a")).toThrow(ParseFailed);
   });
 });
 
@@ -308,6 +471,43 @@ describe("failure positions", () => {
       expect.unreachable("should have thrown");
     } catch (error) {
       expect((error as ParseFailed).index).toBe(1);
+    }
+  });
+
+  it("a negative lookahead's speculation does not move the unconsumed index", () => {
+    // Regression: `absent()` passes `consumeAll` into its inner atom (as
+    // Parslet does), and the inner match's leftover conversion recorded a
+    // watermark for input the lookahead never consumed. `ParseFailed.index`
+    // is "the first code unit the parser could not consume" — a lookahead
+    // consumes nothing, so index must stay at the composite's own position.
+    try {
+      str("a").absent().parse("ab");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect((error as ParseFailed).index).toBe(0); // was 1: the leak
+    }
+  });
+
+  it("the same, in sequence tail position", () => {
+    try {
+      seq(str("x"), str("a").absent()).parse("xab");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect((error as ParseFailed).index).toBe(1); // was 2: the leak
+    }
+  });
+
+  it("a recording made before the lookahead survives its restore", () => {
+    // The restore must be a snapshot of the speculation window, not a reset.
+    // The first branch matches "ab" of "abz" and fails the consume-all check,
+    // honestly recording index 2; the second branch's lookahead speculation
+    // must not erase that on its way through.
+    const grammar = choice([seq(str("a"), str("b")), seq(str("a"), str("z").absent())]);
+    try {
+      grammar.parse("abz");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect((error as ParseFailed).index).toBe(2); // the first branch's honest mark
     }
   });
 });

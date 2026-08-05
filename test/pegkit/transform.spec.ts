@@ -203,6 +203,31 @@ describe("repeated binding names", () => {
       bound: [{ i: new Slice("x", 0) }],
     });
   });
+
+  it("dispatches to a constructed node's own equality, as Ruby's `==` does", () => {
+    // Measured: two separately built Number.new("2") — `equal?` false, `==`
+    // true — satisfy a repeated `simple(:v)` binding in Parslet. The engine
+    // must ask the object, not compare identity. Review finding on PR #7.
+    const t = new Transform();
+    t.rule({ a: simple("v"), b: simple("v") }, () => "matched");
+    const equalNotIdentical = {
+      kind: "number",
+      value: "2",
+      equals(other: unknown) {
+        return (other as { value?: unknown }).value === "2";
+      },
+    };
+    const twin = { ...equalNotIdentical };
+    expect(t.apply({ a: equalNotIdentical as never, b: twin as never })).toBe("matched");
+  });
+
+  it("keeps Ruby's numeric equality, not Object.is", () => {
+    // Ruby: NaN == NaN is false; -0.0 == 0.0 is true. `Object.is` inverts both.
+    const t = new Transform();
+    t.rule({ a: simple("v"), b: simple("v") }, () => "matched");
+    expect(t.apply({ a: Number.NaN as never, b: Number.NaN as never })).not.toBe("matched");
+    expect(t.apply({ a: -0 as never, b: 0 as never })).toBe("matched");
+  });
 });
 
 describe("matcher shapes", () => {

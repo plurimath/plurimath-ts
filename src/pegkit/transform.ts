@@ -101,10 +101,31 @@ function treeEqual(a: TransformValue, b: TransformValue): boolean {
       aKeys.every((key) => Object.hasOwn(b, key) && treeEqual(a[key], b[key]))
     );
   }
+  // Ruby's `bound_value == tree` dispatches to whatever `==` the bound object
+  // defines. Two separately built but structurally equal model nodes therefore
+  // satisfy a repeated binding in Parslet (measured: `Number.new("2")` twice,
+  // `equal?` false, binding matches). Asking the object for its own `equals`
+  // is that dispatch — no import from `core`, which layer rule 1 forbids; the
+  // object carries its equality with it, exactly as in Ruby.
+  if (
+    typeof a === "object" &&
+    a !== null &&
+    typeof (a as { equals?: unknown }).equals === "function"
+  ) {
+    return (a as { equals(other: unknown): boolean }).equals(b);
+  }
+  // `===`, not `Object.is`: Ruby says `NaN == NaN` is false and `-0.0 == 0.0`
+  // is true, which is `===`'s behaviour and not `Object.is`'s. Everything else
+  // without its own `equals` compares by identity, as Ruby's `Object#==` does.
+  if (typeof a === "number" || typeof b === "number") return a === b;
   return Object.is(a, b);
 }
 
-/** Ruby truthiness: only `nil` and `false` are falsy (unlike JavaScript). */
+/**
+ * Ruby truthiness: only `nil` and `false` are falsy (unlike JavaScript).
+ * `undefined` counts as `nil` here — the engine has no separate notion of it,
+ * and `strippedEmpty` already folds the two together.
+ */
 function rubyTruthy(value: TransformValue): boolean {
   return value !== null && value !== undefined && value !== false;
 }

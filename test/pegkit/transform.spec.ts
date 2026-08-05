@@ -20,7 +20,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { Slice, sequence, simple, subtree, Transform } from "../../src/pegkit/index";
+import { Slice, sequence, simple, strippedEmpty, subtree, Transform } from "../../src/pegkit/index";
 
 /** Stand-in for a constructed model node: not a plain hash, not an array. */
 class ConstructedNode {
@@ -306,5 +306,20 @@ describe("matcher shapes", () => {
     expect(t.apply({ k: { inner: "a", extra: "b" } })).toEqual({
       matched: { inner: "a", extra: "b" },
     });
+  });
+});
+
+describe("strippedEmpty follows Ruby's strip, not trim()", () => {
+  it("keeps a no-break space, as the gem does", () => {
+    // Measured: Ruby `" ".strip.empty?` is false; JS trim() eats it.
+    // The AsciiMath grammar treats NBSP as a symbol, so counting it "empty"
+    // here would drop content the gem preserves.
+    expect(strippedEmpty(" ")).toBe(false);
+    expect(strippedEmpty(new Slice(" ", 0))).toBe(false);
+  });
+
+  it("still treats Ruby whitespace and NUL as strippable", () => {
+    expect(strippedEmpty(" \t\n\v\f\r\0 ")).toBe(true);
+    expect(strippedEmpty("")).toBe(true);
   });
 });

@@ -181,10 +181,23 @@ export class Transform {
   }
 }
 
+/**
+ * The characters Ruby's `String#strip` removes: NUL and ASCII whitespace.
+ * NOT JavaScript's `trim()`, which also eats U+00A0 and other Unicode spaces —
+ * Ruby keeps those (measured: `" ".strip.empty?` is false), and the
+ * AsciiMath grammar deliberately treats NBSP as a symbol, so a `trim()` here
+ * would silently drop content the gem preserves.
+ */
+const RUBY_STRIP = /^[\0\t\n\v\f\r ]+|[\0\t\n\v\f\r ]+$/g;
+
+function rubyStripEmpty(text: string): boolean {
+  return text.replace(RUBY_STRIP, "") === "";
+}
+
 /** Ruby's `value.to_s.strip.empty?` over transformed tree values. */
 export function strippedEmpty(value: TransformValue): boolean {
   if (value === null || value === undefined) return true;
-  if (value instanceof Slice) return value.text.trim() === "";
-  if (typeof value === "string") return value.trim() === "";
+  if (value instanceof Slice) return rubyStripEmpty(value.text);
+  if (typeof value === "string") return rubyStripEmpty(value);
   return false;
 }

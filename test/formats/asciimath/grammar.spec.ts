@@ -56,6 +56,7 @@ import type { YamlValue } from "../../core/corpus-yaml";
  */
 function plain(value: ParseValue): YamlValue {
   if (value === null) return null;
+  if (typeof value === "string") return value;
   if (value instanceof Slice) return value.text;
   if (Array.isArray(value)) return value.map(plain);
   const result: Record<string, YamlValue> = {};

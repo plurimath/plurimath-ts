@@ -122,6 +122,7 @@ const MIXED_SPACE = ` ${TAB}${LINE_FEED}${CARRIAGE_RETURN} `;
 /** Slices flattened to their text, as the corpus generator serializes them. */
 function plain(value: ParseValue): YamlValue {
   if (value === null) return null;
+  if (typeof value === "string") return value;
   if (value instanceof Slice) return value.text;
   if (Array.isArray(value)) return value.map(plain);
   const result: Record<string, YamlValue> = {};

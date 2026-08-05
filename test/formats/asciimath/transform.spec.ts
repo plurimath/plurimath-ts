@@ -50,6 +50,16 @@ const PINNED: readonly (readonly [string, string, string])[] = [
     '{"class":"Math::Formula","fields":{"displaystyle":true,"input_string":"left(x right)","left_right_wrapper":false,"value":[{"class":"Math::Function::Left","fields":{"parameter_one":"("}},{"class":"Math::Symbols::Symbol","fields":{"value":"x"}},{"class":"Math::Function::Right","fields":{"parameter_one":")"}}]}}',
   ],
   [
+    "an empty left/right body is the empty STRING, not nil (Parslet flatten_sequence)",
+    // `(iteration.maybe >> sequence.maybe).as(:left_right_value)` with nothing
+    // between `left(` and `right)`: Parslet folds the all-vanished sequence to
+    // `''`, and that plain string rides into the formula between the wrappers.
+    // Found by model sweep 4, fixed in pegkit's combineSeq — the conformance
+    // suite pins the engine half, this pins the format-level consequence.
+    "left(right)",
+    '{"class":"Math::Formula","fields":{"displaystyle":true,"input_string":"left(right)","left_right_wrapper":false,"value":[{"class":"Math::Function::Left","fields":{"parameter_one":"("}},"",{"class":"Math::Function::Right","fields":{"parameter_one":")"}}]}}',
+  ],
+  [
     "the frac dance shifts the numerator's own value array before unfencing it (transform.rb:93)",
     "(a,b)/(c,d)",
     '{"class":"Math::Formula","fields":{"displaystyle":true,"input_string":"(a,b)/(c,d)","left_right_wrapper":true,"value":[{"class":"Math::Function::Frac","fields":{"parameter_one":{"class":"Math::Formula","fields":{"displaystyle":true,"left_right_wrapper":true,"value":[{"class":"Math::Symbols::Symbol","fields":{"value":"a"}},{"class":"Math::Symbols::Comma","fields":{"value":null}},{"class":"Math::Symbols::Symbol","fields":{"value":"b"}}]}},"parameter_two":{"class":"Math::Formula","fields":{"displaystyle":true,"left_right_wrapper":true,"value":[{"class":"Math::Symbols::Symbol","fields":{"value":"c"}},{"class":"Math::Symbols::Comma","fields":{"value":null}},{"class":"Math::Symbols::Symbol","fields":{"value":"d"}}]}}}}]}}',

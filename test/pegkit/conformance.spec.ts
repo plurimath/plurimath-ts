@@ -200,6 +200,38 @@ describe("maybe", () => {
   it("keeps the value when it does match", () => {
     expect(seq(str("a"), str("b").maybe()).parse("ab")).toEqual(new Slice("ab", 0));
   });
+
+  /**
+   * `flatten_sequence` never yields nil: `foldl` starts from `''` when the
+   * compacted list is empty, and an unnamed absent `:maybe` flattens to `''`
+   * rather than nil (`can_flatten.rb:36,49`). So a sequence whose parts ALL
+   * vanished is the empty STRING — a plain string, not a slice, which the
+   * AsciiMath transform can tell apart (`text.is_a?(Slice)`). Measured on
+   * parslet 2.0.0 (probe-parslet-maybe.rb, 2026-08-05):
+   *
+   *   (str('a').maybe >> str('b').maybe).as(:t).parse('')  => {t: ""}   String
+   *   (str('a').absent? >> str('b').absent?).as(:t).parse('') => {t: ""}
+   *   (str('a').maybe >> str('b').maybe).as(:t).parse('b') => {t: "b"@0} Slice
+   *   str('a').maybe.as(:t).parse('')                      => {t: nil}
+   *
+   * The AsciiMath grammar reaches this through `left_right`'s
+   * `(iteration.maybe >> sequence.maybe).as(:left_right_value)`: the gem's
+   * tree for `left(right)` carries `left_right_value => ""`, and the model
+   * carries that "" into the formula between `Left` and `Right`. Found by the
+   * transform model sweep (sweep 4), not by the length-bounded grammar
+   * sweeps — `left(right)` is eleven characters.
+   */
+  it("a sequence whose parts all vanish is an empty string, not null", () => {
+    expect(seq(str("a").maybe(), str("b").maybe()).as("t").parse("")).toEqual({ t: "" });
+    expect(seq(str("a").absent(), str("b").absent()).as("t").parse("")).toEqual({ t: "" });
+    // A surviving slice still wins over the vanished parts.
+    expect(seq(str("a").maybe(), str("b").maybe()).as("t").parse("b")).toEqual({
+      t: new Slice("b", 0),
+    });
+    // And a DIRECTLY named maybe stays null — the `named` flag in Parslet's
+    // flatten applies exactly one level deep.
+    expect(str("a").maybe().as("t").parse("")).toEqual({ t: null });
+  });
 });
 
 describe("repeat", () => {

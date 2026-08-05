@@ -103,6 +103,23 @@ describe("pinned oracle oddities, end to end", () => {
   });
 });
 
+describe("base-prefix numbers decimalize exactly (base_number_prefix.rb:36-38)", () => {
+  it.each([
+    // Ruby's `to_i(2)` is a bignum: 60 binary digits already exceed a
+    // double's mantissa, so parseInt would have emitted ...846976. Values
+    // measured through the gem (probe-oddities.rb, 2026-08-05).
+    ["0b111111111111111111111111111111111111111111111111111111111111", 2, "1152921504606846975"],
+    ["0o77777777777777777777777", 8, "590295810358705651711"],
+    // Hex keeps its digits as written, case included.
+    ["0x1F2e", 16, "1F2e"],
+  ] as const)("%s", (input, base, value) => {
+    const formula = parseAsciimath(input);
+    const number = (formula.value as readonly unknown[])[0] as { base: number; value: string };
+    expect(number.base).toBe(base);
+    expect(number.value).toBe(value);
+  });
+});
+
 describe("the RGB color-sequence rule (transform.rb:1047)", () => {
   it("is unpinnable in the gem, so this port refuses it loudly", () => {
     // The rule ignores `color_value` and stringifies the bound array through

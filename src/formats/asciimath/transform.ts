@@ -714,12 +714,14 @@ function buildAsciimathTransform(): Transform {
   // and, matching in reverse definition order, tried last. Binary and octal
   // literals are decimalized at construction; hex keeps its digits.
 
+  // BigInt, not parseInt: Ruby's `to_i(2)` is exact at any length, and a
+  // 60-digit binary literal already exceeds a double's 53-bit mantissa.
   t.rule({ hex_number: simple("hex") }, (b) => newNumber(rubyToS(b.hex), 16));
   t.rule({ binary_number: simple("bin") }, (b) =>
-    newNumber(Number.parseInt(rubyToS(b.bin), 2).toString(), 2),
+    newNumber(BigInt(`0b${rubyToS(b.bin)}`).toString(), 2),
   );
   t.rule({ octal_number: simple("oct") }, (b) =>
-    newNumber(Number.parseInt(rubyToS(b.oct), 8).toString(), 8),
+    newNumber(BigInt(`0o${rubyToS(b.oct)}`).toString(), 8),
   );
 
   // --- pass-through and leaf rules (transform.rb:8-91) --------------------

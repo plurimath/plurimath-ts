@@ -3,11 +3,18 @@
  * On each hash node — after its values have been transformed — the first
  * matching rule replaces the node.
  *
- * Two details of Parslet that the grammars depend on, both verified against
- * parslet 2.0.0:
+ * Four details of Parslet that the grammars depend on, all verified against
+ * parslet 2.0.0 and pinned in `test/pegkit/transform.spec.ts`:
  *   - rules are tried in REVERSE definition order (`rule` uses `unshift`), so
- *     a later definition wins over an earlier overlapping one;
- *   - a pattern matches only when its key set is exactly the node's key set.
+ *     a later definition wins over an earlier overlapping one — including an
+ *     exact tie on the same pattern;
+ *   - a pattern matches only when its key set is exactly the node's key set;
+ *   - a rule's replacement is never run back through the rules — it is only
+ *     seen again as part of its parent's match;
+ *   - a name bound twice in one pattern must have `==`-equal values (slices
+ *     compare by TEXT, offsets ignored), the FIRST binding stays, bindings are
+ *     made in pattern definition order, and a first binding that is Ruby-falsy
+ *     (null/false) is silently overwritten instead of compared.
  */
 
 import { Slice } from "./slice";
@@ -68,6 +75,61 @@ function matches(matcher: Matcher, value: TransformValue): boolean {
   }
 }
 
+/**
+ * Ruby `==` over the transform-tree vocabulary, the equality Parslet applies
+ * to a repeated binding (`bound_value == tree` in `element_match_binding`):
+ * slices compare by TEXT — `Parslet::Slice#==` delegates to `str ==`, so the
+ * offset is ignored and a slice equals a plain string with the same text —
+ * arrays compare element-wise, plain hashes by key set and values. Anything
+ * else (constructed nodes included) falls back to identity, which is Ruby's
+ * `Object#==` for classes that do not override it.
+ */
+function treeEqual(a: TransformValue, b: TransformValue): boolean {
+  if (a instanceof Slice || b instanceof Slice) {
+    const left = a instanceof Slice ? a.text : a;
+    const right = b instanceof Slice ? b.text : b;
+    return left === right;
+  }
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((element, index) => treeEqual(element, b[index]));
+  }
+  if (isPlainHash(a) && isPlainHash(b)) {
+    const aKeys = Object.keys(a);
+    const bKeys = Object.keys(b);
+    return (
+      aKeys.length === bKeys.length &&
+      aKeys.every((key) => Object.hasOwn(b, key) && treeEqual(a[key], b[key]))
+    );
+  }
+  // Ruby's `bound_value == tree` dispatches to whatever `==` the bound object
+  // defines. Two separately built but structurally equal model nodes therefore
+  // satisfy a repeated binding in Parslet (measured: `Number.new("2")` twice,
+  // `equal?` false, binding matches). Asking the object for its own `equals`
+  // is that dispatch — no import from `core`, which layer rule 1 forbids; the
+  // object carries its equality with it, exactly as in Ruby.
+  if (
+    typeof a === "object" &&
+    a !== null &&
+    typeof (a as { equals?: unknown }).equals === "function"
+  ) {
+    return (a as { equals(other: unknown): boolean }).equals(b);
+  }
+  // `===`, not `Object.is`: Ruby says `NaN == NaN` is false and `-0.0 == 0.0`
+  // is true, which is `===`'s behaviour and not `Object.is`'s. Everything else
+  // without its own `equals` compares by identity, as Ruby's `Object#==` does.
+  if (typeof a === "number" || typeof b === "number") return a === b;
+  return Object.is(a, b);
+}
+
+/**
+ * Ruby truthiness: only `nil` and `false` are falsy (unlike JavaScript).
+ * `undefined` counts as `nil` here — the engine has no separate notion of it,
+ * and `strippedEmpty` already folds the two together.
+ */
+function rubyTruthy(value: TransformValue): boolean {
+  return value !== null && value !== undefined && value !== false;
+}
+
 export class Transform {
   private readonly rules: TransformRule[] = [];
 
@@ -94,11 +156,24 @@ export class Transform {
         if (rule.keys[index] !== nodeKeys[index]) continue outer;
       }
       const bindings: Bindings = {};
-      for (const key of rule.keys) {
-        const matcher = rule.pattern[key] as Matcher;
+      // Parslet iterates the PATTERN hash (`exp.each` in element_match_hash),
+      // so a repeated name binds in pattern definition order — observable
+      // through the falsy-rebind quirk below.
+      for (const [key, matcher] of Object.entries(rule.pattern)) {
         const value = node[key];
         if (!matches(matcher, value)) continue outer;
-        bindings[matcher.name] = value;
+        const previous = bindings[matcher.name];
+        if (rubyTruthy(previous)) {
+          // A name bound twice must hold `==`-equal values; on a mismatch the
+          // whole rule fails and the next (earlier) rule gets its turn. The
+          // first binding stays — Parslet returns without re-storing.
+          if (!treeEqual(previous, value)) continue outer;
+        } else {
+          // Parslet's `bound_value = bindings[var_name]` guard: an unbound
+          // name AND a name bound to a Ruby-falsy value both take the store
+          // path, so a first null/false binding is overwritten, not compared.
+          bindings[matcher.name] = value;
+        }
       }
       return rule.action(bindings);
     }

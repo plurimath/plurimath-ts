@@ -40,6 +40,9 @@
 # a renderer can bundle only its own slice, §3/§5):
 #   src/generated/asciimath/input.ts       input text -> symbol id + literals
 #   src/generated/asciimath/grammar.ts     the rule alternatives parse.rb builds
+#   src/generated/asciimath/transform-registry.ts
+#                                          every class name transform.rb can
+#                                          reach, resolved through the gem
 #   src/generated/<format>/symbols.ts      symbol id -> static descriptor
 #   src/generated/<format>/exceptions.ts   the context-axis exception matrix
 #   src/generated/context-axes.ts          the probe manifest and its results
@@ -1476,6 +1479,256 @@ module CorpusGenerator
     MESSAGE
   end
 
+  # --- asciimath transform class registry ----------------------------------
+
+  # The transform builds most nodes by *name*: `Utility.get_class(text)` turns
+  # matched input into a constant path at runtime. The port replaces that with
+  # an explicit registry (`src/formats/asciimath/registry.ts`, TODO.plan
+  # p1/05), whose completeness must be asserted against a generated list
+  # rather than by hand. This section measures that list: every name the
+  # transform can hand to `get_class`, plus the two Utility tables its actions
+  # read (`FONT_STYLES` and `UNARY_CLASSES`), each resolved through the gem to
+  # the class it actually names. Resolution is measured, never derived by
+  # capitalizing: `overbrace`, `underbrace` and `underline` resolve through
+  # constant aliases (`Overbrace = Obrace`, ...) to classes whose names do not
+  # match the input.
+  TRANSFORM_SOURCE_FILES = %w[
+    lib/plurimath/asciimath/transform.rb
+    lib/plurimath/asciimath/utility.rb
+  ].freeze
+  PARSE_SOURCE_FILE = "lib/plurimath/asciimath/parse.rb"
+
+  # Where each measured name came from. `unary_class`, `binary_class` and
+  # `ternary_class` are the grammar capture tags whose token ranges are
+  # enumerable (see `transform_capture_ranges`); `literal` is a quoted
+  # `get_class` argument; `utility_unary_classes` and `font_styles` are the
+  # two Utility tables the actions read.
+  TRANSFORM_CAPTURE_KEYS = %w[unary_class binary_class ternary_class].freeze
+
+  # `Utility` inside transform.rb resolves lexically to
+  # Plurimath::Asciimath::Utility. The measured ranges assume it still
+  # delegates `get_class` and both tables to the generic Plurimath::Utility;
+  # an override upstream would silently change what the names resolve
+  # through, so it stops generation instead.
+  def transform_utility!
+    utility = Plurimath::Asciimath::Utility
+    unless utility < Plurimath::Utility
+      raise Error, "Asciimath::Utility no longer subclasses Plurimath::Utility"
+    end
+    unless utility.method(:get_class).owner == Plurimath::Utility.singleton_class
+      raise Error, "Asciimath::Utility overrides get_class; re-measure the registry ranges"
+    end
+    unless utility::FONT_STYLES.equal?(Plurimath::Utility::FONT_STYLES) &&
+        utility::UNARY_CLASSES.equal?(Plurimath::Utility::UNARY_CLASSES)
+      raise Error, "Asciimath::Utility shadows FONT_STYLES or UNARY_CLASSES; " \
+                   "the transform no longer reads the generic tables"
+    end
+    utility
+  end
+
+  # Every `get_class(...)` argument in the transform sources, mechanically.
+  # A literal argument is recorded as itself; an identifier is resolved to the
+  # rule-pattern capture that binds it, because the capture's tag names the
+  # token range the identifier can hold. Every call closes its parenthesis on
+  # its own line in the gem today, and the scan verifies that by counting.
+  def transform_call_sites(gem_dir)
+    literals = []
+    captures = []
+
+    TRANSFORM_SOURCE_FILES.each do |relative|
+      lines = File.readlines(File.join(gem_dir, relative), chomp: true)
+      expected = lines.join("\n").scan("get_class").length
+      found = 0
+
+      lines.each_with_index do |line, index|
+        line.scan(/get_class\(\s*(?:"([^"]*)"|'([^']*)'|([a-z_][a-z0-9_]*))\s*\)/) do |dq, sq, identifier|
+          found += 1
+          if identifier
+            key = capture_key_for(lines, index, identifier, "#{relative}:#{index + 1}")
+            captures << { "file" => relative, "line" => index + 1,
+                          "identifier" => identifier, "key" => key }
+          else
+            literals << { "file" => relative, "line" => index + 1, "name" => dq || sq }
+          end
+        end
+      end
+
+      next if found == expected
+
+      raise Error, <<~MESSAGE
+        #{relative}: #{expected} get_class mention(s), #{found} parsed.
+        A call now spans lines or takes an unrecognized argument shape, so the
+        mechanical extraction no longer sees every call site. Widen the scan.
+      MESSAGE
+    end
+
+    { "literals" => literals, "captures" => captures }
+  end
+
+  # The rule-pattern tag that binds `identifier` in the rule enclosing
+  # `line_index`. The header runs from the nearest `rule(` line to the line
+  # opening the block, and binds each capture as `tag: simple(:name)` (or
+  # sequence/subtree).
+  def capture_key_for(lines, line_index, identifier, where)
+    start = line_index.downto(0).find { |i| lines[i].match?(/\A\s*rule\(/) }
+    raise Error, "#{where}: get_class(#{identifier}) outside any rule" unless start
+
+    header = []
+    (start..line_index).each do |i|
+      header << lines[i]
+      break if lines[i].match?(/\bdo\z|\{/)
+    end
+
+    keys = header.join("\n")
+      .scan(/([a-z_][a-z0-9_]*):\s*(?:simple|sequence|subtree)\(:#{Regexp.escape(identifier)}\)/)
+      .flatten.uniq
+    unless keys.length == 1
+      raise Error, "#{where}: get_class(#{identifier}) binds to #{keys.length} " \
+                   "captures in its rule header; expected exactly one"
+    end
+
+    keys.first
+  end
+
+  # What each capture tag can hold, measured from the grammar's own sources:
+  # parse.rb tags the three Constants class lists via
+  # `arr_to_expression(Constants::X, :tag)` (sub_sup and binary share
+  # `:binary_class`), and tags every `precompile_constants` literal of kind
+  # `:unary_class` via `dynamic_parser_rules` -> `unary_functions`. A capture
+  # feeding `get_class` outside these tags has no enumerable range and fails
+  # generation rather than being guessed at.
+  def transform_capture_ranges(gem_dir)
+    source = File.read(File.join(gem_dir, PARSE_SOURCE_FILE))
+    constants = Plurimath::Asciimath::Constants
+
+    tagged = Hash.new { |hash, key| hash[key] = [] }
+    source.scan(/arr_to_expression\(Constants::([A-Z_]+)(?:\.\w+)?,\s*:([a-z_]+)\)/) do |name, tag|
+      tagged[tag] << name
+    end
+    %w[binary_class ternary_class].each do |tag|
+      next unless tagged[tag].empty?
+
+      raise Error, "#{PARSE_SOURCE_FILE} no longer tags any class list :#{tag}"
+    end
+    unless source.include?(".as(:unary_class)")
+      raise Error, "#{PARSE_SOURCE_FILE} no longer captures :unary_class; " \
+                   "the unary range cannot be enumerated from the grammar"
+    end
+
+    by_kind = constants.precompile_constants.group_by { |_, kind| kind }
+      .transform_values { |pairs| pairs.map(&:first) }
+    unary = by_kind.fetch(:unary_class) do
+      raise Error, "precompile_constants has no :unary_class literals"
+    end
+
+    {
+      "unary_class" => unary,
+      "binary_class" => tagged["binary_class"].flat_map { |name| constants.const_get(name) },
+      "ternary_class" => tagged["ternary_class"].flat_map { |name| constants.const_get(name) },
+      "fonts" => by_kind.fetch(:fonts, []),
+    }
+  end
+
+  def resolve_transform_class(utility, name)
+    klass = begin
+      utility.get_class(name)
+    rescue StandardError, ScriptError => e
+      raise Error, "get_class(#{name.inspect}) raised #{e.class}: #{e.message}; " \
+                   "a reachable name must resolve"
+    end
+    unless klass.is_a?(::Class) && klass < Plurimath::Math::Core
+      raise Error, "get_class(#{name.inspect}) resolved to #{klass}, " \
+                   "which is not a Math::Core descendant"
+    end
+
+    klass
+  end
+
+  # One measured entry: the name, the class it resolves to, and how the census
+  # disposes of that class — the carrier is the implemented class the port
+  # constructs (the alias target for an aliased class, itself otherwise).
+  def transform_registry_entry(census_index, name, klass, sources)
+    key = class_key(klass)
+    entry = census_index[key]
+    raise Error, "#{key} (from #{name.inspect}) is not in the census" unless entry
+
+    {
+      "name" => name,
+      "rubyClass" => key,
+      "disposition" => entry["disposition"],
+      "carrier" => entry["aliases"] || key,
+      "sources" => sources.uniq.sort,
+    }
+  end
+
+  def build_transform_registry(gem_dir, census)
+    utility = transform_utility!
+    sites = transform_call_sites(gem_dir)
+    ranges = transform_capture_ranges(gem_dir)
+
+    unknown = sites["captures"].map { |site| site["key"] }.uniq - TRANSFORM_CAPTURE_KEYS
+    unless unknown.empty?
+      where = sites["captures"].select { |site| unknown.include?(site["key"]) }
+        .map { |site| "#{site['file']}:#{site['line']} (#{site['key']})" }
+      raise Error, <<~MESSAGE
+        get_class fed by capture(s) with no enumerable range: #{where.join(', ')}.
+        Measure the new tag's token range in `transform_capture_ranges` before
+        the registry can claim to be complete.
+      MESSAGE
+    end
+
+    sources_by_name = Hash.new { |hash, key| hash[key] = [] }
+    sites["captures"].each do |site|
+      ranges.fetch(site["key"]).each { |name| sources_by_name[name] << site["key"] }
+    end
+    sites["literals"].each { |site| sources_by_name[site["name"]] << "literal" }
+    utility::UNARY_CLASSES.each { |name| sources_by_name[name] << "utility_unary_classes" }
+
+    census_index = census.fetch("classes").to_h { |entry| [entry["name"], entry] }
+    entries = []
+    excluded = []
+    sources_by_name.sort.each do |name, sources|
+      entry = transform_registry_entry(
+        census_index, name, resolve_transform_class(utility, name), sources
+      )
+      if entry["disposition"] == "deferred"
+        excluded << { "name" => name, "rubyClass" => entry["rubyClass"],
+                      "reason" => "resolves to a class the census defers " \
+                                  "(ARCHITECTURE.md §5); the registry must not carry it" }
+      else
+        entries << entry
+      end
+    end
+
+    missing_fonts = ranges.fetch("fonts").reject { |name| utility::FONT_STYLES.key?(name.to_sym) }
+    unless missing_fonts.empty?
+      raise Error, "fonts literal(s) #{missing_fonts.join(', ')} have no " \
+                   "FONT_STYLES entry; the transform would raise NoMethodError on nil"
+    end
+
+    font_styles = utility::FONT_STYLES.map do |font_key, klass|
+      transform_registry_entry(census_index, font_key.to_s, klass, ["font_styles"])
+    end.sort_by { |entry| entry["name"] }
+
+    {
+      "entries" => entries,
+      "excluded" => excluded,
+      "font_styles" => font_styles,
+      # Membership order is not semantic (the transform only calls
+      # `include?`); the gem's own order is kept so a regeneration diff
+      # mirrors an upstream edit one-to-one.
+      "unary_classes" => utility::UNARY_CLASSES.dup,
+      "counts" => {
+        "get_class" => entries.length,
+        "excluded" => excluded.length,
+        "font_styles" => font_styles.length,
+        "unary_classes" => utility::UNARY_CLASSES.length,
+        "literal_sites" => sites["literals"].length,
+        "capture_sites" => sites["captures"].length,
+      },
+    }
+  end
+
   # --- TypeScript emission -------------------------------------------------
 
   # Biome's string rule: the configured quote wins unless the other one needs
@@ -1853,6 +2106,91 @@ module CorpusGenerator
     write_ts(File.join(out_root, INPUT_FORMAT, "grammar.ts"), sections)
   end
 
+  def emit_transform_registry_file(out_root, registry)
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        Every class name the AsciiMath transform can reach, resolved through
+        the gem — the completeness oracle for `src/formats/asciimath/registry.ts`
+        (TODO.plan p1/05): the registry is complete exactly when it serves every
+        entry here, asserted by `test/generated/transform-registry.spec.ts`
+        rather than by hand.
+
+        The reachable set is measured, never inferred: every `get_class`
+        argument in `asciimath/transform.rb` and `asciimath/utility.rb`
+        (a captured identifier is enumerated through its grammar token range),
+        plus the two Utility tables the actions read. Resolution goes through
+        the gem because it is not mechanical capitalization: `overbrace`,
+        `underbrace` and `underline` resolve through constant aliases to
+        classes named differently (`Obrace`, `Ubrace`, `Ul`).
+      TEXT
+      [
+        ts_doc("How the census disposes of a resolved class. A deferred class\n" \
+               "never reaches this file — it is excluded at generation time."),
+        'export type AsciimathTransformDisposition = "implemented" | "aliased";',
+      ].join("\n"),
+      [
+        ts_doc(<<~TEXT.chomp),
+          One reachable name: the class the gem resolves it to, and the
+          implemented class the port constructs for it. For an aliased class
+          the carrier is its census alias target and the class name rides in
+          the carrier's identity slot; an implemented class carries itself.
+          `sources` names the measurements that reached the entry: a grammar
+          capture tag (`unary_class`, `binary_class`, `ternary_class`), a
+          `literal` argument, or a Utility table.
+        TEXT
+        "export interface AsciimathTransformClassEntry {",
+        "  readonly name: string;",
+        "  readonly rubyClass: string;",
+        "  readonly disposition: AsciimathTransformDisposition;",
+        "  readonly carrier: string;",
+        "  readonly sources: readonly string[];",
+        "}",
+      ].join("\n"),
+      ts_const(
+        "ASCIIMATH_TRANSFORM_GET_CLASS",
+        "readonly AsciimathTransformClassEntry[]",
+        registry["entries"],
+        doc: "#{registry['entries'].length} names `Utility.get_class` can receive, sorted by name.\n" \
+             "A name missing from the port's registry is a parity gap: the\n" \
+             "transform throws rather than constructing something plausible.",
+      ),
+      ts_const(
+        "ASCIIMATH_TRANSFORM_FONT_STYLES",
+        "readonly AsciimathTransformClassEntry[]",
+        registry["font_styles"],
+        doc: "Every `Utility::FONT_STYLES` key, sorted, resolved to its\n" \
+             "FontStyle class. The transform indexes the whole table with the\n" \
+             "captured `fonts_class` text, so the port serves all of it; the\n" \
+             "grammar's reachable keys are the `fonts`-kind literals in\n" \
+             "`./input.ts`.",
+      ),
+      ts_const(
+        "ASCIIMATH_TRANSFORM_UNARY_CLASSES",
+        "readonly string[]",
+        registry["unary_classes"],
+        doc: "`Utility::UNARY_CLASSES`, in the gem's order. Membership only —\n" \
+             "the transform asks `include?` to decide whether a unary argument\n" \
+             "keeps its fence — so the order is not semantic.",
+      ),
+      [
+        ts_doc("A reachable name withheld from the registry, and why."),
+        "export interface AsciimathTransformExclusion {",
+        "  readonly name: string;",
+        "  readonly rubyClass: string;",
+        "  readonly reason: string;",
+        "}",
+      ].join("\n"),
+      ts_const(
+        "ASCIIMATH_TRANSFORM_EXCLUDED",
+        "readonly AsciimathTransformExclusion[]",
+        registry["excluded"],
+        doc: registry["excluded"].empty? ? "No reachable name resolves to a deferred class." : nil,
+      ),
+    ]
+
+    write_ts(File.join(out_root, INPUT_FORMAT, "transform-registry.ts"), sections)
+  end
+
   def emit_context_axes_file(out_root, probe)
     sections = [
       ts_header(<<~TEXT.chomp),
@@ -2070,13 +2408,15 @@ module CorpusGenerator
     MESSAGE
   end
 
-  def write_symbol_data(out_root, data, provenance)
+  def write_symbol_data(out_root, data, registry, provenance)
     written = [
       File.join(out_root, INPUT_FORMAT, "input.ts"),
       File.join(out_root, INPUT_FORMAT, "grammar.ts"),
+      File.join(out_root, INPUT_FORMAT, "transform-registry.ts"),
     ]
     emit_input_file(out_root, data["tables"])
     emit_grammar_file(out_root, data["grammar"])
+    emit_transform_registry_file(out_root, registry)
 
     SYMBOL_FORMATS.each do |format|
       emit_symbols_file(out_root, format, data["static"])
@@ -2334,6 +2674,7 @@ module CorpusGenerator
     assert_pin_exclusions_complete!(pin_cases, exclusions)
     census = build_census(gem_dir)
     symbols = build_symbol_data
+    registry = build_transform_registry(gem_dir, census)
     assert_corpus_symbols_covered!(pin_cases, exclusions, symbols)
 
     out_root = options[:out]
@@ -2356,7 +2697,7 @@ module CorpusGenerator
     bytes = write_payload(path, payload_header("Plurimath::Math::Core node census."), census)
     written << [path, write_manifest(path, bytes, out_root, provenance)]
 
-    emitted = write_symbol_data(options[:symbols_out], symbols, provenance)
+    emitted = write_symbol_data(options[:symbols_out], symbols, registry, provenance)
 
     written.each do |payload_path, manifest_path|
       puts "  #{relative(payload_path, REPO_ROOT)}"
@@ -2371,6 +2712,8 @@ module CorpusGenerator
          "#{symbols['tables']['counts']['literals']} literals"
     puts "grammar tables: " \
          "#{symbols['grammar']['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
+    puts "transform registry: " \
+         "#{registry['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
     puts "context-dependent: " \
          "#{probe['context_dependent'].map { |e| e['id'] }.join(', ')}"
     probe["dynamic"].each do |entry|

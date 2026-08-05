@@ -1338,13 +1338,13 @@ function buildAsciimathTransform(): Transform {
       expr: sequence("expr"),
     },
     (b) => {
-      const coma = asciimathSymbolObject(b.comma);
+      const comma = asciimathSymbolObject(b.comma);
       const powerBase = newPowerBase(
         asciimathSymbolObject(b.rparen),
         unfencedValue(asArray(b.base_value)),
         unfencedValue(b.power_value),
       );
-      const newArr: unknown[] = [powerBase, coma];
+      const newArr: unknown[] = [powerBase, comma];
       if (!strippedEmpty(b.expr)) newArr.push(...compact(flattenDeep(asArray(b.expr))));
       return newArr;
     },
@@ -1360,13 +1360,13 @@ function buildAsciimathTransform(): Transform {
       expr: sequence("expr"),
     },
     (b) => {
-      const coma = asciimathSymbolObject(b.comma);
+      const comma = asciimathSymbolObject(b.comma);
       const powerBase = newPowerBase(
         asciimathSymbolObject(b.rparen),
         unfencedValue(b.base_value),
         unfencedValue(b.power_value),
       );
-      const newArr: unknown[] = [powerBase, coma];
+      const newArr: unknown[] = [powerBase, comma];
       if (!strippedEmpty(b.expr)) newArr.push(...compact(flattenDeep(asArray(b.expr))));
       return newArr;
     },
@@ -1950,12 +1950,12 @@ function finalizeDraft(draft: AsciimathDraft, inputString?: string): MathNode {
   switch (draft.kind) {
     case "formula": {
       const init: {
-        value: NodeSequence;
+        value: NodeSequence | null;
         leftRightWrapper: boolean;
         displaystyle: boolean;
         inputString?: string;
       } = {
-        value: asSequenceValue(f.value) as NodeSequence,
+        value: asSequenceValue(f.value),
         leftRightWrapper: f.leftRightWrapper as boolean,
         displaystyle: f.displaystyle as boolean,
       };
@@ -1965,7 +1965,7 @@ function finalizeDraft(draft: AsciimathDraft, inputString?: string): MathNode {
     case "number":
       return new NumberNode({
         value: f.value as string | null,
-        base: f.base as unknown as NodeParameter,
+        base: f.base as number | null,
         miniSubSized: f.miniSubSized as boolean,
         miniSupSized: f.miniSupSized as boolean,
       });
@@ -2035,7 +2035,7 @@ function finalizeDraft(draft: AsciimathDraft, inputString?: string): MathNode {
       });
     case "table":
       return new TableNode({
-        value: asSequenceValue(f.value),
+        value: asSequenceValue(f.value) ?? [],
         openParen: asParameter(f.openParen),
         closeParen: asParameter(f.closeParen),
         options: f.options as NodeOptions,

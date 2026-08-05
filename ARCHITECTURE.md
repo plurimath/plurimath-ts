@@ -720,9 +720,9 @@ two branches parses differently from the same grammar written out twice —
 the key would fix that, and would make pegkit *more consistent than the oracle*,
 which §1 defines as a defect. In Parslet, the uncached set is `Dynamic` plus
 the wrappers it gives their own `#apply` and never memoizes — `Named`,
-`Capture`, `Ignored`, `Scope`. pegkit implements the subset it needs: its
-uncached atoms are `dynamic` and `AsAtom` (the `Named` equivalent); it has no
-`Ignored`, `Capture`, `Scope` or `Entity` atoms at all.
+`Capture`, `Ignored`, `Scope`. pegkit mirrors that for the atoms it has: its
+uncached set is `AsAtom` (the `Named` equivalent), `CaptureAtom`, `ScopeAtom`
+and `dynamic`; it implements no `Ignored` or `Entity` atom.
 
 Lock conditions, owed in Phase 0:
 

@@ -153,8 +153,8 @@ export abstract class Atom {
    *   Named, Capture, Ignored, Scope, Dynamic  -> parse succeeds  (not cached)
    *   Entity, Alternative                      -> parse fails     (cached)
    *
-   * pegkit's equivalents: `AsAtom` (Named) and `dynamic` are uncacheable;
-   * everything else caches.
+   * pegkit's equivalents: `AsAtom` (Named), `CaptureAtom`, `ScopeAtom` and
+   * `dynamic` are uncacheable; everything else caches.
    */
   protected cacheable(): boolean {
     return true;
@@ -464,7 +464,15 @@ class MaybeAtom extends Atom {
     // Rebuilt rather than returned: `flatten` re-folds a `:maybe` around its
     // child, so an empty repetition inside one is no longer a bare `[]`.
     if (result.ok) return { ok: true, pos: result.pos, value: result.value };
-    if (consumeAll && pos < ctx.input.length) return FAIL;
+    if (consumeAll && pos < ctx.input.length) {
+      // The same leftover conversion `Atom#apply` performs, with the same
+      // bookkeeping: this success-consuming-nothing becomes a failure, and
+      // `pos` is the first unit the parse could not consume. Without the
+      // recording, `parse` falls back to `maxPos`, which the failed inner
+      // attempt pushed deeper — reporting an index past the truth.
+      if (pos > ctx.unconsumed) ctx.unconsumed = pos;
+      return FAIL;
+    }
     return { ok: true, pos, value: null };
   }
 }

@@ -497,6 +497,19 @@ describe("failure positions", () => {
     }
   });
 
+  it("maybe's leftover conversion records the unconsumed index", () => {
+    // Same family as the lookahead leak. When `maybe` succeeds by consuming
+    // nothing and consume-all turns that into a failure, `pos` is the first
+    // unit the parse could not consume — without recording it, the index
+    // fell back to `maxPos`, which the failed inner attempt pushed deeper.
+    try {
+      seq(str("a"), str("b")).maybe().parse("ax");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect((error as ParseFailed).index).toBe(0); // was 1: the inner attempt's maxPos
+    }
+  });
+
   it("a recording made before the lookahead survives its restore", () => {
     // The restore must be a snapshot of the speculation window, not a reset.
     // The first branch matches "ab" of "abz" and fails the consume-all check,

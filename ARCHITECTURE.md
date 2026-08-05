@@ -718,9 +718,11 @@ value. One consequence, measured: a grammar that shares one atom object between
 two branches parses differently from the same grammar written out twice —
 `(a >> str("q")) | a` fails on `"a"` where `a` alone succeeds. Adding the flag to
 the key would fix that, and would make pegkit *more consistent than the oracle*,
-which §1 defines as a defect. Uncached atoms are `Dynamic`, plus the wrappers
-Parslet gives their own `#apply` and never memoizes: `Named`, `Capture`,
-`Ignored`, `Scope`.
+which §1 defines as a defect. In Parslet, the uncached set is `Dynamic` plus
+the wrappers it gives their own `#apply` and never memoizes — `Named`,
+`Capture`, `Ignored`, `Scope`. pegkit implements the subset it needs: its
+uncached atoms are `dynamic` and `AsAtom` (the `Named` equivalent); it has no
+`Ignored`, `Capture`, `Scope` or `Entity` atoms at all.
 
 Lock conditions, owed in Phase 0:
 

@@ -22,12 +22,28 @@ moving an alternative changes what parses.
   `color_value`, `mod`, and the base-prefix number rules.
 - Dispatch the generated literal list (TODO 2) through `tokenChoice`, keeping
   longest-first order.
+- The `number` rule takes its **decimal marker from `formatting`**, never a
+  hardcoded `"."`. In the gem the rule is built from
+  `Plurimath.configuration.decimal` (`asciimath/parse.rb:205`), which
+  `Configuration#decimal` derives from the locale — so locale reaches the
+  grammar, not only the renderers. It is used twice there, by the decimal
+  number rule and by the comma-separated rule, so a comma-decimal locale
+  changes how commas parse too. AsciiMath is one of the four formats whose
+  parser accepts `locale` (`Math::LOCALIZED_PARSE_TYPES` — asciimath, html,
+  latex, unicode), so that behaviour belongs to this item rather than to P4.
+  Deferring it instead is a divergence from the gem and needs recording as one.
 - The `unitsml(...)` alternative in `quoted_text` stays **commented out** with
   a pointer to §5: such input falls through to plain quoted text.
 
 ## Done when
 
-- [ ] For every seed corpus case, the parse tree is deep-equal to the tree recorded
+- [ ] For every pinned corpus case, the parse tree is deep-equal to the tree recorded
   from Parslet.
 - [ ] Offsets in a `ParseError` index the original input, including after a
   length-changing preprocessing token.
+- [ ] Each rule that can fail has a failure-position test, not only a
+  success-tree test. Two pegkit failure-position bugs survived a conformance
+  suite that only tested what parses; `ParseError.index` is public contract.
+- [ ] A comma-decimal locale parses to the same model as the gem for the same
+  input and locale, and the default still parses `1.5`. The shared case schema
+  has no locale axis today, so this is a local fixture until one is agreed.

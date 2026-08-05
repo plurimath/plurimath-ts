@@ -53,6 +53,96 @@ describe("literals and character matching", () => {
   });
 });
 
+/**
+ * Ruby strings are sequences of code points, so Parslet's `consume(1)` takes a
+ * whole character regardless of its byte length. JavaScript strings are
+ * sequences of UTF-16 units, so a character above U+FFFF is two units and
+ * "consume one" has to mean "consume one code point".
+ *
+ * Every expectation here was checked against parslet 2.0.0 and plurimath
+ * v0.11.6 (oracle `00c52783`) before being written:
+ *   Parslet.any.parse("𝑥")                   => OK, one slice
+ *   (Parslet.any >> Parslet.any).parse("𝑥")  => ParseFailed
+ *   Plurimath::Math.parse("𝑥", :asciimath)   => one Symbol node, round-trips
+ *
+ * Offsets stay UTF-16: `Slice.offset` and `ParseFailed.index` index the string
+ * the caller passed in, so `input.slice(index)` is meaningful. (Parslet reports
+ * byte offsets with a `charpos` helper; both name the same character, in the
+ * units their own runtime uses.)
+ */
+describe("characters above the BMP", () => {
+  const astral = "\u{1D465}"; // MATHEMATICAL ITALIC SMALL X, 2 UTF-16 units
+  const emoji = "\u{1F600}";
+
+  it("any consumes the whole character, not one surrogate half", () => {
+    expect(any().parse(astral)).toEqual(new Slice(astral, 0));
+    expect(any().parse(emoji)).toEqual(new Slice(emoji, 0));
+    // The half that used to be left behind made this pair succeed with two
+    // one-unit slices; parslet fails here because there is only one character.
+    expect(() => seq(any().as("a"), any().as("b")).parse(astral)).toThrow(ParseFailed);
+  });
+
+  it("match consumes the whole character", () => {
+    expect(match(".").parse(astral)).toEqual(new Slice(astral, 0));
+    expect(match("[^)]").repeat(1).parse(astral)).toEqual(new Slice(astral, 0));
+  });
+
+  it("a repetition counts one character, not two", () => {
+    // The bug this suite missed: "a𝑥z" yielded four items, the middle two being
+    // the halves of 𝑥. Offsets are UTF-16, hence 0, 1, 3 rather than 0, 1, 2.
+    expect(match(".").as("c").repeat(1).parse(`a${astral}z`)).toEqual([
+      { c: new Slice("a", 0) },
+      { c: new Slice(astral, 1) },
+      { c: new Slice("z", 3) },
+    ]);
+  });
+
+  it("still counts one character for BMP input", () => {
+    // π, a combining acute and a zero-width space are one unit each; parslet
+    // treats all three as one character too.
+    expect(match(".").as("c").repeat(1).parse("π́​")).toEqual([
+      { c: new Slice("π", 0) },
+      { c: new Slice("́", 1) },
+      { c: new Slice("​", 2) },
+    ]);
+  });
+
+  it("reports offsets a caller can slice their own string with", () => {
+    const input = `a${astral}z`;
+    const tree = seq(str("a"), any().as("mid"), str("z")).parse(input) as { mid: Slice };
+    expect(input.slice(tree.mid.offset, tree.mid.offset + tree.mid.text.length)).toBe(astral);
+
+    try {
+      seq(str("a"), any(), str("Q")).parse(input);
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      const { index } = error as ParseFailed;
+      expect(index).toBe(3); // past the two units of 𝑥, not one
+      expect(input.slice(index)).toBe("z");
+    }
+  });
+
+  it("dispatches tokenChoice on an astral first character", () => {
+    // Both keys start with the same lead surrogate, so they share a bucket and
+    // ordered choice inside it decides — the dispatch is on the same unit the
+    // input is indexed by, so it stays consistent.
+    const tokens = tokenChoice([
+      ["\u{1D465}", str("\u{1D465}")],
+      ["\u{1D466}", str("\u{1D466}")],
+    ]);
+    expect(String(tokens.parse("\u{1D466}"))).toBe("\u{1D466}");
+    expect(() => tokens.parse("\u{1D467}")).toThrow(ParseFailed);
+  });
+
+  it("consumes an unpaired surrogate as one unit", () => {
+    // Documented divergence: a lone surrogate is not expressible in Ruby, so
+    // there is no gem behaviour to match. Consuming it keeps the parser total
+    // instead of stalling on input no rule can advance past.
+    expect(any().parse("\ud835")).toEqual(new Slice("\ud835", 0));
+    expect(match(".").parse("\udc65")).toEqual(new Slice("\udc65", 0));
+  });
+});
+
 describe("sequence flattening", () => {
   it("merges adjacent unnamed slices into one", () => {
     const result = seq(str("a"), str("b")).parse("ab");

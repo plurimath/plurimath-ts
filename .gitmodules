@@ -1,0 +1,3 @@
+[submodule "submodules/plurimath-testsuite"]
+	path = submodules/plurimath-testsuite
+	url = https://github.com/plurimath/plurimath-testsuite.git

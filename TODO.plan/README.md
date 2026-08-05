@@ -13,16 +13,16 @@ why that order.
 | Phase | Delivers | Status |
 |---|---|---|
 | [P0 — Foundation](p0-foundation/) | Tooling, quality gates, pegkit parser core | ✅ done |
-| [P1 — AsciiMath vertical](p1-asciimath/) | Corpus, model, grammar, transform, three renderers | ▶ active |
+| [P1 — AsciiMath vertical](p1-asciimath/) | Corpus pin and reader, model, grammar, transform, three renderers | ▶ active |
 | [P2 — Output formats](p2-output-formats/) | UnicodeMath, OMML and HTML renderers; compat class; first `0.x` | planned |
 | [P3 — Input formats](p3-input-formats/) | LaTeX, UnicodeMath and HTML parsers | planned |
-| [P4 — Parity modules](p4-parity-modules/) | Number formatting and locales, evaluation, MathML/OMML input | planned |
+| [P4 — Parity modules](p4-parity-modules/) | The number-format modes nothing earlier reaches, evaluation, MathML/OMML input | planned |
 | [P5 — 1.0](p5-release-1.0/) | Compat complete, `/core` locked, npm takeover | planned |
 
 Reference pages, not tied to one phase:
 
-- [Cross-cutting work](cross-cutting.md) — the shared conformance testsuite,
-  UnitsML, symbol data as shared data.
+- [Cross-cutting work](cross-cutting.md) — the shared conformance testsuite and
+  who owns what in it, UnitsML, symbol data as shared data.
 - [Open decisions](open-decisions.md) — what is deliberately unsettled, who
   decides, and by when.
 
@@ -57,9 +57,12 @@ Each phase exists to make the next one safe:
 4. **Output formats before input formats** (P2 before P3), because every
    renderer shares one model, so they compound; each new parser is instead an
    independent grammar port.
-5. **Parity modules last** (P4) because they cut across everything — number
-   formatting touches every renderer, so it is cheapest once the renderers
-   exist and most disruptive before.
+5. **Parity modules last** (P4) — but only the part that is genuinely left.
+   Number formatting cuts across everything, which cuts both ways: its contract
+   and the behaviour a given renderer or parser actually exercises land *with*
+   that renderer or parser, and P4 keeps the modes nothing earlier reaches.
+   Evaluation and MathML/OMML input are last on their own merits: they need the
+   whole model, and a settled dependency strategy.
 6. **1.0 at the end** (P5), because a stability promise is only meaningful once
    there is nothing substantial left to change.
 

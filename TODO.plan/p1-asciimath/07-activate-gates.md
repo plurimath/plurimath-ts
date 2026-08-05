@@ -8,16 +8,46 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
 ## Scope
 - Add the test suites the registry already names:
   - `corpus-conformance` — parse tree, normalized model, and each landed
-    renderer against the generated expectations.
+    renderer against the generated expectations, over the corpus **discovered
+    in the submodule** (below).
   - `runtime-boundary` — valid structural object renders; unknown kind and
     malformed known kind raise `RenderError`.
   - `unsupported-fallback` — `"unitsml(...)"` becomes `Text`, renders in all
     three formats, warns once per unique construct, and reports an offset into
     the *original* input; `onUnsupported` replaces, silences, and can escalate.
   - `payload-validation` — generated payloads match their schema and the
-    manifest hashes.
-- `scripts/oracle` — the class-B entry point (needs a gem checkout):
-  `regenerate --check` must produce an empty diff.
+    recorded hashes.
+- **Corpus discovery fails unless all of this holds.** No gate today requires
+  the corpus to exist at all, and this repository has already shipped a gate
+  that reported success while inspecting zero modules (`depcruise src` cruised
+  nothing and passed). Discovery is the same shape of hazard, so it asserts
+  presence, not absence of error:
+  - the submodule path recorded in `.gitmodules` exists **and is initialized** —
+    an uninitialized submodule is an empty directory, which otherwise reads as
+    "no cases, nothing failed";
+  - at least one payload file loads, and at least one case loads from it —
+    both counts asserted nonzero, not merely iterated over;
+  - every expected AsciiMath group is present: `fences`, `frac`, `matrices`,
+    `mixed`, `nary`, `numbers`, `operators`, `powers`, `quoted-text`, `roots`,
+    `symbols`, `unary-functions`, `whitespace`. The list is committed here, so
+    a pin that silently loses a group fails rather than shrinking the run;
+  - every group declares the target keys P1 renders — `asciimath`, `latex`,
+    `mathml` — and every case carries an expectation for each;
+  - **every discovered payload is validated**, against the case schema and
+    against its `sha256` and `bytes` in `corpus/provenance.yaml`. Validating
+    only the payloads a test happens to read leaves the rest unchecked;
+  - nothing resolves to the pre-split copy at `corpus/asciimath/` in this
+    repository. TODO 1 deletes it; this rule is what stops it coming back and
+    quietly becoming the thing the suite checks against.
+- `scripts/oracle` — the class-B entry point (needs a gem checkout). Two
+  separate checks, because they have different owners and different failure
+  meanings:
+  - `regenerate --check` over **this repository's** generated data — census,
+    exclusions, symbol slices, core data — must produce an empty diff;
+  - a **testsuite** check: regenerate the pinned corpus in the submodule from
+    the same clean gem checkout and diff it. A difference there is a testsuite
+    change, reported as such, and fixed by moving the pin rather than by
+    editing anything here.
 - Extend the package-isolation gate's forbidden-import table as the
   `/asciimath`, `/mathml`, and `/latex` subpaths appear.
 - Set `currentMilestone` to `P1-baseline` in the same commit.
@@ -25,6 +55,14 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
 ## Done when
 
 - [ ] `pnpm check` reports nine active class-A gates, all passing.
-- [ ] `scripts/oracle regenerate --check` is clean against a clean gem checkout.
-- [ ] The phase-exit checklist is satisfied: gates green, plus the class-C
+- [ ] `scripts/oracle regenerate --check` is clean against a clean gem checkout,
+  and the testsuite regeneration check is reported separately from it.
+- [ ] Each discovery failure is demonstrated, not asserted: a deinitialized
+  submodule, an empty corpus directory, a group removed from a scratch copy, a
+  case missing a target key, and a corrupted payload byte each fail the run.
+  Five red-green proofs, one per rule.
+- [ ] `currentMilestone` is `P1-baseline`, and every gate that activates with
+  it has a runner in the same change. P1 is **not** finished here — see
+  [item 8](08-p1-completion.md).
+- [ ] The milestone-exit checklist is satisfied: gates green, plus the class-C
   evidence — a review round with findings resolved, and sign-off recorded.

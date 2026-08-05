@@ -6,18 +6,31 @@ depends on decisions outside this repository.
 ## Shared conformance testsuite
 
 The corpus is the contract between implementations: Ruby, TypeScript, and any
-future Python or Rust port check against the same cases. Staged deliberately:
+future Python or Rust port check against the same cases. It already lives in
+its own repository, `plurimath-testsuite`. This package consumes it as a **git
+submodule** pinned to a reviewed commit — not as a local directory, and not as
+a published package.
 
-1. **Built locally, in shared shape** — from P1 the corpus lives in its own
-   directory with a JSON Schema, provenance manifests, and a version stamp, and
-   this package consumes it exactly as it would a released dependency.
-2. **Extracted to its own repository** once that pipeline is proven end to end.
-   Designing the schema from experience rather than imagination is the whole
-   point of the ordering; extraction then costs a `git init`, not a rewrite.
+**Generators that write shared data live in the testsuite. Each consumer writes
+its own reader.** One generator per owned directory, each recording its own
+provenance.
 
-Format: YAML sources compiled to JSON artifacts. YAML for humans — comments,
-readable diffs, one file per case group. JSON for machines — parsed by every
-language's standard library, deterministic, checksummed.
+| Owner | Owns |
+|---|---|
+| `plurimath-testsuite` | the case schemas, the cases, `corpus/provenance.yaml`, and `scripts/generate-corpus.rb` that writes them from the gem |
+| plurimath-ts (here) | the submodule pin, the TypeScript reader, `corpus/census.yaml` and `corpus/exclusions.yaml`, and the generators that emit TypeScript |
+| plurimath (Ruby) | its own reader over the same cases |
+
+Census and exclusions are **not** shared. Both encode this port's roadmap
+rather than the gem's behaviour — they classify classes as deferred and cite
+`ARCHITECTURE.md`, which lives here — so they were removed from the shared
+repository and stay here. The symbol-data generator stays here for a different
+reason: it emits TypeScript, which no other implementation can consume.
+
+Format: YAML sources, one file per case group, with JSON Schema validated in
+the testsuite's own CI. YAML for humans — comments, readable diffs. Consumers
+parse that YAML directly; nothing is compiled to JSON today, so a reader is
+each implementation's own small cost.
 
 ## UnitsML
 
@@ -48,9 +61,10 @@ measurement shows only about 7 of 1,461 classes carry any behaviour. Making
 that data authoritative would let the gem generate its own symbol classes from
 it, deleting tens of thousands of hand-maintained lines on the Ruby side too.
 
-Deliberately **not** bundled with the testsuite extraction: it is a bigger ask
-because it changes the gem, and it is a separate conversation once the corpus
-has proven the pipeline.
+Deliberately **not** part of the corpus move: it is a bigger ask, because it
+changes the gem, and it is a separate conversation now that the corpus has its
+own repository. Until it is settled, symbol data is generated straight into
+this repository as TypeScript.
 
 Function classes are explicitly out of scope for sharing: 57 of 102 carry
 conditional logic, so expressing them as data would require a template language

@@ -99,6 +99,7 @@
 import { describe, expect, it } from "vitest";
 import { ParseError } from "../../../src/core/errors";
 import { createAsciimathGrammar } from "../../../src/formats/asciimath/grammar";
+import { parseAsciimathTree } from "../../../src/formats/asciimath/parser";
 import { preprocess } from "../../../src/formats/asciimath/preprocess";
 import { ParseFailed, type ParseValue, Slice } from "../../../src/pegkit/index";
 import type { YamlValue } from "../../core/corpus-yaml";
@@ -129,26 +130,14 @@ function plain(value: ParseValue): YamlValue {
 }
 
 /**
- * The whole pipeline, from the caller's string to a typed error: preprocess,
- * parse, and map any failure position back through the `SourceMap`.
- *
- * This is deliberately the *only* composition of the three published pieces
- * that satisfies the contract above, and it is written here rather than in
- * `src/` because the AsciiMath format entry point is a later item — TODO 4 owns
- * `grammar.ts` and `preprocess.ts`, and `parseAsciimath` takes already-
- * preprocessed text on purpose. When that entry point lands it must do exactly
- * this, and this helper should be deleted in favour of calling it.
+ * The whole pipeline, from the caller's string to a typed error, through the
+ * REAL entry point: `parseAsciimathTree` owns the preprocess → parse →
+ * SourceMap composition this spec used to carry as a local helper (TODO 5
+ * landed it in `src/formats/asciimath/parser.ts`), and this file now only
+ * flattens its tree the way the corpus generator serializes one.
  */
 function parseInput(input: string): YamlValue {
-  const { text, map } = preprocess(input);
-  try {
-    return plain(grammar.root.parse(text));
-  } catch (error) {
-    if (error instanceof ParseFailed) {
-      throw new ParseError(error.message, input, "asciimath", map.toOriginal(error.index));
-    }
-    throw error;
-  }
+  return plain(parseAsciimathTree(input));
 }
 
 /** The `ParseError` a rejected input produces, or `null` if it parsed. */

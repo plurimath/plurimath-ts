@@ -52,6 +52,17 @@
  * - everything else is emitted verbatim: `'`, DEL 0x7F, and all non-ASCII
  *   (U+00A0, U+2028/9, surrogate-pair astral characters, U+E000, U+10FFFF
  *   all measured as raw UTF-8).
+ *
+ * ## Known divergence: lone surrogates (TODO.plan/deferred.md)
+ *
+ * A Ruby string can be forced to carry invalid UTF-8 (a lone-surrogate byte
+ * sequence such as `ED A0 80`), and Ox passes those bytes through raw. A
+ * JavaScript string holds the lone surrogate as a UTF-16 code unit, and any
+ * UTF-8 encoding of the output replaces it with U+FFFD (`EF BF BD`). Such
+ * strings are not valid Unicode, nothing in the gem's parse pipeline
+ * produces one, and the maintainer's standing input-contract ruling applies:
+ * degenerate Unicode input is outside the supported contract and the caller
+ * bears the consequences. Recorded, not papered over.
  */
 
 import type { XmlElement } from "./element";

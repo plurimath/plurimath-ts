@@ -195,7 +195,7 @@ dn["attr-amp-quote"] = dump_nodes(ampattr)
 
 dn["double-newline-text"] = dump_nodes(wrapper_text("mtext", "line1\n\nline2"))
 dn["crlf-blank-text"] = dump_nodes(wrapper_text("mtext", "a\r\n\nb"))
-dn["line-separator-text"] = dump_nodes(wrapper_text("mtext", "a \nb"))
+dn["line-separator-text"] = dump_nodes(wrapper_text("mtext", "a\u2028\nb"))
 dn["entity-text-passthrough"] = dump_nodes(wrapper_text("mo", "&#x2211;"))
 dn["ascii-sweep"] = dump_nodes(wrapper_text("mtext", ASCII))
 

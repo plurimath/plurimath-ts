@@ -3,9 +3,12 @@
 #
 # Run from the pinned oracle checkout, emitting to stdout:
 #
-#   cd ../plurimath-oracle && bundle exec ruby \
+#   cd ../plurimath-oracle && mise x ruby@4.0.1 -- bundle exec ruby \
 #     ../plurimath-ts/scripts/generate-xml-fixtures.rb \
 #     > ../plurimath-ts/test/xml/ox-contract.expected.json
+#
+# The mise activation matters: an unactivated shell selects system Ruby and
+# bundler exits with GemNotFound (review-proven).
 #
 # The tree recipes mirror test/xml/ox-contract.ts one-for-one; the three
 # mathml-* entries are byte-checked against Plurimath::Math.parse(...)

@@ -9,9 +9,9 @@
  *
  * Every expected model here was MEASURED, not reasoned out: the gem ran the
  * same input through `Plurimath::Math.parse(input, :asciimath)` and its
- * formula was serialized with the corpus generator's `serialize_node`
- * (probe: `probe-oddities.rb` against plurimath 0.11.6 at `00c52783`,
- * 2026-08-05). The JSON blobs are pasted verbatim from that run.
+ * formula was serialized with the corpus generator's `serialize_node` (a
+ * one-off Ruby probe against the pinned oracle checkout, plurimath 0.11.6 at
+ * `00c52783`, 2026-08-05). The JSON blobs are pasted verbatim from that run.
  */
 
 import { describe, expect, it } from "vitest";
@@ -117,7 +117,7 @@ describe("base-prefix numbers decimalize exactly (base_number_prefix.rb:36-38)",
   it.each([
     // Ruby's `to_i(2)` is a bignum: 60 binary digits already exceed a
     // double's mantissa, so parseInt would have emitted ...846976. Values
-    // measured through the gem (probe-oddities.rb, 2026-08-05).
+    // measured through the gem at the pinned oracle commit (2026-08-05).
     ["0b111111111111111111111111111111111111111111111111111111111111", 2, "1152921504606846975"],
     ["0o77777777777777777777777", 8, "590295810358705651711"],
     // Hex keeps its digits as written, case included.

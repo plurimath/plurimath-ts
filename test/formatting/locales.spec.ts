@@ -3,15 +3,14 @@
  * `00c52783`, Ruby 4.0.1, Ox).
  *
  * Every expectation here is a value the gem printed, not a value read off its
- * source. The probes that produced them are recorded in
- * `.codex-context/SESSION-LOG.md`; the shape of each is
+ * source. Each came from a one-off probe of the shape
  *
  * ```ruby
  * Plurimath::Formatter::SupportedLocales.decimal_for(locale, default: ".")
  * Plurimath::Math.parse("1,5", :asciimath, locale: locale).to_asciimath
  * ```
  *
- * run through `bundle exec ruby -Ilib` in the oracle checkout.
+ * run through `bundle exec ruby -Ilib` in the pinned oracle checkout.
  */
 
 import { describe, expect, it } from "vitest";

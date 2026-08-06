@@ -1,28 +1,30 @@
 /**
  * The AsciiMath class registry — `Utility.get_class`, `Utility::FONT_STYLES`
- * and `Utility::UNARY_CLASSES` as explicit immutable tables (TODO.plan p1/05).
+ * and `Utility::UNARY_CLASSES` (TODO.plan p1/05), DERIVED from the generated
+ * reachability census in `src/generated/asciimath/transform-registry.ts`.
  *
  * Ruby resolves a captured name at runtime with
  * `Object.const_get("Plurimath::Math::Function::#{capitalize(text)}")`
  * (`utility.rb:139`), which reaches whatever constant exists — including the
  * alias constants `Overbrace = Obrace`, `Underbrace = Ubrace` and
  * `Underline = Ul`. A port cannot const_get, and ARCHITECTURE.md §3 rule 7
- * bans the POC's late-bound mutable registry, so every reachable name is an
- * explicit entry here, built from direct `core` imports at module scope.
- * Importing this module has no observable effect: the tables are module-local
- * constants.
+ * bans the POC's late-bound mutable registry, so every reachable name gets an
+ * explicit entry, built at module scope. Importing this module has no
+ * observable effect: the tables are module-local constants.
  *
- * Completeness is asserted, not assumed: `test/formats/asciimath/registry.spec.ts`
- * checks these tables against the generated reachability census in
- * `src/generated/asciimath/transform-registry.ts` — every name the gem's
- * transform can pass to `get_class`, with the class it resolves to. A name
- * missing here is a parity gap and fails that suite; at runtime a miss throws
- * (see `getClass` in `./transform`) rather than constructing something
- * plausible.
+ * The names, their resolved classes and their carriers are gem-derived data,
+ * so they are never restated here (PORTING-STANDARDS.md, "Generated data
+ * discipline"): the census tables are the single source, and this module only
+ * BINDS them — each census carrier resolves through `NODE_SPECS` to its node
+ * kind, and the one hand-written table maps that kind to its `core`
+ * constructor (the map §3 rule 7 asks for). A census entry this module cannot
+ * bind — an unknown carrier, or a kind without a measured constructor family —
+ * throws at import time rather than resolving to something plausible; at
+ * runtime a lookup miss throws too (see `getClass` in `./transform`).
  *
  * Entries carry three things the transform needs:
- *   - the `core` constructor the name finalizes into (the map §3 rule 7 asks
- *     for), plus `kind`/`name` — the carrier identity for aliased classes;
+ *   - the `core` constructor the name finalizes into, plus `kind`/`name` — the
+ *     carrier identity for aliased classes;
  *   - `family`: which Ruby `initialize` shape the class has, measured from the
  *     gem source (which ivars get assigned, and whether a Slice argument is
  *     converted) — the draft builders in `./transform` dispatch on it.
@@ -31,23 +33,38 @@
 import {
   AbsNode,
   BarNode,
+  BaseNode,
   BinaryFunctionNode,
   CeilNode,
+  ColorNode,
   DdotNode,
   DotNode,
+  FencedNode,
   FloorNode,
   FontStyleNode,
+  FormulaNode,
   FracNode,
   HatNode,
   IntNode,
+  LinebreakNode,
   type MathNode,
+  MpaddedNode,
+  MrowNode,
+  NaryNode,
+  NODE_KINDS,
+  type NodeKind,
   NormNode,
+  NumberNode,
   ObraceNode,
   OintNode,
+  OverleftrightarrowNode,
   OversetNode,
   ProdNode,
   SqrtNode,
   SumNode,
+  SymbolNode,
+  TableNode,
+  TernaryFunctionNode,
   TextNode,
   TildeNode,
   UbraceNode,
@@ -56,6 +73,13 @@ import {
   UndersetNode,
   VecNode,
 } from "../../core/index";
+import { NODE_SPECS } from "../../core/normalize";
+import {
+  ASCIIMATH_TRANSFORM_FONT_STYLES,
+  ASCIIMATH_TRANSFORM_GET_CLASS,
+  ASCIIMATH_TRANSFORM_UNARY_CLASSES,
+  type AsciimathTransformClassEntry,
+} from "../../generated/asciimath/transform-registry";
 
 /**
  * Which Ruby `initialize` runs when the transform calls `.new` on a resolved
@@ -99,227 +123,182 @@ export interface AsciimathClassEntry {
   /** The `core` constructor this name finalizes into. */
   readonly ctor: AsciimathNodeConstructor;
   /** The constructor's node kind, for the transform's finalizer. */
-  readonly kind:
-    | "abs"
-    | "bar"
-    | "binaryFunction"
-    | "ceil"
-    | "ddot"
-    | "dot"
-    | "floor"
-    | "frac"
-    | "hat"
-    | "int"
-    | "norm"
-    | "obrace"
-    | "oint"
-    | "overset"
-    | "prod"
-    | "sqrt"
-    | "sum"
-    | "text"
-    | "tilde"
-    | "ubrace"
-    | "ul"
-    | "unaryFunction"
-    | "underset"
-    | "vec";
+  readonly kind: NodeKind;
   /** Ruby class basename for the alias carriers; absent on implemented kinds. */
   readonly name?: string;
   readonly family: AsciimathConstructorFamily;
 }
 
-const unary = (name: string): AsciimathClassEntry => ({
-  ctor: UnaryFunctionNode,
-  kind: "unaryFunction",
-  name,
-  family: "unary",
-});
-
-const binary = (name: string): AsciimathClassEntry => ({
-  ctor: BinaryFunctionNode,
-  kind: "binaryFunction",
-  name,
-  family: "binary",
-});
-
 /**
- * Every name `Utility.get_class` can receive from the AsciiMath transform,
- * in the generated census's (sorted) order. Keys are the names as captured —
- * `get_class` capitalizes on the way to a constant, this map does not need to.
+ * The one hand-written table this module keeps: node kind → `core`
+ * constructor. It is model-structural TypeScript, not gem-derived data — the
+ * census names a carrier CLASS, but only this file can say which constructor
+ * implements it. The mapped type keeps it total over `NodeKind`: adding a
+ * kind to the model without binding its constructor is a compile error, and
+ * binding a kind twice or misspelling one is too.
  */
-export const ASCIIMATH_CLASS_REGISTRY: ReadonlyMap<string, AsciimathClassEntry> = new Map<
-  string,
-  AsciimathClassEntry
->([
-  ["abs", { ctor: AbsNode, kind: "abs", family: "unary" }],
-  ["arccos", unary("Arccos")],
-  ["arcsin", unary("Arcsin")],
-  ["arctan", unary("Arctan")],
-  ["bar", { ctor: BarNode, kind: "bar", family: "unaryAttributes" }],
-  ["cancel", unary("Cancel")],
-  ["ceil", { ctor: CeilNode, kind: "ceil", family: "unary" }],
-  ["cos", unary("Cos")],
-  ["cosh", unary("Cosh")],
-  ["cot", unary("Cot")],
-  ["coth", unary("Coth")],
-  ["csc", unary("Csc")],
-  ["csch", unary("Csch")],
-  ["ddot", { ctor: DdotNode, kind: "ddot", family: "unaryAttributes" }],
-  ["deg", unary("Deg")],
-  ["det", unary("Det")],
-  ["dim", unary("Dim")],
-  ["dot", { ctor: DotNode, kind: "dot", family: "unaryAttributes" }],
-  ["exp", unary("Exp")],
-  ["floor", { ctor: FloorNode, kind: "floor", family: "unary" }],
-  ["frac", { ctor: FracNode, kind: "frac", family: "binary" }],
-  ["gcd", unary("Gcd")],
-  ["glb", unary("Glb")],
-  ["hat", { ctor: HatNode, kind: "hat", family: "unaryAttributes" }],
-  ["int", { ctor: IntNode, kind: "int", family: "ternary" }],
-  ["ker", unary("Ker")],
-  ["lcm", unary("Lcm")],
-  ["left", unary("Left")],
-  ["lg", unary("Lg")],
-  ["lim", binary("Lim")],
-  ["liminf", unary("Liminf")],
-  ["limsup", unary("Limsup")],
-  ["ln", unary("Ln")],
-  ["log", binary("Log")],
-  ["lub", unary("Lub")],
-  ["max", unary("Max")],
-  ["min", unary("Min")],
-  ["norm", { ctor: NormNode, kind: "norm", family: "unary" }],
-  ["obrace", { ctor: ObraceNode, kind: "obrace", family: "unaryAttributes" }],
-  ["oint", { ctor: OintNode, kind: "oint", family: "ternary" }],
-  ["overbrace", { ctor: ObraceNode, kind: "obrace", family: "unaryAttributes" }],
-  ["overset", { ctor: OversetNode, kind: "overset", family: "binary" }],
-  ["prod", { ctor: ProdNode, kind: "prod", family: "ternary" }],
-  ["right", unary("Right")],
-  ["root", binary("Root")],
-  ["sec", unary("Sec")],
-  ["sech", unary("Sech")],
-  ["sin", unary("Sin")],
-  ["sinh", unary("Sinh")],
-  ["sqrt", { ctor: SqrtNode, kind: "sqrt", family: "unary" }],
-  ["stackrel", binary("Stackrel")],
-  ["sum", { ctor: SumNode, kind: "sum", family: "ternary" }],
-  ["sup", unary("Sup")],
-  ["tan", unary("Tan")],
-  ["tanh", unary("Tanh")],
-  ["text", { ctor: TextNode, kind: "text", family: "text" }],
-  ["tilde", { ctor: TildeNode, kind: "tilde", family: "unaryAttributes" }],
-  ["ubrace", { ctor: UbraceNode, kind: "ubrace", family: "unaryAttributes" }],
-  ["ul", { ctor: UlNode, kind: "ul", family: "unaryAttributes" }],
-  ["underbrace", { ctor: UbraceNode, kind: "ubrace", family: "unaryAttributes" }],
-  ["underline", { ctor: UlNode, kind: "ul", family: "unaryAttributes" }],
-  ["underset", { ctor: UndersetNode, kind: "underset", family: "binaryAssignedOptions" }],
-  ["vec", { ctor: VecNode, kind: "vec", family: "unaryAttributes" }],
-]);
+export const ASCIIMATH_NODE_CONSTRUCTORS: { readonly [K in NodeKind]: AsciimathNodeConstructor } = {
+  abs: AbsNode,
+  bar: BarNode,
+  base: BaseNode,
+  binaryFunction: BinaryFunctionNode,
+  ceil: CeilNode,
+  color: ColorNode,
+  ddot: DdotNode,
+  dot: DotNode,
+  fenced: FencedNode,
+  floor: FloorNode,
+  fontStyle: FontStyleNode,
+  formula: FormulaNode,
+  frac: FracNode,
+  hat: HatNode,
+  int: IntNode,
+  linebreak: LinebreakNode,
+  mpadded: MpaddedNode,
+  mrow: MrowNode,
+  nary: NaryNode,
+  norm: NormNode,
+  number: NumberNode,
+  obrace: ObraceNode,
+  oint: OintNode,
+  overleftrightarrow: OverleftrightarrowNode,
+  overset: OversetNode,
+  prod: ProdNode,
+  sqrt: SqrtNode,
+  sum: SumNode,
+  symbol: SymbolNode,
+  table: TableNode,
+  ternaryFunction: TernaryFunctionNode,
+  text: TextNode,
+  tilde: TildeNode,
+  ubrace: UbraceNode,
+  ul: UlNode,
+  unaryFunction: UnaryFunctionNode,
+  underset: UndersetNode,
+  vec: VecNode,
+};
 
 /**
- * `Utility::FONT_STYLES` (`utility.rb:7-58`): font keyword → the
- * `FontStyle` subclass basename it resolves to. The transform indexes this
- * with the captured `fonts_class` text and constructs
+ * `family` per kind, for the kinds `get_class` can land on — measured
+ * initialize shapes (see `AsciimathConstructorFamily`), so a kind is listed
+ * only once its gem constructor has been read. A census entry landing on an
+ * unlisted kind is a NEW measurement to take, and `classEntry` throws on it
+ * at import time rather than guessing a family.
+ */
+const CONSTRUCTOR_FAMILIES: { readonly [K in NodeKind]?: AsciimathConstructorFamily } = {
+  abs: "unary",
+  bar: "unaryAttributes",
+  binaryFunction: "binary",
+  ceil: "unary",
+  ddot: "unaryAttributes",
+  dot: "unaryAttributes",
+  floor: "unary",
+  frac: "binary",
+  hat: "unaryAttributes",
+  int: "ternary",
+  norm: "unary",
+  obrace: "unaryAttributes",
+  oint: "ternary",
+  overset: "binary",
+  prod: "ternary",
+  sqrt: "unary",
+  sum: "ternary",
+  ternaryFunction: "ternary",
+  text: "text",
+  tilde: "unaryAttributes",
+  ubrace: "unaryAttributes",
+  ul: "unaryAttributes",
+  unaryFunction: "unary",
+  underset: "binaryAssignedOptions",
+  vec: "unaryAttributes",
+};
+
+/** Census carrier class → the node kind that implements it, via `NODE_SPECS`. */
+const KIND_BY_CARRIER: ReadonlyMap<string, NodeKind> = new Map(
+  NODE_KINDS.map((kind) => [NODE_SPECS[kind].rubyClass, kind]),
+);
+
+function carrierKind(census: AsciimathTransformClassEntry): NodeKind {
+  const kind = KIND_BY_CARRIER.get(census.carrier);
+  if (kind === undefined) {
+    throw new Error(
+      `asciimath registry: census carrier "${census.carrier}" (for "${census.name}") ` +
+        "is not a declared node kind",
+    );
+  }
+  return kind;
+}
+
+/**
+ * The Ruby basename an aliased class rides under on its carrier — the census
+ * `rubyClass` minus the carrier's identity prefix (`Math::Function::Arccos`
+ * on `UnaryFunction` → `Arccos`), exactly what the carrier's identity slot
+ * stores and `rubyClassName` reconstructs.
+ */
+function aliasIdentity(kind: NodeKind, rubyClass: string): string {
+  const identity = NODE_SPECS[kind].identity;
+  if (identity === undefined) {
+    throw new Error(`asciimath registry: carrier kind "${kind}" has no identity slot`);
+  }
+  const prefix = `${identity.prefix}::`;
+  if (!rubyClass.startsWith(prefix) || rubyClass.length <= prefix.length) {
+    throw new Error(
+      `asciimath registry: "${rubyClass}" does not sit under the "${kind}" prefix "${prefix}"`,
+    );
+  }
+  return rubyClass.slice(prefix.length);
+}
+
+function classEntry(census: AsciimathTransformClassEntry): AsciimathClassEntry {
+  const kind = carrierKind(census);
+  const family = CONSTRUCTOR_FAMILIES[kind];
+  if (family === undefined) {
+    throw new Error(
+      `asciimath registry: no measured constructor family for kind "${kind}" ` +
+        `(census name "${census.name}")`,
+    );
+  }
+  const ctor = ASCIIMATH_NODE_CONSTRUCTORS[kind];
+  if (census.disposition === "aliased") {
+    return { ctor, kind, name: aliasIdentity(kind, census.rubyClass), family };
+  }
+  return { ctor, kind, family };
+}
+
+/**
+ * Every name `Utility.get_class` can receive from the AsciiMath transform, in
+ * the census's (sorted) order. Keys are the names as captured — `get_class`
+ * capitalizes on the way to a constant, this map does not need to.
+ */
+export const ASCIIMATH_CLASS_REGISTRY: ReadonlyMap<string, AsciimathClassEntry> = new Map(
+  ASCIIMATH_TRANSFORM_GET_CLASS.map((census) => [census.name, classEntry(census)]),
+);
+
+/**
+ * `Utility::FONT_STYLES` (`utility.rb:7-58`): font keyword → the `FontStyle`
+ * subclass basename it resolves to, from the census's resolved classes. The
+ * transform indexes this with the captured `fonts_class` text and constructs
  * `FontStyleNode({ name, ... })`; the constructor itself is one class for all
  * fifty keywords, which is why the value is a basename rather than a second
- * constructor map.
+ * constructor map. (Iteration order is the census's sorted order, not
+ * `utility.rb`'s; the table is only ever indexed.)
  */
-export const ASCIIMATH_FONT_STYLES: ReadonlyMap<string, string> = new Map([
-  ["double-struck", "DoubleStruck"],
-  ["sans-serif-bold-italic", "SansSerifBoldItalic"],
-  ["sans-serif-italic", "SansSerifItalic"],
-  ["bold-sans-serif", "BoldSansSerif"],
-  ["sans-serif", "SansSerif"],
-  ["bold-fraktur", "BoldFraktur"],
-  ["bold-italic", "BoldItalic"],
-  ["bold-script", "BoldScript"],
-  ["mbfitsans", "SansSerifBoldItalic"],
-  ["monospace", "Monospace"],
-  ["mathfrak", "Fraktur"],
-  ["mitsans", "SansSerifItalic"],
-  ["mbfsans", "BoldSansSerif"],
-  ["mbffrak", "BoldFraktur"],
-  ["mathcal", "Script"],
-  ["fraktur", "Fraktur"],
-  ["mbfscr", "BoldScript"],
-  ["mathbb", "DoubleStruck"],
-  ["double", "DoubleStruck"],
-  ["mathtt", "Monospace"],
-  ["mathsf", "SansSerif"],
-  ["mathrm", "Normal"],
-  ["textrm", "Normal"],
-  ["italic", "Italic"],
-  ["mathit", "Italic"],
-  ["textit", "Italic"],
-  ["mathbf", "Bold"],
-  ["textbf", "Bold"],
-  ["script", "Script"],
-  ["normal", "Normal"],
-  ["mbfit", "BoldItalic"],
-  ["msans", "SansSerif"],
-  ["mfrak", "Fraktur"],
-  ["mscr", "Script"],
-  ["bold", "Bold"],
-  ["bbb", "DoubleStruck"],
-  ["Bbb", "DoubleStruck"],
-  ["mtt", "Monospace"],
-  ["cal", "Script"],
-  ["mit", "Italic"],
-  ["mup", "Normal"],
-  ["mbf", "Bold"],
-  ["sf", "SansSerif"],
-  ["tt", "Monospace"],
-  ["fr", "Fraktur"],
-  ["rm", "Normal"],
-  ["cc", "Script"],
-  ["ii", "Italic"],
-  ["bb", "Bold"],
-  ["bf", "Bold"],
-]);
+export const ASCIIMATH_FONT_STYLES: ReadonlyMap<string, string> = new Map(
+  ASCIIMATH_TRANSFORM_FONT_STYLES.map((census) => [
+    census.name,
+    aliasIdentity(carrierKind(census), census.rubyClass),
+  ]),
+);
 
 /** The constructor every font-style keyword resolves through. */
-export const ASCIIMATH_FONT_STYLE_CONSTRUCTOR: AsciimathNodeConstructor = FontStyleNode;
+export const ASCIIMATH_FONT_STYLE_CONSTRUCTOR: AsciimathNodeConstructor =
+  ASCIIMATH_NODE_CONSTRUCTORS.fontStyle;
 
 /**
- * `Utility::UNARY_CLASSES` (`utility.rb:64-98`), in the gem's order. The
- * transform asks membership only — whether a unary argument keeps its fence —
- * so a Set serves it; the ordered list is what the completeness test compares.
+ * `Utility::UNARY_CLASSES` (`utility.rb:64-98`), in the gem's order — the
+ * generated list itself. The transform asks membership only — whether a unary
+ * argument keeps its fence — so a Set serves it.
  */
-export const ASCIIMATH_UNARY_CLASS_NAMES: readonly string[] = [
-  "arccos",
-  "arcsin",
-  "arctan",
-  "liminf",
-  "limsup",
-  "right",
-  "sech",
-  "sinh",
-  "tanh",
-  "cosh",
-  "coth",
-  "csch",
-  "left",
-  "max",
-  "min",
-  "sec",
-  "sin",
-  "sup",
-  "deg",
-  "det",
-  "dim",
-  "exp",
-  "gcd",
-  "glb",
-  "lub",
-  "lcm",
-  "ker",
-  "tan",
-  "cos",
-  "cot",
-  "csc",
-  "ln",
-  "lg",
-];
+export const ASCIIMATH_UNARY_CLASS_NAMES: readonly string[] = ASCIIMATH_TRANSFORM_UNARY_CLASSES;
 
 export const ASCIIMATH_UNARY_CLASS_SET: ReadonlySet<string> = new Set(ASCIIMATH_UNARY_CLASS_NAMES);

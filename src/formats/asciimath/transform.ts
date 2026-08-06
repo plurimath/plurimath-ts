@@ -251,7 +251,7 @@ function rubyArrayToS(values: readonly unknown[]): string {
  * `finalize`. `identity` is the Ruby basename an alias carrier rides under
  * (`Power`, `Comma`, `Paren::Lround`), matching the core carriers' `name`/`id`.
  */
-export class AsciimathDraft {
+class AsciimathDraft {
   constructor(
     readonly kind: NodeKind,
     readonly identity: string | undefined,

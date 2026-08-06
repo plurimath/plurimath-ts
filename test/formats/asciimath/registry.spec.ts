@@ -1,25 +1,29 @@
 /**
- * Registry completeness (TODO.plan p1/05): the hand-written tables in
- * `src/formats/asciimath/registry.ts` are checked against the GENERATED
- * reachability census in `src/generated/asciimath/transform-registry.ts` —
- * every name the gem's transform can hand to `Utility.get_class`, resolved
- * through the gem itself. That generated file exists precisely so this
- * assertion never happens by hand: a registry gap fails here, not at parse
- * time as an unexplained throw.
+ * The derived AsciiMath registry (TODO.plan p1/05). The tables in
+ * `src/formats/asciimath/registry.ts` are DERIVED from the generated
+ * reachability census in `src/generated/asciimath/transform-registry.ts`, so
+ * name-for-name agreement between the two is construction, not evidence, and
+ * is not asserted here — the census itself is pinned in
+ * `test/generated/transform-registry.spec.ts`.
  *
- * Checked in both directions: every generated name resolves, and the registry
- * carries nothing the census cannot attribute — an extra entry would be
- * unmeasured behaviour.
+ * What derivation cannot guarantee is the hand-written half: the
+ * kind → constructor bindings. The compiler proves that table total over
+ * `NodeKind`; it cannot prove each kind names ITS OWN class rather than a
+ * sibling's, so that is checked here through the constructed nodes' own
+ * discriminants — and, for every census name, through the identity the
+ * constructed node reconstructs.
  */
 
 import { describe, expect, it } from "vitest";
-import { FontStyleNode } from "../../../src/core/index";
-import { NODE_SPECS } from "../../../src/core/normalize";
+import { FontStyleNode, NODE_KINDS } from "../../../src/core/index";
+import { NODE_SPECS, rubyClassName } from "../../../src/core/normalize";
 import {
   ASCIIMATH_CLASS_REGISTRY,
   ASCIIMATH_FONT_STYLE_CONSTRUCTOR,
   ASCIIMATH_FONT_STYLES,
+  ASCIIMATH_NODE_CONSTRUCTORS,
   ASCIIMATH_UNARY_CLASS_NAMES,
+  ASCIIMATH_UNARY_CLASS_SET,
 } from "../../../src/formats/asciimath/registry";
 import {
   ASCIIMATH_TRANSFORM_EXCLUDED,
@@ -28,84 +32,85 @@ import {
   ASCIIMATH_TRANSFORM_UNARY_CLASSES,
 } from "../../../src/generated/asciimath/transform-registry";
 
-/** The Ruby class a registry entry's (ctor, name) pair reconstructs. */
-function registryRubyClass(name: string): string {
-  const entry = ASCIIMATH_CLASS_REGISTRY.get(name);
-  if (entry === undefined) throw new Error(`registry has no entry for "${name}"`);
-  if (entry.name !== undefined) return `Math::Function::${entry.name}`;
-  return NODE_SPECS[entry.kind].rubyClass;
-}
+describe("the hand-written kind → constructor map", () => {
+  it("binds every declared kind to the class that declares it", () => {
+    // The census-complete model has 38 kinds; a shorter walk here would mean
+    // the loop below quietly proved less than the whole map.
+    expect(NODE_KINDS.length).toBe(38);
+    for (const kind of NODE_KINDS) {
+      const node = new ASCIIMATH_NODE_CONSTRUCTORS[kind]({});
+      // The node's own discriminant, not the map's key: `abs: BarNode` type
+      // checks (both are `new (init) => MathNode`) and only fails here.
+      expect(node.kind, kind).toBe(kind);
+      expect(rubyClassName(node), kind).toBe(NODE_SPECS[kind].rubyClass);
+    }
+  });
+});
 
 describe("the get_class registry against the generated census", () => {
-  it("has the census's population", () => {
+  it("iterates the full census", () => {
+    // Emptiness guard for the loop below: a truncated census must fail loudly
+    // here, not shrink the walk (PORTING-STANDARDS.md, "Tests must be able to
+    // fail").
     expect(ASCIIMATH_TRANSFORM_GET_CLASS.length).toBe(63);
-    expect(ASCIIMATH_CLASS_REGISTRY.size).toBe(63);
   });
 
-  it("serves every reachable name, resolving to the class the gem resolves", () => {
-    for (const entry of ASCIIMATH_TRANSFORM_GET_CLASS) {
-      expect(ASCIIMATH_CLASS_REGISTRY.has(entry.name), entry.name).toBe(true);
-      expect(registryRubyClass(entry.name), entry.name).toBe(entry.rubyClass);
-    }
-  });
-
-  it("lands every name on the census's carrier", () => {
-    for (const entry of ASCIIMATH_TRANSFORM_GET_CLASS) {
-      const registered = ASCIIMATH_CLASS_REGISTRY.get(entry.name);
-      expect(registered, entry.name).toBeDefined();
-      // The carrier is the implemented class the port constructs: the entry's
-      // own kind for an implemented class, the abstract family root for an
-      // aliased one — exactly `NODE_SPECS[kind].rubyClass` either way.
-      expect(NODE_SPECS[(registered as { kind: keyof typeof NODE_SPECS }).kind].rubyClass).toBe(
-        entry.carrier,
-      );
-    }
-  });
-
-  it("carries nothing the census does not attribute", () => {
-    const reachable = new Set(ASCIIMATH_TRANSFORM_GET_CLASS.map((entry) => entry.name));
-    for (const name of ASCIIMATH_CLASS_REGISTRY.keys()) {
-      expect(reachable.has(name), name).toBe(true);
+  it("constructs every reachable name as the class the gem resolves", () => {
+    for (const census of ASCIIMATH_TRANSFORM_GET_CLASS) {
+      const entry = ASCIIMATH_CLASS_REGISTRY.get(census.name);
+      expect(entry, census.name).toBeDefined();
+      if (entry === undefined) continue;
+      // Through the REAL constructor: what the runtime node says about
+      // itself — its discriminant and the Ruby class name it reconstructs —
+      // must land on the census's carrier and resolved class. This is where a
+      // wrong constructor binding or a mangled alias identity surfaces.
+      const node = new entry.ctor(entry.name === undefined ? {} : { name: entry.name });
+      expect(node.kind, census.name).toBe(entry.kind);
+      expect(NODE_SPECS[node.kind].rubyClass, census.name).toBe(census.carrier);
+      expect(rubyClassName(node), census.name).toBe(census.rubyClass);
     }
   });
 
   it("has no deferred exclusions to honour", () => {
-    // The census records none; if a regeneration adds one, the registry must
-    // start withholding it and this pin must move deliberately.
+    // The derivation maps the census as-is. If a regeneration ever records an
+    // exclusion, the registry must start withholding it, and this pin must
+    // move deliberately with that change.
     expect(ASCIIMATH_TRANSFORM_EXCLUDED.length).toBe(0);
   });
 });
 
 describe("the font-style table against the generated census", () => {
-  it("has the census's population", () => {
+  it("iterates the full census", () => {
     expect(ASCIIMATH_TRANSFORM_FONT_STYLES.length).toBe(50);
-    expect(ASCIIMATH_FONT_STYLES.size).toBe(50);
   });
 
-  it("maps every keyword to the subclass the gem maps it to", () => {
-    for (const entry of ASCIIMATH_TRANSFORM_FONT_STYLES) {
-      const basename = ASCIIMATH_FONT_STYLES.get(entry.name);
-      expect(basename, entry.name).toBeDefined();
-      expect(`Math::Function::FontStyle::${basename}`, entry.name).toBe(entry.rubyClass);
-    }
-    const known = new Set(ASCIIMATH_TRANSFORM_FONT_STYLES.map((entry) => entry.name));
-    for (const name of ASCIIMATH_FONT_STYLES.keys()) {
-      expect(known.has(name), name).toBe(true);
-    }
-  });
-
-  it("constructs every keyword through the FontStyle carrier", () => {
+  it("constructs every keyword through the FontStyle carrier as the gem's subclass", () => {
+    // The carrier binding is hand-written (one constructor for all fifty
+    // keywords); the subclass identity must survive the round trip through it.
     expect(ASCIIMATH_FONT_STYLE_CONSTRUCTOR).toBe(FontStyleNode);
-    for (const entry of ASCIIMATH_TRANSFORM_FONT_STYLES) {
-      expect(entry.carrier, entry.name).toBe("Math::Function::FontStyle");
+    for (const census of ASCIIMATH_TRANSFORM_FONT_STYLES) {
+      const basename = ASCIIMATH_FONT_STYLES.get(census.name);
+      expect(basename, census.name).toBeDefined();
+      const node = new ASCIIMATH_FONT_STYLE_CONSTRUCTOR({ name: basename });
+      expect(node.kind, census.name).toBe("fontStyle");
+      expect(rubyClassName(node), census.name).toBe(census.rubyClass);
     }
   });
 });
 
-describe("the unary-class list against the generated census", () => {
-  it("is the gem's list, order included", () => {
-    // Membership is all the transform asks, but pinning the order too makes a
-    // regeneration diff loud instead of silently reshuffled.
-    expect(ASCIIMATH_UNARY_CLASS_NAMES).toStrictEqual([...ASCIIMATH_TRANSFORM_UNARY_CLASSES]);
+describe("the unary-class list", () => {
+  it("is the generated list itself, order included", () => {
+    // Reference identity, not equality: the registry SERVES the census's
+    // list rather than copying it, so the gem's order cannot drift between
+    // the two exports.
+    expect(ASCIIMATH_UNARY_CLASS_NAMES).toBe(ASCIIMATH_TRANSFORM_UNARY_CLASSES);
+  });
+
+  it("collapses no member into the Set", () => {
+    // The generated spec pins duplicate-freedom for the entry tables but not
+    // for this list; a duplicate here would vanish in the Set and narrow the
+    // keeps-its-fence membership check.
+    expect(ASCIIMATH_UNARY_CLASS_NAMES.length).toBe(33);
+    expect(ASCIIMATH_UNARY_CLASS_SET.size).toBe(33);
   });
 });

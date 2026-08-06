@@ -15,7 +15,8 @@
  *     expectation there was *measured* against the oracle, never reasoned out.
  *   - **failure positions.** `ParseFailed.index` is public contract
  *     (ARCHITECTURE.md §5) and two pegkit bugs once survived a conformance
- *     suite that only checked what parses (`.codex-context/STATUS.md`).
+ *     suite that only checked what parses (both fixed inside the pegkit-core
+ *     squash `8eadb6a`; `test/pegkit/conformance.spec.ts` pins the positions).
  *   - **the decimal marker.** The gem builds it from
  *     `Plurimath.configuration.decimal` and uses it *twice* (`parse.rb:18` and
  *     `:86`), so a comma-decimal locale changes how commas parse too. The
@@ -75,9 +76,9 @@ type Fixture = readonly [preprocessed: string, gemTree: string];
 
 /**
  * Control characters as code points, never as escape sequences in the source.
- * A scripted edit has put literal control bytes into a file in this repository
- * twice (`.codex-context/STATUS.md`), and `test/core/corpus-yaml.ts` writes its
- * own escapes this way for the same reason.
+ * Scripted edits have put literal control bytes into source files before
+ * (PORTING-STANDARDS.md, "Verification hygiene"), and `test/core/corpus-yaml.ts`
+ * writes its own escapes this way for the same reason.
  */
 const TAB = String.fromCodePoint(0x09);
 const LINE_FEED = String.fromCodePoint(0x0a);

@@ -4,20 +4,19 @@
  * The corpus records only successes, so a port that returns something plausible
  * wherever the gem raises passes every other test in this repository. Two pegkit
  * failure-position bugs already survived a 23-test conformance suite that only
- * checked what parses (`.codex-context/STATUS.md`), and `ParseError.index` is
- * public contract (ARCHITECTURE.md §5). This file is the other half.
+ * checked what parses (both fixed inside the pegkit-core squash `8eadb6a`; the
+ * position pins in `test/pegkit/conformance.spec.ts` hold them down), and
+ * `ParseError.index` is public contract (ARCHITECTURE.md §5). This file is the
+ * other half.
  *
  * ## AsciiMath is far more permissive than it looks
  *
  * Nothing here is reasoned out. A candidate list of 156 malformed or truncated
- * inputs was swept against the oracle and the gem's answer decided which side
- * each one lands on:
- *
- *   BUNDLE_GEMFILE=~/ruby_gems/plurimath-oracle/Gemfile mise x -- \
- *     bundle exec ruby probe-failures.rb candidates.json
- *
- * against plurimath 0.11.6 at 00c52783877b38f6b8e6e109f1803f96bb34fc62. Each
- * candidate was run three ways: `Plurimath::Math.parse(input, :asciimath)`,
+ * inputs was swept against the oracle — a one-off Ruby probe against the
+ * pinned checkout, plurimath 0.11.6 at
+ * 00c52783877b38f6b8e6e109f1803f96bb34fc62 — and the gem's answer decided
+ * which side each one lands on. Each candidate was run three ways:
+ * `Plurimath::Math.parse(input, :asciimath)`,
  * `Asciimath::Parser.new(input).text`, and `Asciimath::Parse.new.parse(text)`.
  *
  * **26 of the 156 are rejected; 130 are accepted.** The public boundary and the
@@ -36,7 +35,9 @@
  * The 156 are a curated list; to check that they are not also a *lucky* list,
  * every string of length 1..3 over the structure-heavy alphabet
  * `{ } ( ) [ ] : | / ^ _ , " x 1 <space>` — 4,368 inputs — was run through the
- * gem the same way and classified (`sweep.rb`, `sweep-ts.ts`):
+ * gem the same way (a paired one-off probe: its Ruby side against the same
+ * pinned oracle commit, its TypeScript side against this port's entry points)
+ * and classified:
  *
  *   identical verdict and tree                              4,368
  *   gem accepts, this port rejects                              0
@@ -51,8 +52,9 @@
  * `FORMER_DIVERGENCES` so a regression cannot go quiet.
  * Preprocessing was re-checked on all 4,368 as a side effect and agreed.
  *
- * A second, seeded sweep of 1,500 LONGER inputs (4-26 characters, over the same
- * alphabet plus whole keywords — `sweep2.rb`, `sweep2-ts.ts`) says the same:
+ * A second, seeded sweep of 1,500 LONGER inputs (4-26 characters, over the
+ * same alphabet plus whole keywords, in the same paired-probe shape) says the
+ * same:
  * 1,500 of 1,500 identical. It was run because length 1-3 barely exercises the
  * packrat cache being reached at one position in both `consume_all` modes, and
  * it found both divergence classes independently on the pre-fix code (548
@@ -108,8 +110,8 @@ const grammar = createAsciimathGrammar();
 
 /**
  * Control characters and the no-break space as code points, never as literal
- * bytes in the source. A scripted edit has put raw control bytes into a file in
- * this repository three times (`.codex-context/STATUS.md`), and a literal
+ * bytes in the source. Scripted edits have put raw control bytes into source
+ * files before (PORTING-STANDARDS.md, "Verification hygiene"), and a literal
  * no-break space in a table is invisible to a reviewer.
  */
 const TAB = String.fromCodePoint(0x09);
@@ -985,7 +987,8 @@ describe("failure positions index the original input", () => {
       expect(error.index, id).toBe(1);
       // Reporting 2 — the digraph's second character — would slice the token in
       // half, which is the `SourceMap` bug that clamped past-end offsets into
-      // the middle of a token (`.codex-context/STATUS.md`).
+      // the middle of a token (`test/pegkit/source-map.spec.ts` pins the
+      // engine-side regression).
       expect(input.slice(error.index, error.index + 2), id).toBe(digraph);
     }
   });

@@ -115,3 +115,16 @@ If the 253-entry table proves useful outside this repository, it could ship as
 its own package. Post-1.0 at the earliest, and only on evidence of a second
 consumer — `src/core/generated/html-entities.ts` is 6,009 bytes (2,363
 gzipped), which is not enough to justify a package boundary on its own.
+
+### Constructor families lack behavioral corpus kills for two kinds
+
+**Trigger: the first corpus regeneration that adds cases — include
+`overset`/`underset` (and an options-carrying construct) then.**
+
+The generated constructor families (Option B, 2026-08-06) are guarded by
+literal pins, per-family counts, and an import-time throw — but the review
+noted no *parity* test dies today if `overset`'s or `underset`'s family flips:
+the pinned corpus has no case reaching them, so the Slice-conversion and
+options-storage distinctions the families encode are never exercised
+end-to-end. Not a registry gap — a corpus-scope gap, owned upstream where
+cases are generated.

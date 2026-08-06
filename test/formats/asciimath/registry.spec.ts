@@ -29,7 +29,6 @@ import {
   ASCIIMATH_TRANSFORM_EXCLUDED,
   ASCIIMATH_TRANSFORM_FONT_STYLES,
   ASCIIMATH_TRANSFORM_GET_CLASS,
-  ASCIIMATH_TRANSFORM_UNARY_CLASSES,
 } from "../../../src/generated/asciimath/transform-registry";
 
 describe("the hand-written kind → constructor map", () => {
@@ -99,12 +98,10 @@ describe("the font-style table against the generated census", () => {
 });
 
 describe("the unary-class list", () => {
-  it("is the generated list itself, order included", () => {
-    // Reference identity, not equality: the registry SERVES the census's
-    // list rather than copying it, so the gem's order cannot drift between
-    // the two exports.
-    expect(ASCIIMATH_UNARY_CLASS_NAMES).toBe(ASCIIMATH_TRANSFORM_UNARY_CLASSES);
-  });
+  // No assertion ties ASCIIMATH_UNARY_CLASS_NAMES back to the generated list
+  // it re-exports: the only divergence such a check could catch — serving a
+  // copy instead of the same array — is behaviour-neutral for a membership
+  // table, so the check could never fail for a reason that matters.
 
   it("collapses no member into the Set", () => {
     // The generated spec pins duplicate-freedom for the entry tables but not

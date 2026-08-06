@@ -10,24 +10,27 @@
  * `Underline = Ul`. A port cannot const_get, and ARCHITECTURE.md §3 rule 7
  * bans the POC's late-bound mutable registry, so every reachable name gets an
  * explicit entry, built at module scope. Importing this module has no
- * observable effect: the tables are module-local constants.
+ * observable effect beyond building the exported tables, which are immutable
+ * after that.
  *
- * The names, their resolved classes and their carriers are gem-derived data,
- * so they are never restated here (PORTING-STANDARDS.md, "Generated data
- * discipline"): the census tables are the single source, and this module only
- * BINDS them — each census carrier resolves through `NODE_SPECS` to its node
- * kind, and the one hand-written table maps that kind to its `core`
- * constructor (the map §3 rule 7 asks for). A census entry this module cannot
- * bind — an unknown carrier, or a kind without a measured constructor family —
+ * The names, their resolved classes, their carriers and their constructor
+ * families are gem-derived data, so they are never restated here
+ * (PORTING-STANDARDS.md, "Generated data discipline"): the census tables are
+ * the single source, and this module only BINDS them — each census carrier
+ * resolves through `NODE_SPECS` to its node kind, and the one hand-written
+ * table maps that kind to its `core` constructor (the map §3 rule 7 asks
+ * for). A census entry this module cannot bind — an unknown carrier, or an
+ * entry whose measured constructor family the transform has no builder for —
  * throws at import time rather than resolving to something plausible; at
  * runtime a lookup miss throws too (see `getClass` in `./transform`).
  *
  * Entries carry three things the transform needs:
  *   - the `core` constructor the name finalizes into, plus `kind`/`name` — the
  *     carrier identity for aliased classes;
- *   - `family`: which Ruby `initialize` shape the class has, measured from the
- *     gem source (which ivars get assigned, and whether a Slice argument is
- *     converted) — the draft builders in `./transform` dispatch on it.
+ *   - `family`: which Ruby `initialize` shape the class has, measured by the
+ *     generator off the gem's runtime (which ivars get assigned, and whether
+ *     a Slice argument is converted) — the draft builders in `./transform`
+ *     dispatch on it.
  */
 
 import {
@@ -79,14 +82,16 @@ import {
   ASCIIMATH_TRANSFORM_GET_CLASS,
   ASCIIMATH_TRANSFORM_UNARY_CLASSES,
   type AsciimathTransformClassEntry,
+  type AsciimathTransformConstructorFamily,
 } from "../../generated/asciimath/transform-registry";
 
 /**
  * Which Ruby `initialize` runs when the transform calls `.new` on a resolved
- * class. Read from the gem source class by class, not assumed from the
- * hierarchy — Ruby is not uniform here (`Underset` stores an empty options
- * hash where `Overset` skips it; `Bar` assigns `@attributes` where `Abs`
- * assigns nothing but `@parameter_one`).
+ * class. Measured per census entry by the generator — instantiate, read the
+ * ivars back — not assumed from the hierarchy, because Ruby is not uniform
+ * here (`Underset` stores an empty options hash where `Overset` skips it;
+ * `Bar` assigns `@attributes` where `Abs` assigns nothing but
+ * `@parameter_one`). What each measured family corresponds to in the gem:
  *
  * - `unary`: `UnaryFunction#initialize` — assigns `parameter_one` only,
  *   converting a `Slice` argument to its text (`unary_function.rb:10`).
@@ -95,8 +100,8 @@ import {
  * - `unaryAttributes`: the unary subclasses that add
  *   `@attributes = attributes` with a `{}` default (`bar.rb:9-12` and its
  *   eight siblings).
- * - `text`: `Text#initialize` — `parameter_one` defaults to `""` (the one
- *   non-nil default in the model) and `@lang` is always assigned (`text.rb:9`).
+ * - `text`: `Text#initialize` — `parameter_one` defaults to `""` and `@lang`
+ *   is always assigned (`text.rb:9`).
  * - `binary`: `BinaryFunction#initialize` — assigns `parameter_one` and
  *   `parameter_two`, no Slice conversion. Also `Frac`, `Overset` (options
  *   stored only when non-empty, and the transform never passes any).
@@ -105,13 +110,7 @@ import {
  * - `ternary`: `TernaryFunction#initialize` — three parameters. Also `Sum`,
  *   `Int`, `Prod`, `Oint` (options stored only when non-empty).
  */
-export type AsciimathConstructorFamily =
-  | "unary"
-  | "unaryAttributes"
-  | "text"
-  | "binary"
-  | "binaryAssignedOptions"
-  | "ternary";
+export type AsciimathConstructorFamily = AsciimathTransformConstructorFamily;
 
 /** The `core` constructors a registry entry may name. */
 export type AsciimathNodeConstructor = new (
@@ -179,39 +178,23 @@ export const ASCIIMATH_NODE_CONSTRUCTORS: { readonly [K in NodeKind]: AsciimathN
 };
 
 /**
- * `family` per kind, for the kinds `get_class` can land on — measured
- * initialize shapes (see `AsciimathConstructorFamily`), so a kind is listed
- * only once its gem constructor has been read. A census entry landing on an
- * unlisted kind is a NEW measurement to take, and `classEntry` throws on it
- * at import time rather than guessing a family.
+ * The families the transform has draft builders for, total over the generated
+ * union by construction: a regeneration that measures a NEW family fails
+ * compilation here (and in `./transform`'s dispatch) until the port learns to
+ * construct it. The runtime Set backs `classEntry`'s import-time guard — the
+ * generated table is data, and `./transform`'s family switch has no default
+ * arm, so an unlisted value must stop here rather than construct nothing.
  */
-const CONSTRUCTOR_FAMILIES: { readonly [K in NodeKind]?: AsciimathConstructorFamily } = {
-  abs: "unary",
-  bar: "unaryAttributes",
-  binaryFunction: "binary",
-  ceil: "unary",
-  ddot: "unaryAttributes",
-  dot: "unaryAttributes",
-  floor: "unary",
-  frac: "binary",
-  hat: "unaryAttributes",
-  int: "ternary",
-  norm: "unary",
-  obrace: "unaryAttributes",
-  oint: "ternary",
-  overset: "binary",
-  prod: "ternary",
-  sqrt: "unary",
-  sum: "ternary",
-  ternaryFunction: "ternary",
-  text: "text",
-  tilde: "unaryAttributes",
-  ubrace: "unaryAttributes",
-  ul: "unaryAttributes",
-  unaryFunction: "unary",
-  underset: "binaryAssignedOptions",
-  vec: "unaryAttributes",
+const IMPLEMENTED_FAMILIES: { readonly [F in AsciimathConstructorFamily]: true } = {
+  unary: true,
+  unaryAttributes: true,
+  text: true,
+  binary: true,
+  binaryAssignedOptions: true,
+  ternary: true,
 };
+
+const IMPLEMENTED_FAMILY_SET: ReadonlySet<string> = new Set(Object.keys(IMPLEMENTED_FAMILIES));
 
 /** Census carrier class → the node kind that implements it, via `NODE_SPECS`. */
 const KIND_BY_CARRIER: ReadonlyMap<string, NodeKind> = new Map(
@@ -251,11 +234,13 @@ function aliasIdentity(kind: NodeKind, rubyClass: string): string {
 
 function classEntry(census: AsciimathTransformClassEntry): AsciimathClassEntry {
   const kind = carrierKind(census);
-  const family = CONSTRUCTOR_FAMILIES[kind];
-  if (family === undefined) {
+  const family = census.family;
+  if (family === undefined || !IMPLEMENTED_FAMILY_SET.has(family)) {
     throw new Error(
-      `asciimath registry: no measured constructor family for kind "${kind}" ` +
-        `(census name "${census.name}")`,
+      `asciimath registry: census entry "${census.name}" ` +
+        (family === undefined
+          ? "carries no measured constructor family"
+          : `carries the constructor family "${family}", which the transform cannot build`),
     );
   }
   const ctor = ASCIIMATH_NODE_CONSTRUCTORS[kind];

@@ -59,6 +59,11 @@ import {
 import { RUBY_ABSTRACT_CLASSES } from "../../core/nodes";
 import { NODE_SPECS } from "../../core/normalize";
 import { ASCIIMATH_SYMBOL_EXCEPTIONS } from "../../generated/asciimath/exceptions";
+import {
+  ASCIIMATH_FONT_STYLE_KEYWORDS,
+  ASCIIMATH_SIMPLE_TABLE_NAMES,
+  ASCIIMATH_TABLE_CLOSE_FALLBACK,
+} from "../../generated/asciimath/render-tables";
 import { ASCIIMATH_SYMBOLS } from "../../generated/asciimath/symbols";
 import {
   ASCIIMATH_TRANSFORM_GET_CLASS,
@@ -138,39 +143,29 @@ const REACHABLE_TERNARY_NAMES: ReadonlySet<string> = new Set(["PowerBase"]);
 
 /**
  * The `FontStyle` subclasses that override `to_asciimath` with a keyword
- * wrapper, and the keyword each emits — measured per class on the oracle
- * (`Bold.new(x)` → `mathbf(x)`, ..., 2026-08-06); the other six subclasses
- * and the bare carrier render their value with no wrapper at all. The emitted
- * keyword is not derivable from the parse table (`bb`, `mathbf` and `textbf`
- * all *parse* to `Bold`; only `mathbf` comes back out), so this is one of the
- * two hand-typed render tables recorded in TODO.plan/deferred.md.
+ * wrapper, and the keyword each emits — generated from live renders on the
+ * oracle (`Bold.new(x)` → `mathbf(x)`, `./render-tables.ts` in
+ * `src/generated/asciimath`); the other six subclasses and the bare carrier
+ * render their value with no wrapper at all. The emitted keyword is not
+ * derivable from the parse table (`bb`, `mathbf` and `textbf` all *parse* to
+ * `Bold`; only `mathbf` comes back out), which is why it is measured on the
+ * render side.
  */
-const FONT_STYLE_KEYWORDS: ReadonlyMap<string, string> = new Map([
-  ["Bold", "mathbf"],
-  ["DoubleStruck", "mathbb"],
-  ["Fraktur", "mathfrak"],
-  ["Italic", "ii"],
-  ["Monospace", "mathtt"],
-  ["Normal", "rm"],
-  ["SansSerif", "mathsf"],
-  ["Script", "mathcal"],
-]);
+const FONT_STYLE_KEYWORDS: ReadonlyMap<string, string> = ASCIIMATH_FONT_STYLE_KEYWORDS;
 
 /**
  * `Asciimath::Constants::TABLE_PARENTHESIS` — the close paren a table falls
  * back to when it has none, keyed by the rendered open paren; a miss is the
- * empty string (measured: open `{` renders `{[x]`). The second hand-typed
- * render table (TODO.plan/deferred.md).
+ * empty string (measured: open `{` renders `{[x]`). Generated from the
+ * constant the render path reads, each mapping verified by a render.
  */
-const TABLE_CLOSE_FALLBACK: ReadonlyMap<string, string> = new Map([
-  ["ᑕ", "ᑐ"], // ᑕ → ᑐ
-  ["ℒ", "ℛ"], // ℒ → ℛ
-  ["[", "]"],
-  ["(", ")"],
-]);
+const TABLE_CLOSE_FALLBACK: ReadonlyMap<string, string> = ASCIIMATH_TABLE_CLOSE_FALLBACK;
 
-/** `Table::SIMPLE_TABLES` (`table.rb:20`) plus `Matrix`'s identical override. */
-const PARENTHELESS_TABLE_NAMES: ReadonlySet<string> = new Set(["array", "align", "split"]);
+/**
+ * `Table::SIMPLE_TABLES` (`table.rb:20`), generated, as a set for membership
+ * tests; `Matrix`'s identical override is its own branch in `renderTable`.
+ */
+const PARENTHELESS_TABLE_NAMES: ReadonlySet<string> = new Set(ASCIIMATH_SIMPLE_TABLE_NAMES);
 
 /**
  * Symbol ids rendered from their stored `value` rather than a class literal:

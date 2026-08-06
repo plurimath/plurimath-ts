@@ -367,6 +367,26 @@ describe("tables", () => {
     ).toBe("{:[x]");
   });
 
+  it("falls back to the measured close paren for every listed open paren", () => {
+    // Probes table/fallback: a base Symbol carrying each listed open paren,
+    // nil close — Table.new([row], Symbol.new("ᑕ")) => "ᑕ[x]ᑐ",
+    // "ℒ[x]ℛ", "[[x]]", "([x])" (probe run 2026-08-06).
+    const expected: readonly (readonly [string, string])[] = [
+      ["ᑕ", "ᑕ[x]ᑐ"],
+      ["ℒ", "ℒ[x]ℛ"],
+      ["[", "[[x]]"],
+      ["(", "([x])"],
+    ];
+    for (const [open, output] of expected) {
+      expect(
+        toAsciimath(
+          new TableNode({ value: [tr(x())], openParen: new SymbolNode({ value: open }) }),
+        ),
+        open,
+      ).toBe(output);
+    }
+  });
+
   it("renders every aliased table subclass as the gem does", () => {
     // Probes table/Matrix => "{:[x]:}" ... table/Vmatrix => "|[x]|".
     const expected: readonly (readonly [string, string])[] = [

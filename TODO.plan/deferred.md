@@ -46,20 +46,29 @@ pass byte-identical); each is pinned by a test in
   measured set must widen when a format that constructs those classes lands
   (MathML/OMML input, P4+).
 
-### Three AsciiMath render tables are hand-typed
+### Three AsciiMath render tables — generated
 
-**Trigger: before P1-completion, or the first gem bump — whichever comes
-first (the locale-table entry below shares the schedule and the fix).**
+**Done, 2026-08-06.** `src/formats/asciimath/renderer.ts` no longer
+transcribes the three small render tables it used to hand-type; the same
+`scripts/generate-corpus.rb` run that emits the rest of the AsciiMath data now
+measures and emits them into `src/generated/asciimath/render-tables.ts`:
 
-`src/formats/asciimath/renderer.ts` transcribes three small gem tables rather
-than generating them: the eight `FontStyle` subclass → output keyword pairs
-(`Bold` → `mathbf`; measured per class, and not derivable from the parse
-table, where `bb`, `mathbf` and `textbf` all parse to `Bold`),
-`Asciimath::Constants::TABLE_PARENTHESIS` (four close-paren fallbacks), and
-`Table::SIMPLE_TABLES` (three parentheless table names). All fifteen entries
-are pinned by probe-backed tests, but nothing re-checks them on a gem update —
-the drift argument that got the grammar constants generated applies. The fix
-belongs to the same `scripts/` extension as the locale-table entry.
+- the eight `FontStyle` subclass → output keyword pairs (`Bold` → `mathbf`),
+  measured by rendering a live instance of every subclass and reading the
+  wrapper back — not derivable from the parse table, where `bb`, `mathbf` and
+  `textbf` all parse to `Bold`;
+- `Asciimath::Constants::TABLE_PARENTHESIS` (four close-paren fallbacks), read
+  through the constant `Table#to_asciimath` reads, every mapping re-verified
+  by a render that actually falls back through it;
+- `Table::SIMPLE_TABLES` (three parentheless table names), each re-verified to
+  route its table down the parentheless `{:...:}` path.
+
+All fifteen entries stay pinned by literal probe-backed tests
+(`test/generated/render-tables.spec.ts` and the behavioural pins in
+`test/formats/asciimath/renderer.spec.ts`), independent of the generated data
+they check; a gem bump now re-measures the tables on regeneration. The
+locale-table entry below stands on its own schedule — its fix is a separate
+`generate-formatting-data.rb`.
 
 ### Symbol equality parity — landed
 

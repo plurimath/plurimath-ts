@@ -248,6 +248,32 @@ function describeSlot(value: unknown): string {
 }
 
 /**
+ * A `value` slot the gem interpolates raw — `Number#to_asciimath` and
+ * `Symbols::Symbol#to_asciimath`, the renderer's only two direct
+ * interpolation sites. Nil → `""`, a string → itself; nothing else, because
+ * no gem parse puts anything else there and `String()` cannot reproduce
+ * Ruby's `to_s` of it (probe probe-degenerate-value.rb on the pinned oracle,
+ * ruby 4.0.1: a hash value renders `"{a: 1}"` where `String()` says
+ * "[object Object]"; a node value renders an unstable
+ * `"#<Plurimath::Math::Number:0x…>"`). The standing degenerate-input ruling
+ * makes such shapes a loud `RenderError`, never silently divergent bytes.
+ *
+ * The shape validator cannot reject these at entry without restating slot
+ * types per kind — a plain hash IS legal in other slots (`Mglyph` defaults
+ * `parameter_one` to `{}`), which is why the guard lives at the two sites.
+ */
+function interpolatedValue(value: unknown, kind: string, at: string): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  throw new RenderError(
+    `${at}: holds ${describeSlot(value)} — no gem parse puts one here, and Ruby's ` +
+      `interpolation of it is bytes String() cannot match`,
+    FORMAT,
+    kind,
+  );
+}
+
+/**
  * `UnaryFunction#asciimath_value` (`unary_function.rb:196`): nil → `""`, a
  * list compacts and joins with no separator, anything else renders directly.
  */
@@ -353,7 +379,8 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
 
     /* ---- leaves ---- */
     case "number":
-      return node.value === null || node.value === undefined ? "" : String(node.value);
+      // `Number#to_asciimath`: the value interpolated raw, nil → "".
+      return interpolatedValue(node.value, node.kind, "number.value");
     case "symbol":
       return renderSymbol(node, context);
     case "text":
@@ -680,7 +707,7 @@ function renderSymbol(
   if (VALUE_RENDERED_SYMBOL_IDS.has(id)) {
     // `Symbols::Symbol#to_asciimath`: `value.nil? ? "" : value`. `Paren`
     // inherits it unchanged (measured).
-    return node.value === null || node.value === undefined ? "" : String(node.value);
+    return interpolatedValue(node.value, node.kind, "symbol.value");
   }
   const exception = SYMBOL_EXCEPTIONS.get(id);
   if (exception !== undefined) {

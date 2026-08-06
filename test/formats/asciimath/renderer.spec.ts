@@ -460,6 +460,34 @@ describe("where the gem cannot render its own parse", () => {
   });
 });
 
+describe("degenerate value slots the gem's pipeline cannot produce", () => {
+  // No gem parse puts anything but a string (or nil) into `Number#value` or
+  // `Symbols::Symbol#value`, and `String(value)` cannot reproduce Ruby's
+  // interpolation of anything else — so these raise (the standing
+  // degenerate-input ruling: loud, never silently divergent bytes).
+  it("a number with an object value raises instead of emitting [object Object]", () => {
+    // Probe probe-degenerate-value.rb on the pinned oracle (ruby 4.0.1):
+    //   Plurimath::Math::Number.new({a: 1}).to_asciimath(options: {})
+    //     => "{a: 1}"   (Ruby Hash#to_s; `String({a: 1})` is "[object Object]")
+    expect(() => toAsciimath({ kind: "number", value: { a: 1 } } as never)).toThrow(RenderError);
+  });
+
+  it("a base symbol with an object value raises the same way", () => {
+    // Probe: Plurimath::Math::Symbols::Symbol.new({a: 1}).to_asciimath(options: {})
+    //   => "{a: 1}" — same divergence, same site shape.
+    expect(() => toAsciimath({ kind: "symbol", value: { a: 1 } } as never)).toThrow(RenderError);
+  });
+
+  it("a node in the value slot raises too — Ruby's bytes carry an object address", () => {
+    // Probe: Number.new(Number.new("2")).to_asciimath(options: {})
+    //   => "#<Plurimath::Math::Number:0x0000753b63e99350>" — not stable even
+    //   in Ruby, so there is nothing to be byte-identical to.
+    expect(() =>
+      toAsciimath({ kind: "number", value: { kind: "number", value: "2" } } as never),
+    ).toThrow(RenderError);
+  });
+});
+
 describe("fenced", () => {
   it("defaults its parens and joins the body with spaces", () => {
     // Probes kind/Fenced/nil-parens => "(x)"; kind/Fenced/nil-value => "()".

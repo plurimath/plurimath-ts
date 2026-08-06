@@ -6,10 +6,16 @@
  * slot holding something no Ruby node could hold each raise `RenderError`
  * with the offending path in the message, never a raw `TypeError`.
  *
+ * Negative direction also covers what the walk itself must survive: a cyclic
+ * tree fails as `RenderError` naming the cycle's path (not a `RangeError`
+ * stack overflow), and an explicit `undefined` entry inside a list or hash is
+ * rejected — while shared non-cyclic objects stay accepted.
+ *
  * Mutation-tested (PORTING-STANDARDS.md, "a suite that guards a guard"):
- * with the validator's body gutted to a no-op, the 9 malformed-input tests
- * below fail and the positive ones stay green (run 2026-08-06). A guard spec
- * never seen red proves nothing.
+ * with the validator's body gutted to a no-op, the 13 rejection tests below
+ * fail and the positive ones stay green; with the cycle detector's
+ * ancestor-set never pruned, the shared-object positive test fails alone
+ * (both runs 2026-08-06). A guard spec never seen red proves nothing.
  */
 
 import { describe, expect, it } from "vitest";
@@ -145,5 +151,74 @@ describe("assertMathNodeShape, malformed inputs", () => {
       value: [{ kind: "unaryFunction" }],
     });
     expect(error.message).toContain("abstract");
+  });
+});
+
+describe("assertMathNodeShape, cycles", () => {
+  it("rejects a formula that contains itself, naming the cycle path", () => {
+    // The documented contract is RenderError-or-pass; a cyclic tree must not
+    // escape as a RangeError stack overflow instead.
+    const formula: { kind: string; value: unknown[] } = { kind: "formula", value: [] };
+    formula.value.push(formula);
+    const error = failure(formula);
+    expect(error.message).toContain("node.value[0]");
+    expect(error.message).toContain("cycle");
+  });
+
+  it("rejects a cycle through an options hash and through a bare list", () => {
+    const options: Record<string, unknown> = {};
+    options.self = options;
+    const viaHash = failure({ kind: "sqrt", options });
+    expect(viaHash.message).toContain("node.options.self");
+    expect(viaHash.message).toContain("cycle");
+
+    const list: unknown[] = [];
+    list.push(list);
+    const viaList = failure({ kind: "formula", value: list });
+    expect(viaList.message).toContain("node.value[0]");
+    expect(viaList.message).toContain("cycle");
+  });
+
+  it("accepts the same object appearing twice without a cycle", () => {
+    // Ruby aliases nodes and arrays freely (PORTING-STANDARDS.md: rules
+    // mutate shared arrays); a diamond renders fine — only an ancestor loop
+    // cannot terminate. Seen red against a keep-everything visited set.
+    const shared = { kind: "number", value: "1" };
+    expect(() =>
+      assertMathNodeShape({ kind: "frac", parameterOne: shared, parameterTwo: shared }, FORMAT),
+    ).not.toThrow();
+    const sharedList = [shared];
+    expect(() =>
+      assertMathNodeShape(
+        {
+          kind: "formula",
+          value: [
+            { kind: "mrow", value: sharedList },
+            { kind: "mrow", value: sharedList },
+          ],
+        },
+        FORMAT,
+      ),
+    ).not.toThrow();
+  });
+});
+
+describe("assertMathNodeShape, explicit undefined entries", () => {
+  // An absent ivar is Ruby's only undefined analogue, and that is a missing
+  // field (legal, handled in `assertNode`) — a *present* entry holding
+  // `undefined` inside a list or hash is not Ruby-representable, and
+  // `normalize` already refuses the same shapes.
+  it("rejects undefined inside a list", () => {
+    const error = failure({ kind: "formula", value: [undefined] });
+    expect(error.message).toContain("node.value[0]");
+    expect(error.message).toContain("undefined");
+  });
+
+  it("rejects undefined inside options and attributes hashes", () => {
+    const viaOptions = failure({ kind: "sqrt", options: { mathvariant: undefined } });
+    expect(viaOptions.message).toContain("node.options.mathvariant");
+    expect(viaOptions.message).toContain("undefined");
+    const viaAttributes = failure({ kind: "bar", attributes: { accent: undefined } });
+    expect(viaAttributes.message).toContain("node.attributes.accent");
   });
 });

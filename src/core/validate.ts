@@ -27,6 +27,16 @@
  *     rejected wherever it sits — the same stance `normalize` takes, because
  *     serializing a forged node as a plain hash would let a broken tree
  *     agree with the corpus.
+ *   - the tree is finite: a node, list, or hash that is its own ancestor is
+ *     rejected with the cycle's path — Ruby's serializers cannot produce a
+ *     cyclic tree, and without this check the walk dies as `RangeError`
+ *     instead of the `RenderError` this contract promises. Sharing without a
+ *     cycle (the same object in two sibling slots) stays legal, because Ruby
+ *     aliases nodes and arrays freely and renders such trees fine.
+ *   - an explicit `undefined` *entry* inside a list or hash is rejected:
+ *     Ruby's only undefined analogue is the unassigned ivar, which is a
+ *     missing field (legal, see below), never a present entry. `normalize`
+ *     refuses the same shapes.
  *
  * Deliberately NOT checked: field presence beyond the identity slots, and
  * per-field value types. Ruby reads an unassigned ivar as `nil`, so a missing
@@ -65,10 +75,38 @@ function describeValue(value: unknown): string {
  * carry their `name`, and no slot holds a value no Ruby node could hold.
  */
 export function assertMathNodeShape(value: unknown, format: string): asserts value is MathNode {
-  assertNode(value, format, "node");
+  assertNode(value, format, "node", new Set());
 }
 
-function assertNode(value: unknown, format: string, path: string): asserts value is MathNode {
+/**
+ * Throws the cycle rejection: `value` is already on the recursion stack, so
+ * walking into it again could only recurse forever. `ancestors` holds exactly
+ * the objects between the root and `path` — membership is a cycle, and a
+ * merely shared (diamond) object is never a member because each frame removes
+ * itself on the way out.
+ */
+function assertNotCyclic(
+  ancestors: Set<object>,
+  value: object,
+  format: string,
+  path: string,
+): void {
+  if (ancestors.has(value)) {
+    throw new RenderError(
+      `${path}: the tree cycles — the value here is also its own ancestor, ` +
+        `so no walk of it can terminate`,
+      format,
+      "unknown",
+    );
+  }
+}
+
+function assertNode(
+  value: unknown,
+  format: string,
+  path: string,
+  ancestors: Set<object>,
+): asserts value is MathNode {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new RenderError(
       `${path}: expected a math node, found ${describeValue(value)}`,
@@ -76,6 +114,7 @@ function assertNode(value: unknown, format: string, path: string): asserts value
       "unknown",
     );
   }
+  assertNotCyclic(ancestors, value, format, path);
   const kind = (value as { readonly kind?: unknown }).kind;
   if (typeof kind !== "string" || !Object.hasOwn(NODE_SPECS, kind)) {
     throw new RenderError(
@@ -108,9 +147,15 @@ function assertNode(value: unknown, format: string, path: string): asserts value
     }
   }
 
-  for (const [, tsField] of spec.fields) {
-    const slot = node[tsField];
-    if (slot !== undefined) assertSlot(slot, format, kind, `${path}.${tsField}`);
+  ancestors.add(node);
+  try {
+    for (const [, tsField] of spec.fields) {
+      const slot = node[tsField];
+      // `undefined` here is Ruby's unassigned ivar — a legal, missing field.
+      if (slot !== undefined) assertSlot(slot, format, kind, `${path}.${tsField}`, ancestors);
+    }
+  } finally {
+    ancestors.delete(node);
   }
 }
 
@@ -121,20 +166,34 @@ function assertNode(value: unknown, format: string, path: string): asserts value
  * get the same check, since table parens and alias defaults put real nodes
  * inside).
  */
-function assertSlot(value: unknown, format: string, kind: string, path: string): void {
+function assertSlot(
+  value: unknown,
+  format: string,
+  kind: string,
+  path: string,
+  ancestors: Set<object>,
+): void {
   if (value === null) return;
   const type = typeof value;
   if (type === "string" || type === "boolean" || type === "number") return;
   if (Array.isArray(value)) {
-    value.forEach((item, index) => {
-      if (item !== undefined) assertSlot(item, format, kind, `${path}[${index}]`);
-    });
+    assertNotCyclic(ancestors, value, format, path);
+    ancestors.add(value);
+    try {
+      // An index loop, not `forEach`: `forEach` skips holes, and a hole reads
+      // back as the same `undefined` an explicit entry holds — both rejected.
+      for (let index = 0; index < value.length; index += 1) {
+        assertSlot(value[index], format, kind, `${path}[${index}]`, ancestors);
+      }
+    } finally {
+      ancestors.delete(value);
+    }
     return;
   }
   if (type === "object") {
     const nested = (value as { readonly kind?: unknown }).kind;
     if (typeof nested === "string" && Object.hasOwn(NODE_SPECS, nested)) {
-      assertNode(value, format, path);
+      assertNode(value, format, path, ancestors);
       return;
     }
     if (typeof nested === "string") {
@@ -142,11 +201,23 @@ function assertSlot(value: unknown, format: string, kind: string, path: string):
       // node. `normalize` refuses the same shape for the same reason.
       throw new RenderError(`${path}: unknown node kind ${describeValue(nested)}`, format, nested);
     }
-    for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
-      if (item !== undefined) assertSlot(item, format, kind, `${path}.${key}`);
+    assertNotCyclic(ancestors, value as object, format, path);
+    ancestors.add(value as object);
+    try {
+      for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+        assertSlot(item, format, kind, `${path}.${key}`, ancestors);
+      }
+    } finally {
+      ancestors.delete(value as object);
     }
     return;
   }
-  // function, symbol, bigint, undefined-inside-object: nothing Ruby can hold.
-  throw new RenderError(`${path}: a node slot cannot hold a ${type}`, format, kind);
+  // function, symbol, bigint — or an explicit `undefined` entry inside a list
+  // or hash (an unassigned ivar is a missing *field*, never a present entry):
+  // nothing Ruby can hold.
+  throw new RenderError(
+    `${path}: a node slot cannot hold ${type === "undefined" ? "undefined" : `a ${type}`}`,
+    format,
+    kind,
+  );
 }

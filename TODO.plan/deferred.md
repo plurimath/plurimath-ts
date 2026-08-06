@@ -186,3 +186,47 @@ shared corpus has no case reaching it, so its dropped-empty-options behavior
 is never exercised end-to-end. Not a registry gap — a corpus-scope gap,
 owned upstream where cases are generated. (The first draft of this note
 claimed both kinds were uncovered; review disproved it for `underset`.)
+
+### LaTeX: six renderer-local measured tables await the generator
+
+**Trigger: the next generator run on this branch (in flight), or any oracle
+bump — whichever comes first.**
+
+`src/formats/latex/renderer.ts` holds six small measured tables
+(`LEFT_RIGHT_PARENS`, `PLAIN_WRAPPED_UNARY_NAMES`, `FONT_STYLE_COMMANDS`,
+`MATRIX_ENVIRONMENTS`, `ALIGNMENT_LETTERS`, `COLOR_ASCIIMATH_SYMBOLS`), every
+row probe-pinned in tests. The same Option B treatment that generated the
+AsciiMath render tables applies: emit a `src/generated/latex/render-tables.ts`
+slice — LEFT_RIGHT from the gem constant inverted through Ruby, PLAIN_WRAPPED
+by reading `validate_function_formula` off each reachable class, the rest by
+render probes.
+
+### LaTeX: Fenced refuses node-valued paren slots
+
+**Trigger: a gem release that fixes the interpolation, or a corpus case that
+needs the construct.**
+
+Known divergence. The gem's `Fenced#to_latex` interpolates a formula, mrow,
+or table sitting in a paren slot through `#inspect` — an object memory
+address, nondeterministic run to run. The port raises `RenderError` instead
+of reproducing address bytes; only gem-accepted deterministic input renders.
+Same policy as the color rule and the AsciiMath Left/Right refusal.
+
+### LaTeX: Color renders only the measured AsciiMath fragment
+
+**Trigger: corpus or sweep growth that exercises a new color operand, or the
+generated color-asciimath slice landing.**
+
+`Color`'s first slot renders through the gem's `to_asciimath`. The port
+carries only the measured fragment (base symbols, numbers, quoted text,
+formula joins, `Plus`, `Eqno`) and raises `RenderError` for other symbol ids
+the gem would render — a loud gap, not a silent wrong byte.
+
+### LaTeX: no symbol-exception context axis is threaded
+
+**Trigger: a regeneration that introduces LaTeX symbol variants must wire an
+axis mechanism first — the pin will fail and point here.**
+
+`LATEX_SYMBOL_EXCEPTIONS` is empty today, so `toLatex` threads no context
+axis; `renderer.spec.ts` pins the emptiness so a future regeneration cannot
+silently need one.

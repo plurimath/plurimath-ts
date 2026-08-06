@@ -112,3 +112,4 @@ export {
 } from "./nodes";
 export type { NormalizedNode, NormalizedValue } from "./normalize";
 export { normalize } from "./normalize";
+export { assertMathNodeShape } from "./validate";

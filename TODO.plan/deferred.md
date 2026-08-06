@@ -15,7 +15,51 @@ how things get missed.
 
 ## Known divergences
 
-None open.
+### AsciiMath renderer: three edges where the gem's behaviour cannot or must not be copied
+
+**Trigger: any of these surfacing in a real consumer report, or the P1
+adversarial review deciding differently.**
+
+All three are corners of `src/formats/asciimath/renderer.ts`, none reachable
+from AsciiMath input (the corpus, round-trip and 1,642-case sweep layers all
+pass byte-identical); each is pinned by a test in
+`test/formats/asciimath/renderer.spec.ts`:
+
+- **`Left`/`Right` holding a node raise `RenderError`.** The gem interpolates
+  the parameter into the output string, so a node yields
+  `left#<Plurimath::Math::Symbols::Symbol:0x00007c...>` — an object address,
+  different every run. A byte-parity port cannot reproduce a nondeterministic
+  string, so it refuses instead. (Strings and nil match the gem exactly.)
+- **`toAsciimath` returns `""` where the gem returns `nil`.** One render in
+  the gem returns nil rather than a string: a `FontStyle` without an
+  overriding subclass and with a nil value. Internally this port propagates
+  that nil so composite behaviour matches (`Nary` falls back to `"int"` on
+  it, interpolations drop it — both probed), but the public function's return
+  type is `string`, so at the boundary nil becomes `""`.
+- **A class name outside the AsciiMath-reachable set raises `RenderError`.**
+  The census folds ~1,550 aliased gem classes into carrier kinds; this
+  renderer measured the ones the AsciiMath transform can construct. A
+  hand-built carrier naming any other class (`Mbox`, `Menclose`, `Phantom`,
+  ...) raises rather than rendering the carrier default, because many of
+  those classes override `to_asciimath` in the gem and a default render would
+  diverge silently — parity gaps fail loudly (ARCHITECTURE.md §5). The
+  measured set must widen when a format that constructs those classes lands
+  (MathML/OMML input, P4+).
+
+### Three AsciiMath render tables are hand-typed
+
+**Trigger: before P1-completion, or the first gem bump — whichever comes
+first (the locale-table entry below shares the schedule and the fix).**
+
+`src/formats/asciimath/renderer.ts` transcribes three small gem tables rather
+than generating them: the eight `FontStyle` subclass → output keyword pairs
+(`Bold` → `mathbf`; measured per class, and not derivable from the parse
+table, where `bb`, `mathbf` and `textbf` all parse to `Bold`),
+`Asciimath::Constants::TABLE_PARENTHESIS` (four close-paren fallbacks), and
+`Table::SIMPLE_TABLES` (three parentheless table names). All fifteen entries
+are pinned by probe-backed tests, but nothing re-checks them on a gem update —
+the drift argument that got the grammar constants generated applies. The fix
+belongs to the same `scripts/` extension as the locale-table entry.
 
 ### Symbol equality parity — landed
 

@@ -187,19 +187,35 @@ is never exercised end-to-end. Not a registry gap — a corpus-scope gap,
 owned upstream where cases are generated. (The first draft of this note
 claimed both kinds were uncovered; review disproved it for `underset`.)
 
-### LaTeX: six renderer-local measured tables await the generator
+### LaTeX: six renderer-local measured tables — generated
 
-**Trigger: the next generator run on this branch (in flight), or any oracle
-bump — whichever comes first.**
+**Done, 2026-08-06.** `src/formats/latex/renderer.ts` no longer hand-holds
+its six small measured tables; the same `scripts/generate-corpus.rb` run that
+emits the rest of the data now measures and emits them into
+`src/generated/latex/render-tables.ts`:
 
-`src/formats/latex/renderer.ts` holds six small measured tables
-(`LEFT_RIGHT_PARENS`, `PLAIN_WRAPPED_UNARY_NAMES`, `FONT_STYLE_COMMANDS`,
-`MATRIX_ENVIRONMENTS`, `ALIGNMENT_LETTERS`, `COLOR_ASCIIMATH_SYMBOLS`), every
-row probe-pinned in tests. The same Option B treatment that generated the
-AsciiMath render tables applies: emit a `src/generated/latex/render-tables.ts`
-slice — LEFT_RIGHT from the gem constant inverted through Ruby, PLAIN_WRAPPED
-by reading `validate_function_formula` off each reachable class, the rest by
-render probes.
+- `LEFT_RIGHT_PARENS` — the gem constant inverted through Ruby (`Hash#invert`
+  keeps the last key for the duplicated `&#x2016;`, asserted rather than
+  assumed), every row re-verified through a `Left` and a `Right` render, plus
+  a miss and a nil proving the `.` fallback;
+- `PLAIN_WRAPPED_UNARY_NAMES` — `validate_function_formula` read off a live
+  instance of each reachable unary class and re-verified through an `Overset`
+  render, because the set is not derivable from `UNARY_CLASSES` (ker, liminf,
+  limsup and sup differ); `Left`/`Right` answer false too, asserted at
+  generation and left to their own renderer dispatch;
+- `FONT_STYLE_COMMANDS`, `MATRIX_ENVIRONMENTS`, `ALIGNMENT_LETTERS` — render
+  probes per row: the FontStyle wrapper read back off every subclass, a
+  `Table::Matrix` render per `to_matrices` paren (the NoMethodError miss
+  verified), a `Table::Array` render per alignment (the `.` fallback
+  verified);
+- `COLOR_ASCIIMATH_SYMBOLS` — `to_asciimath` measured for exactly the ids the
+  renderer names (`Plus`, `Eqno`), each verified through a full `Color`
+  render.
+
+All sixty-eight entries stay pinned by literal probe-backed tests
+(`test/generated/latex-render-tables.spec.ts` and the behavioural pins in
+`test/formats/latex/renderer.spec.ts`), independent of the generated data
+they check; a gem bump now re-measures the tables on regeneration.
 
 ### LaTeX: Fenced refuses node-valued paren slots
 
@@ -214,13 +230,14 @@ Same policy as the color rule and the AsciiMath Left/Right refusal.
 
 ### LaTeX: Color renders only the measured AsciiMath fragment
 
-**Trigger: corpus or sweep growth that exercises a new color operand, or the
-generated color-asciimath slice landing.**
+**Trigger: corpus or sweep growth that exercises a new color operand.**
 
 `Color`'s first slot renders through the gem's `to_asciimath`. The port
 carries only the measured fragment (base symbols, numbers, quoted text,
 formula joins, `Plus`, `Eqno`) and raises `RenderError` for other symbol ids
-the gem would render — a loud gap, not a silent wrong byte.
+the gem would render — a loud gap, not a silent wrong byte. (The generated
+color-asciimath slice landed 2026-08-06 carrying exactly this fragment; the
+gap itself remains until the corpus exercises more operands.)
 
 ### LaTeX: no symbol-exception context axis is threaded
 

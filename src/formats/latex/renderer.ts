@@ -78,6 +78,14 @@ import {
 import { RUBY_ABSTRACT_CLASSES } from "../../core/nodes";
 import { NODE_SPECS } from "../../core/normalize";
 import { ASCIIMATH_TRANSFORM_GET_CLASS } from "../../generated/asciimath/transform-registry";
+import {
+  LATEX_ALIGNMENT_LETTERS,
+  LATEX_COLOR_ASCIIMATH_SYMBOLS,
+  LATEX_FONT_STYLE_COMMANDS,
+  LATEX_LEFT_RIGHT_PARENS,
+  LATEX_MATRIX_ENVIRONMENTS,
+  LATEX_PLAIN_WRAPPED_UNARY_NAMES,
+} from "../../generated/latex/render-tables";
 import { LATEX_SYMBOLS } from "../../generated/latex/symbols";
 
 const FORMAT = "latex";
@@ -154,115 +162,49 @@ const VALUE_RENDERED_SYMBOL_IDS: ReadonlySet<string> = new Set(
 );
 
 /* -------------------------------------------------------------------------
- * Measured module-level tables (Option B: hand-held pending a generator
- * lane — each row is pinned by an oracle probe in renderer.spec.ts, and the
- * derivation is recorded in the PR report / TODO.plan/deferred.md proposal).
+ * Measured module-level tables (generated: `src/generated/latex/
+ * render-tables.ts`, emitted by scripts/generate-corpus.rb from live oracle
+ * renders — each row independently pinned by renderer.spec.ts probes and by
+ * the literal pins in test/generated/latex-render-tables.spec.ts).
  * ---------------------------------------------------------------------- */
 
 /**
- * `Latex::Constants::LEFT_RIGHT_PARENTHESIS.invert`, measured row by row
- * through `Left#to_latex` on the oracle (probe_tables.rb, 2026-08-06). This
- * is the complete inverted constant — `&#x2016;` maps to `\|` because Ruby's
- * `Hash#invert` keeps the LAST key for a duplicated value — so any string
- * missing here is a genuine gem-side miss, which renders `.`.
+ * `Latex::Constants::LEFT_RIGHT_PARENTHESIS.invert`, generated row by row
+ * through `Left`/`Right` renders on the oracle. This is the complete
+ * inverted constant — `&#x2016;` maps to `\|` because Ruby's `Hash#invert`
+ * keeps the LAST key for a duplicated value — so any string missing here is
+ * a genuine gem-side miss, which renders `.`.
  */
-const LEFT_RIGHT_PARENS: ReadonlyMap<string, string> = new Map([
-  ["&#x5c;", "\\backslash"],
-  ["&#x2329;", "\\langle"],
-  ["&#x232a;", "\\rangle"],
-  ["&#x230a;", "\\lfloor"],
-  ["&#x230b;", "\\rfloor"],
-  ["&#x2308;", "\\lceil"],
-  ["&#x2309;", "\\rceil"],
-  ["&#x7b;", "\\lbrace"],
-  ["&#x7d;", "\\rbrace"],
-  ["&#x5b;", "\\lbrack"],
-  ["&#x5d;", "\\rbrack"],
-  ["&#x2016;", "\\|"],
-  ["&#x7c;", "\\vert"],
-  ["{", "\\{"],
-  ["}", "\\}"],
-  ["(", "("],
-  [")", ")"],
-  ["<", "<"],
-  [">", ">"],
-  ["/", "/"],
-  ["|", "|"],
-  ["[", "["],
-  ["]", "]"],
-]);
+const LEFT_RIGHT_PARENS: ReadonlyMap<string, string> = LATEX_LEFT_RIGHT_PARENS;
 
 /**
  * The unary names whose gem class answers `validate_function_formula` with
- * false, so `latex_wrapped` gives them plain braces. Measured per class
- * through `Overset.new(instance, …).to_latex` (probe_census.rb `wrapped/*`):
- * 27 of the 34 reachable unary classes — NOT `Cancel`, `Ker`, `Liminf`,
- * `Limsup` or `Sup`, which take the `{ \left ( … \right ) }` wrap. `Left`
- * and `Right` also answer false and are listed with their own dispatch.
- * This is not `Utility::UNARY_CLASSES` (that set contains ker/liminf/
- * limsup/sup), so it cannot be derived from the generated registry.
+ * false, so `latex_wrapped` gives them plain braces. Generated per class
+ * through `Overset.new(instance, …).to_latex` renders: 27 of the 34
+ * reachable unary classes — NOT `Cancel`, `Ker`, `Liminf`, `Limsup` or
+ * `Sup`, which take the `{ \left ( … \right ) }` wrap. `Left` and `Right`
+ * also answer false (asserted at generation) and are listed with their own
+ * dispatch. This is not `Utility::UNARY_CLASSES` (that set contains ker/
+ * liminf/limsup/sup), so it cannot be derived from the generated registry.
  */
-const PLAIN_WRAPPED_UNARY_NAMES: ReadonlySet<string> = new Set([
-  "Arccos",
-  "Arcsin",
-  "Arctan",
-  "Cos",
-  "Cosh",
-  "Cot",
-  "Coth",
-  "Csc",
-  "Csch",
-  "Deg",
-  "Det",
-  "Dim",
-  "Exp",
-  "Gcd",
-  "Glb",
-  "Lcm",
-  "Lg",
-  "Ln",
-  "Lub",
-  "Max",
-  "Min",
-  "Sec",
-  "Sech",
-  "Sin",
-  "Sinh",
-  "Tan",
-  "Tanh",
-]);
+const PLAIN_WRAPPED_UNARY_NAMES: ReadonlySet<string> = new Set(LATEX_PLAIN_WRAPPED_UNARY_NAMES);
 
 /**
  * The `FontStyle` subclasses that override `to_latex` with a `\math..`
- * wrapper, and the command each emits — measured per class on the oracle
- * (probe_census.rb `font/*`); the other six subclasses and the bare carrier
- * render their value with no wrapper at all (nil in, Ruby-nil out).
+ * wrapper, and the command each emits — generated from live renders of
+ * every subclass; the other six subclasses and the bare carrier render
+ * their value with no wrapper at all (nil in, Ruby-nil out).
  */
-const FONT_STYLE_COMMANDS: ReadonlyMap<string, string> = new Map([
-  ["Bold", "\\mathbf"],
-  ["DoubleStruck", "\\mathbb"],
-  ["Fraktur", "\\mathfrak"],
-  ["Italic", "\\mathit"],
-  ["Monospace", "\\mathtt"],
-  ["Normal", "\\mathrm"],
-  ["SansSerif", "\\mathsf"],
-  ["Script", "\\mathcal"],
-]);
+const FONT_STYLE_COMMANDS: ReadonlyMap<string, string> = LATEX_FONT_STYLE_COMMANDS;
 
 /**
  * `Latex::Constants::MATRICES.invert[open_paren.to_matrices]` — which
- * environment a named table's open paren selects, measured through each
- * paren on the oracle (probe_census.rb `named-table/*`, probe_tables.rb
- * `named/*`). Only these five parens define `to_matrices`; any other open
- * paren raises NoMethodError in the gem, RenderError here.
+ * environment a named table's open paren selects, generated through a
+ * `Table::Matrix` render per paren. Only these five parens define
+ * `to_matrices`; any other open paren raises NoMethodError in the gem
+ * (verified at generation), RenderError here.
  */
-const MATRIX_ENVIRONMENTS: ReadonlyMap<string, string> = new Map([
-  ["Paren::Lround", "pmatrix"],
-  ["Paren::Lsquare", "bmatrix"],
-  ["Paren::Lcurly", "Bmatrix"],
-  ["Paren::Vert", "vmatrix"],
-  ["Paren::Norm", "Vmatrix"],
-]);
+const MATRIX_ENVIRONMENTS: ReadonlyMap<string, string> = LATEX_MATRIX_ENVIRONMENTS;
 
 /** The table names rendering `\begin{env}…\end{env}` through that map. */
 const MATRIX_STYLE_TABLE_NAMES: ReadonlySet<string> = new Set([
@@ -276,28 +218,21 @@ const MATRIX_STYLE_TABLE_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * `Utility::ALIGNMENT_LETTERS.invert`, measured through `Table::Array`
- * columnalign renders (probe_tables.rb `align/*`): left→l, right→r,
- * center→c, anything else nil (skipped in `array_args`, `[]` in
- * `latex_columnalign`).
+ * `Utility::ALIGNMENT_LETTERS.invert`, generated through `Table::Array`
+ * columnalign renders: left→l, right→r, center→c, anything else nil
+ * (skipped in `array_args`, `[]` in `latex_columnalign`).
  */
-const ALIGNMENT_LETTERS: ReadonlyMap<string, string> = new Map([
-  ["left", "l"],
-  ["right", "r"],
-  ["center", "c"],
-]);
+const ALIGNMENT_LETTERS: ReadonlyMap<string, string> = LATEX_ALIGNMENT_LETTERS;
 
 /**
  * The asciimath renders `Color#to_latex` needs for its first slot, for the
- * symbol ids the corpus+sweep actually put there (probe_tables.rb
- * `color/*`). Kept deliberately minimal — an id outside this table raises a
- * parity-gap RenderError rather than guessing — because the full asciimath
- * symbol table belongs to the asciimath format (§3, no cross-format tables).
+ * symbol ids the corpus+sweep actually put there — generated per id and
+ * verified through a full Color render. Kept deliberately minimal — an id
+ * outside this table raises a parity-gap RenderError rather than guessing —
+ * because the full asciimath symbol table belongs to the asciimath format
+ * (§3, no cross-format tables).
  */
-const COLOR_ASCIIMATH_SYMBOLS: ReadonlyMap<string, string> = new Map([
-  ["Plus", "+"],
-  ["Eqno", '"P{eqno}"'],
-]);
+const COLOR_ASCIIMATH_SYMBOLS: ReadonlyMap<string, string> = LATEX_COLOR_ASCIIMATH_SYMBOLS;
 
 /** `class_name` (`core.rb:28`): the class basename, lowercased. */
 function kindClassName(kind: MathNode["kind"]): string {

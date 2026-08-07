@@ -576,6 +576,35 @@ describe("numbers and text", () => {
   });
 });
 
+describe("degenerate value slots the gem's pipeline cannot produce", () => {
+  // No gem parse puts anything but a string (or nil) into `Number#value` or
+  // `Symbols::Symbol#value`, and `String(value)` cannot reproduce Ruby's
+  // interpolation of anything else — so these raise (the standing
+  // degenerate-input ruling: loud, never silently divergent bytes). The
+  // asciimath renderer carries the same three pins for its own sites.
+  it("a number with an object value raises instead of emitting [object Object]", () => {
+    // Probe on the pinned oracle (2026-08-07):
+    //   Plurimath::Math::Number.new({a: 1}).to_latex(options: {})
+    //     => "{a: 1}"   (Ruby Hash#to_s; `String({a: 1})` is "[object Object]")
+    expect(() => toLatex({ kind: "number", value: { a: 1 } } as never)).toThrow(RenderError);
+  });
+
+  it("a base symbol with an object value raises the same way", () => {
+    // Probe: Plurimath::Math::Symbols::Symbol.new({a: 1}).to_latex(options: {})
+    //   => "{a: 1}" — same divergence, same site shape.
+    expect(() => toLatex({ kind: "symbol", value: { a: 1 } } as never)).toThrow(RenderError);
+  });
+
+  it("a node in the value slot raises too — Ruby's bytes carry an object address", () => {
+    // Probe: Number.new(Number.new("2")).to_latex(options: {})
+    //   => "#<Plurimath::Math::Number:0x00007337e0654380>" — not stable even
+    //   in Ruby, so there is nothing to be byte-identical to.
+    expect(() =>
+      toLatex({ kind: "number", value: { kind: "number", value: "2" } } as never),
+    ).toThrow(RenderError);
+  });
+});
+
 describe("linebreak", () => {
   it("renders the measured shapes and crashes on missing attributes", () => {
     // Probes linebreak/*: "\\ " bare; "v\\ " after; "\\ v" otherwise;

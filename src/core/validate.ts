@@ -42,7 +42,16 @@
  *     missing field (legal, see below), never a present entry. `normalize`
  *     refuses the same shapes. A sparse array's holes read back as the same
  *     `undefined` and are rejected the same way — which is also why a lying
- *     `length` cannot smuggle anything past the walk.
+ *     `length` cannot smuggle anything past the walk. The `length` read is
+ *     itself validated before it becomes the index loop's bound: a genuine
+ *     array's length is spec-clamped to a Uint32 (a non-negative integer at
+ *     most 2**32 − 1 — ECMA-262 refuses any other assignment with a
+ *     RangeError), so any other report (`Infinity`, `NaN`, a float, a huge
+ *     finite lie) can only come from a proxy or forged accessor and is
+ *     rejected at the `.length` path — trusted as a bound, an `Infinity`
+ *     lie is a walk that never terminates, a third outcome this contract
+ *     does not have. A `length` read that *throws* stays an accessor
+ *     failure: the read-site wrap below runs before the bound is examined.
  *   - the walk itself has no third outcome: a property read that throws (a
  *     getter or proxy trap — no Ruby ivar read runs code) is wrapped AT THE
  *     READ SITE, keeping its message and the path of the read — so even a
@@ -317,7 +326,34 @@ function assertSlot(
       // `length` and every element go through the wrapped read: only a proxy
       // or accessor element puts code behind either, and its throw is the
       // input's failure, not the walk's.
-      const length = readProperty(value, "length", format, `${path}.length`) as number;
+      const length = readProperty(value, "length", format, `${path}.length`);
+      if (
+        typeof length !== "number" ||
+        !Number.isSafeInteger(length) ||
+        length < 0 ||
+        length > 2 ** 32 - 1
+      ) {
+        // A length no native array can report, so the walk refuses to make
+        // it the loop's bound: trusted, an `Infinity` lie is an index loop
+        // that never terminates (and 2**40 is one that might as well not) —
+        // a third outcome the RenderError-or-pass contract does not have.
+        // This throw is unreachable for a genuine `Array`: its `length` is
+        // spec-clamped to a Uint32 — a non-negative integer at most
+        // 2**32 - 1, ECMA-262 ArraySetLength refuses any other assignment
+        // with a RangeError — so only a proxy or forged accessor lying
+        // through the read above can land here (`Array.isArray` sees the
+        // proxy's array target; the trap serves the lie). `String(length)`
+        // on a primitive number runs no input code.
+        throw new RenderError(
+          `${path}.length: no native array length can be ` +
+            `${typeof length === "number" ? String(length) : describeValue(length)} — ` +
+            `a length is a non-negative integer no greater than 2**32 - 1, so only a ` +
+            `proxy or accessor lying about "length" reports this, and the walk will ` +
+            `not trust it as a loop bound`,
+          format,
+          kind,
+        );
+      }
       for (let index = 0; index < length; index += 1) {
         const item = readProperty(value, index, format, `${path}[${index}]`);
         assertSlot(item, format, kind, `${path}[${index}]`, ancestors);

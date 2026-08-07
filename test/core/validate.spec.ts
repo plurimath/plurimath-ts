@@ -14,10 +14,10 @@
  * stay accepted.
  *
  * Mutation-tested (PORTING-STANDARDS.md, "a suite that guards a guard"):
- * with the validator's body gutted to a no-op, the 21 rejection tests below
+ * with the validator's body gutted to a no-op, the 25 rejection tests below
  * fail and the positive ones stay green; with the cycle detector's
  * ancestor-set never pruned, the shared-object positive test fails alone
- * (both runs 2026-08-07, re-run after the read-site accessor wrap). A guard
+ * (both runs 2026-08-07, re-run after the lying-length bound check). A guard
  * spec never seen red proves nothing.
  */
 
@@ -356,5 +356,103 @@ describe("assertMathNodeShape, explicit undefined entries", () => {
     expect(viaOptions.message).toContain("undefined");
     const viaAttributes = failure({ kind: "bar", attributes: { accent: undefined } });
     expect(viaAttributes.message).toContain("node.attributes.accent");
+  });
+});
+
+describe("assertMathNodeShape, lying array lengths", () => {
+  // `Array.isArray` sees through a proxy to its array target, but the
+  // `length` the walk then reads comes from the proxy's own trap — and a
+  // walk that trusts `Infinity` as its loop bound never terminates, a third
+  // outcome the RenderError-or-pass contract does not have. A native array's
+  // length is spec-clamped to a Uint32 (ECMA-262 ArraySetLength refuses
+  // anything else with RangeError), so the bound check these tests pin is
+  // unreachable for every genuine array: only a proxy or forged accessor can
+  // report a length outside [0, 2**32 - 1] or a non-integer.
+  //
+  // Red-first evidence is split by termination. The terminating lies below
+  // ran red pre-fix in this suite. The exact Infinity proxy CANNOT run red
+  // in-suite — pre-fix it IS the hang — so its red half was demonstrated
+  // out-of-tree: the same input against a scratch bundle of the pre-fix
+  // walk, killed by timeout(1) at 5s (exit 124), with an instrumented
+  // variant counting 100,000,000 index reads before being stopped.
+  it("rejects the exact Infinity-lying proxy from the finding, promptly", () => {
+    const proxy = new Proxy([], {
+      get: (_target, key): unknown => (key === "length" ? Number.POSITIVE_INFINITY : null),
+    });
+    expect(Array.isArray(proxy)).toBe(true);
+    const error = failure({ kind: "formula", value: proxy });
+    expect(error.message).toContain("node.value.length");
+    expect(error.message).toContain("Infinity");
+  });
+
+  it("rejects a huge finite length lie (2**40) before any index read", () => {
+    // Pre-fix this terminated only by luck of the trap: the walk trusted the
+    // bound, entered the loop, and rejected the first `undefined` element at
+    // node.value[0] with indexReads = 1. The fix rejects the bound itself.
+    let indexReads = 0;
+    const proxy = new Proxy([], {
+      get: (_target, key): unknown => {
+        if (key === "length") return 2 ** 40;
+        indexReads += 1;
+        return undefined;
+      },
+    });
+    const error = failure({ kind: "formula", value: proxy });
+    expect(error.message).toContain("node.value.length");
+    expect(error.message).toContain("1099511627776");
+    expect(indexReads).toBe(0);
+  });
+
+  it("rejects lengths no native array can report: NaN, a float, a negative, a string", () => {
+    // Pre-fix, every one of these PASSED validation: `0 < NaN` and `0 < -1`
+    // are false (zero iterations), and the float and numeric-string bounds
+    // walked a few null elements and returned — a lying proxy accepted as a
+    // valid tree.
+    const lies: ReadonlyArray<readonly [unknown, string]> = [
+      [Number.NaN, "NaN"],
+      [1.5, "1.5"],
+      [-1, "-1"],
+      ["3", '"3"'],
+    ];
+    for (const [lie, shown] of lies) {
+      const proxy = new Proxy([], {
+        get: (_target, key): unknown => (key === "length" ? lie : null),
+      });
+      const error = failure({ kind: "formula", value: proxy });
+      expect(error.message, shown).toContain("node.value.length");
+      expect(error.message, shown).toContain(shown);
+    }
+  });
+
+  it("keeps a throwing length read as the accessor failure, not the length rejection", () => {
+    // The read-site wrap runs before the bound check can look at the value:
+    // a throwing `length` getter is the input's own failure and keeps its
+    // message, exactly as before the bound check existed.
+    const proxy = new Proxy([], {
+      get: (_target, key): unknown => {
+        if (key === "length") throw new Error("hostile length");
+        return null;
+      },
+    });
+    const error = failure({ kind: "formula", value: proxy });
+    expect(error.message).toContain("node.value.length");
+    expect(error.message).toContain("hostile length");
+    expect(error.message).toContain("reading the tree itself threw");
+  });
+
+  it("never fires for a genuine array — the engine refuses illegitimate lengths first", () => {
+    expect(() => assertMathNodeShape({ kind: "formula", value: [] }, FORMAT)).not.toThrow();
+    const big = Array.from({ length: 10_000 }, () => ({ kind: "number", value: "1" }));
+    expect(() => assertMathNodeShape({ kind: "formula", value: big }, FORMAT)).not.toThrow();
+    // The unreachability claim, executable: a real array cannot even be
+    // GIVEN a length outside the Uint32 range — ArraySetLength throws.
+    expect(() => {
+      const arr: unknown[] = [];
+      arr.length = 2 ** 32; // one past 2**32 - 1
+    }).toThrow(RangeError);
+    expect(() => {
+      const arr: unknown[] = [];
+      arr.length = 1.5;
+    }).toThrow(RangeError);
   });
 });

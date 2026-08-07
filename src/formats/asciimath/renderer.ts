@@ -29,7 +29,12 @@
  * `RenderError` is the §5 runtime-boundary contract.
  */
 
-import { assertMathNodeShape, type MathNode, PlurimathError, RenderError } from "../../core/index";
+import {
+  assertMathNodeShape,
+  type MathNode,
+  MissingSymbolDataError,
+  RenderError,
+} from "../../core/index";
 import { ROOT_CONTEXT } from "./render";
 import { FORMAT } from "./render-shared";
 
@@ -56,14 +61,21 @@ export function toAsciimath(node: MathNode, _options?: AsciimathOptions | null):
     // to "" (recorded in TODO.plan/deferred.md).
     return ROOT_CONTEXT.render(node) ?? "";
   } catch (error) {
-    if (error instanceof PlurimathError) throw error;
-    // The gem's own public boundary does exactly this: `wrap_render_error`
-    // (`formula.rb:437`) re-raises its ParseError and wraps every other
-    // StandardError into one. Here the port's errors pass through and
-    // anything else — a render-phase stack exhaustion the validator's
-    // smaller frames survived, a property read that answered validation and
-    // then threw (no Ruby ivar read runs code, a JS getter does) — becomes
-    // the RenderError the §5 contract promises, original message kept.
+    // Only this walk's own surfaces pass through: `RenderError` (the §5
+    // contract) and the symbol table's `MissingSymbolDataError` — the one
+    // non-RenderError PlurimathError a kind file throws on purpose
+    // (`renderSymbol`, on an id the generated table does not carry), and a
+    // public error code in its own right. The gem's boundary does the
+    // analogous split: `wrap_render_error` (`formula.rb:437`) re-raises its
+    // ParseError and wraps every other StandardError into one — and the
+    // gem's render-phase ParseError maps to RenderError here, so the port's
+    // ParseError is never this walk's error. Anything else — a render-phase
+    // stack exhaustion the validator's smaller frames survived, a property
+    // read that answered validation and then threw (no Ruby ivar read runs
+    // code, a JS getter does — a re-thrown port ParseError included) —
+    // becomes the RenderError the §5 contract promises, original message
+    // kept.
+    if (error instanceof RenderError || error instanceof MissingSymbolDataError) throw error;
     throw new RenderError(`rendering failed mid-walk — ${String(error)}`, FORMAT, "unknown");
   }
 }

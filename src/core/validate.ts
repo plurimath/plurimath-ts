@@ -48,18 +48,23 @@
  *     READ SITE, keeping its message and the path of the read — so even a
  *     getter's deliberate `RangeError` surfaces as that accessor failure,
  *     never as the depth rejection. "Keeping its message" has one honest
- *     limit: describing the thrown value is itself a `String(error)` call,
- *     so a getter that throws an object whose own stringification ALSO
- *     throws gets described by that secondary failure instead, wrapped at
- *     the entry point and rooted at `node` rather than the read's path.
- *     That case previously escaped as the raw secondary throw; the
- *     entry-point wrap made it a `RenderError` — the wrap is new, losing
- *     the original message is not. A finite tree nesting deeper than the
- *     recursion's stack is then the only `RangeError` left to reach the
- *     entry point, rethrown as the too-deep `RenderError`. The gem raises
- *     on the deep tree too — SystemStackError, probed — so a raw
- *     `RangeError` escape here would break the raise-for-raise mapping,
- *     not just the error type.
+ *     limit: describing a thrown value is itself a `String(error)` call,
+ *     running the input's code again — so the wrap and the depth branding
+ *     below hold exactly for inputs whose thrown values stringify without
+ *     themselves throwing (one hostile stringification is still wrapped at
+ *     the entry point, described by its secondary failure and rooted at
+ *     `node` rather than the read's path). Beyond that the chain degrades
+ *     outside the contract: a secondary `RangeError` reaches the entry
+ *     point bare and takes the too-deep branding below, and a chain whose
+ *     secondary description also throws escapes raw — accepted, because no
+ *     Ruby ivar read runs code, so no Ruby analogue of these inputs can
+ *     exist (the misbranding is pinned in `test/core/validate.spec.ts` as
+ *     what IS, not as good). Within that limit, a finite tree nesting
+ *     deeper than the recursion's stack is the `RangeError` the entry
+ *     point rethrows as the too-deep `RenderError`. The gem raises on the
+ *     deep tree too — SystemStackError, probed — so a raw `RangeError`
+ *     escape here would break the raise-for-raise mapping, not just the
+ *     error type.
  *
  * Deliberately NOT checked: field presence beyond the identity slots, and
  * per-field value types. Ruby reads an unassigned ivar as `nil`, so a missing
@@ -177,10 +182,13 @@ export function assertMathNodeShape(value: unknown, format: string): asserts val
   } catch (error) {
     if (error instanceof RenderError) throw error;
     if (error instanceof RangeError) {
-      // GENUINE stack exhaustion, and nothing else: every read the walk
-      // performs on the input is wrapped at its read site (`readProperty`
-      // and friends), so an input's own throw — a getter's deliberate
-      // `RangeError` included — arrives here already spelled RenderError.
+      // GENUINE stack exhaustion — up to the header's stringification
+      // caveat, whose hostile chains can land a secondary `RangeError` here
+      // bare and take this branding too (pinned, accepted). Every read the
+      // walk performs on the input is wrapped at its read site
+      // (`readProperty` and friends), so an input's own throw — a getter's
+      // deliberate `RangeError` included — arrives here already spelled
+      // RenderError when its thrown value stringifies without throwing.
       // What remains is the walk's recursion running out of frames on a
       // finite tree (the cycle check above would have named a loop). The gem
       // raises on the same tree — SystemStackError from `to_asciimath` at

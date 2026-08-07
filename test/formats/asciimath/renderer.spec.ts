@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { RenderError } from "../../../src/core/errors";
+import { MissingSymbolDataError, ParseError, RenderError } from "../../../src/core/errors";
 import {
   BarNode,
   BinaryFunctionNode,
@@ -536,6 +536,35 @@ describe("linebreak", () => {
   });
 });
 
+describe("the formula carrier's name slot", () => {
+  it("Mstyle — the census's one formula alias — renders exactly as Formula does", () => {
+    // Probe probe-mstyle-alias.rb on the pinned oracle (2026-08-07):
+    // `Mstyle.instance_method(:to_asciimath).owner` is `Plurimath::Math::Formula`
+    // — `formula/mstyle.rb` defines no override — and `Mstyle.new([x, 2])`
+    // renders "x 2", byte-identical to `Formula.new([x, 2])`; the bare-string
+    // crash edge is identical too (both raise Math::ParseError).
+    expect(toAsciimath(new FormulaNode({ name: "Mstyle", value: [x(), two()] }))).toBe("x 2");
+    expect(toAsciimath(new FormulaNode({ value: [x(), two()] }))).toBe("x 2");
+    expect(() => toAsciimath(new FormulaNode({ name: "Mstyle", value: [x(), "raw"] }))).toThrow(
+      RenderError,
+    );
+  });
+
+  it("a defined name outside the measured alias set raises rather than guessing", () => {
+    // The fail-loud carrier policy every sibling carrier pins (unary, binary,
+    // ternary, fontStyle, table — TODO.plan/deferred.md): the census folds
+    // exactly one class onto the formula carrier (Mstyle). "Mrow" here forges
+    // Math::Formula::Mrow onto the formula kind — the model implements Mrow
+    // as its own kind, so the name has no measured render on THIS carrier;
+    // rendering the carrier default for it would diverge silently. The bare
+    // carrier — name undefined — keeps its measured render.
+    expect(() => toAsciimath(new FormulaNode({ name: "Mrow", value: [x()] }))).toThrow(RenderError);
+    expect(() => toAsciimath(new FormulaNode({ name: "<unmeasured>", value: [x()] }))).toThrow(
+      RenderError,
+    );
+  });
+});
+
 describe("where the gem cannot render its own parse", () => {
   it("left(right) parses and then refuses to render, here as there", () => {
     // Probe parse/left(right) => Math::ParseError: the parsed value holds a
@@ -726,6 +755,49 @@ describe("inputs that defeat the walk itself", () => {
       expect((caught as RenderError).message, flip).toContain(flip);
       expect((caught as RenderError).kind, flip).toBe(flip);
     }
+  });
+
+  it("a getter throwing the port's own ParseError mid-render wraps as RenderError, message kept", () => {
+    // Only `RenderError` is this walk's surface (plus the symbol table's
+    // `MissingSymbolDataError`, pinned below). A hostile getter re-throwing
+    // the port's ParseError is not a parse failure — letting it out unwrapped
+    // would let the input forge an error class the render boundary never
+    // produces. The gem's own boundary re-raises only ITS ParseError, and
+    // that class maps to RenderError on this walk, not to the port's
+    // ParseError.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new ParseError("forged parse failure", "x", "asciimath", 0);
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toAsciimath(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).message).toContain("forged parse failure");
+  });
+
+  it("the symbol table's MissingSymbolDataError still passes through — the walk's own surface", () => {
+    // `renderSymbol` throws it for an id the generated table does not carry
+    // (`src/render/symbol/asciimath.ts:70`) — the one non-RenderError
+    // PlurimathError a kind file throws on purpose, and a public error code
+    // (MISSING_SYMBOL_DATA); the tightened pass-through must not re-type it.
+    let caught: unknown;
+    try {
+      toAsciimath({ kind: "symbol", id: "NoSuchSymbol", value: null } as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(MissingSymbolDataError);
+    expect((caught as MissingSymbolDataError).code).toBe("MISSING_SYMBOL_DATA");
+    expect((caught as MissingSymbolDataError).symbolId).toBe("NoSuchSymbol");
   });
 
   it("a frozen tree renders — nothing on the render path writes to the input", () => {

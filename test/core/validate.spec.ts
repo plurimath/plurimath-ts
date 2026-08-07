@@ -14,7 +14,7 @@
  * stay accepted.
  *
  * Mutation-tested (PORTING-STANDARDS.md, "a suite that guards a guard"):
- * with the validator's body gutted to a no-op, the 20 rejection tests below
+ * with the validator's body gutted to a no-op, the 21 rejection tests below
  * fail and the positive ones stay green; with the cycle detector's
  * ancestor-set never pruned, the shared-object positive test fails alone
  * (both runs 2026-08-07, re-run after the read-site accessor wrap). A guard
@@ -239,6 +239,27 @@ describe("assertMathNodeShape, the walk itself", () => {
       },
     });
     expect(error.message).toContain("hostile accessor");
+  });
+
+  it("pins the accepted degradation: a thrown value whose stringification throws RangeError takes the too-deep branding", () => {
+    // NOT an endorsement — a pin of what IS (the module header's
+    // stringification caveat). Describing a thrown value is a `String(error)`
+    // call; when that secondary throw is a `RangeError` it reaches the entry
+    // point bare and is indistinguishable from genuine stack exhaustion, so
+    // it gets the too-deep RenderError. Outside the contract: no Ruby ivar
+    // read runs code, so no Ruby analogue of this input exists.
+    const error = failure({
+      kind: "sqrt",
+      get parameterOne(): unknown {
+        throw {
+          toString(): string {
+            throw new RangeError("secondary");
+          },
+        };
+      },
+    });
+    expect(error.message).toContain("too deep");
+    expect(error.message).not.toContain("secondary");
   });
 
   it("a getter's own RangeError surfaces as the accessor failure, not the too-deep rejection", () => {

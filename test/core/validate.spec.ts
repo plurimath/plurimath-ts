@@ -14,10 +14,10 @@
  * stay accepted.
  *
  * Mutation-tested (PORTING-STANDARDS.md, "a suite that guards a guard"):
- * with the validator's body gutted to a no-op, the 19 rejection tests below
+ * with the validator's body gutted to a no-op, the 20 rejection tests below
  * fail and the positive ones stay green; with the cycle detector's
  * ancestor-set never pruned, the shared-object positive test fails alone
- * (both runs 2026-08-07, re-run after the degenerate-input sweep). A guard
+ * (both runs 2026-08-07, re-run after the read-site accessor wrap). A guard
  * spec never seen red proves nothing.
  */
 
@@ -239,6 +239,22 @@ describe("assertMathNodeShape, the walk itself", () => {
       },
     });
     expect(error.message).toContain("hostile accessor");
+  });
+
+  it("a getter's own RangeError surfaces as the accessor failure, not the too-deep rejection", () => {
+    // `RangeError` is also what the engine throws on stack exhaustion, but
+    // an input's getter can throw one deliberately. Only genuine overflow of
+    // the walk's own recursion may take the too-deep branch; the input's own
+    // throw keeps its message and the path of the read that raised it.
+    const error = failure({
+      kind: "sqrt",
+      get parameterOne(): unknown {
+        throw new RangeError("custom message");
+      },
+    });
+    expect(error.message).toContain("custom message");
+    expect(error.message).toContain("node.parameterOne");
+    expect(error.message).not.toContain("too deep");
   });
 });
 

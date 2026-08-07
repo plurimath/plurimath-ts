@@ -43,12 +43,16 @@
  *     refuses the same shapes. A sparse array's holes read back as the same
  *     `undefined` and are rejected the same way — which is also why a lying
  *     `length` cannot smuggle anything past the walk.
- *   - the walk itself has no third outcome: a finite tree nesting deeper
- *     than the recursion's stack, or a property read that throws (a getter
- *     or proxy trap — no Ruby ivar read runs code), is caught at the entry
- *     point and rethrown as `RenderError`. The gem raises on the deep tree
- *     too — SystemStackError, probed — so a raw `RangeError` escape here
- *     would break the raise-for-raise mapping, not just the error type.
+ *   - the walk itself has no third outcome: a property read that throws (a
+ *     getter or proxy trap — no Ruby ivar read runs code) is wrapped AT THE
+ *     READ SITE, keeping its message and the path of the read — so even a
+ *     getter's deliberate `RangeError` surfaces as that accessor failure,
+ *     never as the depth rejection. A finite tree nesting deeper than the
+ *     recursion's stack is then the only `RangeError` left to reach the
+ *     entry point, rethrown as the too-deep `RenderError`. The gem raises
+ *     on the deep tree too — SystemStackError, probed — so a raw
+ *     `RangeError` escape here would break the raise-for-raise mapping,
+ *     not just the error type.
  *
  * Deliberately NOT checked: field presence beyond the identity slots, and
  * per-field value types. Ruby reads an unassigned ivar as `nil`, so a missing
@@ -82,16 +86,70 @@ function describeValue(value: unknown): string {
   if (value === undefined) return "undefined";
   if (Array.isArray(value)) return "an array";
   if (typeof value === "object") {
-    const proto: object | null = Object.getPrototypeOf(value);
-    if (proto === Object.prototype || proto === null) return "an object";
-    const name = (proto as { readonly constructor?: { readonly name?: unknown } }).constructor
-      ?.name;
-    return typeof name === "string" && name !== ""
-      ? `a ${name} instance`
-      : "an instance of an anonymous class";
+    // Best effort under a hostile input: a proxy trap or a `constructor`
+    // getter can throw while the class is being NAMED, and a description
+    // must never replace the rejection it decorates.
+    try {
+      const proto: object | null = Object.getPrototypeOf(value);
+      if (proto === Object.prototype || proto === null) return "an object";
+      const name = (proto as { readonly constructor?: { readonly name?: unknown } }).constructor
+        ?.name;
+      return typeof name === "string" && name !== ""
+        ? `a ${name} instance`
+        : "an instance of an anonymous class";
+    } catch {
+      return "an object of unreadable class";
+    }
   }
   if (typeof value === "string") return JSON.stringify(value);
   return `a ${typeof value}`;
+}
+
+/**
+ * The accessor-failure rejection: a read the walk performed on the input ran
+ * the input's own code — a getter or proxy trap, something no Ruby ivar read
+ * can do — and that code threw. The contract is RenderError-or-pass, so the
+ * input's throw is wrapped, its message kept, at the path of the read.
+ */
+function accessorFailure(error: unknown, format: string, path: string): RenderError {
+  return new RenderError(
+    `${path}: reading the tree itself threw before it could be validated — ${String(error)}`,
+    format,
+    "unknown",
+  );
+}
+
+/**
+ * One property read off the input, wrapped AT THE READ SITE: whatever a
+ * getter or proxy trap throws — a deliberate `RangeError` included — is the
+ * input's failure and becomes the accessor-failure `RenderError` here, which
+ * is what lets the entry point treat a `RangeError` that reaches it as
+ * genuine stack exhaustion and nothing else.
+ */
+function readProperty(source: object, key: PropertyKey, format: string, path: string): unknown {
+  try {
+    return (source as Record<PropertyKey, unknown>)[key];
+  } catch (error) {
+    throw accessorFailure(error, format, path);
+  }
+}
+
+/** `Object.keys`, wrapped like `readProperty`: only a proxy's ownKeys trap can throw here. */
+function readOwnKeys(source: object, format: string, path: string): readonly string[] {
+  try {
+    return Object.keys(source);
+  } catch (error) {
+    throw accessorFailure(error, format, path);
+  }
+}
+
+/** `Object.getPrototypeOf`, wrapped like `readProperty`: only a proxy trap can throw here. */
+function readPrototype(value: object, format: string, path: string): object | null {
+  try {
+    return Object.getPrototypeOf(value);
+  } catch (error) {
+    throw accessorFailure(error, format, path);
+  }
 }
 
 /**
@@ -110,12 +168,16 @@ export function assertMathNodeShape(value: unknown, format: string): asserts val
   } catch (error) {
     if (error instanceof RenderError) throw error;
     if (error instanceof RangeError) {
-      // The walk itself ran out of stack: the tree is finite (the cycle check
-      // above would have named a loop) but nests deeper than this recursion
-      // can follow. The gem raises on the same tree — SystemStackError from
-      // `to_asciimath` at depth 10,000, direct and through the Formula
-      // boundary alike (probe probe-sweep-depth.rb on the pinned oracle) —
-      // and this contract spells every such raise RenderError.
+      // GENUINE stack exhaustion, and nothing else: every read the walk
+      // performs on the input is wrapped at its read site (`readProperty`
+      // and friends), so an input's own throw — a getter's deliberate
+      // `RangeError` included — arrives here already spelled RenderError.
+      // What remains is the walk's recursion running out of frames on a
+      // finite tree (the cycle check above would have named a loop). The gem
+      // raises on the same tree — SystemStackError from `to_asciimath` at
+      // depth 10,000, direct and through the Formula boundary alike (probe
+      // probe-sweep-depth.rb on the pinned oracle) — and this contract
+      // spells every such raise RenderError.
       throw new RenderError(
         "node: the tree nests too deep for the walk's call stack — the gem's own " +
           "render of a tree this deep raises SystemStackError",
@@ -123,14 +185,10 @@ export function assertMathNodeShape(value: unknown, format: string): asserts val
         "unknown",
       );
     }
-    // A property read that itself threw — a getter or proxy trap, something
-    // no Ruby ivar read can do. The contract is RenderError-or-pass, so the
-    // input's own throw is wrapped, its message kept.
-    throw new RenderError(
-      `node: reading the tree itself threw before it could be validated — ${String(error)}`,
-      format,
-      "unknown",
-    );
+    // The reads are wrapped at their sites, but an engine operation on the
+    // input can still throw without one — `Array.isArray` on a revoked
+    // proxy, for one. Same contract, same wrap, rooted at the entry.
+    throw accessorFailure(error, format, "node");
   }
 }
 
@@ -171,7 +229,7 @@ function assertNode(
     );
   }
   assertNotCyclic(ancestors, value, format, path);
-  const kind = (value as { readonly kind?: unknown }).kind;
+  const kind = readProperty(value, "kind", format, `${path}.kind`);
   if (typeof kind !== "string" || !Object.hasOwn(NODE_SPECS, kind)) {
     throw new RenderError(
       `${path}: unknown node kind ${describeValue(kind)}`,
@@ -184,7 +242,7 @@ function assertNode(
 
   const identity = spec.identity;
   if (identity !== undefined) {
-    const name = node[identity.field];
+    const name = readProperty(node, identity.field, format, `${path}.${identity.field}`);
     if (name === undefined) {
       if (ABSTRACT_CARRIERS.has(spec.rubyClass)) {
         throw new RenderError(
@@ -206,7 +264,7 @@ function assertNode(
   ancestors.add(node);
   try {
     for (const [, tsField] of spec.fields) {
-      const slot = node[tsField];
+      const slot = readProperty(node, tsField, format, `${path}.${tsField}`);
       // `undefined` here is Ruby's unassigned ivar — a legal, missing field.
       if (slot !== undefined) assertSlot(slot, format, kind, `${path}.${tsField}`, ancestors);
     }
@@ -239,8 +297,13 @@ function assertSlot(
     try {
       // An index loop, not `forEach`: `forEach` skips holes, and a hole reads
       // back as the same `undefined` an explicit entry holds — both rejected.
-      for (let index = 0; index < value.length; index += 1) {
-        assertSlot(value[index], format, kind, `${path}[${index}]`, ancestors);
+      // `length` and every element go through the wrapped read: only a proxy
+      // or accessor element puts code behind either, and its throw is the
+      // input's failure, not the walk's.
+      const length = readProperty(value, "length", format, `${path}.length`) as number;
+      for (let index = 0; index < length; index += 1) {
+        const item = readProperty(value, index, format, `${path}[${index}]`);
+        assertSlot(item, format, kind, `${path}[${index}]`, ancestors);
       }
     } finally {
       ancestors.delete(value);
@@ -248,7 +311,7 @@ function assertSlot(
     return;
   }
   if (type === "object") {
-    const nested = (value as { readonly kind?: unknown }).kind;
+    const nested = readProperty(value as object, "kind", format, `${path}.kind`);
     if (typeof nested === "string" && Object.hasOwn(NODE_SPECS, nested)) {
       assertNode(value, format, path, ancestors);
       return;
@@ -258,7 +321,7 @@ function assertSlot(
       // node. `normalize` refuses the same shape for the same reason.
       throw new RenderError(`${path}: unknown node kind ${describeValue(nested)}`, format, nested);
     }
-    const proto: object | null = Object.getPrototypeOf(value);
+    const proto = readPrototype(value as object, format, path);
     if (proto !== Object.prototype && proto !== null) {
       // A Date, Map, Set, RegExp, or arbitrary class instance. Walking its
       // enumerable entries would usually find none and wave it through, but
@@ -274,7 +337,11 @@ function assertSlot(
     assertNotCyclic(ancestors, value as object, format, path);
     ancestors.add(value as object);
     try {
-      for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
+      // `Object.keys` then one wrapped read per key (not `Object.entries`,
+      // which performs all its value reads inside one opaque call): a
+      // throwing getter names the exact key it sat behind.
+      for (const key of readOwnKeys(value as object, format, path)) {
+        const item = readProperty(value as object, key, format, `${path}.${key}`);
         assertSlot(item, format, kind, `${path}.${key}`, ancestors);
       }
     } finally {

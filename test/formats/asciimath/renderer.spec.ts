@@ -686,6 +686,35 @@ describe("inputs that defeat the walk itself", () => {
     expect(() => toAsciimath(node as never)).toThrow(RenderError);
   });
 
+  it("a kind that flips to an inherited key after validation raises the unknown-kind RenderError", () => {
+    // Validation reads `kind` once; the dispatcher's own read is a second
+    // one, and a stateful getter can answer it with an inherited
+    // Object.prototype key. On a plain-object table "toString" resolves to a
+    // real function (a string comes back, no error at all) and "__proto__"
+    // to Object.prototype itself (a TypeError from calling a non-function).
+    // Both are unknown kinds and must take the unknown-kind RenderError,
+    // naming the kind the dispatcher actually read.
+    for (const flip of ["toString", "__proto__"]) {
+      let reads = 0;
+      const node = {
+        get kind(): string {
+          reads += 1;
+          return reads > 1 ? flip : "number";
+        },
+        value: "1",
+      };
+      let caught: unknown;
+      try {
+        toAsciimath(node as never);
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught, flip).toBeInstanceOf(RenderError);
+      expect((caught as RenderError).message, flip).toContain(flip);
+      expect((caught as RenderError).kind, flip).toBe(flip);
+    }
+  });
+
   it("a frozen tree renders — nothing on the render path writes to the input", () => {
     // Ruby renders frozen nodes fine; so must this port.
     const tree = Object.freeze({

@@ -47,7 +47,8 @@
 #                                          the three tables to_asciimath reads
 #                                          that the parse tables cannot supply
 #   src/generated/latex/render-tables.ts   the six measured tables to_latex
-#                                          reads that no other slice supplies
+#                                          reads that no other slice supplies,
+#                                          plus the census carrier name lists
 #   src/generated/<format>/symbols.ts      symbol id -> static descriptor
 #   src/generated/<format>/exceptions.ts   the context-axis exception matrix
 #   src/generated/context-axes.ts          the probe manifest and its results
@@ -2229,6 +2230,27 @@ module CorpusGenerator
     plain.sort
   end
 
+  # The class basenames the AsciiMath transform reaches through one carrier:
+  # the `get_class` census rows whose census disposition aliases them onto it
+  # — the same rows the asciimath transform-registry slice carries, projected
+  # for the latex renderer's carrier dispatch and emitted latex-side so the
+  # latex module graph never imports another format's data slice
+  # (ARCHITECTURE.md §3, the generated-data closure). Membership only — the
+  # renderer asks `has` — so the list is deduplicated and sorted. The classes
+  # the transform constructs directly without `get_class` (`Tr`, `Power`,
+  # `Mod`, `Td`) sit outside the census rows and stay renderer-side.
+  def latex_carrier_basenames(registry, carrier)
+    names = registry.fetch("entries")
+      .select { |entry| entry["carrier"] == carrier }
+      .map { |entry| entry["rubyClass"].split("::").last }
+      .uniq.sort
+    if names.empty?
+      raise Error, "no registry entry carries #{carrier}; the measured domain is gone"
+    end
+
+    names
+  end
+
   # FontStyle subclass basename -> the `\math..` command its `to_latex`
   # override wraps its value in, measured by rendering a live instance of
   # every subclass and reading the wrapper back. A subclass either wraps —
@@ -2429,6 +2451,10 @@ module CorpusGenerator
       "matrix_environments" => latex_matrix_environments,
       "alignment_letters" => latex_alignment_letters,
       "color_asciimath" => latex_color_asciimath_symbols,
+      "unary_carrier_names" =>
+        latex_carrier_basenames(registry, "Math::Function::UnaryFunction"),
+      "binary_carrier_names" =>
+        latex_carrier_basenames(registry, "Math::Function::BinaryFunction"),
     }
   end
 
@@ -2965,16 +2991,24 @@ module CorpusGenerator
     sections = [
       ts_header(<<~TEXT.chomp),
         LaTeX render tables: the six measured tables `to_latex` reads that
-        no other generated slice supplies, consumed by
+        no other generated slice supplies, plus the two carrier name lists
+        the latex dispatch reads, consumed by
         `src/formats/latex/renderer.ts`.
 
-        Every entry is measured off the runtime — a live render per row,
-        never a source read (PORTING-STANDARDS.md), each re-verified by the
-        generator with a render that actually uses it. The sources lie
-        where the probes cannot: `Hash#invert` keeps the LAST key for a
-        duplicated value, and `validate_function_formula` is not
+        Every measured entry is read off the runtime — a live render per
+        row, never a source read (PORTING-STANDARDS.md), each re-verified
+        by the generator with a render that actually uses it. The sources
+        lie where the probes cannot: `Hash#invert` keeps the LAST key for
+        a duplicated value, and `validate_function_formula` is not
         `Utility::UNARY_CLASSES` — ker, liminf, limsup and sup sit in that
         parse-side list yet take the `{ \\left ( … \\right ) }` wrap.
+
+        The two carrier name lists are not measured here: they are the
+        same `get_class` census rows the asciimath transform-registry
+        slice carries, projected to class basenames per carrier and
+        emitted latex-side, because per-format slices are self-contained
+        by design — the latex module graph never imports another format's
+        data (ARCHITECTURE.md §3, the generated-data closure).
       TEXT
       ts_tuple_map(
         "LATEX_LEFT_RIGHT_PARENS",
@@ -3039,6 +3073,29 @@ module CorpusGenerator
              "corpus+sweep put there — a deliberately minimal policy slice\n" \
              "(TODO.plan/deferred.md); the renderer raises a parity-gap\n" \
              "RenderError for any other id.",
+      ),
+      ts_const(
+        "LATEX_UNARY_CARRIER_NAMES",
+        "readonly string[]",
+        tables["unary_carrier_names"],
+        doc: "The class basenames the AsciiMath transform reaches through\n" \
+             "the `Math::Function::UnaryFunction` carrier — the same\n" \
+             "`get_class` census rows the asciimath transform-registry\n" \
+             "slice carries, projected and emitted latex-side so the latex\n" \
+             "carrier dispatch imports no other format's slice. The\n" \
+             "renderer adds `Tr` itself (constructed without `get_class`).\n" \
+             "Membership only — deduplicated and sorted.",
+      ),
+      ts_const(
+        "LATEX_BINARY_CARRIER_NAMES",
+        "readonly string[]",
+        tables["binary_carrier_names"],
+        doc: "The class basenames the AsciiMath transform reaches through\n" \
+             "the `Math::Function::BinaryFunction` carrier — the same\n" \
+             "`get_class` census rows the asciimath transform-registry\n" \
+             "slice carries, projected and emitted latex-side. The renderer\n" \
+             "adds `Power`, `Mod` and `Td` itself (constructed without\n" \
+             "`get_class`). Membership only — deduplicated and sorted.",
       ),
     ]
 

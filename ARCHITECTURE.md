@@ -7,7 +7,10 @@ OMML, UnicodeMath, and HTML. It replaces the Opal-compiled `plurimath-js`.
 This document records the agreed design. Change it before changing the code it
 describes.
 
-Revision: v12 (2026-07-29) — applies Codex design review rounds 1–8
+Revision: v13 (2026-08-07) — records the maintainer's renderer-layout
+decision in §5, "How this maps to the gem": render code lives in one file per
+node kind, joined by a dispatch table typed total over `NodeKind`. v12
+(2026-07-29) applies Codex design review rounds 1–8
 (verdicts: approve-with-changes, rework ×4, then approve-with-changes ×3).
 Every finding is verified against the gem, the POC, or the published packages
 before adoption; round 8 confirmed P0 is unblocked. v4 fixed three self-contradictions (P0's gate checklist
@@ -556,6 +559,11 @@ function renderNode(node: MathNode, ctx: RenderContext): XmlElement /* or string
 }
 ```
 
+The `switch` is the contract, not the layout: a renderer may equally realize
+it as a dispatch table typed total over the kind union — a missing entry is
+then a compile error, exactly as `assertNever` is. The AsciiMath renderer
+does ("How this maps to the gem", below).
+
 Execution contract (pinned):
 
 - `renderNode` is the **sole** recursive dispatcher; cases delegate to
@@ -569,6 +577,34 @@ Execution contract (pinned):
   formats.
 - Core may export only format-blind structural predicates. No generic visitor
   framework, no double dispatch.
+
+**How this maps to the gem (decided 2026-08-07; the AsciiMath renderer's
+layout, and the template for every later text renderer).** The node classes
+are the gem's design kept: instances with the same fields, the same measured
+constructor defaults, the same equality projection. The one structural
+deviation is where render code lives. The gem puts a `to_asciimath` method on
+every class; the port puts a function file per node kind under the format
+(`src/formats/asciimath/render/`). The reason is D2's: a JS bundler can drop
+an unused import, but it can never drop a method off a class — code on nodes
+ships with the nodes, every format to every consumer, which is exactly the
+plurimath-js defect this port exists to remove.
+
+| Ruby gem | This port |
+|---|---|
+| one file per class — `function/sqrt.rb` | one file per kind — `render/sqrt.ts` |
+| the implicit method table (every class answering `to_asciimath`) | the explicit dispatch table in `render/index.ts`, typed total over `NodeKind` — a missing entry is a compile error |
+| `child.to_asciimath(options:)` | `ctx.render(child)` — recursion through the context, which looks the child's kind up in the table |
+
+The per-kind files mirror the gem's one-file-per-class layout deliberately: a
+gem reader finds `render/sqrt.ts` where they expect `sqrt.rb`, and each
+file's header comment names the gem file it mirrors. Carrier kinds standing
+in for many aliased gem classes (`unaryFunction`, `binaryFunction`,
+`ternaryFunction`, `table`, `fontStyle`) keep their class-name dispatch
+inside their own kind file — per-kind means per `NodeKind`. Idioms shared
+across kinds (`interpolatedValue`, the strip helpers, the context axes) live
+in `render/shared.ts`; a helper Ruby defines on a base class lives in that
+carrier's kind file and is imported by the inheritors' files exactly where
+Ruby inherits (`norm.ts` importing `renderUnaryDefault` is `Norm`'s `super`).
 
 **Symbols.** Symbol nodes carry a stable id (Ruby class key: `"Sigma"`,
 `"Paren::Lround"`). Parser data maps input text → id. Each renderer slice maps

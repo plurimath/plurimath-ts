@@ -20,7 +20,8 @@ how things get missed.
 **Trigger: any of these surfacing in a real consumer report, or the P1
 adversarial review deciding differently.**
 
-All three are corners of `src/formats/asciimath/renderer.ts`, none reachable
+All three are corners of the AsciiMath renderer
+(`src/formats/asciimath/renderer.ts` and its `render/` kind files), none reachable
 from AsciiMath input (the corpus, round-trip and 1,642-case sweep layers all
 pass byte-identical); each is pinned by a test in
 `test/formats/asciimath/renderer.spec.ts`:
@@ -48,7 +49,8 @@ pass byte-identical); each is pinned by a test in
 
 ### Three AsciiMath render tables — generated
 
-**Done, 2026-08-06.** `src/formats/asciimath/renderer.ts` no longer
+**Done, 2026-08-06.** The AsciiMath renderer (since split into
+`src/formats/asciimath/render/`, one file per kind) no longer
 transcribes the three small render tables it used to hand-type; the same
 `scripts/generate-corpus.rb` run that emits the rest of the AsciiMath data now
 measures and emits them into `src/generated/asciimath/render-tables.ts`:

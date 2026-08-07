@@ -26,7 +26,11 @@
  *     An object carrying a *string* `kind` this model does not declare is
  *     rejected wherever it sits — the same stance `normalize` takes, because
  *     serializing a forged node as a plain hash would let a broken tree
- *     agree with the corpus.
+ *     agree with the corpus. A "plain hash" is a record whose prototype is
+ *     `Object.prototype` or `null`: a `Date`, `Map`, `Set`, `RegExp`, or
+ *     other class instance is not one — it often carries zero enumerable
+ *     entries, so an entry walk alone would wave it through — and no Ruby
+ *     ivar can hold it, so it is rejected with its class named.
  *   - the tree is finite: a node, list, or hash that is its own ancestor is
  *     rejected with the cycle's path — Ruby's serializers cannot produce a
  *     cyclic tree, and without this check the walk dies as `RangeError`
@@ -60,7 +64,15 @@ function describeValue(value: unknown): string {
   if (value === null) return "null";
   if (value === undefined) return "undefined";
   if (Array.isArray(value)) return "an array";
-  if (typeof value === "object") return "an object";
+  if (typeof value === "object") {
+    const proto: object | null = Object.getPrototypeOf(value);
+    if (proto === Object.prototype || proto === null) return "an object";
+    const name = (proto as { readonly constructor?: { readonly name?: unknown } }).constructor
+      ?.name;
+    return typeof name === "string" && name !== ""
+      ? `a ${name} instance`
+      : "an instance of an anonymous class";
+  }
   if (typeof value === "string") return JSON.stringify(value);
   return `a ${typeof value}`;
 }
@@ -165,7 +177,8 @@ function assertNode(
  * node's ivars are observed to hold: nil, strings, booleans, numbers, nodes,
  * lists of any of these, and plain hashes (options, attributes — whose values
  * get the same check, since table parens and alias defaults put real nodes
- * inside).
+ * inside). "Plain" is enforced by prototype: any other object is a class
+ * instance nothing in Ruby maps to, rejected rather than walked as a hash.
  */
 function assertSlot(
   value: unknown,
@@ -201,6 +214,19 @@ function assertSlot(
       // Node-shaped, but a kind the model does not declare: a forged or stale
       // node. `normalize` refuses the same shape for the same reason.
       throw new RenderError(`${path}: unknown node kind ${describeValue(nested)}`, format, nested);
+    }
+    const proto: object | null = Object.getPrototypeOf(value);
+    if (proto !== Object.prototype && proto !== null) {
+      // A Date, Map, Set, RegExp, or arbitrary class instance. Walking its
+      // enumerable entries would usually find none and wave it through, but
+      // the only objects a Ruby ivar holds are nodes and plain hashes — a
+      // record's prototype must be `Object.prototype` or `null` to be one.
+      throw new RenderError(
+        `${path}: a node slot cannot hold ${describeValue(value)} — ` +
+          `the only objects a Ruby node holds are nodes and plain hashes`,
+        format,
+        kind,
+      );
     }
     assertNotCyclic(ancestors, value as object, format, path);
     ancestors.add(value as object);

@@ -12,10 +12,10 @@
  * rejected — while shared non-cyclic objects stay accepted.
  *
  * Mutation-tested (PORTING-STANDARDS.md, "a suite that guards a guard"):
- * with the validator's body gutted to a no-op, the 13 rejection tests below
+ * with the validator's body gutted to a no-op, the 15 rejection tests below
  * fail and the positive ones stay green; with the cycle detector's
  * ancestor-set never pruned, the shared-object positive test fails alone
- * (both runs 2026-08-06). A guard spec never seen red proves nothing.
+ * (both runs 2026-08-07). A guard spec never seen red proves nothing.
  */
 
 import { describe, expect, it } from "vitest";
@@ -151,6 +151,48 @@ describe("assertMathNodeShape, malformed inputs", () => {
       value: [{ kind: "unaryFunction" }],
     });
     expect(error.message).toContain("abstract");
+  });
+});
+
+describe("assertMathNodeShape, non-plain objects", () => {
+  // A Date, Map, Set, RegExp, or arbitrary class instance often carries zero
+  // enumerable own entries, so the plain-hash walk alone would wave it
+  // through — but no Ruby ivar can hold one, and the contract is
+  // RenderError-or-pass. Only a record whose prototype is `Object.prototype`
+  // or `null` is a hash.
+  class Widget {
+    readonly size = 3;
+  }
+
+  it("rejects a class instance in a value slot, naming path and class", () => {
+    const date = failure({ kind: "sqrt", parameterOne: new Date(0) });
+    expect(date.message).toContain("node.parameterOne");
+    expect(date.message).toContain("Date");
+    const map = failure({ kind: "formula", value: [new Map()] });
+    expect(map.message).toContain("node.value[0]");
+    expect(map.message).toContain("Map");
+    const widget = failure({ kind: "bar", parameterOne: new Widget() });
+    expect(widget.message).toContain("node.parameterOne");
+    expect(widget.message).toContain("Widget");
+  });
+
+  it("rejects a class instance inside an options hash", () => {
+    const date = failure({ kind: "sqrt", options: { when: new Date(0) } });
+    expect(date.message).toContain("node.options.when");
+    expect(date.message).toContain("Date");
+    const map = failure({ kind: "mpadded", options: { attr: new Map() } });
+    expect(map.message).toContain("node.options.attr");
+    expect(map.message).toContain("Map");
+    const widget = failure({ kind: "table", options: { paren: new Widget() } });
+    expect(widget.message).toContain("node.options.paren");
+    expect(widget.message).toContain("Widget");
+  });
+
+  it("accepts a null-prototype record in an options slot", () => {
+    // Key-value data with no class behaviour behind it is still a hash.
+    const options: Record<string, unknown> = Object.create(null);
+    options.mathvariant = "bold";
+    expect(() => assertMathNodeShape({ kind: "sqrt", options }, FORMAT)).not.toThrow();
   });
 });
 

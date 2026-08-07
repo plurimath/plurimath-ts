@@ -1,0 +1,6585 @@
+{
+  "description": "Gem-verified LaTeX render sweep: input -> Plurimath::Math.parse(input, :asciimath).to_latex, or the refusal.",
+  "oracle": {
+    "gem": "plurimath",
+    "version": "0.11.6",
+    "commit": "00c52783877b38f6b8e6e109f1803f96bb34fc62"
+  },
+  "count": 1642,
+  "cases": [
+    {
+      "input": "sin x",
+      "render": "\\sin{x}"
+    },
+    {
+      "input": "sinx",
+      "render": "\\sin{x}"
+    },
+    {
+      "input": "sin(x)",
+      "render": "\\sin{( x )}"
+    },
+    {
+      "input": "sin",
+      "render": "\\sin{}"
+    },
+    {
+      "input": "cos y",
+      "render": "\\cos{y}"
+    },
+    {
+      "input": "tan(theta)",
+      "render": "\\tan{( \\theta )}"
+    },
+    {
+      "input": "sec x",
+      "render": "\\sec{x}"
+    },
+    {
+      "input": "csc x",
+      "render": "\\csc{x}"
+    },
+    {
+      "input": "cot x",
+      "render": "\\cot{x}"
+    },
+    {
+      "input": "sinh x",
+      "render": "\\sinh{x}"
+    },
+    {
+      "input": "cosh x",
+      "render": "\\cosh{x}"
+    },
+    {
+      "input": "tanh x",
+      "render": "\\tanh{x}"
+    },
+    {
+      "input": "sech x",
+      "render": "\\sech{x}"
+    },
+    {
+      "input": "csch x",
+      "render": "\\csch{x}"
+    },
+    {
+      "input": "coth x",
+      "render": "\\coth{x}"
+    },
+    {
+      "input": "arcsin x",
+      "render": "\\arcsin{x}"
+    },
+    {
+      "input": "arccos x",
+      "render": "\\arccos{x}"
+    },
+    {
+      "input": "arctan x",
+      "render": "\\arctan{x}"
+    },
+    {
+      "input": "exp x",
+      "render": "\\exp{x}"
+    },
+    {
+      "input": "log x",
+      "render": "\\log x"
+    },
+    {
+      "input": "ln x",
+      "render": "\\ln{x}"
+    },
+    {
+      "input": "lg x",
+      "render": "l g x"
+    },
+    {
+      "input": "det A",
+      "render": "\\det{A}"
+    },
+    {
+      "input": "dim V",
+      "render": "\\dim{V}"
+    },
+    {
+      "input": "max x",
+      "render": "\\max{x}"
+    },
+    {
+      "input": "min x",
+      "render": "\\min{x}"
+    },
+    {
+      "input": "gcd(a,b)",
+      "render": "\\gcd{( a , b )}"
+    },
+    {
+      "input": "lcm(a,b)",
+      "render": "lcm{( a , b )}"
+    },
+    {
+      "input": "glb x",
+      "render": "glb{x}"
+    },
+    {
+      "input": "lub x",
+      "render": "\\lub{x}"
+    },
+    {
+      "input": "ker f",
+      "render": "k e r f"
+    },
+    {
+      "input": "deg p",
+      "render": "d e g p"
+    },
+    {
+      "input": "liminf x",
+      "render": "\\lim \\in f x"
+    },
+    {
+      "input": "limsup x",
+      "render": "\\lim \\supset x"
+    },
+    {
+      "input": "sup x",
+      "render": "\\supset x"
+    },
+    {
+      "input": "cancel(x)",
+      "render": "\\cancel{x}"
+    },
+    {
+      "input": "cancel(x+y)",
+      "render": "\\cancel{x + y}"
+    },
+    {
+      "input": "lim_(x->0) f(x)",
+      "render": "\\lim_{x \\to 0} f ( x )"
+    },
+    {
+      "input": "lim_(n->oo)",
+      "render": "\\lim_{n \\to \\infty}"
+    },
+    {
+      "input": "log_2 8",
+      "render": "\\log_{2} 8"
+    },
+    {
+      "input": "log_(10) 100",
+      "render": "\\log_{10} 100"
+    },
+    {
+      "input": "lim x",
+      "render": "\\lim x"
+    },
+    {
+      "input": "sum_(i=1)^n i",
+      "render": "\\sum_{i = 1}^{n} i"
+    },
+    {
+      "input": "sum x",
+      "render": "\\sum x"
+    },
+    {
+      "input": "sum_(i=1) i",
+      "render": "\\sum_{i = 1} i"
+    },
+    {
+      "input": "sum^n i",
+      "render": "\\sum^{n} i"
+    },
+    {
+      "input": "prod_(i=1)^n i",
+      "render": "\\prod_{i = 1}^{n} i"
+    },
+    {
+      "input": "int_0^1 x dx",
+      "render": "\\int_{0}^{1} x d x"
+    },
+    {
+      "input": "int x dx",
+      "render": "\\int x d x"
+    },
+    {
+      "input": "oint_C f",
+      "render": "\\oint_{C} f"
+    },
+    {
+      "input": "int_0^1",
+      "render": "\\int_{0}^{1}"
+    },
+    {
+      "input": "int",
+      "render": "\\int"
+    },
+    {
+      "input": "sqrt x",
+      "render": "\\sqrt{x}"
+    },
+    {
+      "input": "sqrt(x+1)",
+      "render": "\\sqrt{x + 1}"
+    },
+    {
+      "input": "root(3)(x)",
+      "render": "\\sqrt[3]{x}"
+    },
+    {
+      "input": "root(n)(x+y)",
+      "render": "\\sqrt[n]{x + y}"
+    },
+    {
+      "input": "frac(a)(b)",
+      "render": "\\frac{a}{b}"
+    },
+    {
+      "input": "a/b",
+      "render": "\\frac{a}{b}"
+    },
+    {
+      "input": "1/2",
+      "render": "\\frac{1}{2}"
+    },
+    {
+      "input": "(a+b)/(c-d)",
+      "render": "\\frac{a + b}{c - d}"
+    },
+    {
+      "input": "a/b/c",
+      "render": "\\frac{a}{\\frac{b}{c}}"
+    },
+    {
+      "input": "2/4 + 3/4",
+      "render": "\\frac{2}{4} + \\frac{3}{4}"
+    },
+    {
+      "input": "x/",
+      "error": "parse",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": "frac(a)",
+      "render": "\\frac{a}{}"
+    },
+    {
+      "input": "x^2",
+      "render": "x^{2}"
+    },
+    {
+      "input": "x_i",
+      "render": "x_{i}"
+    },
+    {
+      "input": "x_i^2",
+      "render": "x_{i}^{2}"
+    },
+    {
+      "input": "x_(i+1)",
+      "render": "x_{i + 1}"
+    },
+    {
+      "input": "x^(a+b)",
+      "render": "x^{a + b}"
+    },
+    {
+      "input": "a_1^2 + b_1^2",
+      "render": "a_{1}^{2} + b_{1}^{2}"
+    },
+    {
+      "input": "x^y^z",
+      "render": "x^{y}^{z}"
+    },
+    {
+      "input": "x_a_b",
+      "render": "x_{a}_{b}"
+    },
+    {
+      "input": "(x+1)^2",
+      "render": "( x + 1 )^{2}"
+    },
+    {
+      "input": "2^x",
+      "render": "2^{x}"
+    },
+    {
+      "input": "x^-1",
+      "render": "x^{-} 1"
+    },
+    {
+      "input": "e_(ij)",
+      "render": "e_{i j}"
+    },
+    {
+      "input": "x^",
+      "render": "x ^"
+    },
+    {
+      "input": "a_",
+      "render": "a \\_"
+    },
+    {
+      "input": "obrace(x+y)",
+      "render": "\\overbrace{x + y}"
+    },
+    {
+      "input": "ubrace(a-b)",
+      "render": "\\underbrace{a - b}"
+    },
+    {
+      "input": "overbrace(x)",
+      "render": "\\overbrace{x}"
+    },
+    {
+      "input": "underbrace(y)",
+      "render": "\\underbrace{y}"
+    },
+    {
+      "input": "overset(a)(b)",
+      "render": "\\overset{a}{b}"
+    },
+    {
+      "input": "underset(a)(b)",
+      "render": "\\underset{a}{b}"
+    },
+    {
+      "input": "stackrel(a)(b)",
+      "render": "\\stackrel{a}{b}"
+    },
+    {
+      "input": "hat x",
+      "render": "\\hat{x}"
+    },
+    {
+      "input": "bar x",
+      "render": "\\overline{x}"
+    },
+    {
+      "input": "vec x",
+      "render": "\\vec{x}"
+    },
+    {
+      "input": "dot x",
+      "render": "\\dot{x}"
+    },
+    {
+      "input": "ddot x",
+      "render": "\\ddot{x}"
+    },
+    {
+      "input": "tilde x",
+      "render": "\\tilde{x}"
+    },
+    {
+      "input": "ul x",
+      "render": "\\underline{x}"
+    },
+    {
+      "input": "underline(x)",
+      "render": "\\underline{x}"
+    },
+    {
+      "input": "obrace x",
+      "render": "\\overbrace{x}"
+    },
+    {
+      "input": "abs(x)",
+      "render": "\\abs{x}"
+    },
+    {
+      "input": "norm(x)",
+      "render": "{\\lVert x \\lVert}"
+    },
+    {
+      "input": "floor(x)",
+      "render": "{\\lfloor x \\rfloor}"
+    },
+    {
+      "input": "ceil(x)",
+      "render": "{\\lceil x \\rceil}"
+    },
+    {
+      "input": "|x|",
+      "render": "| x |"
+    },
+    {
+      "input": "||x||",
+      "render": "| | x | |"
+    },
+    {
+      "input": "bb x",
+      "render": "\\mathbf{x}"
+    },
+    {
+      "input": "bbb x",
+      "render": "\\mathbb{x}"
+    },
+    {
+      "input": "Bbb x",
+      "render": "B \\mathbf{x}"
+    },
+    {
+      "input": "bf x",
+      "render": "b f x"
+    },
+    {
+      "input": "bold x",
+      "render": "b o l d x"
+    },
+    {
+      "input": "cal x",
+      "render": "c a l x"
+    },
+    {
+      "input": "cc x",
+      "render": "\\mathcal{x}"
+    },
+    {
+      "input": "fr x",
+      "render": "\\mathfrak{x}"
+    },
+    {
+      "input": "ii x",
+      "render": "\\mathit{x}"
+    },
+    {
+      "input": "mathbb(x)",
+      "render": "\\mathbb{x}"
+    },
+    {
+      "input": "mathbf(x)",
+      "render": "\\mathbf{x}"
+    },
+    {
+      "input": "mathcal(x)",
+      "render": "\\mathcal{x}"
+    },
+    {
+      "input": "mathfrak(x)",
+      "render": "\\mathfrak{x}"
+    },
+    {
+      "input": "mathit(x)",
+      "render": "m a t h i t ( x )"
+    },
+    {
+      "input": "mathrm(x)",
+      "render": "m a t h \\mathrm{x}"
+    },
+    {
+      "input": "mathsf(x)",
+      "render": "\\mathsf{x}"
+    },
+    {
+      "input": "mathtt(x)",
+      "render": "\\mathtt{x}"
+    },
+    {
+      "input": "mbf x",
+      "render": "m b f x"
+    },
+    {
+      "input": "mit x",
+      "render": "m i t x"
+    },
+    {
+      "input": "monospace x",
+      "render": "m o n o s p a c e x"
+    },
+    {
+      "input": "msans x",
+      "render": "m s a n s x"
+    },
+    {
+      "input": "mscr x",
+      "render": "m s c r x"
+    },
+    {
+      "input": "mtt x",
+      "render": "m \\mathtt{x}"
+    },
+    {
+      "input": "mup x",
+      "render": "\\mu p x"
+    },
+    {
+      "input": "normal x",
+      "render": "{\\lVert a \\lVert} l x"
+    },
+    {
+      "input": "rm x",
+      "render": "\\mathrm{x}"
+    },
+    {
+      "input": "sf x",
+      "render": "\\mathsf{x}"
+    },
+    {
+      "input": "tt x",
+      "render": "\\mathtt{x}"
+    },
+    {
+      "input": "italic x",
+      "render": "i t a l i c x"
+    },
+    {
+      "input": "script x",
+      "render": "s c r i p t x"
+    },
+    {
+      "input": "double x",
+      "render": "d o u b \\le x"
+    },
+    {
+      "input": "fraktur x",
+      "render": "\\mathfrak{a} k t u r x"
+    },
+    {
+      "input": "textbf x",
+      "error": "render",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": "textit x",
+      "error": "render",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": "textrm x",
+      "error": "render",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": "mfrak x",
+      "render": "m \\mathfrak{a} k x"
+    },
+    {
+      "input": "mbfit x",
+      "render": "m b f i t x"
+    },
+    {
+      "input": "mbfsans x",
+      "render": "m b f s a n s x"
+    },
+    {
+      "input": "mbfscr x",
+      "render": "m b f s c r x"
+    },
+    {
+      "input": "mbffrak x",
+      "render": "m b f \\mathfrak{a} k x"
+    },
+    {
+      "input": "mbfitsans x",
+      "render": "m b f i t s a n s x"
+    },
+    {
+      "input": "mitsans x",
+      "render": "m i t s a n s x"
+    },
+    {
+      "input": "msans(y+1)",
+      "render": "m s a n s ( y + 1 )"
+    },
+    {
+      "input": "text(hello)",
+      "render": "\\text{hello}"
+    },
+    {
+      "input": "text( )",
+      "render": "\\text{ }"
+    },
+    {
+      "input": "\"quoted text\"",
+      "render": "\\text{quoted text}"
+    },
+    {
+      "input": "\"a+b\"",
+      "render": "\\text{a+b}"
+    },
+    {
+      "input": "text(a,b)",
+      "render": "\\text{a,b}"
+    },
+    {
+      "input": "mbox(hi)",
+      "render": "m b \\ox ( h i )"
+    },
+    {
+      "input": "\"\"",
+      "render": "\\text{}"
+    },
+    {
+      "input": "[[a,b],[c,d]]",
+      "render": "\\left [\\begin{matrix}a & b \\\\ c & d\\end{matrix}\\right ]"
+    },
+    {
+      "input": "((a,b),(c,d))",
+      "render": "\\left (\\begin{matrix}a & b \\\\ c & d\\end{matrix}\\right )"
+    },
+    {
+      "input": "[(a,b),(c,d)]",
+      "render": "\\left [\\begin{matrix}a & b \\\\ c & d\\end{matrix}\\right ]"
+    },
+    {
+      "input": "{(a,b),(c,d)}",
+      "render": "\\{ ( a , b ) , ( c , d ) \\}"
+    },
+    {
+      "input": "[[a]]",
+      "render": "\\left [\\begin{matrix}a\\end{matrix}\\right ]"
+    },
+    {
+      "input": "[[a,b]]",
+      "render": "\\left [\\begin{matrix}a & b\\end{matrix}\\right ]"
+    },
+    {
+      "input": "[[1,2],[3,4]] + [[5,6],[7,8]]",
+      "render": "\\left [\\begin{matrix}1 & 2 \\\\ 3 & 4\\end{matrix}\\right ] + \\left [\\begin{matrix}5 & 6 \\\\ 7 & 8\\end{matrix}\\right ]"
+    },
+    {
+      "input": "{(x,y):}",
+      "render": "\\left \\{\\begin{matrix}x & y\\end{matrix}\\right ."
+    },
+    {
+      "input": "|(a,b),(c,d)|",
+      "render": "\\left |\\begin{matrix}a & b \\\\ c & d\\end{matrix}\\right |"
+    },
+    {
+      "input": "[[a,|,b],[c,|,d]]",
+      "render": "\\left [\\begin{matrix}a & b \\\\ c & d\\end{matrix}\\right ]"
+    },
+    {
+      "input": "[[sin x, cos y],[tan z, cot w]]",
+      "render": "\\left [\\begin{matrix}\\sin{x} & \\cos{y} \\\\ \\tan{z} & \\cot{w}\\end{matrix}\\right ]"
+    },
+    {
+      "input": "left( x right)",
+      "render": "\\left ( x \\right )"
+    },
+    {
+      "input": "left[ y right]",
+      "render": "\\left [ y \\right ]"
+    },
+    {
+      "input": "left(x/2right)",
+      "render": "\\left ( \\frac{x}{2} \\right )"
+    },
+    {
+      "input": "{: x :}",
+      "render": "\\left. x \\right."
+    },
+    {
+      "input": "(: x :)",
+      "render": "\\langle x \\rangle"
+    },
+    {
+      "input": "{: (a,b) :}",
+      "render": "\\left .\\begin{matrix}a & b\\end{matrix}\\right ."
+    },
+    {
+      "input": "color(red)(x)",
+      "render": "{\\color{red} x}"
+    },
+    {
+      "input": "color(blue)(y+1)",
+      "render": "{\\color{blue} y + 1}"
+    },
+    {
+      "input": "color(#ff0000)(z)",
+      "render": "{\\color{\"P{eqno}\"ff0000} z}"
+    },
+    {
+      "input": "2",
+      "render": "2"
+    },
+    {
+      "input": "2.5",
+      "render": "2.5"
+    },
+    {
+      "input": "0",
+      "render": "0"
+    },
+    {
+      "input": "123",
+      "render": "123"
+    },
+    {
+      "input": "3.14159",
+      "render": "3.14159"
+    },
+    {
+      "input": "0.5",
+      "render": "0.5"
+    },
+    {
+      "input": "10.00",
+      "render": "10.00"
+    },
+    {
+      "input": "007",
+      "render": "007"
+    },
+    {
+      "input": "a mod b",
+      "render": "{a} \\mod {b}"
+    },
+    {
+      "input": "7 mod 3",
+      "render": "{7} \\mod {3}"
+    },
+    {
+      "input": "x mod 2 + 1",
+      "render": "{x} \\mod {2} + 1"
+    },
+    {
+      "input": "a, b",
+      "render": "a , b"
+    },
+    {
+      "input": "f(x, y)",
+      "render": "f ( x , y )"
+    },
+    {
+      "input": "(a, b)",
+      "render": "( a , b )"
+    },
+    {
+      "input": "[[a, b]]",
+      "render": "\\left [\\begin{matrix}a & b\\end{matrix}\\right ]"
+    },
+    {
+      "input": "x = [[1, 0],[0, 1]], y",
+      "render": "x = \\left [\\begin{matrix}1 & 0 \\\\ 0 & 1\\end{matrix}\\right ] , y"
+    },
+    {
+      "input": "x = (-b +- sqrt(b^2 - 4ac))/(2a)",
+      "render": "x = \\frac{- b \\pm \\sqrt{b^{2} - 4 a c}}{2 a}"
+    },
+    {
+      "input": "sum_(i=1)^n i^3 = ((n(n+1))/2)^2",
+      "render": "\\sum_{i = 1}^{n} i^{3} = ( \\frac{n ( n + 1 )}{2} )^{2}"
+    },
+    {
+      "input": "sin^2 x + cos^2 x = 1",
+      "render": "\\sin{}^{2} x + \\cos{}^{2} x = 1"
+    },
+    {
+      "input": "(del f)/(del x)",
+      "render": "\\frac{\\partial f}{\\partial x}"
+    },
+    {
+      "input": "lim_(h->0) (f(x+h)-f(x))/h",
+      "render": "\\lim_{h \\to 0} \\frac{f ( x + h ) - f ( x )}{h}"
+    },
+    {
+      "input": "A uu B nn C",
+      "render": "A \\cup B n n C"
+    },
+    {
+      "input": "p => q",
+      "render": "p \\Rightarrow q"
+    },
+    {
+      "input": "x in RR",
+      "render": "x \\in \\mathbb{R}"
+    },
+    {
+      "input": "NN sub ZZ sub QQ",
+      "render": "\\mathbb{N} \\subset \\mathbb{Z} \\subset \\mathbb{Q}"
+    },
+    {
+      "input": "hat(ab) bar(xy) ul(A) vec(v)",
+      "render": "\\hat{a b} \\overline{x y} \\underline{A} \\vec{v}"
+    },
+    {
+      "input": "dot(x) ddot(y)",
+      "render": "\\dot{x} \\ddot{y}"
+    },
+    {
+      "input": "((1),(2),(3))",
+      "render": "\\left (\\begin{matrix}1 \\\\ 2 \\\\ 3\\end{matrix}\\right )"
+    },
+    {
+      "input": "|x| = { (x, if x >= 0), (-x, if x < 0) :}",
+      "render": "| x | = \\left \\{\\begin{matrix}x & \\operatorname{if} x \\geq 0 \\\\ - x & \\operatorname{if} x < 0\\end{matrix}\\right ."
+    },
+    {
+      "input": "f: X -> Y",
+      "render": "f : X \\to Y"
+    },
+    {
+      "input": "a prop b",
+      "render": "a \\propto b"
+    },
+    {
+      "input": "angle ABC",
+      "render": "\\angle A B C"
+    },
+    {
+      "input": "triangle ABC",
+      "render": "\\bigtriangleup A B C"
+    },
+    {
+      "input": "30^@",
+      "render": "30^{\\circ}"
+    },
+    {
+      "input": "a^@",
+      "render": "a^{\\circ}"
+    },
+    {
+      "input": "D^-",
+      "render": "D^{-}"
+    },
+    {
+      "input": "e^(i pi) + 1 = 0",
+      "render": "e^{i \\pi} + 1 = 0"
+    },
+    {
+      "input": "(a",
+      "render": "( a "
+    },
+    {
+      "input": "a)",
+      "render": "a )"
+    },
+    {
+      "input": "frac(a",
+      "render": "\\frac{a}{}"
+    },
+    {
+      "input": "text(",
+      "render": "\\text{}"
+    },
+    {
+      "input": "sqrt(",
+      "render": "\\sqrt{}"
+    },
+    {
+      "input": "root(3)(",
+      "render": "\\sqrt[3]{}"
+    },
+    {
+      "input": "\"",
+      "render": "\\text{}"
+    },
+    {
+      "input": "{:",
+      "render": "\\left.  "
+    },
+    {
+      "input": "))))",
+      "render": ") ) ) )"
+    },
+    {
+      "input": "~",
+      "render": "\\sptilde"
+    },
+    {
+      "input": "$",
+      "render": "\\mathdollar"
+    },
+    {
+      "input": "?",
+      "render": "?"
+    },
+    {
+      "input": "[a)",
+      "render": "[ a )"
+    },
+    {
+      "input": "(a]",
+      "render": "( a ]"
+    },
+    {
+      "input": "|a",
+      "render": "| a"
+    },
+    {
+      "input": "a|",
+      "render": "a |"
+    },
+    {
+      "input": "((((",
+      "render": "( ( ( (     "
+    },
+    {
+      "input": "{: x",
+      "render": "\\left. x "
+    },
+    {
+      "input": "x :}",
+      "render": "x \\right."
+    },
+    {
+      "input": "",
+      "error": "render",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": " ",
+      "error": "render",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": "\"P{acute}\"",
+      "render": "\\acute"
+    },
+    {
+      "input": "\"P{ballotx}\"",
+      "render": "\\ballotx"
+    },
+    {
+      "input": "&#x21b9;",
+      "render": "\\barleftarrowrightarrowba"
+    },
+    {
+      "input": "&#x2943;",
+      "render": "\\leftarrowshortrightarrow"
+    },
+    {
+      "input": "&#x2950;",
+      "render": "\\leftrightharpoondowndown"
+    },
+    {
+      "input": "&#x2942;",
+      "render": "\\rightarrowshortleftarrow"
+    },
+    {
+      "input": "&#x2944;",
+      "render": "\\shortrightarrowleftarrow"
+    },
+    {
+      "input": "&#x27e3;",
+      "render": "\\concavediamondtickright"
+    },
+    {
+      "input": "&#x296f;",
+      "render": "\\downupharpoonsleftright"
+    },
+    {
+      "input": "&#x25db;",
+      "render": "\\invwhitelowerhalfcircle"
+    },
+    {
+      "input": "&#x25da;",
+      "render": "\\invwhiteupperhalfcircle"
+    },
+    {
+      "input": "&#x2918;",
+      "render": "\\nVtwoheadrightarrowtail"
+    },
+    {
+      "input": "&#x25b8;",
+      "render": "\\smallblacktriangleright"
+    },
+    {
+      "input": "&#x294f;",
+      "render": "\\updownharpoonrightright"
+    },
+    {
+      "input": "&#x296e;",
+      "render": "\\updownharpoonsleftright"
+    },
+    {
+      "input": "&#x25d5;",
+      "render": "\\blackcircleulquadwhite"
+    },
+    {
+      "input": "&#x27e2;",
+      "render": "\\concavediamondtickleft"
+    },
+    {
+      "input": "&#x29e9;",
+      "render": "\\downtrianglerightblack"
+    },
+    {
+      "input": "&#x21ff;",
+      "render": "\\leftrightarrowtriangle"
+    },
+    {
+      "input": "&#x294b;",
+      "render": "\\leftrightharpoondownup"
+    },
+    {
+      "input": "&#x294a;",
+      "render": "\\leftrightharpoonupdown"
+    },
+    {
+      "input": "&#x2b3d;",
+      "render": "\\nVtwoheadleftarrowtail"
+    },
+    {
+      "input": "&#x2aa3;",
+      "render": "\\partialmeetcontraction"
+    },
+    {
+      "input": "&#x25c2;",
+      "render": "\\smallblacktriangleleft"
+    },
+    {
+      "input": "&#x294d;",
+      "render": "\\updownharpoonleftright"
+    },
+    {
+      "input": "&#x294c;",
+      "render": "\\updownharpoonrightleft"
+    },
+    {
+      "input": "&#x21b8;",
+      "render": "\\barovernorthwestarrow"
+    },
+    {
+      "input": "&#x29ea;",
+      "render": "\\blackdiamonddownarrow"
+    },
+    {
+      "input": "&#x25d2;",
+      "render": "\\circlebottomhalfblack"
+    },
+    {
+      "input": "&#x2a50;",
+      "render": "\\closedvarcupsmashprod"
+    },
+    {
+      "input": "&#x2965;",
+      "render": "\\downharpoonsleftright"
+    },
+    {
+      "input": "&#x29e8;",
+      "render": "\\downtriangleleftblack"
+    },
+    {
+      "input": "&#x2967;",
+      "render": "\\leftrightharpoonsdown"
+    },
+    {
+      "input": "&#x237c;",
+      "render": "\\rangledownzigzagarrow"
+    },
+    {
+      "input": "&#x2969;",
+      "render": "\\rightleftharpoonsdown"
+    },
+    {
+      "input": "&#x20ec;",
+      "render": "\\underrightharpoondown"
+    },
+    {
+      "input": "&#x2951;",
+      "render": "\\updownharpoonleftleft"
+    },
+    {
+      "input": "&#x2920;",
+      "render": "\\barrightarrowdiamond"
+    },
+    {
+      "input": "&#x25bc;",
+      "render": "\\bigblacktriangledown"
+    },
+    {
+      "input": "&#x29ed;",
+      "render": "\\blackcircledownarrow"
+    },
+    {
+      "input": "&#x2688;",
+      "render": "\\blackcircledrightdot"
+    },
+    {
+      "input": "&#x25d7;",
+      "render": "\\blackrighthalfcircle"
+    },
+    {
+      "input": "&#x293c;",
+      "render": "\\curvearrowrightminus"
+    },
+    {
+      "input": "&#x296d;",
+      "render": "\\dashrightharpoondown"
+    },
+    {
+      "input": "&#x2935;",
+      "render": "\\downrightcurvedarrow"
+    },
+    {
+      "input": "&#x2948;",
+      "render": "\\leftrightarrowcircle"
+    },
+    {
+      "input": "&#x294e;",
+      "render": "\\leftrightharpoonupup"
+    },
+    {
+      "input": "&#x2b48;",
+      "render": "\\rightarrowbackapprox"
+    },
+    {
+      "input": "&#x2937;",
+      "render": "\\rightdowncurvedarrow"
+    },
+    {
+      "input": "&#x2b3b;",
+      "render": "\\twoheadleftarrowtail"
+    },
+    {
+      "input": "&#x2949;",
+      "render": "\\twoheaduparrowcircle"
+    },
+    {
+      "input": "&#x20ed;",
+      "render": "\\underleftharpoondown"
+    },
+    {
+      "input": "&#x27c1;",
+      "render": "\\whiteinwhitetriangle"
+    },
+    {
+      "input": "&#x27e5;",
+      "render": "\\whitesquaretickright"
+    },
+    {
+      "input": "&#x295d;",
+      "render": "\\bardownharpoonright"
+    },
+    {
+      "input": "&#x295f;",
+      "render": "\\barrightharpoondown"
+    },
+    {
+      "input": "&#x2689;",
+      "render": "\\blackcircledtwodots"
+    },
+    {
+      "input": "&#x25c8;",
+      "render": "\\blackinwhitediamond"
+    },
+    {
+      "input": "&#x25d6;",
+      "render": "\\blacklefthalfcircle"
+    },
+    {
+      "input": "&#x2593;",
+      "render": "\\blockthreeqtrshaded"
+    },
+    {
+      "input": "&#x296b;",
+      "render": "\\dashleftharpoondown"
+    },
+    {
+      "input": "&#x291f;",
+      "render": "\\diamondleftarrowbar"
+    },
+    {
+      "input": "&#x2955;",
+      "render": "\\downharpoonrightbar"
+    },
+    {
+      "input": "&#x2b42;",
+      "render": "\\leftarrowbackapprox"
+    },
+    {
+      "input": "&#x2936;",
+      "render": "\\leftdowncurvedarrow"
+    },
+    {
+      "input": "&#x2966;",
+      "render": "\\leftrightharpoonsup"
+    },
+    {
+      "input": "&#x21ad;",
+      "render": "\\leftrightsquigarrow"
+    },
+    {
+      "input": "&#x27ff;",
+      "render": "\\iff"
+    },
+    {
+      "input": "&#x2901;",
+      "render": "\\nVtwoheadrightarrow"
+    },
+    {
+      "input": "&#x2900;",
+      "render": "\\nvtwoheadrightarrow"
+    },
+    {
+      "input": "&#x2957;",
+      "render": "\\rightharpoondownbar"
+    },
+    {
+      "input": "&#x2964;",
+      "render": "\\rightharpoonsupdown"
+    },
+    {
+      "input": "&#x2968;",
+      "render": "\\rightleftharpoonsup"
+    },
+    {
+      "input": "&#x2b37;",
+      "render": "\\twoheadleftdbkarrow"
+    },
+    {
+      "input": "&#x2963;",
+      "render": "\\upharpoonsleftright"
+    },
+    {
+      "input": "&#x21ea;",
+      "render": "\\whitearrowupfrombar"
+    },
+    {
+      "input": "&#x27e4;",
+      "render": "\\whitesquaretickleft"
+    },
+    {
+      "input": "&#xa0;&#xa0;&#xa0;&#xa0;",
+      "render": "\\qquad"
+    },
+    {
+      "input": "&#x27fa;",
+      "render": "\\Longleftrightarrow"
+    },
+    {
+      "input": "&#x227c;",
+      "render": "\\PrecedesSlantEqual"
+    },
+    {
+      "input": "&#x227d;",
+      "render": "\\SucceedsSlantEqual"
+    },
+    {
+      "input": "&#x21ba;",
+      "render": "\\acwopencirclearrow"
+    },
+    {
+      "input": "&#x2961;",
+      "render": "\\bardownharpoonleft"
+    },
+    {
+      "input": "&#x2956;",
+      "render": "\\barleftharpoondown"
+    },
+    {
+      "input": "&#x25b2;",
+      "render": "\\bigblacktriangleup"
+    },
+    {
+      "input": "&#x25a3;",
+      "render": "\\blackinwhitesquare"
+    },
+    {
+      "input": "&#x2b47;",
+      "render": "\\bsimilarrightarrow"
+    },
+    {
+      "input": "&#x293f;",
+      "render": "\\ccwundercurvearrow"
+    },
+    {
+      "input": "&#x29be;",
+      "render": "\\circledwhitebullet"
+    },
+    {
+      "input": "&#x21f4;",
+      "render": "\\circleonrightarrow"
+    },
+    {
+      "input": "&#x25d3;",
+      "render": "\\circletophalfblack"
+    },
+    {
+      "input": "&#x293d;",
+      "render": "\\curvearrowleftplus"
+    },
+    {
+      "input": "&#x2959;",
+      "render": "\\downharpoonleftbar"
+    },
+    {
+      "input": "&#x29f1;",
+      "render": "\\errbarblackdiamond"
+    },
+    {
+      "input": "&#x25d9;",
+      "render": "\\inversewhitecircle"
+    },
+    {
+      "input": "&#x295e;",
+      "render": "\\leftharpoondownbar"
+    },
+    {
+      "input": "&#x2962;",
+      "render": "\\leftharpoonsupdown"
+    },
+    {
+      "input": "&#x2b33;",
+      "render": "\\longleftsquigarrow"
+    },
+    {
+      "input": "&#x22be;",
+      "render": "\\measuredrightangle"
+    },
+    {
+      "input": "&#x2b35;",
+      "render": "\\nVtwoheadleftarrow"
+    },
+    {
+      "input": "&#x20e1;",
+      "render": "\\overleftrightarrow"
+    },
+    {
+      "input": "&#x25b0;",
+      "render": "\\parallelogramblack"
+    },
+    {
+      "input": "&#x2b4c;",
+      "render": "\\rightarrowbsimilar"
+    },
+    {
+      "input": "&#x21fe;",
+      "render": "\\rightarrowtriangle"
+    },
+    {
+      "input": "&#x20d1;",
+      "render": "\\rightharpoonaccent"
+    },
+    {
+      "input": "&#x296c;",
+      "render": "\\rightharpoonupdash"
+    },
+    {
+      "input": "&#x2b53;",
+      "render": "\\rightpentagonblack"
+    },
+    {
+      "input": "&#x25b9;",
+      "render": "\\smalltriangleright"
+    },
+    {
+      "input": "&#x25ee;",
+      "render": "\\trianglerightblack"
+    },
+    {
+      "input": "&#x21c2;",
+      "render": "\\upharpoonrightdown"
+    },
+    {
+      "input": "&#x27f2;",
+      "render": "\\acwgapcirclearrow"
+    },
+    {
+      "input": "&#x295b;",
+      "render": "\\barrightharpoonup"
+    },
+    {
+      "input": "&#x2954;",
+      "render": "\\barupharpoonright"
+    },
+    {
+      "input": "&#x25ba;",
+      "render": "\\blackpointerright"
+    },
+    {
+      "input": "&#x25be;",
+      "render": "\\blacktriangledown"
+    },
+    {
+      "input": "&#x2b41;",
+      "render": "\\bsimilarleftarrow"
+    },
+    {
+      "input": "&#x2b30;",
+      "render": "\\circleonleftarrow"
+    },
+    {
+      "input": "&#x25d4;",
+      "render": "\\circleurquadblack"
+    },
+    {
+      "input": "&#x21bb;",
+      "render": "\\cwopencirclearrow"
+    },
+    {
+      "input": "&#x293e;",
+      "render": "\\cwundercurvearrow"
+    },
+    {
+      "input": "&#x2b17;",
+      "render": "\\diamondrightblack"
+    },
+    {
+      "input": "&#x29f3;",
+      "render": "\\errbarblackcircle"
+    },
+    {
+      "input": "&#x29ef;",
+      "render": "\\errbarblacksquare"
+    },
+    {
+      "input": "&#x223b;",
+      "render": "\\kernelcontraction"
+    },
+    {
+      "input": "&#x2b4b;",
+      "render": "\\leftarrowbsimilar"
+    },
+    {
+      "input": "&#x21fd;",
+      "render": "\\leftarrowtriangle"
+    },
+    {
+      "input": "&#x296a;",
+      "render": "\\leftharpoonupdash"
+    },
+    {
+      "input": "&#x21cb;",
+      "render": "\\leftrightharpoons"
+    },
+    {
+      "input": "&#x299b;",
+      "render": "\\measuredangleleft"
+    },
+    {
+      "input": "&#x291e;",
+      "render": "\\rightarrowdiamond"
+    },
+    {
+      "input": "&#x27f4;",
+      "render": "\\rightarrowonoplus"
+    },
+    {
+      "input": "&#x2974;",
+      "render": "\\rightarrowsimilar"
+    },
+    {
+      "input": "&#x2953;",
+      "render": "\\rightharpoonupbar"
+    },
+    {
+      "input": "&#x21cc;",
+      "render": "\\rightleftharpoons"
+    },
+    {
+      "input": "&#x2972;",
+      "render": "\\similarrightarrow"
+    },
+    {
+      "input": "&#x25bf;",
+      "render": "\\smalltriangledown"
+    },
+    {
+      "input": "&#x25c3;",
+      "render": "\\smalltriangleleft"
+    },
+    {
+      "input": "&#x25ed;",
+      "render": "\\triangleleftblack"
+    },
+    {
+      "input": "&#x21c3;",
+      "render": "\\upharpoonleftdown"
+    },
+    {
+      "input": "&#x295c;",
+      "render": "\\upharpoonrightbar"
+    },
+    {
+      "input": "&#x2934;",
+      "render": "\\uprightcurvearrow"
+    },
+    {
+      "input": "&#x23ce;",
+      "render": "\\varcarriagereturn"
+    },
+    {
+      "input": "&#x2306;",
+      "render": "\\vardoublebarwedge"
+    },
+    {
+      "input": "&#x232c;",
+      "render": "\\varhexagonlrbonds"
+    },
+    {
+      "input": "&#x25bb;",
+      "render": "\\whitepointerright"
+    },
+    {
+      "input": "&#x2348;",
+      "render": "\\APLrightarrowbox"
+    },
+    {
+      "input": "&#x22eb;",
+      "render": "\\NotRightTriangle"
+    },
+    {
+      "input": "&#x29d0;",
+      "render": "\\RightTriangleBar"
+    },
+    {
+      "input": "=>",
+      "render": "\\Rightarrow"
+    },
+    {
+      "input": "&#x293b;",
+      "render": "\\acwunderarcarrow"
+    },
+    {
+      "input": "&#x2952;",
+      "render": "\\barleftharpoonup"
+    },
+    {
+      "input": "&#x2958;",
+      "render": "\\barupharpoonleft"
+    },
+    {
+      "input": "&#x25c4;",
+      "render": "\\blackpointerleft"
+    },
+    {
+      "input": "&#x27f3;",
+      "render": "\\cwgapcirclearrow"
+    },
+    {
+      "input": "&#x291d;",
+      "render": "\\diamondleftarrow"
+    },
+    {
+      "input": "&#x2b16;",
+      "render": "\\diamondleftblack"
+    },
+    {
+      "input": "&#x21f5;",
+      "render": "\\downarrowuparrow"
+    },
+    {
+      "input": "&#x2b32;",
+      "render": "\\leftarrowonoplus"
+    },
+    {
+      "input": "&#x2973;",
+      "render": "\\leftarrowsimilar"
+    },
+    {
+      "input": "&#x295a;",
+      "render": "\\leftharpoonupbar"
+    },
+    {
+      "input": "&#x22b6;",
+      "render": "\\multimapdotbothA"
+    },
+    {
+      "input": "&#x22b7;",
+      "render": "\\multimapdotbothB"
+    },
+    {
+      "input": "&#x2915;",
+      "render": "\\nVrightarrowtail"
+    },
+    {
+      "input": "&#x22ed;",
+      "render": "\\ntrianglerighteq"
+    },
+    {
+      "input": "&#x2904;",
+      "render": "\\nvLeftrightarrow"
+    },
+    {
+      "input": "&#x2914;",
+      "render": "\\nvrightarrowtail"
+    },
+    {
+      "input": "&#x2233;",
+      "render": "\\ointctrclockwise"
+    },
+    {
+      "input": "&#x2975;",
+      "render": "\\rightarrowapprox"
+    },
+    {
+      "input": "&#x2b44;",
+      "render": "\\rightarrowsupset"
+    },
+    {
+      "input": "&#x2933;",
+      "render": "\\leadsto"
+    },
+    {
+      "input": "&#x21c1;",
+      "render": "\\rightharpoondown"
+    },
+    {
+      "input": "&#x21c9;",
+      "render": "\\rightrightarrows"
+    },
+    {
+      "input": "&#x21f6;",
+      "render": "\\rightthreearrows"
+    },
+    {
+      "input": "&#x2b49;",
+      "render": "\\similarleftarrow"
+    },
+    {
+      "input": "&#x29a1;",
+      "render": "\\sphericalangleup"
+    },
+    {
+      "input": "&#x25e8;",
+      "render": "\\squarerightblack"
+    },
+    {
+      "input": "&#x21a1;",
+      "render": "\\twoheaddownarrow"
+    },
+    {
+      "input": "&#x219e;",
+      "render": "\\twoheadleftarrow"
+    },
+    {
+      "input": "&#x21c5;",
+      "render": "\\uparrowdownarrow"
+    },
+    {
+      "input": "&#x2960;",
+      "render": "\\upharpoonleftbar"
+    },
+    {
+      "input": "&#x2232;",
+      "render": "\\varointclockwise"
+    },
+    {
+      "input": "&#x22b3;",
+      "render": "\\vartriangleright"
+    },
+    {
+      "input": "&#x25c5;",
+      "render": "\\whitepointerleft"
+    },
+    {
+      "input": ">->>",
+      "render": "\\twoheadrightarrowtail"
+    },
+    {
+      "input": "&#x2357;",
+      "render": "\\APLdownarrowbox"
+    },
+    {
+      "input": "&#x2347;",
+      "render": "\\APLleftarrowbox"
+    },
+    {
+      "input": "&#x2340;",
+      "render": "\\APLnotbackslash"
+    },
+    {
+      "input": "&#x29cf;",
+      "render": "\\LeftTriangleBar"
+    },
+    {
+      "input": "&#x2275;",
+      "render": "\\NotGreaterTilde"
+    },
+    {
+      "input": "&#x22ea;",
+      "render": "\\NotLeftTriangle"
+    },
+    {
+      "input": "&#x2939;",
+      "render": "\\acwleftarcarrow"
+    },
+    {
+      "input": "&#x293a;",
+      "render": "\\acwoverarcarrow"
+    },
+    {
+      "input": "&#x25bd;",
+      "render": "\\bigtriangledown"
+    },
+    {
+      "input": "&#x2a1e;",
+      "render": "\\bigtriangleleft"
+    },
+    {
+      "input": "&#x25b4;",
+      "render": "\\blacktriangleup"
+    },
+    {
+      "input": "&#x2592;",
+      "render": "\\blockhalfshaded"
+    },
+    {
+      "input": "&#x29ec;",
+      "render": "\\circledownarrow"
+    },
+    {
+      "input": "&#x29b7;",
+      "render": "\\circledparallel"
+    },
+    {
+      "input": "&#x2686;",
+      "render": "\\circledrightdot"
+    },
+    {
+      "input": "&#x21b7;",
+      "render": "\\curvearrowright"
+    },
+    {
+      "input": "&#x2938;",
+      "render": "\\cwrightarcarrow"
+    },
+    {
+      "input": "&#x2b19;",
+      "render": "\\diamondbotblack"
+    },
+    {
+      "input": "&#x2b18;",
+      "render": "\\diamondtopblack"
+    },
+    {
+      "input": "&#x2908;",
+      "render": "\\downarrowbarred"
+    },
+    {
+      "input": "&#x21af;",
+      "render": "\\downzigzagarrow"
+    },
+    {
+      "input": "&#x20e4;",
+      "render": "\\enclosetriangle"
+    },
+    {
+      "input": "&#x2025;",
+      "render": "\\enleadertwodots"
+    },
+    {
+      "input": "&#x2971;",
+      "render": "\\equalrightarrow"
+    },
+    {
+      "input": "&#x25ac;",
+      "render": "\\hrectangleblack"
+    },
+    {
+      "input": "&#x2b4a;",
+      "render": "\\leftarrowapprox"
+    },
+    {
+      "input": "&#x297a;",
+      "render": "\\leftarrowsubset"
+    },
+    {
+      "input": "&#x2b3f;",
+      "render": "\\leftcurvedarrow"
+    },
+    {
+      "input": "&#x21bd;",
+      "render": "\\leftharpoondown"
+    },
+    {
+      "input": "&#x21c6;",
+      "render": "\\leftrightarrows"
+    },
+    {
+      "input": "&#x2b31;",
+      "render": "\\leftthreearrows"
+    },
+    {
+      "input": "&#x25e3;",
+      "render": "\\llblacktriangle"
+    },
+    {
+      "input": "&#x25e2;",
+      "render": "\\lrblacktriangle"
+    },
+    {
+      "input": "&#x29af;",
+      "render": "\\measangledltosw"
+    },
+    {
+      "input": "&#x29ae;",
+      "render": "\\measangledrtose"
+    },
+    {
+      "input": "&#x29ab;",
+      "render": "\\measangleldtosw"
+    },
+    {
+      "input": "&#x29a9;",
+      "render": "\\measanglelutonw"
+    },
+    {
+      "input": "&#x29aa;",
+      "render": "\\measanglerdtose"
+    },
+    {
+      "input": "&#x29a8;",
+      "render": "\\measanglerutone"
+    },
+    {
+      "input": "&#x29ad;",
+      "render": "\\measangleultonw"
+    },
+    {
+      "input": "&#x29ac;",
+      "render": "\\measangleurtone"
+    },
+    {
+      "input": "&#x21ce;",
+      "render": "\\nLeftrightarrow"
+    },
+    {
+      "input": "&#x2b3a;",
+      "render": "\\nVleftarrowtail"
+    },
+    {
+      "input": "&#x22ec;",
+      "render": "\\ntrianglelefteq"
+    },
+    {
+      "input": "&#x21c4;",
+      "render": "\\rightleftarrows"
+    },
+    {
+      "input": "&#x21dd;",
+      "render": "\\rightsquigarrow"
+    },
+    {
+      "input": "&#x22cc;",
+      "render": "\\rightthreetimes"
+    },
+    {
+      "input": "&#x21e8;",
+      "render": "\\rightwhitearrow"
+    },
+    {
+      "input": "&#x25b5;",
+      "render": "\\smalltriangleup"
+    },
+    {
+      "input": "&#x25a9;",
+      "render": "\\squarecrossfill"
+    },
+    {
+      "input": "&#x25e7;",
+      "render": "\\squareleftblack"
+    },
+    {
+      "input": "&#x22b5;",
+      "render": "\\trianglerighteq"
+    },
+    {
+      "input": "&#x2b36;",
+      "render": "\\twoheadmapsfrom"
+    },
+    {
+      "input": "&#x25e4;",
+      "render": "\\ulblacktriangle"
+    },
+    {
+      "input": "&#x20ef;",
+      "render": "\\underrightarrow"
+    },
+    {
+      "input": "...",
+      "render": "\\ldots"
+    },
+    {
+      "input": "&#x29bd;",
+      "render": "\\uparrowoncircle"
+    },
+    {
+      "input": "&#x21bf;",
+      "render": "\\upharpoonleftup"
+    },
+    {
+      "input": "&#x25e5;",
+      "render": "\\urblacktriangle"
+    },
+    {
+      "input": "&#x2b22;",
+      "render": "\\varhexagonblack"
+    },
+    {
+      "input": "&#x22b2;",
+      "render": "\\vartriangleleft"
+    },
+    {
+      "input": "&#x25ae;",
+      "render": "\\vrectangleblack"
+    },
+    {
+      "input": "&#x20e9;",
+      "render": "\\widebridgeabove"
+    },
+    {
+      "input": "&#x2370;",
+      "render": "\\APLboxquestion"
+    },
+    {
+      "input": "&#x27fd;",
+      "render": "\\Longmappedfrom"
+    },
+    {
+      "input": "&#x27f9;",
+      "render": "\\Longrightarrow"
+    },
+    {
+      "input": "&#x2279;",
+      "render": "\\NotGreaterLess"
+    },
+    {
+      "input": "&#x2940;",
+      "render": "\\acwcirclearrow"
+    },
+    {
+      "input": "&#x2a58;",
+      "render": "\\bigslopedwedge"
+    },
+    {
+      "input": "&#x29d7;",
+      "render": "\\blackhourglass"
+    },
+    {
+      "input": "&#x2591;",
+      "render": "\\blockqtrshaded"
+    },
+    {
+      "input": "&#x2590;",
+      "render": "\\blockrighthalf"
+    },
+    {
+      "input": "&#x21b5;",
+      "render": "\\carriagereturn"
+    },
+    {
+      "input": "&#x2687;",
+      "render": "\\circledtwodots"
+    },
+    {
+      "input": "&#x25cd;",
+      "render": "\\circlevertfill"
+    },
+    {
+      "input": "&#x27e1;",
+      "render": "\\concavediamond"
+    },
+    {
+      "input": "&#x21e0;",
+      "render": "\\dashleftarrow"
+    },
+    {
+      "input": "&#x21eb;",
+      "render": "\\text{P[dasharrowright]}"
+    },
+    {
+      "input": "&#x21e2;",
+      "render": "\\dashrightarrow"
+    },
+    {
+      "input": "&#x2a5e;",
+      "render": "\\doublebarwedge"
+    },
+    {
+      "input": "&#x21ca;",
+      "render": "\\downdownarrows"
+    },
+    {
+      "input": "&#x21e9;",
+      "render": "\\downwhitearrow"
+    },
+    {
+      "input": "&#x20df;",
+      "render": "\\enclosediamond"
+    },
+    {
+      "input": "&#x2b40;",
+      "render": "\\equalleftarrow"
+    },
+    {
+      "input": "&#x292f;",
+      "render": "\\fdiagovnearrow"
+    },
+    {
+      "input": "&#x23af;",
+      "render": "\\hline"
+    },
+    {
+      "input": "&#x21aa;",
+      "render": "\\hookrightarrow"
+    },
+    {
+      "input": "&#x23a2;",
+      "render": "\\lbrackextender"
+    },
+    {
+      "input": "&#x21c7;",
+      "render": "\\leftleftarrows"
+    },
+    {
+      "input": "&#x21dc;",
+      "render": "\\leftsquigarrow"
+    },
+    {
+      "input": "&#x22cb;",
+      "render": "\\leftthreetimes"
+    },
+    {
+      "input": "&#x21e6;",
+      "render": "\\leftwhitearrow"
+    },
+    {
+      "input": "&#x21ac;",
+      "render": "\\looparrowright"
+    },
+    {
+      "input": "&#x239c;",
+      "render": "\\lparenextender"
+    },
+    {
+      "input": "&#x25c6;",
+      "render": "\\mdlgblkdiamond"
+    },
+    {
+      "input": "&#x29eb;",
+      "render": "\\mdlgblklozenge"
+    },
+    {
+      "input": "&#x25ca;",
+      "render": "\\mdlgwhtlozenge"
+    },
+    {
+      "input": "&#x315;",
+      "render": "\\ocommatopright"
+    },
+    {
+      "input": "&#x23a5;",
+      "render": "\\rbrackextender"
+    },
+    {
+      "input": "&#x2930;",
+      "render": "\\rdiagovsearrow"
+    },
+    {
+      "input": "&#x299d;",
+      "render": "\\rightanglemdot"
+    },
+    {
+      "input": "&#x2945;",
+      "render": "\\rightarrowplus"
+    },
+    {
+      "input": "&#x21c0;",
+      "render": "\\rightharpoonup"
+    },
+    {
+      "input": "&#x27d6;",
+      "render": "\\rightouterjoin"
+    },
+    {
+      "input": "&#x219d;",
+      "render": "\\rightwavearrow"
+    },
+    {
+      "input": "&#x239f;",
+      "render": "\\rparenextender"
+    },
+    {
+      "input": "&#x2222;",
+      "render": "\\sphericalangle"
+    },
+    {
+      "input": "&#x2b13;",
+      "render": "\\squarebotblack"
+    },
+    {
+      "input": "&#x25a8;",
+      "render": "\\squareneswfill"
+    },
+    {
+      "input": "&#x25a7;",
+      "render": "\\squarenwsefill"
+    },
+    {
+      "input": "&#x2b12;",
+      "render": "\\squaretopblack"
+    },
+    {
+      "input": "&#x22b4;",
+      "render": "\\trianglelefteq"
+    },
+    {
+      "input": "&#x29cd;",
+      "render": "\\triangleserifs"
+    },
+    {
+      "input": "&#x219f;",
+      "render": "\\twoheaduparrow"
+    },
+    {
+      "input": "&#x20ee;",
+      "render": "\\underleftarrow"
+    },
+    {
+      "input": "&#x21a8;",
+      "render": "\\updownarrowbar"
+    },
+    {
+      "input": "&#x21be;",
+      "render": "\\upharpoonright"
+    },
+    {
+      "input": "&#x2666;",
+      "render": "\\vardiamondsuit"
+    },
+    {
+      "input": "&#x23aa;",
+      "render": "\\vbraceextender"
+    },
+    {
+      "input": "&#x2a60;",
+      "render": "\\wedgedoublebar"
+    },
+    {
+      "input": "&#x2353;",
+      "render": "\\APLboxupcaret"
+    },
+    {
+      "input": "&#x2350;",
+      "render": "\\APLuparrowbox"
+    },
+    {
+      "input": "&#x2146;",
+      "render": "\\DifferentialD"
+    },
+    {
+      "input": "&#x26a5;",
+      "render": "\\Hermaphrodite"
+    },
+    {
+      "input": "&#x27f8;",
+      "render": "\\Longleftarrow"
+    },
+    {
+      "input": "&#x227e;",
+      "render": "\\PrecedesTilde"
+    },
+    {
+      "input": "&#x21e5;",
+      "render": "\\RightArrowBar"
+    },
+    {
+      "input": "&#x227f;",
+      "render": "\\SucceedsTilde"
+    },
+    {
+      "input": "&#x2506;",
+      "render": "\\bdtriplevdash"
+    },
+    {
+      "input": "&#x2afc;",
+      "render": "\\biginterleave"
+    },
+    {
+      "input": "&#x2aff;",
+      "render": "\\bigtalloblong"
+    },
+    {
+      "input": "/_\\",
+      "render": "\\bigtriangleup"
+    },
+    {
+      "input": "&#x258c;",
+      "render": "\\blocklefthalf"
+    },
+    {
+      "input": "&#x25e1;",
+      "render": "\\botsemicircle"
+    },
+    {
+      "input": "&#x29b8;",
+      "render": "\\circledbslash"
+    },
+    {
+      "input": "&#x29bf;",
+      "render": "\\circledbullet"
+    },
+    {
+      "input": "&#x2941;",
+      "render": "\\cwcirclearrow"
+    },
+    {
+      "input": "&#xc7;",
+      "render": "\\text{P[divideontimes]}"
+    },
+    {
+      "input": "&#x223a;",
+      "render": "\\dotsminusdots"
+    },
+    {
+      "input": "&#x21e3;",
+      "render": "\\downdasharrow"
+    },
+    {
+      "input": "&#x279b;",
+      "render": "\\draftingarrow"
+    },
+    {
+      "input": "&#x29b4;",
+      "render": "\\emptysetoarrl"
+    },
+    {
+      "input": "&#x29b2;",
+      "render": "\\emptysetocirc"
+    },
+    {
+      "input": "&#x20dd;",
+      "render": "\\enclosecircle"
+    },
+    {
+      "input": "&#x20de;",
+      "render": "\\enclosesquare"
+    },
+    {
+      "input": "&#x22d5;",
+      "render": "\\equalparallel"
+    },
+    {
+      "input": "&#x29f0;",
+      "render": "\\errbardiamond"
+    },
+    {
+      "input": "&#x2252;",
+      "render": "\\fallingdotseq"
+    },
+    {
+      "input": "&#x27d7;",
+      "render": "\\fullouterjoin"
+    },
+    {
+      "input": "&#x21a9;",
+      "render": "\\hookleftarrow"
+    },
+    {
+      "input": "&#x25d8;",
+      "render": "\\inversebullet"
+    },
+    {
+      "input": "&#x2977;",
+      "render": "\\leftarrowless"
+    },
+    {
+      "input": "&#x2946;",
+      "render": "\\leftarrowplus"
+    },
+    {
+      "input": "&#x21a2;",
+      "render": "\\leftarrowtail"
+    },
+    {
+      "input": "&#x21bc;",
+      "render": "\\leftharpoonup"
+    },
+    {
+      "input": "&#x27d5;",
+      "render": "\\leftouterjoin"
+    },
+    {
+      "input": "&#x219c;",
+      "render": "\\leftwavearrow"
+    },
+    {
+      "input": "&#x2987;",
+      "render": "\\llparenthesis"
+    },
+    {
+      "input": "&#x27f5;",
+      "render": "\\longleftarrow"
+    },
+    {
+      "input": "&#x25cf;",
+      "render": "\\mdlgblkcircle"
+    },
+    {
+      "input": "&#x25a0;",
+      "render": "\\mdlgblksquare"
+    },
+    {
+      "input": "square",
+      "render": "\\mdlgwhtsquare"
+    },
+    {
+      "input": "&#x2981;",
+      "render": "\\mdsmblkcircle"
+    },
+    {
+      "input": "&#x25fe;",
+      "render": "\\mdsmblksquare"
+    },
+    {
+      "input": "&#x26ac;",
+      "render": "\\mdsmwhtcircle"
+    },
+    {
+      "input": "&#x25fd;",
+      "render": "\\mdsmwhtsquare"
+    },
+    {
+      "input": "&#x2221;",
+      "render": "\\measuredangle"
+    },
+    {
+      "input": "&#x22e3;",
+      "render": "\\nsqsupseteq"
+    },
+    {
+      "input": "&#x20d6;",
+      "render": "\\overleftarrow"
+    },
+    {
+      "input": "&#x25b1;",
+      "render": "\\parallelogram"
+    },
+    {
+      "input": "&#x2b1f;",
+      "render": "\\pentagonblack"
+    },
+    {
+      "input": "&#x299c;",
+      "render": "\\rightanglesqr"
+    },
+    {
+      "input": "&#x2b43;",
+      "render": "\\rightarrowgtr"
+    },
+    {
+      "input": "&#x2911;",
+      "render": "\\rightdotarrow"
+    },
+    {
+      "input": "&#x297d;",
+      "render": "\\rightfishtail"
+    },
+    {
+      "input": "&#x2b54;",
+      "render": "\\rightpentagon"
+    },
+    {
+      "input": "&#x2988;",
+      "render": "\\rrparenthesis"
+    },
+    {
+      "input": "&#x2143;",
+      "render": "\\sansLmirrored"
+    },
+    {
+      "input": "&#x2adf;",
+      "render": "\\shortdowntack"
+    },
+    {
+      "input": "&#x2ade;",
+      "render": "\\shortlefttack"
+    },
+    {
+      "input": "&#x266c;",
+      "render": "\\sixteenthnote"
+    },
+    {
+      "input": "&#x2216;",
+      "render": "\\smallsetminus"
+    },
+    {
+      "input": "&#x2b15;",
+      "render": "\\squarellblack"
+    },
+    {
+      "input": "&#x25ea;",
+      "render": "\\squarelrblack"
+    },
+    {
+      "input": "&#x25e9;",
+      "render": "\\squareulblack"
+    },
+    {
+      "input": "&#x2b14;",
+      "render": "\\squareurblack"
+    },
+    {
+      "input": "&#x2af6;",
+      "render": "\\threedotcolon"
+    },
+    {
+      "input": "&#x20e8;",
+      "render": "\\threeunderdot"
+    },
+    {
+      "input": "&#x25e0;",
+      "render": "\\topsemicircle"
+    },
+    {
+      "input": "&#x2a3a;",
+      "render": "\\triangleminus"
+    },
+    {
+      "input": "&#x25b7;",
+      "render": "\\triangleright"
+    },
+    {
+      "input": "&#x2a3b;",
+      "render": "\\triangletimes"
+    },
+    {
+      "input": "&#x2905;",
+      "render": "\\twoheadmapsto"
+    },
+    {
+      "input": "&#x2909;",
+      "render": "\\uparrowbarred"
+    },
+    {
+      "input": "&#x3f6;",
+      "render": "\\backepsilon"
+    },
+    {
+      "input": "&#x22bf;",
+      "render": "\\varlrtriangle"
+    },
+    {
+      "input": "&#x2219;",
+      "render": "\\vysmblkcircle"
+    },
+    {
+      "input": "&#x2b1d;",
+      "render": "\\vysmblksquare"
+    },
+    {
+      "input": "@",
+      "render": "\\circ"
+    },
+    {
+      "input": "&#x2b1e;",
+      "render": "\\vysmwhtsquare"
+    },
+    {
+      "input": ":.",
+      "render": "\\therefore"
+    },
+    {
+      "input": "&#x29a6;",
+      "render": "\\wideangledown"
+    },
+    {
+      "input": "&#x2913;",
+      "render": "\\DownArrowBar"
+    },
+    {
+      "input": "&#x21e4;",
+      "render": "\\LeftArrowBar"
+    },
+    {
+      "input": "&#x2274;",
+      "render": "\\NotLessTilde"
+    },
+    {
+      "input": "&#x214a;",
+      "render": "\\PropertyLine"
+    },
+    {
+      "input": "&#x2907;",
+      "render": "\\Mapsto"
+    },
+    {
+      "input": "&#x2a57;",
+      "render": "\\bigslopedvee"
+    },
+    {
+      "input": "&#x2606;",
+      "render": "\\bigwhitestar"
+    },
+    {
+      "input": "&#x2584;",
+      "render": "\\blocklowhalf"
+    },
+    {
+      "input": "&#x229c;",
+      "render": "\\circledequal"
+    },
+    {
+      "input": "&#x25f5;",
+      "render": "\\circlellquad"
+    },
+    {
+      "input": "&#x25f6;",
+      "render": "\\circlelrquad"
+    },
+    {
+      "input": "&#x25f4;",
+      "render": "\\circleulquad"
+    },
+    {
+      "input": "&#x25f7;",
+      "render": "\\circleurquad"
+    },
+    {
+      "input": "&#x2a4d;",
+      "render": "\\closedvarcap"
+    },
+    {
+      "input": "&#x2a4c;",
+      "render": "\\closedvarcup"
+    },
+    {
+      "input": "&#x228c;",
+      "render": "\\cupleftarrow"
+    },
+    {
+      "input": "&#x273d;",
+      "render": "\\dingasterisk"
+    },
+    {
+      "input": "&#x25cc;",
+      "render": "\\dottedcircle"
+    },
+    {
+      "input": "&#x2b1a;",
+      "render": "\\dottedsquare"
+    },
+    {
+      "input": "&#x2a62;",
+      "render": "\\doublebarvee"
+    },
+    {
+      "input": "&#x297f;",
+      "render": "\\downfishtail"
+    },
+    {
+      "input": "&#x29b3;",
+      "render": "\\emptysetoarr"
+    },
+    {
+      "input": "&#x29b1;",
+      "render": "\\emptysetobar"
+    },
+    {
+      "input": "&#x2a9b;",
+      "render": "\\eqqslantless"
+    },
+    {
+      "input": "&#x29f2;",
+      "render": "\\errbarcircle"
+    },
+    {
+      "input": "&#x29ee;",
+      "render": "\\errbarsquare"
+    },
+    {
+      "input": "&#x292c;",
+      "render": "\\fdiagovrdiag"
+    },
+    {
+      "input": "&#x22b9;",
+      "render": "\\hermitmatrix"
+    },
+    {
+      "input": "&#x2b23;",
+      "render": "\\hexagonblack"
+    },
+    {
+      "input": "&#x2043;",
+      "render": "\\hyphenbullet"
+    },
+    {
+      "input": "&#x2231;",
+      "render": "\\intclockwise"
+    },
+    {
+      "input": "&#x263b;",
+      "render": "\\invsmileface"
+    },
+    {
+      "input": "&#x298f;",
+      "render": "\\lbracklltick"
+    },
+    {
+      "input": "&#x298d;",
+      "render": "\\lbrackultick"
+    },
+    {
+      "input": "&#x290e;",
+      "render": "\\leftdbkarrow"
+    },
+    {
+      "input": "&#x2b38;",
+      "render": "\\leftdotarrow"
+    },
+    {
+      "input": "&#x297c;",
+      "render": "\\leftfishtail"
+    },
+    {
+      "input": "&#x27cc;",
+      "render": "\\longdivision"
+    },
+    {
+      "input": "&#x27e0;",
+      "render": "\\lozengeminus"
+    },
+    {
+      "input": "&#x29e1;",
+      "render": "\\lrtriangleeq"
+    },
+    {
+      "input": "&#xa3;",
+      "render": "\\mathsterling"
+    },
+    {
+      "input": "&#x2b25;",
+      "render": "\\mdblkdiamond"
+    },
+    {
+      "input": "&#x2b27;",
+      "render": "\\mdblklozenge"
+    },
+    {
+      "input": "&#x2b26;",
+      "render": "\\mdwhtdiamond"
+    },
+    {
+      "input": "&#x2b28;",
+      "render": "\\mdwhtlozenge"
+    },
+    {
+      "input": "&#x2b51;",
+      "render": "\\medblackstar"
+    },
+    {
+      "input": "&#x2b50;",
+      "render": "\\medwhitestar"
+    },
+    {
+      "input": "&#x29df;",
+      "render": "\\multimapboth"
+    },
+    {
+      "input": "&#x21fb;",
+      "render": "\\nVrightarrow"
+    },
+    {
+      "input": "&#x22e0;",
+      "render": "\\npreccurlyeq"
+    },
+    {
+      "input": "&#x22e1;",
+      "render": "\\nsucccurlyeq"
+    },
+    {
+      "input": "&#x2903;",
+      "render": "\\nvRightarrow"
+    },
+    {
+      "input": "&#x21f8;",
+      "render": "\\nvrightarrow"
+    },
+    {
+      "input": "&#x29bc;",
+      "render": "\\odotslashdot"
+    },
+    {
+      "input": "&#x29c1;",
+      "render": "\\ogreaterthan"
+    },
+    {
+      "input": "&#x312;",
+      "render": "\\oturnedcomma"
+    },
+    {
+      "input": "&#x298e;",
+      "render": "\\rbracklrtick"
+    },
+    {
+      "input": "&#x2990;",
+      "render": "\\rbrackurtick"
+    },
+    {
+      "input": "&#x292b;",
+      "render": "\\rdiagovfdiag"
+    },
+    {
+      "input": "&#x29a5;",
+      "render": "\\revangleubar"
+    },
+    {
+      "input": "&#x290d;",
+      "render": "\\rightbkarrow"
+    },
+    {
+      "input": "&#x291c;",
+      "render": "\\rightdbltail"
+    },
+    {
+      "input": "&#x2253;",
+      "render": "\\risingdotseq"
+    },
+    {
+      "input": "&#x2b29;",
+      "render": "\\smblkdiamond"
+    },
+    {
+      "input": "&#x2b2a;",
+      "render": "\\smblklozenge"
+    },
+    {
+      "input": "diamond",
+      "render": "\\smwhtdiamond"
+    },
+    {
+      "input": "&#x2b2b;",
+      "render": "\\smwhtlozenge"
+    },
+    {
+      "input": "&#x25a6;",
+      "render": "\\squarehvfill"
+    },
+    {
+      "input": "&#x25f1;",
+      "render": "\\squarellquad"
+    },
+    {
+      "input": "&#x25f2;",
+      "render": "\\squarelrquad"
+    },
+    {
+      "input": "&#x25f0;",
+      "render": "\\squareulquad"
+    },
+    {
+      "input": "&#x25f3;",
+      "render": "\\squareurquad"
+    },
+    {
+      "input": "&#x2ac9;",
+      "render": "\\subsetapprox"
+    },
+    {
+      "input": "&#x2aca;",
+      "render": "\\supsetapprox"
+    },
+    {
+      "input": "&#x25ec;",
+      "render": "\\trianglecdot"
+    },
+    {
+      "input": "&#x25c1;",
+      "render": "\\triangleleft"
+    },
+    {
+      "input": "&#x29ca;",
+      "render": "\\triangleodot"
+    },
+    {
+      "input": "&#x2a39;",
+      "render": "\\triangleplus"
+    },
+    {
+      "input": "&#x29cb;",
+      "render": "\\triangleubar"
+    },
+    {
+      "input": "&#x23b5;",
+      "render": "\\underbracket"
+    },
+    {
+      "input": "cdots",
+      "render": "\\cdots"
+    },
+    {
+      "input": "&#x21e7;",
+      "render": "\\upwhitearrow"
+    },
+    {
+      "input": "&#x2665;",
+      "render": "\\varheartsuit"
+    },
+    {
+      "input": "&#x2664;",
+      "render": "\\varspadesuit"
+    },
+    {
+      "input": "&#x228a;",
+      "render": "\\varsubsetneq"
+    },
+    {
+      "input": "&#x2a63;",
+      "render": "\\veedoublebar"
+    },
+    {
+      "input": "&#x2a5a;",
+      "render": "\\wedgemidvert"
+    },
+    {
+      "input": "&#x2a55;",
+      "render": "\\wedgeonwedge"
+    },
+    {
+      "input": "->>",
+      "render": "\\twoheadrightarrow"
+    },
+    {
+      "input": "&#x233f;",
+      "render": "\\APLnotslash"
+    },
+    {
+      "input": "&#x2277;",
+      "render": "\\GreaterLess"
+    },
+    {
+      "input": "&#x210e;",
+      "render": "\\Planckconst"
+    },
+    {
+      "input": "&#x2b46;",
+      "render": "\\RRightarrow"
+    },
+    {
+      "input": "&#x2263;",
+      "render": "\\Equiv"
+    },
+    {
+      "input": "&#x2a53;",
+      "render": "\\Wedge"
+    },
+    {
+      "input": "&#x21d5;",
+      "render": "\\Updownarrow"
+    },
+    {
+      "input": "&#x224b;",
+      "render": "\\approxident"
+    },
+    {
+      "input": "&#x27a2;",
+      "render": "\\arrowbullet"
+    },
+    {
+      "input": "&#x20f0;",
+      "render": "\\asteraccent"
+    },
+    {
+      "input": "&#x2037;",
+      "render": "\\backtrprime"
+    },
+    {
+      "input": "&#x2713;",
+      "render": "\\ballotcheck"
+    },
+    {
+      "input": "&#x25fc;",
+      "render": "\\blacksquare"
+    },
+    {
+      "input": "&#x2b2c;",
+      "render": "\\blkhorzoval"
+    },
+    {
+      "input": "&#x2b2e;",
+      "render": "\\blkvertoval"
+    },
+    {
+      "input": "&#x2580;",
+      "render": "\\blockuphalf"
+    },
+    {
+      "input": "&#x2651;",
+      "render": "\\capricornus"
+    },
+    {
+      "input": "&#x2038;",
+      "render": "\\caretinsert"
+    },
+    {
+      "input": "&#x229a;",
+      "render": "\\circledcirc"
+    },
+    {
+      "input": "&#x229d;",
+      "render": "\\circleddash"
+    },
+    {
+      "input": "&#x29c0;",
+      "render": "\\circledless"
+    },
+    {
+      "input": "&#x272a;",
+      "render": "\\circledstar"
+    },
+    {
+      "input": "&#x29b6;",
+      "render": "\\circledvert"
+    },
+    {
+      "input": "&#x2259;",
+      "render": "\\corresponds"
+    },
+    {
+      "input": "&#x22de;",
+      "render": "\\curlyeqprec"
+    },
+    {
+      "input": "&#x22df;",
+      "render": "\\curlyeqsucc"
+    },
+    {
+      "input": "&#x27d0;",
+      "render": "\\diamondcdot"
+    },
+    {
+      "input": "&#x2a9c;",
+      "render": "\\eqqslantgtr"
+    },
+    {
+      "input": "&#x2a95;",
+      "render": "\\eqslantless"
+    },
+    {
+      "input": "&#x29e6;",
+      "render": "\\gleichstark"
+    },
+    {
+      "input": "&#x23ae;",
+      "render": "\\intextender"
+    },
+    {
+      "input": "&#x2349;",
+      "render": "\\invdiameter"
+    },
+    {
+      "input": "&#x29fc;",
+      "render": "\\lcurvyangle"
+    },
+    {
+      "input": "&#x290c;",
+      "render": "\\leftbkarrow"
+    },
+    {
+      "input": "&#x291b;",
+      "render": "\\leftdbltail"
+    },
+    {
+      "input": "&#x2b24;",
+      "render": "\\lgblkcircle"
+    },
+    {
+      "input": "&#x2b1b;",
+      "render": "\\lgblksquare"
+    },
+    {
+      "input": "&#x25ef;",
+      "render": "\\lgwhtcircle"
+    },
+    {
+      "input": "&#x2b1c;",
+      "render": "\\lgwhtsquare"
+    },
+    {
+      "input": "&#x26ab;",
+      "render": "\\mdblkcircle"
+    },
+    {
+      "input": "&#x26aa;",
+      "render": "\\mdwhtcircle"
+    },
+    {
+      "input": "&#x25fb;",
+      "render": "\\mdwhtsquare"
+    },
+    {
+      "input": "&#x2a5c;",
+      "render": "\\midbarwedge"
+    },
+    {
+      "input": "&#x27dc;",
+      "render": "\\multimapinv"
+    },
+    {
+      "input": "&#x21df;",
+      "render": "\\nHdownarrow"
+    },
+    {
+      "input": "&#x21cf;",
+      "render": "\\nRightarrow"
+    },
+    {
+      "input": "&#x2931;",
+      "render": "\\neovnwarrow"
+    },
+    {
+      "input": "&#x292e;",
+      "render": "\\neovsearrow"
+    },
+    {
+      "input": "&#x22e2;",
+      "render": "\\nsqsubseteq"
+    },
+    {
+      "input": "&#x2902;",
+      "render": "\\nvLeftarrow"
+    },
+    {
+      "input": "&#x2932;",
+      "render": "\\nwovnearrow"
+    },
+    {
+      "input": "&#x2a34;",
+      "render": "\\otimeslhrim"
+    },
+    {
+      "input": "&#x2a35;",
+      "render": "\\otimesrhrim"
+    },
+    {
+      "input": "&#x23b4;",
+      "render": "\\overbracket"
+    },
+    {
+      "input": "&#x2ab9;",
+      "render": "\\precnapprox"
+    },
+    {
+      "input": "&#x2669;",
+      "render": "\\quarternote"
+    },
+    {
+      "input": "&#x29fd;",
+      "render": "\\rcurvyangle"
+    },
+    {
+      "input": "&#x29b0;",
+      "render": "\\revemptyset"
+    },
+    {
+      "input": "&#x2947;",
+      "render": "\\rightarrowx"
+    },
+    {
+      "input": "&#x29f4;",
+      "render": "\\ruledelayed"
+    },
+    {
+      "input": "&#x2650;",
+      "render": "\\sagittarius"
+    },
+    {
+      "input": "&#x2142;",
+      "render": "\\sansLturned"
+    },
+    {
+      "input": "&#x292d;",
+      "render": "\\seovnearrow"
+    },
+    {
+      "input": "&#x2ae0;",
+      "render": "\\shortuptack"
+    },
+    {
+      "input": "&#x2a6c;",
+      "render": "\\simminussim"
+    },
+    {
+      "input": "&#x2022;",
+      "render": "\\smblkcircle"
+    },
+    {
+      "input": "&#x25aa;",
+      "render": "\\smblksquare"
+    },
+    {
+      "input": "&#x2b52;",
+      "render": "\\smwhitestar"
+    },
+    {
+      "input": "&#x25e6;",
+      "render": "\\smwhtcircle"
+    },
+    {
+      "input": "&#x25ab;",
+      "render": "\\smwhtsquare"
+    },
+    {
+      "input": "&#x22e4;",
+      "render": "\\sqsubsetneq"
+    },
+    {
+      "input": "&#x22e5;",
+      "render": "\\sqsupsetneq"
+    },
+    {
+      "input": "&#x25a4;",
+      "render": "\\squarehfill"
+    },
+    {
+      "input": "&#x25a5;",
+      "render": "\\squarevfill"
+    },
+    {
+      "input": "&#x2aba;",
+      "render": "\\succnapprox"
+    },
+    {
+      "input": "&#x27c0;",
+      "render": "\\threedangle"
+    },
+    {
+      "input": "&#x21e1;",
+      "render": "\\updasharrow"
+    },
+    {
+      "input": "&#x2305;",
+      "render": "\\varbarwedge"
+    },
+    {
+      "input": "&#x2667;",
+      "render": "\\varclubsuit"
+    },
+    {
+      "input": "&#x22f6;",
+      "render": "\\varisinobar"
+    },
+    {
+      "input": "&#x20d2;",
+      "render": "\\vertoverlay"
+    },
+    {
+      "input": "&#x2311;",
+      "render": "\\wasylozenge"
+    },
+    {
+      "input": "&#x2b2d;",
+      "render": "\\whthorzoval"
+    },
+    {
+      "input": "&#x2b2f;",
+      "render": "\\whtvertoval"
+    },
+    {
+      "input": "&#x29a7;",
+      "render": "\\wideangleup"
+    },
+    {
+      "input": "&#x235d;",
+      "render": "\\APLcomment"
+    },
+    {
+      "input": "&#x2611;",
+      "render": "\\CheckedBox"
+    },
+    {
+      "input": "&#x290b;",
+      "render": "\\Ddownarrow"
+    },
+    {
+      "input": "&#x2107;",
+      "render": "\\Eulerconst"
+    },
+    {
+      "input": "&#x2b45;",
+      "render": "\\LLeftarrow"
+    },
+    {
+      "input": "&#x27fe;",
+      "render": "\\Longmapsto"
+    },
+    {
+      "input": "&#x2906;",
+      "render": "\\Mappedfrom"
+    },
+    {
+      "input": "&#x2996;",
+      "render": "\\Rparenless"
+    },
+    {
+      "input": "&#x2912;",
+      "render": "\\UpArrowBar"
+    },
+    {
+      "input": "&#x2036;",
+      "render": "\\backdprime"
+    },
+    {
+      "input": "&#x2a47;",
+      "render": "\\capovercup"
+    },
+    {
+      "input": "&#x229b;",
+      "render": "\\circledast"
+    },
+    {
+      "input": "&#x29b5;",
+      "render": "\\circlehbar"
+    },
+    {
+      "input": "&#x2a29;",
+      "render": "\\commaminus"
+    },
+    {
+      "input": "&#x2201;",
+      "render": "\\complement"
+    },
+    {
+      "input": "&#x2332;",
+      "render": "\\conictaper"
+    },
+    {
+      "input": "&#x2a46;",
+      "render": "\\cupovercap"
+    },
+    {
+      "input": "&#x22cf;",
+      "render": "\\curlywedge"
+    },
+    {
+      "input": "&#x29fa;",
+      "render": "\\doubleplus"
+    },
+    {
+      "input": "&#x266a;",
+      "render": "\\eighthnote"
+    },
+    {
+      "input": "&#x2a96;",
+      "render": "\\eqslantgtr"
+    },
+    {
+      "input": "&#x2a69;",
+      "render": "\\equivVvert"
+    },
+    {
+      "input": "&#x221c;",
+      "render": "\\fourthroot"
+    },
+    {
+      "input": "&#x2a8c;",
+      "render": "\\gtreqqless"
+    },
+    {
+      "input": "&#x25ad;",
+      "render": "\\hrectangle"
+    },
+    {
+      "input": "&#x2af4;",
+      "render": "\\interleave"
+    },
+    {
+      "input": "&#x2997;",
+      "render": "\\lblkbrbrak"
+    },
+    {
+      "input": "&#x23a9;",
+      "render": "\\lbracelend"
+    },
+    {
+      "input": "&#x23a7;",
+      "render": "\\lbraceuend"
+    },
+    {
+      "input": "&#x23a3;",
+      "render": "\\lbracklend"
+    },
+    {
+      "input": "&#x298b;",
+      "render": "\\lbrackubar"
+    },
+    {
+      "input": "&#x23a1;",
+      "render": "\\lbrackuend"
+    },
+    {
+      "input": "&#x2b3e;",
+      "render": "\\leftarrowx"
+    },
+    {
+      "input": "&#x2a85;",
+      "render": "\\lessapprox"
+    },
+    {
+      "input": "&#x2a8b;",
+      "render": "\\lesseqqgtr"
+    },
+    {
+      "input": "&#x25fa;",
+      "render": "\\lltriangle"
+    },
+    {
+      "input": "&#x23b0;",
+      "render": "\\lmoustache"
+    },
+    {
+      "input": "&#x239d;",
+      "render": "\\lparenlend"
+    },
+    {
+      "input": "&#x2993;",
+      "render": "\\lparenless"
+    },
+    {
+      "input": "&#x239b;",
+      "render": "\\lparenuend"
+    },
+    {
+      "input": "&#x25ff;",
+      "render": "\\lrtriangle"
+    },
+    {
+      "input": "&#x21a4;",
+      "render": "\\mappedfrom"
+    },
+    {
+      "input": "&#x2a2b;",
+      "render": "\\minusfdots"
+    },
+    {
+      "input": "&#x2a2c;",
+      "render": "\\minusrdots"
+    },
+    {
+      "input": "&#x21cd;",
+      "render": "\\nLeftarrow"
+    },
+    {
+      "input": "#",
+      "render": "\\octothorpe"
+    },
+    {
+      "input": "&#x2a2d;",
+      "render": "\\opluslhrim"
+    },
+    {
+      "input": "&#x2a2e;",
+      "render": "\\oplusrhrim"
+    },
+    {
+      "input": "&#x2a27;",
+      "render": "\\plussubtwo"
+    },
+    {
+      "input": "&#x261e;",
+      "render": "\\pointright"
+    },
+    {
+      "input": "&#x3012;",
+      "render": "\\postalmark"
+    },
+    {
+      "input": "&#x2ab7;",
+      "render": "\\precapprox"
+    },
+    {
+      "input": "&#x2998;",
+      "render": "\\rblkbrbrak"
+    },
+    {
+      "input": "&#x23ad;",
+      "render": "\\rbracelend"
+    },
+    {
+      "input": "&#x23ab;",
+      "render": "\\rbraceuend"
+    },
+    {
+      "input": "&#x23a6;",
+      "render": "\\rbracklend"
+    },
+    {
+      "input": "&#x298c;",
+      "render": "\\rbrackubar"
+    },
+    {
+      "input": "&#x23a4;",
+      "render": "\\rbrackuend"
+    },
+    {
+      "input": "/_",
+      "render": "\\angle"
+    },
+    {
+      "input": "&#x2970;",
+      "render": "\\rightimply"
+    },
+    {
+      "input": "&#x2aa7;",
+      "render": "\\rightslice"
+    },
+    {
+      "input": "&#x23b1;",
+      "render": "\\rmoustache"
+    },
+    {
+      "input": "&#x23a0;",
+      "render": "\\rparenlend"
+    },
+    {
+      "input": "&#x239e;",
+      "render": "\\rparenuend"
+    },
+    {
+      "input": "&#x2a33;",
+      "render": "\\smashtimes"
+    },
+    {
+      "input": "&#x23b7;",
+      "render": "\\sqrtbottom"
+    },
+    {
+      "input": "&#x2291;",
+      "render": "\\sqsubseteq"
+    },
+    {
+      "input": "&#x2292;",
+      "render": "\\sqsupseteq"
+    },
+    {
+      "input": "&#x27c3;",
+      "render": "\\subsetcirc"
+    },
+    {
+      "input": "&#x2acb;",
+      "render": "\\subsetneqq"
+    },
+    {
+      "input": "&#x2abf;",
+      "render": "\\subsetplus"
+    },
+    {
+      "input": "&#x2ab8;",
+      "render": "\\succapprox"
+    },
+    {
+      "input": "&#x27c4;",
+      "render": "\\supsetcirc"
+    },
+    {
+      "input": "&#x2acc;",
+      "render": "\\supsetneqq"
+    },
+    {
+      "input": "&#x2ac0;",
+      "render": "\\supsetplus"
+    },
+    {
+      "input": "&#x2afe;",
+      "render": "\\talloblong"
+    },
+    {
+      "input": "&#x29fb;",
+      "render": "\\tripleplus"
+    },
+    {
+      "input": "&#x2129;",
+      "render": "\\turnediota"
+    },
+    {
+      "input": "&#x2017;",
+      "render": "\\twolowline"
+    },
+    {
+      "input": "&#x25f8;",
+      "render": "\\ultriangle"
+    },
+    {
+      "input": "&#x23dd;",
+      "render": "\\underparen"
+    },
+    {
+      "input": "&#x297e;",
+      "render": "\\upfishtail"
+    },
+    {
+      "input": "&#x3d9;",
+      "render": "\\koppa"
+    },
+    {
+      "input": "&#x21c8;",
+      "render": "\\upuparrows"
+    },
+    {
+      "input": "&#x3f4;",
+      "render": "\\upvarTheta"
+    },
+    {
+      "input": "&#x3f0;",
+      "render": "\\upvarkappa"
+    },
+    {
+      "input": "&#x3c2;",
+      "render": "\\upvarsigma"
+    },
+    {
+      "input": "&#x3d1;",
+      "render": "\\upvartheta"
+    },
+    {
+      "input": "&#x25f9;",
+      "render": "\\urtriangle"
+    },
+    {
+      "input": "&#x3b5;",
+      "render": "\\varepsilon"
+    },
+    {
+      "input": "&#x2b21;",
+      "render": "\\varhexagon"
+    },
+    {
+      "input": "O/",
+      "render": "\\varnothing"
+    },
+    {
+      "input": "&#x2a5b;",
+      "render": "\\veemidvert"
+    },
+    {
+      "input": "&#x2a59;",
+      "render": "\\veeonwedge"
+    },
+    {
+      "input": "&#x25af;",
+      "render": "\\vrectangle"
+    },
+    {
+      "input": "&#x330;",
+      "render": "\\wideutilde"
+    },
+    {
+      "input": "&#x212b;",
+      "render": "\\Angstroem"
+    },
+    {
+      "input": "&#x21d3;",
+      "render": "\\Downarrow"
+    },
+    {
+      "input": "&#x2995;",
+      "render": "\\Lparengtr"
+    },
+    {
+      "input": "&#x23e6;",
+      "render": "\\accurrent"
+    },
+    {
+      "input": "&",
+      "render": "\\&"
+    },
+    {
+      "input": "&#x29a4;",
+      "render": "\\angleubar"
+    },
+    {
+      "input": "&#x2a70;",
+      "render": "\\approxeqq"
+    },
+    {
+      "input": "&#x2035;",
+      "render": "\\backprime"
+    },
+    {
+      "input": "&#x22cd;",
+      "render": "\\backsimeq"
+    },
+    {
+      "input": "&#x22ff;",
+      "render": "\\bagmember"
+    },
+    {
+      "input": "&#x2a03;",
+      "render": "\\bigcupdot"
+    },
+    {
+      "input": "&#x2a02;",
+      "render": "\\bigotimes"
+    },
+    {
+      "input": "&#x2623;",
+      "render": "\\biohazard"
+    },
+    {
+      "input": "&#x2588;",
+      "render": "\\blockfull"
+    },
+    {
+      "input": "&#x29c5;",
+      "render": "\\boxbslash"
+    },
+    {
+      "input": "&#x29c7;",
+      "render": "\\boxcircle"
+    },
+    {
+      "input": "&#x2a49;",
+      "render": "\\capbarcup"
+    },
+    {
+      "input": "&#x2a07;",
+      "render": "\\conjquant"
+    },
+    {
+      "input": "&#x2a48;",
+      "render": "\\cupbarcap"
+    },
+    {
+      "input": "&#x27db;",
+      "render": "\\dashVdash"
+    },
+    {
+      "input": "&#x2239;",
+      "render": "\\dashcolon"
+    },
+    {
+      "input": "&#x2a08;",
+      "render": "\\disjquant"
+    },
+    {
+      "input": "&#x2a68;",
+      "render": "\\equivVert"
+    },
+    {
+      "input": "&#x2999;",
+      "render": "\\fourvdots"
+    },
+    {
+      "input": "&#x2044;",
+      "render": "\\fracslash"
+    },
+    {
+      "input": "&#x2061;",
+      "render": "\\text{P[funcapply]}"
+    },
+    {
+      "input": "&#x2afa;",
+      "render": "\\geqqslant"
+    },
+    {
+      "input": "&#x2a86;",
+      "render": "\\gtrapprox"
+    },
+    {
+      "input": "&#x22db;",
+      "render": "\\gtreqless"
+    },
+    {
+      "input": "&#x2a6f;",
+      "render": "\\hatapprox"
+    },
+    {
+      "input": "&#x2661;",
+      "render": "\\heartsuit"
+    },
+    {
+      "input": "&#x2924;",
+      "render": "\\hknearrow"
+    },
+    {
+      "input": "&#x2923;",
+      "render": "\\hknwarrow"
+    },
+    {
+      "input": "&#x29d6;",
+      "render": "\\hourglass"
+    },
+    {
+      "input": "&#x2206;",
+      "render": "\\increment"
+    },
+    {
+      "input": "&#x2321;",
+      "render": "\\intbottom"
+    },
+    {
+      "input": "&#x2991;",
+      "render": "\\langledot"
+    },
+    {
+      "input": "&#x23a8;",
+      "render": "\\lbracemid"
+    },
+    {
+      "input": "&#x2aa6;",
+      "render": "\\leftslice"
+    },
+    {
+      "input": "&#x2af9;",
+      "render": "\\leqqslant"
+    },
+    {
+      "input": "&#x22da;",
+      "render": "\\lesseqgtr"
+    },
+    {
+      "input": "&#x27de;",
+      "render": "\\longdashv"
+    },
+    {
+      "input": "&#x23b8;",
+      "render": "\\lvboxline"
+    },
+    {
+      "input": ":",
+      "render": ":"
+    },
+    {
+      "input": "&#x2236;",
+      "render": "\\mathratio"
+    },
+    {
+      "input": "//",
+      "render": "/"
+    },
+    {
+      "input": "&#x2a5d;",
+      "render": "\\midbarvee"
+    },
+    {
+      "input": "&#x2a0a;",
+      "render": "\\modtwosum"
+    },
+    {
+      "input": "&#x21de;",
+      "render": "\\nHuparrow"
+    },
+    {
+      "input": "&#x2922;",
+      "render": "\\neswarrow"
+    },
+    {
+      "input": "&#x2271;",
+      "render": "\\ngeqslant"
+    },
+    {
+      "input": "&#x2270;",
+      "render": "\\nleqslant"
+    },
+    {
+      "input": "&#x2226;",
+      "render": "\\nparallel"
+    },
+    {
+      "input": "&#x2288;",
+      "render": "\\nsubseteq"
+    },
+    {
+      "input": "&#x2921;",
+      "render": "\\nwsearrow"
+    },
+    {
+      "input": "&#x2a36;",
+      "render": "\\otimeshat"
+    },
+    {
+      "input": "&#x23dc;",
+      "render": "\\overparen"
+    },
+    {
+      "input": "del",
+      "render": "\\partial"
+    },
+    {
+      "input": "&#x22d4;",
+      "render": "\\pitchfork"
+    },
+    {
+      "input": "&#x2622;",
+      "render": "\\radiation"
+    },
+    {
+      "input": "&#x2992;",
+      "render": "\\rangledot"
+    },
+    {
+      "input": "&#x23ac;",
+      "render": "\\rbracemid"
+    },
+    {
+      "input": "&#x263d;",
+      "render": "\\rightmoon"
+    },
+    {
+      "input": "&#x291a;",
+      "render": "\\righttail"
+    },
+    {
+      "input": "&#x2994;",
+      "render": "\\rparengtr"
+    },
+    {
+      "input": "&#x23b9;",
+      "render": "\\rvboxline"
+    },
+    {
+      "input": ";",
+      "render": ";"
+    },
+    {
+      "input": "&#x263a;",
+      "render": "\\smileface"
+    },
+    {
+      "input": "&#x2660;",
+      "render": "\\spadesuit"
+    },
+    {
+      "input": "&#x2abd;",
+      "render": "\\subsetdot"
+    },
+    {
+      "input": "&#x2ac5;",
+      "render": "\\subseteqq"
+    },
+    {
+      "input": "&#x23b3;",
+      "render": "\\sumbottom"
+    },
+    {
+      "input": "&#x2abe;",
+      "render": "\\supsetdot"
+    },
+    {
+      "input": "&#x2ac6;",
+      "render": "\\supseteqq"
+    },
+    {
+      "input": "&#x228b;",
+      "render": "\\supsetneq"
+    },
+    {
+      "input": "&#x2040;",
+      "render": "\\tieconcat"
+    },
+    {
+      "input": "&#x23e2;",
+      "render": "\\trapezium"
+    },
+    {
+      "input": "&#x225c;",
+      "render": "\\Deltaeq"
+    },
+    {
+      "input": "&#x29cc;",
+      "render": "\\triangles"
+    },
+    {
+      "input": "&#x29a2;",
+      "render": "\\turnangle"
+    },
+    {
+      "input": "&#x2319;",
+      "render": "\\turnednot"
+    },
+    {
+      "input": "&#x2982;",
+      "render": "\\typecolon"
+    },
+    {
+      "input": "&#x332;",
+      "render": "\\underline"
+    },
+    {
+      "input": "&#x395;",
+      "render": "\\upEpsilon"
+    },
+    {
+      "input": "&#x3dd;",
+      "render": "\\updigamma"
+    },
+    {
+      "input": "&#x3bf;",
+      "render": "\\upomicron"
+    },
+    {
+      "input": "&#x3c5;",
+      "render": "\\upupsilon"
+    },
+    {
+      "input": "&#x3d0;",
+      "render": "\\upvarbeta"
+    },
+    {
+      "input": "&#x22fd;",
+      "render": "\\varniobar"
+    },
+    {
+      "input": "&#x2a61;",
+      "render": "\\varveebar"
+    },
+    {
+      "input": "&#x27dd;",
+      "render": "\\vlongdash"
+    },
+    {
+      "input": "&#x2a51;",
+      "render": "\\wedgeodot"
+    },
+    {
+      "input": "<=>",
+      "render": "\\hArr"
+    },
+    {
+      "input": "harr",
+      "render": "\\leftrightarrow"
+    },
+    {
+      "input": ">->",
+      "render": "\\rightarrowtail"
+    },
+    {
+      "input": "(:",
+      "render": "\\langle  "
+    },
+    {
+      "input": ":)",
+      "render": "\\rangle"
+    },
+    {
+      "input": "&#x235e;",
+      "render": "\\APLinput"
+    },
+    {
+      "input": "&#x2a74;",
+      "render": "\\Coloneqq"
+    },
+    {
+      "input": "&#x2148;",
+      "render": "\\ComplexI"
+    },
+    {
+      "input": "&#x2149;",
+      "render": "\\ComplexJ"
+    },
+    {
+      "input": "&#x29da;",
+      "render": "\\Lvzigzag"
+    },
+    {
+      "input": "&#x21a7;",
+      "render": "\\MapsDown"
+    },
+    {
+      "input": "&#x29db;",
+      "render": "\\Rvzigzag"
+    },
+    {
+      "input": "&#x290a;",
+      "render": "\\Uuparrow"
+    },
+    {
+      "input": "&#x267e;",
+      "render": "\\acidfree"
+    },
+    {
+      "input": "&#x224a;",
+      "render": "\\approxeq"
+    },
+    {
+      "input": "&#x2652;",
+      "render": "\\aquarius"
+    },
+    {
+      "input": "&#x224c;",
+      "render": "\\backcong"
+    },
+    {
+      "input": "&#x22bc;",
+      "render": "\\barwedge"
+    },
+    {
+      "input": "&#x23b6;",
+      "render": "\\bbrktbrk"
+    },
+    {
+      "input": "&#x2a01;",
+      "render": "\\bigoplus"
+    },
+    {
+      "input": "&#x2a05;",
+      "render": "\\bigsqcap"
+    },
+    {
+      "input": "&#x2a06;",
+      "render": "\\bigsqcup"
+    },
+    {
+      "input": "&#x2a09;",
+      "render": "\\bigtimes"
+    },
+    {
+      "input": "&#x2a04;",
+      "render": "\\biguplus"
+    },
+    {
+      "input": "&#x229f;",
+      "render": "\\boxminus"
+    },
+    {
+      "input": "&#x29c9;",
+      "render": "\\boxonbox"
+    },
+    {
+      "input": "&#x29c4;",
+      "render": "\\boxslash"
+    },
+    {
+      "input": "&#x22a0;",
+      "render": "\\boxtimes"
+    },
+    {
+      "input": "&#x27c8;",
+      "render": "\\bsolhsub"
+    },
+    {
+      "input": "&#x25ce;",
+      "render": "\\bullseye"
+    },
+    {
+      "input": "&#x2a44;",
+      "render": "\\capwedge"
+    },
+    {
+      "input": "&#xae;",
+      "render": "\\circledR"
+    },
+    {
+      "input": "&#x2a10;",
+      "render": "\\cirfnint"
+    },
+    {
+      "input": "&#x2663;",
+      "render": "\\clubsuit"
+    },
+    {
+      "input": "&#x221b;",
+      "render": "\\cuberoot"
+    },
+    {
+      "input": "&#x22ce;",
+      "render": "\\curlyvee"
+    },
+    {
+      "input": "&#x2300;",
+      "render": "\\diameter"
+    },
+    {
+      "input": "&#x2215;",
+      "render": "/"
+    },
+    {
+      "input": "&#x2251;",
+      "render": "\\Doteq"
+    },
+    {
+      "input": "&#x2a67;",
+      "render": "\\dotequiv"
+    },
+    {
+      "input": "&#x2238;",
+      "render": "\\dotminus"
+    },
+    {
+      "input": "&#x2a30;",
+      "render": "\\dottimes"
+    },
+    {
+      "input": "&#x2910;",
+      "render": "\\drbkarow"
+    },
+    {
+      "input": "&#x23e7;",
+      "render": "\\elinters"
+    },
+    {
+      "input": "&#x2255;",
+      "render": "\\eqqcolon"
+    },
+    {
+      "input": "&#x29e5;",
+      "render": "\\eqvparsl"
+    },
+    {
+      "input": "&#x2add;",
+      "render": "\\forksnot"
+    },
+    {
+      "input": "&#x2a7e;",
+      "render": "\\geqslant"
+    },
+    {
+      "input": "&#x2a84;",
+      "render": "\\gesdotol"
+    },
+    {
+      "input": "&#x2a8a;",
+      "render": "\\gnapprox"
+    },
+    {
+      "input": "&#x2925;",
+      "render": "\\hksearow"
+    },
+    {
+      "input": "&#x2926;",
+      "render": "\\hkswarow"
+    },
+    {
+      "input": "&#x2015;",
+      "render": "\\horizbar"
+    },
+    {
+      "input": "&#x22ba;",
+      "render": "\\intercal"
+    },
+    {
+      "input": "&#x2a17;",
+      "render": "\\intlarhk"
+    },
+    {
+      "input": "&#x2a3d;",
+      "render": "\\intprodr"
+    },
+    {
+      "input": "&#x223e;",
+      "render": "\\invlazys"
+    },
+    {
+      "input": "&#x22f7;",
+      "render": "\\isinobar"
+    },
+    {
+      "input": "&#x263e;",
+      "render": "\\leftmoon"
+    },
+    {
+      "input": "&#x2919;",
+      "render": "\\lefttail"
+    },
+    {
+      "input": "&#x2a7d;",
+      "render": "\\leqslant"
+    },
+    {
+      "input": "&#x2a83;",
+      "render": "\\lesdotor"
+    },
+    {
+      "input": "&#x29d1;",
+      "render": "\\lfbowtie"
+    },
+    {
+      "input": "&#x21b4;",
+      "render": "\\linefeed"
+    },
+    {
+      "input": "&#x231e;",
+      "render": "\\llcorner"
+    },
+    {
+      "input": "&#x2a89;",
+      "render": "\\lnapprox"
+    },
+    {
+      "input": "&#x231f;",
+      "render": "\\lrcorner"
+    },
+    {
+      "input": "&#xa2;",
+      "render": "\\mathcent"
+    },
+    {
+      "input": "&#x30a;",
+      "render": "\\mathring"
+    },
+    {
+      "input": "&#x205f;",
+      "render": "\\medspace"
+    },
+    {
+      "input": "&#x2a2a;",
+      "render": "\\minusdot"
+    },
+    {
+      "input": "&#x22b8;",
+      "render": "\\multimap"
+    },
+    {
+      "input": "&#x2278;",
+      "render": "\\nlessgtr"
+    },
+    {
+      "input": "&#x226d;",
+      "render": "\\notasymp"
+    },
+    {
+      "input": "&#x2225;",
+      "render": "\\rVert"
+    },
+    {
+      "input": "&#x2b20;",
+      "render": "\\pentagon"
+    },
+    {
+      "input": "&#x2a28;",
+      "render": "\\plustrif"
+    },
+    {
+      "input": "&#x2a15;",
+      "render": "\\pointint"
+    },
+    {
+      "input": "&#x2057;",
+      "render": "\\fourth"
+    },
+    {
+      "input": "&#x2ab5;",
+      "render": "\\precneqq"
+    },
+    {
+      "input": "&#x22e8;",
+      "render": "\\precnsim"
+    },
+    {
+      "input": "&#x2312;",
+      "render": "\\profline"
+    },
+    {
+      "input": "&#x2313;",
+      "render": "\\profsurf"
+    },
+    {
+      "input": "&#x27d3;",
+      "render": "\\pullback"
+    },
+    {
+      "input": "&#x29a3;",
+      "render": "\\revangle"
+    },
+    {
+      "input": "&#x29d2;",
+      "render": "\\rfbowtie"
+    },
+    {
+      "input": "&#x2a22;",
+      "render": "\\ringplus"
+    },
+    {
+      "input": "&#x2a12;",
+      "render": "\\rppolint"
+    },
+    {
+      "input": "&#x29ce;",
+      "render": "\\rtriltri"
+    },
+    {
+      "input": "&#x2a13;",
+      "render": "\\scpolint"
+    },
+    {
+      "input": "&#x2a6b;",
+      "render": "\\simrdots"
+    },
+    {
+      "input": "&#x223f;",
+      "render": "\\sinewave"
+    },
+    {
+      "input": "&#x29e4;",
+      "render": "\\smeparsl"
+    },
+    {
+      "input": "&#x228f;",
+      "render": "\\sqsubset"
+    },
+    {
+      "input": "&#x2290;",
+      "render": "\\sqsupset"
+    },
+    {
+      "input": "&#x2615;",
+      "render": "\\steaming"
+    },
+    {
+      "input": "&#x2ab6;",
+      "render": "\\succneqq"
+    },
+    {
+      "input": "&#x22e9;",
+      "render": "\\succnsim"
+    },
+    {
+      "input": "&#x29dd;",
+      "render": "\\tieinfty"
+    },
+    {
+      "input": "&#x2a31;",
+      "render": "\\timesbar"
+    },
+    {
+      "input": "&#x266b;",
+      "render": "\\twonotes"
+    },
+    {
+      "input": "&#x231c;",
+      "render": "\\ulcorner"
+    },
+    {
+      "input": "&#x331;",
+      "render": "\\underbar"
+    },
+    {
+      "input": "Lambda",
+      "render": "\\Lambda"
+    },
+    {
+      "input": "lambda",
+      "render": "\\lambda"
+    },
+    {
+      "input": "&#x3db;",
+      "render": "\\upstigma"
+    },
+    {
+      "input": "varphi",
+      "render": "\\phi"
+    },
+    {
+      "input": "&#x3f1;",
+      "render": "\\upvarrho"
+    },
+    {
+      "input": "&#x231d;",
+      "render": "\\urcorner"
+    },
+    {
+      "input": "&#x2641;",
+      "render": "\\varEarth"
+    },
+    {
+      "input": "&#x2ae6;",
+      "render": "\\varVdash"
+    },
+    {
+      "input": "&#x22f3;",
+      "render": "\\varisins"
+    },
+    {
+      "input": "&#x2a2f;",
+      "render": "\\vectimes"
+    },
+    {
+      "input": "&#x2a56;",
+      "render": "\\veeonvee"
+    },
+    {
+      "input": "&#x2317;",
+      "render": "\\viewdata"
+    },
+    {
+      "input": "&#x2a5f;",
+      "render": "\\wedgebar"
+    },
+    {
+      "input": "&#x27d1;",
+      "render": "\\wedgedot"
+    },
+    {
+      "input": "&#x2a21;",
+      "render": "\\zproject"
+    },
+    {
+      "input": "&#x2643;",
+      "render": "\\jupiter"
+    },
+    {
+      "input": "&#x27ec;",
+      "render": "\\Lbrbrak"
+    },
+    {
+      "input": "&#x263f;",
+      "render": "\\mercury"
+    },
+    {
+      "input": "&#x21d7;",
+      "render": "\\Nearrow"
+    },
+    {
+      "input": "&#x2646;",
+      "render": "\\neptune"
+    },
+    {
+      "input": "&#x21d6;",
+      "render": "\\Nwarrow"
+    },
+    {
+      "input": "&#x27ed;",
+      "render": "\\Rbrbrak"
+    },
+    {
+      "input": "&#x264f;",
+      "render": "\\scorpio"
+    },
+    {
+      "input": "&#x21d8;",
+      "render": "\\Searrow"
+    },
+    {
+      "input": "&#x21d9;",
+      "render": "\\Swarrow"
+    },
+    {
+      "input": "&#x21d1;",
+      "render": "\\Uparrow"
+    },
+    {
+      "input": "&#x20e7;",
+      "render": "\\annuity"
+    },
+    {
+      "input": "&#x223d;",
+      "render": "\\backsim"
+    },
+    {
+      "input": "&#x2717;",
+      "render": "\\ballotx"
+    },
+    {
+      "input": "&#x23e3;",
+      "render": "\\benzenr"
+    },
+    {
+      "input": "&#x226c;",
+      "render": "\\between"
+    },
+    {
+      "input": "&#x2a00;",
+      "render": "\\bigodot"
+    },
+    {
+      "input": "&#x2605;",
+      "render": "\\bigstar"
+    },
+    {
+      "input": "&#x229e;",
+      "render": "\\boxplus"
+    },
+    {
+      "input": "&#x2aae;",
+      "render": "\\bumpeqq"
+    },
+    {
+      "input": "&#x29c2;",
+      "render": "\\cirscir"
+    },
+    {
+      "input": "&#x2050;",
+      "render": "\\closure"
+    },
+    {
+      "input": "&#x2a6d;",
+      "render": "\\congdot"
+    },
+    {
+      "input": "&#x290f;",
+      "render": "\\dbkarow"
+    },
+    {
+      "input": "&#x222f;",
+      "render": "\\dbloint"
+    },
+    {
+      "input": "&#x2021;",
+      "render": "\\ddagger"
+    },
+    {
+      "input": "&#x2a77;",
+      "render": "\\ddotseq"
+    },
+    {
+      "input": "&#x2682;",
+      "render": "\\diceiii"
+    },
+    {
+      "input": "&#x2214;",
+      "render": "\\dotplus"
+    },
+    {
+      "input": "&#x2a99;",
+      "render": "\\eqqless"
+    },
+    {
+      "input": "&#x2a71;",
+      "render": "\\eqqplus"
+    },
+    {
+      "input": "&#x2a78;",
+      "render": "\\equivDD"
+    },
+    {
+      "input": "&#x29d3;",
+      "render": "\\fbowtie"
+    },
+    {
+      "input": "&#x25c9;",
+      "render": "\\fisheye"
+    },
+    {
+      "input": "&#x2639;",
+      "render": "\\frownie"
+    },
+    {
+      "input": "&#x2a82;",
+      "render": "\\gesdoto"
+    },
+    {
+      "input": "&#x2af8;",
+      "render": "\\gggnest"
+    },
+    {
+      "input": ">",
+      "render": ">"
+    },
+    {
+      "input": "&#x2a7c;",
+      "render": "\\gtquest"
+    },
+    {
+      "input": "&#x2394;",
+      "render": "\\hexagon"
+    },
+    {
+      "input": "&#x3030;",
+      "render": "\\hzigzag"
+    },
+    {
+      "input": "&#x2a3c;",
+      "render": "\\intprod"
+    },
+    {
+      "input": "&#x22f5;",
+      "render": "\\isindot"
+    },
+    {
+      "input": "&#x27e6;",
+      "render": "\\lbbrack"
+    },
+    {
+      "input": "&#x2a81;",
+      "render": "\\lesdoto"
+    },
+    {
+      "input": "&#x22d6;",
+      "render": "\\lessdot"
+    },
+    {
+      "input": "&#x2276;",
+      "render": "\\lessgtr"
+    },
+    {
+      "input": "&#x2272;",
+      "render": "\\lesssim"
+    },
+    {
+      "input": "&#x29d4;",
+      "render": "\\lftimes"
+    },
+    {
+      "input": "&#x2989;",
+      "render": "\\llangle"
+    },
+    {
+      "input": "&#x2af7;",
+      "render": "\\lllnest"
+    },
+    {
+      "input": "|><|",
+      "render": "\\lrtimes"
+    },
+    {
+      "input": "&#x2acd;",
+      "render": "\\lsqhook"
+    },
+    {
+      "input": "&#x2a7b;",
+      "render": "\\ltquest"
+    },
+    {
+      "input": "&#x2720;",
+      "render": "\\maltese"
+    },
+    {
+      "input": "&#xf0;",
+      "render": "\\matheth"
+    },
+    {
+      "input": "&#x2249;",
+      "render": "\\napprox"
+    },
+    {
+      "input": "&#x266e;",
+      "render": "\\natural"
+    },
+    {
+      "input": "&#x2204;",
+      "render": "\\nexists"
+    },
+    {
+      "input": "&#x2af5;",
+      "render": "\\nhVvert"
+    },
+    {
+      "input": "&#x2a14;",
+      "render": "\\npolint"
+    },
+    {
+      "input": "&#x2284;",
+      "render": "\\nsubset"
+    },
+    {
+      "input": "&#x2285;",
+      "render": "\\nsupset"
+    },
+    {
+      "input": "&#x29de;",
+      "render": "\\nvinfty"
+    },
+    {
+      "input": "&#x23e0;",
+      "render": "\\obrbrak"
+    },
+    {
+      "input": "&#x29bb;",
+      "render": "\\olcross"
+    },
+    {
+      "input": "&#x305;",
+      "render": "\\overbar"
+    },
+    {
+      "input": "%",
+      "render": "\\percent"
+    },
+    {
+      "input": "&#x2a25;",
+      "render": "\\plusdot"
+    },
+    {
+      "input": "&#x2a72;",
+      "render": "\\pluseqq"
+    },
+    {
+      "input": "&#x2a23;",
+      "render": "\\plushat"
+    },
+    {
+      "input": "&#x2a26;",
+      "render": "\\plussim"
+    },
+    {
+      "input": "&#x2034;",
+      "render": "\\trprime"
+    },
+    {
+      "input": "&#x2ab3;",
+      "render": "\\preceqq"
+    },
+    {
+      "input": "&#x2ab1;",
+      "render": "\\precneq"
+    },
+    {
+      "input": "&#x27d4;",
+      "render": "\\pushout"
+    },
+    {
+      "input": "&#x225f;",
+      "render": "\\questeq"
+    },
+    {
+      "input": "&#x27e7;",
+      "render": "\\rrbracket"
+    },
+    {
+      "input": "&#x267b;",
+      "render": "\\recycle"
+    },
+    {
+      "input": "&#x2aee;",
+      "render": "\\revnmid"
+    },
+    {
+      "input": "&#x29d5;",
+      "render": "\\rftimes"
+    },
+    {
+      "input": "&#x298a;",
+      "render": "\\rrangle"
+    },
+    {
+      "input": "&#x29f7;",
+      "render": "\\rsolbar"
+    },
+    {
+      "input": "&#x2ace;",
+      "render": "\\rsqhook"
+    },
+    {
+      "input": "&#x29e2;",
+      "render": "\\shuffle"
+    },
+    {
+      "input": "&#x2a9d;",
+      "render": "\\simless"
+    },
+    {
+      "input": "&#x2246;",
+      "render": "\\simneqq"
+    },
+    {
+      "input": "&#x2a24;",
+      "render": "\\simplus"
+    },
+    {
+      "input": "&#x220a;",
+      "render": "\\smallin"
+    },
+    {
+      "input": "&#x220d;",
+      "render": "\\smallni"
+    },
+    {
+      "input": "&#x25a2;",
+      "render": "\\squoval"
+    },
+    {
+      "input": "&#x2ac3;",
+      "render": "\\subedot"
+    },
+    {
+      "input": "&#x2ac1;",
+      "render": "\\submult"
+    },
+    {
+      "input": "&#x2979;",
+      "render": "\\subrarr"
+    },
+    {
+      "input": "&#x2ab4;",
+      "render": "\\succeqq"
+    },
+    {
+      "input": "&#x2ab2;",
+      "render": "\\succneq"
+    },
+    {
+      "input": "&#x2ad8;",
+      "render": "\\supdsub"
+    },
+    {
+      "input": "&#x2ac4;",
+      "render": "\\supedot"
+    },
+    {
+      "input": "&#x27c9;",
+      "render": "\\suphsol"
+    },
+    {
+      "input": "&#x2ad7;",
+      "render": "\\suphsub"
+    },
+    {
+      "input": "&#x297b;",
+      "render": "\\suplarr"
+    },
+    {
+      "input": "&#x2ac2;",
+      "render": "\\supmult"
+    },
+    {
+      "input": "&#x29e7;",
+      "render": "\\thermod"
+    },
+    {
+      "input": "&#x2ada;",
+      "render": "\\topfork"
+    },
+    {
+      "input": "&#x2afb;",
+      "render": "\\trslash"
+    },
+    {
+      "input": "&#x2a4b;",
+      "render": "\\twocaps"
+    },
+    {
+      "input": "&#x2a4a;",
+      "render": "\\twocups"
+    },
+    {
+      "input": "&#x23e1;",
+      "render": "\\ubrbrak"
+    },
+    {
+      "input": "&#x391;",
+      "render": "\\upAlpha"
+    },
+    {
+      "input": "Gamma",
+      "render": "\\Gamma"
+    },
+    {
+      "input": "&#x39a;",
+      "render": "\\upKappa"
+    },
+    {
+      "input": "Omega",
+      "render": "\\Omega"
+    },
+    {
+      "input": "Sigma",
+      "render": "\\Sigma"
+    },
+    {
+      "input": "Theta",
+      "render": "\\Theta"
+    },
+    {
+      "input": "alpha",
+      "render": "\\alpha"
+    },
+    {
+      "input": "delta",
+      "render": "\\delta"
+    },
+    {
+      "input": "gamma",
+      "render": "\\gamma"
+    },
+    {
+      "input": "kappa",
+      "render": "\\kappa"
+    },
+    {
+      "input": "&#x3df;",
+      "render": "\\upkoppa"
+    },
+    {
+      "input": "omega",
+      "render": "\\upomega"
+    },
+    {
+      "input": "&#x3e1;",
+      "render": "\\upsampi"
+    },
+    {
+      "input": "sigma",
+      "render": "\\sigma"
+    },
+    {
+      "input": "theta",
+      "render": "\\theta"
+    },
+    {
+      "input": "&#x3d6;",
+      "render": "\\upvarpi"
+    },
+    {
+      "input": "&#x2736;",
+      "render": "\\varstar"
+    },
+    {
+      "input": "&#x2a52;",
+      "render": "\\veeodot"
+    },
+    {
+      "input": "&#x299a;",
+      "render": "\\vzigzag"
+    },
+    {
+      "input": "&#x26a0;",
+      "render": "\\warning"
+    },
+    {
+      "input": "&#x262f;",
+      "render": "\\yinyang"
+    },
+    {
+      "input": "quad",
+      "render": "\\quad"
+    },
+    {
+      "input": "&#x2339;",
+      "render": "\\APLinv"
+    },
+    {
+      "input": "&#x235f;",
+      "render": "\\APLlog"
+    },
+    {
+      "input": "&#x264a;",
+      "render": "\\gemini"
+    },
+    {
+      "input": "&#x27ea;",
+      "render": "\\lang"
+    },
+    {
+      "input": "&#x21a5;",
+      "render": "\\MapsUp"
+    },
+    {
+      "input": "&#x2a37;",
+      "render": "\\Otimes"
+    },
+    {
+      "input": "&#x2644;",
+      "render": "\\saturn"
+    },
+    {
+      "input": "&#x2610;",
+      "render": "\\Square"
+    },
+    {
+      "input": "&#x22d0;",
+      "render": "\\Subset"
+    },
+    {
+      "input": "&#x22d1;",
+      "render": "\\Supset"
+    },
+    {
+      "input": "&#x2649;",
+      "render": "\\taurus"
+    },
+    {
+      "input": "&#x2645;",
+      "render": "\\uranus"
+    },
+    {
+      "input": "&#x22aa;",
+      "render": "\\Vvdash"
+    },
+    {
+      "input": "&#x2693;",
+      "render": "\\anchor"
+    },
+    {
+      "input": "&#x299f;",
+      "render": "\\angdnr"
+    },
+    {
+      "input": "&#x299e;",
+      "render": "\\angles"
+    },
+    {
+      "input": "&#x2273;",
+      "render": "\\gtrsim"
+    },
+    {
+      "input": "&#x22a6;",
+      "render": "\\assert"
+    },
+    {
+      "input": "&#x40;",
+      "render": "\\atsign"
+    },
+    {
+      "input": "&#x2a43;",
+      "render": "\\barcap"
+    },
+    {
+      "input": "&#x2a42;",
+      "render": "\\barcup"
+    },
+    {
+      "input": "&#x22bd;",
+      "render": "\\barvee"
+    },
+    {
+      "input": "&#x27d8;",
+      "render": "\\bigbot"
+    },
+    {
+      "input": "&#x27d9;",
+      "render": "\\bigtop"
+    },
+    {
+      "input": "&#x29c6;",
+      "render": "\\boxast"
+    },
+    {
+      "input": "&#x25eb;",
+      "render": "\\boxbar"
+    },
+    {
+      "input": "&#x29c8;",
+      "render": "\\boxbox"
+    },
+    {
+      "input": "&#x22a1;",
+      "render": "\\boxdot"
+    },
+    {
+      "input": "&#x2a32;",
+      "render": "\\btimes"
+    },
+    {
+      "input": "&#x224f;",
+      "render": "\\bumpeq"
+    },
+    {
+      "input": "&#x264b;",
+      "render": "\\cancer"
+    },
+    {
+      "input": "&#x310;",
+      "render": "\\candra"
+    },
+    {
+      "input": "&#x2a40;",
+      "render": "\\capdot"
+    },
+    {
+      "input": "&#x27df;",
+      "render": "\\cirbot"
+    },
+    {
+      "input": "&#x2257;",
+      "render": "\\circeq"
+    },
+    {
+      "input": "&#x2aef;",
+      "render": "\\cirmid"
+    },
+    {
+      "input": "&#x2210;",
+      "render": "\\coprod"
+    },
+    {
+      "input": "&#x228d;",
+      "render": "\\cupdot"
+    },
+    {
+      "input": "&#x2a45;",
+      "render": "\\cupvee"
+    },
+    {
+      "input": "&#x2020;",
+      "render": "\\dagger"
+    },
+    {
+      "input": "&#x2138;",
+      "render": "\\daleth"
+    },
+    {
+      "input": "&#x2621;",
+      "render": "\\danger"
+    },
+    {
+      "input": "&#x20dc;",
+      "render": "\\ddddot"
+    },
+    {
+      "input": "&#xb0;",
+      "render": "\\text{P[degree]}"
+    },
+    {
+      "input": "&#x2681;",
+      "render": "\\diceii"
+    },
+    {
+      "input": "&#x2683;",
+      "render": "\\diceiv"
+    },
+    {
+      "input": "&#x2685;",
+      "render": "\\dicevi"
+    },
+    {
+      "input": "&#x2a6a;",
+      "render": "\\dotsim"
+    },
+    {
+      "input": "''",
+      "render": "\\dprime"
+    },
+    {
+      "input": "&#x31a;",
+      "render": "\\droang"
+    },
+    {
+      "input": "&#x2a98;",
+      "render": "\\egsdot"
+    },
+    {
+      "input": "&#x2a97;",
+      "render": "\\elsdot"
+    },
+    {
+      "input": "&#x29e3;",
+      "render": "\\eparsl"
+    },
+    {
+      "input": "&#x2256;",
+      "render": "\\eqcirc"
+    },
+    {
+      "input": "&#x2a76;",
+      "render": "\\eqeqeq"
+    },
+    {
+      "input": "&#x22dc;",
+      "render": "\\eqless"
+    },
+    {
+      "input": "&#x2a9a;",
+      "render": "\\eqqgtr"
+    },
+    {
+      "input": "&#x2a73;",
+      "render": "\\eqqsim"
+    },
+    {
+      "input": "!",
+      "render": "\\exclam"
+    },
+    {
+      "input": "&#x2640;",
+      "render": "\\female"
+    },
+    {
+      "input": "&#x2a80;",
+      "render": "\\gesdot"
+    },
+    {
+      "input": "&#x2a94;",
+      "render": "\\gesles"
+    },
+    {
+      "input": "&#x29a0;",
+      "render": "\\gtlpar"
+    },
+    {
+      "input": "&#x2978;",
+      "render": "\\gtrarr"
+    },
+    {
+      "input": "&#x22d7;",
+      "render": "\\gtrdot"
+    },
+    {
+      "input": "&#x210f;",
+      "render": "\\hslash"
+    },
+    {
+      "input": "&#x22f0;",
+      "render": "\\iddots"
+    },
+    {
+      "input": "&#x2a0c;",
+      "render": "\\iiiint"
+    },
+    {
+      "input": "&#x29dc;",
+      "render": "\\iinfin"
+    },
+    {
+      "input": "&#x2a0e;",
+      "render": "\\intBar"
+    },
+    {
+      "input": "&#x2a19;",
+      "render": "\\intcap"
+    },
+    {
+      "input": "&#x2a1a;",
+      "render": "\\intcup"
+    },
+    {
+      "input": "&#x2320;",
+      "render": "\\inttop"
+    },
+    {
+      "input": "&#x214b;",
+      "render": "\\invamp"
+    },
+    {
+      "input": "&#x2310;",
+      "render": "\\invneg"
+    },
+    {
+      "input": "&#x22f8;",
+      "render": "\\isinvb"
+    },
+    {
+      "input": "&#x29e0;",
+      "render": "\\laplac"
+    },
+    {
+      "input": "&#x7b;",
+      "render": "\\lbrace"
+    },
+    {
+      "input": "&#x5b;",
+      "render": "\\lbrack"
+    },
+    {
+      "input": "&#x2a7f;",
+      "render": "\\lesdot"
+    },
+    {
+      "input": "&#x2a93;",
+      "render": "\\lesges"
+    },
+    {
+      "input": "&#x27ee;",
+      "render": "\\lgroup"
+    },
+    {
+      "input": "&#x22b0;",
+      "render": "\\prurel"
+    },
+    {
+      "input": "&#x2a1c;",
+      "render": "\\lowint"
+    },
+    {
+      "input": "&#x28;",
+      "render": "\\lparen"
+    },
+    {
+      "input": "&#x2976;",
+      "render": "\\ltlarr"
+    },
+    {
+      "input": "&#x225e;",
+      "render": "\\measeq"
+    },
+    {
+      "input": "&#x2af0;",
+      "render": "\\midcir"
+    },
+    {
+      "input": "&#x22af;",
+      "render": "\\nVDash"
+    },
+    {
+      "input": "&#x2262;",
+      "render": "\\nequiv"
+    },
+    {
+      "input": "&#x26b2;",
+      "render": "\\neuter"
+    },
+    {
+      "input": "&#x22fe;",
+      "render": "\\niobar"
+    },
+    {
+      "input": "&#x2244;",
+      "render": "\\nsimeq"
+    },
+    {
+      "input": "&#x2230;",
+      "render": "\\oiiint"
+    },
+    {
+      "input": "&#x2296;",
+      "render": "\\ominus"
+    },
+    {
+      "input": "&#x2298;",
+      "render": "\\oslash"
+    },
+    {
+      "input": "&#x309;",
+      "render": "\\ovhook"
+    },
+    {
+      "input": "&#x2af3;",
+      "render": "\\parsim"
+    },
+    {
+      "input": "&#x270e;",
+      "render": "\\pencil"
+    },
+    {
+      "input": ".",
+      "render": "."
+    },
+    {
+      "input": "&#x2653;",
+      "render": "\\pisces"
+    },
+    {
+      "input": "&#x7d;",
+      "render": "\\rbrace"
+    },
+    {
+      "input": "&#x5d;",
+      "render": "\\rbrack"
+    },
+    {
+      "input": "&#x27ef;",
+      "render": "\\rgroup"
+    },
+    {
+      "input": "&#x29;",
+      "render": "\\rparen"
+    },
+    {
+      "input": "&#x22b1;",
+      "render": "\\scurel"
+    },
+    {
+      "input": "&#x2a9e;",
+      "render": "\\simgtr"
+    },
+    {
+      "input": "&#xa8;",
+      "render": "\\spddot"
+    },
+    {
+      "input": "&#x2a16;",
+      "render": "\\sqrint"
+    },
+    {
+      "input": "&#x2afd;",
+      "render": "\\sslash"
+    },
+    {
+      "input": "&#x225b;",
+      "render": "\\stareq"
+    },
+    {
+      "input": "&#x2ac7;",
+      "render": "\\subsim"
+    },
+    {
+      "input": "&#x2ad3;",
+      "render": "\\subsup"
+    },
+    {
+      "input": "&#x2a0b;",
+      "render": "\\sumint"
+    },
+    {
+      "input": "&#x23b2;",
+      "render": "\\sumtop"
+    },
+    {
+      "input": "&#x2ac8;",
+      "render": "\\supsim"
+    },
+    {
+      "input": "&#x2ad4;",
+      "render": "\\supsub"
+    },
+    {
+      "input": "&#x2ad6;",
+      "render": "\\supsup"
+    },
+    {
+      "input": "&#x2694;",
+      "render": "\\swords"
+    },
+    {
+      "input": "&#x29ff;",
+      "render": "\\tminus"
+    },
+    {
+      "input": "&#x2336;",
+      "render": "\\topbot"
+    },
+    {
+      "input": "&#x2af1;",
+      "render": "\\topcir"
+    },
+    {
+      "input": "&#x2a41;",
+      "render": "\\uminus"
+    },
+    {
+      "input": "&#x399;",
+      "render": "\\upIota"
+    },
+    {
+      "input": "&#x396;",
+      "render": "\\upZeta"
+    },
+    {
+      "input": "beta",
+      "render": "\\beta"
+    },
+    {
+      "input": "iota",
+      "render": "\\upiota"
+    },
+    {
+      "input": "zeta",
+      "render": "\\zeta"
+    },
+    {
+      "input": "&#x2ae2;",
+      "render": "\\vDdash"
+    },
+    {
+      "input": "&#x22fb;",
+      "render": "\\varnis"
+    },
+    {
+      "input": "&#x22bb;",
+      "render": "\\veebar"
+    },
+    {
+      "input": "&#x27c7;",
+      "render": "\\veedot"
+    },
+    {
+      "input": "&#x2648;",
+      "render": "\\aries"
+    },
+    {
+      "input": "&#x20db;",
+      "render": "\\dddot"
+    },
+    {
+      "input": "&#x2ae5;",
+      "render": "\\DashV"
+    },
+    {
+      "input": "&#x2a75;",
+      "render": "\\eqeq"
+    },
+    {
+      "input": "&#x264e;",
+      "render": "\\libra"
+    },
+    {
+      "input": "&#xb5;",
+      "render": "\\Micro"
+    },
+    {
+      "input": "&#x2647;",
+      "render": "\\pluto"
+    },
+    {
+      "input": "&#x2a4e;",
+      "render": "\\Sqcap"
+    },
+    {
+      "input": "&#x2a4f;",
+      "render": "\\Sqcup"
+    },
+    {
+      "input": "&#x301;",
+      "render": "\\acute"
+    },
+    {
+      "input": "&#x2a3f;",
+      "render": "\\amalg"
+    },
+    {
+      "input": "&#x2258;",
+      "render": "\\arceq"
+    },
+    {
+      "input": "&#x2a6e;",
+      "render": "\\asteq"
+    },
+    {
+      "input": "&#x224d;",
+      "render": "\\asymp"
+    },
+    {
+      "input": "&#x2a11;",
+      "render": "\\awint"
+    },
+    {
+      "input": "&#x306;",
+      "render": "\\breve"
+    },
+    {
+      "input": "&#xb7;",
+      "render": "\\cdotp"
+    },
+    {
+      "input": "&#x30c;",
+      "render": "\\check"
+    },
+    {
+      "input": ",",
+      "render": ","
+    },
+    {
+      "input": "&#x2ad1;",
+      "render": "\\csube"
+    },
+    {
+      "input": "&#x2ad2;",
+      "render": "\\csupe"
+    },
+    {
+      "input": "&#x2680;",
+      "render": "\\dicei"
+    },
+    {
+      "input": "&#x2684;",
+      "render": "\\dicev"
+    },
+    {
+      "input": "&#x22f2;",
+      "render": "\\disin"
+    },
+    {
+      "input": "&#x225d;",
+      "render": "\\eqdef"
+    },
+    {
+      "input": "&#x2a66;",
+      "render": "\\eqdot"
+    },
+    {
+      "input": "&#x22dd;",
+      "render": "\\eqgtr"
+    },
+    {
+      "input": "&#x2242;",
+      "render": "\\eqsim"
+    },
+    {
+      "input": "=",
+      "render": "="
+    },
+    {
+      "input": "&#x23e5;",
+      "render": "\\fltns"
+    },
+    {
+      "input": "&#x2adc;",
+      "render": "\\forks"
+    },
+    {
+      "input": "&#x2ad9;",
+      "render": "\\forkv"
+    },
+    {
+      "input": "&#x2aa9;",
+      "render": "\\gescc"
+    },
+    {
+      "input": "&#x2137;",
+      "render": "\\gimel"
+    },
+    {
+      "input": "&#x2269;",
+      "render": "\\gneqq"
+    },
+    {
+      "input": "&#x22e7;",
+      "render": "\\gnsim"
+    },
+    {
+      "input": "&#x300;",
+      "render": "\\grave"
+    },
+    {
+      "input": "&#x2a8e;",
+      "render": "\\gsime"
+    },
+    {
+      "input": "&#x2a90;",
+      "render": "\\gsiml"
+    },
+    {
+      "input": "&#x2a7a;",
+      "render": "\\gtcir"
+    },
+    {
+      "input": "&#x2302;",
+      "render": "\\house"
+    },
+    {
+      "input": "&#x222d;",
+      "render": "\\iiint"
+    },
+    {
+      "input": "&#x131;",
+      "render": "\\imath"
+    },
+    {
+      "input": "&#x22f9;",
+      "render": "\\isinE"
+    },
+    {
+      "input": "&#x22f4;",
+      "render": "\\isins"
+    },
+    {
+      "input": "&#x237;",
+      "render": "\\jmath"
+    },
+    {
+      "input": "|~",
+      "render": "\\lceil"
+    },
+    {
+      "input": "&#x2aa8;",
+      "render": "\\lescc"
+    },
+    {
+      "input": "&#x25df;",
+      "render": "\\llarc"
+    },
+    {
+      "input": "&#x2268;",
+      "render": "\\lneqq"
+    },
+    {
+      "input": "&#x22e6;",
+      "render": "\\lnsim"
+    },
+    {
+      "input": "&#x25de;",
+      "render": "\\lrarc"
+    },
+    {
+      "input": "&#x2a8d;",
+      "render": "\\lsime"
+    },
+    {
+      "input": "&#x2a8f;",
+      "render": "\\lsimg"
+    },
+    {
+      "input": "&#x2a79;",
+      "render": "\\ltcir"
+    },
+    {
+      "input": "-",
+      "render": "-"
+    },
+    {
+      "input": "&#x2247;",
+      "render": "\\ncong"
+    },
+    {
+      "input": "&#x2a64;",
+      "render": "\\ndres"
+    },
+    {
+      "input": "&#x2af2;",
+      "render": "\\nhpar"
+    },
+    {
+      "input": "&#x226e;",
+      "render": "\\nless"
+    },
+    {
+      "input": "&#x220c;",
+      "render": "\\notni"
+    },
+    {
+      "input": "&#x2280;",
+      "render": "\\nprec"
+    },
+    {
+      "input": "&#x2a65;",
+      "render": "\\nrres"
+    },
+    {
+      "input": "&#x2281;",
+      "render": "\\nsucc"
+    },
+    {
+      "input": "&#x29b9;",
+      "render": "\\operp"
+    },
+    {
+      "input": "&#x2ae1;",
+      "render": "\\perps"
+    },
+    {
+      "input": "prop",
+      "render": "\\propto"
+    },
+    {
+      "input": "~|",
+      "render": "\\rceil"
+    },
+    {
+      "input": "&#x266f;",
+      "render": "\\sharp"
+    },
+    {
+      "input": "&#x2243;",
+      "render": "\\simeq"
+    },
+    {
+      "input": "&#x2aa0;",
+      "render": "\\simgE"
+    },
+    {
+      "input": "&#x2a9f;",
+      "render": "\\simlE"
+    },
+    {
+      "input": "&#x2620;",
+      "render": "\\skull"
+    },
+    {
+      "input": "&#x2323;",
+      "render": "\\smile"
+    },
+    {
+      "input": "&#x5e;",
+      "render": "\\sphat"
+    },
+    {
+      "input": "&#x23e4;",
+      "render": "\\strns"
+    },
+    {
+      "input": "&#x2126;",
+      "render": "\\tcohm"
+    },
+    {
+      "input": "&#x29fe;",
+      "render": "\\tplus"
+    },
+    {
+      "input": "&#x25dc;",
+      "render": "\\ularc"
+    },
+    {
+      "input": "&#x3a7;",
+      "render": "\\upChi"
+    },
+    {
+      "input": "&#x397;",
+      "render": "\\upEta"
+    },
+    {
+      "input": "Phi",
+      "render": "\\Phi"
+    },
+    {
+      "input": "Psi",
+      "render": "\\Psi"
+    },
+    {
+      "input": "&#x3a1;",
+      "render": "\\upRho"
+    },
+    {
+      "input": "&#x3a4;",
+      "render": "\\upTau"
+    },
+    {
+      "input": "chi",
+      "render": "\\chi"
+    },
+    {
+      "input": "eta",
+      "render": "\\eta"
+    },
+    {
+      "input": "&#x2a1b;",
+      "render": "\\upint"
+    },
+    {
+      "input": "&#x228e;",
+      "render": "\\uplus"
+    },
+    {
+      "input": "phi",
+      "render": "\\upphi"
+    },
+    {
+      "input": "psi",
+      "render": "\\psi"
+    },
+    {
+      "input": "rho",
+      "render": "\\rho"
+    },
+    {
+      "input": "tau",
+      "render": "\\tau"
+    },
+    {
+      "input": "&#x25dd;",
+      "render": "\\urarc"
+    },
+    {
+      "input": "&#x2ae9;",
+      "render": "\\vBarv"
+    },
+    {
+      "input": "|==",
+      "render": "\\vDash"
+    },
+    {
+      "input": "&#x225a;",
+      "render": "\\veeeq"
+    },
+    {
+      "input": "&#x264d;",
+      "render": "\\virgo"
+    },
+    {
+      "input": "&#x29f9;",
+      "render": "\\zhide"
+    },
+    {
+      "input": "&#x2a20;",
+      "render": "\\zpipe"
+    },
+    {
+      "input": "->",
+      "render": "\\to"
+    },
+    {
+      "input": "&#x25b;",
+      "render": "\\varepsilon"
+    },
+    {
+      "input": "&#x2ae7;",
+      "render": "\\Barv"
+    },
+    {
+      "input": "&#x2132;",
+      "render": "\\Finv"
+    },
+    {
+      "input": "&#x2141;",
+      "render": "\\Game"
+    },
+    {
+      "input": "&#x2a1d;",
+      "render": "\\Join"
+    },
+    {
+      "input": "&#x27c5;",
+      "render": "\\Lbag"
+    },
+    {
+      "input": "&#x21b2;",
+      "render": "\\dlsh"
+    },
+    {
+      "input": "&#x2642;",
+      "render": "\\male"
+    },
+    {
+      "input": "&#x2aeb;",
+      "render": "\\Vbar"
+    },
+    {
+      "input": "&#x27c6;",
+      "render": "\\Rbag"
+    },
+    {
+      "input": "&#x21b3;",
+      "render": "\\drsh"
+    },
+    {
+      "input": "&#x2016;",
+      "render": "\\Vert"
+    },
+    {
+      "input": "&#x2612;",
+      "render": "\\XBox"
+    },
+    {
+      "input": "&#x1b5;",
+      "render": "\\Zbar"
+    },
+    {
+      "input": "&#x2aed;",
+      "render": "\\bNot"
+    },
+    {
+      "input": "&#x2136;",
+      "render": "\\beth"
+    },
+    {
+      "input": "&#x29c3;",
+      "render": "\\cirE"
+    },
+    {
+      "input": "&#x2a3e;",
+      "render": "\\fcmp"
+    },
+    {
+      "input": "&#x2acf;",
+      "render": "\\csub"
+    },
+    {
+      "input": "&#x2ad0;",
+      "render": "\\csup"
+    },
+    {
+      "input": "&#x2103;",
+      "render": "\\text{P[degc]}"
+    },
+    {
+      "input": "&#x2109;",
+      "render": "\\text{P[degf]}"
+    },
+    {
+      "input": "nnn",
+      "render": "\\bigcap"
+    },
+    {
+      "input": "&#x29f6;",
+      "render": "\\dsol"
+    },
+    {
+      "input": "uuu",
+      "render": "\\bigcup"
+    },
+    {
+      "input": "&#x20ac;",
+      "render": "\\euro"
+    },
+    {
+      "input": "&#x2a0f;",
+      "render": "\\fint"
+    },
+    {
+      "input": "&#x266d;",
+      "render": "\\flat"
+    },
+    {
+      "input": "&#x2267;",
+      "render": "\\geqq"
+    },
+    {
+      "input": "larr",
+      "render": "\\gets"
+    },
+    {
+      "input": "&#x2a88;",
+      "render": "\\gneq"
+    },
+    {
+      "input": "&#x222c;",
+      "render": "\\iint"
+    },
+    {
+      "input": "&#x2a18;",
+      "render": "\\intx"
+    },
+    {
+      "input": "^^",
+      "render": "\\land"
+    },
+    {
+      "input": "&#x2aad;",
+      "render": "\\late"
+    },
+    {
+      "input": "&#x2266;",
+      "render": "\\leqq"
+    },
+    {
+      "input": "<",
+      "render": "<"
+    },
+    {
+      "input": "not",
+      "render": "\\lnot"
+    },
+    {
+      "input": "&#x2adb;",
+      "render": "\\mlcp"
+    },
+    {
+      "input": "&#x226f;",
+      "render": "\\ngtr"
+    },
+    {
+      "input": "&#x22fa;",
+      "render": "\\nisd"
+    },
+    {
+      "input": "&#x2224;",
+      "render": "\\nmid"
+    },
+    {
+      "input": "&#x2241;",
+      "render": "\\nsim"
+    },
+    {
+      "input": "&#x233d;",
+      "render": "\\obar"
+    },
+    {
+      "input": "&#x29ba;",
+      "render": "\\obot"
+    },
+    {
+      "input": "&#x2a38;",
+      "render": "\\odiv"
+    },
+    {
+      "input": "&#x220b;",
+      "render": "\\owns"
+    },
+    {
+      "input": "_|_",
+      "render": "\\exists"
+    },
+    {
+      "input": "+",
+      "render": "+"
+    },
+    {
+      "input": "&#x2a1f;",
+      "render": "\\zcmp"
+    },
+    {
+      "input": "&#x2aac;",
+      "render": "\\smte"
+    },
+    {
+      "input": "&#x2928;",
+      "render": "\\toea"
+    },
+    {
+      "input": "&#x2927;",
+      "render": "\\tona"
+    },
+    {
+      "input": "&#x2929;",
+      "render": "\\tosa"
+    },
+    {
+      "input": "&#x292a;",
+      "render": "\\towa"
+    },
+    {
+      "input": "&#x39c;",
+      "render": "\\upMu"
+    },
+    {
+      "input": "&#x39d;",
+      "render": "\\upNu"
+    },
+    {
+      "input": "Pi",
+      "render": "\\Pi"
+    },
+    {
+      "input": "Xi",
+      "render": "\\Xi"
+    },
+    {
+      "input": "&#x27d2;",
+      "render": "\\upin"
+    },
+    {
+      "input": "mu",
+      "render": "\\mu"
+    },
+    {
+      "input": "nu",
+      "render": "\\nu"
+    },
+    {
+      "input": "pi",
+      "render": "\\pi"
+    },
+    {
+      "input": "xi",
+      "render": "\\xi"
+    },
+    {
+      "input": "&#x2502;",
+      "render": "\\text{P[vbar]}"
+    },
+    {
+      "input": "|",
+      "render": "|"
+    },
+    {
+      "input": "&#x29f8;",
+      "render": "\\xsol"
+    },
+    {
+      "input": "&#x200c;",
+      "render": "\\text{P[zwnj]}"
+    },
+    {
+      "input": "&#x200b;",
+      "render": "\\text{P[zwsp]}"
+    },
+    {
+      "input": "&#x1d715;",
+      "render": "\\partial"
+    },
+    {
+      "input": "lArr",
+      "render": "\\Leftarrow"
+    },
+    {
+      "input": "\\",
+      "render": "\\backslash"
+    },
+    {
+      "input": "darr",
+      "render": "\\downarrow"
+    },
+    {
+      "input": "&#x22d2;",
+      "render": "\\Cap"
+    },
+    {
+      "input": "&#x22d3;",
+      "render": "\\Cup"
+    },
+    {
+      "input": "&#x307;",
+      "render": "\\period"
+    },
+    {
+      "input": "&#x264c;",
+      "render": "\\leo"
+    },
+    {
+      "input": "&#x21b0;",
+      "render": "\\Lsh"
+    },
+    {
+      "input": "&#x2127;",
+      "render": "\\mho"
+    },
+    {
+      "input": "&#x220e;",
+      "render": "\\QED"
+    },
+    {
+      "input": "&#x21b1;",
+      "render": "\\Rsh"
+    },
+    {
+      "input": "&#x20d7;",
+      "render": "\\Vec"
+    },
+    {
+      "input": "&#x2a54;",
+      "render": "\\Vee"
+    },
+    {
+      "input": "&#x2144;",
+      "render": "\\Yup"
+    },
+    {
+      "input": "&#x2113;",
+      "render": "\\ell"
+    },
+    {
+      "input": ":}",
+      "render": "\\right."
+    },
+    {
+      "input": "EE",
+      "render": "\\exists"
+    },
+    {
+      "input": ">=",
+      "render": "\\geq"
+    },
+    {
+      "input": "&#x22d9;",
+      "render": "\\ggg"
+    },
+    {
+      "input": "&#x2a92;",
+      "render": "\\glE"
+    },
+    {
+      "input": "&#x2aa5;",
+      "render": "\\gla"
+    },
+    {
+      "input": "&#x2aa4;",
+      "render": "\\glj"
+    },
+    {
+      "input": "&#x2aab;",
+      "render": "\\lat"
+    },
+    {
+      "input": "<=",
+      "render": "\\le"
+    },
+    {
+      "input": "&#x2a91;",
+      "render": "\\lgE"
+    },
+    {
+      "input": "&#x22d8;",
+      "render": "\\lll"
+    },
+    {
+      "input": "vv",
+      "render": "\\vee"
+    },
+    {
+      "input": "&#x2223;",
+      "render": "\\mid"
+    },
+    {
+      "input": "!=",
+      "render": "\\ne"
+    },
+    {
+      "input": "!in",
+      "render": "\\notin"
+    },
+    {
+      "input": "&#x22fc;",
+      "render": "\\nis"
+    },
+    {
+      "input": "&#x223c;",
+      "render": "\\sim"
+    },
+    {
+      "input": "&#x2aaa;",
+      "render": "\\smt"
+    },
+    {
+      "input": "&#x263c;",
+      "render": "\\sun"
+    },
+    {
+      "input": "&#xa5;",
+      "render": "\\yen"
+    },
+    {
+      "input": "&#x2004;",
+      "render": "\\;"
+    },
+    {
+      "input": "'",
+      "render": "\\prime"
+    },
+    {
+      "input": "&#x203e;",
+      "render": "\\text{P[overline]}"
+    },
+    {
+      "input": "&#x2102;",
+      "render": "\\CC"
+    },
+    {
+      "input": "&#x2111;",
+      "render": "\\Im"
+    },
+    {
+      "input": "&#x2115;",
+      "render": "\\NN"
+    },
+    {
+      "input": "&#x2118;",
+      "render": "\\wp"
+    },
+    {
+      "input": "&#x211a;",
+      "render": "\\QQ"
+    },
+    {
+      "input": "&#x211c;",
+      "render": "\\Re"
+    },
+    {
+      "input": "&#x211d;",
+      "render": "\\RR"
+    },
+    {
+      "input": "ZZ",
+      "render": "\\mathbb{Z}"
+    },
+    {
+      "input": "aleph",
+      "render": "\\aleph"
+    },
+    {
+      "input": "&#x2145;",
+      "render": "\\text{P[Dd]}"
+    },
+    {
+      "input": "uarr",
+      "render": "\\uparrow"
+    },
+    {
+      "input": "|->",
+      "render": "\\mapsto"
+    },
+    {
+      "input": "AA",
+      "render": "\\forall"
+    },
+    {
+      "input": "grad",
+      "render": "\\nabla"
+    },
+    {
+      "input": "in",
+      "render": "\\in"
+    },
+    {
+      "input": "&#x220f;",
+      "render": "\\prod"
+    },
+    {
+      "input": "&#x2211;",
+      "render": "\\sum"
+    },
+    {
+      "input": "&#x2213;",
+      "render": "\\mp"
+    },
+    {
+      "input": "**",
+      "render": "\\ast"
+    },
+    {
+      "input": "oo",
+      "render": "\\infty"
+    },
+    {
+      "input": "cap",
+      "render": "\\Cap"
+    },
+    {
+      "input": "uu",
+      "render": "\\cup"
+    },
+    {
+      "input": "&#x222b;",
+      "render": "\\int"
+    },
+    {
+      "input": "&#x222e;",
+      "render": "\\oint"
+    },
+    {
+      "input": ":'",
+      "render": "\\because"
+    },
+    {
+      "input": "&#x2240;",
+      "render": "\\wr"
+    },
+    {
+      "input": "~=",
+      "render": "\\cong"
+    },
+    {
+      "input": "~~",
+      "render": "\\approx"
+    },
+    {
+      "input": "-=",
+      "render": "\\equiv"
+    },
+    {
+      "input": "ll",
+      "render": "\\ll"
+    },
+    {
+      "input": "gg",
+      "render": "\\gg"
+    },
+    {
+      "input": "-<",
+      "render": "\\prec"
+    },
+    {
+      "input": ">-",
+      "render": "\\succ"
+    },
+    {
+      "input": "sub",
+      "render": "\\subset"
+    },
+    {
+      "input": "sup",
+      "render": "\\supset"
+    },
+    {
+      "input": "sube",
+      "render": "\\subseteq"
+    },
+    {
+      "input": "supe",
+      "render": "\\supseteq"
+    },
+    {
+      "input": "o+",
+      "render": "\\oplus"
+    },
+    {
+      "input": "ox",
+      "render": "\\ox"
+    },
+    {
+      "input": "o.",
+      "render": "\\odot"
+    },
+    {
+      "input": "|--",
+      "render": "\\vdash"
+    },
+    {
+      "input": "TT",
+      "render": "\\top"
+    },
+    {
+      "input": "^^^",
+      "render": "\\bigwedge"
+    },
+    {
+      "input": "vvv",
+      "render": "\\bigvee"
+    },
+    {
+      "input": "*",
+      "render": "\\cdot"
+    },
+    {
+      "input": "***",
+      "render": "\\star"
+    },
+    {
+      "input": "|><",
+      "render": "\\ltimes"
+    },
+    {
+      "input": "><|",
+      "render": "\\rtimes"
+    },
+    {
+      "input": "vdots",
+      "render": "\\vdots"
+    },
+    {
+      "input": "ddots",
+      "render": "\\ddots"
+    },
+    {
+      "input": "|__",
+      "render": "\\lfloor"
+    },
+    {
+      "input": "__|",
+      "render": "\\rfloor"
+    },
+    {
+      "input": "frown",
+      "render": "\\frown"
+    },
+    {
+      "input": "&#x23de;",
+      "render": "\\text{P[obrace]}"
+    },
+    {
+      "input": "&#x23df;",
+      "render": "\\ubrace"
+    },
+    {
+      "input": "&#x27eb;",
+      "render": "\\rAngle"
+    },
+    {
+      "input": "-<=",
+      "render": "\\preceq"
+    },
+    {
+      "input": ">-=",
+      "render": "\\succeq"
+    },
+    {
+      "input": "^",
+      "render": "^"
+    },
+    {
+      "input": "..",
+      "render": "\\ddot"
+    },
+    {
+      "input": "Delta",
+      "render": "\\Delta"
+    },
+    {
+      "input": "xx",
+      "render": "\\times"
+    },
+    {
+      "input": "&#x27;",
+      "render": "\\prime"
+    },
+    {
+      "input": "\\ ",
+      "render": "\\ "
+    },
+    {
+      "input": "+-",
+      "render": "\\pm"
+    },
+    {
+      "input": "-:",
+      "render": "\\div"
+    },
+    {
+      "input": "neg",
+      "render": "\\lnot"
+    },
+    {
+      "input": "if",
+      "render": "\\operatorname{if}"
+    },
+    {
+      "input": "(",
+      "render": "(  "
+    },
+    {
+      "input": ")",
+      "render": ")"
+    },
+    {
+      "input": "[",
+      "render": "[  "
+    },
+    {
+      "input": "]",
+      "render": "]"
+    },
+    {
+      "input": "_",
+      "render": "\\_"
+    },
+    {
+      "input": "{",
+      "render": "\\{  "
+    },
+    {
+      "input": "}",
+      "render": "\\}"
+    },
+    {
+      "input": "¯",
+      "render": "\\text{P[bar]}"
+    },
+    {
+      "input": "\"P{rBrack}\"",
+      "render": "\\rrbracket"
+    }
+  ]
+}

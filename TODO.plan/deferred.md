@@ -186,3 +186,64 @@ shared corpus has no case reaching it, so its dropped-empty-options behavior
 is never exercised end-to-end. Not a registry gap — a corpus-scope gap,
 owned upstream where cases are generated. (The first draft of this note
 claimed both kinds were uncovered; review disproved it for `underset`.)
+
+### LaTeX: six renderer-local measured tables — generated
+
+**Done, 2026-08-06.** `src/formats/latex/renderer.ts` no longer hand-holds
+its six small measured tables; the same `scripts/generate-corpus.rb` run that
+emits the rest of the data now measures and emits them into
+`src/generated/latex/render-tables.ts`:
+
+- `LEFT_RIGHT_PARENS` — the gem constant inverted through Ruby (`Hash#invert`
+  keeps the last key for the duplicated `&#x2016;`, asserted rather than
+  assumed), every row re-verified through a `Left` and a `Right` render, plus
+  a miss and a nil proving the `.` fallback;
+- `PLAIN_WRAPPED_UNARY_NAMES` — `validate_function_formula` read off a live
+  instance of each reachable unary class and re-verified through an `Overset`
+  render, because the set is not derivable from `UNARY_CLASSES` (ker, liminf,
+  limsup and sup differ); `Left`/`Right` answer false too, asserted at
+  generation and left to their own renderer dispatch;
+- `FONT_STYLE_COMMANDS`, `MATRIX_ENVIRONMENTS`, `ALIGNMENT_LETTERS` — render
+  probes per row: the FontStyle wrapper read back off every subclass, a
+  `Table::Matrix` render per `to_matrices` paren (the NoMethodError miss
+  verified), a `Table::Array` render per alignment (the `.` fallback
+  verified);
+- `COLOR_ASCIIMATH_SYMBOLS` — `to_asciimath` measured for exactly the ids the
+  renderer names (`Plus`, `Eqno`), each verified through a full `Color`
+  render.
+
+All sixty-eight entries stay pinned by literal probe-backed tests
+(`test/generated/latex-render-tables.spec.ts` and the behavioural pins in
+`test/formats/latex/renderer.spec.ts`), independent of the generated data
+they check; a gem bump now re-measures the tables on regeneration.
+
+### LaTeX: Fenced refuses node-valued paren slots
+
+**Trigger: a gem release that fixes the interpolation, or a corpus case that
+needs the construct.**
+
+Known divergence. The gem's `Fenced#to_latex` interpolates a formula, mrow,
+or table sitting in a paren slot through `#inspect` — an object memory
+address, nondeterministic run to run. The port raises `RenderError` instead
+of reproducing address bytes; only gem-accepted deterministic input renders.
+Same policy as the color rule and the AsciiMath Left/Right refusal.
+
+### LaTeX: Color renders only the measured AsciiMath fragment
+
+**Trigger: corpus or sweep growth that exercises a new color operand.**
+
+`Color`'s first slot renders through the gem's `to_asciimath`. The port
+carries only the measured fragment (base symbols, numbers, quoted text,
+formula joins, `Plus`, `Eqno`) and raises `RenderError` for other symbol ids
+the gem would render — a loud gap, not a silent wrong byte. (The generated
+color-asciimath slice landed 2026-08-06 carrying exactly this fragment; the
+gap itself remains until the corpus exercises more operands.)
+
+### LaTeX: no symbol-exception context axis is threaded
+
+**Trigger: a regeneration that introduces LaTeX symbol variants must wire an
+axis mechanism first — the pin will fail and point here.**
+
+`LATEX_SYMBOL_EXCEPTIONS` is empty today, so `toLatex` threads no context
+axis; `renderer.spec.ts` pins the emptiness so a future regeneration cannot
+silently need one.

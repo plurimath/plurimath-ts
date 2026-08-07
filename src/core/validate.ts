@@ -58,6 +58,7 @@ const ABSTRACT_CARRIERS: ReadonlySet<string> = new Set<string>(RUBY_ABSTRACT_CLA
 
 function describeValue(value: unknown): string {
   if (value === null) return "null";
+  if (value === undefined) return "undefined";
   if (Array.isArray(value)) return "an array";
   if (typeof value === "object") return "an object";
   if (typeof value === "string") return JSON.stringify(value);

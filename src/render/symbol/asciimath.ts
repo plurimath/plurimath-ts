@@ -68,8 +68,9 @@ export function renderSymbol(node: NodeOf<"symbol">, context: RenderContext): st
     // No variant claimed this context; fall through to the static value.
   }
   const literal = ASCIIMATH_SYMBOLS.get(id);
-  // The factory brands the error as this walk's own throw, so the boundary
-  // can tell it from an input's imitation (see render-shared.ts).
+  // The factory records the error as this walk's own throw (a
+  // module-private WeakSet), so the boundary can tell it from an input's
+  // imitation (see render-shared.ts).
   if (literal === undefined) throw missingSymbolDataError(id);
   return literal;
 }

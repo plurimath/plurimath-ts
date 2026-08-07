@@ -14,11 +14,11 @@
  * stay accepted.
  *
  * Mutation-tested (PORTING-STANDARDS.md, "a suite that guards a guard"):
- * with the validator's body gutted to a no-op, the 25 rejection tests below
+ * with the validator's body gutted to a no-op, the 26 rejection tests below
  * fail and the positive ones stay green; with the cycle detector's
  * ancestor-set never pruned, the shared-object positive test fails alone
- * (both runs 2026-08-07, re-run after the lying-length bound check). A guard
- * spec never seen red proves nothing.
+ * (both runs 2026-08-07, re-measured after the stringification-fallback
+ * change). A guard spec never seen red proves nothing.
  */
 
 import { describe, expect, it } from "vitest";
@@ -241,13 +241,13 @@ describe("assertMathNodeShape, the walk itself", () => {
     expect(error.message).toContain("hostile accessor");
   });
 
-  it("pins the accepted degradation: a thrown value whose stringification throws RangeError takes the too-deep branding", () => {
-    // NOT an endorsement — a pin of what IS (the module header's
-    // stringification caveat). Describing a thrown value is a `String(error)`
-    // call; when that secondary throw is a `RangeError` it reaches the entry
-    // point bare and is indistinguishable from genuine stack exhaustion, so
-    // it gets the too-deep RenderError. Outside the contract: no Ruby ivar
-    // read runs code, so no Ruby analogue of this input exists.
+  it("a thrown value whose stringification throws RangeError keeps the accessor branding and the read's path", () => {
+    // Formerly the pinned misbranding: describing a thrown value was a bare
+    // `String(error)` call, so this secondary RangeError reached the entry
+    // point indistinguishable from genuine stack exhaustion and took the
+    // too-deep RenderError (seen red exactly so). The description now falls
+    // back to a fixed phrase at the read site — no secondary throw travels,
+    // and the read's path survives into the message.
     const error = failure({
       kind: "sqrt",
       get parameterOne(): unknown {
@@ -258,8 +258,40 @@ describe("assertMathNodeShape, the walk itself", () => {
         };
       },
     });
-    expect(error.message).toContain("too deep");
-    expect(error.message).not.toContain("secondary");
+    expect(error.message).toContain("node.parameterOne");
+    expect(error.message).toContain("a thrown value that cannot be described");
+    expect(error.message).not.toContain("too deep");
+  });
+
+  it("a chain whose every description throws still wraps as RenderError at the read's path", () => {
+    // Formerly the one raw escape: the getter's throw could not be
+    // stringified, and neither could the value describing THAT failure — the
+    // chain left the walk bare (seen red exactly so, caught === the thrown
+    // value). With the fallback phrase there is no chain at all. Not through
+    // `failure()`: its own diagnostic stringifies the caught value, which is
+    // exactly what this input refuses.
+    const selfThrowing = {
+      toString(): string {
+        throw selfThrowing;
+      },
+    };
+    let caught: unknown;
+    try {
+      assertMathNodeShape(
+        {
+          kind: "sqrt",
+          get parameterOne(): unknown {
+            throw selfThrowing;
+          },
+        },
+        FORMAT,
+      );
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).message).toContain("node.parameterOne");
+    expect((caught as RenderError).message).toContain("a thrown value that cannot be described");
   });
 
   it("a getter's own RangeError surfaces as the accessor failure, not the too-deep rejection", () => {

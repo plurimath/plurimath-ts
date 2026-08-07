@@ -58,22 +58,15 @@
  *     getter's deliberate `RangeError` surfaces as that accessor failure,
  *     never as the depth rejection. "Keeping its message" has one honest
  *     limit: describing a thrown value is itself a `String(error)` call,
- *     running the input's code again — so the wrap and the depth branding
- *     below hold exactly for inputs whose thrown values stringify without
- *     themselves throwing (one hostile stringification is still wrapped at
- *     the entry point, described by its secondary failure and rooted at
- *     `node` rather than the read's path). Beyond that the chain degrades
- *     outside the contract: a secondary `RangeError` reaches the entry
- *     point bare and takes the too-deep branding below, and a chain whose
- *     secondary description also throws escapes raw — accepted, because no
- *     Ruby ivar read runs code, so no Ruby analogue of these inputs can
- *     exist (the misbranding is pinned in `test/core/validate.spec.ts` as
- *     what IS, not as good). Within that limit, a finite tree nesting
- *     deeper than the recursion's stack is the `RangeError` the entry
- *     point rethrows as the too-deep `RenderError`. The gem raises on the
- *     deep tree too — SystemStackError, probed — so a raw `RangeError`
- *     escape here would break the raise-for-raise mapping, not just the
- *     error type.
+ *     running the input's code again — so a thrown value whose own
+ *     stringification throws is described by a fixed fallback phrase
+ *     instead (`describeThrown`, core/errors.ts), still as the accessor
+ *     failure at the read's path. No secondary throw travels, so the only
+ *     `RangeError` that can reach the entry point is the walk's own
+ *     recursion running out of frames on a finite tree, rethrown as the
+ *     too-deep `RenderError`. The gem raises on the deep tree too —
+ *     SystemStackError, probed — so a raw `RangeError` escape here would
+ *     break the raise-for-raise mapping, not just the error type.
  *
  * Deliberately NOT checked: field presence beyond the identity slots, and
  * per-field value types. Ruby reads an unassigned ivar as `nil`, so a missing
@@ -94,7 +87,7 @@
  * the renderer entry point's half of the wrap.
  */
 
-import { RenderError } from "./errors";
+import { describeThrown, RenderError } from "./errors";
 import type { MathNode, NodeKind } from "./nodes";
 import { RUBY_ABSTRACT_CLASSES } from "./nodes";
 import { NODE_SPECS } from "./normalize";
@@ -130,13 +123,14 @@ function describeValue(value: unknown): string {
  * The accessor-failure rejection: a read the walk performed on the input ran
  * the input's own code — a getter or proxy trap, something no Ruby ivar read
  * can do — and that code threw. The contract is RenderError-or-pass, so the
- * input's throw is wrapped, its message kept, at the path of the read —
- * subject to the module header's stringification caveat: `String(error)` runs
- * the thrown value's own code, and its secondary throw replaces the message.
+ * input's throw is wrapped, its message kept, at the path of the read — and
+ * the description itself cannot throw: `describeThrown` runs the thrown
+ * value's own `toString` under a fallback phrase, so a hostile
+ * stringification decorates this rejection instead of replacing it.
  */
 function accessorFailure(error: unknown, format: string, path: string): RenderError {
   return new RenderError(
-    `${path}: reading the tree itself threw before it could be validated — ${String(error)}`,
+    `${path}: reading the tree itself threw before it could be validated — ${describeThrown(error)}`,
     format,
     "unknown",
   );
@@ -179,31 +173,40 @@ function readPrototype(value: object, format: string, path: string): object | nu
  * Verifies that `value` is a structurally valid `MathNode` tree, throwing a
  * `RenderError` naming the offending path when it is not.
  *
+ * Deliberately `() => void`, never `asserts value is MathNode`: the check is
+ * structural, and the module header's "Deliberately NOT checked" list is
+ * exactly the gap between passing it and BEING a `MathNode`. Ruby reads an
+ * unassigned ivar as nil, so a constructed kind's required fields may be
+ * absent here; boolean and number slot values pass wherever a string is
+ * declared; extra fields ride along. An `asserts` signature would stamp the
+ * static type onto values the runtime deliberately does not certify — an
+ * unsound narrowing on the public ./core surface. A caller holding
+ * `unknown` casts at its own boundary, naming this check (plus its
+ * renderer's per-site guards) as what the cast leans on.
+ *
  * `format` names the caller in the error (`"asciimath"`, `"latex"`, ...);
  * renderers call this once, at their entry point, and may then dispatch on
  * `kind` without re-checking shape. See the module docs for the exact
  * contract — in one line: every node has a known `kind`, abstract carriers
  * carry their `name`, and no slot holds a value no Ruby node could hold.
  */
-export function assertMathNodeShape(value: unknown, format: string): asserts value is MathNode {
+export function assertMathNodeShape(value: unknown, format: string): void {
   try {
     assertNode(value, format, "node", new Set());
   } catch (error) {
     if (error instanceof RenderError) throw error;
     if (error instanceof RangeError) {
-      // GENUINE stack exhaustion — up to the header's stringification
-      // caveat, whose hostile chains can land a secondary `RangeError` here
-      // bare and take this branding too (pinned, accepted). Every read the
-      // walk performs on the input is wrapped at its read site
-      // (`readProperty` and friends), so an input's own throw — a getter's
-      // deliberate `RangeError` included — arrives here already spelled
-      // RenderError when its thrown value stringifies without throwing.
-      // What remains is the walk's recursion running out of frames on a
-      // finite tree (the cycle check above would have named a loop). The gem
-      // raises on the same tree — SystemStackError from `to_asciimath` at
-      // depth 10,000, direct and through the Formula boundary alike (probe
-      // probe-sweep-depth.rb on the pinned oracle) — and this contract
-      // spells every such raise RenderError.
+      // GENUINE stack exhaustion. Every read the walk performs on the input
+      // is wrapped at its read site (`readProperty` and friends), and the
+      // wrap's description cannot throw (`describeThrown`), so an input's
+      // own throw — a getter's deliberate `RangeError` included — arrives
+      // here already spelled RenderError. What remains is the walk's
+      // recursion running out of frames on a finite tree (the cycle check
+      // above would have named a loop). The gem raises on the same tree —
+      // SystemStackError from `to_asciimath` at depth 10,000, direct and
+      // through the Formula boundary alike (probe probe-sweep-depth.rb on
+      // the pinned oracle) — and this contract spells every such raise
+      // RenderError.
       throw new RenderError(
         "node: the tree nests too deep for the walk's call stack — the gem's own " +
           "render of a tree this deep raises SystemStackError",

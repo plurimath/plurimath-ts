@@ -195,35 +195,45 @@ export function classBasename(rubyClass: string): string {
  * is a test the INPUT can pass too: a hostile getter that answered
  * validation's read can throw its own `MissingSymbolDataError` mid-render
  * and forge the pass-through, reporting MISSING_SYMBOL_DATA for what is an
- * input failure. So the genuine throw site marks its instances with a
- * module-private symbol — the `NODE_BRAND` pattern (`../../core/nodes.ts`),
- * deliberately `Symbol()` and not `Symbol.for()`, so no other module can
- * mint the key — and the boundary passes through only marked instances.
+ * input failure. So the genuine throw site records its instances in this
+ * module-private `WeakSet`, and the boundary passes through members only.
+ * The mark is membership, never state on the instance: a symbol PROPERTY
+ * was discoverable — `Object.getOwnPropertySymbols` on a caught genuine
+ * error handed the input the key to copy onto a forgery — where set
+ * membership cannot be read off, minted, or transplanted (pinned: a genuine
+ * error's own symbols are `[]`, and the copy-everything forgery wraps —
+ * `test/formats/asciimath/renderer.spec.ts`). The residue is narrower: an
+ * input can still REPLAY a genuine instance — obtain one, say by rendering
+ * a missing id itself, and re-throw it from a getter — and the boundary
+ * passes it through as the walk's own; accepted with the pass-through pins
+ * there, because the instance IS the walk's own throw, carrying exactly the
+ * report it was minted with.
  *
- * The mark lives HERE because this file is the one module both sides may
+ * The set lives HERE because this file is the one module both sides may
  * import (§3 rule 8): the throw site (`../../render/symbol/asciimath.ts`)
  * reaches only core, its generated data, this file, and sibling kind files;
  * the boundary (`./renderer.ts`) stands on this file already. Core cannot
  * hold it — `src/index.ts` star-re-exports the core barrel, so a factory
  * there would land on the public surface, and a per-format boundary policy
- * is not layer-1 vocabulary. A symbol property never serializes and never
- * widens the public error type.
+ * is not layer-1 vocabulary. A WeakSet never serializes, never widens the
+ * public error type, and holds weakly — a caught-and-dropped error stays
+ * collectable.
  */
-const MISSING_SYMBOL_BRAND: unique symbol = Symbol("plurimath.asciimath.missingSymbolData");
+const OWN_MISSING_SYMBOL_ERRORS = new WeakSet<MissingSymbolDataError>();
 
-/** The symbol table's one deliberate non-RenderError throw, branded. */
+/** The symbol table's one deliberate non-RenderError throw, recorded as our own. */
 export function missingSymbolDataError(symbolId: string): MissingSymbolDataError {
   const error = new MissingSymbolDataError(symbolId, FORMAT);
-  Object.defineProperty(error, MISSING_SYMBOL_BRAND, { value: true });
+  OWN_MISSING_SYMBOL_ERRORS.add(error);
   return error;
 }
 
-/** Reads the brand the factory set — shape and prototype prove nothing here. */
+/** Membership in the factory's set — shape and prototype prove nothing here. */
 export function isOwnMissingSymbolDataError(error: unknown): boolean {
   return (
     typeof error === "object" &&
     error !== null &&
-    (error as { [MISSING_SYMBOL_BRAND]?: unknown })[MISSING_SYMBOL_BRAND] === true
+    OWN_MISSING_SYMBOL_ERRORS.has(error as MissingSymbolDataError)
   );
 }
 

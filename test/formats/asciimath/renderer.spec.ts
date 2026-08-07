@@ -802,13 +802,13 @@ describe("inputs that defeat the walk itself", () => {
 
   it("a getter throwing a forged MissingSymbolDataError post-validation wraps as RenderError", () => {
     // The pass-through above is for the symbol table's OWN throw
-    // (`src/render/symbol/asciimath.ts`), which the throw site brands with a
-    // module-private symbol. A hostile getter that answers validation's read
+    // (`src/render/symbol/asciimath.ts`), which the throw site records in a
+    // module-private WeakSet. A hostile getter that answers validation's read
     // and then throws its own `MissingSymbolDataError` mid-render is an input
     // failure wearing the class: `instanceof` alone would let it out
     // unwrapped, reporting MISSING_SYMBOL_DATA for a walk the symbol table
     // never faulted — the same forgery the ParseError pin above closes for
-    // the parse surface. Unbranded, it wraps like any other mid-walk throw,
+    // the parse surface. Unrecorded, it wraps like any other mid-walk throw,
     // message kept.
     let reads = 0;
     const node = {
@@ -828,6 +828,95 @@ describe("inputs that defeat the walk itself", () => {
     expect(caught).toBeInstanceOf(RenderError);
     expect((caught as RenderError).code).toBe("RENDER_ERROR");
     expect((caught as RenderError).message).toContain("Forged");
+  });
+
+  it("a genuine missing-symbol error carries no discoverable mark — no symbol to steal", () => {
+    // The pass-through mark is MEMBERSHIP in the throw site's module-private
+    // WeakSet, never anything stored on the instance: a symbol-property
+    // brand was discoverable right here — `Object.getOwnPropertySymbols` on
+    // a caught genuine error handed the input the key, and with it the
+    // forgery the next pin closes. Nothing observable may sit on the error.
+    let genuine: unknown;
+    try {
+      toAsciimath({ kind: "symbol", id: "NoSuchSymbol", value: null } as never);
+    } catch (error) {
+      genuine = error;
+    }
+    expect(genuine).toBeInstanceOf(MissingSymbolDataError);
+    expect(Object.getOwnPropertySymbols(genuine as object)).toEqual([]);
+  });
+
+  it("a forged object carrying everything stolen off a caught genuine error wraps as RenderError", () => {
+    // The exact theft a symbol-property brand allowed: catch the walk's own
+    // missing-symbol throw, lift its own symbols with
+    // `Object.getOwnPropertySymbols`, copy them — values included — onto a
+    // forged look-alike, and throw that mid-render. Under the property brand
+    // the forgery passed `isOwnMissingSymbolDataError` and escaped the
+    // boundary unwrapped (seen red exactly so); WeakSet membership cannot be
+    // read off an instance, so the forgery wraps like any other input throw.
+    // Replaying the genuine INSTANCE itself remains possible — the narrower
+    // residue named in render-shared.ts, accepted with the pass-through pin
+    // above.
+    let genuine: unknown;
+    try {
+      toAsciimath({ kind: "symbol", id: "NoSuchSymbol", value: null } as never);
+    } catch (error) {
+      genuine = error;
+    }
+    const forged = Object.create(MissingSymbolDataError.prototype) as Record<PropertyKey, unknown>;
+    forged.code = "MISSING_SYMBOL_DATA";
+    forged.symbolId = "Forged";
+    forged.message = "forged missing-symbol pass-through";
+    for (const stolen of Object.getOwnPropertySymbols(genuine as object)) {
+      forged[stolen] = (genuine as Record<PropertyKey, unknown>)[stolen];
+    }
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw forged;
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toAsciimath(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).code).toBe("RENDER_ERROR");
+  });
+
+  it("a thrown value whose own toString throws still wraps, described by the fallback phrase", () => {
+    // The boundary's description of a mid-walk throw is a `String(error)`
+    // call — input code that can itself throw. Unwrapped, the secondary
+    // throw escaped the boundary raw (seen red exactly so); the description
+    // falls back to a fixed phrase, so the boundary never leaks a raw value.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) {
+          throw {
+            toString(): string {
+              throw new Error("secondary");
+            },
+          };
+        }
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toAsciimath(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).message).toContain("a thrown value that cannot be described");
   });
 
   it("a frozen tree renders — nothing on the render path writes to the input", () => {

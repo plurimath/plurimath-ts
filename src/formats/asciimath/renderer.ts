@@ -29,6 +29,7 @@
  * `RenderError` is the §5 runtime-boundary contract.
  */
 
+import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
@@ -49,6 +50,12 @@ export type AsciimathOptions = Record<string, never>;
  * `TypeError` inside the dispatch.
  */
 export function toAsciimath(node: MathNode, _options?: AsciimathOptions | null): string {
+  // Structural check only — `assertMathNodeShape` deliberately returns
+  // `void`, not `asserts node is MathNode` (missing constructed fields and
+  // boolean/number slots pass; narrowing would overpromise, see
+  // core/validate.ts). The compile-time contract stays on this parameter's
+  // declared type; a JS caller's unvalidated value either fails this check
+  // or the per-site guards behind it, as `RenderError`.
   assertMathNodeShape(node, FORMAT);
   try {
     // `?? ""`: the one Ruby render that returns nil rather than a string is a
@@ -60,21 +67,28 @@ export function toAsciimath(node: MathNode, _options?: AsciimathOptions | null):
     // contract) and the symbol table's `MissingSymbolDataError` — the one
     // non-RenderError PlurimathError a kind file throws on purpose
     // (`renderSymbol`, on an id the generated table does not carry), and a
-    // public error code in its own right. That second pass-through reads the
-    // brand the throw site set (`isOwnMissingSymbolDataError`,
-    // render-shared.ts), never `instanceof`: the class is constructible by
-    // the input too, and a hostile getter throwing one mid-render is an
-    // input failure, not a symbol-table miss. The gem's boundary does the
-    // analogous split: `wrap_render_error` (`formula.rb:437`) re-raises its
-    // ParseError and wraps every other StandardError into one — and the
-    // gem's render-phase ParseError maps to RenderError here, so the port's
-    // ParseError is never this walk's error. Anything else — a render-phase
-    // stack exhaustion the validator's smaller frames survived, a property
-    // read that answered validation and then threw (no Ruby ivar read runs
-    // code, a JS getter does — a re-thrown port ParseError or an unbranded
-    // MissingSymbolDataError included) — becomes the RenderError the §5
-    // contract promises, original message kept.
+    // public error code in its own right. That second pass-through checks
+    // membership in the throw site's own instance set
+    // (`isOwnMissingSymbolDataError`, render-shared.ts), never `instanceof`:
+    // the class is constructible by the input too, and a hostile getter
+    // throwing one mid-render is an input failure, not a symbol-table miss.
+    // The gem's boundary does the analogous split: `wrap_render_error`
+    // (`formula.rb:437`) re-raises its ParseError and wraps every other
+    // StandardError into one — and the gem's render-phase ParseError maps to
+    // RenderError here, so the port's ParseError is never this walk's error.
+    // Anything else — a render-phase stack exhaustion the validator's
+    // smaller frames survived, a property read that answered validation and
+    // then threw (no Ruby ivar read runs code, a JS getter does — a
+    // re-thrown port ParseError or an unrecorded MissingSymbolDataError
+    // included) — becomes the RenderError the §5 contract promises, original
+    // message kept; describing it runs the thrown value's own `toString`,
+    // so the description falls back to a fixed phrase rather than let a
+    // secondary throw leak the raw value (`describeThrown`).
     if (error instanceof RenderError || isOwnMissingSymbolDataError(error)) throw error;
-    throw new RenderError(`rendering failed mid-walk — ${String(error)}`, FORMAT, "unknown");
+    throw new RenderError(
+      `rendering failed mid-walk — ${describeThrown(error)}`,
+      FORMAT,
+      "unknown",
+    );
   }
 }

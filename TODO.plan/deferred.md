@@ -205,3 +205,31 @@ shared corpus has no case reaching it, so its dropped-empty-options behavior
 is never exercised end-to-end. Not a registry gap — a corpus-scope gap,
 owned upstream where cases are generated. (The first draft of this note
 claimed both kinds were uncovered; review disproved it for `underset`.)
+
+### Lone surrogates diverge from Ox byte output
+
+**Trigger: only if a consumer ever feeds the serializer invalid Unicode and
+files it as a bug — then decide byte-oriented output vs a loud reject.**
+
+Known divergence (PR #9 review, 2026-08-06). Ox, handed a Ruby string
+force-encoded around a lone-surrogate byte sequence (`ED A0 80`), emits those
+invalid bytes raw; `src/xml` holds text as JavaScript strings, so a lone
+UTF-16 surrogate becomes U+FFFD (`EF BF BD`) at any UTF-8 encoding boundary.
+No gem code path produces such a string — constructing one requires
+deliberate `force_encoding` — and the maintainer's parser-side ruling on
+degenerate Unicode input (the caller bears the consequences) extends here.
+Documented in `src/xml/serializer.ts`.
+
+### The XML writer is owed a thorough dedicated review
+
+**Trigger: before the MathML renderer (PR-4) merges — it is that PR's
+foundation — and again before 1.0.**
+
+Maintainer decision at #9's merge (2026-08-07): the hand-rolled Ox-faithful
+writer was accepted after the ecosystem survey (no native org XML layer
+exists; the gem itself hand-rolls the same pattern for its Oga engine), but
+the maintainer wants `src/xml/` thoroughly re-reviewed as a unit — design,
+byte contract, and its fitness as the prospective shared module for future
+sibling ports — beyond the PR-cycle reviews it has had. The reader-side
+(XML parsing for MathML input) remains a separate open decision: evaluate
+existing parser libraries before building anything.

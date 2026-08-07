@@ -115,3 +115,31 @@ If the 253-entry table proves useful outside this repository, it could ship as
 its own package. Post-1.0 at the earliest, and only on evidence of a second
 consumer — `src/core/generated/html-entities.ts` is 6,009 bytes (2,363
 gzipped), which is not enough to justify a package boundary on its own.
+
+### Lone surrogates diverge from Ox byte output
+
+**Trigger: only if a consumer ever feeds the serializer invalid Unicode and
+files it as a bug — then decide byte-oriented output vs a loud reject.**
+
+Known divergence (PR #9 review, 2026-08-06). Ox, handed a Ruby string
+force-encoded around a lone-surrogate byte sequence (`ED A0 80`), emits those
+invalid bytes raw; `src/xml` holds text as JavaScript strings, so a lone
+UTF-16 surrogate becomes U+FFFD (`EF BF BD`) at any UTF-8 encoding boundary.
+No gem code path produces such a string — constructing one requires
+deliberate `force_encoding` — and the maintainer's parser-side ruling on
+degenerate Unicode input (the caller bears the consequences) extends here.
+Documented in `src/xml/serializer.ts`.
+
+### The XML writer is owed a thorough dedicated review
+
+**Trigger: before the MathML renderer (PR-4) merges — it is that PR's
+foundation — and again before 1.0.**
+
+Maintainer decision at #9's merge (2026-08-07): the hand-rolled Ox-faithful
+writer was accepted after the ecosystem survey (no native org XML layer
+exists; the gem itself hand-rolls the same pattern for its Oga engine), but
+the maintainer wants `src/xml/` thoroughly re-reviewed as a unit — design,
+byte contract, and its fitness as the prospective shared module for future
+sibling ports — beyond the PR-cycle reviews it has had. The reader-side
+(XML parsing for MathML input) remains a separate open decision: evaluate
+existing parser libraries before building anything.

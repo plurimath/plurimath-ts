@@ -47,7 +47,14 @@
  *     getter or proxy trap — no Ruby ivar read runs code) is wrapped AT THE
  *     READ SITE, keeping its message and the path of the read — so even a
  *     getter's deliberate `RangeError` surfaces as that accessor failure,
- *     never as the depth rejection. A finite tree nesting deeper than the
+ *     never as the depth rejection. "Keeping its message" has one honest
+ *     limit: describing the thrown value is itself a `String(error)` call,
+ *     so a getter that throws an object whose own stringification ALSO
+ *     throws gets described by that secondary failure instead, wrapped at
+ *     the entry point and rooted at `node` rather than the read's path.
+ *     That case previously escaped as the raw secondary throw; the
+ *     entry-point wrap made it a `RenderError` — the wrap is new, losing
+ *     the original message is not. A finite tree nesting deeper than the
  *     recursion's stack is then the only `RangeError` left to reach the
  *     entry point, rethrown as the too-deep `RenderError`. The gem raises
  *     on the deep tree too — SystemStackError, probed — so a raw
@@ -109,7 +116,9 @@ function describeValue(value: unknown): string {
  * The accessor-failure rejection: a read the walk performed on the input ran
  * the input's own code — a getter or proxy trap, something no Ruby ivar read
  * can do — and that code threw. The contract is RenderError-or-pass, so the
- * input's throw is wrapped, its message kept, at the path of the read.
+ * input's throw is wrapped, its message kept, at the path of the read —
+ * subject to the module header's stringification caveat: `String(error)` runs
+ * the thrown value's own code, and its secondary throw replaces the message.
  */
 function accessorFailure(error: unknown, format: string, path: string): RenderError {
   return new RenderError(

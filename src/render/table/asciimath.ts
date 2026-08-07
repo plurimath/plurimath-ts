@@ -7,7 +7,11 @@
  * Measured pin worth naming: a `Table` with a nil close paren falls back
  * through `Asciimath::Constants::TABLE_PARENTHESIS` and an unlisted open
  * paren yields the empty string: `{:[x]` for an `{:` open. `Matrix` maps its
- * rows strictly while `parentheless_table` is nil-safe.
+ * rows strictly while `parentheless_table` is nil-safe per ROW
+ * (`val&.to_asciimath`) — a nil `value` still raises in both, because each
+ * opens with a bare `value.map` (probe-parentheless-nil-value.rb: Align,
+ * Split and Array all raise NoMethodError; only the bare `Table` renders a
+ * nil value, as `[]`).
  */
 
 import { RenderError } from "../../core/index";
@@ -85,7 +89,8 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): stri
   }
 
   if (PARENTHELESS_TABLE_NAMES.has(className)) {
-    // `parentheless_table` — nil-safe rows (`table.rb:379-383`).
+    // `parentheless_table` — nil-safe rows, but a bare `value.map` on the
+    // value itself (`table.rb:379-383`; probe-parentheless-nil-value.rb).
     if (!Array.isArray(node.value)) {
       throw new RenderError(
         `table.value: is ${describeSlot(node.value)}, not a list — the gem raises NoMethodError here`,

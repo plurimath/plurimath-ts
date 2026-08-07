@@ -437,6 +437,18 @@ describe("tables", () => {
     expect(() => toAsciimath(new TableNode({ name: "Matrix", value: null }))).toThrow(RenderError);
   });
 
+  it("a nil value crashes the parentheless trio too — only the base table is nil-safe", () => {
+    // `parentheless_table` opens with `value.map`, NOT `value&.map`
+    // (`table.rb:380`): probe-parentheless-nil-value.rb on the pinned oracle —
+    // Align/Split/Array with a nil value raise NoMethodError (ParseError
+    // through the Formula boundary) while the bare `Table.new(nil)` renders
+    // "[]". The per-ROW nil-safety (`val&.to_asciimath`) never reaches a nil
+    // value, so the rejection here is the gem's raise, not a port guard.
+    for (const name of ["Align", "Split", "Array"]) {
+      expect(() => toAsciimath(new TableNode({ name, value: null })), name).toThrow(RenderError);
+    }
+  });
+
   it("td joins nil-safely where tr does not", () => {
     // Probes td/nil-member => "x  2"; unary/Tr/nil => NoMethodError.
     expect(
@@ -689,12 +701,13 @@ describe("inputs that defeat the walk itself", () => {
   it("a kind that flips to an inherited key after validation raises the unknown-kind RenderError", () => {
     // Validation reads `kind` once; the dispatcher's own read is a second
     // one, and a stateful getter can answer it with an inherited
-    // Object.prototype key. On a plain-object table "toString" resolves to a
-    // real function (a string comes back, no error at all) and "__proto__"
-    // to Object.prototype itself (a TypeError from calling a non-function).
-    // Both are unknown kinds and must take the unknown-kind RenderError,
-    // naming the kind the dispatcher actually read.
-    for (const flip of ["toString", "__proto__"]) {
+    // Object.prototype key. On a plain-object table "toString" and
+    // "hasOwnProperty" resolve to real functions (a value comes back, no
+    // error at all), "constructor" to `Object` itself (callable too), and
+    // "__proto__" to Object.prototype (a TypeError from calling a
+    // non-function). All are unknown kinds and must take the unknown-kind
+    // RenderError, naming the kind the dispatcher actually read.
+    for (const flip of ["toString", "__proto__", "constructor", "hasOwnProperty"]) {
       let reads = 0;
       const node = {
         get kind(): string {

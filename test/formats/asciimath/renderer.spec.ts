@@ -178,6 +178,19 @@ describe("subsup shapes", () => {
     // Probe binary/Stackrel/nil,nil => "stackrel()()".
     expect(toAsciimath(new BinaryFunctionNode({ name: "Stackrel" }))).toBe("stackrel()()");
   });
+
+  it("a binary or ternary name outside the measured set raises rather than guessing", () => {
+    // The same fail-loud carrier policy the unary, fontStyle and table
+    // carriers pin (TODO.plan/deferred.md): a defined name outside
+    // REACHABLE_BINARY_NAMES / REACHABLE_TERNARY_NAMES names no measured gem
+    // class, so it raises instead of rendering the carrier default.
+    expect(() =>
+      toAsciimath(new BinaryFunctionNode({ name: "<unmeasured>", parameterOne: x() })),
+    ).toThrow(RenderError);
+    expect(() =>
+      toAsciimath(new TernaryFunctionNode({ name: "<unmeasured>", parameterOne: x() })),
+    ).toThrow(RenderError);
+  });
 });
 
 describe("the big operators", () => {
@@ -527,9 +540,12 @@ describe("where the gem cannot render its own parse", () => {
 
 describe("degenerate value slots the gem's pipeline cannot produce", () => {
   // No gem parse puts anything but a string (or nil) into `Number#value` or
-  // `Symbols::Symbol#value`, and `String(value)` cannot reproduce Ruby's
-  // interpolation of anything else — so these raise (the standing
-  // degenerate-input ruling: loud, never silently divergent bytes).
+  // `Symbols::Symbol#value`. Where the gem's spelling of a degenerate value
+  // IS reproducible (booleans, the non-finite floats — next describe) this
+  // port renders it; the shapes here are the ones whose Ruby bytes cannot be
+  // matched — hash inspect, object addresses, the Integer/Float split — so
+  // they raise (the standing degenerate-input ruling: loud, never silently
+  // divergent bytes).
   it("a number with an object value raises instead of emitting [object Object]", () => {
     // Probe probe-degenerate-value.rb on the pinned oracle (ruby 4.0.1):
     //   Plurimath::Math::Number.new({a: 1}).to_asciimath(options: {})
@@ -559,6 +575,125 @@ describe("degenerate value slots the gem's pipeline cannot produce", () => {
     expect(() => toAsciimath({ kind: "number", value: { a: 1 } } as never)).toThrow(
       /holds an object/,
     );
+  });
+
+  it("a finite number raises: JS cannot witness Ruby's Integer/Float split", () => {
+    // Probe probe-sweep-truthiness.rb on the pinned oracle:
+    //   Number.new(5).to_asciimath(options: {})     => "5"
+    //   Number.new(5.0).to_asciimath(options: {})   => "5.0"
+    //   Number.new(1.0e21).to_asciimath(options: {})=> "1.0e+21" (String() says "1e+21")
+    // The JS number 5 is both Ruby values at once, so there is no single
+    // byte answer to match — loud, never a guess.
+    expect(() => toAsciimath({ kind: "number", value: 5 } as never)).toThrow(RenderError);
+    expect(() =>
+      toAsciimath(new UnaryFunctionNode({ name: "Left", parameterOne: 5 as never })),
+    ).toThrow(RenderError);
+  });
+});
+
+describe("degenerate value slots the gem spells reproducibly", () => {
+  // The mirror half of the ruling above: where the gem RENDERS a degenerate
+  // slot and its bytes are reproducible, this port renders the same bytes —
+  // class-for-class parity cuts both ways. All pins probed on the pinned
+  // oracle (probe-sweep-truthiness.rb, 2026-08-07, ruby 4.0.1).
+  it("a false parameter renders as Ruby truthiness renders it — empty, not a crash", () => {
+    // asciimath_value (`unary_function.rb:196`) opens `return "" unless
+    // parameter_one` — a truthiness test, so `false` answers "" exactly like
+    // nil. Probes: mpadded-false => ""; sin-false => "sin".
+    expect(toAsciimath({ kind: "mpadded", parameterOne: false } as never)).toBe("");
+    expect(toAsciimath(new UnaryFunctionNode({ name: "Sin", parameterOne: false as never }))).toBe(
+      "sin",
+    );
+    // Probe norm-false => "norm" — the non-keyword carrier default reaches
+    // its `if parameter_one` guard instead, same answer through `present`.
+    expect(toAsciimath(new NormNode({ parameterOne: false as never }))).toBe("norm");
+  });
+
+  it("a boolean value interpolates as Ruby spells it", () => {
+    // Probes: number-true => "true"; number-false => "false" (TextRenderer's
+    // `result.to_s`); symbol-true-in-formula => "true" (the raw value,
+    // to_s'd by Formula's join).
+    expect(toAsciimath({ kind: "number", value: true } as never)).toBe("true");
+    expect(toAsciimath({ kind: "number", value: false } as never)).toBe("false");
+    expect(toAsciimath({ kind: "symbol", value: true } as never)).toBe("true");
+  });
+
+  it("the three non-finite floats interpolate as Ruby spells them", () => {
+    // Probes: number-nan => "NaN"; number-inf => "Infinity"; number-neg-inf
+    // => "-Infinity" — each the one JS number with exactly one Ruby preimage
+    // and a byte-identical to_s, unlike every finite number (see above).
+    expect(toAsciimath({ kind: "number", value: Number.NaN } as never)).toBe("NaN");
+    expect(toAsciimath({ kind: "number", value: Number.POSITIVE_INFINITY } as never)).toBe(
+      "Infinity",
+    );
+    expect(toAsciimath({ kind: "number", value: Number.NEGATIVE_INFINITY } as never)).toBe(
+      "-Infinity",
+    );
+  });
+
+  it("Left/Right interpolate the same reproducible primitives", () => {
+    // Probes: left-true => "lefttrue"; right-false => "rightfalse";
+    // left-nan => "leftNaN" — `"left#{parameter_one}"` is plain
+    // interpolation, so the same to_s parity applies.
+    expect(toAsciimath(new UnaryFunctionNode({ name: "Left", parameterOne: true as never }))).toBe(
+      "lefttrue",
+    );
+    expect(
+      toAsciimath(new UnaryFunctionNode({ name: "Right", parameterOne: false as never })),
+    ).toBe("rightfalse");
+    expect(
+      toAsciimath(new UnaryFunctionNode({ name: "Left", parameterOne: Number.NaN as never })),
+    ).toBe("leftNaN");
+  });
+
+  it("a false slot still raises where the gem's send raises", () => {
+    // Truthiness only reaches the guards that test it. Probes: text-false =>
+    // NoMethodError (false.gsub); mpadded-list-false => NoMethodError
+    // (Array#compact keeps false; false.to_asciimath).
+    expect(() => toAsciimath(new TextNode({ parameterOne: false as never }))).toThrow(RenderError);
+    expect(() => toAsciimath({ kind: "mpadded", parameterOne: [false] } as never)).toThrow(
+      RenderError,
+    );
+  });
+});
+
+describe("inputs that defeat the walk itself", () => {
+  // Class-for-class parity holds even where the INPUT breaks the walker
+  // rather than any one read: the gem raises (probe probe-sweep-depth.rb:
+  // SystemStackError at depth 10,000, direct and through the Formula
+  // boundary), and `Formula#to_asciimath` wraps every render-time
+  // StandardError into ParseError (`formula.rb:437`, wrap_render_error) —
+  // so nothing may escape this boundary as a raw RangeError or a hostile
+  // accessor's own error.
+  it("a tree deeper than the call stack raises RenderError, not RangeError", () => {
+    let node: unknown = { kind: "number", value: "1" };
+    for (let i = 0; i < 50_000; i += 1) node = { kind: "sqrt", parameterOne: node };
+    expect(() => toAsciimath(node as never)).toThrow(RenderError);
+  });
+
+  it("a read that throws mid-render surfaces as RenderError, like the gem's boundary wrap", () => {
+    // The getter answers validation's single read, then throws on the
+    // renderer's — deterministic, and only the render-phase wrap can catch it.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new Error("hostile read");
+        return "1";
+      },
+    };
+    expect(() => toAsciimath(node as never)).toThrow(RenderError);
+  });
+
+  it("a frozen tree renders — nothing on the render path writes to the input", () => {
+    // Ruby renders frozen nodes fine; so must this port.
+    const tree = Object.freeze({
+      kind: "frac",
+      parameterOne: Object.freeze({ kind: "number", value: "1" }),
+      parameterTwo: Object.freeze({ kind: "symbol", id: "Plus", value: null }),
+    });
+    expect(toAsciimath(tree as never)).toBe("frac(1)(+)");
   });
 });
 

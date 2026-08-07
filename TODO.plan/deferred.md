@@ -27,11 +27,15 @@ from AsciiMath input (the corpus, round-trip and 1,642-case sweep layers all
 pass byte-identical); each is pinned by a test in
 `test/formats/asciimath/renderer.spec.ts`:
 
-- **`Left`/`Right` holding a node raise `RenderError`.** The gem interpolates
-  the parameter into the output string, so a node yields
+- **`Left`/`Right` holding a node or a finite number raise `RenderError`.**
+  The gem interpolates the parameter into the output string, so a node yields
   `left#<Plurimath::Math::Symbols::Symbol:0x00007c...>` — an object address,
-  different every run. A byte-parity port cannot reproduce a nondeterministic
-  string, so it refuses instead. (Strings and nil match the gem exactly.)
+  different every run — and a finite number is ambiguous (the JS number 5 is
+  Ruby's `5` and `5.0` at once, which render `"left5"` and `"left5.0"`,
+  probed). A byte-parity port cannot reproduce either, so it refuses instead.
+  (Strings, nil, booleans and the non-finite floats match the gem exactly —
+  probe-sweep-truthiness.rb: `left-true` => `"lefttrue"`, `left-nan` =>
+  `"leftNaN"`.)
 - **`toAsciimath` returns `""` where the gem returns `nil`.** One render in
   the gem returns nil rather than a string: a `FontStyle` without an
   overriding subclass and with a nil value. Internally this port propagates

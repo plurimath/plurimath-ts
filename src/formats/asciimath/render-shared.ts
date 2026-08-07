@@ -117,26 +117,43 @@ export function describeSlot(value: unknown): string {
 }
 
 /**
- * A `value` slot the gem interpolates raw — `Number#to_asciimath` and
- * `Symbols::Symbol#to_asciimath`, the renderer's only two direct
- * interpolation sites. Nil → `""`, a string → itself; nothing else, because
- * no gem parse puts anything else there and `String()` cannot reproduce
- * Ruby's `to_s` of it (probe probe-degenerate-value.rb on the pinned oracle,
- * ruby 4.0.1: a hash value renders `"{a: 1}"` where `String()` says
- * "[object Object]"; a node value renders an unstable
- * `"#<Plurimath::Math::Number:0x…>"`). The standing degenerate-input ruling
- * makes such shapes a loud `RenderError`, never silently divergent bytes.
+ * A `value` slot the gem interpolates raw — `Number#to_asciimath`,
+ * `Symbols::Symbol#to_asciimath`, and `Left`/`Right`'s
+ * `"left#{parameter_one}"`, the renderer's direct interpolation sites. The
+ * line is drawn where Ruby's `to_s` of the value is reproducible
+ * byte-for-byte (probes probe-degenerate-value.rb and
+ * probe-sweep-truthiness.rb on the pinned oracle, ruby 4.0.1):
  *
- * The shape validator cannot reject these at entry without restating slot
- * types per kind — a plain hash IS legal in other slots (`Mglyph` defaults
- * `parameter_one` to `{}`), which is why the guard lives at the two sites.
+ *   - nil → `""`, a string → itself;
+ *   - a boolean → `"true"`/`"false"` (number-true/number-false probes —
+ *     `String()` matches exactly);
+ *   - NaN and ±Infinity → `"NaN"`/`"Infinity"`/`"-Infinity"` — each the one
+ *     JS number with exactly one Ruby preimage and an identical `to_s`;
+ *   - a FINITE number raises: JS cannot witness Ruby's Integer/Float split
+ *     (`Number.new(5)` → `"5"` but `Number.new(5.0)` → `"5.0"`, both the JS
+ *     number 5), and the exponent forms differ (`1.0e+21` vs `"1e+21"`);
+ *   - a hash renders `"{a: 1}"` in Ruby where `String()` says
+ *     "[object Object]"; a node renders an unstable
+ *     `"#<Plurimath::Math::Number:0x…>"` — both raise.
+ *
+ * The standing degenerate-input ruling makes every irreproducible shape a
+ * loud `RenderError`, never silently divergent bytes — and every reproducible
+ * one the gem's own bytes, never a loud error (class-for-class parity cuts
+ * both ways).
+ *
+ * The shape validator cannot reject the raising shapes at entry without
+ * restating slot types per kind — a plain hash IS legal in other slots
+ * (`Mglyph` defaults `parameter_one` to `{}`), which is why the guard lives
+ * at the interpolation sites.
  */
 export function interpolatedValue(value: unknown, kind: string, at: string): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
+  if (typeof value === "boolean") return String(value);
+  if (typeof value === "number" && !Number.isFinite(value)) return String(value);
   throw new RenderError(
     `${at}: holds ${describeSlot(value)} — no gem parse puts one here, and Ruby's ` +
-      `interpolation of it is bytes String() cannot match`,
+      `interpolation of it is bytes String() cannot reliably match`,
     FORMAT,
     kind,
   );

@@ -8,14 +8,17 @@
  *
  * Negative direction also covers what the walk itself must survive: a cyclic
  * tree fails as `RenderError` naming the cycle's path (not a `RangeError`
- * stack overflow), and an explicit `undefined` entry inside a list or hash is
- * rejected — while shared non-cyclic objects stay accepted.
+ * stack overflow), a tree deeper than the walk's own stack and a property
+ * read that throws are wrapped the same way, and an explicit `undefined`
+ * entry inside a list or hash is rejected — while shared non-cyclic objects
+ * stay accepted.
  *
  * Mutation-tested (PORTING-STANDARDS.md, "a suite that guards a guard"):
- * with the validator's body gutted to a no-op, the 15 rejection tests below
+ * with the validator's body gutted to a no-op, the 19 rejection tests below
  * fail and the positive ones stay green; with the cycle detector's
  * ancestor-set never pruned, the shared-object positive test fails alone
- * (both runs 2026-08-07). A guard spec never seen red proves nothing.
+ * (both runs 2026-08-07, re-run after the degenerate-input sweep). A guard
+ * spec never seen red proves nothing.
  */
 
 import { describe, expect, it } from "vitest";
@@ -176,6 +179,21 @@ describe("assertMathNodeShape, non-plain objects", () => {
     expect(widget.message).toContain("Widget");
   });
 
+  it("rejects boxed primitives everywhere, by the same prototype rule", () => {
+    // `new String("2")` is typeof "object" with String.prototype behind it —
+    // a class instance, not the primitive Ruby's ivar holds. In the kind and
+    // identity slots the string typeof checks reject it first.
+    const boxed = failure({ kind: "number", value: new String("2") });
+    expect(boxed.message).toContain("node.value");
+    expect(boxed.message).toContain("String");
+    expect(failure({ kind: "sqrt", parameterOne: new Number(2) }).message).toContain("Number");
+    expect(failure({ kind: "bar", parameterOne: new Boolean(true) }).message).toContain("Boolean");
+    expect(failure({ kind: new String("sqrt") }).message).toContain("String");
+    const identity = failure({ kind: "table", name: new String("Matrix") });
+    expect(identity.message).toContain("node.name");
+    expect(identity.message).toContain("String");
+  });
+
   it("rejects a class instance inside an options hash", () => {
     const date = failure({ kind: "sqrt", options: { when: new Date(0) } });
     expect(date.message).toContain("node.options.when");
@@ -193,6 +211,34 @@ describe("assertMathNodeShape, non-plain objects", () => {
     const options: Record<string, unknown> = Object.create(null);
     options.mathvariant = "bold";
     expect(() => assertMathNodeShape({ kind: "sqrt", options }, FORMAT)).not.toThrow();
+  });
+});
+
+describe("assertMathNodeShape, the walk itself", () => {
+  // The contract is RenderError-or-pass — including when the INPUT defeats
+  // the walk rather than any single check: a tree deeper than the call stack,
+  // or an accessor that throws when read. The gem raises on the same inputs
+  // (probe probe-sweep-depth.rb on the pinned oracle: a 10,000-deep sqrt
+  // chain raises SystemStackError from `to_asciimath`, direct and through
+  // the Formula boundary alike), so a raw RangeError escape here would be a
+  // class-for-class parity break, not just an unpolished error.
+  it("rejects a tree deeper than the walk's stack as RenderError, not RangeError", () => {
+    let node: unknown = { kind: "number", value: "1" };
+    for (let i = 0; i < 50_000; i += 1) node = { kind: "sqrt", parameterOne: node };
+    const error = failure(node);
+    expect(error.message).toContain("deep");
+  });
+
+  it("wraps a property read that itself throws into RenderError", () => {
+    // No Ruby ivar read runs code, but a JS getter does — and its throw
+    // would otherwise escape the walk raw, neither pass nor RenderError.
+    const error = failure({
+      kind: "sqrt",
+      get parameterOne(): unknown {
+        throw new Error("hostile accessor");
+      },
+    });
+    expect(error.message).toContain("hostile accessor");
   });
 });
 
@@ -253,6 +299,17 @@ describe("assertMathNodeShape, explicit undefined entries", () => {
   it("rejects undefined inside a list", () => {
     const error = failure({ kind: "formula", value: [undefined] });
     expect(error.message).toContain("node.value[0]");
+    expect(error.message).toContain("undefined");
+  });
+
+  it("rejects a sparse array's holes the same way — a lying length is holes", () => {
+    // The index loop reads a hole back as `undefined` (the reason it is an
+    // index loop and not `forEach`); an array whose `length` was stretched
+    // past its entries is the same shape.
+    const sparse: unknown[] = ["x"];
+    sparse.length = 3;
+    const error = failure({ kind: "formula", value: sparse });
+    expect(error.message).toContain("node.value[1]");
     expect(error.message).toContain("undefined");
   });
 

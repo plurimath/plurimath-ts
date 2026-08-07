@@ -17,6 +17,7 @@ import {
   classBasename,
   describeSlot,
   FORMAT,
+  interpolatedValue,
   type NodeOf,
   present,
   type RenderContext,
@@ -54,19 +55,15 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
     case "Left":
     case "Right": {
       // `"left#{parameter_one}"` — plain interpolation, no recursion
-      // (`left.rb:7`, `right.rb:7`). A node here would interpolate Ruby's
-      // default inspect (an object address), which no byte-level port can
-      // reproduce; it raises instead (recorded in TODO.plan/deferred.md).
+      // (`left.rb:7`, `right.rb:7`), so it takes the shared interpolation
+      // judge: nil, strings, booleans and the non-finite floats reproduce
+      // Ruby's bytes exactly (probes left-true => "lefttrue", left-nan =>
+      // "leftNaN", probe-sweep-truthiness.rb); a node would interpolate a
+      // nondeterministic #inspect address and a finite number is ambiguous
+      // (probe left-float-5.0 => "left5.0" where JS 5.0 is 5), so those
+      // raise instead (recorded in TODO.plan/deferred.md).
       const keyword = name.toLowerCase();
-      const paren = node.parameterOne;
-      if (paren === null || paren === undefined) return keyword;
-      if (typeof paren === "string") return `${keyword}${paren}`;
-      throw new RenderError(
-        `${keyword}.parameterOne: holds ${describeSlot(paren)}; the gem interpolates ` +
-          "a nondeterministic #inspect address here, which cannot be reproduced",
-        FORMAT,
-        node.kind,
-      );
+      return `${keyword}${interpolatedValue(node.parameterOne, node.kind, `${keyword}.parameterOne`)}`;
     }
     case "Lcm":
       // `"lcm #{asciimath_value}"` — a space, not parentheses (`lcm.rb:20`).
@@ -111,16 +108,22 @@ export function renderUnaryDefault(
 }
 
 /**
- * `UnaryFunction#asciimath_value` (`unary_function.rb:196`): nil → `""`, a
- * list compacts and joins with no separator, anything else renders directly.
- * Exported for the inheriting kind files (`../mpadded/asciimath.ts`, `../linebreak/asciimath.ts`).
+ * `UnaryFunction#asciimath_value` (`unary_function.rb:196`): a falsy value →
+ * `""`, a list compacts and joins with no separator, anything else renders
+ * directly. Falsy by RUBY truthiness — the gem opens with `return "" unless
+ * parameter_one`, so `false` answers `""` exactly like nil (probes
+ * mpadded-false => `""`, sin-false => `"sin"`, probe-sweep-truthiness.rb on
+ * the pinned oracle), while `false` INSIDE a list still crashes there
+ * (`compact` keeps it; probe mpadded-list-false => NoMethodError) and raises
+ * here. Exported for the inheriting kind files (`../mpadded/asciimath.ts`,
+ * `../linebreak/asciimath.ts`).
  */
 export function asciimathValue(
   value: NodeParameter | undefined,
   context: RenderContext,
   at: string,
 ): string {
-  if (value === null || value === undefined) return "";
+  if (!present(value)) return "";
   if (Array.isArray(value)) {
     return value
       .filter((item) => item !== null && item !== undefined)

@@ -40,7 +40,15 @@
  *   - an explicit `undefined` *entry* inside a list or hash is rejected:
  *     Ruby's only undefined analogue is the unassigned ivar, which is a
  *     missing field (legal, see below), never a present entry. `normalize`
- *     refuses the same shapes.
+ *     refuses the same shapes. A sparse array's holes read back as the same
+ *     `undefined` and are rejected the same way — which is also why a lying
+ *     `length` cannot smuggle anything past the walk.
+ *   - the walk itself has no third outcome: a finite tree nesting deeper
+ *     than the recursion's stack, or a property read that throws (a getter
+ *     or proxy trap — no Ruby ivar read runs code), is caught at the entry
+ *     point and rethrown as `RenderError`. The gem raises on the deep tree
+ *     too — SystemStackError, probed — so a raw `RangeError` escape here
+ *     would break the raise-for-raise mapping, not just the error type.
  *
  * Deliberately NOT checked: field presence beyond the identity slots, and
  * per-field value types. Ruby reads an unassigned ivar as `nil`, so a missing
@@ -50,6 +58,15 @@
  * `RenderError` at that exact spot — mirroring where the gem fails, which a
  * shape table cannot express. Extra fields are ignored, as constructors
  * ignore unknown keys.
+ *
+ * Equally deliberate non-checks, because nothing can read them: symbol-keyed
+ * entries (`Object.entries` cannot see them, no renderer reads them, and no
+ * Ruby hash can hold them — a hash whose only `linebreakstyle` is
+ * Symbol-keyed is, for parity, a hash without that key), and values that
+ * CHANGE between this walk and the render (a stateful getter or Proxy): the
+ * gem re-reads its ivars at render time and honors whatever each read
+ * returns, and this port does the same — a read that *throws* mid-render is
+ * the renderer entry point's half of the wrap.
  */
 
 import { RenderError } from "./errors";
@@ -88,7 +105,33 @@ function describeValue(value: unknown): string {
  * carry their `name`, and no slot holds a value no Ruby node could hold.
  */
 export function assertMathNodeShape(value: unknown, format: string): asserts value is MathNode {
-  assertNode(value, format, "node", new Set());
+  try {
+    assertNode(value, format, "node", new Set());
+  } catch (error) {
+    if (error instanceof RenderError) throw error;
+    if (error instanceof RangeError) {
+      // The walk itself ran out of stack: the tree is finite (the cycle check
+      // above would have named a loop) but nests deeper than this recursion
+      // can follow. The gem raises on the same tree — SystemStackError from
+      // `to_asciimath` at depth 10,000, direct and through the Formula
+      // boundary alike (probe probe-sweep-depth.rb on the pinned oracle) —
+      // and this contract spells every such raise RenderError.
+      throw new RenderError(
+        "node: the tree nests too deep for the walk's call stack — the gem's own " +
+          "render of a tree this deep raises SystemStackError",
+        format,
+        "unknown",
+      );
+    }
+    // A property read that itself threw — a getter or proxy trap, something
+    // no Ruby ivar read can do. The contract is RenderError-or-pass, so the
+    // input's own throw is wrapped, its message kept.
+    throw new RenderError(
+      `node: reading the tree itself threw before it could be validated — ${String(error)}`,
+      format,
+      "unknown",
+    );
+  }
 }
 
 /**

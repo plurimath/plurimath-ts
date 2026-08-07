@@ -12,8 +12,16 @@
 
 import { Slice } from "./slice";
 
-/** A parse result value, mirroring Parslet's flattened trees. */
-export type ParseValue = Slice | ParseHash | ParseValue[] | null;
+/**
+ * A parse result value, mirroring Parslet's flattened trees.
+ *
+ * The `string` member is Parslet's plain Ruby String, DISTINCT from a slice:
+ * `flatten_sequence` folds a sequence whose parts all vanished to `''` (its
+ * `foldl` starts there), and transforms can tell the two apart —
+ * `text.is_a?(Slice)` is false for it. The engine produces only that empty
+ * string; every real match is a `Slice` carrying its offset.
+ */
+export type ParseValue = Slice | ParseHash | ParseValue[] | string | null;
 export interface ParseHash {
   [key: string]: ParseValue;
 }
@@ -102,6 +110,15 @@ const FAIL: ParseResult = { ok: false };
 function combineSeq(left: ParseValue, right: ParseValue): ParseValue {
   if (left === null) return right;
   if (right === null) return left;
+  // `merge_fold`'s string arms. The only plain string this engine produces is
+  // the `''` of an all-vanished nested sequence: two of them concatenate
+  // (still `''`), and anything else beside one wins — a slice because "if
+  // we're merging a String with a Slice, the slice wins", a hash or an array
+  // because "if one of them is a string/slice, the other is more important".
+  if (typeof left === "string" || typeof right === "string") {
+    if (typeof left === "string" && typeof right === "string") return left + right;
+    return typeof left === "string" ? right : left;
+  }
   const leftIsHash = isHash(left);
   const rightIsHash = isHash(right);
   if (leftIsHash && rightIsHash) {
@@ -420,7 +437,12 @@ class SeqAtom extends Atom {
     if (!left.ok) return FAIL;
     const right = this.right.apply(left.pos, ctx, consumeAll);
     if (!right.ok) return FAIL;
-    return { ok: true, pos: right.pos, value: combineSeq(left.value, right.value) };
+    const value = combineSeq(left.value, right.value);
+    // `flatten_sequence` never yields nil: `foldl` of an all-vanished list
+    // starts (and ends) at `''`, a plain string — see `ParseValue`. Measured:
+    // `(str('a').maybe >> str('b').maybe).as(:t).parse('')` is `{t: ""}`,
+    // where a directly named absent maybe stays `{t: nil}`.
+    return { ok: true, pos: right.pos, value: value === null ? "" : value };
   }
 }
 

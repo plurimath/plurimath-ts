@@ -17,7 +17,8 @@
  * plus the two Utility tables the actions read. Resolution goes through
  * the gem because it is not mechanical capitalization: `overbrace`,
  * `underbrace` and `underline` resolve through constant aliases to
- * classes named differently (`Obrace`, `Ubrace`, `Ul`).
+ * classes named differently (`Obrace`, `Ubrace`, `Ul`). Each `get_class`
+ * entry also carries its resolved class's measured constructor family.
  */
 
 /**
@@ -27,19 +28,41 @@
 export type AsciimathTransformDisposition = "implemented" | "aliased";
 
 /**
+ * Which Ruby `initialize` shape a resolved class has, measured off the
+ * runtime: the generator instantiates each class and reads the
+ * assigned ivars back, fingerprints the zero-argument shape, then
+ * re-verifies parameter wiring, Slice-to-text conversion and
+ * empty-options behaviour with sentinel arguments (source reading
+ * lies: constructors guard, coerce and inherit). The registry
+ * (`src/formats/asciimath/registry.ts`) documents what each family
+ * means operationally; the transform dispatches its builders on it.
+ */
+export type AsciimathTransformConstructorFamily =
+  | "unary"
+  | "unaryAttributes"
+  | "text"
+  | "binary"
+  | "binaryAssignedOptions"
+  | "ternary";
+
+/**
  * One reachable name: the class the gem resolves it to, and the
  * implemented class the port constructs for it. For an aliased class
  * the carrier is its census alias target and the class name rides in
  * the carrier's identity slot; an implemented class carries itself.
- * `sources` names the measurements that reached the entry: a grammar
- * capture tag (`unary_class`, `binary_class`, `ternary_class`), a
- * `literal` argument, or a Utility table.
+ * `family` is the resolved class's measured constructor family —
+ * present on every `get_class` entry, absent from the font-style
+ * table, whose fifty keywords all construct through the one FontStyle
+ * carrier. `sources` names the measurements that reached the entry: a
+ * grammar capture tag (`unary_class`, `binary_class`,
+ * `ternary_class`), a `literal` argument, or a Utility table.
  */
 export interface AsciimathTransformClassEntry {
   readonly name: string;
   readonly rubyClass: string;
   readonly disposition: AsciimathTransformDisposition;
   readonly carrier: string;
+  readonly family?: AsciimathTransformConstructorFamily;
   readonly sources: readonly string[];
 }
 
@@ -54,6 +77,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Abs",
     disposition: "implemented",
     carrier: "Math::Function::Abs",
+    family: "unary",
     sources: ["unary_class"],
   },
   {
@@ -61,6 +85,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Arccos",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -68,6 +93,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Arcsin",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -75,6 +101,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Arctan",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -82,6 +109,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Bar",
     disposition: "implemented",
     carrier: "Math::Function::Bar",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
   {
@@ -89,6 +117,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Cancel",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class"],
   },
   {
@@ -96,6 +125,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Ceil",
     disposition: "implemented",
     carrier: "Math::Function::Ceil",
+    family: "unary",
     sources: ["unary_class"],
   },
   {
@@ -103,6 +133,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Cos",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -110,6 +141,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Cosh",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -117,6 +149,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Cot",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -124,6 +157,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Coth",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -131,6 +165,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Csc",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -138,6 +173,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Csch",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -145,6 +181,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Ddot",
     disposition: "implemented",
     carrier: "Math::Function::Ddot",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
   {
@@ -152,6 +189,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Deg",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["utility_unary_classes"],
   },
   {
@@ -159,6 +197,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Det",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -166,6 +205,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Dim",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -173,6 +213,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Dot",
     disposition: "implemented",
     carrier: "Math::Function::Dot",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
   {
@@ -180,6 +221,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Exp",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -187,6 +229,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Floor",
     disposition: "implemented",
     carrier: "Math::Function::Floor",
+    family: "unary",
     sources: ["unary_class"],
   },
   {
@@ -194,6 +237,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Frac",
     disposition: "implemented",
     carrier: "Math::Function::Frac",
+    family: "binary",
     sources: ["binary_class"],
   },
   {
@@ -201,6 +245,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Gcd",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -208,6 +253,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Glb",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -215,6 +261,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Hat",
     disposition: "implemented",
     carrier: "Math::Function::Hat",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
   {
@@ -222,6 +269,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Int",
     disposition: "implemented",
     carrier: "Math::Function::Int",
+    family: "ternary",
     sources: ["ternary_class"],
   },
   {
@@ -229,6 +277,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Ker",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["utility_unary_classes"],
   },
   {
@@ -236,6 +285,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Lcm",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -243,6 +293,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Left",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["utility_unary_classes"],
   },
   {
@@ -250,6 +301,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Lg",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["utility_unary_classes"],
   },
   {
@@ -257,6 +309,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Lim",
     disposition: "aliased",
     carrier: "Math::Function::BinaryFunction",
+    family: "binary",
     sources: ["binary_class"],
   },
   {
@@ -264,6 +317,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Liminf",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["utility_unary_classes"],
   },
   {
@@ -271,6 +325,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Limsup",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["utility_unary_classes"],
   },
   {
@@ -278,6 +333,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Ln",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -285,6 +341,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Log",
     disposition: "aliased",
     carrier: "Math::Function::BinaryFunction",
+    family: "binary",
     sources: ["binary_class"],
   },
   {
@@ -292,6 +349,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Lub",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -299,6 +357,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Max",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -306,6 +365,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Min",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -313,6 +373,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Norm",
     disposition: "implemented",
     carrier: "Math::Function::Norm",
+    family: "unary",
     sources: ["unary_class"],
   },
   {
@@ -320,6 +381,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Obrace",
     disposition: "implemented",
     carrier: "Math::Function::Obrace",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
   {
@@ -327,6 +389,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Oint",
     disposition: "implemented",
     carrier: "Math::Function::Oint",
+    family: "ternary",
     sources: ["ternary_class"],
   },
   {
@@ -334,6 +397,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Obrace",
     disposition: "implemented",
     carrier: "Math::Function::Obrace",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
   {
@@ -341,6 +405,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Overset",
     disposition: "implemented",
     carrier: "Math::Function::Overset",
+    family: "binary",
     sources: ["binary_class"],
   },
   {
@@ -348,6 +413,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Prod",
     disposition: "implemented",
     carrier: "Math::Function::Prod",
+    family: "ternary",
     sources: ["ternary_class"],
   },
   {
@@ -355,6 +421,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Right",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["utility_unary_classes"],
   },
   {
@@ -362,6 +429,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Root",
     disposition: "aliased",
     carrier: "Math::Function::BinaryFunction",
+    family: "binary",
     sources: ["binary_class"],
   },
   {
@@ -369,6 +437,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Sec",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -376,6 +445,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Sech",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -383,6 +453,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Sin",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -390,6 +461,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Sinh",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -397,6 +469,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Sqrt",
     disposition: "implemented",
     carrier: "Math::Function::Sqrt",
+    family: "unary",
     sources: ["unary_class"],
   },
   {
@@ -404,6 +477,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Stackrel",
     disposition: "aliased",
     carrier: "Math::Function::BinaryFunction",
+    family: "binary",
     sources: ["binary_class"],
   },
   {
@@ -411,6 +485,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Sum",
     disposition: "implemented",
     carrier: "Math::Function::Sum",
+    family: "ternary",
     sources: ["ternary_class"],
   },
   {
@@ -418,6 +493,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Sup",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["utility_unary_classes"],
   },
   {
@@ -425,6 +501,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Tan",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -432,6 +509,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Tanh",
     disposition: "aliased",
     carrier: "Math::Function::UnaryFunction",
+    family: "unary",
     sources: ["unary_class", "utility_unary_classes"],
   },
   {
@@ -439,6 +517,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Text",
     disposition: "implemented",
     carrier: "Math::Function::Text",
+    family: "text",
     sources: ["literal", "unary_class"],
   },
   {
@@ -446,6 +525,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Tilde",
     disposition: "implemented",
     carrier: "Math::Function::Tilde",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
   {
@@ -453,6 +533,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Ubrace",
     disposition: "implemented",
     carrier: "Math::Function::Ubrace",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
   {
@@ -460,6 +541,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Ul",
     disposition: "implemented",
     carrier: "Math::Function::Ul",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
   {
@@ -467,6 +549,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Ubrace",
     disposition: "implemented",
     carrier: "Math::Function::Ubrace",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
   {
@@ -474,6 +557,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Ul",
     disposition: "implemented",
     carrier: "Math::Function::Ul",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
   {
@@ -481,6 +565,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Underset",
     disposition: "implemented",
     carrier: "Math::Function::Underset",
+    family: "binaryAssignedOptions",
     sources: ["binary_class"],
   },
   {
@@ -488,6 +573,7 @@ export const ASCIIMATH_TRANSFORM_GET_CLASS: readonly AsciimathTransformClassEntr
     rubyClass: "Math::Function::Vec",
     disposition: "implemented",
     carrier: "Math::Function::Vec",
+    family: "unaryAttributes",
     sources: ["unary_class"],
   },
 ];

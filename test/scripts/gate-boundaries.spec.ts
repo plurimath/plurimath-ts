@@ -128,6 +128,16 @@ describe("the boundaries gate on the node-major render layout", () => {
     expect(output).toContain("missing src/render/sqrt/asciimath.ts");
   });
 
+  it("fails when a directory impersonates a render file (Copilot's catch)", () => {
+    const root = writeFixture();
+    rmSync(join(root, "src/render/sqrt/asciimath.ts"));
+    mkdirSync(join(root, "src/render/sqrt/asciimath.ts"));
+    const { status, output } = runGate(root);
+    expect(status).toBe(1);
+    expect(output).toContain("src/render/sqrt/asciimath.ts is not a regular file");
+    expect(output).toContain("missing src/render/sqrt/asciimath.ts");
+  });
+
   it("fails on a stray non-kind file under src/render", () => {
     const root = writeFixture();
     writeFileSync(join(root, "src/render/shared.ts"), "export const stray = 1;\n");

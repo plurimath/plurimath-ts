@@ -467,6 +467,47 @@ describe("linebreak", () => {
       ),
     ).toBe("x\\\n ");
     expect(toAsciimath(new LinebreakNode({ parameterOne: x() }))).toBe("\\\n x");
+    // Probe probe-linebreak-attributes.rb: hash-other-key and hash-style-array
+    // both => "\\\n x" — any hash whose :linebreakstyle is not exactly "after"
+    // takes the before branch.
+    expect(toAsciimath(new LinebreakNode({ parameterOne: x(), attributes: { foo: "bar" } }))).toBe(
+      "\\\n x",
+    );
+    expect(
+      toAsciimath(
+        new LinebreakNode({ parameterOne: x(), attributes: { linebreakstyle: ["after"] } }),
+      ),
+    ).toBe("\\\n x");
+  });
+
+  it("non-hash attributes raise, as the gem's attributes[:linebreakstyle] send does", () => {
+    // Probe probe-linebreak-attributes.rb on the pinned oracle (ruby 4.0.1),
+    // Linebreak.new(Symbols::Symbol.new("x"), ATTRS).to_asciimath(options: {}):
+    //   [] / ["after"] / "after" / 5 => TypeError: no implicit conversion of
+    //     Symbol into Integer
+    //   nil / true / false / 1.5 / Number.new("2") => NoMethodError:
+    //     undefined method '[]' for <the value>
+    // Only a hash answers the send; everything else is RenderError here (the
+    // §5 crash mapping — never the silent before-form these shapes rendered
+    // when `.linebreakstyle` was read unchecked).
+    const linebreak = (attributes: unknown) =>
+      ({
+        kind: "linebreak",
+        parameterOne: { kind: "number", value: "2" },
+        attributes,
+      }) as never;
+    expect(() => toAsciimath(linebreak([]))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(["after"]))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak("after"))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(5))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(1.5))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(null))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(true))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(false))).toThrow(RenderError);
+    // A node in the attributes slot: Ruby's Linebreak instance has no `[]`
+    // either — NoMethodError there, RenderError here.
+    expect(() => toAsciimath(linebreak({ kind: "number", value: "2" }))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak([]))).toThrow(/linebreak\.attributes/);
   });
 });
 

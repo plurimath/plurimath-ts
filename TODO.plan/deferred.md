@@ -21,7 +21,8 @@ how things get missed.
 adversarial review deciding differently.**
 
 All three are corners of the AsciiMath renderer
-(`src/formats/asciimath/renderer.ts` and its `render/` kind files), none reachable
+(`src/formats/asciimath/renderer.ts` and the `src/render/*/asciimath.ts` kind
+files), none reachable
 from AsciiMath input (the corpus, round-trip and 1,642-case sweep layers all
 pass byte-identical); each is pinned by a test in
 `test/formats/asciimath/renderer.spec.ts`:

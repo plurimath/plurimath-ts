@@ -22,7 +22,7 @@
       "class": "A",
       "activatesAt": "P0",
       "run": "pnpm boundaries",
-      "description": "dependency-cruiser: the seven layering rules of §3"
+      "description": "dependency-cruiser: the eight layering rules of §3, plus the render kind inventory"
     },
     {
       "id": "unit-tests",

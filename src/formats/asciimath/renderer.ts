@@ -3,12 +3,13 @@
  * AsciiMath text, byte-identical to the gem's `to_asciimath`.
  *
  * In Ruby, rendering is a method per node class. Here it is a function per
- * node kind — one file each under `./render/`, mirroring the gem's
+ * node kind — one directory per kind under `src/render`, this format's file
+ * inside each (`../../render/<kind>/asciimath.ts`), mirroring the gem's
  * one-file-per-class layout, joined by the dispatch table in
- * `./render/index.ts` (typed total over `NodeKind`) and recursing through
+ * `./render.ts` (typed total over `NodeKind`) and recursing through
  * `context.render` (§5, "How this maps to the gem"). Each kind file's header
  * names the gem file it mirrors and carries that class's measured pins; the
- * cross-cutting Ruby idioms live in `./render/shared.ts`. The five carrier
+ * cross-cutting Ruby idioms live in `./render-shared.ts`. The five carrier
  * kinds the census folds many gem classes into (`unaryFunction`,
  * `binaryFunction`, `ternaryFunction`, `table`, `fontStyle`) keep their
  * class-name dispatch inside their own kind file, because classes with their
@@ -29,8 +30,8 @@
  */
 
 import { assertMathNodeShape, type MathNode } from "../../core/index";
-import { ROOT_CONTEXT } from "./render/index";
-import { FORMAT } from "./render/shared";
+import { ROOT_CONTEXT } from "./render";
+import { FORMAT } from "./render-shared";
 
 /**
  * Renderer options. Empty today and typed exactly (§5): the gem's only

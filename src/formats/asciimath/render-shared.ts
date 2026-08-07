@@ -109,6 +109,10 @@ export function describeSlot(value: unknown): string {
   if (value === null || value === undefined) return "nil";
   if (typeof value === "string") return `the bare string ${JSON.stringify(value)}`;
   if (Array.isArray(value)) return "a bare list";
+  // Explicit, because the article fallback would say "a object" (the
+  // c9d4034 pattern in core's describeValue). Undefined and null are the
+  // first branch: both read "nil", the Ruby value they stand in for.
+  if (typeof value === "object") return "an object";
   return `a ${typeof value}`;
 }
 
@@ -160,11 +164,14 @@ export function classBasename(rubyClass: string): string {
 }
 
 /**
- * Class names outside the AsciiMath-reachable set (the transform's
- * constructors, `src/generated/asciimath/transform-registry.ts`) raise
- * `RenderError`: gem classes such as `Mbox` or `Menclose` carry their own
- * overrides this port has not measured, and a silent carrier-default render
- * would be a quiet divergence. Parity gaps fail loudly (ARCHITECTURE.md §5).
+ * Class names outside a carrier's measured set raise `RenderError`. For most
+ * carriers that set is the AsciiMath-reachable one (the transform's
+ * constructors, `src/generated/asciimath/transform-registry.ts`); the table
+ * carrier's also holds its ten hand-buildable subclasses, measured beyond
+ * the transform's reach. A name outside the set — `Mbox`, `Menclose`, ... —
+ * may carry its own override this port has not measured, and a silent
+ * carrier-default render would be a quiet divergence. Parity gaps fail
+ * loudly (ARCHITECTURE.md §5).
  */
 export function unreachableName(kind: string, name: string): RenderError {
   return new RenderError(

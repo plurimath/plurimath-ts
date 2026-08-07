@@ -258,6 +258,18 @@ describe("font styles", () => {
       toAsciimath(new FormulaNode({ value: [new FontStyleNode({ name: "BoldFraktur" }), x()] })),
     ).toBe(" x");
   });
+
+  it("a defined name outside the measured subclass set raises rather than guessing", () => {
+    // Oracle census (probe-subclass-census.rb, 2026-08-07): FontStyle has
+    // exactly 14 subclasses — the 8 keyword-overriding ones and the 6
+    // value-alone ones above. Any other defined name names no measured gem
+    // class, so it fails loudly instead of rendering the value alone
+    // (TODO.plan/deferred.md, the fail-loud carrier policy). The bare
+    // carrier — name undefined — keeps its measured value-alone render.
+    expect(() =>
+      toAsciimath(new FontStyleNode({ name: "<unmeasured>", parameterOne: x() })),
+    ).toThrow(RenderError);
+  });
 });
 
 describe("color", () => {
@@ -430,6 +442,18 @@ describe("tables", () => {
       RenderError,
     );
   });
+
+  it("a defined name outside the measured subclass set raises rather than guessing", () => {
+    // Oracle census (probe-subclass-census.rb, 2026-08-07): Table has exactly
+    // 10 subclasses, every one pinned above. Any other defined name names no
+    // measured gem class, and the base-table default render for it would
+    // diverge silently — so it fails loudly instead (TODO.plan/deferred.md,
+    // the fail-loud carrier policy). The bare carrier — name undefined —
+    // keeps its measured base-table render.
+    expect(() => toAsciimath(new TableNode({ name: "<unmeasured>", value: [tr(x())] }))).toThrow(
+      RenderError,
+    );
+  });
 });
 
 describe("linebreak", () => {
@@ -485,6 +509,15 @@ describe("degenerate value slots the gem's pipeline cannot produce", () => {
     expect(() =>
       toAsciimath({ kind: "number", value: { kind: "number", value: "2" } } as never),
     ).toThrow(RenderError);
+  });
+
+  it("describes an object slot with its article — an object, never a object", () => {
+    // Wording-only pin on the message the object-value ruling above raises:
+    // `describeSlot` gets an explicit object branch (the c9d4034 pattern in
+    // core's describeValue), so the error reads "an object".
+    expect(() => toAsciimath({ kind: "number", value: { a: 1 } } as never)).toThrow(
+      /holds an object/,
+    );
   });
 });
 

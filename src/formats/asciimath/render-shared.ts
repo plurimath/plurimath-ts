@@ -15,7 +15,13 @@
  * the module graph acyclic (`no-circular` is an error in the boundary gate).
  */
 
-import { type MathNode, type NodeKind, type NodeParameter, RenderError } from "../../core/index";
+import {
+  type MathNode,
+  MissingSymbolDataError,
+  type NodeKind,
+  type NodeParameter,
+  RenderError,
+} from "../../core/index";
 import { NODE_SPECS } from "../../core/normalize";
 
 export const FORMAT = "asciimath";
@@ -178,6 +184,47 @@ export function wrapped(
 
 export function classBasename(rubyClass: string): string {
   return rubyClass.slice(rubyClass.lastIndexOf(":") + 1);
+}
+
+/**
+ * The walk's own missing-symbol throw, distinguishable from an imitation.
+ *
+ * `toAsciimath`'s boundary re-throws the symbol table's
+ * `MissingSymbolDataError` (a public error code in its own right) while
+ * wrapping every other mid-walk throw into `RenderError` — but `instanceof`
+ * is a test the INPUT can pass too: a hostile getter that answered
+ * validation's read can throw its own `MissingSymbolDataError` mid-render
+ * and forge the pass-through, reporting MISSING_SYMBOL_DATA for what is an
+ * input failure. So the genuine throw site marks its instances with a
+ * module-private symbol — the `NODE_BRAND` pattern (`../../core/nodes.ts`),
+ * deliberately `Symbol()` and not `Symbol.for()`, so no other module can
+ * mint the key — and the boundary passes through only marked instances.
+ *
+ * The mark lives HERE because this file is the one module both sides may
+ * import (§3 rule 8): the throw site (`../../render/symbol/asciimath.ts`)
+ * reaches only core, its generated data, this file, and sibling kind files;
+ * the boundary (`./renderer.ts`) stands on this file already. Core cannot
+ * hold it — `src/index.ts` star-re-exports the core barrel, so a factory
+ * there would land on the public surface, and a per-format boundary policy
+ * is not layer-1 vocabulary. A symbol property never serializes and never
+ * widens the public error type.
+ */
+const MISSING_SYMBOL_BRAND: unique symbol = Symbol("plurimath.asciimath.missingSymbolData");
+
+/** The symbol table's one deliberate non-RenderError throw, branded. */
+export function missingSymbolDataError(symbolId: string): MissingSymbolDataError {
+  const error = new MissingSymbolDataError(symbolId, FORMAT);
+  Object.defineProperty(error, MISSING_SYMBOL_BRAND, { value: true });
+  return error;
+}
+
+/** Reads the brand the factory set — shape and prototype prove nothing here. */
+export function isOwnMissingSymbolDataError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { [MISSING_SYMBOL_BRAND]?: unknown })[MISSING_SYMBOL_BRAND] === true
+  );
 }
 
 /**

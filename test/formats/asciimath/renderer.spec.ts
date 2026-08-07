@@ -786,7 +786,7 @@ describe("inputs that defeat the walk itself", () => {
 
   it("the symbol table's MissingSymbolDataError still passes through — the walk's own surface", () => {
     // `renderSymbol` throws it for an id the generated table does not carry
-    // (`src/render/symbol/asciimath.ts:70`) — the one non-RenderError
+    // (`src/render/symbol/asciimath.ts:73`) — the one non-RenderError
     // PlurimathError a kind file throws on purpose, and a public error code
     // (MISSING_SYMBOL_DATA); the tightened pass-through must not re-type it.
     let caught: unknown;
@@ -798,6 +798,36 @@ describe("inputs that defeat the walk itself", () => {
     expect(caught).toBeInstanceOf(MissingSymbolDataError);
     expect((caught as MissingSymbolDataError).code).toBe("MISSING_SYMBOL_DATA");
     expect((caught as MissingSymbolDataError).symbolId).toBe("NoSuchSymbol");
+  });
+
+  it("a getter throwing a forged MissingSymbolDataError post-validation wraps as RenderError", () => {
+    // The pass-through above is for the symbol table's OWN throw
+    // (`src/render/symbol/asciimath.ts`), which the throw site brands with a
+    // module-private symbol. A hostile getter that answers validation's read
+    // and then throws its own `MissingSymbolDataError` mid-render is an input
+    // failure wearing the class: `instanceof` alone would let it out
+    // unwrapped, reporting MISSING_SYMBOL_DATA for a walk the symbol table
+    // never faulted — the same forgery the ParseError pin above closes for
+    // the parse surface. Unbranded, it wraps like any other mid-walk throw,
+    // message kept.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new MissingSymbolDataError("Forged", "asciimath");
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toAsciimath(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).code).toBe("RENDER_ERROR");
+    expect((caught as RenderError).message).toContain("Forged");
   });
 
   it("a frozen tree renders — nothing on the render path writes to the input", () => {

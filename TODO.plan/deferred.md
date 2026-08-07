@@ -15,7 +15,82 @@ how things get missed.
 
 ## Known divergences
 
-None open.
+### AsciiMath renderer: three edges where the gem's behaviour cannot or must not be copied
+
+**Trigger: any of these surfacing in a real consumer report, or the P1
+adversarial review deciding differently.**
+
+All three are corners of the AsciiMath renderer
+(`src/formats/asciimath/renderer.ts` and the `src/render/*/asciimath.ts` kind
+files), none reachable
+from AsciiMath input (the corpus, round-trip and 1,642-case sweep layers all
+pass byte-identical); each is pinned by a test in
+`test/formats/asciimath/renderer.spec.ts`:
+
+- **`Left`/`Right` holding a node or a finite number raise `RenderError`.**
+  The gem interpolates the parameter into the output string, so a node yields
+  `left#<Plurimath::Math::Symbols::Symbol:0x00007c...>` — an object address,
+  different every run — and a finite number is ambiguous (the JS number 5 is
+  Ruby's `5` and `5.0` at once, which render `"left5"` and `"left5.0"`,
+  probed). A byte-parity port cannot reproduce either, so it refuses instead.
+  (Strings, nil, booleans and the non-finite floats match the gem exactly —
+  probe-sweep-truthiness.rb: `left-true` => `"lefttrue"`, `left-nan` =>
+  `"leftNaN"`.)
+- **`toAsciimath` returns `""` where the gem returns `nil`.** One render in
+  the gem returns nil rather than a string: a `FontStyle` without an
+  overriding subclass and with a nil value. Internally this port propagates
+  that nil so composite behaviour matches (`Nary` falls back to `"int"` on
+  it, interpolations drop it — both probed), but the public function's return
+  type is `string`, so at the boundary nil becomes `""`.
+- **A class name outside the measured set raises `RenderError`.**
+  The census folds ~1,550 aliased gem classes into carrier kinds; this
+  renderer measured what the AsciiMath transform can construct, plus the
+  hand-buildable table and font-style subclasses (their full gem sets, 10
+  and 14, enumeration-probed complete). A hand-built carrier naming any
+  other class (`Mbox`, `Menclose`, `Phantom`, ...) raises rather than
+  rendering the carrier default, because many of those classes override
+  `to_asciimath` in the gem and a default render would diverge silently —
+  parity gaps fail loudly (ARCHITECTURE.md §5). The measured set must widen
+  when a format that constructs those classes lands (MathML/OMML input,
+  P4+).
+
+### The table-name guard set is hand-listed
+
+**Trigger: the next generator extension touching table data, or any gem bump.**
+
+`MEASURED_TABLE_NAMES` in `src/render/table/asciimath.ts` hand-lists the ten
+Table subclass basenames because no generated slice carries them — the
+AsciiMath transform builds only bare tables, so the census never emits a
+table-subclass list. The set was enumeration-probed complete against the gem
+(2026-08-07), and every entry is held by the existing renders-every-aliased-
+table-subclass pin, so a dropped or drifted name turns a test red. Still: it
+is gem-derived data typed by hand, so it carries this exception entry until
+the generator owns it.
+
+### Three AsciiMath render tables — generated
+
+**Done, 2026-08-06.** The AsciiMath renderer (since split node-major into
+`src/render/<kind>/asciimath.ts`, one directory per kind) no longer
+transcribes the three small render tables it used to hand-type; the same
+`scripts/generate-corpus.rb` run that emits the rest of the AsciiMath data now
+measures and emits them into `src/generated/asciimath/render-tables.ts`:
+
+- the eight `FontStyle` subclass → output keyword pairs (`Bold` → `mathbf`),
+  measured by rendering a live instance of every subclass and reading the
+  wrapper back — not derivable from the parse table, where `bb`, `mathbf` and
+  `textbf` all parse to `Bold`;
+- `Asciimath::Constants::TABLE_PARENTHESIS` (four close-paren fallbacks), read
+  through the constant `Table#to_asciimath` reads, every mapping re-verified
+  by a render that actually falls back through it;
+- `Table::SIMPLE_TABLES` (three parentheless table names), each re-verified to
+  route its table down the parentheless `{:...:}` path.
+
+All fifteen entries stay pinned by literal probe-backed tests
+(`test/generated/render-tables.spec.ts` and the behavioural pins in
+`test/formats/asciimath/renderer.spec.ts`), independent of the generated data
+they check; a gem bump now re-measures the tables on regeneration. The
+locale-table entry below stands on its own schedule — its fix is a separate
+`generate-formatting-data.rb`.
 
 ### Symbol equality parity — landed
 

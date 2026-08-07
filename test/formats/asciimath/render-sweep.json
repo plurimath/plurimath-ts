@@ -1,0 +1,6585 @@
+{
+  "description": "Gem-verified AsciiMath render sweep: input -> Plurimath::Math.parse(input, :asciimath).to_asciimath, or the refusal.",
+  "oracle": {
+    "gem": "plurimath",
+    "version": "0.11.6",
+    "commit": "00c52783877b38f6b8e6e109f1803f96bb34fc62"
+  },
+  "count": 1642,
+  "cases": [
+    {
+      "input": "sin x",
+      "render": "sinx"
+    },
+    {
+      "input": "sinx",
+      "render": "sinx"
+    },
+    {
+      "input": "sin(x)",
+      "render": "sin(x)"
+    },
+    {
+      "input": "sin",
+      "render": "sin"
+    },
+    {
+      "input": "cos y",
+      "render": "cosy"
+    },
+    {
+      "input": "tan(theta)",
+      "render": "tan(theta)"
+    },
+    {
+      "input": "sec x",
+      "render": "secx"
+    },
+    {
+      "input": "csc x",
+      "render": "cscx"
+    },
+    {
+      "input": "cot x",
+      "render": "cotx"
+    },
+    {
+      "input": "sinh x",
+      "render": "sinhx"
+    },
+    {
+      "input": "cosh x",
+      "render": "coshx"
+    },
+    {
+      "input": "tanh x",
+      "render": "tanhx"
+    },
+    {
+      "input": "sech x",
+      "render": "sechx"
+    },
+    {
+      "input": "csch x",
+      "render": "cschx"
+    },
+    {
+      "input": "coth x",
+      "render": "cothx"
+    },
+    {
+      "input": "arcsin x",
+      "render": "arcsinx"
+    },
+    {
+      "input": "arccos x",
+      "render": "arccosx"
+    },
+    {
+      "input": "arctan x",
+      "render": "arctanx"
+    },
+    {
+      "input": "exp x",
+      "render": "expx"
+    },
+    {
+      "input": "log x",
+      "render": "log x"
+    },
+    {
+      "input": "ln x",
+      "render": "lnx"
+    },
+    {
+      "input": "lg x",
+      "render": "l g x"
+    },
+    {
+      "input": "det A",
+      "render": "detA"
+    },
+    {
+      "input": "dim V",
+      "render": "dimV"
+    },
+    {
+      "input": "max x",
+      "render": "maxx"
+    },
+    {
+      "input": "min x",
+      "render": "minx"
+    },
+    {
+      "input": "gcd(a,b)",
+      "render": "gcd(a , b)"
+    },
+    {
+      "input": "lcm(a,b)",
+      "render": "lcm (a , b)"
+    },
+    {
+      "input": "glb x",
+      "render": "glbx"
+    },
+    {
+      "input": "lub x",
+      "render": "lubx"
+    },
+    {
+      "input": "ker f",
+      "render": "k e r f"
+    },
+    {
+      "input": "deg p",
+      "render": "d e g p"
+    },
+    {
+      "input": "liminf x",
+      "render": "lim in f x"
+    },
+    {
+      "input": "limsup x",
+      "render": "lim supset x"
+    },
+    {
+      "input": "sup x",
+      "render": "supset x"
+    },
+    {
+      "input": "cancel(x)",
+      "render": "cancel(x)"
+    },
+    {
+      "input": "cancel(x+y)",
+      "render": "cancel(x + y)"
+    },
+    {
+      "input": "lim_(x->0) f(x)",
+      "render": "lim_(x to 0) f (x)"
+    },
+    {
+      "input": "lim_(n->oo)",
+      "render": "lim_(n to oo)"
+    },
+    {
+      "input": "log_2 8",
+      "render": "log_(2) 8"
+    },
+    {
+      "input": "log_(10) 100",
+      "render": "log_(10) 100"
+    },
+    {
+      "input": "lim x",
+      "render": "lim x"
+    },
+    {
+      "input": "sum_(i=1)^n i",
+      "render": "sum_(i = 1)^(n) i"
+    },
+    {
+      "input": "sum x",
+      "render": "sum x"
+    },
+    {
+      "input": "sum_(i=1) i",
+      "render": "sum_(i = 1) i"
+    },
+    {
+      "input": "sum^n i",
+      "render": "sum^(n) i"
+    },
+    {
+      "input": "prod_(i=1)^n i",
+      "render": "prod_(i = 1)^(n) i"
+    },
+    {
+      "input": "int_0^1 x dx",
+      "render": "int_(0)^(1) x d x"
+    },
+    {
+      "input": "int x dx",
+      "render": "int x d x"
+    },
+    {
+      "input": "oint_C f",
+      "render": "oint_(C) f"
+    },
+    {
+      "input": "int_0^1",
+      "render": "int_(0)^(1)"
+    },
+    {
+      "input": "int",
+      "render": "int"
+    },
+    {
+      "input": "sqrt x",
+      "render": "sqrt(x)"
+    },
+    {
+      "input": "sqrt(x+1)",
+      "render": "sqrt(x + 1)"
+    },
+    {
+      "input": "root(3)(x)",
+      "render": "root(3)(x)"
+    },
+    {
+      "input": "root(n)(x+y)",
+      "render": "root(n)(x + y)"
+    },
+    {
+      "input": "frac(a)(b)",
+      "render": "frac(a)(b)"
+    },
+    {
+      "input": "a/b",
+      "render": "frac(a)(b)"
+    },
+    {
+      "input": "1/2",
+      "render": "frac(1)(2)"
+    },
+    {
+      "input": "(a+b)/(c-d)",
+      "render": "frac(a + b)(c - d)"
+    },
+    {
+      "input": "a/b/c",
+      "render": "frac(a)(frac(b)(c))"
+    },
+    {
+      "input": "2/4 + 3/4",
+      "render": "frac(2)(4) + frac(3)(4)"
+    },
+    {
+      "input": "x/",
+      "error": "parse",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": "frac(a)",
+      "render": "frac(a)"
+    },
+    {
+      "input": "x^2",
+      "render": "x^(2)"
+    },
+    {
+      "input": "x_i",
+      "render": "x_(i)"
+    },
+    {
+      "input": "x_i^2",
+      "render": "x_(i)^(2)"
+    },
+    {
+      "input": "x_(i+1)",
+      "render": "x_(i + 1)"
+    },
+    {
+      "input": "x^(a+b)",
+      "render": "x^(a + b)"
+    },
+    {
+      "input": "a_1^2 + b_1^2",
+      "render": "a_(1)^(2) + b_(1)^(2)"
+    },
+    {
+      "input": "x^y^z",
+      "render": "x^(y)^(z)"
+    },
+    {
+      "input": "x_a_b",
+      "render": "x_(a)_(b)"
+    },
+    {
+      "input": "(x+1)^2",
+      "render": "(x + 1)^(2)"
+    },
+    {
+      "input": "2^x",
+      "render": "2^(x)"
+    },
+    {
+      "input": "x^-1",
+      "render": "x^(-) 1"
+    },
+    {
+      "input": "e_(ij)",
+      "render": "e_(i j)"
+    },
+    {
+      "input": "x^",
+      "render": "x ^"
+    },
+    {
+      "input": "a_",
+      "render": "a _"
+    },
+    {
+      "input": "obrace(x+y)",
+      "render": "obrace(x + y)"
+    },
+    {
+      "input": "ubrace(a-b)",
+      "render": "ubrace(a - b)"
+    },
+    {
+      "input": "overbrace(x)",
+      "render": "obrace(x)"
+    },
+    {
+      "input": "underbrace(y)",
+      "render": "ubrace(y)"
+    },
+    {
+      "input": "overset(a)(b)",
+      "render": "overset(a)(b)"
+    },
+    {
+      "input": "underset(a)(b)",
+      "render": "underset(a)(b)"
+    },
+    {
+      "input": "stackrel(a)(b)",
+      "render": "stackrel(a)(b)"
+    },
+    {
+      "input": "hat x",
+      "render": "hat(x)"
+    },
+    {
+      "input": "bar x",
+      "render": "bar(x)"
+    },
+    {
+      "input": "vec x",
+      "render": "vec(x)"
+    },
+    {
+      "input": "dot x",
+      "render": "dot(x)"
+    },
+    {
+      "input": "ddot x",
+      "render": "ddot(x)"
+    },
+    {
+      "input": "tilde x",
+      "render": "tilde(x)"
+    },
+    {
+      "input": "ul x",
+      "render": "underline(x)"
+    },
+    {
+      "input": "underline(x)",
+      "render": "underline(x)"
+    },
+    {
+      "input": "obrace x",
+      "render": "obrace(x)"
+    },
+    {
+      "input": "abs(x)",
+      "render": "abs(x)"
+    },
+    {
+      "input": "norm(x)",
+      "render": "norm(x)"
+    },
+    {
+      "input": "floor(x)",
+      "render": "floor(x)"
+    },
+    {
+      "input": "ceil(x)",
+      "render": "ceil(x)"
+    },
+    {
+      "input": "|x|",
+      "render": "| x |"
+    },
+    {
+      "input": "||x||",
+      "render": "| | x | |"
+    },
+    {
+      "input": "bb x",
+      "render": "mathbf(x)"
+    },
+    {
+      "input": "bbb x",
+      "render": "mathbb(x)"
+    },
+    {
+      "input": "Bbb x",
+      "render": "B mathbf(x)"
+    },
+    {
+      "input": "bf x",
+      "render": "b f x"
+    },
+    {
+      "input": "bold x",
+      "render": "b o l d x"
+    },
+    {
+      "input": "cal x",
+      "render": "c a l x"
+    },
+    {
+      "input": "cc x",
+      "render": "mathcal(x)"
+    },
+    {
+      "input": "fr x",
+      "render": "mathfrak(x)"
+    },
+    {
+      "input": "ii x",
+      "render": "ii(x)"
+    },
+    {
+      "input": "mathbb(x)",
+      "render": "mathbb(x)"
+    },
+    {
+      "input": "mathbf(x)",
+      "render": "mathbf(x)"
+    },
+    {
+      "input": "mathcal(x)",
+      "render": "mathcal(x)"
+    },
+    {
+      "input": "mathfrak(x)",
+      "render": "mathfrak(x)"
+    },
+    {
+      "input": "mathit(x)",
+      "render": "m a t h i t (x)"
+    },
+    {
+      "input": "mathrm(x)",
+      "render": "m a t h rm(x)"
+    },
+    {
+      "input": "mathsf(x)",
+      "render": "mathsf(x)"
+    },
+    {
+      "input": "mathtt(x)",
+      "render": "mathtt(x)"
+    },
+    {
+      "input": "mbf x",
+      "render": "m b f x"
+    },
+    {
+      "input": "mit x",
+      "render": "m i t x"
+    },
+    {
+      "input": "monospace x",
+      "render": "m o n o s p a c e x"
+    },
+    {
+      "input": "msans x",
+      "render": "m s a n s x"
+    },
+    {
+      "input": "mscr x",
+      "render": "m s c r x"
+    },
+    {
+      "input": "mtt x",
+      "render": "m mathtt(x)"
+    },
+    {
+      "input": "mup x",
+      "render": "mu p x"
+    },
+    {
+      "input": "normal x",
+      "render": "norm(a) l x"
+    },
+    {
+      "input": "rm x",
+      "render": "rm(x)"
+    },
+    {
+      "input": "sf x",
+      "render": "mathsf(x)"
+    },
+    {
+      "input": "tt x",
+      "render": "mathtt(x)"
+    },
+    {
+      "input": "italic x",
+      "render": "i t a l i c x"
+    },
+    {
+      "input": "script x",
+      "render": "s c r i p t x"
+    },
+    {
+      "input": "double x",
+      "render": "d o u b le x"
+    },
+    {
+      "input": "fraktur x",
+      "render": "mathfrak(a) k t u r x"
+    },
+    {
+      "input": "textbf x",
+      "error": "render",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": "textit x",
+      "error": "render",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": "textrm x",
+      "error": "render",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": "mfrak x",
+      "render": "m mathfrak(a) k x"
+    },
+    {
+      "input": "mbfit x",
+      "render": "m b f i t x"
+    },
+    {
+      "input": "mbfsans x",
+      "render": "m b f s a n s x"
+    },
+    {
+      "input": "mbfscr x",
+      "render": "m b f s c r x"
+    },
+    {
+      "input": "mbffrak x",
+      "render": "m b f mathfrak(a) k x"
+    },
+    {
+      "input": "mbfitsans x",
+      "render": "m b f i t s a n s x"
+    },
+    {
+      "input": "mitsans x",
+      "render": "m i t s a n s x"
+    },
+    {
+      "input": "msans(y+1)",
+      "render": "m s a n s (y + 1)"
+    },
+    {
+      "input": "text(hello)",
+      "render": "\"hello\""
+    },
+    {
+      "input": "text( )",
+      "render": "\" \""
+    },
+    {
+      "input": "\"quoted text\"",
+      "render": "\"quoted text\""
+    },
+    {
+      "input": "\"a+b\"",
+      "render": "\"a+b\""
+    },
+    {
+      "input": "text(a,b)",
+      "render": "\"a,b\""
+    },
+    {
+      "input": "mbox(hi)",
+      "render": "m b ox (h i)"
+    },
+    {
+      "input": "\"\"",
+      "render": "\"\""
+    },
+    {
+      "input": "[[a,b],[c,d]]",
+      "render": "[[a, b], [c, d]]"
+    },
+    {
+      "input": "((a,b),(c,d))",
+      "render": "([a, b], [c, d])"
+    },
+    {
+      "input": "[(a,b),(c,d)]",
+      "render": "[[a, b], [c, d]]"
+    },
+    {
+      "input": "{(a,b),(c,d)}",
+      "render": "{(a , b) , (c , d)}"
+    },
+    {
+      "input": "[[a]]",
+      "render": "[[a]]"
+    },
+    {
+      "input": "[[a,b]]",
+      "render": "[[a, b]]"
+    },
+    {
+      "input": "[[1,2],[3,4]] + [[5,6],[7,8]]",
+      "render": "[[1, 2], [3, 4]] + [[5, 6], [7, 8]]"
+    },
+    {
+      "input": "{(x,y):}",
+      "render": "{[x, y]:}"
+    },
+    {
+      "input": "|(a,b),(c,d)|",
+      "render": "|[a, b], [c, d]|"
+    },
+    {
+      "input": "[[a,|,b],[c,|,d]]",
+      "render": "[[a, |, b], [c, |, d]]"
+    },
+    {
+      "input": "[[sin x, cos y],[tan z, cot w]]",
+      "render": "[[sinx, cosy], [tanz, cotw]]"
+    },
+    {
+      "input": "left( x right)",
+      "render": "left( x right)"
+    },
+    {
+      "input": "left[ y right]",
+      "render": "left[ y right]"
+    },
+    {
+      "input": "left(x/2right)",
+      "render": "left( frac(x)(2) right)"
+    },
+    {
+      "input": "{: x :}",
+      "render": "{:x:}"
+    },
+    {
+      "input": "(: x :)",
+      "render": "<<x>>"
+    },
+    {
+      "input": "{: (a,b) :}",
+      "render": "{:[a, b]:}"
+    },
+    {
+      "input": "color(red)(x)",
+      "render": "color(red)(x)"
+    },
+    {
+      "input": "color(blue)(y+1)",
+      "render": "color(blue)(y + 1)"
+    },
+    {
+      "input": "color(#ff0000)(z)",
+      "render": "color(\"P{eqno}\"ff0000)(z)"
+    },
+    {
+      "input": "2",
+      "render": "2"
+    },
+    {
+      "input": "2.5",
+      "render": "2.5"
+    },
+    {
+      "input": "0",
+      "render": "0"
+    },
+    {
+      "input": "123",
+      "render": "123"
+    },
+    {
+      "input": "3.14159",
+      "render": "3.14159"
+    },
+    {
+      "input": "0.5",
+      "render": "0.5"
+    },
+    {
+      "input": "10.00",
+      "render": "10.00"
+    },
+    {
+      "input": "007",
+      "render": "007"
+    },
+    {
+      "input": "a mod b",
+      "render": "a mod b"
+    },
+    {
+      "input": "7 mod 3",
+      "render": "7 mod 3"
+    },
+    {
+      "input": "x mod 2 + 1",
+      "render": "x mod 2 + 1"
+    },
+    {
+      "input": "a, b",
+      "render": "a , b"
+    },
+    {
+      "input": "f(x, y)",
+      "render": "f (x , y)"
+    },
+    {
+      "input": "(a, b)",
+      "render": "(a , b)"
+    },
+    {
+      "input": "[[a, b]]",
+      "render": "[[a, b]]"
+    },
+    {
+      "input": "x = [[1, 0],[0, 1]], y",
+      "render": "x = [[1, 0], [0, 1]] , y"
+    },
+    {
+      "input": "x = (-b +- sqrt(b^2 - 4ac))/(2a)",
+      "render": "x = frac(- b pm sqrt(b^(2) - 4 a c))(2 a)"
+    },
+    {
+      "input": "sum_(i=1)^n i^3 = ((n(n+1))/2)^2",
+      "render": "sum_(i = 1)^(n) i^(3) = (frac(n (n + 1))(2))^(2)"
+    },
+    {
+      "input": "sin^2 x + cos^2 x = 1",
+      "render": "sin^(2) x + cos^(2) x = 1"
+    },
+    {
+      "input": "(del f)/(del x)",
+      "render": "frac(del f)(del x)"
+    },
+    {
+      "input": "lim_(h->0) (f(x+h)-f(x))/h",
+      "render": "lim_(h to 0) frac(f (x + h) - f (x))(h)"
+    },
+    {
+      "input": "A uu B nn C",
+      "render": "A uu B n n C"
+    },
+    {
+      "input": "p => q",
+      "render": "p Rightarrow q"
+    },
+    {
+      "input": "x in RR",
+      "render": "x in mathbb(R)"
+    },
+    {
+      "input": "NN sub ZZ sub QQ",
+      "render": "mathbb(N) subset mathbb(Z) subset mathbb(Q)"
+    },
+    {
+      "input": "hat(ab) bar(xy) ul(A) vec(v)",
+      "render": "hat(a b) bar(x y) underline(A) vec(v)"
+    },
+    {
+      "input": "dot(x) ddot(y)",
+      "render": "dot(x) ddot(y)"
+    },
+    {
+      "input": "((1),(2),(3))",
+      "render": "([1], [2], [3])"
+    },
+    {
+      "input": "|x| = { (x, if x >= 0), (-x, if x < 0) :}",
+      "render": "| x | = {[x, if x ge 0], [- x, if x lt 0]:}"
+    },
+    {
+      "input": "f: X -> Y",
+      "render": "f : X to Y"
+    },
+    {
+      "input": "a prop b",
+      "render": "a propto b"
+    },
+    {
+      "input": "angle ABC",
+      "render": "angle A B C"
+    },
+    {
+      "input": "triangle ABC",
+      "render": "triangle A B C"
+    },
+    {
+      "input": "30^@",
+      "render": "30^(@)"
+    },
+    {
+      "input": "a^@",
+      "render": "a^(@)"
+    },
+    {
+      "input": "D^-",
+      "render": "D^(-)"
+    },
+    {
+      "input": "e^(i pi) + 1 = 0",
+      "render": "e^(i pi) + 1 = 0"
+    },
+    {
+      "input": "(a",
+      "render": "(a)"
+    },
+    {
+      "input": "a)",
+      "render": "a )"
+    },
+    {
+      "input": "frac(a",
+      "render": "frac(a)"
+    },
+    {
+      "input": "text(",
+      "render": "\"\""
+    },
+    {
+      "input": "sqrt(",
+      "render": "sqrt"
+    },
+    {
+      "input": "root(3)(",
+      "render": "root(3)"
+    },
+    {
+      "input": "\"",
+      "render": "\"\""
+    },
+    {
+      "input": "{:",
+      "render": "{:)"
+    },
+    {
+      "input": "))))",
+      "render": ") ) ) )"
+    },
+    {
+      "input": "~",
+      "render": "~"
+    },
+    {
+      "input": "$",
+      "render": "$"
+    },
+    {
+      "input": "?",
+      "render": "?"
+    },
+    {
+      "input": "[a)",
+      "render": "[a)"
+    },
+    {
+      "input": "(a]",
+      "render": "(a]"
+    },
+    {
+      "input": "|a",
+      "render": "| a"
+    },
+    {
+      "input": "a|",
+      "render": "a |"
+    },
+    {
+      "input": "((((",
+      "render": "(((())))"
+    },
+    {
+      "input": "{: x",
+      "render": "{:x)"
+    },
+    {
+      "input": "x :}",
+      "render": "x :}"
+    },
+    {
+      "input": "",
+      "error": "render",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": " ",
+      "error": "render",
+      "errorClass": "Plurimath::Math::ParseError"
+    },
+    {
+      "input": "\"P{acute}\"",
+      "render": "\"P{acute}\""
+    },
+    {
+      "input": "\"P{ballotx}\"",
+      "render": "\"P{ballotx}\""
+    },
+    {
+      "input": "&#x21b9;",
+      "render": "\"P{barleftarrowrightarrowba}\""
+    },
+    {
+      "input": "&#x2943;",
+      "render": "\"P{leftarrowshortrightarrow}\""
+    },
+    {
+      "input": "&#x2950;",
+      "render": "\"P{leftrightharpoondown}\""
+    },
+    {
+      "input": "&#x2942;",
+      "render": "\"P{rightarrowshortleftarrow}\""
+    },
+    {
+      "input": "&#x2944;",
+      "render": "\"P{shortrightarrowleftarrow}\""
+    },
+    {
+      "input": "&#x27e3;",
+      "render": "\"P{concavediamondtickright}\""
+    },
+    {
+      "input": "&#x296f;",
+      "render": "\"P{downupharpoons}\""
+    },
+    {
+      "input": "&#x25db;",
+      "render": "\"P{invwhitelowerhalfcircle}\""
+    },
+    {
+      "input": "&#x25da;",
+      "render": "\"P{invwhiteupperhalfcircle}\""
+    },
+    {
+      "input": "&#x2918;",
+      "render": "\"P{nVtwoheadrightarrowtail}\""
+    },
+    {
+      "input": "&#x25b8;",
+      "render": "\"P{smallblacktriangleright}\""
+    },
+    {
+      "input": "&#x294f;",
+      "render": "\"P{rightupdownharpoon}\""
+    },
+    {
+      "input": "&#x296e;",
+      "render": "\"P{upequilibrium}\""
+    },
+    {
+      "input": "&#x25d5;",
+      "render": "\"P{blackcircleulquadwhite}\""
+    },
+    {
+      "input": "&#x27e2;",
+      "render": "\"P{concavediamondtickleft}\""
+    },
+    {
+      "input": "&#x29e9;",
+      "render": "\"P{downtrianglerightblack}\""
+    },
+    {
+      "input": "&#x21ff;",
+      "render": "\"P{leftrightarrowtriangle}\""
+    },
+    {
+      "input": "&#x294b;",
+      "render": "\"P{rightleftharpoon}\""
+    },
+    {
+      "input": "&#x294a;",
+      "render": "\"P{leftrightharpoon}\""
+    },
+    {
+      "input": "&#x2b3d;",
+      "render": "\"P{nVtwoheadleftarrowtail}\""
+    },
+    {
+      "input": "&#x2aa3;",
+      "render": "\"P{partialmeetcontraction}\""
+    },
+    {
+      "input": "&#x25c2;",
+      "render": "\"P{smallblacktriangleleft}\""
+    },
+    {
+      "input": "&#x294d;",
+      "render": "\"P{updownharpoonleftright}\""
+    },
+    {
+      "input": "&#x294c;",
+      "render": "\"P{updownharpoonrightleft}\""
+    },
+    {
+      "input": "&#x21b8;",
+      "render": "\"P{barovernorthwestarrow}\""
+    },
+    {
+      "input": "&#x29ea;",
+      "render": "\"P{blackdiamonddownarrow}\""
+    },
+    {
+      "input": "&#x25d2;",
+      "render": "\"P{circlebottomhalfblack}\""
+    },
+    {
+      "input": "&#x2a50;",
+      "render": "\"P{closedvarcupsmashprod}\""
+    },
+    {
+      "input": "&#x2965;",
+      "render": "\"P{downdownharpoons}\""
+    },
+    {
+      "input": "&#x29e8;",
+      "render": "\"P{downtriangleleftblack}\""
+    },
+    {
+      "input": "&#x2967;",
+      "render": "\"P{leftrightharpoonsdown}\""
+    },
+    {
+      "input": "&#x237c;",
+      "render": "\"P{rangledownzigzagarrow}\""
+    },
+    {
+      "input": "&#x2969;",
+      "render": "\"P{rightleftharpoonsdown}\""
+    },
+    {
+      "input": "&#x20ec;",
+      "render": "\"P{underrightharpoondown}\""
+    },
+    {
+      "input": "&#x2951;",
+      "render": "\"P{leftupdownharpoon}\""
+    },
+    {
+      "input": "&#x2920;",
+      "render": "\"P{barrightarrowdiamond}\""
+    },
+    {
+      "input": "&#x25bc;",
+      "render": "\"P{bigblacktriangledown}\""
+    },
+    {
+      "input": "&#x29ed;",
+      "render": "\"P{blackcircledownarrow}\""
+    },
+    {
+      "input": "&#x2688;",
+      "render": "\"P{blackcircledrightdot}\""
+    },
+    {
+      "input": "&#x25d7;",
+      "render": "\"P{RIGHTCIRCLE}\""
+    },
+    {
+      "input": "&#x293c;",
+      "render": "\"P{curvearrowrightminus}\""
+    },
+    {
+      "input": "&#x296d;",
+      "render": "\"P{barrightharpoon}\""
+    },
+    {
+      "input": "&#x2935;",
+      "render": "\"P{downrightcurvedarrow}\""
+    },
+    {
+      "input": "&#x2948;",
+      "render": "\"P{leftrightarrowcircle}\""
+    },
+    {
+      "input": "&#x294e;",
+      "render": "\"P{leftrightharpoonup}\""
+    },
+    {
+      "input": "&#x2b48;",
+      "render": "\"P{rightarrowbackapprox}\""
+    },
+    {
+      "input": "&#x2937;",
+      "render": "\"P{rightdowncurvedarrow}\""
+    },
+    {
+      "input": "&#x2b3b;",
+      "render": "\"P{twoheadleftarrowtail}\""
+    },
+    {
+      "input": "&#x2949;",
+      "render": "\"P{twoheaduparrowcircle}\""
+    },
+    {
+      "input": "&#x20ed;",
+      "render": "\"P{underleftharpoondown}\""
+    },
+    {
+      "input": "&#x27c1;",
+      "render": "\"P{whiteinwhitetriangle}\""
+    },
+    {
+      "input": "&#x27e5;",
+      "render": "\"P{whitesquaretickright}\""
+    },
+    {
+      "input": "&#x295d;",
+      "render": "\"P{RightDownTeeVector}\""
+    },
+    {
+      "input": "&#x295f;",
+      "render": "\"P{DownRightTeeVector}\""
+    },
+    {
+      "input": "&#x2689;",
+      "render": "\"P{blackcircledtwodots}\""
+    },
+    {
+      "input": "&#x25c8;",
+      "render": "\"P{blackinwhitediamond}\""
+    },
+    {
+      "input": "&#x25d6;",
+      "render": "\"P{LEFTCIRCLE}\""
+    },
+    {
+      "input": "&#x2593;",
+      "render": "\"P{blockthreeqtrshaded}\""
+    },
+    {
+      "input": "&#x296b;",
+      "render": "\"P{barleftharpoon}\""
+    },
+    {
+      "input": "&#x291f;",
+      "render": "\"P{diamondleftarrowbar}\""
+    },
+    {
+      "input": "&#x2955;",
+      "render": "\"P{RightDownVectorBar}\""
+    },
+    {
+      "input": "&#x2b42;",
+      "render": "\"P{leftarrowbackapprox}\""
+    },
+    {
+      "input": "&#x2936;",
+      "render": "\"P{leftdowncurvedarrow}\""
+    },
+    {
+      "input": "&#x2966;",
+      "render": "\"P{leftrightharpoonsup}\""
+    },
+    {
+      "input": "&#x21ad;",
+      "render": "\"P{leftrightwavearrow}\""
+    },
+    {
+      "input": "&#x27ff;",
+      "render": "iff"
+    },
+    {
+      "input": "&#x2901;",
+      "render": "\"P{nVtwoheadrightarrow}\""
+    },
+    {
+      "input": "&#x2900;",
+      "render": "\"P{psur}\""
+    },
+    {
+      "input": "&#x2957;",
+      "render": "\"P{DownRightVectorBar}\""
+    },
+    {
+      "input": "&#x2964;",
+      "render": "\"P{rightrightharpoons}\""
+    },
+    {
+      "input": "&#x2968;",
+      "render": "\"P{rightleftharpoonsup}\""
+    },
+    {
+      "input": "&#x2b37;",
+      "render": "\"P{twoheadleftdbkarrow}\""
+    },
+    {
+      "input": "&#x2963;",
+      "render": "\"P{upupharpoons}\""
+    },
+    {
+      "input": "&#x21ea;",
+      "render": "\"P{whitearrowupfrombar}\""
+    },
+    {
+      "input": "&#x27e4;",
+      "render": "\"P{whitesquaretickleft}\""
+    },
+    {
+      "input": "&#xa0;&#xa0;&#xa0;&#xa0;",
+      "render": "\"P{qquad}\""
+    },
+    {
+      "input": "&#x27fa;",
+      "render": "\"P{Longleftrightarrow}\""
+    },
+    {
+      "input": "&#x227c;",
+      "render": "\"P{prcue}\""
+    },
+    {
+      "input": "&#x227d;",
+      "render": "\"P{succcurlyeq}\""
+    },
+    {
+      "input": "&#x21ba;",
+      "render": "\"P{leftturn}\""
+    },
+    {
+      "input": "&#x2961;",
+      "render": "\"P{LeftDownTeeVector}\""
+    },
+    {
+      "input": "&#x2956;",
+      "render": "\"P{DownLeftVectorBar}\""
+    },
+    {
+      "input": "&#x25b2;",
+      "render": "\"P{bigblacktriangleup}\""
+    },
+    {
+      "input": "&#x25a3;",
+      "render": "\"P{blackinwhitesquare}\""
+    },
+    {
+      "input": "&#x2b47;",
+      "render": "\"P{bsimilarrightarrow}\""
+    },
+    {
+      "input": "&#x293f;",
+      "render": "\"P{ccwundercurvearrow}\""
+    },
+    {
+      "input": "&#x29be;",
+      "render": "\"P{circledwhitebullet}\""
+    },
+    {
+      "input": "&#x21f4;",
+      "render": "\"P{circleonrightarrow}\""
+    },
+    {
+      "input": "&#x25d3;",
+      "render": "\"P{circletophalfblack}\""
+    },
+    {
+      "input": "&#x293d;",
+      "render": "\"P{curvearrowleftplus}\""
+    },
+    {
+      "input": "&#x2959;",
+      "render": "\"P{LeftDownVectorBar}\""
+    },
+    {
+      "input": "&#x29f1;",
+      "render": "\"P{errbarblackdiamond}\""
+    },
+    {
+      "input": "&#x25d9;",
+      "render": "\"P{inversewhitecircle}\""
+    },
+    {
+      "input": "&#x295e;",
+      "render": "\"P{DownLeftTeeVector}\""
+    },
+    {
+      "input": "&#x2962;",
+      "render": "\"P{leftleftharpoons}\""
+    },
+    {
+      "input": "&#x2b33;",
+      "render": "\"P{longleftsquigarrow}\""
+    },
+    {
+      "input": "&#x22be;",
+      "render": "\"P{angrtvb}\""
+    },
+    {
+      "input": "&#x2b35;",
+      "render": "\"P{nVtwoheadleftarrow}\""
+    },
+    {
+      "input": "&#x20e1;",
+      "render": "\"P{overleftrightarrow}\""
+    },
+    {
+      "input": "&#x25b0;",
+      "render": "\"P{parallelogramblack}\""
+    },
+    {
+      "input": "&#x2b4c;",
+      "render": "\"P{rightarrowbsimilar}\""
+    },
+    {
+      "input": "&#x21fe;",
+      "render": "\"P{rightarrowtriangle}\""
+    },
+    {
+      "input": "&#x20d1;",
+      "render": "\"P{rightharpoonaccent}\""
+    },
+    {
+      "input": "&#x296c;",
+      "render": "\"P{rightbarharpoon}\""
+    },
+    {
+      "input": "&#x2b53;",
+      "render": "\"P{rightpentagonblack}\""
+    },
+    {
+      "input": "&#x25b9;",
+      "render": "\"P{smalltriangleright}\""
+    },
+    {
+      "input": "&#x25ee;",
+      "render": "\"P{trianglerightblack}\""
+    },
+    {
+      "input": "&#x21c2;",
+      "render": "\"P{downharpoonright}\""
+    },
+    {
+      "input": "&#x27f2;",
+      "render": "\"P{acwgapcirclearrow}\""
+    },
+    {
+      "input": "&#x295b;",
+      "render": "\"P{RightTeeVector}\""
+    },
+    {
+      "input": "&#x2954;",
+      "render": "\"P{RightUpVectorBar}\""
+    },
+    {
+      "input": "&#x25ba;",
+      "render": "\"P{blackpointerright}\""
+    },
+    {
+      "input": "&#x25be;",
+      "render": "\"P{blacktriangledown}\""
+    },
+    {
+      "input": "&#x2b41;",
+      "render": "\"P{bsimilarleftarrow}\""
+    },
+    {
+      "input": "&#x2b30;",
+      "render": "\"P{circleonleftarrow}\""
+    },
+    {
+      "input": "&#x25d4;",
+      "render": "\"P{circleurquadblack}\""
+    },
+    {
+      "input": "&#x21bb;",
+      "render": "\"P{rightturn}\""
+    },
+    {
+      "input": "&#x293e;",
+      "render": "\"P{cwundercurvearrow}\""
+    },
+    {
+      "input": "&#x2b17;",
+      "render": "\"P{diamondrightblack}\""
+    },
+    {
+      "input": "&#x29f3;",
+      "render": "\"P{errbarblackcircle}\""
+    },
+    {
+      "input": "&#x29ef;",
+      "render": "\"P{errbarblacksquare}\""
+    },
+    {
+      "input": "&#x223b;",
+      "render": "\"P{kernelcontraction}\""
+    },
+    {
+      "input": "&#x2b4b;",
+      "render": "\"P{leftarrowbsimilar}\""
+    },
+    {
+      "input": "&#x21fd;",
+      "render": "\"P{leftarrowtriangle}\""
+    },
+    {
+      "input": "&#x296a;",
+      "render": "\"P{leftbarharpoon}\""
+    },
+    {
+      "input": "&#x21cb;",
+      "render": "\"P{lrhar}\""
+    },
+    {
+      "input": "&#x299b;",
+      "render": "\"P{measuredangleleft}\""
+    },
+    {
+      "input": "&#x291e;",
+      "render": "\"P{rightarrowdiamond}\""
+    },
+    {
+      "input": "&#x27f4;",
+      "render": "\"P{rightarrowonoplus}\""
+    },
+    {
+      "input": "&#x2974;",
+      "render": "\"P{rightarrowsimilar}\""
+    },
+    {
+      "input": "&#x2953;",
+      "render": "\"P{RightVectorBar}\""
+    },
+    {
+      "input": "&#x21cc;",
+      "render": "\"P{rlhar}\""
+    },
+    {
+      "input": "&#x2972;",
+      "render": "\"P{similarrightarrow}\""
+    },
+    {
+      "input": "&#x25bf;",
+      "render": "\"P{triangledown}\""
+    },
+    {
+      "input": "&#x25c3;",
+      "render": "\"P{smalltriangleleft}\""
+    },
+    {
+      "input": "&#x25ed;",
+      "render": "\"P{triangleleftblack}\""
+    },
+    {
+      "input": "&#x21c3;",
+      "render": "\"P{downharpoonleft}\""
+    },
+    {
+      "input": "&#x295c;",
+      "render": "\"P{RightUpTeeVector}\""
+    },
+    {
+      "input": "&#x2934;",
+      "render": "\"P{uprightcurvearrow}\""
+    },
+    {
+      "input": "&#x23ce;",
+      "render": "\"P{varcarriagereturn}\""
+    },
+    {
+      "input": "&#x2306;",
+      "render": "\"P{vardoublebarwedge}\""
+    },
+    {
+      "input": "&#x232c;",
+      "render": "\"P{varhexagonlrbonds}\""
+    },
+    {
+      "input": "&#x25bb;",
+      "render": "\"P{whitepointerright}\""
+    },
+    {
+      "input": "&#x2348;",
+      "render": "\"P{APLrightarrowbox}\""
+    },
+    {
+      "input": "&#x22eb;",
+      "render": "\"P{ntriangleright}\""
+    },
+    {
+      "input": "&#x29d0;",
+      "render": "\"P{vbrtri}\""
+    },
+    {
+      "input": "=>",
+      "render": "Rightarrow"
+    },
+    {
+      "input": "&#x293b;",
+      "render": "\"P{acwunderarcarrow}\""
+    },
+    {
+      "input": "&#x2952;",
+      "render": "\"P{LeftVectorBar}\""
+    },
+    {
+      "input": "&#x2958;",
+      "render": "\"P{LeftUpVectorBar}\""
+    },
+    {
+      "input": "&#x25c4;",
+      "render": "\"P{blackpointerleft}\""
+    },
+    {
+      "input": "&#x27f3;",
+      "render": "\"P{cwgapcirclearrow}\""
+    },
+    {
+      "input": "&#x291d;",
+      "render": "\"P{diamondleftarrow}\""
+    },
+    {
+      "input": "&#x2b16;",
+      "render": "\"P{diamondleftblack}\""
+    },
+    {
+      "input": "&#x21f5;",
+      "render": "\"P{downuparrows}\""
+    },
+    {
+      "input": "&#x2b32;",
+      "render": "\"P{leftarrowonoplus}\""
+    },
+    {
+      "input": "&#x2973;",
+      "render": "\"P{leftarrowsimilar}\""
+    },
+    {
+      "input": "&#x295a;",
+      "render": "\"P{LeftTeeVector}\""
+    },
+    {
+      "input": "&#x22b6;",
+      "render": "\"P{origof}\""
+    },
+    {
+      "input": "&#x22b7;",
+      "render": "\"P{imageof}\""
+    },
+    {
+      "input": "&#x2915;",
+      "render": "\"P{finj}\""
+    },
+    {
+      "input": "&#x22ed;",
+      "render": "\"P{nunrhd}\""
+    },
+    {
+      "input": "&#x2904;",
+      "render": "\"P{nvLeftrightarrow}\""
+    },
+    {
+      "input": "&#x2914;",
+      "render": "\"P{pinj}\""
+    },
+    {
+      "input": "&#x2233;",
+      "render": "\"P{cntclockoint}\""
+    },
+    {
+      "input": "&#x2975;",
+      "render": "\"P{rightarrowapprox}\""
+    },
+    {
+      "input": "&#x2b44;",
+      "render": "\"P{rightarrowsupset}\""
+    },
+    {
+      "input": "&#x2933;",
+      "render": "leadsto"
+    },
+    {
+      "input": "&#x21c1;",
+      "render": "\"P{rightharpoondown}\""
+    },
+    {
+      "input": "&#x21c9;",
+      "render": "\"P{rightrightarrows}\""
+    },
+    {
+      "input": "&#x21f6;",
+      "render": "\"P{rightthreearrows}\""
+    },
+    {
+      "input": "&#x2b49;",
+      "render": "\"P{similarleftarrow}\""
+    },
+    {
+      "input": "&#x29a1;",
+      "render": "\"P{sphericalangleup}\""
+    },
+    {
+      "input": "&#x25e8;",
+      "render": "\"P{squarerightblack}\""
+    },
+    {
+      "input": "&#x21a1;",
+      "render": "\"P{twoheaddownarrow}\""
+    },
+    {
+      "input": "&#x219e;",
+      "render": "\"P{twoheadleftarrow}\""
+    },
+    {
+      "input": "&#x21c5;",
+      "render": "\"P{updownarrows}\""
+    },
+    {
+      "input": "&#x2960;",
+      "render": "\"P{LeftUpTeeVector}\""
+    },
+    {
+      "input": "&#x2232;",
+      "render": "\"P{clockoint}\""
+    },
+    {
+      "input": "&#x22b3;",
+      "render": "\"P{vartriangleright}\""
+    },
+    {
+      "input": "&#x25c5;",
+      "render": "\"P{whitepointerleft}\""
+    },
+    {
+      "input": ">->>",
+      "render": "\"P{bij}\""
+    },
+    {
+      "input": "&#x2357;",
+      "render": "\"P{APLdownarrowbox}\""
+    },
+    {
+      "input": "&#x2347;",
+      "render": "\"P{APLleftarrowbox}\""
+    },
+    {
+      "input": "&#x2340;",
+      "render": "\"P{notbackslash}\""
+    },
+    {
+      "input": "&#x29cf;",
+      "render": "\"P{ltrivb}\""
+    },
+    {
+      "input": "&#x2275;",
+      "render": "\"P{ngtrsim}\""
+    },
+    {
+      "input": "&#x22ea;",
+      "render": "\"P{ntriangleleft}\""
+    },
+    {
+      "input": "&#x2939;",
+      "render": "\"P{acwleftarcarrow}\""
+    },
+    {
+      "input": "&#x293a;",
+      "render": "\"P{acwoverarcarrow}\""
+    },
+    {
+      "input": "&#x25bd;",
+      "render": "\"P{bigtriangledown}\""
+    },
+    {
+      "input": "&#x2a1e;",
+      "render": "\"P{bigtriangleleft}\""
+    },
+    {
+      "input": "&#x25b4;",
+      "render": "\"P{blacktriangle}\""
+    },
+    {
+      "input": "&#x2592;",
+      "render": "\"P{blockhalfshaded}\""
+    },
+    {
+      "input": "&#x29ec;",
+      "render": "\"P{circledownarrow}\""
+    },
+    {
+      "input": "&#x29b7;",
+      "render": "\"P{circledparallel}\""
+    },
+    {
+      "input": "&#x2686;",
+      "render": "\"P{circledrightdot}\""
+    },
+    {
+      "input": "&#x21b7;",
+      "render": "\"P{curvearrowright}\""
+    },
+    {
+      "input": "&#x2938;",
+      "render": "\"P{cwrightarcarrow}\""
+    },
+    {
+      "input": "&#x2b19;",
+      "render": "\"P{diamondbotblack}\""
+    },
+    {
+      "input": "&#x2b18;",
+      "render": "\"P{diamondtopblack}\""
+    },
+    {
+      "input": "&#x2908;",
+      "render": "\"P{downarrowbarred}\""
+    },
+    {
+      "input": "&#x21af;",
+      "render": "\"P{lightning}\""
+    },
+    {
+      "input": "&#x20e4;",
+      "render": "\"P{enclosetriangle}\""
+    },
+    {
+      "input": "&#x2025;",
+      "render": "\"P{enleadertwodots}\""
+    },
+    {
+      "input": "&#x2971;",
+      "render": "\"P{equalrightarrow}\""
+    },
+    {
+      "input": "&#x25ac;",
+      "render": "\"P{hrectangleblack}\""
+    },
+    {
+      "input": "&#x2b4a;",
+      "render": "\"P{leftarrowapprox}\""
+    },
+    {
+      "input": "&#x297a;",
+      "render": "\"P{leftarrowsubset}\""
+    },
+    {
+      "input": "&#x2b3f;",
+      "render": "\"P{leftcurvedarrow}\""
+    },
+    {
+      "input": "&#x21bd;",
+      "render": "\"P{leftharpoondown}\""
+    },
+    {
+      "input": "&#x21c6;",
+      "render": "\"P{leftrightarrows}\""
+    },
+    {
+      "input": "&#x2b31;",
+      "render": "\"P{leftthreearrows}\""
+    },
+    {
+      "input": "&#x25e3;",
+      "render": "\"P{llblacktriangle}\""
+    },
+    {
+      "input": "&#x25e2;",
+      "render": "\"P{lrblacktriangle}\""
+    },
+    {
+      "input": "&#x29af;",
+      "render": "\"P{measangledltosw}\""
+    },
+    {
+      "input": "&#x29ae;",
+      "render": "\"P{measangledrtose}\""
+    },
+    {
+      "input": "&#x29ab;",
+      "render": "\"P{measangleldtosw}\""
+    },
+    {
+      "input": "&#x29a9;",
+      "render": "\"P{measanglelutonw}\""
+    },
+    {
+      "input": "&#x29aa;",
+      "render": "\"P{measanglerdtose}\""
+    },
+    {
+      "input": "&#x29a8;",
+      "render": "\"P{measanglerutone}\""
+    },
+    {
+      "input": "&#x29ad;",
+      "render": "\"P{measangleultonw}\""
+    },
+    {
+      "input": "&#x29ac;",
+      "render": "\"P{measangleurtone}\""
+    },
+    {
+      "input": "&#x21ce;",
+      "render": "\"P{nLeftrightarrow}\""
+    },
+    {
+      "input": "&#x2b3a;",
+      "render": "\"P{nVleftarrowtail}\""
+    },
+    {
+      "input": "&#x22ec;",
+      "render": "\"P{nunlhd}\""
+    },
+    {
+      "input": "&#x21c4;",
+      "render": "\"P{rightleftarrow}\""
+    },
+    {
+      "input": "&#x21dd;",
+      "render": "\"P{rightsquigarrow}\""
+    },
+    {
+      "input": "&#x22cc;",
+      "render": "\"P{rightthreetimes}\""
+    },
+    {
+      "input": "&#x21e8;",
+      "render": "\"P{rightwhitearrow}\""
+    },
+    {
+      "input": "&#x25b5;",
+      "render": "\"P{vartriangle}\""
+    },
+    {
+      "input": "&#x25a9;",
+      "render": "\"P{squarecrossfill}\""
+    },
+    {
+      "input": "&#x25e7;",
+      "render": "\"P{squareleftblack}\""
+    },
+    {
+      "input": "&#x22b5;",
+      "render": "\"P{unrhd}\""
+    },
+    {
+      "input": "&#x2b36;",
+      "render": "\"P{twoheadmapsfrom}\""
+    },
+    {
+      "input": "&#x25e4;",
+      "render": "\"P{ulblacktriangle}\""
+    },
+    {
+      "input": "&#x20ef;",
+      "render": "\"P{underrightarrow}\""
+    },
+    {
+      "input": "...",
+      "render": "..."
+    },
+    {
+      "input": "&#x29bd;",
+      "render": "\"P{uparrowoncircle}\""
+    },
+    {
+      "input": "&#x21bf;",
+      "render": "\"P{upharpoonleft}\""
+    },
+    {
+      "input": "&#x25e5;",
+      "render": "\"P{urblacktriangle}\""
+    },
+    {
+      "input": "&#x2b22;",
+      "render": "\"P{varhexagonblack}\""
+    },
+    {
+      "input": "&#x22b2;",
+      "render": "\"P{vartriangleleft}\""
+    },
+    {
+      "input": "&#x25ae;",
+      "render": "\"P{vrectangleblack}\""
+    },
+    {
+      "input": "&#x20e9;",
+      "render": "\"P{widebridgeabove}\""
+    },
+    {
+      "input": "&#x2370;",
+      "render": "\"P{APLboxquestion}\""
+    },
+    {
+      "input": "&#x27fd;",
+      "render": "\"P{Longmapsfrom}\""
+    },
+    {
+      "input": "&#x27f9;",
+      "render": "\"P{Longrightarrow}\""
+    },
+    {
+      "input": "&#x2279;",
+      "render": "\"P{ngtrless}\""
+    },
+    {
+      "input": "&#x2940;",
+      "render": "\"P{acwcirclearrow}\""
+    },
+    {
+      "input": "&#x2a58;",
+      "render": "\"P{bigslopedwedge}\""
+    },
+    {
+      "input": "&#x29d7;",
+      "render": "\"P{blackhourglass}\""
+    },
+    {
+      "input": "&#x2591;",
+      "render": "\"P{blockqtrshaded}\""
+    },
+    {
+      "input": "&#x2590;",
+      "render": "\"P{blockrighthalf}\""
+    },
+    {
+      "input": "&#x21b5;",
+      "render": "\"P{carriagereturn}\""
+    },
+    {
+      "input": "&#x2687;",
+      "render": "\"P{circledtwodots}\""
+    },
+    {
+      "input": "&#x25cd;",
+      "render": "\"P{circlevertfill}\""
+    },
+    {
+      "input": "&#x27e1;",
+      "render": "\"P{concavediamond}\""
+    },
+    {
+      "input": "&#x21e0;",
+      "render": "\"P{leftdasharrow}\""
+    },
+    {
+      "input": "&#x21eb;",
+      "render": "\"P{dasharrowright}\""
+    },
+    {
+      "input": "&#x21e2;",
+      "render": "\"P{dasharrow}\""
+    },
+    {
+      "input": "&#x2a5e;",
+      "render": "\"P{doublebarwedge}\""
+    },
+    {
+      "input": "&#x21ca;",
+      "render": "\"P{downarrows}\""
+    },
+    {
+      "input": "&#x21e9;",
+      "render": "\"P{downwhitearrow}\""
+    },
+    {
+      "input": "&#x20df;",
+      "render": "\"P{enclosediamond}\""
+    },
+    {
+      "input": "&#x2b40;",
+      "render": "\"P{equalleftarrow}\""
+    },
+    {
+      "input": "&#x292f;",
+      "render": "\"P{fdiagovnearrow}\""
+    },
+    {
+      "input": "&#x23af;",
+      "render": "\"P{hline}\""
+    },
+    {
+      "input": "&#x21aa;",
+      "render": "\"P{hookrightarrow}\""
+    },
+    {
+      "input": "&#x23a2;",
+      "render": "\"P{lbrackextender}\""
+    },
+    {
+      "input": "&#x21c7;",
+      "render": "\"P{leftleftarrows}\""
+    },
+    {
+      "input": "&#x21dc;",
+      "render": "\"P{leftsquigarrow}\""
+    },
+    {
+      "input": "&#x22cb;",
+      "render": "\"P{leftthreetimes}\""
+    },
+    {
+      "input": "&#x21e6;",
+      "render": "\"P{leftwhitearrow}\""
+    },
+    {
+      "input": "&#x21ac;",
+      "render": "\"P{looparrowleft}\""
+    },
+    {
+      "input": "&#x239c;",
+      "render": "\"P{lparenextender}\""
+    },
+    {
+      "input": "&#x25c6;",
+      "render": "\"P{Diamondblack}\""
+    },
+    {
+      "input": "&#x29eb;",
+      "render": "\"P{blacklozenge}\""
+    },
+    {
+      "input": "&#x25ca;",
+      "render": "\"P{lozenge}\""
+    },
+    {
+      "input": "&#x315;",
+      "render": "\"P{ocommatopright}\""
+    },
+    {
+      "input": "&#x23a5;",
+      "render": "\"P{rbrackextender}\""
+    },
+    {
+      "input": "&#x2930;",
+      "render": "\"P{rdiagovsearrow}\""
+    },
+    {
+      "input": "&#x299d;",
+      "render": "\"P{rightanglemdot}\""
+    },
+    {
+      "input": "&#x2945;",
+      "render": "\"P{rightarrowplus}\""
+    },
+    {
+      "input": "&#x21c0;",
+      "render": "\"P{rightharpoonup}\""
+    },
+    {
+      "input": "&#x27d6;",
+      "render": "\"P{rightouterjoin}\""
+    },
+    {
+      "input": "&#x219d;",
+      "render": "\"P{rightwavearrow}\""
+    },
+    {
+      "input": "&#x239f;",
+      "render": "\"P{rparenextender}\""
+    },
+    {
+      "input": "&#x2222;",
+      "render": "\"P{angsph}\""
+    },
+    {
+      "input": "&#x2b13;",
+      "render": "\"P{squarebotblack}\""
+    },
+    {
+      "input": "&#x25a8;",
+      "render": "\"P{squareneswfill}\""
+    },
+    {
+      "input": "&#x25a7;",
+      "render": "\"P{squarenwsefill}\""
+    },
+    {
+      "input": "&#x2b12;",
+      "render": "\"P{squaretopblack}\""
+    },
+    {
+      "input": "&#x22b4;",
+      "render": "\"P{unlhd}\""
+    },
+    {
+      "input": "&#x29cd;",
+      "render": "\"P{triangleserifs}\""
+    },
+    {
+      "input": "&#x219f;",
+      "render": "\"P{twoheaduparrow}\""
+    },
+    {
+      "input": "&#x20ee;",
+      "render": "\"P{underleftarrow}\""
+    },
+    {
+      "input": "&#x21a8;",
+      "render": "\"P{updownarrowbar}\""
+    },
+    {
+      "input": "&#x21be;",
+      "render": "\"P{restriction}\""
+    },
+    {
+      "input": "&#x2666;",
+      "render": "\"P{vardiamond}\""
+    },
+    {
+      "input": "&#x23aa;",
+      "render": "\"P{vbraceextender}\""
+    },
+    {
+      "input": "&#x2a60;",
+      "render": "\"P{wedgedoublebar}\""
+    },
+    {
+      "input": "&#x2353;",
+      "render": "\"P{APLboxupcaret}\""
+    },
+    {
+      "input": "&#x2350;",
+      "render": "\"P{APLuparrowbox}\""
+    },
+    {
+      "input": "&#x2146;",
+      "render": "\"P{dd}\""
+    },
+    {
+      "input": "&#x26a5;",
+      "render": "\"P{Hermaphrodite}\""
+    },
+    {
+      "input": "&#x27f8;",
+      "render": "\"P{impliedby}\""
+    },
+    {
+      "input": "&#x227e;",
+      "render": "\"P{precsim}\""
+    },
+    {
+      "input": "&#x21e5;",
+      "render": "\"P{rightarrowbar}\""
+    },
+    {
+      "input": "&#x227f;",
+      "render": "\"P{succsim}\""
+    },
+    {
+      "input": "&#x2506;",
+      "render": "\"P{bdtriplevdash}\""
+    },
+    {
+      "input": "&#x2afc;",
+      "render": "\"P{biginterleave}\""
+    },
+    {
+      "input": "&#x2aff;",
+      "render": "\"P{bigtalloblong}\""
+    },
+    {
+      "input": "/_\\",
+      "render": "triangle"
+    },
+    {
+      "input": "&#x258c;",
+      "render": "\"P{blocklefthalf}\""
+    },
+    {
+      "input": "&#x25e1;",
+      "render": "\"P{botsemicircle}\""
+    },
+    {
+      "input": "&#x29b8;",
+      "render": "\"P{obslash}\""
+    },
+    {
+      "input": "&#x29bf;",
+      "render": "\"P{circledbullet}\""
+    },
+    {
+      "input": "&#x2941;",
+      "render": "\"P{cwcirclearrow}\""
+    },
+    {
+      "input": "&#xc7;",
+      "render": "\"P{divideontimes}\""
+    },
+    {
+      "input": "&#x223a;",
+      "render": "\"P{dotsminusdots}\""
+    },
+    {
+      "input": "&#x21e3;",
+      "render": "\"P{downdasharrow}\""
+    },
+    {
+      "input": "&#x279b;",
+      "render": "\"P{draftingarrow}\""
+    },
+    {
+      "input": "&#x29b4;",
+      "render": "\"P{emptysetoarrl}\""
+    },
+    {
+      "input": "&#x29b2;",
+      "render": "\"P{emptysetocirc}\""
+    },
+    {
+      "input": "&#x20dd;",
+      "render": "\"P{enclosecircle}\""
+    },
+    {
+      "input": "&#x20de;",
+      "render": "\"P{enclosesquare}\""
+    },
+    {
+      "input": "&#x22d5;",
+      "render": "\"P{hash}\""
+    },
+    {
+      "input": "&#x29f0;",
+      "render": "\"P{errbardiamond}\""
+    },
+    {
+      "input": "&#x2252;",
+      "render": "\"P{fallingdotseq}\""
+    },
+    {
+      "input": "&#x27d7;",
+      "render": "\"P{fullouterjoin}\""
+    },
+    {
+      "input": "&#x21a9;",
+      "render": "\"P{hookleftarrow}\""
+    },
+    {
+      "input": "&#x25d8;",
+      "render": "\"P{inversebullet}\""
+    },
+    {
+      "input": "&#x2977;",
+      "render": "\"P{leftarrowless}\""
+    },
+    {
+      "input": "&#x2946;",
+      "render": "\"P{leftarrowplus}\""
+    },
+    {
+      "input": "&#x21a2;",
+      "render": "\"P{leftarrowtail}\""
+    },
+    {
+      "input": "&#x21bc;",
+      "render": "\"P{leftharpoonup}\""
+    },
+    {
+      "input": "&#x27d5;",
+      "render": "\"P{leftouterjoin}\""
+    },
+    {
+      "input": "&#x219c;",
+      "render": "\"P{leftwavearrow}\""
+    },
+    {
+      "input": "&#x2987;",
+      "render": "\"P{limg}\""
+    },
+    {
+      "input": "&#x27f5;",
+      "render": "\"P{longleftarrow}\""
+    },
+    {
+      "input": "&#x25cf;",
+      "render": "\"P{CIRCLE}\""
+    },
+    {
+      "input": "&#x25a0;",
+      "render": "\"P{mdlgblksquare}\""
+    },
+    {
+      "input": "square",
+      "render": "\"P{box}\""
+    },
+    {
+      "input": "&#x2981;",
+      "render": "\"P{spot}\""
+    },
+    {
+      "input": "&#x25fe;",
+      "render": "\"P{mdsmblksquare}\""
+    },
+    {
+      "input": "&#x26ac;",
+      "render": "\"P{mdsmwhtcircle}\""
+    },
+    {
+      "input": "&#x25fd;",
+      "render": "\"P{mdsmwhtsquare}\""
+    },
+    {
+      "input": "&#x2221;",
+      "render": "\"P{angmsd}\""
+    },
+    {
+      "input": "&#x22e3;",
+      "render": "\"P{nsqsuperseteq}\""
+    },
+    {
+      "input": "&#x20d6;",
+      "render": "\"P{LVec}\""
+    },
+    {
+      "input": "&#x25b1;",
+      "render": "\"P{parallelogram}\""
+    },
+    {
+      "input": "&#x2b1f;",
+      "render": "\"P{pentagonblack}\""
+    },
+    {
+      "input": "&#x299c;",
+      "render": "\"P{rightanglesqr}\""
+    },
+    {
+      "input": "&#x2b43;",
+      "render": "\"P{rightarrowgtr}\""
+    },
+    {
+      "input": "&#x2911;",
+      "render": "\"P{rightdotarrow}\""
+    },
+    {
+      "input": "&#x297d;",
+      "render": "\"P{strictif}\""
+    },
+    {
+      "input": "&#x2b54;",
+      "render": "\"P{rightpentagon}\""
+    },
+    {
+      "input": "&#x2988;",
+      "render": "\"P{rimg}\""
+    },
+    {
+      "input": "&#x2143;",
+      "render": "\"P{sansLmirrored}\""
+    },
+    {
+      "input": "&#x2adf;",
+      "render": "\"P{shortdowntack}\""
+    },
+    {
+      "input": "&#x2ade;",
+      "render": "\"P{shortlefttack}\""
+    },
+    {
+      "input": "&#x266c;",
+      "render": "\"P{sixteenthnote}\""
+    },
+    {
+      "input": "&#x2216;",
+      "render": "\"P{setminus}\""
+    },
+    {
+      "input": "&#x2b15;",
+      "render": "\"P{squarellblack}\""
+    },
+    {
+      "input": "&#x25ea;",
+      "render": "\"P{squarelrblack}\""
+    },
+    {
+      "input": "&#x25e9;",
+      "render": "\"P{squareulblack}\""
+    },
+    {
+      "input": "&#x2b14;",
+      "render": "\"P{squareurblack}\""
+    },
+    {
+      "input": "&#x2af6;",
+      "render": "\"P{threedotcolon}\""
+    },
+    {
+      "input": "&#x20e8;",
+      "render": "\"P{threeunderdot}\""
+    },
+    {
+      "input": "&#x25e0;",
+      "render": "\"P{topsemicircle}\""
+    },
+    {
+      "input": "&#x2a3a;",
+      "render": "\"P{triangleminus}\""
+    },
+    {
+      "input": "&#x25b7;",
+      "render": "\"P{rhd}\""
+    },
+    {
+      "input": "&#x2a3b;",
+      "render": "\"P{triangletimes}\""
+    },
+    {
+      "input": "&#x2905;",
+      "render": "\"P{twoheadmapsto}\""
+    },
+    {
+      "input": "&#x2909;",
+      "render": "\"P{uparrowbarred}\""
+    },
+    {
+      "input": "&#x3f6;",
+      "render": "\"P{backepsilon}\""
+    },
+    {
+      "input": "&#x22bf;",
+      "render": "\"P{varlrtriangle}\""
+    },
+    {
+      "input": "&#x2219;",
+      "render": "\"P{bullet}\""
+    },
+    {
+      "input": "&#x2b1d;",
+      "render": "\"P{vysmblksquare}\""
+    },
+    {
+      "input": "@",
+      "render": "@"
+    },
+    {
+      "input": "&#x2b1e;",
+      "render": "\"P{vysmwhtsquare}\""
+    },
+    {
+      "input": ":.",
+      "render": "therefore"
+    },
+    {
+      "input": "&#x29a6;",
+      "render": "\"P{wideangledown}\""
+    },
+    {
+      "input": "&#x2913;",
+      "render": "\"P{downarrowbar}\""
+    },
+    {
+      "input": "&#x21e4;",
+      "render": "\"P{barleftarrow}\""
+    },
+    {
+      "input": "&#x2274;",
+      "render": "\"P{nlesssim}\""
+    },
+    {
+      "input": "&#x214a;",
+      "render": "\"P{PropertyLine}\""
+    },
+    {
+      "input": "&#x2907;",
+      "render": "\"P{Mapsto}\""
+    },
+    {
+      "input": "&#x2a57;",
+      "render": "\"P{bigslopedvee}\""
+    },
+    {
+      "input": "&#x2606;",
+      "render": "\"P{bigwhitestar}\""
+    },
+    {
+      "input": "&#x2584;",
+      "render": "\"P{blocklowhalf}\""
+    },
+    {
+      "input": "&#x229c;",
+      "render": "\"P{oeq}\""
+    },
+    {
+      "input": "&#x25f5;",
+      "render": "\"P{circlellquad}\""
+    },
+    {
+      "input": "&#x25f6;",
+      "render": "\"P{circlelrquad}\""
+    },
+    {
+      "input": "&#x25f4;",
+      "render": "\"P{circleulquad}\""
+    },
+    {
+      "input": "&#x25f7;",
+      "render": "\"P{circleurquad}\""
+    },
+    {
+      "input": "&#x2a4d;",
+      "render": "\"P{closedvarcap}\""
+    },
+    {
+      "input": "&#x2a4c;",
+      "render": "\"P{closedvarcup}\""
+    },
+    {
+      "input": "&#x228c;",
+      "render": "\"P{cupleftarrow}\""
+    },
+    {
+      "input": "&#x273d;",
+      "render": "\"P{dingasterisk}\""
+    },
+    {
+      "input": "&#x25cc;",
+      "render": "\"P{dottedcircle}\""
+    },
+    {
+      "input": "&#x2b1a;",
+      "render": "\"P{dottedsquare}\""
+    },
+    {
+      "input": "&#x2a62;",
+      "render": "\"P{doublebarvee}\""
+    },
+    {
+      "input": "&#x297f;",
+      "render": "\"P{downfishtail}\""
+    },
+    {
+      "input": "&#x29b3;",
+      "render": "\"P{emptysetoarr}\""
+    },
+    {
+      "input": "&#x29b1;",
+      "render": "\"P{emptysetobar}\""
+    },
+    {
+      "input": "&#x2a9b;",
+      "render": "\"P{eqqslantless}\""
+    },
+    {
+      "input": "&#x29f2;",
+      "render": "\"P{errbarcircle}\""
+    },
+    {
+      "input": "&#x29ee;",
+      "render": "\"P{errbarsquare}\""
+    },
+    {
+      "input": "&#x292c;",
+      "render": "\"P{fdiagovrdiag}\""
+    },
+    {
+      "input": "&#x22b9;",
+      "render": "\"P{hermitmatrix}\""
+    },
+    {
+      "input": "&#x2b23;",
+      "render": "\"P{hexagonblack}\""
+    },
+    {
+      "input": "&#x2043;",
+      "render": "\"P{hyphenbullet}\""
+    },
+    {
+      "input": "&#x2231;",
+      "render": "\"P{intclockwise}\""
+    },
+    {
+      "input": "&#x263b;",
+      "render": "\"P{blacksmiley}\""
+    },
+    {
+      "input": "&#x298f;",
+      "render": "\"P{lbracklltick}\""
+    },
+    {
+      "input": "&#x298d;",
+      "render": "\"P{lbrackultick}\""
+    },
+    {
+      "input": "&#x290e;",
+      "render": "\"P{leftdbkarrow}\""
+    },
+    {
+      "input": "&#x2b38;",
+      "render": "\"P{leftdotarrow}\""
+    },
+    {
+      "input": "&#x297c;",
+      "render": "\"P{strictfi}\""
+    },
+    {
+      "input": "&#x27cc;",
+      "render": "\"P{longdivision}\""
+    },
+    {
+      "input": "&#x27e0;",
+      "render": "\"P{lozengeminus}\""
+    },
+    {
+      "input": "&#x29e1;",
+      "render": "\"P{lrtriangleeq}\""
+    },
+    {
+      "input": "&#xa3;",
+      "render": "\"P{pounds}\""
+    },
+    {
+      "input": "&#x2b25;",
+      "render": "\"P{mdblkdiamond}\""
+    },
+    {
+      "input": "&#x2b27;",
+      "render": "\"P{mdblklozenge}\""
+    },
+    {
+      "input": "&#x2b26;",
+      "render": "\"P{mdwhtdiamond}\""
+    },
+    {
+      "input": "&#x2b28;",
+      "render": "\"P{mdwhtlozenge}\""
+    },
+    {
+      "input": "&#x2b51;",
+      "render": "\"P{medblackstar}\""
+    },
+    {
+      "input": "&#x2b50;",
+      "render": "\"P{medwhitestar}\""
+    },
+    {
+      "input": "&#x29df;",
+      "render": "\"P{dualmap}\""
+    },
+    {
+      "input": "&#x21fb;",
+      "render": "\"P{ffun}\""
+    },
+    {
+      "input": "&#x22e0;",
+      "render": "\"P{npreceq}\""
+    },
+    {
+      "input": "&#x22e1;",
+      "render": "\"P{nsucceq}\""
+    },
+    {
+      "input": "&#x2903;",
+      "render": "\"P{nvRightarrow}\""
+    },
+    {
+      "input": "&#x21f8;",
+      "render": "\"P{pfun}\""
+    },
+    {
+      "input": "&#x29bc;",
+      "render": "\"P{odotslashdot}\""
+    },
+    {
+      "input": "&#x29c1;",
+      "render": "\"P{circledgtr}\""
+    },
+    {
+      "input": "&#x312;",
+      "render": "\"P{oturnedcomma}\""
+    },
+    {
+      "input": "&#x298e;",
+      "render": "\"P{rbracklrtick}\""
+    },
+    {
+      "input": "&#x2990;",
+      "render": "\"P{rbrackurtick}\""
+    },
+    {
+      "input": "&#x292b;",
+      "render": "\"P{rdiagovfdiag}\""
+    },
+    {
+      "input": "&#x29a5;",
+      "render": "\"P{revangleubar}\""
+    },
+    {
+      "input": "&#x290d;",
+      "render": "\"P{rightbkarrow}\""
+    },
+    {
+      "input": "&#x291c;",
+      "render": "\"P{rightdbltail}\""
+    },
+    {
+      "input": "&#x2253;",
+      "render": "\"P{risingdotseq}\""
+    },
+    {
+      "input": "&#x2b29;",
+      "render": "\"P{smblkdiamond}\""
+    },
+    {
+      "input": "&#x2b2a;",
+      "render": "\"P{smblklozenge}\""
+    },
+    {
+      "input": "diamond",
+      "render": "diamond"
+    },
+    {
+      "input": "&#x2b2b;",
+      "render": "\"P{smwhtlozenge}\""
+    },
+    {
+      "input": "&#x25a6;",
+      "render": "\"P{squarehvfill}\""
+    },
+    {
+      "input": "&#x25f1;",
+      "render": "\"P{squarellquad}\""
+    },
+    {
+      "input": "&#x25f2;",
+      "render": "\"P{squarelrquad}\""
+    },
+    {
+      "input": "&#x25f0;",
+      "render": "\"P{squareulquad}\""
+    },
+    {
+      "input": "&#x25f3;",
+      "render": "\"P{squareurquad}\""
+    },
+    {
+      "input": "&#x2ac9;",
+      "render": "\"P{subsetapprox}\""
+    },
+    {
+      "input": "&#x2aca;",
+      "render": "\"P{supsetapprox}\""
+    },
+    {
+      "input": "&#x25ec;",
+      "render": "\"P{trianglecdot}\""
+    },
+    {
+      "input": "&#x25c1;",
+      "render": "\"P{lhd}\""
+    },
+    {
+      "input": "&#x29ca;",
+      "render": "\"P{triangleodot}\""
+    },
+    {
+      "input": "&#x2a39;",
+      "render": "\"P{triangleplus}\""
+    },
+    {
+      "input": "&#x29cb;",
+      "render": "\"P{triangleubar}\""
+    },
+    {
+      "input": "&#x23b5;",
+      "render": "\"P{underbracket}\""
+    },
+    {
+      "input": "cdots",
+      "render": "cdots"
+    },
+    {
+      "input": "&#x21e7;",
+      "render": "\"P{upwhitearrow}\""
+    },
+    {
+      "input": "&#x2665;",
+      "render": "\"P{varheart}\""
+    },
+    {
+      "input": "&#x2664;",
+      "render": "\"P{varspade}\""
+    },
+    {
+      "input": "&#x228a;",
+      "render": "\"P{subsetneq}\""
+    },
+    {
+      "input": "&#x2a63;",
+      "render": "\"P{veedoublebar}\""
+    },
+    {
+      "input": "&#x2a5a;",
+      "render": "\"P{wedgemidvert}\""
+    },
+    {
+      "input": "&#x2a55;",
+      "render": "\"P{wedgeonwedge}\""
+    },
+    {
+      "input": "->>",
+      "render": "\"P{tsur}\""
+    },
+    {
+      "input": "&#x233f;",
+      "render": "\"P{notslash}\""
+    },
+    {
+      "input": "&#x2277;",
+      "render": "\"P{gtrless}\""
+    },
+    {
+      "input": "&#x210e;",
+      "render": "\"P{Planckconst}\""
+    },
+    {
+      "input": "&#x2b46;",
+      "render": "\"P{RRightarrow}\""
+    },
+    {
+      "input": "&#x2263;",
+      "render": "\"P{Equiv}\""
+    },
+    {
+      "input": "&#x2a53;",
+      "render": "\"P{Wedge}\""
+    },
+    {
+      "input": "&#x21d5;",
+      "render": "\"P{Updownarrow}\""
+    },
+    {
+      "input": "&#x224b;",
+      "render": "\"P{approxident}\""
+    },
+    {
+      "input": "&#x27a2;",
+      "render": "\"P{arrowbullet}\""
+    },
+    {
+      "input": "&#x20f0;",
+      "render": "\"P{asteraccent}\""
+    },
+    {
+      "input": "&#x2037;",
+      "render": "\"P{backtrprime}\""
+    },
+    {
+      "input": "&#x2713;",
+      "render": "\"P{checkmark}\""
+    },
+    {
+      "input": "&#x25fc;",
+      "render": "\"P{mdblksquare}\""
+    },
+    {
+      "input": "&#x2b2c;",
+      "render": "\"P{blkhorzoval}\""
+    },
+    {
+      "input": "&#x2b2e;",
+      "render": "\"P{blkvertoval}\""
+    },
+    {
+      "input": "&#x2580;",
+      "render": "\"P{blockuphalf}\""
+    },
+    {
+      "input": "&#x2651;",
+      "render": "\"P{capricornus}\""
+    },
+    {
+      "input": "&#x2038;",
+      "render": "\"P{caretinsert}\""
+    },
+    {
+      "input": "&#x229a;",
+      "render": "\"P{ocirc}\""
+    },
+    {
+      "input": "&#x229d;",
+      "render": "\"P{odash}\""
+    },
+    {
+      "input": "&#x29c0;",
+      "render": "\"P{olessthan}\""
+    },
+    {
+      "input": "&#x272a;",
+      "render": "\"P{circledstar}\""
+    },
+    {
+      "input": "&#x29b6;",
+      "render": "\"P{circledvert}\""
+    },
+    {
+      "input": "&#x2259;",
+      "render": "\"P{sdef}\""
+    },
+    {
+      "input": "&#x22de;",
+      "render": "\"P{curlyeqprec}\""
+    },
+    {
+      "input": "&#x22df;",
+      "render": "\"P{curlyeqsucc}\""
+    },
+    {
+      "input": "&#x27d0;",
+      "render": "\"P{Diamonddot}\""
+    },
+    {
+      "input": "&#x2a9c;",
+      "render": "\"P{eqqslantgtr}\""
+    },
+    {
+      "input": "&#x2a95;",
+      "render": "\"P{eqslantless}\""
+    },
+    {
+      "input": "&#x29e6;",
+      "render": "\"P{gleichstark}\""
+    },
+    {
+      "input": "&#x23ae;",
+      "render": "\"P{intextender}\""
+    },
+    {
+      "input": "&#x2349;",
+      "render": "\"P{invdiameter}\""
+    },
+    {
+      "input": "&#x29fc;",
+      "render": "\"P{lcurvyangle}\""
+    },
+    {
+      "input": "&#x290c;",
+      "render": "\"P{leftbkarrow}\""
+    },
+    {
+      "input": "&#x291b;",
+      "render": "\"P{leftdbltail}\""
+    },
+    {
+      "input": "&#x2b24;",
+      "render": "\"P{lgblkcircle}\""
+    },
+    {
+      "input": "&#x2b1b;",
+      "render": "\"P{lgblksquare}\""
+    },
+    {
+      "input": "&#x25ef;",
+      "render": "\"P{lgwhtcircle}\""
+    },
+    {
+      "input": "&#x2b1c;",
+      "render": "\"P{lgwhtsquare}\""
+    },
+    {
+      "input": "&#x26ab;",
+      "render": "\"P{medbullet}\""
+    },
+    {
+      "input": "&#x26aa;",
+      "render": "\"P{medcirc}\""
+    },
+    {
+      "input": "&#x25fb;",
+      "render": "\"P{mdwhtsquare}\""
+    },
+    {
+      "input": "&#x2a5c;",
+      "render": "\"P{midbarwedge}\""
+    },
+    {
+      "input": "&#x27dc;",
+      "render": "\"P{multimapinv}\""
+    },
+    {
+      "input": "&#x21df;",
+      "render": "\"P{nHdownarrow}\""
+    },
+    {
+      "input": "&#x21cf;",
+      "render": "\"P{nRightarrow}\""
+    },
+    {
+      "input": "&#x2931;",
+      "render": "\"P{neovnwarrow}\""
+    },
+    {
+      "input": "&#x292e;",
+      "render": "\"P{neovsearrow}\""
+    },
+    {
+      "input": "&#x22e2;",
+      "render": "\"P{nsqsubseteq}\""
+    },
+    {
+      "input": "&#x2902;",
+      "render": "\"P{nvLeftarrow}\""
+    },
+    {
+      "input": "&#x2932;",
+      "render": "\"P{nwovnearrow}\""
+    },
+    {
+      "input": "&#x2a34;",
+      "render": "\"P{otimeslhrim}\""
+    },
+    {
+      "input": "&#x2a35;",
+      "render": "\"P{otimesrhrim}\""
+    },
+    {
+      "input": "&#x23b4;",
+      "render": "\"P{overbracket}\""
+    },
+    {
+      "input": "&#x2ab9;",
+      "render": "\"P{precnapprox}\""
+    },
+    {
+      "input": "&#x2669;",
+      "render": "\"P{quarternote}\""
+    },
+    {
+      "input": "&#x29fd;",
+      "render": "\"P{rcurvyangle}\""
+    },
+    {
+      "input": "&#x29b0;",
+      "render": "\"P{revemptyset}\""
+    },
+    {
+      "input": "&#x2947;",
+      "render": "\"P{rightarrowx}\""
+    },
+    {
+      "input": "&#x29f4;",
+      "render": "\"P{ruledelayed}\""
+    },
+    {
+      "input": "&#x2650;",
+      "render": "\"P{sagittarius}\""
+    },
+    {
+      "input": "&#x2142;",
+      "render": "\"P{sansLturned}\""
+    },
+    {
+      "input": "&#x292d;",
+      "render": "\"P{seovnearrow}\""
+    },
+    {
+      "input": "&#x2ae0;",
+      "render": "\"P{shortuptack}\""
+    },
+    {
+      "input": "&#x2a6c;",
+      "render": "\"P{simminussim}\""
+    },
+    {
+      "input": "&#x2022;",
+      "render": "\"P{smblkcircle}\""
+    },
+    {
+      "input": "&#x25aa;",
+      "render": "\"P{smblksquare}\""
+    },
+    {
+      "input": "&#x2b52;",
+      "render": "\"P{smwhitestar}\""
+    },
+    {
+      "input": "&#x25e6;",
+      "render": "\"P{smwhtcircle}\""
+    },
+    {
+      "input": "&#x25ab;",
+      "render": "\"P{smwhtsquare}\""
+    },
+    {
+      "input": "&#x22e4;",
+      "render": "\"P{sqsubsetneq}\""
+    },
+    {
+      "input": "&#x22e5;",
+      "render": "\"P{epar}\""
+    },
+    {
+      "input": "&#x25a4;",
+      "render": "\"P{squarehfill}\""
+    },
+    {
+      "input": "&#x25a5;",
+      "render": "\"P{squarevfill}\""
+    },
+    {
+      "input": "&#x2aba;",
+      "render": "\"P{succnapprox}\""
+    },
+    {
+      "input": "&#x27c0;",
+      "render": "\"P{threedangle}\""
+    },
+    {
+      "input": "&#x21e1;",
+      "render": "\"P{updasharrow}\""
+    },
+    {
+      "input": "&#x2305;",
+      "render": "\"P{varbarwedge}\""
+    },
+    {
+      "input": "&#x2667;",
+      "render": "\"P{varclub}\""
+    },
+    {
+      "input": "&#x22f6;",
+      "render": "\"P{barin}\""
+    },
+    {
+      "input": "&#x20d2;",
+      "render": "\"P{vertoverlay}\""
+    },
+    {
+      "input": "&#x2311;",
+      "render": "\"P{sqlozenge}\""
+    },
+    {
+      "input": "&#x2b2d;",
+      "render": "\"P{whthorzoval}\""
+    },
+    {
+      "input": "&#x2b2f;",
+      "render": "\"P{whtvertoval}\""
+    },
+    {
+      "input": "&#x29a7;",
+      "render": "\"P{wideangleup}\""
+    },
+    {
+      "input": "&#x235d;",
+      "render": "\"P{APLcomment}\""
+    },
+    {
+      "input": "&#x2611;",
+      "render": "\"P{CheckedBox}\""
+    },
+    {
+      "input": "&#x290b;",
+      "render": "\"P{Ddownarrow}\""
+    },
+    {
+      "input": "&#x2107;",
+      "render": "\"P{Euler}\""
+    },
+    {
+      "input": "&#x2b45;",
+      "render": "\"P{LLeftarrow}\""
+    },
+    {
+      "input": "&#x27fe;",
+      "render": "\"P{Longmapsto}\""
+    },
+    {
+      "input": "&#x2906;",
+      "render": "\"P{Mapsfrom}\""
+    },
+    {
+      "input": "&#x2996;",
+      "render": "\"P{Rparenless}\""
+    },
+    {
+      "input": "&#x2912;",
+      "render": "\"P{baruparrow}\""
+    },
+    {
+      "input": "&#x2036;",
+      "render": "\"P{backdprime}\""
+    },
+    {
+      "input": "&#x2a47;",
+      "render": "\"P{capovercup}\""
+    },
+    {
+      "input": "&#x229b;",
+      "render": "\"P{oast}\""
+    },
+    {
+      "input": "&#x29b5;",
+      "render": "\"P{circlehbar}\""
+    },
+    {
+      "input": "&#x2a29;",
+      "render": "\"P{commaminus}\""
+    },
+    {
+      "input": "&#x2201;",
+      "render": "\"P{complement}\""
+    },
+    {
+      "input": "&#x2332;",
+      "render": "\"P{conictaper}\""
+    },
+    {
+      "input": "&#x2a46;",
+      "render": "\"P{cupovercap}\""
+    },
+    {
+      "input": "&#x22cf;",
+      "render": "\"P{curlywedge}\""
+    },
+    {
+      "input": "&#x29fa;",
+      "render": "\"P{doubleplus}\""
+    },
+    {
+      "input": "&#x266a;",
+      "render": "\"P{eighthnote}\""
+    },
+    {
+      "input": "&#x2a96;",
+      "render": "\"P{eqslantgtr}\""
+    },
+    {
+      "input": "&#x2a69;",
+      "render": "\"P{equivVvert}\""
+    },
+    {
+      "input": "&#x221c;",
+      "render": "\"P{fourthroot}\""
+    },
+    {
+      "input": "&#x2a8c;",
+      "render": "\"P{gtreqqless}\""
+    },
+    {
+      "input": "&#x25ad;",
+      "render": "\"P{hrectangle}\""
+    },
+    {
+      "input": "&#x2af4;",
+      "render": "\"P{interleave}\""
+    },
+    {
+      "input": "&#x2997;",
+      "render": "\"P{lblkbrbrak}\""
+    },
+    {
+      "input": "&#x23a9;",
+      "render": "\"P{lbracelend}\""
+    },
+    {
+      "input": "&#x23a7;",
+      "render": "\"P{lbraceuend}\""
+    },
+    {
+      "input": "&#x23a3;",
+      "render": "\"P{lbracklend}\""
+    },
+    {
+      "input": "&#x298b;",
+      "render": "\"P{lbrackubar}\""
+    },
+    {
+      "input": "&#x23a1;",
+      "render": "\"P{lbrackuend}\""
+    },
+    {
+      "input": "&#x2b3e;",
+      "render": "\"P{leftarrowx}\""
+    },
+    {
+      "input": "&#x2a85;",
+      "render": "\"P{lessapprox}\""
+    },
+    {
+      "input": "&#x2a8b;",
+      "render": "\"P{lesseqqgtr}\""
+    },
+    {
+      "input": "&#x25fa;",
+      "render": "\"P{lltriangle}\""
+    },
+    {
+      "input": "&#x23b0;",
+      "render": "\"P{lmoustache}\""
+    },
+    {
+      "input": "&#x239d;",
+      "render": "\"P{lparenlend}\""
+    },
+    {
+      "input": "&#x2993;",
+      "render": "\"P{lparenless}\""
+    },
+    {
+      "input": "&#x239b;",
+      "render": "\"P{lparenuend}\""
+    },
+    {
+      "input": "&#x25ff;",
+      "render": "\"P{lrtriangle}\""
+    },
+    {
+      "input": "&#x21a4;",
+      "render": "\"P{mapstoleft}\""
+    },
+    {
+      "input": "&#x2a2b;",
+      "render": "\"P{minusfdots}\""
+    },
+    {
+      "input": "&#x2a2c;",
+      "render": "\"P{minusrdots}\""
+    },
+    {
+      "input": "&#x21cd;",
+      "render": "\"P{nLeftarrow}\""
+    },
+    {
+      "input": "#",
+      "render": "\"P{eqno}\""
+    },
+    {
+      "input": "&#x2a2d;",
+      "render": "\"P{opluslhrim}\""
+    },
+    {
+      "input": "&#x2a2e;",
+      "render": "\"P{oplusrhrim}\""
+    },
+    {
+      "input": "&#x2a27;",
+      "render": "\"P{plussubtwo}\""
+    },
+    {
+      "input": "&#x261e;",
+      "render": "\"P{pointright}\""
+    },
+    {
+      "input": "&#x3012;",
+      "render": "\"P{postalmark}\""
+    },
+    {
+      "input": "&#x2ab7;",
+      "render": "\"P{precapprox}\""
+    },
+    {
+      "input": "&#x2998;",
+      "render": "\"P{rblkbrbrak}\""
+    },
+    {
+      "input": "&#x23ad;",
+      "render": "\"P{rbracelend}\""
+    },
+    {
+      "input": "&#x23ab;",
+      "render": "\"P{rbraceuend}\""
+    },
+    {
+      "input": "&#x23a6;",
+      "render": "\"P{rbracklend}\""
+    },
+    {
+      "input": "&#x298c;",
+      "render": "\"P{rbrackubar}\""
+    },
+    {
+      "input": "&#x23a4;",
+      "render": "\"P{rbrackuend}\""
+    },
+    {
+      "input": "/_",
+      "render": "angle"
+    },
+    {
+      "input": "&#x2970;",
+      "render": "\"P{rightimply}\""
+    },
+    {
+      "input": "&#x2aa7;",
+      "render": "\"P{gtcc}\""
+    },
+    {
+      "input": "&#x23b1;",
+      "render": "\"P{rmoust}\""
+    },
+    {
+      "input": "&#x23a0;",
+      "render": "\"P{rparenlend}\""
+    },
+    {
+      "input": "&#x239e;",
+      "render": "\"P{rparenuend}\""
+    },
+    {
+      "input": "&#x2a33;",
+      "render": "\"P{smashtimes}\""
+    },
+    {
+      "input": "&#x23b7;",
+      "render": "\"P{sqrtbottom}\""
+    },
+    {
+      "input": "&#x2291;",
+      "render": "\"P{sqsubseteq}\""
+    },
+    {
+      "input": "&#x2292;",
+      "render": "\"P{sqsupseteq}\""
+    },
+    {
+      "input": "&#x27c3;",
+      "render": "\"P{subsetcirc}\""
+    },
+    {
+      "input": "&#x2acb;",
+      "render": "\"P{subsetneqq}\""
+    },
+    {
+      "input": "&#x2abf;",
+      "render": "\"P{subsetplus}\""
+    },
+    {
+      "input": "&#x2ab8;",
+      "render": "\"P{succapprox}\""
+    },
+    {
+      "input": "&#x27c4;",
+      "render": "\"P{supsetcirc}\""
+    },
+    {
+      "input": "&#x2acc;",
+      "render": "\"P{supsetneqq}\""
+    },
+    {
+      "input": "&#x2ac0;",
+      "render": "\"P{supsetplus}\""
+    },
+    {
+      "input": "&#x2afe;",
+      "render": "\"P{talloblong}\""
+    },
+    {
+      "input": "&#x29fb;",
+      "render": "\"P{tripleplus}\""
+    },
+    {
+      "input": "&#x2129;",
+      "render": "\"P{turnediota}\""
+    },
+    {
+      "input": "&#x2017;",
+      "render": "\"P{twolowline}\""
+    },
+    {
+      "input": "&#x25f8;",
+      "render": "\"P{ultriangle}\""
+    },
+    {
+      "input": "&#x23dd;",
+      "render": "\"P{underparen}\""
+    },
+    {
+      "input": "&#x297e;",
+      "render": "\"P{upfishtail}\""
+    },
+    {
+      "input": "&#x3d9;",
+      "render": "\"P{koppa}\""
+    },
+    {
+      "input": "&#x21c8;",
+      "render": "\"P{upuparrows}\""
+    },
+    {
+      "input": "&#x3f4;",
+      "render": "\"P{upvarTheta}\""
+    },
+    {
+      "input": "&#x3f0;",
+      "render": "\"P{varkappa}\""
+    },
+    {
+      "input": "&#x3c2;",
+      "render": "\"P{upvarsigma}\""
+    },
+    {
+      "input": "&#x3d1;",
+      "render": "vartheta"
+    },
+    {
+      "input": "&#x25f9;",
+      "render": "\"P{urtriangle}\""
+    },
+    {
+      "input": "&#x3b5;",
+      "render": "epsilon"
+    },
+    {
+      "input": "&#x2b21;",
+      "render": "\"P{varhexagon}\""
+    },
+    {
+      "input": "O/",
+      "render": "\"P{emptyset}\""
+    },
+    {
+      "input": "&#x2a5b;",
+      "render": "\"P{veemidvert}\""
+    },
+    {
+      "input": "&#x2a59;",
+      "render": "\"P{veeonwedge}\""
+    },
+    {
+      "input": "&#x25af;",
+      "render": "\"P{vrectangle}\""
+    },
+    {
+      "input": "&#x330;",
+      "render": "\"P{utilde}\""
+    },
+    {
+      "input": "&#x212b;",
+      "render": "\"P{Angstrom}\""
+    },
+    {
+      "input": "&#x21d3;",
+      "render": "\"P{Downarrow}\""
+    },
+    {
+      "input": "&#x2995;",
+      "render": "\"P{Lparengtr}\""
+    },
+    {
+      "input": "&#x23e6;",
+      "render": "\"P{accurrent}\""
+    },
+    {
+      "input": "&",
+      "render": "&"
+    },
+    {
+      "input": "&#x29a4;",
+      "render": "\"P{angleubar}\""
+    },
+    {
+      "input": "&#x2a70;",
+      "render": "\"P{approxeqq}\""
+    },
+    {
+      "input": "&#x2035;",
+      "render": "\"P{backprime}\""
+    },
+    {
+      "input": "&#x22cd;",
+      "render": "\"P{backsimeq}\""
+    },
+    {
+      "input": "&#x22ff;",
+      "render": "\"P{bagmember}\""
+    },
+    {
+      "input": "&#x2a03;",
+      "render": "\"P{bigcupdot}\""
+    },
+    {
+      "input": "&#x2a02;",
+      "render": "\"P{bigotimes}\""
+    },
+    {
+      "input": "&#x2623;",
+      "render": "\"P{biohazard}\""
+    },
+    {
+      "input": "&#x2588;",
+      "render": "\"P{blockfull}\""
+    },
+    {
+      "input": "&#x29c5;",
+      "render": "\"P{boxbslash}\""
+    },
+    {
+      "input": "&#x29c7;",
+      "render": "\"P{boxcircle}\""
+    },
+    {
+      "input": "&#x2a49;",
+      "render": "\"P{capbarcup}\""
+    },
+    {
+      "input": "&#x2a07;",
+      "render": "\"P{conjquant}\""
+    },
+    {
+      "input": "&#x2a48;",
+      "render": "\"P{cupbarcap}\""
+    },
+    {
+      "input": "&#x27db;",
+      "render": "\"P{dashVdash}\""
+    },
+    {
+      "input": "&#x2239;",
+      "render": "\"P{eqcolon}\""
+    },
+    {
+      "input": "&#x2a08;",
+      "render": "\"P{disjquant}\""
+    },
+    {
+      "input": "&#x2a68;",
+      "render": "\"P{equivVert}\""
+    },
+    {
+      "input": "&#x2999;",
+      "render": "\"P{fourvdots}\""
+    },
+    {
+      "input": "&#x2044;",
+      "render": "\"P{fracslash}\""
+    },
+    {
+      "input": "&#x2061;",
+      "render": "\"P{funcapply}\""
+    },
+    {
+      "input": "&#x2afa;",
+      "render": "\"P{geqqslant}\""
+    },
+    {
+      "input": "&#x2a86;",
+      "render": "\"P{gtrapprox}\""
+    },
+    {
+      "input": "&#x22db;",
+      "render": "\"P{gtreqless}\""
+    },
+    {
+      "input": "&#x2a6f;",
+      "render": "\"P{hatapprox}\""
+    },
+    {
+      "input": "&#x2661;",
+      "render": "\"P{hearsuit}\""
+    },
+    {
+      "input": "&#x2924;",
+      "render": "\"P{hknearrow}\""
+    },
+    {
+      "input": "&#x2923;",
+      "render": "\"P{hknwarrow}\""
+    },
+    {
+      "input": "&#x29d6;",
+      "render": "\"P{hourglass}\""
+    },
+    {
+      "input": "&#x2206;",
+      "render": "\"P{inc}\""
+    },
+    {
+      "input": "&#x2321;",
+      "render": "\"P{intbottom}\""
+    },
+    {
+      "input": "&#x2991;",
+      "render": "\"P{langledot}\""
+    },
+    {
+      "input": "&#x23a8;",
+      "render": "\"P{lbracemid}\""
+    },
+    {
+      "input": "&#x2aa6;",
+      "render": "\"P{ltcc}\""
+    },
+    {
+      "input": "&#x2af9;",
+      "render": "\"P{leqqslant}\""
+    },
+    {
+      "input": "&#x22da;",
+      "render": "\"P{lesseqgtr}\""
+    },
+    {
+      "input": "&#x27de;",
+      "render": "\"P{longdashv}\""
+    },
+    {
+      "input": "&#x23b8;",
+      "render": "\"P{lvboxline}\""
+    },
+    {
+      "input": ":",
+      "render": ":"
+    },
+    {
+      "input": "&#x2236;",
+      "render": "\"P{colon}\""
+    },
+    {
+      "input": "//",
+      "render": "//"
+    },
+    {
+      "input": "&#x2a5d;",
+      "render": "\"P{midbarvee}\""
+    },
+    {
+      "input": "&#x2a0a;",
+      "render": "\"P{modtwosum}\""
+    },
+    {
+      "input": "&#x21de;",
+      "render": "\"P{nHuparrow}\""
+    },
+    {
+      "input": "&#x2922;",
+      "render": "\"P{neswarrow}\""
+    },
+    {
+      "input": "&#x2271;",
+      "render": "\"P{ngeq}\""
+    },
+    {
+      "input": "&#x2270;",
+      "render": "\"P{nleq}\""
+    },
+    {
+      "input": "&#x2226;",
+      "render": "\"P{nparallel}\""
+    },
+    {
+      "input": "&#x2288;",
+      "render": "\"P{subseteq}\""
+    },
+    {
+      "input": "&#x2921;",
+      "render": "\"P{nwsearrow}\""
+    },
+    {
+      "input": "&#x2a36;",
+      "render": "\"P{otimeshat}\""
+    },
+    {
+      "input": "&#x23dc;",
+      "render": "\"P{wideparen}\""
+    },
+    {
+      "input": "del",
+      "render": "del"
+    },
+    {
+      "input": "&#x22d4;",
+      "render": "\"P{pitchfork}\""
+    },
+    {
+      "input": "&#x2622;",
+      "render": "\"P{radiation}\""
+    },
+    {
+      "input": "&#x2992;",
+      "render": "\"P{rangledot}\""
+    },
+    {
+      "input": "&#x23ac;",
+      "render": "\"P{rbracemid}\""
+    },
+    {
+      "input": "&#x263d;",
+      "render": "\"P{rightmoon}\""
+    },
+    {
+      "input": "&#x291a;",
+      "render": "\"P{righttail}\""
+    },
+    {
+      "input": "&#x2994;",
+      "render": "\"P{rparengtr}\""
+    },
+    {
+      "input": "&#x23b9;",
+      "render": "\"P{rvboxline}\""
+    },
+    {
+      "input": ";",
+      "render": ";"
+    },
+    {
+      "input": "&#x263a;",
+      "render": "\"P{smiley}\""
+    },
+    {
+      "input": "&#x2660;",
+      "render": "\"P{spadesuit}\""
+    },
+    {
+      "input": "&#x2abd;",
+      "render": "\"P{subsetdot}\""
+    },
+    {
+      "input": "&#x2ac5;",
+      "render": "\"P{subseteqq}\""
+    },
+    {
+      "input": "&#x23b3;",
+      "render": "\"P{sumbottom}\""
+    },
+    {
+      "input": "&#x2abe;",
+      "render": "\"P{supsetdot}\""
+    },
+    {
+      "input": "&#x2ac6;",
+      "render": "\"P{supseteqq}\""
+    },
+    {
+      "input": "&#x228b;",
+      "render": "\"P{supsetneq}\""
+    },
+    {
+      "input": "&#x2040;",
+      "render": "\"P{cat}\""
+    },
+    {
+      "input": "&#x23e2;",
+      "render": "\"P{trapezium}\""
+    },
+    {
+      "input": "&#x225c;",
+      "render": "Deltaeq"
+    },
+    {
+      "input": "&#x29cc;",
+      "render": "\"P{triangles}\""
+    },
+    {
+      "input": "&#x29a2;",
+      "render": "\"P{turnangle}\""
+    },
+    {
+      "input": "&#x2319;",
+      "render": "\"P{turnednot}\""
+    },
+    {
+      "input": "&#x2982;",
+      "render": "\"P{typecolon}\""
+    },
+    {
+      "input": "&#x332;",
+      "render": "\"P{underline}\""
+    },
+    {
+      "input": "&#x395;",
+      "render": "\"P{upEpsilon}\""
+    },
+    {
+      "input": "&#x3dd;",
+      "render": "\"P{digamma}\""
+    },
+    {
+      "input": "&#x3bf;",
+      "render": "\"P{upomicron}\""
+    },
+    {
+      "input": "&#x3c5;",
+      "render": "upsilon"
+    },
+    {
+      "input": "&#x3d0;",
+      "render": "\"P{varbeta}\""
+    },
+    {
+      "input": "&#x22fd;",
+      "render": "\"P{varniobar}\""
+    },
+    {
+      "input": "&#x2a61;",
+      "render": "\"P{varveebar}\""
+    },
+    {
+      "input": "&#x27dd;",
+      "render": "\"P{vlongdash}\""
+    },
+    {
+      "input": "&#x2a51;",
+      "render": "\"P{wedgeodot}\""
+    },
+    {
+      "input": "<=>",
+      "render": "hArr"
+    },
+    {
+      "input": "harr",
+      "render": "\"P{rel}\""
+    },
+    {
+      "input": ">->",
+      "render": "rightarrowtail"
+    },
+    {
+      "input": "(:",
+      "render": "<<)"
+    },
+    {
+      "input": ":)",
+      "render": ">>"
+    },
+    {
+      "input": "&#x235e;",
+      "render": "\"P{APLinput}\""
+    },
+    {
+      "input": "&#x2a74;",
+      "render": "\"P{Coloneq}\""
+    },
+    {
+      "input": "&#x2148;",
+      "render": "\"P{ii}\""
+    },
+    {
+      "input": "&#x2149;",
+      "render": "\"P{jj}\""
+    },
+    {
+      "input": "&#x29da;",
+      "render": "\"P{Lvzigzag}\""
+    },
+    {
+      "input": "&#x21a7;",
+      "render": "\"P{mapsdown}\""
+    },
+    {
+      "input": "&#x29db;",
+      "render": "\"P{Rvzigzag}\""
+    },
+    {
+      "input": "&#x290a;",
+      "render": "\"P{Uuparrow}\""
+    },
+    {
+      "input": "&#x267e;",
+      "render": "\"P{acidfree}\""
+    },
+    {
+      "input": "&#x224a;",
+      "render": "\"P{approxeq}\""
+    },
+    {
+      "input": "&#x2652;",
+      "render": "\"P{aquarius}\""
+    },
+    {
+      "input": "&#x224c;",
+      "render": "\"P{backcong}\""
+    },
+    {
+      "input": "&#x22bc;",
+      "render": "\"P{barwedge}\""
+    },
+    {
+      "input": "&#x23b6;",
+      "render": "\"P{bbrktbrk}\""
+    },
+    {
+      "input": "&#x2a01;",
+      "render": "\"P{bigoplus}\""
+    },
+    {
+      "input": "&#x2a05;",
+      "render": "\"P{bigsqcap}\""
+    },
+    {
+      "input": "&#x2a06;",
+      "render": "\"P{bigsqcup}\""
+    },
+    {
+      "input": "&#x2a09;",
+      "render": "\"P{varprod}\""
+    },
+    {
+      "input": "&#x2a04;",
+      "render": "\"P{biguplus}\""
+    },
+    {
+      "input": "&#x229f;",
+      "render": "\"P{boxminus}\""
+    },
+    {
+      "input": "&#x29c9;",
+      "render": "\"P{boxonbox}\""
+    },
+    {
+      "input": "&#x29c4;",
+      "render": "\"P{boxdiag}\""
+    },
+    {
+      "input": "&#x22a0;",
+      "render": "\"P{boxtimes}\""
+    },
+    {
+      "input": "&#x27c8;",
+      "render": "\"P{bsolhsub}\""
+    },
+    {
+      "input": "&#x25ce;",
+      "render": "\"P{bullseye}\""
+    },
+    {
+      "input": "&#x2a44;",
+      "render": "\"P{capwedge}\""
+    },
+    {
+      "input": "&#xae;",
+      "render": "\"P{circledR}\""
+    },
+    {
+      "input": "&#x2a10;",
+      "render": "\"P{cirfnint}\""
+    },
+    {
+      "input": "&#x2663;",
+      "render": "\"P{clubsuit}\""
+    },
+    {
+      "input": "&#x221b;",
+      "render": "\"P{cuberoot}\""
+    },
+    {
+      "input": "&#x22ce;",
+      "render": "\"P{curlyvee}\""
+    },
+    {
+      "input": "&#x2300;",
+      "render": "\"P{diameter}\""
+    },
+    {
+      "input": "&#x2215;",
+      "render": "//"
+    },
+    {
+      "input": "&#x2251;",
+      "render": "\"P{Doteq}\""
+    },
+    {
+      "input": "&#x2a67;",
+      "render": "\"P{dotequiv}\""
+    },
+    {
+      "input": "&#x2238;",
+      "render": "\"P{dotminus}\""
+    },
+    {
+      "input": "&#x2a30;",
+      "render": "\"P{dottimes}\""
+    },
+    {
+      "input": "&#x2910;",
+      "render": "\"P{drbkarow}\""
+    },
+    {
+      "input": "&#x23e7;",
+      "render": "\"P{elinters}\""
+    },
+    {
+      "input": "&#x2255;",
+      "render": "\"P{eqqcolon}\""
+    },
+    {
+      "input": "&#x29e5;",
+      "render": "\"P{eqvparsl}\""
+    },
+    {
+      "input": "&#x2add;",
+      "render": "\"P{forksnot}\""
+    },
+    {
+      "input": "&#x2a7e;",
+      "render": "\"P{geqslant}\""
+    },
+    {
+      "input": "&#x2a84;",
+      "render": "\"P{gesdotol}\""
+    },
+    {
+      "input": "&#x2a8a;",
+      "render": "\"P{gnapprox}\""
+    },
+    {
+      "input": "&#x2925;",
+      "render": "\"P{hksearow}\""
+    },
+    {
+      "input": "&#x2926;",
+      "render": "\"P{hkswarow}\""
+    },
+    {
+      "input": "&#x2015;",
+      "render": "\"P{horizbar}\""
+    },
+    {
+      "input": "&#x22ba;",
+      "render": "\"P{intercal}\""
+    },
+    {
+      "input": "&#x2a17;",
+      "render": "\"P{intlarhk}\""
+    },
+    {
+      "input": "&#x2a3d;",
+      "render": "\"P{intprodr}\""
+    },
+    {
+      "input": "&#x223e;",
+      "render": "\"P{invlazys}\""
+    },
+    {
+      "input": "&#x22f7;",
+      "render": "\"P{isinobar}\""
+    },
+    {
+      "input": "&#x263e;",
+      "render": "\"P{leftmoon}\""
+    },
+    {
+      "input": "&#x2919;",
+      "render": "\"P{lefttail}\""
+    },
+    {
+      "input": "&#x2a7d;",
+      "render": "\"P{leqslant}\""
+    },
+    {
+      "input": "&#x2a83;",
+      "render": "\"P{lesdotor}\""
+    },
+    {
+      "input": "&#x29d1;",
+      "render": "\"P{lfbowtie}\""
+    },
+    {
+      "input": "&#x21b4;",
+      "render": "\"P{linefeed}\""
+    },
+    {
+      "input": "&#x231e;",
+      "render": "\"P{llcorner}\""
+    },
+    {
+      "input": "&#x2a89;",
+      "render": "\"P{lnapprox}\""
+    },
+    {
+      "input": "&#x231f;",
+      "render": "\"P{lrcorner}\""
+    },
+    {
+      "input": "&#xa2;",
+      "render": "\"P{cent}\""
+    },
+    {
+      "input": "&#x30a;",
+      "render": "\"P{ring}\""
+    },
+    {
+      "input": "&#x205f;",
+      "render": "\"P{medsp}\""
+    },
+    {
+      "input": "&#x2a2a;",
+      "render": "\"P{minusdot}\""
+    },
+    {
+      "input": "&#x22b8;",
+      "render": "\"P{multimap}\""
+    },
+    {
+      "input": "&#x2278;",
+      "render": "\"P{nlessgtr}\""
+    },
+    {
+      "input": "&#x226d;",
+      "render": "\"P{nasymp}\""
+    },
+    {
+      "input": "&#x2225;",
+      "render": "\"P{rVert}\""
+    },
+    {
+      "input": "&#x2b20;",
+      "render": "\"P{pentagon}\""
+    },
+    {
+      "input": "&#x2a28;",
+      "render": "\"P{plustrif}\""
+    },
+    {
+      "input": "&#x2a15;",
+      "render": "\"P{pointint}\""
+    },
+    {
+      "input": "&#x2057;",
+      "render": "\"P{pppprime}\""
+    },
+    {
+      "input": "&#x2ab5;",
+      "render": "\"P{precneqq}\""
+    },
+    {
+      "input": "&#x22e8;",
+      "render": "\"P{precnsim}\""
+    },
+    {
+      "input": "&#x2312;",
+      "render": "\"P{profline}\""
+    },
+    {
+      "input": "&#x2313;",
+      "render": "\"P{profsurf}\""
+    },
+    {
+      "input": "&#x27d3;",
+      "render": "\"P{pullback}\""
+    },
+    {
+      "input": "&#x29a3;",
+      "render": "\"P{revangle}\""
+    },
+    {
+      "input": "&#x29d2;",
+      "render": "\"P{rfbowtie}\""
+    },
+    {
+      "input": "&#x2a22;",
+      "render": "\"P{ringplus}\""
+    },
+    {
+      "input": "&#x2a12;",
+      "render": "\"P{rppolint}\""
+    },
+    {
+      "input": "&#x29ce;",
+      "render": "\"P{rtriltri}\""
+    },
+    {
+      "input": "&#x2a13;",
+      "render": "\"P{scpolint}\""
+    },
+    {
+      "input": "&#x2a6b;",
+      "render": "\"P{simrdots}\""
+    },
+    {
+      "input": "&#x223f;",
+      "render": "\"P{AC}\""
+    },
+    {
+      "input": "&#x29e4;",
+      "render": "\"P{smeparsl}\""
+    },
+    {
+      "input": "&#x228f;",
+      "render": "\"P{sqsubset}\""
+    },
+    {
+      "input": "&#x2290;",
+      "render": "\"P{sqsupset}\""
+    },
+    {
+      "input": "&#x2615;",
+      "render": "\"P{steaming}\""
+    },
+    {
+      "input": "&#x2ab6;",
+      "render": "\"P{succneqq}\""
+    },
+    {
+      "input": "&#x22e9;",
+      "render": "\"P{succnsim}\""
+    },
+    {
+      "input": "&#x29dd;",
+      "render": "\"P{tieinfty}\""
+    },
+    {
+      "input": "&#x2a31;",
+      "render": "\"P{timesbar}\""
+    },
+    {
+      "input": "&#x266b;",
+      "render": "\"P{twonotes}\""
+    },
+    {
+      "input": "&#x231c;",
+      "render": "\"P{ulcorner}\""
+    },
+    {
+      "input": "&#x331;",
+      "render": "\"P{underbar}\""
+    },
+    {
+      "input": "Lambda",
+      "render": "Lambda"
+    },
+    {
+      "input": "lambda",
+      "render": "lambda"
+    },
+    {
+      "input": "&#x3db;",
+      "render": "\"P{stigma}\""
+    },
+    {
+      "input": "varphi",
+      "render": "phi"
+    },
+    {
+      "input": "&#x3f1;",
+      "render": "\"P{varrho}\""
+    },
+    {
+      "input": "&#x231d;",
+      "render": "\"P{urcorner}\""
+    },
+    {
+      "input": "&#x2641;",
+      "render": "\"P{earth}\""
+    },
+    {
+      "input": "&#x2ae6;",
+      "render": "\"P{varVdash}\""
+    },
+    {
+      "input": "&#x22f3;",
+      "render": "\"P{varisins}\""
+    },
+    {
+      "input": "&#x2a2f;",
+      "render": "\"P{vectimes}\""
+    },
+    {
+      "input": "&#x2a56;",
+      "render": "\"P{veeonvee}\""
+    },
+    {
+      "input": "&#x2317;",
+      "render": "\"P{viewdata}\""
+    },
+    {
+      "input": "&#x2a5f;",
+      "render": "\"P{wedgebar}\""
+    },
+    {
+      "input": "&#x27d1;",
+      "render": "\"P{wedgedot}\""
+    },
+    {
+      "input": "&#x2a21;",
+      "render": "\"P{project}\""
+    },
+    {
+      "input": "&#x2643;",
+      "render": "\"P{Jupiter}\""
+    },
+    {
+      "input": "&#x27ec;",
+      "render": "\"P{Lbrbrak}\""
+    },
+    {
+      "input": "&#x263f;",
+      "render": "\"P{Mercury}\""
+    },
+    {
+      "input": "&#x21d7;",
+      "render": "\"P{Nearrow}\""
+    },
+    {
+      "input": "&#x2646;",
+      "render": "\"P{Neptune}\""
+    },
+    {
+      "input": "&#x21d6;",
+      "render": "\"P{Nwarrow}\""
+    },
+    {
+      "input": "&#x27ed;",
+      "render": "\"P{Rbrbrak}\""
+    },
+    {
+      "input": "&#x264f;",
+      "render": "\"P{Scorpio}\""
+    },
+    {
+      "input": "&#x21d8;",
+      "render": "\"P{Searrow}\""
+    },
+    {
+      "input": "&#x21d9;",
+      "render": "\"P{Swarrow}\""
+    },
+    {
+      "input": "&#x21d1;",
+      "render": "\"P{Uparrow}\""
+    },
+    {
+      "input": "&#x20e7;",
+      "render": "\"P{annuity}\""
+    },
+    {
+      "input": "&#x223d;",
+      "render": "\"P{backsim}\""
+    },
+    {
+      "input": "&#x2717;",
+      "render": "\"P{ballotx}\""
+    },
+    {
+      "input": "&#x23e3;",
+      "render": "\"P{benzenr}\""
+    },
+    {
+      "input": "&#x226c;",
+      "render": "\"P{between}\""
+    },
+    {
+      "input": "&#x2a00;",
+      "render": "\"P{bigodot}\""
+    },
+    {
+      "input": "&#x2605;",
+      "render": "\"P{bigstar}\""
+    },
+    {
+      "input": "&#x229e;",
+      "render": "\"P{boxplus}\""
+    },
+    {
+      "input": "&#x2aae;",
+      "render": "\"P{bumpeqq}\""
+    },
+    {
+      "input": "&#x29c2;",
+      "render": "\"P{cirscir}\""
+    },
+    {
+      "input": "&#x2050;",
+      "render": "\"P{closure}\""
+    },
+    {
+      "input": "&#x2a6d;",
+      "render": "\"P{congdot}\""
+    },
+    {
+      "input": "&#x290f;",
+      "render": "\"P{dbkarow}\""
+    },
+    {
+      "input": "&#x222f;",
+      "render": "\"P{oiint}\""
+    },
+    {
+      "input": "&#x2021;",
+      "render": "\"P{ddag}\""
+    },
+    {
+      "input": "&#x2a77;",
+      "render": "\"P{ddotseq}\""
+    },
+    {
+      "input": "&#x2682;",
+      "render": "\"P{diceiii}\""
+    },
+    {
+      "input": "&#x2214;",
+      "render": "\"P{dotplus}\""
+    },
+    {
+      "input": "&#x2a99;",
+      "render": "\"P{eqqless}\""
+    },
+    {
+      "input": "&#x2a71;",
+      "render": "\"P{eqqplus}\""
+    },
+    {
+      "input": "&#x2a78;",
+      "render": "\"P{equivDD}\""
+    },
+    {
+      "input": "&#x29d3;",
+      "render": "\"P{fbowtie}\""
+    },
+    {
+      "input": "&#x25c9;",
+      "render": "\"P{fisheye}\""
+    },
+    {
+      "input": "&#x2639;",
+      "render": "\"P{sadface}\""
+    },
+    {
+      "input": "&#x2a82;",
+      "render": "\"P{gesdoto}\""
+    },
+    {
+      "input": "&#x2af8;",
+      "render": "\"P{gggnest}\""
+    },
+    {
+      "input": ">",
+      "render": "gt"
+    },
+    {
+      "input": "&#x2a7c;",
+      "render": "\"P{gtquest}\""
+    },
+    {
+      "input": "&#x2394;",
+      "render": "\"P{hexagon}\""
+    },
+    {
+      "input": "&#x3030;",
+      "render": "\"P{hzigzag}\""
+    },
+    {
+      "input": "&#x2a3c;",
+      "render": "\"P{intprod}\""
+    },
+    {
+      "input": "&#x22f5;",
+      "render": "\"P{isindot}\""
+    },
+    {
+      "input": "&#x27e6;",
+      "render": "\"P{lbbrack}\""
+    },
+    {
+      "input": "&#x2a81;",
+      "render": "\"P{lesdoto}\""
+    },
+    {
+      "input": "&#x22d6;",
+      "render": "\"P{lessdot}\""
+    },
+    {
+      "input": "&#x2276;",
+      "render": "\"P{lessgtr}\""
+    },
+    {
+      "input": "&#x2272;",
+      "render": "\"P{apprle}\""
+    },
+    {
+      "input": "&#x29d4;",
+      "render": "\"P{lftimes}\""
+    },
+    {
+      "input": "&#x2989;",
+      "render": "\"P{lblot}\""
+    },
+    {
+      "input": "&#x2af7;",
+      "render": "\"P{lllnest}\""
+    },
+    {
+      "input": "|><|",
+      "render": "\"P{bowtie}\""
+    },
+    {
+      "input": "&#x2acd;",
+      "render": "\"P{lsqhook}\""
+    },
+    {
+      "input": "&#x2a7b;",
+      "render": "\"P{ltquest}\""
+    },
+    {
+      "input": "&#x2720;",
+      "render": "\"P{maltese}\""
+    },
+    {
+      "input": "&#xf0;",
+      "render": "\"P{eth}\""
+    },
+    {
+      "input": "&#x2249;",
+      "render": "\"P{napprox}\""
+    },
+    {
+      "input": "&#x266e;",
+      "render": "\"P{natural}\""
+    },
+    {
+      "input": "&#x2204;",
+      "render": "\"P{nexi}\""
+    },
+    {
+      "input": "&#x2af5;",
+      "render": "\"P{nhVvert}\""
+    },
+    {
+      "input": "&#x2a14;",
+      "render": "\"P{npolint}\""
+    },
+    {
+      "input": "&#x2284;",
+      "render": "\"P{nsub}\""
+    },
+    {
+      "input": "&#x2285;",
+      "render": "\"P{nsup}\""
+    },
+    {
+      "input": "&#x29de;",
+      "render": "\"P{nvinfty}\""
+    },
+    {
+      "input": "&#x23e0;",
+      "render": "\"P{obrbrak}\""
+    },
+    {
+      "input": "&#x29bb;",
+      "render": "\"P{olcross}\""
+    },
+    {
+      "input": "&#x305;",
+      "render": "\"P{overbar}\""
+    },
+    {
+      "input": "%",
+      "render": "%"
+    },
+    {
+      "input": "&#x2a25;",
+      "render": "\"P{plusdot}\""
+    },
+    {
+      "input": "&#x2a72;",
+      "render": "\"P{pluseqq}\""
+    },
+    {
+      "input": "&#x2a23;",
+      "render": "\"P{plushat}\""
+    },
+    {
+      "input": "&#x2a26;",
+      "render": "\"P{plussim}\""
+    },
+    {
+      "input": "&#x2034;",
+      "render": "\"P{ppprime}\""
+    },
+    {
+      "input": "&#x2ab3;",
+      "render": "\"P{preceqq}\""
+    },
+    {
+      "input": "&#x2ab1;",
+      "render": "\"P{precneq}\""
+    },
+    {
+      "input": "&#x27d4;",
+      "render": "\"P{pushout}\""
+    },
+    {
+      "input": "&#x225f;",
+      "render": "\"P{questeq}\""
+    },
+    {
+      "input": "&#x27e7;",
+      "render": "\"P{Rbrack}\""
+    },
+    {
+      "input": "&#x267b;",
+      "render": "\"P{recycle}\""
+    },
+    {
+      "input": "&#x2aee;",
+      "render": "\"P{revnmid}\""
+    },
+    {
+      "input": "&#x29d5;",
+      "render": "\"P{rftimes}\""
+    },
+    {
+      "input": "&#x298a;",
+      "render": "\"P{rblot}\""
+    },
+    {
+      "input": "&#x29f7;",
+      "render": "\"P{rsolbar}\""
+    },
+    {
+      "input": "&#x2ace;",
+      "render": "\"P{rsqhook}\""
+    },
+    {
+      "input": "&#x29e2;",
+      "render": "\"P{shuffle}\""
+    },
+    {
+      "input": "&#x2a9d;",
+      "render": "\"P{simless}\""
+    },
+    {
+      "input": "&#x2246;",
+      "render": "\"P{simneqq}\""
+    },
+    {
+      "input": "&#x2a24;",
+      "render": "\"P{simplus}\""
+    },
+    {
+      "input": "&#x220a;",
+      "render": "\"P{smallin}\""
+    },
+    {
+      "input": "&#x220d;",
+      "render": "\"P{smallni}\""
+    },
+    {
+      "input": "&#x25a2;",
+      "render": "\"P{squoval}\""
+    },
+    {
+      "input": "&#x2ac3;",
+      "render": "\"P{subedot}\""
+    },
+    {
+      "input": "&#x2ac1;",
+      "render": "\"P{submult}\""
+    },
+    {
+      "input": "&#x2979;",
+      "render": "\"P{subrarr}\""
+    },
+    {
+      "input": "&#x2ab4;",
+      "render": "\"P{succeqq}\""
+    },
+    {
+      "input": "&#x2ab2;",
+      "render": "\"P{succneq}\""
+    },
+    {
+      "input": "&#x2ad8;",
+      "render": "\"P{supdsub}\""
+    },
+    {
+      "input": "&#x2ac4;",
+      "render": "\"P{supedot}\""
+    },
+    {
+      "input": "&#x27c9;",
+      "render": "\"P{suphsol}\""
+    },
+    {
+      "input": "&#x2ad7;",
+      "render": "\"P{suphsub}\""
+    },
+    {
+      "input": "&#x297b;",
+      "render": "\"P{suplarr}\""
+    },
+    {
+      "input": "&#x2ac2;",
+      "render": "\"P{supmult}\""
+    },
+    {
+      "input": "&#x29e7;",
+      "render": "\"P{thermod}\""
+    },
+    {
+      "input": "&#x2ada;",
+      "render": "\"P{topfork}\""
+    },
+    {
+      "input": "&#x2afb;",
+      "render": "\"P{trslash}\""
+    },
+    {
+      "input": "&#x2a4b;",
+      "render": "\"P{twocaps}\""
+    },
+    {
+      "input": "&#x2a4a;",
+      "render": "\"P{twocups}\""
+    },
+    {
+      "input": "&#x23e1;",
+      "render": "\"P{ubrbrak}\""
+    },
+    {
+      "input": "&#x391;",
+      "render": "\"P{upAlpha}\""
+    },
+    {
+      "input": "Gamma",
+      "render": "Gamma"
+    },
+    {
+      "input": "&#x39a;",
+      "render": "\"P{upKappa}\""
+    },
+    {
+      "input": "Omega",
+      "render": "Omega"
+    },
+    {
+      "input": "Sigma",
+      "render": "Sigma"
+    },
+    {
+      "input": "Theta",
+      "render": "Theta"
+    },
+    {
+      "input": "alpha",
+      "render": "alpha"
+    },
+    {
+      "input": "delta",
+      "render": "delta"
+    },
+    {
+      "input": "gamma",
+      "render": "gamma"
+    },
+    {
+      "input": "kappa",
+      "render": "kappa"
+    },
+    {
+      "input": "&#x3df;",
+      "render": "\"P{upkoppa}\""
+    },
+    {
+      "input": "omega",
+      "render": "omega"
+    },
+    {
+      "input": "&#x3e1;",
+      "render": "\"P{sampi}\""
+    },
+    {
+      "input": "sigma",
+      "render": "sigma"
+    },
+    {
+      "input": "theta",
+      "render": "theta"
+    },
+    {
+      "input": "&#x3d6;",
+      "render": "\"P{varpi}\""
+    },
+    {
+      "input": "&#x2736;",
+      "render": "\"P{varstar}\""
+    },
+    {
+      "input": "&#x2a52;",
+      "render": "\"P{veeodot}\""
+    },
+    {
+      "input": "&#x299a;",
+      "render": "\"P{vzigzag}\""
+    },
+    {
+      "input": "&#x26a0;",
+      "render": "\"P{warning}\""
+    },
+    {
+      "input": "&#x262f;",
+      "render": "\"P{yinyang}\""
+    },
+    {
+      "input": "quad",
+      "render": "quad"
+    },
+    {
+      "input": "&#x2339;",
+      "render": "\"P{APLinv}\""
+    },
+    {
+      "input": "&#x235f;",
+      "render": "\"P{APLlog}\""
+    },
+    {
+      "input": "&#x264a;",
+      "render": "\"P{Gemini}\""
+    },
+    {
+      "input": "&#x27ea;",
+      "render": "lang"
+    },
+    {
+      "input": "&#x21a5;",
+      "render": "\"P{mapsup}\""
+    },
+    {
+      "input": "&#x2a37;",
+      "render": "\"P{Otimes}\""
+    },
+    {
+      "input": "&#x2644;",
+      "render": "\"P{Saturn}\""
+    },
+    {
+      "input": "&#x2610;",
+      "render": "\"P{Square}\""
+    },
+    {
+      "input": "&#x22d0;",
+      "render": "\"P{Subset}\""
+    },
+    {
+      "input": "&#x22d1;",
+      "render": "\"P{Supset}\""
+    },
+    {
+      "input": "&#x2649;",
+      "render": "\"P{Taurus}\""
+    },
+    {
+      "input": "&#x2645;",
+      "render": "\"P{Uranus}\""
+    },
+    {
+      "input": "&#x22aa;",
+      "render": "\"P{Vvdash}\""
+    },
+    {
+      "input": "&#x2693;",
+      "render": "\"P{anchor}\""
+    },
+    {
+      "input": "&#x299f;",
+      "render": "\"P{angdnr}\""
+    },
+    {
+      "input": "&#x299e;",
+      "render": "\"P{angles}\""
+    },
+    {
+      "input": "&#x2273;",
+      "render": "\"P{apprge}\""
+    },
+    {
+      "input": "&#x22a6;",
+      "render": "\"P{assert}\""
+    },
+    {
+      "input": "&#x40;",
+      "render": "\"P{atsign}\""
+    },
+    {
+      "input": "&#x2a43;",
+      "render": "\"P{barcap}\""
+    },
+    {
+      "input": "&#x2a42;",
+      "render": "\"P{barcup}\""
+    },
+    {
+      "input": "&#x22bd;",
+      "render": "\"P{barvee}\""
+    },
+    {
+      "input": "&#x27d8;",
+      "render": "\"P{bigbot}\""
+    },
+    {
+      "input": "&#x27d9;",
+      "render": "\"P{bigtop}\""
+    },
+    {
+      "input": "&#x29c6;",
+      "render": "\"P{boxast}\""
+    },
+    {
+      "input": "&#x25eb;",
+      "render": "\"P{boxbar}\""
+    },
+    {
+      "input": "&#x29c8;",
+      "render": "\"P{boxbox}\""
+    },
+    {
+      "input": "&#x22a1;",
+      "render": "\"P{boxdot}\""
+    },
+    {
+      "input": "&#x2a32;",
+      "render": "\"P{btimes}\""
+    },
+    {
+      "input": "&#x224f;",
+      "render": "\"P{bumpeq}\""
+    },
+    {
+      "input": "&#x264b;",
+      "render": "\"P{cancer}\""
+    },
+    {
+      "input": "&#x310;",
+      "render": "\"P{candra}\""
+    },
+    {
+      "input": "&#x2a40;",
+      "render": "\"P{capdot}\""
+    },
+    {
+      "input": "&#x27df;",
+      "render": "\"P{cirbot}\""
+    },
+    {
+      "input": "&#x2257;",
+      "render": "\"P{circeq}\""
+    },
+    {
+      "input": "&#x2aef;",
+      "render": "\"P{cirmid}\""
+    },
+    {
+      "input": "&#x2210;",
+      "render": "\"P{coprod}\""
+    },
+    {
+      "input": "&#x228d;",
+      "render": "\"P{cupdot}\""
+    },
+    {
+      "input": "&#x2a45;",
+      "render": "\"P{cupvee}\""
+    },
+    {
+      "input": "&#x2020;",
+      "render": "\"P{dag}\""
+    },
+    {
+      "input": "&#x2138;",
+      "render": "\"P{daleth}\""
+    },
+    {
+      "input": "&#x2621;",
+      "render": "\"P{danger}\""
+    },
+    {
+      "input": "&#x20dc;",
+      "render": "\"P{ddddot}\""
+    },
+    {
+      "input": "&#xb0;",
+      "render": "\"P{degree}\""
+    },
+    {
+      "input": "&#x2681;",
+      "render": "\"P{diceii}\""
+    },
+    {
+      "input": "&#x2683;",
+      "render": "\"P{diceiv}\""
+    },
+    {
+      "input": "&#x2685;",
+      "render": "\"P{dicevi}\""
+    },
+    {
+      "input": "&#x2a6a;",
+      "render": "\"P{dotsim}\""
+    },
+    {
+      "input": "''",
+      "render": "dprime"
+    },
+    {
+      "input": "&#x31a;",
+      "render": "\"P{droang}\""
+    },
+    {
+      "input": "&#x2a98;",
+      "render": "\"P{egsdot}\""
+    },
+    {
+      "input": "&#x2a97;",
+      "render": "\"P{elsdot}\""
+    },
+    {
+      "input": "&#x29e3;",
+      "render": "\"P{eparsl}\""
+    },
+    {
+      "input": "&#x2256;",
+      "render": "\"P{eqcirc}\""
+    },
+    {
+      "input": "&#x2a76;",
+      "render": "\"P{Same}\""
+    },
+    {
+      "input": "&#x22dc;",
+      "render": "\"P{eqless}\""
+    },
+    {
+      "input": "&#x2a9a;",
+      "render": "\"P{eqqgtr}\""
+    },
+    {
+      "input": "&#x2a73;",
+      "render": "\"P{eqqsim}\""
+    },
+    {
+      "input": "!",
+      "render": "!"
+    },
+    {
+      "input": "&#x2640;",
+      "render": "\"P{Venus}\""
+    },
+    {
+      "input": "&#x2a80;",
+      "render": "\"P{gesdot}\""
+    },
+    {
+      "input": "&#x2a94;",
+      "render": "\"P{gesles}\""
+    },
+    {
+      "input": "&#x29a0;",
+      "render": "\"P{gtlpar}\""
+    },
+    {
+      "input": "&#x2978;",
+      "render": "\"P{gtrarr}\""
+    },
+    {
+      "input": "&#x22d7;",
+      "render": "\"P{gtrdot}\""
+    },
+    {
+      "input": "&#x210f;",
+      "render": "\"P{hbar}\""
+    },
+    {
+      "input": "&#x22f0;",
+      "render": "\"P{rddots}\""
+    },
+    {
+      "input": "&#x2a0c;",
+      "render": "\"P{iiiint}\""
+    },
+    {
+      "input": "&#x29dc;",
+      "render": "\"P{iinfin}\""
+    },
+    {
+      "input": "&#x2a0e;",
+      "render": "\"P{intBar}\""
+    },
+    {
+      "input": "&#x2a19;",
+      "render": "\"P{intcap}\""
+    },
+    {
+      "input": "&#x2a1a;",
+      "render": "\"P{intcup}\""
+    },
+    {
+      "input": "&#x2320;",
+      "render": "\"P{inttop}\""
+    },
+    {
+      "input": "&#x214b;",
+      "render": "\"P{upand}\""
+    },
+    {
+      "input": "&#x2310;",
+      "render": "\"P{invnot}\""
+    },
+    {
+      "input": "&#x22f8;",
+      "render": "\"P{isinvb}\""
+    },
+    {
+      "input": "&#x29e0;",
+      "render": "\"P{laplac}\""
+    },
+    {
+      "input": "&#x7b;",
+      "render": "\"P{lbrace}\""
+    },
+    {
+      "input": "&#x5b;",
+      "render": "\"P{lbrack}\""
+    },
+    {
+      "input": "&#x2a7f;",
+      "render": "\"P{lesdot}\""
+    },
+    {
+      "input": "&#x2a93;",
+      "render": "\"P{lesges}\""
+    },
+    {
+      "input": "&#x27ee;",
+      "render": "\"P{lgroup}\""
+    },
+    {
+      "input": "&#x22b0;",
+      "render": "\"P{lmoust}\""
+    },
+    {
+      "input": "&#x2a1c;",
+      "render": "\"P{lowint}\""
+    },
+    {
+      "input": "&#x28;",
+      "render": "\"P{lparen}\""
+    },
+    {
+      "input": "&#x2976;",
+      "render": "\"P{ltlarr}\""
+    },
+    {
+      "input": "&#x225e;",
+      "render": "\"P{measeq}\""
+    },
+    {
+      "input": "&#x2af0;",
+      "render": "\"P{midcir}\""
+    },
+    {
+      "input": "&#x22af;",
+      "render": "\"P{nVDash}\""
+    },
+    {
+      "input": "&#x2262;",
+      "render": "\"P{nequiv}\""
+    },
+    {
+      "input": "&#x26b2;",
+      "render": "\"P{neuter}\""
+    },
+    {
+      "input": "&#x22fe;",
+      "render": "\"P{niobar}\""
+    },
+    {
+      "input": "&#x2244;",
+      "render": "\"P{nsime}\""
+    },
+    {
+      "input": "&#x2230;",
+      "render": "\"P{oiiint}\""
+    },
+    {
+      "input": "&#x2296;",
+      "render": "\"P{ominus}\""
+    },
+    {
+      "input": "&#x2298;",
+      "render": "\"P{oslash}\""
+    },
+    {
+      "input": "&#x309;",
+      "render": "\"P{ovhook}\""
+    },
+    {
+      "input": "&#x2af3;",
+      "render": "\"P{parsim}\""
+    },
+    {
+      "input": "&#x270e;",
+      "render": "\"P{pencil}\""
+    },
+    {
+      "input": ".",
+      "render": "."
+    },
+    {
+      "input": "&#x2653;",
+      "render": "\"P{pisces}\""
+    },
+    {
+      "input": "&#x7d;",
+      "render": "\"P{rbrace}\""
+    },
+    {
+      "input": "&#x5d;",
+      "render": "\"P{rbrack}\""
+    },
+    {
+      "input": "&#x27ef;",
+      "render": "\"P{rgroup}\""
+    },
+    {
+      "input": "&#x29;",
+      "render": "\"P{rparen}\""
+    },
+    {
+      "input": "&#x22b1;",
+      "render": "\"P{scurel}\""
+    },
+    {
+      "input": "&#x2a9e;",
+      "render": "\"P{simgtr}\""
+    },
+    {
+      "input": "&#xa8;",
+      "render": "\"P{spddot}\""
+    },
+    {
+      "input": "&#x2a16;",
+      "render": "\"P{sqint}\""
+    },
+    {
+      "input": "&#x2afd;",
+      "render": "\"P{sslash}\""
+    },
+    {
+      "input": "&#x225b;",
+      "render": "\"P{stareq}\""
+    },
+    {
+      "input": "&#x2ac7;",
+      "render": "\"P{subsim}\""
+    },
+    {
+      "input": "&#x2ad3;",
+      "render": "\"P{subsub}\""
+    },
+    {
+      "input": "&#x2a0b;",
+      "render": "\"P{sumint}\""
+    },
+    {
+      "input": "&#x23b2;",
+      "render": "\"P{sumtop}\""
+    },
+    {
+      "input": "&#x2ac8;",
+      "render": "\"P{supsim}\""
+    },
+    {
+      "input": "&#x2ad4;",
+      "render": "\"P{supsub}\""
+    },
+    {
+      "input": "&#x2ad6;",
+      "render": "\"P{supsup}\""
+    },
+    {
+      "input": "&#x2694;",
+      "render": "\"P{swords}\""
+    },
+    {
+      "input": "&#x29ff;",
+      "render": "\"P{tminus}\""
+    },
+    {
+      "input": "&#x2336;",
+      "render": "\"P{topbot}\""
+    },
+    {
+      "input": "&#x2af1;",
+      "render": "\"P{topcir}\""
+    },
+    {
+      "input": "&#x2a41;",
+      "render": "\"P{uminus}\""
+    },
+    {
+      "input": "&#x399;",
+      "render": "\"P{upIota}\""
+    },
+    {
+      "input": "&#x396;",
+      "render": "\"P{upZeta}\""
+    },
+    {
+      "input": "beta",
+      "render": "beta"
+    },
+    {
+      "input": "iota",
+      "render": "iota"
+    },
+    {
+      "input": "zeta",
+      "render": "zeta"
+    },
+    {
+      "input": "&#x2ae2;",
+      "render": "\"P{vDdash}\""
+    },
+    {
+      "input": "&#x22fb;",
+      "render": "\"P{varnis}\""
+    },
+    {
+      "input": "&#x22bb;",
+      "render": "\"P{veebar}\""
+    },
+    {
+      "input": "&#x27c7;",
+      "render": "\"P{veedot}\""
+    },
+    {
+      "input": "&#x2648;",
+      "render": "\"P{Aries}\""
+    },
+    {
+      "input": "&#x20db;",
+      "render": "\"P{DDDot}\""
+    },
+    {
+      "input": "&#x2ae5;",
+      "render": "\"P{DashV}\""
+    },
+    {
+      "input": "&#x2a75;",
+      "render": "\"P{eqeq}\""
+    },
+    {
+      "input": "&#x264e;",
+      "render": "\"P{Libra}\""
+    },
+    {
+      "input": "&#xb5;",
+      "render": "\"P{tcmu}\""
+    },
+    {
+      "input": "&#x2647;",
+      "render": "\"P{Pluto}\""
+    },
+    {
+      "input": "&#x2a4e;",
+      "render": "\"P{Sqcap}\""
+    },
+    {
+      "input": "&#x2a4f;",
+      "render": "\"P{Sqcup}\""
+    },
+    {
+      "input": "&#x301;",
+      "render": "\"P{acute}\""
+    },
+    {
+      "input": "&#x2a3f;",
+      "render": "\"P{amalg}\""
+    },
+    {
+      "input": "&#x2258;",
+      "render": "\"P{arceq}\""
+    },
+    {
+      "input": "&#x2a6e;",
+      "render": "\"P{asteq}\""
+    },
+    {
+      "input": "&#x224d;",
+      "render": "\"P{asymp}\""
+    },
+    {
+      "input": "&#x2a11;",
+      "render": "\"P{awint}\""
+    },
+    {
+      "input": "&#x306;",
+      "render": "\"P{breve}\""
+    },
+    {
+      "input": "&#xb7;",
+      "render": "\"P{cdotp}\""
+    },
+    {
+      "input": "&#x30c;",
+      "render": "\"P{check}\""
+    },
+    {
+      "input": ",",
+      "render": ","
+    },
+    {
+      "input": "&#x2ad1;",
+      "render": "\"P{csube}\""
+    },
+    {
+      "input": "&#x2ad2;",
+      "render": "\"P{csupe}\""
+    },
+    {
+      "input": "&#x2680;",
+      "render": "\"P{dicei}\""
+    },
+    {
+      "input": "&#x2684;",
+      "render": "\"P{dicev}\""
+    },
+    {
+      "input": "&#x22f2;",
+      "render": "\"P{disin}\""
+    },
+    {
+      "input": "&#x225d;",
+      "render": "\"P{eqdef}\""
+    },
+    {
+      "input": "&#x2a66;",
+      "render": "\"P{eqdot}\""
+    },
+    {
+      "input": "&#x22dd;",
+      "render": "\"P{eqgtr}\""
+    },
+    {
+      "input": "&#x2242;",
+      "render": "\"P{eqsim}\""
+    },
+    {
+      "input": "=",
+      "render": "="
+    },
+    {
+      "input": "&#x23e5;",
+      "render": "\"P{fltns}\""
+    },
+    {
+      "input": "&#x2adc;",
+      "render": "\"P{forks}\""
+    },
+    {
+      "input": "&#x2ad9;",
+      "render": "\"P{forkv}\""
+    },
+    {
+      "input": "&#x2aa9;",
+      "render": "\"P{gescc}\""
+    },
+    {
+      "input": "&#x2137;",
+      "render": "\"P{gimel}\""
+    },
+    {
+      "input": "&#x2269;",
+      "render": "\"P{gneqq}\""
+    },
+    {
+      "input": "&#x22e7;",
+      "render": "\"P{gnsim}\""
+    },
+    {
+      "input": "&#x300;",
+      "render": "\"P{grave}\""
+    },
+    {
+      "input": "&#x2a8e;",
+      "render": "\"P{gsime}\""
+    },
+    {
+      "input": "&#x2a90;",
+      "render": "\"P{gsiml}\""
+    },
+    {
+      "input": "&#x2a7a;",
+      "render": "\"P{gtcir}\""
+    },
+    {
+      "input": "&#x2302;",
+      "render": "\"P{house}\""
+    },
+    {
+      "input": "&#x222d;",
+      "render": "\"P{iiint}\""
+    },
+    {
+      "input": "&#x131;",
+      "render": "\"P{imath}\""
+    },
+    {
+      "input": "&#x22f9;",
+      "render": "\"P{isinE}\""
+    },
+    {
+      "input": "&#x22f4;",
+      "render": "\"P{isins}\""
+    },
+    {
+      "input": "&#x237;",
+      "render": "\"P{jmath}\""
+    },
+    {
+      "input": "|~",
+      "render": "|~"
+    },
+    {
+      "input": "&#x2aa8;",
+      "render": "\"P{lescc}\""
+    },
+    {
+      "input": "&#x25df;",
+      "render": "\"P{llarc}\""
+    },
+    {
+      "input": "&#x2268;",
+      "render": "\"P{lneq}\""
+    },
+    {
+      "input": "&#x22e6;",
+      "render": "\"P{lnsim}\""
+    },
+    {
+      "input": "&#x25de;",
+      "render": "\"P{lrarc}\""
+    },
+    {
+      "input": "&#x2a8d;",
+      "render": "\"P{lsime}\""
+    },
+    {
+      "input": "&#x2a8f;",
+      "render": "\"P{lsimg}\""
+    },
+    {
+      "input": "&#x2a79;",
+      "render": "\"P{ltcir}\""
+    },
+    {
+      "input": "-",
+      "render": "-"
+    },
+    {
+      "input": "&#x2247;",
+      "render": "\"P{ncong}\""
+    },
+    {
+      "input": "&#x2a64;",
+      "render": "\"P{dsub}\""
+    },
+    {
+      "input": "&#x2af2;",
+      "render": "\"P{nhpar}\""
+    },
+    {
+      "input": "&#x226e;",
+      "render": "\"P{nless}\""
+    },
+    {
+      "input": "&#x220c;",
+      "render": "\"P{nni}\""
+    },
+    {
+      "input": "&#x2280;",
+      "render": "\"P{nprec}\""
+    },
+    {
+      "input": "&#x2a65;",
+      "render": "\"P{rsub}\""
+    },
+    {
+      "input": "&#x2281;",
+      "render": "\"P{nsucc}\""
+    },
+    {
+      "input": "&#x29b9;",
+      "render": "\"P{operp}\""
+    },
+    {
+      "input": "&#x2ae1;",
+      "render": "\"P{perps}\""
+    },
+    {
+      "input": "prop",
+      "render": "propto"
+    },
+    {
+      "input": "~|",
+      "render": "~|"
+    },
+    {
+      "input": "&#x266f;",
+      "render": "\"P{sharp}\""
+    },
+    {
+      "input": "&#x2243;",
+      "render": "\"P{simeq}\""
+    },
+    {
+      "input": "&#x2aa0;",
+      "render": "\"P{simgE}\""
+    },
+    {
+      "input": "&#x2a9f;",
+      "render": "\"P{simlE}\""
+    },
+    {
+      "input": "&#x2620;",
+      "render": "\"P{skull}\""
+    },
+    {
+      "input": "&#x2323;",
+      "render": "\"P{smile}\""
+    },
+    {
+      "input": "&#x5e;",
+      "render": "\"P{sphat}\""
+    },
+    {
+      "input": "&#x23e4;",
+      "render": "\"P{strns}\""
+    },
+    {
+      "input": "&#x2126;",
+      "render": "\"P{tcohm}\""
+    },
+    {
+      "input": "&#x29fe;",
+      "render": "\"P{tplus}\""
+    },
+    {
+      "input": "&#x25dc;",
+      "render": "\"P{ularc}\""
+    },
+    {
+      "input": "&#x3a7;",
+      "render": "\"P{upChi}\""
+    },
+    {
+      "input": "&#x397;",
+      "render": "\"P{upEta}\""
+    },
+    {
+      "input": "Phi",
+      "render": "Phi"
+    },
+    {
+      "input": "Psi",
+      "render": "Psi"
+    },
+    {
+      "input": "&#x3a1;",
+      "render": "\"P{upRho}\""
+    },
+    {
+      "input": "&#x3a4;",
+      "render": "\"P{upTau}\""
+    },
+    {
+      "input": "chi",
+      "render": "chi"
+    },
+    {
+      "input": "eta",
+      "render": "eta"
+    },
+    {
+      "input": "&#x2a1b;",
+      "render": "\"P{upint}\""
+    },
+    {
+      "input": "&#x228e;",
+      "render": "\"P{buni}\""
+    },
+    {
+      "input": "phi",
+      "render": "phi"
+    },
+    {
+      "input": "psi",
+      "render": "psi"
+    },
+    {
+      "input": "rho",
+      "render": "rho"
+    },
+    {
+      "input": "tau",
+      "render": "tau"
+    },
+    {
+      "input": "&#x25dd;",
+      "render": "\"P{urarc}\""
+    },
+    {
+      "input": "&#x2ae9;",
+      "render": "\"P{vBarv}\""
+    },
+    {
+      "input": "|==",
+      "render": "models"
+    },
+    {
+      "input": "&#x225a;",
+      "render": "\"P{veeeq}\""
+    },
+    {
+      "input": "&#x264d;",
+      "render": "\"P{virgo}\""
+    },
+    {
+      "input": "&#x29f9;",
+      "render": "\"P{hide}\""
+    },
+    {
+      "input": "&#x2a20;",
+      "render": "\"P{zpipe}\""
+    },
+    {
+      "input": "->",
+      "render": "to"
+    },
+    {
+      "input": "&#x25b;",
+      "render": "varepsilon"
+    },
+    {
+      "input": "&#x2ae7;",
+      "render": "\"P{Barv}\""
+    },
+    {
+      "input": "&#x2132;",
+      "render": "\"P{Finv}\""
+    },
+    {
+      "input": "&#x2141;",
+      "render": "\"P{Game}\""
+    },
+    {
+      "input": "&#x2a1d;",
+      "render": "\"P{Join}\""
+    },
+    {
+      "input": "&#x27c5;",
+      "render": "\"P{lbag}\""
+    },
+    {
+      "input": "&#x21b2;",
+      "render": "\"P{ldsh}\""
+    },
+    {
+      "input": "&#x2642;",
+      "render": "\"P{Mars}\""
+    },
+    {
+      "input": "&#x2aeb;",
+      "render": "\"P{Bot}\""
+    },
+    {
+      "input": "&#x27c6;",
+      "render": "\"P{rbag}\""
+    },
+    {
+      "input": "&#x21b3;",
+      "render": "\"P{rdsh}\""
+    },
+    {
+      "input": "&#x2016;",
+      "render": "norm"
+    },
+    {
+      "input": "&#x2612;",
+      "render": "\"P{XBox}\""
+    },
+    {
+      "input": "&#x1b5;",
+      "render": "\"P{Zbar}\""
+    },
+    {
+      "input": "&#x2aed;",
+      "render": "\"P{bNot}\""
+    },
+    {
+      "input": "&#x2136;",
+      "render": "\"P{beth}\""
+    },
+    {
+      "input": "&#x29c3;",
+      "render": "\"P{cirE}\""
+    },
+    {
+      "input": "&#x2a3e;",
+      "render": "\"P{comp}\""
+    },
+    {
+      "input": "&#x2acf;",
+      "render": "\"P{csub}\""
+    },
+    {
+      "input": "&#x2ad0;",
+      "render": "\"P{csup}\""
+    },
+    {
+      "input": "&#x2103;",
+      "render": "\"P{degc}\""
+    },
+    {
+      "input": "&#x2109;",
+      "render": "\"P{degf}\""
+    },
+    {
+      "input": "nnn",
+      "render": "\"P{dint}\""
+    },
+    {
+      "input": "&#x29f6;",
+      "render": "\"P{dsol}\""
+    },
+    {
+      "input": "uuu",
+      "render": "\"P{duni}\""
+    },
+    {
+      "input": "&#x20ac;",
+      "render": "\"P{euro}\""
+    },
+    {
+      "input": "&#x2a0f;",
+      "render": "\"P{fint}\""
+    },
+    {
+      "input": "&#x266d;",
+      "render": "\"P{flat}\""
+    },
+    {
+      "input": "&#x2267;",
+      "render": "\"P{geqq}\""
+    },
+    {
+      "input": "larr",
+      "render": "larr"
+    },
+    {
+      "input": "&#x2a88;",
+      "render": "\"P{gneq}\""
+    },
+    {
+      "input": "&#x222c;",
+      "render": "\"P{iint}\""
+    },
+    {
+      "input": "&#x2a18;",
+      "render": "\"P{intx}\""
+    },
+    {
+      "input": "^^",
+      "render": "^^"
+    },
+    {
+      "input": "&#x2aad;",
+      "render": "\"P{late}\""
+    },
+    {
+      "input": "&#x2266;",
+      "render": "\"P{leqq}\""
+    },
+    {
+      "input": "<",
+      "render": "lt"
+    },
+    {
+      "input": "not",
+      "render": "not"
+    },
+    {
+      "input": "&#x2adb;",
+      "render": "\"P{mlcp}\""
+    },
+    {
+      "input": "&#x226f;",
+      "render": "\"P{ngt}\""
+    },
+    {
+      "input": "&#x22fa;",
+      "render": "\"P{nisd}\""
+    },
+    {
+      "input": "&#x2224;",
+      "render": "\"P{nmid}\""
+    },
+    {
+      "input": "&#x2241;",
+      "render": "\"P{nsim}\""
+    },
+    {
+      "input": "&#x233d;",
+      "render": "\"P{obar}\""
+    },
+    {
+      "input": "&#x29ba;",
+      "render": "\"P{obot}\""
+    },
+    {
+      "input": "&#x2a38;",
+      "render": "\"P{odiv}\""
+    },
+    {
+      "input": "&#x220b;",
+      "render": "\"P{ni}\""
+    },
+    {
+      "input": "_|_",
+      "render": "exists"
+    },
+    {
+      "input": "+",
+      "render": "+"
+    },
+    {
+      "input": "&#x2a1f;",
+      "render": "\"P{semi}\""
+    },
+    {
+      "input": "&#x2aac;",
+      "render": "\"P{smte}\""
+    },
+    {
+      "input": "&#x2928;",
+      "render": "\"P{toea}\""
+    },
+    {
+      "input": "&#x2927;",
+      "render": "\"P{tona}\""
+    },
+    {
+      "input": "&#x2929;",
+      "render": "\"P{tosa}\""
+    },
+    {
+      "input": "&#x292a;",
+      "render": "\"P{towa}\""
+    },
+    {
+      "input": "&#x39c;",
+      "render": "\"P{upMu}\""
+    },
+    {
+      "input": "&#x39d;",
+      "render": "\"P{upNu}\""
+    },
+    {
+      "input": "Pi",
+      "render": "Pi"
+    },
+    {
+      "input": "Xi",
+      "render": "Xi"
+    },
+    {
+      "input": "&#x27d2;",
+      "render": "\"P{upin}\""
+    },
+    {
+      "input": "mu",
+      "render": "mu"
+    },
+    {
+      "input": "nu",
+      "render": "nu"
+    },
+    {
+      "input": "pi",
+      "render": "pi"
+    },
+    {
+      "input": "xi",
+      "render": "xi"
+    },
+    {
+      "input": "&#x2502;",
+      "render": "\"P{vbar}\""
+    },
+    {
+      "input": "|",
+      "render": "|"
+    },
+    {
+      "input": "&#x29f8;",
+      "render": "\"P{xsol}\""
+    },
+    {
+      "input": "&#x200c;",
+      "render": "\"P{zwnj}\""
+    },
+    {
+      "input": "&#x200b;",
+      "render": "\"P{zwsp}\""
+    },
+    {
+      "input": "&#x1d715;",
+      "render": "del"
+    },
+    {
+      "input": "lArr",
+      "render": "lArr"
+    },
+    {
+      "input": "\\",
+      "render": "\\"
+    },
+    {
+      "input": "darr",
+      "render": "downarrow"
+    },
+    {
+      "input": "&#x22d2;",
+      "render": "\"P{Cap}\""
+    },
+    {
+      "input": "&#x22d3;",
+      "render": "\"P{Cup}\""
+    },
+    {
+      "input": "&#x307;",
+      "render": "."
+    },
+    {
+      "input": "&#x264c;",
+      "render": "\"P{Leo}\""
+    },
+    {
+      "input": "&#x21b0;",
+      "render": "\"P{Lsh}\""
+    },
+    {
+      "input": "&#x2127;",
+      "render": "\"P{Mho}\""
+    },
+    {
+      "input": "&#x220e;",
+      "render": "\"P{qed}\""
+    },
+    {
+      "input": "&#x21b1;",
+      "render": "\"P{Rsh}\""
+    },
+    {
+      "input": "&#x20d7;",
+      "render": "\"P{Vec}\""
+    },
+    {
+      "input": "&#x2a54;",
+      "render": "\"P{Vee}\""
+    },
+    {
+      "input": "&#x2144;",
+      "render": "\"P{Yup}\""
+    },
+    {
+      "input": "&#x2113;",
+      "render": "\"P{ell}\""
+    },
+    {
+      "input": ":}",
+      "render": ":}"
+    },
+    {
+      "input": "EE",
+      "render": "exists"
+    },
+    {
+      "input": ">=",
+      "render": "ge"
+    },
+    {
+      "input": "&#x22d9;",
+      "render": "\"P{ggg}\""
+    },
+    {
+      "input": "&#x2a92;",
+      "render": "\"P{glE}\""
+    },
+    {
+      "input": "&#x2aa5;",
+      "render": "\"P{gla}\""
+    },
+    {
+      "input": "&#x2aa4;",
+      "render": "\"P{glj}\""
+    },
+    {
+      "input": "&#x2aab;",
+      "render": "\"P{lat}\""
+    },
+    {
+      "input": "<=",
+      "render": "le"
+    },
+    {
+      "input": "&#x2a91;",
+      "render": "\"P{lgE}\""
+    },
+    {
+      "input": "&#x22d8;",
+      "render": "\"P{lll}\""
+    },
+    {
+      "input": "vv",
+      "render": "\"P{lor}\""
+    },
+    {
+      "input": "&#x2223;",
+      "render": "\"P{mid}\""
+    },
+    {
+      "input": "!=",
+      "render": "ne"
+    },
+    {
+      "input": "!in",
+      "render": "\"P{nin}\""
+    },
+    {
+      "input": "&#x22fc;",
+      "render": "\"P{nis}\""
+    },
+    {
+      "input": "&#x223c;",
+      "render": "\"P{sim}\""
+    },
+    {
+      "input": "&#x2aaa;",
+      "render": "\"P{smt}\""
+    },
+    {
+      "input": "&#x263c;",
+      "render": "\"P{sun}\""
+    },
+    {
+      "input": "&#xa5;",
+      "render": "\"P{yen}\""
+    },
+    {
+      "input": "&#x2004;",
+      "render": "\"P{\\;}\""
+    },
+    {
+      "input": "'",
+      "render": "prime"
+    },
+    {
+      "input": "&#x203e;",
+      "render": "\"P{overline}\""
+    },
+    {
+      "input": "&#x2102;",
+      "render": "\"P{CC}\""
+    },
+    {
+      "input": "&#x2111;",
+      "render": "\"P{Im}\""
+    },
+    {
+      "input": "&#x2115;",
+      "render": "\"P{NN}\""
+    },
+    {
+      "input": "&#x2118;",
+      "render": "\"P{wp}\""
+    },
+    {
+      "input": "&#x211a;",
+      "render": "\"P{QQ}\""
+    },
+    {
+      "input": "&#x211c;",
+      "render": "\"P{Re}\""
+    },
+    {
+      "input": "&#x211d;",
+      "render": "\"P{RR}\""
+    },
+    {
+      "input": "ZZ",
+      "render": "mathbb(Z)"
+    },
+    {
+      "input": "aleph",
+      "render": "aleph"
+    },
+    {
+      "input": "&#x2145;",
+      "render": "\"P{Dd}\""
+    },
+    {
+      "input": "uarr",
+      "render": "uparrow"
+    },
+    {
+      "input": "|->",
+      "render": "mapsto"
+    },
+    {
+      "input": "AA",
+      "render": "forall"
+    },
+    {
+      "input": "grad",
+      "render": "nabla"
+    },
+    {
+      "input": "in",
+      "render": "in"
+    },
+    {
+      "input": "&#x220f;",
+      "render": "prod"
+    },
+    {
+      "input": "&#x2211;",
+      "render": "sum"
+    },
+    {
+      "input": "&#x2213;",
+      "render": "\"P{mp}\""
+    },
+    {
+      "input": "**",
+      "render": "ast"
+    },
+    {
+      "input": "oo",
+      "render": "oo"
+    },
+    {
+      "input": "cap",
+      "render": "\"P{Cap}\""
+    },
+    {
+      "input": "uu",
+      "render": "uu"
+    },
+    {
+      "input": "&#x222b;",
+      "render": "int"
+    },
+    {
+      "input": "&#x222e;",
+      "render": "oint"
+    },
+    {
+      "input": ":'",
+      "render": "because"
+    },
+    {
+      "input": "&#x2240;",
+      "render": "\"P{wr}\""
+    },
+    {
+      "input": "~=",
+      "render": "~="
+    },
+    {
+      "input": "~~",
+      "render": "approx"
+    },
+    {
+      "input": "-=",
+      "render": "equiv"
+    },
+    {
+      "input": "ll",
+      "render": "ll"
+    },
+    {
+      "input": "gg",
+      "render": "gg"
+    },
+    {
+      "input": "-<",
+      "render": "prec"
+    },
+    {
+      "input": ">-",
+      "render": "succ"
+    },
+    {
+      "input": "sub",
+      "render": "subset"
+    },
+    {
+      "input": "sup",
+      "render": "supset"
+    },
+    {
+      "input": "sube",
+      "render": "subseteq"
+    },
+    {
+      "input": "supe",
+      "render": "supseteq"
+    },
+    {
+      "input": "o+",
+      "render": "oplus"
+    },
+    {
+      "input": "ox",
+      "render": "ox"
+    },
+    {
+      "input": "o.",
+      "render": "odot"
+    },
+    {
+      "input": "|--",
+      "render": "vdash"
+    },
+    {
+      "input": "TT",
+      "render": "\"P{top}\""
+    },
+    {
+      "input": "^^^",
+      "render": "bigwedge"
+    },
+    {
+      "input": "vvv",
+      "render": "bigvee"
+    },
+    {
+      "input": "*",
+      "render": "*"
+    },
+    {
+      "input": "***",
+      "render": "***"
+    },
+    {
+      "input": "|><",
+      "render": "ltimes"
+    },
+    {
+      "input": "><|",
+      "render": "rtimes"
+    },
+    {
+      "input": "vdots",
+      "render": "vdots"
+    },
+    {
+      "input": "ddots",
+      "render": "ddots"
+    },
+    {
+      "input": "|__",
+      "render": "|__"
+    },
+    {
+      "input": "__|",
+      "render": "__|"
+    },
+    {
+      "input": "frown",
+      "render": "frown"
+    },
+    {
+      "input": "&#x23de;",
+      "render": "\"P{obrace}\""
+    },
+    {
+      "input": "&#x23df;",
+      "render": "ubrace"
+    },
+    {
+      "input": "&#x27eb;",
+      "render": "\"P{rang}\""
+    },
+    {
+      "input": "-<=",
+      "render": "preceq"
+    },
+    {
+      "input": ">-=",
+      "render": "succeq"
+    },
+    {
+      "input": "^",
+      "render": "^"
+    },
+    {
+      "input": "..",
+      "render": "ddot"
+    },
+    {
+      "input": "Delta",
+      "render": "Delta"
+    },
+    {
+      "input": "xx",
+      "render": "xx"
+    },
+    {
+      "input": "&#x27;",
+      "render": "'"
+    },
+    {
+      "input": "\\ ",
+      "render": "\\ "
+    },
+    {
+      "input": "+-",
+      "render": "pm"
+    },
+    {
+      "input": "-:",
+      "render": "-:"
+    },
+    {
+      "input": "neg",
+      "render": "\"P{neg}\""
+    },
+    {
+      "input": "if",
+      "render": "if"
+    },
+    {
+      "input": "(",
+      "render": "()"
+    },
+    {
+      "input": ")",
+      "render": ")"
+    },
+    {
+      "input": "[",
+      "render": "[)"
+    },
+    {
+      "input": "]",
+      "render": "]"
+    },
+    {
+      "input": "_",
+      "render": "_"
+    },
+    {
+      "input": "{",
+      "render": "{)"
+    },
+    {
+      "input": "}",
+      "render": "}"
+    },
+    {
+      "input": "¯",
+      "render": "\"P{bar}\""
+    },
+    {
+      "input": "\"P{rBrack}\"",
+      "render": "\"P{Rbrack}\""
+    }
+  ]
+}

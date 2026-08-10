@@ -6,16 +6,24 @@
  * What it was generated from is in `src/generated/provenance.ts`.
  *
  * LaTeX render tables: the six measured tables `to_latex` reads that
- * no other generated slice supplies, consumed by
+ * no other generated slice supplies, plus the two carrier name lists
+ * the latex dispatch reads, consumed by
  * `src/formats/latex/renderer.ts`.
  *
- * Every entry is measured off the runtime — a live render per row,
- * never a source read (PORTING-STANDARDS.md), each re-verified by the
- * generator with a render that actually uses it. The sources lie
- * where the probes cannot: `Hash#invert` keeps the LAST key for a
- * duplicated value, and `validate_function_formula` is not
+ * Every measured entry is read off the runtime — a live render per
+ * row, never a source read (PORTING-STANDARDS.md), each re-verified
+ * by the generator with a render that actually uses it. The sources
+ * lie where the probes cannot: `Hash#invert` keeps the LAST key for
+ * a duplicated value, and `validate_function_formula` is not
  * `Utility::UNARY_CLASSES` — ker, liminf, limsup and sup sit in that
  * parse-side list yet take the `{ \left ( … \right ) }` wrap.
+ *
+ * The two carrier name lists are not measured here: they are the
+ * same `get_class` census rows the asciimath transform-registry
+ * slice carries, projected to class basenames per carrier and
+ * emitted latex-side, because per-format slices are self-contained
+ * by design — the latex module graph never imports another format's
+ * data (ARCHITECTURE.md §3, the generated-data closure).
  */
 
 /**
@@ -149,3 +157,59 @@ export const LATEX_COLOR_ASCIIMATH_SYMBOLS: ReadonlyMap<string, string> = new Ma
   ["Plus", "+"],
   ["Eqno", '"P{eqno}"'],
 ]);
+
+/**
+ * The class basenames the AsciiMath transform reaches through
+ * the `Math::Function::UnaryFunction` carrier — the same
+ * `get_class` census rows the asciimath transform-registry
+ * slice carries, projected and emitted latex-side so the latex
+ * carrier dispatch imports no other format's slice. The
+ * renderer adds `Tr` itself (constructed without `get_class`).
+ * Membership only — deduplicated and sorted.
+ */
+export const LATEX_UNARY_CARRIER_NAMES: readonly string[] = [
+  "Arccos",
+  "Arcsin",
+  "Arctan",
+  "Cancel",
+  "Cos",
+  "Cosh",
+  "Cot",
+  "Coth",
+  "Csc",
+  "Csch",
+  "Deg",
+  "Det",
+  "Dim",
+  "Exp",
+  "Gcd",
+  "Glb",
+  "Ker",
+  "Lcm",
+  "Left",
+  "Lg",
+  "Liminf",
+  "Limsup",
+  "Ln",
+  "Lub",
+  "Max",
+  "Min",
+  "Right",
+  "Sec",
+  "Sech",
+  "Sin",
+  "Sinh",
+  "Sup",
+  "Tan",
+  "Tanh",
+];
+
+/**
+ * The class basenames the AsciiMath transform reaches through
+ * the `Math::Function::BinaryFunction` carrier — the same
+ * `get_class` census rows the asciimath transform-registry
+ * slice carries, projected and emitted latex-side. The renderer
+ * adds `Power`, `Mod` and `Td` itself (constructed without
+ * `get_class`). Membership only — deduplicated and sorted.
+ */
+export const LATEX_BINARY_CARRIER_NAMES: readonly string[] = ["Lim", "Log", "Root", "Stackrel"];

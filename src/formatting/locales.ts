@@ -25,17 +25,27 @@
  * and the rest of the Ruby `Formatter::Numbers` port are P4 scope
  * (ARCHITECTURE.md §9, §10). Only `decimal` is read here; the gem's `group`
  * column is not carried, because nothing at parse time reads it.
+ *
+ * **The data is generated, the policy is not.** The table and the default
+ * marker come from `./generated/locale-decimals.ts`, emitted and verified per
+ * entry by `scripts/generate-formatting-data.rb` — so a gem bump re-checks all
+ * 96 entries instead of trusting a hand-typed copy. This file keeps what a
+ * generator cannot own: the lookup/validation split and the option policy.
  */
 
 import { UnsupportedLocaleError } from "./errors";
-
-/** Ruby: `Plurimath::Configuration::DEFAULT_DECIMAL`. */
-export const DEFAULT_DECIMAL_MARKER = ".";
+import { DEFAULT_DECIMAL_MARKER, LOCALE_DECIMAL_MARKERS } from "./generated/locale-decimals";
 
 /**
- * The gem's `Formatter::SupportedLocales::LOCALES` table, projected onto its
- * `decimal` column and kept in the gem's declaration order so drift against
- * `lib/plurimath/formatter/supported_locales.rb` is a straight diff.
+ * Ruby: `Plurimath::Configuration::DEFAULT_DECIMAL` — generated alongside the
+ * table and re-exported here, so the module's surface is unchanged from when
+ * this file declared the value itself.
+ */
+export { DEFAULT_DECIMAL_MARKER };
+
+/**
+ * Every locale the gem accepts, as a closed union — derived from the generated
+ * tuples' literal types, which is why `locale-decimals.ts` emits `as const`.
  *
  * 96 entries; exactly three distinct markers — `.`, `,` and U+066B ARABIC
  * DECIMAL SEPARATOR, used by `ar` and `fa`. That third one is the reason a
@@ -43,106 +53,6 @@ export const DEFAULT_DECIMAL_MARKER = ".";
  * the reason `test/formatting/locales.spec.ts` asserts its code point rather
  * than trusting the glyph to survive a copy.
  */
-const LOCALE_DECIMAL_MARKERS = [
-  ["sr-Cyrl-ME", ","],
-  ["sr-Latn-ME", ","],
-  ["zh-Hant", "."],
-  ["en-001", "."],
-  ["en-150", "."],
-  ["pt-PT", ","],
-  ["nl-BE", ","],
-  ["it-CH", "."],
-  ["fr-BE", ","],
-  ["fr-CA", ","],
-  ["fr-CH", ","],
-  ["de-AT", ","],
-  ["de-CH", "."],
-  ["en-AU", "."],
-  ["en-CA", "."],
-  ["en-GB", "."],
-  ["en-IE", "."],
-  ["en-IN", "."],
-  ["en-NZ", "."],
-  ["en-SG", "."],
-  ["en-US", "."],
-  ["en-ZA", "."],
-  ["es-419", "."],
-  ["es-AR", ","],
-  ["es-CO", ","],
-  ["es-MX", "."],
-  ["es-US", "."],
-  ["fil", "."],
-  ["af", ","],
-  ["ar", "٫"],
-  ["az", ","],
-  ["be", ","],
-  ["bg", ","],
-  ["bn", "."],
-  ["bo", "."],
-  ["bs", ","],
-  ["ca", ","],
-  ["cs", ","],
-  ["cy", "."],
-  ["da", ","],
-  ["de", ","],
-  ["el", ","],
-  ["en", "."],
-  ["eo", ","],
-  ["es", ","],
-  ["et", ","],
-  ["eu", ","],
-  ["fa", "٫"],
-  ["fi", ","],
-  ["fr", ","],
-  ["ga", "."],
-  ["gl", ","],
-  ["gu", "."],
-  ["he", "."],
-  ["hi", "."],
-  ["hr", ","],
-  ["hu", ","],
-  ["hy", ","],
-  ["id", ","],
-  ["is", ","],
-  ["it", ","],
-  ["ja", "."],
-  ["ka", ","],
-  ["kk", ","],
-  ["km", ","],
-  ["kn", "."],
-  ["ko", "."],
-  ["lo", ","],
-  ["lt", ","],
-  ["lv", ","],
-  ["mk", ","],
-  ["mr", "."],
-  ["ms", "."],
-  ["mt", "."],
-  ["my", "."],
-  ["nb", ","],
-  ["nl", ","],
-  ["pl", ","],
-  ["pt", ","],
-  ["ro", ","],
-  ["ru", ","],
-  ["sk", ","],
-  ["sl", ","],
-  ["sq", ","],
-  ["sr", ","],
-  ["sv", ","],
-  ["sw", "."],
-  ["ta", "."],
-  ["th", "."],
-  ["tr", ","],
-  ["uk", ","],
-  ["ur", "."],
-  ["vi", ","],
-  ["xh", "."],
-  ["zh", "."],
-  ["zu", "."],
-] as const;
-
-/** Every locale the gem accepts, as a closed union. */
 export type LocaleKey = (typeof LOCALE_DECIMAL_MARKERS)[number][0];
 
 const MARKER_BY_LOCALE: ReadonlyMap<string, string> = new Map(LOCALE_DECIMAL_MARKERS);

@@ -359,7 +359,15 @@ module FormattingDataGenerator
       return 0
     end
 
-    gem_dir = options[:gem] || CorpusGenerator.loaded_gem_dir
+    loaded_gem_dir = CorpusGenerator.loaded_gem_dir
+    gem_dir = options[:gem] || loaded_gem_dir
+    if options[:gem] && options[:gem] != loaded_gem_dir
+      raise Error, <<~MESSAGE
+        --gem #{options[:gem]} is not the checkout bundler loaded
+        (#{loaded_gem_dir}). Point BUNDLE_GEMFILE at the same checkout, so the
+        recorded provenance describes the code that actually ran.
+      MESSAGE
+    end
     dirty = check_checkouts!(gem_dir, options[:out], options[:allow_dirty])
 
     default_marker = measured_default_marker

@@ -51,7 +51,7 @@ export const FORMATTING_GENERATED_PROVENANCE: FormattingGeneratedProvenance = {
     ],
     [
       "scripts/generate-formatting-data.rb",
-      "1b49a224b41a1c08dba691a89d3fa3401801d8ac6e5e3c78a681f8002e4768a2",
+      "97bc72537d3045e19bb0e60143b33c7b977061cfd6a89b8abb7a1b6a1e4f4ee6",
     ],
   ]),
   oracle: "plurimath",

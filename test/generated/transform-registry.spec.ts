@@ -14,7 +14,10 @@
  * by the registry section of `scripts/generate-corpus.rb` against plurimath
  * 0.11.6 at 00c52783877b38f6b8e6e109f1803f96bb34fc62, and re-derived
  * independently by a second extraction (session log, 2026-08-05) before being
- * pinned here.
+ * pinned here. The constructor families were measured the same way: an
+ * independent runtime probe against the same pinned oracle (instantiate with
+ * sentinels, read the ivars back; session log, 2026-08-06) produced the
+ * family-by-family counts and the per-name pins below.
  */
 
 import { describe, expect, it } from "vitest";
@@ -125,6 +128,7 @@ describe("what the names resolve to", () => {
       rubyClass: "Math::Function::Sqrt",
       disposition: "implemented",
       carrier: "Math::Function::Sqrt",
+      family: "unary",
       sources: ["unary_class"],
     });
     expect(getClass.get("cancel")).toEqual({
@@ -132,6 +136,7 @@ describe("what the names resolve to", () => {
       rubyClass: "Math::Function::Cancel",
       disposition: "aliased",
       carrier: "Math::Function::UnaryFunction",
+      family: "unary",
       sources: ["unary_class"],
     });
     expect(getClass.get("lim")).toEqual({
@@ -139,8 +144,48 @@ describe("what the names resolve to", () => {
       rubyClass: "Math::Function::Lim",
       disposition: "aliased",
       carrier: "Math::Function::BinaryFunction",
+      family: "binary",
       sources: ["binary_class"],
     });
+  });
+
+  it("measures a constructor family for every get_class name, and none elsewhere", () => {
+    // Per-family counts over all 63 names, pinned from the independent probe.
+    // A family flip anywhere moves two of these numbers; a lost field moves
+    // one into `undefined`, which the counter refuses.
+    const counts = new Map<string, number>();
+    for (const entry of ASCIIMATH_TRANSFORM_GET_CLASS) {
+      expect(entry.family, entry.name).toBeDefined();
+      if (entry.family === undefined) continue;
+      counts.set(entry.family, (counts.get(entry.family) ?? 0) + 1);
+    }
+    expect(Object.fromEntries(counts)).toEqual({
+      unary: 39,
+      unaryAttributes: 12,
+      text: 1,
+      binary: 6,
+      binaryAssignedOptions: 1,
+      ternary: 4,
+    });
+    // The font-style table carries no family: all fifty keywords construct
+    // through the one FontStyle carrier, whose subclasses' initializers sit
+    // outside the family vocabulary.
+    for (const entry of ASCIIMATH_TRANSFORM_FONT_STYLES) {
+      expect(entry.family, entry.name).toBeUndefined();
+    }
+  });
+
+  it("pins the family on each side of every measured split", () => {
+    // One name per boundary the families encode: Abs inherits the plain
+    // unary initialize while its sibling Bar adds `@attributes`; Overset
+    // drops an empty options hash while Underset stores it; Text is the one
+    // defaulted-string initialize; Sum takes three parameters.
+    expect(getClass.get("abs")?.family).toBe("unary");
+    expect(getClass.get("bar")?.family).toBe("unaryAttributes");
+    expect(getClass.get("text")?.family).toBe("text");
+    expect(getClass.get("overset")?.family).toBe("binary");
+    expect(getClass.get("underset")?.family).toBe("binaryAssignedOptions");
+    expect(getClass.get("sum")?.family).toBe("ternary");
   });
 
   it("keeps the two-source entries honest", () => {

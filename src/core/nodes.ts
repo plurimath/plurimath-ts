@@ -104,7 +104,14 @@ export type NodeOptions = Readonly<Record<string, unknown>>;
 export type NodeParameter = MathNode | readonly MathNode[] | string | NodeOptions | null;
 
 /** Ruby's `value` on `Formula`, `Mrow` and `Table`: an ordered node list. */
-export type NodeSequence = readonly MathNode[];
+/**
+ * Ruby's `value` on `Formula`, `Mrow` and `Table`: an ordered list of nodes —
+ * and occasionally a bare string beside them. Measured: the gem parses
+ * `left(right)` to `[Left, "", Right]`, the empty string being Parslet's fold
+ * of an all-vanished sequence. A strings-free type here would be a wish, not
+ * a fact, and it forced a cast in the transform that hid exactly this.
+ */
+export type NodeSequence = readonly (MathNode | string)[];
 
 /**
  * Ruby classes the census marks abstract. Recorded, never union members —
@@ -958,7 +965,8 @@ export class NormNode extends NodeBase {
 }
 
 export interface NumberInit {
-  readonly base?: NodeParameter | undefined;
+  /** Ruby stores `nil` or an Integer radix (2, 8, 16) — never a node. */
+  readonly base?: number | null | undefined;
   readonly miniSubSized?: boolean | undefined;
   readonly miniSupSized?: boolean | undefined;
   readonly value?: string | null | undefined;
@@ -969,14 +977,15 @@ export interface NumberInit {
  */
 export class NumberNode extends NodeBase {
   readonly kind = "number" as const;
-  readonly base: NodeParameter;
+  readonly base: number | null;
   readonly miniSubSized: boolean;
   readonly miniSupSized: boolean;
   readonly value: string | null;
 
   constructor(init: NumberInit = {}) {
     super();
-    this.base = assignedParameter(init.base);
+    // A number needs no slot copying — the value is a primitive.
+    this.base = init.base ?? null;
     this.miniSubSized = init.miniSubSized ?? false;
     this.miniSupSized = init.miniSupSized ?? false;
     this.value = assignedValue(init.value);

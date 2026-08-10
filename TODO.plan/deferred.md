@@ -116,6 +116,21 @@ its own package. Post-1.0 at the earliest, and only on evidence of a second
 consumer — `src/core/generated/html-entities.ts` is 6,009 bytes (2,363
 gzipped), which is not enough to justify a package boundary on its own.
 
+### Overset's constructor family lacks a behavioral kill
+
+**Trigger: the first corpus regeneration that adds cases — include
+`overset` (and another options-carrying construct) then.**
+
+The generated constructor families (Option B, 2026-08-06) are guarded by
+literal pins, per-family counts, and an import-time throw. `underset` also
+has an end-to-end kill: the `underset(a)(b)` oracle pin in
+`test/formats/asciimath/transform.spec.ts` expects `options: {}` and dies if
+its family flips to plain `binary`. `overset` is the one without one — the
+shared corpus has no case reaching it, so its dropped-empty-options behavior
+is never exercised end-to-end. Not a registry gap — a corpus-scope gap,
+owned upstream where cases are generated. (The first draft of this note
+claimed both kinds were uncovered; review disproved it for `underset`.)
+
 ### Lone surrogates diverge from Ox byte output
 
 **Trigger: only if a consumer ever feeds the serializer invalid Unicode and

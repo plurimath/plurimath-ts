@@ -15,7 +15,8 @@
  *     expectation there was *measured* against the oracle, never reasoned out.
  *   - **failure positions.** `ParseFailed.index` is public contract
  *     (ARCHITECTURE.md §5) and two pegkit bugs once survived a conformance
- *     suite that only checked what parses (`.codex-context/STATUS.md`).
+ *     suite that only checked what parses (both fixed inside the pegkit-core
+ *     squash `8eadb6a`; `test/pegkit/conformance.spec.ts` pins the positions).
  *   - **the decimal marker.** The gem builds it from
  *     `Plurimath.configuration.decimal` and uses it *twice* (`parse.rb:18` and
  *     `:86`), so a comma-decimal locale changes how commas parse too. The
@@ -40,7 +41,7 @@ import { describe, expect, it } from "vitest";
 import {
   asciimathGrammar,
   createAsciimathGrammar,
-  parseAsciimath,
+  parseAsciimathPreprocessed,
 } from "../../../src/formats/asciimath/grammar";
 import { ParseFailed, type ParseValue, Slice } from "../../../src/pegkit/index";
 import { loadPinnedCorpus, readExclusions } from "../../core/corpus-pin";
@@ -56,6 +57,7 @@ import type { YamlValue } from "../../core/corpus-yaml";
  */
 function plain(value: ParseValue): YamlValue {
   if (value === null) return null;
+  if (typeof value === "string") return value;
   if (value instanceof Slice) return value.text;
   if (Array.isArray(value)) return value.map(plain);
   const result: Record<string, YamlValue> = {};
@@ -74,9 +76,9 @@ type Fixture = readonly [preprocessed: string, gemTree: string];
 
 /**
  * Control characters as code points, never as escape sequences in the source.
- * A scripted edit has put literal control bytes into a file in this repository
- * twice (`.codex-context/STATUS.md`), and `test/core/corpus-yaml.ts` writes its
- * own escapes this way for the same reason.
+ * Scripted edits have put literal control bytes into source files before
+ * (PORTING-STANDARDS.md, "Verification hygiene"), and `test/core/corpus-yaml.ts`
+ * writes its own escapes this way for the same reason.
  */
 const TAB = String.fromCodePoint(0x09);
 const LINE_FEED = String.fromCodePoint(0x0a);
@@ -618,10 +620,10 @@ describe("the rule inventory", () => {
   });
 
   it("parses through the convenience entry, which resolves the locale itself", () => {
-    expect(plain(parseAsciimath("2.5"))).toStrictEqual(
+    expect(plain(parseAsciimathPreprocessed("2.5"))).toStrictEqual(
       JSON.parse('{"expr":{"sequence":{"number":"2.5"}}}'),
     );
-    expect(plain(parseAsciimath("1,5", { locale: "de" }))).toStrictEqual(
+    expect(plain(parseAsciimathPreprocessed("1,5", { locale: "de" }))).toStrictEqual(
       JSON.parse('{"expr":{"sequence":{"number":"1,5"}}}'),
     );
   });

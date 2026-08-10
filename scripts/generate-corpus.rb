@@ -1644,21 +1644,204 @@ module CorpusGenerator
     klass
   end
 
+  # --- constructor families ------------------------------------------------
+
+  # Which Ruby `initialize` shape a `get_class`-resolved class has — what the
+  # port's transform dispatches its draft builders on. Measured, never read
+  # from source (PORTING-STANDARDS.md): constructors guard (`@options =
+  # options unless options.empty?`), coerce (`UnaryFunction` turns a Slice
+  # into its text) and are routinely inherited, so the truth lives on the
+  # runtime. Each family below is keyed by the exact ivar map a zero-argument
+  # `new` leaves behind — Ruby keeps "assigned nil" and "never assigned"
+  # apart, which is what makes the map a fingerprint — and every match is then
+  # re-verified by `verify_constructor_family!` with sentinel arguments.
+  TRANSFORM_FAMILY_SHAPES = {
+    { "parameter_one" => nil } => "unary",
+    { "attributes" => {}, "parameter_one" => nil } => "unaryAttributes",
+    { "lang" => nil, "parameter_one" => "" } => "text",
+    { "parameter_one" => nil, "parameter_two" => nil } => "binary",
+    { "options" => {}, "parameter_one" => nil,
+      "parameter_two" => nil } => "binaryAssignedOptions",
+    { "parameter_one" => nil, "parameter_two" => nil,
+      "parameter_three" => nil } => "ternary",
+  }.freeze
+
+  # The emitted union, in glossary order (registry.ts documents what each
+  # family means operationally).
+  TRANSFORM_FAMILIES = %w[
+    unary unaryAttributes text binary binaryAssignedOptions ternary
+  ].freeze
+
+  # How many positional `initialize` slots each family may have: the base
+  # classes take exactly their parameters, and the option-carrying subclasses
+  # (`Frac`, `Overset`; `Sum`, `Int`, `Prod`, `Oint`) add one trailing
+  # options slot that an empty hash must NOT survive (`Underset` is the one
+  # class where it does, which is its own family).
+  TRANSFORM_FAMILY_SLOTS = {
+    "unary" => [1],
+    "unaryAttributes" => [2],
+    "text" => [1],
+    "binary" => [2, 3],
+    "binaryAssignedOptions" => [3],
+    "ternary" => [3, 4],
+  }.freeze
+
+  TRANSFORM_SLICE_SENTINEL = "plurimath"
+
+  # A real Parslet::Slice, produced by parsing rather than by constructing one
+  # (Slice#initialize's signature is parslet's private business).
+  def transform_sentinel_slice
+    @transform_sentinel_slice ||= begin
+      slice = Parslet::Atoms::Str.new(TRANSFORM_SLICE_SENTINEL)
+        .parse(TRANSFORM_SLICE_SENTINEL)
+      unless slice.is_a?(Parslet::Slice)
+        raise Error, "parslet no longer parses to a Slice (got #{slice.class}); " \
+                     "the Slice-conversion probe below would prove nothing"
+      end
+
+      slice
+    end
+  end
+
+  def transform_family_ivars(instance)
+    instance.variables.sort.to_h do |ivar|
+      [ivar.to_s.delete_prefix("@"), instance.get(ivar)]
+    end
+  end
+
+  def transform_positional_slots(klass)
+    klass.instance_method(:initialize).parameters
+      .count { |kind, _| %i[req opt].include?(kind) }
+  end
+
+  def constructor_family(klass)
+    @constructor_families ||= {}
+    @constructor_families[klass] ||= measure_constructor_family(klass)
+  end
+
+  def measure_constructor_family(klass)
+    key = class_key(klass)
+    instance = begin
+      klass.new
+    rescue StandardError, ScriptError => e
+      raise Error, <<~MESSAGE
+        #{key}.new (zero-argument family probe) raised #{e.class}: #{e.message}.
+        Every get_class-reachable class has had a fully-defaulted initialize;
+        one that stopped needs its shape measured and a family defined for it.
+      MESSAGE
+    end
+
+    shape = transform_family_ivars(instance)
+    family = TRANSFORM_FAMILY_SHAPES[shape]
+    unless family
+      raise Error, <<~MESSAGE
+        #{key}.new assigns #{shape.inspect}, which matches no known constructor
+        family. A new initialize shape is a NEW measurement: extend
+        TRANSFORM_FAMILY_SHAPES and teach the port's transform to construct it
+        before the registry can carry the class.
+      MESSAGE
+    end
+
+    verify_constructor_family!(key, klass, family)
+    family
+  end
+
+  def family_probe_failure!(key, family, detail)
+    raise Error, "#{key} matched the zero-argument shape of #{family.inspect} " \
+                 "but failed its probe: #{detail}. The shapes no longer pin " \
+                 "the behaviour; re-measure the family vocabulary."
+  end
+
+  # The zero-argument shape is a fingerprint, not a proof: two classes could
+  # leave the same ivars while wiring their parameters differently. So every
+  # classification is re-measured with sentinel arguments — parameter wiring,
+  # the unary side's Slice-to-text conversion, and the option-carrying
+  # constructors' empty-hash behaviour (dropped everywhere except `Underset`).
+  def verify_constructor_family!(key, klass, family)
+    slots = transform_positional_slots(klass)
+    unless TRANSFORM_FAMILY_SLOTS.fetch(family).include?(slots)
+      family_probe_failure!(key, family,
+                            "#{slots} positional slot(s), expected " \
+                            "#{TRANSFORM_FAMILY_SLOTS.fetch(family).join(' or ')}")
+    end
+
+    slice = transform_sentinel_slice
+    stored = klass.new(slice).get(:@parameter_one)
+    if %w[unary unaryAttributes text].include?(family)
+      unless stored.instance_of?(::String) && stored == TRANSFORM_SLICE_SENTINEL
+        family_probe_failure!(key, family, "a Slice argument was not converted " \
+                                           "to its text (stored #{stored.class})")
+      end
+    else
+      unless stored.equal?(slice)
+        family_probe_failure!(key, family, "a Slice argument did not survive " \
+                                           "as itself (stored #{stored.class})")
+      end
+    end
+
+    case family
+    when "unary"
+      one = klass.new("s1")
+      family_probe_failure!(key, family, "parameter_one wiring") unless one.get(:@parameter_one) == "s1"
+    when "unaryAttributes"
+      two = klass.new("s1", { "k" => "v" })
+      family_probe_failure!(key, family, "parameter_one wiring") unless two.get(:@parameter_one) == "s1"
+      family_probe_failure!(key, family, "attributes wiring") unless two.get(:@attributes) == { "k" => "v" }
+    when "text"
+      two = klass.new("s1", lang: "s2")
+      family_probe_failure!(key, family, "parameter_one wiring") unless two.get(:@parameter_one) == "s1"
+      family_probe_failure!(key, family, "lang wiring") unless two.get(:@lang) == "s2"
+    when "binary", "binaryAssignedOptions"
+      two = klass.new("s1", "s2")
+      family_probe_failure!(key, family, "parameter_one wiring") unless two.get(:@parameter_one) == "s1"
+      family_probe_failure!(key, family, "parameter_two wiring") unless two.get(:@parameter_two) == "s2"
+      verify_family_options!(key, klass, family, ["s1", "s2"]) if slots == 3
+    when "ternary"
+      three = klass.new("s1", "s2", "s3")
+      family_probe_failure!(key, family, "parameter_one wiring") unless three.get(:@parameter_one) == "s1"
+      family_probe_failure!(key, family, "parameter_two wiring") unless three.get(:@parameter_two) == "s2"
+      family_probe_failure!(key, family, "parameter_three wiring") unless three.get(:@parameter_three) == "s3"
+      verify_family_options!(key, klass, family, ["s1", "s2", "s3"]) if slots == 4
+    end
+  end
+
+  def verify_family_options!(key, klass, family, args)
+    full = klass.new(*args, { "k" => "v" })
+    family_probe_failure!(key, family, "options wiring") unless full.get(:@options) == { "k" => "v" }
+
+    empty = klass.new(*args, {})
+    empty_stored = empty.variables.include?(:@options)
+    if family == "binaryAssignedOptions"
+      family_probe_failure!(key, family, "an empty options hash was dropped") unless
+        empty_stored && empty.get(:@options) == {}
+    elsif empty_stored
+      family_probe_failure!(key, family, "an empty options hash was stored")
+    end
+  end
+
   # One measured entry: the name, the class it resolves to, and how the census
   # disposes of that class — the carrier is the implemented class the port
   # constructs (the alias target for an aliased class, itself otherwise).
-  def transform_registry_entry(census_index, name, klass, sources)
+  # `family: true` adds the measured constructor family (get_class entries
+  # only: the font-style table constructs every keyword through the one
+  # FontStyle carrier, and its subclasses' initializers — required first
+  # argument, non-nil defaults — sit outside the family vocabulary).
+  def transform_registry_entry(census_index, name, klass, sources, family: false)
     key = class_key(klass)
     entry = census_index[key]
     raise Error, "#{key} (from #{name.inspect}) is not in the census" unless entry
 
-    {
+    measured = {
       "name" => name,
       "rubyClass" => key,
       "disposition" => entry["disposition"],
       "carrier" => entry["aliases"] || key,
-      "sources" => sources.uniq.sort,
     }
+    if family && entry["disposition"] != "deferred"
+      measured["family"] = constructor_family(klass)
+    end
+    measured["sources"] = sources.uniq.sort
+    measured
   end
 
   def build_transform_registry(gem_dir, census)
@@ -1689,7 +1872,8 @@ module CorpusGenerator
     excluded = []
     sources_by_name.sort.each do |name, sources|
       entry = transform_registry_entry(
-        census_index, name, resolve_transform_class(utility, name), sources
+        census_index, name, resolve_transform_class(utility, name), sources,
+        family: true
       )
       if entry["disposition"] == "deferred"
         excluded << { "name" => name, "rubyClass" => entry["rubyClass"],
@@ -1698,6 +1882,14 @@ module CorpusGenerator
       else
         entries << entry
       end
+    end
+
+    # The port's registry throws at import on an entry without a family, so an
+    # emission that lost one must fail here, where the oracle is on hand.
+    unfamilied = entries.reject { |entry| TRANSFORM_FAMILIES.include?(entry["family"]) }
+    unless unfamilied.empty?
+      raise Error, "get_class entries without a measured constructor family: " \
+                   "#{unfamilied.map { |entry| entry['name'] }.join(', ')}"
     end
 
     missing_fonts = ranges.fetch("fonts").reject { |name| utility::FONT_STYLES.key?(name.to_sym) }
@@ -2121,7 +2313,8 @@ module CorpusGenerator
         plus the two Utility tables the actions read. Resolution goes through
         the gem because it is not mechanical capitalization: `overbrace`,
         `underbrace` and `underline` resolve through constant aliases to
-        classes named differently (`Obrace`, `Ubrace`, `Ul`).
+        classes named differently (`Obrace`, `Ubrace`, `Ul`). Each `get_class`
+        entry also carries its resolved class's measured constructor family.
       TEXT
       [
         ts_doc("How the census disposes of a resolved class. A deferred class\n" \
@@ -2130,19 +2323,39 @@ module CorpusGenerator
       ].join("\n"),
       [
         ts_doc(<<~TEXT.chomp),
+          Which Ruby `initialize` shape a resolved class has, measured off the
+          runtime: the generator instantiates each class and reads the
+          assigned ivars back, fingerprints the zero-argument shape, then
+          re-verifies parameter wiring, Slice-to-text conversion and
+          empty-options behaviour with sentinel arguments (source reading
+          lies: constructors guard, coerce and inherit). The registry
+          (`src/formats/asciimath/registry.ts`) documents what each family
+          means operationally; the transform dispatches its builders on it.
+        TEXT
+        "export type AsciimathTransformConstructorFamily =",
+        *TRANSFORM_FAMILIES.map do |family|
+          "  | #{ts_string(family)}#{family == TRANSFORM_FAMILIES.last ? ';' : ''}"
+        end,
+      ].join("\n"),
+      [
+        ts_doc(<<~TEXT.chomp),
           One reachable name: the class the gem resolves it to, and the
           implemented class the port constructs for it. For an aliased class
           the carrier is its census alias target and the class name rides in
           the carrier's identity slot; an implemented class carries itself.
-          `sources` names the measurements that reached the entry: a grammar
-          capture tag (`unary_class`, `binary_class`, `ternary_class`), a
-          `literal` argument, or a Utility table.
+          `family` is the resolved class's measured constructor family —
+          present on every `get_class` entry, absent from the font-style
+          table, whose fifty keywords all construct through the one FontStyle
+          carrier. `sources` names the measurements that reached the entry: a
+          grammar capture tag (`unary_class`, `binary_class`,
+          `ternary_class`), a `literal` argument, or a Utility table.
         TEXT
         "export interface AsciimathTransformClassEntry {",
         "  readonly name: string;",
         "  readonly rubyClass: string;",
         "  readonly disposition: AsciimathTransformDisposition;",
         "  readonly carrier: string;",
+        "  readonly family?: AsciimathTransformConstructorFamily;",
         "  readonly sources: readonly string[];",
         "}",
       ].join("\n"),

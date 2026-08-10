@@ -2576,8 +2576,8 @@ module CorpusGenerator
     sections = [
       ts_header(<<~TEXT.chomp),
         AsciiMath render tables: the three gem tables `to_asciimath` reads
-        that the parse tables cannot supply, consumed by
-        `src/formats/asciimath/renderer.ts`.
+        that the parse tables cannot supply, consumed by the asciimath
+        render kind files (`src/render/<kind>/asciimath.ts`).
 
         Every entry is measured off the runtime — a live render per entry,
         never a source read (PORTING-STANDARDS.md), each re-verified by the

@@ -68,9 +68,35 @@ export function present(value: unknown): boolean {
   return value !== null && value !== undefined && value !== false;
 }
 
-/** Ruby `String#strip`: exactly `[\0\t\n\v\f\r ]`, never the no-break space. */
+/**
+ * The code units Ruby's `String#strip` removes: NUL, TAB, LF, VT, FF, CR,
+ * SPACE — `[\0\t\n\v\f\r ]`, never the no-break space (every member is one
+ * BMP code unit, so `charCodeAt` sees each exactly).
+ */
+function isRubyStripCode(code: number): boolean {
+  return code === 0x20 || (code >= 0x09 && code <= 0x0d) || code === 0;
+}
+
+/**
+ * Ruby `String#strip`: exactly `[\0\t\n\v\f\r ]`, never the no-break space.
+ *
+ * A first/last non-whitespace index scan, not the regex pair it used to be:
+ * an end-anchored `/[\0\t\n\v\f\r ]+$/` has no start anchor, so a long
+ * INTERNAL whitespace run followed by a non-whitespace tail makes every
+ * position in the run a retry point — quadratic, where Ruby's C-implemented
+ * `strip` (`int.rb:37`, `oint.rb:36`, `prod.rb:46`, `sum.rb:47`) is linear.
+ * Reachable end-to-end through `toAsciimath` on validator-passing trees (an
+ * `int` whose third slot renders N internal spaces), so the complexity class
+ * is part of the hostile-input posture, pinned by the wall-clock test in
+ * `test/formats/asciimath/renderer.spec.ts`. Byte-behaviour is unchanged:
+ * the scan trims exactly the leading and trailing runs of the same set.
+ */
 export function rubyStrip(text: string): string {
-  return text.replace(/^[\0\t\n\v\f\r ]+/, "").replace(/[\0\t\n\v\f\r ]+$/, "");
+  let start = 0;
+  let end = text.length;
+  while (start < end && isRubyStripCode(text.charCodeAt(start))) start += 1;
+  while (end > start && isRubyStripCode(text.charCodeAt(end - 1))) end -= 1;
+  return start === 0 && end === text.length ? text : text.slice(start, end);
 }
 
 /** Ruby `/\s/`: ASCII whitespace only — `Color` strips it from its first value. */

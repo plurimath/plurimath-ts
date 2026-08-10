@@ -125,10 +125,28 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): stri
   const open =
     node.openParen === null || node.openParen === undefined
       ? "["
-      : s(renderChild(node.openParen, context, "table.openParen"));
-  const close =
-    node.closeParen === null || node.closeParen === undefined
-      ? (TABLE_CLOSE_FALLBACK.get(open) ?? "")
-      : s(renderChild(node.closeParen, context, "table.closeParen"));
-  return `${open}${rows}${close}`;
+      : renderChild(node.openParen, context, "table.openParen");
+  let close: string;
+  if (node.closeParen === null || node.closeParen === undefined) {
+    // The fallback lookup is `parenthesis[lparen.to_sym]` (`table.rb:48`) —
+    // `to_sym` runs on the RENDERED open paren, so an open paren whose own
+    // render is Ruby-nil (a bare `FontStyle`) is `nil.to_sym`: NoMethodError
+    // in the gem, ParseError through a Formula (probe
+    // probe-table-nil-paren.rb on the pinned oracle, 2026-08-10), RenderError
+    // here. Collapsing the nil to "" first would render where the gem
+    // raises. With a close paren present the gem never reaches the lookup —
+    // that branch interpolates the nil open to "" and renders (probed ")").
+    if (open === null) {
+      throw new RenderError(
+        "table.openParen: renders nil, and with no closeParen the gem's " +
+          "close-paren fallback calls nil.to_sym — the gem raises NoMethodError here",
+        FORMAT,
+        node.kind,
+      );
+    }
+    close = TABLE_CLOSE_FALLBACK.get(open) ?? "";
+  } else {
+    close = s(renderChild(node.closeParen, context, "table.closeParen"));
+  }
+  return `${s(open)}${rows}${close}`;
 }

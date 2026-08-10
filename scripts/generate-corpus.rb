@@ -4292,8 +4292,7 @@ module CorpusGenerator
     written << [path, write_manifest(path, bytes, out_root, provenance)]
 
     emitted = write_symbol_data(options[:symbols_out], symbols, registry, render_tables,
-                                latex_render_tables,
-                                mathml_tables, provenance)
+                                mathml_tables, latex_render_tables, provenance)
 
     written.each do |payload_path, manifest_path|
       puts "  #{relative(payload_path, REPO_ROOT)}"

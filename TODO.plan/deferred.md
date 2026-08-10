@@ -282,19 +282,25 @@ Hex is the gem's canonical form: across all 1,461 symbol classes there are 8,718
 hex entities, 0 decimal, and 27 named — the named ones confined to six classes
 (`Times`, `Cdot`, `Greater`, `Gt`, `Less`, `Lt`) as hand-added aliases.
 
-### The locale table is hand-typed
+### The locale table is hand-typed — generated
 
-**Trigger: before P1-completion, or the first gem bump — whichever comes
-first.**
+**Done, 2026-08-10** (trigger: before P1-completion). The 96 locale →
+decimal-marker entries and the default marker now come from
+`src/formatting/generated/locale-decimals.ts`, emitted by
+`scripts/generate-formatting-data.rb` with the usual provenance discipline
+(`generated/provenance.ts`, deterministic, dirty-checkout refusal).
+`src/formatting/locales.ts` derives its table from it; the module's shape did
+not change, only where its data comes from.
 
-`src/formatting/locales.ts` holds the gem's 96 locale → decimal-marker entries,
-transcribed by hand and verified against the gem once (all 96, plus 14 edge
-inputs, 2026-08-04). Nothing re-checks it on a gem update — the same drift
-argument that got 20 grammar constants generated applies with more force to 96
-entries. The fix is a small `generate-formatting-data.rb` with the usual
-provenance discipline; the module's shape does not change, only where its data
-comes from. Placement (here vs a shared data repo) is a separate,
-already-deferred question for Ronald — this entry is only about generation.
+Measured off the runtime, not transcribed: the generator reads
+`Formatter::SupportedLocales::LOCALES` through the loaded gem and verifies
+every entry before emission — `decimal_for` under both key spellings, plus a
+live `Math.parse` that must read `1<marker>5` as one Number under the entry's
+own marker and must not under each of the other markers. Cross-checked against
+the hand-typed table entry by entry: zero mismatches, consistent with the
+2026-08-04 verification (all 96, plus 14 edge inputs). Placement (here vs a
+shared data repo) is a separate, already-deferred question for Ronald — that
+half stays open; this entry was only about generation.
 
 ### Standalone entity package
 

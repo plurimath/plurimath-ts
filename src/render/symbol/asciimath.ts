@@ -5,13 +5,14 @@
  * (ARCHITECTURE.md §5, "Symbols").
  */
 
-import { MissingSymbolDataError, RenderError } from "../../core/index";
+import { RenderError } from "../../core/index";
 import { RUBY_ABSTRACT_CLASSES } from "../../core/nodes";
 import { NODE_SPECS } from "../../core/normalize";
 import {
   classBasename,
   FORMAT,
   interpolatedValue,
+  missingSymbolDataError,
   type NodeOf,
   type RenderContext,
 } from "../../formats/asciimath/render-shared";
@@ -67,6 +68,9 @@ export function renderSymbol(node: NodeOf<"symbol">, context: RenderContext): st
     // No variant claimed this context; fall through to the static value.
   }
   const literal = ASCIIMATH_SYMBOLS.get(id);
-  if (literal === undefined) throw new MissingSymbolDataError(id, FORMAT);
+  // The factory records the error as this walk's own throw (a
+  // module-private WeakSet), so the boundary can tell it from an input's
+  // imitation (see render-shared.ts).
+  if (literal === undefined) throw missingSymbolDataError(id);
   return literal;
 }

@@ -7,7 +7,11 @@
  * Measured pin worth naming: a `Table` with a nil close paren falls back
  * through `Asciimath::Constants::TABLE_PARENTHESIS` and an unlisted open
  * paren yields the empty string: `{:[x]` for an `{:` open. `Matrix` maps its
- * rows strictly while `parentheless_table` is nil-safe.
+ * rows strictly while `parentheless_table` is nil-safe per ROW
+ * (`val&.to_asciimath`) — a nil `value` still raises in both, because each
+ * opens with a bare `value.map` (probe-parentheless-nil-value.rb: Align,
+ * Split and Array all raise NoMethodError; only the bare `Table` renders a
+ * nil value, as `[]`).
  */
 
 import { RenderError } from "../../core/index";
@@ -18,6 +22,7 @@ import {
   type RenderContext,
   renderChild,
   s,
+  unreachableName,
 } from "../../formats/asciimath/render-shared";
 import {
   ASCIIMATH_SIMPLE_TABLE_NAMES,
@@ -38,7 +43,36 @@ const TABLE_CLOSE_FALLBACK: ReadonlyMap<string, string> = ASCIIMATH_TABLE_CLOSE_
  */
 const PARENTHELESS_TABLE_NAMES: ReadonlySet<string> = new Set(ASCIIMATH_SIMPLE_TABLE_NAMES);
 
+/**
+ * The class names this carrier has measured behaviour for — every `Table`
+ * subclass in the gem (probe-subclass-census.rb on the oracle, 2026-08-07:
+ * exactly these 10, only `Matrix` overriding `to_asciimath`). The AsciiMath
+ * transform builds only bare tables, so unlike the other carriers' sets this
+ * one is not derivable from the transform registry; it is hand-listed, and
+ * every entry is pinned by a behavioural render in
+ * `test/formats/asciimath/renderer.spec.ts` ("renders every aliased table
+ * subclass as the gem does") — dropping one from this set turns that pin
+ * red. A defined name outside the set raises before base-table dispatch,
+ * because rendering the carrier default for an unmeasured class would
+ * diverge silently (`unreachableName` in
+ * `../../formats/asciimath/render-shared.ts`).
+ */
+const MEASURED_TABLE_NAMES: ReadonlySet<string> = new Set([
+  "Align",
+  "Array",
+  "Bmatrix",
+  "Cases",
+  "Eqarray",
+  "Matrix",
+  "Multline",
+  "Pmatrix",
+  "Split",
+  "Vmatrix",
+]);
+
 export function renderTable(node: NodeOf<"table">, context: RenderContext): string {
+  if (node.name !== undefined && !MEASURED_TABLE_NAMES.has(node.name))
+    throw unreachableName(node.kind, node.name);
   const className = node.name === undefined ? "table" : node.name.toLowerCase();
 
   if (className === "matrix") {
@@ -55,7 +89,8 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): stri
   }
 
   if (PARENTHELESS_TABLE_NAMES.has(className)) {
-    // `parentheless_table` — nil-safe rows (`table.rb:379-383`).
+    // `parentheless_table` — nil-safe rows, but a bare `value.map` on the
+    // value itself (`table.rb:379-383`; probe-parentheless-nil-value.rb).
     if (!Array.isArray(node.value)) {
       throw new RenderError(
         `table.value: is ${describeSlot(node.value)}, not a list — the gem raises NoMethodError here`,
@@ -90,10 +125,28 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): stri
   const open =
     node.openParen === null || node.openParen === undefined
       ? "["
-      : s(renderChild(node.openParen, context, "table.openParen"));
-  const close =
-    node.closeParen === null || node.closeParen === undefined
-      ? (TABLE_CLOSE_FALLBACK.get(open) ?? "")
-      : s(renderChild(node.closeParen, context, "table.closeParen"));
-  return `${open}${rows}${close}`;
+      : renderChild(node.openParen, context, "table.openParen");
+  let close: string;
+  if (node.closeParen === null || node.closeParen === undefined) {
+    // The fallback lookup is `parenthesis[lparen.to_sym]` (`table.rb:48`) —
+    // `to_sym` runs on the RENDERED open paren, so an open paren whose own
+    // render is Ruby-nil (a bare `FontStyle`) is `nil.to_sym`: NoMethodError
+    // in the gem, ParseError through a Formula (probe
+    // probe-table-nil-paren.rb on the pinned oracle, 2026-08-10), RenderError
+    // here. Collapsing the nil to "" first would render where the gem
+    // raises. With a close paren present the gem never reaches the lookup —
+    // that branch interpolates the nil open to "" and renders (probed ")").
+    if (open === null) {
+      throw new RenderError(
+        "table.openParen: renders nil, and with no closeParen the gem's " +
+          "close-paren fallback calls nil.to_sym — the gem raises NoMethodError here",
+        FORMAT,
+        node.kind,
+      );
+    }
+    close = TABLE_CLOSE_FALLBACK.get(open) ?? "";
+  } else {
+    close = s(renderChild(node.closeParen, context, "table.closeParen"));
+  }
+  return `${s(open)}${rows}${close}`;
 }

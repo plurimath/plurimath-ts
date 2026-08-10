@@ -26,7 +26,10 @@ const CONFIG = readFileSync(join(REPO_ROOT, ".dependency-cruiser.cjs"), "utf8");
 /**
  * Three kinds and two formats keep every rule reachable: `fontStyle` proves
  * the camelCase-key -> kebab-case-directory mapping, and the second format
- * gives the cross-format mutations a real file to reach for.
+ * gives the cross-format mutations a real file to reach for. Each format
+ * also carries a render-shared.ts its kind files import (the real layout's
+ * edge, allowed by render-kind-file-imports-allowed-set-only), so
+ * render-shared-is-a-leaf has a subject to match.
  */
 const KINDS = ["sqrt", "frac", "fontStyle"];
 const FORMATS = ["asciimath", "latex"];
@@ -50,6 +53,7 @@ function writeFixture(): string {
   write("src/core/index.ts", "export const core = 1;\n");
   for (const format of FORMATS) {
     write(`src/generated/${format}/data.ts`, `export const data = "${format}";\n`);
+    write(`src/formats/${format}/render-shared.ts`, `export const shared = "${format}";\n`);
     const entries = KINDS.map((kind) => `  ${kind}: 1,`).join("\n");
     write(
       `src/formats/${format}/render.ts`,
@@ -57,7 +61,10 @@ function writeFixture(): string {
     );
     for (const kind of KINDS) {
       const dir = kind.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-      write(`src/render/${dir}/${format}.ts`, `export const render = "${dir}/${format}";\n`);
+      write(
+        `src/render/${dir}/${format}.ts`,
+        `import "../../formats/${format}/render-shared";\nexport const render = "${dir}/${format}";\n`,
+      );
     }
   }
   return root;
@@ -109,6 +116,29 @@ describe("the boundaries gate on the node-major render layout", () => {
     expect(output).toContain("format-imports-own-generated-data-only");
   });
 
+  it("fails when a format root imports another format's kind file", () => {
+    const root = writeFixture();
+    const renderTs = join(root, "src/formats/asciimath/render.ts");
+    writeFileSync(renderTs, `import "../../render/sqrt/latex";\n${readFileSync(renderTs, "utf8")}`);
+    const { status, output } = runGate(root);
+    expect(status).toBe(1);
+    expect(output).toContain("format-render-imports-own-kind-files-only");
+  });
+
+  it("fails when render-shared imports a kind file — it must stay a leaf", () => {
+    // The mutation also closes the cycle kind-file -> render-shared ->
+    // kind-file, so no-circular may fire alongside; the assertion is on the
+    // leaf rule's own name, which only its violation record can print.
+    const root = writeFixture();
+    writeFileSync(
+      join(root, "src/formats/asciimath/render-shared.ts"),
+      'import "../../render/sqrt/asciimath";\nexport const shared = "asciimath";\n',
+    );
+    const { status, output } = runGate(root);
+    expect(status).toBe(1);
+    expect(output).toContain("render-shared-is-a-leaf");
+  });
+
   it("fails when core imports render", () => {
     const root = writeFixture();
     writeFileSync(
@@ -125,6 +155,16 @@ describe("the boundaries gate on the node-major render layout", () => {
     rmSync(join(root, "src/render/sqrt/asciimath.ts"));
     const { status, output } = runGate(root);
     expect(status).toBe(1);
+    expect(output).toContain("missing src/render/sqrt/asciimath.ts");
+  });
+
+  it("fails when a directory impersonates a render file (Copilot's catch)", () => {
+    const root = writeFixture();
+    rmSync(join(root, "src/render/sqrt/asciimath.ts"));
+    mkdirSync(join(root, "src/render/sqrt/asciimath.ts"));
+    const { status, output } = runGate(root);
+    expect(status).toBe(1);
+    expect(output).toContain("src/render/sqrt/asciimath.ts is not a regular file");
     expect(output).toContain("missing src/render/sqrt/asciimath.ts");
   });
 

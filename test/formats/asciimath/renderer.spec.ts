@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { RenderError } from "../../../src/core/errors";
+import { MissingSymbolDataError, ParseError, RenderError } from "../../../src/core/errors";
 import {
   BarNode,
   BinaryFunctionNode,
@@ -178,6 +178,19 @@ describe("subsup shapes", () => {
     // Probe binary/Stackrel/nil,nil => "stackrel()()".
     expect(toAsciimath(new BinaryFunctionNode({ name: "Stackrel" }))).toBe("stackrel()()");
   });
+
+  it("a binary or ternary name outside the measured set raises rather than guessing", () => {
+    // The same fail-loud carrier policy the unary, fontStyle and table
+    // carriers pin (TODO.plan/deferred.md): a defined name outside
+    // REACHABLE_BINARY_NAMES / REACHABLE_TERNARY_NAMES names no measured gem
+    // class, so it raises instead of rendering the carrier default.
+    expect(() =>
+      toAsciimath(new BinaryFunctionNode({ name: "<unmeasured>", parameterOne: x() })),
+    ).toThrow(RenderError);
+    expect(() =>
+      toAsciimath(new TernaryFunctionNode({ name: "<unmeasured>", parameterOne: x() })),
+    ).toThrow(RenderError);
+  });
 });
 
 describe("the big operators", () => {
@@ -195,6 +208,29 @@ describe("the big operators", () => {
     // Probe int/linebreak-third => "int \\" — the linebreak's trailing
     // "\n " is stripped, its backslash stays.
     expect(toAsciimath(new IntNode({ parameterThree: new LinebreakNode({}) }))).toBe("int \\");
+  });
+
+  it("strips a long internal whitespace run in linear time, as Ruby's C strip does", () => {
+    // PR #10 review, finding 1: `rubyStrip`'s end-anchored trailing regex had
+    // no start anchor, so a validator-passing tree — an `int` whose third
+    // slot is a formula of N bare (nil-rendering) fontStyle children then a
+    // symbol, rendering "int " + N spaces + "x" — made every position in the
+    // internal run a retry point: quadratic, where the gem's `strip` is
+    // linear. Calibrated in this environment 2026-08-10: pre-fix the regex
+    // pair took 140/509/1,786 ms at n = 10k/20k/40k end-to-end (~4x per
+    // doubling); the index-scan strip takes ~30 ms at 40k. The 750 ms bound
+    // is generous headroom for a slow machine, yet less than half the
+    // quadratic implementation's measured time — this test ran red against
+    // it.
+    const children: unknown[] = [];
+    for (let i = 0; i < 40_000; i += 1) children.push({ kind: "fontStyle" });
+    children.push({ kind: "symbol", value: "x" });
+    const tree = { kind: "int", parameterThree: { kind: "formula", value: children } };
+    const start = performance.now();
+    const out = toAsciimath(tree as never);
+    const elapsed = performance.now() - start;
+    expect(out).toBe(`int ${" ".repeat(40_000)}x`);
+    expect(elapsed).toBeLessThan(750);
   });
 
   it("nary falls back to int for a missing first slot", () => {
@@ -257,6 +293,18 @@ describe("font styles", () => {
     expect(
       toAsciimath(new FormulaNode({ value: [new FontStyleNode({ name: "BoldFraktur" }), x()] })),
     ).toBe(" x");
+  });
+
+  it("a defined name outside the measured subclass set raises rather than guessing", () => {
+    // Oracle census (probe-subclass-census.rb, 2026-08-07): FontStyle has
+    // exactly 14 subclasses — the 8 keyword-overriding ones and the 6
+    // value-alone ones above. Any other defined name names no measured gem
+    // class, so it fails loudly instead of rendering the value alone
+    // (TODO.plan/deferred.md, the fail-loud carrier policy). The bare
+    // carrier — name undefined — keeps its measured value-alone render.
+    expect(() =>
+      toAsciimath(new FontStyleNode({ name: "<unmeasured>", parameterOne: x() })),
+    ).toThrow(RenderError);
   });
 });
 
@@ -387,6 +435,29 @@ describe("tables", () => {
     }
   });
 
+  it("a nil-rendering open paren with no close paren raises, as the gem's to_sym does", () => {
+    // Probe probe-table-nil-paren.rb on the pinned oracle (2026-08-10):
+    // `Table.new([])` with `open_paren` a bare FontStyle and `close_paren`
+    // nil => NoMethodError: undefined method 'to_sym' for nil (ParseError
+    // through the Formula boundary) — the close-paren fallback
+    // `parenthesis[lparen.to_sym]` runs on the RENDERED open paren, which a
+    // bare FontStyle renders as Ruby-nil. Seen red exactly so: collapsing
+    // the nil to "" before the lookup rendered "" where the gem raises.
+    const table = { kind: "table", value: [], openParen: { kind: "fontStyle" } };
+    expect(() => toAsciimath(table as never)).toThrow(RenderError);
+    expect(() => toAsciimath(table as never)).toThrow(/to_sym/);
+    // The adjacent branch — close paren PRESENT — never reaches the lookup:
+    // the gem interpolates the nil open to "" and renders (probed ")").
+    expect(
+      toAsciimath({
+        kind: "table",
+        value: [],
+        openParen: { kind: "fontStyle" },
+        closeParen: { kind: "symbol", id: "Paren::Rround", value: null },
+      } as never),
+    ).toBe(")");
+  });
+
   it("renders every aliased table subclass as the gem does", () => {
     // Probes table/Matrix => "{:[x]:}" ... table/Vmatrix => "|[x]|".
     const expected: readonly (readonly [string, string])[] = [
@@ -412,6 +483,18 @@ describe("tables", () => {
     expect(() => toAsciimath(new TableNode({ name: "Matrix", value: null }))).toThrow(RenderError);
   });
 
+  it("a nil value crashes the parentheless trio too — only the base table is nil-safe", () => {
+    // `parentheless_table` opens with `value.map`, NOT `value&.map`
+    // (`table.rb:380`): probe-parentheless-nil-value.rb on the pinned oracle —
+    // Align/Split/Array with a nil value raise NoMethodError (ParseError
+    // through the Formula boundary) while the bare `Table.new(nil)` renders
+    // "[]". The per-ROW nil-safety (`val&.to_asciimath`) never reaches a nil
+    // value, so the rejection here is the gem's raise, not a port guard.
+    for (const name of ["Align", "Split", "Array"]) {
+      expect(() => toAsciimath(new TableNode({ name, value: null })), name).toThrow(RenderError);
+    }
+  });
+
   it("td joins nil-safely where tr does not", () => {
     // Probes td/nil-member => "x  2"; unary/Tr/nil => NoMethodError.
     expect(
@@ -430,6 +513,18 @@ describe("tables", () => {
       RenderError,
     );
   });
+
+  it("a defined name outside the measured subclass set raises rather than guessing", () => {
+    // Oracle census (probe-subclass-census.rb, 2026-08-07): Table has exactly
+    // 10 subclasses, every one pinned above. Any other defined name names no
+    // measured gem class, and the base-table default render for it would
+    // diverge silently — so it fails loudly instead (TODO.plan/deferred.md,
+    // the fail-loud carrier policy). The bare carrier — name undefined —
+    // keeps its measured base-table render.
+    expect(() => toAsciimath(new TableNode({ name: "<unmeasured>", value: [tr(x())] }))).toThrow(
+      RenderError,
+    );
+  });
 });
 
 describe("linebreak", () => {
@@ -443,6 +538,76 @@ describe("linebreak", () => {
       ),
     ).toBe("x\\\n ");
     expect(toAsciimath(new LinebreakNode({ parameterOne: x() }))).toBe("\\\n x");
+    // Probe probe-linebreak-attributes.rb: hash-other-key and hash-style-array
+    // both => "\\\n x" — any hash whose :linebreakstyle is not exactly "after"
+    // takes the before branch.
+    expect(toAsciimath(new LinebreakNode({ parameterOne: x(), attributes: { foo: "bar" } }))).toBe(
+      "\\\n x",
+    );
+    expect(
+      toAsciimath(
+        new LinebreakNode({ parameterOne: x(), attributes: { linebreakstyle: ["after"] } }),
+      ),
+    ).toBe("\\\n x");
+  });
+
+  it("non-hash attributes raise, as the gem's attributes[:linebreakstyle] send does", () => {
+    // Probe probe-linebreak-attributes.rb on the pinned oracle (ruby 4.0.1),
+    // Linebreak.new(Symbols::Symbol.new("x"), ATTRS).to_asciimath(options: {}):
+    //   [] / ["after"] / "after" / 5 => TypeError: no implicit conversion of
+    //     Symbol into Integer
+    //   nil / true / false / 1.5 / Number.new("2") => NoMethodError:
+    //     undefined method '[]' for <the value>
+    // Only a hash answers the send; everything else is RenderError here (the
+    // §5 crash mapping — never the silent before-form these shapes rendered
+    // when `.linebreakstyle` was read unchecked).
+    const linebreak = (attributes: unknown) =>
+      ({
+        kind: "linebreak",
+        parameterOne: { kind: "number", value: "2" },
+        attributes,
+      }) as never;
+    expect(() => toAsciimath(linebreak([]))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(["after"]))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak("after"))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(5))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(1.5))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(null))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(true))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak(false))).toThrow(RenderError);
+    // A node in the attributes slot: Ruby's Linebreak instance has no `[]`
+    // either — NoMethodError there, RenderError here.
+    expect(() => toAsciimath(linebreak({ kind: "number", value: "2" }))).toThrow(RenderError);
+    expect(() => toAsciimath(linebreak([]))).toThrow(/linebreak\.attributes/);
+  });
+});
+
+describe("the formula carrier's name slot", () => {
+  it("Mstyle — the census's one formula alias — renders exactly as Formula does", () => {
+    // Probe probe-mstyle-alias.rb on the pinned oracle (2026-08-07):
+    // `Mstyle.instance_method(:to_asciimath).owner` is `Plurimath::Math::Formula`
+    // — `formula/mstyle.rb` defines no override — and `Mstyle.new([x, 2])`
+    // renders "x 2", byte-identical to `Formula.new([x, 2])`; the bare-string
+    // crash edge is identical too (both raise Math::ParseError).
+    expect(toAsciimath(new FormulaNode({ name: "Mstyle", value: [x(), two()] }))).toBe("x 2");
+    expect(toAsciimath(new FormulaNode({ value: [x(), two()] }))).toBe("x 2");
+    expect(() => toAsciimath(new FormulaNode({ name: "Mstyle", value: [x(), "raw"] }))).toThrow(
+      RenderError,
+    );
+  });
+
+  it("a defined name outside the measured alias set raises rather than guessing", () => {
+    // The fail-loud carrier policy every sibling carrier pins (unary, binary,
+    // ternary, fontStyle, table — TODO.plan/deferred.md): the census folds
+    // exactly one class onto the formula carrier (Mstyle). "Mrow" here forges
+    // Math::Formula::Mrow onto the formula kind — the model implements Mrow
+    // as its own kind, so the name has no measured render on THIS carrier;
+    // rendering the carrier default for it would diverge silently. The bare
+    // carrier — name undefined — keeps its measured render.
+    expect(() => toAsciimath(new FormulaNode({ name: "Mrow", value: [x()] }))).toThrow(RenderError);
+    expect(() => toAsciimath(new FormulaNode({ name: "<unmeasured>", value: [x()] }))).toThrow(
+      RenderError,
+    );
   });
 });
 
@@ -462,9 +627,12 @@ describe("where the gem cannot render its own parse", () => {
 
 describe("degenerate value slots the gem's pipeline cannot produce", () => {
   // No gem parse puts anything but a string (or nil) into `Number#value` or
-  // `Symbols::Symbol#value`, and `String(value)` cannot reproduce Ruby's
-  // interpolation of anything else — so these raise (the standing
-  // degenerate-input ruling: loud, never silently divergent bytes).
+  // `Symbols::Symbol#value`. Where the gem's spelling of a degenerate value
+  // IS reproducible (booleans, the non-finite floats — next describe) this
+  // port renders it; the shapes here are the ones whose Ruby bytes cannot be
+  // matched — hash inspect, object addresses, the Integer/Float split — so
+  // they raise (the standing degenerate-input ruling: loud, never silently
+  // divergent bytes).
   it("a number with an object value raises instead of emitting [object Object]", () => {
     // Probe probe-degenerate-value.rb on the pinned oracle (ruby 4.0.1):
     //   Plurimath::Math::Number.new({a: 1}).to_asciimath(options: {})
@@ -485,6 +653,361 @@ describe("degenerate value slots the gem's pipeline cannot produce", () => {
     expect(() =>
       toAsciimath({ kind: "number", value: { kind: "number", value: "2" } } as never),
     ).toThrow(RenderError);
+  });
+
+  it("describes an object slot with its article — an object, never a object", () => {
+    // Wording-only pin on the message the object-value ruling above raises:
+    // `describeSlot` gets an explicit object branch (the c9d4034 pattern in
+    // core's describeValue), so the error reads "an object".
+    expect(() => toAsciimath({ kind: "number", value: { a: 1 } } as never)).toThrow(
+      /holds an object/,
+    );
+  });
+
+  it("a finite number raises: JS cannot witness Ruby's Integer/Float split", () => {
+    // Probe probe-sweep-truthiness.rb on the pinned oracle:
+    //   Number.new(5).to_asciimath(options: {})     => "5"
+    //   Number.new(5.0).to_asciimath(options: {})   => "5.0"
+    //   Number.new(1.0e21).to_asciimath(options: {})=> "1.0e+21" (String() says "1e+21")
+    // The JS number 5 is both Ruby values at once, so there is no single
+    // byte answer to match — loud, never a guess.
+    expect(() => toAsciimath({ kind: "number", value: 5 } as never)).toThrow(RenderError);
+    expect(() =>
+      toAsciimath(new UnaryFunctionNode({ name: "Left", parameterOne: 5 as never })),
+    ).toThrow(RenderError);
+  });
+});
+
+describe("degenerate value slots the gem spells reproducibly", () => {
+  // The mirror half of the ruling above: where the gem RENDERS a degenerate
+  // slot and its bytes are reproducible, this port renders the same bytes —
+  // class-for-class parity cuts both ways. All pins probed on the pinned
+  // oracle (probe-sweep-truthiness.rb, 2026-08-07, ruby 4.0.1).
+  it("a false parameter renders as Ruby truthiness renders it — empty, not a crash", () => {
+    // asciimath_value (`unary_function.rb:196`) opens `return "" unless
+    // parameter_one` — a truthiness test, so `false` answers "" exactly like
+    // nil. Probes: mpadded-false => ""; sin-false => "sin".
+    expect(toAsciimath({ kind: "mpadded", parameterOne: false } as never)).toBe("");
+    expect(toAsciimath(new UnaryFunctionNode({ name: "Sin", parameterOne: false as never }))).toBe(
+      "sin",
+    );
+    // Probe norm-false => "norm" — the non-keyword carrier default reaches
+    // its `if parameter_one` guard instead, same answer through `present`.
+    expect(toAsciimath(new NormNode({ parameterOne: false as never }))).toBe("norm");
+  });
+
+  it("a boolean value interpolates as Ruby spells it", () => {
+    // Probes: number-true => "true"; number-false => "false" (TextRenderer's
+    // `result.to_s`); symbol-true-in-formula => "true" (the raw value,
+    // to_s'd by Formula's join).
+    expect(toAsciimath({ kind: "number", value: true } as never)).toBe("true");
+    expect(toAsciimath({ kind: "number", value: false } as never)).toBe("false");
+    expect(toAsciimath({ kind: "symbol", value: true } as never)).toBe("true");
+  });
+
+  it("the three non-finite floats interpolate as Ruby spells them", () => {
+    // Probes: number-nan => "NaN"; number-inf => "Infinity"; number-neg-inf
+    // => "-Infinity" — each the one JS number with exactly one Ruby preimage
+    // and a byte-identical to_s, unlike every finite number (see above).
+    expect(toAsciimath({ kind: "number", value: Number.NaN } as never)).toBe("NaN");
+    expect(toAsciimath({ kind: "number", value: Number.POSITIVE_INFINITY } as never)).toBe(
+      "Infinity",
+    );
+    expect(toAsciimath({ kind: "number", value: Number.NEGATIVE_INFINITY } as never)).toBe(
+      "-Infinity",
+    );
+  });
+
+  it("Left/Right interpolate the same reproducible primitives", () => {
+    // Probes: left-true => "lefttrue"; right-false => "rightfalse";
+    // left-nan => "leftNaN" — `"left#{parameter_one}"` is plain
+    // interpolation, so the same to_s parity applies.
+    expect(toAsciimath(new UnaryFunctionNode({ name: "Left", parameterOne: true as never }))).toBe(
+      "lefttrue",
+    );
+    expect(
+      toAsciimath(new UnaryFunctionNode({ name: "Right", parameterOne: false as never })),
+    ).toBe("rightfalse");
+    expect(
+      toAsciimath(new UnaryFunctionNode({ name: "Left", parameterOne: Number.NaN as never })),
+    ).toBe("leftNaN");
+  });
+
+  it("a false slot still raises where the gem's send raises", () => {
+    // Truthiness only reaches the guards that test it. Probes: text-false =>
+    // NoMethodError (false.gsub); mpadded-list-false => NoMethodError
+    // (Array#compact keeps false; false.to_asciimath).
+    expect(() => toAsciimath(new TextNode({ parameterOne: false as never }))).toThrow(RenderError);
+    expect(() => toAsciimath({ kind: "mpadded", parameterOne: [false] } as never)).toThrow(
+      RenderError,
+    );
+  });
+});
+
+describe("inputs that defeat the walk itself", () => {
+  // Class-for-class parity holds even where the INPUT breaks the walker
+  // rather than any one read: the gem raises (probe probe-sweep-depth.rb:
+  // SystemStackError at depth 10,000, direct and through the Formula
+  // boundary), and `Formula#to_asciimath` wraps every render-time
+  // StandardError into ParseError (`formula.rb:437`, wrap_render_error) —
+  // so nothing may escape this boundary as a raw RangeError or a hostile
+  // accessor's own error.
+  it("a tree deeper than the call stack raises RenderError, not RangeError", () => {
+    let node: unknown = { kind: "number", value: "1" };
+    for (let i = 0; i < 50_000; i += 1) node = { kind: "sqrt", parameterOne: node };
+    expect(() => toAsciimath(node as never)).toThrow(RenderError);
+  });
+
+  it("depths the gem still renders take the too-deep branding, never the generic wrap", () => {
+    // The deep-tree parity window (TODO.plan/deferred.md): the gem's own
+    // recursive render survives nested-sqrt chains to roughly 4,656 frames
+    // on default stacks — depths 2,000/3,000/4,000 render
+    // 12,001/18,001/24,001 chars on the pinned oracle (2026-08-10) — while
+    // this walk's JavaScript stack runs out earlier (full renders reached
+    // ~1,000-2,500 across vitest and plain-node runs). WHERE it runs out
+    // moves with engine state: the validator's smaller frames shrink further
+    // once optimized, so which side overflows first at any fixed depth flips
+    // between cold and warm runs. What must not move is the BRANDING —
+    // genuine stack exhaustion is the too-deep RenderError whichever walk
+    // hits its ceiling first, never the generic mid-walk wrap — so this pin
+    // sweeps the window and holds every failure to it: at least one of these
+    // gem-renderable depths fails here, and no failure may read "mid-walk".
+    // Seen red exactly so: pre-fix, six of the eight depths wrapped the
+    // render walk's RangeError as "rendering failed mid-walk — RangeError:
+    // Maximum call stack size exceeded".
+    const failures: string[] = [];
+    for (const depth of [1_400, 1_800, 2_200, 2_600, 3_000, 3_400, 3_800, 4_200]) {
+      let node: unknown = { kind: "number", value: "1" };
+      for (let i = 0; i < depth; i += 1) node = { kind: "sqrt", parameterOne: node };
+      try {
+        toAsciimath(node as never);
+      } catch (error) {
+        expect(error, `depth ${depth}`).toBeInstanceOf(RenderError);
+        failures.push(`depth ${depth}: ${(error as RenderError).message}`);
+      }
+    }
+    expect(failures).not.toEqual([]);
+    for (const failure of failures) {
+      expect(failure).toContain("nests too deep");
+      expect(failure).not.toContain("mid-walk");
+    }
+  });
+
+  it("a read that throws mid-render surfaces as RenderError, like the gem's boundary wrap", () => {
+    // The getter answers validation's single read, then throws on the
+    // renderer's — deterministic, and only the render-phase wrap can catch it.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new Error("hostile read");
+        return "1";
+      },
+    };
+    expect(() => toAsciimath(node as never)).toThrow(RenderError);
+  });
+
+  it("a kind that flips to an inherited key after validation raises the unknown-kind RenderError", () => {
+    // Validation reads `kind` once; the dispatcher's own read is a second
+    // one, and a stateful getter can answer it with an inherited
+    // Object.prototype key. On a plain-object table "toString" and
+    // "hasOwnProperty" resolve to real functions (a value comes back, no
+    // error at all), "constructor" to `Object` itself (callable too), and
+    // "__proto__" to Object.prototype (a TypeError from calling a
+    // non-function). All are unknown kinds and must take the unknown-kind
+    // RenderError, naming the kind the dispatcher actually read.
+    for (const flip of ["toString", "__proto__", "constructor", "hasOwnProperty"]) {
+      let reads = 0;
+      const node = {
+        get kind(): string {
+          reads += 1;
+          return reads > 1 ? flip : "number";
+        },
+        value: "1",
+      };
+      let caught: unknown;
+      try {
+        toAsciimath(node as never);
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught, flip).toBeInstanceOf(RenderError);
+      expect((caught as RenderError).message, flip).toContain(flip);
+      expect((caught as RenderError).kind, flip).toBe(flip);
+    }
+  });
+
+  it("a getter throwing the port's own ParseError mid-render wraps as RenderError, message kept", () => {
+    // Only `RenderError` is this walk's surface (plus the symbol table's
+    // `MissingSymbolDataError`, pinned below). A hostile getter re-throwing
+    // the port's ParseError is not a parse failure — letting it out unwrapped
+    // would let the input forge an error class the render boundary never
+    // produces. The gem's own boundary re-raises only ITS ParseError, and
+    // that class maps to RenderError on this walk, not to the port's
+    // ParseError.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new ParseError("forged parse failure", "x", "asciimath", 0);
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toAsciimath(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).message).toContain("forged parse failure");
+  });
+
+  it("the symbol table's MissingSymbolDataError still passes through — the walk's own surface", () => {
+    // `renderSymbol` throws it for an id the generated table does not carry
+    // (`src/render/symbol/asciimath.ts:73`) — the one non-RenderError
+    // PlurimathError a kind file throws on purpose, and a public error code
+    // (MISSING_SYMBOL_DATA); the tightened pass-through must not re-type it.
+    let caught: unknown;
+    try {
+      toAsciimath({ kind: "symbol", id: "NoSuchSymbol", value: null } as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(MissingSymbolDataError);
+    expect((caught as MissingSymbolDataError).code).toBe("MISSING_SYMBOL_DATA");
+    expect((caught as MissingSymbolDataError).symbolId).toBe("NoSuchSymbol");
+  });
+
+  it("a getter throwing a forged MissingSymbolDataError post-validation wraps as RenderError", () => {
+    // The pass-through above is for the symbol table's OWN throw
+    // (`src/render/symbol/asciimath.ts`), which the throw site records in a
+    // module-private WeakSet. A hostile getter that answers validation's read
+    // and then throws its own `MissingSymbolDataError` mid-render is an input
+    // failure wearing the class: `instanceof` alone would let it out
+    // unwrapped, reporting MISSING_SYMBOL_DATA for a walk the symbol table
+    // never faulted — the same forgery the ParseError pin above closes for
+    // the parse surface. Unrecorded, it wraps like any other mid-walk throw,
+    // message kept.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new MissingSymbolDataError("Forged", "asciimath");
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toAsciimath(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).code).toBe("RENDER_ERROR");
+    expect((caught as RenderError).message).toContain("Forged");
+  });
+
+  it("a genuine missing-symbol error carries no discoverable mark — no symbol to steal", () => {
+    // The pass-through mark is MEMBERSHIP in the throw site's module-private
+    // WeakSet, never anything stored on the instance: a symbol-property
+    // brand was discoverable right here — `Object.getOwnPropertySymbols` on
+    // a caught genuine error handed the input the key, and with it the
+    // forgery the next pin closes. Nothing observable may sit on the error.
+    let genuine: unknown;
+    try {
+      toAsciimath({ kind: "symbol", id: "NoSuchSymbol", value: null } as never);
+    } catch (error) {
+      genuine = error;
+    }
+    expect(genuine).toBeInstanceOf(MissingSymbolDataError);
+    expect(Object.getOwnPropertySymbols(genuine as object)).toEqual([]);
+  });
+
+  it("a forged object carrying everything stolen off a caught genuine error wraps as RenderError", () => {
+    // The exact theft a symbol-property brand allowed: catch the walk's own
+    // missing-symbol throw, lift its own symbols with
+    // `Object.getOwnPropertySymbols`, copy them — values included — onto a
+    // forged look-alike, and throw that mid-render. Under the property brand
+    // the forgery passed `isOwnMissingSymbolDataError` and escaped the
+    // boundary unwrapped (seen red exactly so); WeakSet membership cannot be
+    // read off an instance, so the forgery wraps like any other input throw.
+    // Replaying the genuine INSTANCE itself remains possible — the narrower
+    // residue named in render-shared.ts, accepted with the pass-through pin
+    // above.
+    let genuine: unknown;
+    try {
+      toAsciimath({ kind: "symbol", id: "NoSuchSymbol", value: null } as never);
+    } catch (error) {
+      genuine = error;
+    }
+    const forged = Object.create(MissingSymbolDataError.prototype) as Record<PropertyKey, unknown>;
+    forged.code = "MISSING_SYMBOL_DATA";
+    forged.symbolId = "Forged";
+    forged.message = "forged missing-symbol pass-through";
+    for (const stolen of Object.getOwnPropertySymbols(genuine as object)) {
+      forged[stolen] = (genuine as Record<PropertyKey, unknown>)[stolen];
+    }
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw forged;
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toAsciimath(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).code).toBe("RENDER_ERROR");
+  });
+
+  it("a thrown value whose own toString throws still wraps, described by the fallback phrase", () => {
+    // The boundary's description of a mid-walk throw is a `String(error)`
+    // call — input code that can itself throw. Unwrapped, the secondary
+    // throw escaped the boundary raw (seen red exactly so); the description
+    // falls back to a fixed phrase, so the boundary never leaks a raw value.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) {
+          throw {
+            toString(): string {
+              throw new Error("secondary");
+            },
+          };
+        }
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toAsciimath(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).message).toContain("a thrown value that cannot be described");
+  });
+
+  it("a frozen tree renders — nothing on the render path writes to the input", () => {
+    // Ruby renders frozen nodes fine; so must this port.
+    const tree = Object.freeze({
+      kind: "frac",
+      parameterOne: Object.freeze({ kind: "number", value: "1" }),
+      parameterTwo: Object.freeze({ kind: "symbol", id: "Plus", value: null }),
+    });
+    expect(toAsciimath(tree as never)).toBe("frac(1)(+)");
   });
 });
 

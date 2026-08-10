@@ -126,7 +126,17 @@ if (!existsSync(renderDir)) {
       );
       continue;
     }
-    for (const file of readdirSync(join(renderDir, entry.name))) {
+    for (const fileEntry of readdirSync(join(renderDir, entry.name), {
+      withFileTypes: true,
+    })) {
+      const file = fileEntry.name;
+      if (!fileEntry.isFile()) {
+        failures.push(
+          `inventory: src/render/${entry.name}/${file} is not a regular file — ` +
+            "a directory or link cannot satisfy a render-format slot",
+        );
+        continue;
+      }
       fileCount += 1;
       const format = file.endsWith(".ts") ? file.slice(0, -".ts".length) : null;
       if (format === null || !expected.has(format)) {

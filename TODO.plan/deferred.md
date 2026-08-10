@@ -27,31 +27,70 @@ from AsciiMath input (the corpus, round-trip and 1,642-case sweep layers all
 pass byte-identical); each is pinned by a test in
 `test/formats/asciimath/renderer.spec.ts`:
 
-- **`Left`/`Right` holding a node raise `RenderError`.** The gem interpolates
-  the parameter into the output string, so a node yields
+- **`Left`/`Right` holding a node or a finite number raise `RenderError`.**
+  The gem interpolates the parameter into the output string, so a node yields
   `left#<Plurimath::Math::Symbols::Symbol:0x00007c...>` — an object address,
-  different every run. A byte-parity port cannot reproduce a nondeterministic
-  string, so it refuses instead. (Strings and nil match the gem exactly.)
+  different every run — and a finite number is ambiguous (the JS number 5 is
+  Ruby's `5` and `5.0` at once, which render `"left5"` and `"left5.0"`,
+  probed). A byte-parity port cannot reproduce either, so it refuses instead.
+  (Strings, nil, booleans and the non-finite floats match the gem exactly —
+  probe-sweep-truthiness.rb: `left-true` => `"lefttrue"`, `left-nan` =>
+  `"leftNaN"`.)
 - **`toAsciimath` returns `""` where the gem returns `nil`.** One render in
   the gem returns nil rather than a string: a `FontStyle` without an
   overriding subclass and with a nil value. Internally this port propagates
   that nil so composite behaviour matches (`Nary` falls back to `"int"` on
   it, interpolations drop it — both probed), but the public function's return
   type is `string`, so at the boundary nil becomes `""`.
-- **A class name outside the AsciiMath-reachable set raises `RenderError`.**
+- **A class name outside the measured set raises `RenderError`.**
   The census folds ~1,550 aliased gem classes into carrier kinds; this
-  renderer measured the ones the AsciiMath transform can construct. A
-  hand-built carrier naming any other class (`Mbox`, `Menclose`, `Phantom`,
-  ...) raises rather than rendering the carrier default, because many of
-  those classes override `to_asciimath` in the gem and a default render would
-  diverge silently — parity gaps fail loudly (ARCHITECTURE.md §5). The
-  measured set must widen when a format that constructs those classes lands
-  (MathML/OMML input, P4+).
+  renderer measured what the AsciiMath transform can construct, plus the
+  hand-buildable table and font-style subclasses (their full gem sets, 10
+  and 14, enumeration-probed complete). A hand-built carrier naming any
+  other class (`Mbox`, `Menclose`, `Phantom`, ...) raises rather than
+  rendering the carrier default, because many of those classes override
+  `to_asciimath` in the gem and a default render would diverge silently —
+  parity gaps fail loudly (ARCHITECTURE.md §5). The measured set must widen
+  when a format that constructs those classes lands (MathML/OMML input,
+  P4+).
+
+### AsciiMath renderer: deep-tree parity window below the gem's stack ceiling
+
+**Trigger: a consumer report with a real tree that deep, or an iterative-walk
+redesign of the validate/render recursion.**
+
+The gem's recursive `to_asciimath` survives nested-sqrt chains to roughly
+4,656 frames on default stacks before SystemStackError (measured on the
+pinned oracle, 2026-08-10: depths 2,000/3,000/4,000 render
+12,001/18,001/24,001 chars). The port's recursive walk exhausts the
+JavaScript call stack earlier and environment-dependently — measured
+full-render ceilings between ~1,000 and ~2,500 across vitest and plain-node
+runs (the PR #10 review measured ~1,562–1,660) — so in the window between
+the two ceilings, roughly 1,600–4,656, a valid tree the gem still renders
+raises the too-deep `RenderError` here. Beyond the gem's own ceiling both
+sides raise. The too-deep message states the window rather than claiming the
+gem fails at the same depth, and the branding is pinned across depths
+1,400–4,200 in `test/formats/asciimath/renderer.spec.ts`: genuine stack
+exhaustion takes the too-deep rejection whichever side hits its ceiling
+first, never the generic mid-walk wrap.
+
+### The table-name guard set is hand-listed
+
+**Trigger: the next generator extension touching table data, or any gem bump.**
+
+`MEASURED_TABLE_NAMES` in `src/render/table/asciimath.ts` hand-lists the ten
+Table subclass basenames because no generated slice carries them — the
+AsciiMath transform builds only bare tables, so the census never emits a
+table-subclass list. The set was enumeration-probed complete against the gem
+(2026-08-07), and every entry is held by the existing renders-every-aliased-
+table-subclass pin, so a dropped or drifted name turns a test red. Still: it
+is gem-derived data typed by hand, so it carries this exception entry until
+the generator owns it.
 
 ### Three AsciiMath render tables — generated
 
-**Done, 2026-08-06.** The AsciiMath renderer (since split into
-`src/formats/asciimath/render/`, one file per kind) no longer
+**Done, 2026-08-06.** The AsciiMath renderer (since split node-major into
+`src/render/<kind>/asciimath.ts`, one directory per kind) no longer
 transcribes the three small render tables it used to hand-type; the same
 `scripts/generate-corpus.rb` run that emits the rest of the AsciiMath data now
 measures and emits them into `src/generated/asciimath/render-tables.ts`:
@@ -151,19 +190,25 @@ Hex is the gem's canonical form: across all 1,461 symbol classes there are 8,718
 hex entities, 0 decimal, and 27 named — the named ones confined to six classes
 (`Times`, `Cdot`, `Greater`, `Gt`, `Less`, `Lt`) as hand-added aliases.
 
-### The locale table is hand-typed
+### The locale table is hand-typed — generated
 
-**Trigger: before P1-completion, or the first gem bump — whichever comes
-first.**
+**Done, 2026-08-10** (trigger: before P1-completion). The 96 locale →
+decimal-marker entries and the default marker now come from
+`src/formatting/generated/locale-decimals.ts`, emitted by
+`scripts/generate-formatting-data.rb` with the usual provenance discipline
+(`generated/provenance.ts`, deterministic, dirty-checkout refusal).
+`src/formatting/locales.ts` derives its table from it; the module's shape did
+not change, only where its data comes from.
 
-`src/formatting/locales.ts` holds the gem's 96 locale → decimal-marker entries,
-transcribed by hand and verified against the gem once (all 96, plus 14 edge
-inputs, 2026-08-04). Nothing re-checks it on a gem update — the same drift
-argument that got 20 grammar constants generated applies with more force to 96
-entries. The fix is a small `generate-formatting-data.rb` with the usual
-provenance discipline; the module's shape does not change, only where its data
-comes from. Placement (here vs a shared data repo) is a separate,
-already-deferred question for Ronald — this entry is only about generation.
+Measured off the runtime, not transcribed: the generator reads
+`Formatter::SupportedLocales::LOCALES` through the loaded gem and verifies
+every entry before emission — `decimal_for` under both key spellings, plus a
+live `Math.parse` that must read `1<marker>5` as one Number under the entry's
+own marker and must not under each of the other markers. Cross-checked against
+the hand-typed table entry by entry: zero mismatches, consistent with the
+2026-08-04 verification (all 96, plus 14 edge inputs). Placement (here vs a
+shared data repo) is a separate, already-deferred question for Ronald — that
+half stays open; this entry was only about generation.
 
 ### Standalone entity package
 
@@ -247,3 +292,31 @@ axis mechanism first — the pin will fail and point here.**
 `LATEX_SYMBOL_EXCEPTIONS` is empty today, so `toLatex` threads no context
 axis; `renderer.spec.ts` pins the emptiness so a future regeneration cannot
 silently need one.
+
+### Lone surrogates diverge from Ox byte output
+
+**Trigger: only if a consumer ever feeds the serializer invalid Unicode and
+files it as a bug — then decide byte-oriented output vs a loud reject.**
+
+Known divergence (PR #9 review, 2026-08-06). Ox, handed a Ruby string
+force-encoded around a lone-surrogate byte sequence (`ED A0 80`), emits those
+invalid bytes raw; `src/xml` holds text as JavaScript strings, so a lone
+UTF-16 surrogate becomes U+FFFD (`EF BF BD`) at any UTF-8 encoding boundary.
+No gem code path produces such a string — constructing one requires
+deliberate `force_encoding` — and the maintainer's parser-side ruling on
+degenerate Unicode input (the caller bears the consequences) extends here.
+Documented in `src/xml/serializer.ts`.
+
+### The XML writer is owed a thorough dedicated review
+
+**Trigger: before the MathML renderer (PR-4) merges — it is that PR's
+foundation — and again before 1.0.**
+
+Maintainer decision at #9's merge (2026-08-07): the hand-rolled Ox-faithful
+writer was accepted after the ecosystem survey (no native org XML layer
+exists; the gem itself hand-rolls the same pattern for its Oga engine), but
+the maintainer wants `src/xml/` thoroughly re-reviewed as a unit — design,
+byte contract, and its fitness as the prospective shared module for future
+sibling ports — beyond the PR-cycle reviews it has had. The reader-side
+(XML parsing for MathML input) remains a separate open decision: evaluate
+existing parser libraries before building anything.

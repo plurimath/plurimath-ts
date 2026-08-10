@@ -13,9 +13,27 @@ import {
   type RenderContext,
   renderChild,
   s,
+  unreachableName,
 } from "../../formats/asciimath/render-shared";
 
+/**
+ * The class names this carrier has measured behaviour for — the one class the
+ * census folds onto `Formula` (`corpus/census.yaml`: `Mstyle`, disposition
+ * `aliased`). The AsciiMath transform never constructs a formula subclass, so
+ * like the table carrier's set this one is not derivable from the transform
+ * registry; it is hand-listed, and pinned by a behavioural render in
+ * `test/formats/asciimath/renderer.spec.ts` (probe-mstyle-alias.rb on the
+ * pinned oracle: `Mstyle#to_asciimath`'s owner is `Math::Formula` — no
+ * override — so it renders byte-identically to the bare carrier). A defined
+ * name outside the set raises rather than rendering the carrier default,
+ * because the class it would denote has no measured render here
+ * (`unreachableName` in `../../formats/asciimath/render-shared.ts`).
+ */
+const MEASURED_FORMULA_NAMES: ReadonlySet<string> = new Set(["Mstyle"]);
+
 export function renderFormula(node: NodeOf<"formula">, context: RenderContext): string {
+  if (node.name !== undefined && !MEASURED_FORMULA_NAMES.has(node.name))
+    throw unreachableName(node.kind, node.name);
   return renderFormulaValue(node.value, context, "formula");
 }
 

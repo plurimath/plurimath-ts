@@ -6,12 +6,15 @@
  */
 
 import {
+  classBasename,
   type NodeOf,
   type RenderContext,
   renderChild,
   s,
+  unreachableName,
 } from "../../formats/asciimath/render-shared";
 import { ASCIIMATH_FONT_STYLE_KEYWORDS } from "../../generated/asciimath/render-tables";
+import { ASCIIMATH_TRANSFORM_FONT_STYLES } from "../../generated/asciimath/transform-registry";
 
 /**
  * The `FontStyle` subclasses that override `to_asciimath` with a keyword
@@ -25,7 +28,22 @@ import { ASCIIMATH_FONT_STYLE_KEYWORDS } from "../../generated/asciimath/render-
  */
 const FONT_STYLE_KEYWORDS: ReadonlyMap<string, string> = ASCIIMATH_FONT_STYLE_KEYWORDS;
 
+/**
+ * The class names this carrier has measured behaviour for — the basenames the
+ * transform's font-style table resolves to, which the oracle census confirms
+ * is every `FontStyle` subclass (probe-subclass-census.rb, 2026-08-07: 14
+ * subclasses, 8 overriding `to_asciimath`, 6 inheriting it). A defined name
+ * outside the set raises rather than rendering the value alone, because the
+ * class it would denote has no measured render here
+ * (`unreachableName` in `../../formats/asciimath/render-shared.ts`).
+ */
+const MEASURED_FONT_STYLE_NAMES: ReadonlySet<string> = new Set(
+  ASCIIMATH_TRANSFORM_FONT_STYLES.map((entry) => classBasename(entry.rubyClass)),
+);
+
 export function renderFontStyle(node: NodeOf<"fontStyle">, context: RenderContext): string | null {
+  if (node.name !== undefined && !MEASURED_FONT_STYLE_NAMES.has(node.name))
+    throw unreachableName(node.kind, node.name);
   const keyword = node.name === undefined ? undefined : FONT_STYLE_KEYWORDS.get(node.name);
   if (keyword !== undefined) {
     const body =

@@ -1823,6 +1823,22 @@ function codepointToString(code: number): string {
  * table: `he` and `entities` implement the larger HTML5 set and decode
  * `&half;` and `&sung;`, which the gem leaves as written.
  */
+/**
+ * The same decoder under its gem name, exported for the MathML renderer:
+ * the gem's XML engine wrapper decodes every attribute WRITE through
+ * `Utility.html_entity_to_unicode` (`OxEngine::Element#update_attrs`,
+ * element.rb:104-110 — measured: `set_attr("intent" => "&#x2211;")` stores
+ * `"∑"`), and `src/xml`'s `setAttribute` deliberately starts at the
+ * already-decoded value (its header note), so the renderer decodes before
+ * calling it. Exported from THIS internal module, not re-exported from the
+ * core barrel (`./index.ts`) — the `describeThrown` precedent: renderer
+ * vocabulary, not public API. `src/index.ts` re-exports only the core
+ * barrel's named exports, so this stays off the public surface.
+ */
+export function htmlEntityToUnicode(text: string): string {
+  return decodeEntities(text);
+}
+
 function decodeEntities(text: string): string {
   // `return string unless string&.include?("&")` — the gem's own fast path.
   if (!text.includes("&")) return text;

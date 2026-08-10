@@ -67,7 +67,8 @@ module.exports = {
     {
       name: "render-kind-file-imports-allowed-set-only",
       comment:
-        "Rule 8: a kind file src/render/<kind>/<F>.ts imports only core, its own format's " +
+        "Rule 8: a kind file src/render/<kind>/<F>.ts imports only layer 1 (core, and xml — " +
+        "the element tree the XML output formats build), its own format's " +
         "generated data (src/generated/<F>), that format's render-shared helpers " +
         "(src/formats/<F>/render-shared.ts), and sibling kind files of the same format " +
         "(<other-kind>/<F>.ts — Ruby's base-class inheritance imports). It never imports the " +
@@ -77,7 +78,7 @@ module.exports = {
       to: {
         path: "^src/",
         pathNot:
-          "^src/core/|^src/generated/$1/|^src/formats/$1/render-shared\\.ts$|^src/render/[^/]+/$1\\.ts$",
+          "^src/(core|xml)/|^src/generated/$1/|^src/formats/$1/render-shared\\.ts$|^src/render/[^/]+/$1\\.ts$",
       },
     },
     {

@@ -43,7 +43,7 @@ export function renderColor(node: NodeOf<"color">, context: RenderContext): stri
   const one =
     node.parameterOne === null || node.parameterOne === undefined
       ? ""
-      : stripRubyWhitespace(s(colorAsciimathValue(node.parameterOne, "color.parameterOne")));
+      : stripRubyWhitespace(s(colorAsciimathValue(node.parameterOne, "color.parameterOne", true)));
   const two = nilSafe(node.parameterTwo, context, "color.parameterTwo");
   return `{\\color{${one}} ${two}}`;
 }
@@ -53,8 +53,16 @@ export function renderColor(node: NodeOf<"color">, context: RenderContext): stri
  * from the asciimath renderer rather than imported (§3; see the module
  * header). Every branch is oracle-measured (probe_tables.rb `color/*`); an
  * operand outside them is a parity gap and raises.
+ *
+ * `topLevel` marks the slot the gsub strip runs on DIRECTLY: a top-level
+ * base symbol answers `to_asciimath` with its raw value, so a non-string
+ * there crashes the gem's `&.gsub` (NoMethodError — probe
+ * probe-latex-degenerate.rb, 2026-08-10: color-symbol-forced-true/nan/int-5
+ * all raise), where the SAME symbol nested in a formula is `to_s`'d by the
+ * join first and renders (color-formula-forced-true =>
+ * `"{\color{true} x}"`). The admission is per level, exactly as probed.
  */
-function colorAsciimathValue(value: unknown, at: string): string | null {
+function colorAsciimathValue(value: unknown, at: string, topLevel = false): string | null {
   if (!isNode(value)) {
     throw new RenderError(
       `${at}: cannot render ${describeSlot(value)} — the gem raises NoMethodError here`,
@@ -67,6 +75,18 @@ function colorAsciimathValue(value: unknown, at: string): string | null {
       const id = value.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
       if (VALUE_RENDERED_SYMBOL_IDS.has(id)) {
         // `Symbols::Symbol#to_asciimath`: `value.nil? ? "" : value`.
+        if (topLevel && value.value !== null && value.value !== undefined) {
+          if (typeof value.value !== "string") {
+            throw new RenderError(
+              `${at}: holds ${describeSlot(value.value)} — the gem's color strip sends ` +
+                "gsub to the raw to_asciimath answer, and only a string answers it " +
+                "(NoMethodError there)",
+              FORMAT,
+              "color",
+            );
+          }
+          return value.value;
+        }
         return interpolatedValue(value.value, "color", at);
       }
       const literal = COLOR_ASCIIMATH_SYMBOLS.get(id);

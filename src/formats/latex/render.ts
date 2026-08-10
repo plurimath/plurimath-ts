@@ -97,15 +97,27 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
  * open paren falls back to `.`).
  */
 function renderNode(node: MathNode, context: RenderContext): string | null {
+  // `kind` is read exactly ONCE per dispatch: a stateful getter that answered
+  // validation with a valid kind can answer a later read with anything, and
+  // three reads (index, error message, error kind) could see three values.
+  const kind = node.kind;
+  // The own-property check is the runtime guard, §5's other half:
+  // compile-time closure does not bind JavaScript callers, and the entry
+  // validator's rejection must hold even off the public path. `Object.hasOwn`
+  // rather than an `undefined` check because the table is a plain object
+  // literal: an inherited Object.prototype key is not undefined — "toString"
+  // indexes to a real function (which would render as a string, no error) and
+  // "__proto__" to Object.prototype itself. The literal stays directly
+  // annotated with the mapped type (not laundered through
+  // `Object.assign(Object.create(null), ...)`, whose `any`-typed target makes
+  // the result `any` and silently disables the missing-entry compile error).
+  if (!Object.hasOwn(RENDERERS, kind)) {
+    throw new RenderError(`Unknown node kind "${kind}"`, FORMAT, kind);
+  }
   // Correlating the node with its table entry is the one step TypeScript
   // cannot infer over a mapped type; the cast is sound because the table is
-  // total and each entry takes exactly its own kind. The runtime guard is
-  // §5's other half: compile-time closure does not bind JavaScript callers,
-  // and the entry validator's rejection must hold even off the public path.
-  const render = RENDERERS[node.kind] as RenderFn<NodeKind> | undefined;
-  if (render === undefined) {
-    throw new RenderError(`Unknown node kind "${node.kind}"`, FORMAT, node.kind);
-  }
+  // total and each entry takes exactly its own kind.
+  const render = RENDERERS[kind] as RenderFn<NodeKind>;
   return render(node, context);
 }
 

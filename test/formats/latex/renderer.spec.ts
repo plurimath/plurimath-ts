@@ -16,7 +16,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { MissingSymbolDataError, RenderError } from "../../../src/core/errors";
+import { MissingSymbolDataError, ParseError, RenderError } from "../../../src/core/errors";
 import {
   BarNode,
   BaseNode,
@@ -415,6 +415,29 @@ describe("the big operators", () => {
     );
   });
 
+  it("strips a long internal whitespace run in linear time, as Ruby's C strip does", () => {
+    // The latex mirror of PR #10 review finding 1: `rubyStrip`'s end-anchored
+    // trailing regex had no start anchor, so a validator-passing tree — an
+    // `int` whose third slot is a formula of N bare (nil-rendering) fontStyle
+    // children then a symbol, rendering "\int " + N spaces + "x" — made every
+    // position in the internal run a retry point: quadratic, where the gem's
+    // C-implemented `strip` is linear. Calibrated in this environment
+    // 2026-08-10: pre-fix the regex pair took 120/449/1,741 ms at
+    // n = 10k/20k/40k end-to-end through `toLatex` (~4x per doubling); the
+    // index-scan strip takes ~30 ms at 40k. The 750 ms bound is generous
+    // headroom for a slow machine, yet less than half the quadratic
+    // implementation's measured time — this test ran red against it.
+    const children: unknown[] = [];
+    for (let i = 0; i < 40_000; i += 1) children.push({ kind: "fontStyle" });
+    children.push({ kind: "symbol", value: "x" });
+    const tree = { kind: "int", parameterThree: { kind: "formula", value: children } };
+    const start = performance.now();
+    const out = toLatex(tree as never);
+    const elapsed = performance.now() - start;
+    expect(out).toBe(`\\int ${" ".repeat(40_000)}x`);
+    expect(elapsed).toBeLessThan(750);
+  });
+
   it("nary falls back to \\int for a nil first value — or a nil RENDER", () => {
     // Probes nary/*: "f_{a}^{b} c", "\int", "f", "\int" (nil-render), "" (empty render).
     expect(
@@ -516,6 +539,51 @@ describe("font styles", () => {
     expect(
       toLatex(new FormulaNode({ value: [new FontStyleNode({ name: "BoldItalic" }), x()] })),
     ).toBe(" x");
+    // The bare carrier — name undefined — keeps the same value-alone render
+    // (`FontStyle#to_latex` is `parameter_one&.to_latex`, `font_style.rb:53`).
+    expect(toLatex(new FontStyleNode({ parameterOne: x(), parameterTwo: "bold" }))).toBe("x");
+  });
+
+  it("a defined name outside the measured subclass set raises rather than guessing", () => {
+    // Oracle census (probe-latex-name-guards.rb on the pinned oracle,
+    // 2026-08-10): FontStyle has exactly 14 subclasses — the 8 overriding
+    // `to_latex` with a `\math..` command and the 6 value-alone ones above.
+    // Any other defined name names no measured gem class, so it fails loudly
+    // instead of rendering the value alone (the fail-loud carrier policy
+    // every asciimath carrier pins, TODO.plan/deferred.md). The bare carrier
+    // — name undefined — keeps its measured value-alone render.
+    expect(() => toLatex(new FontStyleNode({ name: "<unmeasured>", parameterOne: x() }))).toThrow(
+      RenderError,
+    );
+  });
+});
+
+describe("the formula carrier's name slot", () => {
+  it("Mstyle — the census's one formula alias — renders exactly as Formula does", () => {
+    // Probe probe-latex-name-guards.rb on the pinned oracle (2026-08-10):
+    // `Mstyle.instance_method(:to_latex).owner` is `Plurimath::Math::Formula`
+    // — `formula/mstyle.rb` defines no override — and `Mstyle.new([x, 2])`
+    // renders "x 2", byte-identical to `Formula.new([x, 2])`; the bare-string
+    // crash edge is identical too (both raise Math::ParseError).
+    expect(toLatex(new FormulaNode({ name: "Mstyle", value: [x(), two()] }))).toBe("x 2");
+    expect(toLatex(new FormulaNode({ value: [x(), two()] }))).toBe("x 2");
+    expect(() => toLatex(new FormulaNode({ name: "Mstyle", value: [x(), "raw"] }))).toThrow(
+      RenderError,
+    );
+  });
+
+  it("a defined name outside the measured alias set raises rather than guessing", () => {
+    // The census folds exactly one class onto the formula carrier (Mstyle —
+    // probe-latex-name-guards.rb: Formula's subclass list is ["Mstyle"]).
+    // "Mrow" here forges Math::Formula::Mrow onto the formula kind — the
+    // model implements Mrow as its own kind, so the name has no measured
+    // render on THIS carrier; rendering the carrier default for it would
+    // diverge silently. The bare carrier — name undefined — keeps its
+    // measured render.
+    expect(() => toLatex(new FormulaNode({ name: "Mrow", value: [x()] }))).toThrow(RenderError);
+    expect(() => toLatex(new FormulaNode({ name: "<unmeasured>", value: [x()] }))).toThrow(
+      RenderError,
+    );
   });
 });
 
@@ -603,6 +671,178 @@ describe("degenerate value slots the gem's pipeline cannot produce", () => {
       toLatex({ kind: "number", value: { kind: "number", value: "2" } } as never),
     ).toThrow(RenderError);
   });
+
+  it("describes an object slot with its article — an object, never a object", () => {
+    // Wording-only pin on the message the object-value ruling above raises:
+    // `describeSlot` gets an explicit object branch (the c9d4034 pattern in
+    // core's describeValue), so the error reads "an object".
+    expect(() => toLatex({ kind: "number", value: { a: 1 } } as never)).toThrow(/holds an object/);
+  });
+
+  it("a finite number raises: JS cannot witness Ruby's Integer/Float split", () => {
+    // Probe probe-latex-degenerate.rb on the pinned oracle (2026-08-10):
+    //   Number.new(5).to_latex(options: {})      => "5"
+    //   Number.new(5.0).to_latex(options: {})    => "5.0"
+    //   Number.new(1.0e21).to_latex(options: {}) => "1.0e+21" (String() says "1e+21")
+    // The JS number 5 is both Ruby values at once, so there is no single
+    // byte answer to match — loud, never a guess. The forced-ivar symbol
+    // probes answer the same (symbol-forced-int-5 interpolates "5").
+    expect(() => toLatex({ kind: "number", value: 5 } as never)).toThrow(RenderError);
+    expect(() => toLatex({ kind: "symbol", value: 5 } as never)).toThrow(RenderError);
+  });
+});
+
+describe("degenerate value slots the gem spells reproducibly", () => {
+  // The mirror half of the ruling above: where the gem RENDERS a degenerate
+  // slot and its bytes are reproducible, this port renders the same bytes —
+  // class-for-class parity cuts both ways. All pins probed on the pinned
+  // oracle (probe-latex-degenerate.rb, 2026-08-10, ruby 4.0.1). The latex
+  // sites are NOT the asciimath sites: `Fenced` and `Color`'s symbol branch
+  // crash in the gem on exactly these shapes (next describe), so only the
+  // TextRenderer/interpolation sites admit them.
+  it("a boolean number value renders as Ruby spells it", () => {
+    // Probes: number-true => "true"; number-false => "false" (TextRenderer's
+    // result on the :latex path, same bytes as :asciimath).
+    expect(toLatex({ kind: "number", value: true } as never)).toBe("true");
+    expect(toLatex({ kind: "number", value: false } as never)).toBe("false");
+  });
+
+  it("the three non-finite floats interpolate as Ruby spells them", () => {
+    // Probes: number-nan => "NaN"; number-inf => "Infinity"; number-neg-inf
+    // => "-Infinity" — each the one JS number with exactly one Ruby preimage
+    // and a byte-identical to_s, unlike every finite number (see above).
+    expect(toLatex({ kind: "number", value: Number.NaN } as never)).toBe("NaN");
+    expect(toLatex({ kind: "number", value: Number.POSITIVE_INFINITY } as never)).toBe("Infinity");
+    expect(toLatex({ kind: "number", value: Number.NEGATIVE_INFINITY } as never)).toBe("-Infinity");
+  });
+
+  it("a base symbol spells the same primitives, alone and inside a formula join", () => {
+    // Probes: symbol-forced-true (a forced @value, the only route past the
+    // constructor's to_s coercion) returns the raw true from to_latex, and
+    // the formula join interpolates it: formula-symbol-forced-true =>
+    // "true y"; formula-symbol-forced-nan => "NaN y". At this port's string
+    // boundary the raw value spells the same bytes directly.
+    expect(toLatex({ kind: "symbol", value: true } as never)).toBe("true");
+    expect(toLatex({ kind: "symbol", value: Number.NaN } as never)).toBe("NaN");
+    expect(
+      toLatex({
+        kind: "formula",
+        value: [
+          { kind: "symbol", value: true },
+          { kind: "symbol", value: "y" },
+        ],
+      } as never),
+    ).toBe("true y");
+  });
+
+  it("color's number branch rides the same TextRenderer spelling", () => {
+    // Probes: color-number-true => "{\color{true} x}"; color-number-nan =>
+    // "{\color{NaN} x}" — Number#to_asciimath hands Color a real string, so
+    // the gsub strip never sees a raw object. A finite number stays loud
+    // (color-number-int-5 renders "5", ambiguous from JS — see above).
+    const color = (value: unknown) =>
+      ({
+        kind: "color",
+        parameterOne: { kind: "number", value },
+        parameterTwo: { kind: "symbol", value: "x" },
+      }) as never;
+    expect(toLatex(color(true))).toBe("{\\color{true} x}");
+    expect(toLatex(color(Number.NaN))).toBe("{\\color{NaN} x}");
+    expect(() => toLatex(color(5))).toThrow(RenderError);
+  });
+
+  it("color admits the primitives NESTED in a formula, where the gem's join to_s's them", () => {
+    // Probes: color-formula-forced-true => "{\color{true} x}";
+    // color-formula-forced-nan => "{\color{NaN} x}" — Formula's join
+    // stringifies the raw symbol value before Color's gsub runs, so the
+    // nested shape renders where the top-level symbol shape crashes (next
+    // describe).
+    const color = (value: unknown) =>
+      ({
+        kind: "color",
+        parameterOne: { kind: "formula", value: [{ kind: "symbol", value }] },
+        parameterTwo: { kind: "symbol", value: "x" },
+      }) as never;
+    expect(toLatex(color(true))).toBe("{\\color{true} x}");
+    expect(toLatex(color(Number.NaN))).toBe("{\\color{NaN} x}");
+  });
+
+  it("Left/Right stay a hash-lookup miss — every degenerate shape is a dot", () => {
+    // Probes: left-true, left-nan, left-int-5, left-hash, left-node — all
+    // "\left ." (LEFT_RIGHT_PARENS[non-string] is a Ruby hash miss), unlike
+    // the asciimath side's interpolation. Nothing to admit and nothing to
+    // refuse.
+    expect(toLatex(new UnaryFunctionNode({ name: "Left", parameterOne: true as never }))).toBe(
+      "\\left .",
+    );
+    expect(
+      toLatex(new UnaryFunctionNode({ name: "Left", parameterOne: Number.NaN as never })),
+    ).toBe("\\left .");
+    expect(toLatex(new UnaryFunctionNode({ name: "Left", parameterOne: 5 as never }))).toBe(
+      "\\left .",
+    );
+    expect(toLatex(new UnaryFunctionNode({ name: "Right", parameterOne: true as never }))).toBe(
+      "\\right .",
+    );
+  });
+});
+
+describe("degenerate value slots the gem's LATEX path crashes on", () => {
+  // The per-site half of the admission ruling: the same shapes Number and
+  // Symbol admit above CRASH on the gem's latex-only read paths, so this
+  // port raises there — the admission set is probed per site, never copied
+  // from the asciimath answer (probe-latex-degenerate.rb, 2026-08-10).
+  it("fenced slots refuse every non-string value — latex_paren sends include?", () => {
+    // Probes: fenced-number-true/false/nan/int-5/node => NoMethodError
+    // (undefined method 'include?'); fenced-symbol-forced-true/nan => the
+    // same. A hash slips THROUGH include? (Hash has one) into interpolation
+    // bytes String() cannot match (fenced-number-hash => "{a: 1} x )"), so
+    // it raises under the standing degenerate-input ruling instead.
+    const fenced = (value: unknown, kind = "number") =>
+      ({
+        kind: "fenced",
+        parameterOne: { kind, value },
+        parameterTwo: [{ kind: "symbol", value: "x" }],
+        parameterThree: { kind: "symbol", id: "Paren::Rround", value: null },
+      }) as never;
+    expect(() => toLatex(fenced(true))).toThrow(RenderError);
+    expect(() => toLatex(fenced(false))).toThrow(RenderError);
+    expect(() => toLatex(fenced(Number.NaN))).toThrow(RenderError);
+    expect(() => toLatex(fenced(5))).toThrow(RenderError);
+    expect(() => toLatex(fenced({ a: 1 }))).toThrow(RenderError);
+    expect(() => toLatex(fenced(true, "symbol"))).toThrow(RenderError);
+    expect(() => toLatex(fenced(Number.NaN, "symbol"))).toThrow(RenderError);
+  });
+
+  it("a base Paren in a fenced slot refuses the same shapes before rendering", () => {
+    // Probe fenced-base-paren-ivar-true => NoMethodError ('include?' for
+    // true): a Paren-classed slot renders via to_latex, whose raw value then
+    // hits latex_paren. The abstract base is the one Paren id that renders
+    // its stored value, so it is the one Paren id that can carry the crash.
+    expect(() =>
+      toLatex({
+        kind: "fenced",
+        parameterOne: { kind: "symbol", id: "Paren", value: true },
+        parameterTwo: [{ kind: "symbol", value: "x" }],
+      } as never),
+    ).toThrow(RenderError);
+  });
+
+  it("color's top-level symbol branch refuses non-strings — the gsub strip crashes there", () => {
+    // Probes: color-symbol-forced-true/false/nan/int-5 => NoMethodError
+    // (undefined method 'gsub'): Symbol#to_asciimath answers Color with the
+    // raw value, and only a string answers the &.gsub that follows.
+    const color = (value: unknown) =>
+      ({
+        kind: "color",
+        parameterOne: { kind: "symbol", value },
+        parameterTwo: { kind: "symbol", value: "x" },
+      }) as never;
+    expect(() => toLatex(color(true))).toThrow(RenderError);
+    expect(() => toLatex(color(false))).toThrow(RenderError);
+    expect(() => toLatex(color(Number.NaN))).toThrow(RenderError);
+    expect(() => toLatex(color(5))).toThrow(RenderError);
+  });
 });
 
 describe("linebreak", () => {
@@ -621,6 +861,51 @@ describe("linebreak", () => {
       ),
     ).toBe("\\\\ v");
     expect(toLatex(new LinebreakNode({ parameterOne: sym("v"), attributes: {} }))).toBe("\\\\ v");
+    // Probe probe-latex-linebreak.rb: hash-other-key and hash-style-array
+    // both => "\\ x" — any hash whose :linebreakstyle is not exactly "after"
+    // takes the before branch.
+    expect(toLatex(new LinebreakNode({ parameterOne: sym("v"), attributes: { foo: "bar" } }))).toBe(
+      "\\\\ v",
+    );
+    expect(
+      toLatex(
+        new LinebreakNode({ parameterOne: sym("v"), attributes: { linebreakstyle: ["after"] } }),
+      ),
+    ).toBe("\\\\ v");
+  });
+
+  it("non-hash attributes raise, as the gem's attributes[:linebreakstyle] send does", () => {
+    // Probe probe-latex-linebreak.rb on the pinned oracle (ruby 4.0.1),
+    // Linebreak.new(Symbols::Symbol.new("x"), ATTRS).to_latex(options: {}):
+    //   [] / ["after"] / "after" / 5 => TypeError: no implicit conversion of
+    //     Symbol into Integer
+    //   nil / true / false / 1.5 / Number.new("2") => NoMethodError:
+    //     undefined method '[]' for <the value>
+    // Only a hash answers the send; everything else is RenderError here (the
+    // §5 crash mapping — never the silent before-form these shapes rendered
+    // when `.linebreakstyle` was read behind a nil-only guard).
+    const linebreak = (attributes: unknown) =>
+      ({
+        kind: "linebreak",
+        parameterOne: { kind: "number", value: "2" },
+        attributes,
+      }) as never;
+    expect(() => toLatex(linebreak([]))).toThrow(RenderError);
+    expect(() => toLatex(linebreak(["after"]))).toThrow(RenderError);
+    expect(() => toLatex(linebreak("after"))).toThrow(RenderError);
+    expect(() => toLatex(linebreak(5))).toThrow(RenderError);
+    expect(() => toLatex(linebreak(1.5))).toThrow(RenderError);
+    expect(() => toLatex(linebreak(null))).toThrow(RenderError);
+    expect(() => toLatex(linebreak(true))).toThrow(RenderError);
+    expect(() => toLatex(linebreak(false))).toThrow(RenderError);
+    // A node in the attributes slot: Ruby's Number instance has no `[]`
+    // either — NoMethodError there, RenderError here.
+    expect(() => toLatex(linebreak({ kind: "number", value: "2" }))).toThrow(RenderError);
+    expect(() => toLatex(linebreak([]))).toThrow(/linebreak\.attributes/);
+    // The bare node never reaches the attributes read (probe
+    // linebreak-bare-nil-attrs => "\\ ") — the parameterOne guard
+    // short-circuits first, exactly as the gem's `unless parameter_one` does.
+    expect(toLatex({ kind: "linebreak", attributes: null } as never)).toBe("\\\\ ");
   });
 });
 
@@ -932,6 +1217,20 @@ describe("generic tables", () => {
     expect(() => toLatex(new TableNode({ value: null }))).toThrow(RenderError);
     expect(() => toLatex(new TableNode({ value: [] }))).toThrow(RenderError);
   });
+
+  it("a defined name outside the measured subclass set raises rather than guessing", () => {
+    // Oracle census (probe-latex-name-guards.rb on the pinned oracle,
+    // 2026-08-10): Table has exactly 10 subclasses — 8 overriding `to_latex`
+    // (Matrix and its six env siblings, Array) and 2 inheriting it (Cases,
+    // Eqarray) — every one pinned in these suites. Any other defined name
+    // names no measured gem class, and the generic-table default render for
+    // it would diverge silently — so it fails loudly instead (the fail-loud
+    // carrier policy, TODO.plan/deferred.md). The bare carrier — name
+    // undefined — keeps its measured generic render.
+    expect(() => toLatex(new TableNode({ name: "<unmeasured>", value: [tr(x())] }))).toThrow(
+      RenderError,
+    );
+  });
 });
 
 describe("td and tr", () => {
@@ -1160,6 +1459,265 @@ describe("named tables", () => {
     expect(() =>
       toLatex(new TableNode({ name: "Array", value: null, openParen: null, closeParen: null })),
     ).toThrow(RenderError);
+  });
+});
+
+describe("inputs that defeat the walk itself", () => {
+  // Class-for-class parity holds even where the INPUT breaks the walker
+  // rather than any one read: the gem raises (probe-latex-depth.rb:
+  // SystemStackError by depth 4,550, direct and through the Formula
+  // boundary), and `Formula#to_latex` wraps every render-time StandardError
+  // into ParseError (`formula.rb:437`, wrap_render_error) — so nothing may
+  // escape this boundary as a raw RangeError or a hostile accessor's own
+  // error.
+  it("a tree deeper than the call stack raises RenderError, not RangeError", () => {
+    let node: unknown = { kind: "number", value: "1" };
+    for (let i = 0; i < 50_000; i += 1) node = { kind: "sqrt", parameterOne: node };
+    expect(() => toLatex(node as never)).toThrow(RenderError);
+  });
+
+  it("depths the gem still renders take the too-deep branding, never the generic wrap", () => {
+    // The deep-tree parity window (TODO.plan/deferred.md): the gem's own
+    // recursive to_latex survives nested-sqrt chains to roughly 4,500 frames
+    // on default stacks — depths 2,000/3,000/4,000/4,500 render
+    // 14,001/21,001/28,001/31,501 chars on the pinned oracle (2026-08-10,
+    // probe-latex-depth.rb; SystemStackError from 4,550) — while this walk's
+    // JavaScript stack runs out earlier. WHERE it runs out moves with engine
+    // state, so this pin sweeps the window and holds every failure to the
+    // BRANDING: genuine stack exhaustion is the too-deep RenderError
+    // whichever walk hits its ceiling first, never the generic mid-walk
+    // wrap. Seen red exactly so: pre-fix, every failing depth escaped as a
+    // raw RangeError ("Maximum call stack size exceeded").
+    const failures: string[] = [];
+    for (const depth of [1_400, 1_800, 2_200, 2_600, 3_000, 3_400, 3_800, 4_200]) {
+      let node: unknown = { kind: "number", value: "1" };
+      for (let i = 0; i < depth; i += 1) node = { kind: "sqrt", parameterOne: node };
+      try {
+        toLatex(node as never);
+      } catch (error) {
+        expect(error, `depth ${depth}`).toBeInstanceOf(RenderError);
+        failures.push(`depth ${depth}: ${(error as RenderError).message}`);
+      }
+    }
+    expect(failures).not.toEqual([]);
+    for (const failure of failures) {
+      expect(failure).toContain("nests too deep");
+      expect(failure).not.toContain("mid-walk");
+    }
+  });
+
+  it("a read that throws mid-render surfaces as RenderError, like the gem's boundary wrap", () => {
+    // The getter answers validation's single read, then throws on the
+    // renderer's — deterministic, and only the render-phase wrap can catch it.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new Error("hostile read");
+        return "1";
+      },
+    };
+    expect(() => toLatex(node as never)).toThrow(RenderError);
+  });
+
+  it("a kind that flips to an inherited key after validation raises the unknown-kind RenderError", () => {
+    // Validation reads `kind` once; the dispatcher's own read is a second
+    // one, and a stateful getter can answer it with an inherited
+    // Object.prototype key. On a plain-object table "toString" and
+    // "hasOwnProperty" resolve to real functions (a value comes back, no
+    // error at all), "constructor" to `Object` itself (callable too), and
+    // "__proto__" to Object.prototype (a TypeError from calling a
+    // non-function). All are unknown kinds and must take the unknown-kind
+    // RenderError, naming the kind the dispatcher actually read.
+    for (const flip of ["toString", "__proto__", "constructor", "hasOwnProperty"]) {
+      let reads = 0;
+      const node = {
+        get kind(): string {
+          reads += 1;
+          return reads > 1 ? flip : "number";
+        },
+        value: "1",
+      };
+      let caught: unknown;
+      try {
+        toLatex(node as never);
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught, flip).toBeInstanceOf(RenderError);
+      expect((caught as RenderError).message, flip).toContain(flip);
+      expect((caught as RenderError).kind, flip).toBe(flip);
+    }
+  });
+
+  it("a getter throwing the port's own ParseError mid-render wraps as RenderError, message kept", () => {
+    // Only `RenderError` is this walk's surface (plus the symbol table's
+    // `MissingSymbolDataError`, pinned below). A hostile getter re-throwing
+    // the port's ParseError is not a parse failure — letting it out unwrapped
+    // would let the input forge an error class the render boundary never
+    // produces. The gem's own boundary re-raises only ITS ParseError, and
+    // that class maps to RenderError on this walk, not to the port's
+    // ParseError.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new ParseError("forged parse failure", "x", "latex", 0);
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toLatex(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).message).toContain("forged parse failure");
+  });
+
+  it("the symbol table's MissingSymbolDataError still passes through — the walk's own surface", () => {
+    // `renderSymbol` throws it for an id the generated table does not carry
+    // (`src/render/symbol/latex.ts`) — the one non-RenderError
+    // PlurimathError a kind file throws on purpose, and a public error code
+    // (MISSING_SYMBOL_DATA); the boundary's pass-through must not re-type it.
+    let caught: unknown;
+    try {
+      toLatex({ kind: "symbol", id: "NoSuchSymbol", value: null } as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(MissingSymbolDataError);
+    expect((caught as MissingSymbolDataError).code).toBe("MISSING_SYMBOL_DATA");
+    expect((caught as MissingSymbolDataError).symbolId).toBe("NoSuchSymbol");
+  });
+
+  it("a getter throwing a forged MissingSymbolDataError post-validation wraps as RenderError", () => {
+    // The pass-through above is for the symbol table's OWN throw
+    // (`src/render/symbol/latex.ts`), which the throw site records in a
+    // module-private WeakSet. A hostile getter that answers validation's read
+    // and then throws its own `MissingSymbolDataError` mid-render is an input
+    // failure wearing the class: `instanceof` alone would let it out
+    // unwrapped, reporting MISSING_SYMBOL_DATA for a walk the symbol table
+    // never faulted — the same forgery the ParseError pin above closes for
+    // the parse surface. Unrecorded, it wraps like any other mid-walk throw,
+    // message kept.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new MissingSymbolDataError("Forged", "latex");
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toLatex(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).code).toBe("RENDER_ERROR");
+    expect((caught as RenderError).message).toContain("Forged");
+  });
+
+  it("a genuine missing-symbol error carries no discoverable mark — no symbol to steal", () => {
+    // The pass-through mark is MEMBERSHIP in the throw site's module-private
+    // WeakSet, never anything stored on the instance: a symbol-property
+    // brand was discoverable right here — `Object.getOwnPropertySymbols` on
+    // a caught genuine error handed the input the key, and with it the
+    // forgery the next pin closes. Nothing observable may sit on the error.
+    let genuine: unknown;
+    try {
+      toLatex({ kind: "symbol", id: "NoSuchSymbol", value: null } as never);
+    } catch (error) {
+      genuine = error;
+    }
+    expect(genuine).toBeInstanceOf(MissingSymbolDataError);
+    expect(Object.getOwnPropertySymbols(genuine as object)).toEqual([]);
+  });
+
+  it("a forged object carrying everything stolen off a caught genuine error wraps as RenderError", () => {
+    // The exact theft a symbol-property brand allowed: catch the walk's own
+    // missing-symbol throw, lift its own symbols with
+    // `Object.getOwnPropertySymbols`, copy them — values included — onto a
+    // forged look-alike, and throw that mid-render. WeakSet membership cannot
+    // be read off an instance, so the forgery wraps like any other input
+    // throw. Replaying the genuine INSTANCE itself remains possible — the
+    // narrower residue named in render-shared.ts, accepted with the
+    // pass-through pin above.
+    let genuine: unknown;
+    try {
+      toLatex({ kind: "symbol", id: "NoSuchSymbol", value: null } as never);
+    } catch (error) {
+      genuine = error;
+    }
+    const forged = Object.create(MissingSymbolDataError.prototype) as Record<PropertyKey, unknown>;
+    forged.code = "MISSING_SYMBOL_DATA";
+    forged.symbolId = "Forged";
+    forged.message = "forged missing-symbol pass-through";
+    for (const stolen of Object.getOwnPropertySymbols(genuine as object)) {
+      forged[stolen] = (genuine as Record<PropertyKey, unknown>)[stolen];
+    }
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw forged;
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toLatex(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).code).toBe("RENDER_ERROR");
+  });
+
+  it("a thrown value whose own toString throws still wraps, described by the fallback phrase", () => {
+    // The boundary's description of a mid-walk throw is a `String(error)`
+    // call — input code that can itself throw. The description falls back to
+    // a fixed phrase, so the boundary never leaks a raw value.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) {
+          throw {
+            toString(): string {
+              throw new Error("secondary");
+            },
+          };
+        }
+        return "1";
+      },
+    };
+    let caught: unknown;
+    try {
+      toLatex(node as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).message).toContain("a thrown value that cannot be described");
+  });
+
+  it("a frozen tree renders — nothing on the render path writes to the input", () => {
+    // Ruby renders frozen nodes fine; so must this port.
+    const tree = Object.freeze({
+      kind: "frac",
+      parameterOne: Object.freeze({ kind: "number", value: "1" }),
+      parameterTwo: Object.freeze({ kind: "symbol", id: "Plus", value: null }),
+    });
+    expect(toLatex(tree as never)).toBe("\\frac{1}{+}");
   });
 });
 

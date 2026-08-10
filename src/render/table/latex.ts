@@ -29,6 +29,7 @@ import {
   type RenderContext,
   renderChild,
   s,
+  unreachableName,
 } from "../../formats/latex/render-shared";
 import {
   LATEX_ALIGNMENT_LETTERS,
@@ -62,13 +63,41 @@ const MATRIX_STYLE_TABLE_NAMES: ReadonlySet<string> = new Set([
  */
 const ALIGNMENT_LETTERS: ReadonlyMap<string, string> = LATEX_ALIGNMENT_LETTERS;
 
+/**
+ * The class names this carrier has measured behaviour for — every `Table`
+ * subclass in the gem (probe-latex-name-guards.rb on the pinned oracle,
+ * 2026-08-10: exactly these 10 — 8 overriding `to_latex`, `Cases` and
+ * `Eqarray` inheriting it). The AsciiMath transform builds only bare tables,
+ * so like the asciimath table carrier's set this one is not derivable from
+ * the transform registry; it is hand-listed, and every entry is pinned by a
+ * behavioural render in `test/formats/latex/renderer.spec.ts` ("renders
+ * every aliased subclass with its constructor parens as the gem does") —
+ * dropping one from this set turns that pin red. A defined name outside the
+ * set raises before dispatch, because rendering the generic-table default
+ * for an unmeasured class would diverge silently (`unreachableName` in
+ * `../../formats/latex/render-shared.ts`).
+ */
+const MEASURED_TABLE_NAMES: ReadonlySet<string> = new Set([
+  "Align",
+  "Array",
+  "Bmatrix",
+  "Cases",
+  "Eqarray",
+  "Matrix",
+  "Multline",
+  "Pmatrix",
+  "Split",
+  "Vmatrix",
+]);
+
 export function renderTable(node: NodeOf<"table">, context: RenderContext): string {
   const name = node.name;
+  if (name !== undefined && !MEASURED_TABLE_NAMES.has(name)) throw unreachableName(node.kind, name);
   if (name !== undefined && MATRIX_STYLE_TABLE_NAMES.has(name))
     return renderMatrixTable(node, name, context);
   if (name === "Array") return renderArrayTable(node, context);
-  // The bare carrier, `Cases`, `Eqarray` — and any other name, which has no
-  // override in the gem — take `Table#to_latex` (`table.rb:79`).
+  // The bare carrier, `Cases` and `Eqarray` — no override in the gem — take
+  // `Table#to_latex` (`table.rb:79`).
   return renderGenericTable(node, context);
 }
 

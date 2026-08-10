@@ -54,7 +54,37 @@ pass byte-identical); each is pinned by a test in
   when a format that constructs those classes lands (MathML/OMML input,
   P4+).
 
-### AsciiMath renderer: deep-tree parity window below the gem's stack ceiling
+### LaTeX renderer: the same edges, probed on the gem's latex path
+
+**Trigger: any of these surfacing in a real consumer report, or a review
+deciding differently.**
+
+The latex mirror of the three-edges entry above, with the per-path answers
+its own probes gave (probe-latex-degenerate.rb on the pinned oracle,
+2026-08-10) — none reachable from AsciiMath input, each pinned in
+`test/formats/latex/renderer.spec.ts`:
+
+- **`toLatex` returns `""` where the gem returns `nil`** (a bare
+  `FontStyle`/`Mpadded`, a base symbol with no value) — same boundary
+  mapping as `toAsciimath`, internally propagated so composite behaviour
+  matches (`Nary` falls back to `"\int"` on it).
+- **A class name outside the measured set raises `RenderError`** — the
+  unary/binary/ternary carriers' generated reachable sets, plus the
+  hand-listed table (10), fontStyle (8 command + 6 value-alone) and formula
+  (`Mstyle`) sets, enumeration-probed complete (probe-latex-name-guards.rb).
+- **Degenerate value slots are admitted per SITE, not per format.**
+  `Number`/`Symbol` value slots render booleans and the non-finite floats
+  (the gem's TextRenderer/interpolation spells them byte-identically) and
+  refuse finite numbers, hashes and nodes — the same admission set as
+  asciimath, but established by latex probes. `Fenced`'s paren slots and
+  `Color`'s top-level symbol branch refuse ALL non-strings instead: the
+  gem's `latex_paren` sends `include?` and the color strip sends `gsub` to
+  the raw value (NoMethodError there), while the same symbol NESTED in a
+  formula renders through the join's `to_s` — probed both ways.
+  `Left`/`Right` refuse nothing: every degenerate shape is a Ruby hash-miss
+  dot, unlike the asciimath interpolation path.
+
+### Renderer deep-tree parity window below the gem's stack ceiling
 
 **Trigger: a consumer report with a real tree that deep, or an iterative-walk
 redesign of the validate/render recursion.**
@@ -62,30 +92,40 @@ redesign of the validate/render recursion.**
 The gem's recursive `to_asciimath` survives nested-sqrt chains to roughly
 4,656 frames on default stacks before SystemStackError (measured on the
 pinned oracle, 2026-08-10: depths 2,000/3,000/4,000 render
-12,001/18,001/24,001 chars). The port's recursive walk exhausts the
-JavaScript call stack earlier and environment-dependently — measured
-full-render ceilings between ~1,000 and ~2,500 across vitest and plain-node
-runs (the PR #10 review measured ~1,562–1,660) — so in the window between
-the two ceilings, roughly 1,600–4,656, a valid tree the gem still renders
-raises the too-deep `RenderError` here. Beyond the gem's own ceiling both
-sides raise. The too-deep message states the window rather than claiming the
-gem fails at the same depth, and the branding is pinned across depths
-1,400–4,200 in `test/formats/asciimath/renderer.spec.ts`: genuine stack
-exhaustion takes the too-deep rejection whichever side hits its ceiling
-first, never the generic mid-walk wrap.
+12,001/18,001/24,001 chars); its `to_latex` to roughly 4,500
+(probe-latex-depth.rb, same day: 4,500 renders 31,501 chars, 4,550 raises).
+The port's recursive walks exhaust the JavaScript call stack earlier and
+environment-dependently — measured full-render ceilings between ~1,000 and
+~2,500 across vitest and plain-node runs (the PR #10 review measured
+~1,562–1,660) — so in the window between the two ceilings a valid tree the
+gem still renders raises the too-deep `RenderError` here. Beyond the gem's
+own ceiling both sides raise. Each format's too-deep message states its own
+window rather than claiming the gem fails at the same depth, and the
+branding is pinned across depths 1,400–4,200 in
+`test/formats/asciimath/renderer.spec.ts` and
+`test/formats/latex/renderer.spec.ts`: genuine stack exhaustion takes the
+too-deep rejection whichever side hits its ceiling first, never the generic
+mid-walk wrap.
 
-### The table-name guard set is hand-listed
+### The carrier name-guard sets are partly hand-listed
 
-**Trigger: the next generator extension touching table data, or any gem bump.**
+**Trigger: the next generator extension touching table or font-style data,
+or any gem bump.**
 
-`MEASURED_TABLE_NAMES` in `src/render/table/asciimath.ts` hand-lists the ten
-Table subclass basenames because no generated slice carries them — the
-AsciiMath transform builds only bare tables, so the census never emits a
-table-subclass list. The set was enumeration-probed complete against the gem
-(2026-08-07), and every entry is held by the existing renders-every-aliased-
-table-subclass pin, so a dropped or drifted name turns a test red. Still: it
-is gem-derived data typed by hand, so it carries this exception entry until
-the generator owns it.
+`MEASURED_TABLE_NAMES` in `src/render/table/asciimath.ts` and
+`src/render/table/latex.ts` hand-list the ten Table subclass basenames
+because no generated slice carries them — the AsciiMath transform builds
+only bare tables, so the census never emits a table-subclass list. The same
+applies to `MEASURED_FORMULA_NAMES` (`Mstyle`, both formats) and, on the
+latex side only, the six value-alone FontStyle names in
+`MEASURED_FONT_STYLE_NAMES` (the asciimath twin derives all fourteen from
+its transform registry, which the latex format may not import — §3's
+generated-data closure). Every set was enumeration-probed complete against
+the gem (2026-08-07 asciimath, 2026-08-10 latex,
+probe-latex-name-guards.rb), and every entry is held by an existing
+behavioural pin, so a dropped or drifted name turns a test red. Still: it is
+gem-derived data typed by hand, so it carries this exception entry until the
+generator owns it.
 
 ### Three AsciiMath render tables — generated
 
@@ -271,7 +311,11 @@ Known divergence. The gem's `Fenced#to_latex` interpolates a formula, mrow,
 or table sitting in a paren slot through `#inspect` — an object memory
 address, nondeterministic run to run. The port raises `RenderError` instead
 of reproducing address bytes; only gem-accepted deterministic input renders.
-Same policy as the color rule and the AsciiMath Left/Right refusal.
+A HASH in the slot is the one non-string that survives the gem's
+`latex_paren` (`Hash#include?` answers) and interpolates `"{a: 1}"` — bytes
+`String()` cannot match — so it takes the same refusal
+(probe-latex-degenerate.rb, 2026-08-10). Same policy as the color rule and
+the AsciiMath Left/Right refusal.
 
 ### LaTeX: Color renders only the measured AsciiMath fragment
 

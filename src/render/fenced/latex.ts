@@ -16,7 +16,6 @@ import {
   classBasename,
   describeSlot,
   FORMAT,
-  interpolatedValue,
   isNode,
   type NodeOf,
   type RenderContext,
@@ -68,13 +67,24 @@ function fencedSlotValue(
   switch (field.kind) {
     case "symbol": {
       const id = field.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
-      if (id === "Paren" || id.startsWith("Paren::")) return context.render(field);
+      if (id === "Paren") {
+        // The abstract base is the one Paren id that renders its stored
+        // value, so it is the one Paren id whose render can hand
+        // `latex_paren` a raw non-string — the same crash surface the
+        // non-paren arms guard below (probe fenced-base-paren-ivar-true =>
+        // NoMethodError). Checked BEFORE rendering, so the admission the
+        // symbol renderer makes for interpolation contexts never leaks into
+        // this string-operating one.
+        strictParenValue(field.value, at);
+        return context.render(field);
+      }
+      if (id.startsWith("Paren::")) return context.render(field);
       if (field.value === null || field.value === undefined) return null;
-      return interpolatedValue(field.value, "fenced", at);
+      return strictParenValue(field.value, at);
     }
     case "number":
       if (field.value === null || field.value === undefined) return null;
-      return interpolatedValue(field.value, "fenced", at);
+      return strictParenValue(field.value, at);
     case "text": {
       const text = field.parameterOne;
       if (text === null || text === undefined) return null;
@@ -102,6 +112,29 @@ function fencedSlotValue(
         "fenced",
       );
   }
+}
+
+/**
+ * The strict half of `symbol_or_paren`'s raw `value` read: only nil and a
+ * string are admissible HERE, although the symbol renderer itself admits
+ * booleans and the non-finite floats for interpolation contexts. This slot
+ * feeds `latex_paren`, which sends `include?` to the value — NoMethodError
+ * in the gem for booleans, every number, and nodes (probe
+ * probe-latex-degenerate.rb, 2026-08-10: fenced-number-true/nan/int-5/node
+ * and fenced-symbol-forced-true all raise) — and a hash slips through
+ * `include?` (Hash has one) into interpolation bytes `String()` cannot
+ * match (fenced-number-hash renders `"{a: 1} x )"`). Loud either way, never
+ * silently divergent bytes.
+ */
+function strictParenValue(value: unknown, at: string): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") return value;
+  throw new RenderError(
+    `${at}: holds ${describeSlot(value)} — the gem's latex_paren sends include? to it ` +
+      "(NoMethodError there), or interpolates bytes String() cannot match",
+    FORMAT,
+    "fenced",
+  );
 }
 
 /** `Fenced#latex_paren` (`fenced.rb:246`): nil → "", `{:`/`:}` lose the colon. */

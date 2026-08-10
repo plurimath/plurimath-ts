@@ -8,13 +8,12 @@
  * consultation here, and the context parameter is dropped.
  */
 
-import { MissingSymbolDataError } from "../../core/index";
 import { RUBY_ABSTRACT_CLASSES } from "../../core/nodes";
 import { NODE_SPECS } from "../../core/normalize";
 import {
   classBasename,
-  FORMAT,
   interpolatedValue,
+  missingSymbolDataError,
   type NodeOf,
 } from "../../formats/latex/render-shared";
 import { LATEX_SYMBOLS } from "../../generated/latex/symbols";
@@ -50,6 +49,9 @@ export function renderSymbol(node: NodeOf<"symbol">): string | null {
     return text;
   }
   const literal = LATEX_SYMBOLS.get(id);
-  if (literal === undefined) throw new MissingSymbolDataError(id, FORMAT);
+  // The factory records the error as this walk's own throw (a
+  // module-private WeakSet), so the boundary can tell it from an input's
+  // imitation (see render-shared.ts).
+  if (literal === undefined) throw missingSymbolDataError(id);
   return literal;
 }

@@ -101,6 +101,19 @@ describe("the options matrix (probe-mathml-edges.rb)", () => {
   });
 });
 
+describe("the options argument itself", () => {
+  it("rejects a primitive or array options value instead of coercing it", () => {
+    // Object.hasOwn would ToObject-coerce "oops" and silently render with
+    // empty options — a surprise, not the gem's keyword-hash contract.
+    const node = sinX();
+    for (const bad of ["oops", 5, true, ["displayStyle"]] as const) {
+      expect(() => toMathml(node, bad as never)).toThrow(RenderError);
+    }
+    expect(() => toMathml(node)).not.toThrow();
+    expect(() => toMathml(node, null)).not.toThrow();
+  });
+});
+
 describe("the deferred options, refused by name", () => {
   const cases: readonly (readonly [string, Record<string, unknown>])[] = [
     ["formatter", { formatter: {} }],

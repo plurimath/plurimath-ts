@@ -77,6 +77,20 @@ const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
  */
 export function toMathml(node: MathNode, options?: MathmlOptions | null): string {
   assertMathNodeShape(node, FORMAT);
+  // The gem's contract is a keyword hash: a primitive here would silently
+  // coerce through `Object.hasOwn`'s ToObject and behave as empty options —
+  // a surprise, not a rendering. Arrays are not keyword hashes either.
+  if (
+    options !== null &&
+    options !== undefined &&
+    (typeof options !== "object" || Array.isArray(options))
+  ) {
+    throw new RenderError(
+      `options: expected a plain options object, found ${typeof options === "object" ? "an array" : `a ${typeof options}`}`,
+      FORMAT,
+      "formula",
+    );
+  }
   const opts: Record<string, unknown> =
     options === null || options === undefined ? {} : (options as Record<string, unknown>);
   try {

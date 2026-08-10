@@ -46,6 +46,9 @@
 #   src/generated/asciimath/render-tables.ts
 #                                          the three tables to_asciimath reads
 #                                          that the parse tables cannot supply
+#   src/generated/latex/render-tables.ts   the six measured tables to_latex
+#                                          reads that no other slice supplies,
+#                                          plus the census carrier name lists
 #   src/generated/<format>/symbols.ts      symbol id -> static descriptor
 #   src/generated/<format>/exceptions.ts   the context-axis exception matrix
 #   src/generated/context-axes.ts          the probe manifest and its results
@@ -2592,6 +2595,372 @@ module CorpusGenerator
     }
   end
 
+  # --- latex render tables -------------------------------------------------
+
+  # The six measured tables `to_latex` reads that no other generated slice
+  # supplies, consumed by `src/formats/latex/renderer.ts`. Every entry is
+  # measured off the runtime — a live render per row, never a source read
+  # (PORTING-STANDARDS.md) — because the sources lie where probes cannot:
+  # `Hash#invert` keeps the LAST key for a duplicated value,
+  # `validate_function_formula` is not `Utility::UNARY_CLASSES` (ker, liminf,
+  # limsup and sup sit in that parse-side list yet take the wrap), and the
+  # parse tables collapse `bb`, `mathbf` and `textbf` into one class.
+
+  LATEX_RENDER_CELL = "x"
+  LATEX_RENDER_FONT_SENTINEL = "zzfontzz"
+
+  def latex_render_probe_symbol(value)
+    Plurimath::Math::Symbols::Symbol.new(value)
+  end
+
+  def latex_render_probe_row
+    Plurimath::Math::Function::Tr.new(
+      [Plurimath::Math::Function::Td.new([latex_render_probe_symbol(LATEX_RENDER_CELL)])],
+    )
+  end
+
+  # `Latex::Constants::LEFT_RIGHT_PARENTHESIS.invert`, exactly as
+  # `UnaryFunction#latex_paren` reads it (`unary_function.rb:246`): the stored
+  # paren string -> the command `Left`/`Right` emit, `.` on a miss. Ruby's
+  # `Hash#invert` keeps the LAST key for a duplicated value, so the duplicates
+  # are asserted rather than assumed; every surviving row is then verified
+  # through both a `Left` and a `Right` render, plus a miss and a nil proving
+  # the dot fallback the port's renderer mirrors.
+  def latex_left_right_parens
+    constant = Plurimath::Latex::Constants::LEFT_RIGHT_PARENTHESIS
+    unless constant.is_a?(::Hash)
+      raise Error, "LEFT_RIGHT_PARENTHESIS is #{constant.class}; expected a Hash"
+    end
+    raise Error, "LEFT_RIGHT_PARENTHESIS is empty; every Left/Right would render \".\"" if constant.empty?
+
+    constant.each do |command, stored|
+      next if command.is_a?(::Symbol) && stored.is_a?(::String)
+
+      raise Error, "LEFT_RIGHT_PARENTHESIS pair #{command.inspect} => " \
+                   "#{stored.inspect} is not Symbol => String"
+    end
+
+    inverted = constant.invert
+    constant.group_by { |_command, stored| stored }
+      .select { |_stored, pairs| pairs.length > 1 }
+      .each do |stored, pairs|
+        next if inverted[stored] == pairs.last.first
+
+        raise Error, "Hash#invert no longer keeps the last key for #{stored.inspect}; " \
+                     "the emitted row would not match what latex_paren returns"
+      end
+
+    pairs = inverted.map { |stored, command| [stored, command.to_s] }
+    pairs.each do |stored, command|
+      left = Plurimath::Math::Function::Left.new(stored).to_latex(options: {})
+      right = Plurimath::Math::Function::Right.new(stored).to_latex(options: {})
+      next if left == "\\left #{command}" && right == "\\right #{command}"
+
+      raise Error, "Left/Right holding #{stored.inspect} rendered #{left.inspect} / " \
+                   "#{right.inspect}, not the inverted constant's #{command.inspect}"
+    end
+
+    miss = "zzmisszz"
+    raise Error, "the miss probe #{miss.inspect} is now listed; probe with another" if inverted.key?(miss)
+
+    [miss, nil].each do |stored|
+      rendered = Plurimath::Math::Function::Left.new(stored).to_latex(options: {})
+      next if rendered == "\\left ."
+
+      raise Error, "Left holding #{stored.inspect} rendered #{rendered.inspect}; a miss " \
+                   "no longer falls back to \".\", which the port's renderer mirrors"
+    end
+
+    pairs
+  end
+
+  # The unary names the renderer must NOT wrap in `{ \left ( … \right ) }`:
+  # the reachable `UnaryFunction` classes whose `validate_function_formula`
+  # answers false, measured per live instance and verified through an
+  # `Overset` render (`latex_wrapped`, binary_function.rb:159). The set is
+  # NOT `Utility::UNARY_CLASSES` — ker, liminf, limsup and sup sit in that
+  # parse-side list yet take the wrap. `Left` and `Right` also answer false
+  # but carry their own renderer dispatch, so they are asserted here and
+  # omitted from the emitted list.
+  def latex_plain_wrapped_unary_names(registry)
+    classes = registry.fetch("entries")
+      .select { |entry| entry["carrier"] == "Math::Function::UnaryFunction" }
+      .map { |entry| Object.const_get("Plurimath::#{entry['rubyClass']}") }
+      .uniq
+    if classes.empty?
+      raise Error, "no registry entry carries Math::Function::UnaryFunction; " \
+                   "the measured domain is gone"
+    end
+
+    # `Tr` is constructed by the transform without `get_class`, so the
+    # renderer lists it as reachable; it is measured with the rest.
+    classes << Plurimath::Math::Function::Tr
+
+    plain = []
+    wrapping = []
+    classes.sort_by(&:name).each do |klass|
+      basename = class_key(klass).split("::").last
+      instance = if klass == Plurimath::Math::Function::Tr
+                   latex_render_probe_row
+                 else
+                   klass.new(latex_render_probe_symbol(LATEX_RENDER_CELL))
+                 end
+      answer = instance.validate_function_formula
+      inner = instance.to_latex(options: {})
+      rendered = Plurimath::Math::Function::Overset.new(instance, nil).to_latex(options: {})
+      expected = answer ? "{ \\left ( #{inner} \\right ) }" : "{#{inner}}"
+      unless rendered == "\\overset#{expected}"
+        raise Error, "#{class_key(klass)} answers validate_function_formula " \
+                     "#{answer} but an Overset render produced #{rendered.inspect}; " \
+                     "latex_wrapped no longer reads the answer this table records"
+      end
+      (answer ? wrapping : plain) << basename
+    end
+
+    if wrapping.empty?
+      raise Error, "every reachable unary class answers false; a table holding " \
+                   "the whole domain distinguishes nothing"
+    end
+    raise Error, "no reachable unary class answers false; the plain set is gone" if plain.empty?
+
+    %w[Left Right].each do |name|
+      next if plain.delete(name)
+
+      raise Error, "#{name} no longer answers validate_function_formula false; " \
+                   "the renderer's dedicated #{name} dispatch hard-codes that answer"
+    end
+
+    plain.sort
+  end
+
+  # The class basenames the AsciiMath transform reaches through one carrier:
+  # the `get_class` census rows whose census disposition aliases them onto it
+  # — the same rows the asciimath transform-registry slice carries, projected
+  # for the latex renderer's carrier dispatch and emitted latex-side so the
+  # latex module graph never imports another format's data slice
+  # (ARCHITECTURE.md §3, the generated-data closure). Membership only — the
+  # renderer asks `has` — so the list is deduplicated and sorted. The classes
+  # the transform constructs directly without `get_class` (`Tr`, `Power`,
+  # `Mod`, `Td`) sit outside the census rows and stay renderer-side.
+  def latex_carrier_basenames(registry, carrier)
+    names = registry.fetch("entries")
+      .select { |entry| entry["carrier"] == carrier }
+      .map { |entry| entry["rubyClass"].split("::").last }
+      .uniq.sort
+    if names.empty?
+      raise Error, "no registry entry carries #{carrier}; the measured domain is gone"
+    end
+
+    names
+  end
+
+  # FontStyle subclass basename -> the `\math..` command its `to_latex`
+  # override wraps its value in, measured by rendering a live instance of
+  # every subclass and reading the wrapper back. A subclass either wraps —
+  # `\command{value}` with a sentinel, `\command{}` with nil — or renders the
+  # value alone (nil in, Ruby-nil out, like the bare carrier); a third render
+  # shape is a new upstream behaviour and stops generation.
+  def latex_font_style_commands
+    root = Plurimath::Math::Function::FontStyle
+    subclasses = all_descendants(root).uniq
+    raise Error, "FontStyle has no subclasses; the model did not load" if subclasses.empty?
+
+    commands = {}
+    subclasses.sort_by(&:name).each do |klass|
+      basename = class_key(klass).split("::").last
+      wrapped = klass.new(latex_render_probe_symbol(LATEX_RENDER_FONT_SENTINEL))
+        .to_latex(options: {})
+      bare = klass.new(nil).to_latex(options: {})
+
+      if wrapped == LATEX_RENDER_FONT_SENTINEL
+        unless bare.nil?
+          raise Error, "#{basename} renders its value alone but returned " \
+                       "#{bare.inspect} for a nil value, not Ruby nil; the " \
+                       "value-alone contract no longer holds"
+        end
+        next
+      end
+
+      match = wrapped.match(
+        /\A(\\[A-Za-z]+)\{#{Regexp.escape(LATEX_RENDER_FONT_SENTINEL)}\}\z/,
+      )
+      unless match && bare == "#{match[1]}{}"
+        raise Error, <<~MESSAGE
+          #{class_key(klass)} rendered #{wrapped.inspect} (nil: #{bare.inspect}),
+          neither the value alone nor a backslash-command wrapper. A third render
+          shape is a NEW measurement; widen this probe before emitting the table.
+        MESSAGE
+      end
+
+      commands[basename] = match[1]
+    end
+
+    if commands.empty?
+      raise Error, "no FontStyle subclass wraps its value; an empty command " \
+                   "table is a failure, not a finding"
+    end
+
+    carrier = root.new(latex_render_probe_symbol(LATEX_RENDER_FONT_SENTINEL), "bold")
+      .to_latex(options: {})
+    unless carrier == LATEX_RENDER_FONT_SENTINEL &&
+           root.new(nil, "bold").to_latex(options: {}).nil?
+      raise Error, "the bare FontStyle carrier no longer renders its value " \
+                   "alone; the renderer's fallback arm is measured against that"
+    end
+
+    commands
+  end
+
+  # Symbol id -> the environment a named table's open paren selects
+  # (`matrix_class`, table.rb:257: `MATRICES.invert[open_paren.to_matrices]`),
+  # measured through a `Table::Matrix` render per defining paren. Exactly the
+  # parens defining `to_matrices` are emitted; a paren without it raises
+  # NoMethodError in the gem (verified below) — RenderError in the port.
+  def latex_matrix_environments
+    parens = all_descendants(Plurimath::Math::Symbols::Paren).uniq.sort_by(&:name)
+    raise Error, "Paren has no subclasses; the model did not load" if parens.empty?
+
+    defining = parens.select { |klass| klass.new.respond_to?(:to_matrices) }
+    if defining.empty?
+      raise Error, "no Paren subclass defines to_matrices; every named table " \
+                   "with an open paren would crash"
+    end
+
+    environments = {}
+    defining.each do |klass|
+      rendered = Plurimath::Math::Function::Table::Matrix
+        .new([latex_render_probe_row], klass.new).to_latex(options: {})
+      match = rendered.match(
+        /\A\\begin\{(\w+)\}#{Regexp.escape(LATEX_RENDER_CELL)}\\end\{\1\}\z/,
+      )
+      unless match
+        raise Error, "a Matrix with open paren #{class_key(klass)} rendered " \
+                     "#{rendered.inspect}, not a \\begin{env}…\\end{env} pair; " \
+                     "the environment cannot be read off the render"
+      end
+      environments[symbol_id(klass)] = match[1]
+    end
+
+    missing = (parens - defining).first
+    if missing.nil?
+      raise Error, "every paren defines to_matrices; the miss probe needs a " \
+                   "non-defining one"
+    end
+
+    begin
+      rendered = Plurimath::Math::Function::Table::Matrix
+        .new([latex_render_probe_row], missing.new).to_latex(options: {})
+      raise Error, "a Matrix with open paren #{class_key(missing)} rendered " \
+                   "#{rendered.inspect} instead of raising NoMethodError; the " \
+                   "port's RenderError there no longer mirrors the gem"
+    rescue NoMethodError
+      # The measured crash: the port raises RenderError where the gem raises
+      # NoMethodError (ARCHITECTURE.md §5).
+    end
+
+    environments
+  end
+
+  # `Utility::ALIGNMENT_LETTERS.invert`, exactly as `array_args` (array.rb:33)
+  # and `latex_columnalign` (table.rb:270) read it: a td's `columnalign` ->
+  # its column letter. Every row is verified through a `Table::Array` render,
+  # plus one unlisted alignment proving a miss contributes nothing (the
+  # whole-row `.` fallback the port's renderer mirrors).
+  def latex_alignment_letters
+    constant = Plurimath::Utility::ALIGNMENT_LETTERS
+    unless constant.is_a?(::Hash)
+      raise Error, "ALIGNMENT_LETTERS is #{constant.class}; expected a Hash"
+    end
+    raise Error, "ALIGNMENT_LETTERS is empty; every descriptor would fall back to \".\"" if constant.empty?
+
+    constant.each do |letter, alignment|
+      next if letter.is_a?(::Symbol) && alignment.is_a?(::String)
+
+      raise Error, "ALIGNMENT_LETTERS pair #{letter.inspect} => " \
+                   "#{alignment.inspect} is not Symbol => String"
+    end
+
+    inverted = constant.invert
+    unless inverted.length == constant.length
+      raise Error, "ALIGNMENT_LETTERS duplicates a value; Hash#invert dropped a row"
+    end
+
+    pairs = inverted.map { |alignment, letter| [alignment, letter.to_s] }
+    pairs.each do |alignment, letter|
+      td = Plurimath::Math::Function::Td.new(
+        [latex_render_probe_symbol(LATEX_RENDER_CELL)], { columnalign: alignment }
+      )
+      rendered = Plurimath::Math::Function::Table::Array
+        .new([Plurimath::Math::Function::Tr.new([td])]).to_latex(options: {})
+      next if rendered == "\\begin{array}{#{letter}}#{LATEX_RENDER_CELL}\\end{array}"
+
+      raise Error, "an array table with columnalign #{alignment.inspect} rendered " \
+                   "#{rendered.inspect}; the descriptor no longer reads this table"
+    end
+
+    miss = "top"
+    raise Error, "the miss probe #{miss.inspect} is now listed; probe with another" if inverted.key?(miss)
+
+    miss_td = Plurimath::Math::Function::Td.new(
+      [latex_render_probe_symbol(LATEX_RENDER_CELL)], { columnalign: miss }
+    )
+    rendered = Plurimath::Math::Function::Table::Array
+      .new([Plurimath::Math::Function::Tr.new([miss_td])]).to_latex(options: {})
+    unless rendered == "\\begin{array}.#{LATEX_RENDER_CELL}\\end{array}"
+      raise Error, "an unlisted columnalign rendered #{rendered.inspect}; a miss no " \
+                   "longer falls back to the \".\" descriptor the port's renderer mirrors"
+    end
+
+    pairs
+  end
+
+  # The ids the corpus and sweep put in a `Color` first slot — a policy list,
+  # deliberately minimal (TODO.plan/deferred.md, "Color renders only the
+  # measured AsciiMath fragment"): the renderer refuses any other id loudly
+  # rather than importing the asciimath format (ARCHITECTURE.md §3).
+  LATEX_COLOR_SLICE_IDS = %w[Plus Eqno].freeze
+
+  # Symbol id -> the `to_asciimath` value `Color#to_latex` interpolates for
+  # its first slot (color.rb:41), measured per id and verified through a full
+  # Color render — the `/\s/` strip included.
+  def latex_color_asciimath_symbols
+    LATEX_COLOR_SLICE_IDS.map do |id|
+      klass = Object.const_get("Plurimath::#{SYMBOL_NAMESPACE}#{id}")
+      value = symbol_instance(klass).to_asciimath(options: {})
+      unless value.is_a?(::String) && !value.empty?
+        raise Error, "#{id}#to_asciimath returned #{value.inspect}; the color " \
+                     "slice expects a non-empty string"
+      end
+
+      rendered = Plurimath::Math::Function::Color.new(
+        symbol_instance(klass), latex_render_probe_symbol(LATEX_RENDER_CELL)
+      ).to_latex(options: {})
+      expected = "{\\color{#{value.gsub(/\s/, '')}} #{LATEX_RENDER_CELL}}"
+      unless rendered == expected
+        raise Error, "Color holding #{id} rendered #{rendered.inspect}, not " \
+                     "#{expected.inspect}; to_latex no longer routes the first " \
+                     "slot through to_asciimath"
+      end
+
+      [id, value]
+    end
+  end
+
+  def build_latex_render_tables(registry)
+    {
+      "left_right_parens" => latex_left_right_parens,
+      "plain_wrapped_unary" => latex_plain_wrapped_unary_names(registry),
+      "font_style_commands" => latex_font_style_commands,
+      "matrix_environments" => latex_matrix_environments,
+      "alignment_letters" => latex_alignment_letters,
+      "color_asciimath" => latex_color_asciimath_symbols,
+      "unary_carrier_names" =>
+        latex_carrier_basenames(registry, "Math::Function::UnaryFunction"),
+      "binary_carrier_names" =>
+        latex_carrier_basenames(registry, "Math::Function::BinaryFunction"),
+    }
+  end
+
   # --- TypeScript emission -------------------------------------------------
 
   # Biome's string rule: the configured quote wins unless the other one needs
@@ -3291,6 +3660,121 @@ module CorpusGenerator
     write_ts(File.join(out_root, "mathml", "render-tables.ts"), sections)
   end
 
+  def emit_latex_render_tables_file(out_root, tables)
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        LaTeX render tables: the six measured tables `to_latex` reads that
+        no other generated slice supplies, plus the two carrier name lists
+        the latex dispatch reads, consumed by
+        `src/formats/latex/renderer.ts`.
+
+        Every measured entry is read off the runtime — a live render per
+        row, never a source read (PORTING-STANDARDS.md), each re-verified
+        by the generator with a render that actually uses it. The sources
+        lie where the probes cannot: `Hash#invert` keeps the LAST key for
+        a duplicated value, and `validate_function_formula` is not
+        `Utility::UNARY_CLASSES` — ker, liminf, limsup and sup sit in that
+        parse-side list yet take the `{ \\left ( … \\right ) }` wrap.
+
+        The two carrier name lists are not measured here: they are the
+        same `get_class` census rows the asciimath transform-registry
+        slice carries, projected to class basenames per carrier and
+        emitted latex-side, because per-format slices are self-contained
+        by design — the latex module graph never imports another format's
+        data (ARCHITECTURE.md §3, the generated-data closure).
+      TEXT
+      ts_tuple_map(
+        "LATEX_LEFT_RIGHT_PARENS",
+        "ReadonlyMap<string, string>",
+        tables["left_right_parens"],
+        doc: "`Latex::Constants::LEFT_RIGHT_PARENTHESIS.invert`, exactly as\n" \
+             "`UnaryFunction#latex_paren` reads it: the stored paren string ->\n" \
+             "the command `Left`/`Right` emit, in the gem's invert order.\n" \
+             "`&#x2016;` maps to `\\|` because Ruby's `Hash#invert` keeps the\n" \
+             "LAST key for a duplicated value (asserted at generation); a miss\n" \
+             "renders `.` (verified).",
+      ),
+      ts_const(
+        "LATEX_PLAIN_WRAPPED_UNARY_NAMES",
+        "readonly string[]",
+        tables["plain_wrapped_unary"],
+        doc: "The unary names whose class answers `validate_function_formula`\n" \
+             "false, so `latex_wrapped` gives them plain braces — measured per\n" \
+             "class through an `Overset` render, sorted. NOT\n" \
+             "`Utility::UNARY_CLASSES`: ker, liminf, limsup and sup sit there\n" \
+             "yet take the wrap. `Left` and `Right` also answer false\n" \
+             "(asserted) but carry their own renderer dispatch, so they are\n" \
+             "omitted here. Membership only — the renderer asks `has` — so\n" \
+             "the order is not semantic.",
+      ),
+      ts_tuple_map(
+        "LATEX_FONT_STYLE_COMMANDS",
+        "ReadonlyMap<string, string>",
+        tables["font_style_commands"],
+        doc: "FontStyle subclass basename -> the `\\math..` command its\n" \
+             "`to_latex` override wraps its value in, measured per class\n" \
+             "(`Bold.new(x)` -> `\\mathbf{x}`), sorted by basename. A subclass\n" \
+             "absent here was measured rendering its value alone, exactly like\n" \
+             "the bare carrier (Ruby-nil out on nil in).",
+      ),
+      ts_tuple_map(
+        "LATEX_MATRIX_ENVIRONMENTS",
+        "ReadonlyMap<string, string>",
+        tables["matrix_environments"],
+        doc: "Symbol id -> the environment a named table's open paren selects\n" \
+             "(`matrix_class`: `MATRICES.invert[open_paren.to_matrices]`),\n" \
+             "measured through a `Table::Matrix` render per paren, sorted by\n" \
+             "class name. Exactly the parens defining `to_matrices`; any other\n" \
+             "open paren raises NoMethodError in the gem (verified) —\n" \
+             "RenderError in the port.",
+      ),
+      ts_tuple_map(
+        "LATEX_ALIGNMENT_LETTERS",
+        "ReadonlyMap<string, string>",
+        tables["alignment_letters"],
+        doc: "`Utility::ALIGNMENT_LETTERS.invert`, as `array_args` and\n" \
+             "`latex_columnalign` read it: a td's `columnalign` -> its column\n" \
+             "letter, in the gem's invert order. An unlisted alignment\n" \
+             "contributes nothing (verified: the whole-row fallback is `.`).",
+      ),
+      ts_tuple_map(
+        "LATEX_COLOR_ASCIIMATH_SYMBOLS",
+        "ReadonlyMap<string, string>",
+        tables["color_asciimath"],
+        doc: "Symbol id -> the `to_asciimath` value `Color#to_latex`\n" \
+             "interpolates for its first slot, for exactly the ids the\n" \
+             "corpus+sweep put there — a deliberately minimal policy slice\n" \
+             "(TODO.plan/deferred.md); the renderer raises a parity-gap\n" \
+             "RenderError for any other id.",
+      ),
+      ts_const(
+        "LATEX_UNARY_CARRIER_NAMES",
+        "readonly string[]",
+        tables["unary_carrier_names"],
+        doc: "The class basenames the AsciiMath transform reaches through\n" \
+             "the `Math::Function::UnaryFunction` carrier — the same\n" \
+             "`get_class` census rows the asciimath transform-registry\n" \
+             "slice carries, projected and emitted latex-side so the latex\n" \
+             "carrier dispatch imports no other format's slice. The\n" \
+             "renderer adds `Tr` itself (constructed without `get_class`).\n" \
+             "Membership only — deduplicated and sorted.",
+      ),
+      ts_const(
+        "LATEX_BINARY_CARRIER_NAMES",
+        "readonly string[]",
+        tables["binary_carrier_names"],
+        doc: "The class basenames the AsciiMath transform reaches through\n" \
+             "the `Math::Function::BinaryFunction` carrier — the same\n" \
+             "`get_class` census rows the asciimath transform-registry\n" \
+             "slice carries, projected and emitted latex-side. The renderer\n" \
+             "adds `Power`, `Mod` and `Td` itself (constructed without\n" \
+             "`get_class`). Membership only — deduplicated and sorted.",
+      ),
+    ]
+
+    write_ts(File.join(out_root, "latex", "render-tables.ts"), sections)
+  end
+
   def emit_context_axes_file(out_root, probe)
     sections = [
       ts_header(<<~TEXT.chomp),
@@ -3508,19 +3992,22 @@ module CorpusGenerator
     MESSAGE
   end
 
-  def write_symbol_data(out_root, data, registry, render_tables, mathml_tables, provenance)
+  def write_symbol_data(out_root, data, registry, render_tables, mathml_tables,
+                        latex_render_tables, provenance)
     written = [
       File.join(out_root, INPUT_FORMAT, "input.ts"),
       File.join(out_root, INPUT_FORMAT, "grammar.ts"),
       File.join(out_root, INPUT_FORMAT, "transform-registry.ts"),
       File.join(out_root, INPUT_FORMAT, "render-tables.ts"),
       File.join(out_root, "mathml", "render-tables.ts"),
+      File.join(out_root, "latex", "render-tables.ts"),
     ]
     emit_input_file(out_root, data["tables"])
     emit_grammar_file(out_root, data["grammar"])
     emit_transform_registry_file(out_root, registry)
     emit_render_tables_file(out_root, render_tables)
     emit_mathml_render_tables_file(out_root, mathml_tables)
+    emit_latex_render_tables_file(out_root, latex_render_tables)
 
     SYMBOL_FORMATS.each do |format|
       emit_symbols_file(out_root, format, data["static"])
@@ -3779,6 +4266,7 @@ module CorpusGenerator
     census = build_census(gem_dir)
     symbols = build_symbol_data
     registry = build_transform_registry(gem_dir, census)
+    latex_render_tables = build_latex_render_tables(registry)
     render_tables = build_render_tables
     mathml_tables = build_mathml_render_tables(registry)
     assert_corpus_symbols_covered!(pin_cases, exclusions, symbols)
@@ -3804,7 +4292,7 @@ module CorpusGenerator
     written << [path, write_manifest(path, bytes, out_root, provenance)]
 
     emitted = write_symbol_data(options[:symbols_out], symbols, registry, render_tables,
-                                mathml_tables, provenance)
+                                mathml_tables, latex_render_tables, provenance)
 
     written.each do |payload_path, manifest_path|
       puts "  #{relative(payload_path, REPO_ROOT)}"
@@ -3825,6 +4313,8 @@ module CorpusGenerator
          "#{render_tables.map { |name, table| "#{name} #{table.length}" }.join(', ')}"
     puts "mathml render tables: " \
          "#{mathml_tables.map { |name, table| "#{name} #{table.length}" }.join(', ')}"
+    puts "latex render tables: " \
+         "#{latex_render_tables.map { |name, table| "#{name} #{table.length}" }.join(', ')}"
     puts "context-dependent: " \
          "#{probe['context_dependent'].map { |e| e['id'] }.join(', ')}"
     probe["dynamic"].each do |entry|

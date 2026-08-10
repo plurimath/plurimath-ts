@@ -409,6 +409,38 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     expect(() => toMathml(formula(frac))).toThrow(RenderError);
   });
 
+  it("color: the attribute value is entity-decoded like every engine write (probe color-entity)", () => {
+    // Parse-reachable: quoted text carries literal entity bytes into the
+    // first slot — Text#to_asciimath emits them, mathml_options strips the
+    // quotes, and the engine wrapper's write decodes them. Oracle bytes:
+    // mathcolor="∑" (U+2211, e2 88 91), NOT the raw "&#x2211;".
+    expect(toMathml(parseAsciimath('color("&#x2211;")(x)'))).toBe(
+      math('    <mstyle mathcolor="∑">\n      <mi>x</mi>\n    </mstyle>'),
+    );
+    // The strip runs BEFORE the decode, as in the gem (mathml_options gsubs
+    // the hash value, update_attrs decodes at write time): a space ENTITY
+    // survives the whitespace strip and decodes into a literal space —
+    // oracle: mathcolor=" a". Decode-then-strip would emit "a".
+    expect(toMathml(parseAsciimath('color("&#x20;a")(x)'))).toBe(
+      math('    <mstyle mathcolor=" a">\n      <mi>x</mi>\n    </mstyle>'),
+    );
+    // The mathbackground key takes the same decoded path (probed hand-built:
+    // the gem's parse never sets backgroundcolor, options only carry it).
+    expect(
+      toMathml(
+        formula(
+          new ColorNode({
+            parameterOne: new FormulaNode({
+              value: [new TextNode({ parameterOne: "&#x2211;" })],
+            }),
+            parameterTwo: x(),
+            options: { backgroundcolor: true },
+          }),
+        ),
+      ),
+    ).toBe(math('    <mstyle mathbackground="∑">\n      <mi>x</mi>\n    </mstyle>'));
+  });
+
   it("bar attributes: entity decode, nil value, empty skips, junk refusals (probes bar-*)", () => {
     // Hand-built nodes: the class constructor shallow-copies its attributes
     // slot ({...value}), so a string or list can never leave it.

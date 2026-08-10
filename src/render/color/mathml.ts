@@ -37,6 +37,7 @@ import {
   present,
   type RenderContext,
   renderChild,
+  setDecodedAttribute,
   slotKind,
 } from "../../formats/mathml/render-shared";
 import { MATHML_COLOR_SYMBOL_LITERALS } from "../../generated/mathml/render-tables";
@@ -51,10 +52,11 @@ export function renderColor(node: NodeOf<"color">, context: RenderContext): XmlE
     const value = colorAsciimath(node.parameterOne, node.kind, true)
       .replace(/[ \t\r\n\f\v]/g, "")
       .replace(/"/g, "");
-    // The engine wrapper's entity decode applies to every attribute write;
-    // color values are plain words in every measured render, and the decode
-    // is a no-op on them, but the gem's pipeline runs it, so this does too.
-    mstyle.setAttribute(key, value);
+    // The engine wrapper's entity decode applies to every attribute write,
+    // and here it is reachable from a parse: a quoted first slot carries its
+    // text's raw bytes (`color("&#x2211;")(x)` renders mathcolor="∑" in the
+    // gem — probe color-entity, oracle bytes e2 88 91).
+    setDecodedAttribute(mstyle, key, value, node.kind, `color.${key}`);
   }
   if (node.parameterTwo !== null && node.parameterTwo !== undefined) {
     mstyle.append(renderChild(node.parameterTwo, context, "color.parameterTwo"));

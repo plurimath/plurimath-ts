@@ -54,6 +54,26 @@ pass byte-identical); each is pinned by a test in
   when a format that constructs those classes lands (MathML/OMML input,
   P4+).
 
+### AsciiMath renderer: deep-tree parity window below the gem's stack ceiling
+
+**Trigger: a consumer report with a real tree that deep, or an iterative-walk
+redesign of the validate/render recursion.**
+
+The gem's recursive `to_asciimath` survives nested-sqrt chains to roughly
+4,656 frames on default stacks before SystemStackError (measured on the
+pinned oracle, 2026-08-10: depths 2,000/3,000/4,000 render
+12,001/18,001/24,001 chars). The port's recursive walk exhausts the
+JavaScript call stack earlier and environment-dependently — measured
+full-render ceilings between ~1,000 and ~2,500 across vitest and plain-node
+runs (the PR #10 review measured ~1,562–1,660) — so in the window between
+the two ceilings, roughly 1,600–4,656, a valid tree the gem still renders
+raises the too-deep `RenderError` here. Beyond the gem's own ceiling both
+sides raise. The too-deep message states the window rather than claiming the
+gem fails at the same depth, and the branding is pinned across depths
+1,400–4,200 in `test/formats/asciimath/renderer.spec.ts`: genuine stack
+exhaustion takes the too-deep rejection whichever side hits its ceiling
+first, never the generic mid-walk wrap.
+
 ### The table-name guard set is hand-listed
 
 **Trigger: the next generator extension touching table data, or any gem bump.**

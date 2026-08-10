@@ -64,9 +64,11 @@
  *     failure at the read's path. No secondary throw travels, so the only
  *     `RangeError` that can reach the entry point is the walk's own
  *     recursion running out of frames on a finite tree, rethrown as the
- *     too-deep `RenderError`. The gem raises on the deep tree too —
- *     SystemStackError, probed — so a raw `RangeError` escape here would
- *     break the raise-for-raise mapping, not just the error type.
+ *     too-deep `RenderError`. The gem raises past its own, HIGHER ceiling
+ *     too (SystemStackError at roughly 4,656 frames on default stacks,
+ *     probed; the band between the two ceilings is a known parity window,
+ *     TODO.plan/deferred.md) — and a raw `RangeError` escape here would
+ *     break the RenderError-or-pass contract, not just the error type.
  *
  * Deliberately NOT checked: field presence beyond the identity slots, and
  * per-field value types. Ruby reads an unassigned ivar as `nil`, so a missing
@@ -202,14 +204,21 @@ export function assertMathNodeShape(value: unknown, format: string): void {
       // own throw — a getter's deliberate `RangeError` included — arrives
       // here already spelled RenderError. What remains is the walk's
       // recursion running out of frames on a finite tree (the cycle check
-      // above would have named a loop). The gem raises on the same tree —
-      // SystemStackError from `to_asciimath` at depth 10,000, direct and
-      // through the Formula boundary alike (probe probe-sweep-depth.rb on
-      // the pinned oracle) — and this contract spells every such raise
-      // RenderError.
+      // above would have named a loop). The gem's own recursion has a
+      // ceiling too, but a HIGHER one — its render survives to roughly
+      // 4,656 frames on default stacks before SystemStackError (probed on
+      // the pinned oracle; depth 10,000 raises there as well,
+      // probe-sweep-depth.rb) — so between this walk's environment-dependent
+      // ceiling and the gem's sits a known parity window where the gem
+      // renders and this port raises (TODO.plan/deferred.md). The message
+      // says exactly that; the renderer's boundary brands its own overflow
+      // with the same words (`src/formats/asciimath/renderer.ts`).
       throw new RenderError(
-        "node: the tree nests too deep for the walk's call stack — the gem's own " +
-          "render of a tree this deep raises SystemStackError",
+        "node: the tree nests too deep for the walk's call stack. The ceiling is " +
+          "environment-dependent and lower than the gem's — the gem's own render " +
+          "survives to roughly 4,656 frames on default stacks before " +
+          "SystemStackError — so a tree in that window renders there and raises " +
+          "here (TODO.plan/deferred.md)",
         format,
         "unknown",
       );

@@ -198,14 +198,33 @@ function sliceWhen(values: readonly unknown[], splitAfter: (value: unknown) => b
 }
 
 /**
+ * The code units Ruby's `String#strip` removes: NUL, TAB, LF, VT, FF, CR,
+ * SPACE — `[\0\t\n\v\f\r ]`, never the no-break space (every member is one
+ * BMP code unit, so `charCodeAt` sees each exactly).
+ */
+function isRubyStripCode(code: number): boolean {
+  return code === 0x20 || (code >= 0x09 && code <= 0x0d) || code === 0;
+}
+
+/**
  * Ruby `String#strip`, which `Utility.symbols_class` applies before its table
  * lookup. Ruby strips ASCII whitespace plus NUL — NOT the Unicode set
  * JavaScript's `trim()` uses, and the difference is reachable: a no-break
  * space is a symbol character here (`grammar.ts` RUBY_SPACE), so `trim()`
  * would strip it and look up the wrong key.
+ *
+ * An index scan, not the regex pair it used to be: the end-anchored trailing
+ * regex is quadratic on an internal whitespace run (the render path's
+ * `rubyStrip` in `./render-shared.ts` was adversarially reachable; this
+ * parse-path twin only ever sees bounded grammar-matched token text, changed
+ * for hygiene so the idiom has no surviving copy). Bytes are unchanged.
  */
 function rubyStrip(text: string): string {
-  return text.replace(/^[\0\t\n\v\f\r ]+/, "").replace(/[\0\t\n\v\f\r ]+$/, "");
+  let start = 0;
+  let end = text.length;
+  while (start < end && isRubyStripCode(text.charCodeAt(start))) start += 1;
+  while (end > start && isRubyStripCode(text.charCodeAt(end - 1))) end -= 1;
+  return start === 0 && end === text.length ? text : text.slice(start, end);
 }
 
 /** Ruby `nil.to_s`/`Slice#to_s`/`String#to_s` for the values `join` walks. */

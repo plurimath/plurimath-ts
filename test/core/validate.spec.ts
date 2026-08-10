@@ -14,11 +14,12 @@
  * stay accepted.
  *
  * Mutation-tested (PORTING-STANDARDS.md, "a suite that guards a guard"):
- * with the validator's body gutted to a no-op, the 26 rejection tests below
+ * with the validator's body gutted to a no-op, the 29 rejection tests below
  * fail and the positive ones stay green; with the cycle detector's
  * ancestor-set never pruned, the shared-object positive test fails alone
- * (both runs 2026-08-07, re-measured after the stringification-fallback
- * change). A guard spec never seen red proves nothing.
+ * (both runs 2026-08-07; re-measured 2026-08-10 after the engine-throw wrap
+ * tests landed — each of those three was also seen red one wrap-removal
+ * mutation at a time). A guard spec never seen red proves nothing.
  */
 
 import { describe, expect, it } from "vitest";
@@ -292,6 +293,58 @@ describe("assertMathNodeShape, the walk itself", () => {
     expect(caught).toBeInstanceOf(RenderError);
     expect((caught as RenderError).message).toContain("node.parameterOne");
     expect((caught as RenderError).message).toContain("a thrown value that cannot be described");
+  });
+
+  it("wraps an engine throw outside any wrapped read — Array.isArray on a revoked proxy", () => {
+    // The reads are wrapped at their sites, but `Array.isArray` is an engine
+    // operation, not a property read — on a revoked proxy it throws a raw
+    // TypeError with no read-site wrap under it, and only the entry point's
+    // catch-all keeps the RenderError-or-pass contract. `toAsciimath` calls
+    // this validator OUTSIDE its own try/catch, so without the catch-all the
+    // raw TypeError escapes the public render path. Seen red exactly so:
+    // with the entry catch-all rethrowing raw, this input's TypeError left
+    // `assertMathNodeShape` unwrapped.
+    const { proxy, revoke } = Proxy.revocable([], {});
+    revoke();
+    const error = failure({ kind: "formula", value: [proxy] });
+    expect(error.message).toContain("reading the tree itself threw");
+    expect(error.message).toContain("node");
+  });
+
+  it("wraps a throwing ownKeys trap as the accessor failure at the hash's path", () => {
+    // `Object.keys` on a hash slot runs the input's ownKeys trap — the one
+    // wrapped read `readProperty` does not cover. Seen red with the
+    // `readOwnKeys` wrap removed: the trap's Error escaped raw.
+    const options = new Proxy(
+      {},
+      {
+        ownKeys(): never {
+          throw new Error("hostile ownKeys");
+        },
+      },
+    );
+    const error = failure({ kind: "sqrt", options });
+    expect(error.message).toContain("node.options");
+    expect(error.message).toContain("hostile ownKeys");
+    expect(error.message).toContain("reading the tree itself threw");
+  });
+
+  it("wraps a throwing getPrototypeOf trap as the accessor failure at the hash's path", () => {
+    // The plain-hash test reads the slot's prototype — a proxy trap the
+    // `readPrototype` wrap covers. Seen red with that wrap removed: the
+    // trap's Error escaped raw.
+    const options = new Proxy(
+      {},
+      {
+        getPrototypeOf(): never {
+          throw new Error("hostile prototype");
+        },
+      },
+    );
+    const error = failure({ kind: "sqrt", options });
+    expect(error.message).toContain("node.options");
+    expect(error.message).toContain("hostile prototype");
+    expect(error.message).toContain("reading the tree itself threw");
   });
 
   it("a getter's own RangeError surfaces as the accessor failure, not the too-deep rejection", () => {

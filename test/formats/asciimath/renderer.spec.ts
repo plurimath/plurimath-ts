@@ -210,6 +210,29 @@ describe("the big operators", () => {
     expect(toAsciimath(new IntNode({ parameterThree: new LinebreakNode({}) }))).toBe("int \\");
   });
 
+  it("strips a long internal whitespace run in linear time, as Ruby's C strip does", () => {
+    // PR #10 review, finding 1: `rubyStrip`'s end-anchored trailing regex had
+    // no start anchor, so a validator-passing tree — an `int` whose third
+    // slot is a formula of N bare (nil-rendering) fontStyle children then a
+    // symbol, rendering "int " + N spaces + "x" — made every position in the
+    // internal run a retry point: quadratic, where the gem's `strip` is
+    // linear. Calibrated in this environment 2026-08-10: pre-fix the regex
+    // pair took 140/509/1,786 ms at n = 10k/20k/40k end-to-end (~4x per
+    // doubling); the index-scan strip takes ~30 ms at 40k. The 750 ms bound
+    // is generous headroom for a slow machine, yet less than half the
+    // quadratic implementation's measured time — this test ran red against
+    // it.
+    const children: unknown[] = [];
+    for (let i = 0; i < 40_000; i += 1) children.push({ kind: "fontStyle" });
+    children.push({ kind: "symbol", value: "x" });
+    const tree = { kind: "int", parameterThree: { kind: "formula", value: children } };
+    const start = performance.now();
+    const out = toAsciimath(tree as never);
+    const elapsed = performance.now() - start;
+    expect(out).toBe(`int ${" ".repeat(40_000)}x`);
+    expect(elapsed).toBeLessThan(750);
+  });
+
   it("nary falls back to int for a missing first slot", () => {
     // Probes kind/Nary/no-first => "int_(2)^(3) 4"; kind/Nary/bare => "int";
     // fontnil/inside-nary-first => "int 2" (a first slot whose own render is
@@ -410,6 +433,29 @@ describe("tables", () => {
         open,
       ).toBe(output);
     }
+  });
+
+  it("a nil-rendering open paren with no close paren raises, as the gem's to_sym does", () => {
+    // Probe probe-table-nil-paren.rb on the pinned oracle (2026-08-10):
+    // `Table.new([])` with `open_paren` a bare FontStyle and `close_paren`
+    // nil => NoMethodError: undefined method 'to_sym' for nil (ParseError
+    // through the Formula boundary) — the close-paren fallback
+    // `parenthesis[lparen.to_sym]` runs on the RENDERED open paren, which a
+    // bare FontStyle renders as Ruby-nil. Seen red exactly so: collapsing
+    // the nil to "" before the lookup rendered "" where the gem raises.
+    const table = { kind: "table", value: [], openParen: { kind: "fontStyle" } };
+    expect(() => toAsciimath(table as never)).toThrow(RenderError);
+    expect(() => toAsciimath(table as never)).toThrow(/to_sym/);
+    // The adjacent branch — close paren PRESENT — never reaches the lookup:
+    // the gem interpolates the nil open to "" and renders (probed ")").
+    expect(
+      toAsciimath({
+        kind: "table",
+        value: [],
+        openParen: { kind: "fontStyle" },
+        closeParen: { kind: "symbol", id: "Paren::Rround", value: null },
+      } as never),
+    ).toBe(")");
   });
 
   it("renders every aliased table subclass as the gem does", () => {
@@ -710,6 +756,41 @@ describe("inputs that defeat the walk itself", () => {
     let node: unknown = { kind: "number", value: "1" };
     for (let i = 0; i < 50_000; i += 1) node = { kind: "sqrt", parameterOne: node };
     expect(() => toAsciimath(node as never)).toThrow(RenderError);
+  });
+
+  it("depths the gem still renders take the too-deep branding, never the generic wrap", () => {
+    // The deep-tree parity window (TODO.plan/deferred.md): the gem's own
+    // recursive render survives nested-sqrt chains to roughly 4,656 frames
+    // on default stacks — depths 2,000/3,000/4,000 render
+    // 12,001/18,001/24,001 chars on the pinned oracle (2026-08-10) — while
+    // this walk's JavaScript stack runs out earlier (full renders reached
+    // ~1,000-2,500 across vitest and plain-node runs). WHERE it runs out
+    // moves with engine state: the validator's smaller frames shrink further
+    // once optimized, so which side overflows first at any fixed depth flips
+    // between cold and warm runs. What must not move is the BRANDING —
+    // genuine stack exhaustion is the too-deep RenderError whichever walk
+    // hits its ceiling first, never the generic mid-walk wrap — so this pin
+    // sweeps the window and holds every failure to it: at least one of these
+    // gem-renderable depths fails here, and no failure may read "mid-walk".
+    // Seen red exactly so: pre-fix, six of the eight depths wrapped the
+    // render walk's RangeError as "rendering failed mid-walk — RangeError:
+    // Maximum call stack size exceeded".
+    const failures: string[] = [];
+    for (const depth of [1_400, 1_800, 2_200, 2_600, 3_000, 3_400, 3_800, 4_200]) {
+      let node: unknown = { kind: "number", value: "1" };
+      for (let i = 0; i < depth; i += 1) node = { kind: "sqrt", parameterOne: node };
+      try {
+        toAsciimath(node as never);
+      } catch (error) {
+        expect(error, `depth ${depth}`).toBeInstanceOf(RenderError);
+        failures.push(`depth ${depth}: ${(error as RenderError).message}`);
+      }
+    }
+    expect(failures).not.toEqual([]);
+    for (const failure of failures) {
+      expect(failure).toContain("nests too deep");
+      expect(failure).not.toContain("mid-walk");
+    }
   });
 
   it("a read that throws mid-render surfaces as RenderError, like the gem's boundary wrap", () => {

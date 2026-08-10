@@ -123,11 +123,103 @@ nothing from *other* layers, and generated data a layer owns under its own
 directory is part of that layer. No module gained a dependency; the previous
 wording banned core from reading its own data, which was never the intent.
 
+### MathML renderer: four `to_mathml` options deferred by name
+
+**Trigger: `intent` — the P2 compat class (its only optional argument);
+`formatter` — P4 number formatting; `unitsml` — the UnitsML decision
+(ARCHITECTURE.md §5); `split_on_linebreak` — the first consumer request, or
+P2's OMML renderer, whose `to_omml` shares `new_line_support`.**
+
+`toMathml` implements `display_style` and `unary_function_spacing` (both
+byte-matched against oracle probes in
+`test/formats/mathml/renderer.spec.ts`). The other four `Formula#to_mathml`
+keywords are refused BY NAME: passing `formatter`, `intent`, `unitsml` or
+`splitOnLinebreak` with any value but `undefined` — `intent: false` and
+`unitsml: {}` (the gem's inert defaults) included — raises a `RenderError`
+naming the option and this file. Silence was the alternative and is the one
+wrong answer: the corpus was generated with defaults, so a renderer that
+ignored `intent: true` would pass every pin and still be wrong for the first
+caller. The refusal extends to the tree side of unitsml: a hand-built node
+smuggling a `unitsml` ATTRIBUTE through an attributes/options hash is refused
+by the same name, which is what makes the gem's `unitsml_post_processing`
+(space insertion, marker stripping — formula.rb:450-473) a proven no-op on
+every tree this renderer emits.
+
+### MathML renderer: `options[:mask]` supports only the inert decoding
+
+**Trigger: UnicodeMath input (P3), whose parser is what constructs masked
+`Int`/`Nary` nodes.**
+
+The gem decodes `options[:mask]` into limit options and rewrites the script
+tag (`Core#get_mask_options`/`masked_tag`, core.rb:502-570; probed: `mask: 1`
+renames `msubsup` to `munderover`). The port reproduces the gem's read gates
+exactly — `Int` checks the KEY (`{mask: nil}` renders, probed byte-identical
+to no mask), `Nary` checks truthiness, a nil `Nary` options hash crashes —
+and refuses any mask whose decoding is not `limits_default`-only, with a
+named `RenderError`. No parse this port supports can construct a live mask.
+
+### MathML renderer: `Color`'s attribute is the gem's one cross-format call
+
+**Trigger: a consumer report with a color argument beyond the measured
+shapes, or the P2 renderer round deciding a shared cross-format helper.**
+
+`Color#mathml_options` builds `mathcolor`/`mathbackground` from
+`parameter_one.to_asciimath` (color.rb:79-88) — the mathml path calling the
+asciimath renderer, which §3's independent format slices deliberately cannot
+do. The port reproduces the measured first-slot shapes from the mathml
+slice's own generated literal table (`MATHML_COLOR_SYMBOL_LITERALS`):
+formulas/mrows of symbols, id symbols (`color(#ff0000)`'s `Eqno` included),
+numbers and texts — every shape the corpus, the 1,642-input sweep and the
+probes reach. Any other first-slot kind (a `Frac` renders
+`mathcolor="frac(x)(y)"` in the gem, probed) raises a named `RenderError`
+instead of approximating a full asciimath render this format does not own.
+
+### MathML renderer: degenerate attribute/options slots refuse where Ruby's `to_s` diverges
+
+**Trigger: the same standing degenerate-input ruling as the asciimath
+renderer's entry above — a real consumer report reopens it.**
+
+Same policy, this format's slots (all pinned in
+`test/formats/mathml/renderer.spec.ts`, each probed): attribute VALUES render
+through Ruby's `to_s` + entity decode (nil → `accent=""`, booleans, the
+non-finite floats), and a finite number, hash or node value refuses; a
+non-empty LIST in an `attributes` slot — which the gem pair-explodes into
+`a="" b=""` (probed bar-array-attrs) — refuses rather than imitates; `Left`/
+`Right` holding a non-string raises (the gem's `<<` crashes — booleans
+included, where their asciimath render interpolates `lefttrue`). And
+`toMathml` returns bytes for `formula`/`mrow` input only: `to_mathml` is
+defined on `Formula` alone in the gem, every other class answering
+NoMethodError.
+
 ## Upstream issues
 
-Defects in the Ruby gem, found while building the port. Both reproduce on a
-clean checkout. Neither is worked around here — the corpus records the gem's
+Defects in the Ruby gem, found while building the port. All reproduce on a
+clean checkout. None is worked around here — the corpus records the gem's
 real behaviour, including its bugs.
+
+### `Matrix#to_mathml_without_math_tag` crashes on any fenced non-round matrix
+
+```ruby
+Plurimath::Math::Function::Table::Matrix.new(
+  [Tr.new([Td.new([x])])], Paren::Lsquare.new, Paren::Rsquare.new
+).to_mathml_without_math_tag(false, options: {})  # => NoMethodError
+```
+
+`table/matrix.rb:51` calls `validate_paren(paren)`, which is defined nowhere
+in the gem — any matrix whose parens survive `table_tag_only?` (both present,
+not lround/rround) dies. The port raises `RenderError` at the same shape
+(probe matrix-square-parens).
+
+### Half the Paren classes crash mtable fencing
+
+`Table#mathml_parenthesis` (table.rb:211) reads `field.encoded` or
+`field.paren_value`; on twelve Paren classes (`Lbbrack`, `Lbrace`, `Lbrack`,
+`Lceil`, `Lfloor`, their five R-side twins, and `UpcaseLangle`/
+`UpcaseRangle`) both readers are missing or PRIVATE — `lbbrack.rb` defines a
+public `encoded`, then shadows it with a private one — so a table fenced
+with one raises NoMethodError. Measured per class into
+`MATHML_TABLE_PARENS` (`text: null` marks the crash set, probe
+table-lbbrack); the port raises `RenderError` on the same ids.
 
 ### `intent: true` raises on a single `UpcaseDd`
 

@@ -2089,6 +2089,509 @@ module CorpusGenerator
     }
   end
 
+  # --- mathml render tables ------------------------------------------------
+
+  # The gem tables `to_mathml_without_math_tag` reads that neither the parse
+  # tables nor the symbol descriptors supply. Same discipline as the
+  # asciimath set: every entry is measured off the runtime and re-verified by
+  # a render (or the gem's own reader method) that actually uses it.
+
+  MATHML_SPACING_PREFIX = "<mrow>\n      <mo rspace=\"thickmathspace\"/>"
+
+  def mathml_probe_formula(node)
+    Plurimath::Math::Formula.new([node])
+  end
+
+  # `Utility::UNARY_CLASSES` as `UnaryFunction#to_mathml_without_math_tag`
+  # reads it (unary_function.rb:31): a member class_name renders `<mi>` inside
+  # the spacing wrap, a non-member (`Hom`, `Arg`, ...) an `<mo>` with no wrap.
+  # Every carrier-default class is verified through a live render against the
+  # arm its membership selects, so both arms stay measured.
+  def mathml_unary_mi_names
+    names = Plurimath::Utility::UNARY_CLASSES
+    raise Error, "UNARY_CLASSES is #{names.class}; expected an Array" unless names.is_a?(::Array)
+    raise Error, "UNARY_CLASSES is empty" if names.empty?
+
+    duplicates = names.tally.select { |_, count| count > 1 }.keys
+    raise Error, "UNARY_CLASSES repeats #{duplicates.join(', ')}" unless duplicates.empty?
+
+    carrier = Plurimath::Math::Function::UnaryFunction
+    defaults = all_descendants(carrier).uniq.select do |klass|
+      klass.instance_method(:to_mathml_without_math_tag).owner == carrier
+    end
+    raise Error, "no unary class renders through the carrier default" if defaults.empty?
+
+    mo_arm_seen = false
+    defaults.sort_by(&:name).each do |klass|
+      name = klass.new(nil).class_name
+      rendered = mathml_probe_formula(klass.new(render_probe_symbol(RENDER_TABLE_CELL))).to_mathml
+      if names.include?(name)
+        next if rendered.include?(MATHML_SPACING_PREFIX) && rendered.include?("<mi>#{name}</mi>")
+
+        raise Error, "#{class_key(klass)} rendered #{rendered.inspect} — not the " \
+                     "spacing-wrapped <mi> shape UNARY_CLASSES membership promises"
+      else
+        mo_arm_seen = true
+        next if rendered.include?("<mo>#{name}</mo>") && !rendered.include?(MATHML_SPACING_PREFIX)
+
+        raise Error, "#{class_key(klass)} rendered #{rendered.inspect} — not the " \
+                     "bare <mo> shape a non-member takes"
+      end
+    end
+    unless mo_arm_seen
+      raise Error, "every carrier-default unary class is now in UNARY_CLASSES; " \
+                   "the <mo> arm went unverified — probe it another way"
+    end
+
+    names.dup
+  end
+
+  # `Mathml::Constants::UNICODE_SYMBOLS.invert`, name -> entity, in Ruby's
+  # invert order (last write wins — asserted collision-free so the order is
+  # not load-bearing). Read twice by the render path: `Text#parse_text`
+  # substitutes `unicode[:name]` tokens through it (text.rb:127), and
+  # `Core#invert_unicode_symbols` keys it by class_name for the big-operator
+  # `<mo>` texts (core.rb:230). Word-shaped names are verified through a live
+  # `Text` render; the operator reads through `Int`/`Oint`/`Sum`/`Prod`.
+  def mathml_unicode_invert
+    raw = Plurimath::Mathml::Constants::UNICODE_SYMBOLS
+    # Several names ("o+", "hat", "bar", "ul", "&", ...) are mapped from more
+    # than one entity; Ruby's Hash#invert keeps the LAST entity for each, and
+    # the verification loop below checks the emitted winner against a live
+    # render for every word-shaped name — the duplicated reachable ones
+    # included — so last-wins is measured, not assumed.
+    inverted = raw.invert.to_h { |name, entity| [name.to_s, entity.to_s] }
+
+    inverted.each do |name, entity|
+      next unless name.match?(/\A\w+\z/)
+
+      rendered = mathml_probe_formula(
+        Plurimath::Math::Function::Text.new("unicode[:#{name}]"),
+      ).to_mathml
+      next if rendered.include?("<mtext>#{entity}</mtext>")
+
+      raise Error, "Text unicode[:#{name}] rendered #{rendered.inspect}, " \
+                   "not <mtext>#{entity}</mtext>; the invert table drifted"
+    end
+
+    {
+      "int" => Plurimath::Math::Function::Int,
+      "oint" => Plurimath::Math::Function::Oint,
+      "sum" => Plurimath::Math::Function::Sum,
+      "prod" => Plurimath::Math::Function::Prod,
+    }.each do |name, klass|
+      entity = inverted.fetch(name) do
+        raise Error, "UNICODE_SYMBOLS no longer maps #{name.inspect}; " \
+                     "invert_unicode_symbols would fall back to the class name"
+      end
+      rendered = mathml_probe_formula(klass.new).to_mathml
+      next if rendered.include?("<mo>#{entity}</mo>")
+
+      raise Error, "#{class_key(klass)} rendered #{rendered.inspect}, not " \
+                   "<mo>#{entity}</mo>; invert_unicode_symbols drifted"
+    end
+
+    inverted
+  end
+
+  # `Mathml::Constants::SYMBOLS.invert`, the second lookup in
+  # `Text#symbol_value` (text.rb:128). Only word-shaped names are reachable
+  # through the `unicode[:\w+]` token regex; `tilde` is the one such name
+  # today, verified live. The rest ride along for table fidelity.
+  def mathml_symbols_invert
+    inverted = Plurimath::Mathml::Constants::SYMBOLS.invert
+      .to_h { |name, text| [name.to_s, text.to_s] }
+
+    unicode_names = Plurimath::Mathml::Constants::UNICODE_SYMBOLS.values.map(&:to_s)
+    inverted.each do |name, text|
+      next unless name.match?(/\A\w+\z/)
+      # A name UNICODE_SYMBOLS also carries never reaches this fallback.
+      next if unicode_names.include?(name)
+
+      rendered = mathml_probe_formula(
+        Plurimath::Math::Function::Text.new("unicode[:#{name}]"),
+      ).to_mathml
+      next if rendered.include?("<mtext>#{text}</mtext>")
+
+      raise Error, "Text unicode[:#{name}] rendered #{rendered.inspect}, not " \
+                   "<mtext>#{text}</mtext>; the SYMBOLS fallback drifted"
+    end
+
+    inverted
+  end
+
+  def mathml_mathvariant_of(node)
+    element = node.to_mathml_without_math_tag(false, options: {})
+    unless element.respond_to?(:name) && element.name == "mstyle"
+      raise Error, "font-style render produced #{element.inspect}, not an <mstyle>"
+    end
+
+    variant = element.attributes["mathvariant"]
+    raise Error, "font-style <mstyle> carries no mathvariant" if variant.nil?
+
+    variant.to_s
+  end
+
+  # FontStyle subclass basename -> the `mathvariant` its mathml render emits,
+  # measured per class: the eight overriding subclasses hardcode theirs
+  # (font_style/bold.rb:21-30, ...), the six others resolve through
+  # `font_family(mathml: true)` -> `SUPPORTED_FONT_STYLES` (font_style.rb:
+  # 216-240). One measurement covers both routes.
+  def mathml_font_style_variants
+    root = Plurimath::Math::Function::FontStyle
+    subclasses = all_descendants(root).uniq
+    raise Error, "FontStyle has no subclasses; the model did not load" if subclasses.empty?
+
+    subclasses.sort_by(&:name).to_h do |klass|
+      basename = class_key(klass).split("::").last
+      variant = mathml_mathvariant_of(klass.new(render_probe_symbol(RENDER_TABLE_CELL)))
+      [basename, variant]
+    end
+  end
+
+  # The bare FontStyle carrier resolves `parameter_two` through
+  # `Utility::FONT_STYLES` -> `SUPPORTED_FONT_STYLES` (font_style.rb:276-286):
+  # each FONT_STYLES keyword measured end-to-end, an unknown keyword passing
+  # through verbatim (verified), and a nil `parameter_two` crashing in the gem
+  # (`nil.to_sym`, verified) — the port raises RenderError there.
+  def mathml_font_style_carrier_variants
+    root = Plurimath::Math::Function::FontStyle
+    keys = Plurimath::Utility::FONT_STYLES.keys.map(&:to_s)
+    raise Error, "FONT_STYLES is empty" if keys.empty?
+
+    table = keys.to_h do |key|
+      [key, mathml_mathvariant_of(root.new(render_probe_symbol(RENDER_TABLE_CELL), key))]
+    end
+
+    unless mathml_mathvariant_of(root.new(render_probe_symbol(RENDER_TABLE_CELL),
+                                          RENDER_FONT_SENTINEL)) == RENDER_FONT_SENTINEL
+      raise Error, "an unknown font keyword no longer passes through as the " \
+                   "mathvariant; the port's miss arm is measured against that"
+    end
+
+    begin
+      root.new(render_probe_symbol(RENDER_TABLE_CELL), nil)
+        .to_mathml_without_math_tag(false, options: {})
+      raise Error, "a bare FontStyle with nil parameter_two now renders; the " \
+                   "port raises RenderError there and must be re-measured"
+    rescue NoMethodError
+      # `parameter_to_class` calls `parameter_two.to_sym` — the measured crash.
+    end
+
+    table
+  end
+
+  # `Base::MUNDER_CLASSES` (base.rb:15-21): the first-slot class_names whose
+  # script renders `<munder>` instead of `<msub>`. Each verified by a live
+  # `Base` render, plus one non-member proving the check discriminates.
+  def mathml_munder_class_names
+    names = Plurimath::Math::Function::Base::MUNDER_CLASSES
+    raise Error, "MUNDER_CLASSES is #{names.class}" unless names.is_a?(::Array)
+    raise Error, "MUNDER_CLASSES is empty" if names.empty?
+
+    by_class_name = mathml_first_slot_instances
+    names.each do |name|
+      node = by_class_name[name]
+      raise Error, "MUNDER_CLASSES name #{name.inspect} matches no measured class" unless node
+
+      rendered = mathml_probe_formula(
+        Plurimath::Math::Function::Base.new(node, render_probe_symbol("y")),
+      ).to_mathml
+      next if rendered.include?("<munder>")
+
+      raise Error, "Base with a #{name} first slot rendered #{rendered.inspect}, " \
+                   "not <munder>; MUNDER_CLASSES no longer routes it"
+    end
+
+    plain = mathml_probe_formula(
+      Plurimath::Math::Function::Base.new(render_probe_symbol(RENDER_TABLE_CELL),
+                                          render_probe_symbol("y")),
+    ).to_mathml
+    unless plain.include?("<msub>")
+      raise Error, "a plain Base rendered #{plain.inspect}; the munder check " \
+                   "above can no longer discriminate"
+    end
+
+    names.dup
+  end
+
+  # One live instance per MUNDER_CLASSES name, built through the classes the
+  # gem's `class_name` reads back.
+  def mathml_first_slot_instances
+    function = Plurimath::Math::Function
+    {
+      "ubrace" => function::Ubrace.new(render_probe_symbol(RENDER_TABLE_CELL)),
+      "obrace" => function::Obrace.new(render_probe_symbol(RENDER_TABLE_CELL)),
+      "right" => function::Right.new("("),
+      "max" => function::Max.new(render_probe_symbol(RENDER_TABLE_CELL)),
+      "min" => function::Min.new(render_probe_symbol(RENDER_TABLE_CELL)),
+    }
+  end
+
+  # Symbol ids whose `tag_name` answers "underover" (symbols/sum.rb:39-41 and
+  # friends), which `PowerBase#to_mathml_without_math_tag` turns into
+  # `<munderover>` (power_base.rb:14). Measured over every symbol class and
+  # verified through a live PowerBase render per id, plus one "subsup" id.
+  def mathml_underover_tag_ids
+    ids = symbol_classes.filter_map do |klass|
+      instance = begin
+        klass.new
+      rescue ::StandardError
+        next
+      end
+      tag = instance.tag_name
+      next if tag == "subsup"
+
+      unless tag == "underover"
+        raise Error, "#{symbol_id(klass)} answers tag_name #{tag.inspect}; only " \
+                     "subsup and underover are modelled — measure the new tag"
+      end
+
+      symbol_id(klass)
+    end
+    raise Error, "no symbol answers tag_name underover; the table would prove nothing" if ids.empty?
+
+    ids.each do |id|
+      klass = Object.const_get("Plurimath::Math::Symbols::#{id}")
+      rendered = mathml_probe_formula(
+        Plurimath::Math::Function::PowerBase.new(klass.new, render_probe_symbol("y"),
+                                                 render_probe_symbol("z")),
+      ).to_mathml
+      next if rendered.include?("<munderover>")
+
+      raise Error, "PowerBase over #{id} rendered #{rendered.inspect}, not " \
+                   "<munderover>; tag_name no longer routes it"
+    end
+
+    subsup = mathml_probe_formula(
+      Plurimath::Math::Function::PowerBase.new(render_probe_symbol(RENDER_TABLE_CELL),
+                                               render_probe_symbol("y"),
+                                               render_probe_symbol("z")),
+    ).to_mathml
+    unless subsup.include?("<msubsup>")
+      raise Error, "a plain PowerBase rendered #{subsup.inspect}; the underover " \
+                   "check above can no longer discriminate"
+    end
+
+    ids
+  end
+
+  # The mtable paren pipeline, measured through the gem's own readers on a
+  # live Table: per Paren id, whether `mathml_paren_present?` counts it
+  # (table.rb:430-435) and the `<mo>` text `mathml_parenthesis` produces
+  # (table.rb:202-213) — nil where that reader raises (both `encoded` and
+  # `paren_value` missing or private), which the port maps to RenderError.
+  def mathml_table_paren_entries
+    table = render_probe_table
+    parens = all_descendants(Plurimath::Math::Symbols::Paren).uniq.sort_by(&:name)
+    raise Error, "no Paren classes loaded" if parens.empty?
+
+    entries = parens.to_h do |klass|
+      instance = klass.new
+      present = table.send(:mathml_paren_present?, instance, false, options: {})
+      text = begin
+        table.send(:mathml_parenthesis, instance, false, options: {})
+      rescue NoMethodError
+        nil
+      end
+      [symbol_id(klass), { "present" => present == true, "text" => text }]
+    end
+
+    sample = entries.fetch("Paren::Lsquare")
+    unless sample["present"] && sample["text"] == "["
+      raise Error, "Paren::Lsquare measured #{sample.inspect}; the paren pipeline drifted"
+    end
+    crash = entries.fetch("Paren::Lbbrack")
+    unless crash["text"].nil?
+      raise Error, "Paren::Lbbrack now answers mathml_parenthesis " \
+                   "(#{crash.inspect}); the crash arm is no longer a crash"
+    end
+
+    rendered = mathml_probe_formula(
+      Plurimath::Math::Function::Table.new([render_probe_row],
+                                           Plurimath::Math::Symbols::Paren::Lsquare.new,
+                                           Plurimath::Math::Symbols::Paren::Rsquare.new),
+    ).to_mathml
+    unless rendered.include?("<mo>[</mo>") && rendered.include?("<mo>]</mo>")
+      raise Error, "a square-fenced table rendered #{rendered.inspect}; the " \
+                   "measured paren texts do not reach real output"
+    end
+
+    entries
+  end
+
+  # Class-identity roles the mtable/mtr/mtd path tests with `is_a?`:
+  # `Paren::CloseParen` forces `columnalign="left"` (table.rb:249),
+  # `Paren::Norm` routes `norm_table` (table.rb:57), `Paren::Vert` marks a
+  # column line and empties its cell (utility.rb:207, td.rb:53), and
+  # `Symbols::Hline` is stripped from a row head (tr.rb:120-124). Membership
+  # is measured over the loaded hierarchy — descendants included, so a new
+  # subclass lands here on regeneration — and each role is verified live.
+  def mathml_paren_role_ids
+    symbols = Plurimath::Math::Symbols
+    role = lambda do |root|
+      ([root] + all_descendants(root)).uniq.sort_by(&:name).map { |klass| symbol_id(klass) }
+    end
+    roles = {
+      "close" => role.call(symbols::Paren::CloseParen),
+      "norm" => role.call(symbols::Paren::Norm),
+      "vert" => role.call(symbols::Paren::Vert),
+      "hline" => role.call(symbols::Hline),
+    }
+
+    aligned = mathml_probe_formula(
+      Plurimath::Math::Function::Table.new([render_probe_row], nil,
+                                           symbols::Paren::CloseParen.new),
+    ).to_mathml
+    raise Error, "a CloseParen close no longer sets columnalign" unless aligned.include?('columnalign="left"')
+
+    normed = mathml_probe_formula(
+      Plurimath::Math::Function::Table.new([render_probe_row], symbols::Paren::Norm.new),
+    ).to_mathml
+    raise Error, "a Norm open no longer routes norm_table" unless normed.include?("<mo>&#x2016;</mo>")
+
+    vert_cell = mathml_probe_formula(
+      Plurimath::Math::Function::Table.new(
+        [Plurimath::Math::Function::Tr.new(
+          [Plurimath::Math::Function::Td.new([symbols::Paren::Vert.new])],
+        )],
+      ),
+    ).to_mathml
+    unless vert_cell.include?('columnlines="solid"') && vert_cell.include?("<mtr></mtr>")
+      raise Error, "a Vert-only cell rendered #{vert_cell.inspect}; the vert role drifted"
+    end
+
+    hlined = mathml_probe_formula(
+      Plurimath::Math::Function::Table.new(
+        [Plurimath::Math::Function::Tr.new(
+          [Plurimath::Math::Function::Td.new([symbols::Hline.new,
+                                              render_probe_symbol(RENDER_TABLE_CELL)])],
+        )],
+      ),
+    ).to_mathml
+    if hlined.include?("hline") || !hlined.include?("<mi>#{RENDER_TABLE_CELL}</mi>")
+      raise Error, "a leading Hline is no longer stripped: #{hlined.inspect}"
+    end
+
+    roles
+  end
+
+  # The AsciiMath-reachable class basenames per abstract carrier, re-emitted
+  # into the mathml slice: the mathml kind files guard the same measured set
+  # the asciimath ones do, and §3's generated-data closure forbids them
+  # reading the asciimath slice's registry. Derived from the same
+  # `get_class` census, so the two copies cannot drift apart.
+  def mathml_reachable_carrier_names(registry)
+    carriers = {
+      "unary" => "Math::Function::UnaryFunction",
+      "binary" => "Math::Function::BinaryFunction",
+    }
+    lists = carriers.transform_values do |carrier|
+      registry["entries"]
+        .select { |entry| entry["carrier"] == carrier }
+        .map { |entry| entry["rubyClass"].split("::").last }
+        .uniq
+    end
+    lists.each do |group, names|
+      raise Error, "no reachable #{group} carrier names; the guard set would be empty" if names.empty?
+    end
+    lists
+  end
+
+  # Every Table subclass basename -> the mathml override family its render
+  # goes through, measured off `instance_method(:to_mathml_without_math_tag)`
+  # ownership: `matrix`/`array`/`bmatrix` have their own bodies
+  # (table/matrix.rb:26, table/array.rb:19, table/bmatrix.rb), and the
+  # intent-only wrappers (`vmatrix.rb`, `pmatrix.rb`, `eqarray.rb`,
+  # `cases.rb` — `super` plus intent attributes this port never reaches,
+  # intent being deferred) collapse onto `base` with a render-verified
+  # equivalence at intent: false.
+  def mathml_table_name_families
+    table_root = Plurimath::Math::Function::Table
+    own_bodies = {
+      "Matrix" => "matrix",
+      "Array" => "array",
+      "Bmatrix" => "bmatrix",
+    }
+    intent_only = %w[Vmatrix Pmatrix Eqarray Cases]
+
+    all_descendants(table_root).uniq.sort_by(&:name).to_h do |klass|
+      basename = class_key(klass).split("::").last
+      owner = klass.instance_method(:to_mathml_without_math_tag).owner
+      family =
+        if own_bodies.key?(basename)
+          unless owner == klass
+            raise Error, "#{basename} no longer owns its mathml body (owner #{owner})"
+          end
+          own_bodies[basename]
+        elsif owner == table_root
+          "base"
+        elsif intent_only.include?(basename)
+          base_like = table_root.new([render_probe_row], klass.new([]).open_paren,
+                                     klass.new([]).close_paren)
+          own = mathml_probe_formula(klass.new([render_probe_row])).to_mathml
+          base = mathml_probe_formula(base_like).to_mathml
+          unless own == base
+            raise Error, "#{basename} diverges from the base table at intent: false " \
+                         "(#{own.inspect} vs #{base.inspect}); its family is no longer base"
+          end
+          "base"
+        else
+          raise Error, "#{basename} renders through unmeasured owner #{owner}; " \
+                       "classify it before emitting the family table"
+        end
+      [basename, family]
+    end
+  end
+
+  # `Color#mathml_options` builds its `mathcolor`/`mathbackground` attribute
+  # from `parameter_one.to_asciimath` (color.rb:79-88) — the one place the
+  # gem's mathml path calls the asciimath renderer. The port's format slices
+  # are independent (§3), so the symbol literals that lookup can reach are
+  # re-emitted into the mathml slice from the same measurement that feeds
+  # `asciimath/symbols.ts`; the two copies cannot drift. Verified end to end
+  # by a live Color render over an id symbol.
+  def mathml_color_symbol_literals
+    baseline = { "intent" => false, "table" => false, "rspace" => nil }
+    literals = static_symbol_classes(symbol_classes).map do |klass|
+      [symbol_id(klass), representation(klass, "asciimath", baseline)]
+    end
+
+    eqno = literals.assoc("Eqno")
+    raise Error, "Eqno lost its asciimath literal" unless eqno
+
+    rendered = mathml_probe_formula(
+      Plurimath::Math::Function::Color.new(
+        Plurimath::Math::Formula.new([Plurimath::Math::Symbols::Eqno.new]),
+        render_probe_symbol(RENDER_TABLE_CELL),
+      ),
+    ).to_mathml
+    expected = "mathcolor=\"#{eqno[1].delete('"')}\""
+    unless rendered.include?(expected)
+      raise Error, "Color over Eqno rendered #{rendered.inspect}, not #{expected}; " \
+                   "the color literal path drifted"
+    end
+
+    literals
+  end
+
+  def build_mathml_render_tables(registry)
+    {
+      "color_literals" => mathml_color_symbol_literals,
+      "unary_mi" => mathml_unary_mi_names,
+      "unicode_invert" => mathml_unicode_invert,
+      "symbols_invert" => mathml_symbols_invert,
+      "font_variants" => mathml_font_style_variants,
+      "font_carrier" => mathml_font_style_carrier_variants,
+      "munder" => mathml_munder_class_names,
+      "underover_ids" => mathml_underover_tag_ids,
+      "table_parens" => mathml_table_paren_entries,
+      "paren_roles" => mathml_paren_role_ids,
+      "carrier_names" => mathml_reachable_carrier_names(registry),
+      "table_families" => mathml_table_name_families,
+    }
+  end
+
   # --- TypeScript emission -------------------------------------------------
 
   # Biome's string rule: the configured quote wins unless the other one needs
@@ -2618,6 +3121,176 @@ module CorpusGenerator
     write_ts(File.join(out_root, INPUT_FORMAT, "render-tables.ts"), sections)
   end
 
+  def emit_mathml_render_tables_file(out_root, tables)
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        MathML render tables: the gem tables `to_mathml_without_math_tag`
+        reads that neither the parse tables nor the symbol descriptors
+        supply, consumed by the `src/render/<kind>/mathml.ts` files.
+
+        Every entry is measured off the runtime — a live render (or the
+        gem's own reader method on a live instance) per entry, never a
+        source read (PORTING-STANDARDS.md), each re-verified by the
+        generator with a render that actually uses it.
+      TEXT
+      ts_const(
+        "MATHML_UNARY_MI_NAMES",
+        "readonly string[]",
+        tables["unary_mi"],
+        doc: "`Utility::UNARY_CLASSES` (`unary_function.rb:31`), in the gem's\n" \
+             "order: the class_names the unary carrier renders as a\n" \
+             "spacing-wrapped `<mi>`; a non-member (`Hom`, `Arg`, ...) takes\n" \
+             "the bare `<mo>` arm. Membership only — the render path asks\n" \
+             "`include?`. Every carrier-default unary class is render-verified\n" \
+             "against the arm its membership selects, both arms live.",
+      ),
+      ts_tuple_map(
+        "MATHML_UNICODE_INVERT",
+        "ReadonlyMap<string, string>",
+        tables["unicode_invert"],
+        doc: "`Mathml::Constants::UNICODE_SYMBOLS.invert`, name -> entity,\n" \
+             "Ruby's invert semantics kept: a name mapped from several\n" \
+             "entities keeps the LAST one, and every word-shaped winner is\n" \
+             "verified through a live `Text` render. Read twice on the render\n" \
+             "path: `Text#parse_text`'s first `unicode[:name]` lookup\n" \
+             "(`text.rb:127`), and — keyed by class_name —\n" \
+             "`Core#invert_unicode_symbols` (`core.rb:230`), the big-operator\n" \
+             "`<mo>` texts.",
+      ),
+      ts_tuple_map(
+        "MATHML_SYMBOLS_INVERT",
+        "ReadonlyMap<string, string>",
+        tables["symbols_invert"],
+        doc: "`Mathml::Constants::SYMBOLS.invert`, `Text#symbol_value`'s\n" \
+             "fallback lookup (`text.rb:128`). Only word-shaped names can\n" \
+             "reach it through the `unicode[:\\w+]` token regex.",
+      ),
+      ts_tuple_map(
+        "MATHML_FONT_STYLE_VARIANTS",
+        "ReadonlyMap<string, string>",
+        tables["font_variants"],
+        doc: "FontStyle subclass basename -> the `mathvariant` its mathml\n" \
+             "render emits, measured per class: eight subclasses hardcode\n" \
+             "theirs (`font_style/bold.rb:21-30`, ...), six resolve through\n" \
+             "`font_family(mathml: true)` (`font_style.rb:216-240`).",
+      ),
+      ts_tuple_map(
+        "MATHML_FONT_STYLE_CARRIER_VARIANTS",
+        "ReadonlyMap<string, string>",
+        tables["font_carrier"],
+        doc: "The bare FontStyle carrier's `parameter_two` keyword -> the\n" \
+             "`mathvariant` it resolves to through `Utility::FONT_STYLES`\n" \
+             "(`font_style.rb:276-286`), one measurement per keyword. An\n" \
+             "unlisted keyword passes through verbatim (verified); a nil\n" \
+             "`parameter_two` crashes in the gem (`nil.to_sym`, verified) and\n" \
+             "raises RenderError in the port.",
+      ),
+      ts_const(
+        "MATHML_MUNDER_CLASS_NAMES",
+        "readonly string[]",
+        tables["munder"],
+        doc: "`Base::MUNDER_CLASSES` (`base.rb:15-21`), in the gem's order:\n" \
+             "first-slot class_names whose script renders `<munder>` instead\n" \
+             "of `<msub>`. Membership only.",
+      ),
+      ts_const(
+        "MATHML_UNDEROVER_TAG_IDS",
+        "readonly string[]",
+        tables["underover_ids"],
+        doc: "Symbol ids whose `tag_name` answers \"underover\"\n" \
+             "(`symbols/sum.rb:39-41` and friends), measured over every\n" \
+             "symbol class: `PowerBase` renders `<munderover>` over these\n" \
+             "(`power_base.rb:14`, one verifying render per id) and\n" \
+             "`<msubsup>` over everything else.",
+      ),
+      [
+        ts_doc(
+          "One Paren id's answers to the mtable paren pipeline: whether\n" \
+          "`mathml_paren_present?` counts it (`table.rb:430-435`), and the\n" \
+          "`<mo>` text `mathml_parenthesis` produces (`table.rb:202-213`) —\n" \
+          "null where that reader raises NoMethodError in the gem (both\n" \
+          "`encoded` and `paren_value` missing or private), which the port\n" \
+          "maps to RenderError.",
+        ),
+        "export interface MathmlTableParen {",
+        "  readonly present: boolean;",
+        "  readonly text: string | null;",
+        "}",
+      ].join("\n"),
+      ts_tuple_map(
+        "MATHML_TABLE_PARENS",
+        "ReadonlyMap<string, MathmlTableParen>",
+        tables["table_parens"],
+        doc: "Every Paren subclass, measured through the gem's own readers\n" \
+             "on a live Table.",
+      ),
+      [
+        "export interface MathmlParenRoles {",
+        "  readonly close: readonly string[];",
+        "  readonly norm: readonly string[];",
+        "  readonly vert: readonly string[];",
+        "  readonly hline: readonly string[];",
+        "}",
+      ].join("\n"),
+      ts_const(
+        "MATHML_PAREN_ROLE_IDS",
+        "MathmlParenRoles",
+        tables["paren_roles"],
+        doc: "Class-identity roles the mtable/mtr/mtd path tests with\n" \
+             "`is_a?`: `close` forces `columnalign=\"left\"` (`table.rb:249`),\n" \
+             "`norm` routes `norm_table` (`table.rb:57`), `vert` marks a\n" \
+             "column line and empties its cell (`utility.rb:207`,\n" \
+             "`td.rb:53`), `hline` is stripped from a row head\n" \
+             "(`tr.rb:120-124`). Each id list is the measured hierarchy —\n" \
+             "root plus descendants — and each role is verified live.",
+      ),
+      [
+        "export interface MathmlCarrierNames {",
+        "  readonly unary: readonly string[];",
+        "  readonly binary: readonly string[];",
+        "}",
+      ].join("\n"),
+      ts_const(
+        "MATHML_REACHABLE_CARRIER_NAMES",
+        "MathmlCarrierNames",
+        tables["carrier_names"],
+        doc: "The AsciiMath-reachable class basenames per abstract carrier —\n" \
+             "the same measured guard set the asciimath renderer holds,\n" \
+             "re-emitted here because §3's generated-data closure keeps each\n" \
+             "format on its own slice. Derived from the one `get_class`\n" \
+             "census, so the copies cannot drift. The transform-direct\n" \
+             "constructions (`Tr`, `Power`, `Mod`, `Td`, `PowerBase`) are\n" \
+             "added in the kind files, exactly as the asciimath ones do.",
+      ),
+      ts_tuple_map(
+        "MATHML_COLOR_SYMBOL_LITERALS",
+        "ReadonlyMap<string, string>",
+        tables["color_literals"],
+        doc: "Symbol id -> its asciimath literal, re-emitted into this slice\n" \
+             "for the ONE place the gem's mathml path calls the asciimath\n" \
+             "renderer: `Color#mathml_options` builds `mathcolor` from\n" \
+             "`parameter_one.to_asciimath` (`color.rb:79-88`). Same\n" \
+             "measurement as `asciimath/symbols.ts` (baseline axes), so the\n" \
+             "copies cannot drift; verified by a live Color render.",
+      ),
+      ts_tuple_map(
+        "MATHML_TABLE_NAME_FAMILIES",
+        "ReadonlyMap<string, string>",
+        tables["table_families"],
+        doc: "Every Table subclass basename -> the mathml override family\n" \
+             "its render goes through, measured off method ownership:\n" \
+             "`matrix` (`table/matrix.rb:26`), `array` (`table/array.rb:19`),\n" \
+             "`bmatrix` (`table/bmatrix.rb`), and `base` for the rest — the\n" \
+             "intent-only wrappers (`Vmatrix`, `Pmatrix`, `Eqarray`, `Cases`)\n" \
+             "render-verified byte-identical to the base table at\n" \
+             "intent: false, the only intent this port reaches (intent is\n" \
+             "deferred).",
+      ),
+    ]
+
+    write_ts(File.join(out_root, "mathml", "render-tables.ts"), sections)
+  end
+
   def emit_context_axes_file(out_root, probe)
     sections = [
       ts_header(<<~TEXT.chomp),
@@ -2835,17 +3508,19 @@ module CorpusGenerator
     MESSAGE
   end
 
-  def write_symbol_data(out_root, data, registry, render_tables, provenance)
+  def write_symbol_data(out_root, data, registry, render_tables, mathml_tables, provenance)
     written = [
       File.join(out_root, INPUT_FORMAT, "input.ts"),
       File.join(out_root, INPUT_FORMAT, "grammar.ts"),
       File.join(out_root, INPUT_FORMAT, "transform-registry.ts"),
       File.join(out_root, INPUT_FORMAT, "render-tables.ts"),
+      File.join(out_root, "mathml", "render-tables.ts"),
     ]
     emit_input_file(out_root, data["tables"])
     emit_grammar_file(out_root, data["grammar"])
     emit_transform_registry_file(out_root, registry)
     emit_render_tables_file(out_root, render_tables)
+    emit_mathml_render_tables_file(out_root, mathml_tables)
 
     SYMBOL_FORMATS.each do |format|
       emit_symbols_file(out_root, format, data["static"])
@@ -3105,6 +3780,7 @@ module CorpusGenerator
     symbols = build_symbol_data
     registry = build_transform_registry(gem_dir, census)
     render_tables = build_render_tables
+    mathml_tables = build_mathml_render_tables(registry)
     assert_corpus_symbols_covered!(pin_cases, exclusions, symbols)
 
     out_root = options[:out]
@@ -3128,7 +3804,7 @@ module CorpusGenerator
     written << [path, write_manifest(path, bytes, out_root, provenance)]
 
     emitted = write_symbol_data(options[:symbols_out], symbols, registry, render_tables,
-                                provenance)
+                                mathml_tables, provenance)
 
     written.each do |payload_path, manifest_path|
       puts "  #{relative(payload_path, REPO_ROOT)}"
@@ -3147,6 +3823,8 @@ module CorpusGenerator
          "#{registry['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
     puts "render tables: " \
          "#{render_tables.map { |name, table| "#{name} #{table.length}" }.join(', ')}"
+    puts "mathml render tables: " \
+         "#{mathml_tables.map { |name, table| "#{name} #{table.length}" }.join(', ')}"
     puts "context-dependent: " \
          "#{probe['context_dependent'].map { |e| e['id'] }.join(', ')}"
     probe["dynamic"].each do |entry|

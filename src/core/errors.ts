@@ -66,3 +66,21 @@ export class RenderError extends PlurimathError {
     super(message);
   }
 }
+
+/**
+ * Describes a caught throw for an error message. `String(error)` runs the
+ * thrown value's own `toString` — input code, which can itself throw — and a
+ * boundary that lets that secondary throw out leaks the raw value it exists
+ * to wrap, so the description falls back to a fixed phrase instead. Shared by
+ * every wrap that stringifies a caught value (the shape validator's read-site
+ * and entry-point wraps, the renderers' mid-walk wrap); module-internal
+ * vocabulary, deliberately not re-exported from the core barrel — message
+ * text is never API.
+ */
+export function describeThrown(error: unknown): string {
+  try {
+    return String(error);
+  } catch {
+    return "a thrown value that cannot be described";
+  }
+}

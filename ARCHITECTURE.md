@@ -7,7 +7,17 @@ OMML, UnicodeMath, and HTML. It replaces the Opal-compiled `plurimath-js`.
 This document records the agreed design. Change it before changing the code it
 describes.
 
-Revision: v12 (2026-07-29) — applies Codex design review rounds 1–8
+Revision: v14 (2026-08-07) — the render layout goes node-major, per the
+maintainer's decision: one directory per node kind under `src/render`, one
+file per format inside (`render/sqrt/asciimath.ts` — the gem's
+`function/sqrt.rb` locality), with the dispatch table and format-scoped
+helpers on the format side (`src/formats/<F>/render.ts`,
+`render-shared.ts`); §3 gains rule 8 (the render-file closure), the
+matching-format generated-data closure, and the gate's kind-inventory check.
+v13 (2026-08-07) records the maintainer's renderer-layout
+decision in §5, "How this maps to the gem": render code lives in one file per
+node kind, joined by a dispatch table typed total over `NodeKind`. v12
+(2026-07-29) applies Codex design review rounds 1–8
 (verdicts: approve-with-changes, rework ×4, then approve-with-changes ×3).
 Every finding is verified against the gem, the POC, or the published packages
 before adoption; round 8 confirmed P0 is unblocked. v4 fixed three self-contradictions (P0's gate checklist
@@ -95,14 +105,23 @@ src/
                      table and the canonical symbol values Ruby's `==` reads.
                      Never edited by hand.
   formats/
-    asciimath/       parse (grammar + transform) → Formula.
-                     Imports: pegkit, core, its own data slice.
+    asciimath/       parse (grammar + transform) → Formula; render entry
+                     (renderer.ts → toAsciimath), the render dispatch table +
+                     context wiring (render.ts) and the format-scoped render
+                     helpers (render-shared.ts). Imports: pegkit, core, its
+                     own data slice, its own kind files under src/render.
     latex/           Same shape (input format; later phase).
     unicodemath/     Same shape (later phase).
     html/            Same shape (later phase).
     mathml/          toMathml(Formula) → string. Imports: core, xml, its slice.
     omml/            Same shape (output format; later phase).
     ...              Every format module is independent of every other.
+  render/            Renderer code, node-major (§5, "How this maps to the
+                     gem"): one directory per node kind, one file per format
+                     inside — render/sqrt/asciimath.ts is everything about
+                     sqrt in AsciiMath, where a gem reader expects
+                     function/sqrt.rb. A kind file render/<kind>/<F>.ts
+                     belongs to format F's module graph alone (rule 8).
   xml/               XML element tree + Ox-compatible serializer.
                      Imports: nothing internal.
   formatting/        Format-neutral number + locale policy. Two halves, and
@@ -151,9 +170,13 @@ test/                Corpus conformance, pegkit conformance, unit tests,
 2. **Leaf services** import only `core` and their own data, and are the sole
    modules a format may import besides the layer-1 modules. Today that is
    `formatting`; `unitsml` joins this tier if and when it is built (§5).
-3. A format module imports only layer-1 modules, leaf services, and its own
-   data.
-4. No format imports another format.
+3. A format module imports only layer-1 modules, leaf services, its own
+   data — `generated/<F>` and no other format's slice — and its own render
+   kind files: under `src/render`, format `F` may import only
+   `<kind>/<F>.ts`.
+4. No format imports another format — including through `src/render` and
+   `src/generated`: a kind file `render/<kind>/<G>.ts` and a data slice
+   `generated/<G>` are reachable only from `src/formats/<G>`.
 5. Only `compat` and the root entry import across formats.
 6. `evaluation` imports `core` only. No format or leaf service imports it;
    the root entry re-exports it (rule 5) so `parse(...).evaluate` style usage
@@ -163,6 +186,20 @@ test/                Corpus conformance, pegkit conformance, unit tests,
    writes). Module-local constant initialization is fine; `"sideEffects":
    false` declares this to bundlers, and the isolation gate — not the flag —
    is what proves it.
+8. Render code is node-major and format-closed. A kind file
+   `render/<kind>/<F>.ts` imports only `core`, `generated/<F>`,
+   `src/formats/<F>/render-shared.ts`, and sibling kind files of its own
+   format (`<other-kind>/<F>.ts` — Ruby's base-class inheritance imports,
+   e.g. `norm/asciimath.ts` importing `unary-function/asciimath.ts`); it
+   never imports the dispatch table — recursion stays `ctx.render`.
+   `render-shared.ts` is a leaf: it imports neither `render.ts` nor
+   `renderer.ts` nor any kind file. Nothing else under `src/` imports
+   `src/render` (root and compat entries excepted) — among format roots,
+   only `F` reaches `F` files. The boundaries gate additionally checks the
+   kind inventory: the expected kind set derives from each format's
+   dispatch-table keys, and `src/render` must hold exactly one `<F>.ts` per
+   kind for every format with a dispatch table — a missing file, a stray
+   file, or an empty scan fails the gate.
 
 Rules 2–3 exist because leaf services genuinely cross-cut renderers, verified
 in the gem: every numeric render routes through `Formatter::Numbers`, and
@@ -189,6 +226,14 @@ does exactly this — one tsup entry, one JSON blob). Therefore:
   render data; `/mathml` contains no parser.
 - The root entry is documented as intentionally full-sized; only subpath
   imports carry the slim-bundle guarantee.
+
+With render code node-major, the slim-bundle guarantee is per-**file**
+module-graph disjointness — format `F`'s graph contains, under `src/render`,
+only `<kind>/<F>.ts` files — enforced by the boundary gate (rule 8), not by
+directory ownership. Deferral note (2026-08-07): format subpaths are not
+build entries yet — only the root and `/core` entries build today — so the
+per-subpath artifact-isolation assertions for render code land when the
+format subpaths become build entries (staged TODO).
 
 ## 4. Public API
 
@@ -556,6 +601,11 @@ function renderNode(node: MathNode, ctx: RenderContext): XmlElement /* or string
 }
 ```
 
+The `switch` is the contract, not the layout: a renderer may equally realize
+it as a dispatch table typed total over the kind union — a missing entry is
+then a compile error, exactly as `assertNever` is. The AsciiMath renderer
+does ("How this maps to the gem", below).
+
 Execution contract (pinned):
 
 - `renderNode` is the **sole** recursive dispatcher; cases delegate to
@@ -569,6 +619,39 @@ Execution contract (pinned):
   formats.
 - Core may export only format-blind structural predicates. No generic visitor
   framework, no double dispatch.
+
+**How this maps to the gem (decided 2026-08-07; the AsciiMath renderer's
+layout, and the template for every later text renderer).** The node classes
+are the gem's design kept: instances with the same fields, the same measured
+constructor defaults, the same equality projection. The one structural
+deviation is where render code lives. The gem puts a `to_asciimath` method on
+every class; the port puts the render code node-major under `src/render`:
+one directory per node kind, one file per format inside
+(`src/render/<kind>/<format>.ts`) — everything about one construct in one
+directory, the gem's `function/sqrt.rb` locality. The reason is D2's: a JS
+bundler can drop an unused import, but it can never drop a method off a
+class — code on nodes ships with the nodes, every format to every consumer,
+which is exactly the plurimath-js defect this port exists to remove.
+
+| Ruby gem | This port |
+|---|---|
+| one file per class — `function/sqrt.rb` | one directory per kind — `render/sqrt/`, one file per format inside (`render/sqrt/asciimath.ts`) |
+| the implicit method table (every class answering `to_asciimath`) | the explicit dispatch table in the format's `render.ts` (`src/formats/asciimath/render.ts`), typed total over `NodeKind` — a missing entry is a compile error |
+| `child.to_asciimath(options:)` | `ctx.render(child)` — recursion through the context, which looks the child's kind up in the table |
+
+The per-kind directories mirror the gem's one-file-per-class layout
+deliberately: a gem reader finds `render/sqrt/` where they expect `sqrt.rb`,
+and each format file's header comment inside names the gem file it mirrors.
+Carrier kinds standing
+in for many aliased gem classes (`unaryFunction`, `binaryFunction`,
+`ternaryFunction`, `table`, `fontStyle`) keep their class-name dispatch
+inside their own kind file — per-kind means per `NodeKind`. Idioms shared
+across kinds (`interpolatedValue`, the strip helpers, the context axes) live
+in the format's `render-shared.ts` (`src/formats/asciimath/render-shared.ts`,
+a leaf under rule 8); a helper Ruby defines on a base class lives in that
+carrier's kind file and is imported by the inheritors' files exactly where
+Ruby inherits (`norm/asciimath.ts` importing `renderUnaryDefault` from
+`unary-function/asciimath.ts` is `Norm`'s `super`).
 
 **Symbols.** Symbol nodes carry a stable id (Ruby class key: `"Sigma"`,
 `"Paren::Lround"`). Parser data maps input text → id. Each renderer slice maps
@@ -861,7 +944,7 @@ schema, never a silent id change.
 |---|---|---|
 | Types | `tsc --strict`, `noUncheckedIndexedAccess`, `verbatimModuleSyntax` | Type-checking is a CI gate; `any` requires a comment |
 | Lint + format | Biome | One fast tool over ESLint+Prettier: less config to maintain (D7 applied to tooling itself) |
-| Layer boundaries | dependency-cruiser | Encodes §3's seven rules; CI gate |
+| Layer boundaries | dependency-cruiser + render kind inventory | Encodes §3's eight rules; the inventory check derives the kind set from each format's dispatch table; CI gate |
 | Artifact isolation | package test over the **packed tarball** (ESM + CJS + types + export conditions) | §3; builder-independent assertions |
 | Tests | Vitest | Proven in POC |
 | Build | **tsdown `0.22.14`**, pinned exactly → ESM + CJS + d.mts/d.cts, one entry per subpath | See build-tool note below |

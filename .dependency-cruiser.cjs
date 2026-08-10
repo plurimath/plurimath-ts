@@ -1,5 +1,5 @@
 /**
- * Encodes ARCHITECTURE.md §3's seven dependency rules. This is the gate that
+ * Encodes ARCHITECTURE.md §3's eight dependency rules. This is the gate that
  * keeps the layering real: source-level discipline is not a promise, it is a
  * CI check. (What actually *ships* per subpath is proven separately by the
  * package-isolation gate — see scripts/gate-package.mjs.)
@@ -41,12 +41,88 @@ module.exports = {
     {
       name: "formats-import-allowed-layers-only",
       comment:
-        "Rule 3: a format imports only layer-1 modules, leaf services and its own data.",
+        "Rule 3: a format imports only layer-1 modules, leaf services, its own data and its " +
+        "own render kind files. `generated` and `render` are only allowed here as directions; " +
+        "the per-format constraints are format-imports-own-generated-data-only and " +
+        "format-render-imports-own-kind-files-only.",
       severity: "error",
       from: { path: "^src/formats/" },
       to: {
         path: "^src/",
-        pathNot: "^src/(pegkit|core|xml|formatting|unitsml|generated|formats)/",
+        pathNot: "^src/(pegkit|core|xml|formatting|unitsml|generated|formats|render)/",
+      },
+    },
+    {
+      name: "format-render-imports-own-kind-files-only",
+      comment:
+        "Rule 8 (§3, node-major render layout): under src/render, format F may import only " +
+        "<kind>/<F>.ts — its own per-kind files, never another format's.",
+      severity: "error",
+      from: { path: "^src/formats/([^/]+)/" },
+      to: {
+        path: "^src/render/",
+        pathNot: "^src/render/[^/]+/$1\\.ts$",
+      },
+    },
+    {
+      name: "render-kind-file-imports-allowed-set-only",
+      comment:
+        "Rule 8: a kind file src/render/<kind>/<F>.ts imports only core, its own format's " +
+        "generated data (src/generated/<F>), that format's render-shared helpers " +
+        "(src/formats/<F>/render-shared.ts), and sibling kind files of the same format " +
+        "(<other-kind>/<F>.ts — Ruby's base-class inheritance imports). It never imports the " +
+        "dispatch table: recursion goes through context.render.",
+      severity: "error",
+      from: { path: "^src/render/[^/]+/([^/]+)\\.ts$" },
+      to: {
+        path: "^src/",
+        pathNot:
+          "^src/core/|^src/generated/$1/|^src/formats/$1/render-shared\\.ts$|^src/render/[^/]+/$1\\.ts$",
+      },
+    },
+    {
+      name: "only-formats-reach-render",
+      comment:
+        "Rule 8: nothing else under src/ imports src/render (root and compat entries " +
+        "excepted) — among format roots, only F reaches F files. Formats are constrained " +
+        "per-format by format-render-imports-own-kind-files-only, render files by " +
+        "render-kind-file-imports-allowed-set-only.",
+      severity: "error",
+      from: { path: "^src/", pathNot: "^src/(formats|render|compat)/|^src/index\\.ts$" },
+      to: { path: "^src/render/" },
+    },
+    {
+      name: "render-shared-is-a-leaf",
+      comment:
+        "Rule 8: render-shared.ts imports neither render.ts, renderer.ts, nor any kind file " +
+        "— it is the acyclic base the dispatch table and the kind files both stand on.",
+      severity: "error",
+      from: { path: "^src/formats/[^/]+/render-shared\\.ts$" },
+      to: { path: "^src/render/|^src/formats/[^/]+/(render|renderer)\\.ts$" },
+    },
+    {
+      name: "format-imports-own-generated-data-only",
+      comment:
+        "Rule 4 (generated-data closure): src/formats/<F> reaches src/generated/<F> only — " +
+        "another format's data slice in F's module graph is the bundle leak the layout exists " +
+        "to prevent.",
+      severity: "error",
+      from: { path: "^src/formats/([^/]+)/" },
+      to: {
+        path: "^src/generated/",
+        pathNot: "^src/generated/$1/",
+      },
+    },
+    {
+      name: "render-kind-file-imports-own-generated-data-only",
+      comment:
+        "Rule 4 (generated-data closure): src/render/<kind>/<F>.ts reaches src/generated/<F> " +
+        "only — same closure as the format root, stated for the render layer.",
+      severity: "error",
+      from: { path: "^src/render/[^/]+/([^/]+)\\.ts$" },
+      to: {
+        path: "^src/generated/",
+        pathNot: "^src/generated/$1/",
       },
     },
     {

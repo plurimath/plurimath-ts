@@ -43,6 +43,9 @@
 #   src/generated/asciimath/transform-registry.ts
 #                                          every class name transform.rb can
 #                                          reach, resolved through the gem
+#   src/generated/asciimath/render-tables.ts
+#                                          the three tables to_asciimath reads
+#                                          that the parse tables cannot supply
 #   src/generated/<format>/symbols.ts      symbol id -> static descriptor
 #   src/generated/<format>/exceptions.ts   the context-axis exception matrix
 #   src/generated/context-axes.ts          the probe manifest and its results
@@ -1921,6 +1924,171 @@ module CorpusGenerator
     }
   end
 
+  # --- asciimath render tables ---------------------------------------------
+
+  # The three gem tables `to_asciimath` reads that the parse tables cannot
+  # supply: the FontStyle wrapper keywords, the table close-paren fallback,
+  # and the parentheless simple-table names. Each entry is measured off the
+  # runtime — a live render per entry, never a source read
+  # (PORTING-STANDARDS.md). The parse direction is no substitute for the
+  # first table: `bb`, `mathbf` and `textbf` all parse to `Bold`, and only
+  # rendering says which keyword comes back out.
+
+  RENDER_FONT_SENTINEL = "zzfontzz"
+  RENDER_TABLE_CELL = "x"
+
+  def render_probe_symbol(value)
+    Plurimath::Math::Symbols::Symbol.new(value)
+  end
+
+  def render_probe_row
+    Plurimath::Math::Function::Tr.new(
+      [Plurimath::Math::Function::Td.new([render_probe_symbol(RENDER_TABLE_CELL)])],
+    )
+  end
+
+  def render_probe_table(open_paren = nil)
+    Plurimath::Math::Function::Table.new([render_probe_row], open_paren)
+  end
+
+  # FontStyle subclass basename -> the keyword its `to_asciimath` override
+  # wraps its value in, measured by rendering a live instance of every
+  # subclass and reading the wrapper back. A subclass either wraps —
+  # `keyword(value)` with a sentinel, `keyword()` with nil — or renders the
+  # value alone (nil in, Ruby-nil out, like the bare carrier); a third
+  # render shape is a new upstream behaviour and stops generation.
+  def font_style_render_keywords
+    root = Plurimath::Math::Function::FontStyle
+    subclasses = all_descendants(root).uniq
+    raise Error, "FontStyle has no subclasses; the model did not load" if subclasses.empty?
+
+    keywords = {}
+    subclasses.sort_by(&:name).each do |klass|
+      basename = class_key(klass).split("::").last
+      wrapped = klass.new(render_probe_symbol(RENDER_FONT_SENTINEL))
+        .to_asciimath(options: {})
+      bare = klass.new(nil).to_asciimath(options: {})
+
+      if wrapped == RENDER_FONT_SENTINEL
+        unless bare.nil?
+          raise Error, "#{basename} renders its value alone but returned " \
+                       "#{bare.inspect} for a nil value, not Ruby nil; the " \
+                       "value-alone contract no longer holds"
+        end
+        next
+      end
+
+      match = wrapped.match(/\A(\w+)\(#{Regexp.escape(RENDER_FONT_SENTINEL)}\)\z/)
+      unless match && bare == "#{match[1]}()"
+        raise Error, <<~MESSAGE
+          #{class_key(klass)} rendered #{wrapped.inspect} (nil: #{bare.inspect}),
+          neither the value alone nor a keyword wrapper. A third render shape
+          is a NEW measurement; widen this probe before emitting the table.
+        MESSAGE
+      end
+
+      keywords[basename] = match[1]
+    end
+
+    if keywords.empty?
+      raise Error, "no FontStyle subclass wraps its value; an empty keyword " \
+                   "table is a failure, not a finding"
+    end
+
+    carrier = root.new(render_probe_symbol(RENDER_FONT_SENTINEL), "bold")
+      .to_asciimath(options: {})
+    unless carrier == RENDER_FONT_SENTINEL && root.new(nil, "bold").to_asciimath(options: {}).nil?
+      raise Error, "the bare FontStyle carrier no longer renders its value " \
+                   "alone; the renderer's fallback arm is measured against that"
+    end
+
+    keywords
+  end
+
+  # `Asciimath::Constants::TABLE_PARENTHESIS`, as the RENDER path reads it:
+  # `Table#to_asciimath` looks the fallback close paren up by the rendered
+  # open paren when `close_paren` is nil (`math/function/table.rb:43-49`).
+  # The pairs reuse the grammar reader — same constant, same shape checks —
+  # and every mapping is then verified by a render that actually falls back
+  # through it, plus one unlisted open paren proving a miss interpolates
+  # the empty string.
+  def table_close_fallback_pairs
+    pairs = grammar_paren_pairs("TABLE_PARENTHESIS",
+                                Plurimath::Asciimath::Constants::TABLE_PARENTHESIS)
+
+    pairs.each do |open, close|
+      rendered = render_probe_table(render_probe_symbol(open)).to_asciimath(options: {})
+      expected = "#{open}[#{RENDER_TABLE_CELL}]#{close}"
+      next if rendered == expected
+
+      raise Error, "a table with open paren #{open.inspect} and a nil close " \
+                   "rendered #{rendered.inspect}, not #{expected.inspect}; the " \
+                   "render path no longer falls back through TABLE_PARENTHESIS"
+    end
+
+    miss_open = "{"
+    if pairs.any? { |open, _close| open == miss_open }
+      raise Error, "the miss probe's open paren #{miss_open.inspect} is now " \
+                   "listed; probe the miss branch with another"
+    end
+    missed = render_probe_table(render_probe_symbol(miss_open)).to_asciimath(options: {})
+    unless missed == "#{miss_open}[#{RENDER_TABLE_CELL}]"
+      raise Error, "an unlisted open paren rendered #{missed.inspect}; a miss " \
+                   "no longer interpolates the empty string, which the port's " \
+                   "renderer mirrors"
+    end
+
+    pairs
+  end
+
+  # `Table::SIMPLE_TABLES` — the lowercased class basenames whose tables
+  # render parentheless, `{:...:}`, whatever their parens
+  # (`math/function/table.rb:20,41`). Each name is verified to name exactly
+  # one Table subclass through the `class_name` the gem's own guard reads,
+  # and to actually take the parentheless path in a render; the base table's
+  # bracketed render proves that check can tell the two paths apart.
+  def simple_table_names
+    table_root = Plurimath::Math::Function::Table
+    names = table_root::SIMPLE_TABLES
+    raise Error, "SIMPLE_TABLES is #{names.class}; expected an Array" unless names.is_a?(::Array)
+    raise Error, "SIMPLE_TABLES is empty; the emitted list would prove nothing" if names.empty?
+
+    duplicates = names.tally.select { |_, count| count > 1 }.keys
+    raise Error, "SIMPLE_TABLES repeats #{duplicates.join(', ')}" unless duplicates.empty?
+
+    descendants = all_descendants(table_root).uniq
+    names.each do |name|
+      matches = descendants.select { |klass| klass.new([]).class_name == name }
+      unless matches.length == 1
+        raise Error, "SIMPLE_TABLES name #{name.inspect} matches #{matches.length} " \
+                     "Table subclasses (#{matches.map { |k| class_key(k) }.join(', ')}); " \
+                     "expected exactly one"
+      end
+
+      rendered = matches.first.new([render_probe_row]).to_asciimath(options: {})
+      next if rendered == "{:[#{RENDER_TABLE_CELL}]:}"
+
+      raise Error, "#{class_key(matches.first)} rendered #{rendered.inspect}, not " \
+                   "the parentheless {:...:}; SIMPLE_TABLES no longer routes it"
+    end
+
+    base = render_probe_table.to_asciimath(options: {})
+    unless base == "[[#{RENDER_TABLE_CELL}]]"
+      raise Error, "the base table rendered #{base.inspect}; the parentheless " \
+                   "check above can no longer discriminate"
+    end
+
+    names.dup
+  end
+
+  def build_render_tables
+    {
+      "font_keywords" => font_style_render_keywords,
+      "table_close" => table_close_fallback_pairs,
+      "simple_tables" => simple_table_names,
+    }
+  end
+
   # --- TypeScript emission -------------------------------------------------
 
   # Biome's string rule: the configured quote wins unless the other one needs
@@ -2404,6 +2572,52 @@ module CorpusGenerator
     write_ts(File.join(out_root, INPUT_FORMAT, "transform-registry.ts"), sections)
   end
 
+  def emit_render_tables_file(out_root, tables)
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        AsciiMath render tables: the three gem tables `to_asciimath` reads
+        that the parse tables cannot supply, consumed by the asciimath
+        render kind files (`src/render/<kind>/asciimath.ts`).
+
+        Every entry is measured off the runtime — a live render per entry,
+        never a source read (PORTING-STANDARDS.md), each re-verified by the
+        generator with a render that actually uses it. The parse direction
+        is no substitute for the first table: `bb`, `mathbf` and `textbf`
+        all parse to `Bold`, and only rendering says which keyword comes
+        back out.
+      TEXT
+      ts_tuple_map(
+        "ASCIIMATH_FONT_STYLE_KEYWORDS",
+        "ReadonlyMap<string, string>",
+        tables["font_keywords"],
+        doc: "FontStyle subclass basename -> the keyword its `to_asciimath`\n" \
+             "override wraps its value in, measured per class (`Bold.new(x)` ->\n" \
+             "`mathbf(x)`), sorted by basename. A subclass absent here was\n" \
+             "measured rendering its value alone, exactly like the bare carrier.",
+      ),
+      ts_tuple_map(
+        "ASCIIMATH_TABLE_CLOSE_FALLBACK",
+        "ReadonlyMap<string, string>",
+        tables["table_close"],
+        doc: "`Asciimath::Constants::TABLE_PARENTHESIS`, keyed by the rendered\n" \
+             "open paren: the close paren a table with a nil `close_paren`\n" \
+             "falls back to (`math/function/table.rb:43-49`), in the gem's\n" \
+             "order. A miss interpolates the empty string (verified).",
+      ),
+      ts_const(
+        "ASCIIMATH_SIMPLE_TABLE_NAMES",
+        "readonly string[]",
+        tables["simple_tables"],
+        doc: "`Table::SIMPLE_TABLES` (`math/function/table.rb:20`): the\n" \
+             "lowercased class basenames rendered parentheless, `{:...:}`,\n" \
+             "whatever their parens, in the gem's order. Membership only — the\n" \
+             "render path asks `include?` — so the order is not semantic.",
+      ),
+    ]
+
+    write_ts(File.join(out_root, INPUT_FORMAT, "render-tables.ts"), sections)
+  end
+
   def emit_context_axes_file(out_root, probe)
     sections = [
       ts_header(<<~TEXT.chomp),
@@ -2621,15 +2835,17 @@ module CorpusGenerator
     MESSAGE
   end
 
-  def write_symbol_data(out_root, data, registry, provenance)
+  def write_symbol_data(out_root, data, registry, render_tables, provenance)
     written = [
       File.join(out_root, INPUT_FORMAT, "input.ts"),
       File.join(out_root, INPUT_FORMAT, "grammar.ts"),
       File.join(out_root, INPUT_FORMAT, "transform-registry.ts"),
+      File.join(out_root, INPUT_FORMAT, "render-tables.ts"),
     ]
     emit_input_file(out_root, data["tables"])
     emit_grammar_file(out_root, data["grammar"])
     emit_transform_registry_file(out_root, registry)
+    emit_render_tables_file(out_root, render_tables)
 
     SYMBOL_FORMATS.each do |format|
       emit_symbols_file(out_root, format, data["static"])
@@ -2888,6 +3104,7 @@ module CorpusGenerator
     census = build_census(gem_dir)
     symbols = build_symbol_data
     registry = build_transform_registry(gem_dir, census)
+    render_tables = build_render_tables
     assert_corpus_symbols_covered!(pin_cases, exclusions, symbols)
 
     out_root = options[:out]
@@ -2910,7 +3127,8 @@ module CorpusGenerator
     bytes = write_payload(path, payload_header("Plurimath::Math::Core node census."), census)
     written << [path, write_manifest(path, bytes, out_root, provenance)]
 
-    emitted = write_symbol_data(options[:symbols_out], symbols, registry, provenance)
+    emitted = write_symbol_data(options[:symbols_out], symbols, registry, render_tables,
+                                provenance)
 
     written.each do |payload_path, manifest_path|
       puts "  #{relative(payload_path, REPO_ROOT)}"
@@ -2927,6 +3145,8 @@ module CorpusGenerator
          "#{symbols['grammar']['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
     puts "transform registry: " \
          "#{registry['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
+    puts "render tables: " \
+         "#{render_tables.map { |name, table| "#{name} #{table.length}" }.join(', ')}"
     puts "context-dependent: " \
          "#{probe['context_dependent'].map { |e| e['id'] }.join(', ')}"
     probe["dynamic"].each do |entry|

@@ -266,6 +266,8 @@ export interface CorpusCase {
   readonly id: string;
   readonly input: string;
   readonly model: SerializedNode;
+  /** The gem's rendered output per target format (`expected.asciimath`, ...). */
+  readonly expected: ReadonlyMap<string, string>;
 }
 
 /**
@@ -287,7 +289,7 @@ export function readCorpusCases(root: string = PINNED_CORPUS_ROOT): readonly Cor
     if (!isSerializedNode(entry.model)) {
       throw new Error(`case ${entry.id}: "model" is not a serialized node`);
     }
-    cases.push({ id: entry.id, input: entry.input, model: entry.model });
+    cases.push({ id: entry.id, input: entry.input, model: entry.model, expected: entry.expected });
   }
   if (cases.length === 0) {
     throw new Error(

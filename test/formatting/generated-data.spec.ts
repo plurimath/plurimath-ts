@@ -8,6 +8,8 @@
  * consumer misbehaves.
  */
 
+import { createHash } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_DECIMAL_MARKER,
@@ -26,6 +28,17 @@ describe("the generated locale table", () => {
     expect(LOCALE_DECIMAL_MARKERS[0]).toStrictEqual(["sr-Cyrl-ME", ","]);
     expect(LOCALE_DECIMAL_MARKERS[27]).toStrictEqual(["fil", "."]);
     expect(LOCALE_DECIMAL_MARKERS[95]).toStrictEqual(["zu", "."]);
+  });
+
+  it("matches the gem's whole table, hashed — every entry, not a sample", () => {
+    // Digest::SHA256 over JSON.generate of the gem's [locale, decimal] tuples
+    // in declaration order (probe: SupportedLocales::LOCALES at 00c52783) —
+    // printed by the oracle, byte-equal to JSON.stringify here, so ANY drifted
+    // entry moves this hash. Closes the review's gap: the spot-checks below
+    // sample three entries; this pins all 96.
+    const json = JSON.stringify(LOCALE_DECIMAL_MARKERS);
+    const hash = createHash("sha256").update(json).digest("hex");
+    expect(hash).toBe("b0996c899752ac6886cacde35c34187b4753511a400434fc316edbb6cc200dff");
   });
 
   it("holds each locale once, with a marker from the gem's marker set", () => {

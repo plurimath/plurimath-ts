@@ -127,6 +127,23 @@ function renderMatrixTable(node: NodeOf<"table">, name: string, context: RenderC
     env = mapped;
   }
   const options = node.options;
+  // `options&.key?(:asterisk)` (`matrix_class`, `table.rb:257`) is a send, and
+  // `&.` guards nil ALONE: a string, a number, `true`, `FALSE`, a list (the
+  // empty one included) and a node all reach `key?` and raise
+  // `NoMethodError: undefined method 'key?' for <the value>` — probed per
+  // shape on the pinned oracle (00c52783, ruby 4.0.1, 2026-08-10), through the
+  // constructor argument and a forced `@options` ivar alike. Only a hash
+  // answers, so everything else is `RenderError` here — never the silent
+  // no-asterisk render `Object.hasOwn` on a primitive produced, which dropped
+  // both the `*` and the `[…]` the gem never got far enough to decide.
+  if (options !== null && options !== undefined && !isRubyHash(options)) {
+    throw new RenderError(
+      `table.options: holds ${describeSlot(options)} — the gem sends ` +
+        "options&.key?(:asterisk), which only a hash answers (NoMethodError there)",
+      FORMAT,
+      node.kind,
+    );
+  }
   const starred = options !== null && options !== undefined && Object.hasOwn(options, "asterisk");
   const matrixClass = starred ? `{${env}*}` : `{${env}}`;
   let columnalign = "";
@@ -134,6 +151,42 @@ function renderMatrixTable(node: NodeOf<"table">, name: string, context: RenderC
     columnalign = `[${s(firstTdColumnAlignment(node))}]`;
   }
   return `\\begin${matrixClass}${columnalign}${latexContent(node, context)}\\end${matrixClass}`;
+}
+
+/** A Ruby `Hash` at this port's boundary: a plain record, never a list or node. */
+function isRubyHash(value: unknown): boolean {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && !isNode(value);
+}
+
+/**
+ * `Hash(…)[:columnalign]` — the alignment read shared by the starred matrix
+ * environment (`latex_columnalign`, `table.rb:270`, over `td_hash`) and the
+ * array column descriptor (`array_args`, `array.rb:36`, per td).
+ *
+ * `Kernel#Hash` converts exactly three things — a hash, nil, and the EMPTY
+ * list — and raises `TypeError: can't convert <Class> into Hash` for
+ * everything else. Probed per shape through BOTH readers on the pinned oracle
+ * (00c52783, ruby 4.0.1, 2026-08-10): `"left"`, `""`, `5`, `1.5`, `true`,
+ * `false`, `["left"]`, `[[:columnalign, "left"]]` and a `Number` instance all
+ * raise; `{}`, nil, an absent ivar and `[]` all render the no-alignment form
+ * (`[]` on the matrix side, `.` on the array side). So an empty list answers
+ * "no alignment" here and every other non-hash raises — never the silent null
+ * the matrix side used to return, and never the loud refusal the array side
+ * gave the empty list.
+ */
+function columnAlignment(parameterTwo: unknown, kind: string): string | null {
+  if (parameterTwo === null || parameterTwo === undefined) return null;
+  const emptyList = Array.isArray(parameterTwo) && parameterTwo.length === 0;
+  if (!emptyList && !isRubyHash(parameterTwo)) {
+    throw new RenderError(
+      `table.value: a td's parameter_two holds ${describeSlot(parameterTwo)} — the gem's ` +
+        "Hash() converts a hash, nil and the empty list alone (TypeError there)",
+      FORMAT,
+      kind,
+    );
+  }
+  const align = (parameterTwo as { readonly columnalign?: unknown }).columnalign;
+  return typeof align === "string" ? (ALIGNMENT_LETTERS.get(align) ?? null) : null;
 }
 
 /** `td_hash` (`table.rb:276`): `value&.first&.parameter_one&.first&.parameter_two`. */
@@ -146,9 +199,7 @@ function firstTdColumnAlignment(node: NodeOf<"table">): string | null {
   const hash = isNode(firstTd)
     ? (firstTd as { readonly parameterTwo?: unknown }).parameterTwo
     : undefined;
-  if (typeof hash !== "object" || hash === null || Array.isArray(hash) || isNode(hash)) return null;
-  const align = (hash as { readonly columnalign?: unknown }).columnalign;
-  return typeof align === "string" ? (ALIGNMENT_LETTERS.get(align) ?? null) : null;
+  return columnAlignment(hash, node.kind);
 }
 
 /**
@@ -181,17 +232,7 @@ function renderArrayTable(node: NodeOf<"table">, context: RenderContext): string
       );
     }
     if (tdCells.length > 0 && isPipeSymbol(tdCells[0])) return "|";
-    const hash = (td as { readonly parameterTwo?: unknown }).parameterTwo;
-    if (hash === null || hash === undefined) return null;
-    if (typeof hash !== "object" || Array.isArray(hash) || isNode(hash)) {
-      throw new RenderError(
-        "table.value: a td's parameter_two is not a hash — the gem's Hash() raises TypeError here",
-        FORMAT,
-        node.kind,
-      );
-    }
-    const align = (hash as { readonly columnalign?: unknown }).columnalign;
-    return typeof align === "string" ? (ALIGNMENT_LETTERS.get(align) ?? null) : null;
+    return columnAlignment((td as { readonly parameterTwo?: unknown }).parameterTwo, node.kind);
   });
   const descriptor = args.every((entry) => entry === null)
     ? "."

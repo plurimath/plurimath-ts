@@ -183,6 +183,27 @@ nothing from *other* layers, and generated data a layer owns under its own
 directory is part of that layer. No module gained a dependency; the previous
 wording banned core from reading its own data, which was never the intent.
 
+### Both renderers: admitted primitives diverge in composite positions
+
+**Trigger: the cross-format follow-up on raw-value-vs-string admission —
+decide narrow-the-admission versus permanent divergence before 1.0.**
+
+The direct-slot admission of reproducible primitives (booleans, non-finite
+floats) is byte-exact where probed — but a composite that truthiness-tests
+or string-operates on the *raw* Ruby value diverges when the port hands it
+the already-stringified render. Probed both formats (2026-08-10):
+
+- Table open paren forced `false`, LaTeX: gem `\left .` (falsy `|| "."`
+  fallback observes raw `false`) — port `\left false`.
+- Nary first slot forced `false`: gem `\int 2` / `int 2` (LaTeX/AsciiMath;
+  the fallback observes raw `false`) — port `false 2` in both.
+
+Owned jointly by the AsciiMath and LaTeX renderers (the merged #10 carries
+the same class); the admission itself stays, because in direct interpolation
+slots it is byte-exact and pinned. The follow-up chooses: refuse admitted
+primitives in composite-feeding positions, or record these as permanent
+divergences case by case.
+
 ## Upstream issues
 
 Defects in the Ruby gem, found while building the port. Both reproduce on a

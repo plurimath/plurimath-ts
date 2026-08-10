@@ -1407,6 +1407,152 @@ describe("named tables", () => {
     ).toBe("\\begin{matrix*}x\\end{matrix*}");
   });
 
+  it("a non-hash options raises: options&.key?(:asterisk) is a send only a hash answers", () => {
+    // Probe on the pinned oracle (00c52783, ruby 4.0.1, 2026-08-10),
+    // Table::Matrix.new([Tr.new([Td.new([Symbol.new("x")])])], nil, nil, OPTS)
+    // .to_latex(options: {}) — constructor arg and forced @options ivar answer
+    // identically:
+    //   {}                        => "\begin{matrix}x\end{matrix}"
+    //   {asterisk: true}          => "\begin{matrix*}[]x\end{matrix*}"
+    //   nil                       => "\begin{matrix}x\end{matrix}"
+    //   "asterisk" / "" / 5 / 1.5 / true / FALSE / [] / [:asterisk] /
+    //     Number.new("2")         => NoMethodError: undefined method 'key?'
+    //                                for <the value>
+    // `&.` guards nil ALONE, so `false` and the EMPTY list crash with the rest
+    // (unlike the `Hash()` read below, which converts both nil and []).
+    // RenderError here — never the silent no-asterisk render `Object.hasOwn`
+    // on a primitive produced, which dropped the `*` and the `[…]` the gem
+    // never got far enough to decide.
+    const matrix = (options: unknown) =>
+      ({
+        kind: "table",
+        name: "Matrix",
+        value: [tr(x())],
+        openParen: null,
+        closeParen: null,
+        options,
+      }) as never;
+    expect(toLatex(matrix({}))).toBe("\\begin{matrix}x\\end{matrix}");
+    expect(toLatex(matrix({ asterisk: true }))).toBe("\\begin{matrix*}[]x\\end{matrix*}");
+    expect(toLatex(matrix({ asterisk: false }))).toBe("\\begin{matrix*}x\\end{matrix*}");
+    expect(toLatex(matrix(null))).toBe("\\begin{matrix}x\\end{matrix}");
+    expect(toLatex(matrix(undefined))).toBe("\\begin{matrix}x\\end{matrix}");
+    for (const options of ["asterisk", "", 5, 1.5, true, false, [], ["asterisk"], two()]) {
+      expect(() => toLatex(matrix(options)), JSON.stringify(options) ?? "node").toThrow(
+        RenderError,
+      );
+    }
+    expect(() => toLatex(matrix("asterisk"))).toThrow(/table\.options/);
+    // Order, same oracle: `matrix_class` reads the open paren BEFORE the
+    // options key, so a Langle paren beside a String options answers
+    // "NoMethodError: undefined method 'to_matrices'", never the key? crash.
+    // The message names the paren here too.
+    expect(() =>
+      toLatex({
+        kind: "table",
+        name: "Matrix",
+        value: [tr(x())],
+        openParen: paren("Paren::Langle"),
+        closeParen: null,
+        options: "asterisk",
+      } as never),
+    ).toThrow(/table\.openParen/);
+    // The carriers with no `matrix_class` never read options at all. Probes,
+    // each with options "asterisk": a bare Table with square parens =>
+    // "\left [\begin{matrix}x\end{matrix}\right ]"; Table::Array =>
+    // "\begin{array}.x\end{array}"; Cases =>
+    // "\left .\begin{matrix}{a}x\end{matrix}\right .".
+    const carrier = (name: string | undefined, open: unknown, close: unknown) =>
+      ({
+        kind: "table",
+        name,
+        value: [tr(x())],
+        openParen: open,
+        closeParen: close,
+        options: "asterisk",
+      }) as never;
+    expect(toLatex(carrier(undefined, paren("Paren::Lsquare"), paren("Paren::Rsquare")))).toBe(
+      "\\left [\\begin{matrix}x\\end{matrix}\\right ]",
+    );
+    expect(toLatex(carrier("Array", null, null))).toBe("\\begin{array}.x\\end{array}");
+    expect(toLatex(carrier("Cases", null, null))).toBe(
+      "\\left .\\begin{matrix}{a}x\\end{matrix}\\right .",
+    );
+  });
+
+  it("a td parameterTwo raises exactly where Hash() cannot convert it — nil and [] can", () => {
+    // Probe on the pinned oracle (00c52783, ruby 4.0.1, 2026-08-10), the same
+    // PT through both readers — Matrix's `Hash(td_hash)[:columnalign]`
+    // (`table.rb:274`) and Array's `Hash(td.parameter_two)[:columnalign]`
+    // (`array.rb:36`) — Td.new([Symbol.new("x")], PT):
+    //   {columnalign: "left"} => "\begin{matrix*}[l]…" / "\begin{array}{l}…"
+    //   {} / nil / absent / [] => "\begin{matrix*}[]…" / "\begin{array}.…"
+    //   "left" / "" / 5 / 1.5 / true / false / ["left"] /
+    //     [[:columnalign, "left"]] / Number.new("2")
+    //                          => TypeError: can't convert <Class> into Hash
+    // Kernel#Hash converts a Hash, nil and the EMPTY list and nothing else, so
+    // `[]` renders where every other list raises. Matrix's read returned null
+    // (no alignment, silently) for all of these; Array's raised for `[]` too.
+    const alignedTd = (parameterTwo: unknown) =>
+      ({ kind: "binaryFunction", name: "Td", parameterOne: [x()], parameterTwo }) as never;
+    const table = (name: string, parameterTwo: unknown, options: unknown) =>
+      ({
+        kind: "table",
+        name,
+        value: [{ kind: "unaryFunction", name: "Tr", parameterOne: [alignedTd(parameterTwo)] }],
+        openParen: null,
+        closeParen: null,
+        options,
+      }) as never;
+    const starred = (parameterTwo: unknown) => table("Matrix", parameterTwo, { asterisk: true });
+    const arrayed = (parameterTwo: unknown) => table("Array", parameterTwo, {});
+    expect(toLatex(starred({ columnalign: "left" }))).toBe("\\begin{matrix*}[l]x\\end{matrix*}");
+    expect(toLatex(arrayed({ columnalign: "left" }))).toBe("\\begin{array}{l}x\\end{array}");
+    for (const parameterTwo of [{}, null, undefined, []]) {
+      const label = JSON.stringify(parameterTwo) ?? "undefined";
+      expect(toLatex(starred(parameterTwo)), label).toBe("\\begin{matrix*}[]x\\end{matrix*}");
+      expect(toLatex(arrayed(parameterTwo)), label).toBe("\\begin{array}.x\\end{array}");
+    }
+    for (const parameterTwo of ["left", "", 5, 1.5, true, false, ["left"], two()]) {
+      const label = JSON.stringify(parameterTwo) ?? "node";
+      expect(() => toLatex(starred(parameterTwo)), label).toThrow(RenderError);
+      expect(() => toLatex(arrayed(parameterTwo)), label).toThrow(RenderError);
+    }
+    expect(() => toLatex(starred("left"))).toThrow(/parameter_two/);
+    // A FALSY or absent asterisk never reaches the alignment read
+    // (`latex_columnalign` returns "" first), so the same degenerate td
+    // renders there — probes with td parameter_two "left": options
+    // {asterisk: false} => "\begin{matrix*}x\end{matrix*}"; {asterisk: nil} =>
+    // the same; {} => "\begin{matrix}x\end{matrix}".
+    expect(toLatex(table("Matrix", "left", { asterisk: false }))).toBe(
+      "\\begin{matrix*}x\\end{matrix*}",
+    );
+    expect(toLatex(table("Matrix", "left", { asterisk: null }))).toBe(
+      "\\begin{matrix*}x\\end{matrix*}",
+    );
+    expect(toLatex(table("Matrix", "left", {}))).toBe("\\begin{matrix}x\\end{matrix}");
+    // And the alignment read comes BEFORE the content render (`opening` is
+    // interpolated first): probes with a stray bare-string row beside the td —
+    // parameter_two "left" => TypeError (the Hash() refusal), parameter_two
+    // {columnalign: "left"} => NoMethodError 'to_latex' for the row.
+    const withStrayRow = (parameterTwo: unknown) =>
+      ({
+        kind: "table",
+        name: "Matrix",
+        value: [
+          { kind: "unaryFunction", name: "Tr", parameterOne: [alignedTd(parameterTwo)] },
+          "oops",
+        ],
+        openParen: null,
+        closeParen: null,
+        options: { asterisk: true },
+      }) as never;
+    expect(() => toLatex(withStrayRow("left"))).toThrow(/parameter_two/);
+    expect(() => toLatex(withStrayRow({ columnalign: "left" }))).toThrow(
+      /cannot render the bare string/,
+    );
+  });
+
   it("array derives its descriptor from pipes and columnalign, dot when empty", () => {
     // Probes named-table/Array/pipe => "\begin{array}{|}b\end{array}";
     // align/left|right|center => {l}/{r}/{c}; align/unknown => ".".

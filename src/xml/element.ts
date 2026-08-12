@@ -119,14 +119,24 @@ export class XmlElement {
    * not `<t/>` (measured, oracle `00c52783`).
    */
   append(...nodes: readonly XmlAppendable[]): this {
-    for (const node of nodes) {
-      if (node === null || node === undefined) continue;
-      if (Array.isArray(node)) {
-        this.append(...(node as readonly XmlAppendable[]));
-        continue;
+    // Recursion is per nesting LEVEL, never per element. The previous form
+    // re-entered as `this.append(...array)`, which makes one call frame
+    // carrying N arguments and throws `RangeError` past roughly 125k — while
+    // the gem's plain `each` loop has no limit at all (measured: the port
+    // threw at 200k children where the oracle emitted 3,400,140 chars). The
+    // threshold was stack-dependent, so it degraded as a render nested
+    // deeper and there was no safe number to quote.
+    const visit = (items: readonly XmlAppendable[]): void => {
+      for (const node of items) {
+        if (node === null || node === undefined) continue;
+        if (Array.isArray(node)) {
+          visit(node as readonly XmlAppendable[]);
+          continue;
+        }
+        this.childList.push(node as XmlChild);
       }
-      this.childList.push(node as XmlChild);
-    }
+    };
+    visit(nodes);
     return this;
   }
 }

@@ -55,6 +55,8 @@ export function renderLinebreak(node: NodeOf<"linebreak">, context: RenderContex
 function renameToMo(element: XmlElement): XmlElement {
   const mo = new XmlElement("mo");
   mo.setAttributes(element.attributes);
-  mo.append(...element.children);
+  // The array form, not a spread: `append` flattens it without opening a call
+  // frame per child, so a wide `mrow` cannot exhaust the stack here.
+  mo.append(element.children);
   return mo;
 }

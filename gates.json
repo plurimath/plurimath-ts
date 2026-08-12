@@ -1,5 +1,6 @@
 {
   "$comment": "Gate registry — ARCHITECTURE.md §7. Every executable gate (class A and B) is registered from day one and changes activation state as the milestone advances; it never appears or disappears. Class-C evidence (peer review, sign-off) is deliberately absent: it lives in the phase-exit checklist, not in a runner.",
+  "$comment-selects": "A gate whose runner is a vitest path filter carries `selects`: the exact spec files that filter must resolve to. Vitest already fails a filter that matches nothing, but a filter that matches the WRONG files passes green while checking something else — which is what `pnpm test -- corpus` did, selecting the corpus-pin reader specs and none of the conformance suites. test/gates/gate-selection.spec.ts pins each resolution, so adding, renaming or moving a spec fails loudly instead of silently changing what a gate covers.",
   "milestones": ["P0", "P1-baseline", "P1-completion", "P2", "P3", "P4"],
   "currentMilestone": "P0",
   "gates": [
@@ -42,49 +43,58 @@
       "id": "runtime-boundary",
       "class": "A",
       "activatesAt": "P1-baseline",
-      "run": "pnpm test -- runtime-boundary",
+      "run": "pnpm test runtime-boundary",
       "description": "Unknown kind and malformed known kind raise RenderError; valid structural objects render"
     },
     {
       "id": "unsupported-fallback",
       "class": "A",
       "activatesAt": "P1-baseline",
-      "run": "pnpm test -- unsupported",
+      "run": "pnpm test unsupported",
       "description": "Deferred-construct text fallback, diagnostics, dedup, and original-input offsets"
     },
     {
       "id": "corpus-conformance",
       "class": "A",
       "activatesAt": "P1-baseline",
-      "run": "pnpm test -- corpus",
+      "run": "pnpm test corpus- model-parity render-parity asciimath/grammar",
+      "selects": [
+        "test/core/corpus-pin.spec.ts",
+        "test/core/corpus-yaml.spec.ts",
+        "test/formats/asciimath/grammar.spec.ts",
+        "test/formats/asciimath/model-parity.spec.ts",
+        "test/formats/asciimath/render-parity.spec.ts",
+        "test/formats/latex/render-parity.spec.ts",
+        "test/formats/mathml/render-parity.spec.ts"
+      ],
       "description": "Parse tree, normalized model and every landed renderer match the Ruby-generated expectations"
     },
     {
       "id": "payload-validation",
       "class": "A",
       "activatesAt": "P1-baseline",
-      "run": "pnpm test -- payload",
+      "run": "pnpm test payload",
       "description": "Generated payloads validate against their schema and manifest hashes"
     },
     {
       "id": "negative-parity",
       "class": "A",
       "activatesAt": "P1-completion",
-      "run": "pnpm test -- rejection",
+      "run": "pnpm test rejection",
       "description": "Inputs the gem rejects are rejected here"
     },
     {
       "id": "symbol-context-matrix",
       "class": "A",
       "activatesAt": "P1-completion",
-      "run": "pnpm test -- symbol-context",
+      "run": "pnpm test symbol-context",
       "description": "Behavioural probe matrix for context-dependent symbols"
     },
     {
       "id": "adversarial-inputs",
       "class": "A",
       "activatesAt": "P1-completion",
-      "run": "pnpm test -- adversarial",
+      "run": "pnpm test adversarial",
       "description": "Deep nesting, unmatched fences and long token runs fail cleanly in bounded time"
     },
     {

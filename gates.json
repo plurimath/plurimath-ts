@@ -44,8 +44,8 @@
       "class": "A",
       "activatesAt": "P1-baseline",
       "run": "pnpm test runtime-boundary",
-      "selects": [],
-      "description": "Unknown kind and malformed known kind raise RenderError; valid structural objects render"
+      "selects": ["test/gates/runtime-boundary.spec.ts"],
+      "description": "Valid structural objects render; unknown kinds and non-node inputs raise RenderError"
     },
     {
       "id": "unsupported-fallback",

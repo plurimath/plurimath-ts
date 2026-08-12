@@ -1,14 +1,18 @@
 /**
  * Proof that each gate's runner selects the spec files it claims to.
  *
- * Several class-A gates run a vitest path filter (`pnpm test -- <patterns>`).
- * Vitest already exits non-zero when a filter matches nothing, so an empty
- * selection cannot pass unnoticed. The failure this file exists to catch is the
- * other one: a filter that matches the WRONG files runs green while proving
- * something else entirely. That is not hypothetical here — `corpus-conformance`
- * shipped as `pnpm test -- corpus`, which resolved to the two corpus-pin reader
- * specs and to none of the parse-tree, model or renderer conformance suites the
- * gate's description promises.
+ * Several class-A gates run a vitest path filter (`pnpm test <patterns>`).
+ * Vitest exits non-zero when a filter matches nothing, so an empty selection
+ * cannot pass unnoticed. The failure this file exists to catch is the other
+ * one: a filter that matches the WRONG files runs green while proving something
+ * else entirely.
+ *
+ * That is not hypothetical. `corpus-conformance` shipped as
+ * `pnpm test -- corpus`, which under pnpm 10 dropped the pattern and ran the
+ * whole suite. Correcting only the separator would not have been enough — the
+ * corrected `pnpm test corpus` resolves to the two corpus-pin *reader* specs
+ * and to none of the parse-tree, model or renderer conformance suites the
+ * gate's description promises. Two distinct defects, one behind the other.
  *
  * So a gate whose runner is a path filter carries `selects` in gates.json: the
  * exact set of spec files that filter must resolve to. This file re-resolves
@@ -31,11 +35,14 @@ const TEST_ROOT = join(REPO_ROOT, "test");
 interface Gate {
   id: string;
   class: string;
+  activatesAt: string;
   run: string;
   selects?: string[];
 }
 
 const registry = JSON.parse(readFileSync(join(REPO_ROOT, "gates.json"), "utf8")) as {
+  milestones: string[];
+  currentMilestone: string;
   gates: Gate[];
 };
 
@@ -82,7 +89,6 @@ function resolveFilter(patterns: string[], files: string[]): string[] {
 
 const SPEC_FILES = allSpecFiles();
 const filterGates = registry.gates.filter((gate) => filterPatterns(gate.run) !== null);
-const declaredGates = filterGates.filter((gate) => gate.selects !== undefined);
 
 describe("gate selection", () => {
   it("finds the spec tree it is about to reason over", () => {
@@ -106,23 +112,40 @@ describe("gate selection", () => {
     expect(broken.map((gate) => gate.id)).toEqual([]);
   });
 
-  describe.each(declaredGates.map((gate) => [gate.id, gate] as const))("%s", (_id, gate) => {
+  it("requires every filter gate to declare what it selects", () => {
+    // Without this, a gate that simply omits `selects` opts out of the whole
+    // guard — which is how six of the seven filter gates were unprotected in
+    // the first draft of this file. `symbol-context-matrix` already resolves
+    // to a real spec, so renaming that spec would have silently emptied the
+    // gate with nothing failing.
+    const undeclared = filterGates.filter((gate) => gate.selects === undefined).map((g) => g.id);
+    expect(undeclared).toEqual([]);
+  });
+
+  describe.each(filterGates.map((gate) => [gate.id, gate] as const))("%s", (_id, gate) => {
     const patterns = filterPatterns(gate.run) as string[];
     const resolved = resolveFilter(patterns, SPEC_FILES);
+    const declared = [...(gate.selects ?? [])].sort();
 
     it("selects exactly the files it declares", () => {
-      expect(resolved).toEqual([...(gate.selects as string[])].sort());
-    });
-
-    it("selects at least one file", () => {
-      // Redundant against the equality above while `selects` is non-empty, and
-      // deliberately so: it keeps the invariant explicit if a `selects` list is
-      // ever emptied rather than removed.
-      expect(resolved.length).toBeGreaterThan(0);
+      expect(resolved).toEqual(declared);
     });
 
     it("declares only files that exist", () => {
-      for (const file of gate.selects as string[]) expect(SPEC_FILES).toContain(file);
+      for (const file of declared) expect(SPEC_FILES).toContain(file);
+    });
+
+    it("is inactive if it selects nothing", () => {
+      // An empty declaration is legitimate while a gate's specs have not
+      // landed — but only while the gate is inactive. Active with an empty
+      // selection means vitest exits non-zero on "No test files found", so
+      // this would be an active gate that cannot pass. ARCHITECTURE.md §7
+      // forbids active-but-unrunnable, and this is the registry-level form of
+      // that rule.
+      if (declared.length > 0) return;
+      const milestones = registry.milestones;
+      const current = milestones.indexOf(registry.currentMilestone);
+      expect(milestones.indexOf(gate.activatesAt)).toBeGreaterThan(current);
     });
   });
 });

@@ -15,11 +15,11 @@ excluded:
   input_format: asciimath
   feature: unitsml
   matched: unitsml\(
-  reason: unitsml is deferred (ARCHITECTURE.md §5); matched on the input text, since the gem raises for invalid unitsml and produces no formula to inspect
+  reason: unitsml is deferred (ARCHITECTURE.md §5). Matched on the input text rather than on a parsed formula, because the gem raises for invalid unitsml and leaves no formula to inspect — so one textual rule has to cover the valid inputs too
 - id: text-unitsml-valid
   group: quoted-text
   input: '"unitsml(kg)"'
   input_format: asciimath
   feature: unitsml
   matched: unitsml\(
-  reason: unitsml is deferred (ARCHITECTURE.md §5); matched on the input text, since the gem raises for invalid unitsml and produces no formula to inspect
+  reason: unitsml is deferred (ARCHITECTURE.md §5). Matched on the input text rather than on a parsed formula, because the gem raises for invalid unitsml and leaves no formula to inspect — so one textual rule has to cover the valid inputs too

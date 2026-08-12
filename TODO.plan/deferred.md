@@ -464,7 +464,7 @@ deliberate `force_encoding` — and the maintainer's parser-side ruling on
 degenerate Unicode input (the caller bears the consequences) extends here.
 Documented in `src/xml/serializer.ts`.
 
-### RepeatAtom's leftover FAIL records no unconsumed index — and must not
+### RepeatAtom's leftover FAIL records no unconsumed index, and must keep not doing so
 
 **Trigger: a real AsciiMath input whose reported failure index is measurably
 wrong against the gem. Not the standalone-Parslet difference below, which has

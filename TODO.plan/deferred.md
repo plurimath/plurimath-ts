@@ -464,6 +464,44 @@ deliberate `force_encoding` — and the maintainer's parser-side ruling on
 degenerate Unicode input (the caller bears the consequences) extends here.
 Documented in `src/xml/serializer.ts`.
 
+### RepeatAtom's leftover FAIL records no unconsumed index, and must keep not doing so
+
+**Trigger: a real AsciiMath input whose reported failure index is measurably
+wrong against the gem. Not the standalone-Parslet difference below, which has
+already been tried and rejected.**
+
+`MaybeAtom.tryParse` records `ctx.unconsumed` before returning FAIL for a
+`consume_all` leftover (`src/pegkit/atom.ts:495`); `RepeatAtom.tryParse` hits
+the identical condition and records nothing (`:527`). Copilot flagged both
+sites on PR #5; only the maybe half was fixed, in `e5a9995`.
+
+The asymmetry is real and so is the standalone divergence. Measured against
+parslet 2.0.0:
+
+| input | pegkit | parslet `offending_pos` |
+|---|---|---|
+| `(a >> b).repeat(1)` on `"abax"` | 3 | 2 |
+| `(a >> b >> c).repeat(1)` on `"abcabx"` | 5 | 3 |
+
+**The one-line symmetry fix was attempted on 2026-08-12 and reverted.**
+Recording `cursor` into `ctx.unconsumed` moves those synthetic cases to 2 and 3
+as expected — and breaks five previously-passing cases in
+`test/formats/asciimath/failure-parity.spec.ts`, whose expectations are
+measured gem behaviour. For `xℛy/` the recorded index is 1; the fix makes
+pegkit report 3.
+
+The oracle is the gem, not parslet in isolation. The gem's grammar nests this
+repetition inside other combinators, and parslet's compound error position is
+not simply "where the repetition stopped" — probing
+`Plurimath::Asciimath::Parse` directly gives `offending_pos=0` for those same
+inputs, matching neither number. Whatever maps that to the port's reported
+index is the thing to understand before touching `:527` again.
+
+So the port is currently correct against the oracle and wrong against
+standalone parslet, and only the first of those is the contract. Anyone
+re-reading Copilot's comment on #5 will find it persuasive; this entry exists
+so they do not spend the afternoon rediscovering why it is not.
+
 ### The XML writer is owed a thorough dedicated review
 
 **Trigger: before the MathML renderer (PR-4) merges — it is that PR's

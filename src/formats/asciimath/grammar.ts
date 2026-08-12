@@ -140,11 +140,20 @@ function arrToExpression(values: readonly string[], name: string): Atom {
  */
 function negatedCharacterClass(character: string): string {
   const code = character.codePointAt(0);
-  // Unreachable: `read_text` only ever sees a `Constants::PARENTHESIS` key.
-  // Ruby's own fallback is `match("[^]")`, which raises `RegexpError`; an empty
-  // class raises here too, so the failure mode is preserved rather than papered
-  // over.
-  if (code === undefined) return "[^]";
+  // Unreachable by construction: `lparen` and `CLOSING_PAREN` are both built
+  // from the same `ASCIIMATH_PARENTHESIS` array, and this has one call site.
+  //
+  // It still throws rather than returning a class, because the obvious
+  // fallback is a silent disaster. Ruby's own would be `match("[^]")`, which
+  // raises `RegexpError` — but `new RegExp("[^]", "yu")` is *valid* JavaScript
+  // and matches **any** character, so returning it would make `read_text`
+  // quietly accept everything instead of failing. An earlier comment here
+  // claimed the two languages agreed on that; they do not (Copilot, PR #4).
+  if (code === undefined) {
+    throw new Error(
+      `negatedCharacterClass: empty parenthesis character (${JSON.stringify(character)})`,
+    );
+  }
   return `[^\\u{${code.toString(16)}}]`;
 }
 
@@ -223,6 +232,13 @@ export function createAsciimathGrammar(
   const td = rule(() => expression.as("td"));
   const base = rule(() => str("__|").absent().andThen(str("_")));
   const power = rule(() => str("^"));
+  // The `+` is redundant and kept deliberately. `match` consumes exactly one
+  // character however many the pattern could match — pinned against parslet
+  // 2.0.0 in `test/pegkit/conformance.spec.ts` — so a run of whitespace is
+  // consumed by `repeat`, not by this quantifier. But `parse.rb:11` writes
+  // `match(/\s+/)`, and this file transcribes the oracle's grammar rather than
+  // improving on it; the redundancy is the gem's, and removing it would make
+  // the two harder to diff for no behavioural gain (Copilot, PR #4).
   const space = rule(() => match(`[${RUBY_SPACE}]+`));
   const comma = rule(() => seq(str(","), spaceOptional));
   /** Ruby's `space?`; `?` is not a TypeScript identifier character. */

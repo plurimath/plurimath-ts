@@ -463,8 +463,13 @@ module CorpusGenerator
           "bundler" => lock[:bundled_with],
         },
         "sources" => lock[:sources].map do |source|
+          # `.uniq` because a lockfile lists one spec per platform variant, and
+          # this field records which gems a source provides, not how many
+          # builds of each. Without it ffi and nokogiri appeared eight times
+          # apiece — noise that makes a manifest diff unreadable for no
+          # information gained.
           entry = { "kind" => source["kind"], "remote" => source["remote"],
-                    "gems" => source["specs"].sort }
+                    "gems" => source["specs"].uniq.sort }
           entry["revision"] = source["revision"] if source["revision"]
           entry
         end,
@@ -576,9 +581,18 @@ module CorpusGenerator
           "input_format" => INPUT_FORMAT,
           "feature" => feature,
           "matched" => DEFERRED_INPUT_PATTERNS.fetch(feature).source,
-          "reason" => "#{feature} is deferred (ARCHITECTURE.md §5); matched " \
-                      "on the input text, since the gem raises for invalid " \
-                      "#{feature} and produces no formula to inspect",
+          # One rule covers every input carrying the feature, valid or not, so
+          # the reason has to be true of both. The earlier wording said the
+          # gem "raises for invalid #{feature} and produces no formula to
+          # inspect" as though that were why each case was excluded — which
+          # told a reader of exclusions.yaml that a perfectly valid input had
+          # raised. Raising is why the *matching* is textual; deferral is why
+          # the case is excluded.
+          "reason" => "#{feature} is deferred (ARCHITECTURE.md §5). Matched on " \
+                      "the input text rather than on a parsed formula, because " \
+                      "the gem raises for invalid #{feature} and leaves no " \
+                      "formula to inspect — so one textual rule has to cover " \
+                      "the valid inputs too",
         }
       end
     end

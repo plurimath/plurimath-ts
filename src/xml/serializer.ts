@@ -100,6 +100,44 @@ export function dump(root: XmlElement, options: DumpOptions = {}): string {
 }
 
 /**
+ * Ox's `MAX_DEPTH` (`ox-2.14.28/ext/ox/dump.c:17`), past which it raises
+ * rather than emitting (`:582-583`,
+ * `rb_raise(rb_eSysStackError, "maximum depth exceeded")`).
+ *
+ * It is a compiled-in constant, not stack exhaustion: the oracle's boundary
+ * sits at the same place for indent 2 and indent -1 — identical last-ok at
+ * root plus 1000 descendants, identical first-fail at 1001 — so it does not
+ * move with output size. The port's own natural ceiling, by contrast, was
+ * real stack exhaustion and differed by indent (4999 vs 6953), so leaving the
+ * limit implicit would have made the port's failure point nondeterministic as
+ * well as wrong.
+ *
+ * Between roughly 1001 and 4999 levels the port emitted documents the gem can
+ * never produce. Being more capable than the oracle is a defect
+ * (PORTING-STANDARDS.md), and because this boundary is an exact constant it
+ * is modelled exactly rather than approximated.
+ */
+const OX_MAX_DEPTH = 1000;
+
+/**
+ * Thrown when a tree is nested deeper than Ox will serialize. Local to this
+ * module by necessity — layer 1 imports nothing internal (ARCHITECTURE.md §3),
+ * so `RenderError` is not reachable from here. The MathML renderer's mid-walk
+ * catch converts anything that is not already a `RenderError` into one, so
+ * this surfaces to callers as the documented `RenderError` without `xml`
+ * having to know that type exists.
+ */
+export class XmlDepthLimitError extends Error {
+  readonly limit: number;
+
+  constructor(limit: number) {
+    super(`maximum depth exceeded — Ox serializes at most ${limit} levels below the root`);
+    this.name = "XmlDepthLimitError";
+    this.limit = limit;
+  }
+}
+
+/**
  * `Plurimath::Math::Core#dump_nodes` (core.rb:214-223): `Ox.dump`, then the
  * `REPLACABLES` rewrites — the serialization `to_mathml`/`to_omml` return.
  *
@@ -138,6 +176,9 @@ function replacableValues(xml: string): string {
 }
 
 function writeElement(element: XmlElement, depth: number, indent: number, parts: string[]): void {
+  // `depth` is the element's own nesting level, root at 0. The oracle accepts
+  // a root plus 1000 descendants and raises on the 1001st.
+  if (depth > OX_MAX_DEPTH) throw new XmlDepthLimitError(OX_MAX_DEPTH);
   if (indent >= 0) {
     parts.push(`\n${" ".repeat(indent * depth)}`);
   }

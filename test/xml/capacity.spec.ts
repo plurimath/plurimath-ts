@@ -33,8 +33,7 @@ import { describe, expect, it } from "vitest";
 import { RenderError } from "../../src/core/errors";
 import { FormulaNode, SqrtNode, SymbolNode } from "../../src/core/nodes";
 import { toMathml } from "../../src/formats/mathml/renderer";
-import { XmlElement } from "../../src/xml/index";
-import { dump, XmlDepthLimitError } from "../../src/xml/serializer";
+import { dump, XmlDepthLimitError, XmlElement } from "../../src/xml/index";
 
 /** A root with `levels` nested descendants and a text leaf innermost. */
 function chain(levels: number): XmlElement {

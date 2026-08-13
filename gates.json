@@ -76,8 +76,8 @@
       "class": "A",
       "activatesAt": "P1-baseline",
       "run": "pnpm test payload",
-      "selects": [],
-      "description": "Generated payloads validate against their schema and manifest hashes"
+      "selects": ["test/gates/payload-validation.spec.ts"],
+      "description": "Generated data still matches the generators it names, and declares itself committable"
     },
     {
       "id": "negative-parity",

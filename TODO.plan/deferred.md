@@ -450,19 +450,48 @@ axis mechanism first — the pin will fail and point here.**
 axis; `renderer.spec.ts` pins the emptiness so a future regeneration cannot
 silently need one.
 
-### Lone surrogates diverge from Ox byte output
+### Any non-UTF-8 Ruby string diverges from Ox byte output
 
 **Trigger: only if a consumer ever feeds the serializer invalid Unicode and
 files it as a bug — then decide byte-oriented output vs a loud reject.**
 
-Known divergence (PR #9 review, 2026-08-06). Ox, handed a Ruby string
-force-encoded around a lone-surrogate byte sequence (`ED A0 80`), emits those
-invalid bytes raw; `src/xml` holds text as JavaScript strings, so a lone
-UTF-16 surrogate becomes U+FFFD (`EF BF BD`) at any UTF-8 encoding boundary.
+Known divergence (PR #9 review, 2026-08-06; class widened by the `src/xml`
+module review, 2026-08-12). Ox emits whatever bytes a Ruby string carries,
+valid UTF-8 or not, and `src/xml` holds text as JavaScript strings — which
+cannot represent those bytes at all, so any UTF-8 encoding boundary replaces
+them with U+FFFD (`EF BF BD`).
+
+The entry used to name only lone surrogates. Measured on the oracle, the class
+is every Ruby string carrying non-UTF-8 bytes:
+
+| input | Ox emits |
+|---|---|
+| lone surrogate `ED A0 80` | `3C 74 3E` **`ED A0 80`** `3C 2F 74 3E` |
+| bare invalid byte `FF` | `3C 74 3E` **`FF`** `3C 2F 74 3E` |
+| `BINARY` latin-1 `é` (`E9`) | `3C 74 3E` **`E9`** `3C 2F 74 3E` |
+
+A `BINARY`-encoded string is not exotic — it is what `File.binread` returns —
+so the third row is the one most likely to reach a consumer.
 No gem code path produces such a string — constructing one requires
 deliberate `force_encoding` — and the maintainer's parser-side ruling on
 degenerate Unicode input (the caller bears the consequences) extends here.
 Documented in `src/xml/serializer.ts`.
+
+### A NUL inside an element or attribute *name* diverges, unreachably
+
+**Trigger: a consumer constructing element names from untrusted input — which
+no current code path does, since every name in `src/render/` is a literal.**
+
+Found by the `src/xml` module review (2026-08-12) and recorded so the next
+reviewer does not re-find it. Ox truncates a name at an embedded NUL; the port
+emits the name whole (`serializer.ts:144`, `:146` — names are written verbatim,
+because Ox never validates or escapes them either).
+
+Unreachable today and left alone deliberately: fixing it would mean validating
+names on a hot path to model a case nothing can produce. It belongs with the
+non-UTF-8 entry above — both are degenerate-input divergences that the
+maintainer's standing ruling already covers, and both are recorded rather than
+papered over.
 
 ### RepeatAtom's leftover FAIL records no unconsumed index, and must keep not doing so
 

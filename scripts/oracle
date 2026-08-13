@@ -298,10 +298,17 @@ module OracleGate
   end
 
   def extract_head_archive!(repo_root, dest_root)
-    statuses = Open3.pipeline(
-      ["git", "-C", repo_root, "archive", "--format=tar", "HEAD"],
-      ["tar", "-xf", "-", "-C", dest_root],
-    )
+    statuses = begin
+      Open3.pipeline(
+        ["git", "-C", repo_root, "archive", "--format=tar", "HEAD"],
+        ["tar", "-xf", "-", "-C", dest_root],
+      )
+    rescue Errno::ENOENT => e
+      # Ruby raises before the pipeline runs when a binary is not on PATH, so
+      # this would otherwise escape as a stack trace rather than the exit 2 a
+      # precondition failure owes the caller.
+      raise Error, "git and tar are both required to snapshot #{repo_root} (#{e.message})"
+    end
     # Open3.pipeline returns Process::Status objects, not threads — there is
     # no #value to wait on.
     return if statuses.all?(&:success?)
@@ -384,22 +391,61 @@ module OracleGate
   # and only in these temporary copies — never in the repository.
   # Quoted or bare: this repository's manifests emit the hash bare, the
   # testsuite's provenance.yaml emits it quoted.
-  GENERATING_COMMIT = /^(\s*commit:\s*)'?[0-9a-f]{40}'?\s*$/
+  GENERATING_COMMIT = /^(\s*)commit:\s*'?[0-9a-f]{40}'?\s*$/
+  REPOSITORY_KEY = /^(\s*)repository:\s*$/
 
   # Both shapes of provenance file: `*.manifest.yaml` sidecars here, and the
   # testsuite corpus's own `provenance.yaml`.
   PROVENANCE_GLOBS = ["**/*.manifest.yaml", "**/provenance.yaml"].freeze
 
+  # Blank ONLY `generator.repository.commit` — the commit that generated the
+  # data, which changes by construction on every later regeneration.
+  #
+  # A manifest carries two `commit:` keys, and they mean opposite things:
+  #
+  #   generator:
+  #     repository:
+  #       commit: <this repo's HEAD when generated>   <- normalized
+  #   oracle:
+  #     commit: <the pinned gem commit>               <- compared strictly
+  #
+  # An earlier version matched any `commit:` line carrying a 40-hex hash, which
+  # blanked the oracle commit too and would have let the gate accept data
+  # regenerated from a DIFFERENT oracle — the one mismatch it exists to catch.
+  # So the block is tracked structurally rather than pattern-matched: a
+  # `commit:` is normalized only while inside a `repository:` mapping, meaning
+  # indented strictly deeper than the `repository:` key that opened it.
   def normalize_generating_commit!(root)
     PROVENANCE_GLOBS.flat_map { |pattern| Dir.glob(File.join(root, pattern)) }.uniq.each do |path|
-      text = File.read(path)
-      replaced = text.gsub(GENERATING_COMMIT, '\1<normalized>')
-      File.write(path, replaced) unless replaced == text
+      inside = nil
+      changed = false
+      lines = File.readlines(path).map do |line|
+        if (opener = REPOSITORY_KEY.match(line))
+          inside = opener[1].length
+          next line
+        end
+
+        indent = line[/\A\s*/].length
+        inside = nil if inside && !line.strip.empty? && indent <= inside
+
+        if inside && (found = GENERATING_COMMIT.match(line))
+          changed = true
+          next "#{found[1]}commit: <normalized>\n"
+        end
+
+        line
+      end
+      File.write(path, lines.join) if changed
     end
   end
 
   def capture_command(args, chdir: REPO_ROOT, env: {})
     Open3.capture3(env, *args, chdir: chdir)
+  rescue Errno::ENOENT => e
+    # Same reason as the pipeline above: a missing binary raises before the
+    # command runs, and every caller here treats a failure as a precondition
+    # failure worth naming rather than a stack trace.
+    raise Error, "#{args.first} is required but could not be executed (#{e.message})"
   end
 
   def indent_block(text)

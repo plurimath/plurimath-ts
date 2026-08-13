@@ -1,0 +1,467 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Ruby is the right fit here because this entry point exists to drive the
+# repository's Ruby generators under the oracle's Bundler context. Re-wrapping
+# them in Node would add a second runtime at the orchestration layer without
+# removing any Ruby coupling.
+
+require "fileutils"
+require "open3"
+require "tmpdir"
+
+module OracleGate
+  class Error < StandardError; end
+  class UsageError < Error; end
+
+  REPO_ROOT = File.expand_path("..", __dir__)
+  SUBMODULE_RELATIVE_PATH = "submodules/plurimath-testsuite"
+  SUBMODULE_ROOT = File.join(REPO_ROOT, SUBMODULE_RELATIVE_PATH)
+  ORACLE_ENV = "PLURIMATH_ORACLE"
+
+  module_function
+
+  def usage
+    <<~TEXT
+      Usage:
+        scripts/gate-oracle.rb repo --check [--gem PATH]
+        scripts/gate-oracle.rb testsuite --check [--gem PATH]
+        scripts/gate-oracle.rb differential
+        scripts/gate-oracle.rb --help
+        scripts/gate-oracle.rb <subcommand> --help
+
+      Subcommands:
+        repo        Regenerate this repository's committed generated data into
+                    temporary directories and diff it. A diff means this
+                    repository's committed data is stale.
+        testsuite   Regenerate the pinned plurimath-testsuite corpus into a
+                    temporary directory and diff it. A diff means the testsuite
+                    pin changed and should be moved, not that this repository's
+                    generated data should be edited.
+        differential
+                    Reserved for the P1-completion differential runner.
+
+      Oracle checkout resolution:
+        1. --gem PATH
+        2. #{ORACLE_ENV}=PATH
+        3. otherwise fail
+    TEXT
+  end
+
+  def repo_usage
+    <<~TEXT
+      Usage:
+        scripts/gate-oracle.rb repo --check [--gem PATH]
+        scripts/gate-oracle.rb repo --help
+
+      Regenerates, into temporary directories only:
+        - corpus/ and src/generated/ via scripts/generate-corpus.rb
+        - src/core/generated/ via scripts/generate-core-data.rb
+        - src/formatting/generated/ via scripts/generate-formatting-data.rb
+
+      It compares those regenerated outputs against a clean temporary snapshot
+      of this repository's committed HEAD, never against live directories in
+      the working tree, and never by regenerating over committed files.
+    TEXT
+  end
+
+  def testsuite_usage
+    <<~TEXT
+      Usage:
+        scripts/gate-oracle.rb testsuite --check [--gem PATH]
+        scripts/gate-oracle.rb testsuite --help
+
+      Regenerates the pinned plurimath-testsuite corpus with that repository's
+      own scripts/generate-corpus.rb into a temporary directory and diffs it
+      against a clean temporary snapshot of the pinned corpus. A diff is a
+      testsuite pin change, not a plurimath-ts generated-data change.
+    TEXT
+  end
+
+  def run(argv)
+    command = argv.shift
+
+    case command
+    when nil, "--help", "-h"
+      puts usage
+      0
+    when "repo"
+      run_repo(argv)
+    when "testsuite"
+      run_testsuite(argv)
+    when "differential"
+      raise Error, "differential is registered for P1-completion and is not implemented in this change"
+    else
+      raise UsageError, "unknown subcommand #{command.inspect}\n\n#{usage}"
+    end
+  end
+
+  def run_repo(argv)
+    options = parse_check_options(argv, repo_usage)
+    gem_dir = resolve_gem_dir(options[:gem])
+    require_submodule_snapshot_prerequisites!
+
+    Dir.mktmpdir("plurimath-ts-oracle-") do |tmp|
+      snapshot_root = build_clean_repo_snapshot!(tmp)
+      regenerated_root = File.join(tmp, "regenerated", "repo")
+      FileUtils.mkdir_p(regenerated_root)
+
+      run_generator!(
+        File.join(snapshot_root, "scripts", "generate-corpus.rb"),
+        [
+          "--gem", gem_dir,
+          "--out", File.join(regenerated_root, "corpus"),
+          "--symbols-out", File.join(regenerated_root, "src", "generated"),
+        ],
+        chdir: snapshot_root,
+        gem_dir: gem_dir,
+      )
+      run_generator!(
+        File.join(snapshot_root, "scripts", "generate-core-data.rb"),
+        [
+          "--gem", gem_dir,
+          "--out", File.join(regenerated_root, "src", "core", "generated"),
+        ],
+        chdir: snapshot_root,
+        gem_dir: gem_dir,
+      )
+      run_generator!(
+        File.join(snapshot_root, "scripts", "generate-formatting-data.rb"),
+        [
+          "--gem", gem_dir,
+          "--out", File.join(regenerated_root, "src", "formatting", "generated"),
+        ],
+        chdir: snapshot_root,
+        gem_dir: gem_dir,
+      )
+
+      comparisons = [
+        ["corpus", File.join(snapshot_root, "corpus"), File.join(regenerated_root, "corpus")],
+        ["src/generated", File.join(snapshot_root, "src", "generated"),
+         File.join(regenerated_root, "src", "generated")],
+        ["src/core/generated", File.join(snapshot_root, "src", "core", "generated"),
+         File.join(regenerated_root, "src", "core", "generated")],
+        ["src/formatting/generated", File.join(snapshot_root, "src", "formatting", "generated"),
+         File.join(regenerated_root, "src", "formatting", "generated")],
+      ]
+
+      diffs = comparisons.filter_map do |label, committed, regenerated|
+        diff_roots(label, committed, regenerated)
+      end
+
+      if diffs.empty?
+        puts "repo check passed: committed generated data matches a fresh regeneration from #{gem_dir}"
+        return 0
+      end
+
+      warn "repo check failed: this repository's committed generated data is stale."
+      warn "Regenerate this repository's data and commit the diff here; do not move the testsuite pin for this failure."
+      diffs.each do |diff|
+        warn
+        warn diff
+      end
+      1
+    end
+  end
+
+  def run_testsuite(argv)
+    options = parse_check_options(argv, testsuite_usage)
+    gem_dir = resolve_gem_dir(options[:gem])
+    require_submodule_snapshot_prerequisites!
+
+    Dir.mktmpdir("plurimath-ts-oracle-") do |tmp|
+      snapshot_root = build_clean_repo_snapshot!(tmp)
+      testsuite_root = File.join(snapshot_root, SUBMODULE_RELATIVE_PATH)
+      regenerated_root = File.join(tmp, "regenerated", "testsuite", "corpus")
+      FileUtils.mkdir_p(regenerated_root)
+
+      run_generator!(
+        File.join(testsuite_root, "scripts", "generate-corpus.rb"),
+        ["--gem", gem_dir, "--out", regenerated_root],
+        chdir: testsuite_root,
+        gem_dir: gem_dir,
+      )
+
+      diff = diff_roots(
+        "#{SUBMODULE_RELATIVE_PATH}/corpus",
+        File.join(testsuite_root, "corpus"),
+        regenerated_root,
+      )
+
+      if diff.nil?
+        puts "testsuite check passed: pinned corpus matches a fresh regeneration from #{gem_dir}"
+        return 0
+      end
+
+      warn "testsuite check failed: the pinned plurimath-testsuite corpus changed under this oracle."
+      warn "Fix this by moving the submodule pin, not by editing plurimath-ts generated data."
+      warn
+      warn diff
+      1
+    end
+  end
+
+  def parse_check_options(argv, help_text)
+    options = { gem: nil, check: false, help: false }
+    rest = argv.dup
+
+    until rest.empty?
+      arg = rest.shift
+      case arg
+      when "--check"
+        options[:check] = true
+      when "--gem"
+        raise UsageError, "missing path after --gem" if rest.empty?
+
+        options[:gem] = File.expand_path(rest.shift)
+      when /\A--gem=(.+)\z/
+        options[:gem] = File.expand_path(Regexp.last_match(1))
+      when "--help", "-h"
+        options[:help] = true
+      else
+        raise UsageError, "unknown option #{arg.inspect}\n\n#{help_text}"
+      end
+    end
+
+    if options[:help]
+      puts help_text
+      exit 0
+    end
+    raise UsageError, "--check is required\n\n#{help_text}" unless options[:check]
+
+    options
+  end
+
+  def resolve_gem_dir(cli_path)
+    gem_dir = cli_path || ENV[ORACLE_ENV]
+    raise Error, "no oracle checkout configured; pass --gem PATH or set #{ORACLE_ENV}" unless gem_dir && !gem_dir.empty?
+
+    gem_dir = File.expand_path(gem_dir)
+    gemfile = File.join(gem_dir, "Gemfile")
+    raise Error, "#{gemfile} does not exist; the oracle checkout must contain a Gemfile" unless File.file?(gemfile)
+
+    gem_dir
+  end
+
+  def require_submodule_snapshot_prerequisites!
+    unless File.file?(File.join(REPO_ROOT, ".gitmodules"))
+      raise Error, "#{File.join(REPO_ROOT, '.gitmodules')} is missing; cannot locate #{SUBMODULE_RELATIVE_PATH}"
+    end
+    unless File.directory?(SUBMODULE_ROOT)
+      raise Error, "#{SUBMODULE_ROOT} does not exist; initialize the plurimath-testsuite submodule first"
+    end
+    unless git_repository?(SUBMODULE_ROOT)
+      raise Error, "#{SUBMODULE_ROOT} is not an initialized git checkout; run git submodule update --init --recursive"
+    end
+    unless File.file?(File.join(SUBMODULE_ROOT, "scripts", "generate-corpus.rb"))
+      raise Error, "#{SUBMODULE_ROOT}/scripts/generate-corpus.rb is missing; the submodule looks incomplete"
+    end
+    unless File.file?(File.join(SUBMODULE_ROOT, "corpus", "provenance.yaml"))
+      raise Error, "#{SUBMODULE_ROOT}/corpus/provenance.yaml is missing; the submodule corpus is not present"
+    end
+  end
+
+  def build_clean_repo_snapshot!(tmp_root)
+    # The generators reject dirty generator checkouts. Snapshotting HEAD lets
+    # this gate compare committed data even while the live branch has
+    # uncommitted implementation work in flight.
+    snapshot_root = File.join(tmp_root, "snapshot")
+    FileUtils.mkdir_p(snapshot_root)
+
+    copy_git_entry!(REPO_ROOT, snapshot_root)
+    extract_head_archive!(REPO_ROOT, snapshot_root)
+    materialize_clean_submodule_snapshot!(snapshot_root)
+
+    assert_clean_checkout!(snapshot_root, "repository snapshot")
+    assert_clean_checkout!(File.join(snapshot_root, SUBMODULE_RELATIVE_PATH), "testsuite submodule snapshot")
+    snapshot_root
+  end
+
+  def materialize_clean_submodule_snapshot!(snapshot_root)
+    dest = File.join(snapshot_root, SUBMODULE_RELATIVE_PATH)
+    FileUtils.rm_rf(dest) if File.exist?(dest)
+    FileUtils.mkdir_p(dest)
+
+    copy_git_entry!(SUBMODULE_ROOT, dest)
+    extract_head_archive!(SUBMODULE_ROOT, dest)
+  end
+
+  def copy_git_entry!(source_root, dest_root)
+    git_entry = File.join(source_root, ".git")
+    raise Error, "#{git_entry} is missing" unless File.exist?(git_entry)
+
+    if File.directory?(git_entry)
+      FileUtils.cp_r(git_entry, File.join(dest_root, ".git"), preserve: true)
+    else
+      FileUtils.cp(git_entry, File.join(dest_root, ".git"), preserve: true)
+    end
+  end
+
+  def extract_head_archive!(repo_root, dest_root)
+    statuses = begin
+      Open3.pipeline(
+        ["git", "-C", repo_root, "archive", "--format=tar", "HEAD"],
+        ["tar", "-xf", "-", "-C", dest_root],
+      )
+    rescue Errno::ENOENT => e
+      # Ruby raises before the pipeline runs when a binary is not on PATH, so
+      # this would otherwise escape as a stack trace rather than the exit 2 a
+      # precondition failure owes the caller.
+      raise Error, "git and tar are both required to snapshot #{repo_root} (#{e.message})"
+    end
+    # Open3.pipeline returns Process::Status objects, not threads — there is
+    # no #value to wait on.
+    return if statuses.all?(&:success?)
+
+    raise Error, "failed to materialize a clean snapshot of #{repo_root} from HEAD"
+  end
+
+  def assert_clean_checkout!(repo_root, label)
+    output, _stderr, status = capture_command(["git", "-C", repo_root, "status", "--porcelain"])
+    raise Error, "git status failed for #{label} at #{repo_root}" unless status.success?
+
+    dirty = output.lines.map(&:strip).reject(&:empty?)
+    return if dirty.empty?
+
+    raise Error, "#{label} is unexpectedly dirty after snapshotting: #{dirty.join(', ')}"
+  end
+
+  def git_repository?(path)
+    _output, _stderr, status = capture_command(["git", "-C", path, "rev-parse", "--git-dir"])
+    status.success?
+  end
+
+  def run_generator!(script, arguments, chdir:, gem_dir:)
+    gemfile = File.join(gem_dir, "Gemfile")
+    relative = script.delete_prefix("#{chdir}/")
+    puts "▶ #{relative} #{arguments.join(' ')}"
+    stdout, stderr, status = capture_command(
+      ["mise", "x", "--", "bundle", "exec", "ruby", script, *arguments],
+      chdir: chdir,
+      env: { "BUNDLE_GEMFILE" => gemfile },
+    )
+
+    unless status.success?
+      raise Error, <<~MESSAGE
+        #{relative} failed with exit #{status.exitstatus}.
+        stdout:
+        #{indent_block(stdout)}
+        stderr:
+        #{indent_block(stderr)}
+      MESSAGE
+    end
+
+    puts indent_block(stdout) unless stdout.empty?
+    warn indent_block(stderr) unless stderr.empty?
+  end
+
+  def diff_roots(label, committed_root, regenerated_root)
+    unless File.directory?(committed_root)
+      raise Error, "committed #{label} root is missing at #{committed_root}"
+    end
+    unless File.directory?(regenerated_root)
+      raise Error, "regenerated #{label} root is missing at #{regenerated_root}"
+    end
+
+    normalize_generating_commit!(committed_root)
+    normalize_generating_commit!(regenerated_root)
+
+    diff, _stderr, status = capture_command(["git", "--no-pager", "diff", "--no-index", "--", committed_root, regenerated_root])
+    return nil if status.success?
+    if status.exitstatus == 1
+      return <<~TEXT.chomp
+        #{label} differs:
+        #{indent_block(diff)}
+      TEXT
+    end
+
+    raise Error, "git diff --no-index failed while comparing #{label}"
+  end
+
+  # The manifests record `repository.commit` — the commit that generated the
+  # data — so regenerating at any later commit changes it by construction, and
+  # this check could never produce the empty diff TODO 7 asks for except when
+  # run at the exact commit that last regenerated. That is a property of the
+  # data, not a defect in it.
+  #
+  # So the field is blanked on both sides before comparison. Everything that
+  # determines *what* was generated is still compared strictly: the generator
+  # path and its sha256, the oracle version and commit, the engine, and every
+  # payload byte. Only the record of *when* generation happened is normalized,
+  # and only in these temporary copies — never in the repository.
+  # Quoted or bare: this repository's manifests emit the hash bare, the
+  # testsuite's provenance.yaml emits it quoted.
+  GENERATING_COMMIT = /^(\s*)commit:\s*'?[0-9a-f]{40}'?\s*$/
+  REPOSITORY_KEY = /^(\s*)repository:\s*$/
+
+  # Both shapes of provenance file: `*.manifest.yaml` sidecars here, and the
+  # testsuite corpus's own `provenance.yaml`.
+  PROVENANCE_GLOBS = ["**/*.manifest.yaml", "**/provenance.yaml"].freeze
+
+  # Blank ONLY `generator.repository.commit` — the commit that generated the
+  # data, which changes by construction on every later regeneration.
+  #
+  # A manifest carries two `commit:` keys, and they mean opposite things:
+  #
+  #   generator:
+  #     repository:
+  #       commit: <this repo's HEAD when generated>   <- normalized
+  #   oracle:
+  #     commit: <the pinned gem commit>               <- compared strictly
+  #
+  # An earlier version matched any `commit:` line carrying a 40-hex hash, which
+  # blanked the oracle commit too and would have let the gate accept data
+  # regenerated from a DIFFERENT oracle — the one mismatch it exists to catch.
+  # So the block is tracked structurally rather than pattern-matched: a
+  # `commit:` is normalized only while inside a `repository:` mapping, meaning
+  # indented strictly deeper than the `repository:` key that opened it.
+  def normalize_generating_commit!(root)
+    PROVENANCE_GLOBS.flat_map { |pattern| Dir.glob(File.join(root, pattern)) }.uniq.each do |path|
+      inside = nil
+      changed = false
+      lines = File.readlines(path).map do |line|
+        if (opener = REPOSITORY_KEY.match(line))
+          inside = opener[1].length
+          next line
+        end
+
+        indent = line[/\A\s*/].length
+        inside = nil if inside && !line.strip.empty? && indent <= inside
+
+        if inside && (found = GENERATING_COMMIT.match(line))
+          changed = true
+          next "#{found[1]}commit: <normalized>\n"
+        end
+
+        line
+      end
+      File.write(path, lines.join) if changed
+    end
+  end
+
+  def capture_command(args, chdir: REPO_ROOT, env: {})
+    Open3.capture3(env, *args, chdir: chdir)
+  rescue Errno::ENOENT => e
+    # Same reason as the pipeline above: a missing binary raises before the
+    # command runs, and every caller here treats a failure as a precondition
+    # failure worth naming rather than a stack trace.
+    raise Error, "#{args.first} is required but could not be executed (#{e.message})"
+  end
+
+  def indent_block(text)
+    body = text.to_s
+    return "  (none)" if body.empty?
+
+    body.lines.map { |line| "  #{line}" }.join
+  end
+end
+
+begin
+  exit OracleGate.run(ARGV)
+rescue OracleGate::UsageError => e
+  warn e.message
+  exit 2
+rescue OracleGate::Error => e
+  warn "oracle: #{e.message}"
+  exit 2
+end

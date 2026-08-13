@@ -2,7 +2,7 @@
 /**
  * Runs every class-A gate that is active at the repository's current
  * milestone (ARCHITECTURE.md §7). Class-B gates need a Ruby oracle checkout
- * and live in scripts/oracle; class-C evidence is human and lives in the
+ * and live in scripts/gate-oracle.rb; class-C evidence is human and lives in the
  * phase-exit checklist.
  *
  * Failure semantics, per §7:

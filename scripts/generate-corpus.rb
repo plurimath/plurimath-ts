@@ -512,6 +512,21 @@ module CorpusGenerator
     DEFERRED_INPUT_PATTERNS.find { |_feature, pattern| input.match?(pattern) }&.first
   end
 
+  # Does the oracle raise on this input? Measured by asking it, because that
+  # fact is what makes textual matching necessary for some deferred cases and
+  # unnecessary for others — and because a generated file should record what
+  # was observed, not what the generator's author believed.
+  #
+  # Deliberately broad in what it catches: any failure to produce a formula is
+  # a raise for this purpose, and the distinction between error classes is not
+  # one exclusions.yaml needs to carry.
+  def gem_raises?(input)
+    Plurimath::Math.parse(input, INPUT_FORMAT)
+    false
+  rescue StandardError, ScriptError
+    true
+  end
+
   # --- serialization -------------------------------------------------------
 
   def class_key(klass)
@@ -574,6 +589,19 @@ module CorpusGenerator
         feature = deferred_feature_for(input)
         next unless feature
 
+        # Whether the gem raises on THIS input, measured rather than assumed.
+        # It is the reason matching has to be textual at all — a raising input
+        # yields no formula to classify — but it is not true of every excluded
+        # case, and the earlier single reason string said it was. A reader of
+        # exclusions.yaml was told that `"unitsml(kg)"`, which parses fine, had
+        # raised.
+        #
+        # Recorded as a field rather than left to prose so a test can check it.
+        # Prose cannot be verified; this can, and is: see
+        # test/core/local-corpus.spec.ts, which cross-checks it against the
+        # shared pin.
+        raises = gem_raises?(input)
+
         {
           "id" => id,
           "group" => name,
@@ -581,18 +609,16 @@ module CorpusGenerator
           "input_format" => INPUT_FORMAT,
           "feature" => feature,
           "matched" => DEFERRED_INPUT_PATTERNS.fetch(feature).source,
-          # One rule covers every input carrying the feature, valid or not, so
-          # the reason has to be true of both. The earlier wording said the
-          # gem "raises for invalid #{feature} and produces no formula to
-          # inspect" as though that were why each case was excluded — which
-          # told a reader of exclusions.yaml that a perfectly valid input had
-          # raised. Raising is why the *matching* is textual; deferral is why
-          # the case is excluded.
-          "reason" => "#{feature} is deferred (ARCHITECTURE.md §5). Matched on " \
-                      "the input text rather than on a parsed formula, because " \
-                      "the gem raises for invalid #{feature} and leaves no " \
-                      "formula to inspect — so one textual rule has to cover " \
-                      "the valid inputs too",
+          "raises" => raises,
+          "reason" => if raises
+                        "#{feature} is deferred (ARCHITECTURE.md §5). This input " \
+                        "raises in the gem, so there is no formula to classify " \
+                        "and the match is made on the input text"
+                      else
+                        "#{feature} is deferred (ARCHITECTURE.md §5). This input " \
+                        "parses in the gem; it is withheld because the feature " \
+                        "is deferred, not because anything failed"
+                      end,
         }
       end
     end

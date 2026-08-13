@@ -40,11 +40,15 @@ export const PIN_RELATIVE_PATH = "submodules/plurimath-testsuite";
 /** The pinned testsuite checkout. */
 export const PINNED_CORPUS_ROOT = join(REPO_ROOT, ...PIN_RELATIVE_PATH.split("/"));
 
+/** The generated corpus files this repository owns directly. */
+export const LOCAL_CORPUS_ROOT = join(REPO_ROOT, "corpus");
+
 /** The one command that turns an uninitialised submodule into a usable one. */
 export const SUBMODULE_FIX = "git submodule update --init --recursive";
 
 const PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
 const CASE_SCHEMA = "plurimath-corpus/asciimath/1";
+const MANIFEST_SCHEMA = "plurimath-corpus/manifest/1";
 
 /**
  * Ox is the canonical engine (ARCHITECTURE.md §7). Oga is a parity check, and
@@ -374,7 +378,16 @@ export interface Exclusion {
   readonly id: string;
   readonly group: string;
   readonly input: string;
+  readonly inputFormat: string;
   readonly feature: string;
+  readonly matched: string;
+  /**
+   * Whether the gem raises on this input, measured by the generator rather
+   * than described in prose. It is what makes textual matching necessary for
+   * some deferred cases and not others, and it is checkable — see
+   * `local-corpus.spec.ts`.
+   */
+  readonly raises: boolean;
   readonly reason: string;
 }
 
@@ -396,8 +409,68 @@ export function readExclusions(
       id: requiredString(record, "id", where),
       group: requiredString(record, "group", where),
       input: requiredString(record, "input", where),
+      inputFormat: requiredString(record, "input_format", where),
       feature: requiredString(record, "feature", where),
+      matched: requiredString(record, "matched", where),
+      raises: requiredBoolean(record, "raises", where),
       reason: requiredString(record, "reason", where),
+    };
+  });
+}
+
+export interface LocalPayloadManifest {
+  /** Relative to `corpus/`, e.g. `census.manifest.yaml`. */
+  readonly manifestPath: string;
+  /** Relative to `corpus/`, e.g. `census.yaml`. */
+  readonly payloadPath: string;
+  readonly sha256: string;
+  readonly bytes: number;
+  readonly document: YamlValue;
+}
+
+/**
+ * Loads the sidecar manifests this repository owns directly and verifies that
+ * each recorded payload exists and still matches the recorded bytes and sha256.
+ * `root` is the `corpus/` directory itself, so scratch copies can be checked
+ * without recreating a whole repository checkout.
+ */
+export function loadLocalPayloadManifests(
+  root: string = LOCAL_CORPUS_ROOT,
+): readonly LocalPayloadManifest[] {
+  if (!existsSync(root))
+    throw new Error(`${root} is missing; it is generated into this repository`);
+
+  const manifestPaths = payloadFilesOnDisk(root).filter((path) => path.endsWith(".manifest.yaml"));
+  if (manifestPaths.length === 0) throw new Error(`${root}: no *.manifest.yaml files were found.`);
+
+  return manifestPaths.map((relativePath) => {
+    const path = join(root, ...relativePath.split("/"));
+    const document = asMapping(parseYaml(readFileSync(path, "utf8")), path);
+    const schema = requiredString(document, "schema", path);
+    if (schema !== MANIFEST_SCHEMA) {
+      throw new Error(`${path}: schema is "${schema}", this reader knows "${MANIFEST_SCHEMA}".`);
+    }
+
+    const payload = asMapping(requiredPresent(document, "payload", path), `${path} payload`);
+    const payloadRecord = {
+      path: requiredString(payload, "path", `${path} payload`),
+      sha256: requiredString(payload, "sha256", `${path} payload`),
+      bytes: requiredInteger(payload, "bytes", `${path} payload`),
+    };
+    const payloadFile = join(root, ...payloadRecord.path.split("/"));
+    if (!existsSync(payloadFile)) {
+      throw new Error(
+        `${path}: payload.path "${payloadRecord.path}" is not on disk at ${payloadFile}.`,
+      );
+    }
+    verifyPayloadBytes(payloadFile, payloadRecord);
+
+    return {
+      manifestPath: relativePath,
+      payloadPath: payloadRecord.path,
+      sha256: payloadRecord.sha256,
+      bytes: payloadRecord.bytes,
+      document,
     };
   });
 }

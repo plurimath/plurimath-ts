@@ -30,9 +30,22 @@ const run = (command) => {
   return result.status === 0;
 };
 
-/** Entries a format subpath must never pull in, keyed by subpath. */
+/**
+ * Entries a subpath must never pull in, keyed by subpath — the slim-bundle
+ * guarantee of ARCHITECTURE.md §3, checked against the packed artifact rather
+ * than against import statements.
+ *
+ * A consumer who reads AsciiMath should not pay for the LaTeX or MathML
+ * renderers, and one who renders LaTeX should not pay for a parser at all.
+ * `pegkit` is the parser combinator library: only `/asciimath` has an input
+ * side today, so only it may carry pegkit. `xml` is the Ox-compatible
+ * serializer, needed by MathML alone.
+ */
 const FORBIDDEN = {
   "./core": [/formats\//, /pegkit\//],
+  "./asciimath": [/formats\/latex\//, /formats\/mathml\//, /xml\//],
+  "./latex": [/formats\/asciimath\//, /formats\/mathml\//, /pegkit\//, /xml\//],
+  "./mathml": [/formats\/asciimath\//, /formats\/latex\//, /pegkit\//],
 };
 
 const failures = [];

@@ -1,9 +1,12 @@
 /**
  * The `payload-validation` class-A gate (gates.json, ARCHITECTURE.md §7):
- * "Generated payloads validate against their schema and manifest hashes."
+ * "Generated data still matches the generators it names, and declares itself
+ * committable."
  *
- * Payload *content* is already checked elsewhere and deliberately not repeated
- * here — `corpus-pin.ts` verifies the pinned corpus against its provenance,
+ * The registry entry used to read "Generated payloads validate against their
+ * schema and manifest hashes", which described work that already existed
+ * elsewhere rather than anything this gate adds. Payload *content* is checked
+ * there and deliberately not repeated here — `corpus-pin.ts` verifies the pinned corpus against its provenance,
  * and `local-corpus.spec.ts` does the same for this repository's own
  * `corpus/*.manifest.yaml` sidecars. What neither covers is the generated
  * TypeScript under `src/`, and specifically the question those sidecars answer

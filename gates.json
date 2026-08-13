@@ -104,11 +104,18 @@
       "description": "Deep nesting, unmatched fences and long token runs fail cleanly in bounded time"
     },
     {
-      "id": "oracle-regeneration",
+      "id": "oracle-repo-regeneration",
       "class": "B",
       "activatesAt": "P1-baseline",
-      "run": "scripts/oracle regenerate --check",
-      "description": "Regenerate corpus and data from a clean gem checkout; diff must be empty"
+      "run": "scripts/oracle repo --check",
+      "description": "Regenerate this repository's generated data from a clean gem checkout; diff must be empty"
+    },
+    {
+      "id": "oracle-testsuite-regeneration",
+      "class": "B",
+      "activatesAt": "P1-baseline",
+      "run": "scripts/oracle testsuite --check",
+      "description": "Regenerate the pinned plurimath-testsuite corpus from the same clean gem checkout; diff must be empty"
     },
     {
       "id": "differential-runner",

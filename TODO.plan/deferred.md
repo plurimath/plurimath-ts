@@ -484,8 +484,14 @@ no current code path does, since every name in `src/render/` is a literal.**
 
 Found by the `src/xml` module review (2026-08-12) and recorded so the next
 reviewer does not re-find it. Ox truncates a name at an embedded NUL; the port
-emits the name whole (`serializer.ts:144`, `:146` — names are written verbatim,
-because Ox never validates or escapes them either).
+emits the name whole. Names are written verbatim by `writeElement` in
+`src/xml/serializer.ts` — the open tag, the attribute names beside it, and the
+close tag — because Ox never validates or escapes them either.
+
+Cited by symbol rather than line: the first version of this entry carried line
+numbers taken from the review, which had run before the depth cap was added to
+that file, and they pointed at an unrelated docstring by the time it was
+written.
 
 Unreachable today and left alone deliberately: fixing it would mean validating
 names on a hot path to model a case nothing can produce. It belongs with the

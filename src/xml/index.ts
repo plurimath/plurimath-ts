@@ -17,4 +17,4 @@
 export type { XmlAppendable, XmlChild } from "./element";
 export { XmlElement } from "./element";
 export type { DumpOptions } from "./serializer";
-export { dump, dumpNodes, XmlDepthLimitError } from "./serializer";
+export { dump, dumpNodes, XmlDepthLimitError, XmlIndentError } from "./serializer";

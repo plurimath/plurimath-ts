@@ -80,7 +80,9 @@ export interface DumpOptions {
    * Ox's `indent`. Omitted or `null` (the gem's `indent: nil` path) falls
    * back to the effective default, 2. Measured values: -2 and -1 (compact,
    * no newlines), 0, 1, 2, 4 — spacing is linearly `indent * depth`.
-   * Integers only; nothing in the gem passes anything else.
+   * Integers only; Ox rejects floats, NaN and infinities. TypeScript cannot
+   * distinguish Ruby `2` from `2.0`, so the runtime contract here is the
+   * narrowest one this API can express: any finite integer is accepted.
    */
   readonly indent?: number | null | undefined;
 }
@@ -92,7 +94,7 @@ export interface DumpOptions {
  * not modelled: the renderers always dump a root element.
  */
 export function dump(root: XmlElement, options: DumpOptions = {}): string {
-  const indent = options.indent ?? OX_DEFAULT_INDENT;
+  const indent = normalizeIndent(options.indent);
   const parts: string[] = [];
   writeElement(root, 0, indent, parts);
   if (indent >= 0) parts.push("\n");
@@ -138,6 +140,23 @@ export class XmlDepthLimitError extends Error {
 }
 
 /**
+ * Thrown when `dump` receives an indent value this number-typed API cannot
+ * serialize with Ox parity. Wrong runtime types remain outside scope here:
+ * typed callers cannot supply them, and matching Ruby's `Fixnum`/`Float`
+ * class split is impossible in JavaScript because `2` and `2.0` are the same
+ * number value.
+ */
+export class XmlIndentError extends Error {
+  readonly indent: number;
+
+  constructor(indent: number) {
+    super(`indent must be a finite integer; received ${String(indent)}`);
+    this.name = "XmlIndentError";
+    this.indent = indent;
+  }
+}
+
+/**
  * `Plurimath::Math::Core#dump_nodes` (core.rb:214-223): `Ox.dump`, then the
  * `REPLACABLES` rewrites — the serialization `to_mathml`/`to_omml` return.
  *
@@ -173,6 +192,14 @@ const LINE_START_NEWLINE = /(?<=^|\n)\n/g;
 /** `Math::Core#replacable_values` — the gem's spelling, applied in its order. */
 function replacableValues(xml: string): string {
   return xml.replace(AMP_ENTITY, "&").replace(LINE_START_NEWLINE, "");
+}
+
+function normalizeIndent(indent: number | null | undefined): number {
+  if (indent === null || indent === undefined) return OX_DEFAULT_INDENT;
+  if (!Number.isFinite(indent) || !Number.isInteger(indent)) {
+    throw new XmlIndentError(indent);
+  }
+  return indent;
 }
 
 function writeElement(element: XmlElement, depth: number, indent: number, parts: string[]): void {

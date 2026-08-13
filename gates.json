@@ -52,7 +52,7 @@
       "class": "A",
       "activatesAt": "P1-baseline",
       "run": "pnpm test unsupported",
-      "selects": [],
+      "selects": ["test/formats/asciimath/unsupported-fallback.spec.ts"],
       "description": "Deferred-construct text fallback, diagnostics, dedup, and original-input offsets"
     },
     {

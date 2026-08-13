@@ -230,10 +230,11 @@ does exactly this — one tsup entry, one JSON blob). Therefore:
 With render code node-major, the slim-bundle guarantee is per-**file**
 module-graph disjointness — format `F`'s graph contains, under `src/render`,
 only `<kind>/<F>.ts` files — enforced by the boundary gate (rule 8), not by
-directory ownership. Deferral note (2026-08-07): format subpaths are not
-build entries yet — only the root and `/core` entries build today — so the
-per-subpath artifact-isolation assertions for render code land when the
-format subpaths become build entries (staged TODO).
+directory ownership. Landed (2026-08-13): the format subpaths
+`/asciimath`, `/latex` and `/mathml` are build entries, and the isolation gate
+asserts per-subpath artifact isolation for render code — matching each
+subpath's forbidden set against the modules its sourcemaps name, so the check
+inspects what shipped rather than what was imported.
 
 ## 4. Public API
 
@@ -1005,9 +1006,10 @@ executable registry.
 **P0 — Foundation.** Exit when: scaffold matches §3; dependency-cruiser +
 Biome + tsc gates green; pegkit ported with its conformance suite,
 `any`/`present?`/`scope`, and stack-safety tests (pegkit stays **internal** —
-no public subpath); the build emits the two entries that genuinely exist at
-P0, root and `/core`, and the isolation + packaging gates run against those —
-no format stubs are published or tested; the `gates.json` registry and
+no public subpath); the build emitted the two entries that genuinely
+existed at P0, root and `/core`, with no format stubs published or tested;
+the three format subpaths joined them once their renderers and parser landed
+(2026-08-13), each a physical entry the isolation gate checks; the `gates.json` registry and
 `scripts/check` run every P0-activated gate.
 
 **P1 — AsciiMath vertical.**

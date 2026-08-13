@@ -15,7 +15,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -41,6 +41,21 @@ const run = (command) => {
  * side today, so only it may carry pegkit. `xml` is the Ox-compatible
  * serializer, needed by MathML alone.
  */
+/**
+ * What each subpath must export, asserted against the BUILT artifact.
+ *
+ * `test/formats/subpath-surface.spec.ts` pins the same surface from `src/`,
+ * which proves the barrels are right and nothing more: a miswired export map
+ * or tsdown entry would ship the wrong file while that spec stayed green.
+ * This is the artifact-side half — it resolves the subpath exactly as a
+ * consumer would.
+ */
+const EXPECTED_EXPORTS = {
+  "./asciimath": ["parseAsciimath", "toAsciimath"],
+  "./latex": ["toLatex"],
+  "./mathml": ["toMathml"],
+};
+
 const FORBIDDEN = {
   "./core": [/formats\//, /pegkit\//],
   "./asciimath": [/formats\/latex\//, /formats\/mathml\//, /xml\//],
@@ -86,6 +101,17 @@ for (const [subpath, conditions] of subpaths) {
     fail(`CJS load failed: ${error.message}`);
   }
 
+  // the subpath resolves to the surface it promises, not merely to something
+  const expected = EXPECTED_EXPORTS[subpath];
+  if (expected) {
+    const actual = [...esmExports].sort();
+    if (JSON.stringify(actual) !== JSON.stringify([...expected].sort())) {
+      fail(`${subpath} exports [${actual}], expected [${[...expected].sort()}]`);
+    } else {
+      console.log(`  ✓ exports exactly ${expected.join(", ")}`);
+    }
+  }
+
   // 2. bundled graph contains only what this subpath is allowed to contain
   const forbidden = FORBIDDEN[subpath] ?? [];
   if (forbidden.length > 0) {
@@ -98,12 +124,47 @@ for (const [subpath, conditions] of subpaths) {
       metafile: true,
       logLevel: "silent",
     });
-    const inputs = Object.keys(result.metafile.inputs);
+    // The metafile's inputs are the DIST files esbuild read — `dist/latex.js`
+    // and whatever shared chunks it imports. Matching source patterns against
+    // those can never fire, which is how an earlier version of this check
+    // passed while proving nothing.
+    //
+    // The sourcemaps are what map the shipped bytes back to the modules that
+    // produced them, so the forbidden patterns are matched against those. This
+    // still inspects the artifact rather than the source graph: a module that
+    // was tree-shaken out leaves no sourcemap entry, and one that survived
+    // does.
+    const inputs = result.metafile.inputs;
+    const chunks = Object.keys(inputs).filter((input) => input.endsWith(".js"));
+    const analysed = new Set(chunks);
+    const sources = new Set();
+    for (const chunk of chunks) {
+      const mapFile = resolve(root, `${chunk}.map`);
+      if (existsSync(mapFile)) {
+        const map = JSON.parse(readFileSync(mapFile, "utf8"));
+        for (const source of map.sources ?? []) sources.add(source.replace(/^(\.\.\/)+/, ""));
+        continue;
+      }
+      // tsdown emits no map for a pure re-export shim, because it carries no
+      // original code — `dist/core.js` is one. That is only safe to skip if
+      // everything the shim pulls in is itself analysed here; otherwise an
+      // unmapped chunk could hide a forbidden module and this check would go
+      // quiet exactly where it matters.
+      const unanalysed = (inputs[chunk].imports ?? [])
+        .map((entry) => entry.path)
+        .filter((path) => !analysed.has(path));
+      if (unanalysed.length > 0) {
+        fail(`${subpath}: ${chunk} has no sourcemap and imports unanalysed ${unanalysed.join(", ")}`);
+      }
+    }
+    if (sources.size === 0) {
+      fail(`${subpath}: no sources recovered from ${chunks.length} chunk(s); the check would be vacuous`);
+    }
     for (const pattern of forbidden) {
-      const leaked = inputs.filter((input) => pattern.test(input));
+      const leaked = [...sources].filter((source) => pattern.test(source));
       if (leaked.length > 0) fail(`${subpath} pulls in ${pattern}: ${leaked.join(", ")}`);
     }
-    console.log(`  ✓ bundle graph clean (${inputs.length} modules)`);
+    console.log(`  ✓ artifact clean (${chunks.length} chunk(s), ${sources.size} source modules)`);
   }
 }
 

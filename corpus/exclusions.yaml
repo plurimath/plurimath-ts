@@ -15,11 +15,13 @@ excluded:
   input_format: asciimath
   feature: unitsml
   matched: unitsml\(
-  reason: unitsml is deferred (ARCHITECTURE.md §5). Matched on the input text rather than on a parsed formula, because the gem raises for invalid unitsml and leaves no formula to inspect — so one textual rule has to cover the valid inputs too
+  raises: true
+  reason: unitsml is deferred (ARCHITECTURE.md §5). This input raises in the gem, so there is no formula to classify and the match is made on the input text
 - id: text-unitsml-valid
   group: quoted-text
   input: '"unitsml(kg)"'
   input_format: asciimath
   feature: unitsml
   matched: unitsml\(
-  reason: unitsml is deferred (ARCHITECTURE.md §5). Matched on the input text rather than on a parsed formula, because the gem raises for invalid unitsml and leaves no formula to inspect — so one textual rule has to cover the valid inputs too
+  raises: false
+  reason: unitsml is deferred (ARCHITECTURE.md §5). This input parses in the gem; it is withheld because the feature is deferred, not because anything failed

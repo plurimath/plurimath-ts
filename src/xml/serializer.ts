@@ -53,16 +53,21 @@
  *   (U+00A0, U+2028/9, surrogate-pair astral characters, U+E000, U+10FFFF
  *   all measured as raw UTF-8).
  *
- * ## Known divergence: lone surrogates (TODO.plan/deferred.md)
+ * ## Known divergence: non-UTF-8 Ruby strings (TODO.plan/deferred.md)
  *
- * A Ruby string can be forced to carry invalid UTF-8 (a lone-surrogate byte
- * sequence such as `ED A0 80`), and Ox passes those bytes through raw. A
- * JavaScript string holds the lone surrogate as a UTF-16 code unit, and any
- * UTF-8 encoding of the output replaces it with U+FFFD (`EF BF BD`). Such
- * strings are not valid Unicode, nothing in the gem's parse pipeline
- * produces one, and the maintainer's standing input-contract ruling applies:
- * degenerate Unicode input is outside the supported contract and the caller
- * bears the consequences. Recorded, not papered over.
+ * Ox emits whatever bytes a Ruby string carries, valid UTF-8 or not, and a
+ * JavaScript string cannot represent those bytes at all — any UTF-8 encoding
+ * of the output replaces them with U+FFFD (`EF BF BD`). Measured on the
+ * oracle, this covers a lone surrogate (`ED A0 80`), a bare invalid byte
+ * (`FF`), and a `BINARY`-encoded string such as latin-1 `é` (`E9`); each is
+ * emitted raw there.
+ *
+ * This comment previously named lone surrogates alone, which understated it:
+ * `BINARY` is what `File.binread` returns, so it is the likeliest of the three
+ * to reach a consumer. Nothing in the gem's parse pipeline produces such a
+ * string, and the maintainer's standing input-contract ruling applies —
+ * degenerate input is outside the supported contract and the caller bears the
+ * consequences. Recorded, not papered over.
  */
 
 import type { XmlElement } from "./element";

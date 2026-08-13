@@ -869,7 +869,7 @@ milestone is a single tracked field in the same file.
 Lifecycle rules:
 
 - **Runners are per class.** `scripts/check` runs activated **class-A** gates
-  only (no Ruby, no humans). Class B runs via `scripts/oracle` (needs a gem
+  only (no Ruby, no humans). Class B runs via `scripts/gate-oracle.rb` (needs a gem
   checkout) on regeneration and on a schedule; class C is checklist evidence
   recorded in the phase sign-off.
 - **Advancing the milestone is a reviewed change**, owned by the maintainer:
@@ -989,7 +989,7 @@ Consequences pinned here so they are not rediscovered later:
 
 **Convention guardrails beyond tooling.** `scripts/check` — one tracked,
 committed entry point running every *activated* class-A gate locally (§7
-registry; class-B gates run from `scripts/oracle`) — is the enforceable
+registry; class-B gates run from `scripts/gate-oracle.rb`) — is the enforceable
 guardrail and a P0 exit item. Assistant skills (*ts-conventions*,
 *corpus-regen*, *port-a-format*) are developer aids kept **outside the
 repository**, in the maintainer's own skills library; they are never

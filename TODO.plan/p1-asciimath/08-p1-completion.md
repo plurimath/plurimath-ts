@@ -108,7 +108,7 @@ The rejection suite must carry, at minimum:
 - [ ] Malformed entities is recorded as not-applicable to AsciiMath, with the
   reason, rather than being absent.
 - [ ] `pnpm check` reports twelve active class-A gates, all passing.
-- [ ] `scripts/oracle differential` runs a bounded seeded batch against a clean
+- [ ] `scripts/gate-oracle.rb differential` runs a bounded seeded batch against a clean
   gem checkout, and reports either zero divergences or a named list.
 - [ ] `currentMilestone` is `P1-completion`, and no gate is active without a
   runner.

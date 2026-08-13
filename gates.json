@@ -107,21 +107,21 @@
       "id": "oracle-repo-regeneration",
       "class": "B",
       "activatesAt": "P1-baseline",
-      "run": "scripts/oracle repo --check",
+      "run": "scripts/gate-oracle.rb repo --check",
       "description": "Regenerate this repository's generated data from a clean gem checkout; diff must be empty"
     },
     {
       "id": "oracle-testsuite-regeneration",
       "class": "B",
       "activatesAt": "P1-baseline",
-      "run": "scripts/oracle testsuite --check",
+      "run": "scripts/gate-oracle.rb testsuite --check",
       "description": "Regenerate the pinned plurimath-testsuite corpus from the same clean gem checkout; diff must be empty"
     },
     {
       "id": "differential-runner",
       "class": "B",
       "activatesAt": "P1-completion",
-      "run": "scripts/oracle differential",
+      "run": "scripts/gate-oracle.rb differential",
       "description": "Seeded bounded input generator compared live against the gem"
     }
   ]

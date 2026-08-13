@@ -29,13 +29,13 @@ describe("oracle gate registry", () => {
           id: "oracle-repo-regeneration",
           class: "B",
           activatesAt: "P1-baseline",
-          run: "scripts/oracle repo --check",
+          run: "scripts/gate-oracle.rb repo --check",
         }),
         expect.objectContaining({
           id: "oracle-testsuite-regeneration",
           class: "B",
           activatesAt: "P1-baseline",
-          run: "scripts/oracle testsuite --check",
+          run: "scripts/gate-oracle.rb testsuite --check",
         }),
       ]),
     );

@@ -39,7 +39,7 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
   - nothing resolves to the pre-split copy at `corpus/asciimath/` in this
     repository. TODO 1 deletes it; this rule is what stops it coming back and
     quietly becoming the thing the suite checks against.
-- `scripts/oracle` — the class-B entry point (needs a gem checkout). Two
+- `scripts/gate-oracle.rb` — the class-B entry point (needs a gem checkout). Two
   separate checks, because they have different owners and different failure
   meanings:
   - `regenerate --check` over **this repository's** generated data — census,
@@ -55,7 +55,7 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
 ## Done when
 
 - [ ] `pnpm check` reports nine active class-A gates, all passing.
-- [ ] `scripts/oracle regenerate --check` is clean against a clean gem checkout,
+- [ ] `scripts/gate-oracle.rb repo --check` is clean against a clean gem checkout,
   and the testsuite regeneration check is reported separately from it.
 - [ ] Each discovery failure is demonstrated, not asserted: a deinitialized
   submodule, an empty corpus directory, a group removed from a scratch copy, a

@@ -24,11 +24,11 @@ module OracleGate
   def usage
     <<~TEXT
       Usage:
-        scripts/oracle repo --check [--gem PATH]
-        scripts/oracle testsuite --check [--gem PATH]
-        scripts/oracle differential
-        scripts/oracle --help
-        scripts/oracle <subcommand> --help
+        scripts/gate-oracle.rb repo --check [--gem PATH]
+        scripts/gate-oracle.rb testsuite --check [--gem PATH]
+        scripts/gate-oracle.rb differential
+        scripts/gate-oracle.rb --help
+        scripts/gate-oracle.rb <subcommand> --help
 
       Subcommands:
         repo        Regenerate this repository's committed generated data into
@@ -51,8 +51,8 @@ module OracleGate
   def repo_usage
     <<~TEXT
       Usage:
-        scripts/oracle repo --check [--gem PATH]
-        scripts/oracle repo --help
+        scripts/gate-oracle.rb repo --check [--gem PATH]
+        scripts/gate-oracle.rb repo --help
 
       Regenerates, into temporary directories only:
         - corpus/ and src/generated/ via scripts/generate-corpus.rb
@@ -68,8 +68,8 @@ module OracleGate
   def testsuite_usage
     <<~TEXT
       Usage:
-        scripts/oracle testsuite --check [--gem PATH]
-        scripts/oracle testsuite --help
+        scripts/gate-oracle.rb testsuite --check [--gem PATH]
+        scripts/gate-oracle.rb testsuite --help
 
       Regenerates the pinned plurimath-testsuite corpus with that repository's
       own scripts/generate-corpus.rb into a temporary directory and diffs it

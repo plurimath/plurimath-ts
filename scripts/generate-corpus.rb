@@ -463,8 +463,13 @@ module CorpusGenerator
           "bundler" => lock[:bundled_with],
         },
         "sources" => lock[:sources].map do |source|
+          # `.uniq` because a lockfile lists one spec per platform variant, and
+          # this field records which gems a source provides, not how many
+          # builds of each. Without it ffi and nokogiri appeared eight times
+          # apiece — noise that makes a manifest diff unreadable for no
+          # information gained.
           entry = { "kind" => source["kind"], "remote" => source["remote"],
-                    "gems" => source["specs"].sort }
+                    "gems" => source["specs"].uniq.sort }
           entry["revision"] = source["revision"] if source["revision"]
           entry
         end,
@@ -505,6 +510,21 @@ module CorpusGenerator
 
   def deferred_feature_for(input)
     DEFERRED_INPUT_PATTERNS.find { |_feature, pattern| input.match?(pattern) }&.first
+  end
+
+  # Does the oracle raise on this input? Measured by asking it, because that
+  # fact is what makes textual matching necessary for some deferred cases and
+  # unnecessary for others — and because a generated file should record what
+  # was observed, not what the generator's author believed.
+  #
+  # Deliberately broad in what it catches: any failure to produce a formula is
+  # a raise for this purpose, and the distinction between error classes is not
+  # one exclusions.yaml needs to carry.
+  def gem_raises?(input)
+    Plurimath::Math.parse(input, INPUT_FORMAT)
+    false
+  rescue StandardError, ScriptError
+    true
   end
 
   # --- serialization -------------------------------------------------------
@@ -569,6 +589,19 @@ module CorpusGenerator
         feature = deferred_feature_for(input)
         next unless feature
 
+        # Whether the gem raises on THIS input, measured rather than assumed.
+        # It is the reason matching has to be textual at all — a raising input
+        # yields no formula to classify — but it is not true of every excluded
+        # case, and the earlier single reason string said it was. A reader of
+        # exclusions.yaml was told that `"unitsml(kg)"`, which parses fine, had
+        # raised.
+        #
+        # Recorded as a field rather than left to prose so a test can check it.
+        # Prose cannot be verified; this can, and is: see
+        # test/core/local-corpus.spec.ts, which cross-checks it against the
+        # shared pin.
+        raises = gem_raises?(input)
+
         {
           "id" => id,
           "group" => name,
@@ -576,9 +609,16 @@ module CorpusGenerator
           "input_format" => INPUT_FORMAT,
           "feature" => feature,
           "matched" => DEFERRED_INPUT_PATTERNS.fetch(feature).source,
-          "reason" => "#{feature} is deferred (ARCHITECTURE.md §5); matched " \
-                      "on the input text, since the gem raises for invalid " \
-                      "#{feature} and produces no formula to inspect",
+          "raises" => raises,
+          "reason" => if raises
+                        "#{feature} is deferred (ARCHITECTURE.md §5). This input " \
+                        "raises in the gem, so there is no formula to classify " \
+                        "and the match is made on the input text"
+                      else
+                        "#{feature} is deferred (ARCHITECTURE.md §5). This input " \
+                        "parses in the gem; it is withheld because the feature " \
+                        "is deferred, not because anything failed"
+                      end,
         }
       end
     end

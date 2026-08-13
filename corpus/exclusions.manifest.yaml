@@ -6,9 +6,9 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-corpus.rb
-  sha256: da9c31cbee52fa8afb2dab95e1a1f3104e49a91c0d72246d08cf21c4e81e370d
+  sha256: c159af608353b9ecb6cc3123554228be68a0140b255f6217480ecff9a2ffc3ad
   repository:
-    commit: 76e81284fc2a0680b6d2e7415a25e3fdd2d0cd2a
+    commit: 03b3a8f4247e4968be6ff9d703586c09a83041eb
     clean: true
     dirty_paths: []
 oracle:
@@ -58,13 +58,6 @@ dependencies:
     - ebnf
     - erb
     - ffi
-    - ffi
-    - ffi
-    - ffi
-    - ffi
-    - ffi
-    - ffi
-    - ffi
     - fuzzy_match
     - htmlentities
     - io-console
@@ -80,13 +73,6 @@ dependencies:
     - memo_wise
     - mml
     - moxml
-    - nokogiri
-    - nokogiri
-    - nokogiri
-    - nokogiri
-    - nokogiri
-    - nokogiri
-    - nokogiri
     - nokogiri
     - oga
     - omml
@@ -189,5 +175,5 @@ dependencies:
     source: https://rubygems.org/
 payload:
   path: exclusions.yaml
-  sha256: 2083cdd21e62cc47b1fc40a6a532cf5e7f9a3bc5805a76a2c0a65ca6e06ddb6e
-  bytes: 1001
+  sha256: 67daeca13a4e449066785dc69e6f9962570ac2bec40fb70a37b5b67e7e944156
+  bytes: 1037

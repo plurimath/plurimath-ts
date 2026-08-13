@@ -154,11 +154,15 @@ for (const [subpath, conditions] of subpaths) {
         .map((entry) => entry.path)
         .filter((path) => !analysed.has(path));
       if (unanalysed.length > 0) {
-        fail(`${subpath}: ${chunk} has no sourcemap and imports unanalysed ${unanalysed.join(", ")}`);
+        fail(
+          `${subpath}: ${chunk} has no sourcemap and imports unanalysed ${unanalysed.join(", ")}`,
+        );
       }
     }
     if (sources.size === 0) {
-      fail(`${subpath}: no sources recovered from ${chunks.length} chunk(s); the check would be vacuous`);
+      fail(
+        `${subpath}: no sources recovered from ${chunks.length} chunk(s); the check would be vacuous`,
+      );
     }
     for (const pattern of forbidden) {
       const leaked = [...sources].filter((source) => pattern.test(source));

@@ -2,7 +2,7 @@
   "$comment": "Gate registry \u2014 ARCHITECTURE.md \u00a77. Every executable gate (class A and B) is registered from day one and changes activation state as the milestone advances; it never appears or disappears. Class-C evidence (peer review, sign-off) is deliberately absent: it lives in the phase-exit checklist, not in a runner.",
   "$comment-selects": "A gate whose runner is a vitest path filter carries `selects`: the exact spec files that filter must resolve to, `[]` while the gate's specs have not landed yet. Two defects made this necessary. First, every filter gate was registered as `pnpm test -- <pattern>`; under pnpm 10 that separator is consumed and the pattern never reaches vitest, so each ran the entire suite and passed while claiming to prove one specific thing. Second, once the form is corrected, a filter can still resolve to the WRONG files and pass green - `pnpm test corpus` selects only the two corpus-pin reader specs, none of the conformance suites the gate describes. test/gates/gate-selection.spec.ts pins every filter's resolution, so adding, renaming or moving a spec fails loudly instead of silently changing what a gate covers.",
   "milestones": ["P0", "P1-baseline", "P1-completion", "P2", "P3", "P4"],
-  "currentMilestone": "P0",
+  "currentMilestone": "P1-baseline",
   "gates": [
     {
       "id": "types",
@@ -63,6 +63,7 @@
       "selects": [
         "test/core/corpus-pin.spec.ts",
         "test/core/corpus-yaml.spec.ts",
+        "test/gates/corpus-discovery.spec.ts",
         "test/formats/asciimath/grammar.spec.ts",
         "test/formats/asciimath/model-parity.spec.ts",
         "test/formats/asciimath/render-parity.spec.ts",

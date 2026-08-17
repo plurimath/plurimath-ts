@@ -15,7 +15,13 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { loadPinnedCorpus, PINNED_CORPUS_ROOT, readExclusions, SUBMODULE_FIX } from "./corpus-pin";
+import {
+  loadPinnedCorpus,
+  PINNED_CORPUS_ROOT,
+  type PinnedCorpus,
+  readExclusions,
+  SUBMODULE_FIX,
+} from "./corpus-pin";
 import { readCorpusCases } from "./model-builder";
 
 const scratches: string[] = [];
@@ -125,27 +131,47 @@ function syntheticPin(options: SyntheticOptions = {}): string {
   return root;
 }
 
+/**
+ * Committed by name, not counted. A pin that loses a group is still a valid,
+ * self-consistent pin — the reader has nothing to object to and every parity
+ * suite happily runs the smaller set. This list is the only thing standing
+ * between "the corpus shrank" and "the corpus shrank and the suite was still
+ * green"; the proof that it is load-bearing is at the end of this file.
+ */
+const EXPECTED_GROUPS = [
+  "fences",
+  "frac",
+  "matrices",
+  "mixed",
+  "nary",
+  "numbers",
+  "operators",
+  "powers",
+  "quoted-text",
+  "roots",
+  "symbols",
+  "unary-functions",
+  "whitespace",
+];
+
+/**
+ * The assertion itself, so it can be applied to a damaged pin as well as to the
+ * shipped one. Comparing a damaged pin's groups to `EXPECTED_GROUPS` with
+ * `not.toStrictEqual` would only show the arrays differ — it would pass whether
+ * or not anything rejects the damaged pin, which is the difference between a
+ * red-green proof and a restatement.
+ */
+function assertExpectedGroups(corpus: PinnedCorpus): void {
+  expect(corpus.payloads.map((payload) => payload.group)).toStrictEqual(EXPECTED_GROUPS);
+}
+
 describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every group the provenance records", () => {
     expect(corpus.payloads.length).toBe(13);
     expect(corpus.provenance.payloads.length).toBe(13);
-    expect(corpus.payloads.map((payload) => payload.group)).toStrictEqual([
-      "fences",
-      "frac",
-      "matrices",
-      "mixed",
-      "nary",
-      "numbers",
-      "operators",
-      "powers",
-      "quoted-text",
-      "roots",
-      "symbols",
-      "unary-functions",
-      "whitespace",
-    ]);
+    assertExpectedGroups(corpus);
   });
 
   it("carries 70 cases with distinct ids", () => {
@@ -316,5 +342,37 @@ describe("the synthetic fixture, and the gaps only it can have", () => {
   it("fails on a case missing its model", () => {
     const payload = TINY_PAYLOAD.slice(0, TINY_PAYLOAD.indexOf("  model:"));
     expect(() => loadPinnedCorpus(syntheticPin({ payload }))).toThrow('"model" is missing');
+  });
+});
+
+/**
+ * The one discovery failure that is *not* an error: a group that disappears
+ * from the payload directory and from the provenance together leaves a pin
+ * with nothing wrong with it. Every other rule in this file throws; this one
+ * can only be caught by an expectation committed in advance, so that
+ * expectation is proven to be load-bearing rather than decorative.
+ */
+describe("a pin that quietly loses a group", () => {
+  const shrunk = loadPinnedCorpus(
+    damagedCopy((where) => {
+      rmSync(join(where, "corpus", "asciimath", "frac.yaml"));
+      editFile(join(where, "corpus", "provenance.yaml"), (text) =>
+        text.replace(/- path: asciimath\/frac\.yaml\n(?: {2}\S.*\n)*/, ""),
+      );
+    }),
+  );
+
+  it("loads without complaint, which is the whole problem", () => {
+    expect(shrunk.payloads.length).toBe(12);
+    expect(shrunk.cases.length).toBe(64);
+    expect(shrunk.payloads.map((payload) => payload.group)).not.toContain("frac");
+  });
+
+  it("is rejected by the assertion the shipped pin passes", () => {
+    // The same function, applied to both pins: it accepts the real one and
+    // throws on this one. Without running it against damaged input, nothing
+    // would show the expectation rejects anything.
+    expect(() => assertExpectedGroups(loadPinnedCorpus())).not.toThrow();
+    expect(() => assertExpectedGroups(shrunk)).toThrow();
   });
 });

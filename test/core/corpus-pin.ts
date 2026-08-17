@@ -25,7 +25,7 @@
  *   - the pin yields no payloads or no cases at all.
  */
 
-import { spawnSync } from "node:child_process";
+import { type SpawnSyncReturns, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -453,6 +453,30 @@ export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly strin
   return paths;
 }
 
+/**
+ * Runs git, and turns "git could not be run at all" into its own failure.
+ *
+ * `spawnSync` reports a missing or unexecutable binary through `error`, leaving
+ * `status` as `null` — and `null !== 0`, so a plain status check reports the
+ * *repository* as broken when the truth is that git is absent. That is the same
+ * class of misdiagnosis this whole gate exists to prevent: advice that sends a
+ * reader to fix the thing that is not wrong.
+ */
+function runGit(cwd: string, args: readonly string[]): SpawnSyncReturns<string> {
+  const result = spawnSync("git", ["-C", cwd, ...args], { encoding: "utf8" });
+  if (result.error !== undefined) {
+    throw new Error(`could not run git in ${cwd}: ${result.error.message}`);
+  }
+  return result;
+}
+
+/** git's own account of a failure, which is more use than the exit code alone. */
+function detail(result: SpawnSyncReturns<string>): string {
+  const stderr = result.stderr.trim();
+  const exit = ` (git exited ${result.status})`;
+  return stderr === "" ? exit : `${exit}: ${stderr}`;
+}
+
 /** What git records for the pin, and what the checkout is actually at. */
 export interface SubmodulePin {
   /** The superproject index entry's mode; `160000` is a gitlink. */
@@ -481,14 +505,9 @@ export function pinnedSubmoduleCommit(
   root: string = REPO_ROOT,
   relative: string = PIN_RELATIVE_PATH,
 ): SubmodulePin {
-  const staged = spawnSync("git", ["-C", root, "ls-files", "--stage", "-z", "--", relative], {
-    encoding: "utf8",
-  });
-  if (staged.error !== undefined) {
-    throw new Error(`could not run git in ${root}: ${staged.error.message}`);
-  }
+  const staged = runGit(root, ["ls-files", "--stage", "-z", "--", relative]);
   if (staged.status !== 0) {
-    throw new Error(`${root}: git could not read the index (exit ${staged.status}).`);
+    throw new Error(`${root}: git could not read the index${detail(staged)}.`);
   }
   // `<mode> <object> <stage>\t<path>\0`. `ls-files` is recursive: asking about
   // `pin` also reports `pin/child`, so taking the first record would accept a
@@ -518,16 +537,17 @@ export function pinnedSubmoduleCommit(
   // `rev-parse HEAD` succeeds in a bare repository too, so it cannot on its own
   // distinguish an initialised submodule from a bare clone sitting at the right
   // commit next to a copied corpus.
-  const worktree = spawnSync("git", ["-C", nested, "rev-parse", "--is-inside-work-tree"], {
-    encoding: "utf8",
-  });
+  const worktree = runGit(nested, ["rev-parse", "--is-inside-work-tree"]);
   if (worktree.status !== 0 || worktree.stdout.trim() !== "true") {
-    throw submoduleError(nested, "it is not a git working tree (a bare repository, or not a repo)");
+    throw submoduleError(
+      nested,
+      `it is not a git working tree (a bare repository, or not a repo)${detail(worktree)}`,
+    );
   }
 
-  const head = spawnSync("git", ["-C", nested, "rev-parse", "HEAD"], { encoding: "utf8" });
+  const head = runGit(nested, ["rev-parse", "HEAD"]);
   if (head.status !== 0) {
-    throw submoduleError(nested, `HEAD is unreadable (git rev-parse HEAD exited ${head.status})`);
+    throw submoduleError(nested, `HEAD is unreadable${detail(head)}`);
   }
 
   return { mode: fields[1], indexCommit: fields[2], headCommit: head.stdout.trim() };

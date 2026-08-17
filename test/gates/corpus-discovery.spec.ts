@@ -235,6 +235,27 @@ describe("git's own record of the pin", () => {
     expect(() => pinnedSubmoduleCommit(root, "sub")).toThrow("not a git working tree");
   });
 
+  it("says git is missing rather than blaming the repository", () => {
+    // `spawnSync` reports an unrunnable binary through `error` and leaves
+    // `status` as null. A plain `status !== 0` check therefore announces "it is
+    // not a git working tree" when git simply is not installed — sending the
+    // reader to fix a repository that is fine. `declaredSubmodulePaths` already
+    // handled this; `pinnedSubmoduleCommit` did not.
+    const { root } = driftedSuperproject();
+    const emptyPath = mkdtempSync(join(tmpdir(), "plurimath-nogit-"));
+    scratches.push(emptyPath);
+    const previous = process.env.PATH;
+    try {
+      process.env.PATH = emptyPath;
+      expect(() => pinnedSubmoduleCommit(root, "sub")).toThrow("could not run git");
+    } finally {
+      process.env.PATH = previous;
+    }
+    // …and with git back, the same call succeeds, so the failure above was the
+    // missing binary and not the fixture.
+    expect(pinnedSubmoduleCommit(root, "sub").mode).toBe("160000");
+  });
+
   it("reports a checkout left on the wrong commit as the drift it is", () => {
     // The assertion above is only worth what it catches, and a corpus whose
     // bytes still match its provenance is exactly the case that hides drift.

@@ -89,6 +89,42 @@ The rejection suite must carry, at minimum:
   a crash, a hang or a stack overflow. `ARCHITECTURE.md` §7 says "clean
   failures", but unmatched fences parse rather than fail (measured above), so
   asserting a failure there would pin the wrong behaviour.
+
+  **Landed** — `test/adversarial/adversarial-inputs.spec.ts`, wired to the
+  gate's `selects`. Measuring the gem first settled what the bar could be,
+  because on these inputs it mostly has no behaviour to match (oracle at
+  `00c52783`, 2026-08-17):
+
+  | input | gem | this port |
+  |---|---|---|
+  | 300-deep `(…)` nesting | `SystemStackError` | `ParseError`, ~10ms |
+  | 500 space-separated tokens | parses, **64.5 s** | parses, ~200ms |
+  | 1000 space-separated tokens | `SystemStackError` | `ParseError` |
+
+  So the gate is a **port-side** bar, not a parity one: a `SystemStackError` is
+  the absence of defined behaviour rather than behaviour to reproduce, and
+  §PORTING-STANDARDS' "do not be more correct than the gem" governs results,
+  not crashes. Two things fell out of writing it that are worth keeping:
+
+  - **the depth cap is not what refuses these inputs.** The first version of
+    this note claimed `MAX_DEPTH = 20_000` fires before V8's stack; measuring
+    which guard actually produced each rejection showed the opposite. Every
+    adversarial shape probed — nested parens, nested `sqrt`, complete nested
+    `frac`, unmatched opens, long token runs — is refused by the `RangeError`
+    fallback in `Atom#parse`, because this grammar costs many frames per token
+    and the engine stack runs out while `ctx.depth` is still far below the
+    bound. `MAX_DEPTH` has not been observed to fire for any AsciiMath input.
+    The two guards now carry distinct messages so a test can say which did the
+    work; relying on *catching* a `RangeError` is a robustness question in its
+    own right and is recorded in `deferred.md`. Parse time is linear in input
+    length (5,000 closing parens 1.96 s; 40,000 15.1 s);
+  - **whitespace-only input parses and then fails to render**, because the
+    formula holds a bare string. The gem behaves the same way: `Math.parse`
+    returns a `Formula`, and `Formula#to_asciimath` raises
+    `Plurimath::Math::ParseError` whose `cause` is `NoMethodError` on a
+    `Parslet::Slice`. So a typed `RenderError` is the porting-correct outcome —
+    but the failure is at render time for input that parsed, which the spec
+    pins separately rather than burying in the table.
 - **Differential runner** (class B): the seeded, deterministic, bounded input
   generator compared live against the gem.
 - **Package-isolation assertions** for the real `/asciimath`, `/mathml` and

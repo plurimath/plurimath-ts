@@ -74,10 +74,43 @@ export interface ParseContext {
 }
 
 /**
- * Deep grammar recursion on adversarial input can exhaust the JS stack; this
- * bound turns that into a clean ParseFailed well before it happens.
+ * Deep grammar recursion on adversarial input can exhaust the JS stack. This
+ * bound turns that into a clean ParseFailed — but it is not the only guard, and
+ * for several real shapes it is *not* the one that fires: a grammar costing
+ * many frames per input token reaches the engine's stack limit first, which the
+ * `RangeError` fallback in `parse` catches. Both paths end in a typed failure;
+ * they carry different messages so a test can tell which guard did the work.
  */
 const MAX_DEPTH = 20_000;
+
+/** Thrown when `MAX_DEPTH` is reached before the engine stack runs out. */
+export const DEPTH_LIMIT_MESSAGE = "Input is nested too deeply to parse";
+
+/** Thrown when the engine stack runs out first, which `MAX_DEPTH` cannot preempt. */
+export const STACK_EXHAUSTED_MESSAGE = "Input exhausted the parser stack";
+
+/**
+ * How each engine words a blown stack: V8 and JavaScriptCore say "Maximum call
+ * stack size exceeded", SpiderMonkey "too much recursion". Matching the text is
+ * unlovely, but the alternative is worse — `RangeError` is a general-purpose
+ * error, and relabelling *every* one as stack exhaustion would hide an
+ * unrelated bug behind a message asserting a cause nothing established.
+ */
+const STACK_OVERFLOW_TEXT = /maximum call stack|stack size exceeded|too much recursion/i;
+
+/**
+ * The classes those engines throw. V8 and JavaScriptCore use `RangeError`;
+ * **SpiderMonkey uses `InternalError`**, which is not a `RangeError` and is not
+ * a standard global — so an `instanceof RangeError` test excludes Firefox
+ * before the message is ever consulted, leaving the regex's "too much
+ * recursion" branch unreachable there and a browser consumer receiving an
+ * untyped throw the contract says cannot happen.
+ */
+function isStackOverflow(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const fromRecursion = error instanceof RangeError || error.name === "InternalError";
+  return fromRecursion && STACK_OVERFLOW_TEXT.test(error.message);
+}
 
 type ParseResult =
   | {
@@ -213,7 +246,7 @@ export abstract class Atom {
         : FAIL;
     } else {
       if (++ctx.depth > MAX_DEPTH) {
-        throw new ParseFailed("Input is nested too deeply to parse", pos);
+        throw new ParseFailed(DEPTH_LIMIT_MESSAGE, pos);
       }
       try {
         result = this.tryParse(pos, ctx, consumeAll);
@@ -310,11 +343,17 @@ export abstract class Atom {
     try {
       result = this.apply(0, ctx, true);
     } catch (error) {
-      // Grammar recursion can still outrun the JS stack before MAX_DEPTH on
-      // some engines; the per-parse context is discarded, so unwinding is safe.
-      if (error instanceof RangeError) {
-        throw new ParseFailed("Input is nested too deeply to parse", ctx.maxPos);
+      // Grammar recursion routinely outruns the JS stack before MAX_DEPTH:
+      // this grammar costs many frames per input token, so a few hundred
+      // complete `frac` levels exhaust the stack while `ctx.depth` is still far
+      // below the bound. The per-parse context is discarded, so unwinding is
+      // safe. A distinct message keeps the two guards distinguishable — message
+      // text is not API (ARCHITECTURE.md §5), so this is a test affordance, not
+      // a contract change.
+      if (isStackOverflow(error)) {
+        throw new ParseFailed(STACK_EXHAUSTED_MESSAGE, ctx.maxPos);
       }
+      // Any other RangeError is somebody else's bug and travels unchanged.
       throw error;
     }
     // `consume_all` guarantees a successful root reached the end of the input.

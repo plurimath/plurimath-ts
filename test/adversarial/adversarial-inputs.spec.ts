@@ -310,6 +310,27 @@ describe("deep input is refused by a guard that says which guard it was", () => 
     expect(() => throwsRangeError.parse("")).not.toThrow(STACK_EXHAUSTED_MESSAGE);
   });
 
+  it("recognises SpiderMonkey's InternalError, which is not a RangeError", () => {
+    // Firefox throws `InternalError: too much recursion`. An
+    // `instanceof RangeError` test excludes it before the message matters, so
+    // the regex's "too much recursion" branch was unreachable on the one engine
+    // it was written for — coverage claimed and not delivered.
+    class InternalError extends Error {
+      override readonly name = "InternalError";
+    }
+    const spiderMonkey = dynamic(() => {
+      throw new InternalError("too much recursion");
+    });
+    expect(() => spiderMonkey.parse("")).toThrow(STACK_EXHAUSTED_MESSAGE);
+
+    // …while an InternalError from anything else still travels unchanged.
+    const unrelated = dynamic(() => {
+      throw new InternalError("something else entirely");
+    });
+    expect(() => unrelated.parse("")).toThrow("something else entirely");
+    expect(() => unrelated.parse("")).not.toThrow(STACK_EXHAUSTED_MESSAGE);
+  });
+
   it("keeps the two guards distinguishable", () => {
     // The point of separate messages: while they were identical, this file
     // asserted "the depth cap fired" for a rejection the cap had no part in,

@@ -98,6 +98,20 @@ export const STACK_EXHAUSTED_MESSAGE = "Input exhausted the parser stack";
  */
 const STACK_OVERFLOW_TEXT = /maximum call stack|stack size exceeded|too much recursion/i;
 
+/**
+ * The classes those engines throw. V8 and JavaScriptCore use `RangeError`;
+ * **SpiderMonkey uses `InternalError`**, which is not a `RangeError` and is not
+ * a standard global — so an `instanceof RangeError` test excludes Firefox
+ * before the message is ever consulted, leaving the regex's "too much
+ * recursion" branch unreachable there and a browser consumer receiving an
+ * untyped throw the contract says cannot happen.
+ */
+function isStackOverflow(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const fromRecursion = error instanceof RangeError || error.name === "InternalError";
+  return fromRecursion && STACK_OVERFLOW_TEXT.test(error.message);
+}
+
 type ParseResult =
   | {
       ok: true;
@@ -336,7 +350,7 @@ export abstract class Atom {
       // safe. A distinct message keeps the two guards distinguishable — message
       // text is not API (ARCHITECTURE.md §5), so this is a test affordance, not
       // a contract change.
-      if (error instanceof RangeError && STACK_OVERFLOW_TEXT.test(error.message)) {
+      if (isStackOverflow(error)) {
         throw new ParseFailed(STACK_EXHAUSTED_MESSAGE, ctx.maxPos);
       }
       // Any other RangeError is somebody else's bug and travels unchanged.

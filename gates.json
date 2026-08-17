@@ -102,7 +102,7 @@
       "activatesAt": "P1-completion",
       "run": "pnpm test adversarial",
       "selects": ["test/adversarial/adversarial-inputs.spec.ts"],
-      "description": "Deep nesting, unmatched fences and long token runs reach a clean outcome in bounded time - a parse or a typed error, never a crash, hang or stack overflow"
+      "description": "Deep nesting, unmatched fences and long token runs reach a pinned clean outcome - a parse or a typed error, never an untyped throw - within a measured time ceiling. A true non-returning loop is NOT bounded here: the check is synchronous, so only a job timeout catches one"
     },
     {
       "id": "oracle-repo-regeneration",

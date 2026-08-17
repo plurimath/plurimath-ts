@@ -45,6 +45,7 @@
  * renderer.
  */
 
+import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -54,7 +55,9 @@ import {
   loadPinnedCorpus,
   PIN_RELATIVE_PATH,
   PINNED_CORPUS_ROOT,
+  pinnedSubmoduleCommit,
   REPO_ROOT,
+  SUBMODULE_FIX,
 } from "../core/corpus-pin";
 
 const scratches: string[] = [];
@@ -70,6 +73,41 @@ function gitmodulesRoot(contents: string): string {
 afterAll(() => {
   for (const root of scratches) rmSync(root, { recursive: true, force: true });
 });
+
+/**
+ * A real superproject whose submodule checkout has been rewound one commit,
+ * so the index pins one commit and the working tree is on another.
+ */
+function driftedSuperproject(): { root: string; pinned: string; rewound: string } {
+  const base = mkdtempSync(join(tmpdir(), "plurimath-drift-"));
+  scratches.push(base);
+  const git = (cwd: string, ...args: string[]): string =>
+    execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8" }).trim();
+
+  const sub = join(base, "sub-origin");
+  execFileSync("git", ["init", "--quiet", sub]);
+  git(sub, "config", "user.email", "gate@example.invalid");
+  git(sub, "config", "user.name", "gate");
+  writeFileSync(join(sub, "f"), "one\n");
+  git(sub, "add", "f");
+  git(sub, "commit", "--quiet", "-m", "one");
+  const rewound = git(sub, "rev-parse", "HEAD");
+  writeFileSync(join(sub, "f"), "two\n");
+  git(sub, "add", "f");
+  git(sub, "commit", "--quiet", "-m", "two");
+  const pinned = git(sub, "rev-parse", "HEAD");
+
+  const root = join(base, "super");
+  execFileSync("git", ["init", "--quiet", root]);
+  git(root, "config", "user.email", "gate@example.invalid");
+  git(root, "config", "user.name", "gate");
+  // Local-path submodules need this since git 2.38's CVE-2022-39253 fix.
+  git(root, "-c", "protocol.file.allow=always", "submodule", "add", "--quiet", sub, "sub");
+  git(root, "commit", "--quiet", "-m", "add");
+  git(join(root, "sub"), "checkout", "--quiet", rewound);
+
+  return { root, pinned, rewound };
+}
 
 /**
  * Pulls a Ruby string constant out of a script. Two things are asserted rather
@@ -114,6 +152,51 @@ describe("the submodule path every reader hardcodes", () => {
 
   it("points at an initialised checkout, not an empty directory", () => {
     expect(existsSync(join(PINNED_CORPUS_ROOT, "corpus", "provenance.yaml"))).toBe(true);
+  });
+});
+
+/**
+ * `.gitmodules` maps a name to a path and stops there. Everything above would
+ * be satisfied by an ordinary directory holding a copied corpus, with git
+ * considering the submodule uninitialised — and by a checkout sitting on the
+ * wrong commit, whenever the payload bytes happen to match (a submodule commit
+ * that touched only its README would do it).
+ *
+ * The corpus is reproducible only because it comes from a known commit, so
+ * that commit is what gets asserted.
+ */
+describe("git's own record of the pin", () => {
+  const pin = pinnedSubmoduleCommit();
+
+  it("is a gitlink in the superproject index, not a directory of files", () => {
+    expect(pin.mode).toBe("160000");
+  });
+
+  it("has the checkout on the commit the index pins", () => {
+    expect(pin.headCommit).toBe(pin.indexCommit);
+  });
+
+  it("names a commit, not an empty string that would compare equal to itself", () => {
+    expect(pin.indexCommit).toMatch(/^[0-9a-f]{40}$/);
+  });
+
+  it("fails when the path is not in the index at all", () => {
+    const root = mkdtempSync(join(tmpdir(), "plurimath-discovery-"));
+    scratches.push(root);
+    execFileSync("git", ["init", "--quiet", root]);
+    expect(() => pinnedSubmoduleCommit(root)).toThrow(SUBMODULE_FIX);
+  });
+
+  it("reports a checkout left on the wrong commit as the drift it is", () => {
+    // The assertion above is only worth what it catches, and a corpus whose
+    // bytes still match its provenance is exactly the case that hides drift.
+    // So: a real superproject, its submodule rewound one commit.
+    const { root, pinned, rewound } = driftedSuperproject();
+    const pin = pinnedSubmoduleCommit(root, "sub");
+    expect(pin.mode).toBe("160000");
+    expect(pin.indexCommit).toBe(pinned);
+    expect(pin.headCommit).toBe(rewound);
+    expect(pin.headCommit).not.toBe(pin.indexCommit);
   });
 });
 

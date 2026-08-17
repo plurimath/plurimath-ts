@@ -414,12 +414,12 @@ export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly strin
   if (!existsSync(path)) {
     throw new Error(`${path} does not exist, so nothing declares where the corpus pin lives.`);
   }
-  // `--null` frames each record as `key\nvalue\0`. Without it the records are
-  // newline-separated, and a path containing a newline — legal, and what
-  // `path = "a\nEVIL"` produces — splits into two apparent paths, one of which
-  // is the expected one. That is the same "git and this gate disagree about
-  // where the submodule is" failure the hand parser had, moved into the
-  // transport.
+  // `--null` frames each record as `key\nvalue\0` — or just `key\0` where the
+  // key carries no value. Without it the records are newline-separated, and a
+  // path containing a newline — legal, and what `path = "a\nEVIL"` produces —
+  // splits into two apparent paths, one of which is the expected one. That is
+  // the same "git and this gate disagree about where the submodule is" failure
+  // the hand parser had, moved into the transport.
   const result = spawnSync(
     "git",
     ["config", "--file", path, "--null", "--get-regexp", String.raw`^submodule\..+\.path$`],
@@ -451,6 +451,66 @@ export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly strin
     );
   }
   return paths;
+}
+
+/** What git records for the pin, and what the checkout is actually at. */
+export interface SubmodulePin {
+  /** The superproject index entry's mode; `160000` is a gitlink. */
+  readonly mode: string;
+  /** The commit the superproject pins the submodule to. */
+  readonly indexCommit: string;
+  /** The commit the submodule working tree is checked out at. */
+  readonly headCommit: string;
+}
+
+/**
+ * The pin as **git** records it: the gitlink in the superproject index, and the
+ * commit the nested checkout is on.
+ *
+ * `.gitmodules` maps a name to a path. It says nothing about which commit is
+ * pinned, or whether the submodule is initialised at all — so a plain directory
+ * holding a copied corpus satisfies every other check here while git considers
+ * the submodule uninitialised. Worse, a checkout left on the wrong commit
+ * passes silently whenever the payload bytes happen to match, which is exactly
+ * the case for a submodule commit that touched only its README.
+ *
+ * The corpus is only reproducible because it comes from a known commit, so that
+ * commit is the thing worth asserting.
+ */
+export function pinnedSubmoduleCommit(
+  root: string = REPO_ROOT,
+  relative: string = PIN_RELATIVE_PATH,
+): SubmodulePin {
+  const staged = spawnSync("git", ["-C", root, "ls-files", "--stage", "-z", "--", relative], {
+    encoding: "utf8",
+  });
+  if (staged.error !== undefined) {
+    throw new Error(`could not run git in ${root}: ${staged.error.message}`);
+  }
+  if (staged.status !== 0) {
+    throw new Error(`${root}: git could not read the index (exit ${staged.status}).`);
+  }
+  // `<mode> <object> <stage>\t<path>\0`
+  const record = staged.stdout.split("\0").find((entry) => entry !== "");
+  if (record === undefined) {
+    throw submoduleError(join(root, relative), `${relative} is not in the index of ${root}`);
+  }
+  const fields = /^(\d+) ([0-9a-f]{40}) \d+\t/.exec(record);
+  if (fields?.[1] === undefined || fields[2] === undefined) {
+    throw new Error(`${root}: could not read the index entry for ${relative}: ${record}`);
+  }
+
+  const head = spawnSync("git", ["-C", join(root, relative), "rev-parse", "HEAD"], {
+    encoding: "utf8",
+  });
+  if (head.status !== 0) {
+    throw submoduleError(
+      join(root, relative),
+      `it is not a git checkout (git rev-parse HEAD exited ${head.status})`,
+    );
+  }
+
+  return { mode: fields[1], indexCommit: fields[2], headCommit: head.stdout.trim() };
 }
 
 export interface Exclusion {

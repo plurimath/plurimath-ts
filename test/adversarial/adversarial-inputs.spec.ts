@@ -32,7 +32,7 @@ import { parseAsciimath } from "../../src/formats/asciimath/parser";
 import { toAsciimath } from "../../src/formats/asciimath/renderer";
 import { toLatex } from "../../src/formats/latex/renderer";
 import { toMathml } from "../../src/formats/mathml/renderer";
-import { DEPTH_LIMIT_MESSAGE, STACK_EXHAUSTED_MESSAGE } from "../../src/pegkit/atom";
+import { DEPTH_LIMIT_MESSAGE, dynamic, STACK_EXHAUSTED_MESSAGE } from "../../src/pegkit/atom";
 
 /** The typed failures this gate accepts as a clean outcome. */
 const CLEAN_CODES: ReadonlySet<string> = new Set<PlurimathErrorCode>([
@@ -141,15 +141,32 @@ const CASES: ReadonlyArray<readonly [string, string, Outcome]> = [
   ["whitespace only", "   ", "RENDER_ERROR"],
 ];
 
+/**
+ * Ten times the slowest measured case (2,000 unmatched closing parens, ~0.8s),
+ * so this fires on a regression in shape rather than on a slow CI runner.
+ */
+const SLOWEST_ALLOWED_MS = 20_000;
+
 describe("every adversarial input reaches the clean outcome it is pinned to", () => {
   const seen: Outcome[] = [];
 
-  it.each(CASES)("%s", (_label, input, expected) => {
-    // A hang fails here by timeout rather than by a flaky elapsed-time
-    // threshold; the bound is the assertion.
+  it.each(CASES)("%s", (label, input, expected) => {
+    const started = performance.now();
     const outcome = outcomeOf(input);
+    const elapsed = performance.now() - started;
     seen.push(outcome);
     expect(outcome).toBe(expected);
+    // **This does not bound a hang, and an earlier version of this comment
+    // wrongly claimed it did.** `outcomeOf` is synchronous, so a non-returning
+    // loop inside it blocks the very event loop that would have to fire
+    // vitest's timeout: the runner would hang, not fail. Only CI's job timeout
+    // catches that.
+    //
+    // What this *does* catch is the realistic regression — parse time going
+    // superlinear. Every case here was measured under 2s; the ceiling is set
+    // far above that so ordinary machine noise cannot trip it, while a
+    // quadratic blowup on these sizes would be nowhere near it.
+    expect(elapsed, `${label} took ${Math.round(elapsed)}ms`).toBeLessThan(SLOWEST_ALLOWED_MS);
   });
 
   it("exercised every case", () => {
@@ -266,6 +283,31 @@ describe("deep input is refused by a guard that says which guard it was", () => 
     for (const [label, input] of rejecting) {
       expect(guardFor(input), label).toBe(STACK_EXHAUSTED_MESSAGE);
     }
+  });
+
+  it("does not relabel an unrelated RangeError as stack exhaustion", () => {
+    // The fallback used to catch every `RangeError`. `RangeError` is a
+    // general-purpose error — `new Array(-1)` throws one — so relabelling all
+    // of them would report "the parser stack was exhausted" for a bug that had
+    // nothing to do with recursion, and this file's assertions would have
+    // agreed.
+    const unrelated = ((): unknown => {
+      try {
+        return new Array(-1);
+      } catch (error) {
+        return error;
+      }
+    })();
+
+    expect(unrelated).toBeInstanceOf(RangeError);
+    expect((unrelated as Error).message).not.toMatch(/call stack|too much recursion/i);
+
+    // And the parser really does let one through rather than relabelling it.
+    const throwsRangeError = dynamic(() => {
+      throw new RangeError("sentinel, nothing to do with recursion");
+    });
+    expect(() => throwsRangeError.parse("")).toThrow("sentinel");
+    expect(() => throwsRangeError.parse("")).not.toThrow(STACK_EXHAUSTED_MESSAGE);
   });
 
   it("keeps the two guards distinguishable", () => {

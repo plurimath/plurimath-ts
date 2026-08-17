@@ -89,6 +89,15 @@ export const DEPTH_LIMIT_MESSAGE = "Input is nested too deeply to parse";
 /** Thrown when the engine stack runs out first, which `MAX_DEPTH` cannot preempt. */
 export const STACK_EXHAUSTED_MESSAGE = "Input exhausted the parser stack";
 
+/**
+ * How each engine words a blown stack: V8 and JavaScriptCore say "Maximum call
+ * stack size exceeded", SpiderMonkey "too much recursion". Matching the text is
+ * unlovely, but the alternative is worse — `RangeError` is a general-purpose
+ * error, and relabelling *every* one as stack exhaustion would hide an
+ * unrelated bug behind a message asserting a cause nothing established.
+ */
+const STACK_OVERFLOW_TEXT = /maximum call stack|stack size exceeded|too much recursion/i;
+
 type ParseResult =
   | {
       ok: true;
@@ -327,9 +336,10 @@ export abstract class Atom {
       // safe. A distinct message keeps the two guards distinguishable — message
       // text is not API (ARCHITECTURE.md §5), so this is a test affordance, not
       // a contract change.
-      if (error instanceof RangeError) {
+      if (error instanceof RangeError && STACK_OVERFLOW_TEXT.test(error.message)) {
         throw new ParseFailed(STACK_EXHAUSTED_MESSAGE, ctx.maxPos);
       }
+      // Any other RangeError is somebody else's bug and travels unchanged.
       throw error;
     }
     // `consume_all` guarantees a successful root reached the end of the input.

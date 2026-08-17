@@ -1,15 +1,20 @@
 /**
  * What each published subpath actually exports.
  *
- * The package-isolation gate proves a subpath *resolves* and pulls in nothing
- * forbidden. It does not prove the subpath exports anything useful — an entry
- * barrel that lost its re-export would still resolve, still ship, and still
- * pass that gate, while every consumer of it broke.
+ * This pins the **source barrels** that back the published subpaths, and only
+ * those: it imports `src/formats/<F>/index`, so a broken `package.json#exports`
+ * path or a mis-declared tsdown entry would ship the wrong file while every
+ * assertion here stayed green. `scripts/gate-package.mjs` owns that half — it
+ * resolves each subpath through the export map exactly as a consumer would and
+ * asserts the same surface against the packed artifact (`EXPECTED_EXPORTS`).
  *
- * This is the other half: the surface itself. Until these entries existed,
- * `parseAsciimath`, `toAsciimath`, `toLatex` and `toMathml` were exercised by
- * the whole suite and reachable by no consumer at all, because the export map
- * published only the model layer.
+ * Both halves are needed. The gate cannot run in the unit suite because it
+ * requires a build; this spec cannot see the export map at all. Together they
+ * say: the barrel exports this, and that is what a consumer receives.
+ *
+ * Until these entries existed, `parseAsciimath`, `toAsciimath`, `toLatex` and
+ * `toMathml` were exercised by the whole suite and reachable by no consumer at
+ * all, because the export map published only the model layer.
  *
  * Deliberately narrow. Each format exposes the directions it supports and the
  * option types that go with them; the grammar, the transform, `render-shared`

@@ -393,6 +393,12 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
  * packed checkout and in CI without a git binary. `root` is a parameter for
  * the same reason it is one on `loadPinnedCorpus`: so the failure can be shown
  * against a scratch copy instead of argued from the code.
+ *
+ * Only `path` keys inside a `[submodule "…"]` section count. Collecting every
+ * line shaped like `path = …` would let an unrelated section satisfy the check
+ * while no submodule declared that path at all — the check would pass without
+ * checking a submodule, which is the failure mode this whole gate exists to
+ * catch.
  */
 export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly string[] {
   const path = join(root, ".gitmodules");
@@ -400,9 +406,25 @@ export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly strin
     throw new Error(`${path} does not exist, so nothing declares where the corpus pin lives.`);
   }
   const paths: string[] = [];
+  let inSubmoduleSection = false;
   for (const line of readFileSync(path, "utf8").split("\n")) {
+    const section = /^\s*\[\s*([A-Za-z0-9.-]+)/.exec(line);
+    if (section) {
+      inSubmoduleSection = section[1] === "submodule";
+      continue;
+    }
+    if (!inSubmoduleSection) continue;
     const match = /^\s*path\s*=\s*(.+?)\s*$/.exec(line);
-    if (match?.[1] !== undefined) paths.push(match[1]);
+    if (match?.[1] === undefined) continue;
+    // git-config quotes a value only when it has to; an undecoded quoted path
+    // would compare unequal and fail closed, so reject it by name instead of
+    // silently carrying the quotes into the comparison.
+    if (match[1].startsWith('"')) {
+      throw new Error(
+        `${path}: the submodule path ${match[1]} is quoted, which this reader does not decode.`,
+      );
+    }
+    paths.push(match[1]);
   }
   if (paths.length === 0) {
     throw new Error(

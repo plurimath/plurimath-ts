@@ -15,7 +15,13 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
-import { loadPinnedCorpus, PINNED_CORPUS_ROOT, readExclusions, SUBMODULE_FIX } from "./corpus-pin";
+import {
+  loadPinnedCorpus,
+  PINNED_CORPUS_ROOT,
+  type PinnedCorpus,
+  readExclusions,
+  SUBMODULE_FIX,
+} from "./corpus-pin";
 import { readCorpusCases } from "./model-builder";
 
 const scratches: string[] = [];
@@ -148,13 +154,24 @@ const EXPECTED_GROUPS = [
   "whitespace",
 ];
 
+/**
+ * The assertion itself, so it can be applied to a damaged pin as well as to the
+ * shipped one. Comparing a damaged pin's groups to `EXPECTED_GROUPS` with
+ * `not.toStrictEqual` would only show the arrays differ — it would pass whether
+ * or not anything rejects the damaged pin, which is the difference between a
+ * red-green proof and a restatement.
+ */
+function assertExpectedGroups(corpus: PinnedCorpus): void {
+  expect(corpus.payloads.map((payload) => payload.group)).toStrictEqual(EXPECTED_GROUPS);
+}
+
 describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every group the provenance records", () => {
     expect(corpus.payloads.length).toBe(13);
     expect(corpus.provenance.payloads.length).toBe(13);
-    expect(corpus.payloads.map((payload) => payload.group)).toStrictEqual(EXPECTED_GROUPS);
+    assertExpectedGroups(corpus);
   });
 
   it("carries 70 cases with distinct ids", () => {
@@ -348,11 +365,14 @@ describe("a pin that quietly loses a group", () => {
   it("loads without complaint, which is the whole problem", () => {
     expect(shrunk.payloads.length).toBe(12);
     expect(shrunk.cases.length).toBe(64);
+    expect(shrunk.payloads.map((payload) => payload.group)).not.toContain("frac");
   });
 
-  it("is caught only because the group list is committed by name", () => {
-    const groups = shrunk.payloads.map((payload) => payload.group);
-    expect(groups).not.toContain("frac");
-    expect(groups).not.toStrictEqual(EXPECTED_GROUPS);
+  it("is rejected by the assertion the shipped pin passes", () => {
+    // The same function, applied to both pins: it accepts the real one and
+    // throws on this one. Without running it against damaged input, nothing
+    // would show the expectation rejects anything.
+    expect(() => assertExpectedGroups(loadPinnedCorpus())).not.toThrow();
+    expect(() => assertExpectedGroups(shrunk)).toThrow();
   });
 });

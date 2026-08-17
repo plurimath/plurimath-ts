@@ -42,7 +42,7 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
 - `scripts/gate-oracle.rb` — the class-B entry point (needs a gem checkout). Two
   separate checks, because they have different owners and different failure
   meanings:
-  - `regenerate --check` over **this repository's** generated data — census,
+  - `repo --check` over **this repository's** generated data — census,
     exclusions, symbol slices, core data — must produce an empty diff;
   - a **testsuite** check: regenerate the pinned corpus in the submodule from
     the same clean gem checkout and diff it. A difference there is a testsuite
@@ -54,14 +54,20 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
 
 ## Done when
 
-- [ ] `pnpm check` reports nine active class-A gates, all passing.
-- [ ] `scripts/gate-oracle.rb repo --check` is clean against a clean gem checkout,
+- [x] `pnpm check` reports nine active class-A gates, all passing.
+- [x] `scripts/gate-oracle.rb repo --check` is clean against a clean gem checkout,
   and the testsuite regeneration check is reported separately from it.
-- [ ] Each discovery failure is demonstrated, not asserted: a deinitialized
+  Both exit 0 against `plurimath-oracle` at the pinned `00c52783`.
+- [x] Each discovery failure is demonstrated, not asserted: a deinitialized
   submodule, an empty corpus directory, a group removed from a scratch copy, a
   case missing a target key, and a corrupted payload byte each fail the run.
   Five red-green proofs, one per rule.
-- [ ] `currentMilestone` is `P1-baseline`, and every gate that activates with
+  Four were already in `test/core/corpus-pin.spec.ts`. The fifth — a group
+  removed from *both* the payload directory and the provenance, which leaves a
+  pin the reader has no objection to — is proven in "a pin that quietly loses a
+  group": it loads clean at 12 payloads and 64 cases, and only the committed
+  `EXPECTED_GROUPS` list rejects it.
+- [x] `currentMilestone` is `P1-baseline`, and every gate that activates with
   it has a runner in the same change. P1 is **not** finished here — see
   [item 8](08-p1-completion.md).
 - [ ] The milestone-exit checklist is satisfied: gates green, plus the class-C

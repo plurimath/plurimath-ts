@@ -34,7 +34,12 @@ import { parseYaml, type YamlValue } from "./corpus-yaml";
 /** Resolved from this file, so nothing here depends on the working directory. */
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-/** The submodule path recorded in `.gitmodules`. */
+/**
+ * The submodule path recorded in `.gitmodules` — checked against that file by
+ * `declaredSubmodulePaths`, not merely claimed here. Two other copies of this
+ * string exist (`scripts/gate-oracle.rb`, `scripts/generate-corpus.rb`), and
+ * `test/gates/corpus-discovery.spec.ts` is what keeps all of them in step.
+ */
 export const PIN_RELATIVE_PATH = "submodules/plurimath-testsuite";
 
 /** The pinned testsuite checkout. */
@@ -372,6 +377,39 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
   }
 
   return { root, provenance, payloads, cases };
+}
+
+/**
+ * Every `path = …` recorded in `.gitmodules`, in file order.
+ *
+ * `PIN_RELATIVE_PATH` is a hardcoded string, and so are the copies in
+ * `scripts/gate-oracle.rb` and `scripts/generate-corpus.rb`. Nothing made them
+ * agree with the file they all claim to come from: a submodule moved in
+ * `.gitmodules` would leave three constants pointing at a path git no longer
+ * knows, and the reader's own "run `git submodule update --init`" advice
+ * naming the wrong directory.
+ *
+ * Deliberately a parser rather than a `git` call — the check has to work in a
+ * packed checkout and in CI without a git binary. `root` is a parameter for
+ * the same reason it is one on `loadPinnedCorpus`: so the failure can be shown
+ * against a scratch copy instead of argued from the code.
+ */
+export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly string[] {
+  const path = join(root, ".gitmodules");
+  if (!existsSync(path)) {
+    throw new Error(`${path} does not exist, so nothing declares where the corpus pin lives.`);
+  }
+  const paths: string[] = [];
+  for (const line of readFileSync(path, "utf8").split("\n")) {
+    const match = /^\s*path\s*=\s*(.+?)\s*$/.exec(line);
+    if (match?.[1] !== undefined) paths.push(match[1]);
+  }
+  if (paths.length === 0) {
+    throw new Error(
+      `${path} declares no submodule paths; it was expected to declare at least one.`,
+    );
+  }
+  return paths;
 }
 
 export interface Exclusion {

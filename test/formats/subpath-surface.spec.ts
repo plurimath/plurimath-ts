@@ -1,0 +1,67 @@
+/**
+ * What each published subpath actually exports.
+ *
+ * This pins the **source barrels** that back the published subpaths, and only
+ * those: it imports `src/formats/<F>/index`, so a broken `package.json#exports`
+ * path or a mis-declared tsdown entry would ship the wrong file while every
+ * assertion here stayed green. `scripts/gate-package.mjs` owns that half — it
+ * resolves each subpath through the export map exactly as a consumer would and
+ * asserts the same surface against the packed artifact (`EXPECTED_EXPORTS`).
+ *
+ * Both halves are needed. The gate cannot run in the unit suite because it
+ * requires a build; this spec cannot see the export map at all. Together they
+ * say: the barrel exports this, and that is what a consumer receives.
+ *
+ * Until these entries existed, `parseAsciimath`, `toAsciimath`, `toLatex` and
+ * `toMathml` were exercised by the whole suite and reachable by no consumer at
+ * all, because the export map published only the model layer.
+ *
+ * Deliberately narrow. Each format exposes the directions it supports and the
+ * option types that go with them; the grammar, the transform, `render-shared`
+ * and the XML tree are how those work, not what a caller uses. A new export
+ * here is a public-API decision and should fail this test until it is made
+ * deliberately.
+ */
+
+import { describe, expect, it } from "vitest";
+import * as asciimath from "../../src/formats/asciimath/index";
+import * as latex from "../../src/formats/latex/index";
+import * as mathml from "../../src/formats/mathml/index";
+
+/** Runtime exports only — types erase, so they cannot be asserted here. */
+const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly string[]]> = [
+  ["./asciimath", asciimath, ["parseAsciimath", "toAsciimath"]],
+  ["./latex", latex, ["toLatex"]],
+  ["./mathml", mathml, ["toMathml"]],
+];
+
+describe.each(SURFACE.map((entry) => [entry[0], entry] as const))(
+  "%s",
+  (_name, [, mod, expected]) => {
+    it("exports exactly its declared surface", () => {
+      expect(Object.keys(mod).sort()).toStrictEqual([...expected].sort());
+    });
+
+    it("exports functions, not undefined bindings", () => {
+      for (const name of expected) {
+        expect(typeof mod[name]).toBe("function");
+      }
+    });
+  },
+);
+
+describe("the subpaths actually work end to end", () => {
+  it("parses AsciiMath and renders it back", () => {
+    expect(asciimath.toAsciimath(asciimath.parseAsciimath("frac(1)(2)"))).toBe("frac(1)(2)");
+  });
+
+  it("renders a parsed formula as LaTeX", () => {
+    expect(latex.toLatex(asciimath.parseAsciimath("frac(1)(2)"))).toBe("\\frac{1}{2}");
+  });
+
+  it("renders a parsed formula as MathML", () => {
+    const out = mathml.toMathml(asciimath.parseAsciimath("frac(1)(2)"));
+    expect(out).toContain("<mfrac>");
+    expect(out.startsWith("<math")).toBe(true);
+  });
+});

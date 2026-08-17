@@ -12,6 +12,9 @@ export default defineConfig({
   entry: {
     index: "src/index.ts",
     core: "src/core/index.ts",
+    asciimath: "src/formats/asciimath/index.ts",
+    latex: "src/formats/latex/index.ts",
+    mathml: "src/formats/mathml/index.ts",
   },
   format: ["esm", "cjs"],
   platform: "neutral",

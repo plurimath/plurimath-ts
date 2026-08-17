@@ -47,6 +47,36 @@
         "default": "./dist/core.cjs"
       }
     },
+    "./asciimath": {
+      "import": {
+        "types": "./dist/asciimath.d.ts",
+        "default": "./dist/asciimath.js"
+      },
+      "require": {
+        "types": "./dist/asciimath.d.cts",
+        "default": "./dist/asciimath.cjs"
+      }
+    },
+    "./latex": {
+      "import": {
+        "types": "./dist/latex.d.ts",
+        "default": "./dist/latex.js"
+      },
+      "require": {
+        "types": "./dist/latex.d.cts",
+        "default": "./dist/latex.cjs"
+      }
+    },
+    "./mathml": {
+      "import": {
+        "types": "./dist/mathml.d.ts",
+        "default": "./dist/mathml.js"
+      },
+      "require": {
+        "types": "./dist/mathml.d.cts",
+        "default": "./dist/mathml.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [

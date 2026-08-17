@@ -414,9 +414,15 @@ export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly strin
   if (!existsSync(path)) {
     throw new Error(`${path} does not exist, so nothing declares where the corpus pin lives.`);
   }
+  // `--null` frames each record as `key\nvalue\0`. Without it the records are
+  // newline-separated, and a path containing a newline — legal, and what
+  // `path = "a\nEVIL"` produces — splits into two apparent paths, one of which
+  // is the expected one. That is the same "git and this gate disagree about
+  // where the submodule is" failure the hand parser had, moved into the
+  // transport.
   const result = spawnSync(
     "git",
-    ["config", "--file", path, "--get-regexp", String.raw`^submodule\..+\.path$`],
+    ["config", "--file", path, "--null", "--get-regexp", String.raw`^submodule\..+\.path$`],
     { encoding: "utf8" },
   );
   if (result.error !== undefined) {
@@ -430,10 +436,15 @@ export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly strin
       `${path}: git could not read it (exit ${result.status}). ${result.stderr.trim()}`,
     );
   }
+  // A key cannot contain a newline, so the first one ends it; everything after
+  // is the value, newlines and all.
   const paths = result.stdout
-    .split("\n")
-    .filter((line) => line !== "")
-    .map((line) => line.slice(line.indexOf(" ") + 1));
+    .split("\0")
+    .filter((record) => record !== "")
+    .map((record) => {
+      const separator = record.indexOf("\n");
+      return separator === -1 ? "" : record.slice(separator + 1);
+    });
   if (paths.length === 0) {
     throw new Error(
       `${path} declares no submodule paths; it was expected to declare at least one.`,

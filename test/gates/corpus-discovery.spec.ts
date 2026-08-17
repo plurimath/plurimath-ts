@@ -181,6 +181,16 @@ describe("git-config forms the check must read as git does", () => {
     expect(declaredSubmodulePaths(root)).toStrictEqual([`${PIN_RELATIVE_PATH} `]);
   });
 
+  it("keeps a newline inside a path as one path, not two", () => {
+    // git prints the value with a literal newline. Splitting output on newlines
+    // yields ["…testsuite", "EVIL"] — and the first element is exactly the path
+    // the gate is looking for, so the gate would confirm a submodule git puts
+    // somewhere else entirely. `--null` framing is what makes this one record.
+    const root = gitmodulesRoot(`[submodule "x"]\n\tpath = "${PIN_RELATIVE_PATH}\\nEVIL"\n`);
+    expect(declaredSubmodulePaths(root)).toStrictEqual([`${PIN_RELATIVE_PATH}\nEVIL`]);
+    expect(declaredSubmodulePaths(root)).not.toContain(PIN_RELATIVE_PATH);
+  });
+
   it("refuses a file git itself refuses", () => {
     // An unknown escape and an unterminated quote each make git exit 128. The
     // old parser normalised both into the expected path.

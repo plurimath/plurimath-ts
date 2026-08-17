@@ -379,6 +379,64 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
   return { root, provenance, payloads, cases };
 }
 
+/** `[section "subsection"] trailing`, with the subsection optional. */
+const SECTION = /^\s*\[\s*([A-Za-z0-9.-]+)\s*(?:"((?:[^"\\]|\\.)*)")?\s*\]\s*(.*)$/;
+
+/**
+ * Drops a `#` or `;` comment, except inside a quoted string where git treats
+ * both as ordinary characters. A path like `"foo#bar"` is legal and would be
+ * truncated by a plain regex.
+ */
+function stripComment(line: string): string {
+  let out = "";
+  let quoted = false;
+  for (let index = 0; index < line.length; index += 1) {
+    const character = line[index] as string;
+    if (quoted && character === "\\") {
+      out += character + (line[index + 1] ?? "");
+      index += 1;
+    } else if (character === '"') {
+      quoted = !quoted;
+      out += character;
+    } else if (!quoted && (character === "#" || character === ";")) {
+      break;
+    } else {
+      out += character;
+    }
+  }
+  return out;
+}
+
+/**
+ * Git's value syntax: quoted runs keep their whitespace and honour the escapes
+ * git defines, unquoted runs are trimmed. The two can be adjacent in one value.
+ */
+function decodeConfigValue(raw: string): string {
+  const escapes: Record<string, string> = { n: "\n", t: "\t", b: "\b", '"': '"', "\\": "\\" };
+  let out = "";
+  let quoted = false;
+  for (let index = 0; index < raw.length; index += 1) {
+    const character = raw[index] as string;
+    if (character === "\\") {
+      const next = raw[index + 1];
+      if (next !== undefined && next in escapes) {
+        out += escapes[next];
+        index += 1;
+        continue;
+      }
+      continue;
+    }
+    if (character === '"') {
+      quoted = !quoted;
+      continue;
+    }
+    out += character;
+  }
+  // Only unquoted trailing whitespace is insignificant; a value that ends
+  // inside quotes kept its spaces above and there is nothing left to trim.
+  return quoted ? out : out.replace(/\s+$/, "");
+}
+
 /**
  * Every `path = …` recorded in `.gitmodules`, in file order.
  *
@@ -400,14 +458,13 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
  * checking a submodule, which is the failure mode this whole gate exists to
  * catch.
  *
- * It follows the parts of git-config syntax that `.gitmodules` can actually
- * contain: section and key names are case-insensitive, `#` and `;` start a
- * comment anywhere on a line, and a key may share the section header's line.
- * Getting these wrong fails closed rather than passing vacuously — but a
- * formatting-only edit that git reads identically should not break the gate.
- * A quoted value is refused by name rather than decoded, because this reader
- * does not implement git's escape rules and comparing with the quotes still
- * attached would be a confusing false failure.
+ * It follows git-config syntax rather than approximating it, because the two
+ * ways of getting that wrong are both bad: rejecting a file git reads fine
+ * turns the gate into an obstacle that gets disabled, and accepting one git
+ * reads differently is the vacuity this gate exists to prevent. In particular
+ * `[submodule]` **without** a subsection declares `submodule.path`, not
+ * `submodule.<name>.path`, so git sees no submodule there and neither does
+ * this. `test/gates/corpus-discovery.spec.ts` pins the agreement.
  */
 export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly string[] {
   const path = join(root, ".gitmodules");
@@ -416,23 +473,21 @@ export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly strin
   }
   const paths: string[] = [];
   let inSubmoduleSection = false;
-  for (const raw of readFileSync(path, "utf8").split("\n")) {
-    const line = raw.replace(/[#;].*$/, "");
+  // Split on both line endings: a lone `\r` left on the end of each line stops
+  // `(.*)$` matching, which silently found no paths at all in a CRLF file.
+  for (const raw of readFileSync(path, "utf8").split(/\r?\n/)) {
+    const line = stripComment(raw);
     let rest = line;
-    const section = /^\s*\[\s*([A-Za-z0-9.-]+)[^\]]*\]\s*(.*)$/.exec(line);
+    const section = SECTION.exec(line);
     if (section) {
-      inSubmoduleSection = section[1]?.toLowerCase() === "submodule";
-      rest = section[2] ?? "";
+      // A subsection is required: `[submodule]` alone names no submodule.
+      inSubmoduleSection = section[1]?.toLowerCase() === "submodule" && section[2] !== undefined;
+      rest = section[3] ?? "";
     }
     if (!inSubmoduleSection) continue;
-    const match = /^\s*path\s*=\s*(.+?)\s*$/i.exec(rest);
+    const match = /^\s*path\s*=\s*(.*)$/i.exec(rest);
     if (match?.[1] === undefined) continue;
-    if (match[1].startsWith('"')) {
-      throw new Error(
-        `${path}: the submodule path ${match[1]} is quoted, which this reader does not decode.`,
-      );
-    }
-    paths.push(match[1]);
+    paths.push(decodeConfigValue(match[1]));
   }
   if (paths.length === 0) {
     throw new Error(

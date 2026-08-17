@@ -153,9 +153,9 @@ describe("the check reads .gitmodules rather than echoing the constant", () => {
     expect(() => declaredSubmodulePaths(root)).toThrow("declares no submodule paths");
   });
 
-  it("refuses a quoted path rather than comparing the quotes", () => {
+  it("reads a quoted path as the path, not as the quotes", () => {
     const root = gitmodulesRoot(`[submodule "pin"]\n\tpath = "${PIN_RELATIVE_PATH}"\n`);
-    expect(() => declaredSubmodulePaths(root)).toThrow("is quoted");
+    expect(declaredSubmodulePaths(root)).toStrictEqual([PIN_RELATIVE_PATH]);
   });
 });
 
@@ -196,6 +196,46 @@ describe("git-config forms that must not break the check", () => {
       `[submodule "pin"]\n\t# path = ${PIN_RELATIVE_PATH}\n\turl = https://example.invalid/x.git\n`,
     );
     expect(() => declaredSubmodulePaths(root)).toThrow("declares no submodule paths");
+  });
+
+  it("reads CRLF line endings", () => {
+    const root = gitmodulesRoot(`[submodule "pin"]\r\n\tpath = ${PIN_RELATIVE_PATH}\r\n`);
+    expect(declaredSubmodulePaths(root)).toStrictEqual([PIN_RELATIVE_PATH]);
+  });
+
+  it("keeps a # or ; that is inside quotes", () => {
+    // Stripping comments with a plain regex truncates these, and the value git
+    // resolves is not the value the gate would compare.
+    expect(declaredSubmodulePaths(gitmodulesRoot('[submodule "x"]\n\tpath = "foo#bar"\n'))) //
+      .toStrictEqual(["foo#bar"]);
+    expect(declaredSubmodulePaths(gitmodulesRoot('[submodule "x"]\n\tpath = "foo;bar"\n'))) //
+      .toStrictEqual(["foo;bar"]);
+  });
+
+  it("decodes quoted whitespace and escapes the way git does", () => {
+    expect(declaredSubmodulePaths(gitmodulesRoot('[submodule "x"]\n\tpath = "a b"\n'))) //
+      .toStrictEqual(["a b"]);
+    expect(declaredSubmodulePaths(gitmodulesRoot('[submodule "x"]\n\tpath = a\\tb\n'))) //
+      .toStrictEqual(["a\tb"]);
+    expect(declaredSubmodulePaths(gitmodulesRoot('[submodule "x"]\n\tpath = foo" "bar\n'))) //
+      .toStrictEqual(["foo bar"]);
+    expect(declaredSubmodulePaths(gitmodulesRoot('[submodule "x"]\n\tpath = "tail"   \n'))) //
+      .toStrictEqual(["tail"]);
+  });
+
+  it("refuses [submodule] with no subsection, because git declares no submodule there", () => {
+    // git reads this as `submodule.path`, not `submodule.<name>.path`. Treating
+    // it as a declaration would let the gate pass against a file that names no
+    // submodule at all.
+    const root = gitmodulesRoot(`[submodule]\n\tpath = ${PIN_RELATIVE_PATH}\n`);
+    expect(() => declaredSubmodulePaths(root)).toThrow("declares no submodule paths");
+  });
+
+  it("ignores an include.path directive", () => {
+    const root = gitmodulesRoot(
+      `[include]\n\tpath = /etc/x\n[submodule "pin"]\n\tpath = ${PIN_RELATIVE_PATH}\n`,
+    );
+    expect(declaredSubmodulePaths(root)).toStrictEqual([PIN_RELATIVE_PATH]);
   });
 });
 

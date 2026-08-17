@@ -160,11 +160,37 @@ describe("the check reads .gitmodules rather than echoing the constant", () => {
 });
 
 /**
- * Forms git accepts and reads identically. None of these appear in the file
- * today — git writes the canonical form — but a hand edit or another tool can
- * produce them, and a gate that fails on a formatting-only change git does not
- * care about is a gate that gets disabled.
+ * `declaredSubmodulePaths` asks git rather than parsing, so these no longer
+ * test a parser. What can still be wrong is the *query* — the `--get-regexp`
+ * pattern, and the decision to treat git's exit 1 as "no matches" while any
+ * other status is a refusal. These fixtures pin that.
+ *
+ * The three marked below are the forms that broke the hand-written parser this
+ * function replaced. They are kept because they are the reason it was replaced:
+ * each one made git and the parser disagree about where the submodule is.
  */
+describe("git-config forms the check must read as git does", () => {
+  it("follows a line continuation, which git joins and a parser missed", () => {
+    // git reads `…testsuiteEVIL`; the old parser read `…testsuite` and passed.
+    const root = gitmodulesRoot(`[submodule "x"]\n\tpath = ${PIN_RELATIVE_PATH}\\\nEVIL\n`);
+    expect(declaredSubmodulePaths(root)).toStrictEqual([`${PIN_RELATIVE_PATH}EVIL`]);
+  });
+
+  it("keeps whitespace inside quotes", () => {
+    const root = gitmodulesRoot(`[submodule "x"]\n\tpath = "${PIN_RELATIVE_PATH} "   \n`);
+    expect(declaredSubmodulePaths(root)).toStrictEqual([`${PIN_RELATIVE_PATH} `]);
+  });
+
+  it("refuses a file git itself refuses", () => {
+    // An unknown escape and an unterminated quote each make git exit 128. The
+    // old parser normalised both into the expected path.
+    for (const value of [String.raw`a\qb`, `"${PIN_RELATIVE_PATH}`]) {
+      const root = gitmodulesRoot(`[submodule "x"]\n\tpath = ${value}\n`);
+      expect(() => declaredSubmodulePaths(root)).toThrow("git could not read it");
+    }
+  });
+});
+
 describe("git-config forms that must not break the check", () => {
   it("ignores a trailing comment rather than reading it as part of the path", () => {
     const root = gitmodulesRoot(`[submodule "pin"]\n\tpath = ${PIN_RELATIVE_PATH} # the corpus\n`);
@@ -229,6 +255,16 @@ describe("git-config forms that must not break the check", () => {
     // submodule at all.
     const root = gitmodulesRoot(`[submodule]\n\tpath = ${PIN_RELATIVE_PATH}\n`);
     expect(() => declaredSubmodulePaths(root)).toThrow("declares no submodule paths");
+  });
+
+  it("reads a file that starts with a UTF-8 BOM", () => {
+    const root = gitmodulesRoot(`﻿[submodule "pin"]\n\tpath = ${PIN_RELATIVE_PATH}\n`);
+    expect(declaredSubmodulePaths(root)).toStrictEqual([PIN_RELATIVE_PATH]);
+  });
+
+  it("reads the legacy [submodule.x] section syntax", () => {
+    const root = gitmodulesRoot(`[submodule.pin]\n\tpath = ${PIN_RELATIVE_PATH}\n`);
+    expect(declaredSubmodulePaths(root)).toStrictEqual([PIN_RELATIVE_PATH]);
   });
 
   it("ignores an include.path directive", () => {

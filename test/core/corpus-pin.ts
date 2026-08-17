@@ -25,6 +25,7 @@
  *   - the pin yields no payloads or no cases at all.
  */
 
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -379,66 +380,8 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
   return { root, provenance, payloads, cases };
 }
 
-/** `[section "subsection"] trailing`, with the subsection optional. */
-const SECTION = /^\s*\[\s*([A-Za-z0-9.-]+)\s*(?:"((?:[^"\\]|\\.)*)")?\s*\]\s*(.*)$/;
-
 /**
- * Drops a `#` or `;` comment, except inside a quoted string where git treats
- * both as ordinary characters. A path like `"foo#bar"` is legal and would be
- * truncated by a plain regex.
- */
-function stripComment(line: string): string {
-  let out = "";
-  let quoted = false;
-  for (let index = 0; index < line.length; index += 1) {
-    const character = line[index] as string;
-    if (quoted && character === "\\") {
-      out += character + (line[index + 1] ?? "");
-      index += 1;
-    } else if (character === '"') {
-      quoted = !quoted;
-      out += character;
-    } else if (!quoted && (character === "#" || character === ";")) {
-      break;
-    } else {
-      out += character;
-    }
-  }
-  return out;
-}
-
-/**
- * Git's value syntax: quoted runs keep their whitespace and honour the escapes
- * git defines, unquoted runs are trimmed. The two can be adjacent in one value.
- */
-function decodeConfigValue(raw: string): string {
-  const escapes: Record<string, string> = { n: "\n", t: "\t", b: "\b", '"': '"', "\\": "\\" };
-  let out = "";
-  let quoted = false;
-  for (let index = 0; index < raw.length; index += 1) {
-    const character = raw[index] as string;
-    if (character === "\\") {
-      const next = raw[index + 1];
-      if (next !== undefined && next in escapes) {
-        out += escapes[next];
-        index += 1;
-        continue;
-      }
-      continue;
-    }
-    if (character === '"') {
-      quoted = !quoted;
-      continue;
-    }
-    out += character;
-  }
-  // Only unquoted trailing whitespace is insignificant; a value that ends
-  // inside quotes kept its spaces above and there is nothing left to trim.
-  return quoted ? out : out.replace(/\s+$/, "");
-}
-
-/**
- * Every `path = …` recorded in `.gitmodules`, in file order.
+ * The submodule paths `.gitmodules` declares, as **git** reads them.
  *
  * `PIN_RELATIVE_PATH` is a hardcoded string, and so are the copies in
  * `scripts/gate-oracle.rb` and `scripts/generate-corpus.rb`. Nothing made them
@@ -447,48 +390,50 @@ function decodeConfigValue(raw: string): string {
  * knows, and the reader's own "run `git submodule update --init`" advice
  * naming the wrong directory.
  *
- * Deliberately a parser rather than a `git` call — the check has to work in a
- * packed checkout and in CI without a git binary. `root` is a parameter for
- * the same reason it is one on `loadPinnedCorpus`: so the failure can be shown
- * against a scratch copy instead of argued from the code.
+ * This asks git rather than parsing the file. An earlier version hand-parsed
+ * git-config syntax, on the reasoning that the check should not need a git
+ * binary — which was wrong twice over. The corpus *is* a git submodule, so a
+ * checkout without git has no corpus to check and fails long before this. And
+ * the hand parser was wrong in the one direction that matters: a line
+ * continuation (`path = foo\` then `EVIL`) reads as `fooEVIL` to git and as
+ * `foo` to the parser, so `.gitmodules` could point git elsewhere while this
+ * gate confirmed the expected path. Unknown escapes and unterminated quotes
+ * make git reject the file outright, and the parser normalised both into the
+ * expected value.
  *
- * Only `path` keys inside a `[submodule "…"]` section count. Collecting every
- * line shaped like `path = …` would let an unrelated section satisfy the check
- * while no submodule declared that path at all — the check would pass without
- * checking a submodule, which is the failure mode this whole gate exists to
- * catch.
+ * Only `submodule.<name>.path` counts. A `path` key in another section, or in
+ * a `[submodule]` with no subsection, declares no submodule — git does not
+ * report either, and neither does this.
  *
- * It follows git-config syntax rather than approximating it, because the two
- * ways of getting that wrong are both bad: rejecting a file git reads fine
- * turns the gate into an obstacle that gets disabled, and accepting one git
- * reads differently is the vacuity this gate exists to prevent. In particular
- * `[submodule]` **without** a subsection declares `submodule.path`, not
- * `submodule.<name>.path`, so git sees no submodule there and neither does
- * this. `test/gates/corpus-discovery.spec.ts` pins the agreement.
+ * `root` is a parameter for the same reason it is one on `loadPinnedCorpus`:
+ * so the failure paths can be shown against a scratch copy rather than argued
+ * from the code.
  */
 export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly string[] {
   const path = join(root, ".gitmodules");
   if (!existsSync(path)) {
     throw new Error(`${path} does not exist, so nothing declares where the corpus pin lives.`);
   }
-  const paths: string[] = [];
-  let inSubmoduleSection = false;
-  // Split on both line endings: a lone `\r` left on the end of each line stops
-  // `(.*)$` matching, which silently found no paths at all in a CRLF file.
-  for (const raw of readFileSync(path, "utf8").split(/\r?\n/)) {
-    const line = stripComment(raw);
-    let rest = line;
-    const section = SECTION.exec(line);
-    if (section) {
-      // A subsection is required: `[submodule]` alone names no submodule.
-      inSubmoduleSection = section[1]?.toLowerCase() === "submodule" && section[2] !== undefined;
-      rest = section[3] ?? "";
-    }
-    if (!inSubmoduleSection) continue;
-    const match = /^\s*path\s*=\s*(.*)$/i.exec(rest);
-    if (match?.[1] === undefined) continue;
-    paths.push(decodeConfigValue(match[1]));
+  const result = spawnSync(
+    "git",
+    ["config", "--file", path, "--get-regexp", String.raw`^submodule\..+\.path$`],
+    { encoding: "utf8" },
+  );
+  if (result.error !== undefined) {
+    throw new Error(`could not run git to read ${path}: ${result.error.message}`);
   }
+  // git exits 1 when the pattern matches nothing, which is a legitimate answer.
+  // Anything else means git refused the file, and a `.gitmodules` git will not
+  // read is a broken submodule however this gate feels about it.
+  if (result.status !== 0 && result.status !== 1) {
+    throw new Error(
+      `${path}: git could not read it (exit ${result.status}). ${result.stderr.trim()}`,
+    );
+  }
+  const paths = result.stdout
+    .split("\n")
+    .filter((line) => line !== "")
+    .map((line) => line.slice(line.indexOf(" ") + 1));
   if (paths.length === 0) {
     throw new Error(
       `${path} declares no submodule paths; it was expected to declare at least one.`,

@@ -256,24 +256,23 @@ describe("deep input is refused by a guard that says which guard it was", () => 
     }
   }
 
-  it("refuses deep nesting through the stack guard, not the depth cap", () => {
-    // Measured, and the opposite of what this spec first claimed. Every
-    // adversarial shape in the table above is refused by the `RangeError`
-    // fallback in `src/pegkit/atom.ts`: the grammar costs many frames per
-    // token, so the engine stack runs out while `ctx.depth` is still far below
-    // `MAX_DEPTH = 20_000`. The cap has not been observed to fire for any
-    // AsciiMath input.
-    expect(guardFor(`${"(".repeat(2000)}x${")".repeat(2000)}`)).toBe(STACK_EXHAUSTED_MESSAGE);
-    expect(guardFor(nestedFrac(500))).toBe(STACK_EXHAUSTED_MESSAGE);
-    expect(guardFor(Array.from({ length: 5000 }, () => "a").join(" "))).toBe(
-      STACK_EXHAUSTED_MESSAGE,
-    );
+  it("refuses every rejected shape through the stack guard, not the depth cap", () => {
+    // Measured, and the opposite of what this spec first claimed. Driven off
+    // the table rather than a hand-picked sample, so a row that changes guard
+    // — or stops being stack-driven — fails here instead of quietly diverging
+    // from the prose.
+    const rejecting = CASES.filter(([, , expected]) => expected === "PARSE_ERROR");
+    expect(rejecting.length).toBeGreaterThan(0);
+    for (const [label, input] of rejecting) {
+      expect(guardFor(input), label).toBe(STACK_EXHAUSTED_MESSAGE);
+    }
   });
 
   it("keeps the two guards distinguishable", () => {
     // The point of separate messages: while they were identical, this file
     // asserted "the depth cap fired" for a rejection the cap had no part in,
-    // and would have kept passing if the cap were deleted.
+    // and would have kept passing if the cap were deleted. `MAX_DEPTH` has not
+    // been observed to fire for any AsciiMath input — see `deferred.md`.
     expect(DEPTH_LIMIT_MESSAGE).not.toBe(STACK_EXHAUSTED_MESSAGE);
   });
 

@@ -562,7 +562,9 @@ worker with a smaller stack, or a bundler that alters frame size.
 converts engine stack exhaustion into the same typed `ParseFailed`.
 
 Measured 2026-08-17 while writing `test/adversarial/adversarial-inputs.spec.ts`:
-**every** adversarial AsciiMath shape is refused by the `RangeError` path.
+of the adversarial shapes probed, **every one that is refused at all** is
+refused by the `RangeError` path — several parse, and whitespace-only input
+parses and then fails at render.
 Nested parens, nested `sqrt`, complete nested `frac`, 5,000 unmatched opens,
 5,000-token runs and a 20,000-character symbol all exhaust the stack while
 `ctx.depth` is still far below 20,000, because this grammar costs many frames
@@ -576,6 +578,7 @@ are refused, which is a parity decision (the gem `SystemStackError`s at ~300
 nesting, so the port is far more permissive today either way), and it wants its
 own change with its own measurements rather than riding along with a test gate.
 
-The immediate risk is contained: both paths end in the same typed error, the
-adversarial gate pins which guard fires for each shape, and the two messages
-are distinct so a silent swap cannot pass unnoticed.
+The immediate risk is contained: both paths end in a typed error, the
+adversarial gate asserts `STACK_EXHAUSTED_MESSAGE` for **every** row it pins as
+rejected (driven off the case table, so the two cannot drift apart), and the two
+messages are distinct so a silent swap cannot pass unnoticed.

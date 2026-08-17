@@ -100,7 +100,7 @@
       "class": "A",
       "activatesAt": "P1-completion",
       "run": "pnpm test adversarial",
-      "selects": [],
+      "selects": ["test/adversarial/adversarial-inputs.spec.ts"],
       "description": "Deep nesting, unmatched fences and long token runs fail cleanly in bounded time"
     },
     {

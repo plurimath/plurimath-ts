@@ -101,7 +101,7 @@
       "activatesAt": "P1-completion",
       "run": "pnpm test adversarial",
       "selects": ["test/adversarial/adversarial-inputs.spec.ts"],
-      "description": "Deep nesting, unmatched fences and long token runs fail cleanly in bounded time"
+      "description": "Deep nesting, unmatched fences and long token runs reach a clean outcome in bounded time - a parse or a typed error, never a crash, hang or stack overflow"
     },
     {
       "id": "oracle-repo-regeneration",

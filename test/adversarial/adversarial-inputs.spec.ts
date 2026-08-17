@@ -51,16 +51,30 @@ const CLEAN_CODES: ReadonlySet<string> = new Set<PlurimathErrorCode>([
  * stopped catching real crashes.
  */
 function cleanErrorCode(error: unknown): string | null {
-  if (typeof error !== "object" || error === null) return null;
-  const code = (error as { readonly code?: unknown }).code;
+  // `instanceof Error` as well as the code: a thrown plain object carrying
+  // `{ code: "PARSE_ERROR" }` is not a typed error from this package, and
+  // accepting one would let `throw { code: "PARSE_ERROR" }` anywhere in the
+  // parser read as a clean outcome. Both copies of the classes in a dual
+  // ESM/CJS load still extend the same realm's `Error`, so this keeps the
+  // cross-copy case working.
+  if (!(error instanceof Error)) return null;
+  const code = (error as Error & { readonly code?: unknown }).code;
   return typeof code === "string" && CLEAN_CODES.has(code) ? code : null;
 }
 
 type Outcome = "parsed" | "PARSE_ERROR" | "RENDER_ERROR";
 
+type ParsedFormula = ReturnType<typeof parseAsciimath>;
+
+const RENDERERS: ReadonlyArray<readonly [string, (node: ParsedFormula) => string]> = [
+  ["toAsciimath", toAsciimath],
+  ["toLatex", toLatex],
+  ["toMathml", toMathml],
+];
+
 /** Runs one input all the way to a clean outcome, or rethrows what it got. */
 function outcomeOf(input: string): Outcome {
-  let node: ReturnType<typeof parseAsciimath>;
+  let node: ParsedFormula;
   try {
     node = parseAsciimath(input);
   } catch (error) {
@@ -68,60 +82,77 @@ function outcomeOf(input: string): Outcome {
     if (code === null) throw error;
     return code as Outcome;
   }
-  try {
-    // Rendering is part of the outcome: a parse producing a model no renderer
-    // can walk has moved the failure rather than prevented it, and the failure
-    // still has to be typed.
-    toAsciimath(node);
-    toLatex(node);
-    toMathml(node);
-  } catch (error) {
-    const code = cleanErrorCode(error);
-    if (code === null) throw error;
-    return code as Outcome;
-  }
-  return "parsed";
+  // Every renderer runs, whatever the others did. Sharing one `try` meant a
+  // typed `RenderError` from `toAsciimath` returned before `toLatex` or
+  // `toMathml` were called at all — so either of those could have crashed with
+  // an untyped error and the gate would still have reported a clean outcome.
+  const failures = RENDERERS.map(([name, render]) => {
+    try {
+      render(node);
+      return null;
+    } catch (error) {
+      const code = cleanErrorCode(error);
+      if (code === null) throw error;
+      return [name, code] as const;
+    }
+  }).filter((entry) => entry !== null);
+
+  return failures.length === 0 ? "parsed" : (failures[0]?.[1] as Outcome);
+}
+
+/** `frac(frac(…)(2))(2)` — every level a complete binary fraction. */
+function nestedFrac(depth: number): string {
+  let value = "1";
+  for (let level = 0; level < depth; level += 1) value = `frac(${value})(2)`;
+  return value;
 }
 
 /**
- * Sizes cross every threshold this parser has while keeping the suite quick.
- * The parser is linear in input length (measured: 5,000 closing parens 1.96s,
- * 40,000 15.1s), so the large cases are the slow ones and sit just past the
- * interesting boundary rather than as large as possible.
+ * Each case pins the outcome it must produce, not merely that *some* clean
+ * outcome happens. Accepting any of the three per row let a real regression
+ * through: the 500-token parse could start rejecting, or a nesting case could
+ * start producing a model no renderer walks, and the gate stayed green because
+ * an unrelated row still parsed.
+ *
+ * Every value below was measured (2026-08-17), not predicted. Sizes cross the
+ * thresholds while keeping the suite quick — the parser is linear in input
+ * length (5,000 closing parens 1.96s, 40,000 15.1s), so the big cases are the
+ * slow ones and sit just past the boundary rather than as large as possible.
  */
-const CASES: ReadonlyArray<readonly [string, string]> = [
-  ["nesting: 2,000 nested parens", `${"(".repeat(2000)}x${")".repeat(2000)}`],
-  ["nesting: 2,000 nested sqrt", `${"sqrt(".repeat(2000)}2${")".repeat(2000)}`],
-  ["nesting: 500 nested frac", `${"frac(".repeat(500)}1)(2${")".repeat(500)}`],
-  ["fences: 5,000 unmatched open", `${"(".repeat(5000)}x`],
-  ["fences: 2,000 unmatched close", `x${")".repeat(2000)}`],
-  ["fences: alternating unmatched", "(x)) ((y) {: z"],
-  ["tokens: 500 symbols", Array.from({ length: 500 }, () => "a").join(" ")],
-  ["tokens: 5,000 symbols", Array.from({ length: 5000 }, () => "a").join(" ")],
-  ["tokens: 5,000 digits, no spaces", "1".repeat(5000)],
-  ["tokens: 2,000 superscripts", `x${"^y".repeat(2000)}`],
-  ["tokens: 20,000 characters of one symbol", "a".repeat(20000)],
-  ["whitespace only", "   "],
+const CASES: ReadonlyArray<readonly [string, string, Outcome]> = [
+  ["nesting: 2,000 nested parens", `${"(".repeat(2000)}x${")".repeat(2000)}`, "PARSE_ERROR"],
+  ["nesting: 2,000 nested sqrt", `${"sqrt(".repeat(2000)}2${")".repeat(2000)}`, "PARSE_ERROR"],
+  ["nesting: 500 complete nested frac", nestedFrac(500), "PARSE_ERROR"],
+  ["nesting: 20 complete nested frac", nestedFrac(20), "parsed"],
+  ["fences: 5,000 unmatched open", `${"(".repeat(5000)}x`, "PARSE_ERROR"],
+  ["fences: 2,000 unmatched close", `x${")".repeat(2000)}`, "parsed"],
+  ["fences: alternating unmatched", "(x)) ((y) {: z", "parsed"],
+  ["tokens: 500 symbols", Array.from({ length: 500 }, () => "a").join(" "), "parsed"],
+  ["tokens: 5,000 symbols", Array.from({ length: 5000 }, () => "a").join(" "), "PARSE_ERROR"],
+  ["tokens: 5,000 digits, no spaces", "1".repeat(5000), "parsed"],
+  ["tokens: 2,000 superscripts", `x${"^y".repeat(2000)}`, "PARSE_ERROR"],
+  ["tokens: 20,000 characters of one symbol", "a".repeat(20000), "PARSE_ERROR"],
+  ["whitespace only", "   ", "RENDER_ERROR"],
 ];
 
-describe("every adversarial input reaches a clean outcome", () => {
-  const outcomes = new Map<string, Outcome>();
+describe("every adversarial input reaches the clean outcome it is pinned to", () => {
+  const seen: Outcome[] = [];
 
-  it.each(CASES)("%s", (label, input) => {
+  it.each(CASES)("%s", (_label, input, expected) => {
     // A hang fails here by timeout rather than by a flaky elapsed-time
     // threshold; the bound is the assertion.
-    outcomes.set(label, outcomeOf(input));
+    const outcome = outcomeOf(input);
+    seen.push(outcome);
+    expect(outcome).toBe(expected);
   });
 
   it("exercised every case", () => {
     expect(CASES.length).toBeGreaterThan(0);
-    expect(outcomes.size).toBe(CASES.length);
+    expect(seen.length).toBe(CASES.length);
   });
 
-  it("saw more than one outcome, so 'clean' is not passing on one trivial shape", () => {
-    const seen = [...outcomes.values()];
-    expect(seen).toContain("parsed");
-    expect(seen).toContain("PARSE_ERROR");
+  it("covers all three outcomes, so no one shape carries the gate", () => {
+    expect(new Set(seen)).toStrictEqual(new Set(["parsed", "PARSE_ERROR", "RENDER_ERROR"]));
   });
 });
 
@@ -201,10 +232,17 @@ describe("unmatched fences parse, as they do in the gem", () => {
 
 /**
  * Whitespace-only input parses to a formula holding a bare string, which no
- * renderer can walk. The gem raises `NoMethodError` on the same input, so a
- * typed `RenderError` is the porting-correct outcome rather than a defect —
- * but it is a *render*-time failure for input that parsed, which is worth
- * pinning explicitly rather than leaving inside the table above.
+ * renderer can walk.
+ *
+ * The gem does the same thing (verified against `00c52783`): `Math.parse("   ",
+ * :asciimath)` returns a `Formula`, and `Formula#to_asciimath` then raises
+ * `Plurimath::Math::ParseError` — whose `cause` is `NoMethodError: undefined
+ * method 'to_asciimath' for an instance of Parslet::Slice`. So the failure is
+ * internal, wrapped at the public boundary, and a typed `RenderError` here is
+ * the porting-correct outcome rather than a defect.
+ *
+ * It is pinned separately because it is a *render*-time failure for input that
+ * parsed, which the table above would otherwise bury.
  */
 describe("whitespace-only input fails at render, with a typed error", () => {
   it("parses, then refuses to render, and says which value it choked on", () => {

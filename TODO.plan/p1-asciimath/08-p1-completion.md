@@ -111,10 +111,12 @@ The rejection suite must carry, at minimum:
     the typed error is reached rather than a `RangeError`. Parse time is linear
     in input length (5,000 closing parens 1.96 s; 40,000 15.1 s);
   - **whitespace-only input parses and then fails to render**, because the
-    formula holds a bare string. The gem raises `NoMethodError` on the same
-    input, so a typed `RenderError` is the porting-correct outcome — but the
-    failure is at render time for input that parsed, which the spec pins
-    separately rather than burying in the table.
+    formula holds a bare string. The gem behaves the same way: `Math.parse`
+    returns a `Formula`, and `Formula#to_asciimath` raises
+    `Plurimath::Math::ParseError` whose `cause` is `NoMethodError` on a
+    `Parslet::Slice`. So a typed `RenderError` is the porting-correct outcome —
+    but the failure is at render time for input that parsed, which the spec
+    pins separately rather than burying in the table.
 - **Differential runner** (class B): the seeded, deterministic, bounded input
   generator compared live against the gem.
 - **Package-isolation assertions** for the real `/asciimath`, `/mathml` and

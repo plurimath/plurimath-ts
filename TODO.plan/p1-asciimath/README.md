@@ -77,7 +77,11 @@ has never been shown to reject anything.
 **P1-baseline** (item 7):
 
 - [x] Parse tree, normalized model, and all three renderings match the gem for
-      every case in the pinned submodule corpus.
+      every **reachable** case in the pinned submodule corpus — 69 of the 70
+      pinned. `text-unitsml-valid` is withheld by `corpus/exclusions.yaml`
+      because UnitsML is deferred, so the port deliberately renders it as
+      `Text` rather than as the gem does; claiming parity over all 70 would
+      claim it for the one case that is excluded from parity by design.
 - [x] Corpus discovery fails loudly on an absent or empty submodule, on zero
       payloads, on zero cases, and on a missing group or target key.
 - [x] Generated symbol data, census and exclusions produced from a clean

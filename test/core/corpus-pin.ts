@@ -399,6 +399,15 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
  * while no submodule declared that path at all — the check would pass without
  * checking a submodule, which is the failure mode this whole gate exists to
  * catch.
+ *
+ * It follows the parts of git-config syntax that `.gitmodules` can actually
+ * contain: section and key names are case-insensitive, `#` and `;` start a
+ * comment anywhere on a line, and a key may share the section header's line.
+ * Getting these wrong fails closed rather than passing vacuously — but a
+ * formatting-only edit that git reads identically should not break the gate.
+ * A quoted value is refused by name rather than decoded, because this reader
+ * does not implement git's escape rules and comparing with the quotes still
+ * attached would be a confusing false failure.
  */
 export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly string[] {
   const path = join(root, ".gitmodules");
@@ -407,18 +416,17 @@ export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly strin
   }
   const paths: string[] = [];
   let inSubmoduleSection = false;
-  for (const line of readFileSync(path, "utf8").split("\n")) {
-    const section = /^\s*\[\s*([A-Za-z0-9.-]+)/.exec(line);
+  for (const raw of readFileSync(path, "utf8").split("\n")) {
+    const line = raw.replace(/[#;].*$/, "");
+    let rest = line;
+    const section = /^\s*\[\s*([A-Za-z0-9.-]+)[^\]]*\]\s*(.*)$/.exec(line);
     if (section) {
-      inSubmoduleSection = section[1] === "submodule";
-      continue;
+      inSubmoduleSection = section[1]?.toLowerCase() === "submodule";
+      rest = section[2] ?? "";
     }
     if (!inSubmoduleSection) continue;
-    const match = /^\s*path\s*=\s*(.+?)\s*$/.exec(line);
+    const match = /^\s*path\s*=\s*(.+?)\s*$/i.exec(rest);
     if (match?.[1] === undefined) continue;
-    // git-config quotes a value only when it has to; an undecoded quoted path
-    // would compare unequal and fail closed, so reject it by name instead of
-    // silently carrying the quotes into the comparison.
     if (match[1].startsWith('"')) {
       throw new Error(
         `${path}: the submodule path ${match[1]} is quoted, which this reader does not decode.`,

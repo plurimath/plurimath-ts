@@ -82,9 +82,14 @@ afterAll(() => {
  */
 function rubyConstant(script: string, name: string): string {
   const source = readFileSync(join(REPO_ROOT, "scripts", script), "utf8");
-  const matches = [...source.matchAll(new RegExp(String.raw`^\s*${name}\s*=\s*"([^"]+)"`, "gm"))];
-  expect(matches.length, `${script} should assign ${name} exactly once`).toBe(1);
-  return matches[0]?.[1] ?? "";
+  // Every assignment, whatever the right-hand side. Counting only quoted
+  // literals would miss `NAME = ENV.fetch("…")` on a later line and happily
+  // report agreement with a value the script has since overwritten.
+  const assignments = [...source.matchAll(new RegExp(String.raw`^\s*${name}\s*=\s*(.+)$`, "gm"))];
+  expect(assignments.length, `${script} should assign ${name} exactly once`).toBe(1);
+  const literal = /^"([^"]*)"(?:\.freeze)?\s*$/.exec(assignments[0]?.[1] ?? "");
+  expect(literal, `${script}: ${name} is not a plain double-quoted literal`).not.toBeNull();
+  return literal?.[1] ?? "";
 }
 
 /** The formats P1 renders, and so the targets every group must declare. */
@@ -151,6 +156,46 @@ describe("the check reads .gitmodules rather than echoing the constant", () => {
   it("refuses a quoted path rather than comparing the quotes", () => {
     const root = gitmodulesRoot(`[submodule "pin"]\n\tpath = "${PIN_RELATIVE_PATH}"\n`);
     expect(() => declaredSubmodulePaths(root)).toThrow("is quoted");
+  });
+});
+
+/**
+ * Forms git accepts and reads identically. None of these appear in the file
+ * today — git writes the canonical form — but a hand edit or another tool can
+ * produce them, and a gate that fails on a formatting-only change git does not
+ * care about is a gate that gets disabled.
+ */
+describe("git-config forms that must not break the check", () => {
+  it("ignores a trailing comment rather than reading it as part of the path", () => {
+    const root = gitmodulesRoot(`[submodule "pin"]\n\tpath = ${PIN_RELATIVE_PATH} # the corpus\n`);
+    expect(declaredSubmodulePaths(root)).toStrictEqual([PIN_RELATIVE_PATH]);
+  });
+
+  it("ignores a semicolon comment too", () => {
+    const root = gitmodulesRoot(`[submodule "pin"]\n\tpath = ${PIN_RELATIVE_PATH} ; note\n`);
+    expect(declaredSubmodulePaths(root)).toStrictEqual([PIN_RELATIVE_PATH]);
+  });
+
+  it("matches the section and key case-insensitively, as git does", () => {
+    const root = gitmodulesRoot(`[SUBMODULE "pin"]\n\tPATH = ${PIN_RELATIVE_PATH}\n`);
+    expect(declaredSubmodulePaths(root)).toStrictEqual([PIN_RELATIVE_PATH]);
+  });
+
+  it("reads a key sharing the section header's line", () => {
+    const root = gitmodulesRoot(`[submodule "pin"] path = ${PIN_RELATIVE_PATH}\n`);
+    expect(declaredSubmodulePaths(root)).toStrictEqual([PIN_RELATIVE_PATH]);
+  });
+
+  it("reads a subsection name containing a slash", () => {
+    const root = gitmodulesRoot(`[submodule "a/b"]\n\tpath = ${PIN_RELATIVE_PATH}\n`);
+    expect(declaredSubmodulePaths(root)).toStrictEqual([PIN_RELATIVE_PATH]);
+  });
+
+  it("still ignores a commented-out path", () => {
+    const root = gitmodulesRoot(
+      `[submodule "pin"]\n\t# path = ${PIN_RELATIVE_PATH}\n\turl = https://example.invalid/x.git\n`,
+    );
+    expect(() => declaredSubmodulePaths(root)).toThrow("declares no submodule paths");
   });
 });
 

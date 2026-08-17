@@ -550,3 +550,32 @@ byte contract, and its fitness as the prospective shared module for future
 sibling ports — beyond the PR-cycle reviews it has had. The reader-side
 (XML parsing for MathML input) remains a separate open decision: evaluate
 existing parser libraries before building anything.
+
+## The parser's depth bound never fires; a caught `RangeError` does the work
+
+**Trigger to revisit:** any new grammar or input format (P3's LaTeX, UnicodeMath
+and HTML parsers each add one), or a runtime change — a different engine, a
+worker with a smaller stack, or a bundler that alters frame size.
+
+`src/pegkit/atom.ts` has two guards against runaway recursion: `MAX_DEPTH =
+20_000` counted in `Atom#apply`, and a `RangeError` catch in `Atom#parse` that
+converts engine stack exhaustion into the same typed `ParseFailed`.
+
+Measured 2026-08-17 while writing `test/adversarial/adversarial-inputs.spec.ts`:
+**every** adversarial AsciiMath shape is refused by the `RangeError` path.
+Nested parens, nested `sqrt`, complete nested `frac`, 5,000 unmatched opens,
+5,000-token runs and a 20,000-character symbol all exhaust the stack while
+`ctx.depth` is still far below 20,000, because this grammar costs many frames
+per input token. `MAX_DEPTH` has never been observed to fire.
+
+**Why that is worth revisiting rather than fixing now.** Catching a
+`RangeError` and continuing is not something every engine guarantees is safe or
+even possible; a deterministic depth bound that fires *first* is the design the
+cap's own comment claims it has. But lowering the bound changes which inputs
+are refused, which is a parity decision (the gem `SystemStackError`s at ~300
+nesting, so the port is far more permissive today either way), and it wants its
+own change with its own measurements rather than riding along with a test gate.
+
+The immediate risk is contained: both paths end in the same typed error, the
+adversarial gate pins which guard fires for each shape, and the two messages
+are distinct so a silent swap cannot pass unnoticed.

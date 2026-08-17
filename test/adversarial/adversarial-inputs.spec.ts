@@ -32,6 +32,7 @@ import { parseAsciimath } from "../../src/formats/asciimath/parser";
 import { toAsciimath } from "../../src/formats/asciimath/renderer";
 import { toLatex } from "../../src/formats/latex/renderer";
 import { toMathml } from "../../src/formats/mathml/renderer";
+import { DEPTH_LIMIT_MESSAGE, STACK_EXHAUSTED_MESSAGE } from "../../src/pegkit/atom";
 
 /** The typed failures this gate accepts as a clean outcome. */
 const CLEAN_CODES: ReadonlySet<string> = new Set<PlurimathErrorCode>([
@@ -73,7 +74,7 @@ const RENDERERS: ReadonlyArray<readonly [string, (node: ParsedFormula) => string
 ];
 
 /** Runs one input all the way to a clean outcome, or rethrows what it got. */
-function outcomeOf(input: string): Outcome {
+function outcomeOf(input: string, renderers: typeof RENDERERS = RENDERERS): Outcome {
   let node: ParsedFormula;
   try {
     node = parseAsciimath(input);
@@ -86,16 +87,18 @@ function outcomeOf(input: string): Outcome {
   // typed `RenderError` from `toAsciimath` returned before `toLatex` or
   // `toMathml` were called at all — so either of those could have crashed with
   // an untyped error and the gate would still have reported a clean outcome.
-  const failures = RENDERERS.map(([name, render]) => {
-    try {
-      render(node);
-      return null;
-    } catch (error) {
-      const code = cleanErrorCode(error);
-      if (code === null) throw error;
-      return [name, code] as const;
-    }
-  }).filter((entry) => entry !== null);
+  const failures = renderers
+    .map(([name, render]) => {
+      try {
+        render(node);
+        return null;
+      } catch (error) {
+        const code = cleanErrorCode(error);
+        if (code === null) throw error;
+        return [name, code] as const;
+      }
+    })
+    .filter((entry) => entry !== null);
 
   return failures.length === 0 ? "parsed" : (failures[0]?.[1] as Outcome);
 }
@@ -127,7 +130,10 @@ const CASES: ReadonlyArray<readonly [string, string, Outcome]> = [
   ["fences: 5,000 unmatched open", `${"(".repeat(5000)}x`, "PARSE_ERROR"],
   ["fences: 2,000 unmatched close", `x${")".repeat(2000)}`, "parsed"],
   ["fences: alternating unmatched", "(x)) ((y) {: z", "parsed"],
-  ["tokens: 500 symbols", Array.from({ length: 500 }, () => "a").join(" "), "parsed"],
+  // 250, not 500: the transition sits at 625-650 symbols and is *stack*
+  // exhaustion, so it moves with the engine's stack size. A pin at 500 would
+  // fail on a runtime with a slightly smaller stack and no parser regression.
+  ["tokens: 250 symbols", Array.from({ length: 250 }, () => "a").join(" "), "parsed"],
   ["tokens: 5,000 symbols", Array.from({ length: 5000 }, () => "a").join(" "), "PARSE_ERROR"],
   ["tokens: 5,000 digits, no spaces", "1".repeat(5000), "parsed"],
   ["tokens: 2,000 superscripts", `x${"^y".repeat(2000)}`, "PARSE_ERROR"],
@@ -198,20 +204,82 @@ describe("the guard rejects what it exists to reject", () => {
   });
 });
 
-describe("nesting past the cap is refused, and says so", () => {
-  it("names the depth rather than failing as an ordinary syntax error", () => {
-    let caught: unknown;
-    try {
-      parseAsciimath(`${"(".repeat(2000)}x${")".repeat(2000)}`);
-    } catch (error) {
-      caught = error;
-    }
-    expect(cleanErrorCode(caught)).toBe("PARSE_ERROR");
-    expect((caught as Error).message).toMatch(/nested too deeply/);
+describe("a typed failure in one renderer does not hide a crash in a later one", () => {
+  // The regression test for the shared-`try` bug. While all three renderers sat
+  // in one `try`, a typed `RenderError` from the first returned before the
+  // others ran, so an untyped throw from the second or third was never seen.
+  // Restoring that shape makes this test fail; without it, nothing would.
+  const typedFirst = (): string => {
+    throw new ParseError("typed", "x", "asciimath", 0);
+  };
+  const untypedSecond = (): string => {
+    throw new TypeError("this is the crash that used to be skipped");
+  };
+
+  it("propagates the untyped throw from the second renderer", () => {
+    expect(() =>
+      outcomeOf("x", [
+        ["typedFirst", typedFirst],
+        ["untypedSecond", untypedSecond],
+      ]),
+    ).toThrow(TypeError);
   });
 
-  it("still parses nesting the cap allows, so the cap is not refusing everything", () => {
+  it("propagates it from the third renderer too", () => {
+    expect(() =>
+      outcomeOf("x", [
+        ["typedFirst", typedFirst],
+        ["ok", () => "x"],
+        ["untypedThird", untypedSecond],
+      ]),
+    ).toThrow("used to be skipped");
+  });
+
+  it("reports the typed failure when every later renderer is fine", () => {
+    expect(
+      outcomeOf("x", [
+        ["typedFirst", typedFirst],
+        ["ok", () => "x"],
+      ]),
+    ).toBe("PARSE_ERROR");
+  });
+});
+
+describe("deep input is refused by a guard that says which guard it was", () => {
+  /** The message identifying which of the two guards produced a rejection. */
+  function guardFor(input: string): string {
+    try {
+      parseAsciimath(input);
+      return "parsed";
+    } catch (error) {
+      return (error as Error).message;
+    }
+  }
+
+  it("refuses deep nesting through the stack guard, not the depth cap", () => {
+    // Measured, and the opposite of what this spec first claimed. Every
+    // adversarial shape in the table above is refused by the `RangeError`
+    // fallback in `src/pegkit/atom.ts`: the grammar costs many frames per
+    // token, so the engine stack runs out while `ctx.depth` is still far below
+    // `MAX_DEPTH = 20_000`. The cap has not been observed to fire for any
+    // AsciiMath input.
+    expect(guardFor(`${"(".repeat(2000)}x${")".repeat(2000)}`)).toBe(STACK_EXHAUSTED_MESSAGE);
+    expect(guardFor(nestedFrac(500))).toBe(STACK_EXHAUSTED_MESSAGE);
+    expect(guardFor(Array.from({ length: 5000 }, () => "a").join(" "))).toBe(
+      STACK_EXHAUSTED_MESSAGE,
+    );
+  });
+
+  it("keeps the two guards distinguishable", () => {
+    // The point of separate messages: while they were identical, this file
+    // asserted "the depth cap fired" for a rejection the cap had no part in,
+    // and would have kept passing if the cap were deleted.
+    expect(DEPTH_LIMIT_MESSAGE).not.toBe(STACK_EXHAUSTED_MESSAGE);
+  });
+
+  it("still parses depth the guards allow, so they are not refusing everything", () => {
     expect(outcomeOf(`${"(".repeat(100)}x${")".repeat(100)}`)).toBe("parsed");
+    expect(outcomeOf(nestedFrac(20))).toBe("parsed");
   });
 });
 

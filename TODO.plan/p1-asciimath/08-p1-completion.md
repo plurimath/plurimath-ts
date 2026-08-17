@@ -106,10 +106,18 @@ The rejection suite must carry, at minimum:
   §PORTING-STANDARDS' "do not be more correct than the gem" governs results,
   not crashes. Two things fell out of writing it that are worth keeping:
 
-  - the port's depth cap (`src/pegkit/atom.ts`, `MAX_DEPTH = 20_000`) fires
-    before V8's stack does at every size probed up to 100,000 characters, so
-    the typed error is reached rather than a `RangeError`. Parse time is linear
-    in input length (5,000 closing parens 1.96 s; 40,000 15.1 s);
+  - **the depth cap is not what refuses these inputs.** The first version of
+    this note claimed `MAX_DEPTH = 20_000` fires before V8's stack; measuring
+    which guard actually produced each rejection showed the opposite. Every
+    adversarial shape probed — nested parens, nested `sqrt`, complete nested
+    `frac`, unmatched opens, long token runs — is refused by the `RangeError`
+    fallback in `Atom#parse`, because this grammar costs many frames per token
+    and the engine stack runs out while `ctx.depth` is still far below the
+    bound. `MAX_DEPTH` has not been observed to fire for any AsciiMath input.
+    The two guards now carry distinct messages so a test can say which did the
+    work; relying on *catching* a `RangeError` is a robustness question in its
+    own right and is recorded in `deferred.md`. Parse time is linear in input
+    length (5,000 closing parens 1.96 s; 40,000 15.1 s);
   - **whitespace-only input parses and then fails to render**, because the
     formula holds a bare string. The gem behaves the same way: `Math.parse`
     returns a `Formula`, and `Formula#to_asciimath` raises

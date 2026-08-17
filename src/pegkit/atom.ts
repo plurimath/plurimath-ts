@@ -74,10 +74,20 @@ export interface ParseContext {
 }
 
 /**
- * Deep grammar recursion on adversarial input can exhaust the JS stack; this
- * bound turns that into a clean ParseFailed well before it happens.
+ * Deep grammar recursion on adversarial input can exhaust the JS stack. This
+ * bound turns that into a clean ParseFailed — but it is not the only guard, and
+ * for several real shapes it is *not* the one that fires: a grammar costing
+ * many frames per input token reaches the engine's stack limit first, which the
+ * `RangeError` fallback in `parse` catches. Both paths end in a typed failure;
+ * they carry different messages so a test can tell which guard did the work.
  */
 const MAX_DEPTH = 20_000;
+
+/** Thrown when `MAX_DEPTH` is reached before the engine stack runs out. */
+export const DEPTH_LIMIT_MESSAGE = "Input is nested too deeply to parse";
+
+/** Thrown when the engine stack runs out first, which `MAX_DEPTH` cannot preempt. */
+export const STACK_EXHAUSTED_MESSAGE = "Input exhausted the parser stack";
 
 type ParseResult =
   | {
@@ -213,7 +223,7 @@ export abstract class Atom {
         : FAIL;
     } else {
       if (++ctx.depth > MAX_DEPTH) {
-        throw new ParseFailed("Input is nested too deeply to parse", pos);
+        throw new ParseFailed(DEPTH_LIMIT_MESSAGE, pos);
       }
       try {
         result = this.tryParse(pos, ctx, consumeAll);
@@ -310,10 +320,15 @@ export abstract class Atom {
     try {
       result = this.apply(0, ctx, true);
     } catch (error) {
-      // Grammar recursion can still outrun the JS stack before MAX_DEPTH on
-      // some engines; the per-parse context is discarded, so unwinding is safe.
+      // Grammar recursion routinely outruns the JS stack before MAX_DEPTH:
+      // this grammar costs many frames per input token, so a few hundred
+      // complete `frac` levels exhaust the stack while `ctx.depth` is still far
+      // below the bound. The per-parse context is discarded, so unwinding is
+      // safe. A distinct message keeps the two guards distinguishable — message
+      // text is not API (ARCHITECTURE.md §5), so this is a test affordance, not
+      // a contract change.
       if (error instanceof RangeError) {
-        throw new ParseFailed("Input is nested too deeply to parse", ctx.maxPos);
+        throw new ParseFailed(STACK_EXHAUSTED_MESSAGE, ctx.maxPos);
       }
       throw error;
     }

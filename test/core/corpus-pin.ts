@@ -25,6 +25,7 @@
  *   - the pin yields no payloads or no cases at all.
  */
 
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -34,7 +35,12 @@ import { parseYaml, type YamlValue } from "./corpus-yaml";
 /** Resolved from this file, so nothing here depends on the working directory. */
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-/** The submodule path recorded in `.gitmodules`. */
+/**
+ * The submodule path recorded in `.gitmodules` — checked against that file by
+ * `declaredSubmodulePaths`, not merely claimed here. Two other copies of this
+ * string exist (`scripts/gate-oracle.rb`, `scripts/generate-corpus.rb`), and
+ * `test/gates/corpus-discovery.spec.ts` is what keeps all of them in step.
+ */
 export const PIN_RELATIVE_PATH = "submodules/plurimath-testsuite";
 
 /** The pinned testsuite checkout. */
@@ -372,6 +378,159 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
   }
 
   return { root, provenance, payloads, cases };
+}
+
+/**
+ * The submodule paths `.gitmodules` declares, as **git** reads them.
+ *
+ * `PIN_RELATIVE_PATH` is a hardcoded string, and so are the copies in
+ * `scripts/gate-oracle.rb` and `scripts/generate-corpus.rb`. Nothing made them
+ * agree with the file they all claim to come from: a submodule moved in
+ * `.gitmodules` would leave three constants pointing at a path git no longer
+ * knows, and the reader's own "run `git submodule update --init`" advice
+ * naming the wrong directory.
+ *
+ * This asks git rather than parsing the file. An earlier version hand-parsed
+ * git-config syntax, on the reasoning that the check should not need a git
+ * binary — which was wrong twice over. The corpus *is* a git submodule, so a
+ * checkout without git has no corpus to check and fails long before this. And
+ * the hand parser was wrong in the one direction that matters: a line
+ * continuation (`path = foo\` then `EVIL`) reads as `fooEVIL` to git and as
+ * `foo` to the parser, so `.gitmodules` could point git elsewhere while this
+ * gate confirmed the expected path. Unknown escapes and unterminated quotes
+ * make git reject the file outright, and the parser normalised both into the
+ * expected value.
+ *
+ * Only `submodule.<name>.path` counts. A `path` key in another section, or in
+ * a `[submodule]` with no subsection, declares no submodule — git does not
+ * report either, and neither does this.
+ *
+ * `root` is a parameter for the same reason it is one on `loadPinnedCorpus`:
+ * so the failure paths can be shown against a scratch copy rather than argued
+ * from the code.
+ */
+export function declaredSubmodulePaths(root: string = REPO_ROOT): readonly string[] {
+  const path = join(root, ".gitmodules");
+  if (!existsSync(path)) {
+    throw new Error(`${path} does not exist, so nothing declares where the corpus pin lives.`);
+  }
+  // `--null` frames each record as `key\nvalue\0` — or just `key\0` where the
+  // key carries no value. Without it the records are newline-separated, and a
+  // path containing a newline — legal, and what `path = "a\nEVIL"` produces —
+  // splits into two apparent paths, one of which is the expected one. That is
+  // the same "git and this gate disagree about where the submodule is" failure
+  // the hand parser had, moved into the transport.
+  const result = spawnSync(
+    "git",
+    ["config", "--file", path, "--null", "--get-regexp", String.raw`^submodule\..+\.path$`],
+    { encoding: "utf8" },
+  );
+  if (result.error !== undefined) {
+    throw new Error(`could not run git to read ${path}: ${result.error.message}`);
+  }
+  // git exits 1 when the pattern matches nothing, which is a legitimate answer.
+  // Anything else means git refused the file, and a `.gitmodules` git will not
+  // read is a broken submodule however this gate feels about it.
+  if (result.status !== 0 && result.status !== 1) {
+    throw new Error(
+      `${path}: git could not read it (exit ${result.status}). ${result.stderr.trim()}`,
+    );
+  }
+  // A key cannot contain a newline, so the first one ends it; everything after
+  // is the value, newlines and all.
+  const paths = result.stdout
+    .split("\0")
+    .filter((record) => record !== "")
+    .map((record) => {
+      const separator = record.indexOf("\n");
+      return separator === -1 ? "" : record.slice(separator + 1);
+    });
+  if (paths.length === 0) {
+    throw new Error(
+      `${path} declares no submodule paths; it was expected to declare at least one.`,
+    );
+  }
+  return paths;
+}
+
+/** What git records for the pin, and what the checkout is actually at. */
+export interface SubmodulePin {
+  /** The superproject index entry's mode; `160000` is a gitlink. */
+  readonly mode: string;
+  /** The commit the superproject pins the submodule to. */
+  readonly indexCommit: string;
+  /** The commit the submodule working tree is checked out at. */
+  readonly headCommit: string;
+}
+
+/**
+ * The pin as **git** records it: the gitlink in the superproject index, and the
+ * commit the nested checkout is on.
+ *
+ * `.gitmodules` maps a name to a path. It says nothing about which commit is
+ * pinned, or whether the submodule is initialised at all — so a plain directory
+ * holding a copied corpus satisfies every other check here while git considers
+ * the submodule uninitialised. Worse, a checkout left on the wrong commit
+ * passes silently whenever the payload bytes happen to match, which is exactly
+ * the case for a submodule commit that touched only its README.
+ *
+ * The corpus is only reproducible because it comes from a known commit, so that
+ * commit is the thing worth asserting.
+ */
+export function pinnedSubmoduleCommit(
+  root: string = REPO_ROOT,
+  relative: string = PIN_RELATIVE_PATH,
+): SubmodulePin {
+  const staged = spawnSync("git", ["-C", root, "ls-files", "--stage", "-z", "--", relative], {
+    encoding: "utf8",
+  });
+  if (staged.error !== undefined) {
+    throw new Error(`could not run git in ${root}: ${staged.error.message}`);
+  }
+  if (staged.status !== 0) {
+    throw new Error(`${root}: git could not read the index (exit ${staged.status}).`);
+  }
+  // `<mode> <object> <stage>\t<path>\0`. `ls-files` is recursive: asking about
+  // `pin` also reports `pin/child`, so taking the first record would accept a
+  // *descendant* gitlink as though it were the declared path.
+  const records = staged.stdout.split("\0").filter((entry) => entry !== "");
+  if (records.length === 0) {
+    throw submoduleError(join(root, relative), `${relative} is not in the index of ${root}`);
+  }
+  if (records.length > 1) {
+    throw new Error(
+      `${root}: ${relative} covers ${records.length} index entries, so it is a directory of ` +
+        "tracked files rather than a single gitlink.",
+    );
+  }
+  // Object IDs are 40 hex characters under SHA-1 and 64 under SHA-256.
+  const fields = /^(\d+) ([0-9a-f]{40}|[0-9a-f]{64}) \d+\t([\s\S]*)$/.exec(records[0] as string);
+  if (fields?.[1] === undefined || fields[2] === undefined) {
+    throw new Error(`${root}: could not read the index entry for ${relative}: ${records[0]}`);
+  }
+  if (fields[3] !== relative) {
+    throw new Error(
+      `${root}: asked the index about ${relative} and it answered about ${fields[3]}.`,
+    );
+  }
+
+  const nested = join(root, relative);
+  // `rev-parse HEAD` succeeds in a bare repository too, so it cannot on its own
+  // distinguish an initialised submodule from a bare clone sitting at the right
+  // commit next to a copied corpus.
+  const worktree = spawnSync("git", ["-C", nested, "rev-parse", "--is-inside-work-tree"], {
+    encoding: "utf8",
+  });
+  if (worktree.status !== 0 || worktree.stdout.trim() !== "true") {
+    throw submoduleError(nested, "it is not a git working tree (a bare repository, or not a repo)");
+  }
+
+  const head = spawnSync("git", ["-C", nested, "rev-parse", "HEAD"], { encoding: "utf8" });
+  if (head.status !== 0) {
+    throw submoduleError(nested, `HEAD is unreadable (git rev-parse HEAD exited ${head.status})`);
+  }
+
+  return { mode: fields[1], indexCommit: fields[2], headCommit: head.stdout.trim() };
 }
 
 export interface Exclusion {

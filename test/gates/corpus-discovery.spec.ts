@@ -78,7 +78,12 @@ afterAll(() => {
  * A real superproject whose submodule checkout has been rewound one commit,
  * so the index pins one commit and the working tree is on another.
  */
-function driftedSuperproject(): { root: string; origin: string; pinned: string; rewound: string } {
+function driftedSuperproject(at = "sub"): {
+  root: string;
+  origin: string;
+  pinned: string;
+  rewound: string;
+} {
   const base = mkdtempSync(join(tmpdir(), "plurimath-drift-"));
   scratches.push(base);
   const git = (cwd: string, ...args: string[]): string =>
@@ -107,9 +112,9 @@ function driftedSuperproject(): { root: string; origin: string; pinned: string; 
   git(root, "config", "user.email", "gate@example.invalid");
   git(root, "config", "user.name", "gate");
   // Local-path submodules need this since git 2.38's CVE-2022-39253 fix.
-  git(root, "-c", "protocol.file.allow=always", "submodule", "add", "--quiet", sub, "sub");
+  git(root, "-c", "protocol.file.allow=always", "submodule", "add", "--quiet", sub, at);
   commit(root, "add");
-  git(join(root, "sub"), "checkout", "--quiet", rewound);
+  git(join(root, at), "checkout", "--quiet", rewound);
 
   return { root, origin: sub, pinned, rewound };
 }
@@ -182,7 +187,7 @@ describe("git's own record of the pin", () => {
   });
 
   it("names a commit, not an empty string that would compare equal to itself", () => {
-    expect(pin.indexCommit).toMatch(/^[0-9a-f]{40}$/);
+    expect(pin.indexCommit).toMatch(/^[0-9a-f]{40}$|^[0-9a-f]{64}$/);
   });
 
   it("fails when the path is not in the index at all", () => {
@@ -193,10 +198,21 @@ describe("git's own record of the pin", () => {
   });
 
   it("refuses a directory of tracked files standing in for a gitlink", () => {
-    // `ls-files` is recursive, so asking about `sub` also reports `sub/child`.
-    // Taking the first record would accept a descendant as the declared path.
+    // `ls-files` is recursive, so asking about a directory reports what is
+    // under it. Taking the first record would accept a descendant.
     const { root } = driftedSuperproject();
     expect(() => pinnedSubmoduleCommit(root, ".")).toThrow("index entries");
+  });
+
+  it("refuses a descendant gitlink answering for the path that was asked about", () => {
+    // The case the count guard alone cannot catch: `outer` holds exactly one
+    // index entry, `outer/inner`, so there is a single record and it parses
+    // cleanly as a gitlink. Only comparing the pathname rejects it.
+    const { root } = driftedSuperproject("outer/inner");
+    expect(() => pinnedSubmoduleCommit(root, "outer")).toThrow("answered about");
+    // …and the same fixture is accepted when asked about the real path, so the
+    // rejection above is about the pathname and not about the fixture.
+    expect(pinnedSubmoduleCommit(root, "outer/inner").mode).toBe("160000");
   });
 
   it("refuses a bare repository, which answers rev-parse HEAD perfectly well", () => {
@@ -214,7 +230,7 @@ describe("git's own record of the pin", () => {
     ).toContain("160000");
     expect(
       execFileSync("git", ["-C", nested, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
-    ).toMatch(/^[0-9a-f]{40}$/);
+    ).toMatch(/^[0-9a-f]{40}$|^[0-9a-f]{64}$/);
 
     expect(() => pinnedSubmoduleCommit(root, "sub")).toThrow("not a git working tree");
   });

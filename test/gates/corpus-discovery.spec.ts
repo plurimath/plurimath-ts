@@ -78,11 +78,16 @@ afterAll(() => {
  * A real superproject whose submodule checkout has been rewound one commit,
  * so the index pins one commit and the working tree is on another.
  */
-function driftedSuperproject(): { root: string; pinned: string; rewound: string } {
+function driftedSuperproject(): { root: string; origin: string; pinned: string; rewound: string } {
   const base = mkdtempSync(join(tmpdir(), "plurimath-drift-"));
   scratches.push(base);
   const git = (cwd: string, ...args: string[]): string =>
     execFileSync("git", ["-C", cwd, ...args], { encoding: "utf8" }).trim();
+  // A contributor with mandatory commit signing or a global `core.hooksPath`
+  // would otherwise get a red suite for a reason that has nothing to do with
+  // the product: `commit.gpgSign=true` makes these commits exit 128.
+  const commit = (cwd: string, message: string): string =>
+    git(cwd, "commit", "--quiet", "--no-gpg-sign", "--no-verify", "-m", message);
 
   const sub = join(base, "sub-origin");
   execFileSync("git", ["init", "--quiet", sub]);
@@ -90,11 +95,11 @@ function driftedSuperproject(): { root: string; pinned: string; rewound: string 
   git(sub, "config", "user.name", "gate");
   writeFileSync(join(sub, "f"), "one\n");
   git(sub, "add", "f");
-  git(sub, "commit", "--quiet", "-m", "one");
+  commit(sub, "one");
   const rewound = git(sub, "rev-parse", "HEAD");
   writeFileSync(join(sub, "f"), "two\n");
   git(sub, "add", "f");
-  git(sub, "commit", "--quiet", "-m", "two");
+  commit(sub, "two");
   const pinned = git(sub, "rev-parse", "HEAD");
 
   const root = join(base, "super");
@@ -103,10 +108,10 @@ function driftedSuperproject(): { root: string; pinned: string; rewound: string 
   git(root, "config", "user.name", "gate");
   // Local-path submodules need this since git 2.38's CVE-2022-39253 fix.
   git(root, "-c", "protocol.file.allow=always", "submodule", "add", "--quiet", sub, "sub");
-  git(root, "commit", "--quiet", "-m", "add");
+  commit(root, "add");
   git(join(root, "sub"), "checkout", "--quiet", rewound);
 
-  return { root, pinned, rewound };
+  return { root, origin: sub, pinned, rewound };
 }
 
 /**
@@ -185,6 +190,33 @@ describe("git's own record of the pin", () => {
     scratches.push(root);
     execFileSync("git", ["init", "--quiet", root]);
     expect(() => pinnedSubmoduleCommit(root)).toThrow(SUBMODULE_FIX);
+  });
+
+  it("refuses a directory of tracked files standing in for a gitlink", () => {
+    // `ls-files` is recursive, so asking about `sub` also reports `sub/child`.
+    // Taking the first record would accept a descendant as the declared path.
+    const { root } = driftedSuperproject();
+    expect(() => pinnedSubmoduleCommit(root, ".")).toThrow("index entries");
+  });
+
+  it("refuses a bare repository, which answers rev-parse HEAD perfectly well", () => {
+    // The bare repo has to sit at the gitlink path, or this passes on the
+    // index check and proves nothing about the work-tree check.
+    const { root, origin } = driftedSuperproject();
+    const nested = join(root, "sub");
+    rmSync(nested, { recursive: true, force: true });
+    execFileSync("git", ["clone", "--quiet", "--bare", origin, nested]);
+
+    // Still a gitlink in the index, and HEAD still resolves — the two things
+    // the earlier version of this check was satisfied by.
+    expect(
+      execFileSync("git", ["-C", root, "ls-files", "--stage", "--", "sub"], { encoding: "utf8" }),
+    ).toContain("160000");
+    expect(
+      execFileSync("git", ["-C", nested, "rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+    ).toMatch(/^[0-9a-f]{40}$/);
+
+    expect(() => pinnedSubmoduleCommit(root, "sub")).toThrow("not a git working tree");
   });
 
   it("reports a checkout left on the wrong commit as the drift it is", () => {

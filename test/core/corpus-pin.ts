@@ -490,24 +490,44 @@ export function pinnedSubmoduleCommit(
   if (staged.status !== 0) {
     throw new Error(`${root}: git could not read the index (exit ${staged.status}).`);
   }
-  // `<mode> <object> <stage>\t<path>\0`
-  const record = staged.stdout.split("\0").find((entry) => entry !== "");
-  if (record === undefined) {
+  // `<mode> <object> <stage>\t<path>\0`. `ls-files` is recursive: asking about
+  // `pin` also reports `pin/child`, so taking the first record would accept a
+  // *descendant* gitlink as though it were the declared path.
+  const records = staged.stdout.split("\0").filter((entry) => entry !== "");
+  if (records.length === 0) {
     throw submoduleError(join(root, relative), `${relative} is not in the index of ${root}`);
   }
-  const fields = /^(\d+) ([0-9a-f]{40}) \d+\t/.exec(record);
+  if (records.length > 1) {
+    throw new Error(
+      `${root}: ${relative} covers ${records.length} index entries, so it is a directory of ` +
+        "tracked files rather than a single gitlink.",
+    );
+  }
+  // Object IDs are 40 hex characters under SHA-1 and 64 under SHA-256.
+  const fields = /^(\d+) ([0-9a-f]{40}|[0-9a-f]{64}) \d+\t([\s\S]*)$/.exec(records[0] as string);
   if (fields?.[1] === undefined || fields[2] === undefined) {
-    throw new Error(`${root}: could not read the index entry for ${relative}: ${record}`);
+    throw new Error(`${root}: could not read the index entry for ${relative}: ${records[0]}`);
+  }
+  if (fields[3] !== relative) {
+    throw new Error(
+      `${root}: asked the index about ${relative} and it answered about ${fields[3]}.`,
+    );
   }
 
-  const head = spawnSync("git", ["-C", join(root, relative), "rev-parse", "HEAD"], {
+  const nested = join(root, relative);
+  // `rev-parse HEAD` succeeds in a bare repository too, so it cannot on its own
+  // distinguish an initialised submodule from a bare clone sitting at the right
+  // commit next to a copied corpus.
+  const worktree = spawnSync("git", ["-C", nested, "rev-parse", "--is-inside-work-tree"], {
     encoding: "utf8",
   });
+  if (worktree.status !== 0 || worktree.stdout.trim() !== "true") {
+    throw submoduleError(nested, "it is not a git working tree (a bare repository, or not a repo)");
+  }
+
+  const head = spawnSync("git", ["-C", nested, "rev-parse", "HEAD"], { encoding: "utf8" });
   if (head.status !== 0) {
-    throw submoduleError(
-      join(root, relative),
-      `it is not a git checkout (git rev-parse HEAD exited ${head.status})`,
-    );
+    throw submoduleError(nested, `HEAD is unreadable (git rev-parse HEAD exited ${head.status})`);
   }
 
   return { mode: fields[1], indexCommit: fields[2], headCommit: head.stdout.trim() };

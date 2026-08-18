@@ -18,16 +18,21 @@
  * prefix at all rather than failing.
  *
  * There is no Ruby class object to compare here, so the port carries the two
- * hops as tables: `CLASS_OF_FAMILY` (the `FONT_STYLES` half) and
- * `FONT_OF_CLASS` (the `FONTS_CLASSES` half). Both are hand-listed, because no
- * unicodemath-owned generated slice carries the class mapping and §3's
- * generated-data closure forbids reaching for another format's — the same
- * recorded exception `./latex.ts` makes for its value-alone half. The
- * *emission* still goes through the generated `UNICODEMATH_FONTS_CLASSES`, so a
- * regeneration that drops a font makes this port drop the prefix exactly as the
- * gem's failing `find` would.
+ * hops as tables: `UNICODEMATH_CLASS_OF_FAMILY` (the `FONT_STYLES` half) and
+ * `UNICODEMATH_FONT_OF_CLASS` (the `FONTS_CLASSES` half). Both are GENERATED
+ * from the gem's own constants (`scripts/generate-corpus.rb`,
+ * `unicodemath_font_tables`); an earlier version of this file hand-listed all
+ * 64 entries, which is precisely the drift the generator exists to prevent.
  *
- * A one-hop table would have been wrong: `FONT_OF_CLASS` is keyed by class, and
+ * The second hop is an ordered `find` in the gem, not a lookup, so it is only
+ * a table if the class -> font relation is a function. The generator refuses
+ * to emit unless it is one: every subclass must meet `FONTS_CLASSES` in
+ * exactly one alias, and every font must be claimed by some subclass.
+ * Measured at the pinned oracle that is 14 onto 14 with nothing left over — a
+ * relation that stopped being a bijection would have made a table silently
+ * pick a winner.
+ *
+ * A one-hop table would have been wrong: `UNICODEMATH_FONT_OF_CLASS` is keyed by class, and
  * the class is what decides whether the `Monospace` override fires. The bare
  * carrier holding the family `"monospace"` is a `FontStyle`, not a `Monospace`,
  * and measures `"\\mttx"` — not `"ￗ(x)"`.
@@ -79,7 +84,11 @@ import {
   renderOptionalChild,
   unicodemathParens,
 } from "../../formats/unicodemath/render-shared";
-import { UNICODEMATH_FONTS_CLASSES } from "../../generated/unicodemath/render-tables";
+import {
+  UNICODEMATH_CLASS_OF_FAMILY,
+  UNICODEMATH_FONT_OF_CLASS,
+  UNICODEMATH_FONTS_CLASSES,
+} from "../../generated/unicodemath/render-tables";
 
 /**
  * `font_family(unicode: true)` per subclass, without the backslash — the
@@ -92,22 +101,6 @@ import { UNICODEMATH_FONTS_CLASSES } from "../../generated/unicodemath/render-ta
  * These 14 names are also the guard set. A defined name outside it has no
  * measured render here, so it refuses rather than rendering the child bare.
  */
-const FONT_OF_CLASS: ReadonlyMap<string, string> = new Map([
-  ["Bold", "mbf"],
-  ["BoldFraktur", "mbffrak"],
-  ["BoldItalic", "mbfit"],
-  ["BoldSansSerif", "mbfsans"],
-  ["BoldScript", "mbfscr"],
-  ["DoubleStruck", "Bbb"],
-  ["Fraktur", "mfrak"],
-  ["Italic", "mit"],
-  ["Monospace", "mtt"],
-  ["Normal", "mup"],
-  ["SansSerif", "msans"],
-  ["SansSerifBoldItalic", "mbfitsans"],
-  ["SansSerifItalic", "mitsans"],
-  ["Script", "mscr"],
-]);
 
 /**
  * `Utility::FONT_STYLES`, in its own declaration order — the family half of the
@@ -117,58 +110,6 @@ const FONT_OF_CLASS: ReadonlyMap<string, string> = new Map([
  * which core keeps for equality; neither is generated. Regenerating both from
  * the gem is the standing fix.
  */
-const CLASS_OF_FAMILY: ReadonlyMap<string, string> = new Map([
-  ["double-struck", "DoubleStruck"],
-  ["sans-serif-bold-italic", "SansSerifBoldItalic"],
-  ["sans-serif-italic", "SansSerifItalic"],
-  ["bold-sans-serif", "BoldSansSerif"],
-  ["sans-serif", "SansSerif"],
-  ["bold-fraktur", "BoldFraktur"],
-  ["bold-italic", "BoldItalic"],
-  ["bold-script", "BoldScript"],
-  ["mbfitsans", "SansSerifBoldItalic"],
-  ["monospace", "Monospace"],
-  ["mathfrak", "Fraktur"],
-  ["mitsans", "SansSerifItalic"],
-  ["mbfsans", "BoldSansSerif"],
-  ["mbffrak", "BoldFraktur"],
-  ["mathcal", "Script"],
-  ["fraktur", "Fraktur"],
-  ["mbfscr", "BoldScript"],
-  ["mathbb", "DoubleStruck"],
-  ["double", "DoubleStruck"],
-  ["mathtt", "Monospace"],
-  ["mathsf", "SansSerif"],
-  ["mathrm", "Normal"],
-  ["textrm", "Normal"],
-  ["italic", "Italic"],
-  ["mathit", "Italic"],
-  ["textit", "Italic"],
-  ["mathbf", "Bold"],
-  ["textbf", "Bold"],
-  ["script", "Script"],
-  ["normal", "Normal"],
-  ["mbfit", "BoldItalic"],
-  ["msans", "SansSerif"],
-  ["mfrak", "Fraktur"],
-  ["mscr", "Script"],
-  ["bold", "Bold"],
-  ["bbb", "DoubleStruck"],
-  ["Bbb", "DoubleStruck"],
-  ["mtt", "Monospace"],
-  ["cal", "Script"],
-  ["mit", "Italic"],
-  ["mup", "Normal"],
-  ["mbf", "Bold"],
-  ["sf", "SansSerif"],
-  ["tt", "Monospace"],
-  ["fr", "Fraktur"],
-  ["rm", "Normal"],
-  ["cc", "Script"],
-  ["ii", "Italic"],
-  ["bb", "Bold"],
-  ["bf", "Bold"],
-]);
 
 /** `UnicodeMath::Constants::FONTS_CLASSES`, as the membership test it is used as. */
 const SUPPORTED_FONTS: ReadonlySet<string> = new Set(UNICODEMATH_FONTS_CLASSES);
@@ -178,7 +119,8 @@ const MONOSPACE_MARK = "ￗ";
 
 export function renderFontStyle(node: NodeOf<"fontStyle">, context: RenderContext): string {
   const name = node.name;
-  if (name !== undefined && !FONT_OF_CLASS.has(name)) throw missingRenderer(name, "fontStyle");
+  if (name !== undefined && !UNICODEMATH_FONT_OF_CLASS.has(name))
+    throw missingRenderer(name, "fontStyle");
 
   // `Monospace#to_unicodemath` (`monospace.rb:37`) — the one override, and the
   // one arm that wraps its child instead of prefixing it.
@@ -196,7 +138,10 @@ export function renderFontStyle(node: NodeOf<"fontStyle">, context: RenderContex
  * than a failure.
  */
 function fontPrefix(node: NodeOf<"fontStyle">): string {
-  const font = node.name === undefined ? bareFont(node.parameterTwo) : FONT_OF_CLASS.get(node.name);
+  const font =
+    node.name === undefined
+      ? bareFont(node.parameterTwo)
+      : UNICODEMATH_FONT_OF_CLASS.get(node.name);
 
   return font !== undefined && SUPPORTED_FONTS.has(font) ? `\\${font}` : "";
 }
@@ -219,9 +164,9 @@ function bareFont(family: unknown): string | undefined {
     );
   }
 
-  const fontClass = CLASS_OF_FAMILY.get(family);
+  const fontClass = UNICODEMATH_CLASS_OF_FAMILY.get(family);
 
-  return fontClass === undefined ? undefined : FONT_OF_CLASS.get(fontClass);
+  return fontClass === undefined ? undefined : UNICODEMATH_FONT_OF_CLASS.get(fontClass);
 }
 
 /**

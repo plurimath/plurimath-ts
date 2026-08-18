@@ -55,13 +55,12 @@
  *     `Align` with the same value renders `"[■()]"`.
  */
 
-import { RenderError } from "../../core/index";
+import { type MathNode, RenderError } from "../../core/index";
 import {
   className,
   FORMAT,
   htmlEntityToUnicode,
   isNode,
-  type MathNodeLike,
   type NodeOf,
   type RenderContext,
 } from "../../formats/unicodemath/render-shared";
@@ -261,7 +260,7 @@ function isMatrixClass(node: NodeOf<"table">, context: RenderContext): boolean {
   // (`core.rb:484`), and `hexcode_in_input` sends `input` — so it answers for a
   // symbol and raises `NoMethodError` for nil, for a bare string, and for every
   // non-symbol node (measured: nil, `"["`, `Formula`, `Number`, `Frac`).
-  unicodemathFieldValue(open, node.kind, context);
+  unicodemathFieldValue(open, node.kind);
   // The lookup itself is always nil (Symbol keys, String subscript), so the
   // comparison is `nil == close_paren` — and `open_paren` survived the line
   // above, so `close_paren` is the nil one. True.
@@ -439,7 +438,7 @@ function renderWithoutOptions(
 }
 
 /** Whether this node's gem class declares `to_unicodemath(options:)` optional. */
-function answersWithoutOptions(field: MathNodeLike): boolean {
+function answersWithoutOptions(field: MathNode): boolean {
   if (NO_OPTIONS_KINDS.has(field.kind)) return true;
 
   const name = carrierName(field);
@@ -458,14 +457,11 @@ function answersWithoutOptions(field: MathNodeLike): boolean {
  * still misses). Only whether it raises matters, and it raises for everything
  * that is not a symbol.
  */
-function unicodemathFieldValue(field: unknown, kind: string, context: RenderContext): void {
-  if (isNode(field) && field.kind === "symbol") {
-    // `Utility.hexcode_in_input(field)` reads the class's parse-input table,
-    // never the render — so nothing is rendered here, and this argument only
-    // documents that the port asks the node nothing either.
-    void context;
-    return;
-  }
+function unicodemathFieldValue(field: unknown, kind: string): void {
+  // `Utility.hexcode_in_input` reads the class's parse-INPUT table, not the
+  // render, so nothing is rendered here and no context is needed.
+  if (isNode(field) && field.kind === "symbol") return;
+
   throw new RenderError(
     `table.openParen: ${describeSlot(field)} does not answer class_name/input, and ` +
       "unicodemath_table_class? sends unicodemath_field_value to it whenever the close " +
@@ -504,12 +500,12 @@ function isSymbolId(field: unknown, id: string): boolean {
   return isNode(field) && field.kind === "symbol" && symbolId(field) === id;
 }
 
-function symbolId(field: MathNodeLike): string {
+function symbolId(field: MathNode): string {
   const id = (field as { readonly id?: unknown }).id;
   return typeof id === "string" ? id : "";
 }
 
-function carrierName(field: MathNodeLike): string | undefined {
+function carrierName(field: MathNode): string | undefined {
   const name = (field as { readonly name?: unknown }).name;
   return typeof name === "string" ? name : undefined;
 }

@@ -223,7 +223,7 @@ export interface ProbeSummary {
 
 export const PROBE_SUMMARY: ProbeSummary = {
   symbols: 1459,
-  formats: ["asciimath", "latex", "mathml"],
-  directRenders: 23344,
-  hostedRenders: 93376,
+  formats: ["asciimath", "latex", "mathml", "unicodemath"],
+  directRenders: 24803,
+  hostedRenders: 99212,
 };

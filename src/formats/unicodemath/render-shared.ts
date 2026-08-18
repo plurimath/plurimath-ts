@@ -208,5 +208,8 @@ export function squeezeSolidus(text: string): string {
 }
 
 export function missingRenderer(kind: string, at: string): RenderError {
-  return new RenderError(`${at}: no unicodemath renderer for kind "${kind}"`);
+  // `RenderError` carries `format` and `kind` as fields, not just in the
+  // message: ARCHITECTURE.md §5 makes them part of the error contract, so a
+  // caller can branch on the kind without parsing prose.
+  return new RenderError(`${at}: no unicodemath renderer for kind "${kind}"`, FORMAT, kind);
 }

@@ -123,13 +123,13 @@ module CorpusGenerator
     {
       "name" => "table",
       "values" => [false, true],
-      "formats" => %w[asciimath latex mathml].freeze,
+      "formats" => %w[asciimath latex mathml unicodemath].freeze,
       "mechanism" => "options[:table], which Td sets for a Formula cell",
     },
     {
       "name" => "rspace",
       "values" => [nil, "thickmathspace"],
-      "formats" => %w[asciimath latex mathml].freeze,
+      "formats" => %w[asciimath latex mathml unicodemath].freeze,
       "mechanism" => "the symbol node's own options[:rspace]",
     },
   ].freeze
@@ -3231,8 +3231,15 @@ module CorpusGenerator
   # which one won. Everywhere else duplicates are ordinary: `UNARY_SYMBOLS`
   # legitimately maps both `underline` and `underbar` to the same glyph, and is
   # only ever read forward.
+  #
+  # `PHANTOM_SYMBOLS` belongs here too — `phantom.rb:59` and `mpadded.rb:102`
+  # both reverse-look-it-up — and an earlier version of this list omitted it.
+  #
+  # `PARENTHESIS_MATRICES` is checked separately: it holds three legitimate nil
+  # values, so the plain "no two keys share a value" rule would fail on correct
+  # data. Only its non-nil values have to be distinct.
   UNICODEMATH_REVERSED_TABLES = %w[
-    SIZE_OVERRIDES_SYMBOLS UNICODE_FRACTIONS PARENTHESIS_MATRICES
+    SIZE_OVERRIDES_SYMBOLS UNICODE_FRACTIONS PARENTHESIS_MATRICES PHANTOM_SYMBOLS
   ].freeze
 
   def unicodemath_string_map(name)
@@ -3276,6 +3283,28 @@ module CorpusGenerator
     values
   end
 
+  # A table the gem reverse-looks-up must not map two keys to one value:
+  # `Hash#invert` and `Hash#key` keep the LAST match, so the port would have to
+  # guess which key won. Nil values are exempt — they are the gem's own "no
+  # delimiter" marker, not data anything looks up.
+  def assert_reverse_lookup_safe!(name)
+    constant = unicodemath_constant(name)
+    return unless constant.is_a?(::Hash)
+
+    seen = {}
+    constant.each do |key, value|
+      next if value.nil?
+
+      text = value.inspect
+      if (earlier = seen[text])
+        raise Error, "UnicodeMath::Constants::#{name} maps both #{earlier.inspect} " \
+                     "and #{key.inspect} to #{text}, and the gem reverse looks " \
+                     "this table up; the port cannot know which key wins"
+      end
+      seen[text] = key
+    end
+  end
+
   def build_unicodemath_render_tables
     tables = UNICODEMATH_TABLES.to_h { |name, key| [key, unicodemath_string_map(name)] }
     lists = UNICODEMATH_LISTS.to_h { |name, key| [key, unicodemath_string_list(name)] }
@@ -3284,6 +3313,12 @@ module CorpusGenerator
     # `to_unicodemath` reads, and a constant vanishing upstream must fail here
     # rather than be discovered when the renderer is written.
     UNICODEMATH_DEFERRED_TABLES.each { |name| unicodemath_constant(name) }
+
+    # And the reverse-lookup guard has to reach them. It lives inside
+    # `unicodemath_string_map`, which only the emitted tables pass through, so
+    # before this every deferred reverse table was existence-checked and
+    # nothing more — the guard covered one of the four it claimed to cover.
+    UNICODEMATH_REVERSED_TABLES.each { |name| assert_reverse_lookup_safe!(name) }
 
     tables.merge(lists)
   end

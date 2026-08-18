@@ -33,13 +33,13 @@ export const CONTEXT_AXES: readonly ContextAxis[] = [
   {
     name: "table",
     values: ["false", "true"],
-    formats: ["asciimath", "latex", "mathml"],
+    formats: ["asciimath", "latex", "mathml", "unicodemath"],
     mechanism: "options[:table], which Td sets for a Formula cell",
   },
   {
     name: "rspace",
     values: ["none", "thickmathspace"],
-    formats: ["asciimath", "latex", "mathml"],
+    formats: ["asciimath", "latex", "mathml", "unicodemath"],
     mechanism: "the symbol node's own options[:rspace]",
   },
 ];
@@ -224,6 +224,6 @@ export interface ProbeSummary {
 export const PROBE_SUMMARY: ProbeSummary = {
   symbols: 1459,
   formats: ["asciimath", "latex", "mathml", "unicodemath"],
-  directRenders: 24803,
-  hostedRenders: 99212,
+  directRenders: 29180,
+  hostedRenders: 116720,
 };

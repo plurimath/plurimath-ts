@@ -1,13 +1,19 @@
 /**
  * The generated UnicodeMath slice.
  *
- * Two independent generators already produce a UnicodeMath value per symbol,
- * for different reasons: `generate-core-data.rb` emits
- * `SYMBOL_CANONICAL_VALUES` so `Symbols::Symbol#==` has a comparison fallback,
- * and `generate-corpus.rb` now emits `UNICODEMATH_SYMBOLS` for the renderer.
- * They read the same `to_unicodemath`, so they must agree — and because they
- * were written months apart for unrelated purposes, agreement is real evidence
- * rather than a tautology.
+ * Two generators produce a UnicodeMath value per symbol, for different reasons:
+ * `generate-core-data.rb` emits `SYMBOL_CANONICAL_VALUES` so
+ * `Symbols::Symbol#==` has a comparison fallback, and `generate-corpus.rb`
+ * emits `UNICODEMATH_SYMBOLS` for the renderer.
+ *
+ * **They are not independent, and this file used to claim they were.**
+ * `generate-core-data.rb` requires `generate-corpus.rb` and reuses its symbol
+ * discovery and id derivation, and for a concrete symbol
+ * `default_value_for_comparison` reaches the same `to_unicodemath` the corpus
+ * generator calls directly. So agreement here catches a stale file, a
+ * serialization mistake, an exclusion applied on one side only, or the two
+ * runs disagreeing — and cannot catch a shared enumeration bug or a wrong
+ * answer from the gem itself. Worth having, worth not overstating.
  */
 
 import { describe, expect, it } from "vitest";
@@ -64,10 +70,15 @@ describe("the unicodemath symbol slice", () => {
   });
 
   it("has no context-dependent symbols, because none vary on any axis", () => {
-    // Measured, not assumed: the axis probe reports the same six
-    // context-dependent symbols with unicodemath added as without it, and none
-    // of them varies in unicodemath. LaTeX's matrix is empty for the same
-    // reason; MathML's is not, because `intent` moves its output.
+    // Measured, and the measurement had to be fixed before this comment was
+    // true. `CONTEXT_AXES` scopes each axis to named formats, and `table` and
+    // `rspace` originally listed only asciimath, latex and mathml — so
+    // `axis_combinations("unicodemath")` returned a single baseline
+    // combination and nothing was varied at all. The matrix was empty because
+    // nothing was probed, while this file said it was empty because nothing
+    // varied. With both axes now applied to unicodemath the matrix is still
+    // empty, so the claim is finally backed by the probe it names. (`intent`
+    // is not expressible: `to_unicodemath` takes no such argument.)
     expect(UNICODEMATH_SYMBOL_EXCEPTIONS).toStrictEqual([]);
   });
 });

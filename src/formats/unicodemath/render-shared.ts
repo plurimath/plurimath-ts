@@ -365,8 +365,42 @@ export function rubyRound(value: number): number {
   return value < 0 ? -Math.round(-value) : Math.round(value);
 }
 
+/**
+ * The instances THIS walk minted, so `./renderer.ts` can pass its own
+ * deliberate throw through the boundary while wrapping every other one.
+ *
+ * Not `instanceof`: the dual ESM/CJS build means two copies of the class
+ * exist, and the class is constructible by the caller too — a hostile getter
+ * can mint a `MissingSymbolDataError` naming a real missing id and throw it
+ * mid-render, which is an input failure, not a symbol-table miss. Membership
+ * in this set is the only thing that separates them. (An error this walk
+ * minted, that a getter caught and re-threw, is still the walk's own throw
+ * carrying exactly the report it was minted with — it passes through, as on
+ * the latex path.)
+ *
+ * The set lives here because this file is the one module both sides may
+ * import (§3 rule 8): the throw site is `../../render/symbol/unicodemath.ts`
+ * and the boundary is `./renderer.ts`. Core cannot hold it — `src/index.ts`
+ * star-re-exports the core barrel, so a factory there would land on the
+ * public surface. A `WeakSet` never serializes, never widens the public error
+ * type, and holds weakly, so a caught-and-dropped error stays collectable.
+ */
+const OWN_MISSING_SYMBOL_ERRORS = new WeakSet<MissingSymbolDataError>();
+
+/** The symbol table's one deliberate non-RenderError throw, recorded as our own. */
 export function missingSymbol(symbolId: string): MissingSymbolDataError {
-  return new MissingSymbolDataError(symbolId, FORMAT);
+  const error = new MissingSymbolDataError(symbolId, FORMAT);
+  OWN_MISSING_SYMBOL_ERRORS.add(error);
+  return error;
+}
+
+/** Membership in the factory's set — shape and prototype prove nothing here. */
+export function isOwnMissingSymbolDataError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    OWN_MISSING_SYMBOL_ERRORS.has(error as MissingSymbolDataError)
+  );
 }
 
 export function missingRenderer(kind: string, at: string): RenderError {

@@ -221,9 +221,58 @@ export function renderChild(value: unknown, context: RenderContext, at: string):
   );
 }
 
-/** A slot the gem guards with `&.`, where absent means "contribute nothing". */
+/**
+ * A slot the gem guards with `&.`, where absent means "contribute nothing".
+ *
+ * `&.` short-circuits on **nil and nothing else**, so this accepts a node or
+ * an absent slot and refuses everything else. Measured against the oracle:
+ *
+ *   nil&.to_unicodemath    => nil
+ *   "x".to_unicodemath     !! NoMethodError
+ *   [].to_unicodemath      !! NoMethodError
+ *   false&.to_unicodemath  !! NoMethodError   (`&.` does not guard false)
+ *
+ * An earlier version returned `""` for any non-node, which quietly rendered a
+ * bare string or a stray list as an empty slot where the gem raises — the
+ * exact "more correct than the oracle" defect PORTING-STANDARDS.md forbids.
+ * A slot the gem reads WITHOUT `&.` is `renderChild`, which refuses nil too.
+ */
 export function renderOptionalChild(value: unknown, context: RenderContext): string {
-  return isNode(value) ? (context.render(value) ?? "") : "";
+  if (value === null || value === undefined) return "";
+  if (isNode(value)) return context.render(value) ?? "";
+  throw new RenderError(
+    `cannot render ${describeSlot(value)} — the gem raises NoMethodError here`,
+    FORMAT,
+    "unknown",
+  );
+}
+
+/**
+ * What a bad slot held, said precisely enough to debug.
+ *
+ * `typeof` alone calls a list "an object" and null "an object", which sends a
+ * reader looking in the wrong place.
+ */
+export function describeSlot(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  return `a ${typeof value}`;
+}
+
+/**
+ * A carrier name outside the measured set.
+ *
+ * The census records what the AsciiMath transform can construct; a name beyond
+ * it has no measured behaviour, and inventing a fallback would ship output
+ * nothing pinned. Carriers raise instead, which keeps a missing subclass
+ * visible.
+ */
+export function unreachableName(kind: string, name: string): RenderError {
+  return new RenderError(
+    `${kind}: "${name}" is outside the measured unicodemath carrier set`,
+    FORMAT,
+    kind,
+  );
 }
 
 /**

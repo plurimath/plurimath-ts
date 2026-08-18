@@ -1,55 +1,95 @@
 /**
  * Mirrors `function/fenced.rb` — `Fenced#to_unicodemath` (:104).
  *
- * The most options-dependent kind in the format. Four things are worth naming:
+ * The most options-dependent kind in the format, and the one with the most
+ * places the gem simply crashes. Every shape below was measured against the
+ * pinned oracle (plurimath 0.11.6, 00c52783); the transcript is in the
+ * comments, not paraphrased.
+ *
+ * Four things are worth naming up front:
  *
  *   - a **mini-sized** fence takes a different path entirely
- *     (`mini_sized_unicode`, `:182`), joining its contents with no separator
- *     and no added parens;
- *   - a `Frac` child carrying `choose` is rendered by *this* node, not by the
- *     frac — which is why `Frac#to_unicodemath` may return nil for exactly
- *     that shape without anything breaking;
- *   - the open and close parens each have their own three-branch resolution
- *     reading the node's options (`:271`, `:284`);
- *   - `convert_paren_size` (`:301`) rounds a **logarithm**, and Ruby rounds
- *     half away from zero while JS `Math.round` rounds toward +infinity. The
- *     values are negative for any size below 1em, so the difference is
- *     reachable: `0.5em` gives -3.106 and an exact -1.5 would round to -2 in
- *     Ruby and -1 in JS.
+ *     (`mini_sized_unicode`, :182): contents joined with nothing, no added
+ *     parens, and both parens rendered UNGUARDED;
+ *   - a `Frac` carrying `:choose` is rendered by *this* node
+ *     (`Frac#choose_frac`, `frac.rb:118`), and if it is the FIRST element it
+ *     replaces the whole fence, parens included;
+ *   - the open and close parens each resolve through their own three-branch
+ *     chain reading `self.options` (:271, :284);
+ *   - `convert_paren_size` (:301) rounds a **logarithm**. Ruby rounds half
+ *     away from zero, JS `Math.round` rounds toward +infinity, and the values
+ *     go negative for any size below 1em — so the difference is reachable,
+ *     not theoretical. Hence `rubyRound`.
+ *
+ * Measured, `to_unicodemath` on a Fenced does NOT decode HTML entities: a
+ * mini-sized `x` came back as `"(&#x2093;)"`. The decode belongs to
+ * `Formula#to_unicodemath` and reaches this output only through a parent
+ * formula, which is why `formulaBoundary` owns it.
  */
 
+import { RenderError } from "../../core/index";
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
-import { isNode, renderOptionalChild, rubyRound } from "../../formats/unicodemath/render-shared";
+import {
+  FORMAT,
+  isNode,
+  present,
+  renderChild,
+  renderOptionalChild,
+  rubyRound,
+  unicodemathParens,
+} from "../../formats/unicodemath/render-shared";
 
 /** U+251C and U+2524 — the prefixed-paren markers. */
 const OPEN_PREFIX = "├";
 const CLOSE_PREFIX = "┤";
 
+function crash(at: string, gemError: string): RenderError {
+  return new RenderError(`${at}: the gem raises ${gemError} here`, FORMAT, "fenced");
+}
+
 export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): string {
   if (isMiniSized(node)) return miniSizedUnicode(node, context);
 
-  const contents = (asArray(node.parameterTwo) ?? []).map((param) =>
-    isChooseFrac(param) ? chooseFrac(param, context) : renderOptionalChild(param, context),
-  );
-  const joined = contents.join(" ");
+  const contents = node.parameterTwo;
+  // `parameter_two&.map{…}` is guarded but the very next line,
+  // `choose_frac?(parameter_two.first)`, is NOT. Measured: a Fenced with a nil
+  // contents list raises `NoMethodError: undefined method 'first' for nil`,
+  // so the guard on the line above buys nothing and this is a crash, not an
+  // empty fence. An empty ARRAY is fine and gives "()" — measured.
+  if (!Array.isArray(contents)) throw crash("fenced.parameterTwo", "NoMethodError on nil");
 
-  // `return fenced_value if choose_frac?(parameter_two.first)` — a leading
-  // choose-frac replaces the whole fence, parens included.
-  const first = asArray(node.parameterTwo)?.[0];
-  if (isChooseFrac(first)) return joined;
+  const rendered = contents
+    .map((param) =>
+      isChooseFrac(param) ? chooseFrac(param, context) : renderOptionalChild(param, context),
+    )
+    .join(" ");
 
-  const body = isVertParen(node) ? `(${joined})` : joined;
+  // `return fenced_value if choose_frac?(parameter_two.first)` — a LEADING
+  // choose-frac replaces the whole fence, parens and all. Measured:
+  //   [choose]        -> "(n)⒞(k)"        (no outer parens)
+  //   [choose, a]     -> "(n)⒞(k) a"      (no outer parens)
+  //   [a, choose]     -> "(a (n)⒞(k))"    (parens kept — position matters)
+  if (isChooseFrac(contents[0])) return rendered;
+
+  // Measured: a Vert-fenced `|x|` gives "|(x)|" — the contents gain a paren
+  // pair *inside* the existing fence.
+  const body = isVertParen(node) ? `(${rendered})` : rendered;
   return `${openParen(node, context)}${body}${closeParen(node, context)}`;
 }
 
-function asArray(slot: unknown): readonly unknown[] | undefined {
-  return Array.isArray(slot) ? slot : undefined;
-}
-
-/** `Fenced#mini_sized?` (`:176`) — asks all three slots. */
+/**
+ * `Fenced#mini_sized?` (:176) — asks the open paren, a Formula built from the
+ * CONTENTS, and the close paren.
+ *
+ * The middle term is `Math::Formula.new(parameter_two).mini_sized?`, and
+ * `Formula#mini_sized?` inspects only its FIRST child (measured, and pinned in
+ * `test/formats/unicodemath/render-shared.spec.ts`) — so a mini-sized element
+ * in second position does not make the fence mini-sized.
+ */
 function isMiniSized(node: NodeOf<"fenced">): boolean {
-  const contents = asArray(node.parameterTwo);
-  return miniOf(node.parameterOne) || miniOf(contents?.[0]) || miniOf(node.parameterThree);
+  const contents = node.parameterTwo;
+  const first = Array.isArray(contents) ? contents[0] : undefined;
+  return miniOf(node.parameterOne) || miniOf(first) || miniOf(node.parameterThree);
 }
 
 function miniOf(field: unknown): boolean {
@@ -58,75 +98,114 @@ function miniOf(field: unknown): boolean {
   return flags.miniSubSized === true || flags.miniSupSized === true;
 }
 
-/** `mini_sized_unicode` (`:182`) — joined with nothing, and no added parens. */
+/**
+ * `mini_sized_unicode` (:182) — joined with NOTHING, and no added parens.
+ *
+ * Both parens are rendered without safe navigation, unlike everywhere else in
+ * this file. Measured: mini contents with a nil open paren raises
+ * `NoMethodError: undefined method 'to_unicodemath' for nil`, so `renderChild`
+ * (which throws) is correct here where `renderOptionalChild` would be wrong.
+ */
 function miniSizedUnicode(node: NodeOf<"fenced">, context: RenderContext): string {
-  const contents = (asArray(node.parameterTwo) ?? [])
-    .map((param) => renderOptionalChild(param, context))
-    .join("");
-  return `${renderOptionalChild(node.parameterOne, context)}${contents}${renderOptionalChild(node.parameterThree, context)}`;
+  const contents = Array.isArray(node.parameterTwo) ? node.parameterTwo : [];
+  const inner = contents.map((param) => renderOptionalChild(param, context)).join("");
+  const open = renderChild(node.parameterOne, context, "fenced.parameterOne") ?? "";
+  const close = renderChild(node.parameterThree, context, "fenced.parameterThree") ?? "";
+  return `${open}${inner}${close}`;
 }
 
-/** `choose_frac?` (`:297`) — a Frac whose own options carry `choose`. */
+/** `choose_frac?` (:297) — a Frac whose own options hash carries `:choose`. */
 function isChooseFrac(param: unknown): boolean {
   if (!isNode(param) || param.kind !== "frac") return false;
   const options = (param as { readonly options?: Record<string, unknown> | null }).options;
   return options !== undefined && options !== null && "choose" in options;
 }
 
-/** `Frac#choose_frac` (`frac.rb:118`) — rendered here, not by the frac. */
+/**
+ * `Frac#choose_frac` (`frac.rb:118`) — rendered by the FENCE, not the frac.
+ *
+ * Each side goes through `unicodemath_parens`, and each is guarded by a bare
+ * `if parameter_one` (Ruby truthiness), so a nil side contributes nothing
+ * rather than crashing. Measured: `(n)⒞(k)`.
+ */
 function chooseFrac(param: unknown, context: RenderContext): string {
-  if (!isNode(param)) return "";
   const frac = param as { readonly parameterOne?: unknown; readonly parameterTwo?: unknown };
-  const one = wrap(frac.parameterOne, context);
-  const two = wrap(frac.parameterTwo, context);
+  const one = present(frac.parameterOne)
+    ? (unicodemathParens(frac.parameterOne, context) ?? "")
+    : "";
+  const two = present(frac.parameterTwo)
+    ? (unicodemathParens(frac.parameterTwo, context) ?? "")
+    : "";
   // U+24B8 CIRCLED LATIN CAPITAL LETTER C.
   return `${one}⒞${two}`;
 }
 
-function wrap(field: unknown, context: RenderContext): string {
-  if (!isNode(field)) return "";
-  const rendered = context.render(field) ?? "";
-  return field.kind === "fenced" ? rendered : `(${rendered})`;
-}
-
-/** `vert_paren?` (`:318`). */
+/**
+ * `vert_paren?` (:318).
+ *
+ * The gem reads `parameter_one.class_name` UNGUARDED, then falls back to
+ * `is_a?(Paren::Vert)`. Three measurements fix the shape:
+ *   - a nil open paren raises `NoMethodError: undefined method 'class_name'`;
+ *   - `Paren::Vert` answers true even though its `value` is nil, which is why
+ *     the class test cannot be replaced by a value test;
+ *   - `Paren::Lround` answers false.
+ * `Paren::Vert` has no subclasses (measured), so `is_a?` is an exact match and
+ * an id comparison is faithful. `class_name == "symbol"` is likewise exact:
+ * it is the basename of the class, so only a plain `Symbols::Symbol` — whose
+ * id the port leaves as the default `"Symbol"` — takes the value branch.
+ */
 function isVertParen(node: NodeOf<"fenced">): boolean {
   const open = node.parameterOne;
-  if (!isNode(open)) return false;
-  const value = (open as { readonly value?: string | null }).value;
-  if (typeof value === "string") return value.includes("|");
-  return open.kind === "symbol" && open.id.startsWith("Paren::Vert");
+  if (!isNode(open)) throw crash("fenced.parameterOne", "NoMethodError on nil");
+  if (open.kind === "symbol" && open.id === "Symbol") {
+    const value = (open as { readonly value?: string | null }).value;
+    // `parameter_one&.value&.include?("|")` — a nil value is falsy, not a crash.
+    return typeof value === "string" && value.includes("|");
+  }
+  return open.kind === "symbol" && open.id === "Paren::Vert";
 }
 
-/** `unicode_open_paren` (`:271`). */
+/**
+ * `unicode_open_paren` (:271). Measured, in the gem's own branch order:
+ *   {open_paren: {minsize: "0.5em"}} -> "├-3(x)"
+ *   {open_paren: {minsize: "2em"}}   -> "├3(x)"
+ *   {open_paren: {}}                 -> NoMethodError (nil.delete_suffix)
+ *   {open_prefixed: true}, plain     -> "├(x)"
+ *   {open_prefixed: true}, open "{:" -> "├x)"     (open_or_begin?, paren dropped)
+ *   no options, open "{:"            -> "├x┤"
+ */
 function openParen(node: NodeOf<"fenced">, context: RenderContext): string {
   const paren = renderOptionalChild(node.parameterOne, context);
   const options = node.options;
-  if (options !== undefined && options !== null && "open_paren" in options) {
-    const minsize = (options.open_paren as { minsize?: unknown } | undefined)?.minsize;
-    return `${OPEN_PREFIX}${parenSize(minsize)}${paren}`;
+  const has = (key: string) => options !== undefined && options !== null && key in options;
+
+  if (has("open_paren")) {
+    const minsize = (options?.open_paren as { minsize?: unknown } | undefined)?.minsize;
+    return `${OPEN_PREFIX}${parenSize(minsize, "open_paren")}${paren}`;
   }
-  if (options !== undefined && options !== null && "open_prefixed" in options) {
-    return isOpenOrBegin(node) ? OPEN_PREFIX : `${OPEN_PREFIX}${paren}`;
-  }
-  return paren === "{:" ? OPEN_PREFIX : paren;
+  if (has("open_prefixed") && !isOpenOrBegin(node)) return `${OPEN_PREFIX}${paren}`;
+  if (has("open_prefixed") || paren === "{:") return OPEN_PREFIX;
+
+  return paren;
 }
 
-/** `unicode_close_paren` (`:284`). */
+/** `unicode_close_paren` (:284) — the same chain on the closing side. */
 function closeParen(node: NodeOf<"fenced">, context: RenderContext): string {
   const paren = renderOptionalChild(node.parameterThree, context);
   const options = node.options;
-  if (options !== undefined && options !== null && "close_paren" in options) {
-    const minsize = (options.close_paren as { minsize?: unknown } | undefined)?.minsize;
-    return `${CLOSE_PREFIX}${parenSize(minsize)}${paren}`;
+  const has = (key: string) => options !== undefined && options !== null && key in options;
+
+  if (has("close_paren")) {
+    const minsize = (options?.close_paren as { minsize?: unknown } | undefined)?.minsize;
+    return `${CLOSE_PREFIX}${parenSize(minsize, "close_paren")}${paren}`;
   }
-  if (options !== undefined && options !== null && "close_prefixed" in options) {
-    return isCloseOrEnd(node) ? CLOSE_PREFIX : `${CLOSE_PREFIX}${paren}`;
-  }
-  return paren === ":}" ? CLOSE_PREFIX : paren;
+  if (has("close_prefixed") && !isCloseOrEnd(node)) return `${CLOSE_PREFIX}${paren}`;
+  if (has("close_prefixed") || paren === ":}") return CLOSE_PREFIX;
+
+  return paren;
 }
 
-/** `open_or_begin?` (`:306`) and `close_or_end?` (`:312`). */
+/** `open_or_begin?` (:306) and `close_or_end?` (:312), both `&.`-guarded. */
 function isOpenOrBegin(node: NodeOf<"fenced">): boolean {
   return valueHasAny(node.parameterOne, ["&#x251c;", "&#x3016;", "{:"]);
 }
@@ -142,11 +221,35 @@ function valueHasAny(field: unknown, needles: readonly string[]): boolean {
   return needles.some((needle) => value.includes(needle));
 }
 
-/** `convert_paren_size` (`:301`). */
-function parenSize(minsize: unknown): string {
-  if (typeof minsize !== "string") return "";
-  const size = Number.parseFloat(minsize.replace(/em$/, ""));
-  if (!Number.isFinite(size) || size <= 0) return "";
+/**
+ * `convert_paren_size` (:301) — `(Math.log(size) / Math.log(1.25)).round`.
+ *
+ * Every failure mode here is a gem crash, measured:
+ *   nil       -> NoMethodError  (nil.delete_suffix)
+ *   "abc"     -> FloatDomainError -Infinity  (Ruby's `to_f` gives 0.0, log(0) is -Inf)
+ *   "0em"     -> FloatDomainError -Infinity
+ *   "-1em"    -> Math::DomainError
+ * and the successful values are:
+ *   "0.5em" -> -3   "0.8em" -> -1   "1em" -> 0   "1.25em" -> 1   "2em" -> 3
+ */
+function parenSize(minsize: unknown, at: string): string {
+  if (typeof minsize !== "string") {
+    throw crash(`fenced.options.${at}.minsize`, "NoMethodError on nil");
+  }
+  const size = rubyToFloat(minsize.replace(/em$/, ""));
+  if (size === 0) throw crash(`fenced.options.${at}.minsize`, "FloatDomainError (-Infinity)");
+  if (size < 0) throw crash(`fenced.options.${at}.minsize`, "Math::DomainError");
 
   return String(rubyRound(Math.log(size) / Math.log(1.25)));
+}
+
+/**
+ * Ruby's `String#to_f`: parse the leading numeric run, and give 0.0 when there
+ * is none — where JS `parseFloat` gives NaN. The difference is load-bearing:
+ * the gem reaches `Math.log(0.0)` and raises FloatDomainError, so "abc" must
+ * become 0 here and take the crash branch above, not fall through as NaN.
+ */
+function rubyToFloat(text: string): number {
+  const parsed = Number.parseFloat(text);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }

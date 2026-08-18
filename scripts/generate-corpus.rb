@@ -3344,9 +3344,25 @@ module CorpusGenerator
   end
 
   # `PARENTHESIS_MATRICES` carries three nil values — the gem's own "no
-  # delimiter" marker. They are dropped rather than emitted as empty strings:
-  # `Table#unicodemath_class_name` reverse-looks-up by a rendered paren string,
-  # which is never nil, so a nil-valued row can never be the answer.
+  # delimiter" marker — and they are dropped from the emitted map rather than
+  # becoming empty strings, which would collide with a real render.
+  #
+  # This comment used to say a nil-valued row "can never be the answer",
+  # because the lookup goes through a rendered paren string. That was FALSE
+  # and measured false: a generic `Symbols::Symbol.new(nil)` renders nil, and
+  #
+  #   Table(rows, Symbol.new(nil), Paren::Rsquare.new).to_unicodemath
+  #     => "&#x2588;(a)"      i.e. MATRIXS[:eqarray]
+  #
+  # so the nil row is reachable and the port needs its answer. It cannot be
+  # derived from the emitted map, so it is emitted separately as
+  # `UNICODEMATH_NIL_PAREN_MATRIX`.
+  #
+  # Which of the three nil keys wins is decided by `Hash#key`, NOT `Hash#invert`
+  # (`table.rb:422` — the call really is `.key(...)`). `key` returns the FIRST
+  # match where `invert` keeps the LAST, and here they disagree: `key(nil)` is
+  # `:eqarray` and `invert[nil]` is `:cases`. Getting that backwards would ship
+  # the wrong glyph for every nil-paren table.
   def unicodemath_nullable_map(name)
     unicodemath_constant(name).each_with_object({}) do |(key, value), map|
       next if value.nil?
@@ -3401,6 +3417,7 @@ module CorpusGenerator
     # over the carrier), because reachability is a property of what the
     # AsciiMath transform CONSTRUCTS, not of what any renderer emits.
     tables.merge!(unicodemath_font_tables)
+    lists["nil_paren_matrix"] = unicodemath_nil_paren_matrix
 
     lists["unary_carrier_names"] =
       latex_carrier_basenames(registry, "Math::Function::UnaryFunction")
@@ -3408,6 +3425,17 @@ module CorpusGenerator
       latex_carrier_basenames(registry, "Math::Function::BinaryFunction")
 
     tables.merge(lists)
+  end
+
+  # `PARENTHESIS_MATRICES.key(nil)` — the matrix name a nil-rendering open
+  # paren resolves to. Read from the gem with Ruby's own `Hash#key`, so the
+  # port never has to reproduce first-match-wins itself.
+  def unicodemath_nil_paren_matrix
+    constant = unicodemath_constant("PARENTHESIS_MATRICES")
+    name = constant.key(nil)
+    raise Error, "PARENTHESIS_MATRICES no longer carries a nil value" if name.nil?
+
+    name.to_s
   end
 
   # The two hops `FontStyle#to_unicodemath` makes, as tables the port can read.
@@ -4058,10 +4086,10 @@ module CorpusGenerator
 
     tables.each do |key, data|
       name = "UNICODEMATH_#{key.upcase}"
-      sections << if data.is_a?(::Array)
-                    ts_const(name, "readonly string[]", data)
-                  else
-                    ts_tuple_map(name, "ReadonlyMap<string, string>", data)
+      sections << case data
+                  when ::String then ts_const(name, "string", data)
+                  when ::Array then ts_const(name, "readonly string[]", data)
+                  else ts_tuple_map(name, "ReadonlyMap<string, string>", data)
                   end
     end
 

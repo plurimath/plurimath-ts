@@ -234,7 +234,10 @@ directory ownership. Landed (2026-08-13): the format subpaths
 `/asciimath`, `/latex` and `/mathml` are build entries, and the isolation gate
 asserts per-subpath artifact isolation for render code — matching each
 subpath's forbidden set against the modules its sourcemaps name, so the check
-inspects what shipped rather than what was imported.
+inspects what shipped rather than what was imported. `/unicodemath` joined
+them (2026-08-18) on the same terms: a text format like `/latex`, so its
+forbidden set carries the XML layer and the grammar alongside the other three
+formats, and the boundary gate's inventory now reads 38 kinds x 4 formats.
 
 ## 4. Public API
 

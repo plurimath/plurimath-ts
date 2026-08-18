@@ -25,7 +25,12 @@
  * against the gem's own result.
  */
 
-import { type MathNode, type NodeKind, RenderError } from "../../core/index";
+import {
+  type MathNode,
+  MissingSymbolDataError,
+  type NodeKind,
+  RenderError,
+} from "../../core/index";
 
 export const FORMAT = "unicodemath";
 
@@ -316,6 +321,11 @@ export function naryandSupValue(field: unknown, context: RenderContext): string 
   if (isPower(field)) return `^${rendered}`;
 
   return `^${unicodemathParens(field, context) ?? ""}`;
+}
+
+/** A symbol id the generated table does not carry: a parity gap, not output. */
+export function missingSymbol(symbolId: string): MissingSymbolDataError {
+  return new MissingSymbolDataError(symbolId, FORMAT);
 }
 
 export function missingRenderer(kind: string, at: string): RenderError {

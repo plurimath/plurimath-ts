@@ -31,14 +31,14 @@ export interface GeneratedProvenance {
  */
 export const GENERATED_PROVENANCE: GeneratedProvenance = {
   generator: "scripts/generate-corpus.rb",
-  generatorSha256: "de101e54ab70094b8f09d983809d3dc0ae8ba14feb444a5c2e1433cf49768467",
+  generatorSha256: "8288ddcb783fb9262fbd581d086ffa9e18f14d34fda9be2bed9bd0dd81c92762",
   oracle: "plurimath",
   oracleVersion: "0.11.6",
   oracleCommit: "00c52783877b38f6b8e6e109f1803f96bb34fc62",
   oracleClean: true,
-  generatorClean: true,
+  generatorClean: false,
   rubyEngine: "ruby",
   rubyVersion: "4.0.1",
   xmlEngine: "Plurimath::XmlEngine::OxEngine",
-  committable: true,
+  committable: false,
 };

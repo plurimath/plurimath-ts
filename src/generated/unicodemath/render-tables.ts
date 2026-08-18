@@ -190,6 +190,37 @@ export const UNICODEMATH_SUP_OPERATORS: ReadonlyMap<string, string> = new Map([
   ["=", "&#x207c;"],
 ]);
 
+export const UNICODEMATH_UNICODE_FRACTIONS: ReadonlyMap<string, string> = new Map([
+  ["1/3", "&#x2153;"],
+  ["2/3", "&#x2154;"],
+  ["1/5", "&#x2155;"],
+  ["2/5", "&#x2156;"],
+  ["3/5", "&#x2157;"],
+  ["4/5", "&#x2158;"],
+  ["1/6", "&#x2159;"],
+  ["5/6", "&#x215a;"],
+  ["1/7", "&#x2150;"],
+  ["1/8", "&#x215b;"],
+  ["3/8", "&#x215c;"],
+  ["5/8", "&#x215d;"],
+  ["7/8", "&#x215e;"],
+  ["1/9", "&#x2151;"],
+  ["0/3", "&#x2189;"],
+  ["1/2", "&#xbd;"],
+  ["1/4", "&#xbc;"],
+  ["3/4", "&#xbe;"],
+]);
+
+export const UNICODEMATH_SUB_PARENTHESIS: ReadonlyMap<string, string> = new Map([
+  ["(", "&#x208d;"],
+  [")", "&#x208e;"],
+]);
+
+export const UNICODEMATH_SUP_PARENTHESIS: ReadonlyMap<string, string> = new Map([
+  ["⁽", "&#x207d;"],
+  ["⁾", "&#x207e;"],
+]);
+
 export const UNICODEMATH_UNDEF_UNARY_FUNCTIONS: readonly string[] = [
   "arg",
   "def",

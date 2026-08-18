@@ -3207,8 +3207,7 @@ module CorpusGenerator
   # They land with the renderer code that reads them, measured through a render
   # the way the latex and mathml slices are.
   UNICODEMATH_DEFERRED_TABLES = %w[
-    PHANTOM_SYMBOLS SUB_PARENTHESIS SUP_PARENTHESIS UNICODE_FRACTIONS
-    PARENTHESIS_MATRICES
+    PHANTOM_SYMBOLS PARENTHESIS_MATRICES
   ].freeze
 
   def unicodemath_constant(name)
@@ -3305,8 +3304,52 @@ module CorpusGenerator
     end
   end
 
+  # `UNICODE_FRACTIONS` is keyed by the GLYPH with an `[n, d]` array value, and
+  # `Frac#unicodemath_fraction` reads it as `.key([n, d])` — a reverse lookup.
+  # Emitted in the direction the renderer reads, `"n/d" => glyph`, so the port
+  # performs a forward lookup and never has to reproduce Ruby's `Hash#key`.
+  #
+  # The reverse-lookup guard covers this table, so a duplicate `[n, d]` pair
+  # fails generation rather than silently deciding which glyph wins.
+  def unicodemath_fraction_map
+    unicodemath_constant("UNICODE_FRACTIONS").to_h do |glyph, pair|
+      unless pair.is_a?(::Array) && pair.length == 2 && pair.all?(::Integer)
+        raise Error, "UNICODE_FRACTIONS[#{glyph.inspect}] is #{pair.inspect}, " \
+                     "not a two-integer pair"
+      end
+
+      [pair.join("/"), glyph.to_s]
+    end
+  end
+
+  # `SUB_PARENTHESIS` / `SUP_PARENTHESIS` nest one level: `{ open: { "(" =>
+  # "&#x208d;" }, close: { … } }`. `Symbol#mini_sized_parenthesis`
+  # (`symbol.rb:270`) searches every inner hash for the value and digs it out,
+  # so the outer grouping never reaches the output — flattening it here
+  # computes the same lookup once instead of at every render.
+  def unicodemath_nested_paren_map(name)
+    flattened = {}
+    unicodemath_constant(name).each_value do |inner|
+      raise Error, "UnicodeMath::Constants::#{name} inner is #{inner.class}" unless inner.is_a?(::Hash)
+
+      inner.each do |paren, glyph|
+        key = paren.to_s
+        if flattened.key?(key) && flattened[key] != glyph.to_s
+          raise Error, "UnicodeMath::Constants::#{name} maps #{key.inspect} to " \
+                       "both #{flattened[key].inspect} and #{glyph.to_s.inspect}; " \
+                       "flattening would pick one"
+        end
+        flattened[key] = glyph.to_s
+      end
+    end
+    flattened
+  end
+
   def build_unicodemath_render_tables
     tables = UNICODEMATH_TABLES.to_h { |name, key| [key, unicodemath_string_map(name)] }
+    tables["unicode_fractions"] = unicodemath_fraction_map
+    tables["sub_parenthesis"] = unicodemath_nested_paren_map("SUB_PARENTHESIS")
+    tables["sup_parenthesis"] = unicodemath_nested_paren_map("SUP_PARENTHESIS")
     lists = UNICODEMATH_LISTS.to_h { |name, key| [key, unicodemath_string_list(name)] }
 
     # The deferred ones still have to EXIST: this slice claims to cover what

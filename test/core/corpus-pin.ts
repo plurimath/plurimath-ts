@@ -55,6 +55,7 @@ export const SUBMODULE_FIX = "git submodule update --init --recursive";
 const PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
 const CASE_SCHEMA = "plurimath-corpus/asciimath/1";
 const MANIFEST_SCHEMA = "plurimath-corpus/manifest/1";
+const REJECTIONS_SCHEMA = "plurimath-corpus/rejections/1";
 
 /**
  * Ox is the canonical engine (ARCHITECTURE.md §7). Oga is a parity check, and
@@ -100,11 +101,34 @@ export interface PinnedPayload {
   readonly cases: readonly PinnedCase[];
 }
 
+/** One input the gem refuses, and where it refused it. */
+export interface PinnedRejection {
+  readonly id: string;
+  readonly group: string;
+  readonly input: string;
+  readonly inputFormat: string;
+  /** `index` is an offset into THIS, not into `input`. */
+  readonly preprocessed: string;
+  readonly category: string;
+  /** Absent when the failure did not come from the grammar. */
+  readonly index: number | undefined;
+}
+
+export interface PinnedRejectionPayload {
+  readonly path: string;
+  readonly group: string;
+  readonly inputFormat: string;
+  readonly cases: readonly PinnedRejection[];
+}
+
 export interface PinnedCorpus {
   readonly root: string;
   readonly provenance: PinProvenance;
   readonly payloads: readonly PinnedPayload[];
   readonly cases: readonly PinnedCase[];
+  /** Rejection payloads, kept apart because they have no rendering at all. */
+  readonly rejectionPayloads: readonly PinnedRejectionPayload[];
+  readonly rejections: readonly PinnedRejection[];
 }
 
 type Mapping = { readonly [key: string]: YamlValue };
@@ -272,19 +296,25 @@ function verifyPayloadBytes(path: string, record: PayloadRecord): string {
   return bytes.toString("utf8");
 }
 
-function readPayload(root: string, record: PayloadRecord): PinnedPayload {
+/**
+ * Reads a payload's bytes and identifies its kind. Every payload is verified
+ * against the provenance first, whatever kind it turns out to be: an unknown
+ * kind must fail because nothing vouched for it, not because it parsed oddly.
+ */
+function readPayloadDocument(
+  root: string,
+  record: PayloadRecord,
+): { path: string; document: Mapping; schema: string } {
   const path = join(root, "corpus", ...record.path.split("/"));
   if (!existsSync(path)) {
     throw submoduleError(root, `${path} is listed in corpus/provenance.yaml but is not on disk`);
   }
   const text = verifyPayloadBytes(path, record);
   const document = asMapping(parseYaml(text), path);
+  return { path, document, schema: requiredString(document, "schema", path) };
+}
 
-  const schema = requiredString(document, "schema", path);
-  if (schema !== CASE_SCHEMA) {
-    throw new Error(`${path}: schema is "${schema}", this reader knows "${CASE_SCHEMA}".`);
-  }
-
+function readPayload(record: PayloadRecord, document: Mapping, path: string): PinnedPayload {
   // A payload without a group is a payload nothing can name in a failure
   // message, so it fails here rather than being loaded as an unnamed pile.
   const group = requiredString(document, "group", path);
@@ -338,6 +368,49 @@ function readPayload(root: string, record: PayloadRecord): PinnedPayload {
 }
 
 /**
+ * A rejection payload: inputs the gem refuses. Kept a separate reader rather
+ * than a branch inside `readPayload`, because the two shapes share only their
+ * envelope — a rejection has no `targets`, no `expected`, no `parse_tree` and
+ * no `model`, and every one of those is required on a case.
+ */
+function readRejectionPayload(
+  record: PayloadRecord,
+  document: Mapping,
+  path: string,
+): PinnedRejectionPayload {
+  const group = requiredString(document, "group", path);
+  const stem = record.path.slice(record.path.lastIndexOf("/") + 1).replace(/\.yaml$/, "");
+  if (group !== stem) {
+    throw new Error(`${path}: group is "${group}" but the file is named "${stem}.yaml".`);
+  }
+  const inputFormat = requiredString(document, "input_format", path);
+
+  const entries = requiredSequence(document, "cases", path);
+  if (entries.length === 0) throw new Error(`${path}: "cases" is empty`);
+
+  const cases = entries.map((entry, index) => {
+    const at = `${path} cases[${index}]`;
+    const caseRecord = asMapping(entry, at);
+    const error = asMapping(requiredPresent(caseRecord, "error", at), `${at} error`);
+    const rawIndex = error.index;
+    if (rawIndex !== undefined && (typeof rawIndex !== "number" || !Number.isInteger(rawIndex))) {
+      throw new Error(`${at}: error.index must be an integer, found ${describeValue(rawIndex)}`);
+    }
+    return {
+      id: requiredString(caseRecord, "id", at),
+      group,
+      input: requiredString(caseRecord, "input", at),
+      inputFormat: requiredString(caseRecord, "input_format", at),
+      preprocessed: requiredString(caseRecord, "preprocessed", at),
+      category: requiredString(error, "category", `${at} error`),
+      index: typeof rawIndex === "number" ? rawIndex : undefined,
+    };
+  });
+
+  return { path: record.path, group, inputFormat, cases };
+}
+
+/**
  * Loads and verifies the whole pin. `root` is a parameter so the failure paths
  * can be proven against a scratch copy rather than argued from the code.
  */
@@ -356,7 +429,24 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
     );
   }
 
-  const payloads = provenance.payloads.map((record) => readPayload(root, record));
+  // Dispatch on the payload's declared kind. An unknown kind stops the load
+  // rather than being skipped: a payload nothing understands is not a payload
+  // that can be ignored, it is a pin this reader is too old to read.
+  const payloads: PinnedPayload[] = [];
+  const rejectionPayloads: PinnedRejectionPayload[] = [];
+  for (const record of provenance.payloads) {
+    const { path, document, schema } = readPayloadDocument(root, record);
+    if (schema === CASE_SCHEMA) {
+      payloads.push(readPayload(record, document, path));
+    } else if (schema === REJECTIONS_SCHEMA) {
+      rejectionPayloads.push(readRejectionPayload(record, document, path));
+    } else {
+      throw new Error(
+        `${path}: schema is "${schema}", this reader knows "${CASE_SCHEMA}" and ` +
+          `"${REJECTIONS_SCHEMA}".`,
+      );
+    }
+  }
   if (payloads.length === 0) throw new Error(`${corpusDirectory}: no payloads were loaded.`);
 
   const cases: PinnedCase[] = [];
@@ -377,7 +467,19 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
     );
   }
 
-  return { root, provenance, payloads, cases };
+  const rejections: PinnedRejection[] = [];
+  for (const payload of rejectionPayloads) {
+    for (const entry of payload.cases) {
+      const previous = seen.get(entry.id);
+      if (previous !== undefined) {
+        throw new Error(`duplicate case id "${entry.id}" in ${previous} and ${payload.path}`);
+      }
+      seen.set(entry.id, payload.path);
+      rejections.push(entry);
+    }
+  }
+
+  return { root, provenance, payloads, cases, rejectionPayloads, rejections };
 }
 
 /**

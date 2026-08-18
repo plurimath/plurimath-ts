@@ -19,6 +19,7 @@ import {
   isPower,
   miniSized,
   naryandValue,
+  present,
   primeUnicode,
   renderOptionalChild,
   unicodemathParens,
@@ -56,8 +57,8 @@ function supValue(node: NodeOf<"nary">, context: RenderContext): string {
 }
 
 export function renderNary(node: NodeOf<"nary">, context: RenderContext): string {
-  const sub = node.parameterTwo === undefined ? "" : subValue(node, context);
-  const sup = node.parameterThree === undefined ? "" : supValue(node, context);
+  const sub = !present(node.parameterTwo) ? "" : subValue(node, context);
+  const sup = !present(node.parameterThree) ? "" : supValue(node, context);
   const operator = renderOptionalChild(node.parameterOne, context);
   const body = naryandValue(node.parameterFour, context);
 

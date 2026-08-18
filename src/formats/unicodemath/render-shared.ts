@@ -170,6 +170,21 @@ function asNode(value: unknown): MathNode | undefined {
   return isNode(value) ? value : undefined;
 }
 
+/**
+ * Ruby truthiness on a field: `nil` and `false` are falsy, everything else is
+ * truthy.
+ *
+ * The gem guards its optional slots with a bare `if parameter_two`, and this
+ * is that test. Checking `!== undefined` instead is WRONG and was wrong here:
+ * the corpus records an absent slot as nil, the model builder gives it
+ * `null`, and `null !== undefined` is true — so `Nary` emitted `∑_^ x` for
+ * `sum x` where the gem gives `∑ x`, an underscore and a caret with nothing
+ * attached to either. Nine kind files carried the same mistake.
+ */
+export function present(value: unknown): boolean {
+  return value !== null && value !== undefined && value !== false;
+}
+
 export function isNode(value: unknown): value is MathNode {
   return typeof value === "object" && value !== null && "kind" in value;
 }

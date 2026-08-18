@@ -16,13 +16,14 @@ import {
   naryandSubValue,
   naryandSupValue,
   naryandValue,
+  present,
 } from "../../formats/unicodemath/render-shared";
 
 /** U+220F N-ARY PRODUCT — `Prod#nary_attr_value` (`prod.rb:125`). */
 const PRODUCT = "∏";
 
 export function renderProd(node: NodeOf<"prod">, context: RenderContext): string {
-  const sub = node.parameterOne === undefined ? "" : naryandSubValue(node.parameterOne, context);
-  const sup = node.parameterTwo === undefined ? "" : naryandSupValue(node.parameterTwo, context);
+  const sub = !present(node.parameterOne) ? "" : naryandSubValue(node.parameterOne, context);
+  const sup = !present(node.parameterTwo) ? "" : naryandSupValue(node.parameterTwo, context);
   return `${PRODUCT}${sub}${sup}${naryandValue(node.parameterThree, context)}`;
 }

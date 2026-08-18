@@ -77,6 +77,16 @@
         "default": "./dist/mathml.cjs"
       }
     },
+    "./unicodemath": {
+      "import": {
+        "types": "./dist/unicodemath.d.ts",
+        "default": "./dist/unicodemath.js"
+      },
+      "require": {
+        "types": "./dist/unicodemath.d.cts",
+        "default": "./dist/unicodemath.cjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "files": [

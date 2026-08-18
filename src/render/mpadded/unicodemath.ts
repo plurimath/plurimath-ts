@@ -15,7 +15,11 @@
  */
 
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
-import { renderOptionalChild, unicodemathParens } from "../../formats/unicodemath/render-shared";
+import {
+  present,
+  renderOptionalChild,
+  unicodemathParens,
+} from "../../formats/unicodemath/render-shared";
 import {
   UNICODEMATH_PHANTOM_SYMBOLS,
   UNICODEMATH_UNARY_SYMBOLS,
@@ -33,7 +37,7 @@ export function renderMpadded(node: NodeOf<"mpadded">, context: RenderContext): 
   if (options !== undefined && options !== null && "mask" in options) {
     return `${MPADDED}(${String(options.mask ?? "")}&${renderOptionalChild(node.parameterOne, context)})`;
   }
-  if (node.parameterOne === undefined) return MPADDED;
+  if (!present(node.parameterOne)) return MPADDED;
 
   return `${MPADDED}(${renderOptionalChild(node.parameterOne, context)})`;
 }

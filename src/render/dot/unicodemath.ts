@@ -10,13 +10,14 @@
  */
 
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
-import { unicodemathParens } from "../../formats/unicodemath/render-shared";
+import { present, unicodemathParens } from "../../formats/unicodemath/render-shared";
 
 /** U+0307 COMBINING DOT ABOVE. */
 const MARK = "̇";
 
 export function renderDot(node: NodeOf<"dot">, context: RenderContext): string {
-  const value =
-    node.parameterOne === undefined ? "" : (unicodemathParens(node.parameterOne, context) ?? "");
+  const value = !present(node.parameterOne)
+    ? ""
+    : (unicodemathParens(node.parameterOne, context) ?? "");
   return `${value}${MARK}`;
 }

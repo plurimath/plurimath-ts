@@ -8,20 +8,18 @@
  */
 
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
-import { naryandValue, unicodemathParens } from "../../formats/unicodemath/render-shared";
+import { naryandValue, present, unicodemathParens } from "../../formats/unicodemath/render-shared";
 
 /** U+222E CONTOUR INTEGRAL. */
 const OPERATOR = "∮";
 
 export function renderOint(node: NodeOf<"oint">, context: RenderContext): string {
-  const sub =
-    node.parameterOne === undefined
-      ? ""
-      : `_${unicodemathParens(node.parameterOne, context) ?? ""}`;
-  const sup =
-    node.parameterTwo === undefined
-      ? ""
-      : `^${unicodemathParens(node.parameterTwo, context) ?? ""}`;
+  const sub = !present(node.parameterOne)
+    ? ""
+    : `_${unicodemathParens(node.parameterOne, context) ?? ""}`;
+  const sup = !present(node.parameterTwo)
+    ? ""
+    : `^${unicodemathParens(node.parameterTwo, context) ?? ""}`;
   const mask = typeof node.options?.mask === "string" ? node.options.mask : "";
   return `${OPERATOR}${mask}${sub}${sup}${naryandValue(node.parameterThree, context)}`;
 }

@@ -11,7 +11,11 @@
  */
 
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
-import { renderOptionalChild, unicodemathParens } from "../../formats/unicodemath/render-shared";
+import {
+  present,
+  renderOptionalChild,
+  unicodemathParens,
+} from "../../formats/unicodemath/render-shared";
 import { UNICODEMATH_UNICODE_FRACTIONS } from "../../generated/unicodemath/render-tables";
 
 export function renderFrac(node: NodeOf<"frac">, context: RenderContext): string | null {
@@ -21,10 +25,12 @@ export function renderFrac(node: NodeOf<"frac">, context: RenderContext): string
     return unicodeFraction(node);
   }
 
-  const first =
-    node.parameterOne === undefined ? "" : (unicodemathParens(node.parameterOne, context) ?? "");
-  const second =
-    node.parameterTwo === undefined ? "" : (unicodemathParens(node.parameterTwo, context) ?? "");
+  const first = !present(node.parameterOne)
+    ? ""
+    : (unicodemathParens(node.parameterOne, context) ?? "");
+  const second = !present(node.parameterTwo)
+    ? ""
+    : (unicodemathParens(node.parameterTwo, context) ?? "");
 
   // `return "#{first}/#{second}" unless self.options` — no options at all is
   // the ordinary fraction, and is checked before any key is looked at.

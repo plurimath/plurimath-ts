@@ -22,6 +22,17 @@
  * key for a duplicated value. The generator therefore refuses any table
  * that maps two keys to one value: a reverse lookup would silently pick
  * one, and the port would have no way to know which.
+ *
+ * Two entries here are NOT from `Constants` and are not lookups at all:
+ * `UNICODEMATH_UNARY_CARRIER_NAMES` and
+ * `UNICODEMATH_BINARY_CARRIER_NAMES` are the class basenames the
+ * AsciiMath transform reaches through each carrier, read from the
+ * `get_class` census registry — the same rows the latex projection
+ * reads, emitted separately so each format's carrier dispatch imports
+ * only its own slice. Membership only, deduplicated and sorted. The
+ * renderers add the names the transform constructs WITHOUT `get_class`
+ * (`Tr` on the unary carrier; `Power`, `Mod` and `Td` on the binary
+ * one), which no census row can carry.
  */
 
 export const UNICODEMATH_UNARY_SYMBOLS: ReadonlyMap<string, string> = new Map([
@@ -345,4 +356,48 @@ export const UNICODEMATH_DIACRITIC_BELOWS: readonly string[] = [
   "&#x20ed;",
   "&#x20ee;",
   "&#x20ef;",
+];
+
+export const UNICODEMATH_UNARY_CARRIER_NAMES: readonly string[] = [
+  "Arccos",
+  "Arcsin",
+  "Arctan",
+  "Cancel",
+  "Cos",
+  "Cosh",
+  "Cot",
+  "Coth",
+  "Csc",
+  "Csch",
+  "Deg",
+  "Det",
+  "Dim",
+  "Exp",
+  "Gcd",
+  "Glb",
+  "Ker",
+  "Lcm",
+  "Left",
+  "Lg",
+  "Liminf",
+  "Limsup",
+  "Ln",
+  "Lub",
+  "Max",
+  "Min",
+  "Right",
+  "Sec",
+  "Sech",
+  "Sin",
+  "Sinh",
+  "Sup",
+  "Tan",
+  "Tanh",
+];
+
+export const UNICODEMATH_BINARY_CARRIER_NAMES: readonly string[] = [
+  "Lim",
+  "Log",
+  "Root",
+  "Stackrel",
 ];

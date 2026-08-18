@@ -98,6 +98,29 @@ const PRIME_GLYPHS: readonly string[] = [
  */
 export function primeUnicode(node: MathNode | undefined, rendered: string | null): boolean {
   if (node === undefined || node.kind !== "symbol") return false;
+
+  // The gem asks TWO questions, in this order, and this used to ask only the
+  // second. `return true if field&.value&.include?("&#x27;")` tests the RAW
+  // value for the entity text, before anything is rendered — so a generic
+  // `Symbols::Symbol` carrying `"&#x27;"` is a prime even though its render is
+  // the undecoded entity and matches no glyph. Measured:
+  //
+  //   Symbol("&#x27;").to_unicodemath          => "&#x27;"
+  //   prime_unicode?(Symbol("&#x27;"))         => true
+  //   Power(x, Symbol("&#x27;")).to_unicodemath => "x&#x27;"   (accented branch fired)
+  //
+  // against the named class, whose table entry is already decoded:
+  //
+  //   Prime#to_unicodemath                     => "′"
+  //   Power(x, Prime).to_unicodemath           => "x′"
+  //
+  // Unreachable from the AsciiMath transform today — `x^'` parses to
+  // `Symbols::Prime`, not a generic symbol — but `Int`, `Prod`, `Nary` and
+  // `Log` all route through here, and a hand-built or MathML-parsed tree
+  // reaches it.
+  const value = (node as { readonly value?: string | null }).value;
+  if (typeof value === "string" && value.includes("&#x27;")) return true;
+
   if (rendered === null) return false;
 
   return PRIME_GLYPHS.some((glyph) => rendered.includes(glyph));

@@ -3375,7 +3375,7 @@ module CorpusGenerator
     end
   end
 
-  def build_unicodemath_render_tables
+  def build_unicodemath_render_tables(registry)
     tables = UNICODEMATH_TABLES.to_h { |name, key| [key, unicodemath_string_map(name)] }
     tables["unicode_fractions"] = unicodemath_fraction_map
     tables["parenthesis_matrices"] = unicodemath_nullable_map("PARENTHESIS_MATRICES")
@@ -3394,6 +3394,16 @@ module CorpusGenerator
     # before this every deferred reverse table was existence-checked and
     # nothing more — the guard covered one of the four it claimed to cover.
     UNICODEMATH_REVERSED_TABLES.each { |name| assert_reverse_lookup_safe!(name) }
+
+    # The carrier reachability sets, projected unicodemath-side so this
+    # format's carrier dispatch imports no other format's slice. Same census
+    # rows the latex projection reads (`latex_carrier_basenames` is generic
+    # over the carrier), because reachability is a property of what the
+    # AsciiMath transform CONSTRUCTS, not of what any renderer emits.
+    lists["unary_carrier_names"] =
+      latex_carrier_basenames(registry, "Math::Function::UnaryFunction")
+    lists["binary_carrier_names"] =
+      latex_carrier_basenames(registry, "Math::Function::BinaryFunction")
 
     tables.merge(lists)
   end
@@ -3985,6 +3995,17 @@ module CorpusGenerator
         key for a duplicated value. The generator therefore refuses any table
         that maps two keys to one value: a reverse lookup would silently pick
         one, and the port would have no way to know which.
+
+        Two entries here are NOT from `Constants` and are not lookups at all:
+        `UNICODEMATH_UNARY_CARRIER_NAMES` and
+        `UNICODEMATH_BINARY_CARRIER_NAMES` are the class basenames the
+        AsciiMath transform reaches through each carrier, read from the
+        `get_class` census registry — the same rows the latex projection
+        reads, emitted separately so each format's carrier dispatch imports
+        only its own slice. Membership only, deduplicated and sorted. The
+        renderers add the names the transform constructs WITHOUT `get_class`
+        (`Tr` on the unary carrier; `Power`, `Mod` and `Td` on the binary
+        one), which no census row can carry.
       TEXT
     ]
 
@@ -4612,7 +4633,7 @@ module CorpusGenerator
     latex_render_tables = build_latex_render_tables(registry)
     render_tables = build_render_tables
     mathml_tables = build_mathml_render_tables(registry)
-    unicodemath_render_tables = build_unicodemath_render_tables
+    unicodemath_render_tables = build_unicodemath_render_tables(registry)
     assert_corpus_symbols_covered!(pin_cases, exclusions, symbols)
 
     out_root = options[:out]

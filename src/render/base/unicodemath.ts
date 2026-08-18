@@ -17,12 +17,15 @@ import {
   isNode,
   miniSized,
   renderOptionalChild,
+  renderTruthyChild,
   unicodemathParens,
 } from "../../formats/unicodemath/render-shared";
 import { UNICODEMATH_SIZE_OVERRIDES } from "../../generated/unicodemath/render-tables";
 
 export function renderBase(node: NodeOf<"base">, context: RenderContext): string {
-  const first = renderOptionalChild(node.parameterOne, context);
+  // A bare `if parameter_one` guard, not `&.`: measured,
+  // `Base.new(false, x)` renders "_(x)" rather than raising.
+  const first = renderTruthyChild(node.parameterOne, context, "base.parameterOne");
   const two = node.parameterTwo;
   const overrides = sizeOverrides(node);
 

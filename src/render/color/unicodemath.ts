@@ -8,7 +8,7 @@
  */
 
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
-import { renderOptionalChild } from "../../formats/unicodemath/render-shared";
+import { present, renderChild, renderOptionalChild } from "../../formats/unicodemath/render-shared";
 
 /** U+2601 CLOUD, for a background colour. */
 const BACKGROUND = "☁";
@@ -16,8 +16,13 @@ const BACKGROUND = "☁";
 const FOREGROUND = "✎";
 
 export function renderColor(node: NodeOf<"color">, context: RenderContext): string {
-  const operator = node.options?.backgroundcolor === undefined ? FOREGROUND : BACKGROUND;
-  const one = renderOptionalChild(node.parameterOne, context);
-  const two = renderOptionalChild(node.parameterTwo, context);
+  // `options&.dig(:backgroundcolor)` is TRUTHINESS, not key presence: a nil or
+  // false background is no background. Measured — bg nil and bg false both give
+  // "\u270e(red&x)", only a real value gives "\u2601(red&x)".
+  const operator = present(node.options?.backgroundcolor) ? BACKGROUND : FOREGROUND;
+  // Both children are called WITHOUT `&.`, so neither nil nor false survives:
+  // `Color.new(nil, x)` and `Color.new(false, x)` both raise NoMethodError.
+  const one = renderChild(node.parameterOne, context, "color.parameterOne") ?? "";
+  const two = renderChild(node.parameterTwo, context, "color.parameterTwo") ?? "";
   return `${operator}(${one}&${two})`;
 }

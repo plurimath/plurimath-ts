@@ -13,6 +13,7 @@
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
 import {
   present,
+  renderChild,
   renderOptionalChild,
   unicodemathParens,
 } from "../../formats/unicodemath/render-shared";
@@ -21,7 +22,9 @@ import { UNICODEMATH_UNICODE_FRACTIONS } from "../../generated/unicodemath/rende
 export function renderFrac(node: NodeOf<"frac">, context: RenderContext): string | null {
   const options = node.options;
 
-  if (options?.unicodemath_fraction !== undefined && options.unicodemath_fraction !== false) {
+  // `options&.dig(:unicodemath_fraction)` — truthiness. Excluding only `false`
+  // still let `null` through, and the corpus never carries a null option.
+  if (present(options?.unicodemath_fraction)) {
     return unicodeFraction(node);
   }
 
@@ -41,7 +44,11 @@ export function renderFrac(node: NodeOf<"frac">, context: RenderContext): string
   // U+2298 CIRCLED DIVISION SLASH, and note it renders the children BARE —
   // no parens — unlike every other branch.
   if ("displaystyle" in options) {
-    return `${renderOptionalChild(node.parameterOne, context)}⊘${renderOptionalChild(node.parameterTwo, context)}`;
+    // Unguarded in the gem: `Frac.new(nil, x, {displaystyle: nil})` raises
+    // NoMethodError rather than rendering "\u2298x". Note the branch is chosen by
+    // `key?`, so a nil VALUE still selects it — presence and truthiness are
+    // different tests and this line needs both readings to be right.
+    return `${renderChild(node.parameterOne, context, "frac.parameterOne") ?? ""}⊘${renderChild(node.parameterTwo, context, "frac.parameterTwo") ?? ""}`;
   }
   // U+2215 DIVISION SLASH.
   if ("ldiv" in options) return `${first}∕${second}`;
@@ -65,6 +72,8 @@ function unicodeFraction(node: NodeOf<"frac">): string | null {
 function numericValue(field: unknown): number {
   const value = (field as { readonly value?: unknown } | undefined)?.value;
   if (typeof value !== "string") return 0;
-  const match = /^\s*[+-]?\d+/.exec(value);
+  // Ruby's `\s` is ASCII only; JS `\s` also matches U+00A0 and U+2009, which
+  // `String#to_i` does NOT skip — it returns 0 for those.
+  const match = /^[ \t\r\n\f\v]*[+-]?\d+/.exec(value);
   return match === null ? 0 : Number.parseInt(match[0], 10);
 }

@@ -328,7 +328,34 @@ export function htmlEntityToUnicode(text: string): string {
 
 /** The gem's `\s/\s -> /` squeeze, applied at the same boundary. */
 export function squeezeSolidus(text: string): string {
-  return text.replace(/\s\/\s/g, "/");
+  return text.replace(new RegExp(`${RUBY_SPACE}/${RUBY_SPACE}`, "g"), "/");
+}
+
+/**
+ * Ruby's `\s` — and it is NOT JavaScript's.
+ *
+ * Ruby matches exactly space, tab, CR, LF, FF and VT. JavaScript's `\s` also
+ * matches U+00A0 NO-BREAK SPACE, U+2009 THIN SPACE and the rest of the Unicode
+ * space separators. Measured: the gem leaves `"a\u00a0/\u00a0b"` untouched,
+ * where a JS-flavoured `/\s\/\s/` collapses it to `"a/b"`.
+ *
+ * Symbol renders are already decoded by the time the boundary squeeze runs, so
+ * a no-break space really can reach it.
+ */
+const RUBY_SPACE = "[ \\t\\r\\n\\f\\v]";
+
+/**
+ * A slot the gem guards with a bare `if parameter_one` — Ruby truthiness, so
+ * `nil` AND `false` contribute nothing, and anything else is sent the message.
+ *
+ * Distinct from both neighbours, and the distinction is measured:
+ *   `Base.new(false, x).to_unicodemath`   => "_(x)"        (false is skipped)
+ *   `Color.new(false, x).to_unicodemath`  !! NoMethodError (unguarded)
+ *   `renderOptionalChild` (`&.`)          skips nil only, raises on false
+ */
+export function renderTruthyChild(value: unknown, context: RenderContext, at: string): string {
+  if (!present(value)) return "";
+  return renderChild(value, context, at) ?? "";
 }
 
 /**

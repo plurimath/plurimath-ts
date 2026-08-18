@@ -31,7 +31,9 @@ const MPADDED = "⟡";
 export function renderMpadded(node: NodeOf<"mpadded">, context: RenderContext): string {
   const options = node.options;
 
-  if (options?.mpadded !== undefined && options.mpadded !== false) {
+  // `options&.dig(:mpadded)` — truthiness, so nil and false both fall through.
+  // Options checked first so the narrowing reaches `phantomGlyph`.
+  if (options !== undefined && options !== null && present(options.mpadded)) {
     return `${phantomGlyph(options)}${unicodemathParens(node.parameterOne, context) ?? ""}`;
   }
   if (options !== undefined && options !== null && "mask" in options) {

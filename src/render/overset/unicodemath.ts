@@ -20,6 +20,7 @@ import {
   fieldGlyph,
   glyphIn,
   isNode,
+  present,
   renderOptionalChild,
   unicodemathParens,
 } from "../../formats/unicodemath/render-shared";
@@ -65,7 +66,11 @@ export function renderOverset(node: NodeOf<"overset">, context: RenderContext): 
     return `${renderOptionalChild(two, context)}^${unicodemathParens(one, context) ?? ""}`;
   }
 
-  if (one === undefined && two === undefined) return null;
+  // `if parameter_one || parameter_two` — Ruby truthiness, so `false` counts as
+  // absent, and absent yields NIL rather than raising. Measured:
+  // `Overset.new(nil, nil)` and `Overset.new(false, false)` both give nil.
+  // Testing `=== undefined` missed the `null` the model builder produces.
+  if (!present(one) && !present(two)) return null;
 
   // U+2534 BOX DRAWINGS LIGHT UP AND HORIZONTAL.
   return `${unicodemathParens(two, context) ?? ""}┴${unicodemathParens(one, context) ?? ""}`;

@@ -50,7 +50,7 @@ export const CORE_GENERATED_PROVENANCE: CoreGeneratedProvenance = {
     ],
     [
       "scripts/generate-corpus.rb",
-      "c159af608353b9ecb6cc3123554228be68a0140b255f6217480ecff9a2ffc3ad",
+      "5f2df758d3933b63d9022b2b4cb316e974b2bd1fdf7dbde07c27d6b9f58651ce",
     ],
   ]),
   oracle: "plurimath",

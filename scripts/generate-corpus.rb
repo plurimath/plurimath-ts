@@ -89,7 +89,11 @@ module CorpusGenerator
 
   # A symbol slice is only provable where the corpus can check it, so the
   # slices cover exactly the formats the corpus targets.
-  SYMBOL_FORMATS = TARGET_FORMATS
+  # Symbol slices are generated for one more format than the corpus targets:
+  # the UnicodeMath renderer is being built, and its symbol table is needed
+  # before there is a corpus target to check it against. Keeping the two lists
+  # separate is what lets those land in either order.
+  SYMBOL_FORMATS = (TARGET_FORMATS + %w[unicodemath]).freeze
 
   # Roots that carry no static representation of their own. Declared here and
   # machine-checked in `assert_symbol_roots!`, never assumed.
@@ -1122,6 +1126,7 @@ module CorpusGenerator
     case format
     when "asciimath" then node.to_asciimath(options: options)
     when "latex" then node.to_latex(options: options)
+    when "unicodemath" then node.to_unicodemath(options: options)
     when "mathml"
       mathml_descriptor(
         klass,
@@ -1241,8 +1246,15 @@ module CorpusGenerator
     when "asciimath" then formula.to_asciimath(options: options)
     when "latex" then formula.to_latex(options: options)
     when "mathml" then formula.to_mathml(intent: combo["intent"])
+    when "unicodemath" then formula.to_unicodemath(options: options)
     else raise Error, "unknown target format #{format.inspect}"
     end
+  rescue Error
+    # The generator's own errors are bugs, not probe results. Rescuing them
+    # alongside the gem's turned a missing format arm into 5,848 recorded
+    # "probe failures" and let the run finish: the count looked like a finding
+    # about UnicodeMath and was a finding about this method.
+    raise
   rescue StandardError => e
     { "error" => e.class.name }
   end
@@ -3133,6 +3145,149 @@ module CorpusGenerator
     body
   end
 
+  # --- unicodemath render tables -------------------------------------------
+
+  # The constant tables `to_unicodemath` reads that no other generated slice
+  # supplies, consumed by `src/formats/unicodemath/renderer.ts`.
+  #
+  # Unlike the latex and mathml slices these are read from
+  # `Plurimath::UnicodeMath::Constants` rather than measured through a render,
+  # and that difference is deliberate rather than lazy: each one is a plain
+  # lookup the renderer performs verbatim (`ACCENT_SYMBOLS.include?`,
+  # `UNICODE_FRACTIONS.key`, `SIZE_OVERRIDES_SYMBOLS.invert`), with no
+  # per-class override anywhere to make a source read lie. What the sources
+  # *could* still hide is a shape change, so every table is shape-checked here
+  # and a mismatch fails generation.
+  #
+  # `.invert` and `.key` appear at three call sites (`base.rb:128`,
+  # `frac.rb:159`, `table.rb:422`), which is the same `Hash#invert`-keeps-the-
+  # last-key trap `latex_left_right_parens` asserts against, so the duplicate
+  # check below is not theoretical.
+
+  # constant name => output key. Only the tables whose values are plain
+  # strings or string lists; the shapes were measured, not assumed.
+  UNICODEMATH_TABLES = {
+    "UNARY_SYMBOLS" => "unary_symbols",
+    "HORIZONTAL_BRACKETS" => "horizontal_brackets",
+    "ACCENT_SYMBOLS" => "accent_symbols",
+    "UNARY_ARG_FUNCTIONS" => "unary_arg_functions",
+    "SIZE_OVERRIDES_SYMBOLS" => "size_overrides",
+    "MATRIXS" => "matrixs",
+    "SUB_ALPHABETS" => "sub_alphabets",
+    "SUP_ALPHABETS" => "sup_alphabets",
+    "SUB_DIGITS" => "sub_digits",
+    "SUP_DIGITS" => "sup_digits",
+    "SUB_OPERATORS" => "sub_operators",
+    "SUP_OPERATORS" => "sup_operators",
+  }.freeze
+
+  UNICODEMATH_LISTS = {
+    "UNDEF_UNARY_FUNCTIONS" => "undef_unary_functions",
+    "FONTS_CLASSES" => "fonts_classes",
+    "DIACRITIC_OVERLAYS" => "diacritic_overlays",
+    "DIACRITIC_BELOWS" => "diacritic_belows",
+  }.freeze
+
+  # Deliberately NOT emitted here, with the measured reason for each. Every one
+  # of these carries a value shape a `ReadonlyMap<string, string>` cannot hold,
+  # and inventing a representation before the renderer that consumes it exists
+  # would be guessing at the consumer's needs:
+  #
+  #   PHANTOM_SYMBOLS      values are option hashes
+  #                        (`{ mpadded: { depth:, height: }, phantom: }`)
+  #   SUB_PARENTHESIS      values are nested `{ "(" => "\u208d" }` hashes
+  #   SUP_PARENTHESIS      same shape
+  #   UNICODE_FRACTIONS    keyed by the GLYPH with an `[n, d]` array value, and
+  #                        read as `.key([n, d])` — the reverse of the
+  #                        direction a string map would give
+  #   PARENTHESIS_MATRICES carries nil values, and is reverse-looked-up, so
+  #                        what `.key` does with the nils has to be measured
+  #                        against a real render first
+  #
+  # They land with the renderer code that reads them, measured through a render
+  # the way the latex and mathml slices are.
+  UNICODEMATH_DEFERRED_TABLES = %w[
+    PHANTOM_SYMBOLS SUB_PARENTHESIS SUP_PARENTHESIS UNICODE_FRACTIONS
+    PARENTHESIS_MATRICES
+  ].freeze
+
+  def unicodemath_constant(name)
+    unless Plurimath::UnicodeMath::Constants.const_defined?(name)
+      raise Error, "UnicodeMath::Constants::#{name} is gone; the renderer reads it"
+    end
+
+    value = Plurimath::UnicodeMath::Constants.const_get(name)
+    raise Error, "UnicodeMath::Constants::#{name} is empty" if value.empty?
+
+    value
+  end
+
+  # A hash the renderer reads as string -> string. Keys are stringified because
+  # several of these are keyed by Symbol in the gem and by string in the port.
+  # The only tables the gem reverse-looks-up: `SIZE_OVERRIDES_SYMBOLS.invert`
+  # (`base.rb:128`), `UNICODE_FRACTIONS.key` (`frac.rb:159`) and
+  # `PARENTHESIS_MATRICES.key` (`table.rb:422`). A duplicate value matters only
+  # here — `Hash#invert` keeps the LAST key, so the port would have to guess
+  # which one won. Everywhere else duplicates are ordinary: `UNARY_SYMBOLS`
+  # legitimately maps both `underline` and `underbar` to the same glyph, and is
+  # only ever read forward.
+  UNICODEMATH_REVERSED_TABLES = %w[
+    SIZE_OVERRIDES_SYMBOLS UNICODE_FRACTIONS PARENTHESIS_MATRICES
+  ].freeze
+
+  def unicodemath_string_map(name)
+    constant = unicodemath_constant(name)
+    unless constant.is_a?(::Hash)
+      raise Error, "UnicodeMath::Constants::#{name} is #{constant.class}; expected a Hash"
+    end
+
+    seen = {}
+    constant.to_h do |key, value|
+      unless value.is_a?(::String) || value.is_a?(::Symbol)
+        raise Error, "UnicodeMath::Constants::#{name}[#{key.inspect}] is " \
+                     "#{value.class}; expected a String or Symbol"
+      end
+
+      text = value.to_s
+      if UNICODEMATH_REVERSED_TABLES.include?(name)
+        if (earlier = seen[text])
+          raise Error, "UnicodeMath::Constants::#{name} maps both #{earlier.inspect} " \
+                       "and #{key.inspect} to #{text.inspect}, and the gem reverse " \
+                       "looks this table up; `Hash#invert` keeps the last key, so " \
+                       "the port cannot know which one wins"
+        end
+        seen[text] = key
+      end
+      [key.to_s, text]
+    end
+  end
+
+  def unicodemath_string_list(name)
+    constant = unicodemath_constant(name)
+    unless constant.is_a?(::Array)
+      raise Error, "UnicodeMath::Constants::#{name} is #{constant.class}; expected an Array"
+    end
+
+    values = constant.map(&:to_s)
+    if values.uniq.length != values.length
+      raise Error, "UnicodeMath::Constants::#{name} has duplicate entries"
+    end
+
+    values
+  end
+
+  def build_unicodemath_render_tables
+    tables = UNICODEMATH_TABLES.to_h { |name, key| [key, unicodemath_string_map(name)] }
+    lists = UNICODEMATH_LISTS.to_h { |name, key| [key, unicodemath_string_list(name)] }
+
+    # The deferred ones still have to EXIST: this slice claims to cover what
+    # `to_unicodemath` reads, and a constant vanishing upstream must fail here
+    # rather than be discovered when the renderer is written.
+    UNICODEMATH_DEFERRED_TABLES.each { |name| unicodemath_constant(name) }
+
+    tables.merge(lists)
+  end
+
   # --- symbol data payloads ------------------------------------------------
 
   def symbol_representation_type(format)
@@ -3700,6 +3855,41 @@ module CorpusGenerator
     write_ts(File.join(out_root, "mathml", "render-tables.ts"), sections)
   end
 
+  def emit_unicodemath_render_tables_file(out_root, tables)
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        UnicodeMath render tables: the constant tables `to_unicodemath` reads
+        that no other generated slice supplies, consumed by
+        `src/formats/unicodemath/renderer.ts`.
+
+        Read from `Plurimath::UnicodeMath::Constants` rather than measured
+        through a render, unlike the latex and mathml slices. That is a
+        deliberate difference: each is a plain lookup the gem performs
+        verbatim, with no per-class override to make a source read lie. What a
+        source read could still miss is a shape change, so the generator
+        shape-checks every table and fails rather than emitting something
+        malformed.
+
+        Three call sites reverse-look-up these tables (`base.rb:128`,
+        `frac.rb:159`, `table.rb:422`), and Ruby's `Hash#invert` keeps the LAST
+        key for a duplicated value. The generator therefore refuses any table
+        that maps two keys to one value: a reverse lookup would silently pick
+        one, and the port would have no way to know which.
+      TEXT
+    ]
+
+    tables.each do |key, data|
+      name = "UNICODEMATH_#{key.upcase}"
+      sections << if data.is_a?(::Array)
+                    ts_const(name, "readonly string[]", data)
+                  else
+                    ts_tuple_map(name, "ReadonlyMap<string, string>", data)
+                  end
+    end
+
+    write_ts(File.join(out_root, "unicodemath", "render-tables.ts"), sections)
+  end
+
   def emit_latex_render_tables_file(out_root, tables)
     sections = [
       ts_header(<<~TEXT.chomp),
@@ -4033,7 +4223,8 @@ module CorpusGenerator
   end
 
   def write_symbol_data(out_root, data, registry, render_tables, mathml_tables,
-                        latex_render_tables, provenance)
+                        latex_render_tables, unicodemath_render_tables,
+                        provenance)
     written = [
       File.join(out_root, INPUT_FORMAT, "input.ts"),
       File.join(out_root, INPUT_FORMAT, "grammar.ts"),
@@ -4041,6 +4232,7 @@ module CorpusGenerator
       File.join(out_root, INPUT_FORMAT, "render-tables.ts"),
       File.join(out_root, "mathml", "render-tables.ts"),
       File.join(out_root, "latex", "render-tables.ts"),
+      File.join(out_root, "unicodemath", "render-tables.ts"),
     ]
     emit_input_file(out_root, data["tables"])
     emit_grammar_file(out_root, data["grammar"])
@@ -4048,6 +4240,7 @@ module CorpusGenerator
     emit_render_tables_file(out_root, render_tables)
     emit_mathml_render_tables_file(out_root, mathml_tables)
     emit_latex_render_tables_file(out_root, latex_render_tables)
+    emit_unicodemath_render_tables_file(out_root, unicodemath_render_tables)
 
     SYMBOL_FORMATS.each do |format|
       emit_symbols_file(out_root, format, data["static"])
@@ -4309,6 +4502,7 @@ module CorpusGenerator
     latex_render_tables = build_latex_render_tables(registry)
     render_tables = build_render_tables
     mathml_tables = build_mathml_render_tables(registry)
+    unicodemath_render_tables = build_unicodemath_render_tables
     assert_corpus_symbols_covered!(pin_cases, exclusions, symbols)
 
     out_root = options[:out]
@@ -4332,7 +4526,8 @@ module CorpusGenerator
     written << [path, write_manifest(path, bytes, out_root, provenance)]
 
     emitted = write_symbol_data(options[:symbols_out], symbols, registry, render_tables,
-                                mathml_tables, latex_render_tables, provenance)
+                                mathml_tables, latex_render_tables,
+                                unicodemath_render_tables, provenance)
 
     written.each do |payload_path, manifest_path|
       puts "  #{relative(payload_path, REPO_ROOT)}"

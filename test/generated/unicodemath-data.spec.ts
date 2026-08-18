@@ -1,0 +1,132 @@
+/**
+ * The generated UnicodeMath slice.
+ *
+ * Two independent generators already produce a UnicodeMath value per symbol,
+ * for different reasons: `generate-core-data.rb` emits
+ * `SYMBOL_CANONICAL_VALUES` so `Symbols::Symbol#==` has a comparison fallback,
+ * and `generate-corpus.rb` now emits `UNICODEMATH_SYMBOLS` for the renderer.
+ * They read the same `to_unicodemath`, so they must agree — and because they
+ * were written months apart for unrelated purposes, agreement is real evidence
+ * rather than a tautology.
+ */
+
+import { describe, expect, it } from "vitest";
+import {
+  SYMBOL_CANONICAL_VALUES,
+  SYMBOLS_WITHOUT_CANONICAL_VALUE,
+} from "../../src/core/generated/symbol-canonical";
+import { UNICODEMATH_SYMBOL_EXCEPTIONS } from "../../src/generated/unicodemath/exceptions";
+import {
+  UNICODEMATH_ACCENT_SYMBOLS,
+  UNICODEMATH_DIACRITIC_BELOWS,
+  UNICODEMATH_DIACRITIC_OVERLAYS,
+  UNICODEMATH_FONTS_CLASSES,
+  UNICODEMATH_HORIZONTAL_BRACKETS,
+  UNICODEMATH_MATRIXS,
+  UNICODEMATH_SIZE_OVERRIDES,
+  UNICODEMATH_SUB_ALPHABETS,
+  UNICODEMATH_SUB_DIGITS,
+  UNICODEMATH_SUB_OPERATORS,
+  UNICODEMATH_SUP_ALPHABETS,
+  UNICODEMATH_SUP_DIGITS,
+  UNICODEMATH_SUP_OPERATORS,
+  UNICODEMATH_UNARY_ARG_FUNCTIONS,
+  UNICODEMATH_UNARY_SYMBOLS,
+  UNICODEMATH_UNDEF_UNARY_FUNCTIONS,
+} from "../../src/generated/unicodemath/render-tables";
+import { UNICODEMATH_SYMBOLS } from "../../src/generated/unicodemath/symbols";
+
+describe("the unicodemath symbol slice", () => {
+  it("covers every symbol, as the other slices do", () => {
+    expect(UNICODEMATH_SYMBOLS.size).toBe(1459);
+  });
+
+  it("agrees with the canonical values, which a different generator emitted", () => {
+    const disagreed: string[] = [];
+    const absent: string[] = [];
+    for (const [id, value] of UNICODEMATH_SYMBOLS) {
+      const canonical = SYMBOL_CANONICAL_VALUES.get(id);
+      if (canonical === undefined) absent.push(id);
+      else if (canonical !== value) disagreed.push(id);
+    }
+    expect(disagreed).toStrictEqual([]);
+    // Measured: the two slices hold exactly the same 1,459 ids, so nothing is
+    // absent at all. `Paren` and `Symbol` are abstract and appear in neither —
+    // the canonical generator records them in
+    // `SYMBOLS_WITHOUT_CANONICAL_VALUE` rather than emitting a value, and the
+    // symbol slice never had them. Asserting that agreement is the point: two
+    // generators written for unrelated reasons produced identical id sets.
+    expect(absent).toStrictEqual([]);
+    expect(UNICODEMATH_SYMBOLS.size).toBe(SYMBOL_CANONICAL_VALUES.size);
+    for (const id of SYMBOLS_WITHOUT_CANONICAL_VALUE) {
+      expect(UNICODEMATH_SYMBOLS.has(id), id).toBe(false);
+    }
+  });
+
+  it("has no context-dependent symbols, because none vary on any axis", () => {
+    // Measured, not assumed: the axis probe reports the same six
+    // context-dependent symbols with unicodemath added as without it, and none
+    // of them varies in unicodemath. LaTeX's matrix is empty for the same
+    // reason; MathML's is not, because `intent` moves its output.
+    expect(UNICODEMATH_SYMBOL_EXCEPTIONS).toStrictEqual([]);
+  });
+});
+
+/** Sizes measured against the pinned oracle, so a table shrinking is visible. */
+const TABLE_SIZES: ReadonlyArray<readonly [string, { readonly size?: number; length?: number }]> = [
+  ["unary_symbols", UNICODEMATH_UNARY_SYMBOLS],
+  ["horizontal_brackets", UNICODEMATH_HORIZONTAL_BRACKETS],
+  ["accent_symbols", UNICODEMATH_ACCENT_SYMBOLS],
+  ["unary_arg_functions", UNICODEMATH_UNARY_ARG_FUNCTIONS],
+  ["size_overrides", UNICODEMATH_SIZE_OVERRIDES],
+  ["matrixs", UNICODEMATH_MATRIXS],
+  ["sub_alphabets", UNICODEMATH_SUB_ALPHABETS],
+  ["sup_alphabets", UNICODEMATH_SUP_ALPHABETS],
+  ["sub_digits", UNICODEMATH_SUB_DIGITS],
+  ["sup_digits", UNICODEMATH_SUP_DIGITS],
+  ["sub_operators", UNICODEMATH_SUB_OPERATORS],
+  ["sup_operators", UNICODEMATH_SUP_OPERATORS],
+];
+
+describe("the unicodemath render tables", () => {
+  it.each(TABLE_SIZES)("%s is not empty", (_name, table) => {
+    // An empty table is the failure mode that matters: the renderer would fall
+    // back on every lookup and produce plausible output nothing pinned.
+    expect((table as ReadonlyMap<string, string>).size).toBeGreaterThan(0);
+  });
+
+  it.each([
+    ["undef_unary_functions", UNICODEMATH_UNDEF_UNARY_FUNCTIONS],
+    ["fonts_classes", UNICODEMATH_FONTS_CLASSES],
+    ["diacritic_overlays", UNICODEMATH_DIACRITIC_OVERLAYS],
+    ["diacritic_belows", UNICODEMATH_DIACRITIC_BELOWS],
+  ])("%s is a non-empty list of distinct values", (_name, list) => {
+    expect(list.length).toBeGreaterThan(0);
+    expect(new Set(list).size).toBe(list.length);
+  });
+
+  it("carries the counts measured from the gem", () => {
+    expect(UNICODEMATH_ACCENT_SYMBOLS.size).toBe(21);
+    expect(UNICODEMATH_DIACRITIC_BELOWS.length).toBe(52);
+    expect(UNICODEMATH_SUP_ALPHABETS.size).toBe(25);
+    expect(UNICODEMATH_UNDEF_UNARY_FUNCTIONS.length).toBe(7);
+  });
+
+  it("keeps the reverse-lookup tables free of duplicate values", () => {
+    // `SIZE_OVERRIDES_SYMBOLS` is read through `.invert`, and Ruby's
+    // `Hash#invert` keeps the LAST key for a duplicated value. The generator
+    // refuses a duplicate there; this pins that the emitted table is clean, so
+    // the port can invert it without having to guess which key won.
+    const values = [...UNICODEMATH_SIZE_OVERRIDES.values()];
+    expect(new Set(values).size).toBe(values.length);
+  });
+
+  it("does not deduplicate a table the gem reads forward", () => {
+    // `UNARY_SYMBOLS` legitimately maps two names to one glyph — `underline`
+    // and `underbar` are both U+2581 — and is only ever read forward. An
+    // earlier version of the generator rejected this, which would have been a
+    // false alarm on correct data.
+    const values = [...UNICODEMATH_UNARY_SYMBOLS.values()];
+    expect(new Set(values).size).toBeLessThan(values.length);
+  });
+});

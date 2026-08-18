@@ -33,8 +33,8 @@
  *   - `:422` is `Hash#key`, not `Hash#invert` — FIRST matching key, not last,
  *     and the difference is observable: `PARENTHESIS_MATRICES` holds three
  *     nil values, `key(nil)` is `:eqarray` while `invert[nil]` is `:cases`.
- *     It is reachable, so this file carries the nil row the generated table
- *     drops (see `NIL_PAREN_MATRIX_NAME`).
+ *     It is reachable, so the generator emits that answer as
+ *     `UNICODEMATH_NIL_PAREN_MATRIX` (see `NIL_PAREN_MATRIX_NAME`).
  *   - The bare `Table` writes the class name as ENTITY text
  *     (`"&#x24e2;(a&b@c&d)"`) while the six subclass overrides write the
  *     decoded character (`"ⓢ(a&b@c&d)"`). Both reach the reader decoded,
@@ -66,6 +66,7 @@ import {
 } from "../../formats/unicodemath/render-shared";
 import {
   UNICODEMATH_MATRIXS,
+  UNICODEMATH_NIL_PAREN_MATRIX,
   UNICODEMATH_PARENTHESIS_MATRICES,
 } from "../../generated/unicodemath/render-tables";
 
@@ -141,17 +142,21 @@ const MATRIX_MARKS: ReadonlyMap<string, string> = new Map(
  *
  * The gem's `PARENTHESIS_MATRICES` has eight rows and three of them hold nil
  * (`eqarray`, `matrix`, `cases`). `UNICODEMATH_PARENTHESIS_MATRICES` drops
- * those three, on the generator's stated reasoning that the reverse lookup
- * takes "a rendered paren string, which is never nil". That reasoning is
- * wrong, and the counterexample renders: a generic `Symbols::Symbol.new(nil)`
+ * those three, because an empty string would collide with a real render. The
+ * generator used to justify that by claiming the lookup takes "a rendered
+ * paren string, which is never nil". That reasoning was wrong, and the
+ * counterexample renders: a generic `Symbols::Symbol.new(nil)`
  * has `to_unicodemath` nil, and `Table(rows, open: Symbol(nil), close: …)`
  * renders `"&#x2588;(a)"` — `MATRIXS[:eqarray]`, the FIRST nil-valued key,
  * which is what `Hash#key` returns. (`Hash#invert` would have answered
- * `:cases`; the two differ, which is why the direction matters.) The row lives
- * here because the generated slice does not carry it and this file may not
- * edit the generator.
+ * `:cases`; the two differ, which is why the direction matters.)
+ *
+ * The generator now emits that answer as `UNICODEMATH_NIL_PAREN_MATRIX`,
+ * reading it with Ruby's own `Hash#key` so first-match-wins is never
+ * reproduced by hand here, and its comment has been corrected. This file held
+ * the row locally until then.
  */
-const NIL_PAREN_MATRIX_NAME = "eqarray";
+const NIL_PAREN_MATRIX_NAME = UNICODEMATH_NIL_PAREN_MATRIX;
 
 /**
  * The node kinds whose gem class declares `to_unicodemath`'s `options:`

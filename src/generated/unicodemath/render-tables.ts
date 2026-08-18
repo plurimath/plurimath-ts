@@ -428,6 +428,8 @@ export const UNICODEMATH_DIACRITIC_BELOWS: readonly string[] = [
   "&#x20ef;",
 ];
 
+export const UNICODEMATH_NIL_PAREN_MATRIX: string = "eqarray";
+
 export const UNICODEMATH_UNARY_CARRIER_NAMES: readonly string[] = [
   "Arccos",
   "Arcsin",

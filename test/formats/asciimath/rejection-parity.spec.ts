@@ -23,7 +23,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { ParseError } from "../../../src/core/errors";
+import type { ParseError } from "../../../src/core/errors";
 import { parseAsciimath } from "../../../src/formats/asciimath/parser";
 import { loadPinnedCorpus, type PinnedRejection } from "../../core/corpus-pin";
 
@@ -67,12 +67,18 @@ describe("every recorded rejection is refused here too", () => {
       caught = error;
     }
 
+    // Two assertions doing two different jobs. The first only has to prove
+    // something was thrown, and names the input when nothing was — the failure
+    // that matters here is an input the gem refuses and this port ACCEPTS.
+    // `Error` is the global, so this holds even under a dual ESM/CJS load.
     expect(caught, `${entry.id}: ${JSON.stringify(entry.input)} was accepted`).toBeInstanceOf(
-      ParseError,
+      Error,
     );
-    // The code, not just the class: ARCHITECTURE.md §5 makes `code` the
-    // guaranteed discriminator, because a dual ESM/CJS load can hold two
-    // copies of these classes and `instanceof` across copies is false.
+    // The discrimination is `code`, never `instanceof ParseError`: ARCHITECTURE.md
+    // §5 makes `code` the guaranteed discriminator precisely because a dual
+    // ESM/CJS load can hold two copies of these classes, and `instanceof`
+    // across copies is false. Asserting the class here would have contradicted
+    // the reason given for asserting the code.
     expect((caught as ParseError).code).toBe("PARSE_ERROR");
   });
 

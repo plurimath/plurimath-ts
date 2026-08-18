@@ -249,7 +249,12 @@ describe("git's own record of the pin", () => {
       process.env.PATH = emptyPath;
       expect(() => pinnedSubmoduleCommit(root, "sub")).toThrow("could not run git");
     } finally {
-      process.env.PATH = previous;
+      // `process.env.X = undefined` stores the literal string "undefined" in
+      // Node, not an absent variable — verified. Restoring that way when PATH
+      // started unset would leave every later test resolving subprocesses
+      // against a nonexistent directory.
+      if (previous === undefined) delete process.env.PATH;
+      else process.env.PATH = previous;
     }
     // …and with git back, the same call succeeds, so the failure above was the
     // missing binary and not the fixture.

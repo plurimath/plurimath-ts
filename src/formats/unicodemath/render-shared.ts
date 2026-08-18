@@ -353,6 +353,18 @@ export function glyphIn(glyph: string | null, entities: Iterable<string>): boole
   return false;
 }
 
+/**
+ * Ruby's `Float#round`: half away from zero.
+ *
+ * JS `Math.round` rounds half toward +infinity, so the two disagree at exactly
+ * `-x.5`. `Fenced#convert_paren_size` rounds a logarithm that is negative for
+ * any paren size below 1em (`0.5em` gives -3.106), so this is reachable rather
+ * than theoretical.
+ */
+export function rubyRound(value: number): number {
+  return value < 0 ? -Math.round(-value) : Math.round(value);
+}
+
 export function missingSymbol(symbolId: string): MissingSymbolDataError {
   return new MissingSymbolDataError(symbolId, FORMAT);
 }

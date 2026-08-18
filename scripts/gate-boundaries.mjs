@@ -190,9 +190,10 @@ const warned = summary.violations.filter((violation) => violation.severity !== "
 if (warned.length > 0) {
   const byRule = new Map();
   for (const violation of warned) {
-    const where = violation.to && violation.to !== violation.from
-      ? `${violation.from} -> ${violation.to}`
-      : violation.from;
+    const where =
+      violation.to && violation.to !== violation.from
+        ? `${violation.from} -> ${violation.to}`
+        : violation.from;
     // `violation.rule` is an object; its `.name` is the string — the same
     // shape the error path above reads.
     const rule = violation.rule.name;

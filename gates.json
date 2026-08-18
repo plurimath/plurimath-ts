@@ -69,7 +69,7 @@
         "test/formats/asciimath/render-parity.spec.ts",
         "test/formats/latex/render-parity.spec.ts",
         "test/formats/mathml/render-parity.spec.ts",
-      "test/formats/unicodemath/render-parity.spec.ts"
+        "test/formats/unicodemath/render-parity.spec.ts"
       ],
       "description": "Parse tree, normalized model and every landed renderer match the Ruby-generated expectations"
     },

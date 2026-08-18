@@ -1,3 +1,4 @@
+/** biome-ignore-all lint/style/useNamingConvention: the gem's own option keys stay snake_case. */
 /**
  * Gem-pinned UnicodeMath behaviour the corpus cannot reach: hand-built nodes,
  * nil-slot combinations, and the option shapes the AsciiMath parser never

@@ -76,6 +76,13 @@ import {
  * name outside the set raises before dispatch: rendering the bare-`Table`
  * default for an unmeasured class would diverge silently, and six of these ten
  * really do render something else entirely.
+ *
+ * The corpus cannot hold this set honest the way it does on the latex side:
+ * every table case in the pinned corpus is a BARE `Math::Function::Table`, so
+ * none of the ten names is exercised there. All ten were pinned instead by a
+ * shape-for-shape diff against the gem (352 table shapes across these names,
+ * nine paren pairings and three value shapes, 2026-08-18), and they need a
+ * behavioural spec of their own to stay pinned.
  */
 const MEASURED_TABLE_NAMES: ReadonlySet<string> = new Set([
   "Align",
@@ -227,7 +234,7 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): stri
   // branch turns on `unicodemath_table_class?` ALONE: a nil class name does
   // not fall back to the `■` form, it interpolates as the empty string, which
   // is how `Table(rows, Norm, Norm)` renders `"(a&b@c&d)"` with no mark at all.
-  if (isMatrixClass(node, context)) return `${matrixClassName(node, context) ?? ""}(${rows})`;
+  if (isMatrixClass(node)) return `${matrixClassName(node, context) ?? ""}(${rows})`;
 
   return wrapInParens(node, mark("matrix"), rows, context);
 }
@@ -240,7 +247,7 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): stri
  * its open paren is non-nil, does not qualify when both parens are nil, and
  * CRASHES when only the close paren is present.
  */
-function isMatrixClass(node: NodeOf<"table">, context: RenderContext): boolean {
+function isMatrixClass(node: NodeOf<"table">): boolean {
   // `return false unless class_name == "table"` — a named subclass never
   // qualifies, which is exactly why `Align`, `Array`, `Multline` and `Split`
   // take the `■` branch despite inheriting this method.
@@ -279,8 +286,8 @@ function isMatrixClass(node: NodeOf<"table">, context: RenderContext): boolean {
  * **Two of its five lines are dead in the gem and are ported as dead:**
  *
  *   - `:416` calls `is_a?` on `open_paren&.class_name`, which is a String and
- *     so never a `Paren::Norm`. Its `Vmatrix` answer is unreachable from here;
- *     the `⒩` in the corpus comes from `Vmatrix#matrix_symbol` instead.
+ *     so never a `Paren::Norm`. Its `Vmatrix` mark is unreachable through this
+ *     helper; the only way to `⒩` is `Vmatrix#matrix_symbol`.
  *   - `:419` compares `class_name` — always downcased — against the capitalised
  *     literal `"Bmatrix"`, which no class name can equal.
  *
@@ -299,7 +306,7 @@ function matrixClassName(node: NodeOf<"table">, context: RenderContext): string 
   // `:420` — `return unless unicodemath_table_class?`. A no-op at this call
   // site, which asked the same question a moment ago; re-asked so the function
   // is correct standalone, as the gem's is.
-  if (!isMatrixClass(node, context)) return null;
+  if (!isMatrixClass(node)) return null;
 
   const rendered = renderWithoutOptions(node.openParen, node.kind, context);
   const matrixName = parenthesisMatricesKey(rendered);
@@ -413,11 +420,7 @@ function tableValues(
  * `RenderError` here (ARCHITECTURE.md §5) — never the silent render a
  * `context.render` for every node would have produced.
  */
-function renderWithoutOptions(
-  field: unknown,
-  kind: string,
-  context: RenderContext,
-): string | null {
+function renderWithoutOptions(field: unknown, kind: string, context: RenderContext): string | null {
   if (!isNode(field)) {
     throw new RenderError(
       `table.openParen: ${describeSlot(field)} does not answer to_unicodemath — ` +

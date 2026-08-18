@@ -169,8 +169,12 @@ describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every group the provenance records", () => {
+    // 13 case payloads and 1 rejection payload. Counted apart on purpose: the
+    // rejection payload carries no rendering, so folding it into the case
+    // count would inflate what "the corpus covers" claims.
     expect(corpus.payloads.length).toBe(13);
-    expect(corpus.provenance.payloads.length).toBe(13);
+    expect(corpus.rejectionPayloads.length).toBe(1);
+    expect(corpus.provenance.payloads.length).toBe(14);
     assertExpectedGroups(corpus);
   });
 

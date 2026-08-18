@@ -84,6 +84,36 @@ The rejection suite must carry, at minimum:
   projection checked against it class by class.
 - **Symbol context exception matrix** from the behavioural probes (TODO 2),
   driving the `symbol-context-matrix` gate.
+
+  **Scoped 2026-08-18; the gate is green but only half of what it claims.**
+  `test/generated/symbol-context.spec.ts` (11 tests, already in `selects`)
+  checks the *generated matrix's* internal consistency — every named symbol is
+  one a slice can look up, every axis is one the manifest declares, every entry
+  records a real difference. Its own header says the renderers "add their
+  behavioural half here when they land". All three have landed; the half is
+  still owed.
+
+  What the behavioural half can and cannot cover, measured rather than assumed:
+
+  - **`intent` — unreachable by design.** Five of the six MathML exceptions
+    (`Dd`, `Ii`, `Intercal`, `Jj`, `UpcaseDd`) vary only on this axis, and
+    `toMathml` *refuses the option by name*: "the intent attribute pipeline
+    (intentify, intent post-processing) is unmeasured"
+    (`src/formats/mathml/renderer.ts`, `DEFERRED_OPTIONS`). So the gate cannot
+    become fully behavioural until that deferral lifts. The spec should assert
+    the refusal is real and name these exceptions as deferred, rather than
+    quietly covering only the rest.
+  - **`table` — reachable, and the port already threads it.**
+    `src/render/symbol/asciimath.ts` consults `ASCIIMATH_SYMBOL_EXCEPTIONS`,
+    and `src/render/binary-function/asciimath.ts` merges `table: true` for a
+    formula cell. Measured against the oracle at `00c52783`:
+    `Symbols::Comma.new.to_asciimath(options: { table: true })` → `'","'`;
+    with `{ table: false }` or `{}` → `','`.
+  - **The test must build the node, not parse for it.** `","` in AsciiMath
+    source parses as quoted *Text*, not a `Comma` symbol, in the gem and the
+    port alike — both render `[[a "," b],[c,d]]` identically. A test written
+    through the parser would pass while exercising the text path and proving
+    nothing about the exception.
 - **Adversarial inputs**: deep nesting, unmatched fences, long token runs. The
   bar is a **clean outcome** in bounded time — a parse or a typed error, never
   a crash, a hang or a stack overflow. `ARCHITECTURE.md` §7 says "clean

@@ -260,6 +260,64 @@ export function formulaBoundary(node: MathNode, context: RenderContext): string 
   return squeezeSolidus(htmlEntityToUnicode(rendered.join(separator)));
 }
 
+/**
+ * `is_a?(Math::Function::Power)` and `is_a?(Math::Function::Base)`, as the port
+ * can ask them.
+ *
+ * The census aliases `Power` onto `BinaryFunction` and `PowerBase` onto
+ * `TernaryFunction`, so a `Power` here is a `binaryFunction` node carrying that
+ * Ruby class basename — there is no `power` kind to match on. `Base` is
+ * implemented in its own right, so it is a plain kind check.
+ */
+export function isPower(node: unknown): boolean {
+  return isNode(node) && node.kind === "binaryFunction" && node.name === "Power";
+}
+
+export function isBase(node: unknown): boolean {
+  return isNode(node) && node.kind === "base";
+}
+
+/**
+ * `naryand_value` — `ternary_function.rb:257`, and `nary.rb:212` byte for byte.
+ *
+ * The body under an n-ary operator. A `Fenced` child supplies its own
+ * delimiters, so it gets the naryand mark alone; anything else is additionally
+ * wrapped in white lenticular brackets.
+ */
+export function naryandValue(field: unknown, context: RenderContext): string {
+  if (!isNode(field)) return "";
+
+  const rendered = context.render(field) ?? "";
+  // U+2592 MEDIUM SHADE is UnicodeMath's naryand separator.
+  return field.kind === "fenced" ? `▒${rendered}` : `▒〖${rendered}〗`;
+}
+
+/**
+ * `sub_value` as `Int` and `Prod` define it (`int.rb:151`, `prod.rb:165` —
+ * identical bodies, not shared in the gem).
+ */
+export function naryandSubValue(field: unknown, context: RenderContext): string {
+  if (miniSized(isNode(field) ? field : undefined)) return renderOptionalChild(field, context);
+  if (isBase(field)) return `_${renderOptionalChild(field, context)}`;
+
+  return `_${unicodemathParens(field, context) ?? ""}`;
+}
+
+/**
+ * `sup_value` as `Int` and `Prod` define it (`int.rb:141`, `prod.rb:155`).
+ *
+ * The mini-sized and prime cases emit the child *bare* — no `^` — because the
+ * character itself already reads as a superscript.
+ */
+export function naryandSupValue(field: unknown, context: RenderContext): string {
+  const node = isNode(field) ? field : undefined;
+  const rendered = renderOptionalChild(field, context);
+  if (miniSized(node) || primeUnicode(node, rendered)) return rendered;
+  if (isPower(field)) return `^${rendered}`;
+
+  return `^${unicodemathParens(field, context) ?? ""}`;
+}
+
 export function missingRenderer(kind: string, at: string): RenderError {
   // `RenderError` carries `format` and `kind` as fields, not just in the
   // message: ARCHITECTURE.md §5 makes them part of the error contract, so a

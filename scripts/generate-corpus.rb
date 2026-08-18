@@ -3400,12 +3400,59 @@ module CorpusGenerator
     # rows the latex projection reads (`latex_carrier_basenames` is generic
     # over the carrier), because reachability is a property of what the
     # AsciiMath transform CONSTRUCTS, not of what any renderer emits.
+    tables.merge!(unicodemath_font_tables)
+
     lists["unary_carrier_names"] =
       latex_carrier_basenames(registry, "Math::Function::UnaryFunction")
     lists["binary_carrier_names"] =
       latex_carrier_basenames(registry, "Math::Function::BinaryFunction")
 
     tables.merge(lists)
+  end
+
+  # The two hops `FontStyle#to_unicodemath` makes, as tables the port can read.
+  #
+  # The gem goes family-alias -> FontStyle subclass (`Utility::FONT_STYLES`) ->
+  # font name (`UnicodeMath::Constants::FONTS_CLASSES`), and the second hop is
+  # an ordered `find` rather than a lookup: a class's font is the ONE member of
+  # `FONTS_CLASSES` that appears among the aliases pointing at that class.
+  #
+  # That is only a table if the relation is a bijection, so this refuses to
+  # emit anything unless it is: every class must meet `FONTS_CLASSES` in
+  # exactly one alias, and every font must be claimed. Measured at the pinned
+  # oracle it is 14 classes onto 14 fonts with nothing left over — but a table
+  # generated from a relation that stopped being one would silently pick a
+  # winner, which is the failure the whole generator exists to prevent.
+  def unicodemath_font_tables
+    styles = Plurimath::Utility::FONT_STYLES
+    fonts = unicodemath_constant("FONTS_CLASSES")
+
+    aliases_by_class = Hash.new { |hash, key| hash[key] = [] }
+    styles.each do |family, klass|
+      aliases_by_class[klass.name.split("::").last] << family.to_s
+    end
+
+    font_of_class = aliases_by_class.to_h do |basename, aliases|
+      hit = aliases & fonts
+      unless hit.size == 1
+        raise Error, "FontStyle::#{basename} meets FONTS_CLASSES in #{hit.size} aliases " \
+                     "(#{hit.inspect}); the class -> font relation is no longer a function"
+      end
+
+      [basename, hit.first]
+    end
+
+    unclaimed = fonts.sort - font_of_class.values.sort
+    unless unclaimed.empty?
+      raise Error, "FONTS_CLASSES entries no FontStyle subclass claims: #{unclaimed.inspect}"
+    end
+
+    class_of_family = styles.to_h { |family, klass| [family.to_s, klass.name.split("::").last] }
+
+    {
+      "font_of_class" => font_of_class.sort.to_h,
+      "class_of_family" => class_of_family.sort.to_h,
+    }
   end
 
   # --- symbol data payloads ------------------------------------------------

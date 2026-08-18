@@ -1,10 +1,17 @@
 /**
  * Mirrors `function/sqrt.rb` — `Sqrt#to_unicodemath` (:42).
  *
- * The gem does not guard `parameter_one`, and `unicodemath_parens` returns nil
- * for a nil field, so a rootless sqrt renders as the bare radical. Measured on
- * the pinned oracle: `sqrt(` crashes in the gem before reaching here, which is
- * why the adversarial gate records it as a `RenderError` rather than output.
+ * The gem does not guard `parameter_one`, and neither does
+ * `unicodemath_parens`: its first line calls `field.to_unicodemath` before the
+ * trailing `if field`, so a nil root RAISES rather than rendering a bare
+ * radical. Measured on the pinned oracle:
+ *
+ *   Sqrt.new(nil).to_unicodemath  !! NoMethodError: undefined method
+ *                                    'to_unicodemath' for nil
+ *
+ * An earlier version of this file asserted the opposite in prose and rendered
+ * `"√"`, which is the "more correct than the oracle" defect
+ * PORTING-STANDARDS.md forbids. The crash maps to `RenderError` (§5).
  */
 
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";

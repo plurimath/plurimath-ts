@@ -194,14 +194,25 @@ export function isNode(value: unknown): value is MathNode {
  * fenced, in which case the fence is the wrapping.
  */
 export function unicodemathParens(field: unknown, context: RenderContext): string | null {
-  // `"(#{paren})" if field` — a nil field yields nil, not `()`.
-  if (!isNode(field)) return null;
-
-  const rendered = context.render(field);
+  // The trailing `if field` guard is a TRAP, and this helper used to fall for
+  // it: the gem's first line is `paren = field.to_unicodemath(options:)`,
+  // UNGUARDED, so a nil field raises before the guard is ever reached. The
+  // guard only decides whether a successfully-rendered field gets wrapped —
+  // it never rescues nil. Measured: `Sqrt.new(nil).to_unicodemath` raises
+  // `NoMethodError: undefined method 'to_unicodemath' for nil`, and so does
+  // `Monospace.new(nil)`.
+  //
+  // Returning null here instead made every caller silently render a bare
+  // radical where the gem crashes. `renderChild` throws for exactly this
+  // reason, so this delegates rather than repeating the check.
+  const rendered = renderChild(field, context, "unicodemath_parens");
+  // `renderChild` threw unless `field` is a node, so the trailing `if field`
+  // can never be false here — which is the point: it is not a nil guard.
   // `return paren if field.is_a?(Math::Function::Fenced)` — a fence is its own
-  // wrapping, so it is not wrapped again.
-  if (field.kind === "fenced") return rendered;
+  // wrapping, so it is not wrapped again, and it may legitimately render nil.
+  if ((field as MathNode).kind === "fenced") return rendered;
 
+  // `"(#{paren})"` interpolates a nil child as empty, giving `()`.
   return `(${rendered ?? ""})`;
 }
 

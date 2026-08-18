@@ -37,10 +37,10 @@ import {
   isNode,
   isPower,
   miniSized,
+  missingRenderer,
   type NodeOf,
   naryandSubValue,
   naryandSupValue,
-  missingRenderer,
   present,
   primeUnicode,
   type RenderContext,
@@ -232,13 +232,17 @@ function isAccented(field: unknown, context: RenderContext): boolean {
  * `.gsub(/\s+/, "")` (`power.rb:67`), spelled out because `\s` is not the same
  * class in the two languages.
  *
- * Measured on the pinned oracle against node: for
- * `"a b\tc\rd\ne\ff\vg h i​j"`, Ruby's `\s+` leaves
- * `a b c d e f g` collapsed but **keeps** U+00A0, U+2009 and U+200B, while
- * JavaScript's `\s+` also strips U+00A0 and U+2009. The explicit ASCII class
- * below reproduces Ruby's result exactly. This is reachable, not theoretical:
- * symbol renders are already decoded at this point, so a real NBSP can be in
- * the string being squeezed.
+ * Measured on the pinned oracle against node, on the same string
+ * `a SP b TAB c CR d LF e FF f VT g U+00A0 h U+2009 i U+200B j`:
+ *
+ *   - Ruby `gsub(/\s+/, "")` drops SP TAB CR LF FF VT and **keeps** U+00A0,
+ *     U+2009 and U+200B;
+ *   - JavaScript `replace(/\s+/g, "")` additionally drops U+00A0 and U+2009;
+ *   - JavaScript `replace(/[ \t\r\n\f\v]+/g, "")` reproduces Ruby byte for
+ *     byte.
+ *
+ * Reachable, not theoretical: a symbol's render is already decoded by the time
+ * it gets here, so a real NBSP can be in the string being squeezed.
  */
 const RUBY_WHITESPACE = /[ \t\r\n\f\v]+/g;
 

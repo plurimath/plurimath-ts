@@ -324,6 +324,35 @@ export function naryandSupValue(field: unknown, context: RenderContext): string 
 }
 
 /** A symbol id the generated table does not carry: a parity gap, not output. */
+/**
+ * `Core#unicodemath_field_value` (`core.rb:484`), as the port can compute it.
+ *
+ * The gem returns `field.value` for a generic symbol and
+ * `Utility.hexcode_in_input(field)` otherwise — the latter digs an ENTITY
+ * string out of the class's parse-input table. Its callers then compare that
+ * against entity-valued constants, so the whole comparison is entity-to-entity
+ * on the gem side.
+ *
+ * This port holds decoded glyphs in the symbol slice and entity text in the
+ * constant tables, so the comparison is done decoded on both sides instead.
+ * The decode is a bijection for these values, so the two agree.
+ */
+export function fieldGlyph(field: unknown, context: RenderContext): string | null {
+  if (!isNode(field) || field.kind !== "symbol") return null;
+
+  const rendered = context.render(field);
+  return rendered === null ? null : htmlEntityToUnicode(rendered);
+}
+
+/** Whether a decoded glyph appears in an entity-valued table. */
+export function glyphIn(glyph: string | null, entities: Iterable<string>): boolean {
+  if (glyph === null) return false;
+  for (const entity of entities) {
+    if (htmlEntityToUnicode(entity) === glyph) return true;
+  }
+  return false;
+}
+
 export function missingSymbol(symbolId: string): MissingSymbolDataError {
   return new MissingSymbolDataError(symbolId, FORMAT);
 }

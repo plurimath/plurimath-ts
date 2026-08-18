@@ -173,16 +173,37 @@ export function isNode(value: unknown): value is MathNode {
  * `Core#unicodemath_parens` — wrap a field in `(…)` unless it is already
  * fenced, in which case the fence is the wrapping.
  */
-export function unicodemathParens(
-  field: MathNode | undefined,
-  context: RenderContext,
-): string | null {
-  if (field === undefined) return null;
+export function unicodemathParens(field: unknown, context: RenderContext): string | null {
+  // `"(#{paren})" if field` — a nil field yields nil, not `()`.
+  if (!isNode(field)) return null;
 
   const rendered = context.render(field);
+  // `return paren if field.is_a?(Math::Function::Fenced)` — a fence is its own
+  // wrapping, so it is not wrapped again.
   if (field.kind === "fenced") return rendered;
 
   return `(${rendered ?? ""})`;
+}
+
+/**
+ * Render a slot that the type system cannot promise is a node.
+ *
+ * A slot holding a string, an array or nil is not something the gem can call
+ * `to_unicodemath` on — it raises `NoMethodError` there — so this raises the
+ * port's typed equivalent rather than inventing output for it.
+ */
+export function renderChild(value: unknown, context: RenderContext, at: string): string | null {
+  if (isNode(value)) return context.render(value);
+  throw new RenderError(
+    `${at}: cannot render ${typeof value} — the gem raises NoMethodError here`,
+    FORMAT,
+    "unknown",
+  );
+}
+
+/** A slot the gem guards with `&.`, where absent means "contribute nothing". */
+export function renderOptionalChild(value: unknown, context: RenderContext): string {
+  return isNode(value) ? (context.render(value) ?? "") : "";
 }
 
 /**
@@ -205,6 +226,38 @@ export function htmlEntityToUnicode(text: string): string {
 /** The gem's `\s/\s -> /` squeeze, applied at the same boundary. */
 export function squeezeSolidus(text: string): string {
   return text.replace(/\s\/\s/g, "/");
+}
+
+/**
+ * `Core#class_name` — `self.class.name.split("::").last.downcase`.
+ *
+ * The gem gets this from reflection; the port carries the Ruby class basename
+ * on the node (`UnaryFunctionInit.name`), so this is the same expression
+ * evaluated against that. It is *output* here, not just control flow: the
+ * unary carrier writes the name straight into the result.
+ */
+export function className(rubyName: string): string {
+  return rubyName.slice(rubyName.lastIndexOf(":") + 1).toLowerCase();
+}
+
+/**
+ * `Formula#to_unicodemath` (`formula.rb:187`) together with
+ * `Formula#unicodemath_value` (`:486`) — the format's boundary pass.
+ *
+ * Shared by `formula` and `mrow` because `Formula::Mrow` inherits this method
+ * rather than the child path, so a nested Mrow really does re-run the whole
+ * boundary. Idempotent, so that repetition is safe.
+ */
+export function formulaBoundary(node: MathNode, context: RenderContext): string | null {
+  const children = (node as { readonly value?: readonly unknown[] | undefined }).value;
+  if (children === undefined) return null;
+
+  // `join_str = " " if !(negated_value? || mini_sized?)` — Ruby's `join(nil)`
+  // concatenates, so a suppressed separator is the empty string, not a space.
+  const separator = negatedValue(node) || miniSized(node) ? "" : " ";
+  const rendered = children.map((child) => (isNode(child) ? (context.render(child) ?? "") : ""));
+
+  return squeezeSolidus(htmlEntityToUnicode(rendered.join(separator)));
 }
 
 export function missingRenderer(kind: string, at: string): RenderError {

@@ -3206,9 +3206,7 @@ module CorpusGenerator
   #
   # They land with the renderer code that reads them, measured through a render
   # the way the latex and mathml slices are.
-  UNICODEMATH_DEFERRED_TABLES = %w[
-    PHANTOM_SYMBOLS PARENTHESIS_MATRICES
-  ].freeze
+  UNICODEMATH_DEFERRED_TABLES = [].freeze
 
   def unicodemath_constant(name)
     unless Plurimath::UnicodeMath::Constants.const_defined?(name)
@@ -3345,9 +3343,43 @@ module CorpusGenerator
     flattened
   end
 
+  # `PARENTHESIS_MATRICES` carries three nil values — the gem's own "no
+  # delimiter" marker. They are dropped rather than emitted as empty strings:
+  # `Table#unicodemath_class_name` reverse-looks-up by a rendered paren string,
+  # which is never nil, so a nil-valued row can never be the answer.
+  def unicodemath_nullable_map(name)
+    unicodemath_constant(name).each_with_object({}) do |(key, value), map|
+      next if value.nil?
+
+      map[key.to_s] = value.to_s
+    end
+  end
+
+  # `PHANTOM_SYMBOLS` values are option hashes, and `Mpadded#mpadded_symbol`
+  # reverse-looks-them-up by a WHOLE hash (`PHANTOM_SYMBOLS.key(options)`).
+  # Emitted keyed by a canonical serialization of that hash so the port does a
+  # string lookup instead of reimplementing Ruby hash equality — key order is
+  # normalized because Ruby compares hashes by content, not insertion order.
+  def unicodemath_phantom_map
+    unicodemath_constant("PHANTOM_SYMBOLS").to_h do |name, options|
+      raise Error, "PHANTOM_SYMBOLS[#{name.inspect}] is #{options.class}" unless options.is_a?(::Hash)
+
+      [canonical_option_key(options), name.to_s]
+    end
+  end
+
+  def canonical_option_key(value)
+    case value
+    when ::Hash then "{#{value.sort_by { |k, _| k.to_s }.map { |k, v| "#{k}:#{canonical_option_key(v)}" }.join(',')}}"
+    else value.to_s
+    end
+  end
+
   def build_unicodemath_render_tables
     tables = UNICODEMATH_TABLES.to_h { |name, key| [key, unicodemath_string_map(name)] }
     tables["unicode_fractions"] = unicodemath_fraction_map
+    tables["parenthesis_matrices"] = unicodemath_nullable_map("PARENTHESIS_MATRICES")
+    tables["phantom_symbols"] = unicodemath_phantom_map
     tables["sub_parenthesis"] = unicodemath_nested_paren_map("SUB_PARENTHESIS")
     tables["sup_parenthesis"] = unicodemath_nested_paren_map("SUP_PARENTHESIS")
     lists = UNICODEMATH_LISTS.to_h { |name, key| [key, unicodemath_string_list(name)] }

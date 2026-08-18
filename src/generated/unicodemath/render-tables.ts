@@ -211,6 +211,24 @@ export const UNICODEMATH_UNICODE_FRACTIONS: ReadonlyMap<string, string> = new Ma
   ["3/4", "&#xbe;"],
 ]);
 
+export const UNICODEMATH_PARENTHESIS_MATRICES: ReadonlyMap<string, string> = new Map([
+  ["pmatrix", "("],
+  ["vmatrix", "|"],
+  ["Vmatrix", "\\Vert"],
+  ["bmatrix", "["],
+  ["Bmatrix", "{"],
+]);
+
+export const UNICODEMATH_PHANTOM_SYMBOLS: ReadonlyMap<string, string> = new Map([
+  ["{mpadded:{depth:0,height:0},phantom:true}", "hphantom"],
+  ["{mpadded:{width:0},phantom:true}", "vphantom"],
+  ["{phantom:true}", "phantom"],
+  ["{mpadded:{width:0},phantom:false}", "hsmash"],
+  ["{mpadded:{height:0},phantom:false}", "asmash"],
+  ["{mpadded:{depth:0},phantom:false}", "dsmash"],
+  ["{mpadded:{depth:0,height:0},phantom:false}", "smash"],
+]);
+
 export const UNICODEMATH_SUB_PARENTHESIS: ReadonlyMap<string, string> = new Map([
   ["(", "&#x208d;"],
   [")", "&#x208e;"],

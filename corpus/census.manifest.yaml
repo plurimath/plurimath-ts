@@ -5,16 +5,15 @@ schema: plurimath-corpus/manifest/1
 committable: false
 warnings:
 - generated with --allow-dirty
-- 'generator checkout dirty: scripts/generate-corpus.rb, src/render/frac/unicodemath.ts'
+- 'generator checkout dirty: scripts/generate-corpus.rb'
 generator:
   path: scripts/generate-corpus.rb
-  sha256: 8288ddcb783fb9262fbd581d086ffa9e18f14d34fda9be2bed9bd0dd81c92762
+  sha256: 4bb2ae34af06571ba03c106adf36b03a1727517e60ccbce4491284d7827a0713
   repository:
-    commit: 6b7ddc7d3ff64a87e20eba1e6afe483931f9b4e0
+    commit: 0127de7091f6ada3c450df04c21bd891abf1305e
     clean: false
     dirty_paths:
     - scripts/generate-corpus.rb
-    - src/render/frac/unicodemath.ts
 oracle:
   gem: plurimath
   version: 0.11.6

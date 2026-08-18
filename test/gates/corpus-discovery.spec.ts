@@ -140,8 +140,16 @@ function rubyConstant(script: string, name: string): string {
   return literal?.[1] ?? "";
 }
 
-/** The formats P1 renders, and so the targets every group must declare. */
-const REQUIRED_TARGETS = ["asciimath", "latex", "mathml"];
+/**
+ * The formats P1 renders, and so the targets every group must declare.
+ *
+ * `unicodemath` joined this set when its renderer landed — the corpus target
+ * was generated first (plurimath-testsuite), so a group that declares only
+ * three targets is now a group the UnicodeMath parity suite cannot check.
+ * Keeping the list at three would have let a stale group pass while silently
+ * exempting itself from a shipped format.
+ */
+const REQUIRED_TARGETS = ["asciimath", "latex", "mathml", "unicodemath"];
 
 describe("the submodule path every reader hardcodes", () => {
   it("is the one .gitmodules declares", () => {

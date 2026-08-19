@@ -375,7 +375,7 @@ describe("deep structure", () => {
 
 /**
  * The strongest available Ruby-derived fixture: the gem was asked, for all
- * 75 corpus formulas, which pairs satisfy `==`. Exactly three distinct pairs
+ * 90 corpus formulas, which pairs satisfy `==`. Exactly three distinct pairs
  * do, and each differs only in `input_string` — a field the projection skips.
  * Everything else is unequal, and every case equals itself.
  */
@@ -393,8 +393,8 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "symbol-latin-x|whitespace-surrounding",
   ]);
 
-  it("has the 75 cases it expects", () => {
-    expect(nodes).toHaveLength(75);
+  it("has the 90 cases it expects", () => {
+    expect(nodes).toHaveLength(90);
   });
 
   it("is reflexive: a rebuilt tree equals its twin", () => {

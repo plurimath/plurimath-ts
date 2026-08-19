@@ -41,7 +41,7 @@ describe("the rejection corpus", () => {
     // A rejection suite that runs zero cases passes in silence, and this
     // repository has already shipped one gate that did exactly that.
     expect(rejections.length).toBeGreaterThan(0);
-    expect(rejections.length).toBe(11);
+    expect(rejections.length).toBe(13);
   });
 
   it("names every case exactly once", () => {
@@ -131,6 +131,11 @@ const MAPPED_INDEX: ReadonlyMap<string, number> = new Map([
   ["frac-trailing-after-braces", 6],
   ["frac-trailing-after-parens", 6],
   ["frac-trailing-after-both", 11],
+  // The widened corpus's two explicit-fence rejections. The gem records 8 for
+  // both and the port reports 8 for both, so these agree — unlike
+  // `right-unclosed`, whose disagreement is pinned below.
+  ["left-right-curly", 8],
+  ["left-right-vert", 8],
 ]);
 
 /** The one case whose mapped index does not reproduce the gem's. */

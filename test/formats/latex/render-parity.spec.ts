@@ -14,7 +14,7 @@
  * from the same parse that produced the model — so both layers compare
  * against `Plurimath::Math.parse(input, :asciimath).to_latex`.
  *
- * The case count is pinned (75 = the corpus's 76 cases minus the one
+ * The case count is pinned (90 = the corpus's 91 cases minus the one
  * withheld UnitsML case that the pin actually contains — the exclusion
  * manifest names two, but the gem raises on the invalid one, so no case
  * for it was ever generated):
@@ -37,8 +37,8 @@ function expectedLatex(entry: (typeof cases)[number]): string {
 }
 
 describe("latex render parity, corpus layer (recorded model -> text)", () => {
-  it("has the 75 reachable cases (76 pinned, 1 withheld as UnitsML)", () => {
-    expect(cases.length).toBe(75);
+  it("has the 90 reachable cases (91 pinned, 1 withheld as UnitsML)", () => {
+    expect(cases.length).toBe(90);
   });
 
   it("every case carries a latex expectation", () => {

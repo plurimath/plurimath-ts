@@ -39,6 +39,37 @@ const ORACLE = join(REPO_ROOT, "scripts", "gate-oracle.rb");
  * `gate-oracle.rb` ends in a `begin`/`rescue` CLI dispatch that would print
  * usage and exit, so the body is loaded up to the module's closing `end`.
  */
+/**
+ * Runs a Ruby snippet with whatever Ruby this machine has.
+ *
+ * `mise x -- ruby` is how this repository drives Ruby locally, and using it
+ * here made every test in this file fail in CI: the `gates` job installs node
+ * and pnpm only, so `mise` does not exist there. Plain `ruby` does — Ubuntu
+ * runners ship it, and none of the functions under test load plurimath or any
+ * gem, so the bare interpreter is enough. `mise` stays as the local fallback
+ * for machines where Ruby is only on a managed shim.
+ */
+function runRuby(source: string): { stdout: string; status: number | null } {
+  const direct = spawnSync("ruby", ["-e", source], {
+    encoding: "utf8",
+    cwd: REPO_ROOT,
+    timeout: 60_000,
+  });
+  if (direct.error === undefined) return { stdout: direct.stdout ?? "", status: direct.status };
+
+  const viaMise = spawnSync("mise", ["x", "--", "ruby", "-e", source], {
+    encoding: "utf8",
+    cwd: REPO_ROOT,
+    timeout: 60_000,
+  });
+  if (viaMise.error !== undefined) {
+    // Neither works: fail loudly rather than skip. A gate that quietly does
+    // not run is the failure mode this whole file exists to prevent.
+    throw new Error("no ruby available: tried `ruby` and `mise x -- ruby`");
+  }
+  return { stdout: viaMise.stdout ?? "", status: viaMise.status };
+}
+
 function inOracle(expression: string): { ok: boolean; output: string } {
   const harness = `
     require "json"
@@ -52,10 +83,7 @@ function inOracle(expression: string): { ok: boolean; output: string } {
       puts JSON.generate({ "ok" => false, "value" => "#{e.class}: #{e.message.lines.first.strip}" })
     end
   `;
-  const result = spawnSync("mise", ["x", "--", "ruby", "-e", harness], {
-    encoding: "utf8",
-    cwd: REPO_ROOT,
-  });
+  const result = runRuby(harness);
   const line = result.stdout.trim().split("\n").pop() ?? "";
   const parsed = JSON.parse(line) as { ok: boolean; value: string };
   return { ok: parsed.ok, output: parsed.value };
@@ -164,12 +192,8 @@ describe("the timeout bounds the whole exchange, not just the wait", () => {
         puts "RAISED #{(Time.now - started).round}"
       end
     `;
-    const result = spawnSync("mise", ["x", "--", "ruby", "-e", harness], {
-      encoding: "utf8",
-      cwd: REPO_ROOT,
-      timeout: 60_000,
-    });
-    const line = (result.stdout ?? "").trim().split("\n").pop() ?? "";
+    const result = runRuby(harness);
+    const line = result.stdout.trim().split("\n").pop() ?? "";
     // Raised by the runner itself, well inside the harness's own 60s ceiling —
     // if the deadlock were back, spawnSync would kill it instead.
     expect(line.startsWith("RAISED")).toBe(true);

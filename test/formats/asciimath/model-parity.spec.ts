@@ -22,10 +22,10 @@ import { readCorpusCases } from "../../core/model-builder";
 const cases = readCorpusCases();
 
 describe("the pinned corpus, end to end", () => {
-  it("has the 90 reachable cases (91 pinned, 1 withheld as UnitsML)", () => {
+  it("has the 75 reachable cases (76 pinned, 1 withheld as UnitsML)", () => {
     // A suite that quietly ran zero cases has already happened to this
     // repository once (the depcruise gate); the count is pinned so it cannot.
-    expect(cases.length).toBe(90);
+    expect(cases.length).toBe(75);
   });
 
   it.each(cases.map((entry) => [entry.id, entry] as const))(

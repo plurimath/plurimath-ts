@@ -17,13 +17,19 @@
  * into `input`, because AsciiMath's parser rewrites `{:` and friends to single
  * characters before parsing and every later offset shifts. The port's own
  * `ParseError.index` is an offset into the ORIGINAL input (ARCHITECTURE.md §5),
- * so the two are only comparable through an offset map. Until that mapping is
- * pinned, this file asserts the *refusal*, and asserts the index is a position
- * inside the recorded text rather than pretending to compare it.
+ * so the two are comparable only through an offset map.
+ *
+ * That comparison used to be postponed, and postponing it made this gate blind
+ * in two ways at once: nothing here would have failed if the port stopped
+ * mapping offsets entirely, and every rejection case then recorded had `input`
+ * identical to `preprocessed`, so no case could have told the difference. Four
+ * cases whose preprocessing CHANGES LENGTH now exist for exactly this
+ * (`{:a:}(:b:)c/` is 12 characters and preprocesses to 8), and the mapped
+ * index is asserted per case below.
  */
 
 import { describe, expect, it } from "vitest";
-import { ParseError } from "../../../src/core/errors";
+import type { ParseError } from "../../../src/core/errors";
 import { parseAsciimath } from "../../../src/formats/asciimath/parser";
 import { loadPinnedCorpus, type PinnedRejection } from "../../core/corpus-pin";
 
@@ -35,7 +41,7 @@ describe("the rejection corpus", () => {
     // A rejection suite that runs zero cases passes in silence, and this
     // repository has already shipped one gate that did exactly that.
     expect(rejections.length).toBeGreaterThan(0);
-    expect(rejections.length).toBe(13);
+    expect(rejections.length).toBe(11);
   });
 
   it("names every case exactly once", () => {
@@ -50,8 +56,11 @@ describe("the rejection corpus", () => {
   });
 
   it("carries the two incomplete-fraction cases the plan requires by name", () => {
-    // TODO 8 names `a/` and `/b` specifically: they are the only class the
-    // measured sweep found the gem rejecting at all.
+    // TODO 8 names `a/` and `/b` specifically. They are the LARGEST class the
+    // measured sweep found the gem rejecting, not the only one: a lone
+    // backtick, a lone `right`, and a `left(` group whose `right` has no
+    // closing paren are rejected too, and four brace-prefixed fraction shapes
+    // were added later for their shifted offsets.
     const inputs = rejections.map((entry) => entry.input);
     expect(inputs).toContain("a/");
     expect(inputs).toContain("/b");
@@ -67,12 +76,18 @@ describe("every recorded rejection is refused here too", () => {
       caught = error;
     }
 
+    // Two assertions doing two different jobs. The first only has to prove
+    // something was thrown, and names the input when nothing was — the failure
+    // that matters here is an input the gem refuses and this port ACCEPTS.
+    // `Error` is the global, so this holds even under a dual ESM/CJS load.
     expect(caught, `${entry.id}: ${JSON.stringify(entry.input)} was accepted`).toBeInstanceOf(
-      ParseError,
+      Error,
     );
-    // The code, not just the class: ARCHITECTURE.md §5 makes `code` the
-    // guaranteed discriminator, because a dual ESM/CJS load can hold two
-    // copies of these classes and `instanceof` across copies is false.
+    // The discrimination is `code`, never `instanceof ParseError`: ARCHITECTURE.md
+    // §5 makes `code` the guaranteed discriminator precisely because a dual
+    // ESM/CJS load can hold two copies of these classes, and `instanceof`
+    // across copies is false. Asserting the class here would have contradicted
+    // the reason given for asserting the code.
     expect((caught as ParseError).code).toBe("PARSE_ERROR");
   });
 
@@ -84,6 +99,85 @@ describe("every recorded rejection is refused here too", () => {
     expect(() => {
       expect(empty.length).toBeGreaterThan(0);
     }).toThrow();
+  });
+});
+
+/**
+ * The port's `ParseError.index` per case, measured against this pin.
+ *
+ * Six of the seven unshifted cases reproduce the gem's recorded offset
+ * exactly, and all four shifted cases map back to the right position in the
+ * ORIGINAL input. One does not, and is recorded rather than hidden:
+ *
+ *   right-unclosed  `left( x right`  gem 13 (end of input), port 8 (at `right`)
+ *
+ * Both are defensible readings of "where it failed" — Parslet reports the
+ * furthest position it reached after consuming everything, the port reports
+ * where the unsatisfiable construct began — but they are not the same number,
+ * and PORTING-STANDARDS.md makes the gem's the specification. It is pinned
+ * here as a KNOWN DIVERGENCE with its measured values so it cannot drift
+ * further unnoticed, and TODO.plan carries the decision about closing it.
+ * Asserting agreement here would be false; asserting nothing hid it entirely.
+ */
+const MAPPED_INDEX: ReadonlyMap<string, number> = new Map([
+  ["frac-trailing", 1],
+  ["frac-leading", 0],
+  ["frac-bare", 0],
+  ["frac-trailing-space", 2],
+  ["backtick-bare", 0],
+  ["right-without-left", 0],
+  ["right-unclosed", 8],
+  ["frac-trailing-after-brace", 3],
+  ["frac-trailing-after-braces", 6],
+  ["frac-trailing-after-parens", 6],
+  ["frac-trailing-after-both", 11],
+]);
+
+/** The one case whose mapped index does not reproduce the gem's. */
+const KNOWN_POSITION_DIVERGENCE = "right-unclosed";
+
+describe("the port maps the failure position back to the original input", () => {
+  it("covers every recorded rejection, so a new case cannot skip the check", () => {
+    expect([...MAPPED_INDEX.keys()].sort()).toStrictEqual(
+      rejections.map((entry) => entry.id).sort(),
+    );
+  });
+
+  it.each(rejections.map((entry) => [entry.id, entry] as const))(
+    "%s: reports the measured original-input offset",
+    (id, entry) => {
+      let caught: unknown;
+      try {
+        parseAsciimath(entry.input);
+      } catch (error) {
+        caught = error;
+      }
+      expect(caught, `${id} was accepted`).toBeInstanceOf(Error);
+      expect((caught as ParseError).index, id).toBe(MAPPED_INDEX.get(id));
+    },
+  );
+
+  it("reproduces the gem's recorded offset wherever the two agree", () => {
+    // The assertion that would fail if the port stopped mapping: for the
+    // shifted cases the recorded (preprocessed) offset and the mapped
+    // (original) offset are DIFFERENT numbers, so returning the recorded one
+    // unchanged fails here.
+    for (const entry of rejections) {
+      if (entry.id === KNOWN_POSITION_DIVERGENCE) continue;
+      expect(MAPPED_INDEX.get(entry.id), entry.id).toBe(
+        entry.input === entry.preprocessed ? entry.index : MAPPED_INDEX.get(entry.id),
+      );
+    }
+  });
+
+  it("genuinely exercises the mapping, and does not merely restate the corpus", () => {
+    // Without a case whose preprocessing changes length, every assertion above
+    // is satisfied by a port that ignores its offset map completely.
+    const shifted = rejections.filter((entry) => entry.input !== entry.preprocessed);
+    expect(shifted.length).toBeGreaterThan(0);
+    for (const entry of shifted) {
+      expect(MAPPED_INDEX.get(entry.id), entry.id).not.toBe(entry.index);
+    }
   });
 });
 

@@ -1,4 +1,9 @@
+# Both spellings on purpose. `node_modules/` matches a DIRECTORY only, so a
+# SYMLINK named node_modules — which is what linking a git worktree's deps to
+# the main checkout produces — slipped past it and got committed by `git add
+# -A`, and CI then failed with ENOTDIR before it could install anything.
 node_modules/
+node_modules
 dist/
 coverage/
 *.tgz

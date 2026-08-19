@@ -134,3 +134,44 @@ describe("the comparator reports what it used to hide", () => {
     expect(r.output).toBe('["accept/reject"]');
   });
 });
+
+describe("the timeout bounds the whole exchange, not just the wait", () => {
+  /**
+   * The first version of this timeout joined the process thread with a
+   * deadline — but wrote stdin INLINE, before that join. A child that stops
+   * reading fills the pipe, `stdin.write` blocks, and execution never reaches
+   * the deadline at all: the bound covered everything except the most likely
+   * place to hang. It also killed only the direct pid, so a `bundle exec ruby`
+   * child could outlive the kill and hold the pipes open past the deadline the
+   * runner had just announced.
+   *
+   * Measured before the fix: an external `timeout 4s` had to kill the probe
+   * (exit 124). After: the runner raises on its own deadline.
+   */
+  it("raises on its own deadline when the child never reads stdin", () => {
+    const harness = `
+      lines = File.read(${JSON.stringify(ORACLE)}).lines
+      stop = lines.each_with_index.find { |l, i| l == "end\\n" && i > 100 }
+      eval(lines[0..stop[1]].join)
+      OracleGate.send(:remove_const, :DIFFERENTIAL_TIMEOUT_SECONDS)
+      OracleGate.const_set(:DIFFERENTIAL_TIMEOUT_SECONDS, 3)
+      started = Time.now
+      begin
+        OracleGate.capture_bounded({}, "ruby", "-e", "sleep 600",
+          stdin_data: "x" * (4 * 1024 * 1024), chdir: Dir.pwd, label: "probe")
+        puts "NO_TIMEOUT"
+      rescue OracleGate::Error => e
+        puts "RAISED #{(Time.now - started).round}"
+      end
+    `;
+    const result = spawnSync("mise", ["x", "--", "ruby", "-e", harness], {
+      encoding: "utf8",
+      cwd: REPO_ROOT,
+      timeout: 60_000,
+    });
+    const line = (result.stdout ?? "").trim().split("\n").pop() ?? "";
+    // Raised by the runner itself, well inside the harness's own 60s ceiling —
+    // if the deadlock were back, spawnSync would kill it instead.
+    expect(line.startsWith("RAISED")).toBe(true);
+  });
+});

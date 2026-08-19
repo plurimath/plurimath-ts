@@ -388,23 +388,58 @@ module OracleGate
   # "Bounded" was in this command's own description while nothing bounded it.
   DIFFERENTIAL_TIMEOUT_SECONDS = 300
 
+  # Kills the child AND everything it spawned.
+  #
+  # `bundle exec ruby` is a process that execs another process, so killing the
+  # direct pid can leave the real worker running — and a surviving descendant
+  # holding the inherited pipes keeps this side blocked past the deadline it
+  # just declared. `pgroup: true` makes the child a group leader so the whole
+  # group can be signalled with a negative pid.
+  def kill_process_tree(pid)
+    Process.kill("KILL", -Process.getpgid(pid))
+  rescue Errno::ESRCH, Errno::EPERM
+    # Already gone, or not ours to signal; the join below settles it.
+    nil
+  end
+
   def capture_bounded(env, *command, stdin_data:, chdir:, label:)
     out = +""
     err = +""
     status = nil
-    Open3.popen3(env, *command, chdir: chdir) do |stdin, stdout, stderr, thread|
-      stdin.write(stdin_data)
-      stdin.close
+    Open3.popen3(env, *command, chdir: chdir, pgroup: true) do |stdin, stdout, stderr, thread|
+      # stdin is written on its OWN thread. Writing it inline looked harmless
+      # and was the hole in this timeout: a child that stops reading fills the
+      # pipe, `stdin.write` blocks forever, and execution never reaches the
+      # `join` below — so the declared bound covered everything except the one
+      # place most likely to hang. Reading stdout/stderr concurrently matters
+      # for the mirror-image deadlock, where the child blocks writing output
+      # that nobody is draining.
+      writer = Thread.new do
+        stdin.write(stdin_data)
+      rescue Errno::EPIPE, IOError
+        # The child died or closed stdin early; its exit status is the report.
+        nil
+      ensure
+        begin
+          stdin.close
+        rescue IOError
+          nil
+        end
+      end
       readers = [Thread.new { out << stdout.read }, Thread.new { err << stderr.read }]
+
       unless thread.join(DIFFERENTIAL_TIMEOUT_SECONDS)
-        Process.kill("KILL", thread.pid)
+        kill_process_tree(thread.pid)
         thread.join
-        readers.each { |r| r.join(5) }
+        [writer, *readers].each { |t| t.join(5) || t.kill }
         raise Error,
               "the #{label} half did not finish within " \
               "#{DIFFERENTIAL_TIMEOUT_SECONDS}s and was killed"
       end
-      readers.each(&:join)
+
+      # Bounded here too: the process has exited, so these must drain promptly,
+      # but a descendant holding the pipe open would otherwise hang the join.
+      [writer, *readers].each { |t| t.join(30) || t.kill }
       status = thread.value
     end
     [out, err, status]

@@ -130,6 +130,23 @@ describe("primeUnicode matches the gem", () => {
   it("is false when the child rendered to nothing", () => {
     expect(primeUnicode(new SymbolNode({ id: "Symbol" }), null)).toBe(false);
   });
+
+  it("is true for a generic symbol carrying the RAW apostrophe entity", () => {
+    // The gem's first test reads `field.value` before anything is rendered:
+    //   prime_unicode?(Symbol("&#x27;"))          => true
+    //   Symbol("&#x27;").to_unicodemath           => "&#x27;"   (undecoded)
+    //   Power(x, Symbol("&#x27;")).to_unicodemath => "x&#x27;"  (accented)
+    // so the render matches no glyph and the value test is what fires. An
+    // implementation that only compares decoded glyphs answers false here and
+    // silently loses the sub/sup swap for every hand-built or MathML-parsed
+    // tree. Measured against the pinned oracle.
+    const raw = new SymbolNode({ id: "Symbol", value: "&#x27;" });
+    expect(primeUnicode(raw, "&#x27;")).toBe(true);
+  });
+
+  it("is still false for a generic symbol with an unrelated value", () => {
+    expect(primeUnicode(new SymbolNode({ id: "Symbol", value: "x" }), "x")).toBe(false);
+  });
 });
 
 describe("negatedValue matches the gem", () => {

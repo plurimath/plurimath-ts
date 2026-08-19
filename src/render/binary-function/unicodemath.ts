@@ -47,6 +47,7 @@ import {
   renderChild,
   renderOptionalChild,
   unicodemathParens,
+  unreachableName,
 } from "../../formats/unicodemath/render-shared";
 import { UNICODEMATH_BINARY_CARRIER_NAMES } from "../../generated/unicodemath/render-tables";
 
@@ -273,19 +274,4 @@ function renderTd(node: NodeOf<"binaryFunction">, context: RenderContext): strin
     );
   }
   return cells.map((cell) => renderOptionalChild(cell, context)).join("");
-}
-
-/**
- * The twin of `unreachableName` in `../../formats/latex/render-shared.ts`,
- * which the unicodemath render-shared module does not yet export. Local until
- * a second unicodemath carrier needs it.
- */
-function unreachableName(kind: string, name: string): RenderError {
-  return new RenderError(
-    `No measured unicodemath rendering for ${kind} name "${name}" — it is not ` +
-      "reachable from the AsciiMath transform, and the gem class may override " +
-      "to_unicodemath. Rendering a carrier default instead would diverge silently.",
-    FORMAT,
-    kind,
-  );
 }

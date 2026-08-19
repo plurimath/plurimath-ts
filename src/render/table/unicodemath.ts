@@ -58,11 +58,13 @@
 import { type MathNode, RenderError } from "../../core/index";
 import {
   className,
+  describeSlot,
   FORMAT,
   htmlEntityToUnicode,
   isNode,
   type NodeOf,
   type RenderContext,
+  unreachableName,
 } from "../../formats/unicodemath/render-shared";
 import {
   UNICODEMATH_MATRIXS,
@@ -565,31 +567,4 @@ function renderOptionalParen(
 /** Ruby's `nil?` and `&.`: nil ALONE, never `false`, which is not nil there. */
 function isNil(value: unknown): boolean {
   return value === null || value === undefined;
-}
-
-/**
- * A slot described for an error message. Local because the unicodemath
- * `render-shared` has no `describeSlot` — the latex one does — and this file
- * may not add it there.
- */
-function describeSlot(value: unknown): string {
-  if (isNil(value)) return "nil";
-  if (typeof value === "string") return `the bare string ${JSON.stringify(value)}`;
-  if (Array.isArray(value)) return "a bare list";
-  if (typeof value === "object") return "an object";
-  return `a ${typeof value}`;
-}
-
-/**
- * The unicodemath `render-shared` has no `unreachableName` either, so the
- * latex carrier's refusal is spelled out here.
- */
-function unreachableName(kind: string, name: string): RenderError {
-  return new RenderError(
-    `No measured unicodemath rendering for ${kind} name "${name}" — six of the ten Table ` +
-      "subclasses override to_unicodemath, so rendering the carrier default for an " +
-      "unmeasured name would diverge silently.",
-    FORMAT,
-    kind,
-  );
 }

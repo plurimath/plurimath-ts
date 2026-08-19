@@ -32,11 +32,13 @@ import { RenderError } from "../../core/index";
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
 import {
   className,
+  describeSlot,
   FORMAT,
   isNode,
   present,
   renderChild,
   unicodemathParens,
+  unreachableName,
 } from "../../formats/unicodemath/render-shared";
 import { UNICODEMATH_UNARY_CARRIER_NAMES } from "../../generated/unicodemath/render-tables";
 
@@ -200,25 +202,6 @@ function renderTr(node: NodeOf<"unaryFunction">, context: RenderContext): string
 function slotCrash(at: string, value: unknown, kind: string): RenderError {
   return new RenderError(
     `${at}: is ${describeSlot(value)} — the gem raises NoMethodError here`,
-    FORMAT,
-    kind,
-  );
-}
-
-function describeSlot(value: unknown): string {
-  if (value === null || value === undefined) return "nil";
-  if (typeof value === "string") return `the bare string ${JSON.stringify(value)}`;
-  if (Array.isArray(value)) return "a bare list";
-  // Explicit, because the article fallback would say "a object".
-  if (typeof value === "object") return "an object";
-  return `a ${typeof value}`;
-}
-
-function unreachableName(kind: string, name: string): RenderError {
-  return new RenderError(
-    `No measured unicodemath rendering for ${kind} name "${name}" — it is not ` +
-      "reachable from the AsciiMath transform, and the gem class may override " +
-      "to_unicodemath. Rendering a carrier default instead would diverge silently.",
     FORMAT,
     kind,
   );

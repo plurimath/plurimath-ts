@@ -249,7 +249,7 @@ export function unicodemathParens(field: unknown, context: RenderContext): strin
 export function renderChild(value: unknown, context: RenderContext, at: string): string | null {
   if (isNode(value)) return context.render(value);
   throw new RenderError(
-    `${at}: cannot render ${typeof value} — the gem raises NoMethodError here`,
+    `${at}: cannot render ${describeSlot(value)} — the gem raises NoMethodError here`,
     FORMAT,
     "unknown",
   );
@@ -284,12 +284,18 @@ export function renderOptionalChild(value: unknown, context: RenderContext): str
 /**
  * What a bad slot held, said precisely enough to debug.
  *
- * `typeof` alone calls a list "an object" and null "an object", which sends a
- * reader looking in the wrong place.
+ * `typeof` alone calls a list "an object", null "an object", and would print
+ * "a object" from a naive article fallback. The distinctions matter because
+ * the three cases have different causes: a bare string is usually the gem's
+ * own parse of something like `left(right)`, a bare list is a slot that should
+ * have been wrapped in a Formula, and nil is a missing parameter.
  */
 export function describeSlot(value: unknown): string {
-  if (value === null) return "null";
-  if (Array.isArray(value)) return "an array";
+  if (value === null || value === undefined) return "nil";
+  if (typeof value === "string") return `the bare string ${JSON.stringify(value)}`;
+  if (Array.isArray(value)) return "a bare list";
+  // Explicit, because the article fallback would say "a object".
+  if (typeof value === "object") return "an object";
   return `a ${typeof value}`;
 }
 
@@ -303,7 +309,9 @@ export function describeSlot(value: unknown): string {
  */
 export function unreachableName(kind: string, name: string): RenderError {
   return new RenderError(
-    `${kind}: "${name}" is outside the measured unicodemath carrier set`,
+    `No measured unicodemath rendering for ${kind} name "${name}" — it is not ` +
+      "reachable from the AsciiMath transform, and the gem class may override " +
+      "to_unicodemath. Rendering a carrier default instead would diverge silently.",
     FORMAT,
     kind,
   );

@@ -140,15 +140,7 @@ function rubyConstant(script: string, name: string): string {
   return literal?.[1] ?? "";
 }
 
-/**
- * The formats P1 renders, and so the targets every group must declare.
- *
- * `unicodemath` joined this set when its renderer landed — the corpus target
- * was generated first (plurimath-testsuite), so a group that declares only
- * three targets is now a group the UnicodeMath parity suite cannot check.
- * Keeping the list at three would have let a stale group pass while silently
- * exempting itself from a shipped format.
- */
+/** The formats P1 renders, and so the targets every group must declare. */
 const REQUIRED_TARGETS = ["asciimath", "latex", "mathml", "unicodemath"];
 
 describe("the submodule path every reader hardcodes", () => {
@@ -241,6 +233,32 @@ describe("git's own record of the pin", () => {
     ).toMatch(/^[0-9a-f]{40}$|^[0-9a-f]{64}$/);
 
     expect(() => pinnedSubmoduleCommit(root, "sub")).toThrow("not a git working tree");
+  });
+
+  it("says git is missing rather than blaming the repository", () => {
+    // `spawnSync` reports an unrunnable binary through `error` and leaves
+    // `status` as null. A plain `status !== 0` check therefore announces "it is
+    // not a git working tree" when git simply is not installed — sending the
+    // reader to fix a repository that is fine. `declaredSubmodulePaths` already
+    // handled this; `pinnedSubmoduleCommit` did not.
+    const { root } = driftedSuperproject();
+    const emptyPath = mkdtempSync(join(tmpdir(), "plurimath-nogit-"));
+    scratches.push(emptyPath);
+    const previous = process.env.PATH;
+    try {
+      process.env.PATH = emptyPath;
+      expect(() => pinnedSubmoduleCommit(root, "sub")).toThrow("could not run git");
+    } finally {
+      // `process.env.X = undefined` stores the literal string "undefined" in
+      // Node, not an absent variable — verified. Restoring that way when PATH
+      // started unset would leave every later test resolving subprocesses
+      // against a nonexistent directory.
+      if (previous === undefined) delete process.env.PATH;
+      else process.env.PATH = previous;
+    }
+    // …and with git back, the same call succeeds, so the failure above was the
+    // missing binary and not the fixture.
+    expect(pinnedSubmoduleCommit(root, "sub").mode).toBe("160000");
   });
 
   it("reports a checkout left on the wrong commit as the drift it is", () => {

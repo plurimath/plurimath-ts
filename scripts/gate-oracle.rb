@@ -7,6 +7,7 @@
 # removing any Ruby coupling.
 
 require "fileutils"
+require "json"
 require "open3"
 require "tmpdir"
 
@@ -39,7 +40,10 @@ module OracleGate
                     pin changed and should be moved, not that this repository's
                     generated data should be edited.
         differential
-                    Reserved for the P1-completion differential runner.
+                    Generate a seeded, bounded batch of AsciiMath inputs and
+                    render each through both the gem and this port, reporting
+                    every divergence. Deterministic: the same --seed produces
+                    the same batch, so a failure can be reproduced exactly.
 
       Oracle checkout resolution:
         1. --gem PATH
@@ -90,7 +94,7 @@ module OracleGate
     when "testsuite"
       run_testsuite(argv)
     when "differential"
-      raise Error, "differential is registered for P1-completion and is not implemented in this change"
+      run_differential(argv)
     else
       raise UsageError, "unknown subcommand #{command.inspect}\n\n#{usage}"
     end
@@ -201,6 +205,71 @@ module OracleGate
     end
   end
 
+  DIFFERENTIAL_DEFAULT_SEED = 20_260_818
+  DIFFERENTIAL_DEFAULT_COUNT = 500
+
+  def differential_usage
+    <<~TEXT
+      Usage:
+        scripts/gate-oracle.rb differential [--gem PATH] [--seed N] [--count N]
+
+      Generates a seeded batch of AsciiMath inputs, renders each through the
+      oracle gem and through this port's built artifact, and reports every
+      case where they disagree.
+
+      A divergence is either side accepting what the other refused, or the two
+      producing different bytes for a format. Both refusing is agreement: the
+      gem's message text and this port's are different by design, so only the
+      fact of refusal is compared, never its wording.
+
+        --gem PATH   oracle checkout (default: $#{ORACLE_ENV})
+        --seed N     PRNG seed (default: #{DIFFERENTIAL_DEFAULT_SEED})
+        --count N    inputs to generate (default: #{DIFFERENTIAL_DEFAULT_COUNT})
+
+      Deterministic by construction: the same seed and count produce the same
+      inputs, so a reported divergence can be reproduced exactly rather than
+      hunted for.
+    TEXT
+  end
+
+  def parse_differential_options(argv)
+    options = { gem: nil, seed: DIFFERENTIAL_DEFAULT_SEED, count: DIFFERENTIAL_DEFAULT_COUNT }
+    rest = argv.dup
+
+    until rest.empty?
+      arg = rest.shift
+      case arg
+      when "--gem" then options[:gem] = File.expand_path(require_value!(rest, "--gem"))
+      when /\A--gem=(.+)\z/ then options[:gem] = File.expand_path(Regexp.last_match(1))
+      when "--seed" then options[:seed] = require_integer!(rest, "--seed")
+      when /\A--seed=(.+)\z/ then options[:seed] = Integer(Regexp.last_match(1))
+      when "--count" then options[:count] = require_integer!(rest, "--count")
+      when /\A--count=(.+)\z/ then options[:count] = Integer(Regexp.last_match(1))
+      when "--help", "-h"
+        puts differential_usage
+        exit 0
+      else
+        raise UsageError, "unknown option #{arg.inspect}\n\n#{differential_usage}"
+      end
+    end
+
+    raise UsageError, "--count must be positive" unless options[:count].positive?
+
+    options
+  end
+
+  def require_value!(rest, flag)
+    raise UsageError, "missing value after #{flag}" if rest.empty?
+
+    rest.shift
+  end
+
+  def require_integer!(rest, flag)
+    Integer(require_value!(rest, flag))
+  rescue ArgumentError
+    raise UsageError, "#{flag} takes an integer"
+  end
+
   def parse_check_options(argv, help_text)
     options = { gem: nil, check: false, help: false }
     rest = argv.dup
@@ -230,6 +299,278 @@ module OracleGate
     raise UsageError, "--check is required\n\n#{help_text}" unless options[:check]
 
     options
+  end
+
+  # --- differential runner ---------------------------------------------------
+
+  # The alphabet the generator draws from. Deliberately structure-heavy rather
+  # than realistic: the divergences worth finding are in fences, scripts and
+  # fractions, not in which Greek letter a symbol happens to be.
+  #
+  # `unitsml(` is absent on purpose. UnitsML is a deferred feature
+  # (ARCHITECTURE.md §5) and the port renders it as plain text by design, so
+  # generating it would report a divergence the project has already decided to
+  # have — the exclusion manifest exists for exactly that reason.
+  DIFFERENTIAL_ATOMS = %w[a b x y 1 2 42 alpha beta pi oo].freeze
+  DIFFERENTIAL_BINARY = %w[+ - * / = < >].freeze
+  DIFFERENTIAL_FENCES = [%w[( )], %w=[ ]=, %w[{ }], ["(:", ":)"]].freeze
+  DIFFERENTIAL_UNARY = %w[sqrt sin cos log abs hat bar vec ul].freeze
+
+  # One expression, drawn from `random` at the given depth. Depth is bounded
+  # rather than probabilistic: an unbounded generator eventually emits input
+  # deep enough to exhaust a stack, and a gate that sometimes dies on its own
+  # input teaches nothing.
+  def differential_expression(random, depth)
+    return DIFFERENTIAL_ATOMS.sample(random: random) if depth <= 0
+
+    case random.rand(7)
+    when 0 then DIFFERENTIAL_ATOMS.sample(random: random)
+    when 1
+      "#{differential_expression(random, depth - 1)} " \
+        "#{DIFFERENTIAL_BINARY.sample(random: random)} " \
+        "#{differential_expression(random, depth - 1)}"
+    when 2
+      open, close = DIFFERENTIAL_FENCES.sample(random: random)
+      "#{open}#{differential_expression(random, depth - 1)}#{close}"
+    when 3
+      "#{DIFFERENTIAL_UNARY.sample(random: random)}" \
+        "(#{differential_expression(random, depth - 1)})"
+    when 4
+      "#{differential_expression(random, depth - 1)}^" \
+        "(#{differential_expression(random, depth - 1)})"
+    when 5
+      "#{differential_expression(random, depth - 1)}_" \
+        "(#{differential_expression(random, depth - 1)})"
+    else
+      "frac(#{differential_expression(random, depth - 1)})" \
+        "(#{differential_expression(random, depth - 1)})"
+    end
+  end
+
+  def differential_inputs(seed, count)
+    random = Random.new(seed)
+    Array.new(count) { differential_expression(random, random.rand(1..3)) }.uniq
+  end
+
+  # What the gem does with each input, in the same shape the port half reports.
+  #
+  # Run as a subprocess under the ORACLE's bundler, not in this process: this
+  # script never loads plurimath itself, which is what lets it drive a gem
+  # checkout it does not share a dependency set with.
+  DIFFERENTIAL_GEM_SCRIPT = <<~RUBY
+    require "plurimath"
+    require "json"
+    results = JSON.parse(STDIN.read).map do |input|
+      begin
+        f = Plurimath::Math.parse(input, :asciimath)
+        { "ok" => true, "asciimath" => f.to_asciimath, "latex" => f.to_latex,
+          "mathml" => f.to_mathml }
+      rescue Plurimath::Math::ParseError
+        # A REFUSAL. Only the fact of it is comparable: the gem re-raises its
+        # parse failures as Math::ParseError with cause: nil, so its category
+        # is coarser than the port's and matching on it would compare noise.
+        { "ok" => false }
+      rescue StandardError => e
+        # NOT a refusal — a defect. A blanket rescue here turned any gem
+        # NoMethodError or renderer crash into an ordinary "the gem refused
+        # it", which then AGREED with a port refusal and was counted as
+        # parity. Reported as its own outcome so it can never do that again.
+        { "ok" => false, "defect" => e.class.name }
+      end
+    end
+    STDOUT.write("<<<JSON>>>" + JSON.generate(results))
+  RUBY
+
+  # Neither half may run unbounded. `Open3.capture3` has no deadline, so a
+  # stuck gem, a stuck renderer, or a stdin/stdout deadlock left this gate
+  # running forever — it could not falsely pass, but it could never reach a
+  # failing result either, which is the same thing to anyone waiting on CI.
+  # "Bounded" was in this command's own description while nothing bounded it.
+  DIFFERENTIAL_TIMEOUT_SECONDS = 300
+
+  # Kills the child AND everything it spawned.
+  #
+  # `bundle exec ruby` is a process that execs another process, so killing the
+  # direct pid can leave the real worker running — and a surviving descendant
+  # holding the inherited pipes keeps this side blocked past the deadline it
+  # just declared. `pgroup: true` makes the child a group leader so the whole
+  # group can be signalled with a negative pid.
+  def kill_process_tree(pid)
+    Process.kill("KILL", -Process.getpgid(pid))
+  rescue Errno::ESRCH, Errno::EPERM
+    # Already gone, or not ours to signal; the join below settles it.
+    nil
+  end
+
+  def capture_bounded(env, *command, stdin_data:, chdir:, label:)
+    out = +""
+    err = +""
+    status = nil
+    Open3.popen3(env, *command, chdir: chdir, pgroup: true) do |stdin, stdout, stderr, thread|
+      # stdin is written on its OWN thread. Writing it inline looked harmless
+      # and was the hole in this timeout: a child that stops reading fills the
+      # pipe, `stdin.write` blocks forever, and execution never reaches the
+      # `join` below — so the declared bound covered everything except the one
+      # place most likely to hang. Reading stdout/stderr concurrently matters
+      # for the mirror-image deadlock, where the child blocks writing output
+      # that nobody is draining.
+      writer = Thread.new do
+        stdin.write(stdin_data)
+      rescue Errno::EPIPE, IOError
+        # The child died or closed stdin early; its exit status is the report.
+        nil
+      ensure
+        begin
+          stdin.close
+        rescue IOError
+          nil
+        end
+      end
+      readers = [Thread.new { out << stdout.read }, Thread.new { err << stderr.read }]
+
+      unless thread.join(DIFFERENTIAL_TIMEOUT_SECONDS)
+        kill_process_tree(thread.pid)
+        thread.join
+        [writer, *readers].each { |t| t.join(5) || t.kill }
+        raise Error,
+              "the #{label} half did not finish within " \
+              "#{DIFFERENTIAL_TIMEOUT_SECONDS}s and was killed"
+      end
+
+      # Bounded here too: the process has exited, so these must drain promptly,
+      # but a descendant holding the pipe open would otherwise hang the join.
+      [writer, *readers].each { |t| t.join(30) || t.kill }
+      status = thread.value
+    end
+    [out, err, status]
+  end
+
+  def differential_gem_results(inputs, gem_dir)
+    stdout, stderr, status = capture_bounded(
+      { "BUNDLE_GEMFILE" => File.join(gem_dir, "Gemfile") },
+      "bundle", "exec", "ruby", "-Ilib", "-e", DIFFERENTIAL_GEM_SCRIPT,
+      stdin_data: JSON.generate(inputs), chdir: gem_dir, label: "gem"
+    )
+    raise Error, "the gem half failed (exit #{status.exitstatus}):\n#{stderr}" unless status.success?
+
+    marker = stdout.index("<<<JSON>>>")
+    raise Error, "the gem half produced no result:\n#{stdout[0, 400]}" unless marker
+
+    assert_differential_shape!(JSON.parse(stdout[(marker + "<<<JSON>>>".length)..]), "gem", inputs)
+  end
+
+  def differential_port_results(inputs)
+    stdout, stderr, status = capture_bounded(
+      {}, "node", File.join(REPO_ROOT, "scripts", "differential-port.mjs"),
+      stdin_data: JSON.generate(inputs), chdir: REPO_ROOT, label: "port"
+    )
+    raise Error, "the port half failed (exit #{status.exitstatus}):\n#{stderr}" unless status.success?
+
+    assert_differential_shape!(JSON.parse(stdout), "port", inputs)
+  end
+
+  # The fail-open path this gate could not survive: a half that returns one
+  # `{}` per input produces syntactically valid JSON with the right COUNT, and
+  # every `results["ok"]` is then nil. `nil != nil` is false, so the
+  # accept/reject branch does not fire, and `next unless gem["ok"]` skips the
+  # input — so the run compares NOTHING and reports zero divergences.
+  # Checking the count alone cannot see that; the shape has to be checked.
+  def assert_differential_shape!(results, label, inputs)
+    unless results.is_a?(::Array) && results.length == inputs.length
+      raise Error, "the #{label} half returned #{results.is_a?(::Array) ? results.length : results.class} " \
+                   "results for #{inputs.length} inputs"
+    end
+
+    results.each_with_index do |result, index|
+      unless result.is_a?(::Hash) && [true, false].include?(result["ok"])
+        raise Error, "the #{label} half's result #{index} has no boolean \"ok\": #{result.inspect[0, 120]}"
+      end
+      next unless result["ok"]
+
+      DIFFERENTIAL_FORMATS.each do |format|
+        next if result[format].is_a?(::String)
+
+        raise Error, "the #{label} half's result #{index} accepted the input but " \
+                     "its #{format} is #{result[format].inspect[0, 60]}, not a string"
+      end
+    end
+    results
+  end
+
+  DIFFERENTIAL_FORMATS = %w[asciimath latex mathml].freeze
+
+  def differential_divergences(inputs, gem_results, port_results)
+    inputs.each_with_index.filter_map do |input, index|
+      gem = gem_results[index]
+      port = port_results[index]
+
+      # A gem DEFECT is not a refusal, and must never be scored as agreement
+      # with one. Reported whatever the port did.
+      if gem["defect"]
+        next { "input" => input, "format" => "gem-defect",
+               "detail" => "the gem raised #{gem["defect"]}, which is not a refusal" }
+      end
+
+      if gem["ok"] != port["ok"]
+        accepted, refused = gem["ok"] ? %w[gem port] : %w[port gem]
+        next { "input" => input, "format" => "accept/reject",
+               "detail" => "#{accepted} accepted it, #{refused} refused it" }
+      end
+      next unless gem["ok"]
+
+      # `select`, not `find`: this command reports that it lists every
+      # divergence, and stopping at the first differing format made that
+      # false — an input wrong in all three showed up as one asciimath row.
+      differing = DIFFERENTIAL_FORMATS.select { |name| gem[name] != port[name] }
+      next if differing.empty?
+
+      differing.map do |format|
+        { "input" => input, "format" => format, "gem" => gem[format], "port" => port[format] }
+      end
+    end.flatten
+  end
+
+  def run_differential(argv)
+    options = parse_differential_options(argv)
+    gem_dir = resolve_gem_dir(options[:gem])
+    assert_clean_checkout!(gem_dir, "gem")
+
+    inputs = differential_inputs(options[:seed], options[:count])
+    puts "differential: seed #{options[:seed]}, #{inputs.length} distinct inputs"
+
+    port_results = differential_port_results(inputs)
+    unless port_results.length == inputs.length
+      raise Error, "asked the port about #{inputs.length} inputs and got " \
+                   "#{port_results.length} answers"
+    end
+
+    gem_results = differential_gem_results(inputs, gem_dir)
+    unless gem_results.length == inputs.length
+      raise Error, "asked the gem about #{inputs.length} inputs and got " \
+                   "#{gem_results.length} answers"
+    end
+    divergences = differential_divergences(inputs, gem_results, port_results)
+
+    if divergences.empty?
+      puts "differential: no divergences across #{inputs.length} inputs " \
+           "(#{inputs.length * DIFFERENTIAL_FORMATS.length} comparisons)"
+      return 0
+    end
+
+    puts "differential: #{divergences.length} divergence(s)"
+    divergences.first(20).each do |divergence|
+      puts "  #{divergence['input'].inspect} (#{divergence['format']})"
+      if divergence["detail"]
+        puts "    #{divergence['detail']}"
+      else
+        puts "    gem  #{divergence['gem'].inspect}"
+        puts "    port #{divergence['port'].inspect}"
+      end
+    end
+    puts "  ...and #{divergences.length - 20} more" if divergences.length > 20
+    puts "Reproduce with: scripts/gate-oracle.rb differential --seed #{options[:seed]} " \
+         "--count #{options[:count]}"
+    1
   end
 
   def resolve_gem_dir(cli_path)

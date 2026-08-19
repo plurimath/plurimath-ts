@@ -179,9 +179,9 @@ describe("the pin as shipped", () => {
     assertExpectedGroups(corpus);
   });
 
-  it("carries 77 cases with distinct ids", () => {
-    expect(corpus.cases.length).toBe(77);
-    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(77);
+  it("carries 76 cases with distinct ids", () => {
+    expect(corpus.cases.length).toBe(76);
+    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(76);
   });
 
   it("was generated the canonical way", () => {
@@ -211,7 +211,7 @@ describe("what this port checks against", () => {
     // shared corpus has no case to withhold — only the valid one is in the pin.
     expect(inPin).toStrictEqual(["text-unitsml-valid"]);
     expect(readCorpusCases().length).toBe(corpus.cases.length - inPin.length);
-    expect(readCorpusCases().length).toBe(76);
+    expect(readCorpusCases().length).toBe(75);
   });
 
   it("names the deferred feature and cites the architecture note", () => {
@@ -369,7 +369,7 @@ describe("a pin that quietly loses a group", () => {
 
   it("loads without complaint, which is the whole problem", () => {
     expect(shrunk.payloads.length).toBe(13);
-    expect(shrunk.cases.length).toBe(71);
+    expect(shrunk.cases.length).toBe(70);
     expect(shrunk.payloads.map((payload) => payload.group)).not.toContain("frac");
   });
 

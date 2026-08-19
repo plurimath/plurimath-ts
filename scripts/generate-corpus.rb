@@ -3292,13 +3292,27 @@ module CorpusGenerator
     constant.each do |key, value|
       next if value.nil?
 
-      text = value.inspect
-      if (earlier = seen[text])
+      # Keyed by the VALUE ITSELF, never by `value.inspect`.
+      #
+      # The reverse lookup this guards is `Hash#key`, which compares with Ruby's
+      # `eql?`/`hash` — and for a Hash value those are order-independent, while
+      # `inspect` is not. Measured:
+      #
+      #   a = {mpadded: {depth: "0", height: "0"}, phantom: true}
+      #   b = {phantom: true, mpadded: {height: "0", depth: "0"}}
+      #   a == b  -> true      a.eql?(b) -> true     a.hash == b.hash -> true
+      #   a.inspect == b.inspect -> false
+      #
+      # So an inspect-keyed guard let two genuinely duplicate `PHANTOM_SYMBOLS`
+      # option hashes through while `Hash#key` would silently return the first —
+      # the exact ambiguity this guard exists to refuse. Using the value as the
+      # key makes the guard compare the way the call site does.
+      if (earlier = seen[value])
         raise Error, "UnicodeMath::Constants::#{name} maps both #{earlier.inspect} " \
-                     "and #{key.inspect} to #{text}, and the gem reverse looks " \
-                     "this table up; the port cannot know which key wins"
+                     "and #{key.inspect} to #{value.inspect}, and the gem reverse " \
+                     "looks this table up; the port cannot know which key wins"
       end
-      seen[text] = key
+      seen[value] = key
     end
   end
 

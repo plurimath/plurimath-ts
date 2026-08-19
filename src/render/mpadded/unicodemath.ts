@@ -53,7 +53,17 @@ function phantomGlyph(options: Record<string, unknown>): string {
 
 /** The generator's key shape: sorted keys, nested hashes serialized the same way. */
 function canonicalKey(value: unknown): string {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return String(value);
+  // The TYPE is part of the key. Ruby hash equality distinguishes `0` from
+  // `"0"`, so `{width: 0}` and `{width: "0"}` are different keys and only one
+  // of them is in `PHANTOM_SYMBOLS`. Serializing both to `0` made a numeric
+  // width select the string-keyed entry — measured: the gem renders `(x)` for
+  // the integer form and `&#x21f3;(x)` for the string form, and this port gave
+  // the arrow for both.
+  if (value === null || value === undefined) return `nil:${String(value)}`;
+  if (typeof value !== "object") return `${typeof value}:${String(value)}`;
+  if (Array.isArray(value)) {
+    return `array:[${value.map((entry) => canonicalKey(entry)).join(",")}]`;
+  }
 
   const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
     a < b ? -1 : a > b ? 1 : 0,

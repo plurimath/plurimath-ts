@@ -370,7 +370,24 @@ const RUBY_SPACE = "[ \\t\\r\\n\\f\\v]";
  */
 export function rubyInterpolate(value: unknown): string {
   if (value === null || value === undefined) return "";
-  return String(value);
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+
+  // An Array or Hash reaches `to_s` as `inspect`, and `String(value)` is not
+  // that: JS gives `"x,2"` for `["x", 2]` where Ruby gives `["x", 2]`, and
+  // `"[object Object]"` for a hash where Ruby gives `{a: 1}`.
+  //
+  // Refused rather than approximated, because Ruby's own hash format is not
+  // stable across releases — `{a: 1}` on 4.0, `{:a=>1}` before 3.4 — so any
+  // reproduction here would pin this port to one Ruby version and be silently
+  // wrong against every other. No AsciiMath input produces such an option; a
+  // hand-built tree that does gets a typed error instead of plausible bytes.
+  throw new RenderError(
+    `cannot interpolate ${describeSlot(value)} — Ruby renders it through ` +
+      "`inspect`, whose format is version-dependent (ARCHITECTURE.md §5)",
+    FORMAT,
+    "unknown",
+  );
 }
 
 /**

@@ -147,6 +147,8 @@ describe("the prefixed and sized parens", () => {
   it.each([
     ["0.5em", "├-3(x)"],
     ["2em", "├3(x)"],
+    // Ruby's `to_f` reads an exponent: "1e1em" -> "1e1" -> 10.0. Measured.
+    ["1e1em", "├10(x)"],
   ])("sizes an open paren of %s", (minsize, expected) => {
     expect(
       toUnicodemath(fenced({ one: lround(), ...body, options: { open_paren: { minsize } } })),
@@ -212,7 +214,10 @@ describe("Fenced raises where the gem raises", () => {
           options: { open_paren: {} },
         }),
     ],
-    ...(["abc", "0em", "-1em"] as const).map(
+    // `Infinity` and `NaN` are JavaScript float spellings that Ruby's `to_f`
+    // does NOT accept — it returns 0.0, so the gem reaches log(0) and raises.
+    // `parseFloat` accepted them and this port emitted `├Infinity(x)`.
+    ...(["abc", "0em", "-1em", "Infinityem", "NaNem", "0x10em"] as const).map(
       (minsize) =>
         [
           `a minsize of ${minsize}`,

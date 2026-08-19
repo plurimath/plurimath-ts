@@ -607,3 +607,10 @@ change to that constant rather than a silent one.
 Deferred because closing it means changing where the grammar reports failure
 for unclosed `left(` groups, which is parser surgery well beyond the gate that
 found it.
+
+**Trigger:** the first of — a second rejection case is measured whose position
+also disagrees (making this a class rather than a single case), or any consumer
+depends on `ParseError.index` for an unclosed-fence input, or the AsciiMath
+grammar's failure reporting is touched for any other reason. Whichever comes
+first reopens it; `KNOWN_POSITION_DIVERGENCE` in
+`test/formats/asciimath/rejection-parity.spec.ts` is the one place to change.

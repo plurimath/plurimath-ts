@@ -56,8 +56,11 @@ describe("the rejection corpus", () => {
   });
 
   it("carries the two incomplete-fraction cases the plan requires by name", () => {
-    // TODO 8 names `a/` and `/b` specifically: they are the only class the
-    // measured sweep found the gem rejecting at all.
+    // TODO 8 names `a/` and `/b` specifically. They are the LARGEST class the
+    // measured sweep found the gem rejecting, not the only one: a lone
+    // backtick, a lone `right`, and a `left(` group whose `right` has no
+    // closing paren are rejected too, and four brace-prefixed fraction shapes
+    // were added later for their shifted offsets.
     const inputs = rejections.map((entry) => entry.input);
     expect(inputs).toContain("a/");
     expect(inputs).toContain("/b");

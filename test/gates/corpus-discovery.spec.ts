@@ -141,7 +141,7 @@ function rubyConstant(script: string, name: string): string {
 }
 
 /** The formats P1 renders, and so the targets every group must declare. */
-const REQUIRED_TARGETS = ["asciimath", "latex", "mathml"];
+const REQUIRED_TARGETS = ["asciimath", "latex", "mathml", "unicodemath"];
 
 describe("the submodule path every reader hardcodes", () => {
   it("is the one .gitmodules declares", () => {

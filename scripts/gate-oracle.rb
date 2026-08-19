@@ -365,38 +365,101 @@ module OracleGate
         f = Plurimath::Math.parse(input, :asciimath)
         { "ok" => true, "asciimath" => f.to_asciimath, "latex" => f.to_latex,
           "mathml" => f.to_mathml }
-      rescue StandardError
-        # Only the fact of refusal is comparable: the gem re-raises everything
-        # as Math::ParseError with cause: nil, so its category is coarser than
-        # the port's and matching on it would compare noise.
+      rescue Plurimath::Math::ParseError
+        # A REFUSAL. Only the fact of it is comparable: the gem re-raises its
+        # parse failures as Math::ParseError with cause: nil, so its category
+        # is coarser than the port's and matching on it would compare noise.
         { "ok" => false }
+      rescue StandardError => e
+        # NOT a refusal — a defect. A blanket rescue here turned any gem
+        # NoMethodError or renderer crash into an ordinary "the gem refused
+        # it", which then AGREED with a port refusal and was counted as
+        # parity. Reported as its own outcome so it can never do that again.
+        { "ok" => false, "defect" => e.class.name }
       end
     end
     STDOUT.write("<<<JSON>>>" + JSON.generate(results))
   RUBY
 
+  # Neither half may run unbounded. `Open3.capture3` has no deadline, so a
+  # stuck gem, a stuck renderer, or a stdin/stdout deadlock left this gate
+  # running forever — it could not falsely pass, but it could never reach a
+  # failing result either, which is the same thing to anyone waiting on CI.
+  # "Bounded" was in this command's own description while nothing bounded it.
+  DIFFERENTIAL_TIMEOUT_SECONDS = 300
+
+  def capture_bounded(env, *command, stdin_data:, chdir:, label:)
+    out = +""
+    err = +""
+    status = nil
+    Open3.popen3(env, *command, chdir: chdir) do |stdin, stdout, stderr, thread|
+      stdin.write(stdin_data)
+      stdin.close
+      readers = [Thread.new { out << stdout.read }, Thread.new { err << stderr.read }]
+      unless thread.join(DIFFERENTIAL_TIMEOUT_SECONDS)
+        Process.kill("KILL", thread.pid)
+        thread.join
+        readers.each { |r| r.join(5) }
+        raise Error,
+              "the #{label} half did not finish within " \
+              "#{DIFFERENTIAL_TIMEOUT_SECONDS}s and was killed"
+      end
+      readers.each(&:join)
+      status = thread.value
+    end
+    [out, err, status]
+  end
+
   def differential_gem_results(inputs, gem_dir)
-    stdout, stderr, status = Open3.capture3(
+    stdout, stderr, status = capture_bounded(
       { "BUNDLE_GEMFILE" => File.join(gem_dir, "Gemfile") },
       "bundle", "exec", "ruby", "-Ilib", "-e", DIFFERENTIAL_GEM_SCRIPT,
-      stdin_data: JSON.generate(inputs), chdir: gem_dir
+      stdin_data: JSON.generate(inputs), chdir: gem_dir, label: "gem"
     )
     raise Error, "the gem half failed (exit #{status.exitstatus}):\n#{stderr}" unless status.success?
 
     marker = stdout.index("<<<JSON>>>")
     raise Error, "the gem half produced no result:\n#{stdout[0, 400]}" unless marker
 
-    JSON.parse(stdout[(marker + "<<<JSON>>>".length)..])
+    assert_differential_shape!(JSON.parse(stdout[(marker + "<<<JSON>>>".length)..]), "gem", inputs)
   end
 
   def differential_port_results(inputs)
-    stdout, stderr, status = Open3.capture3(
-      "node", File.join(REPO_ROOT, "scripts", "differential-port.mjs"),
-      stdin_data: JSON.generate(inputs), chdir: REPO_ROOT
+    stdout, stderr, status = capture_bounded(
+      {}, "node", File.join(REPO_ROOT, "scripts", "differential-port.mjs"),
+      stdin_data: JSON.generate(inputs), chdir: REPO_ROOT, label: "port"
     )
     raise Error, "the port half failed (exit #{status.exitstatus}):\n#{stderr}" unless status.success?
 
-    JSON.parse(stdout)
+    assert_differential_shape!(JSON.parse(stdout), "port", inputs)
+  end
+
+  # The fail-open path this gate could not survive: a half that returns one
+  # `{}` per input produces syntactically valid JSON with the right COUNT, and
+  # every `results["ok"]` is then nil. `nil != nil` is false, so the
+  # accept/reject branch does not fire, and `next unless gem["ok"]` skips the
+  # input — so the run compares NOTHING and reports zero divergences.
+  # Checking the count alone cannot see that; the shape has to be checked.
+  def assert_differential_shape!(results, label, inputs)
+    unless results.is_a?(::Array) && results.length == inputs.length
+      raise Error, "the #{label} half returned #{results.is_a?(::Array) ? results.length : results.class} " \
+                   "results for #{inputs.length} inputs"
+    end
+
+    results.each_with_index do |result, index|
+      unless result.is_a?(::Hash) && [true, false].include?(result["ok"])
+        raise Error, "the #{label} half's result #{index} has no boolean \"ok\": #{result.inspect[0, 120]}"
+      end
+      next unless result["ok"]
+
+      DIFFERENTIAL_FORMATS.each do |format|
+        next if result[format].is_a?(::String)
+
+        raise Error, "the #{label} half's result #{index} accepted the input but " \
+                     "its #{format} is #{result[format].inspect[0, 60]}, not a string"
+      end
+    end
+    results
   end
 
   DIFFERENTIAL_FORMATS = %w[asciimath latex mathml].freeze
@@ -406,6 +469,13 @@ module OracleGate
       gem = gem_results[index]
       port = port_results[index]
 
+      # A gem DEFECT is not a refusal, and must never be scored as agreement
+      # with one. Reported whatever the port did.
+      if gem["defect"]
+        next { "input" => input, "format" => "gem-defect",
+               "detail" => "the gem raised #{gem["defect"]}, which is not a refusal" }
+      end
+
       if gem["ok"] != port["ok"]
         accepted, refused = gem["ok"] ? %w[gem port] : %w[port gem]
         next { "input" => input, "format" => "accept/reject",
@@ -413,11 +483,16 @@ module OracleGate
       end
       next unless gem["ok"]
 
-      format = DIFFERENTIAL_FORMATS.find { |name| gem[name] != port[name] }
-      next unless format
+      # `select`, not `find`: this command reports that it lists every
+      # divergence, and stopping at the first differing format made that
+      # false — an input wrong in all three showed up as one asciimath row.
+      differing = DIFFERENTIAL_FORMATS.select { |name| gem[name] != port[name] }
+      next if differing.empty?
 
-      { "input" => input, "format" => format, "gem" => gem[format], "port" => port[format] }
-    end
+      differing.map do |format|
+        { "input" => input, "format" => format, "gem" => gem[format], "port" => port[format] }
+      end
+    end.flatten
   end
 
   def run_differential(argv)

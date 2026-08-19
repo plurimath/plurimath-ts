@@ -150,6 +150,7 @@ const EXPECTED_GROUPS = [
   "nary",
   "numbers",
   "operators",
+  "permissive",
   "powers",
   "quoted-text",
   "roots",
@@ -173,18 +174,18 @@ describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every group the provenance records", () => {
-    // 17 case payloads and 1 rejection payload. Counted apart on purpose: the
+    // 18 case payloads and 1 rejection payload. Counted apart on purpose: the
     // rejection payload carries no rendering, so folding it into the case
     // count would inflate what "the corpus covers" claims.
-    expect(corpus.payloads.length).toBe(17);
+    expect(corpus.payloads.length).toBe(18);
     expect(corpus.rejectionPayloads.length).toBe(1);
-    expect(corpus.provenance.payloads.length).toBe(18);
+    expect(corpus.provenance.payloads.length).toBe(19);
     assertExpectedGroups(corpus);
   });
 
-  it("carries 85 cases with distinct ids", () => {
-    expect(corpus.cases.length).toBe(85);
-    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(85);
+  it("carries 91 cases with distinct ids", () => {
+    expect(corpus.cases.length).toBe(91);
+    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(91);
   });
 
   it("was generated the canonical way", () => {
@@ -214,7 +215,7 @@ describe("what this port checks against", () => {
     // shared corpus has no case to withhold — only the valid one is in the pin.
     expect(inPin).toStrictEqual(["text-unitsml-valid"]);
     expect(readCorpusCases().length).toBe(corpus.cases.length - inPin.length);
-    expect(readCorpusCases().length).toBe(84);
+    expect(readCorpusCases().length).toBe(90);
   });
 
   it("names the deferred feature and cites the architecture note", () => {
@@ -371,8 +372,8 @@ describe("a pin that quietly loses a group", () => {
   );
 
   it("loads without complaint, which is the whole problem", () => {
-    expect(shrunk.payloads.length).toBe(16);
-    expect(shrunk.cases.length).toBe(79);
+    expect(shrunk.payloads.length).toBe(17);
+    expect(shrunk.cases.length).toBe(85);
     expect(shrunk.payloads.map((payload) => payload.group)).not.toContain("frac");
   });
 

@@ -35,7 +35,7 @@ describe("the rejection corpus", () => {
     // A rejection suite that runs zero cases passes in silence, and this
     // repository has already shipped one gate that did exactly that.
     expect(rejections.length).toBeGreaterThan(0);
-    expect(rejections.length).toBe(9);
+    expect(rejections.length).toBe(13);
   });
 
   it("names every case exactly once", () => {

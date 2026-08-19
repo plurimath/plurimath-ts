@@ -13,7 +13,7 @@
  * false, displaystyle from the formula, unary spacing on), recorded by the
  * corpus generator from the same parse that produced the model.
  *
- * The case count is pinned (84 = the corpus's 85 cases minus the one
+ * The case count is pinned (90 = the corpus's 91 cases minus the one
  * withheld UnitsML case that the pin actually contains — the exclusion
  * manifest names two, but the gem raises on the invalid one, so no case
  * for it was ever generated):
@@ -36,8 +36,8 @@ function expectedMathml(entry: (typeof cases)[number]): string {
 }
 
 describe("mathml render parity, corpus layer (recorded model -> bytes)", () => {
-  it("has the 84 reachable cases (85 pinned, 1 withheld as UnitsML)", () => {
-    expect(cases.length).toBe(84);
+  it("has the 90 reachable cases (91 pinned, 1 withheld as UnitsML)", () => {
+    expect(cases.length).toBe(90);
   });
 
   it("every case carries a mathml expectation", () => {

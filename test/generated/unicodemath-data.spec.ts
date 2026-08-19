@@ -83,44 +83,53 @@ describe("the unicodemath symbol slice", () => {
   });
 });
 
-/** Sizes measured against the pinned oracle, so a table shrinking is visible. */
-const TABLE_SIZES: ReadonlyArray<readonly [string, { readonly size?: number; length?: number }]> = [
-  ["unary_symbols", UNICODEMATH_UNARY_SYMBOLS],
-  ["horizontal_brackets", UNICODEMATH_HORIZONTAL_BRACKETS],
-  ["accent_symbols", UNICODEMATH_ACCENT_SYMBOLS],
-  ["unary_arg_functions", UNICODEMATH_UNARY_ARG_FUNCTIONS],
-  ["size_overrides", UNICODEMATH_SIZE_OVERRIDES],
-  ["matrixs", UNICODEMATH_MATRIXS],
-  ["sub_alphabets", UNICODEMATH_SUB_ALPHABETS],
-  ["sup_alphabets", UNICODEMATH_SUP_ALPHABETS],
-  ["sub_digits", UNICODEMATH_SUB_DIGITS],
-  ["sup_digits", UNICODEMATH_SUP_DIGITS],
-  ["sub_operators", UNICODEMATH_SUB_OPERATORS],
-  ["sup_operators", UNICODEMATH_SUP_OPERATORS],
+/**
+ * Every table's EXACT size, measured against the pinned oracle.
+ *
+ * This used to assert only that sixteen tables were non-empty, with exact
+ * counts on four — so twelve of them could have shrunk to a single entry and
+ * still passed, which is the shape of a generator that half-ran. "A shrinking
+ * table is visible" was the claim; it was true of four tables and false of the
+ * other twelve. A count is the cheapest assertion that actually holds it.
+ */
+const TABLE_SIZES: ReadonlyArray<readonly [string, ReadonlyMap<string, string>, number]> = [
+  ["unary_symbols", UNICODEMATH_UNARY_SYMBOLS, 13],
+  ["horizontal_brackets", UNICODEMATH_HORIZONTAL_BRACKETS, 8],
+  ["accent_symbols", UNICODEMATH_ACCENT_SYMBOLS, 21],
+  ["unary_arg_functions", UNICODEMATH_UNARY_ARG_FUNCTIONS, 7],
+  ["size_overrides", UNICODEMATH_SIZE_OVERRIDES, 4],
+  ["matrixs", UNICODEMATH_MATRIXS, 8],
+  ["sub_alphabets", UNICODEMATH_SUB_ALPHABETS, 17],
+  ["sup_alphabets", UNICODEMATH_SUP_ALPHABETS, 25],
+  ["sub_digits", UNICODEMATH_SUB_DIGITS, 10],
+  ["sup_digits", UNICODEMATH_SUP_DIGITS, 10],
+  ["sub_operators", UNICODEMATH_SUB_OPERATORS, 4],
+  ["sup_operators", UNICODEMATH_SUP_OPERATORS, 3],
+];
+
+const LIST_SIZES: ReadonlyArray<readonly [string, readonly string[], number]> = [
+  ["undef_unary_functions", UNICODEMATH_UNDEF_UNARY_FUNCTIONS, 7],
+  ["fonts_classes", UNICODEMATH_FONTS_CLASSES, 14],
+  ["diacritic_overlays", UNICODEMATH_DIACRITIC_OVERLAYS, 23],
+  ["diacritic_belows", UNICODEMATH_DIACRITIC_BELOWS, 52],
 ];
 
 describe("the unicodemath render tables", () => {
-  it.each(TABLE_SIZES)("%s is not empty", (_name, table) => {
-    // An empty table is the failure mode that matters: the renderer would fall
-    // back on every lookup and produce plausible output nothing pinned.
-    expect((table as ReadonlyMap<string, string>).size).toBeGreaterThan(0);
+  it.each(TABLE_SIZES)("%s carries exactly its measured rows", (_name, table, size) => {
+    expect(table.size).toBe(size);
   });
 
-  it.each([
-    ["undef_unary_functions", UNICODEMATH_UNDEF_UNARY_FUNCTIONS],
-    ["fonts_classes", UNICODEMATH_FONTS_CLASSES],
-    ["diacritic_overlays", UNICODEMATH_DIACRITIC_OVERLAYS],
-    ["diacritic_belows", UNICODEMATH_DIACRITIC_BELOWS],
-  ])("%s is a non-empty list of distinct values", (_name, list) => {
-    expect(list.length).toBeGreaterThan(0);
-    expect(new Set(list).size).toBe(list.length);
+  it.each(LIST_SIZES)("%s carries exactly its measured entries", (_name, list, size) => {
+    expect(list.length).toBe(size);
+    // Distinctness matters separately: a list that grew by duplication would
+    // satisfy a count alone.
+    expect(new Set(list).size).toBe(size);
   });
 
-  it("carries the counts measured from the gem", () => {
-    expect(UNICODEMATH_ACCENT_SYMBOLS.size).toBe(21);
-    expect(UNICODEMATH_DIACRITIC_BELOWS.length).toBe(52);
-    expect(UNICODEMATH_SUP_ALPHABETS.size).toBe(25);
-    expect(UNICODEMATH_UNDEF_UNARY_FUNCTIONS.length).toBe(7);
+  it("covers every emitted table, so a new one cannot arrive unpinned", () => {
+    // Without this, adding a table to the generator and forgetting to pin it
+    // leaves it entirely unchecked while the suite stays green.
+    expect(TABLE_SIZES.length + LIST_SIZES.length).toBe(16);
   });
 
   it("keeps the reverse-lookup tables free of duplicate values", () => {

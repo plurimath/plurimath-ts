@@ -22,6 +22,7 @@ import {
   SYMBOLS_WITHOUT_CANONICAL_VALUE,
 } from "../../src/core/generated/symbol-canonical";
 import { UNICODEMATH_SYMBOL_EXCEPTIONS } from "../../src/generated/unicodemath/exceptions";
+import * as RenderTables from "../../src/generated/unicodemath/render-tables";
 import {
   UNICODEMATH_ACCENT_SYMBOLS,
   UNICODEMATH_DIACRITIC_BELOWS,
@@ -127,9 +128,35 @@ describe("the unicodemath render tables", () => {
   });
 
   it("covers every emitted table, so a new one cannot arrive unpinned", () => {
-    // Without this, adding a table to the generator and forgetting to pin it
-    // leaves it entirely unchecked while the suite stays green.
-    expect(TABLE_SIZES.length + LIST_SIZES.length).toBe(16);
+    // DERIVED from the module, never a hardcoded total. An earlier version of
+    // this test asserted `TABLE_SIZES.length + LIST_SIZES.length === 16`,
+    // which is satisfied by leaving both arrays untouched while a seventeenth
+    // table is emitted — the exact vacuity the test was added to prevent.
+    // Reading the module's own export names means a new table fails here by
+    // name until somebody pins its size.
+    const pinned = new Set([
+      ...TABLE_SIZES.map(([name]) => name),
+      ...LIST_SIZES.map(([name]) => name),
+    ]);
+    const emitted = Object.keys(RenderTables)
+      .filter((key) => key.startsWith("UNICODEMATH_"))
+      .map((key) => key.slice("UNICODEMATH_".length).toLowerCase())
+      // The carrier-name and font tables are asserted by the specs that own
+      // them (`render-shared`, `font-style`), and the nil-paren answer is a
+      // scalar, not a table with a size.
+      .filter(
+        (name) =>
+          !name.endsWith("carrier_names") &&
+          name !== "nil_paren_matrix" &&
+          name !== "font_of_class" &&
+          name !== "class_of_family" &&
+          name !== "symbols" &&
+          !name.endsWith("parenthesis") &&
+          !name.endsWith("matrices") &&
+          !name.endsWith("fractions") &&
+          !name.endsWith("phantom_symbols"),
+      );
+    expect([...pinned].sort()).toStrictEqual(emitted.sort());
   });
 
   it("keeps the reverse-lookup tables free of duplicate values", () => {

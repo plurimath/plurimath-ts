@@ -614,3 +614,27 @@ depends on `ParseError.index` for an unclosed-fence input, or the AsciiMath
 grammar's failure reporting is touched for any other reason. Whichever comes
 first reopens it; `KNOWN_POSITION_DIVERGENCE` in
 `test/formats/asciimath/rejection-parity.spec.ts` is the one place to change.
+
+## Ruby Float vs JavaScript number in option interpolation
+
+`rubyInterpolate` (`src/formats/unicodemath/render-shared.ts`) reproduces Ruby
+string interpolation for option values. It is exact for Integer, String and
+boolean, and cannot be exact for Float, because JavaScript has ONE numeric type:
+
+| Ruby | `to_s` | JS `String()` |
+|---|---|---|
+| `1.0` | `"1.0"` | `"1"` |
+| `1e20` | `"1.0e+20"` | `"100000000000000000000"` |
+| `-0.0` | `"-0.0"` | `"0"` |
+
+`1` and `1.0` are the same JS value, so the port cannot choose between "1" and
+"1.0" from the value alone. Closing this needs the corpus to carry the Ruby
+type alongside the value.
+
+Not reachable from any parser: the two interpolated options (`mask` on
+Sum/Int/Oint, `size` on Base) arrive as strings. Only a hand-built tree holding
+a Float reaches it.
+
+**Trigger:** the first of — a corpus case records a numeric option value, or a
+parser is added that can produce one, or the model schema gains Ruby type
+information for option values.

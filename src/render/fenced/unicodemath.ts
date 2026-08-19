@@ -260,7 +260,16 @@ function rubyToFloat(text: string): number {
   // `parseFloat` returned Infinity and this port emitted `├Infinity(x)` —
   // plausible output where the specification refuses. The match is anchored
   // and covers only what Ruby's numeric prefix allows.
-  const match = /^[ \t\r\n\f\v]*[+-]?\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?/.exec(text);
+  // An underscore is legal only BETWEEN digits, which `(?:_\d+)*` encodes, and
+  // a leading `.` is a valid float. Both were wrong in the first version of
+  // this regex — measured against Ruby over 25 spellings:
+  //   ".5"   to_f 0.5  (the old pattern required a leading digit -> 0)
+  //   "1__0" to_f 1.0  (the old pattern stripped every `_` -> 10)
+  // Ruby stops at the DOUBLE underscore, keeping only the leading `1`.
+  const match =
+    /^[ \t\r\n\f\v]*[+-]?(?:\d+(?:_\d+)*(?:\.\d+(?:_\d+)*)?|\.\d+(?:_\d+)*)(?:[eE][+-]?\d+(?:_\d+)*)?/.exec(
+      text,
+    );
   if (match === null) return 0;
   const parsed = Number.parseFloat(match[0].replace(/_/g, ""));
   return Number.isFinite(parsed) ? parsed : 0;

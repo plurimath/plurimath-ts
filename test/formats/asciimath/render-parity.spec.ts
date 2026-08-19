@@ -13,7 +13,7 @@
  * generator from the same parse that produced the model — so both layers
  * compare against `Plurimath::Math.parse(input, :asciimath).to_asciimath`.
  *
- * The case count is pinned (69 = the corpus's 70 cases minus the one
+ * The case count is pinned (84 = the corpus's 85 cases minus the one
  * withheld UnitsML case that the pin actually contains — the exclusion
  * manifest names two, but the gem raises on the invalid one, so no case
  * for it was ever generated):
@@ -36,8 +36,8 @@ function expectedAsciimath(entry: (typeof cases)[number]): string {
 }
 
 describe("asciimath render parity, corpus layer (recorded model -> text)", () => {
-  it("has the 69 reachable cases (70 pinned, 1 withheld as UnitsML)", () => {
-    expect(cases.length).toBe(69);
+  it("has the 84 reachable cases (85 pinned, 1 withheld as UnitsML)", () => {
+    expect(cases.length).toBe(84);
   });
 
   it("every case carries an asciimath expectation", () => {

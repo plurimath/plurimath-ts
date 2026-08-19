@@ -97,8 +97,8 @@ describe("corpus parity", () => {
   it("has the cases this port checks against", () => {
     // Guards the whole block: a reader that silently returned nothing would
     // make every `it.each` below vacuous.
-    expect(corpus.cases.length).toBe(70);
-    expect(reachable.length).toBe(69);
+    expect(corpus.cases.length).toBe(85);
+    expect(reachable.length).toBe(84);
   });
 
   it.each(reachable.map((entry) => [entry.id, entry] as const))(

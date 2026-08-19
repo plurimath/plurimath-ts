@@ -146,6 +146,7 @@ const EXPECTED_GROUPS = [
   "left-right",
   "matrices",
   "mixed",
+  "mod",
   "nary",
   "numbers",
   "operators",

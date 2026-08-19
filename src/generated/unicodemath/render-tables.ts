@@ -22,6 +22,17 @@
  * key for a duplicated value. The generator therefore refuses any table
  * that maps two keys to one value: a reverse lookup would silently pick
  * one, and the port would have no way to know which.
+ *
+ * Two entries here are NOT from `Constants` and are not lookups at all:
+ * `UNICODEMATH_UNARY_CARRIER_NAMES` and
+ * `UNICODEMATH_BINARY_CARRIER_NAMES` are the class basenames the
+ * AsciiMath transform reaches through each carrier, read from the
+ * `get_class` census registry — the same rows the latex projection
+ * reads, emitted separately so each format's carrier dispatch imports
+ * only its own slice. Membership only, deduplicated and sorted. The
+ * renderers add the names the transform constructs WITHOUT `get_class`
+ * (`Tr` on the unary carrier; `Power`, `Mod` and `Td` on the binary
+ * one), which no census row can carry.
  */
 
 export const UNICODEMATH_UNARY_SYMBOLS: ReadonlyMap<string, string> = new Map([
@@ -190,6 +201,125 @@ export const UNICODEMATH_SUP_OPERATORS: ReadonlyMap<string, string> = new Map([
   ["=", "&#x207c;"],
 ]);
 
+export const UNICODEMATH_UNICODE_FRACTIONS: ReadonlyMap<string, string> = new Map([
+  ["1/3", "&#x2153;"],
+  ["2/3", "&#x2154;"],
+  ["1/5", "&#x2155;"],
+  ["2/5", "&#x2156;"],
+  ["3/5", "&#x2157;"],
+  ["4/5", "&#x2158;"],
+  ["1/6", "&#x2159;"],
+  ["5/6", "&#x215a;"],
+  ["1/7", "&#x2150;"],
+  ["1/8", "&#x215b;"],
+  ["3/8", "&#x215c;"],
+  ["5/8", "&#x215d;"],
+  ["7/8", "&#x215e;"],
+  ["1/9", "&#x2151;"],
+  ["0/3", "&#x2189;"],
+  ["1/2", "&#xbd;"],
+  ["1/4", "&#xbc;"],
+  ["3/4", "&#xbe;"],
+]);
+
+export const UNICODEMATH_PARENTHESIS_MATRICES: ReadonlyMap<string, string> = new Map([
+  ["pmatrix", "("],
+  ["vmatrix", "|"],
+  ["Vmatrix", "\\Vert"],
+  ["bmatrix", "["],
+  ["Bmatrix", "{"],
+]);
+
+export const UNICODEMATH_PHANTOM_SYMBOLS: ReadonlyMap<string, string> = new Map([
+  ["{mpadded:{depth:0,height:0},phantom:true}", "hphantom"],
+  ["{mpadded:{width:0},phantom:true}", "vphantom"],
+  ["{phantom:true}", "phantom"],
+  ["{mpadded:{width:0},phantom:false}", "hsmash"],
+  ["{mpadded:{height:0},phantom:false}", "asmash"],
+  ["{mpadded:{depth:0},phantom:false}", "dsmash"],
+  ["{mpadded:{depth:0,height:0},phantom:false}", "smash"],
+]);
+
+export const UNICODEMATH_SUB_PARENTHESIS: ReadonlyMap<string, string> = new Map([
+  ["(", "&#x208d;"],
+  [")", "&#x208e;"],
+]);
+
+export const UNICODEMATH_SUP_PARENTHESIS: ReadonlyMap<string, string> = new Map([
+  ["⁽", "&#x207d;"],
+  ["⁾", "&#x207e;"],
+]);
+
+export const UNICODEMATH_FONT_OF_CLASS: ReadonlyMap<string, string> = new Map([
+  ["Bold", "mbf"],
+  ["BoldFraktur", "mbffrak"],
+  ["BoldItalic", "mbfit"],
+  ["BoldSansSerif", "mbfsans"],
+  ["BoldScript", "mbfscr"],
+  ["DoubleStruck", "Bbb"],
+  ["Fraktur", "mfrak"],
+  ["Italic", "mit"],
+  ["Monospace", "mtt"],
+  ["Normal", "mup"],
+  ["SansSerif", "msans"],
+  ["SansSerifBoldItalic", "mbfitsans"],
+  ["SansSerifItalic", "mitsans"],
+  ["Script", "mscr"],
+]);
+
+export const UNICODEMATH_CLASS_OF_FAMILY: ReadonlyMap<string, string> = new Map([
+  ["Bbb", "DoubleStruck"],
+  ["bb", "Bold"],
+  ["bbb", "DoubleStruck"],
+  ["bf", "Bold"],
+  ["bold", "Bold"],
+  ["bold-fraktur", "BoldFraktur"],
+  ["bold-italic", "BoldItalic"],
+  ["bold-sans-serif", "BoldSansSerif"],
+  ["bold-script", "BoldScript"],
+  ["cal", "Script"],
+  ["cc", "Script"],
+  ["double", "DoubleStruck"],
+  ["double-struck", "DoubleStruck"],
+  ["fr", "Fraktur"],
+  ["fraktur", "Fraktur"],
+  ["ii", "Italic"],
+  ["italic", "Italic"],
+  ["mathbb", "DoubleStruck"],
+  ["mathbf", "Bold"],
+  ["mathcal", "Script"],
+  ["mathfrak", "Fraktur"],
+  ["mathit", "Italic"],
+  ["mathrm", "Normal"],
+  ["mathsf", "SansSerif"],
+  ["mathtt", "Monospace"],
+  ["mbf", "Bold"],
+  ["mbffrak", "BoldFraktur"],
+  ["mbfit", "BoldItalic"],
+  ["mbfitsans", "SansSerifBoldItalic"],
+  ["mbfsans", "BoldSansSerif"],
+  ["mbfscr", "BoldScript"],
+  ["mfrak", "Fraktur"],
+  ["mit", "Italic"],
+  ["mitsans", "SansSerifItalic"],
+  ["monospace", "Monospace"],
+  ["msans", "SansSerif"],
+  ["mscr", "Script"],
+  ["mtt", "Monospace"],
+  ["mup", "Normal"],
+  ["normal", "Normal"],
+  ["rm", "Normal"],
+  ["sans-serif", "SansSerif"],
+  ["sans-serif-bold-italic", "SansSerifBoldItalic"],
+  ["sans-serif-italic", "SansSerifItalic"],
+  ["script", "Script"],
+  ["sf", "SansSerif"],
+  ["textbf", "Bold"],
+  ["textit", "Italic"],
+  ["textrm", "Normal"],
+  ["tt", "Monospace"],
+]);
+
 export const UNICODEMATH_UNDEF_UNARY_FUNCTIONS: readonly string[] = [
   "arg",
   "def",
@@ -296,4 +426,50 @@ export const UNICODEMATH_DIACRITIC_BELOWS: readonly string[] = [
   "&#x20ed;",
   "&#x20ee;",
   "&#x20ef;",
+];
+
+export const UNICODEMATH_NIL_PAREN_MATRIX: string = "eqarray";
+
+export const UNICODEMATH_UNARY_CARRIER_NAMES: readonly string[] = [
+  "Arccos",
+  "Arcsin",
+  "Arctan",
+  "Cancel",
+  "Cos",
+  "Cosh",
+  "Cot",
+  "Coth",
+  "Csc",
+  "Csch",
+  "Deg",
+  "Det",
+  "Dim",
+  "Exp",
+  "Gcd",
+  "Glb",
+  "Ker",
+  "Lcm",
+  "Left",
+  "Lg",
+  "Liminf",
+  "Limsup",
+  "Ln",
+  "Lub",
+  "Max",
+  "Min",
+  "Right",
+  "Sec",
+  "Sech",
+  "Sin",
+  "Sinh",
+  "Sup",
+  "Tan",
+  "Tanh",
+];
+
+export const UNICODEMATH_BINARY_CARRIER_NAMES: readonly string[] = [
+  "Lim",
+  "Log",
+  "Root",
+  "Stackrel",
 ];

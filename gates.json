@@ -85,7 +85,7 @@
       "class": "A",
       "activatesAt": "P1-completion",
       "run": "pnpm test rejection",
-      "selects": [],
+      "selects": ["test/formats/asciimath/rejection-parity.spec.ts"],
       "description": "Inputs the gem rejects are rejected here"
     },
     {

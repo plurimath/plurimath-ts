@@ -149,6 +149,16 @@ describe("the prefixed and sized parens", () => {
     ["2em", "├3(x)"],
     // Ruby's `to_f` reads an exponent: "1e1em" -> "1e1" -> 10.0. Measured.
     ["1e1em", "├10(x)"],
+    // Ruby's `to_f` accepts a leading dot and treats an underscore as legal
+    // only BETWEEN digits, stopping at a doubled one. Measured:
+    //   ".5".to_f   => 0.5     log(0.5)/log(1.25)  rounds to -3
+    //   "1__0".to_f => 1.0     log(1)/log(1.25)    is 0
+    // The first version of the port's pattern required a leading digit (so
+    // ".5em" fell to the crash branch) and stripped every underscore (so
+    // "1__0em" became 10).
+    [".5em", "├-3(x)"],
+    ["1__0em", "├0(x)"],
+    ["1_0em", "├10(x)"],
   ])("sizes an open paren of %s", (minsize, expected) => {
     expect(
       toUnicodemath(fenced({ one: lround(), ...body, options: { open_paren: { minsize } } })),

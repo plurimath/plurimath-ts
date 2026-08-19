@@ -371,6 +371,15 @@ const RUBY_SPACE = "[ \\t\\r\\n\\f\\v]";
 export function rubyInterpolate(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
+  // Exactly right for a Ruby Integer, and the closest a JS `number` can get to
+  // a Ruby Float. It cannot be made exact: JS has one numeric type, so `1` and
+  // `1.0` are the SAME value here while Ruby prints "1" and "1.0" — and
+  // `1e20.to_s` is "1.0e+20" where JS gives "100000000000000000000", and
+  // `-0.0.to_s` is "-0.0" where JS gives "0". Choosing between them needs type
+  // information the corpus does not carry, so this is a stated limit rather
+  // than a claim of faithfulness (TODO.plan/deferred.md). Unreachable from any
+  // parser — `mask` and `size` arrive as strings — so only a hand-built tree
+  // holding a Float reaches the divergence.
   if (typeof value === "number" || typeof value === "boolean") return String(value);
 
   // An Array or Hash reaches `to_s` as `inspect`, and `String(value)` is not

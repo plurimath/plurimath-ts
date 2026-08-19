@@ -55,6 +55,11 @@ describe("the gem-verified mathml render sweep", () => {
     }
   });
 
+  // 30s, not the 5s default. This walks the whole recorded sweep — thousands
+  // of parses and renders — and lands within a few hundred milliseconds of the
+  // default when the suite runs it alongside everything else, so it passed
+  // alone and failed in a full run. A timeout that depends on machine load is
+  // a flaky gate, and a flaky gate gets ignored.
   it("reproduces every gem render byte for byte", () => {
     const rendered = fixture.cases.filter((entry) => entry.render !== undefined);
     expect(rendered.length).toBeGreaterThan(0);
@@ -75,7 +80,7 @@ describe("the gem-verified mathml render sweep", () => {
     }
     expect(divergences).toEqual([]);
     expect(rendered.length).toBe(1636);
-  });
+  }, 30_000);
 
   it("refuses to parse exactly what the gem refuses to parse", () => {
     const refused = fixture.cases.filter((entry) => entry.error === "parse");

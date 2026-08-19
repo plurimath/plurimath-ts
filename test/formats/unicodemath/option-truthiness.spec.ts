@@ -251,11 +251,50 @@ describe("option values are interpolated, not type-checked", () => {
     new BaseNode({ parameterOne: sym("x"), parameterTwo: sym("y"), options: { size } as never });
 
   it.each([
+    ["an array", ["x", 2]],
+    ["a hash", { a: 1 }],
+  ])("refuses to interpolate %s rather than guessing", (_name, value) => {
+    // Ruby renders both through `inspect`, and its hash format is not stable
+    // across releases (`{a: 1}` on 4.0, `{:a=>1}` before 3.4), so a
+    // reproduction would pin this port to one Ruby. `String(value)` was
+    // silently wrong for both: measured, the gem gives `∑["x", 2]_(a)^(b)▒〖c〗`
+    // where the port gave `∑x,2…`, and `∑{a: 1}…` where it gave
+    // `∑[object Object]…`.
+    expect(() => toUnicodemath(sum(value))).toThrow(RenderError);
+  });
+
+  it.each([
     ["a known size", "1.25em", "x_ℲA〖y〗"],
     ["an unknown size", "zzz", "x_Ⅎ〖y〗"],
     ["a non-string truthy size", 5, "x_Ⅎ〖y〗"],
     ["a null size", null, "x_〖y〗"],
   ])("emits the marker for %s", (_name, size, expected) => {
     expect(toUnicodemath(base(size))).toBe(expected);
+  });
+});
+
+/**
+ * `PHANTOM_SYMBOLS` is reverse-looked-up by a WHOLE option hash, and Ruby hash
+ * equality distinguishes `0` from `"0"`. Measured:
+ *
+ *   Mpadded(x, {mpadded: {width: "0"}, phantom: true}) => "&#x21f3;(x)"
+ *   Mpadded(x, {mpadded: {width: 0},   phantom: true}) => "(x)"
+ *
+ * The port canonicalised both to the same key, so a numeric width selected the
+ * string-keyed entry and emitted the arrow for both.
+ */
+describe("the phantom lookup key keeps Ruby's scalar types apart", () => {
+  const phantom = (width: unknown) =>
+    new MpaddedNode({
+      parameterOne: sym("x"),
+      options: { mpadded: { width }, phantom: true } as never,
+    });
+
+  it("finds the entry for a string width", () => {
+    expect(toUnicodemath(phantom("0"))).toBe("&#x21f3;(x)");
+  });
+
+  it("does NOT find it for a numeric width", () => {
+    expect(toUnicodemath(phantom(0))).toBe("(x)");
   });
 });

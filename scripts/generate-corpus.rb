@@ -3398,9 +3398,25 @@ module CorpusGenerator
     end
   end
 
+  # The TYPE is part of the key, because Ruby hash equality is what the call
+  # site uses and it distinguishes `0` from `"0"`. Serializing both as `0` made
+  # `{width: 0}` and `{width: "0"}` collide, and only one of them is really in
+  # `PHANTOM_SYMBOLS` — measured, the gem renders `(x)` for the integer form
+  # and `&#x21f3;(x)` for the string form. The port's `canonicalKey` mirrors
+  # this exactly; the two serializations must stay in step or every phantom
+  # lookup silently misses.
   def canonical_option_key(value)
     case value
-    when ::Hash then "{#{value.sort_by { |k, _| k.to_s }.map { |k, v| "#{k}:#{canonical_option_key(v)}" }.join(',')}}"
+    when ::Hash
+      inner = value.sort_by { |k, _| k.to_s }
+                   .map { |k, v| "#{k}:#{canonical_option_key(v)}" }.join(",")
+      "{#{inner}}"
+    when ::Array then "array:[#{value.map { |v| canonical_option_key(v) }.join(',')}]"
+    when ::NilClass then "nil:"
+    when ::String then "string:#{value}"
+    when ::Integer, ::Float then "number:#{value}"
+    when ::TrueClass, ::FalseClass then "boolean:#{value}"
+    when ::Symbol then "string:#{value}"
     else value.to_s
     end
   end

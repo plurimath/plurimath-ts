@@ -250,6 +250,18 @@ function parenSize(minsize: unknown, at: string): string {
  * become 0 here and take the crash branch above, not fall through as NaN.
  */
 function rubyToFloat(text: string): number {
-  const parsed = Number.parseFloat(text);
-  return Number.isNaN(parsed) ? 0 : parsed;
+  // Ruby's grammar, not JavaScript's. `parseFloat` accepts spellings `to_f`
+  // rejects, and the difference is reachable: measured on the oracle,
+  //
+  //   "Infinity".to_f => 0.0      "NaN".to_f  => 0.0      "0x10".to_f => 0.0
+  //   "1e3".to_f      => 1000.0   "1.5abc".to_f => 1.5
+  //
+  // so `minsize: "Infinity"` makes the gem raise FloatDomainError while
+  // `parseFloat` returned Infinity and this port emitted `├Infinity(x)` —
+  // plausible output where the specification refuses. The match is anchored
+  // and covers only what Ruby's numeric prefix allows.
+  const match = /^[ \t\r\n\f\v]*[+-]?\d[\d_]*(?:\.\d[\d_]*)?(?:[eE][+-]?\d+)?/.exec(text);
+  if (match === null) return 0;
+  const parsed = Number.parseFloat(match[0].replace(/_/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
 }

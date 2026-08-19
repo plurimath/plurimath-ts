@@ -345,6 +345,27 @@ export function squeezeSolidus(text: string): string {
 const RUBY_SPACE = "[ \\t\\r\\n\\f\\v]";
 
 /**
+ * Ruby string interpolation, `"#{value}"` — which calls `to_s` on ANYTHING.
+ *
+ * Option values reach the renderer as whatever the parser put there, and the
+ * gem never type-checks them before interpolating. Measured on `Sum`'s `mask`:
+ *
+ *   mask: "x"    => "∑x_(a)^(b)▒〖c〗"
+ *   mask: 5      => "∑5_(a)^(b)▒〖c〗"
+ *   mask: false  => "∑false_(a)^(b)▒〖c〗"
+ *   mask: :m     => "∑m_(a)^(b)▒〖c〗"
+ *   mask: nil    => "∑_(a)^(b)▒〖c〗"
+ *
+ * So a `typeof value === "string"` test — which this port used at three mask
+ * sites — silently drops every non-string, where the gem prints it. Only nil
+ * interpolates to nothing; `false` does not.
+ */
+export function rubyInterpolate(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  return String(value);
+}
+
+/**
  * A slot the gem guards with a bare `if parameter_one` — Ruby truthiness, so
  * `nil` AND `false` contribute nothing, and anything else is sent the message.
  *

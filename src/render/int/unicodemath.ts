@@ -12,6 +12,7 @@ import {
   naryandSupValue,
   naryandValue,
   present,
+  rubyInterpolate,
 } from "../../formats/unicodemath/render-shared";
 
 /** U+222B INTEGRAL. */
@@ -20,6 +21,10 @@ const INTEGRAL = "∫";
 export function renderInt(node: NodeOf<"int">, context: RenderContext): string {
   const sub = !present(node.parameterOne) ? "" : naryandSubValue(node.parameterOne, context);
   const sup = !present(node.parameterTwo) ? "" : naryandSupValue(node.parameterTwo, context);
-  const mask = typeof node.options?.mask === "string" ? node.options.mask : "";
+  // `mask = self.options&.dig(:mask) if self.options&.key?(:mask)` and then a
+  // bare `#{mask}`. Ruby interpolates ANY value through `to_s`, so a `typeof
+  // === "string"` test silently dropped integers, `false` and symbols that the
+  // gem prints. Measured: `mask: 5` gives "∑5…", `mask: false` gives "∑false…".
+  const mask = rubyInterpolate(node.options?.mask);
   return `${INTEGRAL}${mask}${sub}${sup}${naryandValue(node.parameterThree, context)}`;
 }

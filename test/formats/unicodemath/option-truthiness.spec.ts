@@ -35,6 +35,7 @@ import {
   type MathNode,
   MpaddedNode,
   OversetNode,
+  SumNode,
   SymbolNode,
 } from "../../../src/core/index";
 import { toUnicodemath } from "../../../src/formats/unicodemath/renderer";
@@ -212,5 +213,49 @@ describe("the boundary squeeze uses Ruby's whitespace class, not JavaScript's", 
   ])("leaves a solidus delimited by %s alone", (_name, space) => {
     const text = `a${space}/${space}b`;
     expect(toUnicodemath(formulaOf(text))).toBe(text);
+  });
+});
+
+/**
+ * `#{options[:mask]}` and `#{...invert[options[:size]]}` — Ruby interpolation
+ * calls `to_s` on ANY value, and only `nil` interpolates to nothing.
+ *
+ *   Sum mask="x"   => "∑x_(a)^(b)▒〖c〗"    Sum mask=5     => "∑5_(a)^(b)▒〖c〗"
+ *   Sum mask=false => "∑false_(a)^(b)▒〖c〗" Sum mask=nil   => "∑_(a)^(b)▒〖c〗"
+ *   Base size="1.25em" => "x_ℲA〖y〗"       Base size="zzz" => "x_Ⅎ〖y〗"
+ *   Base size=5        => "x_Ⅎ〖y〗"        Base size=nil   => "x_〖y〗"
+ *
+ * Both sites previously tested `typeof value === "string"` and emitted nothing
+ * otherwise, which silently dropped every value the gem prints. Neither is
+ * reachable from the AsciiMath corpus.
+ */
+describe("option values are interpolated, not type-checked", () => {
+  const sum = (mask: unknown) =>
+    new SumNode({
+      parameterOne: sym("a"),
+      parameterTwo: sym("b"),
+      parameterThree: sym("c"),
+      options: { mask } as never,
+    });
+
+  it.each([
+    ["a string", "x", "∑x_(a)^(b)▒〖c〗"],
+    ["an integer", 5, "∑5_(a)^(b)▒〖c〗"],
+    ["false", false, "∑false_(a)^(b)▒〖c〗"],
+    ["null", null, "∑_(a)^(b)▒〖c〗"],
+  ])("interpolates %s mask", (_name, mask, expected) => {
+    expect(toUnicodemath(sum(mask))).toBe(expected);
+  });
+
+  const base = (size: unknown) =>
+    new BaseNode({ parameterOne: sym("x"), parameterTwo: sym("y"), options: { size } as never });
+
+  it.each([
+    ["a known size", "1.25em", "x_ℲA〖y〗"],
+    ["an unknown size", "zzz", "x_Ⅎ〖y〗"],
+    ["a non-string truthy size", 5, "x_Ⅎ〖y〗"],
+    ["a null size", null, "x_〖y〗"],
+  ])("emits the marker for %s", (_name, size, expected) => {
+    expect(toUnicodemath(base(size))).toBe(expected);
   });
 });

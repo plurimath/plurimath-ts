@@ -16,6 +16,7 @@ import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-sha
 import {
   isNode,
   miniSized,
+  present,
   renderOptionalChild,
   renderTruthyChild,
   unicodemathParens,
@@ -63,8 +64,15 @@ function sizeOverrides(node: NodeOf<"base">): string {
   const options = node.options;
   if (options === undefined || options === null || Object.keys(options).length === 0) return "";
 
+  // `"Ⅎ#{...invert[options[:size]]}" if options[:size]` — Ruby TRUTHINESS on the
+  // value, then a reverse lookup whose miss interpolates as empty. So the marker
+  // is emitted for any truthy size and only the NAME is conditional. Measured:
+  //   size: "1.25em" => "x_ℲA〖y〗"    size: "zzz" => "x_Ⅎ〖y〗"
+  //   size: 5        => "x_Ⅎ〖y〗"     size: nil   => "x_〖y〗"
+  // Testing `typeof size !== "string"` dropped the integer case, which the gem
+  // renders as a bare `Ⅎ`.
   const size = options.size;
-  if (typeof size !== "string") return "";
+  if (!present(size)) return "";
 
   for (const [name, value] of UNICODEMATH_SIZE_OVERRIDES) {
     if (value === size) return `Ⅎ${name}`;

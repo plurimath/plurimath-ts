@@ -84,9 +84,16 @@ export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): st
   // empty fence. An empty ARRAY is fine and gives "()" — measured.
   if (!Array.isArray(contents)) throw crash("fenced.parameterTwo", "NoMethodError on nil");
 
+  // `param.to_unicodemath(options: options)` (`fenced.rb:107-111`) — no `&.`,
+  // so a nil ELEMENT raises where a nil LIST raised on the line above.
+  // `renderOptionalChild` returned "" for it. Measured:
+  //   gem   Fenced("(", [Symbol("x"), nil], ")")  !! NoMethodError
+  //   port                                        => "(x )"
   const rendered = contents
     .map((param) =>
-      isChooseFrac(param) ? chooseFrac(param, context) : renderOptionalChild(param, context),
+      isChooseFrac(param)
+        ? chooseFrac(param, context)
+        : renderChild(param, context, "fenced.parameterTwo"),
     )
     .join(" ");
 
@@ -112,8 +119,22 @@ export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): st
  * (which throws) is correct here where `renderOptionalChild` would be wrong.
  */
 function miniSizedUnicode(node: NodeOf<"fenced">, context: RenderContext): string {
-  const contents = Array.isArray(node.parameterTwo) ? node.parameterTwo : [];
-  const inner = contents.map((param) => renderOptionalChild(param, context)).join("");
+  // `parameter_two&.map { … }` (`fenced.rb:183-185`): `&.` guards nil ONLY, so
+  // a non-nil non-array is sent `map` and raises. Substituting `[]` for it
+  // swallowed that. Measured:
+  //   gem   Fenced(Number(mini), "s", ")")  !! NoMethodError ('map' for String)
+  //   port                                   => "&#x2081;)"
+  const raw = node.parameterTwo;
+  if (raw !== null && raw !== undefined && !Array.isArray(raw)) {
+    throw crash("fenced.parameterTwo", "NoMethodError on a non-array");
+  }
+  const contents = Array.isArray(raw) ? raw : [];
+  // And inside the map the gem is again unguarded, so a nil ELEMENT raises too:
+  //   gem   Fenced("(", [Number(mini), nil], ")")  !! NoMethodError
+  //   port                                          => "(&#x2081;)"
+  const inner = contents
+    .map((param) => renderChild(param, context, "fenced.parameterTwo"))
+    .join("");
   const open = renderChild(node.parameterOne, context, "fenced.parameterOne") ?? "";
   const close = renderChild(node.parameterThree, context, "fenced.parameterThree") ?? "";
   return `${open}${inner}${close}`;
@@ -220,8 +241,23 @@ function isCloseOrEnd(node: NodeOf<"fenced">): boolean {
 }
 
 function valueHasAny(field: unknown, needles: readonly string[]): boolean {
-  if (!isNode(field)) return false;
-  const value = (field as { readonly value?: string | null }).value;
+  // `parameter_one&.value&.include?(…)`. The FIRST `&.` guards nil only, so
+  // anything else is sent `value` — and a node kind that has no such field
+  // raises rather than answering false. `"value" in node` is the port's
+  // `respond_to?(:value)`: measured, the two agree on `Abs` and `Fenced`
+  // (neither), and on `Formula`, `Symbol` and `Number` (all three).
+  //
+  //   gem   Fenced(Abs(x), [x], ")", open_prefixed: true)  !! NoMethodError
+  //   port                                                  => "⒜(x)x)"
+  if (field === null || field === undefined) return false;
+  if (!isNode(field) || !("value" in field)) {
+    throw crash("fenced.parameterOne/Three", "NoMethodError reading value");
+  }
+
+  // The SECOND `&.` guards a nil value. A `Formula`'s value is an Array, where
+  // `Array#include?` is element equality against a needle string and so is
+  // always false — measured, gem and port agree on that shape.
+  const value = (field as { readonly value?: unknown }).value;
   if (typeof value !== "string") return false;
   return needles.some((needle) => value.includes(needle));
 }

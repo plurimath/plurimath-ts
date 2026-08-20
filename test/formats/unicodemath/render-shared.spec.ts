@@ -16,10 +16,12 @@
 import { describe, expect, it } from "vitest";
 import { RenderError } from "../../../src/core/errors";
 import {
+  AbsNode,
   FencedNode,
   FormulaNode,
   FracNode,
   MrowNode,
+  NaryNode,
   NumberNode,
   OversetNode,
   SymbolNode,
@@ -145,8 +147,20 @@ describe("primeUnicode matches the gem", () => {
     expect(primeUnicode(new FormulaNode({ value: [plainSymbol()] }))).toBe(false);
   });
 
-  it("is false when the child rendered to nothing", () => {
-    expect(primeUnicode(new SymbolNode({ id: "Symbol" }))).toBe(false);
+  it("raises for a generic symbol holding no value at all", () => {
+    // This pinned `false` while the implementation compared decoded glyphs: a
+    // valueless symbol rendered to nothing, and nothing matched. The gem does
+    // not get that far — `unicodemath_field_value` returns `field.value`, which
+    // is nil, and the next line calls `.include?` on it. Measured:
+    //
+    //   gem   prime_unicode?(Symbols::Symbol.new(nil))     !! NoMethodError
+    //   gem   PowerBase(x, a, Symbol(nil)).to_unicodemath  !! NoMethodError
+    //   port  (before)                                     => "x_(a)^()"
+    //
+    // `new SymbolNode()` is the public model API and produces exactly this, so
+    // the shape is reachable rather than theoretical.
+    expect(() => primeUnicode(new SymbolNode({ id: "Symbol" }))).toThrow(RenderError);
+    expect(() => primeUnicode(new SymbolNode())).toThrow(RenderError);
   });
 
   it("is true for a generic symbol carrying the RAW apostrophe entity", () => {
@@ -317,5 +331,148 @@ describe("the unicodemath field value is entity text, not the render", () => {
         new OversetNode({ parameterOne: new SymbolNode({ id: "Aa" }), parameterTwo: acute() }),
       ),
     ).toBe("&#x2200;\u0301");
+  });
+});
+
+/**
+ * Slots where the gem raises and this port used to emit.
+ *
+ * Every one is the same root cause in a different disguise: a JS falsy or
+ * shape test standing in for Ruby semantics that do not fail softly. `&.`
+ * short-circuits on nil and NOTHING else, and `unless field` short-circuits on
+ * nil and false and nothing else — so a String, an Array, or a node of the
+ * wrong kind reaches the method call and raises.
+ *
+ * Each expectation below was measured on the pinned oracle before the fix, with
+ * the port's old output recorded next to it. These are reachable through the
+ * public model API, not hand-forged internal states.
+ */
+describe("slots the gem refuses are refused here too", () => {
+  const S = (value: string) => new SymbolNode({ id: "Symbol", value });
+  const mini = () => new NumberNode({ value: "1", miniSubSized: true });
+  // The gem's option keys are snake_case Ruby symbols, not JS identifiers, so
+  // they are built rather than written as literal property names.
+  const gemOptions = (key: string, value: unknown): Record<string, unknown> => ({ [key]: value });
+
+  it("refuses a nil element inside fenced contents", () => {
+    // `param.to_unicodemath(options: options)` (`fenced.rb:107-111`) is
+    // unguarded, unlike the `parameter_two&.map` on the line above it.
+    //   gem  Fenced("(", [Symbol("x"), nil], ")")  !! NoMethodError
+    //   port                                        => "(x )"
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: S("("),
+          parameterTwo: [S("x"), null] as never,
+          parameterThree: S(")"),
+        }),
+      ),
+    ).toThrow(RenderError);
+  });
+
+  it("refuses a non-array contents slot on the mini-sized path", () => {
+    // `parameter_two&.map` (`fenced.rb:183`) guards nil only; the port
+    // substituted `[]` for anything non-array, swallowing the raise.
+    //   gem  Fenced(Number(mini), "s", ")")  !! NoMethodError ('map' for String)
+    //   port                                  => "&#x2081;)"
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: mini(),
+          parameterTwo: "s" as never,
+          parameterThree: S(")"),
+        }),
+      ),
+    ).toThrow(RenderError);
+  });
+
+  it("refuses a nil element on the mini-sized path too", () => {
+    //   gem  Fenced("(", [Number(mini), nil], ")")  !! NoMethodError
+    //   port                                         => "(&#x2081;)"
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: S("("),
+          parameterTwo: [mini(), null] as never,
+          parameterThree: S(")"),
+        }),
+      ),
+    ).toThrow(RenderError);
+  });
+
+  it("refuses a non-node paren slot even on the choose-frac early return", () => {
+    // `parameter_one&.mini_sized?` (`fenced.rb:177`) raises for a String. This
+    // is normally masked because the paren resolution throws a few lines later
+    // — the LEADING choose-frac return skips that, so it was reachable.
+    //   gem  Fenced("s", [Frac(n, k, choose: true)], ")")  !! NoMethodError
+    //   port                                                => "(n)⒞(k)"
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: "s" as never,
+          parameterTwo: [
+            new FracNode({
+              parameterOne: S("n"),
+              parameterTwo: S("k"),
+              options: { choose: true },
+            } as never),
+          ] as never,
+          parameterThree: S(")"),
+        }),
+      ),
+    ).toThrow(RenderError);
+  });
+
+  it("refuses a paren node that does not answer value", () => {
+    // `parameter_one&.value&.include?(…)` (`fenced.rb:306`): the first `&.`
+    // guards nil, so a node with no `value` field is sent the message.
+    //   gem  Fenced(Abs(x), [x], ")", open_prefixed: true)  !! NoMethodError
+    //   port                                                 => "├⒜(x)x)"
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: new AbsNode({ parameterOne: S("x") } as never),
+          parameterTwo: [S("x")] as never,
+          parameterThree: S(")"),
+          options: gemOptions("open_prefixed", true),
+        } as never),
+      ),
+    ).toThrow(RenderError);
+  });
+
+  it("still accepts a Formula paren, whose value is an Array", () => {
+    // The boundary case that proves the check above is not simply "throw for
+    // anything unusual": a Formula DOES answer `value`, `Array#include?` on a
+    // needle string is false, and gem and port agree on the output.
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: new FormulaNode({ value: [S("x")] }),
+          parameterTwo: [S("x")] as never,
+          parameterThree: S(")"),
+          options: gemOptions("open_prefixed", true),
+        } as never),
+      ),
+    ).not.toThrow();
+  });
+
+  it("refuses a truthy non-node naryand, and accepts nil and false", () => {
+    // `return "" unless field` is Ruby truthiness: nil and false short-circuit,
+    // everything else is sent `to_unicodemath`.
+    //   gem  Nary(∑, x, x, "s")  !! NoMethodError   port  => "&#x2211;_(x)^(x)"
+    //   gem  Nary(∑, x, x, [])   !! NoMethodError   port  => "&#x2211;_(x)^(x)"
+    //   gem  Nary(∑, x, x, nil)  => "&#x2211;_(x)^(x)"    both agree
+    const nary = (parameterFour: unknown) =>
+      new NaryNode({
+        parameterOne: S("&#x2211;"),
+        parameterTwo: S("x"),
+        parameterThree: S("x"),
+        parameterFour,
+      } as never);
+
+    expect(() => toUnicodemath(nary("s"))).toThrow(RenderError);
+    expect(() => toUnicodemath(nary([]))).toThrow(RenderError);
+    expect(toUnicodemath(nary(null))).toBe("&#x2211;_(x)^(x)");
+    expect(toUnicodemath(nary(false))).toBe("&#x2211;_(x)^(x)");
   });
 });

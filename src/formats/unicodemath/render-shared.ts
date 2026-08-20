@@ -62,33 +62,18 @@ export type RenderFn<K extends NodeKind> = (
 ) => string | null;
 
 /**
- * The glyphs `prime_unicode?` looks for, decoded.
+ * The five entities `prime_unicode?` looks for, as `Utility.primes_constants`
+ * actually holds them — `PREFIXED_PRIMES` merged with `{ sprime: "&#x27;" }`.
  *
- * The gem compares against entity *text* — `Utility.primes_constants` is
- * `PREFIXED_PRIMES` merged with `{ sprime: "&#x27;" }`, and
- * `unicodemath_field_value` returns `Utility.hexcode_in_input(field)`, which is
- * also entity text, so the two match as strings. This port's symbol table holds
- * **decoded** glyphs, so the comparison is against the decoded forms instead.
- *
- * Measured rather than derived: `class_name` for a concrete symbol class is its
- * own name (`"prime"`, `"sum"`), not `"symbol"`, so the `field.value` branch of
- * `unicodemath_field_value` is never the one that runs for these — `value` is
- * `nil` on every concrete symbol probed. Reading the source without probing
- * gives the wrong branch.
- */
-/**
- * The same five, as the ENTITY text `Utility.primes_constants` actually holds:
- * `["&#x2057;", "&#x2034;", "&#x2033;", "&#x2032;", "&#x27;"]`.
- *
- * `unicodemath_field_value` returns `field.value` RAW for a generic
- * `Symbols::Symbol`, so the gem compares entity against entity there — and a
- * generic symbol's render is the undecoded entity, which matches no decoded
- * glyph. Measured: `Symbol("&#x2032;")` through `Symbol("&#x27;")` are ALL
- * primes to the gem. Checking only `&#x27;` caught one of the five.
- *
- * Concrete symbol classes need no entity check: across all 1,460 of them the
- * decoded-glyph comparison below agrees with the gem in every case (measured,
- * zero disagreements), because their renders are already decoded.
+ * Entity text, not decoded glyphs, because both arms of
+ * `unicodemath_field_value` return entity text and the gem's comparison is a
+ * plain string match. An earlier version of this file held the DECODED glyphs
+ * and compared them against the render. That agreed with the gem for all 1,460
+ * concrete classes, which is why it survived so long, but it could not
+ * reproduce the generic-symbol arm: `Symbol("&#x2032;")` through
+ * `Symbol("&#x27;")` are all primes to the gem, and a generic symbol's render
+ * is the undecoded entity, which matches no decoded glyph. Checking only
+ * `&#x27;` caught one of the five.
  */
 const PRIME_ENTITIES: readonly string[] = [
   "&#x2057;",
@@ -96,14 +81,6 @@ const PRIME_ENTITIES: readonly string[] = [
   "&#x2033;",
   "&#x2032;",
   "&#x27;",
-];
-
-const PRIME_GLYPHS: readonly string[] = [
-  "′", // &#x2032; prime
-  "″", // &#x2033; double prime
-  "‴", // &#x2034; triple prime
-  "⁗", // &#x2057; quadruple prime
-  "'", // &#x27; the apostrophe `sprime`
 ];
 
 /**
@@ -123,38 +100,36 @@ const PRIME_GLYPHS: readonly string[] = [
 export function primeUnicode(node: MathNode | undefined): boolean {
   if (node === undefined || node.kind !== "symbol") return false;
 
-  // `unicodemath_field_value(field)` is
-  //   `field.class_name == "symbol" ? field.value : Utility.hexcode_in_input(field)`
-  // so the gem compares RAW ENTITY TEXT on both arms — never the rendered
-  // glyph. An earlier version compared decoded glyphs against the render.
-  // That agreed with the gem for all 1,460 concrete symbol classes (measured,
-  // zero disagreements), which is why it survived so long, but it cannot
-  // reproduce the two arms it is standing in for.
-  const id = node.id;
-  if (id === "Symbol") {
-    // `class_name == "symbol"` — only the generic class. Its `value` is the
-    // raw entity, and a generic symbol carrying ANY prime entity is a prime:
-    // measured, `Symbol("&#x2032;")` through `Symbol("&#x27;")` all answer true.
-    const value = (node as { readonly value?: string | null }).value;
-    return typeof value === "string" && PRIME_ENTITIES.some((e) => value.includes(e));
-  }
+  // Raw entity text on both arms — see `unicodemathFieldValue`. A generic
+  // symbol carrying ANY of the five is a prime, not just the apostrophe.
+  const value = unicodemathFieldValue(node);
 
-  // Every other class goes through `hexcode_in_input`, which returns nil when
-  // the symbol's `input(:unicodemath)` carries no `&#x…;` entry — and the gem
-  // then calls `.include?` on that nil and RAISES. Measured, 10 of 1,460
-  // classes do: Bar, If, Ul, Paren and its six concrete parens. So "absent" is
-  // behaviour to reproduce, not a row to skip — returning false here rendered
-  // `x^(¯)` where the gem refuses outright.
-  const hexcode = UNICODEMATH_HEXCODE_IN_INPUT.get(id);
-  if (hexcode === undefined) {
+  // The gem's last line is `unicodemath_field_value(field).include?(prime)`,
+  // with nothing between it and the nil — so BOTH arms raise when the field
+  // value is nil, and both were once wrong here in the same direction:
+  //
+  //   - a concrete class whose `input(:unicodemath)` holds no `&#x…;` entry.
+  //     Measured, 10 of 1,460 do: Bar, If, Ul, Paren and its six concrete
+  //     parens. Returning false rendered `x^(¯)` where the gem refuses.
+  //   - the GENERIC class holding a nil value, which `new SymbolNode()` — the
+  //     public model API — produces by default. Measured:
+  //       gem   PowerBase(x, a, Symbol(nil))  !! NoMethodError
+  //       port                                => "x_(a)^()"
+  //     That arm returned false because it tested `typeof value === "string"`,
+  //     a JS shape test standing in for a Ruby method call that does not fail
+  //     softly.
+  if (value === null) {
     throw new RenderError(
-      `${id}: has no unicodemath hexcode, and the gem raises NoMethodError ` +
-        "reading it (Utility.hexcode_in_input returns nil)",
+      `${node.id}: unicodemath_field_value is nil — ` +
+        (className(node.id) === "symbol"
+          ? "this generic symbol carries no value"
+          : "Utility.hexcode_in_input finds no entity for this class") +
+        ", and the gem raises NoMethodError calling include? on it",
       FORMAT,
       "symbol",
     );
   }
-  return PRIME_ENTITIES.some((entity) => hexcode.includes(entity));
+  return PRIME_ENTITIES.some((entity) => value.includes(entity));
 }
 
 /**
@@ -175,9 +150,9 @@ export function miniSized(node: MathNode | undefined): boolean {
       return Boolean(node.miniSubSized) || Boolean(node.miniSupSized);
     case "fenced":
       return (
-        miniSized(asNode(node.parameterOne)) ||
+        miniSized(asNode(node.parameterOne, "fenced.parameterOne")) ||
         someMiniSized(node.parameterTwo) ||
-        miniSized(asNode(node.parameterThree))
+        miniSized(asNode(node.parameterThree, "fenced.parameterThree"))
       );
     case "formula":
     case "mrow":
@@ -190,7 +165,9 @@ export function miniSized(node: MathNode | undefined): boolean {
       // First child only. Asking every child would answer true for shapes the
       // gem answers false for, and the difference is a separator that appears
       // or disappears in the output.
-      return miniSized(asNode(node.value?.[0]));
+      // `true if value&.first&.mini_sized?` (`formula.rb:354`) — `&.` again,
+      // so a non-node first child raises rather than answering false.
+      return miniSized(asNode(node.value?.[0], `${node.kind}.value[0]`));
     default:
       return false;
   }
@@ -206,8 +183,12 @@ export function negatedValue(node: MathNode): boolean {
   // answers true exactly as a Formula does.
   if (node.kind !== "formula" && node.kind !== "mrow") return false;
 
-  const last = asNode(node.value?.[node.value.length - 1]);
-  return last?.kind === "symbol" && last.value === NEGATION_VALUE;
+  // `value.last.is_a?(Math::Symbols::Symbol) && …` (`formula.rb:483`) — `is_a?`,
+  // NOT `&.`, so this one genuinely answers false for a non-node instead of
+  // raising. That is why it does not use the strict `asNode` the `mini_sized?`
+  // sites need: the two predicates differ in the gem and must differ here.
+  const last = node.value?.[node.value.length - 1];
+  return isNode(last) && last.kind === "symbol" && last.value === NEGATION_VALUE;
 }
 
 /**
@@ -224,14 +205,34 @@ export function negatedValue(node: MathNode): boolean {
 const NEGATION_VALUE = "&#x338;";
 
 function someMiniSized(slot: unknown): boolean {
-  if (!Array.isArray(slot)) return miniSized(asNode(slot));
+  if (!Array.isArray(slot)) return miniSized(asNode(slot, "fenced.parameterTwo"));
   // `Formula.new(parameter_two).mini_sized?` — a formula asks its first child,
   // so a list slot behaves the same way rather than asking all of them.
-  return miniSized(asNode(slot[0]));
+  return miniSized(asNode(slot[0], "fenced.parameterTwo"));
 }
 
-function asNode(value: unknown): MathNode | undefined {
-  return isNode(value) ? value : undefined;
+/**
+ * A slot as `&.mini_sized?` sees it: nil short-circuits, anything else is sent
+ * the message.
+ *
+ * This used to return `undefined` for EVERY non-node, which made `miniSized`
+ * answer false for a slot the gem raises on — the `&.`-guards-nil-only trap.
+ * It is normally masked, because the callers throw a few lines later for the
+ * same slot; the leading-choose-frac early return skips that. Measured:
+ *
+ *   gem   Fenced("s", [Frac(n, k, choose: true)], ")")  !! NoMethodError
+ *                                            ('mini_sized?' for an instance of String)
+ *   port                                                 => "(n)⒞(k)"
+ */
+function asNode(value: unknown, slot: string): MathNode | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (isNode(value)) return value;
+  throw new RenderError(
+    `${slot}: ${describeSlot(value)} does not answer mini_sized?, and the gem's ` +
+      "`&.` guards nil only — it raises NoMethodError here",
+    FORMAT,
+    "fenced",
+  );
 }
 
 /**
@@ -545,11 +546,18 @@ export function isBase(node: unknown): boolean {
  * wrapped in white lenticular brackets.
  */
 export function naryandValue(field: unknown, context: RenderContext): string {
-  if (!isNode(field)) return "";
+  // `return "" unless field` — RUBY TRUTHINESS, so only nil and false
+  // short-circuit; everything else is sent `to_unicodemath`, and a non-node
+  // raises. Testing `!isNode(field)` swallowed that. Measured:
+  //
+  //   gem  Nary(∑, x, x, "s")  !! NoMethodError   port  => "&#x2211;_(x)^(x)"
+  //   gem  Nary(∑, x, x, [])   !! NoMethodError   port  => "&#x2211;_(x)^(x)"
+  //   gem  Nary(∑, x, x, nil)  => "&#x2211;_(x)^(x)"    and false likewise, both agree
+  if (!present(field)) return "";
 
-  const rendered = context.render(field) ?? "";
+  const rendered = renderChild(field, context, "naryand") ?? "";
   // U+2592 MEDIUM SHADE is UnicodeMath's naryand separator.
-  return field.kind === "fenced" ? `▒${rendered}` : `▒〖${rendered}〗`;
+  return isNode(field) && field.kind === "fenced" ? `▒${rendered}` : `▒〖${rendered}〗`;
 }
 
 /**

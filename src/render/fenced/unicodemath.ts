@@ -149,7 +149,7 @@ function miniSizedUnicode(node: NodeOf<"fenced">, context: RenderContext): strin
 function isChooseFrac(param: unknown): boolean {
   if (!isNode(param) || param.kind !== "frac") return false;
   const options = (param as { readonly options?: Record<string, unknown> | null }).options;
-  return options !== undefined && options !== null && "choose" in options;
+  return options !== undefined && options !== null && Object.hasOwn(options, "choose");
 }
 
 /**
@@ -208,7 +208,12 @@ function isVertParen(node: NodeOf<"fenced">): boolean {
 function openParen(node: NodeOf<"fenced">, context: RenderContext): string {
   const paren = renderOptionalChild(node.parameterOne, context);
   const options = node.options;
-  const has = (key: string) => options !== undefined && options !== null && key in options;
+  // `Object.hasOwn`, not `key in options`: Ruby's `Hash#key?` sees only the
+  // hash's own keys, while `in` walks the prototype chain and answers true
+  // for `constructor`, `toString` and friends. No gem option is named any of
+  // those, so nothing reached it — but the guard should not depend on that.
+  const has = (key: string) =>
+    options !== undefined && options !== null && Object.hasOwn(options, key);
 
   if (has("open_paren")) {
     const minsize = (options?.open_paren as { minsize?: unknown } | undefined)?.minsize;
@@ -224,7 +229,12 @@ function openParen(node: NodeOf<"fenced">, context: RenderContext): string {
 function closeParen(node: NodeOf<"fenced">, context: RenderContext): string {
   const paren = renderOptionalChild(node.parameterThree, context);
   const options = node.options;
-  const has = (key: string) => options !== undefined && options !== null && key in options;
+  // `Object.hasOwn`, not `key in options`: Ruby's `Hash#key?` sees only the
+  // hash's own keys, while `in` walks the prototype chain and answers true
+  // for `constructor`, `toString` and friends. No gem option is named any of
+  // those, so nothing reached it — but the guard should not depend on that.
+  const has = (key: string) =>
+    options !== undefined && options !== null && Object.hasOwn(options, key);
 
   if (has("close_paren")) {
     const minsize = (options?.close_paren as { minsize?: unknown } | undefined)?.minsize;
@@ -283,16 +293,27 @@ function parenSize(minsize: unknown, at: string): string {
     throw crash(`fenced.options.${at}.minsize`, "NoMethodError on nil");
   }
   const size = rubyToFloat(minsize.replace(/em$/, ""));
-  // Ruby reaches FloatDomainError from BOTH ends: `log(0)` is -Infinity for a
-  // size that parses to zero, and `log(Infinity)` is +Infinity for a size like
-  // "1e309em" whose `to_f` overflows. `Number.isFinite` folds the overflow to
-  // zero above, so both arrive here — the message names the pair rather than
-  // claiming the negative one for an input that overflowed upward.
-  if (size === 0)
-    throw crash(`fenced.options.${at}.minsize`, "FloatDomainError (log is not finite)");
-  if (size < 0) throw crash(`fenced.options.${at}.minsize`, "Math::DomainError");
 
-  return String(rubyRound(Math.log(size) / Math.log(1.25)));
+  // The two overflow directions reach DIFFERENT Ruby errors, and folding them
+  // both to zero named the wrong one for half of them. Measured:
+  //
+  //   "-1e400".to_f -> -Infinity, Math.log(-Infinity)        !! Math::DomainError
+  //   "1e400".to_f  ->  Infinity, Math.log(Infinity).round   !! FloatDomainError
+  //   "0em"                       Math.log(0) is -Infinity   !! FloatDomainError
+  //
+  // so the sign is tested first, on the unfolded value, and `-1e400em` — which
+  // this port used to report as FloatDomainError — is a Math::DomainError like
+  // any other negative size.
+  if (size < 0) throw crash(`fenced.options.${at}.minsize`, "Math::DomainError");
+  if (size === 0)
+    throw crash(`fenced.options.${at}.minsize`, "FloatDomainError (log(0) is -Infinity)");
+
+  const quotient = Math.log(size) / Math.log(1.25);
+  // `Math.log(Infinity)` is Infinity, and Ruby raises when rounding it.
+  if (!Number.isFinite(quotient))
+    throw crash(`fenced.options.${at}.minsize`, "FloatDomainError (log is not finite)");
+
+  return String(rubyRound(quotient));
 }
 
 /**
@@ -323,6 +344,10 @@ function rubyToFloat(text: string): number {
       text,
     );
   if (match === null) return 0;
-  const parsed = Number.parseFloat(match[0].replace(/_/g, ""));
-  return Number.isFinite(parsed) ? parsed : 0;
+  // Overflow is NOT folded to zero. Ruby's `to_f` returns ±Infinity for a
+  // literal that overflows, and the caller needs the sign to pick the same
+  // error the gem raises. A non-numeric spelling like "Infinity" or "NaN" never
+  // reaches here — it fails the anchored match above and returns 0, which is
+  // what Ruby's `to_f` gives for it.
+  return Number.parseFloat(match[0].replace(/_/g, ""));
 }

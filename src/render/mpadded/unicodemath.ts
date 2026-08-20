@@ -37,7 +37,7 @@ export function renderMpadded(node: NodeOf<"mpadded">, context: RenderContext): 
   if (options !== undefined && options !== null && present(options.mpadded)) {
     return `${phantomGlyph(options)}${unicodemathParens(node.parameterOne, context) ?? ""}`;
   }
-  if (options !== undefined && options !== null && "mask" in options) {
+  if (options !== undefined && options !== null && Object.hasOwn(options, "mask")) {
     // `"⟡(#{self.options[:mask]}&...)"` — Ruby interpolation, so `to_s` on
     // whatever the option holds. `String()` is not that: measured, the gem
     // gives `⟡(["x", 2]&x)` for an array where `String()` gives `x,2`, and

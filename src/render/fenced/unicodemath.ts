@@ -17,10 +17,15 @@
  *     replaces the whole fence, parens included;
  *   - the open and close parens each resolve through their own three-branch
  *     chain reading `self.options` (:271, :284);
- *   - `convert_paren_size` (:301) rounds a **logarithm**. Ruby rounds half
- *     away from zero, JS `Math.round` rounds toward +infinity, and the values
- *     go negative for any size below 1em — so the difference is reachable,
- *     not theoretical. Hence `rubyRound`.
+ *   - `convert_paren_size` (:301) rounds a **logarithm**. Ruby rounds half away
+ *     from zero, JS `Math.round` rounds toward +infinity, so they differ only
+ *     at an exact `-x.5`. This once argued the difference was reachable because
+ *     the values go negative below 1em, which does not follow — negativity
+ *     alone produces no tie. The conclusion held anyway, and here is the tie
+ *     that proves it: `minsize: "0.45794672179195689em"` makes
+ *     `log(size)/log(1.25)` exactly `-3.5`, where Ruby rounds to -4 and
+ *     `Math.round` gives -3. Measured, the gem emits `"├-4(x)"`. Hence
+ *     `rubyRound`.
  *
  * Measured, `to_unicodemath` on a Fenced does NOT decode HTML entities: a
  * mini-sized `x` came back as `"(&#x2093;)"`. The decode belongs to

@@ -20,6 +20,7 @@ import {
   FencedNode,
   FormulaNode,
   FracNode,
+  MpaddedNode,
   MrowNode,
   NaryNode,
   NumberNode,
@@ -474,5 +475,100 @@ describe("slots the gem refuses are refused here too", () => {
     expect(() => toUnicodemath(nary([]))).toThrow(RenderError);
     expect(toUnicodemath(nary(null))).toBe("&#x2211;_(x)^(x)");
     expect(toUnicodemath(nary(false))).toBe("&#x2211;_(x)^(x)");
+  });
+});
+
+/**
+ * Ruby's `Float#to_s` through an interpolated `mask`.
+ *
+ * The port refused EVERY non-integral number, on the stated grounds that
+ * Ruby's `Float#to_s` cannot be derived from a JS number. That is true only
+ * outside a band: Ruby prints plain shortest-round-trip decimal on
+ * `[1e-4, 1e15)`, JS on the wider `[1e-6, 1e21)`, so Ruby-plain implies
+ * JS-plain and the digits agree. Verified over 5,000 random non-integral values
+ * inside the band: 5,000 agreements, 0 disagreements.
+ *
+ * Refusing there made the port emit nothing where the gem emits `1.5` — a
+ * divergence pointing the opposite way from every other one in this file.
+ */
+describe("a float mask matches Ruby's Float#to_s inside the band", () => {
+  const masked = (mask: unknown) =>
+    toUnicodemath(
+      new MpaddedNode({
+        parameterOne: new SymbolNode({ id: "Symbol", value: "x" }),
+        options: { mask },
+      } as never),
+    );
+
+  it.each([
+    [1.5, "⟡(1.5&x)"],
+    [-0.75, "⟡(-0.75&x)"],
+    [100.25, "⟡(100.25&x)"],
+    // The lower edge of Ruby's plain range: one step below this it switches to
+    // scientific and the two stop agreeing.
+    [0.0001, "⟡(0.0001&x)"],
+  ])("renders %s as the gem does", (mask, expected) => {
+    expect(masked(mask)).toBe(expected);
+  });
+
+  it.each([
+    [Number.NaN, "⟡(NaN&x)"],
+    [Number.POSITIVE_INFINITY, "⟡(Infinity&x)"],
+    [Number.NEGATIVE_INFINITY, "⟡(-Infinity&x)"],
+  ])("renders %s, where both languages agree exactly", (mask, expected) => {
+    expect(masked(mask)).toBe(expected);
+  });
+
+  it("still refuses a value outside the band rather than guessing", () => {
+    // gem `1.5e-05`, JS `0.000015`. Reconstructing Ruby's scientific form is
+    // 3,999-of-4,000 correct and therefore silently wrong once in a few
+    // thousand — `1.2024716144439168e+15` is plain in Ruby while `1.5e15`, at
+    // the same magnitude, is scientific. Refusing is the honest answer until
+    // that rule is pinned.
+    expect(() => masked(1.5e-5)).toThrow(RenderError);
+  });
+
+  it("renders an integral number as Ruby renders an Integer", () => {
+    // The genuinely undecidable case: JS cannot tell `1` from `1.0`, and the
+    // gem prints them differently. Pinned so the choice stays deliberate.
+    expect(masked(1)).toBe("⟡(1&x)");
+    expect(masked(5)).toBe("⟡(5&x)");
+  });
+});
+
+/**
+ * The entity decode is NOT idempotent, and the port relies on running it in
+ * exactly the places the gem does rather than on being able to run it twice.
+ */
+describe("the formula boundary decodes as often as the gem does", () => {
+  const nested = (depth: number) => {
+    let node: FormulaNode | SymbolNode = new SymbolNode({ id: "Symbol", value: "&amp;#x27;" });
+    for (let i = 0; i < depth; i += 1) node = new FormulaNode({ value: [node] as never });
+    return node as FormulaNode;
+  };
+
+  it.each([
+    [1, "&#x27;"],
+    [2, "'"],
+    [3, "'"],
+  ])("at depth %i gives the gem's answer", (depth, expected) => {
+    // Measured on the oracle at each depth. Depth 1 leaves the entity undecoded
+    // and depth 2 decodes it — which is only possible because the decode is
+    // NOT idempotent, so moving it would change these answers.
+    expect(toUnicodemath(nested(depth))).toBe(expected);
+  });
+
+  it("treats an Mrow layer as a Formula layer, as the gem does", () => {
+    const wrapped = new FormulaNode({
+      value: [new MrowNode({ value: [new SymbolNode({ id: "Symbol", value: "&amp;#x27;" })] })],
+    });
+    expect(toUnicodemath(wrapped)).toBe("'");
+  });
+
+  it("refuses a nil value with this format's own error", () => {
+    // `Formula.new(nil)` raises in the gem (`negated_value?` calls `value.last`).
+    // The port used to test `=== undefined`, which never fired for a `null`
+    // value, and the nil fell through to `null.map` as a laundered TypeError.
+    expect(() => toUnicodemath(new FormulaNode({ value: null } as never))).toThrow(RenderError);
   });
 });

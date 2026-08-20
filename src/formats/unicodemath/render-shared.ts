@@ -372,9 +372,27 @@ export function unreachableName(kind: string, name: string): RenderError {
  * carries the full xhtml1 table and the gem's codepoint-range behaviour, and
  * `src/formats/mathml/render-shared.ts` already reaches it the same way.
  *
- * That repetition is safe only because the transform is idempotent, which was
- * measured rather than assumed: decoding `"a&#x2581;b"` twice gives the same
- * string.
+ * A nested `Formula` re-runs this decode, and that repetition used to be
+ * justified here by calling the transform idempotent — "measured rather than
+ * assumed", on the strength of `"a&#x2581;b"`. One example, generalised into a
+ * property it does not have. Measured:
+ *
+ *   "a&#x2581;b"     -> "a▁b"        -> "a▁b"        idempotent
+ *   "&amp;#x27;"     -> "&#x27;"     -> "'"          NOT
+ *   "&amp;amp;"      -> "&amp;"      -> "&"          NOT
+ *   "&#38;#x27;"     -> "&#x27;"     -> "'"          NOT
+ *
+ * What actually makes the repetition safe is that the gem re-enters
+ * `Formula#to_unicodemath` per nesting level too, so both sides decode the same
+ * number of times. Measured on `Symbol("&amp;#x27;")`, gem and port identical
+ * at every depth:
+ *
+ *   Formula[sym] "&#x27;"   Formula[Formula[sym]] "'"   three deep "'"
+ *   Formula[Mrow[sym]] "'"
+ *
+ * So this decode must stay exactly where the gem's is. Moving it somewhere the
+ * gem does not have it changes output, and the idempotence claim would have
+ * licensed precisely that.
  */
 export { htmlEntityToUnicode };
 
@@ -431,27 +449,71 @@ export function rubyInterpolate(value: unknown): string {
  *   1.0      => "⟡(1.0&x)"             5      => "⟡(5&x)"
  *   "s"      => "⟡(s&x)"               true   => "⟡(true&x)"
  *
- * Two shapes are refused because JavaScript cannot decide them, and a wrong
- * answer here would be silent:
+ * What JavaScript genuinely cannot decide is an INTEGRAL number: JS has one
+ * numeric type, so `1` and `1.0` are the same value while Ruby prints "1" and
+ * "1.0". Those render as Ruby renders an Integer — exact for every Integer,
+ * wrong only for a Float that happens to be integral. `0.0` and `-0.0` fall
+ * here too (Ruby "0.0" / "-0.0", JS "0" / "0").
  *
- *   - a NON-INTEGER number. JS has one numeric type, so `1` and `1.0` are the
- *     same value; Ruby prints "1" and "1.0". An integral number is rendered as
- *     Ruby renders an Integer, which is exact for every Integer and wrong only
- *     for a Float that happens to be integral.
- *   - nothing else: hash keys are assumed to be Symbols, which is what every
- *     option hash in the gem's own constants uses (`{mpadded: {...},
- *     phantom: true}`), and a String key would print `{"a" => 1}` instead.
- *     Recorded in TODO.plan/deferred.md rather than guessed at.
+ * A NON-integral number used to be refused alongside it, on the stated grounds
+ * that Ruby's `Float#to_s` "cannot be derived from a JavaScript number". That
+ * is true only outside a band, and the refusal made the port emit nothing where
+ * the gem emits `1.5` — a divergence pointing the opposite way from every other
+ * one in this file. The two agree wherever BOTH print plain shortest-round-trip
+ * decimal, and Ruby's plain range is the narrower of the two: measured on the
+ * oracle, Ruby switches to scientific below 1e-4 and at or above 1e15, where
+ * JS switches below 1e-6 and at or above 1e21. So Ruby-plain implies JS-plain,
+ * and inside that band the digits are identical — verified over 5,000 random
+ * non-integral values in it, 5,000 agreements and 0 disagreements.
+ *
+ * Outside the band the two formats really do differ and are still refused:
+ *
+ *   1.5e-5  ruby "1.5e-05"  js "0.000015"      1e15  ruby "1.0e+15"  js "1000000000000000"
+ *
+ * Reconstructing Ruby's scientific form from `toExponential()` — pad the
+ * exponent to two digits, give the mantissa a ".0" — looks like it closes the
+ * rest, and very nearly does: 3,999 of 4,000 random values outside the band.
+ * It is still WRONG, because Ruby's choice of format is not decided by
+ * magnitude alone. The counterexample, measured:
+ *
+ *   1.2024716144439168e+15  ->  ruby "1202471614443916.8"  (plain, not scientific)
+ *
+ * while `1.5e15` at the same decimal exponent gives "1.5e+15". Two values of
+ * equal magnitude, different formats, so the rule depends on the significant
+ * digits and not just the exponent. A formatter that is right 99.98% of the
+ * time is a silent wrong answer once in every few thousand, which is worse here
+ * than refusing — so the refusal stays until the rule is pinned rather than
+ * approximated.
+ *
+ * `NaN` and `±Infinity` are emitted because the two agree exactly there
+ * (measured: "NaN", "Infinity", "-Infinity" on both sides).
+ *
+ * Hash keys are assumed to be Symbols, which is what every option hash in the
+ * gem's own constants uses (`{mpadded: {...}, phantom: true}`); a String key
+ * would print `{"a" => 1}` instead. Recorded in TODO.plan/deferred.md rather
+ * than guessed at.
  */
+
+/** Ruby prints plain decimal on `[1e-4, 1e15)`; outside it, scientific. */
+const RUBY_PLAIN_FLOAT_MIN = 1e-4;
+const RUBY_PLAIN_FLOAT_MAX = 1e15;
+
 function rubyInspect(value: unknown): string {
   if (value === null || value === undefined) return "nil";
   if (typeof value === "boolean") return String(value);
   if (typeof value === "string") return JSON.stringify(value);
   if (typeof value === "number") {
     if (Number.isInteger(value) && Object.is(value, Math.trunc(value))) return String(value);
+    if (Number.isNaN(value) || !Number.isFinite(value)) return String(value);
+
+    const magnitude = Math.abs(value);
+    if (magnitude >= RUBY_PLAIN_FLOAT_MIN && magnitude < RUBY_PLAIN_FLOAT_MAX) {
+      return String(value);
+    }
     throw new RenderError(
-      `cannot interpolate the non-integer number ${String(value)} — Ruby's Float#to_s ` +
-        "cannot be derived from a JavaScript number (TODO.plan/deferred.md)",
+      `cannot interpolate the number ${String(value)} — it falls outside the range ` +
+        "where Ruby's Float#to_s and JavaScript's agree, and Ruby would print it in " +
+        "scientific notation this port cannot reconstruct (TODO.plan/deferred.md)",
       FORMAT,
       "unknown",
     );
@@ -496,11 +558,29 @@ export function className(rubyName: string): string {
  *
  * Shared by `formula` and `mrow` because `Formula::Mrow` inherits this method
  * rather than the child path, so a nested Mrow really does re-run the whole
- * boundary. Idempotent, so that repetition is safe.
+ * boundary — safe because the gem re-runs it at the same points, NOT because
+ * the entity decode is idempotent (it is not; see `htmlEntityToUnicode` above).
  */
 export function formulaBoundary(node: MathNode, context: RenderContext): string | null {
-  const children = (node as { readonly value?: readonly unknown[] | undefined }).value;
-  if (children === undefined) return null;
+  // `FormulaNode.value` and `MrowNode.value` are `NodeSequence | null` and are
+  // assigned in the constructor, so they are never `undefined`: testing for it
+  // was the `=== undefined` trap this file warns about elsewhere, and the guard
+  // never fired. A nil value falls through to the map below, where the gem also
+  // fails — `negated_value?` calls `value.last` on it. Measured, both refuse:
+  //
+  //   gem   Formula.new(nil).to_unicodemath  !! Math::ParseError
+  //   port  FormulaNode({value: null})       !! RenderError
+  //
+  // Written as a nil test so the throw carries this format's own error rather
+  // than a laundered TypeError from `null.map`.
+  const children = (node as { readonly value?: readonly unknown[] | null }).value;
+  if (children === null || children === undefined) {
+    throw new RenderError(
+      `${node.kind}.value is nil — the gem raises reading value.last in negated_value?`,
+      FORMAT,
+      node.kind,
+    );
+  }
 
   // `join_str = " " if !(negated_value? || mini_sized?)` — Ruby's `join(nil)`
   // concatenates, so a suppressed separator is the empty string, not a space.

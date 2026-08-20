@@ -265,17 +265,22 @@ describe("option values are interpolated, not type-checked", () => {
   });
 
   it("refuses only the number it genuinely cannot decide", () => {
-    // Ruby renders both through `inspect`, and its hash format is not stable
-    // across releases (`{a: 1}` on 4.0, `{:a=>1}` before 3.4), so a
-    // reproduction would pin this port to one Ruby. `String(value)` was
-    // silently wrong for both: measured, the gem gives `∑["x", 2]_(a)^(b)▒〖c〗`
-    // where the port gave `∑x,2…`, and `∑{a: 1}…` where it gave
-    // `∑[object Object]…`.
-    // A JS number carries no Integer/Float distinction, so 1.5 is decidable
-    // (non-integral, therefore a Float) while 1 is not — an integral value is
-    // rendered as Ruby renders an Integer, which is exact for every Integer.
-    expect(() => toUnicodemath(sum(1.5))).toThrow(RenderError);
+    // This used to argue that 1.5 "is decidable (non-integral, therefore a
+    // Float)" and then assert that the port REFUSED it — the reasoning and the
+    // assertion disagreed, and the assertion pinned a divergence. Measured on
+    // the oracle: the gem renders it.
+    expect(toUnicodemath(sum(1.5))).toBe("∑1.5_(a)^(b)▒〖c〗");
+
+    // An integral value is the case JS genuinely cannot decide: one numeric
+    // type, so `5` and `5.0` are the same value while Ruby prints them
+    // differently. Rendered as Ruby renders an Integer — exact for every
+    // Integer, wrong only for an integral Float.
     expect(toUnicodemath(sum(5))).toBe("∑5_(a)^(b)▒〖c〗");
+
+    // Outside `[1e-4, 1e15)` Ruby switches to a scientific format this port
+    // cannot reconstruct reliably, so it refuses rather than guessing. The gem
+    // gives `∑1.5e-05_(a)^(b)▒〖c〗` here.
+    expect(() => toUnicodemath(sum(1.5e-5))).toThrow(RenderError);
   });
 
   it.each([

@@ -3199,26 +3199,59 @@ module CorpusGenerator
     value
   end
 
+  # Every `UnicodeMath::Constants` table the gem reverse-looks-up on the
+  # `to_unicodemath` path, with the call site and — crucially — WHICH Ruby
+  # reverse read it uses. Found by grepping the pinned oracle for `.invert`
+  # and `.key(` and keeping the render-path hits (the `transform.rb` and
+  # `unicode_math/utility.rb` hits are the PARSER, which this port's renderer
+  # does not go through; `menclose.rb:115` reverse-reads
+  # `Utility::UNICODEMATH_MENCLOSE_FUNCTIONS`, which is not a
+  # `UnicodeMath::Constants` table and is not emitted here).
+  #
+  # The two reads DISAGREE on a duplicated value, measured at the oracle:
+  #
+  #   {a: 1, b: 1}.key(1)    -> :a      # FIRST match
+  #   {a: 1, b: 1}.invert[1] -> :b      # LAST match
+  #
+  # so a table's direction is not interchangeable with its neighbour's. One
+  # site is `invert` (LAST); the other four are `key` (FIRST). The live proof
+  # that this is not academic is `PARENTHESIS_MATRICES`, which really does
+  # carry three keys on one value: `key(nil)` is `:eqarray` and `invert[nil]`
+  # is `:cases` (both measured), and `table.rb:422` is the `key` form, so
+  # `:eqarray` is the answer the port must ship.
+  #
+  # Anywhere NOT on this list, duplicates are ordinary and are emitted as-is:
+  # `UNARY_SYMBOLS` legitimately maps both `underline` and `underbar` to the
+  # same glyph, and is only ever read forward.
+  UNICODEMATH_REVERSED_TABLES = {
+    # table                    => [call site,                   read used]
+    "SIZE_OVERRIDES_SYMBOLS" => ["base.rb:128", :invert],
+    "UNICODE_FRACTIONS" => ["frac.rb:159", :key],
+    "PARENTHESIS_MATRICES" => ["table.rb:422", :key],
+    "PHANTOM_SYMBOLS" => ["phantom.rb:59 and mpadded.rb:102", :key],
+  }.freeze
+
+  # How a duplicated value would be resolved by the read the call site uses,
+  # phrased for an error message. Not a choice this generator gets to make —
+  # it refuses instead — but naming the wrong one would teach the next reader
+  # the wrong rule.
+  def unicodemath_reverse_read_note(name)
+    site, read = UNICODEMATH_REVERSED_TABLES.fetch(name)
+    keeps = read == :invert ? "the LAST" : "the FIRST"
+    "the gem reverse looks this table up at #{site} with `Hash##{read}`, " \
+      "which keeps #{keeps} matching key"
+  end
+
   # A hash the renderer reads as string -> string. Keys are stringified because
   # several of these are keyed by Symbol in the gem and by string in the port.
-  # The only tables the gem reverse-looks-up: `SIZE_OVERRIDES_SYMBOLS.invert`
-  # (`base.rb:128`), `UNICODE_FRACTIONS.key` (`frac.rb:159`) and
-  # `PARENTHESIS_MATRICES.key` (`table.rb:422`). A duplicate value matters only
-  # here — `Hash#invert` keeps the LAST key, so the port would have to guess
-  # which one won. Everywhere else duplicates are ordinary: `UNARY_SYMBOLS`
-  # legitimately maps both `underline` and `underbar` to the same glyph, and is
-  # only ever read forward.
   #
-  # `PHANTOM_SYMBOLS` belongs here too — `phantom.rb:59` and `mpadded.rb:102`
-  # both reverse-look-it-up — and an earlier version of this list omitted it.
-  #
-  # `PARENTHESIS_MATRICES` is checked separately: it holds three legitimate nil
-  # values, so the plain "no two keys share a value" rule would fail on correct
-  # data. Only its non-nil values have to be distinct.
-  UNICODEMATH_REVERSED_TABLES = %w[
-    SIZE_OVERRIDES_SYMBOLS UNICODE_FRACTIONS PARENTHESIS_MATRICES PHANTOM_SYMBOLS
-  ].freeze
-
+  # For a reverse-read table the VALUES are stringified too, and that is a
+  # second, port-side way to lose an answer: `:a` and `"a"` are distinct values
+  # to the gem's reverse read and the same key in the emitted map. So the check
+  # here is on the stringified value — it is guarding the emitted map, not the
+  # gem's table. The gem-side check on the raw values is
+  # `assert_reverse_lookup_safe!`, and both run over every name in
+  # `UNICODEMATH_REVERSED_TABLES`.
   def unicodemath_string_map(name)
     constant = unicodemath_constant(name)
     unless constant.is_a?(::Hash)
@@ -3233,12 +3266,12 @@ module CorpusGenerator
       end
 
       text = value.to_s
-      if UNICODEMATH_REVERSED_TABLES.include?(name)
+      if UNICODEMATH_REVERSED_TABLES.key?(name)
         if (earlier = seen[text])
           raise Error, "UnicodeMath::Constants::#{name} maps both #{earlier.inspect} " \
-                       "and #{key.inspect} to #{text.inspect}, and the gem reverse " \
-                       "looks this table up; `Hash#invert` keeps the last key, so " \
-                       "the port cannot know which one wins"
+                       "and #{key.inspect} to #{text.inspect} once stringified, and " \
+                       "#{unicodemath_reverse_read_note(name)}; the emitted map can " \
+                       "hold only one of them, so the port cannot know which one wins"
         end
         seen[text] = key
       end
@@ -3260,39 +3293,56 @@ module CorpusGenerator
     values
   end
 
-  # A table the gem reverse-looks-up must not map two keys to one value:
-  # `Hash#invert` and `Hash#key` keep the LAST match, so the port would have to
-  # guess which key won. Nil values are exempt — they are the gem's own "no
-  # delimiter" marker, not data anything looks up.
+  # A table the gem reverse-looks-up must not map two keys to one value: one of
+  # them wins the lookup and the port, which emits the map value-first, cannot
+  # represent the loser. WHICH one wins differs by call site — `Hash#key` keeps
+  # the FIRST match, `Hash#invert` the LAST (see `UNICODEMATH_REVERSED_TABLES`
+  # for the measurement and for which table is read which way) — so this guard
+  # refuses rather than picking a side.
+  #
+  # Nil values are exempt, and NOT because nothing looks them up: `table.rb:422`
+  # reverse-reads `PARENTHESIS_MATRICES` with whatever the open paren rendered,
+  # and a paren that renders nil lands on the three nil rows. They are exempt
+  # because the gem itself ships that collision, so refusing it would refuse
+  # correct data. The answer is measured off the gem instead, with the gem's own
+  # `Hash#key` — `unicodemath_nil_paren_matrix`, emitted as
+  # `UNICODEMATH_NIL_PAREN_MATRIX`.
   def assert_reverse_lookup_safe!(name)
     constant = unicodemath_constant(name)
     return unless constant.is_a?(::Hash)
 
-    seen = {}
+    # Compared with `==` AND with `eql?`, never with `value.inspect`, and never
+    # by using the value as a Hash key.
+    #
+    # Those three relations are genuinely different here, and the call sites
+    # span two of them. `Hash#key` compares with `==` (MRI's `key_i` calls
+    # `rb_equal`); `Hash#invert` builds a Hash and so compares with
+    # `eql?`/`hash`. Measured at the pinned oracle:
+    #
+    #   {a: 0}.key(0.0)              -> :a    # `==`: 0 and 0.0 are one value
+    #   {a: 0}.invert[0.0]           -> nil   # `eql?`: they are two
+    #   seen = {}; seen[0] = :a; seen[0.0] -> nil   # so is a Hash-key guard
+    #
+    #   a = {mpadded: {depth: "0", height: "0"}, phantom: true}
+    #   b = {phantom: true, mpadded: {height: "0", depth: "0"}}
+    #   a == b -> true   a.eql?(b) -> true   a.inspect == b.inspect -> false
+    #
+    # An inspect-keyed guard let two genuinely duplicate `PHANTOM_SYMBOLS`
+    # option hashes through; a value-as-Hash-key guard closes that but is still
+    # looser than `Hash#key`, which is the read four of the five call sites use.
+    # Checking both relations is the only form that is at least as strict as
+    # every call site. It is O(n^2), which is free on tables of 4 to 18 rows.
+    seen = []
     constant.each do |key, value|
       next if value.nil?
 
-      # Keyed by the VALUE ITSELF, never by `value.inspect`.
-      #
-      # The reverse lookup this guards is `Hash#key`, which compares with Ruby's
-      # `eql?`/`hash` — and for a Hash value those are order-independent, while
-      # `inspect` is not. Measured:
-      #
-      #   a = {mpadded: {depth: "0", height: "0"}, phantom: true}
-      #   b = {phantom: true, mpadded: {height: "0", depth: "0"}}
-      #   a == b  -> true      a.eql?(b) -> true     a.hash == b.hash -> true
-      #   a.inspect == b.inspect -> false
-      #
-      # So an inspect-keyed guard let two genuinely duplicate `PHANTOM_SYMBOLS`
-      # option hashes through while `Hash#key` would silently return the first —
-      # the exact ambiguity this guard exists to refuse. Using the value as the
-      # key makes the guard compare the way the call site does.
-      if (earlier = seen[value])
-        raise Error, "UnicodeMath::Constants::#{name} maps both #{earlier.inspect} " \
-                     "and #{key.inspect} to #{value.inspect}, and the gem reverse " \
-                     "looks this table up; the port cannot know which key wins"
+      if (earlier = seen.find { |_, other| other == value || other.eql?(value) })
+        raise Error, "UnicodeMath::Constants::#{name} maps both " \
+                     "#{earlier.first.inspect} and #{key.inspect} to " \
+                     "#{value.inspect}, and #{unicodemath_reverse_read_note(name)}; " \
+                     "the port cannot know which key wins"
       end
-      seen[value] = key
+      seen << [key, value]
     end
   end
 
@@ -3410,11 +3460,12 @@ module CorpusGenerator
     tables["sup_parenthesis"] = unicodemath_nested_paren_map("SUP_PARENTHESIS")
     lists = UNICODEMATH_LISTS.to_h { |name, key| [key, unicodemath_string_list(name)] }
 
-    # And the reverse-lookup guard has to reach them. It lives inside
-    # `unicodemath_string_map`, which only the emitted tables pass through, so
-    # before this every deferred reverse table was existence-checked and
-    # nothing more — the guard covered one of the four it claimed to cover.
-    UNICODEMATH_REVERSED_TABLES.each { |name| assert_reverse_lookup_safe!(name) }
+    # And the gem-side reverse-lookup guard has to reach them. The check inside
+    # `unicodemath_string_map` only sees the tables that pass through it, which
+    # of the four reverse-read tables is `SIZE_OVERRIDES_SYMBOLS` alone — the
+    # other three have their own builders above, so before this they were
+    # existence-checked and nothing more.
+    UNICODEMATH_REVERSED_TABLES.each_key { |name| assert_reverse_lookup_safe!(name) }
 
     # The carrier reachability sets, projected unicodemath-side so this
     # format's carrier dispatch imports no other format's slice. Same census
@@ -4059,8 +4110,9 @@ module CorpusGenerator
     sections = [
       ts_header(<<~TEXT.chomp),
         UnicodeMath render tables: the constant tables `to_unicodemath` reads
-        that no other generated slice supplies, consumed by
-        `src/formats/unicodemath/renderer.ts`.
+        that no other generated slice supplies, consumed by the per-node
+        renderers under `src/render/<kind>/unicodemath.ts` that
+        `src/formats/unicodemath/renderer.ts` dispatches to.
 
         Read from `Plurimath::UnicodeMath::Constants` rather than measured
         through a render, unlike the latex and mathml slices. That is a
@@ -4070,11 +4122,25 @@ module CorpusGenerator
         shape-checks every table and fails rather than emitting something
         malformed.
 
-        Three call sites reverse-look-up these tables (`base.rb:128`,
-        `frac.rb:159`, `table.rb:422`), and Ruby's `Hash#invert` keeps the LAST
-        key for a duplicated value. The generator therefore refuses any table
-        that maps two keys to one value: a reverse lookup would silently pick
-        one, and the port would have no way to know which.
+        Five call sites reverse-look-up four of these tables, and NOT all with
+        the same Ruby read: `base.rb:128` is `SIZE_OVERRIDES_SYMBOLS.invert`,
+        while `frac.rb:159` (`UNICODE_FRACTIONS`), `table.rb:422`
+        (`PARENTHESIS_MATRICES`), `phantom.rb:59` and `mpadded.rb:102` (both
+        `PHANTOM_SYMBOLS`) are `Hash#key`. The two disagree on a duplicated
+        value — measured, `{a: 1, b: 1}.key(1)` is `:a` and `.invert[1]` is
+        `:b`, FIRST match against LAST — so the generator refuses a duplicate
+        value in THOSE FOUR tables rather than pick a side.
+
+        That is the whole of the guarantee. Tables nothing reverse-reads are
+        emitted with their duplicates intact, because forward reads do not
+        care: `UNICODEMATH_UNARY_SYMBOLS` below maps both `underline` and
+        `underbar` to `&#x2581;`. And nil values are exempt even in the four,
+        because the gem itself ships a collision on them —
+        `PARENTHESIS_MATRICES` has three nil rows, `table.rb:422` really can
+        land on them, and the winner is measured off the gem with the gem's
+        own `Hash#key` and emitted separately as
+        `UNICODEMATH_NIL_PAREN_MATRIX` (`eqarray`; `invert` would have said
+        `cases`).
 
         Two entries here are NOT from `Constants` and are not lookups at all:
         `UNICODEMATH_UNARY_CARRIER_NAMES` and

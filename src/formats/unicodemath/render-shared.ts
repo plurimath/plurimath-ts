@@ -75,6 +75,28 @@ export type RenderFn<K extends NodeKind> = (
  * `nil` on every concrete symbol probed. Reading the source without probing
  * gives the wrong branch.
  */
+/**
+ * The same five, as the ENTITY text `Utility.primes_constants` actually holds:
+ * `["&#x2057;", "&#x2034;", "&#x2033;", "&#x2032;", "&#x27;"]`.
+ *
+ * `unicodemath_field_value` returns `field.value` RAW for a generic
+ * `Symbols::Symbol`, so the gem compares entity against entity there — and a
+ * generic symbol's render is the undecoded entity, which matches no decoded
+ * glyph. Measured: `Symbol("&#x2032;")` through `Symbol("&#x27;")` are ALL
+ * primes to the gem. Checking only `&#x27;` caught one of the five.
+ *
+ * Concrete symbol classes need no entity check: across all 1,460 of them the
+ * decoded-glyph comparison below agrees with the gem in every case (measured,
+ * zero disagreements), because their renders are already decoded.
+ */
+const PRIME_ENTITIES: readonly string[] = [
+  "&#x2057;",
+  "&#x2034;",
+  "&#x2033;",
+  "&#x2032;",
+  "&#x27;",
+];
+
 const PRIME_GLYPHS: readonly string[] = [
   "′", // &#x2032; prime
   "″", // &#x2033; double prime
@@ -120,7 +142,9 @@ export function primeUnicode(node: MathNode | undefined, rendered: string | null
   // `Log` all route through here, and a hand-built or MathML-parsed tree
   // reaches it.
   const value = (node as { readonly value?: string | null }).value;
-  if (typeof value === "string" && value.includes("&#x27;")) return true;
+  if (typeof value === "string" && PRIME_ENTITIES.some((entity) => value.includes(entity))) {
+    return true;
+  }
 
   if (rendered === null) return false;
 

@@ -151,6 +151,22 @@ describe("primeUnicode matches the gem", () => {
     expect(primeUnicode(raw, "&#x27;")).toBe(true);
   });
 
+  it.each([
+    ["&#x2032;", "prime"],
+    ["&#x2033;", "double prime"],
+    ["&#x2034;", "triple prime"],
+    ["&#x2057;", "quadruple prime"],
+    ["&#x27;", "apostrophe"],
+  ])("is true for a generic symbol carrying the raw %s entity", (entity) => {
+    // `unicodemath_field_value` returns `field.value` RAW for a generic
+    // `Symbols::Symbol`, so the gem compares entity text against the entity
+    // text in `primes_constants` — and the render of such a symbol is the
+    // undecoded entity, matching no decoded glyph. Measured: all five are
+    // primes to the gem. Checking only `&#x27;` caught one of them.
+    const raw = new SymbolNode({ id: "Symbol", value: entity });
+    expect(primeUnicode(raw, entity)).toBe(true);
+  });
+
   it("is still false for a generic symbol with an unrelated value", () => {
     expect(primeUnicode(new SymbolNode({ id: "Symbol", value: "x" }), "x")).toBe(false);
   });

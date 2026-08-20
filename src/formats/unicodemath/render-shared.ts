@@ -473,7 +473,8 @@ export function rubyInterpolate(value: unknown): string {
  * numeric type, so `1` and `1.0` are the same value while Ruby prints "1" and
  * "1.0". Those render as Ruby renders an Integer, which is wrong only for a
  * Float that happens to be integral. `0.0` and `-0.0` fall here too (Ruby
- * "0.0" / "-0.0", JS "0" / "0").
+ * "0.0", JS "0"). `-0.0` is the exception and IS handled: Ruby has no Integer
+ * negative zero, so a JS `-0` can only be that Float.
  *
  * That used to be called "exact for every Integer", which it was not: `String`
  * gives up on large magnitudes and emits exponential notation, which Ruby's
@@ -559,6 +560,12 @@ function rubyInspect(value: unknown): string {
   if (typeof value === "boolean") return String(value);
   if (typeof value === "string") return JSON.stringify(value);
   if (typeof value === "number") {
+    // `-0` is the one integral value that IS decidable: Ruby has no Integer
+    // negative zero, so a JS `-0` can only have come from the Float `-0.0`.
+    // Measured: the gem renders `mask: -0.0` as "∑-0.0_(a)^(b)▒〖c〗", where
+    // this printed "0" by falling into the Integer arm below.
+    if (Object.is(value, -0)) return "-0.0";
+
     if (Number.isInteger(value) && Object.is(value, Math.trunc(value))) {
       // `BigInt`, not `String`: `String(1e21)` is "1e+21", and Ruby's
       // Integer#to_s never uses an exponent. `BigInt` prints the double's exact

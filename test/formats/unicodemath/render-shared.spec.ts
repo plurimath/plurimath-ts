@@ -284,6 +284,21 @@ describe("the unicodemath field value is entity text, not the render", () => {
     expect(unicodemathFieldValue(new SymbolNode({ id: "Symbol", value: "\u0301" }))).toBe("\u0301");
   });
 
+  it("coerces the symbol value the way the gem's constructor does", () => {
+    // `@value = sym.is_a?(Array) ? sym.join : sym&.to_s` (`symbols/symbol.rb:12`).
+    // The gem's answer for a non-string argument is decided at CONSTRUCTION,
+    // not in the predicate that later reads it. Measured on the oracle:
+    //   Alpha(["&#x27;"]) value "&#x27;" -> PowerBase renders "xα_(a)"
+    //   Alpha(5)          value "5"      -> "x_(a)^(α)"
+    expect(new SymbolNode({ id: "Alpha", value: ["&#x27;"] } as never).value).toBe("&#x27;");
+    expect(new SymbolNode({ id: "Alpha", value: 5 } as never).value).toBe("5");
+    expect(new SymbolNode({ id: "Alpha", value: false } as never).value).toBe("false");
+    expect(new SymbolNode({ id: "Alpha", value: null }).value).toBeNull();
+    // and the consequence the coercion exists for:
+    expect(primeUnicode(new SymbolNode({ id: "Alpha", value: ["&#x27;"] } as never))).toBe(true);
+    expect(primeUnicode(new SymbolNode({ id: "Alpha", value: ["zz"] } as never))).toBe(false);
+  });
+
   it("answers null for the ten classes with no entity entry", () => {
     // `hexcode_in_input` returns nil for these. Callers differ on what nil
     // means, so this must report it rather than substituting anything.
@@ -547,6 +562,13 @@ describe("a float mask matches Ruby's Float#to_s inside the band", () => {
     // so this is the same undecidable case as `1.0` -> `"1"`, resolved the same
     // way. Pinned here so the next reader sees the choice rather than re-deriving it.
     expect(masked(1e15)).toBe("⟡(1000000000000000&x)");
+  });
+
+  it("renders negative zero as the Float it can only have been", () => {
+    // Ruby has no Integer -0, so a JS `-0` is unambiguously the Float `-0.0`.
+    // Measured: the gem gives "⟡(-0.0&x)". This printed "0" before.
+    expect(masked(-0)).toBe("⟡(-0.0&x)");
+    expect(masked(0)).toBe("⟡(0&x)");
   });
 
   it("prints a large integral value in full, as Ruby's Integer#to_s does", () => {

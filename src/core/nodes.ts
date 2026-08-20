@@ -205,6 +205,48 @@ function assignedValue(value: string | null | undefined): string | null {
 }
 
 /**
+ * `Symbols::Symbol#initialize` (`symbols/symbol.rb:12`):
+ *
+ *   @value = sym.is_a?(Array) ? sym.join : sym&.to_s
+ *
+ * The symbol slot COERCES, unlike the two other users of `assignedValue`:
+ * `Number#initialize` converts only a `Parslet::Slice` and stores anything else
+ * as-is, so they cannot share one helper.
+ *
+ * This matters because callers downstream test the stored value as a string.
+ * `prime_unicode?` reads `field&.value&.include?("&#x27;")`, and the gem's
+ * answer for a non-string argument is decided HERE, at construction, not there
+ * — measured on the oracle:
+ *
+ *   Alpha(["&#x27;"])          value "&#x27;"                 (Array#join)
+ *   Alpha({"&#x27;" => true})  value "{\"&#x27;\" => true}"    (Hash#to_s)
+ *   Alpha(5)                   value "5"
+ *   Alpha(false)               value "false"
+ *   Alpha(nil)                 value nil                      (`&.` short-circuits)
+ *
+ * so `Alpha(["&#x27;"])` IS a prime to the gem, because by the time the
+ * predicate runs the value is the string `"&#x27;"`. A port that stored the
+ * array answered false.
+ *
+ * Arrays and primitives are reproduced exactly. A plain object is NOT: Ruby's
+ * `Hash#to_s` is its inspect form, which core cannot build without the format
+ * layer's `rubyInspect`, so such a value is stored unchanged and will not match
+ * the gem. It is unreachable through the declared `string | null` type and is
+ * left as a known gap rather than approximated.
+ */
+function symbolValue(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  // `Array#join` calls `to_s` on each element and concatenates with no
+  // separator; a nil element contributes "".
+  if (Array.isArray(value)) return value.map((entry) => symbolValue(entry) ?? "").join("");
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  return value as string;
+}
+
+/**
  * The starting value for a slot: the aliased class's own default when it has
  * one, otherwise the carrier's.
  *
@@ -1210,7 +1252,7 @@ export class SymbolNode extends NodeBase {
     this.miniSupSized = init.miniSupSized;
     this.options = copyOptions(init.options);
     this.slashed = init.slashed;
-    this.value = assignedValue(init.value);
+    this.value = symbolValue(init.value);
   }
 }
 

@@ -578,34 +578,42 @@ export function naryandSupValue(field: unknown, context: RenderContext): string 
   return `^${unicodemathParens(field, context) ?? ""}`;
 }
 
-/** A symbol id the generated table does not carry: a parity gap, not output. */
 /**
- * `Core#unicodemath_field_value` (`core.rb:484`), as the port can compute it.
+ * `Core#unicodemath_field_value` (`core.rb:484-486`):
  *
- * The gem returns `field.value` for a generic symbol and
- * `Utility.hexcode_in_input(field)` otherwise — the latter digs an ENTITY
- * string out of the class's parse-input table. Its callers then compare that
- * against entity-valued constants, so the whole comparison is entity-to-entity
- * on the gem side.
+ *   field.class_name == "symbol" ? field.value : Utility.hexcode_in_input(field)
  *
- * This port holds decoded glyphs in the symbol slice and entity text in the
- * constant tables, so the comparison is done decoded on both sides instead.
- * The decode is a bijection for these values, so the two agree.
+ * RAW PARSE-INPUT ENTITY TEXT — never the rendered glyph. Its callers compare
+ * it against entity-valued constants AND interpolate it into output, so on the
+ * gem side the comparison is entity-to-entity and the emitted bytes are entity
+ * text.
+ *
+ * An earlier version had no generated parse-input table, so it decoded the
+ * RENDER and looked that up, on the stated reasoning that the decode is a
+ * bijection. It is not. Six classes render an ASCII shorthand rather than the
+ * entity they parse from — `Dots`, `Hat`, `Paren::Langle`, `Paren::Rangle`,
+ * `Slash`, `Tilde` — and ten carry no `/&#x.+;/` entry at all, where the gem
+ * interpolates nil as `""` and the proxy wrote the render instead. Measured
+ * over `Overset(<class>, Acute)` across all 1,460 symbol classes: the proxy
+ * differed from the gem on 1,439 bare and 15 through `Formula`, and `Underset`
+ * on 2. With this table, 0, 0 and 0.
+ *
+ * Returns null for the gem's nil. What nil DOES is the CALLER's business and
+ * differs by call site: `prime_unicode?` raises on it, both `unicode_accent?`
+ * answer false, and the emit paths interpolate it as `""`. That decision does
+ * not belong in here.
  */
-export function fieldGlyph(field: unknown, context: RenderContext): string | null {
-  if (!isNode(field) || field.kind !== "symbol") return null;
-
-  const rendered = context.render(field);
-  return rendered === null ? null : htmlEntityToUnicode(rendered);
-}
-
-/** Whether a decoded glyph appears in an entity-valued table. */
-export function glyphIn(glyph: string | null, entities: Iterable<string>): boolean {
-  if (glyph === null) return false;
-  for (const entity of entities) {
-    if (htmlEntityToUnicode(entity) === glyph) return true;
-  }
-  return false;
+export function unicodemathFieldValue(field: NodeOf<"symbol">): string | null {
+  // Typed to the symbol node because every call site narrows first, and for the
+  // gem's own reason: `hexcode_in_input` sends `input` to whatever it is given,
+  // so a non-symbol does not return nil here — it raises. The two callers that
+  // can be handed one raise there explicitly rather than widening this.
+  //
+  // `class_name` is `self.class.name.split("::").last.downcase`, so only the
+  // generic `Symbols::Symbol` answers "symbol" — measured across all 1,460
+  // concrete classes, no basename collides and none is named `Symbol`.
+  if (className(field.id) === "symbol") return field.value;
+  return UNICODEMATH_HEXCODE_IN_INPUT.get(field.id) ?? null;
 }
 
 /**

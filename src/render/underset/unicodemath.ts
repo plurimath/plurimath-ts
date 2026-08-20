@@ -21,13 +21,12 @@
 
 import {
   className,
-  fieldGlyph,
-  htmlEntityToUnicode,
   isNode,
   type NodeOf,
   type RenderContext,
   renderChild,
   renderOptionalChild,
+  unicodemathFieldValue,
   unicodemathParens,
 } from "../../formats/unicodemath/render-shared";
 import {
@@ -36,30 +35,19 @@ import {
   UNICODEMATH_HORIZONTAL_BRACKETS,
 } from "../../generated/unicodemath/render-tables";
 
-/** One of the gem's entity-valued constants, indexed the two ways it is read. */
-interface EntityTable {
-  /** The entries verbatim — what a generic symbol's raw `value` is compared against. */
-  readonly raw: ReadonlySet<string>;
-  /**
-   * Decoded glyph -> the entry it decodes from.
-   *
-   * A `Map` can only carry one entry per glyph, which is sound here and
-   * measured: across `DIACRITIC_BELOWS + ACCENT_SYMBOLS.values` (73 entries, 69
-   * distinct) no two DISTINCT entity strings decode to the same character, and
-   * the same holds for `DIACRITIC_OVERLAYS + ACCENT_SYMBOLS.values` (44/41) and
-   * for `HORIZONTAL_BRACKETS` (8/8). The duplicates are repeats of one string
-   * (`widetilde` and `tilde` are both `"&#x303;"`), so the surviving entry is
-   * the same string either way.
-   */
-  readonly byGlyph: ReadonlyMap<string, string>;
-}
+/**
+ * One of the gem's entity-valued constants.
+ *
+ * `match_unicode?` is `include?` / `has_value?` against entity text, and what
+ * this port hands it is entity text too, so a plain set of the entries verbatim
+ * is the whole structure. An earlier version also indexed each table by decoded
+ * glyph, because the value being tested was a decoded render rather than the
+ * gem's `unicodemath_field_value`; that index went with the proxy.
+ */
+type EntityTable = ReadonlySet<string>;
 
 function entityTable(entities: Iterable<string>): EntityTable {
-  const raw = new Set(entities);
-  return {
-    raw,
-    byGlyph: new Map([...raw].map((entity) => [htmlEntityToUnicode(entity), entity] as const)),
-  };
+  return new Set(entities);
 }
 
 /**
@@ -100,40 +88,29 @@ const HORIZONTAL_BRACKETS = entityTable(UNICODEMATH_HORIZONTAL_BRACKETS.values()
  *     still an accent to the gem, and `Symbol("̖")`, holding the decoded
  *     character, is NOT one. Measured: `"(x)&#x316;"` and `"(x)┬̖"`.
  *
- * The `class_name == "symbol"` half is exact here: `className` is the gem's own
- * expression, and no census class shares a basename (measured across all 1,460
- * — no duplicates, and none named `Symbol`).
+ * Both halves are now exact. `className` is the gem's own expression and no
+ * census class shares a basename (measured across all 1,460 — no duplicates,
+ * and none named `Symbol`), and the `hexcode_in_input` half reads the generated
+ * parse-INPUT table rather than decoding the render.
  *
- * The `hexcode_in_input` half is a PROXY — the port has no generated table of
- * parse-INPUT entities, so it decodes the render and looks that up. Measured
- * against the gem's own predicate over all 1,460 symbol classes: 2
- * disagreements for this table and for `DIACRITIC_OVERLAYS`, 0 for
- * `HORIZONTAL_BRACKETS`. Both are classes whose render is an ASCII shorthand
- * rather than the entity they parse from — `Hat` renders `"^"` against
- * `"&#x302;"`, `Tilde` renders `"~"` against `"&#x303;"` — so the gem accents
- * them and this does not: `Underset(Hat, Symbol("x"))` is `"(x)&#x302;"` there
- * and `"(x)┬^"` here. Closing it needs the generated table, not a hand-typed
- * pair (PORTING-STANDARDS.md, "Generated data discipline"); the six classes
- * whose render is not their field value decoded are `Dots`, `Hat`,
- * `Paren::Langle`, `Paren::Rangle`, `Slash` and `Tilde`.
+ * It used to decode the render, which cost 2 disagreements against the gem's
+ * own predicate on this table and on `DIACRITIC_OVERLAYS` (0 on
+ * `HORIZONTAL_BRACKETS`): `Hat` renders `"^"` against `"&#x302;"` and `Tilde`
+ * renders `"~"` against `"&#x303;"`, so the gem accented them and this did not
+ * — `Underset(Hat, Symbol("x"))` was `"(x)&#x302;"` there and `"(x)┬^"` here.
+ * Measured after the change, across all 1,460 classes through `Formula`: 0.
  */
-function matchedFieldValue(
-  field: unknown,
-  context: RenderContext,
-  table: EntityTable,
-): string | null {
+function matchedFieldValue(field: unknown, table: EntityTable): string | null {
   // `return false unless field.is_a?(Math::Symbols::Symbol)` — the guard both
   // `unicode_accent?` (:126) and `horizontal_brackets?` (:132) open with, and
   // the reason a `Formula` or a nil slot answers false instead of raising.
   if (!isNode(field) || field.kind !== "symbol") return null;
 
-  if (className(field.id) === "symbol") {
-    const value = field.value;
-    return value !== null && table.raw.has(value) ? value : null;
-  }
-
-  const glyph = fieldGlyph(field, context);
-  return glyph === null ? null : (table.byGlyph.get(glyph) ?? null);
+  // `match_unicode?(unicodemath_field_value(field))`. nil never matches: both
+  // arms are `include?`/`has_value?` over entity strings, so a nil field value
+  // answers false here rather than raising — unlike `prime_unicode?`.
+  const value = unicodemathFieldValue(field);
+  return value !== null && table.has(value) ? value : null;
 }
 
 /** `unicode_classes_accent?` (`underset.rb:138`). */
@@ -146,13 +123,13 @@ export function renderUnderset(node: NodeOf<"underset">, context: RenderContext)
   const two = node.parameterTwo;
 
   // `horizontal_brackets?` asks `parameter_one` regardless of its argument.
-  if (matchedFieldValue(one, context, HORIZONTAL_BRACKETS) !== null) {
+  if (matchedFieldValue(one, HORIZONTAL_BRACKETS) !== null) {
     return `${renderOptionalChild(one, context)}${unicodemathParens(two, context) ?? ""}`;
   }
   if (isBraceClass(two)) {
     return `${renderOptionalChild(two, context)}_${unicodemathParens(one, context) ?? ""}`;
   }
-  const oneAccent = matchedFieldValue(one, context, ACCENTS);
+  const oneAccent = matchedFieldValue(one, ACCENTS);
   if (oneAccent !== null) {
     return `${unicodemathParens(two, context) ?? ""}${oneAccent}`;
   }

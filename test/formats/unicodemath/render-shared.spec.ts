@@ -21,13 +21,17 @@ import {
   FracNode,
   MrowNode,
   NumberNode,
+  OversetNode,
   SymbolNode,
+  UndersetNode,
 } from "../../../src/core/index";
 import {
   miniSized,
   negatedValue,
   primeUnicode,
+  unicodemathFieldValue,
 } from "../../../src/formats/unicodemath/render-shared";
+import { toUnicodemath } from "../../../src/formats/unicodemath/renderer";
 
 const plainSymbol = () => new SymbolNode({ id: "Symbol", value: "x" });
 const miniSymbol = (which: "sub" | "sup") =>
@@ -228,5 +232,90 @@ describe("negatedValue matches the gem", () => {
     // silently never fires, which is what the first draft of this did.
     const byId = new FormulaNode({ value: [new SymbolNode({ id: "Nsub" })] });
     expect(negatedValue(byId)).toBe(false);
+  });
+});
+
+/**
+ * `Core#unicodemath_field_value` — RAW parse-input entity text.
+ *
+ * Every expectation here was measured on the pinned oracle, and each one is a
+ * case the previous implementation got wrong. It had no generated parse-input
+ * table, so it decoded the RENDER and looked that up, reasoning that the decode
+ * is a bijection. Measured over `Overset(<class>, Acute)` across all 1,460
+ * symbol classes, that proxy differed from the gem on 1,439 bare and 15 through
+ * `Formula`, and `Underset` on 2; with the table, 0, 0 and 0.
+ *
+ * The cases below are the two shapes that survived `Formula`'s entity decode,
+ * because those are the ones a caller could actually see through the public
+ * API — the other 1,424 were invisible there and would not have failed a test
+ * written at that level.
+ */
+describe("the unicodemath field value is entity text, not the render", () => {
+  const acute = () => new SymbolNode({ id: "Acute" });
+  const wrap = (node: OversetNode | UndersetNode) =>
+    toUnicodemath(new FormulaNode({ value: [node] }));
+
+  it("reads the parse-input entity for a symbol subclass", () => {
+    // `Alpha` parses from `&#x3b1;` and renders `α`. The gem emits the former.
+    expect(unicodemathFieldValue(new SymbolNode({ id: "Alpha" }))).toBe("&#x3b1;");
+  });
+
+  it("reads value RAW for the generic symbol, decoded or not", () => {
+    // `class_name == "symbol"` takes the other arm, where the gem does no
+    // lookup at all: whatever the node carries is the field value verbatim.
+    expect(unicodemathFieldValue(new SymbolNode({ id: "Symbol", value: "&#x301;" }))).toBe(
+      "&#x301;",
+    );
+    expect(unicodemathFieldValue(new SymbolNode({ id: "Symbol", value: "\u0301" }))).toBe("\u0301");
+  });
+
+  it("answers null for the ten classes with no entity entry", () => {
+    // `hexcode_in_input` returns nil for these. Callers differ on what nil
+    // means, so this must report it rather than substituting anything.
+    for (const id of ["Bar", "If", "Ul", "Paren::Lround", "Paren::Rsquare"]) {
+      expect(unicodemathFieldValue(new SymbolNode({ id }))).toBeNull();
+    }
+  });
+
+  it("accents Hat and Tilde, which the render proxy could not", () => {
+    // `Hat` renders `^` but parses from `&#x302;`, so the gem's accent tables
+    // match it and the proxy's decoded `^` did not. Measured on the oracle:
+    // `Formula(Overset(Hat, Acute))` is `(́)̂`; the proxy wrote `^́`.
+    expect(
+      wrap(new OversetNode({ parameterOne: new SymbolNode({ id: "Hat" }), parameterTwo: acute() })),
+    ).toBe("(́)̂");
+    expect(
+      wrap(
+        new UndersetNode({ parameterOne: new SymbolNode({ id: "Hat" }), parameterTwo: acute() }),
+      ),
+    ).toBe("(́)̂");
+    expect(
+      wrap(
+        new UndersetNode({ parameterOne: new SymbolNode({ id: "Tilde" }), parameterTwo: acute() }),
+      ),
+    ).toBe("(́)̃");
+  });
+
+  it("interpolates a missing entity as empty, where the proxy wrote the render", () => {
+    // The gem's `"#{unicodemath_field_value(parameter_one)}..."` on a nil is
+    // `""`. The proxy emitted the rendered glyph instead — `¯` for `Bar`,
+    // `if` for `If`. Measured on the oracle: both are `́` alone.
+    expect(
+      wrap(new OversetNode({ parameterOne: new SymbolNode({ id: "Bar" }), parameterTwo: acute() })),
+    ).toBe("́");
+    expect(
+      wrap(new OversetNode({ parameterOne: new SymbolNode({ id: "If" }), parameterTwo: acute() })),
+    ).toBe("́");
+  });
+
+  it("emits entity text when an overset is the render root", () => {
+    // Without `Formula`'s decode pass nothing collapses the difference, which
+    // is where 1,439 of the 1,460 classes diverged. `toUnicodemath` allows this
+    // root, and the gem's own bare `Overset#to_unicodemath` measures it.
+    expect(
+      toUnicodemath(
+        new OversetNode({ parameterOne: new SymbolNode({ id: "Aa" }), parameterTwo: acute() }),
+      ),
+    ).toBe("&#x2200;\u0301");
   });
 });

@@ -371,32 +371,53 @@ const RUBY_SPACE = "[ \\t\\r\\n\\f\\v]";
 export function rubyInterpolate(value: unknown): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
-  // Exactly right for a Ruby Integer, and the closest a JS `number` can get to
-  // a Ruby Float. It cannot be made exact: JS has one numeric type, so `1` and
-  // `1.0` are the SAME value here while Ruby prints "1" and "1.0" — and
-  // `1e20.to_s` is "1.0e+20" where JS gives "100000000000000000000", and
-  // `-0.0.to_s` is "-0.0" where JS gives "0". Choosing between them needs type
-  // information the corpus does not carry, so this is a stated limit rather
-  // than a claim of faithfulness (TODO.plan/deferred.md). Unreachable from any
-  // parser — `mask` and `size` arrive as strings — so only a hand-built tree
-  // holding a Float reaches the divergence.
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return rubyInspect(value);
+}
 
-  // An Array or Hash reaches `to_s` as `inspect`, and `String(value)` is not
-  // that: JS gives `"x,2"` for `["x", 2]` where Ruby gives `["x", 2]`, and
-  // `"[object Object]"` for a hash where Ruby gives `{a: 1}`.
-  //
-  // Refused rather than approximated, because Ruby's own hash format is not
-  // stable across releases — `{a: 1}` on 4.0, `{:a=>1}` before 3.4 — so any
-  // reproduction here would pin this port to one Ruby version and be silently
-  // wrong against every other. No AsciiMath input produces such an option; a
-  // hand-built tree that does gets a typed error instead of plausible bytes.
-  throw new RenderError(
-    `cannot interpolate ${describeSlot(value)} — Ruby renders it through ` +
-      "`inspect`, whose format is version-dependent (ARCHITECTURE.md §5)",
-    FORMAT,
-    "unknown",
-  );
+/**
+ * Ruby's `inspect`, for the values a JS runtime can represent faithfully.
+ *
+ * `"#{value}"` calls `to_s`, and for a String that is the string itself, while
+ * for an Array or Hash `to_s` IS `inspect`. Measured on the pinned oracle
+ * through a real `Mpadded` mask — the gem renders all of these, so refusing
+ * them made this port LESS capable than its specification, which is its own
+ * kind of divergence:
+ *
+ *   ["x", 2] => "⟡([\"x\", 2]&x)"      {a: 1} => "⟡({a: 1}&x)"
+ *   1.0      => "⟡(1.0&x)"             5      => "⟡(5&x)"
+ *   "s"      => "⟡(s&x)"               true   => "⟡(true&x)"
+ *
+ * Two shapes are refused because JavaScript cannot decide them, and a wrong
+ * answer here would be silent:
+ *
+ *   - a NON-INTEGER number. JS has one numeric type, so `1` and `1.0` are the
+ *     same value; Ruby prints "1" and "1.0". An integral number is rendered as
+ *     Ruby renders an Integer, which is exact for every Integer and wrong only
+ *     for a Float that happens to be integral.
+ *   - nothing else: hash keys are assumed to be Symbols, which is what every
+ *     option hash in the gem's own constants uses (`{mpadded: {...},
+ *     phantom: true}`), and a String key would print `{"a" => 1}` instead.
+ *     Recorded in TODO.plan/deferred.md rather than guessed at.
+ */
+function rubyInspect(value: unknown): string {
+  if (value === null || value === undefined) return "nil";
+  if (typeof value === "boolean") return String(value);
+  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "number") {
+    if (Number.isInteger(value) && Object.is(value, Math.trunc(value))) return String(value);
+    throw new RenderError(
+      `cannot interpolate the non-integer number ${String(value)} — Ruby's Float#to_s ` +
+        "cannot be derived from a JavaScript number (TODO.plan/deferred.md)",
+      FORMAT,
+      "unknown",
+    );
+  }
+  if (Array.isArray(value)) return `[${value.map((entry) => rubyInspect(entry)).join(", ")}]`;
+  if (typeof value === "object") {
+    const entries = Object.entries(value as Record<string, unknown>);
+    return `{${entries.map(([key, inner]) => `${key}: ${rubyInspect(inner)}`).join(", ")}}`;
+  }
+  throw new RenderError(`cannot interpolate ${describeSlot(value)}`, FORMAT, "unknown");
 }
 
 /**

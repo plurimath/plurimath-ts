@@ -635,6 +635,21 @@ Not reachable from any parser: the two interpolated options (`mask` on
 Sum/Int/Oint, `size` on Base) arrive as strings. Only a hand-built tree holding
 a Float reaches it.
 
-**Trigger:** the first of — a corpus case records a numeric option value, or a
-parser is added that can produce one, or the model schema gains Ruby type
-information for option values.
+Arrays and hashes ARE now reproduced — `to_s` on them is `inspect`, and the
+pinned gem renders them (`⟡(["x", 2]&x)`, `⟡({a: 1}&x)`), so refusing them made
+this port less capable than its own specification. Two decisions inside that
+reproduction are assumptions rather than measurements, and are the rest of this
+entry:
+
+- **hash keys are assumed to be Symbols.** Every option hash in the gem's own
+  constants uses them (`{mpadded: {…}, phantom: true}`), and a Symbol key
+  prints `{a: 1}` where a String key prints `{"a" => 1}`. A JS object key
+  carries no such distinction.
+- **an integral number is treated as a Ruby Integer.** Exact for every Integer;
+  wrong only for a Float that happens to be integral. A non-integral number is
+  refused outright, since it is decidably a Float whose `to_s` cannot be
+  derived.
+
+**Trigger:** the first of — a corpus case records a numeric or hash option
+value, or a parser is added that can produce one, or the model schema gains
+Ruby type information for option values.

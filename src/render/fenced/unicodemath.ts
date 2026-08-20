@@ -237,7 +237,13 @@ function parenSize(minsize: unknown, at: string): string {
     throw crash(`fenced.options.${at}.minsize`, "NoMethodError on nil");
   }
   const size = rubyToFloat(minsize.replace(/em$/, ""));
-  if (size === 0) throw crash(`fenced.options.${at}.minsize`, "FloatDomainError (-Infinity)");
+  // Ruby reaches FloatDomainError from BOTH ends: `log(0)` is -Infinity for a
+  // size that parses to zero, and `log(Infinity)` is +Infinity for a size like
+  // "1e309em" whose `to_f` overflows. `Number.isFinite` folds the overflow to
+  // zero above, so both arrive here — the message names the pair rather than
+  // claiming the negative one for an input that overflowed upward.
+  if (size === 0)
+    throw crash(`fenced.options.${at}.minsize`, "FloatDomainError (log is not finite)");
   if (size < 0) throw crash(`fenced.options.${at}.minsize`, "Math::DomainError");
 
   return String(rubyRound(Math.log(size) / Math.log(1.25)));

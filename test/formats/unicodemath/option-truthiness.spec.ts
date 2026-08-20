@@ -251,16 +251,28 @@ describe("option values are interpolated, not type-checked", () => {
     new BaseNode({ parameterOne: sym("x"), parameterTwo: sym("y"), options: { size } as never });
 
   it.each([
-    ["an array", ["x", 2]],
-    ["a hash", { a: 1 }],
-  ])("refuses to interpolate %s rather than guessing", (_name, value) => {
+    ["an array", ["x", 2], '∑["x", 2]_(a)^(b)▒〖c〗'],
+    ["a nested array", ["x", [1, true]], '∑["x", [1, true]]_(a)^(b)▒〖c〗'],
+    ["a hash", { a: 1 }, "∑{a: 1}_(a)^(b)▒〖c〗"],
+  ])("interpolates %s the way Ruby's inspect does", (_name, value, expected) => {
+    // `to_s` on an Array or Hash IS `inspect`. Measured through a real mask on
+    // the pinned oracle: `["x", 2]` gives `⟡(["x", 2]&x)`, `{a: 1}` gives
+    // `⟡({a: 1}&x)`. Refusing these made the port less capable than the gem.
+    expect(toUnicodemath(sum(value))).toBe(expected);
+  });
+
+  it("refuses only the number it genuinely cannot decide", () => {
     // Ruby renders both through `inspect`, and its hash format is not stable
     // across releases (`{a: 1}` on 4.0, `{:a=>1}` before 3.4), so a
     // reproduction would pin this port to one Ruby. `String(value)` was
     // silently wrong for both: measured, the gem gives `∑["x", 2]_(a)^(b)▒〖c〗`
     // where the port gave `∑x,2…`, and `∑{a: 1}…` where it gave
     // `∑[object Object]…`.
-    expect(() => toUnicodemath(sum(value))).toThrow(RenderError);
+    // A JS number carries no Integer/Float distinction, so 1.5 is decidable
+    // (non-integral, therefore a Float) while 1 is not — an integral value is
+    // rendered as Ruby renders an Integer, which is exact for every Integer.
+    expect(() => toUnicodemath(sum(1.5))).toThrow(RenderError);
+    expect(toUnicodemath(sum(5))).toBe("∑5_(a)^(b)▒〖c〗");
   });
 
   it.each([

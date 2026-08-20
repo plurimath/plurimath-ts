@@ -73,9 +73,14 @@ describe("the unicodemath symbol slice", () => {
  * only that sixteen tables were non-empty, so twelve could have shrunk to one
  * entry and passed. The second pinned exact sizes but its "covers every
  * emitted table" check carried an EXCLUSION LIST that skipped ten of the
- * twenty-six emitted constants — including every one added most recently —
- * so it could not do the job it was named for. This one enumerates all
- * twenty-six and derives the emitted set from the module, with no filter.
+ * twenty-six constants emitted at that time — including every one added most
+ * recently — so it could not do the job it was named for.
+ *
+ * This one carries no filter: it derives the emitted set from the module, so
+ * a new constant fails by name here until it is pinned below. That is why no
+ * total is quoted in this paragraph — the count has already grown once since
+ * the sentence above was written, and a recited total would rot the same way
+ * the exclusion list did.
  */
 const MAP_SIZES: ReadonlyArray<readonly [string, ReadonlyMap<string, unknown>, number]> = [
   ["ACCENT_SYMBOLS", RenderTables.UNICODEMATH_ACCENT_SYMBOLS, 21],

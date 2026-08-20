@@ -549,6 +549,13 @@ describe("a float mask matches Ruby's Float#to_s inside the band", () => {
     expect(masked(1e15)).toBe("⟡(1000000000000000&x)");
   });
 
+  it("prints a large integral value in full, as Ruby's Integer#to_s does", () => {
+    // `String(1e21)` is "1e+21"; Ruby's Integer#to_s never uses an exponent.
+    // Measured: the gem gives "⟡(1000000000000000000000&x)" for `10**21`.
+    expect(masked(1e21)).toBe("⟡(1000000000000000000000&x)");
+    expect(masked(-1e21)).toBe("⟡(-1000000000000000000000&x)");
+  });
+
   it("refuses a NON-integral value above the band, conservatively", () => {
     // Ruby's format is not decided by magnitude — `1.5e15` prints as "1.5e+15"
     // while `1202471614443916.8` at the same magnitude prints in full. Rather

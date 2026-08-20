@@ -100,13 +100,33 @@ const PRIME_ENTITIES: readonly string[] = [
 export function primeUnicode(node: MathNode | undefined): boolean {
   if (node === undefined || node.kind !== "symbol") return false;
 
+  // `return true if field&.value&.include?("&#x27;")` (`core.rb:417`) — the
+  // gem's SECOND line, which reads the node's own raw `value` for the
+  // apostrophe on EVERY symbol class, generic or concrete, before any hexcode
+  // lookup happens.
+  //
+  // A rewrite of this function dropped that line, on a reading of the gem that
+  // had "nothing between the guard and the field value". There is: this. The
+  // cost was one silent wrong answer and two spurious throws — measured on a
+  // concrete class carrying the entity as its value:
+  //
+  //   gem  PowerBase(x, x, Alpha("&#x27;"))   "xα_(x)"      port "x_(x)^(α)"  WRONG
+  //   gem  PowerBase(x, x, Bar("&#x27;"))     "x¯_(x)"      port  RenderError
+  //   gem  PowerBase(x, x, Lround("&#x27;"))  "x(_(x)"      port  RenderError
+  //
+  // Only `&#x27;` is tested here, not all five: the other four reach a concrete
+  // class solely through `hexcode_in_input` below, which ignores `value`.
+  const raw = node.value;
+  if (typeof raw === "string" && raw.includes("&#x27;")) return true;
+
   // Raw entity text on both arms — see `unicodemathFieldValue`. A generic
   // symbol carrying ANY of the five is a prime, not just the apostrophe.
   const value = unicodemathFieldValue(node);
 
-  // The gem's last line is `unicodemath_field_value(field).include?(prime)`,
-  // with nothing between it and the nil — so BOTH arms raise when the field
-  // value is nil, and both were once wrong here in the same direction:
+  // Past `core.rb:417` the gem's last line is
+  // `unicodemath_field_value(field).include?(prime)`, with nothing further
+  // guarding the nil — so BOTH arms raise when the field value is nil, and both
+  // were once wrong here in the same direction:
   //
   //   - a concrete class whose `input(:unicodemath)` holds no `&#x…;` entry.
   //     Measured, 10 of 1,460 do: Bar, If, Ul, Paren and its six concrete
@@ -451,9 +471,25 @@ export function rubyInterpolate(value: unknown): string {
  *
  * What JavaScript genuinely cannot decide is an INTEGRAL number: JS has one
  * numeric type, so `1` and `1.0` are the same value while Ruby prints "1" and
- * "1.0". Those render as Ruby renders an Integer — exact for every Integer,
- * wrong only for a Float that happens to be integral. `0.0` and `-0.0` fall
- * here too (Ruby "0.0" / "-0.0", JS "0" / "0").
+ * "1.0". Those render as Ruby renders an Integer, which is wrong only for a
+ * Float that happens to be integral. `0.0` and `-0.0` fall here too (Ruby
+ * "0.0" / "-0.0", JS "0" / "0").
+ *
+ * That used to be called "exact for every Integer", which it was not: `String`
+ * gives up on large magnitudes and emits exponential notation, which Ruby's
+ * Integer#to_s never does. Measured:
+ *
+ *   gem  Sum(mask: 10**21)  "∑1000000000000000000000_(a)^(b)▒〖c〗"
+ *   port Sum(mask: 1e21)    "∑1e+21_(a)^(b)▒〖c〗"        before
+ *
+ * `BigInt` prints the double's exact integer value with no exponent, which is
+ * what Ruby does with the Integer that double stands for.
+ *
+ * Above 2^53 that value may not be the Integer the caller meant, and no
+ * formatting choice can recover it — the information is gone before this
+ * function is reached. Measured: `10**30` is `"1000000000000000000000000000000"`
+ * in the gem, while JS's `1e30` IS `1000000000000000019884624838656` and prints
+ * as such. That is a property of the double, not of this port.
  *
  * A NON-integral number used to be refused alongside it, on the stated grounds
  * that Ruby's `Float#to_s` "cannot be derived from a JavaScript number". That
@@ -461,8 +497,10 @@ export function rubyInterpolate(value: unknown): string {
  * the gem emits `1.5` — a divergence pointing the opposite way from every other
  * one in this file. The two agree wherever BOTH print plain shortest-round-trip
  * decimal, and Ruby's plain range is the narrower of the two: measured on the
- * oracle, Ruby switches to scientific below 1e-4 and at or above 1e15, where
- * JS switches below 1e-6 and at or above 1e21. So Ruby-plain implies JS-plain,
+ * oracle, Ruby switches to scientific below 1e-4, and somewhere around 1e15 at
+ * the top — "at or above 1e15" is too strong, as the counterexample further
+ * down shows — where JS switches below 1e-6 and at or above 1e21. Within the
+ * band Ruby-plain implies JS-plain,
  * and inside that band the digits are identical — verified over 5,000 random
  * non-integral values in it, 5,000 agreements and 0 disagreements.
  *
@@ -521,7 +559,12 @@ function rubyInspect(value: unknown): string {
   if (typeof value === "boolean") return String(value);
   if (typeof value === "string") return JSON.stringify(value);
   if (typeof value === "number") {
-    if (Number.isInteger(value) && Object.is(value, Math.trunc(value))) return String(value);
+    if (Number.isInteger(value) && Object.is(value, Math.trunc(value))) {
+      // `BigInt`, not `String`: `String(1e21)` is "1e+21", and Ruby's
+      // Integer#to_s never uses an exponent. `BigInt` prints the double's exact
+      // integer value, which is the Integer this JS number stands for.
+      return BigInt(value).toString();
+    }
     if (Number.isNaN(value) || !Number.isFinite(value)) return String(value);
 
     const magnitude = Math.abs(value);
@@ -530,8 +573,9 @@ function rubyInspect(value: unknown): string {
     }
     throw new RenderError(
       `cannot interpolate the number ${String(value)} — it falls outside the range ` +
-        "where Ruby's Float#to_s and JavaScript's agree, and Ruby would print it in " +
-        "scientific notation this port cannot reconstruct (TODO.plan/deferred.md)",
+        "this port has verified Ruby's Float#to_s and JavaScript's to agree on. Some " +
+        "values out here would in fact agree; the band is deliberately conservative " +
+        "because Ruby's format is not decided by magnitude alone (TODO.plan/deferred.md)",
       FORMAT,
       "unknown",
     );

@@ -33,7 +33,7 @@
  * formula, which is why `formulaBoundary` owns it.
  */
 
-import { RenderError } from "../../core/index";
+import { type MathNode, RenderError } from "../../core/index";
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
 import {
   FORMAT,
@@ -255,24 +255,45 @@ function isCloseOrEnd(node: NodeOf<"fenced">): boolean {
   return valueHasAny(node.parameterThree, ["&#x2524;", "&#x3017;", ":}"]);
 }
 
+/**
+ * What `field.value` returns in the gem, for a port node.
+ *
+ * `"value" in node` was used as the port's `respond_to?(:value)`, on a
+ * measurement over five kinds. Five was too few. `Math::Function::Text` defines
+ * `def value; parameter_one; end` (`text.rb:107-109`) — a METHOD, not a stored
+ * field — so the port's `text` node has no `value` property and the membership
+ * test answered false, throwing where the gem returns a value:
+ *
+ *   gem   Fenced(Text("{:"), [x], ")", open_prefixed: true)   "├x)"
+ *   gem   Fenced("(", [x], Text(":}"), close_prefixed: true)  "(x┤"
+ *   gem   Fenced("(", [x], Text("zz"), close_prefixed: true)  "(x┤\"zz\""
+ *   port  all three                                           RenderError
+ *
+ * Re-measured across all 38 node kinds against live gem instances: `text` is
+ * the ONLY kind where the two disagree, so this is the whole of the gap.
+ */
+function gemValue(field: MathNode): { readonly has: boolean; readonly value: unknown } {
+  if (field.kind === "text") {
+    return { has: true, value: (field as { readonly parameterOne?: unknown }).parameterOne };
+  }
+  return { has: "value" in field, value: (field as { readonly value?: unknown }).value };
+}
+
 function valueHasAny(field: unknown, needles: readonly string[]): boolean {
   // `parameter_one&.value&.include?(…)`. The FIRST `&.` guards nil only, so
-  // anything else is sent `value` — and a node kind that has no such field
-  // raises rather than answering false. `"value" in node` is the port's
-  // `respond_to?(:value)`: measured, the two agree on `Abs` and `Fenced`
-  // (neither), and on `Formula`, `Symbol` and `Number` (all three).
+  // anything else is sent `value`, and a kind that does not answer it raises:
   //
   //   gem   Fenced(Abs(x), [x], ")", open_prefixed: true)  !! NoMethodError
   //   port                                                  => "⒜(x)x)"
   if (field === null || field === undefined) return false;
-  if (!isNode(field) || !("value" in field)) {
-    throw crash("fenced.parameterOne/Three", "NoMethodError reading value");
-  }
+  if (!isNode(field)) throw crash("fenced.parameterOne/Three", "NoMethodError reading value");
+
+  const { has, value } = gemValue(field);
+  if (!has) throw crash("fenced.parameterOne/Three", "NoMethodError reading value");
 
   // The SECOND `&.` guards a nil value. A `Formula`'s value is an Array, where
   // `Array#include?` is element equality against a needle string and so is
   // always false — measured, gem and port agree on that shape.
-  const value = (field as { readonly value?: unknown }).value;
   if (typeof value !== "string") return false;
   return needles.some((needle) => value.includes(needle));
 }
@@ -339,8 +360,13 @@ function rubyToFloat(text: string): number {
   //   ".5"   to_f 0.5  (the old pattern required a leading digit -> 0)
   //   "1__0" to_f 1.0  (the old pattern stripped every `_` -> 10)
   // Ruby stops at the DOUBLE underscore, keeping only the leading `1`.
+  // The digits AFTER a `.` are optional too, which a 25-spelling check missed:
+  // Ruby reads `digits . exponent` and this pattern could not reach `[eE]` past
+  // a bare dot. Measured, 5 of 3,057 fuzzed spellings:
+  //   "1.e5"  to_f 100000.0        (this returned 0, giving "├0(x)" for "├52(x)")
+  //   "1.E5"  to_f 100000.0    "1.e-5" to_f 1.0e-05    "91.E11" to_f 9100000000000.0
   const match =
-    /^[ \t\r\n\f\v]*[+-]?(?:\d+(?:_\d+)*(?:\.\d+(?:_\d+)*)?|\.\d+(?:_\d+)*)(?:[eE][+-]?\d+(?:_\d+)*)?/.exec(
+    /^[ \t\r\n\f\v]*[+-]?(?:\d+(?:_\d+)*(?:\.(?:\d+(?:_\d+)*)?)?|\.\d+(?:_\d+)*)(?:[eE][+-]?\d+(?:_\d+)*)?/.exec(
       text,
     );
   if (match === null) return 0;

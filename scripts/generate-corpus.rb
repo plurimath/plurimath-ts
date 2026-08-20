@@ -3474,6 +3474,9 @@ module CorpusGenerator
     # AsciiMath transform CONSTRUCTS, not of what any renderer emits.
     tables.merge!(unicodemath_font_tables)
     lists["nil_paren_matrix"] = unicodemath_nil_paren_matrix
+    hexcodes = unicodemath_hexcode_tables
+    tables["hexcode_in_input"] = hexcodes["hexcode_in_input"]
+    lists["symbols_without_hexcode"] = hexcodes["symbols_without_hexcode"]
 
     lists["unary_carrier_names"] =
       latex_carrier_basenames(registry, "Math::Function::UnaryFunction")
@@ -3481,6 +3484,50 @@ module CorpusGenerator
       latex_carrier_basenames(registry, "Math::Function::BinaryFunction")
 
     tables.merge(lists)
+  end
+
+  # `Utility.hexcode_in_input(field)` per symbol — the RAW entity text the gem
+  # compares and emits, which is NOT the rendered glyph.
+  #
+  # `Core#unicodemath_field_value` is
+  # `field.class_name == "symbol" ? field.value : Utility.hexcode_in_input(field)`,
+  # and `hexcode_in_input` returns the first `input(:unicodemath)` entry matching
+  # `/&#x.+;/`. Three call sites read it — `prime_unicode?` (`core.rb:415`),
+  # `Overset#unicode_accent?`/`Underset#unicode_accent?` — and all three both
+  # COMPARE against entity tables and EMIT the value, so a decoded render is the
+  # wrong string on both counts. Measured: `Overset(Acute, Symbol("x"))` gives
+  # `"(x)&#x301;"`, not `"(x)́"`.
+  #
+  # The classes with NO such entry are emitted separately rather than omitted:
+  # `hexcode_in_input` returns nil for them and the gem then calls `.include?`
+  # on nil and RAISES, so "absent" is a behaviour the port has to reproduce, not
+  # a row to skip. Measured on the oracle: 4 of 1,460 classes make
+  # `prime_unicode?` raise (`If`, `Paren`, `Bar`, `Ul`).
+  def unicodemath_hexcode_tables
+    with_hexcode = {}
+    without = []
+    symbol_classes.each do |klass|
+      next if klass.name.nil?
+
+      id = symbol_id(klass)
+      value = begin
+        instance = klass.new
+        Plurimath::Utility.hexcode_in_input(instance)
+      rescue StandardError
+        nil
+      end
+      if value.is_a?(::String) && value.match?(/&#x.+;/)
+        with_hexcode[id] = value
+      else
+        without << id
+      end
+    end
+    if with_hexcode.empty?
+      raise Error, "no symbol carries a unicodemath hexcode; hexcode_in_input has changed shape"
+    end
+
+    { "hexcode_in_input" => with_hexcode.sort.to_h,
+      "symbols_without_hexcode" => without.sort }
   end
 
   # `PARENTHESIS_MATRICES.key(nil)` — the matrix name a nil-rendering open

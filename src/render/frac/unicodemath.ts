@@ -11,12 +11,7 @@
  */
 
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
-import {
-  present,
-  renderChild,
-  renderOptionalChild,
-  unicodemathParens,
-} from "../../formats/unicodemath/render-shared";
+import { present, renderChild, unicodemathParens } from "../../formats/unicodemath/render-shared";
 import { UNICODEMATH_UNICODE_FRACTIONS } from "../../generated/unicodemath/render-tables";
 
 export function renderFrac(node: NodeOf<"frac">, context: RenderContext): string | null {
@@ -68,12 +63,45 @@ function unicodeFraction(node: NodeOf<"frac">): string | null {
   return UNICODEMATH_UNICODE_FRACTIONS.get(`${numerator}/${denominator}`) ?? null;
 }
 
-/** Ruby's `String#to_i`: leading digits, or 0 when there are none. */
+/**
+ * Ruby's `String#to_i`: the leading integer literal, or 0 when there is none.
+ *
+ * "Leading digits" is not the whole grammar — `to_i` also accepts an underscore
+ * BETWEEN two digits, exactly as an integer literal in Ruby source does, and
+ * this used to stop at the first underscore. Measured on the pinned oracle
+ * (0.11.6, 00c52783), across the spellings that separate the two readings:
+ *
+ *   "1_0"       => 10        "1__0"  => 1     (a doubled `_` ends the number)
+ *   "1_2_3"     => 123       "1_2__3" => 12
+ *   "1_000_000" => 1000000   "1_"    => 1     (a trailing `_` ends it)
+ *   "_1"        => 0         "+_5"   => 0     (a leading `_` is not a digit)
+ *   ".5"        => 0         "1.9"   => 1     "1_.5" => 1
+ *   "+5"        => 5         "-5"    => -5    "+ 12" => 0   " +12" => 12
+ *   "007"       => 7         "1e3"   => 1     "1 0"  => 1
+ *   "0x10"      => 0         "0b11"  => 0     "0o17" => 0   (no base prefixes)
+ *   "12abc"     => 12        "1_0abc" => 10   "abc"  => 0   ""     => 0
+ *   "--5"       => 0         "+-5"   => 0     "٣"    => 0
+ *
+ * The divergence was reachable and it changed output, not just an internal
+ * number: every pair in `UNICODE_FRACTIONS` is single-digit, so a numerator of
+ * `"1_0"` misses the table in the gem (10/2) and returned nil, while stopping
+ * at the underscore hit `1/2` and rendered `"&#xbd;"` — measured, both sides.
+ *
+ * The whitespace class is Ruby's, not JavaScript's: `to_i` skips
+ * ` \t\n\v\f\r` and nothing else (measured, each one individually), where JS
+ * `\s` would also swallow U+00A0, U+2009 and U+3000 — all three of which
+ * `to_i` refuses, returning 0.
+ *
+ * One thing this cannot reproduce: Ruby's integers are arbitrary-precision, so
+ * `"999999999999999999999".to_i` is exact where `Number.parseInt` rounds to
+ * 1e21 (measured, both). It changes nothing observable here — `unicodeFraction`
+ * above keys the lookup by the pair, every table pair is single-digit, and both
+ * readings miss — but it is why the number is only ever built into a key.
+ */
 function numericValue(field: unknown): number {
   const value = (field as { readonly value?: unknown } | undefined)?.value;
   if (typeof value !== "string") return 0;
-  // Ruby's `\s` is ASCII only; JS `\s` also matches U+00A0 and U+2009, which
-  // `String#to_i` does NOT skip — it returns 0 for those.
-  const match = /^[ \t\r\n\f\v]*[+-]?\d+/.exec(value);
-  return match === null ? 0 : Number.parseInt(match[0], 10);
+  const match = /^[ \t\r\n\f\v]*[+-]?\d+(?:_\d+)*/.exec(value);
+  if (match === null) return 0;
+  return Number.parseInt(match[0].replace(/_/g, ""), 10);
 }

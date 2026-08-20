@@ -107,7 +107,11 @@ describe("every recorded rejection is refused here too", () => {
  *
  * Six of the seven unshifted cases reproduce the gem's recorded offset
  * exactly, and all four shifted cases map back to the right position in the
- * ORIGINAL input. One does not, and is recorded rather than hidden:
+ * ORIGINAL input. Those counts are checked rather than merely stated: "the
+ * counts this header names are derived, not recited" below computes all three
+ * from the corpus and this map, so a rejection case added to the pin fails
+ * there instead of ageing this paragraph. One case does not reproduce the
+ * gem's offset, and is recorded rather than hidden:
  *
  *   right-unclosed  `left( x right`  gem 13 (end of input), port 8 (at `right`)
  *
@@ -146,6 +150,26 @@ describe("the port maps the failure position back to the original input", () => 
     expect([...MAPPED_INDEX.keys()].sort()).toStrictEqual(
       rejections.map((entry) => entry.id).sort(),
     );
+  });
+
+  it("the counts this header names are derived, not recited", () => {
+    // 7 unshifted / 4 shifted / 6 of the 7 agreeing, computed from the corpus
+    // and MAPPED_INDEX rather than restated from the paragraph above. On this
+    // pin, `right-unclosed` is the only unshifted case where the two numbers
+    // differ (gem 13, port 8); every shifted case differs from its recorded
+    // offset by construction, because the recorded one indexes `preprocessed`.
+    const unshifted = rejections.filter((entry) => entry.input === entry.preprocessed);
+    const shifted = rejections.filter((entry) => entry.input !== entry.preprocessed);
+    expect(unshifted.length).toBe(7);
+    expect(shifted.length).toBe(4);
+
+    const agreeing = unshifted.filter((entry) => MAPPED_INDEX.get(entry.id) === entry.index);
+    expect(agreeing.length).toBe(6);
+    expect(
+      unshifted
+        .filter((entry) => MAPPED_INDEX.get(entry.id) !== entry.index)
+        .map((entry) => entry.id),
+    ).toStrictEqual([KNOWN_POSITION_DIVERGENCE]);
   });
 
   it.each(rejections.map((entry) => [entry.id, entry] as const))(

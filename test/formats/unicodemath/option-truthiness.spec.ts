@@ -5,9 +5,12 @@
  *
  * Every case here needs a hand-built node carrying an option that is `nil` or
  * `false`, or a slot holding `false`. The parser never produces those, so the
- * 69 corpus cases pass whatever the port does with them. That is exactly why
- * this file exists: an adversarial review found seven divergences here after
- * the whole parity suite was green.
+ * pinned corpus's 76 positive cases pass whatever the port does with them.
+ * That count is measured, not recalled — `loadPinnedCorpus().cases` is 76, and
+ * `test/core/corpus-pin.spec.ts` asserts it, so a corpus that grows fails
+ * there rather than leaving a stale number here. That is exactly why this file
+ * exists: an adversarial review found seven divergences here after the whole
+ * parity suite was green.
  *
  * Two Ruby rules generate all of them:
  *

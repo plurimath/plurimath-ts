@@ -83,9 +83,7 @@ export function renderTernaryFunction(
   // The swap. `prime_unicode?` is asked of parameterThree, and its answer
   // moves the SUPERSCRIPT in front of the subscript.
   const three = isNode(node.parameterThree) ? node.parameterThree : undefined;
-  return primeUnicode(three, renderOptionalChild(node.parameterThree, context))
-    ? `${base}${sup}${sub}`
-    : `${base}${sub}${sup}`;
+  return primeUnicode(three) ? `${base}${sup}${sub}` : `${base}${sub}${sup}`;
 }
 
 /** `PowerBase#sub_value` (`power_base.rb:125`) — reads parameterTwo. */
@@ -106,7 +104,7 @@ function subValue(node: NodeOf<"ternaryFunction">, context: RenderContext): stri
 function supValue(node: NodeOf<"ternaryFunction">, context: RenderContext): string {
   const field = slotNode(node.parameterThree, "ternaryFunction.parameterThree");
   const rendered = renderOptionalChild(field, context);
-  if (miniSized(field) || primeUnicode(field, rendered)) return rendered;
+  if (miniSized(field) || primeUnicode(field)) return rendered;
   if (isPower(field)) return `^${rendered}`;
 
   // `parameter_one.is_a?(Power) && parameter_one.prime_unicode?(parameter_one.parameter_two)`.
@@ -114,7 +112,7 @@ function supValue(node: NodeOf<"ternaryFunction">, context: RenderContext): stri
   if (isPower(one) && isNode(one)) {
     const inner = (one as { readonly parameterTwo?: unknown }).parameterTwo;
     const innerNode = isNode(inner) ? inner : undefined;
-    if (primeUnicode(innerNode, innerNode === undefined ? null : context.render(innerNode))) {
+    if (primeUnicode(innerNode)) {
       return `^${rendered}`;
     }
   }

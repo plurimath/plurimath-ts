@@ -32,6 +32,7 @@ import {
   RenderError,
 } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
+import { UNICODEMATH_HEXCODE_IN_INPUT } from "../../generated/unicodemath/render-tables";
 
 export const FORMAT = "unicodemath";
 
@@ -119,36 +120,41 @@ const PRIME_GLYPHS: readonly string[] = [
  * all of them swap. Probing only `prime`/`pprime`/`ppprime`/`pppprime` would
  * have suggested a four-class rule that is not the rule.
  */
-export function primeUnicode(node: MathNode | undefined, rendered: string | null): boolean {
+export function primeUnicode(node: MathNode | undefined): boolean {
   if (node === undefined || node.kind !== "symbol") return false;
 
-  // The gem asks TWO questions, in this order, and this used to ask only the
-  // second. `return true if field&.value&.include?("&#x27;")` tests the RAW
-  // value for the entity text, before anything is rendered — so a generic
-  // `Symbols::Symbol` carrying `"&#x27;"` is a prime even though its render is
-  // the undecoded entity and matches no glyph. Measured:
-  //
-  //   Symbol("&#x27;").to_unicodemath          => "&#x27;"
-  //   prime_unicode?(Symbol("&#x27;"))         => true
-  //   Power(x, Symbol("&#x27;")).to_unicodemath => "x&#x27;"   (accented branch fired)
-  //
-  // against the named class, whose table entry is already decoded:
-  //
-  //   Prime#to_unicodemath                     => "′"
-  //   Power(x, Prime).to_unicodemath           => "x′"
-  //
-  // Unreachable from the AsciiMath transform today — `x^'` parses to
-  // `Symbols::Prime`, not a generic symbol — but `Int`, `Prod`, `Nary` and
-  // `Log` all route through here, and a hand-built or MathML-parsed tree
-  // reaches it.
-  const value = (node as { readonly value?: string | null }).value;
-  if (typeof value === "string" && PRIME_ENTITIES.some((entity) => value.includes(entity))) {
-    return true;
+  // `unicodemath_field_value(field)` is
+  //   `field.class_name == "symbol" ? field.value : Utility.hexcode_in_input(field)`
+  // so the gem compares RAW ENTITY TEXT on both arms — never the rendered
+  // glyph. An earlier version compared decoded glyphs against the render.
+  // That agreed with the gem for all 1,460 concrete symbol classes (measured,
+  // zero disagreements), which is why it survived so long, but it cannot
+  // reproduce the two arms it is standing in for.
+  const id = node.id;
+  if (id === "Symbol") {
+    // `class_name == "symbol"` — only the generic class. Its `value` is the
+    // raw entity, and a generic symbol carrying ANY prime entity is a prime:
+    // measured, `Symbol("&#x2032;")` through `Symbol("&#x27;")` all answer true.
+    const value = (node as { readonly value?: string | null }).value;
+    return typeof value === "string" && PRIME_ENTITIES.some((e) => value.includes(e));
   }
 
-  if (rendered === null) return false;
-
-  return PRIME_GLYPHS.some((glyph) => rendered.includes(glyph));
+  // Every other class goes through `hexcode_in_input`, which returns nil when
+  // the symbol's `input(:unicodemath)` carries no `&#x…;` entry — and the gem
+  // then calls `.include?` on that nil and RAISES. Measured, 10 of 1,460
+  // classes do: Bar, If, Ul, Paren and its six concrete parens. So "absent" is
+  // behaviour to reproduce, not a row to skip — returning false here rendered
+  // `x^(¯)` where the gem refuses outright.
+  const hexcode = UNICODEMATH_HEXCODE_IN_INPUT.get(id);
+  if (hexcode === undefined) {
+    throw new RenderError(
+      `${id}: has no unicodemath hexcode, and the gem raises NoMethodError ` +
+        "reading it (Utility.hexcode_in_input returns nil)",
+      FORMAT,
+      "symbol",
+    );
+  }
+  return PRIME_ENTITIES.some((entity) => hexcode.includes(entity));
 }
 
 /**
@@ -566,7 +572,7 @@ export function naryandSubValue(field: unknown, context: RenderContext): string 
 export function naryandSupValue(field: unknown, context: RenderContext): string {
   const node = isNode(field) ? field : undefined;
   const rendered = renderOptionalChild(field, context);
-  if (miniSized(node) || primeUnicode(node, rendered)) return rendered;
+  if (miniSized(node) || primeUnicode(node)) return rendered;
   if (isPower(field)) return `^${rendered}`;
 
   return `^${unicodemathParens(field, context) ?? ""}`;

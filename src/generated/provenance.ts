@@ -31,7 +31,7 @@ export interface GeneratedProvenance {
  */
 export const GENERATED_PROVENANCE: GeneratedProvenance = {
   generator: "scripts/generate-corpus.rb",
-  generatorSha256: "5ade04ab709caebfc1baec2c63fbca8827218fe82258b0959ca51280543a63dd",
+  generatorSha256: "a7c19cfe76254c834597df890a152f4783b02cefc95321eef0c00e60b7a1a1e6",
   oracle: "plurimath",
   oracleVersion: "0.11.6",
   oracleCommit: "00c52783877b38f6b8e6e109f1803f96bb34fc62",

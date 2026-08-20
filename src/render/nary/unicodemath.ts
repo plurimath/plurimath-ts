@@ -39,7 +39,7 @@ function supValue(node: NodeOf<"nary">, context: RenderContext): string {
   const field = node.parameterThree;
   const asNode = isNode(field) ? field : undefined;
   const rendered = renderOptionalChild(field, context);
-  if (miniSized(asNode) || primeUnicode(asNode, rendered)) return rendered;
+  if (miniSized(asNode) || primeUnicode(asNode)) return rendered;
   if (isPower(field)) return `^${rendered}`;
 
   // The two-level branch: parameterOne being a Power whose OWN second
@@ -48,7 +48,7 @@ function supValue(node: NodeOf<"nary">, context: RenderContext): string {
   if (isPower(one) && isNode(one)) {
     const inner = (one as { readonly parameterTwo?: unknown }).parameterTwo;
     const innerNode = isNode(inner) ? inner : undefined;
-    if (primeUnicode(innerNode, innerNode === undefined ? null : context.render(innerNode))) {
+    if (primeUnicode(innerNode)) {
       return `^${rendered}`;
     }
   }
@@ -64,10 +64,7 @@ export function renderNary(node: NodeOf<"nary">, context: RenderContext): string
 
   // The swap. `prime_unicode?` is asked of parameterThree, and its answer
   // moves the SUPERSCRIPT in front of the subscript.
-  return primeUnicode(
-    isNode(node.parameterThree) ? node.parameterThree : undefined,
-    renderOptionalChild(node.parameterThree, context),
-  )
+  return primeUnicode(isNode(node.parameterThree) ? node.parameterThree : undefined)
     ? `${operator}${sup}${sub}${body}`
     : `${operator}${sub}${sup}${body}`;
 }

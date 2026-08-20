@@ -534,6 +534,28 @@ describe("a float mask matches Ruby's Float#to_s inside the band", () => {
     expect(masked(1)).toBe("⟡(1&x)");
     expect(masked(5)).toBe("⟡(5&x)");
   });
+
+  it("takes the Integer reading at the band's upper edge, where JS cannot decide", () => {
+    // `1e15` is integral, so it never reaches the band check — a review read it
+    // as an unhandled edge of the float fix, and a comment here wrongly listed
+    // it as a REFUSED value. It is neither. Measured on the oracle, the gem's
+    // answer depends on a Ruby type JS does not have:
+    //
+    //   mask 1e15 (Float)                "⟡(1.0e+15&x)"
+    //   mask 1000000000000000 (Integer)  "⟡(1000000000000000&x)"
+    //
+    // so this is the same undecidable case as `1.0` -> `"1"`, resolved the same
+    // way. Pinned here so the next reader sees the choice rather than re-deriving it.
+    expect(masked(1e15)).toBe("⟡(1000000000000000&x)");
+  });
+
+  it("refuses a NON-integral value above the band, conservatively", () => {
+    // Ruby's format is not decided by magnitude — `1.5e15` prints as "1.5e+15"
+    // while `1202471614443916.8` at the same magnitude prints in full. Rather
+    // than model that, the band stops at 1e15 and refuses above it, which can
+    // refuse a value that would in fact have agreed. Loud beats silent.
+    expect(() => masked(1000000000000000.5)).toThrow(RenderError);
+  });
 });
 
 /**

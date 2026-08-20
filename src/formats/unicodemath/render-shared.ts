@@ -466,9 +466,27 @@ export function rubyInterpolate(value: unknown): string {
  * and inside that band the digits are identical — verified over 5,000 random
  * non-integral values in it, 5,000 agreements and 0 disagreements.
  *
- * Outside the band the two formats really do differ and are still refused:
+ * Outside the band a NON-INTEGRAL value is refused, because the two formats
+ * differ there: `1.5e-5` is `"1.5e-05"` in Ruby and `"0.000015"` in JS.
  *
- *   1.5e-5  ruby "1.5e-05"  js "0.000015"      1e15  ruby "1.0e+15"  js "1000000000000000"
+ * `1e15` is NOT an example of that, though an earlier version of this comment
+ * claimed it was. It is integral, so it never reaches the band check at all —
+ * it takes the Integer arm above, and it is the undecidable case rather than a
+ * refused one. Measured, the gem answers differently depending on which Ruby
+ * type it was:
+ *
+ *   mask 1e15 (Float)               "⟡(1.0e+15&x)"
+ *   mask 1000000000000000 (Integer) "⟡(1000000000000000&x)"
+ *
+ * and JS has one numeric type, so this cannot tell them apart. It renders the
+ * Integer reading, exactly as it does for `1.0` -> `"1"`.
+ *
+ * The band's upper edge is deliberately CONSERVATIVE rather than exact. Ruby's
+ * choice of format is not decided by magnitude: `1.5e15` prints as `"1.5e+15"`
+ * while `1202471614443916.8`, at the same magnitude, prints in full. Some
+ * non-integral values at or above 1e15 would therefore agree with JS and are
+ * refused anyway. Refusing something that would have matched is loud and
+ * recoverable; emitting something that does not is silent and is not.
  *
  * Reconstructing Ruby's scientific form from `toExponential()` — pad the
  * exponent to two digits, give the mantissa a ".0" — looks like it closes the

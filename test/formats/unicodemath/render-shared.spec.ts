@@ -14,7 +14,14 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { FencedNode, FormulaNode, FracNode, NumberNode, SymbolNode } from "../../../src/core/index";
+import {
+  FencedNode,
+  FormulaNode,
+  FracNode,
+  MrowNode,
+  NumberNode,
+  SymbolNode,
+} from "../../../src/core/index";
 import {
   miniSized,
   negatedValue,
@@ -163,6 +170,22 @@ describe("negatedValue matches the gem", () => {
 
   it("is false for a non-formula", () => {
     expect(negatedValue(plainSymbol())).toBe(false);
+  });
+
+  it("answers for an Mrow exactly as for a Formula", () => {
+    // `Formula::Mrow < Formula` and overrides neither predicate — `mrow.rb`
+    // defines zero of them. Measured on the oracle, an Mrow and a Formula with
+    // the same children both answer true. Omitting `mrow` made every Mrow
+    // answer false, which shows up as a join separator the gem suppresses.
+    const children = [plainSymbol(), new SymbolNode({ id: "Symbol", value: "&#x338;" })];
+    expect(negatedValue(new MrowNode({ value: children }))).toBe(true);
+    expect(negatedValue(new FormulaNode({ value: children }))).toBe(true);
+  });
+
+  it("reports an Mrow as mini-sized when its first child is", () => {
+    const children = [miniSymbol("sub"), plainSymbol()];
+    expect(miniSized(new MrowNode({ value: children }))).toBe(true);
+    expect(miniSized(new FormulaNode({ value: children }))).toBe(true);
   });
 
   it("looks at the raw value, not a symbol id", () => {

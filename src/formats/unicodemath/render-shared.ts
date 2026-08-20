@@ -150,6 +150,13 @@ export function miniSized(node: MathNode | undefined): boolean {
         miniSized(asNode(node.parameterThree))
       );
     case "formula":
+    case "mrow":
+      // `Formula::Mrow < Formula` and overrides NEITHER `mini_sized?` nor
+      // `negated_value?` (`formula/mrow.rb` defines 0 of them), so an Mrow
+      // answers exactly as a Formula does — measured, both give true for the
+      // same content. Omitting `mrow` here made every Mrow answer false and
+      // join with a space the gem suppresses.
+      //
       // First child only. Asking every child would answer true for shapes the
       // gem answers false for, and the difference is a separator that appears
       // or disappears in the output.
@@ -164,7 +171,10 @@ export function miniSized(node: MathNode | undefined): boolean {
  * overlay, which suppresses the join separator alongside `mini_sized?`.
  */
 export function negatedValue(node: MathNode): boolean {
-  if (node.kind !== "formula") return false;
+  // `mrow` as well as `formula`: `Formula::Mrow` inherits `negated_value?`
+  // unchanged, and measured, an Mrow ending in the combining long solidus
+  // answers true exactly as a Formula does.
+  if (node.kind !== "formula" && node.kind !== "mrow") return false;
 
   const last = asNode(node.value?.[node.value.length - 1]);
   return last?.kind === "symbol" && last.value === NEGATION_VALUE;

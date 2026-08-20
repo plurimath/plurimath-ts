@@ -228,22 +228,62 @@ function assignedValue(value: string | null | undefined): string | null {
  * predicate runs the value is the string `"&#x27;"`. A port that stored the
  * array answered false.
  *
- * Arrays and primitives are reproduced exactly. A plain object is NOT: Ruby's
- * `Hash#to_s` is its inspect form, which core cannot build without the format
- * layer's `rubyInspect`, so such a value is stored unchanged and will not match
- * the gem. It is unreachable through the declared `string | null` type and is
- * left as a known gap rather than approximated.
+ * This is reachable, not defensive: `asciimath/transform.ts` casts a parsed
+ * value straight into this slot, and the parser is exactly what hands Ruby the
+ * arrays this coercion exists for.
+ *
+ * An earlier version recursed through arrays and primitives but returned a
+ * plain object UNCHANGED, calling that a documented gap. It was worse than
+ * documented — inside an array the outer `join` stringified it, so
+ * `["pre", {a: 1}, "post"]` became `"pre[object Object]post"` where the gem
+ * gives `"pre{\"a\" => 1}post"`. An invented string is not a gap.
+ *
+ * ONE approximation remains, and it is the same one `rubyInspect` already
+ * declares rather than a second: JS cannot tell a Ruby Symbol key from a String
+ * key, since both arrive as JS strings. Measured, the two print differently —
+ * `{a: 1}` for Symbol keys, `{"a" => 1}` for String keys — and this assumes
+ * Symbol keys, because every option hash in the gem's own constants uses them.
+ * A String-keyed hash here will not match.
  */
 function symbolValue(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   // `Array#join` calls `to_s` on each element and concatenates with no
-  // separator; a nil element contributes "".
+  // separator, recursing into nested arrays; a nil element contributes "".
+  // Measured: `["x", [1, 2], "y"].join` is "x12y", `["x", nil, "y"].join` "xy".
   if (Array.isArray(value)) return value.map((entry) => symbolValue(entry) ?? "").join("");
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
     return String(value);
   }
-  return value as string;
+  if (typeof value === "object") return rubyHashToS(value as Record<string, unknown>);
+  return String(value);
+}
+
+/**
+ * `Hash#to_s`, which Ruby defines AS `inspect` — measured, the two are equal.
+ *
+ * Values are rendered inspect-style, so a String value is quoted where the same
+ * String at top level would not be: `{a: "x"}`.
+ */
+function rubyHashToS(hash: Record<string, unknown>): string {
+  const body = Object.entries(hash)
+    .map(([key, inner]) => `${key}: ${rubyElementInspect(inner)}`)
+    .join(", ");
+  return `{${body}}`;
+}
+
+function rubyElementInspect(value: unknown): string {
+  if (value === null || value === undefined) return "nil";
+  if (typeof value === "string") return JSON.stringify(value);
+  if (typeof value === "boolean" || typeof value === "bigint") return String(value);
+  if (typeof value === "number") {
+    return Number.isInteger(value) && !Object.is(value, -0)
+      ? BigInt(value).toString()
+      : String(value);
+  }
+  if (Array.isArray(value)) return `[${value.map(rubyElementInspect).join(", ")}]`;
+  if (typeof value === "object") return rubyHashToS(value as Record<string, unknown>);
+  return String(value);
 }
 
 /**

@@ -294,6 +294,19 @@ describe("the unicodemath field value is entity text, not the render", () => {
     expect(new SymbolNode({ id: "Alpha", value: 5 } as never).value).toBe("5");
     expect(new SymbolNode({ id: "Alpha", value: false } as never).value).toBe("false");
     expect(new SymbolNode({ id: "Alpha", value: null }).value).toBeNull();
+    // Nested arrays join recursively and a nil element contributes "".
+    // Measured: `["x", [1, 2], "y"].join` is "x12y", `["x", nil, "y"].join` "xy".
+    expect(new SymbolNode({ id: "Alpha", value: ["x", [1, 2], "y"] } as never).value).toBe("x12y");
+    expect(new SymbolNode({ id: "Alpha", value: ["x", null, "y"] } as never).value).toBe("xy");
+    // `Hash#to_s` IS `inspect` (measured equal), so a hash element inside an
+    // array contributes its inspect form. Returning the object unchanged made
+    // the outer join emit "[object Object]" — an invented string, not a gap.
+    expect(new SymbolNode({ id: "Alpha", value: { a: 1 } } as never).value).toBe("{a: 1}");
+    expect(new SymbolNode({ id: "Alpha", value: ["pre", { a: 1 }, "post"] } as never).value).toBe(
+      "pre{a: 1}post",
+    );
+    // Values inside a hash are inspect-style, so a string is quoted there.
+    expect(new SymbolNode({ id: "Alpha", value: { a: "x" } } as never).value).toBe('{a: "x"}');
     // and the consequence the coercion exists for:
     expect(primeUnicode(new SymbolNode({ id: "Alpha", value: ["&#x27;"] } as never))).toBe(true);
     expect(primeUnicode(new SymbolNode({ id: "Alpha", value: ["zz"] } as never))).toBe(false);

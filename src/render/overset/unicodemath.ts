@@ -40,6 +40,15 @@ function isAccent(field: unknown, context: RenderContext): boolean {
 }
 
 /** `unicode_classes_accent?` (`overset.rb:118`). */
+/**
+ * Byte-identical to its twin in `../underset/unicodemath.ts`, on purpose.
+ *
+ * The gem duplicates it too: `horizontal_brackets?` is defined separately and
+ * identically on `overset.rb` and `underset.rb`, and this port is one file per
+ * gem class (ARCHITECTURE.md §5). Hoisting the pair into `render-shared.ts`
+ * would read as a tidy-up and would make the port's structure diverge from the
+ * oracle it mirrors, so the duplication stays.
+ */
 function isBraceClass(field: unknown): boolean {
   return isNode(field) && (field.kind === "obrace" || field.kind === "ubrace");
 }

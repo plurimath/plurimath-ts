@@ -335,7 +335,7 @@ export function htmlEntityToUnicode(text: string): string {
 }
 
 /** The gem's `\s/\s -> /` squeeze, applied at the same boundary. */
-export function squeezeSolidus(text: string): string {
+function squeezeSolidus(text: string): string {
   return text.replace(new RegExp(`${RUBY_SPACE}/${RUBY_SPACE}`, "g"), "/");
 }
 

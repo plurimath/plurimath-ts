@@ -31,6 +31,7 @@ import {
   type NodeKind,
   RenderError,
 } from "../../core/index";
+import { htmlEntityToUnicode } from "../../core/nodes";
 
 export const FORMAT = "unicodemath";
 
@@ -322,17 +323,19 @@ export function unreachableName(kind: string, name: string): RenderError {
  * boundary — and by every *nested* formula too, because a parent calls the
  * same method on its children.
  *
+ * Re-exported from core rather than reimplemented. The gem calls
+ * `HTML_ENTITIES.decode`, which handles NAMED (`&amp;`), DECIMAL (`&#8467;`)
+ * and hex in BOTH cases (`&#x2093;`, `&#X2093;`). A local copy here matched
+ * only lowercase-x hex and silently left the other three forms undecoded —
+ * measured against the gem, which decodes all four. Core's implementation
+ * carries the full xhtml1 table and the gem's codepoint-range behaviour, and
+ * `src/formats/mathml/render-shared.ts` already reaches it the same way.
+ *
  * That repetition is safe only because the transform is idempotent, which was
  * measured rather than assumed: decoding `"a&#x2581;b"` twice gives the same
- * string. The generated render tables hold raw entity text for this reason,
- * while `symbols.ts` holds decoded glyphs, because the gem's symbol methods
- * decode at the symbol and its constant tables do not.
+ * string.
  */
-export function htmlEntityToUnicode(text: string): string {
-  return text.replace(/&#x([0-9a-fA-F]+);/g, (_match, hex: string) =>
-    String.fromCodePoint(Number.parseInt(hex, 16)),
-  );
-}
+export { htmlEntityToUnicode };
 
 /** The gem's `\s/\s -> /` squeeze, applied at the same boundary. */
 export function squeezeSolidus(text: string): string {

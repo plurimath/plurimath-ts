@@ -3188,26 +3188,6 @@ module CorpusGenerator
     "DIACRITIC_BELOWS" => "diacritic_belows",
   }.freeze
 
-  # Deliberately NOT emitted here, with the measured reason for each. Every one
-  # of these carries a value shape a `ReadonlyMap<string, string>` cannot hold,
-  # and inventing a representation before the renderer that consumes it exists
-  # would be guessing at the consumer's needs:
-  #
-  #   PHANTOM_SYMBOLS      values are option hashes
-  #                        (`{ mpadded: { depth:, height: }, phantom: }`)
-  #   SUB_PARENTHESIS      values are nested `{ "(" => "\u208d" }` hashes
-  #   SUP_PARENTHESIS      same shape
-  #   UNICODE_FRACTIONS    keyed by the GLYPH with an `[n, d]` array value, and
-  #                        read as `.key([n, d])` — the reverse of the
-  #                        direction a string map would give
-  #   PARENTHESIS_MATRICES carries nil values, and is reverse-looked-up, so
-  #                        what `.key` does with the nils has to be measured
-  #                        against a real render first
-  #
-  # They land with the renderer code that reads them, measured through a render
-  # the way the latex and mathml slices are.
-  UNICODEMATH_DEFERRED_TABLES = [].freeze
-
   def unicodemath_constant(name)
     unless Plurimath::UnicodeMath::Constants.const_defined?(name)
       raise Error, "UnicodeMath::Constants::#{name} is gone; the renderer reads it"
@@ -3429,11 +3409,6 @@ module CorpusGenerator
     tables["sub_parenthesis"] = unicodemath_nested_paren_map("SUB_PARENTHESIS")
     tables["sup_parenthesis"] = unicodemath_nested_paren_map("SUP_PARENTHESIS")
     lists = UNICODEMATH_LISTS.to_h { |name, key| [key, unicodemath_string_list(name)] }
-
-    # The deferred ones still have to EXIST: this slice claims to cover what
-    # `to_unicodemath` reads, and a constant vanishing upstream must fail here
-    # rather than be discovered when the renderer is written.
-    UNICODEMATH_DEFERRED_TABLES.each { |name| unicodemath_constant(name) }
 
     # And the reverse-lookup guard has to reach them. It lives inside
     # `unicodemath_string_map`, which only the emitted tables pass through, so

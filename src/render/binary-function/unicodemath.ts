@@ -209,13 +209,13 @@ function renderPower(node: NodeOf<"binaryFunction">, context: RenderContext): st
 function isAccented(field: unknown, context: RenderContext): boolean {
   if (!isNode(field)) return false;
 
-  if (field.kind === "symbol") return primeUnicode(field, context.render(field));
+  if (field.kind === "symbol") return primeUnicode(field);
 
   if (field.kind === "formula" || field.kind === "mrow") {
     // `Formula.new(nil).value` is `[nil]`, not nil — measured — so `.first` is
     // nil rather than a raise, and `prime_unicode?(nil)` is false.
     const first = field.value?.[0];
-    return isNode(first) ? primeUnicode(first, context.render(first)) : false;
+    return isNode(first) ? primeUnicode(first) : false;
   }
 
   // `field.is_a?(Math::Function::Power) && prime_unicode?(field.parameter_one)`
@@ -223,7 +223,7 @@ function isAccented(field: unknown, context: RenderContext): boolean {
   // half. Measured: `Power(x, Power(prime, y))` => `"x′^(y)"`.
   if (field.kind === "binaryFunction" && isPower(field)) {
     const inner = field.parameterOne;
-    return isNode(inner) ? primeUnicode(inner, context.render(inner)) : false;
+    return isNode(inner) ? primeUnicode(inner) : false;
   }
 
   return false;

@@ -31,6 +31,8 @@ import {
   type NodeKind,
   RenderError,
 } from "../../core/index";
+import { htmlEntityToUnicode } from "../../core/nodes";
+import { UNICODEMATH_HEXCODE_IN_INPUT } from "../../generated/unicodemath/render-tables";
 
 export const FORMAT = "unicodemath";
 
@@ -74,6 +76,28 @@ export type RenderFn<K extends NodeKind> = (
  * `nil` on every concrete symbol probed. Reading the source without probing
  * gives the wrong branch.
  */
+/**
+ * The same five, as the ENTITY text `Utility.primes_constants` actually holds:
+ * `["&#x2057;", "&#x2034;", "&#x2033;", "&#x2032;", "&#x27;"]`.
+ *
+ * `unicodemath_field_value` returns `field.value` RAW for a generic
+ * `Symbols::Symbol`, so the gem compares entity against entity there — and a
+ * generic symbol's render is the undecoded entity, which matches no decoded
+ * glyph. Measured: `Symbol("&#x2032;")` through `Symbol("&#x27;")` are ALL
+ * primes to the gem. Checking only `&#x27;` caught one of the five.
+ *
+ * Concrete symbol classes need no entity check: across all 1,460 of them the
+ * decoded-glyph comparison below agrees with the gem in every case (measured,
+ * zero disagreements), because their renders are already decoded.
+ */
+const PRIME_ENTITIES: readonly string[] = [
+  "&#x2057;",
+  "&#x2034;",
+  "&#x2033;",
+  "&#x2032;",
+  "&#x27;",
+];
+
 const PRIME_GLYPHS: readonly string[] = [
   "′", // &#x2032; prime
   "″", // &#x2033; double prime
@@ -96,34 +120,41 @@ const PRIME_GLYPHS: readonly string[] = [
  * all of them swap. Probing only `prime`/`pprime`/`ppprime`/`pppprime` would
  * have suggested a four-class rule that is not the rule.
  */
-export function primeUnicode(node: MathNode | undefined, rendered: string | null): boolean {
+export function primeUnicode(node: MathNode | undefined): boolean {
   if (node === undefined || node.kind !== "symbol") return false;
 
-  // The gem asks TWO questions, in this order, and this used to ask only the
-  // second. `return true if field&.value&.include?("&#x27;")` tests the RAW
-  // value for the entity text, before anything is rendered — so a generic
-  // `Symbols::Symbol` carrying `"&#x27;"` is a prime even though its render is
-  // the undecoded entity and matches no glyph. Measured:
-  //
-  //   Symbol("&#x27;").to_unicodemath          => "&#x27;"
-  //   prime_unicode?(Symbol("&#x27;"))         => true
-  //   Power(x, Symbol("&#x27;")).to_unicodemath => "x&#x27;"   (accented branch fired)
-  //
-  // against the named class, whose table entry is already decoded:
-  //
-  //   Prime#to_unicodemath                     => "′"
-  //   Power(x, Prime).to_unicodemath           => "x′"
-  //
-  // Unreachable from the AsciiMath transform today — `x^'` parses to
-  // `Symbols::Prime`, not a generic symbol — but `Int`, `Prod`, `Nary` and
-  // `Log` all route through here, and a hand-built or MathML-parsed tree
-  // reaches it.
-  const value = (node as { readonly value?: string | null }).value;
-  if (typeof value === "string" && value.includes("&#x27;")) return true;
+  // `unicodemath_field_value(field)` is
+  //   `field.class_name == "symbol" ? field.value : Utility.hexcode_in_input(field)`
+  // so the gem compares RAW ENTITY TEXT on both arms — never the rendered
+  // glyph. An earlier version compared decoded glyphs against the render.
+  // That agreed with the gem for all 1,460 concrete symbol classes (measured,
+  // zero disagreements), which is why it survived so long, but it cannot
+  // reproduce the two arms it is standing in for.
+  const id = node.id;
+  if (id === "Symbol") {
+    // `class_name == "symbol"` — only the generic class. Its `value` is the
+    // raw entity, and a generic symbol carrying ANY prime entity is a prime:
+    // measured, `Symbol("&#x2032;")` through `Symbol("&#x27;")` all answer true.
+    const value = (node as { readonly value?: string | null }).value;
+    return typeof value === "string" && PRIME_ENTITIES.some((e) => value.includes(e));
+  }
 
-  if (rendered === null) return false;
-
-  return PRIME_GLYPHS.some((glyph) => rendered.includes(glyph));
+  // Every other class goes through `hexcode_in_input`, which returns nil when
+  // the symbol's `input(:unicodemath)` carries no `&#x…;` entry — and the gem
+  // then calls `.include?` on that nil and RAISES. Measured, 10 of 1,460
+  // classes do: Bar, If, Ul, Paren and its six concrete parens. So "absent" is
+  // behaviour to reproduce, not a row to skip — returning false here rendered
+  // `x^(¯)` where the gem refuses outright.
+  const hexcode = UNICODEMATH_HEXCODE_IN_INPUT.get(id);
+  if (hexcode === undefined) {
+    throw new RenderError(
+      `${id}: has no unicodemath hexcode, and the gem raises NoMethodError ` +
+        "reading it (Utility.hexcode_in_input returns nil)",
+      FORMAT,
+      "symbol",
+    );
+  }
+  return PRIME_ENTITIES.some((entity) => hexcode.includes(entity));
 }
 
 /**
@@ -149,6 +180,13 @@ export function miniSized(node: MathNode | undefined): boolean {
         miniSized(asNode(node.parameterThree))
       );
     case "formula":
+    case "mrow":
+      // `Formula::Mrow < Formula` and overrides NEITHER `mini_sized?` nor
+      // `negated_value?` (`formula/mrow.rb` defines 0 of them), so an Mrow
+      // answers exactly as a Formula does — measured, both give true for the
+      // same content. Omitting `mrow` here made every Mrow answer false and
+      // join with a space the gem suppresses.
+      //
       // First child only. Asking every child would answer true for shapes the
       // gem answers false for, and the difference is a separator that appears
       // or disappears in the output.
@@ -163,7 +201,10 @@ export function miniSized(node: MathNode | undefined): boolean {
  * overlay, which suppresses the join separator alongside `mini_sized?`.
  */
 export function negatedValue(node: MathNode): boolean {
-  if (node.kind !== "formula") return false;
+  // `mrow` as well as `formula`: `Formula::Mrow` inherits `negated_value?`
+  // unchanged, and measured, an Mrow ending in the combining long solidus
+  // answers true exactly as a Formula does.
+  if (node.kind !== "formula" && node.kind !== "mrow") return false;
 
   const last = asNode(node.value?.[node.value.length - 1]);
   return last?.kind === "symbol" && last.value === NEGATION_VALUE;
@@ -322,17 +363,19 @@ export function unreachableName(kind: string, name: string): RenderError {
  * boundary — and by every *nested* formula too, because a parent calls the
  * same method on its children.
  *
+ * Re-exported from core rather than reimplemented. The gem calls
+ * `HTML_ENTITIES.decode`, which handles NAMED (`&amp;`), DECIMAL (`&#8467;`)
+ * and hex in BOTH cases (`&#x2093;`, `&#X2093;`). A local copy here matched
+ * only lowercase-x hex and silently left the other three forms undecoded —
+ * measured against the gem, which decodes all four. Core's implementation
+ * carries the full xhtml1 table and the gem's codepoint-range behaviour, and
+ * `src/formats/mathml/render-shared.ts` already reaches it the same way.
+ *
  * That repetition is safe only because the transform is idempotent, which was
  * measured rather than assumed: decoding `"a&#x2581;b"` twice gives the same
- * string. The generated render tables hold raw entity text for this reason,
- * while `symbols.ts` holds decoded glyphs, because the gem's symbol methods
- * decode at the symbol and its constant tables do not.
+ * string.
  */
-export function htmlEntityToUnicode(text: string): string {
-  return text.replace(/&#x([0-9a-fA-F]+);/g, (_match, hex: string) =>
-    String.fromCodePoint(Number.parseInt(hex, 16)),
-  );
-}
+export { htmlEntityToUnicode };
 
 /** The gem's `\s/\s -> /` squeeze, applied at the same boundary. */
 export function squeezeSolidus(text: string): string {
@@ -461,7 +504,18 @@ export function formulaBoundary(node: MathNode, context: RenderContext): string 
   // `join_str = " " if !(negated_value? || mini_sized?)` — Ruby's `join(nil)`
   // concatenates, so a suppressed separator is the empty string, not a space.
   const separator = negatedValue(node) || miniSized(node) ? "" : " ";
-  const rendered = children.map((child) => (isNode(child) ? (context.render(child) ?? "") : ""));
+  // `value&.map { |v| v.to_unicodemath(options: options) }` — the `&.` guards
+  // `value`, NOT each element `v`, so a non-node element is sent the message
+  // and raises. Mapping it to "" instead made this the ONLY lane that renders
+  // a tree the gem refuses: the port's own parser produces exactly that tree
+  // for `left(right)` (a bare `""` between Left and Right), and measured,
+  //
+  //   gem  to_asciimath/to_latex/to_mathml/to_unicodemath  ALL raise ParseError
+  //   port asciimath/latex/mathml  throw RenderError        unicodemath  "(  )"
+  //
+  // which is the "more correct than the oracle" defect PORTING-STANDARDS.md
+  // forbids. `renderChild` is the strict helper the other three lanes use.
+  const rendered = children.map((child) => renderChild(child, context, "formula.value") ?? "");
 
   return squeezeSolidus(htmlEntityToUnicode(rendered.join(separator)));
 }
@@ -518,7 +572,7 @@ export function naryandSubValue(field: unknown, context: RenderContext): string 
 export function naryandSupValue(field: unknown, context: RenderContext): string {
   const node = isNode(field) ? field : undefined;
   const rendered = renderOptionalChild(field, context);
-  if (miniSized(node) || primeUnicode(node, rendered)) return rendered;
+  if (miniSized(node) || primeUnicode(node)) return rendered;
   if (isPower(field)) return `^${rendered}`;
 
   return `^${unicodemathParens(field, context) ?? ""}`;

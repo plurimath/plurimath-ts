@@ -14,7 +14,15 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { FencedNode, FormulaNode, FracNode, NumberNode, SymbolNode } from "../../../src/core/index";
+import { RenderError } from "../../../src/core/errors";
+import {
+  FencedNode,
+  FormulaNode,
+  FracNode,
+  MrowNode,
+  NumberNode,
+  SymbolNode,
+} from "../../../src/core/index";
 import {
   miniSized,
   negatedValue,
@@ -105,30 +113,36 @@ describe("miniSized matches the gem", () => {
  * four `PREFIXED_PRIMES` classes suggests a four-class rule that is not the
  * rule.
  */
-const PRIME: ReadonlyArray<readonly [string, string, boolean]> = [
-  ["Prime", "′", true],
-  ["Dprime", "″", true],
-  ["Second", "″", true],
-  ["Third", "‴", true],
-  ["Qprime", "⁗", true],
-  ["the bare apostrophe", "'", true],
-  ["Sum", "∑", false],
-  ["Alpha", "α", false],
+/**
+ * Concrete symbol CLASSES, by the id the port carries. The gem reads each
+ * one's `hexcode_in_input` — raw entity text — and asks whether it contains a
+ * prime entity, so these are pinned by id rather than by rendered glyph.
+ * `Sprime` is the bare apostrophe. Measured against the pinned oracle.
+ */
+const PRIME: ReadonlyArray<readonly [string, boolean]> = [
+  ["Prime", true],
+  ["Dprime", true],
+  ["Second", true],
+  ["Third", true],
+  ["Qprime", true],
+  ["Sprime", true],
+  ["Sum", false],
+  ["Alpha", false],
 ];
 
 describe("primeUnicode matches the gem", () => {
-  it.each(PRIME)("%s", (_name, rendered, expected) => {
-    expect(primeUnicode(new SymbolNode({ id: "Symbol" }), rendered)).toBe(expected);
+  it.each(PRIME)("%s", (id, expected) => {
+    expect(primeUnicode(new SymbolNode({ id }))).toBe(expected);
   });
 
   it("is false for a formula, however many primes it holds", () => {
     // The gem's first line is `return false unless field.is_a?(Symbols::Symbol)`,
     // so a formula wrapping a prime never triggers the swap. Measured: false.
-    expect(primeUnicode(new FormulaNode({ value: [plainSymbol()] }), "′")).toBe(false);
+    expect(primeUnicode(new FormulaNode({ value: [plainSymbol()] }))).toBe(false);
   });
 
   it("is false when the child rendered to nothing", () => {
-    expect(primeUnicode(new SymbolNode({ id: "Symbol" }), null)).toBe(false);
+    expect(primeUnicode(new SymbolNode({ id: "Symbol" }))).toBe(false);
   });
 
   it("is true for a generic symbol carrying the RAW apostrophe entity", () => {
@@ -141,11 +155,37 @@ describe("primeUnicode matches the gem", () => {
     // silently loses the sub/sup swap for every hand-built or MathML-parsed
     // tree. Measured against the pinned oracle.
     const raw = new SymbolNode({ id: "Symbol", value: "&#x27;" });
-    expect(primeUnicode(raw, "&#x27;")).toBe(true);
+    expect(primeUnicode(raw)).toBe(true);
   });
 
+  it.each([
+    ["&#x2032;", "prime"],
+    ["&#x2033;", "double prime"],
+    ["&#x2034;", "triple prime"],
+    ["&#x2057;", "quadruple prime"],
+    ["&#x27;", "apostrophe"],
+  ])("is true for a generic symbol carrying the raw %s entity", (entity) => {
+    // `unicodemath_field_value` returns `field.value` RAW for a generic
+    // `Symbols::Symbol`, so the gem compares entity text against the entity
+    // text in `primes_constants` — and the render of such a symbol is the
+    // undecoded entity, matching no decoded glyph. Measured: all five are
+    // primes to the gem. Checking only `&#x27;` caught one of them.
+    const raw = new SymbolNode({ id: "Symbol", value: entity });
+    expect(primeUnicode(raw)).toBe(true);
+  });
+
+  it.each(["Bar", "If", "Ul", "Paren::Lround", "Paren::Rsquare"])(
+    "raises for %s, which has no unicodemath hexcode",
+    (id) => {
+      // `hexcode_in_input` returns nil for these, and the gem then calls
+      // `.include?` on nil and RAISES — measured, 10 of 1,460 classes do.
+      // Returning false instead rendered `x^(¯)` where the gem refuses.
+      expect(() => primeUnicode(new SymbolNode({ id }))).toThrow(RenderError);
+    },
+  );
+
   it("is still false for a generic symbol with an unrelated value", () => {
-    expect(primeUnicode(new SymbolNode({ id: "Symbol", value: "x" }), "x")).toBe(false);
+    expect(primeUnicode(new SymbolNode({ id: "Symbol", value: "x" }))).toBe(false);
   });
 });
 
@@ -163,6 +203,22 @@ describe("negatedValue matches the gem", () => {
 
   it("is false for a non-formula", () => {
     expect(negatedValue(plainSymbol())).toBe(false);
+  });
+
+  it("answers for an Mrow exactly as for a Formula", () => {
+    // `Formula::Mrow < Formula` and overrides neither predicate — `mrow.rb`
+    // defines zero of them. Measured on the oracle, an Mrow and a Formula with
+    // the same children both answer true. Omitting `mrow` made every Mrow
+    // answer false, which shows up as a join separator the gem suppresses.
+    const children = [plainSymbol(), new SymbolNode({ id: "Symbol", value: "&#x338;" })];
+    expect(negatedValue(new MrowNode({ value: children }))).toBe(true);
+    expect(negatedValue(new FormulaNode({ value: children }))).toBe(true);
+  });
+
+  it("reports an Mrow as mini-sized when its first child is", () => {
+    const children = [miniSymbol("sub"), plainSymbol()];
+    expect(miniSized(new MrowNode({ value: children }))).toBe(true);
+    expect(miniSized(new FormulaNode({ value: children }))).toBe(true);
   });
 
   it("looks at the raw value, not a symbol id", () => {

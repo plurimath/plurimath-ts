@@ -18,6 +18,7 @@ import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-sha
 import {
   present,
   renderOptionalChild,
+  rubyInterpolate,
   unicodemathParens,
 } from "../../formats/unicodemath/render-shared";
 import {
@@ -37,7 +38,12 @@ export function renderMpadded(node: NodeOf<"mpadded">, context: RenderContext): 
     return `${phantomGlyph(options)}${unicodemathParens(node.parameterOne, context) ?? ""}`;
   }
   if (options !== undefined && options !== null && "mask" in options) {
-    return `${MPADDED}(${String(options.mask ?? "")}&${renderOptionalChild(node.parameterOne, context)})`;
+    // `"⟡(#{self.options[:mask]}&...)"` — Ruby interpolation, so `to_s` on
+    // whatever the option holds. `String()` is not that: measured, the gem
+    // gives `⟡(["x", 2]&x)` for an array where `String()` gives `x,2`, and
+    // `⟡(1.0&x)` for a float. `rubyInterpolate` is the shared helper written
+    // for exactly this, and this call site was missed when it landed.
+    return `${MPADDED}(${rubyInterpolate(options.mask)}&${renderOptionalChild(node.parameterOne, context)})`;
   }
   if (!present(node.parameterOne)) return MPADDED;
 

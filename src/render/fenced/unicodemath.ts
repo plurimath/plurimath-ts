@@ -10,7 +10,8 @@
  *
  *   - a **mini-sized** fence takes a different path entirely
  *     (`mini_sized_unicode`, :182): contents joined with nothing, no added
- *     parens, and both parens rendered UNGUARDED;
+ *     parens, and both parens rendered UNGUARDED. The question that selects it
+ *     (`mini_sized?`, :176) RECURSES — see the call site below;
  *   - a `Frac` carrying `:choose` is rendered by *this* node
  *     (`Frac#choose_frac`, `frac.rb:118`), and if it is the FIRST element it
  *     replaces the whole fence, parens included;
@@ -32,6 +33,7 @@ import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-sha
 import {
   FORMAT,
   isNode,
+  miniSized,
   present,
   renderChild,
   renderOptionalChild,
@@ -48,7 +50,31 @@ function crash(at: string, gemError: string): RenderError {
 }
 
 export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): string {
-  if (isMiniSized(node)) return miniSizedUnicode(node, context);
+  // `Fenced#mini_sized?` (:176):
+  //
+  //   parameter_one&.mini_sized? ||
+  //     Math::Formula.new(parameter_two)&.mini_sized? ||
+  //     parameter_three&.mini_sized?
+  //
+  // Every term RECURSES, and this file used to ask a local flag test that did
+  // not. `Formula#mini_sized?` is `value&.first&.mini_sized?` (`formula.rb:353`),
+  // so a wrapped child answers for its own first child, however deep — and a
+  // slot holding a Formula carries no `mini_sub_sized` field of its own, so the
+  // flag test answered false for every nested shape. Measured on the oracle,
+  // with the contents `[Formula([Number("1", mini_sub_sized: true)]), Number("2")]`:
+  //
+  //   Fenced[Formula[mini], 2]              => "(₁2)"    (this port gave "(₁ 2)")
+  //   Fenced|Formula[mini]|                 => "|₁|"     (gave "|(₁)|")
+  //   Fenced[Formula[mini]] open_prefixed   => "(₁)"     (gave "├(₁)")
+  //   Fenced[Formula[mini]] minsize "2em"   => "(₁)"     (gave "├3(₁)")
+  //
+  // and `mini_sized?` itself answered `true` for `Fenced[Formula[mini]]`,
+  // `Fenced[Formula[Formula[mini]]]`, `Fenced[Mrow[mini]]` and
+  // `Fenced[Fenced[mini]]`, `nil` for `Fenced[Formula[plain]]` and for
+  // `Fenced[plain, mini]` — the first-child rule survives the recursion.
+  // The shared `miniSized` is that whole recursion, `Fenced` arm included, so
+  // this asks it about the node itself rather than re-deriving the three terms.
+  if (miniSized(node)) return miniSizedUnicode(node, context);
 
   const contents = node.parameterTwo;
   // `parameter_two&.map{…}` is guarded but the very next line,
@@ -75,27 +101,6 @@ export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): st
   // pair *inside* the existing fence.
   const body = isVertParen(node) ? `(${rendered})` : rendered;
   return `${openParen(node, context)}${body}${closeParen(node, context)}`;
-}
-
-/**
- * `Fenced#mini_sized?` (:176) — asks the open paren, a Formula built from the
- * CONTENTS, and the close paren.
- *
- * The middle term is `Math::Formula.new(parameter_two).mini_sized?`, and
- * `Formula#mini_sized?` inspects only its FIRST child (measured, and pinned in
- * `test/formats/unicodemath/render-shared.spec.ts`) — so a mini-sized element
- * in second position does not make the fence mini-sized.
- */
-function isMiniSized(node: NodeOf<"fenced">): boolean {
-  const contents = node.parameterTwo;
-  const first = Array.isArray(contents) ? contents[0] : undefined;
-  return miniOf(node.parameterOne) || miniOf(first) || miniOf(node.parameterThree);
-}
-
-function miniOf(field: unknown): boolean {
-  if (!isNode(field)) return false;
-  const flags = field as { readonly miniSubSized?: boolean; readonly miniSupSized?: boolean };
-  return flags.miniSubSized === true || flags.miniSupSized === true;
 }
 
 /**

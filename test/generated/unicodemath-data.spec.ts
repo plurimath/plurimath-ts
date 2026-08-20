@@ -23,24 +23,6 @@ import {
 } from "../../src/core/generated/symbol-canonical";
 import { UNICODEMATH_SYMBOL_EXCEPTIONS } from "../../src/generated/unicodemath/exceptions";
 import * as RenderTables from "../../src/generated/unicodemath/render-tables";
-import {
-  UNICODEMATH_ACCENT_SYMBOLS,
-  UNICODEMATH_DIACRITIC_BELOWS,
-  UNICODEMATH_DIACRITIC_OVERLAYS,
-  UNICODEMATH_FONTS_CLASSES,
-  UNICODEMATH_HORIZONTAL_BRACKETS,
-  UNICODEMATH_MATRIXS,
-  UNICODEMATH_SIZE_OVERRIDES,
-  UNICODEMATH_SUB_ALPHABETS,
-  UNICODEMATH_SUB_DIGITS,
-  UNICODEMATH_SUB_OPERATORS,
-  UNICODEMATH_SUP_ALPHABETS,
-  UNICODEMATH_SUP_DIGITS,
-  UNICODEMATH_SUP_OPERATORS,
-  UNICODEMATH_UNARY_ARG_FUNCTIONS,
-  UNICODEMATH_UNARY_SYMBOLS,
-  UNICODEMATH_UNDEF_UNARY_FUNCTIONS,
-} from "../../src/generated/unicodemath/render-tables";
 import { UNICODEMATH_SYMBOLS } from "../../src/generated/unicodemath/symbols";
 
 describe("the unicodemath symbol slice", () => {
@@ -85,78 +67,82 @@ describe("the unicodemath symbol slice", () => {
 });
 
 /**
- * Every table's EXACT size, measured against the pinned oracle.
+ * Every emitted constant's EXACT size, measured against the pinned oracle.
  *
- * This used to assert only that sixteen tables were non-empty, with exact
- * counts on four — so twelve of them could have shrunk to a single entry and
- * still passed, which is the shape of a generator that half-ran. "A shrinking
- * table is visible" was the claim; it was true of four tables and false of the
- * other twelve. A count is the cheapest assertion that actually holds it.
+ * Two earlier versions of this were weaker than they read. The first asserted
+ * only that sixteen tables were non-empty, so twelve could have shrunk to one
+ * entry and passed. The second pinned exact sizes but its "covers every
+ * emitted table" check carried an EXCLUSION LIST that skipped ten of the
+ * twenty-six emitted constants — including every one added most recently —
+ * so it could not do the job it was named for. This one enumerates all
+ * twenty-six and derives the emitted set from the module, with no filter.
  */
-const TABLE_SIZES: ReadonlyArray<readonly [string, ReadonlyMap<string, string>, number]> = [
-  ["unary_symbols", UNICODEMATH_UNARY_SYMBOLS, 13],
-  ["horizontal_brackets", UNICODEMATH_HORIZONTAL_BRACKETS, 8],
-  ["accent_symbols", UNICODEMATH_ACCENT_SYMBOLS, 21],
-  ["unary_arg_functions", UNICODEMATH_UNARY_ARG_FUNCTIONS, 7],
-  ["size_overrides", UNICODEMATH_SIZE_OVERRIDES, 4],
-  ["matrixs", UNICODEMATH_MATRIXS, 8],
-  ["sub_alphabets", UNICODEMATH_SUB_ALPHABETS, 17],
-  ["sup_alphabets", UNICODEMATH_SUP_ALPHABETS, 25],
-  ["sub_digits", UNICODEMATH_SUB_DIGITS, 10],
-  ["sup_digits", UNICODEMATH_SUP_DIGITS, 10],
-  ["sub_operators", UNICODEMATH_SUB_OPERATORS, 4],
-  ["sup_operators", UNICODEMATH_SUP_OPERATORS, 3],
+const MAP_SIZES: ReadonlyArray<readonly [string, ReadonlyMap<string, unknown>, number]> = [
+  ["ACCENT_SYMBOLS", RenderTables.UNICODEMATH_ACCENT_SYMBOLS, 21],
+  ["CLASS_OF_FAMILY", RenderTables.UNICODEMATH_CLASS_OF_FAMILY, 50],
+  ["FONT_OF_CLASS", RenderTables.UNICODEMATH_FONT_OF_CLASS, 14],
+  ["HORIZONTAL_BRACKETS", RenderTables.UNICODEMATH_HORIZONTAL_BRACKETS, 8],
+  ["MATRIXS", RenderTables.UNICODEMATH_MATRIXS, 8],
+  ["PARENTHESIS_MATRICES", RenderTables.UNICODEMATH_PARENTHESIS_MATRICES, 5],
+  ["PHANTOM_SYMBOLS", RenderTables.UNICODEMATH_PHANTOM_SYMBOLS, 7],
+  ["SIZE_OVERRIDES", RenderTables.UNICODEMATH_SIZE_OVERRIDES, 4],
+  ["SUB_ALPHABETS", RenderTables.UNICODEMATH_SUB_ALPHABETS, 17],
+  ["SUB_DIGITS", RenderTables.UNICODEMATH_SUB_DIGITS, 10],
+  ["SUB_OPERATORS", RenderTables.UNICODEMATH_SUB_OPERATORS, 4],
+  ["SUB_PARENTHESIS", RenderTables.UNICODEMATH_SUB_PARENTHESIS, 2],
+  ["SUP_ALPHABETS", RenderTables.UNICODEMATH_SUP_ALPHABETS, 25],
+  ["SUP_DIGITS", RenderTables.UNICODEMATH_SUP_DIGITS, 10],
+  ["SUP_OPERATORS", RenderTables.UNICODEMATH_SUP_OPERATORS, 3],
+  ["SUP_PARENTHESIS", RenderTables.UNICODEMATH_SUP_PARENTHESIS, 2],
+  ["UNARY_ARG_FUNCTIONS", RenderTables.UNICODEMATH_UNARY_ARG_FUNCTIONS, 7],
+  ["UNARY_SYMBOLS", RenderTables.UNICODEMATH_UNARY_SYMBOLS, 13],
+  ["UNICODE_FRACTIONS", RenderTables.UNICODEMATH_UNICODE_FRACTIONS, 18],
 ];
 
 const LIST_SIZES: ReadonlyArray<readonly [string, readonly string[], number]> = [
-  ["undef_unary_functions", UNICODEMATH_UNDEF_UNARY_FUNCTIONS, 7],
-  ["fonts_classes", UNICODEMATH_FONTS_CLASSES, 14],
-  ["diacritic_overlays", UNICODEMATH_DIACRITIC_OVERLAYS, 23],
-  ["diacritic_belows", UNICODEMATH_DIACRITIC_BELOWS, 52],
+  ["BINARY_CARRIER_NAMES", RenderTables.UNICODEMATH_BINARY_CARRIER_NAMES, 4],
+  ["DIACRITIC_BELOWS", RenderTables.UNICODEMATH_DIACRITIC_BELOWS, 52],
+  ["DIACRITIC_OVERLAYS", RenderTables.UNICODEMATH_DIACRITIC_OVERLAYS, 23],
+  ["FONTS_CLASSES", RenderTables.UNICODEMATH_FONTS_CLASSES, 14],
+  ["UNARY_CARRIER_NAMES", RenderTables.UNICODEMATH_UNARY_CARRIER_NAMES, 34],
+  ["UNDEF_UNARY_FUNCTIONS", RenderTables.UNICODEMATH_UNDEF_UNARY_FUNCTIONS, 7],
+];
+
+/** The one emitted scalar: `PARENTHESIS_MATRICES.key(nil)`, read with Ruby's own `Hash#key`. */
+const SCALARS: ReadonlyArray<readonly [string, string, string]> = [
+  ["NIL_PAREN_MATRIX", RenderTables.UNICODEMATH_NIL_PAREN_MATRIX, "eqarray"],
 ];
 
 describe("the unicodemath render tables", () => {
-  it.each(TABLE_SIZES)("%s carries exactly its measured rows", (_name, table, size) => {
+  it.each(MAP_SIZES)("%s carries exactly its measured rows", (_name, table, size) => {
     expect(table.size).toBe(size);
   });
 
   it.each(LIST_SIZES)("%s carries exactly its measured entries", (_name, list, size) => {
     expect(list.length).toBe(size);
-    // Distinctness matters separately: a list that grew by duplication would
-    // satisfy a count alone.
+    // Distinctness separately: a list that grew by duplication satisfies a count.
     expect(new Set(list).size).toBe(size);
   });
 
-  it("covers every emitted table, so a new one cannot arrive unpinned", () => {
-    // DERIVED from the module, never a hardcoded total. An earlier version of
-    // this test asserted `TABLE_SIZES.length + LIST_SIZES.length === 16`,
-    // which is satisfied by leaving both arrays untouched while a seventeenth
-    // table is emitted — the exact vacuity the test was added to prevent.
-    // Reading the module's own export names means a new table fails here by
-    // name until somebody pins its size.
+  it.each(SCALARS)("%s holds its measured value", (_name, actual, expected) => {
+    expect(actual).toBe(expected);
+  });
+
+  it("pins every emitted constant, with no exclusions", () => {
+    // DERIVED from the module and compared as a SET. No filter: an exclusion
+    // list is what let the previous version skip ten constants while claiming
+    // to cover them all. A new constant fails here by name until it is pinned.
     const pinned = new Set([
-      ...TABLE_SIZES.map(([name]) => name),
-      ...LIST_SIZES.map(([name]) => name),
+      ...MAP_SIZES.map(([n]) => n),
+      ...LIST_SIZES.map(([n]) => n),
+      ...SCALARS.map(([n]) => n),
     ]);
-    const emitted = Object.keys(RenderTables)
-      .filter((key) => key.startsWith("UNICODEMATH_"))
-      .map((key) => key.slice("UNICODEMATH_".length).toLowerCase())
-      // The carrier-name and font tables are asserted by the specs that own
-      // them (`render-shared`, `font-style`), and the nil-paren answer is a
-      // scalar, not a table with a size.
-      .filter(
-        (name) =>
-          !name.endsWith("carrier_names") &&
-          name !== "nil_paren_matrix" &&
-          name !== "font_of_class" &&
-          name !== "class_of_family" &&
-          name !== "symbols" &&
-          !name.endsWith("parenthesis") &&
-          !name.endsWith("matrices") &&
-          !name.endsWith("fractions") &&
-          !name.endsWith("phantom_symbols"),
-      );
-    expect([...pinned].sort()).toStrictEqual(emitted.sort());
+    const emitted = new Set(
+      Object.keys(RenderTables)
+        .filter((k) => k.startsWith("UNICODEMATH_"))
+        .map((k) => k.slice("UNICODEMATH_".length)),
+    );
+    expect([...pinned].sort()).toStrictEqual([...emitted].sort());
   });
 
   it("keeps the reverse-lookup tables free of duplicate values", () => {
@@ -164,7 +150,7 @@ describe("the unicodemath render tables", () => {
     // `Hash#invert` keeps the LAST key for a duplicated value. The generator
     // refuses a duplicate there; this pins that the emitted table is clean, so
     // the port can invert it without having to guess which key won.
-    const values = [...UNICODEMATH_SIZE_OVERRIDES.values()];
+    const values = [...RenderTables.UNICODEMATH_SIZE_OVERRIDES.values()];
     expect(new Set(values).size).toBe(values.length);
   });
 
@@ -173,7 +159,7 @@ describe("the unicodemath render tables", () => {
     // and `underbar` are both U+2581 — and is only ever read forward. An
     // earlier version of the generator rejected this, which would have been a
     // false alarm on correct data.
-    const values = [...UNICODEMATH_UNARY_SYMBOLS.values()];
+    const values = [...RenderTables.UNICODEMATH_UNARY_SYMBOLS.values()];
     expect(new Set(values).size).toBeLessThan(values.length);
   });
 });

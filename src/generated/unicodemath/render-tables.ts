@@ -6,8 +6,9 @@
  * What it was generated from is in `src/generated/provenance.ts`.
  *
  * UnicodeMath render tables: the constant tables `to_unicodemath` reads
- * that no other generated slice supplies, consumed by
- * `src/formats/unicodemath/renderer.ts`.
+ * that no other generated slice supplies, consumed by the per-node
+ * renderers under `src/render/<kind>/unicodemath.ts` that
+ * `src/formats/unicodemath/renderer.ts` dispatches to.
  *
  * Read from `Plurimath::UnicodeMath::Constants` rather than measured
  * through a render, unlike the latex and mathml slices. That is a
@@ -17,11 +18,25 @@
  * shape-checks every table and fails rather than emitting something
  * malformed.
  *
- * Three call sites reverse-look-up these tables (`base.rb:128`,
- * `frac.rb:159`, `table.rb:422`), and Ruby's `Hash#invert` keeps the LAST
- * key for a duplicated value. The generator therefore refuses any table
- * that maps two keys to one value: a reverse lookup would silently pick
- * one, and the port would have no way to know which.
+ * Five call sites reverse-look-up four of these tables, and NOT all with
+ * the same Ruby read: `base.rb:128` is `SIZE_OVERRIDES_SYMBOLS.invert`,
+ * while `frac.rb:159` (`UNICODE_FRACTIONS`), `table.rb:422`
+ * (`PARENTHESIS_MATRICES`), `phantom.rb:59` and `mpadded.rb:102` (both
+ * `PHANTOM_SYMBOLS`) are `Hash#key`. The two disagree on a duplicated
+ * value — measured, `{a: 1, b: 1}.key(1)` is `:a` and `.invert[1]` is
+ * `:b`, FIRST match against LAST — so the generator refuses a duplicate
+ * value in THOSE FOUR tables rather than pick a side.
+ *
+ * That is the whole of the guarantee. Tables nothing reverse-reads are
+ * emitted with their duplicates intact, because forward reads do not
+ * care: `UNICODEMATH_UNARY_SYMBOLS` below maps both `underline` and
+ * `underbar` to `&#x2581;`. And nil values are exempt even in the four,
+ * because the gem itself ships a collision on them —
+ * `PARENTHESIS_MATRICES` has three nil rows, `table.rb:422` really can
+ * land on them, and the winner is measured off the gem with the gem's
+ * own `Hash#key` and emitted separately as
+ * `UNICODEMATH_NIL_PAREN_MATRIX` (`eqarray`; `invert` would have said
+ * `cases`).
  *
  * Two entries here are NOT from `Constants` and are not lookups at all:
  * `UNICODEMATH_UNARY_CARRIER_NAMES` and

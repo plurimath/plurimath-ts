@@ -461,7 +461,18 @@ export function formulaBoundary(node: MathNode, context: RenderContext): string 
   // `join_str = " " if !(negated_value? || mini_sized?)` — Ruby's `join(nil)`
   // concatenates, so a suppressed separator is the empty string, not a space.
   const separator = negatedValue(node) || miniSized(node) ? "" : " ";
-  const rendered = children.map((child) => (isNode(child) ? (context.render(child) ?? "") : ""));
+  // `value&.map { |v| v.to_unicodemath(options: options) }` — the `&.` guards
+  // `value`, NOT each element `v`, so a non-node element is sent the message
+  // and raises. Mapping it to "" instead made this the ONLY lane that renders
+  // a tree the gem refuses: the port's own parser produces exactly that tree
+  // for `left(right)` (a bare `""` between Left and Right), and measured,
+  //
+  //   gem  to_asciimath/to_latex/to_mathml/to_unicodemath  ALL raise ParseError
+  //   port asciimath/latex/mathml  throw RenderError        unicodemath  "(  )"
+  //
+  // which is the "more correct than the oracle" defect PORTING-STANDARDS.md
+  // forbids. `renderChild` is the strict helper the other three lanes use.
+  const rendered = children.map((child) => renderChild(child, context, "formula.value") ?? "");
 
   return squeezeSolidus(htmlEntityToUnicode(rendered.join(separator)));
 }

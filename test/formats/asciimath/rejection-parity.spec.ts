@@ -187,15 +187,23 @@ describe("the port maps the failure position back to the original input", () => 
   );
 
   it("reproduces the gem's recorded offset wherever the two agree", () => {
-    // The assertion that would fail if the port stopped mapping: for the
-    // shifted cases the recorded (preprocessed) offset and the mapped
-    // (original) offset are DIFFERENT numbers, so returning the recorded one
-    // unchanged fails here.
-    for (const entry of rejections) {
-      if (entry.id === KNOWN_POSITION_DIVERGENCE) continue;
-      expect(MAPPED_INDEX.get(entry.id), entry.id).toBe(
-        entry.input === entry.preprocessed ? entry.index : MAPPED_INDEX.get(entry.id),
-      );
+    // The UNSHIFTED cases only, which is what "wherever the two agree" means:
+    // their recorded offset indexes the original input, so the gem's number and
+    // the port's are directly comparable. A shifted case's recorded offset
+    // indexes `preprocessed` instead and is not comparable here — that it MOVED
+    // is asserted in "genuinely exercises the mapping" below, and the port's
+    // actual `ParseError.index` is pinned per case by the block above, shifted
+    // or not.
+    //
+    // An earlier version looped over every case and, for the shifted ones,
+    // compared `MAPPED_INDEX.get(id)` to itself. That branch could not fail,
+    // while the comment above it claimed it was the one that would.
+    const comparable = rejections.filter(
+      (entry) => entry.input === entry.preprocessed && entry.id !== KNOWN_POSITION_DIVERGENCE,
+    );
+    expect(comparable.length).toBeGreaterThan(0);
+    for (const entry of comparable) {
+      expect(MAPPED_INDEX.get(entry.id), entry.id).toBe(entry.index);
     }
   });
 

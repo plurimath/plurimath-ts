@@ -81,10 +81,24 @@ function renderBaseSymbol(node: NodeOf<"symbol">): XmlElement {
       ? null
       : requireStringForAppend(node.value, node.kind, "symbol.value");
   if (value?.includes("&#x2147;")) {
-    // `attributes[:intent] = Utility.html_entity_to_unicode(value)` —
-    // decoded once here, and the engine wrapper's write decodes again
-    // (idempotent: the decoded text has no entities left).
-    mi.setAttribute("intent", htmlEntityToUnicode(value));
+    // `attributes[:intent] = Utility.html_entity_to_unicode(value)` decodes
+    // once, and then `OxEngine::Element#update_attrs` (`element.rb:104-110`)
+    // decodes EVERY attribute again on the way out. So the gem decodes this
+    // value twice, and both passes are observable.
+    //
+    // This used to decode once and call `setAttribute` directly, on the
+    // grounds that the second pass was a no-op because "the decoded text has
+    // no entities left". That is not true of a value carrying an escaped
+    // ampersand, where the first pass UNCOVERS an entity for the second to
+    // decode. Measured on the pinned oracle, for `Symbol("&#x2147;&amp;#x41;")`:
+    //
+    //   gem   <mi intent="ⅇA">&#x2147;&amp;#x41;</mi>
+    //   port  <mi intent="ⅇ&#x41;">&#x2147;&amp;#x41;</mi>
+    //
+    // and directly: html_entity_to_unicode("&#x26;#x41;") is "&#x41;", which
+    // decodes again to "A". Routing through `setDecodedAttribute` supplies the
+    // write-side pass, exactly as the `rspace` write below already does.
+    setDecodedAttribute(mi, "intent", htmlEntityToUnicode(value), node.kind, "symbol.value");
   }
   const options = hashOrNil(node.options, node.kind, "symbol.options");
   if (options !== null && Object.hasOwn(options, "rspace")) {

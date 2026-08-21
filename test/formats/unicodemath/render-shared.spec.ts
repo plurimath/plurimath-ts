@@ -304,10 +304,10 @@ describe("the unicodemath field value is entity text, not the render", () => {
     // Two review rounds went into inventing strings here. First a plain object
     // inside an array became "[object Object]"; then the "fix" for that turned
     // a Range into "{toString: ...}" and a Struct into '{x: 1, y: "x"}', where
-    // the gem gives "1..3" and "#<struct ...>". A Hash's own form depends on its
-    // KEY TYPE — `{a: 1}` for Symbol keys, `{"a" => 1}` for String keys — which
-    // JS cannot see, and the gem's constants demonstrably use both. So these
-    // refuse rather than guess.
+    // the gem gives "1..3" and "#<struct ...>". An arbitrary object's `to_s`
+    // cannot be reproduced in JS at all, and nothing reaches this branch anyway
+    // — the parse path hands this slot only null or a string — so it refuses
+    // rather than guessing a third time.
     //
     // A TypeError, not a PlurimathError: the declared slot type is
     // `string | null`, so reaching here is a caller type violation.

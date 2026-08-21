@@ -75,15 +75,23 @@ export function rubyUnreproducible(value: unknown): string | null {
   }
   if (Array.isArray(value)) return null;
   if (typeof value === "object") {
-    // A Ruby Hash prints as its `inspect`, and the form depends on the KEY TYPE
-    // — `{a: 1}` for Symbol keys, `{"a" => 1}` for String keys — which JS cannot
-    // distinguish, since both arrive as JS strings. A reviewer confirmed the
-    // gem's own constants use both: `TABLE_PARENTHESIS` and `PARENTHESIS`
-    // (asciimath/constants.rb) are String-keyed, `FONT_STYLES` (utility.rb) is
-    // mixed. So there is no safe default. And an arbitrary Ruby object prints
-    // via its own `to_s`, which cannot be reproduced at all: a Range gives
-    // "1..3", a Struct "#<struct ...>", a custom class whatever it defines.
-    return "a Ruby Hash prints by key type and an arbitrary object by its own to_s, neither of which JavaScript can determine";
+    // An arbitrary Ruby object prints via its own `to_s`, which cannot be
+    // reproduced in JavaScript at all: a Range gives "1..3", a Struct
+    // "#<struct ...>", a custom class whatever it defines. A plain Hash could in
+    // principle be reproduced — its form depends on key type (`{a: 1}` for
+    // Symbol keys, `{"a" => 1}` for String keys) and JS sees both as strings,
+    // but the gem's own constants are uniformly Symbol-keyed, so that default
+    // would be defensible. Measured: `TABLE_PARENTHESIS`, `PARENTHESIS`,
+    // `FONT_STYLES` and `OMML_NAMESPACES` all have `keys.map(&:class).uniq ==
+    // [Symbol]`. A review round claimed these were String-keyed and mixed; that
+    // was a misreading of Ruby's quoted-symbol syntax, where `{"a": 1}` is
+    // `{:a => 1}`, and it is recorded here because the claim was briefly
+    // believed and written into this file.
+    //
+    // Hashes are refused anyway, because nothing reaches this branch — the
+    // parse path hands this slot only `null` or a string — and one refusal is
+    // simpler to keep true than two behaviours.
+    return "an arbitrary Ruby object prints via its own to_s, which JavaScript cannot determine";
   }
   return `a ${typeof value} has no Ruby equivalent here`;
 }

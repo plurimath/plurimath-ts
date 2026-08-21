@@ -5,7 +5,7 @@
  * and this entry grows a parser beside `toMathml` if that lands. One physical
  * entry per published subpath (ARCHITECTURE.md §3), so a consumer rendering
  * MathML does not pay for the AsciiMath grammar — proven by the
- * package-isolation gate against the packed artifact.
+ * package-isolation gate against the built `dist`.
  *
  * `MathmlOptions` is exported because callers pass it; the XML element tree
  * behind it is not, being plumbing rather than public API (`src/xml/index.ts`).

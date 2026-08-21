@@ -37,7 +37,7 @@
       "class": "A",
       "activatesAt": "P0",
       "run": "pnpm gate:package",
-      "description": "Packed-artifact assertions over every published subpath, plus publint and attw"
+      "description": "Built-dist assertions over every published subpath, plus publint and attw"
     },
     {
       "id": "runtime-boundary",

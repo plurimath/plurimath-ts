@@ -3,7 +3,7 @@ import { defineConfig } from "tsdown";
 /**
  * One physical entry per published subpath (ARCHITECTURE.md §3): source-level
  * import rules alone cannot prove what ships, so each subpath is built
- * separately and the package-isolation gate inspects the packed artifacts.
+ * separately and the package-isolation gate inspects the built `dist`.
  *
  * `platform: "neutral"` overrides tsdown's Node default — D2 targets browser
  * bundlers as well as Node.

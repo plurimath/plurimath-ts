@@ -6,7 +6,7 @@
  * path or a mis-declared tsdown entry would ship the wrong file while every
  * assertion here stayed green. `scripts/gate-package.mjs` owns that half — it
  * resolves each subpath through the export map exactly as a consumer would and
- * asserts the same surface against the packed artifact (`EXPECTED_EXPORTS`).
+ * asserts the same surface against the built `dist` (`EXPECTED_EXPORTS`).
  *
  * Both halves are needed. The gate cannot run in the unit suite because it
  * requires a build; this spec cannot see the export map at all. Together they

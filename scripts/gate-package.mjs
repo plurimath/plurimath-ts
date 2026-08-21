@@ -7,10 +7,12 @@
  *
  *   1. every published subpath loads under ESM and CJS with its named exports
  *   2. each subpath's bundled graph contains only what it is allowed to
- *   3. publint and attw pass on the packed tarball
+ *   3. publint passes on the built dist, and attw on a real `npm pack`
  *
- * The subpath list is read from package.json#exports, so new formats need no
- * change here. The root default export is asserted only once the compat class
+ * The subpath list is read from package.json#exports, so a new format is
+ * enumerated automatically — but its expected exports and forbidden layers are
+ * hand-listed below, and a subpath absent from those tables silently skips both
+ * assertions. Adding a format means adding it there. The root default export is asserted only once the compat class
  * exists (§4) — it is deliberately absent at P0.
  */
 
@@ -32,8 +34,9 @@ const run = (command) => {
 
 /**
  * Entries a subpath must never pull in, keyed by subpath — the slim-bundle
- * guarantee of ARCHITECTURE.md §3, checked against the packed artifact rather
- * than against import statements.
+ * guarantee of ARCHITECTURE.md §3, checked against the built `dist` and its
+ * sourcemaps rather than against import statements. Only the attw step below
+ * runs against a real `npm pack`.
  *
  * A consumer who reads AsciiMath should not pay for the LaTeX or MathML
  * renderers, and one who renders LaTeX should not pay for a parser at all.

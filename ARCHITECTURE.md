@@ -60,26 +60,30 @@ and each rendered output must match Ruby for every case. A proof-of-concept
 (2026-07-23) validated tree + rendering parity end to end for AsciiMath: 69
 cases, 276/276 assertions.
 
-The corpus later graduates to a shared, language-neutral repository which
-future implementations (Python, Rust) consume. **Staged deliberately
-(decided 2026-07-29):**
+The corpus has graduated to a shared, language-neutral repository which future
+implementations (Python, Rust) consume. **Staged deliberately (decided
+2026-07-29; steps 1 and 2 are done):**
 
-1. **Corpus first, locally.** P1 generates the corpus already in shared shape
-   — own directory, JSON Schema, manifest, version stamp — and plurimath-ts
-   consumes it through the same interface a released package would use. The
-   schema is thus designed from experience, and extraction later is `git init`
-   plus publish, not rework.
-2. **Then extract**, once the pipeline is proven end to end. Repo creation and
-   naming are the maintainer's call (§11).
-3. **Symbol data joins later, separately** — it is the higher-leverage move
-   (69% of the gem) but a bigger ask, since making it authoritative means the
-   Ruby gem generating its symbol classes from it. Until then symbol data is
-   generated straight into this repo, as today.
+1. **Corpus first, locally** — done. P1 generated the corpus already in shared
+   shape — own directory, JSON Schema, manifest, version stamp — and
+   plurimath-ts consumed it through the same interface a released package would
+   use, so the schema was designed from experience rather than guessed.
+2. **Then extract** — done. The shared repository is `plurimath-testsuite`;
+   this package consumes it as a git submodule pinned to a reviewed commit
+   (`submodules/plurimath-testsuite`), not as a published package. The census
+   and the exclusion list stayed here: they classify the gem's classes against
+   *this port's* roadmap rather than describing the gem.
+3. **Symbol data joins later, separately** — still open (§11). It is the
+   higher-leverage move (69% of the gem) but a bigger ask, since making it
+   authoritative means the Ruby gem generating its symbol classes from it. Until
+   then symbol data is generated straight into this repo, as today.
 
-Format for the shared artifacts: **YAML sources** (comments, reviewable diffs,
-one file per symbol / per case group) compiled to **JSON artifacts** (parsed by
-every language's standard library, deterministic, checksummed). Consumers read
-JSON; only the shared repo parses YAML.
+Format for the shared artifacts: **YAML payloads** (comments, reviewable diffs,
+one file per case group), validated in the shared repository against committed
+JSON Schemas and checksummed per payload in its `corpus/provenance.yaml`.
+**Consumers parse that YAML directly; nothing is compiled to JSON today**, so a
+reader is each implementation's own small cost — here `test/core/corpus-yaml.ts`,
+written by hand because this package declares no YAML dependency.
 
 ## 2. Decisions
 
@@ -105,16 +109,18 @@ src/
                      table and the canonical symbol values Ruby's `==` reads.
                      Never edited by hand.
   formats/
-    asciimath/       parse (grammar + transform) → Formula; render entry
+    asciimath/       parse (grammar + transform) → FormulaNode; render entry
                      (renderer.ts → toAsciimath), the render dispatch table +
                      context wiring (render.ts) and the format-scoped render
                      helpers (render-shared.ts). Imports: pegkit, core, its
                      own data slice, its own kind files under src/render.
-    latex/           Same shape (input format; later phase).
-    unicodemath/     Same shape (later phase).
-    html/            Same shape (later phase).
-    mathml/          toMathml(Formula) → string. Imports: core, xml, its slice.
-    omml/            Same shape (output format; later phase).
+    latex/           Renderer landed: index.ts, renderer.ts (toLatex), render.ts,
+                     render-shared.ts — the same shape as asciimath/ minus the
+                     parse half. Only the LaTeX *parser* is a later phase (§9 P3+).
+    unicodemath/     Same: renderer landed (toUnicodemath), parser a later phase.
+    mathml/          toMathml(MathNode) → string. Imports: core, xml, its slice.
+    html/            Does not exist yet (later phase).
+    omml/            Does not exist yet (later phase; output format).
     ...              Every format module is independent of every other.
   render/            Renderer code, node-major (§5, "How this maps to the
                      gem"): one directory per node kind, one file per format
@@ -141,7 +147,7 @@ src/
   evaluation/        evaluate(formula, bindings, options). Imports: core.
   unitsml/           DEFERRED (decided 2026-07-29, §5) — not built until the
                      approach is settled with the maintainer. When it lands it
-                     is a leaf service: conversion (unit text → Formula) and
+                     is a leaf service: conversion (unit text → FormulaNode) and
                      the standalone `unitsml` input parser as separate entry
                      points, so a renderer never pulls the parser.
   compat/            The frozen `Plurimath` class. Imports: everything.
@@ -151,10 +157,18 @@ src/
     mathml/          Output descriptors for the mathml renderer (own file).
     ...              One physical file set per format. Never one merged blob,
                      never edited by hand.
-scripts/             Ruby extraction: corpus + per-format symbol data
-                     (generate-corpus.rb), and core's own data
-                     (generate-core-data.rb). One generator per owned
-                     directory, each recording its own provenance.
+scripts/             Ruby extraction — four generators covering the repository-owned
+                     generated outputs,
+                     each recording its own provenance: the census, the
+                     exclusion list and the per-format symbol data
+                     (generate-corpus.rb, which does NOT write the shared
+                     conformance cases — the plurimath-testsuite submodule owns
+                     those and its own copy of that generator writes them);
+                     core's own data (generate-core-data.rb); formatting's
+                     locale table (generate-formatting-data.rb); and the Ox
+                     contract fixtures (generate-xml-fixtures.rb). Alongside
+                     them, the gate runners: check.mjs, gate-boundaries.mjs,
+                     gate-package.mjs, gate-oracle.rb, differential-port.mjs.
 test/                Corpus conformance, pegkit conformance, unit tests,
                      package-isolation tests.
 ```
@@ -184,10 +198,15 @@ test/                Corpus conformance, pegkit conformance, unit tests,
 7. No module-level side effects: importing any module must have **no
    externally observable effect** (no I/O, no global mutation, no registry
    writes). Module-local constant initialization is fine; `"sideEffects":
-   false` declares this to bundlers, and the isolation gate — not the flag —
-   is what proves it.
+   false` declares this to bundlers. The isolation gate imports each entry
+   and checks its exports; for the subpaths that declare forbidden patterns it
+   also walks the bundled graph, so it catches an import that drags in another
+   layer. The root declares none, and nothing observes I/O, global mutation or
+   registry writes, so this rule is held by review, not proven by a gate.
 8. Render code is node-major and format-closed. A kind file
-   `render/<kind>/<F>.ts` imports only `core`, `generated/<F>`,
+   `render/<kind>/<F>.ts` imports only `core`, `xml` (the tree builder the
+   MathML kind files emit through — `.dependency-cruiser.cjs` permits it
+   alongside `core`), `generated/<F>`,
    `src/formats/<F>/render-shared.ts`, and sibling kind files of its own
    format (`<other-kind>/<F>.ts` — Ruby's base-class inheritance imports,
    e.g. `norm/asciimath.ts` importing `unary-function/asciimath.ts`); it
@@ -230,12 +249,12 @@ does exactly this — one tsup entry, one JSON blob). Therefore:
 With render code node-major, the slim-bundle guarantee is per-**file**
 module-graph disjointness — format `F`'s graph contains, under `src/render`,
 only `<kind>/<F>.ts` files — enforced by the boundary gate (rule 8), not by
-directory ownership. Landed (2026-08-13): the format subpaths
+directory ownership. Landed (2026-08-17, #26): the format subpaths
 `/asciimath`, `/latex` and `/mathml` are build entries, and the isolation gate
 asserts per-subpath artifact isolation for render code — matching each
 subpath's forbidden set against the modules its sourcemaps name, so the check
 inspects what shipped rather than what was imported. `/unicodemath` joined
-them (2026-08-18) on the same terms: a text format like `/latex`, so its
+them (2026-08-21, #33) on the same terms: a text format like `/latex`, so its
 forbidden set carries the XML layer and the grammar alongside the other three
 formats, and the boundary gate's inventory now reads 38 kinds x 4 formats.
 
@@ -244,20 +263,25 @@ formats, and the boundary gate's inventory now reads 38 kinds x 4 formats.
 `package.json` `exports` map:
 
 ```
-@plurimath/plurimath                → root: everything (convenience + compat)
-@plurimath/plurimath/asciimath     → parseAsciimath, toAsciimath
-@plurimath/plurimath/mathml        → toMathml (parser when ported)
-@plurimath/plurimath/latex         → toLatex (parser when ported)
-@plurimath/plurimath/core          → Formula, node types, errors
-@plurimath/plurimath/formatting    → (NOT YET PUBLISHED — see below)
-@plurimath/plurimath/evaluation    → evaluate
-@plurimath/plurimath/unitsml       → (FUTURE — not published; UnitsML is deferred, §5)
+@plurimath/plurimath-ts             → root: everything the package publishes
+                                      (today core; convenience + compat when they land)
+@plurimath/plurimath-ts/core        → FormulaNode, node types, errors
+@plurimath/plurimath-ts/asciimath   → parseAsciimath, toAsciimath
+@plurimath/plurimath-ts/latex       → toLatex (parser when ported)
+@plurimath/plurimath-ts/mathml      → toMathml (parser when ported)
+@plurimath/plurimath-ts/unicodemath → toUnicodemath (parser when ported)
+@plurimath/plurimath-ts/formatting  → (NOT YET PUBLISHED — see below)
+@plurimath/plurimath-ts/evaluation  → (FUTURE — not published; evaluation lands in P4+, §9)
+@plurimath/plurimath-ts/unitsml     → (FUTURE — not published; UnitsML is deferred, §5)
 ...one subpath per format
 ```
 
 A format subpath exports every function that format owns — parsing *and*
 rendering when both exist. Subpaths appear only when their implementation
-lands; an unimplemented format has no subpath (not a throwing stub).
+lands; an unimplemented format has no subpath (not a throwing stub). The
+package name above is the one `package.json` carries today; the name this
+finally publishes under is still open (§11), and the package stays `private`
+until it is settled.
 
 `/formatting` follows that rule rather than being an exception to it. The
 module exists — `src/formatting/` resolves a decimal marker from a locale,
@@ -276,7 +300,7 @@ type MathNode            = /* the same union minus `equals` */;  // the data sha
 ```
 
 `MathNode` is what every public signature takes — renderers, `normalize`,
-`isMathNode`, and the module function `equals(a, b)` — because §5's dispatch
+and the module function `equals(a, b)` — because §5's dispatch
 is structural: an object with a known `kind` and a valid shape is a node
 whatever produced it, so a caller may hand over a plain object built by JSON,
 a test fixture, or another library. `ConstructedMathNode` is what a
@@ -297,18 +321,19 @@ object (§5 convention), even where it is currently empty, so adding an option
 is never a breaking signature change:
 
 ```ts
-function parseAsciimath(input: string, options?: AsciimathParseOptions): Formula;
+function parseAsciimath(input: string, options?: AsciimathParseOptions | null): FormulaNode;
 //   AsciimathParseOptions includes onUnsupported (see "Unsupported-construct
 //   diagnostics" in §5) — the hook for constructs the port has not built yet.
-function toAsciimath(formula: Formula, options?: AsciimathOptions): string;
-function toMathml(formula: Formula, options?: MathmlOptions): string;
-function toLatex(formula: Formula, options?: LatexOptions): string;
+function toAsciimath(node: MathNode, options?: AsciimathOptions | null): string;
+function toMathml(node: MathNode, options?: MathmlOptions | null): string;
+function toLatex(node: MathNode, options?: LatexOptions | null): string;
+function toUnicodemath(node: MathNode, options?: UnicodemathOptions | null): string;
 ```
 
 Root convenience:
 
 ```ts
-function parse(input: string, format: InputFormat, options?: ParseOptions): Formula;
+function parse(input: string, format: InputFormat, options?: ParseOptions): FormulaNode;
 export { toMathml, toLatex, ... };            // re-exports
 export default class Plurimath { ... }        // compat, below
 ```
@@ -343,11 +368,12 @@ The published `plurimath-js` also exposes a public, **writable** `data`
 property holding an Opal `ParserResult`. That object cannot be reproduced —
 it is Opal-runtime-specific — so the compat class is **method-exact, not
 object-exact**: the constructor and seven methods above match; `data` is an
-open decision (§11) between a name-compatible `readonly data: Formula` and a
+open decision (§11) between a name-compatible `readonly data: FormulaNode` and a
 documented break. The document does not claim a fully exact ABI.
 
-The freeze is enforced by a checked-in declaration fixture (type-level test)
-plus one runtime test per method; no api-extractor needed. The ~80-line budget
+The freeze will be enforced by a checked-in declaration fixture (type-level
+test) plus one runtime test per method; no api-extractor needed. Neither the
+compat class nor that fixture exists yet. The ~80-line budget
 is guidance; exact compatibility overrides it.
 
 **The compat class is not built in P0.** It has nothing to wrap until an input
@@ -375,7 +401,7 @@ values, equality. No `toX` methods, no render or parse imports.
 the API view). `ConstructedMathNode` is the discriminated union of the node
 *classes* — instances, which carry `equals()`. `MathNode` is the same union as
 **data**, derived from it by dropping that one member, and it is the type
-every structural surface takes: renderers, `normalize`, `isMathNode` and the
+every structural surface takes: renderers, `normalize` and the
 module function `equals(a, b)`. A plain object with a known `kind` and a valid
 shape is a `MathNode` and needs no constructor, which is what the runtime
 boundary below already promised; a union of classes cannot say that, because
@@ -580,9 +606,11 @@ reads `open_paren = "("`, a **string**, and `Table#initialize` then runs it
 through `Utility.symbols_class`, so what the object actually holds is a
 `Paren::Lround` node. A port written from the source would have stored `"("`.
 
-Nothing is claimed about parsed trees. The AsciiMath transform does not exist
-yet, so "the transform always passes the value" — which this section used to
-say — is unfounded; when a transform lands, its own tests decide.
+Nothing is claimed about parsed trees here. The AsciiMath transform exists —
+`src/formats/asciimath/transform.ts`, applied by
+`src/formats/asciimath/parser.ts` — so what it does with a value is settled by
+its own tests (`test/formats/asciimath/transform.spec.ts`) and by the corpus
+model-parity gate, not by this section, which describes construction only.
 
 **Renderer options (decided 2026-07-28).** One convention for every renderer:
 options are typed exactly, so unknown keys are rejected on fresh object
@@ -619,8 +647,8 @@ Execution contract (pinned):
 - `RenderContext` is **immutable**; child rendering derives a new context
   (table position, unary spacing, MathML intent, display style, ...).
 - Rendering never mutates the Formula or the caller's options object.
-- Return type is per-format: XML tree for MathML/OMML, string for the text
-  formats.
+- Return type is `string` for every format; MathML and OMML build an XML tree
+  internally and serialize it, rather than returning the tree.
 - Core may export only format-blind structural predicates. No generic visitor
   framework, no double dispatch.
 
@@ -679,8 +707,11 @@ renders each symbol in representative surroundings, not only in isolation, and
 neighbour-dependent behaviour is exercised.
 
 Honest limit: probing cannot discover an axis it does not exercise. The
-primary safety net is regeneration review — a new upstream axis changes
-generated output, and the diff is reviewed like code. A source scanner that
+primary safety net is regeneration review — a changed RESULT for an
+axis/value pair the manifest already lists changes generated output, and the
+diff is reviewed like code. `src/generated/context-axes.ts` enumerates each
+axis's values and the generator probes only those, so a new axis *and* a new
+value on an existing axis are both invisible to regeneration. A source scanner that
 fails regeneration on an unmanifested context key is a **possible later
 addition**, deliberately not built until a real miss justifies it. A symbol id
 missing from a renderer slice throws — parity gaps fail loudly.
@@ -763,18 +794,21 @@ deliberate and documented rather than hidden behind a thrown error that would
 kill an otherwise renderable document; the parse tree for that input likewise
 differs from Ruby's (`{text: ...}` instead of `{unitsml: ...}`).
 
-No Ruby-generated case covers it, by construction. **One canonical
-deferred-feature classifier** serves *all three* generators — positive corpus,
-rejection corpus, and the differential runner — because the divergence cuts
-both ways: Ruby **rejects** malformed UnitsML during construction
+The shared corpus does carry one case, `text-unitsml-valid`, withheld by
+`corpus/exclusions.yaml` rather than absent. The **deferred-feature
+classifier** is local to `scripts/generate-corpus.rb`; the testsuite generator
+and the differential runner do not share it. The divergence cuts both ways:
+Ruby **rejects** malformed UnitsML during construction
 (`::Unitsml.parse` raises inside the node constructor) where the port accepts
 the same quoted string as text, and Ruby **renders** valid UnitsML where the
 port emits literal text. The classifier therefore matches on the **input
 text** (the `unitsml(` construct), not on a parsed class: for rejection cases
 Ruby never produces a formula, so post-parse class detection could not see
-them. Everything it flags is excluded from all three generators and listed in
-an exclusion manifest shipped beside the corpus, so the gap is visible rather
-than implied by absence.
+them. What it flags is listed in an exclusion manifest shipped beside the
+corpus, so the gap is visible rather than implied by absence. The testsuite
+generator still emits the case (`text-unitsml-valid`), and the differential
+runner omits UnitsML from its own atom set rather than through this
+classifier — the exclusion is not one mechanism shared by three generators.
 
 Why it is deferred rather than bridged, verified 2026-07-29:
 
@@ -829,18 +863,19 @@ not all of Parslet. Divergences outside that subset are documented, not fixed.
 Gates fall into three classes. Every gate is **registered from day one** and
 blocks pull requests **from the milestone that activates it**; before that it
 is reported as inactive/non-blocking, never skipped or absent (activation
-matrix below). `scripts/check` runs every *activated* class-A gate.
+matrix below). `scripts/check.mjs` runs every *activated* class-A gate.
 
-**A. Automated TS gates (CI-blocking, no Ruby, all in `scripts/check`)**
+**A. Automated TS gates (CI-blocking, no Ruby, all in `scripts/check.mjs`)**
 
 - **Corpus conformance**: parse tree, normalized model, and every landed
   renderer match the committed Ruby-generated expectations exactly.
 - **Negative parity**: inputs the gem rejects must be rejected here — a
   non-empty rejection corpus (the POC had none).
 - **pegkit conformance suite** (§6.1).
-- **Package isolation** (§3): assertions on the **packed artifact** — ESM
-  import, CJS loading with named-export parity, emitted declarations, and
-  every export condition — not merely a source-level bundle. (The root's
+- **Package isolation** (§3): assertions on the **built `dist` artifact** —
+  ESM import, CJS loading with named-export parity, emitted declarations, and
+  every export condition — not merely a source-level bundle. Only the
+  are-the-types-wrong check runs against a real `npm pack`. (The root's
   default export is asserted only once the compat class exists, §4.)
 - **Adversarial inputs**: deep nesting, unmatched fences, long token runs —
   clean failures, bounded time.
@@ -872,7 +907,7 @@ milestone is a single tracked field in the same file.
 
 Lifecycle rules:
 
-- **Runners are per class.** `scripts/check` runs activated **class-A** gates
+- **Runners are per class.** `scripts/check.mjs` runs activated **class-A** gates
   only (no Ruby, no humans). Class B runs via `scripts/gate-oracle.rb` (needs a gem
   checkout) on regeneration and on a schedule; class C is checklist evidence
   recorded in the phase sign-off.
@@ -889,8 +924,8 @@ Lifecycle rules:
 |---|---|---|
 | Types, lint, layer boundaries | A | `P0` |
 | pegkit conformance + stack safety | A | `P0` (pegkit is internal — tested directly, not via a public subpath) |
-| Package isolation + browser-bundler smoke | A | `P0` — a single gate whose runner **enumerates the currently published entries** from the `exports` map, so new formats need no new row |
-| Packaging correctness (`publint`, `attw`, packed tarball) | A | `P0` |
+| Package isolation + browser-bundler smoke | A | `P0` — a single gate whose runner **enumerates the currently published entries** from the `exports` map, so new formats need no new row in this table — though each still needs its expected exports and forbidden layers listed in the runner |
+| Packaging correctness (`publint` on `dist`, `attw` on a real pack) | A | `P0` |
 | Generated-payload schema + manifest-hash validation | A | `P1-baseline` (first generated data) |
 | Runtime boundary (unknown/malformed nodes) | A | `P1-baseline` (with the first renderer) |
 | Unsupported-construct fallback + diagnostics | A | `P1-baseline` — `Text` fallback in all four renderings; warning dedup; callback replace/silence/throw; exact original-input index (incl. after a length-changing preprocessing token); presence of the user-facing notice |
@@ -898,7 +933,7 @@ Lifecycle rules:
 | Negative/rejection corpus | A | `P1-completion` |
 | Symbol context-exception matrix | A | `P1-completion` |
 | Adversarial inputs | A | `P1-completion` |
-| Clean-oracle regeneration | B | `P1-baseline` |
+| Clean-oracle regeneration — two registered gates: this repo's own data, and the pinned testsuite corpus | B | `P1-baseline` |
 | Differential runner | B | `P1-completion` |
 | Peer review, phase sign-off | C | every phase — **checklist, not registry** (§9) |
 
@@ -949,17 +984,19 @@ schema, never a silent id change.
 | Types | `tsc --strict`, `noUncheckedIndexedAccess`, `verbatimModuleSyntax` | Type-checking is a CI gate; `any` requires a comment |
 | Lint + format | Biome | One fast tool over ESLint+Prettier: less config to maintain (D7 applied to tooling itself) |
 | Layer boundaries | dependency-cruiser + render kind inventory | Encodes §3's eight rules; the inventory check derives the kind set from each format's dispatch table; CI gate |
-| Artifact isolation | package test over the **packed tarball** (ESM + CJS + types + export conditions) | §3; builder-independent assertions |
+| Artifact isolation | package test over the built **`dist`** (ESM + CJS + types + export conditions) | §3; builder-independent assertions |
 | Tests | Vitest | Proven in POC |
 | Build | **tsdown `0.22.14`**, pinned exactly → ESM + CJS + d.mts/d.cts, one entry per subpath | See build-tool note below |
-| Packaging correctness | `publint` + `@arethetypeswrong/cli` on the packed tarball | CI gate; both green on the verification fixture |
+| Packaging correctness | `publint` on `dist`, `@arethetypeswrong/cli` on a real `npm pack` | CI gate; both green on the verification fixture |
 | Package manager | pnpm, pinned via `packageManager` | |
 | Runtimes | `mise.toml` committed (org precedent: the gem commits one); `engines.node >= 20` | |
 | Corpus regen | `scripts/` + documented one-liner | Requires a local gem checkout; class-A CI never needs Ruby (generated files are committed); class-B gates do (§7) |
 
 Conventions: kebab-case filenames; named exports only — the root default
 export (compat class) is the single exception, required for plurimath-js
-parity; no barrel files inside layers; comments explain constraints, not
+parity; each layer's public surface is its own `index.ts` (one non-index
+re-export remains, `core/equality.ts` re-exporting from `./nodes`); comments
+explain constraints, not
 narration.
 
 **Build-tool note (bake-off, 2026-07-29).** A 4-entry fixture mirroring §3 was
@@ -991,7 +1028,7 @@ Consequences pinned here so they are not rediscovered later:
   activated it must pass the same packed-package gate; until then it is not
   configured or run.
 
-**Convention guardrails beyond tooling.** `scripts/check` — one tracked,
+**Convention guardrails beyond tooling.** `scripts/check.mjs` — one tracked,
 committed entry point running every *activated* class-A gate locally (§7
 registry; class-B gates run from `scripts/gate-oracle.rb`) — is the enforceable
 guardrail and a P0 exit item. Assistant skills (*ts-conventions*,
@@ -1011,16 +1048,18 @@ Biome + tsc gates green; pegkit ported with its conformance suite,
 `any`/`present?`/`scope`, and stack-safety tests (pegkit stays **internal** —
 no public subpath); the build emitted the two entries that genuinely
 existed at P0, root and `/core`, with no format stubs published or tested;
-the three format subpaths joined them once their renderers and parser landed
-(2026-08-13), each a physical entry the isolation gate checks; the `gates.json` registry and
-`scripts/check` run every P0-activated gate.
+the format subpaths joined them once their renderers landed — only AsciiMath
+has a parser today —
+`/asciimath`, `/latex` and `/mathml` on 2026-08-17 (#26), `/unicodemath` on
+2026-08-21 (#33) — each a physical entry the isolation gate checks; the `gates.json` registry and
+`scripts/check.mjs` run every P0-activated gate.
 
 **P1 — AsciiMath vertical.**
 *Baseline exit:* the **census classification** (implemented / aliased /
 deferred) exists — corpus exclusion depends on it, even though the full model
 schema completes at P1-completion; POC corpus fully passing under the new
-architecture — parse tree, **normalized model**, asciimath/mathml/latex
-renderings; **minimal
+architecture — parse tree, **normalized model**, and every landed renderer
+(asciimath/mathml/latex, joined by unicodemath); **minimal
 number normalization** in `formatting` (every numeric render already routes
 through it in the gem — locales and configurable formatters come later);
 generator emits per-format data slices with the §7 sidecar manifests from
@@ -1029,11 +1068,13 @@ clean checkouts; runtime-boundary gate active.
 non-empty rejection corpus passing; **generated model schema** and
 **behavioral symbol-context probes** driving the union and exception matrix;
 equality projection generated and tested; package-isolation assertions for the
-real asciimath/mathml/latex subpaths. (UnitsML is explicitly **not** in P1 —
+real asciimath/mathml/latex/unicodemath subpaths. (UnitsML is explicitly **not** in P1 —
 its grammar rule stays commented out and such input is processed as text, §5.)
 
-**P2 — Complete AsciiMath surface.** Exit when: unicodemath/omml/html
-renderers land with corpus coverage; packaging review (npm surface) done;
+**P2 — Complete AsciiMath surface.** Exit when: the omml and html renderers
+land with corpus coverage (the unicodemath renderer landed early, during
+P1-baseline, and its render-parity spec is already inside the
+corpus-conformance gate); packaging review (npm surface) done;
 first release under a distinct name if the publishing decision (§11) says so.
 The `/core` lock does **not** happen here.
 
@@ -1064,8 +1105,13 @@ takeover deliberately drops UnitsML, in which case the "drop-in replacement"
 language goes and the break is documented in the release notes. This does not
 affect P0–P2.
 
-**Data repo migration.** When `plurimath-testsuite` exists, `scripts/` moves
-there and this repo pins released data versions.
+**Data repo migration — done, and not the way this line predicted.**
+`plurimath-testsuite` exists. This repo pins it as a **git submodule** at a
+reviewed commit (`submodules/plurimath-testsuite`), not as a released data
+package. And `scripts/` did **not** move: the testsuite owns its own
+`scripts/generate-corpus.rb` for the shared cases, while this repo keeps
+`scripts/generate-corpus.rb` for what is not shared — the census, the exclusion
+list, and the TypeScript symbol data (TODO.plan/cross-cutting.md).
 
 ## 10. Scope and restraint
 
@@ -1098,9 +1144,9 @@ Decisions needed before their phase:
   errors, construction, renderer options.
 - **Compat `data` property (before P2):** the published plurimath-js exposes a
   public `data` field holding its Opal parse result. Reproduce an equivalent
-  surface (exposing our `Formula`), or document its absence as a deliberate
+  surface (exposing our `FormulaNode`), or document its absence as a deliberate
   break and stop calling the ABI exact. Recommendation: expose
-  `readonly data: Formula` — same property name, our model behind it.
+  `readonly data: FormulaNode` — same property name, our model behind it.
 - **UnitsML approach and its `1.0` consequence** — Suleman to discuss with
   Ronald. Note the coupling: `plurimath-js` ships UnitsML support today, so
   either UnitsML lands before package takeover or the takeover documents a
@@ -1127,16 +1173,22 @@ Decisions needed before their phase:
   — no stability promise, real feedback — and take over the plurimath-js name
   at **`1.0`**, which is the same milestone as compat completeness and the
   `/core` lock (§5, §9).
-- **Shared-repo extraction** — Ronald, after P1 proves the pipeline locally
-  (§1). Two separable asks, in order: (a) the **corpus** — already requested by
-  Ronald ("a language-independent test suite ... encoded in JSON or YAML"), and
-  (b) the **symbol data**, which is higher leverage but implies the Ruby gem
-  eventually generating its symbol classes from it. Function classes are
-  explicitly *not* shareable: 57 of 102 carry conditional logic (measured),
-  so sharing them would require a template DSL plus an interpreter per
-  language — rejected as over-engineering. Repo name (`plurimath-spec`,
-  `plurimath-data`, or an org `-testsuite` form) and symbol-id governance are
-  part of the same decision.
+- **Shared data — the corpus half is settled, the symbol half is not.** Ask (a),
+  the **corpus**, is **done**: the shared repository exists, it is named
+  `plurimath-testsuite`, and this package consumes it as a submodule pinned to a
+  reviewed commit (§1). Ask (b), the **symbol data**, is still open — Ronald. It
+  is higher leverage but implies the Ruby gem eventually generating its symbol
+  classes from it, so it needs gem work and the maintainer's agreement, not just
+  a repository; two sub-questions travel with it — whether symbol data shares
+  `plurimath-testsuite` or gets its own repository, and who governs symbol ids
+  once two implementations depend on them. Function classes are explicitly *not*
+  shareable: 71 of 102 carry an `if`, `unless`, `case` or ternary node inside a
+    `to_*` method — measured by Ripper over the 102 files directly under
+    `lib/plurimath/math/function/` on the pinned oracle — unchanged if
+    short-circuit `&&`/`||` count, since every such file already has a
+    conditional. So sharing them would
+  require a template DSL plus an interpreter per language — rejected as
+  over-engineering.
 - **Repo/directory handover:** this design dir becomes the `plurimath-ts`
   working tree; the POC directory is renamed and retired as a reference
   quarry.

@@ -60,6 +60,38 @@ export function rubyNumberToS(value: number): string | null {
 }
 
 /**
+ * The `toString` implementations JavaScript supplies, as opposed to one a
+ * caller wrote.
+ *
+ * The discriminator was `toString !== Object.prototype.toString`, which is too
+ * permissive: a built-in overrides `toString` too, and spells the result
+ * differently from the Ruby type it corresponds to. A review round measured the
+ * damage — every one of these bypassed the number rules or the format entirely:
+ *
+ *   new Number(1.5e-5)  js "0.000015"   ruby Float   "1.5e-05"
+ *   new Number(1e21)    js "1e+21"      ruby Integer "1000000000000000000000"
+ *   new Number(-0)      js "0"          ruby Float   "-0.0"
+ *   /ab/                js "/ab/"       ruby Regexp  "(?-mix:ab)"
+ *   new Date(0)         js "Thu Jan 01 1970 …"       ruby Time "1970-01-01 …"
+ *
+ * A boxed primitive is not a special case worth unwrapping: Ruby has no boxing,
+ * so a caller reaching this with `new Number(x)` meant to pass `x`, and the
+ * primitive path already handles that exactly.
+ */
+const BUILTIN_TO_STRING: ReadonlySet<unknown> = new Set([
+  Object.prototype.toString,
+  Array.prototype.toString,
+  Boolean.prototype.toString,
+  Date.prototype.toString,
+  Error.prototype.toString,
+  Function.prototype.toString,
+  Number.prototype.toString,
+  RegExp.prototype.toString,
+  String.prototype.toString,
+  Symbol.prototype.toString,
+]);
+
+/**
  * Why a value cannot be reproduced, for an error message. Returns `null` when
  * it CAN be — every caller here refuses only the shapes this names.
  */
@@ -106,8 +138,8 @@ export function rubyUnreproducible(value: unknown): string | null {
     // The discriminator is the separator, not the quotes: a String key prints
     // with `=>`, a Symbol key with `:`.
     const printed = (value as { readonly toString?: unknown }).toString;
-    if (typeof printed === "function" && printed !== Object.prototype.toString) return null;
-    return "this object carries JavaScript's default toString, where Ruby would print a Hash's inspect form or an object's address";
+    if (typeof printed === "function" && !BUILTIN_TO_STRING.has(printed)) return null;
+    return "this object carries a built-in toString, which JavaScript and Ruby spell differently";
   }
   return `a ${typeof value} has no Ruby equivalent here`;
 }

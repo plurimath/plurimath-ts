@@ -328,6 +328,27 @@ describe("the unicodemath field value is entity text, not the render", () => {
       new SymbolNode({ id: "Alpha", value: ["pre", { toString: () => "X" }, "post"] } as never)
         .value,
     ).toBe("preXpost");
+    // Inherited counts too — Ruby finds an inherited `to_s` the same way.
+    expect(
+      new SymbolNode({ id: "Alpha", value: Object.create({ toString: () => "BASE!" }) } as never)
+        .value,
+    ).toBe("BASE!");
+
+    // But a BUILT-IN toString is refused: built-ins override toString too, and
+    // spell the result differently from the Ruby type they correspond to. The
+    // discriminator was `toString !== Object.prototype.toString`, which let them
+    // through. Measured before the fix:
+    //
+    //   new Number(1.5e-5)  js "0.000015"  ruby Float  "1.5e-05"
+    //   new Number(-0)      js "0"         ruby Float  "-0.0"
+    //   /ab/                js "/ab/"      ruby Regexp "(?-mix:ab)"
+    //
+    // A boxed primitive is not worth unwrapping: Ruby has no boxing, so a caller
+    // writing `new Number(x)` meant `x`, which the primitive path handles exactly.
+    for (const builtin of [new Number(1.5e-5), new Number(-0), /ab/, new Date(0)]) {
+      expect(() => new SymbolNode({ id: "Alpha", value: builtin } as never)).toThrow(TypeError);
+    }
+    expect(() => new SymbolNode({ id: "Alpha", value: ["pre", /ab/] } as never)).toThrow(TypeError);
 
     // What it CAN reproduce exactly still works, including inside an array.
     expect(new SymbolNode({ id: "Alpha", value: 1e21 } as never).value).toBe(

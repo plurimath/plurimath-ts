@@ -33,6 +33,7 @@ import {
   NumberNode,
   SqrtNode,
   SymbolNode,
+  UnaryFunctionNode,
 } from "../../../src/core/index";
 import { toUnicodemath } from "../../../src/formats/unicodemath/renderer";
 
@@ -341,5 +342,28 @@ describe("the boundary", () => {
       expect(error).toBeInstanceOf(RenderError);
       expect((error as RenderError).format).toBe("unicodemath");
     }
+  });
+});
+
+/**
+ * Measured, verbatim from the oracle run:
+ *
+ *   Hom.new(Symbol("x")).to_unicodemath  => "hom⁡x"
+ *   Hom.new(nil).to_unicodemath          => "hom⁡"
+ *   Hom.instance_method(:to_unicodemath).owner  => UnaryFunction
+ *   Mbox.instance_method(:to_unicodemath).owner => Mbox
+ */
+describe("Hom, a carrier-default unary name the AsciiMath transform cannot build", () => {
+  it("renders the carrier default, invisible FUNCTION APPLICATION and all", () => {
+    expect(toUnicodemath(new UnaryFunctionNode({ name: "Hom", parameterOne: sym("x") }))).toBe(
+      "hom⁡x",
+    );
+    expect(toUnicodemath(new UnaryFunctionNode({ name: "Hom" }))).toBe("hom⁡");
+  });
+
+  it("still refuses a name whose gem class overrides to_unicodemath", () => {
+    expect(() =>
+      toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: sym("x") })),
+    ).toThrow(RenderError);
   });
 });

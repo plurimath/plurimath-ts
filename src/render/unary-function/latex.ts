@@ -3,7 +3,8 @@
  * `#latex_value` (:221) — plus the name arms for the gem classes the census
  * folds into this carrier with their *own* `to_latex` overrides: `left.rb`
  * (:30), `right.rb` (:30), `glb.rb` (:11), `lcm.rb` (:25), `tr.rb` (:33).
- * Every other reachable name renders the carrier default.
+ * Every other name in `MEASURED_UNARY_NAMES` below renders the carrier
+ * default.
  *
  * Measured pins worth naming, because source-reading gets them wrong:
  * `Glb` and `Lcm` render with no backslash (`glb{x}`, `lcm{x}`); every other
@@ -42,17 +43,39 @@ import {
 const LEFT_RIGHT_PARENS: ReadonlyMap<string, string> = LATEX_LEFT_RIGHT_PARENS;
 
 /**
- * The class names this carrier has measured behaviour for — exactly the
- * AsciiMath-reachable set: every `get_class` basename from the generated
- * reachability census with this carrier (the latex-owned projection,
- * `LATEX_UNARY_CARRIER_NAMES`), plus `Tr`, which the transform constructs
- * directly without `get_class` (`newTr` in
- * `../../formats/asciimath/transform.ts`). A name outside the set raises
- * rather than rendering the carrier default, because the gem class it
- * denotes may override `to_latex` (`unreachableName` in
- * `../../formats/latex/render-shared.ts`).
+ * The class names this carrier has measured behaviour for. Three sources,
+ * and only the first is generated:
+ *
+ *   - the AsciiMath-reachable set — every `get_class` basename from the
+ *     generated reachability census with this carrier (the latex-owned
+ *     projection, `LATEX_UNARY_CARRIER_NAMES`);
+ *   - `Tr`, which the transform constructs directly without `get_class`
+ *     (`newTr` in `../../formats/asciimath/transform.ts`);
+ *   - `Hom`, which the transform never constructs at all, but whose
+ *     `to_latex` is the carrier's own, so `renderUnaryDefault` below
+ *     already emits the gem's bytes.
+ *
+ * `Hom` is measured, not read off the class list: on the pinned oracle
+ * `Hom.instance_method(:to_latex).owner` is `UnaryFunction`, and of the 48
+ * classes the census aliases onto this carrier it is the only one both
+ * outside the reachable set and carrier-default here. It takes the
+ * backslash, unlike `Glb`/`Lcm` above: `Hom.new(Symbol("x"))` renders
+ * `"\\hom{x}"` and `Hom.new(nil)` renders `"\\hom{}"`.
+ *
+ * A name outside the set raises rather than rendering the carrier default,
+ * because the gem class it denotes may override `to_latex`
+ * (`unreachableName` in `../../formats/latex/render-shared.ts`).
+ *
+ * The last two entries are gem-derived data typed by hand — the exception
+ * `TODO.plan/deferred.md` records under "The carrier name-guard sets are
+ * partly hand-listed"; both are held by behavioural pins in
+ * `test/formats/latex/renderer.spec.ts`.
  */
-const REACHABLE_UNARY_NAMES: ReadonlySet<string> = new Set([...LATEX_UNARY_CARRIER_NAMES, "Tr"]);
+const MEASURED_UNARY_NAMES: ReadonlySet<string> = new Set([
+  ...LATEX_UNARY_CARRIER_NAMES,
+  "Tr",
+  "Hom",
+]);
 
 export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
   const name = node.name;
@@ -74,7 +97,7 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
     case "Tr":
       return renderTr(node, context);
     default:
-      if (!REACHABLE_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
+      if (!MEASURED_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
       return renderUnaryDefault(name.toLowerCase(), node.parameterOne, context);
   }
 }

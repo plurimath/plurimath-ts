@@ -75,23 +75,39 @@ export function rubyUnreproducible(value: unknown): string | null {
   }
   if (Array.isArray(value)) return null;
   if (typeof value === "object") {
-    // An arbitrary Ruby object prints via its own `to_s`, which cannot be
-    // reproduced in JavaScript at all: a Range gives "1..3", a Struct
-    // "#<struct ...>", a custom class whatever it defines. A plain Hash could in
-    // principle be reproduced — its form depends on key type (`{a: 1}` for
-    // Symbol keys, `{"a" => 1}` for String keys) and JS sees both as strings,
-    // but the gem's own constants are uniformly Symbol-keyed, so that default
-    // would be defensible. Measured: `TABLE_PARENTHESIS`, `PARENTHESIS`,
-    // `FONT_STYLES` and `OMML_NAMESPACES` all have `keys.map(&:class).uniq ==
-    // [Symbol]`. A review round claimed these were String-keyed and mixed; that
-    // was a misreading of Ruby's quoted-symbol syntax, where `{"a": 1}` is
-    // `{:a => 1}`, and it is recorded here because the claim was briefly
-    // believed and written into this file.
+    // Ruby calls `to_s`; JavaScript calls `toString`. Where the caller has
+    // SUPPLIED one, that is a faithful port and the value is reproducible —
+    // measured, both sides give "CUSTOM!":
     //
-    // Hashes are refused anyway, because nothing reaches this branch — the
-    // parse path hands this slot only `null` or a string — and one refusal is
-    // simpler to keep true than two behaviours.
-    return "an arbitrary Ruby object prints via its own to_s, which JavaScript cannot determine";
+    //   ruby  Symbol.new(obj_with_custom_to_s).value  "CUSTOM!"
+    //   js    String({ toString: () => "CUSTOM!" })   "CUSTOM!"
+    //
+    // Refusing those was an over-correction, and a reviewer was right to call
+    // it: the port refused an input the oracle accepts and JS can reproduce.
+    //
+    // What is NOT reproducible is an object still carrying the DEFAULT
+    // `toString`, because the two languages disagree there and neither answer
+    // can be derived from the other:
+    //
+    //   ruby  Symbol.new({a: 1}).value      "{a: 1}"        (Hash#to_s is inspect)
+    //   ruby  Symbol.new(Object.new).value  "#<Object:0x…>" (carries an address)
+    //   js    String({ a: 1 })              "[object Object]"
+    //
+    // A Hash could in principle be reproduced, but its inspect form depends on
+    // the KEY TYPE and JS sees Symbol and String keys alike as strings. The
+    // gem's own constants are uniformly Symbol-keyed — measured,
+    // `TABLE_PARENTHESIS`, `PARENTHESIS`, `FONT_STYLES` and `OMML_NAMESPACES`
+    // all give `keys.map(&:class).uniq == [Symbol]`.
+    //
+    // TWO review rounds read those as String-keyed, from two different
+    // misreadings, so both are recorded here. In SOURCE, `{"a": 1}` is quoted
+    // SYMBOL syntax and means `{:a => 1}`. In INSPECT output, Ruby >= 3.4 quotes
+    // a symbol key that is not a valid identifier, so `:"["` prints as `"[":`.
+    // The discriminator is the separator, not the quotes: a String key prints
+    // with `=>`, a Symbol key with `:`.
+    const printed = (value as { readonly toString?: unknown }).toString;
+    if (typeof printed === "function" && printed !== Object.prototype.toString) return null;
+    return "this object carries JavaScript's default toString, where Ruby would print a Hash's inspect form or an object's address";
   }
   return `a ${typeof value} has no Ruby equivalent here`;
 }

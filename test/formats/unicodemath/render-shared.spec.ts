@@ -317,6 +317,18 @@ describe("the unicodemath field value is entity text, not the render", () => {
     );
     expect(() => new SymbolNode({ id: "Alpha", value: 1.5e-5 } as never)).toThrow(TypeError);
 
+    // But an object that SUPPLIES a toString is reproducible, and refusing it
+    // was an over-correction a review round caught: Ruby calls `to_s`, JS calls
+    // `toString`, and measured both give "CUSTOM!". The discriminator is
+    // whether the default `Object.prototype.toString` is still in place.
+    expect(
+      new SymbolNode({ id: "Alpha", value: { toString: () => "CUSTOM!" } } as never).value,
+    ).toBe("CUSTOM!");
+    expect(
+      new SymbolNode({ id: "Alpha", value: ["pre", { toString: () => "X" }, "post"] } as never)
+        .value,
+    ).toBe("preXpost");
+
     // What it CAN reproduce exactly still works, including inside an array.
     expect(new SymbolNode({ id: "Alpha", value: 1e21 } as never).value).toBe(
       "1000000000000000000000",

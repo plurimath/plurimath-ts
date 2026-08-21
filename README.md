@@ -29,7 +29,8 @@ and transform — along with three renderers, exported as the `./asciimath`,
 is published to npm under this name yet.
 
 Correctness is gated rather than asserted: a registry of quality gates activates
-in milestones, and the current milestone is P1-baseline.
+in milestones. The current one is recorded as `currentMilestone` in
+[`gates.json`](gates.json), and is P1-completion.
 
 - [`TODO.plan/`](TODO.plan/) — every phase from here to 1.0, what each
   contains, and which decisions are still open.
@@ -59,7 +60,7 @@ start and report as inactive until then, so nothing is silently skipped.
 Class-B gates are the exception, and are not run by `pnpm check`: they compare
 generated data against a live checkout of the Ruby gem, so they need Ruby and the
 gem's bundle. They run from [`scripts/gate-oracle.rb`](scripts/gate-oracle.rb).
-Two of them are active at the current milestone.
+Which of them are active depends on the milestone, like every other gate.
 
 ## Copyright and license
 

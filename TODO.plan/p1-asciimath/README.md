@@ -1,6 +1,6 @@
 # P1 — AsciiMath vertical
 
-**Status: active.** The first end-to-end slice: AsciiMath in, model, and three
+**Status: active.** The first end-to-end slice: AsciiMath in, model, and four
 renderers out, all proven against cases generated from the Ruby gem.
 
 ## What it delivers
@@ -21,9 +21,9 @@ Work in order; each depends on the ones before it.
 | 3 | [Core model](03-core-model.md) | node classes, equality projection, normalization |
 | 4 | [AsciiMath grammar](04-asciimath-grammar.md) | preprocessing + parse tree matching Parslet |
 | 5 | [AsciiMath transform](05-asciimath-transform.md) | parse tree → model |
-| 6 | [Renderers](06-renderers.md) | `toAsciimath`, `toLatex`, `toMathml` |
+| 6 | [Renderers](06-renderers.md) | `toAsciimath`, `toLatex`, `toMathml`, `toUnicodemath` |
 | 7 | [Activate gates](07-activate-gates.md) | milestone `P1-baseline`, nine class-A gates green |
-| 8 | [Complete P1](08-p1-completion.md) | milestone `P1-completion`, the last three class-A gates and both class-B runners |
+| 8 | [Complete P1](08-p1-completion.md) | milestone `P1-completion`, the last three class-A gates and the third class-B runner |
 
 Items 1–2 need a local checkout of the
 [Ruby gem](https://github.com/plurimath/plurimath), because they regenerate
@@ -76,11 +76,11 @@ has never been shown to reject anything.
 
 **P1-baseline** (item 7):
 
-- [x] Parse tree, normalized model, and all three renderings match the gem for
-      every **reachable** case in the pinned submodule corpus — 69 of the 70
+- [x] Parse tree, normalized model, and all four renderings match the gem for
+      every **reachable** case in the pinned submodule corpus — 90 of the 91
       pinned. `text-unitsml-valid` is withheld by `corpus/exclusions.yaml`
       because UnitsML is deferred, so the port deliberately renders it as
-      `Text` rather than as the gem does; claiming parity over all 70 would
+      `Text` rather than as the gem does; claiming parity over all 91 would
       claim it for the one case that is excluded from parity by design.
 - [x] Corpus discovery fails loudly on an absent or empty submodule, on zero
       payloads, on zero cases, and on a missing group or target key.
@@ -90,16 +90,16 @@ has never been shown to reject anything.
 
 **P1-completion** (item 8):
 
-- [ ] Widened positive corpus: fonts, colour, left/right, `mod`.
-- [ ] Rejection corpus non-empty and passing, with its case count asserted, and
+- [x] Widened positive corpus: fonts, colour, left/right, `mod`.
+- [x] Rejection corpus non-empty and passing, with its case count asserted, and
       every malformed-input class item 8 lists resolved against the gem rather
       than assumed.
-- [ ] Generated model schema and behavioural symbol-context probes driving the
+- [x] Generated model schema and behavioural symbol-context probes driving the
       union and the exception matrix.
-- [ ] Package-isolation assertions for the real `/asciimath`, `/mathml` and
-      `/latex` subpaths.
-- [ ] `pnpm check` reports twelve active class-A gates, all passing, and both
-      class-B runners are clean.
+- [ ] Package-isolation assertions for the real `/asciimath`, `/mathml`,
+      `/latex` and `/unicodemath` subpaths.
+- [ ] `pnpm check` reports twelve active class-A gates, all passing, and the
+      three class-B runners are clean.
 
 Both milestones additionally need the class-C evidence: a review round with
 findings resolved, and sign-off recorded.

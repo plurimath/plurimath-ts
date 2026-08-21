@@ -182,6 +182,30 @@ if (failures.length > 0) {
 }
 
 const kindCount = expected.size > 0 ? expected.values().next().value.size : 0;
+// A count with no names is the vacuous half of a gate: "7 warning(s)" reads
+// as noise nobody can act on, and a NEW warning is invisible inside a number
+// that was already non-zero. Name them, grouped by rule, so a regression is
+// legible without re-running dependency-cruiser by hand.
+const warned = summary.violations.filter((violation) => violation.severity !== "error");
+if (warned.length > 0) {
+  const byRule = new Map();
+  for (const violation of warned) {
+    const where =
+      violation.to && violation.to !== violation.from
+        ? `${violation.from} -> ${violation.to}`
+        : violation.from;
+    // `violation.rule` is an object; its `.name` is the string — the same
+    // shape the error path above reads.
+    const rule = violation.rule.name;
+    if (!byRule.has(rule)) byRule.set(rule, []);
+    byRule.get(rule).push(where);
+  }
+  console.log("boundaries: warnings (non-blocking)");
+  for (const [rule, places] of [...byRule].sort()) {
+    console.log(`  ${rule}: ${places.sort().join(", ")}`);
+  }
+}
+
 const warnings = summary.warn > 0 ? `, ${summary.warn} warning(s)` : "";
 console.log(
   `boundaries: ${summary.totalCruised} modules, ` +

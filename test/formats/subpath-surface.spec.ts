@@ -27,12 +27,14 @@ import { describe, expect, it } from "vitest";
 import * as asciimath from "../../src/formats/asciimath/index";
 import * as latex from "../../src/formats/latex/index";
 import * as mathml from "../../src/formats/mathml/index";
+import * as unicodemath from "../../src/formats/unicodemath/index";
 
 /** Runtime exports only — types erase, so they cannot be asserted here. */
 const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly string[]]> = [
   ["./asciimath", asciimath, ["parseAsciimath", "toAsciimath"]],
   ["./latex", latex, ["toLatex"]],
   ["./mathml", mathml, ["toMathml"]],
+  ["./unicodemath", unicodemath, ["toUnicodemath"]],
 ];
 
 describe.each(SURFACE.map((entry) => [entry[0], entry] as const))(
@@ -57,6 +59,15 @@ describe("the subpaths actually work end to end", () => {
 
   it("renders a parsed formula as LaTeX", () => {
     expect(latex.toLatex(asciimath.parseAsciimath("frac(1)(2)"))).toBe("\\frac{1}{2}");
+  });
+
+  it("renders a parsed formula as UnicodeMath", () => {
+    // Measured against the pinned oracle, not guessed:
+    //   Plurimath::Math.parse("frac(1)(2)", :asciimath).to_unicodemath
+    //     => "(1)/(2)"
+    // The solidus keeps no spaces around it because the format's boundary
+    // pass collapses `" / "` to `"/"` (`formula.rb:191`).
+    expect(unicodemath.toUnicodemath(asciimath.parseAsciimath("frac(1)(2)"))).toBe("(1)/(2)");
   });
 
   it("renders a parsed formula as MathML", () => {

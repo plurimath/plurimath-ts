@@ -54,13 +54,29 @@ const EXPECTED_EXPORTS = {
   "./asciimath": ["parseAsciimath", "toAsciimath"],
   "./latex": ["toLatex"],
   "./mathml": ["toMathml"],
+  "./unicodemath": ["toUnicodemath"],
 };
 
 const FORBIDDEN = {
   "./core": [/formats\//, /pegkit\//],
-  "./asciimath": [/formats\/latex\//, /formats\/mathml\//, /xml\//],
-  "./latex": [/formats\/asciimath\//, /formats\/mathml\//, /pegkit\//, /xml\//],
-  "./mathml": [/formats\/asciimath\//, /formats\/latex\//, /pegkit\//],
+  "./asciimath": [/formats\/latex\//, /formats\/mathml\//, /formats\/unicodemath\//, /xml\//],
+  "./latex": [
+    /formats\/asciimath\//,
+    /formats\/mathml\//,
+    /formats\/unicodemath\//,
+    /pegkit\//,
+    /xml\//,
+  ],
+  "./mathml": [/formats\/asciimath\//, /formats\/latex\//, /formats\/unicodemath\//, /pegkit\//],
+  // UnicodeMath is text output like latex, so it needs no XML layer and no
+  // grammar — its graph is core plus its own generated slice, nothing else.
+  "./unicodemath": [
+    /formats\/asciimath\//,
+    /formats\/latex\//,
+    /formats\/mathml\//,
+    /pegkit\//,
+    /xml\//,
+  ],
 };
 
 const failures = [];

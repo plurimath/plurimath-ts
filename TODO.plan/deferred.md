@@ -614,3 +614,42 @@ depends on `ParseError.index` for an unclosed-fence input, or the AsciiMath
 grammar's failure reporting is touched for any other reason. Whichever comes
 first reopens it; `KNOWN_POSITION_DIVERGENCE` in
 `test/formats/asciimath/rejection-parity.spec.ts` is the one place to change.
+
+## Ruby Float vs JavaScript number in option interpolation
+
+`rubyInterpolate` (`src/formats/unicodemath/render-shared.ts`) reproduces Ruby
+string interpolation for option values. It is exact for Integer, String and
+boolean, and cannot be exact for Float, because JavaScript has ONE numeric type:
+
+| Ruby | `to_s` | JS `String()` |
+|---|---|---|
+| `1.0` | `"1.0"` | `"1"` |
+| `1e20` | `"1.0e+20"` | `"100000000000000000000"` |
+| `-0.0` | `"-0.0"` | `"0"` |
+
+`1` and `1.0` are the same JS value, so the port cannot choose between "1" and
+"1.0" from the value alone. Closing this needs the corpus to carry the Ruby
+type alongside the value.
+
+Not reachable from any parser: the two interpolated options (`mask` on
+Sum/Int/Oint, `size` on Base) arrive as strings. Only a hand-built tree holding
+a Float reaches it.
+
+Arrays and hashes ARE now reproduced — `to_s` on them is `inspect`, and the
+pinned gem renders them (`⟡(["x", 2]&x)`, `⟡({a: 1}&x)`), so refusing them made
+this port less capable than its own specification. Two decisions inside that
+reproduction are assumptions rather than measurements, and are the rest of this
+entry:
+
+- **hash keys are assumed to be Symbols.** Every option hash in the gem's own
+  constants uses them (`{mpadded: {…}, phantom: true}`), and a Symbol key
+  prints `{a: 1}` where a String key prints `{"a" => 1}`. A JS object key
+  carries no such distinction.
+- **an integral number is treated as a Ruby Integer.** Exact for every Integer;
+  wrong only for a Float that happens to be integral. A non-integral number is
+  refused outright, since it is decidably a Float whose `to_s` cannot be
+  derived.
+
+**Trigger:** the first of — a corpus case records a numeric or hash option
+value, or a parser is added that can produce one, or the model schema gains
+Ruby type information for option values.

@@ -15,6 +15,7 @@ export default defineConfig({
     asciimath: "src/formats/asciimath/index.ts",
     latex: "src/formats/latex/index.ts",
     mathml: "src/formats/mathml/index.ts",
+    unicodemath: "src/formats/unicodemath/index.ts",
   },
   format: ["esm", "cjs"],
   platform: "neutral",

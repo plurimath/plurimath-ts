@@ -200,6 +200,29 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     );
   });
 
+  it("decodes the intent attribute TWICE, as the gem's two passes do", () => {
+    // `symbol.rb:47` decodes the value into `attributes[:intent]`, and then
+    // `OxEngine::Element#update_attrs` (`element.rb:104-110`) decodes every
+    // attribute again on the way out. Both passes are observable when the
+    // value carries an escaped ampersand, because the first pass UNCOVERS an
+    // entity for the second: `html_entity_to_unicode("&#x26;#x41;")` is
+    // "&#x41;", which decodes again to "A".
+    //
+    // This port decoded once and wrote the attribute directly, on the stated
+    // grounds that the second pass was a no-op. Measured on the pinned oracle:
+    //
+    //   gem   <mi intent="ⅇA">…       port (before)  <mi intent="ⅇ&#x41;">…
+    expect(toMathml(formula(new SymbolNode({ value: "&#x2147;&amp;#x41;" })))).toBe(
+      math('    <mi intent="ⅇA">&#x2147;&amp;#x41;</mi>'),
+    );
+
+    // Exactly two passes, not "decode until stable": a doubly-escaped value
+    // still has an entity left after both. Measured, gem and port agree.
+    expect(toMathml(formula(new SymbolNode({ value: "&#x2147;&amp;amp;#x41;" })))).toBe(
+      math('    <mi intent="ⅇ&#x41;">&#x2147;&amp;amp;#x41;</mi>'),
+    );
+  });
+
   it('Plus reads its value (Ruby ||: "" stays); rspace on a subclass is ignored (probed)', () => {
     expect(toMathml(formula(new SymbolNode({ id: "Plus", value: "&#x2b;" })))).toBe(
       math("    <mo>&#x2b;</mo>"),

@@ -23,12 +23,13 @@ drift apart silently.
 
 ## Status
 
-Early development. The foundation is in place: build tooling, quality gates,
-and the parser core. No input or output format has landed yet, so there is
-nothing to install from npm.
+Early development. The AsciiMath vertical has landed — corpus, model, grammar
+and transform — along with three renderers, exported as the `./asciimath`,
+`./latex` and `./mathml` subpaths. The package is still `private`, and nothing
+is published to npm under this name yet.
 
-In progress is the AsciiMath vertical: corpus, model, grammar, transform, and
-the first three renderers.
+Correctness is gated rather than asserted: a registry of quality gates activates
+in milestones, and the current milestone is P1-baseline.
 
 - [`TODO.plan/`](TODO.plan/) — every phase from here to 1.0, what each
   contains, and which decisions are still open.
@@ -37,12 +38,14 @@ the first three renderers.
 
 ## Development
 
-Requires Node 22.18 or later to build; the published package will support
-Node 20 and later.
+Requires Node `^22.18.0 || >=24.11.0` to build — the range tsdown itself
+declares, so it is not a simple lower bound and Node 23 does not satisfy it. The
+published package will support Node 20 and later, which is what CI's runtime
+matrix covers.
 
 ```sh
 pnpm install
-pnpm check       # every quality gate active at the current milestone
+pnpm check       # every class-A gate active at the current milestone
 pnpm test        # vitest
 pnpm typecheck   # tsc --noEmit
 pnpm lint        # biome
@@ -52,6 +55,11 @@ pnpm build       # tsdown -> dist (ESM + CJS + type declarations)
 `pnpm check` reads [`gates.json`](gates.json), which records every quality gate
 and the milestone at which it starts blocking. Gates are registered from the
 start and report as inactive until then, so nothing is silently skipped.
+
+Class-B gates are the exception, and are not run by `pnpm check`: they compare
+generated data against a live checkout of the Ruby gem, so they need Ruby and the
+gem's bundle. They run from [`scripts/gate-oracle.rb`](scripts/gate-oracle.rb).
+Two of them are active at the current milestone.
 
 ## Copyright and license
 

@@ -441,6 +441,39 @@ the gem would render — a loud gap, not a silent wrong byte. (The generated
 color-asciimath slice landed 2026-08-06 carrying exactly this fragment; the
 gap itself remains until the corpus exercises more operands.)
 
+**The trigger fired, 2026-08-21.** Every gem-declared AsciiMath symbol token
+swept through `color(<token>)(y)` — 3,217 of them, the measured size of
+`Utility.symbols_hash(:asciimath)` on the pinned oracle (00c52783). 3,216
+parse to a top-level `Color`; only `-:` does not, and neither does the gem
+(both sides answer `c o l o r ( - \rangle ( y )`). Of those 3,216, `toLatex`
+raises for 3,209 and `toMathml` for 4.
+
+The seven `toLatex` does render (`+`, `#`, `&#x2b;`, `&#x23;`, `"P{plus}"`,
+`"P{eqno}"`, `"P{octothorpe}"`) are byte-identical to the gem, so the
+fragment is narrow, not wrong — and narrow is all the committed inputs ask
+for: the shared corpus has two color cases (`color(red)(x)`,
+`color(blue)(x) + y`) and the 1,642-input sweep three (`color(red)(x)`,
+`color(blue)(y+1)`, `color(#ff0000)(z)`), whose first slots between them
+need only letter symbols, a number and `Eqno`. Everything past that the gem
+renders and this port refuses: `color(alpha)(y)` is `{\color{alpha} y}` from
+the gem and a `RenderError` here, and an every-40th sample of the 3,217 came
+back from the gem as a `{\color{...} y}` render, 81 out of 81.
+
+Sized, now that the trigger has fired. 3,205 of the 3,209 refusals are one
+missing symbol literal each, over 1,393 distinct ids, against the 2 entries
+(`Plus`, `Eqno`) `LATEX_COLOR_ASCIIMATH_SYMBOLS` carries — and all 1,393 are
+already carried mathml-side by `MATHML_COLOR_SYMBOL_LITERALS`, whose 1,459
+entries are identical to `ASCIIMATH_SYMBOLS` key for key and value for
+value. So closing the bulk is the re-emission `generate-corpus.rb` already
+performs for the mathml slice, not new parity measurement. The remaining 4
+(`ZZ`, `:`, `:.`, `:'` — `fontStyle` and `fenced` nodes) are exactly the
+four `toMathml` refuses as well, and stay refused for the reason the mathml
+entry gives: their operand's render is a composite's full asciimath, which
+§3 keeps out of this format.
+
+The decision is unchanged — still DEFERRED. What changed is that it is a
+sized decision, and the trigger this entry names has now fired once.
+
 ### LaTeX: no symbol-exception context axis is threaded
 
 **Trigger: a regeneration that introduces LaTeX symbol variants must wire an

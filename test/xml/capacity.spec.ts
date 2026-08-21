@@ -42,7 +42,36 @@ function chain(levels: number): XmlElement {
   return element;
 }
 
+/** The same, but with NOTHING inside the deepest element. */
+function bareChain(levels: number): XmlElement {
+  let element = new XmlElement("d");
+  for (let i = 0; i < levels; i++) element = new XmlElement("d").append(element);
+  return element;
+}
+
 describe("serialization depth", () => {
+  it("allows one more level when the deepest element is childless, as Ox does", () => {
+    // Ox tests the depth inside `dump_gen_nodes`, guarded by `if (0 < cnt)`
+    // (`dump.c:1104`), so an element with no child nodes is emitted however deep
+    // it sits. Measured on the pinned oracle, a chain of bare `<a/>`:
+    //
+    //                     root+1000   root+1001   root+1002
+    //   childless deepest    ok          ok        SystemStackError
+    //   text leaf innermost  ok       SystemStackError   SystemStackError
+    //
+    // This port checked the depth on ENTRY to every element, so it refused
+    // root+1001 in both rows — one level stricter than the oracle. The tests
+    // below never caught it because `chain` always puts a text leaf innermost,
+    // which is the row where the two agree.
+    for (const indent of [2, -1]) {
+      expect(() => dump(bareChain(1001), { indent })).not.toThrow();
+      expect(() => dump(bareChain(1002), { indent })).toThrow(XmlDepthLimitError);
+      // and the text-leaf row is unchanged
+      expect(() => dump(chain(1000), { indent })).not.toThrow();
+      expect(() => dump(chain(1001), { indent })).toThrow(XmlDepthLimitError);
+    }
+  });
+
   for (const indent of [2, -1]) {
     describe(`indent ${indent}`, () => {
       it("serializes a root plus 1000 descendants, as Ox does", () => {

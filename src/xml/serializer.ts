@@ -112,9 +112,9 @@ export function dump(root: XmlElement, options: DumpOptions = {}): string {
  * `rb_raise(rb_eSysStackError, "maximum depth exceeded")`).
  *
  * It is a compiled-in constant, not stack exhaustion: the oracle's boundary
- * sits at the same place for indent 2 and indent -1 — identical last-ok at
- * root plus 1000 descendants, identical first-fail at 1001 — so it does not
- * move with output size. The port's own natural ceiling, by contrast, was
+ * sits at the same place for indent 2 and indent -1, so it does not move with
+ * output size. Where it sits depends on whether the deepest element has any
+ * child nodes — see `writeElement`, which is where the check is applied. The port's own natural ceiling, by contrast, was
  * real stack exhaustion and differed by indent (4999 vs 6953), so leaving the
  * limit implicit would have made the port's failure point nondeterministic as
  * well as wrong.
@@ -208,9 +208,7 @@ function normalizeIndent(indent: number | null | undefined): number {
 }
 
 function writeElement(element: XmlElement, depth: number, indent: number, parts: string[]): void {
-  // `depth` is the element's own nesting level, root at 0. The oracle accepts
-  // a root plus 1000 descendants and raises on the 1001st.
-  if (depth > OX_MAX_DEPTH) throw new XmlDepthLimitError(OX_MAX_DEPTH);
+  // `depth` is the element's own nesting level, root at 0.
   if (indent >= 0) {
     parts.push(`\n${" ".repeat(indent * depth)}`);
   }
@@ -223,6 +221,22 @@ function writeElement(element: XmlElement, depth: number, indent: number, parts:
     parts.push("/>");
     return;
   }
+
+  // The depth check belongs HERE, not at the top: Ox tests it inside
+  // `dump_gen_nodes`, guarded by `if (0 < cnt)` (`dump.c:1104`), so an element
+  // with no child nodes is emitted however deep it sits. Checking on entry made
+  // this port one level stricter than the oracle whenever the deepest element
+  // was childless. Measured on the pinned oracle, a chain of bare `<a/>`:
+  //
+  //                     root+1000   root+1001   root+1002
+  //   childless deepest    ok          ok        SystemStackError
+  //   text leaf innermost  ok       SystemStackError   SystemStackError
+  //
+  // The port refused root+1001 in BOTH rows. The existing capacity spec never
+  // caught it because its chain builder puts a text leaf innermost, which is
+  // the row where the two happened to agree.
+  if (depth > OX_MAX_DEPTH) throw new XmlDepthLimitError(OX_MAX_DEPTH);
+
   parts.push(">");
   for (const child of children) {
     if (typeof child === "string") {

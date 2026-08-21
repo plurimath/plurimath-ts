@@ -2,9 +2,9 @@
  * The context-axis exception matrix (ARCHITECTURE.md §5, TODO.plan p1/02).
  *
  * Named `symbol-context` because that is the filter the `symbol-context-matrix`
- * gate runs (`gates.json`, active from P1-completion). Today it checks the
- * generated matrix itself; the renderers add their behavioural half here when
- * they land.
+ * gate runs (`gates.json`, active from P1-completion). It checks the generated
+ * matrix itself and, since the renderers landed, drives that matrix through them
+ * — the table axis behaviourally, and the intent axis as an asserted refusal.
  *
  * The matrix is measured, not written: the generator renders every symbol
  * across every axis of the committed manifest and keeps only the ones whose

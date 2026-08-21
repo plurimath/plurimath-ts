@@ -1,6 +1,6 @@
 /**
  * Mirrors `function/ubrace.rb` — `Ubrace#to_asciimath` (:14): the body
- * `obrace.rb` repeats verbatim (see `../obrace/asciimath.ts`), keyword `ubrace`.
+ * `function/obrace.rb` repeats verbatim (see `../obrace/asciimath.ts`), keyword `ubrace`.
  */
 
 import {

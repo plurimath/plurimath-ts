@@ -24,7 +24,7 @@
  *     `Td([Symbol("|"), x])` => `"|x"`, and it joins with **no** separator
  *     where latex joins with `" "`.
  *   - `Log`'s `sub_value`/`sup_value` bodies are byte-identical to `Int`'s
- *     (`int.rb:141`/:151) and `Prod`'s, which is what the shared
+ *     (`function/int.rb:141`/:151) and `Prod`'s, which is what the shared
  *     `naryandSubValue`/`naryandSupValue` already are.
  *   - `hide_function_name` is read by `to_mathml` and `to_omml` but not here —
  *     measured, `Log(x, y)` with `hide_function_name = true` still renders

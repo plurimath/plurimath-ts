@@ -36,7 +36,7 @@ export const FORMAT = "mathml";
  *     `left_right_wrapper` is falsy returns `mathml_content` raw
  *     (formula.rb:121-126), and `XmlHelper.update_nodes` splices it;
  *   - a plain STRING — `Td#to_mathml_without_math_tag` answers `""` for a
- *     `Vert`-only cell (td.rb:52), which lands in `<mtr>` as an empty text
+ *     `Vert`-only cell (td.rb:18-19), which lands in `<mtr>` as an empty text
  *     node and forces the `<mtr></mtr>` long form (probe td-vert-only);
  *   - `null` — the unary carrier with `hide_function_name`, a nil parameter
  *     and spacing off returns Ruby nil (unary_function.rb:30-58).
@@ -174,7 +174,7 @@ export function validateMathmlFields(
  * big operator's third slot crashes) and a `RenderError` here. With
  * `intent` false — always, intent is deferred — the surviving element
  * passes through unchanged; `Nary` alone calls it with a literal `true`
- * (nary.rb:60), wrapping anything not already an `<mrow>`.
+ * (nary.rb:64), wrapping anything not already an `<mrow>`.
  */
 export function requireElement(rendered: MathmlRendered, kind: string, at: string): XmlElement {
   if (rendered instanceof XmlElement) return rendered;
@@ -188,7 +188,7 @@ export function requireElement(rendered: MathmlRendered, kind: string, at: strin
 
 /**
  * One attribute value as `OxEngine::Element#update_attrs` writes it
- * (element.rb:104-110): `value.to_s`, then the entity decode. The `to_s` is
+ * (ox_engine/element.rb:104-110): `value.to_s`, then the entity decode. The `to_s` is
  * reproducible for exactly the shapes `interpolatedValue` accepts on the
  * asciimath side — nil → `""` (an EMPTY attribute, not a skipped one),
  * strings, booleans, the non-finite floats — and ambiguous for a finite
@@ -239,7 +239,7 @@ export function setAttributesFromHash(
 }
 
 /**
- * One attribute write through the wrapper's `[]=` (element.rb:22-24) — the
+ * One attribute write through the wrapper's `[]=` (ox_engine/element.rb:22-24) — the
  * same `to_s` + entity decode as `set_attr`, for the single-attribute sites
  * (`dot`/`vec`/`tilde`/`overleftrightarrow`'s `accent`).
  */
@@ -278,8 +278,8 @@ export function hashOrNil(
 
 /**
  * The `set_attr(attributes) if attributes && !attributes.empty?` guard the
- * accent family shares (`bar.rb`, `hat.rb`, `obrace.rb`, `ubrace.rb`,
- * `ul.rb`). Measured (probe-mathml-edges3): nil and false skip (truthiness),
+ * accent family shares (`function/bar.rb`, `function/hat.rb`, `function/obrace.rb`, `function/ubrace.rb`,
+ * `function/ul.rb`). Measured (probe-mathml-edges3): nil and false skip (truthiness),
  * an empty hash, empty string, and empty list skip (`.empty?` — Ruby's
  * String and Array both answer it), a plain hash writes its entries, a
  * non-empty string crashes the gem (`String#each`), and a non-empty LIST
@@ -308,7 +308,7 @@ export function attributesForSetAttr(
 
 /**
  * A slot the gem appends with `<<`: `OxEngine::Element#<<` takes a String
- * verbatim and sends `.xml_nodes` to everything else (element.rb:42-45), so
+ * verbatim and sends `.xml_nodes` to everything else (ox_engine/element.rb:42-45), so
  * only a string renders and every other non-nil value crashed the gem
  * (probed: `Left.new(5)`; booleans included — `to_asciimath` interpolates
  * `true`, this path does not). Nil is the caller's own guard.
@@ -324,7 +324,7 @@ export function requireStringForAppend(value: unknown, kind: string, at: string)
 
 /**
  * `Formatter::Numbers::MathmlRenderer.plain_element`'s `result.to_s`
- * (mathml_renderer.rb:50-52) and every other reproducible `to_s`: nil →
+ * (formatter/numbers/mathml_renderer.rb:50-52) and every other reproducible `to_s`: nil →
  * `""`, a string → itself, a boolean → `"true"`/`"false"`, NaN and ±Infinity
  * → their one Ruby spelling. A FINITE number raises — JS cannot witness
  * Ruby's Integer/Float split (`5` vs `5.0`) — as does a hash or node, whose
@@ -346,8 +346,8 @@ export function interpolatedValue(value: unknown, kind: string, at: string): str
 }
 
 /**
- * `options[:mask]` handling on `Int` (`int.rb:34`, key presence) and `Nary`
- * (`nary.rb:57`, truthiness): the gem decodes the mask integer into limit
+ * `options[:mask]` handling on `Int` (`function/int.rb:59`, key presence) and `Nary`
+ * (`nary.rb:56`, truthiness): the gem decodes the mask integer into limit
  * options (`Core#get_mask_options`, core.rb:543-570 — Ruby `to_i` with
  * FLOORED modulo) and rewrites the script tag. This port supports exactly
  * the no-op decoding — a mask whose only option is `limits_default`

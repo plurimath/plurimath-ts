@@ -98,7 +98,7 @@ import {
  *   Also `Abs`, `Ceil`, `Floor`, `Norm`, `Sqrt`, which add no initialize of
  *   their own, so their extra declared fields stay unassigned.
  * - `unaryAttributes`: the unary subclasses that add
- *   `@attributes = attributes` with a `{}` default (`bar.rb:9-12` and its
+ *   `@attributes = attributes` with a `{}` default (`function/bar.rb:9-12` and its
  *   eight siblings).
  * - `text`: `Text#initialize` — `parameter_one` defaults to `""` and `@lang`
  *   is always assigned (`text.rb:9`).

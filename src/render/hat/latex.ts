@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/hat.rb` — `Hat#to_latex` (:19): the body `obrace.rb`
+ * Mirrors `function/hat.rb` — `Hat#to_latex` (:19): the body `function/obrace.rb`
  * repeats (see `../obrace/latex.ts` for the strict-render pin), command `\hat`.
  */
 

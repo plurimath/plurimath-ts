@@ -84,7 +84,7 @@ function isRubyStripCode(code: number): boolean {
  * an end-anchored `/[\0\t\n\v\f\r ]+$/` has no start anchor, so a long
  * INTERNAL whitespace run followed by a non-whitespace tail makes every
  * position in the run a retry point — quadratic, where Ruby's C-implemented
- * `strip` (`int.rb:37`, `oint.rb:36`, `prod.rb:46`, `sum.rb:47`) is linear.
+ * `strip` (`function/int.rb:37`, `function/oint.rb:36`, `function/prod.rb:46`, `function/sum.rb:47`) is linear.
  * Reachable end-to-end through `toAsciimath` on validator-passing trees (an
  * `int` whose third slot renders N internal spaces), so the complexity class
  * is part of the hostile-input posture, pinned by the wall-clock test in

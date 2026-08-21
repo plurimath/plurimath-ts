@@ -2,7 +2,7 @@
  * Mirrors `function/ubrace.rb` — `Ubrace#to_mathml_without_math_tag` (:14):
  * the bar-shaped body over `<munder>`, accent text `&#x23df;` (probes
  * ubrace-x / ubrace-nil). Its `tag_name` override ("underover",
- * `ubrace.rb:40`) matters to `PowerBase`, whose kind file consults
+ * `function/ubrace.rb:40`) matters to `PowerBase`, whose kind file consults
  * `slotKind` for it.
  */
 

@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/prod.rb` — `Prod#to_asciimath` (:37): the body `int.rb`
+ * Mirrors `function/prod.rb` — `Prod#to_asciimath` (:37): the body `function/int.rb`
  * repeats verbatim (see `../int/asciimath.ts` for the strip pin), keyword `prod`.
  */
 

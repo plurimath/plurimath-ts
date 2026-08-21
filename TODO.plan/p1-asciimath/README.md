@@ -98,7 +98,7 @@ has never been shown to reject anything.
       union and the exception matrix.
 - [ ] Package-isolation assertions for the real `/asciimath`, `/mathml` and
       `/latex` subpaths.
-- [ ] `pnpm check` reports twelve active class-A gates, all passing, and both
+- [x] `pnpm check` reports twelve active class-A gates, all passing, and both
       class-B runners are clean.
 
 Both milestones additionally need the class-C evidence: a review round with

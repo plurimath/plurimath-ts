@@ -24,9 +24,9 @@ drift apart silently.
 ## Status
 
 Early development. The AsciiMath vertical has landed — corpus, model, grammar
-and transform — along with three renderers, published as the `./asciimath`,
-`./latex` and `./mathml` subpaths. The package is still private and unversioned,
-so there is nothing to install from npm yet.
+and transform — along with three renderers, exported as the `./asciimath`,
+`./latex` and `./mathml` subpaths. The package is still `private`, and nothing
+is published to npm under this name yet.
 
 Correctness is gated rather than asserted: a registry of quality gates activates
 in milestones, and the current milestone is P1-baseline.

@@ -88,6 +88,7 @@
 
 import { XHTML1_ENTITY_CODEPOINTS } from "./generated/html-entities";
 import { SYMBOL_CANONICAL_VALUES } from "./generated/symbol-canonical";
+import { rubyNumberToS, rubyUnreproducible } from "./ruby-semantics";
 
 /** A node's options or attributes hash. Ruby symbol keys arrive as strings. */
 export type NodeOptions = Readonly<Record<string, unknown>>;
@@ -213,37 +214,25 @@ function assignedValue(value: string | null | undefined): string | null {
  * `Number#initialize` converts only a `Parslet::Slice` and stores anything else
  * as-is, so they cannot share one helper.
  *
- * This matters because callers downstream test the stored value as a string.
- * `prime_unicode?` reads `field&.value&.include?("&#x27;")`, and the gem's
- * answer for a non-string argument is decided HERE, at construction, not there
- * — measured on the oracle:
+ * Ruby needs this because it is untyped and Parslet hands it slices and arrays.
+ * This port declares the slot `string | null`, and a reviewer traced every
+ * producer on the AsciiMath parse path: `newSymbolOfClass` passes `value: null`
+ * and `newBareSymbol` passes a string, so nothing real reaches the other
+ * branches. An earlier version of this comment claimed the opposite — that a
+ * cast in `transform.ts` made arrays reachable — which was inferred from the
+ * cast rather than traced to its producers, and was wrong.
  *
- *   Alpha(["&#x27;"])          value "&#x27;"                 (Array#join)
- *   Alpha({"&#x27;" => true})  value "{\"&#x27;\" => true}"    (Hash#to_s)
- *   Alpha(5)                   value "5"
- *   Alpha(false)               value "false"
- *   Alpha(nil)                 value nil                      (`&.` short-circuits)
+ * So the coercion is kept for the cases it can reproduce EXACTLY, and refuses
+ * the rest rather than inventing a string. Two rounds of review were spent on
+ * invented strings here: a plain object became `"[object Object]"` inside an
+ * array, and once that was "fixed" a Range became `"{toString: ...}"` and a
+ * Struct `"{x: 1, y: \"x\"}"` where the gem gives `"1..3"` and
+ * `"#<struct ...>"`. Ruby's `to_s` on an arbitrary object cannot be reproduced
+ * in JavaScript, so the honest answer is to refuse loudly.
  *
- * so `Alpha(["&#x27;"])` IS a prime to the gem, because by the time the
- * predicate runs the value is the string `"&#x27;"`. A port that stored the
- * array answered false.
- *
- * This is reachable, not defensive: `asciimath/transform.ts` casts a parsed
- * value straight into this slot, and the parser is exactly what hands Ruby the
- * arrays this coercion exists for.
- *
- * An earlier version recursed through arrays and primitives but returned a
- * plain object UNCHANGED, calling that a documented gap. It was worse than
- * documented — inside an array the outer `join` stringified it, so
- * `["pre", {a: 1}, "post"]` became `"pre[object Object]post"` where the gem
- * gives `"pre{\"a\" => 1}post"`. An invented string is not a gap.
- *
- * ONE approximation remains, and it is the same one `rubyInspect` already
- * declares rather than a second: JS cannot tell a Ruby Symbol key from a String
- * key, since both arrive as JS strings. Measured, the two print differently —
- * `{a: 1}` for Symbol keys, `{"a" => 1}` for String keys — and this assumes
- * Symbol keys, because every option hash in the gem's own constants uses them.
- * A String-keyed hash here will not match.
+ * A `TypeError` and not a `PlurimathError`: this fires only on a value the
+ * declared type already forbids, which is a caller type violation rather than a
+ * parse or render failure, and the error contract's codes are for the latter.
  */
 function symbolValue(value: unknown): string | null {
   if (value === null || value === undefined) return null;
@@ -252,37 +241,16 @@ function symbolValue(value: unknown): string | null {
   // Measured: `["x", [1, 2], "y"].join` is "x12y", `["x", nil, "y"].join` "xy".
   if (Array.isArray(value)) return value.map((entry) => symbolValue(entry) ?? "").join("");
   if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
-    return String(value);
-  }
-  if (typeof value === "object") return rubyHashToS(value as Record<string, unknown>);
-  return String(value);
-}
 
-/**
- * `Hash#to_s`, which Ruby defines AS `inspect` — measured, the two are equal.
- *
- * Values are rendered inspect-style, so a String value is quoted where the same
- * String at top level would not be: `{a: "x"}`.
- */
-function rubyHashToS(hash: Record<string, unknown>): string {
-  const body = Object.entries(hash)
-    .map(([key, inner]) => `${key}: ${rubyElementInspect(inner)}`)
-    .join(", ");
-  return `{${body}}`;
-}
-
-function rubyElementInspect(value: unknown): string {
-  if (value === null || value === undefined) return "nil";
-  if (typeof value === "string") return JSON.stringify(value);
-  if (typeof value === "boolean" || typeof value === "bigint") return String(value);
-  if (typeof value === "number") {
-    return Number.isInteger(value) && !Object.is(value, -0)
-      ? BigInt(value).toString()
-      : String(value);
+  const why = rubyUnreproducible(value);
+  if (why !== null) {
+    throw new TypeError(
+      `Symbols::Symbol#initialize coerces its argument with to_s, and ${why} — ` +
+        "pass a string or null (src/core/ruby-semantics.ts)",
+    );
   }
-  if (Array.isArray(value)) return `[${value.map(rubyElementInspect).join(", ")}]`;
-  if (typeof value === "object") return rubyHashToS(value as Record<string, unknown>);
+
+  if (typeof value === "number") return rubyNumberToS(value) as string;
   return String(value);
 }
 

@@ -298,15 +298,31 @@ describe("the unicodemath field value is entity text, not the render", () => {
     // Measured: `["x", [1, 2], "y"].join` is "x12y", `["x", nil, "y"].join` "xy".
     expect(new SymbolNode({ id: "Alpha", value: ["x", [1, 2], "y"] } as never).value).toBe("x12y");
     expect(new SymbolNode({ id: "Alpha", value: ["x", null, "y"] } as never).value).toBe("xy");
-    // `Hash#to_s` IS `inspect` (measured equal), so a hash element inside an
-    // array contributes its inspect form. Returning the object unchanged made
-    // the outer join emit "[object Object]" — an invented string, not a gap.
-    expect(new SymbolNode({ id: "Alpha", value: { a: 1 } } as never).value).toBe("{a: 1}");
-    expect(new SymbolNode({ id: "Alpha", value: ["pre", { a: 1 }, "post"] } as never).value).toBe(
-      "pre{a: 1}post",
+  });
+
+  it("refuses what Ruby's to_s can produce and JavaScript cannot", () => {
+    // Two review rounds went into inventing strings here. First a plain object
+    // inside an array became "[object Object]"; then the "fix" for that turned
+    // a Range into "{toString: ...}" and a Struct into '{x: 1, y: "x"}', where
+    // the gem gives "1..3" and "#<struct ...>". A Hash's own form depends on its
+    // KEY TYPE — `{a: 1}` for Symbol keys, `{"a" => 1}` for String keys — which
+    // JS cannot see, and the gem's constants demonstrably use both. So these
+    // refuse rather than guess.
+    //
+    // A TypeError, not a PlurimathError: the declared slot type is
+    // `string | null`, so reaching here is a caller type violation.
+    expect(() => new SymbolNode({ id: "Alpha", value: { a: 1 } } as never)).toThrow(TypeError);
+    expect(() => new SymbolNode({ id: "Alpha", value: ["pre", { a: 1 }] } as never)).toThrow(
+      TypeError,
     );
-    // Values inside a hash are inspect-style, so a string is quoted there.
-    expect(new SymbolNode({ id: "Alpha", value: { a: "x" } } as never).value).toBe('{a: "x"}');
+    expect(() => new SymbolNode({ id: "Alpha", value: 1.5e-5 } as never)).toThrow(TypeError);
+
+    // What it CAN reproduce exactly still works, including inside an array.
+    expect(new SymbolNode({ id: "Alpha", value: 1e21 } as never).value).toBe(
+      "1000000000000000000000",
+    );
+    expect(new SymbolNode({ id: "Alpha", value: -0 } as never).value).toBe("-0.0");
+    expect(new SymbolNode({ id: "Alpha", value: [1.5, "x"] } as never).value).toBe("1.5x");
     // and the consequence the coercion exists for:
     expect(primeUnicode(new SymbolNode({ id: "Alpha", value: ["&#x27;"] } as never))).toBe(true);
     expect(primeUnicode(new SymbolNode({ id: "Alpha", value: ["zz"] } as never))).toBe(false);

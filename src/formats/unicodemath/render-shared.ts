@@ -32,6 +32,7 @@ import {
   RenderError,
 } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
+import { rubyNumberToS } from "../../core/ruby-semantics";
 import { UNICODEMATH_HEXCODE_IN_INPUT } from "../../generated/unicodemath/render-tables";
 
 export const FORMAT = "unicodemath";
@@ -551,33 +552,17 @@ export function rubyInterpolate(value: unknown): string {
  * than guessed at.
  */
 
-/** Ruby prints plain decimal on `[1e-4, 1e15)`; outside it, scientific. */
-const RUBY_PLAIN_FLOAT_MIN = 1e-4;
-const RUBY_PLAIN_FLOAT_MAX = 1e15;
-
 function rubyInspect(value: unknown): string {
   if (value === null || value === undefined) return "nil";
   if (typeof value === "boolean") return String(value);
   if (typeof value === "string") return JSON.stringify(value);
   if (typeof value === "number") {
-    // `-0` is the one integral value that IS decidable: Ruby has no Integer
-    // negative zero, so a JS `-0` can only have come from the Float `-0.0`.
-    // Measured: the gem renders `mask: -0.0` as "∑-0.0_(a)^(b)▒〖c〗", where
-    // this printed "0" by falling into the Integer arm below.
-    if (Object.is(value, -0)) return "-0.0";
+    // One implementation of Ruby's number semantics, shared with the symbol
+    // constructor in `core/nodes.ts` — see `core/ruby-semantics.ts`. Two copies
+    // of these rules had already drifted apart across five review rounds.
+    const printed = rubyNumberToS(value);
+    if (printed !== null) return printed;
 
-    if (Number.isInteger(value) && Object.is(value, Math.trunc(value))) {
-      // `BigInt`, not `String`: `String(1e21)` is "1e+21", and Ruby's
-      // Integer#to_s never uses an exponent. `BigInt` prints the double's exact
-      // integer value, which is the Integer this JS number stands for.
-      return BigInt(value).toString();
-    }
-    if (Number.isNaN(value) || !Number.isFinite(value)) return String(value);
-
-    const magnitude = Math.abs(value);
-    if (magnitude >= RUBY_PLAIN_FLOAT_MIN && magnitude < RUBY_PLAIN_FLOAT_MAX) {
-      return String(value);
-    }
     throw new RenderError(
       `cannot interpolate the number ${String(value)} — it falls outside the range ` +
         "this port has verified Ruby's Float#to_s and JavaScript's to agree on. Some " +

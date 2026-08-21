@@ -60,38 +60,6 @@ export function rubyNumberToS(value: number): string | null {
 }
 
 /**
- * The `toString` implementations JavaScript supplies, as opposed to one a
- * caller wrote.
- *
- * The discriminator was `toString !== Object.prototype.toString`, which is too
- * permissive: a built-in overrides `toString` too, and spells the result
- * differently from the Ruby type it corresponds to. A review round measured the
- * damage — every one of these bypassed the number rules or the format entirely:
- *
- *   new Number(1.5e-5)  js "0.000015"   ruby Float   "1.5e-05"
- *   new Number(1e21)    js "1e+21"      ruby Integer "1000000000000000000000"
- *   new Number(-0)      js "0"          ruby Float   "-0.0"
- *   /ab/                js "/ab/"       ruby Regexp  "(?-mix:ab)"
- *   new Date(0)         js "Thu Jan 01 1970 …"       ruby Time "1970-01-01 …"
- *
- * A boxed primitive is not a special case worth unwrapping: Ruby has no boxing,
- * so a caller reaching this with `new Number(x)` meant to pass `x`, and the
- * primitive path already handles that exactly.
- */
-const BUILTIN_TO_STRING: ReadonlySet<unknown> = new Set([
-  Object.prototype.toString,
-  Array.prototype.toString,
-  Boolean.prototype.toString,
-  Date.prototype.toString,
-  Error.prototype.toString,
-  Function.prototype.toString,
-  Number.prototype.toString,
-  RegExp.prototype.toString,
-  String.prototype.toString,
-  Symbol.prototype.toString,
-]);
-
-/**
  * Why a value cannot be reproduced, for an error message. Returns `null` when
  * it CAN be — every caller here refuses only the shapes this names.
  */
@@ -107,39 +75,35 @@ export function rubyUnreproducible(value: unknown): string | null {
   }
   if (Array.isArray(value)) return null;
   if (typeof value === "object") {
-    // Ruby calls `to_s`; JavaScript calls `toString`. Where the caller has
-    // SUPPLIED one, that is a faithful port and the value is reproducible —
-    // measured, both sides give "CUSTOM!":
+    // EVERY object is refused, deliberately, after four review rounds each
+    // found a hole in a cleverer rule. The history is the argument:
     //
-    //   ruby  Symbol.new(obj_with_custom_to_s).value  "CUSTOM!"
-    //   js    String({ toString: () => "CUSTOM!" })   "CUSTOM!"
+    //   round 5: plain objects became "[object Object]" inside an array.
+    //   round 6: refusing all objects was called an over-correction, because
+    //            the gem accepts one with a custom `to_s` and JS can reproduce
+    //            it — so the rule became "accept unless toString is
+    //            Object.prototype.toString".
+    //   round 7: that admitted BUILT-INS, which override toString and spell
+    //            results differently — `new Number(1.5e-5)` gave "0.000015"
+    //            where a Ruby Float gives "1.5e-05". So the rule became
+    //            "accept unless toString is one of the built-in ones".
+    //   round 8: that check is identity-based, so a built-in from ANOTHER
+    //            REALM slips through; and it is simultaneously too strict,
+    //            refusing `Symbol.toPrimitive`-only objects and boxed String
+    //            and Boolean, which `String(value)` reproduces exactly.
     //
-    // Refusing those was an over-correction, and a reviewer was right to call
-    // it: the port refused an input the oracle accepts and JS can reproduce.
+    // Round 8 also named why no rule works: the gem's contract is
+    // `sym&.to_s` — "whatever coercion produces". Deciding that from a JS
+    // object is not possible, because what Ruby would print depends on a Ruby
+    // object that does not exist here. Every classification is a guess about a
+    // correspondence that is not defined.
     //
-    // What is NOT reproducible is an object still carrying the DEFAULT
-    // `toString`, because the two languages disagree there and neither answer
-    // can be derived from the other:
-    //
-    //   ruby  Symbol.new({a: 1}).value      "{a: 1}"        (Hash#to_s is inspect)
-    //   ruby  Symbol.new(Object.new).value  "#<Object:0x…>" (carries an address)
-    //   js    String({ a: 1 })              "[object Object]"
-    //
-    // A Hash could in principle be reproduced, but its inspect form depends on
-    // the KEY TYPE and JS sees Symbol and String keys alike as strings. The
-    // gem's own constants are uniformly Symbol-keyed — measured,
-    // `TABLE_PARENTHESIS`, `PARENTHESIS`, `FONT_STYLES` and `OMML_NAMESPACES`
-    // all give `keys.map(&:class).uniq == [Symbol]`.
-    //
-    // TWO review rounds read those as String-keyed, from two different
-    // misreadings, so both are recorded here. In SOURCE, `{"a": 1}` is quoted
-    // SYMBOL syntax and means `{:a => 1}`. In INSPECT output, Ruby >= 3.4 quotes
-    // a symbol key that is not a valid identifier, so `:"["` prints as `"[":`.
-    // The discriminator is the separator, not the quotes: a String key prints
-    // with `=>`, a Symbol key with `:`.
-    const printed = (value as { readonly toString?: unknown }).toString;
-    if (typeof printed === "function" && !BUILTIN_TO_STRING.has(printed)) return null;
-    return "this object carries a built-in toString, which JavaScript and Ruby spell differently";
+    // Refusing is the conservative direction: loud and recoverable, where a
+    // wrong guess is silent. And it costs nothing real — round 5 traced every
+    // producer on the parse path and found only `null` and strings, and the
+    // declared slot type is `string | null`, so reaching here is already a
+    // caller type violation.
+    return "an object cannot be coerced the way Ruby's to_s would coerce it, because what Ruby would print depends on a Ruby object that does not exist here";
   }
   return `a ${typeof value} has no Ruby equivalent here`;
 }

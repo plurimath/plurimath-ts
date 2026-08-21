@@ -317,36 +317,26 @@ describe("the unicodemath field value is entity text, not the render", () => {
     );
     expect(() => new SymbolNode({ id: "Alpha", value: 1.5e-5 } as never)).toThrow(TypeError);
 
-    // But an object that SUPPLIES a toString is reproducible, and refusing it
-    // was an over-correction a review round caught: Ruby calls `to_s`, JS calls
-    // `toString`, and measured both give "CUSTOM!". The discriminator is
-    // whether the default `Object.prototype.toString` is still in place.
-    expect(
-      new SymbolNode({ id: "Alpha", value: { toString: () => "CUSTOM!" } } as never).value,
-    ).toBe("CUSTOM!");
-    expect(
-      new SymbolNode({ id: "Alpha", value: ["pre", { toString: () => "X" }, "post"] } as never)
-        .value,
-    ).toBe("preXpost");
-    // Inherited counts too — Ruby finds an inherited `to_s` the same way.
-    expect(
-      new SymbolNode({ id: "Alpha", value: Object.create({ toString: () => "BASE!" }) } as never)
-        .value,
-    ).toBe("BASE!");
-
-    // But a BUILT-IN toString is refused: built-ins override toString too, and
-    // spell the result differently from the Ruby type they correspond to. The
-    // discriminator was `toString !== Object.prototype.toString`, which let them
-    // through. Measured before the fix:
+    // EVERY object is refused, including one with a caller-supplied toString.
+    // Four review rounds each found a hole in a cleverer rule: plain objects
+    // becoming "[object Object]"; then built-ins admitted because they override
+    // toString; then cross-realm built-ins slipping an identity check, while
+    // `Symbol.toPrimitive` objects were refused despite coercing fine.
     //
-    //   new Number(1.5e-5)  js "0.000015"  ruby Float  "1.5e-05"
-    //   new Number(-0)      js "0"         ruby Float  "-0.0"
-    //   /ab/                js "/ab/"      ruby Regexp "(?-mix:ab)"
-    //
-    // A boxed primitive is not worth unwrapping: Ruby has no boxing, so a caller
-    // writing `new Number(x)` meant `x`, which the primitive path handles exactly.
-    for (const builtin of [new Number(1.5e-5), new Number(-0), /ab/, new Date(0)]) {
-      expect(() => new SymbolNode({ id: "Alpha", value: builtin } as never)).toThrow(TypeError);
+    // The gem's contract is `sym&.to_s` — whatever coercion produces — and that
+    // cannot be decided from a JS object, because what Ruby would print depends
+    // on a Ruby object that does not exist here. Refusing is loud where a wrong
+    // guess is silent, and nothing real reaches this: the parse path hands this
+    // slot only null or a string.
+    for (const value of [
+      { toString: () => "CUSTOM!" },
+      Object.create({ toString: () => "BASE!" }),
+      new Number(1.5e-5),
+      /ab/,
+      new Date(0),
+      { [Symbol.toPrimitive]: () => "PRIM!" },
+    ]) {
+      expect(() => new SymbolNode({ id: "Alpha", value } as never)).toThrow(TypeError);
     }
     expect(() => new SymbolNode({ id: "Alpha", value: ["pre", /ab/] } as never)).toThrow(TypeError);
 

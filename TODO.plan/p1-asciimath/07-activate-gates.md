@@ -27,12 +27,13 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
     "no cases, nothing failed";
   - at least one payload file loads, and at least one case loads from it —
     both counts asserted nonzero, not merely iterated over;
-  - every expected AsciiMath group is present: `fences`, `frac`, `matrices`,
-    `mixed`, `nary`, `numbers`, `operators`, `powers`, `quoted-text`, `roots`,
-    `symbols`, `unary-functions`, `whitespace`. The list is committed here, so
-    a pin that silently loses a group fails rather than shrinking the run;
+  - every expected AsciiMath group is present: `colour`, `fences`, `fonts`,
+    `frac`, `left-right`, `matrices`, `mixed`, `mod`, `nary`, `numbers`,
+    `operators`, `permissive`, `powers`, `quoted-text`, `roots`, `symbols`,
+    `unary-functions`, `whitespace`. The list is committed here, so a pin that
+    silently loses a group fails rather than shrinking the run;
   - every group declares the target keys P1 renders — `asciimath`, `latex`,
-    `mathml` — and every case carries an expectation for each;
+    `mathml`, `unicodemath` — and every case carries an expectation for each;
   - **every discovered payload is validated**, against the case schema and
     against its `sha256` and `bytes` in `corpus/provenance.yaml`. Validating
     only the payloads a test happens to read leaves the rest unchecked;
@@ -49,15 +50,19 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
     change, reported as such, and fixed by moving the pin rather than by
     editing anything here.
 - Extend the package-isolation gate's forbidden-import table as the
-  `/asciimath`, `/mathml`, and `/latex` subpaths appear.
+  `/asciimath`, `/mathml`, `/latex` and `/unicodemath` subpaths appear.
 - Set `currentMilestone` to `P1-baseline` in the same commit.
 
 ## Done when
 
 - [x] `pnpm check` reports nine active class-A gates, all passing.
-- [x] `scripts/gate-oracle.rb repo --check` is clean against a clean gem checkout,
+- [ ] `scripts/gate-oracle.rb repo --check` is clean against a clean gem checkout,
   and the testsuite regeneration check is reported separately from it.
-  Both exit 0 against `plurimath-oracle` at the pinned `00c52783`.
+  `testsuite --check` exits 0 against `plurimath-oracle` at the pinned
+  `00c52783`; `repo --check` exits 1 on `main` today, because #40 hand-edited
+  comments inside two generated render tables and a fresh regeneration reverts
+  them. A separate change moves those corrections into the generator; this box
+  goes back to `[x]` when it lands.
 - [x] Each discovery failure is demonstrated, not asserted: a deinitialized
   submodule, an empty corpus directory, a group removed from a scratch copy, a
   case missing a target key, and a corrupted payload byte each fail the run.
@@ -65,7 +70,7 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
   Four were already in `test/core/corpus-pin.spec.ts`. The fifth — a group
   removed from *both* the payload directory and the provenance, which leaves a
   pin the reader has no objection to — is proven in "a pin that quietly loses a
-  group": it loads clean at 12 payloads and 64 cases, and the same
+  group": it loads clean at 17 payloads and 85 cases, and the same
   `assertExpectedGroups` that the shipped pin passes throws when applied to it.
   The assertion is run against both pins in that test, because showing only
   that two group lists differ would not show that anything rejects the damaged
@@ -78,7 +83,7 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
   `readCorpusCases()`, which drops excluded cases — so a group whose cases were
   all withheld could stop declaring a target with every suite still green.
   `test/gates/corpus-discovery.spec.ts` now asserts the required set directly,
-  and proves the assertion rejects a payload that omits required targets.
+  and proves the assertion rejects a payload that declares two of the four.
 - [x] `currentMilestone` is `P1-baseline`, and every gate that activates with
   it has a runner in the same change. P1 is **not** finished here — see
   [item 8](08-p1-completion.md).

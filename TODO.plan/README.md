@@ -13,8 +13,8 @@ why that order.
 | Phase | Delivers | Status |
 |---|---|---|
 | [P0 — Foundation](p0-foundation/) | Tooling, quality gates, pegkit parser core | ✅ done |
-| [P1 — AsciiMath vertical](p1-asciimath/) | Corpus pin and reader, model, grammar, transform, three renderers | ▶ active |
-| [P2 — Output formats](p2-output-formats/) | UnicodeMath, OMML and HTML renderers; compat class; first `0.x` | planned |
+| [P1 — AsciiMath vertical](p1-asciimath/) | Corpus pin and reader, model, grammar, transform, four renderers | ▶ active |
+| [P2 — Output formats](p2-output-formats/) | OMML and HTML renderers; compat class; first `0.x` | planned |
 | [P3 — Input formats](p3-input-formats/) | LaTeX, UnicodeMath and HTML parsers | planned |
 | [P4 — Parity modules](p4-parity-modules/) | The number-format modes nothing earlier reaches, evaluation, MathML/OMML input | planned |
 | [P5 — 1.0](p5-release-1.0/) | Compat complete, `/core` locked, npm takeover | planned |

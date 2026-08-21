@@ -36,7 +36,7 @@ afterEach(() => {
 });
 
 describe("unsupported UnitsML fallback", () => {
-  it("normalizes to Text and renders through every landed format", () => {
+  it("normalizes to Text and renders through asciimath, latex and mathml", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const formula = parseAsciimath('"unitsml(kg)"');
 

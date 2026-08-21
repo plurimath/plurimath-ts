@@ -1,6 +1,6 @@
 # P1 — AsciiMath vertical
 
-**Status: active.** The first end-to-end slice: AsciiMath in, model, and three
+**Status: active.** The first end-to-end slice: AsciiMath in, model, and four
 renderers out, all proven against cases generated from the Ruby gem.
 
 ## What it delivers
@@ -23,7 +23,7 @@ Work in order; each depends on the ones before it.
 | 5 | [AsciiMath transform](05-asciimath-transform.md) | parse tree → model |
 | 6 | [Renderers](06-renderers.md) | `toAsciimath`, `toLatex`, `toMathml` |
 | 7 | [Activate gates](07-activate-gates.md) | milestone `P1-baseline`, nine class-A gates green |
-| 8 | [Complete P1](08-p1-completion.md) | milestone `P1-completion`, the last three class-A gates and both class-B runners |
+| 8 | [Complete P1](08-p1-completion.md) | milestone `P1-completion`, the last three class-A gates and the third class-B runner |
 
 Items 1–2 need a local checkout of the
 [Ruby gem](https://github.com/plurimath/plurimath), because they regenerate
@@ -45,14 +45,17 @@ AsciiMath goes first because it is the smallest complete grammar in the gem
 
 - **The transform is the bulk.** `transform.rb` is 149 pattern rules (plus 3
   from the number-prefix mixin) and the largest single piece of AsciiMath
-  logic; expect item 5 to dominate. The corpus fires only 45 of the 152, so
-  item 5 carries its own differential sweep.
+  logic; expect item 5 to dominate. The corpus of the day fired well under a
+  third of the 152, so item 5 carries its own differential sweep. The exact
+  count is not carried: it was measured against a 70-input corpus that no longer
+  exists, and re-deriving it needs an instrumented oracle run with no committed
+  runner.
 - **Rule order is behaviour.** Parslet uses ordered choice and reverse-order
   transform matching, so moving an alternative changes what parses. Only the
-  first is pinned: the pegkit conformance suite has one ordered-choice test and
-  no transform test at all — the reverse-order and exact-key-set rules are
-  stated in a comment at the top of `src/pegkit/transform.ts` and nothing
-  fails if they break. Item 5 lands those tests with the transform.
+  first was pinned at the time this was written; `test/pegkit/transform.spec.ts`
+  now covers the reverse-order, exact-key-set and no-revisit rules that were
+  then only a comment at the top of `src/pegkit/transform.ts`. Item 5 landed
+  those tests with the transform.
 - **A suite that passes proves less than it looks.** The pegkit conformance
   suite existed, and review still found two failure-position bugs in the
   component it covered (`tokenChoice` not recording its failure position,
@@ -76,11 +79,11 @@ has never been shown to reject anything.
 
 **P1-baseline** (item 7):
 
-- [x] Parse tree, normalized model, and all three renderings match the gem for
-      every **reachable** case in the pinned submodule corpus — 69 of the 70
+- [x] Parse tree, normalized model, and all four renderings match the gem for
+      every **reachable** case in the pinned submodule corpus — 90 of the 91
       pinned. `text-unitsml-valid` is withheld by `corpus/exclusions.yaml`
       because UnitsML is deferred, so the port deliberately renders it as
-      `Text` rather than as the gem does; claiming parity over all 70 would
+      `Text` rather than as the gem does; claiming parity over all 91 would
       claim it for the one case that is excluded from parity by design.
 - [x] Corpus discovery fails loudly on an absent or empty submodule, on zero
       payloads, on zero cases, and on a missing group or target key.
@@ -99,10 +102,13 @@ has never been shown to reject anything.
 - [x] Package-isolation assertions for the real `/asciimath`, `/mathml`,
       `/latex` and `/unicodemath` subpaths.
 - [x] `pnpm check` reports twelve active class-A gates, all passing.
-- [x] The three class-B runners are clean: `repo --check` and `testsuite
-      --check` exit 0, and `differential` exits 0 with no divergences across
-      429 inputs (1,287 comparisons). It exceeds its 300s bound on a loaded
-      host, so it is measured on a quiet one.
+- [ ] The three class-B runners are clean. `testsuite --check` exits 0 and
+      `differential` exits 0 with no divergences across
+      429 inputs (1,287 comparisons); the differential exceeds its 300s bound on
+      a loaded host, so it is measured on a quiet one. `repo --check` exits 1 on
+      `main` today — #40 hand-edited comments inside two generated render tables
+      and a fresh regeneration reverts them; a separate change moves those into
+      the generator.
 
 Both milestones additionally need the class-C evidence: a review round with
 findings resolved, and sign-off recorded.

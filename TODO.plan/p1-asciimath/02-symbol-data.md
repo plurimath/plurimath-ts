@@ -31,7 +31,7 @@ and quietly break the isolation guarantee (§3).
   matrix (§5).
 
 ## Not in scope
-Function classes are **not** generated: 57 of 102 carry conditional logic, so
+Function classes are **not** generated: 71 of 102 carry conditional logic, so
 sharing them as data would need a template language plus an interpreter per
 implementation. They are hand-ported (§10).
 

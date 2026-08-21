@@ -85,13 +85,13 @@ The rejection suite must carry, at minimum:
 - **Symbol context exception matrix** from the behavioural probes (TODO 2),
   driving the `symbol-context-matrix` gate.
 
-  **Scoped 2026-08-18; the gate is green but only half of what it claims.**
-  `test/generated/symbol-context.spec.ts` (11 tests, already in `selects`)
+  **Scoped 2026-08-18; the behavioural half landed with the corpus-pin move.**
+  `test/generated/symbol-context.spec.ts` (19 tests, already in `selects`)
   checks the *generated matrix's* internal consistency — every named symbol is
   one a slice can look up, every axis is one the manifest declares, every entry
-  records a real difference. Its own header says the renderers "add their
-  behavioural half here when they land". All three have landed; the half is
-  still owed.
+  records a real difference — and now also drives the matrix through the
+  renderers, in "the table axis, behaviourally" and "the intent axis is
+  unreachable, and says so rather than being skipped".
 
   What the behavioural half can and cannot cover, measured rather than assumed:
 
@@ -100,8 +100,8 @@ The rejection suite must carry, at minimum:
     `toMathml` *refuses the option by name*: "the intent attribute pipeline
     (intentify, intent post-processing) is unmeasured"
     (`src/formats/mathml/renderer.ts`, `DEFERRED_OPTIONS`). So the gate cannot
-    become fully behavioural until that deferral lifts. The spec should assert
-    the refusal is real and name these exceptions as deferred, rather than
+    become fully behavioural until that deferral lifts. The spec asserts the
+    refusal is real and names these exceptions as deferred, rather than
     quietly covering only the rest.
   - **`table` — reachable, and the port already threads it.**
     `src/render/symbol/asciimath.ts` consults `ASCIIMATH_SYMBOL_EXCEPTIONS`,
@@ -157,8 +157,8 @@ The rejection suite must carry, at minimum:
     pins separately rather than burying in the table.
 - **Differential runner** (class B): the seeded, deterministic, bounded input
   generator compared live against the gem.
-- **Package-isolation assertions** for the real `/asciimath`, `/mathml` and
-  `/latex` subpaths.
+- **Package-isolation assertions** for the real `/asciimath`, `/mathml`,
+  `/latex` and `/unicodemath` subpaths.
 - Set `currentMilestone` to `P1-completion` in the same change as the runners
   for every gate that activates with it (§7).
 

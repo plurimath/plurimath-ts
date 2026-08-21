@@ -4,7 +4,9 @@
 Three renderers make the first vertical slice provable end to end: AsciiMath in,
 and out again (round-trip), plus the two formats that exercise the most
 structure. MathML additionally validates the XML layer against Ox's exact
-output.
+output. UnicodeMath is not part of this item: it was scoped to P2 and landed
+separately during P1, so the phase has four renderers while this item has
+three.
 
 Renderers are modules, not methods on nodes (D2): a page converting AsciiMath
 to MathML must not download LaTeX or OMML code.
@@ -54,8 +56,9 @@ type, an interface, or a layer.
 
 **MathML options.** `Formula#to_mathml` takes six keyword options
 (`formula.rb`): `intent`, `formatter`, `unitsml`, `split_on_linebreak`,
-`display_style`, `unary_function_spacing`. This item schedules none of them —
-`toMathml` takes an options object that is empty today — yet `intent` is the
+`display_style`, `unary_function_spacing`. Two of the six landed with this
+item: `MathmlOptions` implements `displayStyle` and `unaryFunctionSpacing`, and
+the other four are refused by name through `DEFERRED_OPTIONS`. `intent` is the
 compat class's **only optional argument** (§4), so P2's compat class inherits
 whatever P1 does or does not do here. The fixture records, per option: the
 gem's output with it on and off for at least one input, and whether this port
@@ -87,8 +90,8 @@ turns it into a named property with a one-line diff.
 
 ## Done when
 
-- [ ] `toAsciimath`, `toLatex`, and `toMathml` match the gem byte-for-byte across
-  the pinned corpus.
+- [ ] `toAsciimath`, `toLatex` and `toMathml` match the gem byte-for-byte
+  across the pinned corpus.
 - [ ] The runtime-boundary tests pass: a valid structural object renders, while an
   unknown kind and a malformed known kind each raise `RenderError`.
 - [ ] The package-isolation gate shows `/asciimath` carrying no MathML or LaTeX

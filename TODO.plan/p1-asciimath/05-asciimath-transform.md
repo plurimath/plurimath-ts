@@ -7,8 +7,12 @@ single largest piece of AsciiMath logic. Ported rule-for-rule, in the same
 order, for the same reason as the grammar.
 
 **The corpus alone cannot test this item.** Instrumenting Parslet's rule
-registry and running all 70 corpus inputs through the gem fires only **45 of
-the 152 rules** — 107 would ship unexercised. So corpus parity is necessary
+registry and running the corpus of the day — 70 inputs — through the gem fired
+well under half of the 152 rules, leaving most of them unexercised. That was the
+measurement which motivated this item; it has not been reproduced against the
+current corpus, which has grown to 91 positive cases across 18 payloads, and the
+exact fired-rule count is not carried here because re-deriving it needs an
+instrumented oracle run that has no committed runner. So corpus parity is necessary
 but not sufficient here, and the differential sweep below is an acceptance
 criterion, not an extra.
 
@@ -17,10 +21,10 @@ definition order** (on a tie, the later-defined rule wins), a pattern matches
 only when its key set is **exactly** the node's key set, and **a rule's
 replacement is never visited again**. All three were verified against parslet
 2.0.0 and the first two are implemented in `src/pegkit/transform.ts` — but
-**no test covers any of them**. The pegkit conformance suite has no transform
-test at all; the rules survive only as a comment at the top of that file.
-Pinning them is part of this item, because 149 rules in one file is exactly
-where a silent order change hides.
+all three are now covered by `test/pegkit/transform.spec.ts`, which has a
+describe block each for rule order, exact key-set matching, and a replacement
+never being revisited. Pinning them was part of this item, because 149 rules in
+one file is exactly where a silent order change hides.
 
 Two traps, both measured against the gem rather than inferred:
 
@@ -59,8 +63,7 @@ Two traps, both measured against the gem rather than inferred:
 - [ ] **Differential model parity beyond the corpus**: the grammar's two
   sweeps (length 1–3 exhaustive, length 4–26 seeded) extended through the
   transform — gem model and port model compared for every input the gem
-  accepts, zero mismatches. This is what reaches the 107 rules the corpus
-  cannot.
+  accepts, zero mismatches. This is what reaches the rules the corpus does not.
 - [ ] `registry.ts` completeness is checked, not assumed: every class name
   reachable from `transform.rb`'s actions resolves in the registry, asserted
   against a generated list rather than by hand.

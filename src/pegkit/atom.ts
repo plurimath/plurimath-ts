@@ -96,7 +96,11 @@ export const STACK_EXHAUSTED_MESSAGE = "Input exhausted the parser stack";
  * error, and relabelling *every* one as stack exhaustion would hide an
  * unrelated bug behind a message asserting a cause nothing established.
  */
-const STACK_OVERFLOW_TEXT = /maximum call stack|stack size exceeded|too much recursion/i;
+const STACK_OVERFLOW_TEXT =
+  /maximum call stack|stack size exceeded|too much recursion|stack overflow/i;
+
+/** V8's regex-compilation failure under an exhausted stack, and only that. */
+const REGEX_COMPILE_OVERFLOW = /invalid regular expression:.*stack overflow/i;
 
 /**
  * The classes those engines throw. V8 and JavaScriptCore use `RangeError`;
@@ -105,10 +109,34 @@ const STACK_OVERFLOW_TEXT = /maximum call stack|stack size exceeded|too much rec
  * before the message is ever consulted, leaving the regex's "too much
  * recursion" branch unreachable there and a browser consumer receiving an
  * untyped throw the contract says cannot happen.
+ *
+ * V8 has a THIRD shape, and it escaped both gates. When the stack is already
+ * exhausted, compiling a regex literal fails with a `SyntaxError` — not a
+ * `RangeError` — whose message is "Invalid regular expression: /[0-9]/uy:
+ * Stack overflow". That is neither `RangeError` nor `InternalError`, and
+ * "Stack overflow" matched none of the three message branches either, so it
+ * left `parseAsciimath` raw and untyped. It is stack-budget dependent, so it
+ * does not reproduce every run: at nesting depth 73, 60 cold processes on this
+ * branch gave 10 typed `ParseError` and 50 clean parses with none untyped,
+ * while a review measured 13 untyped `SyntaxError` in 200 cold runs before the
+ * fix and none after.
+ *
+ * V8 names the failing regex in the message, so there are as many message
+ * spellings as there are regexes in the grammar. Two have been observed —
+ * `/[0-9]/uy` and the large character class from the text rule — which is why
+ * the pattern below matches the SHAPE rather than any particular literal.
+ *
+ * A `SyntaxError` is admitted ONLY with that message. A genuinely malformed
+ * pattern reports what is wrong with it ("Invalid group", "Unterminated
+ * character class"), never "Stack overflow", so this cannot swallow a real
+ * grammar bug — which is the reason the class gate exists at all.
  */
-function isStackOverflow(error: unknown): boolean {
+export function isStackOverflow(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  const fromRecursion = error instanceof RangeError || error.name === "InternalError";
+  const fromRecursion =
+    error instanceof RangeError ||
+    error.name === "InternalError" ||
+    (error instanceof SyntaxError && REGEX_COMPILE_OVERFLOW.test(error.message));
   return fromRecursion && STACK_OVERFLOW_TEXT.test(error.message);
 }
 

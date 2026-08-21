@@ -1,6 +1,6 @@
 /**
  * Mirrors `function/font_style.rb` — `FontStyle#to_mathml_without_math_tag`
- * (:34) — and the fourteen subclasses under `function/font_style/`: every
+ * (:33) — and the fourteen subclasses under `function/font_style/`: every
  * one renders `<mstyle mathvariant="...">` over the nil-safe first slot
  * (probe fontstyle-*), the variant measured per class into the generated
  * table (eight hardcode it, six resolve through `font_family`). The bare

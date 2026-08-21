@@ -7,11 +7,11 @@
  * plus the three rules `BaseNumberPrefix::Transform` mixes in ahead of them.
  *
  * The port is deliberately structural, exactly like the grammar's: every
- * `rule(...)` in `transform.rb` is one `t.rule(...)` here, in the same source
+ * `rule(...)` in `asciimath/transform.rb` is one `t.rule(...)` here, in the same source
  * order, and each carries the Ruby line it came from. Order is behaviour —
  * `Parslet::Transform.rule` unshifts, so matching tries rules in REVERSE
  * definition order and a later definition wins a tie (`src/pegkit/transform.ts`).
- * The two `unitsml` rules (`transform.rb:33`, `:875`) are dropped, not ported:
+ * The two `unitsml` rules (`asciimath/transform.rb:33`, `:875`) are dropped, not ported:
  * the grammar's `unitsml` alternative is commented out (UnitsML is deferred,
  * ARCHITECTURE.md §5), so no tree can carry their key sets, and pattern
  * matching is by exact key-set equality — removing them cannot affect any
@@ -20,7 +20,7 @@
  * ## Mutation is behaviour, so nodes are drafts until the entry point returns
  *
  * The gem's actions mutate what earlier actions built: `numerator.value.shift`
- * (`transform.rb:96`) pulls an element out of a *finished* formula,
+ * (`asciimath/transform.rb:96`) pulls an element out of a *finished* formula,
  * `power_value.insert(0, ...)` (`:503`) returns a bound array that still
  * aliases the elements a new node captured, and `Formula.new(array)` stores
  * the caller's array by reference, so a later `shift` reaches inside the node.
@@ -154,7 +154,7 @@ function flattenDeep(values: readonly unknown[]): unknown[] {
 
 /**
  * `.flatten` on a subtree binding that may not be an array
- * (`transform.rb:361`). Ruby's dispatch: `Array#flatten` recurses;
+ * (`asciimath/transform.rb:361`). Ruby's dispatch: `Array#flatten` recurses;
  * `Hash#flatten` yields the one-level `[key, value, key, value, ...]` pairs
  * (symbol keys arrive here as the strings they serialize to); anything else
  * raises `NoMethodError`, which the gem's public boundary converts to a
@@ -239,7 +239,7 @@ function rubyToS(value: unknown): string {
 /**
  * Ruby `Array#to_s` (= `inspect`) for the one call site that stringifies an
  * array: `asciimath_symbol_object(color)` on the RGB sequence rule
- * (`transform.rb:1047-1050`). Slices inspect as `"text"@offset` and strings
+ * (`asciimath/transform.rb:1047-1050`). Slices inspect as `"text"@offset` and strings
  * as their quoted form — both deterministic. A NODE in the array would
  * inspect with its object address, which not even the gem can reproduce
  * across runs; if an input ever reaches that, this throws so the divergence
@@ -575,7 +575,7 @@ function asciimathSymbolObject(value: unknown): AsciimathDraft | null {
   return symbolObject(text);
 }
 
-/** `Utility.symbol_object` (`utility.rb:281-290`): undo the preprocessor. */
+/** `Utility.symbol_object` (`lib/plurimath/utility.rb:281-290`): undo the preprocessor. */
 function symbolObject(text: string): AsciimathDraft {
   let value = text;
   if (value === "ℒ") value = "{:";
@@ -585,14 +585,14 @@ function symbolObject(text: string): AsciimathDraft {
   return symbolsClass(value);
 }
 
-/** `Utility.symbols_class` (`utility.rb:212-218`) for the asciimath lang. */
+/** `Utility.symbols_class` (`lib/plurimath/utility.rb:212-218`) for the asciimath lang. */
 function symbolsClass(text: string): AsciimathDraft {
   const id = ASCIIMATH_SYMBOL_INPUT.get(rubyStrip(text));
   return id !== undefined ? newSymbolOfClass(id) : newBareSymbol(text);
 }
 
 /**
- * `Utility.filter_values(array)` (`utility.rb:192-200`), whose return SHAPE —
+ * `Utility.filter_values(array)` (`lib/plurimath/utility.rb:192-200`), whose return SHAPE —
  * formula, lone element, nil — drives which pattern matches next, so the
  * polymorphism is ported exactly. A Formula input contributes its LIVE value
  * array: `Formula.new(formula.value)` shares it, mutations and all.
@@ -604,7 +604,7 @@ function filterValues(value: unknown): unknown {
   return array.length === 0 ? null : array[0];
 }
 
-/** `Utility.unfenced_value(object)` (`utility.rb:255-268`), one-arg form. */
+/** `Utility.unfenced_value(object)` (`lib/plurimath/utility.rb:255-268`), one-arg form. */
 function unfencedValue(value: unknown): unknown {
   if (isFencedDraft(value)) return filterValues(value.fields.parameterTwo);
   if (Array.isArray(value)) return filterValues(value);
@@ -612,7 +612,7 @@ function unfencedValue(value: unknown): unknown {
 }
 
 /**
- * `Utility.symbol_value(object, value)` (`utility.rb:202-210`). Only the
+ * `Utility.symbol_value(object, value)` (`lib/plurimath/utility.rb:202-210`). Only the
  * class checks matching the separator fire; the generic arm compares the
  * node's own `value` string.
  */
@@ -712,7 +712,7 @@ function fontStyleName(name: unknown): string {
 }
 
 /* =========================================================================
- * 4. The rules, in transform.rb order — ONE Transform instance
+ * 4. The rules, in asciimath/transform.rb order — ONE Transform instance
  * ---------------------------------------------------------------------- */
 
 /**
@@ -729,7 +729,7 @@ function buildAsciimathTransform(): Transform {
   const t = new Transform();
 
   // --- BaseNumberPrefix::Transform (base_number_prefix.rb:36-38) ----------
-  // `include` runs first (`transform.rb:6`), so these three are DEFINED first
+  // `include` runs first (`asciimath/transform.rb:6`), so these three are DEFINED first
   // and, matching in reverse definition order, tried last. Binary and octal
   // literals are decimalized at construction; hex keeps its digits.
 
@@ -743,59 +743,59 @@ function buildAsciimathTransform(): Transform {
     newNumber(BigInt(`0o${rubyToS(b.oct)}`).toString(), 8),
   );
 
-  // --- pass-through and leaf rules (transform.rb:8-91) --------------------
+  // --- pass-through and leaf rules (asciimath/transform.rb:8-91) --------------------
 
-  /** `transform.rb:8` */
+  /** `asciimath/transform.rb:8` */
   t.rule({ mod: simple("mod") }, (b) => b.mod);
-  /** `transform.rb:9` */
+  /** `asciimath/transform.rb:9` */
   t.rule({ frac: simple("frac") }, (b) => b.frac);
-  /** `transform.rb:10` */
+  /** `asciimath/transform.rb:10` */
   t.rule({ unary: simple("unary") }, (b) => b.unary);
-  /** `transform.rb:11` */
+  /** `asciimath/transform.rb:11` */
   t.rule({ table: simple("table") }, (b) => b.table);
-  /** `transform.rb:12` */
+  /** `asciimath/transform.rb:12` */
   t.rule({ comma: simple("comma") }, (b) => asciimathSymbolObject(b.comma));
-  /** `transform.rb:13` */
+  /** `asciimath/transform.rb:13` */
   t.rule({ slash: simple("slash") }, () => newLinebreak());
-  /** `transform.rb:14` */
+  /** `asciimath/transform.rb:14` */
   t.rule({ unary: sequence("unary") }, (b) => filterValues(b.unary));
-  /** `transform.rb:15` */
+  /** `asciimath/transform.rb:15` */
   t.rule({ rparen: simple("rparen") }, (b) => asciimathSymbolObject(b.rparen));
-  /** `transform.rb:16` */
+  /** `asciimath/transform.rb:16` */
   t.rule({ number: simple("number") }, (b) => newNumber(b.number));
 
-  /** `transform.rb:18` */
+  /** `asciimath/transform.rb:18` */
   t.rule({ ternary: simple("ternary") }, (b) => b.ternary);
-  /** `transform.rb:19` */
+  /** `asciimath/transform.rb:19` */
   t.rule({ sequence: simple("sequence") }, (b) => b.sequence);
-  /** `transform.rb:20` */
+  /** `asciimath/transform.rb:20` */
   t.rule({ table_row: simple("table_row") }, (b) => b.table_row);
-  /** `transform.rb:21` */
+  /** `asciimath/transform.rb:21` */
   t.rule({ sequence: sequence("sequence") }, (b) => b.sequence);
-  /** `transform.rb:22` */
+  /** `asciimath/transform.rb:22` */
   t.rule({ power_base: simple("power_base") }, (b) => b.power_base);
-  /** `transform.rb:23` */
+  /** `asciimath/transform.rb:23` */
   t.rule({ left_right: simple("left_right") }, (b) => b.left_right);
-  /** `transform.rb:24` */
+  /** `asciimath/transform.rb:24` */
   t.rule({ table_left: simple("table_left") }, (b) => b.table_left);
 
-  /** `transform.rb:26` */
+  /** `asciimath/transform.rb:26` */
   t.rule({ left_right: sequence("left_right") }, (b) => b.left_right);
-  /** `transform.rb:27` */
+  /** `asciimath/transform.rb:27` */
   t.rule({ power_base: sequence("power_base") }, (b) => b.power_base);
-  /** `transform.rb:28` */
+  /** `asciimath/transform.rb:28` */
   t.rule({ table_right: simple("table_right") }, (b) => b.table_right);
-  /** `transform.rb:29` */
+  /** `asciimath/transform.rb:29` */
   t.rule({ intermediate_exp: simple("int_exp") }, (b) => b.int_exp);
-  /** `transform.rb:30` */
+  /** `asciimath/transform.rb:30` */
   t.rule({ power_value: sequence("power_value") }, (b) => b.power_value);
-  /** `transform.rb:31` */
+  /** `asciimath/transform.rb:31` */
   t.rule({ mod: simple("mod"), expr: simple("expr") }, (b) => [b.mod, b.expr]);
 
-  // `transform.rb:33-35` (unitsml: simple) — DROPPED: the grammar's unitsml
+  // `asciimath/transform.rb:33-35` (unitsml: simple) — DROPPED: the grammar's unitsml
   // alternative is commented out, so no tree carries this key set.
 
-  /** `transform.rb:37-42` — the special-fonts literal keeps only its first
+  /** `asciimath/transform.rb:37-42` — the special-fonts literal keeps only its first
    * character; the family keyword is hardcoded `"mathbf"` even though the
    * class is DoubleStruck. Transcribed, not corrected. */
   t.rule({ bold_fonts: simple("font") }, (b) => {
@@ -803,46 +803,46 @@ function buildAsciimathTransform(): Transform {
     return newFontStyle("DoubleStruck", asciimathSymbolObject(first ?? null), "mathbf");
   });
 
-  /** `transform.rb:44` */
+  /** `asciimath/transform.rb:44` */
   t.rule({ unary_class: simple("unary") }, (b) => constructClass(getClass(b.unary)));
-  /** `transform.rb:48` */
+  /** `asciimath/transform.rb:48` */
   t.rule({ binary_class: simple("binary") }, (b) => constructClass(getClass(b.binary)));
-  /** `transform.rb:52` */
+  /** `asciimath/transform.rb:52` */
   t.rule({ ternary_class: simple("ternary") }, (b) => constructClass(getClass(b.ternary)));
 
-  /** `transform.rb:56` — Ruby's RECURSIVE flatten, and no compact. */
+  /** `asciimath/transform.rb:56` — Ruby's RECURSIVE flatten, and no compact. */
   t.rule({ comma_separated: subtree("comma_separated") }, (b) => rubyFlatten(b.comma_separated));
 
-  /** `transform.rb:60` */
+  /** `asciimath/transform.rb:60` */
   t.rule({ symbol: simple("symbol") }, (b) => asciimathSymbolObject(b.symbol));
 
-  /** `transform.rb:64-71` */
+  /** `asciimath/transform.rb:64-71` */
   t.rule({ expr: subtree("expr") }, (b) =>
     Array.isArray(b.expr) ? compact(flattenDeep(b.expr)) : b.expr,
   );
 
-  /** `transform.rb:73-75` — the Slice test the corpus cannot record: a
+  /** `asciimath/transform.rb:73-75` — the Slice test the corpus cannot record: a
    * recorded tree flattens slices to strings, which is why recorded trees are
    * not a usable transform input. */
   t.rule({ text: simple("text") }, (b) =>
     b.text instanceof Slice ? constructClass(getClass("text"), b.text) : b.text,
   );
 
-  /** `transform.rb:77-79` */
+  /** `asciimath/transform.rb:77-79` */
   t.rule({ text: sequence("text") }, (b) =>
     constructClass(getClass("text"), asArray(b.text).map(rubyToS).join("")),
   );
 
-  /** `transform.rb:81` */
+  /** `asciimath/transform.rb:81` */
   t.rule({ power_value: simple("power_value") }, (b) => b.power_value);
-  /** `transform.rb:85` */
+  /** `asciimath/transform.rb:85` */
   t.rule({ base_value: simple("base_value") }, (b) => b.base_value);
-  /** `transform.rb:89` */
+  /** `asciimath/transform.rb:89` */
   t.rule({ base_value: sequence("base_value") }, (b) => filterValues(b.base_value));
 
-  // --- frac, comma and table-cell assembly (transform.rb:93-334) ----------
+  // --- frac, comma and table-cell assembly (asciimath/transform.rb:93-334) ----------
 
-  /** `transform.rb:93-111` — the mutation showcase: `numerator.value.shift`
+  /** `asciimath/transform.rb:93-111` — the mutation showcase: `numerator.value.shift`
    * pulls the comma'd head out of the finished formula BEFORE unfencing it,
    * and a nil lands in `new_arr` when there was nothing to shift. */
   t.rule({ numerator: simple("numerator"), denominator: simple("denominator") }, (b) => {
@@ -865,7 +865,7 @@ function buildAsciimathTransform(): Transform {
     return newFormula(compact(newArr));
   });
 
-  /** `transform.rb:113-131` */
+  /** `asciimath/transform.rb:113-131` */
   t.rule({ numerator: simple("numerator"), denominator: sequence("denominator") }, (b) => {
     const denominator = asArray(b.denominator);
     const newArr: unknown[] = [];
@@ -885,14 +885,14 @@ function buildAsciimathTransform(): Transform {
     return newFormula(compact(newArr));
   });
 
-  /** `transform.rb:133-138` */
+  /** `asciimath/transform.rb:133-138` */
   t.rule({ sequence: simple("sequence"), left_right: simple("left_right") }, (b) => {
     const newArr: unknown[] = [b.sequence];
     if (!strippedEmpty(b.left_right)) newArr.push(b.left_right);
     return newArr;
   });
 
-  /** `transform.rb:140-145` — an ARRAY emptiness test, not a to_s one. */
+  /** `asciimath/transform.rb:140-145` — an ARRAY emptiness test, not a to_s one. */
   t.rule({ sequence: simple("sequence"), left_right: sequence("left_right") }, (b) => {
     const leftRight = asArray(b.left_right);
     const newArr: unknown[] = [b.sequence];
@@ -900,66 +900,66 @@ function buildAsciimathTransform(): Transform {
     return newArr;
   });
 
-  /** `transform.rb:147-150` */
+  /** `asciimath/transform.rb:147-150` */
   t.rule({ sequence: simple("sequence"), number: simple("number") }, (b) => [
     b.sequence,
     newNumber(rubyToS(b.number)),
   ]);
 
-  /** `transform.rb:152-157` */
+  /** `asciimath/transform.rb:152-157` */
   t.rule({ table_row: simple("table_row"), expr: simple("expr") }, (b) => {
     const newArr: unknown[] = [b.table_row];
     if (!strippedEmpty(b.expr)) newArr.push(b.expr);
     return newArr;
   });
 
-  /** `transform.rb:159-162` */
+  /** `asciimath/transform.rb:159-162` */
   t.rule({ table_row: simple("table_row"), expr: sequence("expr") }, (b) => {
     const flat = compact(flattenDeep(asArray(b.expr)));
     flat.unshift(b.table_row);
     return flat;
   });
 
-  /** `transform.rb:164-169` */
+  /** `asciimath/transform.rb:164-169` */
   t.rule({ comma: simple("comma"), expr: simple("expr") }, (b) => {
     const newArr: unknown[] = [asciimathSymbolObject(b.comma)];
     if (!strippedEmpty(b.expr)) newArr.push(b.expr);
     return newArr;
   });
 
-  /** `transform.rb:171-174` */
+  /** `asciimath/transform.rb:171-174` */
   t.rule({ comma: simple("comma"), expr: sequence("expr") }, (b) => {
     const flat = compact(flattenDeep(asArray(b.expr)));
     flat.unshift(asciimathSymbolObject(b.comma));
     return flat;
   });
 
-  /** `transform.rb:176-179` */
+  /** `asciimath/transform.rb:176-179` */
   t.rule({ symbol: simple("symbol"), expr: sequence("expr") }, (b) => {
     const flat = compact(flattenDeep(asArray(b.expr)));
     flat.unshift(asciimathSymbolObject(b.symbol));
     return flat;
   });
 
-  /** `transform.rb:181-187` */
+  /** `asciimath/transform.rb:181-187` */
   t.rule({ rparen: simple("rparen"), expr: simple("expr") }, (b) => [
     asciimathSymbolObject(b.rparen),
     b.expr,
   ]);
 
-  /** `transform.rb:189-192` */
+  /** `asciimath/transform.rb:189-192` */
   t.rule({ rparen: simple("rparen"), expr: sequence("expr") }, (b) => {
     const flat = compact(flattenDeep(asArray(b.expr)));
     flat.unshift(asciimathSymbolObject(b.rparen));
     return flat;
   });
 
-  /** `transform.rb:194-200` */
+  /** `asciimath/transform.rb:194-200` */
   t.rule({ rparen: simple("rparen"), power: simple("power") }, (b) =>
     newPower(asciimathSymbolObject(b.rparen), unfencedValue(b.power)),
   );
 
-  /** `transform.rb:202-212` */
+  /** `asciimath/transform.rb:202-212` */
   t.rule({ rparen: simple("rparen"), power: simple("power"), expr: simple("expr") }, (b) => {
     const powerObject = newPower(asciimathSymbolObject(b.rparen), unfencedValue(b.power));
     const newArr: unknown[] = [powerObject];
@@ -967,18 +967,18 @@ function buildAsciimathTransform(): Transform {
     return newArr;
   });
 
-  /** `transform.rb:214-224` — `+= expr` with no flatten and no compact. */
+  /** `asciimath/transform.rb:214-224` — `+= expr` with no flatten and no compact. */
   t.rule({ rparen: simple("rparen"), power: simple("power"), expr: sequence("expr") }, (b) => {
     const powerObject = newPower(asciimathSymbolObject(b.rparen), unfencedValue(b.power));
     return [powerObject, ...asArray(b.expr)];
   });
 
-  /** `transform.rb:226-232` */
+  /** `asciimath/transform.rb:226-232` */
   t.rule({ rparen: simple("rparen"), base: simple("base") }, (b) =>
     newBaseFn(asciimathSymbolObject(b.rparen), unfencedValue(b.base)),
   );
 
-  /** `transform.rb:234-244` */
+  /** `asciimath/transform.rb:234-244` */
   t.rule({ rparen: simple("rparen"), base: simple("base"), expr: simple("expr") }, (b) => {
     const baseObject = newBaseFn(asciimathSymbolObject(b.rparen), unfencedValue(b.base));
     const newArr: unknown[] = [baseObject];
@@ -986,13 +986,13 @@ function buildAsciimathTransform(): Transform {
     return newArr;
   });
 
-  /** `transform.rb:246-256` */
+  /** `asciimath/transform.rb:246-256` */
   t.rule({ rparen: simple("rparen"), power: simple("power"), comma: simple("comma") }, (b) => [
     newPower(asciimathSymbolObject(b.rparen), unfencedValue(b.power)),
     asciimathSymbolObject(b.comma),
   ]);
 
-  /** `transform.rb:258-272` */
+  /** `asciimath/transform.rb:258-272` */
   t.rule(
     {
       rparen: simple("rparen"),
@@ -1008,7 +1008,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:274-288` — `+= expr`, unconditionally and unflattened. */
+  /** `asciimath/transform.rb:274-288` — `+= expr`, unconditionally and unflattened. */
   t.rule(
     {
       rparen: simple("rparen"),
@@ -1022,19 +1022,19 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:290-300` */
+  /** `asciimath/transform.rb:290-300` */
   t.rule({ rparen: simple("rparen"), base: simple("base"), comma: simple("comma") }, (b) => [
     newBaseFn(asciimathSymbolObject(b.rparen), unfencedValue(b.base)),
     asciimathSymbolObject(b.comma),
   ]);
 
-  /** `transform.rb:302-308` */
+  /** `asciimath/transform.rb:302-308` */
   t.rule({ comma: simple("comma"), left_right: simple("left_right") }, (b) => [
     asciimathSymbolObject(b.comma),
     b.left_right,
   ]);
 
-  /** `transform.rb:310-320` */
+  /** `asciimath/transform.rb:310-320` */
   t.rule({ td: simple("td") }, (b) => {
     const td = b.td;
     if (isFormulaDraft(td) && formulaValue(td).some(isTableDraft)) {
@@ -1043,25 +1043,25 @@ function buildAsciimathTransform(): Transform {
     return newTd([tdValue(td)]);
   });
 
-  /** `transform.rb:322-324` */
+  /** `asciimath/transform.rb:322-324` */
   t.rule({ td: sequence("td") }, (b) => tdValues(asArray(b.td), ","));
 
-  /** `transform.rb:326-329` */
+  /** `asciimath/transform.rb:326-329` */
   t.rule({ open_tr: simple("tr"), tds_list: simple("tds_list") }, (b) => newTr([b.tds_list]));
 
-  /** `transform.rb:331-334` — the bound array itself becomes the row. */
+  /** `asciimath/transform.rb:331-334` — the bound array itself becomes the row. */
   t.rule({ open_tr: simple("tr"), tds_list: sequence("tds_list") }, (b) =>
     newTr(asArray(b.tds_list)),
   );
 
-  // --- fonts (transform.rb:336-357) ---------------------------------------
+  // --- fonts (asciimath/transform.rb:336-357) ---------------------------------------
 
-  /** `transform.rb:336-342` */
+  /** `asciimath/transform.rb:336-342` */
   t.rule({ fonts_class: simple("font_style"), fonts_value: simple("fonts_value") }, (b) =>
     newFontStyle(fontStyleName(b.font_style), unfencedValue(b.fonts_value), rubyToS(b.font_style)),
   );
 
-  /** `transform.rb:344-357` */
+  /** `asciimath/transform.rb:344-357` */
   t.rule(
     {
       unary_class: simple("function"),
@@ -1079,9 +1079,9 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  // --- base, power and power-base assembly (transform.rb:359-624) ---------
+  // --- base, power and power-base assembly (asciimath/transform.rb:359-624) ---------
 
-  /** `transform.rb:359-362` — subtree: an unmatched HASH takes Ruby's
+  /** `asciimath/transform.rb:359-362` — subtree: an unmatched HASH takes Ruby's
    * `Hash#flatten` path, pairs and all. */
   t.rule({ power_base: simple("power_base"), expr: subtree("expr") }, (b) => {
     const flat = compact(rubyFlatten(b.expr));
@@ -1089,14 +1089,14 @@ function buildAsciimathTransform(): Transform {
     return flat;
   });
 
-  /** `transform.rb:364-369` */
+  /** `asciimath/transform.rb:364-369` */
   t.rule({ power_base: simple("power_base"), expr: simple("expr") }, (b) => {
     const newArr: unknown[] = [b.power_base];
     if (!strippedEmpty(b.expr)) newArr.push(b.expr);
     return newArr;
   });
 
-  /** `transform.rb:371-381` */
+  /** `asciimath/transform.rb:371-381` */
   t.rule({ frac: simple("frac"), expr: subtree("expr") }, (b) => {
     if (Array.isArray(b.expr)) {
       const flat = compact(flattenDeep(b.expr));
@@ -1108,21 +1108,21 @@ function buildAsciimathTransform(): Transform {
     return newArr;
   });
 
-  /** `transform.rb:383-386` */
+  /** `asciimath/transform.rb:383-386` */
   t.rule({ mod: simple("mod"), expr: sequence("expr") }, (b) => {
     const flat = compact(flattenDeep(asArray(b.expr)));
     flat.unshift(b.mod);
     return flat;
   });
 
-  /** `transform.rb:388-393` */
+  /** `asciimath/transform.rb:388-393` */
   t.rule({ frac: simple("frac"), left_right: simple("left_right") }, (b) => {
     const newArr: unknown[] = [b.frac];
     if (!strippedEmpty(b.left_right)) newArr.push(b.left_right);
     return newArr;
   });
 
-  /** `transform.rb:395-404` — when the sequence carries no comma, the shift
+  /** `asciimath/transform.rb:395-404` — when the sequence carries no comma, the shift
    * never runs and the Power's exponent is NIL while the whole sequence stays
    * beside it. Measured, not corrected. */
   t.rule({ power_base: simple("power_base"), power: sequence("power") }, (b) => {
@@ -1134,19 +1134,19 @@ function buildAsciimathTransform(): Transform {
     return [powerObject, ...power];
   });
 
-  /** `transform.rb:406-411` */
+  /** `asciimath/transform.rb:406-411` */
   t.rule({ power_base: simple("power_base"), left_right: simple("left_right") }, (b) => {
     const newArr: unknown[] = [b.power_base];
     if (!strippedEmpty(b.left_right)) newArr.push(b.left_right);
     return newArr;
   });
 
-  /** `transform.rb:413-419` */
+  /** `asciimath/transform.rb:413-419` */
   t.rule({ power_base: simple("power_base"), power: simple("power") }, (b) =>
     newPower(b.power_base, unfencedValue(b.power)),
   );
 
-  /** `transform.rb:421-431` */
+  /** `asciimath/transform.rb:421-431` */
   t.rule(
     { power_base: simple("power_base"), power: simple("power"), expr: sequence("expr") },
     (b) => {
@@ -1157,7 +1157,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:433-456` — the slice_before dance. A comma-led base value
+  /** `asciimath/transform.rb:433-456` — the slice_before dance. A comma-led base value
    * makes the second `shift` return nil and Ruby call `nil.first`, which
    * raises; the throw here is that failure, not a new one. */
   t.rule({ power_base: simple("power_base"), base: simple("base") }, (b) => {
@@ -1179,7 +1179,7 @@ function buildAsciimathTransform(): Transform {
     return newBaseFn(b.power_base, unfencedValue(base));
   });
 
-  /** `transform.rb:458-468` */
+  /** `asciimath/transform.rb:458-468` */
   t.rule(
     { power_base: simple("power_base"), base: simple("base"), expr: sequence("expr") },
     (b) => {
@@ -1190,7 +1190,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:470-481` */
+  /** `asciimath/transform.rb:470-481` */
   t.rule({ power_base: simple("power_base"), base: simple("base"), expr: simple("expr") }, (b) => {
     const baseObject = newBaseFn(b.power_base, unfencedValue(b.base));
     const formulaArray: unknown[] = [baseObject];
@@ -1198,7 +1198,7 @@ function buildAsciimathTransform(): Transform {
     return newFormula(formulaArray);
   });
 
-  /** `transform.rb:483-491` */
+  /** `asciimath/transform.rb:483-491` */
   t.rule(
     {
       power_base: simple("power_base"),
@@ -1208,7 +1208,7 @@ function buildAsciimathTransform(): Transform {
     (b) => newPowerBase(b.power_base, unfencedValue(b.base_value), unfencedValue(b.power_value)),
   );
 
-  /** `transform.rb:493-504` — `power_value.insert(0, ...)` returns the bound
+  /** `asciimath/transform.rb:493-504` — `power_value.insert(0, ...)` returns the bound
    * array, so with no comma the elements sit BOTH inside the new node's
    * third slot and beside it. Measured aliasing; port it, do not fix it. */
   t.rule(
@@ -1231,7 +1231,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:506-518` */
+  /** `asciimath/transform.rb:506-518` */
   t.rule(
     {
       power_base: simple("power_base"),
@@ -1251,7 +1251,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:520-528` */
+  /** `asciimath/transform.rb:520-528` */
   t.rule(
     {
       rparen: simple("rparen"),
@@ -1266,7 +1266,7 @@ function buildAsciimathTransform(): Transform {
       ),
   );
 
-  /** `transform.rb:530-542` */
+  /** `asciimath/transform.rb:530-542` */
   t.rule(
     {
       rparen: simple("rparen"),
@@ -1286,7 +1286,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:544-556` */
+  /** `asciimath/transform.rb:544-556` */
   t.rule(
     {
       rparen: simple("rparen"),
@@ -1306,7 +1306,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:558-568` */
+  /** `asciimath/transform.rb:558-568` */
   t.rule(
     {
       rparen: simple("rparen"),
@@ -1326,7 +1326,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:570-580` */
+  /** `asciimath/transform.rb:570-580` */
   t.rule(
     {
       rparen: simple("rparen"),
@@ -1346,7 +1346,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:582-596` — the guard reads `expr.to_s`, which for an
+  /** `asciimath/transform.rb:582-596` — the guard reads `expr.to_s`, which for an
    * array is its inspect and never blank, so the append always runs. */
   t.rule(
     {
@@ -1369,7 +1369,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:598-612` */
+  /** `asciimath/transform.rb:598-612` */
   t.rule(
     {
       rparen: simple("rparen"),
@@ -1391,20 +1391,20 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:614-619` — appends INTO the bound array and returns it. */
+  /** `asciimath/transform.rb:614-619` — appends INTO the bound array and returns it. */
   t.rule({ power_base: sequence("power_base"), expr: simple("expr") }, (b) => {
     const newArr = asArray(b.power_base);
     if (!strippedEmpty(b.expr)) newArr.push(b.expr);
     return newArr;
   });
 
-  /** `transform.rb:621-624` */
+  /** `asciimath/transform.rb:621-624` */
   t.rule({ power_base: sequence("power_base"), expr: sequence("expr") }, (b) => [
     ...asArray(b.power_base),
     ...asArray(b.expr),
   ]);
 
-  /** `transform.rb:626-636` */
+  /** `asciimath/transform.rb:626-636` */
   t.rule({ sequence: simple("sequence"), expr: subtree("expr") }, (b) => {
     if (Array.isArray(b.expr)) {
       const flat = compact(flattenDeep(b.expr));
@@ -1416,62 +1416,62 @@ function buildAsciimathTransform(): Transform {
     return newArray;
   });
 
-  /** `transform.rb:638-643` */
+  /** `asciimath/transform.rb:638-643` */
   t.rule({ sequence: sequence("sequence"), expr: simple("expr") }, (b) => {
     const newArr = compact(flattenDeep(asArray(b.sequence)));
     if (!strippedEmpty(b.expr)) newArr.push(b.expr);
     return newArr;
   });
 
-  /** `transform.rb:645-650` */
+  /** `asciimath/transform.rb:645-650` */
   t.rule({ sequence: sequence("sequence"), left_right: simple("left_right") }, (b) => {
     const newArr = compact(flattenDeep(asArray(b.sequence)));
     if (!strippedEmpty(b.left_right)) newArr.push(b.left_right);
     return newArr;
   });
 
-  /** `transform.rb:652-655` */
+  /** `asciimath/transform.rb:652-655` */
   t.rule({ sequence: sequence("sequence"), expr: sequence("expr") }, (b) => [
     ...compact(flattenDeep(asArray(b.sequence))),
     ...compact(flattenDeep(asArray(b.expr))),
   ]);
 
-  /** `transform.rb:657-663` */
+  /** `asciimath/transform.rb:657-663` */
   t.rule({ sequence: simple("sequence"), symbol: simple("symbol") }, (b) => [
     b.sequence,
     asciimathSymbolObject(b.symbol),
   ]);
 
-  // --- unary, binary and ternary classes (transform.rb:665-888) -----------
+  // --- unary, binary and ternary classes (asciimath/transform.rb:665-888) -----------
 
-  /** `transform.rb:665-670` */
+  /** `asciimath/transform.rb:665-670` */
   t.rule({ binary_class: simple("function"), base_value: simple("base") }, (b) =>
     constructClass(getClass(b.function), unfencedValue(b.base)),
   );
 
-  /** `transform.rb:672-680` */
+  /** `asciimath/transform.rb:672-680` */
   t.rule({ d: simple("d"), x: simple("x") }, (b) =>
     newFormula([asciimathSymbolObject(b.d), asciimathSymbolObject(b.x)]),
   );
 
-  /** `transform.rb:682-687` */
+  /** `asciimath/transform.rb:682-687` */
   t.rule({ binary_class: simple("function"), base: simple("base") }, (b) =>
     constructClass(getClass(b.function), unfencedValue(b.base)),
   );
 
-  /** `transform.rb:689-695` */
+  /** `asciimath/transform.rb:689-695` */
   t.rule({ binary_class: simple("function"), power: simple("power") }, (b) =>
     constructClass(getClass(b.function), null, unfencedValue(b.power)),
   );
 
-  /** `transform.rb:697-702` — no emptiness guard: expr rides along as-is. */
+  /** `asciimath/transform.rb:697-702` — no emptiness guard: expr rides along as-is. */
   t.rule({ sequence: simple("sequence"), symbol: simple("sym"), expr: simple("expr") }, (b) => [
     b.sequence,
     asciimathSymbolObject(b.sym),
     b.expr,
   ]);
 
-  /** `transform.rb:704-711` */
+  /** `asciimath/transform.rb:704-711` */
   t.rule({ sequence: simple("sequence"), symbol: simple("sym"), expr: sequence("expr") }, (b) => {
     const symbol = asciimathSymbolObject(b.sym);
     const newArr: unknown[] = [b.sequence, symbol];
@@ -1479,7 +1479,7 @@ function buildAsciimathTransform(): Transform {
     return newArr;
   });
 
-  /** `transform.rb:713-720` */
+  /** `asciimath/transform.rb:713-720` */
   t.rule(
     {
       binary_class: simple("function"),
@@ -1489,7 +1489,7 @@ function buildAsciimathTransform(): Transform {
     (b) => constructClass(getClass(b.function), unfencedValue(b.base), unfencedValue(b.power)),
   );
 
-  /** `transform.rb:722-729` */
+  /** `asciimath/transform.rb:722-729` */
   t.rule(
     {
       ternary_class: simple("function"),
@@ -1499,12 +1499,12 @@ function buildAsciimathTransform(): Transform {
     (b) => constructClass(getClass(b.function), unfencedValue(b.base), unfencedValue(b.power)),
   );
 
-  /** `transform.rb:731-736` */
+  /** `asciimath/transform.rb:731-736` */
   t.rule({ ternary_class: simple("function"), base: simple("base") }, (b) =>
     constructClass(getClass(b.function), unfencedValue(b.base)),
   );
 
-  /** `transform.rb:738-747` — a Slice third value becomes NIL, never text.
+  /** `asciimath/transform.rb:738-747` — a Slice third value becomes NIL, never text.
    * Measured oddity; transcribed. */
   t.rule(
     { ternary_class: simple("function"), base: simple("base"), third_value: simple("third") },
@@ -1514,28 +1514,28 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:749-755` */
+  /** `asciimath/transform.rb:749-755` */
   t.rule({ ternary_class: simple("function"), power: simple("power") }, (b) =>
     constructClass(getClass(b.function), null, unfencedValue(b.power)),
   );
 
-  /** `transform.rb:757-763` — expr rides along without an emptiness guard. */
+  /** `asciimath/transform.rb:757-763` — expr rides along without an emptiness guard. */
   t.rule({ ternary_class: simple("function"), expr: simple("expr") }, (b) => [
     constructClass(getClass(b.function)),
     b.expr,
   ]);
 
-  /** `transform.rb:765-768` — inserts into the bound array. */
+  /** `asciimath/transform.rb:765-768` — inserts into the bound array. */
   t.rule({ ternary_class: simple("function"), expr: sequence("expr") }, (b) => {
     const expr = asArray(b.expr);
     expr.unshift(constructClass(getClass(b.function)));
     return expr;
   });
 
-  /** `transform.rb:770-773` */
+  /** `asciimath/transform.rb:770-773` */
   t.rule({ ternary: simple("ternary"), expr: simple("expr") }, (b) => [b.ternary, b.expr]);
 
-  /** `transform.rb:775-784` */
+  /** `asciimath/transform.rb:775-784` */
   t.rule(
     { ternary_class: simple("function"), power: simple("power"), third_value: simple("third") },
     (b) => {
@@ -1544,7 +1544,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:786-796` */
+  /** `asciimath/transform.rb:786-796` */
   t.rule(
     {
       ternary_class: simple("function"),
@@ -1563,7 +1563,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:798-808` — the Slice test is vacuous on an array binding,
+  /** `asciimath/transform.rb:798-808` — the Slice test is vacuous on an array binding,
    * so the local assignment is a no-op the gem carries anyway. */
   t.rule(
     {
@@ -1583,125 +1583,125 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:810-818` */
+  /** `asciimath/transform.rb:810-818` */
   t.rule({ unary_class: simple("function"), intermediate_exp: simple("int_exp") }, (b) => {
     const firstValue = isUnaryClassName(b.function) ? b.int_exp : unfencedValue(b.int_exp);
     return constructClass(getClass(b.function), firstValue);
   });
 
-  /** `transform.rb:820-824` */
+  /** `asciimath/transform.rb:820-824` */
   t.rule({ unary_class: simple("function"), symbol: simple("symbol") }, (b) =>
     constructClass(getClass(b.function), asciimathSymbolObject(b.symbol)),
   );
 
-  /** `transform.rb:826-830` */
+  /** `asciimath/transform.rb:826-830` */
   t.rule({ unary_class: simple("function"), number: simple("new_number") }, (b) =>
     constructClass(getClass(b.function), newNumber(b.new_number)),
   );
 
-  /** `transform.rb:832-840` */
+  /** `asciimath/transform.rb:832-840` */
   t.rule({ unary_class: simple("function"), unary: simple("unary") }, (b) => {
     const firstValue = isUnaryClassName(b.function) ? b.unary : unfencedValue(b.unary);
     return constructClass(getClass(b.function), firstValue);
   });
 
-  /** `transform.rb:842-848` */
+  /** `asciimath/transform.rb:842-848` */
   t.rule({ unary_class: simple("function"), binary_class: simple("binary_class") }, (b) => [
     constructClass(getClass(b.function)),
     constructClass(getClass(b.binary_class)),
   ]);
 
-  /** `transform.rb:850-856` */
+  /** `asciimath/transform.rb:850-856` */
   t.rule({ unary_class: simple("function"), ternary_class: simple("ternary_class") }, (b) => [
     constructClass(getClass(b.function)),
     constructClass(getClass(b.ternary_class)),
   ]);
 
-  /** `transform.rb:858-861` — inserts into the bound array and returns it. */
+  /** `asciimath/transform.rb:858-861` — inserts into the bound array and returns it. */
   t.rule({ ternary: simple("ternary"), expr: sequence("expr") }, (b) => {
     const expr = asArray(b.expr);
     expr.unshift(b.ternary);
     return expr;
   });
 
-  /** `transform.rb:863-866` */
+  /** `asciimath/transform.rb:863-866` */
   t.rule({ ternary: simple("ternary"), left_right: simple("left_right") }, (b) => [
     b.ternary,
     b.left_right,
   ]);
 
-  /** `transform.rb:868-873` */
+  /** `asciimath/transform.rb:868-873` */
   t.rule({ unary_class: simple("function"), text: simple("text") }, (b) =>
     constructClass(getClass(b.function), newText(b.text)),
   );
 
-  // `transform.rb:875-880` (unary_class + unitsml) — DROPPED, see above.
+  // `asciimath/transform.rb:875-880` (unary_class + unitsml) — DROPPED, see above.
 
-  /** `transform.rb:882-888` */
+  /** `asciimath/transform.rb:882-888` */
   t.rule({ number: simple("number"), comma: simple("comma") }, (b) => [
     newNumber(b.number),
     asciimathSymbolObject(b.comma),
   ]);
 
-  // --- tables, fences, left/right, color, mod (transform.rb:890-1167) -----
+  // --- tables, fences, left/right, color, mod (asciimath/transform.rb:890-1167) -----
 
-  /** `transform.rb:890-893` */
+  /** `asciimath/transform.rb:890-893` */
   t.rule({ table: simple("table"), expr: sequence("expr") }, (b) =>
     newFormula([b.table, ...compact(flattenDeep(asArray(b.expr)))]),
   );
 
-  /** `transform.rb:895-898` */
+  /** `asciimath/transform.rb:895-898` */
   t.rule({ table: simple("table"), left_right: simple("left_right") }, (b) =>
     newFormula([b.table, b.left_right]),
   );
 
-  /** `transform.rb:900-905` */
+  /** `asciimath/transform.rb:900-905` */
   t.rule({ table: simple("table"), expr: simple("expr") }, (b) => {
     const formulaArray: unknown[] = [b.table];
     if (!strippedEmpty(b.expr)) formulaArray.push(b.expr);
     return newFormula(formulaArray);
   });
 
-  /** `transform.rb:907-910` — raw bindings, no unfencing. */
+  /** `asciimath/transform.rb:907-910` — raw bindings, no unfencing. */
   t.rule({ table: simple("table"), base: simple("base") }, (b) => newBaseFn(b.table, b.base));
 
-  /** `transform.rb:912-915` */
+  /** `asciimath/transform.rb:912-915` */
   t.rule({ table: simple("table"), power: simple("power") }, (b) => newPower(b.table, b.power));
 
-  /** `transform.rb:917-921` — power lands in the BASE slot and base in the
+  /** `asciimath/transform.rb:917-921` — power lands in the BASE slot and base in the
    * POWER slot. Measured oddity; transcribed, not corrected. */
   t.rule(
     { table: simple("table"), power_value: simple("power"), base_value: simple("base") },
     (b) => newPowerBase(b.table, b.power, b.base),
   );
 
-  /** `transform.rb:923-931` */
+  /** `asciimath/transform.rb:923-931` */
   t.rule({ table: simple("table"), power: simple("power"), expr: sequence("expr") }, (b) =>
     newFormula([newPower(b.table, b.power), ...compact(flattenDeep(asArray(b.expr)))]),
   );
 
-  /** `transform.rb:933-942` — expr rides along without an emptiness guard. */
+  /** `asciimath/transform.rb:933-942` — expr rides along without an emptiness guard. */
   t.rule({ table: simple("table"), power: simple("power"), expr: simple("expr") }, (b) =>
     newFormula([newPower(b.table, b.power), b.expr]),
   );
 
-  /** `transform.rb:944-952` */
+  /** `asciimath/transform.rb:944-952` */
   t.rule({ table: simple("table"), base: simple("base"), expr: sequence("expr") }, (b) =>
     newFormula([newBaseFn(b.table, b.base), ...compact(flattenDeep(asArray(b.expr)))]),
   );
 
-  /** `transform.rb:954-963` */
+  /** `asciimath/transform.rb:954-963` */
   t.rule({ table: simple("table"), base: simple("base"), expr: simple("expr") }, (b) =>
     newFormula([newBaseFn(b.table, b.base), b.expr]),
   );
 
-  /** `transform.rb:965-975` */
+  /** `asciimath/transform.rb:965-975` */
   t.rule({ table: simple("table"), rparen: simple("rparen"), expr: sequence("expr") }, (b) => [
     newFenced(newSymbolOfClass("Paren::OpenParen"), [b.table], asciimathSymbolObject(b.rparen)),
     ...compact(flattenDeep(asArray(b.expr))),
   ]);
 
-  /** `transform.rb:977-987` — `left_right_value` is bound as `left_right`;
+  /** `asciimath/transform.rb:977-987` — `left_right_value` is bound as `left_right`;
    * the Left/Right wrappers keep the raw paren text. The formula's first
    * value is a Left, so `Formula#initialize` clears `left_right_wrapper`. */
   t.rule(
@@ -1709,18 +1709,18 @@ function buildAsciimathTransform(): Transform {
     (b) => newFormula([newLeftFn(b.left), b.left_right, newRightFn(b.right)]),
   );
 
-  /** `transform.rb:989-999` */
+  /** `asciimath/transform.rb:989-999` */
   t.rule(
     { left: simple("left"), left_right_value: sequence("left_right"), right: simple("right") },
     (b) => newFormula([newLeftFn(b.left), newFormula(asArray(b.left_right)), newRightFn(b.right)]),
   );
 
-  /** `transform.rb:1001-1008` */
+  /** `asciimath/transform.rb:1001-1008` */
   t.rule({ dividend: simple("dividend"), mod: simple("mod"), divisor: simple("divisor") }, (b) =>
     newMod(b.dividend, b.divisor),
   );
 
-  /** `transform.rb:1010-1023` — an empty Slice expr keeps parameter_two nil;
+  /** `asciimath/transform.rb:1010-1023` — an empty Slice expr keeps parameter_two nil;
    * a nil expr (`maybe`) compacts away to an EMPTY list instead. */
   t.rule({ lparen: simple("lparen"), expr: simple("expr"), rparen: simple("rparen") }, (b) => {
     const expr = b.expr;
@@ -1734,7 +1734,7 @@ function buildAsciimathTransform(): Transform {
     return newFenced(asciimathSymbolObject(b.lparen), fenced, asciimathSymbolObject(b.rparen));
   });
 
-  /** `transform.rb:1025-1033` */
+  /** `asciimath/transform.rb:1025-1033` */
   t.rule({ lparen: simple("lparen"), expr: sequence("expr"), rparen: simple("rparen") }, (b) =>
     newFenced(
       asciimathSymbolObject(b.lparen),
@@ -1743,18 +1743,18 @@ function buildAsciimathTransform(): Transform {
     ),
   );
 
-  /** `transform.rb:1035-1039` */
+  /** `asciimath/transform.rb:1035-1039` */
   t.rule(
     { lparen: simple("lparen"), rgb_color: sequence("color"), rparen: simple("rparen") },
     (b) => newFormula(asArray(b.color)),
   );
 
-  /** `transform.rb:1041-1045` */
+  /** `asciimath/transform.rb:1041-1045` */
   t.rule({ lparen: simple("lparen"), rgb_color: simple("color"), rparen: simple("rparen") }, (b) =>
     newFormula(b.color),
   );
 
-  /** `transform.rb:1047-1050` — the RGB sequence rule IGNORES `color_value`
+  /** `asciimath/transform.rb:1047-1050` — the RGB sequence rule IGNORES `color_value`
    * and stringifies the color array through `Array#to_s`. Measured oddity;
    * transcribed, and `rubyArrayToS` throws loudly on the one shape whose
    * Ruby answer is address-dependent. */
@@ -1762,20 +1762,20 @@ function buildAsciimathTransform(): Transform {
     asciimathSymbolObject(b.color),
   );
 
-  /** `transform.rb:1052-1060` */
+  /** `asciimath/transform.rb:1052-1060` */
   t.rule({ color: simple("color"), color_value: simple("value"), expr: simple("expr") }, (b) => [
     newColor(b.color, unfencedValue(b.value)),
     b.expr,
   ]);
 
-  /** `transform.rb:1062-1070` — inserts into the bound array. */
+  /** `asciimath/transform.rb:1062-1070` — inserts into the bound array. */
   t.rule({ color: simple("color"), color_value: simple("value"), expr: sequence("expr") }, (b) => {
     const expr = asArray(b.expr);
     expr.unshift(newColor(b.color, unfencedValue(b.value)));
     return expr;
   });
 
-  /** `transform.rb:1072-1083` */
+  /** `asciimath/transform.rb:1072-1083` */
   t.rule({ color: simple("color"), color_value: simple("color_value") }, (b) => {
     const color = b.color;
     const firstValue = isTextDraft(color)
@@ -1784,7 +1784,7 @@ function buildAsciimathTransform(): Transform {
     return newColor(firstValue, unfencedValue(b.color_value));
   });
 
-  /** `transform.rb:1085-1095` */
+  /** `asciimath/transform.rb:1085-1095` */
   t.rule(
     {
       table_left: simple("table_left"),
@@ -1799,7 +1799,7 @@ function buildAsciimathTransform(): Transform {
       ),
   );
 
-  /** `transform.rb:1097-1107` — the same power/base slot swap as `:917`. */
+  /** `asciimath/transform.rb:1097-1107` — the same power/base slot swap as `:917`. */
   t.rule(
     {
       table: simple("table"),
@@ -1810,7 +1810,7 @@ function buildAsciimathTransform(): Transform {
     (b) => newFormula([newPowerBase(b.table, b.power, b.base), b.expr]),
   );
 
-  /** `transform.rb:1109-1118` */
+  /** `asciimath/transform.rb:1109-1118` */
   t.rule(
     {
       table: simple("table"),
@@ -1825,7 +1825,7 @@ function buildAsciimathTransform(): Transform {
       ]),
   );
 
-  /** `transform.rb:1120-1131` */
+  /** `asciimath/transform.rb:1120-1131` */
   t.rule(
     {
       table_left: simple("table_left"),
@@ -1844,7 +1844,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:1133-1144` — expr rides into the table unconditionally. */
+  /** `asciimath/transform.rb:1133-1144` — expr rides into the table unconditionally. */
   t.rule(
     {
       norm: simple("function"),
@@ -1863,7 +1863,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:1146-1155` */
+  /** `asciimath/transform.rb:1146-1155` */
   t.rule(
     {
       table_left: simple("table_left"),
@@ -1882,7 +1882,7 @@ function buildAsciimathTransform(): Transform {
     },
   );
 
-  /** `transform.rb:1157-1166` */
+  /** `asciimath/transform.rb:1157-1166` */
   t.rule(
     {
       left: simple("left"),
@@ -2149,7 +2149,7 @@ function finalizeDraft(draft: AsciimathDraft, inputString?: string): MathNode {
 }
 
 /**
- * `Asciimath::Parser#parse` (`parser.rb:17-23`) after the transform, plus the
+ * `Asciimath::Parser#parse` (`asciimath/parser.rb:17-23`) after the transform, plus the
  * `formula.input_string = text` that `Plurimath::Math.parse_formula` adds
  * (`math.rb:63-66`): a transformed tree that already is a formula is kept,
  * anything else is wrapped — `Formula.new` boxes a non-array — and the final

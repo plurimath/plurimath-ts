@@ -19,7 +19,7 @@
  * malformed.
  *
  * Five call sites reverse-look-up four of these tables, and NOT all with
- * the same Ruby read: `base.rb:128` is `SIZE_OVERRIDES_SYMBOLS.invert`,
+ * the same Ruby read: `function/base.rb:128` is `SIZE_OVERRIDES_SYMBOLS.invert`,
  * while `frac.rb:159` (`UNICODE_FRACTIONS`), `table.rb:422`
  * (`PARENTHESIS_MATRICES`), `phantom.rb:59` and `mpadded.rb:102` (both
  * `PHANTOM_SYMBOLS`) are `Hash#key`. The two disagree on a duplicated

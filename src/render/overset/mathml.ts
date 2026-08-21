@@ -1,6 +1,6 @@
 /**
  * Mirrors `function/overset.rb` — `Overset#to_mathml_without_math_tag`
- * (:14): `<mover attrs=options>` over [SECOND slot, FIRST slot] — the gem
+ * (:24): `<mover attrs=options>` over [SECOND slot, FIRST slot] — the gem
  * swaps them (probe overset: `Overset.new(x, y)` renders y above... first) —
  * each through `validate_mathml_fields`.
  */

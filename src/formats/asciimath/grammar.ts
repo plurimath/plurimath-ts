@@ -2,7 +2,7 @@
  * The AsciiMath grammar, ported rule for rule from the gem's Parslet parser
  * (`lib/plurimath/asciimath/parse.rb`, plurimath 0.11.6 at `00c52783`).
  *
- * The port is deliberately structural: every `rule(:name)` in `parse.rb` is one
+ * The port is deliberately structural: every `rule(:name)` in `asciimath/parse.rb` is one
  * `rule(() => ...)` here, in the same source order, with the same alternatives
  * in the same order, and each carries the Ruby line it came from. Parslet's `|`
  * is an ordered choice, so alternative order is behaviour, not style; keeping
@@ -57,12 +57,12 @@ import {
 
 /**
  * `Constants::PARENTHESIS`, keyed by its opening paren — the table `read_text`
- * resolves a closing paren from (`parse.rb:181`).
+ * resolves a closing paren from (`asciimath/parse.rb:181`).
  */
 const CLOSING_PAREN: ReadonlyMap<string, string> = new Map(ASCIIMATH_PARENTHESIS);
 
 /**
- * What Ruby's `\s` means, spelled out — the one escape in `parse.rb` that had
+ * What Ruby's `\s` means, spelled out — the one escape in `asciimath/parse.rb` that had
  * to be rewritten for reasons other than syntax.
  *
  * `\s` is a *different character set* in the two languages, and the difference
@@ -75,15 +75,15 @@ const CLOSING_PAREN: ReadonlyMap<string, string> = new Map(ASCIIMATH_PARENTHESIS
  *
  * It changes trees. `"x y"` is three symbols to the gem, because the
  * no-break space fails `space` and falls through to the catch-all at
- * `parse.rb:90` — which accepts it, since Ruby's `\s` does not exclude it. A
+ * `asciimath/parse.rb:90` — which accepts it, since Ruby's `\s` does not exclude it. A
  * verbatim `\s` here swallowed that character as whitespace instead, losing a
- * node. So both places `parse.rb` writes `\s` (the `space` rule at `:11` and
+ * node. So both places `asciimath/parse.rb` writes `\s` (the `space` rule at `:11` and
  * the negated class at `:90`) use this set literally.
  */
 const RUBY_SPACE = "\\t\\n\\v\\f\\r ";
 
 /**
- * `parse.rb:71,133,134` — the solidus that starts a fraction, as distinct from
+ * `asciimath/parse.rb:71,133,134` — the solidus that starts a fraction, as distinct from
  * the `//` the `iteration` rule claims.
  *
  * Ruby writes `/(?<!\/)\/(?!\/)/` three times, each a distinct atom; this
@@ -115,7 +115,7 @@ function solidus(): Atom {
 }
 
 /**
- * `arr_to_expression` (`parse.rb:171`): an ordered choice of literals, each
+ * `arr_to_expression` (`asciimath/parse.rb:171`): an ordered choice of literals, each
  * one named.
  *
  * Ruby's `reduce` converts only the first element, because after one iteration
@@ -157,50 +157,50 @@ function negatedCharacterClass(character: string): string {
   return `[^\\u{${code.toString(16)}}]`;
 }
 
-/** Every rule in `parse.rb`, plus the three the `BaseNumberPrefix` mixin adds. */
+/** Every rule in `asciimath/parse.rb`, plus the three the `BaseNumberPrefix` mixin adds. */
 export interface AsciimathRules {
-  /** `parse.rb:8` */ readonly td: Atom;
-  /** `parse.rb:9` */ readonly base: Atom;
-  /** `parse.rb:10` */ readonly power: Atom;
-  /** `parse.rb:11` */ readonly space: Atom;
-  /** `parse.rb:12` */ readonly comma: Atom;
-  /** `parse.rb:13` — Ruby's `space?` */ readonly spaceOptional: Atom;
-  /** `parse.rb:14` */ readonly number: Atom;
+  /** `asciimath/parse.rb:8` */ readonly td: Atom;
+  /** `asciimath/parse.rb:9` */ readonly base: Atom;
+  /** `asciimath/parse.rb:10` */ readonly power: Atom;
+  /** `asciimath/parse.rb:11` */ readonly space: Atom;
+  /** `asciimath/parse.rb:12` */ readonly comma: Atom;
+  /** `asciimath/parse.rb:13` — Ruby's `space?` */ readonly spaceOptional: Atom;
+  /** `asciimath/parse.rb:14` */ readonly number: Atom;
   /** `base_number_prefix.rb:15` */ readonly hexNumber: Atom;
   /** `base_number_prefix.rb:19` */ readonly binaryNumber: Atom;
   /** `base_number_prefix.rb:23` */ readonly octalNumber: Atom;
-  /** `parse.rb:23` */ readonly controversialSymbols: Atom;
-  /** `parse.rb:24` */ readonly leftRightOpenParen: Atom;
-  /** `parse.rb:25` */ readonly leftRightCloseParen: Atom;
-  /** `parse.rb:26` */ readonly colorLeftParenthesis: Atom;
-  /** `parse.rb:27` */ readonly colorRightParenthesis: Atom;
-  /** `parse.rb:29` */ readonly ternaryClassesRules: Atom;
-  /** `parse.rb:35` */ readonly ternaryClasses: Atom;
-  /** `parse.rb:39` */ readonly binaryClasses: Atom;
-  /** `parse.rb:43` */ readonly subSupClasses: Atom;
-  /** `parse.rb:47` */ readonly openTable: Atom;
-  /** `parse.rb:51` */ readonly closeTable: Atom;
-  /** `parse.rb:55` */ readonly lparen: Atom;
-  /** `parse.rb:62` */ readonly rparen: Atom;
-  /** `parse.rb:69` */ readonly leftRight: Atom;
-  /** `parse.rb:75` */ readonly quotedText: Atom;
-  /** `parse.rb:81` */ readonly symbolTextOrInteger: Atom;
-  /** `parse.rb:94` */ readonly powerBase: Atom;
-  /** `parse.rb:102` */ readonly powerBaseRules: Atom;
-  /** `parse.rb:108` */ readonly table: Atom;
-  /** `parse.rb:116` */ readonly tr: Atom;
-  /** `parse.rb:121` */ readonly colorValue: Atom;
-  /** `parse.rb:126` */ readonly sequence: Atom;
-  /** `parse.rb:132` */ readonly frac: Atom;
-  /** `parse.rb:137` */ readonly mod: Atom;
-  /** `parse.rb:143` */ readonly iteration: Atom;
-  /** `parse.rb:157` */ readonly expression: Atom;
+  /** `asciimath/parse.rb:23` */ readonly controversialSymbols: Atom;
+  /** `asciimath/parse.rb:24` */ readonly leftRightOpenParen: Atom;
+  /** `asciimath/parse.rb:25` */ readonly leftRightCloseParen: Atom;
+  /** `asciimath/parse.rb:26` */ readonly colorLeftParenthesis: Atom;
+  /** `asciimath/parse.rb:27` */ readonly colorRightParenthesis: Atom;
+  /** `asciimath/parse.rb:29` */ readonly ternaryClassesRules: Atom;
+  /** `asciimath/parse.rb:35` */ readonly ternaryClasses: Atom;
+  /** `asciimath/parse.rb:39` */ readonly binaryClasses: Atom;
+  /** `asciimath/parse.rb:43` */ readonly subSupClasses: Atom;
+  /** `asciimath/parse.rb:47` */ readonly openTable: Atom;
+  /** `asciimath/parse.rb:51` */ readonly closeTable: Atom;
+  /** `asciimath/parse.rb:55` */ readonly lparen: Atom;
+  /** `asciimath/parse.rb:62` */ readonly rparen: Atom;
+  /** `asciimath/parse.rb:69` */ readonly leftRight: Atom;
+  /** `asciimath/parse.rb:75` */ readonly quotedText: Atom;
+  /** `asciimath/parse.rb:81` */ readonly symbolTextOrInteger: Atom;
+  /** `asciimath/parse.rb:94` */ readonly powerBase: Atom;
+  /** `asciimath/parse.rb:102` */ readonly powerBaseRules: Atom;
+  /** `asciimath/parse.rb:108` */ readonly table: Atom;
+  /** `asciimath/parse.rb:116` */ readonly tr: Atom;
+  /** `asciimath/parse.rb:121` */ readonly colorValue: Atom;
+  /** `asciimath/parse.rb:126` */ readonly sequence: Atom;
+  /** `asciimath/parse.rb:132` */ readonly frac: Atom;
+  /** `asciimath/parse.rb:137` */ readonly mod: Atom;
+  /** `asciimath/parse.rb:143` */ readonly iteration: Atom;
+  /** `asciimath/parse.rb:157` */ readonly expression: Atom;
 }
 
 export interface AsciimathGrammar {
   /** The decimal marker every `decimal_marker` call in this grammar uses. */
   readonly decimalMarker: string;
-  /** `root :expression` (`parse.rb:169`). */
+  /** `root :expression` (`asciimath/parse.rb:169`). */
   readonly root: Atom;
   readonly rules: AsciimathRules;
 }
@@ -209,13 +209,13 @@ export interface AsciimathGrammar {
  * Builds one parser for one decimal marker.
  *
  * The marker is a constructor parameter rather than a global because
- * `decimal_marker` (`parse.rb:204`) reads `Plurimath.configuration.decimal`,
+ * `decimal_marker` (`asciimath/parse.rb:204`) reads `Plurimath.configuration.decimal`,
  * which the locale sets — and the rule is used **twice**, by the decimal-number
  * rule (`:18`) and by the comma-separated rule (`:86`), so a comma-decimal
  * locale changes how commas parse and not only how numbers do.
  *
  * One gem quirk is **not** reproduced: `hash_to_expression` memoizes its
- * alternation in the class variable `@@expression` (`parse.rb:188`), so the
+ * alternation in the class variable `@@expression` (`asciimath/parse.rb:188`), so the
  * literal table built by the first parser instance — including the `sequence`
  * entity it closes over, and through it that instance's decimal marker — is
  * reused by every later instance whatever their configuration. Here each marker
@@ -224,10 +224,10 @@ export interface AsciimathGrammar {
 export function createAsciimathGrammar(
   decimalMarker: string = DEFAULT_DECIMAL_MARKER,
 ): AsciimathGrammar {
-  /** `decimal_marker` (`parse.rb:204`): a fresh atom per call, as in Ruby. */
+  /** `decimal_marker` (`asciimath/parse.rb:204`): a fresh atom per call, as in Ruby. */
   const decimalMarkerAtom = (): Atom => str(decimalMarker);
 
-  // --- parse.rb:8-21 -------------------------------------------------------
+  // --- asciimath/parse.rb:8-21 -------------------------------------------------------
 
   const td = rule(() => expression.as("td"));
   const base = rule(() => str("__|").absent().andThen(str("_")));
@@ -235,7 +235,7 @@ export function createAsciimathGrammar(
   // The `+` is redundant and kept deliberately. `match` consumes exactly one
   // character however many the pattern could match — pinned against parslet
   // 2.0.0 in `test/pegkit/conformance.spec.ts` — so a run of whitespace is
-  // consumed by `repeat`, not by this quantifier. But `parse.rb:11` writes
+  // consumed by `repeat`, not by this quantifier. But `asciimath/parse.rb:11` writes
   // `match(/\s+/)`, and this file transcribes the oracle's grammar rather than
   // improving on it; the redundancy is the gem's, and removing it would make
   // the two harder to diff for no behavioural gain (Copilot, PR #4).
@@ -257,7 +257,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- base_number_prefix.rb:15-25 (included at parse.rb:6) ----------------
+  // --- base_number_prefix.rb:15-25 (included at asciimath/parse.rb:6) ----------------
 
   const hexNumber = rule(() =>
     seq(alt(str("0x"), str("0X")), match("[0-9a-fA-F]").repeat(1).as("hex_number")),
@@ -269,7 +269,7 @@ export function createAsciimathGrammar(
     seq(alt(str("0o"), str("0O")), match("[0-7]").repeat(1).as("octal_number")),
   );
 
-  // --- parse.rb:23-27 ------------------------------------------------------
+  // --- asciimath/parse.rb:23-27 ------------------------------------------------------
 
   const controversialSymbols = rule(() => alt(powerBase, expression));
   const leftRightOpenParen = rule(() => alt(str("("), str("[")));
@@ -277,7 +277,7 @@ export function createAsciimathGrammar(
   const colorLeftParenthesis = rule(() => alt(str("("), str("["), str("{")));
   const colorRightParenthesis = rule(() => alt(str(")"), str("]"), str("}")));
 
-  // --- parse.rb:29-33 ------------------------------------------------------
+  // --- asciimath/parse.rb:29-33 ------------------------------------------------------
 
   const ternaryClassesRules = rule(() =>
     alt(
@@ -301,12 +301,12 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:35-53 ------------------------------------------------------
+  // --- asciimath/parse.rb:35-53 ------------------------------------------------------
 
   const ternaryClasses = rule(() => arrToExpression(ASCIIMATH_TERNARY_CLASSES, "ternary_class"));
   const binaryClasses = rule(() => arrToExpression(ASCIIMATH_BINARY_CLASSES, "binary_class"));
   // Tagged `:binary_class` like the list above — that is the gem's naming, not
-  // a transcription slip (`parse.rb:44`).
+  // a transcription slip (`asciimath/parse.rb:44`).
   const subSupClasses = rule(() => arrToExpression(ASCIIMATH_SUB_SUP_CLASSES, "binary_class"));
   const openTable = rule(() =>
     arrToExpression(
@@ -321,14 +321,14 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:55-67 ------------------------------------------------------
+  // --- asciimath/parse.rb:55-67 ------------------------------------------------------
   // Unlike `arr_to_expression`, these two name nothing: `table` and `sequence`
   // apply their own `.as(...)` at the use site.
 
   const lparen = rule(() => alt(...ASCIIMATH_PARENTHESIS.map(([open]) => str(open))));
   const rparen = rule(() => alt(...ASCIIMATH_PARENTHESIS.map(([, close]) => str(close))));
 
-  // --- parse.rb:69-73 ------------------------------------------------------
+  // --- asciimath/parse.rb:69-73 ------------------------------------------------------
 
   const leftRight = rule(() =>
     alt(
@@ -357,7 +357,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:75-79 ------------------------------------------------------
+  // --- asciimath/parse.rb:75-79 ------------------------------------------------------
 
   const quotedText = rule(() =>
     alt(
@@ -376,7 +376,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:81-92 ------------------------------------------------------
+  // --- asciimath/parse.rb:81-92 ------------------------------------------------------
 
   const symbolTextOrInteger = rule(() =>
     alt(
@@ -394,7 +394,7 @@ export function createAsciimathGrammar(
       quotedText,
       seq(str("d").as("d"), str("x").as("x")).as("intermediate_exp"),
       seq(seq(str("left").absent(), str("right").absent()), match("[a-zA-Z]").as("symbol")),
-      // `parse.rb:90`, with one substitution. Every escape in it — `\[`, `\\`,
+      // `asciimath/parse.rb:90`, with one substitution. Every escape in it — `\[`, `\\`,
       // `\/`, `\]`, `\-` — is legal under the `u` flag and is transcribed as
       // written; `\-` is accepted because Unicode mode permits it inside a
       // character class (and only there). Only `\s` is replaced, by the six
@@ -408,7 +408,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:94-100 -----------------------------------------------------
+  // --- asciimath/parse.rb:94-100 -----------------------------------------------------
 
   const powerBase = rule(() =>
     alt(
@@ -440,7 +440,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:102-106 ----------------------------------------------------
+  // --- asciimath/parse.rb:102-106 ----------------------------------------------------
 
   const powerBaseRules = rule(() =>
     alt(
@@ -456,7 +456,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:108-114 ----------------------------------------------------
+  // --- asciimath/parse.rb:108-114 ----------------------------------------------------
 
   const table = rule(() =>
     alt(
@@ -497,7 +497,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:116-119 ----------------------------------------------------
+  // --- asciimath/parse.rb:116-119 ----------------------------------------------------
 
   const tr = rule(() =>
     alt(
@@ -514,7 +514,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:121-124 ----------------------------------------------------
+  // --- asciimath/parse.rb:121-124 ----------------------------------------------------
 
   const colorValue = rule(() =>
     alt(
@@ -527,7 +527,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:126-130 ----------------------------------------------------
+  // --- asciimath/parse.rb:126-130 ----------------------------------------------------
 
   const sequence = rule(() =>
     alt(
@@ -545,7 +545,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:132-135 ----------------------------------------------------
+  // --- asciimath/parse.rb:132-135 ----------------------------------------------------
 
   const frac = rule(() =>
     alt(
@@ -566,7 +566,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:137-141 ----------------------------------------------------
+  // --- asciimath/parse.rb:137-141 ----------------------------------------------------
 
   const mod = rule(() =>
     alt(
@@ -594,7 +594,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:143-155 ----------------------------------------------------
+  // --- asciimath/parse.rb:143-155 ----------------------------------------------------
 
   const iteration = rule(() =>
     alt(
@@ -612,7 +612,7 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- parse.rb:157-167 ----------------------------------------------------
+  // --- asciimath/parse.rb:157-167 ----------------------------------------------------
   //
   // Alternative 5 is `str("")`, which always succeeds and consumes nothing, so
   // alternatives 6-9 are reachable only through Parslet's `consume_all` retry:
@@ -650,10 +650,10 @@ export function createAsciimathGrammar(
     ),
   );
 
-  // --- helpers (parse.rb:171-216) ------------------------------------------
+  // --- helpers (asciimath/parse.rb:171-216) ------------------------------------------
 
   /**
-   * `read_text` (`parse.rb:179`): read everything up to the closing paren that
+   * `read_text` (`asciimath/parse.rb:179`): read everything up to the closing paren that
    * matches the one `sequence` captured.
    */
   function readText(): Atom {
@@ -664,7 +664,7 @@ export function createAsciimathGrammar(
   }
 
   /**
-   * `unary_functions` (`parse.rb:208`).
+   * `unary_functions` (`asciimath/parse.rb:208`).
    *
    * The gem selects the underbrace branch by comparing `first_value.to_s` to
    * `"'underbrace'"` / `"'ubrace'"` — quotes included, because that is how
@@ -690,7 +690,7 @@ export function createAsciimathGrammar(
   }
 
   /**
-   * `dynamic_parser_rules` (`parse.rb:194`) minus its `:symbol` prefix, which
+   * `dynamic_parser_rules` (`asciimath/parse.rb:194`) minus its `:symbol` prefix, which
    * `literalDispatch` hoists.
    *
    * Each of the four kinds builds a *different* atom — this is not one literal
@@ -710,7 +710,7 @@ export function createAsciimathGrammar(
   }
 
   /**
-   * `hash_to_expression(Constants.precompile_constants)` (`parse.rb:85`): the
+   * `hash_to_expression(Constants.precompile_constants)` (`asciimath/parse.rb:85`): the
    * ordered choice over all 3,330 literals, longest first.
    *
    * Two things make this more than `tokenChoice(literal => str(literal))`:

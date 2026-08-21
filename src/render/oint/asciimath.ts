@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/oint.rb` — `Oint#to_asciimath` (:27): the body `int.rb`
+ * Mirrors `function/oint.rb` — `Oint#to_asciimath` (:27): the body `function/int.rb`
  * repeats verbatim (see `../int/asciimath.ts` for the strip pin), keyword `oint`.
  */
 

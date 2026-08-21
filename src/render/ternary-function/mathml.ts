@@ -1,10 +1,10 @@
 /**
  * Mirrors `function/power_base.rb` — `PowerBase#to_mathml_without_math_tag`
- * (:12) — for the one AsciiMath-reachable class the census folds into this
+ * (:14) — for the one AsciiMath-reachable class the census folds into this
  * carrier. The script tag is `"m" + parameter_one&.tag_name` — `"subsup"`
  * for nearly everything (`Core#tag_name`), `"underover"` for the measured
  * symbol ids (generated `MATHML_UNDEROVER_TAG_IDS` — probe powerbase-sum)
- * and for an `Ubrace` first slot (`ubrace.rb:40` — probe powerbase-ubrace);
+ * and for an `Ubrace` first slot (`function/ubrace.rb:40` — probe powerbase-ubrace);
  * a `Nary` first slot crashes the gem (`tag_name` is protected there —
  * probe raw-powerbase-nary) and raises here. Slots through
  * `validate_mathml_fields` (probe powerbase-nil-mid).

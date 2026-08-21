@@ -6,11 +6,11 @@
  *
  * ## How the gem picks the font
  *
- * `font_family` (:230) asks `font_classes` (:276) for the `Utility::FONT_STYLES`
+ * `font_family` (:216) asks `font_classes` (:276) for the `Utility::FONT_STYLES`
  * keys whose value is **this object's Ruby class** — so for a named subclass
  * the node's own `parameter_two` is ignored entirely. Only when that comes back
  * empty (the bare `FontStyle` carrier, which no `FONT_STYLES` entry names) does
- * it fall back to `parameter_to_class` (:288), `FONT_STYLES[parameter_two.to_sym]`
+ * it fall back to `parameter_to_class` (:282), `FONT_STYLES[parameter_two.to_sym]`
  * instantiated, and resolve from the family string instead. `supported_fonts`
  * (:222) then takes the first `FONTS_CLASSES` entry among those keys and
  * prefixes a backslash; when nothing matches it falls through to nil, which the
@@ -147,7 +147,7 @@ function fontPrefix(node: NodeOf<"fontStyle">): string {
 }
 
 /**
- * `parameter_to_class` (`font_style.rb:288`) followed by `font_classes` on the
+ * `parameter_to_class` (`font_style.rb:282`) followed by `font_classes` on the
  * instance it builds — the bare carrier's path, and the only one where
  * `parameter_two` is consulted at all.
  */

@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/bar.rb` — `Bar#to_mathml_without_math_tag` (:14): a nil
+ * Mirrors `function/bar.rb` — `Bar#to_mathml_without_math_tag` (:24): a nil
  * parameter is the bare `<mo>&#xaf;</mo>`; otherwise `<mover>` over
  * [value, `<mo>&#xaf;</mo>`], the `attributes` hash written onto the mover
  * when non-empty (probe bar-attrs; the guard's measured edges live on

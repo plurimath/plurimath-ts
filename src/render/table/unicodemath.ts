@@ -22,7 +22,7 @@
  *   - `unicodemath_table_class?`'s second disjunct,
  *     `Utility::PARENTHESIS[unicodemath_field_value(open_paren)] ==
  *     close_paren`, is ALWAYS `nil == close_paren`. `Utility::PARENTHESIS`
- *     (`utility.rb:99`) is keyed by SYMBOLS while `unicodemath_field_value`
+ *     (`lib/plurimath/utility.rb:99`) is keyed by SYMBOLS while `unicodemath_field_value`
  *     returns a String, so the lookup can never hit: `PARENTHESIS["["]` is
  *     nil where `PARENTHESIS[:"["]` is `"]"`. The predicate therefore reduces
  *     to "a bare `Table` whose open paren is not nil" — `Table(rows, Lsquare,
@@ -123,7 +123,7 @@ const STRICT_ROW_TABLE_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * `UnicodeMath::Constants::MATRIXS` (`constants.rb:947`), decoded once.
+ * `UnicodeMath::Constants::MATRIXS` (`unicode_math/constants.rb:947`), decoded once.
  *
  * The gem reaches this table two ways and only one of them is a lookup.
  * `matrices_functions` (`table.rb:426`) reads it for the bare `Table`'s class
@@ -319,7 +319,7 @@ function matrixClassName(node: NodeOf<"table">, context: RenderContext): string 
   const matrixName = parenthesisMatricesKey(rendered);
   if (matrixName === null) return null;
 
-  // `matrices_functions` (`table.rb:425`) — `MATRIXS[matrix_name]`, and a name
+  // `matrices_functions` (`table.rb:426`) — `MATRIXS[matrix_name]`, and a name
   // the table does not carry is nil, which the caller interpolates as `""`.
   // Deliberately the raw ENTITY: this branch is the one the gem leaves
   // undecoded (see the header).

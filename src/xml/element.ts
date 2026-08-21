@@ -17,7 +17,7 @@
  * **Attribute values are stored verbatim.** The gem's engine wrapper decodes
  * HTML entities to Unicode on every attribute write
  * (`OxEngine::Element#update_attrs` → `Utility.html_entity_to_unicode`,
- * element.rb:104-110) — measured: `set_attr("intent" => "&#x2211;")` stores
+ * ox_engine/element.rb:104-110) — measured: `set_attr("intent" => "&#x2211;")` stores
  * `"∑"`, and unknown names like `"&nosuch;"` stay as written. That decoder is
  * `core`'s (its xhtml1 table already lives in `core/generated/html-entities`),
  * and layer 1 modules do not import each other (§3 rule 1), so the *renderer*

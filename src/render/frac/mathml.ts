@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/frac.rb` — `Frac#to_mathml_without_math_tag` (:31):
+ * Mirrors `function/frac.rb` — `Frac#to_mathml_without_math_tag` (:33):
  * `<mfrac>` — or `<mrow>` under `hide_function_name` (probe frac-hide) —
  * over the two nil-safe slots. With the `mfrac` tag and a truthy `options`
  * hash, every option except `:choose` becomes an attribute (probes

@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/oint.rb` — `Oint#to_mathml_without_math_tag` (:14): the
+ * Mirrors `function/oint.rb` — `Oint#to_mathml_without_math_tag` (:51): the
  * `<mo>&#x222e;</mo>` head (EMPTY `<mo/>` under `hide_function_name` —
  * probe oint-hide-bare) returned bare when no value exists; otherwise
  * `<msubsup>`/`<msub>`/`<msup>` by which of the first two slots are present

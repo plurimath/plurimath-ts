@@ -4,7 +4,7 @@
  *
  * The pipeline mirrors the gem's two layers exactly:
  *
- *   - `Asciimath::Parser#parse` (`parser.rb:17-23`): parse the preprocessed
+ *   - `Asciimath::Parser#parse` (`asciimath/parser.rb:17-23`): parse the preprocessed
  *     text, apply the transform, and wrap anything that is not already a
  *     formula in `Formula.new` — including its quirks (a non-array is boxed,
  *     and a leading `Left` clears `left_right_wrapper`).
@@ -82,7 +82,7 @@ function parsePreprocessed(
 
 /**
  * The construct the gem's grammar routes to UnitsML: `"unitsml(` ... `)"`
- * (`parse.rb:76`, the alternative this port keeps commented out — see
+ * (`asciimath/parse.rb:76`, the alternative this port keeps commented out — see
  * `grammar.ts`). Such input parses as plain text here, which is a deliberate
  * divergence (§5), so it is reported rather than silent. Detection runs over
  * the PREPROCESSED text, because that is the form the gem's grammar would

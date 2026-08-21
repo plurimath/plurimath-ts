@@ -1,6 +1,6 @@
 /**
  * Mirrors `function/underset.rb` — `Underset#to_mathml_without_math_tag`
- * (:13): `<munder attrs=options>` over [SECOND slot, FIRST slot], exactly
+ * (:24): `<munder attrs=options>` over [SECOND slot, FIRST slot], exactly
  * overset's swap with the under tag (probes underset / underset-options).
  */
 

@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/fenced.rb` — `Fenced#to_mathml_without_math_tag` (:22),
+ * Mirrors `function/fenced.rb` — `Fenced#to_mathml_without_math_tag` (:35),
  * `#mathml_paren` (:254) and `#symbol_or_paren` (:324): an `<mrow>` of
  * `<mo>open</mo>`, the body, `<mo>close</mo>`. Each `<mo>`'s attributes come
  * from `options[:open_paren]` / `options[:close_paren]` (probe

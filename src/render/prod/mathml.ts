@@ -1,6 +1,6 @@
 /**
- * Mirrors `function/prod.rb` — `Prod#to_mathml_without_math_tag` (:13): the
- * body `sum.rb` repeats verbatim (see `../sum/mathml.ts`), head
+ * Mirrors `function/prod.rb` — `Prod#to_mathml_without_math_tag` (:55): the
+ * body `function/sum.rb` repeats verbatim (see `../sum/mathml.ts`), head
  * `<mo>&#x220f;</mo>` (probes prod-bare / prod-all).
  */
 

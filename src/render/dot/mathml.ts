@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/dot.rb` — `Dot#to_mathml_without_math_tag` (:13): a nil
+ * Mirrors `function/dot.rb` — `Dot#to_mathml_without_math_tag` (:14): a nil
  * parameter is the bare `<mo>.</mo>`; otherwise `<mover>` over
  * [value, `<mo>.</mo>`], with an `accent` attribute only when
  * `attributes[:accent]` is truthy (probes dot-x / dot-nil / dot-accent).

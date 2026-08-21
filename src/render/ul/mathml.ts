@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/ul.rb` — `Ul#to_mathml_without_math_tag` (:14): the
+ * Mirrors `function/ul.rb` — `Ul#to_mathml_without_math_tag` (:24): the
  * bar-shaped body over `<munder>`, accent text `&#x332;` (probes ul-x /
  * ul-nil).
  */

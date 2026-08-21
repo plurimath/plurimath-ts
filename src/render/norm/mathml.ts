@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/norm.rb` — `Norm#to_mathml_without_math_tag` (:12):
+ * Mirrors `function/norm.rb` — `Norm#to_mathml_without_math_tag` (:17):
  * `Array(parameter_one&.to_mathml...)` with a `<mo>&#x2225;</mo>` on each
  * side, each skipped when the matching paren field is truthy — probes
  * norm-x / norm-nil.

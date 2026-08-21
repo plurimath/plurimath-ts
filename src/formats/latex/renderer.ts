@@ -9,10 +9,9 @@
  * `./render.ts` (typed total over `NodeKind`) and recursing through
  * `context.render` (§5, "How this maps to the gem"). Each kind file's header
  * names the gem file it mirrors and carries that class's measured pins; the
- * cross-cutting Ruby idioms live in `./render-shared.ts`. The five carrier
- * kinds the census folds many gem classes into (`unaryFunction`,
- * `binaryFunction`, `ternaryFunction`, `table`, `fontStyle`) keep their
- * class-name dispatch inside their own kind file, because classes with their
+ * cross-cutting Ruby idioms live in `./render-shared.ts`. The carrier kinds the
+ * census folds many gem classes into keep their class-name dispatch inside
+ * their own kind file, because classes with their
  * *own* `to_latex` overrides render differently from their carrier default —
  * `Log` goes through `latex_wrapped` where `Lim` interpolates plainly.
  *

@@ -1877,7 +1877,7 @@ function codepointToString(code: number): string {
  * The same decoder under its gem name, exported for the MathML renderer:
  * the gem's XML engine wrapper decodes every attribute WRITE through
  * `Utility.html_entity_to_unicode` (`OxEngine::Element#update_attrs`,
- * element.rb:104-110 — measured: `set_attr("intent" => "&#x2211;")` stores
+ * ox_engine/element.rb:104-110 — measured: `set_attr("intent" => "&#x2211;")` stores
  * `"∑"`), and `src/xml`'s `setAttribute` deliberately starts at the
  * already-decoded value (its header note), so the renderer decodes before
  * calling it. Exported from THIS internal module, not re-exported from the

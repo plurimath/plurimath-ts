@@ -1,6 +1,6 @@
 /**
- * Mirrors `function/hat.rb` — `Hat#to_mathml_without_math_tag` (:14): the
- * body `bar.rb` repeats verbatim (see `../bar/mathml.ts`), accent text `^`
+ * Mirrors `function/hat.rb` — `Hat#to_mathml_without_math_tag` (:24): the
+ * body `function/bar.rb` repeats verbatim (see `../bar/mathml.ts`), accent text `^`
  * (probes hat-x / hat-nil).
  */
 

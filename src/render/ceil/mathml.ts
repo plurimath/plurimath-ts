@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/ceil.rb` — `Ceil#to_mathml_without_math_tag` (:10): the
+ * Mirrors `function/ceil.rb` — `Ceil#to_mathml_without_math_tag` (:13): the
  * abs-shaped body with `&#x2308;` / `&#x2309;` (`paren_node`, :58) — probes
  * ceil-x / ceil-nil.
  */

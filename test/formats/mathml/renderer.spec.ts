@@ -540,6 +540,22 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
       toMathml(formula(new TernaryFunctionNode({ name: "Nosuch", parameterOne: x() }))),
     ).toThrow(RenderError);
   });
+
+  it("Hom is the one admitted name that reaches the <mo> arm of the unary default", () => {
+    // Measured on the pinned oracle through a Formula:
+    //   Hom.new(Symbol("x")) => <mrow><mo>hom</mo><mi>x</mi></mrow>
+    //   Hom.new(nil)         => <mo>hom</mo>
+    // `Hom.instance_method(:to_mathml_without_math_tag).owner` is
+    // UnaryFunction and `"hom"` is absent from UNARY_CLASSES, so the name
+    // element is <mo> and no rspace wrap is added — the spacing option is on
+    // by default here and still changes nothing.
+    expect(toMathml(formula(new UnaryFunctionNode({ name: "Hom", parameterOne: x() })))).toBe(
+      math("    <mrow>\n      <mo>hom</mo>\n      <mi>x</mi>\n    </mrow>"),
+    );
+    expect(toMathml(formula(new UnaryFunctionNode({ name: "Hom" })))).toBe(
+      math("    <mo>hom</mo>"),
+    );
+  });
 });
 
 describe("the boundary (the asciimath renderer's hardening, this format's walk)", () => {

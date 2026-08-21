@@ -2,8 +2,8 @@
  * Mirrors `function/unary_function.rb` — `UnaryFunction#to_asciimath` (:21)
  * and `#asciimath_value` (:196) — plus the name arms for the gem classes the
  * census folds into this carrier with their *own* `to_asciimath` overrides:
- * `left.rb`, `right.rb`, `lcm.rb`, `tr.rb`. Every other reachable name
- * renders the carrier default.
+ * `left.rb`, `right.rb`, `lcm.rb`, `tr.rb`. Every other name in
+ * `MEASURED_UNARY_NAMES` below renders the carrier default.
  *
  * Measured pin worth naming, because source-reading gets it wrong:
  * `UnaryFunction#to_asciimath` drops the parentheses exactly when the class
@@ -34,19 +34,39 @@ import {
 const UNARY_KEYWORDS: ReadonlySet<string> = new Set(ASCIIMATH_TRANSFORM_UNARY_CLASSES);
 
 /**
- * The class names this carrier has measured behaviour for — exactly the
- * AsciiMath-reachable set: every `get_class` name from the generated
- * reachability census with this carrier, plus `Tr`, which the transform
- * constructs directly without `get_class` (`newTr` in `../../formats/asciimath/transform.ts`).
+ * The class names this carrier has measured behaviour for. Three sources,
+ * and only the first is generated:
+ *
+ *   - the AsciiMath-reachable set — every `get_class` name from the
+ *     generated reachability census with this carrier;
+ *   - `Tr`, which the transform constructs directly without `get_class`
+ *     (`newTr` in `../../formats/asciimath/transform.ts`);
+ *   - `Hom`, which the transform never constructs at all — `"hom(x)"`
+ *     parses to bare symbols — but whose `to_asciimath` is the carrier's
+ *     own, so the default arm below already emits the gem's bytes.
+ *
+ * `Hom` is measured, not read off the class list: on the pinned oracle
+ * `Hom.instance_method(:to_asciimath).owner` is `UnaryFunction`, and of the
+ * 48 classes the census aliases onto this carrier it is the only one both
+ * outside the reachable set and carrier-default here. `"hom"` is absent
+ * from `UNARY_CLASSES`, so the parens stay: `Hom.new(Symbol("x"))` renders
+ * `"hom(x)"` and `Hom.new(nil)` renders `"hom"`.
+ *
  * A name outside the set raises rather than rendering the carrier default,
  * because the gem class it denotes may override `to_asciimath`
  * (`unreachableName` in `../../formats/asciimath/render-shared.ts`).
+ *
+ * The last two entries are gem-derived data typed by hand — the exception
+ * `TODO.plan/deferred.md` records under "The carrier name-guard sets are
+ * partly hand-listed"; both are held by behavioural pins in
+ * `test/formats/asciimath/renderer.spec.ts`.
  */
-const REACHABLE_UNARY_NAMES: ReadonlySet<string> = new Set([
+const MEASURED_UNARY_NAMES: ReadonlySet<string> = new Set([
   ...ASCIIMATH_TRANSFORM_GET_CLASS.filter(
     (entry) => entry.carrier === "Math::Function::UnaryFunction",
   ).map((entry) => classBasename(entry.rubyClass)),
   "Tr",
+  "Hom",
 ]);
 
 export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
@@ -83,7 +103,7 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
       return `[${cells.map((cell) => s(renderChild(cell, context, "tr.parameterOne"))).join(", ")}]`;
     }
     default:
-      if (!REACHABLE_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
+      if (!MEASURED_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
       return renderUnaryDefault(name.toLowerCase(), node.parameterOne, context);
   }
 }

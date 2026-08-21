@@ -2,8 +2,8 @@
  * Mirrors `function/unary_function.rb` — `UnaryFunction#to_unicodemath` (:90) —
  * plus the name arms for the gem classes the census folds into this carrier
  * with their *own* `to_unicodemath` overrides: `cancel.rb` (:21), `left.rb`
- * (:34), `right.rb` (:34), `tr.rb` (:65). Every other reachable name renders
- * the carrier default.
+ * (:34), `right.rb` (:34), `tr.rb` (:65). Every other name in
+ * `MEASURED_UNARY_NAMES` below renders the carrier default.
  *
  * That set of four was **measured**, not read off the class list: for each of
  * the 35 reachable names, `Klass.instance_method(:to_unicodemath).owner` on the
@@ -49,20 +49,44 @@ const APPLY = "⁡";
 const CANCEL_MARK = "╱";
 
 /**
- * The class names this carrier has measured behaviour for — exactly the
- * AsciiMath-reachable set: every `get_class` basename from the generated
- * reachability census with this carrier (the unicodemath-owned projection,
- * `UNICODEMATH_UNARY_CARRIER_NAMES`), plus `Tr`, which the transform
- * constructs directly without `get_class` (`newTr` in
- * `../../formats/asciimath/transform.ts`) and which therefore no census row
- * can carry. A name outside the set raises rather than rendering the carrier
- * default, because the gem class it denotes may override `to_unicodemath` —
- * the very way `Tr` produced the literal `"tr⁡"` in a table's rows before this
- * file had arms.
+ * The class names this carrier has measured behaviour for. Three sources,
+ * and only the first is generated:
+ *
+ *   - the AsciiMath-reachable set — every `get_class` basename from the
+ *     generated reachability census with this carrier (the unicodemath-owned
+ *     projection, `UNICODEMATH_UNARY_CARRIER_NAMES`);
+ *   - `Tr`, which the transform constructs directly without `get_class`
+ *     (`newTr` in `../../formats/asciimath/transform.ts`) and which
+ *     therefore no census row can carry;
+ *   - `Hom`, which the transform never constructs at all, but whose
+ *     `to_unicodemath` is the carrier's own, so the default arm below
+ *     already emits the gem's bytes.
+ *
+ * `Hom` is measured, not read off the class list: on the pinned oracle
+ * `Hom.instance_method(:to_unicodemath).owner` is `UnaryFunction`, and
+ * `Hom.new(Symbol("x"))` renders `"hom⁡x"`, `Hom.new(nil)` `"hom⁡"`.
+ *
+ * `Scarries` is the one other census-aliased class outside the reachable set
+ * whose `to_unicodemath` is the carrier's own (`"scarries⁡x"`, measured) —
+ * deliberately NOT admitted here, because this port has no `Scarries`
+ * behaviour measured in any other format and admitting a name in one format
+ * alone is a trap for the next reader. It is recorded in
+ * `TODO.plan/deferred.md` instead.
+ *
+ * A name outside the set raises rather than rendering the carrier default,
+ * because the gem class it denotes may override `to_unicodemath` — the very
+ * way `Tr` produced the literal `"tr⁡"` in a table's rows before this file
+ * had arms.
+ *
+ * The last two entries are gem-derived data typed by hand — the exception
+ * `TODO.plan/deferred.md` records under "The carrier name-guard sets are
+ * partly hand-listed"; both are held by behavioural pins in
+ * `test/formats/unicodemath/renderer.spec.ts`.
  */
-const REACHABLE_UNARY_NAMES: ReadonlySet<string> = new Set([
+const MEASURED_UNARY_NAMES: ReadonlySet<string> = new Set([
   ...UNICODEMATH_UNARY_CARRIER_NAMES,
   "Tr",
+  "Hom",
 ]);
 
 export function renderUnaryFunction(
@@ -79,7 +103,7 @@ export function renderUnaryFunction(
     case "Tr":
       return renderTr(node, context);
     default: {
-      if (!REACHABLE_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
+      if (!MEASURED_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
       // `UnaryFunction#to_unicodemath` (`unary_function.rb:90`):
       // `"#{class_name}⁡#{parameter_one&.to_unicodemath(options: options)}"`.
       const lowered = className(name);

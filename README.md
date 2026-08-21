@@ -23,12 +23,13 @@ drift apart silently.
 
 ## Status
 
-Early development. The foundation is in place: build tooling, quality gates,
-and the parser core. No input or output format has landed yet, so there is
-nothing to install from npm.
+Early development. The AsciiMath vertical has landed — corpus, model, grammar
+and transform — along with three renderers, published as the `./asciimath`,
+`./latex` and `./mathml` subpaths. The package is still private and unversioned,
+so there is nothing to install from npm yet.
 
-In progress is the AsciiMath vertical: corpus, model, grammar, transform, and
-the first three renderers.
+Correctness is gated rather than asserted: a registry of quality gates activates
+in milestones, and the current milestone is P1-baseline.
 
 - [`TODO.plan/`](TODO.plan/) — every phase from here to 1.0, what each
   contains, and which decisions are still open.

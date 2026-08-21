@@ -245,6 +245,47 @@ describe("Fenced raises where the gem raises", () => {
   it.each(cases.map(([name, build]) => [name, build] as const))("%s", (_name, build) => {
     expect(() => toUnicodemath(build())).toThrow(RenderError);
   });
+
+  it.each([
+    // The two overflow directions reach DIFFERENT Ruby errors, and this port
+    // reported both as FloatDomainError because `to_f`'s ±Infinity was folded
+    // to zero before the sign was tested. Measured on the oracle:
+    ["-1e400em", "Math::DomainError"],
+    ["1e400em", "FloatDomainError"],
+    ["1e309em", "FloatDomainError"],
+    ["-2em", "Math::DomainError"],
+    ["0em", "FloatDomainError"],
+  ])("names the Ruby error the gem raises for %s", (minsize, gemError) => {
+    // Throwing is not enough here: the message is what tells a reader which
+    // gem branch they landed in, and it was wrong for the negative overflow.
+    expect(() =>
+      toUnicodemath(
+        fenced({
+          one: lround(),
+          two: [sym("x")],
+          three: rround(),
+          options: { open_paren: { minsize } },
+        }),
+      ),
+    ).toThrow(gemError);
+  });
+
+  it("rounds the reachable half-way tie as Ruby does", () => {
+    // `log(0.45794672179195689)/log(1.25)` is exactly -3.5. Ruby rounds half
+    // away from zero to -4; `Math.round` would give -3. Measured: the gem emits
+    // "├-4(x)". This is the tie that makes `rubyRound` load-bearing rather than
+    // theoretical.
+    expect(
+      toUnicodemath(
+        fenced({
+          one: lround(),
+          two: [sym("x")],
+          three: rround(),
+          options: { open_paren: { minsize: "0.45794672179195689em" } },
+        }),
+      ),
+    ).toBe("├-4(x)");
+  });
 });
 
 /**

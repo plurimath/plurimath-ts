@@ -8,7 +8,7 @@
  */
 
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
-import { present, renderChild, renderOptionalChild } from "../../formats/unicodemath/render-shared";
+import { present, renderChild } from "../../formats/unicodemath/render-shared";
 
 /** U+2601 CLOUD, for a background colour. */
 const BACKGROUND = "☁";

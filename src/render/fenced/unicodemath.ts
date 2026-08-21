@@ -17,10 +17,15 @@
  *     replaces the whole fence, parens included;
  *   - the open and close parens each resolve through their own three-branch
  *     chain reading `self.options` (:271, :284);
- *   - `convert_paren_size` (:301) rounds a **logarithm**. Ruby rounds half
- *     away from zero, JS `Math.round` rounds toward +infinity, and the values
- *     go negative for any size below 1em — so the difference is reachable,
- *     not theoretical. Hence `rubyRound`.
+ *   - `convert_paren_size` (:301) rounds a **logarithm**. Ruby rounds half away
+ *     from zero, JS `Math.round` rounds toward +infinity, so they differ only
+ *     at an exact `-x.5`. This once argued the difference was reachable because
+ *     the values go negative below 1em, which does not follow — negativity
+ *     alone produces no tie. The conclusion held anyway, and here is the tie
+ *     that proves it: `minsize: "0.45794672179195689em"` makes
+ *     `log(size)/log(1.25)` exactly `-3.5`, where Ruby rounds to -4 and
+ *     `Math.round` gives -3. Measured, the gem emits `"├-4(x)"`. Hence
+ *     `rubyRound`.
  *
  * Measured, `to_unicodemath` on a Fenced does NOT decode HTML entities: a
  * mini-sized `x` came back as `"(&#x2093;)"`. The decode belongs to
@@ -28,7 +33,7 @@
  * formula, which is why `formulaBoundary` owns it.
  */
 
-import { RenderError } from "../../core/index";
+import { type MathNode, RenderError } from "../../core/index";
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
 import {
   FORMAT,
@@ -84,9 +89,16 @@ export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): st
   // empty fence. An empty ARRAY is fine and gives "()" — measured.
   if (!Array.isArray(contents)) throw crash("fenced.parameterTwo", "NoMethodError on nil");
 
+  // `param.to_unicodemath(options: options)` (`fenced.rb:107-111`) — no `&.`,
+  // so a nil ELEMENT raises where a nil LIST raised on the line above.
+  // `renderOptionalChild` returned "" for it. Measured:
+  //   gem   Fenced("(", [Symbol("x"), nil], ")")  !! NoMethodError
+  //   port                                        => "(x )"
   const rendered = contents
     .map((param) =>
-      isChooseFrac(param) ? chooseFrac(param, context) : renderOptionalChild(param, context),
+      isChooseFrac(param)
+        ? chooseFrac(param, context)
+        : renderChild(param, context, "fenced.parameterTwo"),
     )
     .join(" ");
 
@@ -112,8 +124,22 @@ export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): st
  * (which throws) is correct here where `renderOptionalChild` would be wrong.
  */
 function miniSizedUnicode(node: NodeOf<"fenced">, context: RenderContext): string {
-  const contents = Array.isArray(node.parameterTwo) ? node.parameterTwo : [];
-  const inner = contents.map((param) => renderOptionalChild(param, context)).join("");
+  // `parameter_two&.map { … }` (`fenced.rb:183-185`): `&.` guards nil ONLY, so
+  // a non-nil non-array is sent `map` and raises. Substituting `[]` for it
+  // swallowed that. Measured:
+  //   gem   Fenced(Number(mini), "s", ")")  !! NoMethodError ('map' for String)
+  //   port                                   => "&#x2081;)"
+  const raw = node.parameterTwo;
+  if (raw !== null && raw !== undefined && !Array.isArray(raw)) {
+    throw crash("fenced.parameterTwo", "NoMethodError on a non-array");
+  }
+  const contents = Array.isArray(raw) ? raw : [];
+  // And inside the map the gem is again unguarded, so a nil ELEMENT raises too:
+  //   gem   Fenced("(", [Number(mini), nil], ")")  !! NoMethodError
+  //   port                                          => "(&#x2081;)"
+  const inner = contents
+    .map((param) => renderChild(param, context, "fenced.parameterTwo"))
+    .join("");
   const open = renderChild(node.parameterOne, context, "fenced.parameterOne") ?? "";
   const close = renderChild(node.parameterThree, context, "fenced.parameterThree") ?? "";
   return `${open}${inner}${close}`;
@@ -123,7 +149,7 @@ function miniSizedUnicode(node: NodeOf<"fenced">, context: RenderContext): strin
 function isChooseFrac(param: unknown): boolean {
   if (!isNode(param) || param.kind !== "frac") return false;
   const options = (param as { readonly options?: Record<string, unknown> | null }).options;
-  return options !== undefined && options !== null && "choose" in options;
+  return options !== undefined && options !== null && Object.hasOwn(options, "choose");
 }
 
 /**
@@ -182,7 +208,12 @@ function isVertParen(node: NodeOf<"fenced">): boolean {
 function openParen(node: NodeOf<"fenced">, context: RenderContext): string {
   const paren = renderOptionalChild(node.parameterOne, context);
   const options = node.options;
-  const has = (key: string) => options !== undefined && options !== null && key in options;
+  // `Object.hasOwn`, not `key in options`: Ruby's `Hash#key?` sees only the
+  // hash's own keys, while `in` walks the prototype chain and answers true
+  // for `constructor`, `toString` and friends. No gem option is named any of
+  // those, so nothing reached it — but the guard should not depend on that.
+  const has = (key: string) =>
+    options !== undefined && options !== null && Object.hasOwn(options, key);
 
   if (has("open_paren")) {
     const minsize = (options?.open_paren as { minsize?: unknown } | undefined)?.minsize;
@@ -198,7 +229,12 @@ function openParen(node: NodeOf<"fenced">, context: RenderContext): string {
 function closeParen(node: NodeOf<"fenced">, context: RenderContext): string {
   const paren = renderOptionalChild(node.parameterThree, context);
   const options = node.options;
-  const has = (key: string) => options !== undefined && options !== null && key in options;
+  // `Object.hasOwn`, not `key in options`: Ruby's `Hash#key?` sees only the
+  // hash's own keys, while `in` walks the prototype chain and answers true
+  // for `constructor`, `toString` and friends. No gem option is named any of
+  // those, so nothing reached it — but the guard should not depend on that.
+  const has = (key: string) =>
+    options !== undefined && options !== null && Object.hasOwn(options, key);
 
   if (has("close_paren")) {
     const minsize = (options?.close_paren as { minsize?: unknown } | undefined)?.minsize;
@@ -219,9 +255,45 @@ function isCloseOrEnd(node: NodeOf<"fenced">): boolean {
   return valueHasAny(node.parameterThree, ["&#x2524;", "&#x3017;", ":}"]);
 }
 
+/**
+ * What `field.value` returns in the gem, for a port node.
+ *
+ * `"value" in node` was used as the port's `respond_to?(:value)`, on a
+ * measurement over five kinds. Five was too few. `Math::Function::Text` defines
+ * `def value; parameter_one; end` (`text.rb:107-109`) — a METHOD, not a stored
+ * field — so the port's `text` node has no `value` property and the membership
+ * test answered false, throwing where the gem returns a value:
+ *
+ *   gem   Fenced(Text("{:"), [x], ")", open_prefixed: true)   "├x)"
+ *   gem   Fenced("(", [x], Text(":}"), close_prefixed: true)  "(x┤"
+ *   gem   Fenced("(", [x], Text("zz"), close_prefixed: true)  "(x┤\"zz\""
+ *   port  all three                                           RenderError
+ *
+ * Re-measured across all 38 node kinds against live gem instances: `text` is
+ * the ONLY kind where the two disagree, so this is the whole of the gap.
+ */
+function gemValue(field: MathNode): { readonly has: boolean; readonly value: unknown } {
+  if (field.kind === "text") {
+    return { has: true, value: (field as { readonly parameterOne?: unknown }).parameterOne };
+  }
+  return { has: "value" in field, value: (field as { readonly value?: unknown }).value };
+}
+
 function valueHasAny(field: unknown, needles: readonly string[]): boolean {
-  if (!isNode(field)) return false;
-  const value = (field as { readonly value?: string | null }).value;
+  // `parameter_one&.value&.include?(…)`. The FIRST `&.` guards nil only, so
+  // anything else is sent `value`, and a kind that does not answer it raises:
+  //
+  //   gem   Fenced(Abs(x), [x], ")", open_prefixed: true)  !! NoMethodError
+  //   port                                                  => "⒜(x)x)"
+  if (field === null || field === undefined) return false;
+  if (!isNode(field)) throw crash("fenced.parameterOne/Three", "NoMethodError reading value");
+
+  const { has, value } = gemValue(field);
+  if (!has) throw crash("fenced.parameterOne/Three", "NoMethodError reading value");
+
+  // The SECOND `&.` guards a nil value. A `Formula`'s value is an Array, where
+  // `Array#include?` is element equality against a needle string and so is
+  // always false — measured, gem and port agree on that shape.
   if (typeof value !== "string") return false;
   return needles.some((needle) => value.includes(needle));
 }
@@ -242,16 +314,27 @@ function parenSize(minsize: unknown, at: string): string {
     throw crash(`fenced.options.${at}.minsize`, "NoMethodError on nil");
   }
   const size = rubyToFloat(minsize.replace(/em$/, ""));
-  // Ruby reaches FloatDomainError from BOTH ends: `log(0)` is -Infinity for a
-  // size that parses to zero, and `log(Infinity)` is +Infinity for a size like
-  // "1e309em" whose `to_f` overflows. `Number.isFinite` folds the overflow to
-  // zero above, so both arrive here — the message names the pair rather than
-  // claiming the negative one for an input that overflowed upward.
-  if (size === 0)
-    throw crash(`fenced.options.${at}.minsize`, "FloatDomainError (log is not finite)");
-  if (size < 0) throw crash(`fenced.options.${at}.minsize`, "Math::DomainError");
 
-  return String(rubyRound(Math.log(size) / Math.log(1.25)));
+  // The two overflow directions reach DIFFERENT Ruby errors, and folding them
+  // both to zero named the wrong one for half of them. Measured:
+  //
+  //   "-1e400".to_f -> -Infinity, Math.log(-Infinity)        !! Math::DomainError
+  //   "1e400".to_f  ->  Infinity, Math.log(Infinity).round   !! FloatDomainError
+  //   "0em"                       Math.log(0) is -Infinity   !! FloatDomainError
+  //
+  // so the sign is tested first, on the unfolded value, and `-1e400em` — which
+  // this port used to report as FloatDomainError — is a Math::DomainError like
+  // any other negative size.
+  if (size < 0) throw crash(`fenced.options.${at}.minsize`, "Math::DomainError");
+  if (size === 0)
+    throw crash(`fenced.options.${at}.minsize`, "FloatDomainError (log(0) is -Infinity)");
+
+  const quotient = Math.log(size) / Math.log(1.25);
+  // `Math.log(Infinity)` is Infinity, and Ruby raises when rounding it.
+  if (!Number.isFinite(quotient))
+    throw crash(`fenced.options.${at}.minsize`, "FloatDomainError (log is not finite)");
+
+  return String(rubyRound(quotient));
 }
 
 /**
@@ -277,11 +360,20 @@ function rubyToFloat(text: string): number {
   //   ".5"   to_f 0.5  (the old pattern required a leading digit -> 0)
   //   "1__0" to_f 1.0  (the old pattern stripped every `_` -> 10)
   // Ruby stops at the DOUBLE underscore, keeping only the leading `1`.
+  // The digits AFTER a `.` are optional too, which a 25-spelling check missed:
+  // Ruby reads `digits . exponent` and this pattern could not reach `[eE]` past
+  // a bare dot. Measured, 5 of 3,057 fuzzed spellings:
+  //   "1.e5"  to_f 100000.0        (this returned 0, giving "├0(x)" for "├52(x)")
+  //   "1.E5"  to_f 100000.0    "1.e-5" to_f 1.0e-05    "91.E11" to_f 9100000000000.0
   const match =
-    /^[ \t\r\n\f\v]*[+-]?(?:\d+(?:_\d+)*(?:\.\d+(?:_\d+)*)?|\.\d+(?:_\d+)*)(?:[eE][+-]?\d+(?:_\d+)*)?/.exec(
+    /^[ \t\r\n\f\v]*[+-]?(?:\d+(?:_\d+)*(?:\.(?:\d+(?:_\d+)*)?)?|\.\d+(?:_\d+)*)(?:[eE][+-]?\d+(?:_\d+)*)?/.exec(
       text,
     );
   if (match === null) return 0;
-  const parsed = Number.parseFloat(match[0].replace(/_/g, ""));
-  return Number.isFinite(parsed) ? parsed : 0;
+  // Overflow is NOT folded to zero. Ruby's `to_f` returns ±Infinity for a
+  // literal that overflows, and the caller needs the sign to pick the same
+  // error the gem raises. A non-numeric spelling like "Infinity" or "NaN" never
+  // reaches here — it fails the anchored match above and returns 0, which is
+  // what Ruby's `to_f` gives for it.
+  return Number.parseFloat(match[0].replace(/_/g, ""));
 }

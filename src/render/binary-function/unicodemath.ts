@@ -151,7 +151,7 @@ function renderPower(node: NodeOf<"binaryFunction">, context: RenderContext): st
   const one = node.parameterOne;
   const two = node.parameterTwo;
 
-  if (isAccented(two, context)) {
+  if (isAccented(two)) {
     // `"#{parameter_one.to_unicodemath}#{parameter_two.to_unicodemath.gsub(/\s+/, '')}"`
     // — `parameter_one` is read unguarded, so a nil base raises: measured,
     // `Power(nil, Power(prime, y)).to_unicodemath` => `NoMethodError:
@@ -206,7 +206,7 @@ function renderPower(node: NodeOf<"binaryFunction">, context: RenderContext): st
  * `Formula::Mrow < Formula`, so an mrow answers here too — measured,
  * `Power(x, Mrow[prime, y])` => `"x′y"`.
  */
-function isAccented(field: unknown, context: RenderContext): boolean {
+function isAccented(field: unknown): boolean {
   if (!isNode(field)) return false;
 
   if (field.kind === "symbol") return primeUnicode(field);

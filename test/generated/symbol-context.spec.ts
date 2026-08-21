@@ -152,3 +152,132 @@ describe("the probe that produced the matrix", () => {
     }
   });
 });
+
+/**
+ * The behavioural half — the matrix's entries as the port's actual output.
+ *
+ * Everything above checks the generated matrix against itself: that each named
+ * symbol is one a slice can look up, each axis one the manifest declares, each
+ * entry a real difference. None of it renders anything. This half closes that,
+ * for the axes that are reachable, and says plainly which are not.
+ *
+ * Measured against the pinned oracle (plurimath 0.11.6, 00c52783).
+ */
+
+import {
+  BinaryFunctionNode,
+  FormulaNode,
+  SymbolNode,
+  TableNode,
+  UnaryFunctionNode,
+} from "../../src/core/index";
+import { parseAsciimath } from "../../src/formats/asciimath/parser";
+import { toAsciimath } from "../../src/formats/asciimath/renderer";
+import { toLatex } from "../../src/formats/latex/renderer";
+import { toMathml } from "../../src/formats/mathml/renderer";
+import { toUnicodemath } from "../../src/formats/unicodemath/renderer";
+
+const comma = () => new SymbolNode({ id: "Comma" });
+
+/** A one-cell table whose cell holds `cell` directly. */
+const tableOf = (cell: unknown) =>
+  new FormulaNode({
+    value: [
+      new TableNode({
+        value: [
+          new UnaryFunctionNode({
+            name: "Tr",
+            parameterOne: [new BinaryFunctionNode({ name: "Td", parameterOne: [cell] as never })],
+          }),
+        ] as never,
+      }),
+    ],
+  });
+
+describe("the table axis, behaviourally", () => {
+  /**
+   * The whole exception, and it is subtler than "inside a table".
+   * `Td#td_asciimath_options` (`td.rb:133`) branches on the CELL's class:
+   *
+   *   when Symbols::Comma  -> options.merge(literal_comma: true)
+   *   when Math::Formula   -> options.merge(table: true)
+   *   else                 -> options unchanged
+   *
+   * and `Comma#to_asciimath` (`comma.rb:21`) reads `options[:table]` and
+   * nothing else. So a Comma placed DIRECTLY in a cell never sees the axis
+   * that governs it, and `literal_comma` — the option the gem sets for exactly
+   * that case — is read by nobody. Measured:
+   *
+   *   Td > Comma            => "[[,]]"
+   *   Td > Formula > Comma  => "[[\",\"]]"
+   *
+   * Same symbol, same table, different wrapper. A test that only built one of
+   * these would report the exception as working or as dead, and be wrong
+   * either way.
+   */
+  it("renders a Comma bare when it is the cell itself", () => {
+    expect(toAsciimath(tableOf(comma()))).toBe("[[,]]");
+  });
+
+  it("renders a Comma quoted when the cell is a formula around it", () => {
+    expect(toAsciimath(tableOf(new FormulaNode({ value: [comma()] })))).toBe('[[","]]');
+  });
+
+  it("leaves a Comma bare outside any table", () => {
+    expect(toAsciimath(new FormulaNode({ value: [comma()] }))).toBe(",");
+  });
+
+  it("is asciimath-only, which is why the other matrices are empty", () => {
+    // `Comma#to_unicodemath` takes `(**)` — it cannot even receive the axis —
+    // and no latex render consults it. Measured: both render "," in a table.
+    expect(toUnicodemath(tableOf(new FormulaNode({ value: [comma()] })))).toBe("■(,)");
+    expect(toLatex(tableOf(new FormulaNode({ value: [comma()] })))).toContain(",");
+    expect(toLatex(tableOf(new FormulaNode({ value: [comma()] })))).not.toContain('","');
+  });
+
+  it("exercises the exception by BUILDING the node, never by parsing for it", () => {
+    // `","` in AsciiMath source parses as quoted Text, not as a Comma symbol,
+    // in the gem and in this port alike. A test written through the parser
+    // would pass while exercising the text path and proving nothing about the
+    // exception — so this asserts the two are genuinely different objects.
+    const parsed = toAsciimath(parseAsciimath('[[a "," b],[c,d]]'));
+    expect(parsed).toBe('[[a "," b], [c, d]]');
+    // …and the built Comma reaches the same bytes by a different route, which
+    // is what makes the parser test useless as coverage for this axis.
+    expect(toAsciimath(tableOf(new FormulaNode({ value: [comma()] })))).toBe('[[","]]');
+  });
+});
+
+describe("the intent axis is unreachable, and says so rather than being skipped", () => {
+  /**
+   * Five of the six MathML exceptions vary only on `intent`, and `toMathml`
+   * REFUSES that option by name — the intent pipeline (intentify, intent
+   * post-processing) is unmeasured (`src/formats/mathml/renderer.ts`,
+   * `DEFERRED_OPTIONS`). So this gate cannot become fully behavioural until
+   * that deferral lifts, and pretending otherwise by covering only the
+   * reachable axes would overstate what it proves.
+   */
+  const IntentOnly = ["Dd", "Ii", "Intercal", "Jj", "UpcaseDd"];
+
+  it("names every exception that varies only on intent", () => {
+    const intentOnly = MATHML_SYMBOL_EXCEPTIONS.filter(
+      (entry) => entry.axes.length === 1 && entry.axes[0] === "intent",
+    ).map((entry) => entry.id);
+    expect(intentOnly.sort()).toStrictEqual([...IntentOnly].sort());
+  });
+
+  it("refuses the option, so the deferral is real and not merely documented", () => {
+    expect(() =>
+      toMathml(new FormulaNode({ value: [new SymbolNode({ id: "Dd" })] }), {
+        intent: true,
+      } as never),
+    ).toThrow(/intent/);
+  });
+
+  it("renders the intent:false variant, which is the one the port does cover", () => {
+    // The exception's `intent: false` row is reachable and is what ships today.
+    const out = toMathml(new FormulaNode({ value: [new SymbolNode({ id: "Dd" })] }));
+    expect(out).toContain("&#x2146;");
+    expect(out).not.toContain("intent=");
+  });
+});

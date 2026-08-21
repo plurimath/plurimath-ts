@@ -88,6 +88,7 @@
 
 import { XHTML1_ENTITY_CODEPOINTS } from "./generated/html-entities";
 import { SYMBOL_CANONICAL_VALUES } from "./generated/symbol-canonical";
+import { rubyNumberToS, rubyUnreproducible } from "./ruby-semantics";
 
 /** A node's options or attributes hash. Ruby symbol keys arrive as strings. */
 export type NodeOptions = Readonly<Record<string, unknown>>;
@@ -202,6 +203,55 @@ function assignedSequence(
 /** A string slot Ruby's `initialize` assigns unconditionally, defaulting to `nil`. */
 function assignedValue(value: string | null | undefined): string | null {
   return value === undefined ? null : value;
+}
+
+/**
+ * `Symbols::Symbol#initialize` (`symbols/symbol.rb:12`):
+ *
+ *   @value = sym.is_a?(Array) ? sym.join : sym&.to_s
+ *
+ * The symbol slot COERCES, unlike the two other users of `assignedValue`:
+ * `Number#initialize` converts only a `Parslet::Slice` and stores anything else
+ * as-is, so they cannot share one helper.
+ *
+ * Ruby needs this because it is untyped and Parslet hands it slices and arrays.
+ * This port declares the slot `string | null`, and a reviewer traced every
+ * producer on the AsciiMath parse path: `newSymbolOfClass` passes `value: null`
+ * and `newBareSymbol` passes a string, so nothing real reaches the other
+ * branches. An earlier version of this comment claimed the opposite — that a
+ * cast in `transform.ts` made arrays reachable — which was inferred from the
+ * cast rather than traced to its producers, and was wrong.
+ *
+ * So the coercion is kept for the cases it can reproduce EXACTLY, and refuses
+ * the rest rather than inventing a string. Two rounds of review were spent on
+ * invented strings here: a plain object became `"[object Object]"` inside an
+ * array, and once that was "fixed" a Range became `"{toString: ...}"` and a
+ * Struct `"{x: 1, y: \"x\"}"` where the gem gives `"1..3"` and
+ * `"#<struct ...>"`. Ruby's `to_s` on an arbitrary object cannot be reproduced
+ * in JavaScript, so the honest answer is to refuse loudly.
+ *
+ * A `TypeError` and not a `PlurimathError`: this fires only on a value the
+ * declared type already forbids, which is a caller type violation rather than a
+ * parse or render failure, and the error contract's codes are for the latter.
+ */
+function symbolValue(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  // `Array#join` calls `to_s` on each element and concatenates with no
+  // separator, recursing into nested arrays; a nil element contributes "".
+  // Measured: `["x", [1, 2], "y"].join` is "x12y", `["x", nil, "y"].join` "xy".
+  if (Array.isArray(value)) return value.map((entry) => symbolValue(entry) ?? "").join("");
+  if (typeof value === "string") return value;
+
+  const why = rubyUnreproducible(value);
+  if (why !== null) {
+    throw new TypeError(
+      `Symbols::Symbol#initialize coerces its argument with to_s, and ${why} — ` +
+        "pass a string or null (src/core/ruby-semantics.ts)",
+    );
+  }
+
+  if (typeof value === "number") return rubyNumberToS(value) as string;
+  return String(value);
 }
 
 /**
@@ -1210,7 +1260,7 @@ export class SymbolNode extends NodeBase {
     this.miniSupSized = init.miniSupSized;
     this.options = copyOptions(init.options);
     this.slashed = init.slashed;
-    this.value = assignedValue(init.value);
+    this.value = symbolValue(init.value);
   }
 }
 

@@ -3492,17 +3492,25 @@ module CorpusGenerator
   # `Core#unicodemath_field_value` is
   # `field.class_name == "symbol" ? field.value : Utility.hexcode_in_input(field)`,
   # and `hexcode_in_input` returns the first `input(:unicodemath)` entry matching
-  # `/&#x.+;/`. Three call sites read it — `prime_unicode?` (`core.rb:415`),
-  # `Overset#unicode_accent?`/`Underset#unicode_accent?` — and all three both
-  # COMPARE against entity tables and EMIT the value, so a decoded render is the
-  # wrong string on both counts. Measured: `Overset(Acute, Symbol("x"))` gives
-  # `"(x)&#x301;"`, not `"(x)́"`.
+  # `/&#x.+;/`. Nine call sites read `unicodemath_field_value` (`table.rb:411`,
+  # `core.rb:420`, `underset.rb:93/129/135`, `overset.rb:64/66/115/126`), and
+  # `symbol_prime?` (`unicode_math/utility.rb:188`) reads `hexcode_in_input`
+  # directly, bypassing it. They both COMPARE against entity tables and EMIT the
+  # value, so a decoded render is the wrong string on both counts. Measured:
+  # `Overset(Acute, Symbol("x"))` gives `"(x)&#x301;"`, not `"(x)́"`.
   #
-  # The classes with NO such entry are emitted separately rather than omitted:
-  # `hexcode_in_input` returns nil for them and the gem then calls `.include?`
-  # on nil and RAISES, so "absent" is a behaviour the port has to reproduce, not
-  # a row to skip. Measured on the oracle: 4 of 1,460 classes make
-  # `prime_unicode?` raise (`If`, `Paren`, `Bar`, `Ul`).
+  # The classes with NO such entry are emitted separately rather than omitted,
+  # because "absent" is a behaviour the port has to reproduce rather than a row
+  # to skip. Measured on the oracle: `hexcode_in_input` returns nil for 10 of
+  # 1,460 classes — `Bar`, `If`, `Ul`, `Paren`, and `Paren::Lcurly/Lround/
+  # Lsquare/Rcurly/Rround/Rsquare`.
+  #
+  # What nil DOES depends on the reader, so do not generalise from one. Measured
+  # with `Bar`: only `prime_unicode?` (`core.rb:420`) raises, calling `.include?`
+  # on nil; `symbol_prime?` returns nil and BOTH `unicode_accent?` return false,
+  # because `match_unicode?` is `Array#include?`/`Hash#value?`, nil-safe by
+  # construction. A port that throws at every one of these sites is wrong at
+  # eight of the nine.
   def unicodemath_hexcode_tables
     with_hexcode = {}
     without = []

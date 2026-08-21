@@ -41,7 +41,7 @@ describe("the rejection corpus", () => {
     // A rejection suite that runs zero cases passes in silence, and this
     // repository has already shipped one gate that did exactly that.
     expect(rejections.length).toBeGreaterThan(0);
-    expect(rejections.length).toBe(11);
+    expect(rejections.length).toBe(13);
   });
 
   it("names every case exactly once", () => {
@@ -105,7 +105,7 @@ describe("every recorded rejection is refused here too", () => {
 /**
  * The port's `ParseError.index` per case, measured against this pin.
  *
- * Six of the seven unshifted cases reproduce the gem's recorded offset
+ * Eight of the nine unshifted cases reproduce the gem's recorded offset
  * exactly, and all four shifted cases map back to the right position in the
  * ORIGINAL input. Those counts are checked rather than merely stated: "the
  * counts this header names are derived, not recited" below computes all three
@@ -135,6 +135,11 @@ const MAPPED_INDEX: ReadonlyMap<string, number> = new Map([
   ["frac-trailing-after-braces", 6],
   ["frac-trailing-after-parens", 6],
   ["frac-trailing-after-both", 11],
+  // The widened corpus's two explicit-fence rejections. The gem records 8 for
+  // both and the port reports 8 for both, so these agree — unlike
+  // `right-unclosed`, whose disagreement is pinned below.
+  ["left-right-curly", 8],
+  ["left-right-vert", 8],
 ]);
 
 /** The one case whose mapped index does not reproduce the gem's. */
@@ -148,18 +153,18 @@ describe("the port maps the failure position back to the original input", () => 
   });
 
   it("the counts this header names are derived, not recited", () => {
-    // 7 unshifted / 4 shifted / 6 of the 7 agreeing, computed from the corpus
+    // 9 unshifted / 4 shifted / 8 of the 9 agreeing, computed from the corpus
     // and MAPPED_INDEX rather than restated from the paragraph above. On this
     // pin, `right-unclosed` is the only unshifted case where the two numbers
     // differ (gem 13, port 8); every shifted case differs from its recorded
     // offset by construction, because the recorded one indexes `preprocessed`.
     const unshifted = rejections.filter((entry) => entry.input === entry.preprocessed);
     const shifted = rejections.filter((entry) => entry.input !== entry.preprocessed);
-    expect(unshifted.length).toBe(7);
+    expect(unshifted.length).toBe(9);
     expect(shifted.length).toBe(4);
 
     const agreeing = unshifted.filter((entry) => MAPPED_INDEX.get(entry.id) === entry.index);
-    expect(agreeing.length).toBe(6);
+    expect(agreeing.length).toBe(8);
     expect(
       unshifted
         .filter((entry) => MAPPED_INDEX.get(entry.id) !== entry.index)
@@ -182,15 +187,23 @@ describe("the port maps the failure position back to the original input", () => 
   );
 
   it("reproduces the gem's recorded offset wherever the two agree", () => {
-    // The assertion that would fail if the port stopped mapping: for the
-    // shifted cases the recorded (preprocessed) offset and the mapped
-    // (original) offset are DIFFERENT numbers, so returning the recorded one
-    // unchanged fails here.
-    for (const entry of rejections) {
-      if (entry.id === KNOWN_POSITION_DIVERGENCE) continue;
-      expect(MAPPED_INDEX.get(entry.id), entry.id).toBe(
-        entry.input === entry.preprocessed ? entry.index : MAPPED_INDEX.get(entry.id),
-      );
+    // The UNSHIFTED cases only, which is what "wherever the two agree" means:
+    // their recorded offset indexes the original input, so the gem's number and
+    // the port's are directly comparable. A shifted case's recorded offset
+    // indexes `preprocessed` instead and is not comparable here — that it MOVED
+    // is asserted in "genuinely exercises the mapping" below, and the port's
+    // actual `ParseError.index` is pinned per case by the block above, shifted
+    // or not.
+    //
+    // An earlier version looped over every case and, for the shifted ones,
+    // compared `MAPPED_INDEX.get(id)` to itself. That branch could not fail,
+    // while the comment above it claimed it was the one that would.
+    const comparable = rejections.filter(
+      (entry) => entry.input === entry.preprocessed && entry.id !== KNOWN_POSITION_DIVERGENCE,
+    );
+    expect(comparable.length).toBeGreaterThan(0);
+    for (const entry of comparable) {
+      expect(MAPPED_INDEX.get(entry.id), entry.id).toBe(entry.index);
     }
   });
 

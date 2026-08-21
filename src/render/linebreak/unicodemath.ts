@@ -8,7 +8,7 @@
  */
 
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
-import { renderOptionalChild, renderTruthyChild } from "../../formats/unicodemath/render-shared";
+import { renderTruthyChild } from "../../formats/unicodemath/render-shared";
 
 const NEWLINE_ENTITY = "&#xa;";
 

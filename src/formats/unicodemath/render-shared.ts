@@ -32,6 +32,7 @@ import {
   RenderError,
 } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
+import { rubyNumberToS } from "../../core/ruby-semantics";
 import { UNICODEMATH_HEXCODE_IN_INPUT } from "../../generated/unicodemath/render-tables";
 
 export const FORMAT = "unicodemath";
@@ -62,33 +63,18 @@ export type RenderFn<K extends NodeKind> = (
 ) => string | null;
 
 /**
- * The glyphs `prime_unicode?` looks for, decoded.
+ * The five entities `prime_unicode?` looks for, as `Utility.primes_constants`
+ * actually holds them — `PREFIXED_PRIMES` merged with `{ sprime: "&#x27;" }`.
  *
- * The gem compares against entity *text* — `Utility.primes_constants` is
- * `PREFIXED_PRIMES` merged with `{ sprime: "&#x27;" }`, and
- * `unicodemath_field_value` returns `Utility.hexcode_in_input(field)`, which is
- * also entity text, so the two match as strings. This port's symbol table holds
- * **decoded** glyphs, so the comparison is against the decoded forms instead.
- *
- * Measured rather than derived: `class_name` for a concrete symbol class is its
- * own name (`"prime"`, `"sum"`), not `"symbol"`, so the `field.value` branch of
- * `unicodemath_field_value` is never the one that runs for these — `value` is
- * `nil` on every concrete symbol probed. Reading the source without probing
- * gives the wrong branch.
- */
-/**
- * The same five, as the ENTITY text `Utility.primes_constants` actually holds:
- * `["&#x2057;", "&#x2034;", "&#x2033;", "&#x2032;", "&#x27;"]`.
- *
- * `unicodemath_field_value` returns `field.value` RAW for a generic
- * `Symbols::Symbol`, so the gem compares entity against entity there — and a
- * generic symbol's render is the undecoded entity, which matches no decoded
- * glyph. Measured: `Symbol("&#x2032;")` through `Symbol("&#x27;")` are ALL
- * primes to the gem. Checking only `&#x27;` caught one of the five.
- *
- * Concrete symbol classes need no entity check: across all 1,460 of them the
- * decoded-glyph comparison below agrees with the gem in every case (measured,
- * zero disagreements), because their renders are already decoded.
+ * Entity text, not decoded glyphs, because both arms of
+ * `unicodemath_field_value` return entity text and the gem's comparison is a
+ * plain string match. An earlier version of this file held the DECODED glyphs
+ * and compared them against the render. That agreed with the gem for all 1,460
+ * concrete classes, which is why it survived so long, but it could not
+ * reproduce the generic-symbol arm: `Symbol("&#x2032;")` through
+ * `Symbol("&#x27;")` are all primes to the gem, and a generic symbol's render
+ * is the undecoded entity, which matches no decoded glyph. Checking only
+ * `&#x27;` caught one of the five.
  */
 const PRIME_ENTITIES: readonly string[] = [
   "&#x2057;",
@@ -96,14 +82,6 @@ const PRIME_ENTITIES: readonly string[] = [
   "&#x2033;",
   "&#x2032;",
   "&#x27;",
-];
-
-const PRIME_GLYPHS: readonly string[] = [
-  "′", // &#x2032; prime
-  "″", // &#x2033; double prime
-  "‴", // &#x2034; triple prime
-  "⁗", // &#x2057; quadruple prime
-  "'", // &#x27; the apostrophe `sprime`
 ];
 
 /**
@@ -123,38 +101,56 @@ const PRIME_GLYPHS: readonly string[] = [
 export function primeUnicode(node: MathNode | undefined): boolean {
   if (node === undefined || node.kind !== "symbol") return false;
 
-  // `unicodemath_field_value(field)` is
-  //   `field.class_name == "symbol" ? field.value : Utility.hexcode_in_input(field)`
-  // so the gem compares RAW ENTITY TEXT on both arms — never the rendered
-  // glyph. An earlier version compared decoded glyphs against the render.
-  // That agreed with the gem for all 1,460 concrete symbol classes (measured,
-  // zero disagreements), which is why it survived so long, but it cannot
-  // reproduce the two arms it is standing in for.
-  const id = node.id;
-  if (id === "Symbol") {
-    // `class_name == "symbol"` — only the generic class. Its `value` is the
-    // raw entity, and a generic symbol carrying ANY prime entity is a prime:
-    // measured, `Symbol("&#x2032;")` through `Symbol("&#x27;")` all answer true.
-    const value = (node as { readonly value?: string | null }).value;
-    return typeof value === "string" && PRIME_ENTITIES.some((e) => value.includes(e));
-  }
+  // `return true if field&.value&.include?("&#x27;")` (`core.rb:417`) — the
+  // gem's SECOND line, which reads the node's own raw `value` for the
+  // apostrophe on EVERY symbol class, generic or concrete, before any hexcode
+  // lookup happens.
+  //
+  // A rewrite of this function dropped that line, on a reading of the gem that
+  // had "nothing between the guard and the field value". There is: this. The
+  // cost was one silent wrong answer and two spurious throws — measured on a
+  // concrete class carrying the entity as its value:
+  //
+  //   gem  PowerBase(x, x, Alpha("&#x27;"))   "xα_(x)"      port "x_(x)^(α)"  WRONG
+  //   gem  PowerBase(x, x, Bar("&#x27;"))     "x¯_(x)"      port  RenderError
+  //   gem  PowerBase(x, x, Lround("&#x27;"))  "x(_(x)"      port  RenderError
+  //
+  // Only `&#x27;` is tested here, not all five: the other four reach a concrete
+  // class solely through `hexcode_in_input` below, which ignores `value`.
+  const raw = node.value;
+  if (typeof raw === "string" && raw.includes("&#x27;")) return true;
 
-  // Every other class goes through `hexcode_in_input`, which returns nil when
-  // the symbol's `input(:unicodemath)` carries no `&#x…;` entry — and the gem
-  // then calls `.include?` on that nil and RAISES. Measured, 10 of 1,460
-  // classes do: Bar, If, Ul, Paren and its six concrete parens. So "absent" is
-  // behaviour to reproduce, not a row to skip — returning false here rendered
-  // `x^(¯)` where the gem refuses outright.
-  const hexcode = UNICODEMATH_HEXCODE_IN_INPUT.get(id);
-  if (hexcode === undefined) {
+  // Raw entity text on both arms — see `unicodemathFieldValue`. A generic
+  // symbol carrying ANY of the five is a prime, not just the apostrophe.
+  const value = unicodemathFieldValue(node);
+
+  // Past `core.rb:417` the gem's last line is
+  // `unicodemath_field_value(field).include?(prime)`, with nothing further
+  // guarding the nil — so BOTH arms raise when the field value is nil, and both
+  // were once wrong here in the same direction:
+  //
+  //   - a concrete class whose `input(:unicodemath)` holds no `&#x…;` entry.
+  //     Measured, 10 of 1,460 do: Bar, If, Ul, Paren and its six concrete
+  //     parens. Returning false rendered `x^(¯)` where the gem refuses.
+  //   - the GENERIC class holding a nil value, which `new SymbolNode()` — the
+  //     public model API — produces by default. Measured:
+  //       gem   PowerBase(x, a, Symbol(nil))  !! NoMethodError
+  //       port                                => "x_(a)^()"
+  //     That arm returned false because it tested `typeof value === "string"`,
+  //     a JS shape test standing in for a Ruby method call that does not fail
+  //     softly.
+  if (value === null) {
     throw new RenderError(
-      `${id}: has no unicodemath hexcode, and the gem raises NoMethodError ` +
-        "reading it (Utility.hexcode_in_input returns nil)",
+      `${node.id}: unicodemath_field_value is nil — ` +
+        (className(node.id) === "symbol"
+          ? "this generic symbol carries no value"
+          : "Utility.hexcode_in_input finds no entity for this class") +
+        ", and the gem raises NoMethodError calling include? on it",
       FORMAT,
       "symbol",
     );
   }
-  return PRIME_ENTITIES.some((entity) => hexcode.includes(entity));
+  return PRIME_ENTITIES.some((entity) => value.includes(entity));
 }
 
 /**
@@ -175,9 +171,9 @@ export function miniSized(node: MathNode | undefined): boolean {
       return Boolean(node.miniSubSized) || Boolean(node.miniSupSized);
     case "fenced":
       return (
-        miniSized(asNode(node.parameterOne)) ||
+        miniSized(asNode(node.parameterOne, "fenced.parameterOne")) ||
         someMiniSized(node.parameterTwo) ||
-        miniSized(asNode(node.parameterThree))
+        miniSized(asNode(node.parameterThree, "fenced.parameterThree"))
       );
     case "formula":
     case "mrow":
@@ -190,7 +186,9 @@ export function miniSized(node: MathNode | undefined): boolean {
       // First child only. Asking every child would answer true for shapes the
       // gem answers false for, and the difference is a separator that appears
       // or disappears in the output.
-      return miniSized(asNode(node.value?.[0]));
+      // `true if value&.first&.mini_sized?` (`formula.rb:354`) — `&.` again,
+      // so a non-node first child raises rather than answering false.
+      return miniSized(asNode(node.value?.[0], `${node.kind}.value[0]`));
     default:
       return false;
   }
@@ -206,8 +204,12 @@ export function negatedValue(node: MathNode): boolean {
   // answers true exactly as a Formula does.
   if (node.kind !== "formula" && node.kind !== "mrow") return false;
 
-  const last = asNode(node.value?.[node.value.length - 1]);
-  return last?.kind === "symbol" && last.value === NEGATION_VALUE;
+  // `value.last.is_a?(Math::Symbols::Symbol) && …` (`formula.rb:483`) — `is_a?`,
+  // NOT `&.`, so this one genuinely answers false for a non-node instead of
+  // raising. That is why it does not use the strict `asNode` the `mini_sized?`
+  // sites need: the two predicates differ in the gem and must differ here.
+  const last = node.value?.[node.value.length - 1];
+  return isNode(last) && last.kind === "symbol" && last.value === NEGATION_VALUE;
 }
 
 /**
@@ -224,14 +226,34 @@ export function negatedValue(node: MathNode): boolean {
 const NEGATION_VALUE = "&#x338;";
 
 function someMiniSized(slot: unknown): boolean {
-  if (!Array.isArray(slot)) return miniSized(asNode(slot));
+  if (!Array.isArray(slot)) return miniSized(asNode(slot, "fenced.parameterTwo"));
   // `Formula.new(parameter_two).mini_sized?` — a formula asks its first child,
   // so a list slot behaves the same way rather than asking all of them.
-  return miniSized(asNode(slot[0]));
+  return miniSized(asNode(slot[0], "fenced.parameterTwo"));
 }
 
-function asNode(value: unknown): MathNode | undefined {
-  return isNode(value) ? value : undefined;
+/**
+ * A slot as `&.mini_sized?` sees it: nil short-circuits, anything else is sent
+ * the message.
+ *
+ * This used to return `undefined` for EVERY non-node, which made `miniSized`
+ * answer false for a slot the gem raises on — the `&.`-guards-nil-only trap.
+ * It is normally masked, because the callers throw a few lines later for the
+ * same slot; the leading-choose-frac early return skips that. Measured:
+ *
+ *   gem   Fenced("s", [Frac(n, k, choose: true)], ")")  !! NoMethodError
+ *                                            ('mini_sized?' for an instance of String)
+ *   port                                                 => "(n)⒞(k)"
+ */
+function asNode(value: unknown, slot: string): MathNode | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (isNode(value)) return value;
+  throw new RenderError(
+    `${slot}: ${describeSlot(value)} does not answer mini_sized?, and the gem's ` +
+      "`&.` guards nil only — it raises NoMethodError here",
+    FORMAT,
+    "fenced",
+  );
 }
 
 /**
@@ -371,14 +393,32 @@ export function unreachableName(kind: string, name: string): RenderError {
  * carries the full xhtml1 table and the gem's codepoint-range behaviour, and
  * `src/formats/mathml/render-shared.ts` already reaches it the same way.
  *
- * That repetition is safe only because the transform is idempotent, which was
- * measured rather than assumed: decoding `"a&#x2581;b"` twice gives the same
- * string.
+ * A nested `Formula` re-runs this decode, and that repetition used to be
+ * justified here by calling the transform idempotent — "measured rather than
+ * assumed", on the strength of `"a&#x2581;b"`. One example, generalised into a
+ * property it does not have. Measured:
+ *
+ *   "a&#x2581;b"     -> "a▁b"        -> "a▁b"        idempotent
+ *   "&amp;#x27;"     -> "&#x27;"     -> "'"          NOT
+ *   "&amp;amp;"      -> "&amp;"      -> "&"          NOT
+ *   "&#38;#x27;"     -> "&#x27;"     -> "'"          NOT
+ *
+ * What actually makes the repetition safe is that the gem re-enters
+ * `Formula#to_unicodemath` per nesting level too, so both sides decode the same
+ * number of times. Measured on `Symbol("&amp;#x27;")`, gem and port identical
+ * at every depth:
+ *
+ *   Formula[sym] "&#x27;"   Formula[Formula[sym]] "'"   three deep "'"
+ *   Formula[Mrow[sym]] "'"
+ *
+ * So this decode must stay exactly where the gem's is. Moving it somewhere the
+ * gem does not have it changes output, and the idempotence claim would have
+ * licensed precisely that.
  */
 export { htmlEntityToUnicode };
 
 /** The gem's `\s/\s -> /` squeeze, applied at the same boundary. */
-export function squeezeSolidus(text: string): string {
+function squeezeSolidus(text: string): string {
   return text.replace(new RegExp(`${RUBY_SPACE}/${RUBY_SPACE}`, "g"), "/");
 }
 
@@ -430,27 +470,104 @@ export function rubyInterpolate(value: unknown): string {
  *   1.0      => "⟡(1.0&x)"             5      => "⟡(5&x)"
  *   "s"      => "⟡(s&x)"               true   => "⟡(true&x)"
  *
- * Two shapes are refused because JavaScript cannot decide them, and a wrong
- * answer here would be silent:
+ * What JavaScript genuinely cannot decide is an INTEGRAL number: JS has one
+ * numeric type, so `1` and `1.0` are the same value while Ruby prints "1" and
+ * "1.0". Those render as Ruby renders an Integer, which is wrong only for a
+ * Float that happens to be integral. `0.0` and `-0.0` fall here too (Ruby
+ * "0.0", JS "0"). `-0.0` is the exception and IS handled: Ruby has no Integer
+ * negative zero, so a JS `-0` can only be that Float.
  *
- *   - a NON-INTEGER number. JS has one numeric type, so `1` and `1.0` are the
- *     same value; Ruby prints "1" and "1.0". An integral number is rendered as
- *     Ruby renders an Integer, which is exact for every Integer and wrong only
- *     for a Float that happens to be integral.
- *   - nothing else: hash keys are assumed to be Symbols, which is what every
- *     option hash in the gem's own constants uses (`{mpadded: {...},
- *     phantom: true}`), and a String key would print `{"a" => 1}` instead.
- *     Recorded in TODO.plan/deferred.md rather than guessed at.
+ * That used to be called "exact for every Integer", which it was not: `String`
+ * gives up on large magnitudes and emits exponential notation, which Ruby's
+ * Integer#to_s never does. Measured:
+ *
+ *   gem  Sum(mask: 10**21)  "∑1000000000000000000000_(a)^(b)▒〖c〗"
+ *   port Sum(mask: 1e21)    "∑1e+21_(a)^(b)▒〖c〗"        before
+ *
+ * `BigInt` prints the double's exact integer value with no exponent, which is
+ * what Ruby does with the Integer that double stands for.
+ *
+ * Above 2^53 that value may not be the Integer the caller meant, and no
+ * formatting choice can recover it — the information is gone before this
+ * function is reached. Measured: `10**30` is `"1000000000000000000000000000000"`
+ * in the gem, while JS's `1e30` IS `1000000000000000019884624838656` and prints
+ * as such. That is a property of the double, not of this port.
+ *
+ * A NON-integral number used to be refused alongside it, on the stated grounds
+ * that Ruby's `Float#to_s` "cannot be derived from a JavaScript number". That
+ * is true only outside a band, and the refusal made the port emit nothing where
+ * the gem emits `1.5` — a divergence pointing the opposite way from every other
+ * one in this file. The two agree wherever BOTH print plain shortest-round-trip
+ * decimal, and Ruby's plain range is the narrower of the two: measured on the
+ * oracle, Ruby switches to scientific below 1e-4, and somewhere around 1e15 at
+ * the top — "at or above 1e15" is too strong, as the counterexample further
+ * down shows — where JS switches below 1e-6 and at or above 1e21. Within the
+ * band Ruby-plain implies JS-plain,
+ * and inside that band the digits are identical — verified over 5,000 random
+ * non-integral values in it, 5,000 agreements and 0 disagreements.
+ *
+ * Outside the band a NON-INTEGRAL value is refused, because the two formats
+ * differ there: `1.5e-5` is `"1.5e-05"` in Ruby and `"0.000015"` in JS.
+ *
+ * `1e15` is NOT an example of that, though an earlier version of this comment
+ * claimed it was. It is integral, so it never reaches the band check at all —
+ * it takes the Integer arm above, and it is the undecidable case rather than a
+ * refused one. Measured, the gem answers differently depending on which Ruby
+ * type it was:
+ *
+ *   mask 1e15 (Float)               "⟡(1.0e+15&x)"
+ *   mask 1000000000000000 (Integer) "⟡(1000000000000000&x)"
+ *
+ * and JS has one numeric type, so this cannot tell them apart. It renders the
+ * Integer reading, exactly as it does for `1.0` -> `"1"`.
+ *
+ * The band's upper edge is deliberately CONSERVATIVE rather than exact. Ruby's
+ * choice of format is not decided by magnitude: `1.5e15` prints as `"1.5e+15"`
+ * while `1202471614443916.8`, at the same magnitude, prints in full. Some
+ * non-integral values at or above 1e15 would therefore agree with JS and are
+ * refused anyway. Refusing something that would have matched is loud and
+ * recoverable; emitting something that does not is silent and is not.
+ *
+ * Reconstructing Ruby's scientific form from `toExponential()` — pad the
+ * exponent to two digits, give the mantissa a ".0" — looks like it closes the
+ * rest, and very nearly does: 3,999 of 4,000 random values outside the band.
+ * It is still WRONG, because Ruby's choice of format is not decided by
+ * magnitude alone. The counterexample, measured:
+ *
+ *   1.2024716144439168e+15  ->  ruby "1202471614443916.8"  (plain, not scientific)
+ *
+ * while `1.5e15` at the same decimal exponent gives "1.5e+15". Two values of
+ * equal magnitude, different formats, so the rule depends on the significant
+ * digits and not just the exponent. A formatter that is right 99.98% of the
+ * time is a silent wrong answer once in every few thousand, which is worse here
+ * than refusing — so the refusal stays until the rule is pinned rather than
+ * approximated.
+ *
+ * `NaN` and `±Infinity` are emitted because the two agree exactly there
+ * (measured: "NaN", "Infinity", "-Infinity" on both sides).
+ *
+ * Hash keys are assumed to be Symbols, which is what every option hash in the
+ * gem's own constants uses (`{mpadded: {...}, phantom: true}`); a String key
+ * would print `{"a" => 1}` instead. Recorded in TODO.plan/deferred.md rather
+ * than guessed at.
  */
+
 function rubyInspect(value: unknown): string {
   if (value === null || value === undefined) return "nil";
   if (typeof value === "boolean") return String(value);
   if (typeof value === "string") return JSON.stringify(value);
   if (typeof value === "number") {
-    if (Number.isInteger(value) && Object.is(value, Math.trunc(value))) return String(value);
+    // One implementation of Ruby's number semantics, shared with the symbol
+    // constructor in `core/nodes.ts` — see `core/ruby-semantics.ts`. Two copies
+    // of these rules had already drifted apart across five review rounds.
+    const printed = rubyNumberToS(value);
+    if (printed !== null) return printed;
+
     throw new RenderError(
-      `cannot interpolate the non-integer number ${String(value)} — Ruby's Float#to_s ` +
-        "cannot be derived from a JavaScript number (TODO.plan/deferred.md)",
+      `cannot interpolate the number ${String(value)} — it falls outside the range ` +
+        "this port has verified Ruby's Float#to_s and JavaScript's to agree on. Some " +
+        "values out here would in fact agree; the band is deliberately conservative " +
+        "because Ruby's format is not decided by magnitude alone (TODO.plan/deferred.md)",
       FORMAT,
       "unknown",
     );
@@ -495,11 +612,29 @@ export function className(rubyName: string): string {
  *
  * Shared by `formula` and `mrow` because `Formula::Mrow` inherits this method
  * rather than the child path, so a nested Mrow really does re-run the whole
- * boundary. Idempotent, so that repetition is safe.
+ * boundary — safe because the gem re-runs it at the same points, NOT because
+ * the entity decode is idempotent (it is not; see `htmlEntityToUnicode` above).
  */
 export function formulaBoundary(node: MathNode, context: RenderContext): string | null {
-  const children = (node as { readonly value?: readonly unknown[] | undefined }).value;
-  if (children === undefined) return null;
+  // `FormulaNode.value` and `MrowNode.value` are `NodeSequence | null` and are
+  // assigned in the constructor, so they are never `undefined`: testing for it
+  // was the `=== undefined` trap this file warns about elsewhere, and the guard
+  // never fired. A nil value falls through to the map below, where the gem also
+  // fails — `negated_value?` calls `value.last` on it. Measured, both refuse:
+  //
+  //   gem   Formula.new(nil).to_unicodemath  !! Math::ParseError
+  //   port  FormulaNode({value: null})       !! RenderError
+  //
+  // Written as a nil test so the throw carries this format's own error rather
+  // than a laundered TypeError from `null.map`.
+  const children = (node as { readonly value?: readonly unknown[] | null }).value;
+  if (children === null || children === undefined) {
+    throw new RenderError(
+      `${node.kind}.value is nil — the gem raises reading value.last in negated_value?`,
+      FORMAT,
+      node.kind,
+    );
+  }
 
   // `join_str = " " if !(negated_value? || mini_sized?)` — Ruby's `join(nil)`
   // concatenates, so a suppressed separator is the empty string, not a space.
@@ -545,11 +680,18 @@ export function isBase(node: unknown): boolean {
  * wrapped in white lenticular brackets.
  */
 export function naryandValue(field: unknown, context: RenderContext): string {
-  if (!isNode(field)) return "";
+  // `return "" unless field` — RUBY TRUTHINESS, so only nil and false
+  // short-circuit; everything else is sent `to_unicodemath`, and a non-node
+  // raises. Testing `!isNode(field)` swallowed that. Measured:
+  //
+  //   gem  Nary(∑, x, x, "s")  !! NoMethodError   port  => "&#x2211;_(x)^(x)"
+  //   gem  Nary(∑, x, x, [])   !! NoMethodError   port  => "&#x2211;_(x)^(x)"
+  //   gem  Nary(∑, x, x, nil)  => "&#x2211;_(x)^(x)"    and false likewise, both agree
+  if (!present(field)) return "";
 
-  const rendered = context.render(field) ?? "";
+  const rendered = renderChild(field, context, "naryand") ?? "";
   // U+2592 MEDIUM SHADE is UnicodeMath's naryand separator.
-  return field.kind === "fenced" ? `▒${rendered}` : `▒〖${rendered}〗`;
+  return isNode(field) && field.kind === "fenced" ? `▒${rendered}` : `▒〖${rendered}〗`;
 }
 
 /**
@@ -578,34 +720,42 @@ export function naryandSupValue(field: unknown, context: RenderContext): string 
   return `^${unicodemathParens(field, context) ?? ""}`;
 }
 
-/** A symbol id the generated table does not carry: a parity gap, not output. */
 /**
- * `Core#unicodemath_field_value` (`core.rb:484`), as the port can compute it.
+ * `Core#unicodemath_field_value` (`core.rb:484-486`):
  *
- * The gem returns `field.value` for a generic symbol and
- * `Utility.hexcode_in_input(field)` otherwise — the latter digs an ENTITY
- * string out of the class's parse-input table. Its callers then compare that
- * against entity-valued constants, so the whole comparison is entity-to-entity
- * on the gem side.
+ *   field.class_name == "symbol" ? field.value : Utility.hexcode_in_input(field)
  *
- * This port holds decoded glyphs in the symbol slice and entity text in the
- * constant tables, so the comparison is done decoded on both sides instead.
- * The decode is a bijection for these values, so the two agree.
+ * RAW PARSE-INPUT ENTITY TEXT — never the rendered glyph. Its callers compare
+ * it against entity-valued constants AND interpolate it into output, so on the
+ * gem side the comparison is entity-to-entity and the emitted bytes are entity
+ * text.
+ *
+ * An earlier version had no generated parse-input table, so it decoded the
+ * RENDER and looked that up, on the stated reasoning that the decode is a
+ * bijection. It is not. Six classes render an ASCII shorthand rather than the
+ * entity they parse from — `Dots`, `Hat`, `Paren::Langle`, `Paren::Rangle`,
+ * `Slash`, `Tilde` — and ten carry no `/&#x.+;/` entry at all, where the gem
+ * interpolates nil as `""` and the proxy wrote the render instead. Measured
+ * over `Overset(<class>, Acute)` across all 1,460 symbol classes: the proxy
+ * differed from the gem on 1,439 bare and 15 through `Formula`, and `Underset`
+ * on 2. With this table, 0, 0 and 0.
+ *
+ * Returns null for the gem's nil. What nil DOES is the CALLER's business and
+ * differs by call site: `prime_unicode?` raises on it, both `unicode_accent?`
+ * answer false, and the emit paths interpolate it as `""`. That decision does
+ * not belong in here.
  */
-export function fieldGlyph(field: unknown, context: RenderContext): string | null {
-  if (!isNode(field) || field.kind !== "symbol") return null;
-
-  const rendered = context.render(field);
-  return rendered === null ? null : htmlEntityToUnicode(rendered);
-}
-
-/** Whether a decoded glyph appears in an entity-valued table. */
-export function glyphIn(glyph: string | null, entities: Iterable<string>): boolean {
-  if (glyph === null) return false;
-  for (const entity of entities) {
-    if (htmlEntityToUnicode(entity) === glyph) return true;
-  }
-  return false;
+export function unicodemathFieldValue(field: NodeOf<"symbol">): string | null {
+  // Typed to the symbol node because every call site narrows first, and for the
+  // gem's own reason: `hexcode_in_input` sends `input` to whatever it is given,
+  // so a non-symbol does not return nil here — it raises. The two callers that
+  // can be handed one raise there explicitly rather than widening this.
+  //
+  // `class_name` is `self.class.name.split("::").last.downcase`, so only the
+  // generic `Symbols::Symbol` answers "symbol" — measured across all 1,460
+  // concrete classes, no basename collides and none is named `Symbol`.
+  if (className(field.id) === "symbol") return field.value;
+  return UNICODEMATH_HEXCODE_IN_INPUT.get(field.id) ?? null;
 }
 
 /**

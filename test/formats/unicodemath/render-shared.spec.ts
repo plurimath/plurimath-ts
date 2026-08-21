@@ -16,18 +16,25 @@
 import { describe, expect, it } from "vitest";
 import { RenderError } from "../../../src/core/errors";
 import {
+  AbsNode,
   FencedNode,
   FormulaNode,
   FracNode,
+  MpaddedNode,
   MrowNode,
+  NaryNode,
   NumberNode,
+  OversetNode,
   SymbolNode,
+  UndersetNode,
 } from "../../../src/core/index";
 import {
   miniSized,
   negatedValue,
   primeUnicode,
+  unicodemathFieldValue,
 } from "../../../src/formats/unicodemath/render-shared";
+import { toUnicodemath } from "../../../src/formats/unicodemath/renderer";
 
 const plainSymbol = () => new SymbolNode({ id: "Symbol", value: "x" });
 const miniSymbol = (which: "sub" | "sup") =>
@@ -141,8 +148,20 @@ describe("primeUnicode matches the gem", () => {
     expect(primeUnicode(new FormulaNode({ value: [plainSymbol()] }))).toBe(false);
   });
 
-  it("is false when the child rendered to nothing", () => {
-    expect(primeUnicode(new SymbolNode({ id: "Symbol" }))).toBe(false);
+  it("raises for a generic symbol holding no value at all", () => {
+    // This pinned `false` while the implementation compared decoded glyphs: a
+    // valueless symbol rendered to nothing, and nothing matched. The gem does
+    // not get that far — `unicodemath_field_value` returns `field.value`, which
+    // is nil, and the next line calls `.include?` on it. Measured:
+    //
+    //   gem   prime_unicode?(Symbols::Symbol.new(nil))     !! NoMethodError
+    //   gem   PowerBase(x, a, Symbol(nil)).to_unicodemath  !! NoMethodError
+    //   port  (before)                                     => "x_(a)^()"
+    //
+    // `new SymbolNode()` is the public model API and produces exactly this, so
+    // the shape is reachable rather than theoretical.
+    expect(() => primeUnicode(new SymbolNode({ id: "Symbol" }))).toThrow(RenderError);
+    expect(() => primeUnicode(new SymbolNode())).toThrow(RenderError);
   });
 
   it("is true for a generic symbol carrying the RAW apostrophe entity", () => {
@@ -228,5 +247,431 @@ describe("negatedValue matches the gem", () => {
     // silently never fires, which is what the first draft of this did.
     const byId = new FormulaNode({ value: [new SymbolNode({ id: "Nsub" })] });
     expect(negatedValue(byId)).toBe(false);
+  });
+});
+
+/**
+ * `Core#unicodemath_field_value` — RAW parse-input entity text.
+ *
+ * Every expectation here was measured on the pinned oracle, and each one is a
+ * case the previous implementation got wrong. It had no generated parse-input
+ * table, so it decoded the RENDER and looked that up, reasoning that the decode
+ * is a bijection. Measured over `Overset(<class>, Acute)` across all 1,460
+ * symbol classes, that proxy differed from the gem on 1,439 bare and 15 through
+ * `Formula`, and `Underset` on 2; with the table, 0, 0 and 0.
+ *
+ * The cases below are the two shapes that survived `Formula`'s entity decode,
+ * because those are the ones a caller could actually see through the public
+ * API — the other 1,424 were invisible there and would not have failed a test
+ * written at that level.
+ */
+describe("the unicodemath field value is entity text, not the render", () => {
+  const acute = () => new SymbolNode({ id: "Acute" });
+  const wrap = (node: OversetNode | UndersetNode) =>
+    toUnicodemath(new FormulaNode({ value: [node] }));
+
+  it("reads the parse-input entity for a symbol subclass", () => {
+    // `Alpha` parses from `&#x3b1;` and renders `α`. The gem emits the former.
+    expect(unicodemathFieldValue(new SymbolNode({ id: "Alpha" }))).toBe("&#x3b1;");
+  });
+
+  it("reads value RAW for the generic symbol, decoded or not", () => {
+    // `class_name == "symbol"` takes the other arm, where the gem does no
+    // lookup at all: whatever the node carries is the field value verbatim.
+    expect(unicodemathFieldValue(new SymbolNode({ id: "Symbol", value: "&#x301;" }))).toBe(
+      "&#x301;",
+    );
+    expect(unicodemathFieldValue(new SymbolNode({ id: "Symbol", value: "\u0301" }))).toBe("\u0301");
+  });
+
+  it("coerces the symbol value the way the gem's constructor does", () => {
+    // `@value = sym.is_a?(Array) ? sym.join : sym&.to_s` (`symbols/symbol.rb:12`).
+    // The gem's answer for a non-string argument is decided at CONSTRUCTION,
+    // not in the predicate that later reads it. Measured on the oracle:
+    //   Alpha(["&#x27;"]) value "&#x27;" -> PowerBase renders "xα_(a)"
+    //   Alpha(5)          value "5"      -> "x_(a)^(α)"
+    expect(new SymbolNode({ id: "Alpha", value: ["&#x27;"] } as never).value).toBe("&#x27;");
+    expect(new SymbolNode({ id: "Alpha", value: 5 } as never).value).toBe("5");
+    expect(new SymbolNode({ id: "Alpha", value: false } as never).value).toBe("false");
+    expect(new SymbolNode({ id: "Alpha", value: null }).value).toBeNull();
+    // Nested arrays join recursively and a nil element contributes "".
+    // Measured: `["x", [1, 2], "y"].join` is "x12y", `["x", nil, "y"].join` "xy".
+    expect(new SymbolNode({ id: "Alpha", value: ["x", [1, 2], "y"] } as never).value).toBe("x12y");
+    expect(new SymbolNode({ id: "Alpha", value: ["x", null, "y"] } as never).value).toBe("xy");
+  });
+
+  it("refuses what Ruby's to_s can produce and JavaScript cannot", () => {
+    // Two review rounds went into inventing strings here. First a plain object
+    // inside an array became "[object Object]"; then the "fix" for that turned
+    // a Range into "{toString: ...}" and a Struct into '{x: 1, y: "x"}', where
+    // the gem gives "1..3" and "#<struct ...>". An arbitrary object's `to_s`
+    // cannot be reproduced in JS at all, and nothing reaches this branch anyway
+    // — the parse path hands this slot only null or a string — so it refuses
+    // rather than guessing a third time.
+    //
+    // A TypeError, not a PlurimathError: the declared slot type is
+    // `string | null`, so reaching here is a caller type violation.
+    expect(() => new SymbolNode({ id: "Alpha", value: { a: 1 } } as never)).toThrow(TypeError);
+    expect(() => new SymbolNode({ id: "Alpha", value: ["pre", { a: 1 }] } as never)).toThrow(
+      TypeError,
+    );
+    expect(() => new SymbolNode({ id: "Alpha", value: 1.5e-5 } as never)).toThrow(TypeError);
+
+    // EVERY object is refused, including one with a caller-supplied toString.
+    // Four review rounds each found a hole in a cleverer rule: plain objects
+    // becoming "[object Object]"; then built-ins admitted because they override
+    // toString; then cross-realm built-ins slipping an identity check, while
+    // `Symbol.toPrimitive` objects were refused despite coercing fine.
+    //
+    // The gem's contract is `sym&.to_s` — whatever coercion produces — and that
+    // cannot be decided from a JS object, because what Ruby would print depends
+    // on a Ruby object that does not exist here. Refusing is loud where a wrong
+    // guess is silent, and nothing real reaches this: the parse path hands this
+    // slot only null or a string.
+    for (const value of [
+      { toString: () => "CUSTOM!" },
+      Object.create({ toString: () => "BASE!" }),
+      new Number(1.5e-5),
+      /ab/,
+      new Date(0),
+      { [Symbol.toPrimitive]: () => "PRIM!" },
+    ]) {
+      expect(() => new SymbolNode({ id: "Alpha", value } as never)).toThrow(TypeError);
+    }
+    expect(() => new SymbolNode({ id: "Alpha", value: ["pre", /ab/] } as never)).toThrow(TypeError);
+
+    // What it CAN reproduce exactly still works, including inside an array.
+    expect(new SymbolNode({ id: "Alpha", value: 1e21 } as never).value).toBe(
+      "1000000000000000000000",
+    );
+    expect(new SymbolNode({ id: "Alpha", value: -0 } as never).value).toBe("-0.0");
+    expect(new SymbolNode({ id: "Alpha", value: [1.5, "x"] } as never).value).toBe("1.5x");
+    // and the consequence the coercion exists for:
+    expect(primeUnicode(new SymbolNode({ id: "Alpha", value: ["&#x27;"] } as never))).toBe(true);
+    expect(primeUnicode(new SymbolNode({ id: "Alpha", value: ["zz"] } as never))).toBe(false);
+  });
+
+  it("answers null for the ten classes with no entity entry", () => {
+    // `hexcode_in_input` returns nil for these. Callers differ on what nil
+    // means, so this must report it rather than substituting anything.
+    for (const id of ["Bar", "If", "Ul", "Paren::Lround", "Paren::Rsquare"]) {
+      expect(unicodemathFieldValue(new SymbolNode({ id }))).toBeNull();
+    }
+  });
+
+  it("accents Hat and Tilde, which the render proxy could not", () => {
+    // `Hat` renders `^` but parses from `&#x302;`, so the gem's accent tables
+    // match it and the proxy's decoded `^` did not. Measured on the oracle:
+    // `Formula(Overset(Hat, Acute))` is `(́)̂`; the proxy wrote `^́`.
+    expect(
+      wrap(new OversetNode({ parameterOne: new SymbolNode({ id: "Hat" }), parameterTwo: acute() })),
+    ).toBe("(́)̂");
+    expect(
+      wrap(
+        new UndersetNode({ parameterOne: new SymbolNode({ id: "Hat" }), parameterTwo: acute() }),
+      ),
+    ).toBe("(́)̂");
+    expect(
+      wrap(
+        new UndersetNode({ parameterOne: new SymbolNode({ id: "Tilde" }), parameterTwo: acute() }),
+      ),
+    ).toBe("(́)̃");
+  });
+
+  it("interpolates a missing entity as empty, where the proxy wrote the render", () => {
+    // The gem's `"#{unicodemath_field_value(parameter_one)}..."` on a nil is
+    // `""`. The proxy emitted the rendered glyph instead — `¯` for `Bar`,
+    // `if` for `If`. Measured on the oracle: both are `́` alone.
+    expect(
+      wrap(new OversetNode({ parameterOne: new SymbolNode({ id: "Bar" }), parameterTwo: acute() })),
+    ).toBe("́");
+    expect(
+      wrap(new OversetNode({ parameterOne: new SymbolNode({ id: "If" }), parameterTwo: acute() })),
+    ).toBe("́");
+  });
+
+  it("emits entity text when an overset is the render root", () => {
+    // Without `Formula`'s decode pass nothing collapses the difference, which
+    // is where 1,439 of the 1,460 classes diverged. `toUnicodemath` allows this
+    // root, and the gem's own bare `Overset#to_unicodemath` measures it.
+    expect(
+      toUnicodemath(
+        new OversetNode({ parameterOne: new SymbolNode({ id: "Aa" }), parameterTwo: acute() }),
+      ),
+    ).toBe("&#x2200;\u0301");
+  });
+});
+
+/**
+ * Slots where the gem raises and this port used to emit.
+ *
+ * Every one is the same root cause in a different disguise: a JS falsy or
+ * shape test standing in for Ruby semantics that do not fail softly. `&.`
+ * short-circuits on nil and NOTHING else, and `unless field` short-circuits on
+ * nil and false and nothing else — so a String, an Array, or a node of the
+ * wrong kind reaches the method call and raises.
+ *
+ * Each expectation below was measured on the pinned oracle before the fix, with
+ * the port's old output recorded next to it. These are reachable through the
+ * public model API, not hand-forged internal states.
+ */
+describe("slots the gem refuses are refused here too", () => {
+  const S = (value: string) => new SymbolNode({ id: "Symbol", value });
+  const mini = () => new NumberNode({ value: "1", miniSubSized: true });
+  // The gem's option keys are snake_case Ruby symbols, not JS identifiers, so
+  // they are built rather than written as literal property names.
+  const gemOptions = (key: string, value: unknown): Record<string, unknown> => ({ [key]: value });
+
+  it("refuses a nil element inside fenced contents", () => {
+    // `param.to_unicodemath(options: options)` (`fenced.rb:107-111`) is
+    // unguarded, unlike the `parameter_two&.map` on the line above it.
+    //   gem  Fenced("(", [Symbol("x"), nil], ")")  !! NoMethodError
+    //   port                                        => "(x )"
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: S("("),
+          parameterTwo: [S("x"), null] as never,
+          parameterThree: S(")"),
+        }),
+      ),
+    ).toThrow(RenderError);
+  });
+
+  it("refuses a non-array contents slot on the mini-sized path", () => {
+    // `parameter_two&.map` (`fenced.rb:183`) guards nil only; the port
+    // substituted `[]` for anything non-array, swallowing the raise.
+    //   gem  Fenced(Number(mini), "s", ")")  !! NoMethodError ('map' for String)
+    //   port                                  => "&#x2081;)"
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: mini(),
+          parameterTwo: "s" as never,
+          parameterThree: S(")"),
+        }),
+      ),
+    ).toThrow(RenderError);
+  });
+
+  it("refuses a nil element on the mini-sized path too", () => {
+    //   gem  Fenced("(", [Number(mini), nil], ")")  !! NoMethodError
+    //   port                                         => "(&#x2081;)"
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: S("("),
+          parameterTwo: [mini(), null] as never,
+          parameterThree: S(")"),
+        }),
+      ),
+    ).toThrow(RenderError);
+  });
+
+  it("refuses a non-node paren slot even on the choose-frac early return", () => {
+    // `parameter_one&.mini_sized?` (`fenced.rb:177`) raises for a String. This
+    // is normally masked because the paren resolution throws a few lines later
+    // — the LEADING choose-frac return skips that, so it was reachable.
+    //   gem  Fenced("s", [Frac(n, k, choose: true)], ")")  !! NoMethodError
+    //   port                                                => "(n)⒞(k)"
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: "s" as never,
+          parameterTwo: [
+            new FracNode({
+              parameterOne: S("n"),
+              parameterTwo: S("k"),
+              options: { choose: true },
+            } as never),
+          ] as never,
+          parameterThree: S(")"),
+        }),
+      ),
+    ).toThrow(RenderError);
+  });
+
+  it("refuses a paren node that does not answer value", () => {
+    // `parameter_one&.value&.include?(…)` (`fenced.rb:306`): the first `&.`
+    // guards nil, so a node with no `value` field is sent the message.
+    //   gem  Fenced(Abs(x), [x], ")", open_prefixed: true)  !! NoMethodError
+    //   port                                                 => "├⒜(x)x)"
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: new AbsNode({ parameterOne: S("x") } as never),
+          parameterTwo: [S("x")] as never,
+          parameterThree: S(")"),
+          options: gemOptions("open_prefixed", true),
+        } as never),
+      ),
+    ).toThrow(RenderError);
+  });
+
+  it("still accepts a Formula paren, whose value is an Array", () => {
+    // The boundary case that proves the check above is not simply "throw for
+    // anything unusual": a Formula DOES answer `value`, `Array#include?` on a
+    // needle string is false, and gem and port agree on the output.
+    expect(() =>
+      toUnicodemath(
+        new FencedNode({
+          parameterOne: new FormulaNode({ value: [S("x")] }),
+          parameterTwo: [S("x")] as never,
+          parameterThree: S(")"),
+          options: gemOptions("open_prefixed", true),
+        } as never),
+      ),
+    ).not.toThrow();
+  });
+
+  it("refuses a truthy non-node naryand, and accepts nil and false", () => {
+    // `return "" unless field` is Ruby truthiness: nil and false short-circuit,
+    // everything else is sent `to_unicodemath`.
+    //   gem  Nary(∑, x, x, "s")  !! NoMethodError   port  => "&#x2211;_(x)^(x)"
+    //   gem  Nary(∑, x, x, [])   !! NoMethodError   port  => "&#x2211;_(x)^(x)"
+    //   gem  Nary(∑, x, x, nil)  => "&#x2211;_(x)^(x)"    both agree
+    const nary = (parameterFour: unknown) =>
+      new NaryNode({
+        parameterOne: S("&#x2211;"),
+        parameterTwo: S("x"),
+        parameterThree: S("x"),
+        parameterFour,
+      } as never);
+
+    expect(() => toUnicodemath(nary("s"))).toThrow(RenderError);
+    expect(() => toUnicodemath(nary([]))).toThrow(RenderError);
+    expect(toUnicodemath(nary(null))).toBe("&#x2211;_(x)^(x)");
+    expect(toUnicodemath(nary(false))).toBe("&#x2211;_(x)^(x)");
+  });
+});
+
+/**
+ * Ruby's `Float#to_s` through an interpolated `mask`.
+ *
+ * The port refused EVERY non-integral number, on the stated grounds that
+ * Ruby's `Float#to_s` cannot be derived from a JS number. That is true only
+ * outside a band: Ruby prints plain shortest-round-trip decimal on
+ * `[1e-4, 1e15)`, JS on the wider `[1e-6, 1e21)`, so Ruby-plain implies
+ * JS-plain and the digits agree. Verified over 5,000 random non-integral values
+ * inside the band: 5,000 agreements, 0 disagreements.
+ *
+ * Refusing there made the port emit nothing where the gem emits `1.5` — a
+ * divergence pointing the opposite way from every other one in this file.
+ */
+describe("a float mask matches Ruby's Float#to_s inside the band", () => {
+  const masked = (mask: unknown) =>
+    toUnicodemath(
+      new MpaddedNode({
+        parameterOne: new SymbolNode({ id: "Symbol", value: "x" }),
+        options: { mask },
+      } as never),
+    );
+
+  it.each([
+    [1.5, "⟡(1.5&x)"],
+    [-0.75, "⟡(-0.75&x)"],
+    [100.25, "⟡(100.25&x)"],
+    // The lower edge of Ruby's plain range: one step below this it switches to
+    // scientific and the two stop agreeing.
+    [0.0001, "⟡(0.0001&x)"],
+  ])("renders %s as the gem does", (mask, expected) => {
+    expect(masked(mask)).toBe(expected);
+  });
+
+  it.each([
+    [Number.NaN, "⟡(NaN&x)"],
+    [Number.POSITIVE_INFINITY, "⟡(Infinity&x)"],
+    [Number.NEGATIVE_INFINITY, "⟡(-Infinity&x)"],
+  ])("renders %s, where both languages agree exactly", (mask, expected) => {
+    expect(masked(mask)).toBe(expected);
+  });
+
+  it("still refuses a value outside the band rather than guessing", () => {
+    // gem `1.5e-05`, JS `0.000015`. Reconstructing Ruby's scientific form is
+    // 3,999-of-4,000 correct and therefore silently wrong once in a few
+    // thousand — `1.2024716144439168e+15` is plain in Ruby while `1.5e15`, at
+    // the same magnitude, is scientific. Refusing is the honest answer until
+    // that rule is pinned.
+    expect(() => masked(1.5e-5)).toThrow(RenderError);
+  });
+
+  it("renders an integral number as Ruby renders an Integer", () => {
+    // The genuinely undecidable case: JS cannot tell `1` from `1.0`, and the
+    // gem prints them differently. Pinned so the choice stays deliberate.
+    expect(masked(1)).toBe("⟡(1&x)");
+    expect(masked(5)).toBe("⟡(5&x)");
+  });
+
+  it("takes the Integer reading at the band's upper edge, where JS cannot decide", () => {
+    // `1e15` is integral, so it never reaches the band check — a review read it
+    // as an unhandled edge of the float fix, and a comment here wrongly listed
+    // it as a REFUSED value. It is neither. Measured on the oracle, the gem's
+    // answer depends on a Ruby type JS does not have:
+    //
+    //   mask 1e15 (Float)                "⟡(1.0e+15&x)"
+    //   mask 1000000000000000 (Integer)  "⟡(1000000000000000&x)"
+    //
+    // so this is the same undecidable case as `1.0` -> `"1"`, resolved the same
+    // way. Pinned here so the next reader sees the choice rather than re-deriving it.
+    expect(masked(1e15)).toBe("⟡(1000000000000000&x)");
+  });
+
+  it("renders negative zero as the Float it can only have been", () => {
+    // Ruby has no Integer -0, so a JS `-0` is unambiguously the Float `-0.0`.
+    // Measured: the gem gives "⟡(-0.0&x)". This printed "0" before.
+    expect(masked(-0)).toBe("⟡(-0.0&x)");
+    expect(masked(0)).toBe("⟡(0&x)");
+  });
+
+  it("prints a large integral value in full, as Ruby's Integer#to_s does", () => {
+    // `String(1e21)` is "1e+21"; Ruby's Integer#to_s never uses an exponent.
+    // Measured: the gem gives "⟡(1000000000000000000000&x)" for `10**21`.
+    expect(masked(1e21)).toBe("⟡(1000000000000000000000&x)");
+    expect(masked(-1e21)).toBe("⟡(-1000000000000000000000&x)");
+  });
+
+  it("refuses a NON-integral value above the band, conservatively", () => {
+    // Ruby's format is not decided by magnitude — `1.5e15` prints as "1.5e+15"
+    // while `1202471614443916.8` at the same magnitude prints in full. Rather
+    // than model that, the band stops at 1e15 and refuses above it, which can
+    // refuse a value that would in fact have agreed. Loud beats silent.
+    expect(() => masked(1000000000000000.5)).toThrow(RenderError);
+  });
+});
+
+/**
+ * The entity decode is NOT idempotent, and the port relies on running it in
+ * exactly the places the gem does rather than on being able to run it twice.
+ */
+describe("the formula boundary decodes as often as the gem does", () => {
+  const nested = (depth: number) => {
+    let node: FormulaNode | SymbolNode = new SymbolNode({ id: "Symbol", value: "&amp;#x27;" });
+    for (let i = 0; i < depth; i += 1) node = new FormulaNode({ value: [node] as never });
+    return node as FormulaNode;
+  };
+
+  it.each([
+    [1, "&#x27;"],
+    [2, "'"],
+    [3, "'"],
+  ])("at depth %i gives the gem's answer", (depth, expected) => {
+    // Measured on the oracle at each depth. Depth 1 leaves the entity undecoded
+    // and depth 2 decodes it — which is only possible because the decode is
+    // NOT idempotent, so moving it would change these answers.
+    expect(toUnicodemath(nested(depth))).toBe(expected);
+  });
+
+  it("treats an Mrow layer as a Formula layer, as the gem does", () => {
+    const wrapped = new FormulaNode({
+      value: [new MrowNode({ value: [new SymbolNode({ id: "Symbol", value: "&amp;#x27;" })] })],
+    });
+    expect(toUnicodemath(wrapped)).toBe("'");
+  });
+
+  it("refuses a nil value with this format's own error", () => {
+    // `Formula.new(nil)` raises in the gem (`negated_value?` calls `value.last`).
+    // The port used to test `=== undefined`, which never fired for a `null`
+    // value, and the nil fell through to `null.map` as a laundered TypeError.
+    expect(() => toUnicodemath(new FormulaNode({ value: null } as never))).toThrow(RenderError);
   });
 });

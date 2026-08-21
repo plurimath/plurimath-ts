@@ -22,7 +22,6 @@
 
 import { RenderError } from "../../core/index";
 import {
-  className,
   describeSlot,
   FORMAT,
   isNode,

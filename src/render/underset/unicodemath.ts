@@ -20,7 +20,6 @@
  */
 
 import {
-  className,
   isNode,
   type NodeOf,
   type RenderContext,

@@ -82,7 +82,7 @@ function renderBaseSymbol(node: NodeOf<"symbol">): XmlElement {
       : requireStringForAppend(node.value, node.kind, "symbol.value");
   if (value?.includes("&#x2147;")) {
     // `attributes[:intent] = Utility.html_entity_to_unicode(value)` decodes
-    // once, and then `OxEngine::Element#update_attrs` (`element.rb:104-110`)
+    // once, and then `OxEngine::Element#update_attrs` (`ox_engine/element.rb:104-110`)
     // decodes EVERY attribute again on the way out. So the gem decodes this
     // value twice, and both passes are observable.
     //

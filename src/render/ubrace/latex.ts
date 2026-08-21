@@ -1,6 +1,6 @@
 /**
  * Mirrors `function/ubrace.rb` — `Ubrace#to_latex` (:19): the body
- * `obrace.rb` repeats (see `../obrace/latex.ts` for the strict-render pin),
+ * `function/obrace.rb` repeats (see `../obrace/latex.ts` for the strict-render pin),
  * command `\underbrace`.
  */
 

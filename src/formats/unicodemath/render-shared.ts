@@ -695,7 +695,7 @@ export function naryandValue(field: unknown, context: RenderContext): string {
 }
 
 /**
- * `sub_value` as `Int` and `Prod` define it (`int.rb:151`, `prod.rb:165` —
+ * `sub_value` as `Int` and `Prod` define it (`function/int.rb:151`, `function/prod.rb:165` —
  * identical bodies, not shared in the gem).
  */
 export function naryandSubValue(field: unknown, context: RenderContext): string {
@@ -706,7 +706,7 @@ export function naryandSubValue(field: unknown, context: RenderContext): string 
 }
 
 /**
- * `sup_value` as `Int` and `Prod` define it (`int.rb:141`, `prod.rb:155`).
+ * `sup_value` as `Int` and `Prod` define it (`function/int.rb:141`, `function/prod.rb:155`).
  *
  * The mini-sized and prime cases emit the child *bare* — no `^` — because the
  * character itself already reads as a superscript.

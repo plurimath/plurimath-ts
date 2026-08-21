@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/sum.rb` — `Sum#to_asciimath` (:38): the body `int.rb`
+ * Mirrors `function/sum.rb` — `Sum#to_asciimath` (:38): the body `function/int.rb`
  * repeats verbatim (see `../int/asciimath.ts` for the strip pin), keyword `sum`.
  */
 

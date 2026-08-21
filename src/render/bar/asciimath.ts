@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/bar.rb` — `Bar#to_asciimath` (:14): the body `obrace.rb`
+ * Mirrors `function/bar.rb` — `Bar#to_asciimath` (:14): the body `function/obrace.rb`
  * repeats verbatim (see `../obrace/asciimath.ts`), keyword `bar`.
  */
 

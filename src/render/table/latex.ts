@@ -161,7 +161,7 @@ function isRubyHash(value: unknown): boolean {
 /**
  * `Hash(…)[:columnalign]` — the alignment read shared by the starred matrix
  * environment (`latex_columnalign`, `table.rb:270`, over `td_hash`) and the
- * array column descriptor (`array_args`, `array.rb:36`, per td).
+ * array column descriptor (`array_args`, `table/array.rb:30`, per td).
  *
  * `Kernel#Hash` converts exactly three things — a hash, nil, and the EMPTY
  * list — and raises `TypeError: can't convert <Class> into Hash` for
@@ -203,7 +203,7 @@ function firstTdColumnAlignment(node: NodeOf<"table">): string | null {
 }
 
 /**
- * `Table::Array#to_latex` (`array.rb:15`): `\begin{array}` plus the column
+ * `Table::Array#to_latex` (`table/array.rb:15`): `\begin{array}` plus the column
  * descriptor from the first row (`array_args` — `|` for a pipe-leading td,
  * an alignment letter for a columnalign td, nothing otherwise; `.` when the
  * whole row yields nothing).

@@ -23,7 +23,7 @@ export function renderSum(node: NodeOf<"sum">, context: RenderContext): XmlEleme
 }
 
 /**
- * The shared body: `sum.rb` and `prod.rb` repeat it verbatim (`sum_tag` /
+ * The shared body: `function/sum.rb` and `function/prod.rb` repeat it verbatim (`sum_tag` /
  * `prod_tag_name` are the same underover choice). Exported for
  * `../prod/mathml.ts`.
  */

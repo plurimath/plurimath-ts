@@ -89,7 +89,7 @@ function inOracle(expression: string): { ok: boolean; output: string } {
   return { ok: parsed.ok, output: parsed.value };
 }
 
-const GOOD = '{"ok"=>true,"asciimath"=>"a","latex"=>"b","mathml"=>"c"}';
+const GOOD = '{"ok"=>true,"asciimath"=>"a","latex"=>"b","mathml"=>"c","unicodemath"=>"d"}';
 
 describe("the shape guard refuses what the count check could not see", () => {
   it("rejects one empty object per input, which used to pass silently", () => {
@@ -100,7 +100,7 @@ describe("the shape guard refuses what the count check could not see", () => {
 
   it("rejects an accepted result whose format field is not a string", () => {
     const r = inOracle(
-      'OracleGate.assert_differential_shape!([{"ok"=>true,"asciimath"=>"a","latex"=>nil,"mathml"=>"c"}], "gem", ["x"])',
+      'OracleGate.assert_differential_shape!([{"ok"=>true,"asciimath"=>"a","latex"=>nil,"mathml"=>"c","unicodemath"=>"d"}], "gem", ["x"])',
     );
     expect(r.ok).toBe(false);
     expect(r.output).toContain("not a string");
@@ -123,10 +123,10 @@ describe("the comparator reports what it used to hide", () => {
   it("reports every differing format, not just the first", () => {
     const r = inOracle(
       `OracleGate.differential_divergences(["x"], [${GOOD}], ` +
-        '[{"ok"=>true,"asciimath"=>"X","latex"=>"Y","mathml"=>"Z"}]).map { |d| d["format"] }',
+        '[{"ok"=>true,"asciimath"=>"X","latex"=>"Y","mathml"=>"Z","unicodemath"=>"W"}]).map { |d| d["format"] }',
     );
     expect(r.ok).toBe(true);
-    expect(r.output).toBe('["asciimath", "latex", "mathml"]');
+    expect(r.output).toBe('["asciimath", "latex", "mathml", "unicodemath"]');
   });
 
   it("never scores a gem defect as agreement with a port refusal", () => {

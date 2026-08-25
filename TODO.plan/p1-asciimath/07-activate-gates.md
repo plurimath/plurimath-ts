@@ -13,7 +13,7 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
   - `runtime-boundary` — valid structural object renders; unknown kind and
     malformed known kind raise `RenderError`.
   - `unsupported-fallback` — `"unitsml(...)"` becomes `Text`, renders in all
-    three formats, warns once per unique construct, and reports an offset into
+    four formats, warns once per unique construct, and reports an offset into
     the *original* input; `onUnsupported` replaces, silences, and can escalate.
   - `payload-validation` — generated payloads match their schema and the
     recorded hashes.

@@ -893,7 +893,7 @@ Lifecycle rules:
 | Packaging correctness (`publint`, `attw`, packed tarball) | A | `P0` |
 | Generated-payload schema + manifest-hash validation | A | `P1-baseline` (first generated data) |
 | Runtime boundary (unknown/malformed nodes) | A | `P1-baseline` (with the first renderer) |
-| Unsupported-construct fallback + diagnostics | A | `P1-baseline` — `Text` fallback and all three renderings; warning dedup; callback replace/silence/throw; exact original-input index (incl. after a length-changing preprocessing token); presence of the user-facing notice |
+| Unsupported-construct fallback + diagnostics | A | `P1-baseline` — `Text` fallback in all four renderings; warning dedup; callback replace/silence/throw; exact original-input index (incl. after a length-changing preprocessing token); presence of the user-facing notice |
 | Corpus conformance (tree, model, renderers) | A | `P1-baseline` |
 | Negative/rejection corpus | A | `P1-completion` |
 | Symbol context-exception matrix | A | `P1-completion` |

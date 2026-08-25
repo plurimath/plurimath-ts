@@ -21,6 +21,7 @@ import { parseAsciimath } from "../../../src/formats/asciimath/parser";
 import { toAsciimath } from "../../../src/formats/asciimath/renderer";
 import { toLatex } from "../../../src/formats/latex/renderer";
 import { toMathml } from "../../../src/formats/mathml/renderer";
+import { toUnicodemath } from "../../../src/formats/unicodemath/renderer";
 
 function math(inner: string, displaystyle = "true"): string {
   return (
@@ -59,6 +60,10 @@ describe("unsupported UnitsML fallback", () => {
     expect(toAsciimath(formula)).toBe('"unitsml(kg)"');
     expect(toLatex(formula)).toBe("\\text{unitsml(kg)}");
     expect(toMathml(formula)).toBe(math("    <mtext>unitsml(kg)</mtext>"));
+    // Measured on the pinned oracle: `Formula#to_unicodemath` over the same
+    // `Text` node answers `"unitsml(kg)"`, quotes included — the same bytes as
+    // to_asciimath, not the LaTeX or MathML wrapping.
+    expect(toUnicodemath(formula)).toBe('"unitsml(kg)"');
   });
 
   it("replaces the default warning when a callback is supplied", () => {

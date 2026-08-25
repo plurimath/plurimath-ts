@@ -364,7 +364,8 @@ module OracleGate
       begin
         f = Plurimath::Math.parse(input, :asciimath)
         { "ok" => true, "asciimath" => f.to_asciimath, "latex" => f.to_latex,
-          "mathml" => f.to_mathml }
+          "mathml" => f.to_mathml,
+            "unicodemath" => f.to_unicodemath }
       rescue Plurimath::Math::ParseError
         # A REFUSAL. Only the fact of it is comparable: the gem re-raises its
         # parse failures as Math::ParseError with cause: nil, so its category
@@ -497,7 +498,7 @@ module OracleGate
     results
   end
 
-  DIFFERENTIAL_FORMATS = %w[asciimath latex mathml].freeze
+  DIFFERENTIAL_FORMATS = %w[asciimath latex mathml unicodemath].freeze
 
   def differential_divergences(inputs, gem_results, port_results)
     inputs.each_with_index.filter_map do |input, index|
@@ -520,7 +521,7 @@ module OracleGate
 
       # `select`, not `find`: this command reports that it lists every
       # divergence, and stopping at the first differing format made that
-      # false — an input wrong in all three showed up as one asciimath row.
+      # false — an input wrong in every format showed up as one asciimath row.
       differing = DIFFERENTIAL_FORMATS.select { |name| gem[name] != port[name] }
       next if differing.empty?
 

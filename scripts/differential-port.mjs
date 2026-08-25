@@ -6,7 +6,8 @@
  * package exactly as a consumer would, and writes a JSON array of results.
  * One object per input, in order:
  *
- *   { "ok": true,  "asciimath": "...", "latex": "...", "mathml": "..." }
+ *   { "ok": true,  "asciimath": "...", "latex": "...", "mathml": "...",
+ *     "unicodemath": "..." }
  *   { "ok": false, "code": "PARSE_ERROR" }
  *
  * Errors are reported by `code`, not by message: the gem's message text and
@@ -33,6 +34,7 @@ if (!existsSync(entry("asciimath"))) {
 const { parseAsciimath, toAsciimath } = await import(entry("asciimath"));
 const { toLatex } = await import(entry("latex"));
 const { toMathml } = await import(entry("mathml"));
+const { toUnicodemath } = await import(entry("unicodemath"));
 
 /** The port's typed failures. Anything else is a crash and must not be caught. */
 const TYPED_CODES = new Set(["PARSE_ERROR", "RENDER_ERROR", "MISSING_SYMBOL_DATA"]);
@@ -62,6 +64,7 @@ function render(input) {
       asciimath: toAsciimath(node),
       latex: toLatex(node),
       mathml: toMathml(node),
+      unicodemath: toUnicodemath(node),
     };
   } catch (error) {
     const code = typedCode(error);

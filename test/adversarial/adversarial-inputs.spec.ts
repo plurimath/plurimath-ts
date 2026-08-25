@@ -32,6 +32,7 @@ import { parseAsciimath } from "../../src/formats/asciimath/parser";
 import { toAsciimath } from "../../src/formats/asciimath/renderer";
 import { toLatex } from "../../src/formats/latex/renderer";
 import { toMathml } from "../../src/formats/mathml/renderer";
+import { toUnicodemath } from "../../src/formats/unicodemath/renderer";
 import { DEPTH_LIMIT_MESSAGE, dynamic, STACK_EXHAUSTED_MESSAGE } from "../../src/pegkit/atom";
 
 /** The typed failures this gate accepts as a clean outcome. */
@@ -71,6 +72,7 @@ const RENDERERS: ReadonlyArray<readonly [string, (node: ParsedFormula) => string
   ["toAsciimath", toAsciimath],
   ["toLatex", toLatex],
   ["toMathml", toMathml],
+  ["toUnicodemath", toUnicodemath],
 ];
 
 /** Runs one input all the way to a clean outcome, or rethrows what it got. */
@@ -222,9 +224,9 @@ describe("the guard rejects what it exists to reject", () => {
 });
 
 describe("a typed failure in one renderer does not hide a crash in a later one", () => {
-  // The regression test for the shared-`try` bug. While all three renderers sat
-  // in one `try`, a typed `RenderError` from the first returned before the
-  // others ran, so an untyped throw from the second or third was never seen.
+  // The regression test for the shared-`try` bug. While every renderer sat in
+  // one `try`, a typed `RenderError` from the first returned before the others
+  // ran, so an untyped throw from a later one was never seen.
   // Restoring that shape makes this test fail; without it, nothing would.
   const typedFirst = (): string => {
     throw new ParseError("typed", "x", "asciimath", 0);

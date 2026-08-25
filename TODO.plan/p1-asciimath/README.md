@@ -90,16 +90,19 @@ has never been shown to reject anything.
 
 **P1-completion** (item 8):
 
-- [ ] Widened positive corpus: fonts, colour, left/right, `mod`.
-- [ ] Rejection corpus non-empty and passing, with its case count asserted, and
+- [x] Widened positive corpus: fonts, colour, left/right, `mod`.
+- [x] Rejection corpus non-empty and passing, with its case count asserted, and
       every malformed-input class item 8 lists resolved against the gem rather
       than assumed.
-- [ ] Generated model schema and behavioural symbol-context probes driving the
+- [x] Generated model schema and behavioural symbol-context probes driving the
       union and the exception matrix.
-- [ ] Package-isolation assertions for the real `/asciimath`, `/mathml` and
-      `/latex` subpaths.
-- [ ] `pnpm check` reports twelve active class-A gates, all passing, and both
-      class-B runners are clean.
+- [x] Package-isolation assertions for the real `/asciimath`, `/mathml`,
+      `/latex` and `/unicodemath` subpaths.
+- [x] `pnpm check` reports twelve active class-A gates, all passing.
+- [x] The three class-B runners are clean: `repo --check` and `testsuite
+      --check` exit 0, and `differential` exits 0 with no divergences across
+      429 inputs (1,287 comparisons). It exceeds its 300s bound on a loaded
+      host, so it is measured on a quiet one.
 
 Both milestones additionally need the class-C evidence: a review round with
 findings resolved, and sign-off recorded.

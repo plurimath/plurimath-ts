@@ -164,19 +164,19 @@ The rejection suite must carry, at minimum:
 
 ## Done when
 
-- [ ] The rejection corpus is non-empty, its case count is asserted, and the
+- [x] The rejection corpus is non-empty, its case count is asserted, and the
   suite **fails** when pointed at an empty set — demonstrated, not assumed.
-- [ ] Every rejection case asserts an error category, and asserts the mapped
+- [x] Every rejection case asserts an error category, and asserts the mapped
   original-input index wherever the generator captured a position.
-- [ ] Every candidate in the committed malformed-input list has a case — in the
+- [x] Every candidate in the committed malformed-input list has a case — in the
   rejection corpus if the gem rejects it, in the positive corpus if the gem
   accepts it — and `a/` and `/b` are among the rejections.
-- [ ] Malformed entities is recorded as not-applicable to AsciiMath, with the
+- [x] Malformed entities is recorded as not-applicable to AsciiMath, with the
   reason, rather than being absent.
-- [ ] `pnpm check` reports twelve active class-A gates, all passing.
-- [ ] `scripts/gate-oracle.rb differential` runs a bounded seeded batch against a clean
+- [x] `pnpm check` reports twelve active class-A gates, all passing.
+- [x] `scripts/gate-oracle.rb differential` runs a bounded seeded batch against a clean
   gem checkout, and reports either zero divergences or a named list.
-- [ ] `currentMilestone` is `P1-completion`, and no gate is active without a
+- [x] `currentMilestone` is `P1-completion`, and no gate is active without a
   runner.
 - [ ] The phase-exit checklist is satisfied: gates green, plus the class-C
   evidence — a review round with findings resolved, and sign-off recorded.

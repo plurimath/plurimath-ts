@@ -84,7 +84,7 @@ its own probes gave (probe-latex-degenerate.rb on the pinned oracle,
   `Left`/`Right` refuse nothing: every degenerate shape is a Ruby hash-miss
   dot, unlike the asciimath interpolation path.
 
-### Renderer deep-tree parity window below the gem's stack ceiling
+### Deep-tree parity window below the gem's stack ceiling
 
 **Trigger: a consumer report with a real tree that deep, or an iterative-walk
 redesign of the validate/render recursion.**
@@ -106,6 +106,14 @@ branding is pinned across depths 1,400–4,200 in
 `test/formats/latex/renderer.spec.ts`: genuine stack exhaustion takes the
 too-deep rejection whichever side hits its ceiling first, never the generic
 mid-walk wrap.
+
+The same applies on the **parse** path, and it is the side where the gem fails
+first: 300 nested parens raise `SystemStackError: stack level too deep` from
+`Plurimath::Math.parse` on the pinned oracle, where the port raises its typed
+`ParseError` / `PARSE_ERROR` ("Input exhausted the parser stack"). Both reject
+the input; only the error's shape differs, because a host-language stack crash
+is not portable behaviour. That is the decision recorded here, and it is what
+the adversarial-inputs gate pins.
 
 ### The carrier name-guard sets are partly hand-listed
 

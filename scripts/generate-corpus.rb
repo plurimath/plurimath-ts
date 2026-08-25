@@ -2203,9 +2203,9 @@ module CorpusGenerator
 
   # `Mathml::Constants::UNICODE_SYMBOLS.invert`, name -> entity, in Ruby's
   # invert order (last write wins — asserted collision-free so the order is
-  # not load-bearing). Read twice by the render path: `Text#parse_text`
-  # substitutes `unicode[:name]` tokens through it (text.rb:126-128, reached
-  # from parse_text at :137), and
+  # not load-bearing). Read twice by the render path: `Text#symbol_value`
+  # (text.rb:126-128) looks `unicode[:name]` tokens up through it, reached from
+  # `Text#parse_text` at :137, and
   # `Core#invert_unicode_symbols` keys it by class_name for the big-operator
   # `<mo>` texts (core.rb:230). Word-shaped names are verified through a live
   # `Text` render; the operator reads through `Int`/`Oint`/`Sum`/`Prod`.

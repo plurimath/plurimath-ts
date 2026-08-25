@@ -3,7 +3,7 @@
  * interpolation (not `latex_wrapped` — measured against `Oint`, see
  * `../oint/latex.ts`), a ` #{third}` append, then Ruby `String#strip`, whose
  * whitespace set is `[\0\t\n\v\f\r ]` — the no-break space stays. The gem
- * repeats this body in `sum.rb` and `prod.rb` (each spelling its own
+ * repeats this body in `function/sum.rb` and `function/prod.rb` (each spelling its own
  * command); so does this port, one file per class (`../sum/latex.ts`, `../prod/latex.ts`).
  */
 

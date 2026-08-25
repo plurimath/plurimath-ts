@@ -1,6 +1,6 @@
 /**
  * Mirrors `function/linebreak.rb` — `Linebreak#to_mathml_without_math_tag`
- * (:9): with no parameter, `<mo linebreak="newline"/>`; with one, the
+ * (:45): with no parameter, `<mo linebreak="newline"/>`; with one, the
  * parameter's OWN render forcibly renamed to `mo` (an `<mtext>ab</mtext>`
  * child becomes `<mo>ab</mo>`, a formula's `<mrow>` becomes an `<mo>`
  * holding elements — probes linebreak-mtext / linebreak-formula-param),

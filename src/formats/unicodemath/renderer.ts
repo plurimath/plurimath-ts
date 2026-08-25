@@ -27,7 +27,7 @@
  * UnicodeMath rendering has NO context axis. The gem threads an `options:`
  * hash through every `to_unicodemath`, which looks like one: it is
  * `{formatter:, unitsml:, formula:}`, and on this path the only reader is
- * `Number#format_value_with_options` (`number.rb:114`), which returns the raw
+ * `Number#format_value_with_options` (`number.rb:115`), which returns the raw
  * value unless a number formatter is configured — P4 scope, and the pinned
  * corpus was generated with none. Separately, the generated exception matrix
  * (`src/generated/unicodemath/exceptions.ts`) is empty: no symbol's

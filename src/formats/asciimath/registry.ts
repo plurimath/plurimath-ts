@@ -5,7 +5,7 @@
  *
  * Ruby resolves a captured name at runtime with
  * `Object.const_get("Plurimath::Math::Function::#{capitalize(text)}")`
- * (`utility.rb:139`), which reaches whatever constant exists — including the
+ * (`lib/plurimath/utility.rb:139`), which reaches whatever constant exists — including the
  * alias constants `Overbrace = Obrace`, `Underbrace = Ubrace` and
  * `Underline = Ul`. A port cannot const_get, and ARCHITECTURE.md §3 rule 7
  * bans the POC's late-bound mutable registry, so every reachable name gets an
@@ -98,7 +98,7 @@ import {
  *   Also `Abs`, `Ceil`, `Floor`, `Norm`, `Sqrt`, which add no initialize of
  *   their own, so their extra declared fields stay unassigned.
  * - `unaryAttributes`: the unary subclasses that add
- *   `@attributes = attributes` with a `{}` default (`bar.rb:9-12` and its
+ *   `@attributes = attributes` with a `{}` default (`function/bar.rb:9-12` and its
  *   eight siblings).
  * - `text`: `Text#initialize` — `parameter_one` defaults to `""` and `@lang`
  *   is always assigned (`text.rb:9`).
@@ -260,13 +260,13 @@ export const ASCIIMATH_CLASS_REGISTRY: ReadonlyMap<string, AsciimathClassEntry> 
 );
 
 /**
- * `Utility::FONT_STYLES` (`utility.rb:7-58`): font keyword → the `FontStyle`
+ * `Utility::FONT_STYLES` (`lib/plurimath/utility.rb:7-58`): font keyword → the `FontStyle`
  * subclass basename it resolves to, from the census's resolved classes. The
  * transform indexes this with the captured `fonts_class` text and constructs
  * `FontStyleNode({ name, ... })`; the constructor itself is one class for all
  * fifty keywords, which is why the value is a basename rather than a second
  * constructor map. (Iteration order is the census's sorted order, not
- * `utility.rb`'s; the table is only ever indexed.)
+ * `lib/plurimath/utility.rb`'s; the table is only ever indexed.)
  */
 export const ASCIIMATH_FONT_STYLES: ReadonlyMap<string, string> = new Map(
   ASCIIMATH_TRANSFORM_FONT_STYLES.map((census) => [
@@ -280,7 +280,7 @@ export const ASCIIMATH_FONT_STYLE_CONSTRUCTOR: AsciimathNodeConstructor =
   ASCIIMATH_NODE_CONSTRUCTORS.fontStyle;
 
 /**
- * `Utility::UNARY_CLASSES` (`utility.rb:64-98`), in the gem's order — the
+ * `Utility::UNARY_CLASSES` (`lib/plurimath/utility.rb:64-98`), in the gem's order — the
  * generated list itself. The transform asks membership only — whether a unary
  * argument keeps its fence — so a Set serves it.
  */

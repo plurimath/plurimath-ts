@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/hat.rb` — `Hat#to_asciimath` (:14): the body `obrace.rb`
+ * Mirrors `function/hat.rb` — `Hat#to_asciimath` (:14): the body `function/obrace.rb`
  * repeats verbatim (see `../obrace/asciimath.ts`), keyword `hat`.
  */
 

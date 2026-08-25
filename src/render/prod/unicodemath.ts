@@ -19,7 +19,7 @@ import {
   present,
 } from "../../formats/unicodemath/render-shared";
 
-/** U+220F N-ARY PRODUCT — `Prod#nary_attr_value` (`prod.rb:125`). */
+/** U+220F N-ARY PRODUCT — `Prod#nary_attr_value` (`function/prod.rb:125`). */
 const PRODUCT = "∏";
 
 export function renderProd(node: NodeOf<"prod">, context: RenderContext): string {

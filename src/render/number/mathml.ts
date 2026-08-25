@@ -1,6 +1,6 @@
 /**
  * Mirrors `number.rb` — `Number#to_mathml_without_math_tag` (:32) →
- * `Formatter::Numbers::MathmlRenderer.plain_element` (mathml_renderer.rb:50):
+ * `Formatter::Numbers::MathmlRenderer.plain_element` (formatter/numbers/mathml_renderer.rb:50):
  * with no formatter configured — the only supported state, `formatter` being
  * deferred — `format_value_with_options` returns the raw value and the
  * render is `<mn>` over `value.to_s`. A nil value is the long-form

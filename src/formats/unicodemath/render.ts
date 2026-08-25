@@ -128,7 +128,7 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
  * looks like a rendering axis and is not one: `Formula#to_unicodemath`
  * (`formula.rb:187`) builds it as `{formatter:, unitsml:, formula:}`, and the
  * only place any of that is read back on this path is
- * `Number#format_value_with_options` (`number.rb:114`), which returns `value`
+ * `Number#format_value_with_options` (`number.rb:115`), which returns `value`
  * unchanged unless a number formatter is configured. The port has no
  * formatter axis at all, so the hash is inert here and there is nothing to
  * carry. (Distinct from the generated exception matrix, which is separately

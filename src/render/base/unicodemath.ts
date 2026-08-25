@@ -3,7 +3,7 @@
  *
  * Two things are specific to this kind:
  *
- *   - **it overrides `unicodemath_parens`** (`base.rb:131`). When the node
+ *   - **it overrides `unicodemath_parens`** (`function/base.rb:131`). When the node
  *     carries options, the wrapper becomes white lenticular brackets instead
  *     of round ones, and only otherwise falls through to `Core`'s. Using the
  *     shared helper here would silently emit the wrong bracket.
@@ -45,7 +45,7 @@ export function renderBase(node: NodeOf<"base">, context: RenderContext): string
 }
 
 /**
- * `Base#unicodemath_parens` (`base.rb:131`) — white lenticular brackets when
+ * `Base#unicodemath_parens` (`function/base.rb:131`) — white lenticular brackets when
  * the node has options of its own, `Core`'s round parens otherwise.
  */
 function baseParens(node: NodeOf<"base">, field: unknown, context: RenderContext): string | null {
@@ -57,7 +57,7 @@ function baseParens(node: NodeOf<"base">, field: unknown, context: RenderContext
 }
 
 /**
- * `Base#size_overrides` (`base.rb:125`) — empty unless the node has options
+ * `Base#size_overrides` (`function/base.rb:125`) — empty unless the node has options
  * carrying a `size`, and a reverse lookup into the size table.
  */
 function sizeOverrides(node: NodeOf<"base">): string {

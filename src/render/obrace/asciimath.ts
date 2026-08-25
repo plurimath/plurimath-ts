@@ -2,7 +2,7 @@
  * Mirrors `function/obrace.rb` — `Obrace#to_asciimath` (:14):
  * `"obrace(#{parameter_one.to_asciimath})"` — strict, so a list crashes here
  * where the default unary path would have joined it. The gem repeats this
- * body verbatim in `ubrace.rb`, `bar.rb` and `hat.rb`; so does this port,
+ * body verbatim in `function/ubrace.rb`, `function/bar.rb` and `function/hat.rb`; so does this port,
  * one file per class.
  */
 

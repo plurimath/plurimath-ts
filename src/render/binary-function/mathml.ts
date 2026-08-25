@@ -44,7 +44,7 @@ export function renderBinaryFunction(
   const name = node.name;
   switch (name) {
     case "Power": {
-      // `power.rb:14-26`: `<mover>` when the base's class_name is ubrace or
+      // `power.rb:21`: `<mover>` when the base's class_name is ubrace or
       // obrace (probe power-ubrace), `<msup>` otherwise; both slots through
       // `validate_mathml_fields` — nil contributes nothing (probe
       // power-nil-nil renders `<msup/>`).
@@ -56,7 +56,7 @@ export function renderBinaryFunction(
       );
     }
     case "Mod": {
-      // `mod.rb:13-28`: `<mrow>` around `<mi>mod</mi>` (empty `<mi/>` under
+      // `mod.rb:34-48`: `<mrow>` around `<mi>mod</mi>` (empty `<mi/>` under
       // hide_function_name — probe mod-hide), the slots nil-guarded by
       // truthiness.
       const mi = new XmlElement("mi");
@@ -74,7 +74,7 @@ export function renderBinaryFunction(
     case "Td":
       return renderTd(node, context);
     case "Lim": {
-      // `lim.rb:13-33`: `<mo>lim</mo>` bare without values; else
+      // `lim.rb:37`: `<mo>lim</mo>` bare without values; else
       // m{underover|under|over} by the slots' truthiness (probes lim-*).
       const mo = new XmlElement("mo").append("lim");
       if (!present(node.parameterOne) && !present(node.parameterTwo)) return mo;
@@ -95,7 +95,7 @@ export function renderBinaryFunction(
       );
     }
     case "Log": {
-      // `log.rb:13-31`: `<mi>log</mi>` (empty under hide — probe log-hide,
+      // `log.rb:82`: `<mi>log</mi>` (empty under hide — probe log-hide,
       // where the empty `<mi/>` STAYS as the first script child) bare
       // without values; else m{subsup|sub|sup}, slots through
       // `validate_mathml_fields`.
@@ -127,7 +127,7 @@ export function renderBinaryFunction(
       );
     }
     case "Stackrel": {
-      // `stackrel.rb:13-24` with `#mathml_values` (:74): `<mover>` over
+      // `stackrel.rb:19` with `#mathml_values` (:74): `<mover>` over
       // [mrow(SECOND), mrow(FIRST)], a nil slot's mrow holding the empty
       // STRING — the long-form `<mrow></mrow>` (probe stackrel-nil-one). A
       // slot rendering to a spliced array crashes the gem's `<<` (probe
@@ -170,9 +170,9 @@ function stackrelValue(
 }
 
 /**
- * `Td#to_mathml_without_math_tag` (`td.rb:50-60`): the EMPTY STRING when the
+ * `Td#to_mathml_without_math_tag` (`td.rb:18-28`): the EMPTY STRING when the
  * first cell entry is a `Vert` paren — or any symbol whose value is `"|"`
- * (`Utility.symbol_value`, utility.rb:202-209; probe symbol-pipe-td) — else
+ * (`Utility.symbol_value`, lib/plurimath/utility.rb:202-209; probe symbol-pipe-td) — else
  * `<mtd>` with `parameter_two` as attributes when non-empty (`&.any?`),
  * cells mapped nil-safely.
  */

@@ -83,7 +83,7 @@ function isRubyStripCode(code: number): boolean {
  * end-anchored `/[\0\t\n\v\f\r ]+$/` has no start anchor, so a long
  * INTERNAL whitespace run followed by a non-whitespace tail makes every
  * position in the run a retry point — quadratic, where Ruby's C-implemented
- * `strip` (`int.rb:43`, `oint.rb:48`, `prod.rb:52`, `sum.rb:53`) is linear.
+ * `strip` (`function/int.rb:43`, `function/oint.rb:48`, `function/prod.rb:52`, `function/sum.rb:53`) is linear.
  * Reachable end-to-end through `toLatex` on validator-passing trees (an
  * `int` whose third slot renders N internal spaces), so the complexity class
  * is part of the hostile-input posture, pinned by the wall-clock test in
@@ -225,8 +225,8 @@ const PLAIN_WRAPPED_UNARY_NAMES: ReadonlySet<string> = new Set(LATEX_PLAIN_WRAPP
  * `Core#validate_function_formula`, per measured class (probe_census.rb
  * `wrapped/*`): true by default (`core.rb:71`); false for symbols
  * (`symbols/symbol.rb:107`), numbers (`number.rb:80`), text (`text.rb:65`),
- * the brace/accent shapes (`obrace.rb:40`, `ubrace.rb:48`, `hat.rb:40`,
- * `tilde.rb:36`), `Left`/`Right` (`left.rb:38`, `right.rb:38`), the 27 plain
+ * the brace/accent shapes (`function/obrace.rb:40`, `function/ubrace.rb:48`, `function/hat.rb:40`,
+ * `function/tilde.rb:36`), `Left`/`Right` (`left.rb:38`, `right.rb:38`), the 27 plain
  * unary names (the generated census, `LATEX_PLAIN_WRAPPED_UNARY_NAMES`) —
  * and a formula holding BOTH a `Left` and a `Right` (`formula.rb:298`:
  * `value.none?(Left) || value.none?(Right)`).
@@ -286,7 +286,7 @@ export function latexWrapped(
 }
 
 /**
- * `Utility.symbol_value(obj, "|")` (`utility.rb:202`): a `Paren::Vert`
+ * `Utility.symbol_value(obj, "|")` (`lib/plurimath/utility.rb:202`): a `Paren::Vert`
  * instance, or any symbol whose stored value is `"|"`. Leaned on by `Td`
  * (`../../render/binary-function/latex.ts`), `Tr`
  * (`../../render/unary-function/latex.ts`) and the table column descriptors

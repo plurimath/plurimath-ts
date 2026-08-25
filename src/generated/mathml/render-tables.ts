@@ -64,8 +64,9 @@ export const MATHML_UNARY_MI_NAMES: readonly string[] = [
  * Ruby's invert semantics kept: a name mapped from several
  * entities keeps the LAST one, and every word-shaped winner is
  * verified through a live `Text` render. Read twice on the render
- * path: `Text#parse_text`'s first `unicode[:name]` lookup
- * (`text.rb:127`), and — keyed by class_name —
+ * path: the `unicode[:name]` lookup `Text#parse_text` reaches
+ * via `Text#symbol_value`
+ * (`text.rb:126-128`), and — keyed by class_name —
  * `Core#invert_unicode_symbols` (`core.rb:230`), the big-operator
  * `<mo>` texts.
  */
@@ -326,7 +327,7 @@ export const MATHML_FONT_STYLE_CARRIER_VARIANTS: ReadonlyMap<string, string> = n
 ]);
 
 /**
- * `Base::MUNDER_CLASSES` (`base.rb:15-21`), in the gem's order:
+ * `Base::MUNDER_CLASSES` (`function/base.rb:15-21`), in the gem's order:
  * first-slot class_names whose script renders `<munder>` instead
  * of `<msub>`. Membership only.
  */
@@ -410,9 +411,9 @@ export interface MathmlParenRoles {
 /**
  * Class-identity roles the mtable/mtr/mtd path tests with
  * `is_a?`: `close` forces `columnalign="left"` (`table.rb:249`),
- * `norm` routes `norm_table` (`table.rb:57`), `vert` marks a
- * column line and empties its cell (`utility.rb:207`,
- * `td.rb:53`), `hline` is stripped from a row head
+ * `norm` routes `norm_table` (`table.rb:61`), `vert` marks a
+ * column line and empties its cell (`lib/plurimath/utility.rb:207`,
+ * `td.rb:19`), `hline` is stripped from a row head
  * (`tr.rb:120-124`). Each id list is the measured hierarchy —
  * root plus descendants — and each role is verified live.
  */

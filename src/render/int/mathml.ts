@@ -1,11 +1,11 @@
 /**
- * Mirrors `function/int.rb` — `Int#to_mathml_without_math_tag` (:22): with
+ * Mirrors `function/int.rb` — `Int#to_mathml_without_math_tag` (:46): with
  * no value anywhere, the bare `<mo>&#x222b;</mo>` (the text via
  * `invert_unicode_symbols`, generated); otherwise ALWAYS `<msubsup>` with
  * `<mrow/>` placeholders for missing sub/sup (`validate_mathml_tag`,
  * ternary_function.rb:237 — probes int-sub / int-sup); a third slot appends
  * behind the msubsup in an outer `<mrow>` (identity `wrap_mrow`, intent
- * off — probe int-all). `options[:mask]` is checked by KEY (`int.rb:34`):
+ * off — probe int-all). `options[:mask]` is checked by KEY (`function/int.rb:59`):
  * only the inert `limits_default` decoding is supported
  * (`assertMaskIsInert`).
  */

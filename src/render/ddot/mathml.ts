@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/ddot.rb` — `Ddot#to_mathml_without_math_tag` (:9):
+ * Mirrors `function/ddot.rb` — `Ddot#to_mathml_without_math_tag` (:14):
  * `<mover accent="true">` over `mathml_value << <mo>..</mo>` — the accent
  * is HARDCODED and the node's own `attributes` slot is never read (probes
  * ddot-x / ddot-nil). `mathml_value` semantics (list compaction, nil to

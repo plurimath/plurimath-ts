@@ -3,8 +3,9 @@
  * (:30) and `#mathml_value` (:209, hoisted to
  * `../../formats/mathml/render-shared.ts`) — plus the name arms for the gem
  * classes the census folds into this carrier with their *own* mathml
- * overrides: `cancel.rb`, `left.rb`, `right.rb`, `sup.rb`, `tr.rb`. Every
- * other name in `MEASURED_UNARY_NAMES` below renders the carrier default.
+ * overrides: `cancel.rb`, `left.rb`, `right.rb`, `function/sup.rb`, `tr.rb`.
+ * Every other name in `MEASURED_UNARY_NAMES` below renders the carrier
+ * default.
  *
  * Measured pins (probe-mathml-kinds on the pinned oracle):
  *
@@ -51,7 +52,7 @@ export function renderUnaryFunction(
   const name = node.name;
   switch (name) {
     case "Cancel": {
-      // `cancel.rb:22-30`: `<menclose notation="updiagonalstrike">`, the
+      // `cancel.rb:7-15`: `<menclose notation="updiagonalstrike">`, the
       // parameter nil-safe (probe cancel-nil renders the empty element).
       const enclose = new XmlElement("menclose").setAttribute("notation", "updiagonalstrike");
       if (node.parameterOne !== null && node.parameterOne !== undefined) {
@@ -79,7 +80,7 @@ export function renderUnaryFunction(
       return mo;
     }
     case "Sup": {
-      // `sup.rb:9-19`: `<mrow>` over the value, `<mo>sup</mo>` prepended
+      // `function/sup.rb:7-18`: `<mrow>` over the value, `<mo>sup</mo>` prepended
       // unless `hide_function_name`.
       const parts = mathmlValue(node.parameterOne, context, "sup.parameterOne");
       if (!present(node.hideFunctionName)) {

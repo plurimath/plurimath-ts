@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/obrace.rb` — `Obrace#to_mathml_without_math_tag` (:14):
+ * Mirrors `function/obrace.rb` — `Obrace#to_mathml_without_math_tag` (:24):
  * the bar-shaped body over `<mover>`, accent text `&#x23de;` (probes
  * obrace-x / obrace-nil).
  */

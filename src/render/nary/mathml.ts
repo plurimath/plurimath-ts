@@ -1,12 +1,12 @@
 /**
- * Mirrors `function/nary.rb` — `Nary#to_mathml_without_math_tag` (:50) and
+ * Mirrors `function/nary.rb` — `Nary#to_mathml_without_math_tag` (:49) and
  * `#tag_name` (:219): the script tag from `options[:type]` — `"undOvr"`
  * selects the munderover family (probe nary-undovr) — and the second/third
  * slots' presence, falling to a bare `<mrow>` with neither (probe
  * nary-bare); slots through `validate_mathml_fields`. A fourth slot appends
  * behind the script, wrapped in `<mrow>` UNLESS its render already is one —
  * the gem's one literal-true `wrap_mrow` (probes nary-p4-sym /
- * nary-p4-formula). `self.options[:mask]` reads truthily (`nary.rb:57`):
+ * nary-p4-formula). `self.options[:mask]` reads truthily (`nary.rb:56`):
  * a nil options hash crashes the gem, and a live mask is refused
  * (`assertMaskIsInert`).
  */

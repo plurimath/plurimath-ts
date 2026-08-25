@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/sum.rb` — `Sum#to_latex` (:50): the body `int.rb`
+ * Mirrors `function/sum.rb` — `Sum#to_latex` (:50): the body `function/int.rb`
  * repeats (see `../int/latex.ts` for the strip pin), command `\sum`.
  */
 

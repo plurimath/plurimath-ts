@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/prod.rb` — `Prod#to_latex` (:49): the body `int.rb`
+ * Mirrors `function/prod.rb` — `Prod#to_latex` (:49): the body `function/int.rb`
  * repeats (see `../int/latex.ts` for the strip pin), command `\prod`.
  */
 

@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/color.rb` — `Color#to_mathml_without_math_tag` (:33)
+ * Mirrors `function/color.rb` — `Color#to_mathml_without_math_tag` (:30)
  * and `#mathml_options` (:79): `<mstyle>` over the SECOND slot, with a
  * `mathcolor` — `mathbackground` when `options[:backgroundcolor]` is truthy
  * (probe color-background) — built from the FIRST slot's ASCIIMATH render,

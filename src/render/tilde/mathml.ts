@@ -1,5 +1,5 @@
 /**
- * Mirrors `function/tilde.rb` — `Tilde#to_mathml_without_math_tag` (:13):
+ * Mirrors `function/tilde.rb` — `Tilde#to_mathml_without_math_tag` (:14):
  * `<mover>` over [value, `<mo>~</mo>`], the mover standing with a nil
  * parameter (probe tilde-nil). The accent read is `attributes&.dig(:accent)`
  * — nil-safe where vec's is not — then the wrapper's `[]=`.

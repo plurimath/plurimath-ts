@@ -426,27 +426,35 @@ describe("the big operators", () => {
     );
   });
 
-  it("strips a long internal whitespace run in linear time, as Ruby's C strip does", () => {
+  it("finishes the 80k internal-whitespace regression case within 2 seconds", () => {
     // The latex mirror of PR #10 review finding 1: `rubyStrip`'s end-anchored
     // trailing regex had no start anchor, so a validator-passing tree — an
     // `int` whose third slot is a formula of N bare (nil-rendering) fontStyle
     // children then a symbol, rendering "\int " + N spaces + "x" — made every
     // position in the internal run a retry point: quadratic, where the gem's
-    // C-implemented `strip` is linear. Calibrated in this environment
-    // 2026-08-10: pre-fix the regex pair took 120/449/1,741 ms at
-    // n = 10k/20k/40k end-to-end through `toLatex` (~4x per doubling); the
-    // index-scan strip takes ~30 ms at 40k. The 750 ms bound is generous
-    // headroom for a slow machine, yet less than half the quadratic
-    // implementation's measured time — this test ran red against it.
+    // C-implemented `strip` is linear.
+    //
+    // A single wall-clock sample proves only that this fixed-size render
+    // finished within the budget on this run; it does not prove asymptotic
+    // linearity. A two-size scaling ratio was rejected because a load shift
+    // between samples can make either implementation look better or worse.
+    // The size and budget are a cost/margin compromise: large enough to
+    // separate the known quadratic implementation, with headroom for host
+    // load on the current implementation.
+    //
+    // Calibration on 2026-08-27 with Node 26.1.0: this 80k case took
+    // 91.95 ms with the index scan and 9,129.11 ms with the historical regex
+    // pair. These figures describe that runtime and measurement run, not
+    // every machine or invocation.
     const children: unknown[] = [];
-    for (let i = 0; i < 40_000; i += 1) children.push({ kind: "fontStyle" });
+    for (let i = 0; i < 80_000; i += 1) children.push({ kind: "fontStyle" });
     children.push({ kind: "symbol", value: "x" });
     const tree = { kind: "int", parameterThree: { kind: "formula", value: children } };
     const start = performance.now();
     const out = toLatex(tree as never);
     const elapsed = performance.now() - start;
-    expect(out).toBe(`\\int ${" ".repeat(40_000)}x`);
-    expect(elapsed).toBeLessThan(750);
+    expect(out).toBe(`\\int ${" ".repeat(80_000)}x`);
+    expect(elapsed, `80k LaTeX render took ${elapsed.toFixed(2)} ms`).toBeLessThan(2_000);
   });
 
   it("nary falls back to \\int for a nil first value — or a nil RENDER", () => {

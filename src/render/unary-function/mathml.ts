@@ -4,15 +4,16 @@
  * `../../formats/mathml/render-shared.ts`) — plus the name arms for the gem
  * classes the census folds into this carrier with their *own* mathml
  * overrides: `cancel.rb`, `left.rb`, `right.rb`, `sup.rb`, `tr.rb`. Every
- * other reachable name renders the carrier default.
+ * other name in `MEASURED_UNARY_NAMES` below renders the carrier default.
  *
  * Measured pins (probe-mathml-kinds on the pinned oracle):
  *
  *   - a `UNARY_CLASSES` member renders `<mi>name</mi>` and — with
  *     `unary_function_spacing` on, the default — the whole element wraps in
  *     `<mrow><mo rspace="thickmathspace"/>…</mrow>` (probe sin-x); a
- *     non-member would render a bare `<mo>` (generator-verified over `Hom`,
- *     `Arg`, ... — none of them reachable here);
+ *     non-member renders a bare `<mo>` with no wrap, which of the admitted
+ *     names only `Hom` takes (`Cancel`, the one reachable non-member, has
+ *     its own `menclose` arm and never reaches the default);
  *   - `hide_function_name` drops the name element but keeps the spacing
  *     wrap: `sin-hide-nil` renders `<mrow><mo rspace="thickmathspace"/></mrow>`,
  *     and with spacing off the render is Ruby nil;
@@ -89,7 +90,7 @@ export function renderUnaryFunction(
     case "Tr":
       return renderTr(node, context);
     default:
-      if (!REACHABLE_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
+      if (!MEASURED_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
       return renderUnaryMathmlDefault(
         name.toLowerCase(),
         node.parameterOne,
@@ -162,15 +163,41 @@ function withLeadingHlineRemoved(cell: NodeParameter, kind: string): NodeParamet
 const HLINE_IDS: ReadonlySet<string> = new Set(MATHML_PAREN_ROLE_IDS.hline);
 
 /**
- * The class names this carrier has measured behaviour for — the same
- * AsciiMath-reachable set the asciimath renderer guards (there via the
- * transform registry, here via the mathml slice's re-emission of the same
- * `get_class` census), plus `Tr`, which the transform constructs directly
- * (ARCHITECTURE.md §5, "parity gaps fail loudly").
+ * The class names this carrier has measured behaviour for. Three sources,
+ * and only the first is generated:
+ *
+ *   - the same AsciiMath-reachable set the asciimath renderer guards (there
+ *     via the transform registry, here via the mathml slice's re-emission of
+ *     the same `get_class` census);
+ *   - `Tr`, which the transform constructs directly
+ *     (ARCHITECTURE.md §5, "parity gaps fail loudly");
+ *   - `Hom`, which the transform never constructs at all, but whose
+ *     `to_mathml_without_math_tag` is the carrier's own.
+ *
+ * `Hom` is measured, not read off the class list: on the pinned oracle
+ * `Hom.instance_method(:to_mathml_without_math_tag).owner` is
+ * `UnaryFunction`, and of the 48 classes the census aliases onto this
+ * carrier it is the only one both outside the reachable set and
+ * carrier-default here. It is also the FIRST name to reach the `<mo>` arm of
+ * `renderUnaryMathmlDefault`: `Cancel` is the only reachable non-member of
+ * `UNARY_CLASSES` and it never gets there, having its own `menclose` arm
+ * above, so before `Hom` that arm was unexercised. Measured through a
+ * `Formula`: `Hom(Symbol("x"))` gives `<mrow><mo>hom</mo><mi>x</mi></mrow>`
+ * and `Hom(nil)` gives `<mo>hom</mo>` — no `rspace` wrap either way.
+ *
+ * A name outside the set raises rather than rendering the carrier default,
+ * because the gem class it denotes may override
+ * `to_mathml_without_math_tag`.
+ *
+ * The last two entries are gem-derived data typed by hand — the exception
+ * `TODO.plan/deferred.md` records under "The carrier name-guard sets are
+ * partly hand-listed"; both are held by behavioural pins in
+ * `test/formats/mathml/renderer.spec.ts`.
  */
-const REACHABLE_UNARY_NAMES: ReadonlySet<string> = new Set([
+const MEASURED_UNARY_NAMES: ReadonlySet<string> = new Set([
   ...MATHML_REACHABLE_CARRIER_NAMES.unary,
   "Tr",
+  "Hom",
 ]);
 
 /**

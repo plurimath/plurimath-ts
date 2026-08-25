@@ -104,6 +104,17 @@ describe("unary functions", () => {
     expect(() => toLatex(new TernaryFunctionNode({ name: "Multiscript" }))).toThrow(RenderError);
   });
 
+  it("Hom renders the carrier default, though the transform cannot build it", () => {
+    // Measured on the pinned oracle: Hom.new(Symbol("x")).to_latex is
+    // "\hom{x}" and Hom.new(nil) is "\hom{}".
+    // `Hom.instance_method(:to_latex).owner` is UnaryFunction, so — unlike
+    // glb and lcm above — it keeps the backslash. Nothing in the transform
+    // builds it, which is why the name is admitted by hand rather than by the
+    // census projection.
+    expect(toLatex(unary("Hom", x()))).toBe("\\hom{x}");
+    expect(toLatex(unary("Hom"))).toBe("\\hom{}");
+  });
+
   it("a bare string parameter crashes as the gem does", () => {
     // Probe unary/Sin/string => NoMethodError.
     expect(() => toLatex(new UnaryFunctionNode({ name: "Sin", parameterOne: "oops" }))).toThrow(

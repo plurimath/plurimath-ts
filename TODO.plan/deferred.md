@@ -127,6 +127,31 @@ behavioural pin, so a dropped or drifted name turns a test red. Still: it is
 gem-derived data typed by hand, so it carries this exception entry until the
 generator owns it.
 
+`MEASURED_UNARY_NAMES` in all four `src/render/unary-function/*.ts` adds two
+names to its generated census projection the same way: `Tr`, which the
+transform constructs without `get_class`, and `Hom`, which the transform
+never constructs at all. `Hom` was admitted 2026-08-21 on this measurement
+(probe-unary-carrier-defaults.rb on the pinned oracle, in the PR record): of
+the 48 classes the census aliases onto `Math::Function::UnaryFunction`, 34
+are reachable through `get_class`, `Tr` is transform-built, and of the
+remaining 13 — Hom, Longdiv, Mbox, Merror, Mglyph, Ms, Msgroup, Msline,
+None, Phantom, Scarries, Scarry, Substack — `Hom` is the only one whose
+`to_asciimath`, `to_latex`, `to_unicodemath` AND
+`to_mathml_without_math_tag` are all owned by the carrier, so the port's
+existing default arms already emit its bytes
+(`"hom(x)"`, `"\hom{x}"`, `"hom⁡x"`, `<mrow><mo>hom</mo><mi>x</mi></mrow>`;
+nil parameter: `"hom"`, `"\hom{}"`, `"hom⁡"`, `<mo>hom</mo>`). It matters
+because the gem's LaTeX parser DOES build it — `Math.parse("\hom{x}",
+:latex)` returns a `Hom` — so the name arrives the moment P3 lands a LaTeX
+input format.
+
+One name is measured and deliberately still refused: `Scarries` inherits
+`to_unicodemath` from the carrier (`"scarries⁡x"`) while overriding the other
+three. Admitting it in one format alone would leave a name that renders in
+UnicodeMath and raises everywhere else, which is a worse trap than the gap.
+**Trigger for revisiting: a generator that owns these sets per format, or the
+first consumer that needs `Scarries`.**
+
 ### Three AsciiMath render tables — generated
 
 **Done, 2026-08-06.** The AsciiMath renderer (since split node-major into

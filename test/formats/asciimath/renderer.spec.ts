@@ -95,6 +95,18 @@ describe("unary functions", () => {
       RenderError,
     );
   });
+
+  it("Hom renders the carrier default, though the transform cannot build it", () => {
+    // Measured on the pinned oracle: Hom.new(Symbol("x")).to_asciimath is
+    // "hom(x)" and Hom.new(nil) is "hom".
+    // `Hom.instance_method(:to_asciimath).owner` is UnaryFunction, so the
+    // carrier default IS the measured render; `"hom"` is absent from
+    // UNARY_CLASSES, so the parens stay. Nothing in the transform builds it —
+    // `Plurimath::Math.parse("hom(x)", :asciimath)` gives bare symbols — which
+    // is why the name has to be admitted by hand rather than by the census.
+    expect(toAsciimath(new UnaryFunctionNode({ name: "Hom", parameterOne: x() }))).toBe("hom(x)");
+    expect(toAsciimath(new UnaryFunctionNode({ name: "Hom" }))).toBe("hom");
+  });
 });
 
 describe("accents and unary kinds with their own overrides", () => {

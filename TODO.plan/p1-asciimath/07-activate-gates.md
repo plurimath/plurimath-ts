@@ -72,13 +72,13 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
   one.
 
   One rule in the list above was **not** in fact covered when this item was
-  first written up: that every group declares `asciimath`, `latex` and
-  `mathml`. The reader enforces only that each case carries whatever its own
-  payload declared, and the three `render-parity.spec.ts` suites iterate
+  first written up: that every group declares `asciimath`, `latex`, `mathml`,
+  and `unicodemath`. The reader enforces only that each case carries whatever
+  its own payload declared, and the four `render-parity.spec.ts` suites iterate
   `readCorpusCases()`, which drops excluded cases — so a group whose cases were
   all withheld could stop declaring a target with every suite still green.
   `test/gates/corpus-discovery.spec.ts` now asserts the required set directly,
-  and proves the assertion rejects a payload that declares two of the three.
+  and proves the assertion rejects a payload that omits required targets.
 - [x] `currentMilestone` is `P1-baseline`, and every gate that activates with
   it has a runner in the same change. P1 is **not** finished here — see
   [item 8](08-p1-completion.md).

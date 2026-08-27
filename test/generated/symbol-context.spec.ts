@@ -32,6 +32,8 @@ import { LATEX_SYMBOL_EXCEPTIONS } from "../../src/generated/latex/exceptions";
 import { LATEX_SYMBOLS } from "../../src/generated/latex/symbols";
 import { MATHML_SYMBOL_EXCEPTIONS } from "../../src/generated/mathml/exceptions";
 import { MATHML_SYMBOLS } from "../../src/generated/mathml/symbols";
+import { UNICODEMATH_SYMBOL_EXCEPTIONS } from "../../src/generated/unicodemath/exceptions";
+import { UNICODEMATH_SYMBOLS } from "../../src/generated/unicodemath/symbols";
 
 const AXIS_NAMES = new Set(CONTEXT_AXES.map((axis) => axis.name));
 
@@ -39,6 +41,7 @@ describe("the context-axis exception matrix", () => {
   const textMatrices = [
     ["asciimath", ASCIIMATH_SYMBOL_EXCEPTIONS, ASCIIMATH_SYMBOLS],
     ["latex", LATEX_SYMBOL_EXCEPTIONS, LATEX_SYMBOLS],
+    ["unicodemath", UNICODEMATH_SYMBOL_EXCEPTIONS, UNICODEMATH_SYMBOLS],
   ] as const;
 
   it("only names symbols the matching slice can look up", () => {
@@ -54,12 +57,14 @@ describe("the context-axis exception matrix", () => {
 
   it("only varies on axes the committed manifest declares", () => {
     const entries: readonly { axes: readonly string[]; whens: readonly object[] }[] = [
-      ...[...ASCIIMATH_SYMBOL_EXCEPTIONS, ...LATEX_SYMBOL_EXCEPTIONS].map(
-        (exception: AsciimathSymbolException) => ({
-          axes: exception.axes,
-          whens: exception.variants.map((variant) => variant.when),
-        }),
-      ),
+      ...[
+        ...ASCIIMATH_SYMBOL_EXCEPTIONS,
+        ...LATEX_SYMBOL_EXCEPTIONS,
+        ...UNICODEMATH_SYMBOL_EXCEPTIONS,
+      ].map((exception: AsciimathSymbolException) => ({
+        axes: exception.axes,
+        whens: exception.variants.map((variant) => variant.when),
+      })),
       ...MATHML_SYMBOL_EXCEPTIONS.map((exception) => ({
         axes: exception.axes,
         whens: exception.variants.map((variant) => variant.when),
@@ -76,9 +81,11 @@ describe("the context-axis exception matrix", () => {
   });
 
   it("records a real difference — a variant set with one outcome is not an exception", () => {
-    for (const exception of ASCIIMATH_SYMBOL_EXCEPTIONS) {
-      const values = new Set(exception.variants.map((variant) => variant.value));
-      expect(values.size, exception.id).toBeGreaterThan(1);
+    for (const [, exceptions] of textMatrices) {
+      for (const exception of exceptions) {
+        const values = new Set(exception.variants.map((variant) => variant.value));
+        expect(values.size, exception.id).toBeGreaterThan(1);
+      }
     }
     for (const exception of MATHML_SYMBOL_EXCEPTIONS) {
       const values = new Set(
@@ -112,6 +119,7 @@ describe("the context-axis exception matrix", () => {
       ...ASCIIMATH_SYMBOL_EXCEPTIONS.map((exception) => exception.id),
       ...LATEX_SYMBOL_EXCEPTIONS.map((exception) => exception.id),
       ...MATHML_SYMBOL_EXCEPTIONS.map((exception) => exception.id),
+      ...UNICODEMATH_SYMBOL_EXCEPTIONS.map((exception) => exception.id),
     ]);
     const fromProbe = new Set(CONTEXT_DEPENDENT_SYMBOLS.map((symbol) => symbol.id));
     expect([...fromSlices].sort()).toEqual([...fromProbe].sort());

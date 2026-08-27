@@ -4,7 +4,7 @@
  * One physical entry per published subpath (ARCHITECTURE.md §3): a consumer
  * who only reads AsciiMath should not pay for the LaTeX or MathML renderers,
  * and source-level import rules cannot prove that on their own — the
- * package-isolation gate inspects the packed artifact, and its forbidden-import
+ * package-isolation gate inspects the built `dist`, and its forbidden-import
  * table names what this subpath must never pull in.
  *
  * The surface is the two directions this format supports and the option types

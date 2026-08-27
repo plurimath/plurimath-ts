@@ -17,7 +17,7 @@
  *
  * Renderer-specific edges — each format's own malformed-slot messages, its
  * option handling, its symbol paths — stay in the renderer suites. This file
- * holds only what all three must agree on.
+ * holds only what every format must agree on.
  */
 
 import { describe, expect, it } from "vitest";
@@ -25,9 +25,10 @@ import { RenderError } from "../../src/core/errors";
 import { toAsciimath } from "../../src/formats/asciimath/renderer";
 import { toLatex } from "../../src/formats/latex/renderer";
 import { toMathml } from "../../src/formats/mathml/renderer";
+import { toUnicodemath } from "../../src/formats/unicodemath/renderer";
 
 /**
- * The three landed renderers. `toMathml` accepts only `formula` and `mrow` at
+ * The four landed renderers. `toMathml` accepts only `formula` and `mrow` at
  * its root — `to_mathml` lives on `Formula` alone in the gem, and every other
  * kind raises `NoMethodError` there — so each format carries its own valid
  * root rather than sharing one.
@@ -57,6 +58,18 @@ const RENDERERS = [
     validRoot: {
       kind: "formula",
       value: [{ kind: "number", value: "1" }],
+    },
+  },
+  {
+    // Measured: `toUnicodemath` renders BOTH roots — `"(1)/(+)"` from the frac
+    // and `"1"` from the formula — so it takes the frac root its two siblings
+    // use rather than MathML's formula-only one.
+    format: "unicodemath",
+    render: toUnicodemath as (node: unknown) => string,
+    validRoot: {
+      kind: "frac",
+      parameterOne: { kind: "number", value: "1" },
+      parameterTwo: { kind: "symbol", id: "Plus", value: null },
     },
   },
 ] as const;

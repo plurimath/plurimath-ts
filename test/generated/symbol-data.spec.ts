@@ -3,7 +3,7 @@
  *
  * These assertions do not re-derive what the gem says — the generator already
  * checked that against the oracle, and would have failed rather than emitted.
- * They check the *shape* of what it emitted: that the three slices agree with
+ * They check the *shape* of what it emitted: that the four slices agree with
  * each other, that every input resolves to an id a renderer can look up, and
  * that the ordered literal list is still ordered. A regeneration that quietly
  * drops half a table fails here.
@@ -24,12 +24,14 @@ import { ASCIIMATH_SYMBOLS } from "../../src/generated/asciimath/symbols";
 import { LATEX_SYMBOLS } from "../../src/generated/latex/symbols";
 import { MATHML_SYMBOLS } from "../../src/generated/mathml/symbols";
 import { GENERATED_PROVENANCE } from "../../src/generated/provenance";
+import { UNICODEMATH_SYMBOLS } from "../../src/generated/unicodemath/symbols";
 
 /** Every slice keyed by format, so the cross-slice checks stay symmetric. */
 const SLICES = {
   asciimath: ASCIIMATH_SYMBOLS,
   latex: LATEX_SYMBOLS,
   mathml: MATHML_SYMBOLS,
+  unicodemath: UNICODEMATH_SYMBOLS,
 } as const;
 
 describe("generated symbol slices", () => {
@@ -43,6 +45,7 @@ describe("generated symbol slices", () => {
     const asciimath = [...ASCIIMATH_SYMBOLS.keys()].sort();
     expect([...LATEX_SYMBOLS.keys()].sort()).toEqual(asciimath);
     expect([...MATHML_SYMBOLS.keys()].sort()).toEqual(asciimath);
+    expect([...UNICODEMATH_SYMBOLS.keys()].sort()).toEqual(asciimath);
   });
 
   it("use the Ruby class key as the symbol id", () => {
@@ -72,6 +75,7 @@ describe("generated symbol slices", () => {
   it("never emit an empty representation for a text format", () => {
     for (const [id, value] of ASCIIMATH_SYMBOLS) expect(value.length, id).toBeGreaterThan(0);
     for (const [id, value] of LATEX_SYMBOLS) expect(value.length, id).toBeGreaterThan(0);
+    for (const [id, value] of UNICODEMATH_SYMBOLS) expect(value.length, id).toBeGreaterThan(0);
   });
 });
 

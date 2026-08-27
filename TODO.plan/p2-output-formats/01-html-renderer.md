@@ -4,10 +4,12 @@
 HTML is the smallest of the renderers P2 still owes, and the port's node model already
 covers everything AsciiMath can produce, so it needs no new node kinds — only a
 `html.ts` per existing kind. That makes it the cheapest place to find out whether the
-add-a-format process that landed UnicodeMath generalises, before OMML, which is the
-largest surface of the four.
+add-a-format process that landed UnicodeMath generalises, before tackling OMML's larger
+surface.
 
-## Measured surface
+## Scope
+
+### Measured surface
 
 Against the port's 38 render kinds, on the pinned oracle (00c52783):
 
@@ -37,7 +39,7 @@ Note the asymmetry: a bare `Symbol` renders `x`, but the unary carrier wraps its
 `<i>x</i>`. The `<i>` comes from the carrier, not the symbol — so it cannot be assumed
 from the symbol's own output.
 
-## The trap this item must not fall into
+### The trap this item must not fall into
 
 **`Nary` has no `to_html` at all.** It is not inherited from `Core` either: the method
 does not exist anywhere in its ancestry, and `Nary#to_html` raises `NoMethodError`

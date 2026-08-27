@@ -14,7 +14,7 @@ why that order.
 |---|---|---|
 | [P0 — Foundation](p0-foundation/) | Tooling, quality gates, pegkit parser core | ✅ done |
 | [P1 — AsciiMath vertical](p1-asciimath/) | Corpus pin and reader, model, grammar, transform, four renderers | ▶ active |
-| [P2 — Output formats](p2-output-formats/) | OMML and HTML renderers; compat class; first `0.x` | planned |
+| [P2 — Output formats](p2-output-formats/) | OMML and HTML renderers; compat class; first `0.x` | ▶ active alongside P1 closeout |
 | [P3 — Input formats](p3-input-formats/) | LaTeX, UnicodeMath and HTML parsers | planned |
 | [P4 — Parity modules](p4-parity-modules/) | The number-format modes nothing earlier reaches, evaluation, MathML/OMML input | planned |
 | [P5 — 1.0](p5-release-1.0/) | Compat complete, `/core` locked, npm takeover | planned |
@@ -32,10 +32,10 @@ Reference pages, not tied to one phase:
 questions in the same order: *what it delivers*, *why here*, *risks and notes*,
 *exit criteria*. So a reader always knows where to look, whatever the phase.
 
-**The active phase also has numbered work items**, one file each, following the
+**A phase gains numbered work items when work on it starts**, one file each, following the
 same shape as the rest of the organisation's `TODO.<topic>/` directories: a
 `## Why` before the `## Scope`, and a `## Done when` checklist. Later phases
-gain their items when they open.
+gain their items when work on them starts.
 
 That asymmetry is deliberate. Detailed scope for work three phases out would be
 invention, and a plan that looks more certain than it is costs more than it

@@ -1,7 +1,8 @@
 /**
- * HTML vertical-slice pins measured with:
- * `mise x -- bundle exec ruby /tmp/wt-html-probe.rb`
+ * Oracle-backed HTML vertical-slice pins measured with:
+ * `mise x -- bundle exec ruby /tmp/wt-html-independent-probe.rb`
  * in the clean oracle checkout at 00c52783.
+ * Phase-one boundary cases below pin deliberate refusals for deferred paths.
  */
 
 import { describe, expect, it } from "vitest";
@@ -127,6 +128,13 @@ describe("HTML leaf and formula rendering", () => {
     expect(toHtml(new TextNode({ parameterOne: "hello" }))).toBe("hello");
     expect(toHtml(new NumberNode({ value: "2" }))).toBe("2");
     expect(toHtml(new NumberNode({ value: "&#x32;" }))).toBe("&#x32;");
+  });
+
+  it("refuses Text unicode substitutions whose HTML data is deferred", () => {
+    expect(() => toHtml(new TextNode({ parameterOne: "unicode[:kappa]" }))).toThrow(RenderError);
+    expect(() => toHtml(new TextNode({ parameterOne: "preunicode[:Gamma]post" }))).toThrow(
+      RenderError,
+    );
   });
 
   it("joins Formula and Mrow children with spaces", () => {

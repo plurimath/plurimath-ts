@@ -46,11 +46,11 @@ export const CORE_GENERATED_PROVENANCE: CoreGeneratedProvenance = {
   generatorInputs: new Map([
     [
       "scripts/generate-core-data.rb",
-      "57ee0e78e0a1abbc0fff594d01cbb06d26fb5355f666b729ac08001409c8e701",
+      "92dcbb1ea954c83f0e9899bc7c6417fc1cae32105a185fb5b0b3caad00b714a0",
     ],
     [
       "scripts/generate-corpus.rb",
-      "d59384f263a06b106038e533d26146228449b2e6f7fba4ee046061fb23a9c09b",
+      "4fd9e76fa41766058c1b1d296e9991f541bf057f745d25b1183160c3978864c4",
     ],
   ]),
   oracle: "plurimath",

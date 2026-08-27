@@ -338,7 +338,7 @@ describe("HTML refusal parity", () => {
 });
 
 describe("HTML partial-slice boundary", () => {
-  it("refuses an omitted kind at the phase-one dispatch guard", () => {
+  it("refuses an omitted kind at the partial-slice dispatch guard", () => {
     let thrown: unknown;
     try {
       toHtml(new BaseNode());

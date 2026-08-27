@@ -9,8 +9,8 @@
  * rules from, consumed by `src/formats/asciimath/grammar.ts`.
  *
  * Order is behaviour. Parslet's `|` is an ordered choice and
- * `power_base_rules` reduces the three class lists into one of them
- * (`asciimath/parse.rb:82-84`), so these arrays keep the gem's insertion
+ * `symbol_text_or_integer` reduces the three class lists into one of them
+ * (`asciimath/parse.rb:81-84`), so these arrays keep the gem's insertion
  * order — they are never sorted, even where today's entries could not
  * overlap.
  */

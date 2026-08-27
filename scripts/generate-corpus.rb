@@ -1452,8 +1452,9 @@ module CorpusGenerator
     tables.merge("counts" => tables.transform_values(&:length))
   end
 
-  # `power_base_rules` reduces the three class lists into one ordered choice
-  # (`sub_sup_classes | binary_classes | ternary_classes`, parse.rb:82-84), so
+  # `symbol_text_or_integer` reduces the three class lists into one ordered
+  # choice (`sub_sup_classes | binary_classes | ternary_classes`,
+  # asciimath/parse.rb:81-84 — `power_base_rules` at :102 is a different set), so
   # order inside a list is behaviour and the emitted array preserves the gem's
   # insertion order rather than sorting it.
   def grammar_class_list(name, list)
@@ -1517,8 +1518,8 @@ module CorpusGenerator
 
     raise Error, <<~MESSAGE
       The grammar class lists overlap: #{shared.join(', ')}.
-      `power_base_rules` reduces all three into one ordered choice
-      (parse.rb:82-84), so a shared entry makes the later list unreachable.
+      `symbol_text_or_integer` reduces all three into one ordered choice
+      (asciimath/parse.rb:81-84), so a shared entry makes the later list unreachable.
     MESSAGE
   end
 
@@ -2203,8 +2204,9 @@ module CorpusGenerator
 
   # `Mathml::Constants::UNICODE_SYMBOLS.invert`, name -> entity, in Ruby's
   # invert order (last write wins — asserted collision-free so the order is
-  # not load-bearing). Read twice by the render path: `Text#parse_text`
-  # substitutes `unicode[:name]` tokens through it (text.rb:127), and
+  # not load-bearing). Read twice by the render path: `Text#symbol_value`
+  # (text.rb:126-128) looks `unicode[:name]` tokens up through it, reached from
+  # `Text#parse_text` at :137, and
   # `Core#invert_unicode_symbols` keys it by class_name for the big-operator
   # `<mo>` texts (core.rb:230). Word-shaped names are verified through a live
   # `Text` render; the operator reads through `Int`/`Oint`/`Sum`/`Prod`.
@@ -2336,7 +2338,7 @@ module CorpusGenerator
     table
   end
 
-  # `Base::MUNDER_CLASSES` (base.rb:15-21): the first-slot class_names whose
+  # `Base::MUNDER_CLASSES` (function/base.rb:15-21): the first-slot class_names whose
   # script renders `<munder>` instead of `<msub>`. Each verified by a live
   # `Base` render, plus one non-member proving the check discriminates.
   def mathml_munder_class_names
@@ -2477,8 +2479,8 @@ module CorpusGenerator
 
   # Class-identity roles the mtable/mtr/mtd path tests with `is_a?`:
   # `Paren::CloseParen` forces `columnalign="left"` (table.rb:249),
-  # `Paren::Norm` routes `norm_table` (table.rb:57), `Paren::Vert` marks a
-  # column line and empties its cell (utility.rb:207, td.rb:53), and
+  # `Paren::Norm` routes `norm_table` (table.rb:61), `Paren::Vert` marks a
+  # column line and empties its cell (lib/plurimath/utility.rb:207, td.rb:19), and
   # `Symbols::Hline` is stripped from a row head (tr.rb:120-124). Membership
   # is measured over the loaded hierarchy — descendants included, so a new
   # subclass lands here on regeneration — and each role is verified live.
@@ -3159,8 +3161,9 @@ module CorpusGenerator
   # *could* still hide is a shape change, so every table is shape-checked here
   # and a mismatch fails generation.
   #
-  # `.invert` and `.key` appear at three call sites (`base.rb:128`,
-  # `frac.rb:159`, `table.rb:422`), which is the same `Hash#invert`-keeps-the-
+  # `.invert` and `.key` appear at five call sites (`function/base.rb:128`,
+  # `frac.rb:159`, `table.rb:422`, `phantom.rb:59`, `mpadded.rb:102`), which is
+  # the same `Hash#invert`-keeps-the-
   # last-key trap `latex_left_right_parens` asserts against, so the duplicate
   # check below is not theoretical.
 
@@ -3225,7 +3228,7 @@ module CorpusGenerator
   # same glyph, and is only ever read forward.
   UNICODEMATH_REVERSED_TABLES = {
     # table                    => [call site,                   read used]
-    "SIZE_OVERRIDES_SYMBOLS" => ["base.rb:128", :invert],
+    "SIZE_OVERRIDES_SYMBOLS" => ["function/base.rb:128", :invert],
     "UNICODE_FRACTIONS" => ["frac.rb:159", :key],
     "PARENTHESIS_MATRICES" => ["table.rb:422", :key],
     "PHANTOM_SYMBOLS" => ["phantom.rb:59 and mpadded.rb:102", :key],
@@ -3790,8 +3793,8 @@ module CorpusGenerator
         rules from, consumed by `src/formats/asciimath/grammar.ts`.
 
         Order is behaviour. Parslet's `|` is an ordered choice and
-        `power_base_rules` reduces the three class lists into one of them
-        (`asciimath/parse.rb:82-84`), so these arrays keep the gem's insertion
+        `symbol_text_or_integer` reduces the three class lists into one of them
+        (`asciimath/parse.rb:81-84`), so these arrays keep the gem's insertion
         order — they are never sorted, even where today's entries could not
         overlap.
       TEXT
@@ -4022,8 +4025,9 @@ module CorpusGenerator
              "Ruby's invert semantics kept: a name mapped from several\n" \
              "entities keeps the LAST one, and every word-shaped winner is\n" \
              "verified through a live `Text` render. Read twice on the render\n" \
-             "path: `Text#parse_text`'s first `unicode[:name]` lookup\n" \
-             "(`text.rb:127`), and — keyed by class_name —\n" \
+             "path: the `unicode[:name]` lookup `Text#parse_text` reaches\n" \
+             "via `Text#symbol_value`\n" \
+             "(`text.rb:126-128`), and — keyed by class_name —\n" \
              "`Core#invert_unicode_symbols` (`core.rb:230`), the big-operator\n" \
              "`<mo>` texts.",
       ),
@@ -4059,7 +4063,7 @@ module CorpusGenerator
         "MATHML_MUNDER_CLASS_NAMES",
         "readonly string[]",
         tables["munder"],
-        doc: "`Base::MUNDER_CLASSES` (`base.rb:15-21`), in the gem's order:\n" \
+        doc: "`Base::MUNDER_CLASSES` (`function/base.rb:15-21`), in the gem's order:\n" \
              "first-slot class_names whose script renders `<munder>` instead\n" \
              "of `<msub>`. Membership only.",
       ),
@@ -4108,9 +4112,9 @@ module CorpusGenerator
         tables["paren_roles"],
         doc: "Class-identity roles the mtable/mtr/mtd path tests with\n" \
              "`is_a?`: `close` forces `columnalign=\"left\"` (`table.rb:249`),\n" \
-             "`norm` routes `norm_table` (`table.rb:57`), `vert` marks a\n" \
-             "column line and empties its cell (`utility.rb:207`,\n" \
-             "`td.rb:53`), `hline` is stripped from a row head\n" \
+             "`norm` routes `norm_table` (`table.rb:61`), `vert` marks a\n" \
+             "column line and empties its cell (`lib/plurimath/utility.rb:207`,\n" \
+             "`td.rb:19`), `hline` is stripped from a row head\n" \
              "(`tr.rb:120-124`). Each id list is the measured hierarchy —\n" \
              "root plus descendants — and each role is verified live.",
       ),
@@ -4178,7 +4182,7 @@ module CorpusGenerator
         malformed.
 
         Five call sites reverse-look-up four of these tables, and NOT all with
-        the same Ruby read: `base.rb:128` is `SIZE_OVERRIDES_SYMBOLS.invert`,
+        the same Ruby read: `function/base.rb:128` is `SIZE_OVERRIDES_SYMBOLS.invert`,
         while `frac.rb:159` (`UNICODE_FRACTIONS`), `table.rb:422`
         (`PARENTHESIS_MATRICES`), `phantom.rb:59` and `mpadded.rb:102` (both
         `PHANTOM_SYMBOLS`) are `Hash#key`. The two disagree on a duplicated

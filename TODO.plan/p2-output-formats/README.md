@@ -52,8 +52,10 @@ AsciiMath *to* everything, which is the most useful early capability.
 
 ## Risks and notes
 
-- OMML's structure diverges most from the model; expect the XML layer to need
-  extension rather than reuse.
+- OMML's structure diverges most from the model; across the measured reachable
+  corpus surface, the existing XML layer represents every emitted shape unchanged,
+  while unmeasured hand-built or malformed states still require an oracle-backed
+  probe before any extension.
 - UnicodeMath's context rules (mini-sized scripts, accents, primes) were the
   risk this phase expected to carry; it landed in P1 instead, and those rules
   are pinned by the UnicodeMath parity suite.

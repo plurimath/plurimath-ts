@@ -11,7 +11,7 @@
 # bundler exits with GemNotFound (review-proven).
 #
 # The tree recipes mirror test/xml/ox-contract.ts one-for-one; the three
-# mathml-* entries are byte-checked against Plurimath::Math.parse(...)
+# MathML tree entries are byte-checked against Plurimath::Math.parse(...)
 # .to_mathml before emission and the script aborts on any mismatch, so the
 # committed fixtures cannot drift from what the gem really renders.
 # Provenance (oracle commit, Ox/Ruby versions) is embedded in the output.
@@ -257,7 +257,7 @@ provenance = {
     "Oracle-printed bytes for test/xml. dump: Ox.dump(tree, indent:). " \
     "dumpNodes: Plurimath::Math::Core#dump_nodes (Ox.dump + REPLACABLES). " \
     "Each tree's build recipe is the probe shape recorded per fixture in " \
-    "test/xml/ox-contract.ts; the three mathml-* entries are additionally " \
+    "test/xml/ox-contract.ts; the three MathML tree entries are additionally " \
     "byte-checked against Plurimath::Math.parse(...).to_mathml before emission.",
 }
 

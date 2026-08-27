@@ -463,6 +463,22 @@ A HASH in the slot is the one non-string that survives the gem's
 (probe-latex-degenerate.rb, 2026-08-10). Same policy as the color rule and
 the AsciiMath Left/Right refusal.
 
+### HTML: Fenced refuses generated and nondeterministic paren paths
+
+**Trigger: the HTML symbol-data slice is generated, or a corpus case needs one of
+these constructs.**
+
+The gem's `Fenced#to_html` takes two incompatible paren paths. A `Paren` instance is
+rendered through `to_mathml_without_math_tag(...).nodes.first`; named `Paren::*` nodes
+therefore need the generated symbol mapping that the scoped HTML slice does not carry.
+The port raises `RenderError` for that path rather than inventing a delimiter.
+
+Any non-`Paren` node contributes its raw `value`. Formula, mrow, and table values are
+arrays of nodes, so Ruby interpolation emits `#inspect` strings containing object memory
+addresses. Those bytes are nondeterministic; the port refuses them, matching the policy
+already recorded for LaTeX's node-valued paren slots. Deterministic raw-value parens
+(base Symbol/Paren and Number values) still render byte-for-byte.
+
 ### LaTeX: Color renders only the measured AsciiMath fragment
 
 **Trigger: corpus or sweep growth that exercises a new color operand.**

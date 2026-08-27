@@ -39,13 +39,38 @@ Note the asymmetry: a bare `Symbol` renders `x`, but the unary carrier wraps its
 `<i>x</i>`. The `<i>` comes from the carrier, not the symbol — so it cannot be assumed
 from the symbol's own output.
 
-### Coverage after phase two, part A
+### Coverage after phase two, part B
 
-The renderer now covers 29 of the 38 kinds: all 21 inherited kinds, seven
-own-implementing kinds (`binary-function`, `formula`, `number`, `symbol`,
-`ternary-function`, `text`, `unary-function`), and the measured `nary` refusal. The
-nine remaining own-implementing kinds are `base`, `ceil`, `ddot`, `fenced`,
-`font-style`, `linebreak`, `prod`, `sum`, and `table`.
+The dispatch table is now total over all 38 kinds: all 21 inherited kinds, all 16
+own-implementing kinds, and the measured `nary` refusal. The former partial-slice guard
+is gone; its compile-time replacement is a mapped table with one entry per `NodeKind`,
+while the runtime unknown-kind guard remains for untyped JavaScript callers.
+
+Part B measured the final nine own implementations with `options: {}` and one plain
+`Symbol("x")` per occupied slot, plus each kind's own structural cases:
+
+| kind | measured occupied output | structural result |
+|---|---|---|
+| `base` | `<i>x</i><sub>x</sub>` | each nil slot disappears; an array in either slot raises |
+| `ceil` | `<i>&#x2308;</i><i>x</i><i>&#x2309;</i>` | nil omits only the child wrapper; an array raises |
+| `ddot` | `<i>x</i><i>..</i>` | nil omits the child wrapper; an array raises |
+| `fenced` | `<i>x</i>x<i>x</i>` | body members join without separators; named parens needing generated data refuse |
+| `font-style` | `x` | all 14 measured aliases return the child alone; nil returns nil |
+| `linebreak` | `<br/>x` | `linebreakstyle: "after"` gives `x<br/>`; nil gives `<br/>` |
+| `prod` | `<i>&prod;</i><sub>x</sub><sup>x</sup>` | the third/body slot is ignored, including an array |
+| `sum` | `<i>&sum;</i><sub>x</sub><sup>x</sup>` | the third/body slot is ignored, including an array |
+| `table` | `<table><tr><td>x</td></tr></table>` | all 10 aliases share the tree; nil value raises, empty value gives `<table></table>` |
+
+`Table` reaches the measured `Tr#to_html` and `Td#to_html` overrides represented by the
+existing `unaryFunction` and `binaryFunction` kinds. They emit `<tr>…</tr>` and
+`<td>…</td>` respectively, joining children without separators.
+
+One `fenced` subpath stays deliberately unavailable without omitting the kind: named
+`Paren::*` nodes with no stored value require generated symbol data, and formula/mrow/
+table nodes in paren slots interpolate object-address-bearing Ruby `#inspect` bytes.
+Both refuse explicitly; the decision is recorded in `TODO.plan/deferred.md`.
+
+### Phase two, part A measurements
 
 The part-A probe called `to_html(options: {})` with one plain `Symbol("x")` per occupied
 slot, then replaced each slot position with `nil` and `[]` in turn. All 17 requested
@@ -89,11 +114,11 @@ makes a defect, not an improvement.
 
 - [ ] `toHtml` matches the gem byte-for-byte across the pinned corpus, for every case the
       corpus reaches.
-- [ ] The 15 own-override kinds are each measured against the oracle, not derived from a
+- [x] The 15 own-override kinds are each measured against the oracle, not derived from a
       sibling format.
-- [ ] The three carrier defaults are pinned by a behavioural test each, so a later change
+- [x] The three carrier defaults are pinned by a behavioural test each, so a later change
       to one carrier cannot silently alter twenty kinds.
-- [ ] `nary` raises rather than rendering, and a test pins the refusal.
+- [x] `nary` raises rather than rendering, and a test pins the refusal.
 - [ ] The corpus declares an `html` target and every case carries an expectation for it —
       the reader asserts a nonzero case count for it, equal to the group's own count.
 - [ ] The cross-format invariant gates cover HTML: `runtime-boundary`,

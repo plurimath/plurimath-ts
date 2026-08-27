@@ -1,11 +1,13 @@
 /**
- * Gem-pinned HTML rendering behaviour: the carrier defaults, the leaf and
- * formula kinds, and the seventeen kinds that inherit a carrier default.
+ * Gem-pinned HTML rendering behaviour across every render kind: the carrier
+ * defaults, the leaf and formula kinds, the kinds that inherit a carrier
+ * default, and the kinds that define their own `to_html`.
  * The oracle-backed pins were measured on plurimath 0.11.6 at 00c52783 by
  * instantiating the class and calling `to_html(options: {})` — local probes
- * wt-html-probe.rb, wt-html-independent-probe.rb and wt-html-p2a-probe.rb.
- * The partial-slice boundary cases below pin deliberate refusals for the
- * kinds and paths deferred to a later increment.
+ * wt-html-probe.rb, wt-html-independent-probe.rb, wt-html-p2a-probe.rb,
+ * wt-html-own-kinds-probe.rb and wt-html-fenced-linebreak-probe.rb.
+ * The measured boundary refusals below pin the paths whose generated HTML
+ * data is deferred to a later increment.
  */
 
 import { describe, expect, it } from "vitest";
@@ -15,13 +17,18 @@ import {
   BarNode,
   BaseNode,
   BinaryFunctionNode,
+  CeilNode,
   ColorNode,
+  DdotNode,
   DotNode,
+  FencedNode,
   FloorNode,
+  FontStyleNode,
   FormulaNode,
   FracNode,
   HatNode,
   IntNode,
+  LinebreakNode,
   type MathNode,
   MpaddedNode,
   MrowNode,
@@ -33,8 +40,11 @@ import {
   OintNode,
   OverleftrightarrowNode,
   OversetNode,
+  ProdNode,
   SqrtNode,
+  SumNode,
   SymbolNode,
+  TableNode,
   TernaryFunctionNode,
   TextNode,
   TildeNode,
@@ -340,24 +350,209 @@ describe("HTML refusal parity", () => {
   });
 });
 
-describe("HTML partial-slice boundary", () => {
-  it("refuses an omitted kind at the partial-slice dispatch guard", () => {
-    let thrown: unknown;
-    try {
-      toHtml(new BaseNode());
-    } catch (error) {
-      thrown = error;
-    }
-
-    expect(thrown).toBeInstanceOf(RenderError);
-    expect(thrown).toMatchObject({
-      code: "RENDER_ERROR",
-      format: "html",
-      kind: "base",
-      message: 'HTML rendering for node kind "base" is outside the measured HTML slice',
-    });
+describe("HTML own-kind rendering", () => {
+  it("renders Base's occupied and nil slots and refuses array slots", () => {
+    expect(toHtml(new BaseNode({ parameterOne: symbol(), parameterTwo: symbol() }))).toBe(
+      "<i>x</i><sub>x</sub>",
+    );
+    expect(toHtml(new BaseNode({ parameterOne: null, parameterTwo: symbol() }))).toBe(
+      "<sub>x</sub>",
+    );
+    expect(toHtml(new BaseNode({ parameterOne: symbol(), parameterTwo: null }))).toBe("<i>x</i>");
+    expect(() => toHtml(new BaseNode({ parameterOne: [], parameterTwo: symbol() }))).toThrow(
+      RenderError,
+    );
+    expect(() => toHtml(new BaseNode({ parameterOne: symbol(), parameterTwo: [] }))).toThrow(
+      RenderError,
+    );
   });
 
+  it("renders Ceil's literal entities around its child", () => {
+    expect(toHtml(new CeilNode({ parameterOne: symbol() }))).toBe(
+      "<i>&#x2308;</i><i>x</i><i>&#x2309;</i>",
+    );
+    expect(toHtml(new CeilNode({ parameterOne: null }))).toBe("<i>&#x2308;</i><i>&#x2309;</i>");
+    expect(toHtml(new CeilNode({ parameterOne: new TextNode({ parameterOne: null }) }))).toBe(
+      "<i>&#x2308;</i><i></i><i>&#x2309;</i>",
+    );
+    expect(() => toHtml(new CeilNode({ parameterOne: [] }))).toThrow(RenderError);
+  });
+
+  it("renders Ddot's child before its measured two-dot suffix", () => {
+    expect(toHtml(new DdotNode({ parameterOne: symbol() }))).toBe("<i>x</i><i>..</i>");
+    expect(toHtml(new DdotNode({ parameterOne: null }))).toBe("<i>..</i>");
+    expect(toHtml(new DdotNode({ parameterOne: new TextNode({ parameterOne: null }) }))).toBe(
+      "<i></i><i>..</i>",
+    );
+    expect(() => toHtml(new DdotNode({ parameterOne: [] }))).toThrow(RenderError);
+  });
+
+  it("renders Fenced's deterministic parens and joins body children without separators", () => {
+    expect(
+      toHtml(
+        new FencedNode({
+          parameterOne: new SymbolNode({ id: "Paren", value: "(" }),
+          parameterTwo: [symbol("a"), symbol("b")],
+          parameterThree: new SymbolNode({ id: "Paren", value: ")" }),
+        }),
+      ),
+    ).toBe("<i>(</i>ab<i>)</i>");
+    expect(
+      toHtml(
+        new FencedNode({
+          parameterOne: symbol("x"),
+          parameterTwo: [symbol("a"), new TextNode({ parameterOne: null }), symbol("b")],
+          parameterThree: symbol("x"),
+        }),
+      ),
+    ).toBe("<i>x</i>ab<i>x</i>");
+  });
+
+  it("renders Fenced's nil and empty body identically and refuses a non-list body", () => {
+    const make = (parameterTwo: NodeParameter) =>
+      new FencedNode({
+        parameterOne: symbol("("),
+        parameterTwo,
+        parameterThree: symbol(")"),
+      });
+
+    expect(toHtml(make(null))).toBe("<i>(</i><i>)</i>");
+    expect(toHtml(make([]))).toBe("<i>(</i><i>)</i>");
+    expect(() => toHtml(make(symbol()))).toThrow(RenderError);
+  });
+
+  it("refuses Fenced paren paths requiring generated data or nondeterministic inspect bytes", () => {
+    expect(() =>
+      toHtml(
+        new FencedNode({
+          parameterOne: new SymbolNode({ id: "Paren::Lround" }),
+          parameterTwo: [symbol()],
+          parameterThree: new SymbolNode({ id: "Paren::Rround" }),
+        }),
+      ),
+    ).toThrow(RenderError);
+    expect(() =>
+      toHtml(
+        new FencedNode({
+          parameterOne: new FormulaNode({ value: [symbol("(")] }),
+          parameterTwo: [symbol()],
+          parameterThree: symbol(")"),
+        }),
+      ),
+    ).toThrow(RenderError);
+  });
+
+  it("renders every measured FontStyle alias as its child alone", () => {
+    const names = [
+      "Bold",
+      "BoldFraktur",
+      "BoldItalic",
+      "BoldSansSerif",
+      "BoldScript",
+      "DoubleStruck",
+      "Fraktur",
+      "Italic",
+      "Monospace",
+      "Normal",
+      "SansSerif",
+      "SansSerifBoldItalic",
+      "SansSerifItalic",
+      "Script",
+    ] as const;
+
+    for (const name of names) {
+      expect(toHtml(new FontStyleNode({ name, parameterOne: symbol() }))).toBe("x");
+    }
+    expect(toHtml(new FontStyleNode({ parameterOne: null }))).toBe("");
+    expect(() => toHtml(new FontStyleNode({ name: "Unknown", parameterOne: symbol() }))).toThrow(
+      RenderError,
+    );
+    expect(() => toHtml(new FontStyleNode({ parameterOne: [] }))).toThrow(RenderError);
+  });
+
+  it("places Linebreak according to the measured linebreakstyle", () => {
+    expect(toHtml(new LinebreakNode({ parameterOne: symbol() }))).toBe("<br/>x");
+    expect(
+      toHtml(
+        new LinebreakNode({ parameterOne: symbol(), attributes: { linebreakstyle: "after" } }),
+      ),
+    ).toBe("x<br/>");
+    expect(
+      toHtml(
+        new LinebreakNode({ parameterOne: symbol(), attributes: { linebreakstyle: "sideways" } }),
+      ),
+    ).toBe("<br/>x");
+    expect(toHtml(new LinebreakNode({ parameterOne: null }))).toBe("<br/>");
+    expect(() => toHtml(new LinebreakNode({ parameterOne: [] }))).toThrow(RenderError);
+  });
+
+  it.each([
+    [
+      "prod",
+      (one: NodeParameter, two: NodeParameter, three: NodeParameter) =>
+        new ProdNode({ parameterOne: one, parameterTwo: two, parameterThree: three }),
+      "&prod;",
+    ],
+    [
+      "sum",
+      (one: NodeParameter, two: NodeParameter, three: NodeParameter) =>
+        new SumNode({ parameterOne: one, parameterTwo: two, parameterThree: three }),
+      "&sum;",
+    ],
+  ] as const)("renders %s's limits and ignores its body", (_kind, make, entity) => {
+    expect(toHtml(make(symbol(), symbol(), symbol()))).toBe(
+      `<i>${entity}</i><sub>x</sub><sup>x</sup>`,
+    );
+    expect(toHtml(make(null, symbol(), symbol()))).toBe(`<i>${entity}</i><sup>x</sup>`);
+    expect(toHtml(make(symbol(), null, symbol()))).toBe(`<i>${entity}</i><sub>x</sub>`);
+    expect(toHtml(make(symbol(), symbol(), []))).toBe(`<i>${entity}</i><sub>x</sub><sup>x</sup>`);
+    expect(() => toHtml(make([], symbol(), symbol()))).toThrow(RenderError);
+    expect(() => toHtml(make(symbol(), [], symbol()))).toThrow(RenderError);
+  });
+
+  const td = (...values: MathNode[]) =>
+    new BinaryFunctionNode({ name: "Td", parameterOne: values, parameterTwo: null });
+  const tr = (...cells: BinaryFunctionNode[]) =>
+    new UnaryFunctionNode({ name: "Tr", parameterOne: cells });
+
+  it("renders Table's measured row and cell tree", () => {
+    expect(
+      toHtml(
+        new TableNode({
+          value: [tr(td(symbol("a")), td(symbol("b"))), tr(td(symbol("c"), symbol("d")))],
+        }),
+      ),
+    ).toBe("<table><tr><td>a</td><td>b</td></tr><tr><td>cd</td></tr></table>");
+    expect(toHtml(new TableNode({ value: [] }))).toBe("<table></table>");
+    expect(toHtml(new TableNode({ value: [symbol()] }))).toBe("<table>x</table>");
+    expect(() => toHtml(new TableNode({ value: null }))).toThrow(RenderError);
+  });
+
+  it("renders every measured Table alias with the same HTML tree", () => {
+    const names = [
+      "Align",
+      "Array",
+      "Bmatrix",
+      "Cases",
+      "Eqarray",
+      "Matrix",
+      "Multline",
+      "Pmatrix",
+      "Split",
+      "Vmatrix",
+    ] as const;
+    for (const name of names) {
+      expect(toHtml(new TableNode({ name, value: [tr(td(symbol()))] }))).toBe(
+        "<table><tr><td>x</td></tr></table>",
+      );
+    }
+    expect(() => toHtml(new TableNode({ name: "Unknown", value: [tr(td(symbol()))] }))).toThrow(
+      RenderError,
+    );
+  });
+});
+
+describe("HTML measured boundary refusals", () => {
   it("refuses unmeasured carrier aliases instead of inventing plausible output", () => {
     expect(() => toHtml(new UnaryFunctionNode({ name: "Mbox", parameterOne: symbol() }))).toThrow(
       RenderError,

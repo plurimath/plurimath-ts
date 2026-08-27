@@ -81,6 +81,7 @@ const PUBLIC_X = xml(
   "  </m:oMath>",
   "</m:oMathPara>",
 );
+const PUBLIC_EMPTY = xml(ROOT_OPEN, "  <m:oMath/>", "</m:oMathPara>");
 
 const UNARY_X = xml(
   "<m:func>",
@@ -365,6 +366,52 @@ describe("OMML first vertical slice", () => {
     );
   });
 
+  it("normalizes ordinary Text independently of unicode[:name] lookup", () => {
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "a b" }))).toBe(
+      xml("<m:t>a&#xa0;b</m:t>"),
+    );
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "π" }))).toBe(
+      xml("<m:t>&#x3c0;</m:t>"),
+    );
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "&pi;" }))).toBe(
+      xml("<m:t>&#x3c0;</m:t>"),
+    );
+    expect(toOmml(new FormulaNode({ value: [new TextNode({ parameterOne: "a b" })] }))).toBe(
+      xml(
+        ROOT_OPEN,
+        "  <m:oMath>",
+        "    <m:r>",
+        "      <m:rPr>",
+        '        <m:sty m:val="p"/>',
+        "      </m:rPr>",
+        "      <m:t>a&#xa0;b</m:t>",
+        "    </m:r>",
+        "  </m:oMath>",
+        "</m:oMathPara>",
+      ),
+    );
+  });
+
+  it('suppresses only the exact Symbol spelling "&#x2062;"', () => {
+    const encoded = new SymbolNode({ value: "&#x2062;" });
+    expect(toOmmlWithoutMathTag(encoded)).toBe("");
+    expect(toOmml(new FormulaNode({ value: [encoded] }))).toBe(PUBLIC_EMPTY);
+
+    const character = new SymbolNode({ value: "⁢" });
+    expect(toOmmlWithoutMathTag(character)).toBe("⁢");
+    expect(toOmml(new FormulaNode({ value: [character] }))).toBe(
+      xml(
+        ROOT_OPEN,
+        "  <m:oMath>",
+        "    <m:r>",
+        "      <m:t>⁢</m:t>",
+        "    </m:r>",
+        "  </m:oMath>",
+        "</m:oMathPara>",
+      ),
+    );
+  });
+
   it("pins the unary and binary carrier defaults", () => {
     expect(
       toOmmlWithoutMathTag(
@@ -451,6 +498,22 @@ describe("OMML first vertical slice", () => {
 });
 
 describe("generated OMML symbol-data deferral", () => {
+  it("renders a named Symbol's explicit value without generated data", () => {
+    const node = new SymbolNode({ id: "Plus", value: "WRONG" });
+    expect(toOmmlWithoutMathTag(node)).toBe("WRONG");
+    expect(toOmml(new FormulaNode({ value: [node] }))).toBe(
+      xml(
+        ROOT_OPEN,
+        "  <m:oMath>",
+        "    <m:r>",
+        "      <m:t>WRONG</m:t>",
+        "    </m:r>",
+        "  </m:oMath>",
+        "</m:oMathPara>",
+      ),
+    );
+  });
+
   it("refuses named Symbol output", () => {
     expectRefusal(() => toOmmlWithoutMathTag(new SymbolNode({ id: "Plus" })), {
       kind: "symbol",
@@ -477,6 +540,18 @@ describe("generated OMML symbol-data deferral", () => {
       kind: "table",
       message:
         'table.openParen: Symbol "Paren::Lsquare" needs generated OMML data, deferred to the symbol-data follow-up',
+    });
+
+    const closeNode = new TableNode({
+      closeParen: new SymbolNode({ id: "Paren::Rsquare" }),
+      openParen: symbol("["),
+      options: {},
+      value: [tr(), tr()],
+    });
+    expectRefusal(() => toOmmlWithoutMathTag(closeNode), {
+      kind: "table",
+      message:
+        'table.closeParen: Symbol "Paren::Rsquare" needs generated OMML data, deferred to the symbol-data follow-up',
     });
   });
 

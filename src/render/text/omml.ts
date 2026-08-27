@@ -1,4 +1,5 @@
 import { RenderError } from "../../core/index";
+import { htmlEntityToUnicode } from "../../core/nodes";
 import {
   FORMAT,
   type NodeOf,
@@ -10,6 +11,24 @@ import { XmlElement } from "../../xml/index";
 
 const UNICODE_TOKEN = /unicode\[:\w+\]/;
 
+function encodeOmmlText(value: string): string {
+  const decoded = htmlEntityToUnicode(value.replaceAll(" ", "&#xa0;"));
+  let encoded = "";
+  for (const character of decoded) {
+    const codepoint = character.codePointAt(0) as number;
+    encoded +=
+      codepoint > 0x7f ||
+      character === "&" ||
+      character === '"' ||
+      character === "'" ||
+      character === "<" ||
+      character === ">"
+        ? `&#x${codepoint.toString(16)};`
+        : character;
+  }
+  return encoded;
+}
+
 /** `Text#to_omml_without_math_tag`: direct `m:t`, with generated lookup deferred. */
 export function renderText(node: NodeOf<"text">): XmlElement {
   const value = requireString(node.parameterOne, node.kind, "text.parameterOne");
@@ -20,7 +39,7 @@ export function renderText(node: NodeOf<"text">): XmlElement {
       node.kind,
     );
   }
-  return textElement(value);
+  return textElement(encodeOmmlText(value));
 }
 
 /** Default-language Text insertion adds `m:rPr/m:sty`; `lang: omml` is unmeasured. */

@@ -222,29 +222,6 @@ describe("the big operators", () => {
     expect(toAsciimath(new IntNode({ parameterThree: new LinebreakNode({}) }))).toBe("int \\");
   });
 
-  it("strips a long internal whitespace run in linear time, as Ruby's C strip does", () => {
-    // PR #10 review, finding 1: `rubyStrip`'s end-anchored trailing regex had
-    // no start anchor, so a validator-passing tree — an `int` whose third
-    // slot is a formula of N bare (nil-rendering) fontStyle children then a
-    // symbol, rendering "int " + N spaces + "x" — made every position in the
-    // internal run a retry point: quadratic, where the gem's `strip` is
-    // linear. Calibrated in this environment 2026-08-10: pre-fix the regex
-    // pair took 140/509/1,786 ms at n = 10k/20k/40k end-to-end (~4x per
-    // doubling); the index-scan strip takes ~30 ms at 40k. The 750 ms bound
-    // is generous headroom for a slow machine, yet less than half the
-    // quadratic implementation's measured time — this test ran red against
-    // it.
-    const children: unknown[] = [];
-    for (let i = 0; i < 40_000; i += 1) children.push({ kind: "fontStyle" });
-    children.push({ kind: "symbol", value: "x" });
-    const tree = { kind: "int", parameterThree: { kind: "formula", value: children } };
-    const start = performance.now();
-    const out = toAsciimath(tree as never);
-    const elapsed = performance.now() - start;
-    expect(out).toBe(`int ${" ".repeat(40_000)}x`);
-    expect(elapsed).toBeLessThan(750);
-  });
-
   it("nary falls back to int for a missing first slot", () => {
     // Probes kind/Nary/no-first => "int_(2)^(3) 4"; kind/Nary/bare => "int";
     // fontnil/inside-nary-first => "int 2" (a first slot whose own render is

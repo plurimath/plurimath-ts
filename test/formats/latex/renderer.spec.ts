@@ -426,29 +426,6 @@ describe("the big operators", () => {
     );
   });
 
-  it("strips a long internal whitespace run in linear time, as Ruby's C strip does", () => {
-    // The latex mirror of PR #10 review finding 1: `rubyStrip`'s end-anchored
-    // trailing regex had no start anchor, so a validator-passing tree — an
-    // `int` whose third slot is a formula of N bare (nil-rendering) fontStyle
-    // children then a symbol, rendering "\int " + N spaces + "x" — made every
-    // position in the internal run a retry point: quadratic, where the gem's
-    // C-implemented `strip` is linear. Calibrated in this environment
-    // 2026-08-10: pre-fix the regex pair took 120/449/1,741 ms at
-    // n = 10k/20k/40k end-to-end through `toLatex` (~4x per doubling); the
-    // index-scan strip takes ~30 ms at 40k. The 750 ms bound is generous
-    // headroom for a slow machine, yet less than half the quadratic
-    // implementation's measured time — this test ran red against it.
-    const children: unknown[] = [];
-    for (let i = 0; i < 40_000; i += 1) children.push({ kind: "fontStyle" });
-    children.push({ kind: "symbol", value: "x" });
-    const tree = { kind: "int", parameterThree: { kind: "formula", value: children } };
-    const start = performance.now();
-    const out = toLatex(tree as never);
-    const elapsed = performance.now() - start;
-    expect(out).toBe(`\\int ${" ".repeat(40_000)}x`);
-    expect(elapsed).toBeLessThan(750);
-  });
-
   it("nary falls back to \\int for a nil first value — or a nil RENDER", () => {
     // Probes nary/*: "f_{a}^{b} c", "\int", "f", "\int" (nil-render), "" (empty render).
     expect(

@@ -558,11 +558,13 @@ describe("failure positions", () => {
 });
 
 describe("packrat memoisation", () => {
-  it("keeps exponential-looking grammars linear", () => {
+  it("finishes the depth-21 backtracking case within 500 ms", () => {
     // Parslet 2.0.0 memoises by (atom, position) in Atoms::Context. Without
-    // the same cache, a grammar that revisits positions this heavily takes
-    // seconds; the assertion is a wall-clock ceiling, generous enough not to
-    // be flaky but far below unmemoised behaviour.
+    // the same cache, the unary alternative reparses every nested left operand
+    // before failing at "+" and falling through to the binary alternative.
+    // At depth 21 that took 2,994.50 ms without the cache on 2026-08-27; the
+    // assertion is generous for the memoised path but below that demonstrated
+    // exponential behaviour.
     const expr: import("../../src/pegkit/index").Atom = rule(() =>
       choice([
         seq(str("("), expr, str(")")),
@@ -570,7 +572,8 @@ describe("packrat memoisation", () => {
         str("x"),
       ]),
     );
-    const deep = `${"(".repeat(12)}x${")".repeat(12)}`;
+    let deep = "x";
+    for (let level = 0; level < 21; level += 1) deep = `(${deep}+x)`;
     const started = performance.now();
     expect(String(expr.parse(deep))).toBe(deep);
     expect(performance.now() - started).toBeLessThan(500);

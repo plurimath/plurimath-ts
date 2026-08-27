@@ -597,14 +597,12 @@ describe("the rule inventory", () => {
     expect(Object.keys(grammar.rules).length).toBe(36);
   });
 
-  it("roots at `expression` (parse.rb:169)", () => {
-    expect(grammar.root).toBe(grammar.rules.expression);
-  });
-
   it("shares one atom per rule, so the packrat cache is shared as Parslet's is", () => {
     // Parslet memoizes an Entity per rule per parser instance; referencing a
     // rule twice must not build two atoms, or one cache becomes two.
-    expect(grammar.rules.expression).toBe(grammar.rules.expression);
+    const rootExpressionReference = grammar.root;
+    const inventoryExpressionReference = grammar.rules.expression;
+    expect(rootExpressionReference).toBe(inventoryExpressionReference);
     expect(createAsciimathGrammar().rules.expression).not.toBe(grammar.rules.expression);
   });
 

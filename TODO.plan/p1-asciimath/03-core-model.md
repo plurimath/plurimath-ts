@@ -59,14 +59,14 @@ now; renderers may reject them with `RenderError`, but may not omit their case
 
 ## Done when
 
-- [x] `MathNode` covers every concrete kind in the census.
-- [x] `equals()` agrees with the gem on Ruby-derived equal and unequal pairs,
+- [ ] `MathNode` covers every concrete kind in the census.
+- [ ] `equals()` agrees with the gem on Ruby-derived equal and unequal pairs,
   including the three `comparable_value` cases above. The known-divergence
   block in `test/core/equality.spec.ts` is deleted, not amended.
-- [x] `node.equals(other)` works as a method on every node class.
-- [x] Constructors materialize Ruby's assigned defaults, and `normalize` still
+- [ ] `node.equals(other)` works as a method on every node class.
+- [ ] Constructors materialize Ruby's assigned defaults, and `normalize` still
   distinguishes assigned-`nil` from never-assigned.
-- [x] A round trip through `normalize` matches the gem's serialization for the seed
+- [ ] A round trip through `normalize` matches the gem's serialization for the seed
   corpus.
-- [x] `pnpm boundaries` reports `core` importing nothing from another layer.
+- [ ] `pnpm boundaries` reports `core` importing nothing from another layer.
   `core/generated/` is core's own data and is expected (§3 rule 1).

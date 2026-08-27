@@ -37,7 +37,7 @@ implementation. They are hand-ported (§10).
 
 ## Done when
 
-- [x] Every symbol the pinned corpus touches resolves through generated data.
-- [x] The probe output names the context-dependent symbols, and the list matches
+- [ ] Every symbol the pinned corpus touches resolves through generated data.
+- [ ] The probe output names the context-dependent symbols, and the list matches
   what the gem actually does rather than a hand-written guess.
-- [x] A symbol id missing from a renderer slice raises `MissingSymbolDataError`.
+- [ ] A symbol id missing from a renderer slice raises `MissingSymbolDataError`.

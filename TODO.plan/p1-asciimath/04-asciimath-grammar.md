@@ -37,13 +37,13 @@ moving an alternative changes what parses.
 
 ## Done when
 
-- [x] For every **reachable** pinned corpus case, the parse tree is deep-equal to
+- [ ] For every **reachable** pinned corpus case, the parse tree is deep-equal to
   the tree recorded from Parslet.
-- [x] Offsets in a `ParseError` index the original input, including after a
+- [ ] Offsets in a `ParseError` index the original input, including after a
   length-changing preprocessing token.
 - [ ] Each rule that can fail has a failure-position test, not only a
   success-tree test. Two pegkit failure-position bugs survived a conformance
   suite that only tested what parses; `ParseError.index` is public contract.
-- [x] A comma-decimal locale parses to the same model as the gem for the same
+- [ ] A comma-decimal locale parses to the same model as the gem for the same
   input and locale, and the default still parses `1.5`. The shared case schema
   has no locale axis today, so this is a local fixture until one is agreed.

@@ -3,5 +3,5 @@ import { renderUnaryDefault } from "../unary-function/html";
 
 /** `Abs#to_html` is inherited from `UnaryFunction`; measured through `Abs.new(x)`. */
 export function renderAbs(node: NodeOf<"abs">, context: RenderContext): string {
-  return renderUnaryDefault("Abs", node.parameterOne, context, "abs.parameterOne");
+  return renderUnaryDefault("abs", node.parameterOne, context, "abs.parameterOne");
 }

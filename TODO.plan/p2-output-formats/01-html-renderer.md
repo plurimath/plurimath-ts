@@ -13,13 +13,13 @@ surface.
 
 Against the port's 38 render kinds, on the pinned oracle (00c52783):
 
-- **15 define their own `to_html`**: `base`, `binary-function`, `ceil`, `ddot`,
+- **16 define their own `to_html`**: `base`, `binary-function`, `ceil`, `ddot`,
   `fenced`, `font-style`, `formula`, `linebreak`, `number`, `prod`, `sum`, `table`,
-  `ternary-function`, `text`, `unary-function`.
-- **20 inherit a carrier default**: thirteen from `UnaryFunction`, four from
+  `ternary-function`, `text`, `unary-function`, and `symbol`.
+- **21 inherit a carrier default**: fourteen from `UnaryFunction`, four from
   `BinaryFunction` (`color`, `frac`, `overset`, `underset`), two from `TernaryFunction`
-  (`int`, `oint`), and `mpadded` from `UnaryFunction`.
-- **`symbol`** defines its own; **`mrow`** inherits `Formula`'s.
+  (`int`, `oint`), and `mrow` from `Formula`.
+- **1 is missing `to_html`**: `nary`.
 
 For scale, excluding `symbol` from each count: UnicodeMath needed 34 own overrides,
 OMML needs 35 implementations, and HTML needs 15 own overrides.
@@ -38,6 +38,44 @@ per slot):
 Note the asymmetry: a bare `Symbol` renders `x`, but the unary carrier wraps its slot as
 `<i>x</i>`. The `<i>` comes from the carrier, not the symbol — so it cannot be assumed
 from the symbol's own output.
+
+### Coverage after phase two, part A
+
+The renderer now covers 29 of the 38 kinds: all 21 inherited kinds, seven
+own-implementing kinds (`binary-function`, `formula`, `number`, `symbol`,
+`ternary-function`, `text`, `unary-function`), and the measured `nary` refusal. The
+nine remaining own-implementing kinds are `base`, `ceil`, `ddot`, `fenced`,
+`font-style`, `linebreak`, `prod`, `sum`, and `table`.
+
+The part-A probe called `to_html(options: {})` with one plain `Symbol("x")` per occupied
+slot, then replaced each slot position with `nil` and `[]` in turn. All 17 requested
+kinds inherited from the expected carrier; none defined its own method or reached
+generated HTML symbol data.
+
+| kind | carrier | occupied slots | nil slot | empty slot |
+|---|---|---|---|---|
+| `bar` | unary | `<i>¯</i><i>x</i>` | `<i>¯</i>` | `<i>¯</i><i></i>` |
+| `color` | binary | `<i>x</i><i>x</i>` | `<i>x</i>` in either position | raises in either position |
+| `dot` | unary | `<i>dot</i><i>x</i>` | `<i>dot</i>` | `<i>dot</i><i></i>` |
+| `floor` | unary | `<i>floor</i><i>x</i>` | `<i>floor</i>` | `<i>floor</i><i></i>` |
+| `hat` | unary | `<i>^</i><i>x</i>` | `<i>^</i>` | `<i>^</i><i></i>` |
+| `mpadded` | unary | `<i>mpadded</i><i>x</i>` | `<i>mpadded</i>` | `<i>mpadded</i><i></i>` |
+| `norm` | unary | `<i>norm</i><i>x</i>` | `<i>norm</i>` | `<i>norm</i><i></i>` |
+| `obrace` | unary | `<i>&#x23de;</i><i>x</i>` | `<i>&#x23de;</i>` | `<i>&#x23de;</i><i></i>` |
+| `oint` | ternary | `<i>x</i><i>x</i><i>x</i>` | two `<i>x</i>` wrappers in any position | raises in any position |
+| `overleftrightarrow` | unary | `<i>&#x20e1;</i><i>x</i>` | `<i>&#x20e1;</i>` | `<i>&#x20e1;</i><i></i>` |
+| `overset` | binary | `<i>x</i><i>x</i>` | `<i>x</i>` in either position | raises in either position |
+| `sqrt` | unary | `<i>sqrt</i><i>x</i>` | `<i>sqrt</i>` | `<i>sqrt</i><i></i>` |
+| `tilde` | unary | `<i>~</i><i>x</i>` | `<i>~</i>` | `<i>~</i><i></i>` |
+| `ubrace` | unary | `<i>&#x23df;</i><i>x</i>` | `<i>&#x23df;</i>` | `<i>&#x23df;</i><i></i>` |
+| `ul` | unary | `<i>underline</i><i>x</i>` | `<i>underline</i>` | `<i>underline</i><i></i>` |
+| `underset` | binary | `<i>x</i><i>x</i>` | `<i>x</i>` in either position | raises in either position |
+| `vec` | unary | `<i>&#x2192;</i><i>x</i>` | `<i>&#x2192;</i>` | `<i>&#x2192;</i><i></i>` |
+
+The measured surprise is that eight unary labels are not the lowercase class name:
+`bar` uses `¯`, `hat` uses `^`, `obrace`, `overleftrightarrow`, and `ubrace` use literal
+HTML entities, `tilde` uses `~`, `ul` uses `underline`, and `vec` uses `&#x2192;`.
+These bytes are reproduced directly rather than normalized.
 
 ### The trap this item must not fall into
 

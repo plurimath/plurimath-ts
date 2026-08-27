@@ -90,30 +90,39 @@ export const DEPTH_LIMIT_MESSAGE = "Input is nested too deeply to parse";
 export const STACK_EXHAUSTED_MESSAGE = "Input exhausted the parser stack";
 
 /**
- * How each engine words a blown stack: V8 and JavaScriptCore say "Maximum call
- * stack size exceeded", SpiderMonkey "too much recursion". Matching the text is
- * unlovely, but the alternative is worse — `RangeError` is a general-purpose
- * error, and relabelling *every* one as stack exhaustion would hide an
- * unrelated bug behind a message asserting a cause nothing established.
+ * Cross-engine wording for recursion errors: V8 and JavaScriptCore include
+ * "Maximum call stack" or "stack size exceeded"; SpiderMonkey uses "too much
+ * recursion". For a `RangeError` or named `InternalError`, this broad heuristic
+ * accepts a message containing any listed fragment. That covers the configured
+ * engine spellings; it does not prove that an arbitrary synthetic error
+ * exhausted the stack.
  */
 const STACK_OVERFLOW_TEXT =
   /maximum call stack|stack size exceeded|too much recursion|stack overflow/i;
 
 /**
+ * Regex-compilation `SyntaxError` needs a stricter rule because it can also
+ * expose a malformed grammar. These are the complete V8 reasons observed for
+ * an exhausted stack. Anchoring rejects longer synthetic reasons, but it cannot
+ * predict or recognise a future V8 wording.
+ */
+const V8_REGEX_STACK_OVERFLOW_REASON = /^(?:maximum call stack size exceeded|stack overflow)$/i;
+
+/**
  * V8 reports a failed regex compilation as
  * `Invalid regular expression: /<source>/<flags>: <reason>`, echoing the
- * pattern back. Only the REASON says why it failed, so only the reason is
- * tested: a search across the whole message matches a malformed pattern whose
+ * pattern back. The reason field identifies the failure, so it is tested
+ * separately: a search across the whole message matches a malformed pattern whose
  * own source contains the words (`new RegExp("Stack overflow(")` reports
  * `Unterminated group` on a pattern that reads "Stack overflow"), which would
  * convert a real grammar bug into a reported parse failure.
  */
 const REGEX_COMPILE_MESSAGE = /^Invalid regular expression: \/[\s\S]*\/[a-z]*: ([\s\S]+)$/;
 
-/** True only when V8's stated REASON for the compile failure is an exhausted stack. */
+/** Matches a V8 regex-compilation message with one of the observed overflow reasons. */
 function isRegexCompileOverflow(message: string): boolean {
   const reason = REGEX_COMPILE_MESSAGE.exec(message)?.[1];
-  return reason !== undefined && STACK_OVERFLOW_TEXT.test(reason);
+  return reason !== undefined && V8_REGEX_STACK_OVERFLOW_REASON.test(reason);
 }
 
 /**
@@ -121,41 +130,29 @@ function isRegexCompileOverflow(message: string): boolean {
  * **SpiderMonkey uses `InternalError`**, which is not a `RangeError` and is not
  * a standard global — so an `instanceof RangeError` test excludes Firefox
  * before the message is ever consulted, leaving the regex's "too much
- * recursion" branch unreachable there and a browser consumer receiving an
- * untyped throw the contract says cannot happen.
+ * recursion" branch unreachable there and a browser consumer receiving the
+ * raw engine exception instead of a parser-stack failure.
  *
- * V8 has a THIRD shape, and it escaped both gates. When the stack is already
+ * V8 has a separate shape. When the stack is already
  * exhausted, compiling a regex literal fails with a `SyntaxError` — not a
  * `RangeError` — reading "Invalid regular expression: /[0-9]/uy: <reason>".
- * The reason is engine-dependent: node 24.18.0 / V8 13.6 emits "Maximum call
- * stack size exceeded" (measured: 25 of 40 cold overflows, the other 15 being
- * RangeError), and "Stack overflow" is the other spelling seen. Neither is a
- * `RangeError` nor an `InternalError`, and neither matched the three message
- * branches, so it left `parseAsciimath` raw and untyped. It is stack-budget dependent, so it
- * does not reproduce every run: at nesting depth 73, 60 cold processes on this
- * branch gave 10 typed `ParseError` and 50 clean parses with none untyped,
- * while a review measured 13 untyped `SyntaxError` in 200 cold runs before the
- * fix and none after.
+ * Node 24.18.0 / V8 13.6 emitted "Maximum call stack size exceeded" in the
+ * reported regression; "Stack overflow" is the alternate observed reason.
+ * Both reasons matched `STACK_OVERFLOW_TEXT`. The earlier classifier rejected
+ * the error because a `SyntaxError` is neither a `RangeError` nor an
+ * `InternalError`.
  *
- * V8 names the failing regex in the message, so there are as many message
- * spellings as there are regexes in the grammar — `/[0-9]/uy` is the one this
- * sweep observed, and the `symbol` capture's character class in
- * `symbolTextOrInteger` is a second the grammar can produce. That is why the
- * pattern below matches the SHAPE rather than any particular literal.
- *
- * A `SyntaxError` is admitted only when V8's stated reason is an exhausted
- * stack. A genuinely malformed pattern gives a structural reason ("Invalid
- * group", "Unterminated character class") and is refused — including when the
- * pattern's own text reads "Stack overflow", which a whole-message search does
- * NOT refuse. That is why the reason is parsed out rather than searched for.
+ * V8 includes the failing regex in the message, so the classifier accepts the
+ * message shape rather than one grammar literal. It then checks the complete
+ * reason with the anchored V8 matcher above. This keeps overflow words in the
+ * echoed regex source, longer synthetic reasons, and structural failure reasons
+ * from satisfying the `SyntaxError` branch.
  */
 export function isStackOverflow(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  const fromRecursion =
-    error instanceof RangeError ||
-    error.name === "InternalError" ||
-    (error instanceof SyntaxError && isRegexCompileOverflow(error.message));
-  return fromRecursion && STACK_OVERFLOW_TEXT.test(error.message);
+  if (error instanceof SyntaxError) return isRegexCompileOverflow(error.message);
+  const recursionClass = error instanceof RangeError || error.name === "InternalError";
+  return recursionClass && STACK_OVERFLOW_TEXT.test(error.message);
 }
 
 type ParseResult =
@@ -399,7 +396,7 @@ export abstract class Atom {
       if (isStackOverflow(error)) {
         throw new ParseFailed(STACK_EXHAUSTED_MESSAGE, ctx.maxPos);
       }
-      // Any other RangeError is somebody else's bug and travels unchanged.
+      // Any other error is somebody else's bug and travels unchanged.
       throw error;
     }
     // `consume_all` guarantees a successful root reached the end of the input.

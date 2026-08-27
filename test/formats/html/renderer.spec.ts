@@ -1,8 +1,11 @@
 /**
- * Oracle-backed HTML vertical-slice pins measured with:
- * `mise x -- bundle exec ruby /tmp/wt-html-independent-probe.rb`
- * in the clean oracle checkout at 00c52783.
- * Phase-one boundary cases below pin deliberate refusals for deferred paths.
+ * Gem-pinned HTML rendering behaviour: the carrier defaults, the leaf and
+ * formula kinds, and the seventeen kinds that inherit a carrier default.
+ * The oracle-backed pins were measured on plurimath 0.11.6 at 00c52783 by
+ * instantiating the class and calling `to_html(options: {})` — local probes
+ * wt-html-probe.rb, wt-html-independent-probe.rb and wt-html-p2a-probe.rb.
+ * The partial-slice boundary cases below pin deliberate refusals for the
+ * kinds and paths deferred to a later increment.
  */
 
 import { describe, expect, it } from "vitest";
@@ -369,7 +372,7 @@ describe("HTML partial-slice boundary", () => {
     );
   });
 
-  it("refuses a named symbol whose generated HTML value is not in this phase", () => {
+  it("refuses a named symbol whose generated HTML value is deferred to a later increment", () => {
     expect(() => toHtml(new SymbolNode({ id: "Plus" }))).toThrow(RenderError);
     expect(() => toHtml(new SymbolNode({ id: "Plus", value: "WRONG" }))).toThrow(RenderError);
     expect(() => toHtml(new SymbolNode({ id: "Plus", value: "&#x2b;" }))).toThrow(RenderError);

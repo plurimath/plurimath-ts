@@ -10,6 +10,7 @@ import {
 import { XmlElement } from "../../xml/index";
 
 const UNICODE_TOKEN = /unicode\[:\w+\]/;
+const HEX_ESCAPED_CONTROL_CODEPOINTS = new Set([0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x0d]);
 
 function encodeOmmlText(value: string): string {
   const decoded = htmlEntityToUnicode(value.replaceAll(" ", "&#xa0;"));
@@ -17,6 +18,7 @@ function encodeOmmlText(value: string): string {
   for (const character of decoded) {
     const codepoint = character.codePointAt(0) as number;
     encoded +=
+      HEX_ESCAPED_CONTROL_CODEPOINTS.has(codepoint) ||
       codepoint > 0x7f ||
       character === "&" ||
       character === '"' ||

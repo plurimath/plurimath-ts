@@ -83,6 +83,20 @@ const PUBLIC_X = xml(
 );
 const PUBLIC_EMPTY = xml(ROOT_OPEN, "  <m:oMath/>", "</m:oMathPara>");
 
+const publicText = (value: string): string =>
+  xml(
+    ROOT_OPEN,
+    "  <m:oMath>",
+    "    <m:r>",
+    "      <m:rPr>",
+    '        <m:sty m:val="p"/>',
+    "      </m:rPr>",
+    `      <m:t>${value}</m:t>`,
+    "    </m:r>",
+    "  </m:oMath>",
+    "</m:oMathPara>",
+  );
+
 const UNARY_X = xml(
   "<m:func>",
   "  <m:funcPr>",
@@ -390,6 +404,18 @@ describe("OMML first vertical slice", () => {
         "</m:oMathPara>",
       ),
     );
+  });
+
+  it.each([
+    ["tab", "\t", "&#x9;"],
+    ["line feed", "\n", "&#xa;"],
+    ["carriage return", "\r", "&#xd;"],
+    ["vertical tab", "\v", "&#xb;"],
+    ["form feed", "\f", "&#xc;"],
+    ["NUL", "\0", "&#x0;"],
+  ])("hex-escapes Text %s on Formula insertion", (_name, control, encoded) => {
+    const node = new TextNode({ parameterOne: `a${control}b` });
+    expect(toOmml(new FormulaNode({ value: [node] }))).toBe(publicText(`a${encoded}b`));
   });
 
   it('suppresses only the exact Symbol spelling "&#x2062;"', () => {

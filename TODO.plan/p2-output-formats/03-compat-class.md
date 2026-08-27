@@ -449,8 +449,12 @@ explicitly says the UnitsML decision does not affect P0-P2
 
 ### Explicitly unmeasured
 
-- The published JavaScript runtime `dist/index.cjs` was not read or executed in this
-  documentation round, so the measured declarations do not establish runtime equivalence.
+- The published JavaScript runtime was read but not executed. Both `dist/index.cjs` (the
+  package's `main`) and `dist/index.js` at `@plurimath/plurimath@0.2.2` define the same
+  six methods as the published declarations, and `grep -c unicodemath` returns `0` against
+  each. So the published `.d.ts` is not merely stale over a richer runtime: the shipped
+  artifact genuinely lacks `toUnicodemath`. Runtime *behaviour* was still not exercised,
+  so byte equivalence remains unestablished.
 - The JavaScript runtime was not rebuilt. Therefore the six constructor cases and all
   five `toDisplay` cases were not re-executed; only the tracked AsciiMath display test is
   present (`spec/to-display.spec.js:3-16`). The thrown Opal error object's JavaScript

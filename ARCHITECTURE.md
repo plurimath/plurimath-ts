@@ -1025,7 +1025,7 @@ Consequences pinned here so they are not rediscovered later:
   browser-bundler smoke test is part of the isolation gate.
 - `tsc`-only is a **documented contingency, not a second maintained build**.
   It was verified to work (ESM + CJS + types, isolation structural). If ever
-  activated it must pass the same packed-package gate; until then it is not
+  activated it must pass the same package-isolation gate; until then it is not
   configured or run.
 
 **Convention guardrails beyond tooling.** `scripts/check.mjs` — one tracked,

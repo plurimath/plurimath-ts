@@ -473,11 +473,13 @@ rendered through `to_mathml_without_math_tag(...).nodes.first`; named `Paren::*`
 therefore need the generated symbol mapping that the scoped HTML slice does not carry.
 The port raises `RenderError` for that path rather than inventing a delimiter.
 
-Any non-`Paren` node contributes its raw `value`. Formula, mrow, and table values are
-arrays of nodes, so Ruby interpolation emits `#inspect` strings containing object memory
-addresses. Those bytes are nondeterministic; the port refuses them, matching the policy
-already recorded for LaTeX's node-valued paren slots. Deterministic raw-value parens
-(base Symbol/Paren and Number values) still render byte-for-byte.
+Any non-`Paren` node contributes its raw `value`. Empty and nil-only formula, mrow, and
+table values have deterministic Ruby `#inspect` bytes (`[]`, `[nil]`; a nil table value
+contributes an empty string), so the port renders those measured cases. Once such a list
+contains a node, Ruby `#inspect` includes that object's memory address; the port refuses
+those nondeterministic bytes, matching the policy already recorded for LaTeX's
+node-valued paren slots. Constructor-normalized Symbol/Paren and Number string or nil
+values still render byte-for-byte; forged container values refuse at the runtime boundary.
 
 ### LaTeX: Color renders only the measured AsciiMath fragment
 

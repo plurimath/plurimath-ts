@@ -59,6 +59,24 @@ import { toHtml } from "../../../src/formats/html/renderer";
 
 const symbol = (value = "x") => new SymbolNode({ value });
 
+function expectHtmlError(
+  run: () => unknown,
+  expected: { readonly kind: string; readonly message: string },
+): void {
+  let thrown: unknown;
+  try {
+    run();
+  } catch (error) {
+    thrown = error;
+  }
+  expect(thrown).toBeInstanceOf(RenderError);
+  expect(thrown).toMatchObject({
+    code: "RENDER_ERROR",
+    format: "html",
+    ...expected,
+  });
+}
+
 interface UnaryInheritedCase {
   readonly kind: string;
   readonly make: (parameterOne: NodeParameter) => MathNode;
@@ -201,14 +219,20 @@ describe("HTML carrier defaults", () => {
     expect(
       toHtml(new UnaryFunctionNode({ name: "Sin", parameterOne: [symbol("a"), symbol("b")] })),
     ).toBe("<i>sin</i><i>ab</i>");
-    expect(() =>
-      toHtml(
-        new UnaryFunctionNode({
-          name: "Sin",
-          parameterOne: [symbol("a"), null, symbol("b")] as unknown as readonly SymbolNode[],
-        }),
-      ),
-    ).toThrow(RenderError);
+    expectHtmlError(
+      () =>
+        toHtml(
+          new UnaryFunctionNode({
+            name: "Sin",
+            parameterOne: [symbol("a"), null, symbol("b")] as unknown as readonly SymbolNode[],
+          }),
+        ),
+      {
+        kind: "unknown",
+        message:
+          "unaryFunction.parameterOne[1]: cannot render nil — the gem raises NoMethodError here",
+      },
+    );
   });
 
   it("renders the binary default through Frac", () => {
@@ -229,9 +253,10 @@ describe("HTML carrier defaults", () => {
   });
 
   it("refuses a binary array slot because BinaryFunction calls to_html on the array", () => {
-    expect(() => toHtml(new FracNode({ parameterOne: [], parameterTwo: symbol() }))).toThrow(
-      RenderError,
-    );
+    expectHtmlError(() => toHtml(new FracNode({ parameterOne: [], parameterTwo: symbol() })), {
+      kind: "unknown",
+      message: "frac.parameterOne: cannot render a list — the gem raises NoMethodError here",
+    });
   });
 
   it("renders the ternary default through Int", () => {
@@ -259,11 +284,16 @@ describe("HTML carrier defaults", () => {
   });
 
   it("refuses a ternary array slot because TernaryFunction calls to_html on the array", () => {
-    expect(() =>
-      toHtml(
-        new IntNode({ parameterOne: symbol("a"), parameterTwo: [], parameterThree: symbol("c") }),
-      ),
-    ).toThrow(RenderError);
+    expectHtmlError(
+      () =>
+        toHtml(
+          new IntNode({ parameterOne: symbol("a"), parameterTwo: [], parameterThree: symbol("c") }),
+        ),
+      {
+        kind: "unknown",
+        message: "int.parameterTwo: cannot render a list — the gem raises NoMethodError here",
+      },
+    );
   });
 });
 
@@ -281,8 +311,14 @@ describe("HTML inherited kind rendering", () => {
       expect(toHtml(inherited.make(symbol(), symbol()), {})).toBe("<i>x</i><i>x</i>");
       expect(toHtml(inherited.make(null, symbol()), {})).toBe("<i>x</i>");
       expect(toHtml(inherited.make(symbol(), null), {})).toBe("<i>x</i>");
-      expect(() => toHtml(inherited.make([], symbol()), {})).toThrow(RenderError);
-      expect(() => toHtml(inherited.make(symbol(), []), {})).toThrow(RenderError);
+      expectHtmlError(() => toHtml(inherited.make([], symbol()), {}), {
+        kind: "unknown",
+        message: `${inherited.kind}.parameterOne: cannot render a list — the gem raises NoMethodError here`,
+      });
+      expectHtmlError(() => toHtml(inherited.make(symbol(), []), {}), {
+        kind: "unknown",
+        message: `${inherited.kind}.parameterTwo: cannot render a list — the gem raises NoMethodError here`,
+      });
     });
   }
 
@@ -297,9 +333,18 @@ describe("HTML inherited kind rendering", () => {
     expect(toHtml(make(null, symbol(), symbol()), {})).toBe("<i>x</i><i>x</i>");
     expect(toHtml(make(symbol(), null, symbol()), {})).toBe("<i>x</i><i>x</i>");
     expect(toHtml(make(symbol(), symbol(), null), {})).toBe("<i>x</i><i>x</i>");
-    expect(() => toHtml(make([], symbol(), symbol()), {})).toThrow(RenderError);
-    expect(() => toHtml(make(symbol(), [], symbol()), {})).toThrow(RenderError);
-    expect(() => toHtml(make(symbol(), symbol(), []), {})).toThrow(RenderError);
+    expectHtmlError(() => toHtml(make([], symbol(), symbol()), {}), {
+      kind: "unknown",
+      message: "oint.parameterOne: cannot render a list — the gem raises NoMethodError here",
+    });
+    expectHtmlError(() => toHtml(make(symbol(), [], symbol()), {}), {
+      kind: "unknown",
+      message: "oint.parameterTwo: cannot render a list — the gem raises NoMethodError here",
+    });
+    expectHtmlError(() => toHtml(make(symbol(), symbol(), []), {}), {
+      kind: "unknown",
+      message: "oint.parameterThree: cannot render a list — the gem raises NoMethodError here",
+    });
   });
 });
 
@@ -321,10 +366,13 @@ describe("HTML leaf and formula rendering", () => {
   });
 
   it("refuses Text unicode substitutions whose HTML data is deferred", () => {
-    expect(() => toHtml(new TextNode({ parameterOne: "unicode[:kappa]" }))).toThrow(RenderError);
-    expect(() => toHtml(new TextNode({ parameterOne: "preunicode[:Gamma]post" }))).toThrow(
-      RenderError,
-    );
+    for (const parameterOne of ["unicode[:kappa]", "preunicode[:Gamma]post"]) {
+      expectHtmlError(() => toHtml(new TextNode({ parameterOne })), {
+        kind: "text",
+        message:
+          "text.parameterOne: unicode[:name] substitution needs generated HTML data from phase two",
+      });
+    }
   });
 
   it("joins Formula and Mrow children with spaces", () => {
@@ -336,7 +384,10 @@ describe("HTML leaf and formula rendering", () => {
   });
 
   it("refuses a Formula whose value is nil where the gem raises", () => {
-    expect(() => toHtml(new FormulaNode({ value: null }))).toThrow(RenderError);
+    expectHtmlError(() => toHtml(new FormulaNode({ value: null })), {
+      kind: "formula",
+      message: "formula.value: is nil, not a list — the gem raises here",
+    });
   });
 
   it("renders end to end from an AsciiMath parse", () => {
@@ -346,7 +397,10 @@ describe("HTML leaf and formula rendering", () => {
 
 describe("HTML refusal parity", () => {
   it("refuses nary because the gem has no to_html method in its ancestry", () => {
-    expect(() => toHtml(new NaryNode())).toThrow(RenderError);
+    expectHtmlError(() => toHtml(new NaryNode()), {
+      kind: "nary",
+      message: "Nary has no HTML renderer in the pinned gem and refuses instead of emitting markup",
+    });
   });
 });
 
@@ -359,12 +413,14 @@ describe("HTML own-kind rendering", () => {
       "<sub>x</sub>",
     );
     expect(toHtml(new BaseNode({ parameterOne: symbol(), parameterTwo: null }))).toBe("<i>x</i>");
-    expect(() => toHtml(new BaseNode({ parameterOne: [], parameterTwo: symbol() }))).toThrow(
-      RenderError,
-    );
-    expect(() => toHtml(new BaseNode({ parameterOne: symbol(), parameterTwo: [] }))).toThrow(
-      RenderError,
-    );
+    expectHtmlError(() => toHtml(new BaseNode({ parameterOne: [], parameterTwo: symbol() })), {
+      kind: "unknown",
+      message: "base.parameterOne: cannot render a list — the gem raises NoMethodError here",
+    });
+    expectHtmlError(() => toHtml(new BaseNode({ parameterOne: symbol(), parameterTwo: [] })), {
+      kind: "unknown",
+      message: "base.parameterTwo: cannot render a list — the gem raises NoMethodError here",
+    });
   });
 
   it("renders Ceil's literal entities around its child", () => {
@@ -375,7 +431,10 @@ describe("HTML own-kind rendering", () => {
     expect(toHtml(new CeilNode({ parameterOne: new TextNode({ parameterOne: null }) }))).toBe(
       "<i>&#x2308;</i><i></i><i>&#x2309;</i>",
     );
-    expect(() => toHtml(new CeilNode({ parameterOne: [] }))).toThrow(RenderError);
+    expectHtmlError(() => toHtml(new CeilNode({ parameterOne: [] })), {
+      kind: "unknown",
+      message: "ceil.parameterOne: cannot render a list — the gem raises NoMethodError here",
+    });
   });
 
   it("renders Ddot's child before its measured two-dot suffix", () => {
@@ -384,7 +443,10 @@ describe("HTML own-kind rendering", () => {
     expect(toHtml(new DdotNode({ parameterOne: new TextNode({ parameterOne: null }) }))).toBe(
       "<i></i><i>..</i>",
     );
-    expect(() => toHtml(new DdotNode({ parameterOne: [] }))).toThrow(RenderError);
+    expectHtmlError(() => toHtml(new DdotNode({ parameterOne: [] })), {
+      kind: "unknown",
+      message: "ddot.parameterOne: cannot render a list — the gem raises NoMethodError here",
+    });
   });
 
   it("renders Fenced's deterministic parens and joins body children without separators", () => {
@@ -418,28 +480,91 @@ describe("HTML own-kind rendering", () => {
 
     expect(toHtml(make(null))).toBe("<i>(</i><i>)</i>");
     expect(toHtml(make([]))).toBe("<i>(</i><i>)</i>");
-    expect(() => toHtml(make(symbol()))).toThrow(RenderError);
+    expectHtmlError(() => toHtml(make(symbol())), {
+      kind: "fenced",
+      message: "fenced.parameterTwo: is an object, not a list — the gem raises NoMethodError here",
+    });
   });
 
-  it("refuses Fenced paren paths requiring generated data or nondeterministic inspect bytes", () => {
-    expect(() =>
+  it("renders deterministic composite Fenced parens", () => {
+    const nilItem = [null] as unknown as readonly MathNode[];
+    const make = (parameterOne: NodeParameter) =>
       toHtml(
         new FencedNode({
-          parameterOne: new SymbolNode({ id: "Paren::Lround" }),
-          parameterTwo: [symbol()],
-          parameterThree: new SymbolNode({ id: "Paren::Rround" }),
-        }),
-      ),
-    ).toThrow(RenderError);
-    expect(() =>
-      toHtml(
-        new FencedNode({
-          parameterOne: new FormulaNode({ value: [symbol("(")] }),
+          parameterOne,
           parameterTwo: [symbol()],
           parameterThree: symbol(")"),
         }),
-      ),
-    ).toThrow(RenderError);
+      );
+
+    expect(make(new FormulaNode({ value: [] }))).toBe("<i>[]</i>x<i>)</i>");
+    expect(make(new FormulaNode({ value: nilItem }))).toBe("<i>[nil]</i>x<i>)</i>");
+    expect(make(new MrowNode({ value: [] }))).toBe("<i>[]</i>x<i>)</i>");
+    expect(make(new MrowNode({ value: nilItem }))).toBe("<i>[nil]</i>x<i>)</i>");
+    expect(make(new TableNode({ value: null }))).toBe("<i></i>x<i>)</i>");
+    expect(make(new TableNode({ value: [] }))).toBe("<i>[]</i>x<i>)</i>");
+    expect(make(new TableNode({ value: nilItem }))).toBe("<i>[nil]</i>x<i>)</i>");
+  });
+
+  it("refuses Fenced paren paths requiring generated data or address-bearing inspect bytes", () => {
+    expectHtmlError(
+      () =>
+        toHtml(
+          new FencedNode({
+            parameterOne: new SymbolNode({ id: "Paren::Lround" }),
+            parameterTwo: [symbol()],
+            parameterThree: new SymbolNode({ id: "Paren::Rround" }),
+          }),
+        ),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterOne: named paren "Paren::Lround" needs generated HTML symbol data',
+      },
+    );
+
+    for (const parameterOne of [
+      new FormulaNode({ value: [symbol("(")] }),
+      new MrowNode({ value: [symbol("(")] }),
+      new TableNode({ value: [symbol("(")] }),
+    ]) {
+      expectHtmlError(
+        () =>
+          toHtml(
+            new FencedNode({
+              parameterOne,
+              parameterTwo: [symbol()],
+              parameterThree: symbol(")"),
+            }),
+          ),
+        {
+          kind: "fenced",
+          message: `fenced.parameterOne: holds a "${parameterOne.kind}" node whose value contains node objects with nondeterministic Ruby #inspect addresses`,
+        },
+      );
+    }
+  });
+
+  it("refuses constructor-bypassed Symbol paren values", () => {
+    const make = (value: unknown) =>
+      toHtml(
+        new FencedNode({
+          parameterOne: { kind: "symbol", id: "Symbol", value } as unknown as SymbolNode,
+          parameterTwo: [symbol()],
+          parameterThree: symbol(")"),
+        }),
+      );
+
+    expectHtmlError(() => make({ a: 1 }), {
+      kind: "fenced",
+      message:
+        'fenced.parameterOne: a "symbol" node holds an object that bypasses constructor normalization',
+    });
+    expectHtmlError(() => make(["a", "b"]), {
+      kind: "fenced",
+      message:
+        'fenced.parameterOne: a "symbol" node holds a list that bypasses constructor normalization',
+    });
   });
 
   it("renders every measured FontStyle alias as its child alone", () => {
@@ -464,10 +589,14 @@ describe("HTML own-kind rendering", () => {
       expect(toHtml(new FontStyleNode({ name, parameterOne: symbol() }))).toBe("x");
     }
     expect(toHtml(new FontStyleNode({ parameterOne: null }))).toBe("");
-    expect(() => toHtml(new FontStyleNode({ name: "Unknown", parameterOne: symbol() }))).toThrow(
-      RenderError,
-    );
-    expect(() => toHtml(new FontStyleNode({ parameterOne: [] }))).toThrow(RenderError);
+    expectHtmlError(() => toHtml(new FontStyleNode({ name: "Unknown", parameterOne: symbol() })), {
+      kind: "fontStyle",
+      message: 'FontStyle alias "Unknown" has not been measured for HTML',
+    });
+    expectHtmlError(() => toHtml(new FontStyleNode({ parameterOne: [] })), {
+      kind: "unknown",
+      message: "fontStyle.parameterOne: cannot render a list — the gem raises NoMethodError here",
+    });
   });
 
   it("places Linebreak according to the measured linebreakstyle", () => {
@@ -483,7 +612,10 @@ describe("HTML own-kind rendering", () => {
       ),
     ).toBe("<br/>x");
     expect(toHtml(new LinebreakNode({ parameterOne: null }))).toBe("<br/>");
-    expect(() => toHtml(new LinebreakNode({ parameterOne: [] }))).toThrow(RenderError);
+    expectHtmlError(() => toHtml(new LinebreakNode({ parameterOne: [] })), {
+      kind: "unknown",
+      message: "linebreak.parameterOne: cannot render a list — the gem raises NoMethodError here",
+    });
   });
 
   it.each([
@@ -506,8 +638,14 @@ describe("HTML own-kind rendering", () => {
     expect(toHtml(make(null, symbol(), symbol()))).toBe(`<i>${entity}</i><sup>x</sup>`);
     expect(toHtml(make(symbol(), null, symbol()))).toBe(`<i>${entity}</i><sub>x</sub>`);
     expect(toHtml(make(symbol(), symbol(), []))).toBe(`<i>${entity}</i><sub>x</sub><sup>x</sup>`);
-    expect(() => toHtml(make([], symbol(), symbol()))).toThrow(RenderError);
-    expect(() => toHtml(make(symbol(), [], symbol()))).toThrow(RenderError);
+    expectHtmlError(() => toHtml(make([], symbol(), symbol())), {
+      kind: "unknown",
+      message: `${_kind}.parameterOne: cannot render a list — the gem raises NoMethodError here`,
+    });
+    expectHtmlError(() => toHtml(make(symbol(), [], symbol())), {
+      kind: "unknown",
+      message: `${_kind}.parameterTwo: cannot render a list — the gem raises NoMethodError here`,
+    });
   });
 
   const td = (...values: MathNode[]) =>
@@ -525,7 +663,10 @@ describe("HTML own-kind rendering", () => {
     ).toBe("<table><tr><td>a</td><td>b</td></tr><tr><td>cd</td></tr></table>");
     expect(toHtml(new TableNode({ value: [] }))).toBe("<table></table>");
     expect(toHtml(new TableNode({ value: [symbol()] }))).toBe("<table>x</table>");
-    expect(() => toHtml(new TableNode({ value: null }))).toThrow(RenderError);
+    expectHtmlError(() => toHtml(new TableNode({ value: null })), {
+      kind: "table",
+      message: "table.value: is nil, not a list — the gem raises NoMethodError here",
+    });
   });
 
   it("renders every measured Table alias with the same HTML tree", () => {
@@ -546,34 +687,52 @@ describe("HTML own-kind rendering", () => {
         "<table><tr><td>x</td></tr></table>",
       );
     }
-    expect(() => toHtml(new TableNode({ name: "Unknown", value: [tr(td(symbol()))] }))).toThrow(
-      RenderError,
-    );
+    expectHtmlError(() => toHtml(new TableNode({ name: "Unknown", value: [tr(td(symbol()))] })), {
+      kind: "table",
+      message: 'Table alias "Unknown" has not been measured for HTML',
+    });
   });
 });
 
 describe("HTML measured boundary refusals", () => {
   it("refuses unmeasured carrier aliases instead of inventing plausible output", () => {
-    expect(() => toHtml(new UnaryFunctionNode({ name: "Mbox", parameterOne: symbol() }))).toThrow(
-      RenderError,
-    );
-    expect(() => toHtml(new BinaryFunctionNode({ name: "Power" }))).toThrow(RenderError);
-    expect(() => toHtml(new TernaryFunctionNode({ name: "PowerBase" }))).toThrow(RenderError);
+    expectHtmlError(() => toHtml(new UnaryFunctionNode({ name: "Mbox", parameterOne: symbol() })), {
+      kind: "unaryFunction",
+      message: 'UnaryFunction alias "Mbox" has not been measured for HTML in this slice',
+    });
+    expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Power" })), {
+      kind: "binaryFunction",
+      message: 'BinaryFunction alias "Power" has not been measured for HTML in this slice',
+    });
+    expectHtmlError(() => toHtml(new TernaryFunctionNode({ name: "PowerBase" })), {
+      kind: "ternaryFunction",
+      message: 'TernaryFunction alias "PowerBase" has not been measured for HTML in this slice',
+    });
   });
 
   it("refuses formula aliases outside the plain Formula slice", () => {
-    expect(() => toHtml(new FormulaNode({ name: "UnmeasuredFormula", value: [symbol()] }))).toThrow(
-      RenderError,
+    expectHtmlError(
+      () => toHtml(new FormulaNode({ name: "UnmeasuredFormula", value: [symbol()] })),
+      {
+        kind: "formula",
+        message: 'Formula alias "UnmeasuredFormula" has not been measured for HTML in this slice',
+      },
     );
   });
 
   it("refuses a named symbol whose generated HTML value is deferred to a later increment", () => {
-    expect(() => toHtml(new SymbolNode({ id: "Plus" }))).toThrow(RenderError);
-    expect(() => toHtml(new SymbolNode({ id: "Plus", value: "WRONG" }))).toThrow(RenderError);
-    expect(() => toHtml(new SymbolNode({ id: "Plus", value: "&#x2b;" }))).toThrow(RenderError);
+    for (const value of [undefined, "WRONG", "&#x2b;"]) {
+      expectHtmlError(() => toHtml(new SymbolNode({ id: "Plus", value })), {
+        kind: "symbol",
+        message: 'Symbol "Plus" needs generated HTML data, which belongs to phase two',
+      });
+    }
   });
 
   it("refuses a non-string Text value instead of silently dropping it", () => {
-    expect(() => toHtml(new TextNode({ parameterOne: symbol() }))).toThrow(RenderError);
+    expectHtmlError(() => toHtml(new TextNode({ parameterOne: symbol() })), {
+      kind: "text",
+      message: "text.parameterOne: holds an object, not a reproducible text value",
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { type MathNode, type NodeKind, RenderError } from "../../core/index";
+import type { MathNode, NodeKind } from "../../core/index";
 import { renderAbs } from "../../render/abs/html";
 import { renderBar } from "../../render/bar/html";
 import { renderBase } from "../../render/base/html";
@@ -37,7 +37,7 @@ import { renderUl } from "../../render/ul/html";
 import { renderUnaryFunction } from "../../render/unary-function/html";
 import { renderUnderset } from "../../render/underset/html";
 import { renderVec } from "../../render/vec/html";
-import { FORMAT, type RenderContext, type RenderFn } from "./render-shared";
+import type { RenderContext, RenderFn } from "./render-shared";
 
 /** One measured renderer per `NodeKind`; `nary` is the gem-matching refusal entry. */
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
@@ -82,11 +82,7 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
 };
 
 function renderNode(node: MathNode, context: RenderContext): string | null {
-  const kind = node.kind;
-  if (!Object.hasOwn(RENDERERS, kind)) {
-    throw new RenderError(`Unknown node kind "${kind}"`, FORMAT, kind);
-  }
-  const render = RENDERERS[kind] as RenderFn<NodeKind>;
+  const render = RENDERERS[node.kind] as RenderFn<NodeKind>;
   return render(node, context);
 }
 

@@ -59,17 +59,13 @@ function renderHtmlParen(value: unknown, at: string): string | null {
           "fenced",
         );
       }
-      return node.value;
+      return renderScalarParenValue(node.value, node.kind, at);
     case "number":
-      return node.value;
+      return renderScalarParenValue(node.value, node.kind, at);
     case "formula":
     case "mrow":
     case "table":
-      throw new RenderError(
-        `${at}: holds a "${node.kind}" node whose list value becomes nondeterministic Ruby #inspect bytes`,
-        FORMAT,
-        "fenced",
-      );
+      return renderCompositeParenValue(node.value, node.kind, at);
     default:
       throw new RenderError(
         `${at}: a "${node.kind}" node has no value reader — the gem raises NoMethodError here`,
@@ -77,4 +73,38 @@ function renderHtmlParen(value: unknown, at: string): string | null {
         "fenced",
       );
   }
+}
+
+/** Constructor-normalized Symbol/Number values are strings or nil, never containers. */
+function renderScalarParenValue(
+  value: unknown,
+  kind: "symbol" | "number",
+  at: string,
+): string | null {
+  if (value === null || value === undefined || typeof value === "string") return value ?? null;
+  throw new RenderError(
+    `${at}: a "${kind}" node holds ${describeSlot(value)} that bypasses constructor normalization`,
+    FORMAT,
+    "fenced",
+  );
+}
+
+/**
+ * Ruby interpolates a composite's raw list value. Empty and nil-only lists have
+ * stable `#inspect` bytes; any actual node contributes its object address.
+ */
+function renderCompositeParenValue(
+  value: unknown,
+  kind: "formula" | "mrow" | "table",
+  at: string,
+): string | null {
+  if (value === null || value === undefined) return null;
+  if (Array.isArray(value) && value.every((item) => item === null)) {
+    return `[${value.map(() => "nil").join(", ")}]`;
+  }
+  throw new RenderError(
+    `${at}: holds a "${kind}" node whose value contains node objects with nondeterministic Ruby #inspect addresses`,
+    FORMAT,
+    "fenced",
+  );
 }

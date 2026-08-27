@@ -1,10 +1,14 @@
 # P2 — Complete the output side
 
-**Status: planned.** Every renderer the gem has, so a formula parsed from
+**Status: active alongside P1 closeout.** Every renderer the gem has, so a formula parsed from
 AsciiMath can be emitted in any supported format. Ends with the first published
 release.
 
-Numbered work items are added to this directory when the phase opens.
+## Work items
+
+| # | Item | Delivers |
+|---|---|---|
+| 1 | [HTML renderer](01-html-renderer.md) | measured vertical slice, then full HTML parity |
 
 ## What it delivers
 

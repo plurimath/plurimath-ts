@@ -15,6 +15,7 @@ import {
   MrowNode,
   NaryNode,
   NumberNode,
+  SqrtNode,
   SymbolNode,
   TernaryFunctionNode,
   TextNode,
@@ -152,6 +153,23 @@ describe("HTML refusal parity", () => {
 });
 
 describe("HTML phase-one boundary", () => {
+  it("refuses an omitted kind at the phase-one dispatch guard", () => {
+    let thrown: unknown;
+    try {
+      toHtml(new SqrtNode());
+    } catch (error) {
+      thrown = error;
+    }
+
+    expect(thrown).toBeInstanceOf(RenderError);
+    expect(thrown).toMatchObject({
+      code: "RENDER_ERROR",
+      format: "html",
+      kind: "sqrt",
+      message: 'HTML rendering for node kind "sqrt" is outside the measured phase-one slice',
+    });
+  });
+
   it("refuses unmeasured carrier aliases instead of inventing plausible output", () => {
     expect(() => toHtml(new UnaryFunctionNode({ name: "Mbox", parameterOne: symbol() }))).toThrow(
       RenderError,

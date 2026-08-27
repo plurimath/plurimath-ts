@@ -10,6 +10,7 @@ Nothing here blocks the active phase.
 |---|---|---|
 | UnitsML approach, and its 1.0 consequence | maintainer + upstream | before 1.0 |
 | npm package name and release line | maintainer | before first publish |
+| Compat declaration target | maintainer | before P2 compat fixture |
 | Compat `data` property | maintainer | before P2 |
 | Bundle budgets | maintainer | during P1, from real numbers |
 | Symbol data as shared data | maintainer + gem | after P1 |
@@ -33,11 +34,31 @@ early under a distinct name, explicitly experimental, and take the name over at
 
 ## Compat `data` property
 
-The published class exposes a writable `data` holding an Opal `ParserResult` —
-runtime-specific and not reproducible. Either expose a name-compatible
-`readonly data: FormulaNode`, or document its absence. The ABI is already described
-as method-exact rather than object-exact, so either choice is honest; the
+Both measured class declarations expose a writable `data` holding an Opal
+`ParserResult` — runtime-specific and not reproducible (published
+[`dist/index.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/dist/index.d.ts);
+source head `ce297e2`, `src/index.ts:4-9`). Either expose a name-compatible
+`readonly data: FormulaNode`, or document its absence. The declaration fixture
+must record this choice separately from the declaration-target choice; the
 question is which breaks fewer consumers.
+
+## Compat declaration target
+
+The published `@plurimath/plurimath@0.2.2` declarations and source head
+`ce297e2` differ in three measured ways: published `0.2.2` has six methods,
+`toMathml()` takes no argument, and its `Format` union contains `mahtml`; source
+head has seven methods by adding `toUnicodemath()`, declares
+`toMathml(intent?: boolean)`, and uses `unicode` (published
+[`dist/index.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/dist/index.d.ts)
+and [`dist/plurimath-opal.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/dist/plurimath-opal.d.ts);
+source head `src/index.ts:4-37` and `src/plurimath-opal.d.ts:8`; the maintainer's
+independent `curl` fetched both published files with exit `0`).
+
+Choose whether the compat fixture freezes the artifact consumers install today,
+including `mahtml`, or targets source head on the expectation that a later
+publish carries those declarations. The `mahtml` spelling looks like an upstream
+defect; the maintainer may prefer to fix and publish it upstream rather than
+freeze it here. This document does not choose.
 
 ## Bundle budgets
 

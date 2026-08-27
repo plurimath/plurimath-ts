@@ -2,16 +2,16 @@
 
 ## Why
 
-P2 needs the published `plurimath-js` class surface before the first experimental
-release. The class is small, but its runtime contract is not: construction has six
-format branches, `toDisplay` reaches a separate diagnostic tree for five output formats,
-and `toMathml` has the surface's only optional argument. A declaration match plus one
-happy-path call per method would leave those branches unfrozen
-(`TODO.plan/p2-output-formats/README.md:25-37`).
+P2 needs a maintainer-selected `plurimath-js` compatibility target before the first
+experimental release. Two candidates are now measured: the declarations published in
+`@plurimath/plurimath@0.2.2` and the declarations generated from source head `ce297e2`.
+They differ in method count, the `toMathml` signature, and one constructor-format
+spelling. The runtime contract is also wider than one happy-path call per method
+(`TODO.plan/p2-output-formats/README.md:25-43`).
 
-This item freezes the wrapper at `/home/apple/ruby_gems/plurimath-js` commit
-`ce297e291703ed47f6e569c9216fc7ef454cd6ce`, package
-`@plurimath/plurimath@0.2.2` (`package.json:2-12`). The wrapper's Plurimath submodule is
+This item compares the wrapper at `/home/apple/ruby_gems/plurimath-js` commit
+`ce297e291703ed47f6e569c9216fc7ef454cd6ce` with the published
+`@plurimath/plurimath@0.2.2` declarations (`package.json:2-12`). The wrapper's Plurimath submodule is
 the gitlink `68564b20de4ade7c7ea60e6c3d62352489931df0`; the current Ruby output oracle is the
 separate clean checkout at `00c52783877b38f6b8e6e109f1803f96bb34fc62`.
 
@@ -51,17 +51,17 @@ git ls-tree -r --name-only HEAD dist
 # exit 0
 ```
 
-No source or artifact was restored inside that read-only checkout. The declaration below
-was reproduced in local-only scratch from the clean `HEAD` versions of `src/index.ts`,
-`src/plurimath-opal.d.ts`, and `tsconfig.json`, using the checkout's installed TypeScript
-`5.7.2`. The build script identifies this `tsc` step as the declaration producer
-(`build.sh` at `HEAD`:42-49).
+No source or artifact was restored inside that read-only checkout. The source-head
+declaration below was reproduced in local-only scratch from the clean `HEAD` versions of
+`src/index.ts`, `src/plurimath-opal.d.ts`, and `tsconfig.json`, using the checkout's
+installed TypeScript `5.7.2`. The build script identifies this `tsc` step as the
+declaration producer (`build.sh` at `HEAD`:42-49).
 
 ```sh
 /home/apple/ruby_gems/plurimath-js/node_modules/.bin/tsc \
   -p .codex-context/tasks/compat-scope/js-head/tmp/tsconfig.json
 nl -ba .codex-context/tasks/compat-scope/js-head/dist/index.d.ts
-# ...the declaration reproduced under "Exact ABI" below...
+# ...the source-head declaration compared under "Measured declaration surfaces" below...
 # exit 0
 
 rg -c '^    to[A-Z].*\): string;$' \
@@ -69,6 +69,15 @@ rg -c '^    to[A-Z].*\): string;$' \
 # 7
 # exit 0
 ```
+
+The maintainer independently fetched the two published declaration files with `curl`
+(exit `0` for each):
+
+- [`dist/index.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/dist/index.d.ts)
+- [`dist/plurimath-opal.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/dist/plurimath-opal.d.ts)
+
+This round did not refetch them. The published columns below carry that maintainer-supplied
+measurement; the source-head columns carry the clean local reproduction above.
 
 Ruby was selected before the gem probe with
 `/home/apple/.codex/skills/ruby-version-manager/detect.sh`; it reported Ruby `4.0.1`,
@@ -157,64 +166,38 @@ node -e 'const g=require("./gates.json"); const i=g.milestones.indexOf(g.current
 # exit 0
 ```
 
-### Measured surface
+### Measured declaration surfaces
 
-#### Exact ABI
+Neither measured surface is selected here. The published `0.2.2` artifact is what npm
+consumers install today; `ce297e2` is the wrapper's later source state. Their declarations
+compare as follows:
 
-The declaration generated from the clean tracked source is:
-
-```ts
-import "./plurimath-opal.js";
-export default class Plurimath {
-    data: Opal.Plurimath.Math.ParserResult;
-    constructor(data: string, format: Opal.Plurimath.Math.Format);
-    toAsciimath(): string;
-    toLatex(): string;
-    toMathml(intent?: boolean): string;
-    toHtml(): string;
-    toOmml(): string;
-    toDisplay(lang: string): string;
-    toUnicodemath(): string;
-}
-```
-
-That is one constructor and **seven methods**, not an inherited count: the source defines
-the class and every member directly (`src/index.ts:4-37`), the reproduced declaration
-lists the seven return types, and the count command above returned `7` with exit `0`.
-The exact callable surface is:
-
-| member | parameters | return |
+| surface part | published `@plurimath/plurimath@0.2.2` | source head `ce297e2` |
 |---|---|---|
-| `constructor` | required `data: string`; required `format: Opal.Plurimath.Math.Format` | instance |
-| `toAsciimath` | none | `string` |
-| `toLatex` | none | `string` |
-| `toMathml` | optional `intent?: boolean`, default `false` | `string` |
-| `toHtml` | none | `string` |
-| `toOmml` | none | `string` |
-| `toDisplay` | required `lang: string` | `string` |
-| `toUnicodemath` | none | `string` |
+| class evidence | [`dist/index.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/dist/index.d.ts) | reproduced declaration command above (exit `0`); `src/index.ts:4-37` |
+| shared class members | `data: Opal.Plurimath.Math.ParserResult`; `constructor(data: string, format: Opal.Plurimath.Math.Format)` | same (`src/index.ts:4-9`) |
+| methods, in declaration order | `toAsciimath(): string`, `toLatex(): string`, `toMathml(): string`, `toHtml(): string`, `toOmml(): string`, `toDisplay(lang: string): string` | `toAsciimath(): string`, `toLatex(): string`, `toMathml(intent?: boolean): string`, `toHtml(): string`, `toOmml(): string`, `toDisplay(lang: string): string`, `toUnicodemath(): string` |
+| method count | **6** | **7**; count command above returned `7` (exit `0`) |
+| `toMathml` | no argument: `toMathml(): string` | optional argument: `toMathml(intent?: boolean): string`; source defaults it to `false` (`src/index.ts:19-21`) |
+| constructor `Format` | `'asciimath' \| 'latex' \| 'mathml' \| 'html' \| 'mahtml' \| 'omml'` | `'asciimath' \| 'latex' \| 'mathml' \| 'html' \| 'unicode' \| 'omml'` (`src/plurimath-opal.d.ts:8`) |
+| format evidence | [`dist/plurimath-opal.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/dist/plurimath-opal.d.ts) | clean source-head fixture and generated declaration command above (exit `0`) |
 
-Parameter names and optionality come from the wrapper source (`src/index.ts:7-35`);
-return types and the optional marker come from the reproduced declaration above. No
-other method has an optional argument.
+These are three declaration differences: the added `toUnicodemath`, the added optional
+`toMathml` argument, and `mahtml` changing to `unicode`. The maintainer must choose which
+surface the port targets (`TODO.plan/open-decisions.md`). The published `mahtml` spelling
+looks like an upstream defect, which may favor fixing and publishing upstream over
+freezing that spelling in this port.
 
 #### Constructor formats and staged availability
 
-The wrapper's declaration gives the six formats in this exact order
-(`src/plurimath-opal.d.ts:8`):
-
-1. `asciimath`
-2. `latex`
-3. `mathml`
-4. `html`
-5. `unicode`
-6. `omml`
-
-The spelling is `unicode`, not `unicodemath`. The wrapper passes both constructor
-arguments directly to the Opal parser (`src/index.ts:7-9`). Its pinned Plurimath
+Both declarations give six formats in the same order except for item five: the published
+artifact says `mahtml`, and source head says `unicode` (published
+[`dist/plurimath-opal.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/dist/plurimath-opal.d.ts);
+source `src/plurimath-opal.d.ts:8`). Source head passes both constructor arguments directly
+to the Opal parser (`src/index.ts:7-9`). Its pinned Plurimath
 submodule recognizes all six and also an internal `unitsml` parse type
 (`vendor/plurimath/lib/plurimath/math.rb` at gitlink `68564b20`:13-21); `unitsml` is not
-in the wrapper's `Format` union.
+in either measured wrapper `Format` union.
 
 On the TypeScript port at `4f3579e`, only `parseAsciimath` exists
 (`src/formats/asciimath/index.ts:10-19`); a search for exported `parseX` entry points found
@@ -227,11 +210,12 @@ therefore:
 | 2 | `latex` | throw `UnsupportedFormatError("latex")` |
 | 3 | `mathml` | throw `UnsupportedFormatError("mathml")` |
 | 4 | `html` | throw `UnsupportedFormatError("html")` |
-| 5 | `unicode` | throw `UnsupportedFormatError("unicode")` |
+| 5 | `mahtml` if the published artifact is selected; `unicode` if source head is selected | throw `UnsupportedFormatError` naming the selected spelling |
 | 6 | `omml` | throw `UnsupportedFormatError("omml")` |
 
-This table is a staged requirement, not a claim that the absent compat class already
-throws. At `4f3579e` there is no constructor to execute.
+This table is conditional on the declaration-target decision. It is a staged requirement,
+not a claim that the absent compat class already throws. At `4f3579e` there is no
+constructor to execute.
 
 `UnsupportedFormatError` is **not** a `plurimath-js` error. `[js-submodule]` confirmed
 both source objects exist; the focused search returned no matches and exit `1` in the
@@ -250,7 +234,7 @@ The five refusal assertions should pin `name`, `code`, and `format`, not invent 
 #### `toDisplay(lang)` is a diagnostic renderer
 
 The wrapper delegates `lang` unchanged (`src/index.ts:31-33`). The pinned JS submodule
-and the current gem both define the dispatch list, in order, as `omml`, `latex`,
+and the current gem both define exactly five dispatch values, in order: `omml`, `latex`,
 `mathml`, `asciimath`, and `unicodemath`
 (`vendor/plurimath/lib/plurimath/math/formula.rb` at gitlink `68564b20`:14-16;
 `/home/apple/ruby_gems/plurimath-oracle/lib/plurimath/math/formula.rb:14-16`).
@@ -266,6 +250,14 @@ Invalid type provided: not_a_format. Must be one of omml, latex, mathml, asciima
 This path is distinct from the constructor's staged `UnsupportedFormatError`: an
 unrecognized language is invalid; a recognized but not-yet-implemented output format is
 unsupported.
+
+Native Ruby has a string-specific quirk. Validation accepts a recognized string by
+checking `type.downcase.to_sym`, but dispatch then compares the original `type` with symbol
+cases (`/home/apple/ruby_gems/plurimath-oracle/lib/plurimath/math/formula.rb:197-232`). The
+earlier direct Ruby measurement returned exactly `"|_ Math zone\n"` for recognized strings;
+the return template is at `formula.rb:233-236`. This is real gem behavior the compat layer
+will encounter; it must not be erased by tests that exercise only symbols or only the Opal
+wrapper's tracked expectation (`spec/to-display.spec.js` at `ce297e2`:3-16).
 
 `toDisplay` does more than call `toX`. Each branch emits the raw rendered string and a
 format-specific "Math zone" tree (`vendor/plurimath/lib/plurimath/math/formula.rb` at
@@ -300,11 +292,14 @@ main, including the measured `nary` refusal (`TODO.plan/p2-output-formats/01-htm
 but HTML is not release-complete: its corpus target, cross-format gates, and package
 subpath remain unchecked (`01-html-renderer.md:113-130`).
 
-#### `toMathml(intent?)`
+#### The two measured `toMathml` contracts
 
-The wrapper defaults `intent` to `false` and always passes it to the underlying method
-(`src/index.ts:19-21`). For AsciiMath `sum_x^y z`, `[gem-probe]` measured default and
-explicit `false` as byte-identical:
+The published declaration accepts no argument
+([`dist/index.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/dist/index.d.ts)). Source
+head adds `intent?: boolean`, defaults it to `false`, and always passes it to the underlying
+method (`src/index.ts:19-21`). The behavior measurements below apply to that source-head
+branch. For AsciiMath `sum_x^y z`, `[gem-probe]` measured default and explicit `false` as
+byte-identical:
 
 ```xml
 <math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
@@ -344,40 +339,45 @@ The tracked JS test independently pins the semantic split: omitted intent has no
 ` intent=`, while `true` adds the sum intent and argument metadata and differs from the
 default (`spec/to-mathml-intent.spec.js:3-19`).
 
-The port cannot yet satisfy both settings. Its current `MathmlOptions` omits `intent`,
-and the renderer rejects any defined `intent`, including `false`, by name
+The port cannot yet satisfy the source-head argument. Its current `MathmlOptions` omits
+`intent`, and the renderer rejects both `{ intent: false }` and `{ intent: true }` with a
+named `RenderError` rather than ignoring either value
 (`src/formats/mathml/renderer.ts:38-69,78-104`; `TODO.plan/deferred.md:240-255`). A compat
 wrapper can preserve omitted/false output by not forwarding a false option, but
-`toMathml(true)` must refuse until the intent pipeline lands. Runtime tests must cover
-omitted, explicit `false`, and `true`; otherwise the default-value equivalence is not
-frozen.
+`toMathml(true)` must refuse until the intent pipeline lands. If the maintainer selects
+source head, runtime tests must cover omitted, explicit `false`, and `true`; if the
+maintainer selects published `0.2.2`, the compat declaration and calls must expose only
+the zero-argument form.
 
 #### The unresolved `data` property
 
-The published source declares public writable
-`data: Opal.Plurimath.Math.ParserResult` and assigns the parser result in the constructor
-(`src/index.ts:4-9`); the reproduced declaration retains that property. The object is an
+The measured class declarations expose public writable
+`data: Opal.Plurimath.Math.ParserResult`; source head assigns the parser result in the
+constructor (`src/index.ts:4-9`), and the published declaration is visible in
+[`dist/index.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/dist/index.d.ts). The object is an
 Opal runtime value, so this port cannot reproduce its type or behavior
-(`TODO.plan/open-decisions.md:34-40`; `ARCHITECTURE.md:367-372`).
+(`TODO.plan/open-decisions.md:35-43`; `ARCHITECTURE.md:367-372`).
 
 Do not decide this in implementation. The maintainer's two recorded options are:
 
 1. expose name-compatible `readonly data: FormulaNode`; or
 2. omit `data` and document that the compat surface is method-exact, not object-exact.
 
-The declaration fixture must include the chosen result. Until the maintainer chooses,
-the fixture can freeze the constructor and seven methods but cannot honestly freeze the
-complete public instance shape.
+The declaration fixture must include the chosen `data` result. Until the maintainer makes
+both open choices, the fixture cannot honestly freeze either the selected method surface
+or the complete public instance shape.
 
 ### Declaration fixture strategy
 
-Freeze the ABI from the built package, not only from `src/`. The package gate already
-builds `dist`, loads ESM and CJS, compares exact named exports, and packs the package for
-publint/attw (`scripts/gate-package.mjs:91-132,194-207`). Reuse that artifact-side gate:
+Freeze the selected declaration target from the built package, not only from `src/`. The
+package gate already builds `dist`, loads ESM and CJS, compares exact named exports, and
+packs the package for publint/attw (`scripts/gate-package.mjs:91-132,194-207`). Reuse that
+artifact-side gate:
 
-1. Check in one canonical compat declaration fixture under `test/fixtures/compat/` after
-   the `data` decision. It contains the default class's property, constructor, and seven
-   method declarations in the exact order and spelling above.
+1. Check in one canonical compat declaration fixture set under `test/fixtures/compat/`
+   after the declaration-target and `data` decisions. It contains the selected default
+   class property, constructor, and either six published methods or seven source-head
+   methods, plus the selected `Format` union (`mahtml` or `unicode`).
 2. In `scripts/gate-package.mjs`, parse both `dist/index.d.ts` and `dist/index.d.cts` with
    the installed TypeScript compiler, resolve the default-exported class, print only its
    public property/constructor/method declaration to a canonical form, and compare that
@@ -391,10 +391,13 @@ publint/attw (`scripts/gate-package.mjs:91-132,194-207`). Reuse that artifact-si
 4. Add focused negative tests for a renamed parameter, changed optional marker, changed
    return type, added method/property, and missing CJS declaration. Each damaged fixture
    must make the check fail, so the gate proves the failure classes it claims to cover.
-5. Keep runtime behavior separate from the declaration fixture: six constructor rows;
-   five valid `toDisplay` rows plus the invalid row; omitted/false/true `toMathml`; and
-   one call for each of the other five methods. Assert the structured port error fields
-   for staged refusals.
+5. Keep runtime behavior separate from the declaration fixture: six constructor rows
+   using the selected spelling; five recognized `toDisplay` rows plus the invalid row,
+   with the native-Ruby string quirk recorded separately from Opal-wrapper expectations;
+   the selected `toMathml` call matrix
+   (zero arguments for published `0.2.2`, or omitted/false/true for source head); and one
+   call for every other selected method. Assert the structured port error fields for
+   staged refusals.
 
 An assignability-only TypeScript test is insufficient: structural typing can accept
 extra members, and parameter names do not participate in assignability. The artifact
@@ -406,12 +409,15 @@ and the eventual `data` choice together.
 Beyond writing the class itself, the measured blockers are:
 
 - **Choose `data`.** The decision is due before P2 and remains open
-  (`TODO.plan/open-decisions.md:9-15,34-40`).
+  (`TODO.plan/open-decisions.md:9-17,35-43`).
+- **Choose the declaration target.** Published `0.2.2` and source head differ in three
+  measured ways, including the likely-defective published `mahtml` spelling; the
+  maintainer must choose before the fixture is written (`TODO.plan/open-decisions.md`).
 - **Build and pin the diagnostic display layer.** The port has none of the five
   `toDisplay` branches today; the JS source census above found 16/16/16/17/16
   format-specific definitions, so this is not a one-switch wrapper.
-- **Land MathML intent.** `toMathml(true)` is the ABI's only optional branch and is still
-  a named refusal (`TODO.plan/deferred.md:240-255`).
+- **Land MathML intent if source head is selected.** `toMathml(true)` is still a named
+  refusal (`TODO.plan/deferred.md:240-255`); published `0.2.2` declares no argument.
 - **Finish OMML.** Main has `0` OMML renderer files across `38` kinds, and P2 requires
   corpus parity, cross-format gates, `/omml`, and package isolation
   (`TODO.plan/p2-output-formats/02-omml-renderer.md:270-293`).
@@ -429,7 +435,7 @@ Beyond writing the class itself, the measured blockers are:
   before first publish (`TODO.plan/open-decisions.md:28-32`).
 - **Complete packaging review and sign-off.** P2's exit criteria require package
   isolation for new subpaths, packaging review, publication, and a resolved review round
-  (`TODO.plan/p2-output-formats/README.md:65-77`). The current package export map has no
+  (`TODO.plan/p2-output-formats/README.md:72-87`). The current package export map has no
   `/html` or `/omml` entry (`package.json:29-90`), and the package gate's expected-export
   and forbidden-layer tables have neither format (`scripts/gate-package.mjs:56-83`).
 
@@ -443,10 +449,8 @@ explicitly says the UnitsML decision does not affect P0-P2
 
 ### Explicitly unmeasured
 
-- The published `dist/index.cjs` and `dist/index.d.ts` could not be read or executed from
-  the supplied JS checkout because `dist/` is absent. The declaration here is a fresh
-  reproduction from clean tracked source, not a claim that the missing published file
-  was inspected.
+- The published JavaScript runtime `dist/index.cjs` was not read or executed in this
+  documentation round, so the measured declarations do not establish runtime equivalence.
 - The JavaScript runtime was not rebuilt. Therefore the six constructor cases and all
   five `toDisplay` cases were not re-executed; only the tracked AsciiMath display test is
   present (`spec/to-display.spec.js:3-16`). The thrown Opal error object's JavaScript
@@ -454,27 +458,32 @@ explicitly says the UnitsML decision does not affect P0-P2
   support only the narrower claims stated above.
 - The in-review and in-flight OMML worktrees were not inspected, modified, or used as
   evidence. All port-availability statements are about `origin/main` at `4f3579e`.
-- No package build, full test suite, full gate run, npm registry lookup, or package publish
-  was performed for this documentation-only scope. Current remote availability and the
-  eventual package name are unmeasured.
+- No package build, full test suite, full gate run, registry metadata lookup, or package
+  publish was performed for this documentation-only scope. The eventual package name
+  remains unmeasured.
 
 ## Done when
 
-- [ ] The maintainer chooses `readonly data: FormulaNode` or a documented absence, and
-      the declaration fixture records that choice without changing the seven-method ABI.
+- [ ] The maintainer chooses the published `0.2.2` or source-head `ce297e2` declaration
+      target, then chooses `readonly data: FormulaNode` or a documented absence. The
+      fixture records both decisions exactly, including method count, `toMathml`
+      optionality, and `mahtml` or `unicode`.
 - [ ] The built ESM and CJS declarations match the canonical fixture and the gate has
       non-vacuity and negative proofs for member, name, optionality, and return-type drift.
-- [ ] All six constructor formats are asserted in declaration order: `asciimath`
-      constructs; `latex`, `mathml`, `html`, `unicode`, and `omml` raise the port's
-      structured `UnsupportedFormatError` until their parsers land.
+- [ ] All six constructor formats are asserted in the selected declaration order:
+      `asciimath` constructs; `latex`, `mathml`, `html`, selected item five (`mahtml` or
+      `unicode`), and `omml` raise the port's structured `UnsupportedFormatError` until
+      their parsers land.
 - [ ] `toDisplay` matches the JS oracle for `omml`, `latex`, `mathml`, `asciimath`, and
       `unicodemath`, and the invalid language path matches the measured invalid-type
-      behavior. A recognized unavailable branch raises `UnsupportedFormatError` instead
-      of returning plausible partial output.
-- [ ] `toMathml()` and `toMathml(false)` produce the measured no-intent bytes, while
-      `toMathml(true)` produces the measured intent tree.
-- [ ] `toAsciimath`, `toLatex`, `toHtml`, `toOmml`, and `toUnicodemath` each have a runtime
-      assertion through a compat instance created from AsciiMath.
+      behavior. The oracle fixtures also record the native-Ruby recognized-string result
+      `"|_ Math zone\n"` and do not substitute that result for an Opal-wrapper measurement.
+- [ ] If published `0.2.2` is selected, only zero-argument `toMathml()` is exposed and
+      tested. If source head is selected, `toMathml()`, `toMathml(false)`, and
+      `toMathml(true)` produce the measured default, false, and intent-bearing results.
+- [ ] `toAsciimath`, `toLatex`, `toHtml`, and `toOmml` each have a runtime assertion
+      through a compat instance created from AsciiMath; `toUnicodemath` has one only if
+      source head is selected.
 - [ ] HTML and OMML corpus targets are nonempty and complete per payload; their
       cross-format and package-isolation gates pass against built artifacts.
 - [ ] The root package exports the default class under ESM and CJS, the real packed

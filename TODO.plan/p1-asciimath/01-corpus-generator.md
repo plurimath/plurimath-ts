@@ -73,16 +73,16 @@ orientation — every key below is required, so a reader that ignores
 
 ## Done when
 
-- [ ] `.gitmodules` records `plurimath-testsuite`, and a fresh clone plus
+- [x] `.gitmodules` records `plurimath-testsuite`, and a fresh clone plus
   `git submodule update --init` gives the reader cases to load.
-- [ ] The reader loads every AsciiMath group in the pin and reports a nonzero
+- [x] The reader loads every AsciiMath group in the pin and reports a nonzero
   case count; a test feeds it an empty directory and asserts it **fails**.
-- [ ] Every payload the reader discovers is checked against
+- [x] Every payload the reader discovers is checked against
   `corpus/provenance.yaml`, and a corrupted byte in any payload fails the run.
-- [ ] `corpus/census.yaml` and `corpus/exclusions.yaml` regenerate
+- [x] `corpus/census.yaml` and `corpus/exclusions.yaml` regenerate
   byte-identically on a second run from a clean checkout.
-- [ ] Nothing under `corpus/asciimath/` remains here, and no test path resolves
+- [x] Nothing under `corpus/asciimath/` remains here, and no test path resolves
   there.
-- [ ] A pin marked `committable: false`, or generated with a non-Ox engine,
+- [x] A pin marked `committable: false`, or generated with a non-Ox engine,
   fails the reader — proven against a scratch copy of the provenance file, not
   argued from the code.

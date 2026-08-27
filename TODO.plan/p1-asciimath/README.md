@@ -63,9 +63,10 @@ AsciiMath goes first because it is the smallest complete grammar in the gem
   what parses, not where errors point. So every grammar rule added here needs a
   failure-position test beside its success-tree test.
 - **Deliberately not here:** UnitsML (deferred — its grammar rule stays
-  commented out and such input is processed as text); the other renderers (P2)
-  and input formats (P3); evaluation, MathML/OMML input, and the number-format
-  modes nothing here exercises (P4). AsciiMath's own `locale` option *is* here:
+  commented out and such input is processed as text); the remaining renderers,
+  OMML and HTML (P2), and input formats (P3); evaluation, MathML/OMML input, and
+  the number-format modes nothing here exercises (P4). AsciiMath's own `locale`
+  option *is* here:
   the gem builds its decimal marker from the configured locale inside the
   grammar, so it cannot wait for P4.
 

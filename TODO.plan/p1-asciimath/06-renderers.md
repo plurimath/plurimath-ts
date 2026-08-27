@@ -90,18 +90,18 @@ turns it into a named property with a one-line diff.
 
 ## Done when
 
-- [ ] `toAsciimath`, `toLatex` and `toMathml` match the gem byte-for-byte
-  across the pinned corpus.
-- [ ] The runtime-boundary tests pass: a valid structural object renders, while an
+- [x] `toAsciimath`, `toLatex` and `toMathml` match the gem byte-for-byte
+  across the **reachable** pinned corpus.
+- [x] The runtime-boundary tests pass: a valid structural object renders, while an
   unknown kind and a malformed known kind each raise `RenderError`.
-- [ ] The package-isolation gate shows `/asciimath` carrying no MathML or LaTeX
+- [x] The package-isolation gate shows `/asciimath` carrying no MathML or LaTeX
   data, and `/mathml` carrying no parser.
-- [ ] The MathML option matrix lists all six options, each marked implemented
+- [x] The MathML option matrix lists all six options, each marked implemented
   here or deferred to a named phase, and every implemented one matches the gem
   byte-for-byte on the fixture's inputs.
 - [ ] The byte-fidelity fixture covers the six properties above, and each one
   is shown failing on its own — break one property in the serializer, watch
   exactly that assertion fail, restore. A fixture never seen failing proves
   nothing.
-- [ ] Every numeric form in the pinned corpus renders byte-identically in all
+- [x] Every numeric form in the pinned corpus renders byte-identically in all
   three formats with no formatter configured.

@@ -19,19 +19,17 @@ This was parked in `deferred.md` until P5. It moves here because
 that ships without it accepts input the gem refuses — a divergence nobody
 measures until a document breaks.
 
-**Status: the in-repo half landed with the grammar** (PR #4,
-`test/formats/asciimath/failure-parity.spec.ts`): 156 candidates probed
-against the gem, the 26 it rejects pinned with mapped positions, and the two
-sweeps showing zero accept/reject disagreement. What remains here is the
-**shared** half — the schema shape for a rejection case in the testsuite, the
-cases themselves, and wiring the `negative-parity` gate to read them — plus
-everything below that the local spec does not cover.
+**Status: both halves have landed.** The in-repo suite from PR #4
+(`test/formats/asciimath/failure-parity.spec.ts`) probes 156 candidates against
+the gem, pins the 26 it rejects with mapped positions, and runs two sweeps with
+zero accept/reject disagreement. The pinned testsuite now supplies 13 canonical
+rejection cases, and `test/formats/asciimath/rejection-parity.spec.ts` reads them
+through the `negative-parity` gate.
 
 Ownership follows the usual split: the **testsuite** defines the failure cases
-and the schema that holds them; **this repository** writes the reader and the
-assertions. The shared case schema has no shape for a rejection today —
-`expected`, `parse_tree` and `model` are all required and `additionalProperties`
-is false — so the shape is agreed there before cases can land.
+and their `schema/rejections.json` schema; **this repository** writes the reader
+and the assertions. Rejections use a separate payload shape because the positive
+case schema requires `expected`, `parse_tree` and `model`.
 
 The rejection suite must carry, at minimum:
 

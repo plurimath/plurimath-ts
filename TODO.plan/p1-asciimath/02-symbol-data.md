@@ -2,7 +2,7 @@
 
 ## Why
 Symbol definitions are 69% of the Ruby gem (64k lines across 1,461 classes) and
-are almost entirely data: measured, only about 7 of them carry any behaviour.
+are almost entirely data: measured, exactly 7 carry conditional behaviour.
 They are generated, never hand-ported (ARCHITECTURE.md D5).
 
 The data is split **per format** so a renderer bundles only its own slice; a
@@ -37,7 +37,7 @@ implementation. They are hand-ported (§10).
 
 ## Done when
 
-- [ ] Every symbol the pinned corpus touches resolves through generated data.
-- [ ] The probe output names the context-dependent symbols, and the list matches
+- [x] Every symbol the pinned corpus touches resolves through generated data.
+- [x] The probe output names the context-dependent symbols, and the list matches
   what the gem actually does rather than a hand-written guess.
-- [ ] A symbol id missing from a renderer slice raises `MissingSymbolDataError`.
+- [x] A symbol id missing from a renderer slice raises `MissingSymbolDataError`.

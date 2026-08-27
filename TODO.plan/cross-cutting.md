@@ -57,7 +57,7 @@ worth reporting regardless of which option wins.
 ## Symbol data as shared data
 
 Higher leverage than the corpus: 69% of the gem is symbol definitions, and
-measurement shows only about 7 of 1,461 classes carry any behaviour. Making
+measurement shows exactly 7 of 1,461 classes carry conditional behaviour. Making
 that data authoritative would let the gem generate its own symbol classes from
 it, deleting tens of thousands of hand-maintained lines on the Ruby side too.
 

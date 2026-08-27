@@ -14,17 +14,26 @@ import {
   BinaryFunctionNode,
   FormulaNode,
   FracNode,
+  IntNode,
   MrowNode,
   NaryNode,
   NumberNode,
+  ObraceNode,
+  OintNode,
+  OversetNode,
+  ProdNode,
+  SumNode,
   SymbolNode,
   TableNode,
   TernaryFunctionNode,
   TextNode,
+  UbraceNode,
   UnaryFunctionNode,
+  UndersetNode,
 } from "../../../src/core/nodes";
 import { parseAsciimath } from "../../../src/formats/asciimath/index";
 import { ROOT_CONTEXT } from "../../../src/formats/omml/render";
+import { serializeRendered } from "../../../src/formats/omml/render-shared";
 import { toOmml, toOmmlWithoutMathTag } from "../../../src/formats/omml/renderer";
 
 const xml = (...lines: readonly string[]): string => `${lines.join("\n")}\n`;
@@ -261,6 +270,89 @@ const NARY_X = xml(
   "  </m:e>",
   "</m:nary>",
 );
+
+const specializedNary = (operator: string, limitLocation: "subSup" | "undOvr"): string =>
+  xml(
+    "<m:nary>",
+    "  <m:naryPr>",
+    `    <m:chr m:val="${operator}"/>`,
+    `    <m:limLoc m:val="${limitLocation}"/>`,
+    '    <m:subHide m:val="0"/>',
+    '    <m:supHide m:val="0"/>',
+    "  </m:naryPr>",
+    "  <m:sub>",
+    "    <m:r>",
+    "      <m:t>x</m:t>",
+    "    </m:r>",
+    "  </m:sub>",
+    "  <m:sup>",
+    "    <m:r>",
+    "      <m:t>x</m:t>",
+    "    </m:r>",
+    "  </m:sup>",
+    "  <m:e>",
+    "    <m:r>",
+    "      <m:t>x</m:t>",
+    "    </m:r>",
+    "  </m:e>",
+    "</m:nary>",
+  );
+
+const limitXml = (position: "Low" | "Upp", limit: string, base = "x"): string =>
+  xml(
+    `<m:lim${position}>`,
+    `  <m:lim${position}Pr>`,
+    "    <m:ctrlPr>",
+    "      <w:rPr>",
+    '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "        <w:i/>",
+    "      </w:rPr>",
+    "    </m:ctrlPr>",
+    `  </m:lim${position}Pr>`,
+    "  <m:e>",
+    "    <m:r>",
+    `      <m:t>${base}</m:t>`,
+    "    </m:r>",
+    "  </m:e>",
+    "  <m:lim>",
+    "    <m:r>",
+    `      <m:t>${limit}</m:t>`,
+    "    </m:r>",
+    "  </m:lim>",
+    `</m:lim${position}>`,
+  );
+
+const UNDERSET_ACCENT = xml(
+  "<m:groupChr>",
+  "  <m:groupChrPR>",
+  '    <m:chr m:val="_"/>',
+  '    <m:pos m:val="bot"/>',
+  "  </m:groupChrPR>",
+  "  <m:e>",
+  "    <m:r>",
+  "      <m:t>x</m:t>",
+  "    </m:r>",
+  "  </m:e>",
+  "</m:groupChr>",
+);
+
+const OBRACE_ACCENT = xml(
+  "<m:acc>",
+  "  <m:accPr>",
+  '    <m:chr m:val="⏞"/>',
+  "  </m:accPr>",
+  "  <m:e>",
+  "    <m:r>",
+  "      <m:t>x</m:t>",
+  "    </m:r>",
+  "  </m:e>",
+  "</m:acc>",
+);
+
+function expectDirectAndInsertion(node: MathNode, expected: string): void {
+  expect(toOmmlWithoutMathTag(node)).toBe(expected);
+  expect(serializeRendered(ROOT_CONTEXT.insert(node))).toBe(expected);
+}
 
 const TD_X = xml("<m:e>", "  <m:r>", "    <m:t>x</m:t>", "  </m:r>", "</m:e>");
 const TR_X = xml(
@@ -714,6 +806,159 @@ describe("OMML parameter-slot parity", () => {
         message:
           'base.parameterOne: cannot insert the bare string "bare" — the gem raises NoMethodError here',
       },
+
+describe("OMML scripts and limits slice", () => {
+  it.each([
+    [
+      "sum",
+      new SumNode({
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+        parameterThree: symbol(),
+      }),
+      specializedNary("∑", "undOvr"),
+    ],
+    [
+      "prod",
+      new ProdNode({
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+        parameterThree: symbol(),
+      }),
+      specializedNary("∏", "undOvr"),
+    ],
+    [
+      "int",
+      new IntNode({
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+        parameterThree: symbol(),
+      }),
+      specializedNary("∫", "subSup"),
+    ],
+    [
+      "oint",
+      new OintNode({
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+        parameterThree: symbol(),
+      }),
+      specializedNary("∮", "subSup"),
+    ],
+  ])("pins %s direct and insertion n-ary bytes", (_kind, node, expected) => {
+    expectDirectAndInsertion(node, expected);
+  });
+
+  it.each([
+    [
+      "overset",
+      new OversetNode({ options: {}, parameterOne: symbol(), parameterTwo: symbol() }),
+      limitXml("Upp", "x"),
+    ],
+    [
+      "underset",
+      new UndersetNode({ options: {}, parameterOne: symbol(), parameterTwo: symbol() }),
+      limitXml("Low", "x"),
+    ],
+    ["obrace", new ObraceNode({ attributes: {}, parameterOne: symbol() }), limitXml("Upp", "⏞")],
+    ["ubrace", new UbraceNode({ attributes: {}, parameterOne: symbol() }), limitXml("Low", "⏟")],
+  ])("pins %s direct and insertion limit bytes", (_kind, node, expected) => {
+    expectDirectAndInsertion(node, expected);
+  });
+
+  it.each([
+    ["sum", new SumNode({ options: {} }), xml("<m:r>", "  <m:t>&#x2211;</m:t>", "</m:r>")],
+    ["prod", new ProdNode({ options: {} }), xml("<m:r>", "  <m:t>&#x220f;</m:t>", "</m:r>")],
+    ["int", new IntNode({ options: {} }), xml("<m:r>", "  <m:t>&#x222b;</m:t>", "</m:r>")],
+    ["oint", new OintNode({ options: {} }), xml("<m:r>", "  <m:t>&#x222e;</m:t>", "</m:r>")],
+    ["overset", new OversetNode({ options: {} }), limitXml("Upp", "&#8203;", "&#8203;")],
+    ["underset", new UndersetNode({ options: {} }), limitXml("Low", "&#8203;", "&#8203;")],
+    ["obrace", new ObraceNode({ attributes: {} }), xml("<m:r>", "  <m:t>⏞</m:t>", "</m:r>")],
+    ["ubrace", new UbraceNode({ attributes: {} }), xml("<m:r>", "  <m:t>⏟</m:t>", "</m:r>")],
+  ])("pins %s's deterministic empty direct and insertion bytes", (_kind, node, expected) => {
+    expectDirectAndInsertion(node, expected);
+  });
+
+  it.each([
+    [
+      "sum",
+      new SumNode({
+        hideFunctionName: true,
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+        parameterThree: symbol(),
+      }),
+      "undOvr",
+    ],
+    [
+      "prod",
+      new ProdNode({
+        hideFunctionName: true,
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+        parameterThree: symbol(),
+      }),
+      "undOvr",
+    ],
+    [
+      "int",
+      new IntNode({
+        hideFunctionName: true,
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+        parameterThree: symbol(),
+      }),
+      "subSup",
+    ],
+    [
+      "oint",
+      new OintNode({
+        hideFunctionName: true,
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+        parameterThree: symbol(),
+      }),
+      "subSup",
+    ],
+  ])("pins %s's measured hidden operator", (_kind, node, limitLocation) => {
+    expectDirectAndInsertion(node, specializedNary("", limitLocation as "subSup" | "undOvr"));
+  });
+
+  it("pins Overset/Underset's asymmetric accentunder option", () => {
+    expectDirectAndInsertion(
+      new OversetNode({
+        options: { accentunder: true },
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+      }),
+      limitXml("Upp", "x"),
+    );
+    expectDirectAndInsertion(
+      new UndersetNode({
+        options: { accentunder: true },
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+      }),
+      UNDERSET_ACCENT,
+    );
+  });
+
+  it("pins Obrace/Ubrace's asymmetric accent attribute", () => {
+    expectDirectAndInsertion(
+      new ObraceNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      OBRACE_ACCENT,
+    );
+    expectDirectAndInsertion(
+      new UbraceNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      limitXml("Low", "⏟"),
     );
   });
 });
@@ -818,7 +1063,7 @@ describe("generated OMML symbol-data deferral", () => {
   });
 });
 
-describe("OMML first-slice refusal boundary", () => {
+describe("OMML partial refusal boundary", () => {
   const omittedKinds = [
     "abs",
     "bar",
@@ -830,28 +1075,20 @@ describe("OMML first-slice refusal boundary", () => {
     "floor",
     "fontStyle",
     "hat",
-    "int",
     "linebreak",
     "mpadded",
     "norm",
-    "obrace",
-    "oint",
     "overleftrightarrow",
-    "overset",
-    "prod",
     "sqrt",
-    "sum",
     "tilde",
-    "ubrace",
     "ul",
-    "underset",
     "vec",
   ] as const satisfies readonly NodeKind[];
 
   it.each(omittedKinds)("refuses omitted kind %s", (kind) => {
     expectRefusal(() => ROOT_CONTEXT.render({ kind } as MathNode), {
       kind,
-      message: `OMML rendering for node kind "${kind}" is outside the measured first slice`,
+      message: `OMML rendering for node kind "${kind}" is outside the measured OMML slices`,
     });
   });
 

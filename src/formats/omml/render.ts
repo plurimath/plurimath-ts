@@ -3,44 +3,68 @@ import { renderBase } from "../../render/base/omml";
 import { renderBinaryFunction } from "../../render/binary-function/omml";
 import { renderFormula } from "../../render/formula/omml";
 import { renderFrac } from "../../render/frac/omml";
+import { renderInt } from "../../render/int/omml";
 import { renderMrow } from "../../render/mrow/omml";
 import { renderNary } from "../../render/nary/omml";
 import { renderNumber, renderNumberInserted } from "../../render/number/omml";
+import { renderObrace } from "../../render/obrace/omml";
+import { renderOint } from "../../render/oint/omml";
+import { renderOverset } from "../../render/overset/omml";
+import { renderProd } from "../../render/prod/omml";
+import { renderSum } from "../../render/sum/omml";
 import { renderSymbol, renderSymbolInserted } from "../../render/symbol/omml";
 import { renderTable } from "../../render/table/omml";
 import { renderTernaryFunction } from "../../render/ternary-function/omml";
 import { renderText, renderTextInserted } from "../../render/text/omml";
+import { renderUbrace } from "../../render/ubrace/omml";
 import { renderUnaryFunction } from "../../render/unary-function/omml";
+import { renderUnderset } from "../../render/underset/omml";
 import { FORMAT, type OmmlRendered, type RenderContext, type RenderFn } from "./render-shared";
 
-/** First measured slice. Every omitted kind refuses at this dispatch boundary. */
+/** Measured vertical slices. Every omitted kind refuses at this dispatch boundary. */
 type SliceKind =
   | "base"
   | "binaryFunction"
   | "formula"
   | "frac"
+  | "int"
   | "mrow"
   | "nary"
   | "number"
+  | "obrace"
+  | "oint"
+  | "overset"
+  | "prod"
+  | "sum"
   | "symbol"
   | "table"
   | "ternaryFunction"
   | "text"
-  | "unaryFunction";
+  | "ubrace"
+  | "unaryFunction"
+  | "underset";
 
 const RENDERERS: { readonly [K in SliceKind]: RenderFn<K> } = {
   base: renderBase,
   binaryFunction: renderBinaryFunction,
   formula: renderFormula,
   frac: renderFrac,
+  int: renderInt,
   mrow: renderMrow,
   nary: renderNary,
   number: renderNumber,
+  obrace: renderObrace,
+  oint: renderOint,
+  overset: renderOverset,
+  prod: renderProd,
+  sum: renderSum,
   symbol: renderSymbol,
   table: renderTable,
   ternaryFunction: renderTernaryFunction,
   text: renderText,
+  ubrace: renderUbrace,
   unaryFunction: renderUnaryFunction,
+  underset: renderUnderset,
 };
 
 function isSliceKind(kind: NodeKind): kind is SliceKind {
@@ -51,7 +75,7 @@ function renderNode(node: MathNode, context: RenderContext): OmmlRendered {
   const kind = node.kind;
   if (!isSliceKind(kind)) {
     throw new RenderError(
-      `OMML rendering for node kind "${kind}" is outside the measured first slice`,
+      `OMML rendering for node kind "${kind}" is outside the measured OMML slices`,
       FORMAT,
       kind,
     );

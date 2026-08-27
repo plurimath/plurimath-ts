@@ -185,6 +185,90 @@ function insertSlotItem(
   );
 }
 
+type FixedNaryNode = NodeOf<"int"> | NodeOf<"oint"> | NodeOf<"prod"> | NodeOf<"sum">;
+type LimitKind = "obrace" | "overset" | "ubrace" | "underset";
+
+export function renderFixedNary(
+  node: FixedNaryNode,
+  context: RenderContext,
+  operator: string,
+  limitLocation: "subSup" | "undOvr",
+  emptyEntity: string,
+): XmlElement {
+  if (
+    !rubyTruthy(node.parameterOne) &&
+    !rubyTruthy(node.parameterTwo) &&
+    !rubyTruthy(node.parameterThree)
+  ) {
+    return plainRun(emptyEntity);
+  }
+
+  const properties = new XmlElement("m:naryPr").append(
+    new XmlElement("m:chr").setAttribute("m:val", node.hideFunctionName ? "" : operator),
+    new XmlElement("m:limLoc").setAttribute("m:val", limitLocation),
+    new XmlElement("m:subHide").setAttribute("m:val", rubyTruthy(node.parameterOne) ? "0" : "1"),
+    new XmlElement("m:supHide").setAttribute("m:val", rubyTruthy(node.parameterTwo) ? "0" : "1"),
+  );
+
+  return new XmlElement("m:nary").append(
+    properties,
+    ommlSlot(node.parameterOne, "sub", context, node.kind, `${node.kind}.parameterOne`),
+    ommlSlot(node.parameterTwo, "sup", context, node.kind, `${node.kind}.parameterTwo`),
+    ommlSlot(node.parameterThree, "e", context, node.kind, `${node.kind}.parameterThree`),
+  );
+}
+
+export function renderLimit(
+  kind: LimitKind,
+  position: "Low" | "Upp",
+  base: unknown,
+  limit: unknown,
+  context: RenderContext,
+): XmlElement {
+  const name = `lim${position}`;
+  return new XmlElement(`m:${name}`).append(
+    new XmlElement(`m:${name}Pr`).append(controlProperties()),
+    ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
+    ommlSlot(limit, "lim", context, kind, `${kind}.parameterTwo`),
+  );
+}
+
+export function ommlSlot(
+  value: unknown,
+  tagName: string,
+  context: RenderContext,
+  kind: string,
+  at: string,
+): XmlElement {
+  const tag = new XmlElement(`m:${tagName}`);
+  if (value === null || value === undefined) return tag.append(plainRun("&#8203;"));
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => {
+      tag.append(insertSlotItem(item, context, kind, `${at}[${index}]`));
+    });
+    return tag;
+  }
+  return tag.append(insertSlotItem(value, context, kind, at));
+}
+
+export function rubyTruthy(value: unknown): boolean {
+  return value !== null && value !== undefined && value !== false;
+}
+
+function insertSlotItem(
+  value: unknown,
+  context: RenderContext,
+  kind: string,
+  at: string,
+): OmmlRendered {
+  if (hasNodeKind(value)) return insertChild(value, context, at);
+  throw new RenderError(
+    `${at}: cannot insert ${describeSlot(value)} — the gem raises NoMethodError here`,
+    FORMAT,
+    kind,
+  );
+}
+
 export function requireElement(
   rendered: OmmlRendered,
   kind: string,

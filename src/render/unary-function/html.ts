@@ -14,15 +14,20 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
       node.kind,
     );
   }
-  return renderUnaryDefault(node.name, node.parameterOne, context, "unaryFunction.parameterOne");
+  return renderUnaryDefault(
+    node.name.toLowerCase(),
+    node.parameterOne,
+    context,
+    "unaryFunction.parameterOne",
+  );
 }
 
-/** `UnaryFunction#to_html`: italicized class name followed by one slot wrapper. */
+/** `UnaryFunction#to_html`: italicized measured label followed by one slot wrapper. */
 export function renderUnaryDefault(
-  className: string,
+  measuredLabel: string,
   parameterOne: unknown,
   context: RenderContext,
   at: string,
 ): string {
-  return `<i>${className.toLowerCase()}</i>${renderUnarySlot(parameterOne, context, at)}`;
+  return `<i>${measuredLabel}</i>${renderUnarySlot(parameterOne, context, at)}`;
 }

@@ -6,7 +6,7 @@
     "oxVersion": "2.14.28",
     "rubyVersion": "4.0.1",
     "xmlEngine": "Plurimath::XmlEngine::OxEngine",
-    "note": "Oracle-printed bytes for test/xml. dump: Ox.dump(tree, indent:). dumpNodes: Plurimath::Math::Core#dump_nodes (Ox.dump + REPLACABLES). Each tree's build recipe is the probe shape recorded per fixture in test/xml/ox-contract.ts; the three mathml-* entries are additionally byte-checked against Plurimath::Math.parse(...).to_mathml before emission."
+    "note": "Oracle-printed bytes for test/xml. dump: Ox.dump(tree, indent:). dumpNodes: Plurimath::Math::Core#dump_nodes (Ox.dump + REPLACABLES). Each tree's build recipe is the probe shape recorded per fixture in test/xml/ox-contract.ts; the three MathML tree entries are additionally byte-checked against Plurimath::Math.parse(...).to_mathml before emission."
   },
   "dump": {
     "nested-indent-2": "\n<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mi>x</mi>\n  </mstyle>\n</math>\n",

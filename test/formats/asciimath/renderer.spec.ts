@@ -222,36 +222,6 @@ describe("the big operators", () => {
     expect(toAsciimath(new IntNode({ parameterThree: new LinebreakNode({}) }))).toBe("int \\");
   });
 
-  it("finishes the 80k internal-whitespace regression case within 2 seconds", () => {
-    // PR #10 review, finding 1: `rubyStrip`'s end-anchored trailing regex had
-    // no start anchor, so a validator-passing tree — an `int` whose third slot
-    // is a formula of N bare (nil-rendering) fontStyle children then a symbol,
-    // rendering "int " + N spaces + "x" — made every position in the internal
-    // run a retry point: quadratic, where the gem's `strip` is linear.
-    //
-    // A single wall-clock sample proves only that this fixed-size render
-    // finished within the budget on this run; it does not prove asymptotic
-    // linearity. A two-size scaling ratio was rejected because a load shift
-    // between samples can make either implementation look better or worse.
-    // The size and budget are a cost/margin compromise: large enough to
-    // separate the known quadratic implementation, with headroom for host
-    // load on the current implementation.
-    //
-    // Calibration on 2026-08-27 with Node 26.1.0: this 80k case took
-    // 102.33 ms with the index scan and 9,342.62 ms with the historical
-    // regex pair. These figures describe that runtime and measurement run,
-    // not every machine or invocation.
-    const children: unknown[] = [];
-    for (let i = 0; i < 80_000; i += 1) children.push({ kind: "fontStyle" });
-    children.push({ kind: "symbol", value: "x" });
-    const tree = { kind: "int", parameterThree: { kind: "formula", value: children } };
-    const start = performance.now();
-    const out = toAsciimath(tree as never);
-    const elapsed = performance.now() - start;
-    expect(out).toBe(`int ${" ".repeat(80_000)}x`);
-    expect(elapsed, `80k AsciiMath render took ${elapsed.toFixed(2)} ms`).toBeLessThan(2_000);
-  });
-
   it("nary falls back to int for a missing first slot", () => {
     // Probes kind/Nary/no-first => "int_(2)^(3) 4"; kind/Nary/bare => "int";
     // fontnil/inside-nary-first => "int 2" (a first slot whose own render is

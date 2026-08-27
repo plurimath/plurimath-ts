@@ -144,7 +144,7 @@ const CASES: ReadonlyArray<readonly [string, string, Outcome]> = [
 ];
 
 /**
- * Ten times the slowest measured case (2,000 unmatched closing parens, ~0.8s),
+ * Twenty-five times the slowest measured case (2,000 unmatched closing parens, ~0.8s),
  * so this fires on a regression in shape rather than on a slow CI runner.
  */
 const SLOWEST_ALLOWED_MS = 20_000;

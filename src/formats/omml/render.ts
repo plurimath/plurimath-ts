@@ -97,11 +97,17 @@ function insertNode(node: MathNode, context: RenderContext): OmmlRendered {
   }
 }
 
-export const ROOT_CONTEXT: RenderContext = {
-  insert(node) {
-    return insertNode(node, ROOT_CONTEXT);
-  },
-  render(node) {
-    return renderNode(node, ROOT_CONTEXT);
-  },
-};
+export function createRenderContext(displaystyle: boolean): RenderContext {
+  const context: RenderContext = {
+    displaystyle,
+    insert(node) {
+      return insertNode(node, context);
+    },
+    render(node) {
+      return renderNode(node, context);
+    },
+  };
+  return context;
+}
+
+export const ROOT_CONTEXT = createRenderContext(true);

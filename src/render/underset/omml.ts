@@ -2,14 +2,14 @@ import {
   type NodeOf,
   ommlSlot,
   type RenderContext,
-  renderLimit,
+  renderOverUnder,
   rubyTruthy,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
 export function renderUnderset(node: NodeOf<"underset">, context: RenderContext): XmlElement {
   if (!rubyTruthy(node.options.accentunder)) {
-    return renderLimit(node.kind, "Low", node.parameterOne, node.parameterTwo, context);
+    return renderOverUnder(node.kind, "Low", node.parameterOne, node.parameterTwo, context);
   }
 
   const properties = new XmlElement("m:groupChrPR").append(

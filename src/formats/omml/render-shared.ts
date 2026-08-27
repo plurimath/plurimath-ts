@@ -12,6 +12,7 @@ export const FORMAT = "omml";
 export type OmmlRendered = XmlElement | string | null | readonly OmmlRendered[];
 
 export interface RenderContext {
+  readonly displaystyle: boolean;
   readonly insert: (node: MathNode) => OmmlRendered;
   readonly render: (node: MathNode) => OmmlRendered;
 }
@@ -230,6 +231,24 @@ export function renderLimit(
     new XmlElement(`m:${name}Pr`).append(controlProperties()),
     ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
     ommlSlot(limit, "lim", context, kind, `${kind}.parameterTwo`),
+  );
+}
+
+export function renderOverUnder(
+  kind: "overset" | "underset",
+  position: "Low" | "Upp",
+  base: unknown,
+  limit: unknown,
+  context: RenderContext,
+): XmlElement {
+  if (context.displaystyle) return renderLimit(kind, position, base, limit, context);
+
+  const name = position === "Upp" ? "sSup" : "sSub";
+  const scriptSlot = position === "Upp" ? "sup" : "sub";
+  return new XmlElement(`m:${name}`).append(
+    structuralProperties(name),
+    ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
+    ommlSlot(limit, scriptSlot, context, kind, `${kind}.parameterTwo`),
   );
 }
 

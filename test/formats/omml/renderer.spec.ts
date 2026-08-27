@@ -92,6 +92,17 @@ const PUBLIC_X = xml(
   "</m:oMathPara>",
 );
 const PUBLIC_EMPTY = xml(ROOT_OPEN, "  <m:oMath/>", "</m:oMathPara>");
+const publicFragment = (fragment: string): string =>
+  xml(
+    ROOT_OPEN,
+    "  <m:oMath>",
+    ...fragment
+      .trimEnd()
+      .split("\n")
+      .map((line) => `    ${line}`),
+    "  </m:oMath>",
+    "</m:oMathPara>",
+  );
 
 const publicText = (value: string): string =>
   xml(
@@ -808,6 +819,37 @@ describe("OMML parameter-slot parity", () => {
       },
 
 describe("OMML scripts and limits slice", () => {
+  it.each([
+    [
+      "overset",
+      true,
+      new OversetNode({ options: {}, parameterOne: symbol(), parameterTwo: symbol() }),
+      limitXml("Upp", "x"),
+    ],
+    [
+      "overset",
+      false,
+      new OversetNode({ options: {}, parameterOne: symbol(), parameterTwo: symbol() }),
+      POWER_X,
+    ],
+    [
+      "underset",
+      true,
+      new UndersetNode({ options: {}, parameterOne: symbol(), parameterTwo: symbol() }),
+      limitXml("Low", "x"),
+    ],
+    [
+      "underset",
+      false,
+      new UndersetNode({ options: {}, parameterOne: symbol(), parameterTwo: symbol() }),
+      BASE_X,
+    ],
+  ])("pins %s at Formula displaystyle=%s", (_kind, displaystyle, node, expected) => {
+    expect(toOmml(new FormulaNode({ displaystyle, value: [node] }))).toBe(
+      publicFragment(expected as string),
+    );
+  });
+
   it.each([
     [
       "sum",

@@ -498,9 +498,12 @@ describe("OMML first vertical slice", () => {
 });
 
 describe("generated OMML symbol-data deferral", () => {
-  it("renders a named Symbol's explicit value without generated data", () => {
+  it("uses a named Symbol's explicit value only on insertion", () => {
     const node = new SymbolNode({ id: "Plus", value: "WRONG" });
-    expect(toOmmlWithoutMathTag(node)).toBe("WRONG");
+    expectRefusal(() => toOmmlWithoutMathTag(node), {
+      kind: "symbol",
+      message: 'Symbol "Plus" needs generated OMML data, deferred to the symbol-data follow-up',
+    });
     expect(toOmml(new FormulaNode({ value: [node] }))).toBe(
       xml(
         ROOT_OPEN,
@@ -553,6 +556,18 @@ describe("generated OMML symbol-data deferral", () => {
       message:
         'table.closeParen: Symbol "Paren::Rsquare" needs generated OMML data, deferred to the symbol-data follow-up',
     });
+
+    const valuedOpenNode = new TableNode({
+      closeParen: symbol("]"),
+      openParen: new SymbolNode({ id: "Paren::Lsquare", value: "WRONG" }),
+      options: {},
+      value: [tr(), tr()],
+    });
+    expectRefusal(() => toOmmlWithoutMathTag(valuedOpenNode), {
+      kind: "table",
+      message:
+        'table.openParen: Symbol "Paren::Lsquare" needs generated OMML data, deferred to the symbol-data follow-up',
+    });
   });
 
   it("refuses a Nary operator that needs the generated symbol value", () => {
@@ -568,6 +583,17 @@ describe("generated OMML symbol-data deferral", () => {
       message:
         'nary.parameterOne: Symbol "Sum" needs generated OMML data, deferred to the symbol-data follow-up',
     });
+
+    const valuedNode = new NaryNode({
+      options: {},
+      parameterOne: new SymbolNode({ id: "Sum", value: "WRONG" }),
+      parameterTwo: symbol(),
+      parameterThree: symbol(),
+      parameterFour: symbol(),
+    });
+    expect(toOmmlWithoutMathTag(valuedNode)).toBe(
+      NARY_X.replace('m:chr m:val="x"', 'm:chr m:val="WRONG"'),
+    );
   });
 });
 

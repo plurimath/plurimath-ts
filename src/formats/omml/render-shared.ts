@@ -87,12 +87,8 @@ export function requireEmptyOptions(value: unknown, kind: string, at: string): v
   );
 }
 
-/** An explicit Symbol value, or generated data for a valueless named subclass. */
+/** A direct base `Symbol`/abstract `Paren` value; named subclasses need generated data. */
 export function baseSymbolValue(node: NodeOf<"symbol">, errorKind: string, at?: string): string {
-  const valueAt = at === undefined ? "symbol.value" : `${at}.value`;
-  if (node.value !== null && node.value !== undefined) {
-    return requireString(node.value, errorKind, valueAt);
-  }
   if (node.id !== "Symbol" && node.id !== "Paren") {
     const prefix = at === undefined ? "" : `${at}: `;
     throw new RenderError(
@@ -101,7 +97,19 @@ export function baseSymbolValue(node: NodeOf<"symbol">, errorKind: string, at?: 
       errorKind,
     );
   }
-  return requireString(node.value, errorKind, valueAt);
+  return requireString(node.value, errorKind, at === undefined ? "symbol.value" : `${at}.value`);
+}
+
+/** `Symbol#t_tag`/`nary_attr_value`: an explicit value wins over subclass output. */
+export function symbolValueOrGenerated(
+  node: NodeOf<"symbol">,
+  errorKind: string,
+  at?: string,
+): string {
+  if (node.value !== null && node.value !== undefined) {
+    return requireString(node.value, errorKind, at === undefined ? "symbol.value" : `${at}.value`);
+  }
+  return baseSymbolValue(node, errorKind, at);
 }
 
 export function textElement(value: string): XmlElement {

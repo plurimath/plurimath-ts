@@ -1,12 +1,12 @@
 import { hasNodeKind, RenderError } from "../../core/index";
 import {
-  baseSymbolValue,
   controlProperties,
   FORMAT,
   type NodeOf,
   ommlParameter,
   type RenderContext,
   requireEmptyOptions,
+  symbolValueOrGenerated,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
@@ -25,7 +25,7 @@ export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlEle
   const properties = new XmlElement("m:naryPr").append(
     new XmlElement("m:chr").setAttribute(
       "m:val",
-      baseSymbolValue(operator, node.kind, "nary.parameterOne"),
+      symbolValueOrGenerated(operator, node.kind, "nary.parameterOne"),
     ),
     new XmlElement("m:limLoc").setAttribute("m:val", "subSup"),
     controlProperties(),

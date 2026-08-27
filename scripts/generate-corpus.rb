@@ -1518,8 +1518,8 @@ module CorpusGenerator
 
     raise Error, <<~MESSAGE
       The grammar class lists overlap: #{shared.join(', ')}.
-      `power_base_rules` reduces all three into one ordered choice
-      (parse.rb:82-84), so a shared entry makes the later list unreachable.
+      `symbol_text_or_integer` reduces all three into one ordered choice
+      (asciimath/parse.rb:81-84), so a shared entry makes the later list unreachable.
     MESSAGE
   end
 

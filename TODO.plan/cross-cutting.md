@@ -57,7 +57,7 @@ worth reporting regardless of which option wins.
 ## Symbol data as shared data
 
 Higher leverage than the corpus: 69% of the gem is symbol definitions, and
-measurement shows only about 7 of 1,461 classes carry any behaviour. Making
+measurement shows exactly 7 of 1,461 classes carry conditional behaviour. Making
 that data authoritative would let the gem generate its own symbol classes from
 it, deleting tens of thousands of hand-maintained lines on the Ruby side too.
 
@@ -66,7 +66,7 @@ changes the gem, and it is a separate conversation now that the corpus has its
 own repository. Until it is settled, symbol data is generated straight into
 this repository as TypeScript.
 
-Function classes are explicitly out of scope for sharing: 57 of 102 carry
+Function classes are explicitly out of scope for sharing: 71 of 102 carry
 conditional logic, so expressing them as data would require a template language
 plus an interpreter in every implementation — more work than porting, and a
 ceiling on what any implementation could express.

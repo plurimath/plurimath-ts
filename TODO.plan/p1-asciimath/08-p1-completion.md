@@ -19,19 +19,17 @@ This was parked in `deferred.md` until P5. It moves here because
 that ships without it accepts input the gem refuses — a divergence nobody
 measures until a document breaks.
 
-**Status: the in-repo half landed with the grammar** (PR #4,
-`test/formats/asciimath/failure-parity.spec.ts`): 156 candidates probed
-against the gem, the 26 it rejects pinned with mapped positions, and the two
-sweeps showing zero accept/reject disagreement. What remains here is the
-**shared** half — the schema shape for a rejection case in the testsuite, the
-cases themselves, and wiring the `negative-parity` gate to read them — plus
-everything below that the local spec does not cover.
+**Status: both halves have landed.** The in-repo suite from PR #4
+(`test/formats/asciimath/failure-parity.spec.ts`) probes 156 candidates against
+the gem, pins the 26 it rejects with mapped positions, and runs two sweeps with
+zero accept/reject disagreement. The pinned testsuite now supplies 13 canonical
+rejection cases, and `test/formats/asciimath/rejection-parity.spec.ts` reads them
+through the `negative-parity` gate.
 
 Ownership follows the usual split: the **testsuite** defines the failure cases
-and the schema that holds them; **this repository** writes the reader and the
-assertions. The shared case schema has no shape for a rejection today —
-`expected`, `parse_tree` and `model` are all required and `additionalProperties`
-is false — so the shape is agreed there before cases can land.
+and their `schema/rejections.json` schema; **this repository** writes the reader
+and the assertions. Rejections use a separate payload shape because the positive
+case schema requires `expected`, `parse_tree` and `model`.
 
 The rejection suite must carry, at minimum:
 
@@ -85,13 +83,13 @@ The rejection suite must carry, at minimum:
 - **Symbol context exception matrix** from the behavioural probes (TODO 2),
   driving the `symbol-context-matrix` gate.
 
-  **Scoped 2026-08-18; the gate is green but only half of what it claims.**
-  `test/generated/symbol-context.spec.ts` (11 tests, already in `selects`)
+  **Scoped 2026-08-18; the behavioural half landed with the corpus-pin move.**
+  `test/generated/symbol-context.spec.ts` (19 tests, already in `selects`)
   checks the *generated matrix's* internal consistency — every named symbol is
   one a slice can look up, every axis is one the manifest declares, every entry
-  records a real difference. Its own header says the renderers "add their
-  behavioural half here when they land". All three have landed; the half is
-  still owed.
+  records a real difference — and now also drives the matrix through the
+  renderers, in "the table axis, behaviourally" and "the intent axis is
+  unreachable, and says so rather than being skipped".
 
   What the behavioural half can and cannot cover, measured rather than assumed:
 
@@ -100,8 +98,8 @@ The rejection suite must carry, at minimum:
     `toMathml` *refuses the option by name*: "the intent attribute pipeline
     (intentify, intent post-processing) is unmeasured"
     (`src/formats/mathml/renderer.ts`, `DEFERRED_OPTIONS`). So the gate cannot
-    become fully behavioural until that deferral lifts. The spec should assert
-    the refusal is real and name these exceptions as deferred, rather than
+    become fully behavioural until that deferral lifts. The spec asserts the
+    refusal is real and names these exceptions as deferred, rather than
     quietly covering only the rest.
   - **`table` — reachable, and the port already threads it.**
     `src/render/symbol/asciimath.ts` consults `ASCIIMATH_SYMBOL_EXCEPTIONS`,
@@ -157,8 +155,8 @@ The rejection suite must carry, at minimum:
     pins separately rather than burying in the table.
 - **Differential runner** (class B): the seeded, deterministic, bounded input
   generator compared live against the gem.
-- **Package-isolation assertions** for the real `/asciimath`, `/mathml` and
-  `/latex` subpaths.
+- **Package-isolation assertions** for the real `/asciimath`, `/mathml`,
+  `/latex` and `/unicodemath` subpaths.
 - Set `currentMilestone` to `P1-completion` in the same change as the runners
   for every gate that activates with it (§7).
 

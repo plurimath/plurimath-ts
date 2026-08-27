@@ -2,7 +2,7 @@
 
 ## Why
 Symbol definitions are 69% of the Ruby gem (64k lines across 1,461 classes) and
-are almost entirely data: measured, only about 7 of them carry any behaviour.
+are almost entirely data: measured, exactly 7 carry conditional behaviour.
 They are generated, never hand-ported (ARCHITECTURE.md D5).
 
 The data is split **per format** so a renderer bundles only its own slice; a
@@ -31,7 +31,7 @@ and quietly break the isolation guarantee (§3).
   matrix (§5).
 
 ## Not in scope
-Function classes are **not** generated: 57 of 102 carry conditional logic, so
+Function classes are **not** generated: 71 of 102 carry conditional logic, so
 sharing them as data would need a template language plus an interpreter per
 implementation. They are hand-ported (§10).
 

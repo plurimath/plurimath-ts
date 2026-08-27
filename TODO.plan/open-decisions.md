@@ -35,15 +35,16 @@ early under a distinct name, explicitly experimental, and take the name over at
 
 The published class exposes a writable `data` holding an Opal `ParserResult` —
 runtime-specific and not reproducible. Either expose a name-compatible
-`readonly data: Formula`, or document its absence. The ABI is already described
+`readonly data: FormulaNode`, or document its absence. The ABI is already described
 as method-exact rather than object-exact, so either choice is honest; the
 question is which breaks fewer consumers.
 
 ## Bundle budgets
 
 Deferred on purpose: ceilings set before the first real measurement would be
-invented. Once P1 produces `/asciimath`, `/mathml` and `/latex`, the isolation
-gate reports actual sizes and the budgets can be set from evidence.
+invented. Once P1 produces `/asciimath`, `/mathml`, `/latex` and `/unicodemath`, the isolation
+gate reports chunk and source-module counts, not bytes, so a size budget
+would need a new measurement rather than a threshold on what it already prints.
 
 ## Symbol data as shared data
 

@@ -23,7 +23,7 @@
  * - an uninitialised or absent submodule, and a payload the provenance lists
  *   but disk lacks — `test/core/corpus-pin.spec.ts`, "an uninitialised
  *   submodule fails loudly";
- * - nonzero payloads and cases, asserted as counts, and the 13 group names
+ * - nonzero payloads and cases, asserted as counts, and the group names
  *   pinned by name — same file, "the pin as shipped";
  * - every payload's bytes and sha256 against the provenance, plus a payload
  *   nothing vouches for — same file, "a payload that does not match its
@@ -35,10 +35,10 @@
  *   repository still owns", which names the files rather than counting them.
  *
  * What is **not** covered elsewhere, and so is covered below: that a payload
- * declares the three target formats at all. The reader only enforces that each
+ * declares the target formats at all. The reader only enforces that each
  * case carries whatever its payload declared, which is self-consistency, not a
  * requirement — `TINY_PAYLOAD` in `corpus-pin.spec.ts` declares two targets and
- * loads happily. The three `render-parity.spec.ts` suites look like they close
+ * loads happily. The four `render-parity.spec.ts` suites look like they close
  * this, but each iterates `readCorpusCases()`, which drops the excluded cases,
  * so a group whose cases were all withheld could stop declaring `mathml` and
  * every suite would stay green while the corpus quietly stopped covering a

@@ -8,16 +8,14 @@ Numbered work items are added to this directory when the phase opens.
 
 ## What it delivers
 
-**UnicodeMath renderer.** Unicode-heavy output with its own spacing and
-mini-sized sub/superscript rules. The gem's `to_unicodemath` methods are the
-reference; several node types carry UnicodeMath-specific branches (fraction
-variants, n-ary masks, prime handling) that need their own corpus cases.
+The UnicodeMath renderer was originally scoped here. It landed early, during
+P1 but outside P1's numbered items, so this phase no longer carries it.
 
 **OMML renderer.** Office Math markup: a second XML tree format, structurally
 quite different from MathML (`m:` namespace, `sSub`/`sSup`/`nary`/`f`
 elements, control properties). Exercises the XML layer harder than MathML does.
 
-**HTML renderer.** The smallest of the three; mostly `<i>`, `<sub>`, `<sup>`
+**HTML renderer.** The smaller of the two; mostly `<i>`, `<sub>`, `<sup>`
 and table markup.
 
 **Compat class.** The frozen `plurimath-js` surface — constructor plus seven
@@ -52,15 +50,17 @@ AsciiMath *to* everything, which is the most useful early capability.
 
 - OMML's structure diverges most from the model; expect the XML layer to need
   extension rather than reuse.
-- UnicodeMath's context rules (mini-sized scripts, accents, primes) are the
-  likeliest source of subtle parity failures.
+- UnicodeMath's context rules (mini-sized scripts, accents, primes) were the
+  risk this phase expected to carry; it landed in P1 instead, and those rules
+  are pinned by the UnicodeMath parity suite.
 - The compat class must not drift from the published ABI: it is verified
   against `plurimath-js`'s own source, not from memory.
 
 ## Exit criteria
 
-- [ ] Every group in the pinned corpus declares the `unicodemath`, `omml` and
-      `html` targets, and every case carries an expectation for each. The
+- [ ] Every group in the pinned corpus declares the `omml` and `html` targets
+      (`unicodemath` landed with P1), and every case carries an expectation for
+      each. The
       reader asserts a nonzero case count per target, and that it equals the
       group's own case count — so a single token case cannot satisfy this.
 - [ ] Compat ABI fixture passing, plus: the constructor asserted for all six

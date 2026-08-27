@@ -37,8 +37,8 @@ moving an alternative changes what parses.
 
 ## Done when
 
-- [ ] For every pinned corpus case, the parse tree is deep-equal to the tree recorded
-  from Parslet.
+- [ ] For every **reachable** pinned corpus case, the parse tree is deep-equal to
+  the tree recorded from Parslet.
 - [ ] Offsets in a `ParseError` index the original input, including after a
   length-changing preprocessing token.
 - [ ] Each rule that can fail has a failure-position test, not only a

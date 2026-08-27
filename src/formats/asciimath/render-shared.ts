@@ -86,9 +86,10 @@ function isRubyStripCode(code: number): boolean {
  * position in the run a retry point — quadratic, where Ruby's C-implemented
  * `strip` (`function/int.rb:37`, `function/oint.rb:36`, `function/prod.rb:46`, `function/sum.rb:47`) is linear.
  * Reachable end-to-end through `toAsciimath` on validator-passing trees (an
- * `int` whose third slot renders N internal spaces), so the complexity class
- * is part of the hostile-input posture, pinned by the wall-clock test in
- * `test/formats/internal-whitespace-regression.spec.ts`. Byte-behaviour is unchanged:
+ * `int` whose third slot renders N internal spaces). The wall-clock test in
+ * `test/formats/internal-whitespace-regression.spec.ts` guards this known
+ * fixed-size regression; it does not establish an asymptotic complexity class.
+ * Byte-behaviour is unchanged:
  * the scan trims exactly the leading and trailing runs of the same set.
  */
 export function rubyStrip(text: string): string {

@@ -87,7 +87,7 @@ function isRubyStripCode(code: number): boolean {
  * Reachable end-to-end through `toLatex` on validator-passing trees (an
  * `int` whose third slot renders N internal spaces), so the complexity class
  * is part of the hostile-input posture, pinned by the wall-clock test in
- * `test/formats/latex/renderer.spec.ts`. Byte-behaviour is unchanged: the
+ * `test/formats/internal-whitespace-regression.spec.ts`. Byte-behaviour is unchanged: the
  * scan trims exactly the leading and trailing runs of the same set.
  */
 export function rubyStrip(text: string): string {

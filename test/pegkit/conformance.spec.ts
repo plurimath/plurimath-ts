@@ -558,7 +558,7 @@ describe("failure positions", () => {
 });
 
 describe("packrat memoisation", () => {
-  it("keeps exponential-looking grammars linear", () => {
+  it("finishes the depth-21 backtracking case within 500 ms", () => {
     // Parslet 2.0.0 memoises by (atom, position) in Atoms::Context. Without
     // the same cache, the unary alternative reparses every nested left operand
     // before failing at "+" and falling through to the binary alternative.

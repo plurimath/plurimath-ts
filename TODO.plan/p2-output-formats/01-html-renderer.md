@@ -19,7 +19,8 @@ Against the port's 38 render kinds, on the pinned oracle (00c52783):
   (`int`, `oint`), and `mpadded` from `UnaryFunction`.
 - **`symbol`** defines its own; **`mrow`** inherits `Formula`'s.
 
-For scale: UnicodeMath needed 34 own overrides and OMML needs 35, against HTML's 15.
+For scale, excluding `symbol` from each count: UnicodeMath needed 34 own overrides,
+OMML needs 35 implementations, and HTML needs 15 own overrides.
 
 The carrier defaults, measured rather than read (`options: {}`, a single `Symbol("x")`
 per slot):

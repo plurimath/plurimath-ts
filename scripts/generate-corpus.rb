@@ -1452,8 +1452,9 @@ module CorpusGenerator
     tables.merge("counts" => tables.transform_values(&:length))
   end
 
-  # `power_base_rules` reduces the three class lists into one ordered choice
-  # (`sub_sup_classes | binary_classes | ternary_classes`, parse.rb:82-84), so
+  # `symbol_text_or_integer` reduces the three class lists into one ordered
+  # choice (`sub_sup_classes | binary_classes | ternary_classes`,
+  # asciimath/parse.rb:81-84 — `power_base_rules` at :102 is a different set), so
   # order inside a list is behaviour and the emitted array preserves the gem's
   # insertion order rather than sorting it.
   def grammar_class_list(name, list)
@@ -3160,8 +3161,9 @@ module CorpusGenerator
   # *could* still hide is a shape change, so every table is shape-checked here
   # and a mismatch fails generation.
   #
-  # `.invert` and `.key` appear at three call sites (`function/base.rb:128`,
-  # `frac.rb:159`, `table.rb:422`), which is the same `Hash#invert`-keeps-the-
+  # `.invert` and `.key` appear at five call sites (`function/base.rb:128`,
+  # `frac.rb:159`, `table.rb:422`, `phantom.rb:59`, `mpadded.rb:102`), which is
+  # the same `Hash#invert`-keeps-the-
   # last-key trap `latex_left_right_parens` asserts against, so the duplicate
   # check below is not theoretical.
 
@@ -3791,8 +3793,8 @@ module CorpusGenerator
         rules from, consumed by `src/formats/asciimath/grammar.ts`.
 
         Order is behaviour. Parslet's `|` is an ordered choice and
-        `power_base_rules` reduces the three class lists into one of them
-        (`asciimath/parse.rb:82-84`), so these arrays keep the gem's insertion
+        `symbol_text_or_integer` reduces the three class lists into one of them
+        (`asciimath/parse.rb:81-84`), so these arrays keep the gem's insertion
         order — they are never sorted, even where today's entries could not
         overlap.
       TEXT

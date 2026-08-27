@@ -87,9 +87,10 @@ module CoreDataGenerator
   }.freeze
 
   # Characters that must never reach a source file as themselves: control,
-  # format and combining characters, and every space but U+0020. Eight symbol
-  # classes render to an invisible character and sixteen to a combining mark,
-  # and a raw one in a `.ts` file is unreviewable — this repository has already
+  # format and combining characters, and every space but U+0020. Some symbol
+  # classes render to an invisible character and others to a combining mark; the
+  # exact counts are not carried here because they are not re-derived on each
+  # run. A raw one in a `.ts` file is unreviewable — this repository has already
   # lost time to invisible bytes in source.
   UNSAFE_IN_SOURCE = /[[:cntrl:]\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Mn}\p{Me}\p{Mc}\p{Zs}\p{Zl}\p{Zp}]/
 

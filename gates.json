@@ -37,7 +37,7 @@
       "class": "A",
       "activatesAt": "P0",
       "run": "pnpm gate:package",
-      "description": "Built-dist assertions over every published subpath, plus publint and attw"
+      "description": "Built ESM/CJS loads for every published code entry, exact exports for format entries, and forbidden-layer checks for configured non-root entries, including HTML, plus publint; only attw runs npm pack"
     },
     {
       "id": "runtime-boundary",

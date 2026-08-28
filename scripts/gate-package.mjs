@@ -100,6 +100,7 @@ const EXPECTED_EXPORTS = {
   ".": CORE_EXPORTS,
   "./core": CORE_EXPORTS,
   "./asciimath": ["parseAsciimath", "toAsciimath"],
+  "./html": ["toHtml"],
   "./latex": ["toLatex"],
   "./mathml": ["toMathml"],
   "./unicodemath": ["toUnicodemath"],
@@ -140,6 +141,9 @@ const FORBIDDEN = {
   ".": NO_FORBIDDEN_SOURCES,
   "./core": [...forbidOtherFormats(), /pegkit\//],
   "./asciimath": [...forbidOtherFormats("asciimath"), /xml\//],
+  // HTML is output-only: no grammar, and its markup is built as strings
+  // rather than through the XML layer.
+  "./html": [...forbidOtherFormats("html"), /pegkit\//, /xml\//],
   "./latex": [...forbidOtherFormats("latex"), /pegkit\//, /xml\//],
   "./mathml": [...forbidOtherFormats("mathml"), /pegkit\//],
   // UnicodeMath is text output like latex, so it needs no XML layer and no

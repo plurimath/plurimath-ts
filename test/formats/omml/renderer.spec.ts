@@ -6,6 +6,7 @@
  * Ox serializations, including their final newlines.
  */
 
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { RenderError } from "../../../src/core/errors";
 import type { MathNode, NodeKind, NodeParameter } from "../../../src/core/nodes";
@@ -94,6 +95,15 @@ const nestedSlice2Containers = {
     new UndersetNode({ options: {}, parameterOne: nestedOverset(), parameterTwo: symbol("z") }),
   obrace: () => new ObraceNode({ attributes: {}, parameterOne: nestedOverset() }),
   ubrace: () => new UbraceNode({ attributes: {}, parameterOne: nestedOverset() }),
+} as const;
+
+const nestedSlice4Containers = {
+  sqrt: () => new SqrtNode({ options: {}, parameterOne: nestedOverset() }),
+  color: () =>
+    new ColorNode({ options: {}, parameterOne: symbol("red"), parameterTwo: nestedOverset() }),
+  fontStyle: () => new FontStyleNode({ name: "Bold", parameterOne: nestedOverset() }),
+  mpadded: () => new MpaddedNode({ options: {}, parameterOne: nestedOverset() }),
+  linebreak: () => new LinebreakNode({ attributes: {}, parameterOne: nestedOverset() }),
 } as const;
 
 interface Refusal {
@@ -3004,15 +3014,47 @@ describe("OMML wrappers slice", () => {
   });
 
   it("recursively injects font style into structural children", () => {
-    const expected = replaceIndentedRun(radicalXml(), fontStyleXml("b", null));
-    expectAtBothDisplayStyles(
-      new FontStyleNode({
-        name: "Bold",
-        parameterOne: new SqrtNode({ options: {}, parameterOne: symbol() }),
-      }),
-      expected,
-    );
+    for (const [displaystyle, limUpp, sSup] of [
+      [true, 1, 0],
+      [false, 0, 1],
+    ] as const) {
+      const rendered = toOmml(
+        new FormulaNode({
+          displaystyle,
+          value: [new FontStyleNode({ name: "Bold", parameterOne: nestedOverset() })],
+        }),
+      );
+      expect(rendered.match(/<m:sty m:val="b"\/>/g)?.length ?? 0).toBe(2);
+      expect({
+        limUpp: rendered.match(/<m:limUpp>/g)?.length ?? 0,
+        sSup: rendered.match(/<m:sSup>/g)?.length ?? 0,
+      }).toEqual({ limUpp, sSup });
+    }
   });
+
+  it.each([
+    ["sqrt", true, 1, 0],
+    ["sqrt", false, 0, 1],
+    ["color", true, 1, 0],
+    ["color", false, 0, 1],
+    ["fontStyle", true, 1, 0],
+    ["fontStyle", false, 0, 1],
+    ["mpadded", true, 1, 0],
+    ["mpadded", false, 0, 1],
+    ["linebreak", true, 1, 0],
+    ["linebreak", false, 0, 1],
+  ] as const)(
+    "pins %s's nested display context at Formula displaystyle=%s",
+    (kind, displaystyle, limUpp, sSup) => {
+      const rendered = toOmml(
+        new FormulaNode({ displaystyle, value: [nestedSlice4Containers[kind]()] }),
+      );
+      expect({
+        limUpp: rendered.match(/<m:limUpp>/g)?.length ?? 0,
+        sSup: rendered.match(/<m:sSup>/g)?.length ?? 0,
+      }).toEqual({ limUpp, sSup });
+    },
+  );
 
   it("reads only Mpadded's measured node options", () => {
     expectDirectAndInsertion(
@@ -3048,6 +3090,53 @@ describe("OMML wrappers slice", () => {
     expectDirectAndInsertion(
       new MpaddedNode({ options: { arbitrary: "0" }, parameterOne: symbol() }),
       phantomXml(['< m:val="on"/>']),
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({ options: { height: "0", depth: "2" }, parameterOne: symbol() }),
+      phantomXml(['<zeroAsc m:val="on"/>']),
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({ options: { arbitrary: "1" }, parameterOne: symbol() }),
+      phantomXml(),
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({ options: { height: "0", arbitrary: "0" }, parameterOne: symbol() }),
+      phantomXml(['<zeroAsc m:val="on"/>', '< m:val="on"/>']),
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({
+        options: { "01": "1", "-1": "1", "4294967295": "1" },
+        parameterOne: symbol(),
+      }),
+      phantomXml(),
+    );
+  });
+
+  it("pins Color's arbitrary node option, call option, and nested Formula child", () => {
+    const arbitraryNodeOption = new ColorNode({
+      options: { arbitrary: true },
+      parameterOne: symbol("red"),
+      parameterTwo: symbol(),
+    });
+    expectDirectAndInsertion(arbitraryNodeOption, RUN_X);
+    expectDirectAndInsertion(
+      new ColorNode({
+        options: { "1": true },
+        parameterOne: symbol("red"),
+        parameterTwo: symbol(),
+      }),
+      RUN_X,
+    );
+    expect(toOmmlWithoutMathTag(arbitraryNodeOption, { arbitrary: "read-me" } as never)).toBe(
+      RUN_X,
+    );
+    expectDirectAndInsertion(
+      new ColorNode({
+        options: {},
+        parameterOne: symbol("red"),
+        parameterTwo: new FormulaNode({ value: [symbol()] }),
+      }),
+      RUN_X,
     );
   });
 
@@ -3141,6 +3230,75 @@ describe("OMML wrappers slice", () => {
 });
 
 describe("OMML renderer boundary", () => {
+  class CustomOptions {}
+
+  it.each([
+    ["Date", new Date(0)],
+    ["Map", new Map([["displayStyle", false]])],
+    ["Set", new Set(["displayStyle"])],
+    ["class", new CustomOptions()],
+  ])("rejects a %s instance instead of silently treating it as options", (_label, options) => {
+    const name = options.constructor.name;
+    const message = `options: expected a plain options object, found a ${name} instance`;
+    expectRefusal(() => toOmml(new FormulaNode({ value: [symbol()] }), options as never), {
+      kind: "formula",
+      message,
+    });
+    expectRefusal(() => toOmmlWithoutMathTag(symbol(), options as never), {
+      kind: "symbol",
+      message,
+    });
+  });
+
+  it("accepts a plain options object from another JavaScript realm", () => {
+    const options = runInNewContext("({ arbitrary: true })") as Record<string, unknown>;
+    expect(toOmml(new FormulaNode({ value: [symbol()] }), options as never)).toBe(PUBLIC_X);
+    expect(toOmmlWithoutMathTag(symbol(), options as never)).toBe("x");
+  });
+
+  it.each([
+    [
+      "displayStyle",
+      { displayStyle: false },
+      'The "displayStyle" feature of to_omml is deferred (TODO.plan/deferred.md): recursive display-style override is unmeasured across the complete OMML renderer',
+    ],
+    [
+      "splitOnLinebreak",
+      { splitOnLinebreak: true },
+      'The "splitOnLinebreak" feature of to_omml is deferred (TODO.plan/deferred.md): line-broken OMML emits multiple m:oMath siblings separated by Word break runs; unmeasured',
+    ],
+    [
+      "formatter",
+      { formatter: {} },
+      'The "formatter" feature of to_omml is deferred (TODO.plan/deferred.md): number formatting is P4 scope; only the no-formatter path is measured',
+    ],
+    [
+      "unitsml",
+      { unitsml: {} },
+      'The "unitsml" feature of to_omml is deferred (TODO.plan/deferred.md): UnitsML is deferred wholesale (ARCHITECTURE.md section 5)',
+    ],
+  ] as const)("refuses deferred %s by name on both entry points", (_name, options, message) => {
+    expectRefusal(() => toOmml(new FormulaNode({ value: [symbol()] }), options as never), {
+      kind: "formula",
+      message,
+    });
+    expectRefusal(() => toOmmlWithoutMathTag(symbol(), options as never), {
+      kind: "symbol",
+      message,
+    });
+  });
+
+  it("treats explicitly undefined deferred keys as absent", () => {
+    const options = {
+      displayStyle: undefined,
+      formatter: undefined,
+      splitOnLinebreak: undefined,
+      unitsml: undefined,
+    } as never;
+    expect(toOmml(new FormulaNode({ value: [symbol()] }), options)).toBe(PUBLIC_X);
+    expect(toOmmlWithoutMathTag(symbol(), options)).toBe("x");
+  });
+
   it("rejects an unknown kind in shape validation before total dispatch", () => {
     expectRefusal(() => toOmmlWithoutMathTag({ kind: "not-a-kind" } as unknown as MathNode), {
       kind: "not-a-kind",

@@ -15,6 +15,7 @@
 
 import { RenderError } from "./errors";
 import { hasNodeKind, type MathNode, type NodeKind } from "./nodes";
+import { assertReproducibleRubyHashOrder } from "./ruby-semantics";
 
 export type NormalizedValue =
   | null
@@ -450,6 +451,7 @@ function normalizeValue(value: unknown, path: string): NormalizedValue {
     throw new RenderError(`Unknown node kind "${kind}" at ${path}`, "normalized-model", kind);
   }
   if (typeof value === "object") {
+    assertReproducibleRubyHashOrder(value, "normalized-model", path, path);
     const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
       a < b ? -1 : a > b ? 1 : 0,
     );

@@ -138,10 +138,25 @@ describe("field presence", () => {
     ]);
   });
 
-  it("sorts the keys of an options hash, as the generator does", () => {
-    const node = new TableNode({ value: [], options: { rowlines: "solid", columnalign: "left" } });
+  it("sorts ordinary string keys of an options hash, as the generator does", () => {
+    const options: Record<string, string> = {};
+    options.rowlines = "solid";
+    options.columnalign = "left";
+    expect(Object.keys(options)).toStrictEqual(["rowlines", "columnalign"]);
+
+    const node = new TableNode({ value: [], options });
     const fields = normalize(node).fields as { options: Record<string, unknown> };
     expect(Object.keys(fields.options)).toStrictEqual(["columnalign", "rowlines"]);
+  });
+
+  it('refuses array-index option keys instead of silently reordering "10" after "2"', () => {
+    const options: Record<string, string> = {};
+    options["10"] = "ten";
+    options["2"] = "two";
+
+    expect(() => normalize(new TableNode({ value: [], options }))).toThrow(
+      "table.options.2: integer-like hash keys are deferred",
+    );
   });
 });
 

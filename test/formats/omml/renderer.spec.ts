@@ -134,6 +134,7 @@ const ROOT_OPEN =
   'xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">';
 
 const RUN_X = xml("<m:r>", "  <m:t>x</m:t>", "</m:r>");
+const RUN_Y = xml("<m:r>", "  <m:t>y</m:t>", "</m:r>");
 const PUBLIC_X = xml(
   ROOT_OPEN,
   "  <m:oMath>",
@@ -530,6 +531,28 @@ const indentFragment = (fragment: string, spaces: number): readonly string[] =>
     .trimEnd()
     .split("\n")
     .map((line) => `${" ".repeat(spaces)}${line}`);
+
+const literalLimitXml = (position: "Low" | "Upp", limit: string, base: string): string =>
+  xml(
+    `<m:lim${position}>`,
+    `  <m:lim${position}Pr>`,
+    "    <m:ctrlPr>",
+    "      <w:rPr>",
+    '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "        <w:i/>",
+    "      </w:rPr>",
+    "    </m:ctrlPr>",
+    `  </m:lim${position}Pr>`,
+    "  <m:e>",
+    ...indentFragment(base, 4),
+    "  </m:e>",
+    "  <m:lim>",
+    "    <m:r>",
+    `      <m:t>${limit}</m:t>`,
+    "    </m:r>",
+    "  </m:lim>",
+    `</m:lim${position}>`,
+  );
 
 const styledRun = (value: string): string =>
   xml(
@@ -1715,6 +1738,71 @@ describe("OMML delimiters and accents slice", () => {
   );
 
   it.each([
+    [
+      "ddot",
+      new DdotNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Upp",
+      "..",
+    ],
+    [
+      "dot",
+      new DotNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Upp",
+      ".",
+    ],
+    [
+      "overleftrightarrow",
+      new OverleftrightarrowNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Upp",
+      "⃡",
+    ],
+    [
+      "tilde",
+      new TildeNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Upp",
+      "~",
+    ],
+    [
+      "ul",
+      new UlNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Low",
+      "&#x332;",
+    ],
+    [
+      "vec",
+      new VecNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Upp",
+      "→",
+    ],
+  ] as const)(
+    "renders nested Hat in %s's forced display context",
+    (_kind, node, position, limit) => {
+      const expected = literalLimitXml(position, limit, limitXml("Upp", "&#x302;"));
+      const inline = createRenderContext(false);
+      expect(serializeRendered(inline.render(node))).toBe(expected);
+      expect(serializeRendered(inline.insert(node))).toBe(expected);
+    },
+  );
+
+  it.each([
     ["abs", new AbsNode(), absoluteXml(true, true, xml("<m:r>", "  <m:t>&#8203;</m:t>", "</m:r>"))],
     ["ceil", new CeilNode(), fencedXml("⌈", "⌉", null)],
     ["floor", new FloorNode(), styledRun("⌊") + styledRun("⌋")],
@@ -1935,6 +2023,27 @@ describe("OMML delimiters and accents slice", () => {
     }
   });
 
+  it("pins Fenced's explicit empty and two-child body shapes", () => {
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: symbol("("),
+        parameterTwo: [],
+        parameterThree: symbol(")"),
+      }),
+      fencedXml("(", ")", null),
+    );
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: symbol("("),
+        parameterTwo: [symbol("x"), symbol("y")],
+        parameterThree: symbol(")"),
+      }),
+      fencedXml("(", ")", RUN_X + RUN_Y),
+    );
+  });
+
   it.each([
     ["empty", "", "[&quot;&quot;]"],
     ["quote", '"', String.raw`[&quot;\&quot;&quot;]`],
@@ -1957,6 +2066,32 @@ describe("OMML delimiters and accents slice", () => {
   });
 
   it("keeps Fenced refusals narrow and fully pinned", () => {
+    for (const [open, expected] of [
+      [new TextNode({ parameterOne: "open" }), "open"],
+      [new TextNode({ parameterOne: { a: "b" } }), "{&quot;a&quot; =&gt; &quot;b&quot;}"],
+      [
+        new TextNode({ parameterOne: ["a", 2, true, null] as never }),
+        "[&quot;a&quot;, 2, true, nil]",
+      ],
+      [
+        {
+          kind: "formula",
+          value: [5, true, null, ["a", 2], { a: "b" }],
+        } as unknown as MathNode,
+        "[5, true, nil, [&quot;a&quot;, 2], {&quot;a&quot; =&gt; &quot;b&quot;}]",
+      ],
+    ] as const) {
+      expectDirectAndInsertion(
+        new FencedNode({
+          options: {},
+          parameterOne: open,
+          parameterTwo: [symbol()],
+          parameterThree: symbol(")"),
+        }),
+        fencedXml(expected, ")"),
+      );
+    }
+
     expectRefusal(
       () =>
         toOmmlWithoutMathTag(

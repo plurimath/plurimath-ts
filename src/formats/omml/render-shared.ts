@@ -314,9 +314,10 @@ export function renderLiteralScript(
 ): XmlElement {
   if (!followDisplaystyle || context.displaystyle) {
     const name = `lim${position}`;
+    const baseContext = followDisplaystyle ? context : context.withDisplaystyle(true);
     return new XmlElement(`m:${name}`).append(
       structuralProperties(name),
-      ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
+      ommlSlot(base, "e", baseContext, kind, `${kind}.parameterOne`),
       new XmlElement("m:lim").append(plainRun(literal)),
     );
   }

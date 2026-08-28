@@ -1,6 +1,7 @@
 import { SYMBOL_CANONICAL_VALUES } from "../../core/generated/symbol-canonical";
 import { hasNodeKind, type MathNode, RenderError } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
+import { rubyNumberToS } from "../../core/ruby-semantics";
 import {
   describeSlot,
   FORMAT,
@@ -75,8 +76,11 @@ function scalarValue(
 ): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") return value;
+  if (Array.isArray(value) || typeof value === "object") {
+    return deterministicRubyInspect(value, kind, at);
+  }
   throw new RenderError(
-    `${at}: a "${kind}" node holds ${describeSlot(value)} that bypasses constructor normalization`,
+    `${at}: a "${kind}" node holds ${describeSlot(value)}; the gem sends include? to it and raises NoMethodError here`,
     FORMAT,
     "fenced",
   );
@@ -95,20 +99,59 @@ function compositeValue(
       "fenced",
     );
   }
-  if (value.every((item) => item === null || typeof item === "string")) {
-    return `[${value
-      .map((item) => (item === null ? "nil" : rubyInspectString(item as string)))
-      .join(", ")}]`;
-  }
-  if (value.some((item) => hasNodeKind(item))) {
+  return deterministicRubyInspect(value, kind, at);
+}
+
+function deterministicRubyInspect(
+  value: unknown,
+  kind: "symbol" | "number" | "text" | "formula" | "mrow" | "table",
+  at: string,
+): string {
+  if (containsNodeObject(value)) {
     throw new RenderError(
       `${at}: holds a "${kind}" node whose value contains node objects with nondeterministic Ruby #inspect addresses`,
       FORMAT,
       "fenced",
     );
   }
+  return rubyInspect(value, kind, at);
+}
+
+function containsNodeObject(value: unknown, seen = new Set<object>()): boolean {
+  if (hasNodeKind(value)) return true;
+  if (typeof value !== "object" || value === null || seen.has(value)) return false;
+  seen.add(value);
+  const children = Array.isArray(value) ? value : Object.values(value as Record<string, unknown>);
+  return children.some((child) => containsNodeObject(child, seen));
+}
+
+function rubyInspect(
+  value: unknown,
+  kind: "symbol" | "number" | "text" | "formula" | "mrow" | "table",
+  at: string,
+): string {
+  if (value === null || value === undefined) return "nil";
+  if (typeof value === "string") return rubyInspectString(value);
+  if (typeof value === "boolean") return String(value);
+  if (typeof value === "number") {
+    const printed = rubyNumberToS(value);
+    if (printed !== null) return printed;
+    throw new RenderError(
+      `${at}: a "${kind}" node contains the number ${String(value)}, whose Ruby #inspect spelling this port cannot reproduce`,
+      FORMAT,
+      "fenced",
+    );
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => rubyInspect(item, kind, at)).join(", ")}]`;
+  }
+  if (typeof value === "object") {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .map(([key, item]) => `${rubyInspectString(key)} => ${rubyInspect(item, kind, at)}`)
+      .join(", ")}}`;
+  }
   throw new RenderError(
-    `${at}: a "${kind}" node has an unmeasured composite value`,
+    `${at}: a "${kind}" node contains ${describeSlot(value)}, which has no measured Ruby #inspect spelling`,
     FORMAT,
     "fenced",
   );

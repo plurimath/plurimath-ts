@@ -10,16 +10,26 @@ import { describe, expect, it } from "vitest";
 import { RenderError } from "../../../src/core/errors";
 import type { MathNode, NodeKind, NodeParameter } from "../../../src/core/nodes";
 import {
+  AbsNode,
+  BarNode,
   BaseNode,
   BinaryFunctionNode,
+  CeilNode,
+  DdotNode,
+  DotNode,
+  FencedNode,
+  FloorNode,
   FormulaNode,
   FracNode,
+  HatNode,
   IntNode,
   MrowNode,
   NaryNode,
+  NormNode,
   NumberNode,
   ObraceNode,
   OintNode,
+  OverleftrightarrowNode,
   OversetNode,
   ProdNode,
   SumNode,
@@ -27,12 +37,15 @@ import {
   TableNode,
   TernaryFunctionNode,
   TextNode,
+  TildeNode,
   UbraceNode,
+  UlNode,
   UnaryFunctionNode,
   UndersetNode,
+  VecNode,
 } from "../../../src/core/nodes";
 import { parseAsciimath } from "../../../src/formats/asciimath/index";
-import { ROOT_CONTEXT } from "../../../src/formats/omml/render";
+import { createRenderContext, ROOT_CONTEXT } from "../../../src/formats/omml/render";
 import { serializeRendered } from "../../../src/formats/omml/render-shared";
 import { toOmml, toOmmlWithoutMathTag } from "../../../src/formats/omml/renderer";
 
@@ -511,6 +524,125 @@ const OBRACE_ACCENT = xml(
   "  </m:e>",
   "</m:acc>",
 );
+
+const indentFragment = (fragment: string, spaces: number): readonly string[] =>
+  fragment
+    .trimEnd()
+    .split("\n")
+    .map((line) => `${" ".repeat(spaces)}${line}`);
+
+const styledRun = (value: string): string =>
+  xml(
+    "<m:r>",
+    "  <m:rPr>",
+    '    <m:sty m:val="p"/>',
+    "  </m:rPr>",
+    `  <m:t>${value}</m:t>`,
+    "</m:r>",
+  );
+
+const fencedXml = (
+  open: string | null,
+  close: string | null,
+  body: string | null = RUN_X,
+): string =>
+  xml(
+    "<m:d>",
+    "  <m:dPr>",
+    ...(open === null ? [] : [`    <m:begChr m:val="${open}"/>`]),
+    '    <m:sepChr m:val=""/>',
+    ...(close === null ? [] : [`    <m:endChr m:val="${close}"/>`]),
+    "  </m:dPr>",
+    ...(body === null ? ["  <m:e/>"] : ["  <m:e>", ...indentFragment(body, 4), "  </m:e>"]),
+    "</m:d>",
+  );
+
+const absoluteXml = (includeOpen: boolean, includeClose: boolean, body = RUN_X): string =>
+  xml(
+    "<m:d>",
+    "  <m:dPr>",
+    "    <w:rPr>",
+    '      <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "    </w:rPr>",
+    ...(includeOpen ? ['    <m:begChr m:val="|"/>'] : []),
+    ...(includeClose ? ['    <m:endChr m:val="|"/>'] : []),
+    '    <m:sepChr m:val=""/>',
+    "    <m:grow/>",
+    "  </m:dPr>",
+    "  <m:e>",
+    ...indentFragment(body, 4),
+    "  </m:e>",
+    "</m:d>",
+  );
+
+const barXml = (): string =>
+  xml(
+    "<m:bar>",
+    "  <m:barPr>",
+    '    <m:pos m:val="top"/>',
+    "    <m:ctrlPr>",
+    "      <w:rPr>",
+    '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "        <w:i/>",
+    "      </w:rPr>",
+    "    </m:ctrlPr>",
+    "  </m:barPr>",
+    "  <m:e>",
+    ...indentFragment(RUN_X, 4),
+    "  </m:e>",
+    "</m:bar>",
+  );
+
+const accentXml = (character: string): string =>
+  xml(
+    "<m:acc>",
+    "  <m:accPr>",
+    `    <m:chr m:val="${character}"/>`,
+    "  </m:accPr>",
+    "  <m:e>",
+    ...indentFragment(RUN_X, 4),
+    "  </m:e>",
+    "</m:acc>",
+  );
+
+const scriptXml = (position: "Sub" | "Sup", value: string): string => {
+  const slot = position === "Sup" ? "sup" : "sub";
+  return xml(
+    `<m:s${position}>`,
+    `  <m:s${position}Pr>`,
+    "    <m:ctrlPr>",
+    "      <w:rPr>",
+    '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "        <w:i/>",
+    "      </w:rPr>",
+    "    </m:ctrlPr>",
+    `  </m:s${position}Pr>`,
+    "  <m:e>",
+    ...indentFragment(RUN_X, 4),
+    "  </m:e>",
+    `  <m:${slot}>`,
+    "    <m:r>",
+    `      <m:t>${value}</m:t>`,
+    "    </m:r>",
+    `  </m:${slot}>`,
+    `</m:s${position}>`,
+  );
+};
+
+function expectAtBothDisplayStyles(
+  node: MathNode,
+  displayed: string,
+  inline: string = displayed,
+): void {
+  for (const [displaystyle, expected] of [
+    [true, displayed],
+    [false, inline],
+  ] as const) {
+    const context = createRenderContext(displaystyle);
+    expect(serializeRendered(context.render(node))).toBe(expected);
+    expect(serializeRendered(context.insert(node))).toBe(expected);
+  }
+}
 
 function expectDirectAndInsertion(node: MathNode, expected: string): void {
   expect(toOmmlWithoutMathTag(node)).toBe(expected);
@@ -1539,6 +1671,374 @@ describe("OMML Ruby-falsy parity", () => {
   });
 });
 
+describe("OMML delimiters and accents slice", () => {
+  const canonicalCases = [
+    ["abs", new AbsNode({ parameterOne: symbol() }), absoluteXml(true, true)],
+    ["ceil", new CeilNode({ parameterOne: symbol() }), fencedXml("⌈", "⌉")],
+    ["floor", new FloorNode({ parameterOne: symbol() }), styledRun("⌊") + RUN_X + styledRun("⌋")],
+    ["norm", new NormNode({ parameterOne: symbol() }), styledRun("∥") + RUN_X + styledRun("∥")],
+    [
+      "fenced",
+      new FencedNode({
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: [symbol()],
+        parameterThree: symbol(),
+      }),
+      fencedXml("x", "x"),
+    ],
+    ["bar", new BarNode({ attributes: {}, parameterOne: symbol() }), barXml()],
+    ["dot", new DotNode({ attributes: {}, parameterOne: symbol() }), limitXml("Upp", ".")],
+    ["ddot", new DdotNode({ attributes: {}, parameterOne: symbol() }), limitXml("Upp", "..")],
+    [
+      "hat",
+      new HatNode({ attributes: {}, parameterOne: symbol() }),
+      limitXml("Upp", "&#x302;"),
+      scriptXml("Sup", "&#x302;"),
+    ],
+    ["tilde", new TildeNode({ attributes: {}, parameterOne: symbol() }), limitXml("Upp", "~")],
+    ["vec", new VecNode({ attributes: {}, parameterOne: symbol() }), limitXml("Upp", "→")],
+    ["ul", new UlNode({ attributes: {}, parameterOne: symbol() }), limitXml("Low", "&#x332;")],
+    [
+      "overleftrightarrow",
+      new OverleftrightarrowNode({ attributes: {}, parameterOne: symbol() }),
+      limitXml("Upp", "⃡"),
+    ],
+  ] as const;
+
+  it.each(canonicalCases)(
+    "pins %s direct and insertion bytes at both displaystyle values",
+    (_kind, node, displayed, inline = displayed) => {
+      expectAtBothDisplayStyles(node, displayed, inline);
+      expect(toOmmlWithoutMathTag(node)).toBe(displayed);
+    },
+  );
+
+  it.each([
+    ["abs", new AbsNode(), absoluteXml(true, true, xml("<m:r>", "  <m:t>&#8203;</m:t>", "</m:r>"))],
+    ["ceil", new CeilNode(), fencedXml("⌈", "⌉", null)],
+    ["floor", new FloorNode(), styledRun("⌊") + styledRun("⌋")],
+    ["norm", new NormNode(), styledRun("∥") + styledRun("∥")],
+    ["fenced", new FencedNode({ options: {} }), fencedXml(null, null, null)],
+    ["bar", new BarNode({ attributes: {} }), xml("<m:r>", "  <m:t>&#xaf;</m:t>", "</m:r>")],
+    ["dot", new DotNode({ attributes: {} }), xml("<m:r>", "  <m:t>.</m:t>", "</m:r>")],
+    ["ddot", new DdotNode({ attributes: {} }), xml("<m:r>", "  <m:t>..</m:t>", "</m:r>")],
+    ["hat", new HatNode({ attributes: {} }), xml("<m:r>", "  <m:t>^</m:t>", "</m:r>")],
+    ["tilde", new TildeNode({ attributes: {} }), xml("<m:r>", "  <m:t>~</m:t>", "</m:r>")],
+    ["vec", new VecNode({ attributes: {} }), xml("<m:r>", "  <m:t>&#x2192;</m:t>", "</m:r>")],
+    ["ul", new UlNode({ attributes: {} }), xml("<m:r>", "  <m:t>&#x332;</m:t>", "</m:r>")],
+    [
+      "overleftrightarrow",
+      new OverleftrightarrowNode({ attributes: {} }),
+      xml("<m:r>", "  <m:t>&#x20e1;</m:t>", "</m:r>"),
+    ],
+  ])("pins %s's deterministic empty direct and insertion bytes", (_kind, node, expected) => {
+    expectDirectAndInsertion(node as MathNode, expected as string);
+  });
+
+  it.each([
+    ["bar", new BarNode({ attributes: { accent: true }, parameterOne: symbol() }), accentXml("‾")],
+    ["dot", new DotNode({ attributes: { accent: true }, parameterOne: symbol() }), accentXml(".")],
+    [
+      "ddot",
+      new DdotNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      limitXml("Upp", ".."),
+    ],
+    ["hat", new HatNode({ attributes: { accent: true }, parameterOne: symbol() }), accentXml("̂")],
+    [
+      "tilde",
+      new TildeNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      accentXml("˜"),
+    ],
+    ["vec", new VecNode({ attributes: { accent: true }, parameterOne: symbol() }), accentXml("→")],
+    [
+      "overleftrightarrow",
+      new OverleftrightarrowNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      accentXml("⃡"),
+    ],
+    [
+      "ul/accent",
+      new UlNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      limitXml("Low", "&#x332;"),
+    ],
+    [
+      "ul/accentunder",
+      new UlNode({ attributes: { accentunder: true }, parameterOne: symbol() }),
+      UNDERSET_ACCENT,
+    ],
+  ])("pins %s's non-uniform accent option behavior", (_kind, node, expected) => {
+    expectAtBothDisplayStyles(node as MathNode, expected as string);
+  });
+
+  it("pins Hat's measured hide_function_name branch without deriving a class label", () => {
+    expectAtBothDisplayStyles(
+      new HatNode({ attributes: {}, hideFunctionName: true, parameterOne: symbol() }),
+      RUN_X,
+    );
+  });
+
+  it.each([
+    [
+      "abs/open",
+      new AbsNode({ openParen: symbol(), parameterOne: symbol() }),
+      absoluteXml(false, true),
+    ],
+    [
+      "abs/close",
+      new AbsNode({ closeParen: symbol(), parameterOne: symbol() }),
+      absoluteXml(true, false),
+    ],
+    [
+      "abs/both",
+      new AbsNode({ closeParen: symbol(), openParen: symbol(), parameterOne: symbol() }),
+      absoluteXml(false, false),
+    ],
+    [
+      "ceil/open",
+      new CeilNode({ openParen: symbol(), parameterOne: symbol() }),
+      fencedXml(null, "⌉"),
+    ],
+    [
+      "ceil/close",
+      new CeilNode({ closeParen: symbol(), parameterOne: symbol() }),
+      fencedXml("⌈", null),
+    ],
+    [
+      "ceil/both",
+      new CeilNode({ closeParen: symbol(), openParen: symbol(), parameterOne: symbol() }),
+      fencedXml(null, null),
+    ],
+    [
+      "floor/open",
+      new FloorNode({ openParen: symbol(), parameterOne: symbol() }),
+      RUN_X + styledRun("⌋"),
+    ],
+    [
+      "floor/close",
+      new FloorNode({ closeParen: symbol(), parameterOne: symbol() }),
+      styledRun("⌊") + RUN_X,
+    ],
+    [
+      "floor/both",
+      new FloorNode({ closeParen: symbol(), openParen: symbol(), parameterOne: symbol() }),
+      RUN_X,
+    ],
+    [
+      "norm/open",
+      new NormNode({ openParen: symbol(), parameterOne: symbol() }),
+      RUN_X + styledRun("∥"),
+    ],
+    [
+      "norm/close",
+      new NormNode({ closeParen: symbol(), parameterOne: symbol() }),
+      styledRun("∥") + RUN_X,
+    ],
+    [
+      "norm/both",
+      new NormNode({ closeParen: symbol(), openParen: symbol(), parameterOne: symbol() }),
+      RUN_X,
+    ],
+  ])("pins %s's measured delimiter suppression", (_case, node, expected) => {
+    expectAtBothDisplayStyles(node as MathNode, expected as string);
+  });
+
+  it("renders Fenced's deterministic scalar, empty-composite, and bare-body cases", () => {
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: symbol("("),
+        parameterTwo: symbol(),
+        parameterThree: symbol(")"),
+      }),
+      fencedXml("(", ")"),
+    );
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: new NumberNode({ value: "1" }),
+        parameterTwo: [symbol()],
+        parameterThree: new NumberNode({ value: "2" }),
+      }),
+      fencedXml("1", "2"),
+    );
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: new TextNode({ parameterOne: "open" }),
+        parameterTwo: [symbol()],
+        parameterThree: new TextNode({ parameterOne: "close" }),
+      }),
+      fencedXml("open", "close"),
+    );
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: new SymbolNode(),
+        parameterTwo: [symbol()],
+        parameterThree: new NumberNode(),
+      }),
+      fencedXml(null, null),
+    );
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: new SymbolNode({ id: "Paren::Lround" }),
+        parameterTwo: [symbol()],
+        parameterThree: new SymbolNode({ id: "Paren::Rround" }),
+      }),
+      fencedXml("(", ")"),
+    );
+
+    for (const composite of [
+      new FormulaNode({ value: [] }),
+      new MrowNode({ value: [] }),
+      new TableNode({ options: {}, value: [] }),
+    ]) {
+      expectDirectAndInsertion(
+        new FencedNode({
+          options: {},
+          parameterOne: composite,
+          parameterTwo: [symbol()],
+          parameterThree: composite,
+        }),
+        fencedXml("[]", "[]"),
+      );
+    }
+
+    for (const composite of [
+      new FormulaNode({ value: ["x"] }),
+      new MrowNode({ value: ["x"] }),
+      new TableNode({ options: {}, value: ["x"] }),
+    ]) {
+      expectDirectAndInsertion(
+        new FencedNode({
+          options: {},
+          parameterOne: composite,
+          parameterTwo: [symbol()],
+          parameterThree: composite,
+        }),
+        fencedXml("[&quot;x&quot;]", "[&quot;x&quot;]"),
+      );
+    }
+
+    for (const kind of ["formula", "mrow", "table"] as const) {
+      const composite = { kind, value: [null] } as unknown as MathNode;
+      expectDirectAndInsertion(
+        new FencedNode({
+          options: {},
+          parameterOne: composite,
+          parameterTwo: [symbol()],
+          parameterThree: composite,
+        }),
+        fencedXml("[nil]", "[nil]"),
+      );
+    }
+  });
+
+  it.each([
+    ["empty", "", "[&quot;&quot;]"],
+    ["quote", '"', String.raw`[&quot;\&quot;&quot;]`],
+    ["backslash", "\\", String.raw`[&quot;\\&quot;]`],
+    ["controls", "\0\u0007\b\t\n\v\f\r\u001b", String.raw`[&quot;\u0000\a\b\t\n\v\f\r\e&quot;]`],
+    ["hex controls", "\u000e\u001f\u007f", String.raw`[&quot;\u000E\u001F\u007F&quot;]`],
+    ["unicode", "π", "[&quot;π&quot;]"],
+    ["interpolation", "#{x} #@x #$x", String.raw`[&quot;\#{x} \#@x \#$x&quot;]`],
+  ])("pins Fenced's Ruby string #inspect spelling for %s", (_case, value, paren) => {
+    const composite = new FormulaNode({ value: [value] });
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: composite,
+        parameterTwo: [symbol()],
+        parameterThree: composite,
+      }),
+      fencedXml(paren, paren),
+    );
+  });
+
+  it("keeps Fenced refusals narrow and fully pinned", () => {
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new FencedNode({
+            options: {},
+            parameterOne: new FormulaNode({ value: [symbol()] }),
+            parameterTwo: [symbol()],
+            parameterThree: symbol(")"),
+          }),
+        ),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterOne: holds a "formula" node whose value contains node objects with nondeterministic Ruby #inspect addresses',
+      },
+    );
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new FencedNode({
+            options: {},
+            parameterOne: "(",
+            parameterTwo: [symbol()],
+            parameterThree: ")",
+          }),
+        ),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterOne: cannot read a value from the bare string "(" — the gem raises NoMethodError here',
+      },
+    );
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new FencedNode({
+            options: {},
+            parameterOne: new AbsNode({ parameterOne: symbol() }),
+            parameterTwo: [symbol()],
+            parameterThree: symbol(")"),
+          }),
+        ),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterOne: a "abs" node has no value reader — the gem raises NoMethodError here',
+      },
+    );
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new FencedNode({
+            options: {},
+            parameterOne: symbol("("),
+            parameterTwo: [null] as unknown as readonly MathNode[],
+            parameterThree: symbol(")"),
+          }),
+        ),
+      {
+        kind: "fenced",
+        message: "fenced.parameterTwo[0]: cannot insert nil — the gem raises NoMethodError here",
+      },
+    );
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new FencedNode({
+            options: {},
+            parameterOne: symbol("("),
+            parameterTwo: "x",
+            parameterThree: symbol(")"),
+          }),
+        ),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterTwo[0]: cannot insert the bare string "x" — the gem raises NoMethodError here',
+      },
+    );
+  });
+});
+
 describe("generated OMML symbol-data deferral", () => {
   it("uses a named Symbol's explicit value only on insertion", () => {
     const node = new SymbolNode({ id: "Plus", value: "WRONG" });
@@ -1641,24 +2141,11 @@ describe("generated OMML symbol-data deferral", () => {
 
 describe("OMML partial refusal boundary", () => {
   const omittedKinds = [
-    "abs",
-    "bar",
-    "ceil",
     "color",
-    "ddot",
-    "dot",
-    "fenced",
-    "floor",
     "fontStyle",
-    "hat",
     "linebreak",
     "mpadded",
-    "norm",
-    "overleftrightarrow",
     "sqrt",
-    "tilde",
-    "ul",
-    "vec",
   ] as const satisfies readonly NodeKind[];
 
   it.each(omittedKinds)("refuses omitted kind %s", (kind) => {

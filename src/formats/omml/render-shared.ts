@@ -136,6 +136,13 @@ export function plainRun(value: string): XmlElement {
   return new XmlElement("m:r").append(textElement(value));
 }
 
+export function styledRun(value: string): XmlElement {
+  return new XmlElement("m:r").append(
+    new XmlElement("m:rPr").append(new XmlElement("m:sty").setAttribute("m:val", "p")),
+    textElement(value),
+  );
+}
+
 export function wordRunProperties(italic: boolean): XmlElement {
   const fonts = new XmlElement("w:rFonts").setAttributes(
     new Map([
@@ -250,6 +257,80 @@ export function renderOverUnder(
     ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
     ommlSlot(limit, scriptSlot, context, kind, `${kind}.parameterTwo`),
   );
+}
+
+/** `Formula.new(Array(value))` followed by Formula insertion. */
+export function ommlFormulaSlot(
+  value: unknown,
+  tagName: string,
+  context: RenderContext,
+  kind: string,
+  at: string,
+): XmlElement {
+  const tag = new XmlElement(`m:${tagName}`);
+  const items = value === null || value === undefined ? [] : Array.isArray(value) ? value : [value];
+  items.forEach((item, index) => {
+    tag.append(insertSlotItem(item, context, kind, `${at}[${index}]`));
+  });
+  return tag;
+}
+
+/** `UnaryFunction#omml_value`: compact a list, or wrap one scalar. */
+export function renderUnaryValue(
+  value: unknown,
+  context: RenderContext,
+  kind: string,
+  at: string,
+): OmmlRendered[] {
+  if (value === null || value === undefined) return [];
+  if (!Array.isArray(value)) return [insertSlotItem(value, context, kind, at)];
+  return value.flatMap((item, index) =>
+    item === null || item === undefined
+      ? []
+      : [insertSlotItem(item, context, kind, `${at}[${index}]`)],
+  );
+}
+
+export function renderAccent(
+  kind: string,
+  value: unknown,
+  character: string,
+  context: RenderContext,
+  at: string,
+): XmlElement {
+  return new XmlElement("m:acc").append(
+    new XmlElement("m:accPr").append(new XmlElement("m:chr").setAttribute("m:val", character)),
+    ommlSlot(value, "e", context, kind, at),
+  );
+}
+
+export function renderLiteralScript(
+  kind: string,
+  position: "Low" | "Upp",
+  base: unknown,
+  literal: string,
+  context: RenderContext,
+  followDisplaystyle: boolean,
+): XmlElement {
+  if (!followDisplaystyle || context.displaystyle) {
+    const name = `lim${position}`;
+    return new XmlElement(`m:${name}`).append(
+      structuralProperties(name),
+      ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
+      new XmlElement("m:lim").append(plainRun(literal)),
+    );
+  }
+
+  const name = position === "Upp" ? "sSup" : "sSub";
+  const scriptSlot = position === "Upp" ? "sup" : "sub";
+  return new XmlElement(`m:${name}`).append(
+    structuralProperties(name),
+    ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
+    new XmlElement(`m:${scriptSlot}`).append(plainRun(literal)),
+  );
+}
+export function rubyTruthy(value: unknown): boolean {
+  return value !== null && value !== undefined && value !== false;
 }
 
 export function requireElement(

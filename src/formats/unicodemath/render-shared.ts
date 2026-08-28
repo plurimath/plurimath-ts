@@ -32,7 +32,7 @@ import {
   RenderError,
 } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
-import { rubyNumberToS } from "../../core/ruby-semantics";
+import { assertReproducibleRubyHashOrder, rubyNumberToS } from "../../core/ruby-semantics";
 import { UNICODEMATH_HEXCODE_IN_INPUT } from "../../generated/unicodemath/render-tables";
 
 export const FORMAT = "unicodemath";
@@ -451,10 +451,10 @@ const RUBY_SPACE = "[ \\t\\r\\n\\f\\v]";
  * sites — silently drops every non-string, where the gem prints it. Only nil
  * interpolates to nothing; `false` does not.
  */
-export function rubyInterpolate(value: unknown): string {
+export function rubyInterpolate(value: unknown, kind: string, at: string): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
-  return rubyInspect(value);
+  return rubyInspect(value, kind, at);
 }
 
 /**
@@ -552,7 +552,7 @@ export function rubyInterpolate(value: unknown): string {
  * than guessed at.
  */
 
-function rubyInspect(value: unknown): string {
+function rubyInspect(value: unknown, kind: string, at: string): string {
   if (value === null || value === undefined) return "nil";
   if (typeof value === "boolean") return String(value);
   if (typeof value === "string") return JSON.stringify(value);
@@ -569,15 +569,18 @@ function rubyInspect(value: unknown): string {
         "values out here would in fact agree; the band is deliberately conservative " +
         "because Ruby's format is not decided by magnitude alone (TODO.plan/deferred.md)",
       FORMAT,
-      "unknown",
+      kind,
     );
   }
-  if (Array.isArray(value)) return `[${value.map((entry) => rubyInspect(entry)).join(", ")}]`;
-  if (typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>);
-    return `{${entries.map(([key, inner]) => `${key}: ${rubyInspect(inner)}`).join(", ")}}`;
+  if (Array.isArray(value)) {
+    return `[${value.map((entry, index) => rubyInspect(entry, kind, `${at}[${index}]`)).join(", ")}]`;
   }
-  throw new RenderError(`cannot interpolate ${describeSlot(value)}`, FORMAT, "unknown");
+  if (typeof value === "object") {
+    assertReproducibleRubyHashOrder(value, FORMAT, kind, at);
+    const entries = Object.entries(value as Record<string, unknown>);
+    return `{${entries.map(([key, inner]) => `${key}: ${rubyInspect(inner, kind, `${at}.${key}`)}`).join(", ")}}`;
+  }
+  throw new RenderError(`cannot interpolate ${describeSlot(value)}`, FORMAT, kind);
 }
 
 /**

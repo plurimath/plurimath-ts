@@ -106,6 +106,9 @@ export function createRenderContext(displaystyle: boolean): RenderContext {
     render(node) {
       return renderNode(node, context);
     },
+    withDisplaystyle(childDisplaystyle) {
+      return childDisplaystyle === displaystyle ? context : createRenderContext(childDisplaystyle);
+    },
   };
   return context;
 }

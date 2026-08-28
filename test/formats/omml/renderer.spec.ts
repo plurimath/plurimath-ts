@@ -38,6 +38,45 @@ import { toOmml, toOmmlWithoutMathTag } from "../../../src/formats/omml/renderer
 
 const xml = (...lines: readonly string[]): string => `${lines.join("\n")}\n`;
 const symbol = (value = "x") => new SymbolNode({ value });
+const nestedOverset = () =>
+  new OversetNode({ options: {}, parameterOne: symbol("x"), parameterTwo: symbol("y") });
+
+const nestedSlice2Containers = {
+  sum: () =>
+    new SumNode({
+      options: {},
+      parameterOne: symbol("a"),
+      parameterTwo: symbol("b"),
+      parameterThree: nestedOverset(),
+    }),
+  prod: () =>
+    new ProdNode({
+      options: {},
+      parameterOne: symbol("a"),
+      parameterTwo: symbol("b"),
+      parameterThree: nestedOverset(),
+    }),
+  int: () =>
+    new IntNode({
+      options: {},
+      parameterOne: symbol("a"),
+      parameterTwo: symbol("b"),
+      parameterThree: nestedOverset(),
+    }),
+  oint: () =>
+    new OintNode({
+      options: {},
+      parameterOne: symbol("a"),
+      parameterTwo: symbol("b"),
+      parameterThree: nestedOverset(),
+    }),
+  overset: () =>
+    new OversetNode({ options: {}, parameterOne: nestedOverset(), parameterTwo: symbol("z") }),
+  underset: () =>
+    new UndersetNode({ options: {}, parameterOne: nestedOverset(), parameterTwo: symbol("z") }),
+  obrace: () => new ObraceNode({ attributes: {}, parameterOne: nestedOverset() }),
+  ubrace: () => new UbraceNode({ attributes: {}, parameterOne: nestedOverset() }),
+} as const;
 
 interface Refusal {
   readonly kind: string;
@@ -819,6 +858,36 @@ describe("OMML parameter-slot parity", () => {
       },
 
 describe("OMML scripts and limits slice", () => {
+  it.each([
+    ["sum", true, 1, 0],
+    ["sum", false, 0, 1],
+    ["prod", true, 1, 0],
+    ["prod", false, 0, 1],
+    ["int", true, 1, 0],
+    ["int", false, 0, 1],
+    ["oint", true, 1, 0],
+    ["oint", false, 0, 1],
+    ["overset", true, 2, 0],
+    ["overset", false, 0, 2],
+    ["underset", true, 1, 0],
+    ["underset", false, 0, 1],
+    ["obrace", true, 2, 0],
+    ["obrace", false, 2, 0],
+    ["ubrace", true, 1, 0],
+    ["ubrace", false, 1, 0],
+  ] as const)(
+    "pins %s's nested display context at Formula displaystyle=%s",
+    (kind, displaystyle, limUpp, sSup) => {
+      const rendered = toOmml(
+        new FormulaNode({ displaystyle, value: [nestedSlice2Containers[kind]()] }),
+      );
+      expect({
+        limUpp: rendered.match(/<m:limUpp>/g)?.length ?? 0,
+        sSup: rendered.match(/<m:sSup>/g)?.length ?? 0,
+      }).toEqual({ limUpp, sSup });
+    },
+  );
+
   it.each([
     [
       "overset",

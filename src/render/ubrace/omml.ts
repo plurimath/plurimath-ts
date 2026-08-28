@@ -14,7 +14,13 @@ export function renderUbrace(node: NodeOf<"ubrace">, context: RenderContext): Xm
 
   return new XmlElement("m:limLow").append(
     structuralProperties("limLow"),
-    ommlSlot(node.parameterOne, "e", context, node.kind, "ubrace.parameterOne"),
+    ommlSlot(
+      node.parameterOne,
+      "e",
+      context.withDisplaystyle(true),
+      node.kind,
+      "ubrace.parameterOne",
+    ),
     new XmlElement("m:lim").append(plainRun(BRACE)),
   );
 }

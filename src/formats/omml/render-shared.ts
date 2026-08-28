@@ -15,6 +15,7 @@ export interface RenderContext {
   readonly displaystyle: boolean;
   readonly insert: (node: MathNode) => OmmlRendered;
   readonly render: (node: MathNode) => OmmlRendered;
+  readonly withDisplaystyle: (displaystyle: boolean) => RenderContext;
 }
 
 export type NodeOf<K extends NodeKind> = Extract<MathNode, { readonly kind: K }>;

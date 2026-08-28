@@ -22,7 +22,13 @@ export function renderObrace(node: NodeOf<"obrace">, context: RenderContext): Xm
 
   return new XmlElement("m:limUpp").append(
     structuralProperties("limUpp"),
-    ommlSlot(node.parameterOne, "e", context, node.kind, "obrace.parameterOne"),
+    ommlSlot(
+      node.parameterOne,
+      "e",
+      context.withDisplaystyle(true),
+      node.kind,
+      "obrace.parameterOne",
+    ),
     new XmlElement("m:lim").append(plainRun(BRACE)),
   );
 }

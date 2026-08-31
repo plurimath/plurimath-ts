@@ -1043,35 +1043,159 @@ describe("OMML scripts and limits slice", () => {
     expectDirectAndInsertion(node, specializedNary("", limitLocation as "subSup" | "undOvr"));
   });
 
-  it("pins Overset/Underset's asymmetric accentunder option", () => {
-    expectDirectAndInsertion(
+  it.each([
+    [
+      "overset",
+      true,
+      false,
+      new OversetNode({
+        options: { accentunder: false },
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+      }),
+      limitXml("Upp", "x"),
+    ],
+    [
+      "overset",
+      true,
+      true,
       new OversetNode({
         options: { accentunder: true },
         parameterOne: symbol(),
         parameterTwo: symbol(),
       }),
       limitXml("Upp", "x"),
-    );
-    expectDirectAndInsertion(
+    ],
+    [
+      "overset",
+      false,
+      false,
+      new OversetNode({
+        options: { accentunder: false },
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+      }),
+      POWER_X,
+    ],
+    [
+      "overset",
+      false,
+      true,
+      new OversetNode({
+        options: { accentunder: true },
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+      }),
+      POWER_X,
+    ],
+    [
+      "underset",
+      true,
+      false,
+      new UndersetNode({
+        options: { accentunder: false },
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+      }),
+      limitXml("Low", "x"),
+    ],
+    [
+      "underset",
+      true,
+      true,
       new UndersetNode({
         options: { accentunder: true },
         parameterOne: symbol(),
         parameterTwo: symbol(),
       }),
       UNDERSET_ACCENT,
-    );
-  });
-
-  it("pins Obrace/Ubrace's asymmetric accent attribute", () => {
-    expectDirectAndInsertion(
+    ],
+    [
+      "underset",
+      false,
+      false,
+      new UndersetNode({
+        options: { accentunder: false },
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+      }),
+      BASE_X,
+    ],
+    [
+      "underset",
+      false,
+      true,
+      new UndersetNode({
+        options: { accentunder: true },
+        parameterOne: symbol(),
+        parameterTwo: symbol(),
+      }),
+      BASE_X,
+    ],
+    [
+      "obrace",
+      true,
+      false,
+      new ObraceNode({ attributes: { accent: false }, parameterOne: symbol() }),
+      limitXml("Upp", "⏞"),
+    ],
+    [
+      "obrace",
+      true,
+      true,
       new ObraceNode({ attributes: { accent: true }, parameterOne: symbol() }),
       OBRACE_ACCENT,
-    );
-    expectDirectAndInsertion(
+    ],
+    [
+      "obrace",
+      false,
+      false,
+      new ObraceNode({ attributes: { accent: false }, parameterOne: symbol() }),
+      limitXml("Upp", "⏞"),
+    ],
+    [
+      "obrace",
+      false,
+      true,
+      new ObraceNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      OBRACE_ACCENT,
+    ],
+    [
+      "ubrace",
+      true,
+      false,
+      new UbraceNode({ attributes: { accent: false }, parameterOne: symbol() }),
+      limitXml("Low", "⏟"),
+    ],
+    [
+      "ubrace",
+      true,
+      true,
       new UbraceNode({ attributes: { accent: true }, parameterOne: symbol() }),
       limitXml("Low", "⏟"),
-    );
-  });
+    ],
+    [
+      "ubrace",
+      false,
+      false,
+      new UbraceNode({ attributes: { accent: false }, parameterOne: symbol() }),
+      limitXml("Low", "⏟"),
+    ],
+    [
+      "ubrace",
+      false,
+      true,
+      new UbraceNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      limitXml("Low", "⏟"),
+    ],
+  ] as const)(
+    "pins %s at Formula displaystyle=%s with accent=%s",
+    (_kind, displaystyle, _accent, node, expected) => {
+      expect(toOmml(new FormulaNode({ displaystyle, value: [node] }))).toBe(
+        publicFragment(expected),
+      );
+    },
+  );
 });
 
 describe("generated OMML symbol-data deferral", () => {

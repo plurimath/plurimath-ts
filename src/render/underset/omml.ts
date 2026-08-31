@@ -1,5 +1,7 @@
+import { BaseNode } from "../../core/index";
 import {
   type NodeOf,
+  type OmmlRendered,
   ommlSlot,
   type RenderContext,
   renderOverUnder,
@@ -7,7 +9,13 @@ import {
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
-export function renderUnderset(node: NodeOf<"underset">, context: RenderContext): XmlElement {
+export function renderUnderset(node: NodeOf<"underset">, context: RenderContext): OmmlRendered {
+  if (!context.displaystyle) {
+    return context.render(
+      new BaseNode({ parameterOne: node.parameterOne, parameterTwo: node.parameterTwo }),
+    );
+  }
+
   if (!rubyTruthy(node.options.accentunder)) {
     return renderOverUnder(node.kind, "Low", node.parameterOne, node.parameterTwo, context);
   }

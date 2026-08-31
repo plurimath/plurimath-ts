@@ -158,6 +158,69 @@ describe("field presence", () => {
       "table.options.2: integer-like hash keys are deferred",
     );
   });
+
+  /**
+   * The predicate in `ruby-semantics.ts` decides between a typed refusal and
+   * silently-wrong output, and its boundary is exact: JavaScript hoists the
+   * array-index keys "0" through "4294967294" and leaves every other string
+   * where it was put. Both sides of that line are pinned, because a guard that
+   * grew too greedy — refusing "4294967295", or "01", or "1e2" — is a defect in
+   * the same way a guard that misses "0" is, and only the refused half was
+   * covered before.
+   *
+   * Each case asserts the JavaScript behaviour it depends on rather than a
+   * remembered list, so the day a runtime changes what it hoists, this fails
+   * here instead of at a renderer.
+   */
+  const hoistsAheadOfEarlierKeys = (key: string): boolean => {
+    const probe: Record<string, string> = {};
+    probe.zzz = "inserted first";
+    probe[key] = "inserted second";
+    return Object.keys(probe)[0] === key;
+  };
+
+  const optionsWith = (key: string): Record<string, string> => {
+    const options: Record<string, string> = {};
+    options.zzz = "inserted first";
+    options[key] = "inserted second";
+    return options;
+  };
+
+  it.each(["0", "1", "2", "10", "4294967293", "4294967294"])(
+    'refuses "%s", which JavaScript hoists ahead of an earlier key',
+    (key) => {
+      expect(hoistsAheadOfEarlierKeys(key)).toBe(true);
+      expect(() => normalize(new TableNode({ value: [], options: optionsWith(key) }))).toThrow(
+        `table.options.${key}: integer-like hash keys are deferred`,
+      );
+    },
+  );
+
+  it.each([
+    "4294967295",
+    "4294967296",
+    "9007199254740993",
+    "-0",
+    "-1",
+    "00",
+    "01",
+    "1.0",
+    "1e2",
+    "0x1",
+    " 1",
+    "1 ",
+    "+1",
+    "",
+    "Infinity",
+    "NaN",
+    "\u0661",
+  ])('accepts "%s", which JavaScript leaves in insertion order', (key) => {
+    expect(hoistsAheadOfEarlierKeys(key)).toBe(false);
+    const fields = normalize(new TableNode({ value: [], options: optionsWith(key) })).fields as {
+      options: Record<string, unknown>;
+    };
+    expect(Object.keys(fields.options)).toStrictEqual([key, "zzz"].sort());
+  });
 });
 
 /**

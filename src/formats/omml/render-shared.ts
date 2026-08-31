@@ -253,40 +253,8 @@ export function renderOverUnder(
   );
 }
 
-export function ommlSlot(
-  value: unknown,
-  tagName: string,
-  context: RenderContext,
-  kind: string,
-  at: string,
-): XmlElement {
-  const tag = new XmlElement(`m:${tagName}`);
-  if (value === null || value === undefined) return tag.append(plainRun("&#8203;"));
-  if (Array.isArray(value)) {
-    value.forEach((item, index) => {
-      tag.append(insertSlotItem(item, context, kind, `${at}[${index}]`));
-    });
-    return tag;
-  }
-  return tag.append(insertSlotItem(value, context, kind, at));
-}
-
 export function rubyTruthy(value: unknown): boolean {
   return value !== null && value !== undefined && value !== false;
-}
-
-function insertSlotItem(
-  value: unknown,
-  context: RenderContext,
-  kind: string,
-  at: string,
-): OmmlRendered {
-  if (hasNodeKind(value)) return insertChild(value, context, at);
-  throw new RenderError(
-    `${at}: cannot insert ${describeSlot(value)} — the gem raises NoMethodError here`,
-    FORMAT,
-    kind,
-  );
 }
 
 export function requireElement(

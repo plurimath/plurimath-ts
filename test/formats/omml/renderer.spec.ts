@@ -605,15 +605,6 @@ function table(): TableNode {
   });
 }
 
-function contractSlot(tag: string, values: readonly string[]): readonly string[] {
-  if (values.length === 0) return [`  <m:${tag}/>`];
-  return [
-    `  <m:${tag}>`,
-    ...values.flatMap((value) => ["    <m:r>", `      <m:t>${value}</m:t>`, "    </m:r>"]),
-    `  </m:${tag}>`,
-  ];
-}
-
 function structuralContractXml(
   root: string,
   slots: readonly (readonly [tag: string, values: readonly string[]])[],
@@ -969,6 +960,9 @@ describe("OMML parameter-slot parity", () => {
         message:
           'base.parameterOne: cannot insert the bare string "bare" — the gem raises NoMethodError here',
       },
+    );
+  });
+});
 
 describe("OMML scripts and limits slice", () => {
   it.each(UNDERSET_SLOT_CASES)(

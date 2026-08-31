@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from "vitest";
 import { RenderError } from "../../../src/core/errors";
-import type { MathNode, NodeKind } from "../../../src/core/nodes";
+import type { MathNode, NodeKind, NodeParameter } from "../../../src/core/nodes";
 import {
   BaseNode,
   BinaryFunctionNode,
@@ -349,6 +349,146 @@ function table(): TableNode {
   });
 }
 
+function contractSlot(tag: string, values: readonly string[]): readonly string[] {
+  if (values.length === 0) return [`  <m:${tag}/>`];
+  return [
+    `  <m:${tag}>`,
+    ...values.flatMap((value) => ["    <m:r>", `      <m:t>${value}</m:t>`, "    </m:r>"]),
+    `  </m:${tag}>`,
+  ];
+}
+
+function structuralContractXml(
+  root: string,
+  slots: readonly (readonly [tag: string, values: readonly string[]])[],
+): string {
+  return xml(
+    `<m:${root}>`,
+    `  <m:${root}Pr>`,
+    "    <m:ctrlPr>",
+    "      <w:rPr>",
+    '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "        <w:i/>",
+    "      </w:rPr>",
+    "    </m:ctrlPr>",
+    `  </m:${root}Pr>`,
+    ...slots.flatMap(([tag, values]) => contractSlot(tag, values)),
+    `</m:${root}>`,
+  );
+}
+
+function naryContractXml(
+  slots: readonly (readonly string[])[],
+  values: readonly NodeParameter[],
+  operator = "x",
+): string {
+  return xml(
+    "<m:nary>",
+    "  <m:naryPr>",
+    `    <m:chr m:val="${operator}"/>`,
+    '    <m:limLoc m:val="subSup"/>',
+    ...(values[0] === null ? ['    <m:subHide m:val="1"/>'] : []),
+    ...(values[1] === null ? ['    <m:supHide m:val="1"/>'] : []),
+    "    <m:ctrlPr>",
+    "      <w:rPr>",
+    '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "        <w:i/>",
+    "      </w:rPr>",
+    "    </m:ctrlPr>",
+    "  </m:naryPr>",
+    ...contractSlot("sub", slots[0] ?? []),
+    ...contractSlot("sup", slots[1] ?? []),
+    ...contractSlot("e", slots[2] ?? []),
+    "</m:nary>",
+  );
+}
+
+interface ParameterShapeFixture {
+  readonly expected: readonly string[];
+  readonly name: string;
+  readonly value: NodeParameter;
+}
+
+const PARAMETER_SHAPES: readonly ParameterShapeFixture[] = [
+  { expected: ["&#8203;"], name: "nil", value: null },
+  { expected: [], name: "empty array", value: [] },
+  { expected: ["a", "b"], name: "node array", value: [symbol("a"), symbol("b")] },
+];
+
+interface ParameterCallerFixture {
+  readonly build: (values: readonly NodeParameter[]) => MathNode;
+  readonly expected: (
+    slots: readonly (readonly string[])[],
+    values: readonly NodeParameter[],
+  ) => string;
+  readonly kind: string;
+  readonly slots: readonly string[];
+}
+
+const PARAMETER_CALLERS: readonly ParameterCallerFixture[] = [
+  {
+    build: ([parameterOne, parameterTwo]) => new BaseNode({ parameterOne, parameterTwo }),
+    expected: (slots) =>
+      structuralContractXml("sSub", [
+        ["e", slots[0] ?? []],
+        ["sub", slots[1] ?? []],
+      ]),
+    kind: "base",
+    slots: ["parameterOne", "parameterTwo"],
+  },
+  {
+    build: ([parameterOne, parameterTwo]) => new FracNode({ parameterOne, parameterTwo }),
+    expected: (slots) =>
+      structuralContractXml("f", [
+        ["num", slots[0] ?? []],
+        ["den", slots[1] ?? []],
+      ]),
+    kind: "frac",
+    slots: ["parameterOne", "parameterTwo"],
+  },
+  {
+    build: ([parameterOne, parameterTwo]) =>
+      new BinaryFunctionNode({ name: "Power", parameterOne, parameterTwo }),
+    expected: (slots) =>
+      structuralContractXml("sSup", [
+        ["e", slots[0] ?? []],
+        ["sup", slots[1] ?? []],
+      ]),
+    kind: "power",
+    slots: ["parameterOne", "parameterTwo"],
+  },
+  {
+    build: ([parameterOne, parameterTwo, parameterThree]) =>
+      new TernaryFunctionNode({
+        name: "PowerBase",
+        parameterOne,
+        parameterTwo,
+        parameterThree,
+      }),
+    expected: (slots) =>
+      structuralContractXml("sSubSup", [
+        ["e", slots[0] ?? []],
+        ["sub", slots[1] ?? []],
+        ["sup", slots[2] ?? []],
+      ]),
+    kind: "powerBase",
+    slots: ["parameterOne", "parameterTwo", "parameterThree"],
+  },
+  {
+    build: ([parameterTwo, parameterThree, parameterFour]) =>
+      new NaryNode({
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo,
+        parameterThree,
+        parameterFour,
+      }),
+    expected: naryContractXml,
+    kind: "nary",
+    slots: ["parameterTwo", "parameterThree", "parameterFour"],
+  },
+];
+
 describe("OMML first vertical slice", () => {
   it("pins the public Formula wrapper and Mrow inheritance", () => {
     expect(toOmml(new FormulaNode({ value: [symbol()] }))).toBe(PUBLIC_X);
@@ -518,6 +658,60 @@ describe("OMML first vertical slice", () => {
         kind: "ternaryFunction",
         message:
           "TernaryFunction has no to_omml_without_math_tag in the pinned gem and refuses instead of emitting markup",
+      },
+    );
+  });
+});
+
+describe("OMML parameter-slot parity", () => {
+  for (const caller of PARAMETER_CALLERS) {
+    for (const [slotIndex, slot] of caller.slots.entries()) {
+      for (const shape of PARAMETER_SHAPES) {
+        it(`${caller.kind}.${slot} renders ${shape.name}`, () => {
+          const values: NodeParameter[] = caller.slots.map(() => symbol());
+          const expectedSlots: string[][] = caller.slots.map(() => ["x"]);
+          values[slotIndex] = shape.value;
+          expectedSlots[slotIndex] = [...shape.expected];
+
+          if (caller.kind === "powerBase" && slotIndex === 0 && Array.isArray(shape.value)) {
+            expectRefusal(() => toOmmlWithoutMathTag(caller.build(values)), {
+              kind: "ternaryFunction",
+              message:
+                "powerBase.parameterOne: cannot inspect a list for omml_tag_name — the gem raises NoMethodError here",
+            });
+            return;
+          }
+
+          expect(toOmmlWithoutMathTag(caller.build(values))).toBe(
+            caller.expected(expectedSlots, values),
+          );
+        });
+      }
+    }
+  }
+
+  it("renders an all-nil Nary with hidden limits and placeholder slots", () => {
+    const values: readonly NodeParameter[] = [null, null, null];
+    expect(
+      toOmmlWithoutMathTag(
+        new NaryNode({
+          options: {},
+          parameterOne: null,
+          parameterTwo: null,
+          parameterThree: null,
+          parameterFour: null,
+        }),
+      ),
+    ).toBe(naryContractXml([["&#8203;"], ["&#8203;"], ["&#8203;"]], values, ""));
+  });
+
+  it("retains the Base bare-string refusal", () => {
+    expectRefusal(
+      () => toOmmlWithoutMathTag(new BaseNode({ parameterOne: "bare", parameterTwo: symbol() })),
+      {
+        kind: "base",
+        message:
+          'base.parameterOne: cannot insert the bare string "bare" — the gem raises NoMethodError here',
       },
     );
   });

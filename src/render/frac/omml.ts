@@ -1,6 +1,6 @@
 import {
   type NodeOf,
-  ommlParameter,
+  ommlSlot,
   type RenderContext,
   requireEmptyOptions,
   structuralProperties,
@@ -11,7 +11,7 @@ export function renderFrac(node: NodeOf<"frac">, context: RenderContext): XmlEle
   requireEmptyOptions(node.options, node.kind, "frac.options");
   return new XmlElement("m:f").append(
     structuralProperties("f"),
-    ommlParameter(node.parameterOne, "num", context, node.kind, "frac.parameterOne"),
-    ommlParameter(node.parameterTwo, "den", context, node.kind, "frac.parameterTwo"),
+    ommlSlot(node.parameterOne, "num", context, node.kind, "frac.parameterOne"),
+    ommlSlot(node.parameterTwo, "den", context, node.kind, "frac.parameterTwo"),
   );
 }

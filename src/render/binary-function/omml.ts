@@ -3,7 +3,7 @@ import {
   FORMAT,
   insertChild,
   type NodeOf,
-  ommlParameter,
+  ommlSlot,
   type RenderContext,
   requireNodeList,
   structuralProperties,
@@ -23,8 +23,8 @@ export function renderBinaryFunction(
     case "Power":
       return new XmlElement("m:sSup").append(
         structuralProperties("sSup"),
-        ommlParameter(node.parameterOne, "e", context, node.kind, "power.parameterOne"),
-        ommlParameter(node.parameterTwo, "sup", context, node.kind, "power.parameterTwo"),
+        ommlSlot(node.parameterOne, "e", context, node.kind, "power.parameterOne"),
+        ommlSlot(node.parameterTwo, "sup", context, node.kind, "power.parameterTwo"),
       );
     case "Td":
       return renderTd(node, context);

@@ -2,7 +2,7 @@ import { hasNodeKind, RenderError } from "../../core/index";
 import {
   FORMAT,
   type NodeOf,
-  ommlParameter,
+  ommlSlot,
   type RenderContext,
   structuralProperties,
 } from "../../formats/omml/render-shared";
@@ -26,6 +26,13 @@ export function renderTernaryFunction(
       node.kind,
     );
   }
+  if (Array.isArray(node.parameterOne)) {
+    throw new RenderError(
+      "powerBase.parameterOne: cannot inspect a list for omml_tag_name — the gem raises NoMethodError here",
+      FORMAT,
+      node.kind,
+    );
+  }
   if (
     hasNodeKind(node.parameterOne) &&
     (node.parameterOne as { readonly kind: string }).kind === "nary"
@@ -38,8 +45,8 @@ export function renderTernaryFunction(
   }
   return new XmlElement("m:sSubSup").append(
     structuralProperties("sSubSup"),
-    ommlParameter(node.parameterOne, "e", context, node.kind, "powerBase.parameterOne"),
-    ommlParameter(node.parameterTwo, "sub", context, node.kind, "powerBase.parameterTwo"),
-    ommlParameter(node.parameterThree, "sup", context, node.kind, "powerBase.parameterThree"),
+    ommlSlot(node.parameterOne, "e", context, node.kind, "powerBase.parameterOne"),
+    ommlSlot(node.parameterTwo, "sub", context, node.kind, "powerBase.parameterTwo"),
+    ommlSlot(node.parameterThree, "sup", context, node.kind, "powerBase.parameterThree"),
   );
 }

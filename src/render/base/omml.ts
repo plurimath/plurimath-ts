@@ -1,6 +1,6 @@
 import {
   type NodeOf,
-  ommlParameter,
+  ommlSlot,
   type RenderContext,
   requireEmptyOptions,
   structuralProperties,
@@ -11,7 +11,7 @@ export function renderBase(node: NodeOf<"base">, context: RenderContext): XmlEle
   requireEmptyOptions(node.options, node.kind, "base.options");
   return new XmlElement("m:sSub").append(
     structuralProperties("sSub"),
-    ommlParameter(node.parameterOne, "e", context, node.kind, "base.parameterOne"),
-    ommlParameter(node.parameterTwo, "sub", context, node.kind, "base.parameterTwo"),
+    ommlSlot(node.parameterOne, "e", context, node.kind, "base.parameterOne"),
+    ommlSlot(node.parameterTwo, "sub", context, node.kind, "base.parameterTwo"),
   );
 }

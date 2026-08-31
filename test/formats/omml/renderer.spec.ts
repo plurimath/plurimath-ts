@@ -217,6 +217,119 @@ const BASE_X = xml(
   "</m:sSub>",
 );
 
+function contractSlot(tag: string, values: readonly string[]): readonly string[] {
+  if (values.length === 0) return [`  <m:${tag}/>`];
+  return [
+    `  <m:${tag}>`,
+    ...values.flatMap((value) => ["    <m:r>", `      <m:t>${value}</m:t>`, "    </m:r>"]),
+    `  </m:${tag}>`,
+  ];
+}
+
+function baseContractXml(base: readonly string[], sub: readonly string[]): string {
+  return xml(
+    "<m:sSub>",
+    "  <m:sSubPr>",
+    "    <m:ctrlPr>",
+    "      <w:rPr>",
+    '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "        <w:i/>",
+    "      </w:rPr>",
+    "    </m:ctrlPr>",
+    "  </m:sSubPr>",
+    ...contractSlot("e", base),
+    ...contractSlot("sub", sub),
+    "</m:sSub>",
+  );
+}
+
+function lowLimitContractXml(base: readonly string[], limit: readonly string[]): string {
+  return xml(
+    "<m:limLow>",
+    "  <m:limLowPr>",
+    "    <m:ctrlPr>",
+    "      <w:rPr>",
+    '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "        <w:i/>",
+    "      </w:rPr>",
+    "    </m:ctrlPr>",
+    "  </m:limLowPr>",
+    ...contractSlot("e", base),
+    ...contractSlot("lim", limit),
+    "</m:limLow>",
+  );
+}
+
+interface UndersetSlotCase {
+  readonly displaystyle: boolean;
+  readonly expectedOne: readonly string[];
+  readonly expectedTwo: readonly string[];
+  readonly name: string;
+  readonly parameterOne: MathNode | readonly MathNode[] | null;
+  readonly parameterTwo: MathNode | readonly MathNode[] | null;
+}
+
+const UNDERSET_SLOT_CASES: readonly UndersetSlotCase[] = ([true, false] as const).flatMap(
+  (displaystyle) => [
+    {
+      displaystyle,
+      expectedOne: ["&#8203;"],
+      expectedTwo: ["&#8203;"],
+      name: "nil / nil",
+      parameterOne: null,
+      parameterTwo: null,
+    },
+    {
+      displaystyle,
+      expectedOne: ["&#8203;"],
+      expectedTwo: ["x"],
+      name: "nil / node",
+      parameterOne: null,
+      parameterTwo: symbol(),
+    },
+    {
+      displaystyle,
+      expectedOne: ["x"],
+      expectedTwo: ["&#8203;"],
+      name: "node / nil",
+      parameterOne: symbol(),
+      parameterTwo: null,
+    },
+    {
+      displaystyle,
+      expectedOne: [],
+      expectedTwo: ["x"],
+      name: "empty array / node",
+      parameterOne: [],
+      parameterTwo: symbol(),
+    },
+    {
+      displaystyle,
+      expectedOne: ["x", "x"],
+      expectedTwo: ["x"],
+      name: "node array / node",
+      parameterOne: [symbol(), symbol()],
+      parameterTwo: symbol(),
+    },
+    {
+      displaystyle,
+      expectedOne: ["x"],
+      expectedTwo: [],
+      name: "node / empty array",
+      parameterOne: symbol(),
+      parameterTwo: [],
+    },
+    {
+      displaystyle,
+      expectedOne: ["x"],
+      expectedTwo: ["x", "x"],
+      name: "node / node array",
+      parameterOne: symbol(),
+      parameterTwo: [symbol(), symbol()],
+    },
+  ],
+);
+
 const POWER_X = xml(
   "<m:sSup>",
   "  <m:sSupPr>",
@@ -858,6 +971,73 @@ describe("OMML parameter-slot parity", () => {
       },
 
 describe("OMML scripts and limits slice", () => {
+  it.each(UNDERSET_SLOT_CASES)(
+    "pins underset $name at Formula displaystyle=$displaystyle",
+    ({ displaystyle, expectedOne, expectedTwo, parameterOne, parameterTwo }) => {
+      const node = new UndersetNode({ options: {}, parameterOne, parameterTwo });
+      const expected = displaystyle
+        ? lowLimitContractXml(expectedOne, expectedTwo)
+        : baseContractXml(expectedOne, expectedTwo);
+      expect(toOmml(new FormulaNode({ displaystyle, value: [node] }))).toBe(
+        publicFragment(expected),
+      );
+    },
+  );
+
+  it.each([true, false])(
+    "ignores nested Base options at Formula displaystyle=%s",
+    (displaystyle) => {
+      const render = (options: Readonly<Record<string, unknown>>) =>
+        toOmml(
+          new FormulaNode({
+            displaystyle,
+            value: [
+              new UndersetNode({
+                options: {},
+                parameterOne: new BaseNode({
+                  options,
+                  parameterOne: symbol(),
+                  parameterTwo: symbol(),
+                }),
+                parameterTwo: symbol(),
+              }),
+            ],
+          }),
+        );
+      expect(render({ ignored: true })).toBe(render({}));
+    },
+  );
+
+  it.each([true, false])(
+    "retains the nested Base bare-string refusal at Formula displaystyle=%s",
+    (displaystyle) => {
+      expectRefusal(
+        () =>
+          toOmml(
+            new FormulaNode({
+              displaystyle,
+              value: [
+                new UndersetNode({
+                  options: {},
+                  parameterOne: new BaseNode({
+                    options: {},
+                    parameterOne: "bare",
+                    parameterTwo: symbol(),
+                  }),
+                  parameterTwo: symbol(),
+                }),
+              ],
+            }),
+          ),
+        {
+          kind: "base",
+          message:
+            'base.parameterOne: cannot insert the bare string "bare" — the gem raises NoMethodError here',
+        },
+      );
+    },
+  );
+
   it.each([
     ["sum", true, 1, 0],
     ["sum", false, 0, 1],

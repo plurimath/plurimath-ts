@@ -205,6 +205,11 @@ describe("field presence", () => {
     "00",
     "01",
     "1.0",
+    // Canonical fractional strings survive `String(Number(key)) === key`, so
+    // only the `Number.isInteger` conjunct rejects them. Without this case a
+    // guard that dropped that conjunct — and refused every "1.5" — stayed green.
+    "1.5",
+    "0.5",
     "1e2",
     "0x1",
     " 1",

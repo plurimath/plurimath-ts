@@ -73,8 +73,6 @@ describe("the subpaths actually work end to end", () => {
     expect(latex.toLatex(asciimath.parseAsciimath("frac(1)(2)"))).toBe("\\frac{1}{2}");
   });
 
-  it("renders a parsed formula as HTML", () => {});
-
   it("renders a parsed formula as UnicodeMath", () => {
     // Measured against the pinned oracle, not guessed:
     //   Plurimath::Math.parse("frac(1)(2)", :asciimath).to_unicodemath

@@ -211,6 +211,11 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
     arity: 1,
     build: (s, v) => new C.BarNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
   },
+  overleftrightarrow: {
+    arity: 1,
+    build: (s, v) =>
+      new C.OverleftrightarrowNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
+  },
   hat: {
     arity: 1,
     build: (s, v) => new C.HatNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
@@ -281,58 +286,6 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
  * byte divergence are different defects and must not share a table.
  */
 export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {};
-
-/**
- * The port's ZWSP-based script structure, emitted where the gem emits a bare
- * accent run. Hand-written from the port's measured output; the spec compares
- * the port against this and against the gem's own bytes, so a composition
- * mistake here fails rather than passing quietly.
- */
-const limScript = (tag: "limUpp" | "limLow", accent: string): readonly string[] => [
-  "  <m:oMath>",
-  `    <m:${tag}>`,
-  `      <m:${tag}Pr>`,
-  "        <m:ctrlPr>",
-  "          <w:rPr>",
-  '            <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
-  "            <w:i/>",
-  "          </w:rPr>",
-  "        </m:ctrlPr>",
-  `      </m:${tag}Pr>`,
-  "      <m:e>",
-  "        <m:r>",
-  "          <m:t>&#8203;</m:t>",
-  "        </m:r>",
-  "      </m:e>",
-  "      <m:lim>",
-  "        <m:r>",
-  `          <m:t>${accent}</m:t>`,
-  "        </m:r>",
-  "      </m:lim>",
-  `    </m:${tag}>`,
-  "  </m:oMath>",
-];
-
-/**
- * ONE defect, seven rows: an accent whose `parameterOne` is `false`.
- *
- * `Math::Function::Bar#to_omml` and its six siblings test the slot with Ruby
- * truthiness, so BOTH `nil` and `false` mean "no base" and the gem emits the
- * accent alone as a bare run. The port's seven renderers test
- * `=== null || === undefined` (`src/render/{bar,hat,dot,ddot,tilde,vec,ul}/omml.ts`),
- * so `false` reaches the accent path and is rendered as a full `m:bar`/`m:limUpp`/
- * `m:limLow` around a zero-width-space base. `nil` is right in all seven; only
- * `false` diverges. This branch is scoped to the specs, so the renderers are
- * left as they are and the gap is pinned here instead — the fix is
- * `!present(node.parameterOne)`, and each entry is a test that fails when it
- * lands, which is when the entry goes.
- *
- * Pinned both ways, like `KNOWN_DIVERGENCES`: the port's exact bytes, so
- * unrelated corruption is not mistaken for the known difference, and inequality
- * with the gem, so the fix is noticed.
- */
-const FALSE_SLOT =
-  "the seven accent renderers treat parameterOne === false as present; the gem's Ruby truthiness treats it as absent and emits the accent as a bare run";
 
 export const DEGENERATE_DIVERGENCES: Readonly<
   Record<string, { readonly reason: string; readonly portOutput: string }>

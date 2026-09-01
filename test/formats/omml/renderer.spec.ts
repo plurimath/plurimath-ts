@@ -9,7 +9,7 @@
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { RenderError } from "../../../src/core/errors";
-import type { MathNode, NodeKind, NodeParameter } from "../../../src/core/nodes";
+import type { MathNode, NodeParameter } from "../../../src/core/nodes";
 import {
   AbsNode,
   BarNode,

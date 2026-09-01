@@ -19,8 +19,11 @@ the oracle rather than to each generated class
 
 ### Measurement commands
 
-The worktree is based on the requested pinned commit, and the oracle was clean
-and detached at `00c52783877b38f6b8e6e109f1803f96bb34fc62`:
+The branch is based on the requested pinned commit, and the oracle was clean
+and detached at `00c52783877b38f6b8e6e109f1803f96bb34fc62`. The first command
+below was run before this document existed, so its recorded output names the
+commit the measurement started from; this file's own commits sit on top of it,
+and re-running the command today reports a later hash.
 
 ```sh
 git rev-parse HEAD && git branch --show-current
@@ -34,64 +37,132 @@ git status --short --branch && git rev-parse HEAD
 # exit 0
 ```
 
-Ruby was selected before probing with
-`/home/apple/.codex/skills/ruby-version-manager/detect.sh`. In both the
-worktree and oracle it reported Ruby `4.0.1`, `mise x --`, and
-`VERSION_AVAILABLE=true` (exit `0`).
-
-The probes are local-only evidence under
-`.codex-context/tasks/symbol-data-scope/`; none is TypeScript and none is
-committed. The labels below mean these exact commands:
+The oracle pins no Ruby version, so the probe runs on whatever `ruby -v`
+resolves to, and that must be the interpreter its bundle was installed
+against. Check it before probing; an older Ruby that still resolves first on
+`PATH` does not announce itself, it fails inside `bundle exec` with
+`Bundler::GemNotFound`:
 
 ```sh
-# [definitions], from the clean oracle; each pipeline used `bash -o pipefail`
-rg -o '^\s*def to_html\b' lib | wc -l
-# 1492
-# exit 0
-
-rg -o '^\s*def to_omml_without_math_tag\b' lib | wc -l
-# 1559
-# exit 0
-
-rg -o '^\s*def to_html\b' lib/plurimath/math/symbols | wc -l
-# 1461
-# exit 0
-
-rg -o '^\s*def to_omml_without_math_tag\b' lib/plurimath/math/symbols | wc -l
-# 1460
-# exit 0
-
-# [symbols], run from the clean oracle
-BUNDLE_GEMFILE=/home/apple/ruby_gems/plurimath-oracle/Gemfile \
-  mise x -- bundle exec ruby \
-  /home/apple/ruby_gems/wt-symbol-data/.codex-context/tasks/symbol-data-scope/symbol_surface_probe.rb
-# exit 0
-
-# [generated-tables], run from this worktree
-node_modules/.bin/esbuild \
-  .codex-context/tasks/symbol-data-scope/generated_table_probe.mjs \
-  --bundle --platform=node --format=esm \
-  --outfile=/tmp/symbol-data-generated-table-probe.mjs
-# exit 0
-node /tmp/symbol-data-generated-table-probe.mjs
-# exit 0
-
-# [html-corpus], run from this worktree
-node_modules/.bin/esbuild \
-  .codex-context/tasks/symbol-data-scope/html_corpus_probe.mjs \
-  --bundle --platform=node --format=esm \
-  --outfile=/tmp/symbol-data-html-corpus-probe.mjs
-# exit 0
-node /tmp/symbol-data-html-corpus-probe.mjs
+ruby -v
+# ruby 4.0.1 (2026-01-13 revision e04267a14b) +PRISM [x86_64-linux]
 # exit 0
 ```
 
-`[symbols]` recursively loaded the oracle's model classes, instantiated every
-symbol class, and called the live render methods. It did not parse source
-method bodies or invoke a generator. `[generated-tables]` read the four
-committed P1 maps. `[html-corpus]` rebuilt all reachable pinned models with the
-existing corpus reader, called the current HTML renderer, and separately
-walked each model for blockers that the first thrown error could mask.
+Where a version manager owns the interpreter, select it explicitly rather than
+trusting `PATH`. Here `mise x -- ruby -v` reports the same `4.0.1` (exit `0`),
+so the plain invocations below are the ones actually used.
+
+This change commits the probes under `scripts/probes/`, so every figure below
+can be re-derived from this revision plus the pinned oracle. None of them ships, none
+runs in a gate, and none writes to `corpus/` or `src/generated/`. The labels
+below mean these exact commands, with `<ts>` the plurimath-ts checkout and
+`<oracle>` the pinned gem checkout:
+
+```sh
+# [definitions], from the clean oracle; each pipeline used `bash -o pipefail`.
+# These use grep rather than ripgrep so they need nothing beyond coreutils.
+# `lib/` holds no ignored or untracked files (`git status --short --ignored
+# lib` is empty), so the `rg -o` form they replace scans the same files.
+grep -rhoE '^[[:space:]]*def to_html\b' lib | wc -l
+# 1492
+# exit 0
+
+grep -rhoE '^[[:space:]]*def to_omml_without_math_tag\b' lib | wc -l
+# 1559
+# exit 0
+
+grep -rhoE '^[[:space:]]*def to_html\b' lib/plurimath/math/symbols | wc -l
+# 1461
+# exit 0
+
+grep -rhoE '^[[:space:]]*def to_omml_without_math_tag\b' lib/plurimath/math/symbols | wc -l
+# 1460
+# exit 0
+
+# [symbols], run from the clean oracle. Writes the counts and the canonical
+# row order, so [generated-tables] can pin against it.
+cd <oracle>
+BUNDLE_GEMFILE=$PWD/Gemfile bundle exec ruby -Ilib \
+  <ts>/scripts/probes/symbol-surface.rb > /tmp/symbol-surface.json
+# exit 0
+
+# [generated-tables], run from the plurimath-ts checkout
+cd <ts>
+out=$(mktemp -d)
+node_modules/.bin/esbuild scripts/probes/generated-tables.mjs \
+  --bundle --platform=node --format=esm --outfile="$out/probe.mjs"
+# exit 0
+node "$out/probe.mjs" --expect-ids /tmp/symbol-surface.json
+# exit 0
+
+# [html-corpus], run from the plurimath-ts checkout
+cd <ts>
+out=$(mktemp -d)
+node_modules/.bin/esbuild scripts/probes/html-corpus.mjs \
+  --bundle --platform=node --format=esm --outfile="$out/probe.mjs"
+# exit 0
+node "$out/probe.mjs"
+# exit 0
+
+# [dist-sizes], the built-artifact baseline the isolation done-conditions
+# below compare against. Run from the plurimath-ts checkout. Needs no esbuild
+# bundling of its own; it imports esbuild to weigh each subpath.
+cd <ts>
+pnpm build
+# exit 0
+node scripts/probes/dist-sizes.mjs
+# exit 0
+```
+
+`[dist-sizes]` reports two numbers per subpath and module system. `entryBytes`
+is the entry file alone, which is what `wc -c dist/latex.js` would say and is
+not the consumer's cost: tsdown puts the core layer in a shared chunk, so
+`dist/latex.js` names roughly a third of its own weight in a
+`from "./core-<hash>.js"` line. `closureBytes` is the entry plus every chunk
+it pulls, measured the way `scripts/gate-package.mjs` inspects the same
+artifacts — re-bundle the built entry with esbuild and weigh the result. It is
+the closure numbers that the budget below is written against. (Tree-shaking
+means a closure can come in under its own entry file, as UnicodeMath's does.)
+
+| subpath | ESM entry | ESM closure | CJS entry | CJS closure |
+|---|---:|---:|---:|---:|
+| `.` | 1,620 | 91,849 | 2,532 | 115,435 |
+| `./core` | 1,620 | 91,849 | 2,532 | 115,434 |
+| `./asciimath` | 471,791 | 476,368 | 472,403 | 501,661 |
+| `./latex` | 121,524 | 149,563 | 122,028 | 194,952 |
+| `./mathml` | 237,118 | 271,333 | 237,811 | 316,629 |
+| `./unicodemath` | 208,705 | 202,367 | 209,200 | 247,245 |
+
+Bytes, from `[dist-sizes]` (exit `0`) against the build of this revision. The
+same run reports the unminified source tables that feed them:
+`asciimath` `50,976`, `latex` `48,699`, `mathml` `73,906`, `unicodemath`
+`35,933`.
+
+`[generated-tables]` and `[html-corpus]` import TypeScript sources, which is
+why each is bundled with the repository's own `esbuild` before it runs. The
+bundle goes to a fresh `mktemp -d`, not a fixed `/tmp` name, so two runs
+cannot read each other's output. `[dist-sizes]` needs no bundling: it imports
+`esbuild` and weighs the already-built artifacts. No probe is reachable from
+`src/`, so none enters a published bundle.
+
+`[symbols]` (`scripts/probes/symbol-surface.rb`) recursively loaded the
+oracle's model classes, instantiated every symbol class, and called the live
+render methods. It did not parse source method bodies or invoke a generator.
+It also echoes `ruby_version` and the oracle's `git rev-parse HEAD`, so a run
+carries its own provenance. `[generated-tables]`
+(`scripts/probes/generated-tables.mjs`) read the four committed P1 maps;
+`--expect-ids` compares their key order against the `static_symbol_ids` list
+`[symbols]` emitted, and the probe exits non-zero when an order differs.
+`[html-corpus]` (`scripts/probes/html-corpus.mjs`) rebuilt all reachable
+pinned models with the existing corpus reader, called the current HTML
+renderer, and separately walked each model for blockers that the first thrown
+error could mask. `[dist-sizes]` (`scripts/probes/dist-sizes.mjs`) weighed the
+built artifacts; it reads `package.json#exports`, so a new subpath is
+enumerated the moment it is published.
+
+All four P1 maps key in one identical order of `1,459` symbol ids, and that
+order is the oracle's own class order (`[generated-tables]`, exit `0`).
 
 ### Measured surface
 
@@ -107,14 +178,23 @@ formats. The P1 columns below come independently from the committed maps
 (`[generated-tables]`, exit `0`); the HTML and OMML columns come from live
 oracle calls (`[symbols]`, exit `0`):
 
-| format | static rows | distinct payloads | rows duplicating an earlier payload | payload shape |
-|---|---:|---:|---:|---|
-| AsciiMath | 1,459 | 1,447 | 12 | string |
-| LaTeX | 1,459 | 1,425 | 34 | string |
-| MathML | 1,459 | 1,421 | 38 | `{ tag, text }` descriptor |
-| UnicodeMath | 1,459 | 1,406 | 53 | string |
-| HTML | 1,459 | 1,413 | 46 | string |
-| OMML | 1,459 | 1,415 | 44 | string |
+| format | static rows | distinct payloads | rows duplicating an earlier payload | most rows sharing one payload | payload shape |
+|---|---:|---:|---:|---:|---|
+| AsciiMath | 1,459 | 1,447 | 12 | 2 | string |
+| LaTeX | 1,459 | 1,425 | 34 | 3 | string |
+| MathML | 1,459 | 1,421 | 38 | 3 | `{ tag, text }` descriptor |
+| UnicodeMath | 1,459 | 1,406 | 53 | 3 | string |
+| HTML | 1,459 | 1,413 | 46 | 3 | string |
+| OMML | 1,459 | 1,415 | 44 | 3 | string |
+
+Those last two columns bound any deduplication scheme, so the decision is
+stated as numbers rather than as a judgement. HTML repeats a
+payload on `46` of its `1,459` rows and OMML on `44`; in neither format is any
+one payload shared by more than `3` ids (`[symbols]`, exit `0`). Interning the
+repeats would therefore replace at most `46` and `44` string literals with
+indirections and could not collapse any group larger than three. The slices
+stay one literal per id, matching what the four P1 formats already emit; a
+future measurement that moves those columns is the reason to revisit it.
 
 The two excluded classes need no static row. The generic `Symbol` root returned
 nil without a value and returned `"x"` when constructed with `"x"` in both
@@ -173,6 +253,41 @@ probed even though the present result has `0` variants; a missing axis cannot
 discover future drift. The shared generator must continue to fail on empty
 class discovery and missing corpus symbols (`scripts/generate-corpus.rb:4537-4558`).
 
+### Isolation is a byte measurement, not only a source rule
+
+Two isolated directories under `src/generated/` are a source guarantee. What
+ships is a separate question, and the scope above does not answer it. The
+`package-isolation` gate inspects a subpath's built bundle for modules it must
+not contain (`scripts/gate-package.mjs`); it asserts no size at all, and it has
+never run against an HTML or OMML subpath because neither exists. Its own
+`EXPECTED_EXPORTS` and `FORBIDDEN` tables are hand-listed, and a subpath absent
+from them silently skips both assertions — so adding the formats to
+`package.json#exports` without adding them there buys a green gate that proves
+nothing.
+
+The cost is not small and it does not tree-shake away. A `ReadonlyMap` of
+`1,459` literals is atomic for a bundler: a renderer that reads one row pulls
+in the whole table, and `"sideEffects": false` cannot drop rows it does not
+use. The order of magnitude is already on disk. The four committed symbol
+tables are `35,933` to `73,906` bytes of unminified source each, and the two
+closest shipped analogues measure `149,563` bytes of ESM closure for `./latex`
+(a string map, no XML layer) and `271,333` for `./mathml` (a descriptor map
+plus the XML serializer) (`[dist-sizes]`, exit `0`).
+
+The budget, per subpath, against the ESM closure:
+
+- `./html` at or below `163,840` bytes (`160` KiB). LaTeX is the right
+  analogue — a plain string map, `1,425` distinct payloads against HTML's
+  `1,413` — and its measured `149,563` leaves that ceiling about `10` percent
+  of headroom.
+- `./omml` at or below `286,720` bytes (`280` KiB). MathML is the analogue
+  that carries an XML layer, and its measured `271,333` sets the same margin.
+
+Landing above a ceiling is not forbidden, but it is a decision rather than a
+rounding error: the measured number goes into this file as an accepted cost
+before the slice ships, never left unstated. No existing subpath may grow at
+all, since neither new table belongs in any of them.
+
 ### Two-step provenance cost
 
 Changing `scripts/generate-corpus.rb` invalidates more than the new HTML and
@@ -189,10 +304,31 @@ The implementation therefore needs two commits, in this order:
 
 1. Commit the generator source and its tests with no generated output. This
    makes the generator checkout clean and gives provenance a real source
-   commit. That intermediate commit is expected to fail the active
-   `payload-validation` gate because the committed provenance still names the
-   old generator digest; the gate hashes the live generator and compares it to
-   all three recorded provenance modules (`test/gates/payload-validation.spec.ts:45-80`).
+   commit. **This intermediate commit is deliberately non-green.** Two gates
+   are expected to fail on it, and both must be listed, because a run that
+   reports only one of them is a run that stopped early:
+
+   - `payload-validation` (class A) fails because the committed provenance
+     still names the old generator digest; the gate hashes the live generator
+     and compares it to all three recorded provenance modules
+     (`test/gates/payload-validation.spec.ts:45-80`).
+   - `oracle-repo-regeneration` (class B) fails because the updated generator
+     emits the two new HTML and OMML slices while the committed generated
+     roots still hold only the old four. The runner executes
+     `generate-corpus.rb` from a clean snapshot and diffs `corpus/` and
+     `src/generated/` against what is committed, so the two unaccounted-for
+     directories are a non-empty diff
+     (`scripts/gate-oracle.rb:103-157`).
+
+   Those two are the failures this commit's own mechanics guarantee. A third
+   is avoidable and must be avoided: any generator test added here has to pass
+   against a tree with no HTML or OMML slice in it, or `unit-tests` fails as
+   well and the intermediate commit stops being diagnosable. Assert on the
+   generator's probe shapes, not on files step 2 creates.
+
+   Because this commit cannot pass its own gates, it must never be pushed or
+   merged on its own. It exists only as the ancestor the generated-data commit
+   records, and it reaches a remote only together with that commit.
 2. From that clean commit and the clean pinned oracle, run the repository's
    three provenance-linked generators, review every diff, and commit the
    generated outputs as a second commit. The first commit then remains an
@@ -267,11 +403,15 @@ landed OMML stack must count the cases it changes.
    second commit exists.
 3. **HTML data consumption.** Replace only the named-symbol and named-paren
    refusals with lookups from `src/generated/html/`; re-measure the `90` cases.
-   Keep the measured function aliases out of this slice.
+   Keep the measured function aliases out of this slice. Because this is the
+   commit where the table first reaches a published bundle, it is also where
+   `package-isolation` is re-run and the `[dist-sizes]` measurement is
+   repeated: the built cost is recorded here, not deferred.
 4. **OMML data consumption.** After the OMML renderer stack lands, route its
    symbol kind through `src/generated/omml/` and keep XML construction in the
    shared wrapper. Re-measure the OMML corpus rather than borrowing HTML's
-   count.
+   count, and re-run the same isolation and size measurements for the OMML
+   subpath.
 5. **HTML function aliases as a separate work item.** Measure the `15` binary,
    `4` unary, and `1` ternary corpus cases against the oracle, then implement
    those carrier paths independently of symbol data.
@@ -279,6 +419,9 @@ landed OMML stack must count the cases it changes.
 ## Not in scope
 
 - No generator, generated-file, renderer, gate-registry, or corpus change.
+  The probes committed under `scripts/probes/` are measurement tools: not
+  registered in `gates.json`, not imported from `src/`, and they write
+  nothing under `corpus/` or `src/generated/`.
 - No function-alias implementation; those paths are not symbol data.
 - No change to the shared testsuite or its pin.
 - No inspection or modification of the open HTML/OMML/compat/package PR
@@ -298,6 +441,27 @@ landed OMML stack must count the cases it changes.
 - [ ] The post-data HTML corpus run reports its actual rendered/throw split;
       the function-alias remainder is tracked separately rather than credited
       to symbol data.
+- [ ] `package-isolation` runs again *after* the HTML renderer imports
+      `src/generated/html/` and again after OMML imports `src/generated/omml/`
+      — not only on the generated-data commit, where neither table is reachable
+      from any subpath and the gate would prove nothing.
+- [ ] Each new subpath appears in both `EXPECTED_EXPORTS` and `FORBIDDEN` in
+      `scripts/gate-package.mjs`; a subpath missing from those tables skips
+      both assertions silently. `./html` forbids `generated/omml/` and every
+      P1 format's modules; `./omml` forbids `generated/html/` and the same P1
+      set. Each list is proven to bite by a run that fails when the forbidden
+      table is imported on purpose.
+- [ ] `scripts/probes/dist-sizes.mjs` is re-run before and after each
+      consumption commit, and the ESM and CJS closure bytes for every published
+      subpath are recorded in this file beside the baseline table above. No
+      existing subpath grows.
+- [ ] `./html`'s ESM closure is at or below `163,840` bytes and `./omml`'s at
+      or below `286,720`, or the measured overage is written into this file as
+      an accepted cost with the numbers that justify it. An unrecorded overage
+      blocks the slice.
+- [ ] The figures above are re-derived from `scripts/probes/` against the
+      pinned oracle before the generator work starts. Drift is a change in the
+      oracle to be investigated, never a number to round in this file.
 - [ ] `node scripts/check.mjs` exits `0` with all `12` active class-A gates, and
       `scripts/gate-oracle.rb repo --check --gem
       /home/apple/ruby_gems/plurimath-oracle` exits `0` from the clean final

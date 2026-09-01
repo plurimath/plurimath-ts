@@ -2183,7 +2183,8 @@ describe("OMML delimiters and accents slice", () => {
  *
  * The port asked `=== null || === undefined`, so `false` fell through to the
  * accent path and wrapped a zero-width-space base in a full accent element.
- * Seven kinds shared the one guard, so they share this test.
+ * Eight kinds read the base through the same Ruby-truthiness helper, so they
+ * share this test.
  */
 describe("OMML accents without a base", () => {
   it.each([

@@ -73,7 +73,7 @@
         "test/formats/mathml/render-parity.spec.ts",
         "test/formats/unicodemath/render-parity.spec.ts"
       ],
-      "description": "Parse tree, normalized model and every landed renderer match the Ruby-generated expectations, including the formats the shared corpus carries no target for (html; omml joins with its stack)"
+      "description": "Parse tree, normalized model and rendered bytes match the Ruby-generated expectations for every corpus case, in every landed format \u2014 including the ones the shared corpus carries no target for (html; omml joins with its stack). For html the degenerate-slot sweep adds every landed renderer the corpus never reaches: its swept set is derived from the src/render inventory, and a renderer nothing sweeps is a failure"
     },
     {
       "id": "payload-validation",

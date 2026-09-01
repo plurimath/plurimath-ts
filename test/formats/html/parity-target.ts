@@ -106,44 +106,79 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  */
 export const RENDERED_BASELINE = 36;
 
+/**
+ * What fills a slot that is NOT the one being swept, by the slot's declared
+ * type. Mirrors `FILLERS` in the generator; the spec pins the type list per
+ * sweep entry, so a builder that fills a sequence slot with a bare node fails
+ * in a test that names the entry rather than as a byte mismatch further down.
+ */
+export type SlotFiller = "node" | "sequence" | "string";
+
 const sym = () => new C.SymbolNode({ value: "a" });
-const at = (slot: number, value: unknown, arity: number): unknown[] => {
-  const args: unknown[] = Array.from({ length: arity }, () => sym());
+const FILL: Readonly<Record<SlotFiller, () => unknown>> = {
+  node: () => sym(),
+  sequence: () => [sym()],
+  string: () => "a",
+};
+
+const at = (slot: number, value: unknown, slots: readonly SlotFiller[]): unknown[] => {
+  const args: unknown[] = slots.map((type) => FILL[type]());
   args[slot] = value === undefined ? sym() : value;
   return args;
 };
 
-/** One swept kind: how many positional slots it has, and how to build it. */
+/** One sweep entry: which renderer it exercises, and how to build its node. */
 export interface DegenerateKind {
-  /** Positional node slots. Must equal the generator's arity for this kind. */
-  readonly arity: number;
+  /** The `src/render/<kind>/html.ts` this entry exercises. */
+  readonly renderKind: C.NodeKind;
+  /** The concrete Ruby class the generator instantiated, fully qualified. */
+  readonly rubyClass: string;
+  /** Positional slots, by filler type. Must equal the generator's list. */
+  readonly slots: readonly SlotFiller[];
   readonly build: (slot: number, value: unknown) => unknown;
 }
 
 /**
- * kind -> arity + a builder placing `value` in `slot`. Mirrors the KINDS table
- * in `scripts/probe-degenerate-slots.rb`, and the spec REQUIRES the two to be
- * the same kinds with the same arities.
+ * Sweep id -> the renderer it covers, the Ruby class it mirrors, its slot
+ * shape, and a builder placing `value` in `slot`. Mirrors the `SWEEP` table in
+ * `scripts/probe-degenerate-slots.rb`, and the spec REQUIRES the two to agree
+ * entry for entry — on `renderKind`, on `rubyClass`, and on `slots`.
+ *
+ * **Every landed HTML renderer must appear as some entry's `renderKind`.** The
+ * spec reads the `src/render` inventory itself and fails naming any renderer no
+ * entry covers. Before that check existed both tables were hand lists holding
+ * 20 of the 38 landed renderers, and `renderMpadded` could be replaced
+ * wholesale by `__BROKEN_MPADDED_HTML__` with both parity specs green at
+ * 319/319.
+ *
+ * More than one entry may name the same renderer where the Ruby side reaches it
+ * through several classes with different constructors: `binaryFunction` is
+ * swept as both `power` (no measured HTML) and `td` (measured), `unaryFunction`
+ * as both `sin` and `tr`.
  *
  * A kind absent here used to be skipped silently. `power` was in the generator
  * and not here, so its 14 rows ran, asserted nothing, and reported green — the
  * "every kind × slot" claim in the spec header was false for 14 of 196 rows.
- * The arity is carried here rather than hidden in each closure so this file,
- * which no generator writes, independently determines the size and shape of the
- * expected matrix: a truncated fixture cannot agree with it.
+ * The slot shape is carried here rather than hidden in each closure so this
+ * file, which no generator writes, independently determines the size and shape
+ * of the expected matrix: a truncated fixture cannot agree with it.
  */
 export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
   frac: {
-    arity: 2,
+    renderKind: "frac",
+    rubyClass: "Plurimath::Math::Function::Frac",
+    slots: ["node", "node"],
     build: (s, v) => {
-      const [a, b] = at(s, v, 2);
+      const [a, b] = at(s, v, ["node", "node"]);
       return new C.FracNode({ parameterOne: a, parameterTwo: b } as never);
     },
   },
   base: {
-    arity: 2,
+    renderKind: "base",
+    rubyClass: "Plurimath::Math::Function::Base",
+    slots: ["node", "node"],
     build: (s, v) => {
-      const [a, b] = at(s, v, 2);
+      const [a, b] = at(s, v, ["node", "node"]);
       return new C.BaseNode({ parameterOne: a, parameterTwo: b } as never);
     },
   },
@@ -153,9 +188,11 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
    * BinaryFunctionNode), so there is no `PowerNode` to reach for.
    */
   power: {
-    arity: 2,
+    renderKind: "binaryFunction",
+    rubyClass: "Plurimath::Math::Function::Power",
+    slots: ["node", "node"],
     build: (s, v) => {
-      const [a, b] = at(s, v, 2);
+      const [a, b] = at(s, v, ["node", "node"]);
       return new C.BinaryFunctionNode({
         name: "Power",
         parameterOne: a,
@@ -163,10 +200,26 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
       } as never);
     },
   },
-  nary: {
-    arity: 4,
+  /** `Td` is the one binary alias the HTML slice has measured, so it renders. */
+  td: {
+    renderKind: "binaryFunction",
+    rubyClass: "Plurimath::Math::Function::Td",
+    slots: ["sequence", "node"],
     build: (s, v) => {
-      const [a, b, c, d] = at(s, v, 4);
+      const [a, b] = at(s, v, ["sequence", "node"]);
+      return new C.BinaryFunctionNode({
+        name: "Td",
+        parameterOne: a,
+        parameterTwo: b,
+      } as never);
+    },
+  },
+  nary: {
+    renderKind: "nary",
+    rubyClass: "Plurimath::Math::Function::Nary",
+    slots: ["node", "node", "node", "node"],
+    build: (s, v) => {
+      const [a, b, c, d] = at(s, v, ["node", "node", "node", "node"]);
       return new C.NaryNode({
         parameterOne: a,
         parameterTwo: b,
@@ -176,89 +229,292 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
     },
   },
   obrace: {
-    arity: 1,
-    build: (s, v) => new C.ObraceNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
+    renderKind: "obrace",
+    rubyClass: "Plurimath::Math::Function::Obrace",
+    slots: ["node"],
+    build: (s, v) =>
+      new C.ObraceNode({ parameterOne: at(s, v, ["node"])[0], attributes: {} } as never),
   },
   ubrace: {
-    arity: 1,
-    build: (s, v) => new C.UbraceNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
+    renderKind: "ubrace",
+    rubyClass: "Plurimath::Math::Function::Ubrace",
+    slots: ["node"],
+    build: (s, v) =>
+      new C.UbraceNode({ parameterOne: at(s, v, ["node"])[0], attributes: {} } as never),
   },
   bar: {
-    arity: 1,
-    build: (s, v) => new C.BarNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
+    renderKind: "bar",
+    rubyClass: "Plurimath::Math::Function::Bar",
+    slots: ["node"],
+    build: (s, v) =>
+      new C.BarNode({ parameterOne: at(s, v, ["node"])[0], attributes: {} } as never),
   },
   hat: {
-    arity: 1,
-    build: (s, v) => new C.HatNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
+    renderKind: "hat",
+    rubyClass: "Plurimath::Math::Function::Hat",
+    slots: ["node"],
+    build: (s, v) =>
+      new C.HatNode({ parameterOne: at(s, v, ["node"])[0], attributes: {} } as never),
   },
   dot: {
-    arity: 1,
-    build: (s, v) => new C.DotNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
+    renderKind: "dot",
+    rubyClass: "Plurimath::Math::Function::Dot",
+    slots: ["node"],
+    build: (s, v) =>
+      new C.DotNode({ parameterOne: at(s, v, ["node"])[0], attributes: {} } as never),
   },
   ddot: {
-    arity: 1,
-    build: (s, v) => new C.DdotNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
+    renderKind: "ddot",
+    rubyClass: "Plurimath::Math::Function::Ddot",
+    slots: ["node"],
+    build: (s, v) =>
+      new C.DdotNode({ parameterOne: at(s, v, ["node"])[0], attributes: {} } as never),
   },
   tilde: {
-    arity: 1,
-    build: (s, v) => new C.TildeNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
+    renderKind: "tilde",
+    rubyClass: "Plurimath::Math::Function::Tilde",
+    slots: ["node"],
+    build: (s, v) =>
+      new C.TildeNode({ parameterOne: at(s, v, ["node"])[0], attributes: {} } as never),
   },
   vec: {
-    arity: 1,
-    build: (s, v) => new C.VecNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
+    renderKind: "vec",
+    rubyClass: "Plurimath::Math::Function::Vec",
+    slots: ["node"],
+    build: (s, v) =>
+      new C.VecNode({ parameterOne: at(s, v, ["node"])[0], attributes: {} } as never),
   },
   ul: {
-    arity: 1,
-    build: (s, v) => new C.UlNode({ parameterOne: at(s, v, 1)[0], attributes: {} } as never),
+    renderKind: "ul",
+    rubyClass: "Plurimath::Math::Function::Ul",
+    slots: ["node"],
+    build: (s, v) => new C.UlNode({ parameterOne: at(s, v, ["node"])[0], attributes: {} } as never),
   },
   abs: {
-    arity: 1,
-    build: (s, v) => new C.AbsNode({ parameterOne: at(s, v, 1)[0] } as never),
+    renderKind: "abs",
+    rubyClass: "Plurimath::Math::Function::Abs",
+    slots: ["node"],
+    build: (s, v) => new C.AbsNode({ parameterOne: at(s, v, ["node"])[0] } as never),
   },
   ceil: {
-    arity: 1,
-    build: (s, v) => new C.CeilNode({ parameterOne: at(s, v, 1)[0] } as never),
+    renderKind: "ceil",
+    rubyClass: "Plurimath::Math::Function::Ceil",
+    slots: ["node"],
+    build: (s, v) => new C.CeilNode({ parameterOne: at(s, v, ["node"])[0] } as never),
   },
   floor: {
-    arity: 1,
-    build: (s, v) => new C.FloorNode({ parameterOne: at(s, v, 1)[0] } as never),
+    renderKind: "floor",
+    rubyClass: "Plurimath::Math::Function::Floor",
+    slots: ["node"],
+    build: (s, v) => new C.FloorNode({ parameterOne: at(s, v, ["node"])[0] } as never),
   },
   norm: {
-    arity: 1,
-    build: (s, v) => new C.NormNode({ parameterOne: at(s, v, 1)[0] } as never),
+    renderKind: "norm",
+    rubyClass: "Plurimath::Math::Function::Norm",
+    slots: ["node"],
+    build: (s, v) => new C.NormNode({ parameterOne: at(s, v, ["node"])[0] } as never),
   },
   sqrt: {
-    arity: 1,
-    build: (s, v) => new C.SqrtNode({ parameterOne: at(s, v, 1)[0] } as never),
+    renderKind: "sqrt",
+    rubyClass: "Plurimath::Math::Function::Sqrt",
+    slots: ["node"],
+    build: (s, v) => new C.SqrtNode({ parameterOne: at(s, v, ["node"])[0] } as never),
   },
   overset: {
-    arity: 2,
+    renderKind: "overset",
+    rubyClass: "Plurimath::Math::Function::Overset",
+    slots: ["node", "node"],
     build: (s, v) => {
-      const [a, b] = at(s, v, 2);
+      const [a, b] = at(s, v, ["node", "node"]);
       return new C.OversetNode({ parameterOne: a, parameterTwo: b, options: {} } as never);
     },
   },
   underset: {
-    arity: 2,
+    renderKind: "underset",
+    rubyClass: "Plurimath::Math::Function::Underset",
+    slots: ["node", "node"],
     build: (s, v) => {
-      const [a, b] = at(s, v, 2);
+      const [a, b] = at(s, v, ["node", "node"]);
       return new C.UndersetNode({ parameterOne: a, parameterTwo: b, options: {} } as never);
     },
+  },
+  color: {
+    renderKind: "color",
+    rubyClass: "Plurimath::Math::Function::Color",
+    slots: ["node", "node"],
+    build: (s, v) => {
+      const [a, b] = at(s, v, ["node", "node"]);
+      return new C.ColorNode({ parameterOne: a, parameterTwo: b } as never);
+    },
+  },
+  fenced: {
+    renderKind: "fenced",
+    rubyClass: "Plurimath::Math::Function::Fenced",
+    slots: ["node", "node", "node"],
+    build: (s, v) => {
+      const [a, b, c] = at(s, v, ["node", "node", "node"]);
+      return new C.FencedNode({
+        parameterOne: a,
+        parameterTwo: b,
+        parameterThree: c,
+      } as never);
+    },
+  },
+  /**
+   * `Math::Function::FontStyle` itself, with no alias basename — the bare
+   * carrier's `nil` defaults, which is what `FontStyle.new(a, b)` builds.
+   */
+  fontStyle: {
+    renderKind: "fontStyle",
+    rubyClass: "Plurimath::Math::Function::FontStyle",
+    slots: ["node", "node"],
+    build: (s, v) => {
+      const [a, b] = at(s, v, ["node", "node"]);
+      return new C.FontStyleNode({ parameterOne: a, parameterTwo: b } as never);
+    },
+  },
+  formula: {
+    renderKind: "formula",
+    rubyClass: "Plurimath::Math::Formula",
+    slots: ["sequence"],
+    build: (s, v) => new C.FormulaNode({ value: at(s, v, ["sequence"])[0] } as never),
+  },
+  int: {
+    renderKind: "int",
+    rubyClass: "Plurimath::Math::Function::Int",
+    slots: ["node", "node", "node"],
+    build: (s, v) => {
+      const [a, b, c] = at(s, v, ["node", "node", "node"]);
+      return new C.IntNode({ parameterOne: a, parameterTwo: b, parameterThree: c } as never);
+    },
+  },
+  linebreak: {
+    renderKind: "linebreak",
+    rubyClass: "Plurimath::Math::Function::Linebreak",
+    slots: ["node"],
+    build: (s, v) =>
+      new C.LinebreakNode({ parameterOne: at(s, v, ["node"])[0], attributes: {} } as never),
+  },
+  mpadded: {
+    renderKind: "mpadded",
+    rubyClass: "Plurimath::Math::Function::Mpadded",
+    slots: ["node"],
+    build: (s, v) => new C.MpaddedNode({ parameterOne: at(s, v, ["node"])[0] } as never),
+  },
+  mrow: {
+    renderKind: "mrow",
+    rubyClass: "Plurimath::Math::Formula::Mrow",
+    slots: ["sequence"],
+    build: (s, v) => new C.MrowNode({ value: at(s, v, ["sequence"])[0] } as never),
+  },
+  number: {
+    renderKind: "number",
+    rubyClass: "Plurimath::Math::Number",
+    slots: ["string"],
+    build: (s, v) => new C.NumberNode({ value: at(s, v, ["string"])[0] } as never),
+  },
+  oint: {
+    renderKind: "oint",
+    rubyClass: "Plurimath::Math::Function::Oint",
+    slots: ["node", "node", "node"],
+    build: (s, v) => {
+      const [a, b, c] = at(s, v, ["node", "node", "node"]);
+      return new C.OintNode({ parameterOne: a, parameterTwo: b, parameterThree: c } as never);
+    },
+  },
+  overleftrightarrow: {
+    renderKind: "overleftrightarrow",
+    rubyClass: "Plurimath::Math::Function::Overleftrightarrow",
+    slots: ["node"],
+    build: (s, v) =>
+      new C.OverleftrightarrowNode({
+        parameterOne: at(s, v, ["node"])[0],
+        attributes: {},
+      } as never),
+  },
+  prod: {
+    renderKind: "prod",
+    rubyClass: "Plurimath::Math::Function::Prod",
+    slots: ["node", "node", "node"],
+    build: (s, v) => {
+      const [a, b, c] = at(s, v, ["node", "node", "node"]);
+      return new C.ProdNode({ parameterOne: a, parameterTwo: b, parameterThree: c } as never);
+    },
+  },
+  sum: {
+    renderKind: "sum",
+    rubyClass: "Plurimath::Math::Function::Sum",
+    slots: ["node", "node", "node"],
+    build: (s, v) => {
+      const [a, b, c] = at(s, v, ["node", "node", "node"]);
+      return new C.SumNode({ parameterOne: a, parameterTwo: b, parameterThree: c } as never);
+    },
+  },
+  symbol: {
+    renderKind: "symbol",
+    rubyClass: "Plurimath::Math::Symbols::Symbol",
+    slots: ["string"],
+    build: (s, v) => new C.SymbolNode({ value: at(s, v, ["string"])[0] } as never),
+  },
+  table: {
+    renderKind: "table",
+    rubyClass: "Plurimath::Math::Function::Table",
+    slots: ["sequence", "node", "node"],
+    build: (s, v) => {
+      const [a, b, c] = at(s, v, ["sequence", "node", "node"]);
+      return new C.TableNode({
+        value: a,
+        openParen: b,
+        closeParen: c,
+        options: {},
+      } as never);
+    },
+  },
+  sin: {
+    renderKind: "unaryFunction",
+    rubyClass: "Plurimath::Math::Function::Sin",
+    slots: ["node"],
+    build: (s, v) =>
+      new C.UnaryFunctionNode({ name: "Sin", parameterOne: at(s, v, ["node"])[0] } as never),
+  },
+  tr: {
+    renderKind: "unaryFunction",
+    rubyClass: "Plurimath::Math::Function::Tr",
+    slots: ["sequence"],
+    build: (s, v) =>
+      new C.UnaryFunctionNode({ name: "Tr", parameterOne: at(s, v, ["sequence"])[0] } as never),
+  },
+  powerBase: {
+    renderKind: "ternaryFunction",
+    rubyClass: "Plurimath::Math::Function::PowerBase",
+    slots: ["node", "node", "node"],
+    build: (s, v) => {
+      const [a, b, c] = at(s, v, ["node", "node", "node"]);
+      return new C.TernaryFunctionNode({
+        name: "PowerBase",
+        parameterOne: a,
+        parameterTwo: b,
+        parameterThree: c,
+      } as never);
+    },
+  },
+  text: {
+    renderKind: "text",
+    rubyClass: "Plurimath::Math::Function::Text",
+    slots: ["string"],
+    build: (s, v) => new C.TextNode({ parameterOne: at(s, v, ["string"])[0] } as never),
   },
 };
 
 /**
- * Degenerate rows the gem renders and this port refuses, keyed `kind[slot]=value`
- * and valued with WHY. The same shape as `PORT_REFUSES`, for the swept matrix.
+ * Degenerate rows the gem RENDERS and this port refuses with `RenderError`,
+ * keyed `id[slot]=value` and valued with WHY. The same shape as `PORT_REFUSES`,
+ * for the swept matrix. Shrinking this list is the work; each removal belongs to
+ * the commit that earns it, and none of them is a decision to diverge.
  *
- * All six are one gap: `Math::Function::Power` reaches the HTML renderer as a
- * `binaryFunction` node, and `src/render/binary-function/html.ts` has measured
- * only the `Td` alias, so every other alias raises `RenderError`. The gem
- * renders exactly the three values that leave a slot Ruby-falsy or a real node;
- * on `true`, `0`, `""` and `[]` it raises, and the port refusing there agrees.
- *
- * This list was 0 until now, because `power` had no builder and its rows were
- * skipped without a word.
+ * The `power` six were the whole list while the sweep covered 20 of the 38
+ * landed HTML renderers. Extending it to all 38 added twelve more, in three
+ * groups, every one a slot the corpus never constructs.
  */
 export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
   "power[0]=nil": 'BinaryFunction alias "Power" is not in the HTML slice',
@@ -267,4 +523,110 @@ export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
   "power[1]=nil": 'BinaryFunction alias "Power" is not in the HTML slice',
   "power[1]=false": 'BinaryFunction alias "Power" is not in the HTML slice',
   "power[1]=node": 'BinaryFunction alias "Power" is not in the HTML slice',
+
+  // `Td#initialize` calls `super(Array(parameter_one), ...)`, so nil becomes the
+  // empty list and the gem renders `<td></td>`. `BinaryFunctionNode` assigns the
+  // slot unconditionally (nodes.ts, `assignedParameter`), leaving it null, and
+  // `renderTd` refuses a non-list. The port is missing Ruby's `Array()` coercion.
+  "td[0]=nil": "Td#initialize coerces nil to [] with Array(); BinaryFunctionNode does not",
+
+  // `Number#initialize` stores its argument as-is and `Number#to_html`
+  // interpolates it, so Ruby spells any object. `interpolatedValue`
+  // (render-shared.ts) reproduces only null, string, boolean and non-finite
+  // number, and refuses the rest rather than guess at Ruby's spelling.
+  "number[0]=zero": 'the gem interpolates 0 as "0"; interpolatedValue refuses a finite number',
+  "number[0]=empty-array": 'the gem interpolates [] as "[]"; interpolatedValue refuses an array',
+
+  // `renderTernaryFunction` throws for every alias: the HTML slice has measured
+  // none of the five. The gem renders each present slot in its own wrapper.
+  "powerBase[0]=nil": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
+  "powerBase[0]=false": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
+  "powerBase[0]=node": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
+  "powerBase[1]=nil": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
+  "powerBase[1]=false": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
+  "powerBase[1]=node": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
+  "powerBase[2]=nil": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
+  "powerBase[2]=false": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
+  "powerBase[2]=node": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
+};
+
+/**
+ * Degenerate rows the gem REFUSES and this port renders, pinned with the port's
+ * exact bytes — the same both-ways pin `KNOWN_DIVERGENCES` uses for the corpus.
+ * If the port's output moves, or it starts refusing, the row fails and the entry
+ * is revisited.
+ *
+ * This is the dangerous direction: the port inventing output for a tree the gem
+ * will not render. All three are one root cause. `Formula#initialize` wraps a
+ * non-Array in `[value]`, so `Formula.new("")` holds `[""]` and raises when the
+ * string is asked to render; `Table` passes its value straight through and
+ * raises the same way. JavaScript's spread reads a string as a sequence of
+ * characters, so `assignedSequence("")` yields `[]` — an EMPTY body the gem
+ * never produces.
+ */
+export const DEGENERATE_PORT_RENDERS: Readonly<
+  Record<string, { readonly reason: string; readonly portOutput: string }>
+> = {
+  "formula[0]=empty-string": {
+    reason: 'Ruby wraps "" as [""] and raises on it; [...""] is [], so the port renders empty',
+    portOutput: "",
+  },
+  "mrow[0]=empty-string": {
+    reason: "Mrow inherits Formula#initialize, and so inherits the same divergence",
+    portOutput: "",
+  },
+  "table[0]=empty-string": {
+    reason:
+      'Table#to_html raises on the string ""; [...""] is [], so the port renders an empty table',
+    portOutput: "<table></table>",
+  },
+};
+
+/**
+ * Rows the port cannot even BUILD: the node constructor throws `TypeError`
+ * because the value is one its declared slot type excludes, and only a cast
+ * reaches it at all. Every row here is a static type error in TypeScript — the
+ * sweep gets to it through `as never`, which is what makes hand-built trees a
+ * supported use (ARCHITECTURE.md §5) worth probing.
+ *
+ * Ten of the thirteen agree with the gem, which refuses these too. Three do not:
+ * `Formula#initialize` wraps a non-Array in `[value]`, so the gem RENDERS a bare
+ * node in that slot and the port throws instead. That is a port gap, named here
+ * rather than counted, and it leaves this table when the wrap lands.
+ */
+export const PORT_TYPE_REFUSES: Readonly<Record<string, string>> = {
+  "formula[0]=false": "assignedSequence spreads the value; false is not iterable",
+  "formula[0]=true": "assignedSequence spreads the value; true is not iterable",
+  "formula[0]=zero": "assignedSequence spreads the value; 0 is not iterable",
+  "formula[0]=node":
+    "the gem wraps a bare node as [node] and renders it; the port spreads and throws",
+  "mrow[0]=false": "assignedSequence spreads the value; false is not iterable",
+  "mrow[0]=true": "assignedSequence spreads the value; true is not iterable",
+  "mrow[0]=zero": "assignedSequence spreads the value; 0 is not iterable",
+  "mrow[0]=node": "the gem wraps a bare node as [node] and renders it; the port spreads and throws",
+  "table[0]=false": "assignedSequence spreads the value; false is not iterable",
+  "table[0]=true": "assignedSequence spreads the value; true is not iterable",
+  "table[0]=zero": "assignedSequence spreads the value; 0 is not iterable",
+  "table[0]=node": "assignedSequence spreads the value; a bare node is not iterable",
+  "symbol[0]=node": "SymbolNode refuses an object: Ruby's sym&.to_s spelling is not reproducible",
+};
+
+/**
+ * Rows whose gem output is NOT reproducible, so no byte claim is possible.
+ *
+ * Both are the same fact: `Symbols::Symbol#initialize` stores `sym&.to_s` and
+ * `Number#initialize` stores its argument untouched, so a node in either slot
+ * reaches `to_html` as Ruby's default `Object#to_s` — a heap address that
+ * differs on every run.
+ *
+ * The generator PROVES each one rather than trusting this list: it probes every
+ * cell twice and sets `stable: false` only where the two probes disagreed. A row
+ * named here that probes identically twice fails, and a row that is
+ * nondeterministic and not named here fails too. What is still asserted for
+ * these rows is that the port reaches a CLEAN outcome — bytes or a typed
+ * refusal, never an untyped throw.
+ */
+export const UNSTABLE_OUTPUT: Readonly<Record<string, string>> = {
+  "number[0]=node": "Number#to_html interpolates the object, spelling its heap address",
+  "symbol[0]=node": "Symbol#initialize stores sym.to_s, which is the object's heap address",
 };

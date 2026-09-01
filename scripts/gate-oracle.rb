@@ -62,6 +62,10 @@ module OracleGate
         - corpus/ and src/generated/ via scripts/generate-corpus.rb
         - src/core/generated/ via scripts/generate-core-data.rb
         - src/formatting/generated/ via scripts/generate-formatting-data.rb
+        - every committed test/formats/<format>/parity-fixtures.json via
+          scripts/generate-parity-fixtures.rb
+        - every committed test/formats/<format>/degenerate-fixtures.json via
+          scripts/probe-degenerate-slots.rb
 
       It compares those regenerated outputs against a clean temporary snapshot
       of this repository's committed HEAD, never against live directories in
@@ -139,6 +143,8 @@ module OracleGate
         gem_dir: gem_dir,
       )
 
+      file_comparisons = regenerate_format_fixtures!(snapshot_root, regenerated_root, gem_dir)
+
       comparisons = [
         ["corpus", File.join(snapshot_root, "corpus"), File.join(regenerated_root, "corpus")],
         ["src/generated", File.join(snapshot_root, "src", "generated"),
@@ -151,6 +157,9 @@ module OracleGate
 
       diffs = comparisons.filter_map do |label, committed, regenerated|
         diff_roots(label, committed, regenerated)
+      end
+      diffs += file_comparisons.filter_map do |label, committed, regenerated|
+        diff_files(label, committed, regenerated)
       end
 
       if diffs.empty?
@@ -165,6 +174,67 @@ module OracleGate
         warn diff
       end
       1
+    end
+  end
+
+  # The per-format fixture generators, and the committed file each one writes.
+  #
+  # Both take `--oracle` rather than `--gem`; they load the pinned checkout
+  # through $LOAD_PATH themselves instead of running under its Bundler alone.
+  FORMAT_FIXTURE_GENERATORS = [
+    {
+      basename: "parity-fixtures.json",
+      script: "generate-parity-fixtures.rb",
+      # `--out` is the format ROOT; the script appends <format>/parity-fixtures.json.
+      arguments: lambda do |format, regenerated_root|
+        ["--format", format, "--out", File.join(regenerated_root, "test", "formats")]
+      end,
+    },
+    {
+      basename: "degenerate-fixtures.json",
+      script: "probe-degenerate-slots.rb",
+      # `--out` is the file itself.
+      arguments: lambda do |format, regenerated_root|
+        ["--format", format,
+         "--out", File.join(regenerated_root, "test", "formats", format, "degenerate-fixtures.json")]
+      end,
+    },
+  ].freeze
+
+  # Regenerate every committed per-format fixture and return the file
+  # comparisons for them.
+  #
+  # Which formats to run is DISCOVERED from the committed tree, never listed
+  # here. A hand list is how the two HTML fixtures shipped outside this gate in
+  # the first place: `repo --check` named three generators, the fixtures came
+  # from two others, and neither was regenerated or compared by anything. An
+  # empty discovery is a failure, not a quiet pass -- a check that regenerates
+  # nothing proves nothing.
+  def regenerate_format_fixtures!(snapshot_root, regenerated_root, gem_dir)
+    FORMAT_FIXTURE_GENERATORS.flat_map do |generator|
+      committed = Dir.glob(
+        File.join(snapshot_root, "test", "formats", "*", generator[:basename]),
+      ).sort
+      if committed.empty?
+        raise Error, "the snapshot holds no test/formats/*/#{generator[:basename]}; " \
+                     "#{generator[:script]} would regenerate nothing"
+      end
+
+      committed.map do |path|
+        format = File.basename(File.dirname(path))
+        FileUtils.mkdir_p(File.join(regenerated_root, "test", "formats", format))
+        run_generator!(
+          File.join(snapshot_root, "scripts", generator[:script]),
+          ["--oracle", gem_dir, *generator[:arguments].call(format, regenerated_root)],
+          chdir: snapshot_root,
+          gem_dir: gem_dir,
+        )
+        [
+          "test/formats/#{format}/#{generator[:basename]}",
+          path,
+          File.join(regenerated_root, "test", "formats", format, generator[:basename]),
+        ]
+      end
     end
   end
 
@@ -709,6 +779,33 @@ module OracleGate
     normalize_generating_commit!(regenerated_root)
 
     diff, _stderr, status = capture_command(["git", "--no-pager", "diff", "--no-index", "--", committed_root, regenerated_root])
+    return nil if status.success?
+    if status.exitstatus == 1
+      return <<~TEXT.chomp
+        #{label} differs:
+        #{indent_block(diff)}
+      TEXT
+    end
+
+    raise Error, "git diff --no-index failed while comparing #{label}"
+  end
+
+  # The same comparison for a single generated FILE.
+  #
+  # `diff_roots` cannot do this: the committed fixtures sit in test/formats/
+  # beside the specs that read them, so a directory diff would report every
+  # spec file as deleted. Nothing here is normalized — these fixtures carry no
+  # generating-commit field, so every byte is compared, the recorded oracle
+  # commit and generator sha256 included.
+  def diff_files(label, committed_file, regenerated_file)
+    raise Error, "committed #{label} is missing at #{committed_file}" unless File.file?(committed_file)
+    unless File.file?(regenerated_file)
+      raise Error, "regenerated #{label} is missing at #{regenerated_file}"
+    end
+
+    diff, _stderr, status = capture_command(
+      ["git", "--no-pager", "diff", "--no-index", "--", committed_file, regenerated_file],
+    )
     return nil if status.success?
     if status.exitstatus == 1
       return <<~TEXT.chomp

@@ -32,7 +32,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -50,11 +50,50 @@ function sha256OfFile(relative: string): string {
 }
 
 /**
- * Every (file, recorded hash) pair the three provenance modules assert.
+ * The generated JSON fixtures under `test/formats/`, and the provenance each
+ * one carries.
+ *
+ * These are generated data exactly as `src/generated` is, and they were outside
+ * this gate entirely: nothing hashed the generators that wrote them, so a
+ * fixture and its generator could be edited together and the suite would stay
+ * green. Discovered from the tree rather than listed, so a fixture that lands
+ * for a new format joins the gate by existing.
+ */
+interface FixtureProvenance {
+  readonly generator?: { readonly script?: string; readonly sha256?: string };
+}
+
+const FORMATS_ROOT = join(REPO_ROOT, "test", "formats");
+const FIXTURE_BASENAMES = ["parity-fixtures.json", "degenerate-fixtures.json"] as const;
+
+const FIXTURE_RECORDS: ReadonlyArray<readonly [label: string, file: string, hash: string]> =
+  readdirSync(FORMATS_ROOT, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((entry) =>
+      FIXTURE_BASENAMES.filter((basename) =>
+        existsSync(join(FORMATS_ROOT, entry.name, basename)),
+      ).map((basename) => {
+        const relative = `test/formats/${entry.name}/${basename}`;
+        const payload = JSON.parse(
+          readFileSync(join(REPO_ROOT, relative), "utf8"),
+        ) as FixtureProvenance;
+        const script = payload.generator?.script;
+        const sha256 = payload.generator?.sha256;
+        if (typeof script !== "string" || typeof sha256 !== "string") {
+          throw new Error(`${relative} records no generator provenance to check`);
+        }
+        return [relative, script, sha256] as const;
+      }),
+    )
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+/**
+ * Every (file, recorded hash) pair the provenance records assert.
  *
  * `src/generated` records one script as `generatorSha256`; the other two
- * record a map because they consume more than one. Both shapes reduce to the
- * same claim, so both are checked the same way.
+ * modules record a map because they consume more than one; each generated
+ * fixture records the one script that wrote it. Every shape reduces to the
+ * same claim, so all are checked the same way.
  */
 const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: string]> = [
   ["src/generated", GENERATED_PROVENANCE.generator, GENERATED_PROVENANCE.generatorSha256],
@@ -64,6 +103,7 @@ const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: strin
   ...[...FORMATTING_GENERATED_PROVENANCE.generatorInputs].map(
     ([file, hash]) => ["src/formatting/generated", file, hash] as const,
   ),
+  ...FIXTURE_RECORDS,
 ];
 
 describe("generated data still matches the generators it names", () => {
@@ -71,6 +111,12 @@ describe("generated data still matches the generators it names", () => {
     // The failure this file exists to catch is a silent one, so it must not be
     // possible for the list itself to be empty and every assertion vacuous.
     expect(RECORDED.length).toBeGreaterThan(3);
+  });
+
+  it("found the generated fixtures under test/formats", () => {
+    // Zero discovered fixtures would make every fixture assertion below
+    // vacuous while the suite stayed green.
+    expect(FIXTURE_RECORDS.length).toBeGreaterThan(0);
   });
 
   it.each(RECORDED.map((entry) => [`${entry[0]} -> ${entry[1]}`, entry] as const))(
@@ -90,11 +136,22 @@ describe("generated data still matches the generators it names", () => {
     // A generator that produces committed data but is recorded by nothing
     // would sit outside this gate entirely. Pinned so adding one is a
     // deliberate act.
+    //
+    // `generate-parity-fixtures.rb` and `probe-degenerate-slots.rb` were
+    // exactly that: they wrote two committed fixtures, and neither this gate
+    // nor `gate-oracle.rb repo --check` knew they existed.
+    //
+    // `generate-xml-fixtures.rb` is deliberately absent: its output
+    // (`test/xml/ox-contract.expected.json`) carries no `generator` record, so
+    // there is nothing here to hash it against. That is an open gap, not a
+    // decision.
     const recordedFiles = new Set(RECORDED.map(([, file]) => file));
     expect([...recordedFiles].sort()).toStrictEqual([
       "scripts/generate-core-data.rb",
       "scripts/generate-corpus.rb",
       "scripts/generate-formatting-data.rb",
+      "scripts/generate-parity-fixtures.rb",
+      "scripts/probe-degenerate-slots.rb",
     ]);
   });
 });

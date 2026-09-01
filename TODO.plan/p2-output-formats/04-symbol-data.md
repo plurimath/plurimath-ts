@@ -1,4 +1,4 @@
-# TODO 3 — Generate HTML and OMML symbol data
+# TODO 4 — Generate HTML and OMML symbol data
 
 ## Why
 
@@ -13,7 +13,7 @@ sites that need it: ordinary symbol rendering (`src/render/symbol/html.ts:4-15`)
 and named fence rendering (`src/render/fenced/html.ts:38-62`). OMML has the same
 payload prerequisite, but its XML wrapper belongs to shared symbol helpers in
 the oracle rather than to each generated class
-(`/home/apple/ruby_gems/plurimath-oracle/lib/plurimath/math/symbols/symbol.rb:82-104,156-165`).
+(`lib/plurimath/math/symbols/symbol.rb:82-104,156-165`).
 
 ## Scope
 
@@ -208,7 +208,7 @@ the `1,459` static rows.
 String, with no changes under `options[:table]`, `options[:rspace]`, or a
 constructor value override (`0` varying rows on each probe). The format does
 not need a descriptor or template: its base method returns the raw value
-(`/home/apple/ruby_gems/plurimath-oracle/lib/plurimath/math/symbols/symbol.rb:63-65`),
+(`lib/plurimath/math/symbols/symbol.rb:63-65`),
 and the named subclasses supply the static replacement (`[symbols]`, exit `0`).
 
 The generated file should therefore be
@@ -227,7 +227,7 @@ For each of the five OMML helpers — `insert_t_tag`, `omml_nodes`, `t_tag`,
 `Math::Symbols::Symbol` as the method owner (`[symbols]`, exit `0`). The shared
 helpers build the `m:r`/`m:t` structure and read the subclass's static
 `to_omml_without_math_tag` string
-(`/home/apple/ruby_gems/plurimath-oracle/lib/plurimath/math/symbols/symbol.rb:82-104,156-165`).
+(`lib/plurimath/math/symbols/symbol.rb:82-104,156-165`).
 
 The generated file should therefore be
 `src/generated/omml/symbols.ts`, also a
@@ -349,7 +349,7 @@ strict (`scripts/gate-oracle.rb:718-769`).
 
 After the generated-data commit, rerun `node scripts/check.mjs` (all `12`
 currently active class-A gates) and the class-B
-`scripts/gate-oracle.rb repo --check --gem /home/apple/ruby_gems/plurimath-oracle`.
+`scripts/gate-oracle.rb repo --check --gem "$PLURIMATH_ORACLE"`.
 The testsuite regeneration gate is not part of this change because this
 repository's generator does not write the shared testsuite corpus
 (`scripts/gate-oracle.rb:72-81`).
@@ -464,5 +464,5 @@ landed OMML stack must count the cases it changes.
       oracle to be investigated, never a number to round in this file.
 - [ ] `node scripts/check.mjs` exits `0` with all `12` active class-A gates, and
       `scripts/gate-oracle.rb repo --check --gem
-      /home/apple/ruby_gems/plurimath-oracle` exits `0` from the clean final
+      "$PLURIMATH_ORACLE"` exits `0` from the clean final
       implementation tree.

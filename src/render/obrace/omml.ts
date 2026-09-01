@@ -2,8 +2,8 @@ import {
   type NodeOf,
   ommlSlot,
   plainRun,
+  present,
   type RenderContext,
-  rubyTruthy,
   structuralProperties,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
@@ -13,9 +13,9 @@ const BRACE = "⏞";
 export function renderObrace(node: NodeOf<"obrace">, context: RenderContext): XmlElement {
   // `return r_element("⏞", rpr_tag: false) unless parameter_one` — Ruby-falsy,
   // so `false` takes the bare-brace path alongside `nil`.
-  if (!rubyTruthy(node.parameterOne)) return plainRun(BRACE);
+  if (!present(node.parameterOne)) return plainRun(BRACE);
 
-  if (rubyTruthy(node.attributes.accent)) {
+  if (present(node.attributes.accent)) {
     return new XmlElement("m:acc").append(
       new XmlElement("m:accPr").append(new XmlElement("m:chr").setAttribute("m:val", BRACE)),
       ommlSlot(node.parameterOne, "e", context, node.kind, "obrace.parameterOne"),

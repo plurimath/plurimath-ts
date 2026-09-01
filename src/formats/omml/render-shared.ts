@@ -164,7 +164,7 @@ export function ommlSlot(
   const tag = new XmlElement(`m:${tagName}`);
   // `Core#omml_parameter` reads `return empty_tag(tag) unless field` — Ruby-falsy,
   // so a `false` slot takes the placeholder path exactly as `nil` does.
-  if (!rubyTruthy(value)) return tag.append(plainRun("&#8203;"));
+  if (!present(value)) return tag.append(plainRun("&#8203;"));
   if (Array.isArray(value)) {
     value.forEach((item, index) => {
       tag.append(insertSlotItem(item, context, kind, `${at}[${index}]`));
@@ -198,24 +198,17 @@ export function renderFixedNary(
   limitLocation: "subSup" | "undOvr",
   emptyEntity: string,
 ): XmlElement {
-  if (
-    !rubyTruthy(node.parameterOne) &&
-    !rubyTruthy(node.parameterTwo) &&
-    !rubyTruthy(node.parameterThree)
-  ) {
+  if (!present(node.parameterOne) && !present(node.parameterTwo) && !present(node.parameterThree)) {
     return plainRun(emptyEntity);
   }
 
   const properties = new XmlElement("m:naryPr").append(
     // `hide_function_name ? "" : "∑"` in the gem: Ruby-falsy, so `0` and `""`
     // suppress the operator there and must suppress it here too.
-    new XmlElement("m:chr").setAttribute(
-      "m:val",
-      rubyTruthy(node.hideFunctionName) ? "" : operator,
-    ),
+    new XmlElement("m:chr").setAttribute("m:val", present(node.hideFunctionName) ? "" : operator),
     new XmlElement("m:limLoc").setAttribute("m:val", limitLocation),
-    new XmlElement("m:subHide").setAttribute("m:val", rubyTruthy(node.parameterOne) ? "0" : "1"),
-    new XmlElement("m:supHide").setAttribute("m:val", rubyTruthy(node.parameterTwo) ? "0" : "1"),
+    new XmlElement("m:subHide").setAttribute("m:val", present(node.parameterOne) ? "0" : "1"),
+    new XmlElement("m:supHide").setAttribute("m:val", present(node.parameterTwo) ? "0" : "1"),
   );
 
   return new XmlElement("m:nary").append(
@@ -257,10 +250,6 @@ export function renderOverUnder(
     ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
     ommlSlot(limit, scriptSlot, context, kind, `${kind}.parameterTwo`),
   );
-}
-
-export function rubyTruthy(value: unknown): boolean {
-  return value !== null && value !== undefined && value !== false;
 }
 
 export function requireElement(

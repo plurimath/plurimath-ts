@@ -3,9 +3,9 @@ import {
   type NodeOf,
   type OmmlRendered,
   ommlSlot,
+  present,
   type RenderContext,
   renderOverUnder,
-  rubyTruthy,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
@@ -16,7 +16,7 @@ export function renderUnderset(node: NodeOf<"underset">, context: RenderContext)
     );
   }
 
-  if (!rubyTruthy(node.options.accentunder)) {
+  if (!present(node.options.accentunder)) {
     return renderOverUnder(node.kind, "Low", node.parameterOne, node.parameterTwo, context);
   }
 

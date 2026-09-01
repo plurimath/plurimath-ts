@@ -1,15 +1,16 @@
 /**
  * What each published subpath actually exports.
  *
- * This pins the **source barrels** that back the published subpaths, and only
- * those: it imports `src/formats/<F>/index`, so a broken `package.json#exports`
- * path or a mis-declared tsdown entry would ship the wrong file while every
- * assertion here stayed green. `scripts/gate-package.mjs` owns that half — it
- * resolves each subpath through the export map exactly as a consumer would and
+ * This pins the **source barrels** that back the published subpaths and checks
+ * that every format barrel listed below has a matching `package.json#exports`
+ * declaration.
+ * It still cannot prove that an export-map path or tsdown entry points at the
+ * right built file. `scripts/gate-package.mjs` owns that half — it reads the
+ * ESM and CJS targets from the export map, imports those files directly, and
  * asserts the same surface against the built `dist` (`EXPECTED_EXPORTS`).
  *
  * Both halves are needed. The gate cannot run in the unit suite because it
- * requires a build; this spec cannot see the export map at all. Together they
+ * requires a build; this spec cannot inspect the built entry. Together they
  * say: the barrel exports this, and that is what a consumer receives.
  *
  * Until these entries existed, `parseAsciimath`, `toAsciimath`, `toLatex` and
@@ -24,6 +25,7 @@
  */
 
 import { describe, expect, it } from "vitest";
+import packageJson from "../../package.json";
 import * as asciimath from "../../src/formats/asciimath/index";
 import * as latex from "../../src/formats/latex/index";
 import * as mathml from "../../src/formats/mathml/index";
@@ -36,6 +38,16 @@ const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly
   ["./mathml", mathml, ["toMathml"]],
   ["./unicodemath", unicodemath, ["toUnicodemath"]],
 ];
+
+const PUBLISHED_FORMAT_SUBPATHS = Object.keys(packageJson.exports).filter(
+  (subpath) => subpath !== "." && subpath !== "./core" && subpath !== "./package.json",
+);
+
+it("publishes every declared format surface as a package subpath", () => {
+  expect(PUBLISHED_FORMAT_SUBPATHS.sort()).toStrictEqual(
+    SURFACE.map(([subpath]) => subpath).sort(),
+  );
+});
 
 describe.each(SURFACE.map((entry) => [entry[0], entry] as const))(
   "%s",

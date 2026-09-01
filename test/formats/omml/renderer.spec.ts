@@ -1117,6 +1117,18 @@ describe("OMML ragged tables", () => {
       });
     }
   });
+
+  // A row-less table is the same gem path, not a separate one: `[].all?` is
+  // true, so `single_table?` holds and `Table.new([])` renders an `m:eqArr`
+  // carrying only its `m:eqArrPr` — measured on the oracle at `00c52783`. It
+  // must therefore reach the eqArr deferral and report that reason, rather
+  // than a second refusal of its own.
+  it("defers eqArr for a table with no rows at all", () => {
+    expectRefusal(() => toOmmlWithoutMathTag(cellTable([])), {
+      kind: "table",
+      message: "table.value: the single-column eqArr branch is deferred until separately measured",
+    });
+  });
 });
 
 /**

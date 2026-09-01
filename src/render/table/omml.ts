@@ -23,9 +23,6 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): XmlE
   }
   requireEmptyOptions(node.options, node.kind, "table.options");
   const rows = requireNodeList(node.value, node.kind, "table.value");
-  if (rows.length === 0) {
-    throw new RenderError("table.value: empty tables are unmeasured", FORMAT, node.kind);
-  }
 
   // `Table#single_table?` (table.rb:385-390) picks the `m:eqArr` branch:
   //
@@ -39,6 +36,12 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): XmlE
   // widths alone decide the branch here. Measured on the oracle at
   // `00c52783`: rows of 1 and 1 cell give `m:eqArr`, rows of 1 and 2 give
   // `m:m` — the shape this guard used to misread as single-column.
+  //
+  // A table with no rows reaches the same branch: `[].all?` is true in Ruby as
+  // `[].every` is in JavaScript, and the gem renders `Table.new([])` as an
+  // `m:eqArr` carrying only its `m:eqArrPr`. It refused separately here as
+  // "empty tables are unmeasured", which split one gem path across two port
+  // refusals and reported the wrong reason for the emptier of them.
   if (rows.every((row) => cellCount(row) === 1)) {
     throw new RenderError(
       "table.value: the single-column eqArr branch is deferred until separately measured",

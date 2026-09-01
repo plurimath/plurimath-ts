@@ -935,3 +935,42 @@ entry:
 **Trigger:** the first of — a corpus case records a numeric or hash option
 value, or a parser is added that can produce one, or the model schema gains
 Ruby type information for option values.
+
+### OMML: the four `to_omml` keywords refuse rather than render
+
+**Trigger: any one of the four gains a measured rendering path — display style
+when the recursive override is measured across the whole renderer, line
+breaking when Word's break-run separator is measured, the formatter with P4,
+and UnitsML when [ARCHITECTURE.md](../ARCHITECTURE.md) §5 stops deferring it
+wholesale.**
+
+`Formula#to_omml` accepts `display_style`, `split_on_linebreak`, `formatter`
+and `unitsml`. The port names each one and refuses it, rather than accepting
+the keyword and quietly ignoring what it asks for — a silently dropped option
+renders plausible OMML that is not what the caller asked for, which is the
+failure this port refuses to have.
+
+`src/formats/omml/renderer.ts` carries the four reasons next to the refusal and
+points here; this is the entry it points at.
+
+### OMML: `fenced` refuses the paren shapes whose gem output is not reproducible
+
+**Trigger: the paren value readers gain measured coverage for the shapes below,
+or generated symbol data lands and supplies the named parens.**
+
+`Fenced` reads its open and close parens through a value reader that mirrors
+what the gem sends to each node kind. Seven shapes refuse instead of rendering,
+each naming what the gem does with it:
+
+- a named paren whose symbol id the pinned oracle does not carry
+- a node kind with no value reader at all, where the gem raises `NoMethodError`
+- a slot holding something the gem sends `include?` to and raises on
+- a composite whose value is not the list the gem exposes
+- a value containing node objects, whose Ruby `#inspect` embeds memory
+  addresses and so cannot be reproduced deterministically
+- a number whose Ruby `#inspect` spelling this port cannot yet reproduce
+- anything else with no measured Ruby `#inspect` spelling
+
+The first is the generated-symbol-data gap and lifts with it. The rest are
+`#inspect` reproducibility, which is why they refuse rather than guess: the
+gem's own output for them is either nondeterministic or unmeasured.

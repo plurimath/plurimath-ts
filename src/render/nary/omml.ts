@@ -28,15 +28,19 @@ import { XmlElement } from "../../xml/index";
  */
 const SUPPRESSED_NARY_OPERATOR = "∫";
 
+/** Ruby `nil`, which this model spells as either an assigned `null` or an absent field. */
+function isNil(value: unknown): boolean {
+  return value === null || value === undefined;
+}
+
 export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlElement {
   requireEmptyOptions(node.options, node.kind, "nary.options");
   const first = node.parameterOne;
-  const rawOperator =
-    first === null || first === undefined
-      ? ""
-      : hasNodeKind(first) && (first as { readonly kind: string }).kind === "symbol"
-        ? symbolValueOrGenerated(first as NodeOf<"symbol">, node.kind, "nary.parameterOne")
-        : null;
+  const rawOperator = isNil(first)
+    ? ""
+    : hasNodeKind(first) && (first as { readonly kind: string }).kind === "symbol"
+      ? symbolValueOrGenerated(first as NodeOf<"symbol">, node.kind, "nary.parameterOne")
+      : null;
   if (rawOperator === null) {
     throw new RenderError(
       "nary.parameterOne: only the measured generic Symbol operator is implemented in this slice",
@@ -50,8 +54,11 @@ export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlEle
       ? null
       : new XmlElement("m:chr").setAttribute("m:val", operatorValue),
     new XmlElement("m:limLoc").setAttribute("m:val", "subSup"),
-    node.parameterTwo === null ? new XmlElement("m:subHide").setAttribute("m:val", "1") : null,
-    node.parameterThree === null ? new XmlElement("m:supHide").setAttribute("m:val", "1") : null,
+    // `Nary#hide_tags` is `return nar unless field.nil?` — an explicit nil test,
+    // NOT Ruby-falsy: a `false` slot keeps its hide tag off. An absent field
+    // reads as `nil` in Ruby, so `undefined` counts alongside `null` here.
+    isNil(node.parameterTwo) ? new XmlElement("m:subHide").setAttribute("m:val", "1") : null,
+    isNil(node.parameterThree) ? new XmlElement("m:supHide").setAttribute("m:val", "1") : null,
     controlProperties(),
   );
   return new XmlElement("m:nary").append(

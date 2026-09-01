@@ -12,8 +12,10 @@ export const FORMAT = "omml";
 export type OmmlRendered = XmlElement | string | null | readonly OmmlRendered[];
 
 export interface RenderContext {
+  readonly displaystyle: boolean;
   readonly insert: (node: MathNode) => OmmlRendered;
   readonly render: (node: MathNode) => OmmlRendered;
+  readonly withDisplaystyle: (displaystyle: boolean) => RenderContext;
 }
 
 export type NodeOf<K extends NodeKind> = Extract<MathNode, { readonly kind: K }>;
@@ -160,7 +162,8 @@ export function ommlSlot(
   at: string,
 ): XmlElement {
   const tag = new XmlElement(`m:${tagName}`);
-  // `return empty_tag(tag) unless field` — Ruby-falsy, so `false` joins `nil`.
+  // `Core#omml_parameter` reads `return empty_tag(tag) unless field` — Ruby-falsy,
+  // so a `false` slot takes the placeholder path exactly as `nil` does.
   if (!present(value)) return tag.append(plainRun("&#8203;"));
   if (Array.isArray(value)) {
     value.forEach((item, index) => {
@@ -182,6 +185,70 @@ function insertSlotItem(
     `${at}: cannot insert ${describeSlot(value)} — the gem raises NoMethodError here`,
     FORMAT,
     kind,
+  );
+}
+
+type FixedNaryNode = NodeOf<"int"> | NodeOf<"oint"> | NodeOf<"prod"> | NodeOf<"sum">;
+type LimitKind = "obrace" | "overset" | "ubrace" | "underset";
+
+export function renderFixedNary(
+  node: FixedNaryNode,
+  context: RenderContext,
+  operator: string,
+  limitLocation: "subSup" | "undOvr",
+  emptyEntity: string,
+): XmlElement {
+  if (!present(node.parameterOne) && !present(node.parameterTwo) && !present(node.parameterThree)) {
+    return plainRun(emptyEntity);
+  }
+
+  const properties = new XmlElement("m:naryPr").append(
+    // `hide_function_name ? "" : "∑"` in the gem: Ruby-falsy, so `0` and `""`
+    // suppress the operator there and must suppress it here too.
+    new XmlElement("m:chr").setAttribute("m:val", present(node.hideFunctionName) ? "" : operator),
+    new XmlElement("m:limLoc").setAttribute("m:val", limitLocation),
+    new XmlElement("m:subHide").setAttribute("m:val", present(node.parameterOne) ? "0" : "1"),
+    new XmlElement("m:supHide").setAttribute("m:val", present(node.parameterTwo) ? "0" : "1"),
+  );
+
+  return new XmlElement("m:nary").append(
+    properties,
+    ommlSlot(node.parameterOne, "sub", context, node.kind, `${node.kind}.parameterOne`),
+    ommlSlot(node.parameterTwo, "sup", context, node.kind, `${node.kind}.parameterTwo`),
+    ommlSlot(node.parameterThree, "e", context, node.kind, `${node.kind}.parameterThree`),
+  );
+}
+
+export function renderLimit(
+  kind: LimitKind,
+  position: "Low" | "Upp",
+  base: unknown,
+  limit: unknown,
+  context: RenderContext,
+): XmlElement {
+  const name = `lim${position}`;
+  return new XmlElement(`m:${name}`).append(
+    new XmlElement(`m:${name}Pr`).append(controlProperties()),
+    ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
+    ommlSlot(limit, "lim", context, kind, `${kind}.parameterTwo`),
+  );
+}
+
+export function renderOverUnder(
+  kind: "overset" | "underset",
+  position: "Low" | "Upp",
+  base: unknown,
+  limit: unknown,
+  context: RenderContext,
+): XmlElement {
+  if (context.displaystyle) return renderLimit(kind, position, base, limit, context);
+
+  const name = position === "Upp" ? "sSup" : "sSub";
+  const scriptSlot = position === "Upp" ? "sup" : "sub";
+  return new XmlElement(`m:${name}`).append(
+    structuralProperties(name),
+    ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
+    ommlSlot(limit, scriptSlot, context, kind, `${kind}.parameterTwo`),
   );
 }
 

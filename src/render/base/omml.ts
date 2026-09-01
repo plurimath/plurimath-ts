@@ -2,13 +2,12 @@ import {
   type NodeOf,
   ommlSlot,
   type RenderContext,
-  requireEmptyOptions,
   structuralProperties,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
 export function renderBase(node: NodeOf<"base">, context: RenderContext): XmlElement {
-  requireEmptyOptions(node.options, node.kind, "base.options");
+  // Base#to_omml_without_math_tag does not inspect its stored options.
   return new XmlElement("m:sSub").append(
     structuralProperties("sSub"),
     ommlSlot(node.parameterOne, "e", context, node.kind, "base.parameterOne"),

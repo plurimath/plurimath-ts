@@ -2194,6 +2194,10 @@ describe("OMML accents without a base", () => {
     ["tilde", (v: NodeParameter) => new TildeNode({ attributes: {}, parameterOne: v })],
     ["vec", (v: NodeParameter) => new VecNode({ attributes: {}, parameterOne: v })],
     ["ul", (v: NodeParameter) => new UlNode({ attributes: {}, parameterOne: v })],
+    [
+      "overleftrightarrow",
+      (v: NodeParameter) => new OverleftrightarrowNode({ attributes: {}, parameterOne: v }),
+    ],
   ] as const)("renders %s the same for a false base as for nil", (_kind, build) => {
     const forNil = toOmmlWithoutMathTag(build(null));
     const forFalse = toOmmlWithoutMathTag(build(false as unknown as NodeParameter));

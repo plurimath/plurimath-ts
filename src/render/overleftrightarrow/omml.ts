@@ -12,7 +12,7 @@ export function renderOverleftrightarrow(
   node: NodeOf<"overleftrightarrow">,
   context: RenderContext,
 ): XmlElement {
-  if (node.parameterOne === null || node.parameterOne === undefined) return plainRun("&#x20e1;");
+  if (!present(node.parameterOne)) return plainRun("&#x20e1;");
   if (present(node.attributes.accent)) {
     return renderAccent(
       node.kind,

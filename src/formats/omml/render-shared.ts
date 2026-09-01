@@ -330,10 +330,6 @@ export function renderLiteralScript(
     new XmlElement(`m:${scriptSlot}`).append(plainRun(literal)),
   );
 }
-export function rubyTruthy(value: unknown): boolean {
-  return value !== null && value !== undefined && value !== false;
-}
-
 export function requireElement(
   rendered: OmmlRendered,
   kind: string,

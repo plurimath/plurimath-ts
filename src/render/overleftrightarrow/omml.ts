@@ -1,10 +1,10 @@
 import {
   type NodeOf,
   plainRun,
+  present,
   type RenderContext,
   renderAccent,
   renderLiteralScript,
-  rubyTruthy,
 } from "../../formats/omml/render-shared";
 import type { XmlElement } from "../../xml/index";
 
@@ -13,7 +13,7 @@ export function renderOverleftrightarrow(
   context: RenderContext,
 ): XmlElement {
   if (node.parameterOne === null || node.parameterOne === undefined) return plainRun("&#x20e1;");
-  if (rubyTruthy(node.attributes.accent)) {
+  if (present(node.attributes.accent)) {
     return renderAccent(
       node.kind,
       node.parameterOne,

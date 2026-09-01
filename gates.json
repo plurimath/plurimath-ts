@@ -59,7 +59,7 @@
       "id": "corpus-conformance",
       "class": "A",
       "activatesAt": "P1-baseline",
-      "run": "pnpm test corpus- model-parity render-parity asciimath/grammar",
+      "run": "pnpm test corpus- model-parity render-parity degenerate-slots asciimath/grammar",
       "selects": [
         "test/core/corpus-pin.spec.ts",
         "test/core/corpus-yaml.spec.ts",
@@ -67,11 +67,13 @@
         "test/formats/asciimath/grammar.spec.ts",
         "test/formats/asciimath/model-parity.spec.ts",
         "test/formats/asciimath/render-parity.spec.ts",
+        "test/formats/html/degenerate-slots.spec.ts",
+        "test/formats/html/render-parity.spec.ts",
         "test/formats/latex/render-parity.spec.ts",
         "test/formats/mathml/render-parity.spec.ts",
         "test/formats/unicodemath/render-parity.spec.ts"
       ],
-      "description": "Parse tree, normalized model and every landed renderer match the Ruby-generated expectations"
+      "description": "Parse tree, normalized model and every landed renderer match the Ruby-generated expectations, including the formats the shared corpus carries no target for (html; omml joins with its stack)"
     },
     {
       "id": "payload-validation",

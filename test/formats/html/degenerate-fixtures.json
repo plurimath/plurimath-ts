@@ -4,6 +4,28 @@
     "commit": "00c52783877b38f6b8e6e109f1803f96bb34fc62"
   },
   "format": "html",
+  "kinds": {
+    "frac": 2,
+    "base": 2,
+    "power": 2,
+    "nary": 4,
+    "obrace": 1,
+    "ubrace": 1,
+    "bar": 1,
+    "hat": 1,
+    "dot": 1,
+    "ddot": 1,
+    "tilde": 1,
+    "vec": 1,
+    "ul": 1,
+    "abs": 1,
+    "ceil": 1,
+    "floor": 1,
+    "norm": 1,
+    "sqrt": 1,
+    "overset": 2,
+    "underset": 2
+  },
   "rowCount": 196,
   "rendersCount": 84,
   "rows": [
@@ -11,15 +33,15 @@
       "kind": "frac",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "frac",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "frac",
@@ -53,22 +75,22 @@
       "kind": "frac",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "frac",
       "slot": 1,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "frac",
       "slot": 1,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "frac",
@@ -102,22 +124,22 @@
       "kind": "frac",
       "slot": 1,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "base",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<sub>a</sub>",
+      "renders": true
     },
     {
       "kind": "base",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<sub>a</sub>",
+      "renders": true
     },
     {
       "kind": "base",
@@ -151,22 +173,22 @@
       "kind": "base",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i><sub>a</sub>",
+      "renders": true
     },
     {
       "kind": "base",
       "slot": 1,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "base",
       "slot": 1,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "base",
@@ -200,22 +222,22 @@
       "kind": "base",
       "slot": 1,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i><sub>a</sub>",
+      "renders": true
     },
     {
       "kind": "power",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<sup>a</sup>",
+      "renders": true
     },
     {
       "kind": "power",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<sup>a</sup>",
+      "renders": true
     },
     {
       "kind": "power",
@@ -249,22 +271,22 @@
       "kind": "power",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i><sup>a</sup>",
+      "renders": true
     },
     {
       "kind": "power",
       "slot": 1,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "power",
       "slot": 1,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "power",
@@ -298,8 +320,8 @@
       "kind": "power",
       "slot": 1,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i><sup>a</sup>",
+      "renders": true
     },
     {
       "kind": "nary",
@@ -501,33 +523,33 @@
       "kind": "obrace",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x23de;</i>",
+      "renders": true
     },
     {
       "kind": "obrace",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x23de;</i>",
+      "renders": true
     },
     {
       "kind": "obrace",
       "slot": 0,
       "value": "true",
-      "renders": false,
-      "error": "Plurimath::Math::ParseError"
-    },
-    {
-      "kind": "obrace",
-      "slot": 0,
-      "value": "zero",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
     },
     {
       "kind": "obrace",
       "slot": 0,
+      "value": "zero",
+      "renders": false,
+      "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "obrace",
+      "slot": 0,
       "value": "empty-string",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
@@ -536,47 +558,47 @@
       "kind": "obrace",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x23de;</i><i></i>",
+      "renders": true
     },
     {
       "kind": "obrace",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x23de;</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "ubrace",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x23df;</i>",
+      "renders": true
     },
     {
       "kind": "ubrace",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x23df;</i>",
+      "renders": true
     },
     {
       "kind": "ubrace",
       "slot": 0,
       "value": "true",
-      "renders": false,
-      "error": "Plurimath::Math::ParseError"
-    },
-    {
-      "kind": "ubrace",
-      "slot": 0,
-      "value": "zero",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
     },
     {
       "kind": "ubrace",
       "slot": 0,
+      "value": "zero",
+      "renders": false,
+      "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "ubrace",
+      "slot": 0,
       "value": "empty-string",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
@@ -585,47 +607,47 @@
       "kind": "ubrace",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x23df;</i><i></i>",
+      "renders": true
     },
     {
       "kind": "ubrace",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x23df;</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "bar",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>¯</i>",
+      "renders": true
     },
     {
       "kind": "bar",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>¯</i>",
+      "renders": true
     },
     {
       "kind": "bar",
       "slot": 0,
       "value": "true",
-      "renders": false,
-      "error": "Plurimath::Math::ParseError"
-    },
-    {
-      "kind": "bar",
-      "slot": 0,
-      "value": "zero",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
     },
     {
       "kind": "bar",
       "slot": 0,
+      "value": "zero",
+      "renders": false,
+      "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "bar",
+      "slot": 0,
       "value": "empty-string",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
@@ -634,47 +656,47 @@
       "kind": "bar",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>¯</i><i></i>",
+      "renders": true
     },
     {
       "kind": "bar",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>¯</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "hat",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>^</i>",
+      "renders": true
     },
     {
       "kind": "hat",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>^</i>",
+      "renders": true
     },
     {
       "kind": "hat",
       "slot": 0,
       "value": "true",
-      "renders": false,
-      "error": "Plurimath::Math::ParseError"
-    },
-    {
-      "kind": "hat",
-      "slot": 0,
-      "value": "zero",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
     },
     {
       "kind": "hat",
       "slot": 0,
+      "value": "zero",
+      "renders": false,
+      "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "hat",
+      "slot": 0,
       "value": "empty-string",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
@@ -683,47 +705,47 @@
       "kind": "hat",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>^</i><i></i>",
+      "renders": true
     },
     {
       "kind": "hat",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>^</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "dot",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>dot</i>",
+      "renders": true
     },
     {
       "kind": "dot",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>dot</i>",
+      "renders": true
     },
     {
       "kind": "dot",
       "slot": 0,
       "value": "true",
-      "renders": false,
-      "error": "Plurimath::Math::ParseError"
-    },
-    {
-      "kind": "dot",
-      "slot": 0,
-      "value": "zero",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
     },
     {
       "kind": "dot",
       "slot": 0,
+      "value": "zero",
+      "renders": false,
+      "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "dot",
+      "slot": 0,
       "value": "empty-string",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
@@ -732,47 +754,47 @@
       "kind": "dot",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>dot</i><i></i>",
+      "renders": true
     },
     {
       "kind": "dot",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>dot</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "ddot",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>..</i>",
+      "renders": true
     },
     {
       "kind": "ddot",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>..</i>",
+      "renders": true
     },
     {
       "kind": "ddot",
       "slot": 0,
       "value": "true",
-      "renders": false,
-      "error": "Plurimath::Math::ParseError"
-    },
-    {
-      "kind": "ddot",
-      "slot": 0,
-      "value": "zero",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
     },
     {
       "kind": "ddot",
       "slot": 0,
+      "value": "zero",
+      "renders": false,
+      "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "ddot",
+      "slot": 0,
       "value": "empty-string",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
@@ -788,40 +810,40 @@
       "kind": "ddot",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i><i>..</i>",
+      "renders": true
     },
     {
       "kind": "tilde",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>~</i>",
+      "renders": true
     },
     {
       "kind": "tilde",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>~</i>",
+      "renders": true
     },
     {
       "kind": "tilde",
       "slot": 0,
       "value": "true",
-      "renders": false,
-      "error": "Plurimath::Math::ParseError"
-    },
-    {
-      "kind": "tilde",
-      "slot": 0,
-      "value": "zero",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
     },
     {
       "kind": "tilde",
       "slot": 0,
+      "value": "zero",
+      "renders": false,
+      "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "tilde",
+      "slot": 0,
       "value": "empty-string",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
@@ -830,47 +852,47 @@
       "kind": "tilde",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>~</i><i></i>",
+      "renders": true
     },
     {
       "kind": "tilde",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>~</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "vec",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x2192;</i>",
+      "renders": true
     },
     {
       "kind": "vec",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x2192;</i>",
+      "renders": true
     },
     {
       "kind": "vec",
       "slot": 0,
       "value": "true",
-      "renders": false,
-      "error": "Plurimath::Math::ParseError"
-    },
-    {
-      "kind": "vec",
-      "slot": 0,
-      "value": "zero",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
     },
     {
       "kind": "vec",
       "slot": 0,
+      "value": "zero",
+      "renders": false,
+      "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "vec",
+      "slot": 0,
       "value": "empty-string",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
@@ -879,47 +901,47 @@
       "kind": "vec",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x2192;</i><i></i>",
+      "renders": true
     },
     {
       "kind": "vec",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x2192;</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "ul",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>underline</i>",
+      "renders": true
     },
     {
       "kind": "ul",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>underline</i>",
+      "renders": true
     },
     {
       "kind": "ul",
       "slot": 0,
       "value": "true",
-      "renders": false,
-      "error": "Plurimath::Math::ParseError"
-    },
-    {
-      "kind": "ul",
-      "slot": 0,
-      "value": "zero",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
     },
     {
       "kind": "ul",
       "slot": 0,
+      "value": "zero",
+      "renders": false,
+      "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "ul",
+      "slot": 0,
       "value": "empty-string",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
@@ -928,47 +950,47 @@
       "kind": "ul",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>underline</i><i></i>",
+      "renders": true
     },
     {
       "kind": "ul",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>underline</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "abs",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>abs</i>",
+      "renders": true
     },
     {
       "kind": "abs",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>abs</i>",
+      "renders": true
     },
     {
       "kind": "abs",
       "slot": 0,
       "value": "true",
-      "renders": false,
-      "error": "Plurimath::Math::ParseError"
-    },
-    {
-      "kind": "abs",
-      "slot": 0,
-      "value": "zero",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
     },
     {
       "kind": "abs",
       "slot": 0,
+      "value": "zero",
+      "renders": false,
+      "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "abs",
+      "slot": 0,
       "value": "empty-string",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
@@ -977,47 +999,47 @@
       "kind": "abs",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>abs</i><i></i>",
+      "renders": true
     },
     {
       "kind": "abs",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>abs</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "ceil",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x2308;</i><i>&#x2309;</i>",
+      "renders": true
     },
     {
       "kind": "ceil",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x2308;</i><i>&#x2309;</i>",
+      "renders": true
     },
     {
       "kind": "ceil",
       "slot": 0,
       "value": "true",
-      "renders": false,
-      "error": "Plurimath::Math::ParseError"
-    },
-    {
-      "kind": "ceil",
-      "slot": 0,
-      "value": "zero",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
     },
     {
       "kind": "ceil",
       "slot": 0,
+      "value": "zero",
+      "renders": false,
+      "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "ceil",
+      "slot": 0,
       "value": "empty-string",
       "renders": false,
       "error": "Plurimath::Math::ParseError"
@@ -1033,22 +1055,22 @@
       "kind": "ceil",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>&#x2308;</i><i>a</i><i>&#x2309;</i>",
+      "renders": true
     },
     {
       "kind": "floor",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>floor</i>",
+      "renders": true
     },
     {
       "kind": "floor",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>floor</i>",
+      "renders": true
     },
     {
       "kind": "floor",
@@ -1075,29 +1097,29 @@
       "kind": "floor",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>floor</i><i></i>",
+      "renders": true
     },
     {
       "kind": "floor",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>floor</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "norm",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>norm</i>",
+      "renders": true
     },
     {
       "kind": "norm",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>norm</i>",
+      "renders": true
     },
     {
       "kind": "norm",
@@ -1124,29 +1146,29 @@
       "kind": "norm",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>norm</i><i></i>",
+      "renders": true
     },
     {
       "kind": "norm",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>norm</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "sqrt",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>sqrt</i>",
+      "renders": true
     },
     {
       "kind": "sqrt",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>sqrt</i>",
+      "renders": true
     },
     {
       "kind": "sqrt",
@@ -1173,29 +1195,29 @@
       "kind": "sqrt",
       "slot": 0,
       "value": "empty-array",
-      "renders": true,
-      "elements": []
+      "output": "<i>sqrt</i><i></i>",
+      "renders": true
     },
     {
       "kind": "sqrt",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>sqrt</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "overset",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "overset",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "overset",
@@ -1229,22 +1251,22 @@
       "kind": "overset",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "overset",
       "slot": 1,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "overset",
       "slot": 1,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "overset",
@@ -1278,22 +1300,22 @@
       "kind": "overset",
       "slot": 1,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "underset",
       "slot": 0,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "underset",
       "slot": 0,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "underset",
@@ -1327,22 +1349,22 @@
       "kind": "underset",
       "slot": 0,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i><i>a</i>",
+      "renders": true
     },
     {
       "kind": "underset",
       "slot": 1,
       "value": "nil",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "underset",
       "slot": 1,
       "value": "false",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i>",
+      "renders": true
     },
     {
       "kind": "underset",
@@ -1376,8 +1398,8 @@
       "kind": "underset",
       "slot": 1,
       "value": "node",
-      "renders": true,
-      "elements": []
+      "output": "<i>a</i><i>a</i>",
+      "renders": true
     }
   ]
 }

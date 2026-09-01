@@ -7,6 +7,7 @@
   "format": "html",
   "caseCount": 104,
   "renderedCount": 88,
+  "raisedCount": 16,
   "cases": [
     {
       "group": "colour",
@@ -138,19 +139,22 @@
       "group": "left-right",
       "id": "left-right-round",
       "input": "left( x right)",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
     },
     {
       "group": "left-right",
       "id": "left-right-square",
       "input": "left[ x right]",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
     },
     {
       "group": "left-right",
       "id": "left-right-around-frac",
       "input": "left( a/b right)",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
     },
     {
       "group": "matrices",
@@ -420,79 +424,92 @@
       "group": "rejections",
       "id": "frac-trailing",
       "input": "a/",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "frac-leading",
       "input": "/b",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "frac-bare",
       "input": "/",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "frac-trailing-space",
       "input": "a / ",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "backtick-bare",
       "input": "`",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "right-without-left",
       "input": "right",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "right-unclosed",
       "input": "left( x right",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "left-right-curly",
       "input": "left{ x right}",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "left-right-vert",
       "input": "left| x right|",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "frac-trailing-after-brace",
       "input": "{:a/",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "frac-trailing-after-braces",
       "input": "{:x:}a/",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "frac-trailing-after-parens",
       "input": "(:x:)y/",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "rejections",
       "id": "frac-trailing-after-both",
       "input": "{:a:}(:b:)c/",
-      "raises": "Plurimath::Math::ParseError"
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "parse"
     },
     {
       "group": "roots",

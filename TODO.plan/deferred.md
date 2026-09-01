@@ -305,6 +305,28 @@ included, where their asciimath render interpolates `lefttrue`). And
 defined on `Formula` alone in the gem, every other class answering
 NoMethodError.
 
+### Integer-like keys in hash carriers are refused across renderers
+
+**Trigger: the model gains an ordered hash input such as entry pairs or a
+`Map`, together with shared key lookup and iteration helpers for every
+renderer and normalized-model consumer.**
+
+JavaScript plain objects do not preserve a Ruby hash's insertion position for
+integer-like keys: those keys enumerate first in numeric order. By the time a
+node constructor receives an object, the original chronology is already gone,
+so changing only the internal copy cannot recover it. A shared emission guard
+therefore refuses an order-sensitive hash containing an array-index key (`"0"`
+through `"4294967294"`). This includes ordinary options/attributes hashes and
+nested deterministic `#inspect` carriers such as OMML Fenced delimiters.
+
+The refusal is hand-built-tree-only today. The only shipped input parser is
+AsciiMath, whose transform creates option and attribute carriers from fixed
+empty object literals; it never derives a carrier key from input. The shared
+guard is nevertheless required because MathML emits arbitrary option and
+attribute entries in order, OMML does the same for Mpadded and Fenced, and
+UnicodeMath interpolates arbitrary hash values. Numeric-looking keys which are
+not JavaScript array indices (`"01"`, `"-1"`, `"4294967295"`) remain accepted.
+
 ## Upstream issues
 
 Defects in the Ruby gem, found while building the port. All reproduce on a

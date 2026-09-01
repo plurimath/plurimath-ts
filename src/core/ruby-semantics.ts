@@ -9,6 +9,36 @@
  * implementation, measured once.
  */
 
+import { RenderError } from "./errors";
+
+/**
+ * Refuses a Ruby hash iteration whose order a JavaScript object has already
+ * lost. Ordinary-object enumeration hoists array-index keys into numeric order
+ * regardless of where the caller inserted them; the original Ruby insertion
+ * position cannot be reconstructed at an emission site.
+ */
+export function assertReproducibleRubyHashOrder(
+  hash: object,
+  format: string,
+  kind: string,
+  at: string,
+): void {
+  for (const key of Object.keys(hash)) {
+    const index = Number(key);
+    const isArrayIndex =
+      Number.isInteger(index) && index >= 0 && index < 2 ** 32 - 1 && String(index) === key;
+    if (isArrayIndex) {
+      throw new RenderError(
+        `${at}.${key}: integer-like hash keys are deferred (TODO.plan/deferred.md) because ` +
+          "JavaScript object enumeration discards their insertion position, so Ruby hash " +
+          "emission order cannot be reproduced",
+        format,
+        kind,
+      );
+    }
+  }
+}
+
 /**
  * Ruby prints a Float in plain decimal on `[1e-4, 1e15)` and switches to
  * scientific outside it; JavaScript switches at `1e-6` and `1e21`. So Ruby's

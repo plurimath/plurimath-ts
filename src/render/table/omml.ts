@@ -4,6 +4,7 @@ import {
   controlProperties,
   FORMAT,
   type NodeOf,
+  type OmmlRendered,
   type RenderContext,
   renderChild,
   requireElement,
@@ -26,19 +27,31 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): XmlE
     throw new RenderError("table.value: empty tables are unmeasured", FORMAT, node.kind);
   }
 
-  const first = rows[0];
-  const firstCells =
-    typeof first === "object" && first !== null && !Array.isArray(first)
-      ? (first as { readonly parameterOne?: unknown }).parameterOne
-      : undefined;
-  const columns = Array.isArray(firstCells) ? firstCells.length : 0;
-  if (columns < 2) {
+  // `Table#single_table?` (table.rb:385-390) picks the `m:eqArr` branch:
+  //
+  //     value.map { |d| d.parameter_one.length == 1 }.all? &&
+  //       nil_option?(:frame) && nil_option?(:columnlines) && nil_option?(:rowlines)
+  //
+  // EVERY row must hold exactly one cell, not just the first. The three
+  // options are already settled above: `requireEmptyOptions` refuses anything
+  // but an absent or empty options hash, and an absent option is what
+  // `nil_option?` accepts (it also accepts `""` and `"none"`), so the row
+  // widths alone decide the branch here. Measured on the oracle at
+  // `00c52783`: rows of 1 and 1 cell give `m:eqArr`, rows of 1 and 2 give
+  // `m:m` — the shape this guard used to misread as single-column.
+  if (rows.every((row) => cellCount(row) === 1)) {
     throw new RenderError(
       "table.value: the single-column eqArr branch is deferred until separately measured",
       FORMAT,
       node.kind,
     );
   }
+
+  // `multiple_td_table` (table.rb:298) takes `m:count` from the FIRST row
+  // alone — `value&.first&.parameter_one&.count` — and never compares it with
+  // any other row. A ragged matrix therefore counts its first row's cells:
+  // measured, rows of 1 and 2 cells give `<m:count m:val="1"/>`.
+  const columns = cellCount(rows[0]) ?? 0;
 
   const matrix = new XmlElement("m:m");
   const columnProperties = new XmlElement("m:mcPr").append(
@@ -52,23 +65,11 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): XmlE
   matrix.append(matrixProperties);
 
   rows.forEach((row, index) => {
-    const rowCells =
-      typeof row === "object" && row !== null && !Array.isArray(row)
-        ? (row as { readonly parameterOne?: unknown }).parameterOne
-        : undefined;
-    if (!Array.isArray(rowCells) || rowCells.length !== columns) {
-      throw new RenderError(
-        `table.value[${index}]: does not have the measured ${columns}-cell row shape`,
-        FORMAT,
-        node.kind,
-      );
-    }
     matrix.append(
-      requireElement(
+      requireRowContent(
         renderChild(row, context, `table.value[${index}]`),
         node.kind,
         `table.value[${index}]`,
-        "m:mr",
       ),
     );
   });
@@ -82,6 +83,39 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): XmlE
     new XmlElement("m:grow"),
   );
   return new XmlElement("m:d").append(delimiterProperties, new XmlElement("m:e").append(matrix));
+}
+
+/**
+ * A row's cell count for `single_table?` and `m:count`. The gem reads
+ * `d.parameter_one.length`, which answers only for a row whose slot holds a
+ * list; anything else is left to fail loudly when that row is rendered.
+ */
+function cellCount(row: unknown): number | undefined {
+  if (typeof row !== "object" || row === null || Array.isArray(row)) return undefined;
+  const cells = (row as { readonly parameterOne?: unknown }).parameterOne;
+  return Array.isArray(cells) ? cells.length : undefined;
+}
+
+/**
+ * The two shapes a row renders to, both measured on the oracle at `00c52783`:
+ * `Tr` answers with `m:mr` for every cell count but one, and with the bare
+ * `m:e` list for exactly one (`src/render/unary-function/omml.ts`). The gem's
+ * `multiple_td_table` flattens whichever it gets straight into `m:m`, so both
+ * are accepted and anything else refuses rather than guessing markup.
+ */
+function requireRowContent(rendered: OmmlRendered, kind: string, at: string): OmmlRendered {
+  if (rendered instanceof XmlElement) return requireElement(rendered, kind, at, "m:mr");
+  if (
+    Array.isArray(rendered) &&
+    rendered.every((cell) => cell instanceof XmlElement && cell.name === "m:e")
+  ) {
+    return rendered;
+  }
+  throw new RenderError(
+    `${at}: did not render the measured m:mr row or m:e cell list`,
+    FORMAT,
+    kind,
+  );
 }
 
 function requireParenValue(value: unknown, node: NodeOf<"table">, at: string): string {

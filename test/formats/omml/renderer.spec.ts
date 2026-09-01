@@ -23,6 +23,7 @@ import {
   TextNode,
   UnaryFunctionNode,
 } from "../../../src/core/nodes";
+import { parseAsciimath } from "../../../src/formats/asciimath/index";
 import { ROOT_CONTEXT } from "../../../src/formats/omml/render";
 import { toOmml, toOmmlWithoutMathTag } from "../../../src/formats/omml/renderer";
 
@@ -890,5 +891,441 @@ describe("OMML first-slice refusal boundary", () => {
         message: 'Formula alias "Mstyle" has not been measured for OMML in this slice',
       },
     );
+  });
+});
+
+/**
+ * Parity pins for the degenerate shapes the conformance corpus never builds:
+ * ragged tables, control characters inside `Text`, the `Nary` operator
+ * attribute, `hide_function_name`, and a Ruby-`false` parameter slot.
+ *
+ * Every expected string below is the oracle's own answer at `00c52783`,
+ * captured by building the identical tree in Ruby and dumping it — the probe
+ * and its raw output live with the task notes. None of these shapes appears in
+ * the corpus, which is why the renderer was wrong on all five and green.
+ */
+
+const cellTd = (value: string): BinaryFunctionNode =>
+  new BinaryFunctionNode({ name: "Td", parameterOne: [symbol(value)] });
+
+const cellTr = (...values: readonly string[]): UnaryFunctionNode =>
+  new UnaryFunctionNode({ name: "Tr", parameterOne: values.map(cellTd) });
+
+const cellTable = (rows: readonly UnaryFunctionNode[]): TableNode =>
+  new TableNode({
+    closeParen: symbol("]"),
+    openParen: symbol("["),
+    options: {},
+    value: rows,
+  });
+
+/** `[1] / [2, 3]` — one cell then two. `m:count` follows the FIRST row. */
+const RAGGED_1_2_X = xml(
+  "<m:d>",
+  "  <m:dPr>",
+  '    <m:begChr m:val="["/>',
+  '    <m:endChr m:val="]"/>',
+  '    <m:sepChr m:val=""/>',
+  "    <m:grow/>",
+  "  </m:dPr>",
+  "  <m:e>",
+  "    <m:m>",
+  "      <m:mPr>",
+  "        <m:mcs>",
+  "          <m:mc>",
+  "            <m:mcPr>",
+  '              <m:count m:val="1"/>',
+  '              <m:mcJc m:val="center"/>',
+  "            </m:mcPr>",
+  "          </m:mc>",
+  "        </m:mcs>",
+  "        <m:ctrlPr>",
+  "          <w:rPr>",
+  '            <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+  "            <w:i/>",
+  "          </w:rPr>",
+  "        </m:ctrlPr>",
+  "      </m:mPr>",
+  "      <m:e>",
+  "        <m:r>",
+  "          <m:t>1</m:t>",
+  "        </m:r>",
+  "      </m:e>",
+  "      <m:mr>",
+  "        <m:e>",
+  "          <m:r>",
+  "            <m:t>2</m:t>",
+  "          </m:r>",
+  "        </m:e>",
+  "        <m:e>",
+  "          <m:r>",
+  "            <m:t>3</m:t>",
+  "          </m:r>",
+  "        </m:e>",
+  "      </m:mr>",
+  "    </m:m>",
+  "  </m:e>",
+  "</m:d>",
+);
+
+/** `[1, 2] / [3]` — the ragged row is the LAST one, and `m:count` is 2. */
+const RAGGED_2_1_X = xml(
+  "<m:d>",
+  "  <m:dPr>",
+  '    <m:begChr m:val="["/>',
+  '    <m:endChr m:val="]"/>',
+  '    <m:sepChr m:val=""/>',
+  "    <m:grow/>",
+  "  </m:dPr>",
+  "  <m:e>",
+  "    <m:m>",
+  "      <m:mPr>",
+  "        <m:mcs>",
+  "          <m:mc>",
+  "            <m:mcPr>",
+  '              <m:count m:val="2"/>',
+  '              <m:mcJc m:val="center"/>',
+  "            </m:mcPr>",
+  "          </m:mc>",
+  "        </m:mcs>",
+  "        <m:ctrlPr>",
+  "          <w:rPr>",
+  '            <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+  "            <w:i/>",
+  "          </w:rPr>",
+  "        </m:ctrlPr>",
+  "      </m:mPr>",
+  "      <m:mr>",
+  "        <m:e>",
+  "          <m:r>",
+  "            <m:t>1</m:t>",
+  "          </m:r>",
+  "        </m:e>",
+  "        <m:e>",
+  "          <m:r>",
+  "            <m:t>2</m:t>",
+  "          </m:r>",
+  "        </m:e>",
+  "      </m:mr>",
+  "      <m:e>",
+  "        <m:r>",
+  "          <m:t>3</m:t>",
+  "        </m:r>",
+  "      </m:e>",
+  "    </m:m>",
+  "  </m:e>",
+  "</m:d>",
+);
+
+/** `[1] / [2, 3] / [4, 5, 6]` — three different widths in one matrix. */
+const RAGGED_1_2_3_X = xml(
+  "<m:d>",
+  "  <m:dPr>",
+  '    <m:begChr m:val="["/>',
+  '    <m:endChr m:val="]"/>',
+  '    <m:sepChr m:val=""/>',
+  "    <m:grow/>",
+  "  </m:dPr>",
+  "  <m:e>",
+  "    <m:m>",
+  "      <m:mPr>",
+  "        <m:mcs>",
+  "          <m:mc>",
+  "            <m:mcPr>",
+  '              <m:count m:val="1"/>',
+  '              <m:mcJc m:val="center"/>',
+  "            </m:mcPr>",
+  "          </m:mc>",
+  "        </m:mcs>",
+  "        <m:ctrlPr>",
+  "          <w:rPr>",
+  '            <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+  "            <w:i/>",
+  "          </w:rPr>",
+  "        </m:ctrlPr>",
+  "      </m:mPr>",
+  "      <m:e>",
+  "        <m:r>",
+  "          <m:t>1</m:t>",
+  "        </m:r>",
+  "      </m:e>",
+  "      <m:mr>",
+  "        <m:e>",
+  "          <m:r>",
+  "            <m:t>2</m:t>",
+  "          </m:r>",
+  "        </m:e>",
+  "        <m:e>",
+  "          <m:r>",
+  "            <m:t>3</m:t>",
+  "          </m:r>",
+  "        </m:e>",
+  "      </m:mr>",
+  "      <m:mr>",
+  "        <m:e>",
+  "          <m:r>",
+  "            <m:t>4</m:t>",
+  "          </m:r>",
+  "        </m:e>",
+  "        <m:e>",
+  "          <m:r>",
+  "            <m:t>5</m:t>",
+  "          </m:r>",
+  "        </m:e>",
+  "        <m:e>",
+  "          <m:r>",
+  "            <m:t>6</m:t>",
+  "          </m:r>",
+  "        </m:e>",
+  "      </m:mr>",
+  "    </m:m>",
+  "  </m:e>",
+  "</m:d>",
+);
+
+const SINGLE_CELL_ROW_X = xml("<m:e>", "  <m:r>", "    <m:t>1</m:t>", "  </m:r>", "</m:e>");
+const EMPTY_ROW_X = xml("<m:mr/>");
+
+describe("OMML ragged tables", () => {
+  it("renders a matrix when only the first row is single-celled", () => {
+    expect(toOmmlWithoutMathTag(cellTable([cellTr("1"), cellTr("2", "3")]))).toBe(RAGGED_1_2_X);
+  });
+
+  it("renders a matrix when a later row is single-celled", () => {
+    expect(toOmmlWithoutMathTag(cellTable([cellTr("1", "2"), cellTr("3")]))).toBe(RAGGED_2_1_X);
+  });
+
+  it("renders three different row widths in one matrix", () => {
+    expect(
+      toOmmlWithoutMathTag(cellTable([cellTr("1"), cellTr("2", "3"), cellTr("4", "5", "6")])),
+    ).toBe(RAGGED_1_2_3_X);
+  });
+
+  it("drops the m:mr wrapper for a one-cell row and keeps it for an empty one", () => {
+    expect(toOmmlWithoutMathTag(cellTr("1"))).toBe(SINGLE_CELL_ROW_X);
+    expect(toOmmlWithoutMathTag(new UnaryFunctionNode({ name: "Tr", parameterOne: [] }))).toBe(
+      EMPTY_ROW_X,
+    );
+  });
+
+  it("still defers eqArr when EVERY row is single-celled", () => {
+    for (const rows of [[cellTr("1")], [cellTr("1"), cellTr("2")]]) {
+      expectRefusal(() => toOmmlWithoutMathTag(cellTable(rows)), {
+        kind: "table",
+        message:
+          "table.value: the single-column eqArr branch is deferred until separately measured",
+      });
+    }
+  });
+});
+
+/**
+ * `<m:t>` bodies for every C0 control, the space (which becomes NBSP before
+ * encoding) and DEL. Measured one codepoint at a time; the lowercase,
+ * UNPADDED spelling is `HTMLEntities`', and is what distinguishes this layer
+ * from Ox's four-digit `&#x000b;`.
+ */
+const CONTROL_TEXT_BODIES: readonly (readonly [string, number, string])[] = [
+  ["U+0000", 0x00, "&#x0;"],
+  ["U+0001", 0x01, "&#x1;"],
+  ["U+0002", 0x02, "&#x2;"],
+  ["U+0003", 0x03, "&#x3;"],
+  ["U+0004", 0x04, "&#x4;"],
+  ["U+0005", 0x05, "&#x5;"],
+  ["U+0006", 0x06, "&#x6;"],
+  ["U+0007", 0x07, "&#x7;"],
+  ["U+0008", 0x08, "&#x8;"],
+  ["U+0009", 0x09, "&#x9;"],
+  ["U+000A", 0x0a, "&#xa;"],
+  ["U+000B", 0x0b, "&#xb;"],
+  ["U+000C", 0x0c, "&#xc;"],
+  ["U+000D", 0x0d, "&#xd;"],
+  ["U+000E", 0x0e, "&#xe;"],
+  ["U+000F", 0x0f, "&#xf;"],
+  ["U+0010", 0x10, "&#x10;"],
+  ["U+0011", 0x11, "&#x11;"],
+  ["U+0012", 0x12, "&#x12;"],
+  ["U+0013", 0x13, "&#x13;"],
+  ["U+0014", 0x14, "&#x14;"],
+  ["U+0015", 0x15, "&#x15;"],
+  ["U+0016", 0x16, "&#x16;"],
+  ["U+0017", 0x17, "&#x17;"],
+  ["U+0018", 0x18, "&#x18;"],
+  ["U+0019", 0x19, "&#x19;"],
+  ["U+001A", 0x1a, "&#x1a;"],
+  ["U+001B", 0x1b, "&#x1b;"],
+  ["U+001C", 0x1c, "&#x1c;"],
+  ["U+001D", 0x1d, "&#x1d;"],
+  ["U+001E", 0x1e, "&#x1e;"],
+  ["U+001F", 0x1f, "&#x1f;"],
+  ["U+0020", 0x20, "&#xa0;"],
+  ["U+007F", 0x7f, "&#x7f;"],
+];
+
+describe("OMML Text control-character encoding", () => {
+  it.each(CONTROL_TEXT_BODIES)("encodes %s as its own hex reference", (_label, codepoint, body) => {
+    expect(
+      toOmmlWithoutMathTag(new TextNode({ parameterOne: String.fromCodePoint(codepoint) })),
+    ).toBe(xml(`<m:t>${body}</m:t>`));
+  });
+
+  it("leaves printable ASCII alone apart from the five basic entities", () => {
+    expect(
+      toOmmlWithoutMathTag(new TextNode({ parameterOne: "~!#$%()*+,-./0:;=?@[\\]^_`{|}" })),
+    ).toBe(xml("<m:t>~!#$%()*+,-./0:;=?@[\\]^_`{|}</m:t>"));
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: ">" }))).toBe(
+      xml("<m:t>&#x3e;</m:t>"),
+    );
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "&#x20;" }))).toBe(
+      xml("<m:t> </m:t>"),
+    );
+  });
+
+  it("encodes an astral character from its own codepoint", () => {
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "\u{1D400}" }))).toBe(
+      xml("<m:t>&#x1d400;</m:t>"),
+    );
+  });
+
+  it("carries a control character through a parsed formula", () => {
+    expect(toOmml(parseAsciimath(`text(a${String.fromCodePoint(1)}b)`))).toBe(
+      publicText("a&#x1;b"),
+    );
+    expect(toOmml(parseAsciimath(`"a${String.fromCodePoint(0x7f)}b"`))).toBe(
+      publicText("a&#x7f;b"),
+    );
+  });
+});
+
+const NARY_INTEGRAL_X = xml(
+  "<m:nary>",
+  "  <m:naryPr>",
+  '    <m:limLoc m:val="subSup"/>',
+  "    <m:ctrlPr>",
+  "      <w:rPr>",
+  '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+  "        <w:i/>",
+  "      </w:rPr>",
+  "    </m:ctrlPr>",
+  "  </m:naryPr>",
+  "  <m:sub>",
+  "    <m:r>",
+  "      <m:t>x</m:t>",
+  "    </m:r>",
+  "  </m:sub>",
+  "  <m:sup>",
+  "    <m:r>",
+  "      <m:t>x</m:t>",
+  "    </m:r>",
+  "  </m:sup>",
+  "  <m:e>",
+  "    <m:r>",
+  "      <m:t>x</m:t>",
+  "    </m:r>",
+  "  </m:e>",
+  "</m:nary>",
+);
+
+const naryOperator = (value: string | null): NaryNode =>
+  new NaryNode({
+    options: {},
+    parameterOne: value === null ? null : symbol(value),
+    parameterTwo: symbol(),
+    parameterThree: symbol(),
+    parameterFour: symbol(),
+  });
+
+describe("OMML Nary operator attribute", () => {
+  it.each(["∫", "&#x222b;", "&#x222B;"])("suppresses m:chr for the integral %s", (value) => {
+    expect(toOmmlWithoutMathTag(naryOperator(value))).toBe(NARY_INTEGRAL_X);
+  });
+
+  it.each(["∑", "&#x2211;"])("writes the decoded character for %s", (value) => {
+    expect(toOmmlWithoutMathTag(naryOperator(value))).toBe(
+      NARY_X.replace('m:chr m:val="x"', 'm:chr m:val="∑"'),
+    );
+  });
+
+  it("keeps the empty m:chr for a nil operator", () => {
+    expect(toOmmlWithoutMathTag(naryOperator(null))).toBe(
+      NARY_X.replace('m:chr m:val="x"', 'm:chr m:val=""'),
+    );
+  });
+});
+
+describe("OMML UnaryFunction hide_function_name", () => {
+  const carrier = (hideFunctionName?: boolean): UnaryFunctionNode =>
+    new UnaryFunctionNode({ name: "UnaryFunction", parameterOne: symbol(), hideFunctionName });
+
+  it("drops the whole m:func wrapper when the flag is set", () => {
+    expect(toOmmlWithoutMathTag(carrier(true))).toBe(RUN_X);
+  });
+
+  it("keeps the wrapper when the flag is false or unset", () => {
+    expect(toOmmlWithoutMathTag(carrier(false))).toBe(UNARY_X);
+    expect(toOmmlWithoutMathTag(carrier())).toBe(UNARY_X);
+  });
+});
+
+describe("OMML Ruby-false parameter slots", () => {
+  const RubyFalse = false as unknown as NodeParameter;
+  const falseSlotCases: readonly {
+    readonly den: readonly string[];
+    readonly name: string;
+    readonly num: readonly string[];
+    readonly parameterOne: NodeParameter;
+    readonly parameterTwo: NodeParameter;
+  }[] = [
+    {
+      den: ["x"],
+      name: "parameterOne",
+      num: ["&#8203;"],
+      parameterOne: RubyFalse,
+      parameterTwo: symbol(),
+    },
+    {
+      den: ["&#8203;"],
+      name: "parameterTwo",
+      num: ["x"],
+      parameterOne: symbol(),
+      parameterTwo: RubyFalse,
+    },
+    {
+      den: ["&#8203;"],
+      name: "both slots",
+      num: ["&#8203;"],
+      parameterOne: RubyFalse,
+      parameterTwo: RubyFalse,
+    },
+  ];
+
+  it.each(falseSlotCases)("renders a Frac whose $name is false", (fixture) => {
+    expect(
+      toOmmlWithoutMathTag(
+        new FracNode({
+          parameterOne: fixture.parameterOne,
+          parameterTwo: fixture.parameterTwo,
+        }),
+      ),
+    ).toBe(
+      structuralContractXml("f", [
+        ["num", fixture.num],
+        ["den", fixture.den],
+      ]),
+    );
+  });
+
+  it("renders a Nary whose limits are false, with no subHide or supHide", () => {
+    expect(
+      toOmmlWithoutMathTag(
+        new NaryNode({
+          options: {},
+          parameterOne: symbol(),
+          parameterTwo: RubyFalse,
+          parameterThree: RubyFalse,
+          parameterFour: RubyFalse,
+        }),
+      ),
+    ).toBe(naryContractXml([["&#8203;"], ["&#8203;"], ["&#8203;"]], [symbol(), symbol()]));
   });
 });

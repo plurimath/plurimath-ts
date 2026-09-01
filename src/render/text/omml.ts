@@ -10,23 +10,41 @@ import {
 import { XmlElement } from "../../xml/index";
 
 const UNICODE_TOKEN = /unicode\[:\w+\]/;
-const HEX_ESCAPED_CONTROL_CODEPOINTS = new Set([0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x0d]);
+
+/**
+ * `Text#first_value("omml")` (text.rb:144-151) re-encodes through
+ * `HTMLEntities.new.encode(..., :hexadecimal)`, whose default `xhtml1` flavour
+ * makes two passes (htmlentities-4.4.2 `Encoder`):
+ *
+ * - `replace_basic` over `/[<>'"&]/`
+ * - `replace_extended` over `/[^\u{20}-\u{7E}]/`
+ *
+ * both writing `"&#x#{codepoint.to_s(16)};"` — lowercase, NOT zero-padded. So
+ * printable ASCII survives verbatim apart from those five characters, and
+ * everything else — every C0 control, DEL, and all non-ASCII — becomes a hex
+ * reference. Measured on the oracle at `00c52783`: U+0001 gives
+ * `<m:t>&#x1;</m:t>`, U+001F `<m:t>&#x1f;</m:t>`, U+007F `<m:t>&#x7f;</m:t>`,
+ * U+0080 `<m:t>&#x80;</m:t>`.
+ *
+ * The zero-padded four-digit spelling belongs to the OTHER escaping layer: Ox
+ * writes an unescaped C0 control as `&#x000b;` (`src/xml/serializer.ts`), and
+ * passes DEL through raw. Encoding here is what keeps those characters away
+ * from that layer, so every codepoint left unencoded here changed the bytes.
+ */
+const BASIC_ENTITY_CODEPOINTS = new Set([0x22, 0x26, 0x27, 0x3c, 0x3e]);
+
+function hexEncoded(codepoint: number): boolean {
+  return codepoint < 0x20 || codepoint > 0x7e || BASIC_ENTITY_CODEPOINTS.has(codepoint);
+}
 
 function encodeOmmlText(value: string): string {
   const decoded = htmlEntityToUnicode(value.replaceAll(" ", "&#xa0;"));
   let encoded = "";
+  // Code points, not UTF-16 units: Ruby's `gsub` matches whole characters, so
+  // an astral character encodes to one reference built from its own codepoint.
   for (const character of decoded) {
     const codepoint = character.codePointAt(0) as number;
-    encoded +=
-      HEX_ESCAPED_CONTROL_CODEPOINTS.has(codepoint) ||
-      codepoint > 0x7f ||
-      character === "&" ||
-      character === '"' ||
-      character === "'" ||
-      character === "<" ||
-      character === ">"
-        ? `&#x${codepoint.toString(16)};`
-        : character;
+    encoded += hexEncoded(codepoint) ? `&#x${codepoint.toString(16)};` : character;
   }
   return encoded;
 }

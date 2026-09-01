@@ -23,6 +23,20 @@ export type RenderFn<K extends NodeKind> = (
   context: RenderContext,
 ) => OmmlRendered;
 
+/**
+ * Ruby truthiness for the gem's bare `unless field` slot guards: only `nil`
+ * and `false` are falsy, so `0` and `""` stay truthy. `undefined` spells the
+ * same `nil` as `null` does on this side of the port.
+ *
+ * `Core#omml_parameter` guards with `return empty_tag(tag) unless field`, so
+ * a `false` slot takes the placeholder path exactly as `nil` does — measured
+ * on the oracle at `00c52783`, `Frac.new(false, Symbol.new("x"), {})` renders
+ * `<m:num><m:r><m:t>&#8203;</m:t></m:r></m:num>` rather than raising.
+ */
+export function present(value: unknown): boolean {
+  return value !== null && value !== undefined && value !== false;
+}
+
 export function describeSlot(value: unknown): string {
   if (value === null || value === undefined) return "nil";
   if (Array.isArray(value)) return "a list";
@@ -146,7 +160,8 @@ export function ommlSlot(
   at: string,
 ): XmlElement {
   const tag = new XmlElement(`m:${tagName}`);
-  if (value === null || value === undefined) return tag.append(plainRun("&#8203;"));
+  // `return empty_tag(tag) unless field` — Ruby-falsy, so `false` joins `nil`.
+  if (!present(value)) return tag.append(plainRun("&#8203;"));
   if (Array.isArray(value)) {
     value.forEach((item, index) => {
       tag.append(insertSlotItem(item, context, kind, `${at}[${index}]`));

@@ -1,7 +1,7 @@
 import { SYMBOL_CANONICAL_VALUES } from "../../core/generated/symbol-canonical";
 import { hasNodeKind, type MathNode, RenderError } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
-import { rubyNumberToS } from "../../core/ruby-semantics";
+import { assertReproducibleRubyHashOrder, rubyNumberToS } from "../../core/ruby-semantics";
 import {
   describeSlot,
   FORMAT,
@@ -143,11 +143,14 @@ function rubyInspect(
     );
   }
   if (Array.isArray(value)) {
-    return `[${value.map((item) => rubyInspect(item, kind, at)).join(", ")}]`;
+    return `[${value.map((item, index) => rubyInspect(item, kind, `${at}[${index}]`)).join(", ")}]`;
   }
   if (typeof value === "object") {
+    assertReproducibleRubyHashOrder(value, FORMAT, "fenced", at);
     return `{${Object.entries(value as Record<string, unknown>)
-      .map(([key, item]) => `${rubyInspectString(key)} => ${rubyInspect(item, kind, at)}`)
+      .map(
+        ([key, item]) => `${rubyInspectString(key)} => ${rubyInspect(item, kind, `${at}.${key}`)}`,
+      )
       .join(", ")}}`;
   }
   throw new RenderError(

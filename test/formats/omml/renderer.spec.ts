@@ -2202,6 +2202,37 @@ describe("OMML accents without a base", () => {
   });
 });
 
+/**
+ * `Fenced` reads its delimiters through a deterministic `#inspect`, which walks
+ * a hash in insertion order. JavaScript hoists array-index keys ahead of
+ * everything inserted before them, so that order is already gone by the time
+ * the renderer sees the object and cannot be recovered at the emission site.
+ * The shared guard from `core/ruby-semantics` refuses rather than emit an order
+ * the gem would not produce.
+ */
+describe("OMML fenced delimiter hash ordering", () => {
+  it("refuses a delimiter carrier holding an integer-like key", () => {
+    const delimiters: Record<string, string> = {};
+    delimiters.named = "open";
+    delimiters["1"] = "close";
+    expect(Object.keys(delimiters)[0]).toBe("1");
+
+    const fenced = new FencedNode({
+      options: {},
+      parameterOne: new FormulaNode({ value: [delimiters as never] }),
+      parameterTwo: [symbol()],
+      parameterThree: symbol(")"),
+    });
+    expectRefusal(() => toOmmlWithoutMathTag(fenced), {
+      kind: "fenced",
+      message:
+        "fenced.parameterOne[0].1: integer-like hash keys are deferred (TODO.plan/deferred.md) " +
+        "because JavaScript object enumeration discards their insertion position, so Ruby hash " +
+        "emission order cannot be reproduced",
+    });
+  });
+});
+
 describe("generated OMML symbol-data deferral", () => {
   it("uses a named Symbol's explicit value only on insertion", () => {
     const node = new SymbolNode({ id: "Plus", value: "WRONG" });

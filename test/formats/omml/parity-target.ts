@@ -336,34 +336,4 @@ const FALSE_SLOT =
 
 export const DEGENERATE_DIVERGENCES: Readonly<
   Record<string, { readonly reason: string; readonly portOutput: string }>
-> = {
-  "bar[0]=false": {
-    reason: FALSE_SLOT,
-    portOutput: doc(
-      "  <m:oMath>",
-      "    <m:bar>",
-      "      <m:barPr>",
-      '        <m:pos m:val="top"/>',
-      "        <m:ctrlPr>",
-      "          <w:rPr>",
-      '            <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
-      "            <w:i/>",
-      "          </w:rPr>",
-      "        </m:ctrlPr>",
-      "      </m:barPr>",
-      "      <m:e>",
-      "        <m:r>",
-      "          <m:t>&#8203;</m:t>",
-      "        </m:r>",
-      "      </m:e>",
-      "    </m:bar>",
-      "  </m:oMath>",
-    ),
-  },
-  "hat[0]=false": { reason: FALSE_SLOT, portOutput: doc(...limScript("limUpp", "&#x302;")) },
-  "dot[0]=false": { reason: FALSE_SLOT, portOutput: doc(...limScript("limUpp", ".")) },
-  "ddot[0]=false": { reason: FALSE_SLOT, portOutput: doc(...limScript("limUpp", "..")) },
-  "tilde[0]=false": { reason: FALSE_SLOT, portOutput: doc(...limScript("limUpp", "~")) },
-  "vec[0]=false": { reason: FALSE_SLOT, portOutput: doc(...limScript("limUpp", "\u2192")) },
-  "ul[0]=false": { reason: FALSE_SLOT, portOutput: doc(...limScript("limLow", "&#x332;")) },
-};
+> = {};

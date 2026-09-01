@@ -44,6 +44,7 @@ branch and dirty, and probing it silently changes answers.
 | `Integer` | `number` | arbitrary precision; long binary/octal need `BigInt`. Hex literals keep their spelling verbatim. |
 | aliased arrays | copies | rules mutate shared arrays (`value.shift`); a defensive copy changes later reads in the same action. |
 | `/\-/` | `u`-flag regex | the `u` flag rejects identity escapes Ruby allows — throws at construction, not at parse. |
+| `x.is_a?(Array) ? x : [x]` | `[...x]` | a string, Set or Map is iterable in JS and is not an Array in Ruby, so the spread splits what Ruby wraps whole. `Formula.new("")` is `[""]` and raises; `[...""]` is `[]`, and the port rendered `""` and `"<table></table>"` for trees the gem refuses — invented output, the one direction that is silent. Guard with `Array.isArray`, wrap the rest, and never spread a slot value. |
 
 ## Tests must be able to fail
 

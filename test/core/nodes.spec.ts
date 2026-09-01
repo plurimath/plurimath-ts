@@ -18,6 +18,7 @@ import {
   HatNode,
   hasNodeKind,
   type MathNode,
+  MrowNode,
   NODE_KINDS,
   type NodeKind,
   NumberNode,
@@ -186,6 +187,78 @@ describe("construction", () => {
     // The defaults are built per call, so two nodes never share one object.
     expect(new HatNode().attributes).not.toBe(new HatNode().attributes);
     expect(new FormulaNode().value).not.toBe(new FormulaNode().value);
+  });
+});
+
+/**
+ * A node-list slot must never be SPREAD.
+ *
+ * Measured on the pinned oracle (00c52783):
+ *
+ * ```text
+ * Formula.new("").value        [""]        to_html -> ParseError
+ * Formula.new(Set[sym]).value  [Set[sym]]  to_html -> ParseError
+ * Table.new("").value          ""          to_html -> ParseError
+ * ```
+ *
+ * Ruby reads only an `Array` as a list; a string, a Set and a Hash are each
+ * wrapped whole (or, for `Table`, stored whole) and then fail to render.
+ * JavaScript's `[...value]` reads every iterable as its elements, so the port
+ * turned `""` into `[]` and `Set[sym]` into `[sym]` and rendered `""`,
+ * `"<table></table>"` and `"a"` for trees the gem refuses outright — output
+ * invented where the oracle has none, which is the one direction a parity
+ * defect must never run in.
+ *
+ * These three cases are the sweep rows `formula[0]=empty-string`,
+ * `mrow[0]=empty-string` and `table[0]=empty-string`, pinned in
+ * `test/formats/html/parity-target.ts` until this guard landed. The Set, Map
+ * and generator cases below are the same trap through iterables the sweep does
+ * not construct, and no test reached them at all.
+ */
+describe("a node-list slot is never spread", () => {
+  // The three classes whose `value` is a node list: `Formula`, its `Mrow`
+  // subclass, and `Table`.
+  const slots: readonly [string, (value: unknown) => { value: unknown }][] = [
+    ["FormulaNode", (value) => new FormulaNode({ value } as never)],
+    ["MrowNode", (value) => new MrowNode({ value } as never)],
+    ["TableNode", (value) => new TableNode({ value } as never)],
+  ];
+
+  describe.each(slots)("%s", (_name, build) => {
+    it("wraps a bare string whole, as Ruby's `[value]` does", () => {
+      // `[...""]` is `[]` and `[..."ab"]` is `["a", "b"]`; neither is a list
+      // Ruby ever builds here.
+      expect(build("").value).toStrictEqual([""]);
+      expect(build("ab").value).toStrictEqual(["ab"]);
+    });
+
+    it("refuses an iterable that is not an array, rather than reading its elements", () => {
+      const sym = new SymbolNode({ value: "a" });
+      expect(() => build(new Set([sym]))).toThrow(TypeError);
+      expect(() => build(new Map([["a", sym]]))).toThrow(TypeError);
+      expect(
+        () =>
+          build(
+            (function* () {
+              yield sym;
+            })(),
+          ),
+        "a generator is iterable in JavaScript and is nothing in Ruby",
+      ).toThrow(TypeError);
+    });
+
+    it("still copies an array, and still keeps nil apart from unset", () => {
+      const given = [new SymbolNode({ value: "a" })];
+      const node = build(given);
+      expect(node.value).toStrictEqual(given);
+      expect(node.value).not.toBe(given);
+      expect(build(null).value).toBeNull();
+    });
+  });
+
+  it("names the value it refused", () => {
+    expect(() => new FormulaNode({ value: new Set() } as never)).toThrow(/an instance of Set/);
+    expect(() => new FormulaNode({ value: 0 } as never)).toThrow(/the number 0/);
   });
 });
 

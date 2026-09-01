@@ -556,31 +556,27 @@ export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
  * If the port's output moves, or it starts refusing, the row fails and the entry
  * is revisited.
  *
- * This is the dangerous direction: the port inventing output for a tree the gem
- * will not render. All three are one root cause. `Formula#initialize` wraps a
- * non-Array in `[value]`, so `Formula.new("")` holds `[""]` and raises when the
- * string is asked to render; `Table` passes its value straight through and
- * raises the same way. JavaScript's spread reads a string as a sequence of
- * characters, so `assignedSequence("")` yields `[]` — an EMPTY body the gem
- * never produces.
+ * This is the dangerous direction: the port inventing confident, plausible,
+ * WRONG bytes for a tree the gem will not render. Every other departure named in
+ * this file is the port refusing, which is loud and safe; this one is silent.
+ *
+ * **Empty, and kept empty.** The table stays so a row that starts inventing has
+ * somewhere to be named — the sweep sends it here by name — and so that emptying
+ * it again is a visible unit of work.
+ *
+ * It held three rows, all one root cause. `assignedSequence` spread its
+ * argument, and `[...""]` is `[]`, so `Formula.new("")`, `Mrow.new("")` and
+ * `Table.new("")` rendered `""`, `""` and `"<table></table>"` where the gem
+ * raises `ParseError` on all three: Ruby's `Formula#initialize` wraps a
+ * non-Array as `[value]` and then cannot render the string it wrapped, and
+ * `Table#initialize` stores the string untouched and cannot render that either.
+ * `src/core/nodes.ts` no longer spreads — an array is copied, a bare string is
+ * wrapped as Ruby wraps it, and the wrapped string earns the same `RenderError`
+ * every other bare string in a node list earns.
  */
 export const DEGENERATE_PORT_RENDERS: Readonly<
   Record<string, { readonly reason: string; readonly portOutput: string }>
-> = {
-  "formula[0]=empty-string": {
-    reason: 'Ruby wraps "" as [""] and raises on it; [...""] is [], so the port renders empty',
-    portOutput: "",
-  },
-  "mrow[0]=empty-string": {
-    reason: "Mrow inherits Formula#initialize, and so inherits the same divergence",
-    portOutput: "",
-  },
-  "table[0]=empty-string": {
-    reason:
-      'Table#to_html raises on the string ""; [...""] is [], so the port renders an empty table',
-    portOutput: "<table></table>",
-  },
-};
+> = {};
 
 /**
  * Rows the port cannot even BUILD: the node constructor throws `TypeError`
@@ -589,25 +585,32 @@ export const DEGENERATE_PORT_RENDERS: Readonly<
  * sweep gets to it through `as never`, which is what makes hand-built trees a
  * supported use (ARCHITECTURE.md §5) worth probing.
  *
- * Ten of the thirteen agree with the gem, which refuses these too. Three do not:
- * `Formula#initialize` wraps a non-Array in `[value]`, so the gem RENDERS a bare
- * node in that slot and the port throws instead. That is a port gap, named here
- * rather than counted, and it leaves this table when the wrap lands.
+ * Ten of the thirteen agree with the gem, which refuses these too. Three render
+ * in the gem: `Formula#initialize` wraps a non-Array as `[value]`, so a bare
+ * node in `formula[0]` and `mrow[0]` renders where the port refuses, and
+ * `symbol[0]=node` renders an unreproducible heap address (`UNSTABLE_OUTPUT`).
+ * The first two are a port gap, named here rather than counted, and they leave
+ * this table when the wrap lands.
+ *
+ * `assignedSequence` refuses these because it takes an array or a bare string
+ * and nothing else. It used to spread instead, which threw for the same rows by
+ * accident and rendered invented bytes for the iterables it did not throw on —
+ * see `DEGENERATE_PORT_RENDERS`.
  */
 export const PORT_TYPE_REFUSES: Readonly<Record<string, string>> = {
-  "formula[0]=false": "assignedSequence spreads the value; false is not iterable",
-  "formula[0]=true": "assignedSequence spreads the value; true is not iterable",
-  "formula[0]=zero": "assignedSequence spreads the value; 0 is not iterable",
+  "formula[0]=false": "assignedSequence takes an array or a bare string; false is neither",
+  "formula[0]=true": "assignedSequence takes an array or a bare string; true is neither",
+  "formula[0]=zero": "assignedSequence takes an array or a bare string; 0 is neither",
   "formula[0]=node":
-    "the gem wraps a bare node as [node] and renders it; the port spreads and throws",
-  "mrow[0]=false": "assignedSequence spreads the value; false is not iterable",
-  "mrow[0]=true": "assignedSequence spreads the value; true is not iterable",
-  "mrow[0]=zero": "assignedSequence spreads the value; 0 is not iterable",
-  "mrow[0]=node": "the gem wraps a bare node as [node] and renders it; the port spreads and throws",
-  "table[0]=false": "assignedSequence spreads the value; false is not iterable",
-  "table[0]=true": "assignedSequence spreads the value; true is not iterable",
-  "table[0]=zero": "assignedSequence spreads the value; 0 is not iterable",
-  "table[0]=node": "assignedSequence spreads the value; a bare node is not iterable",
+    "the gem wraps a bare node as [node] and renders it; assignedSequence refuses it",
+  "mrow[0]=false": "assignedSequence takes an array or a bare string; false is neither",
+  "mrow[0]=true": "assignedSequence takes an array or a bare string; true is neither",
+  "mrow[0]=zero": "assignedSequence takes an array or a bare string; 0 is neither",
+  "mrow[0]=node": "the gem wraps a bare node as [node] and renders it; assignedSequence refuses it",
+  "table[0]=false": "assignedSequence takes an array or a bare string; false is neither",
+  "table[0]=true": "assignedSequence takes an array or a bare string; true is neither",
+  "table[0]=zero": "assignedSequence takes an array or a bare string; 0 is neither",
+  "table[0]=node": "assignedSequence takes an array or a bare string; a bare node is neither",
   "symbol[0]=node": "SymbolNode refuses an object: Ruby's sym&.to_s spelling is not reproducible",
 };
 

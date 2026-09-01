@@ -259,6 +259,23 @@ by the same name, which is what makes the gem's `unitsml_post_processing`
 (space insertion, marker stripping — formula.rb:450-473) a proven no-op on
 every tree this renderer emits.
 
+### OMML renderer: generated symbol data deferred from the first slice
+
+**Trigger: the dedicated OMML symbol-data follow-up, using the repository's
+two-step generation protocol and a provenance digest from the clean pinned
+oracle.**
+
+The first OMML vertical slice implements the shared structural wrapper for the
+base `Symbol`/abstract `Paren`, but deliberately does not hand-type the named
+symbol values measured by the OMML scope. Named symbols therefore raise
+`RenderError` instead of trusting a caller-provided value. The same refusal
+applies where another implemented kind needs that table: `Text`'s
+`unicode[:name]` substitutions, named Table parens, and a named Nary operator.
+The exact refusal contract is pinned in
+`test/formats/omml/renderer.spec.ts`. The follow-up removes these refusals only
+after generated values, an emptiness guard, provenance, and perturbed
+regeneration determinism land together.
+
 ### MathML renderer: `options[:mask]` supports only the inert decoding
 
 **Trigger: UnicodeMath input (P3), whose parser is what constructs masked

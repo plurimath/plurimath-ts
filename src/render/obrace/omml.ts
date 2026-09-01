@@ -11,7 +11,9 @@ import { XmlElement } from "../../xml/index";
 const BRACE = "⏞";
 
 export function renderObrace(node: NodeOf<"obrace">, context: RenderContext): XmlElement {
-  if (node.parameterOne === null || node.parameterOne === undefined) return plainRun(BRACE);
+  // `return r_element("⏞", rpr_tag: false) unless parameter_one` — Ruby-falsy,
+  // so `false` takes the bare-brace path alongside `nil`.
+  if (!rubyTruthy(node.parameterOne)) return plainRun(BRACE);
 
   if (rubyTruthy(node.attributes.accent)) {
     return new XmlElement("m:acc").append(

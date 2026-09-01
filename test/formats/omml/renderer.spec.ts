@@ -517,6 +517,24 @@ function expectDirectAndInsertion(node: MathNode, expected: string): void {
   expect(serializeRendered(ROOT_CONTEXT.insert(node))).toBe(expected);
 }
 
+/** A fully populated fixed n-ary carrying an arbitrary `hide_function_name` value. */
+function naryWithHideFlag(
+  kind: "int" | "oint" | "prod" | "sum",
+  hideFunctionName: unknown,
+): MathNode {
+  const init = {
+    hideFunctionName: hideFunctionName as boolean | undefined,
+    options: {},
+    parameterOne: symbol(),
+    parameterThree: symbol(),
+    parameterTwo: symbol(),
+  };
+  if (kind === "int") return new IntNode(init);
+  if (kind === "oint") return new OintNode(init);
+  if (kind === "prod") return new ProdNode(init);
+  return new SumNode(init);
+}
+
 const TD_X = xml("<m:e>", "  <m:r>", "    <m:t>x</m:t>", "  </m:r>", "</m:e>");
 const TR_X = xml(
   "<m:mr>",
@@ -1370,6 +1388,155 @@ describe("OMML scripts and limits slice", () => {
       );
     },
   );
+});
+
+/**
+ * Ruby's falsy set is `nil`/`false` alone: `0` and `""` are truthy there and
+ * falsy in JavaScript. Every case below is the pinned oracle's byte output for
+ * a slot or flag holding one of those four values, measured at 00c52783 by
+ * `falsy_probe.rb` (recorded in the task handoff).
+ */
+describe("OMML Ruby-falsy parity", () => {
+  // `narypr(hide_function_name ? "" : "∑")` — Ruby-truthy, so `0` and `""`
+  // suppress the operator in the gem exactly as `true` does.
+  it.each([
+    ["sum", "undOvr"],
+    ["prod", "undOvr"],
+    ["int", "subSup"],
+    ["oint", "subSup"],
+  ] as const)(
+    "suppresses %s's operator for every Ruby-truthy hideFunctionName",
+    (kind, limitLoc) => {
+      for (const flag of [true, 0, ""]) {
+        expectDirectAndInsertion(
+          naryWithHideFlag(kind, flag),
+          specializedNary("", limitLoc as "subSup" | "undOvr"),
+        );
+      }
+    },
+  );
+
+  it.each([
+    ["sum", "undOvr"],
+    ["prod", "undOvr"],
+    ["int", "subSup"],
+    ["oint", "subSup"],
+  ] as const)("keeps %s's operator for every Ruby-falsy hideFunctionName", (kind, limitLoc) => {
+    const operator = { int: "∫", oint: "∮", prod: "∏", sum: "∑" }[kind];
+    for (const flag of [undefined, null, false]) {
+      expectDirectAndInsertion(
+        naryWithHideFlag(kind, flag),
+        specializedNary(operator, limitLoc as "subSup" | "undOvr"),
+      );
+    }
+  });
+
+  // `return r_element("⏞", rpr_tag: false) unless parameter_one` — Ruby-falsy,
+  // so `false` takes the bare-brace path that `nil` takes.
+  it.each([
+    ["obrace", "⏞"],
+    ["ubrace", "⏟"],
+  ] as const)("renders a bare %s brace for a false parameterOne", (kind, brace) => {
+    const node =
+      kind === "obrace"
+        ? new ObraceNode({ attributes: {}, parameterOne: false as unknown as NodeParameter })
+        : new UbraceNode({ attributes: {}, parameterOne: false as unknown as NodeParameter });
+    expectDirectAndInsertion(node, xml("<m:r>", `  <m:t>${brace}</m:t>`, "</m:r>"));
+  });
+
+  // `Core#omml_parameter` is `return empty_tag(tag) unless field` — Ruby-falsy,
+  // so a `false` slot yields the same zero-width placeholder a `nil` slot does.
+  it("fills a false Base slot with the nil placeholder", () => {
+    expect(
+      toOmmlWithoutMathTag(
+        new BaseNode({ parameterOne: false as unknown as NodeParameter, parameterTwo: symbol() }),
+      ),
+    ).toBe(baseContractXml(["&#8203;"], ["x"]));
+  });
+
+  it("fills a false Frac slot with the nil placeholder", () => {
+    expect(
+      toOmmlWithoutMathTag(
+        new FracNode({
+          options: {},
+          parameterOne: false as unknown as NodeParameter,
+          parameterTwo: symbol(),
+        }),
+      ),
+    ).toBe(
+      structuralContractXml("f", [
+        ["num", ["&#8203;"]],
+        ["den", ["x"]],
+      ]),
+    );
+  });
+
+  // `Nary#hide_tags` is `return nar unless field.nil?` — an explicit nil test,
+  // NOT Ruby-falsy. A `false` slot keeps its hide tag OFF while still taking
+  // `omml_parameter`'s placeholder.
+  it("omits Nary's hide tags for a false slot while placeholding it", () => {
+    expect(
+      toOmmlWithoutMathTag(
+        new NaryNode({
+          options: {},
+          parameterOne: symbol(),
+          parameterTwo: false as unknown as NodeParameter,
+          parameterThree: symbol(),
+          parameterFour: symbol(),
+        }),
+      ),
+    ).toBe(naryContractXml([["&#8203;"], ["x"], ["x"]], [symbol(), symbol()]));
+  });
+
+  // The other half of the same boundary: `0` and `""` are TRUTHY in Ruby, so
+  // the gem walks into them and raises NoMethodError. Widening any of the
+  // guards above to plain JavaScript falsiness would silently emit markup here.
+  it.each([
+    ["a number", 0],
+    ['the bare string ""', ""],
+  ] as const)("refuses %s in a Base slot rather than placeholding it", (described, value) => {
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new BaseNode({ parameterOne: value as unknown as NodeParameter, parameterTwo: symbol() }),
+        ),
+      {
+        kind: "base",
+        message: `base.parameterOne: cannot insert ${described} — the gem raises NoMethodError here`,
+      },
+    );
+  });
+
+  it.each([
+    ["obrace", "a number", 0],
+    ["obrace", 'the bare string ""', ""],
+    ["ubrace", "a number", 0],
+    ["ubrace", 'the bare string ""', ""],
+  ] as const)(
+    "refuses %s carrying %s rather than emitting a bare brace",
+    (kind, described, value) => {
+      const node =
+        kind === "obrace"
+          ? new ObraceNode({ attributes: {}, parameterOne: value as unknown as NodeParameter })
+          : new UbraceNode({ attributes: {}, parameterOne: value as unknown as NodeParameter });
+      expectRefusal(() => toOmmlWithoutMathTag(node), {
+        kind,
+        message: `${kind}.parameterOne: cannot insert ${described} — the gem raises NoMethodError here`,
+      });
+    },
+  );
+
+  // Ruby reads an unassigned ivar as nil, so an absent field is `nil` too.
+  it("hides Nary's limits for slots absent from a node-shaped value", () => {
+    expect(
+      toOmmlWithoutMathTag({
+        kind: "nary",
+        options: {},
+        parameterOne: symbol(),
+        parameterFour: symbol(),
+      } as unknown as MathNode),
+    ).toBe(naryContractXml([["&#8203;"], ["&#8203;"], ["x"]], [null, null]));
+  });
 });
 
 describe("generated OMML symbol-data deferral", () => {

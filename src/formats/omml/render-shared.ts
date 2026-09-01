@@ -162,8 +162,9 @@ export function ommlSlot(
   at: string,
 ): XmlElement {
   const tag = new XmlElement(`m:${tagName}`);
-  // `return empty_tag(tag) unless field` — Ruby-falsy, so `false` joins `nil`.
-  if (!present(value)) return tag.append(plainRun("&#8203;"));
+  // `Core#omml_parameter` reads `return empty_tag(tag) unless field` — Ruby-falsy,
+  // so a `false` slot takes the placeholder path exactly as `nil` does.
+  if (!rubyTruthy(value)) return tag.append(plainRun("&#8203;"));
   if (Array.isArray(value)) {
     value.forEach((item, index) => {
       tag.append(insertSlotItem(item, context, kind, `${at}[${index}]`));
@@ -206,7 +207,12 @@ export function renderFixedNary(
   }
 
   const properties = new XmlElement("m:naryPr").append(
-    new XmlElement("m:chr").setAttribute("m:val", node.hideFunctionName ? "" : operator),
+    // `hide_function_name ? "" : "∑"` in the gem: Ruby-falsy, so `0` and `""`
+    // suppress the operator there and must suppress it here too.
+    new XmlElement("m:chr").setAttribute(
+      "m:val",
+      rubyTruthy(node.hideFunctionName) ? "" : operator,
+    ),
     new XmlElement("m:limLoc").setAttribute("m:val", limitLocation),
     new XmlElement("m:subHide").setAttribute("m:val", rubyTruthy(node.parameterOne) ? "0" : "1"),
     new XmlElement("m:supHide").setAttribute("m:val", rubyTruthy(node.parameterTwo) ? "0" : "1"),

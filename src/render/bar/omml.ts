@@ -10,7 +10,7 @@ import {
 import { XmlElement } from "../../xml/index";
 
 export function renderBar(node: NodeOf<"bar">, context: RenderContext): XmlElement {
-  if (node.parameterOne === null || node.parameterOne === undefined) return plainRun("&#xaf;");
+  if (!present(node.parameterOne)) return plainRun("&#xaf;");
   if (present(node.attributes.accent)) {
     return renderAccent(node.kind, node.parameterOne, "‾", context, "bar.parameterOne");
   }

@@ -2174,6 +2174,34 @@ describe("OMML delimiters and accents slice", () => {
   });
 });
 
+/**
+ * Every accent kind opens by asking whether it has a base at all. The gem asks
+ * with Ruby truthiness — `nil` and `false` both mean "no base" — and emits the
+ * accent character alone as a bare run. Measured on the oracle at `00c52783`:
+ * `Bar.new(nil)` and `Bar.new(false)` produce the same bare run, with no
+ * `m:bar` wrapper on either.
+ *
+ * The port asked `=== null || === undefined`, so `false` fell through to the
+ * accent path and wrapped a zero-width-space base in a full accent element.
+ * Seven kinds shared the one guard, so they share this test.
+ */
+describe("OMML accents without a base", () => {
+  it.each([
+    ["bar", (v: NodeParameter) => new BarNode({ attributes: {}, parameterOne: v })],
+    ["hat", (v: NodeParameter) => new HatNode({ attributes: {}, parameterOne: v })],
+    ["dot", (v: NodeParameter) => new DotNode({ attributes: {}, parameterOne: v })],
+    ["ddot", (v: NodeParameter) => new DdotNode({ attributes: {}, parameterOne: v })],
+    ["tilde", (v: NodeParameter) => new TildeNode({ attributes: {}, parameterOne: v })],
+    ["vec", (v: NodeParameter) => new VecNode({ attributes: {}, parameterOne: v })],
+    ["ul", (v: NodeParameter) => new UlNode({ attributes: {}, parameterOne: v })],
+  ] as const)("renders %s the same for a false base as for nil", (_kind, build) => {
+    const forNil = toOmmlWithoutMathTag(build(null));
+    const forFalse = toOmmlWithoutMathTag(build(false as unknown as NodeParameter));
+    expect(forFalse).toBe(forNil);
+    expect(forFalse).not.toContain("&#8203;");
+  });
+});
+
 describe("generated OMML symbol-data deferral", () => {
   it("uses a named Symbol's explicit value only on insertion", () => {
     const node = new SymbolNode({ id: "Plus", value: "WRONG" });

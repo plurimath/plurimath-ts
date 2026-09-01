@@ -10,7 +10,7 @@ import {
 } from "../../formats/omml/render-shared";
 
 export function renderHat(node: NodeOf<"hat">, context: RenderContext): OmmlRendered {
-  if (node.parameterOne === null || node.parameterOne === undefined) return plainRun("^");
+  if (!present(node.parameterOne)) return plainRun("^");
   if (present(node.hideFunctionName)) {
     return renderUnaryValue(node.parameterOne, context, node.kind, "hat.parameterOne");
   }

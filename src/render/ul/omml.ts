@@ -9,7 +9,7 @@ import {
 import { XmlElement } from "../../xml/index";
 
 export function renderUl(node: NodeOf<"ul">, context: RenderContext): XmlElement {
-  if (node.parameterOne === null || node.parameterOne === undefined) return plainRun("&#x332;");
+  if (!present(node.parameterOne)) return plainRun("&#x332;");
   if (!present(node.attributes.accentunder)) {
     return renderLiteralScript(node.kind, "Low", node.parameterOne, "&#x332;", context, false);
   }

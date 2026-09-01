@@ -9,7 +9,7 @@ import {
 import type { XmlElement } from "../../xml/index";
 
 export function renderVec(node: NodeOf<"vec">, context: RenderContext): XmlElement {
-  if (node.parameterOne === null || node.parameterOne === undefined) return plainRun("&#x2192;");
+  if (!present(node.parameterOne)) return plainRun("&#x2192;");
   if (present(node.attributes.accent)) {
     return renderAccent(node.kind, node.parameterOne, "→", context, "vec.parameterOne");
   }

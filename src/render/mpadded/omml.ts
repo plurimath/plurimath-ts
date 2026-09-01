@@ -1,4 +1,5 @@
 import { RenderError } from "../../core/index";
+import { assertReproducibleRubyHashOrder } from "../../core/ruby-semantics";
 import {
   describeSlot,
   FORMAT,
@@ -17,7 +18,9 @@ const ZERO_TAGS: Readonly<Record<string, string>> = {
 /** `Mpadded#to_omml_without_math_tag`: the gem's phantom wrapper and zero flags. */
 export function renderMpadded(node: NodeOf<"mpadded">, context: RenderContext): XmlElement {
   const properties = new XmlElement("m:phantPr");
-  for (const [name, value] of Object.entries(node.options ?? {})) {
+  const options = node.options ?? {};
+  assertReproducibleRubyHashOrder(options, FORMAT, node.kind, "mpadded.options");
+  for (const [name, value] of Object.entries(options)) {
     if (typeof value !== "string") {
       throw new RenderError(
         `mpadded.options.${name}: holds ${describeSlot(value)} — the gem sends match? ` +

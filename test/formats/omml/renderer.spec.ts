@@ -2767,6 +2767,34 @@ describe("OMML fenced delimiter hash ordering", () => {
   });
 });
 
+/**
+ * `Mpadded` emits its options in hash order, so it has the same exposure the
+ * `fenced` delimiters do: JavaScript hoists array-index keys ahead of anything
+ * inserted before them, and the gem's order is gone before the renderer runs.
+ * Measured on the oracle at `00c52783`, options inserted as `height` then `"1"`
+ * emit `zeroAsc` first; JavaScript enumerates the `"1"` first and would emit
+ * them reversed.
+ */
+describe("OMML mpadded option hash ordering", () => {
+  it("refuses options holding an integer-like key", () => {
+    const options: Record<string, string> = {};
+    options.height = "0";
+    options["1"] = "0";
+    expect(Object.keys(options)[0]).toBe("1");
+
+    const mpadded = new MpaddedNode({ options, parameterOne: symbol() });
+    const message =
+      "mpadded.options.1: integer-like hash keys are deferred (TODO.plan/deferred.md) because " +
+      "JavaScript object enumeration discards their insertion position, so Ruby hash " +
+      "emission order cannot be reproduced";
+    expectRefusal(() => toOmmlWithoutMathTag(mpadded), { kind: "mpadded", message });
+    expectRefusal(() => toOmml(new FormulaNode({ value: [mpadded] })), {
+      kind: "mpadded",
+      message,
+    });
+  });
+});
+
 describe("generated OMML symbol-data deferral", () => {
   it("uses a named Symbol's explicit value only on insertion", () => {
     const node = new SymbolNode({ id: "Plus", value: "WRONG" });

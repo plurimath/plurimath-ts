@@ -33,6 +33,20 @@ export function renderTernaryFunction(
       node.kind,
     );
   }
+  // `PowerBase` reads its base before the slot helper does, so this slot is NOT
+  // Ruby-falsy the way an ordinary `omml_parameter` slot is. Measured on the
+  // oracle at `00c52783`: `PowerBase.new(nil, a, a)` renders with the
+  // zero-width-space placeholder, while `PowerBase.new(false, a, a)` raises —
+  // `false` answers none of the methods the base is asked for. Sending both
+  // through `ommlSlot` placeholdered the `false` case and invented output the
+  // gem refuses.
+  if ((node.parameterOne as unknown) === false) {
+    throw new RenderError(
+      "powerBase.parameterOne: is false, which answers no omml tag method — the gem raises here, though it renders a placeholder for nil",
+      FORMAT,
+      node.kind,
+    );
+  }
   if (
     hasNodeKind(node.parameterOne) &&
     (node.parameterOne as { readonly kind: string }).kind === "nary"

@@ -607,10 +607,20 @@ export const PORT_TYPE_REFUSES: Readonly<Record<string, string>> = {
   "mrow[0]=true": "assignedSequence takes an array or a bare string; true is neither",
   "mrow[0]=zero": "assignedSequence takes an array or a bare string; 0 is neither",
   "mrow[0]=node": "the gem wraps a bare node as [node] and renders it; assignedSequence refuses it",
-  "table[0]=false": "assignedSequence takes an array or a bare string; false is neither",
-  "table[0]=true": "assignedSequence takes an array or a bare string; true is neither",
-  "table[0]=zero": "assignedSequence takes an array or a bare string; 0 is neither",
-  "table[0]=node": "assignedSequence takes an array or a bare string; a bare node is neither",
+  // Table carries its own policy: it takes an array or any other iterable,
+  // because the gem stores its value and maps over it. These four answer no
+  // iterator, and the gem refuses them too — `Table#to_html` sends `map` and
+  // gets NoMethodError.
+  "table[0]=false": "assignedTableSequence takes an array or another iterable; false is neither",
+  "table[0]=true": "assignedTableSequence takes an array or another iterable; true is neither",
+  "table[0]=zero": "assignedTableSequence takes an array or another iterable; 0 is neither",
+  "table[0]=node":
+    "assignedTableSequence takes an array or another iterable; a bare node is neither",
+  // A string IS iterable in JavaScript, and is excluded deliberately: iterating
+  // it would give characters, where the gem stores the string whole and then
+  // dies on `String#map`. Both refuse; only the moment differs.
+  "table[0]=empty-string":
+    "assignedTableSequence excludes strings; the gem stores it and raises on String#map",
   "symbol[0]=node": "SymbolNode refuses an object: Ruby's sym&.to_s spelling is not reproducible",
 };
 

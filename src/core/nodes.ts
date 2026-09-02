@@ -262,6 +262,50 @@ function assignedSequence(
   );
 }
 
+/**
+ * `Table#initialize` is NOT `Formula#initialize`, and the two must not share a
+ * policy. Formula wraps a non-Array as `[value]`; Table assigns `@value = value`
+ * untouched (`function/table.rb:22-30`) and its renderers call `map` on
+ * whatever arrived. Anything answering `map` therefore renders.
+ *
+ * Measured on the oracle at `00c52783`, with one `Tr` of one `Td`:
+ *
+ * ```text
+ * Table.new([tr], nil, nil, {})        <table><tr><td>a</td></tr></table>
+ * Table.new(Set[tr], nil, nil, {})     <table><tr><td>a</td></tr></table>
+ * Table.new([tr].each, nil, nil, {})   <table><tr><td>a</td></tr></table>
+ * ```
+ *
+ * So a Set and an Enumerator are ordinary Table inputs, not the JavaScript
+ * accident the Formula guard exists to stop. Sending Table through that guard
+ * refused all three shapes above, which is the safe direction but still a
+ * divergence — the port declining what the gem renders.
+ *
+ * A bare string is the one shape both refuse. Ruby stores it and dies on
+ * `String#map`; refusing at construction reaches the same outcome earlier.
+ */
+function assignedTableSequence(
+  value: NodeSequence | null | undefined,
+  fallback: NodeSequence | null,
+): NodeSequence | null {
+  if (value === undefined) return fallback;
+  if (value === null) return null;
+  const given: unknown = value;
+  if (Array.isArray(given)) return [...(given as NodeSequence)];
+  if (
+    typeof given !== "string" &&
+    typeof (given as Iterable<unknown>)?.[Symbol.iterator] === "function"
+  ) {
+    return Array.from(given as Iterable<unknown>) as NodeSequence;
+  }
+  throw new TypeError(
+    `a table value takes an array or another iterable, and received ${describeSequenceValue(
+      given,
+    )} — the gem stores it and calls map on it, which this cannot ` +
+      "(src/core/nodes.ts, assignedTableSequence)",
+  );
+}
+
 /** A string slot Ruby's `initialize` assigns unconditionally, defaulting to `nil`. */
 function assignedValue(value: string | null | undefined): string | null {
   return value === undefined ? null : value;
@@ -1366,7 +1410,7 @@ export class TableNode extends NodeBase {
     this.openParen = assignedParameter(init.openParen, aliasFallback(alias.openParen, null));
     this.options =
       init.options === undefined ? assignedOptions(alias.options) : { ...init.options };
-    this.value = assignedSequence(init.value, aliasFallback(alias.value, null));
+    this.value = assignedTableSequence(init.value, aliasFallback(alias.value, null));
   }
 }
 

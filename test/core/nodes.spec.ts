@@ -201,8 +201,14 @@ describe("construction", () => {
  * Table.new("").value          ""          to_html -> ParseError
  * ```
  *
- * Ruby reads only an `Array` as a list; a string, a Set and a Hash are each
- * wrapped whole (or, for `Table`, stored whole) and then fail to render.
+ * Ruby reads only an `Array` as a list for `Formula` and its `Mrow` subclass:
+ * a string, a Set and a Hash are each wrapped whole and then fail to render.
+ * `Table` is NOT the same and must not share the policy — it stores its value
+ * untouched and its renderers call `map`, so a Set and an Enumerator are
+ * ordinary Table inputs. Measured on the oracle at `00c52783`, with one `Tr` of
+ * one `Td`, `Table.new([tr])`, `Table.new(Set[tr])` and `Table.new([tr].each)`
+ * all render `<table><tr><td>a</td></tr></table>`. Only a bare string fails on
+ * both, dying on `String#map`.
  * JavaScript's `[...value]` reads every iterable as its elements, so the port
  * turned `""` into `[]` and `Set[sym]` into `[sym]` and rendered `""`,
  * `"<table></table>"` and `"a"` for trees the gem refuses outright — output
@@ -216,12 +222,12 @@ describe("construction", () => {
  * not construct, and no test reached them at all.
  */
 describe("a node-list slot is never spread", () => {
-  // The three classes whose `value` is a node list: `Formula`, its `Mrow`
-  // subclass, and `Table`.
+  // `Formula` and its `Mrow` subclass, the two that WRAP a non-Array. `Table`
+  // has its own policy and its own describe below, because the gem gives it
+  // one: it stores the value and maps over it.
   const slots: readonly [string, (value: unknown) => { value: unknown }][] = [
     ["FormulaNode", (value) => new FormulaNode({ value } as never)],
     ["MrowNode", (value) => new MrowNode({ value } as never)],
-    ["TableNode", (value) => new TableNode({ value } as never)],
   ];
 
   describe.each(slots)("%s", (_name, build) => {
@@ -259,6 +265,47 @@ describe("a node-list slot is never spread", () => {
   it("names the value it refused", () => {
     expect(() => new FormulaNode({ value: new Set() } as never)).toThrow(/an instance of Set/);
     expect(() => new FormulaNode({ value: 0 } as never)).toThrow(/the number 0/);
+  });
+});
+
+/**
+ * `Table#initialize` assigns `@value = value` untouched (`function/table.rb:22-30`)
+ * and its renderers call `map`, so anything answering `map` renders. Measured on
+ * the oracle at `00c52783` with one `Tr` of one `Td`, all three of
+ * `Table.new([tr], nil, nil, {})`, `Table.new(Set[tr], nil, nil, {})` and
+ * `Table.new([tr].each, nil, nil, {})` give
+ * `<table><tr><td>a</td></tr></table>`.
+ *
+ * Sending Table through Formula's guard refused all three. That is the safe
+ * direction, but still the port declining what the gem renders, so the two
+ * carry separate policies.
+ */
+describe("a table value keeps any carrier the gem can map", () => {
+  const row = () => new SymbolNode({ value: "a" });
+
+  it.each([
+    ["an array", () => [row()]],
+    ["a Set", () => new Set([row()])],
+    [
+      "a generator",
+      () =>
+        (function* () {
+          yield row();
+        })(),
+    ],
+  ] as const)("accepts %s, as the gem does", (_label, build) => {
+    const table = new TableNode({ value: build() as never });
+    expect(Array.isArray(table.value)).toBe(true);
+    expect((table.value as unknown[]).length).toBe(1);
+  });
+
+  it("still refuses a bare string, which the gem cannot map either", () => {
+    expect(() => new TableNode({ value: "" as never })).toThrow(TypeError);
+  });
+
+  it("does not wrap a non-array the way Formula does", () => {
+    expect(() => new FormulaNode({ value: new Set([row()]) as never })).toThrow(TypeError);
+    expect(new FormulaNode({ value: "" as never }).value).toStrictEqual([""]);
   });
 });
 

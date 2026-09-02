@@ -1479,3 +1479,31 @@ export const OMML_SYMBOLS: ReadonlyMap<string, string> = new Map([
   ["Zwsp", "&#x200b;"],
   ["Zz", "&#x2124;"],
 ]);
+
+/**
+ * The `omml_tag_name` a symbol answers unless `OMML_SYMBOL_TAG_NAMES`
+ * names it — read off `Math::Symbols::Symbol` itself
+ * (`symbols/symbol.rb:93-95`), never inferred from the majority.
+ */
+export const OMML_DEFAULT_SYMBOL_TAG_NAME: string = "subSup";
+
+/**
+ * Symbol id -> its `omml_tag_name`, for the 8 of 1459 symbols
+ * whose answer differs from `OMML_DEFAULT_SYMBOL_TAG_NAME`.
+ * `PowerBase#to_omml_without_math_tag` branches on this value
+ * (`power_base.rb:39-42`): these reach the m:limLow/m:limUpp
+ * under/over structure, everything else `m:sSubSup`. Measured over
+ * every symbol class and verified through one live PowerBase render
+ * per id — an id absent here answers the default, and a symbol
+ * absent from `OMML_SYMBOLS` is the parity gap that throws.
+ */
+export const OMML_SYMBOL_TAG_NAMES: ReadonlyMap<string, string> = new Map([
+  ["Clockoint", "undOvr"],
+  ["Cntclockoint", "undOvr"],
+  ["Intclockwise", "undOvr"],
+  ["Oiiint", "undOvr"],
+  ["Oiint", "undOvr"],
+  ["Oint", "undOvr"],
+  ["Prod", "undOvr"],
+  ["Sum", "undOvr"],
+]);

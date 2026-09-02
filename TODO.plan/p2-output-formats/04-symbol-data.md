@@ -106,11 +106,12 @@ node "$out/probe.mjs"
 # exit 0
 
 # [dist-sizes], the built-artifact baseline the isolation done-conditions
-# below compare against. Run from the plurimath-ts checkout. Needs no esbuild
-# bundling of its own; it imports esbuild to weigh each subpath.
+# below compare against. Run from the plurimath-ts checkout. It runs `pnpm
+# build` itself and weighs what it built, so there is no separate build step
+# and no way to measure artifacts that do not match the source: a timestamp
+# check was tried and has both failure modes, raising a false alarm after a
+# checkout and passing a partial rebuild that left shared chunks stale.
 cd <ts>
-pnpm build
-# exit 0
 node scripts/probes/dist-sizes.mjs
 # exit 0
 ```

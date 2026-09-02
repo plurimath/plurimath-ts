@@ -48,10 +48,21 @@ def symbol_id(klass)
   klass.name.delete_prefix("Plurimath::Math::Symbols::")
 end
 
+# Mirrors the shape check in `scripts/generate-corpus.rb`, which accepts exactly
+# one String node and rejects anything richer, because the descriptor is a static
+# representation rather than final output. Measured on the oracle at `00c52783`:
+# all 1,459 static symbol classes satisfy it. Without the check this probe would
+# quietly describe a shape the generator refuses, and could miscount duplicates.
 def mathml_descriptor(element)
+  nodes = element.nodes
+  unless nodes.length == 1 && nodes.first.is_a?(::String)
+    raise "mathml descriptor for #{element.name}: expected exactly one String node, " \
+          "got #{nodes.length} (#{nodes.map(&:class).uniq.inspect}) — the corpus " \
+          "generator rejects this shape, so this probe must too"
+  end
   {
     "tag" => element.name.to_s,
-    "text" => element.nodes.map(&:to_s),
+    "text" => nodes.first,
     "attributes" => element.attributes.to_h { |key, value| [key.to_s, value.to_s] }.sort.to_h,
   }
 end

@@ -191,101 +191,87 @@ function assignedOptions(value: NodeOptions | undefined): NodeOptions {
   return value === undefined ? {} : { ...value };
 }
 
-/** What a value that is not a list is, for the refusal message below. */
-function describeSequenceValue(value: unknown): string {
-  if (value === null) return "null";
-  if (typeof value === "object") {
-    // A generator object and `Object.create(null)` both leave this empty.
-    const name = (value as { constructor?: { name?: string } }).constructor?.name;
-    return name === undefined || name === "" ? "an unnamed object" : `an instance of ${name}`;
-  }
-  if (typeof value === "symbol") return "a symbol";
-  return `the ${typeof value} ${String(value)}`;
-}
-
 /**
  * A node-list slot Ruby's `initialize` assigns unconditionally.
  *
- * **Never spreads.** `[...value]` reads any JavaScript iterable as its
- * elements, and Ruby's list handling reads only an `Array` as one:
+ * **Never spreads, and never refuses.** `[...value]` reads any JavaScript
+ * iterable as its elements; `Formula#initialize` (`formula.rb:44`) reads only
+ * an `Array` as one and wraps everything else whole:
  *
  * ```text
- * Formula.new("").value        [""]        -> to_html raises ParseError
- * Formula.new(Set[sym]).value  [Set[sym]]  -> to_html raises ParseError
- * Table.new("").value          ""          -> to_html raises ParseError
+ * Formula.new([sym]).value        [sym]         -> to_html "a"
+ * Formula.new(sym).value          [sym]         -> to_html "a"
+ * Formula.new("").value           [""]          -> to_html raises ParseError
+ * Formula.new(Set[sym]).value     [Set[sym]]    -> to_html raises ParseError
+ * Formula.new([sym].each).value   [Enumerator]  -> to_html raises ParseError
  * ```
  *
- * A spread gave `[]` for the first and third and `[sym]` for the second, so the
- * port rendered `""`, `"a"` and `"<table></table>"` where the gem refuses
- * outright — all six outcomes measured on the pinned oracle. The two
- * empty-string rows above, and `Mrow`'s, were pinned as defects in
- * `test/formats/html/parity-target.ts` until this guard landed; the `Set` row
- * the degenerate sweep never constructs, so nothing caught that one at all.
- * Inventing confident, plausible, wrong bytes is the worst direction a parity
- * defect can run in; refusing where the gem renders is at least loud.
+ * All five measured on the pinned oracle at `00c52783`, in all five landed
+ * formats; `Mrow` inherits this `initialize` and behaves identically.
  *
- * So: an `Array` is copied, a bare string is wrapped exactly as
- * `Formula#initialize`'s `value.is_a?(Array) ? value : [value]` wraps it, and
- * everything else is refused. The wrapped string then reaches the renderer as
- * a string where a node belongs and earns the same `RenderError` every other
- * bare string in a list earns, which is the gem's outcome too.
+ * A spread gave `[]` for the empty string and `[sym]` for the `Set`, so the
+ * port rendered `""` and `"a"` for trees the gem refuses outright — inventing
+ * confident, plausible, wrong bytes, the worst direction a parity defect can
+ * run in. That defect is fixed here, by writing Ruby's own expression
+ * (`value.is_a?(Array) ? value : [value]`) with the array shallow-copied so a
+ * caller's later `push` cannot reach in.
  *
- * `Table#initialize` does NOT wrap — it stores the bare string — but its
- * `to_html` raises on it just the same, and this slot's declared type has no
- * spelling for a bare string, so the wrapped form reaches the identical
- * refusal. `Table#to_html` maps over whatever it stored, so the gem does render
- * `Table.new(Set[sym])` as `"<table>a</table>"` (measured), which the spread
- * matched by accident and this guard now refuses. That trades one accidental
- * match for the loud direction, on a value the slot's type never allowed.
- *
- * The refusal is a `TypeError`, matching `symbolValue` below: everything it
- * rejects is already a static type error at this slot, so it is a caller type
- * violation rather than a parse or render failure. A bare node is among them —
- * the gem wraps and renders that one, so the port is stricter than the gem
- * there. That gap is named in `PORT_TYPE_REFUSES` in
- * `test/formats/html/parity-target.ts`, and closing it is its own change.
+ * **The wrapped value is refused at RENDER, not here.** Constructors are
+ * permissive and do not validate (ARCHITECTURE.md §5): an invalid hand-built
+ * tree fails with `RenderError`, never a raw `TypeError`. A bare string, a
+ * `Set` or a generator object wrapped by this helper reaches the renderer as an
+ * element where a node belongs and earns a `RenderError` naming its slot —
+ * which is the same place the gem's own `NoMethodError` happens. An earlier
+ * revision threw `TypeError` from here instead, which fixed the spread defect
+ * at the cost of the construction contract.
  */
 function assignedSequence(
   value: NodeSequence | null | undefined,
   fallback: NodeSequence | null,
 ): NodeSequence | null {
   if (value === undefined) return fallback;
+  // Ruby cannot tell an unset slot from an assigned `nil` and wraps the latter
+  // as `[nil]`; this port keeps the two apart (module docs above) and stores an
+  // assigned nil as `null`. The stored shape differs from the gem's; the
+  // outcome does not — measured, `Formula.new(nil)` and `FormulaNode({ value:
+  // null })` refuse in all five landed formats.
   if (value === null) return null;
   const given: unknown = value;
   if (Array.isArray(given)) return [...(given as NodeSequence)];
-  if (typeof given === "string") return [given];
-  throw new TypeError(
-    `a node-list slot takes an array or a bare string, and received ${describeSequenceValue(
-      given,
-    )} — spreading it would read a JavaScript iterable as a list Ruby never builds ` +
-      "(src/core/nodes.ts, assignedSequence)",
-  );
+  return [given as MathNode | string];
 }
 
 /**
  * `Table#initialize` is NOT `Formula#initialize`, and the two must not share a
- * policy. Formula wraps a non-Array as `[value]`; Table assigns `@value = value`
- * untouched (`function/table.rb:22-30`) and its renderers call `map` on
- * whatever arrived (`table.rb:90` is `value.map { |val| val.to_html }`). So a
- * carrier renders when it answers `map` AND yields renderable rows. A Hash
- * answers `map` and yields `[key, value]` pairs, which answer no `to_html`, so
- * it refuses — as a JavaScript `Map` does here, for the same reason.
- *
- * Measured on the oracle at `00c52783`, with one `Tr` of one `Td`:
+ * policy. Formula wraps a non-Array as `[value]`; Table assigns
+ * `@value = value` untouched (`function/table.rb:22-30`) and its renderers call
+ * `map` on whatever arrived (`table.rb:90` is `value.map { |val| val.to_html }`).
+ * So a carrier renders in the gem when it answers `map` AND yields renderable
+ * rows. Measured on the oracle at `00c52783`, with one `Tr` of one `Td`:
  *
  * ```text
- * Table.new([tr], nil, nil, {})        <table><tr><td>a</td></tr></table>
- * Table.new(Set[tr], nil, nil, {})     <table><tr><td>a</td></tr></table>
- * Table.new([tr].each, nil, nil, {})   <table><tr><td>a</td></tr></table>
+ * Table.new([tr], nil, nil, {})       <table><tr><td>a</td></tr></table>
+ * Table.new(Set[tr], nil, nil, {})    <table><tr><td>a</td></tr></table>
+ * Table.new([tr].each, nil, nil, {})  <table><tr><td>a</td></tr></table>
+ * Table.new({"k" => tr}, ...)         NoMethodError — Hash#map yields pairs
+ * Table.new("", nil, nil, {})         NoMethodError — String#map
+ * Table.new(tr, nil, nil, {})         NoMethodError — Tr#map
  * ```
  *
- * So a Set and an Enumerator are ordinary Table inputs, not the JavaScript
- * accident the Formula guard exists to stop. That guard takes the array and
- * refuses the other two, which is the safe direction but still a divergence —
- * the port declining what the gem renders.
+ * This helper therefore stores the carrier, shallow-copying only an `Array`.
+ * It does not wrap, does not refuse, and — deliberately — does not ITERATE:
+ * consuming an iterator here would run the caller's code inside a constructor,
+ * which Ruby never does, and which turns a throwing iterator into a raw escape
+ * from `new TableNode`. An earlier revision called `Array.from` here and did
+ * exactly that.
  *
- * A bare string is the one shape both refuse. Ruby stores it and dies on
- * `String#map`; refusing at construction reaches the same outcome earlier.
+ * The declared slot type spells none of those carriers, so only a cast reaches
+ * this at all, and every one of them is refused at render as `RenderError`
+ * naming the slot: `./validate` rejects a class instance in a node slot, and
+ * each format's table renderer rejects a `value` that is not a list. For the
+ * `Set` and the `Enumerator` that is the port declining what the gem renders —
+ * a known, loud divergence, pinned with its measured gem output in
+ * `test/core/nodes.spec.ts`, and never invented bytes.
  */
 function assignedTableSequence(
   value: NodeSequence | null | undefined,
@@ -295,18 +281,7 @@ function assignedTableSequence(
   if (value === null) return null;
   const given: unknown = value;
   if (Array.isArray(given)) return [...(given as NodeSequence)];
-  if (
-    typeof given !== "string" &&
-    typeof (given as Iterable<unknown>)?.[Symbol.iterator] === "function"
-  ) {
-    return Array.from(given as Iterable<unknown>) as NodeSequence;
-  }
-  throw new TypeError(
-    `a table value takes an array or another iterable, and received ${describeSequenceValue(
-      given,
-    )} — the gem stores it and calls map on it, which this cannot ` +
-      "(src/core/nodes.ts, assignedTableSequence)",
-  );
+  return given as NodeSequence;
 }
 
 /** A string slot Ruby's `initialize` assigns unconditionally, defaulting to `nil`. */

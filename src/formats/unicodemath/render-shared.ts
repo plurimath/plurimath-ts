@@ -635,6 +635,23 @@ export function formulaBoundary(node: MathNode, context: RenderContext): string 
       node.kind,
     );
   }
+  // Not a list either. `FormulaNode` and `MrowNode` wrap a non-Array as
+  // `[value]` exactly as `Formula#initialize` does, so no CONSTRUCTED node
+  // reaches here holding one — but a hand-built structural object is a
+  // supported input (ARCHITECTURE.md §5) and `assertMathNodeShape` passes a
+  // string or number in a slot, because Ruby nodes do hold those elsewhere.
+  // Without this the map below dies as a raw `TypeError` and the entry point
+  // relabels it "rendering failed mid-walk", naming no slot. The other four
+  // formats each guard the same spot; measured before this landed, only
+  // unicodemath laundered it.
+  if (!Array.isArray(children)) {
+    throw new RenderError(
+      `${node.kind}.value: is ${describeSlot(children)}, not a list — ` +
+        "the gem raises NoMethodError here",
+      FORMAT,
+      node.kind,
+    );
+  }
 
   // `join_str = " " if !(negated_value? || mini_sized?)` — Ruby's `join(nil)`
   // concatenates, so a suppressed separator is the empty string, not a space.

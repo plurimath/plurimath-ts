@@ -570,9 +570,12 @@ export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
  * raises `ParseError` on all three: Ruby's `Formula#initialize` wraps a
  * non-Array as `[value]` and then cannot render the string it wrapped, and
  * `Table#initialize` stores the string untouched and cannot render that either.
- * `src/core/nodes.ts` no longer spreads — an array is copied, a bare string is
- * wrapped as Ruby wraps it, and the wrapped string earns the same `RenderError`
- * every other bare string in a node list earns.
+ * `src/core/nodes.ts` no longer spreads — `Formula` and `Mrow` copy an array and
+ * wrap anything else whole (Ruby's own
+ * `value.is_a?(Array) ? value : [value]`), `Table` copies an array and stores
+ * any other carrier untouched (Ruby's own `@value = value`), and each of the
+ * three rows reaches the RENDERER and is refused there as `RenderError` naming
+ * the slot — which is where the gem's own `NoMethodError` happens.
  */
 export const DEGENERATE_PORT_RENDERS: Readonly<
   Record<string, { readonly reason: string; readonly portOutput: string }>
@@ -580,47 +583,33 @@ export const DEGENERATE_PORT_RENDERS: Readonly<
 
 /**
  * Rows the port cannot even BUILD: the node constructor throws `TypeError`
- * because the value is one its declared slot type excludes, and only a cast
- * reaches it at all. Every row here is a static type error in TypeScript — the
- * sweep gets to it through `as never`, which is what makes hand-built trees a
- * supported use (ARCHITECTURE.md §5) worth probing.
+ * before any renderer sees the tree. Every row here is a static type error in
+ * TypeScript — the sweep gets to it through `as never`, which is what makes
+ * hand-built trees a supported use (ARCHITECTURE.md §5) worth probing.
  *
- * Ten of the thirteen agree with the gem, which refuses these too. Three render
- * in the gem: `Formula#initialize` wraps a non-Array as `[value]`, so a bare
- * node in `formula[0]` and `mrow[0]` renders where the port refuses, and
- * `symbol[0]=node` renders an unreproducible heap address (`UNSTABLE_OUTPUT`).
- * The first two are a port gap, named here rather than counted, and they leave
- * this table when the wrap lands.
+ * **A row here is a CONTRACT BREACH, not a departure.** ARCHITECTURE.md §5 and
+ * the `src/core/nodes.ts` module docs both say constructors do not validate: an
+ * invalid hand-built tree fails at render with `RenderError`, never a raw
+ * `TypeError`. So this table is not a place to record a decision; it is a list
+ * of the places the contract is still not kept, and every row is owed a fix.
  *
- * `assignedSequence` refuses these because it takes an array or a bare string
- * and nothing else. It used to spread instead, which threw for the same rows by
- * accident and rendered invented bytes for the iterables it did not throw on —
- * see `DEGENERATE_PORT_RENDERS`.
+ * It held thirteen more. `assignedSequence` and `assignedTableSequence` threw
+ * from the constructor to stop the `[...value]` spread from inventing bytes
+ * (see `DEGENERATE_PORT_RENDERS`). The spread defect is real and stays fixed,
+ * but the refusal belonged at render, so both helpers now store the way Ruby
+ * stores and the thirteen rows are ordinary sweep rows again — twelve refusing
+ * where the gem refuses, and `formula[0]=node` / `mrow[0]=node` now RENDERING
+ * the gem's own bytes, because Ruby wraps a bare node as `[node]` and so does
+ * this port.
+ *
+ * The one that remains is `symbolValue`, which predates this branch
+ * (`324ad7c`). `Symbols::Symbol#initialize` stores `sym&.to_s`, and Ruby's
+ * `to_s` on an arbitrary object cannot be reproduced in JavaScript, so the
+ * helper refuses rather than invent a string — at construction, where the
+ * contract says it must not. Its gem output is a heap address, so the row is
+ * also in `UNSTABLE_OUTPUT` and no byte claim is possible either way.
  */
 export const PORT_TYPE_REFUSES: Readonly<Record<string, string>> = {
-  "formula[0]=false": "assignedSequence takes an array or a bare string; false is neither",
-  "formula[0]=true": "assignedSequence takes an array or a bare string; true is neither",
-  "formula[0]=zero": "assignedSequence takes an array or a bare string; 0 is neither",
-  "formula[0]=node":
-    "the gem wraps a bare node as [node] and renders it; assignedSequence refuses it",
-  "mrow[0]=false": "assignedSequence takes an array or a bare string; false is neither",
-  "mrow[0]=true": "assignedSequence takes an array or a bare string; true is neither",
-  "mrow[0]=zero": "assignedSequence takes an array or a bare string; 0 is neither",
-  "mrow[0]=node": "the gem wraps a bare node as [node] and renders it; assignedSequence refuses it",
-  // Table carries its own policy: it takes an array or any other iterable,
-  // because the gem stores its value and maps over it. These four answer no
-  // iterator, and the gem refuses them too — `Table#to_html` sends `map` and
-  // gets NoMethodError.
-  "table[0]=false": "assignedTableSequence takes an array or another iterable; false is neither",
-  "table[0]=true": "assignedTableSequence takes an array or another iterable; true is neither",
-  "table[0]=zero": "assignedTableSequence takes an array or another iterable; 0 is neither",
-  "table[0]=node":
-    "assignedTableSequence takes an array or another iterable; a bare node is neither",
-  // A string IS iterable in JavaScript, and is excluded deliberately: iterating
-  // it would give characters, where the gem stores the string whole and then
-  // dies on `String#map`. Both refuse; only the moment differs.
-  "table[0]=empty-string":
-    "assignedTableSequence excludes strings; the gem stores it and raises on String#map",
   "symbol[0]=node": "SymbolNode refuses an object: Ruby's sym&.to_s spelling is not reproducible",
 };
 

@@ -5,6 +5,7 @@ import {
   type NodeParameter,
   RenderError,
 } from "../../core/index";
+import { htmlEntityToUnicode } from "../../core/nodes";
 import { dumpNodes, XmlElement } from "../../xml/index";
 
 export const FORMAT = "omml";
@@ -432,4 +433,30 @@ export function serializeRendered(rendered: OmmlRendered): string {
   };
   visit(rendered);
   return parts.join("");
+}
+
+/**
+ * `Utility.html_entity_to_unicode`, with the one failure the gem shows on
+ * this path given a message of its own. A delimiter entity naming a surrogate
+ * or a code point past U+10FFFF makes the gem raise `RangeError: invalid
+ * codepoint 0xD800 in UTF-8` / `RangeError: 1114112 out of char range` —
+ * measured both with the entity written once (`&#xD800;`) and written twice
+ * (`&amp;#xD800;`), because the second decode reaches what the first left.
+ * Without this, that RangeError travels to the renderer boundary, which
+ * reports every RangeError as a stack-depth refusal.
+ */
+export function decodeEntities(value: string, at: string): string {
+  try {
+    return htmlEntityToUnicode(value);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw new RenderError(
+        `${at}: the delimiter's entities name a code point UTF-8 cannot hold — ` +
+          `the gem raises RangeError here (${error.message})`,
+        FORMAT,
+        "fenced",
+      );
+    }
+    throw error;
+  }
 }

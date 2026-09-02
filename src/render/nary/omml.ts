@@ -2,6 +2,7 @@ import { hasNodeKind, RenderError } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
 import {
   controlProperties,
+  decodeEntities,
   FORMAT,
   type NodeOf,
   ommlSlot,
@@ -48,7 +49,14 @@ export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlEle
       node.kind,
     );
   }
-  const operatorValue = htmlEntityToUnicode(rawOperator);
+  // `Nary#chr_value` decodes the operator the same way `Fenced` decodes its
+  // delimiters: `html_entity_to_unicode` is applied, and what it leaves is
+  // decoded again. Measured on the oracle at `00c52783`, a Symbol valued
+  // `&amp;#x28;` gives `<m:chr m:val="("/>` and `&amp;copy;` gives `©`; a single
+  // decode leaves `&#x28;` and `&copy;`. Shared with `fenced` so the two cannot
+  // drift, and so a code point UTF-8 cannot hold refuses here too rather than
+  // reaching the renderer boundary as a stack-depth error.
+  const operatorValue = decodeEntities(htmlEntityToUnicode(rawOperator), "nary.parameterOne");
   const properties = new XmlElement("m:naryPr").append(
     operatorValue === SUPPRESSED_NARY_OPERATOR
       ? null

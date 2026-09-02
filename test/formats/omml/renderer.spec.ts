@@ -2250,6 +2250,38 @@ describe("OMML fenced delimiter entity decoding", () => {
 });
 
 /**
+ * `Nary#chr_value` decodes its operator twice, exactly as `Fenced` decodes its
+ * delimiters, and the two now share one helper. Measured on the oracle at
+ * `00c52783` over `Nary(Symbol(v), x, x, x, {})`: `&amp;#x28;` gives
+ * `<m:chr m:val="("/>`, `&amp;copy;` gives `©`, and a single decode leaves
+ * `&#x28;` and `&copy;` in the attribute.
+ *
+ * This one came in with an earlier slice and reached `main` before it was
+ * found, which is why it is pinned here rather than left to the branch that
+ * introduced it.
+ */
+describe("OMML Nary operator entity decoding", () => {
+  const naryWith = (value: string) =>
+    new NaryNode({
+      options: {},
+      parameterOne: new SymbolNode({ value }),
+      parameterTwo: symbol(),
+      parameterThree: symbol(),
+      parameterFour: symbol(),
+    });
+
+  it.each([
+    ["&#x28;", "("],
+    ["&amp;#x28;", "("],
+    ["&amp;copy;", "\u00a9"],
+    ["&amp;#x2211;", "\u2211"],
+  ] as const)("decodes %s to %s", (written, expected) => {
+    const out = toOmmlWithoutMathTag(naryWith(written));
+    expect(out).toContain(`<m:chr m:val="${expected}"/>`);
+  });
+});
+
+/**
  * Ruby's `String#inspect` escapes far more than the C0 controls and DEL the
  * port used to escape. Past the named escapes it copies a character through
  * only when `rb_enc_isprint` calls it printable, and that predicate reads

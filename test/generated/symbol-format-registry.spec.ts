@@ -1,6 +1,8 @@
 /**
  * The generator's symbol-slice registry (ARCHITECTURE.md §5,
- * TODO.plan/p2-output-formats/04-symbol-data.md).
+ * TODO.plan/p1-asciimath/02-symbol-data.md, and for the HTML and OMML slices
+ * specifically TODO.plan/p2-output-formats/04-symbol-data.md, which arrives with
+ * its own branch and is not present here yet).
  *
  * `scripts/generate-corpus.rb` emits one physical slice per entry in
  * `SYMBOL_FORMATS`, and probes each of them across the axes `CONTEXT_AXES`
@@ -20,7 +22,7 @@
  * **This spec reads the generator, never its output.** It is the contract test
  * for the source commit that adds a format, which by design lands before the
  * slice that format emits exists on disk (the two-commit protocol in
- * `04-symbol-data.md`: generator source first, generated data second). An
+ * `02-symbol-data.md`: generator source first, generated data second). An
  * assertion here that imported `src/generated/<format>/` would fail on the
  * commit it exists to cover.
  */
@@ -151,5 +153,76 @@ describe("the generator's symbol-slice registry", () => {
       AXES.every((axis) => line.includes(`"${axis.name}" =>`)),
     );
     expect(restated).toStrictEqual([]);
+  });
+});
+
+/**
+ * `omml_tag_name` is the second per-symbol OMML property. `PowerBase` branches
+ * on it (`power_base.rb:39-42`) and the branch changes rendered *structure*, so
+ * a slice carrying only the payload string is not the whole static contract —
+ * the missing arm silently emits `m:sSubSup` for every symbol, which is wrong
+ * bytes rather than a refusal.
+ *
+ * These assertions read the generator, for the same reason the block above
+ * does: they are the contract for the source commit, which lands before the
+ * slice it emits exists on disk.
+ */
+describe("the generator's omml tag-name axis", () => {
+  /** `methodBody`, for a name ending in `!` — where its `\b` cannot match. */
+  function bangMethodBody(name: string): string {
+    const found = [
+      ...GENERATOR.matchAll(new RegExp(String.raw`^  def ${name}[\s\S]*?\n  end$`, "gm")),
+    ];
+    expect(found.length, `generate-corpus.rb should define ${name} exactly once`).toBe(1);
+    return found[0]?.[0] ?? "";
+  }
+
+  const body = methodBody("omml_symbol_tag_names");
+
+  it("measures the default off the symbol root instead of taking the majority", () => {
+    // "1451 of 1459 say subSup" is a coincidence of the current hierarchy. The
+    // inherited answer is the actual default, and it is read, not counted.
+    expect(body).toContain("measured_omml_tag_name(symbol_root)");
+  });
+
+  it("derives membership by asking every symbol class", () => {
+    // The whole point: a list found by reading eight class files is how the
+    // ninth gets missed. Membership comes from the classes handed in.
+    expect(body).toMatch(/classes\.filter_map do \|klass\|/);
+    expect(body).toContain("measured_omml_tag_name(klass)");
+  });
+
+  it("names no symbol in the method that decides which symbols are in the set", () => {
+    // A quoted PascalCase word with no spaces is a symbol id ("Sum",
+    // "Paren::Lround"). One appearing here means the set went back to a list.
+    const idLiterals = [...body.matchAll(/"([A-Z][A-Za-z]*(?:::[A-Z][A-Za-z]*)?)"/g)].map(
+      (match) => match[1],
+    );
+    expect(idLiterals).toStrictEqual([]);
+  });
+
+  it("stops rather than emit a tag name whose output it has not measured", () => {
+    // Only two values are proved to reach output by a live render. A third is a
+    // finding, not a row: emitting it would give the port a value with no
+    // evidence of the structure it produces.
+    expect(assignment("OMML_UNDOVR_TAG")).toBe('"undOvr"');
+    expect(body).toContain("unmodelled");
+    expect(body).toMatch(/raise Error/);
+  });
+
+  it("proves the axis reaches output in both directions", () => {
+    // A membership table that never renders anything would pass while
+    // discriminating nothing, which is how two earlier verification scripts
+    // gave false confidence.
+    expect(body).toContain("assert_omml_tag_name_reaches_output!");
+    const proof = bangMethodBody("assert_omml_tag_name_reaches_output!");
+    expect(proof).toContain("OMML_UNDOVR_MARKERS");
+    expect(proof).toContain("<m:sSubSup>");
+  });
+
+  it("emits the axis only for the omml slice", () => {
+    const emitter = methodBody("emit_symbols_file");
+    expect(emitter).toContain("omml_tag_name_sections(omml_tag_names,");
+    expect(emitter).toContain('if format == "omml"');
   });
 });

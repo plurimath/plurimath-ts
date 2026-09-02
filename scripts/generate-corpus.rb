@@ -50,6 +50,10 @@
 #                                          reads that no other slice supplies,
 #                                          plus the census carrier name lists
 #   src/generated/<format>/symbols.ts      symbol id -> static descriptor
+#                                          html and omml need nothing beyond
+#                                          this pair: OMML's XML wrapper is the
+#                                          renderer's, never a per-class
+#                                          template
 #   src/generated/<format>/exceptions.ts   the context-axis exception matrix
 #   src/generated/context-axes.ts          the probe manifest and its results
 #   src/generated/provenance.ts            what the slices were generated from
@@ -87,13 +91,11 @@ module CorpusGenerator
   SYMBOL_NAMESPACE = "Math::Symbols::"
   SYMBOL_OUT_REL = "src/generated"
 
-  # A symbol slice is only provable where the corpus can check it, so the
-  # slices cover exactly the formats the corpus targets.
-  # Symbol slices are generated for one more format than the corpus targets:
-  # the UnicodeMath renderer is being built, and its symbol table is needed
-  # before there is a corpus target to check it against. Keeping the two lists
-  # separate is what lets those land in either order.
-  SYMBOL_FORMATS = (TARGET_FORMATS + %w[unicodemath]).freeze
+  # Symbol slices are generated for three more formats than the corpus targets:
+  # the UnicodeMath, HTML and OMML renderers are being built, and their symbol
+  # tables are needed before there is a corpus target to check them against.
+  # Keeping the two lists separate is what lets those land in either order.
+  SYMBOL_FORMATS = (TARGET_FORMATS + %w[unicodemath html omml]).freeze
 
   # Roots that carry no static representation of their own. Declared here and
   # machine-checked in `assert_symbol_roots!`, never assumed.
@@ -123,16 +125,33 @@ module CorpusGenerator
     {
       "name" => "table",
       "values" => [false, true],
-      "formats" => %w[asciimath latex mathml unicodemath].freeze,
+      "formats" => %w[asciimath latex mathml unicodemath html omml].freeze,
       "mechanism" => "options[:table], which Td sets for a Formula cell",
     },
     {
       "name" => "rspace",
       "values" => [nil, "thickmathspace"],
-      "formats" => %w[asciimath latex mathml unicodemath].freeze,
+      "formats" => %w[asciimath latex mathml unicodemath html omml].freeze,
       "mechanism" => "the symbol node's own options[:rspace]",
     },
+    {
+      # OMML threads a display-style flag the way MathML threads `intent`, and
+      # it reaches a symbol as the positional argument of
+      # `to_omml_without_math_tag`. On the pinned oracle it moves no symbol's
+      # output, which is exactly why it is manifested rather than dropped: an
+      # axis that is never probed cannot report the day it starts to matter.
+      "name" => "display_style",
+      "values" => [false, true],
+      "formats" => %w[omml].freeze,
+      "mechanism" => "the `display_style` argument Formula#to_omml threads down",
+    },
   ].freeze
+
+  # Every axis at its first value: the context a static descriptor describes.
+  # Derived from the manifest rather than restated, so a new axis cannot be
+  # declared and then silently left out of the baseline the slices are emitted
+  # at.
+  BASELINE_CONTEXT = CONTEXT_AXES.to_h { |axis| [axis["name"], axis["values"].first] }.freeze
 
   # Representative surroundings, so neighbour-dependent behaviour is exercised
   # and not only the isolated symbol (§5).
@@ -1125,7 +1144,9 @@ module CorpusGenerator
 
     case format
     when "asciimath" then node.to_asciimath(options: options)
+    when "html" then node.to_html(options: options)
     when "latex" then node.to_latex(options: options)
+    when "omml" then node.to_omml_without_math_tag(combo["display_style"], options: options)
     when "unicodemath" then node.to_unicodemath(options: options)
     when "mathml"
       mathml_descriptor(
@@ -1244,7 +1265,13 @@ module CorpusGenerator
 
     case format
     when "asciimath" then formula.to_asciimath(options: options)
+    when "html" then formula.to_html(options: options)
     when "latex" then formula.to_latex(options: options)
+    # `Formula#to_omml` builds its own options hash and takes no override, so
+    # the table axis reaches a hosted OMML render only the way a document
+    # would deliver it — through the `table-cell` template, whose Td sets
+    # `options[:table]` itself. `to_mathml` above is threaded the same way.
+    when "omml" then formula.to_omml(display_style: combo["display_style"])
     when "mathml" then formula.to_mathml(intent: combo["intent"])
     when "unicodemath" then formula.to_unicodemath(options: options)
     else raise Error, "unknown target format #{format.inspect}"
@@ -1334,12 +1361,10 @@ module CorpusGenerator
   # this is not a context axis — but a hand-built node may set it, and the
   # renderer has to know which classes read it.
   def probe_value_dependence(classes)
-    baseline = { "intent" => false, "table" => false, "rspace" => nil }
-
     classes.filter_map do |klass|
       formats = SYMBOL_FORMATS.select do |format|
-        representation(klass, format, baseline) !=
-          representation(klass, format, baseline, value: VALUE_PROBE)
+        representation(klass, format, BASELINE_CONTEXT) !=
+          representation(klass, format, BASELINE_CONTEXT, value: VALUE_PROBE)
       end
       next if formats.empty?
 
@@ -2609,9 +2634,8 @@ module CorpusGenerator
   # `asciimath/symbols.ts`; the two copies cannot drift. Verified end to end
   # by a live Color render over an id symbol.
   def mathml_color_symbol_literals
-    baseline = { "intent" => false, "table" => false, "rspace" => nil }
     literals = static_symbol_classes(symbol_classes).map do |klass|
-      [symbol_id(klass), representation(klass, "asciimath", baseline)]
+      [symbol_id(klass), representation(klass, "asciimath", BASELINE_CONTEXT)]
     end
 
     eqno = literals.assoc("Eqno")
@@ -3607,9 +3631,30 @@ module CorpusGenerator
     format.upcase
   end
 
+  # A slice typed `string` must hold strings. Nothing checked this before, and
+  # OMML is the format that makes it matter: `to_omml_without_math_tag` returns
+  # nil for one hard-coded value upstream, and a nil reaching the emitter would
+  # be written as a `null` the declared type forbids — a type error in
+  # generated code rather than a named failure in the run that produced it.
+  def assert_string_payloads!(format, entries)
+    return unless symbol_representation_type(format) == "string"
+
+    offenders = entries.reject { |_id, payload| payload.is_a?(::String) }
+    return if offenders.empty?
+
+    raise Error, <<~MESSAGE
+      #{format} returned a non-String payload for #{offenders.map(&:first).sort.join(', ')}
+      (#{offenders.map { |_id, payload| payload.class }.uniq.join(', ')}). The slice is
+      typed `string`; decide what the renderer should do with the absence before
+      the data claims a value.
+    MESSAGE
+  end
+
   def emit_symbols_file(out_root, format, classes)
-    baseline = { "intent" => false, "table" => false, "rspace" => nil }
-    entries = classes.map { |klass| [symbol_id(klass), representation(klass, format, baseline)] }
+    entries = classes.map do |klass|
+      [symbol_id(klass), representation(klass, format, BASELINE_CONTEXT)]
+    end
+    assert_string_payloads!(format, entries)
     sections = [ts_header(<<~TEXT.chomp)]
       Symbol id -> the static #{format} representation of that symbol.
 

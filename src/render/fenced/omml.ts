@@ -5,23 +5,32 @@ import { assertReproducibleRubyHashOrder, rubyNumberToS } from "../../core/ruby-
 import {
   describeSlot,
   FORMAT,
+  isOptionHash,
   type NodeOf,
   ommlFormulaSlot,
   type RenderContext,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
+/** The kinds `symbol_or_paren` can read a delimiter off. */
+type DelimiterKind = "symbol" | "number" | "text" | "formula" | "mrow" | "table";
+
+/**
+ * What `symbol_or_paren` hands back: never a node, always a Ruby value that
+ * the attribute write will stringify.
+ */
+type DelimiterValue = string | readonly unknown[] | Readonly<Record<string, unknown>>;
+
 export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): XmlElement {
-  const open = parenValue(node.parameterOne, "fenced.parameterOne");
-  const close = parenValue(node.parameterThree, "fenced.parameterThree");
+  assertConstructorValidation(node);
+  // `open_paren` runs to completion — read, decode, write — before
+  // `close_paren` starts, so a refusal on the open delimiter must win.
+  const open = delimiterAttribute(node.parameterOne, "fenced.parameterOne");
+  const close = delimiterAttribute(node.parameterThree, "fenced.parameterThree");
   const properties = new XmlElement("m:dPr").append(
-    open === null
-      ? null
-      : new XmlElement("m:begChr").setAttribute("m:val", htmlEntityToUnicode(open)),
+    open === null ? null : new XmlElement("m:begChr").setAttribute("m:val", open),
     new XmlElement("m:sepChr").setAttribute("m:val", ""),
-    close === null
-      ? null
-      : new XmlElement("m:endChr").setAttribute("m:val", htmlEntityToUnicode(close)),
+    close === null ? null : new XmlElement("m:endChr").setAttribute("m:val", close),
   );
   return new XmlElement("m:d").append(
     properties,
@@ -29,7 +38,75 @@ export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): Xm
   );
 }
 
-function parenValue(value: unknown, at: string): string | null {
+/**
+ * `Fenced#initialize` calls `ModelHelper.validate_left_right` over its three
+ * slots (`ternary_function.rb:16`), and that helper sends `first` to the
+ * `value` of any slot holding a `Math::Formula` (`model_helper.rb:18-22`).
+ * So a Formula or Mrow slot whose value is neither a list nor a hash raises
+ * before a single tag is built — measured on the oracle at `00c52783`:
+ * `NoMethodError: undefined method 'first'` for an instance of String, for an
+ * instance of Integer, for true, and for nil. `Table` is not a
+ * `Math::Formula`, so it is exempt, and a Table holding `"raw"` renders
+ * `m:val="raw"`.
+ *
+ * This port's constructors do not validate (ARCHITECTURE.md §5), so the
+ * refusal lands here, at the first renderer that can observe it. It covers
+ * this one constructor; `validate_left_right` runs in every function
+ * constructor in the gem, and the rest stays unmodelled
+ * (TODO.plan/deferred.md).
+ */
+function assertConstructorValidation(node: NodeOf<"fenced">): void {
+  const slots = [
+    [node.parameterOne, "fenced.parameterOne"],
+    [node.parameterTwo, "fenced.parameterTwo"],
+    [node.parameterThree, "fenced.parameterThree"],
+  ] as const;
+  for (const [slot, at] of slots) {
+    if (!hasNodeKind(slot)) continue;
+    const carrier = slot as MathNode;
+    if (carrier.kind !== "formula" && carrier.kind !== "mrow") continue;
+    const held: unknown = carrier.value;
+    if (Array.isArray(held) || isOptionHash(held)) continue;
+    throw new RenderError(
+      `${at}: a "${carrier.kind}" node holds ${describeSlot(held)}, and the gem's Fenced ` +
+        "constructor sends `first` to it before rendering — it raises NoMethodError there",
+      FORMAT,
+      "fenced",
+    );
+  }
+}
+
+/**
+ * `open_paren`/`close_paren`: read the delimiter, then write it as `m:val`.
+ * Returns nil where the gem returns `dpr` untouched, so the caller drops the
+ * tag.
+ *
+ * The value is entity-decoded TWICE, and both stages are load-bearing.
+ * `Utility.html_entity_to_unicode` runs once on what the reader returned
+ * (`fenced.rb:225`), and the XML wrapper runs it again on every attribute it
+ * writes (`ox_engine/element.rb:104-110`; the Oga wrapper's `encode_entities`
+ * does the same). Measured on the oracle at `00c52783`, a `Symbol` delimiter
+ * valued `"&amp;#x28;"` emits `m:val="("` and one valued `"&amp;copy;"` emits
+ * `m:val="©"`; a single decode leaves `&#x28;` and `&copy;` standing.
+ */
+function delimiterAttribute(value: unknown, at: string): string | null {
+  const node = delimiterCarrier(value, at);
+  if (node === null) return null;
+  const raw = parenValue(node, at);
+  if (raw === null) return null;
+  // `html_entity_to_unicode` short-circuits on `include?`, so a collection
+  // reaches `HTML_ENTITIES.decode` — which stringifies its argument — only
+  // when the collection itself holds "&". Measured: a `Formula` valued
+  // `["&", "&amp;#x28;"]` decodes twice and emits `["&", "("]`, while
+  // `["x", "&amp;#x28;"]` decodes once and emits `["x", "&#x28;"]`.
+  const stringified = rubyIncludesAmpersand(raw)
+    ? decodeEntities(rubyToString(raw, node.kind, at), at)
+    : rubyToString(raw, node.kind, at);
+  return decodeEntities(stringified, at);
+}
+
+/** The carrier `symbol_or_paren` is handed, or nil for an absent slot. */
+function delimiterCarrier(value: unknown, at: string): (MathNode & { kind: DelimiterKind }) | null {
   if (value === null || value === undefined) return null;
   if (!hasNodeKind(value)) {
     throw new RenderError(
@@ -38,28 +115,15 @@ function parenValue(value: unknown, at: string): string | null {
       "fenced",
     );
   }
-
   const node = value as MathNode;
   switch (node.kind) {
     case "symbol":
-      if (node.id.startsWith("Paren::")) {
-        const canonical = SYMBOL_CANONICAL_VALUES.get(node.id);
-        if (canonical !== undefined) return canonical;
-        throw new RenderError(
-          `${at}: named paren "${node.id}" is unknown to the oracle`,
-          FORMAT,
-          "fenced",
-        );
-      }
-      return scalarValue(node.value, node.kind, at);
     case "number":
-      return scalarValue(node.value, node.kind, at);
     case "text":
-      return scalarValue(node.parameterOne, node.kind, at);
     case "formula":
     case "mrow":
     case "table":
-      return compositeValue(node.value, node.kind, at);
+      return node as MathNode & { kind: DelimiterKind };
     default:
       throw new RenderError(
         `${at}: a "${node.kind}" node has no value reader — the gem raises NoMethodError here`,
@@ -69,16 +133,38 @@ function parenValue(value: unknown, at: string): string | null {
   }
 }
 
-function scalarValue(
-  value: unknown,
-  kind: "symbol" | "number" | "text",
-  at: string,
-): string | null {
+function parenValue(node: MathNode & { kind: DelimiterKind }, at: string): DelimiterValue | null {
+  if (node.kind === "symbol") {
+    // `symbol_or_paren` branches on `is_a?(Math::Symbols::Paren)` — the CLASS
+    // decides, and a carrier that names no class is the bare `Symbol`, which
+    // is not a Paren. `validate.ts` admits a concrete carrier with its
+    // identity slot omitted (the bare class IS a Ruby class), so `id` can be
+    // absent at runtime even though the model declares it required.
+    const id: unknown = node.id;
+    if (typeof id === "string" && id.startsWith("Paren::")) {
+      const canonical = SYMBOL_CANONICAL_VALUES.get(id);
+      if (canonical !== undefined) return canonical;
+      throw new RenderError(
+        `${at}: named paren "${id}" is unknown to the oracle`,
+        FORMAT,
+        "fenced",
+      );
+    }
+    return slotValue(node.value, node.kind, at);
+  }
+  // `Text#value` is its `parameter_one`; every other carrier reads `value`.
+  const held: unknown = node.kind === "text" ? node.parameterOne : node.value;
+  return slotValue(held, node.kind, at);
+}
+
+/**
+ * `field&.value`, unconverted. The gem sends `include?` to whatever comes
+ * back, so a String, list or hash survives and everything else raises there.
+ */
+function slotValue(value: unknown, kind: DelimiterKind, at: string): DelimiterValue | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") return value;
-  if (Array.isArray(value) || typeof value === "object") {
-    return deterministicRubyInspect(value, kind, at);
-  }
+  if (Array.isArray(value) || typeof value === "object") return value as DelimiterValue;
   throw new RenderError(
     `${at}: a "${kind}" node holds ${describeSlot(value)}; the gem sends include? to it and raises NoMethodError here`,
     FORMAT,
@@ -86,27 +172,49 @@ function scalarValue(
   );
 }
 
-function compositeValue(
-  value: unknown,
-  kind: "formula" | "mrow" | "table",
-  at: string,
-): string | null {
-  if (value === null || value === undefined) return null;
-  if (!Array.isArray(value)) {
-    throw new RenderError(
-      `${at}: a "${kind}" node has ${describeSlot(value)} where the gem exposes a list`,
-      FORMAT,
-      "fenced",
-    );
+/** `string&.include?("&")`: a substring on a String, a member on a list, a KEY on a hash. */
+function rubyIncludesAmpersand(value: DelimiterValue): boolean {
+  if (typeof value === "string") return value.includes("&");
+  if (Array.isArray(value)) return value.some((item) => item === "&");
+  return Object.hasOwn(value, "&");
+}
+
+/**
+ * `Utility.html_entity_to_unicode`, with the one failure the gem shows on
+ * this path given a message of its own. A delimiter entity naming a surrogate
+ * or a code point past U+10FFFF makes the gem raise `RangeError: invalid
+ * codepoint 0xD800 in UTF-8` / `RangeError: 1114112 out of char range` —
+ * measured both with the entity written once (`&#xD800;`) and written twice
+ * (`&amp;#xD800;`), because the second decode reaches what the first left.
+ * Without this, that RangeError travels to the renderer boundary, which
+ * reports every RangeError as a stack-depth refusal.
+ */
+function decodeEntities(value: string, at: string): string {
+  try {
+    return htmlEntityToUnicode(value);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw new RenderError(
+        `${at}: the delimiter's entities name a code point UTF-8 cannot hold — ` +
+          `the gem raises RangeError here (${error.message})`,
+        FORMAT,
+        "fenced",
+      );
+    }
+    throw error;
   }
+}
+
+/**
+ * `#to_s`, which the attribute write applies: identity on a String, and
+ * `#inspect` on a list or a hash.
+ */
+function rubyToString(value: DelimiterValue, kind: DelimiterKind, at: string): string {
+  if (typeof value === "string") return value;
   return deterministicRubyInspect(value, kind, at);
 }
 
-function deterministicRubyInspect(
-  value: unknown,
-  kind: "symbol" | "number" | "text" | "formula" | "mrow" | "table",
-  at: string,
-): string {
+function deterministicRubyInspect(value: unknown, kind: DelimiterKind, at: string): string {
   if (containsNodeObject(value)) {
     throw new RenderError(
       `${at}: holds a "${kind}" node whose value contains node objects with nondeterministic Ruby #inspect addresses`,
@@ -125,13 +233,9 @@ function containsNodeObject(value: unknown, seen = new Set<object>()): boolean {
   return children.some((child) => containsNodeObject(child, seen));
 }
 
-function rubyInspect(
-  value: unknown,
-  kind: "symbol" | "number" | "text" | "formula" | "mrow" | "table",
-  at: string,
-): string {
+function rubyInspect(value: unknown, kind: DelimiterKind, at: string): string {
   if (value === null || value === undefined) return "nil";
-  if (typeof value === "string") return rubyInspectString(value);
+  if (typeof value === "string") return rubyInspectString(value, kind, at);
   if (typeof value === "boolean") return String(value);
   if (typeof value === "number") {
     const printed = rubyNumberToS(value);
@@ -149,7 +253,8 @@ function rubyInspect(
     assertReproducibleRubyHashOrder(value, FORMAT, "fenced", at);
     return `{${Object.entries(value as Record<string, unknown>)
       .map(
-        ([key, item]) => `${rubyInspectString(key)} => ${rubyInspect(item, kind, `${at}.${key}`)}`,
+        ([key, item]) =>
+          `${rubyInspectString(key, kind, `${at}.${key}`)} => ${rubyInspect(item, kind, `${at}.${key}`)}`,
       )
       .join(", ")}}`;
   }
@@ -160,7 +265,28 @@ function rubyInspect(
   );
 }
 
-function rubyInspectString(value: string): string {
+/**
+ * Every code point Ruby's `String#inspect` escapes, and nothing else.
+ *
+ * Past the named escapes below, `rb_str_inspect` copies a character through
+ * when `rb_enc_isprint` calls it printable and escapes it otherwise. That
+ * predicate reads Onigmo's Unicode tables, so the escaped set is not "C0
+ * controls and DEL": C1 controls, U+2028/U+2029, unassigned code points and
+ * noncharacters all escape, while NBSP, ZWSP, U+FEFF, private use and emoji
+ * do not.
+ *
+ * The set was measured rather than reasoned about. Every one of the
+ * 1,112,064 non-surrogate code points went through `String#inspect` on the
+ * oracle's Ruby 4.0.1, giving 740 escaped ranges, and this predicate
+ * reproduced all of them with zero disagreements. It can, because the two
+ * runtimes carry the same tables: Ruby 4.0.1 reports `UNICODE_VERSION`
+ * 17.0.0 and Node 24.18.0 reports `process.versions.unicode` 17.0. The
+ * boundary cases pinned in the OMML renderer spec are what catches either
+ * side moving.
+ */
+const RUBY_NONPRINTING = /[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}]/u;
+
+function rubyInspectString(value: string, kind: DelimiterKind, at: string): string {
   let inspected = '"';
   for (let index = 0; index < value.length; ) {
     const codepoint = value.codePointAt(index) as number;
@@ -201,12 +327,37 @@ function rubyInspectString(value: string): string {
         inspected += next === "{" || next === "@" || next === "$" ? "\\#" : "#";
         break;
       default:
-        inspected +=
-          codepoint < 0x20 || codepoint === 0x7f
-            ? `\\u${codepoint.toString(16).toUpperCase().padStart(4, "0")}`
-            : character;
+        inspected += inspectCodepoint(codepoint, character, kind, at);
     }
     index += character.length;
   }
   return `${inspected}"`;
+}
+
+/**
+ * The escape spelling, also measured: `\uXXXX` up to U+FFFF and `\u{XXXXX}`
+ * above it, hex in upper case, and consecutive escapes never grouped —
+ * `"͸͹\u{10FFFE}\u{10FFFF}"`.
+ */
+function inspectCodepoint(
+  codepoint: number,
+  character: string,
+  kind: DelimiterKind,
+  at: string,
+): string {
+  if (codepoint >= 0xd800 && codepoint <= 0xdfff) {
+    // A lone UTF-16 surrogate: a Ruby UTF-8 String cannot hold one at all
+    // (`0xD800.chr(Encoding::UTF_8)` raises `RangeError: invalid codepoint
+    // 0xD800 in UTF-8`), so there is no spelling of it to copy.
+    throw new RenderError(
+      `${at}: a "${kind}" node contains the lone surrogate U+${codepoint
+        .toString(16)
+        .toUpperCase()}, which a Ruby UTF-8 string cannot hold`,
+      FORMAT,
+      "fenced",
+    );
+  }
+  if (!RUBY_NONPRINTING.test(character)) return character;
+  const hex = codepoint.toString(16).toUpperCase();
+  return codepoint > 0xffff ? `\\u{${hex}}` : `\\u${hex.padStart(4, "0")}`;
 }

@@ -47,6 +47,55 @@ export function describeSlot(value: unknown): string {
   return `a ${typeof value}`;
 }
 
+/**
+ * A slot value Ruby would hold as a Hash: a plain record, neither a list nor
+ * a node. The prototype test is `validate.ts`'s — a `Date`, `Map` or other
+ * class instance is not a hash, and no Ruby ivar can hold one.
+ */
+export function isOptionHash(value: unknown): value is Readonly<Record<string, unknown>> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  if (hasNodeKind(value)) return false;
+  const prototype = Object.getPrototypeOf(value) as unknown;
+  return prototype === Object.prototype || prototype === null;
+}
+
+/**
+ * `attributes && attributes[:accent]` — the guard seven accent renderers open
+ * with (`bar.rb:41`, and the same line in `dot`, `hat`, `tilde`, `vec`, `ul`
+ * and `overleftrightarrow`; `ddot` never reads attributes at all).
+ *
+ * Both halves were measured on the oracle at `00c52783`:
+ *
+ *   - the `&&` is Ruby-falsy, so `nil` and `false` mean "no attributes" and
+ *     take the no-accent branch. `Bar.new(x, nil)` and `Bar.new(x, false)`
+ *     render the same `m:bar` as `Bar.new(x, {})` — reading `.accent` off a
+ *     missing JavaScript object would instead die as a `TypeError`;
+ *   - anything else truthy is INDEXED, and a non-hash raises there rather
+ *     than falling through to the no-accent branch. `Bar.new(x, 0)`,
+ *     `Bar.new(x, "")`, `Bar.new(x, [])` and `Bar.new(x, :sym)` raise
+ *     `TypeError: no implicit conversion of Symbol into Integer`;
+ *     `Bar.new(x, true)` and `Bar.new(x, 1.5)` raise `NoMethodError:
+ *     undefined method '[]'`. JavaScript reads `undefined` off all six and
+ *     would silently emit an element the gem never reaches.
+ *
+ * The Ruby exception class differs by carrier, so the refusal names the read
+ * that fails rather than one class.
+ */
+export function rubyMemberValue(
+  carrier: unknown,
+  member: string,
+  kind: string,
+  at: string,
+): unknown {
+  if (carrier === null || carrier === undefined || carrier === false) return undefined;
+  if (isOptionHash(carrier)) return carrier[member];
+  throw new RenderError(
+    `${at}: cannot read :${member} from ${describeSlot(carrier)} — the gem indexes it there and raises`,
+    FORMAT,
+    kind,
+  );
+}
+
 export function renderChild(value: unknown, context: RenderContext, at: string): OmmlRendered {
   if (hasNodeKind(value)) return context.render(value as MathNode);
   throw new RenderError(
@@ -259,7 +308,22 @@ export function renderOverUnder(
   );
 }
 
-/** `Formula.new(Array(value))` followed by Formula insertion. */
+/**
+ * `Formula.new(Array(value))` followed by Formula insertion.
+ *
+ * `Kernel#Array` is not `[value]`. It returns `[]` for `nil`, an Array
+ * unchanged, and for anything answering `to_ary`/`to_a` that conversion —
+ * which for a Hash is its pairs. `NodeParameter` admits an options hash on
+ * purpose (`src/core/nodes.ts`: `Mglyph#initialize(parameter_one = {})`), so
+ * that branch is reachable, and it changes the output rather than the error:
+ * measured on the oracle at `00c52783`, `Fenced.new(x, {}, x, {})` and
+ * `Ceil.new({})` both render `<m:e/>` because `Array({})` is EMPTY, while
+ * `Fenced.new(x, {"a" => "b"}, x, {})` raises `NoMethodError: undefined
+ * method 'insert_t_tag' for an instance of Array` because
+ * `Array({"a" => "b"})` is `[["a", "b"]]`, one pair. Nodes answer neither
+ * conversion — `Array(Symbol.new("x"))`, `Array(Formula.new([x]))` and
+ * `Array(Table.new([x]))` are all one-element — so they still wrap.
+ */
 export function ommlFormulaSlot(
   value: unknown,
   tagName: string,
@@ -268,11 +332,18 @@ export function ommlFormulaSlot(
   at: string,
 ): XmlElement {
   const tag = new XmlElement(`m:${tagName}`);
-  const items = value === null || value === undefined ? [] : Array.isArray(value) ? value : [value];
-  items.forEach((item, index) => {
+  rubyArray(value).forEach((item, index) => {
     tag.append(insertSlotItem(item, context, kind, `${at}[${index}]`));
   });
   return tag;
+}
+
+/** `Kernel#Array`, over the shapes a `NodeParameter` slot can hold. */
+function rubyArray(value: unknown): readonly unknown[] {
+  if (value === null || value === undefined) return [];
+  if (Array.isArray(value)) return value;
+  if (isOptionHash(value)) return Object.entries(value);
+  return [value];
 }
 
 /** `UnaryFunction#omml_value`: compact a list, or wrap one scalar. */

@@ -5,12 +5,13 @@ import {
   present,
   type RenderContext,
   renderLiteralScript,
+  rubyMemberValue,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
 export function renderUl(node: NodeOf<"ul">, context: RenderContext): XmlElement {
   if (!present(node.parameterOne)) return plainRun("&#x332;");
-  if (!present(node.attributes.accentunder)) {
+  if (!present(rubyMemberValue(node.attributes, "accentunder", node.kind, "ul.attributes"))) {
     return renderLiteralScript(node.kind, "Low", node.parameterOne, "&#x332;", context, false);
   }
 

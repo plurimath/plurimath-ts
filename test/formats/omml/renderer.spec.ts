@@ -2065,7 +2065,7 @@ describe("OMML delimiters and accents slice", () => {
     );
   });
 
-  it("keeps Fenced refusals narrow and fully pinned", () => {
+  it("pins the delimiter values Fenced reads and the shapes it refuses", () => {
     for (const [open, expected] of [
       [new TextNode({ parameterOne: "open" }), "open"],
       [new TextNode({ parameterOne: { a: "b" } }), "{&quot;a&quot; =&gt; &quot;b&quot;}"],
@@ -2171,6 +2171,383 @@ describe("OMML delimiters and accents slice", () => {
           'fenced.parameterTwo[0]: cannot insert the bare string "x" — the gem raises NoMethodError here',
       },
     );
+  });
+});
+
+/** A `Fenced` whose open delimiter is a hand-built carrier, with `x` for a body. */
+function fencedWithOpen(open: unknown): MathNode {
+  return new FencedNode({
+    options: {},
+    parameterOne: open as never,
+    parameterTwo: [symbol()],
+    parameterThree: null,
+  });
+}
+
+/** A `Formula` delimiter holding one list, which the attribute write inspects. */
+function fencedListDelimiter(value: readonly unknown[]): MathNode {
+  return fencedWithOpen({ kind: "formula", value });
+}
+
+/**
+ * `Fenced`'s delimiter attribute is entity-decoded TWICE, and both decodes
+ * change the bytes. `Utility.html_entity_to_unicode` runs on what
+ * `symbol_or_paren` returned (`fenced.rb:225`), and the XML wrapper runs it
+ * again on every attribute it writes (`ox_engine/element.rb:104-110`). The
+ * port did one decode and shipped `&#x28;` where the gem ships `(`.
+ *
+ * Every row below is the oracle's own `m:begChr` at `00c52783`, from
+ * `Fenced.new(Symbols::Symbol.new(value), [x], nil, {})`. The `&`-carrying
+ * outputs are verbatim: Ox escapes `<` inside an attribute and leaves `&`
+ * alone, so `&nope;` really does reach the file spelled `&nope;`.
+ */
+describe("OMML fenced delimiter entity decoding", () => {
+  it.each([
+    ["a literal paren", "(", "("],
+    ["one hex entity", "&#x28;", "("],
+    ["one decimal entity written twice", "&amp;#40;", "("],
+    ["a hex entity written twice", "&amp;#x28;", "("],
+    ["a hex entity written three times", "&amp;amp;#x28;", "&#x28;"],
+    ["one named entity", "&copy;", "©"],
+    ["a named entity written twice", "&amp;copy;", "©"],
+    ["a bare ampersand entity", "&amp;", "&"],
+    ["an ampersand entity written twice", "&amp;amp;", "&"],
+    ["a less-than entity written twice", "&amp;lt;", "&lt;"],
+    ["an entity the xhtml1 table does not have", "&nope;", "&nope;"],
+    ["an unknown entity written twice", "&amp;nope;", "&nope;"],
+    ["an astral entity written twice", "&amp;#x1F600;", "😀"],
+  ])("decodes %s", (_case, value, expected) => {
+    expectDirectAndInsertion(fencedWithOpen(new SymbolNode({ value })), fencedXml(expected, null));
+  });
+
+  it.each([
+    ["a surrogate entity", "&#xD800;", "invalid codepoint 0xD800 in UTF-8"],
+    ["a surrogate entity written twice", "&amp;#xD800;", "invalid codepoint 0xD800 in UTF-8"],
+    ["an out-of-range entity written twice", "&amp;#x110000;", "Invalid code point 1114112"],
+  ])("refuses %s, where the gem raises RangeError", (_case, value, detail) => {
+    expectRefusal(() => toOmmlWithoutMathTag(fencedWithOpen(new SymbolNode({ value }))), {
+      kind: "fenced",
+      message:
+        "fenced.parameterOne: the delimiter's entities name a code point UTF-8 cannot hold — " +
+        `the gem raises RangeError here (${detail})`,
+    });
+  });
+
+  it("decodes a list twice only when the list itself holds a bare ampersand", () => {
+    // `html_entity_to_unicode` returns its argument untouched unless
+    // `include?("&")` is true, and on a list that is a MEMBER test. So the
+    // first decode reaches the list's `#inspect` text only when some element
+    // IS "&" — and then the second decode sees what the first left behind.
+    expectDirectAndInsertion(
+      fencedListDelimiter(["&", "&amp;#x28;"]),
+      fencedXml("[&quot;&&quot;, &quot;(&quot;]", null),
+    );
+    expectDirectAndInsertion(
+      fencedListDelimiter(["x", "&amp;#x28;"]),
+      fencedXml("[&quot;x&quot;, &quot;&#x28;&quot;]", null),
+    );
+  });
+});
+
+/**
+ * Ruby's `String#inspect` escapes far more than the C0 controls and DEL the
+ * port used to escape. Past the named escapes it copies a character through
+ * only when `rb_enc_isprint` calls it printable, and that predicate reads
+ * Onigmo's Unicode tables: C1 controls, U+2028/U+2029, unassigned code points
+ * and noncharacters all escape, while NBSP, ZWSP, U+FEFF, U+061C, private use
+ * and emoji do not. The spelling is `\uXXXX` up to U+FFFF and `\u{XXXXX}`
+ * above it, and a run of escapes is never grouped.
+ *
+ * Each row is the oracle's own `m:begChr` at `00c52783`, from a `Formula`
+ * delimiter holding one string. The escaped rows are what the port used to get
+ * wrong: it emitted the raw character for every one of them.
+ */
+describe("OMML fenced delimiter Ruby #inspect escapes", () => {
+  it.each([
+    ["a C1 control at the low edge", [0x61, 0x80, 0x62], "a\\u0080b"],
+    ["NEL", [0x61, 0x85, 0x62], "a\\u0085b"],
+    ["a C1 control at the high edge", [0x61, 0x9f, 0x62], "a\\u009Fb"],
+    ["the line separator", [0x61, 0x2028, 0x62], "a\\u2028b"],
+    ["the paragraph separator", [0x61, 0x2029, 0x62], "a\\u2029b"],
+    ["an unassigned BMP code point", [0x61, 0x378, 0x62], "a\\u0378b"],
+    ["the code point just below the surrogates", [0x61, 0xd7ff, 0x62], "a\\uD7FFb"],
+    ["a noncharacter in the Arabic block", [0x61, 0xfdd0, 0x62], "a\\uFDD0b"],
+    ["a BMP noncharacter", [0x61, 0xfffe, 0x62], "a\\uFFFEb"],
+    ["a supplementary noncharacter", [0x61, 0x10fffe, 0x62], "a\\u{10FFFE}b"],
+    ["an unassigned supplementary code point", [0x61, 0x1000c, 0x62], "a\\u{1000C}b"],
+    [
+      "a run of escapes, which stays ungrouped",
+      [0x378, 0x379, 0x10fffe, 0x10ffff],
+      "\\u0378\\u0379\\u{10FFFE}\\u{10FFFF}",
+    ],
+    ["a hash before an escape, which stays bare", [0x23, 0x378], "#\\u0378"],
+  ] as [string, number[], string][])("escapes %s", (_case, codepoints, inspected) => {
+    expectDirectAndInsertion(
+      fencedListDelimiter([String.fromCodePoint(...codepoints)]),
+      fencedXml(`[&quot;${inspected}&quot;]`, null),
+    );
+  });
+
+  it.each([
+    ["a no-break space", 0xa0],
+    ["a zero-width space", 0x200b],
+    ["a byte-order mark", 0xfeff],
+    ["an Arabic letter mark", 0x61c],
+    ["a private-use code point", 0xf0000],
+    ["an emoji", 0x1f600],
+    ["an ideographic space", 0x3000],
+  ] as [string, number][])("copies %s through", (_case, codepoint) => {
+    const character = String.fromCodePoint(codepoint);
+    expectDirectAndInsertion(
+      fencedListDelimiter([`a${character}b`]),
+      fencedXml(`[&quot;a${character}b&quot;]`, null),
+    );
+  });
+
+  it("refuses a lone surrogate, which a Ruby UTF-8 string cannot hold", () => {
+    expectRefusal(
+      () => toOmmlWithoutMathTag(fencedListDelimiter([`a${String.fromCharCode(0xd800)}b`])),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterOne[0]: a "formula" node contains the lone surrogate U+D800, ' +
+          "which a Ruby UTF-8 string cannot hold",
+      },
+    );
+  });
+});
+
+/**
+ * `attributes && attributes[:accent]` — the guard seven accent kinds open
+ * with. Both halves matter, and the port had both wrong: it read
+ * `attributes.accent` straight, so an absent or nil carrier died as a
+ * `TypeError` where the gem takes the no-accent branch, and a truthy non-hash
+ * read `undefined` and took that branch where the gem raises.
+ *
+ * Measured on the oracle at `00c52783` over all eight accent kinds and ten
+ * carriers each. `Ddot` is the control: it never reads attributes, so every
+ * carrier renders.
+ */
+describe("OMML accent attribute carriers", () => {
+  const accentKinds = ["bar", "dot", "hat", "tilde", "vec", "ul", "overleftrightarrow"];
+  const refusedCarriers: [label: string, carrier: unknown, described: string][] = [
+    ["an integer", 0, "a number"],
+    ["an empty string", "", 'the bare string ""'],
+    ["a list", [], "a list"],
+    ["true", true, "a boolean"],
+    ["a float", 1.5, "a number"],
+  ];
+
+  /** A hand-built accent node: the class constructors coerce `attributes` to a hash. */
+  const accent = (kind: string, attributes?: unknown): MathNode => {
+    const node: Record<string, unknown> = { kind, parameterOne: symbol() };
+    if (attributes !== undefined) node.attributes = attributes;
+    return node as unknown as MathNode;
+  };
+
+  it.each([...accentKinds, "ddot"])(
+    "takes %s's no-accent branch for an absent, nil or false carrier",
+    (kind) => {
+      const forEmptyHash = toOmmlWithoutMathTag(accent(kind, {}));
+      expect(toOmmlWithoutMathTag(accent(kind))).toBe(forEmptyHash);
+      expect(toOmmlWithoutMathTag(accent(kind, null))).toBe(forEmptyHash);
+      expect(toOmmlWithoutMathTag(accent(kind, false))).toBe(forEmptyHash);
+      expect(forEmptyHash).not.toContain("<m:acc>");
+      expect(forEmptyHash).not.toContain("<m:groupChr>");
+    },
+  );
+
+  it.each(
+    accentKinds.flatMap((kind) =>
+      refusedCarriers.map(([label, carrier, described]): [string, string, unknown, string] => [
+        kind,
+        label,
+        carrier,
+        described,
+      ]),
+    ),
+  )(
+    "refuses %s carrying %s, which the gem indexes and raises on",
+    (kind, _label, carrier, described) => {
+      const member = kind === "ul" ? "accentunder" : "accent";
+      expectRefusal(() => toOmmlWithoutMathTag(accent(kind, carrier)), {
+        kind,
+        message: `${kind}.attributes: cannot read :${member} from ${described} — the gem indexes it there and raises`,
+      });
+    },
+  );
+
+  it.each(refusedCarriers)(
+    "leaves Ddot rendering for %s, which it never reads",
+    (_label, carrier) => {
+      expect(toOmmlWithoutMathTag(accent("ddot", carrier))).toBe(
+        toOmmlWithoutMathTag(accent("ddot", {})),
+      );
+    },
+  );
+});
+
+/**
+ * `Fenced#to_omml_without_math_tag` wraps its body in
+ * `Formula.new(Array(parameter_two))`, and `Ceil` reaches the same line
+ * through `Fenced.new(lceil, Array(parameter_one), rceil)`. `Kernel#Array` is
+ * not `[value]`: it takes a Hash's PAIRS, so an empty options hash — which
+ * `NodeParameter` admits — collapses to an empty body rather than to an
+ * uninsertable object. Measured on the oracle at `00c52783`.
+ */
+describe("OMML Kernel#Array on the fenced body", () => {
+  it("renders an empty options hash as an empty body", () => {
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: {} as never,
+        parameterThree: symbol(),
+      }),
+      fencedXml("x", "x", null),
+    );
+    expectDirectAndInsertion(
+      new CeilNode({ parameterOne: {} as never }),
+      fencedXml("⌈", "⌉", null),
+    );
+  });
+
+  it.each([
+    [
+      "fenced",
+      (): MathNode =>
+        new FencedNode({
+          options: {},
+          parameterOne: symbol(),
+          parameterTwo: { a: "b" } as never,
+          parameterThree: symbol(),
+        }),
+      "fenced.parameterTwo[0]",
+    ],
+    [
+      "ceil",
+      (): MathNode => new CeilNode({ parameterOne: { a: "b" } as never }),
+      "ceil.parameterOne[0]",
+    ],
+  ] as [string, () => MathNode, string][])(
+    "refuses the pair a one-entry hash becomes in %s",
+    (kind, build, at) => {
+      expectRefusal(() => toOmmlWithoutMathTag(build()), {
+        kind,
+        message: `${at}: cannot insert a list — the gem raises NoMethodError here`,
+      });
+    },
+  );
+});
+
+/**
+ * `symbol_or_paren` hands back `field&.value` untouched, and the attribute
+ * write sends `include?` and then `to_s` to whatever that is. `to_s` is
+ * identity on a String and `#inspect` on a list or a hash — so a `Table`
+ * delimiter holding a bare string renders that string unquoted, and one
+ * holding a hash renders the hash's inspection. The port refused both.
+ *
+ * `Formula` and `Mrow` differ, and not in the renderer: `Fenced#initialize`
+ * runs `ModelHelper.validate_left_right`, which sends `first` to the value of
+ * any `Math::Formula` among the three slots. Those two carriers therefore
+ * accept a list or a hash and raise on everything else, before rendering
+ * starts. `Table` is not a `Math::Formula` and is exempt. All measured on the
+ * oracle at `00c52783`.
+ */
+describe("OMML fenced delimiters that are not lists", () => {
+  it.each([
+    ["a bare string", "table", "raw", "raw"],
+    ["an empty string", "table", "", ""],
+    ["a hash", "table", { a: "b" }, "{&quot;a&quot; =&gt; &quot;b&quot;}"],
+    ["an empty hash", "table", {}, "{}"],
+    ["a doubly-encoded entity string", "table", "&amp;#x28;", "("],
+    ["a hash", "formula", { a: "b" }, "{&quot;a&quot; =&gt; &quot;b&quot;}"],
+    ["a hash", "mrow", { a: "b" }, "{&quot;a&quot; =&gt; &quot;b&quot;}"],
+  ] as [string, string, unknown, string][])(
+    "renders %s held by a %s carrier",
+    (_case, kind, value, expected) => {
+      expectDirectAndInsertion(fencedWithOpen({ kind, value }), fencedXml(expected, null));
+    },
+  );
+
+  it("drops the tag for a Table carrying no value at all", () => {
+    expectDirectAndInsertion(fencedWithOpen({ kind: "table", value: null }), fencedXml(null, null));
+  });
+
+  it("refuses a Table value the gem cannot send include? to", () => {
+    expectRefusal(() => toOmmlWithoutMathTag(fencedWithOpen({ kind: "table", value: 7 })), {
+      kind: "fenced",
+      message:
+        'fenced.parameterOne: a "table" node holds a number; the gem sends include? to it and raises NoMethodError here',
+    });
+  });
+
+  it.each([
+    ["formula", "a bare string", "raw", 'the bare string "raw"'],
+    ["formula", "a number", 7, "a number"],
+    ["formula", "nothing", null, "nil"],
+    ["mrow", "a bare string", "raw", 'the bare string "raw"'],
+  ] as [string, string, unknown, string][])(
+    "refuses a %s carrier holding %s, which the gem's constructor rejects",
+    (kind, _case, value, described) => {
+      expectRefusal(() => toOmmlWithoutMathTag(fencedWithOpen({ kind, value })), {
+        kind: "fenced",
+        message:
+          `fenced.parameterOne: a "${kind}" node holds ${described}, and the gem's Fenced ` +
+          "constructor sends `first` to it before rendering — it raises NoMethodError there",
+      });
+    },
+  );
+});
+
+/**
+ * `symbol_or_paren` branches on `is_a?(Math::Symbols::Paren)` — the class
+ * decides. `validate.ts` deliberately admits a concrete carrier with its
+ * identity slot omitted, because the bare carrier IS a Ruby class, so a
+ * `symbol` node can reach this renderer with no `id` at all. The port read
+ * `id.startsWith` unguarded and died as a `TypeError` wrapped in a
+ * `RenderError`; the gem treats such a carrier as the bare `Symbol`, which is
+ * not a Paren — measured, `Fenced.new(Symbols::Symbol.new("("), [x], nil, {})`
+ * emits `m:begChr m:val="("`.
+ */
+describe("OMML fenced delimiter carriers without an identity", () => {
+  it.each([
+    ["symbol", { kind: "symbol", value: "(" }, "("],
+    ["text", { kind: "text", parameterOne: "open" }, "open"],
+  ] as [string, unknown, string][])(
+    "reads the value off a bare %s carrier",
+    (_kind, carrier, expected) => {
+      expectDirectAndInsertion(fencedWithOpen(carrier), fencedXml(expected, null));
+    },
+  );
+});
+
+/**
+ * A recorded divergence, not a defect. Ruby's `#inspect` prints a recursion
+ * marker for a self-referential delimiter — measured on the oracle at
+ * `00c52783`, a `Table` holding a self-referential list emits
+ * `m:begChr m:val="[[...]]"` and one holding a self-referential hash emits
+ * `{"self" => {...}}` — while this port's global shape check rejects any
+ * cyclic tree before a renderer sees it. The divergence and the trigger that
+ * brings it back are in TODO.plan/deferred.md; this test pins the refusal so
+ * the divergence cannot drift silently into something else.
+ */
+describe("OMML fenced delimiter recursion markers", () => {
+  it("refuses a self-referential delimiter the gem prints a marker for", () => {
+    const list: unknown[] = [];
+    list.push(list);
+    const hash: Record<string, unknown> = {};
+    hash.self = hash;
+
+    for (const [value, path] of [
+      [list, "node.parameterOne.value[0]"],
+      [hash, "node.parameterOne.value.self"],
+    ] as [unknown, string][]) {
+      expectRefusal(() => toOmmlWithoutMathTag(fencedWithOpen({ kind: "table", value })), {
+        kind: "unknown",
+        message: `${path}: the tree cycles — the value here is also its own ancestor, so no walk of it can terminate`,
+      });
+    }
   });
 });
 

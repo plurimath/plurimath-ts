@@ -6,12 +6,13 @@ import {
   present,
   type RenderContext,
   renderAccent,
+  rubyMemberValue,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
 export function renderBar(node: NodeOf<"bar">, context: RenderContext): XmlElement {
   if (!present(node.parameterOne)) return plainRun("&#xaf;");
-  if (present(node.attributes.accent)) {
+  if (present(rubyMemberValue(node.attributes, "accent", node.kind, "bar.attributes"))) {
     return renderAccent(node.kind, node.parameterOne, "‾", context, "bar.parameterOne");
   }
 

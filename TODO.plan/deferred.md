@@ -344,6 +344,48 @@ attribute entries in order, OMML does the same for Mpadded and Fenced, and
 UnicodeMath interpolates arbitrary hash values. Numeric-looking keys which are
 not JavaScript array indices (`"01"`, `"-1"`, `"4294967295"`) remain accepted.
 
+### OMML Fenced: Ruby's `#inspect` recursion markers are refused, not reproduced
+
+**Trigger: a consumer reporting a self-referential delimiter, or the shape
+check in `src/core/validate.ts` gaining a per-slot exemption for values whose
+only consumer is a `#inspect`.**
+
+`Fenced`'s OMML delimiters are the one place a renderer stringifies a raw Ruby
+value through `#inspect`, and `#inspect` has an answer for a cycle rather than
+looping: it prints a recursion marker. Measured on the oracle at `00c52783`, a
+`Table` delimiter whose value is a self-referential list emits
+`m:begChr m:val="[[...]]"`, one whose value is a list holding itself one level
+down emits `[[[...]]]`, and a self-referential hash emits `{"self" => {...}}`.
+
+This port refuses all of them, and not in the renderer: `assertMathNodeShape`
+rejects any cyclic tree before a renderer is reached, because every other walk
+in the port would run until the stack gave out. Narrowing that check to spare
+the delimiter slots would mean threading "this slot is only ever inspected"
+through the shape walk, for a shape no parser produces. The refusal is pinned
+by `test/formats/omml/renderer.spec.ts`, "OMML fenced delimiter recursion
+markers", so it cannot drift into some other behaviour unnoticed.
+
+### `ModelHelper.validate_left_right` is modelled at one renderer, not in the model
+
+**Trigger: a second renderer needing it, or the node constructors gaining any
+gem-side validation at all.**
+
+Every function constructor in the gem runs `ModelHelper.validate_left_right`
+over its slots (`ternary_function.rb:16` and its siblings), and that helper
+sends `first` to the `value` of any slot holding a `Math::Formula`. A Formula
+or Mrow whose value is neither a list nor a hash therefore raises at
+construction — measured on the oracle at `00c52783`, `NoMethodError: undefined
+method 'first'` for an instance of String, for an instance of Integer, for
+true, and for nil.
+
+This port's constructors do not validate (ARCHITECTURE.md §5), so there is no
+constructor to put the check in. `src/render/fenced/omml.ts` reproduces it for
+`Fenced`'s three slots, because that is the renderer where the difference is
+observable in bytes: without it, a `Formula` delimiter holding `"raw"` would
+render `m:val="raw"` where the gem never gets as far as rendering. No other
+carrier or renderer models it; a hand-built tree that would have raised in a
+different gem constructor still renders here.
+
 ## Upstream issues
 
 Defects in the Ruby gem, found while building the port. All reproduce on a

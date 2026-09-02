@@ -276,7 +276,7 @@ describe("a node-list slot is never spread", () => {
  * `Table.new([tr].each, nil, nil, {})` give
  * `<table><tr><td>a</td></tr></table>`.
  *
- * Sending Table through Formula's guard refused all three. That is the safe
+ * Formula's guard takes the array and refuses the other two. That is the safe
  * direction, but still the port declining what the gem renders, so the two
  * carry separate policies.
  */
@@ -301,6 +301,16 @@ describe("a table value keeps any carrier the gem can map", () => {
 
   it("still refuses a bare string, which the gem cannot map either", () => {
     expect(() => new TableNode({ value: "" as never })).toThrow(TypeError);
+  });
+
+  // A Map is the one carrier `Array.from` treats differently from intuition: it
+  // yields `[key, value]` pairs, not values. Ruby's Hash does the same under
+  // `map`, and the pairs answer no `to_html`, so both sides construct and then
+  // refuse at render. Pinned because the asymmetry would be easy to introduce.
+  it("materialises a Map into entry pairs, as Ruby's Hash does", () => {
+    const table = new TableNode({ value: new Map([["k", row()]]) as never });
+    expect((table.value as unknown[]).length).toBe(1);
+    expect(Array.isArray((table.value as unknown[])[0])).toBe(true);
   });
 
   it("does not wrap a non-array the way Formula does", () => {

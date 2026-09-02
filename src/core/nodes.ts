@@ -266,7 +266,10 @@ function assignedSequence(
  * `Table#initialize` is NOT `Formula#initialize`, and the two must not share a
  * policy. Formula wraps a non-Array as `[value]`; Table assigns `@value = value`
  * untouched (`function/table.rb:22-30`) and its renderers call `map` on
- * whatever arrived. Anything answering `map` therefore renders.
+ * whatever arrived (`table.rb:90` is `value.map { |val| val.to_html }`). So a
+ * carrier renders when it answers `map` AND yields renderable rows. A Hash
+ * answers `map` and yields `[key, value]` pairs, which answer no `to_html`, so
+ * it refuses — as a JavaScript `Map` does here, for the same reason.
  *
  * Measured on the oracle at `00c52783`, with one `Tr` of one `Td`:
  *
@@ -277,9 +280,9 @@ function assignedSequence(
  * ```
  *
  * So a Set and an Enumerator are ordinary Table inputs, not the JavaScript
- * accident the Formula guard exists to stop. Sending Table through that guard
- * refused all three shapes above, which is the safe direction but still a
- * divergence — the port declining what the gem renders.
+ * accident the Formula guard exists to stop. That guard takes the array and
+ * refuses the other two, which is the safe direction but still a divergence —
+ * the port declining what the gem renders.
  *
  * A bare string is the one shape both refuse. Ruby stores it and dies on
  * `String#map`; refusing at construction reaches the same outcome earlier.

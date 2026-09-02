@@ -278,10 +278,13 @@ The budget, per subpath, against the ESM closure:
 
 - `./html` at or below `163,840` bytes (`160` KiB). LaTeX is the right
   analogue — a plain string map, `1,425` distinct payloads against HTML's
-  `1,413` — and its measured `149,563` leaves that ceiling about `10` percent
-  of headroom.
+  `1,413` — and its measured `149,563` leaves `14,277` bytes under that
+  ceiling.
 - `./omml` at or below `286,720` bytes (`280` KiB). MathML is the analogue
-  that carries an XML layer, and its measured `271,333` sets the same margin.
+  that carries an XML layer, and its measured `271,333` leaves `15,387` bytes.
+  The two ceilings hold roughly the same absolute headroom, about `15` KiB
+  each, not the same proportion: `9.55` percent for `./html` against `5.67`
+  percent for `./omml`.
 
 Landing above a ceiling is not forbidden, but it is a decision rather than a
 rounding error: the measured number goes into this file as an accepted cost
@@ -304,9 +307,9 @@ The implementation therefore needs two commits, in this order:
 
 1. Commit the generator source and its tests with no generated output. This
    makes the generator checkout clean and gives provenance a real source
-   commit. **This intermediate commit is deliberately non-green.** Two gates
-   are expected to fail on it, and both must be listed, because a run that
-   reports only one of them is a run that stopped early:
+   commit. **This intermediate commit is deliberately non-green.** Three gates
+   are expected to fail on it, and all three must be listed, because a run that
+   reports fewer is a run that stopped early:
 
    - `payload-validation` (class A) fails because the committed provenance
      still names the old generator digest; the gate hashes the live generator
@@ -320,11 +323,19 @@ The implementation therefore needs two commits, in this order:
      directories are a non-empty diff
      (`scripts/gate-oracle.rb:103-157`).
 
-   Those two are the failures this commit's own mechanics guarantee. A third
-   is avoidable and must be avoided: any generator test added here has to pass
-   against a tree with no HTML or OMML slice in it, or `unit-tests` fails as
-   well and the intermediate commit stops being diagnosable. Assert on the
-   generator's probe shapes, not on files step 2 creates.
+   - `unit-tests` (class A) fails for the same reason as the first, and not
+     avoidably. It runs `pnpm test`, the whole suite, and
+     `test/gates/payload-validation.spec.ts` is part of that suite, so the
+     stale digest fails it twice over: once under its own filtered gate and
+     once inside the full run (`gates.json` gives `unit-tests` as `pnpm test`
+     and `payload-validation` as `pnpm test payload`).
+
+   Those three are what this commit's own mechanics guarantee. A fourth is
+   avoidable and must be avoided: any generator test added here has to pass
+   against a tree with no HTML or OMML slice in it, or the failure count grows
+   for a reason unrelated to provenance and the intermediate commit stops being
+   diagnosable. Assert on the generator's probe shapes, not on files step 2
+   creates.
 
    Because this commit cannot pass its own gates, it must never be pushed or
    merged on its own. It exists only as the ancestor the generated-data commit

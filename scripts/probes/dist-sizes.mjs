@@ -25,7 +25,7 @@
  *   node scripts/probes/dist-sizes.mjs
  */
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
@@ -45,11 +45,48 @@ const closureBytes = async (entry, format) => {
   return result.outputFiles.reduce((sum, file) => sum + file.contents.length, 0);
 };
 
+// A size measured from artifacts older than the source they claim to describe
+// is worse than no size, because it reads as a real number. `dist/` is not
+// tracked, so there is nothing to compare a hash against; what this can do is
+// refuse to measure artifacts that are absent or older than the newest source
+// file, and say plainly which it hit.
+const newestSourceMtime = () => {
+  let newest = 0;
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.(ts|mjs|json)$/.test(entry.name)) {
+        const m = statSync(full).mtimeMs;
+        if (m > newest) newest = m;
+      }
+    }
+  };
+  walk(join(root, "src"));
+  return newest;
+};
+
 const subpaths = {};
+const sourceMtime = newestSourceMtime();
 for (const [subpath, conditions] of Object.entries(pkg.exports)) {
   if (subpath === "./package.json") continue;
   const esm = join(root, conditions.import.default);
   const cjs = join(root, conditions.require.default);
+  for (const artifact of [esm, cjs]) {
+    if (!existsSync(artifact)) {
+      throw new Error(
+        `${artifact} is missing. Run \`pnpm build\` first: this probe measures built ` +
+          "artifacts and will not invent a number for one that is not there.",
+      );
+    }
+    if (statSync(artifact).mtimeMs < sourceMtime) {
+      throw new Error(
+        `${artifact} is older than the newest file under src/. Run \`pnpm build\` first: ` +
+          "a size measured from stale artifacts describes a tree that no longer exists.",
+      );
+    }
+  }
   subpaths[subpath] = {
     esmEntryBytes: statSync(esm).size,
     esmClosureBytes: await closureBytes(esm, "esm"),

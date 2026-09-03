@@ -264,6 +264,15 @@ describe("option values are interpolated, not type-checked", () => {
     expect(toUnicodemath(sum(value))).toBe(expected);
   });
 
+  it("refuses an integer-like hash key before Ruby interpolation order can diverge", () => {
+    const value: Record<string, number> = {};
+    value.named = 1;
+    value["1"] = 2;
+    expect(() => toUnicodemath(sum(value))).toThrow(
+      "sum.options.mask.1: integer-like hash keys are deferred",
+    );
+  });
+
   it("refuses only the number it genuinely cannot decide", () => {
     // This used to argue that 1.5 "is decidable (non-integral, therefore a
     // Float)" and then assert that the port REFUSED it — the reasoning and the

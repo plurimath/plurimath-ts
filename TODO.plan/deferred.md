@@ -259,6 +259,23 @@ by the same name, which is what makes the gem's `unitsml_post_processing`
 (space insertion, marker stripping — formula.rb:450-473) a proven no-op on
 every tree this renderer emits.
 
+### OMML renderer: generated symbol data deferred from the first slice
+
+**Trigger: the dedicated OMML symbol-data follow-up, using the repository's
+two-step generation protocol and a provenance digest from the clean pinned
+oracle.**
+
+The first OMML vertical slice implements the shared structural wrapper for the
+base `Symbol`/abstract `Paren`, but deliberately does not hand-type the named
+symbol values measured by the OMML scope. Named symbols therefore raise
+`RenderError` instead of trusting a caller-provided value. The same refusal
+applies where another implemented kind needs that table: `Text`'s
+`unicode[:name]` substitutions, named Table parens, and a named Nary operator.
+The exact refusal contract is pinned in
+`test/formats/omml/renderer.spec.ts`. The follow-up removes these refusals only
+after generated values, an emptiness guard, provenance, and perturbed
+regeneration determinism land together.
+
 ### MathML renderer: `options[:mask]` supports only the inert decoding
 
 **Trigger: UnicodeMath input (P3), whose parser is what constructs masked
@@ -304,6 +321,28 @@ included, where their asciimath render interpolates `lefttrue`). And
 `toMathml` returns bytes for `formula`/`mrow` input only: `to_mathml` is
 defined on `Formula` alone in the gem, every other class answering
 NoMethodError.
+
+### Integer-like keys in hash carriers are refused across renderers
+
+**Trigger: the model gains an ordered hash input such as entry pairs or a
+`Map`, together with shared key lookup and iteration helpers for every
+renderer and normalized-model consumer.**
+
+JavaScript plain objects do not preserve a Ruby hash's insertion position for
+integer-like keys: those keys enumerate first in numeric order. By the time a
+node constructor receives an object, the original chronology is already gone,
+so changing only the internal copy cannot recover it. A shared emission guard
+therefore refuses an order-sensitive hash containing an array-index key (`"0"`
+through `"4294967294"`). This includes ordinary options/attributes hashes and
+nested deterministic `#inspect` carriers such as OMML Fenced delimiters.
+
+The refusal is hand-built-tree-only today. The only shipped input parser is
+AsciiMath, whose transform creates option and attribute carriers from fixed
+empty object literals; it never derives a carrier key from input. The shared
+guard is nevertheless required because MathML emits arbitrary option and
+attribute entries in order, OMML does the same for Mpadded and Fenced, and
+UnicodeMath interpolates arbitrary hash values. Numeric-looking keys which are
+not JavaScript array indices (`"01"`, `"-1"`, `"4294967295"`) remain accepted.
 
 ## Upstream issues
 

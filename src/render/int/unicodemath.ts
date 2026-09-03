@@ -25,6 +25,6 @@ export function renderInt(node: NodeOf<"int">, context: RenderContext): string {
   // bare `#{mask}`. Ruby interpolates ANY value through `to_s`, so a `typeof
   // === "string"` test silently dropped integers, `false` and symbols that the
   // gem prints. Measured: `mask: 5` gives "∑5…", `mask: false` gives "∑false…".
-  const mask = rubyInterpolate(node.options?.mask);
+  const mask = rubyInterpolate(node.options?.mask, node.kind, "int.options.mask");
   return `${INTEGRAL}${mask}${sub}${sup}${naryandValue(node.parameterThree, context)}`;
 }

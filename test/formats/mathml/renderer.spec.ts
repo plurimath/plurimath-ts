@@ -22,6 +22,7 @@ import {
   IntNode,
   LinebreakNode,
   type MathNode,
+  MpaddedNode,
   MrowNode,
   NaryNode,
   NumberNode,
@@ -176,6 +177,15 @@ describe("crash parity: the gem's own parse output it cannot render", () => {
 });
 
 describe("degenerate-slot guards, each measured (probe files in the PR record)", () => {
+  it("refuses an integer-like Mpadded option before attribute order can diverge", () => {
+    const options: Record<string, string> = {};
+    options.height = "0";
+    options["4294967294"] = "0";
+    expect(() => toMathml(formula(new MpaddedNode({ options, parameterOne: x() })))).toThrow(
+      "mpadded.options.4294967294: integer-like hash keys are deferred",
+    );
+  });
+
   it("Left holding a number or boolean raises — the gem's << crashes (probe left)", () => {
     const left = (value: unknown) =>
       new UnaryFunctionNode({ name: "Left", parameterOne: value as never });

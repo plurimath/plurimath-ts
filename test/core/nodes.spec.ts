@@ -31,6 +31,7 @@ import {
 } from "../../src/core/nodes";
 import { NODE_SPECS, normalize, rubyClassName } from "../../src/core/normalize";
 import { assertMathNodeShape } from "../../src/core/validate";
+import { toHtml } from "../../src/formats/html/renderer";
 import {
   aliasIndex,
   buildNode,
@@ -199,7 +200,8 @@ describe("construction", () => {
  *
  * **1. Never SPREAD.** `[...value]` reads any JavaScript iterable as its
  * elements; Ruby reads only an `Array` as one. Measured on the pinned oracle
- * (`00c52783`, Ruby 4.0.1), in all five landed formats:
+ * (`00c52783`, Ruby 4.0.1), in the five formats probed here: AsciiMath, LaTeX,
+ * MathML, UnicodeMath, and HTML:
  *
  * ```text
  *                              gem stores      gem renders (html)
@@ -307,8 +309,8 @@ describe("a node-list slot is stored, never spread and never refused", () => {
       expect(node.value).not.toBe(given);
       // Ruby has no `undefined`, so `Formula.new(nil)` wraps to `[nil]`; this
       // port keeps assigned-nil apart from unset and stores `null`. The stored
-      // shape differs, the outcome does not — measured, both refuse in all five
-      // landed formats.
+      // shape differs, the outcome does not — measured, both refuse in the same
+      // five formats probed above.
       expect(build(null).value).toBeNull();
     });
 
@@ -395,11 +397,13 @@ describe("a node-list slot is stored, never spread and never refused", () => {
    * refused at render instead, as `RenderError` naming the slot.
    *
    * `assertMathNodeShape` is the entry-point check every renderer runs, and it
-   * rejects a class instance wherever it sits — the only objects a Ruby node
-   * holds are nodes and plain hashes. Carriers it CANNOT see (a bare string, a
-   * number, a boolean) are legal slot values elsewhere in the model and are
-   * refused by each format's own list guard instead; those are pinned against
-   * the gem's own outcome in `test/formats/html/degenerate-slots.spec.ts`.
+   * rejects a class instance wherever it sits: this port's supported structural
+   * object slots admit nodes and plain records. Ruby's wider `Table` carrier
+   * behavior is the deliberate divergence recorded in `TODO.plan/deferred.md`.
+   * Carriers the shape check CANNOT see (a bare string, a number, a boolean)
+   * are legal slot values elsewhere in the model and are refused by each
+   * format's own list guard instead; those are pinned against the gem's own
+   * outcome in `test/formats/html/degenerate-slots.spec.ts`.
    */
   describe("the refusal lands at render, as RenderError", () => {
     const objectCarriers: readonly (readonly [string, () => object])[] = [
@@ -425,6 +429,13 @@ describe("a node-list slot is stored, never spread and never refused", () => {
       expect(() => assertMathNodeShape(node, "html"), label).toThrow(/node\.value/);
     });
 
+    it("describes the port's supported shape without misreporting Ruby's", () => {
+      const node = new TableNode({ value: new Set([sym()]) as never });
+      expect(() => assertMathNodeShape(node, "html")).toThrow(
+        /this port's supported structural objects are nodes and plain records/,
+      );
+    });
+
     it("a throwing iterator is refused at render, and never invoked before it", () => {
       let asked = 0;
       const carrier = {
@@ -439,6 +450,7 @@ describe("a node-list slot is stored, never spread and never refused", () => {
       // `Symbol.iterator`.
       const node = new TableNode({ value: carrier as never });
       expect(() => assertMathNodeShape(node, "html")).not.toThrow();
+      expect(() => toHtml(node)).toThrow(RenderError);
       expect(asked).toBe(0);
     });
   });

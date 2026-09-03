@@ -5,8 +5,9 @@
 # slots can hold -- nil, false, true, 0, "", [], a node -- and records what the
 # gem does.
 #
-#   ruby scripts/probe-degenerate-slots.rb --oracle <clean pinned checkout> \
-#        --out test/formats/<format>/degenerate-fixtures.json --format html
+#   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
+#     scripts/probe-degenerate-slots.rb --oracle /path/to/plurimath \
+#     --out test/formats/<format>/degenerate-fixtures.json --format html
 #
 # Why this exists: every parity defect found in the OMML review lived in a
 # degenerate or optional slot the conformance corpus never constructs, and
@@ -34,19 +35,18 @@
 # the same renderers. The swept VALUES are not recorded separately: every row
 # names its own, and the grid comparison already proves the set.
 
-require "digest"
 require "json"
-require "open3"
 require "optparse"
 
 REPO_ROOT = File.expand_path("..", __dir__)
 GENERATOR_RELATIVE_PATH = "scripts/probe-degenerate-slots.rb"
 
-options = { oracle: nil, out: nil, format: nil }
+options = { oracle: nil, out: nil, format: nil, allow_dirty: false }
 OptionParser.new do |o|
   o.on("--oracle PATH") { |v| options[:oracle] = v }
   o.on("--out PATH")    { |v| options[:out] = v }
   o.on("--format NAME") { |v| options[:format] = v }
+  o.on("--allow-dirty") { options[:allow_dirty] = true }
 end.parse!
 abort "--oracle, --out and --format are required" unless options[:oracle] && options[:out] && options[:format]
 
@@ -55,24 +55,17 @@ lib = File.join(oracle, "lib")
 abort "not a plurimath checkout: #{lib}" unless File.exist?(File.join(lib, "plurimath.rb"))
 $LOAD_PATH.unshift(lib)
 require "plurimath"
+require_relative "render-fixture-provenance"
+
+unless Gem.loaded_specs.key?("plurimath")
+  abort "REFUSING: the plurimath gem is not activated. Re-run with " \
+        "BUNDLE_GEMFILE=#{oracle}/Gemfile mise x -- bundle exec ruby #{__FILE__} ..."
+end
+
 loaded = $LOADED_FEATURES.grep(%r{/plurimath\.rb\z}).first
 abort "REFUSING: loaded #{loaded.inspect}, not #{lib}" unless loaded&.start_with?(lib)
 
-# Run git in the oracle checkout, aborting on a non-zero exit. Backticks report
-# no status: a missing git, or a path that is not a repository, yielded "" and
-# read as a clean tree with an empty SHA.
-def git!(repo, *args)
-  out, status = Open3.capture2("git", "-C", repo, *args)
-  unless status.success?
-    abort "REFUSING: `git #{args.join(' ')}` failed in #{repo} (exit #{status.exitstatus.inspect})"
-  end
-
-  out
-end
-
-abort "REFUSING: oracle checkout is dirty" unless git!(oracle, "status", "--porcelain").strip.empty?
-commit = git!(oracle, "rev-parse", "HEAD").strip
-abort "REFUSING: `git rev-parse HEAD` named no commit in #{oracle}" unless /\A[0-9a-f]{40}\z/.match?(commit)
+out = File.expand_path(options[:out])
 
 S = Plurimath::Math::Symbols::Symbol
 FN = Plurimath::Math::Function
@@ -163,6 +156,22 @@ SWEEP = {
   "text"     => { render_kind: "text", klass: FN::Text, slots: %w[string], bag: nil },
 }.freeze
 
+# The only constructor failures the pinned oracle is expected to produce.
+# Each pin names the missing method as well as the row, so an unrelated
+# NoMethodError on one of these constructor paths still aborts generation.
+EXPECTED_CONSTRUCTION_REFUSALS = {
+  "td[0]=false" => "delete_if",
+  "td[0]=true" => "delete_if",
+  "td[0]=zero" => "delete_if",
+  "td[0]=empty-string" => "delete_if",
+  "td[0]=node" => "delete_if",
+  "tr[0]=false" => "all?",
+  "tr[0]=true" => "all?",
+  "tr[0]=zero" => "all?",
+  "tr[0]=empty-string" => "all?",
+  "tr[0]=node" => "all?",
+}.freeze
+
 # `biome check` formats every committed .json in this repository, and it puts an
 # array of scalars on ONE line whenever that line fits inside its configured
 # 100-column width (biome.json). `JSON.pretty_generate` always expands. A
@@ -194,18 +203,18 @@ def render_inventory(repo_root, format)
   dir = File.join(repo_root, "src", "render")
   abort "REFUSING: #{dir} does not exist; there is no render inventory to sweep" unless File.directory?(dir)
 
-  kinds = Dir.children(dir).sort.filter_map do |entry|
+  paths = Dir.children(dir).sort.filter_map do |entry|
     next unless File.directory?(File.join(dir, entry))
     next unless File.file?(File.join(dir, entry, "#{format}.ts"))
 
-    kind_from_directory(entry)
+    File.join("src", "render", entry, "#{format}.ts")
   end
-  abort "REFUSING: zero #{format} renderers found under #{dir}; a sweep of nothing is not a pass" if kinds.empty?
+  abort "REFUSING: zero #{format} renderers found under #{dir}; a sweep of nothing is not a pass" if paths.empty?
 
-  kinds
+  [paths.map { |path| kind_from_directory(File.basename(File.dirname(path))) }, paths]
 end
 
-inventory = render_inventory(REPO_ROOT, options[:format])
+inventory, inventory_paths = render_inventory(REPO_ROOT, options[:format])
 swept_kinds = SWEEP.values.map { |entry| entry[:render_kind] }.uniq.sort
 
 missing = inventory - swept_kinds
@@ -219,6 +228,18 @@ unless stray.empty?
   abort "REFUSING: SWEEP names #{stray.join(', ')}, which src/render has no #{options[:format]} renderer for."
 end
 
+sidecar, provenance = RenderFixtureProvenance.prepare(
+  oracle: oracle,
+  payload_path: out,
+  generator_path: GENERATOR_RELATIVE_PATH,
+  allow_dirty: options[:allow_dirty],
+  corpus: false,
+  inventory: {
+    "glob" => "src/render/*/#{options[:format]}.ts",
+    "paths" => inventory_paths,
+  },
+)
+
 def materialise(token) = token == :NODE ? S.new("a") : token
 
 # One cell of the matrix, probed once.
@@ -231,14 +252,19 @@ def materialise(token) = token == :NODE ? S.new("a") : token
 # was never given; recording it as a defect would abort a run over a documented
 # gem behaviour. It is its own outcome, and the consuming spec reads it as
 # "there is no tree here to compare, and the port must produce no bytes".
-def probe_cell(entry, slot, token, format)
+def probe_cell(id, entry, slot, label, token, format)
   args = entry[:slots].map { |type| FILLERS.fetch(type).call }
   args[slot] = materialise(token)
   args << {} if entry[:bag]
+  at = "#{id}[#{slot}]=#{label}"
 
   node = begin
     entry[:klass].new(*args)
-  rescue StandardError => e
+  rescue NoMethodError => e
+    expected_name = EXPECTED_CONSTRUCTION_REFUSALS[at]
+    unless expected_name && expected_name == e.name&.to_s
+      raise "REFUSING: #{at} raised unexpected #{e.class}##{e.name}: #{e.message}"
+    end
     return { "constructs" => false, "constructError" => e.class.name }
   end
 
@@ -268,8 +294,8 @@ rows = []
 SWEEP.each do |id, entry|
   entry[:slots].each_index do |slot|
     DEGENERATE.each do |label, token|
-      first = probe_cell(entry, slot, token, options[:format])
-      second = probe_cell(entry, slot, token, options[:format])
+      first = probe_cell(id, entry, slot, label, token, options[:format])
+      second = probe_cell(id, entry, slot, label, token, options[:format])
       at = "#{id}[#{slot}]=#{label}"
 
       %w[constructs renders constructError error].each do |key|
@@ -290,6 +316,17 @@ SWEEP.each do |id, entry|
 end
 abort "REFUSING: zero rows probed" if rows.empty?
 
+observed_construction_refusals = rows.filter_map do |row|
+  next if row["constructs"]
+
+  "#{row.fetch('kind')}[#{row.fetch('slot')}]=#{row.fetch('value')}"
+end.sort
+unless observed_construction_refusals == EXPECTED_CONSTRUCTION_REFUSALS.keys.sort
+  abort "REFUSING: constructor-refusal inventory changed: expected " \
+        "#{EXPECTED_CONSTRUCTION_REFUSALS.keys.sort.join(', ')}, observed " \
+        "#{observed_construction_refusals.join(', ')}"
+end
+
 expected_rows = SWEEP.sum { |_, entry| entry[:slots].length } * DEGENERATE.length
 unless rows.length == expected_rows
   abort "REFUSING: swept #{rows.length} rows, the SWEEP x DEGENERATE matrix has #{expected_rows}"
@@ -297,11 +334,7 @@ end
 
 payload = {
   "$comment" => "GENERATED by #{GENERATOR_RELATIVE_PATH}. Do not edit.",
-  "generator" => {
-    "script" => GENERATOR_RELATIVE_PATH,
-    "sha256" => Digest::SHA256.file(File.join(REPO_ROOT, GENERATOR_RELATIVE_PATH)).hexdigest,
-  },
-  "oracle" => { "commit" => commit },
+  "schema" => "plurimath-corpus/degenerate-slots/1",
   "format" => options[:format],
   "inventory" => inventory,
   "kinds" => SWEEP.to_h do |id, entry|
@@ -317,8 +350,17 @@ payload = {
   "unstableCount" => rows.count { |r| r["stable"] == false },
   "rows" => rows,
 }
-File.write(options[:out], "#{biome_json(payload)}\n")
+FileUtils.mkdir_p(File.dirname(out))
+payload_bytes = "#{biome_json(payload)}\n"
+File.binwrite(out, payload_bytes)
+RenderFixtureProvenance.write_manifest(
+  sidecar_path: sidecar,
+  payload_path: out,
+  payload_schema: payload.fetch("schema"),
+  payload_bytes: payload_bytes,
+  provenance: provenance,
+)
 puts "#{rows.length} rows (#{payload['rendersCount']} render, " \
      "#{rows.length - payload['constructsCount']} unbuildable, " \
      "#{payload['unstableCount']} unstable) over #{inventory.length} " \
-     "landed #{options[:format]} renderers -> #{options[:out]}"
+     "landed #{options[:format]} renderers -> #{out}, #{sidecar}"

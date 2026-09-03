@@ -41,9 +41,10 @@ module OracleGate
                     generated data should be edited.
         differential
                     Generate a seeded, bounded batch of AsciiMath inputs and
-                    render each through both the gem and this port, reporting
-                    every divergence. Deterministic: the same --seed produces
-                    the same batch, so a failure can be reproduced exactly.
+                    render each through both the gem and this port. Detect and
+                    count every divergence, print the first 20, and keep the
+                    full count. Deterministic: the same --seed produces the
+                    same batch, so a failure can be reproduced exactly.
 
       Oracle checkout resolution:
         1. --gem PATH
@@ -62,9 +63,11 @@ module OracleGate
         - corpus/ and src/generated/ via scripts/generate-corpus.rb
         - src/core/generated/ via scripts/generate-core-data.rb
         - src/formatting/generated/ via scripts/generate-formatting-data.rb
-        - every committed test/formats/<format>/parity-fixtures.json via
+        - every committed test/formats/<format>/parity-fixtures.json and its
+          sidecar via
           scripts/generate-parity-fixtures.rb
-        - every committed test/formats/<format>/degenerate-fixtures.json via
+        - every committed test/formats/<format>/degenerate-fixtures.json and
+          its sidecar via
           scripts/probe-degenerate-slots.rb
 
       It compares those regenerated outputs against a clean temporary snapshot
@@ -220,8 +223,12 @@ module OracleGate
                      "#{generator[:script]} would regenerate nothing"
       end
 
-      committed.map do |path|
+      committed.flat_map do |path|
         format = File.basename(File.dirname(path))
+        committed_manifest = path.delete_suffix(".json") + ".manifest.yaml"
+        unless File.file?(committed_manifest)
+          raise Error, "#{path} has no adjacent sidecar at #{committed_manifest}"
+        end
         FileUtils.mkdir_p(File.join(regenerated_root, "test", "formats", format))
         run_generator!(
           File.join(snapshot_root, "scripts", generator[:script]),
@@ -229,10 +236,21 @@ module OracleGate
           chdir: snapshot_root,
           gem_dir: gem_dir,
         )
+        regenerated_payload = File.join(
+          regenerated_root, "test", "formats", format, generator[:basename],
+        )
+        regenerated_manifest = regenerated_payload.delete_suffix(".json") + ".manifest.yaml"
         [
-          "test/formats/#{format}/#{generator[:basename]}",
-          path,
-          File.join(regenerated_root, "test", "formats", format, generator[:basename]),
+          [
+            "test/formats/#{format}/#{generator[:basename]}",
+            path,
+            regenerated_payload,
+          ],
+          [
+            "test/formats/#{format}/#{File.basename(committed_manifest)}",
+            committed_manifest,
+            regenerated_manifest,
+          ],
         ]
       end
     end
@@ -546,7 +564,13 @@ module OracleGate
   # accept/reject branch does not fire, and `next unless gem["ok"]` skips the
   # input — so the run compares NOTHING and reports zero divergences.
   # Checking the count alone cannot see that; the shape has to be checked.
+  DIFFERENTIAL_FORMATS = %w[asciimath latex mathml unicodemath].freeze
+  DIFFERENTIAL_PORT_CODES = %w[PARSE_ERROR RENDER_ERROR MISSING_SYMBOL_DATA].freeze
+
   def assert_differential_shape!(results, label, inputs)
+    unless %w[gem port].include?(label)
+      raise Error, "unknown differential result label: #{label.inspect}"
+    end
     unless results.is_a?(::Array) && results.length == inputs.length
       raise Error, "the #{label} half returned #{results.is_a?(::Array) ? results.length : results.class} " \
                    "results for #{inputs.length} inputs"
@@ -556,19 +580,36 @@ module OracleGate
       unless result.is_a?(::Hash) && [true, false].include?(result["ok"])
         raise Error, "the #{label} half's result #{index} has no boolean \"ok\": #{result.inspect[0, 120]}"
       end
-      next unless result["ok"]
+      if result["ok"]
+        expected = ["ok", *DIFFERENTIAL_FORMATS].sort
+        unless result.keys.sort == expected
+          raise Error, "the #{label} half's accepted result #{index} has keys " \
+                       "#{result.keys.sort.inspect}; expected #{expected.inspect}"
+        end
+        DIFFERENTIAL_FORMATS.each do |format|
+          next if result[format].is_a?(::String)
 
-      DIFFERENTIAL_FORMATS.each do |format|
-        next if result[format].is_a?(::String)
-
-        raise Error, "the #{label} half's result #{index} accepted the input but " \
-                     "its #{format} is #{result[format].inspect[0, 60]}, not a string"
+          raise Error, "the #{label} half's result #{index} accepted the input but " \
+                       "its #{format} is #{result[format].inspect[0, 60]}, not a string"
+        end
+      elsif label == "port"
+        unless result.keys.sort == %w[code ok] && DIFFERENTIAL_PORT_CODES.include?(result["code"])
+          raise Error, "the port half's rejected result #{index} must contain only a typed " \
+                       "code (#{DIFFERENTIAL_PORT_CODES.join(', ')}): #{result.inspect[0, 120]}"
+        end
+      elsif label == "gem"
+        unless [%w[ok], %w[defect ok]].include?(result.keys.sort)
+          raise Error, "the gem half's rejected result #{index} has invalid keys: " \
+                       "#{result.keys.sort.inspect}"
+        end
+        if result.key?("defect") && (!result["defect"].is_a?(::String) || result["defect"].empty?)
+          raise Error, "the gem half's rejected result #{index} has an invalid defect: " \
+                       "#{result["defect"].inspect}"
+        end
       end
     end
     results
   end
-
-  DIFFERENTIAL_FORMATS = %w[asciimath latex mathml unicodemath].freeze
 
   def differential_divergences(inputs, gem_results, port_results)
     inputs.each_with_index.filter_map do |input, index|
@@ -589,9 +630,10 @@ module OracleGate
       end
       next unless gem["ok"]
 
-      # `select`, not `find`: this command reports that it lists every
-      # divergence, and stopping at the first differing format made that
-      # false — an input wrong in every format showed up as one asciimath row.
+      # `select`, not `find`: this command counts every divergence before its
+      # presentation layer prints the first 20. Stopping at the first differing
+      # format made the count false — an input wrong in every format showed up
+      # as one asciimath row.
       differing = DIFFERENTIAL_FORMATS.select { |name| gem[name] != port[name] }
       next if differing.empty?
 
@@ -705,7 +747,22 @@ module OracleGate
     if File.directory?(git_entry)
       FileUtils.cp_r(git_entry, File.join(dest_root, ".git"), preserve: true)
     else
-      FileUtils.cp(git_entry, File.join(dest_root, ".git"), preserve: true)
+      git_dir, stderr, status = capture_command(
+        ["git", "-C", source_root, "rev-parse", "--absolute-git-dir"],
+      )
+      unless status.success?
+        detail = stderr.lines.first&.strip
+        suffix = detail && !detail.empty? ? ": #{detail}" : ""
+        raise Error, "failed to resolve #{git_entry}#{suffix}"
+      end
+
+      git_dir = git_dir.strip
+      raise Error, "git returned no directory for #{git_entry}" if git_dir.empty?
+
+      # A submodule inside a linked worktree uses a relative gitdir pointer.
+      # Copying that pointer below a temporary snapshot changes what it resolves
+      # against, so write Git's canonical absolute directory instead.
+      File.write(File.join(dest_root, ".git"), "gitdir: #{git_dir}\n")
     end
   end
 
@@ -750,7 +807,7 @@ module OracleGate
     stdout, stderr, status = capture_command(
       ["mise", "x", "--", "bundle", "exec", "ruby", script, *arguments],
       chdir: chdir,
-      env: { "BUNDLE_GEMFILE" => gemfile },
+      env: { "BUNDLE_FROZEN" => "true", "BUNDLE_GEMFILE" => gemfile },
     )
 
     unless status.success?
@@ -794,14 +851,18 @@ module OracleGate
   #
   # `diff_roots` cannot do this: the committed fixtures sit in test/formats/
   # beside the specs that read them, so a directory diff would report every
-  # spec file as deleted. Nothing here is normalized — these fixtures carry no
-  # generating-commit field, so every byte is compared, the recorded oracle
-  # commit and generator sha256 included.
+  # spec file as deleted. Payload bytes are compared exactly. For a sidecar,
+  # only the generator repository commit is normalized for the same reason as
+  # `diff_roots`; the oracle commit, generator inputs, environment, and payload
+  # hash stay strict.
   def diff_files(label, committed_file, regenerated_file)
     raise Error, "committed #{label} is missing at #{committed_file}" unless File.file?(committed_file)
     unless File.file?(regenerated_file)
       raise Error, "regenerated #{label} is missing at #{regenerated_file}"
     end
+
+    normalize_generating_commit_file!(committed_file)
+    normalize_generating_commit_file!(regenerated_file)
 
     diff, _stderr, status = capture_command(
       ["git", "--no-pager", "diff", "--no-index", "--", committed_file, regenerated_file],
@@ -831,6 +892,7 @@ module OracleGate
   # Quoted or bare: this repository's manifests emit the hash bare, the
   # testsuite's provenance.yaml emits it quoted.
   GENERATING_COMMIT = /^(\s*)commit:\s*'?[0-9a-f]{40}'?\s*$/
+  GENERATOR_KEY = /^(\s*)generator:\s*$/
   REPOSITORY_KEY = /^(\s*)repository:\s*$/
 
   # Both shapes of provenance file: `*.manifest.yaml` sidecars here, and the
@@ -852,30 +914,53 @@ module OracleGate
   # blanked the oracle commit too and would have let the gate accept data
   # regenerated from a DIFFERENT oracle — the one mismatch it exists to catch.
   # So the block is tracked structurally rather than pattern-matched: a
-  # `commit:` is normalized only while inside a `repository:` mapping, meaning
-  # indented strictly deeper than the `repository:` key that opened it.
+  # `commit:` is normalized only at the exact direct
+  # `generator.repository.commit` path. The corpus and oracle carry their own
+  # repository/commit records, and both must stay strict.
   def normalize_generating_commit!(root)
     PROVENANCE_GLOBS.flat_map { |pattern| Dir.glob(File.join(root, pattern)) }.uniq.each do |path|
-      inside = nil
-      changed = false
-      lines = File.readlines(path).map do |line|
-        if (opener = REPOSITORY_KEY.match(line))
-          inside = opener[1].length
-          next line
-        end
-
-        indent = line[/\A\s*/].length
-        inside = nil if inside && !line.strip.empty? && indent <= inside
-
-        if inside && (found = GENERATING_COMMIT.match(line))
-          changed = true
-          next "#{found[1]}commit: <normalized>\n"
-        end
-
-        line
-      end
-      File.write(path, lines.join) if changed
+      normalize_generating_commit_file!(path)
     end
+  end
+
+  def normalize_generating_commit_file!(path)
+    return unless path.end_with?(".manifest.yaml") || File.basename(path) == "provenance.yaml"
+
+    generator_indent = nil
+    repository_indent = nil
+    changed = false
+    lines = File.readlines(path).map do |line|
+      indent = line[/\A\s*/].length
+      unless line.strip.empty?
+        if generator_indent && indent <= generator_indent
+          generator_indent = nil
+          repository_indent = nil
+        elsif repository_indent && indent <= repository_indent
+          repository_indent = nil
+        end
+      end
+
+      if (opener = GENERATOR_KEY.match(line)) && opener[1].empty?
+        generator_indent = opener[1].length
+        repository_indent = nil
+        next line
+      end
+
+      if generator_indent && (opener = REPOSITORY_KEY.match(line)) &&
+         opener[1].length == generator_indent + 2
+        repository_indent = opener[1].length
+        next line
+      end
+
+      if repository_indent && (found = GENERATING_COMMIT.match(line)) &&
+         found[1].length == repository_indent + 2
+        changed = true
+        next "#{found[1]}commit: <normalized>\n"
+      end
+
+      line
+    end
+    File.write(path, lines.join) if changed
   end
 
   def capture_command(args, chdir: REPO_ROOT, env: {})

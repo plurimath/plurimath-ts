@@ -7,8 +7,9 @@
  * root cause: Ruby-falsy is {nil, false}; JavaScript-falsy also swallows 0 and "".
  *
  * Fixtures are generated, never hand-typed:
- *   ruby scripts/probe-degenerate-slots.rb --oracle <clean checkout> \
- *        --format html --out test/formats/html/degenerate-fixtures.json
+ *   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
+ *     scripts/probe-degenerate-slots.rb --oracle /path/to/plurimath \
+ *     --format html --out test/formats/html/degenerate-fixtures.json
  *
  * What is asserted:
  *
@@ -44,7 +45,9 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { NODE_KINDS, RenderError } from "../../../src/core/index";
+import { rubyClassName } from "../../../src/core/normalize";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
+import { parseYaml } from "../../core/corpus-yaml";
 import {
   DEGENERATE_PORT_RENDERS,
   DEGENERATE_REFUSES,
@@ -76,8 +79,7 @@ interface SweptEntry {
 }
 
 interface Fixture {
-  readonly generator: { readonly script: string; readonly sha256: string };
-  readonly oracle: { readonly commit: string };
+  readonly schema: string;
   readonly format: string;
   /** The landed renderers the generator derived, as it derived them. */
   readonly inventory: readonly string[];
@@ -89,9 +91,17 @@ interface Fixture {
   readonly rows: readonly Row[];
 }
 
+interface FixtureManifest {
+  readonly oracle: { readonly commit: string };
+  readonly payload: { readonly schema: string };
+}
+
 const fixture = JSON.parse(
   readFileSync(join(__dirname, "degenerate-fixtures.json"), "utf8"),
 ) as Fixture;
+const manifest = parseYaml(
+  readFileSync(join(__dirname, "degenerate-fixtures.manifest.yaml"), "utf8"),
+) as unknown as FixtureManifest;
 
 /**
  * The degenerate values, in the generator's order. `false`, `0` and `""`
@@ -178,9 +188,11 @@ describe(`${FORMAT} degenerate-slot sweep covers every landed renderer`, () => {
 
 describe(`${FORMAT} degenerate-slot fixture covers the whole matrix`, () => {
   it("came from the pinned oracle, and is not empty", () => {
+    expect(fixture.schema).toBe("plurimath-corpus/degenerate-slots/1");
+    expect(manifest.payload.schema).toBe(fixture.schema);
     expect(fixture.format).toBe(FORMAT);
     expect(fixture.rows.length).toBeGreaterThan(0);
-    expect(fixture.oracle.commit).toBe(loadPinnedCorpus().provenance.oracleCommit);
+    expect(manifest.oracle.commit).toBe(loadPinnedCorpus().provenance.oracleCommit);
   });
 
   it("sweeps exactly the entries NODE_FOR can build", () => {
@@ -297,11 +309,30 @@ describe(`${FORMAT} degenerate-slot parity`, () => {
       // Unguarded on purpose: a constructor throw here fails the test named for
       // this row rather than being counted somewhere else.
       const node = build();
+      expect(node.kind, `${at}: NODE_FOR built the wrong renderer kind`).toBe(spec.renderKind);
+      expect(
+        `Plurimath::${rubyClassName(node)}`,
+        `${at}: NODE_FOR built the wrong Ruby alias`,
+      ).toBe(spec.rubyClass);
+
+      const why = DEGENERATE_REFUSES[at];
+      if (why !== undefined) {
+        expect(
+          gemRenders,
+          `${at} is pinned as a port refusal, but the gem does not render it — drop it from DEGENERATE_REFUSES`,
+        ).toBe(true);
+        expect(
+          () => RENDER(node as never),
+          `${at} is pinned as a port refusal (${why}) but now renders — drop it from DEGENERATE_REFUSES`,
+        ).toThrow(RenderError);
+        return;
+      }
 
       if (row.stable === false) {
         // The gem's own bytes are not reproducible, so no byte claim exists.
-        // What is still required is a CLEAN outcome — bytes, or a typed
-        // refusal, never an untyped throw.
+        // A port-specific outcome can be pinned above. Without one, what is
+        // still required is a CLEAN outcome: bytes or a typed refusal, never
+        // an untyped throw.
         let rendered: unknown;
         try {
           rendered = RENDER(node as never);
@@ -314,19 +345,6 @@ describe(`${FORMAT} degenerate-slot parity`, () => {
         expect(typeof rendered, `${at}: the port rendered something that is not a string`).toBe(
           "string",
         );
-        return;
-      }
-
-      const why = DEGENERATE_REFUSES[at];
-      if (why !== undefined) {
-        expect(
-          gemRenders,
-          `${at} is pinned as a port refusal, but the gem does not render it — drop it from DEGENERATE_REFUSES`,
-        ).toBe(true);
-        expect(
-          () => RENDER(node as never),
-          `${at} is pinned as a port refusal (${why}) but now renders — drop it from DEGENERATE_REFUSES`,
-        ).toThrow(RenderError);
         return;
       }
 

@@ -389,12 +389,12 @@ function assertSlot(
     const proto = readPrototype(value as object, format, path);
     if (proto !== Object.prototype && proto !== null) {
       // A Date, Map, Set, RegExp, or arbitrary class instance. Walking its
-      // enumerable entries would usually find none and wave it through, but
-      // the only objects a Ruby ivar holds are nodes and plain hashes — a
-      // record's prototype must be `Object.prototype` or `null` to be one.
+      // enumerable entries would usually find none and wave it through. This
+      // port's supported structural object slots admit nodes and plain records;
+      // a record's prototype must be `Object.prototype` or `null` to be one.
       throw new RenderError(
         `${path}: a node slot cannot hold ${describeValue(value)} — ` +
-          `the only objects a Ruby node holds are nodes and plain hashes`,
+          `this port's supported structural objects are nodes and plain records`,
         format,
         kind,
       );

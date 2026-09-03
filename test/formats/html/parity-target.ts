@@ -135,7 +135,7 @@ export interface DegenerateKind {
   readonly rubyClass: string;
   /** Positional slots, by filler type. Must equal the generator's list. */
   readonly slots: readonly SlotFiller[];
-  readonly build: (slot: number, value: unknown) => unknown;
+  readonly build: (slot: number, value: unknown) => C.MathNode;
 }
 
 /**
@@ -536,6 +536,7 @@ export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
   // number, and refuses the rest rather than guess at Ruby's spelling.
   "number[0]=zero": 'the gem interpolates 0 as "0"; interpolatedValue refuses a finite number',
   "number[0]=empty-array": 'the gem interpolates [] as "[]"; interpolatedValue refuses an array',
+  "number[0]=node": "the gem interpolates a heap address; the port refuses unreproducible bytes",
 
   // `renderTernaryFunction` throws for every alias: the HTML slice has measured
   // none of the five. The gem renders each present slot in its own wrapper.
@@ -624,9 +625,9 @@ export const PORT_TYPE_REFUSES: Readonly<Record<string, string>> = {
  * The generator PROVES each one rather than trusting this list: it probes every
  * cell twice and sets `stable: false` only where the two probes disagreed. A row
  * named here that probes identically twice fails, and a row that is
- * nondeterministic and not named here fails too. What is still asserted for
- * these rows is that the port reaches a CLEAN outcome — bytes or a typed
- * refusal, never an untyped throw.
+ * nondeterministic and not named here fails too. An unstable row can also carry
+ * a stricter outcome pin above. Without one, the port must at least reach a
+ * CLEAN outcome: bytes or a typed refusal, never an untyped throw.
  */
 export const UNSTABLE_OUTPUT: Readonly<Record<string, string>> = {
   "number[0]=node": "Number#to_html interpolates the object, spelling its heap address",

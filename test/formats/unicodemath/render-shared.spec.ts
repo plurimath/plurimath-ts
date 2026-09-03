@@ -684,9 +684,9 @@ describe("the formula boundary decodes as often as the gem does", () => {
     //
     // The gem reaches the same state through its own `attr_accessor`. Measured
     // on the pinned oracle (00c52783), `f = Formula.new([]); f.value = ""` and
-    // `f.value = 0` raise `ParseError` in ALL FIVE formats, for `Formula` and
-    // `Mrow` alike — so refusing is right; the question is only whether the
-    // refusal says where.
+    // `f.value = 0` raise `ParseError` in all five formats probed here, for
+    // `Formula` and `Mrow` alike — so refusing is right; the question is only
+    // whether the refusal says where.
     //
     // The message is asserted, not just the type: without the `Array.isArray`
     // guard the map below still ends in a `RenderError`, because the renderer's

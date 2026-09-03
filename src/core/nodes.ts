@@ -206,8 +206,9 @@ function assignedOptions(value: NodeOptions | undefined): NodeOptions {
  * Formula.new([sym].each).value   [Enumerator]  -> to_html raises ParseError
  * ```
  *
- * All five measured on the pinned oracle at `00c52783`, in all five landed
- * formats; `Mrow` inherits this `initialize` and behaves identically.
+ * All five measured on the pinned oracle at `00c52783`, in the five formats
+ * probed here: AsciiMath, LaTeX, MathML, UnicodeMath, and HTML. `Mrow` inherits
+ * this `initialize` and behaves identically.
  *
  * A spread gave `[]` for the empty string and `[sym]` for the `Set`, so the
  * port rendered `""` and `"a"` for trees the gem refuses outright — inventing
@@ -234,7 +235,7 @@ function assignedSequence(
   // as `[nil]`; this port keeps the two apart (module docs above) and stores an
   // assigned nil as `null`. The stored shape differs from the gem's; the
   // outcome does not — measured, `Formula.new(nil)` and `FormulaNode({ value:
-  // null })` refuse in all five landed formats.
+  // null })` refuse in the same five formats probed above.
   if (value === null) return null;
   const given: unknown = value;
   if (Array.isArray(given)) return [...(given as NodeSequence)];

@@ -5,8 +5,9 @@
  * not, which is how six parity defects reached review with 2,900 tests green.
  *
  * Fixtures are generated, never hand-typed:
- *   ruby scripts/generate-parity-fixtures.rb --oracle <clean pinned checkout> \
- *        --format html
+ *   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
+ *     scripts/generate-parity-fixtures.rb --oracle /path/to/plurimath \
+ *     --format html
  *
  * What is asserted, in the order the failures matter:
  *
@@ -31,6 +32,7 @@ import { describe, expect, it } from "vitest";
 import { ParseError, RenderError } from "../../../src/core/index";
 import { parseAsciimath } from "../../../src/formats/asciimath/index";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
+import { parseYaml } from "../../core/corpus-yaml";
 import {
   FORMAT,
   KNOWN_DIVERGENCES,
@@ -49,7 +51,7 @@ interface Case {
 }
 
 interface Fixture {
-  readonly oracle: { readonly commit: string; readonly version: string };
+  readonly schema: string;
   readonly format: string;
   readonly caseCount: number;
   readonly renderedCount: number;
@@ -57,9 +59,17 @@ interface Fixture {
   readonly cases: readonly Case[];
 }
 
+interface FixtureManifest {
+  readonly oracle: { readonly commit: string };
+  readonly payload: { readonly schema: string };
+}
+
 const fixture = JSON.parse(
   readFileSync(join(__dirname, "parity-fixtures.json"), "utf8"),
 ) as Fixture;
+const manifest = parseYaml(
+  readFileSync(join(__dirname, "parity-fixtures.manifest.yaml"), "utf8"),
+) as unknown as FixtureManifest;
 
 const pin = loadPinnedCorpus();
 
@@ -78,9 +88,11 @@ const renderableIds = new Set(renderable.map((c) => c.id));
 
 describe(`${FORMAT} parity fixture covers the pinned corpus`, () => {
   it("came from the pinned oracle, and is not empty", () => {
+    expect(fixture.schema).toBe("plurimath-corpus/render-parity/1");
+    expect(manifest.payload.schema).toBe(fixture.schema);
     expect(fixture.format).toBe(FORMAT);
     expect(fixture.cases.length).toBeGreaterThan(0);
-    expect(fixture.oracle.commit).toBe(pin.provenance.oracleCommit);
+    expect(manifest.oracle.commit).toBe(pin.provenance.oracleCommit);
   });
 
   it("carries exactly the pinned corpus's case ids", () => {

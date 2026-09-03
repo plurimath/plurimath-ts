@@ -27,7 +27,8 @@
  *      and never looked at again.
  */
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { ParseError, RenderError } from "../../../src/core/index";
 import { parseAsciimath } from "../../../src/formats/asciimath/index";
@@ -64,11 +65,16 @@ interface FixtureManifest {
   readonly payload: { readonly schema: string };
 }
 
-const fixture = JSON.parse(
-  readFileSync(join(__dirname, "parity-fixtures.json"), "utf8"),
-) as Fixture;
+// ESM-safe, and the same idiom `test/core/corpus-pin.ts` uses: this package is
+// `"type": "module"`, so `__dirname` exists here only because Vite's transform
+// supplies it. Relying on that shim makes the file's fixture reads depend on the
+// test runner rather than on the module system, and diverges from the one other
+// place in this suite that resolves a path.
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+const fixture = JSON.parse(readFileSync(join(HERE, "parity-fixtures.json"), "utf8")) as Fixture;
 const manifest = parseYaml(
-  readFileSync(join(__dirname, "parity-fixtures.manifest.yaml"), "utf8"),
+  readFileSync(join(HERE, "parity-fixtures.manifest.yaml"), "utf8"),
 ) as unknown as FixtureManifest;
 
 const pin = loadPinnedCorpus();

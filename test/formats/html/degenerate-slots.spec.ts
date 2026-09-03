@@ -42,7 +42,8 @@
  *      `UNSTABLE_OUTPUT` (the gem's own output is not reproducible).
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { NODE_KINDS, RenderError } from "../../../src/core/index";
 import { rubyClassName } from "../../../src/core/normalize";
@@ -96,11 +97,15 @@ interface FixtureManifest {
   readonly payload: { readonly schema: string };
 }
 
-const fixture = JSON.parse(
-  readFileSync(join(__dirname, "degenerate-fixtures.json"), "utf8"),
-) as Fixture;
+// ESM-safe, and the same idiom `test/core/corpus-pin.ts` uses: this package is
+// `"type": "module"`, so `__dirname` exists here only because Vite's transform
+// supplies it. The renderer-inventory walk below resolves a path too, so both
+// depend on this rather than on the test runner.
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+const fixture = JSON.parse(readFileSync(join(HERE, "degenerate-fixtures.json"), "utf8")) as Fixture;
 const manifest = parseYaml(
-  readFileSync(join(__dirname, "degenerate-fixtures.manifest.yaml"), "utf8"),
+  readFileSync(join(HERE, "degenerate-fixtures.manifest.yaml"), "utf8"),
 ) as unknown as FixtureManifest;
 
 /**
@@ -131,7 +136,7 @@ const kindFromDirectory = (name: string): string =>
  * agree with itself.
  */
 const landedRenderers = (): readonly string[] => {
-  const root = resolve(__dirname, "..", "..", "..", "src", "render");
+  const root = resolve(HERE, "..", "..", "..", "src", "render");
   return readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && existsSync(join(root, entry.name, `${FORMAT}.ts`)))
     .map((entry) => kindFromDirectory(entry.name))

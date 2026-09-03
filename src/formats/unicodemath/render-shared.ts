@@ -644,7 +644,7 @@ export function formulaBoundary(node: MathNode, context: RenderContext): string 
   // supported input (ARCHITECTURE.md §5) and `assertMathNodeShape` passes a
   // string or number in a slot, because Ruby nodes do hold those elsewhere.
   // Without this the map below dies as a raw `TypeError` and the entry point
-  // relabels it "rendering failed mid-walk", naming no slot. The other four
+  // relabels it "rendering failed mid-walk", naming no slot. The other five
   // formats each guard the same spot; measured before this landed, only
   // unicodemath laundered it.
   if (!Array.isArray(children)) {

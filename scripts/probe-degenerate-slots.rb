@@ -181,10 +181,36 @@ EXPECTED_CONSTRUCTION_REFUSALS = {
 # each other and one of them would have to be turned off. So the generator emits
 # the format the repository checks. Arrays too long to fit are left expanded,
 # which is what biome does with them.
+#
+# The scalars covered are exactly: strings, integers, plain decimals, true,
+# false, null -- NOT exponent-form numbers ("1e+20"). Ruby's JSON.pretty_generate
+# and biome's formatter disagree on how to spell those ("1e+20" vs "1e20"), so no
+# collapsing rule here could ever match biome for one; `refuse_exponent_floats!`
+# below aborts instead of silently emitting a shape that would fail `lint`.
 BIOME_LINE_WIDTH = 100
-SCALAR_ARRAY = /^([ ]*)("[^"]+": )?\[\n((?:[ ]*(?:"[^"]*"|-?\d+|true|false|null),?\n)+)[ ]*\]/
+SCALAR_ARRAY = /^([ ]*)("[^"]+": )?\[\n((?:[ ]*(?:"[^"]*"|-?\d+(?:\.\d+)?|true|false|null),?\n)+)[ ]*\]/
+
+# Walks the payload OBJECT, never the rendered text, so an entity string like
+# "&#x20e1;" can never be mistaken for a number: text scanning would match its
+# "20e1" substring as exponent form, which is exactly the false positive this
+# generator must not produce over rendered HTML.
+def refuse_exponent_floats!(value, path = "payload")
+  case value
+  when Hash
+    value.each { |k, v| refuse_exponent_floats!(v, "#{path}.#{k}") }
+  when Array
+    value.each_with_index { |v, i| refuse_exponent_floats!(v, "#{path}[#{i}]") }
+  when Float
+    if value.to_s.match?(/e/i)
+      abort "REFUSING: #{path} is #{value} -- exponent-form floats cannot be " \
+            "spelled identically by JSON.pretty_generate and biome; add a value " \
+            "the fixture format can represent, or extend biome_json first"
+    end
+  end
+end
 
 def biome_json(payload)
+  refuse_exponent_floats!(payload)
   JSON.pretty_generate(payload).gsub(SCALAR_ARRAY) do
     indent, key, body = Regexp.last_match(1), Regexp.last_match(2), Regexp.last_match(3)
     items = body.lines.map { |line| line.strip.chomp(",") }

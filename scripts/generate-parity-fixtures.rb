@@ -22,7 +22,6 @@
 require "json"
 require "optparse"
 
-REPO_ROOT = File.expand_path("..", __dir__)
 GENERATOR_RELATIVE_PATH = "scripts/generate-parity-fixtures.rb"
 
 FORMATS = %w[omml html].freeze

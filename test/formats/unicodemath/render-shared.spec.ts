@@ -692,7 +692,7 @@ describe("the formula boundary decodes as often as the gem does", () => {
     // guard the map below still ends in a `RenderError`, because the renderer's
     // entry point wraps whatever escapes — but it is the anonymous "rendering
     // failed mid-walk — TypeError: children.map is not a function", which names
-    // no slot. The other four formats each name theirs, and this one is the
+    // no slot. The other five formats each name theirs, and this one is the
     // only lane that ever laundered it.
     const formula = { kind: "formula", value: "", displaystyle: true, leftRightWrapper: true };
     expect(() => toUnicodemath(formula as never)).toThrow(RenderError);

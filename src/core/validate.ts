@@ -29,8 +29,9 @@
  *     agree with the corpus. A "plain hash" is a record whose prototype is
  *     `Object.prototype` or `null`: a `Date`, `Map`, `Set`, `RegExp`, or
  *     other class instance is not one — it often carries zero enumerable
- *     entries, so an entry walk alone would wave it through — and no Ruby
- *     ivar can hold it, so it is rejected with its class named.
+ *     entries, so an entry walk alone would wave it through — but it sits
+ *     outside this port's supported structural slot representation, so it
+ *     is rejected with its class named.
  *   - the tree is finite: a node, list, or hash that is its own ancestor is
  *     rejected with the cycle's path — Ruby's serializers cannot produce a
  *     cyclic tree, and without this check the walk dies as `RangeError`
@@ -312,12 +313,13 @@ function assertNode(
 }
 
 /**
- * One slot value, recursively. The grammar is the union of everything a Ruby
- * node's ivars are observed to hold: nil, strings, booleans, numbers, nodes,
- * lists of any of these, and plain hashes (options, attributes — whose values
- * get the same check, since table parens and alias defaults put real nodes
- * inside). "Plain" is enforced by prototype: any other object is a class
- * instance nothing in Ruby maps to, rejected rather than walked as a hash.
+ * One slot value, recursively. The grammar is this port's supported structural
+ * representation of measured Ruby slot values: nil, strings, booleans,
+ * numbers, nodes, lists of any of these, and plain hashes (options,
+ * attributes — whose values get the same check, since table parens and alias
+ * defaults put real nodes inside). "Plain" is enforced by prototype: any other
+ * object is outside that structural mapping and is rejected rather than walked
+ * as a hash.
  */
 function assertSlot(
   value: unknown,
@@ -416,7 +418,7 @@ function assertSlot(
   }
   // function, symbol, bigint — or an explicit `undefined` entry inside a list
   // or hash (an unassigned ivar is a missing *field*, never a present entry):
-  // nothing Ruby can hold.
+  // all outside this port's supported structural slot types.
   throw new RenderError(
     `${path}: a node slot cannot hold ${type === "undefined" ? "undefined" : `a ${type}`}`,
     format,

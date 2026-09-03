@@ -7,11 +7,11 @@ OMML, UnicodeMath, and HTML. It replaces the Opal-compiled `plurimath-js`.
 This document records the agreed design. Change it before changing the code it
 describes.
 
-Revision: v15 (2026-09-02) — Ruby-backed oracle-runner unit regressions are
+Revision: v15 (2026-09-03) — Ruby-backed oracle-runner unit regressions are
 isolated from the Node-only class-A suite and run in CI with a pinned Ruby
 interpreter; the script inventory now includes the HTML fixture generators and
-their shared provenance helper. v14 (2026-08-07) — the render layout goes node-major, per the
-maintainer's decision: one directory per node kind under `src/render`, one
+their shared provenance helper. v14 (2026-08-07) — the render layout goes
+node-major, per the maintainer's decision: one directory per node kind under `src/render`, one
 file per format inside (`render/sqrt/asciimath.ts` — the gem's
 `function/sqrt.rb` locality), with the dispatch table and format-scoped
 helpers on the format side (`src/formats/<F>/render.ts`,
@@ -932,8 +932,9 @@ Lifecycle rules:
   phase sign-off.
 - **Advancing the milestone is a reviewed change**, owned by the maintainer:
   the PR that advances it must also contain the runners for every gate that
-  newly activates. The registry itself is stable — gates are registered up
-  front and change activation state, rather than appearing over time.
+  newly activates. A gate is registered before its result is relied on and then
+  changes activation state as the milestone advances; a registered gate does not
+  disappear.
 - **Failure semantics are explicit.** A gate whose milestone has arrived but
   whose runner is missing or unrunnable **fails** the run. An executable gate is
   registered before its result is relied on; one not yet activated is reported

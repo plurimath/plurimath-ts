@@ -552,6 +552,28 @@ The port stores the value without invoking caller code, then raises a typed
 `RenderError` instead of inventing bytes. The `number[0]=node` degenerate-sweep
 row records the unstable oracle result and pins this deliberate refusal.
 
+### The degenerate-slot sweep detects a heap-address leak by re-probing, not by proof
+
+**Trigger: a Ruby-side value model exists for the class of value `Symbol#initialize`
+and `Number`'s HTML renderer expose here (an opaque object whose `to_s` is a
+process-specific heap address), or `probe-degenerate-slots.rb` needs a stronger
+guarantee than two same-process allocations disagreeing.**
+
+`probe-degenerate-slots.rb` renders each degenerate cell twice and marks the row
+`"stable": false` (dropping `output`) when the two renders disagree in bytes --
+the mechanism that catches the `Symbol` and `Number` heap-address cases above,
+and the ones this covers. Two allocations a few statements apart in one process
+overwhelmingly will not share an address, but nothing proves they cannot: if a
+future Ruby, GC setting, or object shape ever let two such allocations coincide,
+a heap-address string would be committed to the fixture as `"stable": true`, and
+the class-B regeneration gate would then fail non-deterministically across
+machines rather than catching it at generation time. Measured today: exactly the
+two rows expected to hit `Object#to_s` (`number[0]=node`, `symbol[0]=node`) are
+marked unstable, and no others. Strengthening this into a real proof needs either
+a value model that can represent "an opaque, non-reproducible Ruby object" without
+executing `to_s` at all, or a probe that inspects the object rather than
+re-rendering it -- deferred until one of those exists.
+
 ### Legacy generated fixtures lack reproducible sidecars
 
 **Trigger: before the pinned oracle moves, or before any of these fixture bytes

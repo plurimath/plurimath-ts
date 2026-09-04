@@ -83,6 +83,46 @@ const TINY_PAYLOAD = [
   "",
 ].join("\n");
 
+/**
+ * The same group written as `cases/2`: one target renders, the other refuses.
+ * `cases/2` is not a replacement for `cases/1` — a payload names its own schema
+ * — so both fixtures are loaded intact below before either is damaged.
+ */
+const TINY_PAYLOAD_2 = [
+  "# A synthetic group, with per-target outcomes.",
+  "---",
+  "schema: plurimath-corpus/asciimath/2",
+  "group: tiny",
+  "description: One case the gem renders to one target and refuses on the other",
+  "input_format: asciimath",
+  "targets:",
+  "- asciimath",
+  "- latex",
+  "cases:",
+  "- id: tiny-partial",
+  "  input: x",
+  "  input_format: asciimath",
+  "  preprocessed: x",
+  "  expected:",
+  "    asciimath:",
+  "      output: x",
+  "    latex:",
+  "      error:",
+  "        category: parse_error",
+  "  parse_tree:",
+  "    expr:",
+  "      sequence:",
+  "        symbol: x",
+  "  model:",
+  "    class: Math::Formula",
+  "    fields:",
+  "      value:",
+  "      - class: Math::Symbols::Symbol",
+  "        fields:",
+  "          value: x",
+  "",
+].join("\n");
+
 interface SyntheticOptions {
   readonly payload?: string;
   readonly group?: string;
@@ -150,6 +190,7 @@ const EXPECTED_GROUPS = [
   "nary",
   "numbers",
   "operators",
+  "partial-render",
   "permissive",
   "powers",
   "quoted-text",
@@ -174,18 +215,18 @@ describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every group the provenance records", () => {
-    // 18 case payloads and 1 rejection payload. Counted apart on purpose: the
+    // 19 case payloads and 1 rejection payload. Counted apart on purpose: the
     // rejection payload carries no rendering, so folding it into the case
     // count would inflate what "the corpus covers" claims.
-    expect(corpus.payloads.length).toBe(18);
+    expect(corpus.payloads.length).toBe(19);
     expect(corpus.rejectionPayloads.length).toBe(1);
-    expect(corpus.provenance.payloads.length).toBe(19);
+    expect(corpus.provenance.payloads.length).toBe(20);
     assertExpectedGroups(corpus);
   });
 
-  it("carries 91 cases with distinct ids", () => {
-    expect(corpus.cases.length).toBe(91);
-    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(91);
+  it("carries 92 cases with distinct ids", () => {
+    expect(corpus.cases.length).toBe(92);
+    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(92);
   });
 
   it("was generated the canonical way", () => {
@@ -195,14 +236,33 @@ describe("the pin as shipped", () => {
     expect(corpus.provenance.oracleCommit).toBe("00c52783877b38f6b8e6e109f1803f96bb34fc62");
   });
 
-  it("carries every target for every case", () => {
+  it("accounts for every declared target on every case", () => {
     for (const payload of corpus.payloads) {
       for (const entry of payload.cases) {
-        expect([...entry.expected.keys()].sort(), entry.id).toStrictEqual(
-          [...payload.targets].sort(),
-        );
+        const accounted = [...entry.expected.keys(), ...entry.refusals.keys()].sort();
+        expect(accounted, entry.id).toStrictEqual([...payload.targets].sort());
+        // A target cannot both render and refuse: the two maps are disjoint.
+        for (const target of entry.refusals.keys()) {
+          expect(entry.expected.has(target), `${entry.id} ${target}`).toBe(false);
+        }
       }
     }
+  });
+
+  it("records the one input the gem renders to only some targets", () => {
+    // The single `cases/2` group in the pin. Every other case renders to all
+    // four targets, so its `refusals` map is empty and every consumer written
+    // against `cases/1` reads it unchanged.
+    const partial = corpus.cases.filter((entry) => entry.refusals.size > 0);
+    expect(partial.map((entry) => entry.id)).toStrictEqual(["partial-sqrt-unclosed"]);
+    const entry = partial[0];
+    expect(entry?.input).toBe("sqrt(");
+    expect([...(entry?.expected.keys() ?? [])]).toStrictEqual(["asciimath", "latex", "mathml"]);
+    expect([...(entry?.refusals.entries() ?? [])]).toStrictEqual([["unicodemath", "parse_error"]]);
+    // The input parsed, so the tree and the model are still there; only the
+    // rendering of that model failed.
+    expect(entry?.parseTree).not.toBe(null);
+    expect(entry?.model).not.toBe(null);
   });
 });
 
@@ -215,7 +275,7 @@ describe("what this port checks against", () => {
     // shared corpus has no case to withhold — only the valid one is in the pin.
     expect(inPin).toStrictEqual(["text-unitsml-valid"]);
     expect(readCorpusCases().length).toBe(corpus.cases.length - inPin.length);
-    expect(readCorpusCases().length).toBe(90);
+    expect(readCorpusCases().length).toBe(91);
   });
 
   it("names the deferred feature and cites the architecture note", () => {
@@ -317,6 +377,10 @@ describe("the synthetic fixture, and the gaps only it can have", () => {
     const corpus = loadPinnedCorpus(syntheticPin());
     expect(corpus.cases.map((entry) => entry.id)).toStrictEqual(["tiny-symbol"]);
     expect(corpus.cases[0]?.expected.get("latex")).toBe("x");
+    // A `cases/1` case cannot express a refusal, so its map is empty rather
+    // than absent — which is what lets every consumer written against
+    // `cases/1` read a `cases/2` corpus without changing.
+    expect(corpus.cases[0]?.refusals.size).toBe(0);
   });
 
   it("fails on a pin that records no payloads", () => {
@@ -354,6 +418,128 @@ describe("the synthetic fixture, and the gaps only it can have", () => {
   });
 });
 
+describe("cases/2, and the outcomes only it can carry", () => {
+  it("loads intact, so the failures below are the defect under test", () => {
+    const corpus = loadPinnedCorpus(syntheticPin({ payload: TINY_PAYLOAD_2 }));
+    expect(corpus.cases.map((entry) => entry.id)).toStrictEqual(["tiny-partial"]);
+    const entry = corpus.cases[0];
+    // The rendered target lands in `expected`, the refusing one in `refusals`,
+    // and neither map mentions the other's target.
+    expect([...(entry?.expected.entries() ?? [])]).toStrictEqual([["asciimath", "x"]]);
+    expect([...(entry?.refusals.entries() ?? [])]).toStrictEqual([["latex", "parse_error"]]);
+  });
+
+  it("refuses a bare string where an outcome belongs", () => {
+    // What `cases/1` writes at this position. A payload declaring `2` and
+    // writing `1`'s shape is a payload nothing generated.
+    const payload = TINY_PAYLOAD_2.replace(
+      "    asciimath:\n      output: x\n",
+      "    asciimath: x\n",
+    );
+    expect(() => loadPinnedCorpus(syntheticPin({ payload }))).toThrow(
+      "expected a mapping, found string",
+    );
+  });
+
+  it("refuses an outcome that both renders and refuses", () => {
+    const payload = TINY_PAYLOAD_2.replace(
+      "    asciimath:\n      output: x\n",
+      "    asciimath:\n      output: x\n      error:\n        category: parse_error\n",
+    );
+    expect(() => loadPinnedCorpus(syntheticPin({ payload }))).toThrow(
+      "an outcome is exactly one of",
+    );
+  });
+
+  it("refuses an outcome that is neither", () => {
+    const payload = TINY_PAYLOAD_2.replace(
+      "    asciimath:\n      output: x\n",
+      "    asciimath: {}\n",
+    );
+    expect(() => loadPinnedCorpus(syntheticPin({ payload }))).toThrow(
+      "an outcome is exactly one of",
+    );
+  });
+
+  it("refuses an error category it does not know", () => {
+    const payload = TINY_PAYLOAD_2.replace("category: parse_error", "category: render_error");
+    expect(() => loadPinnedCorpus(syntheticPin({ payload }))).toThrow(
+      'error.category is "render_error"',
+    );
+  });
+
+  it("refuses an error carrying an offset", () => {
+    // `rejections/1` records one; a render refusal cannot, because the input
+    // already parsed and no position in it describes what failed afterwards.
+    const payload = TINY_PAYLOAD_2.replace(
+      "        category: parse_error\n",
+      "        category: parse_error\n        index: 3\n",
+    );
+    expect(() => loadPinnedCorpus(syntheticPin({ payload }))).toThrow(
+      '"error" carries "category" and nothing else',
+    );
+  });
+
+  it("refuses an output that is not a string", () => {
+    const payload = TINY_PAYLOAD_2.replace("      output: x\n", "      output: {}\n");
+    expect(() => loadPinnedCorpus(syntheticPin({ payload }))).toThrow('"output" must be a string');
+  });
+});
+
+/**
+ * The gate that makes a rendered-only `expected` safe to iterate.
+ *
+ * Splitting one payload field across two maps buys every existing consumer an
+ * untouched `expected` — and buys with it the failure that a consumer looping
+ * over `expected` skips a refusing target and reports parity it never checked.
+ * The union of the two maps is therefore checked against the group's `targets`
+ * on every case, in both directions.
+ *
+ * Proven on synthetic pins rather than on damaged copies of the real one: a
+ * copy edited in place fails the provenance sha256 first, so the gate under
+ * test would never be reached.
+ */
+describe("the target-coverage gate", () => {
+  it("passes on both fixtures and on the pin as shipped", () => {
+    expect(() => loadPinnedCorpus(syntheticPin())).not.toThrow();
+    expect(() => loadPinnedCorpus(syntheticPin({ payload: TINY_PAYLOAD_2 }))).not.toThrow();
+    expect(() => loadPinnedCorpus()).not.toThrow();
+  });
+
+  it("fires when a cases/2 case leaves a declared target unaccounted for", () => {
+    const payload = TINY_PAYLOAD_2.replace(
+      "    latex:\n      error:\n        category: parse_error\n",
+      "",
+    );
+    expect(() => loadPinnedCorpus(syntheticPin({ payload }))).toThrow("expected.latex is missing");
+  });
+
+  it("fires when a cases/2 case names a target the group never declared", () => {
+    const payload = TINY_PAYLOAD_2.replace(
+      "    asciimath:\n      output: x\n",
+      "    asciimath:\n      output: x\n    mathml:\n      output: y\n",
+    );
+    expect(() => loadPinnedCorpus(syntheticPin({ payload }))).toThrow(
+      "expected.mathml is not a declared target",
+    );
+  });
+
+  it("fires on a cases/1 payload too, in both directions", () => {
+    // The gate is about the group's `targets`, not about which schema wrote
+    // the outcomes, so a `cases/1` payload is held to the same rule. The
+    // undeclared-target half is new: the previous reader looped over `targets`
+    // and never saw a key outside them.
+    const short = TINY_PAYLOAD.replace("    latex: x\n", "");
+    expect(() => loadPinnedCorpus(syntheticPin({ payload: short }))).toThrow(
+      "expected.latex is missing",
+    );
+    const long = TINY_PAYLOAD.replace("    latex: x\n", "    latex: x\n    mathml: y\n");
+    expect(() => loadPinnedCorpus(syntheticPin({ payload: long }))).toThrow(
+      "expected.mathml is not a declared target",
+    );
+  });
+});
+
 /**
  * The one discovery failure that is *not* an error: a group that disappears
  * from the payload directory and from the provenance together leaves a pin
@@ -372,8 +558,8 @@ describe("a pin that quietly loses a group", () => {
   );
 
   it("loads without complaint, which is the whole problem", () => {
-    expect(shrunk.payloads.length).toBe(17);
-    expect(shrunk.cases.length).toBe(85);
+    expect(shrunk.payloads.length).toBe(18);
+    expect(shrunk.cases.length).toBe(86);
     expect(shrunk.payloads.map((payload) => payload.group)).not.toContain("frac");
   });
 

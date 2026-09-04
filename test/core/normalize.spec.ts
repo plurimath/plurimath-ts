@@ -35,7 +35,7 @@ const aliases = aliasIndex(census);
 
 describe("round trip against the Ruby-generated corpus", () => {
   it("reads every case the corpus ships", () => {
-    expect(cases.length).toBe(90);
+    expect(cases.length).toBe(91);
     expect(new Set(cases.map((entry) => entry.id)).size).toBe(cases.length);
   });
 

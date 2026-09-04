@@ -1,23 +1,18 @@
-import { BaseNode } from "../../core/index";
 import {
   type NodeOf,
-  type OmmlRendered,
   ommlSlot,
+  plainRun,
   present,
   type RenderContext,
-  renderOverUnder,
+  renderLiteralScript,
+  rubyMemberValue,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
-export function renderUnderset(node: NodeOf<"underset">, context: RenderContext): OmmlRendered {
-  if (!context.displaystyle) {
-    return context.render(
-      new BaseNode({ parameterOne: node.parameterOne, parameterTwo: node.parameterTwo }),
-    );
-  }
-
-  if (!present(node.options.accentunder)) {
-    return renderOverUnder(node.kind, "Low", node.parameterOne, node.parameterTwo, context);
+export function renderUl(node: NodeOf<"ul">, context: RenderContext): XmlElement {
+  if (!present(node.parameterOne)) return plainRun("&#x332;");
+  if (!present(rubyMemberValue(node.attributes, "accentunder", node.kind, "ul.attributes"))) {
+    return renderLiteralScript(node.kind, "Low", node.parameterOne, "&#x332;", context, false);
   }
 
   // `m:groupChrPR`, not `m:groupChrPr`. That capitalisation is the GEM's, and it
@@ -35,6 +30,6 @@ export function renderUnderset(node: NodeOf<"underset">, context: RenderContext)
   );
   return new XmlElement("m:groupChr").append(
     properties,
-    ommlSlot(node.parameterTwo, "e", context, node.kind, "underset.parameterTwo"),
+    ommlSlot(node.parameterOne, "e", context, node.kind, "ul.parameterOne"),
   );
 }

@@ -344,6 +344,79 @@ attribute entries in order, OMML does the same for Mpadded and Fenced, and
 UnicodeMath interpolates arbitrary hash values. Numeric-looking keys which are
 not JavaScript array indices (`"01"`, `"-1"`, `"4294967295"`) remain accepted.
 
+### OMML Fenced: Ruby's `#inspect` recursion markers are refused, not reproduced
+
+**Trigger: a consumer reporting a self-referential delimiter, or the shape
+check in `src/core/validate.ts` gaining a per-slot exemption for values whose
+only consumer is a `#inspect`.**
+
+`Fenced`'s OMML delimiters are the one place a renderer stringifies a raw Ruby
+value through `#inspect`, and `#inspect` has an answer for a cycle rather than
+looping: it prints a recursion marker. Measured on the oracle at `00c52783`, a
+`Table` delimiter whose value is a self-referential list emits
+`m:begChr m:val="[[...]]"`, one whose value is a list holding itself one level
+down emits `[[[...]]]`, and a self-referential hash emits `{"self" => {...}}`.
+
+This port refuses all of them, and not in the renderer: `assertMathNodeShape`
+rejects any cyclic tree before a renderer is reached, because every other walk
+in the port would run until the stack gave out. Narrowing that check to spare
+the delimiter slots would mean threading "this slot is only ever inspected"
+through the shape walk, for a shape no parser produces. The refusal is pinned
+by `test/formats/omml/renderer.spec.ts`, "OMML fenced delimiter recursion
+markers", so it cannot drift into some other behaviour unnoticed.
+
+### OMML Fenced: a lone surrogate is refused, not rendered as the gem's byte escapes
+
+**Trigger: a consumer reaching this from real input rather than a hand-built
+tree, or any decision to match Ruby's `#inspect` byte-escape spelling
+generally.**
+
+Ruby cannot BUILD the code point — `0xD800.chr(Encoding::UTF_8)` raises
+`RangeError: invalid codepoint 0xD800 in UTF-8` — but a String carries the
+bytes perfectly well. Measured on the oracle at `00c52783`,
+`[0xD800].pack("U*")` gives a UTF-8 String whose `valid_encoding?` is false,
+whose bytes are `ED A0 80`, and whose `#inspect` prints `"\xED\xA0\x80"`:
+byte escapes, not `\uD800`.
+
+So the gem renders this. A `Fenced` whose delimiter is a Formula valued
+`["a\uD800b"]` emits, measured:
+
+```xml
+<m:begChr m:val="[&quot;a\xED\xA0\x80b&quot;]"/>
+```
+
+This port refuses it instead (`src/render/fenced/omml.ts`), pinned by
+`test/formats/omml/renderer.spec.ts`, "refuses a lone surrogate the gem would
+render as byte escapes".
+
+**This entry is closable, unlike the non-UTF-8 entry above it.** That one is
+about bytes the port cannot hold at all. This output is ASCII-only, so
+JavaScript can represent it exactly; what is missing is only the decision to
+reproduce Ruby's `#inspect` byte-escape spelling, which is a wider question than
+one delimiter slot. Reachable today only from a hand-built tree — no parser
+produces a lone surrogate — which is why it is deferred rather than fixed here.
+
+### `ModelHelper.validate_left_right` is modelled at one renderer, not in the model
+
+**Trigger: a second renderer needing it, or the node constructors gaining any
+gem-side validation at all.**
+
+Every function constructor in the gem runs `ModelHelper.validate_left_right`
+over its slots (`ternary_function.rb:16` and its siblings), and that helper
+sends `first` to the `value` of any slot holding a `Math::Formula`. A Formula
+or Mrow whose value is neither a list nor a hash therefore raises at
+construction — measured on the oracle at `00c52783`, `NoMethodError: undefined
+method 'first'` for an instance of String, for an instance of Integer, for
+true, and for nil.
+
+This port's constructors do not validate (ARCHITECTURE.md §5), so there is no
+constructor to put the check in. `src/render/fenced/omml.ts` reproduces it for
+`Fenced`'s three slots, because that is the renderer where the difference is
+observable in bytes: without it, a `Formula` delimiter holding `"raw"` would
+render `m:val="raw"` where the gem never gets as far as rendering. No other
+carrier or renderer models it; a hand-built tree that would have raised in a
+different gem constructor still renders here.
+
 ## Upstream issues
 
 Defects in the Ruby gem, found while building the port. All reproduce on a

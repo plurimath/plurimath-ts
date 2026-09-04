@@ -2174,6 +2174,54 @@ describe("OMML delimiters and accents slice", () => {
   });
 });
 
+/**
+ * `Ms` is the ONE `UnaryFunction` subclass the gem gives a value reader:
+ * `ms.rb:29-31` is `def value; parameter_one; end`. Measured over every class
+ * under `Plurimath::Math::Function` at `00c52783`, exactly three define
+ * `#value` — `Ms`, `Table` and `Text` — and the other two are already
+ * delimiter carriers here. So a blanket "a unary function has no value reader"
+ * refusal is false for this one class, and the gem really does render it.
+ *
+ * Measured at `00c52783`: `Fenced(Ms("open"), [x], nil)` gives
+ * `<m:begChr m:val="open"/>`, `Fenced(nil, [x], Ms("close"))` gives
+ * `<m:endChr m:val="close"/>`, and `Ms("&amp;#x28;")` gives
+ * `<m:begChr m:val="("/>` — the same two decodes every other delimiter gets.
+ */
+describe("OMML fenced Ms delimiters", () => {
+  const ms = (value: string) => new UnaryFunctionNode({ name: "Ms", parameterOne: value });
+
+  it("renders an Ms open delimiter, which the gem reads through Ms#value", () => {
+    expectDirectAndInsertion(fencedWithOpen(ms("open")), fencedXml("open", null));
+  });
+
+  it("renders an Ms close delimiter", () => {
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: null,
+        parameterTwo: [symbol()],
+        parameterThree: ms("close") as never,
+      }),
+      fencedXml(null, "close"),
+    );
+  });
+
+  it("decodes an Ms delimiter's entities twice, as it does every other delimiter", () => {
+    expectDirectAndInsertion(fencedWithOpen(ms("&amp;#x28;")), fencedXml("(", null));
+  });
+
+  it("still refuses a unary function that has no value reader", () => {
+    expectRefusal(
+      () => toOmmlWithoutMathTag(fencedWithOpen(new UnaryFunctionNode({ name: "Sin" }))),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterOne: a "unaryFunction" node named "Sin" has no value reader — the gem raises NoMethodError here',
+      },
+    );
+  });
+});
+
 /** A `Fenced` whose open delimiter is a hand-built carrier, with `x` for a body. */
 function fencedWithOpen(open: unknown): MathNode {
   return new FencedNode({
@@ -2228,7 +2276,7 @@ describe("OMML fenced delimiter entity decoding", () => {
     expectRefusal(() => toOmmlWithoutMathTag(fencedWithOpen(new SymbolNode({ value }))), {
       kind: "fenced",
       message:
-        "fenced.parameterOne: the delimiter's entities name a code point UTF-8 cannot hold — " +
+        "fenced.parameterOne: the entities here name a code point UTF-8 cannot hold — " +
         `the gem raises RangeError here (${detail})`,
     });
   });
@@ -2250,15 +2298,26 @@ describe("OMML fenced delimiter entity decoding", () => {
 });
 
 /**
- * `Nary#chr_value` decodes its operator twice, exactly as `Fenced` decodes its
- * delimiters, and the two now share one helper. Measured on the oracle at
- * `00c52783` over `Nary(Symbol(v), x, x, x, {})`: `&amp;#x28;` gives
- * `<m:chr m:val="("/>`, `&amp;copy;` gives `©`, and a single decode leaves
- * `&#x28;` and `&copy;` in the attribute.
+ * `Nary#chr_value` reaches the operator through TWO decodes that happen at
+ * different moments, and only the second one reaches the attribute.
  *
- * This one came in with an earlier slice and reached `main` before it was
- * found, which is why it is pinned here rather than left to the branch that
- * introduced it.
+ * `nary.rb:155-160` decodes once and tests THAT value as its suppression
+ * predicate — `first_value = Utility.html_entity_to_unicode(...)`, then
+ * `unless first_value == "∫"`. The attribute is decoded a second time when the
+ * document is written: `ox_engine/element.rb:105-107` runs every attribute
+ * through `html_entity_to_unicode` in `update_attrs`, and the Oga engine does
+ * the same at `oga/dumper.rb:90`. So the predicate reads decode^1 while the
+ * written value is decode^2, and an operator written double-encoded lands on
+ * opposite sides of the two.
+ *
+ * Every row below is the oracle's own output at `00c52783`, measured over
+ * `Nary(Symbol(v), x, x, x, {})`. The four double-encoded integrals are the
+ * regression: one collapsed decode makes them equal the suppressed operator
+ * and drops an element the gem emits.
+ *
+ * The pins are exact whole-document bytes. `toContain` cannot fail on a
+ * MISSING element — the exact shape of this defect, and why the earlier
+ * version of this block shipped green.
  */
 describe("OMML Nary operator entity decoding", () => {
   const naryWith = (value: string) =>
@@ -2270,14 +2329,60 @@ describe("OMML Nary operator entity decoding", () => {
       parameterFour: symbol(),
     });
 
+  /** `NARY_X`'s shape with the operator substituted, or no `m:chr` at all. */
+  const naryOperatorXml = (operator: string | null): string =>
+    xml(
+      "<m:nary>",
+      "  <m:naryPr>",
+      ...(operator === null ? [] : [`    <m:chr m:val="${operator}"/>`]),
+      '    <m:limLoc m:val="subSup"/>',
+      "    <m:ctrlPr>",
+      "      <w:rPr>",
+      '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+      "        <w:i/>",
+      "      </w:rPr>",
+      "    </m:ctrlPr>",
+      "  </m:naryPr>",
+      "  <m:sub>",
+      "    <m:r>",
+      "      <m:t>x</m:t>",
+      "    </m:r>",
+      "  </m:sub>",
+      "  <m:sup>",
+      "    <m:r>",
+      "      <m:t>x</m:t>",
+      "    </m:r>",
+      "  </m:sup>",
+      "  <m:e>",
+      "    <m:r>",
+      "      <m:t>x</m:t>",
+      "    </m:r>",
+      "  </m:e>",
+      "</m:nary>",
+    );
+
+  // Written operator -> the gem's `m:chr` value, or `null` where the gem
+  // suppresses the element. decode^1 is what the predicate tests.
   it.each([
+    // decode^1 is already the integral: the gem suppresses.
+    ["\u222b", null],
+    ["&#x222b;", null],
+    ["&#x222B;", null],
+    ["&#8747;", null],
+    ["&int;", null],
+    // decode^1 is still an entity, so the gem does NOT suppress, and the
+    // written value is decode^2 \u2014 the integral itself.
+    ["&amp;#x222b;", "\u222b"],
+    ["&amp;#x222B;", "\u222b"],
+    ["&amp;#8747;", "\u222b"],
+    ["&amp;int;", "\u222b"],
+    // Operators unrelated to the suppressed one, decoded once and twice.
     ["&#x28;", "("],
     ["&amp;#x28;", "("],
     ["&amp;copy;", "\u00a9"],
     ["&amp;#x2211;", "\u2211"],
-  ] as const)("decodes %s to %s", (written, expected) => {
-    const out = toOmmlWithoutMathTag(naryWith(written));
-    expect(out).toContain(`<m:chr m:val="${expected}"/>`);
+  ] as const)("renders the operator written as %s", (written, expected) => {
+    expect(toOmmlWithoutMathTag(naryWith(written))).toBe(naryOperatorXml(expected));
   });
 });
 

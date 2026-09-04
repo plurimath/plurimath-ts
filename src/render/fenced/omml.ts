@@ -1,6 +1,5 @@
 import { SYMBOL_CANONICAL_VALUES } from "../../core/generated/symbol-canonical";
 import { hasNodeKind, type MathNode, RenderError } from "../../core/index";
-import { htmlEntityToUnicode } from "../../core/nodes";
 import { assertReproducibleRubyHashOrder, rubyNumberToS } from "../../core/ruby-semantics";
 import {
   decodeEntities,
@@ -13,8 +12,12 @@ import {
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
-/** The kinds `symbol_or_paren` can read a delimiter off. */
-type DelimiterKind = "symbol" | "number" | "text" | "formula" | "mrow" | "table";
+/**
+ * The kinds `symbol_or_paren` can read a delimiter off. `unaryFunction` is
+ * here for exactly one name — `Ms`, the only `UnaryFunction` subclass the gem
+ * gives a `#value` (ms.rb:29-31). `delimiterCarrier` enforces that.
+ */
+type DelimiterKind = "symbol" | "number" | "text" | "formula" | "mrow" | "table" | "unaryFunction";
 
 /**
  * What `symbol_or_paren` hands back: never a node, always a Ruby value that
@@ -101,9 +104,9 @@ function delimiterAttribute(value: unknown, at: string): string | null {
   // `["&", "&amp;#x28;"]` decodes twice and emits `["&", "("]`, while
   // `["x", "&amp;#x28;"]` decodes once and emits `["x", "&#x28;"]`.
   const stringified = rubyIncludesAmpersand(raw)
-    ? decodeEntities(rubyToString(raw, node.kind, at), at)
+    ? decodeEntities(rubyToString(raw, node.kind, at), "fenced", at)
     : rubyToString(raw, node.kind, at);
-  return decodeEntities(stringified, at);
+  return decodeEntities(stringified, "fenced", at);
 }
 
 /** The carrier `symbol_or_paren` is handed, or nil for an absent slot. */
@@ -125,6 +128,21 @@ function delimiterCarrier(value: unknown, at: string): (MathNode & { kind: Delim
     case "mrow":
     case "table":
       return node as MathNode & { kind: DelimiterKind };
+    case "unaryFunction": {
+      // Measured over every class under `Plurimath::Math::Function` at
+      // `00c52783`: exactly three define `#value` — `Ms`, `Table` and `Text`.
+      // The last two are carriers of their own above, so `Ms` is the single
+      // unary function `symbol_or_paren` can read, and every other one reaches
+      // it with no reader.
+      const name = (node as { readonly name?: unknown }).name;
+      if (name === "Ms") return node as MathNode & { kind: DelimiterKind };
+      throw new RenderError(
+        `${at}: a "${node.kind}" node named ${JSON.stringify(name)} has no value reader — ` +
+          "the gem raises NoMethodError here",
+        FORMAT,
+        "fenced",
+      );
+    }
     default:
       throw new RenderError(
         `${at}: a "${node.kind}" node has no value reader — the gem raises NoMethodError here`,
@@ -153,8 +171,10 @@ function parenValue(node: MathNode & { kind: DelimiterKind }, at: string): Delim
     }
     return slotValue(node.value, node.kind, at);
   }
-  // `Text#value` is its `parameter_one`; every other carrier reads `value`.
-  const held: unknown = node.kind === "text" ? node.parameterOne : node.value;
+  // `Text#value` and `Ms#value` are both `parameter_one`; every other carrier
+  // reads `value`.
+  const held: unknown =
+    node.kind === "text" || node.kind === "unaryFunction" ? node.parameterOne : node.value;
   return slotValue(held, node.kind, at);
 }
 
@@ -253,11 +273,15 @@ function rubyInspect(value: unknown, kind: DelimiterKind, at: string): string {
  * The set was measured rather than reasoned about. Every one of the
  * 1,112,064 non-surrogate code points went through `String#inspect` on the
  * oracle's Ruby 4.0.1, giving 740 escaped ranges, and this predicate
- * reproduced all of them with zero disagreements. It can, because the two
- * runtimes carry the same tables: Ruby 4.0.1 reports `UNICODE_VERSION`
- * 17.0.0 and Node 24.18.0 reports `process.versions.unicode` 17.0. The
- * boundary cases pinned in the OMML renderer spec are what catches either
- * side moving.
+ * reproduced all of them with zero disagreements. That agreement is between
+ * ONE Ruby and ONE Node — Ruby 4.0.1 reports `UNICODE_VERSION` 17.0.0 and
+ * Node 24.18.0 reports `process.versions.unicode` 17.0 — and it is not a
+ * property of the two languages. The gemspec allows `>= 3.2.0`
+ * (plurimath.gemspec:14), so the gem disagrees with ITSELF across its own
+ * supported range wherever those Rubies ship different tables; pinning this
+ * predicate to one Unicode version would create a divergence rather than
+ * remove one. The boundary cases pinned in the OMML renderer spec are what
+ * catches either side moving.
  */
 const RUBY_NONPRINTING = /[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}]/u;
 
@@ -321,9 +345,17 @@ function inspectCodepoint(
   at: string,
 ): string {
   if (codepoint >= 0xd800 && codepoint <= 0xdfff) {
-    // A lone UTF-16 surrogate: a Ruby UTF-8 String cannot hold one at all
-    // (`0xD800.chr(Encoding::UTF_8)` raises `RangeError: invalid codepoint
-    // 0xD800 in UTF-8`), so there is no spelling of it to copy.
+    // A lone UTF-16 surrogate. Ruby cannot BUILD the code point —
+    // `0xD800.chr(Encoding::UTF_8)` raises `RangeError: invalid codepoint
+    // 0xD800 in UTF-8` — but a String can still carry the bytes: measured on
+    // the oracle's Ruby 4.0.1, `[0xD800].pack("U*")` gives a UTF-8 String
+    // whose `valid_encoding?` is false and whose `inspect` is
+    // `"\xED\xA0\x80"`, byte escapes rather than `\uD800`.
+    //
+    // So this refusal is NOT what the gem would do with the same bytes, and
+    // the message below overstates it. Deciding whether to match the gem's
+    // byte escapes here is a code change, tracked separately; the comment is
+    // corrected now so it stops teaching the wrong mechanism.
     throw new RenderError(
       `${at}: a "${kind}" node contains the lone surrogate U+${codepoint
         .toString(16)

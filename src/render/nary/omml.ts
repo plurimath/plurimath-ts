@@ -1,5 +1,4 @@
 import { hasNodeKind, RenderError } from "../../core/index";
-import { htmlEntityToUnicode } from "../../core/nodes";
 import {
   controlProperties,
   decodeEntities,
@@ -13,8 +12,8 @@ import {
 import { XmlElement } from "../../xml/index";
 
 /**
- * `Nary#chr_value` (nary.rb:155-160) writes the operator DECODED, and then
- * suppresses the whole `m:chr` element for exactly one value:
+ * `Nary#chr_value` (nary.rb:155-160) suppresses the whole `m:chr` element for
+ * exactly one value, and it tests the SINGLY decoded operator to decide:
  *
  * ```ruby
  * first_value = Utility.html_entity_to_unicode(parameter_one&.nary_attr_value(options: options))
@@ -22,10 +21,17 @@ import { XmlElement } from "../../xml/index";
  *   narypr << XmlHelper.ox_element("chr", namespace: "m", attributes: { "m:val": first_value })
  * ```
  *
+ * The attribute it writes is decoded a second time on the way out, by the XML
+ * engine rather than by this method. So the predicate reads decode^1 and the
+ * document carries decode^2.
+ *
  * Measured on the oracle at `00c52783` over `Nary(Symbol(v), x, x, x, {})`:
- * `"∫"`, `"&#x222b;"` and `"&#x222B;"` each give an `m:naryPr` whose first
- * child is `m:limLoc`, while `"&#x2211;"` gives `<m:chr m:val="∑"/>` — the
- * decoded character, never the entity as written.
+ * `"∫"`, `"&#x222b;"`, `"&#x222B;"`, `"&#8747;"` and `"&int;"` each give an
+ * `m:naryPr` whose first child is `m:limLoc`; `"&amp;#x222b;"` and the other
+ * three double-encoded spellings give `<m:chr m:val="∫"/>`, because decode^1
+ * leaves an entity standing and only decode^2 reaches the integral; and
+ * `"&#x2211;"` gives `<m:chr m:val="∑"/>` — the decoded character, never the
+ * entity as written.
  */
 const SUPPRESSED_NARY_OPERATOR = "∫";
 
@@ -49,16 +55,20 @@ export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlEle
       node.kind,
     );
   }
-  // `Nary#chr_value` decodes the operator the same way `Fenced` decodes its
-  // delimiters: `html_entity_to_unicode` is applied, and what it leaves is
-  // decoded again. Measured on the oracle at `00c52783`, a Symbol valued
-  // `&amp;#x28;` gives `<m:chr m:val="("/>` and `&amp;copy;` gives `©`; a single
-  // decode leaves `&#x28;` and `&copy;`. Shared with `fenced` so the two cannot
-  // drift, and so a code point UTF-8 cannot hold refuses here too rather than
-  // reaching the renderer boundary as a stack-depth error.
-  const operatorValue = decodeEntities(htmlEntityToUnicode(rawOperator), "nary.parameterOne");
+  // The operator is decoded twice, but the two decodes are read by different
+  // things and must not be collapsed into one. `Nary#chr_value`
+  // (nary.rb:155-160) tests `first_value` — ONE decode — as its suppression
+  // predicate, while the attribute is decoded a second time only when the
+  // document is written (`ox_engine/element.rb:105-107` in `update_attrs`, and
+  // `oga/dumper.rb:90` for the other engine). Collapsing them suppresses
+  // `m:chr` for an operator written double-encoded, which the gem emits.
+  // Both stages go through the shared guarded decode, so a code point UTF-8
+  // cannot hold refuses here rather than reaching the renderer boundary as a
+  // stack-depth error.
+  const firstValue = decodeEntities(rawOperator, node.kind, "nary.parameterOne");
+  const operatorValue = decodeEntities(firstValue, node.kind, "nary.parameterOne");
   const properties = new XmlElement("m:naryPr").append(
-    operatorValue === SUPPRESSED_NARY_OPERATOR
+    firstValue === SUPPRESSED_NARY_OPERATOR
       ? null
       : new XmlElement("m:chr").setAttribute("m:val", operatorValue),
     new XmlElement("m:limLoc").setAttribute("m:val", "subSup"),

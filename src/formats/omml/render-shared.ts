@@ -437,24 +437,28 @@ export function serializeRendered(rendered: OmmlRendered): string {
 
 /**
  * `Utility.html_entity_to_unicode`, with the one failure the gem shows on
- * this path given a message of its own. A delimiter entity naming a surrogate
- * or a code point past U+10FFFF makes the gem raise `RangeError: invalid
+ * this path given a message of its own. An entity naming a surrogate or a
+ * code point past U+10FFFF makes the gem raise `RangeError: invalid
  * codepoint 0xD800 in UTF-8` / `RangeError: 1114112 out of char range` —
  * measured both with the entity written once (`&#xD800;`) and written twice
  * (`&amp;#xD800;`), because the second decode reaches what the first left.
  * Without this, that RangeError travels to the renderer boundary, which
  * reports every RangeError as a stack-depth refusal.
+ *
+ * `kind` is the kind being RENDERED, not the carrier's: `fenced` decodes its
+ * delimiters and `nary` its operator through this same helper, and a failure
+ * has to name the one it came from.
  */
-export function decodeEntities(value: string, at: string): string {
+export function decodeEntities(value: string, kind: string, at: string): string {
   try {
     return htmlEntityToUnicode(value);
   } catch (error) {
     if (error instanceof RangeError) {
       throw new RenderError(
-        `${at}: the delimiter's entities name a code point UTF-8 cannot hold — ` +
+        `${at}: the entities here name a code point UTF-8 cannot hold — ` +
           `the gem raises RangeError here (${error.message})`,
         FORMAT,
-        "fenced",
+        kind,
       );
     }
     throw error;

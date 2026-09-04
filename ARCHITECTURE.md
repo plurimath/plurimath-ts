@@ -372,6 +372,7 @@ target settled 2026-09-04: source head `ce297e2`, verified against its source,
 type CompatFormat = "asciimath" | "latex" | "mathml" | "html" | "unicode" | "omml";
                                             // NOTE: "unicode", not "unicodemath"
 export default class Plurimath {
+  readonly data: FormulaNode;                 // published class: writable Opal ParserResult
   constructor(data: string, format: CompatFormat);
   toAsciimath(): string;
   toLatex(): string;

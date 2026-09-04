@@ -76,7 +76,7 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  * Derived from `PORT_REFUSES`, and cross-checked against it by the spec: the
  * two disagree only when one was edited without the other.
  */
-export const RENDERED_BASELINE = 64;
+export const RENDERED_BASELINE = 65;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared

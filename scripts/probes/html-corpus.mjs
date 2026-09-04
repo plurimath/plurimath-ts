@@ -34,7 +34,16 @@ const aliases = aliasIndex(readCensus(join(root, "corpus/census.yaml")));
 /** Categories this data work owns; everything else is another work item. */
 const OWNED_BY_SYMBOL_DATA = new Set(["named-symbol-payload", "named-paren-payload"]);
 
-function category(message) {
+/**
+ * Nary dispatches on the error's `kind`, not on its prose. Every other row here
+ * keys on a message that carries semantics no structural field holds, but Nary's
+ * refusal is identified exactly by the kind that raised it — and matching prose
+ * for it was already wrong once: this read `"Nary has no to_html"` while the
+ * renderer said `"Nary has no HTML renderer in the pinned gem ..."`, so every
+ * Nary case fell through to `other` and the breakdown under-counted it.
+ */
+function category(message, kind) {
+  if (kind === "nary") return "oracle-nary-refusal";
   if (message.includes("needs generated HTML data, which belongs to phase two")) {
     return "named-symbol-payload";
   }
@@ -43,7 +52,6 @@ function category(message) {
   if (message.includes("UnaryFunction alias")) return "unary-function-alias";
   if (message.includes("TernaryFunction alias")) return "ternary-function-alias";
   if (message.includes("unicode[:name] substitution")) return "text-unicode-substitution";
-  if (message.includes("Nary has no to_html")) return "oracle-nary-refusal";
   return "other";
 }
 
@@ -103,7 +111,7 @@ for (const entry of cases) {
     const message = error instanceof Error ? error.message : String(error);
     failures.push({
       id: entry.id,
-      category: category(message),
+      category: category(message, error?.kind ?? null),
       code: error?.code ?? null,
       kind: error?.kind ?? null,
       message,

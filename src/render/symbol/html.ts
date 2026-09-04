@@ -54,8 +54,9 @@ const VALUE_RENDERED_SYMBOL_IDS: ReadonlySet<string> = new Set(
  * `Symbols::Symbol#to_html` (`symbols/symbol.rb:63-65`): the stored value,
  * unchanged; nil stays nil.
  *
- * The value goes through `interpolatedValue` rather than being returned raw,
- * as latex and asciimath do. In the gem the value is ALWAYS a String: the
+ * The value goes through `interpolatedValue`, which is what the latex and
+ * asciimath symbol renderers already do for this same slot; it is not returned
+ * raw. In the gem the value is ALWAYS a String: the
  * constructor coerces it (`symbols/symbol.rb:18`,
  * `@value = sym.is_a?(Array) ? sym.join : sym&.to_s`), so `Symbol.new(42)`
  * stores `"42"` and `to_html` can only ever hand back a String.

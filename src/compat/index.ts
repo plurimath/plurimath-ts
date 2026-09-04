@@ -76,6 +76,11 @@ export default class Plurimath {
    * too. A bare `readonly` field would not have: reassigning it changes what
    * every later method renders, exactly as it does in the published class.
    *
+   * The guarantee is that the value does not change, not that assigning throws.
+   * Assignment to a non-writable property raises `TypeError` in strict mode and
+   * fails silently in sloppy mode, and this package ships CJS, so a `require()`
+   * consumer may well be in the latter. Either way `data` keeps its value.
+   *
    * The object it holds is NOT deep-frozen. Mutating the tree through `data`
    * still changes later renders; the port's nodes are immutable by convention
    * and compile-time `readonly`, not by `Object.freeze` (ARCHITECTURE.md §5).

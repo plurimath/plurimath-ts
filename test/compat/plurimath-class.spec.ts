@@ -185,9 +185,20 @@ describe("the two methods that cannot be honest yet", () => {
   it("makes `data` readonly at runtime, not only to TypeScript", () => {
     const formula = build();
     expect(Object.getOwnPropertyDescriptor(formula, "data")?.writable).toBe(false);
-    expect(() => {
-      (formula as unknown as { data: unknown }).data = build().data;
-    }).toThrow(TypeError);
+
+    // The guarantee is that the value does not change, NOT that assigning
+    // throws. Assigning to a non-writable property throws only in strict mode;
+    // this package also ships CJS, and a `require()` consumer in sloppy mode
+    // gets a silent no-op instead. Measured both ways: sloppy `threw=false`,
+    // strict `threw=true`, and the value held in both. So the assertion is on
+    // the value, and the throw is tolerated rather than required.
+    const before = formula.data;
+    try {
+      (formula as unknown as { data: unknown }).data = new Plurimath("x+y", "asciimath").data;
+    } catch {
+      // strict mode: TypeError, which is the stricter of the two behaviours
+    }
+    expect(formula.data).toBe(before);
     expect(formula.toLatex()).toBe(GEM_OUTPUT.toLatex);
   });
 });

@@ -10,6 +10,7 @@ release.
 |---|---|---|
 | 1 | [HTML renderer](01-html-renderer.md) | measured vertical slice, then full HTML parity |
 | 2 | [OMML renderer](02-omml-renderer.md) | the second XML tree format, scoped against the pinned oracle |
+| 3 | [Compat class](03-compat-class.md) | the frozen `plurimath-js` surface, targeted at the plurimath-js source head |
 | 4 | [Symbol data](04-symbol-data.md) | the generated HTML and OMML symbol slices both renderers refuse without |
 
 ## What it delivers
@@ -25,18 +26,27 @@ elements, control properties). Exercises the XML layer harder than MathML does.
 and table markup.
 
 **Compat class.** The frozen `plurimath-js` surface — constructor plus seven
-methods — becomes buildable once several renderers exist. Its ABI is fixed by a
-declaration fixture. One runtime test per method is **not** enough to hold it:
+methods — becomes buildable once several renderers exist. Its declaration
+target is settled: source head `ce297e2`, not the published
+`@plurimath/plurimath@0.2.2` declarations, which carry six methods, a
+`toMathml` that takes no argument, and `mahtml` where source head says
+`unicode`. This package has published nothing, so it has no compatibility debt
+and no reason to inherit that typo (`03-compat-class.md`; `open-decisions.md`).
+A declaration fixture freezes that surface. One runtime test per method is
+**not** enough to hold it:
 
-- the constructor takes six formats. On the plan as it stands, only AsciiMath
-  input exists at P2, so one constructs and five raise
-  `UnsupportedFormatError`. Which is which is part of the staged contract, so
-  it is asserted per format rather than assumed;
+- the constructor takes six formats — `asciimath`, `latex`, `mathml`, `html`,
+  `unicode`, `omml`. On the plan as it stands, only AsciiMath input exists at
+  P2, so one constructs and five raise `UnsupportedFormatError`. Which is which
+  is part of the staged contract, so it is asserted per format rather than
+  assumed;
 - `toDisplay(lang)` dispatches on its argument. The gem's `MATH_ZONE_TYPES`
   has five entries — omml, latex, mathml, asciimath, unicodemath — plus an
-  invalid-type error path, so it needs six assertions, not one;
+  invalid-type error path, so it needs six assertions, not one. Direct native
+  Ruby string calls validate and then fall through to `"|_ Math zone\n"`; the
+  fixture strategy records that quirk separately from Opal-wrapper expectations;
 - `toMathml(intent?)` carries the compat surface's only optional argument, so
-  both settings are tested.
+  omitted, explicit false, and true are all tested.
 
 It is only *complete* at 1.0.
 
@@ -61,8 +71,9 @@ AsciiMath *to* everything, which is the most useful early capability.
 - UnicodeMath's context rules (mini-sized scripts, accents, primes) were the
   risk this phase expected to carry; it landed in P1 instead, and those rules
   are pinned by the UnicodeMath parity suite.
-- The compat class must not drift from the published ABI: it is verified
-  against `plurimath-js`'s own source, not from memory.
+- The compat class must not drift from the settled declaration target, source
+  head `ce297e2`. Published artifacts and source head are separate evidence and
+  must not be substituted for each other (`03-compat-class.md`).
 
 ## Exit criteria
 
@@ -71,10 +82,12 @@ AsciiMath *to* everything, which is the most useful early capability.
       each. The
       reader asserts a nonzero case count per target, and that it equals the
       group's own case count — so a single token case cannot satisfy this.
-- [ ] Compat ABI fixture passing, plus: the constructor asserted for all six
-      formats (constructs, or raises `UnsupportedFormatError`); `toDisplay`
-      across its five branches and the invalid-type path; `toMathml` with and
-      without `intent`; the other five methods at least once each.
+- [ ] Compat declaration fixture passing, plus: the constructor asserted for
+      all six source-head formats (constructs, or raises
+      `UnsupportedFormatError`); `toDisplay` across its five recognized values,
+      the invalid-type path, and a separate record of the native-Ruby string
+      quirk; `toMathml` omitted, explicit false, and true; every other method at
+      least once.
 - [ ] Isolation assertions extended to each new subpath.
 - [ ] Packaging review done and the first `0.x` published.
 - [ ] Review round with findings resolved, and sign-off recorded.

@@ -31,6 +31,7 @@ import { RUBY_ABSTRACT_CLASSES } from "../../core/nodes";
 import { NODE_SPECS } from "../../core/normalize";
 import {
   classBasename,
+  interpolatedValue,
   missingSymbolDataError,
   type NodeOf,
 } from "../../formats/html/render-shared";
@@ -49,15 +50,30 @@ const VALUE_RENDERED_SYMBOL_IDS: ReadonlySet<string> = new Set(
     .map(classBasename),
 );
 
-/** `Symbols::Symbol#to_html`: the stored value, unchanged; nil stays nil. */
+/**
+ * `Symbols::Symbol#to_html` (`symbols/symbol.rb:63-65`): the stored value,
+ * unchanged; nil stays nil.
+ *
+ * The value goes through `interpolatedValue` rather than being returned raw,
+ * as latex and asciimath do. In the gem the value is ALWAYS a String: the
+ * constructor coerces it (`symbols/symbol.rb:18`,
+ * `@value = sym.is_a?(Array) ? sym.join : sym&.to_s`), so `Symbol.new(42)`
+ * stores `"42"` and `to_html` can only ever hand back a String.
+ *
+ * A node carrying a non-string `value` therefore has no gem equivalent at all,
+ * and `assertMathNodeShape` deliberately does not type-check per-field values.
+ * Returning it raw would break this module's own `string` return type —
+ * measured before the guard, `toHtml({kind:"symbol", value: 42})` returned the
+ * NUMBER 42 — so it refuses instead.
+ */
 export function renderSymbol(node: NodeOf<"symbol">): string | null {
   // A plain object without an id is the base class, exactly as the
   // constructor's default makes it.
   const id = node.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
   if (VALUE_RENDERED_SYMBOL_IDS.has(id)) {
     const value = node.value;
-    if (value !== null && value !== undefined) return value;
-    return null;
+    if (value === null || value === undefined) return null;
+    return interpolatedValue(value, node.kind, "symbol.value");
   }
   const literal = HTML_SYMBOLS.get(id);
   // The factory records the error as this walk's own throw (a module-private

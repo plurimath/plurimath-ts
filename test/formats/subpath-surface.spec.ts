@@ -27,6 +27,7 @@
 import { describe, expect, it } from "vitest";
 import packageJson from "../../package.json";
 import * as asciimath from "../../src/formats/asciimath/index";
+import * as html from "../../src/formats/html/index";
 import * as latex from "../../src/formats/latex/index";
 import * as mathml from "../../src/formats/mathml/index";
 import * as unicodemath from "../../src/formats/unicodemath/index";
@@ -34,6 +35,7 @@ import * as unicodemath from "../../src/formats/unicodemath/index";
 /** Runtime exports only — types erase, so they cannot be asserted here. */
 const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly string[]]> = [
   ["./asciimath", asciimath, ["parseAsciimath", "toAsciimath"]],
+  ["./html", html, ["toHtml"]],
   ["./latex", latex, ["toLatex"]],
   ["./mathml", mathml, ["toMathml"]],
   ["./unicodemath", unicodemath, ["toUnicodemath"]],
@@ -71,6 +73,15 @@ describe("the subpaths actually work end to end", () => {
 
   it("renders a parsed formula as LaTeX", () => {
     expect(latex.toLatex(asciimath.parseAsciimath("frac(1)(2)"))).toBe("\\frac{1}{2}");
+  });
+
+  it("renders a parsed formula as HTML", () => {
+    // Measured against the pinned oracle, not guessed:
+    //   Plurimath::Math.parse("abs(x)", :asciimath).to_html
+    //     => "<i>abs</i><i>x</i>"
+    // `abs` is one of the 36 pinned corpus cases HTML renders today; a case
+    // needing generated HTML symbol data would raise here instead.
+    expect(html.toHtml(asciimath.parseAsciimath("abs(x)"))).toBe("<i>abs</i><i>x</i>");
   });
 
   it("renders a parsed formula as UnicodeMath", () => {

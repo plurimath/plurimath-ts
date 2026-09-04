@@ -267,10 +267,13 @@ subpath's forbidden set against the modules its sourcemaps name, so the check
 inspects what shipped rather than what was imported. `/unicodemath` joined
 them (2026-08-21, #33) on the same terms: a text format like `/latex`, so its
 forbidden set carries the XML layer and the grammar alongside the other three
-formats, and the boundary gate's inventory now reads 38 kinds x 4 formats.
+formats, and the boundary gate's inventory read 38 kinds x 4 formats at that
+point.
 `/html` joined them on the same terms: output only, so like `/latex` its
 forbidden set carries both the grammar and the XML layer, its markup being
-built as strings rather than through the element tree.
+built as strings rather than through the element tree. The gate's inventory now
+reads 38 kinds x 6 formats -- it counts every format with render files present,
+so OMML is in that six while its own subpath is still unpublished.
 
 ## 4. Public API
 

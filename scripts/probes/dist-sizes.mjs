@@ -43,7 +43,11 @@ const closureBytes = async (entry, format) => {
     bundle: true,
     write: false,
     format,
-    platform: format === "cjs" ? "node" : "neutral",
+    // "neutral" for BOTH, matching scripts/gate-package.mjs, which bundles the
+    // ESM and CJS artifacts the same way. Using "node" for CJS changes what
+    // esbuild externalizes, so the CJS column would not have been comparable
+    // to the graph the gate inspects -- while this file's header claimed it was.
+    platform: "neutral",
     logLevel: "silent",
   });
   return result.outputFiles.reduce((sum, file) => sum + file.contents.length, 0);

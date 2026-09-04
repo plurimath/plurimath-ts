@@ -8,11 +8,11 @@ generator:
   path: scripts/probe-degenerate-slots.rb
   sha256: 40e485ca9c46bbeb69f2611d0ca7cbc931827f31d7d59663598f447d252af05b
   inputs:
-    scripts/generate-corpus.rb: 6f9e7fe1423c7e6991bafadc2249d8ced33d60812e2c0167ee22cdbf2c318fcc
+    scripts/generate-corpus.rb: a33e507f7767906431c37105fd79396c75cb8dff703b9934f245ffd86ad325df
     scripts/probe-degenerate-slots.rb: 40e485ca9c46bbeb69f2611d0ca7cbc931827f31d7d59663598f447d252af05b
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: ed7c91e12bb0fc497deecec4d581acd901c3e4e7
+    commit: 28dc1a55ca871d60e2852367e51302378579907a
     clean: true
     dirty_paths: []
   inventory:

@@ -119,8 +119,9 @@ node scripts/probes/dist-sizes.mjs
 `[dist-sizes]` reports two numbers per subpath and module system. `entryBytes`
 is the entry file alone, which is what `wc -c dist/latex.js` would say and is
 not the consumer's cost: tsdown puts the core layer in a shared chunk, so
-`dist/latex.js` names roughly a third of its own weight in a
-`from "./core-<hash>.js"` line. `closureBytes` is the entry plus every chunk
+`dist/latex.js` names a further chunk in a `from "./core-<hash>.js"` line.
+Measured: its ESM entry is 121,525 bytes and its closure 149,570, so the shared
+chunk adds 28,045 -- about a fifth of what the consumer actually downloads. `closureBytes` is the entry plus every chunk
 it pulls, measured the way `scripts/gate-package.mjs` inspects the same
 artifacts — re-bundle the built entry with esbuild and weigh the result. It is
 the closure numbers that the budget below is written against. (Tree-shaking

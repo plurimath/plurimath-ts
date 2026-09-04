@@ -13,14 +13,17 @@
  *   entryBytes    the entry file alone, as `wc -c` would report it
  *   closureBytes  the entry plus every shared chunk it imports, which is what
  *                 a consumer actually downloads. Reporting only the entry
- *                 understates a subpath badly: tsdown puts the core layer in a
- *                 shared chunk, so `dist/latex.js` names roughly half its own
- *                 cost in a `from "./core-<hash>.js"` line.
+ *                 understates a subpath: tsdown puts the core layer in a shared
+ *                 chunk that `dist/latex.js` names in a
+ *                 `from "./core-<hash>.js"` line. Measured on this branch, that
+ *                 chunk adds 28,045 bytes to latex's 121,525-byte ESM entry --
+ *                 about a fifth of the 149,570-byte closure.
  *
  * The closure is measured the way scripts/gate-package.mjs inspects the same
  * artifacts: re-bundle the built entry with esbuild and weigh the result.
  *
- * Run `pnpm build` first, then:
+ * Builds first itself (`buildFresh`), so a stale `dist` cannot be measured by
+ * accident. Just run:
  *
  *   node scripts/probes/dist-sizes.mjs
  */

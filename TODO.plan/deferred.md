@@ -365,6 +365,37 @@ through the shape walk, for a shape no parser produces. The refusal is pinned
 by `test/formats/omml/renderer.spec.ts`, "OMML fenced delimiter recursion
 markers", so it cannot drift into some other behaviour unnoticed.
 
+### OMML Fenced: a lone surrogate is refused, not rendered as the gem's byte escapes
+
+**Trigger: a consumer reaching this from real input rather than a hand-built
+tree, or any decision to match Ruby's `#inspect` byte-escape spelling
+generally.**
+
+Ruby cannot BUILD the code point — `0xD800.chr(Encoding::UTF_8)` raises
+`RangeError: invalid codepoint 0xD800 in UTF-8` — but a String carries the
+bytes perfectly well. Measured on the oracle at `00c52783`,
+`[0xD800].pack("U*")` gives a UTF-8 String whose `valid_encoding?` is false,
+whose bytes are `ED A0 80`, and whose `#inspect` prints `"\xED\xA0\x80"`:
+byte escapes, not `\uD800`.
+
+So the gem renders this. A `Fenced` whose delimiter is a Formula valued
+`["a\uD800b"]` emits, measured:
+
+```xml
+<m:begChr m:val="[&quot;a\xED\xA0\x80b&quot;]"/>
+```
+
+This port refuses it instead (`src/render/fenced/omml.ts`), pinned by
+`test/formats/omml/renderer.spec.ts`, "refuses a lone surrogate the gem would
+render as byte escapes".
+
+**This entry is closable, unlike the non-UTF-8 entry above it.** That one is
+about bytes the port cannot hold at all. This output is ASCII-only, so
+JavaScript can represent it exactly; what is missing is only the decision to
+reproduce Ruby's `#inspect` byte-escape spelling, which is a wider question than
+one delimiter slot. Reachable today only from a hand-built tree — no parser
+produces a lone surrogate — which is why it is deferred rather than fixed here.
+
 ### `ModelHelper.validate_left_right` is modelled at one renderer, not in the model
 
 **Trigger: a second renderer needing it, or the node constructors gaining any

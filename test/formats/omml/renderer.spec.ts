@@ -2441,14 +2441,14 @@ describe("OMML fenced delimiter Ruby #inspect escapes", () => {
     );
   });
 
-  it("refuses a lone surrogate, which a Ruby UTF-8 string cannot hold", () => {
+  it("refuses a lone surrogate the gem would render as byte escapes", () => {
     expectRefusal(
       () => toOmmlWithoutMathTag(fencedListDelimiter([`a${String.fromCharCode(0xd800)}b`])),
       {
         kind: "fenced",
         message:
           'fenced.parameterOne[0]: a "formula" node contains the lone surrogate U+D800, ' +
-          "which a Ruby UTF-8 string cannot hold",
+          "which this port refuses rather than emit the gem's byte escapes",
       },
     );
   });

@@ -352,14 +352,16 @@ function inspectCodepoint(
     // whose `valid_encoding?` is false and whose `inspect` is
     // `"\xED\xA0\x80"`, byte escapes rather than `\uD800`.
     //
-    // So this refusal is NOT what the gem would do with the same bytes, and
-    // the message below overstates it. Deciding whether to match the gem's
-    // byte escapes here is a code change, tracked separately; the comment is
-    // corrected now so it stops teaching the wrong mechanism.
+    // So this refusal is NOT what the gem would do with the same bytes.
+    // Measured on the oracle at `00c52783`, a Formula delimiter valued
+    // `["a\uD800b"]` emits `<m:begChr m:val="[&quot;a\xED\xA0\x80b&quot;]"/>`,
+    // and that output is ASCII-only — so it is representable here, and this
+    // divergence is closable rather than structural. Doing so is a code change
+    // outside this unit; `TODO.plan/deferred.md` carries it with its trigger.
     throw new RenderError(
       `${at}: a "${kind}" node contains the lone surrogate U+${codepoint
         .toString(16)
-        .toUpperCase()}, which a Ruby UTF-8 string cannot hold`,
+        .toUpperCase()}, which this port refuses rather than emit the gem's byte escapes`,
       FORMAT,
       "fenced",
     );

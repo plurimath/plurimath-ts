@@ -266,8 +266,15 @@ export interface CorpusCase {
   readonly id: string;
   readonly input: string;
   readonly model: SerializedNode;
-  /** The gem's rendered output per target format (`expected.asciimath`, ...). */
+  /**
+   * The gem's rendered output, per target format the gem rendered this case to
+   * (`expected.asciimath`, ...). A `cases/2` case may be missing a target here;
+   * `refusals` says why, and `corpus-pin.ts` gates that the two together name
+   * every target the group declares.
+   */
   readonly expected: ReadonlyMap<string, string>;
+  /** The targets the gem refused to render, mapped to the error category. */
+  readonly refusals: ReadonlyMap<string, string>;
 }
 
 /**
@@ -289,7 +296,13 @@ export function readCorpusCases(root: string = PINNED_CORPUS_ROOT): readonly Cor
     if (!isSerializedNode(entry.model)) {
       throw new Error(`case ${entry.id}: "model" is not a serialized node`);
     }
-    cases.push({ id: entry.id, input: entry.input, model: entry.model, expected: entry.expected });
+    cases.push({
+      id: entry.id,
+      input: entry.input,
+      model: entry.model,
+      expected: entry.expected,
+      refusals: entry.refusals,
+    });
   }
   if (cases.length === 0) {
     throw new Error(

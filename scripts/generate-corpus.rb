@@ -69,7 +69,7 @@ module CorpusGenerator
   # 2 adds `defaults` (constructor-assigned field values) to each class entry.
   CENSUS_SCHEMA = "plurimath-corpus/census/2"
   EXCLUSIONS_SCHEMA = "plurimath-corpus/exclusions/1"
-  MANIFEST_SCHEMA = "plurimath-corpus/manifest/1"
+  MANIFEST_SCHEMA = "plurimath-corpus/manifest/2"
 
   INPUT_FORMAT = "asciimath"
   TARGET_FORMATS = %w[asciimath latex mathml].freeze
@@ -467,13 +467,22 @@ module CorpusGenerator
           "bundler" => lock[:bundled_with],
         },
         "sources" => lock[:sources].map do |source|
+          entry = { "kind" => source["kind"], "remote" => source["remote"],
+                    "gems" => source["specs"].uniq.size }
+          # A gem name is only worth recording where the name is what pins the
+          # build. For a `gem` source the lockfile already pins each gem by
+          # version, and `lockfile.sha256` above covers the whole resolution,
+          # so listing all of them added seventy-odd lines that prove nothing.
+          # A `path` or `git` source is different: nothing there is pinned by a
+          # version, so which gems it provides is the reproducibility fact, and
+          # the names stay.
+          #
           # `.uniq` because a lockfile lists one spec per platform variant, and
           # this field records which gems a source provides, not how many
           # builds of each. Without it ffi and nokogiri appeared eight times
           # apiece — noise that makes a manifest diff unreadable for no
           # information gained.
-          entry = { "kind" => source["kind"], "remote" => source["remote"],
-                    "gems" => source["specs"].uniq.sort }
+          entry["gem_names"] = source["specs"].uniq.sort unless source["kind"] == "gem"
           entry["revision"] = source["revision"] if source["revision"]
           entry
         end,

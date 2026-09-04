@@ -1,0 +1,147 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Emits oracle expectations for the formats the shared corpus does not carry
+# targets for (today: omml, html), so those renderers get the same executable
+# parity coverage the four P1 formats already have.
+#
+#   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
+#     scripts/generate-parity-fixtures.rb \
+#     --oracle /path/to/plurimath --format html
+#
+# `--format` is REQUIRED and generates exactly one format. This script used to
+# loop over every name in FORMATS, so asking for html also rewrote
+# test/formats/omml/parity-fixtures.json -- a fixture no spec on this branch
+# reads, resurrected by every regeneration.
+#
+# The oracle path MUST be a clean checkout of the pinned plurimath commit.
+# This script loads it through $LOAD_PATH and refuses to run against an
+# installed gem, because that silently answers from a different version --
+# a trap that has cost this project real time (PORTING-STANDARDS.md).
+
+require "json"
+require "optparse"
+
+GENERATOR_RELATIVE_PATH = "scripts/generate-parity-fixtures.rb"
+
+FORMATS = %w[omml html].freeze
+
+options = {
+  oracle: nil,
+  out: "test/formats",
+  format: nil,
+  allow_dirty: false,
+}
+OptionParser.new do |o|
+  o.on("--oracle PATH", "clean pinned plurimath checkout") { |v| options[:oracle] = v }
+  o.on("--out PATH", "output root (default test/formats)") { |v| options[:out] = v }
+  o.on("--format NAME", "exactly one of #{FORMATS.join('|')}") { |v| options[:format] = v }
+  o.on("--allow-dirty", "emit non-committable output from dirty checkouts") do
+    options[:allow_dirty] = true
+  end
+end.parse!
+
+abort "--oracle is required" unless options[:oracle]
+abort "--format is required, one of #{FORMATS.join(', ')}" unless options[:format]
+unless FORMATS.include?(options[:format])
+  abort "unknown --format #{options[:format].inspect}; known formats are #{FORMATS.join(', ')}"
+end
+format = options[:format]
+
+oracle = File.expand_path(options[:oracle])
+lib = File.join(oracle, "lib")
+abort "not a plurimath checkout: #{lib}" unless File.directory?(lib) && File.exist?(File.join(lib, "plurimath.rb"))
+
+$LOAD_PATH.unshift(lib)
+require "plurimath"
+require "plurimath/version"
+require_relative "render-fixture-provenance"
+
+unless Gem.loaded_specs.key?("plurimath")
+  abort "REFUSING: the plurimath gem is not activated. Re-run with " \
+        "BUNDLE_GEMFILE=#{oracle}/Gemfile mise x -- bundle exec ruby #{__FILE__} ..."
+end
+
+loaded = $LOADED_FEATURES.grep(%r{/plurimath\.rb\z}).first
+unless loaded&.start_with?(lib)
+  abort "REFUSING: loaded #{loaded.inspect}, not the pinned checkout at #{lib}. " \
+        "An installed gem answers from a different version."
+end
+
+# The ONE exception the oracle is documented to raise across this surface.
+# `Plurimath::Math.parse` funnels every StandardError into ParseError
+# (lib/plurimath/math.rb), and `Formula#wrap_render_error` does the same for
+# every `to_<format>` (lib/plurimath/math/formula.rb). So a ParseError is the
+# gem saying "I refuse this input"; anything else is a defect in this generator
+# or in the oracle. A blanket `rescue StandardError` here used to launder those
+# into ordinary "raises" rows, which the spec then ignored entirely -- a
+# generator typo would have read as 104 well-understood cases.
+ORACLE_REFUSAL = Plurimath::Math::ParseError
+
+dir = File.expand_path(File.join(options[:out], format))
+out = File.join(dir, "parity-fixtures.json")
+sidecar, provenance = RenderFixtureProvenance.prepare(
+  oracle: oracle,
+  payload_path: out,
+  generator_path: GENERATOR_RELATIVE_PATH,
+  allow_dirty: options[:allow_dirty],
+  corpus: true,
+)
+
+cases = CorpusGenerator.read_pin_cases.map do |c|
+  { group: c["group"], id: c["id"], input: c["input"] }
+end
+abort "REFUSING: zero pinned corpus cases found" if cases.empty?
+
+duplicates = cases.map { |c| c[:id] }.tally.select { |_, count| count > 1 }.keys
+abort "REFUSING: duplicate case ids in the corpus: #{duplicates.join(', ')}" unless duplicates.empty?
+
+rows = cases.map do |c|
+  row = { "group" => c[:group], "id" => c[:id], "input" => c[:input] }
+  formula = nil
+  begin
+    formula = Plurimath::Math.parse(c[:input], :asciimath)
+  rescue ORACLE_REFUSAL => e
+    row["raises"] = e.class.name
+    row["raisedIn"] = "parse"
+  end
+
+  unless formula.nil?
+    begin
+      row["expected"] = formula.public_send("to_#{format}")
+    rescue ORACLE_REFUSAL => e
+      row["raises"] = e.class.name
+      row["raisedIn"] = "render"
+    end
+  end
+  row
+end
+
+rendered = rows.count { |r| r.key?("expected") }
+raised = rows.count { |r| r.key?("raises") }
+abort "REFUSING: #{format} produced zero rendered cases" if rendered.zero?
+abort "REFUSING: #{format} produced zero raising cases" if raised.zero?
+unless rendered + raised == rows.length
+  abort "REFUSING: #{rows.length} rows but #{rendered} rendered + #{raised} raised; a row is both or neither"
+end
+
+payload = {
+  "$comment" => "GENERATED by #{GENERATOR_RELATIVE_PATH}. Do not edit.",
+  "schema" => "plurimath-corpus/render-parity/1",
+  "format" => format,
+  "caseCount" => rows.length,
+  "renderedCount" => rendered,
+  "raisedCount" => raised,
+  "cases" => rows,
+}
+FileUtils.mkdir_p(dir)
+payload_bytes = "#{JSON.pretty_generate(payload)}\n"
+File.binwrite(out, payload_bytes)
+RenderFixtureProvenance.write_manifest(
+  sidecar_path: sidecar,
+  payload_path: out,
+  payload_schema: payload.fetch("schema"),
+  payload_bytes: payload_bytes,
+  provenance: provenance,
+)
+puts "#{format}: #{rows.length} cases, #{rendered} rendered, #{raised} raised -> #{out}, #{sidecar}"

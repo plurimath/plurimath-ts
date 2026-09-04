@@ -502,6 +502,92 @@ A HASH in the slot is the one non-string that survives the gem's
 (probe-latex-degenerate.rb, 2026-08-10). Same policy as the color rule and
 the AsciiMath Left/Right refusal.
 
+### Table rejects non-Array row carriers at render
+
+**Trigger: a supported consumer needs to pass a `Table` value other than the
+exported `NodeSequence`, or that public type is widened with explicit semantics
+for repeatable and one-shot iterables.**
+
+Ruby's `Table#initialize` stores its value unchanged, and the renderers call
+`map` on it. On the clean pinned oracle at `00c52783`, an Array, `Set`, and
+`Enumerator` containing the same table row render byte-identically in the five
+formats probed here—AsciiMath, LaTeX, MathML, UnicodeMath, and HTML—including
+on a repeated render. `TableNode` also stores a
+non-Array carrier unchanged so construction does not run caller code, but the
+port rejects it at render with a typed `RenderError`. The exported
+`NodeSequence` admits arrays only, so typed callers cannot request this; only a
+cast, untyped JavaScript, or malformed structural data reaches it.
+
+Admitting arbitrary JavaScript iterables would create a wider contract with no
+one-to-one Ruby mapping. A JavaScript `Set` is repeatable but has no `map`, while
+a generator is one-shot even though the probed Ruby `Enumerator` renders
+repeatably. The port keeps the refusal loud until that API and repeated-render
+behaviour are chosen deliberately. The constructor and refusal are pinned in
+`test/core/nodes.spec.ts`; the measured Ruby HTML output is recorded beside
+those pins.
+
+### Symbol refuses an opaque object during construction
+
+**Trigger: `SymbolNode` can store an opaque value without coercing or invoking
+caller code, then refuse its unreproducible spelling at render as a typed
+`RenderError`.**
+
+Ruby's `Symbols::Symbol#initialize` applies `sym&.to_s`. For an arbitrary object
+that produces a process-specific heap-address string, so the corresponding HTML
+bytes cannot be regenerated. The port's `symbolValue` instead raises `TypeError`
+while constructing `SymbolNode`, which is safer than inventing bytes but breaches
+the supported hand-built-tree contract: invalid values should be stored and
+refused at render. The `symbol[0]=node` sweep row records both the unstable oracle
+output and this construction-time refusal until the value model can represent
+the raw input without executing it.
+
+### Number refuses opaque object bytes at HTML render
+
+**Trigger: the value model gains a deterministic Ruby-object spelling, or a
+supported consumer needs object-valued `NumberNode` input.**
+
+Ruby's `Number#initialize` stores an arbitrary object unchanged and its HTML
+renderer interpolates that object, producing a process-specific heap address.
+The port stores the value without invoking caller code, then raises a typed
+`RenderError` instead of inventing bytes. The `number[0]=node` degenerate-sweep
+row records the unstable oracle result and pins this deliberate refusal.
+
+### The degenerate-slot sweep detects a heap-address leak by re-probing, not by proof
+
+**Trigger: a Ruby-side value model exists for the class of value `Symbol#initialize`
+and `Number`'s HTML renderer expose here (an opaque object whose `to_s` is a
+process-specific heap address), or `probe-degenerate-slots.rb` needs a stronger
+guarantee than two same-process allocations disagreeing.**
+
+`probe-degenerate-slots.rb` renders each degenerate cell twice and marks the row
+`"stable": false` (dropping `output`) when the two renders disagree in bytes --
+the mechanism that catches the `Symbol` and `Number` heap-address cases above,
+and the ones this covers. Two allocations a few statements apart in one process
+overwhelmingly will not share an address, but nothing proves they cannot: if a
+future Ruby, GC setting, or object shape ever let two such allocations coincide,
+a heap-address string would be committed to the fixture as `"stable": true`, and
+the class-B regeneration gate would then fail non-deterministically across
+machines rather than catching it at generation time. Measured today: exactly the
+two rows expected to hit `Object#to_s` (`number[0]=node`, `symbol[0]=node`) are
+marked unstable, and no others. Strengthening this into a real proof needs either
+a value model that can represent "an opaque, non-reproducible Ruby object" without
+executing `to_s` at all, or a probe that inspects the object rather than
+re-rendering it -- deferred until one of those exists.
+
+### Legacy generated fixtures lack reproducible sidecars
+
+**Trigger: before the pinned oracle moves, or before any of these fixture bytes
+or their consuming assertions change.**
+
+The AsciiMath, LaTeX, and MathML `render-sweep.json` files are one-off oracle
+captures without checked-in generators or adjacent provenance manifests. The
+Ox contract has a generator, `scripts/generate-xml-fixtures.rb`, but only
+partial provenance embedded in `test/xml/ox-contract.expected.json`. They
+predate the section 7 sidecar contract. `test/gates/payload-validation.spec.ts`
+names the three format fixtures and the XML generator as explicit legacy gaps,
+so another untracked generated artifact cannot silently join them. Replacing
+these captures with deterministic generators and full sidecars closes the gap.
+
 ### HTML: Fenced refuses generated and nondeterministic paren paths
 
 **Trigger: the HTML symbol-data slice is generated, or a corpus case needs one of

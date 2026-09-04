@@ -10,16 +10,26 @@ import { describe, expect, it } from "vitest";
 import { RenderError } from "../../../src/core/errors";
 import type { MathNode, NodeKind, NodeParameter } from "../../../src/core/nodes";
 import {
+  AbsNode,
+  BarNode,
   BaseNode,
   BinaryFunctionNode,
+  CeilNode,
+  DdotNode,
+  DotNode,
+  FencedNode,
+  FloorNode,
   FormulaNode,
   FracNode,
+  HatNode,
   IntNode,
   MrowNode,
   NaryNode,
+  NormNode,
   NumberNode,
   ObraceNode,
   OintNode,
+  OverleftrightarrowNode,
   OversetNode,
   ProdNode,
   SumNode,
@@ -27,12 +37,15 @@ import {
   TableNode,
   TernaryFunctionNode,
   TextNode,
+  TildeNode,
   UbraceNode,
+  UlNode,
   UnaryFunctionNode,
   UndersetNode,
+  VecNode,
 } from "../../../src/core/nodes";
 import { parseAsciimath } from "../../../src/formats/asciimath/index";
-import { ROOT_CONTEXT } from "../../../src/formats/omml/render";
+import { createRenderContext, ROOT_CONTEXT } from "../../../src/formats/omml/render";
 import { serializeRendered } from "../../../src/formats/omml/render-shared";
 import { toOmml, toOmmlWithoutMathTag } from "../../../src/formats/omml/renderer";
 
@@ -121,6 +134,7 @@ const ROOT_OPEN =
   'xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">';
 
 const RUN_X = xml("<m:r>", "  <m:t>x</m:t>", "</m:r>");
+const RUN_Y = xml("<m:r>", "  <m:t>y</m:t>", "</m:r>");
 const PUBLIC_X = xml(
   ROOT_OPEN,
   "  <m:oMath>",
@@ -511,6 +525,147 @@ const OBRACE_ACCENT = xml(
   "  </m:e>",
   "</m:acc>",
 );
+
+const indentFragment = (fragment: string, spaces: number): readonly string[] =>
+  fragment
+    .trimEnd()
+    .split("\n")
+    .map((line) => `${" ".repeat(spaces)}${line}`);
+
+const literalLimitXml = (position: "Low" | "Upp", limit: string, base: string): string =>
+  xml(
+    `<m:lim${position}>`,
+    `  <m:lim${position}Pr>`,
+    "    <m:ctrlPr>",
+    "      <w:rPr>",
+    '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "        <w:i/>",
+    "      </w:rPr>",
+    "    </m:ctrlPr>",
+    `  </m:lim${position}Pr>`,
+    "  <m:e>",
+    ...indentFragment(base, 4),
+    "  </m:e>",
+    "  <m:lim>",
+    "    <m:r>",
+    `      <m:t>${limit}</m:t>`,
+    "    </m:r>",
+    "  </m:lim>",
+    `</m:lim${position}>`,
+  );
+
+const styledRun = (value: string): string =>
+  xml(
+    "<m:r>",
+    "  <m:rPr>",
+    '    <m:sty m:val="p"/>',
+    "  </m:rPr>",
+    `  <m:t>${value}</m:t>`,
+    "</m:r>",
+  );
+
+const fencedXml = (
+  open: string | null,
+  close: string | null,
+  body: string | null = RUN_X,
+): string =>
+  xml(
+    "<m:d>",
+    "  <m:dPr>",
+    ...(open === null ? [] : [`    <m:begChr m:val="${open}"/>`]),
+    '    <m:sepChr m:val=""/>',
+    ...(close === null ? [] : [`    <m:endChr m:val="${close}"/>`]),
+    "  </m:dPr>",
+    ...(body === null ? ["  <m:e/>"] : ["  <m:e>", ...indentFragment(body, 4), "  </m:e>"]),
+    "</m:d>",
+  );
+
+const absoluteXml = (includeOpen: boolean, includeClose: boolean, body = RUN_X): string =>
+  xml(
+    "<m:d>",
+    "  <m:dPr>",
+    "    <w:rPr>",
+    '      <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "    </w:rPr>",
+    ...(includeOpen ? ['    <m:begChr m:val="|"/>'] : []),
+    ...(includeClose ? ['    <m:endChr m:val="|"/>'] : []),
+    '    <m:sepChr m:val=""/>',
+    "    <m:grow/>",
+    "  </m:dPr>",
+    "  <m:e>",
+    ...indentFragment(body, 4),
+    "  </m:e>",
+    "</m:d>",
+  );
+
+const barXml = (): string =>
+  xml(
+    "<m:bar>",
+    "  <m:barPr>",
+    '    <m:pos m:val="top"/>',
+    "    <m:ctrlPr>",
+    "      <w:rPr>",
+    '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "        <w:i/>",
+    "      </w:rPr>",
+    "    </m:ctrlPr>",
+    "  </m:barPr>",
+    "  <m:e>",
+    ...indentFragment(RUN_X, 4),
+    "  </m:e>",
+    "</m:bar>",
+  );
+
+const accentXml = (character: string): string =>
+  xml(
+    "<m:acc>",
+    "  <m:accPr>",
+    `    <m:chr m:val="${character}"/>`,
+    "  </m:accPr>",
+    "  <m:e>",
+    ...indentFragment(RUN_X, 4),
+    "  </m:e>",
+    "</m:acc>",
+  );
+
+const scriptXml = (position: "Sub" | "Sup", value: string): string => {
+  const slot = position === "Sup" ? "sup" : "sub";
+  return xml(
+    `<m:s${position}>`,
+    `  <m:s${position}Pr>`,
+    "    <m:ctrlPr>",
+    "      <w:rPr>",
+    '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "        <w:i/>",
+    "      </w:rPr>",
+    "    </m:ctrlPr>",
+    `  </m:s${position}Pr>`,
+    "  <m:e>",
+    ...indentFragment(RUN_X, 4),
+    "  </m:e>",
+    `  <m:${slot}>`,
+    "    <m:r>",
+    `      <m:t>${value}</m:t>`,
+    "    </m:r>",
+    `  </m:${slot}>`,
+    `</m:s${position}>`,
+  );
+};
+
+function expectAtBothDisplayStyles(
+  node: MathNode,
+  displayed: string,
+  inline: string = displayed,
+): void {
+  for (const [displaystyle, expected] of [
+    [true, displayed],
+    [false, inline],
+  ] as const) {
+    const context = createRenderContext(displaystyle);
+    expect(serializeRendered(context.render(node))).toBe(expected);
+    expect(serializeRendered(context.insert(node))).toBe(expected);
+  }
+}
 
 function expectDirectAndInsertion(node: MathNode, expected: string): void {
   expect(toOmmlWithoutMathTag(node)).toBe(expected);
@@ -1539,6 +1694,1064 @@ describe("OMML Ruby-falsy parity", () => {
   });
 });
 
+describe("OMML delimiters and accents slice", () => {
+  const canonicalCases = [
+    ["abs", new AbsNode({ parameterOne: symbol() }), absoluteXml(true, true)],
+    ["ceil", new CeilNode({ parameterOne: symbol() }), fencedXml("⌈", "⌉")],
+    ["floor", new FloorNode({ parameterOne: symbol() }), styledRun("⌊") + RUN_X + styledRun("⌋")],
+    ["norm", new NormNode({ parameterOne: symbol() }), styledRun("∥") + RUN_X + styledRun("∥")],
+    [
+      "fenced",
+      new FencedNode({
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: [symbol()],
+        parameterThree: symbol(),
+      }),
+      fencedXml("x", "x"),
+    ],
+    ["bar", new BarNode({ attributes: {}, parameterOne: symbol() }), barXml()],
+    ["dot", new DotNode({ attributes: {}, parameterOne: symbol() }), limitXml("Upp", ".")],
+    ["ddot", new DdotNode({ attributes: {}, parameterOne: symbol() }), limitXml("Upp", "..")],
+    [
+      "hat",
+      new HatNode({ attributes: {}, parameterOne: symbol() }),
+      limitXml("Upp", "&#x302;"),
+      scriptXml("Sup", "&#x302;"),
+    ],
+    ["tilde", new TildeNode({ attributes: {}, parameterOne: symbol() }), limitXml("Upp", "~")],
+    ["vec", new VecNode({ attributes: {}, parameterOne: symbol() }), limitXml("Upp", "→")],
+    ["ul", new UlNode({ attributes: {}, parameterOne: symbol() }), limitXml("Low", "&#x332;")],
+    [
+      "overleftrightarrow",
+      new OverleftrightarrowNode({ attributes: {}, parameterOne: symbol() }),
+      limitXml("Upp", "⃡"),
+    ],
+  ] as const;
+
+  it.each(canonicalCases)(
+    "pins %s direct and insertion bytes at both displaystyle values",
+    (_kind, node, displayed, inline = displayed) => {
+      expectAtBothDisplayStyles(node, displayed, inline);
+      expect(toOmmlWithoutMathTag(node)).toBe(displayed);
+    },
+  );
+
+  it.each([
+    [
+      "ddot",
+      new DdotNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Upp",
+      "..",
+    ],
+    [
+      "dot",
+      new DotNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Upp",
+      ".",
+    ],
+    [
+      "overleftrightarrow",
+      new OverleftrightarrowNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Upp",
+      "⃡",
+    ],
+    [
+      "tilde",
+      new TildeNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Upp",
+      "~",
+    ],
+    [
+      "ul",
+      new UlNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Low",
+      "&#x332;",
+    ],
+    [
+      "vec",
+      new VecNode({
+        attributes: {},
+        parameterOne: new HatNode({ attributes: {}, parameterOne: symbol() }),
+      }),
+      "Upp",
+      "→",
+    ],
+  ] as const)(
+    "renders nested Hat in %s's forced display context",
+    (_kind, node, position, limit) => {
+      const expected = literalLimitXml(position, limit, limitXml("Upp", "&#x302;"));
+      const inline = createRenderContext(false);
+      expect(serializeRendered(inline.render(node))).toBe(expected);
+      expect(serializeRendered(inline.insert(node))).toBe(expected);
+    },
+  );
+
+  it.each([
+    ["abs", new AbsNode(), absoluteXml(true, true, xml("<m:r>", "  <m:t>&#8203;</m:t>", "</m:r>"))],
+    ["ceil", new CeilNode(), fencedXml("⌈", "⌉", null)],
+    ["floor", new FloorNode(), styledRun("⌊") + styledRun("⌋")],
+    ["norm", new NormNode(), styledRun("∥") + styledRun("∥")],
+    ["fenced", new FencedNode({ options: {} }), fencedXml(null, null, null)],
+    ["bar", new BarNode({ attributes: {} }), xml("<m:r>", "  <m:t>&#xaf;</m:t>", "</m:r>")],
+    ["dot", new DotNode({ attributes: {} }), xml("<m:r>", "  <m:t>.</m:t>", "</m:r>")],
+    ["ddot", new DdotNode({ attributes: {} }), xml("<m:r>", "  <m:t>..</m:t>", "</m:r>")],
+    ["hat", new HatNode({ attributes: {} }), xml("<m:r>", "  <m:t>^</m:t>", "</m:r>")],
+    ["tilde", new TildeNode({ attributes: {} }), xml("<m:r>", "  <m:t>~</m:t>", "</m:r>")],
+    ["vec", new VecNode({ attributes: {} }), xml("<m:r>", "  <m:t>&#x2192;</m:t>", "</m:r>")],
+    ["ul", new UlNode({ attributes: {} }), xml("<m:r>", "  <m:t>&#x332;</m:t>", "</m:r>")],
+    [
+      "overleftrightarrow",
+      new OverleftrightarrowNode({ attributes: {} }),
+      xml("<m:r>", "  <m:t>&#x20e1;</m:t>", "</m:r>"),
+    ],
+  ])("pins %s's deterministic empty direct and insertion bytes", (_kind, node, expected) => {
+    expectDirectAndInsertion(node as MathNode, expected as string);
+  });
+
+  it.each([
+    ["bar", new BarNode({ attributes: { accent: true }, parameterOne: symbol() }), accentXml("‾")],
+    ["dot", new DotNode({ attributes: { accent: true }, parameterOne: symbol() }), accentXml(".")],
+    [
+      "ddot",
+      new DdotNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      limitXml("Upp", ".."),
+    ],
+    ["hat", new HatNode({ attributes: { accent: true }, parameterOne: symbol() }), accentXml("̂")],
+    [
+      "tilde",
+      new TildeNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      accentXml("˜"),
+    ],
+    ["vec", new VecNode({ attributes: { accent: true }, parameterOne: symbol() }), accentXml("→")],
+    [
+      "overleftrightarrow",
+      new OverleftrightarrowNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      accentXml("⃡"),
+    ],
+    [
+      "ul/accent",
+      new UlNode({ attributes: { accent: true }, parameterOne: symbol() }),
+      limitXml("Low", "&#x332;"),
+    ],
+    [
+      "ul/accentunder",
+      new UlNode({ attributes: { accentunder: true }, parameterOne: symbol() }),
+      UNDERSET_ACCENT,
+    ],
+  ])("pins %s's non-uniform accent option behavior", (_kind, node, expected) => {
+    expectAtBothDisplayStyles(node as MathNode, expected as string);
+  });
+
+  it("pins Hat's measured hide_function_name branch without deriving a class label", () => {
+    expectAtBothDisplayStyles(
+      new HatNode({ attributes: {}, hideFunctionName: true, parameterOne: symbol() }),
+      RUN_X,
+    );
+  });
+
+  it.each([
+    [
+      "abs/open",
+      new AbsNode({ openParen: symbol(), parameterOne: symbol() }),
+      absoluteXml(false, true),
+    ],
+    [
+      "abs/close",
+      new AbsNode({ closeParen: symbol(), parameterOne: symbol() }),
+      absoluteXml(true, false),
+    ],
+    [
+      "abs/both",
+      new AbsNode({ closeParen: symbol(), openParen: symbol(), parameterOne: symbol() }),
+      absoluteXml(false, false),
+    ],
+    [
+      "ceil/open",
+      new CeilNode({ openParen: symbol(), parameterOne: symbol() }),
+      fencedXml(null, "⌉"),
+    ],
+    [
+      "ceil/close",
+      new CeilNode({ closeParen: symbol(), parameterOne: symbol() }),
+      fencedXml("⌈", null),
+    ],
+    [
+      "ceil/both",
+      new CeilNode({ closeParen: symbol(), openParen: symbol(), parameterOne: symbol() }),
+      fencedXml(null, null),
+    ],
+    [
+      "floor/open",
+      new FloorNode({ openParen: symbol(), parameterOne: symbol() }),
+      RUN_X + styledRun("⌋"),
+    ],
+    [
+      "floor/close",
+      new FloorNode({ closeParen: symbol(), parameterOne: symbol() }),
+      styledRun("⌊") + RUN_X,
+    ],
+    [
+      "floor/both",
+      new FloorNode({ closeParen: symbol(), openParen: symbol(), parameterOne: symbol() }),
+      RUN_X,
+    ],
+    [
+      "norm/open",
+      new NormNode({ openParen: symbol(), parameterOne: symbol() }),
+      RUN_X + styledRun("∥"),
+    ],
+    [
+      "norm/close",
+      new NormNode({ closeParen: symbol(), parameterOne: symbol() }),
+      styledRun("∥") + RUN_X,
+    ],
+    [
+      "norm/both",
+      new NormNode({ closeParen: symbol(), openParen: symbol(), parameterOne: symbol() }),
+      RUN_X,
+    ],
+  ])("pins %s's measured delimiter suppression", (_case, node, expected) => {
+    expectAtBothDisplayStyles(node as MathNode, expected as string);
+  });
+
+  it("renders Fenced's deterministic scalar, empty-composite, and bare-body cases", () => {
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: symbol("("),
+        parameterTwo: symbol(),
+        parameterThree: symbol(")"),
+      }),
+      fencedXml("(", ")"),
+    );
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: new NumberNode({ value: "1" }),
+        parameterTwo: [symbol()],
+        parameterThree: new NumberNode({ value: "2" }),
+      }),
+      fencedXml("1", "2"),
+    );
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: new TextNode({ parameterOne: "open" }),
+        parameterTwo: [symbol()],
+        parameterThree: new TextNode({ parameterOne: "close" }),
+      }),
+      fencedXml("open", "close"),
+    );
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: new SymbolNode(),
+        parameterTwo: [symbol()],
+        parameterThree: new NumberNode(),
+      }),
+      fencedXml(null, null),
+    );
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: new SymbolNode({ id: "Paren::Lround" }),
+        parameterTwo: [symbol()],
+        parameterThree: new SymbolNode({ id: "Paren::Rround" }),
+      }),
+      fencedXml("(", ")"),
+    );
+
+    for (const composite of [
+      new FormulaNode({ value: [] }),
+      new MrowNode({ value: [] }),
+      new TableNode({ options: {}, value: [] }),
+    ]) {
+      expectDirectAndInsertion(
+        new FencedNode({
+          options: {},
+          parameterOne: composite,
+          parameterTwo: [symbol()],
+          parameterThree: composite,
+        }),
+        fencedXml("[]", "[]"),
+      );
+    }
+
+    for (const composite of [
+      new FormulaNode({ value: ["x"] }),
+      new MrowNode({ value: ["x"] }),
+      new TableNode({ options: {}, value: ["x"] }),
+    ]) {
+      expectDirectAndInsertion(
+        new FencedNode({
+          options: {},
+          parameterOne: composite,
+          parameterTwo: [symbol()],
+          parameterThree: composite,
+        }),
+        fencedXml("[&quot;x&quot;]", "[&quot;x&quot;]"),
+      );
+    }
+
+    for (const kind of ["formula", "mrow", "table"] as const) {
+      const composite = { kind, value: [null] } as unknown as MathNode;
+      expectDirectAndInsertion(
+        new FencedNode({
+          options: {},
+          parameterOne: composite,
+          parameterTwo: [symbol()],
+          parameterThree: composite,
+        }),
+        fencedXml("[nil]", "[nil]"),
+      );
+    }
+  });
+
+  it("pins Fenced's explicit empty and two-child body shapes", () => {
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: symbol("("),
+        parameterTwo: [],
+        parameterThree: symbol(")"),
+      }),
+      fencedXml("(", ")", null),
+    );
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: symbol("("),
+        parameterTwo: [symbol("x"), symbol("y")],
+        parameterThree: symbol(")"),
+      }),
+      fencedXml("(", ")", RUN_X + RUN_Y),
+    );
+  });
+
+  it.each([
+    ["empty", "", "[&quot;&quot;]"],
+    ["quote", '"', String.raw`[&quot;\&quot;&quot;]`],
+    ["backslash", "\\", String.raw`[&quot;\\&quot;]`],
+    ["controls", "\0\u0007\b\t\n\v\f\r\u001b", String.raw`[&quot;\u0000\a\b\t\n\v\f\r\e&quot;]`],
+    ["hex controls", "\u000e\u001f\u007f", String.raw`[&quot;\u000E\u001F\u007F&quot;]`],
+    ["unicode", "π", "[&quot;π&quot;]"],
+    ["interpolation", "#{x} #@x #$x", String.raw`[&quot;\#{x} \#@x \#$x&quot;]`],
+  ])("pins Fenced's Ruby string #inspect spelling for %s", (_case, value, paren) => {
+    const composite = new FormulaNode({ value: [value] });
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: composite,
+        parameterTwo: [symbol()],
+        parameterThree: composite,
+      }),
+      fencedXml(paren, paren),
+    );
+  });
+
+  it("pins the delimiter values Fenced reads and the shapes it refuses", () => {
+    for (const [open, expected] of [
+      [new TextNode({ parameterOne: "open" }), "open"],
+      [new TextNode({ parameterOne: { a: "b" } }), "{&quot;a&quot; =&gt; &quot;b&quot;}"],
+      [
+        new TextNode({ parameterOne: ["a", 2, true, null] as never }),
+        "[&quot;a&quot;, 2, true, nil]",
+      ],
+      [
+        {
+          kind: "formula",
+          value: [5, true, null, ["a", 2], { a: "b" }],
+        } as unknown as MathNode,
+        "[5, true, nil, [&quot;a&quot;, 2], {&quot;a&quot; =&gt; &quot;b&quot;}]",
+      ],
+    ] as const) {
+      expectDirectAndInsertion(
+        new FencedNode({
+          options: {},
+          parameterOne: open,
+          parameterTwo: [symbol()],
+          parameterThree: symbol(")"),
+        }),
+        fencedXml(expected, ")"),
+      );
+    }
+
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new FencedNode({
+            options: {},
+            parameterOne: new FormulaNode({ value: [symbol()] }),
+            parameterTwo: [symbol()],
+            parameterThree: symbol(")"),
+          }),
+        ),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterOne: holds a "formula" node whose value contains node objects with nondeterministic Ruby #inspect addresses',
+      },
+    );
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new FencedNode({
+            options: {},
+            parameterOne: "(",
+            parameterTwo: [symbol()],
+            parameterThree: ")",
+          }),
+        ),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterOne: cannot read a value from the bare string "(" — the gem raises NoMethodError here',
+      },
+    );
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new FencedNode({
+            options: {},
+            parameterOne: new AbsNode({ parameterOne: symbol() }),
+            parameterTwo: [symbol()],
+            parameterThree: symbol(")"),
+          }),
+        ),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterOne: a "abs" node has no value reader — the gem raises NoMethodError here',
+      },
+    );
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new FencedNode({
+            options: {},
+            parameterOne: symbol("("),
+            parameterTwo: [null] as unknown as readonly MathNode[],
+            parameterThree: symbol(")"),
+          }),
+        ),
+      {
+        kind: "fenced",
+        message: "fenced.parameterTwo[0]: cannot insert nil — the gem raises NoMethodError here",
+      },
+    );
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new FencedNode({
+            options: {},
+            parameterOne: symbol("("),
+            parameterTwo: "x",
+            parameterThree: symbol(")"),
+          }),
+        ),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterTwo[0]: cannot insert the bare string "x" — the gem raises NoMethodError here',
+      },
+    );
+  });
+});
+
+/**
+ * `Ms` is the ONE `UnaryFunction` subclass the gem gives a value reader:
+ * `ms.rb:29-31` is `def value; parameter_one; end`. Measured over every class
+ * under `Plurimath::Math::Function` at `00c52783`, exactly three define
+ * `#value` — `Ms`, `Table` and `Text` — and the other two are already
+ * delimiter carriers here. So a blanket "a unary function has no value reader"
+ * refusal is false for this one class, and the gem really does render it.
+ *
+ * Measured at `00c52783`: `Fenced(Ms("open"), [x], nil)` gives
+ * `<m:begChr m:val="open"/>`, `Fenced(nil, [x], Ms("close"))` gives
+ * `<m:endChr m:val="close"/>`, and `Ms("&amp;#x28;")` gives
+ * `<m:begChr m:val="("/>` — the same two decodes every other delimiter gets.
+ */
+describe("OMML fenced Ms delimiters", () => {
+  const ms = (value: string) => new UnaryFunctionNode({ name: "Ms", parameterOne: value });
+
+  it("renders an Ms open delimiter, which the gem reads through Ms#value", () => {
+    expectDirectAndInsertion(fencedWithOpen(ms("open")), fencedXml("open", null));
+  });
+
+  it("renders an Ms close delimiter", () => {
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: null,
+        parameterTwo: [symbol()],
+        parameterThree: ms("close") as never,
+      }),
+      fencedXml(null, "close"),
+    );
+  });
+
+  it("decodes an Ms delimiter's entities twice, as it does every other delimiter", () => {
+    expectDirectAndInsertion(fencedWithOpen(ms("&amp;#x28;")), fencedXml("(", null));
+  });
+
+  it("still refuses a unary function that has no value reader", () => {
+    expectRefusal(
+      () => toOmmlWithoutMathTag(fencedWithOpen(new UnaryFunctionNode({ name: "Sin" }))),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterOne: a "unaryFunction" node named "Sin" has no value reader — the gem raises NoMethodError here',
+      },
+    );
+  });
+});
+
+/** A `Fenced` whose open delimiter is a hand-built carrier, with `x` for a body. */
+function fencedWithOpen(open: unknown): MathNode {
+  return new FencedNode({
+    options: {},
+    parameterOne: open as never,
+    parameterTwo: [symbol()],
+    parameterThree: null,
+  });
+}
+
+/** A `Formula` delimiter holding one list, which the attribute write inspects. */
+function fencedListDelimiter(value: readonly unknown[]): MathNode {
+  return fencedWithOpen({ kind: "formula", value });
+}
+
+/**
+ * `Fenced`'s delimiter attribute is entity-decoded TWICE, and both decodes
+ * change the bytes. `Utility.html_entity_to_unicode` runs on what
+ * `symbol_or_paren` returned (`fenced.rb:225`), and the XML wrapper runs it
+ * again on every attribute it writes (`ox_engine/element.rb:104-110`). The
+ * port did one decode and shipped `&#x28;` where the gem ships `(`.
+ *
+ * Every row below is the oracle's own `m:begChr` at `00c52783`, from
+ * `Fenced.new(Symbols::Symbol.new(value), [x], nil, {})`. The `&`-carrying
+ * outputs are verbatim: Ox escapes `<` inside an attribute and leaves `&`
+ * alone, so `&nope;` really does reach the file spelled `&nope;`.
+ */
+describe("OMML fenced delimiter entity decoding", () => {
+  it.each([
+    ["a literal paren", "(", "("],
+    ["one hex entity", "&#x28;", "("],
+    ["one decimal entity written twice", "&amp;#40;", "("],
+    ["a hex entity written twice", "&amp;#x28;", "("],
+    ["a hex entity written three times", "&amp;amp;#x28;", "&#x28;"],
+    ["one named entity", "&copy;", "©"],
+    ["a named entity written twice", "&amp;copy;", "©"],
+    ["a bare ampersand entity", "&amp;", "&"],
+    ["an ampersand entity written twice", "&amp;amp;", "&"],
+    ["a less-than entity written twice", "&amp;lt;", "&lt;"],
+    ["an entity the xhtml1 table does not have", "&nope;", "&nope;"],
+    ["an unknown entity written twice", "&amp;nope;", "&nope;"],
+    ["an astral entity written twice", "&amp;#x1F600;", "😀"],
+  ])("decodes %s", (_case, value, expected) => {
+    expectDirectAndInsertion(fencedWithOpen(new SymbolNode({ value })), fencedXml(expected, null));
+  });
+
+  it.each([
+    ["a surrogate entity", "&#xD800;", "invalid codepoint 0xD800 in UTF-8"],
+    ["a surrogate entity written twice", "&amp;#xD800;", "invalid codepoint 0xD800 in UTF-8"],
+    ["an out-of-range entity written twice", "&amp;#x110000;", "Invalid code point 1114112"],
+  ])("refuses %s, where the gem raises RangeError", (_case, value, detail) => {
+    expectRefusal(() => toOmmlWithoutMathTag(fencedWithOpen(new SymbolNode({ value }))), {
+      kind: "fenced",
+      message:
+        "fenced.parameterOne: the entities here name a code point UTF-8 cannot hold — " +
+        `the gem raises RangeError here (${detail})`,
+    });
+  });
+
+  it("decodes a list twice only when the list itself holds a bare ampersand", () => {
+    // `html_entity_to_unicode` returns its argument untouched unless
+    // `include?("&")` is true, and on a list that is a MEMBER test. So the
+    // first decode reaches the list's `#inspect` text only when some element
+    // IS "&" — and then the second decode sees what the first left behind.
+    expectDirectAndInsertion(
+      fencedListDelimiter(["&", "&amp;#x28;"]),
+      fencedXml("[&quot;&&quot;, &quot;(&quot;]", null),
+    );
+    expectDirectAndInsertion(
+      fencedListDelimiter(["x", "&amp;#x28;"]),
+      fencedXml("[&quot;x&quot;, &quot;&#x28;&quot;]", null),
+    );
+  });
+});
+
+/**
+ * `Nary#chr_value` reaches the operator through TWO decodes that happen at
+ * different moments, and only the second one reaches the attribute.
+ *
+ * `nary.rb:155-160` decodes once and tests THAT value as its suppression
+ * predicate — `first_value = Utility.html_entity_to_unicode(...)`, then
+ * `unless first_value == "∫"`. The attribute is decoded a second time when the
+ * document is written: `ox_engine/element.rb:105-107` runs every attribute
+ * through `html_entity_to_unicode` in `update_attrs`, and the Oga engine does
+ * the same at `oga/dumper.rb:90`. So the predicate reads decode^1 while the
+ * written value is decode^2, and an operator written double-encoded lands on
+ * opposite sides of the two.
+ *
+ * Every row below is the oracle's own output at `00c52783`, measured over
+ * `Nary(Symbol(v), x, x, x, {})`. The four double-encoded integrals are the
+ * regression: one collapsed decode makes them equal the suppressed operator
+ * and drops an element the gem emits.
+ *
+ * The pins are exact whole-document bytes. `toContain` cannot fail on a
+ * MISSING element — the exact shape of this defect, and why the earlier
+ * version of this block shipped green.
+ */
+describe("OMML Nary operator entity decoding", () => {
+  const naryWith = (value: string) =>
+    new NaryNode({
+      options: {},
+      parameterOne: new SymbolNode({ value }),
+      parameterTwo: symbol(),
+      parameterThree: symbol(),
+      parameterFour: symbol(),
+    });
+
+  /** `NARY_X`'s shape with the operator substituted, or no `m:chr` at all. */
+  const naryOperatorXml = (operator: string | null): string =>
+    xml(
+      "<m:nary>",
+      "  <m:naryPr>",
+      ...(operator === null ? [] : [`    <m:chr m:val="${operator}"/>`]),
+      '    <m:limLoc m:val="subSup"/>',
+      "    <m:ctrlPr>",
+      "      <w:rPr>",
+      '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+      "        <w:i/>",
+      "      </w:rPr>",
+      "    </m:ctrlPr>",
+      "  </m:naryPr>",
+      "  <m:sub>",
+      "    <m:r>",
+      "      <m:t>x</m:t>",
+      "    </m:r>",
+      "  </m:sub>",
+      "  <m:sup>",
+      "    <m:r>",
+      "      <m:t>x</m:t>",
+      "    </m:r>",
+      "  </m:sup>",
+      "  <m:e>",
+      "    <m:r>",
+      "      <m:t>x</m:t>",
+      "    </m:r>",
+      "  </m:e>",
+      "</m:nary>",
+    );
+
+  // Written operator -> the gem's `m:chr` value, or `null` where the gem
+  // suppresses the element. decode^1 is what the predicate tests.
+  it.each([
+    // decode^1 is already the integral: the gem suppresses.
+    ["\u222b", null],
+    ["&#x222b;", null],
+    ["&#x222B;", null],
+    ["&#8747;", null],
+    ["&int;", null],
+    // decode^1 is still an entity, so the gem does NOT suppress, and the
+    // written value is decode^2 \u2014 the integral itself.
+    ["&amp;#x222b;", "\u222b"],
+    ["&amp;#x222B;", "\u222b"],
+    ["&amp;#8747;", "\u222b"],
+    ["&amp;int;", "\u222b"],
+    // Operators unrelated to the suppressed one, decoded once and twice.
+    ["&#x28;", "("],
+    ["&amp;#x28;", "("],
+    ["&amp;copy;", "\u00a9"],
+    ["&amp;#x2211;", "\u2211"],
+  ] as const)("renders the operator written as %s", (written, expected) => {
+    expect(toOmmlWithoutMathTag(naryWith(written))).toBe(naryOperatorXml(expected));
+  });
+});
+
+/**
+ * Ruby's `String#inspect` escapes far more than the C0 controls and DEL the
+ * port used to escape. Past the named escapes it copies a character through
+ * only when `rb_enc_isprint` calls it printable, and that predicate reads
+ * Onigmo's Unicode tables: C1 controls, U+2028/U+2029, unassigned code points
+ * and noncharacters all escape, while NBSP, ZWSP, U+FEFF, U+061C, private use
+ * and emoji do not. The spelling is `\uXXXX` up to U+FFFF and `\u{XXXXX}`
+ * above it, and a run of escapes is never grouped.
+ *
+ * Each row is the oracle's own `m:begChr` at `00c52783`, from a `Formula`
+ * delimiter holding one string. The escaped rows are what the port used to get
+ * wrong: it emitted the raw character for every one of them.
+ */
+describe("OMML fenced delimiter Ruby #inspect escapes", () => {
+  it.each([
+    ["a C1 control at the low edge", [0x61, 0x80, 0x62], "a\\u0080b"],
+    ["NEL", [0x61, 0x85, 0x62], "a\\u0085b"],
+    ["a C1 control at the high edge", [0x61, 0x9f, 0x62], "a\\u009Fb"],
+    ["the line separator", [0x61, 0x2028, 0x62], "a\\u2028b"],
+    ["the paragraph separator", [0x61, 0x2029, 0x62], "a\\u2029b"],
+    ["an unassigned BMP code point", [0x61, 0x378, 0x62], "a\\u0378b"],
+    ["the code point just below the surrogates", [0x61, 0xd7ff, 0x62], "a\\uD7FFb"],
+    ["a noncharacter in the Arabic block", [0x61, 0xfdd0, 0x62], "a\\uFDD0b"],
+    ["a BMP noncharacter", [0x61, 0xfffe, 0x62], "a\\uFFFEb"],
+    ["a supplementary noncharacter", [0x61, 0x10fffe, 0x62], "a\\u{10FFFE}b"],
+    ["an unassigned supplementary code point", [0x61, 0x1000c, 0x62], "a\\u{1000C}b"],
+    [
+      "a run of escapes, which stays ungrouped",
+      [0x378, 0x379, 0x10fffe, 0x10ffff],
+      "\\u0378\\u0379\\u{10FFFE}\\u{10FFFF}",
+    ],
+    ["a hash before an escape, which stays bare", [0x23, 0x378], "#\\u0378"],
+  ] as [string, number[], string][])("escapes %s", (_case, codepoints, inspected) => {
+    expectDirectAndInsertion(
+      fencedListDelimiter([String.fromCodePoint(...codepoints)]),
+      fencedXml(`[&quot;${inspected}&quot;]`, null),
+    );
+  });
+
+  it.each([
+    ["a no-break space", 0xa0],
+    ["a zero-width space", 0x200b],
+    ["a byte-order mark", 0xfeff],
+    ["an Arabic letter mark", 0x61c],
+    ["a private-use code point", 0xf0000],
+    ["an emoji", 0x1f600],
+    ["an ideographic space", 0x3000],
+  ] as [string, number][])("copies %s through", (_case, codepoint) => {
+    const character = String.fromCodePoint(codepoint);
+    expectDirectAndInsertion(
+      fencedListDelimiter([`a${character}b`]),
+      fencedXml(`[&quot;a${character}b&quot;]`, null),
+    );
+  });
+
+  it("refuses a lone surrogate the gem would render as byte escapes", () => {
+    expectRefusal(
+      () => toOmmlWithoutMathTag(fencedListDelimiter([`a${String.fromCharCode(0xd800)}b`])),
+      {
+        kind: "fenced",
+        message:
+          'fenced.parameterOne[0]: a "formula" node contains the lone surrogate U+D800, ' +
+          "which this port refuses rather than emit the gem's byte escapes",
+      },
+    );
+  });
+});
+
+/**
+ * `attributes && attributes[:accent]` — the guard seven accent kinds open
+ * with. Both halves matter, and the port had both wrong: it read
+ * `attributes.accent` straight, so an absent or nil carrier died as a
+ * `TypeError` where the gem takes the no-accent branch, and a truthy non-hash
+ * read `undefined` and took that branch where the gem raises.
+ *
+ * Measured on the oracle at `00c52783` over all eight accent kinds and ten
+ * carriers each. `Ddot` is the control: it never reads attributes, so every
+ * carrier renders.
+ */
+describe("OMML accent attribute carriers", () => {
+  const accentKinds = ["bar", "dot", "hat", "tilde", "vec", "ul", "overleftrightarrow"];
+  const refusedCarriers: [label: string, carrier: unknown, described: string][] = [
+    ["an integer", 0, "a number"],
+    ["an empty string", "", 'the bare string ""'],
+    ["a list", [], "a list"],
+    ["true", true, "a boolean"],
+    ["a float", 1.5, "a number"],
+  ];
+
+  /** A hand-built accent node: the class constructors coerce `attributes` to a hash. */
+  const accent = (kind: string, attributes?: unknown): MathNode => {
+    const node: Record<string, unknown> = { kind, parameterOne: symbol() };
+    if (attributes !== undefined) node.attributes = attributes;
+    return node as unknown as MathNode;
+  };
+
+  it.each([...accentKinds, "ddot"])(
+    "takes %s's no-accent branch for an absent, nil or false carrier",
+    (kind) => {
+      const forEmptyHash = toOmmlWithoutMathTag(accent(kind, {}));
+      expect(toOmmlWithoutMathTag(accent(kind))).toBe(forEmptyHash);
+      expect(toOmmlWithoutMathTag(accent(kind, null))).toBe(forEmptyHash);
+      expect(toOmmlWithoutMathTag(accent(kind, false))).toBe(forEmptyHash);
+      expect(forEmptyHash).not.toContain("<m:acc>");
+      expect(forEmptyHash).not.toContain("<m:groupChr>");
+    },
+  );
+
+  it.each(
+    accentKinds.flatMap((kind) =>
+      refusedCarriers.map(([label, carrier, described]): [string, string, unknown, string] => [
+        kind,
+        label,
+        carrier,
+        described,
+      ]),
+    ),
+  )(
+    "refuses %s carrying %s, which the gem indexes and raises on",
+    (kind, _label, carrier, described) => {
+      const member = kind === "ul" ? "accentunder" : "accent";
+      expectRefusal(() => toOmmlWithoutMathTag(accent(kind, carrier)), {
+        kind,
+        message: `${kind}.attributes: cannot read :${member} from ${described} — the gem indexes it there and raises`,
+      });
+    },
+  );
+
+  it.each(refusedCarriers)(
+    "leaves Ddot rendering for %s, which it never reads",
+    (_label, carrier) => {
+      expect(toOmmlWithoutMathTag(accent("ddot", carrier))).toBe(
+        toOmmlWithoutMathTag(accent("ddot", {})),
+      );
+    },
+  );
+});
+
+/**
+ * `Fenced#to_omml_without_math_tag` wraps its body in
+ * `Formula.new(Array(parameter_two))`, and `Ceil` reaches the same line
+ * through `Fenced.new(lceil, Array(parameter_one), rceil)`. `Kernel#Array` is
+ * not `[value]`: it takes a Hash's PAIRS, so an empty options hash — which
+ * `NodeParameter` admits — collapses to an empty body rather than to an
+ * uninsertable object. Measured on the oracle at `00c52783`.
+ */
+describe("OMML Kernel#Array on the fenced body", () => {
+  it("renders an empty options hash as an empty body", () => {
+    expectDirectAndInsertion(
+      new FencedNode({
+        options: {},
+        parameterOne: symbol(),
+        parameterTwo: {} as never,
+        parameterThree: symbol(),
+      }),
+      fencedXml("x", "x", null),
+    );
+    expectDirectAndInsertion(
+      new CeilNode({ parameterOne: {} as never }),
+      fencedXml("⌈", "⌉", null),
+    );
+  });
+
+  it.each([
+    [
+      "fenced",
+      (): MathNode =>
+        new FencedNode({
+          options: {},
+          parameterOne: symbol(),
+          parameterTwo: { a: "b" } as never,
+          parameterThree: symbol(),
+        }),
+      "fenced.parameterTwo[0]",
+    ],
+    [
+      "ceil",
+      (): MathNode => new CeilNode({ parameterOne: { a: "b" } as never }),
+      "ceil.parameterOne[0]",
+    ],
+  ] as [string, () => MathNode, string][])(
+    "refuses the pair a one-entry hash becomes in %s",
+    (kind, build, at) => {
+      expectRefusal(() => toOmmlWithoutMathTag(build()), {
+        kind,
+        message: `${at}: cannot insert a list — the gem raises NoMethodError here`,
+      });
+    },
+  );
+});
+
+/**
+ * `symbol_or_paren` hands back `field&.value` untouched, and the attribute
+ * write sends `include?` and then `to_s` to whatever that is. `to_s` is
+ * identity on a String and `#inspect` on a list or a hash — so a `Table`
+ * delimiter holding a bare string renders that string unquoted, and one
+ * holding a hash renders the hash's inspection. The port refused both.
+ *
+ * `Formula` and `Mrow` differ, and not in the renderer: `Fenced#initialize`
+ * runs `ModelHelper.validate_left_right`, which sends `first` to the value of
+ * any `Math::Formula` among the three slots. Those two carriers therefore
+ * accept a list or a hash and raise on everything else, before rendering
+ * starts. `Table` is not a `Math::Formula` and is exempt. All measured on the
+ * oracle at `00c52783`.
+ */
+describe("OMML fenced delimiters that are not lists", () => {
+  it.each([
+    ["a bare string", "table", "raw", "raw"],
+    ["an empty string", "table", "", ""],
+    ["a hash", "table", { a: "b" }, "{&quot;a&quot; =&gt; &quot;b&quot;}"],
+    ["an empty hash", "table", {}, "{}"],
+    ["a doubly-encoded entity string", "table", "&amp;#x28;", "("],
+    ["a hash", "formula", { a: "b" }, "{&quot;a&quot; =&gt; &quot;b&quot;}"],
+    ["a hash", "mrow", { a: "b" }, "{&quot;a&quot; =&gt; &quot;b&quot;}"],
+  ] as [string, string, unknown, string][])(
+    "renders %s held by a %s carrier",
+    (_case, kind, value, expected) => {
+      expectDirectAndInsertion(fencedWithOpen({ kind, value }), fencedXml(expected, null));
+    },
+  );
+
+  it("drops the tag for a Table carrying no value at all", () => {
+    expectDirectAndInsertion(fencedWithOpen({ kind: "table", value: null }), fencedXml(null, null));
+  });
+
+  it("refuses a Table value the gem cannot send include? to", () => {
+    expectRefusal(() => toOmmlWithoutMathTag(fencedWithOpen({ kind: "table", value: 7 })), {
+      kind: "fenced",
+      message:
+        'fenced.parameterOne: a "table" node holds a number; the gem sends include? to it and raises NoMethodError here',
+    });
+  });
+
+  it.each([
+    ["formula", "a bare string", "raw", 'the bare string "raw"'],
+    ["formula", "a number", 7, "a number"],
+    ["formula", "nothing", null, "nil"],
+    ["mrow", "a bare string", "raw", 'the bare string "raw"'],
+  ] as [string, string, unknown, string][])(
+    "refuses a %s carrier holding %s, which the gem's constructor rejects",
+    (kind, _case, value, described) => {
+      expectRefusal(() => toOmmlWithoutMathTag(fencedWithOpen({ kind, value })), {
+        kind: "fenced",
+        message:
+          `fenced.parameterOne: a "${kind}" node holds ${described}, and the gem's Fenced ` +
+          "constructor sends `first` to it before rendering — it raises NoMethodError there",
+      });
+    },
+  );
+});
+
+/**
+ * `symbol_or_paren` branches on `is_a?(Math::Symbols::Paren)` — the class
+ * decides. `validate.ts` deliberately admits a concrete carrier with its
+ * identity slot omitted, because the bare carrier IS a Ruby class, so a
+ * `symbol` node can reach this renderer with no `id` at all. The port read
+ * `id.startsWith` unguarded and died as a `TypeError` wrapped in a
+ * `RenderError`; the gem treats such a carrier as the bare `Symbol`, which is
+ * not a Paren — measured, `Fenced.new(Symbols::Symbol.new("("), [x], nil, {})`
+ * emits `m:begChr m:val="("`.
+ */
+describe("OMML fenced delimiter carriers without an identity", () => {
+  it.each([
+    ["symbol", { kind: "symbol", value: "(" }, "("],
+    ["text", { kind: "text", parameterOne: "open" }, "open"],
+  ] as [string, unknown, string][])(
+    "reads the value off a bare %s carrier",
+    (_kind, carrier, expected) => {
+      expectDirectAndInsertion(fencedWithOpen(carrier), fencedXml(expected, null));
+    },
+  );
+});
+
+/**
+ * A recorded divergence, not a defect. Ruby's `#inspect` prints a recursion
+ * marker for a self-referential delimiter — measured on the oracle at
+ * `00c52783`, a `Table` holding a self-referential list emits
+ * `m:begChr m:val="[[...]]"` and one holding a self-referential hash emits
+ * `{"self" => {...}}` — while this port's global shape check rejects any
+ * cyclic tree before a renderer sees it. The divergence and the trigger that
+ * brings it back are in TODO.plan/deferred.md; this test pins the refusal so
+ * the divergence cannot drift silently into something else.
+ */
+describe("OMML fenced delimiter recursion markers", () => {
+  it("refuses a self-referential delimiter the gem prints a marker for", () => {
+    const list: unknown[] = [];
+    list.push(list);
+    const hash: Record<string, unknown> = {};
+    hash.self = hash;
+
+    for (const [value, path] of [
+      [list, "node.parameterOne.value[0]"],
+      [hash, "node.parameterOne.value.self"],
+    ] as [unknown, string][]) {
+      expectRefusal(() => toOmmlWithoutMathTag(fencedWithOpen({ kind: "table", value })), {
+        kind: "unknown",
+        message: `${path}: the tree cycles — the value here is also its own ancestor, so no walk of it can terminate`,
+      });
+    }
+  });
+});
+
+/**
+ * Every accent kind opens by asking whether it has a base at all. The gem asks
+ * with Ruby truthiness — `nil` and `false` both mean "no base" — and emits the
+ * accent character alone as a bare run. Measured on the oracle at `00c52783`:
+ * `Bar.new(nil)` and `Bar.new(false)` produce the same bare run, with no
+ * `m:bar` wrapper on either.
+ *
+ * The port asked `=== null || === undefined`, so `false` fell through to the
+ * accent path and wrapped a zero-width-space base in a full accent element.
+ * Eight kinds read the base through the same Ruby-truthiness helper, so they
+ * share this test.
+ */
+describe("OMML accents without a base", () => {
+  it.each([
+    ["bar", (v: NodeParameter) => new BarNode({ attributes: {}, parameterOne: v })],
+    ["hat", (v: NodeParameter) => new HatNode({ attributes: {}, parameterOne: v })],
+    ["dot", (v: NodeParameter) => new DotNode({ attributes: {}, parameterOne: v })],
+    ["ddot", (v: NodeParameter) => new DdotNode({ attributes: {}, parameterOne: v })],
+    ["tilde", (v: NodeParameter) => new TildeNode({ attributes: {}, parameterOne: v })],
+    ["vec", (v: NodeParameter) => new VecNode({ attributes: {}, parameterOne: v })],
+    ["ul", (v: NodeParameter) => new UlNode({ attributes: {}, parameterOne: v })],
+    [
+      "overleftrightarrow",
+      (v: NodeParameter) => new OverleftrightarrowNode({ attributes: {}, parameterOne: v }),
+    ],
+  ] as const)("renders %s the same for a false base as for nil", (_kind, build) => {
+    const forNil = toOmmlWithoutMathTag(build(null));
+    const forFalse = toOmmlWithoutMathTag(build(false as unknown as NodeParameter));
+    expect(forFalse).toBe(forNil);
+    expect(forFalse).not.toContain("&#8203;");
+  });
+});
+
+/**
+ * `Fenced` reads its delimiters through a deterministic `#inspect`, which walks
+ * a hash in insertion order. JavaScript hoists array-index keys ahead of
+ * everything inserted before them, so that order is already gone by the time
+ * the renderer sees the object and cannot be recovered at the emission site.
+ * The shared guard from `core/ruby-semantics` refuses rather than emit an order
+ * the gem would not produce.
+ */
+describe("OMML fenced delimiter hash ordering", () => {
+  it("refuses a delimiter carrier holding an integer-like key", () => {
+    const delimiters: Record<string, string> = {};
+    delimiters.named = "open";
+    delimiters["1"] = "close";
+    expect(Object.keys(delimiters)[0]).toBe("1");
+
+    const fenced = new FencedNode({
+      options: {},
+      parameterOne: new FormulaNode({ value: [delimiters as never] }),
+      parameterTwo: [symbol()],
+      parameterThree: symbol(")"),
+    });
+    expectRefusal(() => toOmmlWithoutMathTag(fenced), {
+      kind: "fenced",
+      message:
+        "fenced.parameterOne[0].1: integer-like hash keys are deferred (TODO.plan/deferred.md) " +
+        "because JavaScript object enumeration discards their insertion position, so Ruby hash " +
+        "emission order cannot be reproduced",
+    });
+  });
+});
+
 describe("generated OMML symbol-data deferral", () => {
   it("uses a named Symbol's explicit value only on insertion", () => {
     const node = new SymbolNode({ id: "Plus", value: "WRONG" });
@@ -1641,24 +2854,11 @@ describe("generated OMML symbol-data deferral", () => {
 
 describe("OMML partial refusal boundary", () => {
   const omittedKinds = [
-    "abs",
-    "bar",
-    "ceil",
     "color",
-    "ddot",
-    "dot",
-    "fenced",
-    "floor",
     "fontStyle",
-    "hat",
     "linebreak",
     "mpadded",
-    "norm",
-    "overleftrightarrow",
     "sqrt",
-    "tilde",
-    "ul",
-    "vec",
   ] as const satisfies readonly NodeKind[];
 
   it.each(omittedKinds)("refuses omitted kind %s", (kind) => {

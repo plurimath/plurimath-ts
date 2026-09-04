@@ -33,11 +33,19 @@
  *     outside this port's supported structural slot representation, so it
  *     is rejected with its class named.
  *   - the tree is finite: a node, list, or hash that is its own ancestor is
- *     rejected with the cycle's path — Ruby's serializers cannot produce a
- *     cyclic tree, and without this check the walk dies as `RangeError`
- *     instead of the `RenderError` this contract promises. Sharing without a
- *     cycle (the same object in two sibling slots) stays legal, because Ruby
- *     aliases nodes and arrays freely and renders such trees fine.
+ *     rejected with the cycle's path, because without this check the walk
+ *     dies as `RangeError` instead of the `RenderError` this contract
+ *     promises. One gem path does have an answer for a cycle rather than
+ *     looping, so this rejection is not free: `Fenced`'s OMML delimiters are
+ *     stringified through Ruby's `#inspect`, which prints a recursion marker
+ *     — measured on the oracle at `00c52783`, a `Table` delimiter holding a
+ *     self-referential list emits `m:begChr m:val="[[...]]"` and one holding
+ *     a self-referential hash emits `{"self" => {...}}`. This check runs
+ *     first and refuses both; the divergence is recorded with its trigger in
+ *     TODO.plan/deferred.md and pinned by the OMML renderer spec. Sharing
+ *     without a cycle (the same object in two sibling slots) stays legal,
+ *     because Ruby aliases nodes and arrays freely and renders such trees
+ *     fine.
  *   - an explicit `undefined` *entry* inside a list or hash is rejected:
  *     Ruby's only undefined analogue is the unassigned ivar, which is a
  *     missing field (legal, see below), never a present entry. `normalize`

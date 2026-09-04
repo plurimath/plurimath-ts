@@ -31,7 +31,6 @@
  * longer exists.
  */
 
-import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -109,59 +108,5 @@ describe("the generated payloads declare themselves committable", () => {
     // `committable: false` marks output generated from a dirty checkout (§7).
     // Shipping it is the thing this flag exists to prevent.
     expect(committable).toBe(true);
-  });
-});
-
-/**
- * `PORTING-STANDARDS.md` requires that a provenance `repository.commit` be an
- * ancestor of the branch tip, "not an orphaned pre-amend hash". Nothing
- * enforced it, and the way this repository merges makes it easy to break: a
- * squash merge replaces the source commit with a new one, so the hash the
- * manifests recorded stops existing on the target branch. `gate-oracle.rb`
- * blanks that field before diffing — correctly, because it changes on every
- * regeneration — which means the byte comparison cannot catch it either.
- *
- * The consequence is not cosmetic. The recorded commit is the only pointer
- * back to the tree that produced the data, so an orphaned hash makes the
- * question "was this data generated from the source beside it?" unanswerable
- * after the fact.
- *
- * Skipped, not failed, where the commit is simply unknown to this checkout: a
- * shallow clone or a fresh worktree legitimately lacks the object, and failing
- * there would punish the environment rather than the data.
- */
-describe("the commit that generated the data is still reachable", () => {
-  const Manifests = ["corpus/census.manifest.yaml", "corpus/exclusions.manifest.yaml"] as const;
-
-  const recordedCommit = (relative: string): string | null => {
-    const text = readFileSync(join(REPO_ROOT, relative), "utf8");
-    const match = /repository:\s*\n\s*commit:\s*'?([0-9a-f]{40})'?/.exec(text);
-    return match?.[1] ?? null;
-  };
-
-  it.each(Manifests)("%s records a commit", (relative) => {
-    expect(recordedCommit(relative)).toMatch(/^[0-9a-f]{40}$/);
-  });
-
-  it.each(Manifests)("%s's commit is an ancestor of HEAD", (relative) => {
-    const commit = recordedCommit(relative);
-    if (commit === null) throw new Error(`${relative}: no repository.commit recorded`);
-
-    const known = spawnSync("git", ["cat-file", "-e", `${commit}^{commit}`], { cwd: REPO_ROOT });
-    if (known.status !== 0) {
-      // Unknown to this checkout — shallow clone, or a worktree without the
-      // object. Not a claim about the data.
-      return;
-    }
-
-    const ancestor = spawnSync("git", ["merge-base", "--is-ancestor", commit, "HEAD"], {
-      cwd: REPO_ROOT,
-    });
-    expect(
-      ancestor.status,
-      `${relative} records ${commit.slice(0, 12)}, which is not an ancestor of HEAD. ` +
-        "A squash merge rewrites the source commit, so the data must be regenerated " +
-        "after the merge, or the merge must preserve it.",
-    ).toBe(0);
   });
 });

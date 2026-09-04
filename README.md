@@ -54,13 +54,16 @@ pnpm build       # tsdown -> dist (ESM + CJS + type declarations)
 ```
 
 `pnpm check` reads [`gates.json`](gates.json), which records every quality gate
-and the milestone at which it starts blocking. Gates are registered from the
-start and report as inactive until then, so nothing is silently skipped.
+and the milestone at which it starts blocking. Gates are registered before the
+project relies on them and report as inactive until then, so nothing is
+silently skipped.
 
-Class-B gates are the exception, and are not run by `pnpm check`: they compare
-generated data against a live checkout of the Ruby gem, so they need Ruby and the
-gem's bundle. They run from [`scripts/gate-oracle.rb`](scripts/gate-oracle.rb).
-Which of them are active depends on the milestone, like every other gate.
+Class-B gates are the exception, and are not run by `pnpm check`. The
+Ruby-and-Git unit gate runs in every pull request through
+`pnpm test:oracle-unit`; it needs no oracle checkout or gem bundle. Oracle
+integration gates need a clean Ruby gem checkout and its bundle; they run through
+[`scripts/gate-oracle.rb`](scripts/gate-oracle.rb). Which gates are active
+depends on the milestone, like every other gate.
 
 ## Copyright and license
 

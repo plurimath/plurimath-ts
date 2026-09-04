@@ -674,4 +674,38 @@ describe("the formula boundary decodes as often as the gem does", () => {
     // value, and the nil fell through to `null.map` as a laundered TypeError.
     expect(() => toUnicodemath(new FormulaNode({ value: null } as never))).toThrow(RenderError);
   });
+
+  it("refuses a value that is not a list, NAMING the slot", () => {
+    // A hand-built structural object is a supported input (ARCHITECTURE.md §5),
+    // and `assertMathNodeShape` waves a bare string or a number through a slot
+    // because Ruby nodes hold both elsewhere. `FormulaNode` cannot produce this
+    // shape — it wraps a non-Array as `[value]`, exactly as Ruby does — so the
+    // plain object is the only way in, and it is a way callers have.
+    //
+    // The gem reaches the same state through its own `attr_accessor`. Measured
+    // on the pinned oracle (00c52783), `f = Formula.new([]); f.value = ""` and
+    // `f.value = 0` raise `ParseError` in all five formats probed here, for
+    // `Formula` and `Mrow` alike — so refusing is right; the question is only
+    // whether the refusal says where.
+    //
+    // The message is asserted, not just the type: without the `Array.isArray`
+    // guard the map below still ends in a `RenderError`, because the renderer's
+    // entry point wraps whatever escapes — but it is the anonymous "rendering
+    // failed mid-walk — TypeError: children.map is not a function", which names
+    // no slot. The other five formats each name theirs, and this one is the
+    // only lane that ever laundered it.
+    const formula = { kind: "formula", value: "", displaystyle: true, leftRightWrapper: true };
+    expect(() => toUnicodemath(formula as never)).toThrow(RenderError);
+    expect(() => toUnicodemath(formula as never)).toThrow(
+      /^formula\.value: is the bare string "", not a list/,
+    );
+    const mrow = {
+      kind: "mrow",
+      value: 0,
+      displaystyle: true,
+      isMrow: true,
+      leftRightWrapper: true,
+    };
+    expect(() => toUnicodemath(mrow as never)).toThrow(/^mrow\.value: is a number, not a list/);
+  });
 });

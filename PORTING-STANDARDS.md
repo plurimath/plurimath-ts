@@ -44,6 +44,7 @@ branch and dirty, and probing it silently changes answers.
 | `Integer` | `number` | arbitrary precision; long binary/octal need `BigInt`. Hex literals keep their spelling verbatim. |
 | aliased arrays | copies | rules mutate shared arrays (`value.shift`); a defensive copy changes later reads in the same action. |
 | `/\-/` | `u`-flag regex | the `u` flag rejects identity escapes Ruby allows — throws at construction, not at parse. |
+| `x.is_a?(Array) ? x : [x]` | `[...x]` | a string, Set or Map is iterable in JS and is not an Array in Ruby, so the spread splits what Ruby wraps whole. `Formula.new("")` is `[""]` and raises; `[...""]` is `[]`, and the port rendered `""` for a tree the gem refuses — invented output, the one direction that is silent. Measure each class's storage contract first: Formula-like constructors guard with `Array.isArray` and wrap the rest, while `Table` shallow-copies Arrays and stores a non-Array carrier unchanged. Never spread a slot value. |
 
 ## Tests must be able to fail
 
@@ -86,10 +87,14 @@ description of an invariant either has an enforcement or says it is aspiration.
 - Data derived from the gem is generated, never hand-typed — 20 entries drift
   as surely as 3,000. Anything hand-maintained is a recorded exception with a
   trigger (`deferred.md`).
-- Provenance tells the truth: `committable: true` only from clean checkouts;
-  the two-step (commit sources → regenerate clean → amend) is the established
-  pattern; a provenance `repository.commit` must be an ancestor of the branch
-  tip, not an orphaned pre-amend hash.
+- Provenance tells the truth: `committable: true` only from clean checkouts.
+  Commit generator sources, regenerate from that clean source commit, then
+  commit generated outputs separately. The recorded
+  `generator.repository.commit` is generation-time traceability; squash merging
+  may make it non-ancestral, so it is not a landed-history identity constraint.
+  The enforced invariants are exact generator-input hashes, renderer inventory,
+  corpus and oracle pins, dependency/runtime/configuration metadata, payload
+  hashes, and byte-identical class-B regeneration.
 - Generators are deterministic: two runs into fresh directories,
   byte-identical, proven not assumed.
 

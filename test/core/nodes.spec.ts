@@ -9,6 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 import { EQUALITY_FIELDS, equals } from "../../src/core/equality";
+import { RenderError } from "../../src/core/errors";
 import {
   AbsNode,
   BinaryFunctionNode,
@@ -18,6 +19,7 @@ import {
   HatNode,
   hasNodeKind,
   type MathNode,
+  MrowNode,
   NODE_KINDS,
   type NodeKind,
   NumberNode,
@@ -28,6 +30,8 @@ import {
   UnaryFunctionNode,
 } from "../../src/core/nodes";
 import { NODE_SPECS, normalize, rubyClassName } from "../../src/core/normalize";
+import { assertMathNodeShape } from "../../src/core/validate";
+import { toHtml } from "../../src/formats/html/renderer";
 import {
   aliasIndex,
   buildNode,
@@ -186,6 +190,269 @@ describe("construction", () => {
     // The defaults are built per call, so two nodes never share one object.
     expect(new HatNode().attributes).not.toBe(new HatNode().attributes);
     expect(new FormulaNode().value).not.toBe(new FormulaNode().value);
+  });
+});
+
+/**
+ * A node-list slot is stored the way Ruby stores it, and refused at RENDER.
+ *
+ * Two separate facts, and the branch that landed this once conflated them.
+ *
+ * **1. Never SPREAD.** `[...value]` reads any JavaScript iterable as its
+ * elements; Ruby reads only an `Array` as one. Measured on the pinned oracle
+ * (`00c52783`, Ruby 4.0.1), in the five formats probed here: AsciiMath, LaTeX,
+ * MathML, UnicodeMath, and HTML:
+ *
+ * ```text
+ *                              gem stores      gem renders (html)
+ * Formula.new([sym])           [sym]           "a"
+ * Formula.new(sym)             [sym]           "a"
+ * Formula.new("")              [""]            !! ParseError
+ * Formula.new(Set[sym])        [Set[sym]]      !! ParseError
+ * Formula.new([sym].each)      [Enumerator]    !! ParseError
+ * Formula.new({"k" => sym})    [Hash]          !! ParseError
+ * ```
+ *
+ * A spread gave `[]` for the empty string and `[sym]` for the `Set`, so the
+ * port rendered `""` and `"a"` where the gem refuses outright — invented bytes,
+ * the one direction a parity defect must never run in.
+ *
+ * **2. The refusal belongs at RENDER.** ARCHITECTURE.md §5 and the `nodes.ts`
+ * module docs both promise permissive constructors: an invalid hand-built tree
+ * fails with `RenderError`, never a raw `TypeError`. An earlier fix for (1)
+ * threw `TypeError` from these helpers, which broke that promise for every
+ * format at once — and, because `Table`'s helper called `Array.from`, ran a
+ * caller's iterator inside a constructor, so a throwing iterator escaped
+ * `new TableNode` untyped. The gem never raises building any of these.
+ *
+ * So: the constructors store, default and shallow-copy, and nothing else. The
+ * refusal is `./validate` and the format renderers, and the oracle-backed
+ * byte-level proof is `test/formats/html/degenerate-slots.spec.ts`, whose
+ * `formula[0]=node`, `mrow[0]=node`, `formula[0]=empty-string`,
+ * `mrow[0]=empty-string` and `table[0]=empty-string` rows compare against the
+ * gem's own outcome for each.
+ */
+describe("a node-list slot is stored, never spread and never refused", () => {
+  const sym = () => new SymbolNode({ value: "a" });
+  const generator = () =>
+    (function* () {
+      yield sym();
+    })();
+
+  /** Every carrier the port can be handed, and what Ruby does with each. */
+  const carriers: readonly (readonly [string, () => unknown])[] = [
+    ["an array", () => [sym()]],
+    ["a bare node", () => sym()],
+    ["a bare string", () => ""],
+    ["a Set", () => new Set([sym()])],
+    ["a Map", () => new Map([["k", sym()]])],
+    ["a generator", generator],
+    ["a number", () => 0],
+    ["a boolean", () => false],
+    ["null", () => null],
+  ];
+
+  // `Formula` and its `Mrow` subclass share one `initialize`, so they share one
+  // policy: `@value = value.is_a?(Array) ? value : [value]` (`formula.rb:44`).
+  const wrappers: readonly (readonly [string, (value: unknown) => { value: unknown }])[] = [
+    ["FormulaNode", (value) => new FormulaNode({ value } as never)],
+    ["MrowNode", (value) => new MrowNode({ value } as never)],
+  ];
+
+  describe.each(wrappers)("%s", (_name, build) => {
+    it("wraps a bare string whole, as Ruby's `[value]` does", () => {
+      // `[...""]` is `[]` and `[..."ab"]` is `["a", "b"]`; neither is a list
+      // Ruby ever builds here.
+      expect(build("").value).toStrictEqual([""]);
+      expect(build("ab").value).toStrictEqual(["ab"]);
+    });
+
+    it("wraps a bare node whole, which the gem then RENDERS", () => {
+      // `Formula.new(sym).to_html` is `"a"` on the oracle. The port used to
+      // throw here, making it stricter than the gem for no reason.
+      const node = sym();
+      expect(build(node).value).toStrictEqual([node]);
+    });
+
+    const iterables: readonly (readonly [string, () => object])[] = [
+      ["a Set", () => new Set([sym()])],
+      ["a Map", () => new Map([["k", sym()]])],
+      ["a generator", generator],
+    ];
+    it.each(iterables)("wraps %s whole, rather than reading its elements", (_label, make) => {
+      // Identity, not deep equality: the claim is that the carrier itself became
+      // the single element, and a spread would have put its MEMBERS here.
+      const carrier = make();
+      const value = build(carrier).value as readonly unknown[];
+      expect(value).toHaveLength(1);
+      expect(value[0]).toBe(carrier);
+    });
+
+    it("never runs the caller's iterator", () => {
+      // Ruby's wrap touches nothing iterable. Reading one here would run a
+      // caller's code inside a constructor and let it escape untyped.
+      let asked = 0;
+      const carrier = {
+        [Symbol.iterator]() {
+          asked += 1;
+          throw new Error("the constructor consumed a lazy iterator");
+        },
+      };
+      expect(() => build(carrier)).not.toThrow();
+      expect(asked).toBe(0);
+    });
+
+    it("still copies an array, and still keeps nil apart from unset", () => {
+      const given = [sym()];
+      const node = build(given);
+      expect(node.value).toStrictEqual(given);
+      expect(node.value).not.toBe(given);
+      // Ruby has no `undefined`, so `Formula.new(nil)` wraps to `[nil]`; this
+      // port keeps assigned-nil apart from unset and stores `null`. The stored
+      // shape differs, the outcome does not — measured, both refuse in the same
+      // five formats probed above.
+      expect(build(null).value).toBeNull();
+    });
+
+    it.each(carriers)("builds without throwing when handed %s", (_label, make) => {
+      expect(() => build(make())).not.toThrow();
+    });
+  });
+
+  /**
+   * `Table#initialize` is NOT `Formula#initialize`: it assigns `@value = value`
+   * untouched (`function/table.rb:22-30`) and its renderers call `map` on
+   * whatever arrived, so a carrier renders in the gem when it answers `map` and
+   * yields renderable rows. Measured on the oracle with one `Tr` of one `Td`:
+   *
+   * ```text
+   * Table.new([tr], nil, nil, {})       <table><tr><td>a</td></tr></table>
+   * Table.new(Set[tr], nil, nil, {})    <table><tr><td>a</td></tr></table>
+   * Table.new([tr].each, nil, nil, {})  <table><tr><td>a</td></tr></table>
+   * Table.new({"k" => tr}, ...)         NoMethodError — Hash#map yields pairs
+   * Table.new("", nil, nil, {})         NoMethodError — String#map
+   * Table.new(tr, nil, nil, {})         NoMethodError — Tr#map
+   * ```
+   *
+   * The port refuses the `Set` and the `Enumerator` at render, where the gem
+   * renders them: a known divergence in the LOUD direction, and the price of
+   * not consuming an iterator at construction.
+   */
+  describe("TableNode stores its carrier untouched", () => {
+    const table = (value: unknown) => new TableNode({ value } as never);
+
+    it("copies an array, as every other list slot does", () => {
+      const given = [sym()];
+      const node = table(given);
+      expect(node.value).toStrictEqual(given);
+      expect(node.value).not.toBe(given);
+    });
+
+    const asGiven: readonly (readonly [string, () => unknown])[] = [
+      ["a Set", () => new Set([sym()])],
+      ["a Map", () => new Map([["k", sym()]])],
+      ["a bare string", () => ""],
+      ["a bare node", () => sym()],
+    ];
+    it.each(asGiven)("stores %s as it arrived — no wrap, no materialisation", (_label, make) => {
+      const given = make();
+      expect(table(given).value).toBe(given);
+    });
+
+    it("does not wrap a non-array the way Formula does", () => {
+      const set = new Set([sym()]);
+      expect(table(set).value).toBe(set);
+      expect(new FormulaNode({ value: set as never }).value).toStrictEqual([set]);
+    });
+
+    it("never runs the caller's iterator", () => {
+      // `Array.from` here consumed a lazy iterator at construction and let a
+      // throwing one escape `new TableNode` as its own untyped error. Ruby
+      // iterates at render, in `value.map`, and so must this.
+      let asked = 0;
+      const carrier = {
+        [Symbol.iterator]() {
+          asked += 1;
+          throw new Error("the constructor consumed a lazy iterator");
+        },
+      };
+      expect(() => table(carrier)).not.toThrow();
+      expect(asked).toBe(0);
+    });
+
+    it.each(carriers)("builds without throwing when handed %s", (_label, make) => {
+      expect(() => table(make())).not.toThrow();
+    });
+
+    it("keeps nil apart from unset", () => {
+      // `Table.new` defaults `value` to nil, so BOTH are nil here — unlike
+      // Formula, whose Ruby default is `[]`.
+      expect(table(null).value).toBeNull();
+      expect(new TableNode().value).toBeNull();
+    });
+  });
+
+  /**
+   * The other half of the contract: what the constructor no longer refuses is
+   * refused at render instead, as `RenderError` naming the slot.
+   *
+   * `assertMathNodeShape` is the entry-point check every renderer runs, and it
+   * rejects a class instance wherever it sits: this port's supported structural
+   * object slots admit nodes and plain records. Ruby's wider `Table` carrier
+   * behavior is the deliberate divergence recorded in `TODO.plan/deferred.md`.
+   * Carriers the shape check CANNOT see (a bare string, a number, a boolean)
+   * are legal slot values elsewhere in the model and are refused by each
+   * format's own list guard instead; those are pinned against the gem's own
+   * outcome in `test/formats/html/degenerate-slots.spec.ts`.
+   */
+  describe("the refusal lands at render, as RenderError", () => {
+    const objectCarriers: readonly (readonly [string, () => object])[] = [
+      ["a Set", () => new Set([sym()])],
+      ["a Map", () => new Map([["k", sym()]])],
+      ["a generator", generator],
+    ];
+
+    it.each(objectCarriers)("FormulaNode wrapping %s", (label, make) => {
+      const node = new FormulaNode({ value: make() as never });
+      expect(() => assertMathNodeShape(node, "html")).toThrow(RenderError);
+      expect(() => assertMathNodeShape(node, "html"), label).toThrow(/node\.value\[0\]/);
+    });
+
+    it.each(objectCarriers)("MrowNode wrapping %s", (label, make) => {
+      const node = new MrowNode({ value: make() as never });
+      expect(() => assertMathNodeShape(node, "html"), label).toThrow(RenderError);
+    });
+
+    it.each(objectCarriers)("TableNode storing %s", (label, make) => {
+      const node = new TableNode({ value: make() as never });
+      expect(() => assertMathNodeShape(node, "html")).toThrow(RenderError);
+      expect(() => assertMathNodeShape(node, "html"), label).toThrow(/node\.value/);
+    });
+
+    it("describes the port's supported shape without misreporting Ruby's", () => {
+      const node = new TableNode({ value: new Set([sym()]) as never });
+      expect(() => assertMathNodeShape(node, "html")).toThrow(
+        /this port's supported structural objects are nodes and plain records/,
+      );
+    });
+
+    it("a throwing iterator is refused at render, and never invoked before it", () => {
+      let asked = 0;
+      const carrier = {
+        [Symbol.iterator]() {
+          asked += 1;
+          throw new Error("the walk consumed a lazy iterator");
+        },
+      };
+      // A plain object: `assertMathNodeShape` walks its own enumerable string
+      // keys (it has none) and passes, exactly as it would for an options hash.
+      // The format's table guard is what refuses it, and neither reads
+      // `Symbol.iterator`.
+      const node = new TableNode({ value: carrier as never });
+      expect(() => assertMathNodeShape(node, "html")).not.toThrow();
+      expect(() => toHtml(node)).toThrow(RenderError);
+      expect(asked).toBe(0);
+    });
   });
 });
 

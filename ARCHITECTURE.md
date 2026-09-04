@@ -897,8 +897,8 @@ never skipped or absent (activation matrix below).
 - **Package isolation** (§3): assertions on the **built `dist` artifact** —
   ESM import, CJS loading with named-export parity, emitted declarations, and
   every export condition — not merely a source-level bundle. Only the
-  are-the-types-wrong check runs against a real `npm pack`. (The root's
-  default export is asserted only once the compat class exists, §4.)
+  are-the-types-wrong check runs against a real `npm pack`. The root's default
+  export is asserted too, against `dist`, now that the compat class exists (§4).
 - **Adversarial inputs**: deep nesting, unmatched fences, long token runs —
   clean failures, bounded time.
 - **Layer boundaries, types, lint** (§8).
@@ -966,9 +966,14 @@ Lifecycle rules:
 | Peer review, phase sign-off | C | every phase — **checklist, not registry** (§9) |
 
 Export-shape note for the isolation gate: every entry is asserted through its
-**named** exports and CJS loading. The root's `require(...).default`
-assertion activates only when the compat class lands — it is deliberately
-absent at `P0` (§4), so asserting it there would fail by construction.
+**named** exports and CJS loading, and — where the entry promises one — its
+**default** export. The root's `require(...).default` assertion was deliberately
+absent at `P0`, because the compat class it returns did not exist and asserting
+it would have failed by construction. It landed with that class (§4), and is
+checked against the built artifact rather than the source: `import Plurimath
+from "@plurimath/plurimath"` is the one entry point every plurimath-js consumer
+uses, and a miswired export-map target would ship the wrong file while a
+source-importing spec stayed green.
 
 Raw Parslet parse-tree parity is a **plurimath-ts implementation gate** (it
 proves pegkit reproduces Parslet), not a normative requirement for the shared

@@ -25,25 +25,28 @@ elements, control properties). Exercises the XML layer harder than MathML does.
 **HTML renderer.** The smaller of the two; mostly `<i>`, `<sub>`, `<sup>`
 and table markup.
 
-**Compat class.** Its declaration target is open: published
-`@plurimath/plurimath@0.2.2` has six methods, while source head `ce297e2` has
-seven. Their `toMathml` signatures and one constructor-format spelling also
-differ (`03-compat-class.md`; `open-decisions.md`). After the maintainer chooses,
-a declaration fixture freezes that surface. One runtime test per method is
+**Compat class.** The frozen `plurimath-js` surface — constructor plus seven
+methods — becomes buildable once several renderers exist. Its declaration
+target is settled: source head `ce297e2`, not the published
+`@plurimath/plurimath@0.2.2` declarations, which carry six methods, a
+`toMathml` that takes no argument, and `mahtml` where source head says
+`unicode`. This package has published nothing, so it has no compatibility debt
+and no reason to inherit that typo (`03-compat-class.md`; `open-decisions.md`).
+A declaration fixture freezes that surface. One runtime test per method is
 **not** enough to hold it:
 
-- both candidate constructors take six formats, but published `0.2.2` says
-  `mahtml` where source head says `unicode`. On the plan as it stands, only
-  AsciiMath input exists at P2, so one constructs and five raise
-  `UnsupportedFormatError`. Which is which is part of the staged contract, so
-  it is asserted per format rather than assumed;
+- the constructor takes six formats — `asciimath`, `latex`, `mathml`, `html`,
+  `unicode`, `omml`. On the plan as it stands, only AsciiMath input exists at
+  P2, so one constructs and five raise `UnsupportedFormatError`. Which is which
+  is part of the staged contract, so it is asserted per format rather than
+  assumed;
 - `toDisplay(lang)` dispatches on its argument. The gem's `MATH_ZONE_TYPES`
   has five entries — omml, latex, mathml, asciimath, unicodemath — plus an
   invalid-type error path, so it needs six assertions, not one. Direct native
   Ruby string calls validate and then fall through to `"|_ Math zone\n"`; the
   fixture strategy records that quirk separately from Opal-wrapper expectations;
-- `toMathml` is tested with no argument if published `0.2.2` is selected; if
-  source head is selected, omitted, false, and true are tested.
+- `toMathml(intent?)` carries the compat surface's only optional argument, so
+  omitted, explicit false, and true are all tested.
 
 It is only *complete* at 1.0.
 
@@ -68,9 +71,9 @@ AsciiMath *to* everything, which is the most useful early capability.
 - UnicodeMath's context rules (mini-sized scripts, accents, primes) were the
   risk this phase expected to carry; it landed in P1 instead, and those rules
   are pinned by the UnicodeMath parity suite.
-- The compat class must not drift from the maintainer-selected declaration
-  target. Published artifacts and source head are separate evidence and must not
-  be substituted for each other (`03-compat-class.md`).
+- The compat class must not drift from the settled declaration target, source
+  head `ce297e2`. Published artifacts and source head are separate evidence and
+  must not be substituted for each other (`03-compat-class.md`).
 
 ## Exit criteria
 
@@ -79,11 +82,11 @@ AsciiMath *to* everything, which is the most useful early capability.
       each. The
       reader asserts a nonzero case count per target, and that it equals the
       group's own case count — so a single token case cannot satisfy this.
-- [ ] Selected compat declaration fixture passing, plus: the constructor
-      asserted for all six selected formats (constructs, or raises
+- [ ] Compat declaration fixture passing, plus: the constructor asserted for
+      all six source-head formats (constructs, or raises
       `UnsupportedFormatError`); `toDisplay` across its five recognized values,
       the invalid-type path, and a separate record of the native-Ruby string
-      quirk; the selected `toMathml` call matrix; every other selected method at
+      quirk; `toMathml` omitted, explicit false, and true; every other method at
       least once.
 - [ ] Isolation assertions extended to each new subpath.
 - [ ] Packaging review done and the first `0.x` published.

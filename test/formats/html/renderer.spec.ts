@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { RenderError } from "../../../src/core/errors";
+import { MissingSymbolDataError, RenderError } from "../../../src/core/errors";
 import {
   AbsNode,
   BarNode,
@@ -518,8 +518,17 @@ describe("HTML own-kind rendering", () => {
         ),
       {
         kind: "fenced",
+        // Not a data gap this slice can close: `symbol_or_paren(lang: :html)`
+        // takes the MathML payload (`fenced.rb:324-334`), which differs from
+        // `Paren#to_html` on 13 of the 24 Paren classes — measured, oracle
+        // 00c52783 — and the mathml table is forbidden in the ./html bundle.
         message:
-          'fenced.parameterOne: named paren "Paren::Lround" needs generated HTML symbol data',
+          'fenced.parameterOne: named paren "Paren::Lround" needs generated HTML symbol ' +
+          "data for the fenced paren slot, which is the gem's MathML payload " +
+          "(Paren#to_mathml_without_math_tag(...).nodes.first, fenced.rb:324-334) " +
+          "and not Paren#to_html — measured, they differ on 13 of the 24 Paren " +
+          "classes, and the mathml table this slice would need is forbidden in " +
+          "the ./html bundle",
       },
     );
 
@@ -720,13 +729,33 @@ describe("HTML measured boundary refusals", () => {
     );
   });
 
-  it("refuses a named symbol whose generated HTML value is deferred to a later increment", () => {
+  it("renders a named symbol from the generated table, ignoring any value override", () => {
+    // `Symbols::Plus#to_html` answers its static string whatever the
+    // constructor was given: measured on the pinned oracle, `Plus.new("ZZ")`,
+    // `Comma.new("ZZ")` and `Sigma.new("ZZ")` each ignore the override. HTML
+    // has no value-dependent id at all — the generator's own census names
+    // `Comma` and `Plus` for mathml only (`generated/context-axes.ts`).
     for (const value of [undefined, "WRONG", "&#x2b;"]) {
-      expectHtmlError(() => toHtml(new SymbolNode({ id: "Plus", value })), {
-        kind: "symbol",
-        message: 'Symbol "Plus" needs generated HTML data, which belongs to phase two',
-      });
+      expect(toHtml(new SymbolNode({ id: "Plus", value }))).toBe("&#x2b;");
     }
+    expect(toHtml(new SymbolNode({ id: "Comma", value: "WRONG" }))).toBe("&#x2c;");
+    expect(toHtml(new SymbolNode({ id: "Sigma", value: "WRONG" }))).toBe("&#x3c3;");
+  });
+
+  it("refuses an id the generated table does not carry, as MISSING_SYMBOL_DATA", () => {
+    // The one deliberate non-RenderError throw on this walk. It reaches the
+    // caller intact rather than being wrapped by `toHtml`'s boundary, exactly
+    // as the latex renderer's does.
+    let thrown: unknown;
+    try {
+      toHtml(new SymbolNode({ id: "NoSuchSymbolClass" }));
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(MissingSymbolDataError);
+    expect((thrown as MissingSymbolDataError).code).toBe("MISSING_SYMBOL_DATA");
+    expect((thrown as MissingSymbolDataError).symbolId).toBe("NoSuchSymbolClass");
+    expect((thrown as MissingSymbolDataError).format).toBe("html");
   });
 
   it("refuses a non-string Text value instead of silently dropping it", () => {

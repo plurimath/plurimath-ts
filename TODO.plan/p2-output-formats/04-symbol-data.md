@@ -439,6 +439,79 @@ The measured claim is narrower: the `1,459`-row static OMML map supplies every
 named symbol payload used by the shared symbol wrapper. A future run on the
 landed OMML stack must count the cases it changes.
 
+### Measured after HTML consumption
+
+The projection above was arithmetic over a structural probe. This is the
+execution it asked for, run from the HTML consumption slice with the symbol
+table wired in.
+
+`[html-corpus]` re-measured the same `90` reachable pinned cases: `63`
+rendered and `27` threw (exit `0`), against `35`/`55` before. So the data
+moved `28` cases, not the projected `35`. The gap is the named-fence half,
+and the projection's premise for it was wrong.
+
+**The fenced named-paren slot does not read HTML symbol data.**
+`symbol_or_paren(field, lang: :html)` (`function/fenced.rb:324-334`) sends a
+`Math::Symbols::Paren` down the `:mathml` branch —
+`field.to_mathml_without_math_tag(intent, options:).nodes.first` — so the
+payload is the MathML text, not `Paren#to_html`. Measured live over all `24`
+`Paren` subclasses on the pinned oracle (exit `0`), the two disagree on `13`
+of them: each class hand-writes its mathml as either `ox_element(tag) <<
+encoded` (the entity DECODED) or `<< paren_value` (the entity RAW), and no
+rule relates the two. `Paren::Lbbrack#to_html` is `"&#x27e6;"` where its
+mathml text is `"⟦"`; `Paren::CloseParen` answers `"&#x3017;"` to both. End
+to end, the gem renders `Fenced(Lbbrack, [x], Rbbrack).to_html` as
+`<i>⟦</i>x<i>⟧</i>` (exit `0`).
+
+`src/generated/html/symbols.ts` therefore cannot serve that slot, and
+`src/generated/mathml/symbols.ts` — which can — is forbidden in the `./html`
+bundle by `scripts/gate-package.mjs`, correctly. The `7` eligible named-fence
+cases stay refused, by name, until the generator emits an HTML-owned column
+carrying the gem's `symbol_or_paren(lang: :html)` value for the `Paren::*`
+rows. That is a generator slice, not a consumption one; it is the reason the
+`35` did not land, and it belongs beside slice 5 below rather than inside
+this one.
+
+The corpus split after consumption, from the same run (exit `0`):
+
+| refusal | cases |
+|---|---:|
+| named fence payload (Paren, needs the MathML-owned column) | 8 |
+| BinaryFunction alias | 14 |
+| UnaryFunction alias | 4 |
+| TernaryFunction alias | 1 |
+
+The `8` is the projected `7` plus `mixed-function-definition`, whose masked
+`BinaryFunction::Power` blocker the paren refusal still hides; the binary
+column is correspondingly `14` rather than `15`. Against the parity fixture,
+which counts `88` gem-renderable cases rather than the probe's `90`
+reachable ones, the port renders `64` and refuses `24`
+(`test/formats/html/parity-target.ts`). Every one of the `28` ids that left
+`PORT_REFUSES` was verified byte-identical to its gem fixture; one case,
+`text-unitsml-valid`, renders and does not match, and it is the pre-existing
+UnitsML divergence already recorded in `KNOWN_DIVERGENCES`.
+
+`[dist-sizes]` around the consumption change, ESM and CJS closure bytes
+(exit `0` both runs; the before run measured the same tree with the four
+changed renderer sources restored to their pre-change content):
+
+| subpath | ESM before | ESM after | CJS before | CJS after |
+|---|---:|---:|---:|---:|
+| `.` | 92,705 | 92,705 | 116,544 | 116,544 |
+| `./core` | 92,705 | 92,705 | 116,543 | 116,543 |
+| `./asciimath` | 476,672 | 476,672 | 502,770 | 502,770 |
+| `./html` | 82,637 | 126,303 | 129,175 | 172,602 |
+| `./latex` | 149,570 | 149,570 | 196,061 | 196,061 |
+| `./mathml` | 271,875 | 271,875 | 317,810 | 317,810 |
+| `./unicodemath` | 203,304 | 203,304 | 248,834 | 248,834 |
+
+No existing subpath grew. `./html` gained `43,666` ESM bytes, close to the
+`43,127` unminified bytes of `src/generated/html/symbols.ts`, and its
+`126,303` sits `37,537` bytes under the `163,840` ceiling — no overage to
+accept. `package-isolation` was re-run with the table reachable from the
+subpath and passed, reporting `./html`'s ESM artifact clean at `2` chunks and
+`50` source modules.
+
 ### Recommended slice order
 
 1. **Generator contract and source commit.** Extend the existing generator's

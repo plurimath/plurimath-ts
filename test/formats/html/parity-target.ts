@@ -44,58 +44,30 @@ export const KNOWN_DIVERGENCES: Readonly<
  * commit that earns it.
  */
 export const PORT_REFUSES: ReadonlySet<string> = new Set([
-  "colour-in-sum",
-  "fence-round-single",
-  "fence-round-expression",
-  "fence-square-pair",
   "fence-curly-single",
+  "fence-round-expression",
+  "fence-round-single",
   "fence-round-triple",
-  "fence-over-number",
-  "font-mixed",
-  "frac-fenced-numerator",
-  "frac-fenced-denominator",
-  "frac-sum-of-fracs",
-  "mixed-implicit-product",
-  "mixed-greek-sequence",
-  "mixed-function-definition",
+  "fence-square-pair",
   "mixed-binomial-square",
+  "mixed-function-definition",
   "mixed-sum-of-cubes",
-  "mod-simple",
-  "mod-numeric",
   "mod-in-expression",
-  "nary-log-base",
+  "mod-numeric",
+  "mod-simple",
   "nary-lim",
-  "nary-sum-bounded",
-  "nary-prod-bounded",
-  "operator-plus",
-  "operator-asterisk",
-  "operator-minus",
-  "operator-equals",
-  "operator-plus-chain",
-  "permissive-trailing-caret",
+  "nary-log-base",
   "permissive-unclosed-paren",
-  "permissive-unopened-paren",
-  "permissive-closing-run",
-  "permissive-bare-dollar",
-  "permissive-frac-then-operator",
-  "power-square",
-  "power-fenced-exponent",
-  "subscript-fenced",
   "power-and-subscript",
   "power-exponential",
+  "power-fenced-exponent",
   "power-of-two",
   "power-over-number",
-  "root-sqrt-expression",
-  "root-sqrt-pythagoras",
+  "power-square",
   "root-cube",
-  "symbol-greek-alpha",
-  "symbol-greek-pi",
-  "symbol-greek-sigma",
-  "symbol-infinity",
-  "unary-sin-fenced",
+  "root-sqrt-pythagoras",
   "unary-cos-product",
-  "whitespace-around-operator",
-  "whitespace-in-subscript",
+  "unary-sin-fenced",
 ]);
 
 /**
@@ -104,7 +76,7 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  * Derived from `PORT_REFUSES`, and cross-checked against it by the spec: the
  * two disagree only when one was edited without the other.
  */
-export const RENDERED_BASELINE = 36;
+export const RENDERED_BASELINE = 64;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared

@@ -76,6 +76,11 @@ describe("the subpaths actually work end to end", () => {
   });
 
   it("renders a parsed formula as HTML", () => {
+    // Measured against the pinned oracle, not guessed:
+    //   Plurimath::Math.parse("abs(x)", :asciimath).to_html
+    //     => "<i>abs</i><i>x</i>"
+    // `abs` is one of the 36 pinned corpus cases HTML renders today; a case
+    // needing generated HTML symbol data would raise here instead.
     expect(html.toHtml(asciimath.parseAsciimath("abs(x)"))).toBe("<i>abs</i><i>x</i>");
   });
 

@@ -7,7 +7,7 @@
  *
  *   1. every published subpath loads under ESM and CJS with its named exports
  *   2. each subpath's bundled graph contains only what it is allowed to
- *   3. publint passes, and attw checks a real `npm pack`
+ *   3. publint and attw both pass, each against a real packed tarball
  *
  * Executable subpaths are read from package.json#exports. Every one must have
  * non-empty export and graph policies below, so adding a subpath without both
@@ -109,8 +109,9 @@ const EXPECTED_EXPORTS = {
 /**
  * Entries a subpath must never pull in, keyed by subpath — the slim-bundle
  * guarantee of ARCHITECTURE.md §3, checked against the built `dist` and its
- * sourcemaps rather than against import statements. Only the attw step below
- * runs against a real `npm pack`.
+ * sourcemaps rather than against import statements. The publint and attw steps
+ * below are the ones that pack the package; this graph check reads `dist`
+ * directly.
  *
  * ARCHITECTURE.md:187-193 and :249-255 define a format's ownership across
  * `formats/<F>/`, `render/<kind>/<F>.ts`, and `generated/<F>/`. Deriving those

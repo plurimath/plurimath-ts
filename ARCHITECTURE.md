@@ -268,6 +268,9 @@ inspects what shipped rather than what was imported. `/unicodemath` joined
 them (2026-08-21, #33) on the same terms: a text format like `/latex`, so its
 forbidden set carries the XML layer and the grammar alongside the other three
 formats, and the boundary gate's inventory now reads 38 kinds x 4 formats.
+`/html` joined them on the same terms: output only, so like `/latex` its
+forbidden set carries both the grammar and the XML layer, its markup being
+built as strings rather than through the element tree.
 
 ## 4. Public API
 
@@ -278,6 +281,7 @@ formats, and the boundary gate's inventory now reads 38 kinds x 4 formats.
                                       (today core; convenience + compat when they land)
 @plurimath/plurimath-ts/core        → FormulaNode, node types, errors
 @plurimath/plurimath-ts/asciimath   → parseAsciimath, toAsciimath
+@plurimath/plurimath-ts/html        → toHtml (partial coverage; parser when ported)
 @plurimath/plurimath-ts/latex       → toLatex (parser when ported)
 @plurimath/plurimath-ts/mathml      → toMathml (parser when ported)
 @plurimath/plurimath-ts/unicodemath → toUnicodemath (parser when ported)

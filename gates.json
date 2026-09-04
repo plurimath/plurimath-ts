@@ -37,7 +37,7 @@
       "class": "A",
       "activatesAt": "P0",
       "run": "pnpm gate:package",
-      "description": "Built ESM/CJS loads for every published code entry, exact exports for format entries, and forbidden-layer checks for configured non-root entries, including HTML, plus publint; only attw runs npm pack"
+      "description": "Built ESM/CJS loads and exact exports for every published code entry, forbidden-layer checks for configured non-root entries, plus publint and attw; both of those pack the package first"
     },
     {
       "id": "runtime-boundary",

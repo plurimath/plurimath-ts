@@ -24,9 +24,14 @@ drift apart silently.
 ## Status
 
 Early development. The AsciiMath vertical has landed — corpus, model, grammar
-and transform — along with four renderers, exported as the `./asciimath`,
-`./latex`, `./mathml` and `./unicodemath` subpaths. The package is still `private`, and nothing
-is published to npm under this name yet.
+and transform — along with five renderers, exported as the `./asciimath`,
+`./html`, `./latex`, `./mathml` and `./unicodemath` subpaths. The package is still
+`private`, and nothing is published to npm under this name yet.
+
+`./html` is published at partial coverage: 36 of the 88 pinned corpus cases the
+gem renders come back byte-identical today, and the rest raise `RenderError`
+naming what is missing — the generated HTML symbol data, which is a later work
+item. Addition, exponentiation and named parentheses are among the refusals.
 
 Correctness is gated rather than asserted: a registry of quality gates activates
 in milestones. The current one is recorded as `currentMilestone` in

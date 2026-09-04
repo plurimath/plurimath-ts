@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
  * Runs every class-A gate that is active at the repository's current
- * milestone (ARCHITECTURE.md §7). Class-B gates need a Ruby oracle checkout
- * and live in scripts/gate-oracle.rb; class-C evidence is human and lives in the
- * phase-exit checklist.
+ * milestone (ARCHITECTURE.md §7). Class-B gates are Ruby-backed and run through
+ * their own commands; class-C evidence is human and lives in the phase-exit
+ * checklist.
  *
  * Failure semantics, per §7:
  *   - active gate whose runner fails      -> FAIL

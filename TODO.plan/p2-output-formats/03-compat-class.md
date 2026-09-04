@@ -2,11 +2,14 @@
 
 ## Why
 
-P2 needs a maintainer-selected `plurimath-js` compatibility target before the first
-experimental release. Two candidates are now measured: the declarations published in
+P2 needs a `plurimath-js` compatibility target before the first experimental release.
+Two candidates were measured: the declarations published in
 `@plurimath/plurimath@0.2.2` and the declarations generated from source head `ce297e2`.
 They differ in method count, the `toMathml` signature, and one constructor-format
-spelling. The runtime contract is also wider than one happy-path call per method
+spelling.
+
+**Both choices are SETTLED as of 2026-09-04: source head `ce297e2`, and
+`readonly data: FormulaNode`.** See "Settled" below. The runtime contract is also wider than one happy-path call per method
 (`TODO.plan/p2-output-formats/README.md:25-43`).
 
 This item compares the wrapper at `/home/apple/ruby_gems/plurimath-js` commit
@@ -14,6 +17,21 @@ This item compares the wrapper at `/home/apple/ruby_gems/plurimath-js` commit
 `@plurimath/plurimath@0.2.2` declarations (`package.json:2-12`). The wrapper's Plurimath submodule is
 the gitlink `68564b20de4ade7c7ea60e6c3d62352489931df0`; the current Ruby output oracle is the
 separate clean checkout at `00c52783877b38f6b8e6e109f1803f96bb34fc62`.
+
+## Settled
+
+**Declaration target: source head `ce297e2`.** This package has published nothing, so
+it carries no compatibility debt to any consumer and no reason to inherit a defect it
+is not bound by. `mahtml` exists only in a TypeScript declaration, so it is
+compile-time only; freezing the fixture against it would make a typo permanent in
+exchange for nothing. Consequences for the fixture: seven methods including
+`toUnicodemath()`, `toMathml(intent?: boolean)`, and `unicode` in the `Format` union.
+
+`mahtml` is logged for upstream repair in `~/ruby_gems/plurimath/PORT-FINDINGS.md`.
+Upstream work is deliberately not started yet.
+
+**`data`: expose `readonly data: FormulaNode`.** Reasoning under "The `data` property"
+below.
 
 ## Scope
 
@@ -349,7 +367,7 @@ source head, runtime tests must cover omitted, explicit `false`, and `true`; if 
 maintainer selects published `0.2.2`, the compat declaration and calls must expose only
 the zero-argument form.
 
-#### The unresolved `data` property
+#### The `data` property — SETTLED
 
 The measured class declarations expose public writable
 `data: Opal.Plurimath.Math.ParserResult`; source head assigns the parser result in the
@@ -358,14 +376,15 @@ constructor (`src/index.ts:4-9`), and the published declaration is visible in
 Opal runtime value, so this port cannot reproduce its type or behavior
 (`TODO.plan/open-decisions.md:35-43`; `ARCHITECTURE.md:367-372`).
 
-Do not decide this in implementation. The maintainer's two recorded options are:
+**Settled 2026-09-04: expose name-compatible `readonly data: FormulaNode`.** Same
+property name, this port's model behind it. A consumer that READS `.data` gets something
+meaningful; one that WRITES it breaks under either option, so exposing it strictly
+dominates omitting it. `ARCHITECTURE.md` §11 already recommended this.
 
-1. expose name-compatible `readonly data: FormulaNode`; or
-2. omit `data` and document that the compat surface is method-exact, not object-exact.
+The rejected option was omitting `data` and documenting the surface as method-exact
+rather than object-exact.
 
-The declaration fixture must include the chosen `data` result. Until the maintainer makes
-both open choices, the fixture cannot honestly freeze either the selected method surface
-or the complete public instance shape.
+The declaration fixture records this result.
 
 ### Declaration fixture strategy
 
@@ -408,11 +427,9 @@ and the eventual `data` choice together.
 
 Beyond writing the class itself, the measured blockers are:
 
-- **Choose `data`.** The decision is due before P2 and remains open
-  (`TODO.plan/open-decisions.md:9-17,35-43`).
-- **Choose the declaration target.** Published `0.2.2` and source head differ in three
-  measured ways, including the likely-defective published `mahtml` spelling; the
-  maintainer must choose before the fixture is written (`TODO.plan/open-decisions.md`).
+- ~~**Choose `data`.**~~ Settled: `readonly data: FormulaNode`.
+- ~~**Choose the declaration target.**~~ Settled: source head `ce297e2`, so seven
+  methods, `toMathml(intent?: boolean)`, and `unicode` rather than `mahtml`.
 - **Build and pin the diagnostic display layer.** The port has none of the five
   `toDisplay` branches today; the JS source census above found 16/16/16/17/16
   format-specific definitions, so this is not a one-switch wrapper.
@@ -468,10 +485,11 @@ explicitly says the UnitsML decision does not affect P0-P2
 
 ## Done when
 
-- [ ] The maintainer chooses the published `0.2.2` or source-head `ce297e2` declaration
-      target, then chooses `readonly data: FormulaNode` or a documented absence. The
-      fixture records both decisions exactly, including method count, `toMathml`
-      optionality, and `mahtml` or `unicode`.
+- [x] The declaration target and the `data` result are chosen: source head `ce297e2`
+      and `readonly data: FormulaNode` (2026-09-04).
+- [ ] The fixture records both decisions exactly — seven methods,
+      `toMathml(intent?: boolean)`, `unicode` rather than `mahtml`, and the `data`
+      member.
 - [ ] The built ESM and CJS declarations match the canonical fixture and the gate has
       non-vacuity and negative proofs for member, name, optionality, and return-type drift.
 - [ ] All six constructor formats are asserted in the selected declaration order:

@@ -10,8 +10,6 @@ Nothing here blocks the active phase.
 |---|---|---|
 | UnitsML approach, and its 1.0 consequence | maintainer + upstream | before 1.0 |
 | npm package name and release line | maintainer | before first publish |
-| Compat declaration target | maintainer | before P2 compat fixture |
-| Compat `data` property | maintainer | before P2 |
 | Bundle budgets | maintainer | during P1, from real numbers |
 | Symbol data as shared data | maintainer + gem | after P1 |
 | MathML/OMML input strategy | maintainer | P4 planning |
@@ -38,9 +36,15 @@ Both measured class declarations expose a writable `data` holding an Opal
 `ParserResult` — runtime-specific and not reproducible (published
 [`dist/index.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/dist/index.d.ts);
 source head `ce297e2`, `src/index.ts:4-9`). Either expose a name-compatible
-`readonly data: FormulaNode`, or document its absence. The declaration fixture
-must record this choice separately from the declaration-target choice; the
-question is which breaks fewer consumers.
+`readonly data: FormulaNode`, or document its absence.
+
+**SETTLED 2026-09-04: expose `readonly data: FormulaNode`.** Same property name,
+this port's model behind it. A consumer that READS `.data` gets something
+meaningful; one that WRITES it breaks under either choice, so exposing it strictly
+dominates. This is what `ARCHITECTURE.md` §11 already recommended.
+
+The declaration fixture records this separately from the declaration-target
+choice, because the two are independent.
 
 ## Compat declaration target
 
@@ -54,11 +58,16 @@ and [`dist/plurimath-opal.d.ts`](https://unpkg.com/@plurimath/plurimath@0.2.2/di
 source head `src/index.ts:4-37` and `src/plurimath-opal.d.ts:8`; the maintainer's
 independent `curl` fetched both published files with exit `0`).
 
-Choose whether the compat fixture freezes the artifact consumers install today,
-including `mahtml`, or targets source head on the expectation that a later
-publish carries those declarations. The `mahtml` spelling looks like an upstream
-defect; the maintainer may prefer to fix and publish it upstream rather than
-freeze it here. This document does not choose.
+**SETTLED 2026-09-04: source head.** The maintainer's reasoning, which is the
+whole argument: this package has published nothing, so it carries no
+compatibility debt to any consumer, and there is no reason to inherit a defect
+it is not bound by. `mahtml` appears only in a TypeScript declaration, so it is
+compile-time only; freezing the fixture against it would make a typo permanent
+in exchange for nothing.
+
+The `mahtml` spelling is logged as an upstream item in
+`~/ruby_gems/plurimath/PORT-FINDINGS.md`, to be fixed there rather than mirrored
+here. Upstream work is deliberately not started yet.
 
 ## Bundle budgets
 

@@ -7,8 +7,11 @@ OMML, UnicodeMath, and HTML. It replaces the Opal-compiled `plurimath-js`.
 This document records the agreed design. Change it before changing the code it
 describes.
 
-Revision: v14 (2026-08-07) — the render layout goes node-major, per the
-maintainer's decision: one directory per node kind under `src/render`, one
+Revision: v15 (2026-09-03) — Ruby-backed oracle-runner unit regressions are
+isolated from the Node-only class-A suite and run in CI with a pinned Ruby
+interpreter; the script inventory now includes the HTML fixture generators and
+their shared provenance helper. v14 (2026-08-07) — the render layout goes
+node-major, per the maintainer's decision: one directory per node kind under `src/render`, one
 file per format inside (`render/sqrt/asciimath.ts` — the gem's
 `function/sqrt.rb` locality), with the dispatch table and format-scoped
 helpers on the format side (`src/formats/<F>/render.ts`,
@@ -119,8 +122,11 @@ src/
                      parse half. Only the LaTeX *parser* is a later phase (§9 P3+).
     unicodemath/     Same: renderer landed (toUnicodemath), parser a later phase.
     mathml/          toMathml(MathNode) → string. Imports: core, xml, its slice.
-    html/            Does not exist yet (later phase).
-    omml/            Does not exist yet (later phase; output format).
+    html/            Source renderer landed: index.ts, renderer.ts, render.ts,
+                     and render-shared.ts. Its package subpath is a later phase.
+    omml/            Renderer internals landed: renderer.ts, render.ts, and
+                     render-shared.ts. Its format index and package subpath are
+                     a later phase.
     ...              Every format module is independent of every other.
   render/            Renderer code, node-major (§5, "How this maps to the
                      gem"): one directory per node kind, one file per format
@@ -157,17 +163,22 @@ src/
     mathml/          Output descriptors for the mathml renderer (own file).
     ...              One physical file set per format. Never one merged blob,
                      never edited by hand.
-scripts/             Ruby extraction — four generators covering the repository-owned
-                     generated outputs,
-                     each recording its own provenance: the census, the
+scripts/             Ruby extraction — generator/probe entrypoints covering
+                     the repository-owned generated outputs. Managed outputs
+                     record full provenance: the census, the
                      exclusion list and the per-format symbol data
                      (generate-corpus.rb, which does NOT write the shared
                      conformance cases — the plurimath-testsuite submodule owns
                      those and its own copy of that generator writes them);
                      core's own data (generate-core-data.rb); formatting's
-                     locale table (generate-formatting-data.rb); and the Ox
-                     contract fixtures (generate-xml-fixtures.rb). Alongside
-                     them, the gate runners: check.mjs, gate-boundaries.mjs,
+                     locale table (generate-formatting-data.rb); plus HTML
+                     parity fixtures (generate-parity-fixtures.rb) and the
+                     degenerate-slot sweep (probe-degenerate-slots.rb), which
+                     share render-fixture-provenance.rb. The legacy Ox contract
+                     generator records partial provenance inside its payload;
+                     its sidecar gap is explicit in TODO.plan/deferred.md.
+                     Alongside them, the
+                     gate runners: check.mjs, gate-boundaries.mjs,
                      gate-package.mjs, gate-oracle.rb, differential-port.mjs.
 test/                Corpus conformance, pegkit conformance, unit tests,
                      package-isolation tests.
@@ -256,7 +267,13 @@ subpath's forbidden set against the modules its sourcemaps name, so the check
 inspects what shipped rather than what was imported. `/unicodemath` joined
 them (2026-08-21, #33) on the same terms: a text format like `/latex`, so its
 forbidden set carries the XML layer and the grammar alongside the other three
-formats, and the boundary gate's inventory now reads 38 kinds x 4 formats.
+formats, and the boundary gate's inventory read 38 kinds x 4 formats at that
+point.
+`/html` joined them on the same terms: output only, so like `/latex` its
+forbidden set carries both the grammar and the XML layer, its markup being
+built as strings rather than through the element tree. The gate's inventory now
+reads 38 kinds x 6 formats -- it counts every format with render files present,
+so OMML is in that six while its own subpath is still unpublished.
 
 ## 4. Public API
 
@@ -267,6 +284,7 @@ formats, and the boundary gate's inventory now reads 38 kinds x 4 formats.
                                       (today core; convenience + compat when they land)
 @plurimath/plurimath-ts/core        → FormulaNode, node types, errors
 @plurimath/plurimath-ts/asciimath   → parseAsciimath, toAsciimath
+@plurimath/plurimath-ts/html        → toHtml (partial coverage; parser when ported)
 @plurimath/plurimath-ts/latex       → toLatex (parser when ported)
 @plurimath/plurimath-ts/mathml      → toMathml (parser when ported)
 @plurimath/plurimath-ts/unicodemath → toUnicodemath (parser when ported)
@@ -860,15 +878,19 @@ not all of Parslet. Divergences outside that subset are documented, not fixed.
 
 ## 7. Verification
 
-Gates fall into three classes. Every gate is **registered from day one** and
-blocks pull requests **from the milestone that activates it**; before that it
-is reported as inactive/non-blocking, never skipped or absent (activation
-matrix below). `scripts/check.mjs` runs every *activated* class-A gate.
+Gates fall into three classes. Every executable gate is registered before the
+project relies on it. Activated class-A gates and class-B gates explicitly wired
+into per-PR CI are team-policy requirements before merge; the remaining active
+class-B gates are required when explicitly run for regeneration or differential
+verification. Before activation a gate is reported as inactive/non-blocking,
+never skipped or absent (activation matrix below).
+`scripts/check.mjs` runs every *activated* class-A gate.
 
 **A. Automated TS gates (CI-blocking, no Ruby, all in `scripts/check.mjs`)**
 
-- **Corpus conformance**: parse tree, normalized model, and every landed
-  renderer match the committed Ruby-generated expectations exactly.
+- **Corpus conformance**: each format selected by the gate has a pinned outcome
+  for every corpus case — exact Ruby-generated bytes where implemented, and an
+  explicit refusal or named divergence everywhere else.
 - **Negative parity**: inputs the gem rejects must be rejected here — a
   non-empty rejection corpus (the POC had none).
 - **pegkit conformance suite** (§6.1).
@@ -881,9 +903,11 @@ matrix below). `scripts/check.mjs` runs every *activated* class-A gate.
   clean failures, bounded time.
 - **Layer boundaries, types, lint** (§8).
 
-**B. Oracle gates (require a Ruby checkout; run on regeneration and on a
-schedule, not per-PR)**
+**B. Ruby-backed and oracle gates (not in the Node-only class-A runner)**
 
+- **Oracle-runner unit regressions**: exercise the Ruby runner and provenance
+  normalizer with Ruby's standard library plus Git, but no gem bundle or oracle
+  checkout, under a pinned interpreter in every pull request.
 - **Corpus/data regeneration** from a clean gem checkout, reviewed as a diff.
 - **Differential runner**: a deterministic, seeded, bounded input generator
   compared live against the gem. Scheduled fuzzing infrastructure stays YAGNI
@@ -908,17 +932,20 @@ milestone is a single tracked field in the same file.
 Lifecycle rules:
 
 - **Runners are per class.** `scripts/check.mjs` runs activated **class-A** gates
-  only (no Ruby, no humans). Class B runs via `scripts/gate-oracle.rb` (needs a gem
-  checkout) on regeneration and on a schedule; class C is checklist evidence
-  recorded in the phase sign-off.
+  only (no Ruby, no humans). The Ruby-backed unit gate runs via
+  `pnpm test:oracle-unit` in its dedicated CI job; oracle integration gates run
+  via `scripts/gate-oracle.rb` with a gem checkout for regeneration or
+  differential verification. Class C is checklist evidence recorded in the
+  phase sign-off.
 - **Advancing the milestone is a reviewed change**, owned by the maintainer:
   the PR that advances it must also contain the runners for every gate that
-  newly activates. The registry itself is stable — gates are registered up
-  front and change activation state, rather than appearing over time.
+  newly activates. A gate is registered before its result is relied on and then
+  changes activation state as the milestone advances; a registered gate does not
+  disappear.
 - **Failure semantics are explicit.** A gate whose milestone has arrived but
-  whose runner is missing or unrunnable **fails** the run. Every gate is
-  registered from day one; one not yet activated is reported as
-  **inactive/non-blocking**, never silently absent.
+  whose runner is missing or unrunnable **fails** the run. An executable gate is
+  registered before its result is relied on; one not yet activated is reported
+  as **inactive/non-blocking**, never silently absent.
 
 | Gate | Class | Activates at |
 |---|---|---|
@@ -933,6 +960,7 @@ Lifecycle rules:
 | Negative/rejection corpus | A | `P1-completion` |
 | Symbol context-exception matrix | A | `P1-completion` |
 | Adversarial inputs | A | `P1-completion` |
+| Oracle-runner unit regressions | B | `P1-completion` — Ruby standard library plus Git, no gem bundle or oracle checkout; pinned interpreter in per-PR CI |
 | Clean-oracle regeneration — two registered gates: this repo's own data, and the pinned testsuite corpus | B | `P1-baseline` |
 | Differential runner | B | `P1-completion` |
 | Peer review, phase sign-off | C | every phase — **checklist, not registry** (§9) |
@@ -947,16 +975,19 @@ proves pegkit reproduces Parslet), not a normative requirement for the shared
 testsuite — a future Python/Rust port need not reproduce Parslet's tree shape,
 only the model and rendered outputs.
 
-**Oracle provenance.** Generation **rejects a dirty checkout of either the gem
-or this repo's generator** (`--allow-dirty` exists for local experiments only;
-its output is marked non-committable and CI rejects it). Provenance lives in a
-**sidecar manifest** per generated file — not inside the payload — so hashes
-have an unambiguous scope. The manifest records everything that can change an
-output byte:
+**Oracle provenance.** Managed generation **rejects a dirty checkout of either
+the gem or this repo's generator** (`--allow-dirty` exists for local experiments
+only; its output is marked non-committable and CI rejects it). For managed
+payloads, provenance lives in a **sidecar manifest** — not inside the payload —
+so hashes have an unambiguous scope. Legacy render-sweep and Ox-contract
+exceptions are named in `TODO.plan/deferred.md`. A managed manifest records
+everything that can change an output byte:
 
-- corpus/data schema version; generator commit; stable case ids;
-- gem commit and version, plus the **`Gemfile.lock` hash** (not just parslet)
-  and the Ruby engine + version;
+- corpus/data schema version; stable case ids; and
+  `generator.repository.commit`, an informational traceability record that may
+  become non-ancestral after a squash merge;
+- strict oracle and corpus commits; gem version, plus the **`Gemfile.lock` hash**
+  (not just parslet) and the Ruby engine + version;
 - the gem's **XML engine**: canonical payloads are generated with **Ox**
   (the TS serializer is Ox-compatible by design); Oga is used only as a
   secondary parity check, never as the canonical source — recording which
@@ -965,17 +996,22 @@ output byte:
   number formatter) in force;
 - external dependencies, recorded by **source kind** (a released gem has no
   commit to record):
-  - checked-out oracle/generator → commit + clean/dirty state;
+  - checked-out oracle/corpus → strict commit + clean/dirty state;
+  - checked-out generator → informational commit + clean/dirty state;
   - released gem → name, version, source, platform, and its `Gemfile.lock`
     checksum;
   - Git-pinned gem → resolved immutable revision + checkout state;
   - path-pinned gem → **rejected** for canonical generation;
 - the SHA-256 of the canonical payload (the payload never hashes itself).
 
-CI validates every payload against its schema and manifest hash. Regeneration policy: regenerate only from clean
-checkouts and review the diff like code. Symbol ids (`"Paren::Lround"`) are
-internal schema values — a rename in Ruby requires an alias entry in the data
-schema, never a silent id change.
+Class-A CI validates each managed payload's schema and manifest hash plus the
+current generator-input content addresses. Class-B regeneration reproduces
+bytes from clean checkouts and compares them strictly, normalizing only the
+informational `generator.repository.commit`; oracle and corpus commits remain
+strict.
+Regenerate only from clean checkouts and review the diff like code. Symbol ids
+(`"Paren::Lround"`) are internal schema values — a rename in Ruby requires an
+alias entry in the data schema, never a silent id change.
 
 ## 8. Tooling: "clean" made objective
 
@@ -990,7 +1026,7 @@ schema, never a silent id change.
 | Packaging correctness | `publint` on `dist`, `@arethetypeswrong/cli` on a real `npm pack` | CI gate; both green on the verification fixture |
 | Package manager | pnpm, pinned via `packageManager` | |
 | Runtimes | `mise.toml` committed (org precedent: the gem commits one); `engines.node >= 20` | |
-| Corpus regen | `scripts/` + documented one-liner | Requires a local gem checkout; class-A CI never needs Ruby (generated files are committed); class-B gates do (§7) |
+| Corpus regen | `scripts/` + documented one-liner | Requires a local gem checkout; class-A CI never needs Ruby (generated files are committed); Ruby-backed class-B gates declare their own runtime (§7) |
 
 Conventions: kebab-case filenames; named exports only — the root default
 export (compat class) is the single exception, required for plurimath-js
@@ -1030,7 +1066,7 @@ Consequences pinned here so they are not rediscovered later:
 
 **Convention guardrails beyond tooling.** `scripts/check.mjs` — one tracked,
 committed entry point running every *activated* class-A gate locally (§7
-registry; class-B gates run from `scripts/gate-oracle.rb`) — is the enforceable
+registry; class-B runners are named individually in that registry) — is the enforceable
 guardrail and a P0 exit item. Assistant skills (*ts-conventions*,
 *corpus-regen*, *port-a-format*) are developer aids kept **outside the
 repository**, in the maintainer's own skills library; they are never

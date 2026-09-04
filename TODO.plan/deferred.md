@@ -259,6 +259,23 @@ by the same name, which is what makes the gem's `unitsml_post_processing`
 (space insertion, marker stripping — formula.rb:450-473) a proven no-op on
 every tree this renderer emits.
 
+### OMML renderer: generated symbol data deferred from the first slice
+
+**Trigger: the dedicated OMML symbol-data follow-up, using the repository's
+two-step generation protocol and a provenance digest from the clean pinned
+oracle.**
+
+The first OMML vertical slice implements the shared structural wrapper for the
+base `Symbol`/abstract `Paren`, but deliberately does not hand-type the named
+symbol values measured by the OMML scope. Named symbols therefore raise
+`RenderError` instead of trusting a caller-provided value. The same refusal
+applies where another implemented kind needs that table: `Text`'s
+`unicode[:name]` substitutions, named Table parens, and a named Nary operator.
+The exact refusal contract is pinned in
+`test/formats/omml/renderer.spec.ts`. The follow-up removes these refusals only
+after generated values, an emptiness guard, provenance, and perturbed
+regeneration determinism land together.
+
 ### MathML renderer: `options[:mask]` supports only the inert decoding
 
 **Trigger: UnicodeMath input (P3), whose parser is what constructs masked
@@ -304,6 +321,28 @@ included, where their asciimath render interpolates `lefttrue`). And
 `toMathml` returns bytes for `formula`/`mrow` input only: `to_mathml` is
 defined on `Formula` alone in the gem, every other class answering
 NoMethodError.
+
+### Integer-like keys in hash carriers are refused across renderers
+
+**Trigger: the model gains an ordered hash input such as entry pairs or a
+`Map`, together with shared key lookup and iteration helpers for every
+renderer and normalized-model consumer.**
+
+JavaScript plain objects do not preserve a Ruby hash's insertion position for
+integer-like keys: those keys enumerate first in numeric order. By the time a
+node constructor receives an object, the original chronology is already gone,
+so changing only the internal copy cannot recover it. A shared emission guard
+therefore refuses an order-sensitive hash containing an array-index key (`"0"`
+through `"4294967294"`). This includes ordinary options/attributes hashes and
+nested deterministic `#inspect` carriers such as OMML Fenced delimiters.
+
+The refusal is hand-built-tree-only today. The only shipped input parser is
+AsciiMath, whose transform creates option and attribute carriers from fixed
+empty object literals; it never derives a carrier key from input. The shared
+guard is nevertheless required because MathML emits arbitrary option and
+attribute entries in order, OMML does the same for Mpadded and Fenced, and
+UnicodeMath interpolates arbitrary hash values. Numeric-looking keys which are
+not JavaScript array indices (`"01"`, `"-1"`, `"4294967295"`) remain accepted.
 
 ## Upstream issues
 
@@ -462,6 +501,92 @@ A HASH in the slot is the one non-string that survives the gem's
 `String()` cannot match — so it takes the same refusal
 (probe-latex-degenerate.rb, 2026-08-10). Same policy as the color rule and
 the AsciiMath Left/Right refusal.
+
+### Table rejects non-Array row carriers at render
+
+**Trigger: a supported consumer needs to pass a `Table` value other than the
+exported `NodeSequence`, or that public type is widened with explicit semantics
+for repeatable and one-shot iterables.**
+
+Ruby's `Table#initialize` stores its value unchanged, and the renderers call
+`map` on it. On the clean pinned oracle at `00c52783`, an Array, `Set`, and
+`Enumerator` containing the same table row render byte-identically in the five
+formats probed here—AsciiMath, LaTeX, MathML, UnicodeMath, and HTML—including
+on a repeated render. `TableNode` also stores a
+non-Array carrier unchanged so construction does not run caller code, but the
+port rejects it at render with a typed `RenderError`. The exported
+`NodeSequence` admits arrays only, so typed callers cannot request this; only a
+cast, untyped JavaScript, or malformed structural data reaches it.
+
+Admitting arbitrary JavaScript iterables would create a wider contract with no
+one-to-one Ruby mapping. A JavaScript `Set` is repeatable but has no `map`, while
+a generator is one-shot even though the probed Ruby `Enumerator` renders
+repeatably. The port keeps the refusal loud until that API and repeated-render
+behaviour are chosen deliberately. The constructor and refusal are pinned in
+`test/core/nodes.spec.ts`; the measured Ruby HTML output is recorded beside
+those pins.
+
+### Symbol refuses an opaque object during construction
+
+**Trigger: `SymbolNode` can store an opaque value without coercing or invoking
+caller code, then refuse its unreproducible spelling at render as a typed
+`RenderError`.**
+
+Ruby's `Symbols::Symbol#initialize` applies `sym&.to_s`. For an arbitrary object
+that produces a process-specific heap-address string, so the corresponding HTML
+bytes cannot be regenerated. The port's `symbolValue` instead raises `TypeError`
+while constructing `SymbolNode`, which is safer than inventing bytes but breaches
+the supported hand-built-tree contract: invalid values should be stored and
+refused at render. The `symbol[0]=node` sweep row records both the unstable oracle
+output and this construction-time refusal until the value model can represent
+the raw input without executing it.
+
+### Number refuses opaque object bytes at HTML render
+
+**Trigger: the value model gains a deterministic Ruby-object spelling, or a
+supported consumer needs object-valued `NumberNode` input.**
+
+Ruby's `Number#initialize` stores an arbitrary object unchanged and its HTML
+renderer interpolates that object, producing a process-specific heap address.
+The port stores the value without invoking caller code, then raises a typed
+`RenderError` instead of inventing bytes. The `number[0]=node` degenerate-sweep
+row records the unstable oracle result and pins this deliberate refusal.
+
+### The degenerate-slot sweep detects a heap-address leak by re-probing, not by proof
+
+**Trigger: a Ruby-side value model exists for the class of value `Symbol#initialize`
+and `Number`'s HTML renderer expose here (an opaque object whose `to_s` is a
+process-specific heap address), or `probe-degenerate-slots.rb` needs a stronger
+guarantee than two same-process allocations disagreeing.**
+
+`probe-degenerate-slots.rb` renders each degenerate cell twice and marks the row
+`"stable": false` (dropping `output`) when the two renders disagree in bytes --
+the mechanism that catches the `Symbol` and `Number` heap-address cases above,
+and the ones this covers. Two allocations a few statements apart in one process
+overwhelmingly will not share an address, but nothing proves they cannot: if a
+future Ruby, GC setting, or object shape ever let two such allocations coincide,
+a heap-address string would be committed to the fixture as `"stable": true`, and
+the class-B regeneration gate would then fail non-deterministically across
+machines rather than catching it at generation time. Measured today: exactly the
+two rows expected to hit `Object#to_s` (`number[0]=node`, `symbol[0]=node`) are
+marked unstable, and no others. Strengthening this into a real proof needs either
+a value model that can represent "an opaque, non-reproducible Ruby object" without
+executing `to_s` at all, or a probe that inspects the object rather than
+re-rendering it -- deferred until one of those exists.
+
+### Legacy generated fixtures lack reproducible sidecars
+
+**Trigger: before the pinned oracle moves, or before any of these fixture bytes
+or their consuming assertions change.**
+
+The AsciiMath, LaTeX, and MathML `render-sweep.json` files are one-off oracle
+captures without checked-in generators or adjacent provenance manifests. The
+Ox contract has a generator, `scripts/generate-xml-fixtures.rb`, but only
+partial provenance embedded in `test/xml/ox-contract.expected.json`. They
+predate the section 7 sidecar contract. `test/gates/payload-validation.spec.ts`
+names the three format fixtures and the XML generator as explicit legacy gaps,
+so another untracked generated artifact cannot silently join them. Replacing
+these captures with deterministic generators and full sidecars closes the gap.
 
 ### HTML: Fenced refuses generated and nondeterministic paren paths
 

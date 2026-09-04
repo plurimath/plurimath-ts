@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import { PINNED_CORPUS_ROOT, SUBMODULE_FIX } from "./test/core/corpus-pin";
 
 // The conformance cases are not in this repository; they come from the pinned
@@ -19,5 +19,9 @@ if (!existsSync(join(PINNED_CORPUS_ROOT, "corpus", "provenance.yaml"))) {
 export default defineConfig({
   test: {
     include: ["test/**/*.spec.ts"],
+    // This spec executes the Ruby implementation in scripts/gate-oracle.rb.
+    // Keep the default class-A suite Node-only; the dedicated class-B config
+    // and CI job pin the Ruby runtime explicitly.
+    exclude: [...configDefaults.exclude, "test/scripts/gate-oracle-differential.spec.ts"],
   },
 });

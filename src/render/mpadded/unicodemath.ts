@@ -43,7 +43,7 @@ export function renderMpadded(node: NodeOf<"mpadded">, context: RenderContext): 
     // gives `⟡(["x", 2]&x)` for an array where `String()` gives `x,2`, and
     // `⟡(1.0&x)` for a float. `rubyInterpolate` is the shared helper written
     // for exactly this, and this call site was missed when it landed.
-    return `${MPADDED}(${rubyInterpolate(options.mask)}&${renderOptionalChild(node.parameterOne, context)})`;
+    return `${MPADDED}(${rubyInterpolate(options.mask, node.kind, "mpadded.options.mask")}&${renderOptionalChild(node.parameterOne, context)})`;
   }
   if (!present(node.parameterOne)) return MPADDED;
 

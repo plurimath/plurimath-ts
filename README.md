@@ -24,9 +24,14 @@ drift apart silently.
 ## Status
 
 Early development. The AsciiMath vertical has landed — corpus, model, grammar
-and transform — along with four renderers, exported as the `./asciimath`,
-`./latex`, `./mathml` and `./unicodemath` subpaths. The package is still `private`, and nothing
-is published to npm under this name yet.
+and transform — along with five renderers, exported as the `./asciimath`,
+`./html`, `./latex`, `./mathml` and `./unicodemath` subpaths. The package is still
+`private`, and nothing is published to npm under this name yet.
+
+`./html` is exported at partial coverage: 36 of the 88 pinned corpus cases the
+gem renders come back byte-identical today, and the rest raise `RenderError`
+naming what is missing — the generated HTML symbol data, which is a later work
+item. Addition, exponentiation and named parentheses are among the refusals.
 
 Correctness is gated rather than asserted: a registry of quality gates activates
 in milestones. The current one is recorded as `currentMilestone` in
@@ -54,13 +59,16 @@ pnpm build       # tsdown -> dist (ESM + CJS + type declarations)
 ```
 
 `pnpm check` reads [`gates.json`](gates.json), which records every quality gate
-and the milestone at which it starts blocking. Gates are registered from the
-start and report as inactive until then, so nothing is silently skipped.
+and the milestone at which it starts blocking. Gates are registered before the
+project relies on them and report as inactive until then, so nothing is
+silently skipped.
 
-Class-B gates are the exception, and are not run by `pnpm check`: they compare
-generated data against a live checkout of the Ruby gem, so they need Ruby and the
-gem's bundle. They run from [`scripts/gate-oracle.rb`](scripts/gate-oracle.rb).
-Which of them are active depends on the milestone, like every other gate.
+Class-B gates are the exception, and are not run by `pnpm check`. The
+Ruby-and-Git unit gate runs in every pull request through
+`pnpm test:oracle-unit`; it needs no oracle checkout or gem bundle. Oracle
+integration gates need a clean Ruby gem checkout and its bundle; they run through
+[`scripts/gate-oracle.rb`](scripts/gate-oracle.rb). Which gates are active
+depends on the milestone, like every other gate.
 
 ## Copyright and license
 

@@ -124,7 +124,7 @@ makes a defect, not an improvement.
 - [ ] The cross-format invariant gates cover HTML: `runtime-boundary`,
       `unsupported-fallback` and `adversarial-inputs`, plus the class-B differential
       runner on both halves. All four currently cover four formats; HTML makes five.
-- [ ] `/html` is a published subpath with package-isolation assertions, and its expected
+- [x] `/html` is a published subpath with package-isolation assertions, and its expected
       exports and forbidden layers are listed in `scripts/gate-package.mjs` — the runner
       enumerates subpaths from `package.json#exports`, but a subpath absent from those
       tables silently skips both assertions.

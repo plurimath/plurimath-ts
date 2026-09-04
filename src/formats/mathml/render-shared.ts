@@ -24,6 +24,7 @@ import {
 } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS, rubyClassName } from "../../core/normalize";
+import { assertReproducibleRubyHashOrder } from "../../core/ruby-semantics";
 import { XmlElement } from "../../xml/index";
 
 export const FORMAT = "mathml";
@@ -232,6 +233,7 @@ export function setAttributesFromHash(
   kind: string,
   at: string,
 ): XmlElement {
+  assertReproducibleRubyHashOrder(hash, FORMAT, kind, at);
   for (const [key, value] of Object.entries(hash)) {
     element.setAttribute(key, htmlEntityToUnicode(attributeText(value, kind, `${at}.${key}`)));
   }

@@ -9,8 +9,9 @@ release.
 | # | Item | Delivers |
 |---|---|---|
 | 1 | [HTML renderer](01-html-renderer.md) | measured vertical slice, then full HTML parity |
-| 2 | [OMML renderer](02-omml-renderer.md) | measured slice order, then full OMML parity |
-| 3 | [Compat class](03-compat-class.md) | the frozen `plurimath-js` surface, once its declaration target is chosen |
+| 2 | [OMML renderer](02-omml-renderer.md) | the second XML tree format, scoped against the pinned oracle |
+| 3 | [Compat class](03-compat-class.md) | the frozen `plurimath-js` surface, targeted at the plurimath-js source head |
+| 4 | [Symbol data](04-symbol-data.md) | the generated HTML and OMML symbol slices both renderers refuse without |
 
 ## What it delivers
 

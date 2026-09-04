@@ -57,6 +57,16 @@
         "default": "./dist/asciimath.cjs"
       }
     },
+    "./html": {
+      "import": {
+        "types": "./dist/html.d.ts",
+        "default": "./dist/html.js"
+      },
+      "require": {
+        "types": "./dist/html.d.cts",
+        "default": "./dist/html.cjs"
+      }
+    },
     "./latex": {
       "import": {
         "types": "./dist/latex.d.ts",
@@ -96,6 +106,7 @@
     "build": "tsdown",
     "check": "node scripts/check.mjs",
     "test": "vitest run",
+    "test:oracle-unit": "vitest run --config vitest.oracle.config.ts",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",

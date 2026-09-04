@@ -6,23 +6,28 @@
  * Ox serializations, including their final newlines.
  */
 
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import { RenderError } from "../../../src/core/errors";
-import type { MathNode, NodeKind, NodeParameter } from "../../../src/core/nodes";
+import type { MathNode, NodeParameter } from "../../../src/core/nodes";
 import {
   AbsNode,
   BarNode,
   BaseNode,
   BinaryFunctionNode,
   CeilNode,
+  ColorNode,
   DdotNode,
   DotNode,
   FencedNode,
   FloorNode,
+  FontStyleNode,
   FormulaNode,
   FracNode,
   HatNode,
   IntNode,
+  LinebreakNode,
+  MpaddedNode,
   MrowNode,
   NaryNode,
   NormNode,
@@ -32,6 +37,7 @@ import {
   OverleftrightarrowNode,
   OversetNode,
   ProdNode,
+  SqrtNode,
   SumNode,
   SymbolNode,
   TableNode,
@@ -89,6 +95,15 @@ const nestedSlice2Containers = {
     new UndersetNode({ options: {}, parameterOne: nestedOverset(), parameterTwo: symbol("z") }),
   obrace: () => new ObraceNode({ attributes: {}, parameterOne: nestedOverset() }),
   ubrace: () => new UbraceNode({ attributes: {}, parameterOne: nestedOverset() }),
+} as const;
+
+const nestedSlice4Containers = {
+  sqrt: () => new SqrtNode({ options: {}, parameterOne: nestedOverset() }),
+  color: () =>
+    new ColorNode({ options: {}, parameterOne: symbol("red"), parameterTwo: nestedOverset() }),
+  fontStyle: () => new FontStyleNode({ name: "Bold", parameterOne: nestedOverset() }),
+  mpadded: () => new MpaddedNode({ options: {}, parameterOne: nestedOverset() }),
+  linebreak: () => new LinebreakNode({ attributes: {}, parameterOne: nestedOverset() }),
 } as const;
 
 interface Refusal {
@@ -2752,6 +2767,34 @@ describe("OMML fenced delimiter hash ordering", () => {
   });
 });
 
+/**
+ * `Mpadded` emits its options in hash order, so it has the same exposure the
+ * `fenced` delimiters do: JavaScript hoists array-index keys ahead of anything
+ * inserted before them, and the gem's order is gone before the renderer runs.
+ * Measured on the oracle at `00c52783`, options inserted as `height` then `"1"`
+ * emit `zeroAsc` first; JavaScript enumerates the `"1"` first and would emit
+ * them reversed.
+ */
+describe("OMML mpadded option hash ordering", () => {
+  it("refuses options holding an integer-like key", () => {
+    const options: Record<string, string> = {};
+    options.height = "0";
+    options["1"] = "0";
+    expect(Object.keys(options)[0]).toBe("1");
+
+    const mpadded = new MpaddedNode({ options, parameterOne: symbol() });
+    const message =
+      "mpadded.options.1: integer-like hash keys are deferred (TODO.plan/deferred.md) because " +
+      "JavaScript object enumeration discards their insertion position, so Ruby hash " +
+      "emission order cannot be reproduced";
+    expectRefusal(() => toOmmlWithoutMathTag(mpadded), { kind: "mpadded", message });
+    expectRefusal(() => toOmml(new FormulaNode({ value: [mpadded] })), {
+      kind: "mpadded",
+      message,
+    });
+  });
+});
+
 describe("generated OMML symbol-data deferral", () => {
   it("uses a named Symbol's explicit value only on insertion", () => {
     const node = new SymbolNode({ id: "Plus", value: "WRONG" });
@@ -2852,19 +2895,442 @@ describe("generated OMML symbol-data deferral", () => {
   });
 });
 
-describe("OMML partial refusal boundary", () => {
-  const omittedKinds = [
-    "color",
-    "fontStyle",
-    "linebreak",
-    "mpadded",
-    "sqrt",
-  ] as const satisfies readonly NodeKind[];
+describe("OMML wrappers slice", () => {
+  const radicalXml = (value = "x"): string =>
+    xml(
+      "<m:rad>",
+      "  <m:radPr>",
+      '    <m:degHide m:val="on"/>',
+      "    <m:ctrlPr>",
+      "      <w:rPr>",
+      '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+      "        <w:i/>",
+      "      </w:rPr>",
+      "    </m:ctrlPr>",
+      "  </m:radPr>",
+      "  <m:deg/>",
+      "  <m:e>",
+      "    <m:r>",
+      `      <m:t>${value}</m:t>`,
+      "    </m:r>",
+      "  </m:e>",
+      "</m:rad>",
+    );
 
-  it.each(omittedKinds)("refuses omitted kind %s", (kind) => {
-    expectRefusal(() => ROOT_CONTEXT.render({ kind } as MathNode), {
-      kind,
-      message: `OMML rendering for node kind "${kind}" is outside the measured OMML slices`,
+  const fontStyleXml = (sty: string | null, scr: string | null, value = "x"): string =>
+    xml(
+      "<m:r>",
+      "  <m:rPr>",
+      ...(scr === null ? [] : [`    <m:scr m:val="${scr}"/>`]),
+      ...(sty === null ? [] : [`    <m:sty m:val="${sty}"/>`]),
+      "  </m:rPr>",
+      ...(value === "" ? [] : [`  <m:t>${value}</m:t>`]),
+      "</m:r>",
+    );
+
+  const phantomXml = (properties: readonly string[] = [], value = "x"): string =>
+    xml(
+      "<m:phant>",
+      ...(properties.length === 0
+        ? []
+        : ["  <m:phantPr>", ...properties.map((property) => `    ${property}`), "  </m:phantPr>"]),
+      "  <m:e>",
+      "    <m:r>",
+      `      <m:t>${value}</m:t>`,
+      "    </m:r>",
+      "  </m:e>",
+      "</m:phant>",
+    );
+
+  const replaceIndentedRun = (wrapper: string, replacement: string): string =>
+    wrapper.replace(
+      ["    <m:r>", "      <m:t>x</m:t>", "    </m:r>"].join("\n"),
+      replacement
+        .trimEnd()
+        .split("\n")
+        .map((line) => `    ${line}`)
+        .join("\n"),
+    );
+
+  const canonicalCases = [
+    ["sqrt", new SqrtNode({ options: {}, parameterOne: symbol() }), radicalXml()],
+    [
+      "color",
+      new ColorNode({ options: {}, parameterOne: symbol("red"), parameterTwo: symbol() }),
+      RUN_X,
+    ],
+    [
+      "fontStyle",
+      new FontStyleNode({ parameterOne: symbol(), parameterTwo: "ignored-family" }),
+      fontStyleXml("p", null),
+    ],
+    ["mpadded", new MpaddedNode({ options: {}, parameterOne: symbol() }), phantomXml()],
+    ["linebreak", new LinebreakNode({ attributes: {}, parameterOne: symbol() }), RUN_X],
+  ] as const;
+
+  it.each(canonicalCases)(
+    "pins %s direct and insertion bytes at both displaystyle values",
+    (_kind, node, expected) => {
+      expectAtBothDisplayStyles(node, expected);
+      expect(toOmmlWithoutMathTag(node)).toBe(expected);
+    },
+  );
+
+  it.each([
+    [
+      "sqrt",
+      new SqrtNode({ options: {}, parameterOne: new SymbolNode({ id: "Plus", value: "x" }) }),
+      radicalXml(),
+    ],
+    [
+      "color",
+      new ColorNode({
+        options: {},
+        parameterOne: new SymbolNode({ id: "Plus", value: "x" }),
+        parameterTwo: new SymbolNode({ id: "Plus", value: "x" }),
+      }),
+      RUN_X,
+    ],
+    [
+      "fontStyle",
+      new FontStyleNode({
+        parameterOne: new SymbolNode({ id: "Plus", value: "x" }),
+        parameterTwo: "ignored-family",
+      }),
+      fontStyleXml("p", null),
+    ],
+    [
+      "mpadded",
+      new MpaddedNode({
+        options: {},
+        parameterOne: new SymbolNode({ id: "Plus", value: "x" }),
+      }),
+      phantomXml(),
+    ],
+    [
+      "linebreak",
+      new LinebreakNode({
+        attributes: {},
+        parameterOne: new SymbolNode({ id: "Plus", value: "x" }),
+      }),
+      RUN_X,
+    ],
+  ])("pins %s's named-symbol insertion value", (_kind, node, expected) => {
+    expectAtBothDisplayStyles(node as MathNode, expected as string);
+  });
+
+  it.each([
+    ["Bold", "b", null],
+    ["BoldFraktur", "b", "fraktur"],
+    ["BoldItalic", "bi", null],
+    ["BoldSansSerif", "b", "sans-serif"],
+    ["BoldScript", "b", "script"],
+    ["DoubleStruck", null, "double-struck"],
+    ["Fraktur", "p", "fraktur"],
+    ["Italic", "i", null],
+    ["Monospace", null, "monospace"],
+    ["Normal", "p", null],
+    ["SansSerif", "p", "sans-serif"],
+    ["SansSerifBoldItalic", "bi", "sans-serif"],
+    ["SansSerifItalic", "i", "sans-serif"],
+    ["Script", "p", "script"],
+  ] as const)("pins FontStyle::%s without deriving its values from the name", (name, sty, scr) => {
+    expectAtBothDisplayStyles(
+      new FontStyleNode({ name, parameterOne: symbol() }),
+      fontStyleXml(sty, scr),
+    );
+  });
+
+  it("recursively injects font style into structural children", () => {
+    for (const [displaystyle, limUpp, sSup] of [
+      [true, 1, 0],
+      [false, 0, 1],
+    ] as const) {
+      const rendered = toOmml(
+        new FormulaNode({
+          displaystyle,
+          value: [new FontStyleNode({ name: "Bold", parameterOne: nestedOverset() })],
+        }),
+      );
+      expect(rendered.match(/<m:sty m:val="b"\/>/g)?.length ?? 0).toBe(2);
+      expect({
+        limUpp: rendered.match(/<m:limUpp>/g)?.length ?? 0,
+        sSup: rendered.match(/<m:sSup>/g)?.length ?? 0,
+      }).toEqual({ limUpp, sSup });
+    }
+  });
+
+  it.each([
+    ["sqrt", true, 1, 0],
+    ["sqrt", false, 0, 1],
+    ["color", true, 1, 0],
+    ["color", false, 0, 1],
+    ["fontStyle", true, 1, 0],
+    ["fontStyle", false, 0, 1],
+    ["mpadded", true, 1, 0],
+    ["mpadded", false, 0, 1],
+    ["linebreak", true, 1, 0],
+    ["linebreak", false, 0, 1],
+  ] as const)(
+    "pins %s's nested display context at Formula displaystyle=%s",
+    (kind, displaystyle, limUpp, sSup) => {
+      const rendered = toOmml(
+        new FormulaNode({ displaystyle, value: [nestedSlice4Containers[kind]()] }),
+      );
+      expect({
+        limUpp: rendered.match(/<m:limUpp>/g)?.length ?? 0,
+        sSup: rendered.match(/<m:sSup>/g)?.length ?? 0,
+      }).toEqual({ limUpp, sSup });
+    },
+  );
+
+  it("reads only Mpadded's measured node options", () => {
+    expectDirectAndInsertion(
+      new SqrtNode({ options: { accent: true }, parameterOne: symbol() }),
+      radicalXml(),
+    );
+    expectDirectAndInsertion(
+      new ColorNode({
+        options: { backgroundcolor: true },
+        parameterOne: symbol("red"),
+        parameterTwo: symbol(),
+      }),
+      RUN_X,
+    );
+    expectDirectAndInsertion(
+      new LinebreakNode({ attributes: { linebreakstyle: "after" }, parameterOne: symbol() }),
+      RUN_X,
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({
+        options: { height: "1", depth: "2px", width: "auto" },
+        parameterOne: symbol(),
+      }),
+      phantomXml(),
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({
+        options: { height: "0", depth: "0px", width: "-0" },
+        parameterOne: symbol(),
+      }),
+      phantomXml(['<zeroAsc m:val="on"/>', '<zeroDesc m:val="on"/>', '<zeroWid m:val="on"/>']),
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({ options: { arbitrary: "0" }, parameterOne: symbol() }),
+      phantomXml(['< m:val="on"/>']),
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({ options: { height: "0", depth: "2" }, parameterOne: symbol() }),
+      phantomXml(['<zeroAsc m:val="on"/>']),
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({ options: { arbitrary: "1" }, parameterOne: symbol() }),
+      phantomXml(),
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({ options: { height: "0", arbitrary: "0" }, parameterOne: symbol() }),
+      phantomXml(['<zeroAsc m:val="on"/>', '< m:val="on"/>']),
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({
+        options: { "01": "1", "-1": "1", "4294967295": "1" },
+        parameterOne: symbol(),
+      }),
+      phantomXml(),
+    );
+  });
+
+  it("pins Color's arbitrary node option, call option, and nested Formula child", () => {
+    const arbitraryNodeOption = new ColorNode({
+      options: { arbitrary: true },
+      parameterOne: symbol("red"),
+      parameterTwo: symbol(),
+    });
+    expectDirectAndInsertion(arbitraryNodeOption, RUN_X);
+    expectDirectAndInsertion(
+      new ColorNode({
+        options: { "1": true },
+        parameterOne: symbol("red"),
+        parameterTwo: symbol(),
+      }),
+      RUN_X,
+    );
+    expect(toOmmlWithoutMathTag(arbitraryNodeOption, { arbitrary: "read-me" } as never)).toBe(
+      RUN_X,
+    );
+    expectDirectAndInsertion(
+      new ColorNode({
+        options: {},
+        parameterOne: symbol("red"),
+        parameterTwo: new FormulaNode({ value: [symbol()] }),
+      }),
+      RUN_X,
+    );
+  });
+
+  it("pins deterministic empty and list-valued cases", () => {
+    expectDirectAndInsertion(new SqrtNode({ options: {} }), radicalXml("&#8203;"));
+    expectDirectAndInsertion(new FontStyleNode(), fontStyleXml("p", null, ""));
+    expectDirectAndInsertion(new MpaddedNode({ options: {} }), phantomXml([], "&#8203;"));
+    expectDirectAndInsertion(new LinebreakNode({ attributes: {} }), "");
+    expectDirectAndInsertion(
+      new SqrtNode({ options: {}, parameterOne: [symbol(), symbol()] }),
+      replaceIndentedRun(radicalXml(), RUN_X + RUN_X),
+    );
+    expectDirectAndInsertion(
+      new MpaddedNode({ options: {}, parameterOne: [symbol(), symbol()] }),
+      replaceIndentedRun(phantomXml(), RUN_X + RUN_X),
+    );
+  });
+
+  it("emits no break element on the public default path", () => {
+    const before = new FormulaNode({
+      value: [symbol(), new LinebreakNode({ attributes: {}, parameterOne: symbol() }), symbol()],
+    });
+    expect(toOmml(before)).toBe(publicFragment(RUN_X + RUN_X + RUN_X));
+
+    const empty = new FormulaNode({
+      value: [symbol(), new LinebreakNode({ attributes: {} }), symbol()],
+    });
+    expect(toOmml(empty)).toBe(publicFragment(RUN_X + RUN_X));
+  });
+
+  it("pins each measured refusal's complete RenderError contract", () => {
+    expectRefusal(() => toOmmlWithoutMathTag(new SqrtNode({ options: {}, parameterOne: "x" })), {
+      kind: "sqrt",
+      message:
+        'sqrt.parameterOne: cannot insert the bare string "x" — the gem raises NoMethodError here',
+    });
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new ColorNode({ options: {}, parameterOne: symbol(), parameterTwo: null }),
+        ),
+      {
+        kind: "color",
+        message: "color.parameterTwo: cannot insert nil — the gem raises NoMethodError here",
+      },
+    );
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new ColorNode({ options: {}, parameterOne: symbol(), parameterTwo: "x" }),
+        ),
+      {
+        kind: "color",
+        message:
+          'color.parameterTwo: cannot insert the bare string "x" — the gem raises NoMethodError here',
+      },
+    );
+    expectRefusal(
+      () => toOmmlWithoutMathTag(new FontStyleNode({ name: "Bold", parameterOne: [symbol()] })),
+      {
+        kind: "fontStyle",
+        message:
+          "fontStyle.parameterOne: cannot apply font style to a list — the gem raises NoMethodError here",
+      },
+    );
+    expectRefusal(
+      () => toOmmlWithoutMathTag(new FontStyleNode({ name: "Unknown", parameterOne: symbol() })),
+      {
+        kind: "fontStyle",
+        message: 'FontStyle alias "Unknown" has not been measured for OMML',
+      },
+    );
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(new MpaddedNode({ options: { height: 0 }, parameterOne: symbol() })),
+      {
+        kind: "mpadded",
+        message:
+          "mpadded.options.height: holds a number — the gem sends match? to every option value and raises NoMethodError here",
+      },
+    );
+    expectRefusal(
+      () => toOmmlWithoutMathTag(new LinebreakNode({ attributes: {}, parameterOne: "x" })),
+      {
+        kind: "linebreak",
+        message:
+          'linebreak.parameterOne: cannot insert the bare string "x" — the gem raises NoMethodError here',
+      },
+    );
+  });
+});
+
+describe("OMML renderer boundary", () => {
+  class CustomOptions {}
+
+  it.each([
+    ["Date", new Date(0)],
+    ["Map", new Map([["displayStyle", false]])],
+    ["Set", new Set(["displayStyle"])],
+    ["class", new CustomOptions()],
+  ])("rejects a %s instance instead of silently treating it as options", (_label, options) => {
+    const name = options.constructor.name;
+    const message = `options: expected a plain options object, found a ${name} instance`;
+    expectRefusal(() => toOmml(new FormulaNode({ value: [symbol()] }), options as never), {
+      kind: "formula",
+      message,
+    });
+    expectRefusal(() => toOmmlWithoutMathTag(symbol(), options as never), {
+      kind: "symbol",
+      message,
+    });
+  });
+
+  it("accepts a plain options object from another JavaScript realm", () => {
+    const options = runInNewContext("({ arbitrary: true })") as Record<string, unknown>;
+    expect(toOmml(new FormulaNode({ value: [symbol()] }), options as never)).toBe(PUBLIC_X);
+    expect(toOmmlWithoutMathTag(symbol(), options as never)).toBe("x");
+  });
+
+  it.each([
+    [
+      "displayStyle",
+      { displayStyle: false },
+      'The "displayStyle" feature of to_omml is deferred (TODO.plan/deferred.md): recursive display-style override is unmeasured across the complete OMML renderer',
+    ],
+    [
+      "splitOnLinebreak",
+      { splitOnLinebreak: true },
+      'The "splitOnLinebreak" feature of to_omml is deferred (TODO.plan/deferred.md): line-broken OMML emits multiple m:oMath siblings separated by Word break runs; unmeasured',
+    ],
+    [
+      "formatter",
+      { formatter: {} },
+      'The "formatter" feature of to_omml is deferred (TODO.plan/deferred.md): number formatting is P4 scope; only the no-formatter path is measured',
+    ],
+    [
+      "unitsml",
+      { unitsml: {} },
+      'The "unitsml" feature of to_omml is deferred (TODO.plan/deferred.md): UnitsML is deferred wholesale (ARCHITECTURE.md section 5)',
+    ],
+  ] as const)("refuses deferred %s by name on both entry points", (_name, options, message) => {
+    expectRefusal(() => toOmml(new FormulaNode({ value: [symbol()] }), options as never), {
+      kind: "formula",
+      message,
+    });
+    expectRefusal(() => toOmmlWithoutMathTag(symbol(), options as never), {
+      kind: "symbol",
+      message,
+    });
+  });
+
+  it("treats explicitly undefined deferred keys as absent", () => {
+    const options = {
+      displayStyle: undefined,
+      formatter: undefined,
+      splitOnLinebreak: undefined,
+      unitsml: undefined,
+    } as never;
+    expect(toOmml(new FormulaNode({ value: [symbol()] }), options)).toBe(PUBLIC_X);
+    expect(toOmmlWithoutMathTag(symbol(), options)).toBe("x");
+  });
+
+  it("rejects an unknown kind in shape validation before total dispatch", () => {
+    expectRefusal(() => toOmmlWithoutMathTag({ kind: "not-a-kind" } as unknown as MathNode), {
+      kind: "not-a-kind",
+      message: 'node: unknown node kind "not-a-kind"',
     });
   });
 

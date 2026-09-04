@@ -36,6 +36,29 @@ jobs:
 
       - run: pnpm check
 
+  # Ruby-backed unit regressions are class B, isolated from the Node-only
+  # class-A suite and run with an explicit interpreter rather than relying on
+  # whatever happens to be installed on the runner image.
+  oracle-runner-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0.1"
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm test:oracle-unit
+
   # Guards the runtime support claim in package.json#engines.
   runtime-matrix:
     runs-on: ubuntu-latest

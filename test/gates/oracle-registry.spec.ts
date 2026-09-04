@@ -26,6 +26,12 @@ describe("oracle gate registry", () => {
     expect(oracleGates).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
+          id: "oracle-runner-unit-tests",
+          class: "B",
+          activatesAt: "P1-completion",
+          run: "pnpm test:oracle-unit",
+        }),
+        expect.objectContaining({
           id: "oracle-repo-regeneration",
           class: "B",
           activatesAt: "P1-baseline",

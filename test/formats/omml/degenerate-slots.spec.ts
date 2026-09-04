@@ -41,10 +41,12 @@
  *      `UNSTABLE_OUTPUT` (the gem's own output is not reproducible).
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { NODE_KINDS, RenderError } from "../../../src/core/index";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
+import { parseYaml } from "../../core/corpus-yaml";
 import {
   DEGENERATE_DIVERGENCES,
   DEGENERATE_PORT_RENDERS,
@@ -77,8 +79,7 @@ interface SweptEntry {
 }
 
 interface Fixture {
-  readonly generator: { readonly script: string; readonly sha256: string };
-  readonly oracle: { readonly commit: string };
+  readonly schema: string;
   readonly format: string;
   /** The landed renderers the generator derived, as it derived them. */
   readonly inventory: readonly string[];
@@ -90,9 +91,26 @@ interface Fixture {
   readonly rows: readonly Row[];
 }
 
-const fixture = JSON.parse(
-  readFileSync(join(__dirname, "degenerate-fixtures.json"), "utf8"),
-) as Fixture;
+/**
+ * Provenance moved OUT of the payload and into the adjacent sidecar: the
+ * generator writes `degenerate-fixtures.manifest.yaml` beside the JSON, and
+ * `payload-validation` gates the pair. The oracle commit is read from there.
+ */
+interface FixtureManifest {
+  readonly oracle: { readonly commit: string };
+  readonly payload: { readonly schema: string };
+}
+
+// ESM-safe, and the same idiom `test/core/corpus-pin.ts` uses: this package is
+// `"type": "module"`, so `__dirname` exists here only because Vite's transform
+// supplies it. The renderer-inventory walk below resolves a path too, so both
+// depend on this rather than on the test runner.
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+const fixture = JSON.parse(readFileSync(join(HERE, "degenerate-fixtures.json"), "utf8")) as Fixture;
+const manifest = parseYaml(
+  readFileSync(join(HERE, "degenerate-fixtures.manifest.yaml"), "utf8"),
+) as unknown as FixtureManifest;
 
 /**
  * The degenerate values, in the generator's order. `false`, `0` and `""`
@@ -122,7 +140,7 @@ const kindFromDirectory = (name: string): string =>
  * agree with itself.
  */
 const landedRenderers = (): readonly string[] => {
-  const root = resolve(__dirname, "..", "..", "..", "src", "render");
+  const root = resolve(HERE, "..", "..", "..", "src", "render");
   return readdirSync(root, { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && existsSync(join(root, entry.name, `${FORMAT}.ts`)))
     .map((entry) => kindFromDirectory(entry.name))
@@ -179,9 +197,11 @@ describe(`${FORMAT} degenerate-slot sweep covers every landed renderer`, () => {
 
 describe(`${FORMAT} degenerate-slot fixture covers the whole matrix`, () => {
   it("came from the pinned oracle, and is not empty", () => {
+    expect(fixture.schema).toBe("plurimath-corpus/degenerate-slots/1");
+    expect(manifest.payload.schema).toBe(fixture.schema);
     expect(fixture.format).toBe(FORMAT);
     expect(fixture.rows.length).toBeGreaterThan(0);
-    expect(fixture.oracle.commit).toBe(loadPinnedCorpus().provenance.oracleCommit);
+    expect(manifest.oracle.commit).toBe(loadPinnedCorpus().provenance.oracleCommit);
   });
 
   it("sweeps exactly the entries NODE_FOR can build", () => {

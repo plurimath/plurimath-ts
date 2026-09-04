@@ -128,8 +128,17 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  *
  * Derived from `PORT_REFUSES`, and cross-checked against it by the spec: the
  * two disagree only when one was edited without the other.
+ *
+ * Not hand-set. Both this number and the refusal set above come from running
+ * every gem-renderable case in `parity-fixtures.json` through the port and
+ * byte-comparing the result: 92 renderable, 50 refused with a typed
+ * `RenderError`, 42 rendered — 41 reproducing the gem's exact bytes and one
+ * (`text-unitsml-valid`) pinned in `KNOWN_DIVERGENCES`. Nothing rendered bytes
+ * that differ from the gem's without being pinned, and nothing threw untyped.
+ * It moved from 41 when the pinned corpus gained `partial-sqrt-unclosed`, which
+ * the gem renders and this port reproduces; the refusal set did not move.
  */
-export const RENDERED_BASELINE = 41;
+export const RENDERED_BASELINE = 42;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared
@@ -595,33 +604,24 @@ export const DEGENERATE_DIVERGENCES: Readonly<
  * WRONG bytes for a tree the gem will not render. Every other departure named in
  * this file is the port refusing or diverging loudly; this one is silent.
  *
- * Every entry here is a DEFECT AWAITING A FIX, not an accepted divergence. It is
- * pinned only so the sweep can name it and so that emptying the table is a
- * visible unit of work.
+ * **Empty, and kept empty.** The table stays so a row that starts inventing has
+ * somewhere to be named — the sweep sends it here by name — and so that emptying
+ * it again is a visible unit of work.
+ *
+ * It held `formula[0]=empty-string` and `mrow[0]=empty-string`, one root cause.
+ * `assignedSequence` spread its argument and `[...""]` is `[]`, so both built an
+ * empty node list and rendered `<m:oMath/>`. Measured against the pinned oracle,
+ * the gem raises `ParseError` for both: `Formula#initialize` wraps a non-Array
+ * as `[value]` and then cannot render the string it wrapped. `src/core/nodes.ts`
+ * no longer spreads — `Formula` and `Mrow` copy an array and wrap anything else
+ * whole, Ruby's own `value.is_a?(Array) ? value : [value]` — so both rows now
+ * reach the RENDERER and are refused there. Measured: each throws `RenderError`
+ * reading `<kind>.value[0]: cannot insert the bare string "" — the gem raises
+ * NoMethodError here`, which is where the gem's own refusal happens.
  */
 export const DEGENERATE_PORT_RENDERS: Readonly<
   Record<string, { readonly reason: string; readonly portOutput: string }>
-> = {
-  // Two faces of one defect. `assignedSequence` (src/core/nodes.ts) SPREADS its
-  // argument, and `[..."" ]` is `[]`, so a bare empty string becomes an empty
-  // node list and renders an empty `m:oMath`. Ruby's `Formula#initialize` wraps
-  // a non-Array as `[value]` and then cannot render the string it wrapped, so
-  // the gem raises `ParseError` for both.
-  "formula[0]=empty-string": {
-    reason: 'assignedSequence spreads, and [..."" ] is []; the gem wraps "" as [""] and refuses it',
-    portOutput: doc("  <m:oMath/>"),
-  },
-  "mrow[0]=empty-string": {
-    reason: 'assignedSequence spreads, and [..."" ] is []; the gem wraps "" as [""] and refuses it',
-    portOutput: doc("  <m:oMath/>"),
-  },
-
-  // The Ruby-falsy/JavaScript-falsy split again, and in the direction that
-  // invents bytes. `PowerBase#to_omml` reaches its base slot with `false` and
-  // the gem raises; the port treats the slot as absent and emits a zero-width
-  // space base. Slots 1 and 2 take `false` and render in both, so this is the
-  // base slot specifically.
-};
+> = {};
 
 /**
  * Rows the port cannot even BUILD: the node constructor throws `TypeError`
@@ -629,31 +629,37 @@ export const DEGENERATE_PORT_RENDERS: Readonly<
  * reaches it at all. Every row here is a static type error in TypeScript — the
  * sweep gets to it through `as never`, which is what makes hand-built trees a
  * supported use (ARCHITECTURE.md §5) worth probing.
+ *
+ * **A row here is a CONTRACT BREACH, not a departure.** ARCHITECTURE.md §5 and
+ * the `src/core/nodes.ts` module docs both say constructors do not validate: an
+ * invalid hand-built tree fails at render with `RenderError`, never a raw
+ * `TypeError`. So this table is not a place to record a decision; it is a list
+ * of the places the contract is still not kept, and every row is owed a fix.
+ *
+ * It held twelve more — `formula[0]`, `mrow[0]` and `table[0]` against `false`,
+ * `true`, `0` and a bare node. `assignedSequence` and `assignedTableSequence`
+ * threw from the constructor to stop the `[...value]` spread from inventing
+ * bytes (see `DEGENERATE_PORT_RENDERS`). The spread defect is real and stays
+ * fixed, but the refusal belonged at render, so both helpers now store the way
+ * Ruby stores and the twelve rows are ordinary sweep rows again. Measured
+ * against the pinned oracle and this port:
+ *
+ *   - Ten refuse on both sides. The gem raises `ParseError` for every one, and
+ *     the port raises `RenderError` naming the slot — `formula.value[0]: cannot
+ *     insert a boolean`, `table.value: is a number, not a list`, and so on.
+ *   - `formula[0]=node` and `mrow[0]=node` now RENDER, and reproduce the gem's
+ *     own bytes: Ruby wraps a bare node as `[node]`, and so does this port. That
+ *     is a parity gain, not a reclassification, so neither row is named anywhere
+ *     in this file any more.
+ *
+ * The one that remains is `symbolValue`. `Symbols::Symbol#initialize` stores
+ * `sym&.to_s`, and Ruby's `to_s` on an arbitrary object cannot be reproduced in
+ * JavaScript, so the helper refuses rather than invent a string — at
+ * construction, where the contract says it must not. Its gem output is a heap
+ * address, so the row is also in `UNSTABLE_OUTPUT` and no byte claim is possible
+ * either way.
  */
 export const PORT_TYPE_REFUSES: Readonly<Record<string, string>> = {
-  // `assignedSequence` spreads its argument, so anything non-iterable throws
-  // `TypeError` before any renderer is reached. Ten of these agree with the gem,
-  // which refuses them too. Two do not: `Formula#initialize` wraps a bare node
-  // as `[node]` and renders it, so `formula[0]=node` and `mrow[0]=node` are port
-  // gaps named here rather than counted, and they leave this table when the wrap
-  // lands.
-  "formula[0]=false": "assignedSequence spreads its argument; false is not iterable",
-  "formula[0]=true": "assignedSequence spreads its argument; true is not iterable",
-  "formula[0]=zero": "assignedSequence spreads its argument; 0 is not iterable",
-  "formula[0]=node":
-    "the gem wraps a bare node as [node] and renders it; assignedSequence spreads and throws",
-  "mrow[0]=false": "assignedSequence spreads its argument; false is not iterable",
-  "mrow[0]=true": "assignedSequence spreads its argument; true is not iterable",
-  "mrow[0]=zero": "assignedSequence spreads its argument; 0 is not iterable",
-  "mrow[0]=node":
-    "the gem wraps a bare node as [node] and renders it; assignedSequence spreads and throws",
-  "table[0]=false": "assignedSequence spreads its argument; false is not iterable",
-  "table[0]=true": "assignedSequence spreads its argument; true is not iterable",
-  "table[0]=zero": "assignedSequence spreads its argument; 0 is not iterable",
-  "table[0]=node": "assignedSequence spreads its argument; a bare node is not iterable",
-
-  // `SymbolNode` refuses an object outright: Ruby's `sym&.to_s` spelling is a
-  // heap address, which is why the gem's own output for this row is unstable.
   "symbol[0]=node": "SymbolNode refuses an object: Ruby's sym&.to_s spelling is not reproducible",
 };
 

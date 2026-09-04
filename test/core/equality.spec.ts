@@ -393,8 +393,8 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "symbol-latin-x|whitespace-surrounding",
   ]);
 
-  it("has the 90 cases it expects", () => {
-    expect(nodes).toHaveLength(90);
+  it("has the 91 cases it expects", () => {
+    expect(nodes).toHaveLength(91);
   });
 
   it("is reflexive: a rebuilt tree equals its twin", () => {

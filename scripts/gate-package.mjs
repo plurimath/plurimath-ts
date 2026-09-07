@@ -86,6 +86,7 @@ const CORE_EXPORTS = [
   "UlNode",
   "UnaryFunctionNode",
   "UndersetNode",
+  "UnsupportedFeatureError",
   "UnsupportedFormatError",
   "VecNode",
   "assertMathNodeShape",
@@ -96,8 +97,31 @@ const CORE_EXPORTS = [
   "resetUnsupportedWarnings",
 ];
 
+/**
+ * The root additionally carries the `plurimath-js` compat class (ARCHITECTURE.md
+ * §4). It is only at the root: it delegates to every renderer, so putting it
+ * behind a format subpath would drag all of them into that subpath's graph and
+ * break the slim-bundle guarantee the subpaths exist for.
+ */
+const ROOT_EXPORTS = [...CORE_EXPORTS, "FORMATS", "Plurimath"].sort();
+
+/**
+ * Subpaths whose BUILT artifact must expose a default export, and what it must
+ * be. ARCHITECTURE.md §3 held this open — "the root's default export is
+ * asserted only once the compat class exists, §4" — and the compat class now
+ * exists, so it is asserted here.
+ *
+ * It is checked against `dist`, not against source, because `import Plurimath
+ * from "@plurimath/plurimath"` is the single entry point every plurimath-js
+ * consumer uses, and a miswired export-map target or tsdown entry would ship
+ * the wrong file while a source-importing spec stayed green.
+ */
+const EXPECTED_DEFAULT = {
+  ".": "Plurimath",
+};
+
 const EXPECTED_EXPORTS = {
-  ".": CORE_EXPORTS,
+  ".": ROOT_EXPORTS,
   "./core": CORE_EXPORTS,
   "./asciimath": ["parseAsciimath", "toAsciimath"],
   "./html": ["toHtml"],
@@ -187,9 +211,12 @@ for (const [subpath, conditions] of subpaths) {
   const cjsFile = resolve(root, conditions.require.default);
 
   // 1. loads under both module systems, exposing named exports
+  let esmDefault;
+  let cjsDefault;
   let esmExports = [];
   try {
     const loaded = await import(pathToFileURL(esmFile).href);
+    esmDefault = loaded.default;
     esmExports = Object.keys(loaded).filter((key) => key !== "default");
     console.log(`  ✓ ESM loads (${esmExports.length} named exports)`);
   } catch (error) {
@@ -198,6 +225,7 @@ for (const [subpath, conditions] of subpaths) {
   let cjsExports = [];
   try {
     const loaded = require(cjsFile);
+    cjsDefault = loaded.default;
     cjsExports = Object.keys(loaded).filter((key) => key !== "default");
     console.log(`  ✓ CJS loads (${cjsExports.length} named exports)`);
   } catch (error) {
@@ -215,6 +243,28 @@ for (const [subpath, conditions] of subpaths) {
       fail(`${subpath} ${moduleSystem} exports [${actual}], expected [${[...expected].sort()}]`);
     } else {
       console.log(`  ✓ ${moduleSystem} exports exactly ${expected.join(", ")}`);
+    }
+  }
+
+  // 1b. the default export, where the subpath promises one
+  const expectedDefault = EXPECTED_DEFAULT[subpath];
+  for (const [moduleSystem, value] of [
+    ["ESM", esmDefault],
+    ["CJS", cjsDefault],
+  ]) {
+    if (expectedDefault === undefined) {
+      if (value !== undefined) {
+        fail(`${subpath} ${moduleSystem} has an unexpected default export`);
+      }
+      continue;
+    }
+    if (typeof value !== "function" || value.name !== expectedDefault) {
+      const got = value === undefined ? "none" : `${typeof value} ${value?.name ?? ""}`.trim();
+      fail(
+        `${subpath} ${moduleSystem} default export is ${got}, expected class ${expectedDefault}`,
+      );
+    } else {
+      console.log(`  ✓ ${moduleSystem} default export is ${expectedDefault}`);
     }
   }
 

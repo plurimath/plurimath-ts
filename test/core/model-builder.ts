@@ -265,6 +265,16 @@ function buildValue(value: YamlValue, aliases: ReadonlyMap<string, string>): unk
 export interface CorpusCase {
   readonly id: string;
   readonly input: string;
+  /**
+   * The notation `input` is written in, from the payload's own `input_format`
+   * (`corpus-pin.ts` reads it; this type used to drop it on the floor).
+   *
+   * It matters to exactly one kind of check: anything that PARSES `input` can
+   * only run over cases written in the notation its parser reads. A check that
+   * rebuilds from `model` is parser-independent by construction and takes every
+   * case whatever its input format — which is the point of having that layer.
+   */
+  readonly inputFormat: string;
   readonly model: SerializedNode;
   /**
    * The gem's rendered output, per target format the gem rendered this case to
@@ -299,6 +309,7 @@ export function readCorpusCases(root: string = PINNED_CORPUS_ROOT): readonly Cor
     cases.push({
       id: entry.id,
       input: entry.input,
+      inputFormat: entry.inputFormat,
       model: entry.model,
       expected: entry.expected,
       refusals: entry.refusals,
@@ -311,4 +322,38 @@ export function readCorpusCases(root: string = PINNED_CORPUS_ROOT): readonly Cor
     );
   }
   return cases;
+}
+
+/**
+ * The one input notation this port can parse today. AsciiMath is P1's vertical
+ * slice; LaTeX, UnicodeMath and HTML parsers arrive in P3
+ * (`TODO.plan/p3-input-formats/`).
+ */
+export const PARSEABLE_INPUT_FORMAT = "asciimath";
+
+/**
+ * The cases a check may run through a PARSER, as opposed to rebuilding from
+ * `model`.
+ *
+ * The corpus is not AsciiMath-only for much longer: its schema already admits
+ * `latex`, `mathml`, `omml`, `unicode`, `html` and `unitsml` as input formats.
+ * A check that calls `parseAsciimath(entry.input)` over every pinned case would
+ * start feeding it LaTeX source the day a second corpus lands, and fail in a
+ * way that looks like a parser bug rather than a suite that outgrew its filter.
+ *
+ * Throws rather than returning an empty list: a filter that silently matches
+ * nothing turns a suite green while checking nothing, which has happened in
+ * this repository before and is what `gates.json`'s `selects` exists to catch
+ * one level up.
+ */
+export function parseableCases(cases: readonly CorpusCase[]): readonly CorpusCase[] {
+  const parseable = cases.filter((entry) => entry.inputFormat === PARSEABLE_INPUT_FORMAT);
+  if (parseable.length === 0) {
+    throw new Error(
+      `no pinned case has input_format "${PARSEABLE_INPUT_FORMAT}", so every ` +
+        `parser-driven check would run zero cases. Input formats present: ` +
+        `${[...new Set(cases.map((entry) => entry.inputFormat))].sort().join(", ")}`,
+    );
+  }
+  return parseable;
 }

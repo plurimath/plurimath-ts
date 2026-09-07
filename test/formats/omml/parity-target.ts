@@ -69,12 +69,14 @@ export const KNOWN_DIVERGENCES: Readonly<
  * somewhere to be named — `render-parity.spec.ts` sends it here by id — and so
  * that emptying it again is a visible unit of work.
  *
- * It held 13 ids: six an unmeasured `UnaryFunction` alias (`Left`, `Right`,
- * `Sin`, `Cos`), six an unmeasured `BinaryFunction` alias (`Mod`, `Lim`,
- * `Log`, `Root`), and `matrix-column` the deferred single-column `m:eqArr`
- * table branch. All nine classes are measured now and all 13 cases reproduce
- * the gem's exact bytes. The 37 before those were the generated symbol-data
- * gap, closed the same way.
+ * It held 13 case ids, blocked between them on nine alias classes. The two
+ * counts differ because one class blocks more than one case: six IDS waited on
+ * a `UnaryFunction` alias — four classes, `Left`, `Right`, `Sin`, `Cos` — six
+ * IDS on a `BinaryFunction` alias — four classes, `Mod`, `Lim`, `Log`, `Root`
+ * — and `matrix-column` on the deferred single-column `m:eqArr` table branch.
+ * All nine classes are measured now and all 13 cases reproduce the gem's exact
+ * bytes. The 37 before those were the generated symbol-data gap, closed the
+ * same way.
  */
 export const PORT_REFUSES: ReadonlySet<string> = new Set([]);
 

@@ -37,6 +37,12 @@ import { XmlElement } from "../../xml/index";
  *
  * `class_name` never reaches the output on this path, so unlike the unary base
  * set these names carry no label and need no downcasing.
+ *
+ * The set below has FOUR members, not three: the sweep measured the 14 census
+ * ALIASES, and `BinaryFunction` is the carrier they alias rather than one of
+ * them. It renders through this path for the obvious reason — the base method
+ * is its own — so it belongs in the set while sitting outside the measurement
+ * that produced the other three.
  */
 const OMML_BASE_BINARY_CLASSES: ReadonlySet<string> = new Set([
   "Arg",

@@ -50,7 +50,10 @@
 #                                          reads that no other slice supplies,
 #                                          plus the census carrier name lists
 #   src/generated/<format>/symbols.ts      symbol id -> static descriptor.
-#                                          html needs nothing beyond this pair.
+#                                          html carries one more column: the
+#                                          payload Fenced#to_html puts in a
+#                                          named-paren slot, which is the MathML
+#                                          text and not Paren#to_html.
 #                                          OMML's XML wrapper is the renderer's,
 #                                          never a per-class template, but the
 #                                          slice also carries `omml_tag_name`:
@@ -3788,7 +3791,136 @@ module CorpusGenerator
     ]
   end
 
-  def emit_symbols_file(out_root, format, classes, omml_tag_names)
+  # --- html fenced paren payloads -------------------------------------------
+
+  # `Fenced#to_html` (`math/function/fenced.rb:54-69`) does NOT render its paren
+  # slots through `Paren#to_html`. It calls `symbol_or_paren(..., lang: :html)`,
+  # and that method (`fenced.rb:324-336`) sends `:html` down the same arm as
+  # `:mathml`:
+  #
+  #     when :mathml, :html
+  #       field.to_mathml_without_math_tag(intent, options: options).nodes.first
+  #
+  # The `to_html` call site passes no `intent:`, so the argument is the method's
+  # own default, spelled `intent: false` at `fenced.rb:324`. That is the gem's
+  # signature, not this generator's probe baseline, so it is written out rather
+  # than read off `BASELINE_CONTEXT` — the two agree today and answer to
+  # different owners.
+  HTML_FENCED_PAREN_INTENT = false
+
+  # The one `symbol_or_paren` call `lang: :html` makes, spelled once.
+  def html_fenced_paren_payload(instance, intent: HTML_FENCED_PAREN_INTENT, options: {})
+    instance.to_mathml_without_math_tag(intent, options: options).nodes.first
+  end
+
+  # `to_mathml_without_math_tag` takes an `intent` argument and an options hash,
+  # and the node carries its own `value` and `rspace`. All four are probed
+  # rather than assumed, exactly as `measured_omml_tag_name` probes its own
+  # inputs: one measurement per class is a *static* property only while nothing
+  # else moves it.
+  def measured_html_fenced_paren(klass)
+    baseline = html_fenced_paren_payload(symbol_instance(klass))
+    unless baseline.is_a?(::String)
+      raise Error, "#{symbol_id(klass)} puts #{baseline.inspect} in a fenced html paren slot; " \
+                   "the column emits it as a payload string"
+    end
+
+    rspace_values = CONTEXT_AXES.find { |axis| axis["name"] == "rspace" }.fetch("values")
+    instances = rspace_values.map { |rspace| symbol_instance(klass, rspace: rspace) }
+    instances << symbol_instance(klass, value: VALUE_PROBE)
+    instances.product([{}, { table: true }], [false, true]).each do |instance, options, intent|
+      probed = html_fenced_paren_payload(instance, intent: intent, options: options)
+      next if probed == baseline
+
+      raise Error, <<~MESSAGE
+        #{symbol_id(klass)} puts #{probed.inspect} in a fenced html paren slot under one probed
+        construction and #{baseline.inspect} under another. It is emitted as a static per-symbol
+        payload; it has become context-dependent and needs an axis, not a value.
+      MESSAGE
+    end
+
+    baseline
+  end
+
+  # Every `Math::Symbols::Paren` subclass -> the string `Fenced#to_html` puts in
+  # a paren slot for it. The membership is the hierarchy's, never a list: the
+  # `is_a?(Math::Symbols::Paren)` guard in `symbol_or_paren` is what selects
+  # this arm, so `klass < Paren` is the same predicate.
+  #
+  # The abstract `Paren` root is deliberately absent, on the same measurement:
+  # it inherits `Symbol`'s methods, so its mathml payload, its `to_html` and its
+  # stored `value` are one and the same string, and the renderer reads the value
+  # for it as it does for the bare `Symbol`.
+  def html_fenced_paren_payloads(classes)
+    parens = classes.select { |klass| klass < Plurimath::Math::Symbols::Paren }
+    if parens.empty?
+      raise Error, "no Math::Symbols::Paren subclass reached the static set; the " \
+                   "fenced html paren column would be empty and Fenced would have " \
+                   "no named paren to render"
+    end
+
+    entries = parens.map { |klass| [symbol_id(klass), measured_html_fenced_paren(klass)] }.sort
+    divergent = parens.count do |klass|
+      representation(klass, "html", BASELINE_CONTEXT) != measured_html_fenced_paren(klass)
+    end
+    if divergent.zero?
+      raise Error, "every Paren subclass now answers the same string through " \
+                   "Paren#to_html and through the fenced mathml payload; this column " \
+                   "duplicates HTML_SYMBOLS and should be dropped, not emitted"
+    end
+
+    assert_html_fenced_parens_reach_output!(entries)
+    { "entries" => entries, "divergent" => divergent }
+  end
+
+  # The measurement above is a method call on the Paren; this is the proof that
+  # its answer is the byte `Fenced#to_html` actually emits. One live render per
+  # id, filling both paren slots, compared against the whole expected string —
+  # `include?` would pass on a payload that is a substring of the real one.
+  def assert_html_fenced_parens_reach_output!(entries)
+    entries.each do |id, payload|
+      klass = Object.const_get("Plurimath::#{SYMBOL_NAMESPACE}#{id}")
+      rendered = Plurimath::Math::Formula.new(
+        [Plurimath::Math::Function::Fenced.new(
+          symbol_instance(klass),
+          [render_probe_symbol(RENDER_TABLE_CELL)],
+          symbol_instance(klass),
+        )],
+      ).to_html
+      expected = "<i>#{payload}</i>#{RENDER_TABLE_CELL}<i>#{payload}</i>"
+      next if rendered == expected
+
+      raise Error, "Fenced over #{id} rendered #{rendered.inspect}, not #{expected.inspect}; " \
+                   "the fenced html paren column no longer describes what to_html emits"
+    end
+  end
+
+  # The one extra export the html slice carries beyond the payload map.
+  def html_fenced_paren_sections(payloads, total)
+    entries = payloads.fetch("entries")
+    [
+      ts_tuple_map(
+        "HTML_FENCED_PAREN_PAYLOADS",
+        "ReadonlyMap<string, string>",
+        entries,
+        doc: "Symbol id -> the string `Fenced#to_html` puts in a paren slot, for\n" \
+             "all #{entries.length} `Math::Symbols::Paren` subclasses of the #{total} symbols.\n" \
+             "`symbol_or_paren` (`math/function/fenced.rb:324-336`) routes `:html`\n" \
+             "down the `:mathml` arm, so the slot gets\n" \
+             "`to_mathml_without_math_tag(false, options: {}).nodes.first` and NOT\n" \
+             "`Paren#to_html`. The two disagree on #{payloads.fetch('divergent')} of these ids, because each\n" \
+             "class writes its mathml as either `ox_element(\"mi\") << encoded`\n" \
+             "(the entity DECODED, `paren/lbbrack.rb:33-35`) or `<< paren_value`\n" \
+             "(the entity RAW, `paren/langle.rb:33-35`), with no rule relating the\n" \
+             "two — so this is measured, never derived from `HTML_SYMBOLS`.\n" \
+             "Verified through one live `Fenced#to_html` render per id. An id\n" \
+             "absent here is not a Paren subclass; a Paren subclass absent here is\n" \
+             "the parity gap that throws.",
+      ),
+    ]
+  end
+
+  def emit_symbols_file(out_root, format, classes, omml_tag_names:, html_fenced_parens:)
     entries = classes.map do |klass|
       [symbol_id(klass), representation(klass, format, BASELINE_CONTEXT)]
     end
@@ -3833,10 +3965,14 @@ module CorpusGenerator
            "something plausible.",
     )
 
-    # OMML is the one format whose static contract is wider than the payload:
+    # Two formats have a static contract wider than the payload map. For OMML
     # the same symbol also answers a tag name that changes the *structure* a
-    # host renders around it.
+    # host renders around it; for HTML one host, `Fenced`, reads a different
+    # payload out of the same symbol.
     sections.concat(omml_tag_name_sections(omml_tag_names, entries.length)) if format == "omml"
+    if format == "html"
+      sections.concat(html_fenced_paren_sections(html_fenced_parens, entries.length))
+    end
 
     write_ts(File.join(out_root, format, "symbols.ts"), sections)
   end
@@ -4718,6 +4854,7 @@ module CorpusGenerator
         },
       },
       "omml_tag_names" => omml_symbol_tag_names(static),
+      "html_fenced_parens" => html_fenced_paren_payloads(static),
       "tables" => asciimath_input_tables(classes),
       "grammar" => asciimath_grammar_tables,
     }
@@ -4768,7 +4905,9 @@ module CorpusGenerator
     emit_unicodemath_render_tables_file(out_root, unicodemath_render_tables)
 
     SYMBOL_FORMATS.each do |format|
-      emit_symbols_file(out_root, format, data["static"], data["omml_tag_names"])
+      emit_symbols_file(out_root, format, data["static"],
+                        omml_tag_names: data["omml_tag_names"],
+                        html_fenced_parens: data["html_fenced_parens"])
       emit_exceptions_file(out_root, format, data["direct"])
       written << File.join(out_root, format, "symbols.ts")
       written << File.join(out_root, format, "exceptions.ts")
@@ -5069,6 +5208,9 @@ module CorpusGenerator
     puts "omml_tag_name: default #{tag_names['default']}, " \
          "#{tag_names['overrides'].length} override(s) — " \
          "#{tag_names['overrides'].map { |id, tag| "#{id} #{tag}" }.join(', ')}"
+    fenced_parens = symbols["html_fenced_parens"]
+    puts "html fenced paren payloads: #{fenced_parens['entries'].length} Paren subclass(es), " \
+         "#{fenced_parens['divergent']} differing from Paren#to_html"
     puts "grammar tables: " \
          "#{symbols['grammar']['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
     puts "transform registry: " \

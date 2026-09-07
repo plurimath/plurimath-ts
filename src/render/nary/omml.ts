@@ -4,10 +4,10 @@ import {
   decodeEntities,
   FORMAT,
   type NodeOf,
+  naryAttrValue,
   ommlSlot,
   type RenderContext,
   requireEmptyOptions,
-  symbolValueOrGenerated,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
@@ -46,7 +46,7 @@ export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlEle
   const rawOperator = isNil(first)
     ? ""
     : hasNodeKind(first) && (first as { readonly kind: string }).kind === "symbol"
-      ? symbolValueOrGenerated(first as NodeOf<"symbol">, node.kind, "nary.parameterOne")
+      ? naryAttrValue(first as NodeOf<"symbol">, node.kind, "nary.parameterOne")
       : null;
   if (rawOperator === null) {
     throw new RenderError(
@@ -55,8 +55,8 @@ export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlEle
       node.kind,
     );
   }
-  // The operator is decoded twice, but the two decodes are read by different
-  // things and must not be collapsed into one. `Nary#chr_value`
+  // The operator is decoded twice HERE, and the two decodes are read by
+  // different things and must not be collapsed into one. `Nary#chr_value`
   // (nary.rb:155-160) tests `first_value` — ONE decode — as its suppression
   // predicate, while the attribute is decoded a second time only when the
   // document is written (`ox_engine/element.rb:105-107` in `update_attrs`, and
@@ -65,6 +65,10 @@ export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlEle
   // Both stages go through the shared guarded decode, so a code point UTF-8
   // cannot hold refuses here rather than reaching the renderer boundary as a
   // stack-depth error.
+  //
+  // A THIRD decode sits upstream of these two, inside `nary_attr_value`, and
+  // on the generated-literal arm only; `naryAttrValue` carries it, because
+  // that is where the gem puts it.
   const firstValue = decodeEntities(rawOperator, node.kind, "nary.parameterOne");
   const operatorValue = decodeEntities(firstValue, node.kind, "nary.parameterOne");
   const properties = new XmlElement("m:naryPr").append(

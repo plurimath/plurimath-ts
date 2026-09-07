@@ -24,7 +24,13 @@
 import { describe, expect, it } from "vitest";
 import { parseAsciimath } from "../../../src/formats/asciimath/parser";
 import { toMathml } from "../../../src/formats/mathml/renderer";
-import { aliasIndex, buildNode, readCensus, readCorpusCases } from "../../core/model-builder";
+import {
+  aliasIndex,
+  buildNode,
+  parseableCases,
+  readCensus,
+  readCorpusCases,
+} from "../../core/model-builder";
 
 const cases = readCorpusCases();
 const aliases = aliasIndex(readCensus());
@@ -49,6 +55,11 @@ describe("mathml render parity, corpus layer (recorded model -> bytes)", () => {
     // once before; both counts are pinned so it cannot happen silently.
     expect(cases.length).toBe(91);
     expect(rendered.length).toBe(91);
+    // The round-trip layer's scoped list is pinned too. Every pinned case is
+    // AsciiMath today, so scoping removes nothing; when a second input corpus
+    // lands this number drops deliberately rather than the layer thinning out
+    // unnoticed.
+    expect(roundTrip.length).toBe(91);
   });
 
   it("accounts for every case, as a rendering or as a refusal", () => {
@@ -68,8 +79,13 @@ describe("mathml render parity, corpus layer (recorded model -> bytes)", () => {
   );
 });
 
+// The model layer above rebuilds from `model` and is parser-independent, so it
+// takes every pinned case whatever notation the input is written in. This layer
+// calls `parseAsciimath`, so it takes only the AsciiMath ones.
+const roundTrip = parseableCases(rendered);
+
 describe("mathml render parity, round-trip layer (input -> parse -> render)", () => {
-  it.each(rendered.map((entry) => [entry.id, entry] as const))(
+  it.each(roundTrip.map((entry) => [entry.id, entry] as const))(
     "%s: parse + render reproduces the gem's bytes",
     (_id, entry) => {
       expect(toMathml(parseAsciimath(entry.input))).toBe(expectedMathml(entry));

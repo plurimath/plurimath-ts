@@ -25,6 +25,7 @@
 
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { assertKnownOptions } from "../../core/render-options";
 import { dumpNodes, XmlElement } from "../../xml/index";
 import { NO_SPACING_CONTEXT, SPACING_CONTEXT } from "./render";
 import {
@@ -40,8 +41,9 @@ import {
  * deferred `to_mathml` keywords — `formatter`, `intent`, `unitsml`,
  * `split_on_linebreak` — are deliberately NOT in this type; passing one
  * (any value but `undefined`) is a named `RenderError` at runtime
- * (`TODO.plan/deferred.md` carries each entry and its trigger). Unknown
- * keys beyond those are ignored, per the §5 options convention.
+ * (`TODO.plan/deferred.md` carries each entry and its trigger). A key that is
+ * neither — one `to_mathml` has no keyword for at all — is refused by name
+ * too, at the entry (`ACCEPTED_OPTIONS` below).
  */
 export interface MathmlOptions {
   /**
@@ -60,12 +62,39 @@ export interface MathmlOptions {
   readonly unaryFunctionSpacing?: boolean | null | undefined;
 }
 
+/**
+ * The keys `MathmlOptions` declares, as runtime data. The mapped type is TOTAL
+ * over the interface — every optional key is required here, and a key the
+ * interface does not declare is a type error — so an option added to
+ * `MathmlOptions` cannot be left out of the accepted set below. The values
+ * carry nothing; only the keys are read.
+ */
+const IMPLEMENTED_OPTIONS: { readonly [K in keyof Required<MathmlOptions>]: null } = {
+  displayStyle: null,
+  unaryFunctionSpacing: null,
+};
+
 /** The deferred `to_mathml` keywords, each refused by name when present. */
 const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
   ["formatter", "number formatting is P4 scope; only the no-formatter path is measured"],
   ["intent", "the intent attribute pipeline (intentify, intent post-processing) is unmeasured"],
   ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md §5)"],
   ["splitOnLinebreak", "line_breaked_mathml renders one <math> per line-broken slice; unmeasured"],
+];
+
+/**
+ * Every option key this entry accepts: the two implemented axes plus the four
+ * deferred keywords. The deferred names belong here because `to_mathml` really
+ * does take them — `intent:`, `formatter:`, `unitsml:`, `split_on_linebreak:`
+ * are four of its six keywords (formula.rb:76-83 on the pinned oracle) — so
+ * "unknown option" would be the wrong thing to say about one. They are
+ * recognised, then refused by name with the reason, a few lines further down.
+ * Anything outside this list is a keyword `to_mathml` does not have either,
+ * and is refused as unknown at the entry.
+ */
+const ACCEPTED_OPTIONS: readonly string[] = [
+  ...Object.keys(IMPLEMENTED_OPTIONS),
+  ...DEFERRED_OPTIONS.map(([name]) => name),
 ];
 
 /**
@@ -76,21 +105,14 @@ const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
  * `TypeError` inside the dispatch.
  */
 export function toMathml(node: MathNode, options?: MathmlOptions | null): string {
+  // The options come first, as they do in Ruby: the keyword check there is
+  // part of the call, so an unknown keyword raises before the method body
+  // ever looks at the receiver. The shared guard also carries the
+  // keyword-hash check this entry used to make inline — a primitive would
+  // ToObject-coerce through `Object.hasOwn` below and behave as empty
+  // options, and an array is not a keyword hash either.
+  assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
-  // The gem's contract is a keyword hash: a primitive here would silently
-  // coerce through `Object.hasOwn`'s ToObject and behave as empty options —
-  // a surprise, not a rendering. Arrays are not keyword hashes either.
-  if (
-    options !== null &&
-    options !== undefined &&
-    (typeof options !== "object" || Array.isArray(options))
-  ) {
-    throw new RenderError(
-      `options: expected a plain options object, found ${typeof options === "object" ? "an array" : `a ${typeof options}`}`,
-      FORMAT,
-      "formula",
-    );
-  }
   const opts: Record<string, unknown> =
     options === null || options === undefined ? {} : (options as Record<string, unknown>);
   try {

@@ -65,62 +65,26 @@ export const KNOWN_DIVERGENCES: Readonly<
  * case's own test. Shrinking this list is the work; each removal belongs to the
  * commit that earns it.
  *
- * Measured at 50 ids against the pinned oracle: 37 are the generated
- * symbol-data gap (`Symbol "…" needs generated OMML data`), 6 an unmeasured
- * UnaryFunction alias, 6 an unmeasured BinaryFunction alias, and one the
- * deferred single-column `m:eqArr` table branch.
+ * Measured at 13 ids against the pinned oracle: 6 an unmeasured UnaryFunction
+ * alias, 6 an unmeasured BinaryFunction alias, and one the deferred
+ * single-column `m:eqArr` table branch. The 37 that were the generated
+ * symbol-data gap are gone — `src/generated/omml/symbols.ts` is read now, and
+ * every one of those cases reproduces the gem's exact bytes.
  */
 export const PORT_REFUSES: ReadonlySet<string> = new Set([
-  "colour-in-sum",
-  "fence-round-expression",
-  "fence-square-pair",
-  "fence-round-triple",
-  "fence-over-number",
-  "font-mixed",
-  "frac-fenced-numerator",
-  "frac-fenced-denominator",
-  "frac-sum-of-fracs",
+  "left-right-around-frac",
   "left-right-round",
   "left-right-square",
-  "left-right-around-frac",
   "matrix-column",
-  "matrix-two-by-two",
-  "mixed-implicit-product",
-  "mixed-greek-sequence",
-  "mixed-function-definition",
-  "mixed-binomial-square",
-  "mixed-sum-of-cubes",
-  "mod-simple",
-  "mod-numeric",
   "mod-in-expression",
-  "nary-log-base",
+  "mod-numeric",
+  "mod-simple",
   "nary-lim",
-  "nary-sum-bounded",
-  "nary-prod-bounded",
-  "operator-plus",
-  "operator-asterisk",
-  "operator-minus",
-  "operator-equals",
-  "operator-plus-chain",
-  "permissive-trailing-caret",
-  "permissive-unopened-paren",
-  "permissive-closing-run",
-  "permissive-bare-dollar",
-  "permissive-frac-then-operator",
-  "power-fenced-exponent",
-  "subscript-fenced",
-  "root-sqrt-expression",
-  "root-sqrt-pythagoras",
+  "nary-log-base",
   "root-cube",
-  "symbol-greek-alpha",
-  "symbol-greek-pi",
-  "symbol-greek-sigma",
-  "symbol-infinity",
-  "unary-sin-fenced",
-  "unary-sin-bare",
   "unary-cos-product",
-  "whitespace-around-operator",
-  "whitespace-in-subscript",
+  "unary-sin-bare",
+  "unary-sin-fenced",
 ]);
 
 /**
@@ -131,14 +95,14 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  *
  * Not hand-set. Both this number and the refusal set above come from running
  * every gem-renderable case in `parity-fixtures.json` through the port and
- * byte-comparing the result: 92 renderable, 50 refused with a typed
- * `RenderError`, 42 rendered — 41 reproducing the gem's exact bytes and one
+ * byte-comparing the result: 92 renderable, 13 refused with a typed
+ * `RenderError`, 79 rendered — 78 reproducing the gem's exact bytes and one
  * (`text-unitsml-valid`) pinned in `KNOWN_DIVERGENCES`. Nothing rendered bytes
  * that differ from the gem's without being pinned, and nothing threw untyped.
- * It moved from 41 when the pinned corpus gained `partial-sqrt-unclosed`, which
- * the gem renders and this port reproduces; the refusal set did not move.
+ * It moved from 42 when the generated OMML symbol table was wired in: the 37
+ * cases that refused for want of it all render, and all 37 match.
  */
-export const RENDERED_BASELINE = 42;
+export const RENDERED_BASELINE = 79;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared

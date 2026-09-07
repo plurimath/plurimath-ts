@@ -549,6 +549,71 @@ Everything still refused is a function-carrier alias, no longer symbol data:
 
 That is slice 5 below, and it is now the whole remaining HTML corpus gap.
 
+### Measured after OMML consumption
+
+Slice 4 below, executed. `src/generated/omml/symbols.ts` is read by
+`src/formats/omml/render-shared.ts`, which is where this format's five symbol
+helpers already lived, so the XML construction stays in the shared wrapper as
+the contract above requires.
+
+The corpus was re-measured rather than borrowed from HTML: every gem-renderable
+case in `test/formats/omml/parity-fixtures.json` was run through the port and
+byte-compared, before and after (exit `0` both runs).
+
+| | before | after |
+|---|---:|---:|
+| gem-renderable cases | 92 | 92 |
+| rendered, matching the gem | 41 | 78 |
+| rendered, pinned divergence | 1 | 1 |
+| refused with a typed `RenderError` | 50 | 13 |
+| threw untyped | 0 | 0 |
+
+All `37` refusals that named the missing symbol data are gone, and every one of
+those `37` cases now reproduces the gem's exact bytes. The one divergence in
+both columns is `text-unitsml-valid`, the pre-existing UnitsML entry in
+`KNOWN_DIVERGENCES`. `PORT_REFUSES` was not hand-edited: it was written from the
+run, and `RENDERED_BASELINE` moved `42` -> `79`.
+
+The `13` that remain are function-alias work, not symbol data: `6` unmeasured
+`UnaryFunction` aliases, `6` unmeasured `BinaryFunction` aliases, and the
+deferred single-column `m:eqArr` table branch.
+
+Three things the wiring had to carry beyond the payload map, each measured on
+the pinned oracle (exit `0`):
+
+- **`nary_attr_value` decodes one arm only.** `symbols/symbol.rb:101-105` is
+  `value || Utility.html_entity_to_unicode(to_omml_without_math_tag(...))`, so
+  a generated literal reaches `Nary#chr_value` already decoded and a stored
+  value does not. `Nary(Sum.new, ...)` emits `<m:chr m:val="∑"/>` where
+  `Nary(Sum.new("WRONG"), ...)` emits `<m:chr m:val="WRONG"/>`.
+- **`Table#paren` is the representation, not `t_tag`.** `table.rb:375-377`
+  calls `to_omml_without_math_tag(true)`, so a named paren's stored value is
+  never read there — unlike the insertion path, where `t_tag` prefers it.
+- **`OMML_SYMBOL_TAG_NAMES` had to be wired with the payload map.**
+  `PowerBase#to_omml_without_math_tag` branches on
+  `parameter_one&.omml_tag_name == "undOvr"` (`power_base.rb:39-43`). Once the
+  `8` symbols that answer `undOvr` started rendering, a `PowerBase` over one of
+  them would have emitted `m:sSubSup` where the gem emits the
+  `m:limLow`/`m:limUpp` structure — correct-looking markup with the wrong
+  shape. `TernaryFunction#underover` is now modelled instead.
+
+That last change also corrected a refusal message that was false about the gem.
+This file's `src/render/ternary-function/omml.ts` refused a `PowerBase` over an
+`Nary` as "an unmeasured under/over branch in the gem". `Nary` is a bare `Core`
+subclass and answers `omml_tag_name` `"subSup"`; measured live, the gem renders
+`PowerBase(Nary(...), i, n)` as `m:sSubSup`. The branch test now reads the tag
+name for real, so that case takes the `m:sSubSup` arm the gem takes and the
+false claim is gone.
+
+`[dist-sizes]` was not re-run as a before/after pair, and no size ceiling
+applies: `./omml` is not a published subpath yet. `tsdown.config.ts` builds
+seven entries and none of them is `src/formats/omml/`, `package.json` exports
+no `./omml`, and no OMML module is reachable from any entry that does exist —
+`grep -rl oMathPara dist/` after a full build matches nothing. So this slice
+cannot move any subpath's bytes. `package-isolation` was re-run anyway and
+passed; the isolation and size measurements this file asks for belong to the
+slice that publishes `./omml`, which has not landed.
+
 ### Recommended slice order
 
 1. **Generator contract and source commit.** Extend the existing generator's

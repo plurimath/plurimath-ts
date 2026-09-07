@@ -8,7 +8,7 @@
 
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
-import { RenderError } from "../../../src/core/errors";
+import { MissingSymbolDataError, RenderError } from "../../../src/core/errors";
 import type { MathNode, NodeParameter } from "../../../src/core/nodes";
 import {
   AbsNode,
@@ -2795,102 +2795,186 @@ describe("OMML mpadded option hash ordering", () => {
   });
 });
 
-describe("generated OMML symbol-data deferral", () => {
+describe("generated OMML symbol data", () => {
+  it("renders a named Symbol from the generated table, ignoring any value override", () => {
+    // `Symbols::Plus#to_omml_without_math_tag` answers its static string
+    // whatever the constructor was given. Measured over all 1,459 static
+    // symbol classes on the pinned oracle: not one of them lets a value
+    // override move the answer, which is why the OMML exception matrix is
+    // empty and the table needs no context.
+    for (const value of [undefined, "WRONG", "+"]) {
+      expect(toOmmlWithoutMathTag(new SymbolNode({ id: "Plus", value }))).toBe("+");
+    }
+    expect(toOmmlWithoutMathTag(new SymbolNode({ id: "Sum", value: "WRONG" }))).toBe("&#x2211;");
+    expect(toOmmlWithoutMathTag(new SymbolNode({ id: "Sigma" }))).toBe("&#x3c3;");
+  });
+
   it("uses a named Symbol's explicit value only on insertion", () => {
-    const node = new SymbolNode({ id: "Plus", value: "WRONG" });
-    expectRefusal(() => toOmmlWithoutMathTag(node), {
-      kind: "symbol",
-      message: 'Symbol "Plus" needs generated OMML data, deferred to the symbol-data follow-up',
-    });
-    expect(toOmml(new FormulaNode({ value: [node] }))).toBe(
+    // `Symbol#t_tag` is `value || to_omml_without_math_tag(...)`, so the
+    // stored value wins on the insertion path and nowhere else. Both halves
+    // measured: `Formula([Plus.new])` gives `<m:t>+</m:t>` and
+    // `Formula([Plus.new("WRONG")])` gives `<m:t>WRONG</m:t>`.
+    const run = (line: string): string =>
       xml(
         ROOT_OPEN,
         "  <m:oMath>",
         "    <m:r>",
-        "      <m:t>WRONG</m:t>",
+        line,
         "    </m:r>",
         "  </m:oMath>",
         "</m:oMathPara>",
-      ),
+      );
+    expect(toOmml(new FormulaNode({ value: [new SymbolNode({ id: "Plus" })] }))).toBe(
+      run("      <m:t>+</m:t>"),
     );
+    expect(
+      toOmml(new FormulaNode({ value: [new SymbolNode({ id: "Plus", value: "WRONG" })] })),
+    ).toBe(run("      <m:t>WRONG</m:t>"));
   });
 
-  it("refuses named Symbol output", () => {
-    expectRefusal(() => toOmmlWithoutMathTag(new SymbolNode({ id: "Plus" })), {
-      kind: "symbol",
-      message: 'Symbol "Plus" needs generated OMML data, deferred to the symbol-data follow-up',
-    });
+  it("refuses an id the generated table does not carry, as MISSING_SYMBOL_DATA", () => {
+    // The one deliberate non-RenderError throw on this walk. It reaches the
+    // caller intact rather than being wrapped by the renderer boundary,
+    // exactly as the latex and html renderers' does.
+    for (const render of [
+      () => toOmmlWithoutMathTag(new SymbolNode({ id: "NoSuchSymbolClass" })),
+      () => toOmml(new FormulaNode({ value: [new SymbolNode({ id: "NoSuchSymbolClass" })] })),
+    ]) {
+      let thrown: unknown;
+      try {
+        render();
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toBeInstanceOf(MissingSymbolDataError);
+      expect((thrown as MissingSymbolDataError).code).toBe("MISSING_SYMBOL_DATA");
+      expect((thrown as MissingSymbolDataError).symbolId).toBe("NoSuchSymbolClass");
+      expect((thrown as MissingSymbolDataError).format).toBe("omml");
+    }
   });
 
-  it("refuses Text unicode substitutions", () => {
+  it("refuses Text unicode substitutions, which this table does not carry", () => {
+    // Not a gap this slice can close: `Text#symbol_value` (text.rb:126-129)
+    // inverts `Mathml::Constants::UNICODE_SYMBOLS` and `SYMBOLS`, an
+    // entity-name map owned by mathml. The OMML symbol table holds symbol
+    // CLASS literals and has no entry for it.
     expectRefusal(() => toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:kappa]" })), {
       kind: "text",
       message:
-        "text.parameterOne: unicode[:name] substitution needs generated OMML data, deferred to the symbol-data follow-up",
+        "text.parameterOne: unicode[:name] substitution reads " +
+        "Mathml::Constants::UNICODE_SYMBOLS and SYMBOLS inverted " +
+        "(text.rb:126-129), a MathML-owned entity map that no generated OMML " +
+        "table carries — the OMML symbol table holds class literals, not this",
     });
   });
 
-  it("refuses a Table paren that needs the generated symbol value", () => {
-    const node = new TableNode({
-      closeParen: new SymbolNode({ id: "Paren::Rsquare" }),
-      openParen: new SymbolNode({ id: "Paren::Lsquare" }),
-      options: {},
-      value: [tr(), tr()],
-    });
-    expectRefusal(() => toOmmlWithoutMathTag(node), {
-      kind: "table",
-      message:
-        'table.openParen: Symbol "Paren::Lsquare" needs generated OMML data, deferred to the symbol-data follow-up',
-    });
-
-    const closeNode = new TableNode({
-      closeParen: new SymbolNode({ id: "Paren::Rsquare" }),
-      openParen: symbol("["),
-      options: {},
-      value: [tr(), tr()],
-    });
-    expectRefusal(() => toOmmlWithoutMathTag(closeNode), {
-      kind: "table",
-      message:
-        'table.closeParen: Symbol "Paren::Rsquare" needs generated OMML data, deferred to the symbol-data follow-up',
-    });
-
-    const valuedOpenNode = new TableNode({
-      closeParen: symbol("]"),
-      openParen: new SymbolNode({ id: "Paren::Lsquare", value: "WRONG" }),
-      options: {},
-      value: [tr(), tr()],
-    });
-    expectRefusal(() => toOmmlWithoutMathTag(valuedOpenNode), {
-      kind: "table",
-      message:
-        'table.openParen: Symbol "Paren::Lsquare" needs generated OMML data, deferred to the symbol-data follow-up',
-    });
+  it("takes a Table paren from the table, never from its stored value", () => {
+    // `Table#paren` is `parenthesis.to_omml_without_math_tag(true)`
+    // (table.rb:375-377) — the representation, not `t_tag` — so a value
+    // override is ignored here. Measured: the named-paren table and the
+    // base-value table give the same bytes.
+    const named = (openValue?: string): TableNode =>
+      new TableNode({
+        closeParen: new SymbolNode({ id: "Paren::Rsquare" }),
+        openParen: new SymbolNode({ id: "Paren::Lsquare", value: openValue }),
+        options: {},
+        value: [tr(), tr()],
+      });
+    expect(toOmmlWithoutMathTag(named())).toBe(TABLE_X);
+    expect(toOmmlWithoutMathTag(named("WRONG"))).toBe(TABLE_X);
   });
 
-  it("refuses a Nary operator that needs the generated symbol value", () => {
-    const node = new NaryNode({
-      options: {},
-      parameterOne: new SymbolNode({ id: "Sum" }),
-      parameterTwo: symbol(),
-      parameterThree: symbol(),
-      parameterFour: symbol(),
-    });
-    expectRefusal(() => toOmmlWithoutMathTag(node), {
-      kind: "nary",
-      message:
-        'nary.parameterOne: Symbol "Sum" needs generated OMML data, deferred to the symbol-data follow-up',
-    });
-
-    const valuedNode = new NaryNode({
-      options: {},
-      parameterOne: new SymbolNode({ id: "Sum", value: "WRONG" }),
-      parameterTwo: symbol(),
-      parameterThree: symbol(),
-      parameterFour: symbol(),
-    });
-    expect(toOmmlWithoutMathTag(valuedNode)).toBe(
+  it("decodes a Nary operator taken from the table one time more than a stored value", () => {
+    // `Symbol#nary_attr_value` decodes the FALLBACK arm only
+    // (symbols/symbol.rb:101-105), and `Nary#chr_value` then decodes what it
+    // gets again. Measured: `Nary(Sum.new, ...)` emits `m:chr m:val="∑"` —
+    // the decoded character, not the `&#x2211;` the table holds — while
+    // `Nary(Sum.new("WRONG"), ...)` emits `m:chr m:val="WRONG"`.
+    const nary = (operator: SymbolNode): NaryNode =>
+      new NaryNode({
+        options: {},
+        parameterOne: operator,
+        parameterTwo: symbol(),
+        parameterThree: symbol(),
+        parameterFour: symbol(),
+      });
+    expect(toOmmlWithoutMathTag(nary(new SymbolNode({ id: "Sum" })))).toBe(
+      NARY_X.replace('m:chr m:val="x"', 'm:chr m:val="\u2211"'),
+    );
+    expect(toOmmlWithoutMathTag(nary(new SymbolNode({ id: "Sum", value: "WRONG" })))).toBe(
       NARY_X.replace('m:chr m:val="x"', 'm:chr m:val="WRONG"'),
+    );
+  });
+
+  it("routes a PowerBase over an undOvr symbol to the under/over structure", () => {
+    // `PowerBase#to_omml_without_math_tag` opens on
+    // `parameter_one&.omml_tag_name == "undOvr"` (power_base.rb:39-43), which
+    // the generated `OMML_SYMBOL_TAG_NAMES` answers for the 8 symbols that
+    // override it. `TernaryFunction#underover` then renders an `Overset` of
+    // base and superscript, wrapped in an `Underset` over the subscript only
+    // when the subscript is truthy. Both arms measured on the oracle.
+    const limPr = (name: string): readonly string[] => [
+      `  <m:${name}Pr>`,
+      "    <m:ctrlPr>",
+      "      <w:rPr>",
+      '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+      "        <w:i/>",
+      "      </w:rPr>",
+      "    </m:ctrlPr>",
+      `  </m:${name}Pr>`,
+    ];
+    const powerBase = (subscript: NodeParameter | undefined): TernaryFunctionNode =>
+      new TernaryFunctionNode({
+        name: "PowerBase",
+        parameterOne: new SymbolNode({ id: "Sum" }),
+        parameterThree: symbol("n"),
+        ...(subscript === undefined ? {} : { parameterTwo: subscript }),
+      });
+
+    expect(toOmmlWithoutMathTag(powerBase(undefined))).toBe(
+      xml(
+        "<m:limUpp>",
+        ...limPr("limUpp"),
+        "  <m:e>",
+        "    <m:r>",
+        "      <m:t>&#x2211;</m:t>",
+        "    </m:r>",
+        "  </m:e>",
+        "  <m:lim>",
+        "    <m:r>",
+        "      <m:t>n</m:t>",
+        "    </m:r>",
+        "  </m:lim>",
+        "</m:limUpp>",
+      ),
+    );
+
+    expect(toOmmlWithoutMathTag(powerBase(symbol("i")))).toBe(
+      xml(
+        "<m:limLow>",
+        ...limPr("limLow"),
+        "  <m:e>",
+        "    <m:limUpp>",
+        ...limPr("limUpp").map((line) => `    ${line}`),
+        "      <m:e>",
+        "        <m:r>",
+        "          <m:t>&#x2211;</m:t>",
+        "        </m:r>",
+        "      </m:e>",
+        "      <m:lim>",
+        "        <m:r>",
+        "          <m:t>n</m:t>",
+        "        </m:r>",
+        "      </m:lim>",
+        "    </m:limUpp>",
+        "  </m:e>",
+        "  <m:lim>",
+        "    <m:r>",
+        "      <m:t>i</m:t>",
+        "    </m:r>",
+        "  </m:lim>",
+        "</m:limLow>",
+      ),
     );
   });
 });
@@ -3155,9 +3239,12 @@ describe("OMML wrappers slice", () => {
       }),
       RUN_X,
     );
-    expect(toOmmlWithoutMathTag(arbitraryNodeOption, { arbitrary: "read-me" } as never)).toBe(
-      RUN_X,
-    );
+    // The node's own `options` hash is arbitrary data, and stays pinned above.
+    // A CALL option is a different thing — a render keyword — and one this
+    // renderer does not accept is refused by name now rather than ignored.
+    expect(() =>
+      toOmmlWithoutMathTag(arbitraryNodeOption, { arbitrary: "read-me" } as never),
+    ).toThrow(/unknown option "arbitrary"/);
     expectDirectAndInsertion(
       new ColorNode({
         options: {},
@@ -3279,9 +3366,22 @@ describe("OMML renderer boundary", () => {
   });
 
   it("accepts a plain options object from another JavaScript realm", () => {
-    const options = runInNewContext("({ arbitrary: true })") as Record<string, unknown>;
+    // What this pins is the REALM check: an object built in another context
+    // has that context's Object.prototype, and must still count as a plain
+    // options object. It carries no keys, because key validity is a separate
+    // check now and an unknown one would refuse before the realm ever mattered.
+    const options = runInNewContext("({})") as Record<string, unknown>;
     expect(toOmml(new FormulaNode({ value: [symbol()] }), options as never)).toBe(PUBLIC_X);
     expect(toOmmlWithoutMathTag(symbol(), options as never)).toBe("x");
+  });
+
+  it("refuses an unknown key on an options object from another JavaScript realm", () => {
+    // The realm's own object still reaches the key check, rather than passing
+    // because its prototype came from elsewhere.
+    const options = runInNewContext("({ arbitrary: true })") as Record<string, unknown>;
+    expect(() => toOmml(new FormulaNode({ value: [symbol()] }), options as never)).toThrow(
+      /unknown option "arbitrary"/,
+    );
   });
 
   it.each([

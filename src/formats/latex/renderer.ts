@@ -37,6 +37,7 @@
 
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { assertKnownOptions } from "../../core/render-options";
 import { ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
 
@@ -44,12 +45,23 @@ import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
  * Renderer options. Empty today and typed exactly (§5): the gem's only
  * observable option on this path is a configured number formatter, which is
  * P4 scope — with none configured a number renders its raw value, and the
- * whole pinned corpus was generated that way. `toLatex` never READS the
- * parameter (no latex render consults an option — the exception matrix is
- * empty), so there is no options-shape guard here: a guard on an unread
- * argument would be dead code pretending at a contract.
+ * whole pinned corpus was generated that way. No latex render consults an
+ * option — the exception matrix is empty — so the parameter's only job is
+ * the entry-point guard below, which refuses a key this type does not
+ * declare instead of ignoring it (core/render-options.ts).
  */
 export type LatexOptions = Record<string, never>;
+
+/**
+ * The option keys this entry accepts. There are none: `LatexOptions` declares
+ * no key, so every key that reaches the entry is unknown and is refused BY NAME
+ * (`assertKnownOptions`, core/render-options.ts) instead of ignored. The
+ * gem's own `to_latex` keywords — `formatter:`, `unitsml:`, `options:`
+ * (formula.rb:141 on the pinned oracle) — are refused here too: none of the
+ * three is implemented in this port, so accepting one silently would promise
+ * a behaviour it does not have.
+ */
+const ACCEPTED_OPTIONS: readonly string[] = [];
 
 /**
  * `Formula#to_latex` / any node's `to_latex`, as a module function.
@@ -58,7 +70,11 @@ export type LatexOptions = Record<string, never>;
  * malformed tree fails as `RenderError` with the offending path, never as a
  * `TypeError` inside the dispatch.
  */
-export function toLatex(node: MathNode, _options?: LatexOptions | null): string {
+export function toLatex(node: MathNode, options?: LatexOptions | null): string {
+  // The options come first, as they do in Ruby: the keyword check there is
+  // part of the call, so an unknown keyword raises before the method body
+  // ever looks at the receiver.
+  assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   // Structural check only — `assertMathNodeShape` deliberately returns
   // `void`, not `asserts node is MathNode` (missing constructed fields and
   // boolean/number slots pass; narrowing would overpromise, see

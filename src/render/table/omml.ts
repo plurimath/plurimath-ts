@@ -1,6 +1,5 @@
 import { hasNodeKind, RenderError } from "../../core/index";
 import {
-  baseSymbolValue,
   controlProperties,
   FORMAT,
   type NodeOf,
@@ -10,6 +9,7 @@ import {
   requireElement,
   requireEmptyOptions,
   requireNodeList,
+  symbolOmmlValue,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
@@ -129,5 +129,8 @@ function requireParenValue(value: unknown, node: NodeOf<"table">, at: string): s
       node.kind,
     );
   }
-  return baseSymbolValue(value as NodeOf<"symbol">, node.kind, at);
+  // `Table#paren` is `parenthesis.to_omml_without_math_tag(true)`
+  // (`table.rb:375-377`) — the representation itself, NOT `t_tag`, so a named
+  // paren answers its generated literal and its stored value is never read.
+  return symbolOmmlValue(value as NodeOf<"symbol">, node.kind, at);
 }

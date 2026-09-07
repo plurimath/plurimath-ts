@@ -8,7 +8,7 @@ therefore make the implementation look nearly empty when it is not.
 
 The measured corpus does not support the P2 README's earlier prediction that OMML would
 require an XML-layer extension. The README now records the measured boundary
-(`TODO.plan/p2-output-formats/README.md:49-54`): every XML feature OMML emitted in the
+(`TODO.plan/p2-output-formats/README.md:67-70`): every XML feature OMML emitted in the
 sweep below is already expressible by `src/xml/`. Do not schedule an XML-layer change up
 front; require a failing oracle probe that names a missing capability first.
 

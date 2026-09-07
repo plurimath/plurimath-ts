@@ -1479,3 +1479,45 @@ export const HTML_SYMBOLS: ReadonlyMap<string, string> = new Map([
   ["Zwsp", "&#x200b;"],
   ["Zz", "&#x2124;"],
 ]);
+
+/**
+ * Symbol id -> the string `Fenced#to_html` puts in a paren slot, for
+ * all 24 `Math::Symbols::Paren` subclasses of the 1459 symbols.
+ * `symbol_or_paren` (`math/function/fenced.rb:324-336`) routes `:html`
+ * down the `:mathml` arm, so the slot gets
+ * `to_mathml_without_math_tag(false, options: {}).nodes.first` and NOT
+ * `Paren#to_html`. The two disagree on 13 of these ids, because each
+ * class writes its mathml as either `ox_element("mi") << encoded`
+ * (the entity DECODED, `paren/lbbrack.rb:33-35`) or `<< paren_value`
+ * (the entity RAW, `paren/langle.rb:33-35`), with no rule relating the
+ * two — so this is measured, never derived from `HTML_SYMBOLS`.
+ * Verified through one live `Fenced#to_html` render per id. An id
+ * absent here is not a Paren subclass; a Paren subclass absent here is
+ * the parity gap that throws.
+ */
+export const HTML_FENCED_PAREN_PAYLOADS: ReadonlyMap<string, string> = new Map([
+  ["Paren::CloseParen", "&#x3017;"],
+  ["Paren::Langle", "&#x2329;"],
+  ["Paren::Lbbrack", "⟦"],
+  ["Paren::Lbrace", "{"],
+  ["Paren::Lbrack", "["],
+  ["Paren::Lceil", "⌈"],
+  ["Paren::Lcurly", "{"],
+  ["Paren::Lfloor", "⌊"],
+  ["Paren::Lround", "("],
+  ["Paren::Lsquare", "["],
+  ["Paren::Norm", "‖"],
+  ["Paren::OpenParen", "&#x3016;"],
+  ["Paren::Rangle", "&#x232a;"],
+  ["Paren::Rbbrack", "⟧"],
+  ["Paren::Rbrace", "}"],
+  ["Paren::Rbrack", "]"],
+  ["Paren::Rceil", "⌉"],
+  ["Paren::Rcurly", "}"],
+  ["Paren::Rfloor", "⌋"],
+  ["Paren::Rround", ")"],
+  ["Paren::Rsquare", "]"],
+  ["Paren::UpcaseLangle", "⟪"],
+  ["Paren::UpcaseRangle", "⟫"],
+  ["Paren::Vert", "|"],
+]);

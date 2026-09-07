@@ -30,6 +30,7 @@
 
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { assertKnownOptions } from "../../core/render-options";
 import { ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
 
@@ -42,13 +43,29 @@ import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
 export type AsciimathOptions = Record<string, never>;
 
 /**
+ * The option keys this entry accepts. There are none: `AsciimathOptions`
+ * declares no key, so every key that reaches the entry is unknown and is
+ * refused BY NAME
+ * (`assertKnownOptions`, core/render-options.ts) instead of ignored. The
+ * gem's own `to_asciimath` keywords — `formatter:`, `unitsml:`, `options:`
+ * (formula.rb:66 on the pinned oracle) — are refused here too: none of the
+ * three is implemented in this port, so accepting one silently would promise
+ * a behaviour it does not have.
+ */
+const ACCEPTED_OPTIONS: readonly string[] = [];
+
+/**
  * `Formula#to_asciimath` / any node's `to_asciimath`, as a module function.
  *
  * Validates the tree's shape once at entry (`assertMathNodeShape`), so a
  * malformed tree fails as `RenderError` with the offending path, never as a
  * `TypeError` inside the dispatch.
  */
-export function toAsciimath(node: MathNode, _options?: AsciimathOptions | null): string {
+export function toAsciimath(node: MathNode, options?: AsciimathOptions | null): string {
+  // The options come first, as they do in Ruby: the keyword check there is
+  // part of the call, so an unknown keyword raises before the method body
+  // ever looks at the receiver.
+  assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   // Structural check only — `assertMathNodeShape` deliberately returns
   // `void`, not `asserts node is MathNode` (missing constructed fields and
   // boolean/number slots pass; narrowing would overpromise, see

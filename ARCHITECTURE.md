@@ -7,7 +7,7 @@ OMML, UnicodeMath, and HTML. It replaces the Opal-compiled `plurimath-js`.
 This document records the agreed design. Change it before changing the code it
 describes.
 
-Revision: v15 (2026-09-03) — Ruby-backed oracle-runner unit regressions are
+Revision: v16 (2026-09-07) — the renderer-options convention gains its runtime half: §5 now requires every render entry point to REFUSE an option key its format does not accept (it previously said the runtime ignores unknown keys), and §7 registers the `render-options` gate, whose entry-point list is derived rather than written down. v15 (2026-09-03) — Ruby-backed oracle-runner unit regressions are
 isolated from the Node-only class-A suite and run in CI with a pinned Ruby
 interpreter; the script inventory now includes the HTML fixture generators and
 their shared provenance helper. v14 (2026-08-07) — the render layout goes
@@ -630,12 +630,28 @@ Nothing is claimed about parsed trees here. The AsciiMath transform exists —
 its own tests (`test/formats/asciimath/transform.spec.ts`) and by the corpus
 model-parity gate, not by this section, which describes construction only.
 
-**Renderer options (decided 2026-07-28).** One convention for every renderer:
-options are typed exactly, so unknown keys are rejected on fresh object
-literals (TypeScript's excess-property check; a variable widened elsewhere can
-still slip through — the runtime therefore ignores unknown keys rather than
-throwing). Every default is documented on the option; rendering never mutates
-the options object (§5 execution contract).
+**Renderer options (decided 2026-07-28; the runtime half corrected
+2026-09-07).** One convention for every renderer: options are typed exactly,
+so unknown keys are rejected on fresh object literals (TypeScript's
+excess-property check). That is the compile-time half, and it was long the
+only half — a variable widened elsewhere, a JavaScript caller or an `as any`
+walked through it, and every entry point rendered normally on
+`{nosuchoption: 1}`. The gem does not: its public render methods declare
+explicit keywords and no `**rest` (`to_asciimath(formatter:, unitsml:,
+options:)` at `formula.rb:66`, `to_mathml` :76, `to_latex` :141, `to_html`
+:149, `to_omml` :157, `to_unicodemath` :187), so Ruby raises `ArgumentError:
+unknown keyword: :nosuchoption` before the body runs. Every render entry point
+therefore calls `assertKnownOptions` (`src/core/render-options.ts`) FIRST —
+ahead of the tree's own shape check, as Ruby's keyword check precedes the
+method body — and refuses an unaccepted key by name as `RenderError`.
+`undefined`, `null` and an empty object pass, matching the gem's defaults; an
+options argument that is not a keyword hash is refused rather than coerced.
+A key the format recognises but has not implemented is accepted by this guard
+and refused by name where the reason is known — MathML's deferred `to_mathml`
+keywords are the case in point. The `render-options` gate (§7) derives the
+entry points rather than listing them, so a later format cannot skip the
+guard. Every default is documented on the option; rendering never mutates the
+options object (§5 execution contract).
 
 **Renderers.** Each renderer is one module with one public entry function and
 one recursive dispatcher:
@@ -955,6 +971,7 @@ Lifecycle rules:
 | Packaging correctness (`publint` on `dist`, `attw` on a real pack) | A | `P0` |
 | Generated-payload schema + manifest-hash validation | A | `P1-baseline` (first generated data) |
 | Runtime boundary (unknown/malformed nodes) | A | `P1-baseline` (with the first renderer) |
+| Render options (unknown option keys) | A | `P1-baseline` (with the first renderer) — the runner **derives** the entry points from the `src/formats` directories holding a `renderer.ts` and from each module's exported `to*` functions, so a new format needs no new row here and fails the gate until its guard is wired in |
 | Unsupported-construct fallback + diagnostics | A | `P1-baseline` — `Text` fallback in all four renderings; warning dedup; callback replace/silence/throw; exact original-input index (incl. after a length-changing preprocessing token); presence of the user-facing notice |
 | Corpus conformance (tree, model, renderers) | A | `P1-baseline` |
 | Negative/rejection corpus | A | `P1-completion` |

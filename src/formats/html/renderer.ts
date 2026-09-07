@@ -1,5 +1,6 @@
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { assertKnownOptions } from "../../core/render-options";
 import { ROOT_CONTEXT } from "./render";
 import { FORMAT } from "./render-shared";
 
@@ -7,11 +8,23 @@ import { FORMAT } from "./render-shared";
  * Renderer options. Empty today and typed exactly (§5), for the same reason as
  * `LatexOptions`: the gem's `to_html` takes `formatter:`, `unitsml:` and
  * `options:`, and the only one observable on this path is a configured number
- * formatter, which is P4 scope. `toHtml` never READS the parameter, so there is
- * no options-shape guard — a guard on an unread argument would be dead code
- * pretending at a contract.
+ * formatter, which is P4 scope. No html render consults an option, so the
+ * parameter's only job is the entry-point guard below, which refuses a key
+ * this type does not declare instead of ignoring it
+ * (core/render-options.ts).
  */
 export type HtmlOptions = Record<string, never>;
+
+/**
+ * The option keys this entry accepts. There are none: `HtmlOptions` declares
+ * no key, so every key that reaches the entry is unknown and is refused BY NAME
+ * (`assertKnownOptions`, core/render-options.ts) instead of ignored. The
+ * gem's own `to_html` keywords — `formatter:`, `unitsml:`, `options:`
+ * (formula.rb:149 on the pinned oracle) — are refused here too: none of the
+ * three is implemented in this port, so accepting one silently would promise
+ * a behaviour it does not have.
+ */
+const ACCEPTED_OPTIONS: readonly string[] = [];
 
 /**
  * `Formula#to_html` / any node's `to_html`, as a module function.
@@ -25,7 +38,11 @@ export type HtmlOptions = Record<string, never>;
  * markup. `test/formats/html/parity-target.ts` pins exactly which pinned corpus
  * cases render and which refuse.
  */
-export function toHtml(node: MathNode, _options?: HtmlOptions | null): string {
+export function toHtml(node: MathNode, options?: HtmlOptions | null): string {
+  // The options come first, as they do in Ruby: the keyword check there is
+  // part of the call, so an unknown keyword raises before the method body
+  // ever looks at the receiver.
+  assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
   try {
     return ROOT_CONTEXT.render(node) ?? "";

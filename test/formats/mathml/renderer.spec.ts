@@ -113,6 +113,31 @@ describe("the options argument itself", () => {
     expect(() => toMathml(node)).not.toThrow();
     expect(() => toMathml(node, null)).not.toThrow();
   });
+
+  it("refuses a key to_mathml has no keyword for, naming it", () => {
+    // `to_mathml` takes six keywords and no `**rest` (formula.rb:76-83), so
+    // the gem answers an unknown one with `ArgumentError: unknown keyword:
+    // :nosuchoption`. This entry answers with the RenderError §5 promises,
+    // naming the key the same way.
+    let caught: unknown;
+    try {
+      toMathml(sinX(), { nosuchoption: 1 } as never);
+    } catch (error) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(RenderError);
+    expect((caught as RenderError).message).toContain('"nosuchoption"');
+  });
+
+  it("still accepts the two implemented keywords once the guard is in front", () => {
+    // The refusal above must not have cost the options matrix: both keys
+    // render exactly as they did, alone and together.
+    expect(toMathml(sinX(), { displayStyle: false })).toBe(math(SIN_SPACED, "false"));
+    expect(toMathml(sinX(), { unaryFunctionSpacing: false })).toBe(math(SIN_BARE));
+    expect(toMathml(sinX(), { displayStyle: false, unaryFunctionSpacing: false })).toBe(
+      math(SIN_BARE, "false"),
+    );
+  });
 });
 
 describe("the deferred options, refused by name", () => {

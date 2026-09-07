@@ -1,10 +1,28 @@
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { assertKnownOptions } from "../../core/render-options";
 import { dumpNodes, XmlElement } from "../../xml/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, serializeRendered } from "./render-shared";
 
+/**
+ * Renderer options. Empty today and typed exactly (§5), for the same reason as
+ * the other renderers: the gem's `to_omml` keywords are
+ * `display_style:`, `split_on_linebreak:`, `formatter:` and `unitsml:`
+ * (formula.rb:157 on the pinned oracle), and none of the four is implemented
+ * here — on the `toOmml` path `display_style` comes off the formula's own
+ * field below, which is exactly what the gem's default for that keyword is.
+ */
 export type OmmlOptions = Record<string, never>;
+
+/**
+ * The option keys both entries accept. There are none: `OmmlOptions` declares
+ * no key, so every key that reaches an entry is unknown and is refused BY NAME
+ * (`assertKnownOptions`, core/render-options.ts) instead of ignored. The gem's
+ * four keywords above are refused here too: accepting one silently would
+ * promise a behaviour this port does not have.
+ */
+const ACCEPTED_OPTIONS: readonly string[] = [];
 
 const OMML_NAMESPACES: readonly (readonly [string, string])[] = [
   ["xmlns:m", "http://schemas.openxmlformats.org/officeDocument/2006/math"],
@@ -28,13 +46,18 @@ const OMML_NAMESPACES: readonly (readonly [string, string])[] = [
 ];
 
 /** The gem's per-node `to_omml_without_math_tag` entry point. */
-export function toOmmlWithoutMathTag(node: MathNode, _options?: OmmlOptions | null): string {
+export function toOmmlWithoutMathTag(node: MathNode, options?: OmmlOptions | null): string {
+  // The options come first, as they do in Ruby: the keyword check there is
+  // part of the call, so an unknown keyword raises before the method body
+  // ever looks at the receiver.
+  assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
   return atBoundary(() => serializeRendered(ROOT_CONTEXT.render(node)));
 }
 
 /** `Formula#to_omml`; only Formula and its Mrow subclass own this public wrapper. */
-export function toOmml(node: MathNode, _options?: OmmlOptions | null): string {
+export function toOmml(node: MathNode, options?: OmmlOptions | null): string {
+  assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
   return atBoundary(() => {
     if (node.kind !== "formula" && node.kind !== "mrow") {

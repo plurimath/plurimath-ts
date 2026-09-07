@@ -48,17 +48,31 @@
 
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { assertKnownOptions } from "../../core/render-options";
 import { ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
 
 /**
  * Renderer options. Empty today and typed exactly (§5), for the same reason
  * as `LatexOptions`: the gem's only observable option on this path is a
- * configured number formatter, which is P4 scope. `toUnicodemath` never READS
- * the parameter, so there is no options-shape guard — a guard on an unread
- * argument would be dead code pretending at a contract.
+ * configured number formatter, which is P4 scope. No unicodemath render
+ * consults an option, so the parameter's only job is the entry-point guard
+ * below, which refuses a key this type does not declare instead of ignoring
+ * it (core/render-options.ts).
  */
 export type UnicodemathOptions = Record<string, never>;
+
+/**
+ * The option keys this entry accepts. There are none: `UnicodemathOptions`
+ * declares no key, so every key that reaches the entry is unknown and is
+ * refused BY NAME
+ * (`assertKnownOptions`, core/render-options.ts) instead of ignored. The
+ * gem's own `to_unicodemath` keywords — `formatter:`, `unitsml:`, `options:`
+ * (formula.rb:187 on the pinned oracle) — are refused here too: none of the
+ * three is implemented in this port, so accepting one silently would promise
+ * a behaviour it does not have.
+ */
+const ACCEPTED_OPTIONS: readonly string[] = [];
 
 /**
  * `Formula#to_unicodemath` / any node's `to_unicodemath`, as a module
@@ -68,7 +82,11 @@ export type UnicodemathOptions = Record<string, never>;
  * malformed tree fails as `RenderError` with the offending path, never as a
  * `TypeError` inside the dispatch.
  */
-export function toUnicodemath(node: MathNode, _options?: UnicodemathOptions | null): string {
+export function toUnicodemath(node: MathNode, options?: UnicodemathOptions | null): string {
+  // The options come first, as they do in Ruby: the keyword check there is
+  // part of the call, so an unknown keyword raises before the method body
+  // ever looks at the receiver.
+  assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   // Structural check only — `assertMathNodeShape` deliberately returns
   // `void`, not `asserts node is MathNode` (see core/validate.ts).
   assertMathNodeShape(node, FORMAT);

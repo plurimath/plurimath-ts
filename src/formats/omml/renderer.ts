@@ -1,9 +1,18 @@
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { assertKnownOptions } from "../../core/render-options";
 import { dumpNodes, XmlElement } from "../../xml/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, serializeRendered } from "./render-shared";
 
+/**
+ * Renderer options. Empty today and typed exactly (§5), for the same reason as
+ * the other renderers: the gem's `to_omml` keywords are
+ * `display_style:`, `split_on_linebreak:`, `formatter:` and `unitsml:`
+ * (formula.rb:157 on the pinned oracle), and none of the four is implemented
+ * here — on the `toOmml` path `display_style` comes off the formula's own
+ * field below, which is exactly what the gem's default for that keyword is.
+ */
 export type OmmlOptions = Record<string, never>;
 
 /** Public `Formula#to_omml` keywords whose rendering paths are not measured yet. */
@@ -19,6 +28,15 @@ const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
   ["formatter", "number formatting is P4 scope; only the no-formatter path is measured"],
   ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md section 5)"],
 ];
+
+/**
+ * The option keys both entries accept. `OmmlOptions` declares no IMPLEMENTED
+ * key, so the accepted set is exactly the deferred ones: a keyword the gem
+ * really has is recognised here and refused by name where the reason is known
+ * (below), while a key the gem does not have at all is refused as unknown by
+ * `assertKnownOptions` (core/render-options.ts). Same split as MathML.
+ */
+const ACCEPTED_OPTIONS: readonly string[] = DEFERRED_OPTIONS.map(([name]) => name);
 
 const OMML_NAMESPACES: readonly (readonly [string, string])[] = [
   ["xmlns:m", "http://schemas.openxmlformats.org/officeDocument/2006/math"],
@@ -43,6 +61,10 @@ const OMML_NAMESPACES: readonly (readonly [string, string])[] = [
 
 /** The gem's per-node `to_omml_without_math_tag` entry point. */
 export function toOmmlWithoutMathTag(node: MathNode, options?: OmmlOptions | null): string {
+  // The options come first, as they do in Ruby: the keyword check there is
+  // part of the call, so an unknown keyword raises before the method body
+  // ever looks at the receiver.
+  assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
   return atBoundary(() => {
     assertSupportedOptions(options, node.kind);
@@ -52,6 +74,7 @@ export function toOmmlWithoutMathTag(node: MathNode, options?: OmmlOptions | nul
 
 /** `Formula#to_omml`; only Formula and its Mrow subclass own this public wrapper. */
 export function toOmml(node: MathNode, options?: OmmlOptions | null): string {
+  assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
   return atBoundary(() => {
     assertSupportedOptions(options, node.kind);

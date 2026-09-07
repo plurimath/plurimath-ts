@@ -48,6 +48,14 @@
       "description": "Valid structural objects render; unknown kinds and non-node inputs raise RenderError"
     },
     {
+      "id": "render-options",
+      "class": "A",
+      "activatesAt": "P1-baseline",
+      "run": "pnpm test render-options",
+      "selects": ["test/core/render-options.spec.ts", "test/gates/render-options.spec.ts"],
+      "description": "Every published render entry point refuses an option key its format does not accept, naming the key, as the gem's explicit keywords do. The entry points are not listed: they are derived from the src/formats directories that hold a renderer.ts and from each such module's exported to* functions, so a format added later is covered the moment it exists and fails here until its guard is wired in; the derivation itself is asserted, because a scan that finds nothing would pass green"
+    },
+    {
       "id": "unsupported-fallback",
       "class": "A",
       "activatesAt": "P1-baseline",

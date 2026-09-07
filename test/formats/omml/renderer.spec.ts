@@ -3155,9 +3155,12 @@ describe("OMML wrappers slice", () => {
       }),
       RUN_X,
     );
-    expect(toOmmlWithoutMathTag(arbitraryNodeOption, { arbitrary: "read-me" } as never)).toBe(
-      RUN_X,
-    );
+    // The node's own `options` hash is arbitrary data, and stays pinned above.
+    // A CALL option is a different thing — a render keyword — and one this
+    // renderer does not accept is refused by name now rather than ignored.
+    expect(() =>
+      toOmmlWithoutMathTag(arbitraryNodeOption, { arbitrary: "read-me" } as never),
+    ).toThrow(/unknown option "arbitrary"/);
     expectDirectAndInsertion(
       new ColorNode({
         options: {},
@@ -3279,9 +3282,22 @@ describe("OMML renderer boundary", () => {
   });
 
   it("accepts a plain options object from another JavaScript realm", () => {
-    const options = runInNewContext("({ arbitrary: true })") as Record<string, unknown>;
+    // What this pins is the REALM check: an object built in another context
+    // has that context's Object.prototype, and must still count as a plain
+    // options object. It carries no keys, because key validity is a separate
+    // check now and an unknown one would refuse before the realm ever mattered.
+    const options = runInNewContext("({})") as Record<string, unknown>;
     expect(toOmml(new FormulaNode({ value: [symbol()] }), options as never)).toBe(PUBLIC_X);
     expect(toOmmlWithoutMathTag(symbol(), options as never)).toBe("x");
+  });
+
+  it("refuses an unknown key on an options object from another JavaScript realm", () => {
+    // The realm's own object still reaches the key check, rather than passing
+    // because its prototype came from elsewhere.
+    const options = runInNewContext("({ arbitrary: true })") as Record<string, unknown>;
+    expect(() => toOmml(new FormulaNode({ value: [symbol()] }), options as never)).toThrow(
+      /unknown option "arbitrary"/,
+    );
   });
 
   it.each([

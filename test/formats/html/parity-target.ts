@@ -43,11 +43,12 @@ export const KNOWN_DIVERGENCES: Readonly<
  * case's own test. Shrinking this list is the work; each removal belongs to the
  * commit that earns it.
  *
- * **Empty, and every entry earned its way out.** The seventeen it held were the
- * six carrier aliases the HTML slice had not measured — `Power` (9 cases),
- * `Mod` (3), `Lim`, `Log`, `Root`, `PowerBase` and `Cos` (1 each). All are
- * measured now, in `src/render/{binary,ternary,unary}-function/html.ts`, and
- * each of the seventeen produces the gem's exact bytes.
+ * **Empty, and every entry earned its way out.** The seventeen it held waited
+ * on SEVEN carrier aliases the HTML slice had not measured — `Power` (9 cases),
+ * `Mod` (3), and `Lim`, `Log`, `Root`, `PowerBase` and `Cos` at one each, which
+ * is 9 + 3 + 5 = 17. All seven are measured now, in
+ * `src/render/{binary,ternary,unary}-function/html.ts`, and each of the
+ * seventeen cases produces the gem's exact bytes.
  *
  * The table stays so the next case that refuses has somewhere to be named. A
  * corpus that grows can put entries back; what it must not do is put one back

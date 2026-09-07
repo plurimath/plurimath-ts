@@ -3,9 +3,15 @@
  * plus a name arm for each gem class the census folds into this carrier that
  * has its OWN `to_html` override.
  *
- * Five classes are carried here: `PowerBase`, `Rule`, `Limits`, `Multiscript`
- * and `Underover`. `klass.instance_method(:to_html).owner` on the pinned oracle
- * splits them three ways, and only the third group takes the carrier default:
+ * Five classes were MEASURED on the pinned oracle — `PowerBase`, `Rule`,
+ * `Limits`, `Multiscript` and `Underover` — but only `PowerBase` is RENDERED by
+ * this slice. The other four refuse: `Rule` because the gem itself refuses it
+ * (see below), and `Limits`, `Multiscript` and `Underover` because no corpus
+ * case constructs one, so admitting them would be carrying untested output.
+ * What follows is what the measurement found, not what this file emits.
+ *
+ * `klass.instance_method(:to_html).owner` on the pinned oracle splits them
+ * three ways, and only the third group takes the carrier default:
  *
  *   - `PowerBase` (`power_base.rb:32-37`) owns its `to_html`:
  *     `<i>1</i><sub>2</sub><sup>3</sup>`, so the second slot is a `<sub>` and

@@ -65,27 +65,14 @@ export const KNOWN_DIVERGENCES: Readonly<
  * case's own test. Shrinking this list is the work; each removal belongs to the
  * commit that earns it.
  *
- * Measured at 13 ids against the pinned oracle: 6 an unmeasured UnaryFunction
- * alias, 6 an unmeasured BinaryFunction alias, and one the deferred
- * single-column `m:eqArr` table branch. The 37 that were the generated
- * symbol-data gap are gone — `src/generated/omml/symbols.ts` is read now, and
- * every one of those cases reproduces the gem's exact bytes.
+ * Measured at one id: `matrix-column`, the deferred single-column `m:eqArr`
+ * table branch. The 12 before it were carrier aliases — six an unmeasured
+ * `UnaryFunction` alias (`Left`, `Right`, `Sin`, `Cos`) and six an unmeasured
+ * `BinaryFunction` alias (`Mod`, `Lim`, `Log`, `Root`) — and all eight classes
+ * are measured now, with every one of those 12 cases reproducing the gem's
+ * exact bytes. The 37 before those were the generated symbol-data gap.
  */
-export const PORT_REFUSES: ReadonlySet<string> = new Set([
-  "left-right-around-frac",
-  "left-right-round",
-  "left-right-square",
-  "matrix-column",
-  "mod-in-expression",
-  "mod-numeric",
-  "mod-simple",
-  "nary-lim",
-  "nary-log-base",
-  "root-cube",
-  "unary-cos-product",
-  "unary-sin-bare",
-  "unary-sin-fenced",
-]);
+export const PORT_REFUSES: ReadonlySet<string> = new Set(["matrix-column"]);
 
 /**
  * How many of the gem-renderable corpus cases the port renders today.
@@ -95,14 +82,14 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  *
  * Not hand-set. Both this number and the refusal set above come from running
  * every gem-renderable case in `parity-fixtures.json` through the port and
- * byte-comparing the result: 92 renderable, 13 refused with a typed
- * `RenderError`, 79 rendered — 78 reproducing the gem's exact bytes and one
+ * byte-comparing the result: 92 renderable, 1 refused with a typed
+ * `RenderError`, 91 rendered — 90 reproducing the gem's exact bytes and one
  * (`text-unitsml-valid`) pinned in `KNOWN_DIVERGENCES`. Nothing rendered bytes
  * that differ from the gem's without being pinned, and nothing threw untyped.
- * It moved from 42 when the generated OMML symbol table was wired in: the 37
- * cases that refused for want of it all render, and all 37 match.
+ * It moved 42 → 79 when the generated OMML symbol table was wired in, and
+ * 79 → 91 when the function-carrier aliases landed.
  */
-export const RENDERED_BASELINE = 79;
+export const RENDERED_BASELINE = 91;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared
@@ -509,6 +496,10 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
  * keyed `id[slot]=value` and valued with WHY. The same shape as `PORT_REFUSES`,
  * for the swept matrix. Shrinking this list is the work; each removal belongs to
  * the commit that earns it, and none of them is a decision to diverge.
+ *
+ * It held four more: `sin[0]` against nil, false, `[]` and a bare node. `Sin` is
+ * one of the 15 `UnaryFunction` aliases whose OMML method is the base one, and
+ * all four rows reproduce the gem's bytes now.
  */
 export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
   // `Td#initialize` calls `super(Array(parameter_one), ...)`, so nil becomes the
@@ -539,13 +530,6 @@ export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
   // The gem renders an empty single-column `m:eqArr`; the port defers that
   // branch until it is separately measured.
   "table[0]=empty-array": "the single-column m:eqArr branch is deferred until separately measured",
-
-  // `renderUnaryFunction` carries only the aliases the OMML slice has measured;
-  // `Sin` is not among them. The gem renders each of these four.
-  "sin[0]=nil": 'UnaryFunction alias "Sin" is not in the OMML slice',
-  "sin[0]=false": 'UnaryFunction alias "Sin" is not in the OMML slice',
-  "sin[0]=empty-array": 'UnaryFunction alias "Sin" is not in the OMML slice',
-  "sin[0]=node": 'UnaryFunction alias "Sin" is not in the OMML slice',
 };
 
 /**

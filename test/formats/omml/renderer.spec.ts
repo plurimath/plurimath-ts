@@ -3441,12 +3441,32 @@ describe("OMML renderer boundary", () => {
     });
   });
 
+  // `Cancel` and `Menclose` are chosen deliberately: both are real aliases the
+  // census records (`Math::Function::Cancel`, `Math::Function::Menclose`), and
+  // both OWN a `to_omml_without_math_tag` — measured on the oracle at
+  // `00c52783` by reading the method's `owner` for all 48 unary and 14 binary
+  // aliases. So this pins the refusal for a class the gem really renders
+  // differently, not for a name the gem has never heard of.
   it("refuses unmeasured carrier aliases instead of transforming their names", () => {
     expectRefusal(
-      () => toOmmlWithoutMathTag(new UnaryFunctionNode({ name: "Sin", parameterOne: symbol() })),
+      () => toOmmlWithoutMathTag(new UnaryFunctionNode({ name: "Cancel", parameterOne: symbol() })),
       {
         kind: "unaryFunction",
-        message: 'UnaryFunction alias "Sin" has not been measured for OMML in this slice',
+        message: 'UnaryFunction alias "Cancel" has not been measured for OMML in this slice',
+      },
+    );
+    expectRefusal(
+      () =>
+        toOmmlWithoutMathTag(
+          new BinaryFunctionNode({
+            name: "Menclose",
+            parameterOne: symbol(),
+            parameterTwo: symbol(),
+          }),
+        ),
+      {
+        kind: "binaryFunction",
+        message: 'BinaryFunction alias "Menclose" has not been measured for OMML in this slice',
       },
     );
     expectRefusal(
@@ -3707,6 +3727,338 @@ describe("OMML ragged tables", () => {
       kind: "table",
       message: "table.value: the single-column eqArr branch is deferred until separately measured",
     });
+  });
+});
+
+/**
+ * The function carriers: the `UnaryFunction` and `BinaryFunction` aliases whose
+ * OMML shape the slice measured, and the branch each one turns on.
+ *
+ * Which aliases belong here is not a judgment call. Measured on the pinned
+ * oracle `00c52783` over all 48 unary and 14 binary classes the census records
+ * as aliasing those two carriers, reading
+ * `instance_method(:to_omml_without_math_tag).owner` for each (exit 0): 15
+ * unary and 3 binary classes inherit the base method, and the rest own one.
+ * `src/render/unary-function/omml.ts` and `src/render/binary-function/omml.ts`
+ * carry that split; these pins carry the bytes, each captured by building the
+ * identical tree in Ruby and dumping it at `indent: 2`.
+ */
+const FUNC_SIN_X = xml(
+  "<m:func>",
+  "  <m:funcPr>",
+  "    <m:ctrlPr>",
+  "      <w:rPr>",
+  '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+  "        <w:i/>",
+  "      </w:rPr>",
+  "    </m:ctrlPr>",
+  "  </m:funcPr>",
+  "  <m:fName>",
+  "    <m:r>",
+  "      <w:rPr>",
+  '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+  "      </w:rPr>",
+  "      <m:t>sin</m:t>",
+  "    </m:r>",
+  "  </m:fName>",
+  "  <m:e>",
+  "    <m:r>",
+  "      <m:t>x</m:t>",
+  "    </m:r>",
+  "  </m:e>",
+  "</m:func>",
+);
+const FUNC_COS_X = FUNC_SIN_X.replace("<m:t>sin</m:t>", "<m:t>cos</m:t>");
+const LABEL_SIN_X = xml("<m:r>", "  <m:t>sin</m:t>", "</m:r>");
+const LABEL_ARCCOS_X = xml("<m:r>", "  <m:t>arccos</m:t>", "</m:r>");
+const HIDDEN_SIN_X = xml("<m:r>", "  <m:t>x</m:t>", "</m:r>");
+
+const LEFT_ROUND_X = xml("<m:r>", "  <m:t>(</m:t>", "</m:r>");
+const RIGHT_ROUND_X = xml("<m:r>", "  <m:t>)</m:t>", "</m:r>");
+const LEFT_EMPTY_X = xml("<m:r/>");
+const LEFT_BRACE_X = xml("<m:r>", "  <m:t>\\{</m:t>", "</m:r>");
+
+const MOD_X = xml(
+  "<m:r>",
+  "  <m:t>a</m:t>",
+  "</m:r>",
+  "<m:r>",
+  "  <m:rPr>",
+  '    <m:sty m:val="p"/>',
+  "  </m:rPr>",
+  "  <m:t>mod</m:t>",
+  "</m:r>",
+  "<m:r>",
+  "  <m:t>b</m:t>",
+  "</m:r>",
+);
+const MOD_LABEL_ONLY_X = xml(
+  "<m:r>",
+  "  <m:rPr>",
+  '    <m:sty m:val="p"/>',
+  "  </m:rPr>",
+  "  <m:t>mod</m:t>",
+  "</m:r>",
+);
+const MOD_HIDDEN_X = xml("<m:r>", "  <m:t>a</m:t>", "</m:r>", "<m:r>", "  <m:t>b</m:t>", "</m:r>");
+
+const ROOT_X = xml(
+  "<m:rad>",
+  "  <m:radPr>",
+  '    <m:degHide m:val="off"/>',
+  "  </m:radPr>",
+  "  <m:deg>",
+  "    <m:r>",
+  "      <m:t>a</m:t>",
+  "    </m:r>",
+  "  </m:deg>",
+  "  <m:e>",
+  "    <m:r>",
+  "      <m:t>b</m:t>",
+  "    </m:r>",
+  "  </m:e>",
+  "</m:rad>",
+);
+
+const LOG_X = xml(
+  "<m:sSubSup>",
+  "  <m:sSubSupPr>",
+  "    <m:ctrlPr>",
+  "      <w:rPr>",
+  '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+  "        <w:i/>",
+  "      </w:rPr>",
+  "    </m:ctrlPr>",
+  "  </m:sSubSupPr>",
+  "  <m:e>",
+  "    <m:r>",
+  "      <m:rPr>",
+  '        <m:sty m:val="p"/>',
+  "      </m:rPr>",
+  "      <m:t>log</m:t>",
+  "    </m:r>",
+  "  </m:e>",
+  "  <m:sub>",
+  "    <m:r>",
+  "      <m:t>a</m:t>",
+  "    </m:r>",
+  "  </m:sub>",
+  "  <m:sup>",
+  "    <m:r>",
+  "      <m:t>b</m:t>",
+  "    </m:r>",
+  "  </m:sup>",
+  "</m:sSubSup>",
+);
+const LOG_HIDDEN_X = LOG_X.replace(
+  [
+    "  <m:e>",
+    "    <m:r>",
+    "      <m:rPr>",
+    '        <m:sty m:val="p"/>',
+    "      </m:rPr>",
+    "      <m:t>log</m:t>",
+    "    </m:r>",
+    "  </m:e>",
+  ].join("\n"),
+  "  <m:e/>",
+);
+const LOG_LABEL_ONLY_X = xml("<m:r>", "  <m:t>log</m:t>", "</m:r>");
+
+const LIM_DISPLAY_X = xml(
+  "<m:limLow>",
+  "  <m:limLowPr>",
+  "    <m:ctrlPr>",
+  "      <w:rPr>",
+  '        <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+  "        <w:i/>",
+  "      </w:rPr>",
+  "    </m:ctrlPr>",
+  "  </m:limLowPr>",
+  "  <m:e>",
+  "    <m:limUpp>",
+  "      <m:limUppPr>",
+  "        <m:ctrlPr>",
+  "          <w:rPr>",
+  '            <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+  "            <w:i/>",
+  "          </w:rPr>",
+  "        </m:ctrlPr>",
+  "      </m:limUppPr>",
+  "      <m:e>",
+  "        <m:r>",
+  "          <m:t>lim</m:t>",
+  "        </m:r>",
+  "      </m:e>",
+  "      <m:lim>",
+  "        <m:r>",
+  "          <m:t>b</m:t>",
+  "        </m:r>",
+  "      </m:lim>",
+  "    </m:limUpp>",
+  "  </m:e>",
+  "  <m:lim>",
+  "    <m:r>",
+  "      <m:t>a</m:t>",
+  "    </m:r>",
+  "  </m:lim>",
+  "</m:limLow>",
+);
+const LIM_INLINE_X = LOG_X.replace(
+  [
+    "    <m:r>",
+    "      <m:rPr>",
+    '        <m:sty m:val="p"/>',
+    "      </m:rPr>",
+    "      <m:t>log</m:t>",
+    "    </m:r>",
+  ].join("\n"),
+  ["    <m:r>", "      <m:t>lim</m:t>", "    </m:r>"].join("\n"),
+);
+const LIM_LABEL_ONLY_X = xml("<m:r>", "  <m:t>lim</m:t>", "</m:r>");
+
+const BINARY_CARRIER_EMPTY_X = xml("<m:r/>");
+
+/** One `to_omml` document around a `to_omml_without_math_tag` fragment. */
+const document = (fragment: string): string =>
+  xml(
+    ROOT_OPEN,
+    "  <m:oMath>",
+    ...fragment
+      .trimEnd()
+      .split("\n")
+      .map((line) => `    ${line}`),
+    "  </m:oMath>",
+    "</m:oMathPara>",
+  );
+
+const unary = (name: string, parameterOne: unknown, hideFunctionName?: boolean) =>
+  new UnaryFunctionNode({ name, parameterOne: parameterOne as never, hideFunctionName });
+const binary = (
+  name: string,
+  parameterOne: unknown,
+  parameterTwo: unknown,
+  hideFunctionName?: boolean,
+) =>
+  new BinaryFunctionNode({
+    name,
+    parameterOne: parameterOne as never,
+    parameterTwo: parameterTwo as never,
+    hideFunctionName,
+  });
+
+describe("OMML UnaryFunction base aliases", () => {
+  it("labels the m:fName run with the alias's own class_name", () => {
+    expect(toOmmlWithoutMathTag(unary("Sin", symbol()))).toBe(FUNC_SIN_X);
+    expect(toOmmlWithoutMathTag(unary("Cos", symbol()))).toBe(FUNC_COS_X);
+  });
+
+  // `return r_element(class_name, rpr_tag: false) unless parameter_one` runs
+  // BEFORE the hide_function_name branch, so the flag cannot reach it.
+  it("answers the bare label for a Ruby-falsy slot, flag or no flag", () => {
+    expect(toOmmlWithoutMathTag(unary("Sin", null))).toBe(LABEL_SIN_X);
+    expect(toOmmlWithoutMathTag(unary("Sin", false))).toBe(LABEL_SIN_X);
+    expect(toOmmlWithoutMathTag(unary("Sin", null, true))).toBe(LABEL_SIN_X);
+    expect(toOmmlWithoutMathTag(unary("Arccos", null))).toBe(LABEL_ARCCOS_X);
+  });
+
+  it("drops the whole m:func wrapper when hide_function_name is set", () => {
+    expect(toOmmlWithoutMathTag(unary("Sin", symbol()))).toBe(FUNC_SIN_X);
+    expect(toOmmlWithoutMathTag(unary("Sin", symbol(), true))).toBe(HIDDEN_SIN_X);
+  });
+
+  // An empty Array is TRUTHY in Ruby, so it does not take the bare-label arm;
+  // `omml_value` then maps it to nothing and the `m:e` closes empty.
+  it("keeps the wrapper for an empty list and compacts a filled one", () => {
+    expect(toOmmlWithoutMathTag(unary("Sin", []))).toBe(
+      FUNC_SIN_X.replace(
+        ["  <m:e>", "    <m:r>", "      <m:t>x</m:t>", "    </m:r>", "  </m:e>"].join("\n"),
+        "  <m:e/>",
+      ),
+    );
+    expect(toOmmlWithoutMathTag(unary("Sin", [symbol("x"), null]))).toBe(FUNC_SIN_X);
+  });
+});
+
+describe("OMML Left and Right delimiters", () => {
+  it("writes the stored string straight into m:t", () => {
+    expect(toOmmlWithoutMathTag(unary("Left", "("))).toBe(LEFT_ROUND_X);
+    expect(toOmmlWithoutMathTag(unary("Right", ")"))).toBe(RIGHT_ROUND_X);
+  });
+
+  // `to_mathml` and `to_latex` route through `left_paren`, which rewrites
+  // `\{` to `{`. `to_omml_without_math_tag` does not call it — measured.
+  it("does not apply the left_paren rewrite the MathML and LaTeX arms use", () => {
+    expect(toOmmlWithoutMathTag(unary("Left", "\\{"))).toBe(LEFT_BRACE_X);
+  });
+
+  it("drops the m:t entirely for a Ruby-falsy slot, and keeps it for the empty string", () => {
+    expect(toOmmlWithoutMathTag(unary("Left", null))).toBe(LEFT_EMPTY_X);
+    expect(toOmmlWithoutMathTag(unary("Left", false))).toBe(LEFT_EMPTY_X);
+    expect(toOmmlWithoutMathTag(unary("Left", ""))).toBe(xml("<m:r>", "  <m:t></m:t>", "</m:r>"));
+  });
+
+  it("ignores hide_function_name, which this method never reads", () => {
+    expect(toOmmlWithoutMathTag(unary("Left", "(", true))).toBe(LEFT_ROUND_X);
+  });
+
+  it("refuses a non-string slot, which the gem cannot append to m:t", () => {
+    expectRefusal(() => toOmmlWithoutMathTag(unary("Left", symbol())), {
+      kind: "unaryFunction",
+      message:
+        "left.parameterOne: is an object, and the gem appends it straight to <m:t> — " +
+        "only a string answers the engine's xml_nodes there, so anything else raises NoMethodError",
+    });
+    expectRefusal(() => toOmmlWithoutMathTag(unary("Right", 0)), {
+      kind: "unaryFunction",
+      message:
+        "right.parameterOne: is a number, and the gem appends it straight to <m:t> — " +
+        "only a string answers the engine's xml_nodes there, so anything else raises NoMethodError",
+    });
+  });
+});
+
+describe("OMML BinaryFunction aliases", () => {
+  it("renders Mod as three flat runs, only the label styled", () => {
+    expect(toOmmlWithoutMathTag(binary("Mod", symbol("a"), symbol("b")))).toBe(MOD_X);
+  });
+
+  it("keeps the Mod label when both operands are Ruby-falsy, and drops it when hidden", () => {
+    expect(toOmmlWithoutMathTag(binary("Mod", null, null))).toBe(MOD_LABEL_ONLY_X);
+    expect(toOmmlWithoutMathTag(binary("Mod", false, false))).toBe(MOD_LABEL_ONLY_X);
+    expect(toOmmlWithoutMathTag(binary("Mod", symbol("a"), symbol("b"), true))).toBe(MOD_HIDDEN_X);
+  });
+
+  it("renders Root with a degHide-only radPr, degree first", () => {
+    expect(toOmmlWithoutMathTag(binary("Root", symbol("a"), symbol("b")))).toBe(ROOT_X);
+  });
+
+  it("renders Log as sSubSup, and empties its m:e when hidden", () => {
+    expect(toOmmlWithoutMathTag(binary("Log", symbol("a"), symbol("b")))).toBe(LOG_X);
+    expect(toOmmlWithoutMathTag(binary("Log", symbol("a"), symbol("b"), true))).toBe(LOG_HIDDEN_X);
+    expect(toOmmlWithoutMathTag(binary("Log", null, null))).toBe(LOG_LABEL_ONLY_X);
+  });
+
+  // `Log` and `Lim` carry the same two slots and split on display style
+  // differently: `Log`'s tree does not consult it at all, `Lim`'s switches
+  // between the limit tree and `PowerBase`'s script tree.
+  it("switches Lim on display style where Log ignores it", () => {
+    const lim = () => binary("Lim", symbol("a"), symbol("b"));
+    const log = () => binary("Log", symbol("a"), symbol("b"));
+    expect(toOmml(new FormulaNode({ value: [lim()] }))).toBe(document(LIM_DISPLAY_X));
+    expect(toOmml(new FormulaNode({ displaystyle: false, value: [lim()] }))).toBe(
+      document(LIM_INLINE_X),
+    );
+    expect(toOmml(new FormulaNode({ value: [log()] }))).toBe(document(LOG_X));
+    expect(toOmml(new FormulaNode({ displaystyle: false, value: [log()] }))).toBe(document(LOG_X));
+    expect(toOmmlWithoutMathTag(binary("Lim", null, null))).toBe(LIM_LABEL_ONLY_X);
+  });
+
+  it("renders the three aliases that inherit the base carrier's own shape", () => {
+    for (const name of ["Arg", "Intent", "Mlabeledtr", "BinaryFunction"]) {
+      expect(toOmmlWithoutMathTag(binary(name, symbol(), symbol())), name).toBe(BINARY_X);
+      expect(toOmmlWithoutMathTag(binary(name, null, null)), name).toBe(BINARY_CARRIER_EMPTY_X);
+    }
   });
 });
 

@@ -2,7 +2,7 @@ import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { dumpNodes, XmlElement } from "../../xml/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
-import { FORMAT, serializeRendered } from "./render-shared";
+import { FORMAT, isOwnMissingSymbolDataError, serializeRendered } from "./render-shared";
 
 export type OmmlOptions = Record<string, never>;
 
@@ -124,7 +124,16 @@ function atBoundary<T>(render: () => T): T {
   try {
     return render();
   } catch (error) {
-    if (error instanceof RenderError) throw error;
+    // Only this walk's own surfaces pass through: `RenderError` (the §5
+    // contract) and the symbol table's `MissingSymbolDataError` — the one
+    // non-RenderError PlurimathError a kind file throws on purpose
+    // (`symbolOmmlValue`, on an id the generated table does not carry), and a
+    // public error code in its own right. That second pass-through checks
+    // membership in the throw site's own instance set
+    // (`isOwnMissingSymbolDataError`, render-shared.ts), never `instanceof`:
+    // the class is constructible by the input too, and a hostile getter
+    // throwing one mid-render is an input failure, not a symbol-table miss.
+    if (error instanceof RenderError || isOwnMissingSymbolDataError(error)) throw error;
     if (error instanceof RangeError) {
       throw new RenderError(
         "node: the tree nests too deep for the OMML walk's call stack",

@@ -54,7 +54,10 @@ export function renderText(node: NodeOf<"text">): XmlElement {
   const value = requireString(node.parameterOne, node.kind, "text.parameterOne");
   if (UNICODE_TOKEN.test(value)) {
     throw new RenderError(
-      "text.parameterOne: unicode[:name] substitution needs generated OMML data, deferred to the symbol-data follow-up",
+      "text.parameterOne: unicode[:name] substitution reads " +
+        "Mathml::Constants::UNICODE_SYMBOLS and SYMBOLS inverted " +
+        "(text.rb:126-129), a MathML-owned entity map that no generated OMML " +
+        "table carries — the OMML symbol table holds class literals, not this",
       FORMAT,
       node.kind,
     );

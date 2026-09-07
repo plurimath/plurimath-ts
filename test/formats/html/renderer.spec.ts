@@ -56,6 +56,7 @@ import {
 } from "../../../src/core/nodes";
 import { parseAsciimath } from "../../../src/formats/asciimath/parser";
 import { toHtml } from "../../../src/formats/html/renderer";
+import { HTML_SYMBOLS } from "../../../src/generated/html/symbols";
 
 const symbol = (value = "x") => new SymbolNode({ value });
 
@@ -506,32 +507,52 @@ describe("HTML own-kind rendering", () => {
     expect(make(new TableNode({ value: nilItem }))).toBe("<i>[nil]</i>x<i>)</i>");
   });
 
-  it("refuses Fenced paren paths requiring generated data or address-bearing inspect bytes", () => {
-    expectHtmlError(
-      () =>
-        toHtml(
-          new FencedNode({
-            parameterOne: new SymbolNode({ id: "Paren::Lround" }),
-            parameterTwo: [symbol()],
-            parameterThree: new SymbolNode({ id: "Paren::Rround" }),
-          }),
-        ),
-      {
-        kind: "fenced",
-        // Not a data gap this slice can close: `symbol_or_paren(lang: :html)`
-        // takes the MathML payload (`fenced.rb:324-334`), which differs from
-        // `Paren#to_html` on 13 of the 24 Paren classes — measured, oracle
-        // 00c52783 — and the mathml table is forbidden in the ./html bundle.
-        message:
-          'fenced.parameterOne: named paren "Paren::Lround" needs generated HTML symbol ' +
-          "data for the fenced paren slot, which is the gem's MathML payload " +
-          "(Paren#to_mathml_without_math_tag(...).nodes.first, fenced.rb:324-334) " +
-          "and not Paren#to_html — measured, they differ on 13 of the 24 Paren " +
-          "classes, and the mathml table this slice would need is forbidden in " +
-          "the ./html bundle",
-      },
-    );
+  it("renders a named Fenced paren from the generated column, not from Paren#to_html", () => {
+    const fence = (open: string, close: string) =>
+      toHtml(
+        new FencedNode({
+          parameterOne: new SymbolNode({ id: open }),
+          parameterTwo: [symbol()],
+          parameterThree: new SymbolNode({ id: close }),
+        }),
+      );
 
+    // `symbol_or_paren(lang: :html)` takes the MathML payload
+    // (`fenced.rb:324-336`), which differs from `Paren#to_html` on 13 of the
+    // 24 Paren classes — measured, oracle 00c52783. The first id below is on
+    // the differing side and the second on the agreeing side, so a renderer
+    // reading `HTML_SYMBOLS` for this slot fails on the first and passes the
+    // second: both are asserted, and against the symbol table's own bytes.
+    expect(HTML_SYMBOLS.get("Paren::Lbbrack")).toBe("&#x27e6;");
+    expect(fence("Paren::Lbbrack", "Paren::Rbbrack")).toBe("<i>⟦</i>x<i>⟧</i>");
+    expect(HTML_SYMBOLS.get("Paren::CloseParen")).toBe("&#x3017;");
+    expect(fence("Paren::CloseParen", "Paren::CloseParen")).toBe("<i>&#x3017;</i>x<i>&#x3017;</i>");
+    expect(fence("Paren::Lround", "Paren::Rround")).toBe("<i>(</i>x<i>)</i>");
+  });
+
+  it("refuses a Paren id the generated column does not carry, as MISSING_SYMBOL_DATA", () => {
+    // A new upstream subclass must not borrow the abstract carrier's value
+    // path — it has no measured payload, so it throws, the same deliberate
+    // non-RenderError the symbol table raises.
+    let thrown: unknown;
+    try {
+      toHtml(
+        new FencedNode({
+          parameterOne: new SymbolNode({ id: "Paren::NoSuchParen" }),
+          parameterTwo: [symbol()],
+          parameterThree: null,
+        }),
+      );
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(MissingSymbolDataError);
+    expect((thrown as MissingSymbolDataError).code).toBe("MISSING_SYMBOL_DATA");
+    expect((thrown as MissingSymbolDataError).symbolId).toBe("Paren::NoSuchParen");
+    expect((thrown as MissingSymbolDataError).format).toBe("html");
+  });
+
+  it("refuses Fenced paren paths with address-bearing inspect bytes", () => {
     for (const parameterOne of [
       new FormulaNode({ value: [symbol("(")] }),
       new MrowNode({ value: [symbol("(")] }),
@@ -574,6 +595,24 @@ describe("HTML own-kind rendering", () => {
       message:
         'fenced.parameterOne: a "symbol" node holds a list that bypasses constructor normalization',
     });
+  });
+
+  it("renders a fence whose symbol child carries no id", () => {
+    // `SymbolNode` defaults a missing id to the base class, but the shape check
+    // is structural and admits a plain object that never ran that constructor.
+    // Such a node used to reach `id.startsWith` and throw a TypeError mid-walk;
+    // it now resolves to the base id and renders through the value path, the
+    // same resolution every other symbol renderer makes.
+    const noId = {
+      kind: "fenced",
+      parameterOne: { kind: "symbol", value: "(" },
+      parameterTwo: [{ kind: "symbol", value: "x" }],
+      parameterThree: { kind: "symbol", value: ")" },
+    };
+    const rendered = toHtml(noId as never);
+    expect(rendered).toContain("(");
+    expect(rendered).toContain(")");
+    expect(rendered).not.toContain("TypeError");
   });
 
   it("renders every measured FontStyle alias as its child alone", () => {

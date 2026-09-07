@@ -8,9 +8,12 @@ not renderer logic, so it must be generated: the gem is the oracle, and a
 hand-written or normalized replacement would violate the port's first rule
 (`PORTING-STANDARDS.md:8-14`).
 
-The current HTML renderer already refuses missing named-symbol data at the two
-sites that need it: ordinary symbol rendering (`src/render/symbol/html.ts:4-15`)
-and named fence rendering (`src/render/fenced/html.ts:38-62`). OMML has the same
+When this plan was written the HTML renderer refused missing named-symbol data
+at the two sites that need it: ordinary symbol rendering
+(`src/render/symbol/html.ts`) and named fence rendering
+(`src/render/fenced/html.ts`). Both have since been supplied — see *Measured
+after HTML consumption* and *Measured after the fenced named-paren column*
+below. OMML has the same
 payload prerequisite, but its XML wrapper belongs to shared symbol helpers in
 the oracle rather than to each generated class
 (`lib/plurimath/math/symbols/symbol.rb:82-104,156-165`).
@@ -511,6 +514,40 @@ No existing subpath grew. `./html` gained `43,666` ESM bytes, close to the
 accept. `package-isolation` was re-run with the table reachable from the
 subpath and passed, reporting `./html`'s ESM artifact clean at `2` chunks and
 `50` source modules.
+
+### Measured after the fenced named-paren column, 2026-09-07
+
+The HTML-owned column the section above asked for landed:
+`HTML_FENCED_PAREN_PAYLOADS` in `src/generated/html/symbols.ts`, one entry per
+`Math::Symbols::Paren` subclass, carrying
+`to_mathml_without_math_tag(false, options: {}).nodes.first` — the value
+`symbol_or_paren(lang: :html)` hands the slot. `24` entries, `13` of them
+differing from the same id's `Paren#to_html`, each verified through one live
+`Fenced#to_html` render (exit `0`).
+
+Re-measured by running every gem-renderable parity-fixture case through
+`toHtml` and byte-comparing (exit `0`): of the `89` cases the fixture records
+the gem rendering, the port now refuses `17` and renders `72`, against `24`
+and `65` before. `71` of the `72` are byte-identical to the gem; the one that
+is not is `text-unitsml-valid`, the pre-existing UnitsML divergence already in
+`KNOWN_DIVERGENCES`.
+
+The `7` ids that left `PORT_REFUSES` are `fence-curly-single`,
+`fence-round-expression`, `fence-round-single`, `fence-round-triple`,
+`fence-square-pair`, `permissive-unclosed-paren` and `unary-sin-fenced`. The
+projection above said `8`; the eighth, `mixed-function-definition`, is the case
+whose `BinaryFunction::Power` blocker the paren refusal was masking, exactly as
+that section predicted it would be.
+
+Everything still refused is a function-carrier alias, no longer symbol data:
+
+| refusal | cases |
+|---|---:|
+| `BinaryFunction` alias (`Power` 9, `Mod` 3, `Log` 1, `Lim` 1, `Root` 1) | 15 |
+| `UnaryFunction` alias (`Cos`) | 1 |
+| `TernaryFunction` alias (`PowerBase`) | 1 |
+
+That is slice 5 below, and it is now the whole remaining HTML corpus gap.
 
 ### Measured after OMML consumption
 

@@ -661,15 +661,20 @@ names the three format fixtures and the XML generator as explicit legacy gaps,
 so another untracked generated artifact cannot silently join them. Replacing
 these captures with deterministic generators and full sidecars closes the gap.
 
-### HTML: Fenced refuses generated and nondeterministic paren paths
+### HTML: Fenced refuses nondeterministic paren paths
 
-**Trigger: the HTML symbol-data slice is generated, or a corpus case needs one of
-these constructs.**
+**Trigger: a corpus case needs one of these constructs.**
 
 The gem's `Fenced#to_html` takes two incompatible paren paths. A `Paren` instance is
-rendered through `to_mathml_without_math_tag(...).nodes.first`; named `Paren::*` nodes
-therefore need the generated symbol mapping that the scoped HTML slice does not carry.
-The port raises `RenderError` for that path rather than inventing a delimiter.
+rendered through `to_mathml_without_math_tag(...).nodes.first`.
+
+**The generated half of this entry closed, 2026-09-07.**
+`HTML_FENCED_PAREN_PAYLOADS` (`src/generated/html/symbols.ts`) carries that
+value for all 24 `Paren` subclasses, measured on the pinned oracle and verified
+through one live `Fenced#to_html` render per id, so named `Paren::*` nodes now
+render. An id under `Paren::` the column does not carry is a new upstream
+subclass: it raises `MissingSymbolDataError` rather than falling through to the
+value path below.
 
 Any non-`Paren` node contributes its raw `value`. Empty and nil-only formula, mrow, and
 table values have deterministic Ruby `#inspect` bytes (`[]`, `[nil]`; a nil table value

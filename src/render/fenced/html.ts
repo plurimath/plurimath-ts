@@ -1,13 +1,18 @@
 import { hasNodeKind, type MathNode, RenderError } from "../../core/index";
+import { RUBY_ABSTRACT_CLASSES } from "../../core/nodes";
+import { NODE_SPECS } from "../../core/normalize";
 import {
+  classBasename,
   describeSlot,
   FORMAT,
+  missingSymbolDataError,
   type NodeOf,
   present,
   type RenderContext,
   renderChild,
   s,
 } from "../../formats/html/render-shared";
+import { HTML_FENCED_PAREN_PAYLOADS } from "../../generated/html/symbols";
 
 /** `Fenced#to_html`: italic parens around a no-separator body join. */
 export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): string {
@@ -36,36 +41,55 @@ export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): st
 }
 
 /**
- * `symbol_or_paren(field, lang: :html)` (`function/fenced.rb:324-334`):
+ * `Paren::` — the id prefix of every `Math::Symbols::Paren` subclass.
+ *
+ * `symbol_or_paren` guards its paren arm with
+ * `field.is_a?(Math::Symbols::Paren)` (`function/fenced.rb:325`). Symbol ids
+ * are Ruby class keys and each subclass is nested inside that carrier, so the
+ * guard reads here as a prefix test. Derived from core's abstract-class
+ * census, the same list `../symbol/html.ts` reads for the ids the symbol
+ * table omits, so a renamed carrier moves both together.
+ */
+const PAREN_ID_PREFIXES: readonly string[] = RUBY_ABSTRACT_CLASSES.filter((rubyClass) =>
+  rubyClass.startsWith("Math::Symbols::"),
+).map((rubyClass) => `${classBasename(rubyClass)}::`);
+
+/**
+ * `symbol_or_paren(field, lang: :html)` (`function/fenced.rb:324-336`):
  * ordinary Symbol/Number nodes expose their raw value — `field&.value`, the
  * unless-branch — so anything that is not a `Math::Symbols::Paren` never
  * reaches a render method at all.
  *
  * A `Paren` subclass takes the other branch, and `:html` shares it with
- * `:mathml`: `field.to_mathml_without_math_tag(intent, options:).nodes.first`.
- * That payload is NOT `Paren#to_html`, and the difference is not cosmetic.
- * Measured on the pinned oracle (00c52783), over all 24 `Paren` subclasses,
- * exit 0: the two disagree on 13 of them, because each class hand-writes its
- * mathml as either `ox_element(tag) << encoded` (the entity DECODED) or
- * `<< paren_value` (the entity RAW), with no rule relating the two —
- * `Paren::Lbbrack#to_html` is `"&#x27e6;"` where its mathml text is `"⟦"`,
- * while `Paren::CloseParen` answers `"&#x3017;"` to both. End to end, the gem
- * renders `Fenced(Lbbrack, [x], Rbbrack).to_html` as `<i>⟦</i>x<i>⟧</i>`.
+ * `:mathml`: `field.to_mathml_without_math_tag(intent, options:).nodes.first`,
+ * with `intent` left at the method's own `false` default because `to_html`
+ * (`fenced.rb:54-69`) passes none. That payload is NOT `Paren#to_html`, and
+ * the difference is not cosmetic. Measured on the pinned oracle (00c52783),
+ * over all 24 `Paren` subclasses, exit 0: the two disagree on 13 of them,
+ * because each class hand-writes its mathml as either
+ * `ox_element(tag) << encoded` (the entity DECODED) or `<< paren_value` (the
+ * entity RAW), with no rule relating the two — `Paren::Lbbrack#to_html` is
+ * `"&#x27e6;"` where its mathml text is `"⟦"`, while `Paren::CloseParen`
+ * answers `"&#x3017;"` to both. End to end, the gem renders
+ * `Fenced(Lbbrack, [x], Rbbrack).to_html` as `<i>⟦</i>x<i>⟧</i>`.
  *
- * So this slot cannot be served from `src/generated/html/symbols.ts`: that
- * table carries `Paren#to_html`, which is the wrong payload for 13 ids, and
- * substituting it would be a silent divergence on exactly the kind of input
- * the port refuses to guess at. The right payload lives in
- * `src/generated/mathml/symbols.ts`, which the HTML subpath may not import —
- * `scripts/gate-package.mjs` forbids `generated/mathml/` in `./html`'s
- * bundle, and rightly, since a table of 1,459 mathml descriptors has no
- * business in an HTML consumer's download.
+ * So this slot is not served from `HTML_SYMBOLS`: that table carries
+ * `Paren#to_html`, the wrong payload for 13 ids, and substituting it would be
+ * a silent divergence on exactly the kind of input the port refuses to guess
+ * at. `src/generated/mathml/symbols.ts` holds the right string but is out of
+ * reach — `scripts/gate-package.mjs` forbids `generated/mathml/` in `./html`'s
+ * bundle, rightly, since 1,459 mathml descriptors have no business in an HTML
+ * consumer's download. The generator therefore emits an HTML-owned column,
+ * `HTML_FENCED_PAREN_PAYLOADS`, measured over every `Paren` subclass and
+ * verified through one live `Fenced#to_html` render per id.
  *
- * The named-paren slot therefore stays refused until the generator emits an
- * HTML-owned column for it. This is a scope correction:
- * `TODO.plan/p2-output-formats/04-symbol-data.md` records the named-fence
- * cases as unblocked by "the same map's `Paren::*` rows", and the measurement
- * above shows those rows are the wrong data.
+ * The abstract `Paren` carrier is deliberately absent from that column and
+ * falls through to the value path below. Measured on the same oracle, exit 0:
+ * it inherits `Symbol`'s methods, so `Paren.new("zz")` puts `"zz"` in the slot
+ * and `Paren.new` puts Ruby-nil there — its mathml payload, its `to_html` and
+ * its stored value are always the same one. An id under `Paren::` that the
+ * column does not carry is a new upstream subclass, and throws rather than
+ * borrowing that fallback.
  */
 function renderHtmlParen(value: unknown, at: string): string | null {
   if (!hasNodeKind(value)) {
@@ -78,20 +102,25 @@ function renderHtmlParen(value: unknown, at: string): string | null {
   const node = value as MathNode;
 
   switch (node.kind) {
-    case "symbol":
-      if (node.id.startsWith("Paren::")) {
-        throw new RenderError(
-          `${at}: named paren "${node.id}" needs generated HTML symbol data for the ` +
-            "fenced paren slot, which is the gem's MathML payload " +
-            "(Paren#to_mathml_without_math_tag(...).nodes.first, fenced.rb:324-334) " +
-            "and not Paren#to_html — measured, they differ on 13 of the 24 Paren " +
-            "classes, and the mathml table this slice would need is forbidden in " +
-            "the ./html bundle",
-          FORMAT,
-          "fenced",
-        );
+    case "symbol": {
+      // `SymbolNode` defaults a missing id to the base class (core/nodes.ts),
+      // but `assertMathNodeShape` is structural and admits a plain object that
+      // never ran that constructor — so an absent id reaches here and used to
+      // make `startsWith` throw a TypeError mid-walk. Resolving it the way
+      // every other symbol renderer does (`../symbol/html.ts`, and its
+      // asciimath, latex and mathml siblings) keeps the failure controlled and
+      // this format consistent with itself.
+      const id = node.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
+      const payload = HTML_FENCED_PAREN_PAYLOADS.get(id);
+      if (payload !== undefined) return payload;
+      // The factory records the error as this walk's own throw, so the
+      // boundary can tell it from an input's imitation
+      // (`../../formats/html/render-shared.ts`).
+      if (PAREN_ID_PREFIXES.some((prefix) => id.startsWith(prefix))) {
+        throw missingSymbolDataError(id);
       }
       return renderScalarParenValue(node.value, node.kind, at);
+    }
     case "number":
       return renderScalarParenValue(node.value, node.kind, at);
     case "formula":

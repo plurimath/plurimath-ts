@@ -1,5 +1,6 @@
 import { hasNodeKind, type MathNode, RenderError } from "../../core/index";
 import { RUBY_ABSTRACT_CLASSES } from "../../core/nodes";
+import { NODE_SPECS } from "../../core/normalize";
 import {
   classBasename,
   describeSlot,
@@ -102,13 +103,21 @@ function renderHtmlParen(value: unknown, at: string): string | null {
 
   switch (node.kind) {
     case "symbol": {
-      const payload = HTML_FENCED_PAREN_PAYLOADS.get(node.id);
+      // `SymbolNode` defaults a missing id to the base class (core/nodes.ts),
+      // but `assertMathNodeShape` is structural and admits a plain object that
+      // never ran that constructor — so an absent id reaches here and used to
+      // make `startsWith` throw a TypeError mid-walk. Resolving it the way
+      // every other symbol renderer does (`../symbol/html.ts`, and its
+      // asciimath, latex and mathml siblings) keeps the failure controlled and
+      // this format consistent with itself.
+      const id = node.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
+      const payload = HTML_FENCED_PAREN_PAYLOADS.get(id);
       if (payload !== undefined) return payload;
       // The factory records the error as this walk's own throw, so the
       // boundary can tell it from an input's imitation
       // (`../../formats/html/render-shared.ts`).
-      if (PAREN_ID_PREFIXES.some((prefix) => node.id.startsWith(prefix))) {
-        throw missingSymbolDataError(node.id);
+      if (PAREN_ID_PREFIXES.some((prefix) => id.startsWith(prefix))) {
+        throw missingSymbolDataError(id);
       }
       return renderScalarParenValue(node.value, node.kind, at);
     }

@@ -597,6 +597,24 @@ describe("HTML own-kind rendering", () => {
     });
   });
 
+  it("renders a fence whose symbol child carries no id", () => {
+    // `SymbolNode` defaults a missing id to the base class, but the shape check
+    // is structural and admits a plain object that never ran that constructor.
+    // Such a node used to reach `id.startsWith` and throw a TypeError mid-walk;
+    // it now resolves to the base id and renders through the value path, the
+    // same resolution every other symbol renderer makes.
+    const noId = {
+      kind: "fenced",
+      parameterOne: { kind: "symbol", value: "(" },
+      parameterTwo: [{ kind: "symbol", value: "x" }],
+      parameterThree: { kind: "symbol", value: ")" },
+    };
+    const rendered = toHtml(noId as never);
+    expect(rendered).toContain("(");
+    expect(rendered).toContain(")");
+    expect(rendered).not.toContain("TypeError");
+  });
+
   it("renders every measured FontStyle alias as its child alone", () => {
     const names = [
       "Bold",

@@ -43,19 +43,17 @@ export const KNOWN_DIVERGENCES: Readonly<
  * case's own test. Shrinking this list is the work; each removal belongs to the
  * commit that earns it.
  *
- * It held seventeen, all of them one of six carrier aliases the HTML slice had
- * not measured. The ten `Power` and `PowerBase` cases are gone; the seven left
- * are `Mod` (3), `Lim`, `Log`, `Root` and `Cos` (1 each).
+ * **Empty, and every entry earned its way out.** The seventeen it held were the
+ * six carrier aliases the HTML slice had not measured — `Power` (9 cases),
+ * `Mod` (3), `Lim`, `Log`, `Root`, `PowerBase` and `Cos` (1 each). All are
+ * measured now, in `src/render/{binary,ternary,unary}-function/html.ts`, and
+ * each of the seventeen produces the gem's exact bytes.
+ *
+ * The table stays so the next case that refuses has somewhere to be named. A
+ * corpus that grows can put entries back; what it must not do is put one back
+ * without a reason that is TRUE of the gem.
  */
-export const PORT_REFUSES: ReadonlySet<string> = new Set([
-  "mod-in-expression",
-  "mod-numeric",
-  "mod-simple",
-  "nary-lim",
-  "nary-log-base",
-  "root-cube",
-  "unary-cos-product",
-]);
+export const PORT_REFUSES: ReadonlySet<string> = new Set([]);
 
 /**
  * How many of the gem-renderable corpus cases the port renders today.
@@ -63,10 +61,11 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  * Derived from `PORT_REFUSES`, and cross-checked against it by the spec: the
  * two disagree only when one was edited without the other.
  *
- * Counted as rendered: 81 match the gem byte for byte, and `text-unitsml-valid`
- * renders and diverges by decision, pinned both ways in `KNOWN_DIVERGENCES`.
+ * All 89 the gem renders. 88 match it byte for byte; the 89th is
+ * `text-unitsml-valid`, which renders and diverges by decision — it is counted
+ * here as rendered and pinned both ways in `KNOWN_DIVERGENCES`.
  */
-export const RENDERED_BASELINE = 82;
+export const RENDERED_BASELINE = 89;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared

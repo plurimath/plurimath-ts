@@ -205,7 +205,9 @@ describe("HTML carrier defaults", () => {
     expect(toHtml(new AbsNode({ parameterOne: symbol() }))).toBe("<i>abs</i><i>x</i>");
   });
 
-  it("takes the unary label from the class name and keeps an empty child wrapper", () => {
+  // The label is `invert_unicode_symbols`, which for `Sin` — but not for every
+  // name — is the downcased class name. See `src/render/unary-function/html.ts`.
+  it("takes the unary label from the measured table and keeps an empty child wrapper", () => {
     expect(toHtml(new UnaryFunctionNode({ name: "Sin", parameterOne: symbol() }))).toBe(
       "<i>sin</i><i>x</i>",
     );
@@ -750,9 +752,10 @@ describe("HTML own-kind rendering", () => {
  * fixture because these pins name the ALIAS: a corpus failure says some formula
  * changed, one of these says which carrier arm did.
  *
- * Each is a shape the carrier default would get WRONG — both put `<sup>`/`<sub>`
- * where the default puts `<i>` — so a regression back to the default fails here
- * instead of rendering something plausible.
+ * Each is a shape the carrier default would get WRONG — `Power` and `PowerBase`
+ * put `<sup>`/`<sub>` where the default puts `<i>`, and `Mod`, `Lim` and `Log`
+ * carry a literal the default has no notion of — so a regression back to the
+ * default fails here instead of rendering something plausible.
  */
 describe("HTML carrier aliases the corpus reaches", () => {
   const two = (name: string, a?: NodeParameter, b?: NodeParameter) =>
@@ -766,6 +769,17 @@ describe("HTML carrier aliases the corpus reaches", () => {
       two("Power", undefined, new NumberNode({ value: "2" })),
       "<sup>2</sup>",
     ],
+    // mod.rb:56-60 — the literal sits BETWEEN the slots, and outlives both
+    ["Mod", two("Mod", symbol(), symbol("y")), "<i>x</i><i>mod</i><i>y</i>"],
+    ["Mod, both slots absent", two("Mod"), "<i>mod</i>"],
+    // lim.rb:31-35 — literal first
+    ["Lim", two("Lim", symbol(), symbol("y")), "<i>lim</i><i>x</i><i>y</i>"],
+    ["Lim, both slots absent", two("Lim"), "<i>lim</i>"],
+    // log.rb:56-60 — literal first, then a <sub>/<sup> pair
+    ["Log", two("Log", symbol(), symbol("y")), "<i>log</i><sub>x</sub><sup>y</sup>"],
+    ["Log, both slots absent", two("Log"), "<i>log</i>"],
+    // Root inherits binary_function.rb:60-64 unchanged
+    ["Root", two("Root", symbol(), symbol("y")), "<i>x</i><i>y</i>"],
     // power_base.rb:32-37
     [
       "PowerBase",
@@ -785,6 +799,15 @@ describe("HTML carrier aliases the corpus reaches", () => {
         parameterThree: symbol("z"),
       }),
       "<i>x</i><sup>z</sup>",
+    ],
+    // unary_function.rb:65-74, label from Core#invert_unicode_symbols
+    ["Cos", new UnaryFunctionNode({ name: "Cos", parameterOne: symbol() }), "<i>cos</i><i>x</i>"],
+    ["Cos, slot absent", new UnaryFunctionNode({ name: "Cos" }), "<i>cos</i>"],
+    // a list joins inside ONE wrapper, not one wrapper per member
+    [
+      "Cos, list slot",
+      new UnaryFunctionNode({ name: "Cos", parameterOne: [symbol(), symbol("y")] }),
+      "<i>cos</i><i>xy</i>",
     ],
   ];
 

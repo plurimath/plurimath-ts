@@ -157,6 +157,28 @@ One name is measured and deliberately still refused: `Scarries` inherits
 `to_unicodemath` from the carrier (`"scarries⁡x"`) while overriding the other
 three. Admitting it in one format alone would leave a name that renders in
 UnicodeMath and raises everywhere else, which is a worse trap than the gap.
+
+The HTML slice hand-lists the same way, and for the same reason — no
+`src/generated/html/` slice carries a reachable-name set, and §3's
+generated-data closure forbids an HTML kind file reading the mathml one. The
+name arms in `src/render/{binary,ternary,unary}-function/html.ts` admit only
+the ten aliases some corpus case constructs — `Power`, `Mod`, `Lim`, `Log`,
+`Root`, `Td` (binary), `PowerBase` (ternary), `Sin`, `Cos`, `Tr` (unary) — so
+every admitted arm is held to the gem's bytes by `render-parity.spec.ts`, and
+`power`/`powerBase` additionally by the full `degenerate-slots` slot matrix.
+`MEASURED_LABELS` in the unary file is the one hand-typed gem-derived table:
+`Core#invert_unicode_symbols` is `UNICODE_SYMBOLS.invert[class_name] ||
+class_name`, so the label is NOT reliably the downcased class name — of the
+names reachable through that carrier, `Sup` resolves to `&#x2283;` — and the
+port cannot compute it without the mathml table it may not import. Names that
+render on the gem but no case constructs (`Stackrel`, `Underover`, `Limits`,
+`Multiscript`) stay refused rather than admitted untested. Two never become
+admissible as written: `Menclose#to_html` interpolates `parameter_one` raw
+into a `notation=` attribute (a heap address, not reproducible), and
+`Rule#to_html` takes no `options:` keyword at all, so the gem itself raises
+`ArgumentError` — surfacing as `ParseError` — when a `Rule` is rendered
+inside a tree.
+
 **Trigger for revisiting: a generator that owns these sets per format, or the
 first consumer that needs `Scarries`.**
 

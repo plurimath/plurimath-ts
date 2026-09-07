@@ -12,13 +12,23 @@
  * Measured pins, from a sweep of every slot-presence combination on the pinned
  * oracle (`Number` leaves rendering `1` and `2`):
  *
- *   - carrier default: `<i>1</i><i>2</i>`, each slot dropped entirely when
- *     absent, so a carrier with neither slot renders `""`;
+ *   - carrier default, which `Root` is the reachable case of:
+ *     `<i>1</i><i>2</i>`, each slot dropped entirely when absent, so a carrier
+ *     with neither slot renders `""`;
  *   - `Power` (`power.rb:41-45`): `<i>1</i><sup>2</sup>` — the second slot is a
- *     `<sup>`, NOT the carrier's second `<i>`.
+ *     `<sup>`, NOT the carrier's second `<i>`;
+ *   - `Mod` (`mod.rb:56-60`): `<i>1</i><i>mod</i><i>2</i>` — the literal sits
+ *     BETWEEN the slots, and is emitted even when both are absent (`<i>mod</i>`);
+ *   - `Lim` (`lim.rb:31-35`): `<i>lim</i><i>1</i><i>2</i>` — literal first;
+ *   - `Log` (`log.rb:56-60`): `<i>log</i><sub>1</sub><sup>2</sup>` — literal
+ *     first, then a `<sub>`/`<sup>` pair.
  *
- * The remaining overriding names are not measured here yet, and an unmeasured
- * name raises — the same guard the mathml and asciimath files hold.
+ * `Stackrel` and `Menclose` override too but stay unmeasured here: no corpus
+ * case constructs either, so nothing in this suite would hold their bytes
+ * honest. `Menclose#to_html` additionally interpolates `parameter_one` into a
+ * `notation=` attribute RAW, which for a node is Ruby's default `Object#to_s`
+ * — a heap address, and so not reproducible at all. An unmeasured name raises,
+ * the same guard the mathml and asciimath files hold.
  */
 import { RenderError } from "../../core/index";
 import {
@@ -47,6 +57,34 @@ export function renderBinaryFunction(
         renderCarrierSlot(parameterOne, context, "power.parameterOne") +
         renderTaggedSlot("sup", parameterTwo, context, "power.parameterTwo")
       );
+
+    // `mod.rb:56-60`. The literal is unconditional; only the slots are guarded.
+    case "Mod":
+      return (
+        renderCarrierSlot(parameterOne, context, "mod.parameterOne") +
+        "<i>mod</i>" +
+        renderCarrierSlot(parameterTwo, context, "mod.parameterTwo")
+      );
+
+    // `lim.rb:31-35`.
+    case "Lim":
+      return (
+        "<i>lim</i>" +
+        renderCarrierSlot(parameterOne, context, "lim.parameterOne") +
+        renderCarrierSlot(parameterTwo, context, "lim.parameterTwo")
+      );
+
+    // `log.rb:56-60`.
+    case "Log":
+      return (
+        "<i>log</i>" +
+        renderTaggedSlot("sub", parameterOne, context, "log.parameterOne") +
+        renderTaggedSlot("sup", parameterTwo, context, "log.parameterTwo")
+      );
+
+    // `Root` inherits `BinaryFunction#to_html` unchanged (owner is the carrier).
+    case "Root":
+      return renderBinaryDefault(parameterOne, parameterTwo, context, "root");
 
     default:
       throw new RenderError(

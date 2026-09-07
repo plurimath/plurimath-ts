@@ -71,9 +71,10 @@ vertical first:
   byte-identical, capitals intact.
 
   That three-way split is the behaviour of the `HTMLEntities` gem, reached
-  through `latex/parser.rb:27`, not of Plurimath itself — so the port cannot
-  read it out of the gem's source and must probe for it. Author this rejection
-  group from a probe, not from this paragraph.
+  through the Plurimath gem's `lib/plurimath/latex/parser.rb:27` — a path in the
+  oracle, not in this repository — and not of Plurimath itself. So the port
+  cannot read it out of Plurimath's source and must probe for it. Author this
+  rejection group from a probe, not from this paragraph.
 
 ## Exit criteria
 

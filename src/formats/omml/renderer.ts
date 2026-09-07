@@ -15,14 +15,28 @@ import { FORMAT, serializeRendered } from "./render-shared";
  */
 export type OmmlOptions = Record<string, never>;
 
+/** Public `Formula#to_omml` keywords whose rendering paths are not measured yet. */
+const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
+  [
+    "displayStyle",
+    "recursive display-style override is unmeasured across the complete OMML renderer",
+  ],
+  [
+    "splitOnLinebreak",
+    "line-broken OMML emits multiple m:oMath siblings separated by Word break runs; unmeasured",
+  ],
+  ["formatter", "number formatting is P4 scope; only the no-formatter path is measured"],
+  ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md section 5)"],
+];
+
 /**
- * The option keys both entries accept. There are none: `OmmlOptions` declares
- * no key, so every key that reaches an entry is unknown and is refused BY NAME
- * (`assertKnownOptions`, core/render-options.ts) instead of ignored. The gem's
- * four keywords above are refused here too: accepting one silently would
- * promise a behaviour this port does not have.
+ * The option keys both entries accept. `OmmlOptions` declares no IMPLEMENTED
+ * key, so the accepted set is exactly the deferred ones: a keyword the gem
+ * really has is recognised here and refused by name where the reason is known
+ * (below), while a key the gem does not have at all is refused as unknown by
+ * `assertKnownOptions` (core/render-options.ts). Same split as MathML.
  */
-const ACCEPTED_OPTIONS: readonly string[] = [];
+const ACCEPTED_OPTIONS: readonly string[] = DEFERRED_OPTIONS.map(([name]) => name);
 
 const OMML_NAMESPACES: readonly (readonly [string, string])[] = [
   ["xmlns:m", "http://schemas.openxmlformats.org/officeDocument/2006/math"],
@@ -52,7 +66,10 @@ export function toOmmlWithoutMathTag(node: MathNode, options?: OmmlOptions | nul
   // ever looks at the receiver.
   assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
-  return atBoundary(() => serializeRendered(ROOT_CONTEXT.render(node)));
+  return atBoundary(() => {
+    assertSupportedOptions(options, node.kind);
+    return serializeRendered(ROOT_CONTEXT.render(node));
+  });
 }
 
 /** `Formula#to_omml`; only Formula and its Mrow subclass own this public wrapper. */
@@ -60,6 +77,7 @@ export function toOmml(node: MathNode, options?: OmmlOptions | null): string {
   assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
   return atBoundary(() => {
+    assertSupportedOptions(options, node.kind);
     if (node.kind !== "formula" && node.kind !== "mrow") {
       throw new RenderError(
         `to_omml is defined on Formula and its subclasses only — received "${node.kind}"`,
@@ -74,6 +92,55 @@ export function toOmml(node: MathNode, options?: OmmlOptions | null): string {
     para.append(math);
     return dumpNodes(para, { indent: 2 });
   });
+}
+
+function assertSupportedOptions(options: OmmlOptions | null | undefined, kind: string): void {
+  if (
+    options !== null &&
+    options !== undefined &&
+    (typeof options !== "object" || Array.isArray(options))
+  ) {
+    throw new RenderError(
+      `options: expected a plain options object, found ${typeof options === "object" ? "an array" : `a ${typeof options}`}`,
+      FORMAT,
+      kind,
+    );
+  }
+
+  if (options !== null && options !== undefined) {
+    const prototype = Object.getPrototypeOf(options) as { constructor?: unknown } | null;
+    const constructorDescriptor =
+      prototype === null ? undefined : Object.getOwnPropertyDescriptor(prototype, "constructor");
+    const prototypeConstructor = constructorDescriptor?.value;
+    const isRealmObjectPrototype =
+      prototype !== null &&
+      Object.getPrototypeOf(prototype) === null &&
+      typeof prototypeConstructor === "function" &&
+      prototypeConstructor.name === "Object";
+    if (prototype !== Object.prototype && prototype !== null && !isRealmObjectPrototype) {
+      const name =
+        typeof prototypeConstructor === "function" && prototypeConstructor.name.length > 0
+          ? prototypeConstructor.name
+          : "custom";
+      throw new RenderError(
+        `options: expected a plain options object, found a ${name} instance`,
+        FORMAT,
+        kind,
+      );
+    }
+  }
+
+  const values: Record<string, unknown> =
+    options === null || options === undefined ? {} : (options as Record<string, unknown>);
+  for (const [name, detail] of DEFERRED_OPTIONS) {
+    if (Object.hasOwn(values, name) && values[name] !== undefined) {
+      throw new RenderError(
+        `The "${name}" feature of to_omml is deferred (TODO.plan/deferred.md): ${detail}`,
+        FORMAT,
+        kind,
+      );
+    }
+  }
 }
 
 function atBoundary<T>(render: () => T): T {

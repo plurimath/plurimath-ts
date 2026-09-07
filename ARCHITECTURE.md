@@ -364,13 +364,15 @@ option types, discriminated by `format`. The **compat constructor keeps the
 default warning behaviour permanently**: its ABI is frozen and cannot gain an
 options argument.
 
-**Compat surface — method-exact with the `plurimath-js` ABI** (verified
-against its source, `src/index.ts` + `src/plurimath-opal.d.ts`):
+**Compat surface — method-exact with the `plurimath-js` ABI** (declaration
+target settled 2026-09-04: source head `ce297e2`, verified against its source,
+`src/index.ts` + `src/plurimath-opal.d.ts`):
 
 ```ts
 type CompatFormat = "asciimath" | "latex" | "mathml" | "html" | "unicode" | "omml";
                                             // NOTE: "unicode", not "unicodemath"
 export default class Plurimath {
+  readonly data: FormulaNode;                 // published class: writable Opal ParserResult
   constructor(data: string, format: CompatFormat);
   toAsciimath(): string;
   toLatex(): string;
@@ -385,9 +387,9 @@ export default class Plurimath {
 The published `plurimath-js` also exposes a public, **writable** `data`
 property holding an Opal `ParserResult`. That object cannot be reproduced —
 it is Opal-runtime-specific — so the compat class is **method-exact, not
-object-exact**: the constructor and seven methods above match; `data` is an
-open decision (§11) between a name-compatible `readonly data: FormulaNode` and a
-documented break. The document does not claim a fully exact ABI.
+object-exact**: the constructor and seven methods above match, and `data` is
+exposed as a name-compatible `readonly data: FormulaNode` — settled 2026-09-04
+(§11). The document does not claim a fully exact ABI.
 
 The freeze will be enforced by a checked-in declaration fixture (type-level
 test) plus one runtime test per method; no api-extractor needed. Neither the
@@ -395,10 +397,9 @@ compat class nor that fixture exists yet. The ~80-line budget
 is guidance; exact compatibility overrides it.
 
 **The compat class is not built in P0.** It has nothing to wrap until an input
-format exists, and `data` (§11) is unsettled. It lands with the first release
-that claims compatibility value, and its fixture freezes then — building and
-freezing a default export around an empty library first would be pure
-ceremony.
+format exists. It lands with the first release that claims compatibility
+value, and its fixture freezes then — building and freezing a default export
+around an empty library first would be pure ceremony.
 
 **Availability constraint.** The compat constructor accepts six input formats,
 but input formats land across phases (§9). The compat class is therefore only
@@ -1178,11 +1179,23 @@ Decisions needed before their phase:
 
 - **Modern-API semantics:** fully decided (§5) — mutability, equality,
   errors, construction, renderer options.
-- **Compat `data` property (before P2):** the published plurimath-js exposes a
-  public `data` field holding its Opal parse result. Reproduce an equivalent
-  surface (exposing our `FormulaNode`), or document its absence as a deliberate
-  break and stop calling the ABI exact. Recommendation: expose
-  `readonly data: FormulaNode` — same property name, our model behind it.
+- ~~Compat `data` property~~ — decided 2026-09-04: **expose
+  `readonly data: FormulaNode`** (§4), same property name with our model behind
+  it. The published plurimath-js exposes a public, writable `data` holding its
+  Opal parse result, which is runtime-specific and cannot be reproduced. The
+  alternative was documenting its absence as a deliberate break; a consumer that
+  READS `.data` gets something meaningful, and one that WRITES it breaks under
+  either option, so exposing it strictly dominates.
+- ~~Compat declaration target~~ — decided 2026-09-04: **source head `ce297e2`**,
+  not the published `@plurimath/plurimath@0.2.2` declarations (§4). This package
+  has published nothing, so it carries no compatibility debt to any consumer and
+  no reason to inherit a defect it is not bound by: the published `mahtml`
+  spelling exists only in a TypeScript declaration, so it is compile-time only,
+  and freezing the fixture against it would make a typo permanent in exchange
+  for nothing. Consequences for the fixture — seven methods including
+  `toUnicodemath()`, `toMathml(intent?: boolean)`, and `unicode` rather than
+  `mahtml` in the constructor `Format` union. The `mahtml` spelling is logged
+  for upstream repair in the gem's `PORT-FINDINGS.md`.
 - **UnitsML approach and its `1.0` consequence** — Suleman to discuss with
   Ronald. Note the coupling: `plurimath-js` ships UnitsML support today, so
   either UnitsML lands before package takeover or the takeover documents a

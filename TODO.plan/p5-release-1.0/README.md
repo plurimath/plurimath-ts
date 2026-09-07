@@ -26,8 +26,9 @@ a constraint on phases that had not happened yet.
 
 ## Risks and notes
 
-Three decisions must be settled before this milestone, not during it — all
-tracked in [open decisions](../open-decisions.md):
+Two decisions are still open before this milestone, and must be settled before
+it rather than during it — both tracked in
+[open decisions](../open-decisions.md):
 
 - **UnitsML parity.** `plurimath-js` supports UnitsML today and ships tests for
   it (`spec/unitsml.spec.js` converts `"unitsml(kg)"` through AsciiMath, LaTeX
@@ -35,14 +36,19 @@ tracked in [open decisions](../open-decisions.md):
   the "drop-in replacement" language goes.
 - **The package name and release line.** The Opal package currently owns
   `@plurimath/plurimath`.
-- **The compat `data` property.** The published class exposes a writable `data`
-  holding an Opal `ParserResult`, which cannot be reproduced.
+
+The compat `data` property was the third and is **settled (2026-09-04)**: the
+published class exposes a writable `data` holding an Opal `ParserResult`, which
+is runtime-specific and cannot be reproduced, so this port exposes a
+name-compatible `readonly data: FormulaNode` instead (`ARCHITECTURE.md` §11).
+That is what keeps the class method-exact rather than object-exact.
 
 ## Exit criteria
 
 - [ ] Every phase complete.
-- [ ] Compat ABI fixture and runtime tests passing against the published
-      `plurimath-js` surface.
+- [ ] Compat declaration fixture and runtime tests passing against the settled
+      declaration target — `plurimath-js` source head `ce297e2`, not the
+      published `@plurimath/plurimath@0.2.2` surface.
 - [ ] `/core` schema locked and versioned.
-- [ ] The three decisions above recorded rather than assumed.
+- [ ] The two decisions above recorded rather than assumed.
 - [ ] Final review round with findings resolved, and sign-off recorded.

@@ -15,6 +15,7 @@ export {
   ParseError,
   PlurimathError,
   RenderError,
+  UnsupportedFeatureError,
   UnsupportedFormatError,
 } from "./errors";
 /**

@@ -54,7 +54,7 @@ Part B measured the final nine own implementations with `options: {}` and one pl
 | `base` | `<i>x</i><sub>x</sub>` | each nil slot disappears; an array in either slot raises |
 | `ceil` | `<i>&#x2308;</i><i>x</i><i>&#x2309;</i>` | nil omits only the child wrapper; an array raises |
 | `ddot` | `<i>x</i><i>..</i>` | nil omits the child wrapper; an array raises |
-| `fenced` | `<i>x</i>x<i>x</i>` | body members join without separators; named parens needing generated data refuse |
+| `fenced` | `<i>x</i>x<i>x</i>` | body members join without separators; named parens read the generated fenced-paren column |
 | `font-style` | `x` | all 14 measured aliases return the child alone; nil returns nil |
 | `linebreak` | `<br/>x` | `linebreakstyle: "after"` gives `x<br/>`; nil gives `<br/>` |
 | `prod` | `<i>&prod;</i><sub>x</sub><sup>x</sup>` | the third/body slot is ignored, including an array |

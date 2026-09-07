@@ -3685,6 +3685,50 @@ const RAGGED_1_2_3_X = xml(
 const SINGLE_CELL_ROW_X = xml("<m:e>", "  <m:r>", "    <m:t>1</m:t>", "  </m:r>", "</m:e>");
 const EMPTY_ROW_X = xml("<m:mr/>");
 
+/**
+ * `Table#single_td_table` (table.rb:286-296), the branch `single_table?`
+ * picks when EVERY row holds exactly one cell. Each expected string is the
+ * oracle's own answer at `00c52783` for the identical tree.
+ *
+ * The `m:eqArr` carries no `m:count` and no `m:mcJc` — the column bookkeeping
+ * `m:m` needs does not exist here — and a one-cell `Tr` contributes its bare
+ * `<m:e>` rather than the `m:mr` a wider row would.
+ */
+const eqArr = (...cells: readonly string[]): string =>
+  xml(
+    "<m:d>",
+    "  <m:dPr>",
+    '    <m:begChr m:val="["/>',
+    '    <m:endChr m:val="]"/>',
+    '    <m:sepChr m:val=""/>',
+    "    <m:grow/>",
+    "  </m:dPr>",
+    "  <m:e>",
+    "    <m:eqArr>",
+    "      <m:eqArrPr>",
+    "        <m:ctrlPr>",
+    "          <w:rPr>",
+    '            <w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>',
+    "            <w:i/>",
+    "          </w:rPr>",
+    "        </m:ctrlPr>",
+    "      </m:eqArrPr>",
+    ...cells.flatMap((cell) => [
+      "      <m:e>",
+      "        <m:r>",
+      `          <m:t>${cell}</m:t>`,
+      "        </m:r>",
+      "      </m:e>",
+    ]),
+    "    </m:eqArr>",
+    "  </m:e>",
+    "</m:d>",
+  );
+
+const EQ_ARR_1_X = eqArr("1");
+const EQ_ARR_1_2_X = eqArr("1", "2");
+const EQ_ARR_EMPTY_X = eqArr();
+
 describe("OMML ragged tables", () => {
   it("renders a matrix when only the first row is single-celled", () => {
     expect(toOmmlWithoutMathTag(cellTable([cellTr("1"), cellTr("2", "3")]))).toBe(RAGGED_1_2_X);
@@ -3707,26 +3751,16 @@ describe("OMML ragged tables", () => {
     );
   });
 
-  it("still defers eqArr when EVERY row is single-celled", () => {
-    for (const rows of [[cellTr("1")], [cellTr("1"), cellTr("2")]]) {
-      expectRefusal(() => toOmmlWithoutMathTag(cellTable(rows)), {
-        kind: "table",
-        message:
-          "table.value: the single-column eqArr branch is deferred until separately measured",
-      });
-    }
+  it("renders eqArr when EVERY row is single-celled", () => {
+    expect(toOmmlWithoutMathTag(cellTable([cellTr("1")]))).toBe(EQ_ARR_1_X);
+    expect(toOmmlWithoutMathTag(cellTable([cellTr("1"), cellTr("2")]))).toBe(EQ_ARR_1_2_X);
   });
 
   // A row-less table is the same gem path, not a separate one: `[].all?` is
   // true, so `single_table?` holds and `Table.new([])` renders an `m:eqArr`
-  // carrying only its `m:eqArrPr` — measured on the oracle at `00c52783`. It
-  // must therefore reach the eqArr deferral and report that reason, rather
-  // than a second refusal of its own.
-  it("defers eqArr for a table with no rows at all", () => {
-    expectRefusal(() => toOmmlWithoutMathTag(cellTable([])), {
-      kind: "table",
-      message: "table.value: the single-column eqArr branch is deferred until separately measured",
-    });
+  // carrying only its `m:eqArrPr` — measured on the oracle at `00c52783`.
+  it("renders an eqArr with only its properties for a table with no rows at all", () => {
+    expect(toOmmlWithoutMathTag(cellTable([]))).toBe(EQ_ARR_EMPTY_X);
   });
 });
 

@@ -1,11 +1,18 @@
 import {
   hasNodeKind,
   type MathNode,
+  MissingSymbolDataError,
   type NodeKind,
   type NodeParameter,
   RenderError,
 } from "../../core/index";
-import { htmlEntityToUnicode } from "../../core/nodes";
+import { htmlEntityToUnicode, RUBY_ABSTRACT_CLASSES } from "../../core/nodes";
+import { NODE_SPECS } from "../../core/normalize";
+import {
+  OMML_DEFAULT_SYMBOL_TAG_NAME,
+  OMML_SYMBOL_TAG_NAMES,
+  OMML_SYMBOLS,
+} from "../../generated/omml/symbols";
 import { dumpNodes, XmlElement } from "../../xml/index";
 
 export const FORMAT = "omml";
@@ -153,20 +160,102 @@ export function requireEmptyOptions(value: unknown, kind: string, at: string): v
   );
 }
 
-/** A direct base `Symbol`/abstract `Paren` value; named subclasses need generated data. */
-export function baseSymbolValue(node: NodeOf<"symbol">, errorKind: string, at?: string): string {
-  if (node.id !== "Symbol" && node.id !== "Paren") {
-    const prefix = at === undefined ? "" : `${at}: `;
-    throw new RenderError(
-      `${prefix}Symbol "${node.id}" needs generated OMML data, deferred to the symbol-data follow-up`,
-      FORMAT,
-      errorKind,
-    );
-  }
-  return requireString(node.value, errorKind, at === undefined ? "symbol.value" : `${at}.value`);
+/** The Ruby class basename — `Math::Symbols::Sigma` is `Sigma`. */
+export function classBasename(rubyClass: string): string {
+  return rubyClass.slice(rubyClass.lastIndexOf(":") + 1);
 }
 
-/** `Symbol#t_tag`/`nary_attr_value`: an explicit value wins over subclass output. */
+/**
+ * Symbol ids rendered from their stored `value` rather than a class literal:
+ * the `Symbol` base class itself, and the abstract `Paren` root — the two ids
+ * the generated table deliberately omits. Both are derived from core's own
+ * data (the symbol spec's carrier class and the abstract-class census), not
+ * restated, exactly as the latex and html twins derive theirs.
+ */
+const VALUE_RENDERED_SYMBOL_IDS: ReadonlySet<string> = new Set(
+  [NODE_SPECS.symbol.rubyClass, ...RUBY_ABSTRACT_CLASSES]
+    .filter((rubyClass) => rubyClass.startsWith("Math::Symbols::"))
+    .map(classBasename),
+);
+
+/**
+ * The walk's own missing-symbol throw, distinguishable from an imitation.
+ *
+ * The renderer boundary re-throws the symbol table's `MissingSymbolDataError`
+ * (a public error code in its own right) while wrapping every other mid-walk
+ * throw into `RenderError` — but `instanceof` is a test the INPUT can pass
+ * too: a hostile getter that answered validation's read can throw its own
+ * `MissingSymbolDataError` mid-render and forge the pass-through, reporting
+ * MISSING_SYMBOL_DATA for what is an input failure. So the genuine throw site
+ * records its instances in this module-private `WeakSet`, and the boundary
+ * passes through members only. One set per format, because each format's
+ * boundary vouches only for its own throw sites — the rationale in full is in
+ * `../latex/render-shared.ts`, whose set this mirrors.
+ */
+const OWN_MISSING_SYMBOL_ERRORS = new WeakSet<MissingSymbolDataError>();
+
+/** The symbol table's one deliberate non-RenderError throw, recorded as our own. */
+export function missingSymbolDataError(symbolId: string): MissingSymbolDataError {
+  const error = new MissingSymbolDataError(symbolId, FORMAT);
+  OWN_MISSING_SYMBOL_ERRORS.add(error);
+  return error;
+}
+
+/** Membership in the factory's set — shape and prototype prove nothing here. */
+export function isOwnMissingSymbolDataError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    OWN_MISSING_SYMBOL_ERRORS.has(error as MissingSymbolDataError)
+  );
+}
+
+/**
+ * `Symbols::Symbol#to_omml_without_math_tag` (`symbols/symbol.rb:67-72`): the
+ * stored value for the base class and the abstract `Paren` carrier, and the
+ * generated per-id literal for the 1,459 subclasses the census folds into this
+ * kind (ARCHITECTURE.md §5, "Symbols").
+ *
+ * Measured on the pinned oracle `00c52783` over all 1,459 static symbol
+ * classes, one live `to_omml_without_math_tag` call each (exit 0):
+ *
+ *   - none of them answers `nil`, so every id in the table carries a string
+ *     and the base class's `nil` answer is reachable only through the two
+ *     value-rendered ids above;
+ *   - none of them answers the invisible-times entity `&#x2062;`, so the
+ *     gem's one hard-coded `return if value == "&#x2062;"` guard
+ *     (`symbols/symbol.rb:69`) can only ever fire on a stored value — which
+ *     is why the guard lives in `../../render/symbol/omml.ts`, on the value
+ *     side, and not here;
+ *   - a constructor value override moves NONE of them: `Plus.new("ZZ")`,
+ *     `Sum.new("ZZ")` and the other 1,457 each answer their static string, so
+ *     this method never consults `node.value` for a named id;
+ *   - the `display_style` argument moves none of them either, which is what
+ *     the generated OMML exception matrix records by being empty
+ *     (`src/generated/omml/exceptions.ts`) — so there is no context
+ *     consultation here.
+ */
+export function symbolOmmlValue(node: NodeOf<"symbol">, errorKind: string, at?: string): string {
+  // A plain object without an id is the base class, exactly as the
+  // constructor's default makes it.
+  const id = node.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
+  if (VALUE_RENDERED_SYMBOL_IDS.has(id)) {
+    return requireString(node.value, errorKind, at === undefined ? "symbol.value" : `${at}.value`);
+  }
+  const literal = OMML_SYMBOLS.get(id);
+  // The factory records the error as this walk's own throw (a module-private
+  // WeakSet), so the boundary can tell it from an input's imitation.
+  if (literal === undefined) throw missingSymbolDataError(id);
+  return literal;
+}
+
+/**
+ * `Symbol#t_tag` (`symbols/symbol.rb:160-165`):
+ * `value || to_omml_without_math_tag(nil, options:)` — an explicit value wins
+ * over the subclass literal, which is the one place a named symbol's stored
+ * value is read. `font_style_t_tag` is this method verbatim
+ * (`symbols/symbol.rb:97-99`), and no symbol subclass overrides either.
+ */
 export function symbolValueOrGenerated(
   node: NodeOf<"symbol">,
   errorKind: string,
@@ -175,7 +264,44 @@ export function symbolValueOrGenerated(
   if (node.value !== null && node.value !== undefined) {
     return requireString(node.value, errorKind, at === undefined ? "symbol.value" : `${at}.value`);
   }
-  return baseSymbolValue(node, errorKind, at);
+  return symbolOmmlValue(node, errorKind, at);
+}
+
+/**
+ * `Symbol#nary_attr_value` (`symbols/symbol.rb:101-105`):
+ *
+ * ```ruby
+ * value || Utility.html_entity_to_unicode(to_omml_without_math_tag(true, options: options))
+ * ```
+ *
+ * The two arms are NOT the same string: only the fallback is decoded here, so
+ * a named symbol's literal reaches `Nary#chr_value` already decoded once while
+ * an explicit value reaches it as written. `chr_value` then decodes what it
+ * gets a second time and the XML writer a third, so the fallback is decoded
+ * three times overall and an explicit value twice
+ * (`../../render/nary/omml.ts` carries that half).
+ *
+ * Every entry in the generated table is singly encoded — no literal spells an
+ * ampersand as `&amp;` — so this decode currently lands on the same character
+ * the second one would have produced anyway. Modelling it is what keeps that
+ * an observation about the data rather than an assumption baked into the walk.
+ */
+export function naryAttrValue(node: NodeOf<"symbol">, errorKind: string, at: string): string {
+  if (node.value !== null && node.value !== undefined) {
+    return requireString(node.value, errorKind, `${at}.value`);
+  }
+  return decodeEntities(symbolOmmlValue(node, errorKind, at), errorKind, at);
+}
+
+/**
+ * `Symbol#omml_tag_name` (`symbols/symbol.rb:93-95`) and the eight subclasses
+ * that override it. `PowerBase#to_omml_without_math_tag` branches on this
+ * value (`power_base.rb:39-43`); the generated table names the overrides and
+ * the default, both measured over every symbol class.
+ */
+export function symbolOmmlTagName(node: NodeOf<"symbol">): string {
+  const id = node.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
+  return OMML_SYMBOL_TAG_NAMES.get(id) ?? OMML_DEFAULT_SYMBOL_TAG_NAME;
 }
 
 export function textElement(value: string): XmlElement {

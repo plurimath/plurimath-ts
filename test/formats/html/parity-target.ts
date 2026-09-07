@@ -44,11 +44,6 @@ export const KNOWN_DIVERGENCES: Readonly<
  * commit that earns it.
  */
 export const PORT_REFUSES: ReadonlySet<string> = new Set([
-  "fence-curly-single",
-  "fence-round-expression",
-  "fence-round-single",
-  "fence-round-triple",
-  "fence-square-pair",
   "mixed-binomial-square",
   "mixed-function-definition",
   "mixed-sum-of-cubes",
@@ -57,7 +52,6 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
   "mod-simple",
   "nary-lim",
   "nary-log-base",
-  "permissive-unclosed-paren",
   "power-and-subscript",
   "power-exponential",
   "power-fenced-exponent",
@@ -67,7 +61,6 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
   "root-cube",
   "root-sqrt-pythagoras",
   "unary-cos-product",
-  "unary-sin-fenced",
 ]);
 
 /**
@@ -76,7 +69,7 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  * Derived from `PORT_REFUSES`, and cross-checked against it by the spec: the
  * two disagree only when one was edited without the other.
  */
-export const RENDERED_BASELINE = 65;
+export const RENDERED_BASELINE = 72;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared

@@ -742,19 +742,76 @@ describe("HTML own-kind rendering", () => {
   });
 });
 
+/**
+ * The carrier aliases the corpus constructs, pinned to the gem's own bytes.
+ *
+ * Measured on the pinned oracle (00c52783) by building each class directly and
+ * calling `to_html(options: {})`. They are here as well as in the corpus parity
+ * fixture because these pins name the ALIAS: a corpus failure says some formula
+ * changed, one of these says which carrier arm did.
+ *
+ * Each is a shape the carrier default would get WRONG — both put `<sup>`/`<sub>`
+ * where the default puts `<i>` — so a regression back to the default fails here
+ * instead of rendering something plausible.
+ */
+describe("HTML carrier aliases the corpus reaches", () => {
+  const two = (name: string, a?: NodeParameter, b?: NodeParameter) =>
+    new BinaryFunctionNode({ name, parameterOne: a, parameterTwo: b });
+  const cases: readonly (readonly [string, MathNode, string])[] = [
+    // power.rb:41-45 — second slot is a <sup>, not the default's second <i>
+    ["Power", two("Power", symbol(), new NumberNode({ value: "2" })), "<i>x</i><sup>2</sup>"],
+    ["Power, second slot absent", two("Power", symbol()), "<i>x</i>"],
+    [
+      "Power, first slot absent",
+      two("Power", undefined, new NumberNode({ value: "2" })),
+      "<sup>2</sup>",
+    ],
+    // power_base.rb:32-37
+    [
+      "PowerBase",
+      new TernaryFunctionNode({
+        name: "PowerBase",
+        parameterOne: symbol(),
+        parameterTwo: symbol("y"),
+        parameterThree: symbol("z"),
+      }),
+      "<i>x</i><sub>y</sub><sup>z</sup>",
+    ],
+    [
+      "PowerBase, middle slot absent",
+      new TernaryFunctionNode({
+        name: "PowerBase",
+        parameterOne: symbol(),
+        parameterThree: symbol("z"),
+      }),
+      "<i>x</i><sup>z</sup>",
+    ],
+  ];
+
+  it.each(cases)("%s renders the gem's bytes", (_label, node, expected) => {
+    expect(toHtml(node)).toBe(expected);
+  });
+});
+
 describe("HTML measured boundary refusals", () => {
   it("refuses unmeasured carrier aliases instead of inventing plausible output", () => {
+    // `Mbox#to_html` hands back the parameter OBJECT rather than a string, so
+    // there are no bytes here to reproduce in the first place.
     expectHtmlError(() => toHtml(new UnaryFunctionNode({ name: "Mbox", parameterOne: symbol() })), {
       kind: "unaryFunction",
       message: 'UnaryFunction alias "Mbox" has not been measured for HTML in this slice',
     });
-    expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Power" })), {
+    // `Stackrel` and `Underover` DO render on the gem — `"x"` and `"<i>x</i>"`
+    // for a single symbol slot — but no corpus case constructs either, so
+    // nothing in this suite would hold the port's bytes for them honest. They
+    // refuse until something does.
+    expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Stackrel" })), {
       kind: "binaryFunction",
-      message: 'BinaryFunction alias "Power" has not been measured for HTML in this slice',
+      message: 'BinaryFunction alias "Stackrel" has not been measured for HTML in this slice',
     });
-    expectHtmlError(() => toHtml(new TernaryFunctionNode({ name: "PowerBase" })), {
+    expectHtmlError(() => toHtml(new TernaryFunctionNode({ name: "Underover" })), {
       kind: "ternaryFunction",
-      message: 'TernaryFunction alias "PowerBase" has not been measured for HTML in this slice',
+      message: 'TernaryFunction alias "Underover" has not been measured for HTML in this slice',
     });
   });
 

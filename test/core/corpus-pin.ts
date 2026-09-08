@@ -240,6 +240,33 @@ function requiredString(map: Mapping, key: string, where: string): string {
   return value;
 }
 
+/**
+ * A string field the shared schemas declare as a plain `"type": "string"` with
+ * no `minLength`, so `""` is a value the corpus is allowed to carry and this
+ * reader must not treat as damage.
+ *
+ * Only `preprocessed` is read through this, in both the case reader and the
+ * rejection reader, because both upstream schemas declare it the same way
+ * (`schema/cases.json`, `schema/cases2.json`, `schema/rejections.json`).
+ * Preprocessing can legitimately consume the whole input: LaTeX's pass strips
+ * whitespace, so `latex-whitespace-only` records `input: "   "` with
+ * `preprocessed: ""`. Every other string field this reader takes IS declared
+ * `minLength: 1` upstream — `id`, `input`, `group`, `input_format` — and stays
+ * on `requiredString`, so an empty one there still stops the load.
+ *
+ * The distinction is not cosmetic. `loadPinnedCorpus` throws before it returns
+ * anything, so reading this field as non-empty did not fail one case: it
+ * rejected the entire pin and took every corpus-driven suite in the repository
+ * down with it.
+ */
+function requiredPossiblyEmptyString(map: Mapping, key: string, where: string): string {
+  const value = map[key];
+  if (typeof value !== "string") {
+    throw new Error(`${where}: "${key}" must be a string, found ${describeValue(value ?? null)}`);
+  }
+  return value;
+}
+
 function requiredBoolean(map: Mapping, key: string, where: string): boolean {
   const value = map[key];
   if (typeof value !== "boolean") {
@@ -586,7 +613,7 @@ function readPayload(
       group,
       input: requiredString(caseRecord, "input", at),
       inputFormat: caseFormat,
-      preprocessed: requiredString(caseRecord, "preprocessed", at),
+      preprocessed: requiredPossiblyEmptyString(caseRecord, "preprocessed", at),
       expected,
       refusals,
       parseTree: requiredPresent(caseRecord, "parse_tree", at),
@@ -631,7 +658,7 @@ function readRejectionPayload(
       group,
       input: requiredString(caseRecord, "input", at),
       inputFormat: requiredString(caseRecord, "input_format", at),
-      preprocessed: requiredString(caseRecord, "preprocessed", at),
+      preprocessed: requiredPossiblyEmptyString(caseRecord, "preprocessed", at),
       category: requiredString(error, "category", `${at} error`),
       index: typeof rawIndex === "number" ? rawIndex : undefined,
     };

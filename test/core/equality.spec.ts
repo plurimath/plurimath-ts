@@ -374,16 +374,25 @@ describe("deep structure", () => {
 });
 
 /**
- * The strongest available Ruby-derived fixture: the gem was asked, for all
- * 110 reachable corpus formulas, which pairs satisfy `==`. Exactly seven
- * distinct pairs do, and each differs only in `input_string` — a field the
- * projection skips. Everything else is unequal, and every case equals itself.
+ * The strongest available Ruby-derived fixture: the gem was asked, over the
+ * reachable corpus formulas, which pairs satisfy `==`. Each pair it reports
+ * differs only in `input_string` — a field the projection skips. Everything
+ * else is unequal, and every case equals itself.
  *
- * Four of the seven are new with the LaTeX corpus, and all four cross the two
- * input notations: `alpha` and `\alpha` are different source text for the same
- * formula, so the gem reports them equal and so must this port. They are the
- * evidence that `==` compares the model and not the input, which nothing in an
- * AsciiMath-only corpus could show.
+ * Most of the pairs cross the two input notations: `alpha` and `\alpha` are
+ * different source text for the same formula, so the gem reports them equal and
+ * so must this port. They are the evidence that `==` compares the model and not
+ * the input, which nothing in an AsciiMath-only corpus could show.
+ *
+ * STALE AT THIS PIN, and deliberately left failing. `RubyEqualPairs` below was
+ * measured by asking the GEM about the 110 formulas reachable at the previous
+ * pin. The corpus now carries 216, and the port finds 35 equal pairs among
+ * them. Those 35 cannot be pasted in here: they are this port's own answer, and
+ * writing them down as "what the gem reports" would leave the suite comparing
+ * the port to itself and calling it parity — the exact failure this fixture
+ * exists to prevent. Re-running the gem's `==` sweep over the wider corpus
+ * needs the Ruby oracle and belongs to its own change; until then this file
+ * fails loudly rather than vouching for an unmeasured claim.
  */
 describe("the corpus equality matrix, as the gem reports it", () => {
   const cases = readCorpusCases();
@@ -403,8 +412,8 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "symbol-latin-x|whitespace-surrounding",
   ]);
 
-  it("has the 110 cases it expects", () => {
-    expect(nodes).toHaveLength(110);
+  it("has the 216 cases it expects", () => {
+    expect(nodes).toHaveLength(216);
   });
 
   it("is reflexive: a rebuilt tree equals its twin", () => {

@@ -52,18 +52,19 @@ function expectedLatex(entry: (typeof cases)[number]): string {
 }
 
 describe("unicodemath render parity, corpus layer (recorded model -> text)", () => {
-  it("has the 110 reachable cases (111 pinned, 1 withheld as UnitsML)", () => {
+  it("has the 216 reachable cases (217 pinned, 1 withheld as UnitsML)", () => {
     // A suite that quietly loaded zero cases has happened to this repository
     // once before; both counts are pinned so it cannot happen silently.
-    expect(cases.length).toBe(110);
-    // 109 rather than 110, because one case records a unicodemath refusal.
-    expect(rendered.length).toBe(109);
-    // The round-trip layer's scoped list is pinned too, and it is now smaller
-    // than the corpus layer: 91 of the 110 reachable cases are written in
-    // AsciiMath and 19 in LaTeX, which this port cannot yet parse. 90 rather
-    // than 91 here, because the refusing case is one of the AsciiMath ones.
-    // The gap between the two numbers IS the second input corpus, so a suite
-    // that stopped scoping would show up here as the two converging.
+    expect(cases.length).toBe(216);
+    // 215 rather than 216, because one case records a unicodemath refusal.
+    expect(rendered.length).toBe(215);
+    // The round-trip layer's scoped list is pinned too, and it is far smaller
+    // than the corpus layer: 91 of the 216 reachable cases are written in
+    // AsciiMath and 125 in LaTeX. This layer calls `parseAsciimath`, so it
+    // takes the AsciiMath ones — 90 rather than 91, because the refusing case
+    // is one of them. The gap between the two numbers IS the second input
+    // corpus, so a suite that stopped scoping would show up here as the two
+    // converging.
     expect(roundTrip.length).toBe(90);
   });
 

@@ -87,48 +87,61 @@ describe("the preflight runs before any generator does", () => {
    * commented out and when both passed the oracle checkout as `chdir` — a
    * commented line still contains the substring, and so does a wrong argument.
    * Only the call itself proves the call.
+   *
+   * The assertion is EQUALITY between the probe's directory and the first
+   * generator's, because that is the invariant: `mise` resolves the Ruby
+   * runtime from the working directory upwards, so a probe run anywhere else
+   * can clear a bundle the generator cannot load. Matching a substring of the
+   * snapshot path is not enough — `testsuite --check` runs its generator in
+   * `<snapshot>/submodules/plurimath-testsuite`, and a probe given the
+   * snapshot root instead would still contain it.
    */
   it.each(["run_repo", "run_testsuite"])(
-    "%s probes the snapshot's directory before running any generator",
+    "%s probes exactly where its first generator will run",
     (subcommand) => {
       const r = inOracle(`
-        begin
-          require "tmpdir"
-          oracle = Dir.mktmpdir("fake-oracle-")
+        Dir.mktmpdir("fake-oracle-") do |oracle|
           File.write(File.join(oracle, "Gemfile"), "")
-          snapshot = Dir.mktmpdir("fake-snapshot-")
-          Dir.mkdir(File.join(snapshot, "submodules"))
-          Dir.mkdir(File.join(snapshot, "submodules", "plurimath-testsuite"))
+          Dir.mktmpdir("fake-snapshot-") do |snapshot|
+            FileUtils.mkdir_p(File.join(snapshot, "submodules", "plurimath-testsuite"))
 
-          probes = []
-          ok = Class.new { def success? = true }.new
-          OracleGate.define_singleton_method(:capture_command) do |args, chdir: nil, env: {}|
-            probes << { "chdir" => chdir, "env" => env }
-            ["", "", ok]
-          end
-          OracleGate.define_singleton_method(:build_clean_repo_snapshot!) { |_tmp| snapshot }
-          OracleGate.define_singleton_method(:require_submodule_snapshot_prerequisites!) { nil }
-          OracleGate.define_singleton_method(:run_generator!) do |*|
-            raise "REACHED_GENERATOR"
-          end
+            probes = []
+            generator_chdir = nil
+            ok = Class.new { def success? = true }.new
+            OracleGate.define_singleton_method(:capture_command) do |args, chdir: nil, env: {}|
+              probes << { "chdir" => chdir, "env" => env }
+              ["", "", ok]
+            end
+            OracleGate.define_singleton_method(:build_clean_repo_snapshot!) { |_tmp| snapshot }
+            OracleGate.define_singleton_method(:require_submodule_snapshot_prerequisites!) { nil }
+            OracleGate.define_singleton_method(:run_generator!) do |_script, _args, chdir:, gem_dir:|
+              generator_chdir = chdir
+              raise "REACHED_GENERATOR"
+            end
 
-          reached = begin
-            OracleGate.${subcommand}(["--check", "--gem", oracle])
-            "no generator ran"
-          rescue RuntimeError => e
-            e.message
+            reached = begin
+              OracleGate.${subcommand}(["--check", "--gem", oracle])
+              "no generator ran"
+            rescue RuntimeError => e
+              e.message
+            end
+            {
+              "reached" => reached,
+              "probe_count" => probes.length,
+              "matches_generator" => probes.length == 1 && probes[0]["chdir"] == generator_chdir,
+              "probed_the_oracle" => probes.any? { |probe| probe["chdir"] == oracle },
+              "env" => probes.map { |probe| probe["env"] },
+            }
           end
-          { "reached" => reached, "probes" => probes }
         end
       `);
       expect(r.ok).toBe(true);
-      // The probe ran, and it ran before the first generator.
+      // One probe, before the first generator, in that generator's directory.
       expect(r.output).toContain("REACHED_GENERATOR");
+      expect(r.output).toContain('"probe_count" => 1');
+      expect(r.output).toContain('"matches_generator" => true');
+      expect(r.output).toContain('"probed_the_oracle" => false');
       expect(r.output).toContain('"BUNDLE_FROZEN" => "true"');
-      // In the snapshot, never in the oracle checkout.
-      expect(r.output).toContain("fake-snapshot-");
-      expect(r.output).not.toContain('"chdir" => "/oracle');
-      expect(r.output).not.toMatch(/"chdir" => "[^"]*fake-oracle-/);
     },
   );
 });

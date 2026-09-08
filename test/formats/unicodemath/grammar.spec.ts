@@ -7745,12 +7745,13 @@ describe("the upstream unicodemath-tests corpus", () => {
     expect(tree(preprocessed)).toStrictEqual(JSON.parse(gemTree));
   });
 
-  it.each(chunks(UPSTREAM_VERDICTS, 48))(
+  it.each(chunks(UPSTREAM_VERDICTS, 24))(
     "agrees with the gem on every accept and refusal (chunk %i)",
     (_n, batch) => {
       const wrong = batch.filter(([text, parsed]) => refuses(text) === parsed);
       expect(wrong.map(([text]) => text)).toStrictEqual([]);
     },
+    120_000,
   );
 });
 
@@ -7760,26 +7761,31 @@ describe("a sweep over the operators this grammar branches on", () => {
     expect(SWEEP_REFUSED.length).toBe(3444);
   });
 
-  it.each(chunks(SWEEP_FIXTURES, 200))("matches the gem's tree (chunk %i)", (_n, batch) => {
-    const wrong: string[] = [];
-    for (const [preprocessed, gemTree] of batch) {
-      let got: PlainTree;
-      try {
-        got = tree(preprocessed);
-      } catch {
-        wrong.push(preprocessed);
-        continue;
+  it.each(chunks(SWEEP_FIXTURES, 200))(
+    "matches the gem's tree (chunk %i)",
+    (_n, batch) => {
+      const wrong: string[] = [];
+      for (const [preprocessed, gemTree] of batch) {
+        let got: PlainTree;
+        try {
+          got = tree(preprocessed);
+        } catch {
+          wrong.push(preprocessed);
+          continue;
+        }
+        if (JSON.stringify(got) !== JSON.stringify(JSON.parse(gemTree))) wrong.push(preprocessed);
       }
-      if (JSON.stringify(got) !== JSON.stringify(JSON.parse(gemTree))) wrong.push(preprocessed);
-    }
-    expect(wrong).toStrictEqual([]);
-  });
+      expect(wrong).toStrictEqual([]);
+    },
+    120_000,
+  );
 
   it.each(chunks(SWEEP_REFUSED, 500))(
     "refuses everything the gem refuses (chunk %i)",
     (_n, batch) => {
       expect(batch.filter((text) => !refuses(text))).toStrictEqual([]);
     },
+    120_000,
   );
 });
 

@@ -128,9 +128,10 @@ const RUBY_SPACE = "\\t\\n\\v\\f\\r ";
  * the gem's.
  *
  * Measured, so the claim is bounded: switching this grammar between `alt` and
- * `choice` changed no verdict and no tree across the 5,127 oracle inputs the
- * spec covers. It is kept because it is what Parslet builds, not because it
- * fixed something.
+ * `choice` changed no verdict and no tree across the 5,127 inputs it was
+ * compared on — the corpus, sweep and upstream sets. It is kept because it is
+ * what Parslet builds, not because it fixed something; in particular it does
+ * NOT fix the two divergences recorded in the spec.
  *
  * A parenthesised alternation on the RIGHT of a `|` does stay nested in Ruby
  * (`a | (b | c)` is `Alternative(a, Alternative(b, c))`, because the receiver

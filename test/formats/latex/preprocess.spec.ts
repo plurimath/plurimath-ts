@@ -32,6 +32,7 @@
 
 import { describe, expect, it } from "vitest";
 import { ParseError } from "../../../src/core/index";
+import { UndecodableEntityError } from "../../../src/core/nodes";
 import { toAsciimath } from "../../../src/formats/asciimath/index";
 import { parseLatex } from "../../../src/formats/latex/parser";
 import { preprocess } from "../../../src/formats/latex/preprocess";
@@ -103,6 +104,26 @@ const REFUSED: readonly (readonly [input: string, preprocessed: string])[] = [
   ["\\text\t{x}", "\\text&#x9;{x}"],
 ];
 
+/**
+ * `[input, offset of the `&`]` for references the decoder cannot turn into a
+ * character. The gem raises `RangeError` out of `pre_processing`, which
+ * `Plurimath::Math.parse` rewraps as a `Math::ParseError` carrying `@text` and
+ * `@type` and NO position (`errors/parse_error.rb:6-10`) — so the offsets below
+ * have no oracle and are this port's own contract (`ParseError.index`,
+ * ARCHITECTURE.md §5). They are the position of the reference, measured, rather
+ * than the 0 a port with nothing to report would have to invent.
+ */
+const UNDECODABLE: readonly (readonly [input: string, index: number])[] = [
+  ["&#x110000;", 0],
+  ["x&#xd800;", 1],
+  ["x+&#x110000;", 2],
+  ["abc&#x110000;def", 3],
+  ["\\frac{1}{2}+&#x110000;", 12],
+  ["x+&#9999999;", 2],
+  ["&#1114112;", 0],
+  ["&#xffffff;", 0],
+];
+
 describe("latex preprocessing: the restoration pass", () => {
   it.each([...RENDERED.map(([input, pre]) => [input, pre] as const), ...PREPROCESS_ONLY])(
     "%j preprocesses to %j",
@@ -121,5 +142,21 @@ describe("latex preprocessing: the restoration pass", () => {
   it.each(REFUSED)("%j preprocesses to %j and is then refused", (input, preprocessed) => {
     expect(preprocess(input).text).toBe(preprocessed);
     expect(() => parseLatex(input)).toThrow(ParseError);
+  });
+});
+
+describe("latex preprocessing: undecodable character references", () => {
+  it.each(UNDECODABLE)("%j reports the reference at %i", (input, index) => {
+    // A `RangeError` subclass, so the renderers that brand a bare `RangeError`
+    // at their entry as a stack-depth refusal keep matching it.
+    expect(() => preprocess(input)).toThrow(RangeError);
+    let thrown: unknown;
+    try {
+      preprocess(input);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(UndecodableEntityError);
+    expect((thrown as UndecodableEntityError).index).toBe(index);
   });
 });

@@ -1949,6 +1949,35 @@ function codepointToString(code: number): string {
 }
 
 /**
+ * A character reference `codepointToString` refuses, carrying WHERE it was.
+ *
+ * A `RangeError` subclass, deliberately: the decoder's failure is the
+ * language's, not a package operation (see `codepointToString` above), and
+ * several call sites already branch on `error instanceof RangeError` — the
+ * OMML renderer's own decode guard (`omml/render-shared.ts:582`) and the
+ * stack-depth branding at the AsciiMath, LaTeX, HTML and UnicodeMath renderer
+ * entries. Subclassing keeps every one of them matching.
+ *
+ * `index` exists because the gem has nothing to copy here. Measured at oracle
+ * `00c52783`: `Plurimath::Math.parse("x+&#x110000;", :latex)` raises
+ * `Math::ParseError` whose instance variables are exactly `@text` and `@type`
+ * (`errors/parse_error.rb:6-10`) — no position at all. `ParseError.index` is
+ * this package's own contract (ARCHITECTURE.md §5, "UTF-16 code-unit offset
+ * into the ORIGINAL input"), so a caller turning this into a `ParseError` needs
+ * a real offset; 0 would be a position the port invented.
+ */
+export class UndecodableEntityError extends RangeError {
+  constructor(
+    message: string,
+    /** UTF-16 offset of the `&`, in the string handed to the decoder. */
+    readonly index: number,
+  ) {
+    super(message);
+    this.name = "UndecodableEntityError";
+  }
+}
+
+/**
  * `Plurimath::Utility.html_entity_to_unicode`, which `Symbols::Symbol#==`
  * normalizes both sides through.
  *
@@ -2010,7 +2039,16 @@ export function htmlEntitySpans(text: string): readonly HtmlEntitySpan[] {
   // shared state and a reentrant caller would resume mid-string.
   const pattern = new RegExp(ENTITY_PATTERN.source, ENTITY_PATTERN.flags);
   for (const match of text.matchAll(pattern)) {
-    const decoded = decodeEntityMatch(match[0], match[1], match[2], match[3]);
+    let decoded: string;
+    try {
+      decoded = decodeEntityMatch(match[0], match[1], match[2], match[3]);
+    } catch (error) {
+      // `codepointToString` knows the code point and nothing else; this loop is
+      // the only place that knows where the reference started. Rethrow with
+      // that offset so a caller reporting a position has one to report.
+      if (!(error instanceof RangeError)) throw error;
+      throw new UndecodableEntityError(error.message, match.index);
+    }
     if (decoded === match[0]) continue;
     spans.push({ start: match.index, length: match[0].length, text: decoded });
   }

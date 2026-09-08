@@ -205,7 +205,9 @@ describe("HTML carrier defaults", () => {
     expect(toHtml(new AbsNode({ parameterOne: symbol() }))).toBe("<i>abs</i><i>x</i>");
   });
 
-  it("takes the unary label from the class name and keeps an empty child wrapper", () => {
+  // The label is `invert_unicode_symbols`, which for `Sin` — but not for every
+  // name — is the downcased class name. See `src/render/unary-function/html.ts`.
+  it("takes the unary label from the measured table and keeps an empty child wrapper", () => {
     expect(toHtml(new UnaryFunctionNode({ name: "Sin", parameterOne: symbol() }))).toBe(
       "<i>sin</i><i>x</i>",
     );
@@ -742,19 +744,97 @@ describe("HTML own-kind rendering", () => {
   });
 });
 
+/**
+ * The carrier aliases the corpus constructs, pinned to the gem's own bytes.
+ *
+ * Measured on the pinned oracle (00c52783) by building each class directly and
+ * calling `to_html(options: {})`. They are here as well as in the corpus parity
+ * fixture because these pins name the ALIAS: a corpus failure says some formula
+ * changed, one of these says which carrier arm did.
+ *
+ * Each is a shape the carrier default would get WRONG — `Power` and `PowerBase`
+ * put `<sup>`/`<sub>` where the default puts `<i>`, and `Mod`, `Lim` and `Log`
+ * carry a literal the default has no notion of — so a regression back to the
+ * default fails here instead of rendering something plausible.
+ */
+describe("HTML carrier aliases the corpus reaches", () => {
+  const two = (name: string, a?: NodeParameter, b?: NodeParameter) =>
+    new BinaryFunctionNode({ name, parameterOne: a, parameterTwo: b });
+  const cases: readonly (readonly [string, MathNode, string])[] = [
+    // power.rb:41-45 — second slot is a <sup>, not the default's second <i>
+    ["Power", two("Power", symbol(), new NumberNode({ value: "2" })), "<i>x</i><sup>2</sup>"],
+    ["Power, second slot absent", two("Power", symbol()), "<i>x</i>"],
+    [
+      "Power, first slot absent",
+      two("Power", undefined, new NumberNode({ value: "2" })),
+      "<sup>2</sup>",
+    ],
+    // mod.rb:56-60 — the literal sits BETWEEN the slots, and outlives both
+    ["Mod", two("Mod", symbol(), symbol("y")), "<i>x</i><i>mod</i><i>y</i>"],
+    ["Mod, both slots absent", two("Mod"), "<i>mod</i>"],
+    // lim.rb:31-35 — literal first
+    ["Lim", two("Lim", symbol(), symbol("y")), "<i>lim</i><i>x</i><i>y</i>"],
+    ["Lim, both slots absent", two("Lim"), "<i>lim</i>"],
+    // log.rb:56-60 — literal first, then a <sub>/<sup> pair
+    ["Log", two("Log", symbol(), symbol("y")), "<i>log</i><sub>x</sub><sup>y</sup>"],
+    ["Log, both slots absent", two("Log"), "<i>log</i>"],
+    // Root inherits binary_function.rb:60-64 unchanged
+    ["Root", two("Root", symbol(), symbol("y")), "<i>x</i><i>y</i>"],
+    // power_base.rb:32-37
+    [
+      "PowerBase",
+      new TernaryFunctionNode({
+        name: "PowerBase",
+        parameterOne: symbol(),
+        parameterTwo: symbol("y"),
+        parameterThree: symbol("z"),
+      }),
+      "<i>x</i><sub>y</sub><sup>z</sup>",
+    ],
+    [
+      "PowerBase, middle slot absent",
+      new TernaryFunctionNode({
+        name: "PowerBase",
+        parameterOne: symbol(),
+        parameterThree: symbol("z"),
+      }),
+      "<i>x</i><sup>z</sup>",
+    ],
+    // unary_function.rb:65-74, label from Core#invert_unicode_symbols
+    ["Cos", new UnaryFunctionNode({ name: "Cos", parameterOne: symbol() }), "<i>cos</i><i>x</i>"],
+    ["Cos, slot absent", new UnaryFunctionNode({ name: "Cos" }), "<i>cos</i>"],
+    // a list joins inside ONE wrapper, not one wrapper per member
+    [
+      "Cos, list slot",
+      new UnaryFunctionNode({ name: "Cos", parameterOne: [symbol(), symbol("y")] }),
+      "<i>cos</i><i>xy</i>",
+    ],
+  ];
+
+  it.each(cases)("%s renders the gem's bytes", (_label, node, expected) => {
+    expect(toHtml(node)).toBe(expected);
+  });
+});
+
 describe("HTML measured boundary refusals", () => {
   it("refuses unmeasured carrier aliases instead of inventing plausible output", () => {
+    // `Mbox#to_html` hands back the parameter OBJECT rather than a string, so
+    // there are no bytes here to reproduce in the first place.
     expectHtmlError(() => toHtml(new UnaryFunctionNode({ name: "Mbox", parameterOne: symbol() })), {
       kind: "unaryFunction",
       message: 'UnaryFunction alias "Mbox" has not been measured for HTML in this slice',
     });
-    expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Power" })), {
+    // `Stackrel` and `Underover` DO render on the gem — `"x"` and `"<i>x</i>"`
+    // for a single symbol slot — but no corpus case constructs either, so
+    // nothing in this suite would hold the port's bytes for them honest. They
+    // refuse until something does.
+    expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Stackrel" })), {
       kind: "binaryFunction",
-      message: 'BinaryFunction alias "Power" has not been measured for HTML in this slice',
+      message: 'BinaryFunction alias "Stackrel" has not been measured for HTML in this slice',
     });
-    expectHtmlError(() => toHtml(new TernaryFunctionNode({ name: "PowerBase" })), {
+    expectHtmlError(() => toHtml(new TernaryFunctionNode({ name: "Underover" })), {
       kind: "ternaryFunction",
-      message: 'TernaryFunction alias "PowerBase" has not been measured for HTML in this slice',
+      message: 'TernaryFunction alias "Underover" has not been measured for HTML in this slice',
     });
   });
 

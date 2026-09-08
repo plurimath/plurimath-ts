@@ -325,8 +325,13 @@ export function readCorpusCases(root: string = PINNED_CORPUS_ROOT): readonly Cor
 }
 
 /**
- * The one input notation this port can parse today. AsciiMath is P1's vertical
- * slice; LaTeX, UnicodeMath and HTML parsers arrive in P3
+ * The default for `casesInInputFormat` below: the notation `parseAsciimath`
+ * reads, which is what every caller of `parseableCases` drives.
+ *
+ * It is NOT the only notation this port parses. `parseLatex` landed in #76 and
+ * `../formats/latex/rejection-parity.spec.ts` selects through
+ * `casesInInputFormat(cases, "latex")` to drive it. This constant names one
+ * parser's scope, not a limit; UnicodeMath and HTML input arrive in P3
  * (`TODO.plan/p3-input-formats/`).
  */
 export const PARSEABLE_INPUT_FORMAT = "asciimath";

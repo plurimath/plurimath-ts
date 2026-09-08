@@ -11,14 +11,21 @@
  *
  * `expected.mathml` is the gem's own `to_mathml` (default options: intent
  * false, displaystyle from the formula, unary spacing on), recorded by the
- * corpus generator from the same parse that produced the model.
+ * corpus generator from the same parse that produced the model — each case
+ * parsed in the notation its own `input_format` names.
  *
- * Both counts are pinned (91 = the corpus's 92 cases minus the one
- * withheld UnitsML case that the pin actually contains — the exclusion
- * manifest names two, but the gem raises on the invalid one, so no case
- * for it was ever generated; all 91 render to this target):
- * a suite that quietly loads zero cases has happened to this repository
- * once before.
+ * Every count is pinned, because a suite that quietly loads zero cases has
+ * happened to this repository once before:
+ *
+ *   - 216 reachable cases: the pin holds 217 and the one withheld UnitsML case
+ *     it actually contains is dropped. The exclusion manifest names two, but
+ *     the gem raises on the invalid one, so no case for it was ever generated;
+ *   - 216 of those carry `expected.mathml` bytes to compare;
+ *   - 91 go through the round-trip layer, which is the AsciiMath-written
+ *     subset. That says which parser the layer calls, not what this port can
+ *     parse: `parseLatex` landed in #76 and drives
+ *     `../latex/rejection-parity.spec.ts`. Widening this layer to the other
+ *     125 is a separate change with its own measurement to do.
  */
 
 import { describe, expect, it } from "vitest";

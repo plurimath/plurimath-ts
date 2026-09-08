@@ -10,17 +10,26 @@
  *  2. **Round-trip layer** — `parseAsciimath(input)` → `toUnicodemath` →
  *     `expected.unicodemath`, the composition a caller actually runs.
  *
- * `expected.unicodemath` is the gem's own render, recorded by the corpus generator
- * from the same parse that produced the model — so both layers compare
- * against `Plurimath::Math.parse(input, :asciimath).to_unicodemath`.
+ * `expected.unicodemath` is the gem's own render, recorded by the corpus
+ * generator from the same parse that produced the model —
+ * `Plurimath::Math.parse(input, format).to_unicodemath`, where `format` is the
+ * case's own `input_format`. Both layers compare against that; the round-trip
+ * layer is the subset where `format` is `:asciimath`.
  *
- * Both counts are pinned (91 = the corpus's 92 cases minus the one
- * withheld UnitsML case that the pin actually contains — the exclusion
- * manifest names two, but the gem raises on the invalid one; of those
- * 91, 90 render to this target and one — `partial-sqrt-unclosed` — is
- * recorded as a refusal, which has no bytes to compare):
- * a suite that quietly loads zero cases has happened to this repository once
- * before, and `readCorpusCases` throwing on emptiness is belt to this brace.
+ * Every count is pinned, because a suite that quietly loads zero cases has
+ * happened to this repository once before and `readCorpusCases` throwing on
+ * emptiness is only belt to that brace:
+ *
+ *   - 216 reachable cases: the pin holds 217 and the one withheld UnitsML case
+ *     it actually contains is dropped. The exclusion manifest names two, but
+ *     the gem raises on the invalid one, so no case for it was ever generated;
+ *   - 215 of those carry `expected.unicodemath` bytes to compare; the odd one
+ *     out, `partial-sqrt-unclosed`, is recorded as a refusal and has no bytes;
+ *   - 90 go through the round-trip layer: the AsciiMath-written subset is 91
+ *     and the refusing case is one of them. That says which parser the layer
+ *     calls, not what this port can parse — `parseLatex` landed in #76 and
+ *     drives `../latex/rejection-parity.spec.ts`. Widening this layer to the
+ *     other 125 is a separate change with its own measurement to do.
  */
 
 import { describe, expect, it } from "vitest";

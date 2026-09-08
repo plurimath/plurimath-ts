@@ -851,6 +851,26 @@ module UnicodeMathParserDataGenerator
   TRANSFORM_ENTRY_FIELDS =
     %w[name rubyClass disposition carrier family defaultKeyword sources].freeze
 
+  # Biome prints a union on one line when it fits its print width and expands it
+  # one member per line when it does not, so the emitter makes the same call.
+  def ts_union(name, members)
+    quoted = members.map { |member| CoreDataGenerator.ts_string(member) }
+    flat = "export type #{name} = #{quoted.join(' | ')};"
+    return flat if flat.length <= CoreDataGenerator::TS_PRINT_WIDTH
+
+    "export type #{name} =\n  | #{quoted.join("\n  | ")};"
+  end
+
+  # One `[key, [values...]]` Map row, collapsed when Biome would collapse it.
+  def ts_nested_row(key, values)
+    quoted = values.map { |value| CoreDataGenerator.ts_string(value) }
+    flat = "  [#{CoreDataGenerator.ts_string(key)}, [#{quoted.join(', ')}]],"
+    return [flat] if flat.length <= CoreDataGenerator::TS_PRINT_WIDTH
+
+    ["  [", "    #{CoreDataGenerator.ts_string(key)},", "    [",
+     *quoted.map { |value| "      #{value}," }, "    ],", "  ],"]
+  end
+
   def emit_transform_tables_file(out_root, data)
     families = data[:get_class].filter_map { |row| row["family"] }.uniq.sort
     sections = [
@@ -890,8 +910,7 @@ module UnicodeMathParserDataGenerator
           "classes sit outside that vocabulary and the transform constructs\n" \
           "them directly.",
         ),
-        "export type UnicodemathTransformConstructorFamily =\n  | " \
-        "#{families.map { |f| CoreDataGenerator.ts_string(f) }.join("\n  | ")};",
+        ts_union("UnicodemathTransformConstructorFamily", families),
       ].join("\n"),
       [
         CoreDataGenerator.ts_doc(
@@ -1022,10 +1041,7 @@ module UnicodeMathParserDataGenerator
           "quietly stopped matching.",
         ),
         "export const UNICODEMATH_IS_A_CLASSES: ReadonlyMap<string, readonly string[]> = new Map([",
-        *data[:is_a].flat_map do |key, family|
-          ["  [", "    #{CoreDataGenerator.ts_string(key)},", "    [",
-           *family.map { |name| "      #{CoreDataGenerator.ts_string(name)}," }, "    ],", "  ],"]
-        end,
+        *data[:is_a].flat_map { |key, family| ts_nested_row(key, family) },
         "]);",
       ].join("\n"),
       CoreDataGenerator.ts_tuple_map(

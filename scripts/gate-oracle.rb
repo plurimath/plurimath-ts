@@ -114,11 +114,11 @@ module OracleGate
   def run_repo(argv)
     options = parse_check_options(argv, repo_usage)
     gem_dir = resolve_gem_dir(options[:gem])
-    assert_frozen_bundle_usable!(gem_dir)
     require_submodule_snapshot_prerequisites!
 
     Dir.mktmpdir("plurimath-ts-oracle-") do |tmp|
       snapshot_root = build_clean_repo_snapshot!(tmp)
+      assert_frozen_bundle_usable!(gem_dir, chdir: snapshot_root)
       regenerated_root = File.join(tmp, "regenerated", "repo")
       FileUtils.mkdir_p(regenerated_root)
 
@@ -286,12 +286,12 @@ module OracleGate
   def run_testsuite(argv)
     options = parse_check_options(argv, testsuite_usage)
     gem_dir = resolve_gem_dir(options[:gem])
-    assert_frozen_bundle_usable!(gem_dir)
     require_submodule_snapshot_prerequisites!
 
     Dir.mktmpdir("plurimath-ts-oracle-") do |tmp|
       snapshot_root = build_clean_repo_snapshot!(tmp)
       testsuite_root = File.join(snapshot_root, SUBMODULE_RELATIVE_PATH)
+      assert_frozen_bundle_usable!(gem_dir, chdir: testsuite_root)
       regenerated_root = File.join(tmp, "regenerated", "testsuite", "corpus")
       FileUtils.mkdir_p(regenerated_root)
 
@@ -839,10 +839,16 @@ module OracleGate
   # Without this preflight the first generator dies several minutes in with a
   # raw Bundler stack trace, attributed to the generator rather than to the
   # bundle. Probe the same context up front instead, and name the remedy.
-  def assert_frozen_bundle_usable!(gem_dir)
+  #
+  # `chdir` is the caller's, not the oracle checkout: `mise` resolves the Ruby
+  # runtime from the working directory upwards, so probing somewhere else could
+  # select a different interpreter and clear a bundle the generators cannot
+  # then load — or refuse one they could. It is the generators' own directory,
+  # so the probe answers the question that was asked.
+  def assert_frozen_bundle_usable!(gem_dir, chdir:)
     _stdout, stderr, status = capture_command(
       ["mise", "x", "--", "bundle", "exec", "ruby", "-e", ""],
-      chdir: gem_dir,
+      chdir: chdir,
       env: frozen_generator_env(gem_dir),
     )
     return if status.success?

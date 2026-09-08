@@ -7,8 +7,9 @@
  * ```
  *
  * `text_functions` was scanned off the RAW input, but the pass runs over text
- * that decoding, encoding and five `gsub`es have already rewritten, so the two
- * counts disagree whenever a pass creates or destroys a `\text{...}` match:
+ * that decoding, encoding and the six `gsub`es of `gsub_space_and_unicodes`
+ * (`latex/parser.rb:32-40`, counted) have already rewritten, so the two counts
+ * disagree whenever a pass creates or destroys a `\text{...}` match:
  *
  *   - `"\\text {x}"` loses its space and BECOMES a match nothing saved;
  *   - `"\\text&#x7b;x&#x7d;"` gains its braces from the decode and does the same;
@@ -17,17 +18,27 @@
  *
  * Ruby does not guard either direction. `Array#shift` on an exhausted array
  * returns nil and `String#gsub`'s block form stringifies what the block returns
- * (`nil.to_s` is `""`), so a surplus match is DELETED; a surplus saved entry is
- * simply never read. The port reproduced neither until this suite landed — it
- * threw instead, refusing four inputs of which the gem renders two.
+ * (`nil.to_s` is `""`), so a surplus MATCH is deleted; a surplus SAVED entry is
+ * simply never read.
  *
- * Nothing here is reasoned out. Every expectation below is the oracle's own
- * answer at plurimath `00c52783877b38f6b8e6e109f1803f96bb34fc62`, Ruby 4.0.1,
- * read off `Plurimath::Latex::Parser.new(input).text` and
+ * Only the first of those two was broken here. A surplus saved entry needs no
+ * code at all — the port already left `"\\text{ }"` as `\text{}` rendering `""`,
+ * matching the gem, before this change and after it. A surplus match is what
+ * the port refused: it threw rather than shift a nil, which cost it four inputs
+ * of which the gem renders two.
+ *
+ * Nothing in the three tables below is reasoned out. Every one of their
+ * expectations is the oracle's own answer at plurimath
+ * `00c52783877b38f6b8e6e109f1803f96bb34fc62`, Ruby 4.0.1, read off
+ * `Plurimath::Latex::Parser.new(input).text` and
  * `Plurimath::Math.parse(input, :latex).to_asciimath`. Two of them look like
  * gem bugs and are still copied verbatim: `"\\text {a}\\text{b}"` restores the
  * saved `\text{b}` into the FIRST match's position and deletes the second, and
  * `"\\sqrt{\\text {x}}"` renders as `sqrt` with no radicand at all.
+ *
+ * The FOURTH table is the exception and says so at its own docstring: the gem
+ * carries no position for an undecodable character reference, so those eight
+ * offsets are this port's choice, not the gem's answer.
  */
 
 import { describe, expect, it } from "vitest";

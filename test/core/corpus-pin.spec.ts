@@ -224,7 +224,7 @@ function assertExpectedPayloads(corpus: PinnedCorpus): void {
 describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
-  it("loads every group the provenance records", () => {
+  it("loads every payload the provenance records, matched by path", () => {
     // 23 case payloads (19 AsciiMath, 4 LaTeX) and 1 rejection payload.
     // Counted apart on purpose: the rejection payload carries no rendering, so
     // folding it into the case count would inflate what "the corpus covers"

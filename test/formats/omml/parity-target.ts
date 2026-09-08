@@ -65,27 +65,20 @@ export const KNOWN_DIVERGENCES: Readonly<
  * case's own test. Shrinking this list is the work; each removal belongs to the
  * commit that earns it.
  *
- * Measured at 13 ids against the pinned oracle: 6 an unmeasured UnaryFunction
- * alias, 6 an unmeasured BinaryFunction alias, and one the deferred
- * single-column `m:eqArr` table branch. The 37 that were the generated
- * symbol-data gap are gone — `src/generated/omml/symbols.ts` is read now, and
- * every one of those cases reproduces the gem's exact bytes.
+ * **Empty, and kept empty.** The set stays so a case that starts refusing has
+ * somewhere to be named — `render-parity.spec.ts` sends it here by id — and so
+ * that emptying it again is a visible unit of work.
+ *
+ * It held 13 case ids, blocked between them on nine alias classes. The two
+ * counts differ because one class blocks more than one case: six IDS waited on
+ * a `UnaryFunction` alias — four classes, `Left`, `Right`, `Sin`, `Cos` — six
+ * IDS on a `BinaryFunction` alias — four classes, `Mod`, `Lim`, `Log`, `Root`
+ * — and `matrix-column` on the deferred single-column `m:eqArr` table branch.
+ * All nine classes are measured now and all 13 cases reproduce the gem's exact
+ * bytes. The 37 before those were the generated symbol-data gap, closed the
+ * same way.
  */
-export const PORT_REFUSES: ReadonlySet<string> = new Set([
-  "left-right-around-frac",
-  "left-right-round",
-  "left-right-square",
-  "matrix-column",
-  "mod-in-expression",
-  "mod-numeric",
-  "mod-simple",
-  "nary-lim",
-  "nary-log-base",
-  "root-cube",
-  "unary-cos-product",
-  "unary-sin-bare",
-  "unary-sin-fenced",
-]);
+export const PORT_REFUSES: ReadonlySet<string> = new Set([]);
 
 /**
  * How many of the gem-renderable corpus cases the port renders today.
@@ -95,14 +88,14 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  *
  * Not hand-set. Both this number and the refusal set above come from running
  * every gem-renderable case in `parity-fixtures.json` through the port and
- * byte-comparing the result: 92 renderable, 13 refused with a typed
- * `RenderError`, 79 rendered — 78 reproducing the gem's exact bytes and one
- * (`text-unitsml-valid`) pinned in `KNOWN_DIVERGENCES`. Nothing rendered bytes
- * that differ from the gem's without being pinned, and nothing threw untyped.
- * It moved from 42 when the generated OMML symbol table was wired in: the 37
- * cases that refused for want of it all render, and all 37 match.
+ * byte-comparing the result: 92 renderable, 0 refused, 92 rendered — 91
+ * reproducing the gem's exact bytes and one (`text-unitsml-valid`) pinned in
+ * `KNOWN_DIVERGENCES`. Nothing rendered bytes that differ from the gem's
+ * without being pinned, and nothing threw untyped. It moved 42 → 79 when the
+ * generated OMML symbol table was wired in, and 79 → 92 when the function
+ * carriers landed.
  */
-export const RENDERED_BASELINE = 79;
+export const RENDERED_BASELINE = 92;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared
@@ -509,6 +502,12 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
  * keyed `id[slot]=value` and valued with WHY. The same shape as `PORT_REFUSES`,
  * for the swept matrix. Shrinking this list is the work; each removal belongs to
  * the commit that earns it, and none of them is a decision to diverge.
+ *
+ * It held five more, all closed by the function-carrier work: `sin[0]` against
+ * nil, false, `[]` and a bare node — `Sin` is one of the 15 `UnaryFunction`
+ * aliases whose OMML method is the base one — and `table[0]=empty-array`, the
+ * single-column `m:eqArr` branch a row-less table takes. All five reproduce
+ * the gem's bytes now.
  */
 export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
   // `Td#initialize` calls `super(Array(parameter_one), ...)`, so nil becomes the
@@ -535,17 +534,6 @@ export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
 
   // `Text#initialize` stores its argument as-is and the gem interpolates it.
   "text[0]=nil": "the gem interpolates nil as the empty string; requireString refuses nil",
-
-  // The gem renders an empty single-column `m:eqArr`; the port defers that
-  // branch until it is separately measured.
-  "table[0]=empty-array": "the single-column m:eqArr branch is deferred until separately measured",
-
-  // `renderUnaryFunction` carries only the aliases the OMML slice has measured;
-  // `Sin` is not among them. The gem renders each of these four.
-  "sin[0]=nil": 'UnaryFunction alias "Sin" is not in the OMML slice',
-  "sin[0]=false": 'UnaryFunction alias "Sin" is not in the OMML slice',
-  "sin[0]=empty-array": 'UnaryFunction alias "Sin" is not in the OMML slice',
-  "sin[0]=node": 'UnaryFunction alias "Sin" is not in the OMML slice',
 };
 
 /**

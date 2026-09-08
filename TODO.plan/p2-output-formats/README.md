@@ -12,6 +12,7 @@ release.
 | 2 | [OMML renderer](02-omml-renderer.md) | the second XML tree format, scoped against the pinned oracle |
 | 3 | [Compat class](03-compat-class.md) | the frozen `plurimath-js` surface, targeted at the plurimath-js source head |
 | 4 | [Symbol data](04-symbol-data.md) | the generated HTML and OMML symbol slices both renderers refuse without |
+| 5 | [Function carriers](05-function-carriers.md) | the OMML `UnaryFunction`/`BinaryFunction` aliases and the `m:eqArr` table branch |
 
 ## What it delivers
 

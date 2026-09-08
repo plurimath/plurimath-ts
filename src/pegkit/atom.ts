@@ -297,6 +297,20 @@ export abstract class Atom {
         ctx.depth--;
       }
       if (this.cacheable()) {
+        // A pre-call read of `undefined` is STALE here, and acting on it is
+        // what used to lose entries: `tryParse` can apply this same atom at
+        // another position, and that inner application creates the per-atom
+        // map, so installing a fresh one now would discard everything the
+        // recursion cached. Parslet cannot hit this because it resolves both
+        // levels in one statement at store time — `@cache[pos][obj.object_id]
+        // = val`, on a hash whose per-position level is created on demand
+        // (parslet-2.0.0 lib/parslet/atoms/context.rb:13 and 99-101).
+        //
+        // Only the `undefined` case needs the second read. The line below is
+        // the sole writer of `ctx.cache`, and it writes only when the key is
+        // absent, so a map this atom already had is still the one in the
+        // cache and the local is safe to keep.
+        if (!byPosition) byPosition = ctx.cache.get(this);
         if (!byPosition) {
           byPosition = new Map();
           ctx.cache.set(this, byPosition);

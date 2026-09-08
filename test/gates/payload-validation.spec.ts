@@ -17,6 +17,14 @@
  * record, payload byte count and SHA-256, and stable row ids. It does not prove
  * Ruby output equivalence; the class-B regeneration gate does that.
  *
+ * The payload files themselves are excluded from Biome in `biome.json`. They
+ * are machine-written and their exact bytes are hashed into the sidecar, and
+ * Biome's JSON formatter does not agree with Ruby's `JSON.pretty_generate`
+ * about a short array — it prints `[null]` on one line where Ruby expands it —
+ * so a formatter pass would silently invalidate the recorded `payload.sha256`.
+ * Nothing is lost: this gate checks their schema, and the class-B regeneration
+ * gate checks their content.
+ *
  * That is not hypothetical. This gate was written after exactly that happened:
  * `scripts/generate-corpus.rb` was edited twice for the manifest-accuracy work
  * and only its own outputs regenerated, leaving `src/core/generated` and
@@ -92,6 +100,13 @@ const FIXTURE_SPECS = {
     usesCorpus: false,
     usesRenderInventory: true,
   },
+  "model-fixtures.json": {
+    generator: "scripts/generate-latex-model-fixtures.rb",
+    schema: "plurimath-corpus/latex-model/1",
+    rows: "cases",
+    usesCorpus: true,
+    usesRenderInventory: false,
+  },
   "parity-fixtures.json": {
     generator: "scripts/generate-parity-fixtures.rb",
     schema: "plurimath-corpus/render-parity/1",
@@ -102,6 +117,7 @@ const FIXTURE_SPECS = {
 } as const;
 const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "degenerate-fixtures.json"
+  | "model-fixtures.json"
   | "parity-fixtures.json"
 )[];
 const LEGACY_FORMAT_FIXTURES = [

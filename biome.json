@@ -8,7 +8,10 @@
       "**/*.json",
       "!dist",
       "!node_modules",
-      "!submodules"
+      "!submodules",
+      "!test/formats/**/degenerate-fixtures.json",
+      "!test/formats/**/model-fixtures.json",
+      "!test/formats/**/parity-fixtures.json"
     ]
   },
   "formatter": {

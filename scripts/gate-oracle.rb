@@ -63,12 +63,16 @@ module OracleGate
         - corpus/ and src/generated/ via scripts/generate-corpus.rb
         - src/core/generated/ via scripts/generate-core-data.rb
         - src/formatting/generated/ via scripts/generate-formatting-data.rb
+        - src/formats/latex/generated/ via scripts/generate-latex-parser-data.rb
         - every committed test/formats/<format>/parity-fixtures.json and its
           sidecar via
           scripts/generate-parity-fixtures.rb
         - every committed test/formats/<format>/degenerate-fixtures.json and
           its sidecar via
           scripts/probe-degenerate-slots.rb
+        - every committed test/formats/<format>/model-fixtures.json and its
+          sidecar via
+          scripts/generate-latex-model-fixtures.rb
 
       It compares those regenerated outputs against a clean temporary snapshot
       of this repository's committed HEAD, never against live directories in
@@ -145,6 +149,15 @@ module OracleGate
         chdir: snapshot_root,
         gem_dir: gem_dir,
       )
+      run_generator!(
+        File.join(snapshot_root, "scripts", "generate-latex-parser-data.rb"),
+        [
+          "--gem", gem_dir,
+          "--out", File.join(regenerated_root, "src", "formats", "latex", "generated"),
+        ],
+        chdir: snapshot_root,
+        gem_dir: gem_dir,
+      )
 
       file_comparisons = regenerate_format_fixtures!(snapshot_root, regenerated_root, gem_dir)
 
@@ -156,6 +169,9 @@ module OracleGate
          File.join(regenerated_root, "src", "core", "generated")],
         ["src/formatting/generated", File.join(snapshot_root, "src", "formatting", "generated"),
          File.join(regenerated_root, "src", "formatting", "generated")],
+        ["src/formats/latex/generated",
+         File.join(snapshot_root, "src", "formats", "latex", "generated"),
+         File.join(regenerated_root, "src", "formats", "latex", "generated")],
       ]
 
       diffs = comparisons.filter_map do |label, committed, regenerated|
@@ -200,6 +216,16 @@ module OracleGate
       arguments: lambda do |format, regenerated_root|
         ["--format", format,
          "--out", File.join(regenerated_root, "test", "formats", format, "degenerate-fixtures.json")]
+      end,
+    },
+    {
+      # The LaTeX parse fixtures. `--out` is the format DIRECTORY, and the
+      # script takes no `--format`: it emits one file, for the one format that
+      # has a transform to check.
+      basename: "model-fixtures.json",
+      script: "generate-latex-model-fixtures.rb",
+      arguments: lambda do |format, regenerated_root|
+        ["--out", File.join(regenerated_root, "test", "formats", format)]
       end,
     },
   ].freeze

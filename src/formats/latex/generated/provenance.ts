@@ -51,15 +51,15 @@ export const LATEX_PARSER_GENERATED_PROVENANCE: LatexParserGeneratedProvenance =
     ],
     [
       "scripts/generate-latex-parser-data.rb",
-      "422e4f81109e02774f1ed4a5be9baa5bde578e680f7dd011dd43978c12f246fc",
+      "237c0d23d7b2be05ae7654adc80d86888d464619e395468efb33052c36257ec2",
     ],
   ]),
   oracle: "plurimath",
   oracleVersion: "0.11.6",
   oracleCommit: "00c52783877b38f6b8e6e109f1803f96bb34fc62",
   oracleClean: true,
-  generatorClean: true,
+  generatorClean: false,
   rubyEngine: "ruby",
   rubyVersion: "4.0.1",
-  committable: true,
+  committable: false,
 };

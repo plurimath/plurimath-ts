@@ -56,8 +56,20 @@
 #   --help
 #
 # Outputs:
-#   src/formats/latex/generated/parser-tables.ts  the grammar's constant tables
-#   src/formats/latex/generated/provenance.ts     what they were generated from
+#   src/formats/latex/generated/parser-tables.ts     the grammar's constant tables
+#   src/formats/latex/generated/transform-tables.ts  the transform's constant tables
+#   src/formats/latex/generated/provenance.ts        what they were generated from
+#
+# The transform half (`transform-tables.ts`) is the same argument one layer on.
+# `latex/transform.rb` resolves classes by REFLECTION -- `Object.const_get(
+# "Plurimath::Math::Function::#{capitalize(text)}")` (`utility.rb:139`) -- and
+# `capitalize` DOWNCASES the tail, so `vmatrix` and `Vmatrix` both resolve to
+# `Table::Vmatrix`. TypeScript has no const_get, so every name the transform can
+# reach is resolved HERE, through the gem, and emitted with the class it reached,
+# that class's census disposition and its measured constructor family. A name the
+# gem cannot resolve (`Pr`, `binom`, `bmod`, `pmod` all raise NameError) is
+# emitted as such, so the port throws exactly where the gem does instead of
+# resolving to something plausible.
 #
 # The generator is deterministic: two runs over the same oracle produce
 # byte-identical output. No timestamps, no absolute paths; every table keeps
@@ -324,6 +336,353 @@ module LatexParserDataGenerator
     end
   end
 
+
+  # --- the transform's tables ----------------------------------------------
+
+  # The tags `latex/transform.rb` feeds to `Utility.get_class`, and where the
+  # texts under each tag come from. Not inferred from the transform's source:
+  # every tag is a GRAMMAR tag, so the reachable texts are exactly what the
+  # grammar can put under it, which is a table in `Latex::Constants`.
+  #
+  #   unary            SYMBOLS[:unary]        (dynamic_rules :unary)
+  #   unary_functions  SYMBOLS[:unary] + MATH_OPERATORS (math_operators_classes)
+  #   ternary,
+  #   ternary_functions SYMBOLS[:ternary]
+  #   binary           SYMBOLS[:binary] + SYMBOLS[:power_base] (dynamic_rules
+  #                    :power_base tags its token `:binary`) + UNDEROVER_CLASSES
+  #                    (underover_classes is tagged `:binary` too)
+  #   text             SYMBOLS[:text]
+  #   underover        SYMBOLS[:underover]
+  #
+  # Plus two texts no grammar tag carries: `bar`, which `transform.rb:580`
+  # substitutes for `overline`, and `left`/`right`, which
+  # `left_right_objects` (`latex/utility.rb:103`) passes as literals.
+  def get_class_sources
+    symbols = ->(kind) { constants::SYMBOLS.select { |_, k| k == kind }.keys.map(&:to_s) }
+    sources = Hash.new { |hash, key| hash[key] = [] }
+    add = ->(names, tag) { names.each { |name| sources[name] << tag } }
+    add.call(symbols.call(:unary), "unary")
+    add.call(symbols.call(:unary), "unary_functions")
+    add.call(constants::MATH_OPERATORS, "unary_functions")
+    add.call(symbols.call(:ternary), "ternary")
+    add.call(symbols.call(:ternary), "ternary_functions")
+    add.call(symbols.call(:binary), "binary")
+    add.call(symbols.call(:power_base), "binary")
+    add.call(constants::UNDEROVER_CLASSES, "binary")
+    add.call(symbols.call(:text), "text")
+    add.call(symbols.call(:underover), "underover")
+    add.call(["bar"], "overline_substitution")
+    add.call(["mod"], "mod_substitution")
+    add.call(%w[left right], "left_right_objects")
+    sources.transform_values { |tags| tags.uniq.sort }
+  end
+
+  # `Utility.get_class(name)`, or nil when the gem raises `NameError` — which
+  # it does for four reachable names. Three of them the transform never asks
+  # for (`binom` is special-cased at `transform.rb:808`; `bmod`/`pmod` are
+  # rewritten to `mod` by the `include?("mod")` test at `:823` and `:835`), and
+  # `Pr` genuinely raises on `\Pr_1`. Measured, not argued: `resolvable?` runs
+  # the lookup.
+  def resolve_class(name, table: false)
+    table ? Plurimath::Utility.get_table_class(name) : Plurimath::Utility.get_class(name)
+  rescue ::NameError
+    nil
+  end
+
+  # One entry, with the class the gem actually reached and that class's census
+  # disposition. `family:` is measured only for `get_class` names, exactly as
+  # `CorpusGenerator` does for AsciiMath: the table and font-style classes sit
+  # outside its family vocabulary and the port constructs them directly.
+  def class_entry(census_index, name, klass, sources, family:)
+    entry = CorpusGenerator.transform_registry_entry(
+      census_index, name, klass, sources, family: family
+    )
+    if entry["disposition"] == "deferred"
+      raise Error, "#{name.inspect} resolves to #{entry['rubyClass']}, which the " \
+                   "census defers (ARCHITECTURE.md §5); the LaTeX transform reaches it"
+    end
+    entry
+  end
+
+  def get_class_rows(census_index)
+    resolved = []
+    unresolved = []
+    get_class_sources.sort.each do |name, sources|
+      klass = resolve_class(name)
+      if klass.nil?
+        unresolved << name
+        next
+      end
+      resolved << class_entry(census_index, name, klass, sources, family: true)
+    end
+    if resolved.empty?
+      raise Error, "no get_class name resolved; the tag-to-table mapping is wrong"
+    end
+
+    [resolved, unresolved.sort]
+  end
+
+  # `Utility.get_table_class(environment)` over `MATRICES.keys` — the only
+  # texts the grammar can tag `:environment` (`environment` is built from
+  # `MATRICES.keys`, and `symbol_class_commands` reaches it, which is how
+  # `\begin{matrix}` yields `{environment: "matrix"}`).
+  #
+  # `capitalize` downcasing the tail is load-bearing here and is asserted:
+  # `vmatrix` and `Vmatrix` must reach the SAME class, as must `bmatrix` and
+  # `Bmatrix`. A naive port capitalizing only the first letter would resolve
+  # `Table::VMatrix`, which does not exist.
+  def table_class_rows(census_index)
+    rows = constants::MATRICES.keys.map(&:to_s).sort.map do |name|
+      klass = resolve_class(name, table: true)
+      if klass.nil?
+        raise Error, "`get_table_class(#{name.inspect})` raises NameError; every " \
+                     "MATRICES key must resolve, or an environment cannot be built"
+      end
+      class_entry(census_index, name, klass, ["matrices"], family: false)
+    end
+    assert_capitalize_folds!(rows)
+    rows
+  end
+
+  def assert_capitalize_folds!(rows)
+    by_class = rows.group_by { |row| row["rubyClass"] }
+    folded = by_class.select { |_, group| group.length > 1 }
+    if folded.empty?
+      raise Error, "no two MATRICES keys fold onto one table class; `capitalize` " \
+                   "no longer downcases the tail, and the port's registry would " \
+                   "be measuring something else"
+    end
+
+    folded.each do |ruby_class, group|
+      names = group.map { |row| row["name"] }
+      next if names.map(&:downcase).uniq.length == 1
+
+      raise Error, "#{names.inspect} all resolve to #{ruby_class} but differ by " \
+                   "more than case; that is not the `capitalize` fold"
+    end
+  end
+
+  # `Utility::FONT_STYLES` (`utility.rb:7-58`), the table
+  # `transform.rb:417` indexes with `fonts.to_sym`. A miss is not an error
+  # there — the four rules fall back to the generic `Math::Function::FontStyle`
+  # — so the port needs the table AND the fallback, and the emitted list is
+  # exactly the gem's keys.
+  def font_style_rows(census_index)
+    Plurimath::Utility::FONT_STYLES.map do |key, klass|
+      class_entry(census_index, key.to_s, klass, ["font_styles"], family: false)
+    end.sort_by { |row| row["name"] }
+  end
+
+  # The `fonts` texts the grammar can produce (`SYMBOLS[:fonts]`) that
+  # `FONT_STYLES` has NO entry for — the inputs that take the generic-FontStyle
+  # branch. Emitted so the port's test can prove it exercises both branches
+  # rather than assuming one is unreachable.
+  def font_style_fallback_texts
+    fonts = constants::SYMBOLS.select { |_, kind| kind == :fonts }.keys.map(&:to_s)
+    missing = fonts.reject { |name| Plurimath::Utility::FONT_STYLES.key?(name.to_sym) }.sort
+    if missing.empty?
+      raise Error, "every SYMBOLS[:fonts] text has a FONT_STYLES entry, so the " \
+                   "generic-FontStyle fallback at `transform.rb:423` is unreachable; " \
+                   "that is a behaviour change worth a measurement"
+    end
+    missing
+  end
+
+  # The token `Paren::Lcurly` would contribute, and does not.
+  #
+  # `Utility.parens_hash` memoizes into the class variable `@@parens`, keyed by
+  # lang and NOT by `skipables`. The first caller for `:latex` is the GRAMMAR —
+  # `Constants.parenthesis` (`latex/constants.rb:214`) asks for
+  # `parens_hash(:latex, skipables: ["lcurly"])` while `rule(:lparen)` is being
+  # built — so by the time the transform's `symbols_class` reads
+  # `all_symbols_classes(:latex)`, the cached parens half is the one WITHOUT
+  # Lcurly, and `\\{` resolves to a bare `Math::Symbols::Symbol` carrying the
+  # text rather than to `Paren::Lcurly`.
+  #
+  # Measured in a cold process: `Plurimath::Math.parse("\\{x\\}", :latex)` builds
+  # a `Fenced` whose opening paren is `Symbol("\\{")` and whose closing paren is
+  # `Paren::Rcurly`. That asymmetry is the gem's behaviour, and this generator
+  # reproduces the same call order, so the emitted table is the one the
+  # transform actually sees. Asserted rather than left to ordering luck.
+  LCURLY_SKIPPED_TOKEN = "\\{"
+
+  def assert_lcurly_skipped!(parens, merged)
+    lcurly = Plurimath::Math::Symbols::Paren::Lcurly
+    inputs = lcurly::INPUT[:latex].flatten
+    unless inputs.include?(LCURLY_SKIPPED_TOKEN)
+      raise Error, "Paren::Lcurly's latex INPUT no longer includes " \
+                   "#{LCURLY_SKIPPED_TOKEN.inspect}; re-measure which token the " \
+                   "`skipables: [\"lcurly\"]` cache actually withholds"
+    end
+
+    still_present = inputs.select { |input| parens.key?(input) }
+    unless still_present.empty?
+      raise Error, "parens_hash(:latex) still carries Lcurly's #{still_present.inspect}; " \
+                   "the grammar's `skipables: [\"lcurly\"]` call no longer wins the " \
+                   "`@@parens` cache, so this table is not the one the transform reads"
+    end
+
+    unless merged[LCURLY_SKIPPED_TOKEN].nil?
+      raise Error, "all_symbols_classes(:latex)[#{LCURLY_SKIPPED_TOKEN.inspect}] resolves " \
+                   "to #{merged[LCURLY_SKIPPED_TOKEN]}; the gem resolves it to a bare " \
+                   "Symbol at transform time"
+    end
+  end
+
+  # `Utility.all_symbols_classes(:latex)` — `symbols_hash` merged with
+  # `parens_hash`, the table `Utility.symbols_class(string, lang: :latex)`
+  # looks a STRIPPED text up in. Both halves are String-keyed (they come from
+  # each class's `INPUT[:latex]` array), so unlike `symbols_constants` this one
+  # cannot collide and a Map is safe. The parens half is merged LAST and wins
+  # its overlaps; the count of overlaps is asserted so a silent change shows up.
+  def symbol_class_rows
+    # The grammar side first, exactly as `Latex::Parser#parse` does it: it is
+    # what fixes the `@@parens` cache to the Lcurly-less table.
+    constants.parenthesis
+    symbols = Plurimath::Utility.symbols_hash(:latex)
+    parens = Plurimath::Utility.parens_hash(:latex)
+    merged = Plurimath::Utility.all_symbols_classes(:latex)
+    assert_lcurly_skipped!(parens, merged)
+    unless merged.length == (symbols.keys | parens.keys).length
+      raise Error, "all_symbols_classes(:latex) has #{merged.length} entries but the " \
+                   "union of its two halves has #{(symbols.keys | parens.keys).length}"
+    end
+
+    merged.map do |text, klass|
+      unless text.is_a?(::String)
+        raise Error, "all_symbols_classes(:latex) is keyed by #{text.class}, not String; " \
+                     "a Map would collapse entries the gem keeps apart"
+      end
+
+      [text, CorpusGenerator.class_key(klass).delete_prefix("Math::Symbols::")]
+    end
+  end
+
+  def symbol_class_overlap
+    (Plurimath::Utility.symbols_hash(:latex).keys &
+      Plurimath::Utility.parens_hash(:latex).keys).sort
+  end
+
+  def skipped_paren_tokens
+    Plurimath::Math::Symbols::Paren::Lcurly::INPUT[:latex].flatten.sort
+  end
+
+  # `Constants::MATRICES` as ordered pairs: environment -> the OPENING
+  # delimiter text, or nil. Five of the ten are nil (`multline`, `matrix`,
+  # `split`, `align`, `array`), and `symbols_class(nil, ...)` returns nil, so
+  # those tables are built with nil parens rather than defaulted ones — the
+  # transform passes all three positionally, which bypasses each subclass's
+  # own paren defaults. Measured: `Table::Matrix.new(nil)` defaults to round
+  # parens, `Table::Matrix.new(nil, nil, nil)` does not.
+  def matrices_rows
+    constants::MATRICES.map do |env, open_paren|
+      unless open_paren.nil? || open_paren.is_a?(::String)
+        raise Error, "MATRICES[#{env.inspect}] is #{open_paren.class}; expected String or nil"
+      end
+
+      [env.to_s, open_paren]
+    end
+  end
+
+  def matrices_parenthesis_rows
+    constants::MATRICES_PARENTHESIS.map { |open, close| [open.to_s, close.to_s] }
+  end
+
+  def left_right_parenthesis_rows
+    constants::LEFT_RIGHT_PARENTHESIS.map { |token, entity| [token.to_s, entity.to_s] }
+  end
+
+  def alignment_letter_rows
+    Plurimath::Utility::ALIGNMENT_LETTERS.map { |letter, align| [letter.to_s, align.to_s] }
+  end
+
+  # The model predicates the transform and `Latex::Utility` branch on, as data.
+  #
+  # `organize_table` asks each value `data&.separate_table` and
+  # `data.linebreak?`; `filter_table_data` asks `is_a?(Symbols::Minus)`;
+  # `hline_row?` asks `is_a?(Symbols::Hline)`; `table_separator` builds a
+  # `Paren::Vert`; and the Nary rules ask
+  # `sequence.parameter_one.is_nary_symbol?`. In Ruby those are methods on the
+  # model; here they are answered from measured id sets, so a class that gains
+  # or loses one shows up as a regenerated diff instead of as a silent
+  # behaviour change.
+  #
+  # `separate_table` has two arms and both are measured. `Symbol#separate_table`
+  # (`symbols/symbol.rb:167`) is `["&", "\\\\"].include?(value) ||
+  # is_a?(Ampersand)`, so a CLASSED symbol answers on its class (its `@value` is
+  # nil) while a bare `Symbol.new(text)` answers on its text.
+  def symbol_classes
+    Plurimath::Math::Symbols::Symbol.descendants.uniq
+  end
+
+  def symbol_id(klass)
+    CorpusGenerator.class_key(klass).delete_prefix("Math::Symbols::")
+  end
+
+  def nary_symbol_ids
+    symbol_classes.select { |klass| klass.new.is_nary_symbol? }.map { |k| symbol_id(k) }.sort
+  end
+
+  def paren_symbol_ids
+    Plurimath::Math::Symbols::Paren.descendants.uniq.map { |k| symbol_id(k) }.sort
+  end
+
+  # Classes whose `separate_table` is true with NO value — the `is_a?(Ampersand)`
+  # arm. Measured over every symbol class rather than named, so a new sibling
+  # is caught.
+  def separate_table_symbol_ids
+    symbol_classes.select { |klass| klass.new.separate_table }.map { |k| symbol_id(k) }.sort
+  end
+
+  # The `value` strings the OTHER arm accepts, measured by probing a bare
+  # `Symbols::Symbol` with every text the latex table can produce plus the two
+  # the method names. A candidate that is not in the table cannot reach the
+  # predicate as a bare symbol's value, so the probe set is the reachable one.
+  def separate_table_values(texts)
+    candidates = (texts + ["&", "\\\\"]).uniq
+    values = candidates.select do |text|
+      Plurimath::Math::Symbols::Symbol.new(text).separate_table
+    end
+    if values.empty?
+      raise Error, "no reachable text makes a bare Symbol `separate_table`; the " \
+                   "table-splitting arm of the predicate is gone"
+    end
+    values.sort
+  end
+
+  def linebreak_values(texts)
+    candidates = (texts + ["&", "\\\\"]).uniq
+    values = candidates.select { |text| Plurimath::Math::Symbols::Symbol.new(text).linebreak? }
+    if values.empty?
+      raise Error, "no reachable text makes a bare Symbol `linebreak?`; the row " \
+                   "split in `organize_table` can never fire"
+    end
+    values.sort
+  end
+
+  # The symbol classes the transform and its helpers name as LITERALS, mapped
+  # to the ids the port carries. Emitted rather than spelled in TypeScript so
+  # an upstream rename is a regeneration diff.
+  NAMED_SYMBOL_CLASSES = {
+    "hline" => "Plurimath::Math::Symbols::Hline",
+    "minus" => "Plurimath::Math::Symbols::Minus",
+    "vert" => "Plurimath::Math::Symbols::Paren::Vert",
+    "lcurly" => "Plurimath::Math::Symbols::Paren::Lcurly",
+    "rcurly" => "Plurimath::Math::Symbols::Paren::Rcurly",
+    "threePerEmSpace" => "Plurimath::Math::Symbols::ThreePerEmSpace",
+  }.freeze
+
+  def named_symbol_rows
+    NAMED_SYMBOL_CLASSES.map do |role, constant|
+      klass = begin
+        Object.const_get(constant)
+      rescue ::NameError
+        raise Error, "#{constant} no longer exists; the transform names it directly"
+      end
+      [role, symbol_id(klass)]
+    end
+  end
+
   # --- the decimal marker --------------------------------------------------
 
   # `decimal_marker` (`latex/parse.rb:205`) does not match the configured
@@ -532,6 +891,257 @@ module LatexParserDataGenerator
     CoreDataGenerator.write_ts(File.join(out_root, "parser-tables.ts"), sections)
   end
 
+  # One `readonly Entry[]` of object literals, one field per line — the shape
+  # Biome prints for records this wide, and the shape `src/generated`'s census
+  # files already use.
+  def ts_entry_list(name, type, entries, fields, doc)
+    lines = entries.flat_map do |entry|
+      body = fields.filter_map do |field|
+        next unless entry.key?(field)
+
+        "    #{field}: #{CoreDataGenerator.ts_flat(entry.fetch(field))},"
+      end
+      ["  {", *body, "  },"]
+    end
+    [CoreDataGenerator.ts_doc(doc), "export const #{name}: #{type} = [", *lines, "];"].join("\n")
+  end
+
+  # A `ReadonlyMap` whose values may be null, which `ts_tuple_map` cannot emit.
+  def ts_nullable_tuple_list(name, type, entries, doc)
+    lines = entries.map do |key, value|
+      "  [#{CoreDataGenerator.ts_string(key)}, #{CoreDataGenerator.ts_flat(value)}],"
+    end
+    [CoreDataGenerator.ts_doc(doc), "export const #{name}: #{type} = [", *lines, "];"].join("\n")
+  end
+
+  TRANSFORM_ENTRY_FIELDS = %w[name rubyClass disposition carrier family sources].freeze
+
+  def emit_transform_tables_file(out_root, data)
+    families = data[:get_class].filter_map { |row| row["family"] }.uniq.sort
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        The constant tables `Plurimath::Latex::Transform` builds its nodes from.
+
+        `latex/transform.rb` resolves a captured name at RUNTIME —
+        `Object.const_get("Plurimath::Math::Function::\#{capitalize(text)}")`
+        (`utility.rb:139`) — and `capitalize` splits on `_`, capitalizes each
+        part and DOWNCASES the tail, so `vmatrix` and `Vmatrix` both reach
+        `Table::Vmatrix`. There is no TypeScript equivalent, so every name the
+        transform can reach is resolved here, through the gem, and emitted with
+        the class it reached. `src/formats/latex/registry.ts` binds these to
+        `core` constructors; nothing restates them.
+      TEXT
+      [
+        CoreDataGenerator.ts_doc(
+          "How the census disposes of a resolved class — the same vocabulary\n" \
+          "`src/generated/asciimath/transform-registry.ts` uses. An `aliased`\n" \
+          "class adds no field and no equality of its own, so the port carries\n" \
+          "it as its carrier plus a name.",
+        ),
+        'export type LatexTransformDisposition = "implemented" | "aliased";',
+      ].join("\n"),
+      [
+        CoreDataGenerator.ts_doc(
+          "Which Ruby `initialize` shape a `get_class` name resolves to,\n" \
+          "measured off the runtime by `CorpusGenerator` (instantiate, read the\n" \
+          "assigned ivars back, then re-verify parameter wiring with sentinel\n" \
+          "arguments). Only `get_class` entries carry one: the table and\n" \
+          "font-style classes sit outside that vocabulary and the transform\n" \
+          "constructs them directly.",
+        ),
+        "export type LatexTransformConstructorFamily =\n  | #{families.map { |f| CoreDataGenerator.ts_string(f) }.join("\n  | ")};",
+      ].join("\n"),
+      [
+        CoreDataGenerator.ts_doc(
+          "One resolved name: the text as CAPTURED (the registry is keyed by it,\n" \
+          "so nothing has to reimplement `capitalize`), the class the gem\n" \
+          "reached, its census disposition, the implemented carrier the port\n" \
+          "constructs, and — for `get_class` names — the measured constructor\n" \
+          "family. `sources` names the grammar tags that can carry the text.",
+        ),
+        "export interface LatexTransformClassEntry {",
+        "  readonly name: string;",
+        "  readonly rubyClass: string;",
+        "  readonly disposition: LatexTransformDisposition;",
+        "  readonly carrier: string;",
+        "  readonly family?: LatexTransformConstructorFamily;",
+        "  readonly sources: readonly string[];",
+        "}",
+      ].join("\n"),
+      ts_entry_list(
+        "LATEX_TRANSFORM_GET_CLASS", "readonly LatexTransformClassEntry[]",
+        data[:get_class], TRANSFORM_ENTRY_FIELDS,
+        "Every name `Utility.get_class` can receive from the LaTeX transform\n" \
+        "that the gem can resolve, sorted by name.\n" \
+        "\n" \
+        "The reachable set is derived from the GRAMMAR tags that feed\n" \
+        "`get_class`, because each tag's texts are a `Latex::Constants` table —\n" \
+        "see `get_class_sources` in the generator. `bar` is here because\n" \
+        "`transform.rb:580` substitutes it for `overline`; `left` and `right`\n" \
+        "because `left_right_objects` passes them as literals.",
+      ),
+      ts_string_list(
+        "LATEX_TRANSFORM_UNRESOLVED", data[:unresolved],
+        "The reachable names `Utility.get_class` CANNOT resolve: the gem raises\n" \
+        "`NameError` on each, measured.\n" \
+        "\n" \
+        "Three are unreachable in practice and one is not. `binom` is\n" \
+        "special-cased at `transform.rb:808` before `get_class` is called;\n" \
+        "`bmod` and `pmod` are rewritten to `mod` by the `include?(\"mod\")` test\n" \
+        "at `:823` and `:835`. `Pr` is genuinely reachable — it is a\n" \
+        "`MATH_OPERATORS` entry with no `Math::Function::Pr` class, so `\\\\Pr_1`\n" \
+        "raises in the gem. The port's registry must MISS on all four, so that\n" \
+        "throw lands where the gem's does.",
+      ),
+      ts_entry_list(
+        "LATEX_TRANSFORM_TABLE_CLASS", "readonly LatexTransformClassEntry[]",
+        data[:table_class], TRANSFORM_ENTRY_FIELDS,
+        "Every name `Utility.get_table_class` can receive — `MATRICES.keys`,\n" \
+        "the only texts the grammar tags `:environment`.\n" \
+        "\n" \
+        "Two pairs FOLD: `vmatrix`/`Vmatrix` and `bmatrix`/`Bmatrix` each\n" \
+        "resolve to one class, because `capitalize` downcases the tail. That\n" \
+        "fold is asserted at generation time — a port capitalizing only the\n" \
+        "first letter would look for `Table::VMatrix`, which does not exist.",
+      ),
+      ts_entry_list(
+        "LATEX_TRANSFORM_FONT_STYLES", "readonly LatexTransformClassEntry[]",
+        data[:font_styles], TRANSFORM_ENTRY_FIELDS,
+        "`Utility::FONT_STYLES` (`utility.rb:7-58`): the table\n" \
+        "`transform.rb:417` indexes with `fonts.to_sym`, sorted by name.\n" \
+        "A miss is not an error there — the four font rules fall back to the\n" \
+        "generic `Math::Function::FontStyle` — so the port needs both branches.",
+      ),
+      ts_string_list(
+        "LATEX_FONT_STYLE_FALLBACK_TEXTS", data[:font_fallbacks],
+        "The `fonts` texts the grammar can produce that `FONT_STYLES` has no\n" \
+        "entry for — the inputs that take the generic-`FontStyle` branch at\n" \
+        "`transform.rb:423`. Emitted so a test can prove both branches run\n" \
+        "instead of assuming one is unreachable.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "LATEX_SYMBOL_CLASS_INPUT", "ReadonlyMap<string, string>", data[:symbol_classes],
+        doc: "`Utility.all_symbols_classes(:latex)` — the table\n" \
+             "`Utility.symbols_class(string, lang: :latex)` (`utility.rb:212`)\n" \
+             "looks a STRIPPED text up in, as input text -> symbol id.\n" \
+             "\n" \
+             "A Map is safe here where `LATEX_SYMBOL_CONSTANTS` needs an array:\n" \
+             "both halves of this merge are String-keyed (they come from each\n" \
+             "class's `INPUT[:latex]` array), so nothing collides. The parens\n" \
+             "half is merged last and wins its #{data[:symbol_overlap].length}\n" \
+             "overlapping texts — see `LATEX_SYMBOL_CLASS_PAREN_OVERLAP`.\n" \
+             "\n" \
+             "A miss is not an error: `symbols_class` falls back to a bare\n" \
+             "`Math::Symbols::Symbol` carrying the text.",
+      ),
+      ts_string_list(
+        "LATEX_SYMBOL_CLASS_SKIPPED_PARENS", data[:symbol_skipped],
+        "The `Paren::Lcurly` tokens `LATEX_SYMBOL_CLASS_INPUT` does NOT carry.\n" \
+        "\n" \
+        "`Utility.parens_hash` memoizes into `@@parens` keyed by lang and not by\n" \
+        "`skipables`, and the first caller for `:latex` is the grammar —\n" \
+        "`Constants.parenthesis` asks for `skipables: [\"lcurly\"]` while\n" \
+        "`rule(:lparen)` is being built. So the transform reads a parens half\n" \
+        "with no Lcurly, and these tokens fall through to a bare\n" \
+        "`Math::Symbols::Symbol` carrying the text. Measured in a cold process:\n" \
+        "`\\\\{x\\\\}` builds a `Fenced` opening on `Symbol(\"\\\\{\")` and closing on\n" \
+        "`Paren::Rcurly`.",
+      ),
+      ts_string_list(
+        "LATEX_SYMBOL_CLASS_PAREN_OVERLAP", data[:symbol_overlap],
+        "The texts present in BOTH halves of `all_symbols_classes(:latex)`.\n" \
+        "`symbols_hash.merge(parens_hash)` means the paren class wins each one;\n" \
+        "emitted so a test can prove the emitted Map kept the winning side.",
+      ),
+      ts_nullable_tuple_list(
+        "LATEX_MATRICES", "readonly (readonly [string, string | null])[]", data[:matrices],
+        "`Constants::MATRICES` (`latex/constants.rb:121`): environment -> its\n" \
+        "OPENING delimiter text, in the gem's order.\n" \
+        "\n" \
+        "Five values are nil. `symbols_class(nil, ...)` returns nil\n" \
+        "(`utility.rb:213`), and the transform passes all three parens\n" \
+        "positionally, so those tables are built with nil parens rather than\n" \
+        "each subclass's own defaults — measured: `Table::Matrix.new(nil)`\n" \
+        "defaults to round parens, `Table::Matrix.new(nil, nil, nil)` does not.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "LATEX_MATRICES_PARENTHESIS", "ReadonlyMap<string, string>",
+        data[:matrices_parenthesis],
+        doc: "`Constants::MATRICES_PARENTHESIS` (`:114`): OPENING delimiter ->\n" \
+             "closing delimiter. The environment rules reach it through\n" \
+             "`MATRICES[env]`, so the two tables compose.\n" \
+             "\n" \
+             "`\\\\Vert` maps to `]`, not to `\\\\Vert`. Transcribed, not corrected:\n" \
+             "it is what `\\\\begin{Vmatrix}` builds in the gem.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "LATEX_LEFT_RIGHT_PARENTHESIS", "ReadonlyMap<string, string>",
+        data[:left_right_parenthesis],
+        doc: "`Constants::LEFT_RIGHT_PARENTHESIS` (`:181`): delimiter token ->\n" \
+             "HTML entity, the table `left_right_objects` (`latex/utility.rb:101`)\n" \
+             "converts a `\\\\left`/`\\\\right` delimiter through.\n" \
+             "\n" \
+             "The KEYS are also the grammar's `left_parens` and `right_parens`\n" \
+             "alternatives (`LATEX_LEFT_RIGHT_PARENS` in `./parser-tables`); this\n" \
+             "is the same table read for its values. A token the table lacks\n" \
+             "yields nil, which becomes a `Left`/`Right` carrying nil.",
+      ),
+      ts_string_list(
+        "LATEX_NARY_SYMBOL_IDS", data[:nary_symbols],
+        "The symbol ids whose `is_nary_symbol?` is true, measured over every\n" \
+        "`Math::Symbols::Symbol` descendant.\n" \
+        "\n" \
+        "`transform.rb:305` and `:319` ask a node the transform ALREADY BUILT\n" \
+        "whether its `parameter_one` is one of these, and rebuild a `PowerBase`\n" \
+        "into an `Nary` if so. `Core#is_nary_symbol?` returns nil for everything\n" \
+        "else, so a miss is false rather than an error.",
+      ),
+      ts_string_list(
+        "LATEX_PAREN_SYMBOL_IDS", data[:paren_symbols],
+        "Every `Math::Symbols::Paren` descendant's id — the `is_a?(Paren)` test\n" \
+        "`organize_table` (`latex/utility.rb:15`) uses to turn a column-spec\n" \
+        "entry into the string `\"|\"`.",
+      ),
+      ts_string_list(
+        "LATEX_SEPARATE_TABLE_SYMBOL_IDS", data[:separate_table_symbols],
+        "Symbol ids whose `separate_table` is true with NO value — the\n" \
+        "`is_a?(Ampersand)` arm of `Symbol#separate_table`\n" \
+        "(`symbols/symbol.rb:167`). A CLASSED symbol has `@value` nil, so this\n" \
+        "is the arm that fires for `&` once `symbols_class` has resolved it.",
+      ),
+      ts_string_list(
+        "LATEX_SEPARATE_TABLE_VALUES", data[:separate_table_values],
+        "The `value` strings that make a BARE `Math::Symbols::Symbol` answer\n" \
+        "`separate_table` — the other arm of the same predicate, reached when\n" \
+        "`symbols_class` missed and kept the text. Measured by probing every\n" \
+        "text the latex symbol table can produce.",
+      ),
+      ts_string_list(
+        "LATEX_LINEBREAK_VALUES", data[:linebreak_values],
+        "The `value` strings that make a bare `Math::Symbols::Symbol` answer\n" \
+        "`linebreak?` (`symbols/symbol.rb:172`) — the test `organize_table`\n" \
+        "uses to close a row rather than just a cell. `Math::Function::Linebreak`\n" \
+        "answers true unconditionally and is handled by kind, not by value.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "LATEX_NAMED_SYMBOLS", "ReadonlyMap<string, string>", data[:named_symbols],
+        doc: "The symbol classes `latex/transform.rb` and `latex/utility.rb` name\n" \
+             "as literals, mapped to the ids the port carries: `Hline`\n" \
+             "(`hline_row?`), `Minus` (`filter_table_data`), `Paren::Vert`\n" \
+             "(`table_separator`), `Paren::Lcurly`/`Paren::Rcurly`\n" \
+             "(`latex_table_curly_paren` and the `binom` special case) and\n" \
+             "`ThreePerEmSpace` (`transform.rb:38`).",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "LATEX_ALIGNMENT_LETTERS", "ReadonlyMap<string, string>", data[:alignment_letters],
+        doc: "`Utility::ALIGNMENT_LETTERS` (`utility.rb:59`): an `array`\n" \
+             "environment's column-spec letter -> the `columnalign` value\n" \
+             "`organize_tds` (`latex/utility.rb:71`) writes onto each `Td`.",
+      ),
+    ]
+    CoreDataGenerator.write_ts(File.join(out_root, "transform-tables.ts"), sections)
+  end
+
   def emit_provenance_file(out_root, provenance)
     sections = [
       CoreDataGenerator.ts_doc(<<~TEXT.chomp),
@@ -648,6 +1258,42 @@ module LatexParserDataGenerator
     }
   end
 
+  # Everything `emit_transform_tables_file` needs, measured in one place.
+  # The census is built here rather than read from `corpus/census.yaml`: that
+  # file is the corpus generator's output, and a generator that reads another
+  # generator's artifact records the wrong provenance for it.
+  def transform_data(gem_dir)
+    # `descendants` only sees what is loaded, and the model namespaces are
+    # autoloaded, so the census would otherwise be measured against a partial
+    # class tree. `CorpusGenerator` does the same before it builds its census.
+    CorpusGenerator.load_model_classes!(gem_dir)
+    census_index = CorpusGenerator.build_census(gem_dir)
+      .fetch("classes").to_h { |entry| [entry["name"], entry] }
+    resolved, unresolved = get_class_rows(census_index)
+    symbol_classes_table = symbol_class_rows
+    symbol_texts = symbol_classes_table.map(&:first)
+    {
+      get_class: resolved,
+      unresolved: unresolved,
+      table_class: table_class_rows(census_index),
+      font_styles: font_style_rows(census_index),
+      font_fallbacks: font_style_fallback_texts,
+      symbol_classes: symbol_classes_table,
+      symbol_overlap: symbol_class_overlap,
+      symbol_skipped: skipped_paren_tokens,
+      matrices: matrices_rows,
+      matrices_parenthesis: matrices_parenthesis_rows,
+      left_right_parenthesis: left_right_parenthesis_rows,
+      alignment_letters: alignment_letter_rows,
+      nary_symbols: nary_symbol_ids,
+      paren_symbols: paren_symbol_ids,
+      separate_table_symbols: separate_table_symbol_ids,
+      separate_table_values: separate_table_values(symbol_texts),
+      linebreak_values: linebreak_values(symbol_texts),
+      named_symbols: named_symbol_rows,
+    }
+  end
+
   def run(argv)
     options = parse_options(argv)
     if options[:help]
@@ -670,10 +1316,12 @@ module LatexParserDataGenerator
     rows = symbol_constant_rows
     collisions = collision_texts(rows)
     markers = decimal_marker_rows
+    transform = transform_data(gem_dir)
     provenance = build_provenance(gem_dir, dirty, options[:allow_dirty])
 
     written = [
       emit_tables_file(options[:out], tables, rows, collisions, markers),
+      emit_transform_tables_file(options[:out], transform),
       emit_provenance_file(options[:out], provenance),
     ]
     written.sort.each { |path| puts "  #{relative(path)}" }
@@ -682,6 +1330,13 @@ module LatexParserDataGenerator
          "#{collisions.length} texts carried twice"
     puts "decimal markers #{markers.length}: " \
          "#{markers.map { |raw, encoded| "#{raw.inspect} -> #{encoded.inspect}" }.join(', ')}"
+    puts "get_class #{transform[:get_class].length} resolved, " \
+         "#{transform[:unresolved].length} unresolvable " \
+         "(#{transform[:unresolved].join(', ')}); " \
+         "table classes #{transform[:table_class].length}, " \
+         "font styles #{transform[:font_styles].length} " \
+         "(#{transform[:font_fallbacks].length} texts fall back); " \
+         "symbols_class #{transform[:symbol_classes].length} entries"
     puts "committable: #{provenance['committable']}"
     0
   end

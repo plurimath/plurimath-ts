@@ -3,9 +3,9 @@
  * (:30) and `#mathml_value` (:209, hoisted to
  * `../../formats/mathml/render-shared.ts`) — plus the name arms for the gem
  * classes the census folds into this carrier with their *own* mathml
- * overrides: `cancel.rb`, `left.rb`, `right.rb`, `function/sup.rb`, `tr.rb`.
- * Every other name in `MEASURED_UNARY_NAMES` below renders the carrier
- * default.
+ * overrides: `cancel.rb`, `left.rb`, `right.rb`, `function/sup.rb`, `mbox.rb`,
+ * `tr.rb`. Every other name in `MEASURED_UNARY_NAMES` below renders the
+ * carrier default.
  *
  * Measured pins (probe-mathml-kinds on the pinned oracle):
  *
@@ -22,7 +22,7 @@
  */
 
 import type { NodeParameter } from "../../core/index";
-import { RenderError } from "../../core/index";
+import { RenderError, TextNode } from "../../core/index";
 import {
   describeSlot,
   FORMAT,
@@ -41,6 +41,7 @@ import {
   MATHML_UNARY_MI_NAMES,
 } from "../../generated/mathml/render-tables";
 import { XmlElement } from "../../xml/index";
+import { renderText } from "../text/mathml";
 
 /** `Utility::UNARY_CLASSES` — the names rendered as a spacing-wrapped `<mi>`. */
 const UNARY_MI: ReadonlySet<string> = new Set(MATHML_UNARY_MI_NAMES);
@@ -88,6 +89,21 @@ export function renderUnaryFunction(
       }
       return new XmlElement("mrow").append(parts);
     }
+    case "Mbox":
+      // `mbox.rb:11-14`:
+      // `Text.new(parameter_one).to_mathml_without_math_tag(intent, options:)`.
+      // The slot is handed to a FRESH `Text` and rendered as one, so `<mtext>`
+      // is the element — not the carrier's `<mi>`/`<mo>` shape, and no spacing
+      // wrap.
+      //
+      // Measured on the pinned oracle `00c52783`, `Mbox.new(v)` against
+      // `Text.new(v)`: the same element content on every shape.
+      // `"hi"` → `<mtext>hi</mtext>`, `"a b"` → `<mtext>a b</mtext>`,
+      // `""` → `<mtext></mtext>` (a text child that is the empty string),
+      // nil and `false` → the childless `<mtext/>`; a node, a list and an
+      // integer each die in `Text`'s own `gsub`, which is the refusal
+      // `renderText` already carries.
+      return renderText(new TextNode({ parameterOne: node.parameterOne }));
     case "Tr":
       return renderTr(node, context);
     default:

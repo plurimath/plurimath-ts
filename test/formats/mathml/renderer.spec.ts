@@ -562,8 +562,12 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
   });
 
   it("unmeasured carrier names raise instead of rendering a silent default", () => {
+    // Merror, not Mbox: Mbox has an arm now (below). Measured on the pinned
+    // oracle 00c52783, `Merror.instance_method(:to_mathml_without_math_tag)
+    // .owner` is Merror, so a carrier-default render of the name would diverge
+    // silently.
     expect(() =>
-      toMathml(formula(new UnaryFunctionNode({ name: "Mbox", parameterOne: x() }))),
+      toMathml(formula(new UnaryFunctionNode({ name: "Merror", parameterOne: x() }))),
     ).toThrow(RenderError);
     expect(() =>
       toMathml(formula(new TableNode({ name: "Nosuch", value: [tr(td(x()))] }))),
@@ -573,6 +577,37 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     ).toThrow(RenderError);
     expect(() =>
       toMathml(formula(new TernaryFunctionNode({ name: "Nosuch", parameterOne: x() }))),
+    ).toThrow(RenderError);
+  });
+
+  /**
+   * Measured on the pinned oracle 00c52783, through a Formula:
+   *
+   *   Mbox.instance_method(:to_mathml_without_math_tag).owner => Mbox
+   *   Formula([Mbox("hi")]).to_mathml  => …<mstyle><mtext>hi</mtext></mstyle>…
+   *   Formula([Mbox("a b")]).to_mathml => …<mtext>a b</mtext>…
+   *   Formula([Mbox("")]).to_mathml    => …<mtext></mtext>…  (empty text child)
+   *   Formula([Mbox(nil)]).to_mathml   => …<mtext/>…          (no child at all)
+   *   Mbox.new(Symbols::Symbol("x"))   => NoMethodError in Text's own gsub
+   *
+   * Every one of those is byte-identical to Text.new(v) in the same slot,
+   * because `mbox.rb:11-14` hands the slot to a fresh Text.
+   */
+  it("Mbox renders the fresh Text the gem builds, not the carrier's <mo>", () => {
+    expect(toMathml(formula(new UnaryFunctionNode({ name: "Mbox", parameterOne: "hi" })))).toBe(
+      math("    <mtext>hi</mtext>"),
+    );
+    expect(toMathml(formula(new UnaryFunctionNode({ name: "Mbox", parameterOne: "a b" })))).toBe(
+      math("    <mtext>a b</mtext>"),
+    );
+    expect(toMathml(formula(new UnaryFunctionNode({ name: "Mbox", parameterOne: "" })))).toBe(
+      math("    <mtext></mtext>"),
+    );
+    expect(toMathml(formula(new UnaryFunctionNode({ name: "Mbox", parameterOne: null })))).toBe(
+      math("    <mtext/>"),
+    );
+    expect(() =>
+      toMathml(formula(new UnaryFunctionNode({ name: "Mbox", parameterOne: x() }))),
     ).toThrow(RenderError);
   });
 

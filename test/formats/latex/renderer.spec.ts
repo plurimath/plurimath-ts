@@ -99,9 +99,32 @@ describe("unary functions", () => {
   });
 
   it("refuses a class name outside the AsciiMath-reachable set", () => {
-    expect(() => toLatex(unary("Mbox", x()))).toThrow(RenderError);
+    // Merror, not Mbox: Mbox is arm-rendered below, and the two are otherwise
+    // the same case — measured on the pinned oracle 00c52783,
+    // `Merror.instance_method(:to_latex).owner` is Merror, so a carrier-default
+    // render of the name would diverge silently.
+    expect(() => toLatex(unary("Merror", x()))).toThrow(RenderError);
     expect(() => toLatex(new BinaryFunctionNode({ name: "Menclose" }))).toThrow(RenderError);
     expect(() => toLatex(new TernaryFunctionNode({ name: "Multiscript" }))).toThrow(RenderError);
+  });
+
+  /**
+   * Measured on the pinned oracle 00c52783 — the one Mbox override that does
+   * NOT delegate to Text, which writes `\text{…}`:
+   *
+   *   Mbox.new("hi").to_latex   => "\\mbox{hi}"     Text.new("hi")  => "\\text{hi}"
+   *   Mbox.new("a b").to_latex  => "\\mbox{a b}"
+   *   Mbox.new(nil).to_latex    => "\\mbox{}"       Mbox.new("")    => "\\mbox{}"
+   *   Mbox.new(5).to_latex      => "\\mbox{5}"      Mbox.new(true)  => "\\mbox{true}"
+   *   Mbox.new(Symbols::Symbol("x")).to_latex
+   *     => "\\mbox{#<Plurimath::Math::Symbols::Symbol:0x00007a71...>}",
+   *        a heap address no port reproduces (TODO.plan/deferred.md).
+   */
+  it("Mbox interpolates its slot raw, and refuses what Ruby would inspect", () => {
+    expect(toLatex(unary("Mbox", "hi"))).toBe("\\mbox{hi}");
+    expect(toLatex(unary("Mbox", "a b"))).toBe("\\mbox{a b}");
+    expect(toLatex(unary("Mbox"))).toBe("\\mbox{}");
+    expect(() => toLatex(unary("Mbox", x()))).toThrow(RenderError);
   });
 
   it("Hom renders the carrier default, though the transform cannot build it", () => {

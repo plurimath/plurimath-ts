@@ -2,9 +2,9 @@
  * Mirrors `function/unary_function.rb` — `UnaryFunction#to_latex` (:61) and
  * `#latex_value` (:221) — plus the name arms for the gem classes the census
  * folds into this carrier with their *own* `to_latex` overrides: `left.rb`
- * (:30), `right.rb` (:30), `glb.rb` (:11), `lcm.rb` (:25), `tr.rb` (:33).
- * Every other name in `MEASURED_UNARY_NAMES` below renders the carrier
- * default.
+ * (:30), `right.rb` (:30), `glb.rb` (:11), `lcm.rb` (:25), `mbox.rb` (:15),
+ * `tr.rb` (:33). Every other name in `MEASURED_UNARY_NAMES` below renders the
+ * carrier default.
  *
  * Measured pins worth naming, because source-reading gets them wrong:
  * `Glb` and `Lcm` render with no backslash (`glb{x}`, `lcm{x}`); every other
@@ -20,6 +20,7 @@ import { RenderError } from "../../core/index";
 import {
   describeSlot,
   FORMAT,
+  interpolatedValue,
   isNode,
   isPipeSymbol,
   type NodeOf,
@@ -94,6 +95,23 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
     case "Lcm":
       // `"glb{…}"`, `"lcm{…}"` — no backslash (`glb.rb:11`, `lcm.rb:25`).
       return `${name.toLowerCase()}{${s(latexValue(node.parameterOne, context, `${name.toLowerCase()}.parameterOne`))}}`;
+    case "Mbox":
+      // `mbox.rb:15-17`: `"\\mbox{#{parameter_one}}"`. Raw interpolation, so
+      // this is the one of Mbox's six overrides that does NOT delegate to
+      // `Text` — `Text#to_latex` writes `\text{…}`, and delegating would have
+      // emitted the wrong command. It is not `latex_value` either: no child is
+      // rendered, so `\mbox{}` is what a nil, an empty string, an integer or a
+      // boolean each produce, through the same interpolation judge `Left`/
+      // `Right` take on the asciimath side.
+      //
+      // Measured on the pinned oracle `00c52783`: `Mbox.new("hi")` →
+      // `"\\mbox{hi}"`, `Mbox.new("a b")` → `"\\mbox{a b}"`, `Mbox.new(nil)`
+      // and `Mbox.new("")` → `"\\mbox{}"`, `Mbox.new(5)` → `"\\mbox{5}"`,
+      // `Mbox.new(true)` → `"\\mbox{true}"`. A NODE interpolates Ruby's
+      // default `Object#to_s`, a heap address
+      // (`"\\mbox{#<Plurimath::Math::Symbols::Symbol:0x00007a71...>}"`), which
+      // is not reproducible and which `interpolatedValue` refuses.
+      return `\\mbox{${interpolatedValue(node.parameterOne, node.kind, "mbox.parameterOne")}}`;
     case "Tr":
       return renderTr(node, context);
     default:

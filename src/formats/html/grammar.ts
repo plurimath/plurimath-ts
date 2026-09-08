@@ -6,10 +6,12 @@
  * `unicodemath/grammar.ts` are: every `rule(:name)` in `html/parse.rb` is one
  * `rule(() => ...)` here, in the same source order, with the same alternatives
  * in the same order, and each carries the Ruby line it came from. Parslet's `|`
- * is an ordered choice, so alternative order is behaviour, not style. The
- * fourteen helper *methods* below the rules are ported the same way, as
- * functions rather than constants, because each Ruby call site builds a fresh
- * atom and the packrat cache is keyed by atom identity.
+ * is an ordered choice, so alternative order is behaviour, not style. Of the
+ * fourteen helper *methods* below the rules, twelve are ported as functions
+ * rather than constants, because each Ruby call site builds a fresh atom and
+ * the packrat cache is keyed by atom identity; `decimal_marker` is
+ * `decimalMarkerAtom` for the same reason, and `str_to_expression` is inlined
+ * into `arrayToExpression`, its only caller.
  *
  * Rule names are Ruby's, transliterated to camelCase (`symbol_text_or_tag` →
  * `symbolTextOrTag`). Tree *keys* stay Ruby's exactly — they are data, not

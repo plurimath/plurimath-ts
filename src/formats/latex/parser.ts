@@ -52,7 +52,7 @@ export interface LatexParseOptions extends LocaleOptions {
  * `ParseError.index` already indexes the ORIGINAL input here.
  */
 export function parseLatexTree(input: string, options?: LatexParseOptions | null): ParseValue {
-  const { text, map } = preprocess(input);
+  const { text, map } = preprocessOrParseError(input);
   return parsePreprocessed(input, text, map, options);
 }
 
@@ -81,11 +81,41 @@ export function parseLatexTree(input: string, options?: LatexParseOptions | null
  * either.
  */
 export function parseLatex(input: string, options?: LatexParseOptions | null): FormulaNode {
-  const { text, map } = preprocess(input);
+  const { text, map } = preprocessOrParseError(input);
   const tree = parsePreprocessed(input, text, map, options);
   try {
     const transformed = latexTransform().apply(tree);
     return finalizeLatexParse(transformed, input);
+  } catch (error) {
+    if (error instanceof ParseError) throw error;
+    throw new ParseError(
+      error instanceof Error ? error.message : describeThrown(error),
+      input,
+      "latex",
+      0,
+    );
+  }
+}
+
+/**
+ * Preprocessing failures reach the caller as `ParseError`, like every other
+ * failure here.
+ *
+ * `preprocess` has a guard of its own -- when re-encoding produces a
+ * `\\text{...}` match the input did not have, it throws rather than shift a
+ * nil the way Ruby would. Its comment asks for that case to be measured
+ * against the gem, and it has been: `\\text {x}` and `\\text&#x7b;x&#x7d;`
+ * both reach `Plurimath::Math.parse(input, :latex)` as
+ * `Plurimath::Math::ParseError` on the pinned oracle. So the gem's boundary
+ * raises the same class the grammar and transform arms already produce, and
+ * leaving this call outside them surfaced a bare `Error` with no `code` and no
+ * `format` -- which the compat constructor then handed to its caller.
+ *
+ * The guard's own message is kept, because it says which input to measure.
+ */
+function preprocessOrParseError(input: string): ReturnType<typeof preprocess> {
+  try {
+    return preprocess(input);
   } catch (error) {
     if (error instanceof ParseError) throw error;
     throw new ParseError(

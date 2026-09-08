@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from "vitest";
 import Plurimath, { FORMATS, type Format } from "../../src/compat/index";
-import { UnsupportedFeatureError, UnsupportedFormatError } from "../../src/core/index";
+import { equals, UnsupportedFeatureError, UnsupportedFormatError } from "../../src/core/index";
 import RootDefault, { Plurimath as RootNamed } from "../../src/index";
 
 const INPUT = "frac(1)(2)";
@@ -132,6 +132,27 @@ describe("latex input reaches the same model asciimath does", () => {
       expect(fromLatex[method]()).toBe(GEM_OUTPUT[method]);
     },
   );
+
+  /**
+   * The four assertions above compare RENDERED BYTES, and a review showed
+   * that is weaker than this block's name: replacing the LaTeX model's
+   * `inputString` with `"WRONG"` left all of them green. Compare the models.
+   */
+  it("builds a model equal to the one asciimath builds", () => {
+    const fromLatex = new Plurimath(LATEX_INPUT, "latex").data;
+    const fromAsciimath = build().data;
+    expect(equals(fromLatex, fromAsciimath)).toBe(true);
+  });
+
+  /**
+   * `equals` is structural and does not compare `inputString`, which each door
+   * keeps as its own source text. Assert that separately, so "equal models"
+   * cannot quietly come to mean "identical objects".
+   */
+  it("keeps each door's own input string on the model", () => {
+    expect(new Plurimath(LATEX_INPUT, "latex").data.inputString).toBe(LATEX_INPUT);
+    expect(build().data.inputString).toBe(INPUT);
+  });
 });
 
 describe("each method renders the gem's bytes", () => {

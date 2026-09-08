@@ -29,9 +29,10 @@
 #     sharing a code point — so keying by the text deleted 28 alternatives.
 #     That shape DOES exist in `Html::Constants`, and it is the reason the
 #     projection list above is worth stating: `SUB_SUP_CLASSES.values` is eight
-#     entries and four distinct (`prod` and `sum` three times each), because the
-#     hash maps four spellings of the product sign and four of the summation
-#     sign onto two class names. It is measured and emitted as
+#     entries and four distinct — `prod` three times, `sum` three times, `log`
+#     and `lim` once each — because the hash maps three spellings of the product
+#     sign and three of the summation sign onto one class name apiece, and
+#     `log` and `lim` onto their own. It is measured and emitted as
 #     `HTML_REPEATED_TEXT_PROJECTIONS`, and `assert_no_repeated_texts!` proves
 #     that no table the grammar actually reads repeats a text — so the day
 #     upstream adds a repeat to one, or the transform slice reaches for

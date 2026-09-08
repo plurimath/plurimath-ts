@@ -206,12 +206,13 @@ export function createHtmlGrammar(decimalMarker: string = DEFAULT_DECIMAL_MARKER
    * `sub_sup`, tagged `:sum_prod` rather than `:sub_sup` — the tag names the
    * two functions the table's values are (`:prod` and `:sum`), not the rule.
    *
-   * Four of its eight alternatives are unreachable through `Html::Parser`,
-   * though not through this rule: `&prod;` and `&sum;` are rewritten to
-   * `&#x220f;` and `&#x2211;` by `normalized_text` before Parslet sees them,
-   * while the bare `∏` and `∑` are left alone because they do not match
-   * `HTML_ENTITY`. All eight are carried, because the array is the gem's array
-   * and this module's input is the normalised text, not a user's.
+   * Six of its eight alternatives reach Parslet exactly as the user typed
+   * them. Only `&prod;` and `&sum;` are rewritten — to `&#x220f;` and
+   * `&#x2211;`, which are two of the other six — because `normalized_text`
+   * touches only substrings matching `HTML_ENTITY`: the bare `∏` and `∑` do
+   * not match it, and neither do `log` and `lim`. Measured per key on the
+   * oracle. All eight are carried either way, because the array is the gem's
+   * array and this module's input is the normalised text, not a user's.
    */
   const subSup = rule(() => arrayToExpression(HTML_SUB_SUP_CLASSES, "sum_prod"));
 
@@ -457,9 +458,43 @@ export function createHtmlGrammar(decimalMarker: string = DEFAULT_DECIMAL_MARKER
    *
    * The wrapper contributes nothing to the tree: neither tag is `.as`-named, so
    * only `inner`'s nodes survive.
+   *
+   * **The body is built per entry, and that is load-bearing rather than
+   * stylistic.** Parslet's `Scope#apply` (`parslet-2.0.0/lib/parslet/atoms/
+   * scope.rb:16-21`) reads
+   *
+   *     context.scope do
+   *       parslet = block.call
+   *       return parslet.apply(source, context, consume_all)
+   *     end
+   *
+   * — `block.call` sits *inside* `context.scope`, so every entry constructs a
+   * fresh `parse_tag(:open, ...)` and a fresh `matching_close_tag`. pegkit's
+   * `scope` takes an already-built `Atom` instead, and building this body once
+   * broke on backtracking: the `CaptureAtom` is uncacheable but the `seq`
+   * around it is not, so a second entry at a position the sequence had already
+   * matched replayed the cached success and skipped the capture write. The
+   * close tag was then built from an absent capture. `<br><i>x</i>` is the
+   * shortest input that does it — measured, not deduced — and it threw out of
+   * `caseInsensitiveString` instead of returning the gem's tree.
+   *
+   * `dynamic` restores Parslet's timing exactly: it is uncacheable and its
+   * builder runs after `ScopeAtom` has pushed the frame, so `parseTag` and
+   * `matchingCloseTag` are new objects with empty caches on every entry, while
+   * `inner` stays the shared atom the caller passed — which is also what Ruby
+   * does, since `expression` is a memoized `rule` entity there.
+   *
+   * This is deliberately fixed here rather than in pegkit. `ScopeAtom` itself
+   * is faithful — push a frame, run, pop — and it is `scope`'s *signature*
+   * that is narrower than Parslet's: `Scope.new` takes a block, `scope()` takes
+   * an atom. Composing it with `dynamic` recovers the missing half at the one
+   * call site that needs it, without changing a primitive three other grammars
+   * already depend on.
    */
   function wrappedTag(inner: Atom): Atom {
-    return scope(seq(parseTag("open", null, "html_tag_name"), inner, matchingCloseTag()));
+    return scope(
+      dynamic(() => seq(parseTag("open", null, "html_tag_name"), inner, matchingCloseTag())),
+    );
   }
 
   /**
@@ -519,12 +554,16 @@ export function createHtmlGrammar(decimalMarker: string = DEFAULT_DECIMAL_MARKER
    */
   function caseInsensitiveString(value: string): Atom {
     if (value.length === 0) {
-      // Ruby reaches the same dead end differently: `[].reduce(:>>)` answers
-      // nil and `nil >> tag_name_boundary` raises NoMethodError. Unreachable
-      // either way — the only caller that can pass a computed name is
-      // `matchingCloseTag`, and `html_tag_name(nil)` cannot capture fewer than
-      // one character — so this is a legible crash in place of a confusing one,
-      // not a behaviour the gem lacks.
+      // A live guard, not decoration — an earlier revision of `wrappedTag`
+      // reached it on `<br><i>x</i>`, because a cached sequence skipped the
+      // capture write and `matchingCloseTag` was handed an absent name. It
+      // caught that defect, which is the argument for keeping it. Ruby reaches
+      // the same dead end differently: `[].reduce(:>>)` answers nil and
+      // `nil >> tag_name_boundary` raises NoMethodError.
+      //
+      // With the capture written on every entry it is unreachable again: the
+      // only caller that can pass a computed name is `matchingCloseTag`, and
+      // `html_tag_name(nil)` cannot capture fewer than one character.
       throw new Error("createHtmlGrammar: case-insensitive match on an empty tag name");
     }
     return seq(

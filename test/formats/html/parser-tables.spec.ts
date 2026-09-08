@@ -22,9 +22,10 @@
  * text.
  *
  * What it does have is the UnicodeMath shape one projection away.
- * `SUB_SUP_CLASSES.values` is eight entries over four distinct texts, because
- * four spellings of the product sign and four of the summation sign map onto
- * two class names. The grammar never reads it — `html/utility.rb:12` does, on
+ * `SUB_SUP_CLASSES.values` is eight entries over four distinct texts — `prod`
+ * three times, `sum` three times, `log` and `lim` once each — because three
+ * spellings of the product sign and three of the summation sign map onto one
+ * class name apiece. The grammar never reads it — `html/utility.rb:12` does, on
  * the transform side — and `HTML_REPEATED_TEXT_PROJECTIONS` records it so the
  * array-not-Map decision carries its own evidence rather than an assertion that
  * nothing here could ever collapse.
@@ -69,11 +70,11 @@ describe("the tables array_to_expression folds into ordered choices", () => {
     expect(HTML_LPAREN).toStrictEqual(["(", "{", "["]);
     expect(HTML_RPAREN).toStrictEqual([")", "}", "]"]);
     // `Constants::SUB_SUP_CLASSES` — Symbol keys in the gem, projected onto
-    // `to_s`, which is what Parslet's `str` does with them. Four of the eight
-    // are unreachable through `Html::Parser`: `&prod;` and `&sum;` are
-    // rewritten to their hex forms by `normalized_text`, and the two bare
-    // characters are what a user would have to type instead. All eight are
-    // still live alternatives of the rule itself.
+    // `to_s`, which is what Parslet's `str` does with them. Six of the eight
+    // reach Parslet as typed; only `&prod;` and `&sum;` are rewritten by
+    // `normalized_text`, into the hex forms two entries below them. All eight
+    // are live alternatives of the rule itself, whose input is the normalised
+    // text.
     expect(HTML_SUB_SUP_CLASSES).toStrictEqual([
       "&prod;",
       "&sum;",
@@ -164,8 +165,8 @@ describe("the collision that is not here, and the one that is one projection awa
         "html/utility.rb:12 (`Utility.sub_sup_method?`), transform side",
       ],
     ]);
-    // The two halves of the same hash: as many values as keys, a quarter as
-    // many distinct.
+    // The two halves of the same hash: as many values as keys, and half as
+    // many distinct values (`prod`, `sum`, `log`, `lim`) as distinct keys.
     expect(HTML_SUB_SUP_CLASSES.length).toBe(8);
     expect(new Set(HTML_SUB_SUP_CLASSES).size).toBe(8);
   });

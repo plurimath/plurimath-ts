@@ -279,6 +279,7 @@ const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: strin
   ),
   ...[...LATEX_PARSER_GENERATED_PROVENANCE.generatorInputs].map(
     ([file, hash]) => ["src/formats/latex/generated", file, hash] as const,
+  ),
   ...[...UNICODEMATH_PARSER_GENERATED_PROVENANCE.generatorInputs].map(
     ([file, hash]) => ["src/formats/unicodemath/generated", file, hash] as const,
   ),

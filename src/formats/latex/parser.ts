@@ -25,6 +25,7 @@
  * boundary this function stands at, so a refusal is a `ParseError`.
  */
 
+import { describeThrown } from "../../core/errors";
 import { type FormulaNode, type OnUnsupported, ParseError } from "../../core/index";
 import type { LocaleOptions } from "../../formatting/index";
 import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
@@ -87,7 +88,12 @@ export function parseLatex(input: string, options?: LatexParseOptions | null): F
     return finalizeLatexParse(transformed, input);
   } catch (error) {
     if (error instanceof ParseError) throw error;
-    throw new ParseError(error instanceof Error ? error.message : String(error), input, "latex", 0);
+    throw new ParseError(
+      error instanceof Error ? error.message : describeThrown(error),
+      input,
+      "latex",
+      0,
+    );
   }
 }
 

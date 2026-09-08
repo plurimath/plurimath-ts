@@ -31,6 +31,7 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CORE_GENERATED_PROVENANCE } from "../../src/core/generated/provenance";
+import { UNICODEMATH_PARSER_GENERATED_PROVENANCE } from "../../src/formats/unicodemath/generated/provenance";
 import { FORMATTING_GENERATED_PROVENANCE } from "../../src/formatting/generated/provenance";
 import { GENERATED_PROVENANCE } from "../../src/generated/provenance";
 import { loadPinnedCorpus, PIN_RELATIVE_PATH, pinnedSubmoduleCommit } from "../core/corpus-pin";
@@ -261,7 +262,7 @@ const FIXTURE_GENERATOR_HASHES: ReadonlyArray<
 /**
  * Every (file, recorded hash) pair the provenance records assert.
  *
- * `src/generated` records one script as `generatorSha256`; the other two
+ * `src/generated` records one script as `generatorSha256`; the other three
  * modules record a map because they consume more than one; each generated
  * fixture records the one script that wrote it. Every shape reduces to the
  * same claim, so all are checked the same way.
@@ -273,6 +274,9 @@ const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: strin
   ),
   ...[...FORMATTING_GENERATED_PROVENANCE.generatorInputs].map(
     ([file, hash]) => ["src/formatting/generated", file, hash] as const,
+  ),
+  ...[...UNICODEMATH_PARSER_GENERATED_PROVENANCE.generatorInputs].map(
+    ([file, hash]) => ["src/formats/unicodemath/generated", file, hash] as const,
   ),
   ...FIXTURE_GENERATOR_HASHES,
 ];
@@ -764,6 +768,7 @@ describe("generated data binds to the generator inputs it names", () => {
       GENERATED_PROVENANCE.generator,
       CORE_GENERATED_PROVENANCE.generator,
       FORMATTING_GENERATED_PROVENANCE.generator,
+      UNICODEMATH_PARSER_GENERATED_PROVENANCE.generator,
       ...fixtureEntrypoints,
     ];
     // This is an explicit gap, not a generator silently omitted from a
@@ -781,6 +786,7 @@ const COMMITTABLE_RECORDS: ReadonlyArray<readonly [string, boolean]> = [
   ["src/generated", GENERATED_PROVENANCE.committable],
   ["src/core/generated", CORE_GENERATED_PROVENANCE.committable],
   ["src/formatting/generated", FORMATTING_GENERATED_PROVENANCE.committable],
+  ["src/formats/unicodemath/generated", UNICODEMATH_PARSER_GENERATED_PROVENANCE.committable],
   ...FIXTURE_RECORDS.map(
     (record) =>
       [

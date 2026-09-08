@@ -25,7 +25,7 @@
 import { type FormulaNode, UnsupportedFeatureError, UnsupportedFormatError } from "../core/index";
 import { parseAsciimath, toAsciimath } from "../formats/asciimath/index";
 import { toHtml } from "../formats/html/index";
-import { toLatex } from "../formats/latex/index";
+import { parseLatex, toLatex } from "../formats/latex/index";
 import { toMathml } from "../formats/mathml/index";
 import { toOmml } from "../formats/omml/renderer";
 import { toUnicodemath } from "../formats/unicodemath/index";
@@ -53,9 +53,9 @@ export const FORMATS: readonly Format[] = [
 /**
  * The parser each input format uses, keyed by format.
  *
- * Five of the six are absent, and their constructor raises. That is the staged
- * contract, not an oversight: only the AsciiMath parser exists (P1), and the
- * rest arrive in P3 and P4.
+ * Four of the six are absent, and their constructor raises. That is the staged
+ * contract, not an oversight: AsciiMath landed in P1 and LaTeX in P3, and
+ * UnicodeMath, HTML and MathML arrive later in P3 and P4.
  *
  * A MAP rather than a set of parseable names, so that `format` actually selects
  * the parser. With a set, adding a name would have made that format construct
@@ -64,6 +64,7 @@ export const FORMATS: readonly Format[] = [
  */
 const PARSERS: Partial<Record<Format, (input: string) => FormulaNode>> = {
   asciimath: parseAsciimath,
+  latex: parseLatex,
 };
 
 export default class Plurimath {

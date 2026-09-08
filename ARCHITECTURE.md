@@ -296,7 +296,7 @@ so OMML is in that six while its own subpath is still unpublished.
 @plurimath/plurimath-ts/core        → FormulaNode, node types, errors
 @plurimath/plurimath-ts/asciimath   → parseAsciimath, toAsciimath
 @plurimath/plurimath-ts/html        → toHtml (partial coverage; parser when ported)
-@plurimath/plurimath-ts/latex       → toLatex (parser when ported)
+@plurimath/plurimath-ts/latex       → parseLatex, toLatex
 @plurimath/plurimath-ts/mathml      → toMathml (parser when ported)
 @plurimath/plurimath-ts/unicodemath → toUnicodemath (parser when ported)
 @plurimath/plurimath-ts/formatting  → (NOT YET PUBLISHED — see below)

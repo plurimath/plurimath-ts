@@ -55,12 +55,40 @@ export function parseLatexTree(input: string, options?: LatexParseOptions | null
   return parsePreprocessed(input, text, map, options);
 }
 
-/** `Plurimath::Math.parse(input, :latex)`'s observable result. */
+/**
+ * `Plurimath::Math.parse(input, :latex)`'s observable result.
+ *
+ * The transform is wrapped as well as the grammar, because `Plurimath::Math.parse`
+ * wraps everything (`math.rb:44-48`):
+ *
+ * ```ruby
+ * rescue ParseError
+ *   raise
+ * rescue StandardError
+ *   raise ParseError.new(text, type), cause: nil
+ * ```
+ *
+ * That is not theoretical here. `Utility.get_class` raises `NameError` on a
+ * name with no class — `Pr` is a `MATH_OPERATORS` entry with no
+ * `Math::Function::Pr` — so `\Pr_1` reaches the gem's public boundary as a
+ * `ParseError`, and the fixture set records it as one. Without this arm the
+ * port would surface the registry's own `Error` instead, and a caller
+ * branching on `code` would miss it.
+ *
+ * The failure is attributed to offset 0: unlike a grammar failure, a transform
+ * failure carries no position — the gem's own `ParseError` for these has none
+ * either.
+ */
 export function parseLatex(input: string, options?: LatexParseOptions | null): FormulaNode {
   const { text, map } = preprocess(input);
   const tree = parsePreprocessed(input, text, map, options);
-  const transformed = buildLatexTransform().transform.apply(tree);
-  return finalizeLatexParse(transformed, input);
+  try {
+    const transformed = buildLatexTransform().transform.apply(tree);
+    return finalizeLatexParse(transformed, input);
+  } catch (error) {
+    if (error instanceof ParseError) throw error;
+    throw new ParseError(error instanceof Error ? error.message : String(error), input, "latex", 0);
+  }
 }
 
 function parsePreprocessed(

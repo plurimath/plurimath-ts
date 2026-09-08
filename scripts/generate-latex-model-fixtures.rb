@@ -127,6 +127,12 @@ RULE_COVERAGE = {
     "\\zero_1",
     "\\zero^2",
     "\\lim_x^y",
+    # `Pr` is a MATH_OPERATORS entry with no `Math::Function::Pr`, so this
+    # reaches `get_class` and raises NameError, which the gem's public boundary
+    # turns into a ParseError. The port must refuse it the same way, through
+    # the same error type.
+    "\\Pr_1",
+    "\\Pr^1",
     "\\int\\limits_a^b",
     "1_2",
     "+_1",

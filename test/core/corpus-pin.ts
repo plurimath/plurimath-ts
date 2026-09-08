@@ -54,16 +54,65 @@ export const LOCAL_CORPUS_ROOT = join(REPO_ROOT, "corpus");
 export const SUBMODULE_FIX = "git submodule update --init --recursive";
 
 const PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
-const CASE_SCHEMA_1 = "plurimath-corpus/asciimath/1";
+const MANIFEST_SCHEMA = "plurimath-corpus/manifest/1";
+const REJECTIONS_SCHEMA = "plurimath-corpus/rejections/1";
+
+/**
+ * The input formats a case payload's schema may name.
+ *
+ * A case schema is `plurimath-corpus/<input format>/<version>`: the middle
+ * segment is the notation the group's inputs are written in, so an AsciiMath
+ * group declares `plurimath-corpus/asciimath/1` and a LaTeX group declares
+ * `plurimath-corpus/latex/1`. This list is the set the testsuite's own schemas
+ * pin with a `pattern` (`schema/cases.json`, `schema/cases2.json`); it is
+ * repeated rather than derived because those schema files are not shipped to a
+ * consumer that reads only `corpus/`.
+ *
+ * Enumerated rather than matched with `[a-z]+`, so a payload declaring a format
+ * neither repository has agreed on stops the load instead of being read as
+ * though its middle segment were a name this port knows.
+ */
+const CASE_INPUT_FORMATS: readonly string[] = [
+  "asciimath",
+  "html",
+  "latex",
+  "mathml",
+  "omml",
+  "unicode",
+  "unitsml",
+];
+
 /**
  * `cases/2` does not replace `cases/1` and nothing is converted between them:
  * a payload names its own schema, and a group whose every case renders to every
  * target stays on `cases/1`. The only difference is the shape of `expected` —
  * a bare string per target in `cases/1`, an outcome mapping in `cases/2`.
+ *
+ * The version and the input format are independent: `latex/1` and `asciimath/2`
+ * are both legal, so the schema string is decomposed rather than compared
+ * against a fixed list of whole strings.
  */
-const CASE_SCHEMA_2 = "plurimath-corpus/asciimath/2";
-const MANIFEST_SCHEMA = "plurimath-corpus/manifest/1";
-const REJECTIONS_SCHEMA = "plurimath-corpus/rejections/1";
+const CASE_SCHEMA_PATTERN = /^plurimath-corpus\/([^/]+)\/([12])$/;
+
+/** What a case payload's `schema` string says, once decomposed. */
+interface CaseSchema {
+  readonly inputFormat: string;
+  readonly version: CaseSchemaVersion;
+}
+
+/**
+ * Reads a case schema, or returns `undefined` for a string that is not one.
+ * `undefined` rather than a throw, because the caller dispatches on it: a
+ * rejection payload's schema is not a case schema and is not an error either.
+ */
+function readCaseSchema(schema: string): CaseSchema | undefined {
+  const match = CASE_SCHEMA_PATTERN.exec(schema);
+  const inputFormat = match?.[1];
+  const version = match?.[2];
+  if (inputFormat === undefined || version === undefined) return undefined;
+  if (!CASE_INPUT_FORMATS.includes(inputFormat)) return undefined;
+  return { inputFormat, version: version === "1" ? 1 : 2 };
+}
 
 /**
  * The categories a `cases/2` refusal may name. `parse_error` is the only one,
@@ -348,7 +397,7 @@ function readPayloadDocument(
   return { path, document, schema: requiredString(document, "schema", path) };
 }
 
-/** Which shape a payload's `expected` entries take; see `CASE_SCHEMA_2`. */
+/** Which shape a payload's `expected` entries take; see `CASE_SCHEMA_PATTERN`. */
 type CaseSchemaVersion = 1 | 2;
 
 /** What one target did with one case: it rendered, or it refused. */
@@ -456,8 +505,9 @@ function readPayload(
   record: PayloadRecord,
   document: Mapping,
   path: string,
-  version: CaseSchemaVersion,
+  schema: CaseSchema,
 ): PinnedPayload {
+  const version = schema.version;
   // A payload without a group is a payload nothing can name in a failure
   // message, so it fails here rather than being loaded as an unnamed pile.
   const group = requiredString(document, "group", path);
@@ -466,7 +516,20 @@ function readPayload(
     throw new Error(`${path}: group is "${group}" but the file is named "${stem}.yaml".`);
   }
 
+  // The input format is stated twice — in the schema's middle segment and in
+  // this field — and the testsuite reconciles them (`scripts/validate.rb`,
+  // `input_format_errors`). Restated here because this port dispatches on the
+  // field: `parseableCases` selects the cases a PARSER may run, so a `latex`
+  // payload whose `input_format` said `asciimath` would feed LaTeX source to
+  // `parseAsciimath` and fail as though the parser were broken.
   const inputFormat = requiredString(document, "input_format", path);
+  if (inputFormat !== schema.inputFormat) {
+    throw new Error(
+      `${path}: input_format is "${inputFormat}" but the schema declares ` +
+        `"${schema.inputFormat}" ("plurimath-corpus/${schema.inputFormat}/${version}").`,
+    );
+  }
+
   const targets = requiredSequence(document, "targets", path).map((target, index) => {
     if (typeof target !== "string" || target === "") {
       throw new Error(`${path}: targets[${index}] is not a format name`);
@@ -508,11 +571,21 @@ function readPayload(
       if (category !== undefined) refusals.set(target, category);
     }
 
+    // The third statement of the same fact, and the one every consumer reads:
+    // `parseableCases` filters on the case's own `input_format`, so a case that
+    // disagreed with its group would be routed by this field alone.
+    const caseFormat = requiredString(caseRecord, "input_format", at);
+    if (caseFormat !== inputFormat) {
+      throw new Error(
+        `${at}: input_format is "${caseFormat}" but its group declares "${inputFormat}".`,
+      );
+    }
+
     return {
       id,
       group,
       input: requiredString(caseRecord, "input", at),
-      inputFormat: requiredString(caseRecord, "input_format", at),
+      inputFormat: caseFormat,
       preprocessed: requiredString(caseRecord, "preprocessed", at),
       expected,
       refusals,
@@ -593,16 +666,17 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
   const rejectionPayloads: PinnedRejectionPayload[] = [];
   for (const record of provenance.payloads) {
     const { path, document, schema } = readPayloadDocument(root, record);
-    if (schema === CASE_SCHEMA_1) {
-      payloads.push(readPayload(record, document, path, 1));
-    } else if (schema === CASE_SCHEMA_2) {
-      payloads.push(readPayload(record, document, path, 2));
+    const caseSchema = readCaseSchema(schema);
+    if (caseSchema !== undefined) {
+      payloads.push(readPayload(record, document, path, caseSchema));
     } else if (schema === REJECTIONS_SCHEMA) {
       rejectionPayloads.push(readRejectionPayload(record, document, path));
     } else {
       throw new Error(
-        `${path}: schema is "${schema}", this reader knows "${CASE_SCHEMA_1}", ` +
-          `"${CASE_SCHEMA_2}" and "${REJECTIONS_SCHEMA}".`,
+        `${path}: schema is "${schema}", this reader knows ` +
+          `"plurimath-corpus/<input format>/1", "plurimath-corpus/<input format>/2" ` +
+          `(input format one of ${CASE_INPUT_FORMATS.join(", ")}) and ` +
+          `"${REJECTIONS_SCHEMA}".`,
       );
     }
   }

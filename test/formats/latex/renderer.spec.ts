@@ -34,6 +34,7 @@ import {
   MpaddedNode,
   MrowNode,
   NaryNode,
+  type NodeParameter,
   NormNode,
   NumberNode,
   ObraceNode,
@@ -129,15 +130,66 @@ describe("unary functions", () => {
     expect(() => toLatex(unary("Mbox", x()))).toThrow(RenderError);
   });
 
-  it("Mbox renders an EMPTY list, the one array shape Ruby's interpolation pins", () => {
-    // Measured on the pinned oracle 00c52783: `Mbox.new([]).to_latex` is
-    // `"\\mbox{[]}"`, and `"#{[]}"` is `"[]"` — `Array#to_s` is `inspect`, so
-    // an empty list needs neither an object address nor an Integer/Float
-    // distinction, which are the two reasons the shared interpolation judge
-    // refuses a slot. A NON-empty list carries both again: measured,
-    // `Mbox.new([Symbols::Symbol("x")]).to_latex` interpolates a heap address.
-    expect(toLatex(unary("Mbox", []))).toBe("\\mbox{[]}");
-    expect(() => toLatex(unary("Mbox", [x()]))).toThrow(RenderError);
+  /**
+   * `"#{array}"` is `Array#inspect`, and what that reproduces turns on the
+   * ELEMENTS, not on whether the list is empty. Every expectation below was
+   * measured on the pinned oracle 00c52783 as `Mbox.new(v).to_latex`:
+   *
+   *   []          \mbox{[]}          ["x"]         \mbox{["x"]}
+   *   [nil]       \mbox{[nil]}       ["a b"]       \mbox{["a b"]}
+   *   [nil, nil]  \mbox{[nil, nil]}  ["", nil]     \mbox{["", nil]}
+   *   [[]]        \mbox{[[]]}        [true,false]  \mbox{[true, false]}
+   *   [[nil]]     \mbox{[[nil]]}
+   *
+   * The refusals below are each about one element, not about lists:
+   * `[Symbols::Symbol("x")]` interpolates a heap address; `[5]` and `[5.0]`
+   * give `\mbox{[5]}` and `\mbox{[5.0]}`, which JavaScript cannot tell apart —
+   * the ambiguity the shared interpolation judge already refuses at top level;
+   * and `["π"]` is above the codepoint sweep that measured the escaping table,
+   * so it is unmeasured rather than known-bad.
+   */
+  it("Mbox renders the list shapes Ruby's inspect reproduces", () => {
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    expect(toLatex(list([]))).toBe("\\mbox{[]}");
+    expect(toLatex(list([null]))).toBe("\\mbox{[nil]}");
+    expect(toLatex(list([null, null]))).toBe("\\mbox{[nil, nil]}");
+    expect(toLatex(list([[]]))).toBe("\\mbox{[[]]}");
+    expect(toLatex(list([[null]]))).toBe("\\mbox{[[nil]]}");
+    expect(toLatex(list([true, false]))).toBe("\\mbox{[true, false]}");
+    expect(toLatex(list(["x"]))).toBe('\\mbox{["x"]}');
+    expect(toLatex(list(["a b"]))).toBe('\\mbox{["a b"]}');
+    expect(toLatex(list(["", null]))).toBe('\\mbox{["", nil]}');
+  });
+
+  it("Mbox reproduces Ruby's own string escaping inside a list", () => {
+    // Each measured on the same oracle, because JavaScript agrees with Ruby on
+    // none of them by default: `#` is escaped ONLY before `{`, `$` or `@`, the
+    // C0 controls have named forms, and the rest of C0/C1 is `\uXXXX` with
+    // UPPERCASE hex.
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    expect(toLatex(list(['a"b']))).toBe('\\mbox{["a\\"b"]}');
+    expect(toLatex(list(["a\\b"]))).toBe('\\mbox{["a\\\\b"]}');
+    expect(toLatex(list(["a#{b}"]))).toBe('\\mbox{["a\\#{b}"]}');
+    expect(toLatex(list(["a#$g"]))).toBe('\\mbox{["a\\#$g"]}');
+    expect(toLatex(list(["a#@i"]))).toBe('\\mbox{["a\\#@i"]}');
+    expect(toLatex(list(["a#x"]))).toBe('\\mbox{["a#x"]}');
+    expect(toLatex(list(["\n"]))).toBe('\\mbox{["\\n"]}');
+    expect(toLatex(list(["\t"]))).toBe('\\mbox{["\\t"]}');
+    expect(toLatex(list(["\u001b"]))).toBe('\\mbox{["\\e"]}');
+    expect(toLatex(list(["\u0000"]))).toBe('\\mbox{["\\u0000"]}');
+    expect(toLatex(list(["\u001a"]))).toBe('\\mbox{["\\u001A"]}');
+    expect(toLatex(list(["\u007f"]))).toBe('\\mbox{["\\u007F"]}');
+    expect(toLatex(list(["\u009f"]))).toBe('\\mbox{["\\u009F"]}');
+    expect(toLatex(list(["\u00e9"]))).toBe('\\mbox{["\u00e9"]}');
+  });
+
+  it("Mbox refuses the list elements Ruby renders unreproducibly", () => {
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    expect(() => toLatex(list([x()]))).toThrow(RenderError);
+    expect(() => toLatex(list([5]))).toThrow(RenderError);
+    expect(() => toLatex(list([5.0]))).toThrow(RenderError);
+    expect(() => toLatex(list([{}]))).toThrow(RenderError);
+    expect(() => toLatex(list(["\u03c0"]))).toThrow(RenderError);
   });
 
   it("Hom renders the carrier default, though the transform cannot build it", () => {

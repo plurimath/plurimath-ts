@@ -1001,3 +1001,58 @@ each naming what the gem does with it:
 The first is the generated-symbol-data gap and lifts with it. The rest are
 `#inspect` reproducibility, which is why they refuse rather than guess: the
 gem's own output for them is either nondeterministic or unmeasured.
+
+### LaTeX and UnicodeMath: three list slots the gem renders and this port does not
+
+**Trigger: a case, probe or parser reaches a list in one of these three slots —
+or `Mbox`'s list handling is generalised, at which point these are what the
+generalisation has to answer for.**
+
+Found by review while `src/render/unary-function/latex.ts` was gaining the
+`Mbox` list arm; measured on the pinned oracle `00c52783`, each with
+`options: {}` supplied:
+
+| call | gem | port |
+|---|---|---|
+| `Number([]).to_latex` | `"[]"` | refuses |
+| `Number([]).to_unicodemath` | `"[]"` | renders nothing, silently |
+| `Color(Number([]), Symbol("x")).to_latex` | `"{\color{[]} x}"` | refuses |
+
+The UnicodeMath one is the worst of the three, because a silent empty answer is
+the failure mode this port exists to avoid; the other two refuse loudly, which
+is merely incomplete.
+
+**Do not close these by widening `interpolatedValue`.** It is tempting —
+`src/render/number/latex.ts:11` and `src/render/color/latex.ts:103` both call
+it, and the `Mbox` arm calls it too — but the three slots do not reach Ruby the
+same way. `Mbox#to_latex` interpolates its slot raw, so `"#{[]}"` is
+`Array#inspect` and the answer is `"[]"`. `Number#to_latex` goes through
+`Formatter::Numbers::TextRenderer`. And `Color`'s first slot is a NODE whose
+`to_asciimath` is called, so a bare Ruby array there never inspects at all:
+measured, `Color([], Symbol("x")).to_latex` and `Color([Symbol("a")], …)` both
+raise `NoMethodError: undefined method 'to_asciimath'`, where the same `Color`
+wrapping a `Number([])` renders. One helper cannot be right for all three,
+which is why `Mbox`'s list handling sits at its own arm and this entry exists.
+
+### UnicodeMath: `rubyInspect` spells strings with `JSON.stringify`
+
+**Trigger: an option value, or any other slot reaching `rubyInterpolate`,
+carries a string with a character the two spellings disagree on.**
+
+`rubyInspect` (`src/formats/unicodemath/render-shared.ts`) renders a string
+inside an inspected Array or Hash as `JSON.stringify(value)`. That is Ruby's
+`String#inspect` only for the easy characters. Measured on the pinned oracle by
+an exhaustive sweep of U+0000..U+02FF, the two disagree on:
+
+- `#` before `{`, `$` or `@` — Ruby escapes it, JSON does not;
+- U+0007, U+000B and U+001B — Ruby writes the named forms `\a`, `\v`, `\e`;
+  JSON writes `\u0007`, `\u000b` and `\u001b`;
+- every other C0 codepoint — Ruby uses UPPERCASE hex (`\u001A`), JSON
+  lowercase (`\u001a`);
+- U+007F..U+009F — Ruby escapes them, JSON leaves them bare.
+
+`src/render/unary-function/latex.ts` carries the measured table for its own
+`Mbox` arm and refuses above U+02FF rather than guessing. The two cannot share
+it: section 3 rule 8 gives a kind file its own format's `render-shared` and no
+other's, so a shared spelling would have to move into core, which is a layering
+decision rather than a bug fix.

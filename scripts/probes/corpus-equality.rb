@@ -18,12 +18,27 @@
 #
 # It loads the oracle through $LOAD_PATH and refuses to answer from an
 # installed gem, which would silently be a different version
-# (PORTING-STANDARDS.md). It also refuses a checkout that is not AT the pinned
-# revision, or that is dirty: an answer measured from either is not the answer
-# `corpus/provenance.yaml` names, and the whole value of this fixture is that
-# it came from the revision the rest of this repository's generated data came
-# from. `--allow-dirty` downgrades the two checkout refusals to warnings, for
-# probing an experiment; a fixture must never be taken from such a run.
+# (PORTING-STANDARDS.md). It also refuses an oracle checkout that is not AT the
+# revision the pin names, or that is dirty: an answer measured from either is
+# not the answer `corpus/provenance.yaml` names, and the whole value of this
+# fixture is that it came from the revision the rest of this repository's
+# generated data came from.
+#
+# The expected revision is read from the SUBMODULE'S COMMITTED provenance,
+# through `git show <pin-head>:corpus/provenance.yaml`, and the submodule's
+# head is first required to equal the gitlink this repository has committed for
+# it. Reading the working copy instead was not a check at all: editing one
+# `oracle.commit:` line there, with no corpus payload touched and no flag
+# passed, made this probe bless a different revision and exit 0.
+#
+# `--allow-dirty` is DELIBERATELY narrow, and is for probing an experimental
+# oracle, never for producing a fixture. It downgrades exactly three refusals
+# to warnings, all of them about the ORACLE checkout: that it is a git
+# repository, that it is at the expected revision, and that it is clean. It
+# does NOT reach the pin-integrity checks — a submodule whose head has moved
+# off this repository's gitlink, or that is dirty, aborts whatever flags are
+# passed, because those decide which question is being answered rather than how
+# trustworthy the answer is.
 
 require "optparse"
 require "yaml"
@@ -32,7 +47,7 @@ require_relative "../generate-corpus"
 options = { oracle: nil, allow_dirty: false }
 OptionParser.new do |o|
   o.on("--oracle PATH", "clean pinned plurimath checkout") { |v| options[:oracle] = v }
-  o.on("--allow-dirty", "warn instead of refusing on revision or cleanliness") do
+  o.on("--allow-dirty", "warn instead of refusing on the ORACLE's git state") do
     options[:allow_dirty] = true
   end
 end.parse!
@@ -44,18 +59,48 @@ unless File.directory?(lib) && File.exist?(File.join(lib, "plurimath.rb"))
   abort "not a plurimath checkout: #{lib}"
 end
 
-# The revision the pin itself names, read from the pinned corpus rather than
-# typed here, so moving the pin moves this check with it.
-pin_provenance = YAML.safe_load(
-  File.read(File.join(CorpusGenerator.pin_root, "corpus", "provenance.yaml")),
-  aliases: false,
-)
-expected_commit = pin_provenance.fetch("oracle").fetch("commit")
-
 def refuse(message, allow_dirty)
   abort "REFUSING: #{message}" unless allow_dirty
   warn "WARNING (--allow-dirty): #{message}"
 end
+
+# --- pin integrity: which question is being answered ------------------------
+#
+# Not subject to --allow-dirty. Everything below establishes that the corpus
+# and the provenance being read are the ones this repository has COMMITTED,
+# rather than whatever is sitting in the submodule's working tree.
+pin_root = CorpusGenerator.pin_root
+pin_relative = CorpusGenerator::PIN_RELATIVE_PATH
+unless CorpusGenerator.git_repository?(pin_root)
+  abort "REFUSING: #{pin_relative} is not an initialized git checkout"
+end
+
+gitlink = CorpusGenerator.git(CorpusGenerator::REPO_ROOT, "ls-tree", "HEAD", pin_relative)
+index_commit = gitlink.split(/\s+/)[2]
+if index_commit.nil? || !gitlink.start_with?("160000 ")
+  abort "REFUSING: #{pin_relative} is not a committed submodule gitlink: #{gitlink.strip.inspect}"
+end
+pin_head = CorpusGenerator.git(pin_root, "rev-parse", "HEAD").strip
+unless pin_head == index_commit
+  abort "REFUSING: #{pin_relative} is checked out at #{pin_head}, but this repository " \
+        "has committed #{index_commit} for it. The corpus in the working tree is not the " \
+        "pinned corpus."
+end
+pin_dirty = CorpusGenerator.dirty_paths(pin_root)
+unless pin_dirty.empty?
+  abort "REFUSING: #{pin_relative} is dirty: #{pin_dirty.join(', ')}. Its committed bytes " \
+        "are the pin; edited ones are not."
+end
+
+# The revision the pin names, read from the submodule's COMMITTED provenance
+# rather than from its working copy, so a hand-edited `oracle.commit:` cannot
+# steer this probe even in the window before the dirty check would catch it.
+expected_commit = YAML.safe_load(
+  CorpusGenerator.git(pin_root, "show", "#{pin_head}:corpus/provenance.yaml"),
+  aliases: false,
+).fetch("oracle").fetch("commit")
+
+# --- oracle state: how trustworthy the answer is ----------------------------
 
 unless CorpusGenerator.git_repository?(oracle)
   refuse("#{oracle} is not a git checkout; the oracle must be one (ARCHITECTURE.md §7)",

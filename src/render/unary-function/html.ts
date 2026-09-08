@@ -51,10 +51,11 @@ import {
  *
  * `Mbox` is a KNOWN gap, not an absent case. The corpus reaches it —
  * `latex-text-mbox` is `\mbox{hi}` — the gem renders it, and the four P1
- * formats render it (`../unary-function/asciimath.ts` and siblings). It stays
- * unadmitted here because `Mbox#to_html` is NOT the `Text` delegation those
- * four share: it hands back `parameter_one` itself, which is measurably its
- * own shape. On the pinned oracle `00c52783`, `Mbox.new(false).to_html`
+ * formats render it (`./asciimath.ts` and siblings). It stays unadmitted here
+ * because `Mbox#to_html` is NOT the `Text` delegation THREE of those four
+ * share — asciimath, mathml and unicodemath delegate, latex interpolates its
+ * slot raw — and it is not latex's shape either: it hands back
+ * `parameter_one` itself, which is a third thing again. On the pinned oracle `00c52783`, `Mbox.new(false).to_html`
  * answers `false` where `Text.new(false).to_html` raises NoMethodError, and
  * `Formula([Mbox("unicode[:alpha]")]).to_html` is the literal
  * `"unicode[:alpha]"` where the same string under `Text` is `"&#x3b1;"`.

@@ -48,9 +48,11 @@ import { XmlElement } from "../../xml/index";
  *
  * `Mbox` is a KNOWN gap, not an absent case. The corpus reaches it —
  * `latex-text-mbox` is `\mbox{hi}` — the gem renders it, and the four P1
- * formats render it by delegating to `Text` the way `mbox.rb` does. Its OMML
- * method delegates to `Text` too, but delegating HERE would not reproduce the
- * gem: measured on the pinned oracle `00c52783`,
+ * formats render it — three of them (asciimath, mathml, unicodemath) by
+ * delegating to `Text` the way `mbox.rb` does, and latex by interpolating its
+ * slot raw, because `Mbox#to_latex` does not delegate at all. The OMML method
+ * IS one of the delegations, but delegating HERE would not reproduce the gem:
+ * measured on the pinned oracle `00c52783`,
  * `Formula([Mbox("hi")]).to_omml` emits a bare `<m:t>hi</m:t>` where
  * `Formula([Text("hi")]).to_omml` emits `<m:r><m:rPr><m:sty m:val="p"/>
  * </m:rPr><m:t>hi</m:t></m:r>` — the formula boundary wraps a `Text` child in

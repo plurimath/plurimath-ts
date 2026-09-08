@@ -78,6 +78,112 @@ const MEASURED_UNARY_NAMES: ReadonlySet<string> = new Set([
   "Hom",
 ]);
 
+/**
+ * The codepoints `String#inspect` writes as a NAMED escape rather than as
+ * `\uXXXX`, measured in the sweep `inspectString` below describes.
+ */
+const INSPECT_NAMED_ESCAPES: ReadonlyMap<number, string> = new Map([
+  [0x07, "\\a"],
+  [0x08, "\\b"],
+  [0x09, "\\t"],
+  [0x0a, "\\n"],
+  [0x0b, "\\v"],
+  [0x0c, "\\f"],
+  [0x0d, "\\r"],
+  [0x1b, "\\e"],
+  [0x22, '\\"'],
+  [0x5c, "\\\\"],
+]);
+
+/**
+ * `Array#inspect` — what `"#{array}"` actually produces — for the element
+ * shapes measured on the pinned oracle `00c52783`, and `null` for anything
+ * else, which the caller turns into the shared judge's refusal.
+ *
+ * Reproducing this is not optional here: `Mbox#to_latex` interpolates its slot
+ * raw, so a list in the slot reaches Ruby's `inspect` and is rendered rather
+ * than refused. Measured, `Mbox.new([nil]).to_latex` is `"\\mbox{[nil]}"`,
+ * `[[]]` is `"\\mbox{[[]]}"` and `["x"]` is `"\\mbox{[\"x\"]}"`. Only the
+ * ELEMENTS decide: an empty list is not a special case, and a non-empty one is
+ * not automatically unreproducible.
+ *
+ * What is admitted, and why nothing else is:
+ *
+ *   - `nil`, `true`, `false` — `"nil"`, `"true"`, `"false"`, measured;
+ *   - nested arrays, recursively, joined by `", "` (measured: `[nil, nil]` is
+ *     `"[nil, nil]"`, comma AND space);
+ *   - strings, through `inspectString` below;
+ *   - **not** numbers. `[5]` and `[5.0]` inspect as `[5]` and `[5.0]`, which
+ *     JavaScript cannot tell apart — the same ambiguity `interpolatedValue`
+ *     refuses at top level, and refusing it is what keeps the two consistent;
+ *   - **not** nodes or hashes. A node inspects to a heap address, which is
+ *     nondeterministic; a non-empty hash has inspect rules of its own that no
+ *     probe here has measured.
+ */
+function rubyInspect(value: unknown): string | null {
+  if (value === null || value === undefined) return "nil";
+  if (value === true) return "true";
+  if (value === false) return "false";
+  if (typeof value === "string") return inspectString(value);
+  if (Array.isArray(value)) {
+    const parts: string[] = [];
+    for (const item of value) {
+      const part = rubyInspect(item);
+      if (part === null) return null;
+      parts.push(part);
+    }
+    return `[${parts.join(", ")}]`;
+  }
+  return null;
+}
+
+/**
+ * `String#inspect`, from an exhaustive sweep of U+0000..U+02FF on the pinned
+ * oracle `00c52783` — every codepoint in that range whose inspect body is not
+ * the character itself, and there are 67 of them.
+ *
+ * Ruby and JavaScript agree on none of this by default, which is why it is a
+ * table and not `JSON.stringify`:
+ *
+ *   - `"` and `\` take a backslash;
+ *   - `#` takes one ONLY before `{`, `$` or `@` — `"a#x"` inspects as `"a#x"`,
+ *     `'a#{b}'` as `"a\#{b}"`;
+ *   - U+0007..U+000D and U+001B have named forms (`\a \b \t \n \v \f \r \e`);
+ *   - every other codepoint below U+0020, plus U+007F..U+009F, is `\uXXXX`
+ *     with FOUR digits and UPPERCASE hex — `\u001A`, not `\u001a`;
+ *   - U+00A0..U+02FF pass through verbatim (é is `"é"`, not an escape).
+ *
+ * Above U+02FF the answer is `null`, refusing rather than guessing. That
+ * ceiling is this sweep's, not a fact about Ruby: measured, `"π"` inspects as
+ * `"π"` and would render fine, while U+10FFFF inspects as `"\u{10FFFF}"` — a
+ * BRACED form this table does not carry. Ruby's rule up there is about which
+ * codepoints it considers printable, and pinning that needs its own sweep.
+ */
+function inspectString(value: string): string | null {
+  let out = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index] as string;
+    const codepoint = character.codePointAt(0) as number;
+    if (codepoint > 0x2ff) return null;
+    const named = INSPECT_NAMED_ESCAPES.get(codepoint);
+    if (named !== undefined) {
+      out += named;
+      continue;
+    }
+    if (codepoint < 0x20 || (codepoint >= 0x7f && codepoint <= 0x9f)) {
+      out += `\\u${codepoint.toString(16).toUpperCase().padStart(4, "0")}`;
+      continue;
+    }
+    // `#` is escaped only where Ruby would have read an interpolation.
+    if (character === "#" && ["{", "$", "@"].includes(value[index + 1] ?? "")) {
+      out += "\\#";
+      continue;
+    }
+    out += character;
+  }
+  return `"${out}"`;
+}
+
 export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
   const name = node.name;
   switch (name) {
@@ -113,17 +219,20 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
       // (`"\\mbox{#<Plurimath::Math::Symbols::Symbol:0x00007a71...>}"`), which
       // is not reproducible and which `interpolatedValue` refuses.
       const slot = node.parameterOne;
-      // The one array shape the shared judge can afford to admit, and it is
-      // admitted HERE rather than there: `interpolatedValue` also serves
-      // `../number/latex.ts` and `../color/latex.ts`, whose slots do not reach
-      // Ruby through a bare `"#{}"` (`Number#to_latex` goes through
-      // `Formatter::Numbers::TextRenderer`), so what `[]` does at those sites
-      // is a separate measurement. At THIS site it is measured:
-      // `Mbox.new([]).to_latex` is `"\\mbox{[]}"`, because `Array#to_s` is
-      // `inspect` and an empty list needs neither an object address nor an
-      // Integer/Float distinction — the two reasons the judge refuses a slot.
-      // A non-empty list carries both risks again and keeps raising.
-      if (Array.isArray(slot) && slot.length === 0) return "\\mbox{[]}";
+      // Lists are answered HERE rather than inside `interpolatedValue`, which
+      // also serves `../number/latex.ts` and `../color/latex.ts`. Those slots
+      // do NOT reach Ruby through a bare `"#{}"`: `Number#to_latex` goes
+      // through `Formatter::Numbers::TextRenderer`, and Color's nested raw
+      // symbol list goes through a join that answers `""` for `[]`. A list
+      // means a different thing at each of the three, so widening the shared
+      // judge would have been wrong at two of them.
+      if (Array.isArray(slot)) {
+        const inspected = rubyInspect(slot);
+        // A list holding something Ruby renders unreproducibly falls through
+        // to the shared judge, which refuses every array with the reason that
+        // covers it.
+        if (inspected !== null) return `\\mbox{${inspected}}`;
+      }
       return `\\mbox{${interpolatedValue(slot, node.kind, "mbox.parameterOne")}}`;
     }
     case "Tr":

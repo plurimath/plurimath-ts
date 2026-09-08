@@ -254,8 +254,8 @@ function requiredString(map: Mapping, key: string, where: string): string {
  *
  * Every other string field this reader takes is barred from `""` upstream and
  * stays on `requiredString`, so an empty one there still stops the load — but
- * by three different constructs, not all by `minLength`. Read off the pinned
- * schemas: `input` and `description` carry `minLength: 1`; `id` and `group`
+ * by four different constructs, only one of which is `minLength`. Read off the
+ * pinned schemas: `input` and `description` carry `minLength: 1`; `id` and `group`
  * carry `$defs/slug`, which is the pattern `^[a-z0-9]+(-[a-z0-9]+)*$`;
  * `input_format` carries `$defs/input_format`, an `enum`; and `schema` carries
  * a `pattern` in `cases.json` and `cases2.json` and a `const` in

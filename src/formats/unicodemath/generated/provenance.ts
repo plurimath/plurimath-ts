@@ -52,7 +52,7 @@ export const UNICODEMATH_PARSER_GENERATED_PROVENANCE: UnicodemathParserGenerated
     ],
     [
       "scripts/generate-unicodemath-parser-data.rb",
-      "f4537c0453e82d9f1fefacf0bb219dfaea8535595749da3679246663e6cdf90e",
+      "db2db16643da771509ea729398d5470353e369000a023875171047979ec6dcfa",
     ],
   ]),
   oracle: "plurimath",

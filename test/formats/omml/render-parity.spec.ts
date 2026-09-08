@@ -37,6 +37,7 @@ import { ParseError, RenderError } from "../../../src/core/index";
 import { parseAsciimath } from "../../../src/formats/asciimath/index";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
 import { parseYaml } from "../../core/corpus-yaml";
+import { parseableCases } from "../../core/model-builder";
 import {
   FORMAT,
   KNOWN_DIVERGENCES,
@@ -87,12 +88,24 @@ const manifest = parseYaml(
 const pin = loadPinnedCorpus();
 
 /**
- * The corpus ids the generator sweeps — every conformance case plus every
- * rejection case, which together are `corpus/asciimath/*.yaml`.
+ * The corpus ids the generator sweeps: every conformance case plus every
+ * rejection case **written in AsciiMath**.
+ *
+ * Every test below runs `parseAsciimath(c.input)`, and so does the generator
+ * that wrote the fixture — this whole file is a round-trip layer, with no
+ * corpus layer beside it, because the shared corpus carries no target for this
+ * format. So it takes the same scope every other round-trip layer takes. The
+ * corpus is no longer AsciiMath-only: `corpus/latex/*.yaml` arrived with the
+ * pin, and sweeping those inputs through the AsciiMath parser would record
+ * whatever fell out as though it were the gem's answer for them.
+ *
+ * `parseableCases` is that filter, and it throws rather than returning an empty
+ * list, so a scope that stopped matching anything cannot turn this file green
+ * while it checks nothing.
  */
 const pinnedInputs = new Map<string, string>([
-  ...pin.cases.map((c) => [c.id, c.input] as const),
-  ...pin.rejections.map((r) => [r.id, r.input] as const),
+  ...parseableCases(pin.cases).map((c) => [c.id, c.input] as const),
+  ...parseableCases(pin.rejections).map((r) => [r.id, r.input] as const),
 ]);
 
 const renderable = fixture.cases.filter((c) => typeof c.expected === "string");
@@ -142,8 +155,12 @@ describe(`${FORMAT} parity fixture covers the pinned corpus`, () => {
   });
 
   it("records every corpus rejection as a parse-phase refusal", () => {
-    expect(pin.rejections.length).toBeGreaterThan(0);
-    for (const rejection of pin.rejections) {
+    // Scoped like the map above: a LaTeX rejection would have no fixture row,
+    // and rightly so. There is none at this pin, so the two lists are equal
+    // today — but the scope is what keeps that a fact rather than a coincidence.
+    const rejections = parseableCases(pin.rejections);
+    expect(rejections.length).toBeGreaterThan(0);
+    for (const rejection of rejections) {
       const entry = fixture.cases.find((c) => c.id === rejection.id);
       expect(entry, `${rejection.id} is a pinned rejection with no fixture row`).toBeDefined();
       expect(entry?.raisedIn, rejection.id).toBe("parse");

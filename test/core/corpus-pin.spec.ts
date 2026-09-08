@@ -172,61 +172,92 @@ function syntheticPin(options: SyntheticOptions = {}): string {
 }
 
 /**
- * Committed by name, not counted. A pin that loses a group is still a valid,
+ * Committed by name, not counted. A pin that loses a payload is still a valid,
  * self-consistent pin — the reader has nothing to object to and every parity
  * suite happily runs the smaller set. This list is the only thing standing
  * between "the corpus shrank" and "the corpus shrank and the suite was still
  * green"; the proof that it is load-bearing is at the end of this file.
+ *
+ * Paths, not group names. A group name is unique only within one input format,
+ * and the corpus now carries two: `fences`, `numbers`, `operators` and
+ * `symbols` each name an AsciiMath group AND a LaTeX one. A list of bare names
+ * would have said "fences" twice and identified neither, so losing the LaTeX
+ * one while keeping the AsciiMath one would still have matched.
  */
-const EXPECTED_GROUPS = [
-  "colour",
-  "fences",
-  "fonts",
-  "frac",
-  "left-right",
-  "matrices",
-  "mixed",
-  "mod",
-  "nary",
-  "numbers",
-  "operators",
-  "partial-render",
-  "permissive",
-  "powers",
-  "quoted-text",
-  "roots",
-  "symbols",
-  "unary-functions",
-  "whitespace",
+const EXPECTED_PAYLOADS = [
+  "asciimath/colour.yaml",
+  "asciimath/fences.yaml",
+  "asciimath/fonts.yaml",
+  "asciimath/frac.yaml",
+  "asciimath/left-right.yaml",
+  "asciimath/matrices.yaml",
+  "asciimath/mixed.yaml",
+  "asciimath/mod.yaml",
+  "asciimath/nary.yaml",
+  "asciimath/numbers.yaml",
+  "asciimath/operators.yaml",
+  "asciimath/partial-render.yaml",
+  "asciimath/permissive.yaml",
+  "asciimath/powers.yaml",
+  "asciimath/quoted-text.yaml",
+  "asciimath/roots.yaml",
+  "asciimath/symbols.yaml",
+  "asciimath/unary-functions.yaml",
+  "asciimath/whitespace.yaml",
+  "latex/fences.yaml",
+  "latex/numbers.yaml",
+  "latex/operators.yaml",
+  "latex/symbols.yaml",
 ];
 
 /**
  * The assertion itself, so it can be applied to a damaged pin as well as to the
- * shipped one. Comparing a damaged pin's groups to `EXPECTED_GROUPS` with
+ * shipped one. Comparing a damaged pin's payloads to `EXPECTED_PAYLOADS` with
  * `not.toStrictEqual` would only show the arrays differ — it would pass whether
  * or not anything rejects the damaged pin, which is the difference between a
  * red-green proof and a restatement.
  */
-function assertExpectedGroups(corpus: PinnedCorpus): void {
-  expect(corpus.payloads.map((payload) => payload.group)).toStrictEqual(EXPECTED_GROUPS);
+function assertExpectedPayloads(corpus: PinnedCorpus): void {
+  expect(corpus.payloads.map((payload) => payload.path)).toStrictEqual(EXPECTED_PAYLOADS);
 }
 
 describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every group the provenance records", () => {
-    // 19 case payloads and 1 rejection payload. Counted apart on purpose: the
-    // rejection payload carries no rendering, so folding it into the case
-    // count would inflate what "the corpus covers" claims.
-    expect(corpus.payloads.length).toBe(19);
+    // 23 case payloads (19 AsciiMath, 4 LaTeX) and 1 rejection payload.
+    // Counted apart on purpose: the rejection payload carries no rendering, so
+    // folding it into the case count would inflate what "the corpus covers"
+    // claims.
+    expect(corpus.payloads.length).toBe(23);
     expect(corpus.rejectionPayloads.length).toBe(1);
-    expect(corpus.provenance.payloads.length).toBe(20);
-    assertExpectedGroups(corpus);
+    expect(corpus.provenance.payloads.length).toBe(24);
+    assertExpectedPayloads(corpus);
   });
 
-  it("carries 92 cases with distinct ids", () => {
-    expect(corpus.cases.length).toBe(92);
-    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(92);
+  it("carries 111 cases with distinct ids", () => {
+    expect(corpus.cases.length).toBe(111);
+    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(111);
+  });
+
+  it("carries both input formats, and says which cases are which", () => {
+    // The pin's headline change: a second input notation. Counted per format,
+    // because the whole point of the round-trip scoping below is that these two
+    // numbers are different, and a corpus that quietly lost its LaTeX half
+    // would otherwise only show up as a total that still looked large.
+    const byFormat = new Map<string, number>();
+    for (const entry of corpus.cases) {
+      byFormat.set(entry.inputFormat, (byFormat.get(entry.inputFormat) ?? 0) + 1);
+    }
+    expect([...byFormat.entries()].sort()).toStrictEqual([
+      ["asciimath", 92],
+      ["latex", 19],
+    ]);
+    // Every rejection is still AsciiMath: the LaTeX corpus ships no rejection
+    // payload at this pin.
+    expect(new Set(corpus.rejections.map((entry) => entry.inputFormat))).toStrictEqual(
+      new Set(["asciimath"]),
+    );
   });
 
   it("was generated the canonical way", () => {
@@ -275,7 +306,7 @@ describe("what this port checks against", () => {
     // shared corpus has no case to withhold — only the valid one is in the pin.
     expect(inPin).toStrictEqual(["text-unitsml-valid"]);
     expect(readCorpusCases().length).toBe(corpus.cases.length - inPin.length);
-    expect(readCorpusCases().length).toBe(91);
+    expect(readCorpusCases().length).toBe(110);
   });
 
   it("names the deferred feature and cites the architecture note", () => {
@@ -558,16 +589,16 @@ describe("a pin that quietly loses a group", () => {
   );
 
   it("loads without complaint, which is the whole problem", () => {
-    expect(shrunk.payloads.length).toBe(18);
-    expect(shrunk.cases.length).toBe(86);
-    expect(shrunk.payloads.map((payload) => payload.group)).not.toContain("frac");
+    expect(shrunk.payloads.length).toBe(22);
+    expect(shrunk.cases.length).toBe(105);
+    expect(shrunk.payloads.map((payload) => payload.path)).not.toContain("asciimath/frac.yaml");
   });
 
   it("is rejected by the assertion the shipped pin passes", () => {
     // The same function, applied to both pins: it accepts the real one and
     // throws on this one. Without running it against damaged input, nothing
     // would show the expectation rejects anything.
-    expect(() => assertExpectedGroups(loadPinnedCorpus())).not.toThrow();
-    expect(() => assertExpectedGroups(shrunk)).toThrow();
+    expect(() => assertExpectedPayloads(loadPinnedCorpus())).not.toThrow();
+    expect(() => assertExpectedPayloads(shrunk)).toThrow();
   });
 });

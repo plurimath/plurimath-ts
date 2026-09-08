@@ -51,15 +51,16 @@ function expectedLatex(entry: (typeof cases)[number]): string {
 }
 
 describe("latex render parity, corpus layer (recorded model -> text)", () => {
-  it("has the 91 reachable cases (92 pinned, 1 withheld as UnitsML)", () => {
+  it("has the 110 reachable cases (111 pinned, 1 withheld as UnitsML)", () => {
     // A suite that quietly loaded zero cases has happened to this repository
     // once before; both counts are pinned so it cannot happen silently.
-    expect(cases.length).toBe(91);
-    expect(rendered.length).toBe(91);
-    // The round-trip layer's scoped list is pinned too. Every pinned case is
-    // AsciiMath today, so scoping removes nothing; when a second input corpus
-    // lands this number drops deliberately rather than the layer thinning out
-    // unnoticed.
+    expect(cases.length).toBe(110);
+    expect(rendered.length).toBe(110);
+    // The round-trip layer's scoped list is pinned too, and it is now smaller
+    // than the corpus layer: 91 of the 110 reachable cases are written in
+    // AsciiMath and 19 in LaTeX, which this port cannot yet parse. The gap
+    // between the two numbers IS the second input corpus, so a suite that
+    // stopped scoping would show up here as the two converging.
     expect(roundTrip.length).toBe(91);
   });
 

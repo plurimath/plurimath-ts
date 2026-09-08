@@ -88,10 +88,26 @@ sidecar, provenance = RenderFixtureProvenance.prepare(
   corpus: true,
 )
 
-cases = CorpusGenerator.read_pin_cases.map do |c|
+# Every row below is `Plurimath::Math.parse(input, :asciimath)`, so this sweep
+# takes the cases WRITTEN in AsciiMath and no others. The shared corpus is no
+# longer AsciiMath-only -- `corpus/latex/*.yaml` arrived with the pin -- and
+# handing LaTeX source to the AsciiMath parser would record whatever fell out
+# as though it were the gem's answer for that case. The TypeScript side scopes
+# the same way (`parseableCases` in test/core/model-builder.ts); the two lists
+# have to agree or `carries exactly the pinned corpus's case ids` fails.
+PARSEABLE_INPUT_FORMAT = "asciimath"
+
+all_cases = CorpusGenerator.read_pin_cases
+abort "REFUSING: zero pinned corpus cases found" if all_cases.empty?
+
+cases = all_cases.select { |c| c["input_format"] == PARSEABLE_INPUT_FORMAT }.map do |c|
   { group: c["group"], id: c["id"], input: c["input"] }
 end
-abort "REFUSING: zero pinned corpus cases found" if cases.empty?
+if cases.empty?
+  formats = all_cases.map { |c| c["input_format"] }.uniq.sort
+  abort "REFUSING: no pinned case has input_format #{PARSEABLE_INPUT_FORMAT.inspect}; " \
+        "this sweep would render zero cases. Formats present: #{formats.join(', ')}"
+end
 
 duplicates = cases.map { |c| c[:id] }.tally.select { |_, count| count > 1 }.keys
 abort "REFUSING: duplicate case ids in the corpus: #{duplicates.join(', ')}" unless duplicates.empty?

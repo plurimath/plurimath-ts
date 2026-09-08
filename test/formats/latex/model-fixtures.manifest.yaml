@@ -2,10 +2,8 @@
 # `payload.sha256` covers the whole payload file, including its final newline.
 ---
 schema: plurimath-corpus/manifest/1
-committable: false
-warnings:
-- generated with --allow-dirty
-- 'generator checkout dirty: scripts/gate-package.mjs, scripts/generate-latex-model-fixtures.rb, scripts/generate-latex-parser-data.rb, src/core/nodes.ts, src/formats/latex/generated/provenance.ts, src/formats/latex/generated/transform-tables.ts, src/formats/latex/index.ts, src/formats/latex/parser.ts, src/formats/latex/preprocess.ts, src/formats/latex/registry.ts, src/formats/latex/transform.ts, test/formats/latex/model-parity.spec.ts, test/formats/latex/registry.spec.ts, test/formats/latex/transform-coverage.spec.ts, test/formats/subpath-surface.spec.ts, test/gates/payload-validation.spec.ts'
+committable: true
+warnings: []
 generator:
   path: scripts/generate-latex-model-fixtures.rb
   sha256: c1eb590760beffeb46aa2556bb284a3eae27a4116b08abbda66fba235a58daa9
@@ -14,25 +12,9 @@ generator:
     scripts/generate-latex-model-fixtures.rb: c1eb590760beffeb46aa2556bb284a3eae27a4116b08abbda66fba235a58daa9
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: a28c98384113defebabc97107793414a04d9d876
-    clean: false
-    dirty_paths:
-    - scripts/gate-package.mjs
-    - scripts/generate-latex-model-fixtures.rb
-    - scripts/generate-latex-parser-data.rb
-    - src/core/nodes.ts
-    - src/formats/latex/generated/provenance.ts
-    - src/formats/latex/generated/transform-tables.ts
-    - src/formats/latex/index.ts
-    - src/formats/latex/parser.ts
-    - src/formats/latex/preprocess.ts
-    - src/formats/latex/registry.ts
-    - src/formats/latex/transform.ts
-    - test/formats/latex/model-parity.spec.ts
-    - test/formats/latex/registry.spec.ts
-    - test/formats/latex/transform-coverage.spec.ts
-    - test/formats/subpath-surface.spec.ts
-    - test/gates/payload-validation.spec.ts
+    commit: 41436096d5381258ab6568d6b4e821ac830f8efc
+    clean: true
+    dirty_paths: []
 oracle:
   gem: plurimath
   version: 0.11.6

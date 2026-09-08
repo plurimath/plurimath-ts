@@ -50,13 +50,22 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
 # rule the oracle fires for it and the shape that rule leaves behind. Measured
 # with every registered block wrapped in a counter, not read off the source.
 #
+# Rule numbers are the lines the `rule(` calls OPEN on, recovered from the
+# block's `source_location` — Ruby reports the line carrying `do`, which for a
+# multi-line header is one line later. Two of these were first written as the
+# block line; both are corrected here against a fresh trace.
+#
 #   "±"        rule 99   `{combined_symbols: simple}` alone -> `Symbols::Pm`.
 #              The port has no rule for that node, and it arrives as the ROOT of
 #              the tree, where `Kernel#Array` would fold it into pairs before
 #              anything could refuse it.
-#   "a^b c"    rule 766  `{sup_exp: simple, expr: simple}`.
-#   "a≤b"      rule 746  `{factor: simple, operand: simple}`.
-#   "x a/b c"  rule 1791 `{frac: simple, expr: simple}` — the same KEY SET the
+#   "a^b c"    rule 765  `{expr: simple, sup_exp: simple}`.
+#   "a≤b"      rule 745  `{factor: simple, operand: SEQUENCE}`. The port carries
+#              `:735`, the `operand: simple` twin, and the trace shows `:735`
+#              firing on the inner node and `:745` on the outer one — so it is
+#              the matcher KIND, not the key set, that puts this input outside
+#              the slice.
+#   "x a/b c"  rule 1791 `{expr: simple, frac: simple}` — the same KEY SET the
 #              corpus's `(a)/(+) b` leaves unmatched, but with both values
 #              resolved. A key set is not a signature: the gem matches this one
 #              and leaves that one alone.

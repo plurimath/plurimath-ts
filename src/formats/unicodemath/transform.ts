@@ -1318,10 +1318,15 @@ export function unicodemathTransform(): Transform {
  * `[["factor", Symbol("a")], ["expr", {combined_symbols: "&#xb1;", expr:
  * Symbol("b")}]]` — a tree no renderer can read, returned without raising.
  *
- * Anything NOT on this list is a refusal: it means the transform found no rule
- * for a node the gem does match, which for this slice means a rule family it
- * has not reached, and the signature is named so the gap reads as itself rather
- * than as mangled output.
+ * **This list is the measured corpus exceptions, not a decision procedure.** A
+ * signature's absence does NOT mean the gem matches it: it means no pinned
+ * corpus input produced it, so nothing here knows. Anything absent is REFUSED,
+ * which is conservative in both directions — it catches a node whose rule this
+ * slice has not reached, and it also refuses a handful the gem itself leaves
+ * unmatched. Measured example: `±+a` leaves
+ * `{combined_symbols=simple, expr=sequence}` unmatched in the gem too, which
+ * answers it with folded pairs; this port refuses it. Widening the list is a
+ * measurement, never a guess — every entry below came from an oracle trace.
  */
 const GEM_UNMATCHED_SIGNATURES: ReadonlySet<string> = new Set([
   "accent_symbols=simple",

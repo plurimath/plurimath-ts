@@ -661,10 +661,14 @@ module UnicodeMathParserDataGenerator
   # are hashed into six other artifacts' provenance, and editing it would
   # invalidate all of them for a fault that is this generator's to contain.
   #
-  # The guard is not just the assignment. Reading one oracle source back and
+  # The guard is not just the assignment: reading one oracle source back and
   # requiring `valid_encoding?` proves the override actually reached `File.read`
-  # — a future refactor that moves the census call out of this block fails at
-  # generation time instead of only under a C locale.
+  # INSIDE this block. That is all it proves. It cannot notice the census being
+  # moved out of the block — measured under `LC_ALL=C`,
+  # `with_utf8_source_reads(gem) { nil }` passes, `Encoding.default_external` is
+  # US-ASCII again on return, and `build_census(gem)` then raises the same deep
+  # `ArgumentError`. Keeping the census inside the block is a rule this code
+  # cannot enforce on itself; the single call site above is what upholds it.
   def with_utf8_source_reads(gem_dir)
     previous = Encoding.default_external
     Encoding.default_external = Encoding::UTF_8

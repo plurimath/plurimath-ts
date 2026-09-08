@@ -102,3 +102,27 @@ The gem delegates to the `mml` and `omml` gems, and the organisation ships an
 Opal-compiled `@plurimath/mml`. Same shape as the UnitsML question, and the
 same caution: evaluate on evidence — does it publish working artifacts, and
 does it yield a native model or an Opal one?
+
+## What the UnicodeMath transform's coverage invariant should require
+
+`test/formats/unicodemath/transform-coverage.spec.ts` asserts that every ported
+rule fires at least once, and the first slice's rule set was chosen as "the
+rules the pinned corpus fires on the oracle" — 78 of them.
+
+`transform.rb:1791` (`{expr: simple, frac: simple}`) was left out of that slice
+on the strength of it: no corpus input fires it. But the slice-boundary review
+observed that the coverage loop already drives the `slice-boundary` fixture
+rows too, and those are measured against the oracle exactly as the corpus rows
+are. So the invariant the code actually enforces is the wider "every ported rule
+is exercised by a MEASURED fixture", and under that wording `:1791` could be
+ported with `x a/b c` moving from the refusal list into the parity list.
+
+The narrow reading has one thing going for it that is worth stating before it is
+given up: while the boundary list is hand-picked, "the rules the corpus fires"
+is a set nobody chose, so the slice cannot quietly grow to whatever the porter
+found interesting. The wider reading trades that for the ability to close a
+family the corpus happens not to reach.
+
+Not decided here, and deliberately not acted on in the first slice. Whoever
+opens the second one should settle the wording first, because it decides the
+rule set before any porting starts.

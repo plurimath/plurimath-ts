@@ -17,6 +17,14 @@
  * record, payload byte count and SHA-256, and stable row ids. It does not prove
  * Ruby output equivalence; the class-B regeneration gate does that.
  *
+ * The payload files themselves are excluded from Biome in `biome.json`. They
+ * are machine-written and their exact bytes are hashed into the sidecar, and
+ * Biome's JSON formatter does not agree with Ruby's `JSON.pretty_generate`
+ * about a short array — it prints `[null]` on one line where Ruby expands it —
+ * so a formatter pass would silently invalidate the recorded `payload.sha256`.
+ * Nothing is lost: this gate checks their schema, and the class-B regeneration
+ * gate checks their content.
+ *
  * That is not hypothetical. This gate was written after exactly that happened:
  * `scripts/generate-corpus.rb` was edited twice for the manifest-accuracy work
  * and only its own outputs regenerated, leaving `src/core/generated` and
@@ -90,19 +98,30 @@ const FIXTURE_SPECS = {
     generator: "scripts/probe-degenerate-slots.rb",
     schema: "plurimath-corpus/degenerate-slots/1",
     rows: "rows",
+    shape: "degenerate-slots",
     usesCorpus: false,
     usesRenderInventory: true,
+  },
+  "model-fixtures.json": {
+    generator: "scripts/generate-latex-model-fixtures.rb",
+    schema: "plurimath-corpus/latex-model/1",
+    rows: "cases",
+    shape: "latex-model",
+    usesCorpus: true,
+    usesRenderInventory: false,
   },
   "parity-fixtures.json": {
     generator: "scripts/generate-parity-fixtures.rb",
     schema: "plurimath-corpus/render-parity/1",
     rows: "cases",
+    shape: "render-parity",
     usesCorpus: true,
     usesRenderInventory: false,
   },
 } as const;
 const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "degenerate-fixtures.json"
+  | "model-fixtures.json"
   | "parity-fixtures.json"
 )[];
 const LEGACY_FORMAT_FIXTURES = [
@@ -576,7 +595,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         ids.length,
       );
 
-      if (record.spec.rows === "cases") {
+      if (record.spec.shape === "render-parity") {
         expectExactKeys(
           record.payload,
           ["$comment", "schema", "format", "caseCount", "renderedCount", "raisedCount", "cases"],
@@ -616,6 +635,77 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
           rows.length - rendered,
         );
+      } else if (record.spec.shape === "latex-model") {
+        // The parse-side twin of the branch above. A row records what the gem
+        // did with a LaTeX INPUT, so its outcome is a serialized `model` rather
+        // than a rendered string, and every row that got as far as the parser
+        // also carries the `preprocessed` text the grammar saw. A row that
+        // raised inside preprocessing has neither, which is why `preprocessed`
+        // is optional on a refusal and required on a parse.
+        expectExactKeys(
+          record.payload,
+          [
+            "$comment",
+            "schema",
+            "format",
+            "caseCount",
+            "parsedCount",
+            "raisedCount",
+            "corpusLatexCount",
+            "cases",
+          ],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        const parsed = rows.filter((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          stringField(item, "group", record.relative);
+          stringValue(item, "input", record.relative);
+          const hasModel = typeof item.model === "object" && item.model !== null;
+          const hasRefusal = typeof item.raises === "string";
+          expect(Number(hasModel) + Number(hasRefusal), `${at} outcome`).toBe(1);
+          if (hasRefusal) {
+            expectExactKeys(
+              item,
+              [
+                "group",
+                "id",
+                "input",
+                "raises",
+                "raisedIn",
+                ...("preprocessed" in item ? ["preprocessed"] : []),
+              ],
+              at,
+            );
+            expect(["preprocess", "parse"]).toContain(
+              stringField(item, "raisedIn", record.relative),
+            );
+          } else {
+            expectExactKeys(item, ["group", "id", "input", "preprocessed", "model"], at);
+            stringValue(item, "preprocessed", record.relative);
+            const model = mapField(item, "model", at);
+            expect(stringField(model, "class", at)).toBe("Math::Formula");
+            mapField(model, "fields", at);
+          }
+          return hasModel;
+        }).length;
+        expect(integerField(record.payload, "parsedCount", record.relative)).toBe(parsed);
+        expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
+          rows.length - parsed,
+        );
+        // The corpus half is what makes this fixture more than a hand-written
+        // list, so its size is checked rather than trusted.
+        const fromCorpus = rows.filter(
+          (row, index) =>
+            stringField(
+              mapping(row, `${record.relative}.cases[${index}]`),
+              "group",
+              record.relative,
+            ) === "corpus-latex",
+        ).length;
+        expect(integerField(record.payload, "corpusLatexCount", record.relative)).toBe(fromCorpus);
+        expect(fromCorpus).toBeGreaterThan(50);
       } else {
         expectExactKeys(
           record.payload,

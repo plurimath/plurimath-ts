@@ -36,7 +36,7 @@ import * as unicodemath from "../../src/formats/unicodemath/index";
 const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly string[]]> = [
   ["./asciimath", asciimath, ["parseAsciimath", "toAsciimath"]],
   ["./html", html, ["toHtml"]],
-  ["./latex", latex, ["toLatex"]],
+  ["./latex", latex, ["parseLatex", "toLatex"]],
   ["./mathml", mathml, ["toMathml"]],
   ["./unicodemath", unicodemath, ["toUnicodemath"]],
 ];

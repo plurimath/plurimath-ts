@@ -242,17 +242,26 @@ function requiredString(map: Mapping, key: string, where: string): string {
 
 /**
  * A string field the shared schemas declare as a plain `"type": "string"` with
- * no `minLength`, so `""` is a value the corpus is allowed to carry and this
- * reader must not treat as damage.
+ * no constraint on its length, so `""` is a value the corpus is allowed to
+ * carry and this reader must not treat as damage.
  *
  * Only `preprocessed` is read through this, in both the case reader and the
  * rejection reader, because both upstream schemas declare it the same way
  * (`schema/cases.json`, `schema/cases2.json`, `schema/rejections.json`).
  * Preprocessing can legitimately consume the whole input: LaTeX's pass strips
  * whitespace, so `latex-whitespace-only` records `input: "   "` with
- * `preprocessed: ""`. Every other string field this reader takes IS declared
- * `minLength: 1` upstream — `id`, `input`, `group`, `input_format` — and stays
- * on `requiredString`, so an empty one there still stops the load.
+ * `preprocessed: ""`.
+ *
+ * Every other string field this reader takes is barred from `""` upstream and
+ * stays on `requiredString`, so an empty one there still stops the load — but
+ * by three different constructs, not all by `minLength`. Read off the pinned
+ * schemas: `input` and `description` carry `minLength: 1`; `id` and `group`
+ * carry `$defs/slug`, which is the pattern `^[a-z0-9]+(-[a-z0-9]+)*$`;
+ * `input_format` carries `$defs/input_format`, an `enum`; and `schema` carries
+ * a `pattern` in `cases.json` and `cases2.json` and a `const` in
+ * `rejections.json`. `expected.<target>.output` in `cases2.json` is the one
+ * other string with no length constraint; it is read elsewhere, and whether an
+ * empty render is legal there is a separate question from this one.
  *
  * The distinction is not cosmetic. `loadPinnedCorpus` throws before it returns
  * anything, so reading this field as non-empty did not fail one case: it

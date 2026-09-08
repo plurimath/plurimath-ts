@@ -400,4 +400,34 @@ describe("Mbox, a LaTeX-only name whose to_unicodemath delegates to Text", () =>
       toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: sym("x") })),
     ).toThrow(RenderError);
   });
+
+  it("reads an ABSENT slot as the gem's nil, not as the empty string", () => {
+    // §5's structural dispatch admits a plain object with the slot missing, and
+    // `Mbox.new` stores nil. Measured on the pinned oracle 00c52783:
+    //
+    //   Formula([Mbox.new]).to_unicodemath     => ""      (Text answers nil)
+    //   Formula([Mbox.new("")]).to_unicodemath => "\"\""  (two quote marks)
+    //
+    // `Text`'s own Ruby default is `""`, so the absent slot must be narrowed to
+    // nil before a fresh Text is built or the second answer is given for the
+    // first.
+    const absent = { kind: "unaryFunction", name: "Mbox" } as unknown as MathNode;
+    expect(toUnicodemath(absent)).toBe("");
+  });
+
+  it("reads false in the slot as the gem's nil, as Ruby truthiness does", () => {
+    // `Text#to_unicodemath` opens `return unless value` — a nil TEST would be
+    // `unless value.nil?`, and this is not that. Measured on the pinned oracle
+    // 00c52783: `Text.new(false).to_unicodemath` is nil and
+    // `Formula([Mbox.new(false)]).to_unicodemath` is "". The port threw here,
+    // which was a defect in the Text renderer that this arm exposed.
+    const falseSlot = {
+      kind: "unaryFunction",
+      name: "Mbox",
+      parameterOne: false,
+    } as unknown as MathNode;
+    expect(toUnicodemath(falseSlot)).toBe("");
+    const falseText = { kind: "text", parameterOne: false } as unknown as MathNode;
+    expect(toUnicodemath(falseText)).toBe("");
+  });
 });

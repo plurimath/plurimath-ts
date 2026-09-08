@@ -45,6 +45,21 @@ import { XmlElement } from "../../xml/index";
  * separately. This one is the names whose OMML method is inherited, which is a
  * question about the gem rather than about the parser, and is answered per
  * format — the mathml override set is not the omml override set.
+ *
+ * `Mbox` is a KNOWN gap, not an absent case. The corpus reaches it —
+ * `latex-text-mbox` is `\mbox{hi}` — the gem renders it, and the four P1
+ * formats render it by delegating to `Text` the way `mbox.rb` does. Its OMML
+ * method delegates to `Text` too, but delegating HERE would not reproduce the
+ * gem: measured on the pinned oracle `00c52783`,
+ * `Formula([Mbox("hi")]).to_omml` emits a bare `<m:t>hi</m:t>` where
+ * `Formula([Text("hi")]).to_omml` emits `<m:r><m:rPr><m:sty m:val="p"/>
+ * </m:rPr><m:t>hi</m:t></m:r>` — the formula boundary wraps a `Text` child in
+ * a run and does not wrap an `Mbox` one, so the two differ at the boundary
+ * even though their leaf methods agree. Closing it means measuring that
+ * boundary, not adding a name to a set. Nothing here forces the question: the
+ * parity fixtures cannot reach it, because
+ * `scripts/generate-parity-fixtures.rb` sweeps `input_format: asciimath` and
+ * `\mbox` is LaTeX — which is exactly why it is written down.
  */
 const OMML_BASE_UNARY_CLASSES: ReadonlySet<string> = new Set([
   "Arccos",

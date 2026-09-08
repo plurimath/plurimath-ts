@@ -46,6 +46,24 @@ import { renderText } from "../text/mathml";
 /** `Utility::UNARY_CLASSES` — the names rendered as a spacing-wrapped `<mi>`. */
 const UNARY_MI: ReadonlySet<string> = new Set(MATHML_UNARY_MI_NAMES);
 
+/**
+ * The fresh `Text` that `mbox.rb` builds out of the slot.
+ *
+ * The `?? null` is the whole point. `Text.new(parameter_one)` passes the slot
+ * POSITIONALLY, so a nil slot stays nil — but `Text#initialize` defaults an
+ * OMITTED argument to `""` where `UnaryFunction#initialize` defaults to nil
+ * (measured on the pinned oracle `00c52783`: `Text.new.parameter_one` is `""`,
+ * `Mbox.new.parameter_one` is nil), and `TextNode` faithfully reproduces that
+ * `""` for an `undefined` init. §5's structural dispatch admits a plain object
+ * with `parameterOne` absent, which reaches here as `undefined`; without the
+ * narrowing it would render `Text.new("")` where the gem renders
+ * `Text.new(nil)` — `<mtext></mtext>` against `<mtext/>`. An explicit `""` and
+ * an explicit `false` both pass through untouched.
+ */
+function mboxText(parameterOne: NodeParameter | undefined): NodeOf<"text"> {
+  return new TextNode({ parameterOne: parameterOne ?? null });
+}
+
 export function renderUnaryFunction(
   node: NodeOf<"unaryFunction">,
   context: RenderContext,
@@ -103,7 +121,11 @@ export function renderUnaryFunction(
       // nil and `false` → the childless `<mtext/>`; a node, a list and an
       // integer each die in `Text`'s own `gsub`, which is the refusal
       // `renderText` already carries.
-      return renderText(new TextNode({ parameterOne: node.parameterOne }));
+      //
+      // `mboxText` and not `new TextNode({ parameterOne: node.parameterOne })`:
+      // `Text#initialize` defaults its slot to `""` where `Mbox.new` leaves nil,
+      // and `<mtext></mtext>` and `<mtext/>` are different bytes.
+      return renderText(mboxText(node.parameterOne));
     case "Tr":
       return renderTr(node, context);
     default:

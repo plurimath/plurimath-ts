@@ -31,6 +31,7 @@
  *     renders `"╱(a)"`, exactly like `Cancel(Symbol("a"))`.
  */
 
+import type { NodeParameter } from "../../core/index";
 import { RenderError, TextNode } from "../../core/index";
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
 import {
@@ -48,6 +49,24 @@ import { renderText } from "../text/unicodemath";
 
 /** U+2061 FUNCTION APPLICATION — invisible, but a real character. */
 const APPLY = "⁡";
+
+/**
+ * The fresh `Text` that `mbox.rb` builds out of the slot.
+ *
+ * The `?? null` is the whole point. `Text.new(parameter_one)` passes the slot
+ * POSITIONALLY, so a nil slot stays nil — but `Text#initialize` defaults an
+ * OMITTED argument to `""` where `UnaryFunction#initialize` defaults to nil
+ * (measured on the pinned oracle `00c52783`: `Text.new.parameter_one` is `""`,
+ * `Mbox.new.parameter_one` is nil), and `TextNode` faithfully reproduces that
+ * `""` for an `undefined` init. §5's structural dispatch admits a plain object
+ * with `parameterOne` absent, which reaches here as `undefined`; without the
+ * narrowing it would render `Text.new("")` where the gem renders
+ * `Text.new(nil)` — two quotation marks against nothing at all. An explicit
+ * `""` and an explicit `false` both pass through untouched.
+ */
+function mboxText(parameterOne: NodeParameter | undefined): NodeOf<"text"> {
+  return new TextNode({ parameterOne: parameterOne ?? null });
+}
 
 /** U+2571 BOX DRAWINGS LIGHT DIAGONAL — `Cancel`'s strike (`cancel.rb:26`). */
 const CANCEL_MARK = "╱";
@@ -112,11 +131,16 @@ export function renderUnaryFunction(
       //
       // Measured on the pinned oracle `00c52783`, `Mbox.new(v)` against
       // `Text.new(v)`: identical on every shape. `"hi"` → `"\"hi\""`,
-      // `"a b"` → `"\"a b\""`, `""` → `"\"\""`, nil → Ruby nil (which this
-      // renderer carries as `null`, like `Text`); a node, a list and an
+      // `"a b"` → `"\"a b\""`, `""` → `"\"\""`, nil and `false` → Ruby nil
+      // (which this renderer carries as `null`, like `Text`, and which the
+      // formula boundary contributes nothing for); a node, a list and an
       // integer each die in `Text`'s own `start_with?`, which is the refusal
       // `renderText` already carries.
-      return renderText(new TextNode({ parameterOne: node.parameterOne }));
+      //
+      // `mboxText` and not `new TextNode({ parameterOne: node.parameterOne })`:
+      // `Text#initialize` defaults its slot to `""` where `Mbox.new` leaves
+      // nil, and `""` renders two quotation marks where nil renders nothing.
+      return renderText(mboxText(node.parameterOne));
     case "Tr":
       return renderTr(node, context);
     default: {

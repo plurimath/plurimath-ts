@@ -611,6 +611,21 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     ).toThrow(RenderError);
   });
 
+  it("Mbox with the slot ABSENT is the gem's nil, not the empty string", () => {
+    // §5's structural dispatch admits a plain object with the slot missing, and
+    // `Mbox.new` stores nil there — measured on the pinned oracle 00c52783:
+    //
+    //   Mbox.new.parameter_one             => nil
+    //   Formula([Mbox.new]).to_mathml      => …<mtext/>…
+    //   Formula([Mbox.new("")]).to_mathml  => …<mtext></mtext>…
+    //
+    // Those are different bytes, and `Text`'s own Ruby default IS `""`, so
+    // handing the absent slot straight to a fresh Text renders the second for
+    // the first.
+    const absent = { kind: "unaryFunction", name: "Mbox" } as unknown as MathNode;
+    expect(toMathml(formula(absent))).toBe(math("    <mtext/>"));
+  });
+
   it("Hom is the one admitted name that reaches the <mo> arm of the unary default", () => {
     // Measured on the pinned oracle through a Formula:
     //   Hom.new(Symbol("x")) => <mrow><mo>hom</mo><mi>x</mi></mrow>

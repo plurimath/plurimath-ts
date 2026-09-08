@@ -95,23 +95,37 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
     case "Lcm":
       // `"glb{…}"`, `"lcm{…}"` — no backslash (`glb.rb:11`, `lcm.rb:25`).
       return `${name.toLowerCase()}{${s(latexValue(node.parameterOne, context, `${name.toLowerCase()}.parameterOne`))}}`;
-    case "Mbox":
+    case "Mbox": {
       // `mbox.rb:15-17`: `"\\mbox{#{parameter_one}}"`. Raw interpolation, so
-      // this is the one of Mbox's six overrides that does NOT delegate to
-      // `Text` — `Text#to_latex` writes `\text{…}`, and delegating would have
-      // emitted the wrong command. It is not `latex_value` either: no child is
-      // rendered, so `\mbox{}` is what a nil, an empty string, an integer or a
-      // boolean each produce, through the same interpolation judge `Left`/
-      // `Right` take on the asciimath side.
+      // this is one of the two Mbox overrides that do NOT delegate to `Text` —
+      // `Text#to_latex` writes `\text{…}`, and delegating would have emitted
+      // the wrong command. (`to_html`, which hands back `parameter_one`
+      // itself, is the other; the remaining four do delegate.) It is not
+      // `latex_value` either: no child is rendered, so this takes the same
+      // interpolation judge `Left`/`Right` take on the asciimath side.
       //
       // Measured on the pinned oracle `00c52783`: `Mbox.new("hi")` →
       // `"\\mbox{hi}"`, `Mbox.new("a b")` → `"\\mbox{a b}"`, `Mbox.new(nil)`
       // and `Mbox.new("")` → `"\\mbox{}"`, `Mbox.new(5)` → `"\\mbox{5}"`,
-      // `Mbox.new(true)` → `"\\mbox{true}"`. A NODE interpolates Ruby's
-      // default `Object#to_s`, a heap address
+      // `Mbox.new(true)` → `"\\mbox{true}"` — an integer and a boolean write
+      // their own bytes, NOT empty braces. A NODE interpolates Ruby's default
+      // `Object#to_s`, a heap address
       // (`"\\mbox{#<Plurimath::Math::Symbols::Symbol:0x00007a71...>}"`), which
       // is not reproducible and which `interpolatedValue` refuses.
-      return `\\mbox{${interpolatedValue(node.parameterOne, node.kind, "mbox.parameterOne")}}`;
+      const slot = node.parameterOne;
+      // The one array shape the shared judge can afford to admit, and it is
+      // admitted HERE rather than there: `interpolatedValue` also serves
+      // `../number/latex.ts` and `../color/latex.ts`, whose slots do not reach
+      // Ruby through a bare `"#{}"` (`Number#to_latex` goes through
+      // `Formatter::Numbers::TextRenderer`), so what `[]` does at those sites
+      // is a separate measurement. At THIS site it is measured:
+      // `Mbox.new([]).to_latex` is `"\\mbox{[]}"`, because `Array#to_s` is
+      // `inspect` and an empty list needs neither an object address nor an
+      // Integer/Float distinction — the two reasons the judge refuses a slot.
+      // A non-empty list carries both risks again and keeps raising.
+      if (Array.isArray(slot) && slot.length === 0) return "\\mbox{[]}";
+      return `\\mbox{${interpolatedValue(slot, node.kind, "mbox.parameterOne")}}`;
+    }
     case "Tr":
       return renderTr(node, context);
     default:

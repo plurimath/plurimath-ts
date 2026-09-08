@@ -35,6 +35,22 @@ import { renderText } from "../text/asciimath";
 const UNARY_KEYWORDS: ReadonlySet<string> = new Set(ASCIIMATH_TRANSFORM_UNARY_CLASSES);
 
 /**
+ * The fresh `Text` that `mbox.rb` builds out of the slot.
+ *
+ * `Text.new(parameter_one)` passes the slot POSITIONALLY, so a nil slot stays
+ * nil — but `Text#initialize` defaults an OMITTED argument to `""` where
+ * `UnaryFunction#initialize` defaults to nil (measured on the pinned oracle
+ * `00c52783`: `Text.new.parameter_one` is `""`, `Mbox.new.parameter_one` is
+ * nil), and `TextNode` faithfully reproduces that `""` for an `undefined`
+ * init. §5's structural dispatch admits a plain object with `parameterOne`
+ * absent, which reaches here as `undefined`. An explicit `""` and an explicit
+ * `false` both pass through untouched.
+ */
+function mboxText(parameterOne: NodeParameter | undefined): NodeOf<"text"> {
+  return new TextNode({ parameterOne: parameterOne ?? null });
+}
+
+/**
  * The class names this carrier has measured behaviour for. Three sources,
  * and only the first is generated:
  *
@@ -104,7 +120,17 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
       // `Text`'s own `gsub` (NoMethodError), which is the refusal `renderText`
       // already carries. `Text.new` takes the slot positionally with `lang:`
       // left nil, which is what an omitted `lang` builds here.
-      return renderText(new TextNode({ parameterOne: node.parameterOne }));
+      //
+      // `mboxText` narrows an ABSENT slot to nil before building that `Text`,
+      // because `Text#initialize` defaults an omitted argument to `""` where
+      // `Mbox.new` leaves nil. The two answer alike in THIS format — measured,
+      // `Text.new(nil)` and `Text.new("")` both render `"\"\""` — so the
+      // narrowing changes no byte here today. It is applied anyway: the same
+      // slot renders differently under mathml (`<mtext/>` against
+      // `<mtext></mtext>`) and unicodemath (nothing against two quote marks),
+      // and three arms reading one gem line should not disagree about what the
+      // gem line says.
+      return renderText(mboxText(node.parameterOne));
     case "Tr": {
       // `"[#{tds.join(', ')}]"` — strict elements (`tr.rb:16-21`).
       const cells = node.parameterOne;

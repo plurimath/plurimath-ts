@@ -109,8 +109,10 @@ describe("unary functions", () => {
   });
 
   /**
-   * Measured on the pinned oracle 00c52783 — the one Mbox override that does
-   * NOT delegate to Text, which writes `\text{…}`:
+   * Measured on the pinned oracle 00c52783. `to_latex` is one of the two Mbox
+   * overrides that do NOT delegate to `Text` — `Text#to_latex` writes
+   * `\text{…}` — and `to_html`, which hands back `parameter_one` itself, is
+   * the other.
    *
    *   Mbox.new("hi").to_latex   => "\\mbox{hi}"     Text.new("hi")  => "\\text{hi}"
    *   Mbox.new("a b").to_latex  => "\\mbox{a b}"
@@ -125,6 +127,17 @@ describe("unary functions", () => {
     expect(toLatex(unary("Mbox", "a b"))).toBe("\\mbox{a b}");
     expect(toLatex(unary("Mbox"))).toBe("\\mbox{}");
     expect(() => toLatex(unary("Mbox", x()))).toThrow(RenderError);
+  });
+
+  it("Mbox renders an EMPTY list, the one array shape Ruby's interpolation pins", () => {
+    // Measured on the pinned oracle 00c52783: `Mbox.new([]).to_latex` is
+    // `"\\mbox{[]}"`, and `"#{[]}"` is `"[]"` — `Array#to_s` is `inspect`, so
+    // an empty list needs neither an object address nor an Integer/Float
+    // distinction, which are the two reasons the shared interpolation judge
+    // refuses a slot. A NON-empty list carries both again: measured,
+    // `Mbox.new([Symbols::Symbol("x")]).to_latex` interpolates a heap address.
+    expect(toLatex(unary("Mbox", []))).toBe("\\mbox{[]}");
+    expect(() => toLatex(unary("Mbox", [x()]))).toThrow(RenderError);
   });
 
   it("Hom renders the carrier default, though the transform cannot build it", () => {

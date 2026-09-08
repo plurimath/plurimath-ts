@@ -18,15 +18,23 @@
 #
 # It loads the oracle through $LOAD_PATH and refuses to answer from an
 # installed gem, which would silently be a different version
-# (PORTING-STANDARDS.md).
+# (PORTING-STANDARDS.md). It also refuses a checkout that is not AT the pinned
+# revision, or that is dirty: an answer measured from either is not the answer
+# `corpus/provenance.yaml` names, and the whole value of this fixture is that
+# it came from the revision the rest of this repository's generated data came
+# from. `--allow-dirty` downgrades the two checkout refusals to warnings, for
+# probing an experiment; a fixture must never be taken from such a run.
 
 require "optparse"
 require "yaml"
 require_relative "../generate-corpus"
 
-options = { oracle: nil }
+options = { oracle: nil, allow_dirty: false }
 OptionParser.new do |o|
   o.on("--oracle PATH", "clean pinned plurimath checkout") { |v| options[:oracle] = v }
+  o.on("--allow-dirty", "warn instead of refusing on revision or cleanliness") do
+    options[:allow_dirty] = true
+  end
 end.parse!
 abort "--oracle is required" unless options[:oracle]
 
@@ -34,6 +42,33 @@ oracle = File.expand_path(options[:oracle])
 lib = File.join(oracle, "lib")
 unless File.directory?(lib) && File.exist?(File.join(lib, "plurimath.rb"))
   abort "not a plurimath checkout: #{lib}"
+end
+
+# The revision the pin itself names, read from the pinned corpus rather than
+# typed here, so moving the pin moves this check with it.
+pin_provenance = YAML.safe_load(
+  File.read(File.join(CorpusGenerator.pin_root, "corpus", "provenance.yaml")),
+  aliases: false,
+)
+expected_commit = pin_provenance.fetch("oracle").fetch("commit")
+
+def refuse(message, allow_dirty)
+  abort "REFUSING: #{message}" unless allow_dirty
+  warn "WARNING (--allow-dirty): #{message}"
+end
+
+unless CorpusGenerator.git_repository?(oracle)
+  refuse("#{oracle} is not a git checkout; the oracle must be one (ARCHITECTURE.md §7)",
+         options[:allow_dirty])
+end
+actual_commit = CorpusGenerator.git(oracle, "rev-parse", "HEAD").strip
+unless actual_commit == expected_commit
+  refuse("oracle is at #{actual_commit}, not the #{expected_commit} that " \
+         "corpus/provenance.yaml records", options[:allow_dirty])
+end
+oracle_dirty = CorpusGenerator.dirty_paths(oracle)
+unless oracle_dirty.empty?
+  refuse("oracle checkout is dirty: #{oracle_dirty.join(', ')}", options[:allow_dirty])
 end
 
 $LOAD_PATH.unshift(lib)
@@ -49,6 +84,7 @@ unless loaded&.start_with?(lib)
         "An installed gem answers from a different version."
 end
 warn "oracle: #{loaded}"
+warn "revision: #{actual_commit}#{actual_commit == expected_commit ? ' (pinned)' : ' (NOT PINNED)'}"
 
 # The same selection `readCorpusCases` makes on the TypeScript side: every
 # pinned CASE, minus the ids `corpus/exclusions.yaml` withholds for using a

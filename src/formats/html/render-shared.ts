@@ -47,10 +47,33 @@ export function renderChild(value: unknown, context: RenderContext, at: string):
   );
 }
 
+/**
+ * One slot inside one tag, or nothing at all.
+ *
+ * Every carrier `to_html` in the gem is built from this shape:
+ * `first_value = "<TAG>#{parameter_one.to_html(options: options)}</TAG>" if
+ * parameter_one`, and the pieces are then interpolated in order. The guard is
+ * Ruby truthiness, and an unassigned local interpolates as the empty string —
+ * which is why an absent slot contributes nothing at all rather than an empty
+ * tag pair.
+ *
+ * The tag is `i` for most slots, and `sub`/`sup` for the script-bearing
+ * aliases (`Power`, `PowerBase`, `Log`), so it is a parameter here rather
+ * than baked into the helper.
+ */
+export function renderTaggedSlot(
+  tag: string,
+  value: unknown,
+  context: RenderContext,
+  at: string,
+): string {
+  if (!present(value)) return "";
+  return `<${tag}>${s(renderChild(value, context, at))}</${tag}>`;
+}
+
 /** Binary/Ternary slot rendering: call `to_html` on the slot itself. */
 export function renderCarrierSlot(value: unknown, context: RenderContext, at: string): string {
-  if (!present(value)) return "";
-  return `<i>${s(renderChild(value, context, at))}</i>`;
+  return renderTaggedSlot("i", value, context, at);
 }
 
 /** Unary slot rendering: arrays render each member and join with no separator. */

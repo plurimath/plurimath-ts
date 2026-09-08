@@ -1561,6 +1561,13 @@ export function createUnicodemathGrammar(
   const opNary = rule(() => ordered(opNarySymbols, opNaryText));
   const nAscii = rule(() => match("[0-9]").repeat(1).as("number"));
   const aAscii = rule(() => match("[A-Za-z]").repeat(1).as("symbol"));
+  // `repeat()` with no minimum is DELIBERATE and matches the oracle:
+  // `unicode_math/parse.rb:30` is `match["0-9a-fA-F"].repeat`, also min 0, so
+  // `&#x;` parses here exactly as it does there (measured: the gem's own rule
+  // accepts `&#x;` and `&#x41;`, and rejects `&#xZZ;`). The gem's HTML parser
+  // spells the same construct `.repeat(1)` at `html/parse.rb:166` — the two
+  // disagree upstream, and reproducing UnicodeMath's laxness is the point.
+  // Tightening this to `repeat(1)` would be a divergence, not a fix.
   const unicode = rule(() => seq(str("&#x"), match("[0-9a-fA-F]").repeat(), str(";")));
   const anMath = rule(() =>
     seq(space.absent(), match("[\\u{1D400}-\\u{1D7FF}\\u{2102}-\\u{2134}]")),

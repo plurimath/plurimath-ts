@@ -40,7 +40,7 @@ export const LATEX_UNDEROVER_CLASSES: readonly string[] = ["bmod", "pmod", "mod"
 /**
  * `Constants::MATH_OPERATORS` — `math_operators_classes` (`:46`), tagged
  * `:unary_functions`. Written longest-first in the gem because the choice
- * is ordered: `ln` ahead of `liminf` would shadow it.
+ * is ordered: `sin` ahead of `sinh` would shadow it.
  */
 export const LATEX_MATH_OPERATORS: readonly string[] = [
   "liminf",

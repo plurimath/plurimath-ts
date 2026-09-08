@@ -39,10 +39,7 @@ export type UnicodemathTransformDisposition = "implemented" | "aliased";
  * classes sit outside that vocabulary and the transform constructs
  * them directly.
  */
-export type UnicodemathTransformConstructorFamily =
-  | "binary"
-  | "ternary"
-  | "unary";
+export type UnicodemathTransformConstructorFamily = "binary" | "ternary" | "unary";
 
 /**
  * One resolved name: the text as CAPTURED (the registry is keyed by it,
@@ -3869,14 +3866,7 @@ export const UNICODEMATH_MENCLOSE_FUNCTIONS: ReadonlyMap<string, string> = new M
  * quietly stopped matching.
  */
 export const UNICODEMATH_IS_A_CLASSES: ReadonlyMap<string, readonly string[]> = new Map([
-  [
-    "Math::Formula",
-    [
-      "Math::Formula",
-      "Math::Formula::Mrow",
-      "Math::Formula::Mstyle",
-    ],
-  ],
+  ["Math::Formula", ["Math::Formula", "Math::Formula::Mrow", "Math::Formula::Mstyle"]],
   [
     "Math::Function::BinaryFunction",
     [
@@ -3917,24 +3907,9 @@ export const UNICODEMATH_IS_A_CLASSES: ReadonlyMap<string, readonly string[]> = 
       "Math::Function::Underset",
     ],
   ],
-  [
-    "Math::Function::Nary",
-    [
-      "Math::Function::Nary",
-    ],
-  ],
-  [
-    "Math::Function::Overset",
-    [
-      "Math::Function::Overset",
-    ],
-  ],
-  [
-    "Math::Function::Power",
-    [
-      "Math::Function::Power",
-    ],
-  ],
+  ["Math::Function::Nary", ["Math::Function::Nary"]],
+  ["Math::Function::Overset", ["Math::Function::Overset"]],
+  ["Math::Function::Power", ["Math::Function::Power"]],
   [
     "Math::Function::TernaryFunction",
     [
@@ -4023,12 +3998,7 @@ export const UNICODEMATH_IS_A_CLASSES: ReadonlyMap<string, readonly string[]> = 
       "Math::Function::Vec",
     ],
   ],
-  [
-    "Math::Function::Underset",
-    [
-      "Math::Function::Underset",
-    ],
-  ],
+  ["Math::Function::Underset", ["Math::Function::Underset"]],
 ]);
 
 /**

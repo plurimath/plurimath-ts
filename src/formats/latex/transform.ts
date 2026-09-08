@@ -1581,6 +1581,27 @@ export function buildLatexTransform(): LatexTransformBuild {
   return { transform: t, fired, ruleIds };
 }
 
+/**
+ * The one transform `parseLatex` uses, built once.
+ *
+ * Registration is deterministic and takes no arguments — unlike the grammar,
+ * which is built per decimal marker — so rebuilding registers the same 117
+ * rules to no purpose. `asciimathTransform` memoizes for the same reason.
+ *
+ * `buildLatexTransform` stays exported and stays UNmemoized: it returns the
+ * firing counters, and `transform-coverage.spec.ts` needs a fresh, zeroed set.
+ * Sharing this instance with that suite would let one test's firings satisfy
+ * another test's coverage assertion.
+ */
+let latexTransformInstance: Transform | undefined;
+
+export function latexTransform(): Transform {
+  if (latexTransformInstance === undefined) {
+    latexTransformInstance = buildLatexTransform().transform;
+  }
+  return latexTransformInstance;
+}
+
 /** Ruby truthiness: only nil and false are falsy. */
 function rubyTruthy(value: unknown): boolean {
   return value !== null && value !== undefined && value !== false;

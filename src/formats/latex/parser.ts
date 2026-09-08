@@ -30,7 +30,7 @@ import type { LocaleOptions } from "../../formatting/index";
 import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
 import { latexGrammar } from "./grammar";
 import { preprocess } from "./preprocess";
-import { buildLatexTransform, finalizeLatexParse } from "./transform";
+import { finalizeLatexParse, latexTransform } from "./transform";
 
 /**
  * Locale (the decimal marker the grammar reads at parse time) plus the
@@ -83,7 +83,7 @@ export function parseLatex(input: string, options?: LatexParseOptions | null): F
   const { text, map } = preprocess(input);
   const tree = parsePreprocessed(input, text, map, options);
   try {
-    const transformed = buildLatexTransform().transform.apply(tree);
+    const transformed = latexTransform().apply(tree);
     return finalizeLatexParse(transformed, input);
   } catch (error) {
     if (error instanceof ParseError) throw error;

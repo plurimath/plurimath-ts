@@ -107,7 +107,8 @@ does it yield a native model or an Opal one?
 
 `test/formats/unicodemath/transform-coverage.spec.ts` asserts that every ported
 rule fires at least once, and the first slice's rule set was chosen as "the
-rules the pinned corpus fires on the oracle" — 78 of them.
+rules the pinned corpus fires on the oracle" — 86 of them, of which 78 are
+ported once the eight-rule table and matrix family is set aside.
 
 `transform.rb:1791` (`{expr: simple, frac: simple}`) was left out of that slice
 on the strength of it: no corpus input fires it. But the slice-boundary review

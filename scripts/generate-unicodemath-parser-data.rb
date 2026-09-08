@@ -668,7 +668,8 @@ module UnicodeMathParserDataGenerator
   # `with_utf8_source_reads(gem) { nil }` passes, `Encoding.default_external` is
   # US-ASCII again on return, and `build_census(gem)` then raises the same deep
   # `ArgumentError`. Keeping the census inside the block is a rule this code
-  # cannot enforce on itself; the single call site above is what upholds it.
+  # cannot enforce on itself; the single call site below, at the census build,
+  # is what upholds it.
   def with_utf8_source_reads(gem_dir)
     previous = Encoding.default_external
     Encoding.default_external = Encoding::UTF_8

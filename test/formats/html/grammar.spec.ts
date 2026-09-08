@@ -7398,12 +7398,18 @@ describe("scope re-entry", () => {
    * matched replayed the cached success, skipped the write, and left
    * `matching_close_tag` building a tag from an absent name.
    *
-   * `<br><i>x</i>` is the shortest input that does it. The first `<br>` is
-   * tried as a wrapped tag — capturing `br` — before `linebreak` claims it, and
-   * the `<i>` that follows re-enters at a position the failed attempt had
-   * already visited.
+   * `<br><br>x` is a reproducer, not the shortest one — 28 of this group's
+   * 3,628 inputs threw, and no minimal case was looked for. The first `<br>` is
+   * tried as a wrapped tag, capturing `br`, before `linebreak` claims it, and
+   * what follows re-enters at a position the failed attempt had already
+   * visited.
    */
   it("keeps the captured tag name across a failed attempt at the same position", () => {
+    expect(plain(grammar.root.parse("<br><br>x"))).toStrictEqual(
+      JSON.parse(
+        '{"linebreak":"<br>","expression":{"linebreak":"<br>","expression":{"text":"x"}}}',
+      ),
+    );
     expect(plain(grammar.root.parse("<br><i>x</i>"))).toStrictEqual(
       JSON.parse('{"linebreak":"<br>","expression":{"sequence":{"text":"x"}}}'),
     );

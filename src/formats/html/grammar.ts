@@ -474,22 +474,38 @@ export function createHtmlGrammar(decimalMarker: string = DEFAULT_DECIMAL_MARKER
    * broke on backtracking: the `CaptureAtom` is uncacheable but the `seq`
    * around it is not, so a second entry at a position the sequence had already
    * matched replayed the cached success and skipped the capture write. The
-   * close tag was then built from an absent capture. `<br><i>x</i>` is the
-   * shortest input that does it — measured, not deduced — and it threw out of
-   * `caseInsensitiveString` instead of returning the gem's tree.
+   * close tag was then built from an absent capture.
+   *
+   * `<br><br>x` is a reproducer — measured, not deduced. The first `<br>` is
+   * tried as a wrapped tag, capturing `br`, before `linebreak` claims it, and
+   * the second re-enters where the failed attempt had been; it threw out of
+   * `caseInsensitiveString` instead of returning the gem's tree. It is not the
+   * shortest: 28 of the 3,628 inputs in `grammar.spec.ts`'s scope group threw,
+   * and no minimal one was looked for.
    *
    * `dynamic` restores Parslet's timing exactly: it is uncacheable and its
    * builder runs after `ScopeAtom` has pushed the frame, so `parseTag` and
    * `matchingCloseTag` are new objects with empty caches on every entry, while
-   * `inner` stays the shared atom the caller passed — which is also what Ruby
-   * does, since `expression` is a memoized `rule` entity there.
+   * `inner` stays the atom the caller passed.
    *
-   * This is deliberately fixed here rather than in pegkit. `ScopeAtom` itself
-   * is faithful — push a frame, run, pop — and it is `scope`'s *signature*
-   * that is narrower than Parslet's: `Scope.new` takes a block, `scope()` takes
-   * an atom. Composing it with `dynamic` recovers the missing half at the one
-   * call site that needs it, without changing a primitive three other grammars
-   * already depend on.
+   * Sharing `inner` matches Ruby for a plainer reason than memoization:
+   * `wrapped_tag(expression)` closes over an argument that is **already
+   * built**, so every block call reuses that one object whatever it is. Across
+   * the six call sites (`html/parse.rb:16, 33, 38, 63, 68, 121`) it is four
+   * rule entities — `lparen`, `rparen`, `unary`, `binary` — and two atoms
+   * constructed in place, `str("mod").as(:binary)` and
+   * `sequence.as(:sequence)`. So it is not always a memoized rule, and
+   * memoization is not what makes sharing correct.
+   *
+   * `scope` is composed with `dynamic` here rather than changed. pegkit's
+   * `scope()` takes an already-built atom where Parslet's `Scope.new` takes a
+   * block, so the per-entry construction has to come from the caller, and
+   * `dynamic` is exactly that; the pair reproduces `Scope#apply`. This is the
+   * primitive's only production caller — on `origin/main`, `scope(` appears
+   * outside `src/pegkit` only in `test/pegkit/conformance.spec.ts`, twice — so
+   * that is a description of where the code sits, not a claim that changing the
+   * signature would be risky. Whether `scope()` should take a thunk instead is
+   * a pegkit question; this composition is correct either way.
    */
   function wrappedTag(inner: Atom): Atom {
     return scope(

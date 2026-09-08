@@ -84,6 +84,8 @@ describe("the tables arr_to_expression folds into ordered choices", () => {
     expect(UNICODEMATH_BINARY_SYMBOLS.length).toBe(47);
     expect(UNICODEMATH_ORDINARY_SYMBOLS.length).toBe(96);
     expect(UNICODEMATH_RELATIONAL_SYMBOLS.length).toBe(195);
+    expect(UNICODEMATH_UNARY_ARG_FUNCTIONS.length).toBe(7);
+    expect(UNICODEMATH_UNARY_ARG_FUNCTIONS_KEYS.length).toBe(7);
     expect(UNICODEMATH_WRAPPER_SYMBOLS.length).toBe(1492);
   });
 

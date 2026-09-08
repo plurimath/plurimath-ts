@@ -20,7 +20,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { inOracle, ORACLE } from "./oracle-harness";
+import { inOracle } from "./oracle-harness";
 
 /**
  * Calls the probe with `capture_command` replaced, and reports what it did.
@@ -80,22 +80,57 @@ describe("the preflight runs before any generator does", () => {
     expect(r.output).toContain('"BUNDLE_GEMFILE" => "/oracle/checkout/Gemfile"');
   });
 
-  it("is called by both check subcommands before their first generator", () => {
-    // Source-level, because the alternative is running the whole check twice.
-    // Deleting either call site is exactly the regression this catches.
-    const r = inOracle(`
-      body = File.read(${JSON.stringify(ORACLE)})
-      %w[run_repo run_testsuite].map do |name|
-        method_body = body[/def #{name}\\(argv\\).*?\\n  end\\n/m]
-        preflight = method_body.index("assert_frozen_bundle_usable!")
-        generator = method_body.index("run_generator!")
-        [name, !preflight.nil? && !generator.nil? && preflight < generator]
-      end.to_h
-    `);
-    expect(r.ok).toBe(true);
-    expect(r.output).toContain('"run_repo" => true');
-    expect(r.output).toContain('"run_testsuite" => true');
-  });
+  /**
+   * RUNS each subcommand, rather than reading the source for the call.
+   *
+   * A source-level version of this test passed when both call sites were
+   * commented out and when both passed the oracle checkout as `chdir` — a
+   * commented line still contains the substring, and so does a wrong argument.
+   * Only the call itself proves the call.
+   */
+  it.each(["run_repo", "run_testsuite"])(
+    "%s probes the snapshot's directory before running any generator",
+    (subcommand) => {
+      const r = inOracle(`
+        begin
+          require "tmpdir"
+          oracle = Dir.mktmpdir("fake-oracle-")
+          File.write(File.join(oracle, "Gemfile"), "")
+          snapshot = Dir.mktmpdir("fake-snapshot-")
+          Dir.mkdir(File.join(snapshot, "submodules"))
+          Dir.mkdir(File.join(snapshot, "submodules", "plurimath-testsuite"))
+
+          probes = []
+          ok = Class.new { def success? = true }.new
+          OracleGate.define_singleton_method(:capture_command) do |args, chdir: nil, env: {}|
+            probes << { "chdir" => chdir, "env" => env }
+            ["", "", ok]
+          end
+          OracleGate.define_singleton_method(:build_clean_repo_snapshot!) { |_tmp| snapshot }
+          OracleGate.define_singleton_method(:require_submodule_snapshot_prerequisites!) { nil }
+          OracleGate.define_singleton_method(:run_generator!) do |*|
+            raise "REACHED_GENERATOR"
+          end
+
+          reached = begin
+            OracleGate.${subcommand}(["--check", "--gem", oracle])
+            "no generator ran"
+          rescue RuntimeError => e
+            e.message
+          end
+          { "reached" => reached, "probes" => probes }
+        end
+      `);
+      expect(r.ok).toBe(true);
+      // The probe ran, and it ran before the first generator.
+      expect(r.output).toContain("REACHED_GENERATOR");
+      expect(r.output).toContain('"BUNDLE_FROZEN" => "true"');
+      // In the snapshot, never in the oracle checkout.
+      expect(r.output).toContain("fake-snapshot-");
+      expect(r.output).not.toContain('"chdir" => "/oracle');
+      expect(r.output).not.toMatch(/"chdir" => "[^"]*fake-oracle-/);
+    },
+  );
 });
 
 const EMPTY_CHECKSUMS_STDERR =

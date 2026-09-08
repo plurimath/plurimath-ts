@@ -335,18 +335,26 @@ export const PARSEABLE_INPUT_FORMAT = "asciimath";
  * The cases a check may run through a PARSER, as opposed to rebuilding from
  * `model`.
  *
- * The corpus is not AsciiMath-only for much longer: its schema already admits
- * `latex`, `mathml`, `omml`, `unicode`, `html` and `unitsml` as input formats.
- * A check that calls `parseAsciimath(entry.input)` over every pinned case would
- * start feeding it LaTeX source the day a second corpus lands, and fail in a
- * way that looks like a parser bug rather than a suite that outgrew its filter.
+ * The corpus is no longer AsciiMath-only: it carries `corpus/latex/` as well,
+ * and its schema admits `mathml`, `omml`, `unicode`, `html` and `unitsml` too.
+ * A check that calls `parseAsciimath(entry.input)` over every pinned case feeds
+ * it LaTeX source, and fails in a way that looks like a parser bug rather than
+ * a suite that outgrew its filter. That is not hypothetical: it is what the
+ * nineteen LaTeX cases did to `grammar.spec.ts` the moment the pin moved.
+ *
+ * Generic over anything carrying an `inputFormat`, so the pinned-case reader's
+ * own records (`PinnedCase`, which also carries `preprocessed` and
+ * `parse_tree`) go through this one filter rather than a second hand-written
+ * copy of it.
  *
  * Throws rather than returning an empty list: a filter that silently matches
  * nothing turns a suite green while checking nothing, which has happened in
  * this repository before and is what `gates.json`'s `selects` exists to catch
  * one level up.
  */
-export function parseableCases(cases: readonly CorpusCase[]): readonly CorpusCase[] {
+export function parseableCases<Case extends { readonly inputFormat: string }>(
+  cases: readonly Case[],
+): readonly Case[] {
   const parseable = cases.filter((entry) => entry.inputFormat === PARSEABLE_INPUT_FORMAT);
   if (parseable.length === 0) {
     throw new Error(

@@ -30,9 +30,9 @@ export function runRuby(source: string): { stdout: string; status: number | null
   });
   if (direct.error === undefined) return { stdout: direct.stdout ?? "", status: direct.status };
   // Only a missing executable is a reason to try the version manager. A Ruby
-  // that exists and then times out or cannot be executed is a real failure,
-  // and reporting it as "no ruby available" sends the reader looking for a
-  // Ruby they already have.
+  // that exists and then times out (`ETIMEDOUT`) or cannot be executed
+  // (`EACCES`) is a real failure, and reporting it as "no ruby available"
+  // sends the reader looking for a Ruby they already have.
   if (!isMissingExecutable(direct.error)) throw direct.error;
 
   const viaMise = spawnSync("mise", ["x", "--", "ruby", "-e", source], {
@@ -42,15 +42,23 @@ export function runRuby(source: string): { stdout: string; status: number | null
   });
   if (viaMise.error !== undefined) {
     // Neither works: fail loudly rather than skip. A gate that quietly does
-    // not run is the failure mode this whole file exists to prevent. Say which
-    // failure it was — only a missing `mise` means neither Ruby is installed.
+    // not run is the failure mode this whole file exists to prevent. Anything
+    // but ENOENT is a different failure and says so in its own words.
     if (!isMissingExecutable(viaMise.error)) throw viaMise.error;
     throw new Error("no ruby available: tried `ruby` and `mise x -- ruby`");
   }
   return { stdout: viaMise.stdout ?? "", status: viaMise.status };
 }
 
-/** `spawnSync` reports a missing binary as `ENOENT`; everything else ran. */
+/**
+ * Whether `spawnSync` failed because it could not find something to execute.
+ *
+ * `ENOENT` is the code for that, though it does not narrow it to the binary
+ * itself: a missing interpreter named in a shebang, or a working directory
+ * that no longer exists, reach us the same way. It is the only code worth
+ * falling back on — `EACCES` (present, not executable) and `ETIMEDOUT` (ran,
+ * and hung) are failures of their own and are rethrown as themselves.
+ */
 function isMissingExecutable(error: Error): boolean {
   return (error as NodeJS.ErrnoException).code === "ENOENT";
 }

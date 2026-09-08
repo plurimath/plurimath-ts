@@ -7697,6 +7697,24 @@ const PREFIX_PAIR_FIXTURES: readonly Fixture[] = [
   ],
 ];
 
+/**
+ * Splits a bulk check into several tests.
+ *
+ * Not cosmetic: one test that parses all 672 upstream expressions runs for ~50
+ * seconds without returning to the event loop, and vitest's worker then fails
+ * the whole file with `Timeout calling "onTaskUpdate"` — every assertion
+ * passing and the run still red. Chunking keeps each test a few seconds long,
+ * which is what the reporter needs to stay alive.
+ */
+function chunks<T>(
+  items: readonly T[],
+  size: number,
+): ReadonlyArray<readonly [number, readonly T[]]> {
+  const out: Array<readonly [number, readonly T[]]> = [];
+  for (let i = 0; i < items.length; i += size) out.push([i / size + 1, items.slice(i, i + size)]);
+  return out;
+}
+
 // --- the suites ------------------------------------------------------------
 
 describe("the gem's own UnicodeMath, round-tripped through the grammar", () => {
@@ -7727,10 +7745,13 @@ describe("the upstream unicodemath-tests corpus", () => {
     expect(tree(preprocessed)).toStrictEqual(JSON.parse(gemTree));
   });
 
-  it("agrees with the gem on every accept and refusal", { timeout: 600_000 }, () => {
-    const wrong = UPSTREAM_VERDICTS.filter(([text, parsed]) => refuses(text) === parsed);
-    expect(wrong.map(([text]) => text)).toStrictEqual([]);
-  });
+  it.each(chunks(UPSTREAM_VERDICTS, 48))(
+    "agrees with the gem on every accept and refusal (chunk %i)",
+    (_n, batch) => {
+      const wrong = batch.filter(([text, parsed]) => refuses(text) === parsed);
+      expect(wrong.map(([text]) => text)).toStrictEqual([]);
+    },
+  );
 });
 
 describe("a sweep over the operators this grammar branches on", () => {
@@ -7739,9 +7760,9 @@ describe("a sweep over the operators this grammar branches on", () => {
     expect(SWEEP_REFUSED.length).toBe(3444);
   });
 
-  it("matches the gem's tree on every input the gem parsed", { timeout: 600_000 }, () => {
+  it.each(chunks(SWEEP_FIXTURES, 200))("matches the gem's tree (chunk %i)", (_n, batch) => {
     const wrong: string[] = [];
-    for (const [preprocessed, gemTree] of SWEEP_FIXTURES) {
+    for (const [preprocessed, gemTree] of batch) {
       let got: PlainTree;
       try {
         got = tree(preprocessed);
@@ -7754,9 +7775,12 @@ describe("a sweep over the operators this grammar branches on", () => {
     expect(wrong).toStrictEqual([]);
   });
 
-  it("refuses everything the gem refuses", { timeout: 600_000 }, () => {
-    expect(SWEEP_REFUSED.filter((text) => !refuses(text))).toStrictEqual([]);
-  });
+  it.each(chunks(SWEEP_REFUSED, 500))(
+    "refuses everything the gem refuses (chunk %i)",
+    (_n, batch) => {
+      expect(batch.filter((text) => !refuses(text))).toStrictEqual([]);
+    },
+  );
 });
 
 describe("the two divergences pegkit's cache causes", () => {
@@ -7825,7 +7849,7 @@ describe("the prefix pairs in the generated tables", () => {
     expect(PREFIX_PAIR_FIXTURES.length).toBe(105);
   });
 
-  it("matches the gem on both members of every prefix pair", { timeout: 600_000 }, () => {
+  it("matches the gem on both members of every prefix pair", { timeout: 120_000 }, () => {
     const wrong: string[] = [];
     for (const [preprocessed, gemTree] of PREFIX_PAIR_FIXTURES) {
       if (JSON.stringify(tree(preprocessed)) !== JSON.stringify(JSON.parse(gemTree)))

@@ -647,6 +647,41 @@ module UnicodeMathParserDataGenerator
     end
   end
 
+  # Ruby source is UTF-8 whatever the locale says, and `File.read` disagrees.
+  #
+  # `CorpusGenerator.build_census` reaches `abstract_check!`, which reads every
+  # `lib/**/*.rb` in the oracle with a bare `File.read` — so the bytes arrive
+  # tagged `Encoding.default_external`. Under `LC_ALL=C` that is US-ASCII, and
+  # the first regex match over a file with a non-ASCII character raises
+  # `ArgumentError: invalid byte sequence in US-ASCII`. Measured: this
+  # generator failed under `LC_ALL=C` from the commit that added the census
+  # call, while the same generator without it succeeded.
+  #
+  # Fixed here rather than in `scripts/generate-corpus.rb`: that script's bytes
+  # are hashed into six other artifacts' provenance, and editing it would
+  # invalidate all of them for a fault that is this generator's to contain.
+  #
+  # The guard is not just the assignment. Reading one oracle source back and
+  # requiring `valid_encoding?` proves the override actually reached `File.read`
+  # — a future refactor that moves the census call out of this block fails at
+  # generation time instead of only under a C locale.
+  def with_utf8_source_reads(gem_dir)
+    previous = Encoding.default_external
+    Encoding.default_external = Encoding::UTF_8
+    probe = Dir.glob(File.join(gem_dir, "lib/**/*.rb")).sort.first
+    raise Error, "#{gem_dir}/lib has no Ruby sources to read" unless probe
+
+    text = File.read(probe)
+    unless text.encoding == Encoding::UTF_8 && text.valid_encoding?
+      raise Error, "File.read still returns #{text.encoding} for #{probe}; the census " \
+                   "would raise on the first non-ASCII source under this locale"
+    end
+
+    yield
+  ensure
+    Encoding.default_external = previous unless previous.nil?
+  end
+
   # The classes the ported transform rules ask `is_a?` about, each with the
   # full set of classes that answer true — itself plus every descendant.
   #
@@ -1233,7 +1268,7 @@ module UnicodeMathParserDataGenerator
     # autoloaded, so the census would otherwise be measured against a partial
     # class tree. `CorpusGenerator` does the same before it builds its census.
     CorpusGenerator.load_model_classes!(gem_dir)
-    census_index = CorpusGenerator.build_census(gem_dir)
+    census_index = with_utf8_source_reads(gem_dir) { CorpusGenerator.build_census(gem_dir) }
       .fetch("classes").to_h { |entry| [entry["name"], entry] }
     resolved, unresolved = get_class_rows(census_index)
     {

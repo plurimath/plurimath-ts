@@ -14,10 +14,16 @@
 # through `Plurimath::Math.parse(text, :unicode)` gives a round trip the port
 # must match, over inputs nobody wrote by hand.
 #
-# Unlike the LaTeX fixtures there is no second, hand-picked coverage list. The
-# transform slice this pins is DEFINED by what these inputs reach: the rules
-# they fire, measured on the oracle, are the rules the port carries. A coverage
-# list would grow the port past what the corpus can check.
+# Unlike the LaTeX fixtures there is no hand-picked COVERAGE list. The transform
+# slice this pins is DEFINED by what the corpus inputs reach: the rules they
+# fire, measured on the oracle, are the rules the port carries. A coverage list
+# would grow the port past what the corpus can check.
+#
+# There is a second, small BOUNDARY list, which is the opposite thing. Each of
+# its inputs fires a rule the slice does NOT carry, so the port must refuse it;
+# the row records what the gem answered instead, which is what makes "the port
+# refuses" a measured claim rather than a restatement of the port's own code.
+# When a rule family lands, its rows move from refusal to parity.
 #
 # Rows record what the gem did, including refusing:
 #   - `preprocessed`: `UnicodeMath::Parser.new(input).text`, the string Parslet
@@ -39,6 +45,27 @@ require "json"
 require "optparse"
 
 GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
+
+# Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`
+# rule the oracle fires for it and the shape that rule leaves behind. Measured
+# with every registered block wrapped in a counter, not read off the source.
+#
+#   "±"        rule 99   `{combined_symbols: simple}` alone -> `Symbols::Pm`.
+#              The port has no rule for that node, and it arrives as the ROOT of
+#              the tree, where `Kernel#Array` would fold it into pairs before
+#              anything could refuse it.
+#   "a^b c"    rule 766  `{sup_exp: simple, expr: simple}`.
+#   "a≤b"      rule 746  `{factor: simple, operand: simple}`.
+#   "x a/b c"  rule 1791 `{frac: simple, expr: simple}` — the same KEY SET the
+#              corpus's `(a)/(+) b` leaves unmatched, but with both values
+#              resolved. A key set is not a signature: the gem matches this one
+#              and leaves that one alone.
+SLICE_BOUNDARY = [
+  "\u00b1",
+  "a^b c",
+  "a\u2264b",
+  "x a/b c",
+].freeze
 
 options = { oracle: nil, out: "test/formats/unicodemath", allow_dirty: false }
 OptionParser.new do |o|
@@ -111,8 +138,15 @@ if corpus_unicodemath.empty?
   abort "REFUSING: no pinned corpus case carries expected.unicodemath"
 end
 
+sources = corpus_unicodemath.map { |text| ["corpus-unicodemath", text] }
+SLICE_BOUNDARY.each { |text| sources << ["slice-boundary", text] }
+overlap = SLICE_BOUNDARY & corpus_unicodemath
+unless overlap.empty?
+  abort "REFUSING: #{overlap.inspect} is both a corpus case and a boundary case"
+end
+
 seen = {}
-rows = corpus_unicodemath.filter_map do |input|
+rows = sources.filter_map do |(group, input)|
   next if seen.key?(input)
 
   seen[input] = true
@@ -121,7 +155,7 @@ rows = corpus_unicodemath.filter_map do |input|
   # renumbering every row after it; unique because `seen` deduplicates inputs.
   row = {
     "id" => "unicodemath-#{Digest::SHA256.hexdigest(input)[0, 12]}",
-    "group" => "corpus-unicodemath",
+    "group" => group,
     "input" => input,
   }
 
@@ -174,6 +208,7 @@ RenderFixtureProvenance.write_manifest(
   provenance: provenance,
 )
 puts "unicodemath model fixtures: #{rows.length} cases " \
-     "(all from the corpus), #{parsed} parsed, #{raised} raised"
+     "(#{corpus_unicodemath.length} from the corpus, #{SLICE_BOUNDARY.length} boundary), " \
+     "#{parsed} parsed, #{raised} raised"
 puts "  -> #{out}"
 puts "  -> #{sidecar}"

@@ -46,11 +46,13 @@
  *
  * ## Mutation is behaviour, so nodes are drafts until the entry point returns
  *
- * Seven ported rules assign into a node the transform already built —
- * `base.parameter_one =` (`:1019`), `sup.parameter_two =` (`:1116`),
- * `sub_sup.parameter_one.parameter_one =` (`:1173`),
- * `subsup_exp.parameter_three/four =` (`:1861`) — and `Utility.fractions`
- * rewrites a `Frac`'s `parameter_one` in place (`unicode_math/utility.rb:88`).
+ * Four ported rules assign into a node the transform already built, between
+ * them seven writes: `:1019` and `:1116` each set `parameter_one` or
+ * `parameter_two` on one of two branches, `:1173` sets
+ * `sub_sup.parameter_one.parameter_one`, and `:1861` sets
+ * `parameter_three` or `parameter_four`. `Utility.fractions` adds a fifth
+ * mutation site outside the rules, rewriting a `Frac`'s `parameter_one` in
+ * place (`unicode_math/utility.rb:88`).
  * Core nodes are publicly immutable (ARCHITECTURE.md §5), so the transform
  * works on `UnicodemathDraft` objects and `finalize` converts the finished tree
  * into real `core` nodes in one pass at the end.
@@ -1229,7 +1231,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
 
 /**
  * `paren.is_a?(Slice) ? Utility.symbols_class(paren, ...) : paren` — the guard
- * the eight `Fenced` rules each spell out. It tests `Slice` specifically, not
+ * the seven `Fenced` rules each spell out. It tests `Slice` specifically, not
  * "string-like", so a plain String would pass through unconverted.
  */
 function parenClass(paren: unknown): unknown {
@@ -1282,48 +1284,96 @@ export function unicodemathTransform(): Transform {
  * ---------------------------------------------------------------------- */
 
 /**
- * The node key sets the GEM's own transform leaves unmatched, so a hash that
+ * The node SIGNATURES the GEM's own transform leaves unmatched, so a hash that
  * survives to the model is the gem's behaviour rather than this slice's gap.
+ *
+ * **A key set is not a signature.** Parslet binds on the matcher kind as well
+ * as the key, so whether a rule matches depends on the SHAPE of each value:
+ * `{frac:, expr:}` with both values resolved is matched by `transform.rb:1791`,
+ * while the same key set with an unresolved hash under `frac` is matched by
+ * nothing. An allowlist keyed only by `expr,frac` admitted both, and `x a/b c`
+ * — which the gem answers `Formula([Symbol("x"), Frac(a, b), Symbol("c")])` —
+ * came back from this port as folded pairs. Each entry below therefore records
+ * `key=shape` per key, with `shape` computed exactly as pegkit's `simple` and
+ * `sequence` matchers decide.
  *
  * Measured, not reasoned about: every registered block was wrapped on the
  * oracle and every hash that reached `transform_elt` without matching a rule
- * was recorded, over the same 103 corpus strings the fixtures carry. Exactly
- * nine key sets came back, and they belong to three inputs:
+ * was recorded with its value shapes, over the same 103 corpus strings the
+ * fixtures carry. Nine signatures came back, across FIVE inputs:
  *
- *   - `(a)/(+) b` — `close_paren,open_paren,operator`, `intermediate_exp`,
- *     `factor`, `denominator,numerator`, `expr,frac`;
- *   - `a ± b` — `combined_symbols,expr`, `expr,factor`;
- *   - the three accent inputs — `accent_symbols`, `first_value`, which
- *     `transform.rb:52` consumes as a `subtree` and never leaves behind.
+ *   - `(a)/(+) b` — `close_paren=simple,open_paren=simple,operator=simple`,
+ *     `intermediate_exp=other`, `factor=other`,
+ *     `denominator=other,numerator=simple`, `expr=simple,frac=other`;
+ *   - `a ± b` — `combined_symbols=simple,expr=simple`, `expr=other,factor=simple`;
+ *   - the three accent inputs — `accent_symbols=simple`, `first_value=simple`,
+ *     which `transform.rb:52` consumes as a `subtree` and never leaves behind.
  *
- * The first two are a GEM BUG, reproduced here rather than fixed: no rule in
- * the 519 has the signature `{combined_symbols: simple, expr: simple}` or
- * `{close_paren:, open_paren:, operator:}`, so the hash survives the transform,
- * `Kernel#Array` in `UnicodeMath::Parser#parse` folds the OUTERMOST one into
- * its `[key, value]` pairs, and `Plurimath::Math.parse("a ± b", :unicode)`
- * returns a `Formula` whose value is `[["factor", Symbol("a")], ["expr",
- * {combined_symbols: "&#xb1;", expr: Symbol("b")}]]` — a tree no renderer can
- * read, returned without raising.
+ * The first two inputs are a GEM BUG, reproduced here rather than fixed: no
+ * rule in the 519 has the signature `{combined_symbols: simple, expr: simple}`
+ * or `{close_paren:, open_paren:, operator:}`, so the hash survives the
+ * transform, `Kernel#Array` in `UnicodeMath::Parser#parse` folds the OUTERMOST
+ * one into its `[key, value]` pairs, and
+ * `Plurimath::Math.parse("a ± b", :unicode)` returns a `Formula` whose value is
+ * `[["factor", Symbol("a")], ["expr", {combined_symbols: "&#xb1;", expr:
+ * Symbol("b")}]]` — a tree no renderer can read, returned without raising.
  *
  * Anything NOT on this list is a refusal: it means the transform found no rule
- * for a node the gem does match, which for this slice means a deferred rule
- * family, and the keys are named so the gap reads as itself rather than as
- * mangled output.
+ * for a node the gem does match, which for this slice means a rule family it
+ * has not reached, and the signature is named so the gap reads as itself rather
+ * than as mangled output.
  */
-const GEM_UNMATCHED_KEY_SETS: ReadonlySet<string> = new Set([
-  "accent_symbols",
-  "close_paren,open_paren,operator",
-  "combined_symbols,expr",
-  "denominator,numerator",
-  "expr,factor",
-  "expr,frac",
-  "factor",
-  "first_value",
-  "intermediate_exp",
+const GEM_UNMATCHED_SIGNATURES: ReadonlySet<string> = new Set([
+  "accent_symbols=simple",
+  "close_paren=simple,open_paren=simple,operator=simple",
+  "combined_symbols=simple,expr=simple",
+  "denominator=other,numerator=simple",
+  "expr=other,factor=simple",
+  "expr=simple,frac=other",
+  "factor=other",
+  "first_value=simple",
+  "intermediate_exp=other",
 ]);
 
-function keySetOf(hash: Record<string, unknown>): string {
-  return Object.keys(hash).sort().join(",");
+/**
+ * What a value would bind as, in pegkit's own terms: `simple` binds anything
+ * that is not an array and not a plain hash, `sequence` an array whose every
+ * element is such a leaf, and `other` is what neither matcher accepts. Kept in
+ * step with `pegkit/transform.ts`'s `isLeaf`/`matches` by mirroring them, and
+ * exported so `transform-coverage.spec.ts` can check the mirror against the
+ * engine itself rather than against a second copy of this reasoning.
+ */
+export function shapeOf(value: unknown): "simple" | "sequence" | "other" {
+  if (Array.isArray(value)) {
+    return value.every((item) => !Array.isArray(item) && !isPlainObject(item))
+      ? "sequence"
+      : "other";
+  }
+  return isPlainObject(value) ? "other" : "simple";
+}
+
+function signatureOf(hash: Record<string, unknown>): string {
+  return Object.entries(hash)
+    .map(([key, value]) => `${key}=${shapeOf(value)}`)
+    .sort()
+    .join(",");
+}
+
+/**
+ * Refuses a hash the gem would have matched. Both the value walk below and the
+ * ROOT wrap in `finalizeUnicodemathParse` go through here — the root used to
+ * skip it, because `Kernel#Array` folded the hash into pairs before anything
+ * looked at it, so `±` came back as `Formula([["combined_symbols", "&#xb1;"]])`
+ * where the gem answers `Formula([Pm])`.
+ */
+function assertGemLeavesUnmatched(hash: Record<string, unknown>): void {
+  const signature = signatureOf(hash);
+  if (!GEM_UNMATCHED_SIGNATURES.has(signature)) {
+    throw new Error(
+      `unicodemath transform: no rule matched {${signature}}; ` +
+        "that rule family is not in this slice",
+    );
+  }
 }
 
 /**
@@ -1339,12 +1389,7 @@ function finalizeValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(finalizeValue);
   if (isDraft(value)) return finalizeDraft(value);
   if (isPlainObject(value)) {
-    if (!GEM_UNMATCHED_KEY_SETS.has(keySetOf(value))) {
-      throw new Error(
-        `unicodemath transform: no rule matched {${keySetOf(value)}}; ` +
-          "that rule family is not in this slice",
-      );
-    }
+    assertGemLeavesUnmatched(value);
     const result: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) result[key] = finalizeValue(entry);
     return result;
@@ -1383,15 +1428,22 @@ function finalizeDraft(draft: UnicodemathDraft, inputString?: string): MathNode 
  * The wrap is `Math::Formula.new(Array(transformed))`, and `Kernel#Array` is
  * NOT `[x] unless Array`: nil folds to `[]`, and a Hash folds to its
  * `[key, value]` pairs (`Hash#to_a`) rather than being wrapped whole. That arm
- * is live — two corpus inputs reach it (see `GEM_UNMATCHED_KEY_SETS`) — so it
+ * is live — two corpus inputs reach it (see `GEM_UNMATCHED_SIGNATURES`) — so it
  * is transcribed, symbol keys becoming the strings the gem's serializer emits
  * for them.
+ *
+ * The root hash is CHECKED before it is folded. Folding first would put the
+ * pairs beyond `finalizeValue`'s reach, and the refusal this port owes for a
+ * node whose rule it does not carry would never fire: `±` transforms to the
+ * root `{combined_symbols: Slice}`, which `transform.rb:99` matches and this
+ * slice does not.
  */
 export function finalizeUnicodemathParse(transformed: unknown, inputString: string): FormulaNode {
   let value: unknown[];
   if (transformed === null || transformed === undefined) value = [];
   else if (Array.isArray(transformed)) value = transformed;
   else if (isPlainObject(transformed) && !isDraft(transformed)) {
+    assertGemLeavesUnmatched(transformed);
     value = Object.entries(transformed).map(([key, entry]) => [key, entry]);
   } else value = [transformed];
   return finalizeDraft(newFormula(value), inputString) as FormulaNode;

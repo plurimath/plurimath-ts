@@ -512,9 +512,10 @@ Hash — a tree no renderer can read — returned without raising.
 does not survive.
 
 Not worked around: `src/formats/unicodemath/transform.ts` reproduces both trees
-and `test/formats/unicodemath/model-fixtures.json` pins them. The nine key sets
-the gem leaves unmatched over the pinned corpus are listed as
-`GEM_UNMATCHED_KEY_SETS` in that transform; anything else surviving it is
+and `test/formats/unicodemath/model-fixtures.json` pins them. The nine
+signatures the gem leaves unmatched over the pinned corpus — key AND value shape
+per key, because Parslet binds on the matcher kind too — are listed as
+`GEM_UNMATCHED_SIGNATURES` in that transform; anything else surviving it is
 refused, because for this port that would mean a rule family the first slice has
 not reached.
 

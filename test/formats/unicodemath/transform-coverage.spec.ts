@@ -30,7 +30,8 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseUnicodemathPreprocessed } from "../../../src/formats/unicodemath/grammar";
-import { buildUnicodemathTransform } from "../../../src/formats/unicodemath/transform";
+import { buildUnicodemathTransform, shapeOf } from "../../../src/formats/unicodemath/transform";
+import { Slice, sequence, simple, Transform } from "../../../src/pegkit/index";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -87,5 +88,47 @@ describe("transform rule coverage", () => {
       `transform.rb rules no fixture reaches: ${never.join(", ")}. The slice is defined by ` +
         "what the corpus fires on the oracle, so a rule nothing reaches does not belong in it.",
     ).toStrictEqual([]);
+  });
+});
+
+/**
+ * `shapeOf` decides whether a hash the transform left behind is one the GEM
+ * also leaves behind, so it has to agree with the engine that does the binding.
+ * Checked against `pegkit`'s own `Transform` rather than against a restatement:
+ * a one-key tree is driven through a transform carrying a `simple` rule and a
+ * `sequence` rule, and which of the two fires — or neither — is the answer
+ * `shapeOf` must give.
+ */
+describe("shapeOf agrees with pegkit's matchers", () => {
+  const Values: ReadonlyArray<readonly [label: string, value: unknown]> = [
+    ["a slice", new Slice("x", 0)],
+    ["a string", "x"],
+    ["null", null],
+    ["a number", 1],
+    ["a node-like object", new (class {})()],
+    ["an empty array", []],
+    ["an array of leaves", ["a", new Slice("b", 0)]],
+    ["an array holding an array", [["a"]]],
+    // The nested hashes are keyed `zz`, not `k`: `Transform.apply` rewrites a
+    // value BEFORE the enclosing node is matched, so a `{ k: ... }` inner hash
+    // would be replaced by one of the probe's own rules and never reach the
+    // matcher as a hash at all.
+    ["an array holding a hash", [{ zz: "v" }]],
+    ["a hash", { zz: "v" }],
+    ["an empty hash", {}],
+  ];
+
+  it.each(Values.map(([label, value]) => [label, value] as const))("%s", (_label, value) => {
+    const probe = new Transform();
+    probe.rule({ k: sequence("v") }, () => "sequence");
+    probe.rule({ k: simple("v") }, () => "simple");
+    const applied = probe.apply({ k: value });
+    const engine = typeof applied === "string" ? applied : "other";
+    expect(shapeOf(value)).toBe(engine);
+  });
+
+  it("drove a value of every shape, so the agreement is not vacuous", () => {
+    const shapes = new Set(Values.map(([, value]) => shapeOf(value)));
+    expect([...shapes].sort()).toStrictEqual(["other", "sequence", "simple"]);
   });
 });

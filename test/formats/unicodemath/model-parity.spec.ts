@@ -54,7 +54,7 @@ interface Fixtures {
 const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf8")) as Fixtures;
 
 /**
- * The two corpus inputs whose rules this slice defers.
+ * The two CORPUS inputs whose rules this slice defers.
  *
  * `transform.rb`'s table/matrix family — the eight rules `:8`, `:9`, `:14`,
  * `:32`, `:1569`, `:1574`, `:1584` and `:1649` — is the one family the corpus
@@ -70,10 +70,16 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  */
 const DEFERRED_INPUTS: readonly string[] = ["⒨(a@b)", "ⓢ(a&b@c&d)"];
 
+const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");
+const boundary = fixtures.cases.filter((entry) => entry.group === "slice-boundary");
 const parsed = fixtures.cases.filter((entry) => entry.model !== undefined);
 const raised = fixtures.cases.filter((entry) => entry.raises !== undefined);
-const deferred = parsed.filter((entry) => DEFERRED_INPUTS.includes(entry.input));
-const supported = parsed.filter((entry) => !DEFERRED_INPUTS.includes(entry.input));
+const deferred = corpus.filter(
+  (entry) => entry.model !== undefined && DEFERRED_INPUTS.includes(entry.input),
+);
+const supported = corpus.filter(
+  (entry) => entry.model !== undefined && !DEFERRED_INPUTS.includes(entry.input),
+);
 
 function parseFixture(entry: FixtureCase): unknown {
   const preprocessed = entry.preprocessed;
@@ -95,17 +101,22 @@ describe("the UnicodeMath fixture set", () => {
     expect(parsed.length).toBe(fixtures.parsedCount);
     expect(raised.length).toBe(fixtures.raisedCount);
     expect(parsed.length + raised.length).toBe(fixtures.caseCount);
-    expect(fixtures.corpusUnicodemathCount).toBe(fixtures.caseCount);
+    expect(corpus.length).toBe(fixtures.corpusUnicodemathCount);
+    expect(corpus.length + boundary.length).toBe(fixtures.caseCount);
   });
 
-  it("draws every input from the pinned corpus's own UnicodeMath output", () => {
-    expect(fixtures.cases.every((entry) => entry.group === "corpus-unicodemath")).toBe(true);
-    expect(fixtures.cases.length).toBeGreaterThan(50);
+  it("draws its parity inputs from the pinned corpus's own UnicodeMath output", () => {
+    expect(corpus.length).toBeGreaterThan(50);
+    expect(boundary.length).toBeGreaterThan(0);
+    // Every boundary input is one the GEM parses; a row that the gem refused
+    // would prove nothing about the slice edge.
+    expect(boundary.every((entry) => entry.model !== undefined)).toBe(true);
   });
 
-  it("defers exactly the two inputs the table/matrix family serves", () => {
+  it("defers exactly the two corpus inputs the table/matrix family serves", () => {
     expect(deferred.length).toBe(DEFERRED_INPUTS.length);
-    expect(supported.length).toBe(parsed.length - DEFERRED_INPUTS.length);
+    const corpusParsed = corpus.filter((entry) => entry.model !== undefined).length;
+    expect(supported.length).toBe(corpusParsed - DEFERRED_INPUTS.length);
     expect(supported.length).toBeGreaterThan(90);
   });
 });
@@ -122,6 +133,32 @@ describe("the parsed model", () => {
 describe("the rule families this slice defers", () => {
   it.each(deferred.map((entry) => [entry.input, entry] as const))(
     "%j: refuses loudly, naming the unmatched keys",
+    (_input, entry) => {
+      expect(() => parseFixture(entry)).toThrow(/no rule matched \{/);
+    },
+  );
+});
+
+/**
+ * The slice EDGE, as opposed to the deferred family above.
+ *
+ * Each of these fires one `transform.rb` rule the port does not carry — `:99`,
+ * `:766`, `:746`, `:1791` — and the gem answers each with a perfectly ordinary
+ * model, recorded in the fixture row beside it. The port must REFUSE rather
+ * than answer differently, and two of the four are here because it did not:
+ *
+ *   - `±` reaches the transform as a ROOT hash, and `Kernel#Array`'s fold into
+ *     `[key, value]` pairs used to happen before anything validated it, so the
+ *     port returned `Formula([["combined_symbols", "&#xb1;"]])` where the gem
+ *     returns `Formula([Pm])`.
+ *   - `x a/b c` leaves `{frac:, expr:}` — the same KEY SET the corpus's
+ *     `(a)/(+) b` leaves unmatched, but with both values resolved, which is the
+ *     case rule `:1791` matches. A key-set allowlist admitted it; the shape
+ *     signature the port now records does not.
+ */
+describe("inputs whose rules sit outside the slice", () => {
+  it.each(boundary.map((entry) => [entry.input, entry] as const))(
+    "%j: is refused rather than answered differently",
     (_input, entry) => {
       expect(() => parseFixture(entry)).toThrow(/no rule matched \{/);
     },

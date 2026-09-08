@@ -7760,8 +7760,9 @@ describe("a sweep over the operators this grammar branches on", () => {
 
 describe("the cache entry a recursive rule writes", () => {
   /**
-   * `|x|=b` is the smallest input that needs it, so it guards the shape the two
-   * `1|x|=...` fixtures above only reach through a whole table.
+   * `|x|=b` is the smallest input FOUND that needs it — nothing here proves it
+   * minimal — so it guards the shape the two `1|x|=...` fixtures above only
+   * reach through a whole table.
    *
    * The gem applies `expression` at position 3 without `consume_all`, inside
    * the lookahead that closes `|x|`, and caches the short match `=`. Parslet

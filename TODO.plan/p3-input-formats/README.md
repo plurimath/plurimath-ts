@@ -43,7 +43,13 @@ vertical first:
 
 - **pegkit gaps.** The primitives these grammars need beyond AsciiMath's —
   `any`, `present?`, capture `scope` — are implemented and conformance-tested,
-  but unexercised by a real grammar until here.
+  but unexercised by a real grammar until here. Measured against the oracle
+  once the LaTeX grammar landed, that is true of `any` only: `latex/parse.rb`
+  uses it twice, both inside `rule(:color)` at `:21-22`, and uses neither
+  `present?` nor `scope` anywhere. Gem-wide, `present?` appears only under
+  `unicode_math/` and Parslet's `scope` in no parser at all, so `scope`
+  will still be unexercised by a grammar when P3 closes — the candidate that
+  would exercise capture is the HTML or AsciiMath `capture` path, not LaTeX.
 - **Shared model pressure.** A later format may want a node shape that
   contradicts an earlier assumption. The census-driven union is the guard, but
   a genuine conflict means changing `ARCHITECTURE.md` first.

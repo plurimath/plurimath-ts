@@ -119,7 +119,18 @@ src/
                      own data slice, its own kind files under src/render.
     latex/           Renderer landed: index.ts, renderer.ts (toLatex), render.ts,
                      render-shared.ts — the same shape as asciimath/ minus the
-                     parse half. Only the LaTeX *parser* is a later phase (§9 P3+).
+                     parse half. The parser half is arriving in P3: grammar.ts
+                     and its tables are in; the transform and a `parseLatex`
+                     entry are not, so index.ts still publishes output only.
+      generated/     The LaTeX grammar's own constant tables, written by
+                     scripts/generate-latex-parser-data.rb. Part of the layer
+                     (rule 1), like core/generated and formatting/generated,
+                     and separate from src/generated/latex/ because that
+                     directory is the corpus generator's: its provenance file
+                     records what every file under src/generated/ was
+                     generated from, and a second generator writing there
+                     would falsify that. Merging the two is a rename, for a
+                     change that can regenerate the corpus outputs alongside.
     unicodemath/     Same: renderer landed (toUnicodemath), parser a later phase.
     mathml/          toMathml(MathNode) → string. Imports: core, xml, its slice.
     html/            Source renderer landed: index.ts, renderer.ts, render.ts,

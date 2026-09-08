@@ -9,7 +9,7 @@
  * against plurimath 0.11.6 at `00c52783877b38f6b8e6e109f1803f96bb34fc62` from a
  * clean checkout.
  *
- * Seven groups, each answering a different question.
+ * Eight groups, each answering a different question.
  *
  * 1. **The gem's own HTML**: every pinned-corpus case parsed with the gem and
  *    rendered back out with `to_html`, then fed to the HTML grammar — 95
@@ -33,14 +33,28 @@
  *    `&#x;` a symbol here and a unicode node under LaTeX and UnicodeMath.
  * 7. **The decimal marker** under all three of the gem's locales, with the
  *    other two markers probed under each — HTML's marker is exclusive.
+ * 8. **What mutation testing found uncovered.** Twenty-nine mutations were
+ *    applied to the grammar and to the generated tables. Four survived groups 1
+ *    to 7, and three of those were real gaps — a closing tag carrying
+ *    attributes, a parenthesised character that both `symbol` and `sub_sup`
+ *    accept, and the sub/sup pair — so this group is the 67 oracle-measured
+ *    inputs that close them. Twenty-four mutations die here; the five that
+ *    remain are order swaps between alternatives no position can both reach,
+ *    argued in a test of their own rather than covered.
  *
  * These inputs are what `Html::Parse` was handed. Groups 1 and 2 record what
  * `Html::Parser#normalized_text` produced first, because that is what the gem's
- * own path feeds Parslet; groups 3 to 7 are handed to the grammar directly, the
+ * own path feeds Parslet; groups 3 to 8 are handed to the grammar directly, the
  * way `spec/plurimath/html/parse_spec.rb` does.
  */
 
 import { describe, expect, it } from "vitest";
+import {
+  HTML_LPAREN,
+  HTML_RPAREN,
+  HTML_SUB_SUP_CLASSES,
+  HTML_UNARY_CLASSES,
+} from "../../../src/formats/html/generated/parser-tables";
 import {
   createHtmlGrammar,
   htmlGrammar,
@@ -2912,6 +2926,127 @@ const NUMBER_FIXTURES: readonly Fixture[] = [
   ],
 ];
 
+// --- group 8: the inputs mutation testing found uncovered -----------------
+//
+// Twenty-nine mutations were applied to the grammar and the generated
+// tables; four survived the first seven groups. Three of the four were real
+// coverage gaps, and these are the inputs that close them: a closing tag
+// carrying attributes, a parenthesised character that both `symbol` and
+// `sub_sup` accept, and a sub/sup pair where `sub_sup_tags` has to prefer the
+// pair over the single. The fourth is inert and is argued in the test below
+// rather than covered, because no input can distinguish it.
+const GAP_FIXTURES: readonly Fixture[] = [
+  ["<i>x</i >", null],
+  ['<i>x</i class="a">', null],
+  ["<div>x</div class='a'>", null],
+  ["<i>x</i/>", null],
+  ["<i>x</i\t>", null],
+  ["<td>x</td class='a'>", null],
+  ["<sub>a</sub class='c'>", null],
+  ["(∏)", '{"parse_parenthesis":{"lparen":"(","symbol":"∏","rparen":")"}}'],
+  ["(∑)", '{"parse_parenthesis":{"lparen":"(","symbol":"∑","rparen":")"}}'],
+  ["(&#x220f;)", '{"parse_parenthesis":{"lparen":"(","symbol":"&#x220f;","rparen":")"}}'],
+  ["(&#x2211;)", '{"parse_parenthesis":{"lparen":"(","symbol":"&#x2211;","rparen":")"}}'],
+  ["[∏]", '{"parse_parenthesis":{"lparen":"[","symbol":"∏","rparen":"]"}}'],
+  ["{∑}", '{"parse_parenthesis":{"lparen":"{","symbol":"∑","rparen":"}"}}'],
+  ["(log)", '{"parse_parenthesis":{"lparen":"(","sum_prod":"log","rparen":")"}}'],
+  ["(lim)", '{"parse_parenthesis":{"lparen":"(","sum_prod":"lim","rparen":")"}}'],
+  ["(&prod;)", '{"parse_parenthesis":{"lparen":"(","symbol":"&prod;","rparen":")"}}'],
+  ["(&sum;)", '{"parse_parenthesis":{"lparen":"(","symbol":"&sum;","rparen":")"}}'],
+  ["(x)", '{"parse_parenthesis":{"lparen":"(","text":"x","rparen":")"}}'],
+  ["(1)", '{"parse_parenthesis":{"lparen":"(","number":"1","rparen":")"}}'],
+  ["(<br>)", '{"parse_parenthesis":{"lparen":"(","linebreak":"<br>","rparen":")"}}'],
+  ["( )", '{"parse_parenthesis":{"lparen":"(","rparen":")"}}'],
+  ["(sqrt)", '{"parse_parenthesis":{"lparen":"(","unary":"sqrt","rparen":")"}}'],
+  [
+    "x<sub>a</sub><sup>b</sup>",
+    '{"sub_sup":{"text":"x"},"sub_value":{"text":"a"},"sup_value":{"text":"b"}}',
+  ],
+  [
+    "x<sup>b</sup><sub>a</sub>",
+    '{"sub_sup":{"text":"x"},"sup_value":{"text":"b"},"sub_value":{"text":"a"}}',
+  ],
+  ["x<sub>a</sub>", '{"sub_sup":{"text":"x"},"sub_value":{"text":"a"}}'],
+  ["x<sup>b</sup>", '{"sub_sup":{"text":"x"},"sup_value":{"text":"b"}}'],
+  [
+    "∏<sub>a</sub><sup>b</sup>",
+    '{"sub_sup":{"sum_prod":"∏"},"sub_value":{"text":"a"},"sup_value":{"text":"b"}}',
+  ],
+  [
+    "∏<sup>b</sup><sub>a</sub>",
+    '{"sub_sup":{"sum_prod":"∏"},"sup_value":{"text":"b"},"sub_value":{"text":"a"}}',
+  ],
+  [
+    "sqrt(x)y",
+    '{"unary_function":{"unary":"sqrt","first_value":{"lparen":"(","text":"x","rparen":")"}},"sequence":{"text":"y"}}',
+  ],
+  [
+    "lim(x)(y)z",
+    '{"binary":"lim","first_value":{"lparen":"(","text":"x","rparen":")"},"second_value":{"lparen":"(","text":"y","rparen":")"},"sequence":{"text":"z"}}',
+  ],
+  [
+    "sqrtlimx",
+    '{"unary_function":{"unary":"sqrt","first_value":{"sum_prod":"lim"}},"sequence":{"text":"x"}}',
+  ],
+  ["limsqrtx", '{"binary":"lim","first_value":{"unary":"sqrt"},"second_value":{"text":"x"}}'],
+  ["lcmx", '{"unary_function":{"unary":"lcm","first_value":{"text":"x"}}}'],
+  ["lnx", '{"unary_function":{"unary":"ln","first_value":{"text":"x"}}}'],
+  ["lgx", '{"unary_function":{"unary":"lg","first_value":{"text":"x"}}}'],
+  ["limx", '{"binary":"lim","first_value":{"text":"x"}}'],
+  ["lim", '{"sum_prod":"lim"}'],
+  ["sqrt", '{"unary":"sqrt"}'],
+  [
+    "<i>lim</i>(x)(y)",
+    '{"binary":"lim","first_value":{"lparen":"(","text":"x","rparen":")"},"second_value":{"lparen":"(","text":"y","rparen":")"}}',
+  ],
+  [
+    "<i>sqrt</i>(x)y",
+    '{"unary_function":{"unary":"sqrt","first_value":{"lparen":"(","text":"x","rparen":")"}},"sequence":{"text":"y"}}',
+  ],
+  ["<a:b>x</a:b>", '{"sequence":{"text":"x"}}'],
+  ["<a.b>x</a.b>", '{"sequence":{"text":"x"}}'],
+  ["<a-b>x</a-b>", '{"sequence":{"text":"x"}}'],
+  ["<a_b>x</a_b>", '{"sequence":{"text":"x"}}'],
+  ["<a b>x</a>", '{"sequence":{"text":"x"}}'],
+  ["<a\tb>x</a>", '{"sequence":{"text":"x"}}'],
+  ["<div a='<'>x</div>", '{"sequence":{"text":"x"}}'],
+  ['<div a="<">x</div>', '{"sequence":{"text":"x"}}'],
+  ["<div a=<>x</div>", null],
+  ["<div a='>'>x</div>", '{"sequence":{"text":"x"}}'],
+  ["<div a=b>x</div>", '{"sequence":{"text":"x"}}'],
+  ["<div a=''>x</div>", '{"sequence":{"text":"x"}}'],
+  ["xmody", '{"first_value":{"text":"x"},"binary":"mod","second_value":{"text":"y"}}'],
+  ["x<i>mod</i>y", '{"first_value":{"text":"x"},"binary":"mod","second_value":{"text":"y"}}'],
+  ["1mod2", '{"first_value":{"number":"1"},"binary":"mod","second_value":{"number":"2"}}'],
+  [
+    "(x)mod(y)",
+    '{"sequence":{"parse_parenthesis":{"lparen":"(","text":"x","rparen":")"}},"expression":{"text":"m","expression":{"text":"o","expression":{"text":"d","parse_parenthesis":{"lparen":"(","text":"y","rparen":")"}}}}}',
+  ],
+  ["xy", '{"text":"x","expression":{"text":"y"}}'],
+  ["xyz", '{"text":"x","expression":{"text":"y","expression":{"text":"z"}}}'],
+  [
+    "sqrtxy",
+    '{"unary_function":{"unary":"sqrt","first_value":{"text":"x"}},"sequence":{"text":"y"}}',
+  ],
+  [
+    "x(y)z",
+    '{"sequence":{"text":"x","parse_parenthesis":{"lparen":"(","text":"y","rparen":")"}},"expression":{"text":"z"}}',
+  ],
+  [
+    "(x)(y)",
+    '{"sequence":{"parse_parenthesis":{"lparen":"(","text":"x","rparen":")"}},"expression":{"parse_parenthesis":{"lparen":"(","text":"y","rparen":")"}}}',
+  ],
+  [
+    "(x)y",
+    '{"sequence":{"parse_parenthesis":{"lparen":"(","text":"x","rparen":")"}},"expression":{"text":"y"}}',
+  ],
+  ["1.5", '{"number":"1.5"}'],
+  ["1.", '{"number":"1","expression":{"symbol":"."}}'],
+  [".5", '{"symbol":".","expression":{"number":"5"}}'],
+  ["1.5.5", '{"number":"1.5","expression":{"symbol":".","expression":{"number":"5"}}}'],
+  ["0x1.5", '{"hex_number":"1","expression":{"symbol":".","expression":{"number":"5"}}}'],
+];
+
 // --- group 7: the decimal marker under every supported locale --------------
 const LOCALE_FIXTURES: readonly LocaleFixture[] = [
   [",", "1.5", '{"number":"1","expression":{"symbol":".","expression":{"number":"5"}}}'],
@@ -3141,6 +3276,124 @@ describe("entities and numbers", () => {
         expression: { text: "x", expression: { symbol: ";" } },
       },
     });
+  });
+});
+
+describe("the inputs mutation testing found uncovered", () => {
+  it.each(GAP_FIXTURES)("%s", (input, gemTree) => {
+    check([input, gemTree]);
+  });
+
+  /**
+   * `parse_tag` (`html/parse.rb:151`) adds `tag_attributes` only when `opts` is
+   * `:open`, so a closing tag goes straight from the name to `>`. Nothing in the
+   * first seven groups closed a tag with anything after the name, so a port that
+   * attached attributes to both forms passed all of them.
+   */
+  it("refuses a closing tag that carries anything after the name", () => {
+    for (const input of ['<i>x</i class="a">', "<i>x</i >", "<div>x</div class='a'>"]) {
+      expect(() => grammar.root.parse(input), input).toThrow(ParseFailed);
+    }
+    expect(plain(grammar.root.parse("<i>x</i>"))).toStrictEqual(
+      JSON.parse('{"sequence":{"text":"x"}}'),
+    );
+  });
+
+  /**
+   * `parse_parenthesis` (`html/parse.rb:99`) tries `symbol_text_or_tag` before
+   * `intermediate_exp`, and the order is not cosmetic even though the second
+   * rule contains the first: `intermediate_exp` puts `sub_sup` ahead of
+   * `symbol_text_or_tag`, so `(∏)` is a `:symbol` under the real order and would
+   * be a `:sum_prod` under the reversed one. Both branches are live — `(log)`
+   * takes the second, because `symbol_text_or_tag` can only take `l` from it.
+   */
+  it("prefers symbol_text_or_tag inside parentheses, where the two branches differ", () => {
+    expect(plain(grammar.root.parse("(∏)"))).toStrictEqual(
+      JSON.parse('{"parse_parenthesis":{"lparen":"(","symbol":"∏","rparen":")"}}'),
+    );
+    expect(plain(grammar.root.parse("(log)"))).toStrictEqual(
+      JSON.parse('{"parse_parenthesis":{"lparen":"(","sum_prod":"log","rparen":")"}}'),
+    );
+  });
+
+  /**
+   * `sub_sup_tags` (`html/parse.rb:42`) puts the two-tag alternatives ahead of
+   * the one-tag ones, so `x<sub>a</sub><sup>b</sup>` is one node with both
+   * values rather than a subscript followed by a stray superscript.
+   */
+  it("prefers a sub/sup pair over a single script", () => {
+    expect(plain(grammar.root.parse("x<sub>a</sub><sup>b</sup>"))).toStrictEqual(
+      JSON.parse('{"sub_sup":{"text":"x"},"sub_value":{"text":"a"},"sup_value":{"text":"b"}}'),
+    );
+    expect(plain(grammar.root.parse("x<sup>b</sup><sub>a</sub>"))).toStrictEqual(
+      JSON.parse('{"sub_sup":{"text":"x"},"sup_value":{"text":"b"},"sub_value":{"text":"a"}}'),
+    );
+  });
+
+  /**
+   * The five surviving mutations, and why no fixture closes them.
+   *
+   * Twenty-nine mutations were applied in all. Twenty-four die against the
+   * groups above. The five that survive are all the same kind of change — two
+   * alternatives of one ordered choice exchanged — in places where no position
+   * can reach both, so no input can tell the two orders apart:
+   *
+   *   `sequence`'s `unary_args` and `binary_args` branches
+   *   (`html/parse.rb:106-107`), whose heads are the 25 `UNARY_CLASSES` and the
+   *   single word `lim`; `sub_sup_tags`'s two ordered pairs (`:43-44`), whose
+   *   heads are `<sub` and `<sup`; `open_paren`'s and `mod`'s wrapped and bare
+   *   forms (`:33-34`, `:16-17`), where the wrapped form must start with `<`
+   *   and no table entry does; and `unary_args`'s parenthesised and
+   *   intermediate branches (`:50-51`), where `intermediate_exp` refuses every
+   *   opening delimiter outright.
+   *
+   * Disjointness is the whole argument, so the checkable part of it is asserted
+   * rather than described. Parslet's `str` matches only a prefix of the input,
+   * so two literal-headed alternatives can both match at one position exactly
+   * when one head is a prefix of the other. The last of the five is the one
+   * this cannot fully settle by assertion — `parse_parenthesis` can also begin
+   * with `<`, through `wrapped_tag(lparen)` — and it was settled by measurement
+   * instead: the two orders produce byte-identical trees on all 14,424 token
+   * sequences of length up to three over a 24-token alphabet.
+   */
+  it("has no input that could tell the five inert alternative swaps apart", () => {
+    const prefixes = (a: string, b: string) => a.startsWith(b) || b.startsWith(a);
+    // `sequence`: unary heads against the one binary head.
+    for (const unary of HTML_UNARY_CLASSES) {
+      expect(prefixes(unary, "lim"), unary).toBe(false);
+    }
+    // `sub_sup_tags`: the two ordered pairs.
+    expect(prefixes("<sub", "<sup")).toBe(false);
+    // `mod` and `open_paren`: a wrapped form starts with `<`, a bare one never
+    // does, so `alt(wrappedTag(X), X)` is order-inert for every table.
+    for (const text of [
+      ...HTML_UNARY_CLASSES,
+      ...HTML_LPAREN,
+      ...HTML_RPAREN,
+      ...HTML_SUB_SUP_CLASSES,
+      "lim",
+      "mod",
+    ]) {
+      expect(text.startsWith("<"), text).toBe(false);
+    }
+    // `unary_args`: `intermediate_exp` refuses every delimiter, so it cannot
+    // compete with `parse_parenthesis` for one that starts with one.
+    for (const delimiter of [...HTML_LPAREN, ...HTML_RPAREN]) {
+      expect(() => grammar.rules.intermediateExp.parse(delimiter), delimiter).toThrow(ParseFailed);
+    }
+
+    // And the swaps that are NOT inert, in the same rules, do change a tree —
+    // so the rules themselves are covered.
+    expect(plain(grammar.root.parse("sqrt(x)y"))).toStrictEqual(
+      JSON.parse(
+        '{"unary_function":{"unary":"sqrt","first_value":{"lparen":"(","text":"x","rparen":")"}},"sequence":{"text":"y"}}',
+      ),
+    );
+    expect(plain(grammar.root.parse("lim(x)(y)z"))).toStrictEqual(
+      JSON.parse(
+        '{"binary":"lim","first_value":{"lparen":"(","text":"x","rparen":")"},"second_value":{"lparen":"(","text":"y","rparen":")"},"sequence":{"text":"z"}}',
+      ),
+    );
   });
 });
 

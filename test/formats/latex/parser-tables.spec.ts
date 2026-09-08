@@ -123,11 +123,28 @@ describe("the tables arr_to_expression folds into ordered choices", () => {
     ]);
   });
 
-  it("keeps MATH_OPERATORS longest-first, which is what stops `ln` shadowing `liminf`", () => {
+  it("keeps MATH_OPERATORS longest-first, so no operator shadows a longer one", () => {
     expect(nonIncreasingByLength(LATEX_MATH_OPERATORS)).toBe(true);
     expect(LATEX_MATH_OPERATORS[0]).toBe("liminf");
     expect(LATEX_MATH_OPERATORS.at(-1)).toBe("lg");
-    expect(LATEX_MATH_OPERATORS.indexOf("liminf")).toBeLessThan(LATEX_MATH_OPERATORS.indexOf("ln"));
+
+    // Ordering only matters where one operator is a genuine PREFIX of another;
+    // anywhere else the choice cannot shadow whatever the order. Rather than
+    // name one pair, derive every prefix pair the table actually contains and
+    // require the longer of each to come first. Measured: exactly four —
+    // sin/sinh, tan/tanh, cot/coth, cos/cosh.
+    const prefixPairs = LATEX_MATH_OPERATORS.flatMap((short) =>
+      LATEX_MATH_OPERATORS.filter((long) => long !== short && long.startsWith(short)).map(
+        (long) => [short, long] as const,
+      ),
+    );
+    expect(prefixPairs).toHaveLength(4);
+    for (const [short, long] of prefixPairs) {
+      expect(
+        LATEX_MATH_OPERATORS.indexOf(long),
+        `${long} must precede its prefix ${short}`,
+      ).toBeLessThan(LATEX_MATH_OPERATORS.indexOf(short));
+    }
   });
 
   it("keeps the opening delimiters longest-first, from reverse_sort_hash", () => {

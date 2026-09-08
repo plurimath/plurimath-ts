@@ -9,8 +9,10 @@
 #   1. Seven hand-written tables (187 entries between them). Small, but their
 #      order is behaviour: `arr_to_expression` (`latex/parse.rb:196`) folds each
 #      into a Parslet ordered choice with no longest-match backtracking, which
-#      is why `MATH_OPERATORS` is written longest-first by hand — `ln` ahead of
-#      `liminf` would shadow it.
+#      is why `MATH_OPERATORS` is written longest-first by hand — `sin` ahead
+#      of `sinh` would match and leave `h` behind. Only genuine prefix pairs are
+#      at risk; the table has exactly four (sin/sinh, tan/tanh, cot/coth,
+#      cos/cosh), and the spec derives them rather than naming one.
 #   2. `Constants.symbols_constants`, which is *derived*: it merges the
 #      hand-written `SYMBOLS` into a table reflected off every loaded
 #      `Math::Symbols::Symbol` descendant's `INPUT[:latex]` array, then sorts it
@@ -445,7 +447,7 @@ module LatexParserDataGenerator
         "LATEX_MATH_OPERATORS", tables.fetch("mathOperators"),
         "`Constants::MATH_OPERATORS` — `math_operators_classes` (`:46`), tagged\n" \
         "`:unary_functions`. Written longest-first in the gem because the choice\n" \
-        "is ordered: `ln` ahead of `liminf` would shadow it.",
+        "is ordered: `sin` ahead of `sinh` would shadow it.",
       ),
       ts_string_list(
         "LATEX_LPAREN", tables.fetch("lparen"),

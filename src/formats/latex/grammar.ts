@@ -161,9 +161,14 @@ export function createLatexGrammar(decimalMarker: string = DEFAULT_DECIMAL_MARKE
    * never fire. The table is generated and every entry verified by a live parse
    * under its own locale (`scripts/generate-latex-parser-data.rb`).
    *
-   * A fresh atom per call, as in Ruby — the packrat cache is keyed by atom
-   * identity, so sharing one would merge caches the gem keeps apart. There is
-   * one call site (`:109`), so this is shape rather than consequence.
+   * A fresh atom per call, as in Ruby — but NOT for cache reasons. The packrat
+   * cache lives on the `ParseContext` (`pegkit/atom.ts`,
+   * `cache: Map<Atom, Map<number, CacheEntry>>`) and a context is built per
+   * `parse()`, so an atom reused across parses shares no cache with itself.
+   * What must stay separate is one GRAMMAR per decimal marker, because the
+   * marker is baked into the atom when it is built — which building it here,
+   * inside the per-marker factory, gets for free. There is one call site
+   * (`:109`), so this is shape rather than consequence.
    */
   const encodedDecimalMarker = LATEX_ENCODED_DECIMAL_MARKERS.get(decimalMarker);
   if (encodedDecimalMarker === undefined) {

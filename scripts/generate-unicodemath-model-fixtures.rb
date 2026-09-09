@@ -27,8 +27,11 @@
 #
 # Rows record what the gem did, including refusing:
 #   - `preprocessed`: `UnicodeMath::Parser.new(input).text`, the string Parslet
-#     sees. The port does not implement that pass yet — it is the next slice —
-#     so the parity suite feeds this field to the grammar directly.
+#     sees. The port implements that pass now (`formats/unicodemath/preprocess.ts`),
+#     so the parity suite no longer feeds this field to the grammar: it drives
+#     every row from the raw `input` and asserts the port re-derives this value.
+#     The field stays because that assertion needs the oracle's own answer to
+#     compare against.
 #   - `model`: the serialized `Plurimath::Math.parse(input, :unicode)` result,
 #     through `CorpusGenerator.serialize_node` — the same serializer that wrote
 #     the pinned corpus's `model:` blocks.

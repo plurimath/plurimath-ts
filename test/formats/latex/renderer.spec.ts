@@ -840,9 +840,12 @@ describe("a list in a value slot the gem inspects", () => {
   it("escapes an unnamed control with FOUR UPPERCASE hex digits", () => {
     //   ["a\u0000b"] => "[\"a\\u0000b\"]"   ["a\u001Ab"] => "[\"a\\u001Ab\"]"
     //   ["a\u007Fb"] => "[\"a\\u007Fb\"]"   ["a\u009Fb"] => "[\"a\\u009Fb\"]"
-    // `JSON.stringify` spells the middle two with LOWERCASE hex and leaves
-    // U+007F..U+009F unescaped, which is why this is a rule and not that
-    // function. It agrees on U+0000 only because that body has no letters.
+    // `JSON.stringify` gets only one of these four right, which is why this
+    // is a rule and not that function. Measured: it escapes U+001A, but as
+    // \u001a in LOWERCASE hex, and it leaves U+007F and U+009F unescaped
+    // altogether — so of the two middle rows it escapes one, in the wrong
+    // case, and passes the other through raw. It agrees on U+0000 only
+    // because that body has no letters for the case to show up in.
     expect(toLatex(number(["a\u0000b"]))).toBe('["a\\u0000b"]');
     expect(toLatex(number(["a\u001Ab"]))).toBe('["a\\u001Ab"]');
     expect(toLatex(number(["a\u007Fb"]))).toBe('["a\\u007Fb"]');
@@ -905,8 +908,11 @@ describe("a list in a value slot the gem inspects", () => {
     // [-0.0] => "[-0.0]" (Ruby has no Integer negative zero, so a JS -0 has
     // exactly one preimage), [Float::INFINITY] => "[Infinity]",
     // [-Float::INFINITY] => "[-Infinity]", [Float::NAN] => "[NaN]".
-    // Outside Ruby's plain band the two disagree: [1.5e-5] is "[1.5e-05]"
-    // in Ruby where JavaScript spells "0.000015".
+    // Outside Ruby's plain band the two CAN disagree: [1.5e-5] is "[1.5e-05]"
+    // in Ruby where JavaScript spells "0.000015". Not always, though —
+    // measured, [1202471614443916.8] is spelled identically by both and is
+    // refused anyway, because Ruby picks its format by more than magnitude
+    // and the band is therefore drawn conservatively.
     expect(toLatex(number([1.5]))).toBe("[1.5]");
     expect(toLatex(number([0.1]))).toBe("[0.1]");
     expect(toLatex(number([1e-4]))).toBe("[0.0001]");
@@ -938,7 +944,8 @@ describe("a list in a value slot the gem inspects", () => {
     // The shape validator checks INDEXED elements. An inspect walk that asked
     // the input for an iterator instead would disagree with what was
     // validated, and a hand-built array can make the two disagree on purpose:
-    // this one validates as EMPTY and rendered `["ghost"]` — bytes no Ruby
+    // this one validates as EMPTY and rendered `["ghost", "ghost"]`, one per
+    // yield of the generator below — bytes no Ruby
     // value produced. Ruby ignores an overridden enumeration method during
     // `inspect`, so `[].inspect` is `"[]"` however the object is decorated.
     // One traversal has to decide both, and it is the indexed one.

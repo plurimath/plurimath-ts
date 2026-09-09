@@ -100,7 +100,11 @@ export function rubyUnreproducible(value: unknown): string | null {
   }
   if (typeof value === "number") {
     return rubyNumberToS(value) === null
-      ? `the number ${String(value)} falls outside the range where Ruby's Float#to_s and JavaScript's agree`
+      ? `the number ${String(value)} falls outside the range this port has VERIFIED ` +
+          "Ruby's Float#to_s and JavaScript's to agree on. Some values out here do in " +
+          "fact agree — `1202471614443916.8` is spelled identically by both, measured — " +
+          "and are refused anyway, because Ruby's choice of format is not decided by " +
+          "magnitude alone and the edge cannot be drawn exactly"
       : null;
   }
   if (Array.isArray(value)) return null;
@@ -222,8 +226,14 @@ const RUBY_INSPECT_VERBATIM_MAX = 0x377;
  *     interpolation: `"a#b"` inspects as `"a#b"`, `'a#{b}'` as `"a\#{b}"`;
  *   - everything else verbatim, U+00A0..U+0377 included (é is `"é"`).
  *
- * An unpaired surrogate is refused by the ceiling: no UTF-8 Ruby string can
- * hold one, so there is nothing to be byte-identical to.
+ * An unpaired surrogate is refused by the ceiling. The reason is narrower than
+ * "Ruby cannot hold one": `[0xd800].pack("U")` DOES build a String tagged
+ * UTF-8 carrying the bytes `ED A0 80`, with `valid_encoding?` false, and both
+ * renderers inspect it happily as `"\xED\xA0\x80"` (measured on the pinned
+ * oracle). What no WELL-FORMED UTF-8 Ruby string can hold is the surrogate,
+ * and nothing says a JavaScript lone surrogate stands for that invalid-encoding
+ * string rather than for any other byte sequence — so there is no spelling to
+ * be byte-identical to, and refusing is the only answer that does not guess.
  */
 function rubyStringInspect(value: string): string | null {
   let body = "";
@@ -360,11 +370,15 @@ function inspectElement(value: unknown, at: string): ElementInspect {
     return { text: inspected };
   }
   if (Array.isArray(value)) {
-    // An INDEX loop, never `entries()`, `for…of` or `map`. Those ask the input
-    // for its own iterator, while the shape validator (`assertSlot` in
-    // `./validate.ts`) walks indices — so an input that overrides one and not
-    // the other makes the two traversals disagree, and this walk would spell
-    // elements that were never validated. Measured before this loop replaced
+    // An INDEX loop, never `entries()`, `for…of` or `map`. Each of those can
+    // be hijacked by the input, though NOT all by the same mechanism, and the
+    // distinction is worth keeping straight: measured, `map`, `forEach` and
+    // `entries()` do not consult `Symbol.iterator` at all — only `for…of` and
+    // spread do — but every one of them is reachable as an OWN property the
+    // input can define. The shape validator (`assertSlot` in `./validate.ts`)
+    // walks indices, so an input that overrides any of them makes the two
+    // traversals disagree and this walk would spell elements that were never
+    // validated. Measured before this loop replaced
     // an `entries()` one: an array carrying an own `entries` generator
     // validated as EMPTY and rendered `'["ghost", "ghost"]'`, bytes no Ruby
     // value produced. Ruby ignores an overridden enumeration method during

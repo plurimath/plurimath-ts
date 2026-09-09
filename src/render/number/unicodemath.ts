@@ -34,7 +34,7 @@
 
 import { RenderError } from "../../core/index";
 import { rubyArrayInspectOrThrow } from "../../core/ruby-semantics";
-import { FORMAT, type NodeOf } from "../../formats/unicodemath/render-shared";
+import { FORMAT, type NodeOf, present } from "../../formats/unicodemath/render-shared";
 import {
   UNICODEMATH_SUB_DIGITS,
   UNICODEMATH_SUP_DIGITS,
@@ -48,7 +48,15 @@ export function renderNumber(node: NodeOf<"number">): string | null {
   if (Array.isArray(raw)) {
     // The gem's mini short-circuit runs BEFORE the formatter, so it is what a
     // mini-sized list meets — and it sends `to_sym` to the Array.
-    if (node.miniSubSized || node.miniSupSized) {
+    //
+    // `present` and not `||`: `number.rb:53-54` guards with a bare `if`, so
+    // Ruby truthiness decides, and `0` and `""` are TRUE there. Measured on
+    // the pinned gem with `value` a list — `mini_sub_sized` set to `0` and to
+    // `""` both raise `NoMethodError: undefined method 'to_sym' for an
+    // instance of Array`, exactly as `true` does, while `false` returns
+    // `"[]"`. JavaScript truthiness would have skipped the refusal for the
+    // first two and answered `"[]"` for all three.
+    if (present(node.miniSubSized) || present(node.miniSupSized)) {
       throw new RenderError(
         "number.value: a mini-sized number indexes the digit table with " +
           "`value.to_sym` (`number.rb:103`), and a list answers no to_sym — " +
@@ -63,8 +71,11 @@ export function renderNumber(node: NodeOf<"number">): string | null {
   const value = node.value;
   if (value === null) return null;
 
-  if (node.miniSubSized) return UNICODEMATH_SUB_DIGITS.get(value) ?? null;
-  if (node.miniSupSized) return UNICODEMATH_SUP_DIGITS.get(value) ?? null;
+  // Ruby truthiness again, and it is visible here too: measured on the pinned
+  // gem with `value` the string "1", `mini_sub_sized` set to `0` and to `""`
+  // both answer "&#x2081;", the subscript digit, where `false` answers "1".
+  if (present(node.miniSubSized)) return UNICODEMATH_SUB_DIGITS.get(value) ?? null;
+  if (present(node.miniSupSized)) return UNICODEMATH_SUP_DIGITS.get(value) ?? null;
 
   return value;
 }

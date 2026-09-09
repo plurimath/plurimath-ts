@@ -390,6 +390,56 @@ describe("a list in Number#value, which this site used to lose silently", () => 
     expect(toUnicodemath(number("2", { miniSubSized: true }))).toBe("&#x2082;");
   });
 
+  it('reads the mini flags with Ruby truthiness, so 0 and "" are SET', () => {
+    // `number.rb:53-54` guards with a bare `if`, and in Ruby only nil and
+    // false are falsy — `0` and `""` are TRUE. JavaScript disagrees on both,
+    // so a `||` here answered as though the flag were unset. Measured on the
+    // pinned oracle 00c52783 (probe-mini2.rb / probe-mini3.rb, 2026-09-09),
+    // for both flags:
+    //
+    //   value [],  flag 0   => NoMethodError      flag false => "[]"
+    //   value [],  flag ""  => NoMethodError      flag true  => NoMethodError
+    //   value "1", flag 0   => "&#x2081;" (sub)   flag false => "1"
+    //   value "1", flag ""  => "&#x2081;" (sub)   flag true  => "&#x2081;"
+    for (const set of [0, ""]) {
+      expect(() => toUnicodemath(number([], { miniSubSized: set }))).toThrow(RenderError);
+      expect(() => toUnicodemath(number([], { miniSupSized: set }))).toThrow(RenderError);
+      expect(toUnicodemath(number("1", { miniSubSized: set }))).toBe("&#x2081;");
+      expect(toUnicodemath(number("1", { miniSupSized: set }))).toBe("&#xb9;");
+    }
+    // The other half of the same rule. Ruby has exactly two falsy values and
+    // BOTH reach here: measured on the oracle, `nil` and `false` each fall
+    // through to the formatter and answer "1" for the string and "[]" for the
+    // list, while `0` takes the mini branch. The gem's own constructor stores
+    // a nil flag unfiltered, so nil is a shape a caller can really produce.
+    for (const unset of [false, null]) {
+      expect(toUnicodemath(number([], { miniSubSized: unset }))).toBe("[]");
+      expect(toUnicodemath(number("1", { miniSubSized: unset }))).toBe("1");
+      expect(toUnicodemath(number([], { miniSupSized: unset }))).toBe("[]");
+      expect(toUnicodemath(number("1", { miniSupSized: unset }))).toBe("1");
+    }
+  });
+
+  it("refuses a float outside the band WITHOUT claiming the two disagree on it", () => {
+    // The band is conservative, and this is the value that proves it: measured
+    // on the pinned oracle, Ruby's `1202471614443916.8.to_s` and JavaScript's
+    // `String(1202471614443916.8)` are the SAME string, yet the value sits
+    // above `RUBY_PLAIN_FLOAT_MAX` and is refused. The refusal is right — Ruby
+    // picks its format by more than magnitude, so the edge cannot be drawn
+    // exactly — but the reason given must not assert a disagreement that is
+    // not there.
+    let thrown: unknown;
+    try {
+      toUnicodemath(number([1202471614443916.8]));
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(RenderError);
+    const why = (thrown as Error).message;
+    expect(why).toContain("VERIFIED");
+    expect(why).not.toMatch(/range where Ruby's Float#to_s and JavaScript's agree/);
+  });
+
   it("refuses the element shapes JavaScript cannot decide, naming the index", () => {
     // The same admission set as the latex site, because it is the same
     // TextRenderer ride: [5] and [5.0] are one JS number with two Ruby

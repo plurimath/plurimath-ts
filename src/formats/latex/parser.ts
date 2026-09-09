@@ -98,20 +98,31 @@ export function parseLatex(input: string, options?: LatexParseOptions | null): F
 }
 
 /**
- * Preprocessing failures reach the caller as `ParseError`, like every other
- * failure here.
+ * Preprocessing failures reach the caller as `ParseError`, the same class a
+ * grammar or transform failure becomes below. That is not every failure this
+ * module can raise, though: an unsupported locale is rejected before parsing
+ * starts, inside `parsePreprocessed`'s call to `latexGrammar`, and reaches the
+ * caller as `UnsupportedLocaleError` -- never wrapped. Measured:
+ * `parseLatex("x", { locale: "definitely-not-a-locale" })` throws
+ * `UnsupportedLocaleError` with code `UNSUPPORTED_LOCALE`, not a `ParseError`.
+ * That is deliberate, not a gap this function should close: the gem raises
+ * `Plurimath::Errors::UnsupportedLocale` from `key_for!` before parsing
+ * starts, `e.is_a?(Plurimath::Math::ParseError)` is `false` on the pinned
+ * oracle, and `formatting/errors.ts` documents the same split for this port.
  *
- * `preprocess` has a guard of its own -- when re-encoding produces a
- * `\\text{...}` match the input did not have, it throws rather than shift a
- * nil the way Ruby would. Its comment asks for that case to be measured
- * against the gem, and it has been: `\\text {x}` and `\\text&#x7b;x&#x7d;`
- * both reach `Plurimath::Math.parse(input, :latex)` as
- * `Plurimath::Math::ParseError` on the pinned oracle. So the gem's boundary
- * raises the same class the grammar and transform arms already produce, and
- * leaving this call outside them surfaced a bare `Error` with no `code` and no
- * `format` -- which the compat constructor then handed to its caller.
+ * What preprocessing can still fail on is an UNDECODABLE character reference:
+ * `preprocess` raises `UndecodableEntityError`, a bare `RangeError` subclass
+ * with no `code` and no `format`. Without this wrapper that error reached the
+ * caller as-is, and the compat constructor handed it on -- so a caller asking
+ * for LaTeX got something that did not look like a parse failure at all.
  *
- * The guard's own message is kept, because it says which input to measure.
+ * The `\\text{...}` restore is NOT one of those failures any more. It used to
+ * throw when the restore found more matches than the scan had saved; measured
+ * against the gem, Ruby shifts a nil there and `gsub` writes `nil.to_s`, so
+ * the construct is deleted instead -- `\\text {x}` preprocesses to the empty
+ * string, which the grammar then refuses as a `ParseError` of its own. That
+ * arm reproduces the gem rather than raising, so nothing reaches this wrapper
+ * from it.
  */
 function preprocessOrParseError(input: string): ReturnType<typeof preprocess> {
   try {

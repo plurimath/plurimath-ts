@@ -158,15 +158,17 @@ describe("latex preprocessing: the restoration pass", () => {
 
 describe("latex preprocessing: undecodable character references", () => {
   it.each(UNDECODABLE)("%j reports the reference at %i", (input, index) => {
-    // A `RangeError` subclass, so the renderers that brand a bare `RangeError`
-    // at their entry as a stack-depth refusal keep matching it.
-    expect(() => preprocess(input)).toThrow(RangeError);
     let thrown: unknown;
     try {
       preprocess(input);
     } catch (error) {
       thrown = error;
     }
+    // `thrown` stays `undefined` when nothing was raised, so the first
+    // assertion still fails a non-throwing `preprocess` — the reason it is a
+    // `RangeError` subclass being that the renderers which brand a bare
+    // `RangeError` at their entry as a stack-depth refusal keep matching it.
+    expect(thrown).toBeInstanceOf(RangeError);
     expect(thrown).toBeInstanceOf(UndecodableEntityError);
     expect((thrown as UndecodableEntityError).index).toBe(index);
   });

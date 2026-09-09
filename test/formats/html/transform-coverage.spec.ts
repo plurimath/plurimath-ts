@@ -183,8 +183,11 @@ describe("transform rule coverage", () => {
 });
 
 /**
- * `shapeOf` decides which signatures `finalize` will accept, so it has to agree
- * with the matchers themselves rather than with a second reading of them. Each
+ * `shapeOf` names the shape a value would BIND as, which is how the signatures
+ * in `model-parity.spec.ts` are computed. `finalize` no longer accepts or
+ * refuses on that basis — it keeps an unmatched hash the way the gem does — so
+ * this is a mirror of the matchers, not a gate, and it still has to agree with
+ * the matchers themselves rather than with a second reading of them. Each
  * probe is run through a real `Transform` carrying one `simple` rule and one
  * `sequence` rule on the same key, and the answer is compared with `shapeOf`.
  */

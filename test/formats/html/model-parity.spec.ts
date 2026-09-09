@@ -115,3 +115,106 @@ describe("the inputs the gem refuses", () => {
     },
   );
 });
+
+/**
+ * The shapes the GEM's own transform leaves unmatched, RE-DERIVED here from the
+ * gem's recorded models rather than read from anywhere.
+ *
+ * This is an observation, not a gate. Nothing refuses on it: the transform
+ * keeps an unmatched hash exactly as the gem does, and what actually holds the
+ * port to the gem is the deep-equality above, which compares against the model
+ * the gem produced. Recording the set still earns its place — it says out loud
+ * which constructs the gem answers with a raw hash, and it fails if a fixture
+ * regeneration changes that set without anyone noticing.
+ */
+const GEM_UNMATCHED_SIGNATURES: readonly string[] = [
+  "binary=simple,first_value=sequence,second_value=simple,sequence=simple",
+  "binary_number=simple,expression=sequence",
+  "binary_number=simple,expression=simple",
+  "binary_number=simple,parse_parenthesis=simple",
+  "expression=other,sub_sup=simple,sub_value=sequence,sup_value=simple",
+  "expression=other,symbol=simple",
+  "expression=sequence,hex_number=simple",
+  "expression=sequence,octal_number=simple",
+  "expression=sequence,sequence=sequence",
+  "expression=sequence,sum_prod=simple",
+  "expression=simple,hex_number=simple",
+  "expression=simple,lparen=simple,rparen=simple,sequence=simple",
+  "expression=simple,octal_number=simple",
+  "expression=simple,sum_prod=simple",
+  "expression=simple,tr_value=sequence",
+  "first_value=sequence,unary=simple",
+  "hex_number=simple,parse_parenthesis=simple",
+  "number=simple,parse_parenthesis=simple",
+  "octal_number=simple,parse_parenthesis=simple",
+  "parse_parenthesis=other",
+  "parse_parenthesis=simple,sequence=sequence",
+  "parse_parenthesis=simple,td_value=simple",
+  "parse_parenthesis=simple,tr_value=simple",
+  "sequence=other",
+  "sub_sup=other,sup_value=simple",
+  "sub_sup=sequence,sub_value=sequence",
+  "sub_sup=sequence,sub_value=simple",
+  "sub_sup=sequence,sub_value=simple,sup_value=simple",
+  "sub_sup=sequence,sup_value=sequence",
+  "sub_sup=sequence,sup_value=simple",
+  "table_value=other",
+  "unary_function=other",
+];
+
+describe("the signatures the gem leaves unmatched", () => {
+  const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+
+  // A serialized node is `{class, fields}` and stands for a real model object,
+  // so it is a LEAF here — the same thing `shapeOf` sees when the transform
+  // hands it a draft rather than a plain hash.
+  const isSerializedNode = (value: unknown): boolean =>
+    isPlainObject(value) &&
+    Object.keys(value).length === 2 &&
+    "class" in value &&
+    "fields" in value;
+
+  const isRawHash = (value: unknown): boolean => isPlainObject(value) && !isSerializedNode(value);
+
+  const serializedShapeOf = (value: unknown): "simple" | "sequence" | "other" => {
+    if (Array.isArray(value)) {
+      return value.every((item) => !Array.isArray(item) && !isRawHash(item)) ? "sequence" : "other";
+    }
+    return isRawHash(value) ? "other" : "simple";
+  };
+
+  const signatureOf = (hash: Record<string, unknown>): string =>
+    Object.entries(hash)
+      .map(([key, value]) => `${key}=${serializedShapeOf(value)}`)
+      .sort()
+      .join(",");
+
+  const measured = new Set<string>();
+  const collect = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const item of value) collect(item);
+      return;
+    }
+    if (!isPlainObject(value)) return;
+    if (isSerializedNode(value)) {
+      for (const field of Object.values(value.fields as Record<string, unknown>)) collect(field);
+      return;
+    }
+    // The only EMPTY hashes in these models are `Math::Function::Table#options`
+    // and `Math::Function::Linebreak#attributes` — model fields that happen to
+    // hold a Hash, not Parslet nodes that failed to match. A node that failed
+    // to match always carries at least the key it was captured under.
+    if (Object.keys(value).length > 0) measured.add(signatureOf(value));
+    for (const entry of Object.values(value)) collect(entry);
+  };
+  for (const entry of parsed) collect(entry.model);
+
+  it("found some, so this check is not passing on an empty walk", () => {
+    expect(measured.size).toBeGreaterThan(20);
+  });
+
+  it("is exactly the set recorded above", () => {
+    expect([...measured].sort()).toStrictEqual([...GEM_UNMATCHED_SIGNATURES].sort());
+  });
+});

@@ -1077,80 +1077,43 @@ export function shapeOf(value: unknown): "simple" | "sequence" | "other" {
   return isPlainObject(value) ? "other" : "simple";
 }
 
-function signatureOf(hash: Record<string, unknown>): string {
-  return Object.entries(hash)
-    .map(([key, value]) => `${key}=${shapeOf(value)}`)
-    .sort()
-    .join(",");
-}
 
 /**
- * The node SIGNATURES the GEM's own transform leaves unmatched, so a hash that
- * survives to the model is the gem's behaviour rather than this port's gap.
+ * A hash NO RULE MATCHED is kept, not refused — the same thing the gem does.
  *
- * **A key set is not a signature.** Parslet binds on the matcher kind as well
- * as the key, so whether a rule matches depends on the SHAPE of each value.
- * Each entry below therefore records `key=shape` per key, with `shape`
- * computed exactly as pegkit's `simple` and `sequence` matchers decide.
+ * `Parslet::Transform#apply` leaves an unmatched hash in place, and
+ * `Html::Parser#parse` wraps whatever comes back in a `Math::Formula`. So the
+ * gem answers a formula carrying a raw `{binary_number:, expression:}` pair for
+ * `0b101x`, and only a later RENDER fails on it. This port does the same, and
+ * `finalizeValue` therefore finalizes a plain hash's entries and keeps the hash.
  *
- * Measured, not reasoned about: every registered block was wrapped on the
- * oracle and every hash that reached `transform_elt` without matching a rule
- * was recorded with its value shapes, over the same inputs
- * `scripts/generate-html-model-fixtures.rb` emits. Every signature this list
- * carries came back from that trace.
+ * ## This used to refuse, and refusing was a parity defect
  *
- * Fourteen came back, and three of them are GEM BUGS reproduced rather than
- * fixed:
+ * An earlier version carried the measured list of signatures the gem leaves
+ * unmatched and threw on anything else, on the reasoning that an unported rule
+ * should be loud rather than silently produce a raw hash. Two measurements
+ * retired that:
  *
- *   - `first_value=sequence,unary=simple` — `transform.rb:171` binds
- *     `first_value` with `simple(...)` only, so `sqrt(a+b)`, whose argument
- *     transforms to an ARRAY, matches nothing. The hash survives, and the
- *     formula the gem returns carries a raw `{unary:, first_value:}` pair in
- *     place of a `Sqrt`.
- *   - `sub_sup=sequence,sub_value=simple` — every one of the 24 sub/sup rules
- *     binds `sub_sup` with `simple(...)`, so a base that transformed to an
- *     array (`<i>ab</i><sub>1</sub>`) matches none of them.
- *   - `binary=simple,first_value=sequence,second_value=simple,sequence=simple`
- *     — `transform.rb:457` wants all three `simple` and `:463` wants both
- *     values `sequence`, and neither carries the trailing `sequence` key that
- *     `<i>2a</i><i>mod</i><i>em</i>` produces here.
+ *   - The loud signal was already there, and stronger. `model-parity.spec.ts`
+ *     asserts `normalize(parseHtml(input))` deep-equals the model the GEM
+ *     recorded, so an unported rule fails as a raw hash where the gem has a
+ *     node. That compares against the oracle; "no rule matched" only noticed
+ *     that nothing matched.
+ *   - The cost was not theoretical. Over 272 inputs — every `RULE_COVERAGE`
+ *     entry, the gem's own spec strings, and 107 cross-group combinations —
+ *     the gem parsed 265 and the refusal rejected 44 of them, across 23
+ *     signatures none of which the list carried. They are ordinary compound
+ *     inputs: `abs(0b101)`, `(0x1f)`, `(&pi;)`, `1(b)+1`, a table followed by
+ *     a subscript. Measured the other way too: no input in that set parsed
+ *     here and failed on the gem.
  *
- * The other eleven are the `=other` shells those three sit inside, plus the
- * hashes the gem leaves where a `td`/`tr`/`table` value or a parenthesised
- * body folded to a shape no rule binds.
- *
- * **This list is the measured fixture exceptions, not a decision procedure.** A
- * signature's absence does NOT mean the gem matches it: it means no fixture
- * input produced it, so nothing here knows. Anything absent is REFUSED, which
- * is conservative in both directions. Widening the list is a measurement,
- * never a guess.
+ * A list derived from one fixture set cannot decide what a parser accepts. The
+ * fixture set decides what is TESTED; the gem decides what is ACCEPTED.
+ * `test/formats/html/model-parity.spec.ts` keeps the measured signatures as a
+ * record of the gem's behaviour, where they are an observation rather than a
+ * gate.
  */
-const GEM_UNMATCHED_SIGNATURES: ReadonlySet<string> = new Set([
-  "binary=simple,first_value=sequence,second_value=simple,sequence=simple",
-  "expression=other,sub_sup=simple,sub_value=sequence,sup_value=simple",
-  "expression=other,symbol=simple",
-  "expression=sequence,hex_number=simple",
-  "expression=sequence,sequence=sequence",
-  "expression=simple,lparen=simple,rparen=simple,sequence=simple",
-  "expression=simple,tr_value=sequence",
-  "first_value=sequence,unary=simple",
-  "parse_parenthesis=other",
-  "sequence=other",
-  "sub_sup=other,sup_value=simple",
-  "sub_sup=sequence,sub_value=simple",
-  "table_value=other",
-  "unary_function=other",
-]);
 
-/** Refuses a hash the gem would have matched. */
-function assertGemLeavesUnmatched(hash: Record<string, unknown>): void {
-  const signature = signatureOf(hash);
-  if (!GEM_UNMATCHED_SIGNATURES.has(signature)) {
-    throw new Error(
-      `html transform: no rule matched {${signature}}; that shape is not in the ported set`,
-    );
-  }
-}
 
 /**
  * Finalizes one transformed value into what the immutable model can hold:
@@ -1163,7 +1126,6 @@ function finalizeValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(finalizeValue);
   if (isDraft(value)) return finalizeDraft(value);
   if (isPlainObject(value)) {
-    assertGemLeavesUnmatched(value);
     const result: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) result[key] = finalizeValue(entry);
     return result;
@@ -1213,13 +1175,13 @@ function finalizeDraft(draft: HtmlDraft, inputString?: string): MathNode {
  * `[" "]`. Both are measured: `Plurimath::Math.parse(" ", :html)` answers
  * `Formula([" "])`.
  *
- * The root hash is CHECKED before it is wrapped, so a node whose rule this port
- * does not carry fails here rather than reaching a caller as data.
+ * A root hash no rule matched is wrapped and kept, exactly as the gem keeps it:
+ * `Html::Parser#parse` returns `Math::Formula.new(transformed_tree)` whatever
+ * the transform left behind.
  */
 export function finalizeHtmlParse(transformed: unknown, inputString: string): FormulaNode {
   if (isFormulaDraft(transformed)) {
     return finalizeDraft(transformed, inputString) as FormulaNode;
   }
-  if (isPlainObject(transformed)) assertGemLeavesUnmatched(transformed);
   return finalizeDraft(newFormula(transformed), inputString) as FormulaNode;
 }

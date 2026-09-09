@@ -101,10 +101,10 @@ export function rubyUnreproducible(value: unknown): string | null {
   if (typeof value === "number") {
     return rubyNumberToS(value) === null
       ? `the number ${String(value)} falls outside the range this port has VERIFIED ` +
-          "Ruby's Float#to_s and JavaScript's to agree on. Some values out here do in " +
-          "fact agree — `1202471614443916.8` is spelled identically by both, measured — " +
-          "and are refused anyway, because Ruby's choice of format is not decided by " +
-          "magnitude alone and the edge cannot be drawn exactly"
+          "Ruby's Float#to_s and JavaScript's String() to agree on. Some values out " +
+          "here do in fact agree — `1202471614443916.8` is spelled identically by " +
+          "both, measured — and are refused anyway, because Ruby's choice of format " +
+          "is not decided by magnitude alone and the edge cannot be drawn exactly"
       : null;
   }
   if (Array.isArray(value)) return null;

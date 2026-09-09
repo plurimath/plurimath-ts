@@ -149,9 +149,12 @@ export interface PreprocessedUnicodemath {
    * `@splitted` — the raw text after the last `#`, or `undefined` when the
    * input had no split point.
    *
-   * RAW: the gem never encodes, strips or otherwise touches the tail, so this
-   * is a verbatim slice of the caller's input. Measured:
-   * `Parser.new("✎(a#b) # 3")` leaves `@splitted == " 3"`, leading space and all.
+   * Never encoded or stripped — `Parser.new("✎(a#b) # 3")` leaves
+   * `@splitted == " 3"`, leading space and all. It is NOT always a verbatim
+   * slice of the input, though: the pencil pass runs before the split and `:50`
+   * un-protects field 0 only, so a `✎(…)` span landing in the tail keeps the
+   * stand-in. Measured: `Parser.new("x # ✎(a#b)")` leaves
+   * `@splitted == " ✎(a\"replacement\"b)"`.
    */
   readonly label: string | undefined;
   /** Translates an offset in `text` back to an offset in the caller's input. */
@@ -234,9 +237,11 @@ function regexPass(
   const fresh = new RegExp(pattern.source, pattern.flags);
   const rewrites: Rewrite[] = [];
   for (const match of working.text.matchAll(fresh)) {
-    // A zero-length match would loop forever in `matchAll` if the pattern were
-    // able to produce one; none of the patterns here can, and a zero-length
-    // rewrite has no span to attribute, so it is refused rather than skipped.
+    // A zero-length match does NOT hang `matchAll` — it advances past it, so
+    // `/(?:)/g` over `"a"` yields indices 0 and 1 and terminates (measured).
+    // The hazard is `applyRewrites`, which skips any rewrite of length 0 and
+    // would therefore DROP this replacement's text silently. None of the
+    // patterns here can match empty, so this is refused rather than handled.
     if (match[0].length === 0) {
       throw new Error(`unicodemath preprocess: empty match from ${String(pattern)}`);
     }
@@ -245,6 +250,39 @@ function regexPass(
       length: match[0].length,
       text: replacement(match as RegExpExecArray),
     });
+  }
+  return applyRewrites(working, rewrites);
+}
+
+/**
+ * `parser.rb:46-48` — the pencil pass, rewriting each protected `#` on its own.
+ *
+ * The text this produces is identical to rewriting the whole `✎(…)` match, since
+ * the gem's nested `gsub` changes nothing but the `#`s. The SPANS are not.
+ * `applyRewrites` points every character a rewrite emits at the start of what
+ * that rewrite matched, so replacing the span whole made every character inside
+ * it — the `√`, the `@`, all of it — claim to come from the `✎`. Measured before
+ * this was split up: `parseUnicodemath("✎(#f00&√@)")` reported `index` 0 for a
+ * refusal at the `@`, which is at index 8.
+ *
+ * A one-character rewrite per `#` keeps every other character's own origin,
+ * which is why this pass is written out rather than handed to `regexPass`.
+ * The rewrites stay ascending and non-overlapping: `matchAll` yields
+ * non-overlapping matches left to right, and the hashes within each are scanned
+ * in order.
+ *
+ * Only this pass rewrote a REGION. The others rewrite a token — one character to
+ * an entity, `&#x26;` back to `&`, `\\` to `\`, one `\uXXXX` escape to one
+ * entity — where collapsing to the token's start is the correct attribution.
+ */
+function pencilPass(working: Working): Working {
+  const fresh = new RegExp(PENCIL_LABEL.source, PENCIL_LABEL.flags);
+  const rewrites: Rewrite[] = [];
+  for (const match of working.text.matchAll(fresh)) {
+    const span = match[0];
+    for (let at = span.indexOf("#"); at !== -1; at = span.indexOf("#", at + 1)) {
+      rewrites.push({ start: match.index + at, length: 1, text: REPLACEMENT_TOKEN });
+    }
   }
   return applyRewrites(working, rewrites);
 }
@@ -346,9 +384,7 @@ export function preprocess(input: string): PreprocessedUnicodemath {
   // overwriting it with a stand-in. The nested `gsub` runs on the matched
   // substring, so ALL of that span's `#` are protected, not only the one the
   // capture group named.
-  working = regexPass(working, PENCIL_LABEL, (match) =>
-    match[0].split("#").join(REPLACEMENT_TOKEN),
-  );
+  working = pencilPass(working);
 
   // `:49` — split on `#`. Everything after the FIRST `#` is dropped from the
   // formula; `:51` keeps only the LAST field as the label, so a middle field is
@@ -396,9 +432,11 @@ export function preprocess(input: string): PreprocessedUnicodemath {
   // measured, `Parser.new("a\\\\b").text == "a\\b"` (two in, one out).
   working = literalPass(working, "\\\\", "\\");
 
-  // `:17-20` — `\uXXXX` to a hex entity. This runs AFTER `:16`, so a doubled
-  // `\\u0041` has already been halved into `A` and is rewritten here too.
-  // Measured: `Parser.new("\\\\u0041").text == "&#x0041;"`.
+  // `:17-20` — `\uXXXX` to a hex entity. This runs AFTER `:16`, so an input
+  // written with TWO backslashes has already been halved to the one-backslash
+  // escape `\u0041` — still those six literal characters, not the letter `A`
+  // they name — and is rewritten here like any other. Measured:
+  // `Parser.new("\\\\u0041").text == "&#x0041;"`.
   working = regexPass(working, U_ESCAPE, (match) => `&#x${match[1] as string};`);
 
   // `:21`

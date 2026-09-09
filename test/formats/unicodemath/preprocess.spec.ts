@@ -120,6 +120,28 @@ describe("the inputs whose split leaves no field", () => {
 });
 
 describe("the source map", () => {
+  /**
+   * A span rewrite attributes every character it emits to the START of what it
+   * matched, so a pass that rewrites a REGION collapses every offset inside it.
+   * The pencil pass covers `✎(…)` — a region holding arbitrary other text — and
+   * rewriting it whole reported every failure inside it at the `✎`.
+   *
+   * Bounds assertions cannot catch that: a collapsed offset is still inside the
+   * input. Only an exact offset can, so this pins one.
+   */
+  it("keeps offsets inside a pencil span, which is rewritten hash by hash", () => {
+    const input = "✎(#f00&√@)";
+    let thrown: unknown;
+    try {
+      parseUnicodemath(input);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(ParseError);
+    // The `@` is what the grammar refuses, and it sits at index 8 of the input.
+    expect((thrown as ParseError).index).toBe(input.indexOf("@"));
+  });
+
   it("reports failure positions in the caller's input, not the encoded text", () => {
     // `√` is one character in, and encodes to the eight characters `&#x221a;`.
     // An offset taken from the preprocessed text would land far past the `@`.

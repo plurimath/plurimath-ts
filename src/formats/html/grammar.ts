@@ -19,14 +19,15 @@
  * (`html/parse.rb:171`) builds by interpolation.
  *
  * **This is the input side of `src/formats/html/`, beside the renderer, not
- * instead of it.** It is deliberately not re-exported from `index.ts`: the HTML
- * subpath stays output-only until the transform lands, so nothing here ships.
+ * instead of it.** It is not re-exported from `index.ts` — `parseHtml`
+ * (`./parser`) is the entry a caller uses, and this module is how it works.
  *
  * This module takes **already-normalised** text. `Html::Parser#normalized_text`
  * (`html/parser.rb:27`) rewrites every substring matching `HTML_ENTITY` through
  * `string_to_html_entity(html_entity_to_unicode(...))` before Parslet runs, so
- * `&prod;` reaches the grammar as `&#x220f;`. That pass is a separate slice,
- * and until it lands a caller supplies the normalised string itself.
+ * `&prod;` reaches the grammar as `&#x220f;`. That pass is `./preprocess`,
+ * which `parseHtml` runs first; a caller reaching this module directly
+ * supplies the normalised string itself.
  *
  * Two facts about that pass that a reader coming from `latex/grammar.ts` will
  * otherwise get wrong, both measured on the oracle rather than read off the
@@ -41,7 +42,8 @@
  *    .decimal)` — where LaTeX's and UnicodeMath's match an entity-encoded one.
  *    See `decimalMarkerAtom` below.
  *
- * There is no transform yet: this produces the Parslet-shaped tree and stops.
+ * This module produces the Parslet-shaped tree and stops; `./transform` turns
+ * it into a model.
  *
  * Three deliberate departures from a literal transcription, each argued where
  * it sits and each covered by the oracle fixtures in

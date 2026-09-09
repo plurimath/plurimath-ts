@@ -12,7 +12,9 @@
 # back. What there is instead is the ROUND TRIP the gem's own
 # `spec/plurimath/html/to_html_round_trip_spec.rb` performs: parse each corpus
 # case in its own input format, render it with `to_html`, strip the whitespace,
-# and hand the result back to `Plurimath::Math.parse(..., :html)`. Those are by
+# and hand the result back to `Plurimath::Math.parse(..., :html)`. A case that
+# the parser refuses and one the RENDERER refuses are counted apart, through
+# separate rescues. Those are by
 # construction HTML strings the gem can produce, over inputs nobody wrote by
 # hand.
 #
@@ -152,6 +154,33 @@ RULE_COVERAGE = {
   # `Html::Parse#space` (`html/parse.rb:8`) carries no `.as`, so Parslet drops
   # it and the sequence folds to a lone `{expression: ...}`.
   "space" => [" x", " x+y", " ", "x "],
+  # The shapes NO rule matches, which the gem PARSES and returns as a raw hash
+  # inside the formula -- only its subsequent RENDER fails. Twenty-two inputs
+  # chosen off an oracle sweep to cover all 23 such signatures the sweep found;
+  # the port has to return the same odd tree rather than refusing the parse.
+  "unmatched" => [
+    "1(b)",
+    "&sum;x",
+    "&sum;xy",
+    "<i>ab</i>xy",
+    "<i>ab</i><sup>2</sup>",
+    "<i>ab</i><sub>1</sub><sup>2</sup>",
+    "<i>ab</i><sub>ab</sub>",
+    "<i>ab</i><sup>ab</sup>",
+    "<i>ab</i>(b)",
+    "0x1fx",
+    "0x1fxy",
+    "0x1f(b)",
+    "0b101x",
+    "0b101xy",
+    "0b101(b)",
+    "0o17x",
+    "0o17xy",
+    "0o17(b)",
+    "<td>a</td>(b)",
+    "<tr><td>a</td></tr>(b)",
+    "<i>sqrt</i><i>a+b</i>",
+  ],
   # `Html::Parser#normalized_text` on both branches and on the shapes that
   # surprise: an unknown name is MANGLED rather than left alone, `&AMP;`
   # matches the case-insensitive regexp but not the case-sensitive decode
@@ -229,13 +258,24 @@ sidecar, provenance = RenderFixtureProvenance.prepare(
 # the exception here would put a non-string in the input list.
 corpus_html = []
 rendered = 0
+refused_parse = 0
 refused_render = 0
 CorpusGenerator.read_pin_cases.each do |kase|
   format = kase["input_format"]
   next if format.nil?
 
+  # TWO rescues, never one. A single rescue around parse-and-render records a
+  # parse refusal as a render refusal, and this project has published that
+  # wrong statement three times. Measured with them split: `a/` fails inside
+  # `Math.parse`, before `to_html` is reached.
   begin
-    html = Plurimath::Math.parse(kase["input"], format.to_sym).to_html
+    parsed_case = Plurimath::Math.parse(kase["input"], format.to_sym)
+  rescue StandardError
+    refused_parse += 1
+    next
+  end
+  begin
+    html = parsed_case.to_html
   rescue StandardError
     refused_render += 1
     next
@@ -314,7 +354,8 @@ RenderFixtureProvenance.write_manifest(
   provenance: provenance,
 )
 puts "html model fixtures: #{rows.length} cases " \
-     "(#{corpus_html.length} distinct from #{rendered} rendered corpus cases, " \
-     "#{refused_render} the renderer refused), #{parsed} parsed, #{raised} raised"
+     "(#{corpus_html.length} distinct from #{rendered} rendered corpus cases; " \
+     "#{refused_parse} the parser refused, #{refused_render} the renderer did), " \
+     "#{parsed} parsed, #{raised} raised"
 puts "  -> #{out}"
 puts "  -> #{sidecar}"

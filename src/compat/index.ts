@@ -58,9 +58,9 @@ export const FORMATS: readonly Format[] = [
  * UnicodeMath, HTML and MathML arrive later in P3 and P4.
  *
  * Only some of those four are absent because no parser exists:
- * `parseUnicodemath` is implemented
- * (P3) and reachable from the `./unicodemath` subpath. It is withheld HERE,
- * which is a different judgement from "not written yet".
+ * `parseUnicodemath` is implemented (P3) and reachable from the
+ * `./unicodemath` subpath. It is withheld HERE, which is a different
+ * judgement from "not written yet".
  *
  * A partial parser behind this constructor is worse than an absent one. The
  * subpath is opt-in: a caller importing `parseUnicodemath` has chosen that

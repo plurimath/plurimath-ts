@@ -1,19 +1,21 @@
 /**
- * UnicodeMath parse parity against the oracle: for every fixture input, the
- * gem's own preprocessed text → grammar → transform → `normalize` must
- * deep-equal the model the gem recorded for
- * `Plurimath::Math.parse(input, :unicode)`.
+ * UnicodeMath parse parity against the oracle: for every fixture input,
+ * `parseUnicodemath(input)` → `normalize` must deep-equal the model the gem
+ * recorded for `Plurimath::Math.parse(input, :unicode)`.
  *
  * The fixtures are generated, never hand-written
  * (`scripts/generate-unicodemath-model-fixtures.rb`), from one source: every
  * distinct `expected.unicodemath` string in the pinned corpus — UnicodeMath the
  * gem itself emitted, fed back in as a round trip.
  *
- * **The preprocessed text comes from the fixture, not from this port.**
- * `UnicodeMath::Parser#initialize` entity-encodes its input, reverses five
- * specific encodings, rewrites `\uXXXX` escapes and strips the result before
- * Parslet ever runs. That pass is a separate slice — `grammar.spec.ts` already
- * reads its inputs the same way — so this suite starts where the grammar does.
+ * **The preprocessed text is now DERIVED, not read.** This suite used to feed
+ * the grammar each row's recorded `preprocessed` string, because
+ * `UnicodeMath::Parser#initialize`'s entity encoding, `⫷…⫸` deletion, `\uXXXX`
+ * rewriting, `#` split and strip were a separate slice. `preprocess.ts` carries
+ * that pass now, so every row is driven from its RAW `input` through the real
+ * entry point, and the first test below asserts the port re-derives each
+ * recorded `preprocessed` exactly — the crutch is gone rather than merely
+ * unused. Every row moved; none had to stay behind.
  *
  * Refusals are pinned as first-class outcomes: a row with `raises` must fail
  * here too, and a row with a `model` must not — except the rows whose rule
@@ -24,12 +26,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { normalize } from "../../../src/core/index";
-import { parseUnicodemathPreprocessed } from "../../../src/formats/unicodemath/grammar";
-import {
-  finalizeUnicodemathParse,
-  unicodemathTransform,
-} from "../../../src/formats/unicodemath/transform";
+import { normalize, ParseError } from "../../../src/core/index";
+import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
+import { preprocess } from "../../../src/formats/unicodemath/preprocess";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -82,10 +81,7 @@ const supported = corpus.filter(
 );
 
 function parseFixture(entry: FixtureCase): unknown {
-  const preprocessed = entry.preprocessed;
-  if (preprocessed === undefined) throw new Error("fixture row has no preprocessed text");
-  const tree = parseUnicodemathPreprocessed(preprocessed);
-  return finalizeUnicodemathParse(unicodemathTransform().apply(tree), entry.input);
+  return parseUnicodemath(entry.input);
 }
 
 describe("the UnicodeMath fixture set", () => {
@@ -103,6 +99,17 @@ describe("the UnicodeMath fixture set", () => {
     expect(parsed.length + raised.length).toBe(fixtures.caseCount);
     expect(corpus.length).toBe(fixtures.corpusUnicodemathCount);
     expect(corpus.length + boundary.length).toBe(fixtures.caseCount);
+  });
+
+  // The crutch this slice removed. Every row carries the `Parser#text` the gem
+  // produced; the port must re-derive it from the raw input, or the parity
+  // results below would be measuring the grammar against text it was handed
+  // rather than text it computed.
+  it("re-derives every recorded preprocessed text from the raw input", () => {
+    expect(fixtures.cases.every((entry) => entry.preprocessed !== undefined)).toBe(true);
+    for (const entry of fixtures.cases) {
+      expect(preprocess(entry.input).text).toBe(entry.preprocessed);
+    }
   });
 
   it("draws its parity inputs from the pinned corpus's own UnicodeMath output", () => {
@@ -134,6 +141,11 @@ describe("the rule families this slice defers", () => {
   it.each(deferred.map((entry) => [entry.input, entry] as const))(
     "%j: refuses loudly, naming the unmatched keys",
     (_input, entry) => {
+      // The transform's own message survives the entry point's normalisation,
+      // so the refusal still names the keys — but it now reaches a caller as a
+      // `ParseError` rather than a bare `Error`, which is what the gem's public
+      // boundary does with anything a `StandardError` escapes into.
+      expect(() => parseFixture(entry)).toThrow(ParseError);
       expect(() => parseFixture(entry)).toThrow(/no rule matched \{/);
     },
   );
@@ -160,6 +172,7 @@ describe("inputs whose rules sit outside the slice", () => {
   it.each(boundary.map((entry) => [entry.input, entry] as const))(
     "%j: is refused rather than answered differently",
     (_input, entry) => {
+      expect(() => parseFixture(entry)).toThrow(ParseError);
       expect(() => parseFixture(entry)).toThrow(/no rule matched \{/);
     },
   );
@@ -172,11 +185,22 @@ describe("the inputs the gem refuses", () => {
       // Every row here raised `Plurimath::Math::ParseError` inside `parse`
       // (`raisedIn`), which for UnicodeMath means the grammar itself refused —
       // there is no `rescue` under `lib/plurimath/unicode_math/`. The port's
-      // grammar throws `ParseFailed`; this suite stands below the public
-      // boundary that would turn it into a `ParseError`, so it asserts only
-      // that the pipeline fails.
+      // grammar throws `ParseFailed`, and this suite now stands AT the public
+      // boundary, so the refusal must arrive as a `ParseError` carrying the
+      // format token the gem names in its own message.
       expect(entry.raisedIn).toBe("parse");
-      expect(() => parseFixture(entry)).toThrow();
+      let thrown: unknown;
+      try {
+        parseFixture(entry);
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toBeInstanceOf(ParseError);
+      const failure = thrown as ParseError;
+      expect(failure.format).toBe("unicode");
+      expect(failure.input).toBe(entry.input);
+      // The position indexes the CALLER's input, never the encoded text.
+      expect(failure.index).toBeLessThanOrEqual(entry.input.length);
     },
   );
 });

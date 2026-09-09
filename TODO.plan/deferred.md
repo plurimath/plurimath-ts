@@ -166,7 +166,7 @@ the ten aliases some corpus case constructs — `Power`, `Mod`, `Lim`, `Log`,
 `Root`, `Td` (binary), `PowerBase` (ternary), `Sin`, `Cos`, `Tr` (unary) — so
 every admitted arm is held to the gem's bytes by `render-parity.spec.ts`, and
 `power`/`powerBase` additionally by the full `degenerate-slots` slot matrix.
-`MEASURED_LABELS` in the unary file is the one hand-typed gem-derived table:
+`MEASURED_LABELS` in the unary file is one of TWO hand-typed gem-derived tables there:
 `Core#invert_unicode_symbols` is `UNICODE_SYMBOLS.invert[class_name] ||
 class_name`, so the label is NOT reliably the downcased class name — of the
 names reachable through that carrier, `Sup` resolves to `&#x2283;` — and the
@@ -179,8 +179,26 @@ into a `notation=` attribute (a heap address, not reproducible), and
 `ArgumentError` — surfacing as `ParseError` — when a `Rule` is rendered
 inside a tree.
 
-**Trigger for revisiting: a generator that owns these sets per format, or the
-first consumer that needs `Scarries`.**
+The second is `INSPECT_NAMED_ESCAPES` in the same file: the ten codepoints
+whose `String#inspect` form Ruby writes as a NAMED escape rather than
+`\uXXXX` — `\a \b \t \n \v \f \r \e \" \\` for `0x07 0x08 0x09 0x0a
+0x0b 0x0c 0x0d 0x1b 0x22 0x5c`. Every entry was measured against the pinned
+oracle and all ten agree; seven codepoints deliberately absent from it were
+checked too and each falls through to the numeric branch, as the gem does. So
+this is a governance exception, not a correctness one: the data is right, and
+what it lacks is a generator that would keep it right.
+
+Recording it rather than generating it now is a size judgement. The migration
+has a precedent in this very file — the three AsciiMath render tables below —
+and a clear shape: a codepoint sweep in `generate-corpus.rb` beside
+`latex_left_right_parens`, emitted through `ts_tuple_map` into
+`src/generated/latex/render-tables.ts`, asserting on the way that the
+named-escape set is EXACTLY those ten so completeness is enforced rather than
+claimed in prose. That is its own change, not a rider on a corpus pin.
+
+**Trigger for revisiting: a generator that owns these sets per format, the
+first consumer that needs `Scarries`, or any third hand-typed table appearing
+in that file — two is an exception, three is a habit.**
 
 ### Three AsciiMath render tables — generated
 

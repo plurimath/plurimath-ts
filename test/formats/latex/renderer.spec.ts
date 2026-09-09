@@ -162,10 +162,14 @@ describe("unary functions", () => {
   });
 
   it("Mbox reproduces Ruby's own string escaping inside a list", () => {
-    // Each measured on the same oracle, because JavaScript agrees with Ruby on
-    // none of them by default: `#` is escaped ONLY before `{`, `$` or `@`, the
-    // C0 controls have named forms, and the rest of C0/C1 is `\uXXXX` with
-    // UPPERCASE hex.
+    // Each measured on the same oracle. `JSON.stringify` is not this
+    // escaping, but it is not a stranger to it either: comparing it against
+    // these 14 committed bytes, JSON agrees on 7 — the quote, the backslash,
+    // `a#x` needing no escape, `\n`, `\t`, NUL and `é` — and differs on 7:
+    // `#` is escaped ONLY before `{`, `$` or `@`, and JSON never escapes it
+    // at all; ESC and SUB get Ruby's named/uppercase forms where JSON spells
+    // them in lowercase hex; and DEL and U+009F are escaped here where JSON
+    // leaves both bare.
     const list = (value: unknown) => unary("Mbox", value as NodeParameter);
     expect(toLatex(list(['a"b']))).toBe('\\mbox{["a\\"b"]}');
     expect(toLatex(list(["a\\b"]))).toBe('\\mbox{["a\\\\b"]}');
@@ -210,7 +214,6 @@ describe("unary functions", () => {
     expect(() => toLatex(list([x()]))).toThrow(RenderError);
     expect(() => toLatex(list([5]))).toThrow(RenderError);
     expect(() => toLatex(list([5.0]))).toThrow(RenderError);
-    expect(() => toLatex(list(["\u03c0"]))).toThrow(RenderError);
     // A NON-empty hash is the one hash shape still refused, for a reason that
     // does reach it: measured, `[{a: 1}]` renders `\mbox{[{a: 1}]}` with a
     // Symbol key and `[{"a" => 1}]` renders `\mbox{[{"a" => 1}]}` with a
@@ -239,6 +242,17 @@ describe("unary functions", () => {
     for (const wrong of [1e-5, 1e-6, 1e-7, 1.5e-7]) {
       expect(() => toLatex(list([wrong])), String(wrong)).toThrow(RenderError);
     }
+  });
+
+  it("refuses a codepoint past the measured sweep, not because Ruby cannot render it", () => {
+    // π is refused by SWEEP CEILING, not by ambiguity: measured on the
+    // pinned oracle 00c52783, `Mbox.new(["π"]).to_latex` is
+    // `\mbox{["π"]}`, which JavaScript spells identically.
+    // `inspectString`'s table only carries U+0000..U+02FF; above that this
+    // port refuses rather than guesses at Ruby's own printable-range rule,
+    // so losing π costs capability and nothing else.
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    expect(() => toLatex(list(["\u03c0"]))).toThrow(RenderError);
   });
 
   it("Hom renders the carrier default, though the transform cannot build it", () => {

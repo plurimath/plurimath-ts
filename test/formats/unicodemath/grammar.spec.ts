@@ -17,19 +17,21 @@
  *    grammar. 5 of those the gem itself refuses.
  * 2. **Real-world UnicodeMath**: the 672 distinct expressions in the upstream
  *    `unicodemath-tests` corpus, which is what the gem's own
- *    `unicodemath_tests_spec.rb` runs against. All 670 non-divergent inputs
- *    are checked at verdict level, and 98 of them carry the full tree —
- *    chosen by a greedy cover over every distinct parent->child edge the
- *    oracle's trees contain, so all 493 edges are exercised rather than an
- *    arbitrary slice.
+ *    `unicodemath_tests_spec.rb` runs against. All 672 are checked at verdict
+ *    level, and 100 of them carry the full tree: 98 chosen by a greedy cover
+ *    over every distinct parent->child edge the oracle's trees contain, so all
+ *    493 edges are exercised rather than an arbitrary slice, plus the two
+ *    `1|x|` table inputs that a defect in pegkit's cache used to send down a
+ *    different alternative (see the `|x|=b` case below).
  * 3. **A sweep**, with trees, not just verdicts: every string of length 1 and 2
  *    over a 30-character alphabet of the operators this grammar branches on,
  *    plus every length-3 string over the structural subset — 4367 inputs, of
  *    which the gem refuses 3444. Ordering bugs surface here: a reordered
  *    alternative turns an accept into a refusal, or changes the tree.
- * 4. **Two known divergences**, pinned in both directions — see below.
- * 5. **The decimal marker**, which the corpus has no axis for: the same ten
+ * 4. **The decimal marker**, which the corpus has no axis for: the same ten
  *    inputs under three locales, whose markers are `.`, U+066B and `,`.
+ * 5. **The prefix pairs** in the generated tables, where one entry is a proper
+ *    prefix of another and the emitted order decides which one wins.
  *
  * These inputs are already preprocessed. `UnicodeMath::Parser#initialize` is a
  * separate slice; every fixture records what the gem's own preprocessing
@@ -553,6 +555,14 @@ const UPSTREAM_FIXTURES: readonly Fixture[] = [
     '{"factor":{"digit":{"number":"1"}},"operand":{"factor":{"intermediate_exp":{"open_paren":"{","sub_exp":{"base":{"symbol":"x"},"sub":{"sub_script":{"operand":{"factor":{"digit":{"number":"1"}}}}}},"exp":{"operator":",","exp":{"factor":{"symbol":{"ldots":"..."}},"exp":{"operator":",","exp":{"sub_exp":{"base":{"symbol":"x"},"sub":{"sub_script":{"operand":{"factor":{"atom":{"alphanumeric":"n"}}}}}}}}}},"close_paren":"}"}}}}',
   ],
   [
+    '1|x| = {&#x2588;(&x" if "x &#x2265; 0@&#x2212;&x" if "x &#x3c; 0)&#x2524;',
+    '{"factor":{"digit":{"number":"1"}},"operand":{"factor":{"intermediate_exp":{"open_paren":"|","factor":{"atom":{"alphanumeric":"x"}},"close_paren":"|"}}},"expr":{"operator":"="},"expression":{"factor":{"intermediate_exp":{"open_paren":"{","table":{"matrixs":"&#x2588;","array":{"tr":{"td":"&","tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}},"operand":{"text":" if ","operand":{"factor":{"atom":{"alphanumeric":"x"}}}}},"expr":{"exp":{"factor":{"relational_symbols":"&#x2265;"}},"expr":{"exp":{"factor":{"digit":{"number":"0"}}}}}}}},"trs":{"tr":{"td":{"exp":{"unicode_symbols":"&#x2212;"}},"tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}},"operand":{"text":" if ","operand":{"factor":{"atom":{"alphanumeric":"x"}}}}},"expr":{"exp":{"factor":{"atom":{"char":{"unicode_symbols":"&#x3c;"}}}},"expr":{"exp":{"factor":{"digit":{"number":"0"}}}}}}}}}}},"paren_close_prefix":"&#x2524;"}}}}',
+  ],
+  [
+    '1|x|={&#x2588;(&x&"if "x&#x2265;0@-&x&"if "x&#x3c;0)&#x3017;',
+    '{"factor":{"digit":{"number":"1"}},"operand":{"factor":{"intermediate_exp":{"open_paren":"|","factor":{"atom":{"alphanumeric":"x"}},"close_paren":"|"}}},"expr":{"operator":"="},"expression":{"factor":{"intermediate_exp":{"open_paren":"{","table":{"matrixs":"&#x2588;","array":{"tr":{"td":"&","tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}}}},"tds":{"td":{"exp":{"text":"if ","operand":{"factor":{"atom":{"alphanumeric":"x"}},"operand":{"factor":{"relational_symbols":"&#x2265;"},"operand":{"factor":{"digit":{"number":"0"}}}}}}}}}},"trs":{"tr":{"td":{"exp":{"operator":"-"}},"tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}}}},"tds":{"td":{"exp":{"text":"if ","operand":{"factor":{"atom":{"alphanumeric":"x"},"atoms":{"atom":{"char":{"unicode_symbols":"&#x3c;"},"number":"0"}}}}}}}}}}}},"close_paren":"&#x3017;"}}}}',
+  ],
+  [
     "1|a(x,y)/&#x394;x|a&#x226a;1",
     '{"factor":{"digit":{"number":"1"}},"operand":{"factor":{"intermediate_exp":{"open_paren":"|","frac":{"numerator":{"atom":{"alphanumeric":"a"},"recursive_numerator":{"intermediate_exp":{"open_paren":"(","factor":{"atom":{"alphanumeric":"x"}},"exp":{"operator":",","exp":{"factor":{"atom":{"alphanumeric":"y"}}}},"close_paren":")"}}},"denominator":{"relational_symbols":"&#x394;","recursive_denominator":{"factor":{"atom":{"alphanumeric":"x"}}}}},"close_paren":"|"}},"operand":{"factor":{"atom":{"alphanumeric":"a"}},"operand":{"factor":{"relational_symbols":"&#x226a;"},"operand":{"factor":{"digit":{"number":"1"}}}}}}}',
   ],
@@ -766,7 +776,7 @@ const UPSTREAM_FIXTURES: readonly Fixture[] = [
   ],
 ];
 
-/** Every non-divergent upstream input, and whether the gem parsed it. */
+/** Every upstream input, and whether the gem parsed it. */
 const UPSTREAM_VERDICTS: ReadonlyArray<readonly [text: string, parsed: boolean]> = [
   ["0a+b", true],
   ["0lim&#x2592;_(n&#x2192;&#x221e;) a_n", true],
@@ -1468,6 +1478,8 @@ const UPSTREAM_VERDICTS: ReadonlyArray<readonly [text: string, parsed: boolean]>
   ["1|(a|b&#x2212;c|d)|", true],
   ["1|(|x| - |y|)|", true],
   ["1|_&#x3016;|_a&#x3017;^b", true],
+  ['1|x| = {&#x2588;(&x" if "x &#x2265; 0@&#x2212;&x" if "x &#x3c; 0)&#x2524;', true],
+  ['1|x|={&#x2588;(&x&"if "x&#x2265;0@-&x&"if "x&#x3c;0)&#x3017;', true],
   ["1|a(x,y)/&#x394;x|a&#x226a;1", true],
   ["1&#xb9;&#x2082;3", true],
   ["1&#x394;x", true],
@@ -7198,49 +7210,7 @@ const SWEEP_REFUSED: readonly string[] = [
   "\\.@",
 ];
 
-// --- group 4: the two known divergences ------------------------------------
-
-/**
- * Two upstream inputs where this port and the gem disagree, for a reason that
- * is **not** in this grammar: `src/pegkit/atom.ts`'s packrat cache loses
- * entries written by a recursive application of the same atom.
- *
- * `Atom#apply` reads `ctx.cache.get(this)` into a local BEFORE running
- * `tryParse`, and afterwards, if that local was undefined, installs a fresh
- * Map. When `tryParse` recurses into the same atom at another position, the
- * inner application installs its own Map first and the outer one then replaces
- * it, discarding the inner entry.
- *
- * That matters because Parslet's cache is keyed on (atom, position) and
- * deliberately ignores `consume_all`, so whichever mode reaches a position
- * first decides it for the other. Measured on `|x|=b`: the gem applies
- * `expression` at position 3 with `consume_all` false (inside the `|x|`
- * lookahead), caching the short match `=`; its next application there, with
- * `consume_all` true, reuses that entry and FAILS the leftover check, so
- * `expression` falls through to its sixth alternative and emits a sibling
- * `expression` key. This port loses the cached entry, re-evaluates, matches
- * `=b` and takes the fourth alternative instead.
- *
- * Both trees are pinned. The port's is asserted as-is so this is a recorded,
- * bounded difference rather than a silent one; the day pegkit's cache is fixed,
- * the second assertion fails and these move into `UPSTREAM_FIXTURES`.
- */
-const KNOWN_PEGKIT_CACHE_DIVERGENCES: ReadonlyArray<
-  readonly [preprocessed: string, gemTree: string, portTree: string]
-> = [
-  [
-    '1|x| = {&#x2588;(&x" if "x &#x2265; 0@&#x2212;&x" if "x &#x3c; 0)&#x2524;',
-    '{"factor":{"digit":{"number":"1"}},"operand":{"factor":{"intermediate_exp":{"open_paren":"|","factor":{"atom":{"alphanumeric":"x"}},"close_paren":"|"}}},"expr":{"operator":"="},"expression":{"factor":{"intermediate_exp":{"open_paren":"{","table":{"matrixs":"&#x2588;","array":{"tr":{"td":"&","tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}},"operand":{"text":" if ","operand":{"factor":{"atom":{"alphanumeric":"x"}}}}},"expr":{"exp":{"factor":{"relational_symbols":"&#x2265;"}},"expr":{"exp":{"factor":{"digit":{"number":"0"}}}}}}}},"trs":{"tr":{"td":{"exp":{"unicode_symbols":"&#x2212;"}},"tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}},"operand":{"text":" if ","operand":{"factor":{"atom":{"alphanumeric":"x"}}}}},"expr":{"exp":{"factor":{"atom":{"char":{"unicode_symbols":"&#x3c;"}}}},"expr":{"exp":{"factor":{"digit":{"number":"0"}}}}}}}}}}},"paren_close_prefix":"&#x2524;"}}}}',
-    '{"factor":{"digit":{"number":"1"}},"operand":{"factor":{"intermediate_exp":{"open_paren":"|","factor":{"atom":{"alphanumeric":"x"}},"close_paren":"|"}}},"expr":{"operator":"=","expr":{"factor":{"intermediate_exp":{"open_paren":"{","table":{"matrixs":"&#x2588;","array":{"tr":{"td":"&","tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}},"operand":{"text":" if ","operand":{"factor":{"atom":{"alphanumeric":"x"}}}}},"expr":{"exp":{"factor":{"relational_symbols":"&#x2265;"}},"expr":{"exp":{"factor":{"digit":{"number":"0"}}}}}}}},"trs":{"tr":{"td":{"exp":{"unicode_symbols":"&#x2212;"}},"tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}},"operand":{"text":" if ","operand":{"factor":{"atom":{"alphanumeric":"x"}}}}},"expr":{"exp":{"factor":{"atom":{"char":{"unicode_symbols":"&#x3c;"}}}},"expr":{"exp":{"factor":{"digit":{"number":"0"}}}}}}}}}}},"paren_close_prefix":"&#x2524;"}}}}}',
-  ],
-  [
-    '1|x|={&#x2588;(&x&"if "x&#x2265;0@-&x&"if "x&#x3c;0)&#x3017;',
-    '{"factor":{"digit":{"number":"1"}},"operand":{"factor":{"intermediate_exp":{"open_paren":"|","factor":{"atom":{"alphanumeric":"x"}},"close_paren":"|"}}},"expr":{"operator":"="},"expression":{"factor":{"intermediate_exp":{"open_paren":"{","table":{"matrixs":"&#x2588;","array":{"tr":{"td":"&","tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}}}},"tds":{"td":{"exp":{"text":"if ","operand":{"factor":{"atom":{"alphanumeric":"x"}},"operand":{"factor":{"relational_symbols":"&#x2265;"},"operand":{"factor":{"digit":{"number":"0"}}}}}}}}}},"trs":{"tr":{"td":{"exp":{"operator":"-"}},"tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}}}},"tds":{"td":{"exp":{"text":"if ","operand":{"factor":{"atom":{"alphanumeric":"x"},"atoms":{"atom":{"char":{"unicode_symbols":"&#x3c;"},"number":"0"}}}}}}}}}}}},"close_paren":"&#x3017;"}}}}',
-    '{"factor":{"digit":{"number":"1"}},"operand":{"factor":{"intermediate_exp":{"open_paren":"|","factor":{"atom":{"alphanumeric":"x"}},"close_paren":"|"}}},"expr":{"operator":"=","expr":{"factor":{"intermediate_exp":{"open_paren":"{","table":{"matrixs":"&#x2588;","array":{"tr":{"td":"&","tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}}}},"tds":{"td":{"exp":{"text":"if ","operand":{"factor":{"atom":{"alphanumeric":"x"}},"operand":{"factor":{"relational_symbols":"&#x2265;"},"operand":{"factor":{"digit":{"number":"0"}}}}}}}}}},"trs":{"tr":{"td":{"exp":{"operator":"-"}},"tds":{"td":{"exp":{"factor":{"atom":{"alphanumeric":"x"}}}},"tds":{"td":{"exp":{"text":"if ","operand":{"factor":{"atom":{"alphanumeric":"x"},"atoms":{"atom":{"char":{"unicode_symbols":"&#x3c;"},"number":"0"}}}}}}}}}}}},"close_paren":"&#x3017;"}}}}}',
-  ],
-];
-
-// --- group 5: the decimal marker -------------------------------------------
+// --- group 4: the decimal marker -------------------------------------------
 
 const DEFAULT_MARKER_FIXTURES: readonly Fixture[] = [
   [
@@ -7326,7 +7296,7 @@ const FRENCH_MARKER_FIXTURES: readonly Fixture[] = [
   ["1.", '{"factor":{"digit":{"number":"1"}},"expr":{"operator":"."}}'],
 ];
 
-// --- group 6: the prefix pairs that make table order behaviour --------------
+// --- group 5: the prefix pairs that make table order behaviour --------------
 
 /**
  * Six of the generated tables contain an entry that is a proper PREFIX of
@@ -7736,9 +7706,8 @@ describe("the gem's own UnicodeMath, round-tripped through the grammar", () => {
 
 describe("the upstream unicodemath-tests corpus", () => {
   it("has the cases it checks against", () => {
-    expect(UPSTREAM_VERDICTS.length).toBe(670);
-    expect(UPSTREAM_FIXTURES.length).toBe(98);
-    expect(KNOWN_PEGKIT_CACHE_DIVERGENCES.length).toBe(2);
+    expect(UPSTREAM_VERDICTS.length).toBe(672);
+    expect(UPSTREAM_FIXTURES.length).toBe(100);
   });
 
   it.each(UPSTREAM_FIXTURES)("%s", (preprocessed, gemTree) => {
@@ -7789,22 +7758,24 @@ describe("a sweep over the operators this grammar branches on", () => {
   );
 });
 
-describe("the two divergences pegkit's cache causes", () => {
-  it("still produces the gem's tree for neither, and its own for both", () => {
-    for (const [preprocessed, gemTree, portTree] of KNOWN_PEGKIT_CACHE_DIVERGENCES) {
-      const got = JSON.stringify(tree(preprocessed));
-      expect(got).not.toBe(JSON.stringify(JSON.parse(gemTree)));
-      expect(got).toBe(JSON.stringify(JSON.parse(portTree)));
-    }
-  });
-
-  it("reproduces the underlying cache loss on a three-atom grammar", () => {
-    // `|x|=b` is the smallest UnicodeMath input that shows it; this is the
-    // smallest grammar that shows it at all, so the cause stays legible if the
-    // UnicodeMath fixtures ever change.
+describe("the cache entry a recursive rule writes", () => {
+  /**
+   * `|x|=b` is the smallest input FOUND that needs it — nothing here proves it
+   * minimal — so it guards the shape the two `1|x|=...` fixtures above only
+   * reach through a whole table.
+   *
+   * The gem applies `expression` at position 3 without `consume_all`, inside
+   * the lookahead that closes `|x|`, and caches the short match `=`. Parslet
+   * keys its cache on (atom, position) alone, so the next application there —
+   * this time under `consume_all` — reuses that entry, fails the leftover
+   * check, and drops `expression` through to the sixth alternative, which emits
+   * a sibling `expression` key rather than a nested `expr`. An engine that lost
+   * the inner entry re-matched `=b` and took the fourth alternative instead.
+   */
+  it("takes the alternative the gem takes on |x|=b", () => {
     expect(tree("|x|=b")).toStrictEqual(
       JSON.parse(
-        '{"factor":{"intermediate_exp":{"open_paren":"|","factor":{"atom":{"alphanumeric":"x"}},"close_paren":"|"}},"expr":{"operator":"=","expr":{"factor":{"atom":{"alphanumeric":"b"}}}}}',
+        '{"factor":{"intermediate_exp":{"open_paren":"|","factor":{"atom":{"alphanumeric":"x"}},"close_paren":"|"}},"expr":{"operator":"="},"expression":{"factor":{"atom":{"alphanumeric":"b"}}}}',
       ),
     );
   });

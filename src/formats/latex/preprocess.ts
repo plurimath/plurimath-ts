@@ -249,6 +249,11 @@ export function preprocess(input: string): PreprocessedLatex {
   let working = identity(input);
 
   // `@enti.decode(text)` — every entity the gem's own decoder recognises.
+  //
+  // This is the FIRST pass, over `identity(input)` above, so an
+  // `UndecodableEntityError` thrown out of here carries an offset into the
+  // CALLER's input already and must not be mapped again. Any pass inserted
+  // before this one would have to map it.
   working = applyRewrites(
     working,
     htmlEntitySpans(working.text).map((span) => ({
@@ -282,20 +287,27 @@ export function preprocess(input: string): PreprocessedLatex {
   // returned string, which is what makes the restore verbatim; a function
   // replacer has the same property.
   //
-  // The counts can in principle differ between the scan above and this pass,
-  // and Ruby would then `shift` a nil into the result. That is a divergence
-  // worth measuring rather than guessing at, so it throws here instead.
+  // The counts differ whenever a pass above creates or destroys a match, which
+  // several of them do. `\text {x}` loses its space and BECOMES a match the raw
+  // scan never saw; `\text&#x7b;x&#x7d;` gains its braces from the decode and
+  // does the same; `\text{ }` loses its body and stops being one.
+  //
+  // Ruby does not guard that. `Array#shift` on an exhausted array returns nil,
+  // and `String#gsub`'s block form stringifies whatever the block returns —
+  // `nil.to_s` is `""` — so a surplus match is DELETED. Measured on the gem at
+  // `00c52783`: `"x\\text {y}"` preprocesses to `"x"` and renders as AsciiMath
+  // `"x"`, `"\\text&#x7b;x&#x7d;+1"` to `"+1"` and `"+ 1"`, and `"\\text {x}"`
+  // to `""`, which the grammar then refuses — a `ParseError` from the empty
+  // string, not from this pass. Surplus SAVED entries are simply never used:
+  // `"\\text{ }"` saves one and restores none, and keeps the `\text{}` the
+  // space-stripping pass left. Both directions are covered in
+  // `test/formats/latex/preprocess.spec.ts`, expectations taken from the gem.
   let restored = 0;
   working = regexPass(working, textFunctionPattern(), () => {
     const saved = textFunctions[restored];
     restored += 1;
-    if (saved === undefined) {
-      throw new Error(
-        "latex preprocess: encoding created a \\text{...} match that the input did not have; " +
-          "the gem would shift nil here and this input needs measuring against it",
-      );
-    }
-    return saved;
+    // `?? ""` is `nil.to_s`, not a fallback chosen here.
+    return saved ?? "";
   });
 
   return { text: working.text, map: SourceMap.fromSegments(toSegments(working, input.length)) };

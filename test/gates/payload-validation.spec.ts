@@ -94,6 +94,45 @@ const CANONICAL_XML_ENGINE = "Plurimath::XmlEngine::OxEngine";
 const SHA256 = /^[0-9a-f]{64}$/;
 const COMMIT = /^[0-9a-f]{40}$/;
 const IMMUTABLE_REVISION = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
+/**
+ * `model-fixtures.json` is the one basename two formats both use, and they do
+ * not share a generator: LaTeX's records the `preprocessed` text its parser
+ * builds in its constructor, HTML's records `normalized` and its refusals can
+ * come from normalisation rather than preprocessing. Everything else about the
+ * two is identical, so the shape below is one branch parameterised by these
+ * fields rather than two near-copies.
+ */
+const MODEL_FIXTURE_SPECS = {
+  html: {
+    generator: "scripts/generate-html-model-fixtures.rb",
+    schema: "plurimath-corpus/html-model/1",
+    rows: "cases",
+    shape: "model",
+    usesCorpus: true,
+    usesRenderInventory: false,
+    /** The key the payload records the size of its corpus half under. */
+    corpusCountKey: "corpusHtmlCount",
+    /** The group name those rows carry. */
+    corpusGroup: "corpus-html",
+    /** The pre-parse text every parsed row carries. */
+    preParseKey: "normalized",
+    /** The stages the generator can attribute a refusal to. */
+    raisedIn: ["normalize", "parse"],
+  },
+  latex: {
+    generator: "scripts/generate-latex-model-fixtures.rb",
+    schema: "plurimath-corpus/latex-model/1",
+    rows: "cases",
+    shape: "model",
+    usesCorpus: true,
+    usesRenderInventory: false,
+    corpusCountKey: "corpusLatexCount",
+    corpusGroup: "corpus-latex",
+    preParseKey: "preprocessed",
+    raisedIn: ["preprocess", "parse"],
+  },
+} as const;
+
 const FIXTURE_SPECS = {
   "degenerate-fixtures.json": {
     generator: "scripts/probe-degenerate-slots.rb",
@@ -102,14 +141,6 @@ const FIXTURE_SPECS = {
     shape: "degenerate-slots",
     usesCorpus: false,
     usesRenderInventory: true,
-  },
-  "model-fixtures.json": {
-    generator: "scripts/generate-latex-model-fixtures.rb",
-    schema: "plurimath-corpus/latex-model/1",
-    rows: "cases",
-    shape: "latex-model",
-    usesCorpus: true,
-    usesRenderInventory: false,
   },
   "parity-fixtures.json": {
     generator: "scripts/generate-parity-fixtures.rb",
@@ -120,11 +151,35 @@ const FIXTURE_SPECS = {
     usesRenderInventory: false,
   },
 } as const;
-const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
+const FIXTURE_BASENAMES = [
+  ...Object.keys(FIXTURE_SPECS),
+  "model-fixtures.json",
+].sort() as readonly (
   | "degenerate-fixtures.json"
   | "model-fixtures.json"
   | "parity-fixtures.json"
 )[];
+
+type FixtureSpec =
+  | (typeof FIXTURE_SPECS)[keyof typeof FIXTURE_SPECS]
+  | (typeof MODEL_FIXTURE_SPECS)[keyof typeof MODEL_FIXTURE_SPECS];
+
+/**
+ * The spec for one discovered fixture. `model-fixtures.json` is the only
+ * basename whose spec depends on the FORMAT directory it sits in, and an
+ * unknown format there is a failure rather than a skipped fixture: a new
+ * format's model fixtures would otherwise ship unchecked.
+ */
+function specFor(format: string, name: string): FixtureSpec {
+  if (name !== "model-fixtures.json") {
+    return FIXTURE_SPECS[name as keyof typeof FIXTURE_SPECS];
+  }
+  const spec = MODEL_FIXTURE_SPECS[format as keyof typeof MODEL_FIXTURE_SPECS];
+  if (spec === undefined) {
+    throw new Error(`test/formats/#{format}/#{name}: no MODEL_FIXTURE_SPECS entry`);
+  }
+  return spec;
+}
 const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
   "test/formats/latex/render-sweep.json",
@@ -224,7 +279,7 @@ interface FixtureRecord {
   readonly bytes: Buffer;
   readonly payload: Mapping;
   readonly manifest: Mapping;
-  readonly spec: (typeof FIXTURE_SPECS)[keyof typeof FIXTURE_SPECS];
+  readonly spec: FixtureSpec;
 }
 
 const FORMAT_DIRECTORIES = readdirSync(FORMATS_ROOT, { withFileTypes: true })
@@ -245,7 +300,8 @@ const EXPECTED_FIXTURE_MANIFESTS = FIXTURE_PAYLOADS.map((relative) =>
 const FIXTURE_RECORDS: readonly FixtureRecord[] = FIXTURE_PAYLOADS.filter((relative) =>
   existsSync(join(REPO_ROOT, relative.replace(/\.json$/, ".manifest.yaml"))),
 ).map((relative) => {
-  const name = basename(relative) as keyof typeof FIXTURE_SPECS;
+  const name = basename(relative);
+  const format = relative.split("/")[2] as string;
   const manifestRelative = relative.replace(/\.json$/, ".manifest.yaml");
   const bytes = readFileSync(join(REPO_ROOT, relative));
   return {
@@ -257,7 +313,7 @@ const FIXTURE_RECORDS: readonly FixtureRecord[] = FIXTURE_PAYLOADS.filter((relat
       parseYaml(readFileSync(join(REPO_ROOT, manifestRelative), "utf8")),
       manifestRelative,
     ),
-    spec: FIXTURE_SPECS[name],
+    spec: specFor(format, name),
   };
 });
 
@@ -639,13 +695,18 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
           rows.length - rendered,
         );
-      } else if (record.spec.shape === "latex-model") {
+      } else if (record.spec.shape === "model") {
+        // The narrowing above does not survive into the `rows.filter`
+        // callback below — TypeScript resets a property narrowing inside a
+        // function expression — so it is carried in by a const alias.
+        const spec = record.spec;
         // The parse-side twin of the branch above. A row records what the gem
-        // did with a LaTeX INPUT, so its outcome is a serialized `model` rather
-        // than a rendered string, and every row that got as far as the parser
-        // also carries the `preprocessed` text the grammar saw. A row that
-        // raised inside preprocessing has neither, which is why `preprocessed`
-        // is optional on a refusal and required on a parse.
+        // did with an INPUT of that format, so its outcome is a serialized
+        // `model` rather than a rendered string, and every row that got as far
+        // as the parser also carries the pre-parse text the grammar saw
+        // (`preprocessed` for LaTeX, `normalized` for HTML). A row that raised
+        // before there was one has neither, which is why that key is optional
+        // on a refusal and required on a parse.
         expectExactKeys(
           record.payload,
           [
@@ -655,7 +716,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
             "caseCount",
             "parsedCount",
             "raisedCount",
-            "corpusLatexCount",
+            spec.corpusCountKey,
             "cases",
           ],
           record.relative,
@@ -678,16 +739,16 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
                 "input",
                 "raises",
                 "raisedIn",
-                ...("preprocessed" in item ? ["preprocessed"] : []),
+                ...(spec.preParseKey in item ? [spec.preParseKey] : []),
               ],
               at,
             );
-            expect(["preprocess", "parse"]).toContain(
+            expect(spec.raisedIn as readonly string[]).toContain(
               stringField(item, "raisedIn", record.relative),
             );
           } else {
-            expectExactKeys(item, ["group", "id", "input", "preprocessed", "model"], at);
-            stringValue(item, "preprocessed", record.relative);
+            expectExactKeys(item, ["group", "id", "input", spec.preParseKey, "model"], at);
+            stringValue(item, spec.preParseKey, record.relative);
             const model = mapField(item, "model", at);
             expect(stringField(model, "class", at)).toBe("Math::Formula");
             mapField(model, "fields", at);
@@ -706,9 +767,9 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               mapping(row, `${record.relative}.cases[${index}]`),
               "group",
               record.relative,
-            ) === "corpus-latex",
+            ) === spec.corpusGroup,
         ).length;
-        expect(integerField(record.payload, "corpusLatexCount", record.relative)).toBe(fromCorpus);
+        expect(integerField(record.payload, spec.corpusCountKey, record.relative)).toBe(fromCorpus);
         expect(fromCorpus).toBeGreaterThan(50);
       } else {
         expectExactKeys(

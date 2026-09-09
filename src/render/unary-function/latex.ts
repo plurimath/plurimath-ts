@@ -121,12 +121,36 @@ const INSPECT_NAMED_ESCAPES: ReadonlyMap<number, string> = new Map([
  *   - the EMPTY hash, `"{}"` (measured, and `{}` nested or beside other
  *     elements too).
  *
- * And what is refused, each for a reason that reaches exactly it:
+ * And what is refused:
  *
- *   - a FINITE number. `[5]` and `[5.0]` inspect as `"[5]"` and `"[5.0]"`,
- *     which JavaScript cannot tell apart, so one of the two would be invented
- *     bytes. `interpolatedValue` refuses these at top level for the same
- *     reason, and the two staying consistent is deliberate;
+ *   - every FINITE number. This one is a CONSERVATIVE POLICY, not a claim that
+ *     each finite value is ambiguous, and saying so is the point: plenty of
+ *     them are perfectly reproducible. Measured, `[0.5]`, `[-0.5]`, `[1.25]`,
+ *     `[0.1]`, `[0.000123]` and `[1234567890.5]` all inspect exactly as
+ *     JavaScript's `String()` spells them, and refusing those loses nothing
+ *     but capability.
+ *
+ *     The tempting narrower rule — "a number with a fractional part cannot be
+ *     an Integer, so admit it" — was measured and does NOT hold. Ruby's
+ *     `Float#to_s` turns exponential below 1e-4 while JavaScript's turns at
+ *     1e-6, and the two spell an exponent differently even where both use one:
+ *
+ *       1e-5    ruby "1.0e-05"   js "0.00001"
+ *       1e-6    ruby "1.0e-06"   js "0.000001"
+ *       1e-7    ruby "1.0e-07"   js "1e-7"
+ *       1.5e-7  ruby "1.5e-07"   js "1.5e-7"
+ *
+ *     All four have a fractional part, so that rule would emit invented bytes
+ *     for every one of them. A correct rule exists — non-integral AND at least
+ *     1e-4 in magnitude — but its threshold is Ruby's, inferred from a handful
+ *     of points rather than derived, and getting it wrong means wrong bytes
+ *     where the blanket refusal only means a loud `RenderError`. A smaller
+ *     true rule beats a larger one that needs an exception.
+ *
+ *     The integral case is the one that is genuinely undecidable: `[5]` and
+ *     `[5.0]` inspect as `"[5]"` and `"[5.0]"` from the same JavaScript value.
+ *     `interpolatedValue` refuses finite numbers at the top of the slot on the
+ *     same policy, and the two staying consistent is deliberate;
  *   - a node. Its inspect embeds a heap address, which is nondeterministic;
  *   - a NON-EMPTY hash. Measured, `[{a: 1}]` inspects as `"[{a: 1}]"` with a
  *     Symbol key and `[{"a" => 1}]` as `"[{\"a\" => 1}]"` with a String one;

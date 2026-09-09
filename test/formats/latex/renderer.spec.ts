@@ -218,6 +218,29 @@ describe("unary functions", () => {
     expect(() => toLatex(list([{ a: 1 }]))).toThrow(RenderError);
   });
 
+  it("refuses the reproducible finite numbers too, and pins why the narrow rule failed", () => {
+    // `[0.5]` is refused by POLICY, not by ambiguity: measured,
+    // `Mbox.new([0.5]).to_latex` is `\mbox{[0.5]}` and JavaScript spells 0.5
+    // identically. So do `[-0.5]`, `[1.25]`, `[0.1]`, `[0.000123]` and
+    // `[1234567890.5]`. Losing them costs capability and nothing else.
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    for (const reproducible of [0.5, -0.5, 1.25, 0.1, 0.000123, 1234567890.5]) {
+      expect(() => toLatex(list([reproducible])), String(reproducible)).toThrow(RenderError);
+    }
+    // These four are why "admit anything with a fractional part" was measured
+    // and rejected. Ruby's Float#to_s turns exponential below 1e-4 where
+    // JavaScript's turns at 1e-6, and the exponents are spelled differently
+    // even where both use one:
+    //
+    //   1e-5   ruby "1.0e-05"  js "0.00001"     1e-7    ruby "1.0e-07"  js "1e-7"
+    //   1e-6   ruby "1.0e-06"  js "0.000001"    1.5e-7  ruby "1.5e-07"  js "1.5e-7"
+    //
+    // If a later change admits non-integral numbers, these are what must fail.
+    for (const wrong of [1e-5, 1e-6, 1e-7, 1.5e-7]) {
+      expect(() => toLatex(list([wrong])), String(wrong)).toThrow(RenderError);
+    }
+  });
+
   it("Hom renders the carrier default, though the transform cannot build it", () => {
     // Measured on the pinned oracle: Hom.new(Symbol("x")).to_latex is
     // "\hom{x}" and Hom.new(nil) is "\hom{}".

@@ -319,6 +319,100 @@ describe("non-node slots raise rather than rendering as empty", () => {
 });
 
 /**
+ * A list in `Number#value`, which this site used to LOSE.
+ *
+ * `Number#to_unicodemath` (`number.rb:52`) checks the two mini flags and
+ * then rides `Formatter::Numbers::TextRenderer.render`, which answers
+ * `result.to_s` for anything that is not a `FormattedNumber` — and
+ * `Array#to_s` IS `Array#inspect`. Measured on the pinned oracle 00c52783
+ * (plurimath 0.11.6, ruby 4.0.1; probe1.rb / probe3.rb / probe4.rb,
+ * 2026-09-09):
+ *
+ *   Number.new([]).to_unicodemath(options: {})     => "[]"
+ *   Number.new([nil]).to_unicodemath(options: {})  => "[nil]"
+ *   Formula([Number([]), Symbol("x")])             => "[] x"
+ *
+ * The port returned the ARRAY OBJECT itself from a `string | null` renderer
+ * — no error, no bytes. `String([])` is `""`, so the operand vanished from
+ * every join it appeared in: the formula above rendered `" x"`, a leading
+ * separator with nothing in front of it. A loud refusal is a bug a caller
+ * can see; this one they could not.
+ *
+ * The mini flags are a SEPARATE answer at the same site, and they raise:
+ * `mini_sub` is `unicode_const(:SUB_DIGITS)[value.to_sym]` (`number.rb:103`)
+ * and an Array answers no `to_sym`.
+ */
+describe("a list in Number#value, which this site used to lose silently", () => {
+  const number = (value: unknown, extra: Record<string, unknown> = {}) =>
+    ({ kind: "number", value, ...extra }) as never;
+
+  it("renders the list the gem inspects, where it returned a bare array before", () => {
+    const rendered = toUnicodemath(number([]));
+    expect(typeof rendered).toBe("string");
+    expect(rendered).toBe("[]");
+    expect(toUnicodemath(number([null]))).toBe("[nil]");
+    expect(toUnicodemath(number([true, false]))).toBe("[true, false]");
+    expect(toUnicodemath(number([[]]))).toBe("[[]]");
+    expect(toUnicodemath(number(["x"]))).toBe('["x"]');
+  });
+
+  it("keeps the operand in a formula join instead of dropping it", () => {
+    // Before: " x" — the number rendered to nothing and only the separator
+    // survived. Measured on the oracle: "[] x" and "[nil] x".
+    expect(
+      toUnicodemath({
+        kind: "formula",
+        value: [number([]), { kind: "symbol", value: "x" }],
+      } as never),
+    ).toBe("[] x");
+    expect(
+      toUnicodemath({
+        kind: "formula",
+        value: [number([null]), { kind: "symbol", value: "x" }],
+      } as never),
+    ).toBe("[nil] x");
+  });
+
+  it("raises for a MINI-sized list, where the gem sends to_sym to the Array", () => {
+    // Measured: Number.new([], mini_sub_sized: true).to_unicodemath raises
+    // NoMethodError (undefined method 'to_sym' for an instance of Array),
+    // and mini_sup_sized answers the same. The port returned "" here.
+    expect(() => toUnicodemath(number([], { miniSubSized: true }))).toThrow(RenderError);
+    expect(() => toUnicodemath(number([], { miniSupSized: true }))).toThrow(RenderError);
+    expect(() => toUnicodemath(number([null], { miniSubSized: true }))).toThrow(/to_sym/);
+  });
+
+  it("still answers nil for a mini-sized STRING the digit tables miss", () => {
+    // The mini flags are only fatal for a value that answers no `to_sym`.
+    // Measured: "x" and "12" and "" are hash MISSES and return nil, which
+    // the boundary spells as the empty string; "2" hits (=> "&#x2082;").
+    expect(toUnicodemath(number("x", { miniSubSized: true }))).toBe("");
+    expect(toUnicodemath(number("2", { miniSubSized: true }))).toBe("&#x2082;");
+  });
+
+  it("refuses the element shapes JavaScript cannot decide, naming the index", () => {
+    // The same admission set as the latex site, because it is the same
+    // TextRenderer ride: [5] and [5.0] are one JS number with two Ruby
+    // preimages; an object's inspect carries a heap address; above U+0377
+    // the port has no printability table.
+    expect(() => toUnicodemath(number([5]))).toThrow(RenderError);
+    expect(() => toUnicodemath(number([{}]))).toThrow(RenderError);
+    expect(() => toUnicodemath(number(["π"]))).toThrow(RenderError);
+    expect(() => toUnicodemath(number([null, 5]))).toThrow(/number\.value\[1\]/);
+  });
+
+  it("admits the same reproducible primitives the latex site admits", () => {
+    expect(toUnicodemath(number([Number.NaN]))).toBe("[NaN]");
+    expect(toUnicodemath(number([Number.POSITIVE_INFINITY]))).toBe("[Infinity]");
+    expect(toUnicodemath(number([1.5]))).toBe("[1.5]");
+    expect(toUnicodemath(number(["a\nb"]))).toBe('["a\\nb"]');
+    // And refuses what the shape grammar refuses first, for the same reason
+    // it does at the latex site (`src/core/validate.ts`).
+    expect(() => toUnicodemath(number([5n]))).toThrow(/a node slot cannot hold a bigint/);
+  });
+});
+
+/**
  * The public boundary, measured through the real parse path:
  *
  *   Plurimath::Math.parse("frac(1)(2)", :asciimath).to_unicodemath => "(1)/(2)"

@@ -249,6 +249,11 @@ export function preprocess(input: string): PreprocessedLatex {
   let working = identity(input);
 
   // `@enti.decode(text)` — every entity the gem's own decoder recognises.
+  //
+  // This is the FIRST pass, over `identity(input)` above, so an
+  // `UndecodableEntityError` thrown out of here carries an offset into the
+  // CALLER's input already and must not be mapped again. Any pass inserted
+  // before this one would have to map it.
   working = applyRewrites(
     working,
     htmlEntitySpans(working.text).map((span) => ({
@@ -282,24 +287,26 @@ export function preprocess(input: string): PreprocessedLatex {
   // returned string, which is what makes the restore verbatim; a function
   // replacer has the same property.
   //
-  // The counts DO differ for real inputs, and this pass used to throw on that
-  // rather than reproduce it. Measured on the pinned oracle: the queue runs out
-  // whenever a `\\text {...}` written with a space reaches the restore, because
-  // the scan above did not save it — and Ruby answers `text_functions.shift`,
-  // which is `nil`, which `gsub` writes as `nil.to_s`, the EMPTY STRING. So the
-  // construct simply disappears:
+  // The counts differ whenever a pass above creates or destroys a match, which
+  // several of them do. `\text {x}` loses its space and BECOMES a match the raw
+  // scan never saw; `\text&#x7b;x&#x7d;` gains its braces from the decode and
+  // does the same; `\text{ }` loses its body and stops being one.
   //
-  //   "x\\text {y}"        normalizes to "x"   and renders "x"
-  //   "a\\text {b}c"       normalizes to "ac"  and renders "a c"
-  //   "\\text {y}"         normalizes to ""    and then the PARSE fails
-  //   "x\\text{y}"         (no space) is untouched and renders "x \\text{y}"
-  //
-  // Throwing here made the port refuse inputs the gem accepts, which the
-  // compat constructor exposed. Reproducing the empty replacement is the port.
+  // Ruby does not guard that. `Array#shift` on an exhausted array returns nil,
+  // and `String#gsub`'s block form stringifies whatever the block returns —
+  // `nil.to_s` is `""` — so a surplus match is DELETED. Measured on the gem at
+  // `00c52783`: `"x\\text {y}"` preprocesses to `"x"` and renders as AsciiMath
+  // `"x"`, `"\\text&#x7b;x&#x7d;+1"` to `"+1"` and `"+ 1"`, and `"\\text {x}"`
+  // to `""`, which the grammar then refuses — a `ParseError` from the empty
+  // string, not from this pass. Surplus SAVED entries are simply never used:
+  // `"\\text{ }"` saves one and restores none, and keeps the `\text{}` the
+  // space-stripping pass left. Both directions are covered in
+  // `test/formats/latex/preprocess.spec.ts`, expectations taken from the gem.
   let restored = 0;
   working = regexPass(working, textFunctionPattern(), () => {
     const saved = textFunctions[restored];
     restored += 1;
+    // `?? ""` is `nil.to_s`, not a fallback chosen here.
     return saved ?? "";
   });
 

@@ -50,7 +50,8 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  *
  * The two deferred-family inputs are driven too: their transform runs to
  * completion and only `finalize` refuses them, and they are the sole cover for
- * `transform.rb:2621` on a `Fenced` built around a table.
+ * `transform.rb:2619` on a `Fenced` built around a table — the line the rule
+ * STARTS on, which is the id the report below keys on.
  */
 const build = buildUnicodemathTransform();
 let reached = 0;

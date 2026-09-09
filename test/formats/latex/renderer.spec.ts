@@ -934,6 +934,36 @@ describe("a list in a value slot the gem inspects", () => {
     expect(() => toLatex(number([null, [true, 5]]))).toThrow(/number\.value\[1\]\[1\]/);
   });
 
+  it("reads INDEXED elements, so an overridden iterator cannot invent any", () => {
+    // The shape validator checks INDEXED elements. An inspect walk that asked
+    // the input for an iterator instead would disagree with what was
+    // validated, and a hand-built array can make the two disagree on purpose:
+    // this one validates as EMPTY and rendered `["ghost"]` — bytes no Ruby
+    // value produced. Ruby ignores an overridden enumeration method during
+    // `inspect`, so `[].inspect` is `"[]"` however the object is decorated.
+    // One traversal has to decide both, and it is the indexed one.
+    const ghost = (seed: readonly unknown[] = []): unknown[] => {
+      const list: unknown[] = [...seed];
+      Object.defineProperty(list, "entries", {
+        value: function* entries() {
+          yield [0, "ghost"];
+          yield [1, "ghost"];
+        },
+      });
+      return list;
+    };
+    expect(toLatex(number(ghost()))).toBe("[]");
+    expect(toLatex(number([ghost()]))).toBe("[[]]");
+    expect(toLatex(number(ghost([null])))).toBe("[nil]");
+    expect(
+      toLatex({
+        kind: "color",
+        parameterOne: { kind: "number", value: ghost() },
+        parameterTwo: { kind: "symbol", value: "x" },
+      } as never),
+    ).toBe("{\\color{[]} x}");
+  });
+
   it("color's number branch inspects the same list, then strips ASCII whitespace", () => {
     // `Color#to_latex` (`color.rb:41`) sends the first slot `to_asciimath`
     // and `gsub(/\s/, "")`s the answer. `Number#to_asciimath` rides the same

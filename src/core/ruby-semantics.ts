@@ -151,11 +151,14 @@ export function rubyUnreproducible(value: unknown): string | null {
  *
  * Everything below was measured on the pinned oracle 00c52783 (plurimath
  * 0.11.6, ruby 4.0.1) THROUGH those render sites rather than off a bare
- * `inspect` — probe1.rb, probe2.rb and probe4.rb, 2026-09-09. The string
- * sweep in probe2.rb covers every codepoint in U+0000..U+10FFFF and asserts
- * per codepoint that `Number.new([<char>]).to_latex(options: {})` equals
- * `"[" + <char>.inspect + "]"`: 0 mismatches over 1,112,064 codepoints (the
- * whole range less the surrogates, which no UTF-8 string can hold).
+ * `inspect` — probe1.rb, probe2.rb, probe4.rb and probe8.rb, 2026-09-09.
+ * probe8.rb asserts, for every codepoint in U+0000..U+10FFFF less the
+ * surrogates that no UTF-8 string can hold, that
+ * `Number.new([<char>]).to_latex(options: {})` equals
+ * `"[" + <char>.inspect + "]"`: 1,112,064 checked, 0 mismatches. probe2.rb
+ * ran the same comparison but skipped verbatim characters before rendering,
+ * so it covered only the 814,799 that escape; probe8.rb is the one that
+ * covers all of them, and this sentence used to credit probe2.rb for it.
  * ---------------------------------------------------------------------- */
 
 /**
@@ -271,9 +274,15 @@ type ElementInspect = { readonly text: string } | { readonly why: string };
  *     inspects (`1e21` would spell `"1000000000000000000000"` where the gem's
  *     Float says `"1.0e+21"`).
  *   - A NON-integral finite value has one preimage — no Integer is 1.5 — so
- *     it is admitted wherever the two languages spell it alike, which is the
- *     band `rubyNumberToS` already carries. Outside it they diverge
- *     (`[1.5e-5]` is `"[1.5e-05]"` in Ruby, `"0.000015"` in JavaScript).
+ *     it is admitted inside the band `rubyNumberToS` already carries, which
+ *     is where the two languages are VERIFIED to spell it alike. Outside the
+ *     band they may differ — `[1.5e-5]` is `"[1.5e-05]"` in Ruby where
+ *     JavaScript spells `"0.000015"` — but "outside the band" is not the same
+ *     claim as "different bytes": measured, `[1202471614443916.8]` renders
+ *     exactly those digits in Ruby, JavaScript spells them identically, and
+ *     this refuses it anyway. The band is deliberately conservative for the
+ *     reason `RUBY_PLAIN_FLOAT_MAX` gives — Ruby's choice of format is not
+ *     decided by magnitude alone, so the edge cannot be drawn exactly.
  *
  * There is no unambiguous way for a caller to MEAN the Integer: `inspectElement`
  * explains why a BigInt is not an arm.
@@ -351,9 +360,19 @@ function inspectElement(value: unknown, at: string): ElementInspect {
     return { text: inspected };
   }
   if (Array.isArray(value)) {
+    // An INDEX loop, never `entries()`, `for…of` or `map`. Those ask the input
+    // for its own iterator, while the shape validator (`assertSlot` in
+    // `./validate.ts`) walks indices — so an input that overrides one and not
+    // the other makes the two traversals disagree, and this walk would spell
+    // elements that were never validated. Measured before this loop replaced
+    // an `entries()` one: an array carrying an own `entries` generator
+    // validated as EMPTY and rendered `'["ghost", "ghost"]'`, bytes no Ruby
+    // value produced. Ruby ignores an overridden enumeration method during
+    // `inspect` — `[].inspect` is `"[]"` however the object is decorated — so
+    // the indexed read is both the self-consistent answer and the gem's.
     const parts: string[] = [];
-    for (const [index, item] of value.entries()) {
-      const part = inspectElement(item, `${at}[${index}]`);
+    for (let index = 0; index < value.length; index += 1) {
+      const part = inspectElement(value[index], `${at}[${index}]`);
       if ("why" in part) return part;
       parts.push(part.text);
     }

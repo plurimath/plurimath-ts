@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-html-model-fixtures.rb
-  sha256: 466da5fc3d560ba795fa410652ec2ff1464d17855473c566f1c9109aac61bbc1
+  sha256: 5b3dfd9726a9f5a54302a4c84307614349d550137d8550a0e6e63b42cba2048e
   inputs:
     scripts/generate-corpus.rb: a7ed6927c0f3a0821627de2bd6c2dc13e15dff889650419f588546b7ab8a1525
-    scripts/generate-html-model-fixtures.rb: 466da5fc3d560ba795fa410652ec2ff1464d17855473c566f1c9109aac61bbc1
+    scripts/generate-html-model-fixtures.rb: 5b3dfd9726a9f5a54302a4c84307614349d550137d8550a0e6e63b42cba2048e
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 3b7e1a6f7d759bc9b440aa710140fd7e4e1e95dd
+    commit: 2b7f1163b327e7f53aba67abf913da912b1a73af
     clean: true
     dirty_paths: []
 oracle:
@@ -183,5 +183,5 @@ corpus:
 payload:
   path: model-fixtures.json
   schema: plurimath-corpus/html-model/1
-  sha256: e94edb479a3d9d47e448492ce9cad3e6cb4761d2ed5e758b380a29c59d4df0df
-  bytes: 216974
+  sha256: 51ae84fbc1e057ab2da7d6121c1854eb5ef1b140128494047260aa3f2af9ff19
+  bytes: 219134

@@ -28,6 +28,97 @@ import { Slice, sequence, simple, Transform } from "../../../src/pegkit/index";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * Every rule `Plurimath::Html::Transform` registers, in REGISTRATION order,
+ * measured off the oracle: each block's `source_location` walked up to the
+ * `rule(` it opens on, over `Plurimath::Html::Transform.rules` REVERSED —
+ * `rule` unshifts, so that array is the matching order and its reverse is the
+ * order the file registers in.
+ *
+ * Pinning the whole list rather than the count is what catches a rule that
+ * moved to another line upstream, or one this port dropped and replaced.
+ */
+const ORACLE_RULE_IDS: readonly string[] = [
+  "base_number_prefix:36",
+  "base_number_prefix:37",
+  "base_number_prefix:38",
+  "transform:8",
+  "transform:9",
+  "transform:10",
+  "transform:11",
+  "transform:12",
+  "transform:13",
+  "transform:15",
+  "transform:23",
+  "transform:28",
+  "transform:29",
+  "transform:30",
+  "transform:31",
+  "transform:32",
+  "transform:33",
+  "transform:34",
+  "transform:36",
+  "transform:37",
+  "transform:39",
+  "transform:43",
+  "transform:47",
+  "transform:53",
+  "transform:58",
+  "transform:63",
+  "transform:68",
+  "transform:73",
+  "transform:81",
+  "transform:89",
+  "transform:97",
+  "transform:105",
+  "transform:115",
+  "transform:122",
+  "transform:130",
+  "transform:135",
+  "transform:143",
+  "transform:148",
+  "transform:153",
+  "transform:161",
+  "transform:171",
+  "transform:176",
+  "transform:184",
+  "transform:189",
+  "transform:194",
+  "transform:199",
+  "transform:204",
+  "transform:211",
+  "transform:218",
+  "transform:225",
+  "transform:235",
+  "transform:244",
+  "transform:253",
+  "transform:262",
+  "transform:271",
+  "transform:280",
+  "transform:289",
+  "transform:298",
+  "transform:307",
+  "transform:318",
+  "transform:329",
+  "transform:340",
+  "transform:351",
+  "transform:362",
+  "transform:373",
+  "transform:384",
+  "transform:395",
+  "transform:405",
+  "transform:415",
+  "transform:427",
+  "transform:437",
+  "transform:447",
+  "transform:457",
+  "transform:463",
+  "transform:472",
+  "transform:486",
+  "transform:498",
+  "transform:510",
+];
+
 interface FixtureCase {
   readonly input: string;
   readonly model?: unknown;
@@ -69,13 +160,16 @@ describe("transform rule coverage", () => {
     expect(reached).toBeGreaterThan(100);
   });
 
-  it("registers the 78 rules the port carries", () => {
+  it("registers exactly the rules the gem does, in the same order", () => {
     // 75 `rule(` calls in html/transform.rb plus the three from the
     // BaseNumberPrefix mixin, counted off the oracle as
-    // `Plurimath::Html::Transform.rules.length`.
+    // `Plurimath::Html::Transform.rules.length`. Order is behaviour, because
+    // `rule` unshifts on both sides: registering in the gem's order is what
+    // makes the MATCHING order the gem's too.
+    expect(build.ruleIds).toStrictEqual(ORACLE_RULE_IDS);
     expect(build.ruleIds.length).toBe(78);
-    expect(build.ruleIds.filter((id) => id.startsWith("base_number_prefix:")).length).toBe(3);
     expect(new Set(build.ruleIds).size).toBe(78);
+    expect(build.ruleIds.filter((id) => id.startsWith("base_number_prefix:")).length).toBe(3);
   });
 
   it("fires every one of them at least once", () => {
@@ -85,20 +179,6 @@ describe("transform rule coverage", () => {
       `rules no fixture reaches: ${never.join(", ")}. Add an input to RULE_COVERAGE ` +
         "in scripts/generate-html-model-fixtures.rb and regenerate.",
     ).toStrictEqual([]);
-  });
-
-  /**
-   * The mixin's three rules are registered FIRST, as `include` registers them
-   * first in Ruby — and since `rule` unshifts on both sides, first-registered
-   * is last-tried. Pinned because the ordering is behaviour, not style.
-   */
-  it("registers the mixin's rules ahead of html/transform.rb's", () => {
-    expect(build.ruleIds.slice(0, 3)).toStrictEqual([
-      "base_number_prefix:36",
-      "base_number_prefix:37",
-      "base_number_prefix:38",
-    ]);
-    expect(build.ruleIds[3]).toBe("transform:8");
   });
 });
 

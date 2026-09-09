@@ -132,8 +132,20 @@ RULE_COVERAGE = {
     "abc{0}",
   ],
   # The three rules `include BaseNumberPrefix::Transform` adds at
-  # `transform.rb:6`.
-  "base-numbers" => ["0x1f", "0b101", "0o17", "0xff+1"],
+  # `transform.rb:6`. The long literals are there because the binary and
+  # octal rules re-render their digits in DECIMAL through `String#to_i`,
+  # which is arbitrary precision: measured, the gem answers
+  # "1152921504606846975" for sixty binary ones, and a port going through a
+  # JavaScript number would answer 1152921504606846976.
+  "base-numbers" => [
+    "0x1f",
+    "0b101",
+    "0o17",
+    "0xff+1",
+    "0b#{'1' * 60}",
+    "0o#{'7' * 25}",
+    "0x#{'f' * 20}",
+  ],
   # `transform.rb:12`, `:15` and `:23`.
   "linebreak" => ["<br>", "<br>xy", "<br><br>", "<br>x+y"],
   # `transform.rb:13` and `:28`, reachable ONLY through a leading space:

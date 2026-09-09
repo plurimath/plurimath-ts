@@ -13,7 +13,7 @@
  * package-isolation gate against the built `dist`, not by import convention.
  *
  * **What adding `parseHtml` costs, measured.** `dist/html-*.js` grows from
- * 80,481 to 204,992 bytes: the grammar, the transform's 1,436-entry symbol
+ * 80,481 to 205,070 bytes: the grammar, the transform's 1,436-entry symbol
  * table and 30-name class registry, the `core` node constructors the registry
  * binds, and `pegkit` itself. That is the same shape `./latex` already ships
  * (432,700 bytes for its two directions), and the gate's `pegkit/` ban on this

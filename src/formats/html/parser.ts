@@ -81,16 +81,6 @@ function plainTree(value: ParseValue): unknown {
 }
 
 /**
- * Normalises and parses HTML into the raw Parslet-shaped tree — the pipeline's
- * first half, exposed for the grammar and preprocessing suites.
- * `ParseError.index` already indexes the ORIGINAL input here.
- */
-export function parseHtmlTree(input: string, options?: HtmlParseOptions | null): ParseValue {
-  const { text, map } = normalize(input);
-  return parseNormalized(input, text, map, options);
-}
-
-/**
  * `Plurimath::Math.parse(input, :html)`'s observable result.
  *
  * All three stages are wrapped, because `Plurimath::Math.parse` wraps

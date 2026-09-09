@@ -307,8 +307,9 @@ function newText(one: unknown): HtmlDraft {
  * `Td.new(parameter_one, parameter_two)` (`td.rb:7-10`): `delete_if` strips
  * literal `"&"` cells from the CALLER's array in place, then `Array(...)` folds
  * nil to `[]`. A node never equals a string in Ruby, so only a raw string can
- * match — and after the JSON round trip a raw `"&"` cell is exactly what a
- * `&`-only `symbol` leaf would be if any rule left one unwrapped.
+ * match. Transcribed rather than dropped: the strip is what `Td.new` does, and
+ * whether an HTML cell can be a raw `"&"` is the grammar's business, not this
+ * constructor's.
  */
 function newTd(one: unknown): HtmlDraft {
   let cells = orNil(one);
@@ -552,14 +553,18 @@ export function buildHtmlTransform(): HtmlTransformBuild {
   // `to_i(2)`/`to_i(8)` then `to_s` re-render the digits in DECIMAL, so
   // `0b101` stores "5" and only `base` records the notation; the hex rule
   // keeps its digits as written. Reproduced, including the asymmetry.
+  //
+  // `BigInt`, not `parseInt`: `String#to_i` is arbitrary precision, and the
+  // grammar's `match["01"].repeat(1)` puts no ceiling on the digit run, so a
+  // 60-bit literal would come back rounded through a JavaScript number.
   rule("base_number_prefix:36", { hex_number: simple("hex") }, (b) =>
     newNumber(rubyToS(b.hex), 16),
   );
   rule("base_number_prefix:37", { binary_number: simple("bin") }, (b) =>
-    newNumber(String(Number.parseInt(rubyToS(b.bin), 2)), 2),
+    newNumber(BigInt(`0b${rubyToS(b.bin)}`).toString(), 2),
   );
   rule("base_number_prefix:38", { octal_number: simple("oct") }, (b) =>
-    newNumber(String(Number.parseInt(rubyToS(b.oct), 8)), 8),
+    newNumber(BigInt(`0o${rubyToS(b.oct)}`).toString(), 8),
   );
 
   // --- single-key rules (transform.rb:8-51) ------------------------------
@@ -599,8 +604,12 @@ export function buildHtmlTransform(): HtmlTransformBuild {
   rule("transform:47", { sum_prod: simple("sum_prod") }, (b) => {
     const className_ = HTML_SUB_SUP_CLASS_OF.get(rubyToS(b.sum_prod));
     if (className_ === undefined) {
-      // `SUB_SUP_CLASSES[text]` is nil, and `get_class(nil)` reaches
-      // `Object.const_get("Plurimath::Math::Function::")`, which raises.
+      // `SUB_SUP_CLASSES[text]` is nil, and `get_class(nil)` capitalizes it to
+      // `""` and asks for `Plurimath::Math::Function::` — measured on the
+      // oracle: `NameError: wrong constant name Plurimath::Math::Function::`.
+      // Unreachable from the grammar, whose `:sub_sup` rule is built from
+      // these very keys, so this is the shape of the failure rather than a
+      // branch a fixture covers.
       throw new Error(
         `html transform: no sub/sup class for ${JSON.stringify(rubyToS(b.sum_prod))}`,
       );

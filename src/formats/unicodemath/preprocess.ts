@@ -39,8 +39,9 @@
  * ## What it does, in one line
  *
  * Cut the input at the first `#` (keeping the tail as an equation label),
- * hex-encode everything outside printable ASCII plus `<>'"&`, undo the `&` and
- * `"` encodings, delete `⫷…⫸` spans, halve doubled backslashes, rewrite
+ * hex-encode every character that is NOT printable ASCII, and the five
+ * printable ones `<`, `>`, `'`, `"` and `&` as well, undo the `&` and `"`
+ * encodings again, delete `⫷…⫸` spans, halve doubled backslashes, rewrite
  * `\uXXXX` escapes to hex entities, and strip.
  *
  * ## It is NOT LaTeX's, and the differences are load-bearing

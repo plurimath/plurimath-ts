@@ -1044,12 +1044,21 @@ inside an inspected Array or Hash as `JSON.stringify(value)`. That is Ruby's
 `String#inspect` only for the easy characters. Measured on the pinned oracle by
 an exhaustive sweep of U+0000..U+02FF, the two disagree on:
 
-- `#` before `{`, `$` or `@` — Ruby escapes it, JSON does not;
+Of the 768 codepoints swept, **725 are spelled identically** by the two and 43
+are not — `\n`, `\t`, `\b`, `\f`, `\r`, `\"`, `\\` and U+0000..U+0006 and
+U+0010..U+0019 all agree, the hex ones because their four digits hold no letter
+for the case to differ on. The 43 that differ:
+
 - U+0007, U+000B and U+001B — Ruby writes the named forms `\a`, `\v`, `\e`;
   JSON writes `\u0007`, `\u000b` and `\u001b`;
-- every other C0 codepoint — Ruby uses UPPERCASE hex (`\u001A`), JSON
+- U+000E, U+000F, U+001A and U+001C..U+001F — the seven C0 codepoints whose hex
+  digits DO hold a letter, where Ruby uses UPPERCASE (`\u001A`) and JSON
   lowercase (`\u001a`);
-- U+007F..U+009F — Ruby escapes them, JSON leaves them bare.
+- all 33 of U+007F..U+009F — Ruby escapes them, JSON leaves them bare.
+
+Nothing in U+0020..U+007E differs and nothing above U+009F does. Separately,
+and outside that count because it is a two-character rule rather than a
+codepoint: `#` before `{`, `$` or `@`, which Ruby escapes and JSON does not.
 
 `src/render/unary-function/latex.ts` carries the measured table for its own
 `Mbox` arm and refuses above U+02FF rather than guessing. The two cannot share

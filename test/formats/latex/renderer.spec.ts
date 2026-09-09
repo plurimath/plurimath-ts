@@ -183,13 +183,39 @@ describe("unary functions", () => {
     expect(toLatex(list(["\u00e9"]))).toBe('\\mbox{["\u00e9"]}');
   });
 
+  it("Mbox renders the non-finite floats and the empty hash, as Ruby prints them", () => {
+    // These were refused under a rationale that did not reach them, which a
+    // review caught. Measured: `Mbox.new([Float::INFINITY]).to_latex` is
+    // `\mbox{[Infinity]}`, `[-Float::INFINITY]` is `\mbox{[-Infinity]}`,
+    // `[Float::NAN]` is `\mbox{[NaN]}` and `[{}]` is `\mbox{[{}]}`, and
+    // JavaScript's `String()` spells the three floats identically. None is
+    // ambiguous between Integer and Float, and an EMPTY hash has no key whose
+    // Ruby type could be in doubt. `interpolatedValue` already admitted the
+    // same three floats at the top of the slot, so refusing them one level
+    // down was an inconsistency rather than a policy.
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    expect(toLatex(list([Number.POSITIVE_INFINITY]))).toBe("\\mbox{[Infinity]}");
+    expect(toLatex(list([Number.NEGATIVE_INFINITY]))).toBe("\\mbox{[-Infinity]}");
+    expect(toLatex(list([Number.NaN]))).toBe("\\mbox{[NaN]}");
+    expect(toLatex(list([{}]))).toBe("\\mbox{[{}]}");
+    expect(toLatex(list([{}, null]))).toBe("\\mbox{[{}, nil]}");
+    expect(toLatex(list([[{}]]))).toBe("\\mbox{[[{}]]}");
+    // And at the top of the slot, where `"#{}"` is `to_s` rather than
+    // `inspect`: measured, `Mbox.new({}).to_latex` is `\mbox{{}}`.
+    expect(toLatex(unary("Mbox", {} as NodeParameter))).toBe("\\mbox{{}}");
+  });
+
   it("Mbox refuses the list elements Ruby renders unreproducibly", () => {
     const list = (value: unknown) => unary("Mbox", value as NodeParameter);
     expect(() => toLatex(list([x()]))).toThrow(RenderError);
     expect(() => toLatex(list([5]))).toThrow(RenderError);
     expect(() => toLatex(list([5.0]))).toThrow(RenderError);
-    expect(() => toLatex(list([{}]))).toThrow(RenderError);
     expect(() => toLatex(list(["\u03c0"]))).toThrow(RenderError);
+    // A NON-empty hash is the one hash shape still refused, for a reason that
+    // does reach it: measured, `[{a: 1}]` renders `\mbox{[{a: 1}]}` with a
+    // Symbol key and `[{"a" => 1}]` renders `\mbox{[{"a" => 1}]}` with a
+    // String one, and a JavaScript object key carries no such distinction.
+    expect(() => toLatex(list([{ a: 1 }]))).toThrow(RenderError);
   });
 
   it("Hom renders the carrier default, though the transform cannot build it", () => {

@@ -24,21 +24,26 @@
 # fixture is that it came from the revision the rest of this repository's
 # generated data came from.
 #
-# The expected revision is read from the SUBMODULE'S COMMITTED provenance,
-# through `git show <pin-head>:corpus/provenance.yaml`, and the submodule's
-# head is first required to equal the gitlink this repository has committed for
-# it. Reading the working copy instead was not a check at all: editing one
-# `oracle.commit:` line there, with no corpus payload touched and no flag
-# passed, made this probe bless a different revision and exit 0.
+# EVERY byte of the pin this probe reads — the provenance and all of the case
+# and rejection payloads — comes from `git show <pin-head>:<path>`, never from
+# the submodule's working tree, and the submodule's head is first required to
+# equal the gitlink this repository has committed for it. Two reviews found the
+# weaker versions of this: reading the working-copy provenance let one edited
+# `oracle.commit:` line bless a different revision, and then, once that was
+# fixed, `git update-index --assume-unchanged` on an edited case body and its
+# digest kept `status` clean while the equal-pair count moved. A status check
+# answers "does git think this is clean"; the question here is "are these the
+# committed bytes", and only reading them settles it. Each payload's recorded
+# digest is verified against the committed blob as well.
 #
 # `--allow-dirty` is DELIBERATELY narrow, and is for probing an experimental
-# oracle, never for producing a fixture. It downgrades exactly three refusals
-# to warnings, all of them about the ORACLE checkout: that it is a git
-# repository, that it is at the expected revision, and that it is clean. It
-# does NOT reach the pin-integrity checks — a submodule whose head has moved
-# off this repository's gitlink, or that is dirty, aborts whatever flags are
-# passed, because those decide which question is being answered rather than how
-# trustworthy the answer is.
+# oracle, never for producing a fixture. It downgrades refusals about the
+# ORACLE checkout only: that it is a git repository, that it is at the expected
+# revision, and that it is clean. When the oracle is not a repository the other
+# two cannot be asked at all and are skipped, and the banner reports the
+# revision as UNKNOWN. It does NOT reach the pin-integrity checks — those abort
+# whatever flags are passed, because they decide which question is being
+# answered rather than how trustworthy the answer is.
 
 require "optparse"
 require "yaml"
@@ -92,28 +97,45 @@ unless pin_dirty.empty?
         "are the pin; edited ones are not."
 end
 
-# The revision the pin names, read from the submodule's COMMITTED provenance
-# rather than from its working copy, so a hand-edited `oracle.commit:` cannot
-# steer this probe even in the window before the dirty check would catch it.
-expected_commit = YAML.safe_load(
-  CorpusGenerator.git(pin_root, "show", "#{pin_head}:corpus/provenance.yaml"),
-  aliases: false,
-).fetch("oracle").fetch("commit")
+# Everything below is read with `git show <pin-head>:<path>`, never from the
+# working tree, so the status check above is a courtesy and not the guarantee.
+# It cannot be the guarantee: `git update-index --assume-unchanged` makes an
+# edited file invisible to `status`, and a review demonstrated exactly that —
+# a case body changed, its digest updated to match, both files marked, status
+# clean, and this probe reporting a different equal-pair count under either
+# flag setting. "Does git think this is clean" is a different question from
+# "are these the committed bytes", and only the second one matters here.
+def pin_blob(pin_root, pin_head, path)
+  CorpusGenerator.git(pin_root, "show", "#{pin_head}:#{path}")
+end
+
+provenance_bytes = pin_blob(pin_root, pin_head, "corpus/provenance.yaml")
+pin_provenance = YAML.safe_load(provenance_bytes, aliases: false)
+expected_commit = pin_provenance.fetch("oracle").fetch("commit")
 
 # --- oracle state: how trustworthy the answer is ----------------------------
 
-unless CorpusGenerator.git_repository?(oracle)
-  refuse("#{oracle} is not a git checkout; the oracle must be one (ARCHITECTURE.md §7)",
-         options[:allow_dirty])
-end
-actual_commit = CorpusGenerator.git(oracle, "rev-parse", "HEAD").strip
-unless actual_commit == expected_commit
-  refuse("oracle is at #{actual_commit}, not the #{expected_commit} that " \
-         "corpus/provenance.yaml records", options[:allow_dirty])
-end
-oracle_dirty = CorpusGenerator.dirty_paths(oracle)
-unless oracle_dirty.empty?
-  refuse("oracle checkout is dirty: #{oracle_dirty.join(', ')}", options[:allow_dirty])
+# The revision and cleanliness checks below both shell out to git, so they can
+# only run inside a repository. When --allow-dirty waves the first refusal
+# through, the other two have nothing to ask and are SKIPPED rather than run
+# against a directory with no `.git` — which is what they used to do, raising
+# `CorpusGenerator::Error` from `git rev-parse` and exiting 1 immediately after
+# printing a warning that promised otherwise. `actual_commit` stays nil, and
+# the banner says so.
+actual_commit = nil
+if CorpusGenerator.git_repository?(oracle)
+  actual_commit = CorpusGenerator.git(oracle, "rev-parse", "HEAD").strip
+  unless actual_commit == expected_commit
+    refuse("oracle is at #{actual_commit}, not the #{expected_commit} that the pinned " \
+           "corpus/provenance.yaml records", options[:allow_dirty])
+  end
+  oracle_dirty = CorpusGenerator.dirty_paths(oracle)
+  unless oracle_dirty.empty?
+    refuse("oracle checkout is dirty: #{oracle_dirty.join(', ')}", options[:allow_dirty])
+  end
+else
+  refuse("#{oracle} is not a git checkout; the oracle must be one (ARCHITECTURE.md §7). " \
+         "Its revision and cleanliness cannot be checked at all.", options[:allow_dirty])
 end
 
 $LOAD_PATH.unshift(lib)
@@ -129,18 +151,42 @@ unless loaded&.start_with?(lib)
         "An installed gem answers from a different version."
 end
 warn "oracle: #{loaded}"
-warn "revision: #{actual_commit}#{actual_commit == expected_commit ? ' (pinned)' : ' (NOT PINNED)'}"
+warn(if actual_commit.nil?
+       "revision: UNKNOWN (not a git checkout; --allow-dirty)"
+     elsif actual_commit == expected_commit
+       "revision: #{actual_commit} (pinned)"
+     else
+       "revision: #{actual_commit} (NOT PINNED, expected #{expected_commit})"
+     end)
 
 # The same selection `readCorpusCases` makes on the TypeScript side: every
 # pinned CASE, minus the ids `corpus/exclusions.yaml` withholds for using a
 # deferred construct. Both sides must run over the same list or the pair sets
 # cannot be compared at all, so every count is printed below.
 #
-# `read_pin_cases` returns the rejection payloads' rows too — those carry an
-# `error:` and no `model:`, and feeding them to a parser would abort this probe
-# on the first `a/`. The discriminator is the one the TypeScript reader uses:
-# a case has a `model`, a rejection does not.
-records = CorpusGenerator.read_pin_cases
+# Read through `git show`, like the provenance above, rather than through
+# `CorpusGenerator.read_pin_cases`, which reads the working tree. The digest
+# each payload record carries is checked anyway — belt to that brace, and it
+# also catches a payload listed in the provenance but absent from the commit.
+#
+# The rejection payloads' rows come back too. Those carry an `error:` and no
+# `model:`, and feeding them to a parser would abort this probe on the first
+# `a/`. The discriminator is the one the TypeScript reader uses: a case has a
+# `model`, a rejection does not.
+records = pin_provenance.fetch("payloads").flat_map do |entry|
+  relative = "corpus/#{entry.fetch('path')}"
+  bytes = pin_blob(pin_root, pin_head, relative)
+  if bytes.bytesize != entry.fetch("bytes") || CorpusGenerator.sha256(bytes) != entry.fetch("sha256")
+    abort "REFUSING: #{relative} at #{pin_head} does not match the digest its own " \
+          "provenance records. The pinned commit is internally inconsistent."
+  end
+  document = YAML.safe_load(bytes, aliases: false)
+  group = document["group"]
+  abort "REFUSING: #{relative} declares no group" if group.nil? || group.empty?
+  rows = document["cases"] || []
+  abort "REFUSING: #{relative} has no cases" if rows.empty?
+  rows.map { |row| row.merge("group" => group) }
+end
 abort "REFUSING: zero pinned rows found" if records.empty?
 
 rejections, all_cases = records.partition { |row| !row.key?("model") }

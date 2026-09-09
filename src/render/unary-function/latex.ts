@@ -107,24 +107,40 @@ const INSPECT_NAMED_ESCAPES: ReadonlyMap<number, string> = new Map([
  * ELEMENTS decide: an empty list is not a special case, and a non-empty one is
  * not automatically unreproducible.
  *
- * What is admitted, and why nothing else is:
+ * What is admitted:
  *
  *   - `nil`, `true`, `false` — `"nil"`, `"true"`, `"false"`, measured;
  *   - nested arrays, recursively, joined by `", "` (measured: `[nil, nil]` is
  *     `"[nil, nil]"`, comma AND space);
  *   - strings, through `inspectString` below;
- *   - **not** numbers. `[5]` and `[5.0]` inspect as `[5]` and `[5.0]`, which
- *     JavaScript cannot tell apart — the same ambiguity `interpolatedValue`
- *     refuses at top level, and refusing it is what keeps the two consistent;
- *   - **not** nodes or hashes. A node inspects to a heap address, which is
- *     nondeterministic; a non-empty hash has inspect rules of its own that no
- *     probe here has measured.
+ *   - the NON-FINITE numbers. Measured, `[Float::INFINITY]` is
+ *     `"[Infinity]"`, `[-Float::INFINITY]` is `"[-Infinity]"` and
+ *     `[Float::NAN]` is `"[NaN]"`, which is exactly what JavaScript's
+ *     `String()` gives. `interpolatedValue` admits the same three at the top
+ *     of the slot, and this is the same judgement one level down;
+ *   - the EMPTY hash, `"{}"` (measured, and `{}` nested or beside other
+ *     elements too).
+ *
+ * And what is refused, each for a reason that reaches exactly it:
+ *
+ *   - a FINITE number. `[5]` and `[5.0]` inspect as `"[5]"` and `"[5.0]"`,
+ *     which JavaScript cannot tell apart, so one of the two would be invented
+ *     bytes. `interpolatedValue` refuses these at top level for the same
+ *     reason, and the two staying consistent is deliberate;
+ *   - a node. Its inspect embeds a heap address, which is nondeterministic;
+ *   - a NON-EMPTY hash. Measured, `[{a: 1}]` inspects as `"[{a: 1}]"` with a
+ *     Symbol key and `[{"a" => 1}]` as `"[{\"a\" => 1}]"` with a String one;
+ *     a JavaScript object key carries no such distinction. (The unicodemath
+ *     side assumes Symbol keys instead — TODO.plan/deferred.md, "Ruby Float vs
+ *     JavaScript number in option interpolation". Refusing is the choice
+ *     available here, where there is no option-shaped precedent to lean on.)
  */
 function rubyInspect(value: unknown): string | null {
   if (value === null || value === undefined) return "nil";
   if (value === true) return "true";
   if (value === false) return "false";
   if (typeof value === "string") return inspectString(value);
+  if (typeof value === "number") return Number.isFinite(value) ? null : String(value);
   if (Array.isArray(value)) {
     const parts: string[] = [];
     for (const item of value) {
@@ -134,6 +150,9 @@ function rubyInspect(value: unknown): string | null {
     }
     return `[${parts.join(", ")}]`;
   }
+  // A hash, but only the empty one — `isNode` keeps a node out, and a node is
+  // the only other object shape a slot can hold.
+  if (typeof value === "object" && !isNode(value) && Object.keys(value).length === 0) return "{}";
   return null;
 }
 
@@ -142,8 +161,7 @@ function rubyInspect(value: unknown): string | null {
  * oracle `00c52783` — every codepoint in that range whose inspect body is not
  * the character itself, and there are 67 of them.
  *
- * Ruby and JavaScript agree on none of this by default, which is why it is a
- * table and not `JSON.stringify`:
+ * The rules, all from that sweep:
  *
  *   - `"` and `\` take a backslash;
  *   - `#` takes one ONLY before `{`, `$` or `@` — `"a#x"` inspects as `"a#x"`,
@@ -152,6 +170,23 @@ function rubyInspect(value: unknown): string | null {
  *   - every other codepoint below U+0020, plus U+007F..U+009F, is `\uXXXX`
  *     with FOUR digits and UPPERCASE hex — `\u001A`, not `\u001a`;
  *   - U+00A0..U+02FF pass through verbatim (é is `"é"`, not an escape).
+ *
+ * `JSON.stringify` is close but not equal, and the difference was overstated
+ * here before: comparing its body against Ruby's over all 768 swept
+ * codepoints, **725 agree and 43 do not**. `\n`, `\t`, `\b`, `\f`, `\r`,
+ * `\"`, `\\` and U+0000..U+0006 and U+0010..U+0019 are spelled identically by
+ * both — the hex ones because their four digits hold no letter for the case to
+ * differ on. The 43 that differ are exactly:
+ *
+ *   - U+0007, U+000B and U+001B, where Ruby writes the named `\a`, `\v` and
+ *     `\e` and JSON writes hex;
+ *   - U+000E, U+000F, U+001A and U+001C..U+001F — seven codepoints whose hex
+ *     digits DO hold a letter, so Ruby's uppercase and JSON's lowercase part;
+ *   - all 33 of U+007F..U+009F, which Ruby escapes and JSON leaves bare.
+ *
+ * Nothing in U+0020..U+007E differs, and nothing above U+009F does. The `#`
+ * lookahead is a further difference, but a two-character one rather than a
+ * codepoint, so it is outside that count.
  *
  * Above U+02FF the answer is `null`, refusing rather than guessing. That
  * ceiling is this sweep's, not a fact about Ruby: measured, `"π"` inspects as
@@ -219,14 +254,19 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
       // (`"\\mbox{#<Plurimath::Math::Symbols::Symbol:0x00007a71...>}"`), which
       // is not reproducible and which `interpolatedValue` refuses.
       const slot = node.parameterOne;
-      // Lists are answered HERE rather than inside `interpolatedValue`, which
-      // also serves `../number/latex.ts` and `../color/latex.ts`. Those slots
-      // do NOT reach Ruby through a bare `"#{}"`: `Number#to_latex` goes
+      // Composites are answered HERE rather than inside `interpolatedValue`,
+      // which also serves `../number/latex.ts` and `../color/latex.ts`. Those
+      // slots do NOT reach Ruby through a bare `"#{}"`: `Number#to_latex` goes
       // through `Formatter::Numbers::TextRenderer`, and Color's nested raw
       // symbol list goes through a join that answers `""` for `[]`. A list
       // means a different thing at each of the three, so widening the shared
       // judge would have been wrong at two of them.
-      if (Array.isArray(slot)) {
+      //
+      // Arrays AND hashes, because `to_s` on both IS `inspect` — measured,
+      // `Mbox.new({}).to_latex` is `"\\mbox{{}}"`. Scalars are deliberately
+      // not routed here: `"#{}"` on a String is the string itself, not its
+      // quoted inspect, so they keep going to the judge below.
+      if (Array.isArray(slot) || (typeof slot === "object" && slot !== null && !isNode(slot))) {
         const inspected = rubyInspect(slot);
         // A list holding something Ruby renders unreproducibly falls through
         // to the shared judge, which refuses every array with the reason that

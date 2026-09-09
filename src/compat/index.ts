@@ -57,6 +57,45 @@ export const FORMATS: readonly Format[] = [
  * contract, not an oversight: AsciiMath landed in P1 and LaTeX in P3, and
  * UnicodeMath, HTML and MathML arrive later in P3 and P4.
  *
+ * Only some of those four are absent because no parser exists:
+ * `parseUnicodemath` is implemented
+ * (P3) and reachable from the `./unicodemath` subpath. It is withheld HERE,
+ * which is a different judgement from "not written yet".
+ *
+ * A partial parser behind this constructor is worse than an absent one. The
+ * subpath is opt-in: a caller importing `parseUnicodemath` has chosen that
+ * parser and can handle its `ParseError`. This constructor is the plurimath-js
+ * compatibility surface, where `new Plurimath(text, "unicode")` promises the
+ * gem's behaviour — so a format listed here should answer what the gem answers,
+ * or say up front that it cannot.
+ *
+ * For `unicode` that is measured, not assumed. The UnicodeMath transform slice
+ * carries a subset of `transform.rb`'s rules, and the two surfaces it was
+ * measured against disagree sharply:
+ *
+ *   - The pinned corpus's own UnicodeMath output — 103 strings the GEM emitted,
+ *     fed back in — parses to a byte-identical model for 95 of the 97 the gem
+ *     answers (97.9%).
+ *   - Fifty ordinary hand-written expressions, all 50 of which the gem parses,
+ *     come back correct for 38 (76.0%). The twelve refused are `a≤b`, `a≥b`,
+ *     `a±b`, `a→b`, `∂/∂x`, `x∈A`, `2·3`, `a≈b`, `a≡b`, `f(x)=y`, `e^(iπ)`
+ *     and `x'`.
+ *
+ * The gap between the two is the corpus's nature: it is the gem's OUTPUT,
+ * already regular, not what a person types. A constructor that accepts
+ * `"unicode"` and then rejects `f(x)=y` — a bare equals sign — reads as "your
+ * formula is malformed" when the truth is "this port has not got there yet".
+ * `UnsupportedFormatError` says the second thing once, up front, and stays
+ * true; a 24% `ParseError` rate is discovered input by input in production.
+ *
+ * Neither surface produced a WRONG answer — 0 silent divergences across all
+ * 153 inputs — so the refusals are loud. That is what makes the subpath safe to
+ * publish; it is not enough to make this constructor honest.
+ *
+ * The gate for registering `unicode` is that same 50-input battery reaching
+ * parity, which needs the relation and operator families (`=`, `≤`, `≥`, `→`,
+ * `∈`, `≈`, `≡`, binary `±`) and the prime.
+ *
  * A MAP rather than a set of parseable names, so that `format` actually selects
  * the parser. With a set, adding a name would have made that format construct
  * and then silently AsciiMath-parse its input -- measured, `"\\frac{1}{2}"`

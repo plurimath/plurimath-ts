@@ -282,20 +282,25 @@ export function preprocess(input: string): PreprocessedLatex {
   // returned string, which is what makes the restore verbatim; a function
   // replacer has the same property.
   //
-  // The counts can in principle differ between the scan above and this pass,
-  // and Ruby would then `shift` a nil into the result. That is a divergence
-  // worth measuring rather than guessing at, so it throws here instead.
+  // The counts DO differ for real inputs, and this pass used to throw on that
+  // rather than reproduce it. Measured on the pinned oracle: the queue runs out
+  // whenever a `\\text {...}` written with a space reaches the restore, because
+  // the scan above did not save it — and Ruby answers `text_functions.shift`,
+  // which is `nil`, which `gsub` writes as `nil.to_s`, the EMPTY STRING. So the
+  // construct simply disappears:
+  //
+  //   "x\\text {y}"        normalizes to "x"   and renders "x"
+  //   "a\\text {b}c"       normalizes to "ac"  and renders "a c"
+  //   "\\text {y}"         normalizes to ""    and then the PARSE fails
+  //   "x\\text{y}"         (no space) is untouched and renders "x \\text{y}"
+  //
+  // Throwing here made the port refuse inputs the gem accepts, which the
+  // compat constructor exposed. Reproducing the empty replacement is the port.
   let restored = 0;
   working = regexPass(working, textFunctionPattern(), () => {
     const saved = textFunctions[restored];
     restored += 1;
-    if (saved === undefined) {
-      throw new Error(
-        "latex preprocess: encoding created a \\text{...} match that the input did not have; " +
-          "the gem would shift nil here and this input needs measuring against it",
-      );
-    }
-    return saved;
+    return saved ?? "";
   });
 
   return { text: working.text, map: SourceMap.fromSegments(toSegments(working, input.length)) };

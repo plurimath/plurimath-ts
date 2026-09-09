@@ -20,10 +20,13 @@
  *    `spec/plurimath/html/{parse,parser,to_html_round_trip}_spec.rb` — 80
  *    strings the gem's own suite exercises, 6 of which it refuses.
  * 3. **A sweep**, with trees, not just verdicts: every string of length 1 and 2
- *    over a 26-character alphabet of the characters this grammar branches on,
- *    plus every length-3 string over a 10-character structural subset — 1,807
- *    inputs, of which the gem refuses 1,169. Ordering bugs surface here: a
- *    reordered alternative turns an accept into a refusal, or changes the tree.
+ *    over a 28-character alphabet of the characters this grammar branches on
+ *    — 812 combinations, 5 of which duplicate an input group 1 already
+ *    covers exactly (`x`, `0`, `1`, `a)`, `ab`) and are dropped rather than
+ *    repeated — plus every length-3 string over a 10-character structural
+ *    subset, 1,000 combinations with none dropped: 1,807 inputs in all, of
+ *    which the gem refuses 1,169. Ordering bugs surface here: a reordered
+ *    alternative turns an accept into a refusal, or changes the tree.
  * 4. **Every table entry**, bare and wrapped and with arguments, so no
  *    alternative of the four generated tables ships untested.
  * 5. **Tags**: case, attributes, quoting, void tags, `<th>`-as-`td`, nesting,
@@ -33,14 +36,16 @@
  *    `&#x;` a symbol here and a unicode node under LaTeX and UnicodeMath.
  * 7. **The decimal marker** under all three of the gem's locales, with the
  *    other two markers probed under each — HTML's marker is exclusive.
- * 8. **What mutation testing found uncovered.** Thirty mutations were applied
- *    to the grammar and to the generated tables. Four survived groups 1 to 7,
- *    and three of those were real gaps — a closing tag carrying attributes, a
- *    parenthesised character that both `symbol` and `sub_sup` accept, and the
- *    sub/sup pair — so this group is the 67 oracle-measured inputs that close
- *    them. Twenty-six mutations die; the four that remain are order swaps
- *    between alternatives whose heads are literals neither of which is a prefix
- *    of the other, argued in a test of their own.
+ * 8. **What mutation testing found uncovered.** Mutation testing was run
+ *    against the grammar and the generated tables; no report from that run is
+ *    committed, so no count of mutations applied, killed, or surviving is
+ *    asserted here. What it found: real gaps — a closing tag carrying
+ *    attributes, a parenthesised character that both `symbol` and `sub_sup`
+ *    accept, and the sub/sup pair — so this group is the 67 oracle-measured
+ *    inputs that close them — and, separately, order swaps between
+ *    alternatives whose heads are literals neither of which is a prefix of the
+ *    other, which no input can distinguish and which are argued structurally
+ *    in a test of their own.
  * 9. **Scope re-entry**, the class a P1 defect lived in: 3,628 inputs over a
  *    15-token alphabet chosen so a wrapped tag can open, capture its name and
  *    then fail, leaving a later attempt to re-enter where the failed one had
@@ -2934,13 +2939,14 @@ const NUMBER_FIXTURES: readonly Fixture[] = [
 
 // --- group 8: the inputs mutation testing found uncovered -----------------
 //
-// Twenty-nine mutations were applied to the grammar and the generated
-// tables; four survived the first seven groups. Three of the four were real
-// coverage gaps, and these are the inputs that close them: a closing tag
-// carrying attributes, a parenthesised character that both `symbol` and
-// `sub_sup` accept, and a sub/sup pair where `sub_sup_tags` has to prefer the
-// pair over the single. The fourth is inert and is argued in the test below
-// rather than covered, because no input can distinguish it.
+// Mutation testing was run against the grammar and the generated tables; no
+// report from that run is committed, so no count of mutations applied,
+// killed, or surviving is asserted here. What it found were real coverage
+// gaps, and these are the inputs that close them: a closing tag carrying
+// attributes, a parenthesised character that both `symbol` and `sub_sup`
+// accept, and a sub/sup pair where `sub_sup_tags` has to prefer the pair over
+// the single. It also found alternative swaps that no input can distinguish;
+// those are argued in the test below rather than covered here.
 const GAP_FIXTURES: readonly Fixture[] = [
   ["<i>x</i >", null],
   ['<i>x</i class="a">', null],
@@ -7284,6 +7290,13 @@ describe("every entry of the four generated tables", () => {
 });
 
 describe("tags: case, attributes, void tags, nesting, and the matching close", () => {
+  it("covers the whole tag fixture list", () => {
+    expect(TAG_FIXTURES.length).toBe(46);
+    // Mismatched, empty, and otherwise malformed tag shapes refuse; the rest
+    // are the gem's own accepted forms.
+    expect(TAG_FIXTURES.filter(([, gemTree]) => gemTree === null).length).toBe(7);
+  });
+
   it.each(TAG_FIXTURES)("%s", (input, gemTree) => {
     check([input, gemTree]);
   });
@@ -7345,6 +7358,15 @@ describe("tags: case, attributes, void tags, nesting, and the matching close", (
 });
 
 describe("entities and numbers", () => {
+  it("covers the whole entity and number fixture lists", () => {
+    expect(ENTITY_FIXTURES.length).toBe(22);
+    expect(NUMBER_FIXTURES.length).toBe(19);
+    // Neither list refuses: a malformed entity or number falls back to its
+    // individual symbols and text rather than failing the parse.
+    expect(ENTITY_FIXTURES.filter(([, gemTree]) => gemTree === null).length).toBe(0);
+    expect(NUMBER_FIXTURES.filter(([, gemTree]) => gemTree === null).length).toBe(0);
+  });
+
   it.each(ENTITY_FIXTURES)("%s", (input, gemTree) => {
     check([input, gemTree]);
   });
@@ -7425,6 +7447,13 @@ describe("scope re-entry", () => {
 });
 
 describe("the inputs mutation testing found uncovered", () => {
+  it("covers the whole gap fixture list", () => {
+    expect(GAP_FIXTURES.length).toBe(67);
+    // All eight refusals are a closing tag carrying something after its name,
+    // or an unquoted attribute value that itself contains `<`.
+    expect(GAP_FIXTURES.filter(([, gemTree]) => gemTree === null).length).toBe(8);
+  });
+
   it.each(GAP_FIXTURES)("%s", (input, gemTree) => {
     check([input, gemTree]);
   });
@@ -7503,13 +7532,15 @@ describe("the inputs mutation testing found uncovered", () => {
   });
 
   /**
-   * The four surviving mutations, and why no fixture closes them.
+   * The order swaps mutation testing found that no fixture closes.
    *
-   * Thirty mutations were applied in all. Twenty-six die against the groups
-   * above. The four that survive are all the same kind of change — two
-   * alternatives of one ordered choice exchanged — in places where the two
-   * branches begin with literals neither of which is a prefix of the other, so
-   * no position can reach both:
+   * Mutation testing was run against the grammar and the generated tables; no
+   * report from that run is committed, so no count of mutations applied,
+   * killed, or surviving is asserted here — only the survivors themselves,
+   * checked structurally below. What remains uncovered by the groups above is
+   * all the same kind of change — two alternatives of one ordered choice
+   * exchanged — in places where the two branches begin with literals neither
+   * of which is a prefix of the other, so no position can reach both:
    *
    *   `sequence`'s `unary_args` and `binary_args` branches
    *   (`html/parse.rb:106-107`), whose heads are the 25 `UNARY_CLASSES` and the

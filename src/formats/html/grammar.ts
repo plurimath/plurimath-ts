@@ -203,8 +203,9 @@ export function createHtmlGrammar(decimalMarker: string = DEFAULT_DECIMAL_MARKER
   const rparen = rule(() => arrayToExpression(HTML_RPAREN, "rparen"));
 
   /**
-   * `sub_sup`, tagged `:sum_prod` rather than `:sub_sup` — the tag names the
-   * two functions the table's values are (`:prod` and `:sum`), not the rule.
+   * `sub_sup`, tagged `:sum_prod` rather than `:sub_sup` — the tag names two
+   * of the four functions the table's values are (`:prod` and `:sum`; the
+   * other two are `:log` and `:lim`), not the rule.
    *
    * Six of its eight alternatives reach Parslet exactly as the user typed
    * them. Only `&prod;` and `&sum;` are rewritten — to `&#x220f;` and

@@ -43,7 +43,13 @@ vertical first:
 
 - **pegkit gaps.** The primitives these grammars need beyond AsciiMath's —
   `any`, `present?`, capture `scope` — are implemented and conformance-tested,
-  but unexercised by a real grammar until here.
+  but unexercised by a real grammar until here. Measured against the oracle
+  once the LaTeX grammar landed, that is true of `any` only: `latex/parse.rb`
+  uses it twice, both inside `rule(:color)` at `:21-22`, and uses neither
+  `present?` nor `scope` anywhere. Gem-wide, `present?` appears only under
+  `unicode_math/` and Parslet's `scope` in no parser at all, so `scope`
+  will still be unexercised by a grammar when P3 closes — the candidate that
+  would exercise capture is the HTML or AsciiMath `capture` path, not LaTeX.
 - **Shared model pressure.** A later format may want a node shape that
   contradicts an earlier assumption. The census-driven union is the guard, but
   a genuine conflict means changing `ARCHITECTURE.md` first.
@@ -57,8 +63,24 @@ vertical first:
   LaTeX, UnicodeMath and HTML each land their own locale behaviour here, the
   way AsciiMath does in P1. Only what none of them exercises is left for P4.
 - **Entity input.** LaTeX and HTML normalise named entities to hex on input
-  (see [deferred](../deferred.md)); their rejection cases therefore include the
-  malformed-entity class that AsciiMath has no equivalent for.
+  (see [deferred](../deferred.md)). That does *not* give them a malformed-entity
+  rejection class. Probed against the oracle: `&nosuchentity;`, `&#xZZ;`, `&;`,
+  `&pi` and a bare `&` are all accepted by both, and fall through as literal
+  characters.
+
+  What does reject is narrower — a *well-formed* hex entity naming a codepoint
+  above `0x10FFFF`. `&#x110000;` raises `ParseError` under latex and under html,
+  and is accepted under asciimath, so the class is real and genuinely specific
+  to these two formats. It also carries a width boundary a naive port will miss:
+  `&#x10FFFF;` round-trips lowercased, `&#x110000;` breaks the parse, and
+  `&#xFFFFFFFF;` is never recognised as an entity at all and survives
+  byte-identical, capitals intact.
+
+  That three-way split is the behaviour of the `HTMLEntities` gem, reached
+  through the Plurimath gem's `lib/plurimath/latex/parser.rb:27` — a path in the
+  oracle, not in this repository — and not of Plurimath itself. So the port
+  cannot read it out of Plurimath's source and must probe for it. Author this
+  rejection group from a probe, not from this paragraph.
 
 ## Exit criteria
 

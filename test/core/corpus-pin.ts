@@ -21,7 +21,8 @@
  *     neither of those was generated the canonical way (ARCHITECTURE.md §7);
  *   - a payload on disk is not in the provenance list, or vice versa;
  *   - a payload's bytes or sha256 disagree with the provenance;
- *   - a payload has no group, no cases, or a case missing a target key;
+ *   - a payload has no group, no cases, or a case whose outcomes do not cover
+ *     exactly the targets its group declares;
  *   - the pin yields no payloads or no cases at all.
  */
 
@@ -53,9 +54,75 @@ export const LOCAL_CORPUS_ROOT = join(REPO_ROOT, "corpus");
 export const SUBMODULE_FIX = "git submodule update --init --recursive";
 
 const PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
-const CASE_SCHEMA = "plurimath-corpus/asciimath/1";
 const MANIFEST_SCHEMA = "plurimath-corpus/manifest/2";
 const REJECTIONS_SCHEMA = "plurimath-corpus/rejections/1";
+
+/**
+ * The input formats a case payload's schema may name.
+ *
+ * A case schema is `plurimath-corpus/<input format>/<version>`: the middle
+ * segment is the notation the group's inputs are written in, so an AsciiMath
+ * group declares `plurimath-corpus/asciimath/1` and a LaTeX group declares
+ * `plurimath-corpus/latex/1`. This list is the set the testsuite's own schemas
+ * pin with a `pattern` (`schema/cases.json`, `schema/cases2.json`); it is
+ * repeated rather than derived because those schema files are not shipped to a
+ * consumer that reads only `corpus/`.
+ *
+ * Enumerated rather than matched with `[a-z]+`, so a payload declaring a format
+ * neither repository has agreed on stops the load instead of being read as
+ * though its middle segment were a name this port knows.
+ */
+const CASE_INPUT_FORMATS: readonly string[] = [
+  "asciimath",
+  "html",
+  "latex",
+  "mathml",
+  "omml",
+  "unicode",
+  "unitsml",
+];
+
+/**
+ * `cases/2` does not replace `cases/1` and nothing is converted between them:
+ * a payload names its own schema, and a group whose every case renders to every
+ * target stays on `cases/1`. The only difference is the shape of `expected` —
+ * a bare string per target in `cases/1`, an outcome mapping in `cases/2`.
+ *
+ * The version and the input format are independent: `latex/1` and `asciimath/2`
+ * are both legal, so the schema string is decomposed rather than compared
+ * against a fixed list of whole strings.
+ */
+const CASE_SCHEMA_PATTERN = /^plurimath-corpus\/([^/]+)\/([12])$/;
+
+/** What a case payload's `schema` string says, once decomposed. */
+interface CaseSchema {
+  readonly inputFormat: string;
+  readonly version: CaseSchemaVersion;
+}
+
+/**
+ * Reads a case schema, or returns `undefined` for a string that is not one.
+ * `undefined` rather than a throw, because the caller dispatches on it: a
+ * rejection payload's schema is not a case schema and is not an error either.
+ */
+function readCaseSchema(schema: string): CaseSchema | undefined {
+  const match = CASE_SCHEMA_PATTERN.exec(schema);
+  const inputFormat = match?.[1];
+  const version = match?.[2];
+  if (inputFormat === undefined || version === undefined) return undefined;
+  if (!CASE_INPUT_FORMATS.includes(inputFormat)) return undefined;
+  return { inputFormat, version: version === "1" ? 1 : 2 };
+}
+
+/**
+ * The categories a `cases/2` refusal may name. `parse_error` is the only one,
+ * and deliberately: every render failure funnels through the gem's
+ * `Math::Formula#wrap_render_error`, which re-raises `Math::ParseError`, so the
+ * category names what the public boundary says rather than the Ruby class
+ * behind it. A pin that adds a category is a pin this reader is too old to
+ * read, so an unknown one stops the load rather than being carried through.
+ */
+const ERROR_CATEGORIES: readonly string[] = ["parse_error"];
 
 /**
  * Ox is the canonical engine (ARCHITECTURE.md §7). Oga is a parity check, and
@@ -85,8 +152,24 @@ export interface PinnedCase {
   readonly input: string;
   readonly inputFormat: string;
   readonly preprocessed: string;
-  /** One entry per target format the payload declares. */
+  /**
+   * The rendered bytes, per target format — and **only** the targets that
+   * rendered. A `cases/1` case has one entry per declared target, because that
+   * schema cannot record anything else. A `cases/2` case may leave a target out
+   * of this map and name it in `refusals` instead.
+   */
   readonly expected: ReadonlyMap<string, string>;
+  /**
+   * The targets the gem refused to render this case to, mapped to the error
+   * category it refused with (`parse_error`). Always empty for a `cases/1`
+   * case, so a consumer that only reads `expected` keeps working unchanged.
+   *
+   * `expected` and this together always name exactly the payload's `targets` —
+   * enforced by `assertTargetCoverage`, because a consumer iterating `expected`
+   * alone would otherwise skip a refusing target and report parity it never
+   * checked.
+   */
+  readonly refusals: ReadonlyMap<string, string>;
   readonly parseTree: YamlValue;
   /** The gem's serialization of the formula; `model-builder` rebuilds it. */
   readonly model: YamlValue;
@@ -314,7 +397,117 @@ function readPayloadDocument(
   return { path, document, schema: requiredString(document, "schema", path) };
 }
 
-function readPayload(record: PayloadRecord, document: Mapping, path: string): PinnedPayload {
+/** Which shape a payload's `expected` entries take; see `CASE_SCHEMA_PATTERN`. */
+type CaseSchemaVersion = 1 | 2;
+
+/** What one target did with one case: it rendered, or it refused. */
+type Outcome = { readonly rendered: string } | { readonly category: string };
+
+/**
+ * Reads one entry of a case's `expected`.
+ *
+ * `cases/1` writes the rendered bytes at this position and has no way to say
+ * anything else. `cases/2` writes a mapping carrying exactly one of `output`
+ * and `error` — "exactly one" being the point, so a mapping with both keys, or
+ * with neither, is a third state the schema refuses to let exist and so does
+ * this. An empty `output` is legal: a render that produced no bytes is still a
+ * render, and `cases/1` accepted one here too.
+ */
+function readOutcome(value: YamlValue, version: CaseSchemaVersion, where: string): Outcome {
+  if (version === 1) {
+    if (typeof value !== "string") {
+      throw new Error(`${where}: must be a string, found ${describeValue(value)}`);
+    }
+    return { rendered: value };
+  }
+
+  const outcome = asMapping(value, where);
+  const keys = Object.keys(outcome);
+  const kind = keys.length === 1 ? keys[0] : undefined;
+  if (kind !== "output" && kind !== "error") {
+    throw new Error(
+      `${where}: an outcome is exactly one of {output: ...} and ` +
+        `{error: {category: ...}}, found {${keys.join(", ")}}`,
+    );
+  }
+
+  if (kind === "output") {
+    const output = outcome.output;
+    if (typeof output !== "string") {
+      throw new Error(
+        `${where}: "output" must be a string, found ${describeValue(output ?? null)}`,
+      );
+    }
+    return { rendered: output };
+  }
+
+  const error = asMapping(requiredPresent(outcome, "error", where), `${where} error`);
+  const errorKeys = Object.keys(error);
+  if (errorKeys.length !== 1 || errorKeys[0] !== "category") {
+    throw new Error(
+      `${where}: "error" carries "category" and nothing else, found {${errorKeys.join(", ")}}. ` +
+        "There is no offset here as there is on a rejection: the input already " +
+        "parsed, so no position in it describes a render that failed downstream.",
+    );
+  }
+  const category = requiredString(error, "category", `${where} error`);
+  if (!ERROR_CATEGORIES.includes(category)) {
+    throw new Error(
+      `${where}: error.category is "${category}", this reader knows ` +
+        `${ERROR_CATEGORIES.map((known) => `"${known}"`).join(", ")}.`,
+    );
+  }
+  return { category };
+}
+
+/**
+ * The gate that makes a rendered-only `expected` safe to iterate.
+ *
+ * `targets` is declared once for the whole group, and the union of what
+ * rendered and what refused is exactly that list — the same cross-field rule
+ * the testsuite's own validator applies (`scripts/validate.rb`,
+ * `target_coverage_errors`), restated here because this reader splits one
+ * payload field across two maps. A target in neither map is a target every
+ * consumer silently skips; a target in one of them that the group never
+ * declared is an expectation nothing asked for. Both fail here rather than
+ * downstream, where the symptom is a parity suite reporting green on a target
+ * it never looked at.
+ */
+function assertTargetCoverage(
+  at: string,
+  targets: readonly string[],
+  expected: ReadonlyMap<string, string>,
+  refusals: ReadonlyMap<string, string>,
+): void {
+  const covered = new Set([...expected.keys(), ...refusals.keys()]);
+  const declared = new Set(targets);
+  const missing = targets.filter((target) => !covered.has(target));
+  const undeclared = [...covered].filter((target) => !declared.has(target));
+  if (missing.length === 0 && undeclared.length === 0) return;
+
+  const complaints: string[] = [];
+  if (missing.length > 0) {
+    const named = missing.map((target) => `expected.${target}`).join(", ");
+    complaints.push(`${named} ${missing.length === 1 ? "is" : "are"} missing`);
+  }
+  if (undeclared.length > 0) {
+    const named = undeclared.map((target) => `expected.${target}`).join(", ");
+    complaints.push(`${named} ${undeclared.length === 1 ? "is" : "are"} not a declared target`);
+  }
+  throw new Error(
+    `${at}: ${complaints.join("; ")}. The payload declares targets ` +
+      `${targets.join(", ")}; every case must carry an outcome for each of ` +
+      "them and for nothing else.",
+  );
+}
+
+function readPayload(
+  record: PayloadRecord,
+  document: Mapping,
+  path: string,
+  schema: CaseSchema,
+): PinnedPayload {
+  const version = schema.version;
   // A payload without a group is a payload nothing can name in a failure
   // message, so it fails here rather than being loaded as an unnamed pile.
   const group = requiredString(document, "group", path);
@@ -323,7 +516,20 @@ function readPayload(record: PayloadRecord, document: Mapping, path: string): Pi
     throw new Error(`${path}: group is "${group}" but the file is named "${stem}.yaml".`);
   }
 
+  // The input format is stated twice — in the schema's middle segment and in
+  // this field — and the testsuite reconciles them (`scripts/validate.rb`,
+  // `input_format_errors`). Restated here because this port dispatches on the
+  // field: `parseableCases` selects the cases a PARSER may run, so a `latex`
+  // payload whose `input_format` said `asciimath` would feed LaTeX source to
+  // `parseAsciimath` and fail as though the parser were broken.
   const inputFormat = requiredString(document, "input_format", path);
+  if (inputFormat !== schema.inputFormat) {
+    throw new Error(
+      `${path}: input_format is "${inputFormat}" but the schema declares ` +
+        `"${schema.inputFormat}" ("plurimath-corpus/${schema.inputFormat}/${version}").`,
+    );
+  }
+
   const targets = requiredSequence(document, "targets", path).map((target, index) => {
     if (typeof target !== "string" || target === "") {
       throw new Error(`${path}: targets[${index}] is not a format name`);
@@ -341,24 +547,48 @@ function readPayload(record: PayloadRecord, document: Mapping, path: string): Pi
     const id = requiredString(caseRecord, "id", where);
     const at = `${path} case ${id}`;
     const expectedMap = asMapping(requiredPresent(caseRecord, "expected", at), `${at} expected`);
-    const expected = new Map<string, string>();
-    for (const target of targets) {
-      const rendered = expectedMap[target];
-      if (typeof rendered !== "string") {
-        throw new Error(
-          `${at}: expected.${target} is missing or not a string. The payload ` +
-            `declares targets ${targets.join(", ")}; every case must carry all of them.`,
-        );
-      }
-      expected.set(target, rendered);
+    // Classified from the payload's OWN keys, not from `targets`: reading by
+    // target would make a key the group never declared invisible, and the
+    // coverage gate below can only be load-bearing if both directions of the
+    // disagreement can reach it.
+    const rendered = new Map<string, string>();
+    const refused = new Map<string, string>();
+    for (const target of Object.keys(expectedMap)) {
+      const outcome = readOutcome(expectedMap[target] ?? null, version, `${at} expected.${target}`);
+      if ("rendered" in outcome) rendered.set(target, outcome.rendered);
+      else refused.set(target, outcome.category);
     }
+    assertTargetCoverage(at, targets, rendered, refused);
+
+    // Rebuilt in `targets` order, so iteration order comes from the group's
+    // declaration rather than from the order Psych happened to write the keys.
+    const expected = new Map<string, string>();
+    const refusals = new Map<string, string>();
+    for (const target of targets) {
+      const output = rendered.get(target);
+      if (output !== undefined) expected.set(target, output);
+      const category = refused.get(target);
+      if (category !== undefined) refusals.set(target, category);
+    }
+
+    // The third statement of the same fact, and the one every consumer reads:
+    // `parseableCases` filters on the case's own `input_format`, so a case that
+    // disagreed with its group would be routed by this field alone.
+    const caseFormat = requiredString(caseRecord, "input_format", at);
+    if (caseFormat !== inputFormat) {
+      throw new Error(
+        `${at}: input_format is "${caseFormat}" but its group declares "${inputFormat}".`,
+      );
+    }
+
     return {
       id,
       group,
       input: requiredString(caseRecord, "input", at),
-      inputFormat: requiredString(caseRecord, "input_format", at),
+      inputFormat: caseFormat,
       preprocessed: requiredString(caseRecord, "preprocessed", at),
       expected,
+      refusals,
       parseTree: requiredPresent(caseRecord, "parse_tree", at),
       model: asMapping(requiredPresent(caseRecord, "model", at), `${at} model`),
     };
@@ -436,13 +666,16 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
   const rejectionPayloads: PinnedRejectionPayload[] = [];
   for (const record of provenance.payloads) {
     const { path, document, schema } = readPayloadDocument(root, record);
-    if (schema === CASE_SCHEMA) {
-      payloads.push(readPayload(record, document, path));
+    const caseSchema = readCaseSchema(schema);
+    if (caseSchema !== undefined) {
+      payloads.push(readPayload(record, document, path, caseSchema));
     } else if (schema === REJECTIONS_SCHEMA) {
       rejectionPayloads.push(readRejectionPayload(record, document, path));
     } else {
       throw new Error(
-        `${path}: schema is "${schema}", this reader knows "${CASE_SCHEMA}" and ` +
+        `${path}: schema is "${schema}", this reader knows ` +
+          `"plurimath-corpus/<input format>/1", "plurimath-corpus/<input format>/2" ` +
+          `(input format one of ${CASE_INPUT_FORMATS.join(", ")}) and ` +
           `"${REJECTIONS_SCHEMA}".`,
       );
     }

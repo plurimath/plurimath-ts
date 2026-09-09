@@ -7,7 +7,7 @@
  *
  *   1. every published subpath loads under ESM and CJS with its named exports
  *   2. each subpath's bundled graph contains only what it is allowed to
- *   3. publint passes, and attw checks a real `npm pack`
+ *   3. publint and attw both pass, each against a real packed tarball
  *
  * Executable subpaths are read from package.json#exports. Every one must have
  * non-empty export and graph policies below, so adding a subpath without both
@@ -86,6 +86,7 @@ const CORE_EXPORTS = [
   "UlNode",
   "UnaryFunctionNode",
   "UndersetNode",
+  "UnsupportedFeatureError",
   "UnsupportedFormatError",
   "VecNode",
   "assertMathNodeShape",
@@ -96,11 +97,35 @@ const CORE_EXPORTS = [
   "resetUnsupportedWarnings",
 ];
 
+/**
+ * The root additionally carries the `plurimath-js` compat class (ARCHITECTURE.md
+ * §4). It is only at the root: it delegates to every renderer, so putting it
+ * behind a format subpath would drag all of them into that subpath's graph and
+ * break the slim-bundle guarantee the subpaths exist for.
+ */
+const ROOT_EXPORTS = [...CORE_EXPORTS, "FORMATS", "Plurimath"].sort();
+
+/**
+ * Subpaths whose BUILT artifact must expose a default export, and what it must
+ * be. ARCHITECTURE.md §3 held this open — "the root's default export is
+ * asserted only once the compat class exists, §4" — and the compat class now
+ * exists, so it is asserted here.
+ *
+ * It is checked against `dist`, not against source, because `import Plurimath
+ * from "@plurimath/plurimath"` is the single entry point every plurimath-js
+ * consumer uses, and a miswired export-map target or tsdown entry would ship
+ * the wrong file while a source-importing spec stayed green.
+ */
+const EXPECTED_DEFAULT = {
+  ".": "Plurimath",
+};
+
 const EXPECTED_EXPORTS = {
-  ".": CORE_EXPORTS,
+  ".": ROOT_EXPORTS,
   "./core": CORE_EXPORTS,
   "./asciimath": ["parseAsciimath", "toAsciimath"],
-  "./latex": ["toLatex"],
+  "./html": ["toHtml"],
+  "./latex": ["parseLatex", "toLatex"],
   "./mathml": ["toMathml"],
   "./unicodemath": ["toUnicodemath"],
 };
@@ -108,15 +133,17 @@ const EXPECTED_EXPORTS = {
 /**
  * Entries a subpath must never pull in, keyed by subpath — the slim-bundle
  * guarantee of ARCHITECTURE.md §3, checked against the built `dist` and its
- * sourcemaps rather than against import statements. Only the attw step below
- * runs against a real `npm pack`.
+ * sourcemaps rather than against import statements. The publint and attw steps
+ * below are the ones that pack the package; this graph check reads `dist`
+ * directly.
  *
  * ARCHITECTURE.md:187-193 and :249-255 define a format's ownership across
  * `formats/<F>/`, `render/<kind>/<F>.ts`, and `generated/<F>/`. Deriving those
  * patterns here covers the node-major layout without listing every render kind.
- * `pegkit` is the parser combinator library: only `/asciimath` has an input
- * side today, so only it may carry pegkit. `xml` is the Ox-compatible
- * serializer, needed by MathML alone.
+ * `pegkit` is the parser combinator library, so a subpath may carry it exactly
+ * when that format has an input side: `/asciimath` and, since the LaTeX
+ * transform landed, `/latex`. `xml` is the Ox-compatible serializer, needed by
+ * MathML alone.
  */
 const FORMAT_NAMES = readdirSync(resolve(root, "src/formats"), { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
@@ -140,7 +167,13 @@ const FORBIDDEN = {
   ".": NO_FORBIDDEN_SOURCES,
   "./core": [...forbidOtherFormats(), /pegkit\//],
   "./asciimath": [...forbidOtherFormats("asciimath"), /xml\//],
-  "./latex": [...forbidOtherFormats("latex"), /pegkit\//, /xml\//],
+  // HTML is output-only: no grammar, and its markup is built as strings
+  // rather than through the XML layer.
+  "./html": [...forbidOtherFormats("html"), /pegkit\//, /xml\//],
+  // LaTeX parses as well as renders (ARCHITECTURE.md §3, "parsing *and*
+  // rendering when both exist"), so pegkit is expected here; `xml` still is
+  // not, because LaTeX output is text.
+  "./latex": [...forbidOtherFormats("latex"), /xml\//],
   "./mathml": [...forbidOtherFormats("mathml"), /pegkit\//],
   // UnicodeMath is text output like latex, so it needs no XML layer and no
   // grammar — its graph is core plus its own generated slice, nothing else.
@@ -182,9 +215,12 @@ for (const [subpath, conditions] of subpaths) {
   const cjsFile = resolve(root, conditions.require.default);
 
   // 1. loads under both module systems, exposing named exports
+  let esmDefault;
+  let cjsDefault;
   let esmExports = [];
   try {
     const loaded = await import(pathToFileURL(esmFile).href);
+    esmDefault = loaded.default;
     esmExports = Object.keys(loaded).filter((key) => key !== "default");
     console.log(`  ✓ ESM loads (${esmExports.length} named exports)`);
   } catch (error) {
@@ -193,6 +229,7 @@ for (const [subpath, conditions] of subpaths) {
   let cjsExports = [];
   try {
     const loaded = require(cjsFile);
+    cjsDefault = loaded.default;
     cjsExports = Object.keys(loaded).filter((key) => key !== "default");
     console.log(`  ✓ CJS loads (${cjsExports.length} named exports)`);
   } catch (error) {
@@ -210,6 +247,28 @@ for (const [subpath, conditions] of subpaths) {
       fail(`${subpath} ${moduleSystem} exports [${actual}], expected [${[...expected].sort()}]`);
     } else {
       console.log(`  ✓ ${moduleSystem} exports exactly ${expected.join(", ")}`);
+    }
+  }
+
+  // 1b. the default export, where the subpath promises one
+  const expectedDefault = EXPECTED_DEFAULT[subpath];
+  for (const [moduleSystem, value] of [
+    ["ESM", esmDefault],
+    ["CJS", cjsDefault],
+  ]) {
+    if (expectedDefault === undefined) {
+      if (value !== undefined) {
+        fail(`${subpath} ${moduleSystem} has an unexpected default export`);
+      }
+      continue;
+    }
+    if (typeof value !== "function" || value.name !== expectedDefault) {
+      const got = value === undefined ? "none" : `${typeof value} ${value?.name ?? ""}`.trim();
+      fail(
+        `${subpath} ${moduleSystem} default export is ${got}, expected class ${expectedDefault}`,
+      );
+    } else {
+      console.log(`  ✓ ${moduleSystem} default export is ${expectedDefault}`);
     }
   }
 

@@ -157,6 +157,28 @@ One name is measured and deliberately still refused: `Scarries` inherits
 `to_unicodemath` from the carrier (`"scarries⁡x"`) while overriding the other
 three. Admitting it in one format alone would leave a name that renders in
 UnicodeMath and raises everywhere else, which is a worse trap than the gap.
+
+The HTML slice hand-lists the same way, and for the same reason — no
+`src/generated/html/` slice carries a reachable-name set, and §3's
+generated-data closure forbids an HTML kind file reading the mathml one. The
+name arms in `src/render/{binary,ternary,unary}-function/html.ts` admit only
+the ten aliases some corpus case constructs — `Power`, `Mod`, `Lim`, `Log`,
+`Root`, `Td` (binary), `PowerBase` (ternary), `Sin`, `Cos`, `Tr` (unary) — so
+every admitted arm is held to the gem's bytes by `render-parity.spec.ts`, and
+`power`/`powerBase` additionally by the full `degenerate-slots` slot matrix.
+`MEASURED_LABELS` in the unary file is the one hand-typed gem-derived table:
+`Core#invert_unicode_symbols` is `UNICODE_SYMBOLS.invert[class_name] ||
+class_name`, so the label is NOT reliably the downcased class name — of the
+names reachable through that carrier, `Sup` resolves to `&#x2283;` — and the
+port cannot compute it without the mathml table it may not import. Names that
+render on the gem but no case constructs (`Stackrel`, `Underover`, `Limits`,
+`Multiscript`) stay refused rather than admitted untested. Two never become
+admissible as written: `Menclose#to_html` interpolates `parameter_one` raw
+into a `notation=` attribute (a heap address, not reproducible), and
+`Rule#to_html` takes no `options:` keyword at all, so the gem itself raises
+`ArgumentError` — surfacing as `ParseError` — when a `Rule` is rendered
+inside a tree.
+
 **Trigger for revisiting: a generator that owns these sets per format, or the
 first consumer that needs `Scarries`.**
 
@@ -343,6 +365,79 @@ guard is nevertheless required because MathML emits arbitrary option and
 attribute entries in order, OMML does the same for Mpadded and Fenced, and
 UnicodeMath interpolates arbitrary hash values. Numeric-looking keys which are
 not JavaScript array indices (`"01"`, `"-1"`, `"4294967295"`) remain accepted.
+
+### OMML Fenced: Ruby's `#inspect` recursion markers are refused, not reproduced
+
+**Trigger: a consumer reporting a self-referential delimiter, or the shape
+check in `src/core/validate.ts` gaining a per-slot exemption for values whose
+only consumer is a `#inspect`.**
+
+`Fenced`'s OMML delimiters are the one place a renderer stringifies a raw Ruby
+value through `#inspect`, and `#inspect` has an answer for a cycle rather than
+looping: it prints a recursion marker. Measured on the oracle at `00c52783`, a
+`Table` delimiter whose value is a self-referential list emits
+`m:begChr m:val="[[...]]"`, one whose value is a list holding itself one level
+down emits `[[[...]]]`, and a self-referential hash emits `{"self" => {...}}`.
+
+This port refuses all of them, and not in the renderer: `assertMathNodeShape`
+rejects any cyclic tree before a renderer is reached, because every other walk
+in the port would run until the stack gave out. Narrowing that check to spare
+the delimiter slots would mean threading "this slot is only ever inspected"
+through the shape walk, for a shape no parser produces. The refusal is pinned
+by `test/formats/omml/renderer.spec.ts`, "OMML fenced delimiter recursion
+markers", so it cannot drift into some other behaviour unnoticed.
+
+### OMML Fenced: a lone surrogate is refused, not rendered as the gem's byte escapes
+
+**Trigger: a consumer reaching this from real input rather than a hand-built
+tree, or any decision to match Ruby's `#inspect` byte-escape spelling
+generally.**
+
+Ruby cannot BUILD the code point — `0xD800.chr(Encoding::UTF_8)` raises
+`RangeError: invalid codepoint 0xD800 in UTF-8` — but a String carries the
+bytes perfectly well. Measured on the oracle at `00c52783`,
+`[0xD800].pack("U*")` gives a UTF-8 String whose `valid_encoding?` is false,
+whose bytes are `ED A0 80`, and whose `#inspect` prints `"\xED\xA0\x80"`:
+byte escapes, not `\uD800`.
+
+So the gem renders this. A `Fenced` whose delimiter is a Formula valued
+`["a\uD800b"]` emits, measured:
+
+```xml
+<m:begChr m:val="[&quot;a\xED\xA0\x80b&quot;]"/>
+```
+
+This port refuses it instead (`src/render/fenced/omml.ts`), pinned by
+`test/formats/omml/renderer.spec.ts`, "refuses a lone surrogate the gem would
+render as byte escapes".
+
+**This entry is closable, unlike the non-UTF-8 entry above it.** That one is
+about bytes the port cannot hold at all. This output is ASCII-only, so
+JavaScript can represent it exactly; what is missing is only the decision to
+reproduce Ruby's `#inspect` byte-escape spelling, which is a wider question than
+one delimiter slot. Reachable today only from a hand-built tree — no parser
+produces a lone surrogate — which is why it is deferred rather than fixed here.
+
+### `ModelHelper.validate_left_right` is modelled at one renderer, not in the model
+
+**Trigger: a second renderer needing it, or the node constructors gaining any
+gem-side validation at all.**
+
+Every function constructor in the gem runs `ModelHelper.validate_left_right`
+over its slots (`ternary_function.rb:16` and its siblings), and that helper
+sends `first` to the `value` of any slot holding a `Math::Formula`. A Formula
+or Mrow whose value is neither a list nor a hash therefore raises at
+construction — measured on the oracle at `00c52783`, `NoMethodError: undefined
+method 'first'` for an instance of String, for an instance of Integer, for
+true, and for nil.
+
+This port's constructors do not validate (ARCHITECTURE.md §5), so there is no
+constructor to put the check in. `src/render/fenced/omml.ts` reproduces it for
+`Fenced`'s three slots, because that is the renderer where the difference is
+observable in bytes: without it, a `Formula` delimiter holding `"raw"` would
+render `m:val="raw"` where the gem never gets as far as rendering. No other
+carrier or renderer models it; a hand-built tree that would have raised in a
+different gem constructor still renders here.
 
 ## Upstream issues
 
@@ -588,15 +683,20 @@ names the three format fixtures and the XML generator as explicit legacy gaps,
 so another untracked generated artifact cannot silently join them. Replacing
 these captures with deterministic generators and full sidecars closes the gap.
 
-### HTML: Fenced refuses generated and nondeterministic paren paths
+### HTML: Fenced refuses nondeterministic paren paths
 
-**Trigger: the HTML symbol-data slice is generated, or a corpus case needs one of
-these constructs.**
+**Trigger: a corpus case needs one of these constructs.**
 
 The gem's `Fenced#to_html` takes two incompatible paren paths. A `Paren` instance is
-rendered through `to_mathml_without_math_tag(...).nodes.first`; named `Paren::*` nodes
-therefore need the generated symbol mapping that the scoped HTML slice does not carry.
-The port raises `RenderError` for that path rather than inventing a delimiter.
+rendered through `to_mathml_without_math_tag(...).nodes.first`.
+
+**The generated half of this entry closed, 2026-09-07.**
+`HTML_FENCED_PAREN_PAYLOADS` (`src/generated/html/symbols.ts`) carries that
+value for all 24 `Paren` subclasses, measured on the pinned oracle and verified
+through one live `Fenced#to_html` render per id, so named `Paren::*` nodes now
+render. An id under `Paren::` the column does not carry is a new upstream
+subclass: it raises `MissingSymbolDataError` rather than falling through to the
+value path below.
 
 Any non-`Paren` node contributes its raw `value`. Empty and nil-only formula, mrow, and
 table values have deterministic Ruby `#inspect` bytes (`[]`, `[nil]`; a nil table value
@@ -862,3 +962,42 @@ entry:
 **Trigger:** the first of — a corpus case records a numeric or hash option
 value, or a parser is added that can produce one, or the model schema gains
 Ruby type information for option values.
+
+### OMML: the four `to_omml` keywords refuse rather than render
+
+**Trigger: any one of the four gains a measured rendering path — display style
+when the recursive override is measured across the whole renderer, line
+breaking when Word's break-run separator is measured, the formatter with P4,
+and UnitsML when [ARCHITECTURE.md](../ARCHITECTURE.md) §5 stops deferring it
+wholesale.**
+
+`Formula#to_omml` accepts `display_style`, `split_on_linebreak`, `formatter`
+and `unitsml`. The port names each one and refuses it, rather than accepting
+the keyword and quietly ignoring what it asks for — a silently dropped option
+renders plausible OMML that is not what the caller asked for, which is the
+failure this port refuses to have.
+
+`src/formats/omml/renderer.ts` carries the four reasons next to the refusal and
+points here; this is the entry it points at.
+
+### OMML: `fenced` refuses the paren shapes whose gem output is not reproducible
+
+**Trigger: the paren value readers gain measured coverage for the shapes below,
+or generated symbol data lands and supplies the named parens.**
+
+`Fenced` reads its open and close parens through a value reader that mirrors
+what the gem sends to each node kind. Seven shapes refuse instead of rendering,
+each naming what the gem does with it:
+
+- a named paren whose symbol id the pinned oracle does not carry
+- a node kind with no value reader at all, where the gem raises `NoMethodError`
+- a slot holding something the gem sends `include?` to and raises on
+- a composite whose value is not the list the gem exposes
+- a value containing node objects, whose Ruby `#inspect` embeds memory
+  addresses and so cannot be reproduced deterministically
+- a number whose Ruby `#inspect` spelling this port cannot yet reproduce
+- anything else with no measured Ruby `#inspect` spelling
+
+The first is the generated-symbol-data gap and lifts with it. The rest are
+`#inspect` reproducibility, which is why they refuse rather than guess: the
+gem's own output for them is either nondeterministic or unmeasured.

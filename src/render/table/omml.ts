@@ -1,6 +1,5 @@
 import { hasNodeKind, RenderError } from "../../core/index";
 import {
-  baseSymbolValue,
   controlProperties,
   FORMAT,
   type NodeOf,
@@ -10,6 +9,8 @@ import {
   requireElement,
   requireEmptyOptions,
   requireNodeList,
+  structuralProperties,
+  symbolOmmlValue,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
@@ -39,15 +40,9 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): XmlE
   //
   // A table with no rows reaches the same branch: `[].all?` is true in Ruby as
   // `[].every` is in JavaScript, and the gem renders `Table.new([])` as an
-  // `m:eqArr` carrying only its `m:eqArrPr`. It refused separately here as
-  // "empty tables are unmeasured", which split one gem path across two port
-  // refusals and reported the wrong reason for the emptier of them.
+  // `m:eqArr` carrying only its `m:eqArrPr`.
   if (rows.every((row) => cellCount(row) === 1)) {
-    throw new RenderError(
-      "table.value: the single-column eqArr branch is deferred until separately measured",
-      FORMAT,
-      node.kind,
-    );
+    return fencedTable(renderSingleColumn(rows, context), node);
   }
 
   // `multiple_td_table` (table.rb:298) takes `m:count` from the FIRST row
@@ -77,6 +72,45 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): XmlE
     );
   });
 
+  return fencedTable(matrix, node);
+}
+
+/**
+ * `Table#single_td_table` (table.rb:286-296):
+ *
+ * ```ruby
+ * eqarr   = XmlHelper.ox_element("eqArr", namespace: "m")
+ * eqarrpr = XmlHelper.ox_element("eqArrPr", namespace: "m")
+ * eqarrpr << XmlHelper.pr_element("ctrl", true, namespace: "m")
+ * eqarr   << eqarrpr
+ * tr_value = value.map { |o| o.to_omml_without_math_tag(...) }.flatten
+ * XmlHelper.update_nodes(eqarr, tr_value.compact)
+ * ```
+ *
+ * Every row is rendered and its answer is flattened straight in, with no shape
+ * check of any kind — `m:m` gets `requireRowContent` because a matrix's rows
+ * are read for their width, and this branch reads nothing. So a one-cell `Tr`
+ * contributes its bare `<m:e>` list and a `Td` row its single `m:e`, both
+ * measured on the oracle at `00c52783`, and `append` reproduces
+ * `flatten.compact` exactly (nested lists recursed, nil skipped).
+ *
+ * A table with NO rows reaches this branch too, and is the shape that shows
+ * the properties element is unconditional: `Table.new([])` renders an
+ * `m:eqArr` carrying only its `m:eqArrPr` (measured).
+ */
+function renderSingleColumn(rows: readonly unknown[], context: RenderContext): XmlElement {
+  const rowArray = new XmlElement("m:eqArr").append(structuralProperties("eqArr"));
+  rows.forEach((row, index) => {
+    rowArray.append(renderChild(row, context, `table.value[${index}]`));
+  });
+  return rowArray;
+}
+
+/**
+ * `Table#fenced_table` (table.rb:342-351) and `mdpr_node` below it: the
+ * delimiter wrapper both table shapes are handed to.
+ */
+function fencedTable(table: XmlElement, node: NodeOf<"table">): XmlElement {
   const open = requireParenValue(node.openParen, node, "table.openParen");
   const close = requireParenValue(node.closeParen, node, "table.closeParen");
   const delimiterProperties = new XmlElement("m:dPr").append(
@@ -85,7 +119,7 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): XmlE
     new XmlElement("m:sepChr").setAttribute("m:val", ""),
     new XmlElement("m:grow"),
   );
-  return new XmlElement("m:d").append(delimiterProperties, new XmlElement("m:e").append(matrix));
+  return new XmlElement("m:d").append(delimiterProperties, new XmlElement("m:e").append(table));
 }
 
 /**
@@ -129,5 +163,8 @@ function requireParenValue(value: unknown, node: NodeOf<"table">, at: string): s
       node.kind,
     );
   }
-  return baseSymbolValue(value as NodeOf<"symbol">, node.kind, at);
+  // `Table#paren` is `parenthesis.to_omml_without_math_tag(true)`
+  // (`table.rb:375-377`) — the representation itself, NOT `t_tag`, so a named
+  // paren answers its generated literal and its stored value is never read.
+  return symbolOmmlValue(value as NodeOf<"symbol">, node.kind, at);
 }

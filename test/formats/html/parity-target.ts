@@ -42,69 +42,31 @@ export const KNOWN_DIVERGENCES: Readonly<
  * id here that renders, or one absent from here that refuses, fails in that
  * case's own test. Shrinking this list is the work; each removal belongs to the
  * commit that earns it.
+ *
+ * **Empty, and every entry earned its way out.** The seventeen it held waited
+ * on SEVEN carrier aliases the HTML slice had not measured — `Power` (9 cases),
+ * `Mod` (3), and `Lim`, `Log`, `Root`, `PowerBase` and `Cos` at one each, which
+ * is 9 + 3 + 5 = 17. All seven are measured now, in
+ * `src/render/{binary,ternary,unary}-function/html.ts`, and each of the
+ * seventeen cases produces the gem's exact bytes.
+ *
+ * The table stays so the next case that refuses has somewhere to be named. A
+ * corpus that grows can put entries back; what it must not do is put one back
+ * without a reason that is TRUE of the gem.
  */
-export const PORT_REFUSES: ReadonlySet<string> = new Set([
-  "colour-in-sum",
-  "fence-round-single",
-  "fence-round-expression",
-  "fence-square-pair",
-  "fence-curly-single",
-  "fence-round-triple",
-  "fence-over-number",
-  "font-mixed",
-  "frac-fenced-numerator",
-  "frac-fenced-denominator",
-  "frac-sum-of-fracs",
-  "mixed-implicit-product",
-  "mixed-greek-sequence",
-  "mixed-function-definition",
-  "mixed-binomial-square",
-  "mixed-sum-of-cubes",
-  "mod-simple",
-  "mod-numeric",
-  "mod-in-expression",
-  "nary-log-base",
-  "nary-lim",
-  "nary-sum-bounded",
-  "nary-prod-bounded",
-  "operator-plus",
-  "operator-asterisk",
-  "operator-minus",
-  "operator-equals",
-  "operator-plus-chain",
-  "permissive-trailing-caret",
-  "permissive-unclosed-paren",
-  "permissive-unopened-paren",
-  "permissive-closing-run",
-  "permissive-bare-dollar",
-  "permissive-frac-then-operator",
-  "power-square",
-  "power-fenced-exponent",
-  "subscript-fenced",
-  "power-and-subscript",
-  "power-exponential",
-  "power-of-two",
-  "power-over-number",
-  "root-sqrt-expression",
-  "root-sqrt-pythagoras",
-  "root-cube",
-  "symbol-greek-alpha",
-  "symbol-greek-pi",
-  "symbol-greek-sigma",
-  "symbol-infinity",
-  "unary-sin-fenced",
-  "unary-cos-product",
-  "whitespace-around-operator",
-  "whitespace-in-subscript",
-]);
+export const PORT_REFUSES: ReadonlySet<string> = new Set([]);
 
 /**
  * How many of the gem-renderable corpus cases the port renders today.
  *
  * Derived from `PORT_REFUSES`, and cross-checked against it by the spec: the
  * two disagree only when one was edited without the other.
+ *
+ * All 89 the gem renders. 88 match it byte for byte; the 89th is
+ * `text-unitsml-valid`, which renders and diverges by decision — it is counted
+ * here as rendered and pinned both ways in `KNOWN_DIVERGENCES`.
  */
-export const RENDERED_BASELINE = 36;
+export const RENDERED_BASELINE = 89;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared
@@ -152,9 +114,10 @@ export interface DegenerateKind {
  * 319/319.
  *
  * More than one entry may name the same renderer where the Ruby side reaches it
- * through several classes with different constructors: `binaryFunction` is
- * swept as both `power` (no measured HTML) and `td` (measured), `unaryFunction`
- * as both `sin` and `tr`.
+ * through several classes with different constructors, and with different HTML:
+ * `binaryFunction` is swept as both `power` (`<i>`/`<sup>`, from `power.rb`'s
+ * own `to_html`) and `td` (one `<td>` around a list), `unaryFunction` as both
+ * `sin` and `tr`.
  *
  * A kind absent here used to be skipped silently. `power` was in the generator
  * and not here, so its 14 rows ran, asserted nothing, and reported green — the
@@ -200,7 +163,7 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
       } as never);
     },
   },
-  /** `Td` is the one binary alias the HTML slice has measured, so it renders. */
+  /** `Td` is the one binary alias whose HTML is a tag of its own, not slot wrappers. */
   td: {
     renderKind: "binaryFunction",
     rubyClass: "Plurimath::Math::Function::Td",
@@ -515,15 +478,12 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
  * The `power` six were the whole list while the sweep covered 20 of the 38
  * landed HTML renderers. Extending it to all 38 added twelve more, in three
  * groups, every one a slot the corpus never constructs.
+ *
+ * The `power` six and the `powerBase` nine are gone: both aliases are measured
+ * now, and every one of those fifteen rows reproduces the gem's own bytes from
+ * this fixture. What is left is four rows and three unrelated root causes.
  */
 export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
-  "power[0]=nil": 'BinaryFunction alias "Power" is not in the HTML slice',
-  "power[0]=false": 'BinaryFunction alias "Power" is not in the HTML slice',
-  "power[0]=node": 'BinaryFunction alias "Power" is not in the HTML slice',
-  "power[1]=nil": 'BinaryFunction alias "Power" is not in the HTML slice',
-  "power[1]=false": 'BinaryFunction alias "Power" is not in the HTML slice',
-  "power[1]=node": 'BinaryFunction alias "Power" is not in the HTML slice',
-
   // `Td#initialize` calls `super(Array(parameter_one), ...)`, so nil becomes the
   // empty list and the gem renders `<td></td>`. `BinaryFunctionNode` assigns the
   // slot unconditionally (nodes.ts, `assignedParameter`), leaving it null, and
@@ -537,18 +497,6 @@ export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
   "number[0]=zero": 'the gem interpolates 0 as "0"; interpolatedValue refuses a finite number',
   "number[0]=empty-array": 'the gem interpolates [] as "[]"; interpolatedValue refuses an array',
   "number[0]=node": "the gem interpolates a heap address; the port refuses unreproducible bytes",
-
-  // `renderTernaryFunction` throws for every alias: the HTML slice has measured
-  // none of the five. The gem renders each present slot in its own wrapper.
-  "powerBase[0]=nil": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
-  "powerBase[0]=false": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
-  "powerBase[0]=node": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
-  "powerBase[1]=nil": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
-  "powerBase[1]=false": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
-  "powerBase[1]=node": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
-  "powerBase[2]=nil": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
-  "powerBase[2]=false": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
-  "powerBase[2]=node": 'TernaryFunction alias "PowerBase" is not in the HTML slice',
 };
 
 /**

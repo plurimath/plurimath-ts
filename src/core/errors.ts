@@ -10,6 +10,7 @@
 export type PlurimathErrorCode =
   | "PARSE_ERROR"
   | "UNSUPPORTED_FORMAT"
+  | "UNSUPPORTED_FEATURE"
   | "MISSING_SYMBOL_DATA"
   | "RENDER_ERROR";
 
@@ -41,6 +42,32 @@ export class UnsupportedFormatError extends PlurimathError {
 
   constructor(readonly format: string) {
     super(`Format "${format}" is not supported`);
+  }
+}
+
+/**
+ * A surface this port declares but has not implemented yet.
+ *
+ * Distinct from `UnsupportedFormatError`, which is about an input FORMAT and
+ * carries the format token in `format`. This is about a FEATURE — the compat
+ * class's `toDisplay`, or `toMathml(intent: true)` — where no format token
+ * describes what was refused, and where a consumer branching on `code` wants
+ * to tell "this port cannot do that yet" apart from "that is not a format".
+ *
+ * `DECISIONS.md` records this class as rejected once, for having no consumer
+ * after the grammar rule that would have raised it was commented out. The
+ * compat surface gives it two, which is the new evidence that file asks for
+ * before a rejected decision is reopened.
+ */
+export class UnsupportedFeatureError extends PlurimathError {
+  readonly code = "UNSUPPORTED_FEATURE" as const;
+
+  /** A stable identifier for the feature, never prose. */
+  constructor(
+    readonly feature: string,
+    detail: string,
+  ) {
+    super(`${feature} is not supported yet: ${detail}`);
   }
 }
 

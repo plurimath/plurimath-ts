@@ -375,9 +375,15 @@ describe("deep structure", () => {
 
 /**
  * The strongest available Ruby-derived fixture: the gem was asked, for all
- * 90 corpus formulas, which pairs satisfy `==`. Exactly three distinct pairs
- * do, and each differs only in `input_string` — a field the projection skips.
- * Everything else is unequal, and every case equals itself.
+ * 110 reachable corpus formulas, which pairs satisfy `==`. Exactly seven
+ * distinct pairs do, and each differs only in `input_string` — a field the
+ * projection skips. Everything else is unequal, and every case equals itself.
+ *
+ * Four of the seven are new with the LaTeX corpus, and all four cross the two
+ * input notations: `alpha` and `\alpha` are different source text for the same
+ * formula, so the gem reports them equal and so must this port. They are the
+ * evidence that `==` compares the model and not the input, which nothing in an
+ * AsciiMath-only corpus could show.
  */
 describe("the corpus equality matrix, as the gem reports it", () => {
   const cases = readCorpusCases();
@@ -390,11 +396,15 @@ describe("the corpus equality matrix, as the gem reports it", () => {
   const RubyEqualPairs: ReadonlySet<string> = new Set([
     "frac-simple|frac-explicit",
     "operator-plus|whitespace-around-operator",
+    "power-of-two|latex-number-braced-exponent",
+    "symbol-greek-alpha|latex-symbol-greek-alpha",
+    "symbol-greek-pi|latex-symbol-greek-pi",
+    "symbol-infinity|latex-symbol-infinity",
     "symbol-latin-x|whitespace-surrounding",
   ]);
 
-  it("has the 90 cases it expects", () => {
-    expect(nodes).toHaveLength(90);
+  it("has the 110 cases it expects", () => {
+    expect(nodes).toHaveLength(110);
   });
 
   it("is reflexive: a rebuilt tree equals its twin", () => {
@@ -420,7 +430,7 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     expect([...found].sort()).toStrictEqual([...RubyEqualPairs].sort());
   });
 
-  it("proves those three differ only in a field the projection skips", () => {
+  it("proves those seven differ only in a field the projection skips", () => {
     for (const pair of RubyEqualPairs) {
       const [leftId, rightId] = pair.split("|");
       const left = cases.find((entry) => entry.id === leftId)?.model;

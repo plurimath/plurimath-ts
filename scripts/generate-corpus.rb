@@ -49,7 +49,17 @@
 #   src/generated/latex/render-tables.ts   the six measured tables to_latex
 #                                          reads that no other slice supplies,
 #                                          plus the census carrier name lists
-#   src/generated/<format>/symbols.ts      symbol id -> static descriptor
+#   src/generated/<format>/symbols.ts      symbol id -> static descriptor.
+#                                          html carries one more column: the
+#                                          payload Fenced#to_html puts in a
+#                                          named-paren slot, which is the MathML
+#                                          text and not Paren#to_html.
+#                                          OMML's XML wrapper is the renderer's,
+#                                          never a per-class template, but the
+#                                          slice also carries `omml_tag_name`:
+#                                          a second per-symbol property that
+#                                          PowerBase reads to pick the
+#                                          under/over structure over m:sSubSup
 #   src/generated/<format>/exceptions.ts   the context-axis exception matrix
 #   src/generated/context-axes.ts          the probe manifest and its results
 #   src/generated/provenance.ts            what the slices were generated from
@@ -87,13 +97,11 @@ module CorpusGenerator
   SYMBOL_NAMESPACE = "Math::Symbols::"
   SYMBOL_OUT_REL = "src/generated"
 
-  # A symbol slice is only provable where the corpus can check it, so the
-  # slices cover exactly the formats the corpus targets.
-  # Symbol slices are generated for one more format than the corpus targets:
-  # the UnicodeMath renderer is being built, and its symbol table is needed
-  # before there is a corpus target to check it against. Keeping the two lists
-  # separate is what lets those land in either order.
-  SYMBOL_FORMATS = (TARGET_FORMATS + %w[unicodemath]).freeze
+  # Symbol slices are generated for three more formats than the corpus targets:
+  # the UnicodeMath, HTML and OMML renderers are being built, and their symbol
+  # tables are needed before there is a corpus target to check them against.
+  # Keeping the two lists separate is what lets those land in either order.
+  SYMBOL_FORMATS = (TARGET_FORMATS + %w[unicodemath html omml]).freeze
 
   # Roots that carry no static representation of their own. Declared here and
   # machine-checked in `assert_symbol_roots!`, never assumed.
@@ -123,16 +131,33 @@ module CorpusGenerator
     {
       "name" => "table",
       "values" => [false, true],
-      "formats" => %w[asciimath latex mathml unicodemath].freeze,
+      "formats" => %w[asciimath latex mathml unicodemath html omml].freeze,
       "mechanism" => "options[:table], which Td sets for a Formula cell",
     },
     {
       "name" => "rspace",
       "values" => [nil, "thickmathspace"],
-      "formats" => %w[asciimath latex mathml unicodemath].freeze,
+      "formats" => %w[asciimath latex mathml unicodemath html omml].freeze,
       "mechanism" => "the symbol node's own options[:rspace]",
     },
+    {
+      # OMML threads a display-style flag the way MathML threads `intent`, and
+      # it reaches a symbol as the positional argument of
+      # `to_omml_without_math_tag`. On the pinned oracle it moves no symbol's
+      # output, which is exactly why it is manifested rather than dropped: an
+      # axis that is never probed cannot report the day it starts to matter.
+      "name" => "display_style",
+      "values" => [false, true],
+      "formats" => %w[omml].freeze,
+      "mechanism" => "the `display_style` argument Formula#to_omml threads down",
+    },
   ].freeze
+
+  # Every axis at its first value: the context a static descriptor describes.
+  # Derived from the manifest rather than restated, so a new axis cannot be
+  # declared and then silently left out of the baseline the slices are emitted
+  # at.
+  BASELINE_CONTEXT = CONTEXT_AXES.to_h { |axis| [axis["name"], axis["values"].first] }.freeze
 
   # Representative surroundings, so neighbour-dependent behaviour is exercised
   # and not only the isolated symbol (§5).
@@ -1134,7 +1159,9 @@ module CorpusGenerator
 
     case format
     when "asciimath" then node.to_asciimath(options: options)
+    when "html" then node.to_html(options: options)
     when "latex" then node.to_latex(options: options)
+    when "omml" then node.to_omml_without_math_tag(combo["display_style"], options: options)
     when "unicodemath" then node.to_unicodemath(options: options)
     when "mathml"
       mathml_descriptor(
@@ -1253,7 +1280,13 @@ module CorpusGenerator
 
     case format
     when "asciimath" then formula.to_asciimath(options: options)
+    when "html" then formula.to_html(options: options)
     when "latex" then formula.to_latex(options: options)
+    # `Formula#to_omml` builds its own options hash and takes no override, so
+    # the table axis reaches a hosted OMML render only the way a document
+    # would deliver it — through the `table-cell` template, whose Td sets
+    # `options[:table]` itself. `to_mathml` above is threaded the same way.
+    when "omml" then formula.to_omml(display_style: combo["display_style"])
     when "mathml" then formula.to_mathml(intent: combo["intent"])
     when "unicodemath" then formula.to_unicodemath(options: options)
     else raise Error, "unknown target format #{format.inspect}"
@@ -1343,12 +1376,10 @@ module CorpusGenerator
   # this is not a context axis — but a hand-built node may set it, and the
   # renderer has to know which classes read it.
   def probe_value_dependence(classes)
-    baseline = { "intent" => false, "table" => false, "rspace" => nil }
-
     classes.filter_map do |klass|
       formats = SYMBOL_FORMATS.select do |format|
-        representation(klass, format, baseline) !=
-          representation(klass, format, baseline, value: VALUE_PROBE)
+        representation(klass, format, BASELINE_CONTEXT) !=
+          representation(klass, format, BASELINE_CONTEXT, value: VALUE_PROBE)
       end
       next if formats.empty?
 
@@ -2618,9 +2649,8 @@ module CorpusGenerator
   # `asciimath/symbols.ts`; the two copies cannot drift. Verified end to end
   # by a live Color render over an id symbol.
   def mathml_color_symbol_literals
-    baseline = { "intent" => false, "table" => false, "rspace" => nil }
     literals = static_symbol_classes(symbol_classes).map do |klass|
-      [symbol_id(klass), representation(klass, "asciimath", baseline)]
+      [symbol_id(klass), representation(klass, "asciimath", BASELINE_CONTEXT)]
     end
 
     eqno = literals.assoc("Eqno")
@@ -3616,9 +3646,294 @@ module CorpusGenerator
     format.upcase
   end
 
-  def emit_symbols_file(out_root, format, classes)
-    baseline = { "intent" => false, "table" => false, "rspace" => nil }
-    entries = classes.map { |klass| [symbol_id(klass), representation(klass, format, baseline)] }
+  # A slice typed `string` must hold strings. Nothing checked this before, and
+  # OMML is the format that makes it matter: `to_omml_without_math_tag` returns
+  # nil for one hard-coded value upstream, and a nil reaching the emitter would
+  # be written as a `null` the declared type forbids — a type error in
+  # generated code rather than a named failure in the run that produced it.
+  def assert_string_payloads!(format, entries)
+    return unless symbol_representation_type(format) == "string"
+
+    offenders = entries.reject { |_id, payload| payload.is_a?(::String) }
+    return if offenders.empty?
+
+    raise Error, <<~MESSAGE
+      #{format} returned a non-String payload for #{offenders.map(&:first).sort.join(', ')}
+      (#{offenders.map { |_id, payload| payload.class }.uniq.join(', ')}). The slice is
+      typed `string`; decide what the renderer should do with the absence before
+      the data claims a value.
+    MESSAGE
+  end
+
+  # --- omml limit location -------------------------------------------------
+
+  # The one non-default `omml_tag_name` this generator can prove reaches
+  # output. It is named here so a *third* value halts generation instead of
+  # being emitted with no evidence that the port can act on it; the
+  # *membership* of the set is never listed, it is measured
+  # (`omml_symbol_tag_names`).
+  OMML_UNDOVR_TAG = "undOvr"
+
+  # What the under/over arm puts in the output. `PowerBase#underover` nests a
+  # `limUpp` inside a `limLow`, so both must be present for the render to have
+  # taken that arm and not merely avoided `m:sSubSup`.
+  OMML_UNDOVR_MARKERS = ["<m:limLow>", "<m:limUpp>"].freeze
+
+  # `omml_tag_name` takes no arguments, so the only inputs that can move it are
+  # the ones the constructor carries: the manifested `rspace` option and the
+  # node's own `value`. Both are probed rather than assumed — one measurement
+  # per class is a *static* property only while they leave the answer alone.
+  def measured_omml_tag_name(klass)
+    baseline = symbol_instance(klass).omml_tag_name
+    unless baseline.is_a?(::String) && !baseline.empty?
+      raise Error, "#{symbol_id(klass)} answers omml_tag_name #{baseline.inspect}; " \
+                   "the slice emits it as a tag name string"
+    end
+
+    rspace_values = CONTEXT_AXES.find { |axis| axis["name"] == "rspace" }.fetch("values")
+    probes = rspace_values.map { |rspace| symbol_instance(klass, rspace: rspace) }
+    probes << symbol_instance(klass, value: VALUE_PROBE)
+    probes.each do |instance|
+      next if instance.omml_tag_name == baseline
+
+      raise Error, <<~MESSAGE
+        #{symbol_id(klass)} answers omml_tag_name #{instance.omml_tag_name.inspect} under one
+        probed construction and #{baseline.inspect} under another. It is emitted as a static
+        per-symbol property; it has become context-dependent and needs an axis, not a value.
+      MESSAGE
+    end
+
+    baseline
+  end
+
+  # `omml_tag_name` per symbol: the value inherited from the root, plus every
+  # symbol that answers something else. `PowerBase#to_omml_without_math_tag`
+  # branches on it (`power_base.rb:39-42`), so it is a second per-symbol OMML
+  # property and the payload string alone is not the whole static contract.
+  #
+  # Shaped like the exception matrix (§5) — a measured default and only the
+  # symbols that differ from it — and derived the same way: every symbol class
+  # is asked, nothing is listed. A hand-kept membership list is how the next
+  # member gets missed.
+  def omml_symbol_tag_names(classes)
+    default = measured_omml_tag_name(symbol_root)
+    overrides = classes.filter_map do |klass|
+      tag = measured_omml_tag_name(klass)
+      next if tag == default
+
+      [symbol_id(klass), tag]
+    end.sort
+
+    if overrides.empty?
+      raise Error, "every symbol answers omml_tag_name #{default.inspect}; the table " \
+                   "would prove nothing, and PowerBase's under/over arm would be dead"
+    end
+
+    unmodelled = overrides.reject { |_id, tag| tag == OMML_UNDOVR_TAG }
+    unless unmodelled.empty?
+      raise Error, <<~MESSAGE
+        #{unmodelled.map { |id, tag| "#{id} answers #{tag.inspect}" }.join(', ')}. Only
+        #{default.inspect} and #{OMML_UNDOVR_TAG.inspect} are verified through a live render,
+        so a third value would be emitted with no evidence of the structure it produces.
+        Measure that structure, then widen the check.
+      MESSAGE
+    end
+
+    assert_omml_tag_name_reaches_output!(overrides.map(&:first), default)
+    { "default" => default, "overrides" => overrides }
+  end
+
+  # The measurement is a method call; this is the proof it changes bytes. One
+  # live `PowerBase` render per member must reach the under/over structure, and
+  # a `PowerBase` over a default-answering symbol must still reach
+  # `m:sSubSup` — otherwise the table would pass while discriminating nothing.
+  def assert_omml_tag_name_reaches_output!(ids, default)
+    ids.each do |id|
+      klass = Object.const_get("Plurimath::#{SYMBOL_NAMESPACE}#{id}")
+      rendered = omml_probe_power_base(symbol_instance(klass))
+      missing = OMML_UNDOVR_MARKERS.reject { |marker| rendered.include?(marker) }
+      next if missing.empty?
+
+      raise Error, "PowerBase over #{id} rendered without #{missing.join(' and ')}; " \
+                   "omml_tag_name no longer routes it to the under/over structure"
+    end
+
+    control = omml_probe_power_base(render_probe_symbol(RENDER_TABLE_CELL))
+    return if control.include?("<m:sSubSup>")
+
+    raise Error, "a PowerBase over a #{default} symbol rendered #{control.inspect}, not " \
+                 "<m:sSubSup>; the check above can no longer discriminate"
+  end
+
+  def omml_probe_power_base(node)
+    Plurimath::Math::Formula.new(
+      [Plurimath::Math::Function::PowerBase.new(node, render_probe_symbol("y"),
+                                                render_probe_symbol("z"))],
+    ).to_omml
+  end
+
+  # The two extra exports the omml slice carries beyond the payload map.
+  def omml_tag_name_sections(tag_names, total)
+    overrides = tag_names.fetch("overrides")
+    [
+      ts_const(
+        "OMML_DEFAULT_SYMBOL_TAG_NAME",
+        "string",
+        tag_names.fetch("default"),
+        doc: "The `omml_tag_name` a symbol answers unless `OMML_SYMBOL_TAG_NAMES`\n" \
+             "names it — read off `Math::Symbols::Symbol` itself\n" \
+             "(`symbols/symbol.rb:93-95`), never inferred from the majority.",
+      ),
+      ts_tuple_map(
+        "OMML_SYMBOL_TAG_NAMES",
+        "ReadonlyMap<string, string>",
+        overrides,
+        doc: "Symbol id -> its `omml_tag_name`, for the #{overrides.length} of #{total} symbols\n" \
+             "whose answer differs from `OMML_DEFAULT_SYMBOL_TAG_NAME`.\n" \
+             "`PowerBase#to_omml_without_math_tag` branches on this value\n" \
+             "(`power_base.rb:39-42`): these reach the m:limLow/m:limUpp\n" \
+             "under/over structure, everything else `m:sSubSup`. Measured over\n" \
+             "every symbol class and verified through one live PowerBase render\n" \
+             "per id — an id absent here answers the default, and a symbol\n" \
+             "absent from `OMML_SYMBOLS` is the parity gap that throws.",
+      ),
+    ]
+  end
+
+  # --- html fenced paren payloads -------------------------------------------
+
+  # `Fenced#to_html` (`math/function/fenced.rb:54-69`) does NOT render its paren
+  # slots through `Paren#to_html`. It calls `symbol_or_paren(..., lang: :html)`,
+  # and that method (`fenced.rb:324-336`) sends `:html` down the same arm as
+  # `:mathml`:
+  #
+  #     when :mathml, :html
+  #       field.to_mathml_without_math_tag(intent, options: options).nodes.first
+  #
+  # The `to_html` call site passes no `intent:`, so the argument is the method's
+  # own default, spelled `intent: false` at `fenced.rb:324`. That is the gem's
+  # signature, not this generator's probe baseline, so it is written out rather
+  # than read off `BASELINE_CONTEXT` — the two agree today and answer to
+  # different owners.
+  HTML_FENCED_PAREN_INTENT = false
+
+  # The one `symbol_or_paren` call `lang: :html` makes, spelled once.
+  def html_fenced_paren_payload(instance, intent: HTML_FENCED_PAREN_INTENT, options: {})
+    instance.to_mathml_without_math_tag(intent, options: options).nodes.first
+  end
+
+  # `to_mathml_without_math_tag` takes an `intent` argument and an options hash,
+  # and the node carries its own `value` and `rspace`. All four are probed
+  # rather than assumed, exactly as `measured_omml_tag_name` probes its own
+  # inputs: one measurement per class is a *static* property only while nothing
+  # else moves it.
+  def measured_html_fenced_paren(klass)
+    baseline = html_fenced_paren_payload(symbol_instance(klass))
+    unless baseline.is_a?(::String)
+      raise Error, "#{symbol_id(klass)} puts #{baseline.inspect} in a fenced html paren slot; " \
+                   "the column emits it as a payload string"
+    end
+
+    rspace_values = CONTEXT_AXES.find { |axis| axis["name"] == "rspace" }.fetch("values")
+    instances = rspace_values.map { |rspace| symbol_instance(klass, rspace: rspace) }
+    instances << symbol_instance(klass, value: VALUE_PROBE)
+    instances.product([{}, { table: true }], [false, true]).each do |instance, options, intent|
+      probed = html_fenced_paren_payload(instance, intent: intent, options: options)
+      next if probed == baseline
+
+      raise Error, <<~MESSAGE
+        #{symbol_id(klass)} puts #{probed.inspect} in a fenced html paren slot under one probed
+        construction and #{baseline.inspect} under another. It is emitted as a static per-symbol
+        payload; it has become context-dependent and needs an axis, not a value.
+      MESSAGE
+    end
+
+    baseline
+  end
+
+  # Every `Math::Symbols::Paren` subclass -> the string `Fenced#to_html` puts in
+  # a paren slot for it. The membership is the hierarchy's, never a list: the
+  # `is_a?(Math::Symbols::Paren)` guard in `symbol_or_paren` is what selects
+  # this arm, so `klass < Paren` is the same predicate.
+  #
+  # The abstract `Paren` root is deliberately absent, on the same measurement:
+  # it inherits `Symbol`'s methods, so its mathml payload, its `to_html` and its
+  # stored `value` are one and the same string, and the renderer reads the value
+  # for it as it does for the bare `Symbol`.
+  def html_fenced_paren_payloads(classes)
+    parens = classes.select { |klass| klass < Plurimath::Math::Symbols::Paren }
+    if parens.empty?
+      raise Error, "no Math::Symbols::Paren subclass reached the static set; the " \
+                   "fenced html paren column would be empty and Fenced would have " \
+                   "no named paren to render"
+    end
+
+    entries = parens.map { |klass| [symbol_id(klass), measured_html_fenced_paren(klass)] }.sort
+    divergent = parens.count do |klass|
+      representation(klass, "html", BASELINE_CONTEXT) != measured_html_fenced_paren(klass)
+    end
+    if divergent.zero?
+      raise Error, "every Paren subclass now answers the same string through " \
+                   "Paren#to_html and through the fenced mathml payload; this column " \
+                   "duplicates HTML_SYMBOLS and should be dropped, not emitted"
+    end
+
+    assert_html_fenced_parens_reach_output!(entries)
+    { "entries" => entries, "divergent" => divergent }
+  end
+
+  # The measurement above is a method call on the Paren; this is the proof that
+  # its answer is the byte `Fenced#to_html` actually emits. One live render per
+  # id, filling both paren slots, compared against the whole expected string —
+  # `include?` would pass on a payload that is a substring of the real one.
+  def assert_html_fenced_parens_reach_output!(entries)
+    entries.each do |id, payload|
+      klass = Object.const_get("Plurimath::#{SYMBOL_NAMESPACE}#{id}")
+      rendered = Plurimath::Math::Formula.new(
+        [Plurimath::Math::Function::Fenced.new(
+          symbol_instance(klass),
+          [render_probe_symbol(RENDER_TABLE_CELL)],
+          symbol_instance(klass),
+        )],
+      ).to_html
+      expected = "<i>#{payload}</i>#{RENDER_TABLE_CELL}<i>#{payload}</i>"
+      next if rendered == expected
+
+      raise Error, "Fenced over #{id} rendered #{rendered.inspect}, not #{expected.inspect}; " \
+                   "the fenced html paren column no longer describes what to_html emits"
+    end
+  end
+
+  # The one extra export the html slice carries beyond the payload map.
+  def html_fenced_paren_sections(payloads, total)
+    entries = payloads.fetch("entries")
+    [
+      ts_tuple_map(
+        "HTML_FENCED_PAREN_PAYLOADS",
+        "ReadonlyMap<string, string>",
+        entries,
+        doc: "Symbol id -> the string `Fenced#to_html` puts in a paren slot, for\n" \
+             "all #{entries.length} `Math::Symbols::Paren` subclasses of the #{total} symbols.\n" \
+             "`symbol_or_paren` (`math/function/fenced.rb:324-336`) routes `:html`\n" \
+             "down the `:mathml` arm, so the slot gets\n" \
+             "`to_mathml_without_math_tag(false, options: {}).nodes.first` and NOT\n" \
+             "`Paren#to_html`. The two disagree on #{payloads.fetch('divergent')} of these ids, because each\n" \
+             "class writes its mathml as either `ox_element(\"mi\") << encoded`\n" \
+             "(the entity DECODED, `paren/lbbrack.rb:33-35`) or `<< paren_value`\n" \
+             "(the entity RAW, `paren/langle.rb:33-35`), with no rule relating the\n" \
+             "two — so this is measured, never derived from `HTML_SYMBOLS`.\n" \
+             "Verified through one live `Fenced#to_html` render per id. An id\n" \
+             "absent here is not a Paren subclass; a Paren subclass absent here is\n" \
+             "the parity gap that throws.",
+      ),
+    ]
+  end
+
+  def emit_symbols_file(out_root, format, classes, omml_tag_names:, html_fenced_parens:)
+    entries = classes.map do |klass|
+      [symbol_id(klass), representation(klass, format, BASELINE_CONTEXT)]
+    end
+    assert_string_payloads!(format, entries)
     sections = [ts_header(<<~TEXT.chomp)]
       Symbol id -> the static #{format} representation of that symbol.
 
@@ -3658,6 +3973,15 @@ module CorpusGenerator
            "renderer throws `MissingSymbolDataError` rather than emitting\n" \
            "something plausible.",
     )
+
+    # Two formats have a static contract wider than the payload map. For OMML
+    # the same symbol also answers a tag name that changes the *structure* a
+    # host renders around it; for HTML one host, `Fenced`, reads a different
+    # payload out of the same symbol.
+    sections.concat(omml_tag_name_sections(omml_tag_names, entries.length)) if format == "omml"
+    if format == "html"
+      sections.concat(html_fenced_paren_sections(html_fenced_parens, entries.length))
+    end
 
     write_ts(File.join(out_root, format, "symbols.ts"), sections)
   end
@@ -4538,6 +4862,8 @@ module CorpusGenerator
           "hostedRenders" => direct_renders * HOST_TEMPLATES.length,
         },
       },
+      "omml_tag_names" => omml_symbol_tag_names(static),
+      "html_fenced_parens" => html_fenced_paren_payloads(static),
       "tables" => asciimath_input_tables(classes),
       "grammar" => asciimath_grammar_tables,
     }
@@ -4588,7 +4914,9 @@ module CorpusGenerator
     emit_unicodemath_render_tables_file(out_root, unicodemath_render_tables)
 
     SYMBOL_FORMATS.each do |format|
-      emit_symbols_file(out_root, format, data["static"])
+      emit_symbols_file(out_root, format, data["static"],
+                        omml_tag_names: data["omml_tag_names"],
+                        html_fenced_parens: data["html_fenced_parens"])
       emit_exceptions_file(out_root, format, data["direct"])
       written << File.join(out_root, format, "symbols.ts")
       written << File.join(out_root, format, "exceptions.ts")
@@ -4885,6 +5213,13 @@ module CorpusGenerator
     puts "#{symbols['static'].length} symbols across #{SYMBOL_FORMATS.join(', ')}; " \
          "#{symbols['tables']['counts']['merged']} inputs, " \
          "#{symbols['tables']['counts']['literals']} literals"
+    tag_names = symbols["omml_tag_names"]
+    puts "omml_tag_name: default #{tag_names['default']}, " \
+         "#{tag_names['overrides'].length} override(s) — " \
+         "#{tag_names['overrides'].map { |id, tag| "#{id} #{tag}" }.join(', ')}"
+    fenced_parens = symbols["html_fenced_parens"]
+    puts "html fenced paren payloads: #{fenced_parens['entries'].length} Paren subclass(es), " \
+         "#{fenced_parens['divergent']} differing from Paren#to_html"
     puts "grammar tables: " \
          "#{symbols['grammar']['counts'].map { |name, count| "#{name} #{count}" }.join(', ')}"
     puts "transform registry: " \

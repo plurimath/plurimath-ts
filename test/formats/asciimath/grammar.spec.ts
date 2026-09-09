@@ -46,6 +46,7 @@ import {
 import { ParseFailed, type ParseValue, Slice } from "../../../src/pegkit/index";
 import { loadPinnedCorpus, readExclusions } from "../../core/corpus-pin";
 import type { YamlValue } from "../../core/corpus-yaml";
+import { parseableCases } from "../../core/model-builder";
 
 /**
  * The parse tree as the corpus records it: slices flattened to their text,
@@ -93,15 +94,27 @@ describe("corpus parity", () => {
   const corpus = loadPinnedCorpus();
   const withheld = new Set(readExclusions().map((entry) => entry.id));
   const reachable = corpus.cases.filter((entry) => !withheld.has(entry.id));
+  /**
+   * This block runs the ASCIIMATH grammar, so it takes the cases written in
+   * AsciiMath and no others. The corpus carries `corpus/latex/` as well, and
+   * its `parse_tree` is the tree the gem's LaTeX Parslet grammar produced —
+   * a different grammar, so a different tree. Feeding those nineteen inputs
+   * here failed nineteen tests that read like grammar defects and were nothing
+   * of the kind; `parseableCases` is the same filter every other parser-driven
+   * layer uses, and it throws rather than quietly matching nothing.
+   */
+  const parseable = parseableCases(reachable);
 
   it("has the cases this port checks against", () => {
     // Guards the whole block: a reader that silently returned nothing would
     // make every `it.each` below vacuous.
-    expect(corpus.cases.length).toBe(91);
-    expect(reachable.length).toBe(90);
+    expect(corpus.cases.length).toBe(111);
+    expect(reachable.length).toBe(110);
+    // The AsciiMath-input subset, which is what this grammar is asked to parse.
+    expect(parseable.length).toBe(91);
   });
 
-  it.each(reachable.map((entry) => [entry.id, entry] as const))(
+  it.each(parseable.map((entry) => [entry.id, entry] as const))(
     "%s parses to the tree Parslet produced",
     (_id, entry) => {
       expect(tree(entry.preprocessed)).toStrictEqual(entry.parseTree);

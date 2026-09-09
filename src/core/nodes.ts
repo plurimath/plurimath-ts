@@ -1949,6 +1949,35 @@ function codepointToString(code: number): string {
 }
 
 /**
+ * A character reference `codepointToString` refuses, carrying WHERE it was.
+ *
+ * A `RangeError` subclass, deliberately: the decoder's failure is the
+ * language's, not a package operation (see `codepointToString` above), and
+ * several call sites already branch on `error instanceof RangeError` — the
+ * OMML renderer's own decode guard (`omml/render-shared.ts:582`) and the
+ * stack-depth branding at the AsciiMath, LaTeX, HTML and UnicodeMath renderer
+ * entries. Subclassing keeps every one of them matching.
+ *
+ * `index` exists because the gem has nothing to copy here. Measured at oracle
+ * `00c52783`: `Plurimath::Math.parse("x+&#x110000;", :latex)` raises
+ * `Math::ParseError` whose instance variables are exactly `@text` and `@type`
+ * (`errors/parse_error.rb:6-10`) — no position at all. `ParseError.index` is
+ * this package's own contract (ARCHITECTURE.md §5, "UTF-16 code-unit offset
+ * into the ORIGINAL input"), so a caller turning this into a `ParseError` needs
+ * a real offset; 0 would be a position the port invented.
+ */
+export class UndecodableEntityError extends RangeError {
+  constructor(
+    message: string,
+    /** UTF-16 offset of the `&`, in the string handed to the decoder. */
+    readonly index: number,
+  ) {
+    super(message);
+    this.name = "UndecodableEntityError";
+  }
+}
+
+/**
  * `Plurimath::Utility.html_entity_to_unicode`, which `Symbols::Symbol#==`
  * normalizes both sides through.
  *
@@ -1974,24 +2003,82 @@ export function htmlEntityToUnicode(text: string): string {
   return decodeEntities(text);
 }
 
-function decodeEntities(text: string): string {
+/** One entity `htmlEntityToUnicode` rewrites, and the span it occupies. */
+export interface HtmlEntitySpan {
+  /** Offset of the `&`, in UTF-16 code units. */
+  readonly start: number;
+  /** How many code units the match consumed — the `(?=\n|<)` arm consumes none. */
+  readonly length: number;
+  /** What the match decodes to. */
+  readonly text: string;
+}
+
+/**
+ * Every entity `htmlEntityToUnicode` would rewrite, with its position.
+ *
+ * The LaTeX preprocessor (`formats/latex/preprocess.ts`) needs the same decode
+ * the equality projection needs, but has to carry offsets through it:
+ * `Latex::Parser#pre_processing` decodes and re-encodes before Parslet ever
+ * runs, so a parse-failure index has to be mapped back to the caller's input
+ * (ARCHITECTURE.md §5). Exposing the spans rather than letting that module
+ * carry a second copy of `ENTITY_PATTERN` keeps ONE decoder: `decodeEntities`
+ * below is built on this, so the two cannot drift.
+ *
+ * A match the table does not know (`&nosuchentity;`) is not returned at all —
+ * the gem leaves it as written, and a caller that rebuilds the string from
+ * these spans reproduces that by copying the untouched text.
+ *
+ * Exported from this internal module rather than the core barrel, like
+ * `htmlEntityToUnicode` above: port vocabulary, not public API.
+ */
+export function htmlEntitySpans(text: string): readonly HtmlEntitySpan[] {
   // `return string unless string&.include?("&")` — the gem's own fast path.
-  if (!text.includes("&")) return text;
-  return text.replace(
-    ENTITY_PATTERN,
-    (match: string, named?: string, decimal?: string, hex?: string): string => {
-      if (named !== undefined) {
-        const codepoint = XHTML1_ENTITY_CODEPOINTS.get(named);
-        return codepoint === undefined ? match : codepointToString(codepoint);
-      }
-      const digits = decimal ?? hex;
-      if (digits === undefined) return match;
-      const code = Number.parseInt(digits, decimal === undefined ? 16 : 10);
-      // Raises for a codepoint the gem cannot encode, exactly where the gem
-      // raises. The equality projection is the gem's, including its failures.
-      return codepointToString(code);
-    },
-  );
+  if (!text.includes("&")) return [];
+  const spans: HtmlEntitySpan[] = [];
+  // A fresh regex per call: `ENTITY_PATTERN` is global, so `lastIndex` is
+  // shared state and a reentrant caller would resume mid-string.
+  const pattern = new RegExp(ENTITY_PATTERN.source, ENTITY_PATTERN.flags);
+  for (const match of text.matchAll(pattern)) {
+    let decoded: string;
+    try {
+      decoded = decodeEntityMatch(match[0], match[1], match[2], match[3]);
+    } catch (error) {
+      // `codepointToString` knows the code point and nothing else; this loop is
+      // the only place that knows where the reference started. Rethrow with
+      // that offset so a caller reporting a position has one to report.
+      if (!(error instanceof RangeError)) throw error;
+      throw new UndecodableEntityError(error.message, match.index);
+    }
+    if (decoded === match[0]) continue;
+    spans.push({ start: match.index, length: match[0].length, text: decoded });
+  }
+  return spans;
+}
+
+function decodeEntityMatch(match: string, named?: string, decimal?: string, hex?: string): string {
+  if (named !== undefined) {
+    const codepoint = XHTML1_ENTITY_CODEPOINTS.get(named);
+    return codepoint === undefined ? match : codepointToString(codepoint);
+  }
+  const digits = decimal ?? hex;
+  if (digits === undefined) return match;
+  const code = Number.parseInt(digits, decimal === undefined ? 16 : 10);
+  // Raises for a codepoint the gem cannot encode, exactly where the gem
+  // raises. The equality projection is the gem's, including its failures.
+  return codepointToString(code);
+}
+
+function decodeEntities(text: string): string {
+  const spans = htmlEntitySpans(text);
+  if (spans.length === 0) return text;
+  const pieces: string[] = [];
+  let cursor = 0;
+  for (const span of spans) {
+    pieces.push(text.slice(cursor, span.start), span.text);
+    cursor = span.start + span.length;
+  }
+  pieces.push(text.slice(cursor));
+  return pieces.join("");
 }
 
 /**

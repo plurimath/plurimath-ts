@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { RenderError } from "../../../src/core/errors";
+import { MissingSymbolDataError, RenderError } from "../../../src/core/errors";
 import {
   AbsNode,
   BarNode,
@@ -56,6 +56,7 @@ import {
 } from "../../../src/core/nodes";
 import { parseAsciimath } from "../../../src/formats/asciimath/parser";
 import { toHtml } from "../../../src/formats/html/renderer";
+import { HTML_SYMBOLS } from "../../../src/generated/html/symbols";
 
 const symbol = (value = "x") => new SymbolNode({ value });
 
@@ -204,7 +205,9 @@ describe("HTML carrier defaults", () => {
     expect(toHtml(new AbsNode({ parameterOne: symbol() }))).toBe("<i>abs</i><i>x</i>");
   });
 
-  it("takes the unary label from the class name and keeps an empty child wrapper", () => {
+  // The label is `invert_unicode_symbols`, which for `Sin` — but not for every
+  // name — is the downcased class name. See `src/render/unary-function/html.ts`.
+  it("takes the unary label from the measured table and keeps an empty child wrapper", () => {
     expect(toHtml(new UnaryFunctionNode({ name: "Sin", parameterOne: symbol() }))).toBe(
       "<i>sin</i><i>x</i>",
     );
@@ -506,23 +509,52 @@ describe("HTML own-kind rendering", () => {
     expect(make(new TableNode({ value: nilItem }))).toBe("<i>[nil]</i>x<i>)</i>");
   });
 
-  it("refuses Fenced paren paths requiring generated data or address-bearing inspect bytes", () => {
-    expectHtmlError(
-      () =>
-        toHtml(
-          new FencedNode({
-            parameterOne: new SymbolNode({ id: "Paren::Lround" }),
-            parameterTwo: [symbol()],
-            parameterThree: new SymbolNode({ id: "Paren::Rround" }),
-          }),
-        ),
-      {
-        kind: "fenced",
-        message:
-          'fenced.parameterOne: named paren "Paren::Lround" needs generated HTML symbol data',
-      },
-    );
+  it("renders a named Fenced paren from the generated column, not from Paren#to_html", () => {
+    const fence = (open: string, close: string) =>
+      toHtml(
+        new FencedNode({
+          parameterOne: new SymbolNode({ id: open }),
+          parameterTwo: [symbol()],
+          parameterThree: new SymbolNode({ id: close }),
+        }),
+      );
 
+    // `symbol_or_paren(lang: :html)` takes the MathML payload
+    // (`fenced.rb:324-336`), which differs from `Paren#to_html` on 13 of the
+    // 24 Paren classes — measured, oracle 00c52783. The first id below is on
+    // the differing side and the second on the agreeing side, so a renderer
+    // reading `HTML_SYMBOLS` for this slot fails on the first and passes the
+    // second: both are asserted, and against the symbol table's own bytes.
+    expect(HTML_SYMBOLS.get("Paren::Lbbrack")).toBe("&#x27e6;");
+    expect(fence("Paren::Lbbrack", "Paren::Rbbrack")).toBe("<i>⟦</i>x<i>⟧</i>");
+    expect(HTML_SYMBOLS.get("Paren::CloseParen")).toBe("&#x3017;");
+    expect(fence("Paren::CloseParen", "Paren::CloseParen")).toBe("<i>&#x3017;</i>x<i>&#x3017;</i>");
+    expect(fence("Paren::Lround", "Paren::Rround")).toBe("<i>(</i>x<i>)</i>");
+  });
+
+  it("refuses a Paren id the generated column does not carry, as MISSING_SYMBOL_DATA", () => {
+    // A new upstream subclass must not borrow the abstract carrier's value
+    // path — it has no measured payload, so it throws, the same deliberate
+    // non-RenderError the symbol table raises.
+    let thrown: unknown;
+    try {
+      toHtml(
+        new FencedNode({
+          parameterOne: new SymbolNode({ id: "Paren::NoSuchParen" }),
+          parameterTwo: [symbol()],
+          parameterThree: null,
+        }),
+      );
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(MissingSymbolDataError);
+    expect((thrown as MissingSymbolDataError).code).toBe("MISSING_SYMBOL_DATA");
+    expect((thrown as MissingSymbolDataError).symbolId).toBe("Paren::NoSuchParen");
+    expect((thrown as MissingSymbolDataError).format).toBe("html");
+  });
+
+  it("refuses Fenced paren paths with address-bearing inspect bytes", () => {
     for (const parameterOne of [
       new FormulaNode({ value: [symbol("(")] }),
       new MrowNode({ value: [symbol("(")] }),
@@ -565,6 +597,24 @@ describe("HTML own-kind rendering", () => {
       message:
         'fenced.parameterOne: a "symbol" node holds a list that bypasses constructor normalization',
     });
+  });
+
+  it("renders a fence whose symbol child carries no id", () => {
+    // `SymbolNode` defaults a missing id to the base class, but the shape check
+    // is structural and admits a plain object that never ran that constructor.
+    // Such a node used to reach `id.startsWith` and throw a TypeError mid-walk;
+    // it now resolves to the base id and renders through the value path, the
+    // same resolution every other symbol renderer makes.
+    const noId = {
+      kind: "fenced",
+      parameterOne: { kind: "symbol", value: "(" },
+      parameterTwo: [{ kind: "symbol", value: "x" }],
+      parameterThree: { kind: "symbol", value: ")" },
+    };
+    const rendered = toHtml(noId as never);
+    expect(rendered).toContain("(");
+    expect(rendered).toContain(")");
+    expect(rendered).not.toContain("TypeError");
   });
 
   it("renders every measured FontStyle alias as its child alone", () => {
@@ -694,19 +744,97 @@ describe("HTML own-kind rendering", () => {
   });
 });
 
+/**
+ * The carrier aliases the corpus constructs, pinned to the gem's own bytes.
+ *
+ * Measured on the pinned oracle (00c52783) by building each class directly and
+ * calling `to_html(options: {})`. They are here as well as in the corpus parity
+ * fixture because these pins name the ALIAS: a corpus failure says some formula
+ * changed, one of these says which carrier arm did.
+ *
+ * Each is a shape the carrier default would get WRONG — `Power` and `PowerBase`
+ * put `<sup>`/`<sub>` where the default puts `<i>`, and `Mod`, `Lim` and `Log`
+ * carry a literal the default has no notion of — so a regression back to the
+ * default fails here instead of rendering something plausible.
+ */
+describe("HTML carrier aliases the corpus reaches", () => {
+  const two = (name: string, a?: NodeParameter, b?: NodeParameter) =>
+    new BinaryFunctionNode({ name, parameterOne: a, parameterTwo: b });
+  const cases: readonly (readonly [string, MathNode, string])[] = [
+    // power.rb:41-45 — second slot is a <sup>, not the default's second <i>
+    ["Power", two("Power", symbol(), new NumberNode({ value: "2" })), "<i>x</i><sup>2</sup>"],
+    ["Power, second slot absent", two("Power", symbol()), "<i>x</i>"],
+    [
+      "Power, first slot absent",
+      two("Power", undefined, new NumberNode({ value: "2" })),
+      "<sup>2</sup>",
+    ],
+    // mod.rb:56-60 — the literal sits BETWEEN the slots, and outlives both
+    ["Mod", two("Mod", symbol(), symbol("y")), "<i>x</i><i>mod</i><i>y</i>"],
+    ["Mod, both slots absent", two("Mod"), "<i>mod</i>"],
+    // lim.rb:31-35 — literal first
+    ["Lim", two("Lim", symbol(), symbol("y")), "<i>lim</i><i>x</i><i>y</i>"],
+    ["Lim, both slots absent", two("Lim"), "<i>lim</i>"],
+    // log.rb:56-60 — literal first, then a <sub>/<sup> pair
+    ["Log", two("Log", symbol(), symbol("y")), "<i>log</i><sub>x</sub><sup>y</sup>"],
+    ["Log, both slots absent", two("Log"), "<i>log</i>"],
+    // Root inherits binary_function.rb:60-64 unchanged
+    ["Root", two("Root", symbol(), symbol("y")), "<i>x</i><i>y</i>"],
+    // power_base.rb:32-37
+    [
+      "PowerBase",
+      new TernaryFunctionNode({
+        name: "PowerBase",
+        parameterOne: symbol(),
+        parameterTwo: symbol("y"),
+        parameterThree: symbol("z"),
+      }),
+      "<i>x</i><sub>y</sub><sup>z</sup>",
+    ],
+    [
+      "PowerBase, middle slot absent",
+      new TernaryFunctionNode({
+        name: "PowerBase",
+        parameterOne: symbol(),
+        parameterThree: symbol("z"),
+      }),
+      "<i>x</i><sup>z</sup>",
+    ],
+    // unary_function.rb:65-74, label from Core#invert_unicode_symbols
+    ["Cos", new UnaryFunctionNode({ name: "Cos", parameterOne: symbol() }), "<i>cos</i><i>x</i>"],
+    ["Cos, slot absent", new UnaryFunctionNode({ name: "Cos" }), "<i>cos</i>"],
+    // a list joins inside ONE wrapper, not one wrapper per member
+    [
+      "Cos, list slot",
+      new UnaryFunctionNode({ name: "Cos", parameterOne: [symbol(), symbol("y")] }),
+      "<i>cos</i><i>xy</i>",
+    ],
+  ];
+
+  it.each(cases)("%s renders the gem's bytes", (_label, node, expected) => {
+    expect(toHtml(node)).toBe(expected);
+  });
+});
+
 describe("HTML measured boundary refusals", () => {
   it("refuses unmeasured carrier aliases instead of inventing plausible output", () => {
+    // `Mbox#to_html` hands back the parameter OBJECT rather than a string, so
+    // there are no bytes here to reproduce in the first place.
     expectHtmlError(() => toHtml(new UnaryFunctionNode({ name: "Mbox", parameterOne: symbol() })), {
       kind: "unaryFunction",
       message: 'UnaryFunction alias "Mbox" has not been measured for HTML in this slice',
     });
-    expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Power" })), {
+    // `Stackrel` and `Underover` DO render on the gem — `"x"` and `"<i>x</i>"`
+    // for a single symbol slot — but no corpus case constructs either, so
+    // nothing in this suite would hold the port's bytes for them honest. They
+    // refuse until something does.
+    expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Stackrel" })), {
       kind: "binaryFunction",
-      message: 'BinaryFunction alias "Power" has not been measured for HTML in this slice',
+      message: 'BinaryFunction alias "Stackrel" has not been measured for HTML in this slice',
     });
-    expectHtmlError(() => toHtml(new TernaryFunctionNode({ name: "PowerBase" })), {
+    expectHtmlError(() => toHtml(new TernaryFunctionNode({ name: "Underover" })), {
       kind: "ternaryFunction",
-      message: 'TernaryFunction alias "PowerBase" has not been measured for HTML in this slice',
+      message: 'TernaryFunction alias "Underover" has not been measured for HTML in this slice',
     });
   });
 
@@ -720,13 +848,33 @@ describe("HTML measured boundary refusals", () => {
     );
   });
 
-  it("refuses a named symbol whose generated HTML value is deferred to a later increment", () => {
+  it("renders a named symbol from the generated table, ignoring any value override", () => {
+    // `Symbols::Plus#to_html` answers its static string whatever the
+    // constructor was given: measured on the pinned oracle, `Plus.new("ZZ")`,
+    // `Comma.new("ZZ")` and `Sigma.new("ZZ")` each ignore the override. HTML
+    // has no value-dependent id at all — the generator's own census names
+    // `Comma` and `Plus` for mathml only (`generated/context-axes.ts`).
     for (const value of [undefined, "WRONG", "&#x2b;"]) {
-      expectHtmlError(() => toHtml(new SymbolNode({ id: "Plus", value })), {
-        kind: "symbol",
-        message: 'Symbol "Plus" needs generated HTML data, which belongs to phase two',
-      });
+      expect(toHtml(new SymbolNode({ id: "Plus", value }))).toBe("&#x2b;");
     }
+    expect(toHtml(new SymbolNode({ id: "Comma", value: "WRONG" }))).toBe("&#x2c;");
+    expect(toHtml(new SymbolNode({ id: "Sigma", value: "WRONG" }))).toBe("&#x3c3;");
+  });
+
+  it("refuses an id the generated table does not carry, as MISSING_SYMBOL_DATA", () => {
+    // The one deliberate non-RenderError throw on this walk. It reaches the
+    // caller intact rather than being wrapped by `toHtml`'s boundary, exactly
+    // as the latex renderer's does.
+    let thrown: unknown;
+    try {
+      toHtml(new SymbolNode({ id: "NoSuchSymbolClass" }));
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(MissingSymbolDataError);
+    expect((thrown as MissingSymbolDataError).code).toBe("MISSING_SYMBOL_DATA");
+    expect((thrown as MissingSymbolDataError).symbolId).toBe("NoSuchSymbolClass");
+    expect((thrown as MissingSymbolDataError).format).toBe("html");
   });
 
   it("refuses a non-string Text value instead of silently dropping it", () => {

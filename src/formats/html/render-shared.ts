@@ -1,4 +1,10 @@
-import { hasNodeKind, type MathNode, type NodeKind, RenderError } from "../../core/index";
+import {
+  hasNodeKind,
+  type MathNode,
+  MissingSymbolDataError,
+  type NodeKind,
+  RenderError,
+} from "../../core/index";
 
 export const FORMAT = "html";
 
@@ -41,10 +47,33 @@ export function renderChild(value: unknown, context: RenderContext, at: string):
   );
 }
 
+/**
+ * One slot inside one tag, or nothing at all.
+ *
+ * Every carrier `to_html` in the gem is built from this shape:
+ * `first_value = "<TAG>#{parameter_one.to_html(options: options)}</TAG>" if
+ * parameter_one`, and the pieces are then interpolated in order. The guard is
+ * Ruby truthiness, and an unassigned local interpolates as the empty string —
+ * which is why an absent slot contributes nothing at all rather than an empty
+ * tag pair.
+ *
+ * The tag is `i` for most slots, and `sub`/`sup` for the script-bearing
+ * aliases (`Power`, `PowerBase`, `Log`), so it is a parameter here rather
+ * than baked into the helper.
+ */
+export function renderTaggedSlot(
+  tag: string,
+  value: unknown,
+  context: RenderContext,
+  at: string,
+): string {
+  if (!present(value)) return "";
+  return `<${tag}>${s(renderChild(value, context, at))}</${tag}>`;
+}
+
 /** Binary/Ternary slot rendering: call `to_html` on the slot itself. */
 export function renderCarrierSlot(value: unknown, context: RenderContext, at: string): string {
-  if (!present(value)) return "";
-  return `<i>${s(renderChild(value, context, at))}</i>`;
+  return renderTaggedSlot("i", value, context, at);
 }
 
 /** Unary slot rendering: arrays render each member and join with no separator. */
@@ -71,5 +100,42 @@ export function interpolatedValue(value: unknown, kind: string, at: string): str
     `${at}: holds ${describeSlot(value)} whose Ruby spelling cannot be reproduced reliably`,
     FORMAT,
     kind,
+  );
+}
+
+/** The Ruby class basename — `Math::Symbols::Sigma` is `Sigma`. */
+export function classBasename(rubyClass: string): string {
+  return rubyClass.slice(rubyClass.lastIndexOf(":") + 1);
+}
+
+/**
+ * The walk's own missing-symbol throw, distinguishable from an imitation.
+ *
+ * `toHtml`'s boundary re-throws the symbol table's `MissingSymbolDataError`
+ * (a public error code in its own right) while wrapping every other mid-walk
+ * throw into `RenderError` — but `instanceof` is a test the INPUT can pass
+ * too: a hostile getter that answered validation's read can throw its own
+ * `MissingSymbolDataError` mid-render and forge the pass-through, reporting
+ * MISSING_SYMBOL_DATA for what is an input failure. So the genuine throw site
+ * records its instances in this module-private `WeakSet`, and the boundary
+ * passes through members only. One set per format, because each format's
+ * boundary vouches only for its own throw sites — the rationale in full is in
+ * `../latex/render-shared.ts`, whose set this mirrors.
+ */
+const OWN_MISSING_SYMBOL_ERRORS = new WeakSet<MissingSymbolDataError>();
+
+/** The symbol table's one deliberate non-RenderError throw, recorded as our own. */
+export function missingSymbolDataError(symbolId: string): MissingSymbolDataError {
+  const error = new MissingSymbolDataError(symbolId, FORMAT);
+  OWN_MISSING_SYMBOL_ERRORS.add(error);
+  return error;
+}
+
+/** Membership in the factory's set — shape and prototype prove nothing here. */
+export function isOwnMissingSymbolDataError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    OWN_MISSING_SYMBOL_ERRORS.has(error as MissingSymbolDataError)
   );
 }

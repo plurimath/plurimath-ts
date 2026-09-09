@@ -1,10 +1,42 @@
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { assertKnownOptions } from "../../core/render-options";
 import { dumpNodes, XmlElement } from "../../xml/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
-import { FORMAT, serializeRendered } from "./render-shared";
+import { FORMAT, isOwnMissingSymbolDataError, serializeRendered } from "./render-shared";
 
+/**
+ * Renderer options. Empty today and typed exactly (§5), for the same reason as
+ * the other renderers: the gem's `to_omml` keywords are
+ * `display_style:`, `split_on_linebreak:`, `formatter:` and `unitsml:`
+ * (formula.rb:157 on the pinned oracle), and none of the four is implemented
+ * here — on the `toOmml` path `display_style` comes off the formula's own
+ * field below, which is exactly what the gem's default for that keyword is.
+ */
 export type OmmlOptions = Record<string, never>;
+
+/** Public `Formula#to_omml` keywords whose rendering paths are not measured yet. */
+const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
+  [
+    "displayStyle",
+    "recursive display-style override is unmeasured across the complete OMML renderer",
+  ],
+  [
+    "splitOnLinebreak",
+    "line-broken OMML emits multiple m:oMath siblings separated by Word break runs; unmeasured",
+  ],
+  ["formatter", "number formatting is P4 scope; only the no-formatter path is measured"],
+  ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md section 5)"],
+];
+
+/**
+ * The option keys both entries accept. `OmmlOptions` declares no IMPLEMENTED
+ * key, so the accepted set is exactly the deferred ones: a keyword the gem
+ * really has is recognised here and refused by name where the reason is known
+ * (below), while a key the gem does not have at all is refused as unknown by
+ * `assertKnownOptions` (core/render-options.ts). Same split as MathML.
+ */
+const ACCEPTED_OPTIONS: readonly string[] = DEFERRED_OPTIONS.map(([name]) => name);
 
 const OMML_NAMESPACES: readonly (readonly [string, string])[] = [
   ["xmlns:m", "http://schemas.openxmlformats.org/officeDocument/2006/math"],
@@ -28,15 +60,24 @@ const OMML_NAMESPACES: readonly (readonly [string, string])[] = [
 ];
 
 /** The gem's per-node `to_omml_without_math_tag` entry point. */
-export function toOmmlWithoutMathTag(node: MathNode, _options?: OmmlOptions | null): string {
+export function toOmmlWithoutMathTag(node: MathNode, options?: OmmlOptions | null): string {
+  // The options come first, as they do in Ruby: the keyword check there is
+  // part of the call, so an unknown keyword raises before the method body
+  // ever looks at the receiver.
+  assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
-  return atBoundary(() => serializeRendered(ROOT_CONTEXT.render(node)));
+  return atBoundary(() => {
+    assertSupportedOptions(options, node.kind);
+    return serializeRendered(ROOT_CONTEXT.render(node));
+  });
 }
 
 /** `Formula#to_omml`; only Formula and its Mrow subclass own this public wrapper. */
-export function toOmml(node: MathNode, _options?: OmmlOptions | null): string {
+export function toOmml(node: MathNode, options?: OmmlOptions | null): string {
+  assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
   return atBoundary(() => {
+    assertSupportedOptions(options, node.kind);
     if (node.kind !== "formula" && node.kind !== "mrow") {
       throw new RenderError(
         `to_omml is defined on Formula and its subclasses only — received "${node.kind}"`,
@@ -53,11 +94,69 @@ export function toOmml(node: MathNode, _options?: OmmlOptions | null): string {
   });
 }
 
+function assertSupportedOptions(options: OmmlOptions | null | undefined, kind: string): void {
+  if (
+    options !== null &&
+    options !== undefined &&
+    (typeof options !== "object" || Array.isArray(options))
+  ) {
+    throw new RenderError(
+      `options: expected a plain options object, found ${typeof options === "object" ? "an array" : `a ${typeof options}`}`,
+      FORMAT,
+      kind,
+    );
+  }
+
+  if (options !== null && options !== undefined) {
+    const prototype = Object.getPrototypeOf(options) as { constructor?: unknown } | null;
+    const constructorDescriptor =
+      prototype === null ? undefined : Object.getOwnPropertyDescriptor(prototype, "constructor");
+    const prototypeConstructor = constructorDescriptor?.value;
+    const isRealmObjectPrototype =
+      prototype !== null &&
+      Object.getPrototypeOf(prototype) === null &&
+      typeof prototypeConstructor === "function" &&
+      prototypeConstructor.name === "Object";
+    if (prototype !== Object.prototype && prototype !== null && !isRealmObjectPrototype) {
+      const name =
+        typeof prototypeConstructor === "function" && prototypeConstructor.name.length > 0
+          ? prototypeConstructor.name
+          : "custom";
+      throw new RenderError(
+        `options: expected a plain options object, found a ${name} instance`,
+        FORMAT,
+        kind,
+      );
+    }
+  }
+
+  const values: Record<string, unknown> =
+    options === null || options === undefined ? {} : (options as Record<string, unknown>);
+  for (const [name, detail] of DEFERRED_OPTIONS) {
+    if (Object.hasOwn(values, name) && values[name] !== undefined) {
+      throw new RenderError(
+        `The "${name}" feature of to_omml is deferred (TODO.plan/deferred.md): ${detail}`,
+        FORMAT,
+        kind,
+      );
+    }
+  }
+}
+
 function atBoundary<T>(render: () => T): T {
   try {
     return render();
   } catch (error) {
-    if (error instanceof RenderError) throw error;
+    // Only this walk's own surfaces pass through: `RenderError` (the §5
+    // contract) and the symbol table's `MissingSymbolDataError` — the one
+    // non-RenderError PlurimathError a kind file throws on purpose
+    // (`symbolOmmlValue`, on an id the generated table does not carry), and a
+    // public error code in its own right. That second pass-through checks
+    // membership in the throw site's own instance set
+    // (`isOwnMissingSymbolDataError`, render-shared.ts), never `instanceof`:
+    // the class is constructible by the input too, and a hostile getter
+    // throwing one mid-render is an input failure, not a symbol-table miss.
+    if (error instanceof RenderError || isOwnMissingSymbolDataError(error)) throw error;
     if (error instanceof RangeError) {
       throw new RenderError(
         "node: the tree nests too deep for the OMML walk's call stack",

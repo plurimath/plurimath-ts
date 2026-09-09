@@ -265,9 +265,26 @@ function buildValue(value: YamlValue, aliases: ReadonlyMap<string, string>): unk
 export interface CorpusCase {
   readonly id: string;
   readonly input: string;
+  /**
+   * The notation `input` is written in, from the payload's own `input_format`
+   * (`corpus-pin.ts` reads it; this type used to drop it on the floor).
+   *
+   * It matters to exactly one kind of check: anything that PARSES `input` can
+   * only run over cases written in the notation its parser reads. A check that
+   * rebuilds from `model` is parser-independent by construction and takes every
+   * case whatever its input format — which is the point of having that layer.
+   */
+  readonly inputFormat: string;
   readonly model: SerializedNode;
-  /** The gem's rendered output per target format (`expected.asciimath`, ...). */
+  /**
+   * The gem's rendered output, per target format the gem rendered this case to
+   * (`expected.asciimath`, ...). A `cases/2` case may be missing a target here;
+   * `refusals` says why, and `corpus-pin.ts` gates that the two together name
+   * every target the group declares.
+   */
   readonly expected: ReadonlyMap<string, string>;
+  /** The targets the gem refused to render, mapped to the error category. */
+  readonly refusals: ReadonlyMap<string, string>;
 }
 
 /**
@@ -289,7 +306,14 @@ export function readCorpusCases(root: string = PINNED_CORPUS_ROOT): readonly Cor
     if (!isSerializedNode(entry.model)) {
       throw new Error(`case ${entry.id}: "model" is not a serialized node`);
     }
-    cases.push({ id: entry.id, input: entry.input, model: entry.model, expected: entry.expected });
+    cases.push({
+      id: entry.id,
+      input: entry.input,
+      inputFormat: entry.inputFormat,
+      model: entry.model,
+      expected: entry.expected,
+      refusals: entry.refusals,
+    });
   }
   if (cases.length === 0) {
     throw new Error(
@@ -298,4 +322,46 @@ export function readCorpusCases(root: string = PINNED_CORPUS_ROOT): readonly Cor
     );
   }
   return cases;
+}
+
+/**
+ * The one input notation this port can parse today. AsciiMath is P1's vertical
+ * slice; LaTeX, UnicodeMath and HTML parsers arrive in P3
+ * (`TODO.plan/p3-input-formats/`).
+ */
+export const PARSEABLE_INPUT_FORMAT = "asciimath";
+
+/**
+ * The cases a check may run through a PARSER, as opposed to rebuilding from
+ * `model`.
+ *
+ * The corpus is no longer AsciiMath-only: it carries `corpus/latex/` as well,
+ * and its schema admits `mathml`, `omml`, `unicode`, `html` and `unitsml` too.
+ * A check that calls `parseAsciimath(entry.input)` over every pinned case feeds
+ * it LaTeX source, and fails in a way that looks like a parser bug rather than
+ * a suite that outgrew its filter. That is not hypothetical: it is what the
+ * nineteen LaTeX cases did to `grammar.spec.ts` the moment the pin moved.
+ *
+ * Generic over anything carrying an `inputFormat`, so the pinned-case reader's
+ * own records (`PinnedCase`, which also carries `preprocessed` and
+ * `parse_tree`) go through this one filter rather than a second hand-written
+ * copy of it.
+ *
+ * Throws rather than returning an empty list: a filter that silently matches
+ * nothing turns a suite green while checking nothing, which has happened in
+ * this repository before and is what `gates.json`'s `selects` exists to catch
+ * one level up.
+ */
+export function parseableCases<Case extends { readonly inputFormat: string }>(
+  cases: readonly Case[],
+): readonly Case[] {
+  const parseable = cases.filter((entry) => entry.inputFormat === PARSEABLE_INPUT_FORMAT);
+  if (parseable.length === 0) {
+    throw new Error(
+      `no pinned case has input_format "${PARSEABLE_INPUT_FORMAT}", so every ` +
+        `parser-driven check would run zero cases. Input formats present: ` +
+        `${[...new Set(cases.map((entry) => entry.inputFormat))].sort().join(", ")}`,
+    );
+  }
+  return parseable;
 }

@@ -1,0 +1,18 @@
+import {
+  type NodeOf,
+  plainRun,
+  present,
+  type RenderContext,
+  renderAccent,
+  renderLiteralScript,
+  rubyMemberValue,
+} from "../../formats/omml/render-shared";
+import type { XmlElement } from "../../xml/index";
+
+export function renderVec(node: NodeOf<"vec">, context: RenderContext): XmlElement {
+  if (!present(node.parameterOne)) return plainRun("&#x2192;");
+  if (present(rubyMemberValue(node.attributes, "accent", node.kind, "vec.attributes"))) {
+    return renderAccent(node.kind, node.parameterOne, "→", context, "vec.parameterOne");
+  }
+  return renderLiteralScript(node.kind, "Upp", node.parameterOne, "→", context, false);
+}

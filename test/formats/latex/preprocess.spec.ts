@@ -210,5 +210,25 @@ describe("latex preprocessing: the undecodable-entity wrapper", () => {
     const error = thrown as ParseError;
     expect(error.format).toBe("latex");
     expect(error.input).toBe(input);
+    // The offset is CARRIED, not invented. `UndecodableEntityError` records the
+    // UTF-16 offset of the `&` it could not decode, and `ParseError.index` is
+    // documented as an offset into the original input — so they are the same
+    // number and the wrapper must not flatten it. Measured: `preprocess` throws
+    // with index 2 for this input, where the reference starts.
+    expect(error.index).toBe(2);
+  });
+
+  it("takes that offset from the error rather than the start of the string", () => {
+    // The guard against a wrapper that hard-codes 0: a longer prefix moves the
+    // reference, and the reported index has to move with it.
+    const shifted = `xyz+${input}`;
+    let thrown: unknown;
+    try {
+      parseLatex(shifted);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(ParseError);
+    expect((thrown as ParseError).index).toBe(6);
   });
 });

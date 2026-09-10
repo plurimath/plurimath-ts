@@ -840,17 +840,14 @@ module OracleGate
   # raw Bundler stack trace, attributed to the generator rather than to the
   # bundle. Probe the same context up front instead, and name the remedy.
   #
-  # `chdir` is the caller's, not the oracle checkout: `mise` resolves the Ruby
-  # runtime from the working directory upwards, so probing somewhere else could
-  # select a different interpreter and clear a bundle the generators cannot
-  # then load — or refuse one they could. It is the generators' own directory,
-  # so the probe answers the question that was asked.
+  # `chdir` is the caller's, not the oracle checkout: a Ruby version manager
+  # resolves its runtime from the working directory upwards, so probing
+  # somewhere else could select a different interpreter and clear a bundle the
+  # generators cannot then load — or refuse one they could. It is the
+  # generators' own directory, so the probe answers the question that was
+  # asked.
   def assert_frozen_bundle_usable!(gem_dir, chdir:)
-    _stdout, stderr, status = capture_command(
-      ["mise", "x", "--", "bundle", "exec", "ruby", "-e", ""],
-      chdir: chdir,
-      env: frozen_generator_env(gem_dir),
-    )
+    _stdout, stderr, status = capture_generator_command(["-e", ""], chdir: chdir, gem_dir: gem_dir)
     return if status.success?
 
     raise Error, frozen_bundle_error(gem_dir, stderr)
@@ -858,6 +855,38 @@ module OracleGate
 
   def frozen_generator_env(gem_dir)
     { "BUNDLE_FROZEN" => "true", "BUNDLE_GEMFILE" => File.join(gem_dir, "Gemfile") }
+  end
+
+  # Tries `bundle exec ruby` directly first, the same shape
+  # `differential_gem_results` above already uses with no version manager
+  # wrapping at all. A developer with any correctly set up Ruby (rbenv, asdf,
+  # rvm, the system Ruby, or mise) already has `bundle` on PATH; `mise x --`
+  # is a fallback for the one case direct invocation cannot cover: a Ruby
+  # provisioned only through mise and never put on PATH by itself. Mirrors the
+  # try-PATH-then-mise split in test/scripts/oracle-harness.ts#runRuby.
+  #
+  # `capture_command` raises `Error` for exactly one reason: the named
+  # executable could not be found. Rescuing it here means "try mise next", not
+  # "guess at every possible failure" — anything else it might raise (a raw
+  # `Errno::EACCES`, say) is not rescued by `capture_command` either, and
+  # reaches this method's own caller as itself, same as before this fallback
+  # existed.
+  def capture_generator_command(ruby_args, chdir:, gem_dir:)
+    env = frozen_generator_env(gem_dir)
+    direct = ["bundle", "exec", "ruby", *ruby_args]
+    begin
+      capture_command(direct, chdir: chdir, env: env)
+    rescue Error
+      begin
+        capture_command(["mise", "x", "--", *direct], chdir: chdir, env: env)
+      rescue Error
+        raise Error, "bundle is required but could not be executed, and mise " \
+                     "— the fallback version manager — is not on PATH either. " \
+                     "Install bundler where `bundle` resolves (rbenv, asdf, " \
+                     "rvm, the system Ruby, or any other way), or put mise on " \
+                     "PATH."
+      end
+    end
   end
 
   # Split from the probe so the message can be tested without a bundle.
@@ -881,10 +910,8 @@ module OracleGate
   def run_generator!(script, arguments, chdir:, gem_dir:)
     relative = script.delete_prefix("#{chdir}/")
     puts "▶ #{relative} #{arguments.join(' ')}"
-    stdout, stderr, status = capture_command(
-      ["mise", "x", "--", "bundle", "exec", "ruby", script, *arguments],
-      chdir: chdir,
-      env: frozen_generator_env(gem_dir),
+    stdout, stderr, status = capture_generator_command(
+      [script, *arguments], chdir: chdir, gem_dir: gem_dir,
     )
 
     unless status.success?

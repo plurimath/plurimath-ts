@@ -425,14 +425,16 @@ module HtmlParserDataGenerator
 
   # `TransformUtility.normalize_symbol` (`html/transform_utility.rb:53-58`)
   # leaves a text that already looks like an entity alone and entity-encodes
-  # everything else. This SAMPLES both branches rather than covering every
-  # text the grammar can tag `:symbol`: the first three grammar-tagged texts
-  # starting with `&`, plus six fixed literals, deduplicated. Only ONE of
-  # those three passes through -- measured on the pinned oracle,
-  # `&#x1d70b;` returns unchanged while `&#xa0;&#xa0;` and
-  # `&#xa0;&#xa0;&#xa0;&#xa0;` do not, because `HTML_ENTITY` is anchored and
-  # a run of concatenated entities does not match it. Those two take the
-  # encoding branch alongside the six literals.
+  # everything else. This SAMPLES both branches rather than covering every key
+  # `Utility.all_symbols_classes(:html)` carries: the first three of those keys
+  # starting with `&`, plus six fixed literals, deduplicated. They are the
+  # TRANSFORM's inputs, not the grammar's -- two of the three do not parse as a
+  # single `:symbol` at all. Only ONE of the three passes through: measured on
+  # the pinned oracle, `&#x1d70b;` returns unchanged while `&#xa0;&#xa0;` and
+  # `&#xa0;&#xa0;&#xa0;&#xa0;` do not, because `HTML_ENTITY` is anchored at
+  # both ends and a run of concatenated entities does not match it even though
+  # each component does on its own. Those two take the encoding branch
+  # alongside the six literals.
   def symbol_normalization_rows(symbol_texts)
     probes = symbol_texts.select { |text| text.start_with?("&") }.first(3) +
              %w[+ - = < > x]

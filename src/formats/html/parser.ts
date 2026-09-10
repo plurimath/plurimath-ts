@@ -145,7 +145,11 @@ function plainTree(value: ParseValue, depth = 0): unknown {
 /** `depth + 1`, or throws Ruby's own message once that would exceed `JSON_MAX_NESTING`. */
 function enterContainer(depth: number): number {
   const childDepth = depth + 1;
-  if (childDepth > JSON_MAX_NESTING) throw new Error("nesting of 100 is too deep");
+  if (childDepth > JSON_MAX_NESTING) {
+    // Ruby's own wording, built from the constant so the two cannot drift:
+    // `JSON::NestingError: nesting of 100 is too deep`.
+    throw new Error(`nesting of ${JSON_MAX_NESTING} is too deep`);
+  }
   return childDepth;
 }
 

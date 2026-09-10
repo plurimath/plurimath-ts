@@ -27,8 +27,9 @@
  *   - the generator's `RULE_COVERAGE` inputs take that to **78**.
  *
  * So there is nothing to defer and nothing stubbed. A node whose key set no
- * rule matches survives the transform as a plain hash, and `finalize` throws on
- * it unless the GEM leaves the same signature unmatched.
+ * rule matches survives the transform as a plain hash and is KEPT, exactly as
+ * the gem keeps it — see the note above `finalizeValue` for why an earlier
+ * version refused those instead, and what measuring the cost of that showed.
  *
  * ## Order is behaviour — and here it shadows nothing
  *

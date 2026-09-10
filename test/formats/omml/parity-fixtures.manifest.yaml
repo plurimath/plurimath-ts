@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-parity-fixtures.rb
-  sha256: 1e6d58a908b70851c25806afcf954df3c5614d96a442feb0b85e9aca124e335f
+  sha256: 4123ddb81e7bfaec3cf1a61ed21efa137489f7bc197a647a253fb27b2b8bba7e
   inputs:
-    scripts/generate-corpus.rb: a7ed6927c0f3a0821627de2bd6c2dc13e15dff889650419f588546b7ab8a1525
-    scripts/generate-parity-fixtures.rb: 1e6d58a908b70851c25806afcf954df3c5614d96a442feb0b85e9aca124e335f
+    scripts/generate-corpus.rb: c2ce1875421d0281f778a3fcdf09c2d72ebc9acb91aef847a8b756407bd4bd69
+    scripts/generate-parity-fixtures.rb: 4123ddb81e7bfaec3cf1a61ed21efa137489f7bc197a647a253fb27b2b8bba7e
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 93fdd7f3574435b0424764d9295c67554af9f2b1
+    commit: b7308ce6fdcb0da5965dba4e04dbe11d6990153a
     clean: true
     dirty_paths: []
 oracle:
@@ -30,7 +30,7 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: cac2ded84a6a0d51d39c1618aa7cc1246ebc762fd1be78ef6d2d5fcf3e1d02a9
+    sha256: 03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121
     resolved_gems: 77
     platforms:
     - aarch64-linux-gnu
@@ -158,7 +158,7 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: ox
-    version: 2.14.29
+    version: 2.14.28
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/

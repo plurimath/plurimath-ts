@@ -83,6 +83,15 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
 #   "(_2^3)X_5^6"   rule 3978 {open_paren, pre_subscript, pre_supscript,
 #                   close_paren, base, sub, sup}
 #
+# Then the same four rules that call `Utility.unfenced_value` -- `:2958`,
+# `:3662`, `:3853`, `:3978` -- once more with the trailing script FENCED, since
+# a bare script never reaches the unwrapping branch:
+#
+#   "_2 X_(5)"          rule 2958, fenced sub
+#   "_2^3 X_(5)"        rule 3662, fenced sub
+#   "_2^3 X_(5)^(6)"    rule 3853, fenced sub and sup
+#   "(_2^3)X_(5)^(6)"   rule 3978, fenced sub and sup
+#
 # Every one of the twelve also fires `:57`, the `pre_script` unwrap every
 # Multiscript construction routes through, so it needs no input of its own.
 # "fraction": every rule the port carries that calls `Utility.fractions`
@@ -142,6 +151,15 @@ RULE_COVERAGE = {
     "_2^3 X_5^6",
     "(_2^3)X",
     "(_2^3)X_5^6",
+    # The four fenced-script witnesses. Without them, bypassing every one of
+    # the ten `unfenced_value` calls in `:2958`, `:3662`, `:3853` and `:3978`
+    # left the whole UnicodeMath suite green -- the twelve inputs above all
+    # carry BARE scripts, which that helper passes through untouched. These
+    # parenthesize the trailing script, which is the case it exists for.
+    "_2 X_(5)",
+    "_2^3 X_(5)",
+    "_2^3 X_(5)^(6)",
+    "(_2^3)X_(5)^(6)",
   ],
   "fraction" => [
     "³/₂",

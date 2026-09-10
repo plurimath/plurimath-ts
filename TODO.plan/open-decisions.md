@@ -129,26 +129,38 @@ that call `Mml.parse` (XML text to an `Mml::V4::*` model) and then
 `when Mml::V4::…` branches. **pegkit has no part in it.**
 
 - The `mml` gem is 11,605 lines over 320 files, but the translator consumes a
-  thin slice: `each_mixed_content`, `value`, and about 26 attribute readers.
+  thin slice: `each_mixed_content`, `value`, and 29 attribute readers of the
+  126 those 44 classes define.
   The model adds no semantics over the XML — across 25 attributes on 6 element
   types, every attribute absent from the source read back `nil` rather than a
   schema default; `display="block"` and `displaystyle="true"` arrive as
   `String` rather than coerced booleans; `value` is an `Array` of `String`. A
   reader plus an element-name map reproduces what the translator consumes, so
   lutaml-model's machinery would not need porting.
-- The translating logic itself is `translator.rb` (601 lines),
-  `formula_transformation.rb` (460) and `constants.rb` (418) — 1,479 lines.
+- The translating logic itself is `translator.rb` (607 lines),
+  `formula_transformation.rb` (457) and `constants.rb` (289) — 1,353 lines.
 - **A contract gap either way:** `src/xml` is write-only. It exports
-  `XmlElement`, `dump` and `dumpNodes` and no reader, and `ARCHITECTURE.md` §3
+  `XmlElement`, `dump`, `dumpNodes`, two serializer errors and three types —
+  and no reader of any kind — and `ARCHITECTURE.md` §3
   describes the layer as "XML element tree + Ox-compatible serializer". MathML
   input needs an XML *reader* in layer 1, which the module map does not
   describe, so §3 changes before any of this code lands.
 
-Oracle available today: of the 111 corpus cases carrying an `expected.mathml`,
-110 re-parse through `Math.parse(text, :mathml)` on the gem (the remaining one
-raises `ParseError`). They exercise 19 distinct element classes of the 44 the
-translator dispatches on, so the corpus alone would lock under half the
-surface; the rest needs cases written for it.
+Oracle available today: 111 corpus cases carry an `expected.mathml`, and all
+111 re-parse through `Math.parse(text, :mathml)` on the gem. They exercise 19
+distinct element classes of the 44 the translator dispatches on, so the corpus
+alone would lock under half the surface; the rest needs cases written for it.
+The 25 it does not reach are the ones to write for: `Mfenced`, `Mmultiscripts`,
+`Mprescripts`, `Menclose`, `Mspace`, `Mpadded`, `Mphantom`, `Ms`, `Merror`,
+`Semantics`, `Annotation`, `AnnotationXml`, `Mglyph`, `Mlabeledtr`, `Mlongdiv`,
+`Maligngroup`, `Malignmark`, `Mstack`, `Msgroup`, `Msrow`, `Msline`,
+`Mscarries`, `Mscarry`, `Mfraction` and `None`.
+
+One caveat for anyone re-running that count: `expected.mathml` is USUALLY a
+string but is a `{output: ...}` map in `asciimath/partial-render.yaml`. A probe
+that assumes the string shape hands a `Hash` to `Math.parse` and records a
+`ParseError` that belongs to the probe, not to the gem — which is what an
+earlier draft of this section reported as "110 of 111".
 
 Behaviour a port would have to reproduce, measured identically under both the
 Ox and Oga adapters — so there is a single answer, not an adapter-dependent one:

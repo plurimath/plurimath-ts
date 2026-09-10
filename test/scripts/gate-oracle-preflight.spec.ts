@@ -16,6 +16,15 @@
  * REMOVED: they exercised only the message builder, so deleting the probe and
  * both its call sites left every one of them green. The probe and the call
  * sites are asserted here first, and the message after.
+ *
+ * A second, independent review found the message builder itself over-claiming:
+ * on ANY non-zero exit it named `bundle install` as the remedy and labeled
+ * whatever came back on stderr "bundler said:" — including stderr the probe
+ * produced for reasons that have nothing to do with the bundle, such as an
+ * invalid `RUBYOPT`. The confident remedies are now earned by matching text
+ * Bundler is actually known to emit; anything else gets a neutral report of
+ * the command and its exit status, with no claim about who produced the
+ * stderr.
  */
 
 import { describe, expect, it } from "vitest";
@@ -146,39 +155,79 @@ describe("the preflight runs before any generator does", () => {
   );
 });
 
+// Must match `OracleGate::FROZEN_BUNDLE_PROBE_COMMAND` rendered the same way
+// (`Array#join(" ")`); duplicated here rather than read from the Ruby source
+// because the neutral message is expected to quote exactly this.
+const FROZEN_BUNDLE_PROBE_COMMAND = "mise x -- bundle exec ruby -e ";
+
 const EMPTY_CHECKSUMS_STDERR =
   'Your lockfile has an empty CHECKSUMS entry for "rake", but cannot be updated ' +
   "because frozen mode is set (Bundler::ProductionError)";
 
-function frozenBundleError(stderr: string): string {
-  const r = inOracle(
-    `OracleGate.frozen_bundle_error("/oracle/checkout", ${JSON.stringify(stderr)})`,
-  );
+// A failure Bundler itself actually raises for a locked gem it cannot
+// resolve, reproduced directly against the Bundler this repo pins by locking
+// a Gemfile against a gem that does not exist: the "Could not find gem"
+// phrasing is real (bundler/resolver.rb and three other call sites), and the
+// "(Bundler::GemNotFound)" suffix is how Ruby renders an uncaught exception
+// of that class.
+const BUNDLER_GEM_NOT_FOUND_STDERR =
+  "Could not find gem 'rake (= 12.3.3)' in locally installed gems (Bundler::GemNotFound)";
+
+// What this project's probe itself produces for a failure that has nothing to
+// do with Bundler or the bundle — reproduced directly by running the exact
+// probe command with `RUBYOPT=--definitely-invalid-option` set.
+const INVALID_RUBYOPT_STDERR =
+  "ruby: invalid option --definitely-invalid-option  (-h will show valid options) (RuntimeError)";
+
+function frozenBundleError(stderr: string, exitstatus = 1): string {
+  const r = inOracle(`
+    begin
+      status = Struct.new(:exitstatus).new(${exitstatus})
+      OracleGate.frozen_bundle_error("/oracle/checkout", ${JSON.stringify(stderr)}, status)
+    end
+  `);
   expect(r.ok).toBe(true);
   return r.output;
 }
 
-describe("the frozen-bundle error names a remedy", () => {
+describe("the frozen-bundle error names a remedy only where the evidence supports it", () => {
   it("prescribes --add-checksums for the empty CHECKSUMS entry", () => {
     const message = frozenBundleError(EMPTY_CHECKSUMS_STDERR);
     expect(message).toContain("bundle lock --add-checksums");
     expect(message).toContain("/oracle/checkout");
   });
 
-  it("falls back to bundle install for every other frozen failure", () => {
-    const message = frozenBundleError("Could not find rake-12.3.3 in locally installed gems");
+  it("falls back to bundle install for a differently-shaped bundler failure", () => {
+    const message = frozenBundleError(BUNDLER_GEM_NOT_FOUND_STDERR);
     expect(message).toContain("bundle install");
     expect(message).not.toContain("--add-checksums");
   });
 
   it("quotes what bundler actually said, so the remedy can be second-guessed", () => {
-    const message = frozenBundleError("Could not find rake-12.3.3 in locally installed gems");
-    expect(message).toContain("Could not find rake-12.3.3");
+    const message = frozenBundleError(BUNDLER_GEM_NOT_FOUND_STDERR);
+    expect(message).toContain("Could not find gem 'rake (= 12.3.3)'");
   });
 
   it("blames the bundle rather than the generator that had not run yet", () => {
     const message = frozenBundleError(EMPTY_CHECKSUMS_STDERR);
     expect(message).toContain("no usable frozen bundle");
     expect(message).not.toContain("generate-corpus");
+  });
+
+  /**
+   * The regression this file exists to catch a second time: a probe failure
+   * unrelated to Bundler — here, the exact stderr an invalid `RUBYOPT`
+   * produces — used to get the same "no usable frozen bundle, run `bundle
+   * install`, bundler said:" message as a real Bundler failure. Nothing here
+   * shows the stderr came from Bundler, so the message must not claim it did.
+   */
+  it("reports a non-bundler failure plainly, prescribing nothing", () => {
+    const message = frozenBundleError(INVALID_RUBYOPT_STDERR, 1);
+    expect(message).not.toContain("bundle install");
+    expect(message).not.toContain("bundler said");
+    expect(message).not.toContain("no usable frozen bundle");
+    expect(message).toContain("failed with exit 1");
+    expect(message).toContain(FROZEN_BUNDLE_PROBE_COMMAND);
+    expect(message).toContain(INVALID_RUBYOPT_STDERR);
   });
 });

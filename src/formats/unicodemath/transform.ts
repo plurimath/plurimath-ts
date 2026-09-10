@@ -1036,9 +1036,11 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // FRACTION's mini variant (`:1614`) needs its numerator and denominator
   // pre-resolved to a `simple` value, and the grammar leaves a single sup/sub
   // digit as `{sup_digits: Slice}`/`{sub_digits: Slice}` until one of these
-  // fires — `subDigitNumber` already existed for `:2971`'s compound shape;
-  // `supDigitNumber` is its new sup-side twin, both a `Constants::SUP_DIGITS`/
-  // `SUB_DIGITS` reverse lookup the generated tables already carry.
+  // fires. `subDigitNumber` arrives earlier in this same branch, with the
+  // MULTISCRIPT family, where `:2971`'s compound shape needs it; nothing on
+  // `main` has either helper. `supDigitNumber` is its sup-side twin, added
+  // here. Both are a `Constants::SUP_DIGITS`/`SUB_DIGITS` reverse lookup over
+  // tables the generated data already carries.
   rule("165", { sup_digits: simple("digits") }, (b) => supDigitNumber(b.digits));
   rule("170", { sub_digits: simple("digits") }, (b) => subDigitNumber(b.digits));
 

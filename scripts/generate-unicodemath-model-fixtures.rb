@@ -92,6 +92,12 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
 #   "_2^3 X_(5)^(6)"    rule 3853, fenced sub and sup
 #   "(_2^3)X_(5)^(6)"   rule 3978, fenced sub and sup
 #
+# and twice more with the PRESCRIPTS fenced rather than the trailing script,
+# which is a different pair of call sites in the same two rules:
+#
+#   "_(2)^(3) X_5"      rule 3662, fenced pre_sub and pre_sup
+#   "_(2)^(3) X_5^6"    rule 3853, fenced pre_sub and pre_sup
+#
 # Every one of the twelve also fires `:57`, the `pre_script` unwrap every
 # Multiscript construction routes through, so it needs no input of its own.
 # "fraction": every rule the port carries that calls `Utility.fractions`
@@ -160,6 +166,12 @@ RULE_COVERAGE = {
     "_2^3 X_(5)",
     "_2^3 X_(5)^(6)",
     "(_2^3)X_(5)^(6)",
+    # Those four fence the TRAILING script. `:3662` and `:3853` unwrap their
+    # PRESCRIPTS through the same helper, and no input above reaches those four
+    # call sites -- bypassing them alone stayed green over all 129 rows. These
+    # two fence the prescripts instead.
+    "_(2)^(3) X_5",
+    "_(2)^(3) X_5^6",
   ],
   "fraction" => [
     "³/₂",

@@ -7677,9 +7677,12 @@ const PREFIX_PAIR_FIXTURES: readonly Fixture[] = [
  * assertion passing and the run still red. vitest 4 builds that RPC with
  * `timeout: -1`, so the deadline is gone and the failure with it.
  *
- * Chunking stays. A test that holds the event loop for the better part of a
- * minute reports nothing while it runs and names nothing when it fails; the
- * chunks are a few seconds each, so a failure says which expressions it was in.
+ * Chunking stays, for a smaller reason than it used to have. An assertion
+ * failure names the offending expressions either way -- the body collects them
+ * into `wrong` and asserts on the list. What one long test costs is everything
+ * around that: no progress for the better part of a minute, and, if the parse
+ * HANGS or throws where the assertion never runs, nothing at all to say which
+ * of the 672 it was in. The chunks are a few seconds each and numbered.
  */
 function chunks<T>(
   items: readonly T[],

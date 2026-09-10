@@ -66,9 +66,12 @@ describe("the preflight runs before any generator does", () => {
   });
 
   it("probes where the generators will run, not in the oracle checkout", () => {
-    // mise resolves the Ruby runtime from the working directory upwards, so a
+    // Every version manager this code can meet -- mise, rbenv, asdf, chruby --
+    // resolves the Ruby runtime by walking UP from the working directory, so a
     // probe run somewhere else can select a different interpreter and clear a
-    // bundle the generators cannot load.
+    // bundle the generators cannot load. That is why the directory is the thing
+    // asserted here, and why nothing below names a particular manager: the
+    // preflight no longer picks one.
     const r = probeWith(true, "/tmp");
     expect(r.output).toContain('"chdir" => "/tmp"');
     expect(r.output).not.toContain('"chdir" => "/oracle/checkout"');
@@ -89,9 +92,10 @@ describe("the preflight runs before any generator does", () => {
    * Only the call itself proves the call.
    *
    * The assertion is EQUALITY between the probe's directory and the first
-   * generator's, because that is the invariant: `mise` resolves the Ruby
-   * runtime from the working directory upwards, so a probe run anywhere else
-   * can clear a bundle the generator cannot load. Matching a substring of the
+   * generator's, because that is the invariant: a version manager resolves the
+   * Ruby runtime by walking UP from the working directory, so a probe run
+   * anywhere else can clear a bundle the generator cannot load. Matching a
+   * substring of the
    * snapshot path is not enough — `testsuite --check` runs its generator in
    * `<snapshot>/submodules/plurimath-testsuite`, and a probe given the
    * snapshot root instead would still contain it.

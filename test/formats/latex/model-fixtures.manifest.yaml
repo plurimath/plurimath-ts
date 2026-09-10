@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-latex-model-fixtures.rb
-  sha256: 71d1127cc4f5244a50aca16989add330bc383b2169a0867719f82b3c872604a6
+  sha256: 340f074adc74f2e60df794e219124108b2d0c10b50afb850ab8a2ee8d4d2453d
   inputs:
-    scripts/generate-corpus.rb: a7ed6927c0f3a0821627de2bd6c2dc13e15dff889650419f588546b7ab8a1525
-    scripts/generate-latex-model-fixtures.rb: 71d1127cc4f5244a50aca16989add330bc383b2169a0867719f82b3c872604a6
+    scripts/generate-corpus.rb: c2ce1875421d0281f778a3fcdf09c2d72ebc9acb91aef847a8b756407bd4bd69
+    scripts/generate-latex-model-fixtures.rb: 340f074adc74f2e60df794e219124108b2d0c10b50afb850ab8a2ee8d4d2453d
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: cd62ced3a7e9bf015d1c7dca3a46a8ef7825f73b
+    commit: cb45e2cf33114f279ffda733157d9dbcf8a77e0f
     clean: true
     dirty_paths: []
 oracle:
@@ -30,10 +30,17 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: c3e7a4b08d05573f17017a0623a1f2af75147015015a281a802bc20230aa7379
+    sha256: 03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121
     resolved_gems: 77
     platforms:
+    - aarch64-linux-gnu
+    - aarch64-linux-musl
+    - arm-linux-gnu
+    - arm-linux-musl
+    - arm64-darwin
+    - x86_64-darwin
     - x86_64-linux-gnu
+    - x86_64-linux-musl
     bundler: 4.0.3
   sources:
   - kind: path
@@ -151,7 +158,7 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: ox
-    version: 2.14.29
+    version: 2.14.28
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/

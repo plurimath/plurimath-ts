@@ -67,15 +67,21 @@ describe("transform rule coverage", () => {
     expect(reached).toBeGreaterThan(90);
   });
 
-  it("registers the 91 rules the slice carries", () => {
+  it("registers the 99 rules the slice carries", () => {
     // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
     // eight-rule table/matrix family the slice defers: `transform.rb:8`, `:9`,
     // `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13 MULTISCRIPT —
     // twelve `Math::Function::Multiscript` constructors (`:1992`-`:3978`) and
     // the `:57` unwrap every one of them routes through — reached by the
-    // hand-picked "multiscript" coverage group, not the corpus.
-    expect(build.ruleIds.length).toBe(91);
-    expect(new Set(build.ruleIds).size).toBe(91);
+    // hand-picked "multiscript" coverage group, not the corpus — plus 8
+    // FRACTION, on top of `:1609` (already one of the 78, the corpus's own
+    // plain fraction shape): its six option-carrying `Utility.fractions`/
+    // `Fenced` siblings (`:1614`, `:2197`, `:2209`, `:2347`, `:2353`,
+    // `:2377`), plus the two standalone SUP_DIGITS/SUB_DIGITS unwraps (`:165`,
+    // `:170`) `:1614`'s mini shape needs — reached by the hand-picked
+    // "fraction" coverage group, not the corpus.
+    expect(build.ruleIds.length).toBe(99);
+    expect(new Set(build.ruleIds).size).toBe(99);
     for (const deferred of ["8", "9", "14", "32", "1569", "1574", "1584", "1649"]) {
       expect(build.ruleIds, `transform.rb:${deferred} is deferred`).not.toContain(deferred);
     }

@@ -71,6 +71,13 @@ const DEFERRED_INPUTS: readonly string[] = ["⒨(a@b)", "ⓢ(a&b@c&d)"];
 
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");
 const boundary = fixtures.cases.filter((entry) => entry.group === "slice-boundary");
+// Every row that is neither the corpus nor a boundary case: the RULE_COVERAGE
+// groups the generator adds, one per ported family. This started as an
+// afterthought and became the majority path — the corpus can no longer reach
+// the rules being ported, so each new family arrives with its own group here.
+const coverage = fixtures.cases.filter(
+  (entry) => entry.group !== "corpus-unicodemath" && entry.group !== "slice-boundary",
+);
 const parsed = fixtures.cases.filter((entry) => entry.model !== undefined);
 const raised = fixtures.cases.filter((entry) => entry.raises !== undefined);
 const deferred = corpus.filter(
@@ -98,7 +105,13 @@ describe("the UnicodeMath fixture set", () => {
     expect(raised.length).toBe(fixtures.raisedCount);
     expect(parsed.length + raised.length).toBe(fixtures.caseCount);
     expect(corpus.length).toBe(fixtures.corpusUnicodemathCount);
-    expect(corpus.length + boundary.length).toBe(fixtures.caseCount);
+    // Not `corpus + boundary`: that held only while those were the only two
+    // groups, and silently became false the moment a coverage group arrived.
+    expect(corpus.length + boundary.length + coverage.length).toBe(fixtures.caseCount);
+    // And the coverage rows have to BE there. A regeneration that dropped every
+    // one of them would keep the sum above consistent while quietly removing
+    // the only inputs that reach the newly ported rules.
+    expect(coverage.length).toBeGreaterThan(0);
   });
 
   // The crutch this slice removed. Every row carries the `Parser#text` the gem

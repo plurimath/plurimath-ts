@@ -84,6 +84,49 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
 #
 # Every one of the twelve also fires `:57`, the `pre_script` unwrap every
 # Multiscript construction routes through, so it needs no input of its own.
+# "fraction": every rule the port carries that calls `Utility.fractions`
+# (`unicode_math/utility.rb:86-104`) — the FRACTION family's real membership,
+# measured the same way as MULTISCRIPT above: every registered block wrapped
+# in a counter, one input per rule, traced on the oracle. The call sites
+# number SEVENTEEN, not the 44 a prior line-range survey estimated — that
+# count conflated this family with the `atom`/`atoms` and
+# `recursive_numerator`/`recursive_denominator` combinators (`transform.rb:486`
+# and some twenty siblings spanning the whole file, e.g. `:658`-`:697`), which
+# build the multi-character ARRAY a `numerator: sequence(...)` or
+# `denominator: sequence(...)` binding needs but do not themselves call
+# `Utility.fractions` and are not specific to fractions at all — `entity =
+# atoms | number` (`common_rules.rb:11`) is the generic multi-character-run
+# production every bare symbol sequence in the grammar goes through.
+#
+# Of the seventeen, `transform.rb:1609` — plain `numerator: simple, denominator:
+# simple`, no options — was already ported in the first slice: it is exactly
+# what the corpus's own fraction-shaped `expected.unicodemath` strings reach,
+# with `Utility.fractions`'s mutating `recursion_fraction` branch (continued
+# fractions, `(a)/(b)/(c)`) already wired to it. The six below are its
+# OPTION-carrying siblings — mini, `atop`, `choose`, `bevelled`, `ldiv`,
+# `no_display_style` — every one restricted to the same `simple`/`simple` shape
+# `:1609` already carries, so none of them needs the `atoms` combinator either:
+#
+#   "³/₂"          rule 1614 {mini_numerator, mini_denominator} -> Frac with
+#                  {displaystyle: false}; sup/sub-sized `Number`s, not `Symbol`s
+#   "x \atop y"    rule 2197 {numerator, atop, denominator} -> Frac with
+#                  {linethickness: "0"}
+#   "x \choose y"  rule 2209 {numerator, choose, denominator} -> Fenced(Lround,
+#                  [Frac with {linethickness: "0", choose: true}], Rround)
+#   "x\sdiv y"     rule 2347 {numerator, bevelled, denominator} -> Frac with
+#                  {bevelled: true}
+#   "x\ldiv y"     rule 2353 {numerator, ldiv, denominator} -> Frac with
+#                  {ldiv: true}
+#   "x\ndiv y"     rule 2377 {numerator, no_display_style, denominator} -> Frac
+#                  with {displaystyle: false} — NOT {no_display_style: false},
+#                  which is what `transform.rb:2371`'s SEQUENCE-denominator twin
+#                  passes instead; the gem is inconsistent between the two and
+#                  both are transcribed as measured.
+#
+# The other ten call sites — `:1619`, `:1624`, `:1629`, `:1634`, `:1639`,
+# `:1644`, `:2203`, `:2359`, `:2365`, `:2371` — all need a `sequence` numerator
+# or denominator and are deferred with the `atoms` combinator they depend on,
+# not carried by any input here.
 RULE_COVERAGE = {
   "multiscript" => [
     "^3 X",
@@ -98,6 +141,14 @@ RULE_COVERAGE = {
     "_2^3 X_5^6",
     "(_2^3)X",
     "(_2^3)X_5^6",
+  ],
+  "fraction" => [
+    "³/₂",
+    "x \\atop y",
+    "x \\choose y",
+    "x\\sdiv y",
+    "x\\ldiv y",
+    "x\\ndiv y",
   ],
 }.freeze
 

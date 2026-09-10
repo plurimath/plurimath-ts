@@ -63,7 +63,51 @@
  * than reusing a generated one, which is the premise MULTISCRIPT was portable
  * on and this family is not.
  *
- * Everything outside those 91 is genuinely ABSENT rather than stubbed. A node
+ * ## A third increment: FRACTION, cut to the shape `:1609` already carries
+ *
+ * FRACTION is every `rule(` block that calls `Utility.fractions`
+ * (`unicode_math/utility.rb:86-104`) — measured on the oracle by wrapping every
+ * registered block, not read off a line-range survey, which had put this
+ * family at 44 rules across `transform.rb:284`-`:3074`. That range mostly
+ * covers `atom`/`atoms` (`:486` and some nineteen more sites through the whole
+ * file, e.g. `:658`-`:697`) and `recursive_numerator`/`recursive_denominator`,
+ * the generic multi-character-run combinator every bare symbol sequence in the
+ * grammar goes through (`entity = atoms | number`, `common_rules.rb:11`) —
+ * real, but neither specific to fractions nor called through
+ * `Utility.fractions`. The measured count is **seventeen**: sixteen build
+ * `Math::Function::Frac` and one (`:2209`, `\choose`) wraps that `Frac` in a
+ * `Fenced`.
+ *
+ * One of the seventeen, `:1609` — `numerator: simple, denominator: simple`, no
+ * options — was already in the 78 corpus-derived rules: it is what the
+ * corpus's own fraction-shaped `expected.unicodemath` strings reach, complete
+ * with `Utility.fractions`'s mutating `recursion_fraction` branch for
+ * continued fractions like `(a)/(b)/(c)`. This increment ports its six
+ * OPTION-carrying siblings, every one still a `simple`/`simple` shape (`mini_
+ * numerator`/`mini_denominator` for `:1614`, `numerator`/`denominator` plus
+ * one more key for the rest) — `:1614` (mini, `{displaystyle: false}`),
+ * `:2197` (`\atop`,
+ * `{linethickness: "0"}`), `:2209` (`\choose`, the `Fenced` wrap),
+ * `:2347` (`\sdiv`/bevelled), `:2353` (`\ldiv`), and `:2377` (`\ndiv`,
+ * `{displaystyle: false}` — its SEQUENCE-denominator twin `:2371`, deferred,
+ * passes `{no_display_style: false}` instead for the same input shape; the gem
+ * is inconsistent between the two and both are transcribed as measured, not
+ * reconciled) — plus two small prerequisites `:1614`'s mini shape needs:
+ * `:165`/`:170`, the standalone `{sup_digits:}`/`{sub_digits:}` unwraps to
+ * `Math::Number`, reusing the `SUB_DIGITS` reverse lookup `:2971` already
+ * built and adding its `SUP_DIGITS` twin from a generated array this file
+ * already imports the sibling of.
+ *
+ * The other ten call sites — `:1619`, `:1624`, `:1629`, `:1634`, `:1639`,
+ * `:1644` (the `numerator`/`mini_numerator` × `denominator`/`mini_denominator`
+ * shapes where at least one side is a SEQUENCE), `:2203` (`\atop` with a
+ * sequence numerator), and `:2359`/`:2365`/`:2371` (bevelled/ldiv/
+ * no_display_style with a sequence denominator) — all need the `atoms`
+ * combinator above, which is cross-cutting rather than fraction-specific and
+ * is deferred whole, same reasoning as DECORATION: porting a slice of it here
+ * would mean starting a second large family rather than finishing this one.
+ *
+ * Everything outside those 99 is genuinely ABSENT rather than stubbed. A node
  * whose key set no ported rule matches survives the transform as a plain hash
  * and `finalize` throws on it, naming the keys — the loud failure the deferred
  * families are supposed to produce.
@@ -124,6 +168,7 @@ import {
   UNICODEMATH_NARY_SYMBOLS,
   UNICODEMATH_NARY_SYMBOLS_KEYS,
   UNICODEMATH_SUB_DIGITS,
+  UNICODEMATH_SUP_DIGITS,
 } from "./generated/parser-tables";
 import {
   UNICODEMATH_BINARY_FUNCTIONS,
@@ -261,6 +306,11 @@ const RROUND_ID = namedSymbolId("rround");
  */
 const SUB_DIGITS_INVERTED = new Map<string, string>(
   UNICODEMATH_SUB_DIGITS.map((entity, index) => [entity, String(index)]),
+);
+
+/** `Constants::SUP_DIGITS.key(entity)`, inverted the same way, for `:165`. */
+const SUP_DIGITS_INVERTED = new Map<string, string>(
+  UNICODEMATH_SUP_DIGITS.map((entity, index) => [entity, String(index)]),
 );
 
 function isAFamily(rubyClass: string): ReadonlySet<string> {
@@ -853,9 +903,10 @@ function naryFunctionName(naryClass: unknown): unknown {
 }
 
 /**
- * `:2971`'s `digit = Constants::SUB_DIGITS.key(digits).to_s; Math::Number.new(digit,
- * mini_sub_sized: true)` — the one rule that resolves a trailing SUB_DIGITS
- * unicode digit back to its plain-text key, mini-sized.
+ * `digit = Constants::SUB_DIGITS.key(digits).to_s; Math::Number.new(digit,
+ * mini_sub_sized: true)` — shared by `:170`'s standalone unwrap and `:2971`'s
+ * compound `{pre_subscript:, base:, sub_digits:}` shape, both resolving a
+ * trailing SUB_DIGITS unicode digit back to its plain-text key, mini-sized.
  */
 function subDigitNumber(digits: unknown): UnicodemathDraft {
   const digit = SUB_DIGITS_INVERTED.get(rubyToS(digits)) ?? "";
@@ -863,6 +914,17 @@ function subDigitNumber(digits: unknown): UnicodemathDraft {
     value: digit,
     miniSubSized: true,
     miniSupSized: false,
+    base: null,
+  });
+}
+
+/** `:165`'s SUP_DIGITS twin of `subDigitNumber`, mini-sup-sized instead. */
+function supDigitNumber(digits: unknown): UnicodemathDraft {
+  const digit = SUP_DIGITS_INVERTED.get(rubyToS(digits)) ?? "";
+  return new UnicodemathDraft("number", undefined, {
+    value: digit,
+    miniSubSized: false,
+    miniSupSized: true,
     base: null,
   });
 }
@@ -914,7 +976,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     });
   };
 
-  // --- pass-through and leaf rules (transform.rb:13-153) -----------------
+  // --- pass-through and leaf rules (transform.rb:13-170) -----------------
 
   rule("13", { exp: simple("exp") }, (b) => b.exp);
   rule("18", { atom: simple("atom") }, (b) => b.atom);
@@ -967,6 +1029,15 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("153", { monospace_value: simple("monospace_value") }, (b) =>
     newFontStyle("mtt", b.monospace_value),
   );
+
+  // FRACTION's mini variant (`:1614`) needs its numerator and denominator
+  // pre-resolved to a `simple` value, and the grammar leaves a single sup/sub
+  // digit as `{sup_digits: Slice}`/`{sub_digits: Slice}` until one of these
+  // fires — `subDigitNumber` already existed for `:2971`'s compound shape;
+  // `supDigitNumber` is its new sup-side twin, both a `Constants::SUP_DIGITS`/
+  // `SUB_DIGITS` reverse lookup the generated tables already carry.
+  rule("165", { sup_digits: simple("digits") }, (b) => supDigitNumber(b.digits));
+  rule("170", { sub_digits: simple("digits") }, (b) => subDigitNumber(b.digits));
 
   // --- two-key rules (transform.rb:236-2001) -----------------------------
 
@@ -1134,6 +1205,18 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     fractions(b.numerator, b.denominator),
   );
 
+  // FRACTION, second increment (`transform.rb:1614`-`:2377`): `:1609` above is
+  // the plain, option-free shape the corpus already reaches; these six are its
+  // option-carrying siblings, each still `numerator: simple, denominator:
+  // simple` so none needs the `atoms`/`recursive_numerator` combinator the
+  // other ten `Utility.fractions` call sites depend on (deferred; see the
+  // header).
+  rule(
+    "1614",
+    { mini_numerator: simple("numerator"), mini_denominator: simple("denominator") },
+    (b) => fractions(b.numerator, b.denominator, { displaystyle: false }),
+  );
+
   rule("1806", { expr: simple("expr"), func_expr: simple("func_expr") }, (b) => [
     b.expr,
     b.func_expr,
@@ -1199,6 +1282,38 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     return newPowerBase(b.base, unfencedValue(b.sub, true), unfencedValue(b.sup, true));
   });
 
+  // FRACTION continued — `atop` (`\atop`/`&#xa6;`) and `choose` (`\choose`/
+  // `&#x249e;`) each add one key to the same `numerator: simple, denominator:
+  // simple` shape; `:2203`, `atop`'s SEQUENCE-numerator twin, is deferred with
+  // the rest. `choose` alone builds `Fenced`, not `Frac` directly: the gem
+  // wraps the Frac in round parens it constructs with no lookup
+  // (`Math::Symbols::Paren::Lround.new`/`Rround.new`), which `LROUND_ID`/
+  // `RROUND_ID` (declared with the other named-symbol ids above) name here.
+  rule(
+    "2197",
+    {
+      numerator: simple("numerator"),
+      atop: simple("atop"),
+      denominator: simple("denominator"),
+    },
+    (b) => fractions(b.numerator, b.denominator, { linethickness: "0" }),
+  );
+
+  rule(
+    "2209",
+    {
+      numerator: simple("numerator"),
+      choose: simple("choose"),
+      denominator: simple("denominator"),
+    },
+    (b) =>
+      newFenced(
+        newSymbolOfClass(LROUND_ID),
+        [fractions(b.numerator, b.denominator, { linethickness: "0", choose: true })],
+        newSymbolOfClass(RROUND_ID),
+      ),
+  );
+
   rule(
     "2227",
     { whole: simple("whole"), decimal: simple("decimal"), fractional: simple("fractional") },
@@ -1208,6 +1323,40 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
           `${rubyToS(draftValue(b.whole))}${rubyToS(b.decimal)}${rubyToS(draftValue(b.fractional))}`,
         ),
       ),
+  );
+
+  // FRACTION concluded — `bevelled` (`\sdiv`/`\sdivide`/`\sfrac`/`&#x2044;`),
+  // `ldiv` (`\ldiv`/`&#x2215;`) and `no_display_style` (`\ndiv`/`\oslash`/
+  // `&#x2298;`), each still `numerator: simple, denominator: simple`. The last
+  // one's options are NOT `{no_display_style: false}` despite the key name:
+  // `transform.rb:2377` passes `{displaystyle: false}`, and only its
+  // SEQUENCE-denominator twin `:2371` (deferred) passes the differently-named
+  // option — measured, not reconciled, because the gem itself is inconsistent
+  // between the two.
+  rule(
+    "2347",
+    {
+      numerator: simple("numerator"),
+      bevelled: simple("bevelled"),
+      denominator: simple("denominator"),
+    },
+    (b) => fractions(b.numerator, b.denominator, { bevelled: true }),
+  );
+
+  rule(
+    "2353",
+    { numerator: simple("numerator"), ldiv: simple("ldiv"), denominator: simple("denominator") },
+    (b) => fractions(b.numerator, b.denominator, { ldiv: true }),
+  );
+
+  rule(
+    "2377",
+    {
+      numerator: simple("numerator"),
+      no_display_style: simple("no_display_style"),
+      denominator: simple("denominator"),
+    },
+    (b) => fractions(b.numerator, b.denominator, { displaystyle: false }),
   );
 
   // `Utility.unfenced_value(operand, ...)` on the first line is computed and
@@ -1615,11 +1764,14 @@ function finalizeValue(value: unknown): unknown {
 function finalizeDraft(draft: UnicodemathDraft, inputString?: string): MathNode {
   const init: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(draft.fields)) {
-    // `options` is a Ruby OPTION hash, not a tree value: the only ones this
-    // slice builds are `{}` (Fenced, Nary, Underset) and `{accent: true}`
-    // (`unicode_math/utility.rb:51`). Routing it through `finalizeValue` would
-    // put it in the unmatched-node branch, where `{}` and `{accent}` are not
-    // key sets the gem leaves behind and would be refused.
+    // `options` is a Ruby OPTION hash, not a tree value: every one this slice
+    // builds is `{}` (Fenced, Nary, Underset's default) or a flat hash of
+    // already-finalized primitives — `{accent: true}` (`unicode_math/
+    // utility.rb:51`), and FRACTION's `displaystyle`/`linethickness`/
+    // `bevelled`/`ldiv`/`choose`, singly or paired (`:1614`-`:2377`). Routing
+    // it through `finalizeValue` would put it in the unmatched-node branch,
+    // where none of these key sets is one the gem leaves behind, and it would
+    // be refused.
     init[key] = key === "options" ? value : finalizeValue(value);
   }
   if (draft.identity !== undefined) init[draft.kind === "symbol" ? "id" : "name"] = draft.identity;

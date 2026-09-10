@@ -119,6 +119,7 @@ module OracleGate
 
     Dir.mktmpdir("plurimath-ts-oracle-") do |tmp|
       snapshot_root = build_clean_repo_snapshot!(tmp)
+      assert_frozen_bundle_usable!(gem_dir, chdir: snapshot_root)
       regenerated_root = File.join(tmp, "regenerated", "repo")
       FileUtils.mkdir_p(regenerated_root)
 
@@ -312,6 +313,7 @@ module OracleGate
     Dir.mktmpdir("plurimath-ts-oracle-") do |tmp|
       snapshot_root = build_clean_repo_snapshot!(tmp)
       testsuite_root = File.join(snapshot_root, SUBMODULE_RELATIVE_PATH)
+      assert_frozen_bundle_usable!(gem_dir, chdir: testsuite_root)
       regenerated_root = File.join(tmp, "regenerated", "testsuite", "corpus")
       FileUtils.mkdir_p(regenerated_root)
 
@@ -848,14 +850,63 @@ module OracleGate
     status.success?
   end
 
+  # The generators below run under `BUNDLE_FROZEN=true`, so that a check can
+  # never quietly resolve or install a different dependency set part-way
+  # through and generate data no one can reproduce. Frozen mode also refuses a
+  # lockfile whose CHECKSUMS section is present but empty, which is what
+  # `bundle install` writes when it satisfies every gem from already-installed
+  # copies rather than fetching them. The gem does not track its lockfile, so
+  # every oracle checkout generates its own and that outcome is ordinary.
+  #
+  # Without this preflight the first generator dies several minutes in with a
+  # raw Bundler stack trace, attributed to the generator rather than to the
+  # bundle. Probe the same context up front instead, and name the remedy.
+  #
+  # `chdir` is the caller's, not the oracle checkout: `mise` resolves the Ruby
+  # runtime from the working directory upwards, so probing somewhere else could
+  # select a different interpreter and clear a bundle the generators cannot
+  # then load — or refuse one they could. It is the generators' own directory,
+  # so the probe answers the question that was asked.
+  def assert_frozen_bundle_usable!(gem_dir, chdir:)
+    _stdout, stderr, status = capture_command(
+      ["mise", "x", "--", "bundle", "exec", "ruby", "-e", ""],
+      chdir: chdir,
+      env: frozen_generator_env(gem_dir),
+    )
+    return if status.success?
+
+    raise Error, frozen_bundle_error(gem_dir, stderr)
+  end
+
+  def frozen_generator_env(gem_dir)
+    { "BUNDLE_FROZEN" => "true", "BUNDLE_GEMFILE" => File.join(gem_dir, "Gemfile") }
+  end
+
+  # Split from the probe so the message can be tested without a bundle.
+  def frozen_bundle_error(gem_dir, stderr)
+    remedy =
+      if stderr.include?("empty CHECKSUMS entry")
+        "Run `bundle lock --add-checksums` in #{gem_dir} to fill the lockfile's " \
+          "CHECKSUMS section, then re-run this check."
+      else
+        "Run `bundle install` in #{gem_dir}, then re-run this check."
+      end
+
+    <<~MESSAGE
+      the oracle checkout at #{gem_dir} has no usable frozen bundle.
+      #{remedy}
+      bundler said:
+      #{indent_block(stderr)}
+    MESSAGE
+  end
+
   def run_generator!(script, arguments, chdir:, gem_dir:)
-    gemfile = File.join(gem_dir, "Gemfile")
     relative = script.delete_prefix("#{chdir}/")
     puts "▶ #{relative} #{arguments.join(' ')}"
     stdout, stderr, status = capture_command(
       ["mise", "x", "--", "bundle", "exec", "ruby", script, *arguments],
       chdir: chdir,
-      env: { "BUNDLE_FROZEN" => "true", "BUNDLE_GEMFILE" => gemfile },
+      env: frozen_generator_env(gem_dir),
     )
 
     unless status.success?

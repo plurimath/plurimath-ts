@@ -117,8 +117,17 @@ Both halves are now answered, measured 2026-09-09 against the gem at
   optional shared runtime from `@lutaml/opal-runtime`" — the runtime this port
   exists to replace.
 
-Bridging to the published package is therefore closed on evidence, leaving a
-native port or continued deferral.
+**OMML has no package at all.** `@plurimath/omml` returns HTTP 404 from the npm
+registry — the organisation publishes `@plurimath/mml`, `@plurimath/plurimath`
+and `@lutaml/opal-runtime`, and nothing for OMML. So for OMML the bridging
+option does not exist to be evaluated; a native port is the only path. The gem
+side is smaller than MathML's: the `omml` gem its `Gemfile.lock` resolves is
+0.2.5, 6,797 lines over 270 files, and the gem's own `lib/plurimath/omml/` is
+722 lines (`translator.rb` 274, `formula_transformation.rb` 319, `utility.rb`
+109, `parser.rb` 20) against MathML's 1,353.
+
+Bridging to the published package is therefore closed on evidence for MathML
+and unavailable for OMML, leaving a native port or continued deferral for both.
 
 ### What a native port would involve
 

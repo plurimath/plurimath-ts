@@ -219,7 +219,8 @@ module OracleGate
 
   # The per-format fixture generators, and the committed file each one writes.
   #
-  # Both take `--oracle` rather than `--gem`; they load the pinned checkout
+  # These generators take `--oracle` rather than `--gem`; they load the pinned
+  # checkout
   # through $LOAD_PATH themselves instead of running under its Bundler alone.
   FORMAT_FIXTURE_GENERATORS = [
     {

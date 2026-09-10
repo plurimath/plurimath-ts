@@ -427,8 +427,12 @@ module HtmlParserDataGenerator
   # leaves a text that already looks like an entity alone and entity-encodes
   # everything else. This SAMPLES both branches rather than covering every
   # text the grammar can tag `:symbol`: the first three grammar-tagged texts
-  # that start with `&` (the pass-through branch) plus six fixed literals
-  # (the encode branch), deduplicated.
+  # starting with `&`, plus six fixed literals, deduplicated. Only ONE of
+  # those three passes through -- measured on the pinned oracle,
+  # `&#x1d70b;` returns unchanged while `&#xa0;&#xa0;` and
+  # `&#xa0;&#xa0;&#xa0;&#xa0;` do not, because `HTML_ENTITY` is anchored and
+  # a run of concatenated entities does not match it. Those two take the
+  # encoding branch alongside the six literals.
   def symbol_normalization_rows(symbol_texts)
     probes = symbol_texts.select { |text| text.start_with?("&") }.first(3) +
              %w[+ - = < > x]
@@ -781,9 +785,11 @@ module HtmlParserDataGenerator
         "and `Utility.sub_sup_method?` (`html/utility.rb:12`) tests its VALUES,\n" \
         "so a port needs both halves of the same hash. The keys are the same\n" \
         "eight texts `HTML_SUB_SUP_CLASSES` carries for the grammar, asserted\n" \
-        "equal at generation time. Emitted as one ordered pair list rather than\n" \
-        "a Map because `registry.ts` builds BOTH readers from it — a Map for\n" \
-        "the keyed lookup and a Set for the values — from this one artifact.",
+        "equal at generation time. Emitted as one ordered pair list, from which\n" \
+        "`registry.ts` derives both readers: a Map for the keyed lookup and a\n" \
+        "Set for the values. A Map here would hold the same eight pairs, and\n" \
+        "`new Set(map.values())` the same four names — so this is the\n" \
+        "arrangement, not a constraint.",
       ),
       CoreDataGenerator.ts_tuple_map(
         "HTML_SYMBOL_CLASS_INPUT", "ReadonlyMap<string, string>", data[:symbol_classes],
@@ -813,9 +819,9 @@ module HtmlParserDataGenerator
         "measured on both of its branches: a text already matching\n" \
         "`HTML_ENTITY` is returned unchanged, anything else is run through\n" \
         "`Utility.string_to_html_entity`. A SAMPLE of #{data[:symbol_normalization].length}\n" \
-        "texts, not exhaustive coverage — `symbol_normalization_rows` below says\n" \
-        "which. No test reads this table yet; it is a recorded oracle\n" \
-        "measurement, not an enforced one.",
+        "texts, not exhaustive coverage; `symbol_normalization_rows` in\n" \
+        "`scripts/generate-html-parser-data.rb` picks them. No test reads this\n" \
+        "table yet; it is a recorded oracle measurement, not an enforced one.",
       ),
     ]
     CoreDataGenerator.write_ts(File.join(out_root, "transform-tables.ts"), sections)

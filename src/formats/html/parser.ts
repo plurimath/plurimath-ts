@@ -173,7 +173,7 @@ function enterContainer(depth: number): number {
  * and so reaches a caller as `ParseError`. The GRAMMAR raises `ParseFailed`,
  * which is mapped with a position. And the JSON ROUND TRIP / TRANSFORM raises
  * on the nesting limit (`plainTree`) — a node shape whose rule family the gem
- * does not carry is kept as a raw hash, not raised on; see `finalizeDraft`'s
+ * does not carry is kept as a raw hash, not raised on; see `finalizeValue`'s
  * header in `transform.ts`.
  *
  * A normalisation or JSON-round-trip-or-transform failure is attributed to

@@ -76,6 +76,7 @@
         "test/formats/asciimath/model-parity.spec.ts",
         "test/formats/asciimath/render-parity.spec.ts",
         "test/formats/html/degenerate-slots.spec.ts",
+        "test/formats/html/model-parity.spec.ts",
         "test/formats/html/render-parity.spec.ts",
         "test/formats/latex/model-parity.spec.ts",
         "test/formats/latex/render-parity.spec.ts",

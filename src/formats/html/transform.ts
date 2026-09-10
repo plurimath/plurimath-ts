@@ -1077,7 +1077,6 @@ export function shapeOf(value: unknown): "simple" | "sequence" | "other" {
   return isPlainObject(value) ? "other" : "simple";
 }
 
-
 /**
  * A hash NO RULE MATCHED is kept, not refused — the same thing the gem does.
  *
@@ -1113,7 +1112,6 @@ export function shapeOf(value: unknown): "simple" | "sequence" | "other" {
  * record of the gem's behaviour, where they are an observation rather than a
  * gate.
  */
-
 
 /**
  * Finalizes one transformed value into what the immutable model can hold:

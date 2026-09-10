@@ -72,6 +72,7 @@ const CORE_EXPORTS = [
   "OverleftrightarrowNode",
   "OversetNode",
   "ParseError",
+  "ParseOptionError",
   "PlurimathError",
   "ProdNode",
   "RenderError",

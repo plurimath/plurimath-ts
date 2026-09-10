@@ -53,6 +53,26 @@ module OracleGate
     TEXT
   end
 
+  # The model-fixture generator names come from FORMAT_FIXTURE_GENERATORS
+  # rather than being spelled out here a second time. This text still named
+  # two of them on the day a third format was registered in that map, which
+  # is what a hand-kept duplicate of a list does; a derived one cannot.
+  def model_fixture_script_lines
+    family = FORMAT_FIXTURE_GENERATORS.find do |generator|
+      generator[:basename] == "model-fixtures.json"
+    end
+    unless family
+      raise Error, "no generator family emits model-fixtures.json, so this " \
+                   "help text cannot name the scripts that do."
+    end
+
+    # Joined with the indentation the surrounding heredoc has already had
+    # stripped from its own lines: `<<~` dedents the SOURCE lines, and an
+    # interpolated newline is inserted verbatim, so continuation lines carry
+    # their four spaces themselves.
+    family.fetch(:script).values.sort.map { |name| "scripts/#{name}" }.join(",\n    ")
+  end
+
   def repo_usage
     <<~TEXT
       Usage:
@@ -72,8 +92,7 @@ module OracleGate
           scripts/probe-degenerate-slots.rb
         - every committed test/formats/<format>/model-fixtures.json and its
           sidecar via that format's own generator:
-          scripts/generate-html-model-fixtures.rb,
-          scripts/generate-latex-model-fixtures.rb
+          #{model_fixture_script_lines}
 
       It compares those regenerated outputs against a clean temporary snapshot
       of this repository's committed HEAD, never against live directories in

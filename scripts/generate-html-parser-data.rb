@@ -9,9 +9,10 @@
 # which *projection* of each: `array_to_expression` (`html/parse.rb:133`) is
 # called four times, at `:9`, `:21`, `:25` and `:29`, with `UNARY_CLASSES`,
 # `PARENTHESIS.keys`, `PARENTHESIS.values` and `SUB_SUP_CLASSES.keys`. Four
-# tables, three constants, and one projection deliberately left out:
-# `SUB_SUP_CLASSES.values` is read by `html/utility.rb:12`, on the transform
-# side, which this slice does not port.
+# tables from three constants for the grammar; the fifth projection,
+# `SUB_SUP_CLASSES.values`, is read on the TRANSFORM side
+# (`html/transform.rb:47-51` indexes the hash, `html/utility.rb:12` tests its
+# values) and goes into `transform-tables.ts` instead, as the whole hash.
 #
 # **Which of the two earlier collisions applies here: NEITHER, and both are
 # re-checked on every run rather than assumed.**
@@ -87,7 +88,8 @@
 #   --help
 #
 # Outputs:
-#   src/formats/html/generated/parser-tables.ts  the grammar's tables
+#   src/formats/html/generated/parser-tables.ts     the grammar's tables
+#   src/formats/html/generated/transform-tables.ts  the transform's tables
 #   src/formats/html/generated/provenance.ts     what they came from
 #
 # The generator is deterministic: two runs over the same oracle produce
@@ -310,6 +312,148 @@ module HtmlParserDataGenerator
     end
   end
 
+  # --- the transform's tables ----------------------------------------------
+
+  # Which `Html::Constants` projections the TRANSFORM reads, and where.
+  #
+  #   UNARY_CLASSES        -> `:unary` / `:first_value` (`transform.rb:9`, `:171`)
+  #   SUB_SUP_CLASSES      -> indexed at `transform.rb:49`, its VALUES tested by
+  #                           `html/utility.rb:12`
+  #   (`binary` is not a Constants table: `html/parse.rb:10` and `:16` write
+  #   `str("lim")` and `str("mod")` as literals.)
+  #
+  # Both reach `Utility.get_class`, which resolves a name at RUNTIME through
+  # `Object.const_get` (`utility.rb:139`). There is no TypeScript equivalent, so
+  # every name reachable here is resolved through the gem and emitted with the
+  # class it reached.
+  GET_CLASS_LITERALS = {
+    "lim" => "binary",
+    "mod" => "mod",
+  }.freeze
+
+  TRANSFORM_ENTRY_FIELDS = %w[name rubyClass disposition carrier family sources].freeze
+
+  # Every name `Utility.get_class` can receive from `html/transform.rb`, with
+  # the tags that can carry it. Not read off the transform's source: `unary`
+  # and `sum_prod` are GRAMMAR tags, so the texts under each are exactly the
+  # `Html::Constants` table the grammar built that rule from, and the two
+  # remaining names are the literals above.
+  def get_class_sources
+    sources = Hash.new { |hash, key| hash[key] = [] }
+    constants::UNARY_CLASSES.each { |name| sources[name.to_s] << "unary" }
+    constants::SUB_SUP_CLASSES.each_value { |name| sources[name.to_s] << "sum_prod" }
+    GET_CLASS_LITERALS.each { |name, tag| sources[name] << tag }
+    sources.transform_values { |tags| tags.uniq.sort }
+  end
+
+  # One entry, with the class the gem actually reached and that class's census
+  # disposition. Unlike LaTeX's, EVERY reachable name here resolves — measured,
+  # not assumed: an unresolvable one stops the run rather than being emitted as
+  # a documented gap, because `html/transform.rb` has no name it never asks for.
+  def get_class_rows(census_index)
+    rows = get_class_sources.sort.map do |name, tags|
+      klass =
+        begin
+          Plurimath::Html::Utility.get_class(name)
+        rescue ::NameError => e
+          raise Error, "Utility.get_class(#{name.inspect}) raises #{e.class}: " \
+                       "#{e.message}. Every name html/transform.rb can reach " \
+                       "resolved when this port was written."
+        end
+      entry = CorpusGenerator.transform_registry_entry(
+        census_index, name, klass, tags, family: true
+      )
+      if entry["disposition"] == "deferred"
+        raise Error, "#{name.inspect} resolves to #{entry['rubyClass']}, which the " \
+                     "census defers (ARCHITECTURE.md §5); the HTML transform reaches it"
+      end
+      entry
+    end
+    raise Error, "no get_class name resolved; the tag-to-table mapping is wrong" if rows.empty?
+
+    rows
+  end
+
+  # `Constants::SUB_SUP_CLASSES` whole, in the gem's order: the transform
+  # INDEXES it (`transform.rb:49`) and `Utility.sub_sup_method?` tests its
+  # VALUES (`html/utility.rb:12`), so neither half alone is enough.
+  #
+  # Emitted as ordered pairs rather than a Map for the reason the grammar
+  # tables are arrays: order is the gem's and a keyed shape invites a
+  # projection that collapses. The keys are asserted to match the grammar's
+  # own table, so the two files cannot drift apart.
+  def sub_sup_class_rows(grammar_keys)
+    rows = constants::SUB_SUP_CLASSES.map { |key, value| [key.to_s, value.to_s] }
+    unless rows.map(&:first) == grammar_keys
+      raise Error, "SUB_SUP_CLASSES.keys (#{rows.map(&:first).join(', ')}) no longer match " \
+                   "the emitted HTML_SUB_SUP_CLASSES (#{grammar_keys.join(', ')})"
+    end
+    rows
+  end
+
+  # `Utility.all_symbols_classes(:html)` — the table
+  # `Utility.symbols_class(text, lang: :html)` (`utility.rb:212`) looks a
+  # STRIPPED text up in, as input text -> symbol id.
+  #
+  # A Map is safe: both halves are String-keyed, so nothing collapses. The
+  # length identity is re-checked rather than assumed, and the parens half is
+  # merged last, so it wins the texts both halves carry.
+  def symbol_class_rows
+    symbols = Plurimath::Utility.symbols_hash(:html)
+    parens = Plurimath::Utility.parens_hash(:html)
+    merged = Plurimath::Utility.all_symbols_classes(:html)
+    union = (symbols.keys | parens.keys).length
+    unless merged.length == union
+      raise Error, "all_symbols_classes(:html) has #{merged.length} entries but the " \
+                   "union of its two halves has #{union}"
+    end
+
+    merged.map do |text, klass|
+      unless text.is_a?(::String)
+        raise Error, "all_symbols_classes(:html) is keyed by #{text.class}, not String; " \
+                     "a Map would collapse entries the gem keeps apart"
+      end
+
+      [text, CorpusGenerator.class_key(klass).delete_prefix("Math::Symbols::")]
+    end
+  end
+
+  def symbol_class_overlap
+    (Plurimath::Utility.symbols_hash(:html).keys &
+      Plurimath::Utility.parens_hash(:html).keys).sort
+  end
+
+  # The transform's own round trip, proved rather than described:
+  # `TransformUtility.normalize_symbol` (`html/transform_utility.rb:53-58`)
+  # leaves a text that already looks like an entity alone and entity-encodes
+  # everything else. Both branches are measured here, over every text the
+  # grammar can tag `:symbol`, so the port's copy of that regexp cannot drift.
+  def symbol_normalization_rows(symbol_texts)
+    probes = symbol_texts.select { |text| text.start_with?("&") }.first(3) +
+             %w[+ - = < > x]
+    probes.uniq.map do |text|
+      [text, Plurimath::Html::TransformUtility.normalize_symbol(text)]
+    end
+  end
+
+  # Everything `emit_transform_tables_file` needs, measured in one place. The
+  # census is built here rather than read from `corpus/census.yaml`: that file
+  # is the corpus generator's output, and a generator that reads another
+  # generator's artifact records the wrong provenance for it.
+  def transform_data(gem_dir, grammar_keys)
+    CorpusGenerator.load_model_classes!(gem_dir)
+    census_index = CorpusGenerator.build_census(gem_dir)
+      .fetch("classes").to_h { |entry| [entry["name"], entry] }
+    symbol_classes = symbol_class_rows
+    {
+      get_class: get_class_rows(census_index),
+      sub_sup_classes: sub_sup_class_rows(grammar_keys),
+      symbol_classes: symbol_classes,
+      symbol_overlap: symbol_class_overlap,
+      symbol_normalization: symbol_normalization_rows(symbol_classes.map(&:first)),
+    }
+  end
+
   # --- the entity alternation ----------------------------------------------
 
   # `html_entity` (`html/parse.rb:165-169`) spelled with `repeat(1)` where the
@@ -530,6 +674,154 @@ module HtmlParserDataGenerator
     CoreDataGenerator.write_ts(File.join(out_root, "parser-tables.ts"), sections)
   end
 
+  # A string-literal union, on one line when it fits inside Biome's print width
+  # and expanded when it does not.
+  def ts_union(name, members)
+    literals = members.map { |member| CoreDataGenerator.ts_string(member) }
+    flat = "export type #{name} = #{literals.join(' | ')};"
+    return flat if flat.length <= 100
+
+    "export type #{name} =\n  | #{literals.join("\n  | ")};"
+  end
+
+  def ts_entry_list(name, type, entries, doc)
+    lines = entries.flat_map do |entry|
+      body = TRANSFORM_ENTRY_FIELDS.filter_map do |field|
+        next unless entry.key?(field)
+
+        "    #{field}: #{CoreDataGenerator.ts_flat(entry.fetch(field))},"
+      end
+      ["  {", *body, "  },"]
+    end
+    [CoreDataGenerator.ts_doc(doc), "export const #{name}: #{type} = [", *lines, "];"].join("\n")
+  end
+
+  def ts_tuple_list(name, type, entries, doc)
+    lines = entries.map do |key, value|
+      "  [#{CoreDataGenerator.ts_string(key)}, #{CoreDataGenerator.ts_string(value)}],"
+    end
+    [CoreDataGenerator.ts_doc(doc), "export const #{name}: #{type} = [", *lines, "];"].join("\n")
+  end
+
+  def emit_transform_tables_file(out_root, data)
+    families = data[:get_class].filter_map { |row| row["family"] }.uniq.sort
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        The constant tables `Plurimath::Html::Transform` builds its nodes from.
+
+        `html/transform.rb` resolves a captured name at RUNTIME —
+        `Object.const_get("Plurimath::Math::Function::\#{capitalize(text)}")`
+        (`utility.rb:139`) — so every name it can reach is resolved here,
+        through the gem, and emitted with the class it reached.
+        `src/formats/html/registry.ts` binds these to `core` constructors;
+        nothing restates them.
+
+        Unlike LaTeX's table this one has no unresolvable half: every name
+        reachable from `html/transform.rb` resolves, and the generator stops if
+        one stops resolving rather than emitting the gap.
+      TEXT
+      [
+        CoreDataGenerator.ts_doc(
+          "How the census disposes of a resolved class — the same vocabulary\n" \
+          "`src/formats/latex/generated/transform-tables.ts` uses. An `aliased`\n" \
+          "class adds no field and no equality of its own, so the port carries\n" \
+          "it as its carrier plus a name.",
+        ),
+        'export type HtmlTransformDisposition = "implemented" | "aliased";',
+      ].join("\n"),
+      [
+        CoreDataGenerator.ts_doc(
+          "Which Ruby `initialize` shape a `get_class` name resolves to,\n" \
+          "measured off the runtime by `CorpusGenerator` (instantiate, read the\n" \
+          "assigned ivars back, then re-verify parameter wiring with sentinel\n" \
+          "arguments).",
+        ),
+        # Biome collapses a union that fits its print width and expands one
+        # that does not, so the emitter makes the same call rather than
+        # shipping generated output `pnpm lint` would reformat.
+        ts_union("HtmlTransformConstructorFamily", families),
+      ].join("\n"),
+      [
+        CoreDataGenerator.ts_doc(
+          "One resolved name: the text as CAPTURED (the registry is keyed by it,\n" \
+          "so nothing has to reimplement `capitalize`), the class the gem\n" \
+          "reached, its census disposition, the implemented carrier the port\n" \
+          "constructs, and the measured constructor family. `sources` names the\n" \
+          "grammar tags — or the `html/parse.rb` literal — that carry the text.",
+        ),
+        "export interface HtmlTransformClassEntry {",
+        "  readonly name: string;",
+        "  readonly rubyClass: string;",
+        "  readonly disposition: HtmlTransformDisposition;",
+        "  readonly carrier: string;",
+        "  readonly family: HtmlTransformConstructorFamily;",
+        "  readonly sources: readonly string[];",
+        "}",
+      ].join("\n"),
+      ts_entry_list(
+        "HTML_TRANSFORM_GET_CLASS", "readonly HtmlTransformClassEntry[]",
+        data[:get_class],
+        "Every name `Utility.get_class` can receive from the HTML transform,\n" \
+        "sorted by name.\n" \
+        "\n" \
+        "`unary` and `sum_prod` are grammar tags, so their texts are the\n" \
+        "`Html::Constants` tables the grammar built those rules from. `lim` and\n" \
+        "`mod` are `html/parse.rb` literals (`:10` and `:16`), not table\n" \
+        "entries, and `lim` carries both tags because `SUB_SUP_CLASSES` maps\n" \
+        "the text `lim` onto the class `lim` as well.",
+      ),
+      ts_tuple_list(
+        "HTML_TRANSFORM_SUB_SUP_CLASSES",
+        "ReadonlyArray<\n  readonly [key: string, className: string]\n>",
+        data[:sub_sup_classes],
+        "`Constants::SUB_SUP_CLASSES` whole, in the gem's order.\n" \
+        "\n" \
+        "`transform.rb:49` INDEXES it — `SUB_SUP_CLASSES[sum_prod.to_sym]` —\n" \
+        "and `Utility.sub_sup_method?` (`html/utility.rb:12`) tests its VALUES,\n" \
+        "so a port needs both halves of the same hash. The keys are the same\n" \
+        "eight texts `HTML_SUB_SUP_CLASSES` carries for the grammar, asserted\n" \
+        "equal at generation time; the values are four distinct class names,\n" \
+        "which is why this is an ordered pair list and not a Map.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "HTML_SYMBOL_CLASS_INPUT", "ReadonlyMap<string, string>", data[:symbol_classes],
+        doc: "`Utility.all_symbols_classes(:html)` — the table\n" \
+             "`Utility.symbols_class(text, lang: :html)` (`utility.rb:212`)\n" \
+             "looks a STRIPPED text up in, as input text -> symbol id.\n" \
+             "\n" \
+             "Both halves of the merge are String-keyed, so a Map collapses\n" \
+             "nothing; the parens half is merged last and wins its\n" \
+             "#{data[:symbol_overlap].length} overlapping texts — see\n" \
+             "`HTML_SYMBOL_CLASS_PAREN_OVERLAP`.\n" \
+             "\n" \
+             "A miss is not an error: `symbols_class` falls back to a bare\n" \
+             "`Math::Symbols::Symbol` carrying the text.",
+      ),
+      ts_string_list(
+        "HTML_SYMBOL_CLASS_PAREN_OVERLAP", data[:symbol_overlap],
+        "The texts present in BOTH halves of `all_symbols_classes(:html)`.\n" \
+        "`symbols_hash.merge(parens_hash)` means the paren class wins each one;\n" \
+        "emitted so a test can prove the Map above kept the winning side.",
+      ),
+      ts_tuple_list(
+        "HTML_SYMBOL_NORMALIZATION_PROBES",
+        "ReadonlyArray<\n  readonly [text: string, normalized: string]\n>",
+        data[:symbol_normalization],
+        "`TransformUtility.normalize_symbol` (`html/transform_utility.rb:53-58`)\n" \
+        "measured on both of its branches: a text already matching\n" \
+        "`HTML_ENTITY` is returned unchanged, anything else is run through\n" \
+        "`Utility.string_to_html_entity`. The port reimplements that regexp, so\n" \
+        "these rows are what `test/formats/html/registry.spec.ts` checks it\n" \
+        "against rather than a second reading of the Ruby.",
+      ),
+    ]
+    CoreDataGenerator.write_ts(File.join(out_root, "transform-tables.ts"), sections)
+  end
+
+  def ts_string_list(name, value, doc)
+    CoreDataGenerator.ts_const(name, "readonly string[]", value, doc: doc)
+  end
+
   def emit_provenance_file(out_root, provenance)
     sections = [
       CoreDataGenerator.ts_doc(<<~TEXT.chomp),
@@ -675,8 +967,11 @@ module HtmlParserDataGenerator
     markers = raw_decimal_markers
     provenance = build_provenance(gem_dir, dirty, options[:allow_dirty])
 
+    transform = transform_data(gem_dir, tables.fetch("HTML_SUB_SUP_CLASSES"))
+
     written = [
       emit_tables_file(options[:out], tables, projections, markers),
+      emit_transform_tables_file(options[:out], transform),
       emit_provenance_file(options[:out], provenance),
     ]
     written.sort.each { |path| puts "  #{relative(path)}" }
@@ -685,6 +980,10 @@ module HtmlParserDataGenerator
     puts "unemitted projections: " \
          "#{projections.map { |s, t, d, _, _| "#{s} #{t}/#{d}" }.join(', ')}"
     puts "raw decimal markers #{markers.length}: #{markers.map(&:inspect).join(', ')}"
+    puts "get_class #{transform[:get_class].length} names, " \
+         "sub_sup #{transform[:sub_sup_classes].length} pairs, " \
+         "symbols_class #{transform[:symbol_classes].length} entries " \
+         "(#{transform[:symbol_overlap].length} carried by both halves)"
     puts "committable: #{provenance['committable']}"
     0
   end

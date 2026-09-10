@@ -53,14 +53,14 @@ function probeWith(succeeds: boolean, chdir: string): { ok: boolean; output: str
 
 describe("the preflight runs before any generator does", () => {
   it("refuses a bundle that cannot start, naming the remedy", () => {
-    const r = probeWith(false, "/snapshot");
+    const r = probeWith(false, "/tmp");
     expect(r.ok).toBe(true);
     expect(r.output).toContain("raised:");
     expect(r.output).toContain("no usable frozen bundle");
   });
 
   it("lets a usable bundle through", () => {
-    const r = probeWith(true, "/snapshot");
+    const r = probeWith(true, "/tmp");
     expect(r.ok).toBe(true);
     expect(r.output).toContain("returned");
   });
@@ -69,13 +69,13 @@ describe("the preflight runs before any generator does", () => {
     // mise resolves the Ruby runtime from the working directory upwards, so a
     // probe run somewhere else can select a different interpreter and clear a
     // bundle the generators cannot load.
-    const r = probeWith(true, "/snapshot");
-    expect(r.output).toContain('"chdir" => "/snapshot"');
+    const r = probeWith(true, "/tmp");
+    expect(r.output).toContain('"chdir" => "/tmp"');
     expect(r.output).not.toContain('"chdir" => "/oracle/checkout"');
   });
 
   it("probes under the same frozen environment the generators get", () => {
-    const r = probeWith(true, "/snapshot");
+    const r = probeWith(true, "/tmp");
     expect(r.output).toContain('"BUNDLE_FROZEN" => "true"');
     expect(r.output).toContain('"BUNDLE_GEMFILE" => "/oracle/checkout/Gemfile"');
   });

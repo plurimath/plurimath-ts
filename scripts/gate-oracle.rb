@@ -871,7 +871,22 @@ module OracleGate
   # `Errno::EACCES`, say) is not rescued by `capture_command` either, and
   # reaches this method's own caller as itself, same as before this fallback
   # existed.
+  # A missing EXECUTABLE and a missing working DIRECTORY both reach
+  # `capture_command` as `Errno::ENOENT`, so "the rescue fired" does not mean
+  # "bundle is absent" — measured: `Open3.capture3({}, "true", chdir: "/nope")`
+  # raises `No such file or directory - /nope`, the same class as a missing
+  # binary. Falling back to mise on a missing directory would then report that
+  # neither bundle nor mise is on PATH, which would be a wrong diagnosis of
+  # exactly the kind this file is being changed to stop making.
+  #
+  # So the directory is checked first, by name, and only an ENOENT that is NOT
+  # about it reaches the fallback.
   def capture_generator_command(ruby_args, chdir:, gem_dir:)
+    unless Dir.exist?(chdir)
+      raise Error, "the working directory #{chdir} does not exist, so no " \
+                   "generator can run there. This is not a missing bundler."
+    end
+
     env = frozen_generator_env(gem_dir)
     direct = ["bundle", "exec", "ruby", *ruby_args]
     begin

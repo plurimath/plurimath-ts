@@ -63,27 +63,27 @@ describe("run_generator! tries a Ruby on PATH before mise", () => {
   it("never reaches for mise when bundle exec ruby succeeds directly", () => {
     const r = withStubbedCommand(
       ["ok"],
-      'OracleGate.run_generator!("/chdir/script.rb", [], chdir: "/chdir", gem_dir: "/gem")',
+      'OracleGate.run_generator!("/tmp/script.rb", [], chdir: "/tmp", gem_dir: "/gem")',
     );
     expect(r.ok).toBe(true);
-    expect(r.output).toContain('["bundle", "exec", "ruby", "/chdir/script.rb"]');
+    expect(r.output).toContain('["bundle", "exec", "ruby", "/tmp/script.rb"]');
     expect(r.output).not.toContain("mise");
   });
 
   it("falls back to mise only when bundle itself could not be executed", () => {
     const r = withStubbedCommand(
       ["missing", "ok"],
-      'OracleGate.run_generator!("/chdir/script.rb", [], chdir: "/chdir", gem_dir: "/gem")',
+      'OracleGate.run_generator!("/tmp/script.rb", [], chdir: "/tmp", gem_dir: "/gem")',
     );
     expect(r.ok).toBe(true);
-    expect(r.output).toContain('["bundle", "exec", "ruby", "/chdir/script.rb"]');
-    expect(r.output).toContain('["mise", "x", "--", "bundle", "exec", "ruby", "/chdir/script.rb"]');
+    expect(r.output).toContain('["bundle", "exec", "ruby", "/tmp/script.rb"]');
+    expect(r.output).toContain('["mise", "x", "--", "bundle", "exec", "ruby", "/tmp/script.rb"]');
   });
 
   it("does not guess at mise for a failure that is not a missing executable", () => {
     const r = withStubbedCommand(
       ["broken"],
-      'OracleGate.run_generator!("/chdir/script.rb", [], chdir: "/chdir", gem_dir: "/gem")',
+      'OracleGate.run_generator!("/tmp/script.rb", [], chdir: "/tmp", gem_dir: "/gem")',
     );
     expect(r.ok).toBe(true);
     expect(r.output).toContain("raised");
@@ -94,7 +94,7 @@ describe("run_generator! tries a Ruby on PATH before mise", () => {
   it("names both attempts when neither bundle nor mise can be executed", () => {
     const r = withStubbedCommand(
       ["missing", "missing"],
-      'OracleGate.run_generator!("/chdir/script.rb", [], chdir: "/chdir", gem_dir: "/gem")',
+      'OracleGate.run_generator!("/tmp/script.rb", [], chdir: "/tmp", gem_dir: "/gem")',
     );
     expect(r.ok).toBe(true);
     expect(r.output).toContain("raised");
@@ -107,7 +107,7 @@ describe("assert_frozen_bundle_usable! tries a Ruby on PATH before mise", () => 
   it("never reaches for mise when the direct probe succeeds", () => {
     const r = withStubbedCommand(
       ["ok"],
-      'OracleGate.assert_frozen_bundle_usable!("/gem", chdir: "/chdir")',
+      'OracleGate.assert_frozen_bundle_usable!("/gem", chdir: "/tmp")',
     );
     expect(r.ok).toBe(true);
     expect(r.output).toContain('["bundle", "exec", "ruby", "-e", ""]');
@@ -117,9 +117,29 @@ describe("assert_frozen_bundle_usable! tries a Ruby on PATH before mise", () => 
   it("falls back to mise only when bundle itself could not be executed", () => {
     const r = withStubbedCommand(
       ["missing", "ok"],
-      'OracleGate.assert_frozen_bundle_usable!("/gem", chdir: "/chdir")',
+      'OracleGate.assert_frozen_bundle_usable!("/gem", chdir: "/tmp")',
     );
     expect(r.ok).toBe(true);
     expect(r.output).toContain('["mise", "x", "--", "bundle", "exec", "ruby", "-e", ""]');
+  });
+  it("names a missing working directory instead of blaming bundler", () => {
+    // Both a missing binary and a missing chdir surface as `Errno::ENOENT`, so
+    // "the rescue fired" never meant "bundle is absent". Measured:
+    // `Open3.capture3({}, "true", chdir: "/nope")` raises
+    // `No such file or directory - /nope`. Falling back to mise there would
+    // report that neither bundle nor mise is on PATH — the wrong diagnosis, of
+    // exactly the kind this file exists to stop making.
+    const r = withStubbedCommand(
+      ["ok"],
+      'OracleGate.run_generator!("/x/script.rb", [], chdir: "/definitely-not-a-directory-xyz", gem_dir: "/gem")',
+    );
+    // `withStubbedCommand` catches inside the harness, so `ok` stays true and
+    // the outcome is in the output — same as the sibling tests above.
+    expect(r.output).toContain("raised");
+    expect(r.output).toContain("/definitely-not-a-directory-xyz");
+    expect(r.output).toContain("does not exist");
+    expect(r.output).not.toContain("not on PATH");
+    // and it never got as far as trying anything
+    expect(r.output).toContain('"calls" => []');
   });
 });

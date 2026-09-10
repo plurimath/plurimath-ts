@@ -80,6 +80,12 @@ describe("transform rule coverage", () => {
     // `:2377`), plus the two standalone SUP_DIGITS/SUB_DIGITS unwraps (`:165`,
     // `:170`) `:1614`'s mini shape needs — reached by the hand-picked
     // "fraction" coverage group, not the corpus.
+    //
+    // The count is rules REGISTERED, not branches reached: the multiscript
+    // group carries four extra inputs whose trailing script is fenced, because
+    // the twelve that name a rule each all carry BARE scripts, and bypassing
+    // every `unfencedValue` call in `:2958`, `:3662`, `:3853` and `:3978` left
+    // the suite green without them.
     expect(build.ruleIds.length).toBe(99);
     expect(new Set(build.ruleIds).size).toBe(99);
     for (const deferred of ["8", "9", "14", "32", "1569", "1574", "1584", "1649"]) {

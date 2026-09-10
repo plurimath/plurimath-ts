@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-html-model-fixtures.rb
-  sha256: 96651621f4676c3d49d1789a3d61543c7766be860dc69354beaed0b60130eed4
+  sha256: 96d1ded427e3e6dd7a0d3b38bcf8bc62f190e51c65da6a5008849110695c69e3
   inputs:
     scripts/generate-corpus.rb: a7ed6927c0f3a0821627de2bd6c2dc13e15dff889650419f588546b7ab8a1525
-    scripts/generate-html-model-fixtures.rb: 96651621f4676c3d49d1789a3d61543c7766be860dc69354beaed0b60130eed4
+    scripts/generate-html-model-fixtures.rb: 96d1ded427e3e6dd7a0d3b38bcf8bc62f190e51c65da6a5008849110695c69e3
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 0360b06d998b4c3f89cdf81aa9f73fbd9f3c822b
+    commit: 93dd5f107ac40cfd6b9294b38a9d701bd630255d
     clean: true
     dirty_paths: []
 oracle:
@@ -30,10 +30,17 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: c3e7a4b08d05573f17017a0623a1f2af75147015015a281a802bc20230aa7379
+    sha256: 03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121
     resolved_gems: 77
     platforms:
+    - aarch64-linux-gnu
+    - aarch64-linux-musl
+    - arm-linux-gnu
+    - arm-linux-musl
+    - arm64-darwin
+    - x86_64-darwin
     - x86_64-linux-gnu
+    - x86_64-linux-musl
     bundler: 4.0.3
   sources:
   - kind: path
@@ -151,7 +158,7 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: ox
-    version: 2.14.29
+    version: 2.14.28
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/

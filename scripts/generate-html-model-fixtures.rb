@@ -47,6 +47,7 @@
 # gem, which would silently answer from a different version.
 
 require "digest"
+require "fileutils"
 require "json"
 require "optparse"
 

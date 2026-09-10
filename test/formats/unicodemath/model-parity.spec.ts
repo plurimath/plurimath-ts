@@ -86,6 +86,13 @@ const deferred = corpus.filter(
 const supported = corpus.filter(
   (entry) => entry.model !== undefined && !DEFERRED_INPUTS.includes(entry.input),
 );
+// The corpus does not reach the rules a slice has just ported -- that is why
+// each family arrives with a coverage group -- so `supported` above, drawn from
+// `corpus` alone, compares the model of nothing this slice added. Measured: with
+// only that comparison, changing a newly ported fraction rule's options to
+// `displaystyle: true` still passed every test in this file. The firing counts
+// and the preprocessing checks do not see a wrong VALUE.
+const coverageSupported = coverage.filter((entry) => entry.model !== undefined);
 
 function parseFixture(entry: FixtureCase): unknown {
   return parseUnicodemath(entry.input);
@@ -150,6 +157,19 @@ describe("the parsed model", () => {
   );
 });
 
+describe("the parsed model, for the hand-picked coverage inputs", () => {
+  it("has rows to compare at all", () => {
+    expect(coverageSupported.length).toBeGreaterThan(0);
+  });
+
+  it.each(coverageSupported.map((entry) => [entry.input, entry] as const))(
+    "%j: deep-equals the gem's",
+    (_input, entry) => {
+      expect(normalize(parseFixture(entry) as never)).toStrictEqual(entry.model);
+    },
+  );
+});
+
 describe("the rule families this slice defers", () => {
   it.each(deferred.map((entry) => [entry.input, entry] as const))(
     "%j: refuses loudly, naming the unmatched keys",
@@ -168,7 +188,7 @@ describe("the rule families this slice defers", () => {
  * The slice EDGE, as opposed to the deferred family above.
  *
  * Each of these fires one `transform.rb` rule the port does not carry — `:99`,
- * `:766`, `:746`, `:1791` — and the gem answers each with a perfectly ordinary
+ * `:765`, `:745`, `:1791` — and the gem answers each with a perfectly ordinary
  * model, recorded in the fixture row beside it. The port must REFUSE rather
  * than answer differently, and two of the four are here because it did not:
  *

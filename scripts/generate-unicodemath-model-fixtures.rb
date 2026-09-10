@@ -63,7 +63,8 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
 # (`transform.rb:1992`-`:3978`), one input per rule, each traced on the oracle
 # with every registered block wrapped in a counter (rule numbers are the
 # lines `rule(` calls OPEN on, not the block's `source_location`, which Ruby
-# reports one or two lines later for a multi-line header):
+# reports at the line carrying the block opener -- measured offsets on the
+# pinned gem run to six, so there is no fixed distance to subtract):
 #
 #   "^3 X"          rule 1992 {pre_supscript, base}
 #   "_2 X"          rule 2001 {pre_subscript, base}

@@ -85,10 +85,15 @@ describe("transform rule coverage", () => {
     for (const deferred of ["8", "9", "14", "32", "1569", "1574", "1584", "1649"]) {
       expect(build.ruleIds, `transform.rb:${deferred} is deferred`).not.toContain(deferred);
     }
-    // `transform.rb:846` shares its signature with `:871` and `rule` unshifts,
-    // so `:871` wins every tie and `:846` can never match. Porting it would add
+    // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
+    // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.
-    expect(build.ruleIds).not.toContain("846");
+    //
+    // This asserted `"846"` until it was measured: 846 is the CONTINUATION of
+    // the header that opens on 845, and every id in `ruleIds` is a `rule(`
+    // opening line, so the assertion could not have failed however the port
+    // changed.
+    expect(build.ruleIds).not.toContain("845");
   });
 
   it("fires every one of them at least once", () => {

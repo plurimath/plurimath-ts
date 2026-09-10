@@ -44,17 +44,19 @@
  * (`{pre_script: simple(:script)} -> script`, the same shape as `:55`/`:56`)
  * every one of them routes through — the grammar wraps every prescript
  * expression in a `pre_script` key that only `:57` removes, confirmed by the
- * oracle firing it once per Multiscript input. All twelve reuse
- * `unfenced_value` and the existing `PowerBase`/ternary-alias machinery; the
+ * oracle firing it once per Multiscript input. All twelve reuse the existing
+ * `PowerBase`/ternary-alias machinery, and four of them (`:2958`, `:3662`,
+ * `:3853`, `:3978`) additionally call `unfenced_value`; the
  * one addition is `:2971`'s reverse lookup into `Constants::SUB_DIGITS`,
  * built from the generated `UNICODEMATH_SUB_DIGITS` array this file already
  * had no reason to import.
  *
  * A DECORATION family (`transform.rb:1286`-`:1491`, building `Obrace`/
  * `Ubrace`, `Overset`, `Menclose`, `Underset`) was measured alongside it and
- * set aside, unstarted: three of its eight rules read
- * `Constants::UNDER_HORIZONTAL_BRACKETS`, `OVERLAYS_NOTATIONS` and
- * `BELOWS_NOTATIONS`, and none of the three is in any generated table this
+ * set aside, unstarted: all eight of its rules read one of
+ * `Constants::UNDER_HORIZONTAL_BRACKETS` (four of them), `OVERLAYS_NOTATIONS`
+ * (three) or `BELOWS_NOTATIONS` (one), and none of the three is in any
+ * generated table this
  * repository carries — confirmed both by `grep -rl` across `src/` (nothing)
  * and by `scripts/generate-unicodemath-parser-data.rb`'s own
  * `UNCONSUMED_CONSTANTS` list, which already names all three as read only by
@@ -954,8 +956,9 @@ export interface UnicodemathTransformBuild {
  * the fixture set actually exercises each ported rule.
  *
  * The ids are the `rule(` lines, not the block's `source_location` — Ruby
- * reports the line carrying `do`, which for a multi-line header is one or two
- * lines later.
+ * reports the line carrying the block opener, which for a multi-line header is
+ * some way further down: measured offsets on the pinned gem run to six, with
+ * `:3978`'s block reporting 3984.
  */
 export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   const t = new Transform();

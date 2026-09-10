@@ -1,7 +1,7 @@
 /**
  * Every ported transform rule is exercised by the fixture set.
  *
- * `model-parity.spec.ts` proves the port agrees with the gem on 159 parsed
+ * `model-parity.spec.ts` proves the port agrees with the gem on 183 parsed
  * inputs. It cannot prove that a rule was ever REACHED — a rule with a typo in
  * its action passes vacuously if nothing routes to it, and 78 rules is too many
  * to eyeball. So `buildHtmlTransform` counts each rule's firings, this suite

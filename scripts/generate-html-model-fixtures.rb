@@ -155,8 +155,8 @@ RULE_COVERAGE = {
   # it and the sequence folds to a lone `{expression: ...}`.
   "space" => [" x", " x+y", " ", "x "],
   # The shapes NO rule matches, which the gem PARSES and returns as a raw hash
-  # inside the formula -- only its subsequent RENDER fails. Twenty-two inputs
-  # chosen off an oracle sweep to cover all 23 such signatures the sweep found;
+  # inside the formula -- only its subsequent RENDER fails. Twenty-one inputs
+  # chosen off an oracle sweep to cover all 32 such signatures the sweep found;
   # the port has to return the same odd tree rather than refusing the parse.
   "unmatched" => [
     "1(b)",

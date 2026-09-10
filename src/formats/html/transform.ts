@@ -20,7 +20,7 @@
  * ported. UnicodeMath's port had to slice at 78 of its 519 because no corpus
  * input reached the rest; here the checkable corpus reaches everything.
  * Measured with every registered block wrapped in a counter on the oracle, over
- * the 164 inputs `scripts/generate-html-model-fixtures.rb` emits:
+ * the 188 inputs `scripts/generate-html-model-fixtures.rb` emits:
  *
  *   - the 95 distinct HTML strings the pinned corpus round-trips through
  *     `to_html` fire **39**;
@@ -41,8 +41,8 @@
  * equal**. Parslet demands an exact key-set match
  * (`parslet/pattern.rb:97`, `exp.size == tree.size`) and `simple`/`sequence`
  * are disjoint on shape, so the signature is a complete discriminator: no rule
- * in this file is dead, and the eighteen key sets carried by two or more rules
- * are live siblings distinguished by shape.
+ * in this file is dead, and the twenty-three key sets carried by two or more
+ * rules are live siblings distinguished by shape.
  *
  * ## No `Parslet::Slice` can reach here
  *
@@ -59,10 +59,12 @@
  * `TransformUtility.sub_sup_value` (`html/transform_utility.rb:24-27`) ASSIGNS
  * `parameter_one`/`parameter_two` on a node the transform already built,
  * whenever `Utility.sub_sup_method?` says the base is one of the four
- * sub/sup-capable classes. Four ported rule families reach it. Core nodes are
- * publicly immutable (ARCHITECTURE.md §5), so the transform works on
+ * sub/sup-capable classes. Five ported rules reach that branch over the
+ * fixture set — `:211`, `:218`, `:225`, `:244`, `:351` — measured the same
+ * way as the 39/78 split above. Core nodes are publicly immutable
+ * (ARCHITECTURE.md §5), so the transform works on
  * `HtmlDraft` objects and `finalize` converts the finished tree into real
- * `core` nodes in one pass at the end. Five rules also mutate a bound ARRAY
+ * `core` nodes in one pass at the end. Four rules also mutate a bound ARRAY
  * (`:63`, `:68`, `:81`, `:97` and the `Array#insert`/`<<` they use); those are
  * transcribed as in-place operations for the same reason.
  *

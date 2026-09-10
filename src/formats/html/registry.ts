@@ -234,8 +234,14 @@ export const HTML_CLASS_REGISTRY: ReadonlyMap<string, HtmlClassEntry> = new Map(
  * `Html::Constants::SUB_SUP_CLASSES` as the lookup `transform.rb:49` performs:
  * the captured `sum_prod` text → the class name `get_class` is then given.
  *
- * Eight keys onto four names, so this Map is smaller than the ordered pair
- * list it is built from — which is exactly why the generated table is a list.
+ * All eight keys are distinct, so this Map holds all eight pairs — the same
+ * count as the list it is built from. It is the VALUES that repeat: `prod`
+ * and `sum` each spell three ways (a named entity, a numeric entity, and the
+ * raw Unicode symbol), `log` and `lim` once each, four distinct names in
+ * total. That value repetition is exactly why the generated table keeps the
+ * raw pairs as a list rather than a Map to begin with — `sub_sup_method?`
+ * needs the VALUE set (`HTML_SUB_SUP_METHOD_CLASS_NAMES` below), which a
+ * lookup keyed the other way cannot hand back.
  */
 export const HTML_SUB_SUP_CLASS_OF: ReadonlyMap<string, string> = new Map(
   HTML_TRANSFORM_SUB_SUP_CLASSES,

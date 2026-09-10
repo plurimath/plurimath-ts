@@ -176,7 +176,7 @@ function specFor(format: string, name: string): FixtureSpec {
   }
   const spec = MODEL_FIXTURE_SPECS[format as keyof typeof MODEL_FIXTURE_SPECS];
   if (spec === undefined) {
-    throw new Error(`test/formats/#{format}/#{name}: no MODEL_FIXTURE_SPECS entry`);
+    throw new Error(`test/formats/${format}/${name}: no MODEL_FIXTURE_SPECS entry`);
   }
   return spec;
 }

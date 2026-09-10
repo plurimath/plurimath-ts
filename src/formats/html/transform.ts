@@ -1143,9 +1143,10 @@ function finalizeDraft(draft: HtmlDraft, inputString?: string): MathNode {
   for (const [key, value] of Object.entries(draft.fields)) {
     // `options` and `attributes` are Ruby OPTION hashes, not tree values: the
     // only ones this transform builds are `{}` (Table, Vec, Linebreak).
-    // Routing them through `finalizeValue` would put them in the
-    // unmatched-node branch, where `{}` is not a signature the gem leaves
-    // behind and would be refused.
+    // `finalizeValue` would walk them as if they were a node, rebuilding each
+    // as a fresh plain object. Keeping the original is not about refusal —
+    // nothing refuses an unmatched hash any more — it is about not treating an
+    // option hash as part of the tree in the first place.
     init[key] = key === "options" || key === "attributes" ? value : finalizeValue(value);
   }
   if (draft.identity !== undefined) init[draft.kind === "symbol" ? "id" : "name"] = draft.identity;

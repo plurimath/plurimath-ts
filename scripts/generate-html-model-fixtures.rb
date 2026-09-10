@@ -54,10 +54,13 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-html-model-fixtures.rb"
 
 # Inputs chosen to drive transform rules the round trip does not reach.
 # Grouped by what they are for, and deliberately small: each one is here
-# because a rule needs it, not to be a second corpus. Fourteen of them are
-# `let(:string)` literals from the gem's own `spec/plurimath/html/parse_spec.rb`
-# and `parser_spec.rb` — copied in rather than scraped, so this file stays the
-# only thing that decides what is generated.
+# because a rule needs it, not to be a second corpus. Eighteen of them are
+# EXACT MATCHES for a `let(:string)` literal in the gem's own
+# `spec/plurimath/html/parse_spec.rb` or `parser_spec.rb` — measured by string
+# equality, which cannot distinguish a deliberate copy from an independently
+# written coincidence (some, like `abs(3)`, are short enough that either is
+# plausible). Either way, this file stays the only thing that decides what is
+# generated; nothing here is scraped.
 RULE_COVERAGE = {
   # `transform.rb:184`-`:393`, the 24-rule sub/sup cluster: every combination
   # of a sub value, a sup value and a trailing expression, in both the `simple`

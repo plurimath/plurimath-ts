@@ -238,10 +238,10 @@ export const HTML_CLASS_REGISTRY: ReadonlyMap<string, HtmlClassEntry> = new Map(
  * count as the list it is built from. It is the VALUES that repeat: `prod`
  * and `sum` each spell three ways (a named entity, a numeric entity, and the
  * raw Unicode symbol), `log` and `lim` once each, four distinct names in
- * total. That value repetition is exactly why the generated table keeps the
- * raw pairs as a list rather than a Map to begin with — `sub_sup_method?`
- * needs the VALUE set (`HTML_SUB_SUP_METHOD_CLASS_NAMES` below), which a
- * lookup keyed the other way cannot hand back.
+ * total. The generated table (`HTML_TRANSFORM_SUB_SUP_CLASSES`) is a raw
+ * pair list, not a Map, because this Map is not its only reader:
+ * `HTML_SUB_SUP_METHOD_CLASS_NAMES` below builds the VALUE set from that
+ * same list, so the generator emits it once and both are derived here.
  */
 export const HTML_SUB_SUP_CLASS_OF: ReadonlyMap<string, string> = new Map(
   HTML_TRANSFORM_SUB_SUP_CLASSES,

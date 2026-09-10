@@ -53,14 +53,26 @@ describe("the HTML fixture set", () => {
     expect(fixtures.schema).toBe("plurimath-corpus/html-model/1");
   });
 
-  // A suite that quietly ran zero cases has happened in this repository before;
-  // the counts are pinned so a fixture regeneration that empties a category
-  // fails here rather than passing green.
+  // A suite that quietly ran zero cases has happened in this repository before.
+  // This alone only checks the counts against each other and the header's OWN
+  // fields, so a regeneration that empties a category and edits the header to
+  // match still passes it — the two checks below anchor `raised` and the
+  // normalisation-refusal subset to a literal instead, so emptying either
+  // fails here regardless of what the header says.
   it("has the counts its header records", () => {
     expect(fixtures.cases.length).toBe(fixtures.caseCount);
     expect(parsed.length).toBe(fixtures.parsedCount);
     expect(raised.length).toBe(fixtures.raisedCount);
     expect(parsed.length + raised.length).toBe(fixtures.caseCount);
+  });
+
+  it("actually has refusals, not merely a header count that says so", () => {
+    expect(raised.length).toBeGreaterThan(0);
+  });
+
+  it("actually has a case that fails during normalisation, not merely a header count that says so", () => {
+    const normalisationRefused = fixtures.cases.filter((entry) => entry.normalized === undefined);
+    expect(normalisationRefused.length).toBeGreaterThan(0);
   });
 
   it("draws most of its inputs from the corpus's own HTML round trip", () => {

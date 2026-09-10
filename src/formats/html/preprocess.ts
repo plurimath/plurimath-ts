@@ -106,8 +106,9 @@ export function isWholeHtmlEntity(text: string): boolean {
  * shared one: ARCHITECTURE.md §3 rule 3 lets a format import layer 1, leaf
  * services and its own files, and another format's preprocessor is none of
  * those. `HTML_SYMBOL_NORMALIZATION_PROBES` in
- * `./generated/transform-tables` is the oracle check that the two agree with
- * the gem rather than merely with each other.
+ * `./generated/transform-tables` records a sample of this encoder measured
+ * against the gem, for a reader to check by eye — no test asserts against it
+ * yet.
  */
 const ENCODE_BASIC = /[<>'"&]/g;
 const ENCODE_EXTENDED = /[^ -~]/gu;

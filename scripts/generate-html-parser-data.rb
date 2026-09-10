@@ -423,11 +423,12 @@ module HtmlParserDataGenerator
       Plurimath::Utility.parens_hash(:html).keys).sort
   end
 
-  # The transform's own round trip, proved rather than described:
   # `TransformUtility.normalize_symbol` (`html/transform_utility.rb:53-58`)
   # leaves a text that already looks like an entity alone and entity-encodes
-  # everything else. Both branches are measured here, over every text the
-  # grammar can tag `:symbol`, so the port's copy of that regexp cannot drift.
+  # everything else. This SAMPLES both branches rather than covering every
+  # text the grammar can tag `:symbol`: the first three grammar-tagged texts
+  # that start with `&` (the pass-through branch) plus six fixed literals
+  # (the encode branch), deduplicated.
   def symbol_normalization_rows(symbol_texts)
     probes = symbol_texts.select { |text| text.start_with?("&") }.first(3) +
              %w[+ - = < > x]
@@ -780,8 +781,9 @@ module HtmlParserDataGenerator
         "and `Utility.sub_sup_method?` (`html/utility.rb:12`) tests its VALUES,\n" \
         "so a port needs both halves of the same hash. The keys are the same\n" \
         "eight texts `HTML_SUB_SUP_CLASSES` carries for the grammar, asserted\n" \
-        "equal at generation time; the values are four distinct class names,\n" \
-        "which is why this is an ordered pair list and not a Map.",
+        "equal at generation time. Emitted as one ordered pair list rather than\n" \
+        "a Map because `registry.ts` builds BOTH readers from it — a Map for\n" \
+        "the keyed lookup and a Set for the values — from this one artifact.",
       ),
       CoreDataGenerator.ts_tuple_map(
         "HTML_SYMBOL_CLASS_INPUT", "ReadonlyMap<string, string>", data[:symbol_classes],
@@ -810,9 +812,10 @@ module HtmlParserDataGenerator
         "`TransformUtility.normalize_symbol` (`html/transform_utility.rb:53-58`)\n" \
         "measured on both of its branches: a text already matching\n" \
         "`HTML_ENTITY` is returned unchanged, anything else is run through\n" \
-        "`Utility.string_to_html_entity`. The port reimplements that regexp, so\n" \
-        "these rows are what `test/formats/html/registry.spec.ts` checks it\n" \
-        "against rather than a second reading of the Ruby.",
+        "`Utility.string_to_html_entity`. A SAMPLE of #{data[:symbol_normalization].length}\n" \
+        "texts, not exhaustive coverage — `symbol_normalization_rows` below says\n" \
+        "which. No test reads this table yet; it is a recorded oracle\n" \
+        "measurement, not an enforced one.",
       ),
     ]
     CoreDataGenerator.write_ts(File.join(out_root, "transform-tables.ts"), sections)

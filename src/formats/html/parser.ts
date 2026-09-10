@@ -172,8 +172,9 @@ function enterContainer(depth: number): number {
  * `RangeError: invalid codepoint 0xD800 in UTF-8`, which is a `StandardError`
  * and so reaches a caller as `ParseError`. The GRAMMAR raises `ParseFailed`,
  * which is mapped with a position. And the JSON ROUND TRIP / TRANSFORM raises
- * either on the nesting limit (`plainTree`) or on a node shape whose rule
- * family the gem does not carry either.
+ * on the nesting limit (`plainTree`) — a node shape whose rule family the gem
+ * does not carry is kept as a raw hash, not raised on; see `finalizeDraft`'s
+ * header in `transform.ts`.
  *
  * A normalisation or JSON-round-trip-or-transform failure is attributed to
  * offset 0: unlike a grammar failure it carries no position, and the gem's

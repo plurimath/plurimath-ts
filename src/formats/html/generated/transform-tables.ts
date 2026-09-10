@@ -311,9 +311,11 @@ export const HTML_TRANSFORM_GET_CLASS: readonly HtmlTransformClassEntry[] = [
  * and `Utility.sub_sup_method?` (`html/utility.rb:12`) tests its VALUES,
  * so a port needs both halves of the same hash. The keys are the same
  * eight texts `HTML_SUB_SUP_CLASSES` carries for the grammar, asserted
- * equal at generation time. Emitted as one ordered pair list rather than
- * a Map because `registry.ts` builds BOTH readers from it — a Map for
- * the keyed lookup and a Set for the values — from this one artifact.
+ * equal at generation time. Emitted as one ordered pair list, from which
+ * `registry.ts` derives both readers: a Map for the keyed lookup and a
+ * Set for the values. A Map here would hold the same eight pairs, and
+ * `new Set(map.values())` the same four names — so this is the
+ * arrangement, not a constraint.
  */
 export const HTML_TRANSFORM_SUB_SUP_CLASSES: ReadonlyArray<
   readonly [key: string, className: string]
@@ -1796,9 +1798,9 @@ export const HTML_SYMBOL_CLASS_PAREN_OVERLAP: readonly string[] = [
  * measured on both of its branches: a text already matching
  * `HTML_ENTITY` is returned unchanged, anything else is run through
  * `Utility.string_to_html_entity`. A SAMPLE of 9
- * texts, not exhaustive coverage — `symbol_normalization_rows` below says
- * which. No test reads this table yet; it is a recorded oracle
- * measurement, not an enforced one.
+ * texts, not exhaustive coverage; `symbol_normalization_rows` in
+ * `scripts/generate-html-parser-data.rb` picks them. No test reads this
+ * table yet; it is a recorded oracle measurement, not an enforced one.
  */
 export const HTML_SYMBOL_NORMALIZATION_PROBES: ReadonlyArray<
   readonly [text: string, normalized: string]

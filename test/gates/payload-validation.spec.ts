@@ -136,6 +136,8 @@ const FIXTURE_SPEC_PATHS: { readonly [path: string]: FixtureSpec } = {
     schema: "plurimath-corpus/html-model/1",
     rows: "cases",
     shape: "format-model",
+    parseTextField: "normalized",
+    parseTextStage: "normalize",
     corpusGroup: "corpus-html",
     corpusCountField: "corpusHtmlCount",
     usesCorpus: true,
@@ -158,6 +160,21 @@ interface FixtureSpec {
   readonly schema: string;
   readonly rows: string;
   readonly shape: string;
+  /**
+   * What a `format-model` row calls the text the grammar saw. Named per format
+   * because the GEM names it per format: `Latex::Parser` and
+   * `UnicodeMath::Parser` preprocess, while `Html::Parser` normalises
+   * (`normalized_text`), and a fixture that renamed it would be describing
+   * something the gem does not call by that name. Defaults to `preprocessed`.
+   */
+  readonly parseTextField?: string;
+  /**
+   * What a refusal from that stage calls itself in `raisedIn`. Spelled out
+   * rather than derived from `parseTextField`, because turning "normalized"
+   * into "normalize" by trimming a letter is the kind of rule that works until
+   * a format names its stage something else.
+   */
+  readonly parseTextStage?: string;
   readonly corpusGroup?: string;
   readonly corpusCountField?: string;
   readonly usesCorpus: boolean;
@@ -707,6 +724,8 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         // the field name and the group value that must add up to it.
         const corpusGroup = record.spec.corpusGroup;
         const corpusCountField = record.spec.corpusCountField;
+        const parseTextField = record.spec.parseTextField ?? "preprocessed";
+        const parseTextStage = record.spec.parseTextStage ?? "preprocess";
         if (corpusGroup === undefined || corpusCountField === undefined) {
           throw new Error(`${record.relative}: a format-model spec must name its corpus group`);
         }
@@ -742,16 +761,16 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
                 "input",
                 "raises",
                 "raisedIn",
-                ...("preprocessed" in item ? ["preprocessed"] : []),
+                ...(parseTextField in item ? [parseTextField] : []),
               ],
               at,
             );
-            expect(["preprocess", "parse"]).toContain(
+            expect([parseTextStage, "parse"]).toContain(
               stringField(item, "raisedIn", record.relative),
             );
           } else {
-            expectExactKeys(item, ["group", "id", "input", "preprocessed", "model"], at);
-            stringValue(item, "preprocessed", record.relative);
+            expectExactKeys(item, ["group", "id", "input", parseTextField, "model"], at);
+            stringValue(item, parseTextField, record.relative);
             const model = mapField(item, "model", at);
             expect(stringField(model, "class", at)).toBe("Math::Formula");
             mapField(model, "fields", at);

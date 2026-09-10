@@ -131,10 +131,20 @@ src/
                      generated from, and a second generator writing there
                      would falsify that. Merging the two is a rename, for a
                      change that can regenerate the corpus outputs alongside.
-    unicodemath/     Same: renderer landed (toUnicodemath), parser a later phase.
+    unicodemath/     Same shape as latex/: renderer landed (toUnicodemath), and
+                     grammar.ts with its generated/ tables; transform and a
+                     `parseUnicodemath` entry are not in, so index.ts publishes
+                     output only.
     mathml/          toMathml(MathNode) → string. Imports: core, xml, its slice.
     html/            Source renderer landed: index.ts, renderer.ts, render.ts,
                      and render-shared.ts. Its package subpath is a later phase.
+                     The parser half has begun: grammar.ts, ported rule for rule
+                     from html/parse.rb, with the transform and a `parseHtml`
+                     entry still to come — so index.ts publishes output only and
+                     grammar.ts is not a build entry.
+      generated/     The HTML grammar's own constant tables, written by
+                     scripts/generate-html-parser-data.rb. Same rule-1 placement
+                     and same reason as latex/generated above.
     omml/            Renderer internals landed: renderer.ts, render.ts, and
                      render-shared.ts. Its format index and package subpath are
                      a later phase.

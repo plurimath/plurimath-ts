@@ -208,6 +208,17 @@ describe("the frozen-bundle error names a remedy only where the evidence support
     expect(message).toContain("Could not find gem 'rake (= 12.3.3)'");
   });
 
+  it("prints a probe command a reader can paste back into a shell", () => {
+    // The probe's last argument is the EMPTY string, the program handed to
+    // `-e`. Joining the array on a space dropped it, so the message read
+    // `ruby -e ` and the line could not be re-run as written. Asserted on the
+    // rendered message rather than on the helper, because it is the message a
+    // reader copies from.
+    const message = frozenBundleError(INVALID_RUBYOPT_STDERR);
+    expect(message).toContain("bundle exec ruby -e ''");
+    expect(message).not.toMatch(/ruby -e `/);
+  });
+
   it("blames the bundle rather than the generator that had not run yet", () => {
     const message = frozenBundleError(EMPTY_CHECKSUMS_STDERR);
     expect(message).toContain("no usable frozen bundle");

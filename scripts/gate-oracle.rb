@@ -9,6 +9,7 @@
 require "fileutils"
 require "json"
 require "open3"
+require "shellwords"
 require "tmpdir"
 
 module OracleGate
@@ -850,6 +851,18 @@ module OracleGate
   # message a failure produces can quote the exact command that ran.
   FROZEN_BUNDLE_PROBE_COMMAND = ["mise", "x", "--", "bundle", "exec", "ruby", "-e", ""].freeze
 
+  # The command as something a reader can paste back into a shell.
+  #
+  # `join(" ")` will not do: the last argument is the EMPTY string -- the
+  # program `-e` is given -- and joining renders it as nothing at all, so the
+  # message said `ruby -e ` with a trailing space. Anyone copying that line runs
+  # a different command from the one that failed: `-e` then swallows whatever
+  # follows, or errors for want of an argument. `Shellwords.escape` leaves the
+  # ordinary words untouched and turns the empty one into `''`.
+  def frozen_bundle_probe_display
+    FROZEN_BUNDLE_PROBE_COMMAND.map { |argument| Shellwords.escape(argument) }.join(" ")
+  end
+
   def assert_frozen_bundle_usable!(gem_dir, chdir:)
     _stdout, stderr, status = capture_command(
       FROZEN_BUNDLE_PROBE_COMMAND,
@@ -933,7 +946,7 @@ module OracleGate
     MESSAGE
 
     <<~MESSAGE
-      the frozen-bundle preflight (`#{FROZEN_BUNDLE_PROBE_COMMAND.join(' ')}`) in #{gem_dir} failed with exit #{status.exitstatus}.
+      the frozen-bundle preflight (`#{frozen_bundle_probe_display}`) in #{gem_dir} failed with exit #{status.exitstatus}.
       stderr:
       #{indent_block(stderr)}
     MESSAGE

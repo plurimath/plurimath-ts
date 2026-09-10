@@ -30,7 +30,40 @@
  * `get_table_class`, `Td`/`Tr` construction and per-subclass table paren
  * defaults that no other rule here touches.
  *
- * Everything outside those 78 is genuinely ABSENT rather than stubbed. A node
+ * ## A second increment: MULTISCRIPT, reached by hand-picked inputs
+ *
+ * Outside the eight-rule table family, no other unported rule fires on the
+ * 103-string corpus — that method is exhausted — so a second family was
+ * chosen by what it BUILDS rather than what the corpus reaches, and given
+ * inputs of its own in `scripts/generate-unicodemath-model-fixtures.rb`,
+ * each checked against the oracle before being written down.
+ *
+ * MULTISCRIPT is every rule building `Math::Function::Multiscript`, measured
+ * (not the eight a prior pass estimated) at **thirteen**: twelve constructors
+ * spanning `transform.rb:1992` to `:3978`, plus the `:57` unwrap
+ * (`{pre_script: simple(:script)} -> script`, the same shape as `:55`/`:56`)
+ * every one of them routes through — the grammar wraps every prescript
+ * expression in a `pre_script` key that only `:57` removes, confirmed by the
+ * oracle firing it once per Multiscript input. All twelve reuse
+ * `unfenced_value` and the existing `PowerBase`/ternary-alias machinery; the
+ * one addition is `:2971`'s reverse lookup into `Constants::SUB_DIGITS`,
+ * built from the generated `UNICODEMATH_SUB_DIGITS` array this file already
+ * had no reason to import.
+ *
+ * A DECORATION family (`transform.rb:1286`-`:1491`, building `Obrace`/
+ * `Ubrace`, `Overset`, `Menclose`, `Underset`) was measured alongside it and
+ * set aside, unstarted: three of its eight rules read
+ * `Constants::UNDER_HORIZONTAL_BRACKETS`, `OVERLAYS_NOTATIONS` and
+ * `BELOWS_NOTATIONS`, and none of the three is in any generated table this
+ * repository carries — confirmed both by `grep -rl` across `src/` (nothing)
+ * and by `scripts/generate-unicodemath-parser-data.rb`'s own
+ * `UNCONSUMED_CONSTANTS` list, which already names all three as read only by
+ * transform rules the port defers. Porting it now would mean hand-transcribing
+ * gem constant data — one table alone carries over fifty entries — rather
+ * than reusing a generated one, which is the premise MULTISCRIPT was portable
+ * on and this family is not.
+ *
+ * Everything outside those 91 is genuinely ABSENT rather than stubbed. A node
  * whose key set no ported rule matches survives the transform as a plain hash
  * and `finalize` throws on it, naming the keys — the loud failure the deferred
  * families are supposed to produce.
@@ -90,6 +123,7 @@ import {
   UNICODEMATH_BINARY_SYMBOLS_KEYS,
   UNICODEMATH_NARY_SYMBOLS,
   UNICODEMATH_NARY_SYMBOLS_KEYS,
+  UNICODEMATH_SUB_DIGITS,
 } from "./generated/parser-tables";
 import {
   UNICODEMATH_BINARY_FUNCTIONS,
@@ -216,6 +250,18 @@ const BINARY_FUNCTION_NAMES: ReadonlySet<string> = new Set(UNICODEMATH_BINARY_FU
 const UNDEF_UNARY_FUNCTIONS: ReadonlySet<string> = new Set(UNICODEMATH_UNDEF_UNARY_FUNCTIONS);
 const LROUND_ID = namedSymbolId("lround");
 const RROUND_ID = namedSymbolId("rround");
+
+/**
+ * `Constants::SUB_DIGITS.key(entity)`, inverted from the ONE generated array:
+ * `Constants::SUB_DIGITS` has no separate keys table because its keys are
+ * `"0".."9"` in order, and `UNICODEMATH_SUB_DIGITS[i]` is measured to be the
+ * entity for digit `i` (`generated/parser-tables.ts`'s own comment: emitted
+ * from `Constants::SUB_DIGITS.values`, and Ruby hashes preserve insertion
+ * order). `Hash#key` on a miss is nil, so `:2971` needs a not-found case too.
+ */
+const SUB_DIGITS_INVERTED = new Map<string, string>(
+  UNICODEMATH_SUB_DIGITS.map((entity, index) => [entity, String(index)]),
+);
 
 function isAFamily(rubyClass: string): ReadonlySet<string> {
   const family = UNICODEMATH_IS_A_CLASSES.get(rubyClass);
@@ -734,9 +780,24 @@ function newBase(one: unknown, two: unknown): UnicodemathDraft {
   return binaryDraft("base", undefined, one, two);
 }
 
-/** `Math::Function::PowerBase.new(p1, p2, p3)` — an alias on `TernaryFunction`. */
-function newPowerBase(one: unknown, two: unknown, three: unknown): UnicodemathDraft {
+/**
+ * `Math::Function::PowerBase.new(p1, p2 = nil, p3 = nil)` — an alias on
+ * `TernaryFunction`. The MULTISCRIPT rules are the first callers to omit `p2`
+ * and/or `p3`; `orNil` inside `ternaryDraft` already turns the resulting
+ * `undefined` into the same nil Ruby's default would leave.
+ */
+function newPowerBase(one: unknown, two?: unknown, three?: unknown): UnicodemathDraft {
   return ternaryDraft("ternaryFunction", "PowerBase", one, two, three);
+}
+
+/**
+ * `Math::Function::Multiscript.new(p1, p2, p3)` — an alias on `TernaryFunction`.
+ * `p2`/`p3` are the prescript sub/superscript ARRAYS (`[]` when absent, never
+ * nil — every ported rule passes one), `p1` the `PowerBase` the real base and
+ * any trailing (non-prescript) sub/sup build.
+ */
+function newMultiscript(one: unknown, two: unknown, three: unknown): UnicodemathDraft {
+  return ternaryDraft("ternaryFunction", "Multiscript", one, two, three);
 }
 
 /** `Math::Function::Underover.new(p1, p2, p3)` — an alias on `TernaryFunction`. */
@@ -789,6 +850,21 @@ function naryFunctionName(naryClass: unknown): unknown {
   const text = rubyToS(naryClass);
   if (UNICODEMATH_NARY_CLASSES.has(text)) return naryClass;
   return NARY_CLASSES_INVERTED.get(text) ?? NARY_SYMBOLS.get(text) ?? naryClass;
+}
+
+/**
+ * `:2971`'s `digit = Constants::SUB_DIGITS.key(digits).to_s; Math::Number.new(digit,
+ * mini_sub_sized: true)` — the one rule that resolves a trailing SUB_DIGITS
+ * unicode digit back to its plain-text key, mini-sized.
+ */
+function subDigitNumber(digits: unknown): UnicodemathDraft {
+  const digit = SUB_DIGITS_INVERTED.get(rubyToS(digits)) ?? "";
+  return new UnicodemathDraft("number", undefined, {
+    value: digit,
+    miniSubSized: true,
+    miniSupSized: false,
+    base: null,
+  });
 }
 
 function asArray(value: TransformValue): unknown[] {
@@ -861,6 +937,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("52", { accents: subtree("accent") }, (b) => unicodeAccents(b.accent));
   rule("55", { sub_script: simple("script") }, (b) => b.script);
   rule("56", { sup_script: simple("script") }, (b) => b.script);
+  // Every MULTISCRIPT rule below (`:1992` on) is reached through the grammar's
+  // `pre_script` wrapper, so this unwrap fires once per one of them, exactly
+  // like `:55`/`:56` do for `sub_exp`/`sup_exp`.
+  rule("57", { pre_script: simple("script") }, (b) => b.script);
   rule("61", { close_paren: simple("paren") }, (b) => symbolsClass(b.paren));
   rule("62", { operator: simple("operator") }, (b) => symbolsClass(b.operator));
   rule("68", { monospace: simple("monospace") }, (b) => b.monospace);
@@ -888,7 +968,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     newFontStyle("mtt", b.monospace_value),
   );
 
-  // --- two-key rules (transform.rb:236-1968) -----------------------------
+  // --- two-key rules (transform.rb:236-2001) -----------------------------
 
   rule("236", { font_class: simple("fonts"), symbol: simple("symbol") }, (b) =>
     newFontStyle(b.fonts, symbolsClass(b.symbol)),
@@ -1096,6 +1176,19 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     return newNary(symbolsClass(name), null, null, b.naryand);
   });
 
+  // MULTISCRIPT (`transform.rb:1992`-`:3978`, thirteen rules counting `:57`
+  // above): every prescript expression `Math::Function::Multiscript` — base
+  // plus prescript sub/superscript arrays, and optionally a real trailing
+  // sub/sup the grammar folds into the `PowerBase` `p1` carries. All twelve
+  // constructors below share that shape; only `unfenced_value` and the
+  // SUB_DIGITS table (`:2971`) are new, both already established.
+  rule("1992", { pre_supscript: simple("pre_sup"), base: simple("base") }, (b) =>
+    newMultiscript(newPowerBase(b.base), [], [b.pre_sup]),
+  );
+  rule("2001", { pre_subscript: simple("pre_sub"), base: simple("base") }, (b) =>
+    newMultiscript(newPowerBase(b.base), [b.pre_sub], []),
+  );
+
   // --- three- and four-key rules (transform.rb:2103-3477) ----------------
 
   rule("2103", { base: simple("base"), sup: simple("sup"), sub: simple("sub") }, (b) => {
@@ -1187,6 +1280,28 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
   );
 
+  // MULTISCRIPT continued — a real trailing sub or sup joins the prescript.
+  rule(
+    "2938",
+    { pre_supscript: simple("pre_sup"), base: simple("base"), sub: simple("sub") },
+    (b) => newMultiscript(newPowerBase(b.base, b.sub), [], [b.pre_sup]),
+  );
+  rule(
+    "2948",
+    { pre_supscript: simple("pre_sup"), pre_subscript: simple("pre_sub"), base: simple("base") },
+    (b) => newMultiscript(newPowerBase(b.base), [b.pre_sub], [b.pre_sup]),
+  );
+  rule(
+    "2958",
+    { pre_subscript: simple("pre_sub"), base: simple("base"), sub: simple("sub") },
+    (b) => newMultiscript(newPowerBase(b.base, unfencedValue(b.sub, true)), [b.pre_sub], []),
+  );
+  rule(
+    "2971",
+    { pre_subscript: simple("pre_sub"), base: simple("base"), sub_digits: simple("digits") },
+    (b) => newMultiscript(newPowerBase(b.base, subDigitNumber(b.digits)), [b.pre_sub], []),
+  );
+
   rule(
     "3233",
     {
@@ -1224,6 +1339,94 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) =>
       newFenced(parenClass(b.open_paren), [b.factor, ...asArray(b.exp)], parenClass(b.close_paren)),
+  );
+
+  // MULTISCRIPT concluded — both a prescript pair and a paren wrap it, in
+  // every combination the grammar builds. `unfenced_value` reaches the
+  // prescripts themselves only at `:3662`/`:3853`; `:3687`, `:3768`, `:3952`
+  // and `:3978` bind `open_paren`/`close_paren` but never read them, exactly
+  // as `:2436` reads `operand` past what its own guard already discarded —
+  // transcribed rather than tidied.
+  rule(
+    "3662",
+    {
+      pre_subscript: simple("pre_sub"),
+      pre_supscript: simple("pre_sup"),
+      base: simple("base"),
+      sub: simple("sub"),
+    },
+    (b) =>
+      newMultiscript(
+        newPowerBase(b.base, unfencedValue(b.sub, true)),
+        [unfencedValue(b.pre_sub, true)],
+        [unfencedValue(b.pre_sup, true)],
+      ),
+  );
+  rule(
+    "3687",
+    {
+      open_paren: simple("open_paren"),
+      pre_subscript: simple("pre_sub"),
+      close_paren: simple("close_paren"),
+      base: simple("base"),
+    },
+    (b) => newMultiscript(newPowerBase(b.base), [b.pre_sub], []),
+  );
+  rule(
+    "3768",
+    {
+      open_paren: simple("open_paren"),
+      pre_subscript: simple("pre_sub"),
+      close_paren: simple("close_paren"),
+      base: simple("base"),
+      sub: simple("sub"),
+    },
+    (b) => newMultiscript(newPowerBase(b.base, b.sub), [b.pre_sub], []),
+  );
+  rule(
+    "3853",
+    {
+      pre_subscript: simple("pre_sub"),
+      pre_supscript: simple("pre_sup"),
+      base: simple("base"),
+      sub: simple("sub"),
+      sup: simple("sup"),
+    },
+    (b) =>
+      newMultiscript(
+        newPowerBase(b.base, unfencedValue(b.sub, true), unfencedValue(b.sup, true)),
+        [unfencedValue(b.pre_sub, true)],
+        [unfencedValue(b.pre_sup, true)],
+      ),
+  );
+  rule(
+    "3952",
+    {
+      open_paren: simple("open_paren"),
+      pre_subscript: simple("pre_sub"),
+      pre_supscript: simple("pre_sup"),
+      close_paren: simple("close_paren"),
+      base: simple("base"),
+    },
+    (b) => newMultiscript(newPowerBase(b.base), [b.pre_sub], [b.pre_sup]),
+  );
+  rule(
+    "3978",
+    {
+      open_paren: simple("open_paren"),
+      pre_subscript: simple("pre_sub"),
+      pre_supscript: simple("pre_sup"),
+      close_paren: simple("close_paren"),
+      base: simple("base"),
+      sub: simple("sub"),
+      sup: simple("sup"),
+    },
+    (b) =>
+      newMultiscript(
+        newPowerBase(b.base, unfencedValue(b.sub, true), unfencedValue(b.sup, true)),
+        [b.pre_sub],
+        [b.pre_sup],
+      ),
   );
 
   return { transform: t, fired, ruleIds };

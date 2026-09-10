@@ -52,7 +52,7 @@ export const HTML_PARSER_GENERATED_PROVENANCE: HtmlParserGeneratedProvenance = {
     ],
     [
       "scripts/generate-html-parser-data.rb",
-      "5038d216b85103e201b3994b3e3a11a58fc4214be8b3747b017616e5041cbf6d",
+      "00dc9bc3ec7086c864d41b8ebddb08d451ca28562b1068bf0624122f5e0fe631",
     ],
   ]),
   oracle: "plurimath",

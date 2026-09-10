@@ -47,7 +47,7 @@ export const FORMATTING_GENERATED_PROVENANCE: FormattingGeneratedProvenance = {
     ],
     [
       "scripts/generate-corpus.rb",
-      "a7ed6927c0f3a0821627de2bd6c2dc13e15dff889650419f588546b7ab8a1525",
+      "bb9e2b17058c562941eb6749664abb053f2250e3641580a81837225546997254",
     ],
     [
       "scripts/generate-formatting-data.rb",

@@ -232,6 +232,7 @@ module OracleGate
       script: {
         "html" => "generate-html-model-fixtures.rb",
         "latex" => "generate-latex-model-fixtures.rb",
+        "unicodemath" => "generate-unicodemath-model-fixtures.rb",
       }.freeze,
       arguments: lambda do |format, regenerated_root|
         ["--out", File.join(regenerated_root, "test", "formats", format)]

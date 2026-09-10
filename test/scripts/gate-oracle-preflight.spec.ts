@@ -155,10 +155,17 @@ describe("the preflight runs before any generator does", () => {
   );
 });
 
-// Must match `OracleGate::FROZEN_BUNDLE_PROBE_COMMAND` rendered the same way
-// (`Array#join(" ")`); duplicated here rather than read from the Ruby source
-// because the neutral message is expected to quote exactly this.
-const FROZEN_BUNDLE_PROBE_COMMAND = "mise x -- bundle exec ruby -e ";
+// Must match `OracleGate::FROZEN_BUNDLE_PROBE_COMMAND` rendered the way
+// `frozen_bundle_probe_display` renders it — each argument through
+// `Shellwords.escape`, so the empty `-e` argument shows as `''`. Duplicated
+// here rather than read from the Ruby source because the neutral message is
+// expected to quote exactly this.
+//
+// The trailing `''` is the whole point of duplicating it. This constant read
+// `... ruby -e ` while the Ruby still joined on a space, and when the Ruby
+// changed, that old string stayed a PREFIX of the new one — so `toContain`
+// went on passing while no longer checking the part that had been wrong.
+const FROZEN_BUNDLE_PROBE_COMMAND = "mise x -- bundle exec ruby -e ''";
 
 const EMPTY_CHECKSUMS_STDERR =
   'Your lockfile has an empty CHECKSUMS entry for "rake", but cannot be updated ' +

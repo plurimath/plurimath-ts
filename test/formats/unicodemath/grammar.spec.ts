@@ -7670,11 +7670,16 @@ const PREFIX_PAIR_FIXTURES: readonly Fixture[] = [
 /**
  * Splits a bulk check into several tests.
  *
- * Not cosmetic: one test that parses all 672 upstream expressions runs for ~50
- * seconds without returning to the event loop, and vitest's worker then fails
- * the whole file with `Timeout calling "onTaskUpdate"` — every assertion
- * passing and the run still red. Chunking keeps each test a few seconds long,
- * which is what the reporter needs to stay alive.
+ * Not cosmetic. Under vitest 3 this was a correctness problem: one test that
+ * parses all 672 upstream expressions runs for ~50 seconds without returning
+ * to the event loop, which outran the worker RPC's 60-second deadline and
+ * failed the whole file with `Timeout calling "onTaskUpdate"` — every
+ * assertion passing and the run still red. vitest 4 builds that RPC with
+ * `timeout: -1`, so the deadline is gone and the failure with it.
+ *
+ * Chunking stays. A test that holds the event loop for the better part of a
+ * minute reports nothing while it runs and names nothing when it fails; the
+ * chunks are a few seconds each, so a failure says which expressions it was in.
  */
 function chunks<T>(
   items: readonly T[],

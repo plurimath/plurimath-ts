@@ -128,7 +128,7 @@ const EXPECTED_EXPORTS = {
   "./html": ["parseHtml", "toHtml"],
   "./latex": ["parseLatex", "toLatex"],
   "./mathml": ["toMathml"],
-  "./unicodemath": ["toUnicodemath"],
+  "./unicodemath": ["parseUnicodemath", "toUnicodemath"],
 };
 
 /**
@@ -142,8 +142,9 @@ const EXPECTED_EXPORTS = {
  * `formats/<F>/`, `render/<kind>/<F>.ts`, and `generated/<F>/`. Deriving those
  * patterns here covers the node-major layout without listing every render kind.
  * `pegkit` is the parser combinator library, so a subpath may carry it exactly
- * when that format has an input side: `/asciimath`, `/latex` and — since the
- * HTML transform landed — `/html`. `xml` is the Ox-compatible serializer,
+ * when that format has an input side: `/asciimath`, `/latex` since its
+ * transform landed, `/unicodemath` since `parseUnicodemath` did, and `/html`
+ * since the HTML transform did. `xml` is the Ox-compatible serializer,
  * needed by MathML alone.
  */
 const FORMAT_NAMES = readdirSync(resolve(root, "src/formats"), { withFileTypes: true })
@@ -177,9 +178,9 @@ const FORBIDDEN = {
   // not, because LaTeX output is text.
   "./latex": [...forbidOtherFormats("latex"), /xml\//],
   "./mathml": [...forbidOtherFormats("mathml"), /pegkit\//],
-  // UnicodeMath is text output like latex, so it needs no XML layer and no
-  // grammar — its graph is core plus its own generated slice, nothing else.
-  "./unicodemath": [...forbidOtherFormats("unicodemath"), /pegkit\//, /xml\//],
+  // UnicodeMath parses as well as renders, so pegkit is expected here on the
+  // same grounds as `/latex`; `xml` still is not, because its output is text.
+  "./unicodemath": [...forbidOtherFormats("unicodemath"), /xml\//],
 };
 
 const failures = [];

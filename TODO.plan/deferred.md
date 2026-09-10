@@ -490,6 +490,35 @@ key — `Utility.symbols_class("&times;", lang: :mathml)` returns `Symbols::Time
 both Ox and Oga. Same omission in `omml/utility.rb:30,96` and
 `html/transform_utility.rb:53-57`. LaTeX and HTML input are unaffected.
 
+### UnicodeMath input returns a non-model tree instead of raising
+
+```ruby
+Plurimath::Math.parse("a ± b", :unicode).value
+# => [[:factor, Symbol("a")],
+#     [:expr, {combined_symbols: "&#xb1;"@2, expr: Symbol("b")}]]
+```
+
+No rule among `unicode_math/transform.rb`'s 519 has the signature
+`{combined_symbols: simple, expr: simple}`, so that node survives the transform
+as a Hash; the enclosing `{factor:, expr:}` node then cannot match either
+(`simple` rejects a Hash); and `Kernel#Array` in `UnicodeMath::Parser#parse`
+folds the outermost Hash into its `[key, value]` pairs rather than wrapping it.
+The result is a `Formula` whose value holds Symbols, Arrays and a raw parse-tree
+Hash — a tree no renderer can read — returned without raising.
+
+`(a)/(+) b` reaches the same end through a different missing signature,
+`{close_paren:, open_paren:, operator:}`. Both strings are the gem's OWN
+`to_unicodemath` output for pinned corpus cases, so this is a round trip the gem
+does not survive.
+
+Not worked around: `src/formats/unicodemath/transform.ts` reproduces both trees
+and `test/formats/unicodemath/model-fixtures.json` pins them. The nine
+signatures the gem leaves unmatched over the pinned corpus — key AND value shape
+per key, because Parslet binds on the matcher kind too — are listed as
+`GEM_UNMATCHED_SIGNATURES` in that transform; anything else surviving it is
+refused, because for this port that would mean a rule family the first slice has
+not reached.
+
 ## Parked ideas
 
 ### Entity handling in the P3 input parsers

@@ -136,11 +136,12 @@ src/
                      `parseUnicodemath` entry are not in, so index.ts publishes
                      output only.
     mathml/          toMathml(MathNode) → string. Imports: core, xml, its slice.
-    html/            Both directions: renderer.ts, render.ts and
-                     render-shared.ts on the output side; grammar.ts,
-                     transform.ts, preprocess.ts, registry.ts and parser.ts
-                     (`parseHtml`) on the input side — the same shape as
-                     asciimath/. index.ts publishes both.
+    html/            Source renderer landed: index.ts, renderer.ts, render.ts,
+                     and render-shared.ts. Its package subpath is a later phase.
+                     The parser half has begun: grammar.ts, ported rule for rule
+                     from html/parse.rb, with the transform and a `parseHtml`
+                     entry still to come — so index.ts publishes output only and
+                     grammar.ts is not a build entry.
       generated/     The HTML grammar's own constant tables, written by
                      scripts/generate-html-parser-data.rb. Same rule-1 placement
                      and same reason as latex/generated above.
@@ -289,13 +290,11 @@ them (2026-08-21, #33) on the same terms: a text format like `/latex`, so its
 forbidden set carries the XML layer and the grammar alongside the other three
 formats, and the boundary gate's inventory read 38 kinds x 4 formats at that
 point.
-`/html` joined them on the same terms, output only at first, so its forbidden
-set carried both the grammar and the XML layer. `parseHtml` lifted the grammar
-half of that ban, the way `parseLatex` lifted `/latex`'s; the XML layer stays
-forbidden, HTML markup being built as strings rather than through the element
-tree. The gate's inventory now reads 38 kinds x 6 formats -- it counts every
-format with render files present, so OMML is in that six while its own subpath
-is still unpublished.
+`/html` joined them on the same terms: output only, so like `/latex` its
+forbidden set carries both the grammar and the XML layer, its markup being
+built as strings rather than through the element tree. The gate's inventory now
+reads 38 kinds x 6 formats -- it counts every format with render files present,
+so OMML is in that six while its own subpath is still unpublished.
 
 ## 4. Public API
 

@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-unicodemath-model-fixtures.rb
-  sha256: add3c45d7b4e2a418a4a2c56ee26555bffbdc92db4c4f148ae85f1d7a34628b5
+  sha256: cbb6ee8355de0dd2da7ac86f8e44360f6834069d8cbb24ef41bed7c3a502eaa2
   inputs:
     scripts/generate-corpus.rb: a7ed6927c0f3a0821627de2bd6c2dc13e15dff889650419f588546b7ab8a1525
-    scripts/generate-unicodemath-model-fixtures.rb: add3c45d7b4e2a418a4a2c56ee26555bffbdc92db4c4f148ae85f1d7a34628b5
+    scripts/generate-unicodemath-model-fixtures.rb: cbb6ee8355de0dd2da7ac86f8e44360f6834069d8cbb24ef41bed7c3a502eaa2
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: cc970599631cb51aa9990a0c55238ccfc1e22b60
+    commit: 29eeba3921c442b69829ffc4ddf8363afe5ce5d8
     clean: true
     dirty_paths: []
 oracle:

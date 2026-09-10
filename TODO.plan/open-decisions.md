@@ -131,12 +131,22 @@ that call `Mml.parse` (XML text to an `Mml::V4::*` model) and then
 - The `mml` gem is 11,605 lines over 320 files, but the translator consumes a
   thin slice: `each_mixed_content`, `value`, and 29 attribute readers of the
   126 those 44 classes define.
-  The model adds no semantics over the XML — across 25 attributes on 6 element
-  types, every attribute absent from the source read back `nil` rather than a
-  schema default; `display="block"` and `displaystyle="true"` arrive as
-  `String` rather than coerced booleans; `value` is an `Array` of `String`. A
-  reader plus an element-name map reproduces what the translator consumes, so
-  lutaml-model's machinery would not need porting.
+  The model adds no semantics over the XML, measured exhaustively rather than
+  sampled: instantiating all 198 `Mml::V4` classes bare and reading all 1,559
+  of their attribute readers returns a non-nil, non-empty value **zero** times,
+  so no schema default leaks through anywhere in the model — an absent
+  attribute is `nil`, including ones with obvious MathML defaults like
+  `mfrac`'s `linethickness`, `mo`'s `form`/`stretchy`, and `mtable`'s
+  `columnalign`. Values are not coerced either: `display="block"` and
+  `displaystyle="true"` arrive as `String`, and `value` is an `Array` of
+  `String`. A reader plus an element-name map reproduces what the translator
+  consumes, so lutaml-model's machinery would not need porting.
+
+  One trap for a port working from the gem's own documentation: `mml`'s
+  `README.adoc` lists `fence` and `separator` together as legacy `<mo>`
+  attributes, but only `fence` is a live V4 reader — `separator` is not defined
+  at all, so calling it raises `NoMethodError` rather than returning `nil`. Port
+  what the classes expose, not what the README lists.
 - The translating logic itself is `translator.rb` (607 lines),
   `formula_transformation.rb` (457) and `constants.rb` (289) — 1,353 lines.
 - **A contract gap either way:** `src/xml` is write-only. It exports

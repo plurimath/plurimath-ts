@@ -12,11 +12,7 @@ generator:
     scripts/generate-parity-fixtures.rb: 4123ddb81e7bfaec3cf1a61ed21efa137489f7bc197a647a253fb27b2b8bba7e
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-<<<<<<< HEAD
-    commit: b7308ce6fdcb0da5965dba4e04dbe11d6990153a
-=======
-    commit: b67050735092e7bcfc2605d29a5dca31aadddf35
->>>>>>> origin/main
+    commit: 417af83a11069ac094e14d97488e3c2aa91bc8e8
     clean: true
     dirty_paths: []
 oracle:
@@ -34,14 +30,17 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-<<<<<<< HEAD
     sha256: 03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121
-=======
-    sha256: 6c8db1f30cf27fa8a73517c3d584cf9de39b460dab2ce9cccfd6d5a73d40179f
->>>>>>> origin/main
     resolved_gems: 77
     platforms:
+    - aarch64-linux-gnu
+    - aarch64-linux-musl
+    - arm-linux-gnu
+    - arm-linux-musl
+    - arm64-darwin
+    - x86_64-darwin
     - x86_64-linux-gnu
+    - x86_64-linux-musl
     bundler: 4.0.3
   sources:
   - kind: path
@@ -181,13 +180,13 @@ dependencies:
 corpus:
   path: submodules/plurimath-testsuite
   repository:
-    commit: 281d7003c934cdfa1c56b4c39e0920dd4b320410
+    commit: 518266068bd446c070b6b807d69f3f2a5d0925fa
     clean: true
     dirty_paths: []
   provenance:
     path: corpus/provenance.yaml
     schema: plurimath-corpus/provenance/2
-    sha256: 734776dc0f16546cd0b53bf87526c4b62bbd7f1235ea5755c7eceb4cd2a1ca38
+    sha256: aab15f598eef6a500ea2f2e8dfa2bdd2119e0f8d987991a67583e3f3312f3c41
 payload:
   path: parity-fixtures.json
   schema: plurimath-corpus/render-parity/1

@@ -132,6 +132,28 @@ describe("construction", () => {
     expect(node.hideFunctionName).toBeUndefined();
   });
 
+  // `Frac#initialize` is `@options = options if options && !options&.empty?`,
+  // so an empty hash leaves `@options` UNDEFINED on the gem — measured:
+  // `Frac.new(a, b, {}).instance_variable_defined?(:@options)` is false, while
+  // `Frac.new(a, b, {x: 1})` holds the hash. Ten classes share that guard and
+  // all of them route through `copyOptions`. Storing `{}` instead would put an
+  // empty hash into `normalize`'s output where the gem emits nothing.
+  it("drops an empty options hash, as the gem's guard does", () => {
+    const empty = new FracNode({
+      parameterOne: new SymbolNode({ value: "a" }),
+      parameterTwo: new SymbolNode({ value: "b" }),
+      options: {},
+    });
+    expect(empty.options).toBeUndefined();
+
+    // Not a blanket rule about empty objects: a non-empty hash still lands.
+    const kept = new FracNode({ options: { display: "block" } });
+    expect(kept.options).toStrictEqual({ display: "block" });
+
+    // And the slot is still absent when nothing is passed at all.
+    expect(new FracNode().options).toBeUndefined();
+  });
+
   it("validates nothing — an empty or nonsensical node builds fine", () => {
     const empty = new FracNode();
     // `Frac.new` in Ruby assigns both parameters, to nil.

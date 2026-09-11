@@ -21,7 +21,7 @@
  *
  * The gem lets `Parslet::ParseFailed` escape uncaught — there is no `rescue`
  * anywhere under `lib/plurimath/latex/` — and `Plurimath::Math.parse` turns it
- * into a `ParseError` at the public boundary (`math.rb:44-48`). That is the
+ * into a `ParseError` at the public boundary (`math.rb:44-49`). That is the
  * boundary this function stands at, so a refusal is a `ParseError`.
  */
 
@@ -61,7 +61,7 @@ export function parseLatexTree(input: string, options?: LatexParseOptions | null
  * `Plurimath::Math.parse(input, :latex)`'s observable result.
  *
  * The transform is wrapped as well as the grammar, because `Plurimath::Math.parse`
- * wraps everything (`math.rb:44-48`):
+ * wraps everything (`math.rb:44-49`):
  *
  * ```ruby
  * rescue ParseError

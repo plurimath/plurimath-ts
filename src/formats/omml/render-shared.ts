@@ -68,9 +68,24 @@ export function isOptionHash(value: unknown): value is Readonly<Record<string, u
 }
 
 /**
- * `attributes && attributes[:accent]` — the guard seven accent renderers open
- * with (`bar.rb:41`, and the same line in `dot`, `hat`, `tilde`, `vec`, `ul`
- * and `overleftrightarrow`; `ddot` never reads attributes at all).
+ * `attributes && attributes[:accent]` — the guard SIX accent renderers open
+ * their `to_omml_without_math_tag` with, each at its own line: `bar.rb:43`,
+ * `dot.rb:38`, `hat.rb:51`, `tilde.rb:27`, `vec.rb:34` and
+ * `overleftrightarrow.rb:34`.
+ *
+ * `ul` is the seventh accent renderer and is NOT one of them: `ul.rb:43` reads
+ * `attributes[:accentunder]`, a different key. `src/render/ul/omml.ts:14`
+ * reads `accentunder`, and fourteen oracle-generated `ul` rows in
+ * `test/formats/omml/degenerate-fixtures.json` hold it to the gem's answers,
+ * so the code is right; this note exists because the sentence here used to
+ * lump `ul` in with the other six, which would have sent the next reader to
+ * the wrong attribute. `ddot` reads attributes in neither renderer.
+ *
+ * `dot`, `vec` and `overleftrightarrow` carry a SECOND guard of the same shape
+ * in `to_mathml_without_math_tag` (`dot.rb:22`, `vec.rb:18`,
+ * `overleftrightarrow.rb:18`). Those are the MathML side and are not what this
+ * module reads — a search that takes the first match in each file lands on
+ * them, which is how the line numbers above were wrong before.
  *
  * Both halves were measured on the oracle at `00c52783`:
  *

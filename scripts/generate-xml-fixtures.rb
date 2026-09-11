@@ -250,10 +250,38 @@ dn["mathml-sum-tree"] = dump_nodes(math_style_tree([sum_mrow]))
   end
 end
 
+# The oracle's commit, or a refusal.
+#
+# This used to be `%x(git rev-parse HEAD).strip`, and Ruby's backtick form does
+# NOT raise when the subprocess fails — outside a git working tree it returns
+# "" with `$?.exitstatus` 128 and no exception. This script's own header says to
+# redirect its stdout straight into the committed fixture, so that silently
+# wrote `"oracleCommit": ""` into checked-in test data: a provenance record
+# that states nothing while looking like it states something.
+#
+# `generate-corpus.rb:349` already does this correctly for the rest of the
+# repository; this file was the one generator that did not.
+def oracle_commit
+  output = IO.popen(["git", "rev-parse", "HEAD"], err: File::NULL, &:read)
+  unless $?.success?
+    abort "REFUSING: `git rev-parse HEAD` failed in #{Dir.pwd} (exit " \
+          "#{$?.exitstatus}). This script records the ORACLE's commit as " \
+          "provenance, so it must run from the oracle checkout."
+  end
+
+  commit = output.strip
+  unless commit.match?(/\A[0-9a-f]{40}\z/)
+    abort "REFUSING: `git rev-parse HEAD` in #{Dir.pwd} gave #{commit.inspect}, " \
+          "which is not a commit id."
+  end
+
+  commit
+end
+
 provenance = {
   "oracle" => "plurimath",
   "oracleVersion" => Plurimath::VERSION,
-  "oracleCommit" => %x(git rev-parse HEAD).strip,
+  "oracleCommit" => oracle_commit,
   "oxVersion" => Ox::VERSION,
   "rubyVersion" => RUBY_VERSION,
   "xmlEngine" => Plurimath.xml_engine.name,

@@ -94,7 +94,7 @@ function gitFileSha256AtCommit(
  * `specFor` below is the single place either is read.
  */
 const FORMATS_ROOT = join(REPO_ROOT, "test", "formats");
-const MANIFEST_SCHEMA = "plurimath-corpus/manifest/1";
+const MANIFEST_SCHEMA = "plurimath-corpus/manifest/2";
 const PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
 const CANONICAL_XML_ENGINE = "Plurimath::XmlEngine::OxEngine";
 const SHA256 = /^[0-9a-f]{64}$/;
@@ -574,20 +574,35 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         const kind = stringField(source, "kind", sourceAt);
         expect(["gem", "git", "path"], `${sourceAt}.kind`).toContain(kind);
         const remote = stringField(source, "remote", sourceAt);
-        const gems = arrayField(source, "gems", sourceAt);
-        expect(gems.length, `${sourceAt}.gems`).toBeGreaterThan(0);
-        for (const [gemIndex, gem] of gems.entries()) {
-          expect(typeof gem, `${sourceAt}.gems[${gemIndex}]`).toBe("string");
-          expect(String(gem).length, `${sourceAt}.gems[${gemIndex}]`).toBeGreaterThan(0);
+        // `gems` is a COUNT. A `gem` source pins every gem by version in the
+        // lockfile, and `lockfile.sha256` covers that whole resolution, so the
+        // names carried no information the manifest did not already have. A
+        // `path` or `git` source pins nothing by version, so there the names
+        // are the reproducibility fact and are kept in `gem_names`.
+        const gems = integerField(source, "gems", sourceAt);
+        expect(gems, `${sourceAt}.gems`).toBeGreaterThan(0);
+        const namedKinds = ["git", "path"];
+        if (namedKinds.includes(kind)) {
+          const names = arrayField(source, "gem_names", sourceAt);
+          expect(names.length, `${sourceAt}.gem_names`).toBe(gems);
+          for (const [nameIndex, gem] of names.entries()) {
+            expect(typeof gem, `${sourceAt}.gem_names[${nameIndex}]`).toBe("string");
+            expect(String(gem).length, `${sourceAt}.gem_names[${nameIndex}]`).toBeGreaterThan(0);
+          }
+          expect(new Set(names).size, `${sourceAt}.gem_names must be unique`).toBe(names.length);
+        } else {
+          expect(source.gem_names, `${sourceAt}.gem_names`).toBeUndefined();
         }
-        expect(new Set(gems).size, `${sourceAt}.gems must be unique`).toBe(gems.length);
         if (kind === "git") {
-          expectExactKeys(source, ["kind", "remote", "revision", "gems"], sourceAt);
+          expectExactKeys(source, ["kind", "remote", "revision", "gems", "gem_names"], sourceAt);
           expect(stringField(source, "revision", sourceAt)).toMatch(IMMUTABLE_REVISION);
+        } else if (kind === "path") {
+          expectExactKeys(source, ["kind", "remote", "gems", "gem_names"], sourceAt);
+          expect(source.revision, `${sourceAt}.revision`).toBeUndefined();
+          expect(remote, `${sourceAt}.remote`).toBe(".");
         } else {
           expectExactKeys(source, ["kind", "remote", "gems"], sourceAt);
           expect(source.revision, `${sourceAt}.revision`).toBeUndefined();
-          if (kind === "path") expect(remote, `${sourceAt}.remote`).toBe(".");
         }
       }
 

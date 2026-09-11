@@ -54,7 +54,7 @@ export const LOCAL_CORPUS_ROOT = join(REPO_ROOT, "corpus");
 export const SUBMODULE_FIX = "git submodule update --init --recursive";
 
 const PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
-const MANIFEST_SCHEMA = "plurimath-corpus/manifest/1";
+const MANIFEST_SCHEMA = "plurimath-corpus/manifest/2";
 const REJECTIONS_SCHEMA = "plurimath-corpus/rejections/1";
 
 /**

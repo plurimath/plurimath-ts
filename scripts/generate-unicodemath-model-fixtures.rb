@@ -143,6 +143,70 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
 # `:1644`, `:2203`, `:2359`, `:2365`, `:2371` — all need a `sequence` numerator
 # or denominator and are deferred with the `atoms` combinator they depend on,
 # not carried by any input here.
+#
+# "table": the `Td`/`Tr`/`Table`/`Mlabeledtr` family, measured at EIGHTEEN
+# rules, not the seventeen a prior survey counted (`transform.ts`'s module
+# header has the correction). Eight of them are corpus-covered already —
+# `"⒨(a@b)"` and `"ⓢ(a&b@c&d)"` (both `corpus-unicodemath` rows) between them
+# fire `:8`, `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584` and `:1649` — so
+# this group carries witnesses for the other ten, one input per rule traced on
+# the oracle the same way as the two groups above, plus six more `:1649`
+# witnesses for BRANCH coverage a firing count cannot prove:
+#
+#   "■(a)"          rule 1670 {matrixs, array: simple} — one cell, no row
+#                   separator, the `array: sequence` sibling above needs no
+#                   input of its own.
+#   "■3"            rule 1691 {matrixs, identity_matrix_number} — a MATRIXS
+#                   character directly followed by one ASCII digit, no parens.
+#   "■(3x)"         rule 15 {td: sequence} — a cell whose OWN content is two
+#                   adjacent factors (`:735`'s `{factor:, operand:}`, already
+#                   ported), which is what makes a single, tds-less cell a
+#                   SEQUENCE rather than the `:8` `simple` case. `:17`
+#                   (`{exp: sequence(:exp)} -> exp`, `:13`'s sequence twin) is
+#                   the one small prerequisite this needs, unported until now
+#                   for the same reason `:165`/`:170` were: nothing before this
+#                   slice ever left `exp` a sequence.
+#   "■(a&b&c)"      rule 1594 {td: simple, tds: sequence} — three single-token
+#                   cells; the first cell stays SIMPLE, the fold of the other
+#                   two is what is SEQUENCE.
+#   "■((x)y&c)"     rule 1604 {td: sequence, tds: simple} — first cell's
+#                   content is `:735`'s two-factor shape again (SEQUENCE), the
+#                   second cell is a bare token (SIMPLE).
+#   "■((x)y&c&d)"   rule 1599 {td: sequence, tds: sequence} — same first cell,
+#                   folded against two more.
+#   "■(a@b@c)"      rule 1579 {tr: simple, trs: sequence} — three single-cell
+#                   rows; same SIMPLE/SEQUENCE split as `:1594`, one level up.
+#   "■(a&b@c&d@e&f)" rule 1589 {tr: sequence, trs: sequence} — three two-cell
+#                   rows: each row is already a SEQUENCE via `:1574`, and so is
+#                   the fold of the last two rows.
+#   "a#b"           rule 606 {labeled_tr_value: simple, labeled_tr_id: simple}
+#                   — `Parser#post_processing`'s `#`-split wrapper
+#                   (`parser.ts`'s `postProcessing`), with a single-token value.
+#   "a b#c"         rule 598 {labeled_tr_value: sequence, labeled_tr_id: simple}
+#                   — same wrapper, with `:835`'s `{factor:, expr:}` (already
+#                   ported) giving the value a SEQUENCE instead.
+#
+# The six `:1649` branch witnesses, all `"X(a@b)"` — the same `array: sequence`
+# shape `"⒨(a@b)"` above already reaches, one per `Constants::MATRIXS`
+# character the two corpus rows do not cover:
+#
+#   "⒱(a@b)"  vmatrix, lowercase — the `else`/`get_table_class` branch, no
+#             explicit parens.
+#   "⒩(a@b)"  Vmatrix, capital — the `if :Vmatrix == matrix` branch, an
+#             explicit `Paren::Norm`. `get_table_class` returns the SAME class
+#             name, `"Vmatrix"`, for this and `⒱` above (`Utility.capitalize`
+#             downcases the tail) — the pair is the collapse the module header
+#             documents, reproduced rather than "fixed", and only comparable
+#             with both rows in the set.
+#   "Ⓢ(a@b)"  Bmatrix, capital — `elsif :Bmatrix == matrix`, explicit
+#             `Paren::Lcurly`/`Paren::Rcurly`; `"ⓢ(a&b@c&d)"` above is its
+#             collapsed lowercase pair, the `Bmatrix`/`bmatrix` twin of `⒩`/`⒱`.
+#   "█(a@b)"  eqarray — `else`/`get_table_class`, a name with no `MATRIXS`
+#             case-collision.
+#   "■(a@b)"  matrix — `elsif :matrix == matrix`, the BARE `Table` carrier,
+#             not `Table::Matrix`: "`Matrix` is not special"
+#             (`table-behaviour.spec.ts`).
+#   "Ⓒ(a@b)"  cases — `else`/`get_table_class`, no case collision.
 RULE_COVERAGE = {
   "multiscript" => [
     "^3 X",
@@ -180,6 +244,24 @@ RULE_COVERAGE = {
     "x\\sdiv y",
     "x\\ldiv y",
     "x\\ndiv y",
+  ],
+  "table" => [
+    "■(a)",
+    "■3",
+    "■(3x)",
+    "■(a&b&c)",
+    "■((x)y&c)",
+    "■((x)y&c&d)",
+    "■(a@b@c)",
+    "■(a&b@c&d@e&f)",
+    "a#b",
+    "a b#c",
+    "⒱(a@b)",
+    "⒩(a@b)",
+    "Ⓢ(a@b)",
+    "█(a@b)",
+    "■(a@b)",
+    "Ⓒ(a@b)",
   ],
 }.freeze
 

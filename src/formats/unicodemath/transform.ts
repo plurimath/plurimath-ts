@@ -109,10 +109,63 @@
  * is deferred whole, same reasoning as DECORATION: porting a slice of it here
  * would mean starting a second large family rather than finishing this one.
  *
- * Everything outside those 99 is genuinely ABSENT rather than stubbed. A node
- * whose key set no ported rule matches survives the transform as a plain hash
- * and `finalize` throws on it, naming the keys — the loud failure the deferred
- * families are supposed to produce.
+ * ## A fourth increment: TABLE, the family the first slice deferred whole
+ *
+ * TABLE builds `Td`, `Tr`, `Table` (or one of its ten subclasses) and
+ * `Mlabeledtr` — the eight-rule family the first slice's boundary section
+ * above named and deferred (`:8`, `:9`, `:14`, `:32`, `:1569`, `:1574`,
+ * `:1584`, `:1649`) plus nine more that same family needed but the corpus
+ * never reached (`:15`, `:598`, `:606`, `:1579`, `:1589`, `:1594`, `:1599`,
+ * `:1604`, `:1691`).
+ *
+ * That survey's "eight plus nine" is **eighteen**, not seventeen: it missed
+ * `:1670`, the `matrixs`/`array: simple` sibling of `:1649` (`array:
+ * sequence`) and `:1691` (`identity_matrix_number`) — measured by wrapping
+ * every `unicode_math/transform.rb` rule in a firing counter (the same
+ * technique MULTISCRIPT and FRACTION above were measured with) and tracing
+ * `■(a)` (one cell, no row separator) on the oracle: it fires `:1670` and
+ * nothing else this slice does not already carry, and parses. `grep -n
+ * get_table_class unicode_math/transform.rb unicode_math/utility.rb` finds
+ * it called from nowhere but these three `matrixs` rules, so porting
+ * `:1649`/`:1691` without `:1670` would leave a THIRD of that trio missing
+ * for no reason the source gives. Eighteen is what this increment ports.
+ *
+ * Two helpers this family alone needs, both new: `getTableClass` (`Utility.
+ * get_table_class`, `utility.rb:135-137`) and `identityMatrix` (`Utility.
+ * identity_matrix`, `unicode_math/utility.rb:202-211`). The first is where a
+ * trap lives — `Utility.capitalize` (`utility.rb:143-145`) is
+ * `split("_").map(&:capitalize).join`, and Ruby's `String#capitalize`
+ * DOWNCASES the tail, so `get_table_class` returns the SAME class,
+ * `Table::Vmatrix`, for both the `vmatrix` and `Vmatrix` `Constants::MATRIXS`
+ * keys (and `Table::Bmatrix` for `bmatrix`/`Bmatrix`). Measured on the
+ * oracle: the two differ only in whether `:1649`/`:1670`/`:1691`'s
+ * `if :Vmatrix == matrix`/`elsif :Bmatrix == matrix` branch passes an
+ * explicit `Paren::Norm`/`Paren::Lcurly`+`Paren::Rcurly` that the plain
+ * `vmatrix`/`bmatrix` branch never does. The collapse is reproduced here, not
+ * "fixed", by `buildMatrixTable`'s three-way branch and the alias defaults
+ * `core/nodes.ts` already carries for the ten `table::*` names.
+ *
+ * `Mlabeledtr`'s pair (`:598`, `:606`) needs no new parsing machinery:
+ * `parser.ts`'s `postProcessing` already builds the `{labeled_tr_value:,
+ * labeled_tr_id:}` wrapper these two rules match, ahead of this slice — it is
+ * named there as the reason a labelled input was refused, and this increment
+ * is that reason resolved.
+ *
+ * The family serves exactly two of the 103 corpus strings — `"⒨(a@b)"` and
+ * `"ⓢ(a&b@c&d)"`, `model-parity.spec.ts` compares both for real now — so the
+ * rest of its eighteen rules' coverage comes from hand-picked witnesses in
+ * `generate-unicodemath-model-fixtures.rb`'s own `"table"` group — the same
+ * pattern MULTISCRIPT and FRACTION used above, including the trap their own
+ * witnesses avoid: firing coverage is not branch coverage, so the group
+ * carries one input per `MATRIXS` character (eight), not one for the family.
+ * One further small prerequisite, `:17` (`:13`'s SEQUENCE twin), came from
+ * building those witnesses — see it at its own position below — bringing the
+ * total this increment adds to nineteen and the file's running count to 118.
+ *
+ * Everything outside those 118 is genuinely ABSENT rather than stubbed. A
+ * node whose key set no ported rule matches survives the transform as a
+ * plain hash and `finalize` throws on it, naming the keys — the loud failure
+ * the deferred families are supposed to produce.
  *
  * ## Order is behaviour, and one rule is dead because of it
  *
@@ -168,6 +221,8 @@ import { Slice, sequence, simple, subtree, Transform, type TransformValue } from
 import {
   UNICODEMATH_BINARY_SYMBOLS,
   UNICODEMATH_BINARY_SYMBOLS_KEYS,
+  UNICODEMATH_MATRIXS,
+  UNICODEMATH_MATRIXS_KEYS,
   UNICODEMATH_NARY_SYMBOLS,
   UNICODEMATH_NARY_SYMBOLS_KEYS,
   UNICODEMATH_SUB_DIGITS,
@@ -298,6 +353,23 @@ const BINARY_FUNCTION_NAMES: ReadonlySet<string> = new Set(UNICODEMATH_BINARY_FU
 const UNDEF_UNARY_FUNCTIONS: ReadonlySet<string> = new Set(UNICODEMATH_UNDEF_UNARY_FUNCTIONS);
 const LROUND_ID = namedSymbolId("lround");
 const RROUND_ID = namedSymbolId("rround");
+// The three parens the TABLE family's `:Vmatrix`/`:Bmatrix` branches
+// (`:1649`, `:1670`, `:1691`) construct directly, the same pattern as
+// `LROUND_ID`/`RROUND_ID` above.
+const NORM_ID = namedSymbolId("norm");
+const LCURLY_ID = namedSymbolId("lcurly");
+const RCURLY_ID = namedSymbolId("rcurly");
+
+/**
+ * `Constants::MATRIXS.key(entity)`: `zipConstants` pairs the keys/values
+ * arrays exactly as `BINARY_SYMBOLS`/`NARY_SYMBOLS` above do, and
+ * `invertFirstWins` turns that key->entity map into the entity->key one
+ * `Hash#key` performs. A miss is nil there, so `matrixSymbol` below needs a
+ * not-found case too.
+ */
+const MATRIXS_INVERTED = invertFirstWins(
+  zipConstants(UNICODEMATH_MATRIXS_KEYS, UNICODEMATH_MATRIXS, "MATRIXS"),
+);
 
 /**
  * `Constants::SUB_DIGITS.key(entity)`, inverted from the ONE generated array:
@@ -894,6 +966,48 @@ function newMod(one: unknown, two: unknown): UnicodemathDraft {
 }
 
 /**
+ * `Math::Function::Td.new(parameter_one)` — a `BinaryFunction`, so
+ * `parameter_two` stays Ruby's own `nil` default. Every TABLE-family call
+ * site already shapes `one` the way `Td#initialize` wants it — `[td]` for a
+ * single cell, an already-sequence `td` for several — so this is the plain
+ * wrap, not a second `Array()`.
+ */
+function newTd(one: unknown): UnicodemathDraft {
+  return binaryDraft("binaryFunction", "Td", one, undefined);
+}
+
+/** `Math::Function::Tr.new(parameter_one)` — a `UnaryFunction`, same shape as `newTd`. */
+function newTr(one: unknown): UnicodemathDraft {
+  return unaryDraft("unaryFunction", "Tr", one);
+}
+
+/**
+ * `Math::Function::Table.new(value, open_paren = nil, close_paren = nil,
+ * options = {})` (`function/table.rb:20-29`): `name` undefined builds the
+ * BARE carrier (`buildMatrixTable`'s `:matrix` branch below), and a paren
+ * argument left OMITTED here — not passed as `null` — stays out of the
+ * draft's fields entirely, so `finalizeDraft` never sets it on `init` and the
+ * node constructor's own `aliasDefaults` (`core/nodes.ts`) supplies the
+ * subclass's default, exactly what omitting the Ruby argument does.
+ */
+function newTable(
+  name: string | undefined,
+  value: unknown,
+  openParen?: unknown,
+  closeParen?: unknown,
+): UnicodemathDraft {
+  const fields: Record<string, unknown> = { value };
+  if (openParen !== undefined) fields.openParen = openParen;
+  if (closeParen !== undefined) fields.closeParen = closeParen;
+  return new UnicodemathDraft("table", name, fields);
+}
+
+/** `Math::Function::Mlabeledtr.new(p1, p2)` — an alias on `BinaryFunction`. */
+function newMlabeledtr(one: unknown, two: unknown): UnicodemathDraft {
+  return binaryDraft("binaryFunction", "Mlabeledtr", one, two);
+}
+
+/**
  * The n-ary name `transform.rb:1968` and `:2806` both compute before deciding
  * which constructor to use: the captured text when it is already a
  * `NARY_CLASSES` key, else the key its entity inverts to, else the
@@ -930,6 +1044,90 @@ function supDigitNumber(digits: unknown): UnicodemathDraft {
     miniSupSized: true,
     base: null,
   });
+}
+
+/**
+ * `Utility.capitalize(text)` (`utility.rb:143-145`):
+ * `text.to_s.split("_").map(&:capitalize).join`. None of the eight `MATRIXS`
+ * keys carries an underscore, so the split is a no-op here, but Ruby's
+ * `String#capitalize` DOWNCASES every character after the first — so
+ * `"vmatrix"` and `"Vmatrix"` both become `"Vmatrix"`. That collapse is
+ * measured on the oracle (module header) and reproduced here, not "fixed":
+ * `getTableClass` returns the same name for both, and only the extra paren
+ * argument `buildMatrixTable` passes for the capital symbol tells the two
+ * apart.
+ */
+function rubyCapitalizeWord(word: string): string {
+  if (word.length === 0) return word;
+  return (word[0] as string).toUpperCase() + word.slice(1).toLowerCase();
+}
+
+/**
+ * `Utility.get_table_class(text)` (`utility.rb:135-137`):
+ * `Object.const_get("...Table::#{capitalize(text)}")`. The port has no
+ * `const_get`, so this returns the alias identity `newTable`'s `name`
+ * argument wants — the same string the class's basename would be.
+ */
+function getTableClass(name: string): string {
+  return name.split("_").map(rubyCapitalizeWord).join("");
+}
+
+/**
+ * `Utility.identity_matrix(size)` (`unicode_math/utility.rb:202-211`): a
+ * `size`x`size` grid with `1` on the diagonal and `0` elsewhere, each cell a
+ * `Td` wrapping a `Number`, each row a `Tr` — returned as the array of `Tr`s
+ * directly, the same shape `array: sequence(:array)` rules pass to
+ * `newTable`.
+ */
+function identityMatrix(size: number): UnicodemathDraft[] {
+  const rows: UnicodemathDraft[] = [];
+  for (let row = 0; row < size; row += 1) {
+    const cells: UnicodemathDraft[] = [];
+    for (let column = 0; column < size; column += 1) {
+      cells.push(newTd([newNumber(row === column ? "1" : "0")]));
+    }
+    rows.push(newTr(cells));
+  }
+  return rows;
+}
+
+/**
+ * `Constants::MATRIXS.key(matrixs) || matrixs.to_sym` (`:1649`, `:1670`,
+ * `:1691`'s shared preamble): the entity `opMatrixs` captures resolves
+ * through the inverted table; `opPrefixedMatrixs`'s `\pmatrix`-style
+ * alternative captures the KEY text itself, which the inverted lookup
+ * misses, so the raw text stands in for the symbol Ruby's `.to_sym` would
+ * produce.
+ */
+function matrixSymbol(value: unknown): string {
+  const text = rubyToS(value);
+  return MATRIXS_INVERTED.get(text) ?? text;
+}
+
+/**
+ * The three-way branch every `matrixs` rule shares (`:1649`, `:1670`,
+ * `:1691`): `:Vmatrix` and `:Bmatrix` — the CAPITAL symbols — pass explicit
+ * parens the lowercase names never do, `:matrix` builds the BARE carrier
+ * (`table-behaviour.spec.ts`'s "`Matrix` is not special"), and everything
+ * else asks `getTableClass`, which collapses `vmatrix`/`Vmatrix` and
+ * `bmatrix`/`Bmatrix` onto the same subclass name — see the module header and
+ * `getTableClass` above.
+ */
+function buildMatrixTable(matrixs: unknown, array: unknown): UnicodemathDraft {
+  const matrix = matrixSymbol(matrixs);
+  if (matrix === "Vmatrix") {
+    return newTable(getTableClass(matrix), array, newSymbolOfClass(NORM_ID));
+  }
+  if (matrix === "Bmatrix") {
+    return newTable(
+      getTableClass(matrix),
+      array,
+      newSymbolOfClass(LCURLY_ID),
+      newSymbolOfClass(RCURLY_ID),
+    );
+  }
+  if (matrix === "matrix") return newTable(undefined, array);
+  return newTable(getTableClass(matrix), array);
 }
 
 function asArray(value: TransformValue): unknown[] {
@@ -980,9 +1178,20 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     });
   };
 
-  // --- pass-through and leaf rules (transform.rb:13-170) -----------------
+  // --- pass-through and leaf rules (transform.rb:8-170) -------------------
 
+  // TABLE (eighteen rules total, not the seventeen a prior survey counted —
+  // see the module header): `:8`/`:9` are the base cases `:14`/`:15` below
+  // extend to a sequence of cells.
+  rule("8", { td: simple("td") }, (b) => newTd([b.td]));
+  rule("9", { tr: simple("tr") }, (b) => newTr([b.tr]));
   rule("13", { exp: simple("exp") }, (b) => b.exp);
+  rule("14", { tr: sequence("tr") }, (b) => newTr(b.tr));
+  rule("15", { td: sequence("td") }, (b) => newTd(b.td));
+  // `:13`'s SEQUENCE twin — unneeded until a TABLE coverage witness needed a
+  // cell whose own content resolves to an array (`generate-unicodemath-model-
+  // fixtures.rb`'s "table" group), the one case that leaves `exp` a sequence.
+  rule("17", { exp: sequence("exp") }, (b) => b.exp);
   rule("18", { atom: simple("atom") }, (b) => b.atom);
   rule("20", { nary: simple("nary") }, (b) => b.nary);
   rule("21", { char: simple("char") }, (b) => b.char);
@@ -993,6 +1202,11 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("27", { sub_exp: simple("exp") }, (b) => b.exp);
   rule("28", { sup_exp: simple("exp") }, (b) => b.exp);
   rule("29", { int_exp: simple("exp") }, (b) => b.exp);
+  // TABLE's fifth single-key member: the `{table: ...}` wrapper every
+  // `array` alternative (`grammar.ts`'s `array` rule) puts around its match,
+  // unwrapped once and for all here rather than by each of the other
+  // seventeen.
+  rule("32", { table: simple("table") }, (b) => b.table);
   rule("33", { fonts: simple("fonts") }, (b) => b.fonts);
   rule("34", { digit: simple("digit") }, (b) => b.digit);
   rule("35", { color: simple("color") }, (b) => b.color);
@@ -1082,6 +1296,21 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     symbolsClass(b.operator),
     ...asArray(b.exp),
   ]);
+
+  // TABLE continued (`transform.rb:598`-`:1691`, eighteen rules total; see
+  // the module header): `Mlabeledtr`'s pair, built from `UnicodeMath::
+  // Parser#post_processing`'s `{labeled_tr_value:, labeled_tr_id:}` wrap
+  // (`parser.ts`'s own `postProcessing`, ported ahead of this slice) rather
+  // than from the grammar directly. `:598`'s `value` is a SEQUENCE of rows —
+  // `Utility.filter_values` folds it the way every multi-row formula field
+  // does elsewhere in this file; `:606`'s is already the single row.
+  rule("598", { labeled_tr_value: sequence("value"), labeled_tr_id: simple("id") }, (b) =>
+    newMlabeledtr(filterValues(b.value), newText(b.id)),
+  );
+  rule("606", { labeled_tr_value: simple("value"), labeled_tr_id: simple("id") }, (b) =>
+    newMlabeledtr(b.value, newText(b.id)),
+  );
+
   rule("735", { factor: simple("factor"), operand: simple("operand") }, (b) => [
     b.factor,
     b.operand,
@@ -1207,6 +1436,34 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     return buildClass(b.unary, b.first_value);
   });
 
+  // TABLE continued: the eight `tr`/`trs` and `td`/`tds` combinators
+  // (`:1569`-`:1604`) that fold a row (or cell) onto a growing sequence of
+  // them — the SIMPLE/SIMPLE pair prepends a single item, SIMPLE/SEQUENCE and
+  // SEQUENCE/SIMPLE concatenate onto the front or wrap the first onto an
+  // already-built rest, and SEQUENCE/SEQUENCE concatenates both. Ruby's
+  // `[x] + xs` is a plain array concatenation, spelled `[x, ...asArray(xs)]`
+  // here the same way `:501`/`:506`/`:825`/`:865`/`:870` above already do.
+  rule("1569", { tr: simple("tr"), trs: simple("trs") }, (b) => [newTr([b.tr]), b.trs]);
+  rule("1574", { td: simple("td"), tds: simple("tds") }, (b) => [newTd([b.td]), b.tds]);
+  rule("1579", { tr: simple("tr"), trs: sequence("trs") }, (b) => [
+    newTr([b.tr]),
+    ...asArray(b.trs),
+  ]);
+  rule("1584", { tr: sequence("tr"), trs: simple("trs") }, (b) => [newTr(b.tr), b.trs]);
+  rule("1589", { tr: sequence("tr"), trs: sequence("trs") }, (b) => [
+    newTr(b.tr),
+    ...asArray(b.trs),
+  ]);
+  rule("1594", { td: simple("td"), tds: sequence("tds") }, (b) => [
+    newTd([b.td]),
+    ...asArray(b.tds),
+  ]);
+  rule("1599", { td: sequence("td"), tds: sequence("tds") }, (b) => [
+    newTd(b.td),
+    ...asArray(b.tds),
+  ]);
+  rule("1604", { td: sequence("td"), tds: simple("tds") }, (b) => [newTd(b.td), b.tds]);
+
   rule("1609", { numerator: simple("numerator"), denominator: simple("denominator") }, (b) =>
     fractions(b.numerator, b.denominator),
   );
@@ -1221,6 +1478,22 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     "1614",
     { mini_numerator: simple("numerator"), mini_denominator: simple("denominator") },
     (b) => fractions(b.numerator, b.denominator, { displaystyle: false }),
+  );
+
+  // TABLE concluded — the three `matrixs` rules (`:1649`, `:1670`, `:1691`),
+  // one per shape `array`/`identity_matrix_number` can take once `:1569`-
+  // `:1604` above have folded a row sequence, a bare row, or neither. All
+  // three share `buildMatrixTable`'s branch; `:1670`'s own body wraps its
+  // SIMPLE `array` in a one-element array before that branch runs, exactly as
+  // `transform.rb:1671`-`:1710` does at each of its three call sites.
+  rule("1649", { matrixs: simple("matrixs"), array: sequence("array") }, (b) =>
+    buildMatrixTable(b.matrixs, b.array),
+  );
+  rule("1670", { matrixs: simple("matrixs"), array: simple("array") }, (b) =>
+    buildMatrixTable(b.matrixs, [b.array]),
+  );
+  rule("1691", { matrixs: simple("matrixs"), identity_matrix_number: simple("number") }, (b) =>
+    buildMatrixTable(b.matrixs, identityMatrix(Number(rubyToS(b.number)))),
   );
 
   rule("1806", { expr: simple("expr"), func_expr: simple("func_expr") }, (b) => [

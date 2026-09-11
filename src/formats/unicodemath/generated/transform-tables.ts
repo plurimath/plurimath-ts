@@ -3801,6 +3801,9 @@ export const UNICODEMATH_SYMBOL_CLASS_OVERLAP: readonly string[] = [
 export const UNICODEMATH_TRANSFORM_NAMED_SYMBOLS: ReadonlyMap<string, string> = new Map([
   ["lround", "Paren::Lround"],
   ["rround", "Paren::Rround"],
+  ["norm", "Paren::Norm"],
+  ["lcurly", "Paren::Lcurly"],
+  ["rcurly", "Paren::Rcurly"],
 ]);
 
 /**

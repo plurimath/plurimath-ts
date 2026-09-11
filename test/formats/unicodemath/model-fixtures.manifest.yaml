@@ -2,10 +2,8 @@
 # `payload.sha256` covers the whole payload file, including its final newline.
 ---
 schema: plurimath-corpus/manifest/1
-committable: false
-warnings:
-- generated with --allow-dirty
-- 'generator checkout dirty: scripts/generate-unicodemath-model-fixtures.rb, scripts/generate-unicodemath-parser-data.rb, src/formats/unicodemath/generated/provenance.ts, src/formats/unicodemath/generated/transform-tables.ts, src/formats/unicodemath/transform.ts, test/formats/unicodemath/model-parity.spec.ts, test/formats/unicodemath/transform-coverage.spec.ts'
+committable: true
+warnings: []
 generator:
   path: scripts/generate-unicodemath-model-fixtures.rb
   sha256: 363e42a2fd12b830b67112e59895e2fda45bc91fbf7bffd665ff5301c9993e65
@@ -14,16 +12,9 @@ generator:
     scripts/generate-unicodemath-model-fixtures.rb: 363e42a2fd12b830b67112e59895e2fda45bc91fbf7bffd665ff5301c9993e65
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: a1538fa80689a5477f51b52e7e4a5fc1c1ae03c4
-    clean: false
-    dirty_paths:
-    - scripts/generate-unicodemath-model-fixtures.rb
-    - scripts/generate-unicodemath-parser-data.rb
-    - src/formats/unicodemath/generated/provenance.ts
-    - src/formats/unicodemath/generated/transform-tables.ts
-    - src/formats/unicodemath/transform.ts
-    - test/formats/unicodemath/model-parity.spec.ts
-    - test/formats/unicodemath/transform-coverage.spec.ts
+    commit: 411da9ba83aa04a52a32be6eb153fe3a45ad3cd9
+    clean: true
+    dirty_paths: []
 oracle:
   gem: plurimath
   version: 0.11.6

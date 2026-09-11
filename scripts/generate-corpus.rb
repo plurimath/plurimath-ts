@@ -393,7 +393,7 @@ module CorpusGenerator
 
     raise Error, <<~MESSAGE
       No Gemfile.lock in #{gem_dir}.
-      Run `mise x -- bundle install` there first; §7 records its checksum.
+      Run `bundle install` there first; §7 records its checksum.
     MESSAGE
   end
 

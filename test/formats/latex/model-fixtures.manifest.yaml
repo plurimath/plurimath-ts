@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-latex-model-fixtures.rb
-  sha256: 71d1127cc4f5244a50aca16989add330bc383b2169a0867719f82b3c872604a6
+  sha256: 340f074adc74f2e60df794e219124108b2d0c10b50afb850ab8a2ee8d4d2453d
   inputs:
-    scripts/generate-corpus.rb: a7ed6927c0f3a0821627de2bd6c2dc13e15dff889650419f588546b7ab8a1525
-    scripts/generate-latex-model-fixtures.rb: 71d1127cc4f5244a50aca16989add330bc383b2169a0867719f82b3c872604a6
+    scripts/generate-corpus.rb: c2ce1875421d0281f778a3fcdf09c2d72ebc9acb91aef847a8b756407bd4bd69
+    scripts/generate-latex-model-fixtures.rb: 340f074adc74f2e60df794e219124108b2d0c10b50afb850ab8a2ee8d4d2453d
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: b67050735092e7bcfc2605d29a5dca31aadddf35
+    commit: 373ca4de93934ce7d7368a5bdee36945224b41c3
     clean: true
     dirty_paths: []
 oracle:
@@ -30,10 +30,17 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: 6c8db1f30cf27fa8a73517c3d584cf9de39b460dab2ce9cccfd6d5a73d40179f
+    sha256: 03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121
     resolved_gems: 77
     platforms:
+    - aarch64-linux-gnu
+    - aarch64-linux-musl
+    - arm-linux-gnu
+    - arm-linux-musl
+    - arm64-darwin
+    - x86_64-darwin
     - x86_64-linux-gnu
+    - x86_64-linux-musl
     bundler: 4.0.3
   sources:
   - kind: path
@@ -151,7 +158,7 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: ox
-    version: 2.14.29
+    version: 2.14.28
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
@@ -173,15 +180,15 @@ dependencies:
 corpus:
   path: submodules/plurimath-testsuite
   repository:
-    commit: 281d7003c934cdfa1c56b4c39e0920dd4b320410
+    commit: 518266068bd446c070b6b807d69f3f2a5d0925fa
     clean: true
     dirty_paths: []
   provenance:
     path: corpus/provenance.yaml
     schema: plurimath-corpus/provenance/2
-    sha256: 734776dc0f16546cd0b53bf87526c4b62bbd7f1235ea5755c7eceb4cd2a1ca38
+    sha256: aab15f598eef6a500ea2f2e8dfa2bdd2119e0f8d987991a67583e3f3312f3c41
 payload:
   path: model-fixtures.json
   schema: plurimath-corpus/latex-model/1
-  sha256: e62f1f0c064e93ddbc397623cbf17e05a92b16b179addda5069013f4512dd5c1
-  bytes: 407974
+  sha256: a429f94974ba38a44452a8deb81307230c00aca9d17656fc2d83e18b890928a9
+  bytes: 321296

@@ -58,8 +58,10 @@ require "plurimath/version"
 require_relative "render-fixture-provenance"
 
 unless Gem.loaded_specs.key?("plurimath")
-  abort "REFUSING: the plurimath gem is not activated. Re-run with " \
-        "BUNDLE_GEMFILE=#{oracle}/Gemfile mise x -- bundle exec ruby #{__FILE__} ..."
+  abort "REFUSING: the plurimath gem is not activated. Set BUNDLE_GEMFILE=" \
+        "#{oracle}/Gemfile and run #{__FILE__} with `bundle exec ruby`, under " \
+        "any Ruby that has it bundled (mise, rbenv, asdf, rvm, or the system " \
+        "Ruby all work)."
 end
 
 loaded = $LOADED_FEATURES.grep(%r{/plurimath\.rb\z}).first

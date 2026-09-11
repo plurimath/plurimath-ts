@@ -248,7 +248,7 @@ end
 
 # The ONE exception the oracle is documented to raise across this surface:
 # `Plurimath::Math.parse` funnels every StandardError into ParseError
-# (`math.rb:44-48`). Anything else is a defect here or in the oracle, and a
+# (`math.rb:45-49`). Anything else is a defect here or in the oracle, and a
 # blanket rescue would launder it into an ordinary "raises" row.
 ORACLE_REFUSAL = Plurimath::Math::ParseError
 

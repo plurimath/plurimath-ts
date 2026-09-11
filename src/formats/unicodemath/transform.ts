@@ -119,9 +119,10 @@
  * `Parslet::Transform.rule` **unshifts** (`parslet-2.0.0/lib/parslet/transform.rb:128`
  * and `:160`), so a later definition wins a tie. Measured over all 519
  * registered patterns, exactly ONE signature appears twice —
- * `{exp: sequence, factor: simple}` at `transform.rb:846` and `:871` — and the
- * later `:871` wins, which the coverage probe confirms (`:871` fires, `:846`
- * never). `:871` is ported; `:846` is dead and is not.
+ * `{exp: sequence, factor: simple}` at `transform.rb:845` and `:870` — and the
+ * later `:870` wins, which the coverage probe confirms (`:870` fires, `:845`
+ * never). `:870` is ported; `:845` is dead and is not. (846 and 871 are those
+ * headers' CONTINUATION lines; every id here is a `rule(` opening line.)
  *
  * ## Mutation is behaviour, so nodes are drafts until the entry point returns
  *
@@ -131,7 +132,7 @@
  * `sub_sup.parameter_one.parameter_one`, and `:1861` sets
  * `parameter_three` or `parameter_four`. `Utility.fractions` adds a fifth
  * mutation site outside the rules, rewriting a `Frac`'s `parameter_one` in
- * place (`unicode_math/utility.rb:88`).
+ * place (`unicode_math/utility.rb:92`).
  * Core nodes are publicly immutable (ARCHITECTURE.md §5), so the transform
  * works on `UnicodemathDraft` objects and `finalize` converts the finished tree
  * into real `core` nodes in one pass at the end.
@@ -232,7 +233,7 @@ function rubyToS(value: unknown): string {
 }
 
 /**
- * `Slice#== other` is `str == other` (`parslet-2.0.0/lib/parslet/slice.rb:43`),
+ * `Slice#== other` is `str == other` (`parslet-2.0.0/lib/parslet/slice.rb:45-46`),
  * and Ruby's `String#==` delegates to the other side when it responds to
  * `to_str` — so a slice and a string with the same text compare equal in BOTH
  * directions. Three ported rules depend on it: `[opener, closer].include?("|")`
@@ -467,7 +468,7 @@ function newSymbolOfClass(id: string): UnicodemathDraft {
 }
 
 /**
- * `Math::Symbols::Symbol.new(sym)` (`symbols/symbol.rb:16`): `@value =
+ * `Math::Symbols::Symbol.new(sym)` (`symbols/symbol.rb:12-17`): `@value =
  * sym.is_a?(Array) ? sym.join : sym&.to_s`. Only `@value` is assigned — the
  * other four ivars are guarded and stay unassigned.
  */
@@ -1098,7 +1099,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.factor,
     ...asArray(b.expr),
   ]);
-  // `:846` has this exact signature and is DEAD: `rule` unshifts, so this
+  // `:845` has this exact signature and is DEAD: `rule` unshifts, so this
   // later definition wins every tie. See the header.
   rule("870", { factor: simple("factor"), exp: sequence("exp") }, (b) => [
     b.factor,
@@ -1365,7 +1366,8 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   );
 
   // `Utility.unfenced_value(operand, ...)` on the first line is computed and
-  // DISCARDED — a statement whose value nothing reads (`transform.rb:2438`).
+  // DISCARDED — a statement whose value nothing reads (`transform.rb:2439`;
+  // 2436-2438 are the rule's three-line header).
   // It is transcribed because it can still raise; the `Fenced` below is built
   // from the untouched `operand` either way.
   rule(

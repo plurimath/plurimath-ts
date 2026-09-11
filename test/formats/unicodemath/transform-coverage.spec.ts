@@ -49,9 +49,15 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * One transform, driven over every input the gem parsed, counting firings.
  *
  * The two deferred-family inputs are driven too: their transform runs to
- * completion and only `finalize` refuses them, and they are the sole cover for
- * `transform.rb:2619` on a `Fenced` built around a table — the line the rule
- * STARTS on, which is the id the report below keys on.
+ * completion and only `finalize` refuses them, so their rule firings count
+ * here even though `model-parity.spec.ts` expects a refusal.
+ *
+ * They are NOT special cover for anything. This said they were "the sole cover
+ * for `transform.rb:2619` on a `Fenced` built around a table"; measured, they
+ * fire `:13`, `:18`, `:39` and `:92` and never reach `:2619` at all — they are
+ * refused at the FORMULA root with `{table=...}`, so no `Fenced` is built.
+ * `:2619` fires 40 times across 32 other rows, starting with `(x)` and `{x}`.
+ * Rule ids here are the line a `rule(` call OPENS on.
  */
 const build = buildUnicodemathTransform();
 let reached = 0;

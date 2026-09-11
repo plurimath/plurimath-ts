@@ -25,7 +25,7 @@
  *
  * The gem lets `Parslet::ParseFailed` escape uncaught — there is no `rescue`
  * anywhere under `lib/plurimath/unicode_math/` — and `Plurimath::Math.parse`
- * turns it into a `ParseError` at the public boundary (`math.rb:44-48`). That
+ * turns it into a `ParseError` at the public boundary (`math.rb:45-49`). That
  * is the boundary this function stands at, so a refusal is a `ParseError`.
  */
 
@@ -136,7 +136,7 @@ export function parseUnicodemathTree(
  * `Plurimath::Math.parse(input, :unicode)`'s observable result.
  *
  * The transform is wrapped as well as the grammar, because `Plurimath::Math.parse`
- * wraps everything (`math.rb:44-48`):
+ * wraps everything (`math.rb:45-49`):
  *
  * ```ruby
  * rescue ParseError

@@ -169,8 +169,36 @@ function copyParameter(value: NodeParameter | undefined): NodeParameter | undefi
   return value === undefined ? undefined : copySlot(value);
 }
 
+/**
+ * The options slot for the classes whose Ruby `initialize` SKIPS an empty hash.
+ *
+ * The gem has three shapes, measured across `lib/plurimath/math/**`:
+ *
+ * - `@options = options unless options.empty?` — ten classes: `base`, `color`,
+ *   `frac` (spelled `if options && !options&.empty?`), `int`, `mpadded`,
+ *   `oint`, `overset`, `prod`, `sum`, and `symbols/symbol`.
+ * - `@options = options` — three: `fenced`, `nary`, `table`. An empty hash is
+ *   STORED.
+ * - `@options = options unless options.nil?` — one: `underset`. An empty hash
+ *   is stored there too.
+ *
+ * Every caller of this helper is in the first group, so an empty hash must
+ * leave the slot unset, exactly as `Frac.new(a, b, {})` does — measured, its
+ * `@options` is not even defined afterwards, while `Underset.new(a, b, {})`
+ * holds `{}`. Returning a fresh `{}` here instead would put an empty hash into
+ * `normalize`'s output where the gem emits nothing.
+ *
+ * `Sqrt` is the one caller whose gem class cannot take options through `new` at
+ * all — it inherits `UnaryFunction#initialize(parameter_one = nil)`, so
+ * `Sqrt.new(a, {})` raises `ArgumentError`. Dropping an empty hash is the
+ * closer answer for it as well.
+ *
+ * The three store-always classes do NOT route through here; they assign the
+ * slot directly, which is why this helper can drop empties unconditionally.
+ */
 function copyOptions(value: NodeOptions | undefined): NodeOptions | undefined {
-  return value === undefined ? undefined : { ...value };
+  if (value === undefined) return undefined;
+  return Object.keys(value).length === 0 ? undefined : { ...value };
 }
 
 /**

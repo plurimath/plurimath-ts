@@ -27,6 +27,7 @@
 
 import { describeThrown } from "../../core/errors";
 import { type FormulaNode, type OnUnsupported, ParseError } from "../../core/index";
+import { UndecodableEntityError } from "../../core/nodes";
 import type { LocaleOptions } from "../../formatting/index";
 import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
 import { latexGrammar } from "./grammar";
@@ -52,7 +53,7 @@ export interface LatexParseOptions extends LocaleOptions {
  * `ParseError.index` already indexes the ORIGINAL input here.
  */
 export function parseLatexTree(input: string, options?: LatexParseOptions | null): ParseValue {
-  const { text, map } = preprocess(input);
+  const { text, map } = preprocessOrParseError(input);
   return parsePreprocessed(input, text, map, options);
 }
 
@@ -81,7 +82,7 @@ export function parseLatexTree(input: string, options?: LatexParseOptions | null
  * either.
  */
 export function parseLatex(input: string, options?: LatexParseOptions | null): FormulaNode {
-  const { text, map } = preprocess(input);
+  const { text, map } = preprocessOrParseError(input);
   const tree = parsePreprocessed(input, text, map, options);
   try {
     const transformed = latexTransform().apply(tree);
@@ -93,6 +94,53 @@ export function parseLatex(input: string, options?: LatexParseOptions | null): F
       input,
       "latex",
       0,
+    );
+  }
+}
+
+/**
+ * Preprocessing failures reach the caller as `ParseError`, the same class a
+ * grammar or transform failure becomes below. That is not every failure this
+ * module can raise, though: an unsupported locale is rejected before parsing
+ * starts, inside `parsePreprocessed`'s call to `latexGrammar`, and reaches the
+ * caller as `UnsupportedLocaleError` -- never wrapped. Measured:
+ * `parseLatex("x", { locale: "definitely-not-a-locale" })` throws
+ * `UnsupportedLocaleError` with code `UNSUPPORTED_LOCALE`, not a `ParseError`.
+ * That is deliberate, not a gap this function should close: the gem raises
+ * `Plurimath::Errors::UnsupportedLocale` from `key_for!` before parsing
+ * starts, `e.is_a?(Plurimath::Math::ParseError)` is `false` on the pinned
+ * oracle, and `formatting/errors.ts` documents the same split for this port.
+ *
+ * What preprocessing can still fail on is an UNDECODABLE character reference:
+ * `preprocess` raises `UndecodableEntityError`, a bare `RangeError` subclass
+ * with no `code` and no `format`. Without this wrapper that error reached the
+ * caller as-is, and the compat constructor handed it on -- so a caller asking
+ * for LaTeX got something that did not look like a parse failure at all.
+ *
+ * The `\\text{...}` restore is NOT one of those failures any more. It used to
+ * throw when the restore found more matches than the scan had saved; measured
+ * against the gem, Ruby shifts a nil there and `gsub` writes `nil.to_s`, so
+ * the construct is deleted instead -- `\\text {x}` preprocesses to the empty
+ * string, which the grammar then refuses as a `ParseError` of its own. That
+ * arm reproduces the gem rather than raising, so nothing reaches this wrapper
+ * from it.
+ */
+function preprocessOrParseError(input: string): ReturnType<typeof preprocess> {
+  try {
+    return preprocess(input);
+  } catch (error) {
+    if (error instanceof ParseError) throw error;
+    // Carry the offset across rather than inventing one. `UndecodableEntityError`
+    // records the UTF-16 offset of the `&` it could not decode, which is exactly
+    // what `ParseError.index` is documented to hold — an offset into the ORIGINAL
+    // input. Measured: `preprocess("x+&#x110000;")` throws with `index` 2, and
+    // this used to report 0, telling a caller the failure was at the start of a
+    // string where the reference is two characters in.
+    throw new ParseError(
+      error instanceof Error ? error.message : describeThrown(error),
+      input,
+      "latex",
+      error instanceof UndecodableEntityError ? error.index : 0,
     );
   }
 }

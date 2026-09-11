@@ -119,7 +119,7 @@ describe("the inputs the gem refuses", () => {
     (_group, _input, entry) => {
       // Every refusal reaches `Plurimath::Math.parse`'s boundary as a
       // `ParseError`, whichever stage raised — including the normalisation
-      // `RangeError`, which `math.rb:47` funnels into one. `parseHtml` stands
+      // `RangeError`, which `math.rb:48-49` funnels into one. `parseHtml` stands
       // at the same boundary, so the type is required on every row rather than
       // only on the `raisedIn: "parse"` ones.
       expect(entry.raises).toBe("Plurimath::Math::ParseError");

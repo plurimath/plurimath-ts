@@ -254,7 +254,7 @@ function newSymbolOfClass(id: string): HtmlDraft {
 }
 
 /**
- * `Math::Symbols::Symbol.new(sym)` (`symbols/symbol.rb:16`): `@value =
+ * `Math::Symbols::Symbol.new(sym)` (`symbols/symbol.rb:12-17`): `@value =
  * sym.is_a?(Array) ? sym.join : sym&.to_s`. Only `@value` is assigned — the
  * other four ivars are guarded and stay unassigned.
  */

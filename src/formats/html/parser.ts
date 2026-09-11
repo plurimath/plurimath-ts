@@ -35,7 +35,7 @@
  * The gem lets `Parslet::ParseFailed` escape uncaught — there is no `rescue`
  * anywhere under `lib/plurimath/html/` — and `Plurimath::Math.parse` turns it,
  * and every other `StandardError`, into a `ParseError` at the public boundary
- * (`math.rb:44-48`). That is the boundary `normalize`, the grammar and the
+ * (`math.rb:45-49`). That is the boundary `normalize`, the grammar and the
  * transform stand at, so a refusal from ANY of those three is a `ParseError`
  * and nothing else escapes from them. It is NOT the boundary the function as
  * a whole stands at: `Math.parse` validates parse OPTIONS first, from its own
@@ -158,7 +158,7 @@ function enterContainer(depth: number): number {
  *
  * OPTION VALIDATION runs first and is UNWRAPPED — see `validateOptions`.
  * Everything after it is wrapped, because `Plurimath::Math.parse` wraps
- * everything past that point (`math.rb:44-48`):
+ * everything past that point (`math.rb:45-49`):
  *
  * ```ruby
  * rescue ParseError

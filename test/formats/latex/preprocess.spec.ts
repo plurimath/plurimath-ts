@@ -42,10 +42,11 @@
  */
 
 import { describe, expect, it } from "vitest";
+import Plurimath from "../../../src/compat/index";
 import { ParseError } from "../../../src/core/index";
 import { UndecodableEntityError } from "../../../src/core/nodes";
 import { toAsciimath } from "../../../src/formats/asciimath/index";
-import { parseLatex } from "../../../src/formats/latex/parser";
+import { parseLatex, parseLatexTree } from "../../../src/formats/latex/parser";
 import { preprocess } from "../../../src/formats/latex/preprocess";
 
 /**
@@ -171,5 +172,63 @@ describe("latex preprocessing: undecodable character references", () => {
     expect(thrown).toBeInstanceOf(RangeError);
     expect(thrown).toBeInstanceOf(UndecodableEntityError);
     expect((thrown as UndecodableEntityError).index).toBe(index);
+  });
+});
+
+/**
+ * `preprocessOrParseError` (`parser.ts`) is the only thing standing between
+ * the raw `UndecodableEntityError` proven above and a caller of `parseLatex`,
+ * `parseLatexTree`, or the compat constructor. Delete both of its call sites
+ * and every one of those three still throws on this input -- `preprocess`
+ * itself refuses it, per `UNDECODABLE` above -- but what they throw stops
+ * being a `ParseError`: it surfaces as the bare `UndecodableEntityError`, with
+ * no `code`, no `format`, and no `input` for a caller to read. A review did
+ * exactly that and the rest of this suite, 30 compatibility assertions and 266
+ * model-fixture checks, stayed green, which is what this block exists to
+ * close.
+ *
+ * `"x+&#x110000;"` is `UNDECODABLE`'s own second entry, chosen because its raw
+ * failure is already pinned by a different assertion above.
+ */
+describe("latex preprocessing: the undecodable-entity wrapper", () => {
+  const input = "x+&#x110000;";
+
+  it.each([
+    ["parseLatex", () => parseLatex(input)],
+    ["parseLatexTree", () => parseLatexTree(input)],
+    ["the compat constructor", () => new Plurimath(input, "latex")],
+  ] as const)("%s reports a ParseError naming the format and the original input", (_label, run) => {
+    let thrown: unknown;
+    try {
+      run();
+    } catch (error) {
+      thrown = error;
+    }
+    // `thrown` stays `undefined` when nothing was raised, so the first
+    // assertion still fails a call that does not throw at all.
+    expect(thrown).toBeInstanceOf(ParseError);
+    const error = thrown as ParseError;
+    expect(error.format).toBe("latex");
+    expect(error.input).toBe(input);
+    // The offset is CARRIED, not invented. `UndecodableEntityError` records the
+    // UTF-16 offset of the `&` it could not decode, and `ParseError.index` is
+    // documented as an offset into the original input — so they are the same
+    // number and the wrapper must not flatten it. Measured: `preprocess` throws
+    // with index 2 for this input, where the reference starts.
+    expect(error.index).toBe(2);
+  });
+
+  it("takes that offset from the error rather than the start of the string", () => {
+    // The guard against a wrapper that hard-codes 0: a longer prefix moves the
+    // reference, and the reported index has to move with it.
+    const shifted = `xyz+${input}`;
+    let thrown: unknown;
+    try {
+      parseLatex(shifted);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(ParseError);
+    expect((thrown as ParseError).index).toBe(6);
   });
 });

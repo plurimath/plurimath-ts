@@ -350,8 +350,8 @@ describe("the boundary", () => {
  *
  *   Hom.new(Symbol("x")).to_unicodemath  => "hom⁡x"
  *   Hom.new(nil).to_unicodemath          => "hom⁡"
- *   Hom.instance_method(:to_unicodemath).owner  => UnaryFunction
- *   Mbox.instance_method(:to_unicodemath).owner => Mbox
+ *   Hom.instance_method(:to_unicodemath).owner    => UnaryFunction
+ *   Merror.instance_method(:to_unicodemath).owner => Merror
  */
 describe("Hom, a carrier-default unary name the AsciiMath transform cannot build", () => {
   it("renders the carrier default, invisible FUNCTION APPLICATION and all", () => {
@@ -362,8 +362,72 @@ describe("Hom, a carrier-default unary name the AsciiMath transform cannot build
   });
 
   it("still refuses a name whose gem class overrides to_unicodemath", () => {
+    // Merror, not Mbox: Mbox is arm-rendered below, Merror is the same case
+    // left unmeasured.
+    expect(() =>
+      toUnicodemath(new UnaryFunctionNode({ name: "Merror", parameterOne: sym("x") })),
+    ).toThrow(RenderError);
+  });
+});
+
+/**
+ * Measured on the pinned oracle 00c52783, through a Formula, with Mbox.new(v)
+ * against Text.new(v) in the same slot — identical on every shape, because
+ * `mbox.rb:27-29` hands the slot to a fresh Text:
+ *
+ *   Mbox.instance_method(:to_unicodemath).owner => Mbox
+ *   Formula([Mbox("hi")]).to_unicodemath  => "\"hi\""
+ *   Formula([Mbox("a b")]).to_unicodemath => "\"a b\""
+ *   Formula([Mbox("")]).to_unicodemath    => "\"\""
+ *   Formula([Mbox(nil)]).to_unicodemath   => ""    (Text answers Ruby nil,
+ *                                                   which the formula
+ *                                                   boundary contributes
+ *                                                   nothing for)
+ *   Mbox.new(Symbols::Symbol("x")) => NoMethodError in Text's own start_with?
+ */
+describe("Mbox, a LaTeX-only name whose to_unicodemath delegates to Text", () => {
+  it("renders the fresh Text the gem builds, quotes and no FUNCTION APPLICATION", () => {
+    expect(toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: "hi" }))).toBe('"hi"');
+    expect(toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: "a b" }))).toBe(
+      '"a b"',
+    );
+    expect(toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: "" }))).toBe('""');
+    expect(toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: null }))).toBe("");
+  });
+
+  it("refuses a node in the slot, where the gem's Text dies in start_with?", () => {
     expect(() =>
       toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: sym("x") })),
     ).toThrow(RenderError);
+  });
+
+  it("reads an ABSENT slot as the gem's nil, not as the empty string", () => {
+    // §5's structural dispatch admits a plain object with the slot missing, and
+    // `Mbox.new` stores nil. Measured on the pinned oracle 00c52783:
+    //
+    //   Formula([Mbox.new]).to_unicodemath     => ""      (Text answers nil)
+    //   Formula([Mbox.new("")]).to_unicodemath => "\"\""  (two quote marks)
+    //
+    // `Text`'s own Ruby default is `""`, so the absent slot must be narrowed to
+    // nil before a fresh Text is built or the second answer is given for the
+    // first.
+    const absent = { kind: "unaryFunction", name: "Mbox" } as unknown as MathNode;
+    expect(toUnicodemath(absent)).toBe("");
+  });
+
+  it("reads false in the slot as the gem's nil, as Ruby truthiness does", () => {
+    // `Text#to_unicodemath` opens `return unless value` — a nil TEST would be
+    // `unless value.nil?`, and this is not that. Measured on the pinned oracle
+    // 00c52783: `Text.new(false).to_unicodemath` is nil and
+    // `Formula([Mbox.new(false)]).to_unicodemath` is "". The port threw here,
+    // which was a defect in the Text renderer that this arm exposed.
+    const falseSlot = {
+      kind: "unaryFunction",
+      name: "Mbox",
+      parameterOne: false,
+    } as unknown as MathNode;
+    expect(toUnicodemath(falseSlot)).toBe("");
+    const falseText = { kind: "text", parameterOne: false } as unknown as MathNode;
+    expect(toUnicodemath(falseText)).toBe("");
   });
 });

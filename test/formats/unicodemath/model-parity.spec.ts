@@ -18,8 +18,7 @@
  * unused. Every row moved; none had to stay behind.
  *
  * Refusals are pinned as first-class outcomes: a row with `raises` must fail
- * here too, and a row with a `model` must not — except the rows whose rule
- * family this slice defers, which are listed below and must fail LOUDLY.
+ * here too, and a row with a `model` must not.
  */
 
 import { readFileSync } from "node:fs";
@@ -53,22 +52,14 @@ interface Fixtures {
 const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf8")) as Fixtures;
 
 /**
- * The two CORPUS inputs whose rules this slice defers.
- *
- * `transform.rb`'s table/matrix family — the eight rules `:8`, `:9`, `:14`,
- * `:32`, `:1569`, `:1574`, `:1584` and `:1649` — is the one family the corpus
- * reaches that the port leaves out, and these are exactly the inputs that reach
- * it (measured on the oracle: no other corpus string fires any of the eight).
- *
- * They are listed here rather than dropped from the fixture set, because the
- * fixture set is the ORACLE's answer and stays complete. What is asserted is
- * that the port REFUSES them: with those rules absent the `matrixs`/`tr`/`td`
- * nodes reach `finalize` as plain hashes and it throws, naming the keys. When
- * the family lands, these two move from this list into the parity list and the
- * count below fails until they do.
+ * `transform.rb`'s table/matrix family — measured at eighteen rules, not the
+ * seventeen a prior survey counted (see `transform.ts`'s module header) — used
+ * to be the one family the corpus reaches that the port left out, and
+ * `"⒨(a@b)"`/`"ⓢ(a&b@c&d)"` were the two corpus inputs that reached it
+ * (measured on the oracle: no other corpus string fires any of the eighteen).
+ * The TABLE increment ported the family, so both rows now compare for real
+ * below, in `supported`, the same as every other corpus row.
  */
-const DEFERRED_INPUTS: readonly string[] = ["⒨(a@b)", "ⓢ(a&b@c&d)"];
-
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");
 const boundary = fixtures.cases.filter((entry) => entry.group === "slice-boundary");
 // Every row that is neither the corpus nor a boundary case: the RULE_COVERAGE
@@ -80,12 +71,7 @@ const coverage = fixtures.cases.filter(
 );
 const parsed = fixtures.cases.filter((entry) => entry.model !== undefined);
 const raised = fixtures.cases.filter((entry) => entry.raises !== undefined);
-const deferred = corpus.filter(
-  (entry) => entry.model !== undefined && DEFERRED_INPUTS.includes(entry.input),
-);
-const supported = corpus.filter(
-  (entry) => entry.model !== undefined && !DEFERRED_INPUTS.includes(entry.input),
-);
+const supported = corpus.filter((entry) => entry.model !== undefined);
 // The corpus does not reach the rules a slice has just ported -- that is why
 // each family arrives with a coverage group -- so `supported` above, drawn from
 // `corpus` alone, compares the model of nothing this slice added. Measured: with
@@ -140,10 +126,9 @@ describe("the UnicodeMath fixture set", () => {
     expect(boundary.every((entry) => entry.model !== undefined)).toBe(true);
   });
 
-  it("defers exactly the two corpus inputs the table/matrix family serves", () => {
-    expect(deferred.length).toBe(DEFERRED_INPUTS.length);
+  it("supports every corpus input the gem itself parses", () => {
     const corpusParsed = corpus.filter((entry) => entry.model !== undefined).length;
-    expect(supported.length).toBe(corpusParsed - DEFERRED_INPUTS.length);
+    expect(supported.length).toBe(corpusParsed);
     expect(supported.length).toBeGreaterThan(90);
   });
 });
@@ -170,22 +155,8 @@ describe("the parsed model, for the hand-picked coverage inputs", () => {
   );
 });
 
-describe("the rule families this slice defers", () => {
-  it.each(deferred.map((entry) => [entry.input, entry] as const))(
-    "%j: refuses loudly, naming the unmatched keys",
-    (_input, entry) => {
-      // The transform's own message survives the entry point's normalisation,
-      // so the refusal still names the keys — but it now reaches a caller as a
-      // `ParseError` rather than a bare `Error`, which is what the gem's public
-      // boundary does with anything a `StandardError` escapes into.
-      expect(() => parseFixture(entry)).toThrow(ParseError);
-      expect(() => parseFixture(entry)).toThrow(/no rule matched \{/);
-    },
-  );
-});
-
 /**
- * The slice EDGE, as opposed to the deferred family above.
+ * The slice EDGE: inputs the corpus reaches that fire an unported rule.
  *
  * Each of these fires one `transform.rb` rule the port does not carry — `:99`,
  * `:765`, `:745`, `:1791` — and the gem answers each with a perfectly ordinary

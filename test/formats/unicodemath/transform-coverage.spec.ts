@@ -1,7 +1,7 @@
 /**
  * Every ported transform rule is exercised by the fixture set.
  *
- * `model-parity.spec.ts` proves the port agrees with the gem on 95 inputs. It
+ * `model-parity.spec.ts` proves the port agrees with the gem on 97 inputs. It
  * cannot prove that a rule was ever REACHED — a rule with a typo in its action
  * passes vacuously if nothing routes to it — so `buildUnicodemathTransform`
  * counts each rule's firings, this suite drives the whole fixture set through
@@ -29,7 +29,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { parseUnicodemathPreprocessed } from "../../../src/formats/unicodemath/grammar";
+import { parseUnicodemathTree } from "../../../src/formats/unicodemath/parser";
 import { buildUnicodemathTransform, shapeOf } from "../../../src/formats/unicodemath/transform";
 import { Slice, sequence, simple, Transform } from "../../../src/pegkit/index";
 
@@ -48,22 +48,24 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
 /**
  * One transform, driven over every input the gem parsed, counting firings.
  *
- * The two deferred-family inputs are driven too: their transform runs to
- * completion and only `finalize` refuses them, so their rule firings count
- * here even though `model-parity.spec.ts` expects a refusal.
- *
- * They are NOT special cover for anything. This said they were "the sole cover
- * for `transform.rb:2619` on a `Fenced` built around a table"; measured, they
- * fire `:13`, `:18`, `:39` and `:92` and never reach `:2619` at all — they are
- * refused at the FORMULA root with `{table=...}`, so no `Fenced` is built.
- * `:2619` fires 40 times across 32 other rows, starting with `(x)` and `{x}`.
+ * Driven through `parseUnicodemathTree(entry.input)` — preprocess, parse,
+ * AND `Parser#post_processing`'s `#`-label wrap — rather than straight from
+ * `entry.preprocessed` through the grammar alone: the `Mlabeledtr` pair
+ * (`:598`, `:606`) only ever matches the `{labeled_tr_value:,
+ * labeled_tr_id:}` shape that wrap builds, which the grammar alone never
+ * produces, so a "table" coverage row that needs them (`"a#b"`, `"a b#c"`)
+ * could not reach them any other way. Safe to route every OTHER row through
+ * the extra preprocessing step too: `model-parity.spec.ts`'s own "re-derives
+ * every recorded preprocessed text from the raw input" already proves
+ * `preprocess(entry.input).text` equals the recorded `entry.preprocessed` for
+ * every row, so this changes what runs, not what a passing row parses to.
  * Rule ids here are the line a `rule(` call OPENS on.
  */
 const build = buildUnicodemathTransform();
 let reached = 0;
 for (const entry of fixtures.cases) {
   if (entry.model === undefined || entry.preprocessed === undefined) continue;
-  build.transform.apply(parseUnicodemathPreprocessed(entry.preprocessed));
+  build.transform.apply(parseUnicodemathTree(entry.input));
   reached += 1;
 }
 
@@ -73,30 +75,36 @@ describe("transform rule coverage", () => {
     expect(reached).toBeGreaterThan(90);
   });
 
-  it("registers the 99 rules the slice carries", () => {
+  it("registers the 118 rules the slice carries", () => {
     // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
-    // eight-rule table/matrix family the slice defers: `transform.rb:8`, `:9`,
-    // `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13 MULTISCRIPT —
-    // twelve `Math::Function::Multiscript` constructors (`:1992`-`:3978`) and
-    // the `:57` unwrap every one of them routes through — reached by the
-    // hand-picked "multiscript" coverage group, not the corpus — plus 8
-    // FRACTION, on top of `:1609` (already one of the 78, the corpus's own
-    // plain fraction shape): its six option-carrying `Utility.fractions`/
+    // eight-rule table/matrix family the first slice deferred: `transform.rb:8`,
+    // `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13
+    // MULTISCRIPT — twelve `Math::Function::Multiscript` constructors
+    // (`:1992`-`:3978`) and the `:57` unwrap every one of them routes through —
+    // reached by the hand-picked "multiscript" coverage group, not the corpus —
+    // plus 8 FRACTION, on top of `:1609` (already one of the 78, the corpus's
+    // own plain fraction shape): its six option-carrying `Utility.fractions`/
     // `Fenced` siblings (`:1614`, `:2197`, `:2209`, `:2347`, `:2353`,
     // `:2377`), plus the two standalone SUP_DIGITS/SUB_DIGITS unwraps (`:165`,
     // `:170`) `:1614`'s mini shape needs — reached by the hand-picked
-    // "fraction" coverage group, not the corpus.
+    // "fraction" coverage group, not the corpus — plus 19 TABLE: the eight the
+    // first slice deferred, the nine more that family needed but the corpus
+    // never reached (`:15`, `:598`, `:606`, `:1579`, `:1589`, `:1594`, `:1599`,
+    // `:1604`, `:1691`), `:1670`, which a prior survey missed — see the module
+    // header — and `:17` (`:13`'s SEQUENCE twin), the one small prerequisite a
+    // "table" coverage witness needed — reached by the hand-picked "table"
+    // coverage group.
     //
     // The count is rules REGISTERED, not branches reached: the multiscript
     // group carries four extra inputs whose trailing script is fenced, because
     // the twelve that name a rule each all carry BARE scripts, and bypassing
     // every `unfencedValue` call in `:2958`, `:3662`, `:3853` and `:3978` left
-    // the suite green without them.
-    expect(build.ruleIds.length).toBe(99);
-    expect(new Set(build.ruleIds).size).toBe(99);
-    for (const deferred of ["8", "9", "14", "32", "1569", "1574", "1584", "1649"]) {
-      expect(build.ruleIds, `transform.rb:${deferred} is deferred`).not.toContain(deferred);
-    }
+    // the suite green without them. The table group carries one input per
+    // `Constants::MATRIXS` character (eight) for the same reason: all eight
+    // fire `:1649`/`:1670`/`:1691` with an identical trace and take four
+    // different branches to eight different table classes.
+    expect(build.ruleIds.length).toBe(118);
+    expect(new Set(build.ruleIds).size).toBe(118);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

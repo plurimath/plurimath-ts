@@ -89,11 +89,41 @@ describe("unary functions", () => {
   });
 
   it("a name outside the AsciiMath-reachable set raises rather than guessing", () => {
-    // Math::Function::Mbox overrides to_asciimath; a carrier-default render
-    // here would diverge silently, so the gap fails loudly instead.
-    expect(() => toAsciimath(new UnaryFunctionNode({ name: "Mbox", parameterOne: x() }))).toThrow(
+    // Math::Function::Merror overrides to_asciimath, so a carrier-default
+    // render here would diverge silently and the gap fails loudly instead.
+    // Measured on the pinned oracle 00c52783: of the twelve classes the census
+    // aliases onto this carrier from outside the AsciiMath-reachable set,
+    // eleven own `to_asciimath` — Merror among them — and the twelfth, Hom, is
+    // admitted below precisely because it does not.
+    expect(() => toAsciimath(new UnaryFunctionNode({ name: "Merror", parameterOne: x() }))).toThrow(
       RenderError,
     );
+  });
+
+  /**
+   * Measured on the pinned oracle 00c52783, Mbox.new(v) against Text.new(v):
+   *
+   *   Mbox.instance_method(:to_asciimath).owner => Mbox
+   *   Mbox.new("hi").to_asciimath   => "\"hi\""   (Text.new("hi"): same)
+   *   Mbox.new("a b").to_asciimath  => "\"a b\""  (Text.new("a b"): same)
+   *   Mbox.new(nil).to_asciimath    => "\"\""     (Text.new(nil): same)
+   *   Mbox.new(Symbols::Symbol("x")) => NoMethodError: undefined method
+   *                                     'gsub' for an instance of Symbol
+   */
+  describe("Mbox, a LaTeX-only name whose to_asciimath delegates to Text", () => {
+    it("renders the fresh Text the gem builds, quotes and all", () => {
+      expect(toAsciimath(new UnaryFunctionNode({ name: "Mbox", parameterOne: "hi" }))).toBe('"hi"');
+      expect(toAsciimath(new UnaryFunctionNode({ name: "Mbox", parameterOne: "a b" }))).toBe(
+        '"a b"',
+      );
+      expect(toAsciimath(new UnaryFunctionNode({ name: "Mbox", parameterOne: null }))).toBe('""');
+    });
+
+    it("still refuses a node in the slot, where the gem's Text dies in gsub", () => {
+      expect(() => toAsciimath(new UnaryFunctionNode({ name: "Mbox", parameterOne: x() }))).toThrow(
+        RenderError,
+      );
+    });
   });
 
   it("Hom renders the carrier default, though the transform cannot build it", () => {

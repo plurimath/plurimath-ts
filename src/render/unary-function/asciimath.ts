@@ -2,7 +2,7 @@
  * Mirrors `function/unary_function.rb` — `UnaryFunction#to_asciimath` (:21)
  * and `#asciimath_value` (:196) — plus the name arms for the gem classes the
  * census folds into this carrier with their *own* `to_asciimath` overrides:
- * `left.rb`, `right.rb`, `lcm.rb`, `tr.rb`. Every other name in
+ * `left.rb`, `right.rb`, `lcm.rb`, `mbox.rb`, `tr.rb`. Every other name in
  * `MEASURED_UNARY_NAMES` below renders the carrier default.
  *
  * Measured pin worth naming, because source-reading gets it wrong:
@@ -12,7 +12,7 @@
  */
 
 import type { NodeParameter } from "../../core/index";
-import { RenderError } from "../../core/index";
+import { RenderError, TextNode } from "../../core/index";
 import {
   classBasename,
   describeSlot,
@@ -29,9 +29,26 @@ import {
   ASCIIMATH_TRANSFORM_GET_CLASS,
   ASCIIMATH_TRANSFORM_UNARY_CLASSES,
 } from "../../generated/asciimath/transform-registry";
+import { renderText } from "../text/asciimath";
 
 /** `Utility::UNARY_CLASSES` — the names rendered without parentheses. */
 const UNARY_KEYWORDS: ReadonlySet<string> = new Set(ASCIIMATH_TRANSFORM_UNARY_CLASSES);
+
+/**
+ * The fresh `Text` that `mbox.rb` builds out of the slot.
+ *
+ * `Text.new(parameter_one)` passes the slot POSITIONALLY, so a nil slot stays
+ * nil — but `Text#initialize` defaults an OMITTED argument to `""` where
+ * `UnaryFunction#initialize` defaults to nil (measured on the pinned oracle
+ * `00c52783`: `Text.new.parameter_one` is `""`, `Mbox.new.parameter_one` is
+ * nil), and `TextNode` faithfully reproduces that `""` for an `undefined`
+ * init. §5's structural dispatch admits a plain object with `parameterOne`
+ * absent, which reaches here as `undefined`. An explicit `""` and an explicit
+ * `false` both pass through untouched.
+ */
+function mboxText(parameterOne: NodeParameter | undefined): NodeOf<"text"> {
+  return new TextNode({ parameterOne: parameterOne ?? null });
+}
 
 /**
  * The class names this carrier has measured behaviour for. Three sources,
@@ -90,6 +107,30 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
       return present(node.parameterOne)
         ? `lcm ${asciimathValue(node.parameterOne, context, "lcm.parameterOne")}`
         : "lcm";
+    case "Mbox":
+      // `mbox.rb:7-9`: `Text.new(parameter_one).to_asciimath(options: options)`.
+      // The slot is handed to a FRESH `Text` and rendered as one — the carrier
+      // default never runs, and the class is not in `UNARY_CLASSES` either, so
+      // reading it as `mbox(hi)` would have been wrong twice over.
+      //
+      // Measured on the pinned oracle `00c52783`, `Mbox.new(v)` against
+      // `Text.new(v)` for every shape a slot can hold: identical bytes on all
+      // of them. `"hi"` → `"\"hi\""`, `"a b"` → `"\"a b\""`, `""` → `"\"\""`,
+      // nil → `"\"\""`; a node, a list, an integer and a boolean each die in
+      // `Text`'s own `gsub` (NoMethodError), which is the refusal `renderText`
+      // already carries. `Text.new` takes the slot positionally with `lang:`
+      // left nil, which is what an omitted `lang` builds here.
+      //
+      // `mboxText` narrows an ABSENT slot to nil before building that `Text`,
+      // because `Text#initialize` defaults an omitted argument to `""` where
+      // `Mbox.new` leaves nil. The two answer alike in THIS format — measured,
+      // `Text.new(nil)` and `Text.new("")` both render `"\"\""` — so the
+      // narrowing changes no byte here today. It is applied anyway: the same
+      // slot renders differently under mathml (`<mtext/>` against
+      // `<mtext></mtext>`) and unicodemath (nothing against two quote marks),
+      // and three arms reading one gem line should not disagree about what the
+      // gem line says.
+      return renderText(mboxText(node.parameterOne));
     case "Tr": {
       // `"[#{tds.join(', ')}]"` — strict elements (`tr.rb:16-21`).
       const cells = node.parameterOne;

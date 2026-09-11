@@ -1049,11 +1049,21 @@ The first is the generated-symbol-data gap and lifts with it. The rest are
 `#inspect` reproducibility, which is why they refuse rather than guess: the
 gem's own output for them is either nondeterministic or unmeasured.
 
-### LaTeX and UnicodeMath: three list slots the gem renders and this port does not
+### LaTeX and UnicodeMath: three list slots the gem renders — CLOSED
 
-**Trigger: a case, probe or parser reaches a list in one of these three slots —
+**CLOSED.** The trigger below fired: the three slots now render, through
+`rubyArrayInspectOrThrow` rather than by widening `interpolatedValue`, which is
+the route this entry said was the wrong one. See `src/render/number/latex.ts`,
+`src/render/number/unicodemath.ts` and `src/render/color/latex.ts`, and their
+cases in `test/formats/latex/renderer.spec.ts` and
+`test/formats/unicodemath/renderer.spec.ts`.
+
+The measurements below are kept because they are the specification the fix was
+built against, not because anything here is still outstanding.
+
+~~Trigger: a case, probe or parser reaches a list in one of these three slots —
 or `Mbox`'s list handling is generalised, at which point these are what the
-generalisation has to answer for.**
+generalisation has to answer for.~~
 
 Found by review while `src/render/unary-function/latex.ts` was gaining the
 `Mbox` list arm; measured on the pinned oracle `00c52783`, each with

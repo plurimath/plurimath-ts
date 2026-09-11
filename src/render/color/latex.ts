@@ -12,6 +12,7 @@
 
 import { RenderError } from "../../core/index";
 import { NODE_SPECS } from "../../core/normalize";
+import { rubyArrayInspectOrThrow } from "../../core/ruby-semantics";
 import {
   classBasename,
   describeSlot,
@@ -99,8 +100,29 @@ function colorAsciimathValue(value: unknown, at: string, topLevel = false): stri
         "color",
       );
     }
-    case "number":
-      return interpolatedValue(value.value, "color", at);
+    case "number": {
+      // `Number#to_asciimath` rides the same `Formatter::Numbers::TextRenderer`
+      // as its latex twin, whose non-`FormattedNumber` arm is `result.to_s`
+      // (`text_renderer.rb:25`) — and for an Array that `to_s` IS `inspect`.
+      // So a list HERE renders, where a bare list in the slot itself crashes
+      // the gem: measured on the pinned oracle `00c52783`,
+      // `Color(Number([]), Symbol("x")).to_latex(options: {})` is
+      // `"{\color{[]} x}"`, while `Color([], Symbol("x"))` raises
+      // NoMethodError (undefined method `to_asciimath` for an instance of
+      // Array). The admission is the NUMBER's, not the slot's, which is why
+      // it sits in this branch and not beside the `isNode` guard above.
+      //
+      // The `/\s/` strip in `renderColor` runs on the finished string, so a
+      // separator space vanishes exactly as the gem's does — `[nil, nil]`
+      // renders `"{\color{[nil,nil]} x}"` — and so does a space INSIDE an
+      // element: `["a b"]` renders `'{\color{["ab"]} x}'`. A `\n` inside an
+      // element survives, because inspect already turned it into `\` and `n`.
+      const number: unknown = value.value;
+      if (Array.isArray(number)) {
+        return rubyArrayInspectOrThrow(number, FORMAT, "color", at);
+      }
+      return interpolatedValue(number, "color", at);
+    }
     case "text": {
       // `Text#to_asciimath`: quoted, `unicode[:name]` unwrapped.
       const text = value.parameterOne;

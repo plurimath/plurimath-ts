@@ -30,7 +30,86 @@
  * `get_table_class`, `Td`/`Tr` construction and per-subclass table paren
  * defaults that no other rule here touches.
  *
- * Everything outside those 78 is genuinely ABSENT rather than stubbed. A node
+ * ## A second increment: MULTISCRIPT, reached by hand-picked inputs
+ *
+ * Outside the eight-rule table family, no other unported rule fires on the
+ * 103-string corpus — that method is exhausted — so a second family was
+ * chosen by what it BUILDS rather than what the corpus reaches, and given
+ * inputs of its own in `scripts/generate-unicodemath-model-fixtures.rb`,
+ * each checked against the oracle before being written down.
+ *
+ * MULTISCRIPT is every rule building `Math::Function::Multiscript`, measured
+ * (not the eight a prior pass estimated) at **thirteen**: twelve constructors
+ * spanning `transform.rb:1992` to `:3978`, plus the `:57` unwrap
+ * (`{pre_script: simple(:script)} -> script`, the same shape as `:55`/`:56`)
+ * every one of them routes through — the grammar wraps every prescript
+ * expression in a `pre_script` key that only `:57` removes, confirmed by the
+ * oracle firing it once per Multiscript input. All twelve reuse the existing
+ * `PowerBase`/ternary-alias machinery, and four of them (`:2958`, `:3662`,
+ * `:3853`, `:3978`) additionally call `unfenced_value`; the
+ * one addition is `:2971`'s reverse lookup into `Constants::SUB_DIGITS`,
+ * built from the generated `UNICODEMATH_SUB_DIGITS` array this file already
+ * had no reason to import.
+ *
+ * A DECORATION family (`transform.rb:1286`-`:1491`, building `Obrace`/
+ * `Ubrace`, `Overset`, `Menclose`, `Underset`) was measured alongside it and
+ * set aside, unstarted: all eight of its rules read one of
+ * `Constants::UNDER_HORIZONTAL_BRACKETS` (four of them), `OVERLAYS_NOTATIONS`
+ * (three) or `BELOWS_NOTATIONS` (one), and none of the three is in any
+ * generated table this
+ * repository carries — confirmed both by `grep -rl` across `src/` (nothing)
+ * and by `scripts/generate-unicodemath-parser-data.rb`'s own
+ * `UNCONSUMED_CONSTANTS` list, which already names all three as read only by
+ * transform rules the port defers. Porting it now would mean hand-transcribing
+ * gem constant data — one table alone carries over fifty entries — rather
+ * than reusing a generated one, which is the premise MULTISCRIPT was portable
+ * on and this family is not.
+ *
+ * ## A third increment: FRACTION, cut to the shape `:1609` already carries
+ *
+ * FRACTION is every `rule(` block that calls `Utility.fractions`
+ * (`unicode_math/utility.rb:86-104`) — measured on the oracle by wrapping every
+ * registered block, not read off a line-range survey, which had put this
+ * family at 44 rules across `transform.rb:284`-`:3074`. That range mostly
+ * covers `atom`/`atoms` (`:486` and some nineteen more sites through the whole
+ * file, e.g. `:658`-`:697`) and `recursive_numerator`/`recursive_denominator`,
+ * the generic multi-character-run combinator every bare symbol sequence in the
+ * grammar goes through (`entity = atoms | number`, `common_rules.rb:11`) —
+ * real, but neither specific to fractions nor called through
+ * `Utility.fractions`. The measured count is **seventeen**: sixteen build
+ * `Math::Function::Frac` and one (`:2209`, `\choose`) wraps that `Frac` in a
+ * `Fenced`.
+ *
+ * One of the seventeen, `:1609` — `numerator: simple, denominator: simple`, no
+ * options — was already in the 78 corpus-derived rules: it is what the
+ * corpus's own fraction-shaped `expected.unicodemath` strings reach, complete
+ * with `Utility.fractions`'s mutating `recursion_fraction` branch for
+ * continued fractions like `(a)/(b)/(c)`. This increment ports its six
+ * OPTION-carrying siblings, every one still a `simple`/`simple` shape (`mini_
+ * numerator`/`mini_denominator` for `:1614`, `numerator`/`denominator` plus
+ * one more key for the rest) — `:1614` (mini, `{displaystyle: false}`),
+ * `:2197` (`\atop`,
+ * `{linethickness: "0"}`), `:2209` (`\choose`, the `Fenced` wrap),
+ * `:2347` (`\sdiv`/bevelled), `:2353` (`\ldiv`), and `:2377` (`\ndiv`,
+ * `{displaystyle: false}` — its SEQUENCE-denominator twin `:2371`, deferred,
+ * passes `{no_display_style: false}` instead for the same input shape; the gem
+ * is inconsistent between the two and both are transcribed as measured, not
+ * reconciled) — plus two small prerequisites `:1614`'s mini shape needs:
+ * `:165`/`:170`, the standalone `{sup_digits:}`/`{sub_digits:}` unwraps to
+ * `Math::Number`, reusing the `SUB_DIGITS` reverse lookup `:2971` already
+ * built and adding its `SUP_DIGITS` twin from a generated array this file
+ * already imports the sibling of.
+ *
+ * The other ten call sites — `:1619`, `:1624`, `:1629`, `:1634`, `:1639`,
+ * `:1644` (the `numerator`/`mini_numerator` × `denominator`/`mini_denominator`
+ * shapes where at least one side is a SEQUENCE), `:2203` (`\atop` with a
+ * sequence numerator), and `:2359`/`:2365`/`:2371` (bevelled/ldiv/
+ * no_display_style with a sequence denominator) — all need the `atoms`
+ * combinator above, which is cross-cutting rather than fraction-specific and
+ * is deferred whole, same reasoning as DECORATION: porting a slice of it here
+ * would mean starting a second large family rather than finishing this one.
+ *
+ * Everything outside those 99 is genuinely ABSENT rather than stubbed. A node
  * whose key set no ported rule matches survives the transform as a plain hash
  * and `finalize` throws on it, naming the keys — the loud failure the deferred
  * families are supposed to produce.
@@ -40,9 +119,10 @@
  * `Parslet::Transform.rule` **unshifts** (`parslet-2.0.0/lib/parslet/transform.rb:128`
  * and `:160`), so a later definition wins a tie. Measured over all 519
  * registered patterns, exactly ONE signature appears twice —
- * `{exp: sequence, factor: simple}` at `transform.rb:846` and `:871` — and the
- * later `:871` wins, which the coverage probe confirms (`:871` fires, `:846`
- * never). `:871` is ported; `:846` is dead and is not.
+ * `{exp: sequence, factor: simple}` at `transform.rb:845` and `:870` — and the
+ * later `:870` wins, which the coverage probe confirms (`:870` fires, `:845`
+ * never). `:870` is ported; `:845` is dead and is not. (846 and 871 are those
+ * headers' CONTINUATION lines; every id here is a `rule(` opening line.)
  *
  * ## Mutation is behaviour, so nodes are drafts until the entry point returns
  *
@@ -52,7 +132,7 @@
  * `sub_sup.parameter_one.parameter_one`, and `:1861` sets
  * `parameter_three` or `parameter_four`. `Utility.fractions` adds a fifth
  * mutation site outside the rules, rewriting a `Frac`'s `parameter_one` in
- * place (`unicode_math/utility.rb:88`).
+ * place (`unicode_math/utility.rb:92`).
  * Core nodes are publicly immutable (ARCHITECTURE.md §5), so the transform
  * works on `UnicodemathDraft` objects and `finalize` converts the finished tree
  * into real `core` nodes in one pass at the end.
@@ -90,6 +170,8 @@ import {
   UNICODEMATH_BINARY_SYMBOLS_KEYS,
   UNICODEMATH_NARY_SYMBOLS,
   UNICODEMATH_NARY_SYMBOLS_KEYS,
+  UNICODEMATH_SUB_DIGITS,
+  UNICODEMATH_SUP_DIGITS,
 } from "./generated/parser-tables";
 import {
   UNICODEMATH_BINARY_FUNCTIONS,
@@ -151,7 +233,7 @@ function rubyToS(value: unknown): string {
 }
 
 /**
- * `Slice#== other` is `str == other` (`parslet-2.0.0/lib/parslet/slice.rb:43`),
+ * `Slice#== other` is `str == other` (`parslet-2.0.0/lib/parslet/slice.rb:45-46`),
  * and Ruby's `String#==` delegates to the other side when it responds to
  * `to_str` — so a slice and a string with the same text compare equal in BOTH
  * directions. Three ported rules depend on it: `[opener, closer].include?("|")`
@@ -216,6 +298,23 @@ const BINARY_FUNCTION_NAMES: ReadonlySet<string> = new Set(UNICODEMATH_BINARY_FU
 const UNDEF_UNARY_FUNCTIONS: ReadonlySet<string> = new Set(UNICODEMATH_UNDEF_UNARY_FUNCTIONS);
 const LROUND_ID = namedSymbolId("lround");
 const RROUND_ID = namedSymbolId("rround");
+
+/**
+ * `Constants::SUB_DIGITS.key(entity)`, inverted from the ONE generated array:
+ * `Constants::SUB_DIGITS` has no separate keys table because its keys are
+ * `"0".."9"` in order, and `UNICODEMATH_SUB_DIGITS[i]` is measured to be the
+ * entity for digit `i` (`generated/parser-tables.ts`'s own comment: emitted
+ * from `Constants::SUB_DIGITS.values`, and Ruby hashes preserve insertion
+ * order). `Hash#key` on a miss is nil, so `:2971` needs a not-found case too.
+ */
+const SUB_DIGITS_INVERTED = new Map<string, string>(
+  UNICODEMATH_SUB_DIGITS.map((entity, index) => [entity, String(index)]),
+);
+
+/** `Constants::SUP_DIGITS.key(entity)`, inverted the same way, for `:165`. */
+const SUP_DIGITS_INVERTED = new Map<string, string>(
+  UNICODEMATH_SUP_DIGITS.map((entity, index) => [entity, String(index)]),
+);
 
 function isAFamily(rubyClass: string): ReadonlySet<string> {
   const family = UNICODEMATH_IS_A_CLASSES.get(rubyClass);
@@ -369,7 +468,7 @@ function newSymbolOfClass(id: string): UnicodemathDraft {
 }
 
 /**
- * `Math::Symbols::Symbol.new(sym)` (`symbols/symbol.rb:16`): `@value =
+ * `Math::Symbols::Symbol.new(sym)` (`symbols/symbol.rb:12-17`): `@value =
  * sym.is_a?(Array) ? sym.join : sym&.to_s`. Only `@value` is assigned — the
  * other four ivars are guarded and stay unassigned.
  */
@@ -734,9 +833,24 @@ function newBase(one: unknown, two: unknown): UnicodemathDraft {
   return binaryDraft("base", undefined, one, two);
 }
 
-/** `Math::Function::PowerBase.new(p1, p2, p3)` — an alias on `TernaryFunction`. */
-function newPowerBase(one: unknown, two: unknown, three: unknown): UnicodemathDraft {
+/**
+ * `Math::Function::PowerBase.new(p1, p2 = nil, p3 = nil)` — an alias on
+ * `TernaryFunction`. The MULTISCRIPT rules are the first callers to omit `p2`
+ * and/or `p3`; `orNil` inside `ternaryDraft` already turns the resulting
+ * `undefined` into the same nil Ruby's default would leave.
+ */
+function newPowerBase(one: unknown, two?: unknown, three?: unknown): UnicodemathDraft {
   return ternaryDraft("ternaryFunction", "PowerBase", one, two, three);
+}
+
+/**
+ * `Math::Function::Multiscript.new(p1, p2, p3)` — an alias on `TernaryFunction`.
+ * `p2`/`p3` are the prescript sub/superscript ARRAYS (`[]` when absent, never
+ * nil — every ported rule passes one), `p1` the `PowerBase` the real base and
+ * any trailing (non-prescript) sub/sup build.
+ */
+function newMultiscript(one: unknown, two: unknown, three: unknown): UnicodemathDraft {
+  return ternaryDraft("ternaryFunction", "Multiscript", one, two, three);
 }
 
 /** `Math::Function::Underover.new(p1, p2, p3)` — an alias on `TernaryFunction`. */
@@ -791,6 +905,33 @@ function naryFunctionName(naryClass: unknown): unknown {
   return NARY_CLASSES_INVERTED.get(text) ?? NARY_SYMBOLS.get(text) ?? naryClass;
 }
 
+/**
+ * `digit = Constants::SUB_DIGITS.key(digits).to_s; Math::Number.new(digit,
+ * mini_sub_sized: true)` — shared by `:170`'s standalone unwrap and `:2971`'s
+ * compound `{pre_subscript:, base:, sub_digits:}` shape, both resolving a
+ * trailing SUB_DIGITS unicode digit back to its plain-text key, mini-sized.
+ */
+function subDigitNumber(digits: unknown): UnicodemathDraft {
+  const digit = SUB_DIGITS_INVERTED.get(rubyToS(digits)) ?? "";
+  return new UnicodemathDraft("number", undefined, {
+    value: digit,
+    miniSubSized: true,
+    miniSupSized: false,
+    base: null,
+  });
+}
+
+/** `:165`'s SUP_DIGITS twin of `subDigitNumber`, mini-sup-sized instead. */
+function supDigitNumber(digits: unknown): UnicodemathDraft {
+  const digit = SUP_DIGITS_INVERTED.get(rubyToS(digits)) ?? "";
+  return new UnicodemathDraft("number", undefined, {
+    value: digit,
+    miniSubSized: false,
+    miniSupSized: true,
+    base: null,
+  });
+}
+
 function asArray(value: TransformValue): unknown[] {
   return value as unknown[];
 }
@@ -816,8 +957,9 @@ export interface UnicodemathTransformBuild {
  * the fixture set actually exercises each ported rule.
  *
  * The ids are the `rule(` lines, not the block's `source_location` — Ruby
- * reports the line carrying `do`, which for a multi-line header is one or two
- * lines later.
+ * reports the line carrying the block opener, which for a multi-line header is
+ * some way further down: measured offsets on the pinned gem run to six, with
+ * `:3978`'s block reporting 3984.
  */
 export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   const t = new Transform();
@@ -838,7 +980,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     });
   };
 
-  // --- pass-through and leaf rules (transform.rb:13-153) -----------------
+  // --- pass-through and leaf rules (transform.rb:13-170) -----------------
 
   rule("13", { exp: simple("exp") }, (b) => b.exp);
   rule("18", { atom: simple("atom") }, (b) => b.atom);
@@ -861,6 +1003,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("52", { accents: subtree("accent") }, (b) => unicodeAccents(b.accent));
   rule("55", { sub_script: simple("script") }, (b) => b.script);
   rule("56", { sup_script: simple("script") }, (b) => b.script);
+  // Every MULTISCRIPT rule below (`:1992` on) is reached through the grammar's
+  // `pre_script` wrapper, so this unwrap fires once per one of them, exactly
+  // like `:55`/`:56` do for `sub_exp`/`sup_exp`.
+  rule("57", { pre_script: simple("script") }, (b) => b.script);
   rule("61", { close_paren: simple("paren") }, (b) => symbolsClass(b.paren));
   rule("62", { operator: simple("operator") }, (b) => symbolsClass(b.operator));
   rule("68", { monospace: simple("monospace") }, (b) => b.monospace);
@@ -888,7 +1034,18 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     newFontStyle("mtt", b.monospace_value),
   );
 
-  // --- two-key rules (transform.rb:236-1968) -----------------------------
+  // FRACTION's mini variant (`:1614`) needs its numerator and denominator
+  // pre-resolved to a `simple` value, and the grammar leaves a single sup/sub
+  // digit as `{sup_digits: Slice}`/`{sub_digits: Slice}` until one of these
+  // fires. `subDigitNumber` arrives earlier in this same branch, with the
+  // MULTISCRIPT family, where `:2971`'s compound shape needs it; nothing on
+  // `main` has either helper. `supDigitNumber` is its sup-side twin, added
+  // here. Both are a `Constants::SUP_DIGITS`/`SUB_DIGITS` reverse lookup over
+  // tables the generated data already carries.
+  rule("165", { sup_digits: simple("digits") }, (b) => supDigitNumber(b.digits));
+  rule("170", { sub_digits: simple("digits") }, (b) => subDigitNumber(b.digits));
+
+  // --- two-key rules (transform.rb:236-2001) -----------------------------
 
   rule("236", { font_class: simple("fonts"), symbol: simple("symbol") }, (b) =>
     newFontStyle(b.fonts, symbolsClass(b.symbol)),
@@ -942,7 +1099,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.factor,
     ...asArray(b.expr),
   ]);
-  // `:846` has this exact signature and is DEAD: `rule` unshifts, so this
+  // `:845` has this exact signature and is DEAD: `rule` unshifts, so this
   // later definition wins every tie. See the header.
   rule("870", { factor: simple("factor"), exp: sequence("exp") }, (b) => [
     b.factor,
@@ -1054,6 +1211,18 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     fractions(b.numerator, b.denominator),
   );
 
+  // FRACTION, second increment (`transform.rb:1614`-`:2377`): `:1609` above is
+  // the plain, option-free shape the corpus already reaches; these six are its
+  // option-carrying siblings, each still `numerator: simple, denominator:
+  // simple` so none needs the `atoms`/`recursive_numerator` combinator the
+  // other ten `Utility.fractions` call sites depend on (deferred; see the
+  // header).
+  rule(
+    "1614",
+    { mini_numerator: simple("numerator"), mini_denominator: simple("denominator") },
+    (b) => fractions(b.numerator, b.denominator, { displaystyle: false }),
+  );
+
   rule("1806", { expr: simple("expr"), func_expr: simple("func_expr") }, (b) => [
     b.expr,
     b.func_expr,
@@ -1096,6 +1265,19 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     return newNary(symbolsClass(name), null, null, b.naryand);
   });
 
+  // MULTISCRIPT (`transform.rb:1992`-`:3978`, thirteen rules counting `:57`
+  // above): every prescript expression `Math::Function::Multiscript` — base
+  // plus prescript sub/superscript arrays, and optionally a real trailing
+  // sub/sup the grammar folds into the `PowerBase` `p1` carries. All twelve
+  // constructors below share that shape; only `unfenced_value` and the
+  // SUB_DIGITS table (`:2971`) are new, both already established.
+  rule("1992", { pre_supscript: simple("pre_sup"), base: simple("base") }, (b) =>
+    newMultiscript(newPowerBase(b.base), [], [b.pre_sup]),
+  );
+  rule("2001", { pre_subscript: simple("pre_sub"), base: simple("base") }, (b) =>
+    newMultiscript(newPowerBase(b.base), [b.pre_sub], []),
+  );
+
   // --- three- and four-key rules (transform.rb:2103-3477) ----------------
 
   rule("2103", { base: simple("base"), sup: simple("sup"), sub: simple("sub") }, (b) => {
@@ -1105,6 +1287,38 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     }
     return newPowerBase(b.base, unfencedValue(b.sub, true), unfencedValue(b.sup, true));
   });
+
+  // FRACTION continued — `atop` (`\atop`/`&#xa6;`) and `choose` (`\choose`/
+  // `&#x249e;`) each add one key to the same `numerator: simple, denominator:
+  // simple` shape; `:2203`, `atop`'s SEQUENCE-numerator twin, is deferred with
+  // the rest. `choose` alone builds `Fenced`, not `Frac` directly: the gem
+  // wraps the Frac in round parens it constructs with no lookup
+  // (`Math::Symbols::Paren::Lround.new`/`Rround.new`), which `LROUND_ID`/
+  // `RROUND_ID` (declared with the other named-symbol ids above) name here.
+  rule(
+    "2197",
+    {
+      numerator: simple("numerator"),
+      atop: simple("atop"),
+      denominator: simple("denominator"),
+    },
+    (b) => fractions(b.numerator, b.denominator, { linethickness: "0" }),
+  );
+
+  rule(
+    "2209",
+    {
+      numerator: simple("numerator"),
+      choose: simple("choose"),
+      denominator: simple("denominator"),
+    },
+    (b) =>
+      newFenced(
+        newSymbolOfClass(LROUND_ID),
+        [fractions(b.numerator, b.denominator, { linethickness: "0", choose: true })],
+        newSymbolOfClass(RROUND_ID),
+      ),
+  );
 
   rule(
     "2227",
@@ -1117,8 +1331,43 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       ),
   );
 
+  // FRACTION concluded — `bevelled` (`\sdiv`/`\sdivide`/`\sfrac`/`&#x2044;`),
+  // `ldiv` (`\ldiv`/`&#x2215;`) and `no_display_style` (`\ndiv`/`\oslash`/
+  // `&#x2298;`), each still `numerator: simple, denominator: simple`. The last
+  // one's options are NOT `{no_display_style: false}` despite the key name:
+  // `transform.rb:2377` passes `{displaystyle: false}`, and only its
+  // SEQUENCE-denominator twin `:2371` (deferred) passes the differently-named
+  // option — measured, not reconciled, because the gem itself is inconsistent
+  // between the two.
+  rule(
+    "2347",
+    {
+      numerator: simple("numerator"),
+      bevelled: simple("bevelled"),
+      denominator: simple("denominator"),
+    },
+    (b) => fractions(b.numerator, b.denominator, { bevelled: true }),
+  );
+
+  rule(
+    "2353",
+    { numerator: simple("numerator"), ldiv: simple("ldiv"), denominator: simple("denominator") },
+    (b) => fractions(b.numerator, b.denominator, { ldiv: true }),
+  );
+
+  rule(
+    "2377",
+    {
+      numerator: simple("numerator"),
+      no_display_style: simple("no_display_style"),
+      denominator: simple("denominator"),
+    },
+    (b) => fractions(b.numerator, b.denominator, { displaystyle: false }),
+  );
+
   // `Utility.unfenced_value(operand, ...)` on the first line is computed and
-  // DISCARDED — a statement whose value nothing reads (`transform.rb:2438`).
+  // DISCARDED — a statement whose value nothing reads (`transform.rb:2439`;
+  // 2436-2438 are the rule's three-line header).
   // It is transcribed because it can still raise; the `Fenced` below is built
   // from the untouched `operand` either way.
   rule(
@@ -1187,6 +1436,28 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
   );
 
+  // MULTISCRIPT continued — a real trailing sub or sup joins the prescript.
+  rule(
+    "2938",
+    { pre_supscript: simple("pre_sup"), base: simple("base"), sub: simple("sub") },
+    (b) => newMultiscript(newPowerBase(b.base, b.sub), [], [b.pre_sup]),
+  );
+  rule(
+    "2948",
+    { pre_supscript: simple("pre_sup"), pre_subscript: simple("pre_sub"), base: simple("base") },
+    (b) => newMultiscript(newPowerBase(b.base), [b.pre_sub], [b.pre_sup]),
+  );
+  rule(
+    "2958",
+    { pre_subscript: simple("pre_sub"), base: simple("base"), sub: simple("sub") },
+    (b) => newMultiscript(newPowerBase(b.base, unfencedValue(b.sub, true)), [b.pre_sub], []),
+  );
+  rule(
+    "2971",
+    { pre_subscript: simple("pre_sub"), base: simple("base"), sub_digits: simple("digits") },
+    (b) => newMultiscript(newPowerBase(b.base, subDigitNumber(b.digits)), [b.pre_sub], []),
+  );
+
   rule(
     "3233",
     {
@@ -1224,6 +1495,94 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) =>
       newFenced(parenClass(b.open_paren), [b.factor, ...asArray(b.exp)], parenClass(b.close_paren)),
+  );
+
+  // MULTISCRIPT concluded — both a prescript pair and a paren wrap it, in
+  // every combination the grammar builds. `unfenced_value` reaches the
+  // prescripts themselves only at `:3662`/`:3853`; `:3687`, `:3768`, `:3952`
+  // and `:3978` bind `open_paren`/`close_paren` but never read them, exactly
+  // as `:2436` reads `operand` past what its own guard already discarded —
+  // transcribed rather than tidied.
+  rule(
+    "3662",
+    {
+      pre_subscript: simple("pre_sub"),
+      pre_supscript: simple("pre_sup"),
+      base: simple("base"),
+      sub: simple("sub"),
+    },
+    (b) =>
+      newMultiscript(
+        newPowerBase(b.base, unfencedValue(b.sub, true)),
+        [unfencedValue(b.pre_sub, true)],
+        [unfencedValue(b.pre_sup, true)],
+      ),
+  );
+  rule(
+    "3687",
+    {
+      open_paren: simple("open_paren"),
+      pre_subscript: simple("pre_sub"),
+      close_paren: simple("close_paren"),
+      base: simple("base"),
+    },
+    (b) => newMultiscript(newPowerBase(b.base), [b.pre_sub], []),
+  );
+  rule(
+    "3768",
+    {
+      open_paren: simple("open_paren"),
+      pre_subscript: simple("pre_sub"),
+      close_paren: simple("close_paren"),
+      base: simple("base"),
+      sub: simple("sub"),
+    },
+    (b) => newMultiscript(newPowerBase(b.base, b.sub), [b.pre_sub], []),
+  );
+  rule(
+    "3853",
+    {
+      pre_subscript: simple("pre_sub"),
+      pre_supscript: simple("pre_sup"),
+      base: simple("base"),
+      sub: simple("sub"),
+      sup: simple("sup"),
+    },
+    (b) =>
+      newMultiscript(
+        newPowerBase(b.base, unfencedValue(b.sub, true), unfencedValue(b.sup, true)),
+        [unfencedValue(b.pre_sub, true)],
+        [unfencedValue(b.pre_sup, true)],
+      ),
+  );
+  rule(
+    "3952",
+    {
+      open_paren: simple("open_paren"),
+      pre_subscript: simple("pre_sub"),
+      pre_supscript: simple("pre_sup"),
+      close_paren: simple("close_paren"),
+      base: simple("base"),
+    },
+    (b) => newMultiscript(newPowerBase(b.base), [b.pre_sub], [b.pre_sup]),
+  );
+  rule(
+    "3978",
+    {
+      open_paren: simple("open_paren"),
+      pre_subscript: simple("pre_sub"),
+      pre_supscript: simple("pre_sup"),
+      close_paren: simple("close_paren"),
+      base: simple("base"),
+      sub: simple("sub"),
+      sup: simple("sup"),
+    },
+    (b) =>
+      newMultiscript(
+        newPowerBase(b.base, unfencedValue(b.sub, true), unfencedValue(b.sup, true)),
+        [b.pre_sub],
+        [b.pre_sup],
+      ),
   );
 
   return { transform: t, fired, ruleIds };
@@ -1412,11 +1771,14 @@ function finalizeValue(value: unknown): unknown {
 function finalizeDraft(draft: UnicodemathDraft, inputString?: string): MathNode {
   const init: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(draft.fields)) {
-    // `options` is a Ruby OPTION hash, not a tree value: the only ones this
-    // slice builds are `{}` (Fenced, Nary, Underset) and `{accent: true}`
-    // (`unicode_math/utility.rb:51`). Routing it through `finalizeValue` would
-    // put it in the unmatched-node branch, where `{}` and `{accent}` are not
-    // key sets the gem leaves behind and would be refused.
+    // `options` is a Ruby OPTION hash, not a tree value: every one this slice
+    // builds is `{}` (Fenced, Nary, Underset's default) or a flat hash of
+    // already-finalized primitives — `{accent: true}` (`unicode_math/
+    // utility.rb:51`), and FRACTION's `displaystyle`/`linethickness`/
+    // `bevelled`/`ldiv`/`choose`, singly or paired (`:1614`-`:2377`). Routing
+    // it through `finalizeValue` would put it in the unmatched-node branch,
+    // where none of these key sets is one the gem leaves behind, and it would
+    // be refused.
     init[key] = key === "options" ? value : finalizeValue(value);
   }
   if (draft.identity !== undefined) init[draft.kind === "symbol" ? "id" : "name"] = draft.identity;

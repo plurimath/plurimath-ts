@@ -124,6 +124,13 @@ const DEFERRED_INPUTS: readonly string[] = [
 
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");
 const boundary = fixtures.cases.filter((entry) => entry.group === "slice-boundary");
+// Every row that is neither the corpus nor a boundary case: the RULE_COVERAGE
+// groups the generator adds, one per ported family. This started as an
+// afterthought and became the majority path — the corpus can no longer reach
+// the rules being ported, so each new family arrives with its own group here.
+const coverage = fixtures.cases.filter(
+  (entry) => entry.group !== "corpus-unicodemath" && entry.group !== "slice-boundary",
+);
 const parsed = fixtures.cases.filter((entry) => entry.model !== undefined);
 const raised = fixtures.cases.filter((entry) => entry.raises !== undefined);
 const deferred = corpus.filter(
@@ -132,6 +139,13 @@ const deferred = corpus.filter(
 const supported = corpus.filter(
   (entry) => entry.model !== undefined && !DEFERRED_INPUTS.includes(entry.input),
 );
+// The corpus does not reach the rules a slice has just ported -- that is why
+// each family arrives with a coverage group -- so `supported` above, drawn from
+// `corpus` alone, compares the model of nothing this slice added. Measured: with
+// only that comparison, changing a newly ported fraction rule's options to
+// `displaystyle: true` still passed every test in this file. The firing counts
+// and the preprocessing checks do not see a wrong VALUE.
+const coverageSupported = coverage.filter((entry) => entry.model !== undefined);
 
 function parseFixture(entry: FixtureCase): unknown {
   return parseUnicodemath(entry.input);
@@ -151,7 +165,13 @@ describe("the UnicodeMath fixture set", () => {
     expect(raised.length).toBe(fixtures.raisedCount);
     expect(parsed.length + raised.length).toBe(fixtures.caseCount);
     expect(corpus.length).toBe(fixtures.corpusUnicodemathCount);
-    expect(corpus.length + boundary.length).toBe(fixtures.caseCount);
+    // Not `corpus + boundary`: that held only while those were the only two
+    // groups, and silently became false the moment a coverage group arrived.
+    expect(corpus.length + boundary.length + coverage.length).toBe(fixtures.caseCount);
+    // And the coverage rows have to BE there. A regeneration that dropped every
+    // one of them would keep the sum above consistent while quietly removing
+    // the only inputs that reach the newly ported rules.
+    expect(coverage.length).toBeGreaterThan(0);
   });
 
   // The crutch this slice removed. Every row carries the `Parser#text` the gem
@@ -190,6 +210,19 @@ describe("the parsed model", () => {
   );
 });
 
+describe("the parsed model, for the hand-picked coverage inputs", () => {
+  it("has rows to compare at all", () => {
+    expect(coverageSupported.length).toBeGreaterThan(0);
+  });
+
+  it.each(coverageSupported.map((entry) => [entry.input, entry] as const))(
+    "%j: deep-equals the gem's",
+    (_input, entry) => {
+      expect(normalize(parseFixture(entry) as never)).toStrictEqual(entry.model);
+    },
+  );
+});
+
 describe("the rule families this slice defers", () => {
   it.each(deferred.map((entry) => [entry.input, entry] as const))(
     "%j: refuses loudly, naming the unmatched keys",
@@ -208,7 +241,7 @@ describe("the rule families this slice defers", () => {
  * The slice EDGE, as opposed to the deferred family above.
  *
  * Each of these fires one `transform.rb` rule the port does not carry — `:99`,
- * `:766`, `:746`, `:1791` — and the gem answers each with a perfectly ordinary
+ * `:765`, `:745`, `:1791` — and the gem answers each with a perfectly ordinary
  * model, recorded in the fixture row beside it. The port must REFUSE rather
  * than answer differently, and two of the four are here because it did not:
  *

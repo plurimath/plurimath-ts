@@ -49,9 +49,15 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * One transform, driven over every input the gem parsed, counting firings.
  *
  * The two deferred-family inputs are driven too: their transform runs to
- * completion and only `finalize` refuses them, and they are the sole cover for
- * `transform.rb:2619` on a `Fenced` built around a table — the line the rule
- * STARTS on, which is the id the report below keys on.
+ * completion and only `finalize` refuses them, so their rule firings count
+ * here even though `model-parity.spec.ts` expects a refusal.
+ *
+ * They are NOT special cover for anything. This said they were "the sole cover
+ * for `transform.rb:2619` on a `Fenced` built around a table"; measured, they
+ * fire `:13`, `:18`, `:39` and `:92` and never reach `:2619` at all — they are
+ * refused at the FORMULA root with `{table=...}`, so no `Fenced` is built.
+ * `:2619` fires 40 times across 32 other rows, starting with `(x)` and `{x}`.
+ * Rule ids here are the line a `rule(` call OPENS on.
  */
 const build = buildUnicodemathTransform();
 let reached = 0;
@@ -67,19 +73,39 @@ describe("transform rule coverage", () => {
     expect(reached).toBeGreaterThan(90);
   });
 
-  it("registers the 78 rules the slice carries", () => {
-    // 86 rules the pinned corpus fires on the oracle, minus the eight-rule
-    // table/matrix family the slice defers (`transform.rb:8`, `:9`, `:14`,
-    // `:32`, `:1569`, `:1574`, `:1584`, `:1649`).
-    expect(build.ruleIds.length).toBe(78);
-    expect(new Set(build.ruleIds).size).toBe(78);
+  it("registers the 99 rules the slice carries", () => {
+    // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
+    // eight-rule table/matrix family the slice defers: `transform.rb:8`, `:9`,
+    // `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13 MULTISCRIPT —
+    // twelve `Math::Function::Multiscript` constructors (`:1992`-`:3978`) and
+    // the `:57` unwrap every one of them routes through — reached by the
+    // hand-picked "multiscript" coverage group, not the corpus — plus 8
+    // FRACTION, on top of `:1609` (already one of the 78, the corpus's own
+    // plain fraction shape): its six option-carrying `Utility.fractions`/
+    // `Fenced` siblings (`:1614`, `:2197`, `:2209`, `:2347`, `:2353`,
+    // `:2377`), plus the two standalone SUP_DIGITS/SUB_DIGITS unwraps (`:165`,
+    // `:170`) `:1614`'s mini shape needs — reached by the hand-picked
+    // "fraction" coverage group, not the corpus.
+    //
+    // The count is rules REGISTERED, not branches reached: the multiscript
+    // group carries four extra inputs whose trailing script is fenced, because
+    // the twelve that name a rule each all carry BARE scripts, and bypassing
+    // every `unfencedValue` call in `:2958`, `:3662`, `:3853` and `:3978` left
+    // the suite green without them.
+    expect(build.ruleIds.length).toBe(99);
+    expect(new Set(build.ruleIds).size).toBe(99);
     for (const deferred of ["8", "9", "14", "32", "1569", "1574", "1584", "1649"]) {
       expect(build.ruleIds, `transform.rb:${deferred} is deferred`).not.toContain(deferred);
     }
-    // `transform.rb:846` shares its signature with `:871` and `rule` unshifts,
-    // so `:871` wins every tie and `:846` can never match. Porting it would add
+    // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
+    // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.
-    expect(build.ruleIds).not.toContain("846");
+    //
+    // This asserted `"846"` until it was measured: 846 is the CONTINUATION of
+    // the header that opens on 845, and every id in `ruleIds` is a `rule(`
+    // opening line, so the assertion could not have failed however the port
+    // changed.
+    expect(build.ruleIds).not.toContain("845");
   });
 
   it("fires every one of them at least once", () => {

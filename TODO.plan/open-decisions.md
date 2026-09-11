@@ -122,9 +122,13 @@ registry — the organisation publishes `@plurimath/mml`, `@plurimath/plurimath`
 and `@lutaml/opal-runtime`, and nothing for OMML. So for OMML the bridging
 option does not exist to be evaluated; a native port is the only path. The gem
 side is smaller than MathML's: the `omml` gem its `Gemfile.lock` resolves is
-0.2.5, 6,797 lines over 270 files, and the gem's own `lib/plurimath/omml/` is
-722 lines (`translator.rb` 274, `formula_transformation.rb` 319, `utility.rb`
-109, `parser.rb` 20) against MathML's 1,353.
+0.2.5, 6,516 lines over 275 files, and PLURIMATH's own `lib/plurimath/omml/`
+translating layer is 722 lines (`translator.rb` 274,
+`formula_transformation.rb` 319, `utility.rb` 109, `parser.rb` 20) against
+MathML's 1,353. (0.2.1 is also installed on this machine, at 6,797 lines over
+270 files; a measurement that globs the gems directory and takes the first
+match reports those instead, which is how an earlier draft of this line got
+them.)
 
 Bridging to the published package is therefore closed on evidence for MathML
 and unavailable for OMML, leaving a native port or continued deferral for both.
@@ -154,11 +158,21 @@ that call `Mml.parse` (XML text to an `Mml::V4::*` model) and then
 `when Mml::V4::…` branches. **pegkit has no part in it.**
 
 - The `mml` gem is 11,605 lines over 320 files, but the translator consumes a
-  thin slice: `each_mixed_content`, `value`, and 29 attribute readers of the
-  126 those 44 classes define.
+  thin slice: `each_mixed_content`, `value`, and a couple of dozen attribute
+  readers out of the ~120 those 44 classes define. The exact pair of numbers
+  depends on what counts as an "attribute reader" —
+  `instance_methods(false) - Object.instance_methods`, minus writers, gives 126
+  defined and 29 named in the translating layer; the stricter
+  `mappings_for(:xml).attributes`, which excludes content and child-element
+  mappings, gives 120 and 28. Either way it is a small, fixed surface.
   The model adds no semantics over the XML, measured exhaustively rather than
-  sampled: instantiating all 198 `Mml::V4` classes bare and reading all 1,559
-  of their attribute readers returns a non-nil, non-empty value **zero** times,
+  sampled: instantiating every `Mml::V4` class bare and reading all of their
+  attribute readers returns a non-nil, non-empty value **zero** times. The
+  class count depends on the filter and the zero does not: `Mml::V4.constants`
+  yields 198 Class-valued constants, of which `MathWithNamespace` is a literal
+  alias of `Math` and `Namespace` is not an element model at all, so the
+  element count is 196; the zero holds at 198, 197 and 196, and under both the
+  loose and strict definitions of "attribute reader" above.
   so no schema default leaks through anywhere in the model — an absent
   attribute is `nil`, including ones with obvious MathML defaults like
   `mfrac`'s `linethickness`, `mo`'s `form`/`stretchy`, and `mtable`'s

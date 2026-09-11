@@ -62,12 +62,65 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  *
  * They are listed here rather than dropped from the fixture set, because the
  * fixture set is the ORACLE's answer and stays complete. What is asserted is
- * that the port REFUSES them: with those rules absent the `matrixs`/`tr`/`td`
- * nodes reach `finalize` as plain hashes and it throws, naming the keys. When
- * the family lands, these two move from this list into the parity list and the
- * count below fails until they do.
+ * that the port REFUSES them: with those rules absent the unmatched nodes reach
+ * `finalize` as plain hashes and it throws, naming the keys. When a family
+ * lands, its inputs move from this list into the parity list and the count
+ * below fails until they do — so this list is a ratchet, not a suppression. An
+ * input that starts parsing CORRECTLY fails here just as loudly as one that
+ * starts parsing wrongly.
+ *
+ * The list grew from two to twenty-six when the corpus pin advanced to
+ * `281d7003` (PR #84), which added cases reaching four families this port has
+ * not started. Measured on that pin: of the corpus's UnicodeMath rows, exactly
+ * these twenty-six raise `ParseError` and NONE parses to a different model —
+ * there is no silent divergence hiding behind this list.
  */
-const DEFERRED_INPUTS: readonly string[] = ["⒨(a@b)", "ⓢ(a&b@c&d)"];
+const DEFERRED_INPUTS: readonly string[] = [
+  // TABLE and matrix (`transform.rb:8`, `:9`, `:14`, `:32`, `:1569`, `:1574`,
+  // `:1584`, `:1649`, `:1670`, `:1691`). `&` separates cells and `@` rows, so
+  // every input carrying either reaches the family.
+  "⒨(a@b)",
+  "ⓢ(a&b@c&d)",
+  "⒱(a&b@c&d)",
+  "ⓢ(a)",
+  "Ⓢ(a)",
+  "■(a&b)",
+  "✎(blue&y + z)",
+  "√(3&8)",
+  "√(n&x)",
+
+  // NARY (`transform.rb:175`, `:1874`-`:3588`). `▒` and the `_(…)` script on a
+  // large operator both land here.
+  "∏_(k)▒〖k〗",
+  "∮_(C)▒〖f〗",
+  "⋃_(i) A_(i)",
+  "⋂_(i) A_(i)",
+  "∐_(i) A_(i)",
+  "⨁_(i) A_(i)",
+
+  // DECORATION (`transform.rb:1286`-`:1491`). Blocked on three constants no
+  // generated table carries: `UNDER_HORIZONTAL_BRACKETS`, `OVERLAYS_NOTATIONS`
+  // and `BELOWS_NOTATIONS`.
+  "((a)̅)̅",
+  "⏟(a b)",
+  "⏟(a + b)",
+  "⏟(x)_(y)",
+  "(y)┴(x)",
+  "(y)┬x",
+
+  // SCRIPT (`transform.rb:118`-`:2403`): a right-associative double exponent.
+  "x^y^(z)",
+
+  // UNICODE SPACE characters, not runs of ASCII spaces — the distinction
+  // matters, because a plain-space literal here silently fails to match the
+  // fixture and the case quietly rejoins the parity list. Measured from the
+  // fixture bytes: NBSP (U+00A0) and THREE-PER-EM SPACE (U+2004). The grammar
+  // maps only the ASCII space today.
+  "a \u00a0\u00a0 b",
+  "a \u00a0\u00a0 b \u00a0\u00a0 c",
+  "a \u2004 b",
+  "a \u00a0\u00a0\u00a0\u00a0 b",
+];
 
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");
 const boundary = fixtures.cases.filter((entry) => entry.group === "slice-boundary");

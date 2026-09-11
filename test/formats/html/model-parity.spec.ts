@@ -141,9 +141,11 @@ describe("the inputs the gem refuses", () => {
  */
 const GEM_UNMATCHED_SIGNATURES: readonly string[] = [
   "binary=simple,first_value=sequence,second_value=simple,sequence=simple",
+  "binary=simple,first_value=simple",
   "binary_number=simple,expression=sequence",
   "binary_number=simple,expression=simple",
   "binary_number=simple,parse_parenthesis=simple",
+  "expression=other,sequence=simple",
   "expression=other,sub_sup=simple,sub_value=sequence,sup_value=simple",
   "expression=other,symbol=simple",
   "expression=sequence,hex_number=simple",

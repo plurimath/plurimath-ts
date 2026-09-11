@@ -172,11 +172,20 @@ that call `Mml.parse` (XML text to an `Mml::V4::*` model) and then
   yields 198 Class-valued constants, of which `MathWithNamespace` is a literal
   alias of `Math` and `Namespace` is not an element model at all, so the
   element count is 196; the zero holds at 198, 197 and 196, and under both the
-  loose and strict definitions of "attribute reader" above.
-  so no schema default leaks through anywhere in the model — an absent
-  attribute is `nil`, including ones with obvious MathML defaults like
-  `mfrac`'s `linethickness`, `mo`'s `form`/`stretchy`, and `mtable`'s
-  `columnalign`. Values are not coerced either: `display="block"` and
+  loose and strict definitions of "attribute reader" above. So no schema
+  default leaks through anywhere in the ELEMENT model — an absent attribute is
+  `nil`, including ones with obvious MathML defaults like `mfrac`'s
+  `linethickness`, `mo`'s `form`/`stretchy`, and `mtable`'s `columnalign`.
+
+  "Element model" is doing work in that sentence. `Mml::V4::Namespace` — the
+  constant that is dropped to reach 196 — DOES carry a default:
+  `Namespace.new.uri` is `"http://www.w3.org/1998/Math/MathML"`. Neither
+  methodology above can see it, because `Namespace.instance_methods(false)` is
+  empty (the reader is inherited from `Lutaml::Xml::Namespace`) and it does not
+  respond to `mappings_for`. It is not an element and no `when Mml::V4::…`
+  branch dispatches on it, so it does not weaken the claim — but a port that
+  enumerates readers the way this measurement does will not find it either, and
+  the namespace URI is something a reader has to supply from somewhere. Values are not coerced either: `display="block"` and
   `displaystyle="true"` arrive as `String`, and `value` is an `Array` of
   `String`. A reader plus an element-name map reproduces what the translator
   consumes, so lutaml-model's machinery would not need porting.

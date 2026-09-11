@@ -166,7 +166,7 @@ the ten aliases some corpus case constructs — `Power`, `Mod`, `Lim`, `Log`,
 `Root`, `Td` (binary), `PowerBase` (ternary), `Sin`, `Cos`, `Tr` (unary) — so
 every admitted arm is held to the gem's bytes by `render-parity.spec.ts`, and
 `power`/`powerBase` additionally by the full `degenerate-slots` slot matrix.
-`MEASURED_LABELS` in the unary file is the one hand-typed gem-derived table:
+`MEASURED_LABELS` in the unary file is one of TWO hand-typed gem-derived tables there:
 `Core#invert_unicode_symbols` is `UNICODE_SYMBOLS.invert[class_name] ||
 class_name`, so the label is NOT reliably the downcased class name — of the
 names reachable through that carrier, `Sup` resolves to `&#x2283;` — and the
@@ -179,8 +179,26 @@ into a `notation=` attribute (a heap address, not reproducible), and
 `ArgumentError` — surfacing as `ParseError` — when a `Rule` is rendered
 inside a tree.
 
-**Trigger for revisiting: a generator that owns these sets per format, or the
-first consumer that needs `Scarries`.**
+The second is `INSPECT_NAMED_ESCAPES` in the same file: the ten codepoints
+whose `String#inspect` form Ruby writes as a NAMED escape rather than
+`\uXXXX` — `\a \b \t \n \v \f \r \e \" \\` for `0x07 0x08 0x09 0x0a
+0x0b 0x0c 0x0d 0x1b 0x22 0x5c`. Every entry was measured against the pinned
+oracle and all ten agree; seven codepoints deliberately absent from it were
+checked too and each falls through to the numeric branch, as the gem does. So
+this is a governance exception, not a correctness one: the data is right, and
+what it lacks is a generator that would keep it right.
+
+Recording it rather than generating it now is a size judgement. The migration
+has a precedent in this very file — the three AsciiMath render tables below —
+and a clear shape: a codepoint sweep in `generate-corpus.rb` beside
+`latex_left_right_parens`, emitted through `ts_tuple_map` into
+`src/generated/latex/render-tables.ts`, asserting on the way that the
+named-escape set is EXACTLY those ten so completeness is enforced rather than
+claimed in prose. That is its own change, not a rider on a corpus pin.
+
+**Trigger for revisiting: a generator that owns these sets per format, the
+first consumer that needs `Scarries`, or any third hand-typed table appearing
+in that file — two is an exception, three is a habit.**
 
 ### Three AsciiMath render tables — generated
 
@@ -489,6 +507,35 @@ key — `Utility.symbols_class("&times;", lang: :mathml)` returns `Symbols::Time
 — the path mangles the string before it gets there. Reproduces identically under
 both Ox and Oga. Same omission in `omml/utility.rb:30,96` and
 `html/transform_utility.rb:53-57`. LaTeX and HTML input are unaffected.
+
+### UnicodeMath input returns a non-model tree instead of raising
+
+```ruby
+Plurimath::Math.parse("a ± b", :unicode).value
+# => [[:factor, Symbol("a")],
+#     [:expr, {combined_symbols: "&#xb1;"@2, expr: Symbol("b")}]]
+```
+
+No rule among `unicode_math/transform.rb`'s 519 has the signature
+`{combined_symbols: simple, expr: simple}`, so that node survives the transform
+as a Hash; the enclosing `{factor:, expr:}` node then cannot match either
+(`simple` rejects a Hash); and `Kernel#Array` in `UnicodeMath::Parser#parse`
+folds the outermost Hash into its `[key, value]` pairs rather than wrapping it.
+The result is a `Formula` whose value holds Symbols, Arrays and a raw parse-tree
+Hash — a tree no renderer can read — returned without raising.
+
+`(a)/(+) b` reaches the same end through a different missing signature,
+`{close_paren:, open_paren:, operator:}`. Both strings are the gem's OWN
+`to_unicodemath` output for pinned corpus cases, so this is a round trip the gem
+does not survive.
+
+Not worked around: `src/formats/unicodemath/transform.ts` reproduces both trees
+and `test/formats/unicodemath/model-fixtures.json` pins them. The nine
+signatures the gem leaves unmatched over the pinned corpus — key AND value shape
+per key, because Parslet binds on the matcher kind too — are listed as
+`GEM_UNMATCHED_SIGNATURES` in that transform; anything else surviving it is
+refused, because for this port that would mean a rule family the first slice has
+not reached.
 
 ## Parked ideas
 
@@ -1001,3 +1048,77 @@ each naming what the gem does with it:
 The first is the generated-symbol-data gap and lifts with it. The rest are
 `#inspect` reproducibility, which is why they refuse rather than guess: the
 gem's own output for them is either nondeterministic or unmeasured.
+
+### LaTeX and UnicodeMath: three list slots the gem renders — CLOSED
+
+**CLOSED.** The trigger below fired: the three slots now render, through
+`rubyArrayInspectOrThrow` rather than by widening `interpolatedValue`, which is
+the route this entry said was the wrong one. See `src/render/number/latex.ts`,
+`src/render/number/unicodemath.ts` and `src/render/color/latex.ts`, and their
+cases in `test/formats/latex/renderer.spec.ts` and
+`test/formats/unicodemath/renderer.spec.ts`.
+
+The measurements below are kept because they are the specification the fix was
+built against, not because anything here is still outstanding.
+
+~~Trigger: a case, probe or parser reaches a list in one of these three slots —
+or `Mbox`'s list handling is generalised, at which point these are what the
+generalisation has to answer for.~~
+
+Found by review while `src/render/unary-function/latex.ts` was gaining the
+`Mbox` list arm; measured on the pinned oracle `00c52783`, each with
+`options: {}` supplied:
+
+| call | gem | port |
+|---|---|---|
+| `Number([]).to_latex` | `"[]"` | refuses |
+| `Number([]).to_unicodemath` | `"[]"` | renders nothing, silently |
+| `Color(Number([]), Symbol("x")).to_latex` | `"{\color{[]} x}"` | refuses |
+
+The UnicodeMath one is the worst of the three, because a silent empty answer is
+the failure mode this port exists to avoid; the other two refuse loudly, which
+is merely incomplete.
+
+**Do not close these by widening `interpolatedValue`.** It is tempting —
+`src/render/number/latex.ts:11` and `src/render/color/latex.ts:103` both call
+it, and the `Mbox` arm calls it too — but the three slots do not reach Ruby the
+same way. `Mbox#to_latex` interpolates its slot raw, so `"#{[]}"` is
+`Array#inspect` and the answer is `"[]"`. `Number#to_latex` goes through
+`Formatter::Numbers::TextRenderer`. And `Color`'s first slot is a NODE whose
+`to_asciimath` is called, so a bare Ruby array there never inspects at all:
+measured, `Color([], Symbol("x")).to_latex` and `Color([Symbol("a")], …)` both
+raise `NoMethodError: undefined method 'to_asciimath'`, where the same `Color`
+wrapping a `Number([])` renders. One helper cannot be right for all three,
+which is why `Mbox`'s list handling sits at its own arm and this entry exists.
+
+### UnicodeMath: `rubyInspect` spells strings with `JSON.stringify`
+
+**Trigger: an option value, or any other slot reaching `rubyInterpolate`,
+carries a string with a character the two spellings disagree on.**
+
+`rubyInspect` (`src/formats/unicodemath/render-shared.ts`) renders a string
+inside an inspected Array or Hash as `JSON.stringify(value)`. That is Ruby's
+`String#inspect` only for the easy characters. Measured on the pinned oracle by
+an exhaustive sweep of U+0000..U+02FF, the two disagree on:
+
+Of the 768 codepoints swept, **725 are spelled identically** by the two and 43
+are not — `\n`, `\t`, `\b`, `\f`, `\r`, `\"`, `\\` and U+0000..U+0006 and
+U+0010..U+0019 all agree, the hex ones because their four digits hold no letter
+for the case to differ on. The 43 that differ:
+
+- U+0007, U+000B and U+001B — Ruby writes the named forms `\a`, `\v`, `\e`;
+  JSON writes `\u0007`, `\u000b` and `\u001b`;
+- U+000E, U+000F, U+001A and U+001C..U+001F — the seven C0 codepoints whose hex
+  digits DO hold a letter, where Ruby uses UPPERCASE (`\u001A`) and JSON
+  lowercase (`\u001a`);
+- all 33 of U+007F..U+009F — Ruby escapes them, JSON leaves them bare.
+
+Nothing in U+0020..U+007E differs and nothing above U+009F does. Separately,
+and outside that count because it is a two-character rule rather than a
+codepoint: `#` before `{`, `$` or `@`, which Ruby escapes and JSON does not.
+
+`src/render/unary-function/latex.ts` carries the measured table for its own
+`Mbox` arm and refuses above U+02FF rather than guessing. The two cannot share
+it: section 3 rule 8 gives a kind file its own format's `render-shared` and no
+other's, so a shared spelling would have to move into core, which is a layering
+decision rather than a bug fix.

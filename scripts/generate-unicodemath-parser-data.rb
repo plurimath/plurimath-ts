@@ -2,14 +2,17 @@
 
 # Generates the constant tables the UnicodeMath *grammar* reads — the
 # alternatives `Plurimath::UnicodeMath::Parse` builds its rules from, consumed
-# by `src/formats/unicodemath/grammar.ts`.
+# by `src/formats/unicodemath/grammar.ts` — and the class-resolution tables the
+# UnicodeMath *transform* reads, consumed by
+# `src/formats/unicodemath/registry.ts`.
 #
-# `UnicodeMath::Constants` holds 42 constants. Only the 33 the grammar actually
-# reaches are emitted, plus one derived table; the other 9 belong to
-# `unicode_math/transform.rb`, which is a later slice. The list is not a
-# judgement call: `unicode_math/parsing_rules/constants_rules.rb` is the single
-# file that turns constants into rules, and every `Constants::` reference under
-# `unicode_math/` was enumerated to build `TABLES` below.
+# `UnicodeMath::Constants` holds 42 constants. 33 of them the grammar reaches,
+# plus one derived table; three more — `BINARY_FUNCTIONS`, `NARY_CLASSES` and
+# `PREFIXED_PRIMES` — the transform reaches, and are emitted here too. The list
+# is not a judgement call: `unicode_math/parsing_rules/constants_rules.rb` is the
+# single file that turns constants into rules, and every `Constants::` reference
+# under `unicode_math/` was enumerated to build `TABLES` and
+# `TRANSFORM_CONSTANT_SOURCES` below.
 #
 # **The collision this file exists to make impossible — and it is NOT the one
 # the LaTeX generator guards.** `scripts/generate-latex-parser-data.rb` emits
@@ -71,8 +74,9 @@
 #   --help
 #
 # Outputs:
-#   src/formats/unicodemath/generated/parser-tables.ts  the grammar's tables
-#   src/formats/unicodemath/generated/provenance.ts     what they came from
+#   src/formats/unicodemath/generated/parser-tables.ts     the grammar's tables
+#   src/formats/unicodemath/generated/transform-tables.ts  the transform's tables
+#   src/formats/unicodemath/generated/provenance.ts        what they came from
 #
 # The generator is deterministic: two runs over the same oracle produce
 # byte-identical output. No timestamps, no absolute paths; every table keeps
@@ -183,15 +187,30 @@ module UnicodeMathParserDataGenerator
     ["UNICODEMATH_WRAPPER_SYMBOLS", "Constants.wrapper_symbols", :wrapper_symbols, "", nil],
   ].freeze
 
-  # `Constants` entries the grammar never reads. Named so the emitted set is a
-  # measured subset rather than an unexplained one, and so a constant that
-  # appears upstream later fails the inventory assertion instead of being
-  # silently ignored. Every one of these is read by `unicode_math/transform.rb`
-  # or by `Utility`, neither of which this slice ports.
+  # The `Constants` tables the TRANSFORM reads that the grammar does not, each
+  # with the emitted name it becomes. `PREFIXED_PRIMES` is reached indirectly:
+  # `Utility.primes_constants` (`utility.rb:292-297`) is that hash merged with
+  # `{ sprime: "&#x27;" }`, and the merged result is what the transform tests.
+  TRANSFORM_CONSTANT_SOURCES = {
+    "BINARY_FUNCTIONS" => "UNICODEMATH_BINARY_FUNCTIONS",
+    "NARY_CLASSES" => "UNICODEMATH_NARY_CLASSES",
+    "PREFIXED_PRIMES" => "UNICODEMATH_PRIMES_CONSTANTS",
+  }.freeze
+
+  # `Constants` entries neither the grammar nor the ported transform slice
+  # reads. Named so the emitted set is a measured subset rather than an
+  # unexplained one, and so a constant that appears upstream later fails the
+  # inventory assertion instead of being silently ignored.
+  #
+  # `UNDEF_UNARY_FUNCTIONS` is the one entry here the transform DOES read. It is
+  # not emitted by this generator because `scripts/generate-corpus.rb` already
+  # emits it as `UNICODEMATH_UNDEF_UNARY_FUNCTIONS` in
+  # `src/generated/unicodemath/render-tables.ts`, and one table generated twice
+  # is one table that can drift. The others are read only by transform rules
+  # this slice defers.
   UNCONSUMED_CONSTANTS = %w[
-    BELOWS_NOTATIONS BINARY_FUNCTIONS NARY_CLASSES OVERLAYS_NOTATIONS
-    PARENTHESIS_MATRICES PHANTOM_SYMBOLS PREFIXED_PRIMES UNDEF_UNARY_FUNCTIONS
-    UNDER_HORIZONTAL_BRACKETS
+    BELOWS_NOTATIONS OVERLAYS_NOTATIONS PARENTHESIS_MATRICES PHANTOM_SYMBOLS
+    UNDEF_UNARY_FUNCTIONS UNDER_HORIZONTAL_BRACKETS
   ].freeze
 
   # `UNICODED_FONTS` reaches the grammar through its own builder,
@@ -259,6 +278,7 @@ module UnicodeMathParserDataGenerator
       source[/\A[A-Z][A-Z_]+/] unless source.start_with?("Constants.")
     end.uniq
     emitted |= ["UNICODED_FONTS"]
+    emitted |= TRANSFORM_CONSTANT_SOURCES.keys
     overlap = emitted & UNCONSUMED_CONSTANTS
     unless overlap.empty?
       raise Error, "#{overlap.join(', ')} is both emitted and named unconsumed; " \
@@ -463,6 +483,261 @@ module UnicodeMathParserDataGenerator
     inner.is_a?(::Hash) && inner[:decimal].to_s == marker
   end
 
+  # --- the transform's tables ----------------------------------------------
+
+  # The names `unicode_math/transform.rb` can feed to `Utility.get_class`.
+  #
+  # There are only two identifier shapes across the file's 18 `get_class`
+  # mentions, and each is a GRAMMAR tag whose reachable texts are a `Constants`
+  # table, so the set is enumerable rather than guessed at:
+  #
+  #   `unary`         bound by `unary_functions: simple(:unary)` (`:126`, `:1547`)
+  #                   -> `Constants::UNARY_FUNCTIONS`, minus the seven
+  #                   `UNDEF_UNARY_FUNCTIONS` texts, which take the
+  #                   `symbols_class` arm and never reach `get_class`.
+  #   `nary_function` derived from `nary_class: simple(:nary_class)`
+  #                   -> `get_class` runs only inside
+  #                   `if Constants::NARY_CLASSES.key?(nary_function.to_sym)`,
+  #                   so the reachable names are `NARY_CLASSES.keys`.
+  #
+  # `matrix` (`get_table_class`) is the third, and this slice defers the
+  # table/matrix rules, so no table-class table is emitted: emitting one would
+  # ship data nothing reads.
+  def get_class_sources
+    sources = Hash.new { |hash, key| hash[key] = [] }
+    (constants::UNARY_FUNCTIONS - constants::UNDEF_UNARY_FUNCTIONS).each do |name|
+      sources[name] << "unary_functions"
+    end
+    constants::NARY_CLASSES.each_key { |name| sources[name.to_s] << "nary_class" }
+    sources.transform_values { |tags| tags.uniq.sort }
+  end
+
+  # `Utility.get_class(name)`, or nil when the gem raises `NameError`. Measured,
+  # never argued: the lookup is run.
+  def resolve_class(name)
+    Plurimath::Utility.get_class(name)
+  rescue ::NameError
+    nil
+  end
+
+  def class_entry(census_index, name, klass, sources, family:)
+    entry = CorpusGenerator.transform_registry_entry(
+      census_index, name, klass, sources, family: family
+    )
+    if entry["disposition"] == "deferred"
+      raise Error, "#{name.inspect} resolves to #{entry['rubyClass']}, which the " \
+                   "census defers (ARCHITECTURE.md §5); the UnicodeMath transform reaches it"
+    end
+    entry
+  end
+
+  def get_class_rows(census_index)
+    resolved = []
+    unresolved = []
+    get_class_sources.sort.each do |name, sources|
+      klass = resolve_class(name)
+      if klass.nil?
+        unresolved << name
+        next
+      end
+      resolved << class_entry(census_index, name, klass, sources, family: true)
+    end
+    raise Error, "no get_class name resolved; the tag-to-table mapping is wrong" if resolved.empty?
+
+    [resolved, unresolved.sort]
+  end
+
+  # `Utility::FONT_STYLES[fonts.to_sym]` at `transform.rb:236`. The `fonts`
+  # binding comes from the `font_class` tag, which `constants_rules.rb:17` and
+  # `:80` build from `FONTS_CLASSES` and `ALPHANUMERIC_FONTS_CLASSES`; a text
+  # with no `FONT_STYLES` entry would make the rule call `.new` on nil, so a
+  # miss stops generation rather than shipping.
+  def font_style_rows(census_index)
+    names = (constants::FONTS_CLASSES + constants::ALPHANUMERIC_FONTS_CLASSES).uniq
+    missing = names.reject { |name| Plurimath::Utility::FONT_STYLES.key?(name.to_sym) }
+    unless missing.empty?
+      raise Error, "font_class text(s) #{missing.join(', ')} have no FONT_STYLES " \
+                   "entry; `transform.rb:236` would raise NoMethodError on nil"
+    end
+
+    names.sort.map do |name|
+      klass = Plurimath::Utility::FONT_STYLES.fetch(name.to_sym)
+      entry = class_entry(census_index, name, klass, ["font_class"], family: false)
+      entry.merge("defaultKeyword" => font_style_default_keyword(klass))
+    end
+  end
+
+  # What a `FontStyle` subclass stores in `parameter_two` when it is given ONE
+  # argument, which is how `transform.rb:236` calls it.
+  #
+  # It is not derivable from the name and it is not uniform: `Bold` defaults to
+  # `"bold"`, `Normal` to `"rm"`, and six of the fourteen — `BoldFraktur`,
+  # `BoldItalic`, `SansSerifBoldItalic`, `BoldSansSerif`, `BoldScript` and
+  # `SansSerifItalic` — default to nil. Measured per class by constructing one
+  # and reading the ivar back.
+  FONT_STYLE_SENTINEL = "plurimath"
+
+  def font_style_default_keyword(klass)
+    instance = klass.new(FONT_STYLE_SENTINEL)
+    stored = instance.instance_variable_get(:@parameter_one)
+    unless stored == FONT_STYLE_SENTINEL
+      raise Error, "#{klass.name}.new(text) stored #{stored.inspect} in parameter_one; " \
+                   "the one-argument probe no longer measures what the transform builds"
+    end
+
+    keyword = instance.instance_variable_get(:@parameter_two)
+    unless keyword.nil? || keyword.is_a?(::String)
+      raise Error, "#{klass.name}.new(text) defaults parameter_two to a " \
+                   "#{keyword.class}; expected String or nil"
+    end
+
+    keyword
+  end
+
+  # `Utility.all_symbols_classes(:unicodemath)` — `symbols_hash` merged with
+  # `parens_hash`, the table `Utility.symbols_class(string, lang: :unicodemath)`
+  # looks a STRIPPED text up in.
+  #
+  # Unlike the LaTeX table this one has no cache-order trap: nothing under
+  # `unicode_math/` calls `parens_hash` with `skipables:`, so the memoized
+  # parens half is the complete one whichever caller warms it. Asserted on
+  # every run by comparing the merge against the union of its two halves.
+  def symbol_class_rows
+    symbols = Plurimath::Utility.symbols_hash(:unicodemath)
+    parens = Plurimath::Utility.parens_hash(:unicodemath)
+    merged = Plurimath::Utility.all_symbols_classes(:unicodemath)
+    union = (symbols.keys | parens.keys).length
+    unless merged.length == union
+      raise Error, "all_symbols_classes(:unicodemath) has #{merged.length} entries but the " \
+                   "union of its two halves has #{union}"
+    end
+
+    merged.map do |text, klass|
+      unless text.is_a?(::String)
+        raise Error, "all_symbols_classes(:unicodemath) is keyed by #{text.class}, not " \
+                     "String; a Map would collapse entries the gem keeps apart"
+      end
+
+      [text, CorpusGenerator.class_key(klass).delete_prefix("Math::Symbols::")]
+    end
+  end
+
+  def symbol_class_overlap
+    (Plurimath::Utility.symbols_hash(:unicodemath).keys &
+      Plurimath::Utility.parens_hash(:unicodemath).keys).sort
+  end
+
+  # The symbol classes the ported transform slice names as LITERALS rather than
+  # reaching through a table, mapped to the ids the port carries. `Lround` and
+  # `Rround` are the pair `Utility.valid_paren?` (`utility.rb:270-279`) tests
+  # for, which is what decides whether `unfenced_value` unwraps a `Fenced`.
+  NAMED_SYMBOL_CLASSES = {
+    "lround" => "Plurimath::Math::Symbols::Paren::Lround",
+    "rround" => "Plurimath::Math::Symbols::Paren::Rround",
+  }.freeze
+
+  def named_symbol_rows
+    NAMED_SYMBOL_CLASSES.map do |role, constant|
+      klass = begin
+        Object.const_get(constant)
+      rescue ::NameError
+        raise Error, "#{constant} no longer exists; the transform names it directly"
+      end
+      [role, CorpusGenerator.class_key(klass).delete_prefix("Math::Symbols::")]
+    end
+  end
+
+  # Ruby source is UTF-8 whatever the locale says, and `File.read` disagrees.
+  #
+  # `CorpusGenerator.build_census` reaches `abstract_check!`, which reads every
+  # `lib/**/*.rb` in the oracle with a bare `File.read` — so the bytes arrive
+  # tagged `Encoding.default_external`. Under `LC_ALL=C` that is US-ASCII, and
+  # the first regex match over a file with a non-ASCII character raises
+  # `ArgumentError: invalid byte sequence in US-ASCII`. Measured: this
+  # generator failed under `LC_ALL=C` from the commit that added the census
+  # call, while the same generator without it succeeded.
+  #
+  # Fixed here rather than in `scripts/generate-corpus.rb`: that script's bytes
+  # are hashed into six other artifacts' provenance, and editing it would
+  # invalidate all of them for a fault that is this generator's to contain.
+  #
+  # The guard is not just the assignment: reading one oracle source back and
+  # requiring `valid_encoding?` proves the override actually reached `File.read`
+  # INSIDE this block. That is all it proves. It cannot notice the census being
+  # moved out of the block — measured under `LC_ALL=C`,
+  # `with_utf8_source_reads(gem) { nil }` passes, `Encoding.default_external` is
+  # US-ASCII again on return, and `build_census(gem)` then raises the same deep
+  # `ArgumentError`. Keeping the census inside the block is a rule this code
+  # cannot enforce on itself; the single call site below, at the census build,
+  # is what upholds it.
+  def with_utf8_source_reads(gem_dir)
+    previous = Encoding.default_external
+    Encoding.default_external = Encoding::UTF_8
+    probe = Dir.glob(File.join(gem_dir, "lib/**/*.rb")).sort.first
+    raise Error, "#{gem_dir}/lib has no Ruby sources to read" unless probe
+
+    text = File.read(probe)
+    unless text.encoding == Encoding::UTF_8 && text.valid_encoding?
+      raise Error, "File.read still returns #{text.encoding} for #{probe}; the census " \
+                   "would raise on the first non-ASCII source under this locale"
+    end
+
+    yield
+  ensure
+    Encoding.default_external = previous unless previous.nil?
+  end
+
+  # The classes the ported transform rules ask `is_a?` about, each with the
+  # full set of classes that answer true — itself plus every descendant.
+  #
+  # `is_a?` is inheritance, not identity, and the port has only a node kind and
+  # an alias basename to work with. Enumerating the answer here rather than
+  # assuming "no subclasses" means an upstream subclass changes a regenerated
+  # table instead of silently changing a branch.
+  #
+  #   Math::Formula                    `transform.rb:1019` (ubrace arm)
+  #   Math::Function::BinaryFunction   `unicode_math/utility.rb:13`
+  #   Math::Function::Nary             `transform.rb:1861`
+  #   Math::Function::Overset          `transform.rb:1116`
+  #   Math::Function::Power            `transform.rb:1019`
+  #   Math::Function::TernaryFunction  `is_ternary_function?` (`core.rb:348`)
+  #   Math::Function::UnaryFunction    `is_unary?` (`core.rb:330`)
+  #   Math::Function::Underset         `transform.rb:1019`
+  IS_A_PROBED_CLASSES = %w[
+    Math::Formula
+    Math::Function::BinaryFunction
+    Math::Function::Nary
+    Math::Function::Overset
+    Math::Function::Power
+    Math::Function::TernaryFunction
+    Math::Function::UnaryFunction
+    Math::Function::Underset
+  ].freeze
+
+  def is_a_rows(gem_dir)
+    CorpusGenerator.load_model_classes!(gem_dir)
+    IS_A_PROBED_CLASSES.map do |key|
+      klass = begin
+        Object.const_get("Plurimath::#{key}")
+      rescue ::NameError
+        raise Error, "Plurimath::#{key} no longer exists; a transform branch tests it"
+      end
+      family = ([klass] + CorpusGenerator.all_descendants(klass))
+        .uniq.map { |k| CorpusGenerator.class_key(k) }.sort
+      [key, family]
+    end
+  end
+
+  def string_pairs(hash, where)
+    hash.map do |key, value|
+      unless value.is_a?(::String)
+        raise Error, "#{where}[#{key.inspect}] is #{value.class}; expected String"
+      end
+
+      [key.to_s, value]
+    end
+  end
+
   # --- payloads ------------------------------------------------------------
 
   def ts_header(description)
@@ -596,6 +871,231 @@ module UnicodeMathParserDataGenerator
       ),
     ]
     CoreDataGenerator.write_ts(File.join(out_root, "parser-tables.ts"), sections)
+  end
+
+  # One `readonly Entry[]` of object literals, one field per line — the shape
+  # Biome prints for records this wide, and the shape the LaTeX transform
+  # tables already use.
+  def ts_entry_list(name, type, entries, doc)
+    lines = entries.flat_map do |entry|
+      body = TRANSFORM_ENTRY_FIELDS.filter_map do |field|
+        next unless entry.key?(field)
+
+        "    #{field}: #{CoreDataGenerator.ts_flat(entry.fetch(field))},"
+      end
+      ["  {", *body, "  },"]
+    end
+    [CoreDataGenerator.ts_doc(doc), "export const #{name}: #{type} = [", *lines, "];"].join("\n")
+  end
+
+  TRANSFORM_ENTRY_FIELDS =
+    %w[name rubyClass disposition carrier family defaultKeyword sources].freeze
+
+  # Biome prints a union on one line when it fits its print width and expands it
+  # one member per line when it does not, so the emitter makes the same call.
+  def ts_union(name, members)
+    quoted = members.map { |member| CoreDataGenerator.ts_string(member) }
+    flat = "export type #{name} = #{quoted.join(' | ')};"
+    return flat if flat.length <= CoreDataGenerator::TS_PRINT_WIDTH
+
+    "export type #{name} =\n  | #{quoted.join("\n  | ")};"
+  end
+
+  # One `[key, [values...]]` Map row, collapsed when Biome would collapse it.
+  def ts_nested_row(key, values)
+    quoted = values.map { |value| CoreDataGenerator.ts_string(value) }
+    flat = "  [#{CoreDataGenerator.ts_string(key)}, [#{quoted.join(', ')}]],"
+    return [flat] if flat.length <= CoreDataGenerator::TS_PRINT_WIDTH
+
+    ["  [", "    #{CoreDataGenerator.ts_string(key)},", "    [",
+     *quoted.map { |value| "      #{value}," }, "    ],", "  ],"]
+  end
+
+  def emit_transform_tables_file(out_root, data)
+    families = data[:get_class].filter_map { |row| row["family"] }.uniq.sort
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        The tables `Plurimath::UnicodeMath::Transform` resolves its nodes and
+        symbols through.
+
+        `unicode_math/transform.rb` resolves a captured name at RUNTIME —
+        `Object.const_get("Plurimath::Math::Function::\#{capitalize(text)}")`
+        (`utility.rb:139`) — and `Utility.symbols_class` looks a captured text up
+        in a table reflected off every symbol class's `INPUT[:unicodemath]`.
+        Neither has a TypeScript equivalent, so both are resolved here, through
+        the gem, and emitted with what they reached.
+        `src/formats/unicodemath/registry.ts` binds these to `core`
+        constructors; nothing restates them.
+
+        This is the FIRST transform slice, so the emitted set is what that slice
+        consumes and no more. `Utility.get_table_class` has no table here: the
+        table/matrix rules are deferred, and data nothing reads cannot be kept
+        honest.
+      TEXT
+      [
+        CoreDataGenerator.ts_doc(
+          "How the census disposes of a resolved class — the same vocabulary\n" \
+          "`src/formats/latex/generated/transform-tables.ts` uses. An `aliased`\n" \
+          "class adds no field and no equality of its own, so the port carries\n" \
+          "it as its carrier plus a name.",
+        ),
+        'export type UnicodemathTransformDisposition = "implemented" | "aliased";',
+      ].join("\n"),
+      [
+        CoreDataGenerator.ts_doc(
+          "Which Ruby `initialize` shape a `get_class` name resolves to,\n" \
+          "measured off the runtime by `CorpusGenerator` (instantiate, read the\n" \
+          "assigned ivars back, then re-verify parameter wiring with sentinel\n" \
+          "arguments). Only `get_class` entries carry one: the font-style\n" \
+          "classes sit outside that vocabulary and the transform constructs\n" \
+          "them directly.",
+        ),
+        ts_union("UnicodemathTransformConstructorFamily", families),
+      ].join("\n"),
+      [
+        CoreDataGenerator.ts_doc(
+          "One resolved name: the text as CAPTURED (the registry is keyed by it,\n" \
+          "so nothing has to reimplement `capitalize`), the class the gem\n" \
+          "reached, its census disposition, the implemented carrier the port\n" \
+          "constructs, and — for `get_class` names — the measured constructor\n" \
+          "family. `sources` names the grammar tags that can carry the text.",
+        ),
+        "export interface UnicodemathTransformClassEntry {",
+        "  readonly name: string;",
+        "  readonly rubyClass: string;",
+        "  readonly disposition: UnicodemathTransformDisposition;",
+        "  readonly carrier: string;",
+        "  readonly family?: UnicodemathTransformConstructorFamily;",
+        "  readonly defaultKeyword?: string | null;",
+        "  readonly sources: readonly string[];",
+        "}",
+      ].join("\n"),
+      ts_entry_list(
+        "UNICODEMATH_TRANSFORM_GET_CLASS", "readonly UnicodemathTransformClassEntry[]",
+        data[:get_class],
+        "Every name `Utility.get_class` can receive from the UnicodeMath\n" \
+        "transform that the gem can resolve, sorted by name.\n" \
+        "\n" \
+        "Derived from the two grammar tags that feed it — `unary_functions`\n" \
+        "minus `UNDEF_UNARY_FUNCTIONS`, and `NARY_CLASSES.keys` — see\n" \
+        "`get_class_sources` in the generator. The whole file has only those\n" \
+        "two identifier shapes across its 18 `get_class` mentions, so this is\n" \
+        "the transform's complete name space, not just the ported slice's.",
+      ),
+      ts_string_list(
+        "UNICODEMATH_TRANSFORM_UNRESOLVED", data[:unresolved],
+        "The reachable names `Utility.get_class` CANNOT resolve, measured by\n" \
+        "running the lookup and catching `NameError`.\n" \
+        "\n" \
+        "Empty today. It is emitted anyway, because LaTeX's equivalent is not\n" \
+        "empty (`Pr` has no `Math::Function::Pr` and `\\\\Pr_1` raises there), and\n" \
+        "a name that stops resolving upstream has to become a registry MISS\n" \
+        "here rather than a silent substitution.",
+      ),
+      ts_entry_list(
+        "UNICODEMATH_TRANSFORM_FONT_STYLES", "readonly UnicodemathTransformClassEntry[]",
+        data[:font_styles],
+        "`Utility::FONT_STYLES` restricted to the texts the `font_class` tag can\n" \
+        "carry — `FONTS_CLASSES` and `ALPHANUMERIC_FONTS_CLASSES`\n" \
+        "(`constants_rules.rb:17` and `:80`) — sorted by name.\n" \
+        "\n" \
+        "`transform.rb:236` calls `.new` on the lookup with no nil guard, so a\n" \
+        "text with no entry would raise `NoMethodError`. Generation asserts\n" \
+        "there is none.\n" \
+        "\n" \
+        "`defaultKeyword` is what that ONE-argument call leaves in\n" \
+        "`parameter_two`, measured per class by constructing one and reading the\n" \
+        "ivar back. It is not derivable from the name: `Bold` defaults to\n" \
+        "`\"bold\"`, `Normal` to `\"rm\"`, and six of the fourteen default to nil.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_SYMBOL_CLASS_INPUT", "ReadonlyMap<string, string>",
+        data[:symbol_classes],
+        doc: "`Utility.all_symbols_classes(:unicodemath)` — the table\n" \
+             "`Utility.symbols_class(text, lang: :unicodemath)` looks a STRIPPED\n" \
+             "text up in, as text -> symbol id.\n" \
+             "\n" \
+             "`symbols_hash` merged with `parens_hash`, parens last, so a text in\n" \
+             "both halves resolves to the PAREN class;\n" \
+             "`UNICODEMATH_SYMBOL_CLASS_OVERLAP` names those. Both halves are\n" \
+             "String-keyed — they come from each class's `INPUT[:unicodemath]`\n" \
+             "array — so unlike the LaTeX `symbols_constants` table this one\n" \
+             "cannot collide and a Map is safe; generation asserts the merge is\n" \
+             "the size of the union of its halves.\n" \
+             "\n" \
+             "A MISS is not an error: `symbols_class` falls back to\n" \
+             "`Math::Symbols::Symbol.new(text)`, carrying the text itself.",
+      ),
+      ts_string_list(
+        "UNICODEMATH_SYMBOL_CLASS_OVERLAP", data[:symbol_overlap],
+        "The texts present in BOTH halves of\n" \
+        "`all_symbols_classes(:unicodemath)`. The parens half is merged last and\n" \
+        "wins each of them; emitted so the count is pinned and a silent change\n" \
+        "to the merge order shows up as a diff.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_TRANSFORM_NAMED_SYMBOLS", "ReadonlyMap<string, string>",
+        data[:named_symbols],
+        doc: "The symbol classes the ported transform names as literals rather\n" \
+             "than reaching through a table, as role -> symbol id.\n" \
+             "\n" \
+             "`Utility.valid_paren?` (`utility.rb:270-279`) asks whether a\n" \
+             "`Fenced`'s parens are exactly `Paren::Lround` and `Paren::Rround`;\n" \
+             "that answer is what decides whether `unfenced_value` unwraps it.\n" \
+             "Emitted rather than spelled in TypeScript so an upstream rename is\n" \
+             "a regeneration diff.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_NARY_CLASSES", "ReadonlyMap<string, string>", data[:nary_classes],
+        doc: "`Constants::NARY_CLASSES`: the four n-ary names that resolve to a\n" \
+             "dedicated `Math::Function` class, mapped to the entity that spells\n" \
+             "them. The n-ary rules test membership by KEY and invert the hash to\n" \
+             "recover a key from an entity, so both directions are read.",
+      ),
+      ts_string_list(
+        "UNICODEMATH_BINARY_FUNCTIONS", data[:binary_functions],
+        "`Constants::BINARY_FUNCTIONS`: the `class_name` values the sub- and\n" \
+        "sup-script rules treat as \"a function still missing its argument\", so\n" \
+        "the script fills `parameter_one`/`parameter_two` instead of wrapping.\n" \
+        "Order is not semantic here (the transform only calls `include?`); the\n" \
+        "gem's order is kept so a regeneration diff mirrors an upstream edit.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_MENCLOSE_FUNCTIONS", "ReadonlyMap<string, string>", data[:menclose],
+        doc: "`Utility::UNICODEMATH_MENCLOSE_FUNCTIONS` (`utility.rb:111-122`):\n" \
+             "the `unary_arg_functions` name -> the `Menclose` notation string\n" \
+             "`transform.rb:1209` passes as `parameter_one`.\n" \
+             "\n" \
+             "A MISS yields Ruby nil, and `Menclose.new(nil, value)` is a legal\n" \
+             "node, so this table is deliberately not exhaustive over the tag.",
+      ),
+      [
+        CoreDataGenerator.ts_doc(
+          "The classes the ported transform rules ask `is_a?` about, each with\n" \
+          "the full set of classes that answer true — itself plus every\n" \
+          "descendant, measured off the loaded class tree.\n" \
+          "\n" \
+          "`is_a?` is inheritance, not identity, and a draft carries only a node\n" \
+          "kind and an alias basename. Enumerating the answer means an upstream\n" \
+          "subclass shows up as a regenerated table rather than as a branch that\n" \
+          "quietly stopped matching.",
+        ),
+        "export const UNICODEMATH_IS_A_CLASSES: ReadonlyMap<string, readonly string[]> = new Map([",
+        *data[:is_a].flat_map { |key, family| ts_nested_row(key, family) },
+        "]);",
+      ].join("\n"),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_PRIMES_CONSTANTS", "ReadonlyMap<string, string>", data[:primes],
+        doc: "`Utility.primes_constants` (`utility.rb:292-297`):\n" \
+             "`Constants::PREFIXED_PRIMES` merged with `{ sprime: \"&#x27;\" }`,\n" \
+             "as name -> entity.\n" \
+             "\n" \
+             "`Utility.base_is_prime?` reads it in the VALUE direction — `key(v)`\n" \
+             "— to decide whether a `Power`'s exponent is a prime mark, which is\n" \
+             "what turns `x'_1` into a `PowerBase` rather than a nested `Base`.",
+      ),
+    ]
+    CoreDataGenerator.write_ts(File.join(out_root, "transform-tables.ts"), sections)
   end
 
   def emit_provenance_file(out_root, provenance)
@@ -740,10 +1240,12 @@ module UnicodeMathParserDataGenerator
     fonts = unicoded_font_rows
     duplicates = duplicate_report(tables)
     markers = decimal_marker_rows
+    transform = transform_data(gem_dir)
     provenance = build_provenance(gem_dir, dirty, options[:allow_dirty])
 
     written = [
       emit_tables_file(options[:out], tables, fonts, duplicates, markers),
+      emit_transform_tables_file(options[:out], transform),
       emit_provenance_file(options[:out], provenance),
     ]
     written.sort.each { |path| puts "  #{relative(path)}" }
@@ -753,8 +1255,42 @@ module UnicodeMathParserDataGenerator
          "#{fonts.map { |font, entries| "#{font} #{entries.length}" }.join(', ')}"
     puts "decimal markers #{markers.length}: " \
          "#{markers.map { |raw, encoded| "#{raw.inspect} -> #{encoded.inspect}" }.join(', ')}"
+    puts "get_class #{transform[:get_class].length} resolved, " \
+         "#{transform[:unresolved].length} unresolvable; " \
+         "font styles #{transform[:font_styles].length}; " \
+         "symbols_class #{transform[:symbol_classes].length} entries " \
+         "(#{transform[:symbol_overlap].length} carried by both halves)"
     puts "committable: #{provenance['committable']}"
     0
+  end
+
+  # Everything `emit_transform_tables_file` needs, measured in one place. The
+  # census is built here rather than read from `corpus/census.yaml`: that file
+  # is the corpus generator's output, and a generator that reads another
+  # generator's artifact records the wrong provenance for it.
+  def transform_data(gem_dir)
+    # `descendants` only sees what is loaded, and the model namespaces are
+    # autoloaded, so the census would otherwise be measured against a partial
+    # class tree. `CorpusGenerator` does the same before it builds its census.
+    CorpusGenerator.load_model_classes!(gem_dir)
+    census_index = with_utf8_source_reads(gem_dir) { CorpusGenerator.build_census(gem_dir) }
+      .fetch("classes").to_h { |entry| [entry["name"], entry] }
+    resolved, unresolved = get_class_rows(census_index)
+    {
+      get_class: resolved,
+      unresolved: unresolved,
+      font_styles: font_style_rows(census_index),
+      symbol_classes: symbol_class_rows,
+      symbol_overlap: symbol_class_overlap,
+      named_symbols: named_symbol_rows,
+      nary_classes: string_pairs(constants::NARY_CLASSES, "NARY_CLASSES"),
+      binary_functions: constants::BINARY_FUNCTIONS.dup,
+      menclose: string_pairs(
+        Plurimath::Utility::UNICODEMATH_MENCLOSE_FUNCTIONS, "UNICODEMATH_MENCLOSE_FUNCTIONS"
+      ),
+      primes: string_pairs(Plurimath::Utility.primes_constants, "primes_constants"),
+      is_a: is_a_rows(gem_dir),
+    }
   end
 end
 

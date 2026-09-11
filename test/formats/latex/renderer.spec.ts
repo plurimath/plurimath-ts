@@ -34,6 +34,7 @@ import {
   MpaddedNode,
   MrowNode,
   NaryNode,
+  type NodeParameter,
   NormNode,
   NumberNode,
   ObraceNode,
@@ -99,9 +100,159 @@ describe("unary functions", () => {
   });
 
   it("refuses a class name outside the AsciiMath-reachable set", () => {
-    expect(() => toLatex(unary("Mbox", x()))).toThrow(RenderError);
+    // Merror, not Mbox: Mbox is arm-rendered below, and the two are otherwise
+    // the same case — measured on the pinned oracle 00c52783,
+    // `Merror.instance_method(:to_latex).owner` is Merror, so a carrier-default
+    // render of the name would diverge silently.
+    expect(() => toLatex(unary("Merror", x()))).toThrow(RenderError);
     expect(() => toLatex(new BinaryFunctionNode({ name: "Menclose" }))).toThrow(RenderError);
     expect(() => toLatex(new TernaryFunctionNode({ name: "Multiscript" }))).toThrow(RenderError);
+  });
+
+  /**
+   * Measured on the pinned oracle 00c52783. `to_latex` is one of the two Mbox
+   * overrides that do NOT delegate to `Text` — `Text#to_latex` writes
+   * `\text{…}` — and `to_html`, which hands back `parameter_one` itself, is
+   * the other.
+   *
+   *   Mbox.new("hi").to_latex   => "\\mbox{hi}"     Text.new("hi")  => "\\text{hi}"
+   *   Mbox.new("a b").to_latex  => "\\mbox{a b}"
+   *   Mbox.new(nil).to_latex    => "\\mbox{}"       Mbox.new("")    => "\\mbox{}"
+   *   Mbox.new(5).to_latex      => "\\mbox{5}"      Mbox.new(true)  => "\\mbox{true}"
+   *   Mbox.new(Symbols::Symbol("x")).to_latex
+   *     => "\\mbox{#<Plurimath::Math::Symbols::Symbol:0x00007a71...>}",
+   *        a heap address no port reproduces (TODO.plan/deferred.md).
+   */
+  it("Mbox interpolates its slot raw, and refuses what Ruby would inspect", () => {
+    expect(toLatex(unary("Mbox", "hi"))).toBe("\\mbox{hi}");
+    expect(toLatex(unary("Mbox", "a b"))).toBe("\\mbox{a b}");
+    expect(toLatex(unary("Mbox"))).toBe("\\mbox{}");
+    expect(() => toLatex(unary("Mbox", x()))).toThrow(RenderError);
+  });
+
+  /**
+   * `"#{array}"` is `Array#inspect`, and what that reproduces turns on the
+   * ELEMENTS, not on whether the list is empty. Every expectation below was
+   * measured on the pinned oracle 00c52783 as `Mbox.new(v).to_latex`:
+   *
+   *   []          \mbox{[]}          ["x"]         \mbox{["x"]}
+   *   [nil]       \mbox{[nil]}       ["a b"]       \mbox{["a b"]}
+   *   [nil, nil]  \mbox{[nil, nil]}  ["", nil]     \mbox{["", nil]}
+   *   [[]]        \mbox{[[]]}        [true,false]  \mbox{[true, false]}
+   *   [[nil]]     \mbox{[[nil]]}
+   *
+   * The refusals below are each about one element, not about lists:
+   * `[Symbols::Symbol("x")]` interpolates a heap address; `[5]` and `[5.0]`
+   * give `\mbox{[5]}` and `\mbox{[5.0]}`, which JavaScript cannot tell apart —
+   * the ambiguity the shared interpolation judge already refuses at top level;
+   * and `["π"]` is above the codepoint sweep that measured the escaping table,
+   * so it is unmeasured rather than known-bad.
+   */
+  it("Mbox renders the list shapes Ruby's inspect reproduces", () => {
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    expect(toLatex(list([]))).toBe("\\mbox{[]}");
+    expect(toLatex(list([null]))).toBe("\\mbox{[nil]}");
+    expect(toLatex(list([null, null]))).toBe("\\mbox{[nil, nil]}");
+    expect(toLatex(list([[]]))).toBe("\\mbox{[[]]}");
+    expect(toLatex(list([[null]]))).toBe("\\mbox{[[nil]]}");
+    expect(toLatex(list([true, false]))).toBe("\\mbox{[true, false]}");
+    expect(toLatex(list(["x"]))).toBe('\\mbox{["x"]}');
+    expect(toLatex(list(["a b"]))).toBe('\\mbox{["a b"]}');
+    expect(toLatex(list(["", null]))).toBe('\\mbox{["", nil]}');
+  });
+
+  it("Mbox reproduces Ruby's own string escaping inside a list", () => {
+    // Each measured on the same oracle. `JSON.stringify` is not this
+    // escaping, but it is not a stranger to it either: comparing it against
+    // these 14 committed bytes, JSON agrees on 7 — the quote, the backslash,
+    // `a#x` needing no escape, `\n`, `\t`, NUL and `é` — and differs on 7:
+    // `#` is escaped ONLY before `{`, `$` or `@`, and JSON never escapes it
+    // at all; ESC and SUB get Ruby's named/uppercase forms where JSON spells
+    // them in lowercase hex; and DEL and U+009F are escaped here where JSON
+    // leaves both bare.
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    expect(toLatex(list(['a"b']))).toBe('\\mbox{["a\\"b"]}');
+    expect(toLatex(list(["a\\b"]))).toBe('\\mbox{["a\\\\b"]}');
+    expect(toLatex(list(["a#{b}"]))).toBe('\\mbox{["a\\#{b}"]}');
+    expect(toLatex(list(["a#$g"]))).toBe('\\mbox{["a\\#$g"]}');
+    expect(toLatex(list(["a#@i"]))).toBe('\\mbox{["a\\#@i"]}');
+    expect(toLatex(list(["a#x"]))).toBe('\\mbox{["a#x"]}');
+    expect(toLatex(list(["\n"]))).toBe('\\mbox{["\\n"]}');
+    expect(toLatex(list(["\t"]))).toBe('\\mbox{["\\t"]}');
+    expect(toLatex(list(["\u001b"]))).toBe('\\mbox{["\\e"]}');
+    expect(toLatex(list(["\u0000"]))).toBe('\\mbox{["\\u0000"]}');
+    expect(toLatex(list(["\u001a"]))).toBe('\\mbox{["\\u001A"]}');
+    expect(toLatex(list(["\u007f"]))).toBe('\\mbox{["\\u007F"]}');
+    expect(toLatex(list(["\u009f"]))).toBe('\\mbox{["\\u009F"]}');
+    expect(toLatex(list(["\u00e9"]))).toBe('\\mbox{["\u00e9"]}');
+  });
+
+  it("Mbox renders the non-finite floats and the empty hash, as Ruby prints them", () => {
+    // These were refused under a rationale that did not reach them, which a
+    // review caught. Measured: `Mbox.new([Float::INFINITY]).to_latex` is
+    // `\mbox{[Infinity]}`, `[-Float::INFINITY]` is `\mbox{[-Infinity]}`,
+    // `[Float::NAN]` is `\mbox{[NaN]}` and `[{}]` is `\mbox{[{}]}`, and
+    // JavaScript's `String()` spells the three floats identically. None is
+    // ambiguous between Integer and Float, and an EMPTY hash has no key whose
+    // Ruby type could be in doubt. `interpolatedValue` already admitted the
+    // same three floats at the top of the slot, so refusing them one level
+    // down was an inconsistency rather than a policy.
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    expect(toLatex(list([Number.POSITIVE_INFINITY]))).toBe("\\mbox{[Infinity]}");
+    expect(toLatex(list([Number.NEGATIVE_INFINITY]))).toBe("\\mbox{[-Infinity]}");
+    expect(toLatex(list([Number.NaN]))).toBe("\\mbox{[NaN]}");
+    expect(toLatex(list([{}]))).toBe("\\mbox{[{}]}");
+    expect(toLatex(list([{}, null]))).toBe("\\mbox{[{}, nil]}");
+    expect(toLatex(list([[{}]]))).toBe("\\mbox{[[{}]]}");
+    // And at the top of the slot, where `"#{}"` is `to_s` rather than
+    // `inspect`: measured, `Mbox.new({}).to_latex` is `\mbox{{}}`.
+    expect(toLatex(unary("Mbox", {} as NodeParameter))).toBe("\\mbox{{}}");
+  });
+
+  it("Mbox refuses the list elements Ruby renders unreproducibly", () => {
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    expect(() => toLatex(list([x()]))).toThrow(RenderError);
+    expect(() => toLatex(list([5]))).toThrow(RenderError);
+    expect(() => toLatex(list([5.0]))).toThrow(RenderError);
+    // A NON-empty hash is the one hash shape still refused, for a reason that
+    // does reach it: measured, `[{a: 1}]` renders `\mbox{[{a: 1}]}` with a
+    // Symbol key and `[{"a" => 1}]` renders `\mbox{[{"a" => 1}]}` with a
+    // String one, and a JavaScript object key carries no such distinction.
+    expect(() => toLatex(list([{ a: 1 }]))).toThrow(RenderError);
+  });
+
+  it("refuses the reproducible finite numbers too, and pins why the narrow rule failed", () => {
+    // `[0.5]` is refused by POLICY, not by ambiguity: measured,
+    // `Mbox.new([0.5]).to_latex` is `\mbox{[0.5]}` and JavaScript spells 0.5
+    // identically. So do `[-0.5]`, `[1.25]`, `[0.1]`, `[0.000123]` and
+    // `[1234567890.5]`. Losing them costs capability and nothing else.
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    for (const reproducible of [0.5, -0.5, 1.25, 0.1, 0.000123, 1234567890.5]) {
+      expect(() => toLatex(list([reproducible])), String(reproducible)).toThrow(RenderError);
+    }
+    // These four are why "admit anything with a fractional part" was measured
+    // and rejected. Ruby's Float#to_s turns exponential below 1e-4 where
+    // JavaScript's turns at 1e-6, and the exponents are spelled differently
+    // even where both use one:
+    //
+    //   1e-5   ruby "1.0e-05"  js "0.00001"     1e-7    ruby "1.0e-07"  js "1e-7"
+    //   1e-6   ruby "1.0e-06"  js "0.000001"    1.5e-7  ruby "1.5e-07"  js "1.5e-7"
+    //
+    // If a later change admits non-integral numbers, these are what must fail.
+    for (const wrong of [1e-5, 1e-6, 1e-7, 1.5e-7]) {
+      expect(() => toLatex(list([wrong])), String(wrong)).toThrow(RenderError);
+    }
+  });
+
+  it("refuses a codepoint past the measured sweep, not because Ruby cannot render it", () => {
+    // π is refused by SWEEP CEILING, not by ambiguity: measured on the
+    // pinned oracle 00c52783, `Mbox.new(["π"]).to_latex` is
+    // `\mbox{["π"]}`, which JavaScript spells identically.
+    // `inspectString`'s table only carries U+0000..U+02FF; above that this
+    // port refuses rather than guesses at Ruby's own printable-range rule,
+    // so losing π costs capability and nothing else.
+    const list = (value: unknown) => unary("Mbox", value as NodeParameter);
+    expect(() => toLatex(list(["\u03c0"]))).toThrow(RenderError);
   });
 
   it("Hom renders the carrier default, though the transform cannot build it", () => {

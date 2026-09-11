@@ -39,6 +39,7 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CORE_GENERATED_PROVENANCE } from "../../src/core/generated/provenance";
+import { HTML_PARSER_GENERATED_PROVENANCE } from "../../src/formats/html/generated/provenance";
 import { LATEX_PARSER_GENERATED_PROVENANCE } from "../../src/formats/latex/generated/provenance";
 import { UNICODEMATH_PARSER_GENERATED_PROVENANCE } from "../../src/formats/unicodemath/generated/provenance";
 import { FORMATTING_GENERATED_PROVENANCE } from "../../src/formatting/generated/provenance";
@@ -85,6 +86,12 @@ function gitFileSha256AtCommit(
  * suite would stay green. Their basenames are explicit because three older
  * `render-sweep.json` files are one-off fixtures with no reproducible generator
  * or sidecar yet; the inventory assertion below keeps that exception closed.
+ *
+ * A basename alone stopped identifying a family once a SECOND format grew a
+ * `model-fixtures.json`: LaTeX's and UnicodeMath's have the same shape but
+ * different generators, schemas and corpus-count fields. `FIXTURE_SPEC_PATHS`
+ * overrides the basename lookup for exactly those collisions, and
+ * `specFor` below is the single place either is read.
  */
 const FORMATS_ROOT = join(REPO_ROOT, "test", "formats");
 const MANIFEST_SCHEMA = "plurimath-corpus/manifest/1";
@@ -106,7 +113,9 @@ const FIXTURE_SPECS = {
     generator: "scripts/generate-latex-model-fixtures.rb",
     schema: "plurimath-corpus/latex-model/1",
     rows: "cases",
-    shape: "latex-model",
+    shape: "format-model",
+    corpusGroup: "corpus-latex",
+    corpusCountField: "corpusLatexCount",
     usesCorpus: true,
     usesRenderInventory: false,
   },
@@ -119,6 +128,42 @@ const FIXTURE_SPECS = {
     usesRenderInventory: false,
   },
 } as const;
+
+/** Per-path overrides for the basenames more than one format now uses. */
+const FIXTURE_SPEC_PATHS: { readonly [path: string]: FixtureSpec } = {
+  "test/formats/unicodemath/model-fixtures.json": {
+    generator: "scripts/generate-unicodemath-model-fixtures.rb",
+    schema: "plurimath-corpus/unicodemath-model/1",
+    rows: "cases",
+    shape: "format-model",
+    corpusGroup: "corpus-unicodemath",
+    corpusCountField: "corpusUnicodemathCount",
+    usesCorpus: true,
+    usesRenderInventory: false,
+  },
+};
+
+interface FixtureSpec {
+  readonly generator: string;
+  readonly schema: string;
+  readonly rows: string;
+  readonly shape: string;
+  readonly corpusGroup?: string;
+  readonly corpusCountField?: string;
+  readonly usesCorpus: boolean;
+  readonly usesRenderInventory: boolean;
+}
+
+function specFor(relative: string): FixtureSpec {
+  const override = FIXTURE_SPEC_PATHS[relative];
+  if (override !== undefined) return override;
+  const spec = (FIXTURE_SPECS as { readonly [name: string]: FixtureSpec | undefined })[
+    basename(relative)
+  ];
+  if (spec === undefined) throw new Error(`no fixture spec for ${relative}`);
+  return spec;
+}
+
 const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "degenerate-fixtures.json"
   | "model-fixtures.json"
@@ -223,7 +268,7 @@ interface FixtureRecord {
   readonly bytes: Buffer;
   readonly payload: Mapping;
   readonly manifest: Mapping;
-  readonly spec: (typeof FIXTURE_SPECS)[keyof typeof FIXTURE_SPECS];
+  readonly spec: FixtureSpec;
 }
 
 const FORMAT_DIRECTORIES = readdirSync(FORMATS_ROOT, { withFileTypes: true })
@@ -244,7 +289,6 @@ const EXPECTED_FIXTURE_MANIFESTS = FIXTURE_PAYLOADS.map((relative) =>
 const FIXTURE_RECORDS: readonly FixtureRecord[] = FIXTURE_PAYLOADS.filter((relative) =>
   existsSync(join(REPO_ROOT, relative.replace(/\.json$/, ".manifest.yaml"))),
 ).map((relative) => {
-  const name = basename(relative) as keyof typeof FIXTURE_SPECS;
   const manifestRelative = relative.replace(/\.json$/, ".manifest.yaml");
   const bytes = readFileSync(join(REPO_ROOT, relative));
   return {
@@ -256,7 +300,7 @@ const FIXTURE_RECORDS: readonly FixtureRecord[] = FIXTURE_PAYLOADS.filter((relat
       parseYaml(readFileSync(join(REPO_ROOT, manifestRelative), "utf8")),
       manifestRelative,
     ),
-    spec: FIXTURE_SPECS[name],
+    spec: specFor(relative),
   };
 });
 
@@ -282,10 +326,10 @@ const FIXTURE_GENERATOR_HASHES: ReadonlyArray<
 /**
  * Every (file, recorded hash) pair the provenance records assert.
  *
- * `src/generated` records one script as `generatorSha256`; the other four
- * modules — core, formatting, and the latex and unicodemath parser tables —
- * record a map because they consume more than one; each generated fixture
- * records the one script that wrote it. Every shape reduces to the
+ * `src/generated` records one script as `generatorSha256`; the other five
+ * modules — core, formatting, and the latex, unicodemath and html parser
+ * tables — record a map because they consume more than one; each generated
+ * fixture records the one script that wrote it. Every shape reduces to the
  * same claim, so all are checked the same way.
  */
 const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: string]> = [
@@ -301,6 +345,9 @@ const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: strin
   ),
   ...[...UNICODEMATH_PARSER_GENERATED_PROVENANCE.generatorInputs].map(
     ([file, hash]) => ["src/formats/unicodemath/generated", file, hash] as const,
+  ),
+  ...[...HTML_PARSER_GENERATED_PROVENANCE.generatorInputs].map(
+    ([file, hash]) => ["src/formats/html/generated", file, hash] as const,
   ),
   ...FIXTURE_GENERATOR_HASHES,
 ];
@@ -635,13 +682,24 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
           rows.length - rendered,
         );
-      } else if (record.spec.shape === "latex-model") {
-        // The parse-side twin of the branch above. A row records what the gem
-        // did with a LaTeX INPUT, so its outcome is a serialized `model` rather
-        // than a rendered string, and every row that got as far as the parser
-        // also carries the `preprocessed` text the grammar saw. A row that
-        // raised inside preprocessing has neither, which is why `preprocessed`
-        // is optional on a refusal and required on a parse.
+      } else if (record.spec.shape === "format-model") {
+        // The parse-side twin of the branch above, shared by every format whose
+        // fixtures record a PARSE. A row records what the gem did with an input
+        // in that format, so its outcome is a serialized `model` rather than a
+        // rendered string, and every row that got as far as the parser also
+        // carries the `preprocessed` text the grammar saw. A row that raised
+        // inside preprocessing has neither, which is why `preprocessed` is
+        // optional on a refusal and required on a parse.
+        //
+        // The corpus-count field is named per format (`corpusLatexCount`,
+        // `corpusUnicodemathCount`) because the fixtures are keyed to the
+        // corpus expectation they were harvested from; the spec carries both
+        // the field name and the group value that must add up to it.
+        const corpusGroup = record.spec.corpusGroup;
+        const corpusCountField = record.spec.corpusCountField;
+        if (corpusGroup === undefined || corpusCountField === undefined) {
+          throw new Error(`${record.relative}: a format-model spec must name its corpus group`);
+        }
         expectExactKeys(
           record.payload,
           [
@@ -651,7 +709,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
             "caseCount",
             "parsedCount",
             "raisedCount",
-            "corpusLatexCount",
+            corpusCountField,
             "cases",
           ],
           record.relative,
@@ -702,9 +760,9 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               mapping(row, `${record.relative}.cases[${index}]`),
               "group",
               record.relative,
-            ) === "corpus-latex",
+            ) === corpusGroup,
         ).length;
-        expect(integerField(record.payload, "corpusLatexCount", record.relative)).toBe(fromCorpus);
+        expect(integerField(record.payload, corpusCountField, record.relative)).toBe(fromCorpus);
         expect(fromCorpus).toBeGreaterThan(50);
       } else {
         expectExactKeys(
@@ -865,6 +923,7 @@ describe("generated data binds to the generator inputs it names", () => {
       FORMATTING_GENERATED_PROVENANCE.generator,
       LATEX_PARSER_GENERATED_PROVENANCE.generator,
       UNICODEMATH_PARSER_GENERATED_PROVENANCE.generator,
+      HTML_PARSER_GENERATED_PROVENANCE.generator,
       ...fixtureEntrypoints,
     ];
     // This is an explicit gap, not a generator silently omitted from a
@@ -884,6 +943,7 @@ const COMMITTABLE_RECORDS: ReadonlyArray<readonly [string, boolean]> = [
   ["src/formatting/generated", FORMATTING_GENERATED_PROVENANCE.committable],
   ["src/formats/latex/generated", LATEX_PARSER_GENERATED_PROVENANCE.committable],
   ["src/formats/unicodemath/generated", UNICODEMATH_PARSER_GENERATED_PROVENANCE.committable],
+  ["src/formats/html/generated", HTML_PARSER_GENERATED_PROVENANCE.committable],
   ...FIXTURE_RECORDS.map(
     (record) =>
       [

@@ -22,6 +22,14 @@ import { rubyArrayInspectOrThrow } from "../../core/ruby-semantics";
 import { FORMAT, interpolatedValue, type NodeOf } from "../../formats/latex/render-shared";
 
 export function renderNumber(node: NodeOf<"number">): string {
+  // Measured on the pinned oracle `00c52783`: `Number([]).to_latex(options: {})`
+  // is `"[]"`. `interpolatedValue` used to refuse that, which
+  // TODO.plan/deferred.md recorded as a known gap — and said why widening
+  // `interpolatedValue` would be the WRONG way to close it, since this slot
+  // does not reach Ruby through a bare `"#{}"` at all but through
+  // `Formatter::Numbers::TextRenderer`. So it is closed here instead, with the
+  // dedicated judge.
+  //
   // The declared slot type is `string | null`; a list arrives only from a
   // caller that has already violated it, which is the same door every other
   // degenerate shape here comes through.

@@ -10,17 +10,26 @@
  *  2. **Round-trip layer** — `parseAsciimath(input)` → `toUnicodemath` →
  *     `expected.unicodemath`, the composition a caller actually runs.
  *
- * `expected.unicodemath` is the gem's own render, recorded by the corpus generator
- * from the same parse that produced the model — so both layers compare
- * against `Plurimath::Math.parse(input, :asciimath).to_unicodemath`.
+ * `expected.unicodemath` is the gem's own render, recorded by the corpus
+ * generator from the same parse that produced the model —
+ * `Plurimath::Math.parse(input, format).to_unicodemath`, where `format` is the
+ * case's own `input_format`. Both layers compare against that; the round-trip
+ * layer is the subset where `format` is `:asciimath`.
  *
- * Both counts are pinned (91 = the corpus's 92 cases minus the one
- * withheld UnitsML case that the pin actually contains — the exclusion
- * manifest names two, but the gem raises on the invalid one; of those
- * 91, 90 render to this target and one — `partial-sqrt-unclosed` — is
- * recorded as a refusal, which has no bytes to compare):
- * a suite that quietly loads zero cases has happened to this repository once
- * before, and `readCorpusCases` throwing on emptiness is belt to this brace.
+ * Every count is pinned, because a suite that quietly loads zero cases has
+ * happened to this repository once before and `readCorpusCases` throwing on
+ * emptiness is only belt to that brace:
+ *
+ *   - 216 reachable cases: the pin holds 217 and the one withheld UnitsML case
+ *     it actually contains is dropped. The exclusion manifest names two, but
+ *     the gem raises on the invalid one, so no case for it was ever generated;
+ *   - 215 of those carry `expected.unicodemath` bytes to compare; the odd one
+ *     out, `partial-sqrt-unclosed`, is recorded as a refusal and has no bytes;
+ *   - 90 go through the round-trip layer: the AsciiMath-written subset is 91
+ *     and the refusing case is one of them. That says which parser the layer
+ *     calls, not what this port can parse — `parseLatex` landed in #76 and
+ *     drives `../latex/rejection-parity.spec.ts`. Widening this layer to the
+ *     other 125 is a separate change with its own measurement to do.
  */
 
 import { describe, expect, it } from "vitest";
@@ -52,18 +61,19 @@ function expectedLatex(entry: (typeof cases)[number]): string {
 }
 
 describe("unicodemath render parity, corpus layer (recorded model -> text)", () => {
-  it("has the 110 reachable cases (111 pinned, 1 withheld as UnitsML)", () => {
+  it("has the 216 reachable cases (217 pinned, 1 withheld as UnitsML)", () => {
     // A suite that quietly loaded zero cases has happened to this repository
     // once before; both counts are pinned so it cannot happen silently.
-    expect(cases.length).toBe(110);
-    // 109 rather than 110, because one case records a unicodemath refusal.
-    expect(rendered.length).toBe(109);
-    // The round-trip layer's scoped list is pinned too, and it is now smaller
-    // than the corpus layer: 91 of the 110 reachable cases are written in
-    // AsciiMath and 19 in LaTeX, which this port cannot yet parse. 90 rather
-    // than 91 here, because the refusing case is one of the AsciiMath ones.
-    // The gap between the two numbers IS the second input corpus, so a suite
-    // that stopped scoping would show up here as the two converging.
+    expect(cases.length).toBe(216);
+    // 215 rather than 216, because one case records a unicodemath refusal.
+    expect(rendered.length).toBe(215);
+    // The round-trip layer's scoped list is pinned too, and it is far smaller
+    // than the corpus layer: 91 of the 216 reachable cases are written in
+    // AsciiMath and 125 in LaTeX. This layer calls `parseAsciimath`, so it
+    // takes the AsciiMath ones — 90 rather than 91, because the refusing case
+    // is one of them. The gap between the two numbers IS the second input
+    // corpus, so a suite that stopped scoping would show up here as the two
+    // converging.
     expect(roundTrip.length).toBe(90);
   });
 

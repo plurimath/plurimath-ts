@@ -38,7 +38,7 @@ const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly
   ["./html", html, ["toHtml"]],
   ["./latex", latex, ["parseLatex", "toLatex"]],
   ["./mathml", mathml, ["toMathml"]],
-  ["./unicodemath", unicodemath, ["toUnicodemath"]],
+  ["./unicodemath", unicodemath, ["parseUnicodemath", "toUnicodemath"]],
 ];
 
 const PUBLISHED_FORMAT_SUBPATHS = Object.keys(packageJson.exports).filter(

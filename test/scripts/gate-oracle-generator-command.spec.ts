@@ -1,14 +1,18 @@
 /**
- * Regression proof that `scripts/gate-oracle.rb` no longer assumes `mise`.
+ * Regression proof that `scripts/gate-oracle.rb` names no version manager.
  *
  * `run_generator!` and `assert_frozen_bundle_usable!` used to hard-code
  * `mise x -- bundle exec ruby ...`, so a developer with a perfectly good Ruby
  * via rbenv, asdf, rvm, or the system — just not mise — got "mise is required
- * but could not be executed" instead of a working generator run. Both now
- * share `capture_generator_command`, which tries `bundle exec ruby` directly
- * first and falls back to `mise x -- bundle exec ruby` only when the direct
- * attempt could not find an executable at all — mirroring the try-PATH-
- * then-mise split in `test/scripts/oracle-harness.ts#runRuby`.
+ * but could not be executed" instead of a working generator run. A first fix
+ * tried `bundle exec ruby` and fell back to `mise x --`, which moved the
+ * assumption down a level rather than removing it: mise was still the one
+ * manager the file knew by name.
+ *
+ * Both now share `capture_generator_command`, which runs ONE command —
+ * `bundle exec ruby` by default, or whatever `--ruby-command` /
+ * `PLURIMATH_RUBY_COMMAND` says. There is no fallback chain to test, because
+ * there is no chain: a machine whose Ruby needs a wrapper passes its own.
  *
  * These stub `capture_command`, the seam `gate-oracle-preflight.spec.ts`
  * already uses to test `assert_frozen_bundle_usable!` without a real bundle,
@@ -59,8 +63,8 @@ function withStubbedCommand(
   `);
 }
 
-describe("run_generator! tries a Ruby on PATH before mise", () => {
-  it("never reaches for mise when bundle exec ruby succeeds directly", () => {
+describe("run_generator! runs the configured Ruby command", () => {
+  it("defaults to bundle exec ruby and names no version manager", () => {
     const r = withStubbedCommand(
       ["ok"],
       'OracleGate.run_generator!("/tmp/script.rb", [], chdir: "/tmp", gem_dir: "/gem")',
@@ -70,17 +74,38 @@ describe("run_generator! tries a Ruby on PATH before mise", () => {
     expect(r.output).not.toContain("mise");
   });
 
-  it("falls back to mise only when bundle itself could not be executed", () => {
+  it("runs whatever PLURIMATH_RUBY_COMMAND says, and only that", () => {
     const r = withStubbedCommand(
-      ["missing", "ok"],
-      'OracleGate.run_generator!("/tmp/script.rb", [], chdir: "/tmp", gem_dir: "/gem")',
+      ["ok"],
+      `ENV["PLURIMATH_RUBY_COMMAND"] = "mise x -- bundle exec ruby"
+       begin
+         OracleGate.run_generator!("/tmp/script.rb", [], chdir: "/tmp", gem_dir: "/gem")
+       ensure
+         ENV.delete("PLURIMATH_RUBY_COMMAND")
+       end`,
     );
     expect(r.ok).toBe(true);
-    expect(r.output).toContain('["bundle", "exec", "ruby", "/tmp/script.rb"]');
+    // One attempt, not a chain: exactly the configured command, nothing before it.
     expect(r.output).toContain('["mise", "x", "--", "bundle", "exec", "ruby", "/tmp/script.rb"]');
+    expect(r.output).not.toContain('["bundle", "exec", "ruby", "/tmp/script.rb"]');
   });
 
-  it("does not guess at mise for a failure that is not a missing executable", () => {
+  it("splits the configured command the way a shell would", () => {
+    const r = withStubbedCommand(
+      ["ok"],
+      `ENV["PLURIMATH_RUBY_COMMAND"] = "docker run --rm -v /x:/x img bundle exec ruby"
+       begin
+         OracleGate.run_generator!("/tmp/script.rb", [], chdir: "/tmp", gem_dir: "/gem")
+       ensure
+         ENV.delete("PLURIMATH_RUBY_COMMAND")
+       end`,
+    );
+    expect(r.ok).toBe(true);
+    expect(r.output).toContain('"docker", "run", "--rm"');
+    expect(r.output).toContain('"img", "bundle", "exec", "ruby", "/tmp/script.rb"');
+  });
+
+  it("does not swallow a failure that is not a missing executable", () => {
     const r = withStubbedCommand(
       ["broken"],
       'OracleGate.run_generator!("/tmp/script.rb", [], chdir: "/tmp", gem_dir: "/gem")',
@@ -91,20 +116,23 @@ describe("run_generator! tries a Ruby on PATH before mise", () => {
     expect(r.output).not.toContain("mise");
   });
 
-  it("names both attempts when neither bundle nor mise can be executed", () => {
+  it("names the command it tried and how to change it", () => {
     const r = withStubbedCommand(
-      ["missing", "missing"],
+      ["missing"],
       'OracleGate.run_generator!("/tmp/script.rb", [], chdir: "/tmp", gem_dir: "/gem")',
     );
     expect(r.ok).toBe(true);
     expect(r.output).toContain("raised");
-    expect(r.output).toContain("bundle");
-    expect(r.output).toContain("mise");
+    // The remedy has to be actionable without reading the source: the command
+    // that was tried, and the two ways to change it.
+    expect(r.output).toContain("bundle exec ruby");
+    expect(r.output).toContain("--ruby-command");
+    expect(r.output).toContain("PLURIMATH_RUBY_COMMAND");
   });
 });
 
-describe("assert_frozen_bundle_usable! tries a Ruby on PATH before mise", () => {
-  it("never reaches for mise when the direct probe succeeds", () => {
+describe("assert_frozen_bundle_usable! runs the configured Ruby command", () => {
+  it("defaults to bundle exec ruby and names no version manager", () => {
     const r = withStubbedCommand(
       ["ok"],
       'OracleGate.assert_frozen_bundle_usable!("/gem", chdir: "/tmp")',
@@ -114,13 +142,19 @@ describe("assert_frozen_bundle_usable! tries a Ruby on PATH before mise", () => 
     expect(r.output).not.toContain("mise");
   });
 
-  it("falls back to mise only when bundle itself could not be executed", () => {
+  it("probes through the configured command, not a fallback chain", () => {
     const r = withStubbedCommand(
-      ["missing", "ok"],
-      'OracleGate.assert_frozen_bundle_usable!("/gem", chdir: "/tmp")',
+      ["ok"],
+      `ENV["PLURIMATH_RUBY_COMMAND"] = "mise x -- bundle exec ruby"
+       begin
+         OracleGate.assert_frozen_bundle_usable!("/gem", chdir: "/tmp")
+       ensure
+         ENV.delete("PLURIMATH_RUBY_COMMAND")
+       end`,
     );
     expect(r.ok).toBe(true);
     expect(r.output).toContain('["mise", "x", "--", "bundle", "exec", "ruby", "-e", ""]');
+    expect(r.output).not.toContain('["bundle", "exec", "ruby", "-e", ""]');
   });
   it("names a missing working directory instead of blaming bundler", () => {
     // Both a missing binary and a missing chdir surface as `Errno::ENOENT`, so

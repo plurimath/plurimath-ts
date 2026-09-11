@@ -9,6 +9,7 @@
 require "fileutils"
 require "json"
 require "open3"
+require "shellwords"
 require "tmpdir"
 
 module OracleGate
@@ -19,6 +20,25 @@ module OracleGate
   SUBMODULE_RELATIVE_PATH = "submodules/plurimath-testsuite"
   SUBMODULE_ROOT = File.join(REPO_ROOT, SUBMODULE_RELATIVE_PATH)
   ORACLE_ENV = "PLURIMATH_ORACLE"
+
+  # How to reach a Ruby that can load the oracle's bundle.
+  #
+  # `bundle exec ruby` is the default because it is what every correctly set up
+  # Ruby answers to, however it was installed -- rbenv, asdf, rvm, chruby, the
+  # system one, or a version manager that puts its shims on PATH.
+  #
+  # It is an OPTION rather than a hardcoded chain because this gate cannot know
+  # what a given machine needs in front of it. Naming one version manager here
+  # -- which an earlier revision did, falling back to `mise x --` -- is the
+  # same assumption this gate exists to stop making, just moved one level down.
+  # A machine whose Ruby is reachable only through a wrapper passes its own:
+  #
+  #   --ruby-command "mise x -- bundle exec ruby"
+  #   PLURIMATH_RUBY_COMMAND="nix develop -c bundle exec ruby"
+  #
+  # Split with `Shellwords`, so quoting works the way a shell would.
+  RUBY_COMMAND_ENV = "PLURIMATH_RUBY_COMMAND"
+  DEFAULT_RUBY_COMMAND = %w[bundle exec ruby].freeze
 
   module_function
 
@@ -56,8 +76,14 @@ module OracleGate
   def repo_usage
     <<~TEXT
       Usage:
-        scripts/gate-oracle.rb repo --check [--gem PATH]
+        scripts/gate-oracle.rb repo --check [--gem PATH] [--ruby-command CMD]
         scripts/gate-oracle.rb repo --help
+
+      --ruby-command CMD  how to reach a Ruby that can load the oracle's
+                          bundle (default: #{DEFAULT_RUBY_COMMAND.join(" ")}).
+                          Also settable as #{RUBY_COMMAND_ENV}. Pass a wrapper
+                          when the Ruby is not on PATH by itself, for example
+                          "mise x -- bundle exec ruby".
 
       Regenerates, into temporary directories only:
         - corpus/ and src/generated/ via scripts/generate-corpus.rb
@@ -113,6 +139,10 @@ module OracleGate
 
   def run_repo(argv)
     options = parse_check_options(argv, repo_usage)
+    # The flag and #{RUBY_COMMAND_ENV} are one knob. Setting the env from the
+    # flag keeps them exactly equivalent rather than threading an argument
+    # through every frame between here and `capture_generator_command`.
+    ENV[RUBY_COMMAND_ENV] = options[:ruby] if options[:ruby]
     gem_dir = resolve_gem_dir(options[:gem])
     require_submodule_snapshot_prerequisites!
 
@@ -285,6 +315,10 @@ module OracleGate
 
   def run_testsuite(argv)
     options = parse_check_options(argv, testsuite_usage)
+    # The flag and #{RUBY_COMMAND_ENV} are one knob. Setting the env from the
+    # flag keeps them exactly equivalent rather than threading an argument
+    # through every frame between here and `capture_generator_command`.
+    ENV[RUBY_COMMAND_ENV] = options[:ruby] if options[:ruby]
     gem_dir = resolve_gem_dir(options[:gem])
     require_submodule_snapshot_prerequisites!
 
@@ -387,7 +421,7 @@ module OracleGate
   end
 
   def parse_check_options(argv, help_text)
-    options = { gem: nil, check: false, help: false }
+    options = { gem: nil, check: false, help: false, ruby: nil }
     rest = argv.dup
 
     until rest.empty?
@@ -401,6 +435,12 @@ module OracleGate
         options[:gem] = File.expand_path(rest.shift)
       when /\A--gem=(.+)\z/
         options[:gem] = File.expand_path(Regexp.last_match(1))
+      when "--ruby-command"
+        raise UsageError, "missing command after --ruby-command" if rest.empty?
+
+        options[:ruby] = rest.shift
+      when /\A--ruby-command=(.+)\z/
+        options[:ruby] = Regexp.last_match(1)
       when "--help", "-h"
         options[:help] = true
       else
@@ -857,50 +897,55 @@ module OracleGate
     { "BUNDLE_FROZEN" => "true", "BUNDLE_GEMFILE" => File.join(gem_dir, "Gemfile") }
   end
 
-  # Tries `bundle exec ruby` directly first, the same shape
-  # `differential_gem_results` above already uses with no version manager
-  # wrapping at all. A developer with any correctly set up Ruby (rbenv, asdf,
-  # rvm, the system Ruby, or mise) already has `bundle` on PATH; `mise x --`
-  # is a fallback for the one case direct invocation cannot cover: a Ruby
-  # provisioned only through mise and never put on PATH by itself. Mirrors the
-  # try-PATH-then-mise split in test/scripts/oracle-harness.ts#runRuby.
+  # Runs the configured Ruby command, which defaults to `bundle exec ruby` and
+  # is overridden with `--ruby-command` or #{RUBY_COMMAND_ENV} -- see
+  # DEFAULT_RUBY_COMMAND above for why this is configuration rather than a
+  # hardcoded chain of version managers to try.
   #
   # `capture_command` raises `Error` for exactly one reason: the named
-  # executable could not be found. Rescuing it here means "try mise next", not
-  # "guess at every possible failure" — anything else it might raise (a raw
-  # `Errno::EACCES`, say) is not rescued by `capture_command` either, and
-  # reaches this method's own caller as itself, same as before this fallback
-  # existed.
+  # executable could not be found. Rescuing it here turns that into a message
+  # naming the command that was tried and how to change it, not a guess at
+  # every possible failure — anything else it might raise (a raw
+  # `Errno::EACCES`, say) is not rescued by `capture_command` either and
+  # reaches this method's own caller as itself.
+  #
   # A missing EXECUTABLE and a missing working DIRECTORY both reach
   # `capture_command` as `Errno::ENOENT`, so "the rescue fired" does not mean
   # "bundle is absent" — measured: `Open3.capture3({}, "true", chdir: "/nope")`
   # raises `No such file or directory - /nope`, the same class as a missing
-  # binary. Falling back to mise on a missing directory would then report that
-  # neither bundle nor mise is on PATH, which would be a wrong diagnosis of
-  # exactly the kind this file is being changed to stop making.
+  # binary. Reporting a missing command for a missing directory would be a
+  # wrong diagnosis of exactly the kind this file exists to stop making.
   #
   # So the directory is checked first, by name, and only an ENOENT that is NOT
-  # about it reaches the fallback.
-  def capture_generator_command(ruby_args, chdir:, gem_dir:)
+  # about it reaches the rescue.
+  # The Ruby command to run generators with: `--ruby-command`, else
+  # #{RUBY_COMMAND_ENV}, else `bundle exec ruby`.
+  def ruby_command(override = nil)
+    raw = override || ENV[RUBY_COMMAND_ENV]
+    return DEFAULT_RUBY_COMMAND.dup if raw.nil? || raw.strip.empty?
+
+    words = Shellwords.split(raw)
+    raise Error, "#{RUBY_COMMAND_ENV} is set but empty after splitting" if words.empty?
+
+    words
+  end
+
+  def capture_generator_command(ruby_args, chdir:, gem_dir:, ruby: nil)
     unless Dir.exist?(chdir)
       raise Error, "the working directory #{chdir} does not exist, so no " \
                    "generator can run there. This is not a missing bundler."
     end
 
-    env = frozen_generator_env(gem_dir)
-    direct = ["bundle", "exec", "ruby", *ruby_args]
+    command = ruby_command(ruby)
     begin
-      capture_command(direct, chdir: chdir, env: env)
+      capture_command([*command, *ruby_args], chdir: chdir, env: frozen_generator_env(gem_dir))
     rescue Error
-      begin
-        capture_command(["mise", "x", "--", *direct], chdir: chdir, env: env)
-      rescue Error
-        raise Error, "bundle is required but could not be executed, and mise " \
-                     "— the fallback version manager — is not on PATH either. " \
-                     "Install bundler where `bundle` resolves (rbenv, asdf, " \
-                     "rvm, the system Ruby, or any other way), or put mise on " \
-                     "PATH."
-      end
+      raise Error, "#{command.first} could not be executed. The generators run " \
+                   "through `#{command.join(' ')}`, which is the default " \
+                   "`#{DEFAULT_RUBY_COMMAND.join(' ')}` unless --ruby-command or " \
+                   "#{RUBY_COMMAND_ENV} changed it. Either install bundler where " \
+                   "`bundle` resolves, or pass the wrapper your Ruby needs — for " \
+                   "example --ruby-command \"mise x -- bundle exec ruby\"."
     end
   end
 

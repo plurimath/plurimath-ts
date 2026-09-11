@@ -15,6 +15,13 @@ jobs:
   # (gates.json). No Ruby is needed: generated payloads are committed.
   gates:
     runs-on: ubuntu-latest
+    # A whole run takes about two minutes, so this is roughly seven times the
+    # observed cost -- generous for a slow runner, and still a bound. It is
+    # here because vitest 4 builds the worker RPC with `timeout: -1`: the
+    # 60-second deadline that used to end a stalled call is gone, and with it
+    # the only thing that stopped a genuinely unanswered call from waiting for
+    # the 360-minute GitHub default.
+    timeout-minutes: 15
     steps:
       # The conformance cases live in the plurimath-testsuite submodule. Without
       # this the reader finds nothing — and fails loudly rather than passing an
@@ -41,6 +48,7 @@ jobs:
   # whatever happens to be installed on the runner image.
   oracle-runner-unit-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
 
@@ -62,6 +70,7 @@ jobs:
   # Guards the runtime support claim in package.json#engines.
   runtime-matrix:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: gates
     strategy:
       fail-fast: false

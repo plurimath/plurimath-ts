@@ -51,7 +51,7 @@ export const LATEX_PARSER_GENERATED_PROVENANCE: LatexParserGeneratedProvenance =
     ],
     [
       "scripts/generate-latex-parser-data.rb",
-      "237c0d23d7b2be05ae7654adc80d86888d464619e395468efb33052c36257ec2",
+      "ab3aba4fd146211a17793b1e4e667f6cf3d653c70786f6e93dd5645bf9cef0c7",
     ],
   ]),
   oracle: "plurimath",

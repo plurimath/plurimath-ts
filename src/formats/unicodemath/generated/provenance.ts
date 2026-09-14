@@ -59,8 +59,8 @@ export const UNICODEMATH_PARSER_GENERATED_PROVENANCE: UnicodemathParserGenerated
   oracleVersion: "0.11.6",
   oracleCommit: "00c52783877b38f6b8e6e109f1803f96bb34fc62",
   oracleClean: true,
-  generatorClean: false,
+  generatorClean: true,
   rubyEngine: "ruby",
   rubyVersion: "4.0.1",
-  committable: false,
+  committable: true,
 };

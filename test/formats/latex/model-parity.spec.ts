@@ -53,14 +53,29 @@ describe("the LaTeX fixture set", () => {
     expect(fixtures.schema).toBe("plurimath-corpus/latex-model/1");
   });
 
-  // A suite that quietly ran zero cases has happened in this repository before;
-  // the counts are pinned so a fixture regeneration that empties a category
-  // fails here rather than passing green.
+  // A suite that quietly ran zero cases has happened in this repository before.
+  // This test alone does NOT catch that, and used to claim it did: every
+  // assertion here compares the payload against the payload's OWN header, so a
+  // regeneration that empties a category and writes the matching zero into the
+  // header passes all four. Measured on a constructed payload with `raised`
+  // emptied to 0 and `raisedCount` set to 0: green.
+  //
+  // What it does catch is DRIFT — a header count computed by a different path
+  // from the array it describes. The emptying attack is caught by the literal
+  // floors below, by `fromCorpus.length > 50`, and, for `parsed`, by the
+  // generator's own `abort "REFUSING: zero rows parsed"`
+  // (`scripts/generate-latex-model-fixtures.rb`). Nothing guarded `raised`
+  // until the second test here.
   it("has the counts its header records", () => {
     expect(fixtures.cases.length).toBe(fixtures.caseCount);
     expect(parsed.length).toBe(fixtures.parsedCount);
     expect(raised.length).toBe(fixtures.raisedCount);
     expect(parsed.length + raised.length).toBe(fixtures.caseCount);
+  });
+
+  it("actually has both categories, not merely header counts that say so", () => {
+    expect(parsed.length).toBeGreaterThan(0);
+    expect(raised.length).toBeGreaterThan(0);
   });
 
   it("draws most of its inputs from the pinned corpus's own LaTeX output", () => {

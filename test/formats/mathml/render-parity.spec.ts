@@ -11,14 +11,21 @@
  *
  * `expected.mathml` is the gem's own `to_mathml` (default options: intent
  * false, displaystyle from the formula, unary spacing on), recorded by the
- * corpus generator from the same parse that produced the model.
+ * corpus generator from the same parse that produced the model — each case
+ * parsed in the notation its own `input_format` names.
  *
- * Both counts are pinned (91 = the corpus's 92 cases minus the one
- * withheld UnitsML case that the pin actually contains — the exclusion
- * manifest names two, but the gem raises on the invalid one, so no case
- * for it was ever generated; all 91 render to this target):
- * a suite that quietly loads zero cases has happened to this repository
- * once before.
+ * Every count is pinned, because a suite that quietly loads zero cases has
+ * happened to this repository once before:
+ *
+ *   - 216 reachable cases: the pin holds 217 and the one withheld UnitsML case
+ *     it actually contains is dropped. The exclusion manifest names two, but
+ *     the gem raises on the invalid one, so no case for it was ever generated;
+ *   - 216 of those carry `expected.mathml` bytes to compare;
+ *   - 91 go through the round-trip layer, which is the AsciiMath-written
+ *     subset. That says which parser the layer calls, not what this port can
+ *     parse: `parseLatex` landed in #76 and drives
+ *     `../latex/rejection-parity.spec.ts`. Widening this layer to the other
+ *     125 is a separate change with its own measurement to do.
  */
 
 import { describe, expect, it } from "vitest";
@@ -50,16 +57,17 @@ function expectedMathml(entry: (typeof cases)[number]): string {
 }
 
 describe("mathml render parity, corpus layer (recorded model -> bytes)", () => {
-  it("has the 110 reachable cases (111 pinned, 1 withheld as UnitsML)", () => {
+  it("has the 216 reachable cases (217 pinned, 1 withheld as UnitsML)", () => {
     // A suite that quietly loaded zero cases has happened to this repository
     // once before; both counts are pinned so it cannot happen silently.
-    expect(cases.length).toBe(110);
-    expect(rendered.length).toBe(110);
-    // The round-trip layer's scoped list is pinned too, and it is now smaller
-    // than the corpus layer: 91 of the 110 reachable cases are written in
-    // AsciiMath and 19 in LaTeX, which this port cannot yet parse. The gap
-    // between the two numbers IS the second input corpus, so a suite that
-    // stopped scoping would show up here as the two converging.
+    expect(cases.length).toBe(216);
+    expect(rendered.length).toBe(216);
+    // The round-trip layer's scoped list is pinned too, and it is far smaller
+    // than the corpus layer: 91 of the 216 reachable cases are written in
+    // AsciiMath and 125 in LaTeX. This layer calls `parseAsciimath`, so it
+    // takes the 91. The gap between the two numbers IS the second input
+    // corpus, so a suite that stopped scoping would show up here as the two
+    // converging.
     expect(roundTrip.length).toBe(91);
   });
 

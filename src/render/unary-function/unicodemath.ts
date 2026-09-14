@@ -2,13 +2,16 @@
  * Mirrors `function/unary_function.rb` — `UnaryFunction#to_unicodemath` (:90) —
  * plus the name arms for the gem classes the census folds into this carrier
  * with their *own* `to_unicodemath` overrides: `cancel.rb` (:21), `left.rb`
- * (:34), `right.rb` (:34), `tr.rb` (:65). Every other name in
+ * (:34), `right.rb` (:34), `mbox.rb` (:27), `tr.rb` (:65). Every other name in
  * `MEASURED_UNARY_NAMES` below renders the carrier default.
  *
- * That set of four was **measured**, not read off the class list: for each of
- * the 35 reachable names, `Klass.instance_method(:to_unicodemath).owner` on the
- * pinned oracle answers `UnaryFunction` except for `Cancel`, `Left`, `Right`
- * and `Tr`. It is deliberately NOT the same set as `./latex.ts` carries —
+ * The reachable four were **measured**, not read off the class list: for each
+ * of the 35 reachable names, `Klass.instance_method(:to_unicodemath).owner` on
+ * the pinned oracle answers `UnaryFunction` except for `Cancel`, `Left`,
+ * `Right` and `Tr`. `Mbox` is the one arm here whose name the AsciiMath
+ * transform cannot reach at all — it arrives from the LaTeX transform, which
+ * is why it is arm-rendered rather than admitted to `MEASURED_UNARY_NAMES`.
+ * That set is deliberately NOT the same as `./latex.ts` carries —
  * `Glb` and `Lcm` override `to_latex` only, so they take the carrier default
  * here (`Glb.new(x).to_unicodemath` → `"glb⁡x"`, `Lcm` → `"lcm⁡x"`, measured).
  * Every other gem class with its own `to_unicodemath` (`abs`, `sqrt`, `text`,
@@ -28,7 +31,8 @@
  *     renders `"╱(a)"`, exactly like `Cancel(Symbol("a"))`.
  */
 
-import { RenderError } from "../../core/index";
+import type { NodeParameter } from "../../core/index";
+import { RenderError, TextNode } from "../../core/index";
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
 import {
   className,
@@ -41,9 +45,28 @@ import {
   unreachableName,
 } from "../../formats/unicodemath/render-shared";
 import { UNICODEMATH_UNARY_CARRIER_NAMES } from "../../generated/unicodemath/render-tables";
+import { renderText } from "../text/unicodemath";
 
 /** U+2061 FUNCTION APPLICATION — invisible, but a real character. */
 const APPLY = "⁡";
+
+/**
+ * The fresh `Text` that `mbox.rb` builds out of the slot.
+ *
+ * The `?? null` is the whole point. `Text.new(parameter_one)` passes the slot
+ * POSITIONALLY, so a nil slot stays nil — but `Text#initialize` defaults an
+ * OMITTED argument to `""` where `UnaryFunction#initialize` defaults to nil
+ * (measured on the pinned oracle `00c52783`: `Text.new.parameter_one` is `""`,
+ * `Mbox.new.parameter_one` is nil), and `TextNode` faithfully reproduces that
+ * `""` for an `undefined` init. §5's structural dispatch admits a plain object
+ * with `parameterOne` absent, which reaches here as `undefined`; without the
+ * narrowing it would render `Text.new("")` where the gem renders
+ * `Text.new(nil)` — two quotation marks against nothing at all. An explicit
+ * `""` and an explicit `false` both pass through untouched.
+ */
+function mboxText(parameterOne: NodeParameter | undefined): NodeOf<"text"> {
+  return new TextNode({ parameterOne: parameterOne ?? null });
+}
 
 /** U+2571 BOX DRAWINGS LIGHT DIAGONAL — `Cancel`'s strike (`cancel.rb:26`). */
 const CANCEL_MARK = "╱";
@@ -100,6 +123,24 @@ export function renderUnaryFunction(
     case "Left":
     case "Right":
       return renderLeftRight(node);
+    case "Mbox":
+      // `mbox.rb:27-29`: `Text.new(parameter_one).to_unicodemath(options:)`.
+      // The slot is handed to a FRESH `Text` and rendered as one, so the
+      // quotes are `Text`'s and the invisible FUNCTION APPLICATION of the
+      // carrier default never appears.
+      //
+      // Measured on the pinned oracle `00c52783`, `Mbox.new(v)` against
+      // `Text.new(v)`: identical on every shape. `"hi"` → `"\"hi\""`,
+      // `"a b"` → `"\"a b\""`, `""` → `"\"\""`, nil and `false` → Ruby nil
+      // (which this renderer carries as `null`, like `Text`, and which the
+      // formula boundary contributes nothing for); a node, a list and an
+      // integer each die in `Text`'s own `start_with?`, which is the refusal
+      // `renderText` already carries.
+      //
+      // `mboxText` and not `new TextNode({ parameterOne: node.parameterOne })`:
+      // `Text#initialize` defaults its slot to `""` where `Mbox.new` leaves
+      // nil, and `""` renders two quotation marks where nil renders nothing.
+      return renderText(mboxText(node.parameterOne));
     case "Tr":
       return renderTr(node, context);
     default: {

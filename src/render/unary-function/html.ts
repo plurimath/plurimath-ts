@@ -48,6 +48,22 @@ import {
  *
  * A table rather than a rule: see the module note on `Sup`, where that label
  * and the downcased class name are not the same string.
+ *
+ * `Mbox` is a KNOWN gap, not an absent case. The corpus reaches it —
+ * `latex-text-mbox` is `\mbox{hi}` — the gem renders it, and the four P1
+ * formats render it (`./asciimath.ts` and siblings). It stays unadmitted here
+ * because `Mbox#to_html` is NOT the `Text` delegation THREE of those four
+ * share — asciimath, mathml and unicodemath delegate, latex interpolates its
+ * slot raw — and it is not latex's shape either: it hands back
+ * `parameter_one` itself, which is a third thing again. On the pinned oracle `00c52783`, `Mbox.new(false).to_html`
+ * answers `false` where `Text.new(false).to_html` raises NoMethodError, and
+ * `Formula([Mbox("unicode[:alpha]")]).to_html` is the literal
+ * `"unicode[:alpha]"` where the same string under `Text` is `"&#x3b1;"`.
+ * Admitting it means measuring that shape across the slots this file's other
+ * arms already cover. Nothing here forces the question: the parity fixtures
+ * cannot reach it, because `scripts/generate-parity-fixtures.rb` sweeps
+ * `input_format: asciimath` and `\mbox` is LaTeX — which is exactly why it is
+ * written down rather than left to be noticed.
  */
 const MEASURED_LABELS: ReadonlyMap<string, string> = new Map([
   ["Sin", "sin"],

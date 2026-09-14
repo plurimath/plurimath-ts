@@ -1,7 +1,7 @@
 /**
  * Every ported transform rule is exercised by the fixture set.
  *
- * `model-parity.spec.ts` proves the port agrees with the gem on 220 inputs. It
+ * `model-parity.spec.ts` proves the port agrees with the gem on 256 inputs. It
  * cannot prove that a rule was ever REACHED — a rule with a typo in its action
  * passes vacuously if nothing routes to it, and 114 rules is far too many to
  * eyeball. So `buildLatexTransform` counts each rule's firings, this suite
@@ -30,7 +30,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 
 /**
  * The three ported rules no input reaches, and why — each argued from the
- * grammar and then CONFIRMED against the gem: the same 255 inputs were driven
+ * grammar and then CONFIRMED against the gem: the same 256 inputs were driven
  * through `Plurimath::Latex::Transform` with every registered block wrapped in
  * a counter, and these three (plus the dead `:747`) were the only rule
  * openings that never fired there either.
@@ -40,7 +40,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
  *   `first_value` alongside it, so a one-key `{text:}` node cannot be built.
  * - `67` and `75` (`left_right` with a subscript / supscript). `sequence`'s
  *   alternatives 9 and 10 (`parse.rb:152-153`) are strictly dominated by
- *   `over_class`'s second and third (`:179-180`): both start with `left_right`
+ *   `over_class`'s second and third (`:178-179`): both start with `left_right`
  *   and continue with the same `power`/`base` plus `intermediate_exp`, and
  *   `over_class` is tried first, so whenever 9 or 10 could match, 8 already has.
  *

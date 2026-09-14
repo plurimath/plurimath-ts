@@ -325,8 +325,13 @@ export function readCorpusCases(root: string = PINNED_CORPUS_ROOT): readonly Cor
 }
 
 /**
- * The one input notation this port can parse today. AsciiMath is P1's vertical
- * slice; LaTeX, UnicodeMath and HTML parsers arrive in P3
+ * The default for `casesInInputFormat` below: the notation `parseAsciimath`
+ * reads, which is what every caller of `parseableCases` drives.
+ *
+ * It is NOT the only notation this port parses. `parseLatex` landed in #76 and
+ * `../formats/latex/rejection-parity.spec.ts` selects through
+ * `casesInInputFormat(cases, "latex")` to drive it. This constant names one
+ * parser's scope, not a limit; UnicodeMath and HTML input arrive in P3
  * (`TODO.plan/p3-input-formats/`).
  */
 export const PARSEABLE_INPUT_FORMAT = "asciimath";
@@ -340,7 +345,8 @@ export const PARSEABLE_INPUT_FORMAT = "asciimath";
  * A check that calls `parseAsciimath(entry.input)` over every pinned case feeds
  * it LaTeX source, and fails in a way that looks like a parser bug rather than
  * a suite that outgrew its filter. That is not hypothetical: it is what the
- * nineteen LaTeX cases did to `grammar.spec.ts` the moment the pin moved.
+ * LaTeX cases did to `grammar.spec.ts` the moment the pin first moved — and
+ * the corpus has grown from nineteen of them to 125 since.
  *
  * Generic over anything carrying an `inputFormat`, so the pinned-case reader's
  * own records (`PinnedCase`, which also carries `preprocessed` and
@@ -355,13 +361,35 @@ export const PARSEABLE_INPUT_FORMAT = "asciimath";
 export function parseableCases<Case extends { readonly inputFormat: string }>(
   cases: readonly Case[],
 ): readonly Case[] {
-  const parseable = cases.filter((entry) => entry.inputFormat === PARSEABLE_INPUT_FORMAT);
-  if (parseable.length === 0) {
+  return casesInInputFormat(cases, PARSEABLE_INPUT_FORMAT);
+}
+
+/**
+ * The same selection, for a parser other than the AsciiMath one.
+ *
+ * `parseableCases` names the format its callers must use and is the right call
+ * for anything driving `parseAsciimath`. A check that drives a DIFFERENT parser
+ * needs the same filter against a different format, and writing that filter out
+ * by hand is how a suite ends up with two selectors that disagree — one of them
+ * throwing on an empty match and the other passing vacuously. `parseLatex`
+ * landed in #76 and the LaTeX rejection corpus landed with the pin, so there is
+ * now a second parser-driven suite; it selects through here.
+ *
+ * The empty-match throw is the whole point and is repeated for every format: a
+ * corpus that stops carrying a format must fail the suite that reads it rather
+ * than quietly run zero cases.
+ */
+export function casesInInputFormat<Case extends { readonly inputFormat: string }>(
+  cases: readonly Case[],
+  format: string,
+): readonly Case[] {
+  const selected = cases.filter((entry) => entry.inputFormat === format);
+  if (selected.length === 0) {
     throw new Error(
-      `no pinned case has input_format "${PARSEABLE_INPUT_FORMAT}", so every ` +
+      `no pinned case has input_format "${format}", so every ` +
         `parser-driven check would run zero cases. Input formats present: ` +
         `${[...new Set(cases.map((entry) => entry.inputFormat))].sort().join(", ")}`,
     );
   }
-  return parseable;
+  return selected;
 }

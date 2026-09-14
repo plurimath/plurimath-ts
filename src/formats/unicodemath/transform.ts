@@ -32,9 +32,10 @@
  *
  * ## A second increment: MULTISCRIPT, reached by hand-picked inputs
  *
- * Outside the eight-rule table family, no other unported rule fires on the
- * 103-string corpus — that method is exhausted — so a second family was
- * chosen by what it BUILDS rather than what the corpus reaches, and given
+ * Outside the eight-rule table family, no other unported rule fired on the
+ * 103-string corpus at the time — that method was exhausted against it — so
+ * a second family was chosen by what it BUILDS rather than what the corpus
+ * reaches, and given
  * inputs of its own in `scripts/generate-unicodemath-model-fixtures.rb`,
  * each checked against the oracle before being written down.
  *
@@ -369,6 +370,23 @@ const RCURLY_ID = namedSymbolId("rcurly");
  */
 const MATRIXS_INVERTED = invertFirstWins(
   zipConstants(UNICODEMATH_MATRIXS_KEYS, UNICODEMATH_MATRIXS, "MATRIXS"),
+);
+
+/**
+ * `Constants::SUB_DIGITS.key(entity)`, inverted from the ONE generated array:
+ * `Constants::SUB_DIGITS` has no separate keys table because its keys are
+ * `"0".."9"` in order, and `UNICODEMATH_SUB_DIGITS[i]` is measured to be the
+ * entity for digit `i` (`generated/parser-tables.ts`'s own comment: emitted
+ * from `Constants::SUB_DIGITS.values`, and Ruby hashes preserve insertion
+ * order). `Hash#key` on a miss is nil, so `:2971` needs a not-found case too.
+ */
+const SUB_DIGITS_INVERTED = new Map<string, string>(
+  UNICODEMATH_SUB_DIGITS.map((entity, index) => [entity, String(index)]),
+);
+
+/** `Constants::SUP_DIGITS.key(entity)`, inverted the same way, for `:165`. */
+const SUP_DIGITS_INVERTED = new Map<string, string>(
+  UNICODEMATH_SUP_DIGITS.map((entity, index) => [entity, String(index)]),
 );
 
 /**

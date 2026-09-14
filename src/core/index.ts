@@ -13,6 +13,7 @@ export type { PlurimathErrorCode } from "./errors";
 export {
   MissingSymbolDataError,
   ParseError,
+  ParseOptionError,
   PlurimathError,
   RenderError,
   UnsupportedFeatureError,

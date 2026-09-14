@@ -32,9 +32,28 @@ import { describe, expect, it } from "vitest";
 import type { ParseError } from "../../../src/core/errors";
 import { parseAsciimath } from "../../../src/formats/asciimath/parser";
 import { loadPinnedCorpus, type PinnedRejection } from "../../core/corpus-pin";
+import { parseableCases } from "../../core/model-builder";
 
 const corpus = loadPinnedCorpus();
-const rejections: readonly PinnedRejection[] = corpus.rejections;
+
+/**
+ * The AsciiMath rejections, selected the way every other parser-driven suite in
+ * this repository selects: through `parseableCases`, on the case's own
+ * `input_format`.
+ *
+ * This file feeds each input to `parseAsciimath`, so it may only take the cases
+ * written in AsciiMath. The rejection corpus stopped being AsciiMath-only at the
+ * pin that added `corpus/latex/rejections.yaml`, and reading it unscoped was not
+ * merely noisy: `\frac{1` is a perfectly good AsciiMath expression, so
+ * `parseAsciimath` ACCEPTED most of the LaTeX rejections and this suite reported
+ * the port failing to refuse inputs it was never asked to refuse. The LaTeX half
+ * is checked against `parseLatex` by
+ * `test/formats/latex/rejection-parity.spec.ts`.
+ *
+ * `parseableCases` throws on an empty match, so a pin that lost its AsciiMath
+ * rejection payload fails here rather than running nothing.
+ */
+const rejections: readonly PinnedRejection[] = parseableCases(corpus.rejections);
 
 describe("the rejection corpus", () => {
   it("is not empty, asserted as a count", () => {
@@ -42,6 +61,23 @@ describe("the rejection corpus", () => {
     // repository has already shipped one gate that did exactly that.
     expect(rejections.length).toBeGreaterThan(0);
     expect(rejections.length).toBe(13);
+  });
+
+  it("selects a proper subset, and both halves are accounted for", () => {
+    // What the filter above leaves out is counted here rather than left
+    // implicit. Without this, the scoping would still pass if the LaTeX
+    // rejection payload vanished from the pin, and the filter would be dead
+    // code that looked like a safeguard.
+    expect(corpus.rejections.length).toBe(27);
+    expect(rejections.length).toBeLessThan(corpus.rejections.length);
+    const byFormat = new Map<string, number>();
+    for (const entry of corpus.rejections) {
+      byFormat.set(entry.inputFormat, (byFormat.get(entry.inputFormat) ?? 0) + 1);
+    }
+    expect([...byFormat.entries()].sort()).toStrictEqual([
+      ["asciimath", 13],
+      ["latex", 14],
+    ]);
   });
 
   it("names every case exactly once", () => {

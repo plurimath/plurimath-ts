@@ -76,6 +76,7 @@
         "test/formats/asciimath/model-parity.spec.ts",
         "test/formats/asciimath/render-parity.spec.ts",
         "test/formats/html/degenerate-slots.spec.ts",
+        "test/formats/html/model-parity.spec.ts",
         "test/formats/html/render-parity.spec.ts",
         "test/formats/latex/model-parity.spec.ts",
         "test/formats/latex/render-parity.spec.ts",
@@ -100,8 +101,11 @@
       "class": "A",
       "activatesAt": "P1-completion",
       "run": "pnpm test rejection",
-      "selects": ["test/formats/asciimath/rejection-parity.spec.ts"],
-      "description": "Inputs the gem rejects are rejected here"
+      "selects": [
+        "test/formats/asciimath/rejection-parity.spec.ts",
+        "test/formats/latex/rejection-parity.spec.ts"
+      ],
+      "description": "Inputs the gem rejects are rejected here, in both notations this port parses. Each suite reads only the rejection cases written in its own input format: the corpus carries two, and feeding one parser the other notation's source proves nothing about either"
     },
     {
       "id": "symbol-context-matrix",

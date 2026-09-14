@@ -59,6 +59,17 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * every recorded preprocessed text from the raw input" already proves
  * `preprocess(entry.input).text` equals the recorded `entry.preprocessed` for
  * every row, so this changes what runs, not what a passing row parses to.
+ *
+ * The still-deferred-family inputs (`DEFERRED_INPUTS` in
+ * `model-parity.spec.ts`) are driven too: their transform runs to completion
+ * and only `finalize` refuses them, so their rule firings count here even
+ * though `model-parity.spec.ts` expects a refusal.
+ *
+ * They are NOT special cover for anything. This said they were "the sole cover
+ * for `transform.rb:2619` on a `Fenced` built around a table"; measured, they
+ * fire `:13`, `:18`, `:39` and `:92` and never reach `:2619` at all — they are
+ * refused at the FORMULA root with `{table=...}`, so no `Fenced` is built.
+ * `:2619` fires 40 times across 32 other rows, starting with `(x)` and `{x}`.
  * Rule ids here are the line a `rule(` call OPENS on.
  */
 const build = buildUnicodemathTransform();

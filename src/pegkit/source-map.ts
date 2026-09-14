@@ -26,8 +26,13 @@ export class SourceMap {
     const originOf: number[] = [];
     let originalLength = 0;
     for (const segment of segments) {
+      // An unchanged (identity) segment has `output.length === originLength`,
+      // so each output char advances one origin offset. A replaced segment
+      // (e.g. an entity collapsed to fewer output chars) has fewer output
+      // chars than origin chars, so every output char still points at the
+      // segment's start — clamping keeps that case exactly as before.
       for (let index = 0; index < segment.output.length; index++) {
-        originOf.push(segment.originStart);
+        originOf.push(segment.originStart + Math.min(index, segment.originLength - 1));
       }
       originalLength = segment.originStart + segment.originLength;
     }

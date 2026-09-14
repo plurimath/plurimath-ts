@@ -98,8 +98,8 @@ describe("corpus parity", () => {
    * This block runs the ASCIIMATH grammar, so it takes the cases written in
    * AsciiMath and no others. The corpus carries `corpus/latex/` as well, and
    * its `parse_tree` is the tree the gem's LaTeX Parslet grammar produced —
-   * a different grammar, so a different tree. Feeding those nineteen inputs
-   * here failed nineteen tests that read like grammar defects and were nothing
+   * a different grammar, so a different tree. Feeding those 125 inputs
+   * here failed as many tests that read like grammar defects and were nothing
    * of the kind; `parseableCases` is the same filter every other parser-driven
    * layer uses, and it throws rather than quietly matching nothing.
    */
@@ -108,8 +108,8 @@ describe("corpus parity", () => {
   it("has the cases this port checks against", () => {
     // Guards the whole block: a reader that silently returned nothing would
     // make every `it.each` below vacuous.
-    expect(corpus.cases.length).toBe(111);
-    expect(reachable.length).toBe(110);
+    expect(corpus.cases.length).toBe(217);
+    expect(reachable.length).toBe(216);
     // The AsciiMath-input subset, which is what this grammar is asked to parse.
     expect(parseable.length).toBe(91);
   });

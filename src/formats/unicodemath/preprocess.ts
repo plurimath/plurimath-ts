@@ -356,7 +356,7 @@ function rubySplitOnHash(text: string): string[] {
  *
  * Throws for the inputs the gem cannot preprocess — see `rubySplitOnHash`.
  * `parseUnicodemath` turns that into a `ParseError`, which is what the gem's own
- * public boundary does with the `NoMethodError` (`math.rb:44-48` rescues
+ * public boundary does with the `NoMethodError` (`math.rb:45-49` rescues
  * `StandardError`); measured, `Plurimath::Math.parse("", :unicode)` raises
  * `Plurimath::Math::ParseError`.
  *

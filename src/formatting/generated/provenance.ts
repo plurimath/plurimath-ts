@@ -43,7 +43,7 @@ export const FORMATTING_GENERATED_PROVENANCE: FormattingGeneratedProvenance = {
   generatorInputs: new Map([
     [
       "scripts/generate-core-data.rb",
-      "92dcbb1ea954c83f0e9899bc7c6417fc1cae32105a185fb5b0b3caad00b714a0",
+      "6c3cdec230b1a640e14e2fb8ce212d992914e5c1d502f963a2fcdbad2467de71",
     ],
     [
       "scripts/generate-corpus.rb",
@@ -51,7 +51,7 @@ export const FORMATTING_GENERATED_PROVENANCE: FormattingGeneratedProvenance = {
     ],
     [
       "scripts/generate-formatting-data.rb",
-      "97bc72537d3045e19bb0e60143b33c7b977061cfd6a89b8abb7a1b6a1e4f4ee6",
+      "3115d344b7ccb4ec21e2331459a9243fad16c56c51b99edd506be791c2c64ecf",
     ],
   ]),
   oracle: "plurimath",

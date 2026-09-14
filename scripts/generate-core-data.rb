@@ -362,27 +362,15 @@ module CoreDataGenerator
     ["  #{key}: new Map([", *value.map { |k, v| "    #{ts_value([k, v], 2)}," }, "  ]),"]
   end
 
-  def emit_provenance_file(out_root, provenance)
+  # Shared by every per-format data generator that borrows this module (§7):
+  # each supplies its own header section, interface name and const name, since
+  # those carry file-specific documentation that a shared doc string would
+  # flatten into something generic.
+  def emit_provenance_file(out_root, provenance, header_section:, interface_name:, const_name:)
     sections = [
-      ts_header(<<~TEXT.chomp, provenance: false),
-        What every file under `#{OUT_REL}/` was generated from.
-
-        Separate from `src/generated/provenance.ts` because a separate generator
-        wrote it: layer 1 may not import format-owned data, and each generator
-        records its own inputs (§7).
-
-        `generator` names the script that was run; `generatorInputs` hashes every
-        Ruby file whose bytes can change these tables, keyed by its
-        repository-relative path — that script, plus the corpus generator it
-        borrows class discovery, symbol ids and hashing from. Hashing only the
-        entry point would let a change to the shared file move the tables while
-        the recorded hash stayed identical.
-
-        Otherwise deliberately path-free: dirty file lists would churn on every
-        unrelated edit.
-      TEXT
+      header_section,
       [
-        "export interface CoreGeneratedProvenance {",
+        "export interface #{interface_name} {",
         *provenance.map { |key, value| "  readonly #{key}: #{provenance_type(value)};" },
         "}",
       ].join("\n"),
@@ -391,7 +379,7 @@ module CoreDataGenerator
       [
         ts_doc("`committable: false` marks output generated from a dirty checkout —\n" \
                "useful while iterating, never to be committed (§7)."),
-        "export const CORE_GENERATED_PROVENANCE: CoreGeneratedProvenance = {",
+        "export const #{const_name}: #{interface_name} = {",
         *provenance.flat_map { |key, value| provenance_entry(key, value) },
         "};",
       ].join("\n"),
@@ -401,8 +389,10 @@ module CoreDataGenerator
 
   # --- driver --------------------------------------------------------------
 
-  def parse_options(argv)
-    options = { gem: nil, out: File.join(REPO_ROOT, OUT_REL), allow_dirty: false }
+  # Shared by every per-format data generator: each supplies its own output
+  # default, since `--out` defaults to that generator's own directory.
+  def parse_options(argv, out_default:)
+    options = { gem: nil, out: out_default, allow_dirty: false }
     until argv.empty?
       case (arg = argv.shift)
       when "--gem" then options[:gem] = File.expand_path(argv.shift.to_s)
@@ -415,12 +405,17 @@ module CoreDataGenerator
     options
   end
 
-  def usage
-    File.readlines(File.join(REPO_ROOT, GENERATOR_PATH))
+  # Shared by every per-format data generator: each passes its own entry point,
+  # since the usage text is that generator's own leading comment block.
+  def usage(generator_path)
+    File.readlines(File.join(REPO_ROOT, generator_path))
       .drop(2).take_while { |line| line.start_with?("#") }
       .map { |line| line.sub(/\A# ?/, "") }.join
   end
 
+  # Shared by every per-format data generator: `REPO_ROOT` is the same
+  # absolute path in every module (each computes it the same way from its own
+  # `__dir__`), so checking it here checks it everywhere.
   def check_checkouts!(gem_dir, out_root, allow_dirty)
     unless CorpusGenerator.git_repository?(gem_dir)
       raise Error, "#{gem_dir} is not a git checkout; the oracle must be one (§7)"
@@ -455,30 +450,31 @@ module CoreDataGenerator
     end
   end
 
-  def build_provenance(gem_dir, dirty, allow_dirty)
+  # Shared by every per-format data generator: each passes its own generator
+  # path and pre-hashed inputs (keyed by its own `GENERATOR_INPUT_PATHS`), and
+  # may add fields after `generatorClean` and before `rubyEngine` via `extra`
+  # (e.g. the entity library fields this module's own caller adds).
+  def build_provenance(generator_path, generator_inputs, gem_dir, dirty, allow_dirty, extra: {})
     gem_spec = Gem.loaded_specs.fetch("plurimath")
-    entities_spec = Gem.loaded_specs.fetch("htmlentities")
     {
-      "generator" => GENERATOR_PATH,
-      "generatorInputs" => generator_input_hashes,
+      "generator" => generator_path,
+      "generatorInputs" => generator_inputs,
       "oracle" => "plurimath",
       "oracleVersion" => gem_spec.version.to_s,
       "oracleCommit" => CorpusGenerator.git(gem_dir, "rev-parse", "HEAD").strip,
       "oracleClean" => dirty["gem"].empty?,
       "generatorClean" => dirty["generator"].empty?,
-      "entityLibrary" => "htmlentities",
-      "entityLibraryVersion" => entities_spec.version.to_s,
-      "entityFlavour" => ENTITY_FLAVOUR,
+    }.merge(extra).merge(
       "rubyEngine" => RUBY_ENGINE,
       "rubyVersion" => RUBY_VERSION,
       "committable" => dirty["gem"].empty? && dirty["generator"].empty? && !allow_dirty,
-    }
+    )
   end
 
   def run(argv)
-    options = parse_options(argv)
+    options = parse_options(argv, out_default: File.join(REPO_ROOT, OUT_REL))
     if options[:help]
-      puts usage
+      puts usage(GENERATOR_PATH)
       return 0
     end
 
@@ -488,12 +484,41 @@ module CoreDataGenerator
 
     entities = entity_table
     canonical = symbol_canonical_values
-    provenance = build_provenance(gem_dir, dirty, options[:allow_dirty])
+    entities_spec = Gem.loaded_specs.fetch("htmlentities")
+    provenance = build_provenance(
+      GENERATOR_PATH, generator_input_hashes, gem_dir, dirty, options[:allow_dirty],
+      extra: {
+        "entityLibrary" => "htmlentities",
+        "entityLibraryVersion" => entities_spec.version.to_s,
+        "entityFlavour" => ENTITY_FLAVOUR,
+      },
+    )
 
     written = [
       emit_html_entities_file(options[:out], entities),
       emit_symbol_canonical_file(options[:out], canonical),
-      emit_provenance_file(options[:out], provenance),
+      emit_provenance_file(
+        options[:out], provenance,
+        header_section: ts_header(<<~TEXT.chomp, provenance: false),
+          What every file under `#{OUT_REL}/` was generated from.
+
+          Separate from `src/generated/provenance.ts` because a separate generator
+          wrote it: layer 1 may not import format-owned data, and each generator
+          records its own inputs (§7).
+
+          `generator` names the script that was run; `generatorInputs` hashes every
+          Ruby file whose bytes can change these tables, keyed by its
+          repository-relative path — that script, plus the corpus generator it
+          borrows class discovery, symbol ids and hashing from. Hashing only the
+          entry point would let a change to the shared file move the tables while
+          the recorded hash stayed identical.
+
+          Otherwise deliberately path-free: dirty file lists would churn on every
+          unrelated edit.
+        TEXT
+        interface_name: "CoreGeneratedProvenance",
+        const_name: "CORE_GENERATED_PROVENANCE",
+      ),
     ]
     written.sort.each { |path| puts "  #{relative(path)}" }
     puts "#{entities.length} #{ENTITY_FLAVOUR} entities; " \

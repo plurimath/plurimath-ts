@@ -67,6 +67,26 @@ describe("SourceMap", () => {
     expect(map.toOriginal(1)).toBe(2); // x  → after the digraph
   });
 
+  it("increments through a multi-character unchanged segment, not repeat its start", () => {
+    // The local `preprocess` helper above emits one segment per input
+    // character, so it never exercises a single segment spanning several
+    // unchanged characters — which is exactly how the real HTML preprocessor
+    // emits its "between" runs. Build that shape directly.
+    const map = SourceMap.fromSegments([
+      { originStart: 0, originLength: 3, output: "xxx" },
+      { originStart: 3, originLength: 6, output: "&" }, // e.g. &amp; -> &
+      { originStart: 9, originLength: 6, output: "abcdef" },
+    ]);
+    // preprocessed offsets: 0-2 = "xxx", 3 = "&", 4-9 = "abcdef"
+    expect(map.toOriginal(0)).toBe(0);
+    expect(map.toOriginal(1)).toBe(1);
+    expect(map.toOriginal(2)).toBe(2);
+    expect(map.toOriginal(3)).toBe(3); // the replacement's single output char
+    expect(map.toOriginal(4)).toBe(9); // "a" of "abcdef" — the bug mapped this to 9 too, which happens to be right...
+    expect(map.toOriginal(5)).toBe(10); // ...but "b" is where the old code broke: it also mapped to 9
+    expect(map.toOriginal(9)).toBe(14); // "f", the last char of the segment
+  });
+
   it("clamps an offset past the end to the end of the original input", () => {
     const { text, map } = preprocess("{:x");
     expect(map.toOriginal(text.length)).toBe(3);

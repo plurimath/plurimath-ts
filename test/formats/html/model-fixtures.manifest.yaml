@@ -2,10 +2,8 @@
 # `payload.sha256` covers the whole payload file, including its final newline.
 ---
 schema: plurimath-corpus/manifest/1
-committable: false
-warnings:
-- generated with --allow-dirty
-- 'generator checkout dirty: src/core/generated/provenance.ts, src/formats/html/generated/provenance.ts, src/formats/latex/generated/provenance.ts, src/formats/unicodemath/generated/provenance.ts, src/formatting/generated/provenance.ts, test/formats/html/degenerate-fixtures.manifest.yaml, test/formats/html/parity-fixtures.manifest.yaml, test/formats/omml/degenerate-fixtures.manifest.yaml, test/formats/omml/parity-fixtures.manifest.yaml'
+committable: true
+warnings: []
 generator:
   path: scripts/generate-html-model-fixtures.rb
   sha256: cdd9d0ec782679441ff06683143452bf49c2b1922e915df13aa9e53ac533e7ac
@@ -14,18 +12,9 @@ generator:
     scripts/generate-html-model-fixtures.rb: cdd9d0ec782679441ff06683143452bf49c2b1922e915df13aa9e53ac533e7ac
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: dc08b48eebbae1800ae22965625599398a8bcaea
-    clean: false
-    dirty_paths:
-    - src/core/generated/provenance.ts
-    - src/formats/html/generated/provenance.ts
-    - src/formats/latex/generated/provenance.ts
-    - src/formats/unicodemath/generated/provenance.ts
-    - src/formatting/generated/provenance.ts
-    - test/formats/html/degenerate-fixtures.manifest.yaml
-    - test/formats/html/parity-fixtures.manifest.yaml
-    - test/formats/omml/degenerate-fixtures.manifest.yaml
-    - test/formats/omml/parity-fixtures.manifest.yaml
+    commit: f6ea4778c842a5c80736155dbe93702924511ee3
+    clean: true
+    dirty_paths: []
 oracle:
   gem: plurimath
   version: 0.11.6

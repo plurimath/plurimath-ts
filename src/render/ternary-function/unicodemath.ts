@@ -48,9 +48,8 @@
  *                                 for an instance of String
  */
 
-import { type MathNode, RenderError } from "../../core/index";
+import type { MathNode } from "../../core/index";
 import {
-  FORMAT,
   isBase,
   isNode,
   isPower,
@@ -61,6 +60,7 @@ import {
   primeUnicode,
   type RenderContext,
   renderOptionalChild,
+  slotCrash,
   unicodemathParens,
 } from "../../formats/unicodemath/render-shared";
 
@@ -133,9 +133,5 @@ function supValue(node: NodeOf<"ternaryFunction">, context: RenderContext): stri
 function slotNode(field: unknown, at: string): MathNode {
   if (isNode(field)) return field;
 
-  throw new RenderError(
-    `${at}: holds ${field === null ? "null" : typeof field} — the gem raises NoMethodError here`,
-    FORMAT,
-    "ternaryFunction",
-  );
+  throw slotCrash(at, field, "ternaryFunction");
 }

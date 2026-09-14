@@ -363,6 +363,21 @@ export function describeSlot(value: unknown): string {
 }
 
 /**
+ * The port's stand-in for the gem's `NoMethodError` on a slot that cannot
+ * answer `to_unicodemath`, where the caller has a real node kind to report.
+ *
+ * `renderChild`'s own crash brands the kind `"unknown"` because it never
+ * receives one; this wrapper exists for the callers that do.
+ */
+export function slotCrash(at: string, value: unknown, kind: string): RenderError {
+  return new RenderError(
+    `${at}: is ${describeSlot(value)} — the gem raises NoMethodError here`,
+    FORMAT,
+    kind,
+  );
+}
+
+/**
  * A carrier name outside the measured set.
  *
  * The census records what the AsciiMath transform can construct; a name beyond

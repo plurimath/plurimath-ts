@@ -41,6 +41,7 @@ import {
   isNode,
   present,
   renderChild,
+  slotCrash,
   unicodemathParens,
   unreachableName,
 } from "../../formats/unicodemath/render-shared";
@@ -253,31 +254,4 @@ function renderTr(node: NodeOf<"unaryFunction">, context: RenderContext): string
   // `Array#join` writes a nil element as "" — measured: a row whose first td
   // renders nil gives `"&b"`, a leading empty field rather than a dropped one.
   return tds.map((td) => renderChild(td, context, "tr.parameterOne") ?? "").join("&");
-}
-
-/**
- * The port's stand-in for the gem's NoMethodError on a slot that cannot answer
- * `to_unicodemath`.
- *
- * This used to say `../../formats/unicodemath/render-shared.ts` exports no
- * `describeSlot`/`unreachableName` pair and that its `renderChild` reports a
- * bare `typeof`. Both halves are now false: the module exports `describeSlot`
- * and `unreachableName`, and `renderChild`/`renderOptionalChild` phrase their
- * own crashes through `describeSlot` — which is why this file imports the pair
- * rather than carrying copies of either.
- *
- * What is left here is only the two-line wrapper the shared module has no
- * equivalent for: `describeSlot` names the value, `RenderError` needs the node
- * kind beside it, and `renderChild`'s message brands the kind `"unknown"`
- * because it does not receive one. Two other kind files still describe such a
- * slot with a bare `typeof` (`../text/unicodemath.ts`,
- * `../ternary-function/unicodemath.ts`); lifting this wrapper into the shared
- * module is worth doing when one of them is next touched.
- */
-function slotCrash(at: string, value: unknown, kind: string): RenderError {
-  return new RenderError(
-    `${at}: is ${describeSlot(value)} — the gem raises NoMethodError here`,
-    FORMAT,
-    kind,
-  );
 }

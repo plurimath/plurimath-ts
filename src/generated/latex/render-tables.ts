@@ -213,3 +213,28 @@ export const LATEX_UNARY_CARRIER_NAMES: readonly string[] = [
  * `get_class`). Membership only — deduplicated and sorted.
  */
 export const LATEX_BINARY_CARRIER_NAMES: readonly string[] = ["Lim", "Log", "Root", "Stackrel"];
+
+/**
+ * Every `Table` subclass basename the gem defines, sorted — the
+ * same measurement the asciimath render-tables slice makes,
+ * re-taken here rather than shared (ARCHITECTURE.md §3, the
+ * generated-data closure). Neither the AsciiMath transform (bare
+ * tables only) nor a `get_class` census row supplies this list,
+ * so it is measured directly off the class hierarchy, each
+ * verified live by a render that reaches some dispatch arm
+ * without raising. The names this carrier has measured behaviour
+ * for — a defined name outside this set raises before dispatch
+ * (`unreachableName`, `src/render/table/latex.ts`).
+ */
+export const LATEX_TABLE_NAMES: readonly string[] = [
+  "Align",
+  "Array",
+  "Bmatrix",
+  "Cases",
+  "Eqarray",
+  "Matrix",
+  "Multline",
+  "Pmatrix",
+  "Split",
+  "Vmatrix",
+];

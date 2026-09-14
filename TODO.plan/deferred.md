@@ -120,12 +120,20 @@ the adversarial-inputs gate pins.
 **Trigger: the next generator extension touching table or font-style data,
 or any gem bump.**
 
-`MEASURED_TABLE_NAMES` in `src/render/table/asciimath.ts` and
-`src/render/table/latex.ts` hand-list the ten Table subclass basenames
-because no generated slice carries them — the AsciiMath transform builds
-only bare tables, so the census never emits a table-subclass list. The same
-applies to `MEASURED_FORMULA_NAMES` (`Mstyle`, both formats) and, on the
-latex side only, the six value-alone FontStyle names in
+**`MEASURED_TABLE_NAMES` is resolved (2026-09-14):** the trigger fired with
+the `MATHML_TABLE_PARENS` generator extension, and both
+`src/render/table/asciimath.ts` and `src/render/table/latex.ts` now import
+`ASCIIMATH_TABLE_NAMES` / `LATEX_TABLE_NAMES` from their generated
+`render-tables.ts` slices instead of hand-listing the ten Table subclass
+basenames. `scripts/generate-corpus.rb` measures the census directly off
+the class hierarchy (`all_descendants` on `Table`, the same primitive
+`MATHML_TABLE_NAME_FAMILIES` already used), since the AsciiMath transform
+still builds only bare tables and no `get_class` census row carries a
+table-subclass list. The generated set is byte-identical to the
+hand-typed one it replaced.
+
+The same still applies to `MEASURED_FORMULA_NAMES` (`Mstyle`, both formats)
+and, on the latex side only, the six value-alone FontStyle names in
 `MEASURED_FONT_STYLE_NAMES` (the asciimath twin derives all fourteen from
 its transform registry, which the latex format may not import — §3's
 generated-data closure). Every set was enumeration-probed complete against

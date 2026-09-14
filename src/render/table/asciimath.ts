@@ -27,6 +27,7 @@ import {
 import {
   ASCIIMATH_SIMPLE_TABLE_NAMES,
   ASCIIMATH_TABLE_CLOSE_FALLBACK,
+  ASCIIMATH_TABLE_NAMES,
 } from "../../generated/asciimath/render-tables";
 
 /**
@@ -45,11 +46,12 @@ const PARENTHELESS_TABLE_NAMES: ReadonlySet<string> = new Set(ASCIIMATH_SIMPLE_T
 
 /**
  * The class names this carrier has measured behaviour for — every `Table`
- * subclass in the gem (probe-subclass-census.rb on the oracle, 2026-08-07:
- * exactly these 10, only `Matrix` overriding `to_asciimath`). The AsciiMath
- * transform builds only bare tables, so unlike the other carriers' sets this
- * one is not derivable from the transform registry; it is hand-listed, and
- * every entry is pinned by a behavioural render in
+ * subclass in the gem, generated (`ASCIIMATH_TABLE_NAMES`,
+ * `src/generated/asciimath/render-tables.ts`; exactly these 10, only
+ * `Matrix` overriding `to_asciimath`). The AsciiMath transform builds only
+ * bare tables, so unlike the other carriers' sets this one is not derivable
+ * from the transform registry; it is measured directly off the class
+ * hierarchy, and every entry is pinned by a behavioural render in
  * `test/formats/asciimath/renderer.spec.ts` ("renders every aliased table
  * subclass as the gem does") — dropping one from this set turns that pin
  * red. A defined name outside the set raises before base-table dispatch,
@@ -57,18 +59,7 @@ const PARENTHELESS_TABLE_NAMES: ReadonlySet<string> = new Set(ASCIIMATH_SIMPLE_T
  * diverge silently (`unreachableName` in
  * `../../formats/asciimath/render-shared.ts`).
  */
-const MEASURED_TABLE_NAMES: ReadonlySet<string> = new Set([
-  "Align",
-  "Array",
-  "Bmatrix",
-  "Cases",
-  "Eqarray",
-  "Matrix",
-  "Multline",
-  "Pmatrix",
-  "Split",
-  "Vmatrix",
-]);
+const MEASURED_TABLE_NAMES: ReadonlySet<string> = new Set(ASCIIMATH_TABLE_NAMES);
 
 export function renderTable(node: NodeOf<"table">, context: RenderContext): string {
   if (node.name !== undefined && !MEASURED_TABLE_NAMES.has(node.name))

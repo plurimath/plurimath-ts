@@ -44,7 +44,7 @@ export const UNICODEMATH_PARSER_GENERATED_PROVENANCE: UnicodemathParserGenerated
   generatorInputs: new Map([
     [
       "scripts/generate-core-data.rb",
-      "92dcbb1ea954c83f0e9899bc7c6417fc1cae32105a185fb5b0b3caad00b714a0",
+      "6c3cdec230b1a640e14e2fb8ce212d992914e5c1d502f963a2fcdbad2467de71",
     ],
     [
       "scripts/generate-corpus.rb",
@@ -52,7 +52,7 @@ export const UNICODEMATH_PARSER_GENERATED_PROVENANCE: UnicodemathParserGenerated
     ],
     [
       "scripts/generate-unicodemath-parser-data.rb",
-      "bfffc68c64261ca3acbcc48d1d9702e3ff48d1b0e7f235aabfc9ad2862f7ae66",
+      "cbb0ce8799b8cf4e0e710ef61a36635f10433eb4f6b3a3d89d446d563653ca2c",
     ],
   ]),
   oracle: "plurimath",

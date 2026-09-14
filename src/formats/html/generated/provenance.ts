@@ -44,7 +44,7 @@ export const HTML_PARSER_GENERATED_PROVENANCE: HtmlParserGeneratedProvenance = {
   generatorInputs: new Map([
     [
       "scripts/generate-core-data.rb",
-      "92dcbb1ea954c83f0e9899bc7c6417fc1cae32105a185fb5b0b3caad00b714a0",
+      "6c3cdec230b1a640e14e2fb8ce212d992914e5c1d502f963a2fcdbad2467de71",
     ],
     [
       "scripts/generate-corpus.rb",
@@ -52,7 +52,7 @@ export const HTML_PARSER_GENERATED_PROVENANCE: HtmlParserGeneratedProvenance = {
     ],
     [
       "scripts/generate-html-parser-data.rb",
-      "aa35133310a94ff012e94654b466287263222793918da47eca79936d6d271d36",
+      "67ec5ef615a6495203cfec38f28c54d87670e7a5d1442a60fba137845080fe67",
     ],
   ]),
   oracle: "plurimath",

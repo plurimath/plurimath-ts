@@ -129,8 +129,14 @@ module OracleGate
   def testsuite_usage
     <<~TEXT
       Usage:
-        scripts/gate-oracle.rb testsuite --check [--gem PATH]
+        scripts/gate-oracle.rb testsuite --check [--gem PATH] [--ruby-command CMD]
         scripts/gate-oracle.rb testsuite --help
+
+      --ruby-command CMD  how to reach a Ruby that can load the oracle's
+                          bundle (default: #{DEFAULT_RUBY_COMMAND.join(" ")}).
+                          Also settable as #{RUBY_COMMAND_ENV}. Pass a wrapper
+                          when the Ruby is not on PATH by itself, for example
+                          "mise x -- bundle exec ruby".
 
       Regenerates the pinned plurimath-testsuite corpus with that repository's
       own scripts/generate-corpus.rb into a temporary directory and diffs it
@@ -415,9 +421,14 @@ module OracleGate
       gem's message text and this port's are different by design, so only the
       fact of refusal is compared, never its wording.
 
-        --gem PATH   oracle checkout (default: $#{ORACLE_ENV})
-        --seed N     PRNG seed (default: #{DIFFERENTIAL_DEFAULT_SEED})
-        --count N    inputs to generate (default: #{DIFFERENTIAL_DEFAULT_COUNT})
+        --gem PATH          oracle checkout (default: $#{ORACLE_ENV})
+        --seed N            PRNG seed (default: #{DIFFERENTIAL_DEFAULT_SEED})
+        --count N           inputs to generate (default: #{DIFFERENTIAL_DEFAULT_COUNT})
+        --ruby-command CMD  how to reach a Ruby that can load the oracle's
+                            bundle (default: #{DEFAULT_RUBY_COMMAND.join(" ")}).
+                            Also settable as #{RUBY_COMMAND_ENV}. Pass a wrapper
+                            when the Ruby is not on PATH by itself, for example
+                            "mise x -- bundle exec ruby".
 
       Deterministic by construction: the same seed and count produce the same
       inputs, so a reported divergence can be reproduced exactly rather than
@@ -426,7 +437,7 @@ module OracleGate
   end
 
   def parse_differential_options(argv)
-    options = { gem: nil, seed: DIFFERENTIAL_DEFAULT_SEED, count: DIFFERENTIAL_DEFAULT_COUNT }
+    options = { gem: nil, seed: DIFFERENTIAL_DEFAULT_SEED, count: DIFFERENTIAL_DEFAULT_COUNT, ruby: nil }
     rest = argv.dup
 
     until rest.empty?
@@ -438,6 +449,8 @@ module OracleGate
       when /\A--seed=(.+)\z/ then options[:seed] = Integer(Regexp.last_match(1))
       when "--count" then options[:count] = require_integer!(rest, "--count")
       when /\A--count=(.+)\z/ then options[:count] = Integer(Regexp.last_match(1))
+      when "--ruby-command" then options[:ruby] = require_value!(rest, "--ruby-command")
+      when /\A--ruby-command=(.+)\z/ then options[:ruby] = Regexp.last_match(1)
       when "--help", "-h"
         puts differential_usage
         exit 0
@@ -648,10 +661,10 @@ module OracleGate
   def differential_gem_results(inputs, gem_dir)
     stdout, stderr, status = capture_bounded(
       { "BUNDLE_GEMFILE" => File.join(gem_dir, "Gemfile") },
-      "bundle", "exec", "ruby", "-Ilib", "-e", DIFFERENTIAL_GEM_SCRIPT,
+      *ruby_command, "-Ilib", "-e", DIFFERENTIAL_GEM_SCRIPT,
       stdin_data: JSON.generate(inputs), chdir: gem_dir, label: "gem"
     )
-    raise Error, "the gem half failed (exit #{status.exitstatus}):\n#{stderr}" unless status.success?
+    raise Error, "the gem half failed (#{exit_description(status)}):\n#{stderr}" unless status.success?
 
     marker = stdout.index("<<<JSON>>>")
     raise Error, "the gem half produced no result:\n#{stdout[0, 400]}" unless marker
@@ -664,7 +677,7 @@ module OracleGate
       {}, "node", File.join(REPO_ROOT, "scripts", "differential-port.mjs"),
       stdin_data: JSON.generate(inputs), chdir: REPO_ROOT, label: "port"
     )
-    raise Error, "the port half failed (exit #{status.exitstatus}):\n#{stderr}" unless status.success?
+    raise Error, "the port half failed (#{exit_description(status)}):\n#{stderr}" unless status.success?
 
     assert_differential_shape!(JSON.parse(stdout), "port", inputs)
   end
@@ -756,6 +769,10 @@ module OracleGate
 
   def run_differential(argv)
     options = parse_differential_options(argv)
+    # The flag and #{RUBY_COMMAND_ENV} are one knob. Setting the env from the
+    # flag keeps them exactly equivalent rather than threading an argument
+    # through every frame between here and `ruby_command`.
+    ENV[RUBY_COMMAND_ENV] = options[:ruby] if options[:ruby]
     gem_dir = resolve_gem_dir(options[:gem])
     assert_clean_checkout!(gem_dir, "gem")
 
@@ -946,15 +963,22 @@ module OracleGate
   # a different command from the one that failed: `-e` then swallows whatever
   # follows, or errors for want of an argument. `Shellwords.escape` leaves the
   # ordinary words untouched and turns the empty one into `''`.
-  def frozen_bundle_probe_display
-    (ruby_command(nil) + FROZEN_BUNDLE_PROBE_ARGS).map { |argument| Shellwords.escape(argument) }.join(" ")
+  # Pasting only the argv silently drops what actually made the probe fail
+  # or pass: it also runs with `BUNDLE_FROZEN`/`BUNDLE_GEMFILE` set and in
+  # `chdir`, not the shell's own directory or bundle. Without those, a
+  # pasted copy can resolve a different Gemfile entirely and give a result
+  # that has nothing to do with the failure it was meant to reproduce.
+  def frozen_bundle_probe_display(gem_dir, chdir:)
+    env = frozen_generator_env(gem_dir).map { |key, value| "#{key}=#{Shellwords.escape(value)}" }.join(" ")
+    command = (ruby_command(nil) + FROZEN_BUNDLE_PROBE_ARGS).map { |argument| Shellwords.escape(argument) }.join(" ")
+    "#{env} (cd #{Shellwords.escape(chdir)} && #{command})"
   end
 
   def assert_frozen_bundle_usable!(gem_dir, chdir:)
     _stdout, stderr, status = capture_generator_command(FROZEN_BUNDLE_PROBE_ARGS, chdir: chdir, gem_dir: gem_dir)
     return if status.success?
 
-    raise Error, frozen_bundle_error(gem_dir, stderr, status)
+    raise Error, frozen_bundle_error(gem_dir, chdir, stderr, status)
   end
 
   def frozen_generator_env(gem_dir)
@@ -998,8 +1022,17 @@ module OracleGate
     "Frozen mode is set",
   ].freeze
 
-  def bundler_shaped_failure?(stderr)
-    BUNDLER_STDERR_SIGNATURES.any? { |signature| stderr.include?(signature) }
+  # A substring match alone is not evidence Bundler ran: a custom
+  # `--ruby-command` wrapper whose own stderr happens to contain one of
+  # these phrases (its own error message quoting a gem name, say) would
+  # earn the "bundler said:" framing and the `bundle install` remedy for a
+  # command that never touched Bundler at all — the exact bug this check
+  # exists to avoid. The one thing available here that actually reflects
+  # what ran is the resolved command line itself: only a probe whose
+  # command names `bundle` as a component can plausibly have produced
+  # Bundler's own output, so that is checked alongside the text.
+  def bundler_shaped_failure?(stderr, command)
+    command.include?("bundle") && BUNDLER_STDERR_SIGNATURES.any? { |signature| stderr.include?(signature) }
   end
 
   # Runs the configured Ruby command, which defaults to `bundle exec ruby` and
@@ -1064,12 +1097,13 @@ module OracleGate
   # generator failure below — command, exit status, stderr — without
   # attributing the stderr to Bundler, because at that point it hasn't been
   # shown to be Bundler's.
-  def frozen_bundle_error(gem_dir, stderr, status)
+  def frozen_bundle_error(gem_dir, chdir, stderr, status)
+    command = ruby_command(nil)
     remedy =
-      if stderr.include?("empty CHECKSUMS entry")
+      if command.include?("bundle") && stderr.include?("empty CHECKSUMS entry")
         "Run `bundle lock --add-checksums` in #{gem_dir} to fill the lockfile's " \
           "CHECKSUMS section, then re-run this check."
-      elsif bundler_shaped_failure?(stderr)
+      elsif bundler_shaped_failure?(stderr, command)
         "Run `bundle install` in #{gem_dir}, then re-run this check."
       end
 
@@ -1081,7 +1115,7 @@ module OracleGate
     MESSAGE
 
     <<~MESSAGE
-      the frozen-bundle preflight (`#{frozen_bundle_probe_display}`) in #{gem_dir} failed with exit #{status.exitstatus}.
+      the frozen-bundle preflight (`#{frozen_bundle_probe_display(gem_dir, chdir: chdir)}`) in #{gem_dir} failed with #{exit_description(status)}.
       stderr:
       #{indent_block(stderr)}
     MESSAGE
@@ -1096,7 +1130,7 @@ module OracleGate
 
     unless status.success?
       raise Error, <<~MESSAGE
-        #{relative} failed with exit #{status.exitstatus}.
+        #{relative} failed with #{exit_description(status)}.
         stdout:
         #{indent_block(stdout)}
         stderr:
@@ -1261,6 +1295,16 @@ module OracleGate
     return "  (none)" if body.empty?
 
     body.lines.map { |line| "  #{line}" }.join
+  end
+
+  # `Process::Status#exitstatus` is nil when the process died by signal
+  # instead of exiting normally, so interpolating it directly renders
+  # "...failed with exit ." — a dangling period where the number should be.
+  # Report the signal instead of a blank exit code in that case.
+  def exit_description(status)
+    return "exit #{status.exitstatus}" if status.exitstatus
+
+    "terminated by signal #{status.termsig}"
   end
 end
 

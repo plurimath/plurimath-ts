@@ -43,7 +43,7 @@ export const LATEX_PARSER_GENERATED_PROVENANCE: LatexParserGeneratedProvenance =
   generatorInputs: new Map([
     [
       "scripts/generate-core-data.rb",
-      "92dcbb1ea954c83f0e9899bc7c6417fc1cae32105a185fb5b0b3caad00b714a0",
+      "6c3cdec230b1a640e14e2fb8ce212d992914e5c1d502f963a2fcdbad2467de71",
     ],
     [
       "scripts/generate-corpus.rb",
@@ -51,7 +51,7 @@ export const LATEX_PARSER_GENERATED_PROVENANCE: LatexParserGeneratedProvenance =
     ],
     [
       "scripts/generate-latex-parser-data.rb",
-      "237c0d23d7b2be05ae7654adc80d86888d464619e395468efb33052c36257ec2",
+      "befe44ef3595335bd7eff5c6f37e703285bf4a160e9fc058b7cab1f9d6060166",
     ],
   ]),
   oracle: "plurimath",

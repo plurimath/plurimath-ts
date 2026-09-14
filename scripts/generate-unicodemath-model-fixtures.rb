@@ -17,10 +17,11 @@
 # Unlike the LaTeX fixtures there was no hand-picked COVERAGE list, for as long
 # as the corpus alone could define the slice: the rules the 103
 # `expected.unicodemath` strings fire, measured on the oracle, were the rules
-# the port carried. That method is now EXHAUSTED outside the deferred
-# table/matrix family — no other unported rule fires on the corpus — so
-# RULE_COVERAGE below drives rule families chosen by what they BUILD instead,
-# same shape as the LaTeX generator's own list: grouped by family, each input
+# the port carried. That method was EXHAUSTED against the 103-string corpus
+# outside the deferred table/matrix family — no other unported rule fired on
+# it at the time — so RULE_COVERAGE below drives rule families chosen by what
+# they BUILD instead, same shape as the LaTeX generator's own list: grouped
+# by family, each input
 # checked against the oracle before being written down.
 #
 # There is a third, small BOUNDARY list, which is the opposite thing again.

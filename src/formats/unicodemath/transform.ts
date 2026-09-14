@@ -32,9 +32,10 @@
  *
  * ## A second increment: MULTISCRIPT, reached by hand-picked inputs
  *
- * Outside the eight-rule table family, no other unported rule fires on the
- * 103-string corpus — that method is exhausted — so a second family was
- * chosen by what it BUILDS rather than what the corpus reaches, and given
+ * Outside the eight-rule table family, no other unported rule fired on the
+ * 103-string corpus at the time — that method was exhausted against it — so
+ * a second family was chosen by what it BUILDS rather than what the corpus
+ * reaches, and given
  * inputs of its own in `scripts/generate-unicodemath-model-fixtures.rb`,
  * each checked against the oracle before being written down.
  *

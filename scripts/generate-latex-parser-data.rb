@@ -118,7 +118,7 @@ module LatexParserDataGenerator
   COLLIDING_KINDS = %w[symbols operant].freeze
 
   # `\;` never reaches the symbol alternation: `symbol_class_commands`
-  # (`latex/parse.rb:94`) matches it as `:three_per_em_space` two alternatives
+  # (`latex/parse.rb:92`) matches it as `:three_per_em_space` two alternatives
   # earlier. Measured, and named here so the collision check below can assert
   # the *other* eighteen behave identically instead of quietly skipping this one.
   SLASH_CLAIMED_EARLIER = { ";" => "three_per_em_space" }.freeze
@@ -266,7 +266,7 @@ module LatexParserDataGenerator
     rows
   end
 
-  # `reverse_sort_hash` (`latex/constants.rb:242`) sorts by descending key
+  # `reverse_sort_hash` (`latex/constants.rb:239`) sorts by descending key
   # length so a longer token wins the ordered choice — `\lim` must not shadow
   # `\liminf`. If that ever stops holding, the emitted alternation is wrong in a
   # way no shape check would catch.
@@ -356,7 +356,7 @@ module LatexParserDataGenerator
   #
   # Plus two texts no grammar tag carries: `bar`, which `transform.rb:580`
   # substitutes for `overline`, and `left`/`right`, which
-  # `left_right_objects` (`latex/utility.rb:103`) passes as literals.
+  # `left_right_objects` (`latex/utility.rb:97`) passes as literals.
   def get_class_sources
     symbols = ->(kind) { constants::SYMBOLS.select { |_, k| k == kind }.keys.map(&:to_s) }
     sources = Hash.new { |hash, key| hash[key] = [] }
@@ -492,7 +492,7 @@ module LatexParserDataGenerator
   #
   # `Utility.parens_hash` memoizes into the class variable `@@parens`, keyed by
   # lang and NOT by `skipables`. The first caller for `:latex` is the GRAMMAR —
-  # `Constants.parenthesis` (`latex/constants.rb:214`) asks for
+  # `Constants.parenthesis` (`latex/constants.rb:213`) asks for
   # `parens_hash(:latex, skipables: ["lcurly"])` while `rule(:lparen)` is being
   # built — so by the time the transform's `symbols_class` reads
   # `all_symbols_classes(:latex)`, the cached parens half is the one WITHOUT
@@ -1078,7 +1078,7 @@ module LatexParserDataGenerator
         "LATEX_LEFT_RIGHT_PARENTHESIS", "ReadonlyMap<string, string>",
         data[:left_right_parenthesis],
         doc: "`Constants::LEFT_RIGHT_PARENTHESIS` (`:181`): delimiter token ->\n" \
-             "HTML entity, the table `left_right_objects` (`latex/utility.rb:101`)\n" \
+             "HTML entity, the table `left_right_objects` (`latex/utility.rb:97`)\n" \
              "converts a `\\\\left`/`\\\\right` delimiter through.\n" \
              "\n" \
              "The KEYS are also the grammar's `left_parens` and `right_parens`\n" \
@@ -1099,7 +1099,7 @@ module LatexParserDataGenerator
       ts_string_list(
         "LATEX_PAREN_SYMBOL_IDS", data[:paren_symbols],
         "Every `Math::Symbols::Paren` descendant's id — the `is_a?(Paren)` test\n" \
-        "`organize_table` (`latex/utility.rb:15`) uses to turn a column-spec\n" \
+        "`organize_table` (`latex/utility.rb:10`) uses to turn a column-spec\n" \
         "entry into the string `\"|\"`.",
       ),
       ts_string_list(
@@ -1142,94 +1142,10 @@ module LatexParserDataGenerator
     CoreDataGenerator.write_ts(File.join(out_root, "transform-tables.ts"), sections)
   end
 
-  def emit_provenance_file(out_root, provenance)
-    sections = [
-      CoreDataGenerator.ts_doc(<<~TEXT.chomp),
-        GENERATED FILE — do not edit, regenerate.
-
-        Emitted by #{GENERATOR_PATH} from the Plurimath Ruby gem, the oracle
-        (ARCHITECTURE.md §1).
-
-        What every file under `#{OUT_REL}/` was generated from.
-
-        Separate from the core, formatting and corpus provenance files because a
-        separate generator wrote it: the LaTeX format module owns its own parser
-        tables (§3 rules 1 and 3), and each generator records its own inputs (§7).
-
-        `generator` names the script that was run; `generatorInputs` hashes every
-        Ruby file whose bytes can change the tables, keyed by its
-        repository-relative path — that script, plus the two generators it
-        borrows emission, git and hashing helpers from. Hashing only the entry
-        point would let a change to a shared file move a table while the
-        recorded hash stayed identical.
-
-        Otherwise deliberately path-free: dirty file lists would churn on every
-        unrelated edit.
-      TEXT
-      [
-        "export interface LatexParserGeneratedProvenance {",
-        *provenance.map do |key, value|
-          "  readonly #{key}: #{CoreDataGenerator.provenance_type(value)};"
-        end,
-        "}",
-      ].join("\n"),
-      [
-        CoreDataGenerator.ts_doc(
-          "`committable: false` marks output generated from a dirty checkout —\n" \
-          "useful while iterating, never to be committed (§7).",
-        ),
-        "export const LATEX_PARSER_GENERATED_PROVENANCE: LatexParserGeneratedProvenance = {",
-        *provenance.flat_map { |key, value| CoreDataGenerator.provenance_entry(key, value) },
-        "};",
-      ].join("\n"),
-    ]
-    CoreDataGenerator.write_ts(File.join(out_root, "provenance.ts"), sections)
-  end
-
   # --- driver --------------------------------------------------------------
-
-  def parse_options(argv)
-    options = { gem: nil, out: File.join(REPO_ROOT, OUT_REL), allow_dirty: false }
-    until argv.empty?
-      case (arg = argv.shift)
-      when "--gem" then options[:gem] = File.expand_path(argv.shift.to_s)
-      when "--out" then options[:out] = File.expand_path(argv.shift.to_s)
-      when "--allow-dirty" then options[:allow_dirty] = true
-      when "--help", "-h" then options[:help] = true
-      else raise Error, "unknown option #{arg.inspect}"
-      end
-    end
-    options
-  end
-
-  def usage
-    File.readlines(File.join(REPO_ROOT, GENERATOR_PATH))
-      .drop(2).take_while { |line| line.start_with?("#") }
-      .map { |line| line.sub(/\A# ?/, "") }.join
-  end
 
   def relative(path)
     File.expand_path(path).delete_prefix("#{REPO_ROOT}/")
-  end
-
-  def check_checkouts!(gem_dir, out_root, allow_dirty)
-    unless CorpusGenerator.git_repository?(gem_dir)
-      raise Error, "#{gem_dir} is not a git checkout; the oracle must be one (§7)"
-    end
-
-    gem_dirty = CorpusGenerator.dirty_paths(gem_dir)
-    repo_dirty = CorpusGenerator.dirty_paths(REPO_ROOT, except: [relative(out_root)])
-
-    if !allow_dirty && !(gem_dirty.empty? && repo_dirty.empty?)
-      raise Error, <<~MESSAGE
-        Refusing to generate from a dirty checkout (ARCHITECTURE.md §7).
-          gem       #{gem_dir}: #{gem_dirty.empty? ? 'clean' : gem_dirty.join(', ')}
-          generator #{REPO_ROOT}: #{repo_dirty.empty? ? 'clean' : repo_dirty.join(', ')}
-        Commit or stash, or pass --allow-dirty to produce non-committable output.
-      MESSAGE
-    end
-
-    { "gem" => gem_dirty, "generator" => repo_dirty }
   end
 
   # Sorted by path, so adding an input cannot reorder the emitted file.
@@ -1240,22 +1156,6 @@ module LatexParserDataGenerator
 
       [path, CorpusGenerator.sha256(File.binread(absolute))]
     end
-  end
-
-  def build_provenance(gem_dir, dirty, allow_dirty)
-    gem_spec = Gem.loaded_specs.fetch("plurimath")
-    {
-      "generator" => GENERATOR_PATH,
-      "generatorInputs" => generator_input_hashes,
-      "oracle" => "plurimath",
-      "oracleVersion" => gem_spec.version.to_s,
-      "oracleCommit" => CorpusGenerator.git(gem_dir, "rev-parse", "HEAD").strip,
-      "oracleClean" => dirty["gem"].empty?,
-      "generatorClean" => dirty["generator"].empty?,
-      "rubyEngine" => RUBY_ENGINE,
-      "rubyVersion" => RUBY_VERSION,
-      "committable" => dirty["gem"].empty? && dirty["generator"].empty? && !allow_dirty,
-    }
   end
 
   # Everything `emit_transform_tables_file` needs, measured in one place.
@@ -1295,9 +1195,9 @@ module LatexParserDataGenerator
   end
 
   def run(argv)
-    options = parse_options(argv)
+    options = CoreDataGenerator.parse_options(argv, out_default: File.join(REPO_ROOT, OUT_REL))
     if options[:help]
-      puts usage
+      puts CoreDataGenerator.usage(GENERATOR_PATH)
       return 0
     end
 
@@ -1310,19 +1210,47 @@ module LatexParserDataGenerator
         recorded provenance describes the code that actually ran.
       MESSAGE
     end
-    dirty = check_checkouts!(gem_dir, options[:out], options[:allow_dirty])
+    dirty = CoreDataGenerator.check_checkouts!(gem_dir, options[:out], options[:allow_dirty])
 
     tables = literal_tables
     rows = symbol_constant_rows
     collisions = collision_texts(rows)
     markers = decimal_marker_rows
     transform = transform_data(gem_dir)
-    provenance = build_provenance(gem_dir, dirty, options[:allow_dirty])
+    provenance = CoreDataGenerator.build_provenance(
+      GENERATOR_PATH, generator_input_hashes, gem_dir, dirty, options[:allow_dirty],
+    )
 
     written = [
       emit_tables_file(options[:out], tables, rows, collisions, markers),
       emit_transform_tables_file(options[:out], transform),
-      emit_provenance_file(options[:out], provenance),
+      CoreDataGenerator.emit_provenance_file(
+        options[:out], provenance,
+        header_section: CoreDataGenerator.ts_doc(<<~TEXT.chomp),
+          GENERATED FILE — do not edit, regenerate.
+
+          Emitted by #{GENERATOR_PATH} from the Plurimath Ruby gem, the oracle
+          (ARCHITECTURE.md §1).
+
+          What every file under `#{OUT_REL}/` was generated from.
+
+          Separate from the core, formatting and corpus provenance files because a
+          separate generator wrote it: the LaTeX format module owns its own parser
+          tables (§3 rules 1 and 3), and each generator records its own inputs (§7).
+
+          `generator` names the script that was run; `generatorInputs` hashes every
+          Ruby file whose bytes can change the tables, keyed by its
+          repository-relative path — that script, plus the two generators it
+          borrows emission, git and hashing helpers from. Hashing only the entry
+          point would let a change to a shared file move a table while the
+          recorded hash stayed identical.
+
+          Otherwise deliberately path-free: dirty file lists would churn on every
+          unrelated edit.
+        TEXT
+        interface_name: "LatexParserGeneratedProvenance",
+        const_name: "LATEX_PARSER_GENERATED_PROVENANCE",
+      ),
     ]
     written.sort.each { |path| puts "  #{relative(path)}" }
     puts tables.map { |name, texts| "#{name} #{texts.length}" }.join(", ")

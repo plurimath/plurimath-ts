@@ -1105,96 +1105,10 @@ module UnicodeMathParserDataGenerator
     CoreDataGenerator.write_ts(File.join(out_root, "transform-tables.ts"), sections)
   end
 
-  def emit_provenance_file(out_root, provenance)
-    sections = [
-      CoreDataGenerator.ts_doc(<<~TEXT.chomp),
-        GENERATED FILE — do not edit, regenerate.
-
-        Emitted by #{GENERATOR_PATH} from the Plurimath Ruby gem, the oracle
-        (ARCHITECTURE.md §1).
-
-        What every file under `#{OUT_REL}/` was generated from.
-
-        Separate from the core, formatting, corpus and LaTeX provenance files
-        because a separate generator wrote it: the UnicodeMath format module owns
-        its own parser tables (§3 rules 1 and 3), and each generator records its
-        own inputs (§7).
-
-        `generator` names the script that was run; `generatorInputs` hashes every
-        Ruby file whose bytes can change the tables, keyed by its
-        repository-relative path — that script, plus the two generators it
-        borrows emission, git and hashing helpers from. Hashing only the entry
-        point would let a change to a shared file move a table while the
-        recorded hash stayed identical.
-
-        Otherwise deliberately path-free: dirty file lists would churn on every
-        unrelated edit.
-      TEXT
-      [
-        "export interface UnicodemathParserGeneratedProvenance {",
-        *provenance.map do |key, value|
-          "  readonly #{key}: #{CoreDataGenerator.provenance_type(value)};"
-        end,
-        "}",
-      ].join("\n"),
-      [
-        CoreDataGenerator.ts_doc(
-          "`committable: false` marks output generated from a dirty checkout —\n" \
-          "useful while iterating, never to be committed (§7).",
-        ),
-        "export const UNICODEMATH_PARSER_GENERATED_PROVENANCE: " \
-        "UnicodemathParserGeneratedProvenance = {",
-        *provenance.flat_map { |key, value| CoreDataGenerator.provenance_entry(key, value) },
-        "};",
-      ].join("\n"),
-    ]
-    CoreDataGenerator.write_ts(File.join(out_root, "provenance.ts"), sections)
-  end
-
   # --- driver --------------------------------------------------------------
-
-  def parse_options(argv)
-    options = { gem: nil, out: File.join(REPO_ROOT, OUT_REL), allow_dirty: false }
-    until argv.empty?
-      case (arg = argv.shift)
-      when "--gem" then options[:gem] = File.expand_path(argv.shift.to_s)
-      when "--out" then options[:out] = File.expand_path(argv.shift.to_s)
-      when "--allow-dirty" then options[:allow_dirty] = true
-      when "--help", "-h" then options[:help] = true
-      else raise Error, "unknown option #{arg.inspect}"
-      end
-    end
-    options
-  end
-
-  def usage
-    File.readlines(File.join(REPO_ROOT, GENERATOR_PATH))
-      .drop(2).take_while { |line| line.start_with?("#") }
-      .map { |line| line.sub(/\A# ?/, "") }.join
-  end
 
   def relative(path)
     File.expand_path(path).delete_prefix("#{REPO_ROOT}/")
-  end
-
-  def check_checkouts!(gem_dir, out_root, allow_dirty)
-    unless CorpusGenerator.git_repository?(gem_dir)
-      raise Error, "#{gem_dir} is not a git checkout; the oracle must be one (§7)"
-    end
-
-    gem_dirty = CorpusGenerator.dirty_paths(gem_dir)
-    repo_dirty = CorpusGenerator.dirty_paths(REPO_ROOT, except: [relative(out_root)])
-
-    if !allow_dirty && !(gem_dirty.empty? && repo_dirty.empty?)
-      raise Error, <<~MESSAGE
-        Refusing to generate from a dirty checkout (ARCHITECTURE.md §7).
-          gem       #{gem_dir}: #{gem_dirty.empty? ? 'clean' : gem_dirty.join(', ')}
-          generator #{REPO_ROOT}: #{repo_dirty.empty? ? 'clean' : repo_dirty.join(', ')}
-        Commit or stash, or pass --allow-dirty to produce non-committable output.
-      MESSAGE
-    end
-
-    { "gem" => gem_dirty, "generator" => repo_dirty }
   end
 
   # Sorted by path, so adding an input cannot reorder the emitted file.
@@ -1207,26 +1121,10 @@ module UnicodeMathParserDataGenerator
     end
   end
 
-  def build_provenance(gem_dir, dirty, allow_dirty)
-    gem_spec = Gem.loaded_specs.fetch("plurimath")
-    {
-      "generator" => GENERATOR_PATH,
-      "generatorInputs" => generator_input_hashes,
-      "oracle" => "plurimath",
-      "oracleVersion" => gem_spec.version.to_s,
-      "oracleCommit" => CorpusGenerator.git(gem_dir, "rev-parse", "HEAD").strip,
-      "oracleClean" => dirty["gem"].empty?,
-      "generatorClean" => dirty["generator"].empty?,
-      "rubyEngine" => RUBY_ENGINE,
-      "rubyVersion" => RUBY_VERSION,
-      "committable" => dirty["gem"].empty? && dirty["generator"].empty? && !allow_dirty,
-    }
-  end
-
   def run(argv)
-    options = parse_options(argv)
+    options = CoreDataGenerator.parse_options(argv, out_default: File.join(REPO_ROOT, OUT_REL))
     if options[:help]
-      puts usage
+      puts CoreDataGenerator.usage(GENERATOR_PATH)
       return 0
     end
 
@@ -1239,7 +1137,7 @@ module UnicodeMathParserDataGenerator
         recorded provenance describes the code that actually ran.
       MESSAGE
     end
-    dirty = check_checkouts!(gem_dir, options[:out], options[:allow_dirty])
+    dirty = CoreDataGenerator.check_checkouts!(gem_dir, options[:out], options[:allow_dirty])
 
     assert_no_mixed_key_classes!
     assert_constant_inventory!
@@ -1248,12 +1146,41 @@ module UnicodeMathParserDataGenerator
     duplicates = duplicate_report(tables)
     markers = decimal_marker_rows
     transform = transform_data(gem_dir)
-    provenance = build_provenance(gem_dir, dirty, options[:allow_dirty])
+    provenance = CoreDataGenerator.build_provenance(
+      GENERATOR_PATH, generator_input_hashes, gem_dir, dirty, options[:allow_dirty],
+    )
 
     written = [
       emit_tables_file(options[:out], tables, fonts, duplicates, markers),
       emit_transform_tables_file(options[:out], transform),
-      emit_provenance_file(options[:out], provenance),
+      CoreDataGenerator.emit_provenance_file(
+        options[:out], provenance,
+        header_section: CoreDataGenerator.ts_doc(<<~TEXT.chomp),
+          GENERATED FILE — do not edit, regenerate.
+
+          Emitted by #{GENERATOR_PATH} from the Plurimath Ruby gem, the oracle
+          (ARCHITECTURE.md §1).
+
+          What every file under `#{OUT_REL}/` was generated from.
+
+          Separate from the core, formatting, corpus and LaTeX provenance files
+          because a separate generator wrote it: the UnicodeMath format module owns
+          its own parser tables (§3 rules 1 and 3), and each generator records its
+          own inputs (§7).
+
+          `generator` names the script that was run; `generatorInputs` hashes every
+          Ruby file whose bytes can change the tables, keyed by its
+          repository-relative path — that script, plus the two generators it
+          borrows emission, git and hashing helpers from. Hashing only the entry
+          point would let a change to a shared file move a table while the
+          recorded hash stayed identical.
+
+          Otherwise deliberately path-free: dirty file lists would churn on every
+          unrelated edit.
+        TEXT
+        interface_name: "UnicodemathParserGeneratedProvenance",
+        const_name: "UNICODEMATH_PARSER_GENERATED_PROVENANCE",
+      ),
     ]
     written.sort.each { |path| puts "  #{relative(path)}" }
     puts "#{tables.length} tables, #{tables.values.sum(&:length)} entries verified by parse"

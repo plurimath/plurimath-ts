@@ -287,6 +287,59 @@ describe("the comparator reports what it used to hide", () => {
   });
 });
 
+describe("the differential runner's gem half respects the configured Ruby command", () => {
+  /**
+   * `differential_gem_results` used to hardcode `["bundle", "exec", "ruby",
+   * ...]`, bypassing the `--ruby-command` / `PLURIMATH_RUBY_COMMAND` resolver
+   * that `repo --check` and `testsuite --check` already used. A machine that
+   * needs a wrapper in front of its Ruby got a working `repo`/`testsuite` and
+   * a `differential` that still failed outright.
+   *
+   * Stubs `capture_bounded`, the seam `differential_gem_results` calls,
+   * mirroring `gate-oracle-generator-command.spec.ts`'s stub of
+   * `capture_command` for the same resolver.
+   */
+  function withStubbedBounded(call: string): { ok: boolean; output: string } {
+    return inOracle(`
+      begin
+        calls = []
+        OracleGate.define_singleton_method(:capture_bounded) do |env, *command, stdin_data:, chdir:, label:|
+          calls << command
+          status = Class.new { def success? = true; def exitstatus = 0 }.new
+          ["<<<JSON>>>[]", "", status]
+        end
+        run_result = begin
+          { "returned" => (${call}) }
+        rescue => e
+          { "raised" => "#{e.class}: #{e.message}" }
+        end
+        run_result.merge("calls" => calls)
+      end
+    `);
+  }
+
+  it("defaults to bundle exec ruby and names no version manager", () => {
+    const r = withStubbedBounded('OracleGate.differential_gem_results([], "/gem")');
+    expect(r.ok).toBe(true);
+    expect(r.output).toContain('["bundle", "exec", "ruby", "-Ilib", "-e"');
+    expect(r.output).not.toContain("mise");
+  });
+
+  it("runs whatever PLURIMATH_RUBY_COMMAND says, and only that", () => {
+    const r = withStubbedBounded(
+      `ENV["PLURIMATH_RUBY_COMMAND"] = "mise x -- bundle exec ruby"
+       begin
+         OracleGate.differential_gem_results([], "/gem")
+       ensure
+         ENV.delete("PLURIMATH_RUBY_COMMAND")
+       end`,
+    );
+    expect(r.ok).toBe(true);
+    expect(r.output).toContain('["mise", "x", "--", "bundle", "exec", "ruby", "-Ilib", "-e"');
+    expect(r.output).not.toContain('["bundle", "exec", "ruby", "-Ilib", "-e"');
+  });
+});
+
 describe("the timeout bounds the whole exchange, not just the wait", () => {
   /**
    * The first version of this timeout joined the process thread with a

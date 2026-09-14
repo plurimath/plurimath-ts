@@ -211,6 +211,7 @@
 import type { FormulaNode, MathNode, NodeKind, NodeOptions } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS } from "../../core/normalize";
+import { rubyToI } from "../../core/ruby-semantics";
 import {
   UNICODEMATH_ACCENT_SYMBOLS,
   UNICODEMATH_HEXCODE_IN_INPUT,
@@ -1102,7 +1103,15 @@ function identityMatrix(size: number): UnicodemathDraft[] {
  */
 function matrixSymbol(value: unknown): string {
   const text = rubyToS(value);
-  return MATRIXS_INVERTED.get(text) ?? text;
+  const inverted = MATRIXS_INVERTED.get(text);
+  if (inverted !== undefined) return inverted;
+  if (UNICODEMATH_MATRIXS_KEYS.includes(text)) return text;
+  // `Constants::MATRIXS.key(matrixs) || matrixs.to_sym` never lands here in
+  // Ruby: `getTableClass` below feeds this symbol straight into
+  // `Object.const_get`, which raises `NameError` for anything that is not one
+  // of the eight `MATRIXS` keys. The port has no `const_get` to raise for it,
+  // so the refusal moves here instead of being silently accepted.
+  throw new Error(`unicodemath transform: "${text}" is not a known matrix symbol`);
 }
 
 /**
@@ -1494,7 +1503,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     buildMatrixTable(b.matrixs, [b.array]),
   );
   rule("1691", { matrixs: simple("matrixs"), identity_matrix_number: simple("number") }, (b) =>
-    buildMatrixTable(b.matrixs, identityMatrix(Number(rubyToS(b.number)))),
+    buildMatrixTable(b.matrixs, identityMatrix(rubyToI(rubyToS(b.number)))),
   );
 
   rule("1806", { expr: simple("expr"), func_expr: simple("func_expr") }, (b) => [

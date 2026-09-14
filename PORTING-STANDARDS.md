@@ -82,6 +82,62 @@ unsorted emitter, cache docs naming atoms that do not exist. Before done:
 diff every claim you wrote against the code that supposedly backs it. A
 description of an invariant either has an enforcement or says it is aspiration.
 
+## Error messages name the JS problem, not the Ruby cause
+
+This is a JS library for JS users. A thrown message that reads `NoMethodError`
+or `the gem raises X here` asks the reader to know Ruby to understand their
+own error. The comment above the throw is the right place for the Ruby
+behaviour it mirrors — the reader debugging their input never sees the
+comment, only the message.
+
+- **The rule, going forward:** a new user-facing error message describes the
+  JS-observable problem — what value, what shape, what was expected — never
+  a Ruby class name, a Ruby method name, or "the gem". The code comment above
+  the throw may still say what Ruby does there (`NoMethodError`, `NameError`,
+  the exact method) — that's porting-parity documentation this repo relies
+  on (`Measure, never read`, above), and it costs the reader nothing because
+  it isn't in the string that reaches them.
+- **Applies to new code only.** The existing 154 Ruby-naming messages across
+  62 files are a deliberate, deferred rewrite — not something this rule asks
+  anyone to touch mid-port. Don't fix one in passing; record it in
+  `TODO.plan/deferred.md` if it's in a file you're already changing for
+  another reason, and leave the string alone otherwise.
+
+Before/after, from messages already in `src/`:
+
+```
+// before — src/render/fenced/unicodemath.ts
+throw new RenderError(`${at}: the gem raises ${gemError} here`, FORMAT, "fenced");
+// called as: crash("fenced.parameterTwo", "NoMethodError on nil")
+// => "fenced.parameterTwo: the gem raises NoMethodError on nil here"
+
+// after
+throw new RenderError(`${at}: parameterTwo is required here, not nil`, FORMAT, "fenced");
+```
+
+```
+// before — src/render/fenced/unicodemath.ts
+throw crash("fenced.parameterTwo", "NoMethodError on a non-array");
+
+// after
+throw crash("fenced.parameterTwo", "expected an array of contents, got a non-array value");
+```
+(`crash`'s signature stays; only the second argument's wording changes — it
+stops naming a Ruby exception and starts naming the JS-observable shape.)
+
+```
+// before — src/formats/unicodemath/transform.ts
+throw new TypeError("unicodemath transform: #value on a node that has none (NoMethodError)");
+
+// after
+throw new TypeError("unicodemath transform: this node has no value to read");
+```
+
+In each case the comment above the throw (already present in these files)
+keeps citing the gem's exact behaviour — `NoMethodError: undefined method
+'first' for nil`, the Ruby line number, the measured input/output pair. That
+stays. Only the string handed to `new Error`/`RenderError`/`TypeError` changes.
+
 ## Generated data discipline
 
 - Data derived from the gem is generated, never hand-typed — 20 entries drift

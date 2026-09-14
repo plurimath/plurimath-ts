@@ -4351,7 +4351,7 @@ export const LATEX_MATRICES_PARENTHESIS: ReadonlyMap<string, string> = new Map([
 
 /**
  * `Constants::LEFT_RIGHT_PARENTHESIS` (`:181`): delimiter token ->
- * HTML entity, the table `left_right_objects` (`latex/utility.rb:101`)
+ * HTML entity, the table `left_right_objects` (`latex/utility.rb:97`)
  * converts a `\\left`/`\\right` delimiter through.
  *
  * The KEYS are also the grammar's `left_parens` and `right_parens`
@@ -4413,7 +4413,7 @@ export const LATEX_NARY_SYMBOL_IDS: readonly string[] = [
 
 /**
  * Every `Math::Symbols::Paren` descendant's id — the `is_a?(Paren)` test
- * `organize_table` (`latex/utility.rb:15`) uses to turn a column-spec
+ * `organize_table` (`latex/utility.rb:10`) uses to turn a column-spec
  * entry into the string `"|"`.
  */
 export const LATEX_PAREN_SYMBOL_IDS: readonly string[] = [

@@ -631,9 +631,16 @@ module UnicodeMathParserDataGenerator
   # reaching through a table, mapped to the ids the port carries. `Lround` and
   # `Rround` are the pair `Utility.valid_paren?` (`utility.rb:270-279`) tests
   # for, which is what decides whether `unfenced_value` unwraps a `Fenced`.
+  # `Norm`/`Lcurly`/`Rcurly` are the three the TABLE family's `:Vmatrix`/
+  # `:Bmatrix` branches (`transform.rb:1649`-`:1710`) construct directly —
+  # `Plurimath::Math::Symbols::Paren::Norm.new`/`Lcurly.new`/`Rcurly.new` —
+  # rather than resolving through `Utility.symbols_class`.
   NAMED_SYMBOL_CLASSES = {
     "lround" => "Plurimath::Math::Symbols::Paren::Lround",
     "rround" => "Plurimath::Math::Symbols::Paren::Rround",
+    "norm" => "Plurimath::Math::Symbols::Paren::Norm",
+    "lcurly" => "Plurimath::Math::Symbols::Paren::Lcurly",
+    "rcurly" => "Plurimath::Math::Symbols::Paren::Rcurly",
   }.freeze
 
   def named_symbol_rows

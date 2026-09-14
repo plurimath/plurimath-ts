@@ -18,8 +18,7 @@
  * unused. Every row moved; none had to stay behind.
  *
  * Refusals are pinned as first-class outcomes: a row with `raises` must fail
- * here too, and a row with a `model` must not — except the rows whose rule
- * family this slice defers, which are listed below and must fail LOUDLY.
+ * here too, and a row with a `model` must not.
  */
 
 import { readFileSync } from "node:fs";
@@ -53,12 +52,18 @@ interface Fixtures {
 const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf8")) as Fixtures;
 
 /**
- * The two CORPUS inputs whose rules this slice defers.
+ * The CORPUS inputs whose rules this slice still defers.
  *
- * `transform.rb`'s table/matrix family — the eight rules `:8`, `:9`, `:14`,
- * `:32`, `:1569`, `:1574`, `:1584` and `:1649` — is the one family the corpus
- * reaches that the port leaves out, and these are exactly the inputs that reach
- * it (measured on the oracle: no other corpus string fires any of the eight).
+ * `transform.rb`'s table/matrix family — measured at eighteen rules, not the
+ * seventeen a prior survey counted (see `transform.ts`'s module header) —
+ * used to be part of this list; `"⒨(a@b)"`, `"ⓢ(a&b@c&d)"` and four other
+ * table/matrix-only corpus inputs below reached it (measured on the oracle: no
+ * other corpus string fires any of the eighteen). The TABLE increment ported
+ * the family, so those six rows have moved out of `DEFERRED_INPUTS` and now
+ * compare for real below, in `supported`, the same as every other corpus row.
+ * Three more — `"✎(blue&y + z)"`, `"√(3&8)"`, `"√(n&x)"` — carry a `&` too but
+ * measured on the oracle they route through `color`/`root`, not table, and
+ * stay in this list.
  *
  * They are listed here rather than dropped from the fixture set, because the
  * fixture set is the ORACLE's answer and stays complete. What is asserted is
@@ -71,20 +76,14 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  *
  * The list grew from two to twenty-six when the corpus pin advanced to
  * `281d7003` (PR #84), which added cases reaching four families this port has
- * not started. Measured on that pin: of the corpus's UnicodeMath rows, exactly
- * these twenty-six raise `ParseError` and NONE parses to a different model —
- * there is no silent divergence hiding behind this list.
+ * not started, then shrank by the six table/matrix-only rows the TABLE
+ * increment above ported.
  */
 const DEFERRED_INPUTS: readonly string[] = [
-  // TABLE and matrix (`transform.rb:8`, `:9`, `:14`, `:32`, `:1569`, `:1574`,
-  // `:1584`, `:1649`, `:1670`, `:1691`). `&` separates cells and `@` rows, so
-  // every input carrying either reaches the family.
-  "⒨(a@b)",
-  "ⓢ(a&b@c&d)",
-  "⒱(a&b@c&d)",
-  "ⓢ(a)",
-  "Ⓢ(a)",
-  "■(a&b)",
+  // COLOR and ROOT: each of these three also carries a `&`, but measured on
+  // the oracle (the `ParseError` message names the unmatched key) they route
+  // through `{color=...}`/`{root=...}`, not the table family the TABLE
+  // increment ported.
   "✎(blue&y + z)",
   "√(3&8)",
   "√(n&x)",
@@ -124,6 +123,13 @@ const DEFERRED_INPUTS: readonly string[] = [
 
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");
 const boundary = fixtures.cases.filter((entry) => entry.group === "slice-boundary");
+// Every row that is neither the corpus nor a boundary case: the RULE_COVERAGE
+// groups the generator adds, one per ported family. This started as an
+// afterthought and became the majority path — the corpus can no longer reach
+// the rules being ported, so each new family arrives with its own group here.
+const coverage = fixtures.cases.filter(
+  (entry) => entry.group !== "corpus-unicodemath" && entry.group !== "slice-boundary",
+);
 const parsed = fixtures.cases.filter((entry) => entry.model !== undefined);
 const raised = fixtures.cases.filter((entry) => entry.raises !== undefined);
 const deferred = corpus.filter(
@@ -132,6 +138,13 @@ const deferred = corpus.filter(
 const supported = corpus.filter(
   (entry) => entry.model !== undefined && !DEFERRED_INPUTS.includes(entry.input),
 );
+// The corpus does not reach the rules a slice has just ported -- that is why
+// each family arrives with a coverage group -- so `supported` above, drawn from
+// `corpus` alone, compares the model of nothing this slice added. Measured: with
+// only that comparison, changing a newly ported fraction rule's options to
+// `displaystyle: true` still passed every test in this file. The firing counts
+// and the preprocessing checks do not see a wrong VALUE.
+const coverageSupported = coverage.filter((entry) => entry.model !== undefined);
 
 function parseFixture(entry: FixtureCase): unknown {
   return parseUnicodemath(entry.input);
@@ -151,7 +164,13 @@ describe("the UnicodeMath fixture set", () => {
     expect(raised.length).toBe(fixtures.raisedCount);
     expect(parsed.length + raised.length).toBe(fixtures.caseCount);
     expect(corpus.length).toBe(fixtures.corpusUnicodemathCount);
-    expect(corpus.length + boundary.length).toBe(fixtures.caseCount);
+    // Not `corpus + boundary`: that held only while those were the only two
+    // groups, and silently became false the moment a coverage group arrived.
+    expect(corpus.length + boundary.length + coverage.length).toBe(fixtures.caseCount);
+    // And the coverage rows have to BE there. A regeneration that dropped every
+    // one of them would keep the sum above consistent while quietly removing
+    // the only inputs that reach the newly ported rules.
+    expect(coverage.length).toBeGreaterThan(0);
   });
 
   // The crutch this slice removed. Every row carries the `Parser#text` the gem
@@ -173,7 +192,7 @@ describe("the UnicodeMath fixture set", () => {
     expect(boundary.every((entry) => entry.model !== undefined)).toBe(true);
   });
 
-  it("defers exactly the two corpus inputs the table/matrix family serves", () => {
+  it("defers exactly the corpus inputs the still-unported families serve", () => {
     expect(deferred.length).toBe(DEFERRED_INPUTS.length);
     const corpusParsed = corpus.filter((entry) => entry.model !== undefined).length;
     expect(supported.length).toBe(corpusParsed - DEFERRED_INPUTS.length);
@@ -183,6 +202,19 @@ describe("the UnicodeMath fixture set", () => {
 
 describe("the parsed model", () => {
   it.each(supported.map((entry) => [entry.input, entry] as const))(
+    "%j: deep-equals the gem's",
+    (_input, entry) => {
+      expect(normalize(parseFixture(entry) as never)).toStrictEqual(entry.model);
+    },
+  );
+});
+
+describe("the parsed model, for the hand-picked coverage inputs", () => {
+  it("has rows to compare at all", () => {
+    expect(coverageSupported.length).toBeGreaterThan(0);
+  });
+
+  it.each(coverageSupported.map((entry) => [entry.input, entry] as const))(
     "%j: deep-equals the gem's",
     (_input, entry) => {
       expect(normalize(parseFixture(entry) as never)).toStrictEqual(entry.model);
@@ -205,10 +237,10 @@ describe("the rule families this slice defers", () => {
 });
 
 /**
- * The slice EDGE, as opposed to the deferred family above.
+ * The slice EDGE: inputs the corpus reaches that fire an unported rule.
  *
  * Each of these fires one `transform.rb` rule the port does not carry — `:99`,
- * `:766`, `:746`, `:1791` — and the gem answers each with a perfectly ordinary
+ * `:765`, `:745`, `:1791` — and the gem answers each with a perfectly ordinary
  * model, recorded in the fixture row beside it. The port must REFUSE rather
  * than answer differently, and two of the four are here because it did not:
  *

@@ -929,15 +929,77 @@ module OracleGate
   # generators cannot then load — or refuse one they could. It is the
   # generators' own directory, so the probe answers the question that was
   # asked.
+  #
+  # The arguments are named as a constant, not retyped in
+  # `frozen_bundle_probe_display` below, so the message a failure produces can
+  # quote the exact probe that ran.
+  FROZEN_BUNDLE_PROBE_ARGS = ["-e", ""].freeze
+
+  # The resolved probe command as something a reader can paste back into a
+  # shell: whatever `ruby_command` resolves to right now -- the default
+  # `bundle exec ruby`, or `--ruby-command` / #{RUBY_COMMAND_ENV} if either
+  # changed it -- followed by the probe's own arguments.
+  #
+  # `join(" ")` will not do: the last argument is the EMPTY string -- the
+  # program `-e` is given -- and joining renders it as nothing at all, so the
+  # message said `ruby -e ` with a trailing space. Anyone copying that line runs
+  # a different command from the one that failed: `-e` then swallows whatever
+  # follows, or errors for want of an argument. `Shellwords.escape` leaves the
+  # ordinary words untouched and turns the empty one into `''`.
+  def frozen_bundle_probe_display
+    (ruby_command(nil) + FROZEN_BUNDLE_PROBE_ARGS).map { |argument| Shellwords.escape(argument) }.join(" ")
+  end
+
   def assert_frozen_bundle_usable!(gem_dir, chdir:)
-    _stdout, stderr, status = capture_generator_command(["-e", ""], chdir: chdir, gem_dir: gem_dir)
+    _stdout, stderr, status = capture_generator_command(FROZEN_BUNDLE_PROBE_ARGS, chdir: chdir, gem_dir: gem_dir)
     return if status.success?
 
-    raise Error, frozen_bundle_error(gem_dir, stderr)
+    raise Error, frozen_bundle_error(gem_dir, stderr, status)
   end
 
   def frozen_generator_env(gem_dir)
     { "BUNDLE_FROZEN" => "true", "BUNDLE_GEMFILE" => File.join(gem_dir, "Gemfile") }
+  end
+
+  # Text that only reaches stderr because Bundler itself put it there.
+  # Established against the Bundler that ships with this repo's pinned Ruby
+  # (4.0.1), by triggering each failure directly rather than reading the
+  # source alone:
+  #
+  #   - "Bundler::" — an error `bundle exec` cannot catch reaches Ruby's
+  #     default uncaught-exception rendering, which prints the class name in
+  #     parentheses (`... (Bundler::ProductionError)`), and every error this
+  #     probe can hit for a frozen-mode mismatch is a `Bundler::BundlerError`
+  #     subclass (bundler/errors.rb). Reproduced directly: a Gemfile whose
+  #     lockfile has no entry for the current platform raises exactly
+  #     `Bundler::ProductionError` through `bundle exec ruby -e ""`.
+  #   - "Could not find gem" — the literal phrase Bundler raises when a
+  #     locked gem cannot be resolved, from four independent call sites
+  #     (bundler/resolver.rb, bundler/resolver/base.rb, bundler/cli/common.rb,
+  #     bundler/cli/outdated.rb) and reproduced directly by locking a Gemfile
+  #     against a gem that does not exist.
+  #   - "Your bundle is locked to" — the literal phrase Bundler raises when a
+  #     locked gem is no longer available from its source
+  #     (bundler/definition.rb).
+  #   - "Frozen mode is set" — the literal phrase Bundler raises when the
+  #     Gemfile and lockfile disagree under `BUNDLE_FROZEN=true`
+  #     (bundler/definition.rb, `ensure_equivalent_gemfile_and_lockfile`) —
+  #     the most likely failure for this probe specifically, since it always
+  #     sets that flag.
+  #
+  # None of these describe an ordinary Ruby, version-manager, or shell
+  # failure — an invalid `RUBYOPT`, a missing interpreter, a wrapper
+  # misconfiguration — which this same probe can also produce and which have
+  # nothing to do with the bundle.
+  BUNDLER_STDERR_SIGNATURES = [
+    "Bundler::",
+    "Could not find gem",
+    "Your bundle is locked to",
+    "Frozen mode is set",
+  ].freeze
+
+  def bundler_shaped_failure?(stderr)
+    BUNDLER_STDERR_SIGNATURES.any? { |signature| stderr.include?(signature) }
   end
 
   # Runs the configured Ruby command, which defaults to `bundle exec ruby` and
@@ -993,19 +1055,34 @@ module OracleGate
   end
 
   # Split from the probe so the message can be tested without a bundle.
-  def frozen_bundle_error(gem_dir, stderr)
+  #
+  # Only the two early returns below say the stderr came from Bundler, and
+  # only once its text backs that up: `empty CHECKSUMS entry` is the exact
+  # phrase `bundle install` writes for an unfetched checksum, and
+  # `bundler_shaped_failure?` matches text Bundler is actually known to emit
+  # (above). Everything else is reported the way `run_generator!` reports a
+  # generator failure below — command, exit status, stderr — without
+  # attributing the stderr to Bundler, because at that point it hasn't been
+  # shown to be Bundler's.
+  def frozen_bundle_error(gem_dir, stderr, status)
     remedy =
       if stderr.include?("empty CHECKSUMS entry")
         "Run `bundle lock --add-checksums` in #{gem_dir} to fill the lockfile's " \
           "CHECKSUMS section, then re-run this check."
-      else
+      elsif bundler_shaped_failure?(stderr)
         "Run `bundle install` in #{gem_dir}, then re-run this check."
       end
 
-    <<~MESSAGE
+    return <<~MESSAGE if remedy
       the oracle checkout at #{gem_dir} has no usable frozen bundle.
       #{remedy}
       bundler said:
+      #{indent_block(stderr)}
+    MESSAGE
+
+    <<~MESSAGE
+      the frozen-bundle preflight (`#{frozen_bundle_probe_display}`) in #{gem_dir} failed with exit #{status.exitstatus}.
+      stderr:
       #{indent_block(stderr)}
     MESSAGE
   end

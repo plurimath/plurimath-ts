@@ -926,6 +926,257 @@ describe("degenerate value slots the gem spells reproducibly", () => {
   });
 });
 
+describe("a list in a value slot the gem inspects", () => {
+  // `Number#to_latex` (`number.rb:36`) hands its raw value to
+  // `Formatter::Numbers::TextRenderer.render`, which answers `result.to_s`
+  // for anything that is not a `FormattedNumber` (`text_renderer.rb:25`) —
+  // and `Array#to_s` IS `Array#inspect`. So a list in this slot RENDERS in
+  // the gem, and refusing it made the port answer LESS than its
+  // specification, which is its own kind of divergence.
+  //
+  // Every pin below was measured on the pinned oracle 00c52783 (plurimath
+  // 0.11.6, ruby 4.0.1) through `Number.new(<list>).to_latex(options: {})`
+  // — probe1.rb, probe2.rb and probe4.rb, 2026-09-09. The ELEMENT shapes
+  // decide, not the length: an empty list is not a special case, and a
+  // non-empty one is not automatically unreproducible.
+  const number = (value: unknown) => ({ kind: "number", value }) as never;
+
+  it("renders the element shapes the oracle spells reproducibly", () => {
+    //   []                 => "[]"
+    //   [nil]              => "[nil]"
+    //   [true, false]      => "[true, false]"   (comma AND space)
+    //   [[]]               => "[[]]"
+    //   [[[nil]]]          => "[[[nil]]]"
+    //   [nil, [true, "a"]] => "[nil, [true, \"a\"]]"
+    expect(toLatex(number([]))).toBe("[]");
+    expect(toLatex(number([null]))).toBe("[nil]");
+    expect(toLatex(number([true, false]))).toBe("[true, false]");
+    expect(toLatex(number([[]]))).toBe("[[]]");
+    expect(toLatex(number([[[null]]]))).toBe("[[[nil]]]");
+    expect(toLatex(number([null, [true, "a"]]))).toBe('[nil, [true, "a"]]');
+  });
+
+  it("renders a list-valued number nested in a formula join", () => {
+    // Formula([Number([]), Symbol("x")]).to_latex(options: {}) => "[] x".
+    // The join is where a dropped operand would be observable as a missing
+    // one rather than a wrong one — the shape the unicodemath site had.
+    expect(
+      toLatex({
+        kind: "formula",
+        value: [number([]), { kind: "symbol", value: "x" }],
+      } as never),
+    ).toBe("[] x");
+  });
+
+  it("spells a string element with Ruby's String#inspect, not JavaScript's", () => {
+    //   ["x"]        => "[\"x\"]"        [""]         => "[\"\"]"
+    //   ["a\nb"]     => "[\"a\\nb\"]"    ["a\tb"]     => "[\"a\\tb\"]"
+    //   ["a\"b"]     => "[\"a\\\"b\"]"   ["a\\b"]     => "[\"a\\\\b\"]"
+    //   ["a\u0007b"] => "[\"a\\ab\"]"    ["a\u001Bb"] => "[\"a\\eb\"]"
+    //   ["a\u000Bb"] => "[\"a\\vb\"]"    ["a\u0008b"] => "[\"a\\bb\"]"
+    expect(toLatex(number(["x"]))).toBe('["x"]');
+    expect(toLatex(number([""]))).toBe('[""]');
+    expect(toLatex(number(["a\nb"]))).toBe('["a\\nb"]');
+    expect(toLatex(number(["a\tb"]))).toBe('["a\\tb"]');
+    expect(toLatex(number(['a"b']))).toBe('["a\\"b"]');
+    expect(toLatex(number(["a\\b"]))).toBe('["a\\\\b"]');
+    expect(toLatex(number(["a\u0007b"]))).toBe('["a\\ab"]');
+    expect(toLatex(number(["a\bb"]))).toBe('["a\\bb"]');
+    expect(toLatex(number(["a\vb"]))).toBe('["a\\vb"]');
+    expect(toLatex(number(["a\fb"]))).toBe('["a\\fb"]');
+    expect(toLatex(number(["a\rb"]))).toBe('["a\\rb"]');
+    expect(toLatex(number(["a\u001Bb"]))).toBe('["a\\eb"]');
+  });
+
+  it("escapes an unnamed control with FOUR UPPERCASE hex digits", () => {
+    //   ["a\u0000b"] => "[\"a\\u0000b\"]"   ["a\u001Ab"] => "[\"a\\u001Ab\"]"
+    //   ["a\u007Fb"] => "[\"a\\u007Fb\"]"   ["a\u009Fb"] => "[\"a\\u009Fb\"]"
+    // `JSON.stringify` gets only one of these four right, which is why this
+    // is a rule and not that function. Measured: it escapes U+001A, but as
+    // \u001a in LOWERCASE hex, and it leaves U+007F and U+009F unescaped
+    // altogether — so of the two middle rows it escapes one, in the wrong
+    // case, and passes the other through raw. It agrees on U+0000 only
+    // because that body has no letters for the case to show up in.
+    expect(toLatex(number(["a\u0000b"]))).toBe('["a\\u0000b"]');
+    expect(toLatex(number(["a\u001Ab"]))).toBe('["a\\u001Ab"]');
+    expect(toLatex(number(["a\u007Fb"]))).toBe('["a\\u007Fb"]');
+    expect(toLatex(number(["a\u009Fb"]))).toBe('["a\\u009Fb"]');
+  });
+
+  it("escapes `#` only where Ruby would have read an interpolation", () => {
+    //   ["a#b"]   => "[\"a#b\"]"      ["a#{b}"] => "[\"a\\#{b}\"]"
+    //   ["a#$g"]  => "[\"a\\#$g\"]"   ["a#@i"]  => "[\"a\\#@i\"]"
+    //   ["a#"]    => "[\"a#\"]"       ["a#["]   => "[\"a#[\"]"
+    expect(toLatex(number(["a#b"]))).toBe('["a#b"]');
+    expect(toLatex(number(["a#{b}"]))).toBe('["a\\#{b}"]');
+    expect(toLatex(number(["a#$g"]))).toBe('["a\\#$g"]');
+    expect(toLatex(number(["a#@i"]))).toBe('["a\\#@i"]');
+    expect(toLatex(number(["a#"]))).toBe('["a#"]');
+    expect(toLatex(number(["a#["]))).toBe('["a#["]');
+  });
+
+  it("passes U+00A0 through U+0377 verbatim, and refuses from U+0378 up", () => {
+    // The C1 block ends the escaped run: U+009F => "\\u009F", but U+00A0 is
+    // the no-break space ITSELF and every codepoint up to U+0377 is its own
+    // character. U+0378 is the first that is not (=> "\\u0378").
+    expect(toLatex(number(["a\u00A0b"]))).toBe('["a\u00A0b"]');
+    expect(toLatex(number(["é"]))).toBe('["é"]');
+    expect(toLatex(number(["\u0100"]))).toBe('["\u0100"]');
+    expect(toLatex(number(["\u0377"]))).toBe('["\u0377"]');
+    expect(() => toLatex(number(["\u0378"]))).toThrow(RenderError);
+    // π (U+03C0) and 😀 (U+1F600) DO inspect verbatim in the gem. They are
+    // refused because this port carries no printability table, NOT because
+    // Ruby escapes them — so the message must say that and not the other.
+    expect(() => toLatex(number(["π"]))).toThrow(/printability/);
+    expect(() => toLatex(number(["😀"]))).toThrow(RenderError);
+  });
+
+  it("refuses an integral number element, which has two Ruby preimages", () => {
+    // [5] => "[5]" and [5.0] => "[5.0]": one JS number, two Ruby values that
+    // inspect differently, so there is no single answer to match.
+    expect(() => toLatex(number([5]))).toThrow(/the integral number 5 has two Ruby preimages/);
+    expect(() => toLatex(number([0]))).toThrow(RenderError);
+    // 1e21 is integral in JavaScript, so it is refused as ambiguous — and
+    // that is the right answer twice over: the gem's Float spells it
+    // "1.0e+21", which `String` never produces either.
+    expect(() => toLatex(number([1e21]))).toThrow(RenderError);
+  });
+
+  it("a BigInt — the one unambiguous Integer — is refused by the shape grammar", () => {
+    // A BigInt would settle the ambiguity above, and the renderer carries no
+    // arm for one because `assertSlot` (`src/core/validate.ts`) rejects a
+    // bigint in any node slot first. Pinned so that widening the grammar
+    // fails HERE and prompts a measured arm, rather than silently producing
+    // whatever the fallthrough says.
+    expect(() => toLatex(number([5n]))).toThrow(/a node slot cannot hold a bigint/);
+    // Same door, same reason: an explicit `undefined` list entry, which would
+    // otherwise inspect as "nil".
+    expect(() => toLatex(number([undefined]))).toThrow(/a node slot cannot hold undefined/);
+  });
+
+  it("admits the non-integral floats whose spelling both languages agree on", () => {
+    // [1.5] => "[1.5]", [0.1] => "[0.1]", [1e-4] => "[0.0001]",
+    // [-0.0] => "[-0.0]" (Ruby has no Integer negative zero, so a JS -0 has
+    // exactly one preimage), [Float::INFINITY] => "[Infinity]",
+    // [-Float::INFINITY] => "[-Infinity]", [Float::NAN] => "[NaN]".
+    // Outside Ruby's plain band the two CAN disagree: [1.5e-5] is "[1.5e-05]"
+    // in Ruby where JavaScript spells "0.000015". Not always, though —
+    // measured, [1202471614443916.8] is spelled identically by both and is
+    // refused anyway, because Ruby picks its format by more than magnitude
+    // and the band is therefore drawn conservatively.
+    expect(toLatex(number([1.5]))).toBe("[1.5]");
+    expect(toLatex(number([0.1]))).toBe("[0.1]");
+    expect(toLatex(number([1e-4]))).toBe("[0.0001]");
+    expect(toLatex(number([-0]))).toBe("[-0.0]");
+    expect(toLatex(number([Number.POSITIVE_INFINITY]))).toBe("[Infinity]");
+    expect(toLatex(number([Number.NEGATIVE_INFINITY]))).toBe("[-Infinity]");
+    expect(toLatex(number([Number.NaN]))).toBe("[NaN]");
+    expect(() => toLatex(number([1.5e-5]))).toThrow(RenderError);
+  });
+
+  it("refuses an object element, whose inspect carries a heap address", () => {
+    // [Object.new]  => "[#<Object:0x000071bfcee272f0>]" — nondeterministic.
+    // [{}]          => "[{}]"
+    // [{a: 1}]      => "[{a: 1}]"      [{"a" => 1}] => "[{\"a\" => 1}]"
+    // A JS object cannot say which Ruby class it stands for, and for a Hash
+    // it cannot say whether a key was the Symbol :a or the String "a".
+    expect(() => toLatex(number([{}]))).toThrow(RenderError);
+    expect(() => toLatex(number([{ a: 1 }]))).toThrow(RenderError);
+    expect(() => toLatex(number([{ kind: "number", value: "5" }]))).toThrow(RenderError);
+  });
+
+  it("names the element that could not be reproduced, by index", () => {
+    // A refusal that does not say WHICH element is one a caller cannot act
+    // on; the path is the slot plus the index chain.
+    expect(() => toLatex(number([null, [true, 5]]))).toThrow(/number\.value\[1\]\[1\]/);
+  });
+
+  it("reads INDEXED elements, so an overridden iterator cannot invent any", () => {
+    // The shape validator checks INDEXED elements. An inspect walk that asked
+    // the input for an iterator instead would disagree with what was
+    // validated, and a hand-built array can make the two disagree on purpose:
+    // this one validates as EMPTY and rendered `["ghost", "ghost"]`, one per
+    // yield of the generator below — bytes no Ruby
+    // value produced. Ruby ignores an overridden enumeration method during
+    // `inspect`, so `[].inspect` is `"[]"` however the object is decorated.
+    // One traversal has to decide both, and it is the indexed one.
+    const ghost = (seed: readonly unknown[] = []): unknown[] => {
+      const list: unknown[] = [...seed];
+      Object.defineProperty(list, "entries", {
+        value: function* entries() {
+          yield [0, "ghost"];
+          yield [1, "ghost"];
+        },
+      });
+      return list;
+    };
+    expect(toLatex(number(ghost()))).toBe("[]");
+    expect(toLatex(number([ghost()]))).toBe("[[]]");
+    expect(toLatex(number(ghost([null])))).toBe("[nil]");
+    expect(
+      toLatex({
+        kind: "color",
+        parameterOne: { kind: "number", value: ghost() },
+        parameterTwo: { kind: "symbol", value: "x" },
+      } as never),
+    ).toBe("{\\color{[]} x}");
+  });
+
+  it("color's number branch inspects the same list, then strips ASCII whitespace", () => {
+    // `Color#to_latex` (`color.rb:41`) sends the first slot `to_asciimath`
+    // and `gsub(/\s/, "")`s the answer. `Number#to_asciimath` rides the same
+    // TextRenderer, so the list inspects and THEN loses its spaces:
+    //   Color(Number([]),         Symbol("x")) => "{\\color{[]} x}"
+    //   Color(Number([nil, nil]), Symbol("x")) => "{\\color{[nil,nil]} x}"
+    //   Color(Number(["a b"]),    Symbol("x")) => "{\\color{[\"ab\"]} x}"
+    //   Color(Number([" "]),      Symbol("x")) => "{\\color{[\"\"]} x}"
+    // A `\n` inside the inspected string survives, because inspect already
+    // turned it into the two characters `\` and `n`:
+    //   Color(Number(["\n"]),     Symbol("x")) => "{\\color{[\"\\n\"]} x}"
+    const color = (value: unknown) =>
+      ({
+        kind: "color",
+        parameterOne: { kind: "number", value },
+        parameterTwo: { kind: "symbol", value: "x" },
+      }) as never;
+    expect(toLatex(color([]))).toBe("{\\color{[]} x}");
+    expect(toLatex(color([null, null]))).toBe("{\\color{[nil,nil]} x}");
+    expect(toLatex(color(["a b"]))).toBe('{\\color{["ab"]} x}');
+    expect(toLatex(color([" "]))).toBe('{\\color{[""]} x}');
+    expect(toLatex(color(["\n"]))).toBe('{\\color{["\\n"]} x}');
+    expect(toLatex(color([true, false]))).toBe("{\\color{[true,false]} x}");
+  });
+
+  it("color refuses the shapes the number site refuses, at its OWN path", () => {
+    // The admission set is the same because the ride is the same
+    // TextRenderer — but the refusal has to name Color's slot, not Number's.
+    const color = (value: unknown) =>
+      ({
+        kind: "color",
+        parameterOne: { kind: "number", value },
+        parameterTwo: { kind: "symbol", value: "x" },
+      }) as never;
+    expect(() => toLatex(color([5]))).toThrow(/color\.parameterOne/);
+    expect(() => toLatex(color([{}]))).toThrow(RenderError);
+    expect(() => toLatex(color(["π"]))).toThrow(RenderError);
+  });
+
+  it("color still refuses a BARE list in its first slot, which the gem crashes on", () => {
+    // Measured: Color([], Symbol("x")).to_latex(options: {}) raises
+    // NoMethodError (undefined method 'to_asciimath' for an instance of
+    // Array), and so does Color([Symbol("a")], …). Only a NODE whose
+    // to_asciimath ANSWERS a list-inspect renders, which is why the
+    // admission belongs to the number branch and not to the slot.
+    expect(() =>
+      toLatex({
+        kind: "color",
+        parameterOne: [],
+        parameterTwo: { kind: "symbol", value: "x" },
+      } as never),
+    ).toThrow(RenderError);
+  });
+});
+
 describe("degenerate value slots the gem's LATEX path crashes on", () => {
   // The per-site half of the admission ruling: the same shapes Number and
   // Symbol admit above CRASH on the gem's latex-only read paths, so this

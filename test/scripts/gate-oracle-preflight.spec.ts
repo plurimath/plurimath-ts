@@ -173,6 +173,13 @@ describe("the preflight runs before any generator does", () => {
 // went on passing while no longer checking the part that had been wrong.
 const FROZEN_BUNDLE_PROBE_COMMAND = "bundle exec ruby -e ''";
 
+// The pasteable command also needs to carry the env vars and directory the
+// real probe ran with -- BUNDLE_FROZEN, BUNDLE_GEMFILE, and a `cd` into
+// `chdir` -- since pasting only the argv can silently run against the wrong
+// bundle or directory. `frozenBundleError` below always uses "/oracle/checkout"
+// as gem_dir and "/tmp" as chdir.
+const FROZEN_BUNDLE_PROBE_CONTEXT = `BUNDLE_FROZEN=true BUNDLE_GEMFILE=/oracle/checkout/Gemfile (cd /tmp && ${FROZEN_BUNDLE_PROBE_COMMAND})`;
+
 const EMPTY_CHECKSUMS_STDERR =
   'Your lockfile has an empty CHECKSUMS entry for "rake", but cannot be updated ' +
   "because frozen mode is set (Bundler::ProductionError)";
@@ -192,11 +199,15 @@ const BUNDLER_GEM_NOT_FOUND_STDERR =
 const INVALID_RUBYOPT_STDERR =
   "ruby: invalid option --definitely-invalid-option  (-h will show valid options) (RuntimeError)";
 
-function frozenBundleError(stderr: string, exitstatus = 1): string {
+function frozenBundleError(
+  stderr: string,
+  exitstatus: number | null = 1,
+  termsig: number | null = null,
+): string {
   const r = inOracle(`
     begin
-      status = Struct.new(:exitstatus).new(${exitstatus})
-      OracleGate.frozen_bundle_error("/oracle/checkout", ${JSON.stringify(stderr)}, status)
+      status = Struct.new(:exitstatus, :termsig).new(${exitstatus === null ? "nil" : exitstatus}, ${termsig === null ? "nil" : termsig})
+      OracleGate.frozen_bundle_error("/oracle/checkout", "/tmp", ${JSON.stringify(stderr)}, status)
     end
   `);
   expect(r.ok).toBe(true);
@@ -232,6 +243,14 @@ describe("the frozen-bundle error names a remedy only where the evidence support
     expect(message).not.toMatch(/ruby -e `/);
   });
 
+  it("includes the env vars and directory a paste needs to actually reproduce the failure", () => {
+    // The argv alone omits BUNDLE_FROZEN/BUNDLE_GEMFILE and the chdir the real
+    // probe ran with, so a paste could silently run against the wrong bundle
+    // or directory and report a different result than the one that failed.
+    const message = frozenBundleError(INVALID_RUBYOPT_STDERR);
+    expect(message).toContain(FROZEN_BUNDLE_PROBE_CONTEXT);
+  });
+
   it("blames the bundle rather than the generator that had not run yet", () => {
     const message = frozenBundleError(EMPTY_CHECKSUMS_STDERR);
     expect(message).toContain("no usable frozen bundle");
@@ -253,5 +272,40 @@ describe("the frozen-bundle error names a remedy only where the evidence support
     expect(message).toContain("failed with exit 1");
     expect(message).toContain(FROZEN_BUNDLE_PROBE_COMMAND);
     expect(message).toContain(INVALID_RUBYOPT_STDERR);
+  });
+
+  /**
+   * `Process::Status#exitstatus` is nil for a process killed by a signal
+   * (e.g. the probe getting SIGTERMed), so interpolating it directly renders
+   * "...failed with exit ." -- a dangling period, no number. The message
+   * should name the signal instead.
+   */
+  it("names the signal rather than a blank exit code when the probe died by signal", () => {
+    const message = frozenBundleError(INVALID_RUBYOPT_STDERR, null, 15);
+    expect(message).toContain("failed with terminated by signal 15");
+    expect(message).not.toContain("failed with exit .");
+    expect(message).not.toMatch(/exit\s*\./);
+  });
+
+  /**
+   * The substantive fix: a `BUNDLER_STDERR_SIGNATURES` phrase appearing in
+   * stderr is not evidence Bundler ran -- a custom `--ruby-command` wrapper
+   * could produce that text itself while never invoking `bundle` at all. Only
+   * a probe whose resolved command actually names `bundle` earns the
+   * "bundler said:" framing and its remedy.
+   */
+  it("does not attribute a bundler-shaped stderr to bundler when the command never invoked it", () => {
+    const r = inOracle(`
+      begin
+        OracleGate.define_singleton_method(:ruby_command) { |_override = nil| ["/opt/wrapper/ruby"] }
+        status = Struct.new(:exitstatus, :termsig).new(1, nil)
+        OracleGate.frozen_bundle_error("/oracle/checkout", "/tmp", ${JSON.stringify(BUNDLER_GEM_NOT_FOUND_STDERR)}, status)
+      end
+    `);
+    expect(r.ok).toBe(true);
+    expect(r.output).not.toContain("bundle install");
+    expect(r.output).not.toContain("bundler said");
+    expect(r.output).not.toContain("no usable frozen bundle");
+    expect(r.output).toContain(BUNDLER_GEM_NOT_FOUND_STDERR);
   });
 });

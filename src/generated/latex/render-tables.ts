@@ -119,34 +119,6 @@ export const LATEX_FONT_STYLE_COMMANDS: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
- * The full `FontStyle` subclass basename set, sorted — the eight
- * `LATEX_FONT_STYLE_COMMANDS` names plus the six that render
- * their value alone, reusing that table's verification rather
- * than repeating it. The AsciiMath transform builds only bare
- * font styles, so unlike the asciimath font-style carrier's set
- * this one is not derivable from the transform registry. The
- * names this carrier has measured behaviour for — a defined name
- * outside this set raises before dispatch (`unreachableName`,
- * `src/render/font-style/latex.ts`).
- */
-export const LATEX_FONT_STYLE_NAMES: readonly string[] = [
-  "Bold",
-  "BoldFraktur",
-  "BoldItalic",
-  "BoldSansSerif",
-  "BoldScript",
-  "DoubleStruck",
-  "Fraktur",
-  "Italic",
-  "Monospace",
-  "Normal",
-  "SansSerif",
-  "SansSerifBoldItalic",
-  "SansSerifItalic",
-  "Script",
-];
-
-/**
  * Symbol id -> the environment a named table's open paren selects
  * (`matrix_class`: `MATRICES.invert[open_paren.to_matrices]`),
  * measured through a `Table::Matrix` render per paren, sorted by
@@ -243,12 +215,26 @@ export const LATEX_UNARY_CARRIER_NAMES: readonly string[] = [
 export const LATEX_BINARY_CARRIER_NAMES: readonly string[] = ["Lim", "Log", "Root", "Stackrel"];
 
 /**
- * `Formula`'s aliased children (`corpus/census.yaml`), sorted —
- * the AsciiMath transform never constructs a formula subclass, so
- * this is measured directly off the census, each verified live by
- * a `to_latex` render that does not raise. The names this
- * carrier has measured behaviour for — a defined name outside
- * this set raises before dispatch (`unreachableName`,
- * `src/render/formula/latex.ts`).
+ * Every `Table` subclass basename the gem defines, sorted — the
+ * same measurement the asciimath render-tables slice makes,
+ * re-taken here rather than shared (ARCHITECTURE.md §3, the
+ * generated-data closure). Neither the AsciiMath transform (bare
+ * tables only) nor a `get_class` census row supplies this list,
+ * so it is measured directly off the class hierarchy, each
+ * verified live by a render that reaches some dispatch arm
+ * without raising. The names this carrier has measured behaviour
+ * for — a defined name outside this set raises before dispatch
+ * (`unreachableName`, `src/render/table/latex.ts`).
  */
-export const LATEX_FORMULA_NAMES: readonly string[] = ["Mstyle"];
+export const LATEX_TABLE_NAMES: readonly string[] = [
+  "Align",
+  "Array",
+  "Bmatrix",
+  "Cases",
+  "Eqarray",
+  "Matrix",
+  "Multline",
+  "Pmatrix",
+  "Split",
+  "Vmatrix",
+];

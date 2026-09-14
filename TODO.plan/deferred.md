@@ -120,24 +120,33 @@ the adversarial-inputs gate pins.
 **Trigger: the next generator extension touching table data, or any gem
 bump.**
 
-`MEASURED_TABLE_NAMES` in `src/render/table/asciimath.ts` and
-`src/render/table/latex.ts` hand-list the ten Table subclass basenames
-because no generated slice carries them — the AsciiMath transform builds
-only bare tables, so the census never emits a table-subclass list. Every
-entry was enumeration-probed complete against the gem (2026-08-07 asciimath,
-2026-08-10 latex, probe-latex-name-guards.rb), and every entry is held by an
-existing behavioural pin, so a dropped or drifted name turns a test red.
-Still: it is gem-derived data typed by hand, so it carries this exception
-entry until the generator owns it.
+**`MEASURED_TABLE_NAMES` is resolved (2026-09-14):** the trigger fired with
+the `MATHML_TABLE_PARENS` generator extension, and both
+`src/render/table/asciimath.ts` and `src/render/table/latex.ts` now import
+`ASCIIMATH_TABLE_NAMES` / `LATEX_TABLE_NAMES` from their generated
+`render-tables.ts` slices instead of hand-listing the ten Table subclass
+basenames. `scripts/generate-corpus.rb` measures the census directly off
+the class hierarchy (`all_descendants` on `Table`, the same primitive
+`MATHML_TABLE_NAME_FAMILIES` already used), since the AsciiMath transform
+still builds only bare tables and no `get_class` census row carries a
+table-subclass list. The generated set is byte-identical to the
+hand-typed one it replaced.
 
-`MEASURED_FORMULA_NAMES` (all three formats) and, on the latex side, the
-full `MEASURED_FONT_STYLE_NAMES` set are no longer part of this exception:
+**`MEASURED_FORMULA_NAMES` (all three formats) and, on the latex side, the
+full `MEASURED_FONT_STYLE_NAMES` set are also resolved:**
 `asciimath_formula_subclass_names`/`latex_formula_subclass_names`/
 `mathml_formula_subclass_names` and `latex_font_style_names` in
 `scripts/generate-corpus.rb` now measure them off `corpus/census.yaml`'s
 aliased `Formula` children and the live `FontStyle` class hierarchy, each
 re-verified by a format-specific render, and emit `ASCIIMATH_FORMULA_NAMES`,
 `LATEX_FORMULA_NAMES`, `MATHML_FORMULA_NAMES` and `LATEX_FONT_STYLE_NAMES`.
+
+Every one of these three sets was enumeration-probed complete against the
+gem (2026-08-07 asciimath, 2026-08-10 latex, probe-latex-name-guards.rb)
+before the generator took it over, and every entry is held by an existing
+behavioural pin, so a dropped or drifted name still turns a test red. With
+all three resolved, nothing gem-derived in this area remains hand-typed —
+this exception entry now only documents how each set came to be measured.
 
 `MEASURED_UNARY_NAMES` in all four `src/render/unary-function/*.ts` adds two
 names to its generated census projection the same way: `Tr`, which the

@@ -2226,12 +2226,53 @@ module CorpusGenerator
     names
   end
 
+  # The census of Table subclass basenames itself — every subclass the gem
+  # defines, distinct from `SIMPLE_TABLES` above (which names only the
+  # parentheless subset). Neither the AsciiMath transform (which builds only
+  # bare tables) nor a `get_class` census row supplies this list
+  # (TODO.plan/deferred.md, "The carrier name-guard sets are partly
+  # hand-listed"), so it is measured directly off the class hierarchy: every
+  # `Table` descendant's basename, PascalCase as `node.name` carries it (NOT
+  # the lowercased `class_name` `simple_table_names` above reads — that
+  # string is `SIMPLE_TABLES` membership data, a different gem table),
+  # sorted. Each is verified live by an asciimath render that reaches SOME
+  # dispatch arm without raising —
+  # `Matrix`'s own override or the base table's inherited one — so a name
+  # this census would emit but the renderer cannot yet reach stops
+  # generation instead of shipping a guard list the port's dispatch cannot
+  # back up.
+  def asciimath_table_subclass_names
+    table_root = Plurimath::Math::Function::Table
+    descendants = all_descendants(table_root).uniq
+    raise Error, "Table has no subclasses; the model did not load" if descendants.empty?
+
+    names = descendants.map { |klass| class_key(klass).split("::").last }
+    duplicates = names.tally.select { |_, count| count > 1 }.keys
+    unless duplicates.empty?
+      raise Error, "Table subclasses repeat basename #{duplicates.join(', ')}"
+    end
+
+    descendants.each do |klass|
+      begin
+        klass.new([render_probe_row]).to_asciimath(options: {})
+      rescue StandardError => e
+        raise Error, "#{class_key(klass)} raised #{e.class} (#{e.message}) " \
+                     "rendering to_asciimath with a bare row and no parens; " \
+                     "every Table subclass must render before this census can " \
+                     "guard node.name against it"
+      end
+    end
+
+    names.sort
+  end
+
   def build_render_tables(census)
     {
       "font_keywords" => font_style_render_keywords,
       "table_close" => table_close_fallback_pairs,
       "simple_tables" => simple_table_names,
       "formula_names" => asciimath_formula_subclass_names(census),
+      "table_names" => asciimath_table_subclass_names,
     }
   end
 
@@ -3084,6 +3125,42 @@ module CorpusGenerator
     pairs
   end
 
+  # The census of Table subclass basenames itself, latex-side — the same
+  # measurement `asciimath_table_subclass_names` makes, re-taken here rather
+  # than shared because per-format slices are self-contained by design
+  # (ARCHITECTURE.md §3, the generated-data closure): every `Table`
+  # descendant's basename, PascalCase as `node.name` carries it (NOT the
+  # lowercased `class_name` string, which is `SIMPLE_TABLES` membership
+  # data, a different gem table), sorted, each verified live by a latex
+  # render that reaches some dispatch arm without raising. Neither the
+  # AsciiMath transform (bare tables only) nor a `get_class` census row
+  # supplies this list (TODO.plan/deferred.md, "The carrier name-guard sets
+  # are partly hand-listed").
+  def latex_table_subclass_names
+    table_root = Plurimath::Math::Function::Table
+    descendants = all_descendants(table_root).uniq
+    raise Error, "Table has no subclasses; the model did not load" if descendants.empty?
+
+    names = descendants.map { |klass| class_key(klass).split("::").last }
+    duplicates = names.tally.select { |_, count| count > 1 }.keys
+    unless duplicates.empty?
+      raise Error, "Table subclasses repeat basename #{duplicates.join(', ')}"
+    end
+
+    descendants.each do |klass|
+      begin
+        klass.new([latex_render_probe_row]).to_latex(options: {})
+      rescue StandardError => e
+        raise Error, "#{class_key(klass)} raised #{e.class} (#{e.message}) " \
+                     "rendering to_latex with a bare row and no parens; every " \
+                     "Table subclass must render before this census can guard " \
+                     "node.name against it"
+      end
+    end
+
+    names.sort
+  end
+
   # The ids the corpus and sweep put in a `Color` first slot — a policy list,
   # deliberately minimal (TODO.plan/deferred.md, "Color renders only the
   # measured AsciiMath fragment"): the renderer refuses any other id loudly
@@ -3179,6 +3256,7 @@ module CorpusGenerator
       "binary_carrier_names" =>
         latex_carrier_basenames(registry, "Math::Function::BinaryFunction"),
       "formula_names" => latex_formula_subclass_names(census),
+      "table_names" => latex_table_subclass_names,
     }
   end
 
@@ -4462,6 +4540,20 @@ module CorpusGenerator
              "this set raises before dispatch (`unreachableName`,\n" \
              "`src/render/formula/asciimath.ts`).",
       ),
+      ts_const(
+        "ASCIIMATH_TABLE_NAMES",
+        "readonly string[]",
+        tables["table_names"],
+        doc: "Every `Table` subclass basename the gem defines, sorted —\n" \
+             "distinct from `ASCIIMATH_SIMPLE_TABLE_NAMES` above, which names\n" \
+             "only the parentheless subset. Neither the AsciiMath transform\n" \
+             "(bare tables only) nor a `get_class` census row supplies this\n" \
+             "list, so it is measured directly off the class hierarchy, each\n" \
+             "verified live by a render that reaches some dispatch arm\n" \
+             "without raising. The names this carrier has measured behaviour\n" \
+             "for — a defined name outside this set raises before dispatch\n" \
+             "(`unreachableName`, `src/render/table/asciimath.ts`).",
+      ),
     ]
 
     write_ts(File.join(out_root, INPUT_FORMAT, "render-tables.ts"), sections)
@@ -4846,6 +4938,21 @@ module CorpusGenerator
              "carrier has measured behaviour for — a defined name outside\n" \
              "this set raises before dispatch (`unreachableName`,\n" \
              "`src/render/formula/latex.ts`).",
+      ),
+      ts_const(
+        "LATEX_TABLE_NAMES",
+        "readonly string[]",
+        tables["table_names"],
+        doc: "Every `Table` subclass basename the gem defines, sorted — the\n" \
+             "same measurement the asciimath render-tables slice makes,\n" \
+             "re-taken here rather than shared (ARCHITECTURE.md §3, the\n" \
+             "generated-data closure). Neither the AsciiMath transform (bare\n" \
+             "tables only) nor a `get_class` census row supplies this list,\n" \
+             "so it is measured directly off the class hierarchy, each\n" \
+             "verified live by a render that reaches some dispatch arm\n" \
+             "without raising. The names this carrier has measured behaviour\n" \
+             "for — a defined name outside this set raises before dispatch\n" \
+             "(`unreachableName`, `src/render/table/latex.ts`).",
       ),
     ]
 

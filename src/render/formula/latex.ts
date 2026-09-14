@@ -15,22 +15,25 @@ import {
   s,
   unreachableName,
 } from "../../formats/latex/render-shared";
+import { LATEX_FORMULA_NAMES } from "../../generated/latex/render-tables";
 
 /**
- * The class names this carrier has measured behaviour for — the one class the
- * census folds onto `Formula` (`corpus/census.yaml`: `Mstyle`, disposition
- * `aliased`). The AsciiMath transform never constructs a formula subclass, so
- * like the table carrier's set this one is not derivable from the transform
- * registry; it is hand-listed, and pinned by a behavioural render in
- * `test/formats/latex/renderer.spec.ts` (probe-latex-name-guards.rb on the
- * pinned oracle, 2026-08-10: `Mstyle#to_latex`'s owner is `Math::Formula` —
- * no override — so it renders byte-identically to the bare carrier, and
- * Formula's subclass list is exactly `["Mstyle"]`). A defined name outside
- * the set raises rather than rendering the carrier default, because the
- * class it would denote has no measured render here
- * (`unreachableName` in `../../formats/latex/render-shared.ts`).
+ * The class names this carrier has measured behaviour for — the classes the
+ * census folds onto `Formula` (`corpus/census.yaml`: disposition `aliased`),
+ * generated (`LATEX_FORMULA_NAMES`, `src/generated/latex/render-tables.ts`;
+ * exactly `Mstyle`). The AsciiMath transform never constructs a formula
+ * subclass, so like the table carrier's set this one is not derivable from
+ * the transform registry; it is measured directly off the census, and
+ * pinned by a behavioural render in `test/formats/latex/renderer.spec.ts`
+ * (probe-latex-name-guards.rb on the pinned oracle, 2026-08-10:
+ * `Mstyle#to_latex`'s owner is `Math::Formula` — no override — so it renders
+ * byte-identically to the bare carrier, and Formula's subclass list is
+ * exactly `["Mstyle"]`). A defined name outside the set raises rather than
+ * rendering the carrier default, because the class it would denote has no
+ * measured render here (`unreachableName` in
+ * `../../formats/latex/render-shared.ts`).
  */
-const MEASURED_FORMULA_NAMES: ReadonlySet<string> = new Set(["Mstyle"]);
+const MEASURED_FORMULA_NAMES: ReadonlySet<string> = new Set(LATEX_FORMULA_NAMES);
 
 export function renderFormula(node: NodeOf<"formula">, context: RenderContext): string {
   if (node.name !== undefined && !MEASURED_FORMULA_NAMES.has(node.name))

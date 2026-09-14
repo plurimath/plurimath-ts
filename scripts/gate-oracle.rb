@@ -9,6 +9,7 @@
 require "fileutils"
 require "json"
 require "open3"
+require "shellwords"
 require "tmpdir"
 
 module OracleGate
@@ -19,6 +20,25 @@ module OracleGate
   SUBMODULE_RELATIVE_PATH = "submodules/plurimath-testsuite"
   SUBMODULE_ROOT = File.join(REPO_ROOT, SUBMODULE_RELATIVE_PATH)
   ORACLE_ENV = "PLURIMATH_ORACLE"
+
+  # How to reach a Ruby that can load the oracle's bundle.
+  #
+  # `bundle exec ruby` is the default because it is what every correctly set up
+  # Ruby answers to, however it was installed -- rbenv, asdf, rvm, chruby, the
+  # system one, or a version manager that puts its shims on PATH.
+  #
+  # It is an OPTION rather than a hardcoded chain because this gate cannot know
+  # what a given machine needs in front of it. Naming one version manager here
+  # -- which an earlier revision did, falling back to `mise x --` -- is the
+  # same assumption this gate exists to stop making, just moved one level down.
+  # A machine whose Ruby is reachable only through a wrapper passes its own:
+  #
+  #   --ruby-command "mise x -- bundle exec ruby"
+  #   PLURIMATH_RUBY_COMMAND="nix develop -c bundle exec ruby"
+  #
+  # Split with `Shellwords`, so quoting works the way a shell would.
+  RUBY_COMMAND_ENV = "PLURIMATH_RUBY_COMMAND"
+  DEFAULT_RUBY_COMMAND = %w[bundle exec ruby].freeze
 
   module_function
 
@@ -53,11 +73,37 @@ module OracleGate
     TEXT
   end
 
+  # The model-fixture generator names come from FORMAT_FIXTURE_GENERATORS
+  # rather than being spelled out here a second time. This text still named
+  # two of them on the day a third format was registered in that map, which
+  # is what a hand-kept duplicate of a list does; a derived one cannot.
+  def model_fixture_script_lines
+    family = FORMAT_FIXTURE_GENERATORS.find do |generator|
+      generator[:basename] == "model-fixtures.json"
+    end
+    unless family
+      raise Error, "no generator family emits model-fixtures.json, so this " \
+                   "help text cannot name the scripts that do."
+    end
+
+    # Joined with the indentation the surrounding heredoc has already had
+    # stripped from its own lines: `<<~` dedents the SOURCE lines, and an
+    # interpolated newline is inserted verbatim, so continuation lines carry
+    # their four spaces themselves.
+    family.fetch(:script).values.sort.map { |name| "scripts/#{name}" }.join(",\n    ")
+  end
+
   def repo_usage
     <<~TEXT
       Usage:
-        scripts/gate-oracle.rb repo --check [--gem PATH]
+        scripts/gate-oracle.rb repo --check [--gem PATH] [--ruby-command CMD]
         scripts/gate-oracle.rb repo --help
+
+      --ruby-command CMD  how to reach a Ruby that can load the oracle's
+                          bundle (default: #{DEFAULT_RUBY_COMMAND.join(" ")}).
+                          Also settable as #{RUBY_COMMAND_ENV}. Pass a wrapper
+                          when the Ruby is not on PATH by itself, for example
+                          "mise x -- bundle exec ruby".
 
       Regenerates, into temporary directories only:
         - corpus/ and src/generated/ via scripts/generate-corpus.rb
@@ -71,8 +117,8 @@ module OracleGate
           its sidecar via
           scripts/probe-degenerate-slots.rb
         - every committed test/formats/<format>/model-fixtures.json and its
-          sidecar via
-          scripts/generate-latex-model-fixtures.rb
+          sidecar via that format's own generator:
+          #{model_fixture_script_lines}
 
       It compares those regenerated outputs against a clean temporary snapshot
       of this repository's committed HEAD, never against live directories in
@@ -83,8 +129,14 @@ module OracleGate
   def testsuite_usage
     <<~TEXT
       Usage:
-        scripts/gate-oracle.rb testsuite --check [--gem PATH]
+        scripts/gate-oracle.rb testsuite --check [--gem PATH] [--ruby-command CMD]
         scripts/gate-oracle.rb testsuite --help
+
+      --ruby-command CMD  how to reach a Ruby that can load the oracle's
+                          bundle (default: #{DEFAULT_RUBY_COMMAND.join(" ")}).
+                          Also settable as #{RUBY_COMMAND_ENV}. Pass a wrapper
+                          when the Ruby is not on PATH by itself, for example
+                          "mise x -- bundle exec ruby".
 
       Regenerates the pinned plurimath-testsuite corpus with that repository's
       own scripts/generate-corpus.rb into a temporary directory and diffs it
@@ -113,11 +165,16 @@ module OracleGate
 
   def run_repo(argv)
     options = parse_check_options(argv, repo_usage)
+    # The flag and #{RUBY_COMMAND_ENV} are one knob. Setting the env from the
+    # flag keeps them exactly equivalent rather than threading an argument
+    # through every frame between here and `capture_generator_command`.
+    ENV[RUBY_COMMAND_ENV] = options[:ruby] if options[:ruby]
     gem_dir = resolve_gem_dir(options[:gem])
     require_submodule_snapshot_prerequisites!
 
     Dir.mktmpdir("plurimath-ts-oracle-") do |tmp|
       snapshot_root = build_clean_repo_snapshot!(tmp)
+      assert_frozen_bundle_usable!(gem_dir, chdir: snapshot_root)
       regenerated_root = File.join(tmp, "regenerated", "repo")
       FileUtils.mkdir_p(regenerated_root)
 
@@ -198,7 +255,8 @@ module OracleGate
 
   # The per-format fixture generators, and the committed file each one writes.
   #
-  # Both take `--oracle` rather than `--gem`; they load the pinned checkout
+  # These generators take `--oracle` rather than `--gem`; they load the pinned
+  # checkout
   # through $LOAD_PATH themselves instead of running under its Bundler alone.
   FORMAT_FIXTURE_GENERATORS = [
     {
@@ -219,16 +277,38 @@ module OracleGate
       end,
     },
     {
-      # The LaTeX parse fixtures. `--out` is the format DIRECTORY, and the
-      # script takes no `--format`: it emits one file, for the one format that
-      # has a transform to check.
+      # The parse fixtures. `--out` is the format DIRECTORY, and no script
+      # takes a `--format`: each emits one file, for its own format, and the
+      # three do not share a payload schema. So `script` is a MAP here, and a
+      # format with committed model fixtures and no entry stops the run
+      # rather than having its fixtures regenerated by another format's
+      # script -- which is what a single script name did the day the HTML
+      # fixtures landed.
       basename: "model-fixtures.json",
-      script: "generate-latex-model-fixtures.rb",
+      script: {
+        "html" => "generate-html-model-fixtures.rb",
+        "latex" => "generate-latex-model-fixtures.rb",
+        "unicodemath" => "generate-unicodemath-model-fixtures.rb",
+      }.freeze,
       arguments: lambda do |format, regenerated_root|
         ["--out", File.join(regenerated_root, "test", "formats", format)]
       end,
     },
   ].freeze
+
+  # The script one family runs for one format. A family names either one
+  # script for every format or a map from format to script; a format missing
+  # from the map stops the run.
+  def generator_script(generator, format)
+    script = generator[:script]
+    return script if script.is_a?(::String)
+
+    script.fetch(format) do
+      raise Error, "test/formats/#{format}/#{generator[:basename]} is committed " \
+                   "but no generator is registered for #{format}; it would be " \
+                   "regenerated by another format's script"
+    end
+  end
 
   # Regenerate every committed per-format fixture and return the file
   # comparisons for them.
@@ -257,7 +337,7 @@ module OracleGate
         end
         FileUtils.mkdir_p(File.join(regenerated_root, "test", "formats", format))
         run_generator!(
-          File.join(snapshot_root, "scripts", generator[:script]),
+          File.join(snapshot_root, "scripts", generator_script(generator, format)),
           ["--oracle", gem_dir, *generator[:arguments].call(format, regenerated_root)],
           chdir: snapshot_root,
           gem_dir: gem_dir,
@@ -284,12 +364,17 @@ module OracleGate
 
   def run_testsuite(argv)
     options = parse_check_options(argv, testsuite_usage)
+    # The flag and #{RUBY_COMMAND_ENV} are one knob. Setting the env from the
+    # flag keeps them exactly equivalent rather than threading an argument
+    # through every frame between here and `capture_generator_command`.
+    ENV[RUBY_COMMAND_ENV] = options[:ruby] if options[:ruby]
     gem_dir = resolve_gem_dir(options[:gem])
     require_submodule_snapshot_prerequisites!
 
     Dir.mktmpdir("plurimath-ts-oracle-") do |tmp|
       snapshot_root = build_clean_repo_snapshot!(tmp)
       testsuite_root = File.join(snapshot_root, SUBMODULE_RELATIVE_PATH)
+      assert_frozen_bundle_usable!(gem_dir, chdir: testsuite_root)
       regenerated_root = File.join(tmp, "regenerated", "testsuite", "corpus")
       FileUtils.mkdir_p(regenerated_root)
 
@@ -336,9 +421,14 @@ module OracleGate
       gem's message text and this port's are different by design, so only the
       fact of refusal is compared, never its wording.
 
-        --gem PATH   oracle checkout (default: $#{ORACLE_ENV})
-        --seed N     PRNG seed (default: #{DIFFERENTIAL_DEFAULT_SEED})
-        --count N    inputs to generate (default: #{DIFFERENTIAL_DEFAULT_COUNT})
+        --gem PATH          oracle checkout (default: $#{ORACLE_ENV})
+        --seed N            PRNG seed (default: #{DIFFERENTIAL_DEFAULT_SEED})
+        --count N           inputs to generate (default: #{DIFFERENTIAL_DEFAULT_COUNT})
+        --ruby-command CMD  how to reach a Ruby that can load the oracle's
+                            bundle (default: #{DEFAULT_RUBY_COMMAND.join(" ")}).
+                            Also settable as #{RUBY_COMMAND_ENV}. Pass a wrapper
+                            when the Ruby is not on PATH by itself, for example
+                            "mise x -- bundle exec ruby".
 
       Deterministic by construction: the same seed and count produce the same
       inputs, so a reported divergence can be reproduced exactly rather than
@@ -347,7 +437,7 @@ module OracleGate
   end
 
   def parse_differential_options(argv)
-    options = { gem: nil, seed: DIFFERENTIAL_DEFAULT_SEED, count: DIFFERENTIAL_DEFAULT_COUNT }
+    options = { gem: nil, seed: DIFFERENTIAL_DEFAULT_SEED, count: DIFFERENTIAL_DEFAULT_COUNT, ruby: nil }
     rest = argv.dup
 
     until rest.empty?
@@ -359,6 +449,8 @@ module OracleGate
       when /\A--seed=(.+)\z/ then options[:seed] = Integer(Regexp.last_match(1))
       when "--count" then options[:count] = require_integer!(rest, "--count")
       when /\A--count=(.+)\z/ then options[:count] = Integer(Regexp.last_match(1))
+      when "--ruby-command" then options[:ruby] = require_value!(rest, "--ruby-command")
+      when /\A--ruby-command=(.+)\z/ then options[:ruby] = Regexp.last_match(1)
       when "--help", "-h"
         puts differential_usage
         exit 0
@@ -385,7 +477,7 @@ module OracleGate
   end
 
   def parse_check_options(argv, help_text)
-    options = { gem: nil, check: false, help: false }
+    options = { gem: nil, check: false, help: false, ruby: nil }
     rest = argv.dup
 
     until rest.empty?
@@ -399,6 +491,12 @@ module OracleGate
         options[:gem] = File.expand_path(rest.shift)
       when /\A--gem=(.+)\z/
         options[:gem] = File.expand_path(Regexp.last_match(1))
+      when "--ruby-command"
+        raise UsageError, "missing command after --ruby-command" if rest.empty?
+
+        options[:ruby] = rest.shift
+      when /\A--ruby-command=(.+)\z/
+        options[:ruby] = Regexp.last_match(1)
       when "--help", "-h"
         options[:help] = true
       else
@@ -563,10 +661,10 @@ module OracleGate
   def differential_gem_results(inputs, gem_dir)
     stdout, stderr, status = capture_bounded(
       { "BUNDLE_GEMFILE" => File.join(gem_dir, "Gemfile") },
-      "bundle", "exec", "ruby", "-Ilib", "-e", DIFFERENTIAL_GEM_SCRIPT,
+      *ruby_command, "-Ilib", "-e", DIFFERENTIAL_GEM_SCRIPT,
       stdin_data: JSON.generate(inputs), chdir: gem_dir, label: "gem"
     )
-    raise Error, "the gem half failed (exit #{status.exitstatus}):\n#{stderr}" unless status.success?
+    raise Error, "the gem half failed (#{exit_description(status)}):\n#{stderr}" unless status.success?
 
     marker = stdout.index("<<<JSON>>>")
     raise Error, "the gem half produced no result:\n#{stdout[0, 400]}" unless marker
@@ -579,7 +677,7 @@ module OracleGate
       {}, "node", File.join(REPO_ROOT, "scripts", "differential-port.mjs"),
       stdin_data: JSON.generate(inputs), chdir: REPO_ROOT, label: "port"
     )
-    raise Error, "the port half failed (exit #{status.exitstatus}):\n#{stderr}" unless status.success?
+    raise Error, "the port half failed (#{exit_description(status)}):\n#{stderr}" unless status.success?
 
     assert_differential_shape!(JSON.parse(stdout), "port", inputs)
   end
@@ -671,6 +769,10 @@ module OracleGate
 
   def run_differential(argv)
     options = parse_differential_options(argv)
+    # The flag and #{RUBY_COMMAND_ENV} are one knob. Setting the env from the
+    # flag keeps them exactly equivalent rather than threading an argument
+    # through every frame between here and `ruby_command`.
+    ENV[RUBY_COMMAND_ENV] = options[:ruby] if options[:ruby]
     gem_dir = resolve_gem_dir(options[:gem])
     assert_clean_checkout!(gem_dir, "gem")
 
@@ -826,19 +928,209 @@ module OracleGate
     status.success?
   end
 
+  # The generators below run under `BUNDLE_FROZEN=true`, so that a check can
+  # never quietly resolve or install a different dependency set part-way
+  # through and generate data no one can reproduce. Frozen mode also refuses a
+  # lockfile whose CHECKSUMS section is present but empty, which is what
+  # `bundle install` writes when it satisfies every gem from already-installed
+  # copies rather than fetching them. The gem does not track its lockfile, so
+  # every oracle checkout generates its own and that outcome is ordinary.
+  #
+  # Without this preflight the first generator dies several minutes in with a
+  # raw Bundler stack trace, attributed to the generator rather than to the
+  # bundle. Probe the same context up front instead, and name the remedy.
+  #
+  # `chdir` is the caller's, not the oracle checkout: a Ruby version manager
+  # resolves its runtime from the working directory upwards, so probing
+  # somewhere else could select a different interpreter and clear a bundle the
+  # generators cannot then load — or refuse one they could. It is the
+  # generators' own directory, so the probe answers the question that was
+  # asked.
+  #
+  # The arguments are named as a constant, not retyped in
+  # `frozen_bundle_probe_display` below, so the message a failure produces can
+  # quote the exact probe that ran.
+  FROZEN_BUNDLE_PROBE_ARGS = ["-e", ""].freeze
+
+  # The resolved probe command as something a reader can paste back into a
+  # shell: whatever `ruby_command` resolves to right now -- the default
+  # `bundle exec ruby`, or `--ruby-command` / #{RUBY_COMMAND_ENV} if either
+  # changed it -- followed by the probe's own arguments.
+  #
+  # `join(" ")` will not do: the last argument is the EMPTY string -- the
+  # program `-e` is given -- and joining renders it as nothing at all, so the
+  # message said `ruby -e ` with a trailing space. Anyone copying that line runs
+  # a different command from the one that failed: `-e` then swallows whatever
+  # follows, or errors for want of an argument. `Shellwords.escape` leaves the
+  # ordinary words untouched and turns the empty one into `''`.
+  # Pasting only the argv silently drops what actually made the probe fail
+  # or pass: it also runs with `BUNDLE_FROZEN`/`BUNDLE_GEMFILE` set and in
+  # `chdir`, not the shell's own directory or bundle. Without those, a
+  # pasted copy can resolve a different Gemfile entirely and give a result
+  # that has nothing to do with the failure it was meant to reproduce.
+  def frozen_bundle_probe_display(gem_dir, chdir:)
+    env = frozen_generator_env(gem_dir).map { |key, value| "#{key}=#{Shellwords.escape(value)}" }.join(" ")
+    command = (ruby_command(nil) + FROZEN_BUNDLE_PROBE_ARGS).map { |argument| Shellwords.escape(argument) }.join(" ")
+    "#{env} (cd #{Shellwords.escape(chdir)} && #{command})"
+  end
+
+  def assert_frozen_bundle_usable!(gem_dir, chdir:)
+    _stdout, stderr, status = capture_generator_command(FROZEN_BUNDLE_PROBE_ARGS, chdir: chdir, gem_dir: gem_dir)
+    return if status.success?
+
+    raise Error, frozen_bundle_error(gem_dir, chdir, stderr, status)
+  end
+
+  def frozen_generator_env(gem_dir)
+    { "BUNDLE_FROZEN" => "true", "BUNDLE_GEMFILE" => File.join(gem_dir, "Gemfile") }
+  end
+
+  # Text that only reaches stderr because Bundler itself put it there.
+  # Established against the Bundler that ships with this repo's pinned Ruby
+  # (4.0.1), by triggering each failure directly rather than reading the
+  # source alone:
+  #
+  #   - "Bundler::" — an error `bundle exec` cannot catch reaches Ruby's
+  #     default uncaught-exception rendering, which prints the class name in
+  #     parentheses (`... (Bundler::ProductionError)`), and every error this
+  #     probe can hit for a frozen-mode mismatch is a `Bundler::BundlerError`
+  #     subclass (bundler/errors.rb). Reproduced directly: a Gemfile whose
+  #     lockfile has no entry for the current platform raises exactly
+  #     `Bundler::ProductionError` through `bundle exec ruby -e ""`.
+  #   - "Could not find gem" — the literal phrase Bundler raises when a
+  #     locked gem cannot be resolved, from four independent call sites
+  #     (bundler/resolver.rb, bundler/resolver/base.rb, bundler/cli/common.rb,
+  #     bundler/cli/outdated.rb) and reproduced directly by locking a Gemfile
+  #     against a gem that does not exist.
+  #   - "Your bundle is locked to" — the literal phrase Bundler raises when a
+  #     locked gem is no longer available from its source
+  #     (bundler/definition.rb).
+  #   - "Frozen mode is set" — the literal phrase Bundler raises when the
+  #     Gemfile and lockfile disagree under `BUNDLE_FROZEN=true`
+  #     (bundler/definition.rb, `ensure_equivalent_gemfile_and_lockfile`) —
+  #     the most likely failure for this probe specifically, since it always
+  #     sets that flag.
+  #
+  # None of these describe an ordinary Ruby, version-manager, or shell
+  # failure — an invalid `RUBYOPT`, a missing interpreter, a wrapper
+  # misconfiguration — which this same probe can also produce and which have
+  # nothing to do with the bundle.
+  BUNDLER_STDERR_SIGNATURES = [
+    "Bundler::",
+    "Could not find gem",
+    "Your bundle is locked to",
+    "Frozen mode is set",
+  ].freeze
+
+  # A substring match alone is not evidence Bundler ran: a custom
+  # `--ruby-command` wrapper whose own stderr happens to contain one of
+  # these phrases (its own error message quoting a gem name, say) would
+  # earn the "bundler said:" framing and the `bundle install` remedy for a
+  # command that never touched Bundler at all — the exact bug this check
+  # exists to avoid. The one thing available here that actually reflects
+  # what ran is the resolved command line itself: only a probe whose
+  # command names `bundle` as a component can plausibly have produced
+  # Bundler's own output, so that is checked alongside the text.
+  def bundler_shaped_failure?(stderr, command)
+    command.include?("bundle") && BUNDLER_STDERR_SIGNATURES.any? { |signature| stderr.include?(signature) }
+  end
+
+  # Runs the configured Ruby command, which defaults to `bundle exec ruby` and
+  # is overridden with `--ruby-command` or #{RUBY_COMMAND_ENV} -- see
+  # DEFAULT_RUBY_COMMAND above for why this is configuration rather than a
+  # hardcoded chain of version managers to try.
+  #
+  # `capture_command` raises `Error` for exactly one reason: the named
+  # executable could not be found. Rescuing it here turns that into a message
+  # naming the command that was tried and how to change it, not a guess at
+  # every possible failure — anything else it might raise (a raw
+  # `Errno::EACCES`, say) is not rescued by `capture_command` either and
+  # reaches this method's own caller as itself.
+  #
+  # A missing EXECUTABLE and a missing working DIRECTORY both reach
+  # `capture_command` as `Errno::ENOENT`, so "the rescue fired" does not mean
+  # "bundle is absent" — measured: `Open3.capture3({}, "true", chdir: "/nope")`
+  # raises `No such file or directory - /nope`, the same class as a missing
+  # binary. Reporting a missing command for a missing directory would be a
+  # wrong diagnosis of exactly the kind this file exists to stop making.
+  #
+  # So the directory is checked first, by name, and only an ENOENT that is NOT
+  # about it reaches the rescue.
+  # The Ruby command to run generators with: `--ruby-command`, else
+  # #{RUBY_COMMAND_ENV}, else `bundle exec ruby`.
+  def ruby_command(override = nil)
+    raw = override || ENV[RUBY_COMMAND_ENV]
+    return DEFAULT_RUBY_COMMAND.dup if raw.nil? || raw.strip.empty?
+
+    words = Shellwords.split(raw)
+    raise Error, "#{RUBY_COMMAND_ENV} is set but empty after splitting" if words.empty?
+
+    words
+  end
+
+  def capture_generator_command(ruby_args, chdir:, gem_dir:, ruby: nil)
+    unless Dir.exist?(chdir)
+      raise Error, "the working directory #{chdir} does not exist, so no " \
+                   "generator can run there. This is not a missing bundler."
+    end
+
+    command = ruby_command(ruby)
+    begin
+      capture_command([*command, *ruby_args], chdir: chdir, env: frozen_generator_env(gem_dir))
+    rescue Error
+      raise Error, "#{command.first} could not be executed. The generators run " \
+                   "through `#{command.join(' ')}`, which is the default " \
+                   "`#{DEFAULT_RUBY_COMMAND.join(' ')}` unless --ruby-command or " \
+                   "#{RUBY_COMMAND_ENV} changed it. Either install bundler where " \
+                   "`bundle` resolves, or pass the wrapper your Ruby needs — for " \
+                   "example --ruby-command \"mise x -- bundle exec ruby\"."
+    end
+  end
+
+  # Split from the probe so the message can be tested without a bundle.
+  #
+  # Only the two early returns below say the stderr came from Bundler, and
+  # only once its text backs that up: `empty CHECKSUMS entry` is the exact
+  # phrase `bundle install` writes for an unfetched checksum, and
+  # `bundler_shaped_failure?` matches text Bundler is actually known to emit
+  # (above). Everything else is reported the way `run_generator!` reports a
+  # generator failure below — command, exit status, stderr — without
+  # attributing the stderr to Bundler, because at that point it hasn't been
+  # shown to be Bundler's.
+  def frozen_bundle_error(gem_dir, chdir, stderr, status)
+    command = ruby_command(nil)
+    remedy =
+      if command.include?("bundle") && stderr.include?("empty CHECKSUMS entry")
+        "Run `bundle lock --add-checksums` in #{gem_dir} to fill the lockfile's " \
+          "CHECKSUMS section, then re-run this check."
+      elsif bundler_shaped_failure?(stderr, command)
+        "Run `bundle install` in #{gem_dir}, then re-run this check."
+      end
+
+    return <<~MESSAGE if remedy
+      the oracle checkout at #{gem_dir} has no usable frozen bundle.
+      #{remedy}
+      bundler said:
+      #{indent_block(stderr)}
+    MESSAGE
+
+    <<~MESSAGE
+      the frozen-bundle preflight (`#{frozen_bundle_probe_display(gem_dir, chdir: chdir)}`) in #{gem_dir} failed with #{exit_description(status)}.
+      stderr:
+      #{indent_block(stderr)}
+    MESSAGE
+  end
+
   def run_generator!(script, arguments, chdir:, gem_dir:)
-    gemfile = File.join(gem_dir, "Gemfile")
     relative = script.delete_prefix("#{chdir}/")
     puts "▶ #{relative} #{arguments.join(' ')}"
-    stdout, stderr, status = capture_command(
-      ["mise", "x", "--", "bundle", "exec", "ruby", script, *arguments],
-      chdir: chdir,
-      env: { "BUNDLE_FROZEN" => "true", "BUNDLE_GEMFILE" => gemfile },
+    stdout, stderr, status = capture_generator_command(
+      [script, *arguments], chdir: chdir, gem_dir: gem_dir,
     )
 
     unless status.success?
       raise Error, <<~MESSAGE
-        #{relative} failed with exit #{status.exitstatus}.
+        #{relative} failed with #{exit_description(status)}.
         stdout:
         #{indent_block(stdout)}
         stderr:
@@ -1003,6 +1295,16 @@ module OracleGate
     return "  (none)" if body.empty?
 
     body.lines.map { |line| "  #{line}" }.join
+  end
+
+  # `Process::Status#exitstatus` is nil when the process died by signal
+  # instead of exiting normally, so interpolating it directly renders
+  # "...failed with exit ." — a dangling period where the number should be.
+  # Report the signal instead of a blank exit code in that case.
+  def exit_description(status)
+    return "exit #{status.exitstatus}" if status.exitstatus
+
+    "terminated by signal #{status.termsig}"
   end
 end
 

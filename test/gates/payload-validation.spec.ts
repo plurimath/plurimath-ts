@@ -39,11 +39,17 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { CORE_GENERATED_PROVENANCE } from "../../src/core/generated/provenance";
+import { HTML_PARSER_GENERATED_PROVENANCE } from "../../src/formats/html/generated/provenance";
 import { LATEX_PARSER_GENERATED_PROVENANCE } from "../../src/formats/latex/generated/provenance";
 import { UNICODEMATH_PARSER_GENERATED_PROVENANCE } from "../../src/formats/unicodemath/generated/provenance";
 import { FORMATTING_GENERATED_PROVENANCE } from "../../src/formatting/generated/provenance";
 import { GENERATED_PROVENANCE } from "../../src/generated/provenance";
-import { loadPinnedCorpus, PIN_RELATIVE_PATH, pinnedSubmoduleCommit } from "../core/corpus-pin";
+import {
+  loadLocalPayloadManifests,
+  loadPinnedCorpus,
+  PIN_RELATIVE_PATH,
+  pinnedSubmoduleCommit,
+} from "../core/corpus-pin";
 import { parseYaml } from "../core/corpus-yaml";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -85,9 +91,15 @@ function gitFileSha256AtCommit(
  * suite would stay green. Their basenames are explicit because three older
  * `render-sweep.json` files are one-off fixtures with no reproducible generator
  * or sidecar yet; the inventory assertion below keeps that exception closed.
+ *
+ * A basename alone stopped identifying a family once a SECOND format grew a
+ * `model-fixtures.json`: LaTeX's and UnicodeMath's have the same shape but
+ * different generators, schemas and corpus-count fields. `FIXTURE_SPEC_PATHS`
+ * overrides the basename lookup for exactly those collisions, and
+ * `specFor` below is the single place either is read.
  */
 const FORMATS_ROOT = join(REPO_ROOT, "test", "formats");
-const MANIFEST_SCHEMA = "plurimath-corpus/manifest/1";
+const MANIFEST_SCHEMA = "plurimath-corpus/manifest/2";
 const PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
 const CANONICAL_XML_ENGINE = "Plurimath::XmlEngine::OxEngine";
 const SHA256 = /^[0-9a-f]{64}$/;
@@ -106,7 +118,9 @@ const FIXTURE_SPECS = {
     generator: "scripts/generate-latex-model-fixtures.rb",
     schema: "plurimath-corpus/latex-model/1",
     rows: "cases",
-    shape: "latex-model",
+    shape: "format-model",
+    corpusGroup: "corpus-latex",
+    corpusCountField: "corpusLatexCount",
     usesCorpus: true,
     usesRenderInventory: false,
   },
@@ -119,6 +133,69 @@ const FIXTURE_SPECS = {
     usesRenderInventory: false,
   },
 } as const;
+
+/** Per-path overrides for the basenames more than one format now uses. */
+const FIXTURE_SPEC_PATHS: { readonly [path: string]: FixtureSpec } = {
+  "test/formats/html/model-fixtures.json": {
+    generator: "scripts/generate-html-model-fixtures.rb",
+    schema: "plurimath-corpus/html-model/1",
+    rows: "cases",
+    shape: "format-model",
+    parseTextField: "normalized",
+    parseTextStage: "normalize",
+    corpusGroup: "corpus-html",
+    corpusCountField: "corpusHtmlCount",
+    usesCorpus: true,
+    usesRenderInventory: false,
+  },
+  "test/formats/unicodemath/model-fixtures.json": {
+    generator: "scripts/generate-unicodemath-model-fixtures.rb",
+    schema: "plurimath-corpus/unicodemath-model/1",
+    rows: "cases",
+    shape: "format-model",
+    corpusGroup: "corpus-unicodemath",
+    corpusCountField: "corpusUnicodemathCount",
+    usesCorpus: true,
+    usesRenderInventory: false,
+  },
+};
+
+interface FixtureSpec {
+  readonly generator: string;
+  readonly schema: string;
+  readonly rows: string;
+  readonly shape: string;
+  /**
+   * What a `format-model` row calls the text the grammar saw. Named per format
+   * because the GEM names it per format: `Latex::Parser` and
+   * `UnicodeMath::Parser` preprocess, while `Html::Parser` normalises
+   * (`normalized_text`), and a fixture that renamed it would be describing
+   * something the gem does not call by that name. Defaults to `preprocessed`.
+   */
+  readonly parseTextField?: string;
+  /**
+   * What a refusal from that stage calls itself in `raisedIn`. Spelled out
+   * rather than derived from `parseTextField`, because turning "normalized"
+   * into "normalize" by trimming a letter is the kind of rule that works until
+   * a format names its stage something else.
+   */
+  readonly parseTextStage?: string;
+  readonly corpusGroup?: string;
+  readonly corpusCountField?: string;
+  readonly usesCorpus: boolean;
+  readonly usesRenderInventory: boolean;
+}
+
+function specFor(relative: string): FixtureSpec {
+  const override = FIXTURE_SPEC_PATHS[relative];
+  if (override !== undefined) return override;
+  const spec = (FIXTURE_SPECS as { readonly [name: string]: FixtureSpec | undefined })[
+    basename(relative)
+  ];
+  if (spec === undefined) throw new Error(`no fixture spec for ${relative}`);
+  return spec;
+}
+
 const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "degenerate-fixtures.json"
   | "model-fixtures.json"
@@ -217,13 +294,140 @@ function expectExactKeys(record: Mapping, expected: readonly string[], where: st
   );
 }
 
+/**
+ * A single `dependencies.sources` entry's shape, as changed by the manifest
+ * `/1` -> `/2` bump (#87): `gems` moved from a full name array to a count, and
+ * `gem_names` survives only for the two kinds a count alone cannot reproduce.
+ *
+ * Extracted so the same rule can be checked against every manifest that
+ * carries a `dependencies.sources` array — the per-format fixture sidecars
+ * AND the two top-level corpus manifests — without either family drifting
+ * from the other, and so it can be unit-tested directly against a synthetic
+ * `kind: "git"` source, which no shipped manifest currently carries.
+ */
+function expectSourceShape(source: Mapping, sourceAt: string): void {
+  const kind = stringField(source, "kind", sourceAt);
+  expect(["gem", "git", "path"], `${sourceAt}.kind`).toContain(kind);
+  const remote = stringField(source, "remote", sourceAt);
+  // `gems` is a COUNT. A `gem` source pins every gem by version in the
+  // lockfile, and `lockfile.sha256` covers that whole resolution, so the
+  // names carried no information the manifest did not already have. A
+  // `path` or `git` source pins nothing by version, so there the names
+  // are the reproducibility fact and are kept in `gem_names`.
+  const gems = integerField(source, "gems", sourceAt);
+  expect(gems, `${sourceAt}.gems`).toBeGreaterThan(0);
+  const namedKinds = ["git", "path"];
+  if (namedKinds.includes(kind)) {
+    const names = arrayField(source, "gem_names", sourceAt);
+    expect(names.length, `${sourceAt}.gem_names`).toBe(gems);
+    for (const [nameIndex, gem] of names.entries()) {
+      expect(typeof gem, `${sourceAt}.gem_names[${nameIndex}]`).toBe("string");
+      expect(String(gem).length, `${sourceAt}.gem_names[${nameIndex}]`).toBeGreaterThan(0);
+    }
+    expect(new Set(names).size, `${sourceAt}.gem_names must be unique`).toBe(names.length);
+  } else {
+    expect(source.gem_names, `${sourceAt}.gem_names`).toBeUndefined();
+  }
+  if (kind === "git") {
+    expectExactKeys(source, ["kind", "remote", "revision", "gems", "gem_names"], sourceAt);
+    expect(stringField(source, "revision", sourceAt)).toMatch(IMMUTABLE_REVISION);
+  } else if (kind === "path") {
+    expectExactKeys(source, ["kind", "remote", "gems", "gem_names"], sourceAt);
+    expect(source.revision, `${sourceAt}.revision`).toBeUndefined();
+    expect(remote, `${sourceAt}.remote`).toBe(".");
+  } else {
+    expectExactKeys(source, ["kind", "remote", "gems"], sourceAt);
+    expect(source.revision, `${sourceAt}.revision`).toBeUndefined();
+  }
+}
+
+/**
+ * `dependencies.lockfile`, `.sources` and `.direct_runtime`, as recorded by
+ * every manifest `/2` sidecar this repository ships — the per-format fixture
+ * manifests under `test/formats/**` AND the two top-level corpus manifests
+ * (`corpus/census.manifest.yaml`, `corpus/exclusions.manifest.yaml`), which
+ * record the same dependency snapshot for the same generator run.
+ */
+function expectDependenciesShape(dependencies: Mapping, at: string): void {
+  expectExactKeys(dependencies, ["lockfile", "sources", "direct_runtime"], at);
+  const lockfile = mapField(dependencies, "lockfile", at);
+  expectExactKeys(
+    lockfile,
+    ["path", "sha256", "resolved_gems", "platforms", "bundler"],
+    `${at}.lockfile`,
+  );
+  expect(stringField(lockfile, "path", `${at}.lockfile`)).toBe("Gemfile.lock");
+  expect(stringField(lockfile, "sha256", `${at}.lockfile`)).toMatch(SHA256);
+  expect(integerField(lockfile, "resolved_gems", `${at}.lockfile`)).toBeGreaterThan(0);
+  const platforms = arrayField(lockfile, "platforms", `${at}.lockfile`);
+  expect(platforms.length).toBeGreaterThan(0);
+  for (const [index, platform] of platforms.entries()) {
+    expect(typeof platform, `${at}.lockfile.platforms[${index}]`).toBe("string");
+    expect(String(platform).length, `${at}.lockfile.platforms[${index}]`).toBeGreaterThan(0);
+  }
+  expect(stringField(lockfile, "bundler", `${at}.lockfile`)).toMatch(/^\d+\.\d+\.\d+/);
+
+  const sources = arrayField(dependencies, "sources", at);
+  expect(sources.length).toBeGreaterThan(0);
+  for (const [index, sourceValue] of sources.entries()) {
+    const source = mapping(sourceValue, `${at}.sources[${index}]`);
+    expectSourceShape(source, `${at}.sources[${index}]`);
+  }
+
+  const directRuntime = arrayField(dependencies, "direct_runtime", at);
+  expect(directRuntime.length).toBeGreaterThan(0);
+  const directNames: string[] = [];
+  for (const [index, dependencyValue] of directRuntime.entries()) {
+    const dependency = mapping(dependencyValue, `${at}.direct_runtime[${index}]`);
+    const dependencyAt = `${at}.direct_runtime[${index}]`;
+    directNames.push(stringField(dependency, "name", dependencyAt));
+    stringField(dependency, "version", dependencyAt);
+    stringField(dependency, "platform", dependencyAt);
+    const sourceKind = stringField(dependency, "source_kind", dependencyAt);
+    expect(["gem", "git", "path"], `${dependencyAt}.source_kind`).toContain(sourceKind);
+    const source = stringField(dependency, "source", dependencyAt);
+    const baseKeys = ["name", "version", "platform", "source_kind", "source"];
+    if (sourceKind === "git") {
+      expectExactKeys(dependency, [...baseKeys, "revision"], dependencyAt);
+      expect(stringField(dependency, "revision", dependencyAt)).toMatch(IMMUTABLE_REVISION);
+    } else {
+      expectExactKeys(dependency, baseKeys, dependencyAt);
+      expect(dependency.revision, `${dependencyAt}.revision`).toBeUndefined();
+      if (sourceKind === "path") expect(source, `${dependencyAt}.source`).toBe(".");
+    }
+  }
+  expect(new Set(directNames).size, `${at}.direct_runtime names`).toBe(directNames.length);
+}
+
+/**
+ * `oracle`, as recorded by every manifest `/2` sidecar — the version and
+ * commit of the `plurimath` gem the generator ran against, checked against
+ * the pinned conformance corpus's own record of the same oracle so the two
+ * cannot silently disagree.
+ */
+function expectOracleShape(manifest: Mapping, at: string): void {
+  const pin = loadPinnedCorpus().provenance;
+  const oracle = mapField(manifest, "oracle", at);
+  expectExactKeys(
+    oracle,
+    ["gem", "version", "kind", "commit", "clean", "dirty_paths"],
+    `${at}.oracle`,
+  );
+  expect(stringField(oracle, "gem", `${at}.oracle`)).toBe("plurimath");
+  expect(stringField(oracle, "kind", `${at}.oracle`)).toBe("git-checkout");
+  expect(stringField(oracle, "version", `${at}.oracle`)).toBe(pin.oracleVersion);
+  expect(stringField(oracle, "commit", `${at}.oracle`)).toBe(pin.oracleCommit);
+  expect(booleanField(oracle, "clean", `${at}.oracle`)).toBe(true);
+  expect(arrayField(oracle, "dirty_paths", `${at}.oracle`)).toEqual([]);
+}
+
 interface FixtureRecord {
   readonly relative: string;
   readonly manifestRelative: string;
   readonly bytes: Buffer;
   readonly payload: Mapping;
   readonly manifest: Mapping;
-  readonly spec: (typeof FIXTURE_SPECS)[keyof typeof FIXTURE_SPECS];
+  readonly spec: FixtureSpec;
 }
 
 const FORMAT_DIRECTORIES = readdirSync(FORMATS_ROOT, { withFileTypes: true })
@@ -244,7 +448,6 @@ const EXPECTED_FIXTURE_MANIFESTS = FIXTURE_PAYLOADS.map((relative) =>
 const FIXTURE_RECORDS: readonly FixtureRecord[] = FIXTURE_PAYLOADS.filter((relative) =>
   existsSync(join(REPO_ROOT, relative.replace(/\.json$/, ".manifest.yaml"))),
 ).map((relative) => {
-  const name = basename(relative) as keyof typeof FIXTURE_SPECS;
   const manifestRelative = relative.replace(/\.json$/, ".manifest.yaml");
   const bytes = readFileSync(join(REPO_ROOT, relative));
   return {
@@ -256,7 +459,7 @@ const FIXTURE_RECORDS: readonly FixtureRecord[] = FIXTURE_PAYLOADS.filter((relat
       parseYaml(readFileSync(join(REPO_ROOT, manifestRelative), "utf8")),
       manifestRelative,
     ),
-    spec: FIXTURE_SPECS[name],
+    spec: specFor(relative),
   };
 });
 
@@ -282,10 +485,10 @@ const FIXTURE_GENERATOR_HASHES: ReadonlyArray<
 /**
  * Every (file, recorded hash) pair the provenance records assert.
  *
- * `src/generated` records one script as `generatorSha256`; the other four
- * modules — core, formatting, and the latex and unicodemath parser tables —
- * record a map because they consume more than one; each generated fixture
- * records the one script that wrote it. Every shape reduces to the
+ * `src/generated` records one script as `generatorSha256`; the other five
+ * modules — core, formatting, and the latex, unicodemath and html parser
+ * tables — record a map because they consume more than one; each generated
+ * fixture records the one script that wrote it. Every shape reduces to the
  * same claim, so all are checked the same way.
  */
 const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: string]> = [
@@ -301,6 +504,9 @@ const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: strin
   ),
   ...[...UNICODEMATH_PARSER_GENERATED_PROVENANCE.generatorInputs].map(
     ([file, hash]) => ["src/formats/unicodemath/generated", file, hash] as const,
+  ),
+  ...[...HTML_PARSER_GENERATED_PROVENANCE.generatorInputs].map(
+    ([file, hash]) => ["src/formats/html/generated", file, hash] as const,
   ),
   ...FIXTURE_GENERATOR_HASHES,
 ];
@@ -426,19 +632,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         expect(generator.inventory, `${at}.generator.inventory`).toBeUndefined();
       }
 
-      const pin = loadPinnedCorpus().provenance;
-      const oracle = mapField(manifest, "oracle", at);
-      expectExactKeys(
-        oracle,
-        ["gem", "version", "kind", "commit", "clean", "dirty_paths"],
-        `${at}.oracle`,
-      );
-      expect(stringField(oracle, "gem", `${at}.oracle`)).toBe("plurimath");
-      expect(stringField(oracle, "kind", `${at}.oracle`)).toBe("git-checkout");
-      expect(stringField(oracle, "version", `${at}.oracle`)).toBe(pin.oracleVersion);
-      expect(stringField(oracle, "commit", `${at}.oracle`)).toBe(pin.oracleCommit);
-      expect(booleanField(oracle, "clean", `${at}.oracle`)).toBe(true);
-      expect(arrayField(oracle, "dirty_paths", `${at}.oracle`)).toEqual([]);
+      expectOracleShape(manifest, at);
 
       if (record.spec.usesCorpus) {
         const corpus = mapField(manifest, "corpus", at);
@@ -490,85 +684,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
       expect(mapping(manifest.configuration, `${at}.configuration`)).toStrictEqual({});
 
       const dependencies = mapField(manifest, "dependencies", at);
-      expectExactKeys(
-        dependencies,
-        ["lockfile", "sources", "direct_runtime"],
-        `${at}.dependencies`,
-      );
-      const lockfile = mapField(dependencies, "lockfile", `${at}.dependencies`);
-      expectExactKeys(
-        lockfile,
-        ["path", "sha256", "resolved_gems", "platforms", "bundler"],
-        `${at}.dependencies.lockfile`,
-      );
-      expect(stringField(lockfile, "path", `${at}.dependencies.lockfile`)).toBe("Gemfile.lock");
-      expect(stringField(lockfile, "sha256", `${at}.dependencies.lockfile`)).toMatch(SHA256);
-      expect(
-        integerField(lockfile, "resolved_gems", `${at}.dependencies.lockfile`),
-      ).toBeGreaterThan(0);
-      const platforms = arrayField(lockfile, "platforms", `${at}.dependencies.lockfile`);
-      expect(platforms.length).toBeGreaterThan(0);
-      for (const [index, platform] of platforms.entries()) {
-        expect(typeof platform, `${at}.dependencies.lockfile.platforms[${index}]`).toBe("string");
-        expect(
-          String(platform).length,
-          `${at}.dependencies.lockfile.platforms[${index}]`,
-        ).toBeGreaterThan(0);
-      }
-      expect(stringField(lockfile, "bundler", `${at}.dependencies.lockfile`)).toMatch(
-        /^\d+\.\d+\.\d+/,
-      );
-
-      const sources = arrayField(dependencies, "sources", `${at}.dependencies`);
-      expect(sources.length).toBeGreaterThan(0);
-      for (const [index, sourceValue] of sources.entries()) {
-        const source = mapping(sourceValue, `${at}.dependencies.sources[${index}]`);
-        const sourceAt = `${at}.dependencies.sources[${index}]`;
-        const kind = stringField(source, "kind", sourceAt);
-        expect(["gem", "git", "path"], `${sourceAt}.kind`).toContain(kind);
-        const remote = stringField(source, "remote", sourceAt);
-        const gems = arrayField(source, "gems", sourceAt);
-        expect(gems.length, `${sourceAt}.gems`).toBeGreaterThan(0);
-        for (const [gemIndex, gem] of gems.entries()) {
-          expect(typeof gem, `${sourceAt}.gems[${gemIndex}]`).toBe("string");
-          expect(String(gem).length, `${sourceAt}.gems[${gemIndex}]`).toBeGreaterThan(0);
-        }
-        expect(new Set(gems).size, `${sourceAt}.gems must be unique`).toBe(gems.length);
-        if (kind === "git") {
-          expectExactKeys(source, ["kind", "remote", "revision", "gems"], sourceAt);
-          expect(stringField(source, "revision", sourceAt)).toMatch(IMMUTABLE_REVISION);
-        } else {
-          expectExactKeys(source, ["kind", "remote", "gems"], sourceAt);
-          expect(source.revision, `${sourceAt}.revision`).toBeUndefined();
-          if (kind === "path") expect(remote, `${sourceAt}.remote`).toBe(".");
-        }
-      }
-
-      const directRuntime = arrayField(dependencies, "direct_runtime", `${at}.dependencies`);
-      expect(directRuntime.length).toBeGreaterThan(0);
-      const directNames: string[] = [];
-      for (const [index, dependencyValue] of directRuntime.entries()) {
-        const dependency = mapping(dependencyValue, `${at}.dependencies.direct_runtime[${index}]`);
-        const dependencyAt = `${at}.dependencies.direct_runtime[${index}]`;
-        directNames.push(stringField(dependency, "name", dependencyAt));
-        stringField(dependency, "version", dependencyAt);
-        stringField(dependency, "platform", dependencyAt);
-        const sourceKind = stringField(dependency, "source_kind", dependencyAt);
-        expect(["gem", "git", "path"], `${dependencyAt}.source_kind`).toContain(sourceKind);
-        const source = stringField(dependency, "source", dependencyAt);
-        const baseKeys = ["name", "version", "platform", "source_kind", "source"];
-        if (sourceKind === "git") {
-          expectExactKeys(dependency, [...baseKeys, "revision"], dependencyAt);
-          expect(stringField(dependency, "revision", dependencyAt)).toMatch(IMMUTABLE_REVISION);
-        } else {
-          expectExactKeys(dependency, baseKeys, dependencyAt);
-          expect(dependency.revision, `${dependencyAt}.revision`).toBeUndefined();
-          if (sourceKind === "path") expect(source, `${dependencyAt}.source`).toBe(".");
-        }
-      }
-      expect(new Set(directNames).size, `${at}.dependencies.direct_runtime names`).toBe(
-        directNames.length,
-      );
+      expectDependenciesShape(dependencies, `${at}.dependencies`);
 
       const payload = mapField(manifest, "payload", at);
       expectExactKeys(payload, ["path", "schema", "sha256", "bytes"], `${at}.payload`);
@@ -635,13 +751,26 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
           rows.length - rendered,
         );
-      } else if (record.spec.shape === "latex-model") {
-        // The parse-side twin of the branch above. A row records what the gem
-        // did with a LaTeX INPUT, so its outcome is a serialized `model` rather
-        // than a rendered string, and every row that got as far as the parser
-        // also carries the `preprocessed` text the grammar saw. A row that
-        // raised inside preprocessing has neither, which is why `preprocessed`
-        // is optional on a refusal and required on a parse.
+      } else if (record.spec.shape === "format-model") {
+        // The parse-side twin of the branch above, shared by every format whose
+        // fixtures record a PARSE. A row records what the gem did with an input
+        // in that format, so its outcome is a serialized `model` rather than a
+        // rendered string, and every row that got as far as the parser also
+        // carries the `preprocessed` text the grammar saw. A row that raised
+        // inside preprocessing has neither, which is why `preprocessed` is
+        // optional on a refusal and required on a parse.
+        //
+        // The corpus-count field is named per format (`corpusLatexCount`,
+        // `corpusUnicodemathCount`) because the fixtures are keyed to the
+        // corpus expectation they were harvested from; the spec carries both
+        // the field name and the group value that must add up to it.
+        const corpusGroup = record.spec.corpusGroup;
+        const corpusCountField = record.spec.corpusCountField;
+        const parseTextField = record.spec.parseTextField ?? "preprocessed";
+        const parseTextStage = record.spec.parseTextStage ?? "preprocess";
+        if (corpusGroup === undefined || corpusCountField === undefined) {
+          throw new Error(`${record.relative}: a format-model spec must name its corpus group`);
+        }
         expectExactKeys(
           record.payload,
           [
@@ -651,7 +780,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
             "caseCount",
             "parsedCount",
             "raisedCount",
-            "corpusLatexCount",
+            corpusCountField,
             "cases",
           ],
           record.relative,
@@ -674,16 +803,16 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
                 "input",
                 "raises",
                 "raisedIn",
-                ...("preprocessed" in item ? ["preprocessed"] : []),
+                ...(parseTextField in item ? [parseTextField] : []),
               ],
               at,
             );
-            expect(["preprocess", "parse"]).toContain(
+            expect([parseTextStage, "parse"]).toContain(
               stringField(item, "raisedIn", record.relative),
             );
           } else {
-            expectExactKeys(item, ["group", "id", "input", "preprocessed", "model"], at);
-            stringValue(item, "preprocessed", record.relative);
+            expectExactKeys(item, ["group", "id", "input", parseTextField, "model"], at);
+            stringValue(item, parseTextField, record.relative);
             const model = mapField(item, "model", at);
             expect(stringField(model, "class", at)).toBe("Math::Formula");
             mapField(model, "fields", at);
@@ -702,9 +831,9 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               mapping(row, `${record.relative}.cases[${index}]`),
               "group",
               record.relative,
-            ) === "corpus-latex",
+            ) === corpusGroup,
         ).length;
-        expect(integerField(record.payload, "corpusLatexCount", record.relative)).toBe(fromCorpus);
+        expect(integerField(record.payload, corpusCountField, record.relative)).toBe(fromCorpus);
         expect(fromCorpus).toBeGreaterThan(50);
       } else {
         expectExactKeys(
@@ -865,6 +994,7 @@ describe("generated data binds to the generator inputs it names", () => {
       FORMATTING_GENERATED_PROVENANCE.generator,
       LATEX_PARSER_GENERATED_PROVENANCE.generator,
       UNICODEMATH_PARSER_GENERATED_PROVENANCE.generator,
+      HTML_PARSER_GENERATED_PROVENANCE.generator,
       ...fixtureEntrypoints,
     ];
     // This is an explicit gap, not a generator silently omitted from a
@@ -884,6 +1014,7 @@ const COMMITTABLE_RECORDS: ReadonlyArray<readonly [string, boolean]> = [
   ["src/formatting/generated", FORMATTING_GENERATED_PROVENANCE.committable],
   ["src/formats/latex/generated", LATEX_PARSER_GENERATED_PROVENANCE.committable],
   ["src/formats/unicodemath/generated", UNICODEMATH_PARSER_GENERATED_PROVENANCE.committable],
+  ["src/formats/html/generated", HTML_PARSER_GENERATED_PROVENANCE.committable],
   ...FIXTURE_RECORDS.map(
     (record) =>
       [
@@ -898,5 +1029,148 @@ describe("the generated payloads declare themselves committable", () => {
     // `committable: false` marks output generated from a dirty checkout (§7).
     // Shipping it is the thing this flag exists to prevent.
     expect(committable).toBe(true);
+  });
+});
+
+/**
+ * The two top-level corpus manifests (`corpus/census.manifest.yaml`,
+ * `corpus/exclusions.manifest.yaml`) never went through the shape checks
+ * above: `local-corpus.spec.ts` only verifies their payload hashes/bytes and
+ * the absence of structural duplicates, and `corpus-pin.ts` only checks the
+ * `schema` STRING for equality. A manifest claiming schema `/2` could still
+ * carry `/1`-shaped `dependencies.sources` (a full name array instead of a
+ * `gems` count) and nothing here would have noticed.
+ *
+ * These manifests are not per-format fixture sidecars — they have no
+ * `corpus` field (they do not read the pinned corpus, they define local
+ * gem-level census/exclusion data) and their `generator` block records no
+ * `inputs` (they are produced directly by `generate-corpus.rb`, not a
+ * downstream format generator it also records). Their `payload` block
+ * likewise carries no `schema` key, because `census.yaml`/`exclusions.yaml`
+ * are not one of `FIXTURE_SPECS`'s payload schemas. Everything else —
+ * `oracle`, `ruby`/`xml_engine`/`configuration`, and `dependencies` — is the
+ * same shape the per-format fixtures above already enforce, checked here with
+ * the same `expectOracleShape`/`expectDependenciesShape` helpers so the two
+ * families cannot drift apart.
+ */
+describe("top-level corpus manifests carry the manifest/2 shape", () => {
+  const topLevelManifests = loadLocalPayloadManifests();
+
+  it("found both top-level corpus manifests", () => {
+    // A discovery failure here would make every assertion below vacuous.
+    expect(topLevelManifests.map((manifest) => manifest.manifestPath)).toStrictEqual([
+      "census.manifest.yaml",
+      "exclusions.manifest.yaml",
+    ]);
+  });
+
+  it.each(topLevelManifests.map((record) => [record.manifestPath, record] as const))(
+    "%s",
+    (_label, record) => {
+      const at = record.manifestPath;
+      const manifest = mapping(record.document, at);
+      expectExactKeys(
+        manifest,
+        [
+          "schema",
+          "committable",
+          "warnings",
+          "generator",
+          "oracle",
+          "ruby",
+          "xml_engine",
+          "configuration",
+          "dependencies",
+          "payload",
+        ],
+        at,
+      );
+      expect(stringField(manifest, "schema", at)).toBe(MANIFEST_SCHEMA);
+      expect(booleanField(manifest, "committable", at)).toBe(true);
+      expect(arrayField(manifest, "warnings", at)).toStrictEqual([]);
+
+      const generator = mapField(manifest, "generator", at);
+      expectExactKeys(generator, ["path", "sha256", "repository"], `${at}.generator`);
+      expect(stringField(generator, "path", `${at}.generator`)).toBe("scripts/generate-corpus.rb");
+      const generatorSha256 = stringField(generator, "sha256", `${at}.generator`);
+      expect(generatorSha256).toMatch(SHA256);
+      expect(sha256OfFile("scripts/generate-corpus.rb")).toBe(generatorSha256);
+      const generatorRepository = mapField(generator, "repository", `${at}.generator`);
+      expectExactKeys(
+        generatorRepository,
+        ["commit", "clean", "dirty_paths"],
+        `${at}.generator.repository`,
+      );
+      expect(stringField(generatorRepository, "commit", `${at}.generator.repository`)).toMatch(
+        COMMIT,
+      );
+      expect(booleanField(generatorRepository, "clean", `${at}.generator.repository`)).toBe(true);
+      expect(arrayField(generatorRepository, "dirty_paths", `${at}.generator.repository`)).toEqual(
+        [],
+      );
+
+      expectOracleShape(manifest, at);
+
+      const ruby = mapField(manifest, "ruby", at);
+      expectExactKeys(ruby, ["engine", "version"], `${at}.ruby`);
+      expect(stringField(ruby, "engine", `${at}.ruby`)).toBe("ruby");
+      expect(stringField(ruby, "version", `${at}.ruby`)).toMatch(/^\d+\.\d+\.\d+$/);
+      expect(stringField(manifest, "xml_engine", at)).toBe(CANONICAL_XML_ENGINE);
+      expect(mapping(manifest.configuration, `${at}.configuration`)).toStrictEqual({});
+
+      expect(
+        manifest.corpus,
+        `${at}: a top-level manifest must not claim a corpus input`,
+      ).toBeUndefined();
+
+      const dependencies = mapField(manifest, "dependencies", at);
+      expectDependenciesShape(dependencies, `${at}.dependencies`);
+
+      const payload = mapField(manifest, "payload", at);
+      expectExactKeys(payload, ["path", "sha256", "bytes"], `${at}.payload`);
+      expect(stringField(payload, "path", `${at}.payload`)).toBe(record.payloadPath);
+      expect(stringField(payload, "sha256", `${at}.payload`)).toBe(record.sha256);
+      expect(integerField(payload, "bytes", `${at}.payload`)).toBe(record.bytes);
+    },
+  );
+});
+
+/**
+ * No shipped manifest anywhere — per-format fixture or top-level corpus
+ * manifest — currently carries a `kind: "git"` source; every one on disk is
+ * `kind: "path"` (the local checkout) or `kind: "gem"` (rubygems.org). That
+ * leaves the git-branch validation inside `expectSourceShape` completely
+ * unexercised by every other test in this file, so it is exercised here
+ * directly against synthetic source objects.
+ */
+describe("dependencies.sources shape validation covers the untested git kind", () => {
+  const validGitSource: Mapping = {
+    kind: "git",
+    remote: "https://example.com/example-gem.git",
+    revision: "a".repeat(40),
+    gems: 1,
+    // biome-ignore lint/style/useNamingConvention: mirrors the manifest's own snake_case key.
+    gem_names: ["example-gem"],
+  };
+
+  it("accepts a well-formed git source", () => {
+    expect(() => expectSourceShape(validGitSource, "synthetic.sources[0]")).not.toThrow();
+  });
+
+  it("rejects a git source missing its revision", () => {
+    const { revision: _revision, ...withoutRevision } = validGitSource;
+    expect(() => expectSourceShape(withoutRevision, "synthetic.sources[0]")).toThrow();
+  });
+
+  it("rejects a git source whose revision is not a 40-hex commit or 64-hex hash", () => {
+    expect(() =>
+      expectSourceShape({ ...validGitSource, revision: "not-a-commit" }, "synthetic.sources[0]"),
+    ).toThrow();
+  });
+
+  it("rejects a git source whose gem_names count disagrees with gems", () => {
+    expect(() =>
+      expectSourceShape({ ...validGitSource, gems: 2 }, "synthetic.sources[0]"),
+    ).toThrow();
   });
 });

@@ -186,6 +186,18 @@ export function describeSlot(value: unknown): string {
  * restating slot types per kind — a plain hash IS legal in other slots
  * (`Mglyph` defaults `parameter_one` to `{}`), which is why the guard lives
  * at the interpolation sites.
+ *
+ * **Do not widen this to admit lists.** It looks like the one place to fix
+ * three call sites at once, and it is not: only one of the three reaches Ruby
+ * through a bare `"#{}"`. `../../render/unary-function/latex.ts` does, and
+ * carries its own measured `Array#inspect` for exactly that reason;
+ * `../../render/number/latex.ts` goes through
+ * `Formatter::Numbers::TextRenderer`; and `../../render/color/latex.ts` hands
+ * its slot to a NODE's `to_asciimath`, where a bare Ruby array raises
+ * NoMethodError rather than inspecting. A list admitted here would be right
+ * for one caller and invented bytes for the other two. TODO.plan/deferred.md
+ * records what each of them actually owes, under "three list slots the gem
+ * renders and this port does not".
  */
 export function interpolatedValue(value: unknown, kind: string, at: string): string {
   if (value === null || value === undefined) return "";

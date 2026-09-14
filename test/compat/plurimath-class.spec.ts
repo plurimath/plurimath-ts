@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from "vitest";
 import Plurimath, { FORMATS, type Format } from "../../src/compat/index";
-import { UnsupportedFeatureError, UnsupportedFormatError } from "../../src/core/index";
+import { equals, UnsupportedFeatureError, UnsupportedFormatError } from "../../src/core/index";
 import RootDefault, { Plurimath as RootNamed } from "../../src/index";
 
 const INPUT = "frac(1)(2)";
@@ -78,13 +78,29 @@ describe("the compat class matches the plurimath-js surface", () => {
   });
 });
 
+const PARSEABLE: readonly Format[] = ["asciimath", "latex"];
+
+/**
+ * The same formula written in each door's own notation.
+ *
+ * Measured on the clean oracle at 00c52783:
+ * `Plurimath::Math.parse("\\frac{1}{2}", :latex)` renders to exactly the
+ * bytes in `GEM_OUTPUT` above — the ones AsciiMath's `frac(1)(2)` produces.
+ * Both doors reach one model, which is the compat class's whole premise.
+ */
+const LATEX_INPUT = "\\frac{1}{2}";
+
 describe("the constructor's staged contract", () => {
   it("parses asciimath", () => {
     expect(() => build()).not.toThrow();
   });
 
-  /** Five of six raise today. Asserted per format so it cannot drift quietly. */
-  it.each(FORMATS.filter((f) => f !== "asciimath"))(
+  it("parses latex", () => {
+    expect(() => new Plurimath(LATEX_INPUT, "latex")).not.toThrow();
+  });
+
+  /** Four of six raise today. Asserted per format so it cannot drift quietly. */
+  it.each(FORMATS.filter((f) => !PARSEABLE.includes(f)))(
     "raises UnsupportedFormatError for %s, which has no parser yet",
     (format: Format) => {
       expect(() => new Plurimath(INPUT, format)).toThrow(UnsupportedFormatError);
@@ -92,7 +108,50 @@ describe("the constructor's staged contract", () => {
   );
 
   it("names the format it refused", () => {
-    expect(() => new Plurimath(INPUT, "latex")).toThrow(/latex/);
+    expect(() => new Plurimath(INPUT, "mathml")).toThrow(/mathml/);
+  });
+
+  /**
+   * The guard the MAP was chosen for. A set of parseable names would let
+   * `latex` construct and then AsciiMath-parse its input; that produced
+   * `"\\backslash \\frac{1}{2}"` when it was measured. Now that latex has a
+   * parser of its own, assert it is the LATEX one that runs.
+   */
+  it("parses latex input with the latex parser, not the asciimath one", () => {
+    const formula = new Plurimath(LATEX_INPUT, "latex");
+    expect(formula.toAsciimath()).toBe(GEM_OUTPUT.toAsciimath);
+    expect(formula.toAsciimath()).not.toContain("backslash");
+  });
+});
+
+describe("latex input reaches the same model asciimath does", () => {
+  it.each(Object.keys(GEM_OUTPUT) as (keyof typeof GEM_OUTPUT)[])(
+    "%s matches the gem's bytes for latex input",
+    (method) => {
+      const fromLatex = new Plurimath(LATEX_INPUT, "latex");
+      expect(fromLatex[method]()).toBe(GEM_OUTPUT[method]);
+    },
+  );
+
+  /**
+   * The four assertions above compare RENDERED BYTES, and a review showed
+   * that is weaker than this block's name: replacing the LaTeX model's
+   * `inputString` with `"WRONG"` left all of them green. Compare the models.
+   */
+  it("builds a model equal to the one asciimath builds", () => {
+    const fromLatex = new Plurimath(LATEX_INPUT, "latex").data;
+    const fromAsciimath = build().data;
+    expect(equals(fromLatex, fromAsciimath)).toBe(true);
+  });
+
+  /**
+   * `equals` is structural and does not compare `inputString`, which each door
+   * keeps as its own source text. Assert that separately, so "equal models"
+   * cannot quietly come to mean "identical objects".
+   */
+  it("keeps each door's own input string on the model", () => {
+    expect(new Plurimath(LATEX_INPUT, "latex").data.inputString).toBe(LATEX_INPUT);
+    expect(build().data.inputString).toBe(INPUT);
   });
 });
 
@@ -149,7 +208,7 @@ describe("the two methods that cannot be honest yet", () => {
     const codes: Record<string, string> = {};
     const fields: Record<string, string> = {};
     for (const [label, run] of [
-      ["ctor", () => new Plurimath(INPUT, "latex")],
+      ["ctor", () => new Plurimath(INPUT, "mathml")],
       ["toMathml", () => build().toMathml(true)],
       ["toDisplay", () => build().toDisplay("latex")],
     ] as const) {
@@ -169,7 +228,7 @@ describe("the two methods that cannot be honest yet", () => {
     });
     // stable identifiers, not sentences
     expect(fields).toEqual({
-      ctor: "latex",
+      ctor: "mathml",
       toMathml: "toMathml(intent: true)",
       toDisplay: "toDisplay",
     });

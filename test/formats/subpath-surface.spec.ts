@@ -35,10 +35,10 @@ import * as unicodemath from "../../src/formats/unicodemath/index";
 /** Runtime exports only — types erase, so they cannot be asserted here. */
 const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly string[]]> = [
   ["./asciimath", asciimath, ["parseAsciimath", "toAsciimath"]],
-  ["./html", html, ["toHtml"]],
+  ["./html", html, ["parseHtml", "toHtml"]],
   ["./latex", latex, ["parseLatex", "toLatex"]],
   ["./mathml", mathml, ["toMathml"]],
-  ["./unicodemath", unicodemath, ["toUnicodemath"]],
+  ["./unicodemath", unicodemath, ["parseUnicodemath", "toUnicodemath"]],
 ];
 
 const PUBLISHED_FORMAT_SUBPATHS = Object.keys(packageJson.exports).filter(

@@ -13,11 +13,14 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  type Atom,
+  alt,
   any,
   captured,
   choice,
   dynamic,
   match,
+  type ParseContext,
   ParseFailed,
   rule,
   Slice,
@@ -472,6 +475,34 @@ describe("packrat and consume_all interact", () => {
     // The control: an alternative IS cached, so the same shape fails.
     const cached = choice([str(""), str("a")]);
     expect(() => choice([seq(cached, str("q")), cached]).parse("a")).toThrow(ParseFailed);
+  });
+
+  it("keeps an entry a recursive application of the SAME atom wrote", () => {
+    // Parslet resolves both levels of its cache at store time —
+    // `@cache[pos][obj.object_id] = val` on a hash whose per-position level is
+    // created on demand (parslet-2.0.0 lib/parslet/atoms/context.rb:13 and
+    // 99-101) — so an entry written while an outer application of the same
+    // atom is still running cannot be undone by it.
+    //
+    //   r = ("a" >> r) | "b"   applied to "ab"
+    //
+    // matches at 0 only by recursing into itself at 1, so a correct cache
+    // holds BOTH positions. Reading the per-atom map before `tryParse` and
+    // installing a fresh one afterwards dropped the inner entry, leaving 0
+    // alone — the parse still succeeded, which is why only the cache itself
+    // shows the defect here.
+    const r: Atom = rule(() => alt(seq(str("a"), r), str("b")));
+    const ctx: ParseContext = {
+      input: "ab",
+      captures: [new Map()],
+      maxPos: 0,
+      unconsumed: -1,
+      cache: new Map(),
+      depth: 0,
+    };
+    expect(r.apply(0, ctx, true).ok).toBe(true);
+    const positions = [...(ctx.cache.get(r)?.keys() ?? [])].sort((a, b) => a - b);
+    expect(positions).toStrictEqual([0, 1]);
   });
 });
 

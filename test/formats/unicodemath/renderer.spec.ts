@@ -319,6 +319,150 @@ describe("non-node slots raise rather than rendering as empty", () => {
 });
 
 /**
+ * A list in `Number#value`, which this site used to LOSE.
+ *
+ * `Number#to_unicodemath` (`number.rb:52`) checks the two mini flags and
+ * then rides `Formatter::Numbers::TextRenderer.render`, which answers
+ * `result.to_s` for anything that is not a `FormattedNumber` — and
+ * `Array#to_s` IS `Array#inspect`. Measured on the pinned oracle 00c52783
+ * (plurimath 0.11.6, ruby 4.0.1; probe1.rb / probe3.rb / probe4.rb,
+ * 2026-09-09):
+ *
+ *   Number.new([]).to_unicodemath(options: {})     => "[]"
+ *   Number.new([nil]).to_unicodemath(options: {})  => "[nil]"
+ *   Formula([Number([]), Symbol("x")])             => "[] x"
+ *
+ * The port returned the ARRAY OBJECT itself from a `string | null` renderer
+ * — no error, no bytes. `String([])` is `""`, so the operand vanished from
+ * every join it appeared in: the formula above rendered `" x"`, a leading
+ * separator with nothing in front of it. A loud refusal is a bug a caller
+ * can see; this one they could not.
+ *
+ * The mini flags are a SEPARATE answer at the same site, and they raise:
+ * `mini_sub` is `unicode_const(:SUB_DIGITS)[value.to_sym]` (`number.rb:103`)
+ * and an Array answers no `to_sym`.
+ */
+describe("a list in Number#value, which this site used to lose silently", () => {
+  const number = (value: unknown, extra: Record<string, unknown> = {}) =>
+    ({ kind: "number", value, ...extra }) as never;
+
+  it("renders the list the gem inspects, where it returned a bare array before", () => {
+    const rendered = toUnicodemath(number([]));
+    expect(typeof rendered).toBe("string");
+    expect(rendered).toBe("[]");
+    expect(toUnicodemath(number([null]))).toBe("[nil]");
+    expect(toUnicodemath(number([true, false]))).toBe("[true, false]");
+    expect(toUnicodemath(number([[]]))).toBe("[[]]");
+    expect(toUnicodemath(number(["x"]))).toBe('["x"]');
+  });
+
+  it("keeps the operand in a formula join instead of dropping it", () => {
+    // Before: " x" — the number rendered to nothing and only the separator
+    // survived. Measured on the oracle: "[] x" and "[nil] x".
+    expect(
+      toUnicodemath({
+        kind: "formula",
+        value: [number([]), { kind: "symbol", value: "x" }],
+      } as never),
+    ).toBe("[] x");
+    expect(
+      toUnicodemath({
+        kind: "formula",
+        value: [number([null]), { kind: "symbol", value: "x" }],
+      } as never),
+    ).toBe("[nil] x");
+  });
+
+  it("raises for a MINI-sized list, where the gem sends to_sym to the Array", () => {
+    // Measured: Number.new([], mini_sub_sized: true).to_unicodemath raises
+    // NoMethodError (undefined method 'to_sym' for an instance of Array),
+    // and mini_sup_sized answers the same. The port returned "" here.
+    expect(() => toUnicodemath(number([], { miniSubSized: true }))).toThrow(RenderError);
+    expect(() => toUnicodemath(number([], { miniSupSized: true }))).toThrow(RenderError);
+    expect(() => toUnicodemath(number([null], { miniSubSized: true }))).toThrow(/to_sym/);
+  });
+
+  it("still answers nil for a mini-sized STRING the digit tables miss", () => {
+    // The mini flags are only fatal for a value that answers no `to_sym`.
+    // Measured: "x" and "12" and "" are hash MISSES and return nil, which
+    // the boundary spells as the empty string; "2" hits (=> "&#x2082;").
+    expect(toUnicodemath(number("x", { miniSubSized: true }))).toBe("");
+    expect(toUnicodemath(number("2", { miniSubSized: true }))).toBe("&#x2082;");
+  });
+
+  it('reads the mini flags with Ruby truthiness, so 0 and "" are SET', () => {
+    // `number.rb:53-54` guards with a bare `if`, and in Ruby only nil and
+    // false are falsy — `0` and `""` are TRUE. JavaScript disagrees on both,
+    // so a `||` here answered as though the flag were unset. Measured on the
+    // pinned oracle 00c52783 (probe-mini2.rb / probe-mini3.rb, 2026-09-09),
+    // for both flags:
+    //
+    //   value [],  flag 0   => NoMethodError      flag false => "[]"
+    //   value [],  flag ""  => NoMethodError      flag true  => NoMethodError
+    //   value "1", flag 0   => "&#x2081;" (sub)   flag false => "1"
+    //   value "1", flag ""  => "&#x2081;" (sub)   flag true  => "&#x2081;"
+    for (const set of [0, ""]) {
+      expect(() => toUnicodemath(number([], { miniSubSized: set }))).toThrow(RenderError);
+      expect(() => toUnicodemath(number([], { miniSupSized: set }))).toThrow(RenderError);
+      expect(toUnicodemath(number("1", { miniSubSized: set }))).toBe("&#x2081;");
+      expect(toUnicodemath(number("1", { miniSupSized: set }))).toBe("&#xb9;");
+    }
+    // The other half of the same rule. Ruby has exactly two falsy values and
+    // BOTH reach here: measured on the oracle, `nil` and `false` each fall
+    // through to the formatter and answer "1" for the string and "[]" for the
+    // list, while `0` takes the mini branch. The gem's own constructor stores
+    // a nil flag unfiltered, so nil is a shape a caller can really produce.
+    for (const unset of [false, null]) {
+      expect(toUnicodemath(number([], { miniSubSized: unset }))).toBe("[]");
+      expect(toUnicodemath(number("1", { miniSubSized: unset }))).toBe("1");
+      expect(toUnicodemath(number([], { miniSupSized: unset }))).toBe("[]");
+      expect(toUnicodemath(number("1", { miniSupSized: unset }))).toBe("1");
+    }
+  });
+
+  it("refuses a float outside the band WITHOUT claiming the two disagree on it", () => {
+    // The band is conservative, and this is the value that proves it: measured
+    // on the pinned oracle, Ruby's `1202471614443916.8.to_s` and JavaScript's
+    // `String(1202471614443916.8)` are the SAME string, yet the value sits
+    // above `RUBY_PLAIN_FLOAT_MAX` and is refused. The refusal is right — Ruby
+    // picks its format by more than magnitude, so the edge cannot be drawn
+    // exactly — but the reason given must not assert a disagreement that is
+    // not there.
+    let thrown: unknown;
+    try {
+      toUnicodemath(number([1202471614443916.8]));
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(RenderError);
+    const why = (thrown as Error).message;
+    expect(why).toContain("VERIFIED");
+    expect(why).not.toMatch(/range where Ruby's Float#to_s and JavaScript's agree/);
+  });
+
+  it("refuses the element shapes JavaScript cannot decide, naming the index", () => {
+    // The same admission set as the latex site, because it is the same
+    // TextRenderer ride: [5] and [5.0] are one JS number with two Ruby
+    // preimages; an object's inspect carries a heap address; above U+0377
+    // the port has no printability table.
+    expect(() => toUnicodemath(number([5]))).toThrow(RenderError);
+    expect(() => toUnicodemath(number([{}]))).toThrow(RenderError);
+    expect(() => toUnicodemath(number(["π"]))).toThrow(RenderError);
+    expect(() => toUnicodemath(number([null, 5]))).toThrow(/number\.value\[1\]/);
+  });
+
+  it("admits the same reproducible primitives the latex site admits", () => {
+    expect(toUnicodemath(number([Number.NaN]))).toBe("[NaN]");
+    expect(toUnicodemath(number([Number.POSITIVE_INFINITY]))).toBe("[Infinity]");
+    expect(toUnicodemath(number([1.5]))).toBe("[1.5]");
+    expect(toUnicodemath(number(["a\nb"]))).toBe('["a\\nb"]');
+    // And refuses what the shape grammar refuses first, for the same reason
+    // it does at the latex site (`src/core/validate.ts`).
+    expect(() => toUnicodemath(number([5n]))).toThrow(/a node slot cannot hold a bigint/);
+  });
+});
+
+/**
  * The public boundary, measured through the real parse path:
  *
  *   Plurimath::Math.parse("frac(1)(2)", :asciimath).to_unicodemath => "(1)/(2)"
@@ -350,8 +494,8 @@ describe("the boundary", () => {
  *
  *   Hom.new(Symbol("x")).to_unicodemath  => "hom⁡x"
  *   Hom.new(nil).to_unicodemath          => "hom⁡"
- *   Hom.instance_method(:to_unicodemath).owner  => UnaryFunction
- *   Mbox.instance_method(:to_unicodemath).owner => Mbox
+ *   Hom.instance_method(:to_unicodemath).owner    => UnaryFunction
+ *   Merror.instance_method(:to_unicodemath).owner => Merror
  */
 describe("Hom, a carrier-default unary name the AsciiMath transform cannot build", () => {
   it("renders the carrier default, invisible FUNCTION APPLICATION and all", () => {
@@ -362,8 +506,72 @@ describe("Hom, a carrier-default unary name the AsciiMath transform cannot build
   });
 
   it("still refuses a name whose gem class overrides to_unicodemath", () => {
+    // Merror, not Mbox: Mbox is arm-rendered below, Merror is the same case
+    // left unmeasured.
+    expect(() =>
+      toUnicodemath(new UnaryFunctionNode({ name: "Merror", parameterOne: sym("x") })),
+    ).toThrow(RenderError);
+  });
+});
+
+/**
+ * Measured on the pinned oracle 00c52783, through a Formula, with Mbox.new(v)
+ * against Text.new(v) in the same slot — identical on every shape, because
+ * `mbox.rb:27-29` hands the slot to a fresh Text:
+ *
+ *   Mbox.instance_method(:to_unicodemath).owner => Mbox
+ *   Formula([Mbox("hi")]).to_unicodemath  => "\"hi\""
+ *   Formula([Mbox("a b")]).to_unicodemath => "\"a b\""
+ *   Formula([Mbox("")]).to_unicodemath    => "\"\""
+ *   Formula([Mbox(nil)]).to_unicodemath   => ""    (Text answers Ruby nil,
+ *                                                   which the formula
+ *                                                   boundary contributes
+ *                                                   nothing for)
+ *   Mbox.new(Symbols::Symbol("x")) => NoMethodError in Text's own start_with?
+ */
+describe("Mbox, a LaTeX-only name whose to_unicodemath delegates to Text", () => {
+  it("renders the fresh Text the gem builds, quotes and no FUNCTION APPLICATION", () => {
+    expect(toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: "hi" }))).toBe('"hi"');
+    expect(toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: "a b" }))).toBe(
+      '"a b"',
+    );
+    expect(toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: "" }))).toBe('""');
+    expect(toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: null }))).toBe("");
+  });
+
+  it("refuses a node in the slot, where the gem's Text dies in start_with?", () => {
     expect(() =>
       toUnicodemath(new UnaryFunctionNode({ name: "Mbox", parameterOne: sym("x") })),
     ).toThrow(RenderError);
+  });
+
+  it("reads an ABSENT slot as the gem's nil, not as the empty string", () => {
+    // §5's structural dispatch admits a plain object with the slot missing, and
+    // `Mbox.new` stores nil. Measured on the pinned oracle 00c52783:
+    //
+    //   Formula([Mbox.new]).to_unicodemath     => ""      (Text answers nil)
+    //   Formula([Mbox.new("")]).to_unicodemath => "\"\""  (two quote marks)
+    //
+    // `Text`'s own Ruby default is `""`, so the absent slot must be narrowed to
+    // nil before a fresh Text is built or the second answer is given for the
+    // first.
+    const absent = { kind: "unaryFunction", name: "Mbox" } as unknown as MathNode;
+    expect(toUnicodemath(absent)).toBe("");
+  });
+
+  it("reads false in the slot as the gem's nil, as Ruby truthiness does", () => {
+    // `Text#to_unicodemath` opens `return unless value` — a nil TEST would be
+    // `unless value.nil?`, and this is not that. Measured on the pinned oracle
+    // 00c52783: `Text.new(false).to_unicodemath` is nil and
+    // `Formula([Mbox.new(false)]).to_unicodemath` is "". The port threw here,
+    // which was a defect in the Text renderer that this arm exposed.
+    const falseSlot = {
+      kind: "unaryFunction",
+      name: "Mbox",
+      parameterOne: false,
+    } as unknown as MathNode;
+    expect(toUnicodemath(falseSlot)).toBe("");
+    const falseText = { kind: "text", parameterOne: false } as unknown as MathNode;
+    expect(toUnicodemath(falseText)).toBe("");
   });
 });

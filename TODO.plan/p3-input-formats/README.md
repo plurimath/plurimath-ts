@@ -46,10 +46,12 @@ vertical first:
   but unexercised by a real grammar until here. Measured against the oracle
   once the LaTeX grammar landed, that is true of `any` only: `latex/parse.rb`
   uses it twice, both inside `rule(:color)` at `:21-22`, and uses neither
-  `present?` nor `scope` anywhere. Gem-wide, `present?` appears only under
-  `unicode_math/` and Parslet's `scope` in no parser at all, so `scope`
-  will still be unexercised by a grammar when P3 closes — the candidate that
-  would exercise capture is the HTML or AsciiMath `capture` path, not LaTeX.
+  `present?` nor `scope` anywhere. All three are exercised by the end of P3.
+  Re-measured across `lib/plurimath/` when the HTML grammar landed: `present?`
+  appears under `unicode_math/` and once at `html/parse.rb:200`
+  (`tag_name_boundary`), and Parslet's `scope` appears exactly once in the whole
+  gem, at `html/parse.rb:180` (`wrapped_tag`) — so HTML, not LaTeX, is the
+  grammar that exercises both `scope` and `capture`.
 - **Shared model pressure.** A later format may want a node shape that
   contradicts an earlier assumption. The census-driven union is the guard, but
   a genuine conflict means changing `ARCHITECTURE.md` first.

@@ -374,16 +374,36 @@ describe("deep structure", () => {
 });
 
 /**
- * The strongest available Ruby-derived fixture: the gem was asked, for all
- * 110 reachable corpus formulas, which pairs satisfy `==`. Exactly seven
- * distinct pairs do, and each differs only in `input_string` — a field the
- * projection skips. Everything else is unequal, and every case equals itself.
+ * The strongest available Ruby-derived fixture: the gem was asked, over the
+ * reachable corpus formulas, which pairs satisfy `==`. Everything not listed
+ * is unequal, and every case equals itself.
  *
- * Four of the seven are new with the LaTeX corpus, and all four cross the two
- * input notations: `alpha` and `\alpha` are different source text for the same
- * formula, so the gem reports them equal and so must this port. They are the
- * evidence that `==` compares the model and not the input, which nothing in an
- * AsciiMath-only corpus could show.
+ * 29 of the 35 cross the two input notations: `alpha` and `\alpha` are
+ * different source text for the same formula, so the gem reports them equal and
+ * so must this port. They are the evidence that `==` compares the model and not
+ * the input, which nothing in an AsciiMath-only corpus could show. The other
+ * six are within one notation — three AsciiMath (`a/b` against `frac(a)(b)`,
+ * and two spacing pairs) and three LaTeX (`\bmod`, `\pmod` and infix `mod`).
+ * What each pair asks the projection to skip is asserted below, not assumed.
+ *
+ * `RubyEqualPairs` is the GEM's answer, re-measured for this pin by
+ * `scripts/probes/corpus-equality.rb` against the oracle checkout at
+ * `00c52783` — never this port's own, which would leave the suite comparing
+ * the port to itself and calling it parity. The probe parses each pinned case
+ * in the notation it is written in (`Plurimath::Math.parse(input, format)`),
+ * withholds the same id `readCorpusCases` withholds, and runs `==` in both
+ * directions over every pair. Its report, verbatim:
+ *
+ *   rows in pin:     244        rejections:      27
+ *   cases pinned:    217        cases withheld:   1
+ *   cases compared:  216        reflexive:      216
+ *   comparisons:   23220        asymmetric:       0
+ *   equal pairs:      35
+ *
+ * The fixture this replaces held the seven pairs the same sweep reported over
+ * the 110 formulas of the previous pin. All seven are still here, and the 28
+ * that join them are what a corpus that grew from 19 LaTeX cases to 125 would
+ * be expected to add.
  */
 describe("the corpus equality matrix, as the gem reports it", () => {
   const cases = readCorpusCases();
@@ -394,17 +414,49 @@ describe("the corpus equality matrix, as the gem reports it", () => {
   ]);
 
   const RubyEqualPairs: ReadonlySet<string> = new Set([
+    "font-bold|latex-font-bold",
+    "frac-fenced-denominator|latex-frac-sum-denominator",
+    "frac-fenced-numerator|latex-frac-sum-numerator",
     "frac-simple|frac-explicit",
+    "latex-mod-bmod|latex-mod-pmod",
+    "latex-mod-infix|latex-mod-bmod",
+    "latex-mod-infix|latex-mod-pmod",
+    "mod-in-expression|latex-mod-fenced-left",
+    "mod-numeric|latex-mod-numeric",
+    "mod-simple|latex-mod-bmod",
+    "mod-simple|latex-mod-infix",
+    "mod-simple|latex-mod-pmod",
+    "nary-lim|latex-nary-lim-to-infinity",
+    "nary-sum-bare|latex-nary-sum-bare",
+    "nary-sum-bounded|latex-nary-sum-bounded",
     "operator-plus|whitespace-around-operator",
+    "power-exponential|latex-power-exponential",
+    "power-fenced-exponent|latex-power-braced-exponent",
     "power-of-two|latex-number-braced-exponent",
+    "power-square|latex-power-square",
+    "root-sqrt-expression|latex-root-sqrt-sum",
+    "root-sqrt-number|latex-root-sqrt-number",
+    "root-sqrt-pythagoras|latex-root-sqrt-pythagoras",
+    "subscript-fenced|latex-subscript-braced",
     "symbol-greek-alpha|latex-symbol-greek-alpha",
     "symbol-greek-pi|latex-symbol-greek-pi",
     "symbol-infinity|latex-symbol-infinity",
     "symbol-latin-x|whitespace-surrounding",
+    "text-function|latex-text-command",
+    "text-quoted|latex-text-spaced",
+    "unary-bar|latex-accent-bar",
+    "unary-cos-product|latex-unary-cos-product",
+    "unary-sin-bare|latex-unary-sin-bare",
+    "unary-sin-fenced|latex-unary-sin-fenced",
+    "unary-vec|latex-accent-vec",
   ]);
 
-  it("has the 110 cases it expects", () => {
-    expect(nodes).toHaveLength(110);
+  it("has the 216 cases it expects", () => {
+    expect(nodes).toHaveLength(216);
+    // The probe reported 35 over these same 216. A line lost while the
+    // fixture was pasted in would otherwise pass green against a port that
+    // had lost the same pair.
+    expect(RubyEqualPairs.size).toBe(35);
   });
 
   it("is reflexive: a rebuilt tree equals its twin", () => {
@@ -430,12 +482,67 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     expect([...found].sort()).toStrictEqual([...RubyEqualPairs].sort());
   });
 
-  it("proves those seven differ only in a field the projection skips", () => {
+  /**
+   * What the projection is skipping in each pair, as an assertion rather than
+   * as prose. Measured over these 35 pairs on the pinned corpus, and each of
+   * the three groups is named rather than folded into one loose claim:
+   *
+   *   - 2 pairs have models that are identical outright, `input_string`
+   *     included: `e^x` and `x^2` are the same source text in both notations,
+   *     so the two parsers meet at the same tree and the corpus records it
+   *     twice. Nothing is being skipped there at all;
+   *   - 32 differ in `input_string` and in nothing else — the field the
+   *     projection drops;
+   *   - 1, `font-bold|latex-font-bold`, differs in `input_string` and in one
+   *     more field: its `FontStyle::Bold` carries `parameter_two: "bb"` from
+   *     `bb(x)` against `"mathbf"` from `\mathbf{x}`, which the projection
+   *     folds through the font-family map ("font family folding" above).
+   *
+   * Listing the last two groups by name is the point: a pair drifting into
+   * either is a different claim about `==` and has to be looked at rather than
+   * absorbed by a weaker assertion.
+   */
+  it("names what each pair is asking the projection to skip", () => {
+    const identical: string[] = [];
+    const beyondInputString: string[] = [];
     for (const pair of RubyEqualPairs) {
       const [leftId, rightId] = pair.split("|");
       const left = cases.find((entry) => entry.id === leftId)?.model;
       const right = cases.find((entry) => entry.id === rightId)?.model;
+      expect(left, pair).toBeDefined();
+      expect(right, pair).toBeDefined();
+      if (canonical(left) === canonical(right)) {
+        identical.push(pair);
+        continue;
+      }
       expect(left?.fields.input_string, pair).not.toStrictEqual(right?.fields.input_string);
+      if (canonical(left, "input_string") !== canonical(right, "input_string")) {
+        beyondInputString.push(pair);
+      }
     }
+    expect(identical).toStrictEqual([
+      "power-exponential|latex-power-exponential",
+      "power-square|latex-power-square",
+    ]);
+    expect(beyondInputString).toStrictEqual(["font-bold|latex-font-bold"]);
   });
 });
+
+/**
+ * A model as one string, with `drop` removed at every depth and object keys
+ * ordered, so two models can be compared for sameness rather than asserted
+ * equal. `JSON.stringify` alone would make key order significant, and the YAML
+ * reader's order follows the file's.
+ */
+function canonical(value: unknown, drop?: string): string {
+  if (Array.isArray(value)) return `[${value.map((item) => canonical(item, drop)).join(",")}]`;
+  if (typeof value === "object" && value !== null) {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => key !== drop)
+      .map(([key, item]) => [key, canonical(item, drop)] as const)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([key, item]) => `${JSON.stringify(key)}:${item}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "undefined";
+}

@@ -1,14 +1,18 @@
 # Regenerates test/xml/ox-contract.expected.json — every expected string is
 # printed by the oracle's own Ox in this process; nothing is retyped.
 #
-# Run from the pinned oracle checkout, emitting to stdout:
+# Run with the working directory set to a pinned oracle checkout — the script
+# only ever reads `Dir.pwd`, so no particular clone location is required —
+# emitting to stdout. For example, with the oracle cloned as a sibling
+# `../plurimath-oracle` and Ruby provisioned via mise:
 #
 #   cd ../plurimath-oracle && mise x ruby@4.0.1 -- bundle exec ruby \
 #     ../plurimath-ts/scripts/generate-xml-fixtures.rb \
 #     > ../plurimath-ts/test/xml/ox-contract.expected.json
 #
-# The mise activation matters: an unactivated shell selects system Ruby and
-# bundler exits with GemNotFound (review-proven).
+# Activation is what matters, not that specific location or Ruby version: an
+# unactivated shell selects system Ruby and bundler exits with GemNotFound
+# (review-proven).
 #
 # The tree recipes mirror test/xml/ox-contract.ts one-for-one; the three
 # MathML tree entries are byte-checked against Plurimath::Math.parse(...)
@@ -246,10 +250,38 @@ dn["mathml-sum-tree"] = dump_nodes(math_style_tree([sum_mrow]))
   end
 end
 
+# The oracle's commit, or a refusal.
+#
+# This used to be `%x(git rev-parse HEAD).strip`, and Ruby's backtick form does
+# NOT raise when the subprocess fails — outside a git working tree it returns
+# "" with `$?.exitstatus` 128 and no exception. This script's own header says to
+# redirect its stdout straight into the committed fixture, so that silently
+# wrote `"oracleCommit": ""` into checked-in test data: a provenance record
+# that states nothing while looking like it states something.
+#
+# `generate-corpus.rb:349` already does this correctly for the rest of the
+# repository; this file was the one generator that did not.
+def oracle_commit
+  output = IO.popen(["git", "rev-parse", "HEAD"], err: File::NULL, &:read)
+  unless $?.success?
+    abort "REFUSING: `git rev-parse HEAD` failed in #{Dir.pwd} (exit " \
+          "#{$?.exitstatus}). This script records the ORACLE's commit as " \
+          "provenance, so it must run from the oracle checkout."
+  end
+
+  commit = output.strip
+  unless commit.match?(/\A[0-9a-f]{40}\z/)
+    abort "REFUSING: `git rev-parse HEAD` in #{Dir.pwd} gave #{commit.inspect}, " \
+          "which is not a commit id."
+  end
+
+  commit
+end
+
 provenance = {
   "oracle" => "plurimath",
   "oracleVersion" => Plurimath::VERSION,
-  "oracleCommit" => %x(git rev-parse HEAD).strip,
+  "oracleCommit" => oracle_commit,
   "oxVersion" => Ox::VERSION,
   "rubyVersion" => RUBY_VERSION,
   "xmlEngine" => Plurimath.xml_engine.name,

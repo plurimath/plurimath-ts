@@ -131,10 +131,20 @@ src/
                      generated from, and a second generator writing there
                      would falsify that. Merging the two is a rename, for a
                      change that can regenerate the corpus outputs alongside.
-    unicodemath/     Same: renderer landed (toUnicodemath), parser a later phase.
+    unicodemath/     Same shape as latex/: renderer landed (toUnicodemath), and
+                     grammar.ts with its generated/ tables; transform and a
+                     `parseUnicodemath` entry are not in, so index.ts publishes
+                     output only.
     mathml/          toMathml(MathNode) → string. Imports: core, xml, its slice.
     html/            Source renderer landed: index.ts, renderer.ts, render.ts,
                      and render-shared.ts. Its package subpath is a later phase.
+                     The parser half has begun: grammar.ts, ported rule for rule
+                     from html/parse.rb, with the transform and a `parseHtml`
+                     entry still to come — so index.ts publishes output only and
+                     grammar.ts is not a build entry.
+      generated/     The HTML grammar's own constant tables, written by
+                     scripts/generate-html-parser-data.rb. Same rule-1 placement
+                     and same reason as latex/generated above.
     omml/            Renderer internals landed: renderer.ts, render.ts, and
                      render-shared.ts. Its format index and package subpath are
                      a later phase.
@@ -296,7 +306,7 @@ so OMML is in that six while its own subpath is still unpublished.
 @plurimath/plurimath-ts/core        → FormulaNode, node types, errors
 @plurimath/plurimath-ts/asciimath   → parseAsciimath, toAsciimath
 @plurimath/plurimath-ts/html        → toHtml (partial coverage; parser when ported)
-@plurimath/plurimath-ts/latex       → toLatex (parser when ported)
+@plurimath/plurimath-ts/latex       → parseLatex, toLatex
 @plurimath/plurimath-ts/mathml      → toMathml (parser when ported)
 @plurimath/plurimath-ts/unicodemath → toUnicodemath (parser when ported)
 @plurimath/plurimath-ts/formatting  → (NOT YET PUBLISHED — see below)
@@ -1118,8 +1128,8 @@ Biome + tsc gates green; pegkit ported with its conformance suite,
 `any`/`present?`/`scope`, and stack-safety tests (pegkit stays **internal** —
 no public subpath); the build emitted the two entries that genuinely
 existed at P0, root and `/core`, with no format stubs published or tested;
-the format subpaths joined them once their renderers landed — only AsciiMath
-has a parser today —
+the format subpaths joined them once their renderers landed — AsciiMath and
+LaTeX have a parser today —
 `/asciimath`, `/latex` and `/mathml` on 2026-08-17 (#26), `/unicodemath` on
 2026-08-21 (#33) — each a physical entry the isolation gate checks; the `gates.json` registry and
 `scripts/check.mjs` run every P0-activated gate.

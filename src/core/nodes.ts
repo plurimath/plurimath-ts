@@ -169,8 +169,36 @@ function copyParameter(value: NodeParameter | undefined): NodeParameter | undefi
   return value === undefined ? undefined : copySlot(value);
 }
 
+/**
+ * The options slot for the classes whose Ruby `initialize` SKIPS an empty hash.
+ *
+ * The gem has three shapes, measured across `lib/plurimath/math/**`:
+ *
+ * - `@options = options unless options.empty?` — ten classes: `base`, `color`,
+ *   `frac` (spelled `if options && !options&.empty?`), `int`, `mpadded`,
+ *   `oint`, `overset`, `prod`, `sum`, and `symbols/symbol`.
+ * - `@options = options` — three: `fenced`, `nary`, `table`. An empty hash is
+ *   STORED.
+ * - `@options = options unless options.nil?` — one: `underset`. An empty hash
+ *   is stored there too.
+ *
+ * Every caller of this helper is in the first group, so an empty hash must
+ * leave the slot unset, exactly as `Frac.new(a, b, {})` does — measured, its
+ * `@options` is not even defined afterwards, while `Underset.new(a, b, {})`
+ * holds `{}`. Returning a fresh `{}` here instead would put an empty hash into
+ * `normalize`'s output where the gem emits nothing.
+ *
+ * `Sqrt` is the one caller whose gem class cannot take options through `new` at
+ * all — it inherits `UnaryFunction#initialize(parameter_one = nil)`, so
+ * `Sqrt.new(a, {})` raises `ArgumentError`. Dropping an empty hash is the
+ * closer answer for it as well.
+ *
+ * The three store-always classes do NOT route through here; they assign the
+ * slot directly, which is why this helper can drop empties unconditionally.
+ */
 function copyOptions(value: NodeOptions | undefined): NodeOptions | undefined {
-  return value === undefined ? undefined : { ...value };
+  if (value === undefined) return undefined;
+  return Object.keys(value).length === 0 ? undefined : { ...value };
 }
 
 /**
@@ -1949,6 +1977,35 @@ function codepointToString(code: number): string {
 }
 
 /**
+ * A character reference `codepointToString` refuses, carrying WHERE it was.
+ *
+ * A `RangeError` subclass, deliberately: the decoder's failure is the
+ * language's, not a package operation (see `codepointToString` above), and
+ * several call sites already branch on `error instanceof RangeError` — the
+ * OMML renderer's own decode guard (`omml/render-shared.ts:582`) and the
+ * stack-depth branding at the AsciiMath, LaTeX, HTML and UnicodeMath renderer
+ * entries. Subclassing keeps every one of them matching.
+ *
+ * `index` exists because the gem has nothing to copy here. Measured at oracle
+ * `00c52783`: `Plurimath::Math.parse("x+&#x110000;", :latex)` raises
+ * `Math::ParseError` whose instance variables are exactly `@text` and `@type`
+ * (`errors/parse_error.rb:6-10`) — no position at all. `ParseError.index` is
+ * this package's own contract (ARCHITECTURE.md §5, "UTF-16 code-unit offset
+ * into the ORIGINAL input"), so a caller turning this into a `ParseError` needs
+ * a real offset; 0 would be a position the port invented.
+ */
+export class UndecodableEntityError extends RangeError {
+  constructor(
+    message: string,
+    /** UTF-16 offset of the `&`, in the string handed to the decoder. */
+    readonly index: number,
+  ) {
+    super(message);
+    this.name = "UndecodableEntityError";
+  }
+}
+
+/**
  * `Plurimath::Utility.html_entity_to_unicode`, which `Symbols::Symbol#==`
  * normalizes both sides through.
  *
@@ -2010,7 +2067,16 @@ export function htmlEntitySpans(text: string): readonly HtmlEntitySpan[] {
   // shared state and a reentrant caller would resume mid-string.
   const pattern = new RegExp(ENTITY_PATTERN.source, ENTITY_PATTERN.flags);
   for (const match of text.matchAll(pattern)) {
-    const decoded = decodeEntityMatch(match[0], match[1], match[2], match[3]);
+    let decoded: string;
+    try {
+      decoded = decodeEntityMatch(match[0], match[1], match[2], match[3]);
+    } catch (error) {
+      // `codepointToString` knows the code point and nothing else; this loop is
+      // the only place that knows where the reference started. Rethrow with
+      // that offset so a caller reporting a position has one to report.
+      if (!(error instanceof RangeError)) throw error;
+      throw new UndecodableEntityError(error.message, match.index);
+    }
     if (decoded === match[0]) continue;
     spans.push({ start: match.index, length: match[0].length, text: decoded });
   }

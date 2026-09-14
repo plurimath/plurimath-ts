@@ -2,9 +2,9 @@
  * Mirrors `function/unary_function.rb` — `UnaryFunction#to_latex` (:61) and
  * `#latex_value` (:221) — plus the name arms for the gem classes the census
  * folds into this carrier with their *own* `to_latex` overrides: `left.rb`
- * (:30), `right.rb` (:30), `glb.rb` (:11), `lcm.rb` (:25), `tr.rb` (:33).
- * Every other name in `MEASURED_UNARY_NAMES` below renders the carrier
- * default.
+ * (:30), `right.rb` (:30), `glb.rb` (:11), `lcm.rb` (:25), `mbox.rb` (:15),
+ * `tr.rb` (:33). Every other name in `MEASURED_UNARY_NAMES` below renders the
+ * carrier default.
  *
  * Measured pins worth naming, because source-reading gets them wrong:
  * `Glb` and `Lcm` render with no backslash (`glb{x}`, `lcm{x}`); every other
@@ -20,6 +20,7 @@ import { RenderError } from "../../core/index";
 import {
   describeSlot,
   FORMAT,
+  interpolatedValue,
   isNode,
   isPipeSymbol,
   type NodeOf,
@@ -77,6 +78,171 @@ const MEASURED_UNARY_NAMES: ReadonlySet<string> = new Set([
   "Hom",
 ]);
 
+/**
+ * The codepoints `String#inspect` writes as a NAMED escape rather than as
+ * `\uXXXX`, measured in the sweep `inspectString` below describes.
+ */
+const INSPECT_NAMED_ESCAPES: ReadonlyMap<number, string> = new Map([
+  [0x07, "\\a"],
+  [0x08, "\\b"],
+  [0x09, "\\t"],
+  [0x0a, "\\n"],
+  [0x0b, "\\v"],
+  [0x0c, "\\f"],
+  [0x0d, "\\r"],
+  [0x1b, "\\e"],
+  [0x22, '\\"'],
+  [0x5c, "\\\\"],
+]);
+
+/**
+ * `Array#inspect` — what `"#{array}"` actually produces — for the element
+ * shapes measured on the pinned oracle `00c52783`, and `null` for anything
+ * else, which the caller turns into the shared judge's refusal.
+ *
+ * Reproducing this is not optional here: `Mbox#to_latex` interpolates its slot
+ * raw, so a list in the slot reaches Ruby's `inspect` and is rendered rather
+ * than refused. Measured, `Mbox.new([nil]).to_latex` is `"\\mbox{[nil]}"`,
+ * `[[]]` is `"\\mbox{[[]]}"` and `["x"]` is `"\\mbox{[\"x\"]}"`. Only the
+ * ELEMENTS decide: an empty list is not a special case, and a non-empty one is
+ * not automatically unreproducible.
+ *
+ * What is admitted:
+ *
+ *   - `nil`, `true`, `false` — `"nil"`, `"true"`, `"false"`, measured;
+ *   - nested arrays, recursively, joined by `", "` (measured: `[nil, nil]` is
+ *     `"[nil, nil]"`, comma AND space);
+ *   - strings, through `inspectString` below;
+ *   - the NON-FINITE numbers. Measured, `[Float::INFINITY]` is
+ *     `"[Infinity]"`, `[-Float::INFINITY]` is `"[-Infinity]"` and
+ *     `[Float::NAN]` is `"[NaN]"`, which is exactly what JavaScript's
+ *     `String()` gives. `interpolatedValue` admits the same three at the top
+ *     of the slot, and this is the same judgement one level down;
+ *   - the EMPTY hash, `"{}"` (measured, and `{}` nested or beside other
+ *     elements too).
+ *
+ * And what is refused:
+ *
+ *   - every FINITE number. This one is a CONSERVATIVE POLICY, not a claim that
+ *     each finite value is ambiguous, and saying so is the point: plenty of
+ *     them are perfectly reproducible. Measured, `[0.5]`, `[-0.5]`, `[1.25]`,
+ *     `[0.1]`, `[0.000123]` and `[1234567890.5]` all inspect exactly as
+ *     JavaScript's `String()` spells them, and refusing those loses nothing
+ *     but capability.
+ *
+ *     The tempting narrower rule — "a number with a fractional part cannot be
+ *     an Integer, so admit it" — was measured and does NOT hold. Ruby's
+ *     `Float#to_s` turns exponential below 1e-4 while JavaScript's turns at
+ *     1e-6, and the two spell an exponent differently even where both use one:
+ *
+ *       1e-5    ruby "1.0e-05"   js "0.00001"
+ *       1e-6    ruby "1.0e-06"   js "0.000001"
+ *       1e-7    ruby "1.0e-07"   js "1e-7"
+ *       1.5e-7  ruby "1.5e-07"   js "1.5e-7"
+ *
+ *     All four have a fractional part, so that rule would emit invented bytes
+ *     for every one of them. A correct rule exists — non-integral AND at least
+ *     1e-4 in magnitude — but its threshold is Ruby's, inferred from a handful
+ *     of points rather than derived, and getting it wrong means wrong bytes
+ *     where the blanket refusal only means a loud `RenderError`. A smaller
+ *     true rule beats a larger one that needs an exception.
+ *
+ *     The integral case is the one that is genuinely undecidable: `[5]` and
+ *     `[5.0]` inspect as `"[5]"` and `"[5.0]"` from the same JavaScript value.
+ *     `interpolatedValue` refuses finite numbers at the top of the slot on the
+ *     same policy, and the two staying consistent is deliberate;
+ *   - a node. Its inspect embeds a heap address, which is nondeterministic;
+ *   - a NON-EMPTY hash. Measured, `[{a: 1}]` inspects as `"[{a: 1}]"` with a
+ *     Symbol key and `[{"a" => 1}]` as `"[{\"a\" => 1}]"` with a String one;
+ *     a JavaScript object key carries no such distinction. (The unicodemath
+ *     side assumes Symbol keys instead — TODO.plan/deferred.md, "Ruby Float vs
+ *     JavaScript number in option interpolation". Refusing is the choice
+ *     available here, where there is no option-shaped precedent to lean on.)
+ */
+function rubyInspect(value: unknown): string | null {
+  if (value === null || value === undefined) return "nil";
+  if (value === true) return "true";
+  if (value === false) return "false";
+  if (typeof value === "string") return inspectString(value);
+  if (typeof value === "number") return Number.isFinite(value) ? null : String(value);
+  if (Array.isArray(value)) {
+    const parts: string[] = [];
+    for (const item of value) {
+      const part = rubyInspect(item);
+      if (part === null) return null;
+      parts.push(part);
+    }
+    return `[${parts.join(", ")}]`;
+  }
+  // A hash, but only the empty one — `isNode` keeps a node out, and a node is
+  // the only other object shape a slot can hold.
+  if (typeof value === "object" && !isNode(value) && Object.keys(value).length === 0) return "{}";
+  return null;
+}
+
+/**
+ * `String#inspect`, from an exhaustive sweep of U+0000..U+02FF on the pinned
+ * oracle `00c52783` — every codepoint in that range whose inspect body is not
+ * the character itself, and there are 67 of them.
+ *
+ * The rules, all from that sweep:
+ *
+ *   - `"` and `\` take a backslash;
+ *   - `#` takes one ONLY before `{`, `$` or `@` — `"a#x"` inspects as `"a#x"`,
+ *     `'a#{b}'` as `"a\#{b}"`;
+ *   - U+0007..U+000D and U+001B have named forms (`\a \b \t \n \v \f \r \e`);
+ *   - every other codepoint below U+0020, plus U+007F..U+009F, is `\uXXXX`
+ *     with FOUR digits and UPPERCASE hex — `\u001A`, not `\u001a`;
+ *   - U+00A0..U+02FF pass through verbatim (é is `"é"`, not an escape).
+ *
+ * `JSON.stringify` is close but not equal, and the difference was overstated
+ * here before: comparing its body against Ruby's over all 768 swept
+ * codepoints, **725 agree and 43 do not**. `\n`, `\t`, `\b`, `\f`, `\r`,
+ * `\"`, `\\` and U+0000..U+0006 and U+0010..U+0019 are spelled identically by
+ * both — the hex ones because their four digits hold no letter for the case to
+ * differ on. The 43 that differ are exactly:
+ *
+ *   - U+0007, U+000B and U+001B, where Ruby writes the named `\a`, `\v` and
+ *     `\e` and JSON writes hex;
+ *   - U+000E, U+000F, U+001A and U+001C..U+001F — seven codepoints whose hex
+ *     digits DO hold a letter, so Ruby's uppercase and JSON's lowercase part;
+ *   - all 33 of U+007F..U+009F, which Ruby escapes and JSON leaves bare.
+ *
+ * Nothing in U+0020..U+007E differs, and nothing above U+009F does. The `#`
+ * lookahead is a further difference, but a two-character one rather than a
+ * codepoint, so it is outside that count.
+ *
+ * Above U+02FF the answer is `null`, refusing rather than guessing. That
+ * ceiling is this sweep's, not a fact about Ruby: measured, `"π"` inspects as
+ * `"π"` and would render fine, while U+10FFFF inspects as `"\u{10FFFF}"` — a
+ * BRACED form this table does not carry. Ruby's rule up there is about which
+ * codepoints it considers printable, and pinning that needs its own sweep.
+ */
+function inspectString(value: string): string | null {
+  let out = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index] as string;
+    const codepoint = character.codePointAt(0) as number;
+    if (codepoint > 0x2ff) return null;
+    const named = INSPECT_NAMED_ESCAPES.get(codepoint);
+    if (named !== undefined) {
+      out += named;
+      continue;
+    }
+    if (codepoint < 0x20 || (codepoint >= 0x7f && codepoint <= 0x9f)) {
+      out += `\\u${codepoint.toString(16).toUpperCase().padStart(4, "0")}`;
+      continue;
+    }
+    // `#` is escaped only where Ruby would have read an interpolation.
+    if (character === "#" && ["{", "$", "@"].includes(value[index + 1] ?? "")) {
+      out += "\\#";
+      continue;
+    }
+    out += character;
+  }
+  return `"${out}"`;
+}
+
 export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
   const name = node.name;
   switch (name) {
@@ -94,6 +260,45 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
     case "Lcm":
       // `"glb{…}"`, `"lcm{…}"` — no backslash (`glb.rb:11`, `lcm.rb:25`).
       return `${name.toLowerCase()}{${s(latexValue(node.parameterOne, context, `${name.toLowerCase()}.parameterOne`))}}`;
+    case "Mbox": {
+      // `mbox.rb:15-17`: `"\\mbox{#{parameter_one}}"`. Raw interpolation, so
+      // this is one of the two Mbox overrides that do NOT delegate to `Text` —
+      // `Text#to_latex` writes `\text{…}`, and delegating would have emitted
+      // the wrong command. (`to_html`, which hands back `parameter_one`
+      // itself, is the other; the remaining four do delegate.) It is not
+      // `latex_value` either: no child is rendered, so this takes the same
+      // interpolation judge `Left`/`Right` take on the asciimath side.
+      //
+      // Measured on the pinned oracle `00c52783`: `Mbox.new("hi")` →
+      // `"\\mbox{hi}"`, `Mbox.new("a b")` → `"\\mbox{a b}"`, `Mbox.new(nil)`
+      // and `Mbox.new("")` → `"\\mbox{}"`, `Mbox.new(5)` → `"\\mbox{5}"`,
+      // `Mbox.new(true)` → `"\\mbox{true}"` — an integer and a boolean write
+      // their own bytes, NOT empty braces. A NODE interpolates Ruby's default
+      // `Object#to_s`, a heap address
+      // (`"\\mbox{#<Plurimath::Math::Symbols::Symbol:0x00007a71...>}"`), which
+      // is not reproducible and which `interpolatedValue` refuses.
+      const slot = node.parameterOne;
+      // Composites are answered HERE rather than inside `interpolatedValue`,
+      // which also serves `../number/latex.ts` and `../color/latex.ts`. Those
+      // slots do NOT reach Ruby through a bare `"#{}"`: `Number#to_latex` goes
+      // through `Formatter::Numbers::TextRenderer`, and Color's nested raw
+      // symbol list goes through a join that answers `""` for `[]`. A list
+      // means a different thing at each of the three, so widening the shared
+      // judge would have been wrong at two of them.
+      //
+      // Arrays AND hashes, because `to_s` on both IS `inspect` — measured,
+      // `Mbox.new({}).to_latex` is `"\\mbox{{}}"`. Scalars are deliberately
+      // not routed here: `"#{}"` on a String is the string itself, not its
+      // quoted inspect, so they keep going to the judge below.
+      if (Array.isArray(slot) || (typeof slot === "object" && slot !== null && !isNode(slot))) {
+        const inspected = rubyInspect(slot);
+        // A list holding something Ruby renders unreproducibly falls through
+        // to the shared judge, which refuses every array with the reason that
+        // covers it.
+        if (inspected !== null) return `\\mbox{${inspected}}`;
+      }
+      return `\\mbox{${interpolatedValue(slot, node.kind, "mbox.parameterOne")}}`;
+    }
     case "Tr":
       return renderTr(node, context);
     default:

@@ -129,8 +129,14 @@ module OracleGate
   def testsuite_usage
     <<~TEXT
       Usage:
-        scripts/gate-oracle.rb testsuite --check [--gem PATH]
+        scripts/gate-oracle.rb testsuite --check [--gem PATH] [--ruby-command CMD]
         scripts/gate-oracle.rb testsuite --help
+
+      --ruby-command CMD  how to reach a Ruby that can load the oracle's
+                          bundle (default: #{DEFAULT_RUBY_COMMAND.join(" ")}).
+                          Also settable as #{RUBY_COMMAND_ENV}. Pass a wrapper
+                          when the Ruby is not on PATH by itself, for example
+                          "mise x -- bundle exec ruby".
 
       Regenerates the pinned plurimath-testsuite corpus with that repository's
       own scripts/generate-corpus.rb into a temporary directory and diffs it
@@ -415,9 +421,14 @@ module OracleGate
       gem's message text and this port's are different by design, so only the
       fact of refusal is compared, never its wording.
 
-        --gem PATH   oracle checkout (default: $#{ORACLE_ENV})
-        --seed N     PRNG seed (default: #{DIFFERENTIAL_DEFAULT_SEED})
-        --count N    inputs to generate (default: #{DIFFERENTIAL_DEFAULT_COUNT})
+        --gem PATH          oracle checkout (default: $#{ORACLE_ENV})
+        --seed N            PRNG seed (default: #{DIFFERENTIAL_DEFAULT_SEED})
+        --count N           inputs to generate (default: #{DIFFERENTIAL_DEFAULT_COUNT})
+        --ruby-command CMD  how to reach a Ruby that can load the oracle's
+                            bundle (default: #{DEFAULT_RUBY_COMMAND.join(" ")}).
+                            Also settable as #{RUBY_COMMAND_ENV}. Pass a wrapper
+                            when the Ruby is not on PATH by itself, for example
+                            "mise x -- bundle exec ruby".
 
       Deterministic by construction: the same seed and count produce the same
       inputs, so a reported divergence can be reproduced exactly rather than
@@ -426,7 +437,7 @@ module OracleGate
   end
 
   def parse_differential_options(argv)
-    options = { gem: nil, seed: DIFFERENTIAL_DEFAULT_SEED, count: DIFFERENTIAL_DEFAULT_COUNT }
+    options = { gem: nil, seed: DIFFERENTIAL_DEFAULT_SEED, count: DIFFERENTIAL_DEFAULT_COUNT, ruby: nil }
     rest = argv.dup
 
     until rest.empty?
@@ -438,6 +449,8 @@ module OracleGate
       when /\A--seed=(.+)\z/ then options[:seed] = Integer(Regexp.last_match(1))
       when "--count" then options[:count] = require_integer!(rest, "--count")
       when /\A--count=(.+)\z/ then options[:count] = Integer(Regexp.last_match(1))
+      when "--ruby-command" then options[:ruby] = require_value!(rest, "--ruby-command")
+      when /\A--ruby-command=(.+)\z/ then options[:ruby] = Regexp.last_match(1)
       when "--help", "-h"
         puts differential_usage
         exit 0
@@ -648,7 +661,7 @@ module OracleGate
   def differential_gem_results(inputs, gem_dir)
     stdout, stderr, status = capture_bounded(
       { "BUNDLE_GEMFILE" => File.join(gem_dir, "Gemfile") },
-      "bundle", "exec", "ruby", "-Ilib", "-e", DIFFERENTIAL_GEM_SCRIPT,
+      *ruby_command, "-Ilib", "-e", DIFFERENTIAL_GEM_SCRIPT,
       stdin_data: JSON.generate(inputs), chdir: gem_dir, label: "gem"
     )
     raise Error, "the gem half failed (exit #{status.exitstatus}):\n#{stderr}" unless status.success?
@@ -756,6 +769,10 @@ module OracleGate
 
   def run_differential(argv)
     options = parse_differential_options(argv)
+    # The flag and #{RUBY_COMMAND_ENV} are one knob. Setting the env from the
+    # flag keeps them exactly equivalent rather than threading an argument
+    # through every frame between here and `ruby_command`.
+    ENV[RUBY_COMMAND_ENV] = options[:ruby] if options[:ruby]
     gem_dir = resolve_gem_dir(options[:gem])
     assert_clean_checkout!(gem_dir, "gem")
 

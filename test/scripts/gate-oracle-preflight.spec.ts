@@ -62,29 +62,32 @@ function probeWith(succeeds: boolean, chdir: string): { ok: boolean; output: str
 
 describe("the preflight runs before any generator does", () => {
   it("refuses a bundle that cannot start, naming the remedy", () => {
-    const r = probeWith(false, "/snapshot");
+    const r = probeWith(false, "/tmp");
     expect(r.ok).toBe(true);
     expect(r.output).toContain("raised:");
     expect(r.output).toContain("no usable frozen bundle");
   });
 
   it("lets a usable bundle through", () => {
-    const r = probeWith(true, "/snapshot");
+    const r = probeWith(true, "/tmp");
     expect(r.ok).toBe(true);
     expect(r.output).toContain("returned");
   });
 
   it("probes where the generators will run, not in the oracle checkout", () => {
-    // mise resolves the Ruby runtime from the working directory upwards, so a
+    // Every version manager this code can meet -- mise, rbenv, asdf, chruby --
+    // resolves the Ruby runtime by walking UP from the working directory, so a
     // probe run somewhere else can select a different interpreter and clear a
-    // bundle the generators cannot load.
-    const r = probeWith(true, "/snapshot");
-    expect(r.output).toContain('"chdir" => "/snapshot"');
+    // bundle the generators cannot load. That is why the directory is the thing
+    // asserted here, and why nothing below names a particular manager: the
+    // preflight no longer picks one.
+    const r = probeWith(true, "/tmp");
+    expect(r.output).toContain('"chdir" => "/tmp"');
     expect(r.output).not.toContain('"chdir" => "/oracle/checkout"');
   });
 
   it("probes under the same frozen environment the generators get", () => {
-    const r = probeWith(true, "/snapshot");
+    const r = probeWith(true, "/tmp");
     expect(r.output).toContain('"BUNDLE_FROZEN" => "true"');
     expect(r.output).toContain('"BUNDLE_GEMFILE" => "/oracle/checkout/Gemfile"');
   });
@@ -98,9 +101,10 @@ describe("the preflight runs before any generator does", () => {
    * Only the call itself proves the call.
    *
    * The assertion is EQUALITY between the probe's directory and the first
-   * generator's, because that is the invariant: `mise` resolves the Ruby
-   * runtime from the working directory upwards, so a probe run anywhere else
-   * can clear a bundle the generator cannot load. Matching a substring of the
+   * generator's, because that is the invariant: a version manager resolves the
+   * Ruby runtime by walking UP from the working directory, so a probe run
+   * anywhere else can clear a bundle the generator cannot load. Matching a
+   * substring of the
    * snapshot path is not enough — `testsuite --check` runs its generator in
    * `<snapshot>/submodules/plurimath-testsuite`, and a probe given the
    * snapshot root instead would still contain it.
@@ -155,8 +159,10 @@ describe("the preflight runs before any generator does", () => {
   );
 });
 
-// Must match `OracleGate::FROZEN_BUNDLE_PROBE_COMMAND` rendered the way
-// `frozen_bundle_probe_display` renders it — each argument through
+// Must match what `frozen_bundle_probe_display` renders for the DEFAULT
+// `ruby_command` -- `bundle exec ruby`, since nothing here sets
+// `--ruby-command` or `PLURIMATH_RUBY_COMMAND` -- followed by
+// `OracleGate::FROZEN_BUNDLE_PROBE_ARGS`, each argument through
 // `Shellwords.escape`, so the empty `-e` argument shows as `''`. Duplicated
 // here rather than read from the Ruby source because the neutral message is
 // expected to quote exactly this.
@@ -165,7 +171,7 @@ describe("the preflight runs before any generator does", () => {
 // `... ruby -e ` while the Ruby still joined on a space, and when the Ruby
 // changed, that old string stayed a PREFIX of the new one — so `toContain`
 // went on passing while no longer checking the part that had been wrong.
-const FROZEN_BUNDLE_PROBE_COMMAND = "mise x -- bundle exec ruby -e ''";
+const FROZEN_BUNDLE_PROBE_COMMAND = "bundle exec ruby -e ''";
 
 const EMPTY_CHECKSUMS_STDERR =
   'Your lockfile has an empty CHECKSUMS entry for "rake", but cannot be updated ' +

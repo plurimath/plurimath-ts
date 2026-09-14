@@ -9,6 +9,7 @@
 
 export type PlurimathErrorCode =
   | "PARSE_ERROR"
+  | "PARSE_OPTION_ERROR"
   | "UNSUPPORTED_FORMAT"
   | "UNSUPPORTED_FEATURE"
   | "MISSING_SYMBOL_DATA"
@@ -34,6 +35,40 @@ export class ParseError extends PlurimathError {
     readonly index: number,
   ) {
     super(message);
+  }
+}
+
+/**
+ * Ruby: `Plurimath::Math::ParseOptionError.unknown_options` (`math.rb:86-91`),
+ * raised for a parse-option KEY no entry point recognizes — never for a known
+ * key holding an unsupported VALUE, which is a different failure per option
+ * (`UnsupportedLocaleError` in `formatting/errors.ts`, for `locale`).
+ *
+ * Deliberately not a `ParseError`: `Math.parse` raises this from its own body
+ * (`math.rb:33-34`), OUTSIDE the `begin`/`rescue StandardError` that turns
+ * every other failure into a `ParseError` (`math.rb:44-48`). Measured:
+ * `Math.parse("x", :html, nosuchoption: true)` raises
+ * `Plurimath::Math::ParseOptionError`, and `e.is_a?(Plurimath::Math::
+ * ParseError)` is `false`.
+ *
+ * `supportedOptions` is this PORT's declared option shape for the entry point
+ * that raised, not the gem's `SUPPORTED_PARSE_OPTIONS`. The gem has no
+ * `onUnsupported` — that hook is a port-only addition every parser's options
+ * type carries (§5) — so mirroring the gem's list verbatim would reject a key
+ * TypeScript itself calls legal, which is stricter than what the type this
+ * check exists to approximate for a JavaScript caller.
+ */
+export class ParseOptionError extends PlurimathError {
+  readonly code = "PARSE_OPTION_ERROR" as const;
+
+  constructor(
+    readonly unknownOptions: readonly string[],
+    readonly supportedOptions: readonly string[],
+  ) {
+    super(
+      `unknown parse ${unknownOptions.length === 1 ? "option" : "options"}: ` +
+        `${unknownOptions.join(", ")}; supported parse options are ${supportedOptions.join(", ")}`,
+    );
   }
 }
 

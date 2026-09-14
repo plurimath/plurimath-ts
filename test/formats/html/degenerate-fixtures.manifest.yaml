@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/probe-degenerate-slots.rb
-  sha256: 40e485ca9c46bbeb69f2611d0ca7cbc931827f31d7d59663598f447d252af05b
+  sha256: ff67285d9741ce87311c506d610af80473fd4bd019e9c32c2a234b681618dab9
   inputs:
-    scripts/generate-corpus.rb: a7ed6927c0f3a0821627de2bd6c2dc13e15dff889650419f588546b7ab8a1525
-    scripts/probe-degenerate-slots.rb: 40e485ca9c46bbeb69f2611d0ca7cbc931827f31d7d59663598f447d252af05b
+    scripts/generate-corpus.rb: c2ce1875421d0281f778a3fcdf09c2d72ebc9acb91aef847a8b756407bd4bd69
+    scripts/probe-degenerate-slots.rb: ff67285d9741ce87311c506d610af80473fd4bd019e9c32c2a234b681618dab9
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: dc65e991fbdc3650aceee017a13d166947450b7a
+    commit: a2ce0bbaa0c9897872414f520f43ba99479abed0
     clean: true
     dirty_paths: []
   inventory:
@@ -72,7 +72,7 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: 07ec6e1bc178b7198dd34b64522d375d35d3f5309bbfa1eb91a28a5cb00ffb69
+    sha256: 03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121
     resolved_gems: 77
     platforms:
     - aarch64-linux-gnu

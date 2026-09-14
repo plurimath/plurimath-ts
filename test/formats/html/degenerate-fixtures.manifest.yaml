@@ -2,10 +2,8 @@
 # `payload.sha256` covers the whole payload file, including its final newline.
 ---
 schema: plurimath-corpus/manifest/1
-committable: false
-warnings:
-- generated with --allow-dirty
-- 'generator checkout dirty: src/core/generated/provenance.ts, src/formats/html/generated/provenance.ts, src/formats/latex/generated/provenance.ts, src/formats/unicodemath/generated/provenance.ts, src/formatting/generated/provenance.ts'
+committable: true
+warnings: []
 generator:
   path: scripts/probe-degenerate-slots.rb
   sha256: ff67285d9741ce87311c506d610af80473fd4bd019e9c32c2a234b681618dab9
@@ -14,14 +12,9 @@ generator:
     scripts/probe-degenerate-slots.rb: ff67285d9741ce87311c506d610af80473fd4bd019e9c32c2a234b681618dab9
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: dc08b48eebbae1800ae22965625599398a8bcaea
-    clean: false
-    dirty_paths:
-    - src/core/generated/provenance.ts
-    - src/formats/html/generated/provenance.ts
-    - src/formats/latex/generated/provenance.ts
-    - src/formats/unicodemath/generated/provenance.ts
-    - src/formatting/generated/provenance.ts
+    commit: 6df08838d75313c901c9fd5f162f8edbf8c54666
+    clean: true
+    dirty_paths: []
   inventory:
     glob: src/render/*/html.ts
     paths:

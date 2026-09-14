@@ -6,9 +6,9 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-corpus.rb
-  sha256: eeffa2081da2c61d89398092a41bd753beffe9ff317d9d5ef1fdb6d30f9b3003
+  sha256: b8f2f80d66208378272fdde4a05f56a6da2f4ee350adb230ed580ac7101d98df
   repository:
-    commit: 94e22a17653dd11507ecefc8dfe9b5f2f75f22ba
+    commit: 6f48077c0ae18f0a913039e8b41b9258b563e2aa
     clean: true
     dirty_paths: []
 oracle:

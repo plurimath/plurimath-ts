@@ -151,9 +151,15 @@ describe("local corpus manifests as shipped", () => {
 
 describe("the local-manifest guards prove their own failure modes", () => {
   it("fails when a manifest list repeats a structural entry", () => {
+    // `lockfile.platforms` rather than a gem-name list: a `gem` source records
+    // how many gems it provides, not their names, so the only names left are
+    // the path source's — and it provides exactly one.
     const root = damagedCopy((where) => {
       editFile(join(where, "census.manifest.yaml"), (text) =>
-        text.replace("    - ffi\n    - fuzzy_match", "    - ffi\n    - ffi\n    - fuzzy_match"),
+        text.replace(
+          "    - arm64-darwin\n    - x86_64-darwin",
+          "    - arm64-darwin\n    - arm64-darwin\n    - x86_64-darwin",
+        ),
       );
     });
     expect(() => assertNoDuplicateManifestEntries(root)).toThrow(

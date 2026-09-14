@@ -54,3 +54,14 @@ export const ASCIIMATH_TABLE_CLOSE_FALLBACK: ReadonlyMap<string, string> = new M
  * render path asks `include?` — so the order is not semantic.
  */
 export const ASCIIMATH_SIMPLE_TABLE_NAMES: readonly string[] = ["array", "align", "split"];
+
+/**
+ * `Formula`'s aliased children (`corpus/census.yaml`), sorted —
+ * the AsciiMath transform never constructs a formula subclass, so
+ * this is measured directly off the census, each verified live by
+ * an `to_asciimath` render that does not raise. The names this
+ * carrier has measured behaviour for — a defined name outside
+ * this set raises before dispatch (`unreachableName`,
+ * `src/render/formula/asciimath.ts`).
+ */
+export const ASCIIMATH_FORMULA_NAMES: readonly string[] = ["Mstyle"];

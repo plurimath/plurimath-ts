@@ -1970,3 +1970,14 @@ export const MATHML_TABLE_NAME_FAMILIES: ReadonlyMap<string, string> = new Map([
   ["Split", "base"],
   ["Vmatrix", "base"],
 ]);
+
+/**
+ * `Formula`'s aliased children (`corpus/census.yaml`), sorted —
+ * measured directly off the census, each verified live by a
+ * `to_mathml_without_math_tag` render (through the same wrap the
+ * table census above uses) that does not raise. The names this
+ * carrier has measured behaviour for — a defined name outside
+ * this set raises before dispatch (`unreachableName`,
+ * `src/render/formula/mathml.ts`).
+ */
+export const MATHML_FORMULA_NAMES: readonly string[] = ["Mstyle"];

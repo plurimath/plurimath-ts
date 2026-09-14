@@ -740,6 +740,28 @@ module CorpusGenerator
     acc
   end
 
+  # `Math::Formula`'s "aliased" children (`corpus/census.yaml`) — the
+  # subclasses the census folds onto `Formula` itself because they add no
+  # field and no equality of their own (`disposition_of` in `build_census`
+  # above). Distinct from a Formula subclass the census marks "implemented"
+  # (`Mrow`, which the port carries as its own node kind,
+  # `src/render/mrow/*.ts`, not through this guard). Every asciimath, latex
+  # and mathml formula carrier reads this same set
+  # (TODO.plan/deferred.md, "The carrier name-guard sets are partly
+  # hand-listed"); each format re-verifies it with its own live render
+  # rather than sharing the check, matching the per-format table census
+  # above.
+  def formula_aliased_basenames(census)
+    formula_key = class_key(Plurimath::Math::Formula)
+    names = census.fetch("classes")
+      .select { |entry| entry["parent"] == formula_key && entry["disposition"] == "aliased" }
+      .map { |entry| entry["name"].split("::").last }
+      .sort
+    raise Error, "Formula has no aliased children; the census shape changed" if names.empty?
+
+    names
+  end
+
   # Force-loads the autoloaded model namespaces so `descendants` is complete.
   def load_model_classes!(gem_dir)
     Dir.glob(File.join(gem_dir, "lib/plurimath/math/**/*.rb")).sort.each do |file|
@@ -2177,11 +2199,39 @@ module CorpusGenerator
     names.dup
   end
 
-  def build_render_tables
+  # The census of `Formula`'s aliased children, asciimath-verified: each
+  # basename `formula_aliased_basenames` names must resolve to a live
+  # `Formula` descendant that renders `to_asciimath` without raising — the
+  # AsciiMath transform never constructs a formula subclass, so unlike the
+  # font-style keyword table this one is not derivable from the transform
+  # registry.
+  def asciimath_formula_subclass_names(census)
+    names = formula_aliased_basenames(census)
+    by_name = all_descendants(Plurimath::Math::Formula).uniq
+      .to_h { |klass| [class_key(klass).split("::").last, klass] }
+
+    names.each do |name|
+      klass = by_name[name]
+      raise Error, "#{name} is not a Formula descendant; the census disagrees with the model" unless klass
+
+      begin
+        klass.new([render_probe_symbol(RENDER_TABLE_CELL)]).to_asciimath(options: {})
+      rescue StandardError => e
+        raise Error, "#{name} raised #{e.class} (#{e.message}) rendering to_asciimath; " \
+                     "every aliased Formula subclass must render before this census can " \
+                     "guard node.name against it"
+      end
+    end
+
+    names
+  end
+
+  def build_render_tables(census)
     {
       "font_keywords" => font_style_render_keywords,
       "table_close" => table_close_fallback_pairs,
       "simple_tables" => simple_table_names,
+      "formula_names" => asciimath_formula_subclass_names(census),
     }
   end
 
@@ -2671,7 +2721,33 @@ module CorpusGenerator
     literals
   end
 
-  def build_mathml_render_tables(registry)
+  # The census of `Formula`'s aliased children, mathml-verified: each
+  # basename `formula_aliased_basenames` names must resolve to a live
+  # `Formula` descendant that renders `to_mathml_without_math_tag` (through
+  # the same `mathml_probe_formula` wrap the table census above uses)
+  # without raising.
+  def mathml_formula_subclass_names(census)
+    names = formula_aliased_basenames(census)
+    by_name = all_descendants(Plurimath::Math::Formula).uniq
+      .to_h { |klass| [class_key(klass).split("::").last, klass] }
+
+    names.each do |name|
+      klass = by_name[name]
+      raise Error, "#{name} is not a Formula descendant; the census disagrees with the model" unless klass
+
+      begin
+        mathml_probe_formula(klass.new([render_probe_symbol(RENDER_TABLE_CELL)])).to_mathml
+      rescue StandardError => e
+        raise Error, "#{name} raised #{e.class} (#{e.message}) rendering to_mathml; " \
+                     "every aliased Formula subclass must render before this census can " \
+                     "guard node.name against it"
+      end
+    end
+
+    names
+  end
+
+  def build_mathml_render_tables(registry, census)
     {
       "color_literals" => mathml_color_symbol_literals,
       "unary_mi" => mathml_unary_mi_names,
@@ -2685,6 +2761,7 @@ module CorpusGenerator
       "paren_roles" => mathml_paren_role_ids,
       "carrier_names" => mathml_reachable_carrier_names(registry),
       "table_families" => mathml_table_name_families,
+      "formula_names" => mathml_formula_subclass_names(census),
     }
   end
 
@@ -3039,11 +3116,61 @@ module CorpusGenerator
     end
   end
 
-  def build_latex_render_tables(registry)
+  # The full `FontStyle` subclass basename set, latex-side — the same
+  # subclasses `latex_font_style_commands` already verifies render one of
+  # its two measured shapes (a `\command{}` wrapper or the value alone), so
+  # this reuses that verification rather than repeating it: the eight
+  # command names plus the six that render their value alone. Neither the
+  # AsciiMath transform registry (this format may not import it — §3's
+  # generated-data closure) nor a `get_class` census row supplies this list
+  # (TODO.plan/deferred.md, "The carrier name-guard sets are partly
+  # hand-listed").
+  def latex_font_style_names(commands)
+    root = Plurimath::Math::Function::FontStyle
+    subclasses = all_descendants(root).uniq
+    raise Error, "FontStyle has no subclasses; the model did not load" if subclasses.empty?
+
+    names = subclasses.map { |klass| class_key(klass).split("::").last }.sort
+    value_alone = names - commands.keys
+    unless (names - value_alone).sort == commands.keys.sort
+      raise Error, "font-style command names #{commands.keys.sort} are not a subset of " \
+                   "the FontStyle subclass basenames #{names}"
+    end
+
+    names
+  end
+
+  # The census of `Formula`'s aliased children, latex-verified: each
+  # basename `formula_aliased_basenames` names must resolve to a live
+  # `Formula` descendant that renders `to_latex` without raising.
+  def latex_formula_subclass_names(census)
+    names = formula_aliased_basenames(census)
+    by_name = all_descendants(Plurimath::Math::Formula).uniq
+      .to_h { |klass| [class_key(klass).split("::").last, klass] }
+
+    names.each do |name|
+      klass = by_name[name]
+      raise Error, "#{name} is not a Formula descendant; the census disagrees with the model" unless klass
+
+      begin
+        klass.new([latex_render_probe_symbol(LATEX_RENDER_CELL)]).to_latex(options: {})
+      rescue StandardError => e
+        raise Error, "#{name} raised #{e.class} (#{e.message}) rendering to_latex; " \
+                     "every aliased Formula subclass must render before this census can " \
+                     "guard node.name against it"
+      end
+    end
+
+    names
+  end
+
+  def build_latex_render_tables(registry, census)
+    font_style_commands = latex_font_style_commands
     {
       "left_right_parens" => latex_left_right_parens,
       "plain_wrapped_unary" => latex_plain_wrapped_unary_names(registry),
-      "font_style_commands" => latex_font_style_commands,
+      "font_style_commands" => font_style_commands,
+      "font_style_names" => latex_font_style_names(font_style_commands),
       "matrix_environments" => latex_matrix_environments,
       "alignment_letters" => latex_alignment_letters,
       "color_asciimath" => latex_color_asciimath_symbols,
@@ -3051,6 +3178,7 @@ module CorpusGenerator
         latex_carrier_basenames(registry, "Math::Function::UnaryFunction"),
       "binary_carrier_names" =>
         latex_carrier_basenames(registry, "Math::Function::BinaryFunction"),
+      "formula_names" => latex_formula_subclass_names(census),
     }
   end
 
@@ -4322,6 +4450,18 @@ module CorpusGenerator
              "whatever their parens, in the gem's order. Membership only — the\n" \
              "render path asks `include?` — so the order is not semantic.",
       ),
+      ts_const(
+        "ASCIIMATH_FORMULA_NAMES",
+        "readonly string[]",
+        tables["formula_names"],
+        doc: "`Formula`'s aliased children (`corpus/census.yaml`), sorted —\n" \
+             "the AsciiMath transform never constructs a formula subclass, so\n" \
+             "this is measured directly off the census, each verified live by\n" \
+             "an `to_asciimath` render that does not raise. The names this\n" \
+             "carrier has measured behaviour for — a defined name outside\n" \
+             "this set raises before dispatch (`unreachableName`,\n" \
+             "`src/render/formula/asciimath.ts`).",
+      ),
     ]
 
     write_ts(File.join(out_root, INPUT_FORMAT, "render-tables.ts"), sections)
@@ -4493,6 +4633,18 @@ module CorpusGenerator
              "intent: false, the only intent this port reaches (intent is\n" \
              "deferred).",
       ),
+      ts_const(
+        "MATHML_FORMULA_NAMES",
+        "readonly string[]",
+        tables["formula_names"],
+        doc: "`Formula`'s aliased children (`corpus/census.yaml`), sorted —\n" \
+             "measured directly off the census, each verified live by a\n" \
+             "`to_mathml_without_math_tag` render (through the same wrap the\n" \
+             "table census above uses) that does not raise. The names this\n" \
+             "carrier has measured behaviour for — a defined name outside\n" \
+             "this set raises before dispatch (`unreachableName`,\n" \
+             "`src/render/formula/mathml.ts`).",
+      ),
     ]
 
     write_ts(File.join(out_root, "mathml", "render-tables.ts"), sections)
@@ -4616,6 +4768,20 @@ module CorpusGenerator
              "absent here was measured rendering its value alone, exactly like\n" \
              "the bare carrier (Ruby-nil out on nil in).",
       ),
+      ts_const(
+        "LATEX_FONT_STYLE_NAMES",
+        "readonly string[]",
+        tables["font_style_names"],
+        doc: "The full `FontStyle` subclass basename set, sorted — the eight\n" \
+             "`LATEX_FONT_STYLE_COMMANDS` names plus the six that render\n" \
+             "their value alone, reusing that table's verification rather\n" \
+             "than repeating it. The AsciiMath transform builds only bare\n" \
+             "font styles, so unlike the asciimath font-style carrier's set\n" \
+             "this one is not derivable from the transform registry. The\n" \
+             "names this carrier has measured behaviour for — a defined name\n" \
+             "outside this set raises before dispatch (`unreachableName`,\n" \
+             "`src/render/font-style/latex.ts`).",
+      ),
       ts_tuple_map(
         "LATEX_MATRIX_ENVIRONMENTS",
         "ReadonlyMap<string, string>",
@@ -4668,6 +4834,18 @@ module CorpusGenerator
              "slice carries, projected and emitted latex-side. The renderer\n" \
              "adds `Power`, `Mod` and `Td` itself (constructed without\n" \
              "`get_class`). Membership only — deduplicated and sorted.",
+      ),
+      ts_const(
+        "LATEX_FORMULA_NAMES",
+        "readonly string[]",
+        tables["formula_names"],
+        doc: "`Formula`'s aliased children (`corpus/census.yaml`), sorted —\n" \
+             "the AsciiMath transform never constructs a formula subclass, so\n" \
+             "this is measured directly off the census, each verified live by\n" \
+             "a `to_latex` render that does not raise. The names this\n" \
+             "carrier has measured behaviour for — a defined name outside\n" \
+             "this set raises before dispatch (`unreachableName`,\n" \
+             "`src/render/formula/latex.ts`).",
       ),
     ]
 
@@ -5172,9 +5350,9 @@ module CorpusGenerator
     census = build_census(gem_dir)
     symbols = build_symbol_data
     registry = build_transform_registry(gem_dir, census)
-    latex_render_tables = build_latex_render_tables(registry)
-    render_tables = build_render_tables
-    mathml_tables = build_mathml_render_tables(registry)
+    latex_render_tables = build_latex_render_tables(registry, census)
+    render_tables = build_render_tables(census)
+    mathml_tables = build_mathml_render_tables(registry, census)
     unicodemath_render_tables = build_unicodemath_render_tables(registry)
     assert_corpus_symbols_covered!(pin_cases, exclusions, symbols)
 

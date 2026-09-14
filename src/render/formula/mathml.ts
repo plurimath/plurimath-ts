@@ -20,16 +20,19 @@ import {
   renderChild,
   unreachableName,
 } from "../../formats/mathml/render-shared";
+import { MATHML_FORMULA_NAMES } from "../../generated/mathml/render-tables";
 import { XmlElement } from "../../xml/index";
 
 /**
  * The class names this carrier has measured behaviour for — `Mstyle`, the
  * one class the census folds onto `Formula` (its
  * `to_mathml_without_math_tag` owner is `Math::Formula`; probe mstyle
- * renders byte-identically to the bare carrier). The same hand-listed set
- * the asciimath formula file guards, same justification.
+ * renders byte-identically to the bare carrier), generated
+ * (`MATHML_FORMULA_NAMES`, `src/generated/mathml/render-tables.ts`). The
+ * same generated set the asciimath and latex formula files guard, same
+ * justification.
  */
-const MEASURED_FORMULA_NAMES: ReadonlySet<string> = new Set(["Mstyle"]);
+const MEASURED_FORMULA_NAMES: ReadonlySet<string> = new Set(MATHML_FORMULA_NAMES);
 
 export function renderFormula(node: NodeOf<"formula">, context: RenderContext): MathmlRendered {
   if (node.name !== undefined && !MEASURED_FORMULA_NAMES.has(node.name))

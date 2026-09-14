@@ -14,6 +14,7 @@
  */
 export const CLASS_B_SPECS = [
   "test/scripts/gate-oracle-differential.spec.ts",
+  "test/scripts/gate-oracle-generator-command.spec.ts",
   "test/scripts/gate-oracle-preflight.spec.ts",
   "test/scripts/gate-oracle-usage.spec.ts",
 ] as const;

@@ -12,7 +12,7 @@ generator:
     scripts/generate-html-model-fixtures.rb: cdd9d0ec782679441ff06683143452bf49c2b1922e915df13aa9e53ac533e7ac
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 70d6eaaf2210af9c8bc902b980c0cbeb8e797699
+    commit: 77d7195f18a9700756c3a6451fb6fe492a119dcb
     clean: true
     dirty_paths: []
 oracle:

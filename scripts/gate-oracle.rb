@@ -9,6 +9,7 @@
 require "fileutils"
 require "json"
 require "open3"
+require "shellwords"
 require "tmpdir"
 
 module OracleGate
@@ -19,6 +20,25 @@ module OracleGate
   SUBMODULE_RELATIVE_PATH = "submodules/plurimath-testsuite"
   SUBMODULE_ROOT = File.join(REPO_ROOT, SUBMODULE_RELATIVE_PATH)
   ORACLE_ENV = "PLURIMATH_ORACLE"
+
+  # How to reach a Ruby that can load the oracle's bundle.
+  #
+  # `bundle exec ruby` is the default because it is what every correctly set up
+  # Ruby answers to, however it was installed -- rbenv, asdf, rvm, chruby, the
+  # system one, or a version manager that puts its shims on PATH.
+  #
+  # It is an OPTION rather than a hardcoded chain because this gate cannot know
+  # what a given machine needs in front of it. Naming one version manager here
+  # -- which an earlier revision did, falling back to `mise x --` -- is the
+  # same assumption this gate exists to stop making, just moved one level down.
+  # A machine whose Ruby is reachable only through a wrapper passes its own:
+  #
+  #   --ruby-command "mise x -- bundle exec ruby"
+  #   PLURIMATH_RUBY_COMMAND="nix develop -c bundle exec ruby"
+  #
+  # Split with `Shellwords`, so quoting works the way a shell would.
+  RUBY_COMMAND_ENV = "PLURIMATH_RUBY_COMMAND"
+  DEFAULT_RUBY_COMMAND = %w[bundle exec ruby].freeze
 
   module_function
 
@@ -53,11 +73,37 @@ module OracleGate
     TEXT
   end
 
+  # The model-fixture generator names come from FORMAT_FIXTURE_GENERATORS
+  # rather than being spelled out here a second time. This text still named
+  # two of them on the day a third format was registered in that map, which
+  # is what a hand-kept duplicate of a list does; a derived one cannot.
+  def model_fixture_script_lines
+    family = FORMAT_FIXTURE_GENERATORS.find do |generator|
+      generator[:basename] == "model-fixtures.json"
+    end
+    unless family
+      raise Error, "no generator family emits model-fixtures.json, so this " \
+                   "help text cannot name the scripts that do."
+    end
+
+    # Joined with the indentation the surrounding heredoc has already had
+    # stripped from its own lines: `<<~` dedents the SOURCE lines, and an
+    # interpolated newline is inserted verbatim, so continuation lines carry
+    # their four spaces themselves.
+    family.fetch(:script).values.sort.map { |name| "scripts/#{name}" }.join(",\n    ")
+  end
+
   def repo_usage
     <<~TEXT
       Usage:
-        scripts/gate-oracle.rb repo --check [--gem PATH]
+        scripts/gate-oracle.rb repo --check [--gem PATH] [--ruby-command CMD]
         scripts/gate-oracle.rb repo --help
+
+      --ruby-command CMD  how to reach a Ruby that can load the oracle's
+                          bundle (default: #{DEFAULT_RUBY_COMMAND.join(" ")}).
+                          Also settable as #{RUBY_COMMAND_ENV}. Pass a wrapper
+                          when the Ruby is not on PATH by itself, for example
+                          "mise x -- bundle exec ruby".
 
       Regenerates, into temporary directories only:
         - corpus/ and src/generated/ via scripts/generate-corpus.rb
@@ -71,8 +117,8 @@ module OracleGate
           its sidecar via
           scripts/probe-degenerate-slots.rb
         - every committed test/formats/<format>/model-fixtures.json and its
-          sidecar via
-          scripts/generate-latex-model-fixtures.rb
+          sidecar via that format's own generator:
+          #{model_fixture_script_lines}
 
       It compares those regenerated outputs against a clean temporary snapshot
       of this repository's committed HEAD, never against live directories in
@@ -113,6 +159,10 @@ module OracleGate
 
   def run_repo(argv)
     options = parse_check_options(argv, repo_usage)
+    # The flag and #{RUBY_COMMAND_ENV} are one knob. Setting the env from the
+    # flag keeps them exactly equivalent rather than threading an argument
+    # through every frame between here and `capture_generator_command`.
+    ENV[RUBY_COMMAND_ENV] = options[:ruby] if options[:ruby]
     gem_dir = resolve_gem_dir(options[:gem])
     require_submodule_snapshot_prerequisites!
 
@@ -199,7 +249,8 @@ module OracleGate
 
   # The per-format fixture generators, and the committed file each one writes.
   #
-  # Both take `--oracle` rather than `--gem`; they load the pinned checkout
+  # These generators take `--oracle` rather than `--gem`; they load the pinned
+  # checkout
   # through $LOAD_PATH themselves instead of running under its Bundler alone.
   FORMAT_FIXTURE_GENERATORS = [
     {
@@ -220,16 +271,38 @@ module OracleGate
       end,
     },
     {
-      # The LaTeX parse fixtures. `--out` is the format DIRECTORY, and the
-      # script takes no `--format`: it emits one file, for the one format that
-      # has a transform to check.
+      # The parse fixtures. `--out` is the format DIRECTORY, and no script
+      # takes a `--format`: each emits one file, for its own format, and the
+      # three do not share a payload schema. So `script` is a MAP here, and a
+      # format with committed model fixtures and no entry stops the run
+      # rather than having its fixtures regenerated by another format's
+      # script -- which is what a single script name did the day the HTML
+      # fixtures landed.
       basename: "model-fixtures.json",
-      script: "generate-latex-model-fixtures.rb",
+      script: {
+        "html" => "generate-html-model-fixtures.rb",
+        "latex" => "generate-latex-model-fixtures.rb",
+        "unicodemath" => "generate-unicodemath-model-fixtures.rb",
+      }.freeze,
       arguments: lambda do |format, regenerated_root|
         ["--out", File.join(regenerated_root, "test", "formats", format)]
       end,
     },
   ].freeze
+
+  # The script one family runs for one format. A family names either one
+  # script for every format or a map from format to script; a format missing
+  # from the map stops the run.
+  def generator_script(generator, format)
+    script = generator[:script]
+    return script if script.is_a?(::String)
+
+    script.fetch(format) do
+      raise Error, "test/formats/#{format}/#{generator[:basename]} is committed " \
+                   "but no generator is registered for #{format}; it would be " \
+                   "regenerated by another format's script"
+    end
+  end
 
   # Regenerate every committed per-format fixture and return the file
   # comparisons for them.
@@ -258,7 +331,7 @@ module OracleGate
         end
         FileUtils.mkdir_p(File.join(regenerated_root, "test", "formats", format))
         run_generator!(
-          File.join(snapshot_root, "scripts", generator[:script]),
+          File.join(snapshot_root, "scripts", generator_script(generator, format)),
           ["--oracle", gem_dir, *generator[:arguments].call(format, regenerated_root)],
           chdir: snapshot_root,
           gem_dir: gem_dir,
@@ -285,6 +358,10 @@ module OracleGate
 
   def run_testsuite(argv)
     options = parse_check_options(argv, testsuite_usage)
+    # The flag and #{RUBY_COMMAND_ENV} are one knob. Setting the env from the
+    # flag keeps them exactly equivalent rather than threading an argument
+    # through every frame between here and `capture_generator_command`.
+    ENV[RUBY_COMMAND_ENV] = options[:ruby] if options[:ruby]
     gem_dir = resolve_gem_dir(options[:gem])
     require_submodule_snapshot_prerequisites!
 
@@ -387,7 +464,7 @@ module OracleGate
   end
 
   def parse_check_options(argv, help_text)
-    options = { gem: nil, check: false, help: false }
+    options = { gem: nil, check: false, help: false, ruby: nil }
     rest = argv.dup
 
     until rest.empty?
@@ -401,6 +478,12 @@ module OracleGate
         options[:gem] = File.expand_path(rest.shift)
       when /\A--gem=(.+)\z/
         options[:gem] = File.expand_path(Regexp.last_match(1))
+      when "--ruby-command"
+        raise UsageError, "missing command after --ruby-command" if rest.empty?
+
+        options[:ruby] = rest.shift
+      when /\A--ruby-command=(.+)\z/
+        options[:ruby] = Regexp.last_match(1)
       when "--help", "-h"
         options[:help] = true
       else
@@ -840,17 +923,14 @@ module OracleGate
   # raw Bundler stack trace, attributed to the generator rather than to the
   # bundle. Probe the same context up front instead, and name the remedy.
   #
-  # `chdir` is the caller's, not the oracle checkout: `mise` resolves the Ruby
-  # runtime from the working directory upwards, so probing somewhere else could
-  # select a different interpreter and clear a bundle the generators cannot
-  # then load — or refuse one they could. It is the generators' own directory,
-  # so the probe answers the question that was asked.
+  # `chdir` is the caller's, not the oracle checkout: a Ruby version manager
+  # resolves its runtime from the working directory upwards, so probing
+  # somewhere else could select a different interpreter and clear a bundle the
+  # generators cannot then load — or refuse one they could. It is the
+  # generators' own directory, so the probe answers the question that was
+  # asked.
   def assert_frozen_bundle_usable!(gem_dir, chdir:)
-    _stdout, stderr, status = capture_command(
-      ["mise", "x", "--", "bundle", "exec", "ruby", "-e", ""],
-      chdir: chdir,
-      env: frozen_generator_env(gem_dir),
-    )
+    _stdout, stderr, status = capture_generator_command(["-e", ""], chdir: chdir, gem_dir: gem_dir)
     return if status.success?
 
     raise Error, frozen_bundle_error(gem_dir, stderr)
@@ -858,6 +938,58 @@ module OracleGate
 
   def frozen_generator_env(gem_dir)
     { "BUNDLE_FROZEN" => "true", "BUNDLE_GEMFILE" => File.join(gem_dir, "Gemfile") }
+  end
+
+  # Runs the configured Ruby command, which defaults to `bundle exec ruby` and
+  # is overridden with `--ruby-command` or #{RUBY_COMMAND_ENV} -- see
+  # DEFAULT_RUBY_COMMAND above for why this is configuration rather than a
+  # hardcoded chain of version managers to try.
+  #
+  # `capture_command` raises `Error` for exactly one reason: the named
+  # executable could not be found. Rescuing it here turns that into a message
+  # naming the command that was tried and how to change it, not a guess at
+  # every possible failure — anything else it might raise (a raw
+  # `Errno::EACCES`, say) is not rescued by `capture_command` either and
+  # reaches this method's own caller as itself.
+  #
+  # A missing EXECUTABLE and a missing working DIRECTORY both reach
+  # `capture_command` as `Errno::ENOENT`, so "the rescue fired" does not mean
+  # "bundle is absent" — measured: `Open3.capture3({}, "true", chdir: "/nope")`
+  # raises `No such file or directory - /nope`, the same class as a missing
+  # binary. Reporting a missing command for a missing directory would be a
+  # wrong diagnosis of exactly the kind this file exists to stop making.
+  #
+  # So the directory is checked first, by name, and only an ENOENT that is NOT
+  # about it reaches the rescue.
+  # The Ruby command to run generators with: `--ruby-command`, else
+  # #{RUBY_COMMAND_ENV}, else `bundle exec ruby`.
+  def ruby_command(override = nil)
+    raw = override || ENV[RUBY_COMMAND_ENV]
+    return DEFAULT_RUBY_COMMAND.dup if raw.nil? || raw.strip.empty?
+
+    words = Shellwords.split(raw)
+    raise Error, "#{RUBY_COMMAND_ENV} is set but empty after splitting" if words.empty?
+
+    words
+  end
+
+  def capture_generator_command(ruby_args, chdir:, gem_dir:, ruby: nil)
+    unless Dir.exist?(chdir)
+      raise Error, "the working directory #{chdir} does not exist, so no " \
+                   "generator can run there. This is not a missing bundler."
+    end
+
+    command = ruby_command(ruby)
+    begin
+      capture_command([*command, *ruby_args], chdir: chdir, env: frozen_generator_env(gem_dir))
+    rescue Error
+      raise Error, "#{command.first} could not be executed. The generators run " \
+                   "through `#{command.join(' ')}`, which is the default " \
+                   "`#{DEFAULT_RUBY_COMMAND.join(' ')}` unless --ruby-command or " \
+                   "#{RUBY_COMMAND_ENV} changed it. Either install bundler where " \
+                   "`bundle` resolves, or pass the wrapper your Ruby needs — for " \
+                   "example --ruby-command \"mise x -- bundle exec ruby\"."
+    end
   end
 
   # Split from the probe so the message can be tested without a bundle.
@@ -881,10 +1013,8 @@ module OracleGate
   def run_generator!(script, arguments, chdir:, gem_dir:)
     relative = script.delete_prefix("#{chdir}/")
     puts "▶ #{relative} #{arguments.join(' ')}"
-    stdout, stderr, status = capture_command(
-      ["mise", "x", "--", "bundle", "exec", "ruby", script, *arguments],
-      chdir: chdir,
-      env: frozen_generator_env(gem_dir),
+    stdout, stderr, status = capture_generator_command(
+      [script, *arguments], chdir: chdir, gem_dir: gem_dir,
     )
 
     unless status.success?

@@ -12,7 +12,7 @@ generator:
     scripts/generate-parity-fixtures.rb: 4123ddb81e7bfaec3cf1a61ed21efa137489f7bc197a647a253fb27b2b8bba7e
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: bee37ec11bd5477f41662c881cf362ae8d7cb826
+    commit: e00d7a16fb82a2a2cee0f9242b3c31c46c58a7bf
     clean: true
     dirty_paths: []
 oracle:

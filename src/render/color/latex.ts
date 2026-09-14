@@ -119,7 +119,7 @@ function colorAsciimathValue(value: unknown, at: string, topLevel = false): stri
       // element survives, because inspect already turned it into `\` and `n`.
       const number: unknown = value.value;
       if (Array.isArray(number)) {
-        return rubyArrayInspectOrThrow(number, FORMAT, "color", at);
+        return rubyArrayInspectOrThrow(number, FORMAT, "color", `${at}.value`);
       }
       return interpolatedValue(number, "color", at);
     }

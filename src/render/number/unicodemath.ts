@@ -69,12 +69,9 @@ export function renderNumber(node: NodeOf<"number">): string | null {
   }
 
   const value = node.value;
-  // A list in this slot answers nothing and says nothing about it, which is the
-  // failure mode this port exists to avoid: measured on the pinned oracle
-  // `00c52783`, `Number([]).to_unicodemath(options: {})` is `"[]"`. Recorded in
-  // TODO.plan/deferred.md under "three list slots the gem renders and this port
-  // does not"; not closed here, because the fix is per-slot and this is not the
-  // slot the change that found it was about.
+  // The list case for this slot is already closed above: a list arrives only
+  // as `raw`, and `Array.isArray(raw)` returns before reaching this point, so
+  // `value` here is never an array.
   if (value === null) return null;
 
   // Ruby truthiness again, and it is visible here too: measured on the pinned

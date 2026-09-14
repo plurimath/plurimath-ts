@@ -56,11 +56,14 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  *
  * `transform.rb`'s table/matrix family — measured at eighteen rules, not the
  * seventeen a prior survey counted (see `transform.ts`'s module header) —
- * used to be part of this list; `"⒨(a@b)"`, `"ⓢ(a&b@c&d)"` and the other
- * table/matrix corpus inputs below reached it (measured on the oracle: no
+ * used to be part of this list; `"⒨(a@b)"`, `"ⓢ(a&b@c&d)"` and four other
+ * table/matrix-only corpus inputs below reached it (measured on the oracle: no
  * other corpus string fires any of the eighteen). The TABLE increment ported
- * the family, so those rows have moved out of `DEFERRED_INPUTS` and now
+ * the family, so those six rows have moved out of `DEFERRED_INPUTS` and now
  * compare for real below, in `supported`, the same as every other corpus row.
+ * Three more — `"✎(blue&y + z)"`, `"√(3&8)"`, `"√(n&x)"` — carry a `&` too but
+ * measured on the oracle they route through `color`/`root`, not table, and
+ * stay in this list.
  *
  * They are listed here rather than dropped from the fixture set, because the
  * fixture set is the ORACLE's answer and stays complete. What is asserted is
@@ -73,10 +76,18 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  *
  * The list grew from two to twenty-six when the corpus pin advanced to
  * `281d7003` (PR #84), which added cases reaching four families this port has
- * not started, then shrank by the nine table/matrix rows the TABLE increment
- * above ported.
+ * not started, then shrank by the six table/matrix-only rows the TABLE
+ * increment above ported.
  */
 const DEFERRED_INPUTS: readonly string[] = [
+  // COLOR and ROOT: each of these three also carries a `&`, but measured on
+  // the oracle (the `ParseError` message names the unmatched key) they route
+  // through `{color=...}`/`{root=...}`, not the table family the TABLE
+  // increment ported.
+  "✎(blue&y + z)",
+  "√(3&8)",
+  "√(n&x)",
+
   // NARY (`transform.rb:175`, `:1874`-`:3588`). `▒` and the `_(…)` script on a
   // large operator both land here.
   "∏_(k)▒〖k〗",
@@ -215,7 +226,12 @@ describe("the rule families this slice defers", () => {
   it.each(deferred.map((entry) => [entry.input, entry] as const))(
     "%j: refuses loudly, naming the unmatched keys",
     (_input, entry) => {
-      expect(normalize(parseFixture(entry) as never)).toStrictEqual(entry.model);
+      // The transform's own message survives the entry point's normalisation,
+      // so the refusal still names the keys — but it now reaches a caller as a
+      // `ParseError` rather than a bare `Error`, which is what the gem's public
+      // boundary does with anything a `StandardError` escapes into.
+      expect(() => parseFixture(entry)).toThrow(ParseError);
+      expect(() => parseFixture(entry)).toThrow(/no rule matched \{/);
     },
   );
 });

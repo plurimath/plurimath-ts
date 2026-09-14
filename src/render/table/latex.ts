@@ -34,6 +34,7 @@ import {
 import {
   LATEX_ALIGNMENT_LETTERS,
   LATEX_MATRIX_ENVIRONMENTS,
+  LATEX_TABLE_NAMES,
 } from "../../generated/latex/render-tables";
 
 /**
@@ -65,30 +66,20 @@ const ALIGNMENT_LETTERS: ReadonlyMap<string, string> = LATEX_ALIGNMENT_LETTERS;
 
 /**
  * The class names this carrier has measured behaviour for — every `Table`
- * subclass in the gem (probe-latex-name-guards.rb on the pinned oracle,
- * 2026-08-10: exactly these 10 — 8 overriding `to_latex`, `Cases` and
- * `Eqarray` inheriting it). The AsciiMath transform builds only bare tables,
- * so like the asciimath table carrier's set this one is not derivable from
- * the transform registry; it is hand-listed, and every entry is pinned by a
- * behavioural render in `test/formats/latex/renderer.spec.ts` ("renders
- * every aliased subclass with its constructor parens as the gem does") —
- * dropping one from this set turns that pin red. A defined name outside the
- * set raises before dispatch, because rendering the generic-table default
- * for an unmeasured class would diverge silently (`unreachableName` in
+ * subclass in the gem, generated (`LATEX_TABLE_NAMES`,
+ * `src/generated/latex/render-tables.ts`; exactly these 10 — 8 overriding
+ * `to_latex`, `Cases` and `Eqarray` inheriting it). The AsciiMath transform
+ * builds only bare tables, so like the asciimath table carrier's set this
+ * one is not derivable from the transform registry; it is measured directly
+ * off the class hierarchy, and every entry is pinned by a behavioural
+ * render in `test/formats/latex/renderer.spec.ts` ("renders every aliased
+ * subclass with its constructor parens as the gem does") — dropping one
+ * from this set turns that pin red. A defined name outside the set raises
+ * before dispatch, because rendering the generic-table default for an
+ * unmeasured class would diverge silently (`unreachableName` in
  * `../../formats/latex/render-shared.ts`).
  */
-const MEASURED_TABLE_NAMES: ReadonlySet<string> = new Set([
-  "Align",
-  "Array",
-  "Bmatrix",
-  "Cases",
-  "Eqarray",
-  "Matrix",
-  "Multline",
-  "Pmatrix",
-  "Split",
-  "Vmatrix",
-]);
+const MEASURED_TABLE_NAMES: ReadonlySet<string> = new Set(LATEX_TABLE_NAMES);
 
 export function renderTable(node: NodeOf<"table">, context: RenderContext): string {
   const name = node.name;

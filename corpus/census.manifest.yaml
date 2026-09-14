@@ -2,15 +2,18 @@
 # `payload.sha256` covers the whole payload file, header comments included.
 ---
 schema: plurimath-corpus/manifest/1
-committable: true
-warnings: []
+committable: false
+warnings:
+- generated with --allow-dirty
+- 'generator checkout dirty: scripts/generate-corpus.rb'
 generator:
   path: scripts/generate-corpus.rb
-  sha256: c2ce1875421d0281f778a3fcdf09c2d72ebc9acb91aef847a8b756407bd4bd69
+  sha256: 30a6d92036b3ff594259521164d15c91954e5e5d7270f620b73cc2bb0ec6b9d2
   repository:
-    commit: 607340e93d2686fa0e70ece308635653bafd073d
-    clean: true
-    dirty_paths: []
+    commit: 916c1882d3e9c9df78325a1b691074192e14a676
+    clean: false
+    dirty_paths:
+    - scripts/generate-corpus.rb
 oracle:
   gem: plurimath
   version: 0.11.6

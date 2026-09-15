@@ -264,6 +264,68 @@ RULE_COVERAGE = {
     "■(a@b)",
     "Ⓒ(a@b)",
   ],
+  # "decoration": `hbracket_class` (`transform.rb:1286`-`:1391`, building
+  # `Obrace`/`Ubrace`/`Overset`/`Underset` from the eight `HORIZONTAL_BRACKETS`
+  # characters) and `overlay_after`/`overlay_before`/`below_after`
+  # (`:1420`-`:1491`, building `Overset`/`Underset`/`Menclose` from a
+  # combining diacritic), plus the four unwraps every one of them routes
+  # through (`:40`'s `hbrack`, `:81`'s `diacritic_belows`, `:88`'s
+  # `diacritics_accents`, `:94`'s `diacritic_overlays`), which needed no
+  # input of their own.
+  #
+  #   "⏞a"    rule 1286, hbracket_class simple/first_value simple, the
+  #           `hbrack == overbrace` branch -> bare `Obrace`.
+  #   "⏟a"    rule 1286, same shape, the `hbrack == underbrace` branch on a
+  #           value that is NOT a `Base` -> bare `Ubrace`.
+  #   "⏟x_2"  rule 1286, same shape, the `underbrace` branch on a value that
+  #           IS a `Base` (`:1019` fires first) -> `Underset(2, Ubrace(x))`,
+  #           not a bare `Ubrace`.
+  #   "⎴a"    rule 1286, `hbrack` neither over- nor under-brace and NOT in
+  #           `UNDER_HORIZONTAL_BRACKETS` (overbracket) -> `Overset`.
+  #   "⎵a"    rule 1286, same else branch, `hbrack` IS in
+  #           `UNDER_HORIZONTAL_BRACKETS` (underbracket) -> `Underset`.
+  #   "⎵3x"   rule 1315, `hbracket_class` simple/`first_value` SEQUENCE
+  #           (`:735`'s `{factor:, operand:}` gives "3x" a sequence, the same
+  #           shape `"■(3x)"` above reaches for `td`) -> `Underset` wrapping
+  #           a `Formula`.
+  #   "⏟a^2"  rule 1344, `hbracket_class` simple/`scripted_first_value`
+  #           simple — a scripted base resolves through `:1116` before
+  #           `hbracket_class` sees it, so this is the SIMPLE
+  #           `scripted_first_value` shape, not the SEQUENCE one. `:1375`,
+  #           the SEQUENCE twin, needs a `scripted_first_value` built from a
+  #           three-key `{base:, sub:, sup:}` or a `{base:, sub: sequence}`
+  #           shape this slice's `:1019`/`:1116` do not carry (both are
+  #           `simple`/`simple` only) — measured by trying several
+  #           `subsup_exp` and `pre_script` inputs, all of which hit that gap
+  #           first — so `:1375` is transcribed from the gem but UNWITNESSED
+  #           here; see `transform.ts`'s module header.
+  #   "3x⃝"   rule 1420, `first_value` SEQUENCE/`overlay_after` simple — the
+  #           same `{factor:, operand:}` sequence as `"⎵3x"` above, with
+  #           `Array#pop` peeling the diacritic onto only the LAST factor.
+  #   "a⃝"    rule 1447, `first_value` simple/`overlay_after` simple, the
+  #           `notation == "mover"` branch (U+20DD is `"mover"` in
+  #           `OVERLAYS_NOTATIONS`) -> `Overset` with `accent: true`.
+  #   "a⃞" rule 1447, same shape, a notation OTHER than `"mover"`
+  #           (U+20DE is `"box"`) -> `Menclose`.
+  #   "⃝b"    rule 1473, `overlay_before` simple/`first_value` simple, the
+  #           `"mover"` branch again, from the LEADING position this time.
+  #   "a̖" rule 1491, `below_after` simple/`first_value` simple, the
+  #           `notation == "munder"` branch (U+0316 is `"munder"` in
+  #           `BELOWS_NOTATIONS`) -> `Underset` with `accent: true`.
+  "decoration" => [
+    "⏞a",
+    "⏟a",
+    "⏟x_2",
+    "⎴a",
+    "⎵a",
+    "⎵3x",
+    "⏟a^2",
+    "3x⃝",
+    "a⃝",
+    "a⃞",
+    "⃝b",
+    "a̖",
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`

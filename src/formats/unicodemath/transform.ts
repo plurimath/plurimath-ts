@@ -1482,7 +1482,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
 
   // NARY continued — the bare `nary_class` base case, no sub/sup/naryand at
   // all (a lone `∫`): the resolved name's own zero-arg constructor.
-  rule("175", { nary_class: simple("nary_class") }, (b) => buildClass(naryFunctionName(b.nary_class)));
+  rule("175", { nary_class: simple("nary_class") }, (b) =>
+    buildClass(naryFunctionName(b.nary_class)),
+  );
 
   // RELATION/OPERATOR: `\not=`-style negated ordinary symbols — the matched
   // operator, already resolved by an earlier rule, followed by a literal
@@ -1570,11 +1572,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.nary,
     b.naryand_recursion,
   ]);
-  rule(
-    "730",
-    { nary: simple("nary"), naryand_recursion: sequence("naryand_recursion") },
-    (b) => [b.nary, ...asArray(b.naryand_recursion)],
-  );
+  rule("730", { nary: simple("nary"), naryand_recursion: sequence("naryand_recursion") }, (b) => [
+    b.nary,
+    ...asArray(b.naryand_recursion),
+  ]);
 
   rule("735", { factor: simple("factor"), operand: simple("operand") }, (b) => [
     b.factor,
@@ -1924,29 +1925,25 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // measured, not reconciled), and the fallback builds a fresh `Nary` from
   // the un-mutated `subsup_exp`'s own three parameters rather than wrapping
   // it in a `Formula` the way `:1861`'s fallback does.
-  rule(
-    "1874",
-    { nary_sub_sup: simple("subsup_exp"), naryand: sequence("naryand") },
-    (b) => {
-      const subsup = b.subsup_exp;
-      if (isA(subsup, IS_TERNARY_FUNCTION)) {
-        setField(subsup, "parameterThree", filterValues(b.naryand));
-        return subsup;
+  rule("1874", { nary_sub_sup: simple("subsup_exp"), naryand: sequence("naryand") }, (b) => {
+    const subsup = b.subsup_exp;
+    if (isA(subsup, IS_TERNARY_FUNCTION)) {
+      setField(subsup, "parameterThree", filterValues(b.naryand));
+      return subsup;
+    }
+    if (isA(subsup, IS_NARY)) {
+      if (fieldOf(subsup, "parameterFour") === null) {
+        setField(subsup, "parameterFour", filterValues(b.naryand));
       }
-      if (isA(subsup, IS_NARY)) {
-        if (fieldOf(subsup, "parameterFour") === null) {
-          setField(subsup, "parameterFour", filterValues(b.naryand));
-        }
-        return subsup;
-      }
-      return newNary(
-        fieldOf(subsup, "parameterOne"),
-        fieldOf(subsup, "parameterTwo"),
-        fieldOf(subsup, "parameterThree"),
-        filterValues(b.naryand),
-      );
-    },
-  );
+      return subsup;
+    }
+    return newNary(
+      fieldOf(subsup, "parameterOne"),
+      fieldOf(subsup, "parameterTwo"),
+      fieldOf(subsup, "parameterThree"),
+      filterValues(b.naryand),
+    );
+  });
 
   rule("1968", { nary_class: simple("nary_class"), naryand: simple("naryand") }, (b) => {
     const name = naryFunctionName(b.nary_class);
@@ -1971,7 +1968,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     const name = naryFunctionName(b.nary_class);
     if (UNICODEMATH_NARY_CLASSES.has(rubyToS(name))) {
       const naryValue =
-        className(b.sub) === "underset" ? fieldOf(b.sub, "parameterOne") : unfencedValue(b.sub, true);
+        className(b.sub) === "underset"
+          ? fieldOf(b.sub, "parameterOne")
+          : unfencedValue(b.sub, true);
       return buildClass(name, naryValue);
     }
     return newNary(symbolsClass(name), unfencedValue(b.sub, true), undefined, undefined);
@@ -2190,7 +2189,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     { nary_class: simple("nary_class"), mask: simple("mask"), sub: simple("sub") },
     (b) => {
       const name = naryFunctionName(b.nary_class);
-      const subValue = isA(b.sub, IS_UNDERSET) ? fieldOf(b.sub, "parameterOne") : unfencedValue(b.sub, true);
+      const subValue = isA(b.sub, IS_UNDERSET)
+        ? fieldOf(b.sub, "parameterOne")
+        : unfencedValue(b.sub, true);
       const options: NodeOptions = { mask: fieldOf(b.mask, "value") };
       if (UNICODEMATH_NARY_CLASSES.has(rubyToS(name))) {
         return buildClass(name, subValue, null, null, options);
@@ -2288,8 +2289,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) => {
       const name = naryFunctionName(b.nary_class);
-      const subValue = isA(b.sub, IS_UNDERSET) ? fieldOf(b.sub, "parameterOne") : unfencedValue(b.sub, true);
-      const supValue = isA(b.sup, IS_OVERSET) ? fieldOf(b.sup, "parameterOne") : unfencedValue(b.sup, true);
+      const subValue = isA(b.sub, IS_UNDERSET)
+        ? fieldOf(b.sub, "parameterOne")
+        : unfencedValue(b.sub, true);
+      const supValue = isA(b.sup, IS_OVERSET)
+        ? fieldOf(b.sup, "parameterOne")
+        : unfencedValue(b.sup, true);
       const options: NodeOptions = { mask: fieldOf(b.mask, "value") };
       if (UNICODEMATH_NARY_CLASSES.has(rubyToS(name))) {
         return buildClass(name, subValue, supValue, null, options);

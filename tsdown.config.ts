@@ -16,6 +16,7 @@ export default defineConfig({
     html: "src/formats/html/index.ts",
     latex: "src/formats/latex/index.ts",
     mathml: "src/formats/mathml/index.ts",
+    omml: "src/formats/omml/index.ts",
     unicodemath: "src/formats/unicodemath/index.ts",
   },
   format: ["esm", "cjs"],

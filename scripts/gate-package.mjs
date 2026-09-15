@@ -128,6 +128,7 @@ const EXPECTED_EXPORTS = {
   "./html": ["parseHtml", "toHtml"],
   "./latex": ["parseLatex", "toLatex"],
   "./mathml": ["toMathml"],
+  "./omml": ["toOmml"],
   "./unicodemath": ["parseUnicodemath", "toUnicodemath"],
 };
 
@@ -178,6 +179,10 @@ const FORBIDDEN = {
   // not, because LaTeX output is text.
   "./latex": [...forbidOtherFormats("latex"), /xml\//],
   "./mathml": [...forbidOtherFormats("mathml"), /pegkit\//],
+  // OMML has no parser (unlike LaTeX/HTML/UnicodeMath) and its renderer
+  // builds its tree through the XML layer (unlike LaTeX/HTML/UnicodeMath's
+  // string output), so it forbids pegkit but, like MathML, not `xml`.
+  "./omml": [...forbidOtherFormats("omml"), /pegkit\//],
   // UnicodeMath parses as well as renders, so pegkit is expected here on the
   // same grounds as `/latex`; `xml` still is not, because its output is text.
   "./unicodemath": [...forbidOtherFormats("unicodemath"), /xml\//],

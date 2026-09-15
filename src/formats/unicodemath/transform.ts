@@ -299,9 +299,9 @@
  * atom`) turned out to be reachable after all — the RELATION/OPERATOR
  * increment above measured and ported it directly, correcting this
  * increment's own original "dead by construction" finding, so it is not
- * counted among the thirteen here. `:491` remains dead by construction:
- * this grammar's left recursion always captures `atom` one leaf at a time
- * for the shape `:491` binds, so nothing ever leaves it a SEQUENCE at that
+ * counted among the twelve here. `:491` remains dead by construction: this
+ * grammar's right recursion always captures `atom` one leaf at a time for
+ * the shape `:491` binds, so nothing ever leaves it a SEQUENCE at that
  * position (the same kind of measured absence as `:845`'s deadness above).
  * The remaining eleven — `:675`, `:680`, `:685`, `:690`, `:695`, `:1756`,
  * `:2035`, `:2041`,
@@ -1635,8 +1635,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // `factor: [Symbol(a), Symbol(b), Symbol(c)]`, which `:49` above then
   // unwraps. `:491` (`atom: sequence, atoms: simple`) is its sibling for an
   // atom side that already folded to an array — deferred with `:30` above:
-  // this grammar's own left recursion always captures `atom` one leaf at a
-  // time, so no probed input leaves it anything but `simple` at this position.
+  // this grammar's own right recursion (`atom.as("atom") >> atoms.as("atoms")
+  // .maybe()`) always captures `atom` one leaf at a time, so no probed input
+  // leaves it anything but `simple` at this position.
   rule("486", { atom: simple("atom"), atoms: simple("atoms") }, (b) => [b.atom, b.atoms]);
   rule("496", { atom: simple("atom"), atoms: sequence("atoms") }, (b) => [
     b.atom,

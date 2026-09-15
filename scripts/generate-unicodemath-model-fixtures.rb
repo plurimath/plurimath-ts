@@ -388,6 +388,16 @@ RULE_COVERAGE = {
     "f(x)=y",
     "e^(iπ)",
     "x'",
+    # `:99`'s COMBINING_SYMBOLS map lookup, not its fallback: the "±" cases
+    # above use the already-decoded Unicode glyph, which is preprocessed to
+    # its numeric entity BEFORE the grammar sees it, so the fallback branch
+    # fires (matched text passed through unchanged), never the map. These
+    # three use the raw two-character ASCII keys `UNICODEMATH_COMBINING_
+    # SYMBOLS_KEYS` actually holds (`!!`, `-+`, `+-`), which is what the
+    # grammar's `combined_symbols` rule matches on the input text itself.
+    "a!!b",
+    "a-+b",
+    "a+-b",
   ],
 }.freeze
 

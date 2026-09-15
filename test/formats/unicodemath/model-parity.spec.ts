@@ -63,7 +63,10 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * compare for real below, in `supported`, the same as every other corpus row.
  * Three more — `"✎(blue&y + z)"`, `"√(3&8)"`, `"√(n&x)"` — carry a `&` too but
  * measured on the oracle they route through `color`/`root`, not table, and
- * stay in this list.
+ * stay in this list. Six NARY rows — a large operator with a single-token
+ * `_(…)` script — moved the same way once `:1931`/`:1968` landed: `"∏_(k)▒
+ * 〖k〗"`, `"∮_(C)▒〖f〗"`, `"⋃_(i) A_(i)"`, `"⋂_(i) A_(i)"`, `"∐_(i) A_(i)"`,
+ * `"⨁_(i) A_(i)"`.
  *
  * They are listed here rather than dropped from the fixture set, because the
  * fixture set is the ORACLE's answer and stays complete. What is asserted is

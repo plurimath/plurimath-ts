@@ -219,9 +219,52 @@
  * them there, so this increment closes the gap the compat comment named
  * rather than opening a new, unmeasured one.
  *
- * Ten increments the running count from 118 to 128.
+ * ## A sixth increment: NARY, minus the half still behind ATOMS
  *
- * Everything outside those 128 is genuinely ABSENT rather than stubbed. A
+ * Every remaining `nary_class`/`nary`/`nary_sub_sup` call site was measured
+ * the same way as every increment above — `unicode_math/transform.rb`, every
+ * registered block wrapped in a firing counter, traced on real inputs built
+ * from `Constants::NARY_SYMBOLS`/`NARY_CLASSES` keys (`∫`, `\amalg`) rather
+ * than read off a line-range survey. Nineteen such rules exist
+ * (`:84`-`:3588`); this increment ports ELEVEN of them plus one small
+ * prerequisite, `:255`.
+ *
+ * `:84` (`nary_sub_sup` pass-through), `:175` (a bare `nary_class`, no
+ * sub/sup/naryand), `:1831`/`:1953` (two more `nary`/`nary_class` shapes with
+ * no branch), `:1931` (`nary_class`+simple `sub`, the one with a
+ * `NARY_CLASSES` branch), `:2856`/`:2911`/`:3588` (the three MASK-carrying
+ * shapes whose `sub`/`sup` both stay `simple`) all bind keys `grammar.ts`
+ * already produces and call nothing new. `:725`/`:730` (`nary`+
+ * `naryand_recursion`, simple and SEQUENCE) and `:1874` (`nary_sub_sup`+
+ * SEQUENCE `naryand`, `:1861`'s sequence twin) reach a SEQUENCE only through
+ * `:255` — a new prerequisite, `{symbol:, expr:}` -> a two-element array,
+ * the same "adjacent atom" shape `:401` already covers for `char`+`number` —
+ * and ONLY when nested under a `sub`/`sup` (`"∫_a∫f g"`), never bare
+ * (`"∫∫f g"`): traced on the oracle, a bare double-nary's own
+ * `{nary_class:, naryand:}` wrapper has no SEQUENCE-`naryand` rule anywhere
+ * in the 519, so `Kernel#Array`'s pair-fold — `assertGemLeavesUnmatched`'s
+ * own doc comment names this exact failure mode — silently turns it into
+ * `Formula([[:nary, {...}]])` rather than a real parse; measured by
+ * comparing `Math.parse(...).to_unicodemath` against the input's own shape,
+ * not by the rule firing alone. Six corpus rows — `"∏_(k)▒〖k〗"` and five
+ * siblings — reach `:1931`/`:1968` this way and moved out of
+ * `model-parity.spec.ts`'s `DEFERRED_INPUTS`.
+ *
+ * The other EIGHT — `:1919`, `:2183`, `:2827`, `:2841`, `:2884`, `:2993`,
+ * `:3020`, `:3047`, every one binding a SEQUENCE `sub` or `sup` directly
+ * (not through `:255`'s `naryand` route) — stay unported. Traced on the
+ * oracle, the only way a bare `sub`/`sup` position becomes a genuine
+ * SEQUENCE is the `{atom:, atoms:}` multi-character-run combinator
+ * (`"∫_(ab)f"`'s `sub` resolves through exactly that shape) — the same
+ * `atoms`/`recursive_numerator`/`recursive_denominator` family the FIRST
+ * FRACTION increment's own boundary section named and deferred whole. Eight
+ * rules that read `grammar.ts` cleanly are gated on a ninth family this
+ * slice does not carry, the same shape as DECORATION's own deferral below,
+ * so they are named here rather than forced through with an untested input.
+ *
+ * Twelve increments the running count from 128 to 140.
+ *
+ * Everything outside those 140 is genuinely ABSENT rather than stubbed. A
  * node whose key set no ported rule matches survives the transform as a
  * plain hash and `finalize` throws on it, naming the keys — the loud failure
  * the deferred families are supposed to produce.
@@ -690,14 +733,24 @@ function newFenced(one: unknown, two: unknown, three: unknown): UnicodemathDraft
   return draft;
 }
 
-/** `Nary.new(p1, p2, p3, p4, options = {})` — `@options` always assigned. */
-function newNary(one: unknown, two: unknown, three: unknown, four: unknown): UnicodemathDraft {
+/**
+ * `Nary.new(p1, p2, p3, p4, options = {})` — `@options` always assigned, the
+ * mask-carrying NARY rules (`:2856`-`:3588`) being the only callers that
+ * pass a non-default `options`.
+ */
+function newNary(
+  one: unknown,
+  two: unknown,
+  three: unknown,
+  four: unknown,
+  options?: NodeOptions,
+): UnicodemathDraft {
   return new UnicodemathDraft("nary", undefined, {
     parameterOne: orNil(one),
     parameterTwo: orNil(two),
     parameterThree: orNil(three),
     parameterFour: orNil(four),
-    options: {},
+    options: options ?? {},
   });
 }
 
@@ -776,7 +829,14 @@ function getClass(name: unknown): UnicodemathClassEntry {
   return entry;
 }
 
-/** `.new` on what `get_class` resolved, honouring that class's initialize. */
+/**
+ * `.new` on what `get_class` resolved, honouring that class's initialize. A
+ * fourth ternary argument is the mask-carrying NARY rules' `options` — every
+ * `TernaryFunction` subclass `get_class` can resolve for a NARY name takes it
+ * as `initialize`'s own trailing `options = {}`, assigned only when passed
+ * (`int.rb:16-21`'s `@options = options unless options&.empty?`, transcribed
+ * as "only set the field when the caller passed one").
+ */
 function buildClass(name: unknown, ...args: unknown[]): UnicodemathDraft {
   const entry = getClass(name);
   switch (entry.family) {
@@ -784,8 +844,11 @@ function buildClass(name: unknown, ...args: unknown[]): UnicodemathDraft {
       return unaryDraft(entry.kind, entry.name, args[0]);
     case "binary":
       return binaryDraft(entry.kind, entry.name, args[0], args[1]);
-    case "ternary":
-      return ternaryDraft(entry.kind, entry.name, args[0], args[1], args[2]);
+    case "ternary": {
+      const draft = ternaryDraft(entry.kind, entry.name, args[0], args[1], args[2]);
+      if (args[3] !== undefined) draft.fields.options = args[3];
+      return draft;
+    }
     default:
       throw new Error(`unicodemath transform: "${rubyToS(name)}" has no constructible family`);
   }
@@ -1355,6 +1418,13 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("81", { diacritic_belows: simple("belows") }, (b) => b.belows);
   rule("82", { unary_function: simple("function") }, (b) => b.function);
   rule("88", { diacritics_accents: simple("accent") }, (b) => b.accent);
+  // NARY (`transform.rb:84`-`:3588`, nineteen rules): every remaining
+  // `nary_class`/`nary`/`nary_sub_sup` call site, all reusing `:1968`'s and
+  // `:2806`'s own `naryFunctionName`/`UNICODEMATH_NARY_CLASSES`/`buildClass`/
+  // `newNary` machinery — no new grammar key, no new helper. `:84` is the
+  // `nary_sub_sup` pass-through `:74`'s sibling already carries for
+  // `subsup_exp`.
+  rule("84", { nary_sub_sup: simple("subsup_exp") }, (b) => b.subsup_exp);
   rule("90", { unary_subsup: simple("unary_subsup") }, (b) => b.unary_subsup);
   rule("92", { alphanumeric: simple("alphanumeric") }, (b) => symbolsClass(b.alphanumeric));
   rule("94", { diacritic_overlays: simple("overlays") }, (b) => b.overlays);
@@ -1410,6 +1480,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("165", { sup_digits: simple("digits") }, (b) => supDigitNumber(b.digits));
   rule("170", { sub_digits: simple("digits") }, (b) => subDigitNumber(b.digits));
 
+  // NARY continued — the bare `nary_class` base case, no sub/sup/naryand at
+  // all (a lone `∫`): the resolved name's own zero-arg constructor.
+  rule("175", { nary_class: simple("nary_class") }, (b) => buildClass(naryFunctionName(b.nary_class)));
+
   // RELATION/OPERATOR: `\not=`-style negated ordinary symbols — the matched
   // operator, already resolved by an earlier rule, followed by a literal
   // combining-overlay-strike mark (`&#x338;`) as a second `Formula` element,
@@ -1423,6 +1497,17 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("236", { font_class: simple("fonts"), symbol: simple("symbol") }, (b) =>
     newFontStyle(b.fonts, symbolsClass(b.symbol)),
   );
+
+  // NARY prerequisite — a resolved `symbol` immediately followed by an
+  // `expr` continuation, the two-element array shape `:730`'s
+  // `naryand_recursion` (and `:1874`'s SEQUENCE `naryand`) is built from:
+  // implicit multiplication between two bare symbols with no relation
+  // between them (`x y`, inside a NARY integrand), the same "adjacent atom"
+  // shape `:401` already covers for `char`+`number`.
+  rule("255", { symbol: simple("symbol"), expr: simple("expr") }, (b) => [
+    symbolsClass(b.symbol),
+    b.expr,
+  ]);
 
   rule("260", { binary_symbols: simple("symbols"), expr: simple("expr") }, (b) => {
     const symbol = BINARY_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols;
@@ -1476,6 +1561,19 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   );
   rule("606", { labeled_tr_value: simple("value"), labeled_tr_id: simple("id") }, (b) =>
     newMlabeledtr(b.value, newText(b.id)),
+  );
+
+  // NARY continued — a bare `nary` (already resolved by `:20`/`:175` above)
+  // followed by its `naryand_recursion` continuation, the two-element array
+  // every such pairing here folds into.
+  rule("725", { nary: simple("nary"), naryand_recursion: simple("naryand_recursion") }, (b) => [
+    b.nary,
+    b.naryand_recursion,
+  ]);
+  rule(
+    "730",
+    { nary: simple("nary"), naryand_recursion: sequence("naryand_recursion") },
+    (b) => [b.nary, ...asArray(b.naryand_recursion)],
   );
 
   rule("735", { factor: simple("factor"), operand: simple("operand") }, (b) => [
@@ -1806,6 +1904,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.nary,
     ...asArray(b.expr),
   ]);
+  rule("1831", { nary: simple("nary"), expr: simple("expr") }, (b) => [b.nary, b.expr]);
 
   rule("1861", { nary_sub_sup: simple("subsup_exp"), naryand: simple("naryand") }, (b) => {
     const subsup = b.subsup_exp;
@@ -1819,6 +1918,35 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     }
     return newFormula([subsup, b.naryand]);
   });
+  // NARY continued — `:1861`'s SEQUENCE-`naryand` twin: the ternary branch
+  // is identical, the NARY branch only fills `parameterFour` when it is
+  // still empty (the gem's own asymmetry with `:1861`, transcribed as
+  // measured, not reconciled), and the fallback builds a fresh `Nary` from
+  // the un-mutated `subsup_exp`'s own three parameters rather than wrapping
+  // it in a `Formula` the way `:1861`'s fallback does.
+  rule(
+    "1874",
+    { nary_sub_sup: simple("subsup_exp"), naryand: sequence("naryand") },
+    (b) => {
+      const subsup = b.subsup_exp;
+      if (isA(subsup, IS_TERNARY_FUNCTION)) {
+        setField(subsup, "parameterThree", filterValues(b.naryand));
+        return subsup;
+      }
+      if (isA(subsup, IS_NARY)) {
+        if (fieldOf(subsup, "parameterFour") === null) {
+          setField(subsup, "parameterFour", filterValues(b.naryand));
+        }
+        return subsup;
+      }
+      return newNary(
+        fieldOf(subsup, "parameterOne"),
+        fieldOf(subsup, "parameterTwo"),
+        fieldOf(subsup, "parameterThree"),
+        filterValues(b.naryand),
+      );
+    },
+  );
 
   rule("1968", { nary_class: simple("nary_class"), naryand: simple("naryand") }, (b) => {
     const name = naryFunctionName(b.nary_class);
@@ -1830,6 +1958,29 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       return buildClass(name, null, null, naryValue);
     }
     return newNary(symbolsClass(name), null, null, b.naryand);
+  });
+
+  // NARY continued — `sub`/`sup` alone (no `naryand`), the shape a bare
+  // limit like `∑_(i=1)` reaches. `:1953`'s `sup` calls `get_class` with no
+  // `NARY_CLASSES` branch at all — every name it sees there is measured to
+  // already be a registered class, same as `:175` above; `:1931`'s simple
+  // `sub` is the one with the branch, `:2806`'s own shape one key short.
+  // `:1919`, the SEQUENCE-`sub` twin, is deferred with the rest of the
+  // SEQUENCE-taking NARY rules below.
+  rule("1931", { nary_class: simple("nary_class"), sub: simple("sub") }, (b) => {
+    const name = naryFunctionName(b.nary_class);
+    if (UNICODEMATH_NARY_CLASSES.has(rubyToS(name))) {
+      const naryValue =
+        className(b.sub) === "underset" ? fieldOf(b.sub, "parameterOne") : unfencedValue(b.sub, true);
+      return buildClass(name, naryValue);
+    }
+    return newNary(symbolsClass(name), unfencedValue(b.sub, true), undefined, undefined);
+  });
+  rule("1953", { nary_class: simple("nary_class"), sup: simple("sup") }, (b) => {
+    const name = naryFunctionName(b.nary_class);
+    const naryValue =
+      className(b.sup) === "overset" ? fieldOf(b.sup, "parameterOne") : unfencedValue(b.sup, true);
+    return buildClass(name, null, naryValue);
   });
 
   // MULTISCRIPT (`transform.rb:1992`-`:3978`, thirteen rules counting `:57`
@@ -2029,6 +2180,38 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
   );
 
+  // NARY continued — `:2806`'s mask-carrying siblings, each adding a `mask`
+  // key ahead of `sub`/`sup` and branching on `NARY_CLASSES` membership,
+  // building `options` from the bound `Number`'s own `value` field either
+  // way. `:2827`/`:2841`/`:2884` and every other SEQUENCE-`sub`-or-`sup`
+  // NARY rule are deferred together below, past `:3477`.
+  rule(
+    "2856",
+    { nary_class: simple("nary_class"), mask: simple("mask"), sub: simple("sub") },
+    (b) => {
+      const name = naryFunctionName(b.nary_class);
+      const subValue = isA(b.sub, IS_UNDERSET) ? fieldOf(b.sub, "parameterOne") : unfencedValue(b.sub, true);
+      const options: NodeOptions = { mask: fieldOf(b.mask, "value") };
+      if (UNICODEMATH_NARY_CLASSES.has(rubyToS(name))) {
+        return buildClass(name, subValue, null, null, options);
+      }
+      return newNary(symbolsClass(name), subValue, null, null, options);
+    },
+  );
+  rule(
+    "2911",
+    { nary_class: simple("nary_class"), mask: simple("mask"), sup: simple("sup") },
+    (b) => {
+      const name = naryFunctionName(b.nary_class);
+      const supValue = unfencedValue(b.sup, true);
+      const options: NodeOptions = { mask: fieldOf(b.mask, "value") };
+      if (UNICODEMATH_NARY_CLASSES.has(rubyToS(name))) {
+        return buildClass(name, null, supValue, null, options);
+      }
+      return newNary(symbolsClass(name), null, supValue, null, options);
+    },
+  );
+
   // MULTISCRIPT continued — a real trailing sub or sup joins the prescript.
   rule(
     "2938",
@@ -2088,6 +2271,31 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) =>
       newFenced(parenClass(b.open_paren), [b.factor, ...asArray(b.exp)], parenClass(b.close_paren)),
+  );
+
+  // NARY concluded (for this slice; see the module header for the SEQUENCE
+  // rules deferred past it) — `mask` plus BOTH a simple `sub` and a simple
+  // `sup`, `:2806`'s own shape with a mask added; `Underset`/`Overset`
+  // unwrap the same way `:2103`'s underover guard and `:2806` above already
+  // do.
+  rule(
+    "3588",
+    {
+      nary_class: simple("nary_class"),
+      mask: simple("mask"),
+      sub: simple("sub"),
+      sup: simple("sup"),
+    },
+    (b) => {
+      const name = naryFunctionName(b.nary_class);
+      const subValue = isA(b.sub, IS_UNDERSET) ? fieldOf(b.sub, "parameterOne") : unfencedValue(b.sub, true);
+      const supValue = isA(b.sup, IS_OVERSET) ? fieldOf(b.sup, "parameterOne") : unfencedValue(b.sup, true);
+      const options: NodeOptions = { mask: fieldOf(b.mask, "value") };
+      if (UNICODEMATH_NARY_CLASSES.has(rubyToS(name))) {
+        return buildClass(name, subValue, supValue, null, options);
+      }
+      return newNary(symbolsClass(name), subValue, supValue, null, options);
+    },
   );
 
   // MULTISCRIPT concluded — both a prescript pair and a paren wrap it, in

@@ -86,7 +86,7 @@ describe("transform rule coverage", () => {
     expect(reached).toBeGreaterThan(90);
   });
 
-  it("registers the 151 rules the slice carries", () => {
+  it("registers the 155 rules the slice carries", () => {
     // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
     // eight-rule table/matrix family the first slice deferred: `transform.rb:8`,
     // `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13
@@ -132,9 +132,15 @@ describe("transform rule coverage", () => {
     // the suite green without them. The table group carries one input per
     // `Constants::MATRIXS` character (eight) for the same reason: all eight
     // fire `:1649`/`:1670`/`:1691` with an identical trace and take four
-    // different branches to eight different table classes.
-    expect(build.ruleIds.length).toBe(151);
-    expect(new Set(build.ruleIds).size).toBe(151);
+    // different branches to eight different table classes — plus 3 ATOMS:
+    // the `{atom:, atoms:}` combinator's directly-verifiable unwraps
+    // (`:486`, `:496`, `:1851`) — `:30` and `:49`, this family's own base
+    // unwraps, were already ported by RELATION/OPERATOR above (`"2·3"`
+    // needed `:49`, and RELATION's own probing separately reached `:30`) —
+    // reached by the existing corpus and coverage groups, not a new
+    // hand-picked one.
+    expect(build.ruleIds.length).toBe(154);
+    expect(new Set(build.ruleIds).size).toBe(154);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

@@ -281,7 +281,27 @@ RULE_COVERAGE_NARY_INPUTS = [
   "\\amalg13_d^d\\of d",     # 3588: mask + simple sub + simple sup
 ].freeze
 
+# "atoms": the `{atom:, atoms:}` combinator (`grammar.ts:668`-`:670`,
+# `common_rules.rb:9-11`, `transform.rb:486`/`:496`) and `:1851`, the one
+# further `atom:`-keyed site (`atom`, `exclamation_symbol`) reachable WITHOUT
+# also wiring FRACTION's still-deferred SEQUENCE-numerator/denominator family
+# (`transform.rb:1619`-`:2371`) — every OTHER `atom:` site with a third key
+# (`recursive_numerator`/`recursive_denominator`/`binary_symbols`/`operator`)
+# only ever appears inside a fraction's `numerator`/`denominator`, so its
+# result always lands back on one of those ten still-unported rules and can
+# never reach a passing parse on its own; `transform.ts`'s own comment at
+# `:735` records the measured input (`"1/a(b)"`, firing `:675` exactly as
+# coded there) that proves the point rather than asserting it. Measured on
+# the oracle, one input per rule:
+#
+#   "abc"  rule 486 (2-atom fold) + 496 (3rd atom onto the fold) + 49 (`:39`'s
+#          SEQUENCE twin, unwrapping the folded array off `factor`)
+#   "a!"   rule 1851 {atom, exclamation_symbol}, then `:49` again
 RULE_COVERAGE = {
+  "atoms" => [
+    "abc",
+    "a!",
+  ],
   "multiscript" => [
     "^3 X",
     "_2 X",

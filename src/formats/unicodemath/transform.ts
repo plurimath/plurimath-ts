@@ -262,9 +262,69 @@
  * slice does not carry, the same shape as DECORATION's own deferral below,
  * so they are named here rather than forced through with an untested input.
  *
- * Twelve increments the running count from 128 to 140.
+ * Twelve increments the running count from 139 to 151 (after DECORATION and
+ * RELATION/OPERATOR landed as their own increments in between; see git
+ * history for their own module-header sections, since each merged with the
+ * running count current as of its own landing).
  *
- * Everything outside those 140 is genuinely ABSENT rather than stubbed. A
+ * ## A seventh increment: ATOMS, cut to what a passing witness can prove
+ *
+ * The FRACTION section above named the `atom`/`atoms` combinator
+ * (`grammar.ts:668`-`:670`, `common_rules.rb:9-11`: `atom.as("atom") >>
+ * atoms.as("atoms").maybe()`) as deferred whole. Its own grammar production
+ * was already ported — it needed no new grammar work, only transform-side
+ * consumption — and a firing-counter probe on the oracle (the same
+ * methodology every increment above used) finds SEVENTEEN `transform.rb`
+ * sites keyed on `atom:`: two base unwraps (`:18`, `:30`), three that fold
+ * the recursion into a plain array (`:486`, `:491`, `:496`), and twelve more
+ * where an `atom` binds alongside `recursive_numerator`/`recursive_denominator`
+ * (five sites), `exclamation_symbol` (`:1851`), `binary_symbols` (`:2041`,
+ * `:2048`), `operator`+`frac` (`:2787`, `:3074`), or a compound of `atoms`
+ * SEQUENCE plus `recursive_denominator` (`:2035`).
+ *
+ * This increment ports **three**: `:486`/`:496` (the two-atom and
+ * three-or-more-atom fold `"abc"` measurably fires) and `:1851` (`"a!"`).
+ * `:49` — `{factor: sequence(:factor)} -> factor`, `:39`'s SEQUENCE twin and
+ * no `atom:` site itself, the prerequisite that unwraps the array `:486`/
+ * `:496` leave under `factor` — turned out to already be ported: RELATION/
+ * OPERATOR above needed it first, for `"2·3"`'s own SEQUENCE `factor`. Found
+ * while probing this increment, the same way `:165`/`:170` and `:17` were
+ * found while building earlier increments' witnesses — but landed under a
+ * different increment's name.
+ *
+ * The other TWELVE are deferred, not because their code would be hard —
+ * every one is the same array-fold shape already established above — but
+ * because none of them can reach a PASSING witness without also porting
+ * work outside this slice's boundary. `:30` (`{atom: sequence(:atom)} ->
+ * atom`) turned out to be reachable after all — the RELATION/OPERATOR
+ * increment above measured and ported it directly, correcting this
+ * increment's own original "dead by construction" finding, so it is not
+ * counted among the thirteen here. `:491` remains dead by construction:
+ * this grammar's left recursion always captures `atom` one leaf at a time
+ * for the shape `:491` binds, so nothing ever leaves it a SEQUENCE at that
+ * position (the same kind of measured absence as `:845`'s deadness above).
+ * The remaining eleven — `:675`, `:680`, `:685`, `:690`, `:695`, `:1756`,
+ * `:2035`, `:2041`,
+ * `:2048`, `:2787`, `:3074` — only ever appear inside FRACTION's own
+ * `numerator`/`denominator` grammar productions, so their output always
+ * lands on the TOP `{numerator:, denominator:}` rule, and that rule is one
+ * of the ten SEQUENCE-numerator/denominator sites (`:1619`-`:2371`) the
+ * FRACTION section above already deferred. Measured directly: `"1/a(b)"`
+ * fires `:675` on the oracle exactly as this file would code it, but the
+ * `[atom, Fenced]` result is a SEQUENCE denominator, and feeding the same
+ * input through this port lands on `transform.rb:1619`
+ * (`numerator: simple, denominator: sequence`) — unported — so the port
+ * refuses the one input that would prove `:675` correct. Porting any of the
+ * eleven without also porting at least the matching half of those ten would
+ * add code with no reachable, passing witness; wiring that family is the
+ * explicit follow-up this increment unblocks, not part of it.
+ *
+ * This increment ports `:486`/`:496`/`:1851` — three new rules, since `:30`
+ * and `:49`, the family's own two base unwraps, were already ported above by
+ * RELATION/OPERATOR (`:49` for `"2·3"`, `:30` from its own probing).
+ * Running count: 151 + 3 = **154**.
+ *
+ * Everything outside those 154 is genuinely ABSENT rather than stubbed. A
  * node whose key set no ported rule matches survives the transform as a
  * plain hash and `finalize` throws on it, naming the keys — the loud failure
  * the deferred families are supposed to produce.
@@ -1413,6 +1473,11 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("40", { hbrack: simple("hbrack") }, (b) => b.hbrack);
   rule("44", { symbol: simple("symbol") }, (b) => symbolsClass(b.symbol));
   rule("45", { number: simple("number") }, (b) => newNumber(b.number));
+  // `:39`'s SEQUENCE twin — already needed by RELATION/OPERATOR's `"2·3"`
+  // above, and also needed the moment `:486`/`:491`/`:496` below fold more
+  // than one atom onto a `factor`: without it the resulting array is a hash
+  // the gem always resolves, refused here as if it were the "factor=other"
+  // bug case `GEM_UNMATCHED_SIGNATURES` names.
   rule("49", { factor: sequence("factor") }, (b) => b.factor);
   rule("50", { operand: simple("operand") }, (b) => b.operand);
   rule("52", { accents: subtree("accent") }, (b) => unicodeAccents(b.accent));
@@ -1563,6 +1628,21 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     symbolsClass(b.unicode_symbols),
     b.expr,
   ]);
+  // ATOMS proper: the recursive `atom.as("atom") >> atoms.as("atoms").maybe()`
+  // combinator (`grammar.ts:668`-`:670`, `common_rules.rb:9-11`) folded into a
+  // plain array, one atom at a time. Measured on the oracle: "abc" folds
+  // `atoms` -> `atom` -> `atom` via `:496` then `:18`/`:18`, landing
+  // `factor: [Symbol(a), Symbol(b), Symbol(c)]`, which `:49` above then
+  // unwraps. `:491` (`atom: sequence, atoms: simple`) is its sibling for an
+  // atom side that already folded to an array — deferred with `:30` above:
+  // this grammar's own left recursion always captures `atom` one leaf at a
+  // time, so no probed input leaves it anything but `simple` at this position.
+  rule("486", { atom: simple("atom"), atoms: simple("atoms") }, (b) => [b.atom, b.atoms]);
+  rule("496", { atom: simple("atom"), atoms: sequence("atoms") }, (b) => [
+    b.atom,
+    ...asArray(b.atoms),
+  ]);
+
   rule("501", { operator: simple("operator"), expr: sequence("expr") }, (b) => [
     symbolsClass(b.operator),
     ...asArray(b.expr),
@@ -1597,6 +1677,24 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.nary,
     ...asArray(b.naryand_recursion),
   ]);
+
+  // ATOMS meeting FRACTION's `recursive_denominator`/`recursive_numerator`
+  // (`:675`, `:680`, `:685`, `:690`, `:695`, `:1756`, `:2035`, `:2041`,
+  // `:2048`, `:2787`, `:3074`) is deferred whole, not rule by rule: every one
+  // of those eleven keys only ever appears inside FRACTION's `numerator`/
+  // `denominator` grammar productions, and the TOP `{numerator:, denominator:}`
+  // rule that would receive their output is itself one of the ten still-
+  // deferred SEQUENCE-numerator/denominator sites (`transform.rb:1619`-
+  // `:2371`, the module header's own "other ten call sites"). Measured by
+  // probing each on the oracle and then driving the same input through this
+  // port: `"1/a(b)"` fires `:675` on the oracle exactly as coded here, but the
+  // resulting `[atom, Fenced]` is a SEQUENCE denominator, which lands on
+  // `transform.rb:1619` (`numerator: simple, denominator: sequence`) —
+  // unported — so the port refuses the very input that proves `:675` correct.
+  // Porting any of these eleven without also porting at least the matching
+  // half of the ten deferred FRACTION sites would add code with no reachable,
+  // passing witness, which the repo's evidence rules do not allow; wiring
+  // that family is the explicit follow-up this slice unblocks, not part of it.
 
   rule("735", { factor: simple("factor"), operand: simple("operand") }, (b) => [
     b.factor,
@@ -1928,6 +2026,13 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   ]);
   rule("1831", { nary: simple("nary"), expr: simple("expr") }, (b) => [b.nary, b.expr]);
 
+  // ATOMS meeting `exclamation_symbols` (`!`/`!!`, `grammar.ts:705`) directly
+  // rather than through `atoms`.
+  rule("1851", { atom: simple("atom"), exclamation_symbol: simple("exclamation_symbol") }, (b) => [
+    b.atom,
+    symbolsClass(b.exclamation_symbol),
+  ]);
+
   rule("1861", { nary_sub_sup: simple("subsup_exp"), naryand: simple("naryand") }, (b) => {
     const subsup = b.subsup_exp;
     if (isA(subsup, IS_TERNARY_FUNCTION)) {
@@ -2174,6 +2279,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) => newFenced(parenClass(b.open_paren), [b.sup_exp], parenClass(b.close_paren)),
   );
+
+  // ATOMS meeting a bare `operator` and a `frac` directly (`:2787`) and that
+  // shape's SEQUENCE-`expr` extension (`:3074`) are deferred with `:30`
+  // above: no probed input reached either.
 
   rule(
     "2806",

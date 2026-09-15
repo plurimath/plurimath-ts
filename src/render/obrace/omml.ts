@@ -15,7 +15,7 @@ export function renderObrace(node: NodeOf<"obrace">, context: RenderContext): Xm
   // so `false` takes the bare-brace path alongside `nil`.
   if (!present(node.parameterOne)) return plainRun(BRACE);
 
-  if (present(node.attributes.accent)) {
+  if (present(node.attributes?.accent)) {
     return new XmlElement("m:acc").append(
       new XmlElement("m:accPr").append(new XmlElement("m:chr").setAttribute("m:val", BRACE)),
       ommlSlot(node.parameterOne, "e", context, node.kind, "obrace.parameterOne"),

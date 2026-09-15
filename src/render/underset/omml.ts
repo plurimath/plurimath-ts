@@ -16,7 +16,7 @@ export function renderUnderset(node: NodeOf<"underset">, context: RenderContext)
     );
   }
 
-  if (!present(node.options.accentunder)) {
+  if (!present(node.options?.accentunder)) {
     return renderOverUnder(node.kind, "Low", node.parameterOne, node.parameterTwo, context);
   }
 

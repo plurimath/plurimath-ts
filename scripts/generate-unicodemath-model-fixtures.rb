@@ -284,6 +284,14 @@ RULE_COVERAGE = {
   #           `UNDER_HORIZONTAL_BRACKETS` (overbracket) -> `Overset`.
   #   "⎵a"    rule 1286, same else branch, `hbrack` IS in
   #           `UNDER_HORIZONTAL_BRACKETS` (underbracket) -> `Underset`.
+  #   "\overbracket(a)"
+  #           rule 1286, same else branch, but reached through
+  #           `op_h_bracket_prefixed` (`constants_rules.rb:81`) rather than
+  #           `op_h_bracket`: `hbracket_class` captures the bracket NAME
+  #           "overbracket", not the entity, so `HORIZONTAL_BRACKETS[hbrack.
+  #           to_sym]` resolves it to `&#x23b4;` before `Overset` is built.
+  #           Exercises the name-form lookup `"⎴a"` above cannot, since that
+  #           input already carries the entity and never needs the table.
   #   "⎵3x"   rule 1315, `hbracket_class` simple/`first_value` SEQUENCE
   #           (`:735`'s `{factor:, operand:}` gives "3x" a sequence, the same
   #           shape `"■(3x)"` above reaches for `td`) -> `Underset` wrapping
@@ -318,6 +326,7 @@ RULE_COVERAGE = {
     "⏟x_2",
     "⎴a",
     "⎵a",
+    "\\overbracket(a)",
     "⎵3x",
     "⏟a^2",
     "3x⃝",

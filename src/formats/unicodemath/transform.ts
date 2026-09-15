@@ -381,13 +381,14 @@ const HORIZONTAL_BRACKETS_INVERTED = invertFirstWins(UNICODEMATH_HORIZONTAL_BRAC
 
 /**
  * `Constants::UNDER_HORIZONTAL_BRACKETS[hbrack.to_sym] || .key(hbrack)`
- * (`transform.rb:1300`-`:1303`): `hbrack` is always the ENTITY text the
- * `hbracket_class` rule captured — `arr_to_expression` builds it from
- * `HORIZONTAL_BRACKETS.values` — never a bracket NAME, so
- * `hbrack.to_sym` can never be a key of a Symbol-keyed hash and the first
- * disjunct is always nil. What decides `Underset` vs. `Overset` is therefore
- * only the second disjunct: whether `hbrack` is one of this table's four
- * VALUES.
+ * (`transform.rb:1300`-`:1303`): `hbrack` is EITHER the bracket NAME
+ * `opHbracketPrefixed` captures behind a `\` prefix, or the ENTITY text
+ * `opHbracket` captures directly (`grammar.ts:530`, `:630`-`:631`), both
+ * funnelled through the same `hbracket_class` key. The first disjunct
+ * (`[hbrack.to_sym]`) is the name-form membership check — whether `hbrack`
+ * is one of this table's four NAME keys; the second (`.key(hbrack)`) is the
+ * entity-form check against its four VALUES, used when `hbrack` already
+ * arrived as an entity. `hbracketDecoration` below runs both.
  */
 const UNDER_HORIZONTAL_BRACKETS_VALUES: ReadonlySet<string> = new Set(
   UNICODEMATH_UNDER_HORIZONTAL_BRACKETS.values(),
@@ -1536,11 +1537,18 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     }
     // `Constants::HORIZONTAL_BRACKETS[hbrack.to_sym] || hbrack` and
     // `Constants::UNDER_HORIZONTAL_BRACKETS[hbrack.to_sym] || .key(hbrack)`:
-    // `hbrack` is always an ENTITY, never a bracket NAME, so both `[...to_sym]`
-    // lookups are always nil (see `UNDER_HORIZONTAL_BRACKETS_VALUES`'s own
-    // comment) and both expressions reduce to their second disjunct.
-    const bracketSymbol = newBareSymbol(hbrack);
-    return UNDER_HORIZONTAL_BRACKETS_VALUES.has(rubyToS(hbrack))
+    // `hbrack` can be EITHER shape here — the entity `opHbracket` captures
+    // directly, or the bracket NAME `opHbracketPrefixed` captures behind a
+    // `\` prefix (`grammar.ts:630`-`:631`), both funnelled through the same
+    // `hbracket_class` key. `hbrack.to_sym` only resolves when `hbrack` is a
+    // NAME, so the first disjunct of each Ruby expression is the name-form
+    // lookup and the second is the pass-through for an already-ENTITY
+    // `hbrack`.
+    const hbrackText = rubyToS(hbrack);
+    const bracketEntity = UNICODEMATH_HORIZONTAL_BRACKETS.get(hbrackText) ?? hbrack;
+    const bracketSymbol = newBareSymbol(bracketEntity);
+    return UNICODEMATH_UNDER_HORIZONTAL_BRACKETS.has(hbrackText) ||
+      UNDER_HORIZONTAL_BRACKETS_VALUES.has(hbrackText)
       ? newUnderset(bracketSymbol, value)
       : newOverset(bracketSymbol, value);
   };

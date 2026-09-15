@@ -294,3 +294,42 @@ describe("the inputs the gem refuses", () => {
     },
   );
 });
+
+/**
+ * `"∫∫f g"` — bare doubled-nary, not carried by the pinned corpus, so it lives
+ * here rather than in the fixture set. Both the gem and the port ultimately
+ * refuse it, but at different PHASES, measured directly against the oracle
+ * (`plurimath-oracle`, 2026-09-15) rather than assumed from the fixture shape:
+ *
+ *   - `Plurimath::Math.parse("∫∫f g", :unicode)` does not raise. It returns a
+ *     `Formula` whose value is
+ *     `[[:nary, {nary_class: "&#x222b;", naryand: [Int(…), Symbol("g")]}]]` —
+ *     `Kernel#Array` folding the outermost `{nary:, ...}` hash into its
+ *     `[key, value]` pairs, same as the `±`/`(a)/(+) b` cases this port
+ *     already reproduces. The malformed `Formula` is handed back successfully.
+ *   - Only RENDERING it raises: `formula.to_unicodemath` throws
+ *     `Plurimath::Math::ParseError`, because no renderer branch reads a
+ *     `[:nary, Hash]` pair.
+ *
+ * The port refuses earlier: `nary=other` is not in
+ * `GEM_UNMATCHED_SIGNATURES` (measured — no pinned corpus input produces it),
+ * so `assertGemLeavesUnmatched` throws at the FORMULA root, before the
+ * `Kernel#Array` pair-fold equivalent in `finalizeUnicodemathParse` ever runs.
+ * `parseUnicodemath` itself refuses, where the gem's `Math.parse` would not.
+ *
+ * This is the measured, accepted divergence Codex's review of #116 flagged as
+ * undocumented: WHEN each side refuses differs (parse-time here, render-time
+ * on the gem), but WHETHER either side produces usable output does not — both
+ * refuse. Nothing here says the phase difference is a bug to fix; it is
+ * recorded so a future change to `GEM_UNMATCHED_SIGNATURES` or to
+ * `finalizeUnicodemathParse`'s ordering trips this test rather than silently
+ * moving the refusal's phase.
+ */
+describe("a doubled nary the gem parses but cannot render", () => {
+  const input = "∫∫f g";
+
+  it("is refused by the port at parse time, naming the nary signature", () => {
+    expect(() => parseUnicodemath(input)).toThrow(ParseError);
+    expect(() => parseUnicodemath(input)).toThrow(/no rule matched \{nary=other\}/);
+  });
+});

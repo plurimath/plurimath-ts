@@ -219,6 +219,7 @@ payload = {
     "oracle #{Plurimath::VERSION rescue 'unknown'}, NOT corpus-derived.",
   "schema" => "plurimath-compat/html-battery/1",
   "oracleCommit" => `git -C #{oracle} rev-parse HEAD`.strip,
+  "generatorSha256" => Digest::SHA256.file(__FILE__).hexdigest,
   "caseCount" => rows.length,
   "parsedCount" => parsed,
   "raisedCount" => raised,

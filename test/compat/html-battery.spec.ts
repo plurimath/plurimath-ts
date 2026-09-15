@@ -31,6 +31,7 @@
  * "complete" HTML port would be expected to do.
  */
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,6 +40,28 @@ import { normalize, ParseError } from "../../src/core/index";
 import { parseHtml } from "../../src/formats/html/parser";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(HERE, "..", "..");
+
+function sha256OfFile(relativeToRoot: string): string {
+  return createHash("sha256")
+    .update(readFileSync(join(REPO_ROOT, relativeToRoot)))
+    .digest("hex");
+}
+
+/**
+ * The oracle commit this repository is actually pinned to, read from the
+ * census manifest's `oracle.commit` rather than duplicated as a literal —
+ * so this file can't go stale the way a hand-copied hash would. A plain
+ * targeted regex, not a YAML parser: this repo has no `yaml` dependency,
+ * and the manifest's `oracle:` block has a fixed, generator-written shape.
+ */
+function pinnedOracleCommit(): string {
+  const manifest = readFileSync(join(REPO_ROOT, "corpus/census.manifest.yaml"), "utf8");
+  const oracleBlock = manifest.slice(manifest.indexOf("\noracle:\n"));
+  const match = oracleBlock.match(/\n {2}commit: ([0-9a-f]{40})\n/);
+  if (!match) throw new Error("corpus/census.manifest.yaml: could not find oracle.commit");
+  return match[1] as string;
+}
 
 interface FixtureCase {
   readonly id: string;
@@ -51,6 +74,7 @@ interface FixtureCase {
 interface Fixtures {
   readonly schema: string;
   readonly oracleCommit: string;
+  readonly generatorSha256: string;
   readonly caseCount: number;
   readonly parsedCount: number;
   readonly raisedCount: number;
@@ -67,6 +91,17 @@ const raised = fixtures.cases.filter((entry) => entry.raises !== undefined);
 describe("the HTML battery fixture set", () => {
   it("is the schema this suite reads", () => {
     expect(fixtures.schema).toBe("plurimath-compat/html-battery/1");
+  });
+
+  it("was generated against the oracle commit this repo is actually pinned to", () => {
+    // Without this, a hand-edited fixture JSON (or one generated against a
+    // stale oracle checkout) would still pass every other assertion below —
+    // the measurement is only as trustworthy as this provenance check.
+    expect(fixtures.oracleCommit).toBe(pinnedOracleCommit());
+  });
+
+  it("was produced by the generator script currently committed here", () => {
+    expect(fixtures.generatorSha256).toBe(sha256OfFile("scripts/battery-html-fixtures.rb"));
   });
 
   it("has fifty hand-typed cases", () => {

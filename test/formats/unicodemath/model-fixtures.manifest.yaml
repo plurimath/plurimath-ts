@@ -2,10 +2,8 @@
 # `payload.sha256` covers the whole payload file, including its final newline.
 ---
 schema: plurimath-corpus/manifest/2
-committable: false
-warnings:
-- generated with --allow-dirty
-- 'generator checkout dirty: scripts/generate-unicodemath-model-fixtures.rb, src/formats/unicodemath/transform.ts'
+committable: true
+warnings: []
 generator:
   path: scripts/generate-unicodemath-model-fixtures.rb
   sha256: 94b557df57d76f68b2ce99b9342409f838256d8e6567af1d8ec866f9e2ae61e8
@@ -14,11 +12,9 @@ generator:
     scripts/generate-unicodemath-model-fixtures.rb: 94b557df57d76f68b2ce99b9342409f838256d8e6567af1d8ec866f9e2ae61e8
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 616c6543874d6155a6ceac7fecbe42d1b7ba553f
-    clean: false
-    dirty_paths:
-    - scripts/generate-unicodemath-model-fixtures.rb
-    - src/formats/unicodemath/transform.ts
+    commit: 142ebacdeed98568e7ebb71a9755891fa576d677
+    clean: true
+    dirty_paths: []
 oracle:
   gem: plurimath
   version: 0.11.6

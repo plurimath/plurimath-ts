@@ -77,9 +77,17 @@ export const FORMATS: readonly Format[] = [
  *     fed back in — parses to a byte-identical model for 95 of the 97 the gem
  *     answers (97.9%).
  *   - Fifty ordinary hand-written expressions, all 50 of which the gem parses,
- *     come back correct for 38 (76.0%). The twelve refused are `a≤b`, `a≥b`,
- *     `a±b`, `a→b`, `∂/∂x`, `x∈A`, `2·3`, `a≈b`, `a≡b`, `f(x)=y`, `e^(iπ)`
- *     and `x'`.
+ *     came back correct for 38 (76.0%) before the RELATION/OPERATOR increment
+ *     (`transform.ts`'s own header). The twelve refused were `a≤b`, `a≥b`,
+ *     `a±b`, `a→b`, `∂/∂x`, `x∈A`, `2·3`, `a≈b`, `a≡b`, `f(x)=y`, `e^(iπ)` and
+ *     `x'` — every one of which parses now (verified against this module's
+ *     own `parseUnicodemath`, not assumed from the transform landing).
+ *
+ * That increment closes the twelve-input gap the gate named, but registering
+ * `unicode` here is a separate decision this slice does not make: the battery
+ * itself was never checked into a test file, so "50/50" is not a claim this
+ * comment can re-measure, and the open question `TODO.plan/open-decisions.md`
+ * records for the transform's coverage invariant is still open.
  *
  * The gap between the two is the corpus's nature: it is the gem's OUTPUT,
  * already regular, not what a person types. A constructor that accepts

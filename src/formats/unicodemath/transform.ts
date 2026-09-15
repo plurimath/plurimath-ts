@@ -163,7 +163,40 @@
  * building those witnesses — see it at its own position below — bringing the
  * total this increment adds to nineteen and the file's running count to 118.
  *
- * Everything outside those 118 is genuinely ABSENT rather than stubbed. A
+ * ## A fifth increment: RELATION/OPERATOR, the ten rules the compat gate named
+ *
+ * `src/compat/index.ts` withholds `"unicode"` behind a measured gate: a
+ * 50-input hand-written battery, 38 of which passed before this increment,
+ * naming "the relation and operator families (`=`, `≤`, `≥`, `→`, `∈`, `≈`,
+ * `≡`, binary `±`) and the prime" as what was missing. Traced on the oracle
+ * (every registered block wrapped in a counter, the same method every prior
+ * increment used), the twelve refused inputs plus `"±"` — already a
+ * `SLICE_BOUNDARY` witness below, proving `:99` absent — fire exactly TEN
+ * unported rules between them: `:30` (`atom: sequence`), `:49` (`factor:
+ * sequence`), `:99` (`combined_symbols`, `Constants::COMBINING_SYMBOLS`),
+ * `:184` (`ordinary_negated_operator`, a resolved symbol plus a literal
+ * `&#x338;` strike), `:401` (`char`+`number`), `:745` (`factor`'s
+ * SEQUENCE-`operand` twin of the already-ported `:735`), `:1412`
+ * (`first_value`+`prime_accent_symbols`, `x'`'s bare prime — `Power` built
+ * from `unfencedValue`/`updatedPrimes`, both already here), `:2269`/`:2317`
+ * (`factor`+`operand`+`expr`, the SEQUENCE and simple three-key twins), and
+ * `:2447` (`opener`+SEQUENCE-`operand`+`closer`, `:2436`'s sequence twin).
+ * None needed new parsing machinery or a new draft helper: every grammar key
+ * these bind on `grammar.ts` already produces, and every constructor they
+ * call (`newFormula`, `newPower`, `newFenced`, `newNumber`) this file already
+ * had. The two generated constants they needed, `UNICODEMATH_COMBINING_
+ * SYMBOLS`/`_KEYS`, were already in `generated/parser-tables.ts`, zipped the
+ * same way `BINARY_SYMBOLS`/`NARY_SYMBOLS` are above.
+ *
+ * `"±"` and `"a≤b"` — the `SLICE_BOUNDARY` witnesses for `:99` and `:745` —
+ * moved up into `generate-unicodemath-model-fixtures.rb`'s new `"relation"`
+ * coverage group now that both rules are ported; the rest of the twelve join
+ * them there, so this increment closes the gap the compat comment named
+ * rather than opening a new, unmeasured one.
+ *
+ * Ten increments the running count from 118 to 128.
+ *
+ * Everything outside those 128 is genuinely ABSENT rather than stubbed. A
  * node whose key set no ported rule matches survives the transform as a
  * plain hash and `finalize` throws on it, naming the keys — the loud failure
  * the deferred families are supposed to produce.
@@ -223,6 +256,8 @@ import { Slice, sequence, simple, subtree, Transform, type TransformValue } from
 import {
   UNICODEMATH_BINARY_SYMBOLS,
   UNICODEMATH_BINARY_SYMBOLS_KEYS,
+  UNICODEMATH_COMBINING_SYMBOLS,
+  UNICODEMATH_COMBINING_SYMBOLS_KEYS,
   UNICODEMATH_MATRIXS,
   UNICODEMATH_MATRIXS_KEYS,
   UNICODEMATH_NARY_SYMBOLS,
@@ -346,6 +381,12 @@ const NARY_SYMBOLS = zipConstants(
   UNICODEMATH_NARY_SYMBOLS_KEYS,
   UNICODEMATH_NARY_SYMBOLS,
   "NARY_SYMBOLS",
+);
+/** `Constants::COMBINING_SYMBOLS[key]`, read by `:99`. */
+const COMBINING_SYMBOLS = zipConstants(
+  UNICODEMATH_COMBINING_SYMBOLS_KEYS,
+  UNICODEMATH_COMBINING_SYMBOLS,
+  "COMBINING_SYMBOLS",
 );
 const NARY_CLASSES_INVERTED = invertFirstWins(UNICODEMATH_NARY_CLASSES);
 const UNARY_ARG_FUNCTIONS_INVERTED = invertFirstWins(UNICODEMATH_UNARY_ARG_FUNCTIONS);
@@ -1212,6 +1253,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("27", { sub_exp: simple("exp") }, (b) => b.exp);
   rule("28", { sup_exp: simple("exp") }, (b) => b.exp);
   rule("29", { int_exp: simple("exp") }, (b) => b.exp);
+  rule("30", { atom: sequence("atom") }, (b) => b.atom);
   // TABLE's fifth single-key member: the `{table: ...}` wrapper every
   // `array` alternative (`grammar.ts`'s `array` rule) puts around its match,
   // unwrapped once and for all here rather than by each of the other
@@ -1223,6 +1265,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("39", { factor: simple("factor") }, (b) => b.factor);
   rule("44", { symbol: simple("symbol") }, (b) => symbolsClass(b.symbol));
   rule("45", { number: simple("number") }, (b) => newNumber(b.number));
+  rule("49", { factor: sequence("factor") }, (b) => b.factor);
   rule("50", { operand: simple("operand") }, (b) => b.operand);
   rule("52", { accents: subtree("accent") }, (b) => unicodeAccents(b.accent));
   rule("55", { sub_script: simple("script") }, (b) => b.script);
@@ -1241,6 +1284,16 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("82", { unary_function: simple("function") }, (b) => b.function);
   rule("90", { unary_subsup: simple("unary_subsup") }, (b) => b.unary_subsup);
   rule("92", { alphanumeric: simple("alphanumeric") }, (b) => symbolsClass(b.alphanumeric));
+
+  // RELATION/OPERATOR: `combined_symbols` (`±`/`∓`/`‼`, `Constants::
+  // COMBINING_SYMBOLS`) resolved the same way `:99`'s siblings resolve every
+  // other named-symbol table — a keyed lookup falling back to the matched
+  // text itself, then through `symbolsClass` like every other resolved
+  // symbol here.
+  rule("99", { combined_symbols: simple("combined_symbols") }, (b) => {
+    const key = rubyToS(b.combined_symbols);
+    return symbolsClass(COMBINING_SYMBOLS.get(key) ?? b.combined_symbols);
+  });
 
   rule("126", { unary_functions: simple("unary") }, (b) =>
     UNDEF_UNARY_FUNCTIONS.has(rubyToS(b.unary)) ? symbolsClass(b.unary) : buildClass(b.unary),
@@ -1269,6 +1322,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("165", { sup_digits: simple("digits") }, (b) => supDigitNumber(b.digits));
   rule("170", { sub_digits: simple("digits") }, (b) => subDigitNumber(b.digits));
 
+  // RELATION/OPERATOR: `\not=`-style negated ordinary symbols — the matched
+  // operator, already resolved by an earlier rule, followed by a literal
+  // combining-overlay-strike mark (`&#x338;`) as a second `Formula` element,
+  // exactly as the gem builds it rather than as one negated glyph.
+  rule("184", { ordinary_negated_operator: simple("operator") }, (b) =>
+    newFormula([symbolsClass(b.operator), newBareSymbol("&#x338;")]),
+  );
+
   // --- two-key rules (transform.rb:236-2001) -----------------------------
 
   rule("236", { font_class: simple("fonts"), symbol: simple("symbol") }, (b) =>
@@ -1281,6 +1342,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   });
 
   rule("391", { unary_subsup: simple("subsup"), expr: simple("expr") }, (b) => [b.subsup, b.expr]);
+  // RELATION/OPERATOR: a resolved `char` (e.g. the `·` `unicode_symbols`
+  // already turned into a symbol by `:149`) directly followed by a digit
+  // run — `2·3`'s `char`/`number` pair, folded into a two-element list the
+  // way every other `char: simple` sibling here is.
+  rule("401", { char: simple("char"), number: simple("number") }, (b) => [
+    b.char,
+    newNumber(b.number),
+  ]);
   rule("416", { fonts: simple("fonts"), expr: sequence("expr") }, (b) => [
     b.fonts,
     ...asArray(b.expr),
@@ -1328,6 +1397,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("740", { factor: simple("factor"), unary_subsup: simple("subsup") }, (b) => [
     b.factor,
     b.subsup,
+  ]);
+  // RELATION/OPERATOR: `factor`'s SEQUENCE-`operand` twin of `:735` — reached
+  // once a resolved relation symbol (e.g. `≤`) is itself an `operand` that
+  // already flattened into a multi-element run, the same `[x, ...xs]` shape
+  // `:825`/`:865`/`:870` below use for their own sequence-typed siblings.
+  rule("745", { factor: simple("factor"), operand: sequence("operand") }, (b) => [
+    b.factor,
+    ...asArray(b.operand),
   ]);
   rule("825", { sup_exp: simple("sup_exp"), expr: sequence("expr") }, (b) => [
     b.sup_exp,
@@ -1430,6 +1507,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       const unary = UNARY_ARG_FUNCTIONS_INVERTED.get(text) ?? text;
       return newMenclose(UNICODEMATH_MENCLOSE_FUNCTIONS.get(unary) ?? null, value);
     },
+  );
+
+  // RELATION/OPERATOR: `x'`'s prime — `first_value` carrying a trailing
+  // `prime_accent_symbols`, wrapped in `Power` the same way `updatedPrimes`
+  // already builds every OTHER prime this file carries (`accentValue`
+  // above).
+  rule("1412", { first_value: simple("first_value"), prime_accent_symbols: simple("prime") }, (b) =>
+    newPower(unfencedValue(b.first_value, true), updatedPrimes(b.prime)),
   );
 
   rule(
@@ -1614,6 +1699,21 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       ),
   );
 
+  // RELATION/OPERATOR: `factor`+`operand`(both simple)+`expr`, the
+  // three-key sibling of `:735`/`:745` above, reached once a relation chain
+  // grows a third element — `a≤b`'s `expr` sequence twin (`SEQUENCE`) and
+  // its simple twin, folded the same `[x, y, ...zs]` / `[x, y, z]` way.
+  rule(
+    "2269",
+    { factor: simple("factor"), operand: simple("operand"), expr: sequence("expr") },
+    (b) => [b.factor, b.operand, ...asArray(b.expr)],
+  );
+  rule(
+    "2317",
+    { factor: simple("factor"), operand: simple("operand"), expr: simple("expr") },
+    (b) => [b.factor, b.operand, b.expr],
+  );
+
   // FRACTION concluded — `bevelled` (`\sdiv`/`\sdivide`/`\sfrac`/`&#x2044;`),
   // `ldiv` (`\ldiv`/`&#x2215;`) and `no_display_style` (`\ndiv`/`\oslash`/
   // `&#x2298;`), each still `numerator: simple, denominator: simple`. The last
@@ -1662,6 +1762,17 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       }
       return newFenced(parenClass(b.opener), [b.operand], parenClass(b.closer));
     },
+  );
+
+  // RELATION/OPERATOR: `:2436`'s SEQUENCE-`operand` twin — `e^(iπ)`'s
+  // parenthesised exponent, which already flattened to a multi-element run
+  // before reaching the fence, so `operand` is passed through as-is rather
+  // than wrapped in a fresh one-element array. No `"|"` special case: the
+  // gem's own `:2447` does not carry one either.
+  rule(
+    "2447",
+    { opener: simple("opener"), operand: sequence("operand"), closer: simple("closer") },
+    (b) => newFenced(parenClass(b.opener), b.operand, parenClass(b.closer)),
   );
 
   rule(

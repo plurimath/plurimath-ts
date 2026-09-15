@@ -3820,6 +3820,121 @@ export const UNICODEMATH_NARY_CLASSES: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
+ * `Constants::UNDER_HORIZONTAL_BRACKETS`: the four `HORIZONTAL_BRACKETS`
+ * keys the `hbracket_class` rule (`transform.rb:1286`-`:1349`) tests
+ * membership against — by key OR by value, `hash[x] || hash.key(x)` — to
+ * decide whether a bracket other than `underbrace`/`overbrace` builds an
+ * `Underset` (a member) or an `Overset` (not one). A subset of
+ * `HORIZONTAL_BRACKETS`, kept as its own table because the gem keeps it
+ * as its own constant rather than deriving it.
+ */
+export const UNICODEMATH_UNDER_HORIZONTAL_BRACKETS: ReadonlyMap<string, string> = new Map([
+  ["underbracket", "&#x23b5;"],
+  ["undershell", "&#x23e1;"],
+  ["underparen", "&#x23dd;"],
+  ["underbrace", "&#x23df;"],
+]);
+
+/**
+ * `Constants::OVERLAYS_NOTATIONS`: every `DIACRITIC_OVERLAYS` entity
+ * mapped to the notation the `overlay_after`/`overlay_before` rules
+ * (`transform.rb:1409`-`:1471`) classify it by — `"mover"` builds an
+ * `Overset`, anything else (and the `&#x304;` entity specifically, which
+ * reads `"top"` here but is hard-coded to the `Overset` arm anyway) a
+ * `Menclose` carrying this table's value as its notation string.
+ */
+export const UNICODEMATH_OVERLAYS_NOTATIONS: ReadonlyMap<string, string> = new Map([
+  ["&#x20eb;", "mover"],
+  ["&#x20ea;", "mover"],
+  ["&#x20e6;", "mover"],
+  ["&#x20e5;", "mover"],
+  ["&#x20e4;", "mover"],
+  ["&#x20e3;", "mover"],
+  ["&#x20e2;", "mover"],
+  ["&#x20e0;", "circle downdiagonalstrike"],
+  ["&#x20df;", "mover"],
+  ["&#x20de;", "box"],
+  ["&#x20dd;", "circle"],
+  ["&#x20da;", "mover"],
+  ["&#x20d9;", "mover"],
+  ["&#x20d4;", "mover"],
+  ["&#x20d6;", "mover"],
+  ["&#x20d5;", "mover"],
+  ["&#x20d8;", "mover"],
+  ["&#x20d3;", "mover"],
+  ["&#x20d2;", "mover"],
+  ["&#x304;", "top"],
+  ["&#x338;", "mover"],
+  ["&#x337;", "mover"],
+  ["&#x336;", "mover"],
+  ["&#x335;", "mover"],
+  ["&#x334;", "mover"],
+  ["&#x309;", "mover"],
+]);
+
+/**
+ * `Constants::BELOWS_NOTATIONS`: every `DIACRITIC_BELOWS` entity mapped
+ * to the notation the `below_after` rule (`transform.rb:1473`-`:1485`)
+ * classifies it by — `"munder"` builds an `Underset`, anything else
+ * (only `&#x332;`, `"bottom"`) a `Menclose` carrying this table's value
+ * as its notation string.
+ */
+export const UNICODEMATH_BELOWS_NOTATIONS: ReadonlyMap<string, string> = new Map([
+  ["&#x316;", "munder"],
+  ["&#x317;", "munder"],
+  ["&#x318;", "munder"],
+  ["&#x319;", "munder"],
+  ["&#x31c;", "munder"],
+  ["&#x31d;", "munder"],
+  ["&#x31e;", "munder"],
+  ["&#x31f;", "munder"],
+  ["&#x320;", "munder"],
+  ["&#x321;", "munder"],
+  ["&#x322;", "munder"],
+  ["&#x323;", "munder"],
+  ["&#x324;", "munder"],
+  ["&#x325;", "munder"],
+  ["&#x326;", "munder"],
+  ["&#x327;", "munder"],
+  ["&#x328;", "munder"],
+  ["&#x329;", "munder"],
+  ["&#x32a;", "munder"],
+  ["&#x32b;", "munder"],
+  ["&#x32c;", "munder"],
+  ["&#x32d;", "munder"],
+  ["&#x32e;", "munder"],
+  ["&#x32f;", "munder"],
+  ["&#x330;", "munder"],
+  ["&#x331;", "munder"],
+  ["&#x332;", "bottom"],
+  ["&#x333;", "munder"],
+  ["&#x339;", "munder"],
+  ["&#x33a;", "munder"],
+  ["&#x33b;", "munder"],
+  ["&#x33c;", "munder"],
+  ["&#x345;", "munder"],
+  ["&#x347;", "munder"],
+  ["&#x348;", "munder"],
+  ["&#x349;", "munder"],
+  ["&#x34d;", "munder"],
+  ["&#x34e;", "munder"],
+  ["&#x353;", "munder"],
+  ["&#x354;", "munder"],
+  ["&#x355;", "munder"],
+  ["&#x356;", "munder"],
+  ["&#x359;", "munder"],
+  ["&#x35a;", "munder"],
+  ["&#x35c;", "munder"],
+  ["&#x35f;", "munder"],
+  ["&#x362;", "munder"],
+  ["&#x20e8;", "munder"],
+  ["&#x20ec;", "munder"],
+  ["&#x20ed;", "munder"],
+  ["&#x20ee;", "munder"],
+  ["&#x20ef;", "munder"],
+]);
+
+/**
  * `Constants::BINARY_FUNCTIONS`: the `class_name` values the sub- and
  * sup-script rules treat as "a function still missing its argument", so
  * the script fills `parameter_one`/`parameter_two` instead of wrapping.

@@ -195,9 +195,15 @@ function copyParameter(value: NodeParameter | undefined): NodeParameter | undefi
  *
  * The three store-always classes do NOT route through here; they assign the
  * slot directly, which is why this helper can drop empties unconditionally.
+ *
+ * The `unless options&.empty?` guard (`int`, `oint`, `prod`, `sum`, and
+ * others) reads as false — not raises — when `options` is `nil`: safe
+ * navigation makes `nil&.empty?` itself `nil`, so `unless nil` still assigns,
+ * storing `nil`. An explicit `null` here therefore lands exactly where
+ * `undefined` does — unset — never at `Object.keys`, which would throw on it.
  */
-function copyOptions(value: NodeOptions | undefined): NodeOptions | undefined {
-  if (value === undefined) return undefined;
+function copyOptions(value: NodeOptions | null | undefined): NodeOptions | undefined {
+  if (value === undefined || value === null) return undefined;
   return Object.keys(value).length === 0 ? undefined : { ...value };
 }
 
@@ -214,9 +220,21 @@ function assignedParameter(
   return copySlot(value === undefined ? fallback : value);
 }
 
-/** A hash slot Ruby's `initialize` assigns unconditionally, defaulting to `{}`. */
-function assignedOptions(value: NodeOptions | undefined): NodeOptions {
-  return value === undefined ? {} : { ...value };
+/**
+ * A hash slot Ruby's `initialize` assigns unconditionally, defaulting to `{}`.
+ *
+ * An explicit `null` is the caller's explicit `nil`, which these three
+ * classes' `initialize` methods store as-is (`fenced`, `nary` unconditionally;
+ * `underset`'s `unless options.nil?` skips the assignment, but its field was
+ * never set to anything else first, so the observed value is `nil` either
+ * way). Spreading `null` (`{ ...null }`) silently produces `{}` in
+ * JavaScript, which would collapse that `nil` back into an empty hash — so
+ * `null` is returned unchanged rather than spread.
+ */
+function assignedOptions(value: NodeOptions | null | undefined): NodeOptions | null {
+  if (value === undefined) return {};
+  if (value === null) return null;
+  return { ...value };
 }
 
 /**
@@ -590,7 +608,7 @@ export class AbsNode extends NodeBase {
 }
 
 export interface BarInit {
-  readonly attributes?: NodeOptions | undefined;
+  readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
@@ -600,7 +618,7 @@ export interface BarInit {
  */
 export class BarNode extends NodeBase {
   readonly kind = "bar" as const;
-  readonly attributes: NodeOptions;
+  readonly attributes: NodeOptions | null;
   readonly hideFunctionName: boolean | undefined;
   readonly parameterOne: NodeParameter;
 
@@ -614,7 +632,7 @@ export class BarNode extends NodeBase {
 
 export interface BaseInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
   readonly parameterTwo?: NodeParameter | undefined;
 }
@@ -706,7 +724,7 @@ export class CeilNode extends NodeBase {
 
 export interface ColorInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
   readonly parameterTwo?: NodeParameter | undefined;
 }
@@ -731,7 +749,7 @@ export class ColorNode extends NodeBase {
 }
 
 export interface DdotInit {
-  readonly attributes?: NodeOptions | undefined;
+  readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
@@ -741,7 +759,7 @@ export interface DdotInit {
  */
 export class DdotNode extends NodeBase {
   readonly kind = "ddot" as const;
-  readonly attributes: NodeOptions;
+  readonly attributes: NodeOptions | null;
   readonly hideFunctionName: boolean | undefined;
   readonly parameterOne: NodeParameter;
 
@@ -754,7 +772,7 @@ export class DdotNode extends NodeBase {
 }
 
 export interface DotInit {
-  readonly attributes?: NodeOptions | undefined;
+  readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
@@ -764,7 +782,7 @@ export interface DotInit {
  */
 export class DotNode extends NodeBase {
   readonly kind = "dot" as const;
-  readonly attributes: NodeOptions;
+  readonly attributes: NodeOptions | null;
   readonly hideFunctionName: boolean | undefined;
   readonly parameterOne: NodeParameter;
 
@@ -778,7 +796,7 @@ export class DotNode extends NodeBase {
 
 export interface FencedInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
   readonly parameterThree?: NodeParameter | undefined;
   readonly parameterTwo?: NodeParameter | undefined;
@@ -790,7 +808,7 @@ export interface FencedInit {
 export class FencedNode extends NodeBase {
   readonly kind = "fenced" as const;
   readonly hideFunctionName: boolean | undefined;
-  readonly options: NodeOptions;
+  readonly options: NodeOptions | null;
   readonly parameterOne: NodeParameter;
   readonly parameterThree: NodeParameter;
   readonly parameterTwo: NodeParameter;
@@ -915,7 +933,7 @@ export class FormulaNode extends NodeBase {
 
 export interface FracInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
   readonly parameterTwo?: NodeParameter | undefined;
 }
@@ -943,7 +961,7 @@ export class FracNode extends NodeBase {
 }
 
 export interface HatInit {
-  readonly attributes?: NodeOptions | undefined;
+  readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
@@ -953,7 +971,7 @@ export interface HatInit {
  */
 export class HatNode extends NodeBase {
   readonly kind = "hat" as const;
-  readonly attributes: NodeOptions;
+  readonly attributes: NodeOptions | null;
   readonly hideFunctionName: boolean | undefined;
   readonly parameterOne: NodeParameter;
 
@@ -967,7 +985,7 @@ export class HatNode extends NodeBase {
 
 export interface IntInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
   readonly parameterThree?: NodeParameter | undefined;
   readonly parameterTwo?: NodeParameter | undefined;
@@ -995,7 +1013,7 @@ export class IntNode extends NodeBase {
 }
 
 export interface LinebreakInit {
-  readonly attributes?: NodeOptions | undefined;
+  readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
@@ -1005,7 +1023,7 @@ export interface LinebreakInit {
  */
 export class LinebreakNode extends NodeBase {
   readonly kind = "linebreak" as const;
-  readonly attributes: NodeOptions;
+  readonly attributes: NodeOptions | null;
   readonly hideFunctionName: boolean | undefined;
   readonly parameterOne: NodeParameter;
 
@@ -1019,7 +1037,7 @@ export class LinebreakNode extends NodeBase {
 
 export interface MpaddedInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
 
@@ -1073,7 +1091,7 @@ export class MrowNode extends NodeBase {
 }
 
 export interface NaryInit {
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterFour?: NodeParameter | undefined;
   readonly parameterOne?: NodeParameter | undefined;
   readonly parameterThree?: NodeParameter | undefined;
@@ -1085,7 +1103,7 @@ export interface NaryInit {
  */
 export class NaryNode extends NodeBase {
   readonly kind = "nary" as const;
-  readonly options: NodeOptions;
+  readonly options: NodeOptions | null;
   readonly parameterFour: NodeParameter;
   readonly parameterOne: NodeParameter;
   readonly parameterThree: NodeParameter;
@@ -1156,7 +1174,7 @@ export class NumberNode extends NodeBase {
 }
 
 export interface ObraceInit {
-  readonly attributes?: NodeOptions | undefined;
+  readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
@@ -1166,7 +1184,7 @@ export interface ObraceInit {
  */
 export class ObraceNode extends NodeBase {
   readonly kind = "obrace" as const;
-  readonly attributes: NodeOptions;
+  readonly attributes: NodeOptions | null;
   readonly hideFunctionName: boolean | undefined;
   readonly parameterOne: NodeParameter;
 
@@ -1180,7 +1198,7 @@ export class ObraceNode extends NodeBase {
 
 export interface OintInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
   readonly parameterThree?: NodeParameter | undefined;
   readonly parameterTwo?: NodeParameter | undefined;
@@ -1208,7 +1226,7 @@ export class OintNode extends NodeBase {
 }
 
 export interface OverleftrightarrowInit {
-  readonly attributes?: NodeOptions | undefined;
+  readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
@@ -1218,7 +1236,7 @@ export interface OverleftrightarrowInit {
  */
 export class OverleftrightarrowNode extends NodeBase {
   readonly kind = "overleftrightarrow" as const;
-  readonly attributes: NodeOptions;
+  readonly attributes: NodeOptions | null;
   readonly hideFunctionName: boolean | undefined;
   readonly parameterOne: NodeParameter;
 
@@ -1232,7 +1250,7 @@ export class OverleftrightarrowNode extends NodeBase {
 
 export interface OversetInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
   readonly parameterTwo?: NodeParameter | undefined;
 }
@@ -1258,7 +1276,7 @@ export class OversetNode extends NodeBase {
 
 export interface ProdInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
   readonly parameterThree?: NodeParameter | undefined;
   readonly parameterTwo?: NodeParameter | undefined;
@@ -1287,7 +1305,7 @@ export class ProdNode extends NodeBase {
 
 export interface SqrtInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
 
@@ -1310,7 +1328,7 @@ export class SqrtNode extends NodeBase {
 
 export interface SumInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
   readonly parameterThree?: NodeParameter | undefined;
   readonly parameterTwo?: NodeParameter | undefined;
@@ -1342,7 +1360,7 @@ export interface SymbolInit {
   readonly id?: string | undefined;
   readonly miniSubSized?: boolean | undefined;
   readonly miniSupSized?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly slashed?: boolean | undefined;
   readonly value?: string | null | undefined;
 }
@@ -1382,7 +1400,7 @@ export interface TableInit {
   readonly name?: string | undefined;
   readonly closeParen?: NodeParameter | undefined;
   readonly openParen?: NodeParameter | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly value?: NodeSequence | null | undefined;
 }
 
@@ -1406,7 +1424,7 @@ export class TableNode extends NodeBase {
   readonly name: string | undefined;
   readonly closeParen: NodeParameter;
   readonly openParen: NodeParameter;
-  readonly options: NodeOptions;
+  readonly options: NodeOptions | null;
   readonly value: NodeSequence | null;
 
   constructor(init: TableInit = {}) {
@@ -1416,7 +1434,11 @@ export class TableNode extends NodeBase {
     this.closeParen = assignedParameter(init.closeParen, aliasFallback(alias.closeParen, null));
     this.openParen = assignedParameter(init.openParen, aliasFallback(alias.openParen, null));
     this.options =
-      init.options === undefined ? assignedOptions(alias.options) : { ...init.options };
+      init.options === undefined
+        ? assignedOptions(alias.options)
+        : init.options === null
+          ? null
+          : { ...init.options };
     this.value = assignedTableSequence(init.value, aliasFallback(alias.value, null));
   }
 }
@@ -1483,7 +1505,7 @@ export class TextNode extends NodeBase {
 }
 
 export interface TildeInit {
-  readonly attributes?: NodeOptions | undefined;
+  readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
@@ -1493,7 +1515,7 @@ export interface TildeInit {
  */
 export class TildeNode extends NodeBase {
   readonly kind = "tilde" as const;
-  readonly attributes: NodeOptions;
+  readonly attributes: NodeOptions | null;
   readonly hideFunctionName: boolean | undefined;
   readonly parameterOne: NodeParameter;
 
@@ -1506,7 +1528,7 @@ export class TildeNode extends NodeBase {
 }
 
 export interface UbraceInit {
-  readonly attributes?: NodeOptions | undefined;
+  readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
@@ -1516,7 +1538,7 @@ export interface UbraceInit {
  */
 export class UbraceNode extends NodeBase {
   readonly kind = "ubrace" as const;
-  readonly attributes: NodeOptions;
+  readonly attributes: NodeOptions | null;
   readonly hideFunctionName: boolean | undefined;
   readonly parameterOne: NodeParameter;
 
@@ -1529,7 +1551,7 @@ export class UbraceNode extends NodeBase {
 }
 
 export interface UlInit {
-  readonly attributes?: NodeOptions | undefined;
+  readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
@@ -1539,7 +1561,7 @@ export interface UlInit {
  */
 export class UlNode extends NodeBase {
   readonly kind = "ul" as const;
-  readonly attributes: NodeOptions;
+  readonly attributes: NodeOptions | null;
   readonly hideFunctionName: boolean | undefined;
   readonly parameterOne: NodeParameter;
 
@@ -1587,7 +1609,7 @@ export class UnaryFunctionNode extends NodeBase {
 
 export interface UndersetInit {
   readonly hideFunctionName?: boolean | undefined;
-  readonly options?: NodeOptions | undefined;
+  readonly options?: NodeOptions | null | undefined;
   readonly parameterOne?: NodeParameter | undefined;
   readonly parameterTwo?: NodeParameter | undefined;
 }
@@ -1598,7 +1620,7 @@ export interface UndersetInit {
 export class UndersetNode extends NodeBase {
   readonly kind = "underset" as const;
   readonly hideFunctionName: boolean | undefined;
-  readonly options: NodeOptions;
+  readonly options: NodeOptions | null;
   readonly parameterOne: NodeParameter;
   readonly parameterTwo: NodeParameter;
 
@@ -1613,7 +1635,7 @@ export class UndersetNode extends NodeBase {
 }
 
 export interface VecInit {
-  readonly attributes?: NodeOptions | undefined;
+  readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
   readonly parameterOne?: NodeParameter | undefined;
 }
@@ -1623,7 +1645,7 @@ export interface VecInit {
  */
 export class VecNode extends NodeBase {
   readonly kind = "vec" as const;
-  readonly attributes: NodeOptions;
+  readonly attributes: NodeOptions | null;
   readonly hideFunctionName: boolean | undefined;
   readonly parameterOne: NodeParameter;
 

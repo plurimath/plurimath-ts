@@ -20,6 +20,7 @@ import {
   hasNodeKind,
   type MathNode,
   MrowNode,
+  NaryNode,
   NODE_KINDS,
   type NodeKind,
   NumberNode,
@@ -152,6 +153,30 @@ describe("construction", () => {
 
     // And the slot is still absent when nothing is passed at all.
     expect(new FracNode().options).toBeUndefined();
+  });
+
+  // `Int#initialize` is `@options = options unless options&.empty?` — `&.`
+  // makes `nil&.empty?` itself `nil`, so `unless nil` still runs and stores
+  // `nil`. Measured on the oracle: `Int.new(a, nil, nil, nil).options` is
+  // `nil`, not raising. `copyOptions` used to reach `Object.keys(null)` for
+  // this input and throw; it now treats an explicit `null` the same way an
+  // omitted or `{}` argument is already treated — the slot stays unset.
+  it("accepts an explicit null options hash without throwing, like an omitted one", () => {
+    expect(() => new FracNode({ options: null })).not.toThrow();
+    expect(new FracNode({ options: null }).options).toBeUndefined();
+  });
+
+  // `Nary#initialize` assigns `@options` unconditionally — `@options = options`,
+  // no guard at all. Measured on the oracle: `Nary.new(nil, nil, nil, nil,
+  // nil).options` is `nil`, distinct from both an omitted argument (`{}`, the
+  // parameter default) and an explicit `{}` (also `{}`, but because it was
+  // passed, not because it was defaulted). `{ ...null }` produces `{}` in
+  // JavaScript, which used to erase that distinction.
+  it("keeps Nary's three-way options distinction: omitted, {}, and explicit null", () => {
+    expect(new NaryNode().options).toStrictEqual({});
+    expect(new NaryNode({ options: {} }).options).toStrictEqual({});
+    expect(new NaryNode({ options: null }).options).toBeNull();
+    expect(new NaryNode({ options: { mask: true } }).options).toStrictEqual({ mask: true });
   });
 
   it("validates nothing — an empty or nonsensical node builds fine", () => {

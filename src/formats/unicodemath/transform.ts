@@ -737,20 +737,33 @@ function newFenced(one: unknown, two: unknown, three: unknown): UnicodemathDraft
  * `Nary.new(p1, p2, p3, p4, options = {})` — `@options` always assigned, the
  * mask-carrying NARY rules (`:2856`-`:3588`) being the only callers that
  * pass a non-default `options`.
+ *
+ * `options ?? {}` would default an explicit `null` to `{}` as well as an
+ * omitted argument, but `Nary.new(..., nil)` — measured on the oracle —
+ * stores `@options = nil`, distinct from both an omitted argument (`{}`) and
+ * an explicit `{}` (`{}`). Only `undefined` (truly omitted) defaults here;
+ * an explicit `null` passes through unchanged.
+ *
+ * Exported for `test/core/nodes.spec.ts`'s options-distinction coverage:
+ * every rule that calls this always either omits `options` or builds one
+ * from a bound `mask`, so no grammar input reaches an explicit `null` here —
+ * the export exists to exercise that latent path directly, the same
+ * rationale `matrix-transform.spec.ts` gives for driving unreachable
+ * transform code by hand rather than through a full parse.
  */
-function newNary(
+export function newNary(
   one: unknown,
   two: unknown,
   three: unknown,
   four: unknown,
-  options?: NodeOptions,
+  options?: NodeOptions | null,
 ): UnicodemathDraft {
   return new UnicodemathDraft("nary", undefined, {
     parameterOne: orNil(one),
     parameterTwo: orNil(two),
     parameterThree: orNil(three),
     parameterFour: orNil(four),
-    options: options ?? {},
+    options: options === undefined ? {} : options,
   });
 }
 
@@ -846,6 +859,14 @@ function buildClass(name: unknown, ...args: unknown[]): UnicodemathDraft {
       return binaryDraft(entry.kind, entry.name, args[0], args[1]);
     case "ternary": {
       const draft = ternaryDraft(entry.kind, entry.name, args[0], args[1], args[2]);
+      // `!== undefined`, not `??`: an explicit `null` here must reach the
+      // built node's `options` field unchanged (an omitted 4th argument must
+      // not), for `assignedOptions`/`copyOptions` downstream to make the same
+      // omitted-vs-null-vs-`{}` distinction the constructor being built —
+      // `Nary`/`Fenced` (`assignedOptions`) or `Int`/`Oint`/`Prod`/`Sum`
+      // (`copyOptions`) — makes on it. Both now treat an explicit `null` the
+      // same as `nil` reaching the oracle's own `options` ivar rather than
+      // crashing on it (`copyOptions` used to hit `Object.keys(null)`).
       if (args[3] !== undefined) draft.fields.options = args[3];
       return draft;
     }

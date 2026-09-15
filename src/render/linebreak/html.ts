@@ -7,5 +7,5 @@ const BR = "<br/>";
 export function renderLinebreak(node: NodeOf<"linebreak">, context: RenderContext): string {
   if (!present(node.parameterOne)) return BR;
   const inner = s(renderChild(node.parameterOne, context, "linebreak.parameterOne"));
-  return node.attributes.linebreakstyle === "after" ? `${inner}${BR}` : `${BR}${inner}`;
+  return node.attributes?.linebreakstyle === "after" ? `${inner}${BR}` : `${BR}${inner}`;
 }

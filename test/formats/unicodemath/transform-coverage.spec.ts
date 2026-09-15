@@ -86,7 +86,7 @@ describe("transform rule coverage", () => {
     expect(reached).toBeGreaterThan(90);
   });
 
-  it("registers the 128 rules the slice carries", () => {
+  it("registers the 140 rules the slice carries", () => {
     // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
     // eight-rule table/matrix family the first slice deferred: `transform.rb:8`,
     // `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13
@@ -110,7 +110,14 @@ describe("transform rule coverage", () => {
     // class family — reached by the hand-picked "relation" coverage group,
     // which also carries `"±"` and `"a≤b"`, the two inputs that used to prove
     // `:99` and `:745` absent from `SLICE_BOUNDARY` (`transform.ts`'s own
-    // header names both).
+    // header names both) — plus 12 NARY: eleven `nary_class`/`nary`/
+    // `nary_sub_sup` rules (`:84`, `:175`, `:725`, `:730`, `:1831`, `:1874`,
+    // `:1931`, `:1953`, `:2856`, `:2911`, `:3588`) and one small prerequisite,
+    // `:255` (`{symbol:, expr:}`, the shape `:725`/`:730`/`:1874` need to
+    // reach a SEQUENCE) — reached by the hand-picked "nary" coverage group —
+    // see the module header for the eight SEQUENCE-`sub`/`sup` NARY rules
+    // this slice still defers, gated on the same `atoms` combinator FRACTION's
+    // own boundary section named.
     //
     // The count is rules REGISTERED, not branches reached: the multiscript
     // group carries four extra inputs whose trailing script is fenced, because
@@ -120,8 +127,8 @@ describe("transform rule coverage", () => {
     // `Constants::MATRIXS` character (eight) for the same reason: all eight
     // fire `:1649`/`:1670`/`:1691` with an identical trace and take four
     // different branches to eight different table classes.
-    expect(build.ruleIds.length).toBe(128);
-    expect(new Set(build.ruleIds).size).toBe(128);
+    expect(build.ruleIds.length).toBe(140);
+    expect(new Set(build.ruleIds).size).toBe(140);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

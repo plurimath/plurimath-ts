@@ -247,6 +247,40 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
 #                  multi-token exponent.
 #   "x'"           rule 1412 {first_value: simple, prime_accent_symbols:
 #                  simple} — a bare prime.
+#
+# "nary": every `nary_class`/`nary`/`nary_sub_sup` call site the ported slice
+# carries (`transform.rb:84`-`:3588`, eleven rules, plus the one small
+# prerequisite `:255` needed to reach two of them), traced the same way —
+# every registered block wrapped in a counter, one input per rule, checked
+# against the oracle before being written down. `\amalg` (the gem's own
+# `Constants::NARY_SYMBOLS` control word for `∐`) is the one NARY symbol
+# whose UnicodeMath spelling also takes an inline MASK digit run (`13`,
+# immediately after the symbol, no space) — `parser_spec.rb`'s own
+# `#EXAMPLE_676`-`:678` use exactly this shape.
+#
+# A doubled nary directly under a bare `nary_class` (no sub/sup ahead of it,
+# e.g. `"∫∫f g"`) measures as a GEM refusal in disguise: the oracle fires
+# `:725` on it, but the surrounding `{nary_class:, naryand:}` node it leaves
+# behind has no SEQUENCE-`naryand` rule to match it, and the gem's own
+# `Kernel#Array` fallback silently turns the unmatched hash into pairs
+# rather than raising — the exact failure mode `assertGemLeavesUnmatched`'s
+# own doc comment already names. Nesting the double nary under a `sub`
+# instead (`"∫_a∫f g"`) reaches `:725` (and `:730`, `:1874`, `:1931`) through
+# `:1874`'s SEQUENCE-`naryand` rule, which DOES exist, and the oracle's own
+# rendered output confirms a real parse rather than pair-flattened garbage.
+RULE_COVERAGE_NARY_INPUTS = [
+  "∫",                       # 175: bare nary_class, no sub/sup/naryand
+  "∫_a",                     # 84 (nary_sub_sup pass-through) and 1931
+  "∫^a",                     # 1953
+  "∫f g",                    # 1831
+  "∫_a∫f g",                 # 725 (nary + naryand_recursion, simple) via 1874/1931
+  "∫_a∫f gh",                # 730 (nary + naryand_recursion, SEQUENCE) and 255, via 1874/1931
+  "∫_a fg",                  # 1874 (nary_sub_sup + SEQUENCE naryand) and 255, via 1931
+  "\\amalg13_d\\of d",       # 2856: mask + simple sub (#EXAMPLE_676)
+  "\\amalg13^d\\of d",       # 2911: mask + simple sup, no sub
+  "\\amalg13_d^d\\of d",     # 3588: mask + simple sub + simple sup
+].freeze
+
 RULE_COVERAGE = {
   "multiscript" => [
     "^3 X",
@@ -318,6 +352,7 @@ RULE_COVERAGE = {
     "e^(iπ)",
     "x'",
   ],
+  "nary" => RULE_COVERAGE_NARY_INPUTS,
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`

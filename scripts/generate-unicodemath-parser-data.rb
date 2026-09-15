@@ -195,6 +195,9 @@ module UnicodeMathParserDataGenerator
     "BINARY_FUNCTIONS" => "UNICODEMATH_BINARY_FUNCTIONS",
     "NARY_CLASSES" => "UNICODEMATH_NARY_CLASSES",
     "PREFIXED_PRIMES" => "UNICODEMATH_PRIMES_CONSTANTS",
+    "UNDER_HORIZONTAL_BRACKETS" => "UNICODEMATH_UNDER_HORIZONTAL_BRACKETS",
+    "OVERLAYS_NOTATIONS" => "UNICODEMATH_OVERLAYS_NOTATIONS",
+    "BELOWS_NOTATIONS" => "UNICODEMATH_BELOWS_NOTATIONS",
   }.freeze
 
   # `Constants` entries neither the grammar nor the ported transform slice
@@ -208,9 +211,14 @@ module UnicodeMathParserDataGenerator
   # `src/generated/unicodemath/render-tables.ts`, and one table generated twice
   # is one table that can drift. The others are read only by transform rules
   # this slice defers.
+  #
+  # `BELOWS_NOTATIONS`, `OVERLAYS_NOTATIONS` and `UNDER_HORIZONTAL_BRACKETS`
+  # moved OUT of this list once the DECORATION family (`hbracket_class`/
+  # `overlay_after`/`overlay_before`/`below_after`) was ported: they are now
+  # emitted through `TRANSFORM_CONSTANT_SOURCES` below, the same path
+  # `NARY_CLASSES` and `PREFIXED_PRIMES` already use.
   UNCONSUMED_CONSTANTS = %w[
-    BELOWS_NOTATIONS OVERLAYS_NOTATIONS PARENTHESIS_MATRICES PHANTOM_SYMBOLS
-    UNDEF_UNARY_FUNCTIONS UNDER_HORIZONTAL_BRACKETS
+    PARENTHESIS_MATRICES PHANTOM_SYMBOLS UNDEF_UNARY_FUNCTIONS
   ].freeze
 
   # `UNICODED_FONTS` reaches the grammar through its own builder,
@@ -1059,6 +1067,36 @@ module UnicodeMathParserDataGenerator
              "them. The n-ary rules test membership by KEY and invert the hash to\n" \
              "recover a key from an entity, so both directions are read.",
       ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_UNDER_HORIZONTAL_BRACKETS", "ReadonlyMap<string, string>",
+        data[:under_horizontal_brackets],
+        doc: "`Constants::UNDER_HORIZONTAL_BRACKETS`: the four `HORIZONTAL_BRACKETS`\n" \
+             "keys the `hbracket_class` rule (`transform.rb:1286`-`:1349`) tests\n" \
+             "membership against — by key OR by value, `hash[x] || hash.key(x)` — to\n" \
+             "decide whether a bracket other than `underbrace`/`overbrace` builds an\n" \
+             "`Underset` (a member) or an `Overset` (not one). A subset of\n" \
+             "`HORIZONTAL_BRACKETS`, kept as its own table because the gem keeps it\n" \
+             "as its own constant rather than deriving it.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_OVERLAYS_NOTATIONS", "ReadonlyMap<string, string>",
+        data[:overlays_notations],
+        doc: "`Constants::OVERLAYS_NOTATIONS`: every `DIACRITIC_OVERLAYS` entity\n" \
+             "mapped to the notation the `overlay_after`/`overlay_before` rules\n" \
+             "(`transform.rb:1409`-`:1471`) classify it by — `\"mover\"` builds an\n" \
+             "`Overset`, anything else (and the `&#x304;` entity specifically, which\n" \
+             "reads `\"top\"` here but is hard-coded to the `Overset` arm anyway) a\n" \
+             "`Menclose` carrying this table's value as its notation string.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_BELOWS_NOTATIONS", "ReadonlyMap<string, string>",
+        data[:belows_notations],
+        doc: "`Constants::BELOWS_NOTATIONS`: every `DIACRITIC_BELOWS` entity mapped\n" \
+             "to the notation the `below_after` rule (`transform.rb:1473`-`:1485`)\n" \
+             "classifies it by — `\"munder\"` builds an `Underset`, anything else\n" \
+             "(only `&#x332;`, `\"bottom\"`) a `Menclose` carrying this table's value\n" \
+             "as its notation string.",
+      ),
       ts_string_list(
         "UNICODEMATH_BINARY_FUNCTIONS", data[:binary_functions],
         "`Constants::BINARY_FUNCTIONS`: the `class_name` values the sub- and\n" \
@@ -1218,6 +1256,11 @@ module UnicodeMathParserDataGenerator
       symbol_overlap: symbol_class_overlap,
       named_symbols: named_symbol_rows,
       nary_classes: string_pairs(constants::NARY_CLASSES, "NARY_CLASSES"),
+      under_horizontal_brackets: string_pairs(
+        constants::UNDER_HORIZONTAL_BRACKETS, "UNDER_HORIZONTAL_BRACKETS"
+      ),
+      overlays_notations: string_pairs(constants::OVERLAYS_NOTATIONS, "OVERLAYS_NOTATIONS"),
+      belows_notations: string_pairs(constants::BELOWS_NOTATIONS, "BELOWS_NOTATIONS"),
       binary_functions: constants::BINARY_FUNCTIONS.dup,
       menclose: string_pairs(
         Plurimath::Utility::UNICODEMATH_MENCLOSE_FUNCTIONS, "UNICODEMATH_MENCLOSE_FUNCTIONS"

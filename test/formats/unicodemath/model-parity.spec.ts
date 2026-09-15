@@ -97,13 +97,15 @@ const DEFERRED_INPUTS: readonly string[] = [
   "∐_(i) A_(i)",
   "⨁_(i) A_(i)",
 
-  // DECORATION (`transform.rb:1286`-`:1491`). Blocked on three constants no
-  // generated table carries: `UNDER_HORIZONTAL_BRACKETS`, `OVERLAYS_NOTATIONS`
-  // and `BELOWS_NOTATIONS`.
+  // DECORATION (`transform.rb:1286`-`:1491`) is ported now (`transform.ts`'s
+  // module header). Three of the six corpus rows that used to sit here moved
+  // out to `supported` below: `"⏟(a b)"`, `"⏟(a + b)"` and `"⏟(x)_(y)"` all
+  // route only through `hbracket_class`. The other three stay, blocked on
+  // machinery DECORATION does not touch: `"((a)̅)̅"` needs the `accents`/
+  // paren combination `{accents=other, close_paren=, open_paren=}` (the
+  // `atoms`-adjacent gap FRACTION's own header names), and `"(y)┴(x)"`/
+  // `"(y)┬x"` need `sup_exp`/`sub_exp` shapes SCRIPT does not carry either.
   "((a)̅)̅",
-  "⏟(a b)",
-  "⏟(a + b)",
-  "⏟(x)_(y)",
   "(y)┴(x)",
   "(y)┬x",
 

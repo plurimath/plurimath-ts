@@ -54,17 +54,42 @@
  *
  * A DECORATION family (`transform.rb:1286`-`:1491`, building `Obrace`/
  * `Ubrace`, `Overset`, `Menclose`, `Underset`) was measured alongside it and
- * set aside, unstarted: all eight of its rules read one of
- * `Constants::UNDER_HORIZONTAL_BRACKETS` (four of them), `OVERLAYS_NOTATIONS`
- * (three) or `BELOWS_NOTATIONS` (one), and none of the three is in any
- * generated table this
- * repository carries — confirmed both by `grep -rl` across `src/` (nothing)
- * and by `scripts/generate-unicodemath-parser-data.rb`'s own
- * `UNCONSUMED_CONSTANTS` list, which already names all three as read only by
- * transform rules the port defers. Porting it now would mean hand-transcribing
- * gem constant data — one table alone carries over fifty entries — rather
- * than reusing a generated one, which is the premise MULTISCRIPT was portable
- * on and this family is not.
+ * set aside, unstarted, in an earlier pass: all eight of its rules read one
+ * of `Constants::UNDER_HORIZONTAL_BRACKETS` (four of them),
+ * `OVERLAYS_NOTATIONS` (three) or `BELOWS_NOTATIONS` (one), and at the time
+ * none of the three was in any generated table this repository carried.
+ *
+ * A later increment ported it. `scripts/generate-unicodemath-parser-data.rb`
+ * now emits all three as `UNICODEMATH_UNDER_HORIZONTAL_BRACKETS`,
+ * `UNICODEMATH_OVERLAYS_NOTATIONS` and `UNICODEMATH_BELOWS_NOTATIONS`
+ * (`generated/transform-tables.ts`), the same `TRANSFORM_CONSTANT_SOURCES`
+ * path `NARY_CLASSES` and `PREFIXED_PRIMES` already used, so the family no
+ * longer needs hand-transcribed data.
+ *
+ * Seven of the eight rules are registered: `:1286`/`:1315`/`:1344`
+ * (`hbracket_class`, one body across `simple`/`sequence` ×
+ * `first_value`/`scripted_first_value`, differing only in whether the
+ * `Ubrace`-on-`Base` branch re-applies `unfenced_value` to `parameter_one`),
+ * `:1420`/`:1447` (`overlay_after`, `sequence`/`simple`), `:1473`
+ * (`overlay_before`) and `:1491` (`below_after`). Four more rules feed them
+ * the plain text `hbracket_class`/`overlay_after`/`overlay_before`/
+ * `below_after` need: `:40` unwraps the `hbrack` envelope the grammar's
+ * third `hbrack` alternative adds, and `:81`/`:88`/`:94` unwrap
+ * `diacritic_belows`/`diacritics_accents`/`diacritic_overlays` the same way
+ * `:55`/`:56`/`:57` already unwrap `sub_script`/`sup_script`/`pre_script`.
+ *
+ * The eighth, `:1375` (`hbracket_class` simple / `scripted_first_value`
+ * SEQUENCE), is transcribed in a comment at its position below but NOT
+ * registered: every `scripted_first_value` shape that would reach it needs a
+ * `{base:, sub:, sup:}` three-key hash or a `{base:, sub: sequence}`
+ * two-key one, and `:1019`/`:1116` here are `simple`/`simple` only, so
+ * nothing this slice carries can ever bind it — measured by testing several
+ * `subsup_exp`, `mini_sub_sup` and `pre_script` inputs, every one of which
+ * hit that gap before `hbracket_class` did. `transform-coverage.spec.ts`
+ * refuses an unfired rule on principle, the same call FRACTION's own header
+ * below makes for its ten `atoms`-blocked call sites. See
+ * `scripts/generate-unicodemath-model-fixtures.rb`'s own `"decoration"`
+ * group for the fixtures that exercise the other seven.
  *
  * ## A third increment: FRACTION, cut to the shape `:1609` already carries
  *
@@ -231,12 +256,15 @@ import {
   UNICODEMATH_SUP_DIGITS,
 } from "./generated/parser-tables";
 import {
+  UNICODEMATH_BELOWS_NOTATIONS,
   UNICODEMATH_BINARY_FUNCTIONS,
   UNICODEMATH_IS_A_CLASSES,
   UNICODEMATH_MENCLOSE_FUNCTIONS,
   UNICODEMATH_NARY_CLASSES,
+  UNICODEMATH_OVERLAYS_NOTATIONS,
   UNICODEMATH_PRIMES_CONSTANTS,
   UNICODEMATH_SYMBOL_CLASS_INPUT,
+  UNICODEMATH_UNDER_HORIZONTAL_BRACKETS,
 } from "./generated/transform-tables";
 import {
   namedSymbolId,
@@ -350,6 +378,21 @@ const NARY_SYMBOLS = zipConstants(
 const NARY_CLASSES_INVERTED = invertFirstWins(UNICODEMATH_NARY_CLASSES);
 const UNARY_ARG_FUNCTIONS_INVERTED = invertFirstWins(UNICODEMATH_UNARY_ARG_FUNCTIONS);
 const HORIZONTAL_BRACKETS_INVERTED = invertFirstWins(UNICODEMATH_HORIZONTAL_BRACKETS);
+
+/**
+ * `Constants::UNDER_HORIZONTAL_BRACKETS[hbrack.to_sym] || .key(hbrack)`
+ * (`transform.rb:1300`-`:1303`): `hbrack` is EITHER the bracket NAME
+ * `opHbracketPrefixed` captures behind a `\` prefix, or the ENTITY text
+ * `opHbracket` captures directly (`grammar.ts:530`, `:630`-`:631`), both
+ * funnelled through the same `hbracket_class` key. The first disjunct
+ * (`[hbrack.to_sym]`) is the name-form membership check — whether `hbrack`
+ * is one of this table's four NAME keys; the second (`.key(hbrack)`) is the
+ * entity-form check against its four VALUES, used when `hbrack` already
+ * arrived as an entity. `hbracketDecoration` below runs both.
+ */
+const UNDER_HORIZONTAL_BRACKETS_VALUES: ReadonlySet<string> = new Set(
+  UNICODEMATH_UNDER_HORIZONTAL_BRACKETS.values(),
+);
 const PRIMES_INVERTED = invertFirstWins(UNICODEMATH_PRIMES_CONSTANTS);
 const BINARY_FUNCTION_NAMES: ReadonlySet<string> = new Set(UNICODEMATH_BINARY_FUNCTIONS);
 const UNDEF_UNARY_FUNCTIONS: ReadonlySet<string> = new Set(UNICODEMATH_UNDEF_UNARY_FUNCTIONS);
@@ -962,6 +1005,21 @@ function newMenclose(one: unknown, two: unknown): UnicodemathDraft {
   return binaryDraft("binaryFunction", "Menclose", one, two);
 }
 
+/**
+ * `Math::Function::Obrace.new(p1, attributes = {})` — a `UnaryFunction`.
+ * Every DECORATION construction site calls it with one argument, so
+ * `attributes` is left unset and `finalize` defaults it the same way
+ * `assignedOptions(undefined)` does in `core/nodes.ts`.
+ */
+function newObrace(one: unknown): UnicodemathDraft {
+  return unaryDraft("obrace", undefined, one);
+}
+
+/** `Math::Function::Ubrace.new(p1, attributes = {})` — a `UnaryFunction`. */
+function newUbrace(one: unknown): UnicodemathDraft {
+  return unaryDraft("ubrace", undefined, one);
+}
+
 /** `Math::Function::Mod.new(p1, p2)` — an alias on `BinaryFunction`. */
 function newMod(one: unknown, two: unknown): UnicodemathDraft {
   return binaryDraft("binaryFunction", "Mod", one, two);
@@ -1221,6 +1279,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("34", { digit: simple("digit") }, (b) => b.digit);
   rule("35", { color: simple("color") }, (b) => b.color);
   rule("39", { factor: simple("factor") }, (b) => b.factor);
+  // DECORATION's fourth unwrap: `hbrack` (`grammar.ts`'s `hbrack` rule, third
+  // alternative) wraps the whole `{hbracket_class:, first_value:}` /
+  // `{hbracket_class:, scripted_first_value:}` hash under its own tag; the
+  // first alternative (a `(`-bracketed value) does not, so `:1286`/`:1315`
+  // below see both shapes and this unwrap only fires on the second.
+  rule("40", { hbrack: simple("hbrack") }, (b) => b.hbrack);
   rule("44", { symbol: simple("symbol") }, (b) => symbolsClass(b.symbol));
   rule("45", { number: simple("number") }, (b) => newNumber(b.number));
   rule("50", { operand: simple("operand") }, (b) => b.operand);
@@ -1238,9 +1302,19 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("72", { decimal_number: simple("number") }, (b) => b.number);
   rule("74", { subsup_exp: simple("subsup_exp") }, (b) => b.subsup_exp);
   rule("76", { open_paren: simple("open_paren") }, (b) => symbolsClass(b.open_paren));
+  // DECORATION's three unwraps: `op_diacritic_belows`/`op_diacritic_overlays`
+  // (`grammar.ts`'s `opDiacriticBelows`/`opDiacriticOverlays`) each wrap the
+  // matched entity under its own tag before `diacriticsAccents` wraps THAT
+  // under `below_after`/`overlay_after`/`overlay_before`, so these strip the
+  // inner tag back to plain text first — exactly what `:81`/`:94` do in the
+  // gem. `:88` strips `diacriticsAccents`'s own outer `diacritics_accents`
+  // wrapper once the rules below have built a node from its contents.
+  rule("81", { diacritic_belows: simple("belows") }, (b) => b.belows);
   rule("82", { unary_function: simple("function") }, (b) => b.function);
+  rule("88", { diacritics_accents: simple("accent") }, (b) => b.accent);
   rule("90", { unary_subsup: simple("unary_subsup") }, (b) => b.unary_subsup);
   rule("92", { alphanumeric: simple("alphanumeric") }, (b) => symbolsClass(b.alphanumeric));
+  rule("94", { diacritic_overlays: simple("overlays") }, (b) => b.overlays);
 
   rule("126", { unary_functions: simple("unary") }, (b) =>
     UNDEF_UNARY_FUNCTIONS.has(rubyToS(b.unary)) ? symbolsClass(b.unary) : buildClass(b.unary),
@@ -1431,6 +1505,117 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       return newMenclose(UNICODEMATH_MENCLOSE_FUNCTIONS.get(unary) ?? null, value);
     },
   );
+
+  // DECORATION (`transform.rb:1286`-`:1491`): `hbracket_class` builds
+  // `Obrace`/`Ubrace`/`Overset`/`Underset` from the eight `HORIZONTAL_
+  // BRACKETS` characters, and `overlay_after`/`overlay_before`/`below_after`
+  // build `Overset`/`Underset`/`Menclose` from a following or leading
+  // combining diacritic. See the module header for why this family was
+  // deferred through the first three increments, and `:81`/`:88`/`:94`
+  // above for the wrapper unwraps every one of these five needs to fire.
+  //
+  // `:1286`/`:1315`/`:1344`/`:1375` share one body up to a single
+  // difference: `:1344`'s `Ubrace` branch re-applies `unfenced_value` to
+  // the `Base`'s `parameter_one` before wrapping it, the other three pass it
+  // through as-is. Transcribed as measured, not reconciled.
+  const hbracketDecoration = (hbrack: unknown, rawValue: unknown, unfenceUbraceInner: boolean) => {
+    const value = unfencedValue(rawValue, true);
+    if (textEquals(hbrack, "&#x23de;")) return newObrace(value);
+    if (textEquals(hbrack, "&#x23df;")) {
+      if (
+        isDraft(value) &&
+        value.kind === "base" &&
+        !isA(fieldOf(value, "parameterOne"), IS_FORMULA)
+      ) {
+        const inner = fieldOf(value, "parameterOne");
+        return newUnderset(
+          fieldOf(value, "parameterTwo"),
+          newUbrace(unfenceUbraceInner ? unfencedValue(inner, true) : inner),
+        );
+      }
+      return newUbrace(value);
+    }
+    // `Constants::HORIZONTAL_BRACKETS[hbrack.to_sym] || hbrack` and
+    // `Constants::UNDER_HORIZONTAL_BRACKETS[hbrack.to_sym] || .key(hbrack)`:
+    // `hbrack` can be EITHER shape here — the entity `opHbracket` captures
+    // directly, or the bracket NAME `opHbracketPrefixed` captures behind a
+    // `\` prefix (`grammar.ts:630`-`:631`), both funnelled through the same
+    // `hbracket_class` key. `hbrack.to_sym` only resolves when `hbrack` is a
+    // NAME, so the first disjunct of each Ruby expression is the name-form
+    // lookup and the second is the pass-through for an already-ENTITY
+    // `hbrack`.
+    const hbrackText = rubyToS(hbrack);
+    const bracketEntity = UNICODEMATH_HORIZONTAL_BRACKETS.get(hbrackText) ?? hbrack;
+    const bracketSymbol = newBareSymbol(bracketEntity);
+    return UNICODEMATH_UNDER_HORIZONTAL_BRACKETS.has(hbrackText) ||
+      UNDER_HORIZONTAL_BRACKETS_VALUES.has(hbrackText)
+      ? newUnderset(bracketSymbol, value)
+      : newOverset(bracketSymbol, value);
+  };
+
+  rule("1286", { hbracket_class: simple("hbrack"), first_value: simple("first_value") }, (b) =>
+    hbracketDecoration(b.hbrack, b.first_value, false),
+  );
+  rule("1315", { hbracket_class: simple("hbrack"), first_value: sequence("first_value") }, (b) =>
+    hbracketDecoration(b.hbrack, b.first_value, false),
+  );
+  rule(
+    "1344",
+    { hbracket_class: simple("hbrack"), scripted_first_value: simple("scripted_first_value") },
+    (b) => hbracketDecoration(b.hbrack, b.scripted_first_value, true),
+  );
+  // `:1375` (`hbracket_class` simple / `scripted_first_value` SEQUENCE) is
+  // NOT registered: every `scripted_first_value` shape that would reach it
+  // needs a `{base:, sub:, sup:}` three-key hash or a `{base:, sub:
+  // sequence}` two-key one, and this slice's `:1019`/`:1116` are `simple`/
+  // `simple` only, so nothing this port carries can ever bind it — measured
+  // by testing several `subsup_exp`, `mini_sub_sup` and `pre_script` inputs,
+  // every one of which hit that gap before `hbracket_class` did.
+  // `transform-coverage.spec.ts` refuses an unfired rule on principle (the
+  // slice is defined by what fires, not by what looks portable), so the
+  // choice here is the same one FRACTION's own header makes for its ten
+  // `atoms`-blocked call sites: transcribe the fact in prose, register
+  // nothing.
+
+  // `:1420`: the only DECORATION rule whose `first_value` is a SEQUENCE —
+  // `Array#pop` MUTATES that sequence, taking its last element as the
+  // overlaid value and leaving the rest as the prefix `Formula.new` folds
+  // the built overlay node onto.
+  rule("1420", { first_value: sequence("first_value"), overlay_after: simple("overlay") }, (b) => {
+    const notation = UNICODEMATH_OVERLAYS_NOTATIONS.get(rubyToS(b.overlay));
+    const first = asArray(b.first_value);
+    const overlayValue = unfencedValue(first.pop(), true);
+    const overlayObject =
+      notation === "mover" || textEquals(b.overlay, "&#x304;")
+        ? newOverset(symbolsClass(b.overlay), overlayValue, { accent: true })
+        : newMenclose(notation ?? null, overlayValue);
+    first.push(overlayObject);
+    return newFormula(first);
+  });
+
+  rule("1447", { first_value: simple("first_value"), overlay_after: simple("overlay") }, (b) => {
+    const notation = UNICODEMATH_OVERLAYS_NOTATIONS.get(rubyToS(b.overlay));
+    const overlayValue = unfencedValue(b.first_value, true);
+    return notation === "mover" || textEquals(b.overlay, "&#x304;")
+      ? newOverset(symbolsClass(b.overlay), overlayValue, { accent: true })
+      : newMenclose(notation ?? null, overlayValue);
+  });
+
+  rule("1473", { overlay_before: simple("overlay"), first_value: simple("first_value") }, (b) => {
+    const notation = UNICODEMATH_OVERLAYS_NOTATIONS.get(rubyToS(b.overlay));
+    const overlayValue = unfencedValue(b.first_value, true);
+    return notation === "mover"
+      ? newOverset(symbolsClass(b.overlay), overlayValue, { accent: true })
+      : newMenclose(notation ?? null, overlayValue);
+  });
+
+  rule("1491", { below_after: simple("overlay"), first_value: simple("first_value") }, (b) => {
+    const notation = UNICODEMATH_BELOWS_NOTATIONS.get(rubyToS(b.overlay));
+    const overlayValue = unfencedValue(b.first_value, true);
+    return notation === "munder"
+      ? newUnderset(symbolsClass(b.overlay), overlayValue, { accent: true })
+      : newMenclose(notation ?? null, overlayValue);
+  });
 
   rule(
     "1522",

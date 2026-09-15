@@ -1360,7 +1360,21 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // other named-symbol table — a keyed lookup falling back to the matched
   // text itself, then through `symbolsClass` like every other resolved
   // symbol here.
+  //
+  // Ruby's `combined_symbols.to_sym` raises `NoMethodError` on anything that
+  // is not a String — `nil`, `false`, an Integer all raise. `rubyToS` is a
+  // general coercion helper that would instead answer something for those,
+  // silently admitting a malformed transform node this rule cannot actually
+  // reach from real grammar output but should still refuse the way Ruby
+  // does, so the boundary is checked explicitly here (a matched grammar
+  // token arrives as `string | Slice`, same as every other `simple()`
+  // binding in this file) rather than delegated to `rubyToS`.
   rule("99", { combined_symbols: simple("combined_symbols") }, (b) => {
+    if (!(typeof b.combined_symbols === "string" || b.combined_symbols instanceof Slice)) {
+      throw new TypeError(
+        `unicodemath transform: combined_symbols.to_sym on a ${typeof b.combined_symbols} (Ruby raises NoMethodError)`,
+      );
+    }
     const key = rubyToS(b.combined_symbols);
     return symbolsClass(COMBINING_SYMBOLS.get(key) ?? b.combined_symbols);
   });

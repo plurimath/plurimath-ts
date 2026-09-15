@@ -78,7 +78,7 @@ describe("the compat class matches the plurimath-js surface", () => {
   });
 });
 
-const PARSEABLE: readonly Format[] = ["asciimath", "latex"];
+const PARSEABLE: readonly Format[] = ["asciimath", "latex", "html", "unicode"];
 
 /**
  * The same formula written in each door's own notation.
@@ -99,7 +99,15 @@ describe("the constructor's staged contract", () => {
     expect(() => new Plurimath(LATEX_INPUT, "latex")).not.toThrow();
   });
 
-  /** Four of six raise today. Asserted per format so it cannot drift quietly. */
+  it("parses html", () => {
+    expect(() => new Plurimath(GEM_OUTPUT.toHtml, "html")).not.toThrow();
+  });
+
+  it("parses unicode", () => {
+    expect(() => new Plurimath(GEM_OUTPUT.toUnicodemath, "unicode")).not.toThrow();
+  });
+
+  /** Two of six raise today. Asserted per format so it cannot drift quietly. */
   it.each(FORMATS.filter((f) => !PARSEABLE.includes(f)))(
     "raises UnsupportedFormatError for %s, which has no parser yet",
     (format: Format) => {

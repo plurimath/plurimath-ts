@@ -86,7 +86,7 @@ generated before it can be ported rather than transcribed.
 
 #### HTML input — complete but not wired into compat
 
-**Port:** `parseHtml` exists and is exported from `/html`. `src/compat/index.ts`
+**Port:** `parseHtml` exists and is exported from `/html` (`#88`). `src/compat/index.ts`
 registers only `asciimath` and `latex`, and its comment still says HTML
 "arrive[s] later". No recorded reason for withholding it was found in
 `TODO.plan/` or the compat file.

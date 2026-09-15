@@ -208,6 +208,45 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
 #             not `Table::Matrix`: "`Matrix` is not special"
 #             (`table-behaviour.spec.ts`).
 #   "Ⓒ(a@b)"  cases — `else`/`get_table_class`, no case collision.
+#
+# "relation": ten rules measured the same way, chosen by what UNBLOCKS
+# `src/compat/index.ts`'s 50-input battery rather than by a Ruby class family
+# — the battery's comment names twelve refused inputs plus the `"±"`
+# `SLICE_BOUNDARY` row below, and every one of those thirteen is covered here,
+# moved out of (or never entering) `SLICE_BOUNDARY` now that its rule is
+# ported. Traced with every registered block wrapped in a counter, same
+# method as MULTISCRIPT/FRACTION/TABLE above:
+#
+#   "±"       rule 99 {combined_symbols: simple} alone, at the tree ROOT
+#                  — the input `SLICE_BOUNDARY` used to carry to prove this
+#                  exact absence; ported now, so it moves here.
+#   "a≤b"     rule 745 {factor: simple, operand: SEQUENCE} — `:735`'s
+#                  sequence-operand twin; the input `SLICE_BOUNDARY` used for
+#                  the same reason as `"±"` above.
+#   "a≥b"     rule 745 again, a different relation glyph reaching the
+#                  identical shape — kept for the battery's own sake, not for
+#                  firing coverage `"a≤b"` already gives it.
+#   "a±b"     rules 99 AND 745 together — the combined-symbol resolved
+#                  first, then folded via the same sequence-operand rule.
+#   "a→b"     rule 745, `→`, same shape.
+#   "x∈A"     rule 745, `∈`, same shape.
+#   "a≈b"     rule 745, `≈`, same shape.
+#   "a≡b"     rule 745, `≡`, same shape.
+#   "2·3"     rules 30 {atom: sequence}, 49 {factor: sequence} and 401
+#                  {char: simple, number: simple} together — the interpunct
+#                  resolves to a `char`, `3` a trailing `number`, and the pair
+#                  folds up through the two bare SEQUENCE unwraps neither of
+#                  which any prior slice needed.
+#   "∂/∂x" rules 184 {ordinary_negated_operator: simple} and 2317
+#                  {factor: simple, operand: simple, expr: simple} — a
+#                  negated ordinary symbol immediately followed by a fraction.
+#   "f(x)=y"       rule 2269 {factor: simple, operand: simple, expr:
+#                  SEQUENCE} — `:2317`'s sequence-`expr` sibling.
+#   "e^(iπ)"  rule 2447 {opener: simple, operand: SEQUENCE, closer:
+#                  simple} — `:2436`'s sequence-operand twin, a parenthesised
+#                  multi-token exponent.
+#   "x'"           rule 1412 {first_value: simple, prime_accent_symbols:
+#                  simple} — a bare prime.
 RULE_COVERAGE = {
   "multiscript" => [
     "^3 X",
@@ -335,6 +374,21 @@ RULE_COVERAGE = {
     "⃝b",
     "a̖",
   ],
+  "relation" => [
+    "±",
+    "a≤b",
+    "a≥b",
+    "a±b",
+    "a→b",
+    "x∈A",
+    "a≈b",
+    "a≡b",
+    "2·3",
+    "∂/∂x",
+    "f(x)=y",
+    "e^(iπ)",
+    "x'",
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`
@@ -346,24 +400,18 @@ RULE_COVERAGE = {
 # multi-line header is one line later. Two of these were first written as the
 # block line; both are corrected here against a fresh trace.
 #
-#   "±"        rule 99   `{combined_symbols: simple}` alone -> `Symbols::Pm`.
-#              The port has no rule for that node, and it arrives as the ROOT of
-#              the tree, where `Kernel#Array` would fold it into pairs before
-#              anything could refuse it.
+# "±" and "a≤b" USED to be here, each proving the absence of a specific rule
+# (`:99`, `:745`) the RELATION increment now carries; both moved up into
+# `RULE_COVERAGE["relation"]` once their rule landed, the same ratchet
+# `DEFERRED_INPUTS` in `model-parity.spec.ts` documents for the corpus side.
+#
 #   "a^b c"    rule 765  `{expr: simple, sup_exp: simple}`.
-#   "a≤b"      rule 745  `{factor: simple, operand: SEQUENCE}`. The port carries
-#              `:735`, the `operand: simple` twin, and the trace shows `:735`
-#              firing on the inner node and `:745` on the outer one — so it is
-#              the matcher KIND, not the key set, that puts this input outside
-#              the slice.
 #   "x a/b c"  rule 1791 `{expr: simple, frac: simple}` — the same KEY SET the
 #              corpus's `(a)/(+) b` leaves unmatched, but with both values
 #              resolved. A key set is not a signature: the gem matches this one
 #              and leaves that one alone.
 SLICE_BOUNDARY = [
-  "\u00b1",
   "a^b c",
-  "a\u2264b",
   "x a/b c",
 ].freeze
 

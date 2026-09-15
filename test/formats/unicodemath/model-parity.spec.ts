@@ -91,15 +91,6 @@ const DEFERRED_INPUTS: readonly string[] = [
   "√(3&8)",
   "√(n&x)",
 
-  // NARY (`transform.rb:175`, `:1874`-`:3588`). `▒` and the `_(…)` script on a
-  // large operator both land here.
-  "∏_(k)▒〖k〗",
-  "∮_(C)▒〖f〗",
-  "⋃_(i) A_(i)",
-  "⋂_(i) A_(i)",
-  "∐_(i) A_(i)",
-  "⨁_(i) A_(i)",
-
   // DECORATION (`transform.rb:1286`-`:1491`) is ported now (`transform.ts`'s
   // module header). Three of the six corpus rows that used to sit here moved
   // out to `supported` below: `"⏟(a b)"`, `"⏟(a + b)"` and `"⏟(x)_(y)"` all

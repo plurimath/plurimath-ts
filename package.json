@@ -87,6 +87,16 @@
         "default": "./dist/mathml.cjs"
       }
     },
+    "./omml": {
+      "import": {
+        "types": "./dist/omml.d.ts",
+        "default": "./dist/omml.js"
+      },
+      "require": {
+        "types": "./dist/omml.d.cts",
+        "default": "./dist/omml.cjs"
+      }
+    },
     "./unicodemath": {
       "import": {
         "types": "./dist/unicodemath.d.ts",

@@ -30,6 +30,7 @@ import * as asciimath from "../../src/formats/asciimath/index";
 import * as html from "../../src/formats/html/index";
 import * as latex from "../../src/formats/latex/index";
 import * as mathml from "../../src/formats/mathml/index";
+import * as omml from "../../src/formats/omml/index";
 import * as unicodemath from "../../src/formats/unicodemath/index";
 
 /** Runtime exports only — types erase, so they cannot be asserted here. */
@@ -38,6 +39,7 @@ const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly
   ["./html", html, ["parseHtml", "toHtml"]],
   ["./latex", latex, ["parseLatex", "toLatex"]],
   ["./mathml", mathml, ["toMathml"]],
+  ["./omml", omml, ["toOmml"]],
   ["./unicodemath", unicodemath, ["parseUnicodemath", "toUnicodemath"]],
 ];
 
@@ -97,5 +99,14 @@ describe("the subpaths actually work end to end", () => {
     const out = mathml.toMathml(asciimath.parseAsciimath("frac(1)(2)"));
     expect(out).toContain("<mfrac>");
     expect(out.startsWith("<math")).toBe(true);
+  });
+
+  it("renders a parsed formula as OMML", () => {
+    // Measured against a live run of the renderer, not guessed: OMML has no
+    // parser in this codebase (ARCHITECTURE.md §11), so there is no oracle
+    // round trip to pin, only the render side.
+    const out = omml.toOmml(asciimath.parseAsciimath("frac(1)(2)"));
+    expect(out).toContain("<m:f>");
+    expect(out.startsWith("<m:oMathPara")).toBe(true);
   });
 });

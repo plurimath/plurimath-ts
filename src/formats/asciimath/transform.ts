@@ -26,7 +26,8 @@
  * the caller's array by reference, so a later `shift` reaches inside the node.
  * Core nodes are publicly immutable (§5), so the transform works on
  * `AsciimathDraft` objects — one mutable class, not a parallel node hierarchy
- * (the rejected `FracDraft`-per-class design; DECISIONS.md) — and `finalize`
+ * (a rejected per-node `FracDraft`-style class hierarchy would double the
+ * model; transform-local builders suffice) — and `finalize`
  * converts the finished tree into real `core` nodes in one pass at the end.
  * Draft arrays are held by reference exactly as Ruby holds them, which is what
  * makes the aliasing above come out right, including the measured oddity where

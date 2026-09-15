@@ -89,10 +89,10 @@ export class UnsupportedFormatError extends PlurimathError {
  * describes what was refused, and where a consumer branching on `code` wants
  * to tell "this port cannot do that yet" apart from "that is not a format".
  *
- * `DECISIONS.md` records this class as rejected once, for having no consumer
- * after the grammar rule that would have raised it was commented out. The
- * compat surface gives it two, which is the new evidence that file asks for
- * before a rejected decision is reopened.
+ * This class was rejected once, for having no consumer after the grammar
+ * rule that would have raised it was commented out — dead API. The compat
+ * surface gives it two, which is the new evidence a rejected decision needs
+ * before it is reopened.
  */
 export class UnsupportedFeatureError extends PlurimathError {
   readonly code = "UNSUPPORTED_FEATURE" as const;

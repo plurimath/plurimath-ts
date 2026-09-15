@@ -86,7 +86,7 @@ describe("transform rule coverage", () => {
     expect(reached).toBeGreaterThan(90);
   });
 
-  it("registers the 118 rules the slice carries", () => {
+  it("registers the 129 rules the slice carries", () => {
     // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
     // eight-rule table/matrix family the first slice deferred: `transform.rb:8`,
     // `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13
@@ -104,7 +104,12 @@ describe("transform rule coverage", () => {
     // `:1604`, `:1691`), `:1670`, which a prior survey missed — see the module
     // header — and `:17` (`:13`'s SEQUENCE twin), the one small prerequisite a
     // "table" coverage witness needed — reached by the hand-picked "table"
-    // coverage group.
+    // coverage group — plus 11 DECORATION: seven of the eight rules
+    // `transform.rb:1286`-`:1491` builds (`:1375` is provably unreachable by
+    // anything this slice carries and is not registered — see
+    // `transform.ts`'s module header), plus the four unwraps every one of
+    // them routes through (`:40`, `:81`, `:88`, `:94`) — reached by the
+    // hand-picked "decoration" coverage group, not the corpus.
     //
     // The count is rules REGISTERED, not branches reached: the multiscript
     // group carries four extra inputs whose trailing script is fenced, because
@@ -114,8 +119,8 @@ describe("transform rule coverage", () => {
     // `Constants::MATRIXS` character (eight) for the same reason: all eight
     // fire `:1649`/`:1670`/`:1691` with an identical trace and take four
     // different branches to eight different table classes.
-    expect(build.ruleIds.length).toBe(118);
-    expect(new Set(build.ruleIds).size).toBe(118);
+    expect(build.ruleIds.length).toBe(129);
+    expect(new Set(build.ruleIds).size).toBe(129);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

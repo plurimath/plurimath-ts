@@ -66,26 +66,30 @@
  * path `NARY_CLASSES` and `PREFIXED_PRIMES` already used, so the family no
  * longer needs hand-transcribed data.
  *
- * The eight rules are `:1286`/`:1315`/`:1344`/`:1375` (`hbracket_class`,
- * one body across `simple`/`sequence` × `first_value`/`scripted_first_value`,
- * differing only in whether the `Ubrace`-on-`Base` branch re-applies
- * `unfenced_value` to `parameter_one`), `:1420`/`:1447` (`overlay_after`,
- * `sequence`/`simple`), `:1473` (`overlay_before`) and `:1491`
- * (`below_after`). Four more rules feed them the plain text `hbracket_class`/
- * `overlay_after`/`overlay_before`/`below_after` need: `:40` unwraps the
- * `hbrack` envelope the grammar's third `hbrack` alternative adds, and `:81`/
- * `:88`/`:94` unwrap `diacritic_belows`/`diacritics_accents`/
- * `diacritic_overlays` the same way `:55`/`:56`/`:57` already unwrap
- * `sub_script`/`sup_script`/`pre_script`.
+ * Seven of the eight rules are registered: `:1286`/`:1315`/`:1344`
+ * (`hbracket_class`, one body across `simple`/`sequence` ×
+ * `first_value`/`scripted_first_value`, differing only in whether the
+ * `Ubrace`-on-`Base` branch re-applies `unfenced_value` to `parameter_one`),
+ * `:1420`/`:1447` (`overlay_after`, `sequence`/`simple`), `:1473`
+ * (`overlay_before`) and `:1491` (`below_after`). Four more rules feed them
+ * the plain text `hbracket_class`/`overlay_after`/`overlay_before`/
+ * `below_after` need: `:40` unwraps the `hbrack` envelope the grammar's
+ * third `hbrack` alternative adds, and `:81`/`:88`/`:94` unwrap
+ * `diacritic_belows`/`diacritics_accents`/`diacritic_overlays` the same way
+ * `:55`/`:56`/`:57` already unwrap `sub_script`/`sup_script`/`pre_script`.
  *
- * `:1375` (`hbracket_class` simple / `scripted_first_value` SEQUENCE) is
- * transcribed but UNWITNESSED: every `scripted_first_value` shape that would
- * reach it needs a `{base:, sub:, sup:}` three-key hash or a `{base:,
- * sub: sequence}` two-key one, and `:1019`/`:1116` here are `simple`/
- * `simple` only — measured by testing several `subsup_exp` and `pre_script`
- * inputs, every one of which hit that gap before `hbracket_class` did. See
+ * The eighth, `:1375` (`hbracket_class` simple / `scripted_first_value`
+ * SEQUENCE), is transcribed in a comment at its position below but NOT
+ * registered: every `scripted_first_value` shape that would reach it needs a
+ * `{base:, sub:, sup:}` three-key hash or a `{base:, sub: sequence}`
+ * two-key one, and `:1019`/`:1116` here are `simple`/`simple` only, so
+ * nothing this slice carries can ever bind it — measured by testing several
+ * `subsup_exp`, `mini_sub_sup` and `pre_script` inputs, every one of which
+ * hit that gap before `hbracket_class` did. `transform-coverage.spec.ts`
+ * refuses an unfired rule on principle, the same call FRACTION's own header
+ * below makes for its ten `atoms`-blocked call sites. See
  * `scripts/generate-unicodemath-model-fixtures.rb`'s own `"decoration"`
- * group for the fixtures that DO exercise the other seven.
+ * group for the fixtures that exercise the other seven.
  *
  * ## A third increment: FRACTION, cut to the shape `:1609` already carries
  *
@@ -1541,82 +1545,69 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       : newOverset(bracketSymbol, value);
   };
 
-  rule(
-    "1286",
-    { hbracket_class: simple("hbrack"), first_value: simple("first_value") },
-    (b) => hbracketDecoration(b.hbrack, b.first_value, false),
+  rule("1286", { hbracket_class: simple("hbrack"), first_value: simple("first_value") }, (b) =>
+    hbracketDecoration(b.hbrack, b.first_value, false),
   );
-  rule(
-    "1315",
-    { hbracket_class: simple("hbrack"), first_value: sequence("first_value") },
-    (b) => hbracketDecoration(b.hbrack, b.first_value, false),
+  rule("1315", { hbracket_class: simple("hbrack"), first_value: sequence("first_value") }, (b) =>
+    hbracketDecoration(b.hbrack, b.first_value, false),
   );
   rule(
     "1344",
     { hbracket_class: simple("hbrack"), scripted_first_value: simple("scripted_first_value") },
     (b) => hbracketDecoration(b.hbrack, b.scripted_first_value, true),
   );
-  rule(
-    "1375",
-    { hbracket_class: simple("hbrack"), scripted_first_value: sequence("scripted_first_value") },
-    (b) => hbracketDecoration(b.hbrack, b.scripted_first_value, false),
-  );
+  // `:1375` (`hbracket_class` simple / `scripted_first_value` SEQUENCE) is
+  // NOT registered: every `scripted_first_value` shape that would reach it
+  // needs a `{base:, sub:, sup:}` three-key hash or a `{base:, sub:
+  // sequence}` two-key one, and this slice's `:1019`/`:1116` are `simple`/
+  // `simple` only, so nothing this port carries can ever bind it — measured
+  // by testing several `subsup_exp`, `mini_sub_sup` and `pre_script` inputs,
+  // every one of which hit that gap before `hbracket_class` did.
+  // `transform-coverage.spec.ts` refuses an unfired rule on principle (the
+  // slice is defined by what fires, not by what looks portable), so the
+  // choice here is the same one FRACTION's own header makes for its ten
+  // `atoms`-blocked call sites: transcribe the fact in prose, register
+  // nothing.
 
   // `:1420`: the only DECORATION rule whose `first_value` is a SEQUENCE —
   // `Array#pop` MUTATES that sequence, taking its last element as the
   // overlaid value and leaving the rest as the prefix `Formula.new` folds
   // the built overlay node onto.
-  rule(
-    "1420",
-    { first_value: sequence("first_value"), overlay_after: simple("overlay") },
-    (b) => {
-      const notation = UNICODEMATH_OVERLAYS_NOTATIONS.get(rubyToS(b.overlay));
-      const first = asArray(b.first_value);
-      const overlayValue = unfencedValue(first.pop(), true);
-      const overlayObject =
-        notation === "mover" || textEquals(b.overlay, "&#x304;")
-          ? newOverset(symbolsClass(b.overlay), overlayValue, { accent: true })
-          : newMenclose(notation ?? null, overlayValue);
-      first.push(overlayObject);
-      return newFormula(first);
-    },
-  );
-
-  rule(
-    "1447",
-    { first_value: simple("first_value"), overlay_after: simple("overlay") },
-    (b) => {
-      const notation = UNICODEMATH_OVERLAYS_NOTATIONS.get(rubyToS(b.overlay));
-      const overlayValue = unfencedValue(b.first_value, true);
-      return notation === "mover" || textEquals(b.overlay, "&#x304;")
+  rule("1420", { first_value: sequence("first_value"), overlay_after: simple("overlay") }, (b) => {
+    const notation = UNICODEMATH_OVERLAYS_NOTATIONS.get(rubyToS(b.overlay));
+    const first = asArray(b.first_value);
+    const overlayValue = unfencedValue(first.pop(), true);
+    const overlayObject =
+      notation === "mover" || textEquals(b.overlay, "&#x304;")
         ? newOverset(symbolsClass(b.overlay), overlayValue, { accent: true })
         : newMenclose(notation ?? null, overlayValue);
-    },
-  );
+    first.push(overlayObject);
+    return newFormula(first);
+  });
 
-  rule(
-    "1473",
-    { overlay_before: simple("overlay"), first_value: simple("first_value") },
-    (b) => {
-      const notation = UNICODEMATH_OVERLAYS_NOTATIONS.get(rubyToS(b.overlay));
-      const overlayValue = unfencedValue(b.first_value, true);
-      return notation === "mover"
-        ? newOverset(symbolsClass(b.overlay), overlayValue, { accent: true })
-        : newMenclose(notation ?? null, overlayValue);
-    },
-  );
+  rule("1447", { first_value: simple("first_value"), overlay_after: simple("overlay") }, (b) => {
+    const notation = UNICODEMATH_OVERLAYS_NOTATIONS.get(rubyToS(b.overlay));
+    const overlayValue = unfencedValue(b.first_value, true);
+    return notation === "mover" || textEquals(b.overlay, "&#x304;")
+      ? newOverset(symbolsClass(b.overlay), overlayValue, { accent: true })
+      : newMenclose(notation ?? null, overlayValue);
+  });
 
-  rule(
-    "1491",
-    { below_after: simple("overlay"), first_value: simple("first_value") },
-    (b) => {
-      const notation = UNICODEMATH_BELOWS_NOTATIONS.get(rubyToS(b.overlay));
-      const overlayValue = unfencedValue(b.first_value, true);
-      return notation === "munder"
-        ? newUnderset(symbolsClass(b.overlay), overlayValue, { accent: true })
-        : newMenclose(notation ?? null, overlayValue);
-    },
-  );
+  rule("1473", { overlay_before: simple("overlay"), first_value: simple("first_value") }, (b) => {
+    const notation = UNICODEMATH_OVERLAYS_NOTATIONS.get(rubyToS(b.overlay));
+    const overlayValue = unfencedValue(b.first_value, true);
+    return notation === "mover"
+      ? newOverset(symbolsClass(b.overlay), overlayValue, { accent: true })
+      : newMenclose(notation ?? null, overlayValue);
+  });
+
+  rule("1491", { below_after: simple("overlay"), first_value: simple("first_value") }, (b) => {
+    const notation = UNICODEMATH_BELOWS_NOTATIONS.get(rubyToS(b.overlay));
+    const overlayValue = unfencedValue(b.first_value, true);
+    return notation === "munder"
+      ? newUnderset(symbolsClass(b.overlay), overlayValue, { accent: true })
+      : newMenclose(notation ?? null, overlayValue);
+  });
 
   rule(
     "1522",

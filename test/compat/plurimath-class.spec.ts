@@ -14,6 +14,8 @@
 import { describe, expect, it } from "vitest";
 import Plurimath, { FORMATS, type Format } from "../../src/compat/index";
 import { equals, UnsupportedFeatureError, UnsupportedFormatError } from "../../src/core/index";
+import { parseHtml } from "../../src/formats/html/index";
+import { parseUnicodemath } from "../../src/formats/unicodemath/index";
 import RootDefault, { Plurimath as RootNamed } from "../../src/index";
 
 const INPUT = "frac(1)(2)";
@@ -105,6 +107,24 @@ describe("the constructor's staged contract", () => {
 
   it("parses unicode", () => {
     expect(() => new Plurimath(GEM_OUTPUT.toUnicodemath, "unicode")).not.toThrow();
+  });
+
+  /**
+   * "does not throw" alone cannot tell `PARSERS.html` routing to `parseHtml`
+   * apart from routing to some other format's parser that also happens not
+   * to throw on this input — measured, that gap is exactly how `latex`
+   * silently AsciiMath-parsed before the MAP-not-set guard below existed.
+   * Comparing the model, not just bytes, ties the constructor's `data`
+   * directly to the same function `../../src/formats/html/index` exports.
+   */
+  it("routes html construction to parseHtml, not some other parser", () => {
+    const formula = new Plurimath(GEM_OUTPUT.toHtml, "html");
+    expect(equals(formula.data, parseHtml(GEM_OUTPUT.toHtml))).toBe(true);
+  });
+
+  it("routes unicode construction to parseUnicodemath, not some other parser", () => {
+    const formula = new Plurimath(GEM_OUTPUT.toUnicodemath, "unicode");
+    expect(equals(formula.data, parseUnicodemath(GEM_OUTPUT.toUnicodemath))).toBe(true);
   });
 
   /** Two of six raise today. Asserted per format so it cannot drift quietly. */

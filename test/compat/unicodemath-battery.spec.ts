@@ -74,10 +74,12 @@ interface FixtureCase {
 interface Fixtures {
   readonly schema: string;
   readonly oracleCommit: string;
+  readonly oracleClean: boolean;
   readonly generatorSha256: string;
   readonly caseCount: number;
   readonly parsedCount: number;
   readonly raisedCount: number;
+  readonly casesSha256: string;
   readonly cases: readonly FixtureCase[];
 }
 
@@ -102,6 +104,24 @@ describe("the UnicodeMath battery fixture set", () => {
 
   it("was produced by the generator script currently committed here", () => {
     expect(fixtures.generatorSha256).toBe(sha256OfFile("scripts/battery-unicodemath-fixtures.rb"));
+  });
+
+  it("was generated from a clean oracle checkout", () => {
+    // `oracleCommit` alone binds the HEAD a run claims, not the tree it
+    // actually read — an uncommitted edit in the oracle checkout leaves HEAD
+    // untouched, so a dirty checkout at the pinned commit would otherwise be
+    // indistinguishable from a clean one.
+    expect(fixtures.oracleClean).toBe(true);
+  });
+
+  it("has cases matching the payload hash recorded at generation time", () => {
+    // Binds the recorded ROWS themselves, not just their count and the
+    // commit/generator that produced them — a hand-edited case (same id,
+    // group and input, a tampered `model` or `raises`) would otherwise pass
+    // every other provenance check here.
+    expect(createHash("sha256").update(JSON.stringify(fixtures.cases)).digest("hex")).toBe(
+      fixtures.casesSha256,
+    );
   });
 
   it("has fifty hand-typed cases", () => {
@@ -135,8 +155,12 @@ describe("the UnicodeMath battery fixture set", () => {
  * stale).
  *
  * At the time this file was written, the port matched 47 of the 49 inputs
- * the oracle parses and refused the 1 the oracle refuses; two inputs are
- * documented gaps, measured here rather than deleted or hidden:
+ * the oracle parses and refused the 1 the oracle refuses. That is 50 total
+ * cases, not 49: 47 exact matches, plus 1 shared refusal (an input the
+ * oracle itself refuses), plus these 2 documented gaps — never "1 shared
+ * refusal out of the 49 the oracle parses", which double-counts against the
+ * wrong denominator. Two inputs are documented gaps, measured here rather
+ * than deleted or hidden:
  *
  *   - `"a·b·c"` (`unicodemath-battery-6d2c0882dcdd`) — a chained interpunct
  *     multiplication. The port's transform slice does not carry the rule
@@ -162,13 +186,40 @@ const KNOWN_PORT_GAPS: ReadonlySet<string> = new Set([
 ]);
 
 describe("the parsed model", () => {
+  it("finds a port-side gap on exactly the two documented ids, no more and no fewer", () => {
+    // Without this, a stray or missing id in `KNOWN_PORT_GAPS` — one for a
+    // case that doesn't exist, or one that omits an actual divergence —
+    // would pass every `it.each` row below unnoticed: the affected row would
+    // just take whichever branch the (wrong) set membership sends it to.
+    const actualGaps = parsed
+      .filter((entry) => {
+        try {
+          parseUnicodemath(entry.input);
+          return false;
+        } catch {
+          return true;
+        }
+      })
+      .map((entry) => entry.id)
+      .sort();
+    expect(actualGaps).toStrictEqual([...KNOWN_PORT_GAPS].sort());
+  });
+
   it.each(parsed.map((entry) => [entry.group, entry.input, entry] as const))(
     "%s %j: deep-equals the gem's",
     (_group, _input, entry) => {
       if (KNOWN_PORT_GAPS.has(entry.id)) {
         // Measured as a divergent REFUSAL, not a divergent model: the port
-        // throws here where the oracle returned a model.
-        expect(() => parseUnicodemath(entry.input)).toThrow(ParseError);
+        // throws here where the oracle returned a model. The message itself
+        // is asserted to keep citing the missing rule family — not a bare
+        // parse failure — so the up-front "this is a known port gap, not a
+        // malformed input" signal registering `unicode` would otherwise cost
+        // stays covered. Compare `src/formats/unicodemath/parser.ts`'s
+        // transform-miss message, which names `{...}` fields, against the
+        // fixed prefix asserted here.
+        expect(() => parseUnicodemath(entry.input)).toThrow(
+          /unicodemath transform: no rule matched .*not in this slice/,
+        );
         return;
       }
       expect(normalize(parseUnicodemath(entry.input))).toStrictEqual(entry.model);

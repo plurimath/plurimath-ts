@@ -15,7 +15,6 @@ Nothing here blocks the active phase.
 | npm package name and release line | maintainer | before first publish |
 | Bundle budgets | maintainer | during P1, from real numbers |
 | Symbol data as shared data | maintainer + gem | after P1 |
-| MathML/OMML input strategy | maintainer | P4 planning |
 
 ## UnitsML, and what it means for 1.0
 
@@ -26,6 +25,17 @@ break is documented and the "drop-in replacement" claim is dropped.
 
 Options when it returns: fix upstream and bridge behind the leaf-service
 boundary; port UnitsML natively; or keep deferring.
+
+Re-checked 2026-09-16, independently of the MathML/OMML re-check below:
+`@unitsml/unitsml@0.6.7` (published by `unitsml/unitsml-js`, part of the
+separate `unitsml` GitHub org — not `plurimath`) is still the latest version
+and still ships only `LICENSE`, `package.json` and `README.md`; every
+`package.json` entry field points at a `dist/` the tarball does not contain,
+so both `require()` and `import()` fail with `MODULE_NOT_FOUND`. The repo's
+own README says "Status: scaffolding." No GitHub issue in either
+`unitsml/unitsml-js` or `unitsml/unitsml-ruby` tracks this defect — it is
+unreported, not merely unfixed. Still open: keep deferring for now, informed
+by the same evidence gathered for the MathML/OMML decision below.
 
 ## npm package name and release line
 
@@ -132,6 +142,19 @@ them.)
 
 Bridging to the published package is therefore closed on evidence for MathML
 and unavailable for OMML, leaving a native port or continued deferral for both.
+
+**SETTLED 2026-09-16: continued deferral, not a native port, for now.** The
+maintainer's reasoning: a native port is a real undertaking (an XML reader
+layer this port does not have, plus the translator) with no clear timeline,
+while the bridging option is closed on the evidence above, not on preference.
+Rather than leave the compat constructor's refusal generic, `new
+Plurimath(text, "mathml")` and `new Plurimath(text, "omml")` now throw an
+informative error naming the actual blocker (no XML reader) without hard-coding
+the specific broken-package names into the user-facing message, since those are
+implementation detail that will go stale the moment either dependency ships a
+working build (`src/compat/index.ts`, PR #120). Revisit once a working way to
+read MathML/OMML XML exists — either upstream ships a working build, or this
+port builds a native reader.
 
 ### What already exists here, and what does not
 
@@ -256,6 +279,16 @@ is a set nobody chose, so the slice cannot quietly grow to whatever the porter
 found interesting. The wider reading trades that for the ability to close a
 family the corpus happens not to reach.
 
-Not decided here, and deliberately not acted on in the first slice. Whoever
-opens the second one should settle the wording first, because it decides the
-rule set before any porting starts.
+**SETTLED 2026-09-16: the wide reading.** Every rule that counts, under either
+reading, is verified against the same oracle — the actual correctness bar this
+project uses everywhere — so the narrow reading was not protecting correctness,
+only guarding against a hypothetical "porter only tests what they already know
+works" concern that does not hold here, since the oracle decides pass or fail
+either way, not the porter. Its cost was concrete and immediate: it permanently
+blocks a correctly-ported, oracle-verified rule from ever counting as covered,
+for no correctness reason, whenever the shared corpus happens not to exercise
+it. `transform.rb:1791` can move from the refusal list to the parity list under
+this reading. Whoever writes the next slice: a hand-picked fixture still needs
+the same oracle-measured provenance as everything else in this repo — the wide
+reading accepts hand-picked fixtures as counting toward coverage, it does not
+relax how they are measured.

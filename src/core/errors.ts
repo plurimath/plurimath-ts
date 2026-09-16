@@ -75,8 +75,18 @@ export class ParseOptionError extends PlurimathError {
 export class UnsupportedFormatError extends PlurimathError {
   readonly code = "UNSUPPORTED_FORMAT" as const;
 
-  constructor(readonly format: string) {
-    super(`Format "${format}" is not supported`);
+  /**
+   * `reason`, when given, is appended to the default message so a caller
+   * hitting a format-specific refusal learns WHY, not just THAT. Optional
+   * because most formats this error covers have no format-specific story to
+   * tell yet — they are simply not built — and a generic "not supported" is
+   * all there is to say for those.
+   */
+  constructor(
+    readonly format: string,
+    reason?: string,
+  ) {
+    super(`Format "${format}" is not supported${reason === undefined ? "" : `: ${reason}`}`);
   }
 }
 

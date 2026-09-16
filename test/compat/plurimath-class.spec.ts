@@ -112,6 +112,21 @@ describe("the constructor's staged contract", () => {
   });
 
   /**
+   * `mathml`/`omml` input has a story beyond "no parser yet": both need an
+   * XML reader this port does not have, and neither is currently planned.
+   * Asserted with a substring, not the full message, so wording tweaks that
+   * keep the same fact do not break this test.
+   */
+  it.each(["mathml", "omml"] as const)(
+    "explains WHY %s input is refused, not just that it is",
+    (format) => {
+      expect(() => new Plurimath(INPUT, format)).toThrow(
+        /needs an XML reader this port does not have yet/,
+      );
+    },
+  );
+
+  /**
    * The guard the MAP was chosen for. A set of parseable names would let
    * `latex` construct and then AsciiMath-parse its input; that produced
    * `"\\backslash \\frac{1}{2}"` when it was measured. Now that latex has a

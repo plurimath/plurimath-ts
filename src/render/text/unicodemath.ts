@@ -20,12 +20,11 @@
  *     backslash, which passes through raw and unquoted.
  */
 
-import { RenderError } from "../../core/index";
 import {
-  FORMAT,
   htmlEntityToUnicode,
   type NodeOf,
   present,
+  slotCrash,
 } from "../../formats/unicodemath/render-shared";
 
 export function renderText(node: NodeOf<"text">): string | null {
@@ -33,11 +32,7 @@ export function renderText(node: NodeOf<"text">): string | null {
   // `return unless value` — Ruby truthiness, so nil and `false` answer alike.
   if (!present(text)) return null;
   if (typeof text !== "string") {
-    throw new RenderError(
-      `text.parameterOne: holds ${typeof text} — the gem raises NoMethodError here`,
-      FORMAT,
-      "text",
-    );
+    throw slotCrash("text.parameterOne", text, "text");
   }
   if (text.startsWith("\\")) return text;
 

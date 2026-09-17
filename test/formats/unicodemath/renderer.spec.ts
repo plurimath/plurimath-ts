@@ -33,6 +33,8 @@ import {
   NumberNode,
   SqrtNode,
   SymbolNode,
+  TernaryFunctionNode,
+  TextNode,
   UnaryFunctionNode,
 } from "../../../src/core/index";
 import { toUnicodemath } from "../../../src/formats/unicodemath/renderer";
@@ -573,5 +575,37 @@ describe("Mbox, a LaTeX-only name whose to_unicodemath delegates to Text", () =>
     expect(toUnicodemath(falseSlot)).toBe("");
     const falseText = { kind: "text", parameterOne: false } as unknown as MathNode;
     expect(toUnicodemath(falseText)).toBe("");
+  });
+});
+
+describe("slotCrash's exact wording, pinned so a future refactor cannot silently change it", () => {
+  // `slotCrash` (`../../../src/formats/unicodemath/render-shared.ts`) is shared
+  // by three call sites in `render/unary-function/unicodemath.ts` and, since
+  // this lift, by `render/ternary-function/unicodemath.ts` and
+  // `render/text/unicodemath.ts` too. Its wording is "is ${describeSlot(...)}",
+  // matching the unary-function call sites the helper was lifted FROM — not
+  // "holds ${typeof ...}", which is what those two files said locally before
+  // the lift. Only the message text changed for these two sites; behaviour
+  // (a thrown `RenderError`) did not. Both messages below are asserted in
+  // full so a wording regression fails here instead of passing silently
+  // under a bare `toThrow(RenderError)`.
+
+  it("ternaryFunction.parameterTwo: a non-node slot", () => {
+    const node = new TernaryFunctionNode({
+      name: "PowerBase",
+      parameterOne: sym("x"),
+      parameterTwo: "str" as never,
+      parameterThree: null,
+    });
+    expect(() => toUnicodemath(node)).toThrow(
+      'ternaryFunction.parameterTwo: is the bare string "str" — the gem raises NoMethodError here',
+    );
+  });
+
+  it("text.parameterOne: a non-string, present slot", () => {
+    const node = new TextNode({ parameterOne: sym("x") as never });
+    expect(() => toUnicodemath(node)).toThrow(
+      "text.parameterOne: is an object — the gem raises NoMethodError here",
+    );
   });
 });

@@ -14,14 +14,18 @@
  * shapes are a pre-existing divergence this change does not touch — `nil`
  * with a mini flag still answers `null` here where the gem raises.
  *
- * The formatter path is deliberately the plain value here. The gem routes
- * through `Formatter::Numbers::TextRenderer` with
- * `format_value_with_options`, which falls back to the raw value whenever
- * `Plurimath.configuration.number_formatter` is nil — and it is nil by
- * default, which is the only configuration the pinned corpus was generated
- * under (`configuration: {}` in its provenance). Number formatting is P4
- * scope; wiring a formatter here would be output nothing has measured.
+ * With no `formatter:` option, the gem routes through `Formatter::Numbers::
+ * TextRenderer` with `format_value_with_options`, which falls back to the raw
+ * value whenever `Plurimath.configuration.number_formatter` is nil — and it
+ * is nil by default, which is the only configuration the pinned corpus was
+ * generated under (`configuration: {}` in its provenance). With one, and a
+ * value B2's first slice measures (a plain digit string,
+ * `isPlainFormattableNumber`), the default-symbol substitution
+ * (`../../formatting/number-format.ts`) — but only past the mini-sizing
+ * short-circuit above, exactly where the gem's own formatter read sits
+ * (`number.rb:115`, after the `mini_sub`/`mini_sup` returns at `:103`/`:107`).
  *
+
  * "The plain value" is `result.to_s` (`text_renderer.rb:25`), and for an
  * Array that `to_s` IS `inspect`: `Number.new([]).to_unicodemath(options: {})`
  * is `"[]"`, and inside a formula join `Formula([Number([]), Symbol("x")])`
@@ -34,13 +38,20 @@
 
 import { RenderError } from "../../core/index";
 import { rubyArrayInspectOrThrow } from "../../core/ruby-semantics";
-import { FORMAT, type NodeOf, present } from "../../formats/unicodemath/render-shared";
+import {
+  applyNumberFormat,
+  FORMAT,
+  isPlainFormattableNumber,
+  type NodeOf,
+  present,
+  type RenderContext,
+} from "../../formats/unicodemath/render-shared";
 import {
   UNICODEMATH_SUB_DIGITS,
   UNICODEMATH_SUP_DIGITS,
 } from "../../generated/unicodemath/render-tables";
 
-export function renderNumber(node: NodeOf<"number">): string | null {
+export function renderNumber(node: NodeOf<"number">, context: RenderContext): string | null {
   // The declared slot type is `string | null`; a list arrives only from a
   // caller that has already violated it, so the list test reads the slot as
   // `unknown` and everything below keeps the declared type.
@@ -80,5 +91,8 @@ export function renderNumber(node: NodeOf<"number">): string | null {
   if (present(node.miniSubSized)) return UNICODEMATH_SUB_DIGITS.get(value) ?? null;
   if (present(node.miniSupSized)) return UNICODEMATH_SUP_DIGITS.get(value) ?? null;
 
+  if (context.numberFormat !== null && isPlainFormattableNumber(value)) {
+    return applyNumberFormat(value, context.numberFormat);
+  }
   return value;
 }

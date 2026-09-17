@@ -5,10 +5,28 @@ import {
   type NodeKind,
   RenderError,
 } from "../../core/index";
+import type { NumberFormat } from "../../formatting/index";
 
 export const FORMAT = "html";
 
+/**
+ * Re-exported for `../../render/number/html.ts`. A kind file may import only
+ * its own format's `render-shared.ts`, never `formatting` directly
+ * (`.dependency-cruiser.cjs`, "render-kind-file-imports-allowed-set-only"),
+ * so the two helpers B2's first slice adds live in `formatting/
+ * number-format.ts` and pass through here.
+ */
+export type { NumberFormat } from "../../formatting/index";
+export { applyNumberFormat, isPlainFormattableNumber } from "../../formatting/index";
+
+/**
+ * The render context. `numberFormat` is B2's first slice: `null` with no
+ * `formatter:` option (a `Number` renders its raw value, exactly as the
+ * whole pinned corpus was generated), or the resolved decimal/group symbols
+ * (`../../formatting/number-format.ts`).
+ */
 export interface RenderContext {
+  readonly numberFormat: NumberFormat | null;
   readonly render: (node: MathNode) => string | null;
 }
 

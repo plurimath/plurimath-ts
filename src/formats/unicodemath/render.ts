@@ -46,7 +46,7 @@ import { renderUl } from "../../render/ul/unicodemath";
 import { renderUnaryFunction } from "../../render/unary-function/unicodemath";
 import { renderUnderset } from "../../render/underset/unicodemath";
 import { renderVec } from "../../render/vec/unicodemath";
-import { FORMAT, type RenderContext, type RenderFn } from "./render-shared";
+import { FORMAT, type NumberFormat, type RenderContext, type RenderFn } from "./render-shared";
 
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   abs: renderAbs,
@@ -122,26 +122,33 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
 }
 
 /**
- * The one context value the unicodemath path ever holds.
+ * Builds the one context value the unicodemath path holds for a given
+ * `numberFormat`.
  *
  * The gem threads an `options:` hash through every `to_unicodemath`, which
- * looks like a rendering axis and is not one: `Formula#to_unicodemath`
+ * looks like a rendering axis and mostly is not one: `Formula#to_unicodemath`
  * (`formula.rb:187`) builds it as `{formatter:, unitsml:, formula:}`, and the
  * only place any of that is read back on this path is
- * `Number#format_value_with_options` (`number.rb:115`), which returns `value`
- * unchanged unless a number formatter is configured. The port has no
- * formatter axis at all, so the hash is inert here and there is nothing to
- * carry. (Distinct from the generated exception matrix, which is separately
- * empty — no symbol's unicodemath value varies on any probed axis; see
+ * `Number#format_value_with_options` (`number.rb:115`) — which B2's first
+ * slice now implements (`../../formatting/number-format.ts`). (Distinct from
+ * the generated exception matrix, which is separately empty — no symbol's
+ * unicodemath value varies on any probed axis; see
  * `test/generated/unicodemath-data.spec.ts`.)
  *
- * What remains is the dispatcher bound to itself, which is how recursion
- * reaches the table without any kind file importing it. The per-node
- * `options` the kind files read is a different thing entirely: a field on the
- * node, set by the parser, not threaded by the renderer.
+ * The dispatcher bound to itself is how recursion reaches the table without
+ * any kind file importing it. The per-node `options` the kind files read is a
+ * different thing entirely: a field on the node, set by the parser, not
+ * threaded by the renderer.
  */
-export const ROOT_CONTEXT: RenderContext = {
-  render(node) {
-    return renderNode(node, ROOT_CONTEXT);
-  },
-};
+export function createRenderContext(numberFormat: NumberFormat | null): RenderContext {
+  const context: RenderContext = {
+    numberFormat,
+    render(node) {
+      return renderNode(node, context);
+    },
+  };
+  return context;
+}
+
+/** Where `Formula#to_unicodemath` starts with no `formatter:` option — the common case. */
+export const ROOT_CONTEXT: RenderContext = createRenderContext(null);

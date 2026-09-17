@@ -1248,13 +1248,16 @@ Decisions needed before their phase:
   bug in the org's own `unitsml/unitsml-js` repo, worth reporting regardless
   of which option wins.
 
-- **MathML/OMML input strategy (P4+):** the same question, same
-  shape — Ruby delegates to the `mml`/`omml` gems and the org ships
-  Opal-compiled `@plurimath/mml`. Note the UnitsML case set no "wrap the Opal
-  release" precedent — that option was *deferred*, not adopted, once the
-  upstream package proved unusable. Evaluate `@plurimath/mml` on its own
-  evidence (does it publish working artifacts, and does it yield a native
-  model?) when P4 planning starts.
+- ~~MathML/OMML input strategy~~ — decided 2026-09-16 by the maintainer:
+  **continued deferral, not a native port, for now**
+  ([open-decisions.md](TODO.plan/open-decisions.md#mathmlomml-input-strategy)).
+  Bridging is closed on evidence for both formats (`@plurimath/mml@0.1.0`
+  ships no `dist/` and is Opal-compiled; `@plurimath/omml` does not exist on
+  npm), leaving native-port-or-deferral as the real choice, and a native port
+  is deferred as a real undertaking with no clear timeline. The compat
+  constructor's refusal is made informative rather than generic in the
+  meantime (PR #120, open). Revisit once a working way to read MathML/OMML
+  XML exists.
 - ~~Build tool~~ — decided 2026-07-29 by bake-off: **tsdown** (§8), with
   bundler-free `tsc` as the verified fallback.
 - **Bundle budgets (P1):** set measurable size ceilings per subpath once the

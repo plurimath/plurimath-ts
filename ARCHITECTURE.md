@@ -1200,7 +1200,10 @@ feature set, each with a home in the module map (§3) and a phase (§9): number
 formatting (`formatting/` — minimal normalization in P1, locales and
 configurable formatters in P4+); the `evaluate` module (`evaluation/`);
 UnitsML (**deferred pending a maintainer decision**, §5 — the upstream JS
-package is currently unusable); MathML/OMML *input* parsing (behind the mml/omml-ts strategy decision, §11).
+package is currently unusable); MathML/OMML *input* parsing (behind the mml/omml-ts strategy decision, §11);
+a command-line interface (**SETTLED 2026-09-16**: in scope, an idiomatic
+Node CLI rather than gem-flag parity with `lib/plurimath/cli.rb`'s Thor
+`convert` command — see `TODO.plan/feature-roadmap.md`'s CLI entry).
 "Later" here means a planned phase, not a rejection.
 
 **YAGNI — not built until a real consumer demands it.** Architecture and

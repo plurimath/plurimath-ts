@@ -264,6 +264,59 @@ Ox and Oga adapters — so there is a single answer, not an adapter-dependent on
   translator's `else` branch (`translator.rb:64-65`) has no content-element
   case, although `mml` models those elements.
 
+## Command-line interface
+
+`ARCHITECTURE.md` §10 previously listed a CLI neither in scope nor under
+YAGNI. `lib/plurimath/cli.rb` is a Thor `convert` command with input/output
+format, `--split-on-linebreak`, display style, `--math-rendering`
+(`to_display`), and an XML engine choice; the port has nothing yet.
+
+**SETTLED 2026-09-16: in scope**, direction is an idiomatic Node CLI rather
+than flag-for-flag parity with the gem's Thor command. Nothing blocks it but
+effort — everything it would call already exists once the render options in
+[feature-roadmap.md](feature-roadmap.md) land, so it has no reason to go
+first. This decision was recorded in a local session note
+(`plan-2026-09-16.md`) the same day as the MathML/OMML and coverage-invariant
+decisions below, but — unlike those — never made it into this file; this
+entry corrects that gap.
+
+## Number-formatter API shape (`formatter:` option)
+
+`feature-roadmap.md`'s number-formatting entry names this as a design
+question blocking B2's first slice: does the per-call `formatter:` option
+arrive as a class instance (mirroring the gem's `Formatter::Standard <
+NumberFormatter`) or a plain options object?
+
+**SETTLED: plain options object.** The gem's `Formatter::Standard` sets its
+config once at construction and never mutates it (`number_formatter.rb:6-16`,
+re-verified against the pinned oracle `plurimath` @ `00c52783`, v0.11.6 — not
+the unpinned v0.11.3 clone an earlier check used by mistake), so nothing
+about statelessness forces the class shape here. Weighed against that: the
+port has no existing precedent for a subclassable option — every renderer
+option today is a plain object gated by `assertKnownOptions`
+(`src/core/render-options.ts`), and the one existing pluggable-behavior
+option, `onUnsupported`, is a function field on a plain object, not a class a
+consumer subclasses. `ARCHITECTURE.md` §5 also states node classes "are not
+extension points: subclassing is unsupported" — a stated bias against adding
+a new subclassable class here. `plurimath-testsuite`'s `calls/1` schema
+already records formatter args as a flat plain object
+(`{locale, options: {...}, precision, string_format}`), agnostic to either
+choice, so it does not push either way.
+
+**Conceded tradeoff:** a class instance would 1:1-mirror the gem's own
+`NumberFormatter` subclassing extension point, giving a cleaner story for a
+consumer wanting fully custom formatting logic beyond field values. B2's
+first slice only needs to replicate `Formatter::Standard`'s behavior, and
+deeper pluggability can be added later as a function field (matching
+`onUnsupported`) if a real consumer asks — not strong enough to override the
+object shape now.
+
+This decision, like the CLI one above, was recorded in a local session note
+(`plan-2026-09-16.md`, which described it differently — "plain functions, a
+thin class binds them" — a framing about the *gem's* internals verified for
+B1's oracle generation, not the port's own option shape) but never landed
+here; this entry settles the port-specific question directly.
+
 ## What the UnicodeMath transform's coverage invariant should require
 
 `test/formats/unicodemath/transform-coverage.spec.ts` asserts that every ported

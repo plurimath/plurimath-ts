@@ -312,15 +312,17 @@ configuration in the gem and meets the same per-call design question as the
 formatter. The `plurimath-js` compat surface has no `evaluate`, so this does
 not affect the drop-in claim.
 
-#### Command-line interface — not scoped
+#### Command-line interface — in scope, not yet built
 
 **Gem:** `lib/plurimath/cli.rb`, a Thor `convert` command with input and output
 format, `--split-on-linebreak`, display style, `--math-rendering` (which is
 `to_display`), and an XML engine choice.
 
-**Port:** nothing, and `ARCHITECTURE.md` §10 lists a CLI neither in scope nor
-under YAGNI. **Blocks:** a scope decision. Everything it calls would exist
-once the render options above do.
+**Port:** nothing yet. **SETTLED 2026-09-16: in scope**, and the direction is
+an idiomatic Node CLI rather than flag-for-flag parity with the gem's Thor
+command (`ARCHITECTURE.md` §10). **Blocks:** nothing but effort — everything
+it calls would exist once the render options above do, so it has no reason
+to go first.
 
 #### Out of scope, recorded so it is not re-proposed
 
@@ -450,7 +452,7 @@ The UnicodeMath transform's remaining families, ending with registering
 | Is the options-carrying case kind a testsuite schema version, and who authors it? | B1 is chain B's shared-data route |
 | Does compat register `html` now, or after a hand-written battery like UnicodeMath's? | the compat comment is stale either way |
 | Is `/omml` published, and does §4's subpath list gain it? | `toOmml` is compat-only today |
-| Is a CLI in scope, or does it join §10's YAGNI list? | unscoped in both lists |
+| ~~Is a CLI in scope, or does it join §10's YAGNI list?~~ | settled 2026-09-16: in scope, idiomatic Node CLI over gem-flag parity (`ARCHITECTURE.md` §10) |
 | Does the formatter arrive as a class instance or a plain options object? | settles before B2's first slice |
 | ~~Native MathML/OMML input, or further deferral?~~ | settled 2026-09-16: continued deferral (`open-decisions.md`); Chain A's A2/A3 ordering above still needs revising to match |
 | Does the port need an equivalent of `Plurimath.mml_adapter`? | the gem picks the `mml` XML backend globally (`plurimath.rb:34-37`); one native reader may make it moot |

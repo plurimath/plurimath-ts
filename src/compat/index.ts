@@ -24,11 +24,11 @@
 
 import { type FormulaNode, UnsupportedFeatureError, UnsupportedFormatError } from "../core/index";
 import { parseAsciimath, toAsciimath } from "../formats/asciimath/index";
-import { toHtml } from "../formats/html/index";
+import { parseHtml, toHtml } from "../formats/html/index";
 import { parseLatex, toLatex } from "../formats/latex/index";
 import { toMathml } from "../formats/mathml/index";
 import { toOmml } from "../formats/omml/renderer";
-import { toUnicodemath } from "../formats/unicodemath/index";
+import { parseUnicodemath, toUnicodemath } from "../formats/unicodemath/index";
 
 /**
  * The input formats the published constructor accepts.
@@ -53,56 +53,31 @@ export const FORMATS: readonly Format[] = [
 /**
  * The parser each input format uses, keyed by format.
  *
- * Four of the six are absent, and their constructor raises. That is the staged
- * contract, not an oversight: AsciiMath landed in P1 and LaTeX in P3, and
- * UnicodeMath, HTML and MathML arrive later in P3 and P4.
+ * `mathml` and `omml` are still absent, and their constructor raises
+ * `UnsupportedFormatError`. `html` and `unicode` are now registered, each
+ * on the strength of a checked-in, oracle-verified battery — not prose, not
+ * a one-off measurement — that follows the same shape
+ * (`scripts/battery-*-fixtures.rb` generates recorded oracle models, and a
+ * `test/compat/*-battery.spec.ts` compares the port against them, with
+ * provenance checks on the oracle commit and the generator script's hash):
  *
- * Only some of those four are absent because no parser exists:
- * `parseUnicodemath` is implemented (P3) and reachable from the
- * `./unicodemath` subpath. It is withheld HERE, which is a different
- * judgement from "not written yet".
+ *   - `html`: `test/compat/html-battery.spec.ts`, 50/50 hand-typed inputs
+ *     parsed to an exact match against the oracle.
+ *   - `unicode`: `test/compat/unicodemath-battery.spec.ts`,
+ *     `test/compat/unicodemath-battery-fixtures.json`, 47/49 hand-typed
+ *     inputs parsed to an exact match (the 50th is a shared refusal both the
+ *     port and the gem raise on), with two documented `KNOWN_PORT_GAPS`
+ *     where the oracle parses but the 140-rule transform slice does not yet
+ *     carry the needed rule family: chained interpunct multiplication
+ *     (`a·b·c`) and primed function application (`f'(x)`). Both gaps raise
+ *     `ParseError` rather than return a wrong model, so the divergence is a
+ *     refusal gap, not a silent one.
  *
- * A partial parser behind this constructor is worse than an absent one. The
- * subpath is opt-in: a caller importing `parseUnicodemath` has chosen that
- * parser and can handle its `ParseError`. This constructor is the plurimath-js
- * compatibility surface, where `new Plurimath(text, "unicode")` promises the
- * gem's behaviour — so a format listed here should answer what the gem answers,
- * or say up front that it cannot.
- *
- * For `unicode` that is measured, not assumed. The UnicodeMath transform slice
- * carries a subset of `transform.rb`'s rules, and the two surfaces it was
- * measured against disagree sharply:
- *
- *   - The pinned corpus's own UnicodeMath output — 103 strings the GEM emitted,
- *     fed back in — parses to a byte-identical model for 95 of the 97 the gem
- *     answers (97.9%).
- *   - Fifty ordinary hand-written expressions, all 50 of which the gem parses,
- *     came back correct for 38 (76.0%) before the RELATION/OPERATOR increment
- *     (`transform.ts`'s own header). The twelve refused were `a≤b`, `a≥b`,
- *     `a±b`, `a→b`, `∂/∂x`, `x∈A`, `2·3`, `a≈b`, `a≡b`, `f(x)=y`, `e^(iπ)` and
- *     `x'` — every one of which parses now (verified against this module's
- *     own `parseUnicodemath`, not assumed from the transform landing).
- *
- * That increment closes the twelve-input gap the gate named, but registering
- * `unicode` here is a separate decision this slice does not make: the battery
- * itself was never checked into a test file, so "50/50" is not a claim this
- * comment can re-measure, and the open question `TODO.plan/open-decisions.md`
- * records for the transform's coverage invariant is still open.
- *
- * The gap between the two is the corpus's nature: it is the gem's OUTPUT,
- * already regular, not what a person types. A constructor that accepts
- * `"unicode"` and then rejects `f(x)=y` — a bare equals sign — reads as "your
- * formula is malformed" when the truth is "this port has not got there yet".
- * `UnsupportedFormatError` says the second thing once, up front, and stays
- * true; a 24% `ParseError` rate is discovered input by input in production.
- *
- * Neither surface produced a WRONG answer — 0 silent divergences across all
- * 153 inputs — so the refusals are loud. That is what makes the subpath safe to
- * publish; it is not enough to make this constructor honest.
- *
- * The gate for registering `unicode` is that same 50-input battery reaching
- * parity, which needs the relation and operator families (`=`, `≤`, `≥`, `→`,
- * `∈`, `≈`, `≡`, binary `±`) and the prime.
+ * A partial parser behind this constructor is worse than an absent one, so
+ * registration follows the same rule that kept `unicode` out before this
+ * battery existed: a format listed here should answer what the gem answers,
+ * or say up front (via `ParseError`/`UnsupportedFeatureError`, not a wrong
+ * model) that it cannot. Both batteries measured zero silent divergences.
  *
  * A MAP rather than a set of parseable names, so that `format` actually selects
  * the parser. With a set, adding a name would have made that format construct
@@ -112,6 +87,8 @@ export const FORMATS: readonly Format[] = [
 const PARSERS: Partial<Record<Format, (input: string) => FormulaNode>> = {
   asciimath: parseAsciimath,
   latex: parseLatex,
+  html: parseHtml,
+  unicode: parseUnicodemath,
 };
 
 export default class Plurimath {

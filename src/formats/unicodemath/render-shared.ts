@@ -33,18 +33,36 @@ import {
 } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
 import { assertReproducibleRubyHashOrder, rubyNumberToS } from "../../core/ruby-semantics";
+import type { NumberFormat } from "../../formatting/index";
 import { UNICODEMATH_HEXCODE_IN_INPUT } from "../../generated/unicodemath/render-tables";
 
 export const FORMAT = "unicodemath";
 
 /**
- * The render context. UnicodeMath has no option axis: the generated exception
- * matrix (`src/generated/unicodemath/exceptions.ts`) is empty, because no
- * symbol varies on `intent`, `table` or `rspace` — measured, and pinned by
+ * Re-exported for `../../render/number/unicodemath.ts`. A kind file may
+ * import only its own format's `render-shared.ts`, never `formatting`
+ * directly (`.dependency-cruiser.cjs`,
+ * "render-kind-file-imports-allowed-set-only"), so the two helpers B2's
+ * first slice adds live in `formatting/number-format.ts` and pass through
+ * here.
+ */
+export type { NumberFormat } from "../../formatting/index";
+export { applyNumberFormat, isPlainFormattableNumber } from "../../formatting/index";
+
+/**
+ * The render context. The generated exception matrix
+ * (`src/generated/unicodemath/exceptions.ts`) is empty, because no symbol
+ * varies on `intent`, `table` or `rspace` — measured, and pinned by
  * `test/generated/unicodemath-data.spec.ts` so a regeneration that introduces
- * variants fails loudly.
+ * variants fails loudly. `numberFormat` is a real axis all the same, added
+ * for B2's first slice: `null` with no `formatter:` option (the gem's own
+ * `Number#format_value_with_options`, `number.rb:115`, returns `value`
+ * unchanged unless a number formatter is configured — which is how the whole
+ * pinned corpus was generated), or the resolved decimal/group symbols
+ * (`../../formatting/number-format.ts`).
  */
 export interface RenderContext {
+  readonly numberFormat: NumberFormat | null;
   /**
    * `child.to_unicodemath(options:)`. Returns `null` exactly where the gem
    * returns nil, which callers observe: `Frac#to_unicodemath` falls off its

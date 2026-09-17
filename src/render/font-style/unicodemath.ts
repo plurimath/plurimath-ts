@@ -76,6 +76,7 @@
 
 import { RenderError } from "../../core/index";
 import {
+  describeSlot,
   FORMAT,
   isNode,
   missingRenderer,
@@ -158,7 +159,7 @@ function bareFont(family: unknown): string | undefined {
     throw new RenderError(
       `fontStyle.parameterTwo: the bare carrier resolves its font through ` +
         `parameter_two.to_sym, and the gem raises NoMethodError for ` +
-        `${family === null ? "null" : typeof family}`,
+        `${describeSlot(family)}`,
       FORMAT,
       "fontStyle",
     );
@@ -181,7 +182,7 @@ function monospaceParens(field: unknown, context: RenderContext): string {
   if (!isNode(field)) {
     throw new RenderError(
       `fontStyle.parameterOne: Monospace wraps its child unconditionally, and the gem ` +
-        `raises NoMethodError for ${field === null ? "null" : typeof field}`,
+        `raises NoMethodError for ${describeSlot(field)}`,
       FORMAT,
       "fontStyle",
     );

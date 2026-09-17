@@ -24,11 +24,11 @@
 
 import { type FormulaNode, UnsupportedFeatureError, UnsupportedFormatError } from "../core/index";
 import { parseAsciimath, toAsciimath } from "../formats/asciimath/index";
-import { toHtml } from "../formats/html/index";
+import { parseHtml, toHtml } from "../formats/html/index";
 import { parseLatex, toLatex } from "../formats/latex/index";
 import { toMathml } from "../formats/mathml/index";
 import { toOmml } from "../formats/omml/renderer";
-import { toUnicodemath } from "../formats/unicodemath/index";
+import { parseUnicodemath, toUnicodemath } from "../formats/unicodemath/index";
 
 /**
  * The input formats the published constructor accepts.
@@ -55,25 +55,44 @@ export const FORMATS: readonly Format[] = [
  *
  * Not every format has a registered parser, and an unregistered format's
  * constructor raises `UnsupportedFormatError`. `asciimath` and `latex` are
- * registered (P1, P3). `html` and `unicode`'s registration is owned by a
- * separate PR, #119 — its history carries the oracle-verified battery each
- * one needed before joining this map, and that story is not repeated here so
- * it cannot drift out of step with what #119 actually did. `mathml` and
- * `omml` are not on that track; they are documented on their own, immediately
- * below.
+ * registered (P1, P3). `html` and `unicode` are registered too, each on the
+ * strength of a checked-in, oracle-verified battery — not prose, not a
+ * one-off measurement — that follows the same shape
+ * (`scripts/battery-*-fixtures.rb` generates recorded oracle models, and a
+ * `test/compat/*-battery.spec.ts` compares the port against them, with
+ * provenance checks on the oracle commit and the generator script's hash):
  *
- * `mathml` and `omml` input specifically: a native reader for either format
- * is not being pursued right now (decided 2026-09-16). Bridging to the
- * organisation's own Opal-compiled JavaScript package was the alternative
- * under consideration, and it is a confirmed dead end on measured evidence
- * (PR #110) — that evidence, and the package name it concerns, belong in the
- * PR history and `TODO.plan/`, not in this comment, so they are not repeated
- * here where they would go stale. What IS durable, and what the thrown
- * `UnsupportedFormatError` says: this port needs an XML reader it does not
- * have yet before `mathml`/`omml` input can be registered here. That is the
- * real prerequisite, whichever way it eventually gets built (native port,
- * a fixed bridge, or something else) — a future maintainer picking this back
- * up starts from "no XML reader exists", not from a stale phase label.
+ *   - `html`: `test/compat/html-battery.spec.ts`, 50/50 hand-typed inputs
+ *     parsed to an exact match against the oracle.
+ *   - `unicode`: `test/compat/unicodemath-battery.spec.ts`,
+ *     `test/compat/unicodemath-battery-fixtures.json`, 47/49 hand-typed
+ *     inputs parsed to an exact match (the 50th is a shared refusal both the
+ *     port and the gem raise on), with two documented `KNOWN_PORT_GAPS`
+ *     where the oracle parses but the 140-rule transform slice does not yet
+ *     carry the needed rule family: chained interpunct multiplication
+ *     (`a·b·c`) and primed function application (`f'(x)`). Both gaps raise
+ *     `ParseError` rather than return a wrong model, so the divergence is a
+ *     refusal gap, not a silent one.
+ *
+ * A partial parser behind this constructor is worse than an absent one, so
+ * registration follows the same rule that kept `unicode` out before this
+ * battery existed: a format listed here should answer what the gem answers,
+ * or say up front (via `ParseError`/`UnsupportedFeatureError`, not a wrong
+ * model) that it cannot. Both batteries measured zero silent divergences.
+ *
+ * `mathml` and `omml` are not on that track; they are documented on their
+ * own. A native reader for either format is not being pursued right now
+ * (decided 2026-09-16). Bridging to the organisation's own Opal-compiled
+ * JavaScript package was the alternative under consideration, and it is a
+ * confirmed dead end on measured evidence (PR #110) — that evidence, and the
+ * package name it concerns, belong in the PR history and `TODO.plan/`, not
+ * in this comment, so they are not repeated here where they would go stale.
+ * What IS durable, and what the thrown `UnsupportedFormatError` says: this
+ * port needs an XML reader it does not have yet before `mathml`/`omml`
+ * input can be registered here. That is the real prerequisite, whichever
+ * way it eventually gets built (native port, a fixed bridge, or something
+ * else) — a future maintainer picking this back up starts from "no XML
+ * reader exists", not from a stale phase label.
  *
  * A MAP rather than a set of parseable names, so that `format` actually selects
  * the parser. With a set, adding a name would have made that format construct
@@ -83,6 +102,8 @@ export const FORMATS: readonly Format[] = [
 const PARSERS: Partial<Record<Format, (input: string) => FormulaNode>> = {
   asciimath: parseAsciimath,
   latex: parseLatex,
+  html: parseHtml,
+  unicode: parseUnicodemath,
 };
 
 /**

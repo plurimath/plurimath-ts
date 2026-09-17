@@ -115,18 +115,22 @@ records whether a single native reader makes it moot.
    serializer, so it changes before a reader lands. `deferred.md`'s XML-writer
    entry already records that the reader is a separate decision: evaluate
    existing parser libraries before building one.
-2. **The strategy is half-answered on evidence, and not yet on `main`.** Bridging to
-   the organisation's JavaScript package is closed: `@plurimath/mml@0.1.0`
-   publishes three files and none of the `dist/` its entry points name
-   (`npm view`, re-run for this page: `dist.fileCount` 3), and it is
-   Opal-compiled. The detailed measurements — the translator's 44 dispatched
-   element classes, the attribute surface it reads, entity and unknown-element
-   behaviour — are in PR #110, which is **open**, not merged. This page cites
-   it rather than repeating it. The `plurimath/mml-js` repository is that
-   package's source, so it is the same option, not a second one. What PR
-   #110 leaves open is the choice evidence cannot make — a native port or
-   further deferral — and `open-decisions.md` on `main` still lists the whole
-   question as undecided.
+2. **The strategy is answered on evidence, but the answer is not yet on
+   `main`.** Bridging to the organisation's JavaScript package is closed:
+   `@plurimath/mml@0.1.0` publishes three files and none of the `dist/` its
+   entry points name (`npm view`, re-run for this page: `dist.fileCount` 3),
+   and it is Opal-compiled. The detailed measurements — the translator's 44
+   dispatched element classes, the attribute surface it reads, entity and
+   unknown-element behaviour — are in PR #110, which is **open**, not merged.
+   This page cites it rather than repeating it. The `plurimath/mml-js`
+   repository is that package's source, so it is the same option, not a
+   second one. The choice evidence alone could not make — a native port or
+   further deferral — is **settled 2026-09-16: continued deferral, not a
+   native port, for now**
+   ([open-decisions.md](open-decisions.md#mathmlomml-input-strategy), PR
+   #122, also open). This page's own build order below (Chain A, A2/A3) has
+   not yet been revised to reflect that a native port is deferred rather than
+   the recommended next step.
 
 **Oracle data already available:** the corpus at `281d700` carries 217
 `mathml:` expected-output blocks (92 under `corpus/asciimath/`, 125 under
@@ -448,5 +452,5 @@ The UnicodeMath transform's remaining families, ending with registering
 | Is `/omml` published, and does §4's subpath list gain it? | `toOmml` is compat-only today |
 | Is a CLI in scope, or does it join §10's YAGNI list? | unscoped in both lists |
 | Does the formatter arrive as a class instance or a plain options object? | settles before B2's first slice |
-| Native MathML/OMML input, or further deferral? | A2 and A3 wait on it; PR #110 supplies the evidence |
+| ~~Native MathML/OMML input, or further deferral?~~ | settled 2026-09-16: continued deferral (`open-decisions.md`); Chain A's A2/A3 ordering above still needs revising to match |
 | Does the port need an equivalent of `Plurimath.mml_adapter`? | the gem picks the `mml` XML backend globally (`plurimath.rb:34-37`); one native reader may make it moot |

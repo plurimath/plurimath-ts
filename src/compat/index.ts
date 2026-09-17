@@ -53,11 +53,14 @@ export const FORMATS: readonly Format[] = [
 /**
  * The parser each input format uses, keyed by format.
  *
- * Four of the six are absent, and their constructor raises. That is the staged
- * contract, not an oversight: AsciiMath landed in P1 and LaTeX in P3.
- * UnicodeMath and HTML are being registered by a separate, already-open PR
- * (#119); `mathml` and `omml` are not on that track and are documented on
- * their own, immediately below.
+ * Not every format has a registered parser, and an unregistered format's
+ * constructor raises `UnsupportedFormatError`. `asciimath` and `latex` are
+ * registered (P1, P3). `html` and `unicode`'s registration is owned by a
+ * separate PR, #119 — its history carries the oracle-verified battery each
+ * one needed before joining this map, and that story is not repeated here so
+ * it cannot drift out of step with what #119 actually did. `mathml` and
+ * `omml` are not on that track; they are documented on their own, immediately
+ * below.
  *
  * `mathml` and `omml` input specifically: a native reader for either format
  * is not being pursued right now (decided 2026-09-16). Bridging to the
@@ -71,53 +74,6 @@ export const FORMATS: readonly Format[] = [
  * real prerequisite, whichever way it eventually gets built (native port,
  * a fixed bridge, or something else) — a future maintainer picking this back
  * up starts from "no XML reader exists", not from a stale phase label.
- *
- * Only some of those four are absent because no parser exists:
- * `parseUnicodemath` is implemented (P3) and reachable from the
- * `./unicodemath` subpath. It is withheld HERE, which is a different
- * judgement from "not written yet".
- *
- * A partial parser behind this constructor is worse than an absent one. The
- * subpath is opt-in: a caller importing `parseUnicodemath` has chosen that
- * parser and can handle its `ParseError`. This constructor is the plurimath-js
- * compatibility surface, where `new Plurimath(text, "unicode")` promises the
- * gem's behaviour — so a format listed here should answer what the gem answers,
- * or say up front that it cannot.
- *
- * For `unicode` that is measured, not assumed. The UnicodeMath transform slice
- * carries a subset of `transform.rb`'s rules, and the two surfaces it was
- * measured against disagree sharply:
- *
- *   - The pinned corpus's own UnicodeMath output — 103 strings the GEM emitted,
- *     fed back in — parses to a byte-identical model for 95 of the 97 the gem
- *     answers (97.9%).
- *   - Fifty ordinary hand-written expressions, all 50 of which the gem parses,
- *     came back correct for 38 (76.0%) before the RELATION/OPERATOR increment
- *     (`transform.ts`'s own header). The twelve refused were `a≤b`, `a≥b`,
- *     `a±b`, `a→b`, `∂/∂x`, `x∈A`, `2·3`, `a≈b`, `a≡b`, `f(x)=y`, `e^(iπ)` and
- *     `x'` — every one of which parses now (verified against this module's
- *     own `parseUnicodemath`, not assumed from the transform landing).
- *
- * That increment closes the twelve-input gap the gate named, but registering
- * `unicode` here is a separate decision this slice does not make: the battery
- * itself was never checked into a test file, so "50/50" is not a claim this
- * comment can re-measure, and the open question `TODO.plan/open-decisions.md`
- * records for the transform's coverage invariant is still open.
- *
- * The gap between the two is the corpus's nature: it is the gem's OUTPUT,
- * already regular, not what a person types. A constructor that accepts
- * `"unicode"` and then rejects `f(x)=y` — a bare equals sign — reads as "your
- * formula is malformed" when the truth is "this port has not got there yet".
- * `UnsupportedFormatError` says the second thing once, up front, and stays
- * true; a 24% `ParseError` rate is discovered input by input in production.
- *
- * Neither surface produced a WRONG answer — 0 silent divergences across all
- * 153 inputs — so the refusals are loud. That is what makes the subpath safe to
- * publish; it is not enough to make this constructor honest.
- *
- * The gate for registering `unicode` is that same 50-input battery reaching
- * parity, which needs the relation and operator families (`=`, `≤`, `≥`, `→`,
- * `∈`, `≈`, `≡`, binary `±`) and the prime.
  *
  * A MAP rather than a set of parseable names, so that `format` actually selects
  * the parser. With a set, adding a name would have made that format construct
@@ -141,9 +97,8 @@ const PARSERS: Partial<Record<Format, (input: string) => FormulaNode>> = {
  * come to depend on reading a certain way.
  */
 const UNSUPPORTED_FORMAT_REASONS: Partial<Record<Format, string>> = {
-  mathml:
-    "MathML input needs an XML reader this port does not have yet, and none is currently planned",
-  omml: "OMML input needs an XML reader this port does not have yet, and none is currently planned",
+  mathml: "MathML input needs an XML reader this port does not have yet",
+  omml: "OMML input needs an XML reader this port does not have yet",
 };
 
 export default class Plurimath {

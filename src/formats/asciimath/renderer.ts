@@ -42,7 +42,7 @@ import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
  * default-symbol behavior only, resolved by `resolveNumberFormat`
  * (`../../formatting/number-format.ts`), which itself refuses by name every
  * field of the gem's `formatter:` keyword this slice does not implement
- * (precision, notation, base, fraction-side grouping, ...). The gem's other
+ * (precision, notation, base, ...). The gem's other
  * two `to_asciimath` keywords — `unitsml:`, `options:` (formula.rb:66 on the
  * pinned oracle) — are still not implemented at all.
  */

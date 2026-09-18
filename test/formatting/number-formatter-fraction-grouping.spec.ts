@@ -30,8 +30,12 @@
  * The payload's bytes are verified against a recorded sha256 before
  * anything trusts them, same as `number-formatter-slice1.spec.ts`.
  *
- * `expected.mathml` in the payload is not compared here, for the same
- * reason as slice 1: MathML still refuses `formatter` by name.
+ * `expected.mathml` IS compared here, for the same reason as slice 1's
+ * update: MathML's `formatter` support (the MathML/OMML number-formatting
+ * slice) covers fraction-side grouping the same way the four text renderers
+ * do, by threading the same resolved `NumberFormat` through
+ * `applyNumberFormat`. OMML still has no `expected.omml` field to check
+ * against in this payload, so its `formatter` support stays deferred.
  */
 
 import { execFileSync } from "node:child_process";
@@ -229,10 +233,10 @@ describe(`calls/1 case "${CALL_CASE.id}" — fraction-side digit grouping`, () =
     );
   });
 
-  it("still refuses formatter by name on mathml — that slice is not this one", () => {
+  it("renders mathml byte-identical to the oracle", () => {
     const node = buildFormula();
-    expect(() =>
-      toMathml(node, { formatter: CALL_CASE.formatter } as Parameters<typeof toMathml>[1]),
-    ).toThrow(/formatter/);
+    expect(toMathml(node, { formatter: CALL_CASE.formatter })).toBe(
+      CALL_CASE.expected.get("mathml"),
+    );
   });
 });

@@ -86,4 +86,26 @@ describe("parseArgs", () => {
     expect(result.kind).toBe("error");
     expect(result.kind === "error" && result.message).toMatch(/--from requires a value/);
   });
+
+  it("treats a bare '-' as a literal file argument rather than an unknown option", () => {
+    const result = parseArgs(["convert", "--from", "asciimath", "--to", "latex", "-"]);
+    expect(result).toEqual({
+      kind: "convert",
+      args: { from: "asciimath", to: "latex", file: "-" },
+    });
+  });
+
+  it("treats everything after '--' as positional, even dash-prefixed tokens", () => {
+    const result = parseArgs(["convert", "--from", "asciimath", "--to", "latex", "--", "--weird"]);
+    expect(result).toEqual({
+      kind: "convert",
+      args: { from: "asciimath", to: "latex", file: "--weird" },
+    });
+  });
+
+  it("reports '--from requires a value' rather than a bogus --to value when a flag follows --from", () => {
+    const result = parseArgs(["convert", "--from", "--to", "latex"]);
+    expect(result.kind).toBe("error");
+    expect(result.kind === "error" && result.message).toMatch(/--from requires a value/);
+  });
 });

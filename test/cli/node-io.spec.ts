@@ -39,6 +39,16 @@ describe("readStdin", () => {
     stubStdin([Buffer.from([0xff])]);
     await expect(readStdin()).rejects.toThrow(/utf-8/i);
   });
+
+  it("rejects input over an injected size limit", async () => {
+    stubStdin([Buffer.from("0123456789", "utf8")]);
+    await expect(readStdin(5)).rejects.toThrow(/exceeds the 0mb limit/i);
+  });
+
+  it("accepts input at or under an injected size limit", async () => {
+    stubStdin([Buffer.from("01234", "utf8")]);
+    await expect(readStdin(5)).resolves.toBe("01234");
+  });
 });
 
 describe("readFile", () => {
@@ -57,5 +67,15 @@ describe("readFile", () => {
   it("rejects a file with invalid UTF-8 instead of silently replacing it", () => {
     const path = tempFile(Buffer.from([0xff]));
     expect(() => readFile(path)).toThrow(/utf-8/i);
+  });
+
+  it("rejects a file over an injected size limit", () => {
+    const path = tempFile(Buffer.from("0123456789", "utf8"));
+    expect(() => readFile(path, 5)).toThrow(/exceeds the 0mb limit/i);
+  });
+
+  it("accepts a file at or under an injected size limit", () => {
+    const path = tempFile(Buffer.from("01234", "utf8"));
+    expect(readFile(path, 5)).toBe("01234");
   });
 });

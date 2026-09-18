@@ -8,11 +8,11 @@ generator:
   path: scripts/generate-html-model-fixtures.rb
   sha256: cdd9d0ec782679441ff06683143452bf49c2b1922e915df13aa9e53ac533e7ac
   inputs:
-    scripts/generate-corpus.rb: e08ded952aa69efd03e4b4c6b7eafaeda5d002573fe3b28639d55e6d6a2e0665
+    scripts/generate-corpus.rb: 60afefa7bccb49b7f801c27a0fe3ce7605c63cd2e4afdccea7d4125fff2c01b3
     scripts/generate-html-model-fixtures.rb: cdd9d0ec782679441ff06683143452bf49c2b1922e915df13aa9e53ac533e7ac
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: df4070e4dafd601503489967c6d41c72d91f3c4a
+    commit: 7bdaf475efeeb84e153b4c341b1584fbdd8ca244
     clean: true
     dirty_paths: []
 oracle:
@@ -115,5 +115,5 @@ corpus:
 payload:
   path: model-fixtures.json
   schema: plurimath-corpus/html-model/1
-  sha256: 9338b2631a2a2eab8fd38635f4fc73ce17c9bbbc83f4bce4cfa3191dfde326dc
-  bytes: 314012
+  sha256: 53e3335b720386456ddc7e14597a5edbc8f23d9964095183d7d4ab31ee4e9103
+  bytes: 312748

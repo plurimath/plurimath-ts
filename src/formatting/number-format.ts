@@ -63,18 +63,24 @@ import {
 const DEFAULT_GROUP_DIGITS = 3;
 /**
  * `FormatOptions#fraction_group`/`#fraction_group_digits`
- * (`format_options.rb:69-75`) have no `DEFAULT_*` constant unlike their
- * integer-side counterparts: `fraction_group` falls back to `""`
- * (`separator_option(:fraction_group).to_s` on a missing key), and
- * `fraction_group_digits` falls back to `nil` (`integer_option` called with
- * no `default:` kwarg). `Fraction#format_groups`'s `group.to_i.zero?` check
- * (`fraction.rb:55`) then reads that absent digit count as zero and skips
- * grouping — so, unlike the integer side, no grouping happens unless the
- * caller asks for it. `0` is this port's own sentinel for "off", matching
- * `groupFractionDigits`'s `size <= 0` no-op branch below.
+ * (`format_options.rb:69-75`) do read with no default of their own —
+ * `fraction_group` falls back to `""` (`separator_option` on a missing key),
+ * `fraction_group_digits` to `nil` (`integer_option` with no `default:`
+ * kwarg) — but by the time a call reaches `FormatOptions`, the gem's public
+ * `Formatter::Standard` class (the class this port's `formatter:` shape
+ * mirrors) has already filled both in: `Standard::DEFAULT_OPTIONS` sets
+ * `fraction_group_digits: 3` and `fraction_group: "'"`, applied by
+ * `Standard#set_default_options` unless the caller's own options hash
+ * already has the key. So fraction-side grouping IS on by default — live
+ * oracle check: `Formatter::Standard.new.format`-equivalent call on
+ * `"1.123456"` answers `"1.123'456"`, not `"1.123456"`. This is a real
+ * default, unlike `Standard`'s decimal/group locale-defaulting above, which
+ * this port deliberately does NOT reproduce — there is no locale-layering
+ * question here for grouping defaults to override, so the port matches
+ * `Standard::DEFAULT_OPTIONS` directly.
  */
-const DEFAULT_FRACTION_GROUP_MARKER = "";
-const DEFAULT_FRACTION_GROUP_DIGITS = 0;
+const DEFAULT_FRACTION_GROUP_MARKER = "'";
+const DEFAULT_FRACTION_GROUP_DIGITS = 3;
 
 /** Locale key -> group marker, mirroring `formatting/locales.ts`'s `MARKER_BY_LOCALE`. */
 const GROUP_MARKER_BY_LOCALE: ReadonlyMap<string, string> = new Map(LOCALE_GROUP_MARKERS);
@@ -296,6 +302,18 @@ export function refuseNonNumericUnderFormatter(value: unknown, format: string, k
  * `string.length`, so padding is a no-op for every case this slice accepts
  * (`formatter.options` admits no padding key at all yet).
  */
+/**
+ * `Parts#normalized` (`parts.rb:63`): `value.to_s.sub(/\A0+(?=.)/, "")` —
+ * strip leading zeros, keeping the last one when every digit is a zero, so
+ * `"000"`/`"00"` canonicalize to `"0"` and `"007"` to `"7"`. Only applied
+ * under an active formatter — a lookahead-free reading of "000" without one
+ * renders unchanged (verified live: `to_asciimath` with no `formatter:`
+ * answers `"000"`), so this must not run on the raw, unformatted path.
+ */
+function canonicalizeLeadingZeros(digits: string): string {
+  return digits.replace(/^0+(?=.)/, "");
+}
+
 function groupIntegerDigits(digits: string, separator: string, size: number): string {
   if (size <= 0 || digits.length <= size) return digits;
   const tokens: string[] = [];
@@ -347,8 +365,14 @@ function groupFractionDigits(digits: string, separator: string, size: number): s
  */
 export function applyNumberFormat(value: string, format: NumberFormat): string {
   const dot = value.indexOf(".");
-  if (dot === -1) return groupIntegerDigits(value, format.group, format.groupDigits);
-  const integerPart = groupIntegerDigits(value.slice(0, dot), format.group, format.groupDigits);
+  if (dot === -1) {
+    return groupIntegerDigits(canonicalizeLeadingZeros(value), format.group, format.groupDigits);
+  }
+  const integerPart = groupIntegerDigits(
+    canonicalizeLeadingZeros(value.slice(0, dot)),
+    format.group,
+    format.groupDigits,
+  );
   const fractionPart = groupFractionDigits(
     value.slice(dot + 1),
     format.fractionGroup,

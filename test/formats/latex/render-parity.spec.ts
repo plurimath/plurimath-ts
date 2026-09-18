@@ -20,10 +20,10 @@
  * happened to this repository once before and `readCorpusCases` throwing on
  * emptiness is only belt to that brace:
  *
- *   - 216 reachable cases: the pin holds 217 and the one withheld UnitsML case
+ *   - 236 reachable cases: the pin holds 237 and the one withheld UnitsML case
  *     it actually contains is dropped. The exclusion manifest names two, but
  *     the gem raises on the invalid one, so no case for it was ever generated;
- *   - 216 of those carry `expected.latex` bytes to compare;
+ *   - 236 of those carry `expected.latex` bytes to compare;
  *   - 91 go through the round-trip layer, which is the AsciiMath-written
  *     subset. That says which parser the layer calls, not what this port can
  *     parse: `parseLatex` landed in #76 and drives
@@ -60,13 +60,13 @@ function expectedLatex(entry: (typeof cases)[number]): string {
 }
 
 describe("latex render parity, corpus layer (recorded model -> text)", () => {
-  it("has the 216 reachable cases (217 pinned, 1 withheld as UnitsML)", () => {
+  it("has the 236 reachable cases (237 pinned, 1 withheld as UnitsML)", () => {
     // A suite that quietly loaded zero cases has happened to this repository
     // once before; both counts are pinned so it cannot happen silently.
-    expect(cases.length).toBe(216);
-    expect(rendered.length).toBe(216);
+    expect(cases.length).toBe(236);
+    expect(rendered.length).toBe(236);
     // The round-trip layer's scoped list is pinned too, and it is far smaller
-    // than the corpus layer: 91 of the 216 reachable cases are written in
+    // than the corpus layer: 91 of the 236 reachable cases are written in
     // AsciiMath and 125 in LaTeX. This layer calls `parseAsciimath`, so it
     // takes the 91. The gap between the two numbers IS the second input
     // corpus, so a suite that stopped scoping would show up here as the two

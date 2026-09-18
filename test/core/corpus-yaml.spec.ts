@@ -132,12 +132,12 @@ describe("the corpus itself", () => {
     ].sort();
     const found = pinned.map((path) => relative(PINNED_CORPUS_ROOT, path).split("\\").join("/"));
     expect(found).toStrictEqual(expected);
-    expect(found.length).toBe(40);
+    expect(found.length).toBe(45);
   });
 
   it("reads all of them to a mapping", () => {
     const files = [...local, ...pinned];
-    expect(files.length).toBe(44);
+    expect(files.length).toBe(49);
     for (const file of files) {
       const document = parseYaml(readFileSync(file, "utf8"));
       expect(typeof document, file).toBe("object");

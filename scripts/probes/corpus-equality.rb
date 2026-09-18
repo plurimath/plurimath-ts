@@ -173,6 +173,17 @@ warn(if actual_commit.nil?
 # `model:`, and feeding them to a parser would abort this probe on the first
 # `a/`. The discriminator is the one the TypeScript reader uses: a case has a
 # `model`, a rejection does not.
+#
+# `plurimath-corpus/calls/1` payloads are skipped outright, not merely
+# withheld like a deferred-feature exclusion: their cases record
+# `Formula#to_<target>` called WITH a non-default option (`formatter:`
+# today), so comparing their MODELS for `==` would silently measure the
+# plain-parse equality matrix this probe exists to build, from an input that
+# was never rendered plainly. `readCorpusCases` on the TypeScript side keeps
+# the same split (`PinnedCorpus#cases` vs `#calls`) — this probe must match
+# it, per the invariant this comment already states below, or the two case
+# counts drift the moment a `calls/1` payload exists at all (as it now does).
+CALLS_SCHEMA = "plurimath-corpus/calls/1"
 records = pin_provenance.fetch("payloads").flat_map do |entry|
   relative = "corpus/#{entry.fetch('path')}"
   bytes = pin_blob(pin_root, pin_head, relative)
@@ -181,6 +192,7 @@ records = pin_provenance.fetch("payloads").flat_map do |entry|
           "provenance records. The pinned commit is internally inconsistent."
   end
   document = YAML.safe_load(bytes, aliases: false)
+  next [] if document["schema"] == CALLS_SCHEMA
   group = document["group"]
   abort "REFUSING: #{relative} declares no group" if group.nil? || group.empty?
   rows = document["cases"] || []

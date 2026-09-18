@@ -53,10 +53,11 @@ export const FORMATS: readonly Format[] = [
 /**
  * The parser each input format uses, keyed by format.
  *
- * `mathml` and `omml` are still absent, and their constructor raises
- * `UnsupportedFormatError`. `html` and `unicode` are now registered, each
- * on the strength of a checked-in, oracle-verified battery — not prose, not
- * a one-off measurement — that follows the same shape
+ * Not every format has a registered parser, and an unregistered format's
+ * constructor raises `UnsupportedFormatError`. `asciimath` and `latex` are
+ * registered (P1, P3). `html` and `unicode` are registered too, each on the
+ * strength of a checked-in, oracle-verified battery — not prose, not a
+ * one-off measurement — that follows the same shape
  * (`scripts/battery-*-fixtures.rb` generates recorded oracle models, and a
  * `test/compat/*-battery.spec.ts` compares the port against them, with
  * provenance checks on the oracle commit and the generator script's hash):
@@ -79,6 +80,20 @@ export const FORMATS: readonly Format[] = [
  * or say up front (via `ParseError`/`UnsupportedFeatureError`, not a wrong
  * model) that it cannot. Both batteries measured zero silent divergences.
  *
+ * `mathml` and `omml` are not on that track; they are documented on their
+ * own. A native reader for either format is not being pursued right now
+ * (decided 2026-09-16). Bridging to the organisation's own Opal-compiled
+ * JavaScript package was the alternative under consideration, and it is a
+ * confirmed dead end on measured evidence (PR #110) — that evidence, and the
+ * package name it concerns, belong in the PR history and `TODO.plan/`, not
+ * in this comment, so they are not repeated here where they would go stale.
+ * What IS durable, and what the thrown `UnsupportedFormatError` says: this
+ * port needs an XML reader it does not have yet before `mathml`/`omml`
+ * input can be registered here. That is the real prerequisite, whichever
+ * way it eventually gets built (native port, a fixed bridge, or something
+ * else) — a future maintainer picking this back up starts from "no XML
+ * reader exists", not from a stale phase label.
+ *
  * A MAP rather than a set of parseable names, so that `format` actually selects
  * the parser. With a set, adding a name would have made that format construct
  * and then silently AsciiMath-parse its input -- measured, `"\\frac{1}{2}"`
@@ -89,6 +104,22 @@ const PARSERS: Partial<Record<Format, (input: string) => FormulaNode>> = {
   latex: parseLatex,
   html: parseHtml,
   unicode: parseUnicodemath,
+};
+
+/**
+ * Format-specific reasons appended to `UnsupportedFormatError`'s message, for
+ * the formats whose refusal has a story worth telling a caller up front.
+ * Formats absent here fall back to the error's generic "not supported".
+ *
+ * The wording stays durable on purpose: it names the missing capability (an
+ * XML reader), not the specific package or evidence that ruled out an
+ * alternative — that detail lives in code comments and PR history instead,
+ * where staleness is expected and tracked, not in a message a caller might
+ * come to depend on reading a certain way.
+ */
+const UNSUPPORTED_FORMAT_REASONS: Partial<Record<Format, string>> = {
+  mathml: "MathML input needs an XML reader this port does not have yet",
+  omml: "OMML input needs an XML reader this port does not have yet",
 };
 
 export default class Plurimath {
@@ -114,7 +145,9 @@ export default class Plurimath {
 
   constructor(data: string, format: Format) {
     const parse = PARSERS[format];
-    if (parse === undefined) throw new UnsupportedFormatError(format);
+    if (parse === undefined) {
+      throw new UnsupportedFormatError(format, UNSUPPORTED_FORMAT_REASONS[format]);
+    }
     Object.defineProperty(this, "data", {
       value: parse(data),
       writable: false,

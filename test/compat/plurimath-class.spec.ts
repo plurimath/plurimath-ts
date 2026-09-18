@@ -140,6 +140,20 @@ describe("the constructor's staged contract", () => {
   });
 
   /**
+   * `mathml`/`omml` input has a story beyond "no parser yet": both need an
+   * XML reader this port does not have. Asserted with a substring, not the
+   * full message, so wording tweaks that keep the same fact do not break
+   * this test — but the substring must still name the FORMAT, not just the
+   * shared tail, or swapping the two reason strings would pass unnoticed.
+   */
+  it.each([
+    ["mathml", /MathML input needs an XML reader this port does not have yet/],
+    ["omml", /OMML input needs an XML reader this port does not have yet/],
+  ] as const)("explains WHY %s input is refused, not just that it is", (format, reason) => {
+    expect(() => new Plurimath(INPUT, format)).toThrow(reason);
+  });
+
+  /**
    * The guard the MAP was chosen for. A set of parseable names would let
    * `latex` construct and then AsciiMath-parse its input; that produced
    * `"\\backslash \\frac{1}{2}"` when it was measured. Now that latex has a

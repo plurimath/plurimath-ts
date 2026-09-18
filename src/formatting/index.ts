@@ -35,6 +35,8 @@ export {
 export type { FormatterOptions, FormatterSymbolOptions, NumberFormat } from "./number-format";
 export {
   applyNumberFormat,
+  isGemNumericValue,
   isPlainFormattableNumber,
+  refuseNonNumericUnderFormatter,
   resolveNumberFormat,
 } from "./number-format";

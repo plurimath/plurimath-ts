@@ -45,6 +45,7 @@ import {
   type NodeOf,
   present,
   type RenderContext,
+  refuseNonNumericUnderFormatter,
 } from "../../formats/unicodemath/render-shared";
 import {
   UNICODEMATH_SUB_DIGITS,
@@ -83,7 +84,18 @@ export function renderNumber(node: NodeOf<"number">, context: RenderContext): st
   // The list case for this slot is already closed above: a list arrives only
   // as `raw`, and `Array.isArray(raw)` returns before reaching this point, so
   // `value` here is never an array.
-  if (value === null) return null;
+  if (value === null) {
+    // A mini-sized `null` is a PRE-EXISTING divergence this change does not
+    // touch: the gem's `mini_sub`/`mini_sup` send `to_sym` to `nil` and raise
+    // NoMethodError before a formatter is ever consulted, where this returns
+    // `null`. Left as-is, so the refusal below applies only to the
+    // non-mini-sized case, which is what `number.rb:115`'s formatter read
+    // actually reaches for a `null` value: `nil.to_s` is `""`, and `""` fails
+    // `Source::NUMERIC_PATTERN`, so an active formatter refuses it too.
+    if (present(node.miniSubSized) || present(node.miniSupSized)) return null;
+    if (context.numberFormat !== null) refuseNonNumericUnderFormatter(value, FORMAT, node.kind);
+    return null;
+  }
 
   // Ruby truthiness again, and it is visible here too: measured on the pinned
   // gem with `value` the string "1", `mini_sub_sized` set to `0` and to `""`
@@ -91,8 +103,12 @@ export function renderNumber(node: NodeOf<"number">, context: RenderContext): st
   if (present(node.miniSubSized)) return UNICODEMATH_SUB_DIGITS.get(value) ?? null;
   if (present(node.miniSupSized)) return UNICODEMATH_SUP_DIGITS.get(value) ?? null;
 
-  if (context.numberFormat !== null && isPlainFormattableNumber(value)) {
-    return applyNumberFormat(value, context.numberFormat);
+  if (context.numberFormat !== null) {
+    if (isPlainFormattableNumber(value)) return applyNumberFormat(value, context.numberFormat);
+    // `Formatter::Numbers::Source#validate_numeric!` raises for anything that
+    // is not a gem-numeric string — a value it lets through but not-plain
+    // (negative, scientific notation) is gem-valid and still renders raw.
+    refuseNonNumericUnderFormatter(value, FORMAT, node.kind);
   }
   return value;
 }

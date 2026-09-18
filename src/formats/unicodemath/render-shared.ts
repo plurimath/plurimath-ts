@@ -47,7 +47,11 @@ export const FORMAT = "unicodemath";
  * here.
  */
 export type { NumberFormat } from "../../formatting/index";
-export { applyNumberFormat, isPlainFormattableNumber } from "../../formatting/index";
+export {
+  applyNumberFormat,
+  isPlainFormattableNumber,
+  refuseNonNumericUnderFormatter,
+} from "../../formatting/index";
 
 /**
  * The render context. The generated exception matrix

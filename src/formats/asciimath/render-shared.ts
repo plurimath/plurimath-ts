@@ -35,7 +35,11 @@ export const FORMAT = "asciimath";
  * number-format.ts` and pass through here.
  */
 export type { NumberFormat } from "../../formatting/index";
-export { applyNumberFormat, isPlainFormattableNumber } from "../../formatting/index";
+export {
+  applyNumberFormat,
+  isPlainFormattableNumber,
+  refuseNonNumericUnderFormatter,
+} from "../../formatting/index";
 
 /**
  * The render context. `table` is one option axis the gem's asciimath path

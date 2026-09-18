@@ -17,24 +17,65 @@
  * change — TODO.plan/feature-roadmap.md's build order puts each on a later
  * B2 slice.
  *
- * Locale coverage is narrow for the same reason `formatting/locales.ts`'s
- * decimal table is: that module's header records that the gem's `group`
- * column is "deliberately not emitted" because nothing at parse time reads
- * it. Rendering now does, and generating that table (`scripts/
- * generate-formatting-data.rb`) is its own slice of work this change does not
- * do. Only `"en"` — and no locale at all, which the gem's own
- * `NumberFormatter#supported_locale` also reads as `"en"` — is supported;
- * any other locale is refused by name.
+ * **Locale coverage.** Every locale `formatting/locales.ts` knows — all 96 of
+ * `Formatter::SupportedLocales::LOCALES` — is accepted here too, sourcing its
+ * decimal AND group defaults from `./generated/locale-decimals.ts` and
+ * `./generated/locale-groups.ts` (`scripts/generate-formatting-data.rb`, both
+ * live-verified against the oracle). `formatter.options.decimal`/`group`
+ * still override the locale's own defaults when given, matching how the gem
+ * layers explicit symbols over a locale's `SupportedLocales` entry
+ * (`Formatter::Numbers::SymbolResolver#resolve`:
+ * `locale_symbols.merge(explicit_symbols)`).
+ *
+ * That layering is `SymbolResolver`'s, deliberately NOT `Formatter::
+ * Standard`'s own — a real, measured divergence worth recording. Constructing
+ * `Formatter::Standard.new(locale: "de")` on the pinned oracle and rendering
+ * `1234567` answers `"1,234,567"`, the "en" symbols, not the German
+ * `"1.234.567"`: `Standard#set_default_options` fills every `DEFAULT_OPTIONS`
+ * key — including `:decimal` and `:group` — onto the options hash before
+ * `SymbolResolver#resolve` ever merges the locale's entry in, so those two
+ * keys are never actually absent by the time the locale's own symbols would
+ * have applied. Through the gem's own public `Formatter::Standard` class,
+ * `locale:` is therefore inert for `decimal`/`group` in the current oracle
+ * version (v0.11.6, `00c52783`) — only the base `Plurimath::NumberFormatter`
+ * class (used with an empty `localizer_symbols:` hash) actually renders with
+ * a locale's own symbols, which is the live call `scripts/
+ * generate-formatting-data.rb` verifies the generated `group` column against.
+ * This port implements the layering `SymbolResolver` was written to provide
+ * — locale defaults, explicit options win — rather than reproducing
+ * `Standard`'s own defaulting, since the alternative would make this widening
+ * a no-op for every locale but "en" and contradicts what `SupportedLocales`'
+ * `group` column is for. Worth a maintainer's attention as a possible gem
+ * defect, not a designed API.
  */
 
 import { RenderError } from "../core/errors";
 import { assertKnownOptions } from "../core/render-options";
-import { DEFAULT_DECIMAL_MARKER } from "./locales";
+import { DEFAULT_GROUP_MARKER, LOCALE_GROUP_MARKERS } from "./generated/locale-groups";
+import {
+  DEFAULT_DECIMAL_MARKER,
+  decimalMarkerFor,
+  isSupportedLocale,
+  SUPPORTED_LOCALES,
+} from "./locales";
 
-/** `Formatter::Standard::DEFAULT_OPTIONS[:group]`. */
-const DEFAULT_GROUP_MARKER = ",";
 /** `Formatter::Standard::DEFAULT_OPTIONS[:group_digits]`. */
 const DEFAULT_GROUP_DIGITS = 3;
+
+/** Locale key -> group marker, mirroring `formatting/locales.ts`'s `MARKER_BY_LOCALE`. */
+const GROUP_MARKER_BY_LOCALE: ReadonlyMap<string, string> = new Map(LOCALE_GROUP_MARKERS);
+
+/**
+ * Ruby: `Formatter::SupportedLocales.symbols_for(locale).fetch(:group)`, cut
+ * down to the one column this slice reads (`locales.ts`'s `decimalMarkerFor`
+ * is the `decimal` counterpart). `locale` is assumed already validated by the
+ * caller — `resolveNumberFormat` below checks `isSupportedLocale` before
+ * this ever runs — so an unrecognised key is a caller bug, not a case this
+ * falls back for.
+ */
+function groupMarkerFor(locale: string): string {
+  return GROUP_MARKER_BY_LOCALE.get(locale) ?? DEFAULT_GROUP_MARKER;
+}
 
 /**
  * The `formatter.options` fields this slice implements — `Formatter::
@@ -110,15 +151,20 @@ export function resolveNumberFormat(
   refuseUnlessAbsent(formatter.stringFormat, "stringFormat", format);
 
   const locale = formatter.locale;
-  if (locale !== null && locale !== undefined && locale !== "en") {
-    throw new RenderError(
-      `formatter.locale: ${JSON.stringify(locale)} is not implemented by this slice — only ` +
-        '"en" (and no locale at all, which the gem also reads as "en") has a group-marker ' +
-        "table; formatting/locales.ts's decimal table has no group column yet " +
-        "(TODO.plan/feature-roadmap.md, Number formatting)",
-      format,
-      "unknown",
-    );
+  let decimalDefault = DEFAULT_DECIMAL_MARKER;
+  let groupDefault = DEFAULT_GROUP_MARKER;
+  if (locale !== null && locale !== undefined) {
+    if (!isSupportedLocale(locale)) {
+      throw new RenderError(
+        `formatter.locale: ${JSON.stringify(locale)} is not one of the ${
+          SUPPORTED_LOCALES.length
+        } locales the oracle's Formatter::SupportedLocales table holds`,
+        format,
+        "unknown",
+      );
+    }
+    decimalDefault = decimalMarkerFor(locale);
+    groupDefault = groupMarkerFor(locale);
   }
 
   assertKnownOptions(formatter.options, ACCEPTED_SYMBOL_KEYS, format);
@@ -134,8 +180,8 @@ export function resolveNumberFormat(
   }
 
   return {
-    decimal: options?.decimal ?? DEFAULT_DECIMAL_MARKER,
-    group: options?.group ?? DEFAULT_GROUP_MARKER,
+    decimal: options?.decimal ?? decimalDefault,
+    group: options?.group ?? groupDefault,
     groupDigits,
   };
 }
@@ -153,6 +199,57 @@ const PLAIN_NUMBER_PATTERN = /^\d+(?:\.\d+)?$/;
 /** Whether `value` is a shape this slice's grouping/substitution measures. */
 export function isPlainFormattableNumber(value: unknown): value is string {
   return typeof value === "string" && PLAIN_NUMBER_PATTERN.test(value);
+}
+
+/**
+ * `Formatter::Numbers::Source::NUMERIC_PATTERN` (`source.rb:18`), verbatim —
+ * signed, optionally-fractional, optionally-exponential digit strings. Wider
+ * than `PLAIN_NUMBER_PATTERN` above (which is what this slice actually
+ * formats): a value can match this and still fall through to the raw-value
+ * path below, for shapes (negative sign, scientific notation) this slice does
+ * not yet group or substitute into. What this pattern draws the line on is
+ * `Source#validate_numeric!`'s OTHER branch — a value that fails it entirely.
+ */
+const GEM_NUMERIC_PATTERN = /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
+
+/**
+ * `Formatter::Numbers::Source#validate_numeric!` (`source.rb:93-98`): a value
+ * given to an active formatter must be `Numeric` or a `String` matching
+ * `NUMERIC_PATTERN` (base-10 only — this port's `Number` slot never carries a
+ * base other than 10, so the gem's `non_decimal_base?` escape hatch does not
+ * apply here); anything else raises `Plurimath::Errors::InvalidNumber`. This
+ * port's `Number` slot is always `string | null` (never a JS number), so the
+ * `Numeric` half of the gem's check has no counterpart to test — a `null`
+ * value renders as `""` before reaching the gem's formatter (`number.rb:85`,
+ * `nil.to_s`), which `NUMERIC_PATTERN` also refuses, so `null` refuses too.
+ */
+export function isGemNumericValue(value: unknown): value is string {
+  return typeof value === "string" && GEM_NUMERIC_PATTERN.test(value);
+}
+
+/**
+ * Call once a `context.numberFormat` is active and `isPlainFormattableNumber`
+ * has already said no: refuses exactly what `Source#validate_numeric!` does,
+ * matching the gem's `Plurimath::Errors::InvalidNumber` refusal
+ * (`[plurimath] Invalid number ... for number formatting`) with this port's
+ * own `RenderError` boundary (`core/render-options.ts`'s convention — the
+ * port's own error, never the gem's wording).
+ *
+ * A value that passes is not necessarily formatted by this slice — a
+ * negative number or scientific notation is gem-valid but still out of this
+ * slice's scope (module doc above) and falls through to the raw-value path,
+ * unformatted, exactly as before this change.
+ */
+export function refuseNonNumericUnderFormatter(value: unknown, format: string, kind: string): void {
+  if (isGemNumericValue(value)) return;
+  throw new RenderError(
+    `number.value: ${JSON.stringify(value)} is not a numeric string under an active ` +
+      "formatter — Formatter::Numbers::Source#validate_numeric! (source.rb) raises " +
+      "Plurimath::Errors::InvalidNumber for a value that is not Numeric/String, or a " +
+      "String failing NUMERIC_PATTERN",
+    format,
+    kind,
+  );
 }
 
 /**

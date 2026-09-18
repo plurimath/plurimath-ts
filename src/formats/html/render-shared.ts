@@ -17,7 +17,11 @@ export const FORMAT = "html";
  * number-format.ts` and pass through here.
  */
 export type { NumberFormat } from "../../formatting/index";
-export { applyNumberFormat, isPlainFormattableNumber } from "../../formatting/index";
+export {
+  applyNumberFormat,
+  isPlainFormattableNumber,
+  refuseNonNumericUnderFormatter,
+} from "../../formatting/index";
 
 /**
  * The render context. `numberFormat` is B2's first slice: `null` with no

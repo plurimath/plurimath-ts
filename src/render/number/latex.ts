@@ -34,6 +34,7 @@ import {
   isPlainFormattableNumber,
   type NodeOf,
   type RenderContext,
+  refuseNonNumericUnderFormatter,
 } from "../../formats/latex/render-shared";
 
 export function renderNumber(node: NodeOf<"number">, context: RenderContext): string {
@@ -52,8 +53,12 @@ export function renderNumber(node: NodeOf<"number">, context: RenderContext): st
   if (Array.isArray(value)) {
     return rubyArrayInspectOrThrow(value, FORMAT, node.kind, "number.value");
   }
-  if (context.numberFormat !== null && isPlainFormattableNumber(value)) {
-    return applyNumberFormat(value, context.numberFormat);
+  if (context.numberFormat !== null) {
+    if (isPlainFormattableNumber(value)) return applyNumberFormat(value, context.numberFormat);
+    // `Formatter::Numbers::Source#validate_numeric!` raises for anything that
+    // is not a gem-numeric string — a value it lets through but not-plain
+    // (negative, scientific notation) is gem-valid and still renders raw.
+    refuseNonNumericUnderFormatter(value, FORMAT, node.kind);
   }
   return interpolatedValue(value, node.kind, "number.value");
 }

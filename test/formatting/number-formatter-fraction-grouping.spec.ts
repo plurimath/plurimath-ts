@@ -5,30 +5,12 @@
  * `number-formatter-fraction-side-grouping`
  * (`corpus/asciimath/number-formatting.yaml`).
  *
- * **Why this reads a fetched, not-yet-merged commit, and not just
- * `origin/...`.** `number-formatter-slice1.spec.ts`'s case (PR #17,
- * `33acd2fd`) is reachable in the pinned submodule's object store because it
- * is an ancestor of `plurimath-testsuite`'s `origin/main`, which a plain
- * `git submodule update --init` already fetches. This case is further out:
- * it lives on `plurimath-testsuite`'s `feat/fraction-grouping-oracle-case`
- * branch, not yet merged to that repository's main, so it is not an
- * ancestor of anything `origin` serves. The commit was made reachable here
- * with one local, read-only fetch from a sibling worktree that has the
- * branch checked out:
- *
- *   git -C submodules/plurimath-testsuite fetch \
- *     ~/ruby_gems/wt-testsuite-fraction-grouping feat/fraction-grouping-oracle-case
- *
- * That fetch adds objects to the submodule's local `.git` store without
- * moving its checked-out commit (`git -C submodules/plurimath-testsuite
- * status` still reports the pinned commit, no diff) — the same
- * read-but-never-move discipline `number-formatter-slice1.spec.ts` follows,
- * one step further from the pin. Once `feat/fraction-grouping-oracle-case`
- * merges upstream and a later change bumps the pin to include it, this
- * fetch step stops being necessary and this comment can be trimmed.
- *
- * The payload's bytes are verified against a recorded sha256 before
- * anything trusts them, same as `number-formatter-slice1.spec.ts`.
+ * This reads through `test/core/corpus-pin.ts`'s `loadPinnedCorpus()`, same
+ * as every other corpus-driven spec: the pin (`TODO.plan/cross-cutting.md`)
+ * now includes the `plurimath-testsuite` commit that merged this case
+ * (`feat/fraction-grouping-oracle-case` merged upstream, then folded into
+ * the same pin bump as PR #17's case) — no out-of-band `git show`/`git
+ * fetch` against a sibling worktree is needed.
  *
  * `expected.mathml` IS compared here, for the same reason as slice 1's
  * update: MathML's `formatter` support (the MathML/OMML number-formatting
@@ -38,8 +20,6 @@
  * against in this payload, so its `formatter` support stays deferred.
  */
 
-import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import type { ConstructedMathNode } from "../../src/core/nodes";
 import { toAsciimath } from "../../src/formats/asciimath/index";
@@ -47,48 +27,11 @@ import { toLatex } from "../../src/formats/latex/index";
 import { toMathml } from "../../src/formats/mathml/index";
 import { toUnicodemath } from "../../src/formats/unicodemath/index";
 import type { FormatterOptions } from "../../src/formatting/index";
-import { PINNED_CORPUS_ROOT } from "../core/corpus-pin";
-import { parseYaml, type YamlValue } from "../core/corpus-yaml";
+import { loadPinnedCorpus, type PinnedCallCase } from "../core/corpus-pin";
+import type { YamlValue } from "../core/corpus-yaml";
 import { aliasIndex, buildNode, readCensus, type SerializedNode } from "../core/model-builder";
 
-/**
- * `plurimath-testsuite`'s commit generating the fraction-grouping case, on
- * the not-yet-merged `feat/fraction-grouping-oracle-case` branch — fetched
- * into the submodule's object store per this file's header, not present on
- * `origin/main`.
- */
-const NUMBER_FORMATTING_COMMIT = "07bf58981dd0be9a2583df423a2478c03b315f4c";
-const PAYLOAD_PATH = "corpus/asciimath/number-formatting.yaml";
-/** `git -C submodules/plurimath-testsuite show <commit>:<path> | sha256sum`, recorded once. */
-const EXPECTED_SHA256 = "82c6cd611c6866ece165142880d44e713d739b29d3176e8a1beb5d52a6cc4058";
 const CASE_ID = "number-formatter-fraction-side-grouping";
-
-function readPayloadAtCommit(): string {
-  let text: string;
-  try {
-    text = execFileSync(
-      "git",
-      ["-C", PINNED_CORPUS_ROOT, "show", `${NUMBER_FORMATTING_COMMIT}:${PAYLOAD_PATH}`],
-      { encoding: "utf8" },
-    );
-  } catch (error) {
-    throw new Error(
-      `could not read ${PAYLOAD_PATH} at ${NUMBER_FORMATTING_COMMIT} from the ` +
-        `submodule checked out at ${PINNED_CORPUS_ROOT} — is the commit reachable there? ` +
-        "This file's header documents the one-time fetch needed: " +
-        `git -C ${PINNED_CORPUS_ROOT} fetch <path-to-the-oracle-branch-checkout> ` +
-        `feat/fraction-grouping-oracle-case. (${String(error)})`,
-    );
-  }
-  const digest = createHash("sha256").update(text, "utf8").digest("hex");
-  if (digest !== EXPECTED_SHA256) {
-    throw new Error(
-      `${PAYLOAD_PATH}@${NUMBER_FORMATTING_COMMIT}: sha256 ${digest}, expected ` +
-        `${EXPECTED_SHA256} — the recorded bytes have changed upstream.`,
-    );
-  }
-  return text;
-}
 
 type Mapping = { readonly [key: string]: YamlValue };
 
@@ -119,37 +62,23 @@ interface CallCase {
   readonly expected: ReadonlyMap<string, string>;
 }
 
-function readCallCase(text: string, caseId: string): CallCase {
-  const document = asMapping(parseYaml(text), PAYLOAD_PATH);
-  const schema = requireString(document, "schema", PAYLOAD_PATH);
-  if (schema !== "plurimath-corpus/calls/1") {
-    throw new Error(`${PAYLOAD_PATH}: schema is "${schema}", this spec knows "calls/1"`);
-  }
-  const targets = document.targets;
-  if (!Array.isArray(targets) || targets.length === 0) {
-    throw new Error(`${PAYLOAD_PATH}: "targets" is missing or empty`);
-  }
-
-  const cases = document.cases;
-  if (!Array.isArray(cases)) {
-    throw new Error(`${PAYLOAD_PATH}: "cases" is missing`);
-  }
-  const entries = cases
-    .map((entry) => asMapping(entry ?? null, `${PAYLOAD_PATH} cases[]`))
-    .filter((entry) => entry.id === caseId);
-  if (entries.length !== 1) {
+function findCase(caseId: string): PinnedCallCase {
+  const corpus = loadPinnedCorpus();
+  const found = corpus.calls.filter((entry) => entry.id === caseId);
+  if (found.length !== 1) {
     throw new Error(
-      `${PAYLOAD_PATH}: expected exactly one case with id "${caseId}", found ${entries.length}`,
+      `the pinned corpus: expected exactly one calls/1 case with id "${caseId}", found ${found.length}`,
     );
   }
-  const entry = entries[0] as Mapping;
-  const at = `${PAYLOAD_PATH} case ${caseId}`;
+  return found[0] as PinnedCallCase;
+}
 
-  const call = asMapping(entry.call ?? null, `${at} call`);
-  if (requireString(call, "method", `${at} call`) !== "number_formatter") {
+function reduceCallCase(entry: PinnedCallCase): CallCase {
+  const at = `calls/1 case ${entry.id}`;
+  if (entry.call.method !== "number_formatter") {
     throw new Error(`${at}: call.method is not "number_formatter"`);
   }
-  const args = asMapping(call.args ?? null, `${at} call.args`);
+  const args = asMapping(entry.call.args, `${at} call.args`);
   const locale = requireString(args, "locale", `${at} call.args`);
   const options = asMapping(args.options ?? null, `${at} call.args.options`);
   const formatter: FormatterOptions = {
@@ -169,14 +98,6 @@ function readCallCase(text: string, caseId: string): CallCase {
     stringFormat: null,
   };
 
-  const expectedMap = asMapping(entry.expected ?? null, `${at} expected`);
-  const expected = new Map<string, string>();
-  for (const target of targets) {
-    if (typeof target !== "string") continue;
-    const outcome = asMapping(expectedMap[target] ?? null, `${at} expected.${target}`);
-    expected.set(target, requireString(outcome, "output", `${at} expected.${target}`));
-  }
-
   const model = entry.model as unknown as SerializedNode;
   if (
     typeof model !== "object" ||
@@ -186,10 +107,10 @@ function readCallCase(text: string, caseId: string): CallCase {
     throw new Error(`${at}: "model" is not a serialized node`);
   }
 
-  return { id: caseId, formatter, model, expected };
+  return { id: entry.id, formatter, model, expected: entry.expected };
 }
 
-const CALL_CASE = readCallCase(readPayloadAtCommit(), CASE_ID);
+const CALL_CASE = reduceCallCase(findCase(CASE_ID));
 
 function buildFormula(): ConstructedMathNode {
   const census = readCensus();

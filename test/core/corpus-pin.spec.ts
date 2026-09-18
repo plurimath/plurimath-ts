@@ -179,10 +179,11 @@ function syntheticPin(options: SyntheticOptions = {}): string {
  * green"; the proof that it is load-bearing is at the end of this file.
  *
  * Paths, not group names. A group name is unique only within one input format,
- * and the corpus now carries two: `fences`, `numbers`, `operators` and
- * `symbols` each name an AsciiMath group AND a LaTeX one. A list of bare names
- * would have said "fences" twice and identified neither, so losing the LaTeX
- * one while keeping the AsciiMath one would still have matched.
+ * and the corpus now carries three: `fences`, `numbers`, `operators` and
+ * `symbols` each name an AsciiMath group, a LaTeX one, AND a Unicode one. A
+ * list of bare names would have said "fences" three times and identified
+ * none of them, so losing the Unicode one while keeping the other two would
+ * still have matched.
  */
 const EXPECTED_PAYLOADS = [
   "asciimath/colour.yaml",
@@ -222,6 +223,10 @@ const EXPECTED_PAYLOADS = [
   "latex/symbols.yaml",
   "latex/unary-functions.yaml",
   "latex/whitespace.yaml",
+  "unicode/fences.yaml",
+  "unicode/numbers.yaml",
+  "unicode/operators.yaml",
+  "unicode/symbols.yaml",
 ];
 
 /**
@@ -239,26 +244,38 @@ describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every payload the provenance records, matched by path", () => {
-    // 37 case payloads (19 AsciiMath, 18 LaTeX) and 2 rejection payloads, one
-    // per input format. Counted apart on purpose: a rejection payload carries
-    // no rendering, so folding it into the case count would inflate what "the
-    // corpus covers" claims.
-    expect(corpus.payloads.length).toBe(37);
+    // 41 case payloads (19 AsciiMath, 18 LaTeX, 4 Unicode), 2 rejection
+    // payloads (one per input format that carries rejections), and 1 calls/1
+    // payload. Counted apart on purpose: a rejection payload carries no
+    // rendering and a calls payload carries a render under something other
+    // than default options, so folding either into the case count would
+    // inflate what "the corpus covers" claims.
+    expect(corpus.payloads.length).toBe(41);
     expect(corpus.rejectionPayloads.length).toBe(2);
-    expect(corpus.provenance.payloads.length).toBe(39);
+    expect(corpus.callsPayloads.length).toBe(1);
+    expect(corpus.provenance.payloads.length).toBe(44);
     assertExpectedPayloads(corpus);
   });
 
-  it("carries 217 cases with distinct ids", () => {
-    expect(corpus.cases.length).toBe(217);
-    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(217);
+  it("carries 237 cases with distinct ids", () => {
+    expect(corpus.cases.length).toBe(237);
+    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(237);
   });
 
-  it("carries both input formats, and says which cases are which", () => {
-    // The pin's headline change: a second input notation. Counted per format,
-    // because the whole point of the round-trip scoping below is that these two
-    // numbers are different, and a corpus that quietly lost its LaTeX half
-    // would otherwise only show up as a total that still looked large.
+  it("carries 2 calls/1 cases, both number_formatter, with distinct ids", () => {
+    expect(corpus.calls.length).toBe(2);
+    expect(new Set(corpus.calls.map((entry) => entry.id)).size).toBe(2);
+    for (const entry of corpus.calls) {
+      expect(entry.call.method).toBe("number_formatter");
+    }
+  });
+
+  it("carries all three input formats, and says which cases are which", () => {
+    // The pin's headline changes: a second input notation (LaTeX), and now a
+    // third (Unicode). Counted per format, because the whole point of the
+    // round-trip scoping below is that these numbers are different, and a
+    // corpus that quietly lost one format's half would otherwise only show up
+    // as a total that still looked large.
     const byFormat = new Map<string, number>();
     for (const entry of corpus.cases) {
       byFormat.set(entry.inputFormat, (byFormat.get(entry.inputFormat) ?? 0) + 1);
@@ -266,11 +283,12 @@ describe("the pin as shipped", () => {
     expect([...byFormat.entries()].sort()).toStrictEqual([
       ["asciimath", 92],
       ["latex", 125],
+      ["unicode", 20],
     ]);
-    // The rejections carry both notations too, and are counted per format for
-    // the same reason. This is what makes scoping the rejection suites
-    // load-bearing: each parser may only be handed the cases written in the
-    // notation it reads (`test/formats/*/rejection-parity.spec.ts`).
+    // The rejections carry only two of the three notations, and are counted
+    // per format for the same reason. This is what makes scoping the
+    // rejection suites load-bearing: each parser may only be handed the cases
+    // written in the notation it reads (`test/formats/*/rejection-parity.spec.ts`).
     const rejectionsByFormat = new Map<string, number>();
     for (const entry of corpus.rejections) {
       rejectionsByFormat.set(
@@ -330,7 +348,7 @@ describe("what this port checks against", () => {
     // shared corpus has no case to withhold — only the valid one is in the pin.
     expect(inPin).toStrictEqual(["text-unitsml-valid"]);
     expect(readCorpusCases().length).toBe(corpus.cases.length - inPin.length);
-    expect(readCorpusCases().length).toBe(216);
+    expect(readCorpusCases().length).toBe(236);
   });
 
   it("names the deferred feature and cites the architecture note", () => {
@@ -613,10 +631,10 @@ describe("a pin that quietly loses a group", () => {
   );
 
   it("loads without complaint, which is the whole problem", () => {
-    // The shipped 37 payloads less the one removed, and the shipped 217 cases
+    // The shipped 41 payloads less the one removed, and the shipped 237 cases
     // less the six `asciimath/frac.yaml` carries.
-    expect(shrunk.payloads.length).toBe(36);
-    expect(shrunk.cases.length).toBe(211);
+    expect(shrunk.payloads.length).toBe(40);
+    expect(shrunk.cases.length).toBe(231);
     expect(shrunk.payloads.map((payload) => payload.path)).not.toContain("asciimath/frac.yaml");
   });
 

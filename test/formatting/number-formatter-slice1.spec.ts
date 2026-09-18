@@ -4,26 +4,11 @@
  * `calls/1` oracle case (PR #17, `corpus/asciimath/number-formatting.yaml`,
  * case `number-formatter-de-style-grouping`).
  *
- * **Why this does not go through `test/core/corpus-pin.ts`.** That reader
- * knows three payload schemas — `plurimath-corpus/<format>/1`,
- * `.../<format>/2`, and `.../rejections/1` — and throws on anything else, by
- * design (`loadPinnedCorpus`'s "an unknown kind stops the load"). `calls/1`
- * is a fourth kind, added by the same PR this case comes from, and the
- * submodule commit this repository pins (`TODO.plan/cross-cutting.md`,
- * `281d7003`) predates that PR's merge commit (`33acd2fd`). Bumping the
- * pin to include it would change what every OTHER corpus-driven suite in
- * this repository loads and verifies against `corpus/provenance.yaml` — the
- * hardcoded payload/case counts in `test/core/corpus-pin.spec.ts` among
- * them — which is out of scope for this slice.
- *
- * So this spec reads the one payload directly: `git show` against the
- * ALREADY-INITIALISED submodule's local object store, at the known merge
- * commit — read-only, and it never moves the submodule's checkout off its
- * pinned commit. `33acd2fd` is reachable there because it is an ancestor of
- * `origin/main`, which a plain `git submodule update --init` fetches
- * alongside the pinned commit. The payload's bytes are then verified against
- * a recorded sha256 before anything trusts them, the same "verify, don't
- * just read" discipline `corpus-pin.ts` applies to the payloads it owns.
+ * This reads through `test/core/corpus-pin.ts`'s `loadPinnedCorpus()`, same
+ * as every other corpus-driven spec: the pin (`TODO.plan/cross-cutting.md`)
+ * now includes the `plurimath-testsuite` commit that added the `calls/1`
+ * schema, and `corpus-pin.ts` reads that schema as first-class data — no
+ * out-of-band `git show` against the submodule's object store is needed.
  *
  * `expected.mathml` IS compared here (`src/formats/mathml/renderer.ts`'s
  * `formatter` is implemented as of the MathML/OMML number-formatting slice,
@@ -35,8 +20,6 @@
  * carries an OMML expectation.
  */
 
-import { execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import type { ConstructedMathNode } from "../../src/core/nodes";
 import { toAsciimath } from "../../src/formats/asciimath/index";
@@ -44,40 +27,11 @@ import { toLatex } from "../../src/formats/latex/index";
 import { toMathml } from "../../src/formats/mathml/index";
 import { toUnicodemath } from "../../src/formats/unicodemath/index";
 import type { FormatterOptions } from "../../src/formatting/index";
-import { PINNED_CORPUS_ROOT } from "../core/corpus-pin";
-import { parseYaml, type YamlValue } from "../core/corpus-yaml";
+import { loadPinnedCorpus, type PinnedCallCase } from "../core/corpus-pin";
+import type { YamlValue } from "../core/corpus-yaml";
 import { aliasIndex, buildNode, readCensus, type SerializedNode } from "../core/model-builder";
 
-/** `plurimath-testsuite`'s merge commit for PR #17 (`plurimath/plurimath-testsuite#17`). */
-const NUMBER_FORMATTING_COMMIT = "33acd2fd1f4653ebb1a541b95aaef0bc9dd9f92a";
-const PAYLOAD_PATH = "corpus/asciimath/number-formatting.yaml";
-/** `git -C submodules/plurimath-testsuite show <commit>:<path> | sha256sum`, recorded once. */
-const EXPECTED_SHA256 = "d01a37e70eb066508636c6a1ab77de4ed5b08b6422acfc9fca8c4013a68d689e";
-
-function readPayloadAtCommit(): string {
-  let text: string;
-  try {
-    text = execFileSync(
-      "git",
-      ["-C", PINNED_CORPUS_ROOT, "show", `${NUMBER_FORMATTING_COMMIT}:${PAYLOAD_PATH}`],
-      { encoding: "utf8" },
-    );
-  } catch (error) {
-    throw new Error(
-      `could not read ${PAYLOAD_PATH} at ${NUMBER_FORMATTING_COMMIT} from the ` +
-        `submodule checked out at ${PINNED_CORPUS_ROOT} — is the commit reachable there? ` +
-        `Run: git -C ${PINNED_CORPUS_ROOT} fetch origin. (${String(error)})`,
-    );
-  }
-  const digest = createHash("sha256").update(text, "utf8").digest("hex");
-  if (digest !== EXPECTED_SHA256) {
-    throw new Error(
-      `${PAYLOAD_PATH}@${NUMBER_FORMATTING_COMMIT}: sha256 ${digest}, expected ` +
-        `${EXPECTED_SHA256} — the recorded bytes have changed upstream.`,
-    );
-  }
-  return text;
-}
+const CASE_ID = "number-formatter-de-style-grouping";
 
 type Mapping = { readonly [key: string]: YamlValue };
 
@@ -100,7 +54,7 @@ function requireNumber(map: Mapping, key: string, where: string): number {
   return value;
 }
 
-/** The one case this payload carries, reduced to what this spec renders and checks. */
+/** The one case this spec renders and checks, reduced from the pinned `calls/1` case. */
 interface CallCase {
   readonly id: string;
   readonly formatter: FormatterOptions;
@@ -108,33 +62,23 @@ interface CallCase {
   readonly expected: ReadonlyMap<string, string>;
 }
 
-function readCallCase(text: string): CallCase {
-  const document = asMapping(parseYaml(text), PAYLOAD_PATH);
-  const schema = requireString(document, "schema", PAYLOAD_PATH);
-  if (schema !== "plurimath-corpus/calls/1") {
-    throw new Error(`${PAYLOAD_PATH}: schema is "${schema}", this spec knows "calls/1"`);
-  }
-  const targets = document.targets;
-  if (!Array.isArray(targets) || targets.length === 0) {
-    throw new Error(`${PAYLOAD_PATH}: "targets" is missing or empty`);
-  }
-
-  const cases = document.cases;
-  if (!Array.isArray(cases) || cases.length !== 1) {
+function findCase(caseId: string): PinnedCallCase {
+  const corpus = loadPinnedCorpus();
+  const found = corpus.calls.filter((entry) => entry.id === caseId);
+  if (found.length !== 1) {
     throw new Error(
-      `${PAYLOAD_PATH}: expected exactly one case (this spec has not measured a second), ` +
-        `found ${Array.isArray(cases) ? cases.length : "none"}`,
+      `the pinned corpus: expected exactly one calls/1 case with id "${caseId}", found ${found.length}`,
     );
   }
-  const entry = asMapping(cases[0] ?? null, `${PAYLOAD_PATH} cases[0]`);
-  const id = requireString(entry, "id", `${PAYLOAD_PATH} cases[0]`);
-  const at = `${PAYLOAD_PATH} case ${id}`;
+  return found[0] as PinnedCallCase;
+}
 
-  const call = asMapping(entry.call ?? null, `${at} call`);
-  if (requireString(call, "method", `${at} call`) !== "number_formatter") {
+function reduceCallCase(entry: PinnedCallCase): CallCase {
+  const at = `calls/1 case ${entry.id}`;
+  if (entry.call.method !== "number_formatter") {
     throw new Error(`${at}: call.method is not "number_formatter"`);
   }
-  const args = asMapping(call.args ?? null, `${at} call.args`);
+  const args = asMapping(entry.call.args, `${at} call.args`);
   const locale = requireString(args, "locale", `${at} call.args`);
   const options = asMapping(args.options ?? null, `${at} call.args.options`);
   const formatter: FormatterOptions = {
@@ -155,14 +99,6 @@ function readCallCase(text: string): CallCase {
     stringFormat: null,
   };
 
-  const expectedMap = asMapping(entry.expected ?? null, `${at} expected`);
-  const expected = new Map<string, string>();
-  for (const target of targets) {
-    if (typeof target !== "string") continue;
-    const outcome = asMapping(expectedMap[target] ?? null, `${at} expected.${target}`);
-    expected.set(target, requireString(outcome, "output", `${at} expected.${target}`));
-  }
-
   const model = entry.model as unknown as SerializedNode;
   if (
     typeof model !== "object" ||
@@ -172,10 +108,10 @@ function readCallCase(text: string): CallCase {
     throw new Error(`${at}: "model" is not a serialized node`);
   }
 
-  return { id, formatter, model, expected };
+  return { id: entry.id, formatter, model, expected: entry.expected };
 }
 
-const CALL_CASE = readCallCase(readPayloadAtCommit());
+const CALL_CASE = reduceCallCase(findCase(CASE_ID));
 
 function buildFormula(): ConstructedMathNode {
   const census = readCensus();

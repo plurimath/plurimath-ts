@@ -708,6 +708,17 @@ module CorpusGenerator
     cases
   end
 
+  # A `plurimath-corpus/calls/1` payload's cases record `Formula#to_<target>`
+  # invoked WITH a non-default option (`formatter:` today) — their
+  # `expected.<target>` values are what the gem produced from a FORMATTED
+  # call, not a plain parse-then-render. Every consumer of `read_pin_cases`
+  # (this port's four fixture generators) treats every case it returns as an
+  # ordinary plain-render round-trip input; feeding a formatted-number string
+  # like `"1.123_456_789"` back through a parser as if it were a genuine
+  # input is not a claim any of those generators mean to make. Skipped here,
+  # at the shared source, rather than in each of the four call sites.
+  CALLS_SCHEMA = "plurimath-corpus/calls/1"
+
   def read_pin_payload(entry)
     path = File.join(pin_root, "corpus", entry.fetch("path"))
     missing_pin!("#{path} is listed in corpus/provenance.yaml but is not on disk") unless
@@ -721,6 +732,8 @@ module CorpusGenerator
     end
 
     document = YAML.safe_load(bytes, aliases: false)
+    return [] if document["schema"] == CALLS_SCHEMA
+
     group = document["group"]
     raise Error, "#{path} declares no group" if group.nil? || group.empty?
 

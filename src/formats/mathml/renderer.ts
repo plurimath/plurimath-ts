@@ -26,8 +26,9 @@
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { assertKnownOptions } from "../../core/render-options";
+import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
 import { dumpNodes, XmlElement } from "../../xml/index";
-import { NO_SPACING_CONTEXT, SPACING_CONTEXT } from "./render";
+import { createRenderContext, NO_SPACING_CONTEXT, SPACING_CONTEXT } from "./render";
 import {
   deferredFeatureError,
   FORMAT,
@@ -37,13 +38,15 @@ import {
 } from "./render-shared";
 
 /**
- * Renderer options, typed exactly (§5): the two implemented axes. The
- * deferred `to_mathml` keywords — `formatter`, `intent`, `unitsml`,
- * `split_on_linebreak` — are deliberately NOT in this type; passing one
- * (any value but `undefined`) is a named `RenderError` at runtime
- * (`TODO.plan/deferred.md` carries each entry and its trigger). A key that is
- * neither — one `to_mathml` has no keyword for at all — is refused by name
- * too, at the entry (`ACCEPTED_OPTIONS` below).
+ * Renderer options, typed exactly (§5): the three implemented axes
+ * (`formatter` joins `displayStyle`/`unaryFunctionSpacing` here, B2's Number
+ * formatting slice — TODO.plan/feature-roadmap.md). The still-deferred
+ * `to_mathml` keywords — `intent`, `unitsml`, `split_on_linebreak` — are
+ * deliberately NOT in this type; passing one (any value but `undefined`) is a
+ * named `RenderError` at runtime (`TODO.plan/deferred.md` carries each entry
+ * and its trigger). A key that is neither — one `to_mathml` has no keyword
+ * for at all — is refused by name too, at the entry (`ACCEPTED_OPTIONS`
+ * below).
  */
 export interface MathmlOptions {
   /**
@@ -60,6 +63,14 @@ export interface MathmlOptions {
    * turns the spacing off (probed).
    */
   readonly unaryFunctionSpacing?: boolean | null | undefined;
+  /**
+   * `Formatter::Standard`'s default-symbol behavior only, resolved by
+   * `resolveNumberFormat` (`../../formatting/number-format.ts`), which itself
+   * refuses by name every field of the gem's `formatter:` keyword B2's build
+   * order has not reached yet — the html/asciimath/latex/unicodemath
+   * renderers' own field, added here in the same shape.
+   */
+  readonly formatter?: FormatterOptions | null;
 }
 
 /**
@@ -72,25 +83,26 @@ export interface MathmlOptions {
 const IMPLEMENTED_OPTIONS: { readonly [K in keyof Required<MathmlOptions>]: null } = {
   displayStyle: null,
   unaryFunctionSpacing: null,
+  formatter: null,
 };
 
-/** The deferred `to_mathml` keywords, each refused by name when present. */
+/** The still-deferred `to_mathml` keywords, each refused by name when present. */
 const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
-  ["formatter", "number formatting is P4 scope; only the no-formatter path is measured"],
   ["intent", "the intent attribute pipeline (intentify, intent post-processing) is unmeasured"],
   ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md §5)"],
   ["splitOnLinebreak", "line_breaked_mathml renders one <math> per line-broken slice; unmeasured"],
 ];
 
 /**
- * Every option key this entry accepts: the two implemented axes plus the four
- * deferred keywords. The deferred names belong here because `to_mathml` really
- * does take them — `intent:`, `formatter:`, `unitsml:`, `split_on_linebreak:`
- * are four of its six keywords (formula.rb:76-83 on the pinned oracle) — so
- * "unknown option" would be the wrong thing to say about one. They are
- * recognised, then refused by name with the reason, a few lines further down.
- * Anything outside this list is a keyword `to_mathml` does not have either,
- * and is refused as unknown at the entry.
+ * Every option key this entry accepts: the three implemented axes plus the
+ * three still-deferred keywords. The deferred names belong here because
+ * `to_mathml` really does take them — `intent:`, `unitsml:`,
+ * `split_on_linebreak:` are three of its six keywords (formula.rb:76-83 on
+ * the pinned oracle; `formatter:` moved from this list to `IMPLEMENTED_OPTIONS`
+ * above) — so "unknown option" would be the wrong thing to say about one. They
+ * are recognised, then refused by name with the reason, a few lines further
+ * down. Anything outside this list is a keyword `to_mathml` does not have
+ * either, and is refused as unknown at the entry.
  */
 const ACCEPTED_OPTIONS: readonly string[] = [
   ...Object.keys(IMPLEMENTED_OPTIONS),
@@ -115,6 +127,7 @@ export function toMathml(node: MathNode, options?: MathmlOptions | null): string
   assertMathNodeShape(node, FORMAT);
   const opts: Record<string, unknown> =
     options === null || options === undefined ? {} : (options as Record<string, unknown>);
+  const numberFormat = resolveNumberFormat(options?.formatter, FORMAT);
   try {
     // Inside the wrap: reading a hostile options object (a Proxy trap, a
     // throwing getter) must surface as RenderError, never raw.
@@ -123,7 +136,7 @@ export function toMathml(node: MathNode, options?: MathmlOptions | null): string
         throw deferredFeatureError(name, detail, "formula");
       }
     }
-    return renderMath(node, opts);
+    return renderMath(node, opts, numberFormat);
   } catch (error) {
     // The boundary split is the asciimath renderer's, verbatim: this walk's
     // own surfaces pass through — `RenderError` (the §5 contract) and the
@@ -141,7 +154,11 @@ export function toMathml(node: MathNode, options?: MathmlOptions | null): string
   }
 }
 
-function renderMath(node: MathNode, opts: Record<string, unknown>): string {
+function renderMath(
+  node: MathNode,
+  opts: Record<string, unknown>,
+  numberFormat: ReturnType<typeof resolveNumberFormat>,
+): string {
   // `to_mathml` lives on Formula alone; Mrow (and the Mstyle name) inherit
   // it. Every other node kind raises NoMethodError in the gem.
   if (node.kind !== "formula" && node.kind !== "mrow") {
@@ -161,7 +178,12 @@ function renderMath(node: MathNode, opts: Record<string, unknown>): string {
     : undefined;
   const spacing =
     spacingValue === undefined ? true : spacingValue !== null && spacingValue !== false; // Ruby truthiness; nil compacts away
-  const context = spacing ? SPACING_CONTEXT : NO_SPACING_CONTEXT;
+  const context =
+    numberFormat === null
+      ? spacing
+        ? SPACING_CONTEXT
+        : NO_SPACING_CONTEXT
+      : createRenderContext(spacing, numberFormat);
 
   const displayValue = Object.hasOwn(opts, "displayStyle")
     ? opts.displayStyle

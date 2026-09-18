@@ -25,9 +25,25 @@ import {
 import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS, rubyClassName } from "../../core/normalize";
 import { assertReproducibleRubyHashOrder } from "../../core/ruby-semantics";
+import type { NumberFormat } from "../../formatting/index";
 import { XmlElement } from "../../xml/index";
 
 export const FORMAT = "mathml";
+
+/**
+ * Re-exported for `../../render/number/mathml.ts`. A kind file may import
+ * only its own format's `render-shared.ts`, never `formatting` directly
+ * (`.dependency-cruiser.cjs`, "render-kind-file-imports-allowed-set-only"),
+ * so the two helpers B2's number-formatting slices add live in `formatting/
+ * number-format.ts` and pass through here — the html render-shared.ts
+ * counterpart, verbatim.
+ */
+export type { NumberFormat } from "../../formatting/index";
+export {
+  applyNumberFormat,
+  isPlainFormattableNumber,
+  refuseNonNumericUnderFormatter,
+} from "../../formatting/index";
 
 /**
  * What one `to_mathml_without_math_tag` answers. Almost always an
@@ -46,15 +62,22 @@ export type MathmlRendered = XmlElement | string | null | MathmlRenderedList;
 export type MathmlRenderedList = readonly MathmlRendered[];
 
 /**
- * The render context. The one axis the mathml walk reads is
- * `options[:unary_function_spacing]` (unary_function.rb:48), fixed for a
- * whole render by `Formula#to_mathml`'s keyword — nothing derives a child
+ * The render context. Two axes the mathml walk reads, both fixed for a
+ * whole render by `Formula#to_mathml`'s keywords — nothing derives a child
  * context on this path (the `table:` merge is `Td`'s ASCIIMATH move;
- * `Td#to_mathml_without_math_tag` threads options through unchanged).
+ * `Td#to_mathml_without_math_tag` threads options through unchanged):
+ *
+ *   - `options[:unary_function_spacing]` (unary_function.rb:48);
+ *   - `numberFormat`, B2's `formatter:` slice: `null` with no `formatter:`
+ *     option (a `Number` renders its raw value, exactly as the whole pinned
+ *     corpus was generated), or the resolved decimal/group symbols
+ *     (`../../formatting/number-format.ts`) — the html context's own axis,
+ *     added here in the same shape.
  */
 export interface RenderContext {
   /** Ruby truthiness of `options[:unary_function_spacing]`, default true. */
   readonly unaryFunctionSpacing: boolean;
+  readonly numberFormat: NumberFormat | null;
   /**
    * `child.to_mathml_without_math_tag(intent, options:)` — looks the child's
    * kind up in the render table (`./render.ts`) and renders it under THIS

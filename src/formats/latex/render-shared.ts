@@ -23,19 +23,38 @@ import {
   RenderError,
 } from "../../core/index";
 import { NODE_SPECS } from "../../core/normalize";
+import type { NumberFormat } from "../../formatting/index";
 import { LATEX_PLAIN_WRAPPED_UNARY_NAMES } from "../../generated/latex/render-tables";
 
 export const FORMAT = "latex";
 
 /**
- * The render context. LaTeX rendering has NO option axis: the generated
- * exception matrix (`src/generated/latex/exceptions.ts`) is empty — no symbol
- * varies on any manifested axis — so unlike the asciimath context there is no
- * axis member and no derivation here, only the recursive dispatcher.
- * `test/formats/latex/renderer.spec.ts` pins that emptiness so a regeneration
- * that introduces variants fails loudly.
+ * Re-exported for `../../render/number/latex.ts`. A kind file may import only
+ * its own format's `render-shared.ts`, never `formatting` directly
+ * (`.dependency-cruiser.cjs`, "render-kind-file-imports-allowed-set-only"),
+ * so the two helpers B2's first slice adds live in `formatting/
+ * number-format.ts` and pass through here.
+ */
+export type { NumberFormat } from "../../formatting/index";
+export {
+  applyNumberFormat,
+  isPlainFormattableNumber,
+  refuseNonNumericUnderFormatter,
+} from "../../formatting/index";
+
+/**
+ * The render context. LaTeX rendering has no manifested EXCEPTION axis: the
+ * generated exception matrix (`src/generated/latex/exceptions.ts`) is empty —
+ * no symbol varies on any manifested axis. `numberFormat` is a real axis all
+ * the same, added for B2's first slice: `null` with no `formatter:` option (a
+ * `Number` renders its raw value, exactly as the whole pinned corpus was
+ * generated), or the resolved decimal/group symbols
+ * (`../../formatting/number-format.ts`).
+ * `test/formats/latex/renderer.spec.ts` pins the exception matrix's emptiness
+ * so a regeneration that introduces variants fails loudly.
  */
 export interface RenderContext {
+  readonly numberFormat: NumberFormat | null;
   /**
    * `child.to_latex(options:)` — looks the child's kind up in the render
    * table (`./render.ts`) and renders it under THIS context. Returns `null`

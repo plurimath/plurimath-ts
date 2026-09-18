@@ -23,18 +23,37 @@ import {
   RenderError,
 } from "../../core/index";
 import { NODE_SPECS } from "../../core/normalize";
+import type { NumberFormat } from "../../formatting/index";
 
 export const FORMAT = "asciimath";
 
 /**
- * The render context. `table` is the one option axis the gem's asciimath path
+ * Re-exported for `../../render/number/asciimath.ts`. A kind file may import
+ * only its own format's `render-shared.ts`, never `formatting` directly
+ * (`.dependency-cruiser.cjs`, "render-kind-file-imports-allowed-set-only"),
+ * so the two helpers B2's first slice adds live in `formatting/
+ * number-format.ts` and pass through here.
+ */
+export type { NumberFormat } from "../../formatting/index";
+export {
+  applyNumberFormat,
+  isPlainFormattableNumber,
+  refuseNonNumericUnderFormatter,
+} from "../../formatting/index";
+
+/**
+ * The render context. `table` is one option axis the gem's asciimath path
  * reads — `Td` merges `table: true` into the options when rendering a
  * *formula* child, and `Symbols::Comma` alone reads it (`","` instead of `,`).
  * That axis and its variants come from the generated exception matrix, not
- * from code here.
+ * from code here. `numberFormat` is the other: `null` with no `formatter:`
+ * option (a `Number` renders its raw value, exactly as the pinned corpus was
+ * generated), or the resolved decimal/group symbols B2's first slice
+ * implements (`../../formatting/number-format.ts`).
  */
 export interface RenderContext {
   readonly table: boolean;
+  readonly numberFormat: NumberFormat | null;
   /**
    * `child.to_asciimath(options:)` — looks the child's kind up in the render
    * table (`./render.ts`) and renders it under THIS context. Returns `null`

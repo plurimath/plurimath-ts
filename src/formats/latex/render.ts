@@ -46,7 +46,7 @@ import { renderUl } from "../../render/ul/latex";
 import { renderUnaryFunction } from "../../render/unary-function/latex";
 import { renderUnderset } from "../../render/underset/latex";
 import { renderVec } from "../../render/vec/latex";
-import { FORMAT, type RenderContext, type RenderFn } from "./render-shared";
+import { FORMAT, type NumberFormat, type RenderContext, type RenderFn } from "./render-shared";
 
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   abs: renderAbs,
@@ -122,14 +122,23 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
 }
 
 /**
- * The one context value the latex path ever holds — LaTeX rendering has no
- * option axis (the generated exception matrix is empty; `./render-shared.ts`), so
- * there is nothing to derive. It carries the dispatcher bound to itself,
- * which is how recursion reaches the table without any kind file importing
- * it. Where `Formula#to_latex` starts.
+ * Builds the one context value the latex path holds for a given
+ * `numberFormat` — the generated exception matrix is otherwise empty
+ * (`./render-shared.ts`), so `numberFormat` is the only thing to derive. It
+ * carries the dispatcher bound to itself, which is how recursion reaches the
+ * table without any kind file importing it. `toLatex` (`./renderer.ts`)
+ * calls this once per render with whatever `resolveNumberFormat` answered for
+ * the per-call `formatter:` option.
  */
-export const ROOT_CONTEXT: RenderContext = {
-  render(node) {
-    return renderNode(node, ROOT_CONTEXT);
-  },
-};
+export function createRenderContext(numberFormat: NumberFormat | null): RenderContext {
+  const context: RenderContext = {
+    numberFormat,
+    render(node) {
+      return renderNode(node, context);
+    },
+  };
+  return context;
+}
+
+/** Where `Formula#to_latex` starts with no `formatter:` option — the common case. */
+export const ROOT_CONTEXT: RenderContext = createRenderContext(null);

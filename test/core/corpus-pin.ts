@@ -56,6 +56,17 @@ export const SUBMODULE_FIX = "git submodule update --init --recursive";
 const PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
 const MANIFEST_SCHEMA = "plurimath-corpus/manifest/2";
 const REJECTIONS_SCHEMA = "plurimath-corpus/rejections/1";
+const CALLS_SCHEMA = "plurimath-corpus/calls/1";
+
+/**
+ * `call.method` values `calls/1` currently declares (`schema/calls.json`).
+ * Narrow on purpose, exactly as `ERROR_CATEGORIES` is: the schema's own
+ * description names five more call kinds a later schema version will add
+ * (`intent`, `split_on_linebreak`, `display_style`, `to_display`, `evaluate`),
+ * so a method this reader has not been taught stops the load rather than
+ * being carried through as though its shape were already agreed.
+ */
+const CALL_METHODS: readonly string[] = ["number_formatter"];
 
 /**
  * The input formats a case payload's schema may name.
@@ -204,6 +215,51 @@ export interface PinnedRejectionPayload {
   readonly cases: readonly PinnedRejection[];
 }
 
+/**
+ * What a `calls/1` case invoked, beyond a plain parse-then-render. `method`
+ * names the kind of call (see `CALL_METHODS`); `args` is deliberately
+ * free-form, exactly as the schema declares it — the gem's own keyword names
+ * for whichever call kind `method` is, not independently invented ones.
+ */
+export interface PinnedCall {
+  readonly method: string;
+  /**
+   * Free-form, per the schema's own description (`schema/calls.json`): the
+   * gem's own keyword names for whichever call kind `method` is, not typed
+   * further here for the same reason `PinnedCase.model` is left as
+   * `YamlValue` — a consumer narrows the shape it expects for the one
+   * `method` it reads.
+   */
+  readonly args: YamlValue;
+}
+
+/**
+ * One case from a `calls/1` payload: structurally `PinnedCase` plus `call`,
+ * because a call case is a render case under something other than default
+ * options, and every other field means what it means there (see `PinnedCase`
+ * for `expected`/`refusals`).
+ */
+export interface PinnedCallCase {
+  readonly id: string;
+  readonly group: string;
+  readonly input: string;
+  readonly inputFormat: string;
+  readonly preprocessed: string;
+  readonly call: PinnedCall;
+  readonly expected: ReadonlyMap<string, string>;
+  readonly refusals: ReadonlyMap<string, string>;
+  readonly parseTree: YamlValue;
+  readonly model: YamlValue;
+}
+
+export interface PinnedCallsPayload {
+  readonly path: string;
+  readonly group: string;
+  readonly inputFormat: string;
+  readonly targets: readonly string[];
+  readonly cases: readonly PinnedCallCase[];
+}
+
 export interface PinnedCorpus {
   readonly root: string;
   readonly provenance: PinProvenance;
@@ -212,6 +268,9 @@ export interface PinnedCorpus {
   /** Rejection payloads, kept apart because they have no rendering at all. */
   readonly rejectionPayloads: readonly PinnedRejectionPayload[];
   readonly rejections: readonly PinnedRejection[];
+  /** `calls/1` payloads, kept apart because they carry a `call` no other kind has. */
+  readonly callsPayloads: readonly PinnedCallsPayload[];
+  readonly calls: readonly PinnedCallCase[];
 }
 
 type Mapping = { readonly [key: string]: YamlValue };
@@ -677,6 +736,106 @@ function readRejectionPayload(
 }
 
 /**
+ * Reads a case's `call` field. `method` is checked against `CALL_METHODS`
+ * rather than accepted as any string, for the same reason `ERROR_CATEGORIES`
+ * is checked: a method this reader has not been taught is a shape nothing
+ * here has agreed to interpret, so it stops the load instead of being handed
+ * to a caller as though it meant something known.
+ */
+function readCall(value: YamlValue, where: string): PinnedCall {
+  const call = asMapping(value, where);
+  const method = requiredString(call, "method", where);
+  if (!CALL_METHODS.includes(method)) {
+    throw new Error(
+      `${where}: call.method is "${method}", this reader knows ` +
+        `${CALL_METHODS.map((known) => `"${known}"`).join(", ")}.`,
+    );
+  }
+  const args = asMapping(requiredPresent(call, "args", where), `${where} args`);
+  return { method, args };
+}
+
+/**
+ * A `calls/1` payload: a group of cases recording `Formula#to_<target>`
+ * invoked with a non-default option. Its envelope and `expected` shape are
+ * exactly `readPayload`'s `cases/2` handling — an outcome is a render or a
+ * refusal, and `assertTargetCoverage` applies unchanged — with one addition,
+ * `call`, which is what varies within one payload instead of the input's own
+ * notation.
+ */
+function readCallsPayload(
+  record: PayloadRecord,
+  document: Mapping,
+  path: string,
+): PinnedCallsPayload {
+  const group = requiredString(document, "group", path);
+  const stem = record.path.slice(record.path.lastIndexOf("/") + 1).replace(/\.yaml$/, "");
+  if (group !== stem) {
+    throw new Error(`${path}: group is "${group}" but the file is named "${stem}.yaml".`);
+  }
+
+  const inputFormat = requiredString(document, "input_format", path);
+
+  const targets = requiredSequence(document, "targets", path).map((target, index) => {
+    if (typeof target !== "string" || target === "") {
+      throw new Error(`${path}: targets[${index}] is not a format name`);
+    }
+    return target;
+  });
+  if (targets.length === 0) throw new Error(`${path}: "targets" is empty`);
+
+  const entries = requiredSequence(document, "cases", path);
+  if (entries.length === 0) throw new Error(`${path}: "cases" is empty; the group has no cases.`);
+
+  const cases = entries.map((entry, index) => {
+    const where = `${path} cases[${index}]`;
+    const caseRecord = asMapping(entry, where);
+    const id = requiredString(caseRecord, "id", where);
+    const at = `${path} case ${id}`;
+    const expectedMap = asMapping(requiredPresent(caseRecord, "expected", at), `${at} expected`);
+    const rendered = new Map<string, string>();
+    const refused = new Map<string, string>();
+    for (const target of Object.keys(expectedMap)) {
+      const outcome = readOutcome(expectedMap[target] ?? null, 2, `${at} expected.${target}`);
+      if ("rendered" in outcome) rendered.set(target, outcome.rendered);
+      else refused.set(target, outcome.category);
+    }
+    assertTargetCoverage(at, targets, rendered, refused);
+
+    const expected = new Map<string, string>();
+    const refusals = new Map<string, string>();
+    for (const target of targets) {
+      const output = rendered.get(target);
+      if (output !== undefined) expected.set(target, output);
+      const category = refused.get(target);
+      if (category !== undefined) refusals.set(target, category);
+    }
+
+    const caseFormat = requiredString(caseRecord, "input_format", at);
+    if (caseFormat !== inputFormat) {
+      throw new Error(
+        `${at}: input_format is "${caseFormat}" but its group declares "${inputFormat}".`,
+      );
+    }
+
+    return {
+      id,
+      group,
+      input: requiredString(caseRecord, "input", at),
+      inputFormat: caseFormat,
+      preprocessed: requiredPossiblyEmptyString(caseRecord, "preprocessed", at),
+      call: readCall(requiredPresent(caseRecord, "call", at), `${at} call`),
+      expected,
+      refusals,
+      parseTree: requiredPresent(caseRecord, "parse_tree", at),
+      model: asMapping(requiredPresent(caseRecord, "model", at), `${at} model`),
+    };
+  });
+
+  return { path: record.path, group, inputFormat, targets, cases };
+}
+
+/**
  * Loads and verifies the whole pin. `root` is a parameter so the failure paths
  * can be proven against a scratch copy rather than argued from the code.
  */
@@ -700,6 +859,7 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
   // that can be ignored, it is a pin this reader is too old to read.
   const payloads: PinnedPayload[] = [];
   const rejectionPayloads: PinnedRejectionPayload[] = [];
+  const callsPayloads: PinnedCallsPayload[] = [];
   for (const record of provenance.payloads) {
     const { path, document, schema } = readPayloadDocument(root, record);
     const caseSchema = readCaseSchema(schema);
@@ -707,12 +867,14 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
       payloads.push(readPayload(record, document, path, caseSchema));
     } else if (schema === REJECTIONS_SCHEMA) {
       rejectionPayloads.push(readRejectionPayload(record, document, path));
+    } else if (schema === CALLS_SCHEMA) {
+      callsPayloads.push(readCallsPayload(record, document, path));
     } else {
       throw new Error(
         `${path}: schema is "${schema}", this reader knows ` +
           `"plurimath-corpus/<input format>/1", "plurimath-corpus/<input format>/2" ` +
-          `(input format one of ${CASE_INPUT_FORMATS.join(", ")}) and ` +
-          `"${REJECTIONS_SCHEMA}".`,
+          `(input format one of ${CASE_INPUT_FORMATS.join(", ")}), "${REJECTIONS_SCHEMA}" and ` +
+          `"${CALLS_SCHEMA}".`,
       );
     }
   }
@@ -748,7 +910,28 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
     }
   }
 
-  return { root, provenance, payloads, cases, rejectionPayloads, rejections };
+  const calls: PinnedCallCase[] = [];
+  for (const payload of callsPayloads) {
+    for (const entry of payload.cases) {
+      const previous = seen.get(entry.id);
+      if (previous !== undefined) {
+        throw new Error(`duplicate case id "${entry.id}" in ${previous} and ${payload.path}`);
+      }
+      seen.set(entry.id, payload.path);
+      calls.push(entry);
+    }
+  }
+
+  return {
+    root,
+    provenance,
+    payloads,
+    cases,
+    rejectionPayloads,
+    rejections,
+    callsPayloads,
+    calls,
+  };
 }
 
 /**

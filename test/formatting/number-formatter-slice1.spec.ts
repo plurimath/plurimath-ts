@@ -25,11 +25,14 @@
  * a recorded sha256 before anything trusts them, the same "verify, don't
  * just read" discipline `corpus-pin.ts` applies to the payloads it owns.
  *
- * `expected.mathml` in the payload is not compared here: MathML still
- * refuses `formatter` by name (`src/formats/mathml/renderer.ts`,
- * `DEFERRED_OPTIONS`), per this slice's scope
- * (TODO.plan/feature-roadmap.md's build order covers MathML/OMML in a later
- * slice) — this spec instead confirms that refusal still fires.
+ * `expected.mathml` IS compared here (`src/formats/mathml/renderer.ts`'s
+ * `formatter` is implemented as of the MathML/OMML number-formatting slice,
+ * TODO.plan/feature-roadmap.md) — the same payload the four text renderers
+ * check against. OMML has no `expected.omml` field in this payload (`targets`
+ * carries only asciimath/latex/mathml/unicodemath), so OMML's `formatter`
+ * support is not exercised here and stays deferred by name
+ * (`src/formats/omml/renderer.ts`, `DEFERRED_OPTIONS`) until an oracle case
+ * carries an OMML expectation.
  */
 
 import { execFileSync } from "node:child_process";
@@ -215,16 +218,11 @@ describe(`calls/1 case "${CALL_CASE.id}" — the formatter: option's default-sym
     );
   });
 
-  it("still refuses formatter by name on mathml — that slice is not this one", () => {
+  it("renders mathml byte-identical to the oracle", () => {
     const node = buildFormula();
-    // `MathmlOptions` deliberately has no `formatter` field (it is a DEFERRED
-    // key, recognised only by `ACCEPTED_OPTIONS` for its named refusal) — the
-    // cast puts the same unknown-to-the-type key a JavaScript caller could
-    // pass, which is exactly the shape `assertKnownOptions` and the deferred
-    // check both guard against silently letting through.
-    expect(() =>
-      toMathml(node, { formatter: CALL_CASE.formatter } as Parameters<typeof toMathml>[1]),
-    ).toThrow(/formatter/);
+    expect(toMathml(node, { formatter: CALL_CASE.formatter })).toBe(
+      CALL_CASE.expected.get("mathml"),
+    );
   });
 
   it("renders the plain no-formatter path unchanged (the whole pinned corpus's path)", () => {

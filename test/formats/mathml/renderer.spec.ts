@@ -129,20 +129,41 @@ describe("the options argument itself", () => {
     expect((caught as RenderError).message).toContain('"nosuchoption"');
   });
 
-  it("still accepts the two implemented keywords once the guard is in front", () => {
-    // The refusal above must not have cost the options matrix: both keys
-    // render exactly as they did, alone and together.
+  it("still accepts the three implemented keywords once the guard is in front", () => {
+    // The refusal above must not have cost the options matrix: all three
+    // keys render exactly as they did, alone and together.
     expect(toMathml(sinX(), { displayStyle: false })).toBe(math(SIN_SPACED, "false"));
     expect(toMathml(sinX(), { unaryFunctionSpacing: false })).toBe(math(SIN_BARE));
     expect(toMathml(sinX(), { displayStyle: false, unaryFunctionSpacing: false })).toBe(
       math(SIN_BARE, "false"),
     );
+    expect(toMathml(sinX(), { formatter: null })).toBe(math(SIN_SPACED));
+  });
+});
+
+describe("the formatter option (B2's MathML/OMML number-formatting slice)", () => {
+  const number = () => new NumberNode({ value: "1234.5" });
+
+  it("with no formatter, a Number renders its raw value — the corpus's own path", () => {
+    expect(toMathml(formula(number()))).toBe(math("    <mn>1234.5</mn>"));
+  });
+
+  it("with a formatter, a Number is grouped and its decimal marker substituted", () => {
+    expect(
+      toMathml(formula(number()), {
+        formatter: { options: { decimal: ",", group: ".", groupDigits: 3 } },
+      }),
+    ).toBe(math("    <mn>1.234,5</mn>"));
+  });
+
+  it("a non-numeric value under an active formatter refuses, naming the value", () => {
+    const node = formula(new NumberNode({ value: "not-a-number" }));
+    expect(() => toMathml(node, { formatter: {} })).toThrow(/not-a-number/);
   });
 });
 
 describe("the deferred options, refused by name", () => {
   const cases: readonly (readonly [string, Record<string, unknown>])[] = [
-    ["formatter", { formatter: {} }],
     ["intent", { intent: true }],
     ["intent", { intent: false }],
     ["unitsml", { unitsml: {} }],

@@ -378,10 +378,10 @@ describe("deep structure", () => {
  * reachable corpus formulas, which pairs satisfy `==`. Everything not listed
  * is unequal, and every case equals itself.
  *
- * 29 of the 35 cross the two input notations: `alpha` and `\alpha` are
+ * 50 of the 56 cross the two input notations: `alpha` and `\alpha` are
  * different source text for the same formula, so the gem reports them equal and
  * so must this port. They are the evidence that `==` compares the model and not
- * the input, which nothing in an AsciiMath-only corpus could show. The other
+ * the input, which nothing in a single-notation corpus could show. The other
  * six are within one notation — three AsciiMath (`a/b` against `frac(a)(b)`,
  * and two spacing pairs) and three LaTeX (`\bmod`, `\pmod` and infix `mod`).
  * What each pair asks the projection to skip is asserted below, not assumed.
@@ -394,16 +394,17 @@ describe("deep structure", () => {
  * withholds the same id `readCorpusCases` withholds, and runs `==` in both
  * directions over every pair. Its report, verbatim:
  *
- *   rows in pin:     244        rejections:      27
- *   cases pinned:    217        cases withheld:   1
- *   cases compared:  216        reflexive:      216
- *   comparisons:   23220        asymmetric:       0
- *   equal pairs:      35
+ *   rows in pin:     264        rejections:      27
+ *   cases pinned:    237        cases withheld:   1
+ *   cases compared:  236        reflexive:      236
+ *   comparisons:   27730        asymmetric:       0
+ *   equal pairs:      56
  *
- * The fixture this replaces held the seven pairs the same sweep reported over
- * the 110 formulas of the previous pin. All seven are still here, and the 28
- * that join them are what a corpus that grew from 19 LaTeX cases to 125 would
- * be expected to add.
+ * The fixture this replaces held the 35 pairs the same sweep reported before
+ * UnicodeMath joined the corpus as a third input notation (#15). All 35 are
+ * still here, and the 21 that join them are exactly the UnicodeMath/LaTeX and
+ * UnicodeMath/AsciiMath twins a corpus that grew a third notation would be
+ * expected to add — none of the original 35 pairs' own membership changed.
  */
 describe("the corpus equality matrix, as the gem reports it", () => {
   const cases = readCorpusCases();
@@ -418,9 +419,26 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "frac-fenced-denominator|latex-frac-sum-denominator",
     "frac-fenced-numerator|latex-frac-sum-numerator",
     "frac-simple|frac-explicit",
+    "latex-fence-angle|unicode-fence-angle",
+    "latex-fence-ceiling|unicode-fence-ceiling",
+    "latex-fence-round|unicode-fence-round",
+    "latex-fence-square|unicode-fence-square",
     "latex-mod-bmod|latex-mod-pmod",
     "latex-mod-infix|latex-mod-bmod",
     "latex-mod-infix|latex-mod-pmod",
+    "latex-number-braced-exponent|unicode-number-exponent",
+    "latex-number-decimal|unicode-number-decimal",
+    "latex-number-integer|unicode-number-integer",
+    "latex-number-negative|unicode-number-negative",
+    "latex-operator-equiv|unicode-operator-equiv",
+    "latex-operator-leq|unicode-operator-leq",
+    "latex-operator-plus-minus|unicode-operator-plus-minus",
+    "latex-operator-plus|unicode-operator-plus",
+    "latex-operator-times|unicode-operator-times",
+    "latex-symbol-empty-set|unicode-symbol-empty-set",
+    "latex-symbol-greek-alpha|unicode-symbol-greek-alpha",
+    "latex-symbol-greek-pi|unicode-symbol-greek-pi",
+    "latex-symbol-infinity|unicode-symbol-infinity",
     "mod-in-expression|latex-mod-fenced-left",
     "mod-numeric|latex-mod-numeric",
     "mod-simple|latex-mod-bmod",
@@ -433,14 +451,18 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "power-exponential|latex-power-exponential",
     "power-fenced-exponent|latex-power-braced-exponent",
     "power-of-two|latex-number-braced-exponent",
+    "power-of-two|unicode-number-exponent",
     "power-square|latex-power-square",
     "root-sqrt-expression|latex-root-sqrt-sum",
     "root-sqrt-number|latex-root-sqrt-number",
     "root-sqrt-pythagoras|latex-root-sqrt-pythagoras",
     "subscript-fenced|latex-subscript-braced",
     "symbol-greek-alpha|latex-symbol-greek-alpha",
+    "symbol-greek-alpha|unicode-symbol-greek-alpha",
     "symbol-greek-pi|latex-symbol-greek-pi",
+    "symbol-greek-pi|unicode-symbol-greek-pi",
     "symbol-infinity|latex-symbol-infinity",
+    "symbol-infinity|unicode-symbol-infinity",
     "symbol-latin-x|whitespace-surrounding",
     "text-function|latex-text-command",
     "text-quoted|latex-text-spaced",
@@ -451,12 +473,12 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "unary-vec|latex-accent-vec",
   ]);
 
-  it("has the 216 cases it expects", () => {
-    expect(nodes).toHaveLength(216);
-    // The probe reported 35 over these same 216. A line lost while the
+  it("has the 236 cases it expects", () => {
+    expect(nodes).toHaveLength(236);
+    // The probe reported 56 over these same 236. A line lost while the
     // fixture was pasted in would otherwise pass green against a port that
     // had lost the same pair.
-    expect(RubyEqualPairs.size).toBe(35);
+    expect(RubyEqualPairs.size).toBe(56);
   });
 
   it("is reflexive: a rebuilt tree equals its twin", () => {
@@ -484,14 +506,18 @@ describe("the corpus equality matrix, as the gem reports it", () => {
 
   /**
    * What the projection is skipping in each pair, as an assertion rather than
-   * as prose. Measured over these 35 pairs on the pinned corpus, and each of
+   * as prose. Measured over these 56 pairs on the pinned corpus, and each of
    * the three groups is named rather than folded into one loose claim:
    *
-   *   - 2 pairs have models that are identical outright, `input_string`
+   *   - 8 pairs have models that are identical outright, `input_string`
    *     included: `e^x` and `x^2` are the same source text in both notations,
    *     so the two parsers meet at the same tree and the corpus records it
-   *     twice. Nothing is being skipped there at all;
-   *   - 32 differ in `input_string` and in nothing else — the field the
+   *     twice — and UnicodeMath adds six more of the same shape, all plain
+   *     numbers, an exponent, or ASCII-delimited fences whose source text
+   *     needs no notation-specific syntax at all: `(a)`, `[a]`, `1`, `3.14`,
+   *     `-42` and `2^10` are the same bytes in LaTeX and UnicodeMath source.
+   *     Nothing is being skipped there at all;
+   *   - 47 differ in `input_string` and in nothing else — the field the
    *     projection drops;
    *   - 1, `font-bold|latex-font-bold`, differs in `input_string` and in one
    *     more field: its `FontStyle::Bold` carries `parameter_two: "bb"` from
@@ -521,7 +547,13 @@ describe("the corpus equality matrix, as the gem reports it", () => {
       }
     }
     expect(identical).toStrictEqual([
+      "latex-fence-round|unicode-fence-round",
+      "latex-fence-square|unicode-fence-square",
+      "latex-number-decimal|unicode-number-decimal",
+      "latex-number-integer|unicode-number-integer",
+      "latex-number-negative|unicode-number-negative",
       "power-exponential|latex-power-exponential",
+      "power-of-two|unicode-number-exponent",
       "power-square|latex-power-square",
     ]);
     expect(beyondInputString).toStrictEqual(["font-bold|latex-font-bold"]);

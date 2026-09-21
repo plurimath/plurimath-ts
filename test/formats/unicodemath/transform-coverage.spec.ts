@@ -1,7 +1,9 @@
 /**
  * Every ported transform rule is exercised by the fixture set.
  *
- * `model-parity.spec.ts` proves the port agrees with the gem on 97 inputs. It
+ * `model-parity.spec.ts` proves the port agrees with the gem on every parsed
+ * input of `model-fixtures.json` (549 cases: 182 corpus, 364 coverage, 3
+ * slice-boundary; 535 parsed, 14 raised). It
  * cannot prove that a rule was ever REACHED — a rule with a typo in its action
  * passes vacuously if nothing routes to it — so `buildUnicodemathTransform`
  * counts each rule's firings, this suite drives the whole fixture set through
@@ -10,11 +12,11 @@
  * The rule ids are the lines `transform.rb`'s `rule(` calls open on, so a gap
  * reads as "nothing covers transform.rb:1097" rather than as an index.
  *
- * This suite is what makes the slice boundary self-enforcing. The ported set
- * was DERIVED from what the corpus fires on the oracle, so "every ported rule
- * fires" and "every rule the corpus fires is ported" are the same claim seen
- * from two sides: the first is asserted here, the second by `model-parity`'s
- * refusal to leave an unmatched node in a supported input.
+ * This suite is what makes the slice boundary self-enforcing. The first 78
+ * ported rules were DERIVED from what the corpus fires on the oracle; every
+ * later rule was added with a hand-picked coverage input that reaches it. So
+ * "every ported rule fires" is asserted here, and `model-parity`'s refusal to
+ * leave an unmatched node in a supported input covers the other side.
  *
  * **Per rule, not per branch.** The counter increments once per action call, so
  * a rule with three arms is "covered" when any one of them runs. Measured
@@ -89,7 +91,8 @@ describe("transform rule coverage", () => {
   });
 
   it("registers every rule the slice carries", () => {
-    // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
+    // Historical tally, by increment (the assertion below is the one live
+    // count): 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
     // eight-rule table/matrix family the first slice deferred: `transform.rb:8`,
     // `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13
     // MULTISCRIPT — twelve `Math::Function::Multiscript` constructors
@@ -229,8 +232,8 @@ describe("transform rule coverage", () => {
     const never = build.ruleIds.filter((id) => build.fired.get(id) === 0);
     expect(
       never,
-      `transform.rb rules no fixture reaches: ${never.join(", ")}. The slice is defined by ` +
-        "what the corpus fires on the oracle, so a rule nothing reaches does not belong in it.",
+      `transform.rb rules no fixture reaches: ${never.join(", ")}. A rule ` +
+        "nothing reaches is unverified, so it does not belong in the registered set.",
     ).toStrictEqual([]);
   });
 });

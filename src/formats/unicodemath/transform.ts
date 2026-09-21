@@ -2,7 +2,7 @@
  * tree keys — Ruby's snake_case is the schema, exactly as in the generated
  * tables, and renaming one would stop its rule from ever matching. */
 /**
- * The UnicodeMath transform, FIRST SLICE — ported rule for rule from the gem
+ * The UnicodeMath transform — ported rule for rule from the gem
  * (`lib/plurimath/unicode_math/transform.rb`, plurimath 0.11.6 at `00c52783`).
  *
  * `latex/transform.ts` is the template in every respect: one `t.rule(...)` per
@@ -13,6 +13,11 @@
  * firing counters.
  *
  * ## Where the slice boundary is, and why
+ *
+ * Current state: `unicodemathTransform()` registers 409 rules, the table/matrix
+ * family included (see the TABLE increment below). The rest of this header is
+ * the increment-by-increment history of how that set grew; its "this slice"
+ * counts describe the first slice, not the present set.
  *
  * `unicode_math/transform.rb` registers 516 rules — 519 counting the three the
  * `BaseNumberPrefix::Transform` mixin adds — and porting them in one unit is
@@ -395,10 +400,10 @@
  *    `str("double") | str("fraktur") | str("script")` and is never tagged
  *    `.as(:script)`/`.as(:double)`/`.as(:fraktur)`.
  *
- * Five `SLICE_BOUNDARY` rows in the fixture generator record an input for the
- * blocking builders `:1148`, `:1078`, `:1054`, `:1619` and `:227`: the port
- * must refuse each, and the refusal becomes a failing ratchet the moment that
- * builder lands, which is when the pure rules it blocks can be checked.
+ * Three `SLICE_BOUNDARY` rows (`1x₂`, `1/2a`, `ⅇ`) in the fixture generator
+ * record an input for a rule the port lacks: the port must refuse each, and
+ * the refusal becomes a failing ratchet the moment that rule lands, which is
+ * when the pure rules it blocks can be checked.
  *
  * Everything outside those 210 is genuinely ABSENT rather than stubbed. A
  * ## A ninth increment: FENCED, the `open_paren`/`opener` rules of `:2020`-`:2983`

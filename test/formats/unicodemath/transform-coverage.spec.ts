@@ -138,9 +138,14 @@ describe("transform rule coverage", () => {
     // unwraps, were already ported by RELATION/OPERATOR above (`"2·3"`
     // needed `:49`, and RELATION's own probing separately reached `:30`) —
     // reached by the existing corpus and coverage groups, not a new
-    // hand-picked one.
-    expect(build.ruleIds.length).toBe(154);
-    expect(new Set(build.ruleIds).size).toBe(154);
+    // hand-picked one — plus 23 SYMBOL/OPERATOR/NUMBER leaves: the three
+    // `BaseNumberPrefix::Transform` rules (`bnp:36`-`bnp:38`) and twenty
+    // `unicode_math/transform.rb` rules (`:109`, `:134`, `:191`, `:243`,
+    // `:250`, `:266`, `:272`, `:278`, `:302`, `:309`, `:320`, `:396`, `:451`,
+    // `:456`, `:466`, `:476`, `:481`, `:527`, `:2085`, `:2091`) — reached by
+    // the hand-picked "symbol" coverage group.
+    expect(build.ruleIds.length).toBe(177);
+    expect(new Set(build.ruleIds).size).toBe(177);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

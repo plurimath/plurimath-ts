@@ -324,6 +324,32 @@
  * RELATION/OPERATOR (`:49` for `"2·3"`, `:30` from its own probing).
  * Running count: 151 + 3 = **154**.
  *
+ * ## An eighth increment: SYMBOL/OPERATOR/NUMBER leaves
+ *
+ * Twenty-three rules whose bodies build a symbol, operator or number: the three
+ * `BaseNumberPrefix::Transform` rules (`base_number_prefix.rb:36`-`:38`,
+ * registered as `bnp:36`-`bnp:38` like `latex/transform.ts`'s) and `:109`,
+ * `:134`, `:191`, `:243`, `:250`, `:266`, `:272`, `:278`, `:302`, `:309`,
+ * `:320`, `:396`, `:451`, `:456`, `:466`, `:476`, `:481`, `:527`, `:2085`,
+ * `:2091`. Each is reached by an input of the "symbol" coverage group, traced
+ * on the oracle to fire it and compared with the oracle's model.
+ *
+ * Eight rules of the same family are NOT registered, because each one's result
+ * lands on a rule this slice does not carry, so no input yet reaches them and
+ * parses (measured: the oracle fires the rule, the port stops at the named
+ * hash): `:196`/`:204` (`[+∞,1]`; the enclosing `left_value` sequence needs the
+ * interval `Fenced` rules), `:284`/`:290`/`:296`/`:666` (`1/2\not∘b`,
+ * `1/2\not∘⊆⊈`, `⊕b/c`, `a\not∈b`; the array they return is a SEQUENCE
+ * numerator/denominator, the `:1619`-family, port stops at `{frac=other}`),
+ * `:521` (`a^!!b`; the array is a SEQUENCE `sup`, `:1148`, port stops at
+ * `{sup_exp=other}`) and `:2079` (`a···2`; the nested `diacritics` it needs
+ * folds through `:406`/`:411`, port stops at `{atom=other}`).
+ *
+ * `f'(x)` and `a·b·c` are not rule gaps. The gem's own tree for each holds a
+ * hash no rule matches, so `Kernel#Array` folds it and the gem returns pairs;
+ * the port refused them for want of an entry in `GEM_UNMATCHED_SIGNATURES`
+ * below, which now names both shapes (each measured, see the entries).
+ *
  * Everything outside those 154 is genuinely ABSENT rather than stubbed. A
  * node whose key set no ported rule matches survives the transform as a
  * plain hash and `finalize` throws on it, naming the keys — the loud failure
@@ -713,13 +739,13 @@ function newFormula(value: unknown = [], leftRightWrapper: unknown = true): Unic
   });
 }
 
-/** `Math::Number.new(value)` — Slice value to text, mini flags false, base nil. */
-function newNumber(value: unknown): UnicodemathDraft {
+/** `Math::Number.new(value, base:)` — Slice value to text, mini flags false. */
+function newNumber(value: unknown, base: number | null = null): UnicodemathDraft {
   return new UnicodemathDraft("number", undefined, {
     value: sliceToText(orNil(value)),
     miniSubSized: false,
     miniSupSized: false,
-    base: null,
+    base,
   });
 }
 
@@ -1431,6 +1457,20 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     });
   };
 
+  // --- BaseNumberPrefix::Transform (base_number_prefix.rb:36-38) ----------
+  // `include` runs first (`unicode_math/transform.rb:6`), so these three are
+  // DEFINED first and, matching in reverse definition order, tried LAST. The
+  // ids follow `latex/transform.ts`'s `bnp:<line>` for the same mixin.
+  //
+  // BigInt, not parseInt: Ruby's `to_i(2)` is exact at any length.
+  rule("bnp:36", { hex_number: simple("hex") }, (b) => newNumber(rubyToS(b.hex), 16));
+  rule("bnp:37", { binary_number: simple("bin") }, (b) =>
+    newNumber(BigInt(`0b${rubyToS(b.bin)}`).toString(), 2),
+  );
+  rule("bnp:38", { octal_number: simple("oct") }, (b) =>
+    newNumber(BigInt(`0o${rubyToS(b.oct)}`).toString(), 8),
+  );
+
   // --- pass-through and leaf rules (transform.rb:8-170) -------------------
 
   // TABLE (eighteen rules total, not the seventeen a prior survey counted —
@@ -1539,8 +1579,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     return symbolsClass(COMBINING_SYMBOLS.get(key) ?? b.combined_symbols);
   });
 
+  rule("109", { binary_symbols: simple("symbols") }, (b) => symbolsClass(b.symbols));
+
   rule("126", { unary_functions: simple("unary") }, (b) =>
     UNDEF_UNARY_FUNCTIONS.has(rubyToS(b.unary)) ? symbolsClass(b.unary) : buildClass(b.unary),
+  );
+
+  rule("134", { negated_operator: simple("operator") }, (b) =>
+    newFormula([symbolsClass(b.operator), newBareSymbol("&#x338;")]),
   );
 
   rule("141", { ordinary_symbols: simple("ordinary") }, (b) => symbolsClass(b.ordinary));
@@ -1580,6 +1626,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     newFormula([symbolsClass(b.operator), newBareSymbol("&#x338;")]),
   );
 
+  // `Number.new("#{decimal}#{whole.value}")`: a leading decimal marker with no
+  // integer part (`,1`); `:2227` above is the `whole`+`decimal`+`fractional` twin.
+  rule("191", { decimal: simple("decimal"), whole: simple("whole") }, (b) =>
+    newNumber(htmlEntityToUnicode(`${rubyToS(b.decimal)}${rubyToS(draftValue(b.whole))}`)),
+  );
+
   // --- two-key rules (transform.rb:236-2001) -----------------------------
 
   rule("236", { font_class: simple("fonts"), symbol: simple("symbol") }, (b) =>
@@ -1592,6 +1644,15 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // implicit multiplication between two bare symbols with no relation
   // between them (`x y`, inside a NARY integrand), the same "adjacent atom"
   // shape `:401` already covers for `char`+`number`.
+  rule(
+    "243",
+    { symbol: simple("symbol"), naryand_recursion: sequence("naryand_recursion") },
+    (b) => [symbolsClass(b.symbol), ...asArray(b.naryand_recursion)],
+  );
+  rule("250", { symbol: simple("symbol"), naryand_recursion: simple("naryand_recursion") }, (b) => [
+    symbolsClass(b.symbol),
+    b.naryand_recursion,
+  ]);
   rule("255", { symbol: simple("symbol"), expr: simple("expr") }, (b) => [
     symbolsClass(b.symbol),
     b.expr,
@@ -1602,11 +1663,43 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     return [symbolsClass(symbol), b.expr];
   });
 
+  rule("266", { binary_symbols: simple("symbols"), exp: sequence("exp") }, (b) => {
+    const symbol = BINARY_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols;
+    return [symbolsClass(symbol), ...asArray(b.exp)];
+  });
+  rule("272", { binary_symbols: simple("symbols"), expr: sequence("expr") }, (b) => {
+    const symbol = BINARY_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols;
+    return [symbolsClass(symbol), ...asArray(b.expr)];
+  });
+  rule(
+    "278",
+    { binary_symbols: simple("symbols"), naryand_recursion: simple("naryand_recursion") },
+    (b) => {
+      const symbol = BINARY_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols;
+      return [symbolsClass(symbol), b.naryand_recursion];
+    },
+  );
+  rule("302", { symbol: simple("symbol"), expr: sequence("expr") }, (b) => [
+    symbolsClass(b.symbol),
+    ...asArray(b.expr),
+  ]);
+  rule("309", { negated_operator: simple("operator"), expr: simple("expr") }, (b) => [
+    newFormula([symbolsClass(b.operator), newBareSymbol("&#x338;")]),
+    b.expr,
+  ]);
+  rule("320", { negated_operator: simple("operator"), expr: sequence("expr") }, (b) => [
+    newFormula([symbolsClass(b.operator), newBareSymbol("&#x338;")]),
+    ...asArray(b.expr),
+  ]);
   rule("391", { unary_subsup: simple("subsup"), expr: simple("expr") }, (b) => [b.subsup, b.expr]);
   // RELATION/OPERATOR: a resolved `char` (e.g. the `·` `unicode_symbols`
   // already turned into a symbol by `:149`) directly followed by a digit
   // run — `2·3`'s `char`/`number` pair, folded into a two-element list the
   // way every other `char: simple` sibling here is.
+  rule("396", { char: simple("char"), alphanumeric: simple("alphanumeric") }, (b) => [
+    b.char,
+    symbolsClass(b.alphanumeric),
+  ]);
   rule("401", { char: simple("char"), number: simple("number") }, (b) => [
     b.char,
     newNumber(b.number),
@@ -1620,13 +1713,33 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     symbolsClass(b.operator),
     b.expr,
   ]);
+  rule("451", { mid_symbol: simple("mid_symbol"), expr: simple("expr") }, (b) => [
+    symbolsClass(b.mid_symbol),
+    b.expr,
+  ]);
+  rule("456", { mid_symbol: simple("mid_symbol"), expr: sequence("expr") }, (b) => [
+    symbolsClass(b.mid_symbol),
+    ...asArray(b.expr),
+  ]);
   rule("461", { operator: simple("operator"), exp: simple("exp") }, (b) => [
     symbolsClass(b.operator),
+    b.exp,
+  ]);
+  rule("466", { unicode_symbols: simple("unicode_symbols"), exp: simple("exp") }, (b) => [
+    symbolsClass(b.unicode_symbols),
     b.exp,
   ]);
   rule("471", { unicode_symbols: simple("unicode_symbols"), expr: simple("expr") }, (b) => [
     symbolsClass(b.unicode_symbols),
     b.expr,
+  ]);
+  rule("476", { unicode_symbols: simple("unicode_symbols"), exp: sequence("exp") }, (b) => [
+    symbolsClass(b.unicode_symbols),
+    ...asArray(b.exp),
+  ]);
+  rule("481", { unicode_symbols: simple("unicode_symbols"), expr: sequence("expr") }, (b) => [
+    symbolsClass(b.unicode_symbols),
+    ...asArray(b.expr),
   ]);
   // ATOMS proper: the recursive `atom.as("atom") >> atoms.as("atoms").maybe()`
   // combinator (`grammar.ts:668`-`:670`, `common_rules.rb:9-11`) folded into a
@@ -1651,6 +1764,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("506", { operator: simple("operator"), exp: sequence("exp") }, (b) => [
     symbolsClass(b.operator),
     ...asArray(b.exp),
+  ]);
+
+  // `Constants::COMBINING_SYMBOLS[key]` with NO fallback, unlike `:99`.
+  rule("527", { combined_symbols: simple("combined_symbols"), exp: simple("exp") }, (b) => [
+    symbolsClass(COMBINING_SYMBOLS.get(rubyToS(b.combined_symbols)) ?? null),
+    b.exp,
   ]);
 
   // TABLE continued (`transform.rb:598`-`:1691`, eighteen rules total; see
@@ -2120,6 +2239,17 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   );
   rule("2001", { pre_subscript: simple("pre_sub"), base: simple("base") }, (b) =>
     newMultiscript(newPowerBase(b.base), [b.pre_sub], []),
+  );
+
+  rule(
+    "2085",
+    { char: simple("char"), diacritics: simple("diacritics"), number: simple("number") },
+    (b) => [b.char, b.diacritics, newNumber(b.number)],
+  );
+  rule(
+    "2091",
+    { char: simple("char"), diacritics: simple("diacritics"), alphanumeric: simple("alpha") },
+    (b) => [b.char, b.diacritics, symbolsClass(b.alpha)],
   );
 
   // --- three- and four-key rules (transform.rb:2103-3477) ----------------
@@ -2626,6 +2756,18 @@ export function unicodemathTransform(): Transform {
  */
 const GEM_UNMATCHED_SIGNATURES: ReadonlySet<string> = new Set([
   "accent_symbols=simple",
+  // `f'(x)`: `{accents: {first_value:, prime_accent_symbols:}, expr:}`. `:1412`
+  // resolves the accents half to a `Power`; no rule of the 519 has the
+  // `accents` + `expr: simple` signature (`transform.rb:341`/`:346` need a
+  // SEQUENCE), so the gem returns the folded pairs. Oracle trace fires only
+  // `:18 :39 :71 :92 :1412 :2619`.
+  "accents=simple,expr=simple",
+  // `a·b·c`: the ATOMS combinator's `{atom:, atoms: {atom:, atoms:}}` chain.
+  // `:486`/`:496` need `atoms` simple or a sequence, so a nested hash in
+  // `atoms` binds neither; the inner `{atom: sequence, atoms: sequence}` pair
+  // matches none of `:486`/`:491`/`:496` either.
+  "atom=sequence,atoms=sequence",
+  "atom=simple,atoms=other",
   "close_paren=simple,open_paren=simple,operator=simple",
   "combined_symbols=simple,expr=simple",
   "denominator=other,numerator=simple",

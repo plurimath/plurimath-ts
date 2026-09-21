@@ -444,6 +444,26 @@ RULE_COVERAGE = {
     "x'",
   ],
   "nary" => RULE_COVERAGE_NARY_INPUTS,
+  # "root_overunder": the root / unary-function / over-under / accent leftovers,
+  # one input per rule, each traced on the oracle (rule numbers are the lines
+  # `rule(` opens on):
+  #
+  #   rules 1530, 969 and 977 are reached by corpus cases already ("√(3&8)",
+  #   "√(n&x)", "(y)┴(x)", "(y)┬x": the generator refuses an input that is both a
+  #   corpus and a coverage case), so they need no row of their own here.
+  #
+  #   "√(ab&cd)"       rule 1538 {first_value: sequence, second_value: sequence}
+  #   "ab''"           rule 1506 {first_value: sequence, prime_accent_symbols}
+  #   "x\\prime\\prime"  rule 1404 {first_value, prime_accent_symbols: sequence}
+  #   "a⃗+b"           rule 341  {accents, expr: sequence}
+  #   "ⓐa x"           rule 2221 {arg, arg_arguments, first_value}
+  "root_overunder" => [
+    "√(ab&cd)",
+    "ab''",
+    "x\\prime\\prime",
+    "a⃗+b",
+    "ⓐa x",
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`

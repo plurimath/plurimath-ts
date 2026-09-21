@@ -324,7 +324,24 @@
  * RELATION/OPERATOR (`:49` for `"2·3"`, `:30` from its own probing).
  * Running count: 151 + 3 = **154**.
  *
- * Everything outside those 154 is genuinely ABSENT rather than stubbed. A
+ * ## An eighth increment: ROOT / OVER-UNDER / ACCENT leftovers
+ *
+ * Eight rules that build a node: `:341` (`accents` + SEQUENCE `expr`), `:969`/
+ * `:977` (a bare `over`/`under` script, `Overset`/`Underset` with no second
+ * parameter), `:1404`/`:1506` (`:1412`'s SEQUENCE-prime and SEQUENCE-base
+ * twins), `:1530`/`:1538` (`Root` from two simple / two sequence operands) and
+ * `:2221` (`Arg`). Two unwraps owned by the pure-rule slice, `:31` and `:118`,
+ * ride along because `:1538` and `:1404` cannot be reached without them.
+ * Running count: 154 + 10 = **164**.
+ *
+ * Two siblings are NOT registered because no input tried reached them, traced
+ * on the oracle: `:1514` (`root_first_value`, the `binary_root` grammar rule —
+ * `\root`/`⒭` inputs were either parse refusals or parsed without firing it,
+ * and `√`/`\surd` are caught by `sqrt` first) and `:346` (`accents` + SEQUENCE
+ * `exp`). Neither is proven unreachable, only unreached. `:1375` stays
+ * unregistered for the reason given at its position.
+ *
+ * Everything outside those 164 is genuinely ABSENT rather than stubbed. A
  * node whose key set no ported rule matches survives the transform as a
  * plain hash and `finalize` throws on it, naming the keys — the loud failure
  * the deferred families are supposed to produce.
@@ -1030,7 +1047,12 @@ function newFrac(one: unknown, two: unknown, options?: NodeOptions): Unicodemath
 const UNICODE_REGEX = /&#x[a-zA-Z0-9]+;/g;
 
 function updatedPrimes(prime: unknown): unknown {
-  const matches = rubyToS(prime).match(UNICODE_REGEX) ?? [];
+  // `:1404` hands over a SEQUENCE (`x\prime\prime`): Ruby's `Array#to_s` is
+  // `inspect`, which prints each element's text between quotes and commas —
+  // never a new `&#x...;` entity — so scanning the joined element texts finds
+  // exactly the entities the inspected string would.
+  const text = Array.isArray(prime) ? prime.map((item) => rubyToS(item)).join(" ") : rubyToS(prime);
+  const matches = text.match(UNICODE_REGEX) ?? [];
   return filterValues(matches.map((text) => symbolsClass(text)));
 }
 
@@ -1456,6 +1478,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("28", { sup_exp: simple("exp") }, (b) => b.exp);
   rule("29", { int_exp: simple("exp") }, (b) => b.exp);
   rule("30", { atom: sequence("atom") }, (b) => b.atom);
+  // `:31` — PREREQUISITE owned by the pure-unwrap slice (claims file A.txt), carried
+  // here because `:1538`'s `ab` operands only reach it through this unwrap.
+  rule("31", { expr: sequence("expr") }, (b) => b.expr);
   // TABLE's fifth single-key member: the `{table: ...}` wrapper every
   // `array` alternative (`grammar.ts`'s `array` rule) puts around its match,
   // unwrapped once and for all here rather than by each of the other
@@ -1539,6 +1564,15 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     return symbolsClass(COMBINING_SYMBOLS.get(key) ?? b.combined_symbols);
   });
 
+  // `:118` — PREREQUISITE owned by the pure-unwrap slice (claims file A.txt), carried
+  // here because `:1404`'s SEQUENCE `prime_accent_symbols` only exists once
+  // `\prime` names are normalised to their entity. The gem reads
+  // `Constants::PREFIXED_PRIMES`; the generated table here is that hash plus
+  // `sprime`, which no grammar alternative can produce.
+  rule("118", { prefixed_prime: simple("prime") }, (b) => {
+    const entity = UNICODEMATH_PRIMES_CONSTANTS.get(rubyToS(b.prime));
+    return entity ?? b.prime;
+  });
   rule("126", { unary_functions: simple("unary") }, (b) =>
     UNDEF_UNARY_FUNCTIONS.has(rubyToS(b.unary)) ? symbolsClass(b.unary) : buildClass(b.unary),
   );
@@ -1601,6 +1635,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     const symbol = BINARY_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols;
     return [symbolsClass(symbol), b.expr];
   });
+
+  // `:341`: an accented run followed by a SEQUENCE `expr` — the accent node is
+  // built by `unicodeAccents` and prepended, the same `[x] + xs` concatenation
+  // `:501`/`:825` use.
+  rule("341", { accents: subtree("accent"), expr: sequence("expr") }, (b) => [
+    unicodeAccents(b.accent),
+    ...asArray(b.expr),
+  ]);
 
   rule("391", { unary_subsup: simple("subsup"), expr: simple("expr") }, (b) => [b.subsup, b.expr]);
   // RELATION/OPERATOR: a resolved `char` (e.g. the `·` `unicode_symbols`
@@ -1729,6 +1771,16 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     ...asArray(b.exp),
   ]);
   rule("875", { factor: simple("factor"), exp: simple("exp") }, (b) => [b.factor, b.exp]);
+
+  // `:969`/`:977`: a bare `over`/`under` operator carrying only a script — the
+  // `Overset`/`Underset` is built with the script as `parameter_one` and NO
+  // `parameter_two`, which `:1019`/`:1116` later fill in from the base.
+  rule("969", { over: simple("over"), sup_script: simple("sup_script") }, (b) =>
+    newOverset(unfencedValue(b.sup_script, true), null),
+  );
+  rule("977", { under: simple("under"), sub_script: simple("sub_script") }, (b) =>
+    newUnderset(unfencedValue(b.sub_script, true), null),
+  );
 
   rule("1019", { base: simple("base"), sub: simple("sub") }, (b) => {
     const base = b.base;
@@ -1935,10 +1987,35 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     newPower(unfencedValue(b.first_value, true), updatedPrimes(b.prime)),
   );
 
+  // ROOT/PRIME leftovers: `:1404`/`:1506` are `:1412`'s twins for a SEQUENCE
+  // `prime_accent_symbols` and a SEQUENCE `first_value` (`x\prime\prime`,
+  // `ab''`); `:1530`/`:1538` are `:1522`'s siblings for the other
+  // `first_value`/`second_value` shape pairs.
+  rule(
+    "1404",
+    { first_value: simple("first_value"), prime_accent_symbols: sequence("prime") },
+    (b) => newPower(unfencedValue(b.first_value, true), updatedPrimes(b.prime)),
+  );
+  rule(
+    "1506",
+    { first_value: sequence("first_value"), prime_accent_symbols: simple("prime") },
+    (b) => newPower(unfencedValue(b.first_value, true), updatedPrimes(b.prime)),
+  );
+
   rule(
     "1522",
     { first_value: simple("first_value"), second_value: sequence("second_value") },
     (b) => newRoot(b.first_value, unfencedValue(b.second_value, true)),
+  );
+
+  rule("1530", { first_value: simple("first_value"), second_value: simple("second_value") }, (b) =>
+    newRoot(b.first_value, unfencedValue(b.second_value, true)),
+  );
+
+  rule(
+    "1538",
+    { first_value: sequence("first_value"), second_value: sequence("second_value") },
+    (b) => newRoot(filterValues(b.first_value), unfencedValue(b.second_value, true)),
   );
 
   rule("1547", { unary_functions: simple("unary"), first_value: simple("first_value") }, (b) => {
@@ -2162,6 +2239,16 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
         [fractions(b.numerator, b.denominator, { linethickness: "0", choose: true })],
         newSymbolOfClass(RROUND_ID),
       ),
+  );
+
+  rule(
+    "2221",
+    {
+      arg: simple("arg"),
+      arg_arguments: simple("args"),
+      first_value: simple("first_value"),
+    },
+    (b) => binaryDraft("binaryFunction", "Arg", b.first_value, b.args),
   );
 
   rule(

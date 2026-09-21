@@ -91,25 +91,10 @@ const DEFERRED_INPUTS: readonly string[] = [
   // DECORATION (`transform.rb:1286`-`:1491`) is ported now (`transform.ts`'s
   // module header). Three of the six corpus rows that used to sit here moved
   // out to `supported` below: `"⏟(a b)"`, `"⏟(a + b)"` and `"⏟(x)_(y)"` all
-<<<<<<< HEAD
-  // route only through `hbracket_class`. The other three stay, blocked on
-  // machinery DECORATION does not touch: `"((a)̅)̅"` needs the `accents`/
-  // paren combination `{accents=other, close_paren=, open_paren=}` (the
-  // `atoms`-adjacent gap FRACTION's own header names). `"(y)┴(x)"`/
-  // `"(y)┬x"` moved out with `:969`/`:977`, and `"√(3&8)"`/`"√(n&x)"` with
-  // `:1530`; each now compares for real, as a corpus row.
-  "((a)̅)̅",
-
-<<<<<<< HEAD
-=======
   // route only through `hbracket_class`. `"((a)̅)̅"` moved out with `:2640`
   // (the `accents` + paren combination, the FENCED slice), `"(y)┴(x)"`/
   // `"(y)┬x"` with `:969`/`:977`, and `"√(3&8)"`/`"√(n&x)"` with `:1530`; each
   // now compares for real, as a corpus row.
->>>>>>> feat/um-slice-g1-fenced-a
-  // SCRIPT (`transform.rb:118`-`:2403`): a right-associative double exponent.
-  "x^y^(z)",
-=======
   // `"x^y^(z)"` (`:985`, a right-associative double exponent) sat here until
   // the SCRIPT/SUBSUP/BASE builders landed; it is a `supported` corpus row now.
 
@@ -122,7 +107,6 @@ const DEFERRED_INPUTS: readonly string[] = [
   "a \u00a0\u00a0 b \u00a0\u00a0 c",
   "a \u2004 b",
   "a \u00a0\u00a0\u00a0\u00a0 b",
->>>>>>> feat/um-slice-f-nary-scripts
 ];
 
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");

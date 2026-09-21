@@ -199,7 +199,7 @@ module UnicodeMathParserDataGenerator
     "OVERLAYS_NOTATIONS" => "UNICODEMATH_OVERLAYS_NOTATIONS",
     "BELOWS_NOTATIONS" => "UNICODEMATH_BELOWS_NOTATIONS",
     "PHANTOM_SYMBOLS" => "UNICODEMATH_PHANTOM_FUNCTIONS",
-    "UNICODE_FRACTIONS" => "UNICODEMATH_UNICODE_FRACTION_PARTS",
+    "UNICODE_FRACTIONS" => "UNICODEMATH_FRACTION_PARTS",
   }.freeze
 
   # `Constants` entries neither the grammar nor the ported transform slice
@@ -1166,6 +1166,8 @@ module UnicodeMathParserDataGenerator
         data[:sup_operators],
         doc: "`Constants::SUP_OPERATORS`: character -> superscript entity, for the\n" \
              "`.key(entity)` in `transform.rb:113`/`:652`.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
         "UNICODEMATH_SUB_PARENTHESIS_OPEN", "ReadonlyMap<string, string>",
         data[:sub_parenthesis_open],
         doc: "`Constants::SUB_PARENTHESIS[:open]`: key -> entity. The grammar reads\n" \
@@ -1178,14 +1180,6 @@ module UnicodeMathParserDataGenerator
         data[:sub_parenthesis_close],
         doc: "`Constants::SUB_PARENTHESIS[:close]`: `:open`'s twin, inverted the same\n" \
              "way for the closing paren.",
-        "UNICODEMATH_UNICODE_FRACTION_PARTS",
-        "ReadonlyMap<string, readonly string[]>",
-        data[:unicode_fraction_parts],
-        doc: "`Constants::UNICODE_FRACTIONS`: each precomposed fraction entity mapped\n" \
-             "to its numerator and denominator as text. `Utility.unicode_fractions`\n" \
-             "(`unicode_math/utility.rb:69-76`) builds a `Frac` from the two parts,\n" \
-             "`.to_s` on each, and the grammar's `UNICODEMATH_UNICODE_FRACTIONS` is\n" \
-             "this table's keys.",
       ),
       ts_string_list(
         "UNICODEMATH_BINARY_FUNCTIONS", data[:binary_functions],
@@ -1413,9 +1407,6 @@ module UnicodeMathParserDataGenerator
       unicode_fraction_parts: unicode_fraction_rows,
       phantom_functions: phantom_rows,
       primes: string_pairs(Plurimath::Utility.primes_constants, "primes_constants"),
-      unicode_fraction_parts: constants::UNICODE_FRACTIONS.map do |key, (numerator, denominator)|
-        [key.to_s, [numerator.to_s, denominator.to_s]]
-      end,
       is_a: is_a_rows(gem_dir),
     }
   end

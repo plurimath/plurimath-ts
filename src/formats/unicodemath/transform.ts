@@ -587,7 +587,6 @@ import {
   UNICODEMATH_SUB_PARENTHESIS_OPEN,
   UNICODEMATH_SYMBOL_CLASS_INPUT,
   UNICODEMATH_UNDER_HORIZONTAL_BRACKETS,
-  UNICODEMATH_UNICODE_FRACTION_PARTS,
   type UnicodemathPhantomAttribute,
 } from "./generated/transform-tables";
 import {
@@ -1318,14 +1317,6 @@ function unicodeFractions(fractions: unknown): UnicodemathDraft {
   if (parts === undefined) {
     throw new TypeError(
       `unicodemath transform: UNICODE_FRACTIONS has no ${rubyToS(fractions)} (Ruby raises NoMethodError)`,
- * a precomposed fraction entity as a `Frac` of two `Number`s, flagged
- * `unicodemath_fraction`. A miss is `nil.first` in Ruby, a `NoMethodError`.
- */
-function unicodeFractions(fraction: unknown): UnicodemathDraft {
-  const parts = UNICODEMATH_UNICODE_FRACTION_PARTS.get(rubyToS(fraction));
-  if (parts === undefined) {
-    throw new TypeError(
-      `unicodemath transform: no UNICODE_FRACTIONS entry for ${rubyToS(fraction)} (Ruby raises NoMethodError)`,
     );
   }
   return newFrac(newNumber(parts[0]), newNumber(parts[1]), {
@@ -1989,9 +1980,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("92", { alphanumeric: simple("alphanumeric") }, (b) => symbolsClass(b.alphanumeric));
   rule("94", { diacritic_overlays: simple("overlays") }, (b) => b.overlays);
   // PREREQUISITE of `:2597`'s witness (slice A's claim, registered here under
-  // the same id): a `mini_sub` wrapper unwrapped.
-  rule("60", { mini_sub: simple("mini_sub") }, (b) => b.mini_sub);
-  // PREREQUISITE of `:2597`'s witness (slice A's claim, registered here under
   // the same id): `sub_paren`'s `mini_intermediate_exp` wrapper, unwrapped.
   rule("97", { mini_intermediate_exp: simple("mini_expr") }, (b) => b.mini_expr);
 
@@ -2103,9 +2091,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // `:3531` only once its `,1` has become a `Number` (`:191`), and the interval
   // rules `:3922`/`:3935` receive `[+∞,1]`'s and `[−∞,1]`'s signed infinity as a
   // two-element run (`:196`, `:204`).
-  rule("191", { decimal: simple("decimal"), whole: simple("whole") }, (b) =>
-    newNumber(htmlEntityToUnicode(`${rubyToS(b.decimal)}${rubyToS(draftValue(b.whole))}`)),
-  );
   rule("196", { positive: simple("positive"), infty: simple("infty") }, (b) => [
     symbolsClass(b.positive),
     symbolsClass(b.infty),
@@ -2113,6 +2098,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("204", { negative: simple("negative"), infty: simple("infty") }, (b) => [
     symbolsClass(b.negative),
     symbolsClass(b.infty),
+  ]);
 
   rule("222", { diacritics_accents: simple("accents"), expr: sequence("expr") }, (b) => [
     b.accents,
@@ -3134,6 +3120,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       close_paren: simple("close_paren"),
     },
     (b) => [b.close_paren_mask, b.close_paren],
+  );
 
   rule(
     "2085",
@@ -3609,6 +3596,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     "2609",
     { open_paren: simple("open_paren"), text: simple("text"), close_paren: simple("close_paren") },
     (b) => newFenced(parenClass(b.open_paren), [newText(b.text)], parenClass(b.close_paren)),
+  );
 
   // A masked (`├1(`) fence around a `frac`: the size-prefixed side(s) arrive as
   // `[Number, paren]` sequences, and the fence's own paren is the LAST element.
@@ -4068,6 +4056,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) =>
       newFenced(parenClass(b.open_paren), [b.frac, ...asArray(b.exp)], parenClass(b.close_paren)),
+  );
 
   fenced(
     "3255",
@@ -4650,8 +4639,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // because the script witnesses below cannot parse without them and A has
   // not landed on this branch; the integration keeps each id exactly once.
   rule("38", { sub_exp: sequence("exp") }, (b) => b.exp);
-  rule("59", { mini_sup: simple("mini_sup") }, (b) => b.mini_sup);
-  rule("60", { mini_sub: simple("mini_sub") }, (b) => b.mini_sub);
   rule("65", { sub_script: sequence("script") }, (b) => b.script);
   rule("66", { sup_script: sequence("script") }, (b) => b.script);
   rule("86", { subsup_exp: sequence("subsup_exp") }, (b) => filterValues(b.subsup_exp));
@@ -4710,10 +4697,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     { sup_digits: simple("digits"), sup_recursion_expr: sequence("sup_recursion_expr") },
     (b) => [supDigitNumber(b.digits), ...asArray(b.sup_recursion_expr)],
   );
-  rule("592", { sup_digits: simple("digits"), sup_recursion_expr: simple("sup") }, (b) => [
-    supDigitNumber(b.digits),
-    b.sup,
-  ]);
 
   // OPERATOR/SCRIPT + a recursion: `Utility.recursive_sub`/`recursive_sup`.
   rule("614", { operator: simple("operator"), sup_recursion: simple("sup_recursion") }, (b) =>
@@ -5012,49 +4995,6 @@ function subParenKey(table: ReadonlyMap<string, string>, entity: unknown): strin
 }
 
 /**
- * The size mask a numeric prefix on a fence's paren stands for:
- * `"#{1.25**prefix.value.to_i}em"`. `1.25 ** n` is `5**n / 4**n`, exact in a
- * double while `5**n` stays under 2**53 (`n <= 22`), so JavaScript's `**` and
- * Ruby's `Float#**` agree there; past that the last digits may round
- * differently, and nothing here can say which, so it refuses. Ruby's
- * `Float#to_s` prints `1.0` where JavaScript prints `1`; every other value in
- * range is non-integral and both print the shortest round-trip digits.
- */
-function parenMask(prefix: string): string {
-  const exponent = rubyToI(prefix);
-  if (exponent < 0 || exponent > 22) {
-    throw new Error(
-      `unicodemath transform: paren size prefix ${exponent} is outside 0..22, where 1.25**n is ` +
-        "exact and Ruby's Float#to_s and JavaScript's String() are known to agree",
-    );
-  }
-  const size = 1.25 ** exponent;
-  return `${Number.isInteger(size) ? `${size}.0` : String(size)}em`;
-}
-
-/**
- * The block four `Fenced` rules spell out once per side — a SEQUENCE paren
- * whose first element is a `Number` carries a size prefix:
- *
- *   options[:open_prefixed] = true
- *   options[:open_paren] = { minsize: mask, maxsize: mask } unless value == ""
- *
- * `paren` is the bound array, `side` picks the option keys. `NodeOptions` keeps
- * the keys in the order they are assigned, as the Ruby hash does.
- */
-function applyParenMask(
-  options: Record<string, unknown>,
-  paren: readonly unknown[],
-  side: "open" | "close",
-): void {
-  const first = paren[0];
-  if (!(isDraft(first) && first.kind === "number")) return;
-  const value = rubyToS(first.fields.value);
-  options[`${side}_prefixed`] = true;
-  if (value !== "") {
-    const mask = parenMask(value);
-    options[`${side}_paren`] = { minsize: mask, maxsize: mask };
-  }
  * Ruby `Float#to_s` for the positive powers of 1.25 the paren-size mask
  * builds: a whole value keeps its `.0` (`1.25**0` is `"1.0"`), and the
  * exponent form starts at 1e16 (`"1.0e+16"`), where JavaScript's starts at 1e21.

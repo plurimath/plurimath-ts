@@ -80,16 +80,15 @@ for (const entry of fixtures.cases) {
   reached += 1;
 }
 
+const FINAL_COUNT = 0;
+
 describe("transform rule coverage", () => {
   it("drove every parseable fixture through one transform", () => {
     expect(reached).toBe(fixtures.cases.filter((entry) => entry.model !== undefined).length);
     expect(reached).toBeGreaterThan(90);
   });
 
-  it("registers the 188 rules the slice carries", () => {
-  it("registers the 210 rules the slice carries", () => {
   it("registers every rule the slice carries", () => {
-  it("registers the rules the slice carries", () => {
     // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
     // eight-rule table/matrix family the first slice deferred: `transform.rb:8`,
     // `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13
@@ -146,8 +145,6 @@ describe("transform rule coverage", () => {
     // Plus 10 from the ROOT/OVER-UNDER/ACCENT leftovers: `:341`, `:969`,
     // `:977`, `:1404`, `:1506`, `:1530`, `:1538`, `:2221`, and two unwraps
     // they need first, `:31` and `:118`.
-    expect(build.ruleIds.length).toBe(188);
-    expect(new Set(build.ruleIds).size).toBe(188);
     // hand-picked one — plus 23 SYMBOL/OPERATOR/NUMBER leaves: the three
     // `BaseNumberPrefix::Transform` rules (`bnp:36`-`bnp:38`) and twenty
     // `unicode_math/transform.rb` rules (`:109`, `:134`, `:191`, `:243`,
@@ -172,8 +169,6 @@ describe("transform rule coverage", () => {
     // The other 83 pure rules of the gem are not registered: none has an
     // input the port can parse to the oracle's model yet, because each one
     // reaches an unported BUILDING rule first (see `transform.ts`).
-    expect(build.ruleIds.length).toBe(210);
-    expect(new Set(build.ruleIds).size).toBe(210);
     //
     // Plus 32 from slice E (FRACTIONS), reached by the hand-picked
     // "fractions_seq" coverage group: 25 that build (the ten sequence-shaped
@@ -184,8 +179,6 @@ describe("transform rule coverage", () => {
     // `:666`) and 7 prerequisite folds owned by other slices and registered
     // under their ids (`:396`, `:561`, `:592`, `:675`, `:1756`, `:2055`,
     // `:2067`).
-    expect(build.ruleIds.length).toBe(220);
-    expect(new Set(build.ruleIds).size).toBe(220);
     // Plus 49 from slice F, the SCRIPT/SUBSUP/BASE builders and the NARY
     // remainder: 42 building rules (`:53`, `:86`, `:113`, `:511`, `:516`,
     // `:521`, `:533`, `:553`, `:561`, `:567`, `:575`, `:584`, `:592`, `:614`,
@@ -198,8 +191,6 @@ describe("transform rule coverage", () => {
     // rules are NOT registered: `:1003` (`{sub_script:, recursion:}` — no
     // grammar rule emits a `recursion` key) and `:2403` (`{base:, sub:
     // sequence, sub_recursion:}` — no reaching input found).
-    expect(build.ruleIds.length).toBe(237);
-    expect(new Set(build.ruleIds).size).toBe(237);
     //
     // Plus 23 FENCED (slice G1, `transform.rb:2020`-`:2983`): every `Fenced`-
     // building rule of that range not claimed by another slice — `:2020`,
@@ -210,8 +201,6 @@ describe("transform rule coverage", () => {
     // corpus row `"((a)̅)̅"`) — plus 6 prerequisites owned by other slices' pure
     // rules, registered under their own ids so the SEQUENCE-paren and
     // mini-paren witnesses can compare: `:60`, `:85`, `:97`, `:561`, `:2055`, `:2067`.
-    expect(build.ruleIds.length).toBe(217);
-    expect(new Set(build.ruleIds).size).toBe(217);
     //
     // Plus 47 from the bracket-pair family in `transform.rb:3000` to the end
     // (slice G2): 42 `Fenced` rules (`:3085`, `:3108`, `:3119`, `:3132`, `:3143`,
@@ -224,8 +213,9 @@ describe("transform rule coverage", () => {
     // the ids slices A and B claim (`:191`, `:196`, `:204`, `:2055`, `:2067`). Twenty-one more rules in that
     // range are NOT registered: no input among the ~5,100 traced on the oracle
     // reaches them (see `.codex-context/tasks/unicodemath-rule-claims/G2.deferred`).
-    expect(build.ruleIds.length).toBe(235);
-    expect(new Set(build.ruleIds).size).toBe(235);
+    // Slice tallies above are historical; the assertion is the one final count.
+    expect(build.ruleIds.length).toBe(FINAL_COUNT);
+    expect(new Set(build.ruleIds).size).toBe(FINAL_COUNT);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

@@ -852,6 +852,7 @@ RULE_COVERAGE = {
     "a a^b ab",
     "a a_b ab",
     "|a| a b",
+  ],
   # FENCED (slice G1): the `Fenced`-building rules of `transform.rb:2020`-`:2983`
   # (rule numbers are the lines `rule(` opens on). Each input was traced on the
   # oracle with a `TracePoint :b_call` mapped to those lines and fires the rule
@@ -927,6 +928,7 @@ RULE_COVERAGE = {
     "[■(a&b)]",
     "(_a^b c)",
   # "fenced_g2": the bracket-pair family, `transform.rb:3000` to the end of the
+  ],
   # file -- every `Fenced.new(open_paren, ..., close_paren)` rule (a few wrap the
   # Fenced in a `Power`) that binds `open_paren`/`close_paren` -- plus B's two
   # interval-infinity rules. One input per rule, each traced on the oracle with

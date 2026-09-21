@@ -106,7 +106,7 @@ describe("unary functions", () => {
     // render of the name would diverge silently.
     expect(() => toLatex(unary("Merror", x()))).toThrow(RenderError);
     expect(() => toLatex(new BinaryFunctionNode({ name: "Menclose" }))).toThrow(RenderError);
-    expect(() => toLatex(new TernaryFunctionNode({ name: "Multiscript" }))).toThrow(RenderError);
+    expect(() => toLatex(new TernaryFunctionNode({ name: "Underover" }))).toThrow(RenderError);
   });
 
   /**

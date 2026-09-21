@@ -24,7 +24,7 @@
  *
  * Every fixture row is asserted: byte-for-byte where the gem renders, a
  * `RenderError`/`ParseError` where it refused. A row the port cannot yet
- * reproduce is named in `PORT_REFUSES` below (104 rows, all kind-renderer
+ * reproduce is named in `PORT_REFUSES` below (92 rows, all kind-renderer
  * refusals).
  */
 import { readFileSync } from "node:fs";
@@ -59,7 +59,7 @@ interface Row {
 }
 
 /** Rows the gem renders that the port renders too, per format (a pin, not a knob). */
-const RENDERED_BASELINE = { mathml: 166, omml: 161 } as const;
+const RENDERED_BASELINE = { mathml: 172, omml: 167 } as const;
 
 interface Fixture {
   readonly schema: string;
@@ -74,8 +74,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const CENSUS_ALIASES = aliasIndex(readCensus());
 
 /**
- * Rows the gem renders and this port's KIND renderers do not, by id: 26 for
- * MathML and 78 for OMML. Every one refuses on a node kind or alias the
+ * Rows the gem renders and this port's KIND renderers do not, by id: 20 for
+ * MathML and 72 for OMML. Every one refuses on a node kind or alias the
  * per-kind renderer has not measured (`Longdiv`, `Phantom`, `Underover`, the
  * unmeasured unary aliases...). For all but six the same refusal occurs without
  * `splitOnLinebreak`; the six (MathML `line-break-029`, OMML `012` and `029`,
@@ -106,16 +106,10 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-059-display-false",
     "line-break-072",
     "line-break-072-display-false",
-    "line-break-076",
-    "line-break-076-display-false",
     "line-break-077",
     "line-break-077-display-false",
-    "line-break-083",
-    "line-break-083-display-false",
     "line-break-084",
     "line-break-084-display-false",
-    "line-break-090",
-    "line-break-090-display-false",
   ],
   omml: [
     "asciimath-spec-omml-08",
@@ -184,18 +178,12 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-072-display-false",
     "line-break-073",
     "line-break-073-display-false",
-    "line-break-076",
-    "line-break-076-display-false",
     "line-break-077",
     "line-break-077-display-false",
-    "line-break-083",
-    "line-break-083-display-false",
     "line-break-084",
     "line-break-084-display-false",
     "line-break-085",
     "line-break-085-display-false",
-    "line-break-090",
-    "line-break-090-display-false",
   ],
 };
 
@@ -232,16 +220,22 @@ for (const format of ["mathml", "omml"] as const) {
   const fixture = load(format);
   const render = RENDERERS[format];
   const refuses = new Set(PORT_REFUSES[format]);
-  const rendered = fixture.cases.filter((row) => row.expected !== undefined);
-  const refused = fixture.cases.filter((row) => row.raises !== undefined);
+  // The `ternary-function` group shares the file but not the subject; it is
+  // asserted by `ternary-function-parity.spec.ts`. Everything below is about
+  // the split and display-style rows, so the group is left out of them.
+  const own = fixture.cases.filter((row) => row.group !== "ternary-function");
+  const allRendered = fixture.cases.filter((row) => row.expected !== undefined);
+  const allRefused = fixture.cases.filter((row) => row.raises !== undefined);
+  const rendered = own.filter((row) => row.expected !== undefined);
+  const refused = own.filter((row) => row.raises !== undefined);
 
   describe(`${format} render-options fixture`, () => {
     it("counts its own rows", () => {
       expect(fixture.schema).toBe("plurimath-corpus/render-options/1");
       expect(fixture.format).toBe(format);
       expect(fixture.caseCount).toBe(fixture.cases.length);
-      expect(fixture.renderedCount).toBe(rendered.length);
-      expect(fixture.raisedCount).toBe(refused.length);
+      expect(fixture.renderedCount).toBe(allRendered.length);
+      expect(fixture.raisedCount).toBe(allRefused.length);
       expect(new Set(fixture.cases.map((row) => row.id)).size).toBe(fixture.cases.length);
     });
 

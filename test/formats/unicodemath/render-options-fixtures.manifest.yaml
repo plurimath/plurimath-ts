@@ -2,31 +2,19 @@
 # `payload.sha256` covers the whole payload file, including its final newline.
 ---
 schema: plurimath-corpus/manifest/2
-committable: false
-warnings:
-- generated with --allow-dirty
-- 'generator checkout dirty: TODO.plan/deferred.md, scripts/generate-render-options-fixtures.rb, src/render/ternary-function/asciimath.ts, src/render/ternary-function/html.ts, src/render/ternary-function/latex.ts, src/render/ternary-function/mathml.ts, src/render/ternary-function/omml.ts, src/render/ternary-function/unicodemath.ts, test/formats/latex/renderer.spec.ts, test/formats/ternary-function-parity.spec.ts'
+committable: true
+warnings: []
 generator:
   path: scripts/generate-render-options-fixtures.rb
-  sha256: e1948018c10a7e52ce85c423c8ae6688c373931826571ddc4c121933595cbc40
+  sha256: f5e5dd3db8d70c0b4a4dfc073c4adc28f5ba2f0f6e2f9db285f702e981e603e4
   inputs:
     scripts/generate-corpus.rb: 60afefa7bccb49b7f801c27a0fe3ce7605c63cd2e4afdccea7d4125fff2c01b3
-    scripts/generate-render-options-fixtures.rb: e1948018c10a7e52ce85c423c8ae6688c373931826571ddc4c121933595cbc40
+    scripts/generate-render-options-fixtures.rb: f5e5dd3db8d70c0b4a4dfc073c4adc28f5ba2f0f6e2f9db285f702e981e603e4
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 82c3ac544f9904b43a894d87a1b8908f5e4e28c0
-    clean: false
-    dirty_paths:
-    - TODO.plan/deferred.md
-    - scripts/generate-render-options-fixtures.rb
-    - src/render/ternary-function/asciimath.ts
-    - src/render/ternary-function/html.ts
-    - src/render/ternary-function/latex.ts
-    - src/render/ternary-function/mathml.ts
-    - src/render/ternary-function/omml.ts
-    - src/render/ternary-function/unicodemath.ts
-    - test/formats/latex/renderer.spec.ts
-    - test/formats/ternary-function-parity.spec.ts
+    commit: 0fff20eef47c0406809cc73f890c3dd6c68c377b
+    clean: true
+    dirty_paths: []
 oracle:
   gem: plurimath
   version: 0.11.6
@@ -117,5 +105,5 @@ dependencies:
 payload:
   path: render-options-fixtures.json
   schema: plurimath-corpus/render-options/1
-  sha256: 80b5dc99ff87c7dc4d177223de31727e3fa9ab9bca8f60e66f6f2804d63e1838
-  bytes: 51790
+  sha256: a00ba20810676f3d815832661537764303e8502262117b6e986f874f2e8fe00f
+  bytes: 124099

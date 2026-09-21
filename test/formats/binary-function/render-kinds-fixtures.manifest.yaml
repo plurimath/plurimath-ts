@@ -103,7 +103,7 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
 payload:
-  path: render-options-fixtures.json
-  schema: plurimath-corpus/render-options/1
-  sha256: 5c0da4c25dc18bd32bb9a95391b060630d8090b1d7e8810859c7465c7f2ade6d
-  bytes: 2282464
+  path: render-kinds-fixtures.json
+  schema: plurimath-corpus/render-binary-kinds/1
+  sha256: 9670e6f46f02c71a2426a85cc7ba1e4725e902fdbb31610385d67aa70b8ef677
+  bytes: 406544

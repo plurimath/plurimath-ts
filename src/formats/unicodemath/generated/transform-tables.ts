@@ -3936,6 +3936,7 @@ export const UNICODEMATH_BELOWS_NOTATIONS: ReadonlyMap<string, string> = new Map
 
 /**
 <<<<<<< HEAD
+<<<<<<< HEAD
  * `Constants::SUP_ALPHABETS`: character -> superscript entity. The grammar
  * table above carries `.values` only; the mini-sized script rules
  * (`transform.rb:53`, `:567`, `:575`) recover the character with
@@ -4005,6 +4006,33 @@ export const UNICODEMATH_SUB_PARENTHESIS_OPEN: ReadonlyMap<string, string> = new
 export const UNICODEMATH_SUB_PARENTHESIS_CLOSE: ReadonlyMap<string, string> = new Map([
   [")", "&#x208e;"],
 >>>>>>> feat/um-slice-g1-fenced-a
+=======
+ * `Constants::UNICODE_FRACTIONS`: each precomposed fraction entity mapped
+ * to its numerator and denominator as text. `Utility.unicode_fractions`
+ * (`unicode_math/utility.rb:69-76`) builds a `Frac` from the two parts,
+ * `.to_s` on each, and the grammar's `UNICODEMATH_UNICODE_FRACTIONS` is
+ * this table's keys.
+ */
+export const UNICODEMATH_UNICODE_FRACTION_PARTS: ReadonlyMap<string, readonly string[]> = new Map([
+  ["&#x2153;", ["1", "3"]],
+  ["&#x2154;", ["2", "3"]],
+  ["&#x2155;", ["1", "5"]],
+  ["&#x2156;", ["2", "5"]],
+  ["&#x2157;", ["3", "5"]],
+  ["&#x2158;", ["4", "5"]],
+  ["&#x2159;", ["1", "6"]],
+  ["&#x215a;", ["5", "6"]],
+  ["&#x2150;", ["1", "7"]],
+  ["&#x215b;", ["1", "8"]],
+  ["&#x215c;", ["3", "8"]],
+  ["&#x215d;", ["5", "8"]],
+  ["&#x215e;", ["7", "8"]],
+  ["&#x2151;", ["1", "9"]],
+  ["&#x2189;", ["0", "3"]],
+  ["&#xbd;", ["1", "2"]],
+  ["&#xbc;", ["1", "4"]],
+  ["&#xbe;", ["3", "4"]],
+>>>>>>> feat/um-slice-g2-fenced-b
 ]);
 
 /**

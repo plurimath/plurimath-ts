@@ -54,6 +54,7 @@ export const UNICODEMATH_PARSER_GENERATED_PROVENANCE: UnicodemathParserGenerated
       "scripts/generate-unicodemath-parser-data.rb",
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       "c8a15b9407997ca352bb04e05c0eb8e1eade02f48bf6059a6712e14db8bef801",
 =======
       "91b8af7c9f0afa0f560e9122643f7431952c175d680991580a011d10eb4eb633",
@@ -61,6 +62,9 @@ export const UNICODEMATH_PARSER_GENERATED_PROVENANCE: UnicodemathParserGenerated
 =======
       "9178fc744f5f029d2a29830f1ef8c5659b25b8cb81e619b8c52aa55fa11990f7",
 >>>>>>> feat/um-slice-g1-fenced-a
+=======
+      "b3b5fe21029e0f38b8f43960c920083c6ecd15339aa16fa6014844a55021ae6e",
+>>>>>>> feat/um-slice-g2-fenced-b
     ],
   ]),
   oracle: "plurimath",

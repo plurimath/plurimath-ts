@@ -89,6 +89,7 @@ describe("transform rule coverage", () => {
   it("registers the 188 rules the slice carries", () => {
   it("registers the 210 rules the slice carries", () => {
   it("registers every rule the slice carries", () => {
+  it("registers the rules the slice carries", () => {
     // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
     // eight-rule table/matrix family the first slice deferred: `transform.rb:8`,
     // `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13
@@ -211,6 +212,20 @@ describe("transform rule coverage", () => {
     // mini-paren witnesses can compare: `:60`, `:85`, `:97`, `:561`, `:2055`, `:2067`.
     expect(build.ruleIds.length).toBe(217);
     expect(new Set(build.ruleIds).size).toBe(217);
+    //
+    // Plus 47 from the bracket-pair family in `transform.rb:3000` to the end
+    // (slice G2): 42 `Fenced` rules (`:3085`, `:3108`, `:3119`, `:3132`, `:3143`,
+    // `:3167`, `:3178`, `:3200`, `:3255`, `:3277`, `:3288`, `:3299`, `:3310`,
+    // `:3345`, `:3367`, `:3389`, `:3400`, `:3411`, `:3422`, `:3455`, `:3499`,
+    // `:3510`, `:3521`, `:3531`, `:3542`, `:3553`, `:3564`, `:3576`, `:3640`,
+    // `:3651`, `:3676`, `:3711`, `:3723`, `:3739`, `:3755`, `:3792`, `:3804`,
+    // `:3840`, `:3897`, `:3909`, `:3922`, `:3935`) reached by the hand-picked
+    // "fenced_g2" coverage group, and five prerequisites registered under
+    // the ids slices A and B claim (`:191`, `:196`, `:204`, `:2055`, `:2067`). Twenty-one more rules in that
+    // range are NOT registered: no input among the ~5,100 traced on the oracle
+    // reaches them (see `.codex-context/tasks/unicodemath-rule-claims/G2.deferred`).
+    expect(build.ruleIds.length).toBe(235);
+    expect(new Set(build.ruleIds).size).toBe(235);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

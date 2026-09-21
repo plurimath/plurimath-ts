@@ -926,6 +926,110 @@ RULE_COVERAGE = {
     "(■(a&b))",
     "[■(a&b)]",
     "(_a^b c)",
+  # "fenced_g2": the bracket-pair family, `transform.rb:3000` to the end of the
+  # file -- every `Fenced.new(open_paren, ..., close_paren)` rule (a few wrap the
+  # Fenced in a `Power`) that binds `open_paren`/`close_paren` -- plus B's two
+  # interval-infinity rules. One input per rule, each traced on the oracle with
+  # every registered block wrapped in a counter (rule numbers are the lines
+  # `rule(` calls OPEN on):
+  #
+  #   :3085 `├1(a b c┤1)`     prefixed pair: open/close arrive as SEQUENCES;
+  #         `├0(a b c┤3)` takes the `1.0em` (a whole float) and `1.953125em` sizes
+  #   :3108 `(⒜x - ⒜y)`       unary_function + exp SEQUENCE
+  #   :3119 `∫_a▒(x)ab`       factor + naryand_recursion SEQUENCE
+  #   :3143 `∫_a▒(x)y`        factor + naryand_recursion simple; `|(x)|` in
+  #         place of `(x)` on both takes the `unfenced_value` branch
+  #   :3132 `(lim_x+a)`       unary_subsup + exp
+  #   :3167 `(x₁+a)`          mini_sub + exp SEQUENCE
+  #   :3178 `(x₂³+a)`         mini_sub_sup + exp SEQUENCE
+  #   :3200 `(x⁵+a)`          mini_sup + exp SEQUENCE
+  #   :3255 `(a′+a)`          accents + exp SEQUENCE
+  #   :3277 `(½+a)`           unicode_fractions + exp SEQUENCE
+  #   :3288 `(−=a)`           unicode_symbols + exp SEQUENCE
+  #   :3299 `(−1)^n`          unicode_symbols + exp
+  #   :3310 `∑ (−1)^n`        unicode_symbols + exp + sup (a Power around the Fenced)
+  #   :3345 `(x_1+a)`         sub_exp + exp SEQUENCE
+  #   :3367 `(x_2 a)`         sub_exp + exp
+  #   :3389 `(x^2 =)`         sup_exp + exp
+  #   :3400 `(ￗ(a) b c)`     monospace + exp SEQUENCE
+  #   :3411 `(a/b a)`         frac + exp
+  #   :3422 `(a/b+a)`         frac + exp SEQUENCE
+  #   :3455 `(x_1^2+a)`       subsup_exp + exp SEQUENCE
+  #   :3499 `(−≤a)`           symbol + expr SEQUENCE
+  #   :3510 `(ab +a)`         factor SEQUENCE + exp SEQUENCE
+  #   :3521 `(n!)`            factor SEQUENCE alone
+  #   :3531 `(a,1)`           factor + operand (the `,1` is `:191`'s decimal number)
+  #   :3542 `(a≤a)`           factor + operand SEQUENCE
+  #   :3553 `(ab≤a)`          factor SEQUENCE + operand SEQUENCE
+  #   :3564 `("t"a b)`        text + operand + exp
+  #   :3576 `("t"x=a)`        text + operand + exp SEQUENCE
+  #   :3640 `(\mbfA a)`       fonts + exp
+  #   :3651 `(= ab)`          operator + exp SEQUENCE
+  #   :3676 `(+a)`            operator + exp
+  #   :3711 `(a x^2 b c)`     factor + sup_exp + exp SEQUENCE
+  #   :3723 `∑▒(a_t b)^2`     sub_exp + exp + sup; `^(n+1)` takes the
+  #         `unfenced_value` branch on a parenthesised sup
+  #   :3739 `∑▒(a_t-b_t)^2`   sub_exp + exp SEQUENCE + sup; likewise `^(n+1)`
+  #   :3755 `∑▒(-1)^k`        operator + exp + sup
+  #   :3792 `(2x+3y)`         factor + operand + exp SEQUENCE
+  #   :3804 `(a≤a b c)`       factor + operand SEQUENCE + exp SEQUENCE
+  #   :3840 `(ￗ(a)←ￗ(b) c d)` monospace + relational_symbols + expr + exp SEQUENCE
+  #   :3897 `(1,2]`           interval, left and right both simple
+  #   :3909 `(1,ab]`          interval, right SEQUENCE
+  #   :3922 `(ab,1]`          interval, left SEQUENCE
+  #   :3935 `(a,b]`           interval, both SEQUENCE
+  #   :196  `[+∞,1]`          B: `{positive, infty}` -> [sign, infinity]
+  #   :204  `[−∞,1]`          B: `{negative, infty}`
+  "fenced_g2" => [
+    "├1(a b c┤1)",
+    "├0(a b c┤3)",
+    "(⒜x - ⒜y)",
+    "∫_a▒(x)ab",
+    "∫_a▒(x)y",
+    "∫_a▒|(x)|ab",
+    "∫_a▒|(x)|y",
+    "(lim_x+a)",
+    "(x₁+a)",
+    "(x₂³+a)",
+    "(x⁵+a)",
+    "(a′+a)",
+    "(½+a)",
+    "(−=a)",
+    "(−1)^n",
+    "∑ (−1)^n",
+    "(x_1+a)",
+    "(x_2 a)",
+    "(x^2 =)",
+    "(ￗ(a) b c)",
+    "(a/b a)",
+    "(a/b+a)",
+    "(x_1^2+a)",
+    "(−≤a)",
+    "(ab +a)",
+    "(n!)",
+    "(a,1)",
+    "(a≤a)",
+    "(ab≤a)",
+    "(\"t\"a b)",
+    "(\"t\"x=a)",
+    "(\\mbfA a)",
+    "(= ab)",
+    "(+a)",
+    "(a x^2 b c)",
+    "∑▒(a_t b)^2",
+    "∑▒(a_t b)^(n+1)",
+    "∑▒(a_t-b_t)^2",
+    "∑▒(a_t-b_t)^(n+1)",
+    "∑▒(-1)^k",
+    "(2x+3y)",
+    "(a≤a b c)",
+    "(ￗ(a)←ￗ(b) c d)",
+    "(1,2]",
+    "(1,ab]",
+    "(ab,1]",
+    "(a,b]",
+    "[+∞,1]",
+    "[−∞,1]",
   ],
 }.freeze
 

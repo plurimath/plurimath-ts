@@ -1133,6 +1133,20 @@ module UnicodeMathParserDataGenerator
              "(only `&#x332;`, `\"bottom\"`) a `Menclose` carrying this table's value\n" \
              "as its notation string.",
       ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_SUB_PARENTHESIS_OPEN", "ReadonlyMap<string, string>",
+        data[:sub_parenthesis_open],
+        doc: "`Constants::SUB_PARENTHESIS[:open]`: key -> entity. The grammar reads\n" \
+             "only `.values` (`UNICODEMATH_SUB_OPEN_PARENTHESIS`); the\n" \
+             "`sub_open_paren` rule (`transform.rb:2597`) inverts it with `Hash#key`\n" \
+             "to recover the plain-text paren the entity stands for.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_SUB_PARENTHESIS_CLOSE", "ReadonlyMap<string, string>",
+        data[:sub_parenthesis_close],
+        doc: "`Constants::SUB_PARENTHESIS[:close]`: `:open`'s twin, inverted the same\n" \
+             "way for the closing paren.",
+      ),
       ts_string_list(
         "UNICODEMATH_BINARY_FUNCTIONS", data[:binary_functions],
         "`Constants::BINARY_FUNCTIONS`: the `class_name` values the sub- and\n" \
@@ -1333,6 +1347,12 @@ module UnicodeMathParserDataGenerator
       ),
       overlays_notations: string_pairs(constants::OVERLAYS_NOTATIONS, "OVERLAYS_NOTATIONS"),
       belows_notations: string_pairs(constants::BELOWS_NOTATIONS, "BELOWS_NOTATIONS"),
+      sub_parenthesis_open: string_pairs(
+        constants::SUB_PARENTHESIS.fetch(:open), "SUB_PARENTHESIS[:open]"
+      ),
+      sub_parenthesis_close: string_pairs(
+        constants::SUB_PARENTHESIS.fetch(:close), "SUB_PARENTHESIS[:close]"
+      ),
       binary_functions: constants::BINARY_FUNCTIONS.dup,
       menclose: string_pairs(
         Plurimath::Utility::UNICODEMATH_MENCLOSE_FUNCTIONS, "UNICODEMATH_MENCLOSE_FUNCTIONS"

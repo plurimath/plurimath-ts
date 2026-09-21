@@ -86,7 +86,7 @@ describe("transform rule coverage", () => {
     expect(reached).toBeGreaterThan(90);
   });
 
-  it("registers the 155 rules the slice carries", () => {
+  it("registers every rule the slice carries", () => {
     // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
     // eight-rule table/matrix family the first slice deferred: `transform.rb:8`,
     // `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13
@@ -143,8 +143,18 @@ describe("transform rule coverage", () => {
     // Plus 10 from the ROOT/OVER-UNDER/ACCENT leftovers: `:341`, `:969`,
     // `:977`, `:1404`, `:1506`, `:1530`, `:1538`, `:2221`, and two unwraps
     // they need first, `:31` and `:118`.
-    expect(build.ruleIds.length).toBe(188);
-    expect(new Set(build.ruleIds).size).toBe(188);
+    //
+    // Plus 23 FENCED (slice G1, `transform.rb:2020`-`:2983`): every `Fenced`-
+    // building rule of that range not claimed by another slice — `:2020`,
+    // `:2457`, `:2485`, `:2495`, `:2505`, `:2515`, `:2525`, `:2536`, `:2547`,
+    // `:2557`, `:2567`, `:2577`, `:2587`, `:2597`, `:2609`, `:2640`, `:2650`,
+    // `:2668`, `:2724`, `:2746`, `:2761`, `:2769`, `:2983` — reached by the
+    // hand-picked "fenced_g1" coverage group (`:2640` is also reached by the
+    // corpus row `"((a)̅)̅"`) — plus 6 prerequisites owned by other slices' pure
+    // rules, registered under their own ids so the SEQUENCE-paren and
+    // mini-paren witnesses can compare: `:60`, `:85`, `:97`, `:561`, `:2055`, `:2067`.
+    expect(build.ruleIds.length).toBe(217);
+    expect(new Set(build.ruleIds).size).toBe(217);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

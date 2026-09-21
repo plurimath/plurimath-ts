@@ -3935,6 +3935,24 @@ export const UNICODEMATH_BELOWS_NOTATIONS: ReadonlyMap<string, string> = new Map
 ]);
 
 /**
+ * `Constants::SUB_PARENTHESIS[:open]`: key -> entity. The grammar reads
+ * only `.values` (`UNICODEMATH_SUB_OPEN_PARENTHESIS`); the
+ * `sub_open_paren` rule (`transform.rb:2597`) inverts it with `Hash#key`
+ * to recover the plain-text paren the entity stands for.
+ */
+export const UNICODEMATH_SUB_PARENTHESIS_OPEN: ReadonlyMap<string, string> = new Map([
+  ["(", "&#x208d;"],
+]);
+
+/**
+ * `Constants::SUB_PARENTHESIS[:close]`: `:open`'s twin, inverted the same
+ * way for the closing paren.
+ */
+export const UNICODEMATH_SUB_PARENTHESIS_CLOSE: ReadonlyMap<string, string> = new Map([
+  [")", "&#x208e;"],
+]);
+
+/**
  * `Constants::BINARY_FUNCTIONS`: the `class_name` values the sub- and
  * sup-script rules treat as "a function still missing its argument", so
  * the script fills `parameter_one`/`parameter_two` instead of wrapping.

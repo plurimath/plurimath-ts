@@ -754,6 +754,19 @@ module UnicodeMathParserDataGenerator
     end
   end
 
+  # `Constants::UNICODE_FRACTIONS` as `[entity, [numerator, denominator]]`, the
+  # two integers as the Strings `Utility.unicode_fractions` hands to
+  # `Math::Number.new` (`.to_s`), so the port copies text and never re-derives it.
+  def unicode_fraction_rows
+    constants::UNICODE_FRACTIONS.map do |entity, parts|
+      unless parts.is_a?(::Array) && parts.length == 2 && parts.all?(::Integer)
+        raise Error, "UNICODE_FRACTIONS[#{entity.inspect}] is #{parts.inspect}; expected [Integer, Integer]"
+      end
+
+      [entity.to_s, parts.map(&:to_s)]
+    end
+  end
+
   # `Constants::PHANTOM_SYMBOLS` as `[name, [[function_name, attributes], ...]]`,
   # every hash below the top written as ordered `[key, value]` pairs.
   def phantom_rows
@@ -1157,6 +1170,15 @@ module UnicodeMathParserDataGenerator
              "(`unicode_math/utility.rb:213-226`) emits for that bit of a `rect_value`\n" \
              "mask.",
       ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_FRACTION_PARTS", "ReadonlyMap<string, readonly [string, string]>",
+        data[:unicode_fraction_parts],
+        doc: "`Constants::UNICODE_FRACTIONS`: each vulgar-fraction entity mapped to its\n" \
+             "`[numerator, denominator]` as text. `Utility.unicode_fractions`\n" \
+             "(`utility.rb:69-76`) reads `.first` and `.last` of this pair and builds\n" \
+             "`Math::Number.new(x.to_s)` from each. The parser's own key-only view is\n" \
+             "`UNICODEMATH_UNICODE_FRACTIONS`.",
+      ),
       [
         CoreDataGenerator.ts_doc(
           "One `PHANTOM_SYMBOLS` attribute value: a boolean, a string, or a hash\n" \
@@ -1338,6 +1360,7 @@ module UnicodeMathParserDataGenerator
         Plurimath::Utility::UNICODEMATH_MENCLOSE_FUNCTIONS, "UNICODEMATH_MENCLOSE_FUNCTIONS"
       ),
       mask_classes: string_pairs(Plurimath::Utility::MASK_CLASSES, "MASK_CLASSES"),
+      unicode_fraction_parts: unicode_fraction_rows,
       phantom_functions: phantom_rows,
       primes: string_pairs(Plurimath::Utility.primes_constants, "primes_constants"),
       is_a: is_a_rows(gem_dir),

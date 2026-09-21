@@ -41,6 +41,13 @@
 #                       checked on its own, apart from any renderer;
 #   - `expected`        the gem's bytes, or `raises`/`raisedIn` when it refused.
 #
+# The same files also carry rows that pass NO options, for kinds only the LaTeX,
+# HTML and UnicodeMath parsers (or a hand-built tree) reach — each under its own
+# `group`, asserted by `test/formats/table-frac-nary-parity.spec.ts`:
+# `table-frac-nary-survey`, `table-frac-nary-spec` and `table-frac-nary-probe`
+# (OMML: Table and its subclasses, Frac and Nary options), and `nary-mask`
+# (MathML: `options[:mask]` on Nary).
+#
 # The oracle path MUST be a clean checkout of the pinned plurimath commit. This
 # script loads it through $LOAD_PATH and refuses to run against an installed
 # gem, which would silently answer from a different version.
@@ -53,6 +60,15 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-render-options-fixtures.rb"
 SCHEMA = "plurimath-corpus/render-options/1"
 FORMATS = %w[mathml omml].freeze
 PAYLOAD_BASENAME = "render-options-fixtures.json"
+
+# The gem's parse type for each input format this file records; UnicodeMath is
+# `:unicode` there and `unicodemath` everywhere in the port.
+GEM_PARSE_TYPES = {
+  "asciimath" => :asciimath,
+  "html" => :html,
+  "latex" => :latex,
+  "unicodemath" => :unicode,
+}.freeze
 
 KEYWORDS = {
   "displayStyle" => :display_style,
@@ -92,6 +108,86 @@ DISPLAY_STYLE_PROBES = [
 # spells `to_s == ""` and so is FALSE, not the default.
 DISPLAY_STYLE_VALUES = [true, false, "true", "false", nil].freeze
 
+# Inputs the renderers refused while the port had only the AsciiMath transform:
+# each is a kind (Table and its ten subclasses, Frac with options, Nary with
+# options) that only the LaTeX, HTML or UnicodeMath parser can build. Taken from
+# a survey of what those three parsers produce, before any renderer change, and
+# kept whether or not the port now renders them: the row is the gem's answer.
+TABLE_FRAC_NARY_TEXT_SOURCES = [
+  ["latex", "\\left (\\begin{matrix}a \\\\ b\\end{matrix}\\right )"],
+  ["latex", "\\left [\\begin{matrix}a & b \\\\ c & d\\end{matrix}\\right ]"],
+  ["latex", "\\begin{matrix}a & b\\end{matrix}"],
+  ["latex", "\\begin{pmatrix}a \\\\ b\\end{pmatrix}"],
+  ["latex", "\\begin{bmatrix}a\\end{bmatrix}"],
+  ["latex", "\\begin{vmatrix}a & b \\\\ c & d\\end{vmatrix}"],
+  ["latex", "\\begin{Bmatrix}a\\end{Bmatrix}"],
+  ["latex", "\\begin{array}{cc}a & b\\end{array}"],
+  ["latex", "\\begin{matrix}a&b\\\\c&d\\end{matrix}"],
+  ["latex", "\\begin{pmatrix}a&b\\\\c&d\\end{pmatrix}"],
+  ["latex", "\\begin{vmatrix}a\\end{vmatrix}"],
+  ["latex", "\\begin{Vmatrix}a\\end{Vmatrix}"],
+  ["latex", "\\begin{multline}a\\end{multline}"],
+  ["latex", "\\begin{split}a\\\\b\\end{split}"],
+  ["latex", "\\begin{align}a&=b\\\\c&=d\\end{align}"],
+  ["latex", "\\begin{align*}a&=b\\end{align*}"],
+  ["latex", "\\begin{array}{cc}a&b\\\\c&d\\end{array}"],
+  ["latex", "\\begin{array}{c|c}a&b\\\\c&d\\end{array}"],
+  ["latex", "\\begin{array}{lr}a&b\\end{array}"],
+  ["latex", "\\begin{matrix}a\\\\\\end{matrix}"],
+  ["latex", "\\begin{matrix}\\hline a\\\\b\\end{matrix}"],
+  ["latex", "\\begin{array}{c}\\hline a\\\\ \\hline b\\end{array}"],
+  ["latex", "\\matrix{a}"],
+  ["latex", "\\matrix{a&b}"],
+  ["latex", "\\begin{matrix}-a&b\\end{matrix}"],
+  ["latex", "\\begin{array}{c}a\\end{array}"],
+  ["latex", "\\begin{align*}[c]a&b\\\\c&d\\end{align*}"],
+  ["html", "<table><tr><td>a</td></tr><tr><td>b</td></tr></table>"],
+  ["html", "<table><tr><td>a</td><td>b</td></tr></table>"],
+  ["html", "<table><tr><td>a</td></tr></table>"],
+  ["html", "<table><tr><td>Something</td></tr></table>"],
+  ["html", "<table><tr><td>4</td></tr><tr><td>3</td></tr><tr><td>2</td></tr><tr><td>1</td></tr></table>"],
+  ["unicodemath", "⒨(a@b)"],
+  ["unicodemath", "ⓢ(a&b@c&d)"],
+  ["unicodemath", "■(a&b)"],
+  ["unicodemath", "ⓢ(a)"],
+  ["unicodemath", "⒱(a&b@c&d)"],
+  ["unicodemath", "Ⓢ(a)"],
+  ["unicodemath", "³/₂"],
+  ["unicodemath", "x \\atop y"],
+  ["unicodemath", "x \\choose y"],
+  ["unicodemath", "x\\sdiv y"],
+  ["unicodemath", "x\\ldiv y"],
+  ["unicodemath", "x\\ndiv y"],
+  ["unicodemath", "■(a)"],
+  ["unicodemath", "■3"],
+  ["unicodemath", "■(3x)"],
+  ["unicodemath", "■(a&b&c)"],
+  ["unicodemath", "■((x)y&c)"],
+  ["unicodemath", "■((x)y&c&d)"],
+  ["unicodemath", "■(a@b@c)"],
+  ["unicodemath", "■(a&b@c&d@e&f)"],
+  ["unicodemath", "⒱(a@b)"],
+  ["unicodemath", "⒩(a@b)"],
+  ["unicodemath", "Ⓢ(a@b)"],
+  ["unicodemath", "█(a@b)"],
+  ["unicodemath", "■(a@b)"],
+  ["unicodemath", "Ⓒ(a@b)"],
+  ["unicodemath", "\\amalg13_d\\of d"],
+  ["unicodemath", "\\amalg13^d\\of d"],
+  ["unicodemath", "\\amalg13_d^d\\of d"],
+  ["unicodemath", "■(a&b@c&d)"],
+  ["unicodemath", "Ⓢ(a&b@c&d)"],
+].freeze
+
+# The `Nary` operand and limits a mask probe fills the two script slots with, in
+# the four ways `Nary#tag_name` distinguishes (both, lower only, upper only,
+# neither), and the masks tried. Chosen to hit every branch of
+# `Core#get_mask_options` (both `case` arms, all seven `% 32` values, a
+# negative mask, and each coercion `to_i` performs) — see `nary_mask_rows`.
+NARY_MASK_FILLINGS = [%w[d u], ["d", nil], [nil, "u"], [nil, nil]].freeze
+NARY_MASK_VALUES = [0, 1, 2, 3, 4, 5, 8, 9, 12, 13, 16, 17, 20, 24, 28, 29, 32, -1, -3,
+                    "13", "1abc", "x", 13.7, nil, false, true].freeze
+
 options = { oracle: nil, out: "test/formats", allow_dirty: false }
 OptionParser.new do |o|
   o.on("--oracle PATH", "clean pinned plurimath checkout") { |v| options[:oracle] = v }
@@ -127,6 +223,7 @@ unless loaded&.start_with?(lib)
 end
 
 require "plurimath/fixtures/formula_modules/line_break_values"
+require "plurimath/fixtures/formula_modules/expected_values"
 
 # The ONE exception the oracle is documented to raise across this surface:
 # `Formula#wrap_render_error` funnels every StandardError from a `to_<format>`
@@ -167,6 +264,144 @@ def render(formula, format, options_hash)
   formula.public_send("to_#{format}", **kwargs(options_hash))
 end
 
+# --- Table / Frac / Nary rows ------------------------------------------------
+
+# Whether a formula holds a node of any of these kinds, anywhere below it.
+def holds_table_frac_or_nary?(value)
+  case value
+  when ::Array then value.any? { |v| holds_table_frac_or_nary?(v) }
+  when ::Hash then value.each_value.any? { |v| holds_table_frac_or_nary?(v) }
+  when Plurimath::Math::Core
+    return true if value.is_a?(Plurimath::Math::Function::Table) ||
+                   value.is_a?(Plurimath::Math::Function::Nary) ||
+                   value.is_a?(Plurimath::Math::Function::Frac)
+
+    value.variables.any? { |ivar| holds_table_frac_or_nary?(value.get(ivar)) }
+  else false
+  end
+end
+
+# The constants `spec/plurimath/math/formula/omml_spec.rb` renders, read from the
+# file (each `let(:exp) { ExpectedValues::EX_NNN }`), that hold a Table, Nary or
+# Frac.
+def omml_spec_table_frac_nary_values(oracle)
+  path = File.join(oracle, "spec/plurimath/math/formula/omml_spec.rb")
+  names = File.read(path).scan(/ExpectedValues::(\w+)/).flatten.uniq.sort
+  abort "REFUSING: no ExpectedValues constants in #{path}" if names.empty?
+
+  names.filter_map do |name|
+    formula = ExpectedValues.const_get(name)
+    [name, formula] if holds_table_frac_or_nary?(formula)
+  end
+end
+
+# Hand-built Tables, Fracs and Nary the parsers cannot reach or never vary: every
+# branch of `Table#to_omml_without_math_tag` (`single_table?`, the three
+# `nil_option?` reads, `fenced_table` with either paren missing), `Frac#fpr_element`
+# and `Nary#chr_value`, including the shapes where the gem raises. A non-hash
+# options slot (a String, `false`) is left out: the port's node constructors copy
+# the slot as a record, so no serialized model can spell it. Each entry is
+# `[id, node]`; the node is wrapped in a Formula by the caller.
+def table_frac_nary_probes
+  fn = Plurimath::Math::Function
+  sy = Plurimath::Math::Symbols
+  sym = ->(value) { sy::Symbol.new(value) }
+  tr = ->(*cells) { fn::Tr.new(cells.map { |v| fn::Td.new([sym.call(v)]) }) }
+  table = lambda do |rows, open = nil, close = nil, opts = {}|
+    fn::Table.new(rows, open, close, opts)
+  end
+  frac = ->(opts) { fn::Frac.new(sym.call("a"), sym.call("b"), opts) }
+  nary = ->(opts) { fn::Nary.new(sy::Sum.new, sym.call("d"), sym.call("u"), sym.call("x"), opts) }
+  [
+    ["table-nil-options-single-column", table.call([tr.call("a")], nil, nil, nil)],
+    ["table-nil-options-two-columns", table.call([tr.call("a", "b")], nil, nil, nil)],
+    ["table-empty-options-single-column", table.call([tr.call("a")])],
+    ["table-no-rows", table.call([])],
+    ["table-no-rows-parens", table.call([], sy::Paren::Lround.new, sy::Paren::Rround.new)],
+    ["table-open-paren-only", table.call([tr.call("a")], sy::Paren::Lround.new)],
+    ["table-close-paren-only", table.call([tr.call("a")], nil, sy::Paren::Rround.new)],
+    ["table-nil-valued-paren", table.call([tr.call("a")], sym.call(nil), sym.call(")"))],
+    ["table-norm-parens", table.call([tr.call("a")], sy::Paren::Norm.new, sy::Paren::Norm.new)],
+    ["table-frame-solid", table.call([tr.call("a")], nil, nil, { frame: "solid" })],
+    ["table-frame-none", table.call([tr.call("a")], nil, nil, { frame: "none" })],
+    ["table-columnlines-solid", table.call([tr.call("a")], nil, nil, { columnlines: "solid" })],
+    ["table-rowlines-solid", table.call([tr.call("a")], nil, nil, { rowlines: "solid" })],
+    ["table-rowlines-empty", table.call([tr.call("a")], nil, nil, { rowlines: "" })],
+    ["table-unrelated-option", table.call([tr.call("a")], nil, nil, { columnalign: "left" })],
+    ["table-ragged-rows", table.call([tr.call("a"), tr.call("b", "c")])],
+    ["matrix-default-parens", fn::Table::Matrix.new([tr.call("a", "b")])],
+    ["array-default-parens", fn::Table::Array.new([tr.call("a", "b")])],
+    ["cases-default-parens", fn::Table::Cases.new([tr.call("a"), tr.call("b")])],
+    ["vmatrix-no-parens", fn::Table::Vmatrix.new([tr.call("a")], nil, nil, {})],
+    ["frac-no-options", fn::Frac.new(sym.call("a"), sym.call("b"))],
+    ["frac-empty-options", frac.call({})],
+    ["frac-no-bar", frac.call({ linethickness: "0" })],
+    ["frac-skewed", frac.call({ bevelled: "true" })],
+    ["frac-bevelled-false", frac.call({ bevelled: "false" })],
+    ["frac-no-bar-and-skewed", frac.call({ linethickness: "0", bevelled: "true" })],
+    ["frac-thickness-one", frac.call({ linethickness: "1" })],
+    ["frac-thickness-integer-zero", frac.call({ linethickness: 0 })],
+    ["frac-unrelated-option", frac.call({ ldiv: true })],
+    ["frac-false-options", frac.call(false)],
+    ["nary-empty-options", nary.call({})],
+    ["nary-nil-options", nary.call(nil)],
+    ["nary-undover", nary.call({ type: "undOvr" })],
+    ["nary-type-nil", nary.call({ type: nil })],
+    ["nary-type-false", nary.call({ type: false })],
+    ["nary-type-integer", nary.call({ type: 5 })],
+    ["nary-type-true", nary.call({ type: true })],
+    ["nary-mask-ignored", nary.call({ mask: 13 })],
+  ]
+end
+
+def table_frac_nary_rows(add, oracle)
+  TABLE_FRAC_NARY_TEXT_SOURCES.each_with_index do |(input_format, text), index|
+    add.call(format("tfn-%s-%02d", input_format, index + 1), "table-frac-nary-survey",
+             "renderer survey of the LaTeX, HTML and UnicodeMath parsers, measured on the oracle",
+             { "format" => input_format, "text" => text }, {})
+  end
+  omml_spec_table_frac_nary_values(oracle).each do |name, formula|
+    add.call("tfn-spec-#{name.downcase}", "table-frac-nary-spec",
+             "spec/plurimath/math/formula/omml_spec.rb ExpectedValues::#{name}",
+             { "model" => CorpusGenerator.serialize_node(formula, "model") }, {}, formula)
+  end
+  table_frac_nary_probes.each do |id, node|
+    formula = Plurimath::Math::Formula.new([node])
+    add.call("tfn-probe-#{id}", "table-frac-nary-probe", "hand-built, measured on the oracle",
+             { "model" => CorpusGenerator.serialize_node(formula, "model") }, {}, formula)
+  end
+end
+
+# `Nary#to_mathml_without_math_tag` under `options[:mask]` (nary.rb:56,
+# `Core#masked_tag`): the four fillings of the two script slots against every mask
+# value that reaches a different branch, and a few again with `type: "undOvr"`.
+def nary_mask_rows(add)
+  fn = Plurimath::Math::Function
+  sy = Plurimath::Math::Symbols
+  build = lambda do |lower, upper, opts|
+    nary = fn::Nary.new(sy::Sum.new, lower && sy::Symbol.new(lower), upper && sy::Symbol.new(upper),
+                        sy::Symbol.new("x"), opts)
+    Plurimath::Math::Formula.new([nary])
+  end
+  emit = lambda do |id, formula|
+    add.call(id, "nary-mask", "measured on the oracle",
+             { "model" => CorpusGenerator.serialize_node(formula, "model") }, {}, formula)
+  end
+  NARY_MASK_FILLINGS.each do |lower, upper|
+    slots = "#{lower ? 'lower' : 'nolower'}-#{upper ? 'upper' : 'noupper'}"
+    NARY_MASK_VALUES.each do |mask|
+      label = mask.is_a?(::String) ? "str-#{mask}" : mask.inspect
+      emit.call("nary-mask-#{slots}-#{label}", build.call(lower, upper, { mask: mask }))
+    end
+    [1, 2, 13, 17, 20, 29].each do |mask|
+      emit.call("nary-mask-#{slots}-#{mask}-undover", build.call(lower, upper, { mask: mask, type: "undOvr" }))
+    end
+  end
+  # `to_s` on a mask the gem coerces: absent key, and the nil options hash the gem cannot read.
+  emit.call("nary-mask-key-absent", build.call("d", "u", {}))
+  emit.call("nary-nil-options", build.call("d", "u", nil))
+end
+
 def rows_for(format, oracle)
   rows = []
   # The gem's parser is slow (seconds for a table), and several rows share an
@@ -180,7 +415,7 @@ def rows_for(format, oracle)
     if formula.nil?
       begin
         key = [input.fetch("format"), input.fetch("text")]
-        formula = parsed[key] ||= Plurimath::Math.parse(input.fetch("text"), input.fetch("format").to_sym)
+        formula = parsed[key] ||= Plurimath::Math.parse(input.fetch("text"), GEM_PARSE_TYPES.fetch(input.fetch("format")))
       rescue ORACLE_REFUSAL => e
         row["raises"] = e.class.name
         row["raisedIn"] = "parse"
@@ -233,7 +468,10 @@ def rows_for(format, oracle)
   add.call("asciimath-backslash-no-break", "parsed-linebreak", "measured on the oracle",
            { "format" => "asciimath", "text" => "a \\ b" }, spec_options)
 
-  return rows if format == "mathml"
+  if format == "mathml"
+    nary_mask_rows(add)
+    return rows
+  end
 
   # `display_style:` — the asciimath spec's own `.to_omml` inputs, with the
   # option left out (the spec's default is `display_style: true`) and `false`.
@@ -265,6 +503,7 @@ def rows_for(format, oracle)
   add.call("display-probe-split-false", "display-style-probe", "measured on the oracle",
            { "format" => "latex", "text" => "\\lim_{x \\to 0} f(x) \\\\ \\underset{a}{b}" },
            { "splitOnLinebreak" => true, "displayStyle" => false })
+  table_frac_nary_rows(add, oracle)
   rows
 end
 

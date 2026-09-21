@@ -24,7 +24,7 @@
  *
  * Every fixture row is asserted: byte-for-byte where the gem renders, a
  * `RenderError`/`ParseError` where it refused. A row the port cannot yet
- * reproduce is named in `PORT_REFUSES` below (104 rows, all kind-renderer
+ * reproduce is named in `PORT_REFUSES` below (102 rows, all kind-renderer
  * refusals).
  */
 import { readFileSync } from "node:fs";
@@ -58,8 +58,20 @@ interface Row {
   readonly split?: readonly unknown[];
 }
 
+/**
+ * The groups this file asserts. The fixture files also carry the groups of
+ * other specs (`table-frac-nary-parity.spec.ts`), which own their own counts.
+ */
+const OWN_GROUPS: ReadonlySet<string> = new Set([
+  "line-break-spec",
+  "line-break-spec-display-style",
+  "parsed-linebreak",
+  "display-style-spec",
+  "display-style-probe",
+]);
+
 /** Rows the gem renders that the port renders too, per format (a pin, not a knob). */
-const RENDERED_BASELINE = { mathml: 166, omml: 161 } as const;
+const RENDERED_BASELINE = { mathml: 166, omml: 163 } as const;
 
 interface Fixture {
   readonly schema: string;
@@ -75,10 +87,10 @@ const CENSUS_ALIASES = aliasIndex(readCensus());
 
 /**
  * Rows the gem renders and this port's KIND renderers do not, by id: 26 for
- * MathML and 78 for OMML. Every one refuses on a node kind or alias the
+ * MathML and 76 for OMML. Every one refuses on a node kind or alias the
  * per-kind renderer has not measured (`Longdiv`, `Phantom`, `Underover`, the
- * unmeasured unary aliases...). For all but six the same refusal occurs without
- * `splitOnLinebreak`; the six (MathML `line-break-029`, OMML `012` and `029`,
+ * unmeasured unary aliases...). For all but four the same refusal occurs without
+ * `splitOnLinebreak`; the four (MathML `line-break-029` and OMML `029`,
  * each with its `-display-false` variant) render unsplit, and only refuse
  * because splitting yields a transformed alias the kind renderer has not
  * measured — a kind-renderer gap, not a walker mismatch (the split itself is
@@ -128,8 +140,6 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-008-display-false",
     "line-break-009",
     "line-break-009-display-false",
-    "line-break-012",
-    "line-break-012-display-false",
     "line-break-013",
     "line-break-013-display-false",
     "line-break-014",
@@ -200,7 +210,8 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
 };
 
 /** What a kind renderer says when it has not measured a kind, alias or slot. */
-const KIND_REFUSAL = /has not been measured|No measured \w+ rendering|only the measured generic/;
+const KIND_REFUSAL =
+  /has not been measured|No measured \w+ rendering|only the measured generic|only a Symbol, Sum or Prod/;
 
 const RENDERERS = {
   mathml: (node: MathNode, options: Record<string, unknown>) => toMathml(node, options as never),
@@ -232,16 +243,21 @@ for (const format of ["mathml", "omml"] as const) {
   const fixture = load(format);
   const render = RENDERERS[format];
   const refuses = new Set(PORT_REFUSES[format]);
-  const rendered = fixture.cases.filter((row) => row.expected !== undefined);
-  const refused = fixture.cases.filter((row) => row.raises !== undefined);
+  const own = fixture.cases.filter((row) => OWN_GROUPS.has(row.group));
+  const rendered = own.filter((row) => row.expected !== undefined);
+  const refused = own.filter((row) => row.raises !== undefined);
 
   describe(`${format} render-options fixture`, () => {
     it("counts its own rows", () => {
       expect(fixture.schema).toBe("plurimath-corpus/render-options/1");
       expect(fixture.format).toBe(format);
       expect(fixture.caseCount).toBe(fixture.cases.length);
-      expect(fixture.renderedCount).toBe(rendered.length);
-      expect(fixture.raisedCount).toBe(refused.length);
+      expect(fixture.renderedCount).toBe(
+        fixture.cases.filter((row) => row.expected !== undefined).length,
+      );
+      expect(fixture.raisedCount).toBe(
+        fixture.cases.filter((row) => row.raises !== undefined).length,
+      );
       expect(new Set(fixture.cases.map((row) => row.id)).size).toBe(fixture.cases.length);
     });
 

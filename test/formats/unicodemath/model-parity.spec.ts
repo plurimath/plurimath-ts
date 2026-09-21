@@ -78,6 +78,10 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * input that starts parsing CORRECTLY fails here just as loudly as one that
  * starts parsing wrongly.
  *
+ * The four UNICODE SPACE rows (NBSP and THREE-PER-EM SPACE runs, `"a \u00a0\u00a0 b"`
+ * and its three siblings) left this list when `:104`, the `spaces` leaf, was
+ * ported: with it registered all four parse to the oracle's model.
+ *
  * The list grew from two to twenty-six when the corpus pin advanced to
  * `281d7003` (PR #84), which added cases reaching four families this port has
  * not started, then shrank by the six table/matrix-only rows the TABLE
@@ -97,16 +101,6 @@ const DEFERRED_INPUTS: readonly string[] = [
 
   // SCRIPT (`transform.rb:118`-`:2403`): a right-associative double exponent.
   "x^y^(z)",
-
-  // UNICODE SPACE characters, not runs of ASCII spaces — the distinction
-  // matters, because a plain-space literal here silently fails to match the
-  // fixture and the case quietly rejoins the parity list. Measured from the
-  // fixture bytes: NBSP (U+00A0) and THREE-PER-EM SPACE (U+2004). The grammar
-  // maps only the ASCII space today.
-  "a \u00a0\u00a0 b",
-  "a \u00a0\u00a0 b \u00a0\u00a0 c",
-  "a \u2004 b",
-  "a \u00a0\u00a0\u00a0\u00a0 b",
 ];
 
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");

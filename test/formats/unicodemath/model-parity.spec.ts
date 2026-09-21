@@ -84,7 +84,6 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * increment above ported.
  */
 const DEFERRED_INPUTS: readonly string[] = [
-
   // DECORATION (`transform.rb:1286`-`:1491`) is ported now (`transform.ts`'s
   // module header). Three of the six corpus rows that used to sit here moved
   // out to `supported` below: `"⏟(a b)"`, `"⏟(a + b)"` and `"⏟(x)_(y)"` all

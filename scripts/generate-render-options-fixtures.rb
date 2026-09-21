@@ -80,10 +80,15 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-render-options-fixtures.rb"
 
 SCHEMA = "plurimath-corpus/render-options/1"
 FORMATS = %w[asciimath html latex mathml omml unicodemath].freeze
-# The formats the line-break and display-style groups are recorded for.
+# The formats whose payload holds an option group: the line-break rows, which
+# `rows_for` builds for exactly these.
 LINE_BREAK_FORMATS = %w[mathml omml].freeze
-# The formats whose payload holds no option group.
-UNARY_ONLY_FORMATS = %w[asciimath latex html unicodemath].freeze
+# The formats whose payload holds no option group (the B3 options do not touch
+# their renderers). Derived, so the two lists cannot drift apart.
+UNARY_ONLY_FORMATS = (FORMATS - LINE_BREAK_FORMATS).freeze
+# Of the option formats, the one that also records the `display_style:` rows
+# (MathML's payload stops after the line-break rows and the N-ary mask rows).
+DISPLAY_STYLE_FORMATS = %w[omml].freeze
 PAYLOAD_BASENAME = "render-options-fixtures.json"
 
 # The gem's parse type for each input format this file records; UnicodeMath is
@@ -204,6 +209,11 @@ UNARY_FUNCTION_TEXT_INPUTS = [
   ["latex", "\\cancel{\\frac{a}{b}}", "measured on the oracle"],
   ["latex", "\\ln{}", "measured on the oracle"],
   ["latex", "\\substack{a \\\\ b & c}", "measured on the oracle"],
+  # The aliases the HTML parser reads back (`HTML_UNARY_CLASSES`), as the
+  # gem's own HTML output spells them.
+  *%w[arcsin arccos arctan coth tanh sech csch sinh cosh csc exp sec tan cot lcm lg].map do |name|
+    ["html", "<i>#{name}</i><i><i>(</i>qx<i>)</i></i>", "measured on the oracle"]
+  end,
 ].freeze
 
 # The `ternary-function` group: every renderer's answer for the three
@@ -510,6 +520,23 @@ def unary_function_models
   cell = ->(value) { f::Td.new([symbol.call(value)]) }
 
   rows = []
+  # The plain aliases (`UnaryFunction` subclasses that add no slot logic of
+  # their own for this group), each over the same four shapes: a symbol, a
+  # formula, an empty slot and a hidden name. Every one is rendered to every
+  # format, so a format that admits an alias where another refuses is pinned as
+  # the gem does it. `Sin`, `Cos`, `Lg`, `Ker`, `Deg`, `Liminf` and `Limsup`
+  # ride along so a refusal hiding a renderable alias shows up.
+  %w[Sin Cos Arccos Arcsin Arctan Coth Tanh Sech Csch Sinh Cosh Csc Exp Sec Tan Cot
+     Lcm Min Dim Glb Lub Lg Ker Deg Liminf Limsup].each do |name|
+    klass = f.const_get(name)
+    lower = name.downcase
+    src = "measured on the oracle"
+    rows << ["alias-#{lower}-symbol", src, klass.new(symbol.call("x"))]
+    rows << ["alias-#{lower}-formula", src, klass.new(so_sum.call)]
+    rows << ["alias-#{lower}-nil", src, klass.new(nil)]
+    rows << ["alias-#{lower}-hidden", src, hidden.call(klass.new(symbol.call("x")))]
+  end
+
   %w[Ln Det Gcd Max Hom Cancel Phantom].each do |name|
     klass = f.const_get(name)
     lower = name.downcase
@@ -757,6 +784,8 @@ def rows_for(format, oracle)
   # The gem's own line-break fixtures, rendered exactly as its specs do
   # (`split_on_linebreak: true`; MathML also `unary_function_spacing: false`),
   # then again with `display_style: false` to show the two options compose.
+  raise "no row routing for format #{format}" unless LINE_BREAK_FORMATS.include?(format)
+
   constants = LineBreakValues.constants.sort
   raise "expected 90 LineBreak values, found #{constants.length}" unless constants.length == 90
 
@@ -782,7 +811,7 @@ def rows_for(format, oracle)
   add.call("asciimath-backslash-no-break", "parsed-linebreak", "measured on the oracle",
            { "format" => "asciimath", "text" => "a \\ b" }, spec_options)
 
-  if format == "mathml"
+  unless DISPLAY_STYLE_FORMATS.include?(format)
     unary_function_rows(add)
     nary_mask_rows(add)
     return rows

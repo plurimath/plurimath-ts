@@ -105,9 +105,9 @@ describe("transform rule coverage", () => {
     // header — and `:17` (`:13`'s SEQUENCE twin), the one small prerequisite a
     // "table" coverage witness needed — reached by the hand-picked "table"
     // coverage group — plus 11 DECORATION: seven of the eight rules
-    // `transform.rb:1286`-`:1491` builds (`:1375` is provably unreachable by
-    // anything this slice carries and is not registered — see
-    // `transform.ts`'s module header), plus the four unwraps every one of
+    // `transform.rb:1286`-`:1491` builds (`:1375` was unreachable by
+    // anything this increment carried and was left out — slice F registers it
+    // below), plus the four unwraps every one of
     // them routes through (`:40`, `:81`, `:88`, `:94`) — reached by the
     // hand-picked "decoration" coverage group, not the corpus — plus 10
     // RELATION/OPERATOR (`:30`, `:49`, `:99`, `:184`, `:401`, `:745`, `:1412`,
@@ -143,8 +143,20 @@ describe("transform rule coverage", () => {
     // Plus 10 from the ROOT/OVER-UNDER/ACCENT leftovers: `:341`, `:969`,
     // `:977`, `:1404`, `:1506`, `:1530`, `:1538`, `:2221`, and two unwraps
     // they need first, `:31` and `:118`.
-    expect(build.ruleIds.length).toBe(188);
-    expect(new Set(build.ruleIds).size).toBe(188);
+    // Plus 49 from slice F, the SCRIPT/SUBSUP/BASE builders and the NARY
+    // remainder: 42 building rules (`:53`, `:86`, `:113`, `:511`, `:516`,
+    // `:521`, `:533`, `:553`, `:561`, `:567`, `:575`, `:584`, `:592`, `:614`,
+    // `:622`, `:630`, `:635`, `:640`, `:646`, `:652`, `:985`, `:1011`,
+    // `:1054`, `:1069`, `:1078`, `:1139`, `:1148`, `:1164`, `:1183`, `:1919`,
+    // `:2142`, `:2153`, `:2163`, `:2173`, `:2183`, `:2827`, `:2841`, `:2884`,
+    // `:2993`, `:3020`, `:3047`, and DECORATION's `:1375`, which `:1054` unblocks) and 7 slice-A prerequisites registered under
+    // A's own ids (`:38`, `:59`, `:60`, `:65`, `:66`, `:89`, `:830`) —
+    // reached by the "script-subsup-nary" coverage group. Two of F's claimed
+    // rules are NOT registered: `:1003` (`{sub_script:, recursion:}` — no
+    // grammar rule emits a `recursion` key) and `:2403` (`{base:, sub:
+    // sequence, sub_recursion:}` — no reaching input found).
+    expect(build.ruleIds.length).toBe(237);
+    expect(new Set(build.ruleIds).size).toBe(237);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

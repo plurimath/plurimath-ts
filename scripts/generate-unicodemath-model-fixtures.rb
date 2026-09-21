@@ -302,6 +302,101 @@ RULE_COVERAGE = {
     "abc",
     "a!",
   ],
+  # "script-subsup-nary": the SCRIPT/SUBSUP/BASE builders and the NARY
+  # remainder (`transform.rb:53`-`:3047`). One input per rule, each traced on
+  # the oracle with every registered block mapped to the `rule(` line it sits
+  # under (a `TracePoint :b_call` over `transform.rb`), and kept only where the
+  # port carries every OTHER rule the input fires. `x^y^(z)` (`:985`), the one
+  # corpus input this family reaches, is already a corpus row.
+  #
+  #   "aᵃ"            53   {sup_alpha}, a mini-sup symbol
+  #   "a1^1_1"        86   {subsup_exp: sequence} — the array `:2142` returns
+  #                        when the base is a sequence, and `:2142` itself
+  #   "a⁺"            113  {sup_operators}, bare
+  #   "a^+n"          511  {operator, sup_script simple}, with `:1148`
+  #   "a^+ab"         516  {operator, sup_script sequence}, with `:1148`
+  #   "a^!!b"         521  {combined_symbols, sup_script}, with `:1148` — the
+  #                        input slice B recorded as waiting on `:1148`
+  #   "a_+1"          533  {operator, sub_script}, with `:1078`
+  #   "a₁₁₁"          553  {sub_digits, sub_recursion_expr sequence}
+  #   "a₁₂"           561  {sub_digits, sub_recursion_expr simple}
+  #   "aⁿ⁺¹"          567  {sup_alpha, sup_recursion_expr sequence}, `:652`
+  #   "a₁ⁿⁿ"          575  {sup_alpha, sup_recursion_expr simple}
+  #   "a²³⁴"          584  {sup_digits, sup_recursion_expr sequence}
+  #   "a²³"           592  {sup_digits, sup_recursion_expr simple}
+  #   "a^+^b"         614  {operator, sup_recursion} -> `recursive_sup`
+  #   "a_+_b"         622  {operator, sub_recursion simple} -> `recursive_sub`
+  #   "a_+_ab"        630  {operator, sub_recursion sequence}
+  #   "a_b_c"         635  {sub_script, sub_recursion} -> `recursive_sub`
+  #   "a₁₊₁"          640  {sub_operators, sub_recursions simple}
+  #   "a₁₊₁₂"         646  {sub_operators, sub_recursions sequence}
+  #   "aⁿ⁺¹"          652  {sup_operators, sup_recursions simple}, with `:567`
+  #   "a^b^c"         985  {sup_script, sup_recursion} -> `recursive_sup`
+  #   "a^cd^e"        1011 {sup_script sequence, sup_recursion}
+  #   "a1_1"          1054 {base sequence, sub simple}
+  #   "a1_cd"         1069 {base sequence, sub sequence}
+  #   "+_c1"          1078 {base simple, sub sequence}
+  #   "a1^1"          1139 {base sequence, sup simple}
+  #   "a^!!b"         1148 {base simple, sup sequence}
+  #   "a1^cd xy"      1164 {base sequence, sup sequence}
+  #   "lim^n ab"      1183 {unary_sub_sup, first_value sequence}
+  #   "∑_c1"          1919 {nary_class, sub sequence}
+  #   "a1^1_1"        2142 {base sequence, sup simple, sub simple}
+  #   "2₁₂ⁿ"          2153 {base simple, sup simple, sub sequence}
+  #   "+^c1_c1"       2163 {base simple, sup sequence, sub sequence}
+  #   "+^c1_1"        2173 {base simple, sup sequence, sub simple}
+  #   "∑₁₂²"          2183 {nary_class, sub sequence, sup simple}
+  #   "∑^c1_c1"       2827 {nary_class, sub sequence, sup sequence}
+  #   "∑^c1_1"        2841 {nary_class, sub simple, sup sequence}
+  #   "\\amalg13_cd"   2884 {nary_class, mask, sub sequence}
+  #   "\\amalg13^c1_c1" 2993 {nary_class, mask, sub sequence, sup sequence}
+  #   "\\amalg13^c1_1"  3020 {nary_class, mask, sub simple, sup sequence}
+  #   "\\amalg13^1_c1"  3047 {nary_class, mask, sub sequence, sup simple}
+  #
+  #   "⏟ab_1"         1375 {hbracket_class, scripted_first_value sequence} —
+  #                        the `:1054` array the `decoration` group could not
+  #                        build (fires `:1054`, `:38`)
+  "script-subsup-nary" => [
+    "aᵃ",
+    "a1^1_1",
+    "a⁺",
+    "a^+n",
+    "a^+ab",
+    "a^!!b",
+    "a_+1",
+    "a₁₁₁",
+    "a₁₂",
+    "aⁿ⁺¹",
+    "a₁ⁿⁿ",
+    "a²³⁴",
+    "a²³",
+    "a^+^b",
+    "a_+_b",
+    "a_+_ab",
+    "a_b_c",
+    "a₁₊₁",
+    "a₁₊₁₂",
+    "a^b^c",
+    "a^cd^e",
+    "a1_1",
+    "a1_cd",
+    "+_c1",
+    "a1^1",
+    "a1^cd xy",
+    "lim^n ab",
+    "∑_c1",
+    "2₁₂ⁿ",
+    "+^c1_c1",
+    "+^c1_1",
+    "∑₁₂²",
+    "∑^c1_c1",
+    "∑^c1_1",
+    "\\amalg13_cd",
+    "\\amalg13^c1_c1",
+    "\\amalg13^c1_1",
+    "\\amalg13^1_c1",
+    "⏟ab_1",
+  ],
   "multiscript" => [
     "^3 X",
     "_2 X",
@@ -393,13 +488,8 @@ RULE_COVERAGE = {
   #           simple — a scripted base resolves through `:1116` before
   #           `hbracket_class` sees it, so this is the SIMPLE
   #           `scripted_first_value` shape, not the SEQUENCE one. `:1375`,
-  #           the SEQUENCE twin, needs a `scripted_first_value` built from a
-  #           three-key `{base:, sub:, sup:}` or a `{base:, sub: sequence}`
-  #           shape this slice's `:1019`/`:1116` do not carry (both are
-  #           `simple`/`simple` only) — measured by trying several
-  #           `subsup_exp` and `pre_script` inputs, all of which hit that gap
-  #           first — so `:1375` is transcribed from the gem but UNWITNESSED
-  #           here; see `transform.ts`'s module header.
+  #           the SEQUENCE twin, needs a sequence-shaped scripted base and is
+  #           witnessed by `"⏟ab_1"` in the "script-subsup-nary" group.
   #   "3x⃝"   rule 1420, `first_value` SEQUENCE/`overlay_after` simple — the
   #           same `{factor:, operand:}` sequence as `"⎵3x"` above, with
   #           `Array#pop` peeling the diacritic onto only the LAST factor.

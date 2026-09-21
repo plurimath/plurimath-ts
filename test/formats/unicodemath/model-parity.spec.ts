@@ -95,8 +95,8 @@ const DEFERRED_INPUTS: readonly string[] = [
   // `:1530`; each now compares for real, as a corpus row.
   "((a)̅)̅",
 
-  // SCRIPT (`transform.rb:118`-`:2403`): a right-associative double exponent.
-  "x^y^(z)",
+  // `"x^y^(z)"` (`:985`, a right-associative double exponent) sat here until
+  // the SCRIPT/SUBSUP/BASE builders landed; it is a `supported` corpus row now.
 
   // UNICODE SPACE characters, not runs of ASCII spaces — the distinction
   // matters, because a plain-space literal here silently fails to match the

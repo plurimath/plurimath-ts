@@ -154,39 +154,25 @@ describe("the UnicodeMath battery fixture set", () => {
  * signal to move the id out of the list rather than the list silently going
  * stale).
  *
- * At the time this file was written, the port matched 47 of the 49 inputs
- * the oracle parses and refused the 1 the oracle refuses. That is 50 total
- * cases, not 49: 47 exact matches, plus 1 shared refusal (an input the
- * oracle itself refuses), plus these 2 documented gaps — never "1 shared
- * refusal out of the 49 the oracle parses", which double-counts against the
- * wrong denominator. Two inputs are documented gaps, measured here rather
- * than deleted or hidden:
+ * Measured now: the port matches all 49 inputs the oracle parses and refuses
+ * the 1 the oracle refuses, so the set is empty. Two inputs used to be gaps,
+ * and neither was a missing rule:
  *
- *   - `"a·b·c"` (`unicodemath-battery-6d2c0882dcdd`) — a chained interpunct
- *     multiplication. The port's transform slice does not carry the rule
- *     matching `{atom: simple, atoms: other}`, which this three-token chain
- *     needs; the two-token `"2·3"` case above stays in the parsed set
- *     because it resolves through rules the slice already carries.
- *   - `"f'(x)"` (`unicodemath-battery-f88c04694b60`) — a primed function
- *     application. The port's transform slice does not carry the rule
- *     matching `{accents: simple, expr: simple}`, which a prime immediately
- *     followed by a parenthesised argument needs; the bare-prime cases
- *     `"x'"` and `"x''"` above stay in the parsed set because they resolve
- *     through the rule this slice does carry.
+ *   - `"a·b·c"` (`unicodemath-battery-6d2c0882dcdd`) and `"f'(x)"`
+ *     (`unicodemath-battery-f88c04694b60`): the gem's own transform leaves a
+ *     hash no rule matches (`{atom:, atoms: {...}}` and `{accents:, expr:}`),
+ *     and `Kernel#Array` folds it into `[key, value]` pairs, so the gem's
+ *     model for each is a formula holding pairs — see the recorded fixtures.
+ *     The port refused them only because `GEM_UNMATCHED_SIGNATURES` did not
+ *     yet list those shapes; it reproduces the gem's pairs now.
  *
- * Both raise `ParseError` here where the oracle returned a model — a
- * divergent REFUSAL, not a wrong model — so each is recorded as a documented
- * gap rather than a silent failure. A future slice that ports either rule
- * family makes the matching `toThrow` assertion below fail (the port would
- * stop throwing), which is the signal to move that id out of this set.
+ * The mechanism stays so that a future battery input the port cannot yet parse
+ * is recorded rather than deleted.
  */
-const KNOWN_PORT_GAPS: ReadonlySet<string> = new Set([
-  "unicodemath-battery-6d2c0882dcdd",
-  "unicodemath-battery-f88c04694b60",
-]);
+const KNOWN_PORT_GAPS: ReadonlySet<string> = new Set<string>();
 
 describe("the parsed model", () => {
-  it("finds a port-side gap on exactly the two documented ids, no more and no fewer", () => {
+  it("finds a port-side gap on exactly the documented ids, no more and no fewer", () => {
     // Without this, a stray or missing id in `KNOWN_PORT_GAPS` — one for a
     // case that doesn't exist, or one that omits an actual divergence —
     // would pass every `it.each` row below unnoticed: the affected row would

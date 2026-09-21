@@ -145,6 +145,14 @@ describe("transform rule coverage", () => {
     // they need first, `:31` and `:118`.
     expect(build.ruleIds.length).toBe(188);
     expect(new Set(build.ruleIds).size).toBe(188);
+    // hand-picked one — plus 23 SYMBOL/OPERATOR/NUMBER leaves: the three
+    // `BaseNumberPrefix::Transform` rules (`bnp:36`-`bnp:38`) and twenty
+    // `unicode_math/transform.rb` rules (`:109`, `:134`, `:191`, `:243`,
+    // `:250`, `:266`, `:272`, `:278`, `:302`, `:309`, `:320`, `:396`, `:451`,
+    // `:456`, `:466`, `:476`, `:481`, `:527`, `:2085`, `:2091`) — reached by
+    // the hand-picked "symbol" coverage group.
+    expect(build.ruleIds.length).toBe(0); // TODO-INT
+    expect(new Set(build.ruleIds).size).toBe(0); // TODO-INT
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

@@ -545,6 +545,34 @@ RULE_COVERAGE = {
     "\\mbfsansA∈x",
     "\\BbbA≤x",
   ],
+  # Symbol, operator and number leaves. Each input was traced on the oracle
+  # (a `TracePoint :b_call` over every `rule(` block of `unicode_math/
+  # transform.rb` and of `base_number_prefix.rb`) to fire the rule named beside
+  # it. Every input's port parse deep-equals the oracle's model.
+  "symbol" => [
+    "0x1F",           # base_number_prefix.rb:36 hex_number
+    "0b101",          # base_number_prefix.rb:37 binary_number
+    "0o17",           # base_number_prefix.rb:38 octal_number
+    "×",              # :109
+    "/+",             # :134
+    ",5",             # :191
+    "∫_a^b −a",       # :250
+    "∫_a^b a·b",      # :243, :396
+    "(a×b c)",        # :266
+    "×b c",           # :272
+    "∫_a^b ×b",       # :278
+    "∫_a^b abc",      # :302
+    "/+ b",           # :309
+    "/+ b c",         # :320
+    "(a∣b)",          # :451
+    "(a∣b c)",        # :456
+    "(a −b)",         # :466
+    "(a −b c)",       # :476
+    "−a b",           # :481
+    "(a -+b)",        # :527
+    "··2",            # :2085
+    "a··b",           # :2091
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`

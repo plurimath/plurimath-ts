@@ -22,6 +22,9 @@
   ],
   "type": "module",
   "sideEffects": false,
+  "bin": {
+    "plurimath": "./dist/cli.mjs"
+  },
   "engines": {
     "node": ">=20"
   },

@@ -550,6 +550,41 @@ per key, because Parslet binds on the matcher kind too — are listed as
 refused, because for this port that would mean a rule family the first slice has
 not reached.
 
+### `Formatter::Standard` ignores `locale:` for the decimal and group symbols
+
+```ruby
+Plurimath::Formatter::Standard.new(locale: "de").localized_number("1234567.891")
+# => "1,234,567.891"   (German symbols would be "1.234.567,891")
+Plurimath::NumberFormatter.new("de").localized_number("1234567.891")
+# => "1.234.567,891"   (the base class does apply the locale)
+```
+
+`Standard#set_default_options` fills every `DEFAULT_OPTIONS` key, including
+`decimal: "."` and `group: ","`, into the options hash before
+`SymbolResolver#resolve` merges the locale's `SupportedLocales` entry underneath
+it (`locale_symbols.merge(localizer_symbols_hash)`), so the locale never
+supplies anything. `decimal` and `group` are the only two keys any of the 96
+entries carries, so `locale:` is fully inert through `Standard`: measured on the
+oracle (`00c52783`) for `"1234567.891234"` in asciimath, latex, html, mathml,
+omml and unicodemath, `locale:` of `"en"`, `"de"`, `"fr"`, `"de-CH"`, `"ar"`,
+`"xx"`, `nil`, `42`, `:de` and `"DE"` all answer `1,234,567.891'234`; an
+unknown or non-string locale falls back to `:en` without raising
+(`NumberFormatter#supported_locale`).
+
+Evidence: pinned corpus cases `number-formatter-locale-de-standard-defaults`,
+`number-formatter-locale-fr-standard-defaults` and
+`number-formatter-locale-unsupported-falls-back` record the en symbols.
+Reproduce with `BUNDLE_GEMFILE=~/ruby_gems/plurimath-oracle/Gemfile mise x --
+bundle exec ruby -e 'require "plurimath"; puts Plurimath::Formatter::Standard.new(locale: "de").localized_number("1234567.891")'`.
+
+**The port reproduces this on purpose.** It stays byte-exact with the oracle
+(decision 2026-09-21): `resolveNumberFormat` accepts `locale` and ignores it,
+and `test/formatting/number-format-locales.spec.ts` plus the three corpus cases
+in `number-formatter-numeric-pipeline.spec.ts` pin it. The fix is scheduled for
+BOTH the Ruby gem and this port, after the byte-identical structure is
+complete: make `Standard` layer the locale's symbols under explicit options,
+then re-record the corpus and flip the port together. Not yet reported upstream.
+
 ## Parked ideas
 
 ### Entity handling in the P3 input parsers

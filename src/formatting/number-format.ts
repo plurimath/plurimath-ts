@@ -28,47 +28,25 @@
  * `stringFormat` — a later lane (TODO.plan/feature-roadmap.md, Chain B),
  * built on the seam `numbers/number-renderer.ts` documents.
  *
- * **Locale coverage.** Every locale `formatting/locales.ts` knows — all 96 of
- * `Formatter::SupportedLocales::LOCALES` — is accepted here too, sourcing its
- * decimal AND group defaults from `./generated/locale-decimals.ts` and
- * `./generated/locale-groups.ts` (`scripts/generate-formatting-data.rb`, both
- * live-verified against the oracle). `formatter.options.decimal`/`group`
- * still override the locale's own defaults when given, matching how the gem
- * layers explicit symbols over a locale's `SupportedLocales` entry
- * (`Formatter::Numbers::SymbolResolver#resolve`:
- * `locale_symbols.merge(explicit_symbols)`).
- *
- * That layering is `SymbolResolver`'s, deliberately NOT `Formatter::
- * Standard`'s own — a real, measured divergence worth recording. Constructing
- * `Formatter::Standard.new(locale: "de")` on the pinned oracle and rendering
- * `1234567` answers `"1,234,567"`, the "en" symbols, not the German
- * `"1.234.567"`: `Standard#set_default_options` fills every `DEFAULT_OPTIONS`
- * key — including `:decimal` and `:group` — onto the options hash before
- * `SymbolResolver#resolve` ever merges the locale's entry in, so those two
- * keys are never actually absent by the time the locale's own symbols would
- * have applied. Through the gem's own public `Formatter::Standard` class,
- * `locale:` is therefore inert for `decimal`/`group` in the current oracle
- * version (v0.11.6, `00c52783`) — only the base `Plurimath::NumberFormatter`
- * class (used with an empty `localizer_symbols:` hash) actually renders with
- * a locale's own symbols, which is the live call `scripts/
- * generate-formatting-data.rb` verifies the generated `group` column against.
- * This port implements the layering `SymbolResolver` was written to provide
- * — locale defaults, explicit options win — rather than reproducing
- * `Standard`'s own defaulting, since the alternative would make this widening
- * a no-op for every locale but "en" and contradicts what `SupportedLocales`'
- * `group` column is for. Worth a maintainer's attention as a possible gem
- * defect, not a designed API.
+ * **Locale.** `formatter.locale` is accepted and INERT, byte-for-byte as in
+ * the oracle (v0.11.6, `00c52783`). `Formatter::Standard#set_default_options`
+ * fills every `DEFAULT_OPTIONS` key — `decimal: "."` and `group: ","`
+ * included — before `SymbolResolver#resolve` merges a locale's
+ * `SupportedLocales` entry underneath, so the locale's `decimal`/`group`
+ * (the only two keys any of the 96 entries carries) are always overwritten.
+ * `Standard.new(locale: "de")` therefore renders `1234567.891` as
+ * `"1,234,567.891"`, exactly like `"en"`. `NumberFormatter#supported_locale`
+ * falls back to `:en` for anything else (unknown strings, `nil`, non-strings)
+ * and never raises, so this port never refuses a `locale` value either.
+ * The port reproduces that on purpose: it stays byte-exact with the oracle,
+ * and the gem's defect is logged in TODO.plan/deferred.md ("Formatter::
+ * Standard ignores locale") to be fixed in both the gem and this port once
+ * the byte-identical structure is complete. `formatter.options.decimal`/
+ * `group` are the only way to change the symbols.
  */
 
 import { RenderError } from "../core/errors";
 import { assertKnownOptions } from "../core/render-options";
-import { DEFAULT_GROUP_MARKER, LOCALE_GROUP_MARKERS } from "./generated/locale-groups";
-import {
-  DEFAULT_DECIMAL_MARKER,
-  decimalMarkerFor,
-  isSupportedLocale,
-  SUPPORTED_LOCALES,
-} from "./locales";
 import {
   DEFAULT_BASE,
   DEFAULT_BASE_PREFIXES,
@@ -108,28 +86,15 @@ const DEFAULT_PADDING = "0";
  * already has the key. So fraction-side grouping IS on by default — live
  * oracle check: `Formatter::Standard.new.format`-equivalent call on
  * `"1.123456"` answers `"1.123'456"`, not `"1.123456"`. This is a real
- * default, unlike `Standard`'s decimal/group locale-defaulting above, which
- * this port deliberately does NOT reproduce — there is no locale-layering
- * question here for grouping defaults to override, so the port matches
- * `Standard::DEFAULT_OPTIONS` directly.
+ * default, taken straight from `Standard::DEFAULT_OPTIONS`.
  */
 const DEFAULT_FRACTION_GROUP_MARKER = "'";
 const DEFAULT_FRACTION_GROUP_DIGITS = 3;
 
-/** Locale key -> group marker, mirroring `formatting/locales.ts`'s `MARKER_BY_LOCALE`. */
-const GROUP_MARKER_BY_LOCALE: ReadonlyMap<string, string> = new Map(LOCALE_GROUP_MARKERS);
-
-/**
- * Ruby: `Formatter::SupportedLocales.symbols_for(locale).fetch(:group)`, cut
- * down to the one column this slice reads (`locales.ts`'s `decimalMarkerFor`
- * is the `decimal` counterpart). `locale` is assumed already validated by the
- * caller — `resolveNumberFormat` below checks `isSupportedLocale` before
- * this ever runs — so an unrecognised key is a caller bug, not a case this
- * falls back for.
- */
-function groupMarkerFor(locale: string): string {
-  return GROUP_MARKER_BY_LOCALE.get(locale) ?? DEFAULT_GROUP_MARKER;
-}
+/** `Formatter::Standard::DEFAULT_OPTIONS[:decimal]`. */
+const DEFAULT_DECIMAL_MARKER = ".";
+/** `Formatter::Standard::DEFAULT_OPTIONS[:group]`. */
+const DEFAULT_GROUP_MARKER = ",";
 
 /**
  * The `formatter.options` fields the numeric pipeline implements — `Formatter::
@@ -182,7 +147,8 @@ export interface FormatterSymbolOptions {
  * rather than "unknown option".
  */
 export interface FormatterOptions {
-  readonly locale?: string | null;
+  /** Accepted and inert: see the module header ("Locale"). */
+  readonly locale?: unknown;
   readonly options?: FormatterSymbolOptions | null;
   readonly precision?: number | null;
   readonly stringFormat?: null;
@@ -288,7 +254,6 @@ function numberSignOption(value: unknown, format: string): string | null {
   return value;
 }
 
-/**
 /**
  * `FormatOptions#symbol_option` (`format_options.rb:213`): a String or Symbol,
  * or absent; anything else raises `invalid_formatter_option`. `null` is the
@@ -448,23 +413,6 @@ export function resolveNumberFormat(
   assertKnownOptions(formatter, ACCEPTED_FORMATTER_KEYS, format);
   refuseUnlessAbsent(formatter.stringFormat, "stringFormat", format);
 
-  const locale = formatter.locale;
-  let decimalDefault = DEFAULT_DECIMAL_MARKER;
-  let groupDefault = DEFAULT_GROUP_MARKER;
-  if (locale !== null && locale !== undefined) {
-    if (!isSupportedLocale(locale)) {
-      throw new RenderError(
-        `formatter.locale: ${JSON.stringify(locale)} is not one of the ${
-          SUPPORTED_LOCALES.length
-        } locales the oracle's Formatter::SupportedLocales table holds`,
-        format,
-        "unknown",
-      );
-    }
-    decimalDefault = decimalMarkerFor(locale);
-    groupDefault = groupMarkerFor(locale);
-  }
-
   assertKnownOptions(formatter.options, ACCEPTED_SYMBOL_KEYS, format);
   const options = formatter.options;
   // `FormatOptions#validate_padding_options!` (`format_options.rb:236`) is
@@ -484,8 +432,14 @@ export function resolveNumberFormat(
   }
 
   return {
-    decimal: separatorOption(options?.decimal, "decimal", decimalDefault, "", format),
-    group: separatorOption(options?.group, "group", groupDefault, groupDefault, format),
+    decimal: separatorOption(options?.decimal, "decimal", DEFAULT_DECIMAL_MARKER, "", format),
+    group: separatorOption(
+      options?.group,
+      "group",
+      DEFAULT_GROUP_MARKER,
+      DEFAULT_GROUP_MARKER,
+      format,
+    ),
     groupDigits: countOption(options?.groupDigits, "groupDigits", DEFAULT_GROUP_DIGITS, format),
     fractionGroup: separatorOption(
       options?.fractionGroup,
@@ -564,7 +518,6 @@ export function refuseNonNumericUnderFormatter(value: unknown, format: string, k
   );
 }
 
-/**
 /**
  * What `Formatter::Numbers::MathmlRenderer.render` draws for one value: one
  * `<mn>` of plain text (a plain number, a base with a literal affix, an `e`

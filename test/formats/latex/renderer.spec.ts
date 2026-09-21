@@ -105,7 +105,7 @@ describe("unary functions", () => {
     // `Merror.instance_method(:to_latex).owner` is Merror, so a carrier-default
     // render of the name would diverge silently.
     expect(() => toLatex(unary("Merror", x()))).toThrow(RenderError);
-    expect(() => toLatex(new BinaryFunctionNode({ name: "Menclose" }))).toThrow(RenderError);
+    expect(() => toLatex(new BinaryFunctionNode({ name: "Semantics" }))).toThrow(RenderError);
     expect(() => toLatex(new TernaryFunctionNode({ name: "Underover" }))).toThrow(RenderError);
   });
 

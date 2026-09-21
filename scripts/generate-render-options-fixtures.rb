@@ -14,10 +14,12 @@
 # One run writes `test/formats/<format>/render-options-fixtures.json` for every
 # format in `FORMATS`: mathml and omml carry the option groups below and the
 # `ternary-function` group; the other four carry only the `unary-function` and
-# `ternary-function` groups. All are prepared before any is written:
-# `RenderFixtureProvenance.prepare` refuses a checkout that is dirty outside the
-# one payload it is about to write, and the outputs would otherwise make each
-# other dirty. (The canonical parity/degenerate pair
+# `ternary-function` groups. It also writes
+# `test/formats/binary-function/render-kinds-fixtures.json` (the
+# `binary-function-kinds` group, described below). All are prepared before
+# any is written: `RenderFixtureProvenance.prepare` refuses a checkout that
+# is dirty outside the one payload it is about to write, and the outputs
+# would otherwise make each other dirty. (The canonical parity/degenerate pair
 # gets its exemption from `MANAGED_PAYLOAD_BASENAMES`, an edit to a file every
 # existing manifest hashes.)
 #
@@ -45,6 +47,21 @@
 #                       whenever the gem parsed the input, so the port's walk is
 #                       checked on its own, apart from any renderer;
 #   - `expected`        the gem's bytes, or `raises`/`raisedIn` when it refused.
+#
+# The `binary-function-kinds` group is a different shape, because what it
+# checks is different: not options but KINDS. `Over`, `Menclose`, `Mlabeledtr`,
+# `Stackrel` and `Inf` are `BinaryFunction` subclasses that the AsciiMath
+# transform never builds, so no shared-corpus case reaches them, while the gem
+# renders them in every format. Each row records one input — `input.format` +
+# `input.text` where the port has a parser for it, or a `input.model` (a
+# `CorpusGenerator.serialize_node` model) for a hand-built formula or a MathML
+# source, which the port cannot parse — and, per target format, the gem's exact
+# bytes (`results.<format>.expected`), the refusal (`results.<format>.raises`),
+# or `results.<format>.unreproducible` where the gem's output holds a heap
+# address (a node interpolated through `Object#to_s`), which no fixture can hold
+# and the port must refuse.
+# A row may name `formats` to restrict which targets it records, and carries
+# `options` (only `displayStyle`, only for `omml`).
 #
 # The oracle path MUST be a clean checkout of the pinned plurimath commit. This
 # script loads it through $LOAD_PATH and refuses to run against an installed
@@ -297,6 +314,13 @@ TERNARY_BUILT_INPUTS = {
     m::Function::Rule.new(m::Symbols::Symbol.new("x"), m::Number.new("2"), m::Number.new("3"))
   },
 }.freeze
+
+BINARY_KIND_SCHEMA = "plurimath-corpus/render-binary-kinds/1"
+BINARY_KIND_PAYLOAD = File.join("binary-function", "render-kinds-fixtures.json")
+BINARY_KIND_FORMATS = %w[asciimath latex mathml html omml unicodemath].freeze
+# Input syntaxes the port has a parser for. A row in any other syntax records
+# the gem's parse as a model, since the port cannot build one from the text.
+PORT_PARSED_FORMATS = %w[asciimath latex html unicodemath].freeze
 
 options = { oracle: nil, out: "test/formats", allow_dirty: false }
 OptionParser.new do |o|
@@ -602,6 +626,251 @@ def ternary_rows_for(format)
   rows
 end
 
+
+# One input's text, read from a spec of the pinned oracle rather than retyped:
+# the `let(:...)` that follows the `nth` context called `title` — a one-line
+# `{ "..." }` literal or a heredoc — evaluated (the file is the oracle's own)
+# and stripped of its trailing newline.
+def spec_input(oracle, relative, title, nth = 0)
+  path = File.join(oracle, "spec/plurimath", relative)
+  lines = File.readlines(path)
+  starts = lines.each_index.select { |i| lines[i].strip == %(context "#{title}" do) }
+  start = starts[nth] or abort "REFUSING: no context #{title.inspect} (##{nth}) in #{path}"
+  at = ((start + 1)..(start + 4)).find { |i| lines[i].match?(/\A\s*let\(:\w+\)/) }
+  abort "REFUSING: no let after #{title.inspect} in #{path}" unless at
+
+  if (m = lines[at].match(/\{\s*(.+?)\s*\}\s*\z/))
+    eval(m[1]).strip # rubocop:disable Security/Eval
+  else
+    tag = lines[at + 1][/<<~(\w+)/, 1] or abort "REFUSING: no heredoc after #{title.inspect} in #{path}"
+    stop = ((at + 2)..lines.length).find { |i| lines[i].match?(/\A\s*#{tag}\s*\z/) }
+    eval(lines[(at + 1)..stop].join).strip # rubocop:disable Security/Eval
+  end
+end
+
+# The rows of the `binary-function-kinds` group.
+def binary_kind_rows(oracle)
+  fn = Plurimath::Math::Function
+  sy = Plurimath::Math::Symbols
+  mt = Plurimath::Math
+  sym = ->(v) { sy::Symbol.new(v) }
+  num = ->(v) { mt::Number.new(v) }
+  txt = ->(v) { fn::Text.new(v) }
+  formula = ->(*v) { mt::Formula.new(v) }
+  bf = lambda do |name, one, two, hide: false|
+    node = fn.const_get(name).new(one, two)
+    node.hide_function_name = true if hide
+    node
+  end
+  fenced = ->(*v) { fn::Fenced.new(sy::Lparen.new, v, sy::Rparen.new) }
+  a = sym.("a")
+  b = sym.("b")
+  ab_sum = formula.(sym.("a"), sy::Plus.new, sym.("b"))
+
+  rows = []
+  add = lambda do |id, group, source, input, options_hash = {}, only = nil, parsed = nil|
+    formula_in = parsed
+    if formula_in.nil?
+      syntax = input.fetch("format")
+      formula_in = Plurimath::Math.parse(input.fetch("text"), syntax == "unicodemath" ? :unicode : syntax.to_sym)
+    end
+    row = { "id" => id, "group" => group, "source" => source, "input" => input }
+    # A MathML (or any other unparsed) source keeps its text for provenance and
+    # gains the gem's parse, which is what the port renders.
+    if input.key?("format") && !PORT_PARSED_FORMATS.include?(input["format"])
+      row["input"] = input.merge("model" => CorpusGenerator.serialize_node(formula_in, "model"))
+    end
+    row["options"] = options_hash unless options_hash.empty?
+    row["formats"] = only if only
+    results = {}
+    (only || BINARY_KIND_FORMATS).each do |format|
+      call_options = format == "omml" && options_hash.key?("displayStyle") ? { display_style: options_hash["displayStyle"] } : {}
+      begin
+        bytes = formula_in.public_send("to_#{format}", **call_options)
+        # A node where the gem prints `Object#to_s` is a heap address: the
+        # bytes change from run to run, so no fixture can hold them. The row
+        # says so instead, and the port must refuse it.
+        results[format] =
+          if bytes.to_s.match?(/#(<|&lt;)Plurimath::[^>]*0x[0-9a-f]+|@value=/)
+            { "unreproducible" => "the gem prints a node's Object#to_s, which carries a heap address" }
+          else
+            { "expected" => bytes }
+          end
+      rescue ORACLE_REFUSAL => e
+        results[format] = { "raises" => e.class.name, "raisedIn" => "render" }
+      end
+    end
+    row["results"] = results
+    rows << row
+  end
+
+  # Hand-built formulas: every branch of each kind's `to_<format>`.
+  hand = lambda do |id, group, source, node, options_hash = {}, only = nil|
+    top = mt::Formula.new([node])
+    add.call(id, group, source, { "model" => CorpusGenerator.serialize_node(top, "model") },
+             options_hash, only, top)
+  end
+
+  slots = {
+    "ab" => [a, b], "a-nil" => [a, nil], "nil-b" => [nil, b], "nil-nil" => [nil, nil],
+    "formula" => [ab_sum, formula.(sym.("c"))],
+    "number" => [num.("1"), num.("2")],
+    "fenced" => [fenced.(sym.("x")), fenced.(sym.("y"))],
+  }
+
+  # Over: both slots, each absent, formulas, fenced (unicodemath does not wrap a
+  # fence again), the hidden-name variant `line_breaking` produces, and a slot
+  # holding a bare string, where the gem raises.
+  slots.each { |k, (x, y)| hand.call("over-#{k}", "over", "measured on the oracle", bf.("Over", x, y)) }
+  hand.call("over-hidden", "over", "measured on the oracle", bf.("Over", a, b, hide: true))
+  hand.call("over-hidden-nil", "over", "measured on the oracle", bf.("Over", nil, nil, hide: true))
+  hand.call("over-string-slot", "over", "measured on the oracle", bf.("Over", "x", b))
+  hand.call("over-nested", "over", "measured on the oracle",
+            bf.("Over", bf.("Over", a, b), bf.("Over", sym.("c"), sym.("d"))))
+  hand.call("over-in-stackrel", "over", "measured on the oracle",
+            bf.("Stackrel", bf.("Over", a, b), bf.("Over", sym.("c"), sym.("d"))))
+
+  # Stackrel: html and omml are the two formats the port refused; the rest are
+  # here so the same inputs hold every format.
+  slots.each { |k, (x, y)| hand.call("stackrel-#{k}", "stackrel", "measured on the oracle", bf.("Stackrel", x, y)) }
+  hand.call("stackrel-spec-symbol-prod", "stackrel", "spec/plurimath/math/function/stackrel_spec.rb contains Symbol as value",
+            bf.("Stackrel", sym.("n"),
+                formula.(fn::Prod.new(sy::Ampersand.new, txt.("so")))))
+  hand.call("stackrel-spec-number-symbol", "stackrel", "spec/plurimath/math/function/stackrel_spec.rb contains Number as value",
+            bf.("Stackrel", num.("70"), sym.("n")))
+  hand.call("stackrel-spec-sum-prod", "stackrel", "spec/plurimath/math/function/stackrel_spec.rb contains Formula as value",
+            bf.("Stackrel", formula.(fn::Sum.new(sy::Ampersand.new, txt.("so"))),
+                formula.(fn::Prod.new(sy::Ampersand.new, txt.("so")))))
+  hand.call("stackrel-string-slot", "stackrel", "measured on the oracle", bf.("Stackrel", "x", b))
+
+  # Mlabeledtr. The gem reads BOTH mathml slots unguarded, so an absent one
+  # raises there; unicodemath prints the second slot's raw `value`.
+  slots.each { |k, (x, y)| hand.call("mlabeledtr-#{k}", "mlabeledtr", "measured on the oracle", bf.("Mlabeledtr", x, y)) }
+  hand.call("mlabeledtr-text-label", "mlabeledtr", "measured on the oracle", bf.("Mlabeledtr", a, txt.("b")))
+  # A symbol with no value: OMML's symbol renderer is not this group's to
+  # measure, so that one target is left out.
+  hand.call("mlabeledtr-symbol-nil-value", "mlabeledtr", "measured on the oracle", bf.("Mlabeledtr", a, sym.(nil)),
+            {}, %w[asciimath latex mathml html unicodemath])
+  hand.call("mlabeledtr-named-symbol-label", "mlabeledtr", "measured on the oracle", bf.("Mlabeledtr", a, sy::Plus.new))
+  hand.call("mlabeledtr-frac-label", "mlabeledtr", "measured on the oracle", bf.("Mlabeledtr", a, fn::Frac.new(a, b)))
+  hand.call("mlabeledtr-entity-value", "mlabeledtr", "measured on the oracle", bf.("Mlabeledtr", a, sym.("&#x3b1;")))
+  hand.call("mlabeledtr-string-slot", "mlabeledtr", "measured on the oracle", bf.("Mlabeledtr", "x", b))
+
+  # Inf: the limit slots, the three unicodemath branches of each slot (mini
+  # sized, prime, `Power`/`Base`, everything else), and display style off for
+  # omml, where `underover` takes its `PowerBase` branch.
+  slots.each { |k, (x, y)| hand.call("inf-#{k}", "inf", "measured on the oracle", bf.("Inf", x, y)) }
+  hand.call("inf-mini-sub-sup", "inf", "measured on the oracle",
+            bf.("Inf", sy::Symbol.new("2", mini_sub_sized: true), sy::Symbol.new("2", mini_sup_sized: true)))
+  hand.call("inf-prime-sup", "inf", "measured on the oracle", bf.("Inf", a, sym.("&#x2032;")))
+  hand.call("inf-power-sup", "inf", "measured on the oracle", bf.("Inf", a, fn::Power.new(a, num.("2"))))
+  hand.call("inf-base-sub", "inf", "measured on the oracle", bf.("Inf", fn::Base.new(a, b), num.("2")))
+  hand.call("inf-string-slot", "inf", "measured on the oracle", bf.("Inf", "x", b))
+  %w[ab a-nil nil-b nil-nil].each do |k|
+    x, y = slots.fetch(k)
+    hand.call("inf-#{k}-display-false", "inf-display-style", "measured on the oracle", bf.("Inf", x, y),
+              { "displayStyle" => false }, %w[omml])
+  end
+
+  # Menclose, one row per enclosure type a branch distinguishes. The type is a
+  # string, or nil; a node there prints as a heap address in mathml and html,
+  # which the row records as `unreproducible` rather than as bytes.
+  body = num.("3")
+  notations = {
+    "box" => "box", "circle" => "circle", "roundedbox" => "roundedbox",
+    "circle-box" => "circle box", "circle-top" => "circle top",
+    "longdiv" => "longdiv", "bottom" => "bottom",
+    "xcancel" => "updiagonalstrike downdiagonalstrike", "bcancel" => "updiagonalstrike",
+    "cancel" => "downdiagonalstrike", "top" => "top", "top-bottom" => "top bottom",
+    "all-sides" => "top bottom left right", "horizontalstrike" => "horizontalstrike",
+    "vertical-updiagonal" => "verticalstrike updiagonalstrike",
+    "top-radical" => "top radical", "actuarial" => "actuarial", "duplicate-top" => "top top",
+    "padded" => "  top   left ", "empty" => "", "nul" => "top\0left",
+  }
+  notations.each do |k, notation|
+    hand.call("menclose-#{k}", "menclose", "measured on the oracle", bf.("Menclose", notation, body))
+  end
+  hand.call("menclose-nil-type", "menclose", "measured on the oracle", bf.("Menclose", nil, body))
+  hand.call("menclose-nil-nil", "menclose", "measured on the oracle", bf.("Menclose", nil, nil))
+  %w[box top longdiv actuarial].each do |k|
+    hand.call("menclose-#{k}-nil-body", "menclose", "measured on the oracle", bf.("Menclose", notations.fetch(k), nil))
+  end
+  hand.call("menclose-formula-body", "menclose", "measured on the oracle",
+            bf.("Menclose", "circle", ab_sum))
+  hand.call("menclose-top-formula-body", "menclose", "measured on the oracle",
+            bf.("Menclose", "top", ab_sum))
+  hand.call("menclose-symbol-type", "menclose", "measured on the oracle", bf.("Menclose", a, body))
+  hand.call("menclose-formula-type", "menclose", "measured on the oracle", bf.("Menclose", ab_sum, body))
+  hand.call("menclose-string-body", "menclose", "measured on the oracle", bf.("Menclose", "box", "x"))
+  hand.call("menclose-nested", "menclose", "measured on the oracle",
+            bf.("Menclose", "box", bf.("Menclose", "circle", a)))
+  %w[box top-radical actuarial].each do |k|
+    hand.call("menclose-#{k}-display-false", "menclose-display-style", "measured on the oracle",
+              bf.("Menclose", notations.fetch(k), body), { "displayStyle" => false }, %w[omml])
+  end
+
+  # Inputs the gem parses itself, each in a syntax the port has a parser for.
+  # From the gem's specs where the spec has one; the rest measured.
+  text = lambda do |id, group, source, format, string, only = nil|
+    add.call(id, group, source, { "format" => format, "text" => string }, {}, only)
+  end
+  from_spec = lambda do |id, group, relative, title, format, only = nil|
+    text.call(id, group, "spec/plurimath/#{relative} #{title}", format, spec_input(oracle, relative, title), only)
+  end
+  from_spec.call("latex-over-simple", "over", "latex/parser_spec.rb", "contains simple use of over", "latex")
+  from_spec.call("latex-over-base", "over", "latex/parser_spec.rb", "contains over with base value", "latex")
+  from_spec.call("latex-over-power", "over", "latex/parser_spec.rb", "contains over with power value", "latex")
+  from_spec.call("latex-over-nested", "over", "latex/parser_spec.rb", "contains latex equation #42", "latex")
+  from_spec.call("latex-over-metanorma", "over", "latex/metanorma_examples_spec.rb", "contains example #9", "latex")
+  from_spec.call("latex-inf-fn", "inf", "latex_spec.rb", "contains example #35", "latex")
+  # These two hold `\lg`, a unary function whose html and omml renderers are
+  # not this group's to measure, so those targets are left out.
+  no_lg = %w[asciimath latex mathml unicodemath]
+  from_spec.call("latex-inf-oint", "inf", "latex_spec.rb", "contains inf with power base values example #53", "latex", no_lg)
+  from_spec.call("latex-inf-sub-sup", "inf", "latex_spec.rb", "contains simple inf example #05", "latex", no_lg)
+  {
+    "over" => [
+      ["latex", "\\left(a\\over b\\right)"], ["latex", "a\\over b"], ["latex", "{a\\over b}_1"],
+      ["latex", "{a\\over b}+c"], ["latex", "x = {a \\over b} + {c \\over d}"],
+      ["latex", "\\frac{{a\\over b}}{c}"], ["latex", "\\sqrt{{a\\over b}}"]
+    ],
+    "inf" => [["latex", "\\inf_1"], ["latex", "\\inf"]],
+    "stackrel" => [
+      ["latex", "\\stackrel{x}{y}"], ["latex", "\\stackrel{a}{b}"], ["latex", "\\stackrel{a+b}{c}"],
+      ["latex", "\\stackrel{\\frac{a}{b}}{c}"]
+    ],
+    "menclose" => [
+      ["unicodemath", "3x⃝"], ["unicodemath", "a⃝"], ["unicodemath", "a⃞"], ["unicodemath", "╲(a)"],
+      ["unicodemath", "▢(a)"], ["unicodemath", "╳(a)"], ["unicodemath", "⬭(a)"]
+    ],
+    "mlabeledtr" => [["unicodemath", "a#b"], ["unicodemath", "a b#c"]],
+  }.each do |group, inputs|
+    inputs.each_with_index do |(syntax, string), index|
+      text.call(format("%s-%s-measured-%02d", group, syntax, index + 1), group,
+                "measured on the oracle", syntax, string)
+    end
+  end
+
+  # MathML sources of the gem's specs: the port has no MathML parser, so these
+  # carry the gem's parse as a model. `Menclose` and `Mlabeledtr` come from
+  # MathML in practice, which is why the specs use it.
+  from_mathml = lambda do |id, group, relative, title, nth = 0|
+    string = spec_input(oracle, relative, title, nth)
+    add.call(id, group, "spec/plurimath/#{relative} #{title}", { "format" => "mathml", "text" => string })
+  end
+  from_mathml.call("mathml-menclose-box", "menclose", "mathml_spec.rb", "contains menclose tag Mathml")
+  from_mathml.call("mathml-menclose-updiagonalstrike", "menclose", "mathml_spec.rb", "contains menclose tags in Mathml")
+  from_mathml.call("mathml-menclose-circle-box", "menclose", "mathml/v3/section_3_spec.rb", "contains mathml v3 #3 example #41")
+  from_mathml.call("mathml-menclose-no-notation", "menclose", "mathml/v3/section_3_spec.rb", "contains mathml v3 #3 example #42")
+  from_mathml.call("mathml-menclose-actuarial", "menclose", "mathml/v3/section_3_spec.rb", "contains mathml v3 #3 example #43")
+  from_mathml.call("mathml-mlabeledtr", "mlabeledtr", "mathml/v3/section_3_spec.rb", "contains mathml v3 #3 example #55")
+  add.call("mathml-menclose-top-radical", "menclose",
+           "spec/plurimath/unicode_math_spec.rb menclose mixing a known and an unrecognized notation",
+           { "format" => "mathml", "text" => '<math><menclose notation="top radical"><mi>x</mi></menclose></math>' })
+
+  rows
+end
+
 outputs = FORMATS.to_h do |format|
   dir = File.expand_path(File.join(options[:out], format))
   payload_path = File.join(dir, PAYLOAD_BASENAME)
@@ -614,6 +883,15 @@ outputs = FORMATS.to_h do |format|
   )
   [format, { dir: dir, payload_path: payload_path, sidecar: sidecar, provenance: provenance }]
 end
+
+binary_payload_path = File.expand_path(File.join(options[:out], BINARY_KIND_PAYLOAD))
+binary_sidecar, binary_provenance = RenderFixtureProvenance.prepare(
+  oracle: oracle,
+  payload_path: binary_payload_path,
+  generator_path: GENERATOR_RELATIVE_PATH,
+  allow_dirty: options[:allow_dirty],
+  corpus: false,
+)
 
 outputs.each do |format, target|
   rows = rows_for(format, oracle) + ternary_rows_for(format)
@@ -650,3 +928,38 @@ outputs.each do |format, target|
   puts "#{format}: #{rows.length} rows, #{rendered} rendered, #{raised} raised -> " \
        "#{target[:payload_path]}, #{target[:sidecar]}"
 end
+
+# The `binary-function-kinds` payload.
+binary_rows = binary_kind_rows(oracle)
+binary_duplicates = binary_rows.map { |r| r["id"] }.tally.select { |_, n| n > 1 }.keys
+abort "REFUSING: duplicate ids in binary-function-kinds: #{binary_duplicates.join(', ')}" unless binary_duplicates.empty?
+
+binary_results = binary_rows.flat_map { |r| r["results"].values }
+binary_rendered = binary_results.count { |r| r.key?("expected") }
+binary_raised = binary_results.count { |r| r.key?("raises") }
+binary_unreproducible = binary_results.count { |r| r.key?("unreproducible") }
+abort "REFUSING: binary-function-kinds produced zero rendered results" if binary_rendered.zero?
+abort "REFUSING: binary-function-kinds produced zero refusals" if binary_raised.zero?
+
+binary_payload = {
+  "$comment" => "GENERATED by #{GENERATOR_RELATIVE_PATH}. Do not edit.",
+  "schema" => BINARY_KIND_SCHEMA,
+  "format" => File.basename(File.dirname(BINARY_KIND_PAYLOAD)),
+  "caseCount" => binary_rows.length,
+  "renderedCount" => binary_rendered,
+  "raisedCount" => binary_raised,
+  "unreproducibleCount" => binary_unreproducible,
+  "cases" => binary_rows,
+}
+FileUtils.mkdir_p(File.dirname(binary_payload_path))
+binary_bytes = "#{JSON.pretty_generate(binary_payload)}\n"
+File.binwrite(binary_payload_path, binary_bytes)
+RenderFixtureProvenance.write_manifest(
+  sidecar_path: binary_sidecar,
+  payload_path: binary_payload_path,
+  payload_schema: BINARY_KIND_SCHEMA,
+  payload_bytes: binary_bytes,
+  provenance: binary_provenance,
+)
+puts "binary-function-kinds: #{binary_rows.length} rows, #{binary_rendered} rendered results, " \
+     "#{binary_raised} refusals, #{binary_unreproducible} unreproducible -> #{binary_payload_path}, #{binary_sidecar}"

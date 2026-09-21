@@ -3472,14 +3472,14 @@ describe("OMML renderer boundary", () => {
       () =>
         toOmmlWithoutMathTag(
           new BinaryFunctionNode({
-            name: "Menclose",
+            name: "Semantics",
             parameterOne: symbol(),
             parameterTwo: symbol(),
           }),
         ),
       {
         kind: "binaryFunction",
-        message: 'BinaryFunction alias "Menclose" has not been measured for OMML in this slice',
+        message: 'BinaryFunction alias "Semantics" has not been measured for OMML in this slice',
       },
     );
     expectRefusal(

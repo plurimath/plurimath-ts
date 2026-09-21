@@ -848,13 +848,13 @@ describe("HTML measured boundary refusals", () => {
           "so the gem raises ArgumentError for every Phantom",
       },
     );
-    // `Stackrel` and `Underover` DO render on the gem — `"x"` and `"<i>x</i>"`
-    // for a single symbol slot — but no corpus case constructs either, so
-    // nothing in this suite would hold the port's bytes for them honest. They
-    // refuse until something does.
-    expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Stackrel" })), {
+    // `Semantics` is a binary alias no lane has measured for HTML, and `Underover`
+    // DOES render on the gem — `"<i>x</i>"` for a single symbol slot — but no
+    // corpus case constructs it, so nothing in this suite would hold the port's
+    // bytes for it honest. Both refuse until something does.
+    expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Semantics" })), {
       kind: "binaryFunction",
-      message: 'BinaryFunction alias "Stackrel" has not been measured for HTML in this slice',
+      message: 'BinaryFunction alias "Semantics" has not been measured for HTML in this slice',
     });
     expectHtmlError(() => toHtml(new TernaryFunctionNode({ name: "Underover" })), {
       kind: "ternaryFunction",

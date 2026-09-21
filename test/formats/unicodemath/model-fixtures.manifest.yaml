@@ -2,19 +2,28 @@
 # `payload.sha256` covers the whole payload file, including its final newline.
 ---
 schema: plurimath-corpus/manifest/2
-committable: true
-warnings: []
+committable: false
+warnings:
+- generated with --allow-dirty
+- 'generator checkout dirty: scripts/generate-unicodemath-model-fixtures.rb, scripts/generate-unicodemath-parser-data.rb, src/formats/unicodemath/generated/provenance.ts, src/formats/unicodemath/generated/transform-tables.ts, src/formats/unicodemath/transform.ts, test/formats/unicodemath/model-parity.spec.ts, test/formats/unicodemath/transform-coverage.spec.ts'
 generator:
   path: scripts/generate-unicodemath-model-fixtures.rb
-  sha256: 35941256a3140bc1b774b9ae5a40eac0ab4d2ad29bd6aa356ad16a36b50908d5
+  sha256: 81fbb178fcca33c123839ebff5181893f244f1b55124bde7389d19ebc863ba46
   inputs:
     scripts/generate-corpus.rb: 60afefa7bccb49b7f801c27a0fe3ce7605c63cd2e4afdccea7d4125fff2c01b3
-    scripts/generate-unicodemath-model-fixtures.rb: 35941256a3140bc1b774b9ae5a40eac0ab4d2ad29bd6aa356ad16a36b50908d5
+    scripts/generate-unicodemath-model-fixtures.rb: 81fbb178fcca33c123839ebff5181893f244f1b55124bde7389d19ebc863ba46
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: c81466145b574e0712bb593cd87c72dc90a1dfc6
-    clean: true
-    dirty_paths: []
+    commit: 41913f0249607c398a05ebda520f4b7322bb1fef
+    clean: false
+    dirty_paths:
+    - scripts/generate-unicodemath-model-fixtures.rb
+    - scripts/generate-unicodemath-parser-data.rb
+    - src/formats/unicodemath/generated/provenance.ts
+    - src/formats/unicodemath/generated/transform-tables.ts
+    - src/formats/unicodemath/transform.ts
+    - test/formats/unicodemath/model-parity.spec.ts
+    - test/formats/unicodemath/transform-coverage.spec.ts
 oracle:
   gem: plurimath
   version: 0.11.6
@@ -115,5 +124,5 @@ corpus:
 payload:
   path: model-fixtures.json
   schema: plurimath-corpus/unicodemath-model/1
-  sha256: 864ce9bf1813f834ecd353b90896a247febcb21703d70c24b2deb7eb8926ce46
-  bytes: 345494
+  sha256: 421ecf1b14742e55cf19910899bd1389793149f28802d7a2f904d32eee3ed589
+  bytes: 393524

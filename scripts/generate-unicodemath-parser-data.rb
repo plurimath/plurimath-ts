@@ -198,6 +198,7 @@ module UnicodeMathParserDataGenerator
     "UNDER_HORIZONTAL_BRACKETS" => "UNICODEMATH_UNDER_HORIZONTAL_BRACKETS",
     "OVERLAYS_NOTATIONS" => "UNICODEMATH_OVERLAYS_NOTATIONS",
     "BELOWS_NOTATIONS" => "UNICODEMATH_BELOWS_NOTATIONS",
+    "PHANTOM_SYMBOLS" => "UNICODEMATH_PHANTOM_FUNCTIONS",
   }.freeze
 
   # `Constants` entries neither the grammar nor the ported transform slice
@@ -218,7 +219,7 @@ module UnicodeMathParserDataGenerator
   # emitted through `TRANSFORM_CONSTANT_SOURCES` below, the same path
   # `NARY_CLASSES` and `PREFIXED_PRIMES` already use.
   UNCONSUMED_CONSTANTS = %w[
-    PARENTHESIS_MATRICES PHANTOM_SYMBOLS UNDEF_UNARY_FUNCTIONS
+    PARENTHESIS_MATRICES UNDEF_UNARY_FUNCTIONS
   ].freeze
 
   # `UNICODED_FONTS` reaches the grammar through its own builder,
@@ -753,6 +754,22 @@ module UnicodeMathParserDataGenerator
     end
   end
 
+  # `Constants::PHANTOM_SYMBOLS` as `[name, [[function_name, attributes], ...]]`,
+  # every hash below the top written as ordered `[key, value]` pairs.
+  def phantom_rows
+    constants::PHANTOM_SYMBOLS.map do |name, functions|
+      [name.to_s, functions.map { |function, attributes| [function.to_s, attribute_pairs(attributes, name)] }]
+    end
+  end
+
+  def attribute_pairs(value, where)
+    case value
+    when ::Hash then value.map { |key, inner| [key.to_s, attribute_pairs(inner, where)] }
+    when ::String, true, false then value
+    else raise Error, "PHANTOM_SYMBOLS[#{where.inspect}] holds a #{value.class}; expected Hash, String or boolean"
+    end
+  end
+
   # --- payloads ------------------------------------------------------------
 
   def ts_header(description)
@@ -917,6 +934,25 @@ module UnicodeMathParserDataGenerator
   end
 
   # One `[key, [values...]]` Map row, collapsed when Biome would collapse it.
+  # Whether Biome prints `value` expanded: an array holding a broken child, or
+  # two or more arrays that each hold two or more elements.
+  def ts_breaks?(value)
+    return false unless value.is_a?(::Array)
+
+    value.any? { |item| ts_breaks?(item) } ||
+      (value.size > 1 && value.all? { |item| item.is_a?(::Array) && item.size > 1 })
+  end
+
+  # `value` as Biome prints it (`assert_ts_width!` still checks the line width):
+  # flat unless `ts_breaks?`, else one element per line.
+  def ts_broken(value, indent)
+    return CoreDataGenerator.ts_flat(value) unless ts_breaks?(value)
+
+    pad = "  " * indent
+    lines = value.map { |item| "#{pad}  #{ts_broken(item, indent + 1)}," }
+    (["["] + lines + ["#{pad}]"]).join("\n")
+  end
+
   def ts_nested_row(key, values)
     quoted = values.map { |value| CoreDataGenerator.ts_string(value) }
     flat = "  [#{CoreDataGenerator.ts_string(key)}, [#{quoted.join(', ')}]],"
@@ -1114,6 +1150,42 @@ module UnicodeMathParserDataGenerator
              "A MISS yields Ruby nil, and `Menclose.new(nil, value)` is a legal\n" \
              "node, so this table is deliberately not exhaustive over the tag.",
       ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_MASK_CLASSES", "ReadonlyMap<string, string>", data[:mask_classes],
+        doc: "`Plurimath::Utility::MASK_CLASSES` (`utility.rb:123-132`): the bit value\n" \
+             "(as text) -> the `Menclose` notation word `Utility.enclosure_attrs`\n" \
+             "(`unicode_math/utility.rb:213-226`) emits for that bit of a `rect_value`\n" \
+             "mask.",
+      ),
+      [
+        CoreDataGenerator.ts_doc(
+          "One `PHANTOM_SYMBOLS` attribute value: a boolean, a string, or a hash\n" \
+          "written as an ordered list of `[key, value]` pairs — the emitter has no\n" \
+          "object-literal form, and pairs keep the gem's key order, which\n" \
+          "`transform.rb:1224` iterates.",
+        ),
+        "export type UnicodemathPhantomAttribute =",
+        "  | boolean",
+        "  | string",
+        "  | readonly (readonly [key: string, value: UnicodemathPhantomAttribute])[];",
+        "",
+        "export type UnicodemathPhantomSpec = readonly (readonly [",
+        "  functionName: string,",
+        "  attributes: UnicodemathPhantomAttribute,",
+        "])[];",
+      ].join("\n"),
+      [
+        CoreDataGenerator.ts_doc(
+          "`Constants::PHANTOM_SYMBOLS`: the unary-symbol name -> its ordered\n" \
+          "`{function_name => attributes}` hash, as pairs. `transform.rb:1224` walks\n" \
+          "it in order, building a `Phantom` where the name is `phantom` and its\n" \
+          "attributes are truthy and an `Mpadded` where the name is `mpadded`.",
+        ),
+        "export const UNICODEMATH_PHANTOM_FUNCTIONS: " \
+        "ReadonlyMap<string, UnicodemathPhantomSpec> = new Map([",
+        *data[:phantom_functions].map { |row| "  #{ts_broken(row, 1)}," },
+        "]);",
+      ].join("\n"),
       [
         CoreDataGenerator.ts_doc(
           "The classes the ported transform rules ask `is_a?` about, each with\n" \
@@ -1265,6 +1337,8 @@ module UnicodeMathParserDataGenerator
       menclose: string_pairs(
         Plurimath::Utility::UNICODEMATH_MENCLOSE_FUNCTIONS, "UNICODEMATH_MENCLOSE_FUNCTIONS"
       ),
+      mask_classes: string_pairs(Plurimath::Utility::MASK_CLASSES, "MASK_CLASSES"),
+      phantom_functions: phantom_rows,
       primes: string_pairs(Plurimath::Utility.primes_constants, "primes_constants"),
       is_a: is_a_rows(gem_dir),
     }

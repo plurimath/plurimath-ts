@@ -62,8 +62,9 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * the family, so those six rows have moved out of `DEFERRED_INPUTS` and now
  * compare for real below, in `supported`, the same as every other corpus row.
  * Three more — `"✎(blue&y + z)"`, `"√(3&8)"`, `"√(n&x)"` — carry a `&` too but
- * measured on the oracle they route through `color`/`root`, not table, and
- * stay in this list. Six NARY rows — a large operator with a single-token
+ * measured on the oracle they route through `color`/`root`, not table.
+ * `"✎(blue&y + z)"` left this list once `:1201` was ported (a corpus row, so it
+ * compares for real below); the two `root` rows stay. Six NARY rows — a large operator with a single-token
  * `_(…)` script — moved the same way once `:1931`/`:1968` landed: `"∏_(k)▒
  * 〖k〗"`, `"∮_(C)▒〖f〗"`, `"⋃_(i) A_(i)"`, `"⋂_(i) A_(i)"`, `"∐_(i) A_(i)"`,
  * `"⨁_(i) A_(i)"`.
@@ -83,11 +84,9 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * increment above ported.
  */
 const DEFERRED_INPUTS: readonly string[] = [
-  // COLOR and ROOT: each of these three also carries a `&`, but measured on
-  // the oracle (the `ParseError` message names the unmatched key) they route
-  // through `{color=...}`/`{root=...}`, not the table family the TABLE
-  // increment ported.
-  "✎(blue&y + z)",
+  // ROOT: each of these also carries a `&`, but measured on the oracle (the
+  // `ParseError` message names the unmatched key) they route through
+  // `{root=...}`, not the table family the TABLE increment ported.
   "√(3&8)",
   "√(n&x)",
 

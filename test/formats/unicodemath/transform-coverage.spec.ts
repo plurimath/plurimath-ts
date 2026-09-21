@@ -139,8 +139,8 @@ describe("transform rule coverage", () => {
     // needed `:49`, and RELATION's own probing separately reached `:30`) —
     // reached by the existing corpus and coverage groups, not a new
     // hand-picked one.
-    expect(build.ruleIds.length).toBe(154);
-    expect(new Set(build.ruleIds).size).toBe(154);
+    expect(build.ruleIds.length).toBe(178);
+    expect(new Set(build.ruleIds).size).toBe(178);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

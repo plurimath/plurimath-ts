@@ -444,6 +444,87 @@ RULE_COVERAGE = {
     "x'",
   ],
   "nary" => RULE_COVERAGE_NARY_INPUTS,
+  # TEXT / FONT / COLOR / PHANTOM / ENCLOSE / INTENT. Every input fires the
+  # rule named beside it on the oracle (measured with a `TracePoint :b_call`
+  # mapped to each `rule(` opening line). Inputs sharing a rule differ in the
+  # BRANCH they take, which a fired-once count cannot show:
+  #
+  #   :159   U+FFD7 `(ab)`                 monospace_value, SEQUENCE
+  #   :227   `\mitBbb`/`\script`/`\fraktur`/`\double` + a letter
+  #   :351/:356/:361/:366   quoted text followed by an expression or an operand
+  #   :960   `ⓘ(x+y)`                      intent_expr (mutating `shift`)
+  #   :3869/:3877   `ⓘ("foo" ...)`         intent with a simple / SEQUENCE body
+  #   :1201  `✎(blue&y + z)` is a CORPUS case (the group refuses an input that
+  #          is also one), so it is reached there; :1252/:1261 `☁`; :1270/:1278 `▭` (masks 0, 1, 5,
+  #          15, 255 — `enclosure_attrs` flips the low four bits — and a
+  #          non-numeric one)
+  #   :1224  every `Constants::UNARY_SYMBOLS` name, spelled `\name(y)`: the
+  #          seven `PHANTOM_SYMBOLS` names build `Phantom`/`Mpadded`, the rest
+  #          a `Menclose` whose notation may be nil (`overline`); three more
+  #          use the glyph form, where `UNARY_SYMBOLS.key` does the lookup
+  #   :1561  `⟡(1&y)+a`                    phantom_value (an `Mpadded` mask); alone,
+  #          `⟡(1&y)` is a gem-unmatched `{phantom: ...}` hash, so it is followed
+  #          by `+a` to land on `:426` instead
+  #   :2122/:2132   U+2132 + each of A-D on a sequence / simple subscript
+  #   :2383  `\mbfsansA∈x`, `\BbbA≤x`      font + relation + expression
+  #
+  # `▭(256&y)` and `▭(-1&y)` are REFUSALS: `enclosure_attrs` raises outside 0..255.
+  "text_font_color" => [
+    "ￗ(ab)",
+    "\\mitBbbD",
+    "\\mitBbbd",
+    "\\mitBbbe",
+    "\\mitBbbi",
+    "\\mitBbbj",
+    "\\scriptH",
+    "\\frakturH",
+    "\\doubleH",
+    "\"abc\"x",
+    "\"a\"x!",
+    "\"abc\" x",
+    "\"abc\" x y",
+    "ⓘ(x+y)",
+    "ⓘ(\"foo\" x_1)",
+    "ⓘ(\"foo\" x!)",
+    "☁(red&y)",
+    "☁(red&y + z)",
+    "▭(5&y)",
+    "▭(5&y + z)",
+    "▭(0&y)",
+    "▭(1&y)",
+    "▭(15&y)",
+    "▭(255&y)",
+    "▭(x&y)",
+    "▭(256&y)",
+    "▭(-1&y)",
+    "\\underline(y)",
+    "\\hphantom(y)",
+    "\\vphantom(y)",
+    "\\underbar(y)",
+    "\\overline(y)",
+    "\\phantom(y)",
+    "\\longdiv(y)",
+    "\\circle(y)",
+    "\\asmash(y)",
+    "\\dsmash(y)",
+    "\\hsmash(y)",
+    "\\smash(y)",
+    "\\overbar(y)",
+    "⟡(y)",
+    "▁(y)",
+    "¯(y)",
+    "⟡(1&y)+a",
+    "x_ℲA(y)",
+    "x_ℲB(y)",
+    "x_ℲC(y)",
+    "x_ℲD(y)",
+    "x_ℲAab",
+    "x_ℲBab",
+    "x_ℲCab",
+    "x_ℲDab",
+    "\\mbfsansA∈x",
+    "\\BbbA≤x",
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`

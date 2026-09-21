@@ -36,7 +36,16 @@ export {
 export type { FormatterOptions, FormatterSymbolOptions, NumberFormat } from "./number-format";
 export {
   applyNumberFormat,
+  formatNumberValue,
   isGemNumericValue,
   refuseNonNumericUnderFormatter,
   resolveNumberFormat,
 } from "./number-format";
+export type { FormattedNumber } from "./numbers/formatted-number";
+export { formattedNumberText } from "./numbers/formatted-number";
+export type { FormattedNotation } from "./numbers/notation";
+export {
+  formattedExponent,
+  formattedNotationText,
+  isFormattedNotation,
+} from "./numbers/notation";

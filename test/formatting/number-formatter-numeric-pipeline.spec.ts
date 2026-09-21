@@ -1,7 +1,9 @@
 /**
  * B2's numeric-pipeline slice: `precision`, `significant`, `digitCount`,
  * `padding`/`paddingDigits`/`paddingGroupDigits` and `numberSign` of the
- * per-call `formatter:` option, against the pinned `calls/1` oracle cases and
+ * per-call `formatter:` option — plus, since B2's notation slice, `notation`
+ * (`e`/`scientific`/`engineering`), `e`, `times` and `exponentSign`, whose
+ * inline cases are `number-formatter-notation.spec.ts` — against the pinned `calls/1` oracle cases and
  * against values measured directly on the oracle.
  *
  * Three groups:
@@ -9,8 +11,8 @@
  * 1. Every pinned `calls/1` case whose options fall in this slice renders
  *    byte-identically for asciimath, latex, mathml, unicodemath and html.
  *    OMML stays refused (another lane's).
- * 2. Every pinned case outside it is still refused BY NAME, and the refusal
- *    names the offending key.
+ * 2. Every pinned case outside it (base notation, when the pin has any) is
+ *    still refused BY NAME, and the refusal names the offending key.
  * 3. Inline cases measured on the oracle (below), and the option refusals.
  */
 
@@ -49,6 +51,10 @@ const IN_SCOPE_KEYS: ReadonlySet<string> = new Set([
   "padding_digits",
   "padding_group_digits",
   "number_sign",
+  "notation",
+  "e",
+  "times",
+  "exponent_sign",
 ]);
 
 function camel(key: string): string {
@@ -107,17 +113,9 @@ const ALL = loadPinnedCorpus().calls.map(reduce);
 const IN_SCOPE = ALL.filter(
   (c) => c.keys.every((k) => IN_SCOPE_KEYS.has(k)) && c.stringFormat === null && c.locale === "en",
 );
-const NOTATION_OR_BASE_KEYS = new Set([
-  "notation",
-  "e",
-  "times",
-  "exponent_sign",
-  "base",
-  "base_prefix",
-  "base_postfix",
-  "hex_capital",
-]);
-const REFUSED = ALL.filter((c) => c.keys.some((k) => NOTATION_OR_BASE_KEYS.has(k)));
+/** Base notation is B2-Base's; its keys stay refused by name. */
+const BASE_KEYS = new Set(["base", "base_prefix", "base_postfix", "hex_capital"]);
+const REFUSED = ALL.filter((c) => c.keys.some((k) => BASE_KEYS.has(k)));
 
 function buildFormula(entry: PinnedCallCase): ConstructedMathNode {
   const census = readCensus();
@@ -140,6 +138,12 @@ describe("pinned calls/1 cases — the sets this spec partitions", () => {
       "digit-count-",
       "sign-plus-basic",
       "padding-",
+      "notation-e-",
+      "notation-scientific-",
+      "notation-engineering-",
+      "sign-plus-e",
+      "sign-plus-scientific",
+      "sign-plus-engineering",
     ]) {
       expect(
         ids.some((id) => id.includes(stem)),
@@ -176,9 +180,30 @@ describe.each(IN_SCOPE.map((c) => [c.entry.id, c] as const))("%s", (_id, c) => {
   });
 });
 
-describe.each(REFUSED.map((c) => [c.entry.id, c] as const))("%s (notation/base lane)", (_id, c) => {
-  it("is refused by name in every text format and mathml", () => {
-    const named = c.keys.filter((k) => NOTATION_OR_BASE_KEYS.has(k)).map(camel);
+/**
+ * The pinned testsuite carries no `base` case, so `REFUSED` is empty there and
+ * a `describe.each` over it would inspect nothing. The refusal is checked on
+ * an in-scope case's own model with each base key added instead, and the
+ * corpus loop below runs whenever the pin does carry one.
+ */
+describe("base notation (B2-Base's) is refused by name in every text format and mathml", () => {
+  const model = IN_SCOPE[0] as Reduced;
+  it.each([...BASE_KEYS].map(camel))("%s", (key) => {
+    const formatter = { ...model.formatter, options: { [key]: "x" } } as never;
+    for (const render of [toAsciimath, toLatex, toMathml, toUnicodemath, toHtml]) {
+      let error: unknown;
+      try {
+        render(buildFormula(model.entry), { formatter });
+      } catch (thrown) {
+        error = thrown;
+      }
+      expect(error).toBeInstanceOf(RenderError);
+      expect((error as RenderError).message).toContain(`"${key}"`);
+    }
+  });
+
+  it.each(REFUSED.map((c) => [c.entry.id, c] as const))("pinned case %s", (_id, c) => {
+    const named = c.keys.filter((k) => BASE_KEYS.has(k)).map(camel);
     for (const render of [toAsciimath, toLatex, toMathml, toUnicodemath, toHtml]) {
       let error: unknown;
       try {
@@ -360,17 +385,8 @@ describe("option validation", () => {
     refuses({ options: { numberSign: true } } as never, /numberSign/);
   });
 
-  it("still refuses the notation and base keys by name", () => {
-    for (const key of [
-      "notation",
-      "e",
-      "times",
-      "exponentSign",
-      "base",
-      "basePrefix",
-      "basePostfix",
-      "hexCapital",
-    ]) {
+  it("still refuses the base keys by name", () => {
+    for (const key of ["base", "basePrefix", "basePostfix", "hexCapital"]) {
       refuses({ options: { [key]: "x" } } as never, new RegExp(`"${key}"`));
     }
   });

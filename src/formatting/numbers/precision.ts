@@ -19,3 +19,24 @@ import type { Source } from "./source";
 export function resolvePrecision(source: Source, explicit: number | null): number {
   return explicit ?? source.decimalPrecision;
 }
+
+/**
+ * `PrecisionResolver#resolve`'s notation arm (`precision_resolver.rb:21`), the
+ * precision a supported notation renders its coefficient with. An explicit
+ * precision wins (zero included: the gem tests `if precision`, and `0` is
+ * truthy in Ruby). Otherwise the coefficient keeps the source's significant
+ * digits (`Source#notationPrecision`), widened to `budget - 1` when a
+ * `significant` or `digit_count` budget asks for more digits (one digit
+ * leads, so the fraction allowance is one less than the budget).
+ */
+export function resolveNotationPrecision(
+  source: Source,
+  explicit: number | null,
+  significant: number,
+  digitCount: number,
+): number {
+  if (explicit !== null) return explicit;
+  const budget = Math.max(significant, digitCount);
+  if (budget > 0) return Math.max(budget - 1, source.notationPrecision);
+  return source.notationPrecision;
+}

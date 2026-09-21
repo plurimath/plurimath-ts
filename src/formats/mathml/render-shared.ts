@@ -25,7 +25,14 @@ import {
 import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS, rubyClassName } from "../../core/normalize";
 import { assertReproducibleRubyHashOrder } from "../../core/ruby-semantics";
-import type { NumberFormat } from "../../formatting/index";
+import {
+  formatNumberValue,
+  formattedExponent,
+  formattedNotationText,
+  formattedNumberText,
+  isFormattedNotation,
+  type NumberFormat,
+} from "../../formatting/index";
 import { XmlElement } from "../../xml/index";
 
 export const FORMAT = "mathml";
@@ -44,6 +51,28 @@ export {
   isGemNumericValue,
   refuseNonNumericUnderFormatter,
 } from "../../formatting/index";
+
+/**
+ * `Formatter::Numbers::MathmlRenderer.render` for a formatted number: `<mn>`
+ * over the text, except a `scientific`/`engineering` notation, which is
+ * `<mrow><mn>coefficient</mn><mo>times</mo><msup><mn>10</mn><mn>exponent</mn>
+ * </msup></mrow>` (`render_notation`). The `e` notation stays one `<mn>`.
+ * `value` must satisfy `isGemNumericValue`.
+ */
+export function renderFormattedNumber(value: string, format: NumberFormat): XmlElement {
+  const result = formatNumberValue(value, format);
+  if (!isFormattedNotation(result)) return new XmlElement("mn").append(formattedNumberText(result));
+  if (result.style === "e") return new XmlElement("mn").append(formattedNotationText(result));
+
+  return new XmlElement("mrow").append([
+    new XmlElement("mn").append(formattedNumberText(result.coefficient)),
+    new XmlElement("mo").append(result.timesSymbol),
+    new XmlElement("msup").append([
+      new XmlElement("mn").append("10"),
+      new XmlElement("mn").append(formattedExponent(result)),
+    ]),
+  ]);
+}
 
 /**
  * What one `to_mathml_without_math_tag` answers. Almost always an

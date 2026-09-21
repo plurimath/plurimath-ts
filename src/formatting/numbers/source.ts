@@ -6,9 +6,9 @@
  *
  * The gem also holds a `BigDecimal` of the input. Nothing this path reads
  * needs one: every digit string is derived from the raw text by exact string
- * arithmetic, so no JavaScript number ever touches a value. A later notation
- * lane will want `decimal.zero?` and `notation_precision`; both are string
- * questions over the same fields and belong here.
+ * arithmetic, so no JavaScript number ever touches a value. The notation
+ * lane's `decimal.zero?`, `significant_digit_count` and `notation_precision`
+ * are string questions over the same fields and live here too.
  */
 
 import { NumberParts, type Sign } from "./parts";
@@ -58,6 +58,30 @@ export class Source {
   /** `Source#decimal_precision` — how many fraction digits the value has as written. */
   get decimalPrecision(): number {
     return this.decimalDigits()[1].length;
+  }
+
+  /** `Source#decimal.zero?` — every mantissa digit is zero (the exponent cannot change that). */
+  get isZero(): boolean {
+    return !/[1-9]/.test(`${this.integerDigits}${this.fractionDigits}`);
+  }
+
+  /**
+   * `Source#significant_digit_count` — the mantissa's digits from the first
+   * non-zero one (`Source#significant_digits`: leading zeros stripped, the
+   * exponent not folded in).
+   */
+  get significantDigitCount(): number {
+    return `${this.integerDigits}${this.fractionDigits}`.replace(/^0+/, "").length;
+  }
+
+  /**
+   * `Source#notation_precision` (`source.rb:40`): a zero keeps the source's
+   * stated fraction width; anything else has its significant digits less the
+   * single leading one.
+   */
+  get notationPrecision(): number {
+    if (this.isZero) return this.fractionDigits.length;
+    return Math.max(this.significantDigitCount - 1, 0);
   }
 
   /**

@@ -510,8 +510,9 @@ module UnicodeMathParserDataGenerator
   #                   `if Constants::NARY_CLASSES.key?(nary_function.to_sym)`,
   #                   so the reachable names are `NARY_CLASSES.keys`.
   #
-  # `matrix` (`get_table_class`) is the third, and this slice defers the
-  # table/matrix rules, so no table-class table is emitted: emitting one would
+  # `matrix` (`get_table_class`) is the third. The table/matrix rules are
+  # registered in `transform.ts`, but `getTableClass` there is a name transform
+  # rather than a lookup, so no table-class table is emitted: emitting one would
   # ship data nothing reads.
   def get_class_sources
     sources = Hash.new { |hash, key| hash[key] = [] }
@@ -992,10 +993,10 @@ module UnicodeMathParserDataGenerator
         `src/formats/unicodemath/registry.ts` binds these to `core`
         constructors; nothing restates them.
 
-        This is the FIRST transform slice, so the emitted set is what that slice
-        consumes and no more. `Utility.get_table_class` has no table here: the
-        table/matrix rules are deferred, and data nothing reads cannot be kept
-        honest.
+        The emitted set is what the registered transform rules consume and no
+        more. `Utility.get_table_class` has no table here: the port resolves it
+        with `getTableClass` in `transform.ts` (a name transform, not a lookup),
+        so a table would be data nothing reads, and that cannot be kept honest.
       TEXT
       [
         CoreDataGenerator.ts_doc(

@@ -24,7 +24,8 @@
  *
  * Every fixture row is asserted: byte-for-byte where the gem renders, a
  * `RenderError`/`ParseError` where it refused. A row the port cannot yet
- * reproduce would have to be named in `PORT_REFUSES` below, and none is.
+ * reproduce is named in `PORT_REFUSES` below (104 rows, all kind-renderer
+ * refusals).
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -76,8 +77,12 @@ const CENSUS_ALIASES = aliasIndex(readCensus());
  * Rows the gem renders and this port's KIND renderers do not, by id: 26 for
  * MathML and 78 for OMML. Every one refuses on a node kind or alias the
  * per-kind renderer has not measured (`Longdiv`, `Phantom`, `Underover`, the
- * unmeasured unary aliases...) — a refusal that exists with or without
- * `splitOnLinebreak`, so none of these is a divergence of THIS slice. The
+ * unmeasured unary aliases...). For all but six the same refusal occurs without
+ * `splitOnLinebreak`; the six (MathML `line-break-029`, OMML `012` and `029`,
+ * each with its `-display-false` variant) render unsplit, and only refuse
+ * because splitting yields a transformed alias the kind renderer has not
+ * measured — a kind-renderer gap, not a walker mismatch (the split itself is
+ * checked against the gem for every row below). The
  * split itself is checked for every one of them in the walk tests below, which
  * need no renderer; here each is pinned as a refusal, and the message must be a
  * kind file's own (`KIND_REFUSAL`), so a fault in the walker cannot hide in

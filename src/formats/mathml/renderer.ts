@@ -90,6 +90,16 @@ export interface MathmlOptions {
  * `MathmlOptions` cannot be left out of the accepted set below. The values
  * carry nothing; only the keys are read.
  */
+/**
+ * An explicit JS `undefined` means "not given" (as `toOmml` already treats it),
+ * so the receiver's own `displaystyle` applies. Without this, `String(undefined)`
+ * is `"undefined"` and the option would wrongly read as false, where the gem — an
+ * omitted keyword — keeps the receiver's value.
+ */
+function hasDisplayStyle(opts: Record<string, unknown>): boolean {
+  return Object.hasOwn(opts, "displayStyle") && opts.displayStyle !== undefined;
+}
+
 const IMPLEMENTED_OPTIONS: { readonly [K in keyof Required<MathmlOptions>]: null } = {
   displayStyle: null,
   unaryFunctionSpacing: null,
@@ -190,7 +200,7 @@ function renderMath(
   const splitValue = Object.hasOwn(opts, "splitOnLinebreak") ? opts.splitOnLinebreak : undefined;
   if (splitValue !== undefined && splitValue !== null && splitValue !== false) {
     const inherited: Record<string, unknown> = {
-      displayStyle: Object.hasOwn(opts, "displayStyle")
+      displayStyle: hasDisplayStyle(opts)
         ? opts.displayStyle
         : (node as { readonly displaystyle?: unknown }).displaystyle,
     };
@@ -214,7 +224,7 @@ function renderMath(
         : NO_SPACING_CONTEXT
       : createRenderContext(spacing, numberFormat);
 
-  const displayValue = Object.hasOwn(opts, "displayStyle")
+  const displayValue = hasDisplayStyle(opts)
     ? opts.displayStyle
     : (node as { readonly displaystyle?: unknown }).displaystyle;
   // `boolean_display_style`: `display_style.to_s == "true"`.

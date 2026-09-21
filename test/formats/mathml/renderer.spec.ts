@@ -78,6 +78,14 @@ describe("the options matrix (probe-mathml-edges.rb)", () => {
     expect(toMathml(sinX(), { displayStyle: null })).toBe(math(SIN_SPACED, "false"));
   });
 
+  it("an explicit undefined displayStyle is 'not given' (the oracle's omitted keyword), not the string", () => {
+    expect(toMathml(sinX(), { displayStyle: undefined })).toBe(toMathml(sinX()));
+    expect(toMathml(sinX(), { displayStyle: undefined })).toBe(math(SIN_SPACED));
+    expect(toMathml(sinX(), { displayStyle: undefined, splitOnLinebreak: true })).toBe(
+      toMathml(sinX(), { splitOnLinebreak: true }),
+    );
+  });
+
   it("the formula's own displaystyle field is the default", () => {
     const off = new FormulaNode({
       value: [new UnaryFunctionNode({ name: "Sin", parameterOne: x() })],

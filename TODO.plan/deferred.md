@@ -960,6 +960,24 @@ adversarial gate asserts `STACK_EXHAUSTED_MESSAGE` for **every** row it pins as
 rejected (driven off the case table, so the two cannot drift apart), and the two
 messages are distinct so a silent swap cannot pass unnoticed.
 
+**Update 2026-09-21: the trigger fired and the gate now covers LaTeX, HTML and
+UnicodeMath.** `test/adversarial/adversarial-inputs.spec.ts` pins, per grammar,
+parses at nesting 20 and refusals at 1,000 for nested braces/`\frac`/`\sqrt`/
+parens/`\left(`/superscripts (LaTeX), `<mrow>`/`<sup>`/parens (HTML) and
+parens/brackets/roots/fractions (UnicodeMath), plus unterminated and unmatched
+closers, long runs, NUL and lone surrogates. Every 1,000-deep refusal is the
+`RangeError` path (`STACK_EXHAUSTED_MESSAGE`); HTML at exactly 100 levels is the
+JSON round trip's `nesting of 100 is too deep`, which the gem raises too. The
+result is unchanged: **`MAX_DEPTH` was not observed to fire for any of the four
+grammars**, and a spec assertion fails if it ever does. Against the gem
+(measured on `00c52783`): LaTeX and UnicodeMath parse at 20 and overflow the
+Ruby stack (`SystemStackError`) by 100; the port's ceiling is at or above the
+gem's at every depth measured on both sides, so the port is never stricter
+than the gem at a measured depth (LaTeX `\frac` is the near-tie: refused from
+70 here, gem parses 60 and overflows at 80). Still open: the deterministic
+bound itself, and a runtime change (engine, worker stack size), which the
+n=20 / n=1,000 pins are placed to survive but would move the unpinned band.
+
 ## AsciiMath rejection position: `right-unclosed`
 
 The port's `ParseError.index` disagrees with the gem's recorded offset for one

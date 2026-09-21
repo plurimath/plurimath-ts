@@ -252,8 +252,8 @@ describe("the pin as shipped", () => {
     // inflate what "the corpus covers" claims.
     expect(corpus.payloads.length).toBe(41);
     expect(corpus.rejectionPayloads.length).toBe(2);
-    expect(corpus.callsPayloads.length).toBe(1);
-    expect(corpus.provenance.payloads.length).toBe(44);
+    expect(corpus.callsPayloads.length).toBe(7);
+    expect(corpus.provenance.payloads.length).toBe(50);
     assertExpectedPayloads(corpus);
   });
 
@@ -262,9 +262,9 @@ describe("the pin as shipped", () => {
     expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(237);
   });
 
-  it("carries 2 calls/1 cases, both number_formatter, with distinct ids", () => {
-    expect(corpus.calls.length).toBe(2);
-    expect(new Set(corpus.calls.map((entry) => entry.id)).size).toBe(2);
+  it("carries 66 calls/1 cases, all number_formatter, with distinct ids", () => {
+    expect(corpus.calls.length).toBe(66);
+    expect(new Set(corpus.calls.map((entry) => entry.id)).size).toBe(66);
     for (const entry of corpus.calls) {
       expect(entry.call.method).toBe("number_formatter");
     }

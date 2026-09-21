@@ -24,7 +24,7 @@
  *
  * Every fixture row is asserted: byte-for-byte where the gem renders, a
  * `RenderError`/`ParseError` where it refused. A row the port cannot yet
- * reproduce is named in `PORT_REFUSES` below (104 rows, all kind-renderer
+ * reproduce is named in `PORT_REFUSES` below (98 rows, all kind-renderer
  * refusals).
  */
 import { readFileSync } from "node:fs";
@@ -59,7 +59,7 @@ interface Row {
 }
 
 /** Rows the gem renders that the port renders too, per format (a pin, not a knob). */
-const RENDERED_BASELINE = { mathml: 166, omml: 161 } as const;
+const RENDERED_BASELINE = { mathml: 168, omml: 165 } as const;
 
 interface Fixture {
   readonly schema: string;
@@ -104,8 +104,6 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-058-display-false",
     "line-break-059",
     "line-break-059-display-false",
-    "line-break-072",
-    "line-break-072-display-false",
     "line-break-076",
     "line-break-076-display-false",
     "line-break-077",
@@ -180,8 +178,6 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-059-display-false",
     "line-break-064",
     "line-break-064-display-false",
-    "line-break-072",
-    "line-break-072-display-false",
     "line-break-073",
     "line-break-073-display-false",
     "line-break-076",
@@ -192,8 +188,6 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-083-display-false",
     "line-break-084",
     "line-break-084-display-false",
-    "line-break-085",
-    "line-break-085-display-false",
     "line-break-090",
     "line-break-090-display-false",
   ],

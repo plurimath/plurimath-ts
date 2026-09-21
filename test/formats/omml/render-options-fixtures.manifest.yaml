@@ -5,39 +5,28 @@ schema: plurimath-corpus/manifest/2
 committable: false
 warnings:
 - generated with --allow-dirty
-- 'generator checkout dirty: scripts/generate-render-options-fixtures.rb, src/render/mpadded/unicodemath.ts, src/render/unary-function/asciimath.ts, src/render/unary-function/html.ts, src/render/unary-function/latex.ts, src/render/unary-function/mathml.ts, src/render/unary-function/omml.ts, src/render/unary-function/unicodemath.ts, test/formats/asciimath/render-options-fixtures.json, test/formats/asciimath/render-options-fixtures.manifest.yaml, test/formats/html/render-options-fixtures.json, test/formats/html/render-options-fixtures.manifest.yaml, test/formats/latex/render-options-fixtures.json, test/formats/latex/render-options-fixtures.manifest.yaml, test/formats/mathml/render-options-fixtures.json, test/formats/mathml/render-options-fixtures.manifest.yaml, test/formats/omml/render-options-fixtures.json, test/formats/omml/render-options-fixtures.manifest.yaml, test/formats/unary-function-parity.spec.ts, test/formats/unicodemath/render-options-fixtures.json, test/formats/unicodemath/render-options-fixtures.manifest.yaml'
+- 'generator checkout dirty: TODO.plan/deferred.md, scripts/generate-render-options-fixtures.rb, src/render/ternary-function/asciimath.ts, src/render/ternary-function/html.ts, src/render/ternary-function/latex.ts, src/render/ternary-function/mathml.ts, src/render/ternary-function/omml.ts, src/render/ternary-function/unicodemath.ts, test/formats/latex/renderer.spec.ts, test/formats/ternary-function-parity.spec.ts'
 generator:
   path: scripts/generate-render-options-fixtures.rb
-  sha256: 7d1684fc34118d87dc227674c4f841468792abcf68c51f17e6f186ae0d7a3ad7
+  sha256: e1948018c10a7e52ce85c423c8ae6688c373931826571ddc4c121933595cbc40
   inputs:
     scripts/generate-corpus.rb: 60afefa7bccb49b7f801c27a0fe3ce7605c63cd2e4afdccea7d4125fff2c01b3
-    scripts/generate-render-options-fixtures.rb: 7d1684fc34118d87dc227674c4f841468792abcf68c51f17e6f186ae0d7a3ad7
+    scripts/generate-render-options-fixtures.rb: e1948018c10a7e52ce85c423c8ae6688c373931826571ddc4c121933595cbc40
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
     commit: 82c3ac544f9904b43a894d87a1b8908f5e4e28c0
     clean: false
     dirty_paths:
+    - TODO.plan/deferred.md
     - scripts/generate-render-options-fixtures.rb
-    - src/render/mpadded/unicodemath.ts
-    - src/render/unary-function/asciimath.ts
-    - src/render/unary-function/html.ts
-    - src/render/unary-function/latex.ts
-    - src/render/unary-function/mathml.ts
-    - src/render/unary-function/omml.ts
-    - src/render/unary-function/unicodemath.ts
-    - test/formats/asciimath/render-options-fixtures.json
-    - test/formats/asciimath/render-options-fixtures.manifest.yaml
-    - test/formats/html/render-options-fixtures.json
-    - test/formats/html/render-options-fixtures.manifest.yaml
-    - test/formats/latex/render-options-fixtures.json
-    - test/formats/latex/render-options-fixtures.manifest.yaml
-    - test/formats/mathml/render-options-fixtures.json
-    - test/formats/mathml/render-options-fixtures.manifest.yaml
-    - test/formats/omml/render-options-fixtures.json
-    - test/formats/omml/render-options-fixtures.manifest.yaml
-    - test/formats/unary-function-parity.spec.ts
-    - test/formats/unicodemath/render-options-fixtures.json
-    - test/formats/unicodemath/render-options-fixtures.manifest.yaml
+    - src/render/ternary-function/asciimath.ts
+    - src/render/ternary-function/html.ts
+    - src/render/ternary-function/latex.ts
+    - src/render/ternary-function/mathml.ts
+    - src/render/ternary-function/omml.ts
+    - src/render/ternary-function/unicodemath.ts
+    - test/formats/latex/renderer.spec.ts
+    - test/formats/ternary-function-parity.spec.ts
 oracle:
   gem: plurimath
   version: 0.11.6
@@ -128,5 +117,5 @@ dependencies:
 payload:
   path: render-options-fixtures.json
   schema: plurimath-corpus/render-options/1
-  sha256: 8eb86b7ebc2f010a28c72840875091ce339eea07a1bba07a983bcde64f5313b6
-  bytes: 1560961
+  sha256: 4ab6f11c170762ffd94b5227f20a07c967b3df8de2d28030a6949fdc47f3989b
+  bytes: 1469724

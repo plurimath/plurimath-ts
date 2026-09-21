@@ -188,8 +188,9 @@ own bytes; `Phantom` refuses because the gem raises on it.
 class_name`, so the label is NOT reliably the downcased class name — of the
 names reachable through that carrier, `Sup` resolves to `&#x2283;` — and the
 port cannot compute it without the mathml table it may not import. Names that
-render on the gem but no case constructs (`Stackrel`, `Underover`, `Limits`,
-`Multiscript`) stay refused rather than admitted untested. Two never become
+render on the gem but no case constructs (`Stackrel`, `Underover`) stay refused
+rather than admitted untested (`Limits` and `Multiscript` are now admitted, held
+to the gem by `test/formats/ternary-function/`). Two never become
 admissible as written: `Menclose#to_html` interpolates `parameter_one` raw
 into a `notation=` attribute (a heap address, not reproducible), and
 `Rule#to_html` takes no `options:` keyword at all, so the gem itself raises

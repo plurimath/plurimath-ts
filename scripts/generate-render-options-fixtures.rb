@@ -11,11 +11,13 @@
 #   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
 #     scripts/generate-render-options-fixtures.rb --oracle /path/to/plurimath
 #
-# One run writes `test/formats/<format>/render-options-fixtures.json` for each
-# of the six formats; the four other than mathml and omml hold only the
-# `unary-function` group. All are prepared before any is written: `RenderFixtureProvenance.prepare` refuses a checkout that
-# is dirty outside the one payload it is about to write, and the two outputs
-# would otherwise make each other dirty. (The canonical parity/degenerate pair
+# One run writes `test/formats/<format>/render-options-fixtures.json` for every
+# format in `FORMATS`: mathml and omml carry the option groups below and the
+# `ternary-function` group; the other four carry only the `unary-function` and
+# `ternary-function` groups. All are prepared before any is written:
+# `RenderFixtureProvenance.prepare` refuses a checkout that is dirty outside the
+# one payload it is about to write, and the outputs would otherwise make each
+# other dirty. (The canonical parity/degenerate pair
 # gets its exemption from `MANAGED_PAYLOAD_BASENAMES`, an edit to a file every
 # existing manifest hashes.)
 #
@@ -54,8 +56,10 @@ require "optparse"
 GENERATOR_RELATIVE_PATH = "scripts/generate-render-options-fixtures.rb"
 
 SCHEMA = "plurimath-corpus/render-options/1"
-FORMATS = %w[asciimath latex mathml html omml unicodemath].freeze
-# The formats whose payload holds the `unary-function` group and nothing else.
+FORMATS = %w[asciimath html latex mathml omml unicodemath].freeze
+# The formats the line-break and display-style groups are recorded for.
+LINE_BREAK_FORMATS = %w[mathml omml].freeze
+# The formats whose payload holds no option group.
 UNARY_ONLY_FORMATS = %w[asciimath latex html unicodemath].freeze
 # `Math.parse` spells UnicodeMath `:unicode`; the other three are their own name.
 PARSE_TYPES = { "unicodemath" => :unicode }.freeze
@@ -171,6 +175,128 @@ UNARY_FUNCTION_TEXT_INPUTS = [
   ["latex", "\\ln{}", "measured on the oracle"],
   ["latex", "\\substack{a \\\\ b & c}", "measured on the oracle"],
 ].freeze
+
+# The `ternary-function` group: every renderer's answer for the three
+# `TernaryFunction` subclasses that only the LaTeX, HTML and UnicodeMath
+# parsers (or a hand-built tree) can produce — `Multiscript`, `Limits`, `Rule`.
+# # Each row is one input rendered to ONE target, so the same inputs appear once
+# in each of the six per-format payloads, group `ternary-function`, `options`
+# empty (the calls are plain `to_<format>`).
+TERNARY_GROUP = "ternary-function"
+
+# Text the gem parses itself; the row build aborts on any that does not parse.
+# The UnicodeMath ones are the prescript forms that build a `Multiscript`;
+# `\limits` and `\rule` are LaTeX.
+TERNARY_TEXT_INPUTS = [
+  ["latex", "\\int\\limits_a^b"],
+  ["latex", "\\int\\limits_{0}^{\\pi}"], # spec/plurimath/latex/parser_spec.rb:246
+  ["latex", "\\rule{1}{2}"],
+  ["latex", "\\rule[-1mm]{5mm}{1cm}"], # spec/plurimath/latex_spec.rb:2844
+  ["unicodemath", "^3 X"],
+  ["unicodemath", "_2 X"],
+  ["unicodemath", "^3 X_5"],
+  ["unicodemath", "_2^3 X"],
+  ["unicodemath", "_2 X_5"],
+  ["unicodemath", "_2 X₅"],
+  ["unicodemath", "_2^3 X_5"],
+  ["unicodemath", "(_2)X"],
+  ["unicodemath", "(_2)X_5"],
+  ["unicodemath", "_2^3 X_5^6"],
+  ["unicodemath", "(_2^3)X"],
+  ["unicodemath", "(_2^3)X_5^6"],
+  ["unicodemath", "_2 X_(5)"],
+  ["unicodemath", "_2^3 X_(5)"],
+  ["unicodemath", "_2^3 X_(5)^(6)"],
+  ["unicodemath", "(_2^3)X_(5)^(6)"],
+  ["unicodemath", "_(2)^(3) X_5"],
+  ["unicodemath", "_(2)^(3) X_5^6"],
+].freeze
+
+# The gem's own hand-built formulas that hold one of the kinds:
+# `line_break_values.rb` LineBreak_076 (Limits), _083 and _090 (Multiscript).
+TERNARY_SPEC_CONSTANTS = %i[LineBreak_076 LineBreak_083 LineBreak_090].freeze
+
+# Hand-built trees, one per branch of a kind's `to_<format>` the parsers cannot
+# reach: nil slots, empty and unequal-length script lists, a base that is not a
+# `PowerBase`, a script that is a node rather than a list, `Power`/`Base`
+# scripts (the UnicodeMath `sup_value`/`sub_value` arms), a prime. Each lambda
+# is called with the gem's `Plurimath::Math`.
+TERNARY_BUILT_INPUTS = {
+  "multiscript-all-nil" => ->(m) { m::Function::Multiscript.new(nil, nil, nil) },
+  "multiscript-empty-lists" => lambda { |m|
+    m::Function::Multiscript.new(m::Function::PowerBase.new(m::Symbols::Symbol.new("X")), [], [])
+  },
+  "multiscript-sub-only" => lambda { |m|
+    m::Function::Multiscript.new(m::Function::PowerBase.new(m::Symbols::Symbol.new("X")),
+                                 [m::Number.new("2")], [])
+  },
+  "multiscript-plain-base" => lambda { |m|
+    m::Function::Multiscript.new(m::Symbols::Symbol.new("X"), [m::Number.new("2")], [m::Number.new("3")])
+  },
+  "multiscript-unequal-sub-longer" => lambda { |m|
+    m::Function::Multiscript.new(m::Function::PowerBase.new(m::Symbols::Symbol.new("X")),
+                                 [m::Number.new("1"), m::Number.new("2")], [m::Number.new("3")])
+  },
+  "multiscript-unequal-sup-longer" => lambda { |m|
+    m::Function::Multiscript.new(m::Function::PowerBase.new(m::Symbols::Symbol.new("X")),
+                                 [m::Number.new("1")], [m::Number.new("3"), m::Number.new("4")])
+  },
+  "multiscript-nil-sub" => lambda { |m|
+    m::Function::Multiscript.new(m::Function::PowerBase.new(m::Symbols::Symbol.new("X")),
+                                 nil, [m::Number.new("3")])
+  },
+  "multiscript-nil-sup" => lambda { |m|
+    m::Function::Multiscript.new(m::Function::PowerBase.new(m::Symbols::Symbol.new("X")),
+                                 [m::Number.new("1")], nil)
+  },
+  "multiscript-node-scripts" => lambda { |m|
+    m::Function::Multiscript.new(m::Function::PowerBase.new(m::Symbols::Symbol.new("X")),
+                                 m::Number.new("2"), m::Number.new("3"))
+  },
+  "multiscript-power-scripts" => lambda { |m|
+    m::Function::Multiscript.new(
+      m::Function::PowerBase.new(m::Symbols::Symbol.new("X")),
+      [m::Function::Power.new(m::Number.new("1"), m::Number.new("2"))],
+      [m::Function::Power.new(m::Number.new("3"), m::Number.new("4"))],
+    )
+  },
+  "multiscript-base-scripts" => lambda { |m|
+    m::Function::Multiscript.new(
+      m::Function::PowerBase.new(m::Symbols::Symbol.new("X")),
+      [m::Function::Base.new(m::Number.new("1"), m::Number.new("2"))],
+      [m::Number.new("3")],
+    )
+  },
+  "multiscript-prime-sup" => lambda { |m|
+    m::Function::Multiscript.new(m::Function::PowerBase.new(m::Symbols::Symbol.new("X")),
+                                 [m::Number.new("1")], [m::Symbols::Symbol.new("′")])
+  },
+  "limits-all-nil" => ->(m) { m::Function::Limits.new(nil, nil, nil) },
+  "limits-sub-only" => lambda { |m|
+    m::Function::Limits.new(m::Symbols::Symbol.new("x"), m::Number.new("2"), nil)
+  },
+  "limits-sup-only" => lambda { |m|
+    m::Function::Limits.new(m::Symbols::Symbol.new("x"), nil, m::Number.new("3"))
+  },
+  "limits-base-and-power-scripts" => lambda { |m|
+    m::Function::Limits.new(
+      m::Symbols::Symbol.new("x"),
+      m::Function::Base.new(m::Number.new("1"), m::Number.new("2")),
+      m::Function::Power.new(m::Number.new("3"), m::Number.new("4")),
+    )
+  },
+  "limits-prime-power-base" => lambda { |m|
+    m::Function::Limits.new(
+      m::Function::Power.new(m::Symbols::Symbol.new("x"), m::Symbols::Symbol.new("′")),
+      m::Number.new("1"), m::Number.new("2")
+    )
+  },
+  "rule-all-nil" => ->(m) { m::Function::Rule.new(nil, nil, nil) },
+  "rule-first-only" => ->(m) { m::Function::Rule.new(m::Number.new("1"), nil, nil) },
+  "rule-three-slots" => lambda { |m|
+    m::Function::Rule.new(m::Symbols::Symbol.new("x"), m::Number.new("2"), m::Number.new("3"))
+  },
+}.freeze
 
 options = { oracle: nil, out: "test/formats", allow_dirty: false }
 OptionParser.new do |o|
@@ -366,8 +492,9 @@ def rows_for(format, oracle)
     rows << row
   end
 
-  # The `unary-function` group is the whole payload for the four formats whose
-  # renderers the B3 options do not touch.
+  # The `unary-function` group is the whole option-free payload for the four
+  # formats whose renderers the B3 options do not touch (the `ternary-function`
+  # group is appended by the caller).
   if UNARY_ONLY_FORMATS.include?(format)
     unary_function_rows(add)
     return rows
@@ -440,6 +567,41 @@ def rows_for(format, oracle)
   rows
 end
 
+# Rows of the `ternary-function` group for one target format. Each renders
+# through the gem's public `to_<format>` with no options, so the bytes are what
+# a caller gets; a refusal is the gem's ParseError, as everywhere in this file.
+def ternary_rows_for(format)
+  rows = []
+  add = lambda do |id, source, input, formula|
+    row = { "id" => id, "group" => TERNARY_GROUP, "source" => source, "input" => input, "options" => {} }
+    begin
+      row["expected"] = formula.public_send("to_#{format}")
+    rescue ORACLE_REFUSAL => e
+      row["raises"] = e.class.name
+      row["raisedIn"] = "render"
+    end
+    rows << row
+  end
+
+  TERNARY_TEXT_INPUTS.each_with_index do |(input_format, text), index|
+    formula = Plurimath::Math.parse(text, input_format == "unicodemath" ? :unicode : input_format.to_sym)
+    add.call(Kernel.format("ternary-%s-text-%02d", input_format, index + 1), "measured on the oracle",
+             { "format" => input_format, "text" => text }, formula)
+  end
+  TERNARY_SPEC_CONSTANTS.each do |name|
+    formula = LineBreakValues.const_get(name)
+    add.call("ternary-spec-#{name.to_s.downcase.tr('_', '-')}",
+             "spec/plurimath/fixtures/formula_modules/line_break_values.rb #{name}",
+             { "model" => CorpusGenerator.serialize_node(formula, "model") }, formula)
+  end
+  TERNARY_BUILT_INPUTS.each do |id, build|
+    formula = Plurimath::Math::Formula.new([build.call(Plurimath::Math)])
+    add.call("ternary-built-#{id}", "hand-built on the oracle",
+             { "model" => CorpusGenerator.serialize_node(formula, "model") }, formula)
+  end
+  rows
+end
+
 outputs = FORMATS.to_h do |format|
   dir = File.expand_path(File.join(options[:out], format))
   payload_path = File.join(dir, PAYLOAD_BASENAME)
@@ -454,7 +616,7 @@ outputs = FORMATS.to_h do |format|
 end
 
 outputs.each do |format, target|
-  rows = rows_for(format, oracle)
+  rows = rows_for(format, oracle) + ternary_rows_for(format)
   ids = rows.map { |r| r["id"] }
   duplicates = ids.tally.select { |_, n| n > 1 }.keys
   abort "REFUSING: duplicate ids in #{format}: #{duplicates.join(', ')}" unless duplicates.empty?

@@ -17,10 +17,10 @@
  * `src/formats/unicodemath/registry.ts` binds these to `core`
  * constructors; nothing restates them.
  *
- * This is the FIRST transform slice, so the emitted set is what that slice
- * consumes and no more. `Utility.get_table_class` has no table here: the
- * table/matrix rules are deferred, and data nothing reads cannot be kept
- * honest.
+ * The emitted set is what the registered transform rules consume and no
+ * more. `Utility.get_table_class` has no table here: the port resolves it
+ * with `getTableClass` in `transform.ts` (a name transform, not a lookup),
+ * so a table would be data nothing reads, and that cannot be kept honest.
  */
 
 /**

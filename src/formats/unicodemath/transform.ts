@@ -394,7 +394,9 @@ import {
   UNICODEMATH_ACCENT_SYMBOLS,
   UNICODEMATH_HEXCODE_IN_INPUT,
   UNICODEMATH_HORIZONTAL_BRACKETS,
+  UNICODEMATH_SIZE_OVERRIDES,
   UNICODEMATH_UNARY_ARG_FUNCTIONS,
+  UNICODEMATH_UNARY_SYMBOLS,
   UNICODEMATH_UNDEF_UNARY_FUNCTIONS,
 } from "../../generated/unicodemath/render-tables";
 import { Slice, sequence, simple, subtree, Transform, type TransformValue } from "../../pegkit";
@@ -409,17 +411,21 @@ import {
   UNICODEMATH_NARY_SYMBOLS_KEYS,
   UNICODEMATH_SUB_DIGITS,
   UNICODEMATH_SUP_DIGITS,
+  UNICODEMATH_UNICODED_FONTS,
 } from "./generated/parser-tables";
 import {
   UNICODEMATH_BELOWS_NOTATIONS,
   UNICODEMATH_BINARY_FUNCTIONS,
   UNICODEMATH_IS_A_CLASSES,
+  UNICODEMATH_MASK_CLASSES,
   UNICODEMATH_MENCLOSE_FUNCTIONS,
   UNICODEMATH_NARY_CLASSES,
   UNICODEMATH_OVERLAYS_NOTATIONS,
+  UNICODEMATH_PHANTOM_FUNCTIONS,
   UNICODEMATH_PRIMES_CONSTANTS,
   UNICODEMATH_SYMBOL_CLASS_INPUT,
   UNICODEMATH_UNDER_HORIZONTAL_BRACKETS,
+  type UnicodemathPhantomAttribute,
 } from "./generated/transform-tables";
 import {
   namedSymbolId,
@@ -555,6 +561,8 @@ const UNDER_HORIZONTAL_BRACKETS_VALUES: ReadonlySet<string> = new Set(
   UNICODEMATH_UNDER_HORIZONTAL_BRACKETS.values(),
 );
 const PRIMES_INVERTED = invertFirstWins(UNICODEMATH_PRIMES_CONSTANTS);
+/** `Constants::UNARY_SYMBOLS.key(value)` — `Hash#key` is FIRST match, so `&#x2581;` is `underline`. */
+const UNARY_SYMBOLS_INVERTED = invertFirstWins(UNICODEMATH_UNARY_SYMBOLS);
 const BINARY_FUNCTION_NAMES: ReadonlySet<string> = new Set(UNICODEMATH_BINARY_FUNCTIONS);
 const UNDEF_UNARY_FUNCTIONS: ReadonlySet<string> = new Set(UNICODEMATH_UNDEF_UNARY_FUNCTIONS);
 const LROUND_ID = namedSymbolId("lround");
@@ -1152,9 +1160,9 @@ function newPower(one: unknown, two: unknown): UnicodemathDraft {
   return binaryDraft("binaryFunction", "Power", one, two);
 }
 
-/** `Math::Function::Base.new(p1, p2)` — `@options` unassigned at two args. */
-function newBase(one: unknown, two: unknown): UnicodemathDraft {
-  return binaryDraft("base", undefined, one, two);
+/** `Math::Function::Base.new(p1, p2, options = {})` — `@options` unassigned unless non-empty. */
+function newBase(one: unknown, two: unknown, options?: NodeOptions): UnicodemathDraft {
+  return binaryDraft("base", undefined, one, two, options);
 }
 
 /**
@@ -1202,9 +1210,69 @@ function newAbs(one: unknown): UnicodemathDraft {
   return unaryDraft("abs", undefined, one);
 }
 
-/** `Math::Function::Color.new(p1, p2)`. */
-function newColor(one: unknown, two: unknown): UnicodemathDraft {
-  return binaryDraft("color", undefined, one, two);
+/**
+ * `Math::Function::Color.new(p1, p2, options = {})` — `@options` is assigned
+ * only when the hash is non-empty, and the one caller that passes one
+ * (`:1252`/`:1261`, `{backgroundcolor: true}`) never passes an empty hash.
+ */
+function newColor(one: unknown, two: unknown, options?: NodeOptions): UnicodemathDraft {
+  return binaryDraft("color", undefined, one, two, options);
+}
+
+/** `Math::Function::Phantom.new(p1)` — a `UnaryFunction` subclass, so an alias on it. */
+function newPhantom(one: unknown): UnicodemathDraft {
+  return unaryDraft("unaryFunction", "Phantom", one);
+}
+
+/**
+ * `Math::Function::Mpadded.new(p1, options)` — a `UnaryFunction` whose
+ * `@options` is assigned only when non-empty. Both callers (`:1224`, `:1561`)
+ * pass a non-empty hash.
+ */
+function newMpadded(one: unknown, options: NodeOptions): UnicodemathDraft {
+  const draft = unaryDraft("mpadded", undefined, one);
+  draft.fields.options = options;
+  return draft;
+}
+
+/** `Math::Function::Intent.new(p1, p2)` — a `BinaryFunction` subclass, so an alias on it. */
+function newIntent(one: unknown, two: unknown): UnicodemathDraft {
+  return binaryDraft("binaryFunction", "Intent", one, two);
+}
+
+/**
+ * `Utility.enclosure_attrs(mask)` (`unicode_math/utility.rb:213-226`): the
+ * `Menclose` notation words for the sides a `rect_value` mask does NOT set —
+ * the low four bits are flipped (`mask ^= 15`), the result read bit by bit
+ * from the least significant end, and each set bit looked up in
+ * `MASK_CLASSES`. A mask outside 0..255 raises, which the parse reports as a
+ * refusal.
+ */
+function enclosureAttrs(mask: number): string {
+  if (mask < 0 || mask > 255) throw new RangeError("enclosure mask is not between 0 and 255");
+  const flipped = mask ^ 15;
+  const classes: string[] = [];
+  for (let bit = 0; bit < 8; bit++) {
+    const name = UNICODEMATH_MASK_CLASSES.get(String(2 ** bit));
+    if ((flipped & (2 ** bit)) !== 0 && name !== undefined) classes.push(name);
+  }
+  return classes.join(" ");
+}
+
+/**
+ * `Constants::UNICODED_FONTS.dig(font.to_sym, key.to_sym)` (`transform.rb:227`):
+ * a miss at either level is nil.
+ */
+function unicodedFont(font: unknown, key: unknown): string | null {
+  const row = UNICODEMATH_UNICODED_FONTS.find(([fontClass]) => fontClass === rubyToS(font));
+  const entry = row?.[1].find(([name]) => name === rubyToS(key));
+  return entry === undefined ? null : entry[1];
+}
+
+/** One `PHANTOM_SYMBOLS` attribute value back into the hash Ruby held. */
+function attributeValue(value: UnicodemathPhantomAttribute): unknown {
+  if (typeof value === "boolean" || typeof value === "string") return value;
+  return Object.fromEntries(value.map(([key, inner]) => [key, attributeValue(inner)]));
 }
 
 /** `Math::Function::Menclose.new(p1, p2)` — an alias on `BinaryFunction`. */
@@ -1468,6 +1536,11 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // fixtures.rb`'s "table" group), the one case that leaves `exp` a sequence.
   rule("17", { exp: sequence("exp") }, (b) => b.exp);
   rule("18", { atom: simple("atom") }, (b) => b.atom);
+  // Unwraps slice C's fixtures need to reach its own rules through (`:19`,
+  // `:47`, `:58`, `:77`, `:426`): the same one-line shapes as their neighbours
+  // here, claimed by the pure-rule slice as well — identical registrations,
+  // which the merge has to keep exactly once (a second `rule("19", ...)` throws).
+  rule("19", { rect: simple("rect") }, (b) => b.rect);
   rule("20", { nary: simple("nary") }, (b) => b.nary);
   rule("21", { char: simple("char") }, (b) => b.char);
   rule("22", { expr: simple("expr") }, (b) => b.expr);
@@ -1503,6 +1576,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // than one atom onto a `factor`: without it the resulting array is a hash
   // the gem always resolves, refused here as if it were the "factor=other"
   // bug case `GEM_UNMATCHED_SIGNATURES` names.
+  rule("47", { backcolor: simple("color") }, (b) => b.color);
   rule("49", { factor: sequence("factor") }, (b) => b.factor);
   rule("50", { operand: simple("operand") }, (b) => b.operand);
   rule("52", { accents: subtree("accent") }, (b) => unicodeAccents(b.accent));
@@ -1512,6 +1586,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // `pre_script` wrapper, so this unwrap fires once per one of them, exactly
   // like `:55`/`:56` do for `sub_exp`/`sup_exp`.
   rule("57", { pre_script: simple("script") }, (b) => b.script);
+  rule("58", { operand: sequence("operand") }, (b) => b.operand);
   rule("61", { close_paren: simple("paren") }, (b) => symbolsClass(b.paren));
   rule("62", { operator: simple("operator") }, (b) => symbolsClass(b.operator));
   rule("68", { monospace: simple("monospace") }, (b) => b.monospace);
@@ -1526,6 +1601,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // inner tag back to plain text first — exactly what `:81`/`:94` do in the
   // gem. `:88` strips `diacriticsAccents`'s own outer `diacritics_accents`
   // wrapper once the rules below have built a node from its contents.
+  rule("77", { override_subsup: simple("subsup") }, (b) => b.subsup);
   rule("81", { diacritic_belows: simple("belows") }, (b) => b.belows);
   rule("82", { unary_function: simple("function") }, (b) => b.function);
   rule("88", { diacritics_accents: simple("accent") }, (b) => b.accent);
@@ -1589,6 +1665,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     newFontStyle("mtt", b.monospace_value),
   );
 
+  // TEXT/FONT/COLOR/PHANTOM/ENCLOSE/INTENT (slice C). `:159` is `:153`'s
+  // SEQUENCE twin: the run is folded through `filter_values` first.
+  rule("159", { monospace_value: sequence("monospace_value") }, (b) =>
+    newFontStyle("mtt", filterValues(b.monospace_value)),
+  );
+
   // FRACTION's mini variant (`:1614`) needs its numerator and denominator
   // pre-resolved to a `simple` value, and the grammar leaves a single sup/sub
   // digit as `{sup_digits: Slice}`/`{sub_digits: Slice}` until one of these
@@ -1615,6 +1697,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   );
 
   // --- two-key rules (transform.rb:236-2001) -----------------------------
+
+  // `:227`: a `\script`/`\double`/`\fraktur`/`\mitBbb` prefix plus one letter
+  // — the `UNICODED_FONTS` code point when the pair has one, else the letter.
+  rule("227", { unicoded_font_class: simple("unicoded"), symbol: simple("symbol") }, (b) =>
+    symbolsClass(unicodedFont(b.unicoded, b.symbol) ?? b.symbol),
+  );
 
   rule("236", { font_class: simple("fonts"), symbol: simple("symbol") }, (b) =>
     newFontStyle(b.fonts, symbolsClass(b.symbol)),
@@ -1644,6 +1732,22 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     ...asArray(b.expr),
   ]);
 
+  // TEXT followed by more: a quoted run, then the rest of the expression as a
+  // list (`:351`, `:361`) or a single item (`:366`, `:356`).
+  rule("351", { text: simple("text"), expr: sequence("expr") }, (b) => [
+    newText(b.text),
+    ...asArray(b.expr),
+  ]);
+  rule("356", { text: simple("text"), operand: simple("operand") }, (b) => [
+    newText(b.text),
+    b.operand,
+  ]);
+  rule("361", { text: simple("text"), operand: sequence("operand") }, (b) => [
+    newText(b.text),
+    ...asArray(b.operand),
+  ]);
+  rule("366", { text: simple("text"), expr: simple("expr") }, (b) => [newText(b.text), b.expr]);
+
   rule("391", { unary_subsup: simple("subsup"), expr: simple("expr") }, (b) => [b.subsup, b.expr]);
   // RELATION/OPERATOR: a resolved `char` (e.g. the `·` `unicode_symbols`
   // already turned into a symbol by `:149`) directly followed by a digit
@@ -1658,6 +1762,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     ...asArray(b.expr),
   ]);
   rule("421", { fonts: simple("fonts"), expr: simple("expr") }, (b) => [b.fonts, b.expr]);
+  rule("426", { phantom: simple("phantom"), expr: sequence("expr") }, (b) => [
+    b.phantom,
+    ...asArray(b.expr),
+  ]);
   rule("446", { operator: simple("operator"), expr: simple("expr") }, (b) => [
     symbolsClass(b.operator),
     b.expr,
@@ -1772,6 +1880,21 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   ]);
   rule("875", { factor: simple("factor"), exp: simple("exp") }, (b) => [b.factor, b.exp]);
 
+  // INTENT (`:960`): the body after `ⓘ` arrives as one parsed expression whose
+  // `parameter_two` list is MUTATED — its first element is shifted off to
+  // become the intent's name, the rest is what the intent wraps. Ruby's
+  // `Array#shift` on a non-array raises `NoMethodError`.
+  rule("960", { intent: simple("intent"), intent_expr: simple("expr") }, (b) => {
+    const list = fieldOf(b.expr, "parameterTwo");
+    if (!Array.isArray(list)) {
+      throw new TypeError(
+        "unicodemath transform: shift on a non-array (Ruby raises NoMethodError)",
+      );
+    }
+    const intentString = list.shift();
+    return newIntent(filterValues(list), intentString);
+  });
+
   // `:969`/`:977`: a bare `over`/`under` operator carrying only a script — the
   // `Overset`/`Underset` is built with the script as `parameter_one` and NO
   // `parameter_two`, which `:1019`/`:1116` later fill in from the base.
@@ -1866,6 +1989,50 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       const unary = UNARY_ARG_FUNCTIONS_INVERTED.get(text) ?? text;
       return newMenclose(UNICODEMATH_MENCLOSE_FUNCTIONS.get(unary) ?? null, value);
     },
+  );
+
+  // COLOR/ENCLOSE/PHANTOM (slice C). `:1201` is `:1193`'s SEQUENCE twin.
+  rule("1201", { color_value: simple("color"), first_value: sequence("first_value") }, (b) =>
+    newColor(newBareSymbol(b.color), filterValues(b.first_value)),
+  );
+
+  // `unary_symbols` is one of `PHANTOM_SYMBOLS`' seven names (a `Phantom`
+  // and/or an `Mpadded`, built in the hash's own order, the `Phantom` wrapping
+  // whatever the loop built before it) or else an `Menclose` notation.
+  rule("1224", { unary_symbols: simple("unary"), first_value: simple("first_value") }, (b) => {
+    const text = rubyToS(b.unary);
+    const unarySymbol = UNARY_SYMBOLS_INVERTED.get(text) ?? text;
+    const steps = UNICODEMATH_PHANTOM_FUNCTIONS.get(unarySymbol);
+    if (steps !== undefined) {
+      let newValue: unknown = null;
+      for (const [functionName, attributes] of steps) {
+        if (functionName === "phantom" && attributes !== false) {
+          newValue = newPhantom(unfencedValue(newValue === null ? b.first_value : newValue, true));
+        } else if (functionName === "mpadded") {
+          newValue = newMpadded(
+            unfencedValue(b.first_value, true),
+            attributeValue(steps) as NodeOptions,
+          );
+        }
+      }
+      return newValue;
+    }
+    const notation =
+      UNICODEMATH_MENCLOSE_FUNCTIONS.get(text) ?? UNICODEMATH_MENCLOSE_FUNCTIONS.get(unarySymbol);
+    return newMenclose(notation ?? null, unfencedValue(b.first_value, true));
+  });
+
+  rule("1252", { backcolor_value: simple("color"), first_value: simple("first_value") }, (b) =>
+    newColor(newBareSymbol(b.color), b.first_value, { backgroundcolor: true }),
+  );
+  rule("1261", { backcolor_value: simple("color"), first_value: sequence("first_value") }, (b) =>
+    newColor(newBareSymbol(b.color), filterValues(b.first_value), { backgroundcolor: true }),
+  );
+  rule("1270", { rect_value: simple("mask"), first_value: sequence("first_value") }, (b) =>
+    newMenclose(enclosureAttrs(rubyToI(rubyToS(b.mask))), unfencedValue(b.first_value, true)),
+  );
+  rule("1278", { rect_value: simple("mask"), first_value: simple("first_value") }, (b) =>
+    newMenclose(enclosureAttrs(rubyToI(rubyToS(b.mask))), unfencedValue(b.first_value, true)),
   );
 
   // DECORATION (`transform.rb:1286`-`:1491`): `hbracket_class` builds
@@ -2025,6 +2192,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     if (textEquals(b.unary, "mod")) return newMod(null, b.first_value);
     return buildClass(b.unary, b.first_value);
   });
+
+  // `phantom_value` (a mask before `&`) builds an `Mpadded` whose option is the
+  // mask text.
+  rule("1561", { phantom_value: simple("value"), first_value: simple("first_value") }, (b) =>
+    newMpadded(b.first_value, { mask: rubyToS(b.value) }),
+  );
 
   // TABLE continued: the eight `tr`/`trs` and `td`/`tds` combinators
   // (`:1569`-`:1604`) that fold a row (or cell) onto a growing sequence of
@@ -2209,6 +2382,25 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     return newPowerBase(b.base, unfencedValue(b.sub, true), unfencedValue(b.sup, true));
   });
 
+  // SIZE OVERRIDE: `Ⅎ` plus a size letter on a base's subscript; the size is
+  // `SIZE_OVERRIDES_SYMBOLS[letter]`, nil when the letter is not a key.
+  rule(
+    "2122",
+    { base: simple("base"), size_overrides: simple("size_overrides"), sub_script: sequence("sub") },
+    (b) =>
+      newBase(b.base, filterValues(b.sub), {
+        size: UNICODEMATH_SIZE_OVERRIDES.get(rubyToS(b.size_overrides)) ?? null,
+      }),
+  );
+  rule(
+    "2132",
+    { base: simple("base"), size_overrides: simple("size_overrides"), sub_script: simple("sub") },
+    (b) =>
+      newBase(b.base, unfencedValue(b.sub, true), {
+        size: UNICODEMATH_SIZE_OVERRIDES.get(rubyToS(b.size_overrides)) ?? null,
+      }),
+  );
+
   // FRACTION continued — `atop` (`\atop`/`&#xa6;`) and `choose` (`\choose`/
   // `&#x249e;`) each add one key to the same `numerator: simple, denominator:
   // simple` shape; `:2203`, `atop`'s SEQUENCE-numerator twin, is deferred with
@@ -2309,6 +2501,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       denominator: simple("denominator"),
     },
     (b) => fractions(b.numerator, b.denominator, { displaystyle: false }),
+  );
+
+  rule(
+    "2383",
+    { fonts: simple("fonts"), relational_symbols: simple("symbols"), expr: simple("expr") },
+    (b) => [b.fonts, symbolsClass(b.symbols), b.expr],
   );
 
   // `Utility.unfenced_value(operand, ...)` on the first line is computed and
@@ -2579,6 +2777,31 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
         [unfencedValue(b.pre_sup, true)],
       ),
   );
+  // INTENT with parentheses: the quoted argument text (already a `Text`) is the
+  // intent's name, the parenthesised expression what it wraps.
+  rule(
+    "3869",
+    {
+      intent: simple("intent"),
+      open_paren: simple("open_paren"),
+      intent_arguments: simple("args"),
+      first_value: simple("value"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => newIntent(b.value, b.args),
+  );
+  rule(
+    "3877",
+    {
+      intent: simple("intent"),
+      open_paren: simple("open_paren"),
+      intent_arguments: simple("args"),
+      first_value: sequence("value"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => newIntent(filterValues(b.value), b.args),
+  );
+
   rule(
     "3952",
     {

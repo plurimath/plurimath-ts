@@ -143,8 +143,8 @@ describe("transform rule coverage", () => {
     // Plus 10 from the ROOT/OVER-UNDER/ACCENT leftovers: `:341`, `:969`,
     // `:977`, `:1404`, `:1506`, `:1530`, `:1538`, `:2221`, and two unwraps
     // they need first, `:31` and `:118`.
-    expect(build.ruleIds.length).toBe(164);
-    expect(new Set(build.ruleIds).size).toBe(164);
+    expect(build.ruleIds.length).toBe(188);
+    expect(new Set(build.ruleIds).size).toBe(188);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

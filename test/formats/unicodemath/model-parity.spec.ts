@@ -61,9 +61,10 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * other corpus string fires any of the eighteen). The TABLE increment ported
  * the family, so those six rows have moved out of `DEFERRED_INPUTS` and now
  * compare for real below, in `supported`, the same as every other corpus row.
- * One more — `"✎(blue&y + z)"` — carries a `&` too but measured on the
- * oracle it routes through `color`, not table, and stays in this list
- * (`"√(3&8)"` and `"√(n&x)"` did too, until `:1530` moved them out). Six NARY rows — a large operator with a single-token
+ * `"✎(blue&y + z)"` (`:1201`) and `"√(3&8)"`/`"√(n&x)"` (`:1530`) also carry a
+ * `&` but route through `color`/`root`, not table; all three left this list
+ * once their rules were ported (corpus rows, so they compare for real below).
+ * Six NARY rows — a large operator with a single-token
  * `_(…)` script — moved the same way once `:1931`/`:1968` landed: `"∏_(k)▒
  * 〖k〗"`, `"∮_(C)▒〖f〗"`, `"⋃_(i) A_(i)"`, `"⋂_(i) A_(i)"`, `"∐_(i) A_(i)"`,
  * `"⨁_(i) A_(i)"`.
@@ -83,11 +84,6 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * increment above ported.
  */
 const DEFERRED_INPUTS: readonly string[] = [
-  // COLOR: carries a `&`, but measured on the oracle (the `ParseError`
-  // message names the unmatched key) it routes through `{color=...}`, not
-  // the table family the TABLE increment ported. (Its two ROOT siblings,
-  // `"√(3&8)"` and `"√(n&x)"`, moved out with `:1530`.)
-  "✎(blue&y + z)",
 
   // DECORATION (`transform.rb:1286`-`:1491`) is ported now (`transform.ts`'s
   // module header). Three of the six corpus rows that used to sit here moved

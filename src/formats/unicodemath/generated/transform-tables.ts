@@ -3974,6 +3974,103 @@ export const UNICODEMATH_MENCLOSE_FUNCTIONS: ReadonlyMap<string, string> = new M
 ]);
 
 /**
+ * `Plurimath::Utility::MASK_CLASSES` (`utility.rb:123-132`): the bit value
+ * (as text) -> the `Menclose` notation word `Utility.enclosure_attrs`
+ * (`unicode_math/utility.rb:213-226`) emits for that bit of a `rect_value`
+ * mask.
+ */
+export const UNICODEMATH_MASK_CLASSES: ReadonlyMap<string, string> = new Map([
+  ["1", "top"],
+  ["2", "bottom"],
+  ["4", "left"],
+  ["8", "right"],
+  ["16", "horizontalstrike"],
+  ["32", "verticalstrike"],
+  ["64", "downdiagonalstrike"],
+  ["128", "updiagonalstrike"],
+]);
+
+/**
+ * One `PHANTOM_SYMBOLS` attribute value: a boolean, a string, or a hash
+ * written as an ordered list of `[key, value]` pairs — the emitter has no
+ * object-literal form, and pairs keep the gem's key order, which
+ * `transform.rb:1224` iterates.
+ */
+export type UnicodemathPhantomAttribute =
+  | boolean
+  | string
+  | readonly (readonly [key: string, value: UnicodemathPhantomAttribute])[];
+
+export type UnicodemathPhantomSpec = readonly (readonly [
+  functionName: string,
+  attributes: UnicodemathPhantomAttribute,
+])[];
+
+/**
+ * `Constants::PHANTOM_SYMBOLS`: the unary-symbol name -> its ordered
+ * `{function_name => attributes}` hash, as pairs. `transform.rb:1224` walks
+ * it in order, building a `Phantom` where the name is `phantom` and its
+ * attributes are truthy and an `Mpadded` where the name is `mpadded`.
+ */
+export const UNICODEMATH_PHANTOM_FUNCTIONS: ReadonlyMap<string, UnicodemathPhantomSpec> = new Map([
+  [
+    "hphantom",
+    [
+      [
+        "mpadded",
+        [
+          ["depth", "0"],
+          ["height", "0"],
+        ],
+      ],
+      ["phantom", true],
+    ],
+  ],
+  [
+    "vphantom",
+    [
+      ["mpadded", [["width", "0"]]],
+      ["phantom", true],
+    ],
+  ],
+  ["phantom", [["phantom", true]]],
+  [
+    "hsmash",
+    [
+      ["mpadded", [["width", "0"]]],
+      ["phantom", false],
+    ],
+  ],
+  [
+    "asmash",
+    [
+      ["mpadded", [["height", "0"]]],
+      ["phantom", false],
+    ],
+  ],
+  [
+    "dsmash",
+    [
+      ["mpadded", [["depth", "0"]]],
+      ["phantom", false],
+    ],
+  ],
+  [
+    "smash",
+    [
+      [
+        "mpadded",
+        [
+          ["height", "0"],
+          ["depth", "0"],
+        ],
+      ],
+      ["phantom", false],
+    ],
+  ],
+]);
+
+/**
  * The classes the ported transform rules ask `is_a?` about, each with
  * the full set of classes that answer true — itself plus every
  * descendant, measured off the loaded class tree.

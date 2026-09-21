@@ -2,19 +2,28 @@
 # `payload.sha256` covers the whole payload file, including its final newline.
 ---
 schema: plurimath-corpus/manifest/2
-committable: true
-warnings: []
+committable: false
+warnings:
+- generated with --allow-dirty
+- 'generator checkout dirty: scripts/generate-unicodemath-model-fixtures.rb, src/formats/unicodemath/transform.ts, test/tmp-wa-cmp.spec.ts, test/tmp-wa-cov.spec.ts, test/tmp-wa-one.spec.ts, test/tmp-wa-probe.spec.ts, test/tmp-wa-probe2.spec.ts'
 generator:
   path: scripts/generate-unicodemath-model-fixtures.rb
-  sha256: 35941256a3140bc1b774b9ae5a40eac0ab4d2ad29bd6aa356ad16a36b50908d5
+  sha256: 58bef934d7dc23eec80bd295c980be7a0bcc92817aa0b964fb544c225b71fd7b
   inputs:
     scripts/generate-corpus.rb: 60afefa7bccb49b7f801c27a0fe3ce7605c63cd2e4afdccea7d4125fff2c01b3
-    scripts/generate-unicodemath-model-fixtures.rb: 35941256a3140bc1b774b9ae5a40eac0ab4d2ad29bd6aa356ad16a36b50908d5
+    scripts/generate-unicodemath-model-fixtures.rb: 58bef934d7dc23eec80bd295c980be7a0bcc92817aa0b964fb544c225b71fd7b
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: c81466145b574e0712bb593cd87c72dc90a1dfc6
-    clean: true
-    dirty_paths: []
+    commit: 41913f0249607c398a05ebda520f4b7322bb1fef
+    clean: false
+    dirty_paths:
+    - scripts/generate-unicodemath-model-fixtures.rb
+    - src/formats/unicodemath/transform.ts
+    - test/tmp-wa-cmp.spec.ts
+    - test/tmp-wa-cov.spec.ts
+    - test/tmp-wa-one.spec.ts
+    - test/tmp-wa-probe.spec.ts
+    - test/tmp-wa-probe2.spec.ts
 oracle:
   gem: plurimath
   version: 0.11.6
@@ -115,5 +124,5 @@ corpus:
 payload:
   path: model-fixtures.json
   schema: plurimath-corpus/unicodemath-model/1
-  sha256: 864ce9bf1813f834ecd353b90896a247febcb21703d70c24b2deb7eb8926ce46
-  bytes: 345494
+  sha256: 49c8f451241df597e3c693529b6940fb8b586124108d4eebcca96c5e81fb9a60
+  bytes: 433047

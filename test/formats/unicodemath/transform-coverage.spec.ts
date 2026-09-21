@@ -86,7 +86,7 @@ describe("transform rule coverage", () => {
     expect(reached).toBeGreaterThan(90);
   });
 
-  it("registers the 155 rules the slice carries", () => {
+  it("registers the 210 rules the slice carries", () => {
     // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
     // eight-rule table/matrix family the first slice deferred: `transform.rb:8`,
     // `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13
@@ -139,8 +139,25 @@ describe("transform rule coverage", () => {
     // needed `:49`, and RELATION's own probing separately reached `:30`) —
     // reached by the existing corpus and coverage groups, not a new
     // hand-picked one.
-    expect(build.ruleIds.length).toBe(154);
-    expect(new Set(build.ruleIds).size).toBe(154);
+    //
+    // plus 56 COMBINATORS: rules whose body builds nothing — single-key
+    // unwraps and the list-join combinators (`[a, b]`, `[a] + b`, `a + b`) —
+    // and whose input the oracle parses to a model the port reproduces:
+    // `:36`, `:59`, `:60`, `:64`, `:73`, `:104`, `:222`, `:371`, `:386`, `:406`,
+    // `:411`, `:431`, `:436`, `:491`, `:543`, `:548`, `:700`, `:705`, `:765`,
+    // `:770`, `:775`, `:785`, `:790`, `:805`, `:810`, `:815`, `:855`, `:885`,
+    // `:895`, `:900`, `:905`, `:910`, `:915`, `:935`, `:940`, `:950`, `:955`,
+    // `:1716`, `:1721`, `:1726`, `:1731`, `:1736`, `:1741`, `:1791`, `:1796`,
+    // `:1821`, `:2029`, `:2233`, `:2239`, `:2257`, `:2263`, `:2293`, `:2299`,
+    // `:2305`, `:2311`, `:2329` — reached by the hand-picked "combinators"
+    // coverage group. `:104` is the one rule of them that builds a node (a
+    // `Symbol` with `options: { space: true }`); it is here because it is
+    // the spaces leaf every space-bearing input needs.
+    // The other 83 pure rules of the gem are not registered: none has an
+    // input the port can parse to the oracle's model yet, because each one
+    // reaches an unported BUILDING rule first (see `transform.ts`).
+    expect(build.ruleIds.length).toBe(210);
+    expect(new Set(build.ruleIds).size).toBe(210);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

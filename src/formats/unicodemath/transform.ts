@@ -324,7 +324,50 @@
  * RELATION/OPERATOR (`:49` for `"2·3"`, `:30` from its own probing).
  * Running count: 151 + 3 = **154**.
  *
- * Everything outside those 154 is genuinely ABSENT rather than stubbed. A
+ * ## An eighth increment: COMBINATORS, the rules whose body builds nothing
+ *
+ * A rule builds nothing when its block holds no `Math::` and no `Utility.`:
+ * single-key unwraps (`{sub_exp: simple} -> exp`) and list-join combinators
+ * over the values the grammar tags `factor`/`operand`/`expr`/`exp`/
+ * `sub_exp`/`sup_exp`/`mini_sub`/`mini_sup`/`atom`, which glue two or three
+ * of them into the one array a later rule consumes (`[a, b]`, `[a] + b`,
+ * `a + b`). The gem has 139 of them still unported at this point (`:845`,
+ * the dead twin of `:870`, among them); this increment registers **56**,
+ * `:104` (the `spaces` leaf, which builds a `Symbol` but no other rule
+ * could reach an input containing a space run without) included: exactly
+ * those for which a fixture input exists that the port now parses to the
+ * oracle's serialized model (`RULE_COVERAGE["combinators"]` in the fixture
+ * generator names the input for each). Running count: 154 + 56 = **210**.
+ *
+ * The other 83 are NOT registered, each for one of three measured reasons.
+ * Candidate inputs came from the gem's own UnicodeMath specs plus about
+ * 30,000 generated ones, every one traced on the oracle:
+ *
+ *  - 55 fire on the oracle, but the same input reaches an unported BUILDING
+ *    rule first, so the port refuses it and there is no parse to compare.
+ *    The blockers seen (a selection, not the full list): `:1148` (`{base: simple, sup: sequence}`) and `:1078`
+ *    (`{base: simple, sub: sequence}`), which every SEQUENCE script
+ *    (`a^b1`, `a_b1`, `x^(1)1`) needs; `:1054`; `:1139`; the SEQUENCE
+ *    numerator/denominator `Frac` family (`:1619`, `:1629`); `:227` (fonts),
+ *    `:1404` (prime + first value), `:2132`, `:2142`, `:2457`, `:2650`,
+ *    `:2685`, `:3085`, `:3178`, `:3345`, `:3510`. Six more (`:1751`-`:1776`)
+ *    need no such builder: their inputs are ones where the gem itself leaves
+ *    a hash unmatched and folds it, and the port refuses that shape. The port's guard
+ *    (`GEM_UNMATCHED_SIGNATURES`) is deliberately not widened to let these
+ *    through: `sup_exp=other` is what the gem leaves unmatched for `x^(1)a÷b`
+ *    and also what the PORT leaves for `a^b1`, where the gem builds a
+ *    `Power`, so a signature cannot tell the two apart.
+ *  - 28 fired on no probed input at all. `:41`, `:42` and `:51` are dead in the
+ *    gem itself: `custom_fonts` (`common_rules.rb:23`) is
+ *    `str("double") | str("fraktur") | str("script")` and is never tagged
+ *    `.as(:script)`/`.as(:double)`/`.as(:fraktur)`.
+ *
+ * Five `SLICE_BOUNDARY` rows in the fixture generator record an input for the
+ * blocking builders `:1148`, `:1078`, `:1054`, `:1619` and `:227`: the port
+ * must refuse each, and the refusal becomes a failing ratchet the moment that
+ * builder lands, which is when the pure rules it blocks can be checked.
+ *
+ * Everything outside those 210 is genuinely ABSENT rather than stubbed. A
  * node whose key set no ported rule matches survives the transform as a
  * plain hash and `finalize` throws on it, naming the keys — the loud failure
  * the deferred families are supposed to produce.
@@ -390,6 +433,8 @@ import {
   UNICODEMATH_MATRIXS_KEYS,
   UNICODEMATH_NARY_SYMBOLS,
   UNICODEMATH_NARY_SYMBOLS_KEYS,
+  UNICODEMATH_SKIP_SYMBOLS,
+  UNICODEMATH_SKIP_SYMBOLS_KEYS,
   UNICODEMATH_SUB_DIGITS,
   UNICODEMATH_SUP_DIGITS,
 } from "./generated/parser-tables";
@@ -556,6 +601,16 @@ const RCURLY_ID = namedSymbolId("rcurly");
  * `Hash#key` performs. A miss is nil there, so `matrixSymbol` below needs a
  * not-found case too.
  */
+/**
+ * `Constants::SKIP_SYMBOLS` (`constants.rb:519`) as name -> entity, for `:104`:
+ * `\thinsp` reaches the transform as the name, the entity form as the entity.
+ */
+const SKIP_SYMBOLS = zipConstants(
+  UNICODEMATH_SKIP_SYMBOLS_KEYS,
+  UNICODEMATH_SKIP_SYMBOLS,
+  "SKIP_SYMBOLS",
+);
+
 const MATRIXS_INVERTED = invertFirstWins(
   zipConstants(UNICODEMATH_MATRIXS_KEYS, UNICODEMATH_MATRIXS, "MATRIXS"),
 );
@@ -736,6 +791,14 @@ function newSymbolOfClass(id: string): UnicodemathDraft {
 function newBareSymbol(value: unknown): UnicodemathDraft {
   const text = Array.isArray(value) ? value.map(rubyToS).join("") : rubyToS(value);
   return new UnicodemathDraft("symbol", "Symbol", { value: text });
+}
+
+/** `Math::Symbols::Symbol.new(space, options: { space: true })` (`transform.rb:104`). */
+function newSpace(value: unknown): UnicodemathDraft {
+  return new UnicodemathDraft("symbol", "Symbol", {
+    value: rubyToS(value),
+    options: { space: true },
+  });
 }
 
 function unaryDraft(kind: NodeKind, identity: string | undefined, one: unknown): UnicodemathDraft {
@@ -1464,6 +1527,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("33", { fonts: simple("fonts") }, (b) => b.fonts);
   rule("34", { digit: simple("digit") }, (b) => b.digit);
   rule("35", { color: simple("color") }, (b) => b.color);
+  rule("36", { ldots: simple("ldots") }, (b) => b.ldots);
   rule("39", { factor: simple("factor") }, (b) => b.factor);
   // DECORATION's fourth unwrap: `hbrack` (`grammar.ts`'s `hbrack` rule, third
   // alternative) wraps the whole `{hbracket_class:, first_value:}` /
@@ -1487,11 +1551,15 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // `pre_script` wrapper, so this unwrap fires once per one of them, exactly
   // like `:55`/`:56` do for `sub_exp`/`sup_exp`.
   rule("57", { pre_script: simple("script") }, (b) => b.script);
+  rule("59", { mini_sup: simple("mini_sup") }, (b) => b.mini_sup);
+  rule("60", { mini_sub: simple("mini_sub") }, (b) => b.mini_sub);
   rule("61", { close_paren: simple("paren") }, (b) => symbolsClass(b.paren));
   rule("62", { operator: simple("operator") }, (b) => symbolsClass(b.operator));
+  rule("64", { unary_sub_sup: simple("unary") }, (b) => b.unary);
   rule("68", { monospace: simple("monospace") }, (b) => b.monospace);
   rule("71", { intermediate_exp: simple("expr") }, (b) => b.expr);
   rule("72", { decimal_number: simple("number") }, (b) => b.number);
+  rule("73", { accents_subsup: simple("subsup") }, (b) => b.subsup);
   rule("74", { subsup_exp: simple("subsup_exp") }, (b) => b.subsup_exp);
   rule("76", { open_paren: simple("open_paren") }, (b) => symbolsClass(b.open_paren));
   // DECORATION's three unwraps: `op_diacritic_belows`/`op_diacritic_overlays`
@@ -1539,6 +1607,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     return symbolsClass(COMBINING_SYMBOLS.get(key) ?? b.combined_symbols);
   });
 
+  rule("104", { spaces: simple("spaces") }, (b) =>
+    newSpace(SKIP_SYMBOLS.get(rubyToS(b.spaces)) ?? b.spaces),
+  );
   rule("126", { unary_functions: simple("unary") }, (b) =>
     UNDEF_UNARY_FUNCTIONS.has(rubyToS(b.unary)) ? symbolsClass(b.unary) : buildClass(b.unary),
   );
@@ -1582,6 +1653,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
 
   // --- two-key rules (transform.rb:236-2001) -----------------------------
 
+  rule("222", { diacritics_accents: simple("accents"), expr: sequence("expr") }, (b) => [
+    b.accents,
+    ...asArray(b.expr),
+  ]);
   rule("236", { font_class: simple("fonts"), symbol: simple("symbol") }, (b) =>
     newFontStyle(b.fonts, symbolsClass(b.symbol)),
   );
@@ -1602,6 +1677,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     return [symbolsClass(symbol), b.expr];
   });
 
+  rule("371", { subsup_exp: simple("subsup"), expr: sequence("expr") }, (b) => [
+    b.subsup,
+    ...asArray(b.expr),
+  ]);
+  rule("386", { unary_subsup: simple("subsup"), expr: sequence("expr") }, (b) => [
+    b.subsup,
+    ...asArray(b.expr),
+  ]);
   rule("391", { unary_subsup: simple("subsup"), expr: simple("expr") }, (b) => [b.subsup, b.expr]);
   // RELATION/OPERATOR: a resolved `char` (e.g. the `·` `unicode_symbols`
   // already turned into a symbol by `:149`) directly followed by a digit
@@ -1611,11 +1694,21 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.char,
     newNumber(b.number),
   ]);
+  rule("406", { char: simple("char"), diacritics: simple("diacritics") }, (b) => [
+    b.char,
+    b.diacritics,
+  ]);
+  rule("411", { char: simple("char"), diacritics: sequence("diacritics") }, (b) => [
+    b.char,
+    ...asArray(b.diacritics),
+  ]);
   rule("416", { fonts: simple("fonts"), expr: sequence("expr") }, (b) => [
     b.fonts,
     ...asArray(b.expr),
   ]);
   rule("421", { fonts: simple("fonts"), expr: simple("expr") }, (b) => [b.fonts, b.expr]);
+  rule("431", { subsup_exp: simple("subsup"), expr: simple("expr") }, (b) => [b.subsup, b.expr]);
+  rule("436", { subsup_exp: simple("subsup"), exp: simple("exp") }, (b) => [b.subsup, b.exp]);
   rule("446", { operator: simple("operator"), expr: simple("expr") }, (b) => [
     symbolsClass(b.operator),
     b.expr,
@@ -1639,6 +1732,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // .maybe()`) always captures `atom` one leaf at a time, so no probed input
   // leaves it anything but `simple` at this position.
   rule("486", { atom: simple("atom"), atoms: simple("atoms") }, (b) => [b.atom, b.atoms]);
+  rule("491", { atom: sequence("atom"), atoms: simple("atoms") }, (b) => [
+    ...asArray(b.atom),
+    b.atoms,
+  ]);
   rule("496", { atom: simple("atom"), atoms: sequence("atoms") }, (b) => [
     b.atom,
     ...asArray(b.atoms),
@@ -1653,6 +1750,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     ...asArray(b.exp),
   ]);
 
+  rule("543", { pre_script: simple("pre_script"), expr: sequence("expr") }, (b) => [
+    b.pre_script,
+    ...asArray(b.expr),
+  ]);
+  rule("548", { pre_script: simple("pre_script"), expr: simple("expr") }, (b) => [
+    b.pre_script,
+    b.expr,
+  ]);
   // TABLE continued (`transform.rb:598`-`:1691`, eighteen rules total; see
   // the module header): `Mlabeledtr`'s pair, built from `UnicodeMath::
   // Parser#post_processing`'s `{labeled_tr_value:, labeled_tr_id:}` wrap
@@ -1667,6 +1772,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     newMlabeledtr(b.value, newText(b.id)),
   );
 
+  rule("700", { accents_subsup: simple("accents_subsup"), expr: simple("expr") }, (b) => [
+    b.accents_subsup,
+    b.expr,
+  ]);
+  rule("705", { accents_subsup: simple("accents_subsup"), expr: sequence("expr") }, (b) => [
+    b.accents_subsup,
+    ...asArray(b.expr),
+  ]);
   // NARY continued — a bare `nary` (already resolved by `:20`/`:175` above)
   // followed by its `naryand_recursion` continuation, the two-element array
   // every such pairing here folds into.
@@ -1713,11 +1826,32 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.factor,
     ...asArray(b.operand),
   ]);
+  rule("765", { sup_exp: simple("sup_exp"), expr: simple("expr") }, (b) => [b.sup_exp, b.expr]);
+  rule("770", { sup_exp: simple("sup_exp"), exp: simple("exp") }, (b) => [b.sup_exp, b.exp]);
+  rule("775", { sub_exp: simple("sub_exp"), expr: sequence("expr") }, (b) => [
+    b.sub_exp,
+    ...asArray(b.expr),
+  ]);
+  rule("785", { sub_exp: simple("sub_exp"), exp: sequence("exp") }, (b) => [
+    b.sub_exp,
+    ...asArray(b.exp),
+  ]);
+  rule("790", { sub_exp: simple("sub_exp"), expr: simple("expr") }, (b) => [b.sub_exp, b.expr]);
+  rule("805", { sup_exp: simple("sup_exp"), naryand_recursion: simple("naryand") }, (b) => [
+    b.sup_exp,
+    b.naryand,
+  ]);
+  rule("810", { exp: simple("exp"), expr: simple("expr") }, (b) => [b.exp, b.expr]);
+  rule("815", { exp: simple("exp"), expr: sequence("expr") }, (b) => [b.exp, ...asArray(b.expr)]);
   rule("825", { sup_exp: simple("sup_exp"), expr: sequence("expr") }, (b) => [
     b.sup_exp,
     ...asArray(b.expr),
   ]);
   rule("835", { factor: simple("factor"), expr: simple("expr") }, (b) => [b.factor, b.expr]);
+  rule("855", { factor: sequence("factor"), expr: sequence("expr") }, (b) => [
+    ...asArray(b.factor),
+    ...asArray(b.expr),
+  ]);
   rule("865", { factor: simple("factor"), expr: sequence("expr") }, (b) => [
     b.factor,
     ...asArray(b.expr),
@@ -1730,6 +1864,40 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   ]);
   rule("875", { factor: simple("factor"), exp: simple("exp") }, (b) => [b.factor, b.exp]);
 
+  rule("885", { monospace: simple("monospace"), expr: simple("expr") }, (b) => [
+    b.monospace,
+    b.expr,
+  ]);
+  rule("895", { monospace: simple("monospace"), expr: sequence("expr") }, (b) => [
+    b.monospace,
+    ...asArray(b.expr),
+  ]);
+  rule("900", { factor: sequence("factor"), expr: simple("expr") }, (b) => [
+    ...asArray(b.factor),
+    b.expr,
+  ]);
+  rule("905", { factor: sequence("factor"), operand: simple("operand") }, (b) => [
+    ...asArray(b.factor),
+    b.operand,
+  ]);
+  rule("910", { mini_sub: simple("mini_sub"), expr: simple("expr") }, (b) => [b.mini_sub, b.expr]);
+  rule("915", { mini_sub: simple("mini_sub"), expr: sequence("expr") }, (b) => [
+    b.mini_sub,
+    ...asArray(b.expr),
+  ]);
+  rule("935", { unary_function: simple("unary_function"), expr: simple("expr") }, (b) => [
+    b.unary_function,
+    b.expr,
+  ]);
+  rule("940", { unary_function: simple("unary_function"), expr: sequence("expr") }, (b) => [
+    b.unary_function,
+    ...asArray(b.expr),
+  ]);
+  rule("950", { table: simple("table"), expr: sequence("expr") }, (b) => [
+    b.table,
+    ...asArray(b.expr),
+  ]);
+  rule("955", { table: simple("table"), expr: simple("expr") }, (b) => [b.table, b.expr]);
   rule("1019", { base: simple("base"), sub: simple("sub") }, (b) => {
     const base = b.base;
     const sub = b.sub;
@@ -2009,6 +2177,29 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     buildMatrixTable(b.matrixs, identityMatrix(rubyToI(rubyToS(b.number)))),
   );
 
+  rule("1716", { factor: simple("factor"), sup_exp: simple("sup_exp") }, (b) => [
+    b.factor,
+    b.sup_exp,
+  ]);
+  rule("1721", { factor: simple("factor"), sub_exp: simple("sub_exp") }, (b) => [
+    b.factor,
+    b.sub_exp,
+  ]);
+  rule("1726", { factor: simple("factor"), pre_script: simple("pre_script") }, (b) => [
+    b.factor,
+    b.pre_script,
+  ]);
+  rule("1731", { factor: simple("factor"), mini_sup: simple("mini_sup") }, (b) => [
+    b.factor,
+    b.mini_sup,
+  ]);
+  rule("1736", { mini_sup: simple("mini_sup"), expr: simple("expr") }, (b) => [b.mini_sup, b.expr]);
+  rule("1741", { mini_sup: simple("mini_sup"), expr: sequence("expr") }, (b) => [
+    b.mini_sup,
+    ...asArray(b.expr),
+  ]);
+  rule("1791", { frac: simple("frac"), expr: simple("expr") }, (b) => [b.frac, b.expr]);
+  rule("1796", { frac: simple("frac"), exp: simple("exp") }, (b) => [b.frac, b.exp]);
   rule("1806", { expr: simple("expr"), func_expr: simple("func_expr") }, (b) => [
     b.expr,
     b.func_expr,
@@ -2021,6 +2212,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.frac,
     ...asArray(b.expr),
   ]);
+  rule("1821", { frac: simple("frac"), exp: sequence("exp") }, (b) => [b.frac, ...asArray(b.exp)]);
   rule("1826", { nary: simple("nary"), expr: sequence("expr") }, (b) => [
     b.nary,
     ...asArray(b.expr),
@@ -2124,6 +2316,11 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
 
   // --- three- and four-key rules (transform.rb:2103-3477) ----------------
 
+  rule(
+    "2029",
+    { factor: simple("factor"), mini_sup: simple("mini_sup"), expr: sequence("expr") },
+    (b) => [b.factor, b.mini_sup, ...asArray(b.expr)],
+  );
   rule("2103", { base: simple("base"), sup: simple("sup"), sub: simple("sub") }, (b) => {
     const underover = ["underset", "overset"];
     if (underover.includes(className(b.sub)) && underover.includes(className(b.sup))) {
@@ -2175,6 +2372,26 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       ),
   );
 
+  rule(
+    "2233",
+    { factor: simple("factor"), operand: sequence("operand"), expr: simple("expr") },
+    (b) => [b.factor, ...asArray(b.operand), b.expr],
+  );
+  rule(
+    "2239",
+    { factor: simple("factor"), operand: sequence("operand"), expr: sequence("expr") },
+    (b) => [b.factor, ...asArray(b.operand), ...asArray(b.expr)],
+  );
+  rule(
+    "2257",
+    { factor: sequence("factor"), operand: simple("operand"), expr: sequence("expr") },
+    (b) => [...asArray(b.factor), b.operand, ...asArray(b.expr)],
+  );
+  rule(
+    "2263",
+    { factor: sequence("factor"), operand: sequence("operand"), expr: simple("expr") },
+    (b) => [...asArray(b.factor), ...asArray(b.operand), b.expr],
+  );
   // RELATION/OPERATOR: `factor`+`operand`(both simple)+`expr`, the
   // three-key sibling of `:735`/`:745` above, reached once a relation chain
   // grows a third element — `a≤b`'s `expr` sequence twin (`SEQUENCE`) and
@@ -2185,11 +2402,36 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => [b.factor, b.operand, ...asArray(b.expr)],
   );
   rule(
+    "2293",
+    { factor: simple("factor"), sup_exp: simple("sup_exp"), expr: simple("expr") },
+    (b) => [b.factor, b.sup_exp, b.expr],
+  );
+  rule(
+    "2299",
+    { factor: simple("factor"), sub_exp: simple("sub_exp"), expr: simple("expr") },
+    (b) => [b.factor, b.sub_exp, b.expr],
+  );
+  rule(
+    "2305",
+    { factor: simple("factor"), sup_exp: simple("sup_exp"), expr: sequence("expr") },
+    (b) => [b.factor, b.sup_exp, ...asArray(b.expr)],
+  );
+  rule(
+    "2311",
+    { factor: simple("factor"), sub_exp: simple("sub_exp"), expr: sequence("expr") },
+    (b) => [b.factor, b.sub_exp, ...asArray(b.expr)],
+  );
+  rule(
     "2317",
     { factor: simple("factor"), operand: simple("operand"), expr: simple("expr") },
     (b) => [b.factor, b.operand, b.expr],
   );
 
+  rule(
+    "2329",
+    { factor: simple("factor"), expr: simple("expr"), expression: simple("expression") },
+    (b) => [b.factor, b.expr, b.expression],
+  );
   // FRACTION concluded — `bevelled` (`\sdiv`/`\sdivide`/`\sfrac`/`&#x2044;`),
   // `ldiv` (`\ldiv`/`&#x2215;`) and `no_display_style` (`\ndiv`/`\oslash`/
   // `&#x2298;`), each still `numerator: simple, denominator: simple`. The last

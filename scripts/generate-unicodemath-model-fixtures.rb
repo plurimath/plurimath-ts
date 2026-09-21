@@ -297,6 +297,74 @@ RULE_COVERAGE_NARY_INPUTS = [
 #   "abc"  rule 486 (2-atom fold) + 496 (3rd atom onto the fold) + 49 (`:39`'s
 #          SEQUENCE twin, unwrapping the folded array off `factor`)
 #   "a!"   rule 1851 {atom, exclamation_symbol}, then `:49` again
+#
+# "combinators": the transform rules whose body BUILDS nothing (no `Math::` and
+# no `Utility.` in the block): single-key unwraps and the list-join
+# combinators (`[a, b]`, `[a] + b`, `a + b`) that fold adjacent `factor`/
+# `operand`/`expr`/`exp`/script/`atom` values into one sequence. Each input
+# below is the shortest oracle-parsed one, traced with every registered block
+# wrapped in a counter (rule numbers are the lines `rule(` opens on) and then
+# compared against the port, so an input here is one the port parses to the
+# gem's own model, not merely one that reaches the rule. Rules fired also by
+# a pre-existing row (`:104`, `:2233`) are listed with the input this group
+# adds for them. `:765` and `:1791` used to be the only two `SLICE_BOUNDARY` rows.
+#
+#   :36    "..."
+#   :59    "a²"
+#   :60    "x₂"
+#   :64    "lim_(n → b)"
+#   :73    "a'^(c)"
+#   :104   "a \u2002 b"
+#   :222   "x̄2x"
+#   :371   "a^2_b 2x"
+#   :386   "sin a 2x"
+#   :406   "ȧȧ"
+#   :411   "🐟🐠🐡"
+#   :431   "a^2_b+"
+#   :436   "a^b c d/(a b/c (a)_b^c d)"
+#   :491   "ȧ2x"
+#   :543   "^a b 2x"
+#   :548   "^a b+"
+#   :700   "a'^a b"
+#   :705   "x'_a a! a!"
+#   :765   "a^b c"
+#   :770   "(a b/c x^(a b) c) a!"
+#   :775   "a_b++"
+#   :785   "(2 x_a y a/b^c) ^a_b c"
+#   :790   "a_b+"
+#   :805   "∑_a^b c^a b"
+#   :810   "■(a b&c d) x"
+#   :815   "■(a b c&d)a x"
+#   :855   "ab++"
+#   :885   "\uffd7(a)a'"
+#   :895   "\uffd7(a)a!"
+#   :900   "a!+"
+#   :905   "a!1"
+#   :910   "x₂+"
+#   :915   "x₂++"
+#   :935   "▢(a + b) ."
+#   :940   "▭a b a_b"
+#   :950   "■(a&b@c&d)2x"
+#   :955   "■(a&) a"
+#   :1716  "a a^b"
+#   :1721  "a a_b"
+#   :1726  "a ^a b"
+#   :1731  "a a²"
+#   :1736  "a²+"
+#   :1741  "a²2x"
+#   :1791  "x a/b c"
+#   :1796  "(a b)^c/(a b/c x₁)"
+#   :1821  "(a b/c x^(a b) c) a!"
+#   :2029  "a x² ab"
+#   :2233  "1ab+"
+#   :2239  "2xa÷b"
+#   :2257  "n!a - b"
+#   :2263  "ab1a b"
+#   :2293  "a c^2+"
+#   :2299  "a a_b +"
+#   :2305  "a a^b ab"
+#   :2311  "a a_b ab"
+#   :2329  "|a| a b"
 RULE_COVERAGE = {
   "atoms" => [
     "abc",
@@ -444,6 +512,63 @@ RULE_COVERAGE = {
     "x'",
   ],
   "nary" => RULE_COVERAGE_NARY_INPUTS,
+  "combinators" => [
+    "...",
+    "a²",
+    "x₂",
+    "lim_(n → b)",
+    "a'^(c)",
+    "a \u2002 b",
+    "x̄2x",
+    "a^2_b 2x",
+    "sin a 2x",
+    "ȧȧ",
+    "🐟🐠🐡",
+    "a^2_b+",
+    "a^b c d/(a b/c (a)_b^c d)",
+    "ȧ2x",
+    "^a b 2x",
+    "^a b+",
+    "a'^a b",
+    "x'_a a! a!",
+    "a^b c",
+    "(a b/c x^(a b) c) a!",
+    "a_b++",
+    "(2 x_a y a/b^c) ^a_b c",
+    "a_b+",
+    "∑_a^b c^a b",
+    "■(a b&c d) x",
+    "■(a b c&d)a x",
+    "ab++",
+    "\uffd7(a)a'",
+    "\uffd7(a)a!",
+    "a!+",
+    "a!1",
+    "x₂+",
+    "x₂++",
+    "▢(a + b) .",
+    "▭a b a_b",
+    "■(a&b@c&d)2x",
+    "■(a&) a",
+    "a a^b",
+    "a a_b",
+    "a ^a b",
+    "a a²",
+    "a²+",
+    "a²2x",
+    "x a/b c",
+    "(a b)^c/(a b/c x₁)",
+    "a x² ab",
+    "1ab+",
+    "2xa÷b",
+    "n!a - b",
+    "ab1a b",
+    "a c^2+",
+    "a a_b +",
+    "a a^b ab",
+    "a a_b ab",
+    "|a| a b",
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`
@@ -460,14 +585,27 @@ RULE_COVERAGE = {
 # `RULE_COVERAGE["relation"]` once their rule landed, the same ratchet
 # `DEFERRED_INPUTS` in `model-parity.spec.ts` documents for the corpus side.
 #
-#   "a^b c"    rule 765  `{expr: simple, sup_exp: simple}`.
-#   "x a/b c"  rule 1791 `{expr: simple, frac: simple}` — the same KEY SET the
-#              corpus's `(a)/(+) b` leaves unmatched, but with both values
-#              resolved. A key set is not a signature: the gem matches this one
-#              and leaves that one alone.
+#   "a^b1"   rule 1148 `{base: simple, sup: sequence}` — the gem builds a
+#            `Power`; the port has no such rule, so `{sup_exp:}` survives and
+#            the enclosing `sup_script: sequence` unwrap (`:66`) is unported
+#            with it.
+#   "a_b1"   rule 1078 `{base: simple, sub: sequence}`, the `sub_exp` twin
+#            (blocks `:65`).
+#   "1x₂"    rule 1054 `{base: sequence, sub: simple}` (blocks `:67`).
+#   "1/2a"   rule 1619 `{numerator: simple, denominator: sequence}` (blocks
+#            `:658`).
+#   "ⅇ"      rule 227 `{unicoded_font_class:, symbol:}` (blocks `:43`).
+#
+# Every row records a rule the port lacks, not one it has: each is a witness
+# a pure combinator (`RULE_COVERAGE["combinators"]`) needs and cannot have
+# until the builder beside it lands. When that builder does, the row's refusal
+# stops and `model-parity.spec.ts` fails until it moves into a coverage group.
 SLICE_BOUNDARY = [
-  "a^b c",
-  "x a/b c",
+  "a^b1",
+  "a_b1",
+  "1x₂",
+  "1/2a",
+  "ⅇ",
 ].freeze
 
 options = { oracle: nil, out: "test/formats/unicodemath", allow_dirty: false }

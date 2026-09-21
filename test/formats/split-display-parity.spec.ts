@@ -58,6 +58,18 @@ interface Row {
   readonly split?: readonly unknown[];
 }
 
+/**
+ * The groups this file asserts. The fixture files also carry the groups of
+ * other specs (`table-frac-nary-parity.spec.ts`), which own their own counts.
+ */
+const OWN_GROUPS: ReadonlySet<string> = new Set([
+  "line-break-spec",
+  "line-break-spec-display-style",
+  "parsed-linebreak",
+  "display-style-spec",
+  "display-style-probe",
+]);
+
 /** Rows the gem renders that the port renders too, per format (a pin, not a knob). */
 const RENDERED_BASELINE = { mathml: 170, omml: 179 } as const;
 
@@ -174,7 +186,8 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
 };
 
 /** What a kind renderer says when it has not measured a kind, alias or slot. */
-const KIND_REFUSAL = /has not been measured|No measured \w+ rendering|only the measured generic/;
+const KIND_REFUSAL =
+  /has not been measured|No measured \w+ rendering|only the measured generic|only a Symbol, Sum or Prod/;
 
 const RENDERERS = {
   mathml: (node: MathNode, options: Record<string, unknown>) => toMathml(node, options as never),
@@ -220,16 +233,21 @@ for (const format of ["mathml", "omml"] as const) {
   const fixture = load(format);
   const render = RENDERERS[format];
   const refuses = new Set(PORT_REFUSES[format]);
-  const rendered = fixture.cases.filter((row) => row.expected !== undefined);
-  const refused = fixture.cases.filter((row) => row.raises !== undefined);
+  const own = fixture.cases.filter((row) => OWN_GROUPS.has(row.group));
+  const rendered = own.filter((row) => row.expected !== undefined);
+  const refused = own.filter((row) => row.raises !== undefined);
 
   describe(`${format} render-options fixture`, () => {
     it("counts its own rows", () => {
       expect(fixture.schema).toBe("plurimath-corpus/render-options/1");
       expect(fixture.format).toBe(format);
       expect(fixture.caseCount).toBe(fixture.cases.length);
-      expect(fixture.renderedCount).toBe(rendered.length);
-      expect(fixture.raisedCount).toBe(refused.length);
+      expect(fixture.renderedCount).toBe(
+        fixture.cases.filter((row) => row.expected !== undefined).length,
+      );
+      expect(fixture.raisedCount).toBe(
+        fixture.cases.filter((row) => row.raises !== undefined).length,
+      );
       expect(new Set(fixture.cases.map((row) => row.id)).size).toBe(fixture.cases.length);
     });
 

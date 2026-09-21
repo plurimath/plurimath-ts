@@ -1,28 +1,52 @@
 import { hasNodeKind, RenderError } from "../../core/index";
 import {
   controlProperties,
+  decodeEntities,
+  describeSlot,
   FORMAT,
   type NodeOf,
   type OmmlRendered,
   type RenderContext,
   renderChild,
   requireElement,
-  requireEmptyOptions,
   requireNodeList,
   structuralProperties,
   symbolOmmlValue,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
+/**
+ * The ten `Table` subclasses (`function/table/*.rb`). None of them defines
+ * `to_omml_without_math_tag`, so every alias renders through `Table`'s own —
+ * measured on the oracle at `00c52783`: `Matrix`, `Array`, `Cases` and `Vmatrix`
+ * built with their default parens, and `Vmatrix` with none, give the base
+ * table's bytes for the same value and parens. What separates an alias in OMML
+ * is therefore only the parens its constructor defaults to
+ * (`Matrix` `(`/`)`, `Array` `[`/`]`, `Cases` `{`/`:}`), which arrive on the
+ * node, never from the name. An alias outside this list is a name the gem has
+ * no class for and stays refused.
+ */
+const TABLE_ALIASES: ReadonlySet<string> = new Set([
+  "Align",
+  "Array",
+  "Bmatrix",
+  "Cases",
+  "Eqarray",
+  "Matrix",
+  "Multline",
+  "Pmatrix",
+  "Split",
+  "Vmatrix",
+]);
+
 export function renderTable(node: NodeOf<"table">, context: RenderContext): XmlElement {
-  if (node.name !== undefined) {
+  if (node.name !== undefined && !TABLE_ALIASES.has(node.name)) {
     throw new RenderError(
       `Table alias "${node.name}" has not been measured for OMML in this slice`,
       FORMAT,
       node.kind,
     );
   }
-  requireEmptyOptions(node.options, node.kind, "table.options");
   const rows = requireNodeList(node.value, node.kind, "table.value");
 
   // `Table#single_table?` (table.rb:385-390) picks the `m:eqArr` branch:
@@ -30,18 +54,27 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): XmlE
   //     value.map { |d| d.parameter_one.length == 1 }.all? &&
   //       nil_option?(:frame) && nil_option?(:columnlines) && nil_option?(:rowlines)
   //
-  // EVERY row must hold exactly one cell, not just the first. The three
-  // options are already settled above: `requireEmptyOptions` refuses anything
-  // but an absent or empty options hash, and an absent option is what
-  // `nil_option?` accepts (it also accepts `""` and `"none"`), so the row
-  // widths alone decide the branch here. Measured on the oracle at
-  // `00c52783`: rows of 1 and 1 cell give `m:eqArr`, rows of 1 and 2 give
-  // `m:m` — the shape this guard used to misread as single-column.
+  // EVERY row must hold exactly one cell, not just the first. Measured on the
+  // oracle at `00c52783`: rows of 1 and 1 cell give `m:eqArr`, rows of 1 and 2
+  // give `m:m` — the shape this guard used to misread as single-column.
+  //
+  // `nil_option?` (table.rb:392-396) reads `options[option]`, so it is where a
+  // nil or non-hash options slot raises — and only when every row is one cell,
+  // because `&&` never evaluates it otherwise. Measured: `Table.new([tr], nil,
+  // nil, nil)` raises with one cell per row and renders `m:m` with two. Any
+  // other key in the hash is never read: `{columnalign: "left"}` still gives
+  // `m:eqArr`, and `{frame: "solid"}`, `{columnlines: "solid"}` give `m:m`
+  // (measured).
   //
   // A table with no rows reaches the same branch: `[].all?` is true in Ruby as
   // `[].every` is in JavaScript, and the gem renders `Table.new([])` as an
   // `m:eqArr` carrying only its `m:eqArrPr`.
-  if (rows.every((row) => cellCount(row) === 1)) {
+  if (
+    rows.every((row) => cellCount(row) === 1) &&
+    (["frame", "columnlines", "rowlines"] as const).every((option) =>
+      nilOption(node.options, option, node.kind),
+    )
+  ) {
     return fencedTable(renderSingleColumn(rows, context), node);
   }
 
@@ -111,15 +144,47 @@ function renderSingleColumn(rows: readonly unknown[], context: RenderContext): X
  * delimiter wrapper both table shapes are handed to.
  */
 function fencedTable(table: XmlElement, node: NodeOf<"table">): XmlElement {
-  const open = requireParenValue(node.openParen, node, "table.openParen");
-  const close = requireParenValue(node.closeParen, node, "table.closeParen");
+  // `return ox_table unless open_paren || close_paren`: no parens at all is the
+  // bare table. A paren the node does not hold contributes no `begChr` or
+  // `endChr` (`begchr`/`endchr` return nil, which `update_nodes` skips) —
+  // measured for an open-only and a close-only table.
+  if (!isPresent(node.openParen) && !isPresent(node.closeParen)) return table;
+  const open = isPresent(node.openParen)
+    ? requireParenValue(node.openParen, node, "table.openParen")
+    : null;
+  const close = isPresent(node.closeParen)
+    ? requireParenValue(node.closeParen, node, "table.closeParen")
+    : null;
   const delimiterProperties = new XmlElement("m:dPr").append(
-    new XmlElement("m:begChr").setAttribute("m:val", open),
-    new XmlElement("m:endChr").setAttribute("m:val", close),
+    open === null ? null : new XmlElement("m:begChr").setAttribute("m:val", open),
+    close === null ? null : new XmlElement("m:endChr").setAttribute("m:val", close),
     new XmlElement("m:sepChr").setAttribute("m:val", ""),
     new XmlElement("m:grow"),
   );
   return new XmlElement("m:d").append(delimiterProperties, new XmlElement("m:e").append(table));
+}
+
+/** Ruby truthiness of a paren slot: only nil and `false` are absent. */
+function isPresent(value: unknown): boolean {
+  return value !== null && value !== undefined && value !== false;
+}
+
+/**
+ * `Table#nil_option?` (table.rb:392-396): `options[option].nil? ||
+ * options[option] == "" || options[option] == "none"`. The hash read is what
+ * fails for a slot that is not a hash — nil (`NoMethodError`) and a String,
+ * Array or `false` (`TypeError`/`NoMethodError`), all measured as raising.
+ */
+function nilOption(options: unknown, option: string, kind: string): boolean {
+  if (typeof options !== "object" || options === null || Array.isArray(options)) {
+    throw new RenderError(
+      `table.options: is ${describeSlot(options)}, not a hash — the gem raises reading options[:${option}]`,
+      FORMAT,
+      kind,
+    );
+  }
+  const value = (options as Readonly<Record<string, unknown>>)[option];
+  return value === null || value === undefined || value === "" || value === "none";
 }
 
 /**
@@ -166,5 +231,8 @@ function requireParenValue(value: unknown, node: NodeOf<"table">, at: string): s
   // `Table#paren` is `parenthesis.to_omml_without_math_tag(true)`
   // (`table.rb:375-377`) — the representation itself, NOT `t_tag`, so a named
   // paren answers its generated literal and its stored value is never read.
-  return symbolOmmlValue(value as NodeOf<"symbol">, node.kind, at);
+  // The literal is then decoded ONCE on its way into the attribute, as
+  // `update_attrs` does for every attribute the gem writes: `Paren::Norm`'s
+  // `&#x2016;` reaches the document as `‖` (measured, `\begin{Vmatrix}a\end{Vmatrix}`).
+  return decodeEntities(symbolOmmlValue(value as NodeOf<"symbol">, node.kind, at), node.kind, at);
 }

@@ -6,8 +6,9 @@
  * compat class live here: it delegates to every renderer, so it cannot be
  * slim, and a consumer who wants slim imports a subpath instead.
  *
- * The constructor reads AsciiMath and, since the LaTeX parser landed, LaTeX;
- * the other four formats it names still raise (§4, §9).
+ * The constructor reads AsciiMath, LaTeX, HTML and UnicodeMath (named
+ * `unicode`); the other two formats it names, MathML and OMML, still raise
+ * `UnsupportedFormatError` (§4, §9).
  */
 
 export { default as Plurimath, default, FORMATS, type Format } from "./compat/index";

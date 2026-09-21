@@ -1,6 +1,7 @@
 # P1 — AsciiMath vertical
 
-**Status: active.** The first end-to-end slice: AsciiMath in, model, and four
+**Status: landed, with two exit items open** (the class-B runners item and the class-C
+sign-off below; neither was re-verified when this status was updated). The first end-to-end slice: AsciiMath in, model, and four
 renderers out, all proven against cases generated from the Ruby gem.
 
 ## What it delivers

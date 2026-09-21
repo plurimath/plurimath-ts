@@ -143,8 +143,18 @@ describe("transform rule coverage", () => {
     // Plus 10 from the ROOT/OVER-UNDER/ACCENT leftovers: `:341`, `:969`,
     // `:977`, `:1404`, `:1506`, `:1530`, `:1538`, `:2221`, and two unwraps
     // they need first, `:31` and `:118`.
-    expect(build.ruleIds.length).toBe(188);
-    expect(new Set(build.ruleIds).size).toBe(188);
+    //
+    // Plus 32 from slice E (FRACTIONS), reached by the hand-picked
+    // "fractions_seq" coverage group: 25 that build (the ten sequence-shaped
+    // `Utility.fractions` sites `:1619`-`:1644`, `:2203`, `:2359`, `:2365`,
+    // `:2371`; `Utility.unicode_fractions` and its callers `:96`, `:212`,
+    // `:217`, `:3277`; `:2048`, `:2393`, `:2797`; the fraction-holding fences
+    // `:2685`, `:2707`, `:3411`, `:3422`; slice B's `:284`, `:290`, `:296`,
+    // `:666`) and 7 prerequisite folds owned by other slices and registered
+    // under their ids (`:396`, `:561`, `:592`, `:675`, `:1756`, `:2055`,
+    // `:2067`).
+    expect(build.ruleIds.length).toBe(220);
+    expect(new Set(build.ruleIds).size).toBe(220);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

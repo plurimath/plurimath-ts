@@ -339,6 +339,71 @@ RULE_COVERAGE = {
     "x\\ldiv y",
     "x\\ndiv y",
   ],
+  # "fractions_seq": slice E — the `Utility.fractions`/`Utility.unicode_fractions`
+  # call sites the "fraction" group above could not reach (a SEQUENCE side, a
+  # vulgar-fraction entity), plus the slice B rules a fraction's
+  # `recursive_numerator`/`recursive_denominator` finally gives a reaching
+  # input. Each traced on the oracle (rule numbers are the lines `rule(` opens
+  # on); rules named in a comment are the ones the row was chosen for, the
+  # others fire as prerequisites.
+  #
+  #   "½"                    96    {unicode_fractions}
+  #   "½ a"                  217   {unicode_fractions, expr: simple}
+  #   "½ a b"                212   {unicode_fractions, expr: sequence}
+  #   "(½ a b)"              3277  bracketed run led by a vulgar fraction
+  #   "1/a(b)"               1619  numerator simple, denominator sequence
+  #   "²/₃₄"                 1624  mini_numerator simple, mini_denominator sequence
+  #   "a(b)/c"               1629  numerator sequence, denominator simple
+  #   "²³/₃"                 1634  mini, sequence numerator
+  #   "a(b)/c(d)"            1639  both sequences
+  #   "²³/₃₄"                1644  mini, both sequences
+  #   "a(b)\atop c"          2203  atop, sequence numerator
+  #   "1\sdiv a(b)"          2359  bevelled, sequence denominator
+  #   "1\ldiv a(b)"          2365  ldiv, sequence denominator
+  #   "1\ndiv a(b)"          2371  no_display_style, sequence denominator
+  #   "a∘b/c"                2048  {atom, binary_symbols, recursive_numerator}
+  #   "1/2\not∘b"           284   {binary_symbols, recursive_denominator: simple}
+  #   "1/2\not∘⊆⊈"          290   same, recursive_denominator sequence
+  #   "⊕b/c"                 296   {binary_symbols, recursive_numerator}
+  #   "a\not∈b"             666   {relational_symbols, recursive_denominator}
+  #   "(1/2 a)"              3411  bracketed frac + simple exp
+  #   "(1/2 a b)"            3422  bracketed frac + sequence exp
+  #   "¹/₂≤₃/b"              2393  {frac, relational_symbols, expr}
+  #   "++¹/₂ḟa"              2797  {operator, frac, expr: sequence}
+  #   "├1(1/2┤2)"            2685  masked open + masked close around a `frac`
+  #   "├0(1/2┤10)"           2685  the `1.25**0` -> "1.0em" and two-digit branch
+  #   "(1/2┤3)"              2707  plain open, masked close
+  #
+  # Prerequisites the rows above need, registered by the port under the
+  # owning slice's id: 396, 561, 592, 675, 1756.
+  "fractions_seq" => [
+    "½",
+    "½ a",
+    "½ a b",
+    "(½ a b)",
+    "1/a(b)",
+    "²/₃₄",
+    "a(b)/c",
+    "²³/₃",
+    "a(b)/c(d)",
+    "²³/₃₄",
+    "a(b)\\atop c",
+    "1\\sdiv a(b)",
+    "1\\ldiv a(b)",
+    "1\\ndiv a(b)",
+    "a∘b/c",
+    "1/2\\not∘b",
+    "1/2\\not∘⊆⊈",
+    "⊕b/c",
+    "a\\not∈b",
+    "(1/2 a)",
+    "(1/2 a b)",
+    "¹/₂≤₃/b",
+    "++¹/₂ḟa",
+    "├1(1/2┤2)",
+    "├0(1/2┤10)",
+    "(1/2┤3)",
+  ],
   "table" => [
     "■(a)",
     "■3",
@@ -454,7 +519,7 @@ RULE_COVERAGE = {
   #
   #   "√(ab&cd)"       rule 1538 {first_value: sequence, second_value: sequence}
   #   "ab''"           rule 1506 {first_value: sequence, prime_accent_symbols}
-  #   "x\\prime\\prime"  rule 1404 {first_value, prime_accent_symbols: sequence}
+  #   "x\prime\prime"  rule 1404 {first_value, prime_accent_symbols: sequence}
   #   "a⃗+b"           rule 341  {accents, expr: sequence}
   #   "ⓐa x"           rule 2221 {arg, arg_arguments, first_value}
   "root_overunder" => [

@@ -3991,6 +3991,34 @@ export const UNICODEMATH_MASK_CLASSES: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
+ * `Constants::UNICODE_FRACTIONS`: each vulgar-fraction entity mapped to its
+ * `[numerator, denominator]` as text. `Utility.unicode_fractions`
+ * (`utility.rb:69-76`) reads `.first` and `.last` of this pair and builds
+ * `Math::Number.new(x.to_s)` from each. The parser's own key-only view is
+ * `UNICODEMATH_UNICODE_FRACTIONS`.
+ */
+export const UNICODEMATH_FRACTION_PARTS: ReadonlyMap<string, readonly [string, string]> = new Map([
+  ["&#x2153;", ["1", "3"]],
+  ["&#x2154;", ["2", "3"]],
+  ["&#x2155;", ["1", "5"]],
+  ["&#x2156;", ["2", "5"]],
+  ["&#x2157;", ["3", "5"]],
+  ["&#x2158;", ["4", "5"]],
+  ["&#x2159;", ["1", "6"]],
+  ["&#x215a;", ["5", "6"]],
+  ["&#x2150;", ["1", "7"]],
+  ["&#x215b;", ["1", "8"]],
+  ["&#x215c;", ["3", "8"]],
+  ["&#x215d;", ["5", "8"]],
+  ["&#x215e;", ["7", "8"]],
+  ["&#x2151;", ["1", "9"]],
+  ["&#x2189;", ["0", "3"]],
+  ["&#xbd;", ["1", "2"]],
+  ["&#xbc;", ["1", "4"]],
+  ["&#xbe;", ["3", "4"]],
+]);
+
+/**
  * One `PHANTOM_SYMBOLS` attribute value: a boolean, a string, or a hash
  * written as an ordered list of `[key, value]` pairs — the emitter has no
  * object-literal form, and pairs keep the gem's key order, which

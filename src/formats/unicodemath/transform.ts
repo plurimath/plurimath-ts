@@ -369,6 +369,29 @@
  * works on `UnicodemathDraft` objects and `finalize` converts the finished tree
  * into real `core` nodes in one pass at the end.
  *
+ * ## Slice E: FRACTIONS, the ten sequence-shaped sites and their neighbours
+ *
+ * The ten `Utility.fractions` call sites the FRACTION and TABLE increments
+ * above deferred whole (`:1619`-`:1644`, `:2203`, `:2359`, `:2365`, `:2371`)
+ * are registered, and each has a fixture input that reaches it on the oracle
+ * AND through this port (the "fractions_seq" group in
+ * `scripts/generate-unicodemath-model-fixtures.rb`, which carries the trace of
+ * every input). They were deferred behind a combinator that turned out to be
+ * four pure folds the gem's fraction grammar leaves beside a sequence side:
+ * `:675`/`:1756` (an atom onto `recursive_denominator`/`recursive_numerator`)
+ * and `:561`/`:592` (a mini digit onto its `*_recursion_expr`). Those, and
+ * `:396` (`char` + alphanumeric, `++¹/₂ḟa`), belong to slices A, F and B; they
+ * are registered here under their own ids because the fractions cannot parse
+ * without them.
+ *
+ * Also here: `Utility.unicode_fractions` (`unicode_math/utility.rb:69-76`) with
+ * the `:96`/`:212`/`:217`/`:3277` rules that call it, the fraction-led rules
+ * `:2393`, `:2797`, `:3411`, `:3422`, the masked-fence pair `:2685`/`:2707`
+ * (the size-prefix option block, `applyParenMask`), `:2048`, and slice B's four
+ * deferred witnesses `:284`, `:290`, `:296`, `:666`, which a fraction's
+ * `recursive_*` run finally reaches. Not registered, because no input
+ * reached them on the oracle: `:2787`, `:3074`, `:3266`.
+ *
  * ## Two model behaviours that are provably absent here
  *
  * - **`ModelHelper.validate_left_right`** (`model_helper.rb:17-23`) forces
@@ -409,6 +432,8 @@ import {
   UNICODEMATH_MATRIXS_KEYS,
   UNICODEMATH_NARY_SYMBOLS,
   UNICODEMATH_NARY_SYMBOLS_KEYS,
+  UNICODEMATH_RELATIONAL_SYMBOLS,
+  UNICODEMATH_RELATIONAL_SYMBOLS_KEYS,
   UNICODEMATH_SUB_DIGITS,
   UNICODEMATH_SUP_DIGITS,
   UNICODEMATH_UNICODED_FONTS,
@@ -416,6 +441,7 @@ import {
 import {
   UNICODEMATH_BELOWS_NOTATIONS,
   UNICODEMATH_BINARY_FUNCTIONS,
+  UNICODEMATH_FRACTION_PARTS,
   UNICODEMATH_IS_A_CLASSES,
   UNICODEMATH_MASK_CLASSES,
   UNICODEMATH_MENCLOSE_FUNCTIONS,
@@ -535,6 +561,12 @@ const NARY_SYMBOLS = zipConstants(
   UNICODEMATH_NARY_SYMBOLS_KEYS,
   UNICODEMATH_NARY_SYMBOLS,
   "NARY_SYMBOLS",
+);
+/** `Constants::RELATIONAL_SYMBOLS[key]`, read by `:666`. */
+const RELATIONAL_SYMBOLS = zipConstants(
+  UNICODEMATH_RELATIONAL_SYMBOLS_KEYS,
+  UNICODEMATH_RELATIONAL_SYMBOLS,
+  "RELATIONAL_SYMBOLS",
 );
 /** `Constants::COMBINING_SYMBOLS[key]`, read by `:99`. */
 const COMBINING_SYMBOLS = zipConstants(
@@ -1045,6 +1077,69 @@ function isFrac(value: unknown): value is UnicodemathDraft {
 /** `Frac.new(p1, p2, options = nil)` — `@options` assigned only when passed. */
 function newFrac(one: unknown, two: unknown, options?: NodeOptions): UnicodemathDraft {
   return binaryDraft("frac", undefined, one, two, options);
+}
+
+/**
+ * `UnicodeMath::Utility.unicode_fractions(fractions)` (`unicode_math/utility.rb:69-76`):
+ * a vulgar-fraction entity becomes a `Frac` of two `Number`s. An entity the
+ * table lacks is `nil.first` in Ruby, a `NoMethodError`.
+ */
+function unicodeFractions(fractions: unknown): UnicodemathDraft {
+  const parts = UNICODEMATH_FRACTION_PARTS.get(rubyToS(fractions));
+  if (parts === undefined) {
+    throw new TypeError(
+      `unicodemath transform: UNICODE_FRACTIONS has no ${rubyToS(fractions)} (Ruby raises NoMethodError)`,
+    );
+  }
+  return newFrac(newNumber(parts[0]), newNumber(parts[1]), {
+    displaystyle: false,
+    unicodemath_fraction: true,
+  });
+}
+
+/**
+ * `"#{1.25**n}em"`, the size a paren prefix (`├1(`) names. Ruby's `Float#to_s`
+ * prints `1.0` where JavaScript prints `1`; for `n` in 0..22 every other value
+ * is non-integral and both print the shortest round-trip digits. Outside that
+ * range `1.25**n` and its printed form are not known to agree between the two
+ * runtimes, so this refuses rather than guess.
+ */
+function parenMask(prefix: string): string {
+  const exponent = rubyToI(prefix);
+  if (exponent < 0 || exponent > 22) {
+    throw new Error(
+      `unicodemath transform: paren size prefix ${exponent} is outside 0..22, where 1.25**n is ` +
+        "exact and Ruby's Float#to_s and JavaScript's String() are known to agree",
+    );
+  }
+  const size = 1.25 ** exponent;
+  return `${Number.isInteger(size) ? `${size}.0` : String(size)}em`;
+}
+
+/**
+ * The block the masked-`Fenced` rules (`transform.rb:2685`, `:2707`) spell out
+ * once per side — a SEQUENCE paren whose first element is a `Number` carries a
+ * size prefix:
+ *
+ *   options[:open_prefixed] = true
+ *   options[:open_paren] = { minsize: mask, maxsize: mask } unless value == ""
+ *
+ * `paren` is the bound array, `side` picks the option keys, and keys land in
+ * assignment order as the Ruby hash does.
+ */
+function applyParenMask(
+  options: Record<string, unknown>,
+  paren: readonly unknown[],
+  side: "open" | "close",
+): void {
+  const first = paren[0];
+  if (!(isDraft(first) && first.kind === "number")) return;
+  const value = rubyToS(first.fields.value);
+  options[`${side}_prefixed`] = true;
+  if (value !== "") {
+    const mask = parenMask(value);
+    options[`${side}_paren`] = { minsize: mask, maxsize: mask };
+  }
 }
 
 /**
@@ -1615,6 +1710,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("90", { unary_subsup: simple("unary_subsup") }, (b) => b.unary_subsup);
   rule("92", { alphanumeric: simple("alphanumeric") }, (b) => symbolsClass(b.alphanumeric));
   rule("94", { diacritic_overlays: simple("overlays") }, (b) => b.overlays);
+  rule("96", { unicode_fractions: simple("fractions") }, (b) => unicodeFractions(b.fractions));
 
   // RELATION/OPERATOR: `combined_symbols` (`±`/`∓`/`‼`, `Constants::
   // COMBINING_SYMBOLS`) resolved the same way `:99`'s siblings resolve every
@@ -1700,6 +1796,17 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
 
   // `:227`: a `\script`/`\double`/`\fraktur`/`\mitBbb` prefix plus one letter
   // — the `UNICODED_FONTS` code point when the pair has one, else the letter.
+  // FRACTION (slice E): a vulgar-fraction entity (`½`) followed by more of the
+  // run, through `Utility.unicode_fractions`.
+  rule("212", { unicode_fractions: simple("fractions"), expr: sequence("expr") }, (b) => [
+    unicodeFractions(b.fractions),
+    ...asArray(b.expr),
+  ]);
+  rule("217", { unicode_fractions: simple("fractions"), expr: simple("expr") }, (b) => [
+    unicodeFractions(b.fractions),
+    b.expr,
+  ]);
+
   rule("227", { unicoded_font_class: simple("unicoded"), symbol: simple("symbol") }, (b) =>
     symbolsClass(unicodedFont(b.unicoded, b.symbol) ?? b.symbol),
   );
@@ -1723,6 +1830,35 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     const symbol = BINARY_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols;
     return [symbolsClass(symbol), b.expr];
   });
+
+  // A binary symbol leading a fraction's `recursive_denominator`/
+  // `recursive_numerator` run (`1/2\not∘b`, `⊕b/c`). Slice B's rules, deferred
+  // there until a fraction gave them a reaching input; ported with the
+  // fractions that carry them.
+  rule(
+    "284",
+    { binary_symbols: simple("symbols"), recursive_denominator: simple("recursive_denominator") },
+    (b) => [
+      symbolsClass(BINARY_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols),
+      b.recursive_denominator,
+    ],
+  );
+  rule(
+    "290",
+    { binary_symbols: simple("symbols"), recursive_denominator: sequence("recursive_denominator") },
+    (b) => [
+      symbolsClass(BINARY_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols),
+      ...asArray(b.recursive_denominator),
+    ],
+  );
+  rule(
+    "296",
+    { binary_symbols: simple("symbols"), recursive_numerator: simple("recursive_numerator") },
+    (b) => [
+      symbolsClass(BINARY_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols),
+      b.recursive_numerator,
+    ],
+  );
 
   // `:341`: an accented run followed by a SEQUENCE `expr` — the accent node is
   // built by `unicodeAccents` and prepended, the same `[x] + xs` concatenation
@@ -1753,6 +1889,13 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // already turned into a symbol by `:149`) directly followed by a digit
   // run — `2·3`'s `char`/`number` pair, folded into a two-element list the
   // way every other `char: simple` sibling here is.
+  // PREREQUISITE (slice B's `:396`, registered here under the same id): a
+  // `char` followed by an alphanumeric, the shape `++¹/₂ḟa` (`:2797`'s
+  // witness) leaves beside its `frac`.
+  rule("396", { char: simple("char"), alphanumeric: simple("alphanumeric") }, (b) => [
+    b.char,
+    symbolsClass(b.alphanumeric),
+  ]);
   rule("401", { char: simple("char"), number: simple("number") }, (b) => [
     b.char,
     newNumber(b.number),
@@ -1810,11 +1953,47 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // than from the grammar directly. `:598`'s `value` is a SEQUENCE of rows —
   // `Utility.filter_values` folds it the way every multi-row formula field
   // does elsewhere in this file; `:606`'s is already the single row.
+  // PREREQUISITES (slice F's `:561`/`:592`, registered here under the same ids):
+  // a mini digit run folding onto its `*_recursion_expr` — the numerator or
+  // denominator of `²/₃₄` and `²³/₃`. Ported to the same digit lookups
+  // `:165`/`:170` use.
+  rule(
+    "561",
+    { sub_digits: simple("sub_digits"), sub_recursion_expr: simple("sub_recursion_expr") },
+    (b) => [subDigitNumber(b.sub_digits), b.sub_recursion_expr],
+  );
+  rule("592", { sup_digits: simple("digits"), sup_recursion_expr: simple("sup") }, (b) => [
+    supDigitNumber(b.digits),
+    b.sup,
+  ]);
   rule("598", { labeled_tr_value: sequence("value"), labeled_tr_id: simple("id") }, (b) =>
     newMlabeledtr(filterValues(b.value), newText(b.id)),
   );
   rule("606", { labeled_tr_value: simple("value"), labeled_tr_id: simple("id") }, (b) =>
     newMlabeledtr(b.value, newText(b.id)),
+  );
+
+  // FRACTION (slice E): a relational symbol leading a fraction's
+  // `recursive_denominator` (`a\not∈b`). Slice B's rule, deferred there until a
+  // fraction reached it.
+  rule(
+    "666",
+    {
+      relational_symbols: simple("symbols"),
+      recursive_denominator: simple("recursive_denominator"),
+    },
+    (b) => [
+      symbolsClass(rubyToS(RELATIONAL_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols)),
+      b.recursive_denominator,
+    ],
+  );
+
+  // PREREQUISITE (slice A's `:675`, registered here under the same id): an
+  // atom folded onto a fraction's `recursive_denominator` (`1/a(b)`).
+  rule(
+    "675",
+    { atom: simple("atom"), recursive_denominator: simple("recursive_denominator") },
+    (b) => [b.atom, b.recursive_denominator],
   );
 
   // NARY continued — a bare `nary` (already resolved by `:20`/`:175` above)
@@ -2243,6 +2422,35 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => fractions(b.numerator, b.denominator, { displaystyle: false }),
   );
 
+  // FRACTION, the six sites where a side is a SEQUENCE (`transform.rb:1619`-
+  // `:1644`): the `numerator`/`denominator` pair and its `mini_` twin, one
+  // rule per simple/sequence combination, all the same `Utility.fractions`
+  // call as `:1609`/`:1614`.
+  rule("1619", { numerator: simple("numerator"), denominator: sequence("denominator") }, (b) =>
+    fractions(b.numerator, b.denominator),
+  );
+  rule(
+    "1624",
+    { mini_numerator: simple("numerator"), mini_denominator: sequence("denominator") },
+    (b) => fractions(b.numerator, b.denominator, { displaystyle: false }),
+  );
+  rule("1629", { numerator: sequence("numerator"), denominator: simple("denominator") }, (b) =>
+    fractions(b.numerator, b.denominator),
+  );
+  rule(
+    "1634",
+    { mini_numerator: sequence("numerator"), mini_denominator: simple("denominator") },
+    (b) => fractions(b.numerator, b.denominator, { displaystyle: false }),
+  );
+  rule("1639", { numerator: sequence("numerator"), denominator: sequence("denominator") }, (b) =>
+    fractions(b.numerator, b.denominator),
+  );
+  rule(
+    "1644",
+    { mini_numerator: sequence("numerator"), mini_denominator: sequence("denominator") },
+    (b) => fractions(b.numerator, b.denominator, { displaystyle: false }),
+  );
+
   // TABLE concluded — the three `matrixs` rules (`:1649`, `:1670`, `:1691`),
   // one per shape `array`/`identity_matrix_number` can take once `:1569`-
   // `:1604` above have folded a row sequence, a bare row, or neither. All
@@ -2259,6 +2467,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     buildMatrixTable(b.matrixs, identityMatrix(rubyToI(rubyToS(b.number)))),
   );
 
+  // PREREQUISITE (slice A's `:1756`, registered here under the same id): an
+  // atom folded onto a fraction's `recursive_numerator` (`a(b)/c`).
+  rule("1756", { atom: simple("atom"), recursive_numerator: simple("numerator") }, (b) => [
+    b.atom,
+    b.numerator,
+  ]);
   rule("1806", { expr: simple("expr"), func_expr: simple("func_expr") }, (b) => [
     b.expr,
     b.func_expr,
@@ -2374,6 +2588,39 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
 
   // --- three- and four-key rules (transform.rb:2103-3477) ----------------
 
+  // An atom, a binary symbol and a fraction's `recursive_numerator` (`a∘b/c`).
+  rule(
+    "2048",
+    {
+      atom: simple("atom"),
+      binary_symbols: simple("symbols"),
+      recursive_numerator: simple("numerator"),
+    },
+    (b) => [b.atom, symbolsClass(BINARY_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols), b.numerator],
+  );
+
+  // PREREQUISITES (slice A's `:2055`/`:2067`, registered here under the same
+  // ids): a size-prefixed paren (`├1(`, `┤2)`) folds its mask and its paren
+  // into the two-element run `:2685`/`:2707` read.
+  rule(
+    "2055",
+    {
+      paren_open_prefix: simple("paren_open_prefix"),
+      open_paren_mask: simple("open_paren_mask"),
+      open_paren: simple("open_paren"),
+    },
+    (b) => [b.open_paren_mask, b.open_paren],
+  );
+  rule(
+    "2067",
+    {
+      paren_close_prefix: simple("paren_close_prefix"),
+      close_paren_mask: simple("close_paren_mask"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => [b.close_paren_mask, b.close_paren],
+  );
+
   rule("2103", { base: simple("base"), sup: simple("sup"), sub: simple("sub") }, (b) => {
     const underover = ["underset", "overset"];
     if (underover.includes(className(b.sub)) && underover.includes(className(b.sup))) {
@@ -2412,6 +2659,17 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     "2197",
     {
       numerator: simple("numerator"),
+      atop: simple("atop"),
+      denominator: simple("denominator"),
+    },
+    (b) => fractions(b.numerator, b.denominator, { linethickness: "0" }),
+  );
+
+  // `\atop` with a SEQUENCE numerator (`a(b)\atop c`).
+  rule(
+    "2203",
+    {
+      numerator: sequence("numerator"),
       atop: simple("atop"),
       denominator: simple("denominator"),
     },
@@ -2493,6 +2751,37 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => fractions(b.numerator, b.denominator, { ldiv: true }),
   );
 
+  // The SEQUENCE-denominator twins of `:2347`/`:2353`/`:2377`. `:2371` passes
+  // `{no_display_style: false}` where `:2377` passes `{displaystyle: false}`,
+  // exactly as the gem writes them.
+  rule(
+    "2359",
+    {
+      numerator: simple("numerator"),
+      bevelled: simple("bevelled"),
+      denominator: sequence("denominator"),
+    },
+    (b) => fractions(b.numerator, b.denominator, { bevelled: true }),
+  );
+  rule(
+    "2365",
+    {
+      numerator: simple("numerator"),
+      ldiv: simple("ldiv"),
+      denominator: sequence("denominator"),
+    },
+    (b) => fractions(b.numerator, b.denominator, { ldiv: true }),
+  );
+  rule(
+    "2371",
+    {
+      numerator: simple("numerator"),
+      no_display_style: simple("no_display_style"),
+      denominator: sequence("denominator"),
+    },
+    (b) => fractions(b.numerator, b.denominator, { no_display_style: false }),
+  );
+
   rule(
     "2377",
     {
@@ -2507,6 +2796,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     "2383",
     { fonts: simple("fonts"), relational_symbols: simple("symbols"), expr: simple("expr") },
     (b) => [b.fonts, symbolsClass(b.symbols), b.expr],
+  );
+
+  // FRACTION (slice E): a `frac` leading a relation (`¹/₂≤₃/b`). The symbol
+  // goes straight to `symbols_class`, with no `RELATIONAL_SYMBOLS` lookup.
+  rule(
+    "2393",
+    { frac: simple("frac"), relational_symbols: simple("symbols"), expr: simple("expr") },
+    (b) => [b.frac, symbolsClass(b.symbols), b.expr],
   );
 
   // `Utility.unfenced_value(operand, ...)` on the first line is computed and
@@ -2542,6 +2839,48 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => newFenced(parenClass(b.open_paren), [b.frac], parenClass(b.close_paren)),
   );
 
+  // A masked (`├1(`) fence around a `frac`: the size-prefixed side(s) arrive as
+  // `[Number, paren]` sequences, and the fence's own paren is the LAST element.
+  rule(
+    "2685",
+    {
+      open_paren: sequence("open_paren"),
+      frac: simple("frac"),
+      close_paren: sequence("close_paren"),
+    },
+    (b) => {
+      const options: Record<string, unknown> = {};
+      applyParenMask(options, asArray(b.open_paren), "open");
+      applyParenMask(options, asArray(b.close_paren), "close");
+      const fenced = newFenced(
+        symbolsClass(asArray(b.open_paren).at(-1)),
+        [b.frac],
+        symbolsClass(asArray(b.close_paren).at(-1)),
+      );
+      fenced.fields.options = options;
+      return fenced;
+    },
+  );
+  rule(
+    "2707",
+    {
+      open_paren: simple("open_paren"),
+      frac: simple("frac"),
+      close_paren: sequence("close_paren"),
+    },
+    (b) => {
+      const options: Record<string, unknown> = {};
+      applyParenMask(options, asArray(b.close_paren), "close");
+      const fenced = newFenced(
+        parenClass(b.open_paren),
+        [b.frac],
+        symbolsClass(asArray(b.close_paren).at(-1)),
+      );
+      fenced.fields.options = options;
+      return fenced;
+    },
+  );
+
   rule(
     "2619",
     {
@@ -2566,9 +2905,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => newFenced(parenClass(b.open_paren), [b.sup_exp], parenClass(b.close_paren)),
   );
 
-  // ATOMS meeting a bare `operator` and a `frac` directly (`:2787`) and that
-  // shape's SEQUENCE-`expr` extension (`:3074`) are deferred with `:30`
-  // above: no probed input reached either.
+  // An operator, a `frac` and a SEQUENCE `expr` (`++¹/₂ḟa`). The ATOMS-led
+  // `:2787` and its `expr` extension `:3074` are not registered: no probed
+  // input reached either (see the E claim file).
+  rule(
+    "2797",
+    { operator: simple("operator"), frac: simple("frac"), expr: sequence("expr") },
+    (b) => [symbolsClass(b.operator), b.frac, ...asArray(b.expr)],
+  );
 
   rule(
     "2806",
@@ -2660,6 +3004,47 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       close_paren: simple("close_paren"),
     },
     (b) => newFenced(parenClass(b.open_paren), [b.factor, b.exp], parenClass(b.close_paren)),
+  );
+
+  // FRACTION (slice E): a bracketed run led by a vulgar-fraction entity
+  // (`:3277`, SEQUENCE `exp`; its `expr`-keyed sibling `:3266` is not
+  // registered — no probed input reached it) or by a `frac` (`:3411`/`:3422`,
+  // simple/SEQUENCE `exp`).
+  rule(
+    "3277",
+    {
+      open_paren: simple("open_paren"),
+      unicode_fractions: simple("fraction"),
+      exp: sequence("exp"),
+      close_paren: simple("close_paren"),
+    },
+    (b) =>
+      newFenced(
+        parenClass(b.open_paren),
+        [unicodeFractions(b.fraction), ...asArray(b.exp)],
+        parenClass(b.close_paren),
+      ),
+  );
+  rule(
+    "3411",
+    {
+      open_paren: simple("open_paren"),
+      frac: simple("frac"),
+      exp: simple("exp"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => newFenced(parenClass(b.open_paren), [b.frac, b.exp], parenClass(b.close_paren)),
+  );
+  rule(
+    "3422",
+    {
+      open_paren: simple("open_paren"),
+      frac: simple("frac"),
+      exp: sequence("exp"),
+      close_paren: simple("close_paren"),
+    },
+    (b) =>
+      newFenced(parenClass(b.open_paren), [b.frac, ...asArray(b.exp)], parenClass(b.close_paren)),
   );
 
   rule(

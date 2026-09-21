@@ -171,9 +171,9 @@ describe("the formatter option (B2's MathML/OMML number-formatting slice)", () =
 });
 
 describe("the deferred options, refused by name", () => {
+  // `intent` left this list with B4 (`./intent-parity.spec.ts`); `intent: false`
+  // is the gem's default, measured byte-identical to the omitted keyword.
   const cases: readonly (readonly [string, Record<string, unknown>])[] = [
-    ["intent", { intent: true }],
-    ["intent", { intent: false }],
     ["unitsml", { unitsml: {} }],
   ];
   for (const [name, options] of cases) {
@@ -189,6 +189,11 @@ describe("the deferred options, refused by name", () => {
       expect((caught as RenderError).message).toContain("deferred");
     });
   }
+
+  it("intent: false and null are the default, not a refusal", () => {
+    expect(toMathml(sinX(), { intent: false })).toBe(math(SIN_SPACED));
+    expect(toMathml(sinX(), { intent: null })).toBe(math(SIN_SPACED));
+  });
 
   it("an explicitly-undefined deferred key passes through as absent", () => {
     expect(toMathml(sinX(), { formatter: undefined, intent: undefined } as never)).toBe(

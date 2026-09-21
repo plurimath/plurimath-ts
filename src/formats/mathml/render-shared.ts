@@ -44,6 +44,29 @@ export {
   isGemNumericValue,
   refuseNonNumericUnderFormatter,
 } from "../../formatting/index";
+/**
+ * The intent pipeline (`to_mathml(intent: true)`), re-exported for the kind
+ * files: `intent-encoding.ts` is the gem's `Utility::IntentEncoding` and the
+ * helpers it reads a rendered subtree with, `intent-post-processing.ts` the
+ * formula-level pass (formula.rb:491-810). Kind files may import only this
+ * module (`.dependency-cruiser.cjs`, "render-kind-file-imports-allowed-set-only").
+ */
+export {
+  absIntent,
+  attrOf,
+  el,
+  encode,
+  FENCED_INTENT_NAMES,
+  type FencedIntentName,
+  fracIntent,
+  functionIntent,
+  gemCrash,
+  intervalFenceIntent,
+  nameOf,
+  naryandIntent,
+  nodesOf,
+} from "./intent-encoding";
+export { fencedPartialDerivative, intentPostProcessing } from "./intent-post-processing";
 
 /**
  * What one `to_mathml_without_math_tag` answers. Almost always an
@@ -77,6 +100,14 @@ export type MathmlRenderedList = readonly MathmlRendered[];
 export interface RenderContext {
   /** Ruby truthiness of `options[:unary_function_spacing]`, default true. */
   readonly unaryFunctionSpacing: boolean;
+  /**
+   * Ruby truthiness of `to_mathml`'s `intent:` keyword, the first argument of
+   * every `to_mathml_without_math_tag(intent, options:)` — fixed for the whole
+   * call. Off, no kind writes an intent attribute; on, the kinds named in
+   * `TODO.plan/feature-roadmap.md` B4 write theirs through
+   * `intent-encoding.ts`.
+   */
+  readonly intent: boolean;
   readonly numberFormat: NumberFormat | null;
   /**
    * `child.to_mathml_without_math_tag(intent, options:)` — looks the child's
@@ -196,9 +227,10 @@ export function validateMathmlFields(
  * argument before anything else, so a nil, string, or spliced-array render
  * in that slot is a gem `NoMethodError` (probed: a wrapperless formula as a
  * big operator's third slot crashes) and a `RenderError` here. With
- * `intent` false — always, intent is deferred — the surviving element
- * passes through unchanged; `Nary` alone calls it with a literal `true`
- * (nary.rb:64), wrapping anything not already an `<mrow>`.
+ * `intent` false the surviving element passes through unchanged; `Nary`
+ * alone calls it with a literal `true` (nary.rb:64), wrapping anything not
+ * already an `<mrow>`. This is the `requireElement` half; `wrapMrow` below
+ * is the whole call.
  */
 export function requireElement(rendered: MathmlRendered, kind: string, at: string): XmlElement {
   if (rendered instanceof XmlElement) return rendered;
@@ -208,6 +240,23 @@ export function requireElement(rendered: MathmlRendered, kind: string, at: strin
     FORMAT,
     kind,
   );
+}
+
+/**
+ * `wrap_mrow(node, intent)` (core.rb:488-493), whole: an `<mrow>` passes
+ * through, a falsy `intent` returns the element unchanged, and otherwise the
+ * element is wrapped in a fresh `<mrow>`. Under intent the wrap is what puts
+ * every operand of a big operator behind one `arg="naryand"` carrier.
+ */
+export function wrapMrow(
+  rendered: MathmlRendered,
+  intent: boolean,
+  kind: string,
+  at: string,
+): XmlElement {
+  const element = requireElement(rendered, kind, at);
+  if (element.name === "mrow" || !intent) return element;
+  return new XmlElement("mrow").append(element);
 }
 
 /**

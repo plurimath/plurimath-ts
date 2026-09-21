@@ -222,10 +222,24 @@ function build(row: Row): MathNode {
   }
 }
 
+/**
+ * The rows this spec owns: everything but the `intent*` groups, which
+ * `./mathml/intent-parity.spec.ts` reads from the same file (B4). The counts
+ * are recomputed over what is kept, because the file's own counts include them;
+ * `payload-validation.spec.ts` checks those against the file.
+ */
 function load(format: "mathml" | "omml"): Fixture {
-  return JSON.parse(
+  const whole = JSON.parse(
     readFileSync(join(HERE, format, "render-options-fixtures.json"), "utf8"),
   ) as Fixture;
+  const cases = whole.cases.filter((row) => !row.group.startsWith("intent"));
+  return {
+    ...whole,
+    cases,
+    caseCount: cases.length,
+    renderedCount: cases.filter((row) => row.expected !== undefined).length,
+    raisedCount: cases.filter((row) => row.raises !== undefined).length,
+  };
 }
 
 for (const format of ["mathml", "omml"] as const) {

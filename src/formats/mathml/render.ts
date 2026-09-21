@@ -110,8 +110,8 @@ function renderNode(node: MathNode, context: RenderContext): MathmlRendered {
 }
 
 /**
- * One context per `(unaryFunctionSpacing, numberFormat)` pair — both are
- * fixed for a whole `to_mathml` call and nothing on the walk derives a
+ * One context per `(unaryFunctionSpacing, numberFormat, intent)` triple — all
+ * three are fixed for a whole `to_mathml` call and nothing on the walk derives a
  * child context (render-shared.ts). Each carries the dispatcher bound to
  * itself, which is how recursion reaches the table without any kind file
  * importing it. `toMathml` (`./renderer.ts`) calls this once per render with
@@ -121,10 +121,12 @@ function renderNode(node: MathNode, context: RenderContext): MathmlRendered {
 export function createRenderContext(
   unaryFunctionSpacing: boolean,
   numberFormat: NumberFormat | null,
+  intent = false,
 ): RenderContext {
   const context: RenderContext = {
     unaryFunctionSpacing,
     numberFormat,
+    intent,
     render(node) {
       return renderNode(node, context);
     },

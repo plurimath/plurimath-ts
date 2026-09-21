@@ -773,7 +773,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           record.relative,
         );
         expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
-        const known = ["displayStyle", "splitOnLinebreak", "unaryFunctionSpacing"];
+        const known = ["displayStyle", "splitOnLinebreak", "unaryFunctionSpacing", "intent"];
         const rendered = rows.filter((row, index) => {
           const at = `${record.relative}.cases[${index}]`;
           const item = mapping(row, at);

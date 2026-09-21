@@ -2,7 +2,8 @@
  * Mirrors `function/unary_function.rb` — `UnaryFunction#to_asciimath` (:21)
  * and `#asciimath_value` (:196) — plus the name arms for the gem classes the
  * census folds into this carrier with their *own* `to_asciimath` overrides:
- * `left.rb`, `right.rb`, `lcm.rb`, `mbox.rb`, `tr.rb`. Every other name in
+ * `left.rb`, `right.rb`, `lcm.rb`, `mbox.rb`, `phantom.rb`, `substack.rb`,
+ * `tr.rb`. Every other name in
  * `MEASURED_UNARY_NAMES` below renders the carrier default.
  *
  * Measured pin worth naming, because source-reading gets it wrong:
@@ -131,6 +132,22 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
       // and three arms reading one gem line should not disagree about what the
       // gem line says.
       return renderText(mboxText(node.parameterOne));
+    case "Phantom": {
+      // `phantom.rb:7`: `Array.new(asciimath_value&.length, '\ ').join` — one
+      // escaped space per CHARACTER of what the argument would render as, so
+      // the width is measured in codepoints (Ruby's `String#length`), not in
+      // UTF-16 units.
+      const rendered = asciimathValue(node.parameterOne, context, "phantom.parameterOne");
+      return "\\ ".repeat([...rendered].length);
+    }
+    case "Substack": {
+      // `substack.rb:13`: `"{:#{compact.map(to_asciimath).join(',')}:}"`;
+      // an absent slot leaves the braces empty (`&.`), a non-list slot dies in
+      // `compact`.
+      if (node.parameterOne === null || node.parameterOne === undefined) return "{::}";
+      const rows = requireList(node.parameterOne, node.kind, "substack.parameterOne");
+      return `{:${rows.map((row) => s(renderChild(row, context, "substack.parameterOne"))).join(",")}:}`;
+    }
     case "Tr": {
       // `"[#{tds.join(', ')}]"` — strict elements (`tr.rb:16-21`).
       const cells = node.parameterOne;
@@ -147,6 +164,18 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
       if (!MEASURED_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
       return renderUnaryDefault(name.toLowerCase(), node.parameterOne, context);
   }
+}
+
+/** A list slot's non-nil members — `Array#compact`, which a non-list slot does not answer. */
+function requireList(value: unknown, kind: string, at: string): readonly unknown[] {
+  if (!Array.isArray(value)) {
+    throw new RenderError(
+      `${at}: is ${describeSlot(value)}, not a list — the gem raises NoMethodError on compact`,
+      FORMAT,
+      kind,
+    );
+  }
+  return value.filter((item) => item !== null && item !== undefined);
 }
 
 /**

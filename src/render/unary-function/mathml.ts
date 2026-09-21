@@ -126,6 +126,18 @@ export function renderUnaryFunction(
       // `Text#initialize` defaults its slot to `""` where `Mbox.new` leaves nil,
       // and `<mtext></mtext>` and `<mtext/>` are different bytes.
       return renderText(mboxText(node.parameterOne));
+    case "Phantom":
+      // `phantom.rb:19`: `<mphantom>` over `Array(mathml_value)` — no
+      // `hide_function_name` and no `intentify`, unlike the carrier default.
+      return new XmlElement("mphantom").append(
+        mathmlValue(node.parameterOne, context, "phantom.parameterOne"),
+      );
+    case "Substack":
+      // `substack.rb:25`: `<mtable>` over `mathml_value` — the rows go in
+      // as they render, with no wrapper of their own.
+      return new XmlElement("mtable").append(
+        mathmlValue(node.parameterOne, context, "substack.parameterOne"),
+      );
     case "Tr":
       return renderTr(node, context);
     default:

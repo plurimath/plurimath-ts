@@ -128,5 +128,5 @@ dependencies:
 payload:
   path: render-options-fixtures.json
   schema: plurimath-corpus/render-options/1
-  sha256: 4a51250dc49be3b6c1b75f7dbaf178f8ced02ab4fd51ef809b3ce68f66776cbc
-  bytes: 988201
+  sha256: f571465d68d2052f425e63780364102e1bf127fd70715569f32d7aaae9320ab0
+  bytes: 75115

@@ -25,17 +25,23 @@
  *   - `Sin`: `<i>sin</i><i>1</i>`, and `<i>sin</i>` with the slot absent;
  *   - `Cos`: `<i>cos</i><i>1</i>`, and `<i>cos</i>` with the slot absent.
  *
- * Only names some corpus case constructs are admitted, so every arm here is
- * held to the gem's own bytes by a test. `Left` and `Right` own their `to_html`
- * and interpolate the parameter RAW — for a node that is Ruby's default
- * `Object#to_s`, a heap address, so neither is reproducible. The remaining
- * trigonometric and `log`-family names take the same carrier shape as `Sin` and
- * `Cos`, but no case exercises them; an unmeasured name raises.
+ * Only names a fixture or a test measures are admitted, so every arm here is
+ * held to the gem's own bytes by a test. `Left` owns its `to_html`
+ * (`"<i>#{parameter_one}</i>"`, `left.rb:26`) and interpolates the slot RAW,
+ * so it takes the shared interpolation judge: a string, nil, a boolean or a
+ * non-finite number reproduces Ruby's bytes, and a node — Ruby's default
+ * `Object#to_s`, a heap address — is refused. `Right#to_html` and
+ * `Phantom#to_html` take NO keyword arguments while `Formula#to_html` passes
+ * `options:`, so the gem raises ArgumentError on every call; `Phantom` refuses
+ * with that reason, and `Right` stays unadmitted. The remaining
+ * trigonometric and `log`-family names take the same carrier shape as `Sin`
+ * and `Cos`, but no case exercises them; an unmeasured name raises.
  */
 import { RenderError } from "../../core/index";
 import {
   describeSlot,
   FORMAT,
+  interpolatedValue,
   type NodeOf,
   type RenderContext,
   renderChild,
@@ -47,31 +53,37 @@ import {
  * Admitted alias -> its measured `invert_unicode_symbols` label.
  *
  * A table rather than a rule: see the module note on `Sup`, where that label
- * and the downcased class name are not the same string.
- *
- * `Mbox` is a KNOWN gap, not an absent case. The corpus reaches it —
- * `latex-text-mbox` is `\mbox{hi}` — the gem renders it, and the four P1
- * formats render it (`./asciimath.ts` and siblings). It stays unadmitted here
- * because `Mbox#to_html` is NOT the `Text` delegation THREE of those four
- * share — asciimath, mathml and unicodemath delegate, latex interpolates its
- * slot raw — and it is not latex's shape either: it hands back
- * `parameter_one` itself, which is a third thing again. On the pinned oracle `00c52783`, `Mbox.new(false).to_html`
- * answers `false` where `Text.new(false).to_html` raises NoMethodError, and
- * `Formula([Mbox("unicode[:alpha]")]).to_html` is the literal
- * `"unicode[:alpha]"` where the same string under `Text` is `"&#x3b1;"`.
- * Admitting it means measuring that shape across the slots this file's other
- * arms already cover. Nothing here forces the question: the parity fixtures
- * cannot reach it, because `scripts/generate-parity-fixtures.rb` sweeps
- * `input_format: asciimath` and `\mbox` is LaTeX — which is exactly why it is
- * written down rather than left to be noticed.
+ * and the downcased class name are not the same string. For the names added
+ * with the LaTeX, HTML and UnicodeMath parsers — `Ln`, `Det`, `Gcd`, `Max`,
+ * `Cancel`, `Hom`, `Substack` — none is a value of
+ * `Mathml::Constants::UNICODE_SYMBOLS` (measured on the pinned oracle
+ * `00c52783`: `UNICODE_SYMBOLS.invert[name]` is nil for each), so the label is
+ * the class name, and none of them overrides `to_html`.
  */
 const MEASURED_LABELS: ReadonlyMap<string, string> = new Map([
   ["Sin", "sin"],
   ["Cos", "cos"],
+  ["Ln", "ln"],
+  ["Det", "det"],
+  ["Gcd", "gcd"],
+  ["Max", "max"],
+  ["Cancel", "cancel"],
+  ["Hom", "hom"],
+  ["Substack", "substack"],
 ]);
 
 export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
   if (node.name === "Tr") return renderTr(node.parameterOne, context);
+  if (node.name === "Left") return renderLeft(node);
+  if (node.name === "Mbox") return renderMbox(node);
+  if (node.name === "Phantom") {
+    throw new RenderError(
+      "Phantom#to_html takes no keyword arguments and Formula#to_html passes options:, " +
+        "so the gem raises ArgumentError for every Phantom",
+      FORMAT,
+      node.kind,
+    );
+  }
 
   const label = MEASURED_LABELS.get(node.name);
   if (label === undefined) {
@@ -82,6 +94,30 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
     );
   }
   return renderUnaryDefault(label, node.parameterOne, context, "unaryFunction.parameterOne");
+}
+
+/** `Left#to_html` (`left.rb:26`): `"<i>#{parameter_one}</i>"`, the slot interpolated raw. */
+function renderLeft(node: NodeOf<"unaryFunction">): string {
+  return `<i>${interpolatedValue(node.parameterOne, node.kind, "left.parameterOne")}</i>`;
+}
+
+/**
+ * `Mbox#to_html` (`mbox.rb:20`) answers `parameter_one` ITSELF, not a
+ * rendering of it. Measured on the pinned oracle `00c52783`, through a
+ * `Formula`: `Mbox.new("hi")` gives `hi`, `"unicode[:alpha]"` and `"a<b&c"`
+ * come back verbatim, nil and `""` give nothing, `false` gives `false`, and a
+ * node gives its `#inspect` address. Only the string is admitted — the one
+ * slot whose bytes are the same in every parent; the rest are refused.
+ */
+function renderMbox(node: NodeOf<"unaryFunction">): string {
+  const slot = node.parameterOne;
+  if (typeof slot === "string") return slot;
+  throw new RenderError(
+    `mbox.parameterOne: holds ${describeSlot(slot)} — the gem returns the slot unrendered, ` +
+      "and only a string is a value every parent can take",
+    FORMAT,
+    node.kind,
+  );
 }
 
 /** `Tr#to_html`: table cells joined with no separator inside one row tag. */

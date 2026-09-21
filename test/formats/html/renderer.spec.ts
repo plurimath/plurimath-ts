@@ -818,12 +818,36 @@ describe("HTML carrier aliases the corpus reaches", () => {
 
 describe("HTML measured boundary refusals", () => {
   it("refuses unmeasured carrier aliases instead of inventing plausible output", () => {
+    // `Deg` overrides no `to_html` — but no fixture or case constructs it, so
+    // nothing here would hold its label honest.
+    expectHtmlError(() => toHtml(new UnaryFunctionNode({ name: "Deg", parameterOne: symbol() })), {
+      kind: "unaryFunction",
+      message: 'UnaryFunction alias "Deg" has not been measured for HTML in this slice',
+    });
     // `Mbox#to_html` hands back the parameter OBJECT rather than a string, so
-    // there are no bytes here to reproduce in the first place.
+    // a node in the slot has no bytes to reproduce (Ruby's `#inspect` address).
     expectHtmlError(() => toHtml(new UnaryFunctionNode({ name: "Mbox", parameterOne: symbol() })), {
       kind: "unaryFunction",
-      message: 'UnaryFunction alias "Mbox" has not been measured for HTML in this slice',
+      message:
+        "mbox.parameterOne: holds an object — the gem returns the slot unrendered, " +
+        "and only a string is a value every parent can take",
     });
+    // `Left#to_html` interpolates the slot raw, so a node is the same address.
+    expectHtmlError(() => toHtml(new UnaryFunctionNode({ name: "Left", parameterOne: symbol() })), {
+      kind: "unaryFunction",
+      message:
+        "left.parameterOne: holds an object whose Ruby spelling cannot be reproduced reliably",
+    });
+    // `Phantom#to_html` takes no keyword arguments, so the gem raises on every one.
+    expectHtmlError(
+      () => toHtml(new UnaryFunctionNode({ name: "Phantom", parameterOne: symbol() })),
+      {
+        kind: "unaryFunction",
+        message:
+          "Phantom#to_html takes no keyword arguments and Formula#to_html passes options:, " +
+          "so the gem raises ArgumentError for every Phantom",
+      },
+    );
     // `Stackrel` and `Underover` DO render on the gem — `"x"` and `"<i>x</i>"`
     // for a single symbol slot — but no corpus case constructs either, so
     // nothing in this suite would hold the port's bytes for them honest. They

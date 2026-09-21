@@ -24,7 +24,7 @@
  *
  * Every fixture row is asserted: byte-for-byte where the gem renders, a
  * `RenderError`/`ParseError` where it refused. A row the port cannot yet
- * reproduce is named in `PORT_REFUSES` below (104 rows, all kind-renderer
+ * reproduce is named in `PORT_REFUSES` below (82 rows, all kind-renderer
  * refusals).
  */
 import { readFileSync } from "node:fs";
@@ -59,7 +59,7 @@ interface Row {
 }
 
 /** Rows the gem renders that the port renders too, per format (a pin, not a knob). */
-const RENDERED_BASELINE = { mathml: 166, omml: 161 } as const;
+const RENDERED_BASELINE = { mathml: 170, omml: 179 } as const;
 
 interface Fixture {
   readonly schema: string;
@@ -74,9 +74,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const CENSUS_ALIASES = aliasIndex(readCensus());
 
 /**
- * Rows the gem renders and this port's KIND renderers do not, by id: 26 for
- * MathML and 78 for OMML. Every one refuses on a node kind or alias the
- * per-kind renderer has not measured (`Longdiv`, `Phantom`, `Underover`, the
+ * Rows the gem renders and this port's KIND renderers do not, by id: 22 for
+ * MathML and 60 for OMML. Every one refuses on a node kind or alias the
+ * per-kind renderer has not measured (`Longdiv`, `Multiscript`, `Underover`, the
  * unmeasured unary aliases...). For all but six the same refusal occurs without
  * `splitOnLinebreak`; the six (MathML `line-break-029`, OMML `012` and `029`,
  * each with its `-display-false` variant) render unsplit, and only refuse
@@ -98,8 +98,6 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-029-display-false",
     "line-break-056",
     "line-break-056-display-false",
-    "line-break-057",
-    "line-break-057-display-false",
     "line-break-058",
     "line-break-058-display-false",
     "line-break-059",
@@ -112,32 +110,22 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-077-display-false",
     "line-break-083",
     "line-break-083-display-false",
-    "line-break-084",
-    "line-break-084-display-false",
     "line-break-090",
     "line-break-090-display-false",
   ],
   omml: [
-    "asciimath-spec-omml-08",
-    "asciimath-spec-omml-08-display-false",
     "asciimath-spec-omml-11",
     "asciimath-spec-omml-11-display-false",
     "line-break-002",
     "line-break-002-display-false",
     "line-break-008",
     "line-break-008-display-false",
-    "line-break-009",
-    "line-break-009-display-false",
     "line-break-012",
     "line-break-012-display-false",
-    "line-break-013",
-    "line-break-013-display-false",
     "line-break-014",
     "line-break-014-display-false",
     "line-break-015",
     "line-break-015-display-false",
-    "line-break-017",
-    "line-break-017-display-false",
     "line-break-018",
     "line-break-018-display-false",
     "line-break-020",
@@ -158,28 +146,18 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-029-display-false",
     "line-break-030",
     "line-break-030-display-false",
-    "line-break-031",
-    "line-break-031-display-false",
-    "line-break-032",
-    "line-break-032-display-false",
     "line-break-034",
     "line-break-034-display-false",
     "line-break-037",
     "line-break-037-display-false",
-    "line-break-050",
-    "line-break-050-display-false",
     "line-break-055",
     "line-break-055-display-false",
     "line-break-056",
     "line-break-056-display-false",
-    "line-break-057",
-    "line-break-057-display-false",
     "line-break-058",
     "line-break-058-display-false",
     "line-break-059",
     "line-break-059-display-false",
-    "line-break-064",
-    "line-break-064-display-false",
     "line-break-072",
     "line-break-072-display-false",
     "line-break-073",
@@ -222,10 +200,24 @@ function build(row: Row): MathNode {
   }
 }
 
+/**
+ * The rows this spec owns. The same payload carries the `unary-function` group,
+ * which `unary-function-parity.spec.ts` asserts (in all six formats, with a
+ * UnicodeMath parser this file's `build` has no arm for); the counts are
+ * recomputed over what is left, and the payload gate checks the file's own.
+ */
 function load(format: "mathml" | "omml"): Fixture {
-  return JSON.parse(
+  const whole = JSON.parse(
     readFileSync(join(HERE, format, "render-options-fixtures.json"), "utf8"),
   ) as Fixture;
+  const cases = whole.cases.filter((row) => row.group !== "unary-function");
+  return {
+    ...whole,
+    cases,
+    caseCount: cases.length,
+    renderedCount: cases.filter((row) => row.expected !== undefined).length,
+    raisedCount: cases.filter((row) => row.raises !== undefined).length,
+  };
 }
 
 for (const format of ["mathml", "omml"] as const) {

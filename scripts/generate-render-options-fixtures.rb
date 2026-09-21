@@ -4,13 +4,16 @@
 # Emits the oracle's answers for calls that pass OPTIONS to `to_mathml` and
 # `to_omml` — `split_on_linebreak:` on both, `display_style:` on `to_omml` — so
 # the port's B3 slice is checked against the gem rather than against itself.
+# It also carries the `unary-function` group: default calls on the unary-function
+# kinds the LaTeX, HTML and UnicodeMath parsers reach, in ALL SIX formats (see
+# `UNARY_FUNCTION_*` below).
 #
 #   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
 #     scripts/generate-render-options-fixtures.rb --oracle /path/to/plurimath
 #
-# One run writes BOTH `test/formats/mathml/render-options-fixtures.json` and
-# `test/formats/omml/render-options-fixtures.json`. Both are prepared before
-# either is written: `RenderFixtureProvenance.prepare` refuses a checkout that
+# One run writes `test/formats/<format>/render-options-fixtures.json` for each
+# of the six formats; the four other than mathml and omml hold only the
+# `unary-function` group. All are prepared before any is written: `RenderFixtureProvenance.prepare` refuses a checkout that
 # is dirty outside the one payload it is about to write, and the two outputs
 # would otherwise make each other dirty. (The canonical parity/degenerate pair
 # gets its exemption from `MANAGED_PAYLOAD_BASENAMES`, an edit to a file every
@@ -51,7 +54,11 @@ require "optparse"
 GENERATOR_RELATIVE_PATH = "scripts/generate-render-options-fixtures.rb"
 
 SCHEMA = "plurimath-corpus/render-options/1"
-FORMATS = %w[mathml omml].freeze
+FORMATS = %w[asciimath latex mathml html omml unicodemath].freeze
+# The formats whose payload holds the `unary-function` group and nothing else.
+UNARY_ONLY_FORMATS = %w[asciimath latex html unicodemath].freeze
+# `Math.parse` spells UnicodeMath `:unicode`; the other three are their own name.
+PARSE_TYPES = { "unicodemath" => :unicode }.freeze
 PAYLOAD_BASENAME = "render-options-fixtures.json"
 
 KEYWORDS = {
@@ -91,6 +98,79 @@ DISPLAY_STYLE_PROBES = [
 # distinguishing on: the two booleans, the two strings, and `nil`, which Ruby
 # spells `to_s == ""` and so is FALSE, not the default.
 DISPLAY_STYLE_VALUES = [true, false, "true", "false", nil].freeze
+
+# The `unary-function` group: `src/render/unary-function/*`'s kinds. Every input
+# is rendered to every format, so a format that renders one where another refuses
+# is pinned as the gem does it (the html `Left`/`Phantom` split among them).
+#
+# Text inputs the gem parses. The first block is the survey of refusals: inputs
+# whose gem parse holds one of `Mbox Ln Det Gcd Max Cancel Hom Left Substack
+# Phantom` and which the port refused when the LaTeX, HTML and UnicodeMath
+# parsers landed. The `Left` list is long on purpose: measured on the pinned
+# oracle at generation, the gem renders `\left(` in html and raises on the other
+# 23 `\left` inputs. Survey inputs whose other kinds belong to other renderers
+# (`Over`, `Rule`, `Matrix`, `Menclose`, `Ker`) are left out, so this group does
+# not pin those kinds' refusals. The second block is read from the gem's own
+# specs (file and line named per entry); the third is measured, not from a spec.
+# The port's UnicodeMath parser refuses `⟡x` (measured: "no rule matched
+# {unary_function=other}"), so `Phantom`'s UnicodeMath branches are reached
+# through hand-built models instead of text.
+UNARY_FUNCTION_TEXT_INPUTS = [
+  ["latex", "\\mbox{hi}", "survey"],
+  ["latex", "\\mbox{a b}", "survey"],
+  ["latex", "\\mbox{ab}", "survey"],
+  ["latex", "\\ln{x}", "survey"],
+  ["latex", "\\det{A}", "survey"],
+  ["latex", "\\gcd{( a , b )}", "survey"],
+  ["latex", "\\max{A}", "survey"],
+  ["latex", "\\cancel{x}", "survey"],
+  ["latex", "\\substack{a\\\\b}", "survey"],
+  ["latex", "\\phantom{x}", "survey"],
+  ["html", "<i>ln</i><i>x</i>", "survey"],
+  ["html", "<i>det</i><i>A</i>", "survey"],
+  ["html", "<i>gcd</i><i><i>(</i>a&#x2c;b<i>)</i></i>", "survey"],
+  ["unicodemath", "ln\u2061x", "survey"],
+  ["unicodemath", "det\u2061A", "survey"],
+  ["unicodemath", "max\u2061A", "survey"],
+  ["unicodemath", "gcd\u2061(a , b)", "survey"],
+  ["latex", "\\left(", "survey"],
+  ["latex", "\\left ( a + b \\right )", "survey"],
+  ["latex", "\\left ( a \\right )", "survey"],
+  ["latex", "\\left \\{ a \\right \\}", "survey"],
+  ["latex", "\\left ( \\frac{a}{b} \\right )", "survey"],
+  ["latex", "\\left(\\right", "survey"],
+  ["latex", "\\left(\\right)", "survey"],
+  ["latex", "\\left(x\\right)^2", "survey"],
+  ["latex", "\\left ( x \\right )", "survey"],
+  ["latex", "\\left [ x \\right ]", "survey"],
+  ["latex", "\\left | x \\right |", "survey"],
+  ["latex", "\\left(x\\right", "survey"],
+  ["latex", "\\left(x\\right)", "survey"],
+  ["latex", "\\left(x\\right]", "survey"],
+  ["latex", "\\left.x\\right.", "survey"],
+  ["latex", "\\left\\{x\\right\\}", "survey"],
+  ["latex", "\\left(x\\right)^{y}", "survey"],
+  ["latex", "\\left(x\\right)^y", "survey"],
+  ["latex", "\\left(x\\right)_{y}", "survey"],
+  ["latex", "\\left(x\\right)^{y+z}", "survey"],
+  ["latex", "\\left(x\\right)_{y+z}", "survey"],
+  ["latex", "\\left(x+y\\right", "survey"],
+  ["latex", "\\left(x+y\\right)", "survey"],
+  ["latex", "\\left.x+y\\right.", "survey"],
+  ["latex", "\\substack{1 \\\\ b \\\\ 100}", "spec/plurimath/latex_spec.rb:2862"],
+  ["latex", "\\sum_{\\substack{1\\le i\\le n\\\\ i\\ne j}}", "spec/plurimath/latex_spec.rb:1620"],
+  ["latex", "\\mbox{1cm}", "spec/plurimath/latex_spec.rb:2884"],
+  ["latex", "\\phantom{1 + 2}", "spec/plurimath/latex_spec.rb:3197"],
+  ["latex", " x  \\phantom{+} \\phantom{ y } +  z ", "spec/plurimath/mathml_spec.rb:780"],
+  ["latex", "\\max{}_{x \\in \\[ a , b \\]} f ( x )", "spec/plurimath/latex_spec.rb:1556"],
+  ["latex", "\\hom{x}", "measured on the oracle"],
+  ["latex", "\\hom{(d)}", "measured on the oracle"],
+  ["latex", "\\ln{x}\\det{y}\\gcd{z}\\max{w}\\hom{v}", "measured on the oracle"],
+  ["latex", "\\cancel{x + y}", "measured on the oracle"],
+  ["latex", "\\cancel{\\frac{a}{b}}", "measured on the oracle"],
+  ["latex", "\\ln{}", "measured on the oracle"],
+  ["latex", "\\substack{a \\\\ b & c}", "measured on the oracle"],
+].freeze
 
 options = { oracle: nil, out: "test/formats", allow_dirty: false }
 OptionParser.new do |o|
@@ -167,6 +247,86 @@ def render(formula, format, options_hash)
   formula.public_send("to_#{format}", **kwargs(options_hash))
 end
 
+# Hand-built models for the `unary-function` group, after the gem's own unit
+# specs (`spec/plurimath/math/function/{ln,det,gcd,max,phantom,cancel,left}_spec.rb`,
+# which build each class over a Symbol, a Number and a Formula holding a
+# `Sum(Ampersand, Text("so"))`) plus the shapes the specs leave out: an empty
+# slot, and `hide_function_name`, the flag each `to_omml_without_math_tag` reads.
+# Each entry is `[id, source, node]`.
+def unary_function_models
+  m = Plurimath::Math
+  f = m::Function
+  symbol = ->(value) { m::Symbols::Symbol.new(value) }
+  so_sum = lambda do
+    m::Formula.new([f::Sum.new(m::Symbols::Ampersand.new, f::Text.new("so"))])
+  end
+  hidden = lambda do |node|
+    node.hide_function_name = true
+    node
+  end
+  cell = ->(value) { f::Td.new([symbol.call(value)]) }
+
+  rows = []
+  %w[Ln Det Gcd Max Hom Cancel Phantom].each do |name|
+    klass = f.const_get(name)
+    lower = name.downcase
+    src = "spec/plurimath/math/function/#{lower}_spec.rb"
+    src = "measured on the oracle" if name == "Hom"
+    rows << ["#{lower}-symbol", src, klass.new(symbol.call("n"))]
+    rows << ["#{lower}-number", src, klass.new(m::Number.new("70"))]
+    rows << ["#{lower}-formula", src, klass.new(so_sum.call)]
+    rows << ["#{lower}-nil", "measured on the oracle", klass.new(nil)]
+    rows << ["#{lower}-list", "measured on the oracle", klass.new([symbol.call("x"), m::Number.new("1")])]
+    rows << ["#{lower}-hidden", "measured on the oracle", hidden.call(klass.new(symbol.call("n")))]
+  end
+
+  left_src = "spec/plurimath/math/function/left_spec.rb"
+  rows << ["left-paren", left_src, f::Left.new("(")]
+  rows << ["left-brace", "measured on the oracle", f::Left.new("\\{")]
+  rows << ["left-nil", "measured on the oracle", f::Left.new(nil)]
+
+  rows << ["mbox-hi", "measured on the oracle", f::Mbox.new("hi")]
+  rows << ["mbox-empty", "measured on the oracle", f::Mbox.new("")]
+  rows << ["mbox-nil", "measured on the oracle", f::Mbox.new(nil)]
+  rows << ["mbox-special", "measured on the oracle", f::Mbox.new("a<b&c")]
+  rows << ["mbox-unicode-token", "measured on the oracle", f::Mbox.new("unicode[:alpha]")]
+
+  # `Phantom`'s second `to_unicodemath` branch: the UnicodeMath parser builds a
+  # Phantom around an Mpadded for `hphantom` and `vphantom`, so a model does.
+  [["hphantom", { mpadded: { depth: "0", height: "0" }, phantom: true }],
+   ["vphantom", { mpadded: { width: "0" }, phantom: true }],
+   ["smash", { mpadded: { height: "0", depth: "0" }, phantom: false }],
+   ["no-options", nil]].each do |label, opts|
+    padded = opts.nil? ? f::Mpadded.new(symbol.call("x")) : f::Mpadded.new(symbol.call("x"), opts)
+    rows << ["phantom-mpadded-#{label}", "measured on the oracle", f::Phantom.new(padded)]
+  end
+
+  rows << ["substack-two", "measured on the oracle",
+           f::Substack.new([f::Tr.new([cell.call("a")]), f::Tr.new([cell.call("b")])])]
+  rows << ["substack-wide", "measured on the oracle",
+           f::Substack.new([f::Tr.new([cell.call("a"), cell.call("b")])])]
+  rows << ["substack-nil", "measured on the oracle", f::Substack.new(nil)]
+  rows << ["substack-empty", "measured on the oracle", f::Substack.new([])]
+  rows << ["substack-nil-row", "measured on the oracle",
+           f::Substack.new([f::Tr.new([cell.call("a")]), nil])]
+  rows << ["substack-symbols", "measured on the oracle", f::Substack.new([symbol.call("a"), symbol.call("b")])]
+  rows
+end
+
+# The `unary-function` group's rows, through the caller's `add` lambda: the
+# parsed inputs first, then the hand-built models.
+def unary_function_rows(add)
+  UNARY_FUNCTION_TEXT_INPUTS.each_with_index do |(input_format, text, source), index|
+    add.call(format("unary-function-text-%03d", index + 1), "unary-function", source,
+             { "format" => input_format, "text" => text }, {})
+  end
+  unary_function_models.each do |id, source, node|
+    formula = Plurimath::Math::Formula.new([node])
+    add.call("unary-function-model-#{id}", "unary-function", source,
+             { "model" => CorpusGenerator.serialize_node(formula, "model") }, {}, formula)
+  end
+end
+
 def rows_for(format, oracle)
   rows = []
   # The gem's parser is slow (seconds for a table), and several rows share an
@@ -180,7 +340,8 @@ def rows_for(format, oracle)
     if formula.nil?
       begin
         key = [input.fetch("format"), input.fetch("text")]
-        formula = parsed[key] ||= Plurimath::Math.parse(input.fetch("text"), input.fetch("format").to_sym)
+        formula = parsed[key] ||= Plurimath::Math.parse(input.fetch("text"),
+                                                         PARSE_TYPES.fetch(input.fetch("format"), input.fetch("format").to_sym))
       rescue ORACLE_REFUSAL => e
         row["raises"] = e.class.name
         row["raisedIn"] = "parse"
@@ -203,6 +364,13 @@ def rows_for(format, oracle)
       end
     end
     rows << row
+  end
+
+  # The `unary-function` group is the whole payload for the four formats whose
+  # renderers the B3 options do not touch.
+  if UNARY_ONLY_FORMATS.include?(format)
+    unary_function_rows(add)
+    return rows
   end
 
   # The gem's own line-break fixtures, rendered exactly as its specs do
@@ -233,7 +401,10 @@ def rows_for(format, oracle)
   add.call("asciimath-backslash-no-break", "parsed-linebreak", "measured on the oracle",
            { "format" => "asciimath", "text" => "a \\ b" }, spec_options)
 
-  return rows if format == "mathml"
+  if format == "mathml"
+    unary_function_rows(add)
+    return rows
+  end
 
   # `display_style:` — the asciimath spec's own `.to_omml` inputs, with the
   # option left out (the spec's default is `display_style: true`) and `false`.
@@ -265,6 +436,7 @@ def rows_for(format, oracle)
   add.call("display-probe-split-false", "display-style-probe", "measured on the oracle",
            { "format" => "latex", "text" => "\\lim_{x \\to 0} f(x) \\\\ \\underset{a}{b}" },
            { "splitOnLinebreak" => true, "displayStyle" => false })
+  unary_function_rows(add)
   rows
 end
 

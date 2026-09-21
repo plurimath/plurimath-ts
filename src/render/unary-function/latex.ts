@@ -299,6 +299,28 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
       }
       return `\\mbox{${interpolatedValue(slot, node.kind, "mbox.parameterOne")}}`;
     }
+    case "Phantom":
+      // `phantom.rb:15`: `"\\#{class_name}{#{latex_value}}"` — the carrier
+      // default's own line, repeated in the class.
+      return renderUnaryDefault("phantom", node.parameterOne, context);
+    case "Substack": {
+      // `substack.rb:19`: `"\\substack{#{compact.map(to_latex).join(' \\\\ ')}}"`.
+      // An absent slot leaves the braces empty (`&.`); a non-list slot dies in
+      // `compact`.
+      const rows = node.parameterOne;
+      if (rows === null || rows === undefined) return "\\substack{}";
+      if (!Array.isArray(rows)) {
+        throw new RenderError(
+          `substack.parameterOne: is ${describeSlot(rows)}, not a list — the gem raises NoMethodError on compact`,
+          FORMAT,
+          node.kind,
+        );
+      }
+      const rendered = rows
+        .filter((row) => row !== null && row !== undefined)
+        .map((row) => s(renderChild(row, context, "substack.parameterOne")));
+      return `\\substack{${rendered.join(" \\\\ ")}}`;
+    }
     case "Tr":
       return renderTr(node, context);
     default:

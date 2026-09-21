@@ -30,8 +30,11 @@ import { describe, expect, it } from "vitest";
 import { ParseError, type PlurimathErrorCode } from "../../src/core/errors";
 import { parseAsciimath } from "../../src/formats/asciimath/parser";
 import { toAsciimath } from "../../src/formats/asciimath/renderer";
+import { parseHtml } from "../../src/formats/html/parser";
+import { parseLatex } from "../../src/formats/latex/parser";
 import { toLatex } from "../../src/formats/latex/renderer";
 import { toMathml } from "../../src/formats/mathml/renderer";
+import { parseUnicodemath } from "../../src/formats/unicodemath/parser";
 import { toUnicodemath } from "../../src/formats/unicodemath/renderer";
 import { DEPTH_LIMIT_MESSAGE, dynamic, STACK_EXHAUSTED_MESSAGE } from "../../src/pegkit/atom";
 
@@ -68,6 +71,9 @@ type Outcome = "parsed" | "PARSE_ERROR" | "RENDER_ERROR";
 
 type ParsedFormula = ReturnType<typeof parseAsciimath>;
 
+/** A grammar's public parse entry point, as `outcomeOf` drives it. */
+type Parse = (input: string) => ParsedFormula;
+
 const RENDERERS: ReadonlyArray<readonly [string, (node: ParsedFormula) => string]> = [
   ["toAsciimath", toAsciimath],
   ["toLatex", toLatex],
@@ -76,10 +82,14 @@ const RENDERERS: ReadonlyArray<readonly [string, (node: ParsedFormula) => string
 ];
 
 /** Runs one input all the way to a clean outcome, or rethrows what it got. */
-function outcomeOf(input: string, renderers: typeof RENDERERS = RENDERERS): Outcome {
+function outcomeOf(
+  input: string,
+  renderers: typeof RENDERERS = RENDERERS,
+  parse: Parse = parseAsciimath,
+): Outcome {
   let node: ParsedFormula;
   try {
-    node = parseAsciimath(input);
+    node = parse(input);
   } catch (error) {
     const code = cleanErrorCode(error);
     if (code === null) throw error;
@@ -381,4 +391,281 @@ describe("whitespace-only input fails at render, with a typed error", () => {
     expect(outcomeOf("   ")).toBe("RENDER_ERROR");
     expect(() => toAsciimath(parseAsciimath("   "))).toThrow(/cannot render the bare string/);
   });
+});
+
+/**
+ * The LaTeX, HTML and UnicodeMath grammars — the same bar, the same guards.
+ *
+ * This spec exercised only AsciiMath while three more grammars landed, so
+ * nothing had asked whether they refuse pathological input cleanly. The rows
+ * below do, and every gem figure in them was measured against the pinned
+ * oracle (`plurimath-oracle` at `00c52783`, 2026-09-21) through
+ * `Plurimath::Math.parse(input, type)`; every port figure through the public
+ * `parseLatex` / `parseHtml` / `parseUnicodemath` on the same day.
+ *
+ * What the gem does, by shape (nesting depth `n` counts input levels; "parses"
+ * means `Math.parse` returned, not that any renderer was run):
+ *
+ * | shape | gem | this port |
+ * |---|---|---|
+ * | LaTeX `{`, `\frac`, `\sqrt`, `(`, `\left(`, `^{` at n=20 | parses | parses |
+ * | LaTeX `{` at n=80, `\frac` at n=60 | parses | parses |
+ * | LaTeX `\frac` at n=80 (also `{` at 100) | `SystemStackError` | `\frac` refused from n=70; `{` parses at 100, refused at 150 |
+ * | LaTeX all shapes at n=1000 | `SystemStackError` (100 and 300 measured) | `ParseError`, stack guard |
+ * | UnicodeMath `(`, `√(`, `(…)/(…)`, `[` at n=20 | parses | parses |
+ * | UnicodeMath `(` and `(…)/(…)` at n=80 | parses | parses |
+ * | UnicodeMath the same at n=100 | `SystemStackError` | parses (`(`, `[`, `(…)/(…)` to 250, `√(` to 150) |
+ * | UnicodeMath all shapes at n=1000 | `SystemStackError` (100 and 300 measured) | `ParseError`, stack guard |
+ * | HTML `<mrow>`/`<sup>` at n=20..80 | parses | parses at 20 (80 not measured on the port) |
+ * | HTML `<mrow>`/`<sup>` at n=100 | `ParseError` (JSON nesting) | `ParseError`, `nesting of 100 is too deep` |
+ * | HTML `<mrow>`/`<sup>` at n=300 | `SystemStackError` | `ParseError` (`<sup>`: nesting message; `<mrow>`: stack guard) |
+ * | unmatched closers, n up to 300 (1000 for the port) | `ParseError` | `ParseError` |
+ *
+ * The gem's own nesting ceiling therefore sits between 60 and 100 levels in
+ * LaTeX and between 80 and 100 in UnicodeMath, and the port's sits at or above
+ * it at every point measured on both sides, with one near-tie: LaTeX `\frac`
+ * is refused from n=70 on the port, while the gem parsed 60 and overflowed at
+ * 80 and was not measured between. So no measured depth is one where the gem
+ * parses and the port refuses. The ceilings move with the engine's stack size,
+ * so, as the AsciiMath table does, parses are pinned at n=20 and refusals at
+ * n=1000, both far from any transition; the band in between is described here
+ * rather than asserted.
+ *
+ * Every refusal in the table is one of two guards, and NEITHER is
+ * `MAX_DEPTH`: the stack guard (`STACK_EXHAUSTED_MESSAGE`) or, for HTML only,
+ * the JSON round trip's own `nesting of 100 is too deep`. That extends the
+ * deferred.md finding — `MAX_DEPTH` never fires — from AsciiMath to all four
+ * grammars, and the "guard" assertion below fails if it ever does.
+ *
+ * Where the gem parses and the port refuses (measured, 2026-09-21), the row
+ * says so. All are UnicodeMath, whose transform is a slice: `finalize` throws
+ * for a rule family it does not carry, and that reaches the caller as a typed
+ * `ParseError` (a refusal at the transform, not the grammar). Pinning them as
+ * refusals keeps the pin honest — they will need updating when the family lands.
+ */
+type GrammarName = "latex" | "html" | "unicodemath";
+
+const PARSERS: Readonly<Record<GrammarName, Parse>> = {
+  latex: parseLatex,
+  html: parseHtml,
+  unicodemath: parseUnicodemath,
+};
+
+const repeat = (unit: string, count: number): string => unit.repeat(count);
+const wrapped = (open: string, core: string, close: string, depth: number): string =>
+  `${repeat(open, depth)}${core}${repeat(close, depth)}`;
+/** `template(inner)` applied `depth` times to `1`. */
+const layered = (template: (inner: string) => string, depth: number): string => {
+  let value = "1";
+  for (let level = 0; level < depth; level += 1) value = template(value);
+  return value;
+};
+
+const DEEP = 1000;
+const SHALLOW = 20;
+
+type GrammarCase = readonly [grammar: GrammarName, label: string, input: string, expected: Outcome];
+
+const GRAMMAR_CASES: ReadonlyArray<GrammarCase> = [
+  // --- LaTeX. Gem: parses at 20; SystemStackError at 100 for every shape
+  // below (measured). Port: parses at 20; the stack guard at 1000.
+  ["latex", "20 nested braces", wrapped("{", "x", "}", SHALLOW), "parsed"],
+  ["latex", "1,000 nested braces", wrapped("{", "x", "}", DEEP), "PARSE_ERROR"],
+  ["latex", "20 nested \\frac", layered((v) => `\\frac{${v}}{2}`, SHALLOW), "parsed"],
+  ["latex", "1,000 nested \\frac", layered((v) => `\\frac{${v}}{2}`, DEEP), "PARSE_ERROR"],
+  ["latex", "20 nested \\sqrt", wrapped("\\sqrt{", "2", "}", SHALLOW), "parsed"],
+  ["latex", "1,000 nested \\sqrt", wrapped("\\sqrt{", "2", "}", DEEP), "PARSE_ERROR"],
+  ["latex", "20 nested parens", wrapped("(", "x", ")", SHALLOW), "parsed"],
+  ["latex", "1,000 nested parens", wrapped("(", "x", ")", DEEP), "PARSE_ERROR"],
+  ["latex", "20 nested \\left(", wrapped("\\left(", "x", "\\right)", SHALLOW), "parsed"],
+  ["latex", "1,000 nested \\left(", wrapped("\\left(", "x", "\\right)", DEEP), "PARSE_ERROR"],
+  [
+    "latex",
+    "20 nested superscripts",
+    `x${repeat("^{y", SHALLOW)}${repeat("}", SHALLOW)}`,
+    "parsed",
+  ],
+  [
+    "latex",
+    "1,000 nested superscripts",
+    `x${repeat("^{y", DEEP)}${repeat("}", DEEP)}`,
+    "PARSE_ERROR",
+  ],
+  // Gem: ParseError at 20, SystemStackError at 100 and 300.
+  ["latex", "20 unterminated braces", `${repeat("{", SHALLOW)}x`, "PARSE_ERROR"],
+  ["latex", "1,000 unterminated braces", `${repeat("{", DEEP)}x`, "PARSE_ERROR"],
+  // Gem: ParseError at 20, 100 and 300.
+  ["latex", "1,000 unmatched closing braces", `x${repeat("}", DEEP)}`, "PARSE_ERROR"],
+  // Gem: `\left(` with no `\right` parses. Trailing backslash: ParseError.
+  ["latex", "\\left( never closed", "\\left(", "parsed"],
+  ["latex", "trailing backslash", "\\", "PARSE_ERROR"],
+  // Gem parses 300 of each (20.7s for `a`, 28.8s for `x `; the port ~0.8s).
+  ["latex", "300 symbols", repeat("x ", 300), "parsed"],
+  ["latex", "300 characters of one symbol", repeat("a", 300), "parsed"],
+  // Gem: NUL parses. A lone surrogate is not representable in the gem's UTF-8
+  // strings — the nearest input, the same three bytes as invalid UTF-8, is a
+  // ParseError there — so this row pins the port's own behaviour: it parses,
+  // and only `toUnicodemath` then refuses to encode it.
+  ["latex", "NUL character", "x\u0000y", "parsed"],
+  ["latex", "lone surrogate", "x\uD800y", "RENDER_ERROR"],
+
+  // --- HTML. Gem: `<mrow>`/`<sup>` parse at 20-60, ParseError at 100 (the JSON
+  // round trip's nesting-100 cap), SystemStackError at 300.
+  ["html", "20 nested <mrow>", wrapped("<mrow>", "x", "</mrow>", SHALLOW), "parsed"],
+  ["html", "100 nested <mrow>", wrapped("<mrow>", "x", "</mrow>", 100), "PARSE_ERROR"],
+  ["html", "1,000 nested <mrow>", wrapped("<mrow>", "x", "</mrow>", DEEP), "PARSE_ERROR"],
+  ["html", "20 nested <sup>", wrapped("<sup>", "x", "</sup>", SHALLOW), "parsed"],
+  ["html", "100 nested <sup>", wrapped("<sup>", "x", "</sup>", 100), "PARSE_ERROR"],
+  ["html", "1,000 nested <sup>", wrapped("<sup>", "x", "</sup>", DEEP), "PARSE_ERROR"],
+  ["html", "1,000 nested parens", wrapped("(", "x", ")", DEEP), "PARSE_ERROR"],
+  // Gem: ParseError at 20, 100; SystemStackError at 300.
+  ["html", "20 unterminated <sup>", `${repeat("<sup>", SHALLOW)}x`, "PARSE_ERROR"],
+  ["html", "1,000 unterminated <sup>", `${repeat("<sup>", DEEP)}x`, "PARSE_ERROR"],
+  // Gem: ParseError at 20, 100 and 300.
+  ["html", "1,000 unmatched </sup>", `x${repeat("</sup>", DEEP)}`, "PARSE_ERROR"],
+  // Gem: 100 letters parse; 300 raise SystemStackError. The port refuses 300
+  // with the JSON nesting message: a nesting-depth cutoff the gem also has, just
+  // reached earlier than the gem's stack.
+  ["html", "100 characters of one symbol", repeat("a", 100), "parsed"],
+  ["html", "300 characters of one symbol", repeat("a", 300), "PARSE_ERROR"],
+  // Gem: `<` and `<sup` are ParseErrors; NUL parses; `&#55296;` (a surrogate
+  // code point) raises RangeError, wrapped as ParseError; "   " parses.
+  ["html", "bare <", "<", "PARSE_ERROR"],
+  ["html", "unfinished <sup", "<sup", "PARSE_ERROR"],
+  ["html", "NUL character", "x\u0000y", "parsed"],
+  ["html", "surrogate numeric entity", "&#55296;", "PARSE_ERROR"],
+  ["html", "lone surrogate", "x\uD800y", "RENDER_ERROR"],
+  ["html", "whitespace only", "   ", "RENDER_ERROR"],
+
+  // --- UnicodeMath. Gem: parses at 20 (60 for `(` and `(…)/(…)`), SystemStackError
+  // at 100. Port: parses at 20; the stack guard at 1000.
+  ["unicodemath", "20 nested parens", wrapped("(", "x", ")", SHALLOW), "parsed"],
+  ["unicodemath", "1,000 nested parens", wrapped("(", "x", ")", DEEP), "PARSE_ERROR"],
+  ["unicodemath", "20 nested brackets", wrapped("[", "x", "]", SHALLOW), "parsed"],
+  ["unicodemath", "1,000 nested brackets", wrapped("[", "x", "]", DEEP), "PARSE_ERROR"],
+  ["unicodemath", "20 nested roots", wrapped("√(", "2", ")", SHALLOW), "parsed"],
+  ["unicodemath", "1,000 nested roots", wrapped("√(", "2", ")", DEEP), "PARSE_ERROR"],
+  ["unicodemath", "20 nested fractions", layered((v) => `(${v})/(2)`, SHALLOW), "parsed"],
+  ["unicodemath", "1,000 nested fractions", layered((v) => `(${v})/(2)`, DEEP), "PARSE_ERROR"],
+  // Gem: ParseError at 20 (`x^(y)^(y)…` is not a valid chain); SystemStackError at 100.
+  [
+    "unicodemath",
+    "1,000 nested superscripts",
+    `x${repeat("^(", DEEP)}y${repeat(")", DEEP)}`,
+    "PARSE_ERROR",
+  ],
+  // Gem: ParseError at 20; SystemStackError at 100.
+  ["unicodemath", "20 unterminated parens", `${repeat("(", SHALLOW)}x`, "PARSE_ERROR"],
+  ["unicodemath", "1,000 unterminated parens", `${repeat("(", DEEP)}x`, "PARSE_ERROR"],
+  // Gem: ParseError at 20, 100, 300.
+  ["unicodemath", "1,000 unmatched closing parens", `x${repeat(")", DEEP)}`, "PARSE_ERROR"],
+  // Gem parses 300 `a` (12s) and 100 `x ` (29.6s); 300 `x ` timed out past 60s.
+  // The port takes ~1.4s and ~3.3s; sizes stay where the port is quick.
+  ["unicodemath", "300 characters of one symbol", repeat("a", 300), "parsed"],
+  ["unicodemath", "60 symbols", repeat("x ", 60), "parsed"],
+  // Gem parses every input below. The port refuses the first three at the
+  // transform, a rule family outside its slice; the fourth is refused by the
+  // grammar in both. See the header comment.
+  ["unicodemath", "NUL character", "x\u0000y", "PARSE_ERROR"],
+  ["unicodemath", "trailing backslash", "\\", "PARSE_ERROR"],
+  ["unicodemath", "unfinished <sup", "<sup", "PARSE_ERROR"],
+  ["unicodemath", "lone surrogate", "x\uD800y", "PARSE_ERROR"],
+  ["unicodemath", "NUL alone", "\u0000", "parsed"],
+];
+
+/**
+ * Explicit, and the same 60 seconds for every row. Vitest's default is 5s, and
+ * under host load the slowest rows here (UnicodeMath at a few hundred
+ * characters) have run several times slower than the measured figures. Like
+ * `SLOWEST_ALLOWED_MS`, this cannot interrupt a non-returning loop.
+ */
+const GRAMMAR_CASE_TIMEOUT_MS = 60_000;
+
+describe("every LaTeX, HTML and UnicodeMath adversarial input reaches the outcome it is pinned to", () => {
+  const seen = new Map<GrammarName, Outcome[]>();
+
+  it.each(GRAMMAR_CASES)(
+    "%s: %s",
+    (grammar, label, input, expected) => {
+      const started = performance.now();
+      const outcome = outcomeOf(input, RENDERERS, PARSERS[grammar]);
+      const elapsed = performance.now() - started;
+      seen.set(grammar, [...(seen.get(grammar) ?? []), outcome]);
+      expect(outcome).toBe(expected);
+      expect(elapsed, `${grammar}: ${label} took ${Math.round(elapsed)}ms`).toBeLessThan(
+        SLOWEST_ALLOWED_MS,
+      );
+    },
+    GRAMMAR_CASE_TIMEOUT_MS,
+  );
+
+  it("exercised every case", () => {
+    const total = [...seen.values()].reduce((sum, outcomes) => sum + outcomes.length, 0);
+    expect(GRAMMAR_CASES.length).toBeGreaterThan(0);
+    expect(total).toBe(GRAMMAR_CASES.length);
+  });
+
+  it("gives every grammar both a parse and a refusal, so none is carried by one shape", () => {
+    for (const grammar of Object.keys(PARSERS) as GrammarName[]) {
+      const outcomes = new Set(seen.get(grammar));
+      expect(outcomes.has("parsed"), `${grammar} never parses`).toBe(true);
+      expect(outcomes.has("PARSE_ERROR"), `${grammar} never refuses`).toBe(true);
+    }
+  });
+});
+
+describe("the new grammars refuse deep input through a guard that says which guard it was", () => {
+  /** The message of the refusal, or `"parsed"`; a non-`ParseError` is rethrown. */
+  function guardFor(grammar: GrammarName, input: string): string {
+    try {
+      PARSERS[grammar](input);
+      return "parsed";
+    } catch (error) {
+      if (cleanErrorCode(error) !== "PARSE_ERROR") throw error;
+      return (error as Error).message;
+    }
+  }
+
+  const deepRows = GRAMMAR_CASES.filter(
+    ([, label, , expected]) => expected === "PARSE_ERROR" && label.startsWith("1,000 nested"),
+  );
+
+  it(
+    "refuses every 1,000-deep nesting row through the stack guard, not the depth cap",
+    () => {
+      // Driven off the table so a row that changes guard fails here. The HTML
+      // rows at 1,000 come through the stack guard too: the JSON-nesting cap
+      // (100) sits in the tree walk that runs *after* a parse, and 1,000
+      // levels never finish the parse.
+      expect(deepRows.length).toBeGreaterThan(0);
+      for (const [grammar, label, input] of deepRows) {
+        const message = guardFor(grammar, input);
+        expect(message, `${grammar}: ${label}`).toBe(STACK_EXHAUSTED_MESSAGE);
+        expect(message).not.toBe(DEPTH_LIMIT_MESSAGE);
+      }
+    },
+    GRAMMAR_CASE_TIMEOUT_MS,
+  );
+
+  it(
+    "refuses 100-deep HTML with the JSON nesting cap the gem also has",
+    () => {
+      for (const [grammar, label, input, expected] of GRAMMAR_CASES) {
+        if (grammar !== "html" || expected !== "PARSE_ERROR" || !label.startsWith("100 ")) continue;
+        expect(guardFor(grammar, input), label).toMatch(/nesting of 100 is too deep/);
+      }
+    },
+    GRAMMAR_CASE_TIMEOUT_MS,
+  );
+
+  it(
+    "never refuses any pinned row through MAX_DEPTH",
+    () => {
+      for (const [grammar, label, input, expected] of GRAMMAR_CASES) {
+        if (expected !== "PARSE_ERROR") continue;
+        expect(guardFor(grammar, input), `${grammar}: ${label}`).not.toBe(DEPTH_LIMIT_MESSAGE);
+      }
+    },
+    GRAMMAR_CASE_TIMEOUT_MS,
+  );
 });

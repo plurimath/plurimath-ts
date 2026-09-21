@@ -3453,19 +3453,19 @@ describe("OMML renderer boundary", () => {
     });
   });
 
-  // `Deg` and `Menclose` are chosen deliberately: both are real aliases the
-  // census records (`Math::Function::Deg`, `Math::Function::Menclose`), and
+  // `Vec` and `Menclose` are chosen deliberately: both are real aliases the
+  // census records (`Math::Function::Vec`, `Math::Function::Menclose`), and
   // both OWN a `to_omml_without_math_tag` — measured on the oracle at
   // `00c52783` by reading the method's `owner` for all 48 unary and 14 binary
-  // aliases (the 15 base names answer `UnaryFunction`; `Deg` is not one of
+  // aliases (the 15 base names answer `UnaryFunction`; `Vec` is not one of
   // them). So this pins the refusal for a class the gem really renders
   // differently, not for a name the gem has never heard of.
   it("refuses unmeasured carrier aliases instead of transforming their names", () => {
     expectRefusal(
-      () => toOmmlWithoutMathTag(new UnaryFunctionNode({ name: "Deg", parameterOne: symbol() })),
+      () => toOmmlWithoutMathTag(new UnaryFunctionNode({ name: "Vec", parameterOne: symbol() })),
       {
         kind: "unaryFunction",
-        message: 'UnaryFunction alias "Deg" has not been measured for OMML in this slice',
+        message: 'UnaryFunction alias "Vec" has not been measured for OMML in this slice',
       },
     );
     expectRefusal(

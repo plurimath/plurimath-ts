@@ -24,7 +24,7 @@
  *
  * Every fixture row is asserted: byte-for-byte where the gem renders, a
  * `RenderError`/`ParseError` where it refused. A row the port cannot yet
- * reproduce is named in `PORT_REFUSES` below (60 rows, all kind-renderer
+ * reproduce is named in `PORT_REFUSES` below (34 rows, all kind-renderer
  * refusals).
  */
 import { readFileSync } from "node:fs";
@@ -71,7 +71,7 @@ const OWN_GROUPS: ReadonlySet<string> = new Set([
 ]);
 
 /** Rows the gem renders that the port renders too, per format (a pin, not a knob). */
-const RENDERED_BASELINE = { mathml: 178, omml: 193 } as const;
+const RENDERED_BASELINE = { mathml: 178, omml: 219 } as const;
 
 interface Fixture {
   readonly schema: string;
@@ -125,34 +125,10 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-008-display-false",
     "line-break-014",
     "line-break-014-display-false",
-    "line-break-015",
-    "line-break-015-display-false",
-    "line-break-018",
-    "line-break-018-display-false",
-    "line-break-020",
-    "line-break-020-display-false",
-    "line-break-021",
-    "line-break-021-display-false",
-    "line-break-022",
-    "line-break-022-display-false",
     "line-break-024",
     "line-break-024-display-false",
-    "line-break-026",
-    "line-break-026-display-false",
-    "line-break-027",
-    "line-break-027-display-false",
-    "line-break-028",
-    "line-break-028-display-false",
     "line-break-029",
     "line-break-029-display-false",
-    "line-break-030",
-    "line-break-030-display-false",
-    "line-break-034",
-    "line-break-034-display-false",
-    "line-break-037",
-    "line-break-037-display-false",
-    "line-break-055",
-    "line-break-055-display-false",
     "line-break-056",
     "line-break-056-display-false",
     "line-break-058",
@@ -163,8 +139,6 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-073-display-false",
     "line-break-077",
     "line-break-077-display-false",
-    "asciimath-spec-omml-11",
-    "asciimath-spec-omml-11-display-false",
   ],
 };
 

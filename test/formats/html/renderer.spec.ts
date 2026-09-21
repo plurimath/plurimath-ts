@@ -818,11 +818,12 @@ describe("HTML carrier aliases the corpus reaches", () => {
 
 describe("HTML measured boundary refusals", () => {
   it("refuses unmeasured carrier aliases instead of inventing plausible output", () => {
-    // `Deg` overrides no `to_html` — but no fixture or case constructs it, so
-    // nothing here would hold its label honest.
-    expectHtmlError(() => toHtml(new UnaryFunctionNode({ name: "Deg", parameterOne: symbol() })), {
+    // `Vec` renders in the gem, but its `invert_unicode_symbols` label is the
+    // arrow `&#x2192;`, not its downcased class name (measured on the oracle
+    // `00c52783`: `<i>&#x2192;</i><i>x</i>`), so it is not in the admitted list.
+    expectHtmlError(() => toHtml(new UnaryFunctionNode({ name: "Vec", parameterOne: symbol() })), {
       kind: "unaryFunction",
-      message: 'UnaryFunction alias "Deg" has not been measured for HTML in this slice',
+      message: 'UnaryFunction alias "Vec" has not been measured for HTML in this slice',
     });
     // `Mbox#to_html` hands back the parameter OBJECT rather than a string, so
     // a node in the slot has no bytes to reproduce (Ruby's `#inspect` address).

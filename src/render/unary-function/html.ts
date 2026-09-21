@@ -52,25 +52,55 @@ import {
 /**
  * Admitted alias -> its measured `invert_unicode_symbols` label.
  *
- * A table rather than a rule: see the module note on `Sup`, where that label
- * and the downcased class name are not the same string. For the names added
+ * A closed list rather than a rule: see the module note on `Sup`, where that
+ * label and the downcased class name are not the same string. Every name here
+ * was measured on the pinned oracle `00c52783` (the `unary-function-model-alias-*`
+ * and html `unary-function-text-*` rows): the label is the downcased class name,
+ * and none of these classes overrides `to_html`, so they all take
+ * `UnaryFunction#to_html` unchanged. For the names added
  * with the LaTeX, HTML and UnicodeMath parsers — `Ln`, `Det`, `Gcd`, `Max`,
  * `Cancel`, `Hom`, `Substack` — none is a value of
  * `Mathml::Constants::UNICODE_SYMBOLS` (measured on the pinned oracle
  * `00c52783`: `UNICODE_SYMBOLS.invert[name]` is nil for each), so the label is
  * the class name, and none of them overrides `to_html`.
  */
-const MEASURED_LABELS: ReadonlyMap<string, string> = new Map([
-  ["Sin", "sin"],
-  ["Cos", "cos"],
-  ["Ln", "ln"],
-  ["Det", "det"],
-  ["Gcd", "gcd"],
-  ["Max", "max"],
-  ["Cancel", "cancel"],
-  ["Hom", "hom"],
-  ["Substack", "substack"],
-]);
+const MEASURED_LABELS: ReadonlyMap<string, string> = new Map(
+  [
+    "Sin",
+    "Cos",
+    "Arcsin",
+    "Arccos",
+    "Arctan",
+    "Coth",
+    "Tanh",
+    "Sech",
+    "Csch",
+    "Sinh",
+    "Cosh",
+    "Csc",
+    "Exp",
+    "Sec",
+    "Tan",
+    "Cot",
+    "Lcm",
+    "Min",
+    "Dim",
+    "Glb",
+    "Lub",
+    "Lg",
+    "Ker",
+    "Deg",
+    "Liminf",
+    "Limsup",
+    "Ln",
+    "Det",
+    "Gcd",
+    "Max",
+    "Cancel",
+    "Hom",
+    "Substack",
+  ].map((name) => [name, name.toLowerCase()]),
+);
 
 export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
   if (node.name === "Tr") return renderTr(node.parameterOne, context);

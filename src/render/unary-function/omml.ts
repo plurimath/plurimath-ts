@@ -50,8 +50,9 @@ import { renderText } from "../text/omml";
  * format — the mathml override set is not the omml override set.
  *
  * The overriders this file carries beyond the base set are `Left`, `Right`,
- * `Tr`, and the nine named at their arms in `renderUnaryFunction` — `Ln`, `Det`,
- * `Gcd`, `Max` and `Hom` (a name run then the value), `Cancel` (the value
+ * `Tr`, and the twenty named at their arms in `renderUnaryFunction` — `Ln`, `Det`,
+ * `Gcd`, `Max`, `Hom`, `Exp`, `Lcm`, `Min`, `Dim`, `Glb`, `Lub`, `Lg`, `Ker`, `Deg`,
+ * `Liminf` and `Limsup` (a name run then the value), `Cancel` (the value
  * alone), `Phantom`, `Substack` and `Mbox`.
  */
 const OMML_BASE_UNARY_CLASSES: ReadonlySet<string> = new Set([
@@ -88,6 +89,17 @@ export function renderUnaryFunction(
     case "Gcd":
     case "Max":
     case "Hom":
+    case "Exp":
+    case "Lcm":
+    case "Min":
+    case "Dim":
+    case "Glb":
+    case "Lub":
+    case "Lg":
+    case "Ker":
+    case "Deg":
+    case "Liminf":
+    case "Limsup":
       return renderNamedRun(node, context);
     case "Cancel":
       // `cancel.rb:17`: `omml_value` alone — no name run, so an absent slot leaves nothing.

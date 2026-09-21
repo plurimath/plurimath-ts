@@ -58,8 +58,8 @@ in milestones. The current one is recorded as `currentMilestone` in
 
 The package is not published, so the specifiers below are the ones
 `package.json` declares (`@plurimath/plurimath-ts`); they resolve from a local
-build (`pnpm build`), not from npm. Every example in this section was run
-against `dist/`, and both the ESM (`import`) and CommonJS (`require`) entries
+build (`pnpm build`), not from npm. The snippets in this section were run
+against `dist/` (the CLI file example assumes a `formula.txt` you create), and both the ESM (`import`) and CommonJS (`require`) entries
 are built.
 
 ### Input and output formats
@@ -130,8 +130,9 @@ printf 'frac(1)(2)' | plurimath convert --from asciimath --to mathml
 those plus `mathml` and `omml`. Input comes from the file argument, or from
 stdin when there is none. Exit codes: `0` success, `2` usage error (missing or
 unknown option or format, unknown command), `1` for anything else (unreadable
-file, `ParseError`, `RenderError`); errors print as `plurimath: [CODE]
-message` on stderr. The only command is `convert`, and there is no `--version`.
+file, `ParseError`, `RenderError`). Conversion errors print as
+`plurimath: [CODE] message` on stderr; usage and file-read errors print
+`plurimath: <message>` without a code. The only command is `convert`, and there is no `--version`.
 
 The CLI does not strip a trailing newline from its input. `echo` therefore adds
 one: measured, `echo 'x^2' | plurimath convert --from unicodemath --to latex`

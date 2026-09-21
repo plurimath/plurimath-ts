@@ -14,7 +14,7 @@ why that order.
 |---|---|---|
 | [P0 — Foundation](p0-foundation/) | Tooling, quality gates, pegkit parser core | ✅ done |
 | [P1 — AsciiMath vertical](p1-asciimath/) | Corpus pin and reader, model, grammar, transform, four renderers | ✅ landed; two exit items open (class-B runners clean, class-C sign-off), see its README |
-| [P2 — Output formats](p2-output-formats/) | OMML and HTML renderers; compat class; first `0.x` | ▶ active: all six renderers, compat class and CLI exist; all five exit criteria unchecked |
+| [P2 — Output formats](p2-output-formats/) | OMML and HTML renderers; compat class; first `0.x` | ▶ active: all six renderers, compat class and CLI exist; one of five exit criteria checked, see its README |
 | [P3 — Input formats](p3-input-formats/) | LaTeX, UnicodeMath and HTML parsers | ▶ started ahead of plan: LaTeX and HTML parsers, and a partial UnicodeMath parser, are exported; exit criteria unchecked |
 | [P4 — Parity modules](p4-parity-modules/) | The number-format modes nothing earlier reaches, evaluation, MathML/OMML input | planned |
 | [P5 — 1.0](p5-release-1.0/) | Compat complete, `/core` locked, npm takeover | planned |

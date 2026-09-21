@@ -91,7 +91,7 @@ has never been shown to reject anything.
       payloads, on zero cases, and on a missing group or target key.
 - [x] Generated symbol data, census and exclusions produced from a clean
       checkout, with provenance recorded.
-- [x] `pnpm check` reports nine active class-A gates, all passing.
+- [x] `pnpm check` reports ten active class-A gates (P1-baseline in `gates.json`), all passing.
 
 **P1-completion** (item 8):
 
@@ -103,7 +103,7 @@ has never been shown to reject anything.
       union and the exception matrix.
 - [x] Package-isolation assertions for the real `/asciimath`, `/mathml`,
       `/latex` and `/unicodemath` subpaths.
-- [x] `pnpm check` reports twelve active class-A gates, all passing.
+- [x] `pnpm check` reports thirteen active class-A gates (P1-completion in `gates.json`), all passing.
 - [ ] The three class-B runners are clean. `testsuite --check` exits 0 and
       `differential` exits 0 with no divergences across
       429 inputs (1,287 comparisons); the differential exceeds its 300s bound on

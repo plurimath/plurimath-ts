@@ -7764,6 +7764,108 @@
       }
     },
     {
+      "id": "unicodemath-dfbce8b9194a",
+      "group": "script-subsup-nary",
+      "input": "a^b1",
+      "preprocessed": "a^b1",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "a^b1",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "b"
+                        }
+                      },
+                      {
+                        "class": "Math::Number",
+                        "fields": {
+                          "base": null,
+                          "mini_sub_sized": false,
+                          "mini_sup_sized": false,
+                          "value": "1"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "unicodemath-fd547ef987c8",
+      "group": "script-subsup-nary",
+      "input": "a_b1",
+      "preprocessed": "a_b1",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "a_b1",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Base",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "b"
+                        }
+                      },
+                      {
+                        "class": "Math::Number",
+                        "fields": {
+                          "base": null,
+                          "mini_sub_sized": false,
+                          "mini_sup_sized": false,
+                          "value": "1"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "id": "unicodemath-4029ae60b41c",
       "group": "script-subsup-nary",
       "input": "aᵃ",
@@ -26686,108 +26788,6 @@
                     }
                   }
                 ]
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "unicodemath-dfbce8b9194a",
-      "group": "slice-boundary",
-      "input": "a^b1",
-      "preprocessed": "a^b1",
-      "model": {
-        "class": "Math::Formula",
-        "fields": {
-          "displaystyle": true,
-          "input_string": "a^b1",
-          "left_right_wrapper": true,
-          "value": [
-            {
-              "class": "Math::Function::Power",
-              "fields": {
-                "parameter_one": {
-                  "class": "Math::Symbols::Symbol",
-                  "fields": {
-                    "value": "a"
-                  }
-                },
-                "parameter_two": {
-                  "class": "Math::Formula",
-                  "fields": {
-                    "displaystyle": true,
-                    "left_right_wrapper": true,
-                    "value": [
-                      {
-                        "class": "Math::Symbols::Symbol",
-                        "fields": {
-                          "value": "b"
-                        }
-                      },
-                      {
-                        "class": "Math::Number",
-                        "fields": {
-                          "base": null,
-                          "mini_sub_sized": false,
-                          "mini_sup_sized": false,
-                          "value": "1"
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "id": "unicodemath-fd547ef987c8",
-      "group": "slice-boundary",
-      "input": "a_b1",
-      "preprocessed": "a_b1",
-      "model": {
-        "class": "Math::Formula",
-        "fields": {
-          "displaystyle": true,
-          "input_string": "a_b1",
-          "left_right_wrapper": true,
-          "value": [
-            {
-              "class": "Math::Function::Base",
-              "fields": {
-                "parameter_one": {
-                  "class": "Math::Symbols::Symbol",
-                  "fields": {
-                    "value": "a"
-                  }
-                },
-                "parameter_two": {
-                  "class": "Math::Formula",
-                  "fields": {
-                    "displaystyle": true,
-                    "left_right_wrapper": true,
-                    "value": [
-                      {
-                        "class": "Math::Symbols::Symbol",
-                        "fields": {
-                          "value": "b"
-                        }
-                      },
-                      {
-                        "class": "Math::Number",
-                        "fields": {
-                          "base": null,
-                          "mini_sub_sized": false,
-                          "mini_sup_sized": false,
-                          "value": "1"
-                        }
-                      }
-                    ]
-                  }
-                }
               }
             }
           ]

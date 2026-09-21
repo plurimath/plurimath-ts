@@ -202,7 +202,9 @@ describe("the parsed model, for the hand-picked coverage inputs", () => {
   );
 });
 
-describe("the rule families this slice defers", () => {
+// Empty now that every corpus row this list once held is ported; the suite
+// comes back to life the day a new corpus pin adds a refused row.
+describe.skipIf(deferred.length === 0)("the rule families this slice defers", () => {
   it.each(deferred.map((entry) => [entry.input, entry] as const))(
     "%j: refuses loudly, naming the unmatched keys",
     (_input, entry) => {

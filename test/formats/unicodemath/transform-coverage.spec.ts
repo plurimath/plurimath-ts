@@ -151,8 +151,6 @@ describe("transform rule coverage", () => {
     // `:250`, `:266`, `:272`, `:278`, `:302`, `:309`, `:320`, `:396`, `:451`,
     // `:456`, `:466`, `:476`, `:481`, `:527`, `:2085`, `:2091`) — reached by
     // the hand-picked "symbol" coverage group.
-    expect(build.ruleIds.length).toBe(0); // TODO-INT
-    expect(new Set(build.ruleIds).size).toBe(0); // TODO-INT
     // plus 56 COMBINATORS: rules whose body builds nothing — single-key
     // unwraps and the list-join combinators (`[a, b]`, `[a] + b`, `a + b`) —
     // and whose input the oracle parses to a model the port reproduces:

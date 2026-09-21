@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-render-options-fixtures.rb
-  sha256: f5e5dd3db8d70c0b4a4dfc073c4adc28f5ba2f0f6e2f9db285f702e981e603e4
+  sha256: d68e2fe900bc7d8e7eca75b55269f4c19a3c299e0393ff0b1c860d987da71d7c
   inputs:
     scripts/generate-corpus.rb: 60afefa7bccb49b7f801c27a0fe3ce7605c63cd2e4afdccea7d4125fff2c01b3
-    scripts/generate-render-options-fixtures.rb: f5e5dd3db8d70c0b4a4dfc073c4adc28f5ba2f0f6e2f9db285f702e981e603e4
+    scripts/generate-render-options-fixtures.rb: d68e2fe900bc7d8e7eca75b55269f4c19a3c299e0393ff0b1c860d987da71d7c
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 0fff20eef47c0406809cc73f890c3dd6c68c377b
+    commit: 8b3a5e91fa3a1eee0b8efe9f4f2973fdd9f3faa9
     clean: true
     dirty_paths: []
 oracle:
@@ -105,5 +105,5 @@ dependencies:
 payload:
   path: render-options-fixtures.json
   schema: plurimath-corpus/render-options/1
-  sha256: ac62c9ee0eaa842e7e71cbd82b276c9f8eda0e193e4e051f12ac1877b85809d5
-  bytes: 123903
+  sha256: 3ad0fcad4ae6ff1805025bd845f6f5ed7c4c4aeadcdcd2285fa9f789772efdb2
+  bytes: 227923

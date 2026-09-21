@@ -341,7 +341,43 @@
  * `exp`). Neither is proven unreachable, only unreached. `:1375` stays
  * unregistered for the reason given at its position.
  *
- * Everything outside those 164 is genuinely ABSENT rather than stubbed. A
+ * ## A ninth increment (slice G2): the bracket-pair family, `:3000` to the end
+ *
+ * Every rule from `transform.rb:3085` on that binds `open_paren`/`close_paren`
+ * and builds a `Fenced` (a few wrap it in a `Power`). Sixty-three were left
+ * once the multiscript, nary and intent rules in that range were subtracted.
+ * An input for each was searched for on the oracle — the gem's own
+ * `unicodemath-tests` examples plus generated bracket inputs, 5,172 traces of
+ * 5,155 distinct inputs (4,493 of which parsed) with every registered block
+ * wrapped in a counter — and **forty-two** were reached and are registered.
+ * The twenty-one no trace reached are not: `:3156`, `:3189`, `:3211`, `:3222`,
+ * `:3244`, `:3266`, `:3323`, `:3334`, `:3356`, `:3378`, `:3444`, `:3466`,
+ * `:3488`, `:3618`, `:3629`, `:3698`, `:3780`, `:3816`, `:3828`, `:3885`,
+ * `:3966`. Eighteen of them bind `expr` (not `exp`) next to the fence's other
+ * keys, and the two reached rules that bind `expr` (`:3499`, `:3840`) each also
+ * carry a `symbol` or `relational_symbols` key. None of the twenty-one is shown
+ * unreachable, only unreached.
+ *
+ * `fenced` below is the one helper: the thirty-one rules that differ only in
+ * the keys they bind and the list they build share its `parenClass` guard
+ * (`Slice` -> `symbols_class`), as the seven earlier `Fenced` rules do. The
+ * other eleven — `:3085`, `:3119`, `:3143`, `:3310`, `:3723`, `:3739`, `:3755`
+ * and the four interval rules `:3897`-`:3935` — build their `Fenced` (or
+ * `Power`) directly. `:3085` and the four interval rules apply `symbols_class`
+ * to the parens with no `Slice` guard. `:3085` also builds
+ * `1.25**digits` em sizes: Ruby prints `1.25**0` as `1.0`, so `rubyFloatToS`
+ * keeps the `.0` JavaScript drops.
+ *
+ * Five prerequisites are registered under the ids of the slices that own them
+ * (`:191`, `:196`, `:204` for slice B; `:2055`, `:2067` for slice A) because no
+ * input reaches `:3531`, `:3922`/`:3935` or `:3085` without them; the
+ * orchestrator dedupes. `:3119`/`:3143` are reached only under an nary that has
+ * a `sub` (`"∫_a▒(x)ab"`): the bare `"∫▒(x)y"` reaches them too on the oracle
+ * but leaves an unmatched `{nary_class:, naryand:}` wrapper, the
+ * failure mode the NARY section above records.
+ * Running count: 188 + 47 = **235**.
+ *
+ * Everything outside the rules registered here is genuinely ABSENT rather than stubbed. A
  * node whose key set no ported rule matches survives the transform as a
  * plain hash and `finalize` throws on it, naming the keys — the loud failure
  * the deferred families are supposed to produce.
@@ -399,7 +435,16 @@ import {
   UNICODEMATH_UNARY_SYMBOLS,
   UNICODEMATH_UNDEF_UNARY_FUNCTIONS,
 } from "../../generated/unicodemath/render-tables";
-import { Slice, sequence, simple, subtree, Transform, type TransformValue } from "../../pegkit";
+import {
+  type Bindings,
+  type Matcher,
+  Slice,
+  sequence,
+  simple,
+  subtree,
+  Transform,
+  type TransformValue,
+} from "../../pegkit";
 import {
   UNICODEMATH_BINARY_SYMBOLS,
   UNICODEMATH_BINARY_SYMBOLS_KEYS,
@@ -425,6 +470,7 @@ import {
   UNICODEMATH_PRIMES_CONSTANTS,
   UNICODEMATH_SYMBOL_CLASS_INPUT,
   UNICODEMATH_UNDER_HORIZONTAL_BRACKETS,
+  UNICODEMATH_UNICODE_FRACTION_PARTS,
   type UnicodemathPhantomAttribute,
 } from "./generated/transform-tables";
 import {
@@ -1048,6 +1094,24 @@ function newFrac(one: unknown, two: unknown, options?: NodeOptions): Unicodemath
 }
 
 /**
+ * `UnicodeMath::Utility.unicode_fractions(fractions)` (`unicode_math/utility.rb:69-76`):
+ * a precomposed fraction entity as a `Frac` of two `Number`s, flagged
+ * `unicodemath_fraction`. A miss is `nil.first` in Ruby, a `NoMethodError`.
+ */
+function unicodeFractions(fraction: unknown): UnicodemathDraft {
+  const parts = UNICODEMATH_UNICODE_FRACTION_PARTS.get(rubyToS(fraction));
+  if (parts === undefined) {
+    throw new TypeError(
+      `unicodemath transform: no UNICODE_FRACTIONS entry for ${rubyToS(fraction)} (Ruby raises NoMethodError)`,
+    );
+  }
+  return newFrac(newNumber(parts[0]), newNumber(parts[1]), {
+    displaystyle: false,
+    unicodemath_fraction: true,
+  });
+}
+
+/**
  * `UnicodeMath::Utility.updated_primes(prime)` (`unicode_math/utility.rb:78-84`)
  * — every `&#x...;` entity in the text, each through `symbols_class`, folded by
  * `filter_values`. `UNICODE_REGEX` is `%r{&#x[a-zA-Z0-9]+;}` (`utility.rb:6`).
@@ -1521,6 +1585,23 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     });
   };
 
+  /**
+   * The `Fenced.new(paren, contents, paren)` rules of `transform.rb:3085`-`:3966`
+   * all spell out the same guarded pair (`parenClass`); only the keys they bind
+   * and the contents they build differ. One `rule` call per Ruby rule, its id
+   * the Ruby line, exactly as everywhere else in this file.
+   */
+  const fenced = (
+    id: string,
+    keys: Record<string, Matcher>,
+    contents: (bindings: Bindings) => unknown,
+  ): void =>
+    rule(
+      id,
+      { open_paren: simple("open_paren"), ...keys, close_paren: simple("close_paren") },
+      (b) => newFenced(parenClass(b.open_paren), contents(b), parenClass(b.close_paren)),
+    );
+
   // --- pass-through and leaf rules (transform.rb:8-170) -------------------
 
   // TABLE (eighteen rules total, not the seventeen a prior survey counted —
@@ -1697,6 +1778,23 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   );
 
   // --- two-key rules (transform.rb:236-2001) -----------------------------
+
+  // PREREQUISITES of the fenced family below, registered under the ids slice B
+  // claims (`:191`, `:196`, `:204`; the orchestrator dedupes): `(a,1)` reaches
+  // `:3531` only once its `,1` has become a `Number` (`:191`), and the interval
+  // rules `:3922`/`:3935` receive `[+∞,1]`'s and `[−∞,1]`'s signed infinity as a
+  // two-element run (`:196`, `:204`).
+  rule("191", { decimal: simple("decimal"), whole: simple("whole") }, (b) =>
+    newNumber(htmlEntityToUnicode(`${rubyToS(b.decimal)}${rubyToS(draftValue(b.whole))}`)),
+  );
+  rule("196", { positive: simple("positive"), infty: simple("infty") }, (b) => [
+    symbolsClass(b.positive),
+    symbolsClass(b.infty),
+  ]);
+  rule("204", { negative: simple("negative"), infty: simple("infty") }, (b) => [
+    symbolsClass(b.negative),
+    symbolsClass(b.infty),
+  ]);
 
   // `:227`: a `\script`/`\double`/`\fraktur`/`\mitBbb` prefix plus one letter
   // — the `UNICODED_FONTS` code point when the pair has one, else the letter.
@@ -2372,6 +2470,29 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     newMultiscript(newPowerBase(b.base), [b.pre_sub], []),
   );
 
+  // PREREQUISITES of `:3085`, registered under the ids slice A claims (`:2055`,
+  // `:2067`; the orchestrator dedupes): a `\left`/`\right` mask digit and its
+  // paren arrive as one three-key hash, and this pair is what turns it into the
+  // `[mask, paren]` run `:3085` reads `first`/`last` of.
+  rule(
+    "2055",
+    {
+      paren_open_prefix: simple("paren_open_prefix"),
+      open_paren_mask: simple("open_paren_mask"),
+      open_paren: simple("open_paren"),
+    },
+    (b) => [b.open_paren_mask, b.open_paren],
+  );
+  rule(
+    "2067",
+    {
+      paren_close_prefix: simple("paren_close_prefix"),
+      close_paren_mask: simple("close_paren_mask"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => [b.close_paren_mask, b.close_paren],
+  );
+
   // --- three- and four-key rules (transform.rb:2103-3477) ----------------
 
   rule("2103", { base: simple("base"), sup: simple("sup"), sub: simple("sub") }, (b) => {
@@ -2651,6 +2772,123 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => newMultiscript(newPowerBase(b.base, subDigitNumber(b.digits)), [b.pre_sub], []),
   );
 
+  // A `\left`/`\right` pair whose opener or closer arrived as a SEQUENCE — the
+  // mask digits (a `Number`) followed by the paren itself — so the size and the
+  // `prefixed` flag ride in the Fenced's options: `1.25**digits` em, both
+  // `minsize` and `maxsize`, left off when the digits are the empty string.
+  rule(
+    "3085",
+    {
+      open_paren: sequence("open_paren"),
+      factor: simple("factor"),
+      exp: sequence("exp"),
+      close_paren: sequence("close_paren"),
+    },
+    (b) => {
+      const options: Record<string, unknown> = {};
+      const opener = asArray(b.open_paren);
+      const closer = asArray(b.close_paren);
+      const openFirst = opener[0];
+      if (isDraft(openFirst) && openFirst.kind === "number") {
+        const mask = `${rubyFloatToS(1.25 ** rubyToI(rubyToS(draftValue(openFirst))))}em`;
+        options.open_prefixed = true;
+        if (draftValue(openFirst) !== "") options.open_paren = { minsize: mask, maxsize: mask };
+      }
+      const closeFirst = closer[0];
+      if (isDraft(closeFirst) && closeFirst.kind === "number") {
+        const mask = `${rubyFloatToS(1.25 ** rubyToI(rubyToS(draftValue(closeFirst))))}em`;
+        options.close_prefixed = true;
+        if (draftValue(closeFirst) !== "") options.close_paren = { minsize: mask, maxsize: mask };
+      }
+      const fenced = newFenced(
+        symbolsClass(opener[opener.length - 1]),
+        [b.factor, ...asArray(b.exp)],
+        symbolsClass(closer[closer.length - 1]),
+      );
+      fenced.fields.options = options;
+      return fenced;
+    },
+  );
+
+  fenced(
+    "3108",
+    {
+      unary_function: simple("unary"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.unary, ...asArray(b.exp)],
+  );
+
+  // `:3119` and `:3143`: a `|` on either side unwraps the factor's own fence
+  // first (`paren_specific`), then the Fenced leads a naryand-recursion run.
+  rule(
+    "3119",
+    {
+      open_paren: simple("open_paren"),
+      factor: simple("factor"),
+      close_paren: simple("close_paren"),
+      naryand_recursion: sequence("naryand_recursion"),
+    },
+    (b) => {
+      const bar = textEquals(b.open_paren, "|") || textEquals(b.close_paren, "|");
+      const newFactor = bar ? unfencedValue(b.factor, true) : b.factor;
+      const fenced = newFenced(parenClass(b.open_paren), [newFactor], parenClass(b.close_paren));
+      return [fenced, ...asArray(b.naryand_recursion)];
+    },
+  );
+
+  fenced(
+    "3132",
+    {
+      unary_subsup: simple("unary_subsup"),
+      exp: simple("exp"),
+    },
+    (b) => [b.unary_subsup, b.exp],
+  );
+
+  rule(
+    "3143",
+    {
+      open_paren: simple("open_paren"),
+      factor: simple("factor"),
+      close_paren: simple("close_paren"),
+      naryand_recursion: simple("naryand_recursion"),
+    },
+    (b) => {
+      const bar = textEquals(b.open_paren, "|") || textEquals(b.close_paren, "|");
+      const newFactor = bar ? unfencedValue(b.factor, true) : b.factor;
+      const fenced = newFenced(parenClass(b.open_paren), [newFactor], parenClass(b.close_paren));
+      return [fenced, b.naryand_recursion];
+    },
+  );
+
+  fenced(
+    "3167",
+    {
+      mini_sub: simple("mini_sub"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.mini_sub, ...asArray(b.exp)],
+  );
+
+  fenced(
+    "3178",
+    {
+      mini_sub_sup: simple("mini_sub_sup"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.mini_sub_sup, ...asArray(b.exp)],
+  );
+
+  fenced(
+    "3200",
+    {
+      mini_sup: simple("mini_sup"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.mini_sup, ...asArray(b.exp)],
+  );
+
   rule(
     "3233",
     {
@@ -2660,6 +2898,116 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       close_paren: simple("close_paren"),
     },
     (b) => newFenced(parenClass(b.open_paren), [b.factor, b.exp], parenClass(b.close_paren)),
+  );
+
+  fenced(
+    "3255",
+    {
+      accents: subtree("accent"),
+      exp: sequence("exp"),
+    },
+    (b) => [unicodeAccents(b.accent), ...asArray(b.exp)],
+  );
+
+  fenced(
+    "3277",
+    {
+      unicode_fractions: simple("fraction"),
+      exp: sequence("exp"),
+    },
+    (b) => [unicodeFractions(b.fraction), ...asArray(b.exp)],
+  );
+
+  fenced(
+    "3288",
+    {
+      unicode_symbols: simple("symbol"),
+      exp: sequence("exp"),
+    },
+    (b) => [symbolsClass(b.symbol), ...asArray(b.exp)],
+  );
+
+  fenced(
+    "3299",
+    {
+      unicode_symbols: simple("symbol"),
+      exp: simple("exp"),
+    },
+    (b) => [symbolsClass(b.symbol), b.exp],
+  );
+
+  rule(
+    "3310",
+    {
+      open_paren: simple("open_paren"),
+      unicode_symbols: simple("symbol"),
+      exp: simple("exp"),
+      close_paren: simple("close_paren"),
+      sup: simple("sup"),
+    },
+    (b) =>
+      newPower(
+        newFenced(
+          parenClass(b.open_paren),
+          [symbolsClass(b.symbol), b.exp],
+          parenClass(b.close_paren),
+        ),
+        b.sup,
+      ),
+  );
+
+  fenced(
+    "3345",
+    {
+      sub_exp: simple("sub_exp"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.sub_exp, ...asArray(b.exp)],
+  );
+
+  fenced(
+    "3367",
+    {
+      sub_exp: simple("sub_exp"),
+      exp: simple("exp"),
+    },
+    (b) => [b.sub_exp, b.exp],
+  );
+
+  fenced(
+    "3389",
+    {
+      sup_exp: simple("sup_exp"),
+      exp: simple("exp"),
+    },
+    (b) => [b.sup_exp, b.exp],
+  );
+
+  fenced(
+    "3400",
+    {
+      monospace: simple("monospace"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.monospace, ...asArray(b.exp)],
+  );
+
+  fenced(
+    "3411",
+    {
+      frac: simple("frac"),
+      exp: simple("exp"),
+    },
+    (b) => [b.frac, b.exp],
+  );
+
+  fenced(
+    "3422",
+    {
+      frac: simple("frac"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.frac, ...asArray(b.exp)],
   );
 
   rule(
@@ -2678,6 +3026,15 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       ),
   );
 
+  fenced(
+    "3455",
+    {
+      subsup_exp: simple("subsup_exp"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.subsup_exp, ...asArray(b.exp)],
+  );
+
   rule(
     "3477",
     {
@@ -2688,6 +3045,79 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) =>
       newFenced(parenClass(b.open_paren), [b.factor, ...asArray(b.exp)], parenClass(b.close_paren)),
+  );
+
+  fenced(
+    "3499",
+    {
+      symbol: simple("symbol"),
+      expr: sequence("expr"),
+    },
+    (b) => [symbolsClass(b.symbol), ...asArray(b.expr)],
+  );
+
+  fenced(
+    "3510",
+    {
+      factor: sequence("factor"),
+      exp: sequence("exp"),
+    },
+    (b) => [...asArray(b.factor), ...asArray(b.exp)],
+  );
+
+  fenced(
+    "3521",
+    {
+      factor: sequence("factor"),
+    },
+    (b) => b.factor,
+  );
+
+  fenced(
+    "3531",
+    {
+      factor: simple("factor"),
+      operand: simple("operand"),
+    },
+    (b) => [b.factor, b.operand],
+  );
+
+  fenced(
+    "3542",
+    {
+      factor: simple("factor"),
+      operand: sequence("operand"),
+    },
+    (b) => [b.factor, ...asArray(b.operand)],
+  );
+
+  fenced(
+    "3553",
+    {
+      factor: sequence("factor"),
+      operand: sequence("operand"),
+    },
+    (b) => [...asArray(b.factor), ...asArray(b.operand)],
+  );
+
+  fenced(
+    "3564",
+    {
+      text: simple("text"),
+      operand: simple("operand"),
+      exp: simple("exp"),
+    },
+    (b) => [newText(b.text), b.operand, b.exp],
+  );
+
+  fenced(
+    "3576",
+    {
+      text: simple("text"),
+      operand: simple("operand"),
+      exp: sequence("exp"),
+    },
+    (b) => [newText(b.text), b.operand, ...asArray(b.exp)],
   );
 
   // NARY concluded (for this slice; see the module header for the SEQUENCE
@@ -2719,6 +3149,24 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
   );
 
+  fenced(
+    "3640",
+    {
+      fonts: simple("fonts"),
+      exp: simple("exp"),
+    },
+    (b) => [b.fonts, b.exp],
+  );
+
+  fenced(
+    "3651",
+    {
+      operator: simple("operator"),
+      exp: sequence("exp"),
+    },
+    (b) => [symbolsClass(b.operator), ...asArray(b.exp)],
+  );
+
   // MULTISCRIPT concluded — both a prescript pair and a paren wrap it, in
   // every combination the grammar builds. `unfenced_value` reaches the
   // prescripts themselves only at `:3662`/`:3853`; `:3687`, `:3768`, `:3952`
@@ -2740,6 +3188,16 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
         [unfencedValue(b.pre_sup, true)],
       ),
   );
+
+  fenced(
+    "3676",
+    {
+      operator: simple("operator"),
+      exp: simple("exp"),
+    },
+    (b) => [symbolsClass(b.operator), b.exp],
+  );
+
   rule(
     "3687",
     {
@@ -2750,6 +3208,73 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) => newMultiscript(newPowerBase(b.base), [b.pre_sub], []),
   );
+
+  fenced(
+    "3711",
+    {
+      factor: simple("factor"),
+      sup_exp: simple("sup_exp"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.factor, b.sup_exp, ...asArray(b.exp)],
+  );
+
+  rule(
+    "3723",
+    {
+      open_paren: simple("open_paren"),
+      sub_exp: simple("sub_exp"),
+      exp: simple("exp"),
+      close_paren: simple("close_paren"),
+      sup: simple("sup"),
+    },
+    (b) =>
+      newPower(
+        newFenced(parenClass(b.open_paren), [b.sub_exp, b.exp], parenClass(b.close_paren)),
+        unfencedValue(b.sup, true),
+      ),
+  );
+
+  rule(
+    "3739",
+    {
+      open_paren: simple("open_paren"),
+      sub_exp: simple("sub_exp"),
+      exp: sequence("exp"),
+      close_paren: simple("close_paren"),
+      sup: simple("sup"),
+    },
+    (b) =>
+      newPower(
+        newFenced(
+          parenClass(b.open_paren),
+          [b.sub_exp, ...asArray(b.exp)],
+          parenClass(b.close_paren),
+        ),
+        unfencedValue(b.sup, true),
+      ),
+  );
+
+  rule(
+    "3755",
+    {
+      open_paren: simple("open_paren"),
+      operator: simple("operator"),
+      exp: simple("exp"),
+      close_paren: simple("close_paren"),
+      sup: simple("sup"),
+    },
+    (b) =>
+      newPower(
+        newFenced(
+          parenClass(b.open_paren),
+          [symbolsClass(b.operator), b.exp],
+          parenClass(b.close_paren),
+        ),
+        b.sup,
+      ),
+  );
+
   rule(
     "3768",
     {
@@ -2761,6 +3286,38 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) => newMultiscript(newPowerBase(b.base, b.sub), [b.pre_sub], []),
   );
+
+  fenced(
+    "3792",
+    {
+      factor: simple("factor"),
+      operand: simple("operand"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.factor, b.operand, ...asArray(b.exp)],
+  );
+
+  fenced(
+    "3804",
+    {
+      factor: simple("factor"),
+      operand: sequence("operand"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.factor, ...asArray(b.operand), ...asArray(b.exp)],
+  );
+
+  fenced(
+    "3840",
+    {
+      monospace: simple("monospace"),
+      relational_symbols: simple("symbol"),
+      expr: simple("expr"),
+      exp: sequence("exp"),
+    },
+    (b) => [b.monospace, symbolsClass(b.symbol), b.expr, ...asArray(b.exp)],
+  );
+
   rule(
     "3853",
     {
@@ -2777,6 +3334,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
         [unfencedValue(b.pre_sup, true)],
       ),
   );
+
   // INTENT with parentheses: the quoted argument text (already a `Text`) is the
   // intent's name, the parenthesised expression what it wraps.
   rule(
@@ -2790,6 +3348,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) => newIntent(b.value, b.args),
   );
+
   rule(
     "3877",
     {
@@ -2800,6 +3359,76 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       close_paren: simple("close_paren"),
     },
     (b) => newIntent(filterValues(b.value), b.args),
+  );
+
+  // INTERVAL: `(1,2]`, `[1,2)`, `]1,2[` — a left value, the comma as a symbol,
+  // a right value; `symbols_class` again unguarded on both parens.
+  rule(
+    "3897",
+    {
+      open_paren: simple("open_paren"),
+      left_value: simple("left_value"),
+      comma: simple("comma"),
+      right_value: simple("right_value"),
+      close_paren: simple("close_paren"),
+    },
+    (b) =>
+      newFenced(
+        symbolsClass(b.open_paren),
+        [b.left_value, symbolsClass(b.comma), b.right_value],
+        symbolsClass(b.close_paren),
+      ),
+  );
+
+  rule(
+    "3909",
+    {
+      open_paren: simple("open_paren"),
+      left_value: simple("left_value"),
+      comma: simple("comma"),
+      right_value: sequence("right_value"),
+      close_paren: simple("close_paren"),
+    },
+    (b) =>
+      newFenced(
+        symbolsClass(b.open_paren),
+        [b.left_value, symbolsClass(b.comma), filterValues(b.right_value)],
+        symbolsClass(b.close_paren),
+      ),
+  );
+
+  rule(
+    "3922",
+    {
+      open_paren: simple("open_paren"),
+      left_value: sequence("left_value"),
+      comma: simple("comma"),
+      right_value: simple("right_value"),
+      close_paren: simple("close_paren"),
+    },
+    (b) =>
+      newFenced(
+        symbolsClass(b.open_paren),
+        [filterValues(b.left_value), symbolsClass(b.comma), b.right_value],
+        symbolsClass(b.close_paren),
+      ),
+  );
+
+  rule(
+    "3935",
+    {
+      open_paren: simple("open_paren"),
+      left_value: sequence("left_value"),
+      comma: simple("comma"),
+      right_value: sequence("right_value"),
+      close_paren: simple("close_paren"),
+    },
+    (b) =>
+      newFenced(
+        symbolsClass(b.open_paren),
+        [filterValues(b.left_value), symbolsClass(b.comma), filterValues(b.right_value)],
+        symbolsClass(b.close_paren),
+      ),
   );
 
   rule(
@@ -2813,6 +3442,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) => newMultiscript(newPowerBase(b.base), [b.pre_sub], [b.pre_sup]),
   );
+
   rule(
     "3978",
     {
@@ -2842,6 +3472,22 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
  */
 function parenClass(paren: unknown): unknown {
   return paren instanceof Slice ? symbolsClass(paren) : paren;
+}
+
+/**
+ * Ruby `Float#to_s` for the positive powers of 1.25 the paren-size mask
+ * builds: a whole value keeps its `.0` (`1.25**0` is `"1.0"`), and the
+ * exponent form starts at 1e16 (`"1.0e+16"`), where JavaScript's starts at 1e21.
+ */
+function rubyFloatToS(value: number): string {
+  if (!Number.isFinite(value)) return "Infinity";
+  if (value >= 1e16) {
+    const [mantissa, exponent] = value.toExponential().split("e");
+    const digits = (mantissa as string).includes(".") ? (mantissa as string) : `${mantissa}.0`;
+    return `${digits}e+${(exponent as string).replace("+", "").padStart(2, "0")}`;
+  }
+  const text = String(value);
+  return text.includes(".") ? text : `${text}.0`;
 }
 
 /** `node.parameter_x` on a draft; Ruby raises `NoMethodError` on anything else. */

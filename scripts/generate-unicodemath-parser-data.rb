@@ -199,6 +199,7 @@ module UnicodeMathParserDataGenerator
     "OVERLAYS_NOTATIONS" => "UNICODEMATH_OVERLAYS_NOTATIONS",
     "BELOWS_NOTATIONS" => "UNICODEMATH_BELOWS_NOTATIONS",
     "PHANTOM_SYMBOLS" => "UNICODEMATH_PHANTOM_FUNCTIONS",
+    "UNICODE_FRACTIONS" => "UNICODEMATH_UNICODE_FRACTION_PARTS",
   }.freeze
 
   # `Constants` entries neither the grammar nor the ported transform slice
@@ -1133,6 +1134,16 @@ module UnicodeMathParserDataGenerator
              "(only `&#x332;`, `\"bottom\"`) a `Menclose` carrying this table's value\n" \
              "as its notation string.",
       ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_UNICODE_FRACTION_PARTS",
+        "ReadonlyMap<string, readonly string[]>",
+        data[:unicode_fraction_parts],
+        doc: "`Constants::UNICODE_FRACTIONS`: each precomposed fraction entity mapped\n" \
+             "to its numerator and denominator as text. `Utility.unicode_fractions`\n" \
+             "(`unicode_math/utility.rb:69-76`) builds a `Frac` from the two parts,\n" \
+             "`.to_s` on each, and the grammar's `UNICODEMATH_UNICODE_FRACTIONS` is\n" \
+             "this table's keys.",
+      ),
       ts_string_list(
         "UNICODEMATH_BINARY_FUNCTIONS", data[:binary_functions],
         "`Constants::BINARY_FUNCTIONS`: the `class_name` values the sub- and\n" \
@@ -1340,6 +1351,9 @@ module UnicodeMathParserDataGenerator
       mask_classes: string_pairs(Plurimath::Utility::MASK_CLASSES, "MASK_CLASSES"),
       phantom_functions: phantom_rows,
       primes: string_pairs(Plurimath::Utility.primes_constants, "primes_constants"),
+      unicode_fraction_parts: constants::UNICODE_FRACTIONS.map do |key, (numerator, denominator)|
+        [key.to_s, [numerator.to_s, denominator.to_s]]
+      end,
       is_a: is_a_rows(gem_dir),
     }
   end

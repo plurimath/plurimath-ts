@@ -52,15 +52,15 @@ export const UNICODEMATH_PARSER_GENERATED_PROVENANCE: UnicodemathParserGenerated
     ],
     [
       "scripts/generate-unicodemath-parser-data.rb",
-      "15ce7726d20703bd97f5d2583046773f00cbb0fe4b2f57fd3167bc4c2ff93943",
+      "b3b5fe21029e0f38b8f43960c920083c6ecd15339aa16fa6014844a55021ae6e",
     ],
   ]),
   oracle: "plurimath",
   oracleVersion: "0.11.6",
   oracleCommit: "00c52783877b38f6b8e6e109f1803f96bb34fc62",
   oracleClean: true,
-  generatorClean: true,
+  generatorClean: false,
   rubyEngine: "ruby",
   rubyVersion: "4.0.1",
-  committable: true,
+  committable: false,
 };

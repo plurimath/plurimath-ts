@@ -24,13 +24,12 @@
  * their measured tables, because a wrong answer is invisible on every shape
  * except the one it governs (`test/formats/unicodemath/render-shared.spec.ts`).
  *
- * UnicodeMath rendering has NO context axis. The gem threads an `options:`
- * hash through every `to_unicodemath`, which looks like one: it is
+ * The gem threads an `options:` hash through every `to_unicodemath`, which
+ * looks like a context axis and mostly is not one: it is
  * `{formatter:, unitsml:, formula:}`, and on this path the only reader is
- * `Number#format_value_with_options` (`number.rb:115`), which returns the raw
- * value unless a number formatter is configured — P4 scope, and the pinned
- * corpus was generated with none. Separately, the generated exception matrix
- * (`src/generated/unicodemath/exceptions.ts`) is empty: no symbol's
+ * `Number#format_value_with_options` (`number.rb:115`) — B2's first slice
+ * (`../../formatting/number-format.ts`). Separately, the generated exception
+ * matrix (`src/generated/unicodemath/exceptions.ts`) is empty: no symbol's
  * unicodemath value varies on any probed axis, and
  * `test/generated/unicodemath-data.spec.ts` pins that emptiness so a
  * regeneration introducing variants fails loudly. The per-node `options` the
@@ -49,30 +48,31 @@
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { assertKnownOptions } from "../../core/render-options";
-import { ROOT_CONTEXT } from "./render";
+import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
+import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
 
 /**
- * Renderer options. Empty today and typed exactly (§5), for the same reason
- * as `LatexOptions`: the gem's only observable option on this path is a
- * configured number formatter, which is P4 scope. No unicodemath render
- * consults an option, so the parameter's only job is the entry-point guard
- * below, which refuses a key this type does not declare instead of ignoring
- * it (core/render-options.ts).
+ * Renderer options, typed exactly (§5). `formatter` is B2's first slice
+ * (TODO.plan/feature-roadmap.md, "Number formatting"; TODO.plan/
+ * open-decisions.md, "Number-formatter API shape") — `Formatter::Standard`'s
+ * default-symbol behavior only, resolved by `resolveNumberFormat`
+ * (`../../formatting/number-format.ts`), which itself refuses by name every
+ * field of the gem's `formatter:` keyword this slice does not implement. The
+ * gem's other two `to_unicodemath` keywords — `unitsml:`, `options:`
+ * (formula.rb:187 on the pinned oracle) — are still not implemented at all.
  */
-export type UnicodemathOptions = Record<string, never>;
+export interface UnicodemathOptions {
+  readonly formatter?: FormatterOptions | null;
+}
 
 /**
- * The option keys this entry accepts. There are none: `UnicodemathOptions`
- * declares no key, so every key that reaches the entry is unknown and is
- * refused BY NAME
- * (`assertKnownOptions`, core/render-options.ts) instead of ignored. The
- * gem's own `to_unicodemath` keywords — `formatter:`, `unitsml:`, `options:`
- * (formula.rb:187 on the pinned oracle) — are refused here too: none of the
- * three is implemented in this port, so accepting one silently would promise
- * a behaviour it does not have.
+ * The option keys this entry accepts. `formatter` is implemented (above);
+ * every other key — including the gem's own `unitsml:` and `options:`
+ * keywords — is unknown and refused BY NAME (`assertKnownOptions`,
+ * core/render-options.ts) instead of ignored.
  */
-const ACCEPTED_OPTIONS: readonly string[] = [];
+const ACCEPTED_OPTIONS: readonly string[] = ["formatter"];
 
 /**
  * `Formula#to_unicodemath` / any node's `to_unicodemath`, as a module
@@ -90,13 +90,15 @@ export function toUnicodemath(node: MathNode, options?: UnicodemathOptions | nul
   // Structural check only — `assertMathNodeShape` deliberately returns
   // `void`, not `asserts node is MathNode` (see core/validate.ts).
   assertMathNodeShape(node, FORMAT);
+  const numberFormat = resolveNumberFormat(options?.formatter, FORMAT);
+  const context = numberFormat === null ? ROOT_CONTEXT : createRenderContext(numberFormat);
   try {
     // `?? ""`: the renders that return nil in Ruby map to "" at the public
     // string boundary, exactly as the latex and asciimath entries do. No
     // decode here — see this file's header; `renderFormula` already ran it,
     // and a bare non-Formula node is left encoded because the gem leaves it
     // encoded.
-    return ROOT_CONTEXT.render(node) ?? "";
+    return context.render(node) ?? "";
   } catch (error) {
     // Only this walk's own surfaces pass through: `RenderError` (the §5
     // contract) and the symbol table's `MissingSymbolDataError`, checked by

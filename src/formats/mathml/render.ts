@@ -46,7 +46,13 @@ import { renderUl } from "../../render/ul/mathml";
 import { renderUnaryFunction } from "../../render/unary-function/mathml";
 import { renderUnderset } from "../../render/underset/mathml";
 import { renderVec } from "../../render/vec/mathml";
-import { FORMAT, type MathmlRendered, type RenderContext, type RenderFn } from "./render-shared";
+import {
+  FORMAT,
+  type MathmlRendered,
+  type NumberFormat,
+  type RenderContext,
+  type RenderFn,
+} from "./render-shared";
 
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   abs: renderAbs,
@@ -104,22 +110,28 @@ function renderNode(node: MathNode, context: RenderContext): MathmlRendered {
 }
 
 /**
- * One context per spacing state — `options[:unary_function_spacing]` is
+ * One context per `(unaryFunctionSpacing, numberFormat)` pair — both are
  * fixed for a whole `to_mathml` call and nothing on the walk derives a
  * child context (render-shared.ts). Each carries the dispatcher bound to
  * itself, which is how recursion reaches the table without any kind file
- * importing it.
+ * importing it. `toMathml` (`./renderer.ts`) calls this once per render with
+ * the spacing keyword's Ruby truthiness and whatever `resolveNumberFormat`
+ * answered for the per-call `formatter:` option.
  */
-export const SPACING_CONTEXT: RenderContext = {
-  unaryFunctionSpacing: true,
-  render(node) {
-    return renderNode(node, SPACING_CONTEXT);
-  },
-};
+export function createRenderContext(
+  unaryFunctionSpacing: boolean,
+  numberFormat: NumberFormat | null,
+): RenderContext {
+  const context: RenderContext = {
+    unaryFunctionSpacing,
+    numberFormat,
+    render(node) {
+      return renderNode(node, context);
+    },
+  };
+  return context;
+}
 
-export const NO_SPACING_CONTEXT: RenderContext = {
-  unaryFunctionSpacing: false,
-  render(node) {
-    return renderNode(node, NO_SPACING_CONTEXT);
-  },
-};
+/** The two no-`formatter:` contexts — the common case, and every call before this slice. */
+export const SPACING_CONTEXT: RenderContext = createRenderContext(true, null);
+export const NO_SPACING_CONTEXT: RenderContext = createRenderContext(false, null);

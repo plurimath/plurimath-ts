@@ -6,7 +6,8 @@
  *
  * The gem also holds a `BigDecimal` of the input. Nothing this path reads
  * needs one: every digit string is derived from the raw text by exact string
- * arithmetic, so no JavaScript number ever touches a value. The notation
+ * arithmetic. The only JavaScript number is the parsed exponent, an integer
+ * shift of the decimal point; no digit is ever held as a number. The notation
  * lane's `decimal.zero?`, `significant_digit_count` and `notation_precision`
  * are string questions over the same fields and live here too.
  */

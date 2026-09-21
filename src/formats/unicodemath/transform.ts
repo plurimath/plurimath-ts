@@ -561,10 +561,10 @@ import {
   UNICODEMATH_MATRIXS_KEYS,
   UNICODEMATH_NARY_SYMBOLS,
   UNICODEMATH_NARY_SYMBOLS_KEYS,
-  UNICODEMATH_SKIP_SYMBOLS,
-  UNICODEMATH_SKIP_SYMBOLS_KEYS,
   UNICODEMATH_RELATIONAL_SYMBOLS,
   UNICODEMATH_RELATIONAL_SYMBOLS_KEYS,
+  UNICODEMATH_SKIP_SYMBOLS,
+  UNICODEMATH_SKIP_SYMBOLS_KEYS,
   UNICODEMATH_SUB_DIGITS,
   UNICODEMATH_SUP_DIGITS,
   UNICODEMATH_UNICODED_FONTS,
@@ -581,10 +581,10 @@ import {
   UNICODEMATH_PHANTOM_FUNCTIONS,
   UNICODEMATH_PRIMES_CONSTANTS,
   UNICODEMATH_SUB_OPERATORS_BY_KEY,
-  UNICODEMATH_SUP_ALPHABETS_BY_KEY,
-  UNICODEMATH_SUP_OPERATORS_BY_KEY,
   UNICODEMATH_SUB_PARENTHESIS_CLOSE,
   UNICODEMATH_SUB_PARENTHESIS_OPEN,
+  UNICODEMATH_SUP_ALPHABETS_BY_KEY,
+  UNICODEMATH_SUP_OPERATORS_BY_KEY,
   UNICODEMATH_SYMBOL_CLASS_INPUT,
   UNICODEMATH_UNDER_HORIZONTAL_BRACKETS,
   type UnicodemathPhantomAttribute,
@@ -2015,7 +2015,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
 
   rule("109", { binary_symbols: simple("symbols") }, (b) => symbolsClass(b.symbols));
 
-
   // `:118` — PREREQUISITE owned by the pure-unwrap slice (claims file A.txt), carried
   // here because `:1404`'s SEQUENCE `prime_accent_symbols` only exists once
   // `\prime` names are normalised to their entity. The gem reads
@@ -2233,7 +2232,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   ]);
   rule("366", { text: simple("text"), expr: simple("expr") }, (b) => [newText(b.text), b.expr]);
 
-
   rule("371", { subsup_exp: simple("subsup"), expr: sequence("expr") }, (b) => [
     b.subsup,
     ...asArray(b.expr),
@@ -2345,7 +2343,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.exp,
   ]);
 
-
   rule("543", { pre_script: simple("pre_script"), expr: sequence("expr") }, (b) => [
     b.pre_script,
     ...asArray(b.expr),
@@ -2375,11 +2372,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // a mini digit run folding onto its `*_recursion_expr` — the numerator or
   // denominator of `²/₃₄` and `²³/₃`. Ported to the same digit lookups
   // `:165`/`:170` use.
-  rule(
-    "561",
-    { sub_digits: simple("sub_digits"), sub_recursion_expr: simple("sub_recursion_expr") },
-    (b) => [subDigitNumber(b.sub_digits), b.sub_recursion_expr],
-  );
   rule("592", { sup_digits: simple("digits"), sup_recursion_expr: simple("sup") }, (b) => [
     supDigitNumber(b.digits),
     b.sup,
@@ -2413,7 +2405,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     { atom: simple("atom"), recursive_denominator: simple("recursive_denominator") },
     (b) => [b.atom, b.recursive_denominator],
   );
-
 
   rule("700", { accents_subsup: simple("accents_subsup"), expr: simple("expr") }, (b) => [
     b.accents_subsup,
@@ -3155,24 +3146,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // PREREQUISITES (slice A's `:2055`/`:2067`, registered here under the same
   // ids): a size-prefixed paren (`├1(`, `┤2)`) folds its mask and its paren
   // into the two-element run `:2685`/`:2707` read.
-  rule(
-    "2055",
-    {
-      paren_open_prefix: simple("paren_open_prefix"),
-      open_paren_mask: simple("open_paren_mask"),
-      open_paren: simple("open_paren"),
-    },
-    (b) => [b.open_paren_mask, b.open_paren],
-  );
-  rule(
-    "2067",
-    {
-      paren_close_prefix: simple("paren_close_prefix"),
-      close_paren_mask: simple("close_paren_mask"),
-      close_paren: simple("close_paren"),
-    },
-    (b) => [b.close_paren_mask, b.close_paren],
-  );
 
   rule("2103", { base: simple("base"), sup: simple("sup"), sub: simple("sub") }, (b) => {
     const underover = ["underset", "overset"];
@@ -4068,15 +4041,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   );
 
   fenced(
-    "3277",
-    {
-      unicode_fractions: simple("fraction"),
-      exp: sequence("exp"),
-    },
-    (b) => [unicodeFractions(b.fraction), ...asArray(b.exp)],
-  );
-
-  fenced(
     "3288",
     {
       unicode_symbols: simple("symbol"),
@@ -4148,24 +4112,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       exp: sequence("exp"),
     },
     (b) => [b.monospace, ...asArray(b.exp)],
-  );
-
-  fenced(
-    "3411",
-    {
-      frac: simple("frac"),
-      exp: simple("exp"),
-    },
-    (b) => [b.frac, b.exp],
-  );
-
-  fenced(
-    "3422",
-    {
-      frac: simple("frac"),
-      exp: sequence("exp"),
-    },
-    (b) => [b.frac, ...asArray(b.exp)],
   );
 
   rule(
@@ -4670,11 +4616,6 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     "553",
     { sub_digits: simple("sub_digits"), sub_recursion_expr: sequence("sub_recursion_expr") },
     (b) => [subDigitNumber(b.sub_digits), ...asArray(b.sub_recursion_expr)],
-  );
-  rule(
-    "561",
-    { sub_digits: simple("sub_digits"), sub_recursion_expr: simple("sub_recursion_expr") },
-    (b) => [subDigitNumber(b.sub_digits), b.sub_recursion_expr],
   );
   rule(
     "567",

@@ -425,6 +425,8 @@ RULE_COVERAGE = {
   #                        the `:1054` array the `decoration` group could not
   #                        build (fires `:1054`, `:38`)
   "script-subsup-nary" => [
+    "a^b1",
+    "a_b1",
     "aᵃ",
     "a1^1_1",
     "a⁺",
@@ -1049,12 +1051,8 @@ RULE_COVERAGE = {
 # `RULE_COVERAGE["relation"]` once their rule landed, the same ratchet
 # `DEFERRED_INPUTS` in `model-parity.spec.ts` documents for the corpus side.
 #
-#   "a^b1"   rule 1148 `{base: simple, sup: sequence}` — the gem builds a
-#            `Power`; the port has no such rule, so `{sup_exp:}` survives and
-#            the enclosing `sup_script: sequence` unwrap (`:66`) is unported
-#            with it.
-#   "a_b1"   rule 1078 `{base: simple, sub: sequence}`, the `sub_exp` twin
-#            (blocks `:65`).
+#   ("a^b1" and "a_b1" moved to `RULE_COVERAGE["script-subsup-nary"]` when
+#   slice F ported rules 1148 and 1078.)
 #   "1x₂"    rule 1054 `{base: sequence, sub: simple}` (blocks `:67`).
 #   "1/2a"   rule 1619 `{numerator: simple, denominator: sequence}` (blocks
 #            `:658`).
@@ -1065,8 +1063,6 @@ RULE_COVERAGE = {
 # until the builder beside it lands. When that builder does, the row's refusal
 # stops and `model-parity.spec.ts` fails until it moves into a coverage group.
 SLICE_BOUNDARY = [
-  "a^b1",
-  "a_b1",
   "1x₂",
   "1/2a",
   "ⅇ",

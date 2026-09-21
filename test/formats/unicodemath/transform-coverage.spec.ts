@@ -80,7 +80,7 @@ for (const entry of fixtures.cases) {
   reached += 1;
 }
 
-const FINAL_COUNT = 0;
+const FINAL_COUNT = 409;
 
 describe("transform rule coverage", () => {
   it("drove every parseable fixture through one transform", () => {

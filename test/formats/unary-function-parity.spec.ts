@@ -69,7 +69,6 @@ const RENDERERS: Readonly<Record<Format, (node: MathNode) => string>> = {
  * refused, and the reason is named at the entry. An entry that starts rendering
  * fails its test until it is dropped.
  */
-const TABLE_PAREN = /table\.openParen: only the measured generic Symbol paren/;
 const MPADDED_HASH = /mpadded\.options\.mpadded: attribute holds an object/;
 const PORT_REFUSES: Readonly<Record<Format, Readonly<Record<string, RegExp>>>> = {
   asciimath: {},
@@ -86,17 +85,6 @@ const PORT_REFUSES: Readonly<Record<Format, Readonly<Record<string, RegExp>>>> =
     "model-mbox-nil": /mbox\.parameterOne: holds nil/,
   },
   omml: {
-    // `Substack#to_omml_without_math_tag` is `Table.new(rows).to_omml_...`, and
-    // that table has NO parentheses: the gem's `fenced_table` returns it
-    // unfenced, where `src/render/table/omml.ts` requires both parens. Closing
-    // this is a change to the table renderer, not to `Substack`.
-    "text-009": TABLE_PAREN,
-    "text-042": TABLE_PAREN,
-    "text-043": TABLE_PAREN,
-    "text-054": TABLE_PAREN,
-    "model-substack-two": TABLE_PAREN,
-    "model-substack-wide": TABLE_PAREN,
-    "model-substack-empty": TABLE_PAREN,
     // `unicode[:alpha]` substitution reads a MathML-owned entity table that
     // `text/omml.ts` does not carry.
     "model-mbox-unicode-token": /unicode\[:name\] substitution/,

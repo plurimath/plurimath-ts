@@ -24,7 +24,7 @@
  *
  * Every fixture row is asserted: byte-for-byte where the gem renders, a
  * `RenderError`/`ParseError` where it refused. A row the port cannot yet
- * reproduce is named in `PORT_REFUSES` below (82 rows, all kind-renderer
+ * reproduce is named in `PORT_REFUSES` below (60 rows, all kind-renderer
  * refusals).
  */
 import { readFileSync } from "node:fs";
@@ -71,7 +71,7 @@ const OWN_GROUPS: ReadonlySet<string> = new Set([
 ]);
 
 /** Rows the gem renders that the port renders too, per format (a pin, not a knob). */
-const RENDERED_BASELINE = { mathml: 170, omml: 179 } as const;
+const RENDERED_BASELINE = { mathml: 178, omml: 193 } as const;
 
 interface Fixture {
   readonly schema: string;
@@ -86,14 +86,15 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const CENSUS_ALIASES = aliasIndex(readCensus());
 
 /**
- * Rows the gem renders and this port's KIND renderers do not, by id: 22 for
- * MathML and 60 for OMML. Every one refuses on a node kind or alias the
- * per-kind renderer has not measured (`Longdiv`, `Multiscript`, `Underover`, the
- * unmeasured unary aliases...). For all but six the same refusal occurs without
- * `splitOnLinebreak`; the six (MathML `line-break-029`, OMML `012` and `029`,
- * each with its `-display-false` variant) render unsplit, and only refuse
- * because splitting yields a transformed alias the kind renderer has not
- * measured — a kind-renderer gap, not a walker mismatch (the split itself is
+ * Rows the gem renders and this port's KIND renderers do not, by id: 14 for
+ * MathML and 46 for OMML. Every one refuses on a node kind or alias the
+ * per-kind renderer has not measured (`Longdiv`, `Underover`, the unmeasured
+ * unary aliases, an `Nary` operator that is not a Symbol, Sum or Prod...). For
+ * all but eight the same refusal occurs without `splitOnLinebreak`; the eight
+ * (MathML and OMML `line-break-024` and `029`, each with its `-display-false`
+ * variant) render unsplit, and only refuse because splitting yields a
+ * transformed alias the kind renderer has not measured — a kind-renderer gap,
+ * not a walker mismatch (the split itself is
  * checked against the gem for every row below). The
  * split itself is checked for every one of them in the walk tests below, which
  * need no renderer; here each is pinned as a refusal, and the message must be a
@@ -114,24 +115,14 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-058-display-false",
     "line-break-059",
     "line-break-059-display-false",
-    "line-break-076",
-    "line-break-076-display-false",
     "line-break-077",
     "line-break-077-display-false",
-    "line-break-083",
-    "line-break-083-display-false",
-    "line-break-090",
-    "line-break-090-display-false",
   ],
   omml: [
-    "asciimath-spec-omml-11",
-    "asciimath-spec-omml-11-display-false",
     "line-break-002",
     "line-break-002-display-false",
     "line-break-008",
     "line-break-008-display-false",
-    "line-break-012",
-    "line-break-012-display-false",
     "line-break-014",
     "line-break-014-display-false",
     "line-break-015",
@@ -168,20 +159,12 @@ const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonl
     "line-break-058-display-false",
     "line-break-059",
     "line-break-059-display-false",
-    "line-break-072",
-    "line-break-072-display-false",
     "line-break-073",
     "line-break-073-display-false",
-    "line-break-076",
-    "line-break-076-display-false",
     "line-break-077",
     "line-break-077-display-false",
-    "line-break-083",
-    "line-break-083-display-false",
-    "line-break-084",
-    "line-break-084-display-false",
-    "line-break-090",
-    "line-break-090-display-false",
+    "asciimath-spec-omml-11",
+    "asciimath-spec-omml-11-display-false",
   ],
 };
 

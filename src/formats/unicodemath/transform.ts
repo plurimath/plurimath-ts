@@ -79,15 +79,9 @@
  * `:55`/`:56`/`:57` already unwrap `sub_script`/`sup_script`/`pre_script`.
  *
  * The eighth, `:1375` (`hbracket_class` simple / `scripted_first_value`
- * SEQUENCE), is transcribed in a comment at its position below but NOT
- * registered: every `scripted_first_value` shape that would reach it needs a
- * `{base:, sub:, sup:}` three-key hash or a `{base:, sub: sequence}`
- * two-key one, and `:1019`/`:1116` here are `simple`/`simple` only, so
- * nothing this slice carries can ever bind it — measured by testing several
- * `subsup_exp`, `mini_sub_sup` and `pre_script` inputs, every one of which
- * hit that gap before `hbracket_class` did. `transform-coverage.spec.ts`
- * refuses an unfired rule on principle, the same call FRACTION's own header
- * below makes for its ten `atoms`-blocked call sites. See
+ * SEQUENCE), was left unregistered by this increment: nothing it carried could
+ * build the sequence-shaped scripted base that reaches it. Slice F's
+ * `:1054`/`:1069` do, and `:1375` is registered beside `:1344` below. See
  * `scripts/generate-unicodemath-model-fixtures.rb`'s own `"decoration"`
  * group for the fixtures that exercise the other seven.
  *
@@ -252,15 +246,9 @@
  *
  * The other EIGHT — `:1919`, `:2183`, `:2827`, `:2841`, `:2884`, `:2993`,
  * `:3020`, `:3047`, every one binding a SEQUENCE `sub` or `sup` directly
- * (not through `:255`'s `naryand` route) — stay unported. Traced on the
- * oracle, the only way a bare `sub`/`sup` position becomes a genuine
- * SEQUENCE is the `{atom:, atoms:}` multi-character-run combinator
- * (`"∫_(ab)f"`'s `sub` resolves through exactly that shape) — the same
- * `atoms`/`recursive_numerator`/`recursive_denominator` family the FIRST
- * FRACTION increment's own boundary section named and deferred whole. Eight
- * rules that read `grammar.ts` cleanly are gated on a ninth family this
- * slice does not carry, the same shape as DECORATION's own deferral below,
- * so they are named here rather than forced through with an untested input.
+ * (not through `:255`'s `naryand` route) — were left unported by this
+ * increment; slice F registers all eight (the "script-subsup-nary" fixture
+ * group), reached by multi-character `sub`/`sup` runs such as `"∑_c1"`.
  *
  * Twelve increments the running count from 139 to 151 (after DECORATION and
  * RELATION/OPERATOR landed as their own increments in between; see git
@@ -522,6 +510,9 @@ import {
   UNICODEMATH_OVERLAYS_NOTATIONS,
   UNICODEMATH_PHANTOM_FUNCTIONS,
   UNICODEMATH_PRIMES_CONSTANTS,
+  UNICODEMATH_SUB_OPERATORS_BY_KEY,
+  UNICODEMATH_SUP_ALPHABETS_BY_KEY,
+  UNICODEMATH_SUP_OPERATORS_BY_KEY,
   UNICODEMATH_SYMBOL_CLASS_INPUT,
   UNICODEMATH_UNDER_HORIZONTAL_BRACKETS,
   type UnicodemathPhantomAttribute,
@@ -650,6 +641,10 @@ const COMBINING_SYMBOLS = zipConstants(
 const NARY_CLASSES_INVERTED = invertFirstWins(UNICODEMATH_NARY_CLASSES);
 const UNARY_ARG_FUNCTIONS_INVERTED = invertFirstWins(UNICODEMATH_UNARY_ARG_FUNCTIONS);
 const HORIZONTAL_BRACKETS_INVERTED = invertFirstWins(UNICODEMATH_HORIZONTAL_BRACKETS);
+/** `Constants::SUP_ALPHABETS.key(entity)`, `SUB_OPERATORS.key(entity)`, `SUP_OPERATORS.key(entity)`. */
+const SUP_ALPHABETS_INVERTED = invertFirstWins(UNICODEMATH_SUP_ALPHABETS_BY_KEY);
+const SUB_OPERATORS_INVERTED = invertFirstWins(UNICODEMATH_SUB_OPERATORS_BY_KEY);
+const SUP_OPERATORS_INVERTED = invertFirstWins(UNICODEMATH_SUP_OPERATORS_BY_KEY);
 
 /**
  * `Constants::UNDER_HORIZONTAL_BRACKETS[hbrack.to_sym] || .key(hbrack)`
@@ -1120,6 +1115,71 @@ function baseIsPrime(base: UnicodemathDraft): boolean {
   const two = base.fields.parameterTwo;
   if (symbolPrime(two)) return true;
   return PRIMES_INVERTED.has(rubyToS(draftValue(two)));
+}
+
+/** `Math::Function::Base`'s own class, not a `BinaryFunction` alias or a descendant. */
+function isBaseNode(value: unknown): value is UnicodemathDraft {
+  return isDraft(value) && draftRubyClass(value) === "Math::Function::Base";
+}
+
+/**
+ * `Utility.recursive_sub(sub_script, sub_recursion)`
+ * (`unicode_math/utility.rb:123-139`, with `base_recursion`): a `Base`
+ * recursion has `sub_script` folded into the innermost `parameter_one` of its
+ * leftmost `Base` chain, and comes back itself; anything else is wrapped.
+ */
+function recursiveSub(subScript: unknown, subRecursion: unknown): unknown {
+  if (!isBaseNode(subRecursion)) return newBase(subScript, subRecursion);
+  let node: UnicodemathDraft = subRecursion;
+  while (isBaseNode(fieldOf(node, "parameterOne"))) {
+    node = fieldOf(node, "parameterOne") as UnicodemathDraft;
+  }
+  setField(node, "parameterOne", newBase(subScript, fieldOf(node, "parameterOne")));
+  return subRecursion;
+}
+
+/**
+ * `Utility.recursive_sup(sup_script, sup_recursion)`
+ * (`unicode_math/utility.rb:152-179`, with the module-level `sup_recursion`
+ * helper): `recursiveSub`'s twin over `Power`.
+ */
+function recursiveSup(supScript: unknown, supRecursion: unknown): unknown {
+  if (!isA(supRecursion, IS_POWER)) return newPower(supScript, supRecursion);
+  let node: UnicodemathDraft = supRecursion;
+  while (isA(fieldOf(node, "parameterOne"), IS_POWER)) {
+    node = fieldOf(node, "parameterOne") as UnicodemathDraft;
+  }
+  setField(node, "parameterOne", newPower(supScript, fieldOf(node, "parameterOne")));
+  return supRecursion;
+}
+
+/**
+ * `Utility.base_is_sub_or_sup?(base)` (`unicode_math/utility.rb:191-200`): a
+ * `case` with no `else`, so every node kind it does not name answers nil. A
+ * `Fenced`'s `parameter_two.first` raises `NoMethodError` when the parameter
+ * is not an array.
+ */
+function baseIsSubOrSup(base: unknown): boolean {
+  if (isFormulaDraft(base)) return baseIsSubOrSup(formulaValue(base)[0]);
+  if (isFenced(base)) {
+    const inner = fieldOf(base, "parameterTwo");
+    if (!Array.isArray(inner)) {
+      throw new TypeError("unicodemath transform: Fenced#parameter_two.first on a non-array");
+    }
+    return baseIsSubOrSup(inner[0]);
+  }
+  if (isSymbol(base) || (isDraft(base) && base.kind === "number")) {
+    return rubyTruthy(base.fields.miniSubSized) || rubyTruthy(base.fields.miniSupSized);
+  }
+  return false;
+}
+
+/** `Math::Symbols::Symbol.new(text, mini_sup_sized: true)` / `mini_sub_sized: true`. */
+function newMiniSymbol(text: string, size: "sub" | "sup"): UnicodemathDraft {
+  return new UnicodemathDraft("symbol", "Symbol", {
+    value: text,
+    ...(size === "sub" ? { miniSubSized: true } : { miniSupSized: true }),
+  });
 }
 
 /**
@@ -2569,18 +2629,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     { hbracket_class: simple("hbrack"), scripted_first_value: simple("scripted_first_value") },
     (b) => hbracketDecoration(b.hbrack, b.scripted_first_value, true),
   );
-  // `:1375` (`hbracket_class` simple / `scripted_first_value` SEQUENCE) is
-  // NOT registered: every `scripted_first_value` shape that would reach it
-  // needs a `{base:, sub:, sup:}` three-key hash or a `{base:, sub:
-  // sequence}` two-key one, and this slice's `:1019`/`:1116` are `simple`/
-  // `simple` only, so nothing this port carries can ever bind it — measured
-  // by testing several `subsup_exp`, `mini_sub_sup` and `pre_script` inputs,
-  // every one of which hit that gap before `hbracket_class` did.
-  // `transform-coverage.spec.ts` refuses an unfired rule on principle (the
-  // slice is defined by what fires, not by what looks portable), so the
-  // choice here is the same one FRACTION's own header makes for its ten
-  // `atoms`-blocked call sites: transcribe the fact in prose, register
-  // nothing.
+  // `:1375`, the SEQUENCE twin of `:1344`, is registered now: slice F's
+  // `:1054`/`:1069` build the sequence-shaped scripted base it needs
+  // (witness `"⏟ab_1"`, in the "script-subsup-nary" fixture group).
+  rule(
+    "1375",
+    { hbracket_class: simple("hbrack"), scripted_first_value: sequence("scripted_first_value") },
+    (b) => hbracketDecoration(b.hbrack, b.scripted_first_value, false),
+  );
 
   // `:1420`: the only DECORATION rule whose `first_value` is a SEQUENCE —
   // `Array#pop` MUTATES that sequence, taking its last element as the
@@ -2875,8 +2931,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // `NARY_CLASSES` branch at all — every name it sees there is measured to
   // already be a registered class, same as `:175` above; `:1931`'s simple
   // `sub` is the one with the branch, `:2806`'s own shape one key short.
-  // `:1919`, the SEQUENCE-`sub` twin, is deferred with the rest of the
-  // SEQUENCE-taking NARY rules below.
+  // `:1919`, the SEQUENCE-`sub` twin, is slice F's (below).
   rule("1931", { nary_class: simple("nary_class"), sub: simple("sub") }, (b) => {
     const name = naryFunctionName(b.nary_class);
     if (UNICODEMATH_NARY_CLASSES.has(rubyToS(name))) {
@@ -3327,7 +3382,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // key ahead of `sub`/`sup` and branching on `NARY_CLASSES` membership,
   // building `options` from the bound `Number`'s own `value` field either
   // way. `:2827`/`:2841`/`:2884` and every other SEQUENCE-`sub`-or-`sup`
-  // NARY rule are deferred together below, past `:3477`.
+  // NARY rule are slice F's, registered in its block at the end.
   rule(
     "2856",
     { nary_class: simple("nary_class"), mask: simple("mask"), sub: simple("sub") },
@@ -3599,6 +3654,313 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
         [b.pre_sub],
         [b.pre_sup],
       ),
+  );
+
+  // --- SCRIPT / SUBSUP / BASE builders and the NARY remainder (slice F) ----
+  //
+  // Every rule below BUILDS a node (`Math::`/`Utility.`); the pure
+  // unwrap/list-join rules of the same families belong to slice A. Registered
+  // in ascending gem-line order except the slice-A prerequisites, which sit
+  // beside their first user; none of them shares a signature with another rule
+  // here, so order decides no tie. Ids are `rule(` lines.
+  //
+  // MINI-SIZED leaves: `Constants::X.key(entity)` recovers the plain
+  // character (`Hash#key` on a miss is nil, `nil.to_s` is `""`), and the
+  // built `Symbol`/`Number` carries `mini_sup_sized`/`mini_sub_sized`.
+  rule("53", { sup_alpha: simple("alpha") }, (b) =>
+    newMiniSymbol(SUP_ALPHABETS_INVERTED.get(rubyToS(b.alpha)) ?? "", "sup"),
+  );
+  // PREREQUISITES owned by slice A (pure unwraps and a list-join, ids `:38`/
+  // `:59`/`:60`/`:65`/`:66`/`:89`/`:830`), registered here under the same ids
+  // because the script witnesses below cannot parse without them and A has
+  // not landed on this branch; the integration keeps each id exactly once.
+  rule("38", { sub_exp: sequence("exp") }, (b) => b.exp);
+  rule("59", { mini_sup: simple("mini_sup") }, (b) => b.mini_sup);
+  rule("60", { mini_sub: simple("mini_sub") }, (b) => b.mini_sub);
+  rule("65", { sub_script: sequence("script") }, (b) => b.script);
+  rule("66", { sup_script: sequence("script") }, (b) => b.script);
+  rule("86", { subsup_exp: sequence("subsup_exp") }, (b) => filterValues(b.subsup_exp));
+  rule("89", { mini_sub_sup: simple("mini_sub_sup") }, (b) => b.mini_sub_sup);
+  rule("113", { sup_operators: simple("operator") }, (b) =>
+    newMiniSymbol(SUP_OPERATORS_INVERTED.get(rubyToS(b.operator)) ?? "", "sup"),
+  );
+
+  // OPERATOR + a script: the symbol, then the script expression(s).
+  rule("511", { operator: simple("operator"), sup_script: simple("sup_script") }, (b) => [
+    symbolsClass(b.operator),
+    b.sup_script,
+  ]);
+  rule("516", { operator: simple("operator"), sup_script: sequence("sup_script") }, (b) => [
+    symbolsClass(b.operator),
+    ...asArray(b.sup_script),
+  ]);
+  // `:521` was slice B's, blocked on `:1148` (`a^!!b`), which lives below.
+  rule(
+    "521",
+    { combined_symbols: simple("combined_symbols"), sup_script: simple("sup_script") },
+    (b) => [symbolsClass(COMBINING_SYMBOLS.get(rubyToS(b.combined_symbols))), b.sup_script],
+  );
+  rule("533", { operator: simple("operator"), sub_script: simple("sub_script") }, (b) => [
+    symbolsClass(b.operator),
+    b.sub_script,
+  ]);
+  rule(
+    "553",
+    { sub_digits: simple("sub_digits"), sub_recursion_expr: sequence("sub_recursion_expr") },
+    (b) => [subDigitNumber(b.sub_digits), ...asArray(b.sub_recursion_expr)],
+  );
+  rule(
+    "561",
+    { sub_digits: simple("sub_digits"), sub_recursion_expr: simple("sub_recursion_expr") },
+    (b) => [subDigitNumber(b.sub_digits), b.sub_recursion_expr],
+  );
+  rule(
+    "567",
+    { sup_alpha: simple("sup_alpha"), sup_recursion_expr: sequence("sup_recursion_expr") },
+    (b) => [
+      newMiniSymbol(SUP_ALPHABETS_INVERTED.get(rubyToS(b.sup_alpha)) ?? "", "sup"),
+      ...asArray(b.sup_recursion_expr),
+    ],
+  );
+  rule(
+    "575",
+    { sup_alpha: simple("sup_alpha"), sup_recursion_expr: simple("sup_recursion_expr") },
+    (b) => [
+      newMiniSymbol(SUP_ALPHABETS_INVERTED.get(rubyToS(b.sup_alpha)) ?? "", "sup"),
+      b.sup_recursion_expr,
+    ],
+  );
+  rule(
+    "584",
+    { sup_digits: simple("digits"), sup_recursion_expr: sequence("sup_recursion_expr") },
+    (b) => [supDigitNumber(b.digits), ...asArray(b.sup_recursion_expr)],
+  );
+  rule("592", { sup_digits: simple("digits"), sup_recursion_expr: simple("sup") }, (b) => [
+    supDigitNumber(b.digits),
+    b.sup,
+  ]);
+
+  // OPERATOR/SCRIPT + a recursion: `Utility.recursive_sub`/`recursive_sup`.
+  rule("614", { operator: simple("operator"), sup_recursion: simple("sup_recursion") }, (b) =>
+    recursiveSup(symbolsClass(b.operator), unfencedValue(b.sup_recursion, true)),
+  );
+  rule("622", { operator: simple("operator"), sub_recursion: simple("sub_recursion") }, (b) =>
+    recursiveSub(symbolsClass(b.operator), b.sub_recursion),
+  );
+  rule("630", { operator: simple("operator"), sub_recursion: sequence("sub_recursion") }, (b) => [
+    symbolsClass(b.operator),
+    ...asArray(b.sub_recursion),
+  ]);
+  rule("635", { sub_script: simple("sub_script"), sub_recursion: simple("sub_recursion") }, (b) =>
+    recursiveSub(b.sub_script, b.sub_recursion),
+  );
+  rule("640", { sub_operators: simple("operator"), sub_recursions: simple("recursions") }, (b) => [
+    newMiniSymbol(SUB_OPERATORS_INVERTED.get(rubyToS(b.operator)) ?? "", "sub"),
+    b.recursions,
+  ]);
+  rule(
+    "646",
+    { sub_operators: simple("operator"), sub_recursions: sequence("recursions") },
+    (b) => [
+      newMiniSymbol(SUB_OPERATORS_INVERTED.get(rubyToS(b.operator)) ?? "", "sub"),
+      ...asArray(b.recursions),
+    ],
+  );
+  rule("652", { sup_operators: simple("operator"), sup_recursions: simple("recursions") }, (b) => [
+    newMiniSymbol(SUP_OPERATORS_INVERTED.get(rubyToS(b.operator)) ?? "", "sup"),
+    b.recursions,
+  ]);
+  // `:830` (slice A's `{sup_exp: sequence, expr: sequence}` list-join): the
+  // only way `:1164`'s array result, wrapped in `sup_exp`, reaches a parent.
+  rule("830", { sup_exp: sequence("sup_exp"), expr: sequence("expr") }, (b) => [
+    ...asArray(b.sup_exp),
+    ...asArray(b.expr),
+  ]);
+  rule("985", { sup_script: simple("sup_script"), sup_recursion: simple("sup_recursion") }, (b) =>
+    recursiveSup(b.sup_script, unfencedValue(b.sup_recursion, true)),
+  );
+  rule(
+    "1011",
+    { sup_script: sequence("sup_script"), sup_recursion: simple("sup_recursion") },
+    (b) => recursiveSup(newFormula(b.sup_script), unfencedValue(b.sup_recursion, true)),
+  );
+
+  // BASE: a base plus a sub and/or sup whose shape is a SEQUENCE. `:1019`/
+  // `:1116` above are the simple/simple twins.
+  rule("1054", { base: sequence("base"), sub: simple("sub") }, (b) => {
+    const base = asArray(b.base);
+    const newBaseValue = base.pop();
+    let object: unknown;
+    if (className(b.sub) === "underset") {
+      setField(b.sub, "parameterTwo", newBaseValue);
+      object = b.sub;
+    } else {
+      object = newBase(newBaseValue, unfencedValue(b.sub, true));
+    }
+    base.push(object);
+    return base;
+  });
+  rule("1069", { base: sequence("base"), sub: sequence("sub") }, (b) => {
+    const base = asArray(b.base);
+    const popped = base.pop();
+    base.push(newBase(popped, unfencedValue(b.sub, true)));
+    return base;
+  });
+  // `:1078`'s and `:2403`'s first arm assigns an UNDEFINED local
+  // (`base.parameter_one = sub_value`): Ruby raises `NameError` there, so the
+  // arm is a refusal, not a build.
+  rule("1078", { base: simple("base"), sub: sequence("sub") }, (b) => {
+    if (
+      BINARY_FUNCTION_NAMES.has(className(b.base)) &&
+      !rubyTruthy(fieldOf(b.base, "parameterOne"))
+    ) {
+      throw new ReferenceError("undefined local variable or method 'sub_value' (Ruby NameError)");
+    }
+    if (isA(b.base, IS_POWER) && baseIsPrime(b.base)) {
+      return newPowerBase(fieldOf(b.base, "parameterOne"), b.sub, fieldOf(b.base, "parameterTwo"));
+    }
+    return newBase(b.base, unfencedValue(b.sub, true));
+  });
+  rule("1139", { base: sequence("base"), sup: simple("sup") }, (b) => {
+    const base = asArray(b.base);
+    const power = newPower(base.pop(), unfencedValue(b.sup, true));
+    base.push(power);
+    return newFormula(base);
+  });
+  rule("1148", { base: simple("base"), sup: sequence("sup") }, (b) => {
+    if (className(b.base) === "base" && baseIsSubOrSup(fieldOf(b.base, "parameterTwo"))) {
+      return newPowerBase(
+        fieldOf(b.base, "parameterOne"),
+        fieldOf(b.base, "parameterTwo"),
+        unfencedValue(b.sup, true),
+      );
+    }
+    return newPower(b.base, unfencedValue(b.sup, true));
+  });
+  rule("1164", { base: sequence("base"), sup: sequence("sup") }, (b) => {
+    const base = asArray(b.base);
+    const power = newPower(base.pop(), unfencedValue(b.sup, true));
+    base.push(power);
+    return base;
+  });
+  rule("1183", { unary_sub_sup: simple("sub_sup"), first_value: sequence("first_value") }, (b) => {
+    const subSup = b.sub_sup;
+    if (isA(subSup, IS_UNARY_FUNCTION)) {
+      setField(fieldOf(subSup, "parameterOne"), "parameterOne", filterValues(b.first_value));
+      return subSup;
+    }
+    return newFormula([subSup, ...asArray(b.first_value)]);
+  });
+
+  // NARY with a SEQUENCE `sub`/`sup` and no mask. Every arm below resolves
+  // the name with `naryFunctionName`, exactly as `:1931`/`:2806` do.
+  rule("1919", { nary_class: simple("nary_class"), sub: sequence("sub") }, (b) =>
+    buildClass(naryFunctionName(b.nary_class), filterValues(b.sub)),
+  );
+
+  // BASE with a `sub` AND a `sup`, one or both a sequence.
+  rule("2142", { base: sequence("base"), sup: simple("sup"), sub: simple("sub") }, (b) => {
+    const base = asArray(b.base);
+    const powerBase = newPowerBase(
+      base.pop(),
+      unfencedValue(b.sub, true),
+      unfencedValue(b.sup, true),
+    );
+    return [...base, powerBase];
+  });
+  rule("2153", { base: simple("base"), sup: simple("sup"), sub: sequence("sub") }, (b) =>
+    newPowerBase(b.base, unfencedValue(b.sub, true), unfencedValue(b.sup, true)),
+  );
+  rule("2163", { base: simple("base"), sup: sequence("sup"), sub: sequence("sub") }, (b) =>
+    newPowerBase(b.base, filterValues(b.sub), filterValues(b.sup)),
+  );
+  rule("2173", { base: simple("base"), sup: sequence("sup"), sub: simple("sub") }, (b) =>
+    newPowerBase(b.base, filterValues(b.sub), filterValues(b.sup)),
+  );
+  rule(
+    "2183",
+    { nary_class: simple("nary_class"), sub: sequence("sub"), sup: simple("sup") },
+    (b) => buildClass(naryFunctionName(b.nary_class), filterValues(b.sub), filterValues(b.sup)),
+  );
+
+  // NARY, SEQUENCE `sub`/`sup` with one or both keys, and the mask-carrying
+  // ones. `:2856`/`:2911` above are the simple `sub`/`sup` mask siblings.
+  rule(
+    "2827",
+    { nary_class: simple("nary_class"), sub: sequence("sub"), sup: sequence("sup") },
+    (b) =>
+      buildClass(
+        naryFunctionName(b.nary_class),
+        unfencedValue(b.sub, true),
+        unfencedValue(b.sup, true),
+      ),
+  );
+  rule(
+    "2841",
+    { nary_class: simple("nary_class"), sub: simple("sub"), sup: sequence("sup") },
+    (b) => {
+      const subValue = isA(b.sub, IS_UNDERSET)
+        ? fieldOf(b.sub, "parameterOne")
+        : unfencedValue(b.sub, true);
+      return buildClass(naryFunctionName(b.nary_class), subValue, unfencedValue(b.sup, true));
+    },
+  );
+  rule(
+    "2884",
+    { nary_class: simple("nary_class"), mask: simple("mask"), sub: sequence("sub") },
+    (b) => {
+      const name = naryFunctionName(b.nary_class);
+      const options: NodeOptions = { mask: fieldOf(b.mask, "value") };
+      const subValue = unfencedValue(b.sub, true);
+      if (UNICODEMATH_NARY_CLASSES.has(rubyToS(name))) {
+        return buildClass(name, subValue, null, null, options);
+      }
+      return newNary(symbolsClass(name), subValue, null, null, options);
+    },
+  );
+  // The three mask rules with both `sub` and `sup` share one shape: only the
+  // per-key value builder differs.
+  const maskedNary = (
+    b: Record<string, TransformValue>,
+    subValue: unknown,
+    supValue: unknown,
+  ): UnicodemathDraft => {
+    const name = naryFunctionName(b.nary_class);
+    const options: NodeOptions = { mask: fieldOf(b.mask, "value") };
+    if (UNICODEMATH_NARY_CLASSES.has(rubyToS(name))) {
+      return buildClass(name, subValue, supValue, options);
+    }
+    return newNary(symbolsClass(name), subValue, supValue, null, options);
+  };
+  rule(
+    "2993",
+    {
+      nary_class: simple("nary_class"),
+      mask: simple("mask"),
+      sub: sequence("sub"),
+      sup: sequence("sup"),
+    },
+    (b) => maskedNary(b, filterValues(b.sub), filterValues(b.sup)),
+  );
+  rule(
+    "3020",
+    {
+      nary_class: simple("nary_class"),
+      mask: simple("mask"),
+      sub: simple("sub"),
+      sup: sequence("sup"),
+    },
+    (b) => maskedNary(b, unfencedValue(b.sub, true), filterValues(b.sup)),
+  );
+  rule(
+    "3047",
+    {
+      nary_class: simple("nary_class"),
+      mask: simple("mask"),
+      sub: sequence("sub"),
+      sup: simple("sup"),
+    },
+    (b) => maskedNary(b, filterValues(b.sub), unfencedValue(b.sup, true)),
   );
 
   return { transform: t, fired, ruleIds };

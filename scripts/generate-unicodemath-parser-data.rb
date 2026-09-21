@@ -1146,6 +1146,26 @@ module UnicodeMathParserDataGenerator
              "(only `&#x332;`, `\"bottom\"`) a `Menclose` carrying this table's value\n" \
              "as its notation string.",
       ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_SUP_ALPHABETS_BY_KEY", "ReadonlyMap<string, string>",
+        data[:sup_alphabets],
+        doc: "`Constants::SUP_ALPHABETS`: character -> superscript entity. The grammar\n" \
+             "table above carries `.values` only; the mini-sized script rules\n" \
+             "(`transform.rb:53`, `:567`, `:575`) recover the character with\n" \
+             "`.key(entity)`, so the pairs are emitted here.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_SUB_OPERATORS_BY_KEY", "ReadonlyMap<string, string>",
+        data[:sub_operators],
+        doc: "`Constants::SUB_OPERATORS`: character -> subscript entity, for the\n" \
+             "`.key(entity)` in `transform.rb:640`/`:646`/`:2426`.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_SUP_OPERATORS_BY_KEY", "ReadonlyMap<string, string>",
+        data[:sup_operators],
+        doc: "`Constants::SUP_OPERATORS`: character -> superscript entity, for the\n" \
+             "`.key(entity)` in `transform.rb:113`/`:652`.",
+      ),
       ts_string_list(
         "UNICODEMATH_BINARY_FUNCTIONS", data[:binary_functions],
         "`Constants::BINARY_FUNCTIONS`: the `class_name` values the sub- and\n" \
@@ -1355,6 +1375,9 @@ module UnicodeMathParserDataGenerator
       ),
       overlays_notations: string_pairs(constants::OVERLAYS_NOTATIONS, "OVERLAYS_NOTATIONS"),
       belows_notations: string_pairs(constants::BELOWS_NOTATIONS, "BELOWS_NOTATIONS"),
+      sup_alphabets: string_pairs(constants::SUP_ALPHABETS, "SUP_ALPHABETS"),
+      sub_operators: string_pairs(constants::SUB_OPERATORS, "SUB_OPERATORS"),
+      sup_operators: string_pairs(constants::SUP_OPERATORS, "SUP_OPERATORS"),
       binary_functions: constants::BINARY_FUNCTIONS.dup,
       menclose: string_pairs(
         Plurimath::Utility::UNICODEMATH_MENCLOSE_FUNCTIONS, "UNICODEMATH_MENCLOSE_FUNCTIONS"

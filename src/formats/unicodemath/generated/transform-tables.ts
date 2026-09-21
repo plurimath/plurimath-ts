@@ -3935,6 +3935,61 @@ export const UNICODEMATH_BELOWS_NOTATIONS: ReadonlyMap<string, string> = new Map
 ]);
 
 /**
+ * `Constants::SUP_ALPHABETS`: character -> superscript entity. The grammar
+ * table above carries `.values` only; the mini-sized script rules
+ * (`transform.rb:53`, `:567`, `:575`) recover the character with
+ * `.key(entity)`, so the pairs are emitted here.
+ */
+export const UNICODEMATH_SUP_ALPHABETS_BY_KEY: ReadonlyMap<string, string> = new Map([
+  ["a", "&#x1d43;"],
+  ["b", "&#x1d47;"],
+  ["c", "&#x1d9c;"],
+  ["d", "&#x1d48;"],
+  ["e", "&#x1d49;"],
+  ["f", "&#x1da0;"],
+  ["g", "&#x1d4d;"],
+  ["h", "&#x2b0;"],
+  ["i", "&#x2071;"],
+  ["j", "&#x2b2;"],
+  ["k", "&#x1d4f;"],
+  ["l", "&#x2e1;"],
+  ["m", "&#x1d50;"],
+  ["n", "&#x207f;"],
+  ["o", "&#x1d52;"],
+  ["p", "&#x1d56;"],
+  ["r", "&#x2b3;"],
+  ["s", "&#x2e2;"],
+  ["t", "&#x1d57;"],
+  ["u", "&#x1d58;"],
+  ["v", "&#x1d5b;"],
+  ["w", "&#x2b7;"],
+  ["x", "&#x2e3;"],
+  ["y", "&#x2b8;"],
+  ["z", "&#x1dbb;"],
+]);
+
+/**
+ * `Constants::SUB_OPERATORS`: character -> subscript entity, for the
+ * `.key(entity)` in `transform.rb:640`/`:646`/`:2426`.
+ */
+export const UNICODEMATH_SUB_OPERATORS_BY_KEY: ReadonlyMap<string, string> = new Map([
+  ["+", "&#x208a;"],
+  ["-", "&#x208b;"],
+  ["=", "&#x208c;"],
+  ["ₔ", "&#x2094;"],
+]);
+
+/**
+ * `Constants::SUP_OPERATORS`: character -> superscript entity, for the
+ * `.key(entity)` in `transform.rb:113`/`:652`.
+ */
+export const UNICODEMATH_SUP_OPERATORS_BY_KEY: ReadonlyMap<string, string> = new Map([
+  ["+", "&#x207a;"],
+  ["-", "&#x207b;"],
+  ["=", "&#x207c;"],
+]);
+
+/**
  * `Constants::BINARY_FUNCTIONS`: the `class_name` values the sub- and
  * sup-script rules treat as "a function still missing its argument", so
  * the script fills `parameter_one`/`parameter_two` instead of wrapping.

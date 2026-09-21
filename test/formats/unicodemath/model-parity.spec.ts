@@ -99,8 +99,23 @@ const DEFERRED_INPUTS: readonly string[] = [
   // `:1530`; each now compares for real, as a corpus row.
   "((a)̅)̅",
 
+<<<<<<< HEAD
   // SCRIPT (`transform.rb:118`-`:2403`): a right-associative double exponent.
   "x^y^(z)",
+=======
+  // `"x^y^(z)"` (`:985`, a right-associative double exponent) sat here until
+  // the SCRIPT/SUBSUP/BASE builders landed; it is a `supported` corpus row now.
+
+  // UNICODE SPACE characters, not runs of ASCII spaces — the distinction
+  // matters, because a plain-space literal here silently fails to match the
+  // fixture and the case quietly rejoins the parity list. Measured from the
+  // fixture bytes: NBSP (U+00A0) and THREE-PER-EM SPACE (U+2004). The grammar
+  // maps only the ASCII space today.
+  "a \u00a0\u00a0 b",
+  "a \u00a0\u00a0 b \u00a0\u00a0 c",
+  "a \u2004 b",
+  "a \u00a0\u00a0\u00a0\u00a0 b",
+>>>>>>> feat/um-slice-f-nary-scripts
 ];
 
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");

@@ -7,17 +7,23 @@
  * fraction width (`Source#decimal_precision`), so nothing is truncated and
  * nothing is padded.
  *
- * The resolver's other two rules are not here because the paths that reach
- * them are not: `significant_base_precision` only answers for a target base
- * other than 10 (`target_base?`), and the coefficient-width rule only for a
- * supported notation. The base and notation lanes add their rule to this
+ * The base rule sits between them (`significant_base_precision`, only for a
+ * target base other than 10 with a positive `significant`). The coefficient-
+ * width rule is not here because the path that reaches it is not: it applies
+ * only for a supported notation. The notation lane adds its rule to this
  * function, in the gem's order (explicit, then base, then notation).
  */
 
+import { type NumberBase, significantBasePrecision } from "./base-notation";
 import type { Source } from "./source";
 
-export function resolvePrecision(source: Source, explicit: number | null): number {
-  return explicit ?? source.decimalPrecision;
+export function resolvePrecision(
+  source: Source,
+  explicit: number | null,
+  base: { readonly base: NumberBase; readonly significant: number },
+): number {
+  if (explicit !== null) return explicit;
+  return significantBasePrecision(source, base.base, base.significant) ?? source.decimalPrecision;
 }
 
 /**

@@ -24,7 +24,7 @@ import {
 export function renderNumber(node: NodeOf<"number">, context: RenderContext): string {
   const value = node.value;
   if (context.numberFormat !== null) {
-    if (isGemNumericValue(value)) return applyNumberFormat(value, context.numberFormat);
+    if (isGemNumericValue(value)) return applyNumberFormat(value, context.numberFormat, FORMAT);
     refuseNonNumericUnderFormatter(value, FORMAT, node.kind);
   }
   return interpolatedValue(value, node.kind, "number.value");

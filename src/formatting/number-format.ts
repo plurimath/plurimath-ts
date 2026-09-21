@@ -19,10 +19,14 @@
  * `exponentSign`) is `numbers/notation.ts`'s: the gem branches to it before
  * the numeric pipeline and localizes the coefficient back through it.
  *
+ * Since B2's base slice it also covers base notation (`base` 2/8/10/16,
+ * `basePrefix`, `basePostfix`, `hexCapital`) — `numbers/base-notation.ts` —
+ * under the numeric pipeline and under notation alike (the coefficient is
+ * converted to the base).
+ *
  * Deliberately NOT here, and refused by name rather than silently ignored:
- * base notation (`base`, `basePrefix`, `basePostfix`, `hexCapital`) and
- * `stringFormat` — each is a later lane (TODO.plan/feature-roadmap.md, Chain B), built on the seam
- * `numbers/number-renderer.ts` documents.
+ * `stringFormat` — a later lane (TODO.plan/feature-roadmap.md, Chain B),
+ * built on the seam `numbers/number-renderer.ts` documents.
  *
  * **Locale coverage.** Every locale `formatting/locales.ts` knows — all 96 of
  * `Formatter::SupportedLocales::LOCALES` — is accepted here too, sourcing its
@@ -65,9 +69,18 @@ import {
   isSupportedLocale,
   SUPPORTED_LOCALES,
 } from "./locales";
+import {
+  DEFAULT_BASE,
+  DEFAULT_BASE_PREFIXES,
+  type HexCapital,
+  isSupportedBase,
+  type NumberBase,
+  resolveBaseNotation,
+} from "./numbers/base-notation";
 import { type FormattedNumber, formattedNumberText } from "./numbers/formatted-number";
 import {
   type FormattedNotation,
+  formattedExponent,
   formattedNotationText,
   isFormattedNotation,
   NOTATIONS,
@@ -76,6 +89,7 @@ import {
   renderNotation,
 } from "./numbers/notation";
 import { formatNumber, type NumericOptions } from "./numbers/number-renderer";
+import { renderNumberText, semanticBaseParts, type TextTarget } from "./numbers/text-renderer";
 
 /** `Formatter::Standard::DEFAULT_OPTIONS[:group_digits]`. */
 const DEFAULT_GROUP_DIGITS = 3;
@@ -122,11 +136,11 @@ function groupMarkerFor(locale: string): string {
  * Standard::DEFAULT_OPTIONS`' decimal/group/group_digits triple, the
  * fraction-side grouping pair, and the digit-shaping keys `precision`,
  * `significant`, `digit_count`, `padding`, `padding_digits`,
- * `padding_group_digits` and `number_sign`, and the notation keys `notation`,
- * `e`, `times` and `exponent_sign`. The base keys (`base`, `base_prefix`,
- * `base_postfix`, `hex_capital`) belong to a later lane and are refused as
- * unknown keys by `assertKnownOptions` below, never silently accepted and
- * ignored.
+ * `padding_group_digits` and `number_sign`, the notation keys `notation`,
+ * `e`, `times` and `exponent_sign`, and the base keys `base`, `base_prefix`,
+ * `base_postfix` and `hex_capital`. Every key that hash accepts is accepted
+ * here; an unknown key is refused by `assertKnownOptions` below, never
+ * silently accepted and ignored.
  *
  * `times: null` is the gem's explicit `nil` (`FormatOptions#times` then falls
  * back to `"\u00d7"`), where an absent or `undefined` key takes `Standard`'s
@@ -150,6 +164,13 @@ export interface FormatterSymbolOptions {
   readonly e?: string | null;
   readonly times?: string | null;
   readonly exponentSign?: string | null;
+  /** 2, 8, 10 or 16; anything else is refused (the gem raises `UnsupportedBase`). */
+  readonly base?: number | null;
+  /** Given, even as `null`, it makes the base render as literal text (`base_prefix?`). */
+  readonly basePrefix?: string | null;
+  readonly basePostfix?: string | null;
+  /** `true`, `"numbers_only"`, or anything else for none (`false`, `null`). */
+  readonly hexCapital?: boolean | string | null;
 }
 
 /**
@@ -199,6 +220,10 @@ const ACCEPTED_SYMBOL_KEYS: readonly string[] = [
   "e",
   "times",
   "exponentSign",
+  "base",
+  "basePrefix",
+  "basePostfix",
+  "hexCapital",
 ];
 
 /** `undefined`/`null` mean "the gem's default", present-and-anything-else is refused. */
@@ -264,6 +289,7 @@ function numberSignOption(value: unknown, format: string): string | null {
 }
 
 /**
+/**
  * `FormatOptions#symbol_option` (`format_options.rb:213`): a String or Symbol,
  * or absent; anything else raises `invalid_formatter_option`. `null` is the
  * gem's nil and reads as absent.
@@ -273,6 +299,36 @@ function symbolOption(value: unknown, key: string, format: string): string | nul
   if (typeof value !== "string") {
     throw new RenderError(
       `formatter.options.${key}: ${JSON.stringify(value)} is not a string`,
+      format,
+      "unknown",
+    );
+  }
+  return value;
+}
+
+/**
+ * `FormatOptions#separator_option` (`format_options.rb:206`) for the
+ * decimal, group and fraction-group markers. `undefined` (key absent) takes
+ * the default; an explicit `null` is the gem's nil, whose meaning differs per
+ * marker (`nullValue`): `decimal` and `fraction_group` render no marker at
+ * all, `group` falls back to the default. A Boolean raises the gem's
+ * `ConfigurationError` (`invalid_formatter_option`). The gem stringifies any
+ * other type (`to_s`/`inspect`); this port's options are typed strings, so
+ * every other non-string is refused, as `countOption` does.
+ */
+function separatorOption(
+  value: unknown,
+  key: string,
+  fallback: string,
+  nullValue: string,
+  format: string,
+): string {
+  if (value === undefined) return fallback;
+  if (value === null) return nullValue;
+  if (typeof value !== "string") {
+    throw new RenderError(
+      `formatter.options.${key}: ${JSON.stringify(value)} is not a string — the gem raises ` +
+        "ConfigurationError (invalid_formatter_option) for a Boolean",
       format,
       "unknown",
     );
@@ -301,6 +357,61 @@ function notationOption(value: unknown, format: string): Notation | null {
 function timesOption(value: unknown, format: string): string {
   if (value === undefined) return "x";
   return symbolOption(value, "times", format) ?? "\u00d7";
+}
+
+/**
+ * `FormatOptions#base` + `BaseNotation.validate!` (`base_notation.rb:87`): the
+ * base is 2, 8, 10 or 16, `null`/absent meaning 10. The gem raises
+ * `Plurimath::Errors::UnsupportedBase` for anything else on the call that
+ * renders the number; this refuses when the formatter is resolved. It also
+ * coerces a numeric String (`"16"`); this port's options are typed, so a
+ * string is refused, as `countOption` does.
+ */
+function baseOption(value: unknown, format: string): NumberBase {
+  if (value === undefined || value === null) return DEFAULT_BASE;
+  if (isSupportedBase(value)) return value;
+  throw new RenderError(
+    `formatter.options.base: ${JSON.stringify(value)} is not one of ` +
+      `${Object.keys(DEFAULT_BASE_PREFIXES).join(", ")} — the gem raises ` +
+      "Plurimath::Errors::UnsupportedBase (base_notation.rb)",
+    format,
+    "unknown",
+  );
+}
+
+/**
+ * `FormatOptions#hex_capital` (`format_options.rb:88`): nil, `true`, `false`,
+ * or a String/Symbol; `"true"` is `true`, `"numbers_only"` is `:numbers_only`,
+ * everything else (`false` included) is nil. Any other type raises
+ * `ConfigurationError`, base 10 included.
+ */
+function hexCapitalOption(value: unknown, format: string): HexCapital {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "boolean" && typeof value !== "string") {
+    throw new RenderError(
+      `formatter.options.hexCapital: ${JSON.stringify(value)} is not true, false, or a string`,
+      format,
+      "unknown",
+    );
+  }
+  const text = String(value);
+  if (text === "true") return true;
+  return text === "numbers_only" ? "numbers_only" : null;
+}
+
+/**
+ * `FormatOptions#base_prefix`/`#base_postfix` (`separator_option`): a string
+ * or nil, never a Boolean. `undefined` (the key absent) stays `undefined`: the
+ * gem tells "not given" (`symbols.key?`) from "given as nil", and only the
+ * first leaves the default prefix and the semantic form in place.
+ */
+function affixOption(value: unknown, key: string, format: string): string | null | undefined {
+  if (value === undefined || value === null || typeof value === "string") return value;
+  throw new RenderError(
+    `formatter.options.${key}: ${JSON.stringify(value)} is not a string`,
+    format,
+    "unknown",
+  );
 }
 
 /**
@@ -373,10 +484,16 @@ export function resolveNumberFormat(
   }
 
   return {
-    decimal: options?.decimal ?? decimalDefault,
-    group: options?.group ?? groupDefault,
+    decimal: separatorOption(options?.decimal, "decimal", decimalDefault, "", format),
+    group: separatorOption(options?.group, "group", groupDefault, groupDefault, format),
     groupDigits: countOption(options?.groupDigits, "groupDigits", DEFAULT_GROUP_DIGITS, format),
-    fractionGroup: options?.fractionGroup ?? DEFAULT_FRACTION_GROUP_MARKER,
+    fractionGroup: separatorOption(
+      options?.fractionGroup,
+      "fractionGroup",
+      DEFAULT_FRACTION_GROUP_MARKER,
+      "",
+      format,
+    ),
     fractionGroupDigits: countOption(
       options?.fractionGroupDigits,
       "fractionGroupDigits",
@@ -394,6 +511,12 @@ export function resolveNumberFormat(
     exponentSeparator: symbolOption(options?.e, "e", format) ?? "e",
     times: timesOption(options?.times, format),
     exponentSign: symbolOption(options?.exponentSign, "exponentSign", format),
+    baseNotation: resolveBaseNotation(
+      baseOption(options?.base, format),
+      affixOption(options?.basePrefix, "basePrefix", format),
+      affixOption(options?.basePostfix, "basePostfix", format),
+      hexCapitalOption(options?.hexCapital, format),
+    ),
   };
 }
 
@@ -442,10 +565,53 @@ export function refuseNonNumericUnderFormatter(value: unknown, format: string, k
 }
 
 /**
+/**
+ * What `Formatter::Numbers::MathmlRenderer.render` draws for one value: one
+ * `<mn>` of plain text (a plain number, a base with a literal affix, an `e`
+ * notation — all `to_s`); the `<msub>` parts when the number has a semantic
+ * base (`base` set, no prefix or postfix given); or a `scientific`/
+ * `engineering` notation's `<mrow>` parts (`render_notation`).
+ */
+export type MathmlNumber =
+  | { readonly kind: "plain"; readonly text: string }
+  | {
+      readonly kind: "base";
+      /** `FormattedNumber#sign_text`, `null` when there is none. */
+      readonly sign: string | null;
+      readonly digits: string;
+      readonly base: number;
+    }
+  | {
+      readonly kind: "notation";
+      /** The coefficient's `to_s` (a semantic base is NOT drawn as `<msub>` here). */
+      readonly coefficient: string;
+      readonly times: string;
+      /** `FormattedNotation#formatted_exponent`. */
+      readonly exponent: string;
+    };
+
+/** The pipeline (or the notation branch), then `MathmlRenderer.render`'s choice. `value` must satisfy `isGemNumericValue`. */
+export function formatNumberForMathml(value: string, format: NumberFormat): MathmlNumber {
+  const formatted = formatNumberValue(value, format);
+  if (isFormattedNotation(formatted)) {
+    if (formatted.style === "e") return { kind: "plain", text: formattedNotationText(formatted) };
+    return {
+      kind: "notation",
+      coefficient: formattedNumberText(formatted.coefficient),
+      times: formatted.timesSymbol,
+      exponent: formattedExponent(formatted),
+    };
+  }
+  const semantic = semanticBaseParts(formatted);
+  return semantic === null
+    ? { kind: "plain", text: formattedNumberText(formatted) }
+    : { kind: "base", ...semantic };
+}
+
+/**
  * `NumberFormatter#formatted_number`: the structured result — a
  * `FormattedNotation` when `notation` names a supported one (the gem branches
- * before the numeric pipeline), else the pipeline's `FormattedNumber`. MathML
- * lays the two out structurally; the text formats read `applyNumberFormat`.
+ * before the numeric pipeline), else the pipeline's `FormattedNumber`.
  * `value` must satisfy `isGemNumericValue`.
  */
 export function formatNumberValue(
@@ -457,13 +623,21 @@ export function formatNumberValue(
 }
 
 /**
- * `Formatter::Numbers::TextRenderer.render` for a number with no base
- * notation: the structured result's `to_s`. For a plain number that is the
- * sign, grouped integer digits, decimal marker and grouped fraction digits;
- * for a notation, `FormattedNotation#to_s`. `value` must satisfy
+ * `Formatter::Numbers::TextRenderer.render` for one of the four text targets.
+ * A notation is `FormattedNotation#to_s` whatever the target (the gem's
+ * `structured_number?` is false for it, so a base coefficient keeps its
+ * literal prefix and postfix and never takes a semantic template). A plain
+ * number takes the target's text (`numbers/text-renderer.ts` — a semantic
+ * base takes the target's template); without a `target` it is
+ * `FormattedNumber#to_s`, the flat text. `value` must satisfy
  * `isGemNumericValue`.
  */
-export function applyNumberFormat(value: string, format: NumberFormat): string {
+export function applyNumberFormat(
+  value: string,
+  format: NumberFormat,
+  target?: TextTarget,
+): string {
   const result = formatNumberValue(value, format);
-  return isFormattedNotation(result) ? formattedNotationText(result) : formattedNumberText(result);
+  if (isFormattedNotation(result)) return formattedNotationText(result);
+  return target === undefined ? formattedNumberText(result) : renderNumberText(result, target);
 }

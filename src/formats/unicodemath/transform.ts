@@ -1643,10 +1643,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // `:118` — PREREQUISITE owned by the pure-unwrap slice (claims file A.txt), carried
   // here because `:1404`'s SEQUENCE `prime_accent_symbols` only exists once
   // `\prime` names are normalised to their entity. The gem reads
-  // `Constants::PREFIXED_PRIMES`; the generated table here is that hash plus
-  // `sprime`, which no grammar alternative can produce.
+  // `Constants::PREFIXED_PRIMES` (four keys); the generated table is that hash
+  // plus `sprime` (`Utility.primes_constants`), so `sprime` is excluded here to
+  // keep this rule's lookup exactly the gem's.
   rule("118", { prefixed_prime: simple("prime") }, (b) => {
-    const entity = UNICODEMATH_PRIMES_CONSTANTS.get(rubyToS(b.prime));
+    const key = rubyToS(b.prime);
+    const entity = key === "sprime" ? undefined : UNICODEMATH_PRIMES_CONSTANTS.get(key);
     return entity ?? b.prime;
   });
   rule("126", { unary_functions: simple("unary") }, (b) =>

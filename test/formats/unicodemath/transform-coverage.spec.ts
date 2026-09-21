@@ -86,7 +86,7 @@ describe("transform rule coverage", () => {
     expect(reached).toBeGreaterThan(90);
   });
 
-  it("registers the 155 rules the slice carries", () => {
+  it("registers the 188 rules the slice carries", () => {
     // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
     // eight-rule table/matrix family the first slice deferred: `transform.rb:8`,
     // `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13

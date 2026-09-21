@@ -25,6 +25,7 @@
 
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { splitOnLinebreak } from "../../core/linebreak";
 import { assertKnownOptions } from "../../core/render-options";
 import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
 import { dumpNodes, XmlElement } from "../../xml/index";
@@ -38,10 +39,10 @@ import {
 } from "./render-shared";
 
 /**
- * Renderer options, typed exactly (§5): the three implemented axes
- * (`formatter` joins `displayStyle`/`unaryFunctionSpacing` here, B2's Number
- * formatting slice — TODO.plan/feature-roadmap.md). The still-deferred
- * `to_mathml` keywords — `intent`, `unitsml`, `split_on_linebreak` — are
+ * Renderer options, typed exactly (§5): the four implemented axes
+ * (`formatter` joined `displayStyle`/`unaryFunctionSpacing` with B2's Number
+ * formatting slice, `splitOnLinebreak` with B3 — TODO.plan/feature-roadmap.md).
+ * The still-deferred `to_mathml` keywords — `intent`, `unitsml` — are
  * deliberately NOT in this type; passing one (any value but `undefined`) is a
  * named `RenderError` at runtime (`TODO.plan/deferred.md` carries each entry
  * and its trigger). A key that is neither — one `to_mathml` has no keyword
@@ -71,6 +72,15 @@ export interface MathmlOptions {
    * renderers' own field, added here in the same shape.
    */
   readonly formatter?: FormatterOptions | null;
+  /**
+   * The gem's `split_on_linebreak:` keyword, default false. Ruby truthiness:
+   * `null` is off. When on, the formula is cut at each `Linebreak` and every
+   * line is rendered as its own complete `<math>` document, concatenated with
+   * nothing between (`line_breaked_mathml`, formula.rb:110). `displayStyle`,
+   * `unaryFunctionSpacing` and `formatter` apply to every line; the display
+   * style DEFAULT is the receiver's own, not each line's.
+   */
+  readonly splitOnLinebreak?: boolean | null | undefined;
 }
 
 /**
@@ -84,21 +94,21 @@ const IMPLEMENTED_OPTIONS: { readonly [K in keyof Required<MathmlOptions>]: null
   displayStyle: null,
   unaryFunctionSpacing: null,
   formatter: null,
+  splitOnLinebreak: null,
 };
 
 /** The still-deferred `to_mathml` keywords, each refused by name when present. */
 const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
   ["intent", "the intent attribute pipeline (intentify, intent post-processing) is unmeasured"],
   ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md §5)"],
-  ["splitOnLinebreak", "line_breaked_mathml renders one <math> per line-broken slice; unmeasured"],
 ];
 
 /**
- * Every option key this entry accepts: the three implemented axes plus the
- * three still-deferred keywords. The deferred names belong here because
- * `to_mathml` really does take them — `intent:`, `unitsml:`,
- * `split_on_linebreak:` are three of its six keywords (formula.rb:76-83 on
- * the pinned oracle; `formatter:` moved from this list to `IMPLEMENTED_OPTIONS`
+ * Every option key this entry accepts: the four implemented axes plus the
+ * two still-deferred keywords. The deferred names belong here because
+ * `to_mathml` really does take them — `intent:` and `unitsml:` are two of its
+ * six keywords (formula.rb:76-83 on the pinned oracle; `formatter:` and
+ * `split_on_linebreak:` moved from this list to `IMPLEMENTED_OPTIONS`
  * above) — so "unknown option" would be the wrong thing to say about one. They
  * are recognised, then refused by name with the reason, a few lines further
  * down. Anything outside this list is a keyword `to_mathml` does not have
@@ -171,6 +181,25 @@ function renderMath(
   }
   if (node.kind === "formula" && node.name !== undefined && node.name !== "Mstyle") {
     throw unreachableName(node.kind, node.name);
+  }
+
+  // `line_breaked_mathml` (formula.rb:110-119) renders each line as its own
+  // `to_mathml`, handing down the display style as the receiver's `display_style`
+  // keyword resolved BEFORE the split — a line is a fresh clone whose own
+  // `displaystyle` is the constructor default, so it must not be read there.
+  const splitValue = Object.hasOwn(opts, "splitOnLinebreak") ? opts.splitOnLinebreak : undefined;
+  if (splitValue !== undefined && splitValue !== null && splitValue !== false) {
+    const inherited: Record<string, unknown> = {
+      displayStyle: Object.hasOwn(opts, "displayStyle")
+        ? opts.displayStyle
+        : (node as { readonly displaystyle?: unknown }).displaystyle,
+    };
+    if (Object.hasOwn(opts, "unaryFunctionSpacing")) {
+      inherited.unaryFunctionSpacing = opts.unaryFunctionSpacing;
+    }
+    return splitOnLinebreak(node)
+      .map((line) => renderMath(line, inherited, numberFormat))
+      .join("");
   }
 
   const spacingValue = Object.hasOwn(opts, "unaryFunctionSpacing")

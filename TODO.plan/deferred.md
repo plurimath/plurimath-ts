@@ -290,18 +290,18 @@ slots it is byte-exact and pinned. The follow-up chooses: refuse admitted
 primitives in composite-feeding positions, or record these as permanent
 divergences case by case.
 
-### MathML renderer: four `to_mathml` options deferred by name
+### MathML renderer: two `to_mathml` options deferred by name
 
 **Trigger: `intent` — the P2 compat class (its only optional argument);
-`formatter` — P4 number formatting; `unitsml` — the UnitsML decision
-(ARCHITECTURE.md §5); `split_on_linebreak` — the first consumer request, or
-P2's OMML renderer, whose `to_omml` shares `new_line_support`.**
+`unitsml` — the UnitsML decision (ARCHITECTURE.md §5).**
 
-`toMathml` implements `display_style` and `unary_function_spacing` (both
-byte-matched against oracle probes in
-`test/formats/mathml/renderer.spec.ts`). The other four `Formula#to_mathml`
-keywords are refused BY NAME: passing `formatter`, `intent`, `unitsml` or
-`splitOnLinebreak` with any value but `undefined` — `intent: false` and
+`toMathml` implements `display_style`, `unary_function_spacing`, `formatter`
+(B2's first slice) and `split_on_linebreak` (B3, shared with `to_omml` through
+`src/core/linebreak.ts`), byte-matched against oracle probes in
+`test/formats/mathml/renderer.spec.ts` and
+`test/formats/split-display-parity.spec.ts`. The other two `Formula#to_mathml`
+keywords are refused BY NAME: passing `intent` or `unitsml` with any value but
+`undefined` — `intent: false` and
 `unitsml: {}` (the gem's inert defaults) included — raises a `RenderError`
 naming the option and this file. Silence was the alternative and is the one
 wrong answer: the corpus was generated with defaults, so a renderer that
@@ -1023,21 +1023,25 @@ entry:
 value, or a parser is added that can produce one, or the model schema gains
 Ruby type information for option values.
 
-### OMML: the four `to_omml` keywords refuse rather than render
+### OMML: two `to_omml` keywords refuse rather than render
 
-**Trigger: any one of the four gains a measured rendering path — display style
-when the recursive override is measured across the whole renderer, line
-breaking when Word's break-run separator is measured, the formatter with P4,
-and UnitsML when [ARCHITECTURE.md](../ARCHITECTURE.md) §5 stops deferring it
-wholesale.**
+**Trigger: `formatter` gains an OMML rendering path with B2's OMML number
+slice, and UnitsML when [ARCHITECTURE.md](../ARCHITECTURE.md) §5 stops
+deferring it wholesale.**
 
 `Formula#to_omml` accepts `display_style`, `split_on_linebreak`, `formatter`
-and `unitsml`. The port names each one and refuses it, rather than accepting
-the keyword and quietly ignoring what it asks for — a silently dropped option
+and `unitsml`. `display_style` and `split_on_linebreak` are implemented (B3);
+the port names the other two and refuses them, rather than accepting the
+keyword and quietly ignoring what it asks for — a silently dropped option
 renders plausible OMML that is not what the caller asked for, which is the
 failure this port refuses to have.
 
-`src/formats/omml/renderer.ts` carries the four reasons next to the refusal and
+The per-node `toOmmlWithoutMathTag` keeps refusing `displayStyle` and
+`splitOnLinebreak` by name too: the gem's `to_omml_without_math_tag` takes the
+display style as a positional argument and has no line splitting, so neither
+keyword belongs on it.
+
+`src/formats/omml/renderer.ts` carries the reasons next to the refusal and
 points here; this is the entry it points at.
 
 ### OMML: `fenced` refuses the paren shapes whose gem output is not reproducible

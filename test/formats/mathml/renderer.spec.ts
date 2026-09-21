@@ -167,7 +167,6 @@ describe("the deferred options, refused by name", () => {
     ["intent", { intent: true }],
     ["intent", { intent: false }],
     ["unitsml", { unitsml: {} }],
-    ["splitOnLinebreak", { splitOnLinebreak: true }],
   ];
   for (const [name, options] of cases) {
     it(`${JSON.stringify(options)} raises a RenderError naming "${name}"`, () => {

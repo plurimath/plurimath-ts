@@ -11,7 +11,8 @@
       "!submodules",
       "!test/formats/**/degenerate-fixtures.json",
       "!test/formats/**/model-fixtures.json",
-      "!test/formats/**/parity-fixtures.json"
+      "!test/formats/**/parity-fixtures.json",
+      "!test/formats/**/render-options-fixtures.json"
     ]
   },
   "formatter": {

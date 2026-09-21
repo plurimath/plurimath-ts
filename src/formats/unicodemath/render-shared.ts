@@ -49,7 +49,7 @@ export const FORMAT = "unicodemath";
 export type { NumberFormat } from "../../formatting/index";
 export {
   applyNumberFormat,
-  isPlainFormattableNumber,
+  isGemNumericValue,
   refuseNonNumericUnderFormatter,
 } from "../../formatting/index";
 

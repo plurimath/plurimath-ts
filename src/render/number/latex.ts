@@ -2,8 +2,7 @@
  * Mirrors `number.rb` — `Number#to_latex` (:36): `Formatter::Numbers::
  * TextRenderer`. With no `formatter:` option, renders the raw value, nil →
  * `""` — which is how the whole pinned corpus was generated. With one, and a
- * value B2's first slice measures (a plain digit string,
- * `isPlainFormattableNumber`), the default-symbol substitution
+ * gem-numeric value (`isGemNumericValue`), the numeric pipeline
  * (`../../formatting/number-format.ts`).
  *
  * "Renders the raw value" (the no-formatter path) is `result.to_s`
@@ -31,7 +30,7 @@ import {
   applyNumberFormat,
   FORMAT,
   interpolatedValue,
-  isPlainFormattableNumber,
+  isGemNumericValue,
   type NodeOf,
   type RenderContext,
   refuseNonNumericUnderFormatter,
@@ -54,10 +53,9 @@ export function renderNumber(node: NodeOf<"number">, context: RenderContext): st
     return rubyArrayInspectOrThrow(value, FORMAT, node.kind, "number.value");
   }
   if (context.numberFormat !== null) {
-    if (isPlainFormattableNumber(value)) return applyNumberFormat(value, context.numberFormat);
+    if (isGemNumericValue(value)) return applyNumberFormat(value, context.numberFormat);
     // `Formatter::Numbers::Source#validate_numeric!` raises for anything that
-    // is not a gem-numeric string — a value it lets through but not-plain
-    // (negative, scientific notation) is gem-valid and still renders raw.
+    // is not a gem-numeric string.
     refuseNonNumericUnderFormatter(value, FORMAT, node.kind);
   }
   return interpolatedValue(value, node.kind, "number.value");

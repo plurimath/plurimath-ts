@@ -7,22 +7,19 @@
  * child, not an absent one). The interpolation guard is the shared one: a
  * finite JS number is ambiguous (`5` vs `5.0`) and raises.
  *
- * With a formatter active, and a value B2's number-formatting slices measure
- * (a plain digit string, `isPlainFormattableNumber`), the same default-symbol
- * substitution the four text renderers already thread through
+ * With a formatter active, and a gem-numeric value (`isGemNumericValue`), the
+ * same numeric pipeline the four text renderers already thread through
  * (`../../formatting/number-format.ts`) — `<mn>` wraps the formatted string
- * instead of the raw one. A value that is neither refuses, matching
+ * instead of the raw one. A value that is not numeric refuses, matching
  * `Formatter::Numbers::Source#validate_numeric!`
- * (`refuseNonNumericUnderFormatter`): a value it lets through but
- * `isPlainFormattableNumber` already said no to is gem-valid and still
- * renders raw, unformatted — out of this slice's scope, not an error.
+ * (`refuseNonNumericUnderFormatter`).
  */
 
 import {
   applyNumberFormat,
   FORMAT,
   interpolatedValue,
-  isPlainFormattableNumber,
+  isGemNumericValue,
   type NodeOf,
   type RenderContext,
   refuseNonNumericUnderFormatter,
@@ -32,7 +29,7 @@ import { XmlElement } from "../../xml/index";
 export function renderNumber(node: NodeOf<"number">, context: RenderContext): XmlElement {
   const value = node.value;
   if (context.numberFormat !== null) {
-    if (isPlainFormattableNumber(value)) {
+    if (isGemNumericValue(value)) {
       return new XmlElement("mn").append(applyNumberFormat(value, context.numberFormat));
     }
     refuseNonNumericUnderFormatter(value, FORMAT, node.kind);

@@ -106,14 +106,13 @@ describe("non-numeric values under an active formatter now refuse", () => {
     }
   });
 
-  it("does NOT refuse a value the gem accepts but this slice does not format", () => {
+  it("formats a value the gem accepts but the plain digit shape does not cover", () => {
     // Negative numbers and scientific notation pass Source::NUMERIC_PATTERN
-    // in the gem but are out of this slice's scope (sign handling, notation
-    // — module doc, number-format.ts) — they render raw, not refused.
-    expect(() => toAsciimath(numberNode("-5"), { formatter })).not.toThrow();
+    // and go through the same numeric pipeline (measured on the oracle,
+    // 00c52783: Formatter::Standard renders "-5" as "-5" and "1.5e10" as
+    // "15,000,000,000").
     expect(toAsciimath(numberNode("-5"), { formatter })).toBe("-5");
-    expect(() => toAsciimath(numberNode("1.5e10"), { formatter })).not.toThrow();
-    expect(toAsciimath(numberNode("1.5e10"), { formatter })).toBe("1.5e10");
+    expect(toAsciimath(numberNode("1.5e10"), { formatter })).toBe("15,000,000,000");
   });
 
   it("does not refuse a non-numeric value when no formatter is active at all", () => {

@@ -38,7 +38,7 @@ export const FORMAT = "latex";
 export type { NumberFormat } from "../../formatting/index";
 export {
   applyNumberFormat,
-  isPlainFormattableNumber,
+  isGemNumericValue,
   refuseNonNumericUnderFormatter,
 } from "../../formatting/index";
 

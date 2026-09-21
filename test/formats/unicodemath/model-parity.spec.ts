@@ -91,6 +91,7 @@ const DEFERRED_INPUTS: readonly string[] = [
   // DECORATION (`transform.rb:1286`-`:1491`) is ported now (`transform.ts`'s
   // module header). Three of the six corpus rows that used to sit here moved
   // out to `supported` below: `"⏟(a b)"`, `"⏟(a + b)"` and `"⏟(x)_(y)"` all
+<<<<<<< HEAD
   // route only through `hbracket_class`. The other three stay, blocked on
   // machinery DECORATION does not touch: `"((a)̅)̅"` needs the `accents`/
   // paren combination `{accents=other, close_paren=, open_paren=}` (the
@@ -100,6 +101,12 @@ const DEFERRED_INPUTS: readonly string[] = [
   "((a)̅)̅",
 
 <<<<<<< HEAD
+=======
+  // route only through `hbracket_class`. `"((a)̅)̅"` moved out with `:2640`
+  // (the `accents` + paren combination, the FENCED slice), `"(y)┴(x)"`/
+  // `"(y)┬x"` with `:969`/`:977`, and `"√(3&8)"`/`"√(n&x)"` with `:1530`; each
+  // now compares for real, as a corpus row.
+>>>>>>> feat/um-slice-g1-fenced-a
   // SCRIPT (`transform.rb:118`-`:2403`): a right-associative double exponent.
   "x^y^(z)",
 =======

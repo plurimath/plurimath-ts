@@ -401,6 +401,30 @@
  * builder lands, which is when the pure rules it blocks can be checked.
  *
  * Everything outside those 210 is genuinely ABSENT rather than stubbed. A
+ * ## A ninth increment: FENCED, the `open_paren`/`opener` rules of `:2020`-`:2983`
+ *
+ * Twenty-three rules building `Fenced` (or, for `:2761`/`:2769`, replacing a
+ * `Table`'s two parens), from the range's `open_paren`/`opener`/
+ * `paren_open_prefix`/`sub_open_paren` keys: `:2020` (no content), `:2457`
+ * (SEQUENCE `opener`), `:2485` (`slashed_value` SEQUENCE), `:2495`-`:2609`
+ * (one content key each, `:2525`/`:2536` carrying `close_prefixed`/
+ * `open_prefixed`, `:2597` the mini-sized `sub_open_paren` fence), `:2640`
+ * (`accents`), `:2650`/`:2668`/`:2724` (SEQUENCE parens, whose first element is
+ * a size-prefix `Number`), `:2746` (`negated_operator`), `:2761`/`:2769`
+ * (table) and `:2983` (`pre_script`). Four helpers are new: `applyParenMask`
+ * (the `1.25**n` size block four rules repeat, refusing an exponent past 22
+ * where JavaScript's and Ruby's `1.25**n` stop agreeing — measured, `1.25**23`
+ * differs in the last digit), `subParenKey` (over two generated tables,
+ * `UNICODEMATH_SUB_PARENTHESIS_OPEN`/`_CLOSE`), and
+ * `slashedValues`/`sequenceSlashedValues` (`Utility.slashed_values` and its
+ * sequence form). `:2685`/`:2707` (SEQUENCE parens around a `frac`) belong to
+ * the fractions slice and are not registered here. The SEQUENCE-paren rules
+ * are reached by the unicode `├`/`┤` prefix glyphs; the spelled forms probed
+ * (`\left1(a\right1)`, `\open2[a\close]`) leave an unmatched hash in the gem. Running
+ * count: 188 + 23 + 6 prerequisites (`:60`, `:85`, `:97`, `:561`, `:2055`, `:2067`, owned by
+ * slices A and F and registered under their ids) = **217**.
+ *
+ * Everything outside the registered rules is genuinely ABSENT rather than stubbed. A
  * node whose key set no ported rule matches survives the transform as a
  * plain hash and `finalize` throws on it, naming the keys — the loud failure
  * the deferred families are supposed to produce.
@@ -513,6 +537,8 @@ import {
   UNICODEMATH_SUB_OPERATORS_BY_KEY,
   UNICODEMATH_SUP_ALPHABETS_BY_KEY,
   UNICODEMATH_SUP_OPERATORS_BY_KEY,
+  UNICODEMATH_SUB_PARENTHESIS_CLOSE,
+  UNICODEMATH_SUB_PARENTHESIS_OPEN,
   UNICODEMATH_SYMBOL_CLASS_INPUT,
   UNICODEMATH_UNDER_HORIZONTAL_BRACKETS,
   type UnicodemathPhantomAttribute,
@@ -930,9 +956,14 @@ function newUnderset(one: unknown, two: unknown, options: NodeOptions = {}): Uni
 }
 
 /** `Fenced.new(p1, p2, p3, options = {})` — `@options` always assigned. */
-function newFenced(one: unknown, two: unknown, three: unknown): UnicodemathDraft {
+function newFenced(
+  one: unknown,
+  two: unknown,
+  three: unknown,
+  options: NodeOptions = {},
+): UnicodemathDraft {
   const draft = ternaryDraft("fenced", undefined, one, two, three);
-  draft.fields.options = {};
+  draft.fields.options = options;
   return draft;
 }
 
@@ -1878,9 +1909,21 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // `nary_sub_sup` pass-through `:74`'s sibling already carries for
   // `subsup_exp`.
   rule("84", { nary_sub_sup: simple("subsup_exp") }, (b) => b.subsup_exp);
+  // PREREQUISITE of slice G1's SEQUENCE-paren witnesses (`:2457`, `:2650`): the
+  // size-prefix arms (`:2055`, `:2067`) leave `open_paren` a list, and this
+  // unwrap is what hands it on. Registered under the pure-rule slice's own
+  // claim (`:85`, slice A) so the integration dedupes by id.
+  rule("85", { open_paren: sequence("open_paren") }, (b) => b.open_paren);
   rule("90", { unary_subsup: simple("unary_subsup") }, (b) => b.unary_subsup);
   rule("92", { alphanumeric: simple("alphanumeric") }, (b) => symbolsClass(b.alphanumeric));
   rule("94", { diacritic_overlays: simple("overlays") }, (b) => b.overlays);
+  // PREREQUISITE of `:2597`'s witness (slice A's claim, registered here under
+  // the same id): a `mini_sub` wrapper unwrapped.
+  rule("60", { mini_sub: simple("mini_sub") }, (b) => b.mini_sub);
+  // PREREQUISITE of `:2597`'s witness (slice A's claim, registered here under
+  // the same id): `sub_paren`'s `mini_intermediate_exp` wrapper, unwrapped.
+  rule("97", { mini_intermediate_exp: simple("mini_expr") }, (b) => b.mini_expr);
+
   rule("96", { unicode_fractions: simple("fractions") }, (b) => unicodeFractions(b.fractions));
 
   // RELATION/OPERATOR: `combined_symbols` (`±`/`∓`/`‼`, `Constants::
@@ -2238,6 +2281,16 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.pre_script,
     b.expr,
   ]);
+
+  // PREREQUISITE of `:2597`'s witness (`x₍₁₂₎`): a sub digit followed by a
+  // simple recursion. Slice F's claim (`:561`), registered here under the same
+  // id. `Constants::SUB_DIGITS.key(...).to_s` mini-sized, as `:170` does.
+  rule(
+    "561",
+    { sub_digits: simple("sub_digits"), sub_recursion_expr: simple("recursion") },
+    (b) => [subDigitNumber(b.sub_digits), b.recursion],
+  );
+
   // TABLE continued (`transform.rb:598`-`:1691`, eighteen rules total; see
   // the module header): `Mlabeledtr`'s pair, built from `UnicodeMath::
   // Parser#post_processing`'s `{labeled_tr_value:, labeled_tr_id:}` wrap
@@ -2963,6 +3016,34 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     newMultiscript(newPowerBase(b.base), [b.pre_sub], []),
   );
 
+  // FENCED: a fence with nothing inside — `()` — is the one shape whose value
+  // is the EMPTY array, not a one-element list around a binding.
+  rule("2020", { open_paren: simple("open_paren"), close_paren: simple("close_paren") }, (b) =>
+    newFenced(parenClass(b.open_paren), [], parenClass(b.close_paren)),
+  );
+
+  // PREREQUISITES of slice G1's SEQUENCE-paren witnesses, slice A's claims
+  // (`:2055`, `:2067`) registered here under the same ids: a size-prefix digit
+  // string and the paren it prefixes, as `[mask, paren]`. `:2055` is the open
+  // side (`├1(`), `:2067` the close side (`┤1)`).
+  rule(
+    "2055",
+    {
+      paren_open_prefix: simple("paren_open_prefix"),
+      open_paren_mask: simple("open_paren_mask"),
+      open_paren: simple("open_paren"),
+    },
+    (b) => [b.open_paren_mask, b.open_paren],
+  );
+  rule(
+    "2067",
+    {
+      paren_close_prefix: simple("paren_close_prefix"),
+      close_paren_mask: simple("close_paren_mask"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => [b.close_paren_mask, b.close_paren],
+
   rule(
     "2085",
     { char: simple("char"), diacritics: simple("diacritics"), number: simple("number") },
@@ -3272,11 +3353,171 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => newFenced(parenClass(b.opener), b.operand, parenClass(b.closer)),
   );
 
+  // FENCED: `:2436`'s SEQUENCE-`opener` twin. The opener is a run whose FIRST
+  // element may be a `Number` (a size prefix, `\left1(`) and whose LAST is the
+  // paren itself. `[opener, closer].include?("|")` compares the ARRAY to "|",
+  // which is never equal, so only `closer` can trigger the discarded
+  // `unfenced_value` call (kept, since it can raise).
+  rule(
+    "2457",
+    { opener: sequence("opener"), operand: simple("operand"), closer: simple("closer") },
+    (b) => {
+      const opener = asArray(b.opener);
+      const options: Record<string, unknown> = {};
+      applyParenMask(options, opener, "open");
+      if (textEquals(b.closer, "|")) unfencedValue(b.operand, true);
+      return newFenced(
+        symbolsClass(opener[opener.length - 1]),
+        [b.operand],
+        parenClass(b.closer),
+        options,
+      );
+    },
+  );
+
   rule(
     "2475",
     { open_paren: simple("open_paren"), frac: simple("frac"), close_paren: simple("close_paren") },
     (b) => newFenced(parenClass(b.open_paren), [b.frac], parenClass(b.close_paren)),
   );
+
+  // FENCED: every `open_paren` + one content key + `close_paren` shape below
+  // wraps its content in a one-element list between the two parens, and
+  // differs only in the key it binds. The paren guard is `parenClass`
+  // (`paren.is_a?(Slice) ? Utility.symbols_class(paren) : paren`) in each.
+  // Every slashed run — `(\a2)` — already came through the grammar as a list of
+  // `Symbol`/`Number` nodes; `sequence_slashed_values` rewrites each in place.
+  rule(
+    "2485",
+    {
+      open_paren: simple("open_paren"),
+      slashed_value: sequence("values"),
+      close_paren: simple("close_paren"),
+    },
+    (b) =>
+      newFenced(
+        parenClass(b.open_paren),
+        sequenceSlashedValues(asArray(b.values)),
+        parenClass(b.close_paren),
+      ),
+  );
+
+  rule(
+    "2495",
+    {
+      open_paren: simple("open_paren"),
+      phantom: simple("phantom"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => newFenced(parenClass(b.open_paren), [b.phantom], parenClass(b.close_paren)),
+  );
+  rule(
+    "2505",
+    {
+      open_paren: simple("open_paren"),
+      unary_function: simple("unary_function"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => newFenced(parenClass(b.open_paren), [b.unary_function], parenClass(b.close_paren)),
+  );
+  rule(
+    "2515",
+    { open_paren: simple("open_paren"), rect: simple("rect"), close_paren: simple("close_paren") },
+    (b) => newFenced(parenClass(b.open_paren), [b.rect], parenClass(b.close_paren)),
+  );
+
+  rule(
+    "2525",
+    {
+      open_paren: simple("open_paren"),
+      factor: simple("factor"),
+      paren_close_prefix: simple("close_prefix"),
+    },
+    (b) =>
+      newFenced(parenClass(b.open_paren), [b.factor], symbolsClass(b.close_prefix), {
+        close_prefixed: true,
+      }),
+  );
+
+  // The paren is looked up unconditionally here — `paren_open_prefix` only
+  // ever binds a Slice — where every other rule guards it with `parenClass`.
+  rule(
+    "2536",
+    {
+      paren_open_prefix: simple("open_paren"),
+      factor: simple("factor"),
+      close_paren: simple("close_paren"),
+    },
+    (b) =>
+      newFenced(symbolsClass(b.open_paren), [b.factor], parenClass(b.close_paren), {
+        open_prefixed: true,
+      }),
+  );
+
+  rule(
+    "2547",
+    { open_paren: simple("open_paren"), nary: simple("nary"), close_paren: simple("close_paren") },
+    (b) => newFenced(parenClass(b.open_paren), [b.nary], parenClass(b.close_paren)),
+  );
+  rule(
+    "2557",
+    {
+      open_paren: simple("open_paren"),
+      sub_exp: simple("sub_exp"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => newFenced(parenClass(b.open_paren), [b.sub_exp], parenClass(b.close_paren)),
+  );
+  rule(
+    "2567",
+    {
+      open_paren: simple("open_paren"),
+      subsup_exp: simple("subsup_exp"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => newFenced(parenClass(b.open_paren), [b.subsup_exp], parenClass(b.close_paren)),
+  );
+  rule(
+    "2577",
+    {
+      open_paren: simple("open_paren"),
+      unary_subsup: simple("subsup"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => newFenced(parenClass(b.open_paren), [b.subsup], parenClass(b.close_paren)),
+  );
+  rule(
+    "2587",
+    {
+      open_paren: simple("open_paren"),
+      mini_sup: simple("mini_sup"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => newFenced(parenClass(b.open_paren), [b.mini_sup], parenClass(b.close_paren)),
+  );
+
+  // A mini-sized fence: both parens are the plain-text paren the entity stands
+  // for (`Hash#key`, `nil.to_s` on a miss), rebuilt as mini-sub-sized symbols
+  // around the bound SEQUENCE.
+  rule(
+    "2597",
+    {
+      sub_open_paren: simple("open_paren"),
+      mini_expr: sequence("mini_expr"),
+      sub_close_paren: simple("close_paren"),
+    },
+    (b) =>
+      newFenced(
+        miniSubSymbol(subParenKey(UNICODEMATH_SUB_PARENTHESIS_OPEN, b.open_paren)),
+        asArray(b.mini_expr),
+        miniSubSymbol(subParenKey(UNICODEMATH_SUB_PARENTHESIS_CLOSE, b.close_paren)),
+      ),
+  );
+
+  rule(
+    "2609",
+    { open_paren: simple("open_paren"), text: simple("text"), close_paren: simple("close_paren") },
+    (b) => newFenced(parenClass(b.open_paren), [newText(b.text)], parenClass(b.close_paren)),
 
   // A masked (`├1(`) fence around a `frac`: the size-prefixed side(s) arrive as
   // `[Number, paren]` sequences, and the fence's own paren is the LAST element.
@@ -3343,6 +3584,131 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) => newFenced(parenClass(b.open_paren), [b.sup_exp], parenClass(b.close_paren)),
   );
+
+  rule(
+    "2640",
+    {
+      open_paren: simple("open_paren"),
+      accents: subtree("accents"),
+      close_paren: simple("close_paren"),
+    },
+    (b) =>
+      newFenced(parenClass(b.open_paren), [unicodeAccents(b.accents)], parenClass(b.close_paren)),
+  );
+
+  // FENCED with a SEQUENCE paren: the run's first element may be a size-prefix
+  // `Number` (see `applyParenMask`) and its last is the paren. Only `:2650`
+  // tests for `"|"`, and only on the simple side, because an Array never
+  // equals a String.
+  rule(
+    "2650",
+    {
+      open_paren: sequence("open_paren"),
+      factor: simple("factor"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => {
+      const open = asArray(b.open_paren);
+      const options: Record<string, unknown> = {};
+      applyParenMask(options, open, "open");
+      const newFactor = textEquals(b.close_paren, "|") ? unfencedValue(b.factor, true) : b.factor;
+      return newFenced(
+        symbolsClass(open[open.length - 1]),
+        [newFactor],
+        parenClass(b.close_paren),
+        options,
+      );
+    },
+  );
+
+  // `:2650` with a `paren_close_prefix` close instead. Only the OPEN side's
+  // mask is applied; the close side sets no `close_prefixed`, unlike `:2525`.
+  rule(
+    "2668",
+    {
+      open_paren: sequence("open_paren"),
+      factor: simple("factor"),
+      paren_close_prefix: simple("close_prefix"),
+    },
+    (b) => {
+      const open = asArray(b.open_paren);
+      const options: Record<string, unknown> = {};
+      applyParenMask(options, open, "open");
+      return newFenced(
+        symbolsClass(open[open.length - 1]),
+        [b.factor],
+        symbolsClass(b.close_prefix),
+        options,
+      );
+    },
+  );
+
+  // `:2685` and `:2707` (SEQUENCE parens around a `frac`) are slice E's.
+
+  // Both parens SEQUENCEs: each side's mask, open first.
+  rule(
+    "2724",
+    {
+      open_paren: sequence("open_paren"),
+      factor: simple("factor"),
+      close_paren: sequence("close_paren"),
+    },
+    (b) => {
+      const open = asArray(b.open_paren);
+      const close = asArray(b.close_paren);
+      const options: Record<string, unknown> = {};
+      applyParenMask(options, open, "open");
+      applyParenMask(options, close, "close");
+      return newFenced(
+        symbolsClass(open[open.length - 1]),
+        [b.factor],
+        symbolsClass(close[close.length - 1]),
+        options,
+      );
+    },
+  );
+
+  // `¬` after an opener: the negated operator plus a literal `&#x338;` strike,
+  // wrapped in a `Formula`.
+  rule(
+    "2746",
+    {
+      open_paren: simple("open_paren"),
+      negated_operator: simple("operator"),
+      close_paren: simple("close_paren"),
+    },
+    (b) =>
+      newFenced(
+        parenClass(b.open_paren),
+        [newFormula([symbolsClass(b.operator), newBareSymbol("&#x338;")])],
+        parenClass(b.close_paren),
+      ),
+  );
+
+  // A parenthesised TABLE is the table itself with its two parens REPLACED:
+  // the fence is never built. Both writes look the paren up unconditionally.
+  rule(
+    "2761",
+    {
+      open_paren: simple("open_paren"),
+      table: simple("table"),
+      paren_close_prefix: simple("close_paren"),
+    },
+    (b) => parenthesisedTable(b.table, b.open_paren, b.close_paren),
+  );
+  rule(
+    "2769",
+    {
+      open_paren: simple("open_paren"),
+      table: simple("table"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => parenthesisedTable(b.table, b.open_paren, b.close_paren),
+  );
+
+  // ATOMS meeting a bare `operator` and a `frac` directly (`:2787`) and that
+  // shape's SEQUENCE-`expr` extension (`:3074`) are deferred with `:30`
+  // above: no probed input reached either.
 
   // An operator, a `frac` and a SEQUENCE `expr` (`++¹/₂ḟa`). The ATOMS-led
   // `:2787` and its `expr` extension `:3074` are not registered: no probed
@@ -3432,6 +3798,16 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     "2971",
     { pre_subscript: simple("pre_sub"), base: simple("base"), sub_digits: simple("digits") },
     (b) => newMultiscript(newPowerBase(b.base, subDigitNumber(b.digits)), [b.pre_sub], []),
+  );
+
+  rule(
+    "2983",
+    {
+      open_paren: simple("open_paren"),
+      pre_script: simple("pre_script"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => newFenced(parenClass(b.open_paren), [b.pre_script], parenClass(b.close_paren)),
   );
 
   rule(
@@ -3973,6 +4349,113 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
  */
 function parenClass(paren: unknown): unknown {
   return paren instanceof Slice ? symbolsClass(paren) : paren;
+}
+
+/**
+ * `Utility.slashed_values(value)` (`unicode_math/utility.rb:228-235`): the
+ * entity-decoded text becomes a `Text` carrying a leading backslash when it
+ * begins with a Ruby `\w` character, and a slashed `Symbol` otherwise. Ruby's
+ * `\w` is ASCII-only (`"é".match?(/^\w+/)` and `"α".match?(/^\w+/)` are both
+ * false, measured), and its `^` also matches after a newline.
+ */
+function slashedValues(value: unknown): UnicodemathDraft {
+  const decoded = htmlEntityToUnicode(rubyToS(value));
+  if (/(?:^|\n)[A-Za-z0-9_]/.test(decoded)) return newText(`\\${decoded}`);
+  const symbol = newBareSymbol(decoded);
+  symbol.fields.slashed = true;
+  return symbol;
+}
+
+/**
+ * `Utility.sequence_slashed_values(values, lang: :unicodemath)`
+ * (`unicode_math/utility.rb:237-252`): the first element goes through
+ * `slashed_values`, every later one becomes a `Number` when its decoded text
+ * holds an ASCII digit and a looked-up symbol otherwise. `.value` is read off
+ * each element, so one without it raises, as in Ruby.
+ */
+function sequenceSlashedValues(values: readonly unknown[]): unknown[] {
+  return values.map((element, index) => {
+    const raw = draftValue(element);
+    if (index === 0) return slashedValues(raw);
+    const decoded = htmlEntityToUnicode(rubyToS(raw));
+    return /[0-9]/.test(decoded) ? newNumber(decoded) : symbolsClass(decoded);
+  });
+}
+
+/** `Math::Symbols::Symbol.new(text, mini_sub_sized: true)`. */
+function miniSubSymbol(text: string): UnicodemathDraft {
+  const draft = newBareSymbol(text);
+  draft.fields.miniSubSized = true;
+  return draft;
+}
+
+/**
+ * `table.open_paren = symbols_class(open); table.close_paren =
+ * symbols_class(close); table` (`:2761`, `:2769`): the two `attr_accessor`
+ * writes replace whatever paren the table's own subclass defaulted to.
+ */
+function parenthesisedTable(table: unknown, open: unknown, close: unknown): unknown {
+  setField(table, "openParen", symbolsClass(open));
+  setField(table, "closeParen", symbolsClass(close));
+  return table;
+}
+
+/**
+ * `Constants::SUB_PARENTHESIS[side].key(entity).to_s` — the plain-text paren a
+ * mini-sized entity stands for, `""` on a miss (`Hash#key` answers nil there,
+ * and `nil.to_s` is empty). `Hash#key` returns the FIRST key mapping to the
+ * value, so the inversion keeps the first.
+ */
+function subParenKey(table: ReadonlyMap<string, string>, entity: unknown): string {
+  const text = rubyToS(entity);
+  for (const [key, value] of table) if (value === text) return key;
+  return "";
+}
+
+/**
+ * The size mask a numeric prefix on a fence's paren stands for:
+ * `"#{1.25**prefix.value.to_i}em"`. `1.25 ** n` is `5**n / 4**n`, exact in a
+ * double while `5**n` stays under 2**53 (`n <= 22`), so JavaScript's `**` and
+ * Ruby's `Float#**` agree there; past that the last digits may round
+ * differently, and nothing here can say which, so it refuses. Ruby's
+ * `Float#to_s` prints `1.0` where JavaScript prints `1`; every other value in
+ * range is non-integral and both print the shortest round-trip digits.
+ */
+function parenMask(prefix: string): string {
+  const exponent = rubyToI(prefix);
+  if (exponent < 0 || exponent > 22) {
+    throw new Error(
+      `unicodemath transform: paren size prefix ${exponent} is outside 0..22, where 1.25**n is ` +
+        "exact and Ruby's Float#to_s and JavaScript's String() are known to agree",
+    );
+  }
+  const size = 1.25 ** exponent;
+  return `${Number.isInteger(size) ? `${size}.0` : String(size)}em`;
+}
+
+/**
+ * The block four `Fenced` rules spell out once per side — a SEQUENCE paren
+ * whose first element is a `Number` carries a size prefix:
+ *
+ *   options[:open_prefixed] = true
+ *   options[:open_paren] = { minsize: mask, maxsize: mask } unless value == ""
+ *
+ * `paren` is the bound array, `side` picks the option keys. `NodeOptions` keeps
+ * the keys in the order they are assigned, as the Ruby hash does.
+ */
+function applyParenMask(
+  options: Record<string, unknown>,
+  paren: readonly unknown[],
+  side: "open" | "close",
+): void {
+  const first = paren[0];
+  if (!(isDraft(first) && first.kind === "number")) return;
+  const value = rubyToS(first.fields.value);
+  options[`${side}_prefixed`] = true;
+  if (value !== "") {
+    const mask = parenMask(value);
+    options[`${side}_paren`] = { minsize: mask, maxsize: mask };
+  }
 }
 
 /** `node.parameter_x` on a draft; Ruby raises `NoMethodError` on anything else. */

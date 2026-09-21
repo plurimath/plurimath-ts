@@ -3935,6 +3935,7 @@ export const UNICODEMATH_BELOWS_NOTATIONS: ReadonlyMap<string, string> = new Map
 ]);
 
 /**
+<<<<<<< HEAD
  * `Constants::SUP_ALPHABETS`: character -> superscript entity. The grammar
  * table above carries `.values` only; the mini-sized script rules
  * (`transform.rb:53`, `:567`, `:575`) recover the character with
@@ -3987,6 +3988,23 @@ export const UNICODEMATH_SUP_OPERATORS_BY_KEY: ReadonlyMap<string, string> = new
   ["+", "&#x207a;"],
   ["-", "&#x207b;"],
   ["=", "&#x207c;"],
+=======
+ * `Constants::SUB_PARENTHESIS[:open]`: key -> entity. The grammar reads
+ * only `.values` (`UNICODEMATH_SUB_OPEN_PARENTHESIS`); the
+ * `sub_open_paren` rule (`transform.rb:2597`) inverts it with `Hash#key`
+ * to recover the plain-text paren the entity stands for.
+ */
+export const UNICODEMATH_SUB_PARENTHESIS_OPEN: ReadonlyMap<string, string> = new Map([
+  ["(", "&#x208d;"],
+]);
+
+/**
+ * `Constants::SUB_PARENTHESIS[:close]`: `:open`'s twin, inverted the same
+ * way for the closing paren.
+ */
+export const UNICODEMATH_SUB_PARENTHESIS_CLOSE: ReadonlyMap<string, string> = new Map([
+  [")", "&#x208e;"],
+>>>>>>> feat/um-slice-g1-fenced-a
 ]);
 
 /**

@@ -852,6 +852,80 @@ RULE_COVERAGE = {
     "a a^b ab",
     "a a_b ab",
     "|a| a b",
+  # FENCED (slice G1): the `Fenced`-building rules of `transform.rb:2020`-`:2983`
+  # (rule numbers are the lines `rule(` opens on). Each input was traced on the
+  # oracle with a `TracePoint :b_call` mapped to those lines and fires the rule
+  # beside it; the SEQUENCE-paren rules carry a size prefix, which only the
+  # unicode glyphs `├`/`┤` produce -- the spelled `\left1(`/`\right)` forms
+  # leave an unmatched hash in the gem:
+  #
+  #   :2020  `()`, `[]`                      open_paren + close_paren, no content
+  #   :2457  `x_├1(a)`, `a_├2[a]`            opener SEQUENCE (size prefix) in a script
+  #   :2485  `(\a)`, `(\a2)`, `(\a2b)`      slashed_value SEQUENCE: text, number, symbol arms
+  #   :2495  `(⟡(1&a))`                      phantom
+  #   :2505  `(▭(a))`, `(⟡(a))`              unary_function
+  #   :2515  `(▭(5&a))`                      rect
+  #   :2525  `(a┤`                           factor + paren_close_prefix
+  #   :2536  `├a)`                           paren_open_prefix + factor
+  #   :2547  `(∫a)`                          nary
+  #   :2557  `(a_b)`                         sub_exp
+  #   :2567  `(a_b^c)`                       subsup_exp
+  #   :2577  `(sin a)`                       unary_subsup
+  #   :2587  `(a²)`                          mini_sup
+  #   :2597  `x₍₁₂₎`                        sub_open_paren + mini_expr SEQUENCE
+  #   :2609  `("t")`                         text
+  #   :2640  `(a̅)`, `((a)̅)`, `[a̅]`          accents
+  #   :2650  `├1(a)`, `├0(a]`, `├12(a)`       open_paren SEQUENCE + factor (`├12(` is a
+  #                                          two-digit prefix: `1.25**12`)
+  #   :2668  `├1(a┤`                         open SEQUENCE + paren_close_prefix
+  #   :2724  `├1(a┤1)`, `├2[a┤0)`            both parens SEQUENCE
+  #   :2746  `(/=)`                          negated_operator
+  #   :2761  `(■(a&b)┤`                      table + paren_close_prefix
+  #   :2769  `(■(a&b))`, `[■(a&b)]`          table + close_paren
+  #   :2983  `(_a^b c)`                      pre_script
+  #
+  # `:2685`/`:2707` (SEQUENCE parens around a fraction) are slice E's.
+  #
+  # Six rules other slices own also fire on these inputs and are registered
+  # under their own ids so the witnesses compare: `:85`, `:2055`/`:2067` (the
+  # size-prefix arms), `:60` and `:97` (slice A), `:561` (slice F). `x₍₁₂₎` is
+  # spelled bare on purpose: `(x₍₁₂₎)` parses on the oracle to an unmatched
+  # `{open_paren:, mini_sub:, close_paren:}` hash, not a model.
+  "fenced_g1" => [
+    "()",
+    "[]",
+    "x_├1(a)",
+    "a_├2[a]",
+    "(\\a)",
+    "(\\a2)",
+    "(\\a2b)",
+    "(⟡(1&a))",
+    "(▭(a))",
+    "(⟡(a))",
+    "(▭(5&a))",
+    "(a┤",
+    "├a)",
+    "(∫a)",
+    "(a_b)",
+    "(a_b^c)",
+    "(sin a)",
+    "(a²)",
+    "x₍₁₂₎",
+    "(\"t\")",
+    "(a̅)",
+    "((a)̅)",
+    "[a̅]",
+    "├1(a)",
+    "├0(a]",
+    "├12(a)",
+    "├1(a┤",
+    "├1(a┤1)",
+    "├2[a┤0)",
+    "(/=)",
+    "(■(a&b)┤",
+    "(■(a&b))",
+    "[■(a&b)]",
+    "(_a^b c)",
   ],
 }.freeze
 

@@ -91,6 +91,15 @@ const PARSERS: Partial<Record<Format, (input: string) => FormulaNode>> = {
   unicode: parseUnicodemath,
 };
 
+/**
+ * The gem's `Formula::MATH_ZONE_TYPES` (`math/formula.rb:16`), downcased for
+ * the case-insensitive comparison `to_display` itself does
+ * (`type.downcase.to_sym`, `math/formula.rb:205`). Note this is `unicodemath`,
+ * not `unicode` -- `to_display`'s type token is the gem's own spelling, not
+ * this class's constructor `Format`.
+ */
+const DISPLAY_TYPES: readonly string[] = ["omml", "latex", "mathml", "asciimath", "unicodemath"];
+
 export default class Plurimath {
   /**
    * The parsed formula.
@@ -153,18 +162,50 @@ export default class Plurimath {
   }
 
   /**
-   * `Formula#to_display`, which the port does not have.
+   * `Formula#to_display` (`math/formula.rb:197-237`), reached the way THIS
+   * class reaches it, not the way a Ruby caller would.
    *
-   * Not a thin wrapper over the renderers: the gem defines a per-format
-   * `to_<format>_math_zone` on each node class — 16, 16, 16, 17 and 16
-   * definitions across the five `MATH_ZONE_TYPES` — so this is its own port,
-   * not a switch. It raises rather than approximate one.
+   * The gem dispatches on `type` with `case type; when :asciimath ... when
+   * :latex ...` -- a SYMBOL comparison, `Symbol#===`. `plurimath-js`'s own
+   * `toDisplay(lang: string)` (`plurimath-js/src/index.ts:31-33`) calls
+   * `this.data.$to_display(lang)`, and Opal always crosses a JS string as a
+   * Ruby STRING, never a Symbol. `Symbol#===` on a String is `false`, so
+   * every `when` branch fails to match and the `case` evaluates to `nil` --
+   * none of the `to_<format>_math_zone` methods defined across the 17 node
+   * classes for exactly this purpose is ever reached from a String argument.
+   *
+   * Measured directly on the pinned oracle, calling `to_display` the same
+   * way (a Ruby String, exactly what Opal hands across):
+   *
+   *   f = Plurimath::Math::Formula.new([])
+   *   f.to_display("latex")     # => "|_ Math zone\n"
+   *   f.to_display("LATEX")     # => "|_ Math zone\n" (case-insensitive)
+   *   f.to_display("asciimath") # => "|_ Math zone\n"
+   *   f.to_display("html")      # raises InvalidTypeError: not a MATH_ZONE_TYPE
+   *   f.to_display("unicode")   # raises InvalidTypeError: needs "unicodemath"
+   *   f.to_display(nil)         # raises NoMethodError (undefined `downcase`)
+   *
+   * Repeated on `Plurimath::Asciimath.new("frac(1)(2)").to_formula` and on an
+   * EMPTY formula: identical `"|_ Math zone\n"` either way, because no
+   * renderer runs on this path at all -- the formula's content is never
+   * inspected. So this is not the 17-file port this method once (correctly,
+   * for a Ruby caller) said it was refusing. Reached the way this class's
+   * `string`-typed signature reaches it, `to_display` is a literal constant
+   * gated by a five-name allow-list; the tree-dump behavior exists only for a
+   * caller able to pass a Ruby Symbol, which this surface cannot produce.
+   *
+   * `UnsupportedFormatError`, not `UnsupportedFeatureError`, for a bad `lang`:
+   * this is a token rejected for not being one of a fixed set, exactly what
+   * that error already means for the constructor's `format` (`PARSERS`
+   * above) -- message text is not API (`core/errors.ts:1-8`), so reusing it
+   * costs nothing and keeps the error taxonomy to two axes: format-token
+   * validation, and no-parser-yet.
    */
-  toDisplay(_lang: string): string {
-    throw new UnsupportedFeatureError(
-      "toDisplay",
-      "the per-format math-zone renderers it needs are not ported",
-    );
+  toDisplay(lang: string): string {
+    if (!DISPLAY_TYPES.includes(lang.toLowerCase())) {
+      throw new UnsupportedFormatError(lang);
+    }
+    return "|_ Math zone\n";
   }
 
   toUnicodemath(): string {

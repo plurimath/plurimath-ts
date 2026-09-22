@@ -229,11 +229,6 @@ describe("the one method that cannot be honest yet, and the one that now is", ()
     expect(new Plurimath("sum_(i=1)^n i", "asciimath").toMathml(false)).not.toContain("intent");
   });
 
-  it("toDisplay refuses, naming what is missing", () => {
-    expect(() => build().toDisplay("latex")).toThrow(UnsupportedFeatureError);
-    expect(() => build().toDisplay("latex")).toThrow(/math-zone/);
-  });
-
   /**
    * `code` is the discriminator and `format`/`feature` are API
    * (`src/core/errors.ts:1-8`), so neither may carry prose. An unported
@@ -246,7 +241,7 @@ describe("the one method that cannot be honest yet, and the one that now is", ()
     const fields: Record<string, string> = {};
     for (const [label, run] of [
       ["ctor", () => new Plurimath(INPUT, "mathml")],
-      ["toDisplay", () => build().toDisplay("latex")],
+      ["toMathml", () => build().toMathml(true)],
     ] as const) {
       try {
         run();
@@ -259,12 +254,12 @@ describe("the one method that cannot be honest yet, and the one that now is", ()
     }
     expect(codes).toEqual({
       ctor: "UNSUPPORTED_FORMAT",
-      toDisplay: "UNSUPPORTED_FEATURE",
+      toMathml: "UNSUPPORTED_FEATURE",
     });
     // stable identifiers, not sentences
     expect(fields).toEqual({
       ctor: "mathml",
-      toDisplay: "toDisplay",
+      toMathml: "toMathml(intent: true)",
     });
     for (const value of Object.values(fields)) expect(value).not.toMatch(/\s\w+\s\w+\s\w+\s/);
   });

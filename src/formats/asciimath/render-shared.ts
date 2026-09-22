@@ -37,7 +37,7 @@ export const FORMAT = "asciimath";
 export type { NumberFormat } from "../../formatting/index";
 export {
   applyNumberFormat,
-  isPlainFormattableNumber,
+  isGemNumericValue,
   refuseNonNumericUnderFormatter,
 } from "../../formatting/index";
 

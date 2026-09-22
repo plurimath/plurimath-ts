@@ -19,8 +19,7 @@
  * value whenever `Plurimath.configuration.number_formatter` is nil — and it
  * is nil by default, which is the only configuration the pinned corpus was
  * generated under (`configuration: {}` in its provenance). With one, and a
- * value B2's first slice measures (a plain digit string,
- * `isPlainFormattableNumber`), the default-symbol substitution
+ * gem-numeric value (`isGemNumericValue`), the numeric pipeline
  * (`../../formatting/number-format.ts`) — but only past the mini-sizing
  * short-circuit above, exactly where the gem's own formatter read sits
  * (`number.rb:115`, after the `mini_sub`/`mini_sup` returns at `:103`/`:107`).
@@ -41,7 +40,7 @@ import { rubyArrayInspectOrThrow } from "../../core/ruby-semantics";
 import {
   applyNumberFormat,
   FORMAT,
-  isPlainFormattableNumber,
+  isGemNumericValue,
   type NodeOf,
   present,
   type RenderContext,
@@ -104,10 +103,9 @@ export function renderNumber(node: NodeOf<"number">, context: RenderContext): st
   if (present(node.miniSupSized)) return UNICODEMATH_SUP_DIGITS.get(value) ?? null;
 
   if (context.numberFormat !== null) {
-    if (isPlainFormattableNumber(value)) return applyNumberFormat(value, context.numberFormat);
+    if (isGemNumericValue(value)) return applyNumberFormat(value, context.numberFormat);
     // `Formatter::Numbers::Source#validate_numeric!` raises for anything that
-    // is not a gem-numeric string — a value it lets through but not-plain
-    // (negative, scientific notation) is gem-valid and still renders raw.
+    // is not a gem-numeric string.
     refuseNonNumericUnderFormatter(value, FORMAT, node.kind);
   }
   return value;

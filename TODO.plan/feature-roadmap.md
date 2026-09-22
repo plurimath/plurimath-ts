@@ -452,7 +452,7 @@ and unblocks nothing; and the compat surface does not expose it.
   slice.
 - **B3, line splitting and OMML display style,** landed: two renderers only,
   and the `Linebreak` kind already rendered.
-- **B4, `intent`,** next, as sequencing rather than dependency: MathML only, but 318 lines of encoding plus the
+- **B4, `intent`,** landed: MathML only, but 318 lines of encoding plus the
   formula's own post-processing, and a known gem defect to reproduce.
 - **B5, `toDisplay`,** after the renderers it composes stop changing under B2
   to B4, since it embeds their output.

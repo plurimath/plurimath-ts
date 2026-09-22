@@ -85,13 +85,29 @@ export interface MathmlOptions {
   /**
    * The gem's `intent:` keyword, default false. Ruby truthiness: `null` (the
    * gem's `nil`) is off, and so is an explicit `false` — measured
-   * byte-identical to leaving the keyword out. When on, the renderer writes
-   * the MathML Core `intent` (and `arg`) attributes exactly as the gem's
-   * `intentify` / `intent_post_processing` do (`./intent-encoding.ts`,
+   * byte-identical to leaving the keyword out. Every other JS-representable
+   * shape is on, byte-identical to `true` (measured against the oracle:
+   * `"false"`, `""`, `0`, `1`, `[]` and `{}` all match `intent: true`
+   * exactly, because the gem's `if intent` / `if intent` guards
+   * (`formula.rb`) are plain Ruby truthiness with no `.to_s` or numeric
+   * coercion — unlike `display_style`, which the gem does coerce via
+   * `.to_s == "true"`). The type below is widened to match; the runtime
+   * check at the call site (`intentValue !== undefined && intentValue !==
+   * null && intentValue !== false`) already implements this correctly for
+   * any shape and needs no change. When on, the renderer writes the MathML
+   * Core `intent` (and `arg`) attributes exactly as the gem's `intentify` /
+   * `intent_post_processing` do (`./intent-encoding.ts`,
    * `./intent-post-processing.ts`); inputs on which the gem raises
    * (a lone `UpcaseDd`, among others) raise `RenderError` here.
    */
-  readonly intent?: boolean | null | undefined;
+  readonly intent?:
+    | boolean
+    | string
+    | number
+    | ReadonlyArray<unknown>
+    | Record<string, unknown>
+    | null
+    | undefined;
 }
 
 /**

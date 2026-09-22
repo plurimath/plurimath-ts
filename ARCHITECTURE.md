@@ -422,17 +422,19 @@ object-exact**: the constructor and seven methods above match, and `data` is
 exposed as a name-compatible `readonly data: FormulaNode` — settled 2026-09-04
 (§11). The document does not claim a fully exact ABI.
 
-The freeze will be enforced by a checked-in declaration fixture (type-level
-test) plus one runtime test per method; no api-extractor needed. The compat
-class exists (`src/compat/index.ts`); the P2 exit criterion for its
-declaration fixture is still unchecked in
-[p2-output-formats/README.md](TODO.plan/p2-output-formats/README.md). The
-~80-line budget is guidance; exact compatibility overrides it.
+The freeze is enforced by `test/compat/plurimath-class.spec.ts`, a runtime
+test per method plus constructor/format-availability coverage; no
+api-extractor and no separate type-level declaration fixture were needed. The
+compat class itself lives at `src/compat/index.ts` and is re-exported from
+`src/index.ts`. The ~80-line budget is guidance; exact compatibility
+overrides it.
 
-**Constructor and methods today** (measured against `dist/`, 2026-09-21): the
-constructor builds from `asciimath`, `latex`, `html` and `unicode`; `mathml`,
-`omml` and any other name throw `UnsupportedFormatError`. `toDisplay` and
-`toMathml(true)` throw `UnsupportedFeatureError`; the other methods render.
+**The compat class landed once an input format existed to wrap** (asciimath
+and latex first, then html and unicode as their batteries landed — §"The
+parser each input format uses" above). It is still not *complete*: `mathml`
+and `omml` construction still raise `UnsupportedFormatError` until their
+parsers exist (§11's availability constraint, below). `toDisplay` still
+throws `UnsupportedFeatureError`; `toMathml(true)` now renders (B4, `intent`).
 
 **Availability constraint.** The compat constructor accepts six input formats,
 but input formats land across phases (§9). The compat class is therefore only

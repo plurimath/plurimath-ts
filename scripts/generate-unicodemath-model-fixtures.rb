@@ -15,14 +15,17 @@
 # must match, over inputs nobody wrote by hand.
 #
 # Unlike the LaTeX fixtures there was no hand-picked COVERAGE list, for as long
-# as the corpus alone could define the slice: the rules the 103
+# as the corpus alone could define the slice: the rules its
 # `expected.unicodemath` strings fire, measured on the oracle, were the rules
-# the port carried. That method was EXHAUSTED against the 103-string corpus
-# outside the deferred table/matrix family — no other unported rule fired on
-# it at the time — so RULE_COVERAGE below drives rule families chosen by what
-# they BUILD instead, same shape as the LaTeX generator's own list: grouped
-# by family, each input
-# checked against the oracle before being written down.
+# the port carried. That method was EXHAUSTED against the corpus as it stood
+# at the time (103 distinct strings) outside the deferred table/matrix family
+# — no other unported rule fired on it then — so RULE_COVERAGE below drives
+# rule families chosen by what they BUILD instead, same shape as the LaTeX
+# generator's own list: grouped by family, each input
+# checked against the oracle before being written down. The corpus has since
+# grown (see `corpusUnicodemathCount` in the generated fixtures for its
+# current size) and continues to be exhausted for corpus-reachable rules
+# independently of RULE_COVERAGE.
 #
 # There is a third, small BOUNDARY list, which is the opposite thing again.
 # Each of its inputs fires a rule the slice does NOT carry, so the port must
@@ -894,6 +897,17 @@ RULE_COVERAGE = {
   # size-prefix arms), `:60` and `:97` (slice A), `:561` (slice F). `x₍₁₂₎` is
   # spelled bare on purpose: `(x₍₁₂₎)` parses on the oracle to an unmatched
   # `{open_paren:, mini_sub:, close_paren:}` hash, not a model.
+  #
+  # `x_├1(2┤1)` is the other kind of witness this group carries: not a rule
+  # firing, but a GEM BUG the same shape as `"±"` in `relation` above. Traced
+  # with every `unicode_math/transform.rb` block wrapped in a counter, NONE of
+  # the gem's 516 rules ever fires on a `sub_exp` key for this input (every
+  # `x_├N(M┤K)` size-prefix-plus-sub variant checked behaves the same way), so
+  # the root `{sub_exp: {base:, sub:}}` hash — nested four deep, unlike `"±"`'s
+  # single level — survives untouched and `Kernel#Array` folds only the
+  # OUTERMOST layer. `GEM_UNMATCHED_SIGNATURES` in `transform.ts` carries the
+  # nested hashes' own shapes (`sub_exp=other` down to `close_paren=sequence`)
+  # so this row compares for real rather than being refused.
   "fenced_g1" => [
     "()",
     "[]",
@@ -929,6 +943,7 @@ RULE_COVERAGE = {
     "(■(a&b))",
     "[■(a&b)]",
     "(_a^b c)",
+    "x_├1(2┤1)",
   # "fenced_g2": the bracket-pair family, `transform.rb:3000` to the end of the
   ],
   # file -- every `Fenced.new(open_paren, ..., close_paren)` rule (a few wrap the
@@ -1051,12 +1066,26 @@ RULE_COVERAGE = {
 # `RULE_COVERAGE["relation"]` once their rule landed, the same ratchet
 # `DEFERRED_INPUTS` in `model-parity.spec.ts` documents for the corpus side.
 #
-#   ("a^b1" and "a_b1" moved to `RULE_COVERAGE["script-subsup-nary"]` when
-#   slice F ported rules 1148 and 1078.)
-#   "1x₂"    rule 1054 `{base: sequence, sub: simple}` (blocks `:67`).
-#   "1/2a"   rule 1619 `{numerator: simple, denominator: sequence}` (blocks
-#            `:658`).
-#   "ⅇ"      rule 227 `{unicoded_font_class:, symbol:}` (blocks `:43`).
+# ("a^b1" and "a_b1" moved to `RULE_COVERAGE["script-subsup-nary"]` when
+# slice F ported rules 1148 and 1078.) `:1054`, `:1619` and `:227` — the
+# rules originally cited beside these three rows — are ALL ported now too,
+# and each row was re-traced against the current port rather than trusted to
+# still be blocked by the same rule:
+#
+#   "1x₂"    still refused, but by TWO different rules, neither of them
+#            `:1054`: `:1776` `{digit: simple, expr: simple}` never fires, so
+#            `base` inside the `mini_sub` hash stays a raw hash rather than
+#            the SEQUENCE `:1054` needs (`:1054` itself fires fine once it
+#            is), and `:67` `{mini_sub: sequence}` still has to land after it
+#            to unwrap the outer key. The port's own message names the
+#            outermost casualty: `no rule matched {mini_sub=other}`.
+#   "1/2a"   still refused by `:658` `{digit: simple,
+#            recursive_denominator: simple}` exactly as before — `:1619` was
+#            never the blocker here, only the rule one level up that `:658`
+#            feeds. Port message: `no rule matched {frac=other}`.
+#   "ⅇ"      still refused, now by `:43` `{mitBbb: simple}` alone — `:227`
+#            fires fine once `:43` does. Port message:
+#            `no rule matched {fonts=other}`.
 #
 # Every row records a rule the port lacks, not one it has: each is a witness
 # a pure combinator (`RULE_COVERAGE["combinators"]`) needs and cannot have

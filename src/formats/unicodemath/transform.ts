@@ -116,8 +116,8 @@
  * `:2197` (`\atop`,
  * `{linethickness: "0"}`), `:2209` (`\choose`, the `Fenced` wrap),
  * `:2347` (`\sdiv`/bevelled), `:2353` (`\ldiv`), and `:2377` (`\ndiv`,
- * `{displaystyle: false}` — its SEQUENCE-denominator twin `:2371`, deferred,
- * passes `{no_display_style: false}` instead for the same input shape; the gem
+ * `{displaystyle: false}` — its SEQUENCE-denominator twin `:2371` passes
+ * `{no_display_style: false}` instead for the same input shape; the gem
  * is inconsistent between the two and both are transcribed as measured, not
  * reconciled) — plus two small prerequisites `:1614`'s mini shape needs:
  * `:165`/`:170`, the standalone `{sup_digits:}`/`{sub_digits:}` unwraps to
@@ -129,10 +129,10 @@
  * `:1644` (the `numerator`/`mini_numerator` × `denominator`/`mini_denominator`
  * shapes where at least one side is a SEQUENCE), `:2203` (`\atop` with a
  * sequence numerator), and `:2359`/`:2365`/`:2371` (bevelled/ldiv/
- * no_display_style with a sequence denominator) — all need the `atoms`
- * combinator above, which is cross-cutting rather than fraction-specific and
- * is deferred whole, same reasoning as DECORATION: porting a slice of it here
- * would mean starting a second large family rather than finishing this one.
+ * no_display_style with a sequence denominator) — are ALL ported too, each a
+ * plain sequence-spread of the same `Utility.fractions` shape as `:1609`'s
+ * siblings above; none needed the cross-cutting `atoms` combinator this
+ * comment originally expected them to.
  *
  * ## A fourth increment: TABLE, the family the first slice deferred whole
  *
@@ -296,21 +296,16 @@
  * grammar's right recursion always captures `atom` one leaf at a time for
  * the shape `:491` binds, so nothing ever leaves it a SEQUENCE at that
  * position (the same kind of measured absence as `:845`'s deadness above).
- * The remaining eleven — `:675`, `:680`, `:685`, `:690`, `:695`, `:1756`,
- * `:2035`, `:2041`,
- * `:2048`, `:2787`, `:3074` — only ever appear inside FRACTION's own
- * `numerator`/`denominator` grammar productions, so their output always
- * lands on the TOP `{numerator:, denominator:}` rule, and that rule is one
- * of the ten SEQUENCE-numerator/denominator sites (`:1619`-`:2371`) the
- * FRACTION section above already deferred. Measured directly: `"1/a(b)"`
- * fires `:675` on the oracle exactly as this file would code it, but the
- * `[atom, Fenced]` result is a SEQUENCE denominator, and feeding the same
- * input through this port lands on `transform.rb:1619`
- * (`numerator: simple, denominator: sequence`) — unported — so the port
- * refuses the one input that would prove `:675` correct. Porting any of the
- * eleven without also porting at least the matching half of those ten would
- * add code with no reachable, passing witness; wiring that family is the
- * explicit follow-up this increment unblocks, not part of it.
+ * Of the eleven that only ever appear inside FRACTION's own
+ * `numerator`/`denominator` grammar productions — `:675`, `:680`, `:685`,
+ * `:690`, `:695`, `:1756`, `:2035`, `:2041`, `:2048`, `:2787`, `:3074` —
+ * three (`:675`, `:1756`, `:2048`) are ported now, alongside the ten
+ * SEQUENCE-numerator/denominator sites (`:1619`-`:2371`) the FRACTION
+ * section above once deferred and now also carries in full: those ten no
+ * longer block anything downstream of them. The remaining eight — `:680`,
+ * `:685`, `:690`, `:695`, `:2035`, `:2041`, `:2787`, `:3074` — are simply
+ * outside this slice's boundary; see the ATOMS-meeting-FRACTION comment
+ * beside `:675` below for the up-to-date accounting.
  *
  * This increment ports `:486`/`:496`/`:1851` — three new rules, since `:30`
  * and `:49`, the family's own two base unwraps, were already ported above by
@@ -2433,21 +2428,21 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
 
   // ATOMS meeting FRACTION's `recursive_denominator`/`recursive_numerator`
   // (`:675`, `:680`, `:685`, `:690`, `:695`, `:1756`, `:2035`, `:2041`,
-  // `:2048`, `:2787`, `:3074`) is deferred whole, not rule by rule: every one
-  // of those eleven keys only ever appears inside FRACTION's `numerator`/
-  // `denominator` grammar productions, and the TOP `{numerator:, denominator:}`
-  // rule that would receive their output is itself one of the ten still-
-  // deferred SEQUENCE-numerator/denominator sites (`transform.rb:1619`-
-  // `:2371`, the module header's own "other ten call sites"). Measured by
-  // probing each on the oracle and then driving the same input through this
-  // port: `"1/a(b)"` fires `:675` on the oracle exactly as coded here, but the
-  // resulting `[atom, Fenced]` is a SEQUENCE denominator, which lands on
-  // `transform.rb:1619` (`numerator: simple, denominator: sequence`) —
-  // unported — so the port refuses the very input that proves `:675` correct.
-  // Porting any of these eleven without also porting at least the matching
-  // half of the ten deferred FRACTION sites would add code with no reachable,
-  // passing witness, which the repo's evidence rules do not allow; wiring
-  // that family is the explicit follow-up this slice unblocks, not part of it.
+  // `:2048`, `:2787`, `:3074`) was deferred whole when this comment was first
+  // written, on the reasoning that every one of those eleven keys only ever
+  // appears inside FRACTION's `numerator`/`denominator` grammar productions,
+  // and the TOP `{numerator:, denominator:}` rule that would receive their
+  // output was itself one of the ten SEQUENCE-numerator/denominator sites
+  // (`transform.rb:1619`-`:2371`, the module header's own "other ten call
+  // sites"). That top-side blocker is gone now: all ten of those sites are
+  // ported (`:1619`, `:1624`, `:1629`, `:1634`, `:1639`, `:1644`, `:2203`,
+  // `:2359`, `:2365`, `:2371`), and three of the eleven ATOMS-meeting-
+  // FRACTION keys were ported alongside prerequisites that needed them
+  // (`:675` above, `:1756`, `:2048`). The remaining eight — `:680`, `:685`,
+  // `:690`, `:695`, `:2035`, `:2041`, `:2787`, `:3074` — are still unported,
+  // but no longer for the reason this comment originally gave: nothing left
+  // blocks a passing witness for them, porting them is simply outside this
+  // slice's boundary and is the next slice's work, not a dependency gap.
 
   rule("735", { factor: simple("factor"), operand: simple("operand") }, (b) => [
     b.factor,
@@ -3181,8 +3176,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
 
   // FRACTION continued — `atop` (`\atop`/`&#xa6;`) and `choose` (`\choose`/
   // `&#x249e;`) each add one key to the same `numerator: simple, denominator:
-  // simple` shape; `:2203`, `atop`'s SEQUENCE-numerator twin, is deferred with
-  // the rest. `choose` alone builds `Fenced`, not `Frac` directly: the gem
+  // simple` shape; `:2203`, `atop`'s SEQUENCE-numerator twin, is registered
+  // just below, with the other nine SEQUENCE-shaped sites (Slice E's own
+  // header comment above this rule family). `choose` alone builds `Fenced`,
+  // not `Frac` directly: the gem
   // wraps the Frac in round parens it constructs with no lookup
   // (`Math::Symbols::Paren::Lround.new`/`Rround.new`), which `LROUND_ID`/
   // `RROUND_ID` (declared with the other named-symbol ids above) name here.
@@ -3308,9 +3305,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // `&#x2298;`), each still `numerator: simple, denominator: simple`. The last
   // one's options are NOT `{no_display_style: false}` despite the key name:
   // `transform.rb:2377` passes `{displaystyle: false}`, and only its
-  // SEQUENCE-denominator twin `:2371` (deferred) passes the differently-named
-  // option — measured, not reconciled, because the gem itself is inconsistent
-  // between the two.
+  // SEQUENCE-denominator twin `:2371` (registered below, with the other Slice
+  // E sites) passes the differently-named option — measured, not reconciled,
+  // because the gem itself is inconsistent between the two.
   rule(
     "2347",
     {
@@ -5045,6 +5042,14 @@ export function unicodemathTransform(): Transform {
  * `{combined_symbols=simple, expr=sequence}` unmatched in the gem too, which
  * answers it with folded pairs; this port refuses it. Widening the list is a
  * measurement, never a guess — every entry below came from an oracle trace.
+ *
+ * A second, later measurement (round-2 review, not the original 103-string
+ * corpus scan) added the six `sub_exp`/`base`/`sub_script`/`int_exp`/
+ * `close_paren` signatures below, from `x_├1(2┤1)` and its `x_├N(M┤K)`
+ * size-prefix-plus-sub siblings: another GEM BUG of the same shape as `±`,
+ * except the unmatched hash nests four levels deep rather than sitting at
+ * the root alone, so `finalizeValue`'s recursion needs every level's own
+ * signature admitted, not just the outermost.
  */
 const GEM_UNMATCHED_SIGNATURES: ReadonlySet<string> = new Set([
   "accent_symbols=simple",
@@ -5068,6 +5073,28 @@ const GEM_UNMATCHED_SIGNATURES: ReadonlySet<string> = new Set([
   "factor=other",
   "first_value=simple",
   "intermediate_exp=other",
+  // `x_├1(2┤1)` (and every `x_├N(M┤K)` size-prefix-plus-sub variant traced:
+  // `x_├0(2┤1)`, `x_├2(2┤1)`, `x_├1(2┤0)`): the gem's own `mini_sub`/`base`/
+  // `sub` chain never reduces `sub`'s `sub_script: {int_exp: {opener:,
+  // operand:, closer:}}` shape to a leaf value the port's ported rules
+  // reach — traced on the oracle (`TracePoint :b_call` over
+  // `unicode_math/transform.rb`), NONE of its 516 rules ever fires a key
+  // named `sub_exp` for this input, so the ROOT hash `{sub_exp: {base:,
+  // sub:}}` survives the whole transform exactly as `combined_symbols` does
+  // for `±` above, and `Kernel#Array` folds it into
+  // `Formula([["sub_exp", {base: Symbol("x"), sub: {...}}]])` — a gem bug,
+  // reproduced here rather than fixed, not a slice gap. The unmatched hash
+  // nests four deep — `sub_exp`'s value is itself unmatched, and so is
+  // every hash inside it, down to the innermost `close_paren` wrap — because
+  // `finalizeValue` recurses into every hash entry once the outer one is
+  // accepted, checking each nested hash's OWN signature the same way. Every
+  // signature below is that recursion's floor, not a separate gap:
+  "sub_exp=other",
+  "base=simple,sub=other",
+  "sub_script=other",
+  "int_exp=other",
+  "closer=other,opener=sequence,operand=simple",
+  "close_paren=sequence",
 ]);
 
 /**

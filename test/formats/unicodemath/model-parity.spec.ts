@@ -219,21 +219,26 @@ describe.skipIf(deferred.length === 0)("the rule families this slice defers", ()
 });
 
 /**
- * The slice EDGE: inputs the corpus reaches that fire an unported rule.
+ * The slice EDGE: hand-picked inputs (`SLICE_BOUNDARY` in the fixture
+ * generator) that fire a `transform.rb` rule the port still does not carry,
+ * so the gem answers with a perfectly ordinary model while the port must
+ * REFUSE loudly instead of answering differently.
  *
- * Each of these fires one `transform.rb` rule the port does not carry — `:99`,
- * `:765`, `:745`, `:1791` — and the gem answers each with a perfectly ordinary
- * model, recorded in the fixture row beside it. The port must REFUSE rather
- * than answer differently, and two of the four are here because it did not:
+ * `:99`, `:745`, `:765` and `:1791` — the rules `±`, `a≤b` and `x a/b c` used
+ * to prove absent here — are all ported now (RELATION and FRACTION landed);
+ * those inputs moved out into `RULE_COVERAGE` groups and compare for real.
+ * The three inputs still in `SLICE_BOUNDARY` were re-traced against the
+ * CURRENT port rather than trusted to still be blocked by the rule once
+ * named beside them — see the generator's own comment above
+ * `SLICE_BOUNDARY` for the measurement:
  *
- *   - `±` reaches the transform as a ROOT hash, and `Kernel#Array`'s fold into
- *     `[key, value]` pairs used to happen before anything validated it, so the
- *     port returned `Formula([["combined_symbols", "&#xb1;"]])` where the gem
- *     returns `Formula([Pm])`.
- *   - `x a/b c` leaves `{frac:, expr:}` — the same KEY SET the corpus's
- *     `(a)/(+) b` leaves unmatched, but with both values resolved, which is the
- *     case rule `:1791` matches. A key-set allowlist admitted it; the shape
- *     signature the port now records does not.
+ *   - `"1x₂"` is blocked by `:1776` (`{digit: simple, expr: simple}`, which
+ *     must fire before `:1054` — already ported — ever sees the SEQUENCE
+ *     shape it needs) and by `:67` (`{mini_sub: sequence}`) above it.
+ *   - `"1/2a"` is blocked by `:658` (`{digit: simple,
+ *     recursive_denominator: simple}`); `:1619`, one level up, is ported.
+ *   - `"ⅇ"` is blocked by `:43` (`{mitBbb: simple}`); `:227`, which consumes
+ *     its result, is ported.
  */
 describe("inputs whose rules sit outside the slice", () => {
   it.each(boundary.map((entry) => [entry.input, entry] as const))(

@@ -6,10 +6,12 @@
 # UnicodeMath *transform* reads, consumed by
 # `src/formats/unicodemath/registry.ts`.
 #
-# `UnicodeMath::Constants` holds 42 constants. 33 of them the grammar reaches,
-# plus one derived table; three more — `BINARY_FUNCTIONS`, `NARY_CLASSES` and
-# `PREFIXED_PRIMES` — the transform reaches, and are emitted here too. The list
-# is not a judgement call: `unicode_math/parsing_rules/constants_rules.rb` is the
+# `UnicodeMath::Constants` holds 42 constants. 32 of them the grammar reaches,
+# plus one derived table (`Constants.wrapper_symbols`, not a stored constant);
+# eight more — see `TRANSFORM_CONSTANT_SOURCES` below — the transform reaches,
+# and are emitted here too; the remaining two (`UNCONSUMED_CONSTANTS`) are read
+# by neither. The list is not a judgement call:
+# `unicode_math/parsing_rules/constants_rules.rb` is the
 # single file that turns constants into rules, and every `Constants::` reference
 # under `unicode_math/` was enumerated to build `TABLES` and
 # `TRANSFORM_CONSTANT_SOURCES` below.
@@ -31,7 +33,7 @@
 # named symbols share one code point and the gem never deduplicates. The
 # emitted shape is therefore an **ordered array of strings**, which cannot
 # collapse; a `Map`, a `Set`, or an object keyed by the text would silently
-# shorten those ten tables. The repeats are dead alternatives in the gem too
+# shorten those nine tables. The repeats are dead alternatives in the gem too
 # (Parslet's `|` is ordered, so the second occurrence is unreachable), and they
 # are carried anyway so the emitted array is the gem's array rather than an
 # improved one.

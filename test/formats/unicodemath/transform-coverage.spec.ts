@@ -62,10 +62,12 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * `preprocess(entry.input).text` equals the recorded `entry.preprocessed` for
  * every row, so this changes what runs, not what a passing row parses to.
  *
- * The still-deferred-family inputs (`DEFERRED_INPUTS` in
- * `model-parity.spec.ts`) are driven too: their transform runs to completion
- * and only `finalize` refuses them, so their rule firings count here even
- * though `model-parity.spec.ts` expects a refusal.
+ * When `DEFERRED_INPUTS` (in `model-parity.spec.ts`) is non-empty, its inputs
+ * are driven too: their transform runs to completion and only `finalize`
+ * refuses them, so their rule firings would count here even though
+ * `model-parity.spec.ts` expects a refusal. `DEFERRED_INPUTS` is currently
+ * empty — every corpus row it once held is ported — so this has no live
+ * effect until a new corpus pin adds a refused row.
  *
  * They are NOT special cover for anything. This said they were "the sole cover
  * for `transform.rb:2619` on a `Fenced` built around a table"; measured, they

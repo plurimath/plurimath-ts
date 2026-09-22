@@ -2,40 +2,19 @@
 # `payload.sha256` covers the whole payload file, including its final newline.
 ---
 schema: plurimath-corpus/manifest/2
-committable: false
-warnings:
-- generated with --allow-dirty
-- 'generator checkout dirty: scripts/generate-render-options-fixtures.rb, src/formats/mathml/intent-encoding.ts, src/formats/mathml/intent-post-processing.ts, src/formats/mathml/render-shared.ts, src/formats/mathml/render.ts, src/formats/mathml/renderer.ts, src/render/abs/mathml.ts, src/render/binary-function/mathml.ts, src/render/fenced/mathml.ts, src/render/formula/mathml.ts, src/render/frac/mathml.ts, src/render/int/mathml.ts, src/render/nary/mathml.ts, src/render/oint/mathml.ts, src/render/sum/mathml.ts, src/render/symbol/mathml.ts, src/render/table/mathml.ts, src/render/unary-function/mathml.ts, src/xml/element.ts'
+committable: true
+warnings: []
 generator:
   path: scripts/generate-render-options-fixtures.rb
-  sha256: e0e153092b8b50344079d7fab4ba34b6687a418d55db4314cb14f846382dee2f
+  sha256: ccf2df16664c46fb05634377d7b2d03adc42f085dda58e7629d1185528db96dc
   inputs:
     scripts/generate-corpus.rb: 60afefa7bccb49b7f801c27a0fe3ce7605c63cd2e4afdccea7d4125fff2c01b3
-    scripts/generate-render-options-fixtures.rb: e0e153092b8b50344079d7fab4ba34b6687a418d55db4314cb14f846382dee2f
+    scripts/generate-render-options-fixtures.rb: ccf2df16664c46fb05634377d7b2d03adc42f085dda58e7629d1185528db96dc
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: d367ae764f1aadd374525d21be13b8cb8b14fee3
-    clean: false
-    dirty_paths:
-    - scripts/generate-render-options-fixtures.rb
-    - src/formats/mathml/intent-encoding.ts
-    - src/formats/mathml/intent-post-processing.ts
-    - src/formats/mathml/render-shared.ts
-    - src/formats/mathml/render.ts
-    - src/formats/mathml/renderer.ts
-    - src/render/abs/mathml.ts
-    - src/render/binary-function/mathml.ts
-    - src/render/fenced/mathml.ts
-    - src/render/formula/mathml.ts
-    - src/render/frac/mathml.ts
-    - src/render/int/mathml.ts
-    - src/render/nary/mathml.ts
-    - src/render/oint/mathml.ts
-    - src/render/sum/mathml.ts
-    - src/render/symbol/mathml.ts
-    - src/render/table/mathml.ts
-    - src/render/unary-function/mathml.ts
-    - src/xml/element.ts
+    commit: a7e600585711ce4ee6826c8660f9eb906ebf8937
+    clean: true
+    dirty_paths: []
 oracle:
   gem: plurimath
   version: 0.11.6

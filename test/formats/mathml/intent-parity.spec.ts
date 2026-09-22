@@ -213,7 +213,7 @@ describe("the fixtures measure what the pipeline claims", () => {
     ["Frac derivative", /intent=":derivative\(/],
     ["Frac partial-derivative", /intent=":partial-derivative\(/],
     ["Table matrix", /intent=":matrix\(/],
-    ["Table fenced", /<mrow intent=":fenced"><mo>/],
+    ["Table fenced", /<mrow intent=":fenced">\s*<mo>/],
     ["Array / Eqarray / Cases equations", /intent=":equations"/],
     ["Eqarray / Cases cases", /intent=":cases"/],
     ["Pmatrix", /intent=":parenthesized-matrix"/],
@@ -246,8 +246,8 @@ describe("the intent option", () => {
 
   it("composes with unaryFunctionSpacing and formatter", () => {
     const tree = parseAsciimath("sin x");
-    expect(toMathml(tree, { intent: true, unaryFunctionSpacing: false })).toContain(
-      '<mrow intent=":function"><mi>sin</mi>',
+    expect(toMathml(tree, { intent: true, unaryFunctionSpacing: false })).toMatch(
+      /<mrow intent=":function">\s*<mi>sin<\/mi>/,
     );
     expect(toMathml(tree, { intent: true })).toContain('<mo rspace="thickmathspace"/>');
   });

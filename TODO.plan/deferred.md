@@ -290,22 +290,22 @@ slots it is byte-exact and pinned. The follow-up chooses: refuse admitted
 primitives in composite-feeding positions, or record these as permanent
 divergences case by case.
 
-### MathML renderer: two `to_mathml` options deferred by name
+### MathML renderer: one `to_mathml` option deferred by name
 
-**Trigger: `intent` — the P2 compat class (its only optional argument);
-`unitsml` — the UnitsML decision (ARCHITECTURE.md §5).**
+**Trigger: `unitsml` — the UnitsML decision (ARCHITECTURE.md §5).**
 
 `toMathml` implements `display_style`, `unary_function_spacing`, `formatter`
-(B2's first slice) and `split_on_linebreak` (B3, shared with `to_omml` through
-`src/core/linebreak.ts`), byte-matched against oracle probes in
-`test/formats/mathml/renderer.spec.ts` and
-`test/formats/split-display-parity.spec.ts`. The other two `Formula#to_mathml`
-keywords are refused BY NAME: passing `intent` or `unitsml` with any value but
-`undefined` — `intent: false` and
-`unitsml: {}` (the gem's inert defaults) included — raises a `RenderError`
+(B2's first slice), `split_on_linebreak` (B3, shared with `to_omml` through
+`src/core/linebreak.ts`) and `intent` (B4, the P2 compat class's only optional
+argument — `./intent-encoding.ts`, `./intent-post-processing.ts`), byte-matched
+against oracle probes in `test/formats/mathml/renderer.spec.ts`,
+`test/formats/mathml/intent-parity.spec.ts` and
+`test/formats/split-display-parity.spec.ts`. The remaining `Formula#to_mathml`
+keyword is refused BY NAME: passing `unitsml` with any value but `undefined` —
+`unitsml: {}` (the gem's inert default) included — raises a `RenderError`
 naming the option and this file. Silence was the alternative and is the one
 wrong answer: the corpus was generated with defaults, so a renderer that
-ignored `intent: true` would pass every pin and still be wrong for the first
+ignored `unitsml: {...}` would pass every pin and still be wrong for the first
 caller. The refusal extends to the tree side of unitsml: a hand-built node
 smuggling a `unitsml` ATTRIBUTE through an attributes/options hash is refused
 by the same name, which is what makes the gem's `unitsml_post_processing`

@@ -237,19 +237,23 @@ grammars; rendering them in base notation is not.
    7), so the formatter arrives as a per-call option, and its type — a class
    instance, or a plain options object — is undecided.
 
-#### MathML `intent` — refused
+#### MathML `intent` — landed (B4)
 
 **Gem:** `to_mathml(intent: true)` adds `intent` attributes through
 `utility/intent_encoding.rb` (318 lines) and `Formula#intent_post_processing`
 and its neighbours (`math/formula.rb:357-507`). `ARCHITECTURE.md` §5 already
 lists `intent` as a symbol-context axis (`Dd`, `Ii`, `Jj`, ...).
 
-**Port:** `toMathml` refuses `intent` by name; the compat `toMathml(true)`
-raises `UnsupportedFeatureError`.
+**Port:** implemented in `toMathml` (`src/formats/mathml/intent-encoding.ts`,
+`intent-post-processing.ts`, and per-kind writes across `src/render/*/mathml.ts`);
+the compat `toMathml(true)` calls it rather than raising. Checked against the
+oracle by port-local fixtures (`test/formats/mathml/render-options-fixtures.json`,
+`intent*` groups), covering every intent-bearing gem class, the gem's own
+`intent_encoding_spec.rb` examples, and the `ⓘ` UnicodeMath examples as models.
 
-**Blocks:** no shared case. One known gem defect sits in it —
+**Blocks:** no shared case. One known gem defect is reproduced, not fixed —
 `intent: true` raises on a lone `UpcaseDd` ([deferred](deferred.md), upstream
-issues) — which a port must reproduce, not fix.
+issues).
 
 #### Line splitting (`split_on_linebreak:`) — landed (B3)
 

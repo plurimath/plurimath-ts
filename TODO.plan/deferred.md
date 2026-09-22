@@ -585,6 +585,35 @@ BOTH the Ruby gem and this port, after the byte-identical structure is
 complete: make `Standard` layer the locale's symbols under explicit options,
 then re-record the corpus and flip the port together. Not yet reported upstream.
 
+### Typed-options refuse the gem's numeric-String/Symbol coercions
+
+**Intentional, not a gap.** Three `formatter.options` fields the gem coerces
+from a numeric String (or Symbol) are typed as numbers/strings in this port
+and refuse a String/Symbol value instead of coercing it:
+
+- `countOption` (`src/formatting/number-format.ts:206`) — the count options
+  (`groupDigits`, `fractionGroupDigits`, `digitCount`, `paddingDigits`,
+  `paddingGroupDigits`, `significant`) — the gem's `integer_option` accepts a
+  numeric String/Symbol (`"3"`, `:"3"`) and coerces it; this port's fields are
+  typed `number`, so a string is refused rather than coerced.
+- `separatorOption` (`src/formatting/number-format.ts:275`) — the
+  decimal/group/fraction-group markers — the gem stringifies any non-Boolean
+  value (`to_s`/`inspect`) before use; this port's fields are typed `string`,
+  so a non-string (other than the handled `undefined`/`null`) is refused
+  rather than stringified.
+- `baseOption` (`src/formatting/number-format.ts:328`) — the `base` option —
+  the gem accepts a numeric String (`"16"`) and coerces it; this port's field
+  is typed `number`, so a string is refused rather than coerced.
+
+Each divergence is a typed-API boundary, the same shape as the locale
+divergence above: the gem's dynamically-typed `options` Hash accepts whatever
+Ruby can stringify, while this port's `FormatterSymbolOptions` fields are
+typed TypeScript numbers/strings. None of the three is reachable through valid
+typed TypeScript usage — only through a runtime cast or otherwise misusing the
+type system (`as never`, `any`, a `.js` caller) would a numeric-String value
+ever reach one of these functions. Not scheduled for a fix: there is no
+Ruby-gem defect to mirror here, unlike the locale case above.
+
 ## Parked ideas
 
 ### Entity handling in the P3 input parsers

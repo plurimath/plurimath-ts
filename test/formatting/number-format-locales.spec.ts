@@ -10,13 +10,21 @@
  *
  * The second half is the gem's `Source#validate_numeric!` under an active
  * formatter.
+ *
+ * mathml joins the four text renderers on the locale-is-inert cases:
+ * measured on this port, `toMathml` of the same values wraps the identical
+ * digits/symbols in `<mn>…</mn>` inside `<mstyle displaystyle="true">` — its
+ * entry point is a `Formula`, not a bare `Number` node, so it needs its own
+ * `formulaNode` builder and an `<mn>`-stripping helper.
  */
 
 import { describe, expect, it } from "vitest";
 import { RenderError } from "../../src/core/errors";
+import { FormulaNode, NumberNode } from "../../src/core/nodes";
 import { toAsciimath } from "../../src/formats/asciimath/index";
 import { toHtml } from "../../src/formats/html/index";
 import { toLatex } from "../../src/formats/latex/index";
+import { toMathml } from "../../src/formats/mathml/index";
 import { toUnicodemath } from "../../src/formats/unicodemath/index";
 import type { FormatterOptions } from "../../src/formatting/index";
 
@@ -25,17 +33,32 @@ function numberNode(value: string | null): never {
   return { kind: "number", value } as never;
 }
 
+/** A `Formula` wrapping one `Number` — mathml's actual entry point. */
+function formulaNode(value: string): FormulaNode {
+  return new FormulaNode({ value: [new NumberNode({ value })] });
+}
+
+/** `Formula#to_mathml`'s `<mn>…</mn>` text, inside `<mstyle displaystyle="true">`. */
+function mathmlNumber(mathml: string): string {
+  const compact = mathml.replace(/>\s+</g, "><");
+  const match = /<mstyle displaystyle="true"><mn>(.*)<\/mn><\/mstyle>/s.exec(compact);
+  if (match === null) throw new Error(`no plain <mn> in ${mathml}`);
+  return match[1] as string;
+}
+
 describe("formatter.locale is inert, as on the oracle's Formatter::Standard", () => {
   const Oen = "1,234,567.89";
 
   it("renders every locale with the en symbols (de: the oracle answers 1,234,567.891'234)", () => {
     const node = numberNode("1234567.89");
+    const formula = formulaNode("1234567.89");
     for (const locale of ["en", "de", "fr", "en-GB", "de-CH", "it-CH", "ar", "fa", "pt-PT"]) {
       const formatter: FormatterOptions = { locale };
       expect(toAsciimath(node, { formatter }), locale).toBe(Oen);
       expect(toLatex(node, { formatter }), locale).toBe(Oen);
       expect(toHtml(node, { formatter }), locale).toBe(Oen);
       expect(toUnicodemath(node, { formatter }), locale).toBe(Oen);
+      expect(mathmlNumber(toMathml(formula, { formatter })), locale).toBe(Oen);
     }
   });
 
@@ -53,6 +76,9 @@ describe("formatter.locale is inert, as on the oracle's Formatter::Standard", ()
     // Oracle: Standard.new(locale: "fr", options: {group_digits: 2}) -> "1,23,45,67.891'234".
     const formatter: FormatterOptions = { locale: "fr", options: { groupDigits: 2 } };
     expect(toAsciimath(numberNode("1234567.891234"), { formatter })).toBe("1,23,45,67.891'234");
+    expect(mathmlNumber(toMathml(formulaNode("1234567.891234"), { formatter }))).toBe(
+      "1,23,45,67.891'234",
+    );
   });
 
   it("changes symbols only through formatter.options, whatever the locale", () => {
@@ -69,11 +95,15 @@ describe("formatter.locale is inert, as on the oracle's Formatter::Standard", ()
     );
     const overridden: FormatterOptions = { locale: "de", options: { decimal: "#", group: "@" } };
     expect(toAsciimath(numberNode("1234567.89"), { formatter: overridden })).toBe("1@234@567#89");
+    expect(mathmlNumber(toMathml(formulaNode("1234567.89"), { formatter: overridden }))).toBe(
+      "1@234@567#89",
+    );
   });
 
   it("still defaults to en's symbols when no locale is given at all", () => {
     const formatter: FormatterOptions = {};
     expect(toAsciimath(numberNode("1234567.89"), { formatter })).toBe(Oen);
+    expect(mathmlNumber(toMathml(formulaNode("1234567.89"), { formatter }))).toBe(Oen);
   });
 });
 

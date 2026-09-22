@@ -435,16 +435,24 @@ markers", so it cannot drift into some other behaviour unnoticed.
 
 ### OMML Fenced: a lone surrogate is refused, not rendered as the gem's byte escapes
 
-**Trigger: a consumer reaching this from real input rather than a hand-built
-tree, or any decision to match Ruby's `#inspect` byte-escape spelling
-generally.**
-
-Ruby cannot BUILD the code point — `0xD800.chr(Encoding::UTF_8)` raises
-`RangeError: invalid codepoint 0xD800 in UTF-8` — but a String carries the
-bytes perfectly well. Measured on the oracle at `00c52783`,
-`[0xD800].pack("U*")` gives a UTF-8 String whose `valid_encoding?` is false,
-whose bytes are `ED A0 80`, and whose `#inspect` prints `"\xED\xA0\x80"`:
-byte escapes, not `\uD800`.
+**Resolved (2026-09-22).** Ruby cannot BUILD the code point —
+`0xD800.chr(Encoding::UTF_8)` raises `RangeError: invalid codepoint 0xD800 in
+UTF-8` — but a String carries the bytes perfectly well. Measured on the
+oracle at `00c52783`, `[0xD800].pack("U*")` gives a UTF-8 String whose
+`valid_encoding?` is false, whose bytes are `ED A0 80`, and whose `#inspect`
+prints `"\xED\xA0\x80"`: byte escapes, not `\uD800`. Swept over all 2,048
+lone surrogates (0xD800..0xDFFF), not sampled: every one agrees with the
+standard 3-byte UTF-8 encoding formula (byte1 = 0xE0|(cp>>12), byte2 =
+0x80|((cp>>6)&0x3F), byte3 = 0x80|(cp&0x3F)) applied without the
+surrogate-rejection check Ruby normally runs, zero disagreements. Three
+interactions were also measured directly rather than assumed: two lone
+surrogates adjacent (either side) stay ungrouped, matching this file's
+"consecutive escapes never grouped" finding for `\u`-escapes; a lone
+surrogate next to a C1 control or a noncharacter changes neither side's
+spelling nor their order; and the resulting ASCII text (`\`, `x`, hex digits)
+carries no `&`, so the double entity-decode pass in `delimiterAttribute` and
+the XML attribute writer are both inert on it, confirmed by reading each
+decoder's `&`-gated fast path rather than assuming.
 
 So the gem renders this. A `Fenced` whose delimiter is a Formula valued
 `["a\uD800b"]` emits, measured:
@@ -453,16 +461,9 @@ So the gem renders this. A `Fenced` whose delimiter is a Formula valued
 <m:begChr m:val="[&quot;a\xED\xA0\x80b&quot;]"/>
 ```
 
-This port refuses it instead (`src/render/fenced/omml.ts`), pinned by
-`test/formats/omml/renderer.spec.ts`, "refuses a lone surrogate the gem would
-render as byte escapes".
-
-**This entry is closable, unlike the non-UTF-8 entry above it.** That one is
-about bytes the port cannot hold at all. This output is ASCII-only, so
-JavaScript can represent it exactly; what is missing is only the decision to
-reproduce Ruby's `#inspect` byte-escape spelling, which is a wider question than
-one delimiter slot. Reachable today only from a hand-built tree — no parser
-produces a lone surrogate — which is why it is deferred rather than fixed here.
+`inspectCodepoint` in `src/render/fenced/omml.ts` now reproduces this instead
+of refusing it, pinned by `test/formats/omml/renderer.spec.ts`, "OMML fenced
+delimiter Ruby #inspect escapes" (the `it.each` surrogate rows).
 
 ### `ModelHelper.validate_left_right` is modelled at one renderer, not in the model
 

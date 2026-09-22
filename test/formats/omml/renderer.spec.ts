@@ -2413,6 +2413,14 @@ describe("OMML Nary operator entity decoding", () => {
  * Each row is the oracle's own `m:begChr` at `00c52783`, from a `Formula`
  * delimiter holding one string. The escaped rows are what the port used to get
  * wrong: it emitted the raw character for every one of them.
+ *
+ * A lone UTF-16 surrogate (0xD800..0xDFFF) escapes differently: Ruby's
+ * `String#inspect` byte-escapes it as `\xHH\xHH\xHH`, the standard 3-byte
+ * UTF-8 encoding formula applied without the surrogate-rejection check Ruby
+ * normally runs, because a String built with `[cp].pack("U*")` can carry
+ * those bytes even though Ruby cannot construct the code point directly.
+ * Swept over all 2,048 lone surrogates on the oracle: zero disagreements
+ * with the byte1/2/3 formula.
  */
 describe("OMML fenced delimiter Ruby #inspect escapes", () => {
   it.each([
@@ -2456,15 +2464,44 @@ describe("OMML fenced delimiter Ruby #inspect escapes", () => {
     );
   });
 
-  it("refuses a lone surrogate the gem would render as byte escapes", () => {
-    expectRefusal(
-      () => toOmmlWithoutMathTag(fencedListDelimiter([`a${String.fromCharCode(0xd800)}b`])),
-      {
-        kind: "fenced",
-        message:
-          'fenced.parameterOne[0]: a "formula" node contains the lone surrogate U+D800, ' +
-          "which this port refuses rather than emit the gem's byte escapes",
-      },
+  it.each([
+    ["a lone high surrogate", [0x61, 0xd800, 0x62], "a\\xED\\xA0\\x80b"],
+    ["a lone low surrogate", [0x61, 0xdc00, 0x62], "a\\xED\\xB0\\x80b"],
+    ["the surrogate range's high edge", [0x61, 0xdfff, 0x62], "a\\xED\\xBF\\xBFb"],
+    [
+      "two lone high surrogates adjacent, which stay ungrouped",
+      [0xd800, 0xd801],
+      "\\xED\\xA0\\x80\\xED\\xA0\\x81",
+    ],
+    [
+      "two lone low surrogates adjacent, which stay ungrouped",
+      [0xdc00, 0xdc01],
+      "\\xED\\xB0\\x80\\xED\\xB0\\x81",
+    ],
+    [
+      "a C1 control then a lone surrogate, ordering unchanged",
+      [0x80, 0xd800],
+      "\\u0080\\xED\\xA0\\x80",
+    ],
+    [
+      "a lone surrogate then a C1 control, ordering unchanged",
+      [0xd800, 0x80],
+      "\\xED\\xA0\\x80\\u0080",
+    ],
+    [
+      "a noncharacter then a lone surrogate, ordering unchanged",
+      [0xfdd0, 0xd800],
+      "\\uFDD0\\xED\\xA0\\x80",
+    ],
+    [
+      "a lone surrogate then a noncharacter, ordering unchanged",
+      [0xd800, 0xfdd0],
+      "\\xED\\xA0\\x80\\uFDD0",
+    ],
+  ] as [string, number[], string][])("escapes %s", (_case, codepoints, inspected) => {
+    expectDirectAndInsertion(
+      fencedListDelimiter([String.fromCharCode(...codepoints)]),
+      fencedXml(`[&quot;${inspected}&quot;]`, null),
     );
   });
 });

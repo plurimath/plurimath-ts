@@ -16,12 +16,11 @@
  *     which the gem's own render boundary turns into `ParseError`. So a `Rule`
  *     in a tree is a case the gem REFUSES, and this port refuses it too;
  *   - `Limits`, `Multiscript` and `Underover` inherit the carrier, which is
- *     `<i>1</i><i>2</i><i>3</i>` with each absent slot dropped entirely.
- *     `Limits` and `Multiscript` render that here. A `Multiscript` built by
- *     any parser has LIST scripts, and a list has no `to_html`, so the gem
- *     raises for it (`renderCarrierSlot` refuses a list the same way); only a
- *     hand-built `Multiscript` whose scripts are nodes or nil renders. `Underover`
- *     is not rendered by this slice.
+ *     `<i>1</i><i>2</i><i>3</i>` with each absent slot dropped entirely, and
+ *     all three render that here. A `Multiscript` built by any parser has
+ *     LIST scripts, and a list has no `to_html`, so the gem raises for it
+ *     (`renderCarrierSlot` refuses a list the same way); only a hand-built
+ *     `Multiscript` whose scripts are nodes or nil renders.
  *
  * Every arm was checked against the gem by the `ternary-function` group of
  * `test/formats/ternary-function/render-fixtures.json`.
@@ -50,8 +49,11 @@ export function renderTernaryFunction(
       );
 
     // The carrier default, unchanged (`ternary_function.rb:59-64`).
+    // `Underover` has no `to_html` of its own, so it takes it too (measured:
+    // `Underover.new(x, a, b).to_html` is `<i>x</i><i>a</i><i>b</i>`).
     case "Limits":
     case "Multiscript":
+    case "Underover":
       return renderTernaryDefault(
         parameterOne,
         parameterTwo,

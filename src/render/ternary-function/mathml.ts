@@ -44,6 +44,11 @@ export function renderTernaryFunction(
     // `Limits#to_mathml_without_math_tag` (`limits.rb:14`): the same three
     // `validate_mathml_fields` slots in a fixed `<munderover>`.
     case "Limits":
+    // `Underover#to_mathml_without_math_tag` (`underover.rb`) is a
+    // byte-identical copy of the carrier default: `<m#{class_name}>` over
+    // the same three slots, and `class_name` for `Underover` is
+    // `"underover"`, giving the same `<munderover>` tag as `Limits`.
+    case "Underover":
       return renderSlots("munderover", node, context);
     case "Multiscript":
       return renderMultiscript(node, context);

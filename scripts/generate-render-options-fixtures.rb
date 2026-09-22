@@ -48,6 +48,13 @@
 #                       checked on its own, apart from any renderer;
 #   - `expected`        the gem's bytes, or `raises`/`raisedIn` when it refused.
 #
+# The `underover` group carries `Underover` — a `TernaryFunction` subclass the
+# AsciiMath transform's `get_class` census never reaches — in every format,
+# hand-built (`underover_models`, `underover_rows`); omml also carries the
+# `display_style: true`/`false` rows beside the omitted default, since
+# `Underover#to_omml_without_math_tag` is the one method here that branches on
+# it explicitly.
+#
 # The `binary-function-kinds` group is a different shape, because what it
 # checks is different: not options but KINDS. `Over`, `Menclose`, `Mlabeledtr`,
 # `Stackrel` and `Inf` are `BinaryFunction` subclasses that the AsciiMath
@@ -527,7 +534,8 @@ def unary_function_models
   # the gem does it. `Sin`, `Cos`, `Lg`, `Ker`, `Deg`, `Liminf` and `Limsup`
   # ride along so a refusal hiding a renderable alias shows up.
   %w[Sin Cos Arccos Arcsin Arctan Coth Tanh Sech Csch Sinh Cosh Csc Exp Sec Tan Cot
-     Lcm Min Dim Glb Lub Lg Ker Deg Liminf Limsup].each do |name|
+     Lcm Min Dim Glb Lub Lg Ker Deg Liminf Limsup
+     Longdiv Merror Scarries Msline Sup].each do |name|
     klass = f.const_get(name)
     lower = name.downcase
     src = "measured on the oracle"
@@ -536,6 +544,35 @@ def unary_function_models
     rows << ["alias-#{lower}-nil", src, klass.new(nil)]
     rows << ["alias-#{lower}-hidden", src, hidden.call(klass.new(symbol.call("x")))]
   end
+
+  # `Msgroup#parameter_one` must be a LIST (`.map` with no `&.`), unlike the
+  # plain aliases above — so its four shapes wrap a symbol/formula in a list
+  # instead of holding one directly, and the "empty" row is `[]`, not nil (a
+  # bare nil raises in ASCII/LaTeX/MathML/UnicodeMath — measured on the
+  # oracle — while OMML's `omml_value` tolerates it; both answers are pinned).
+  rows << ["msgroup-symbol", "measured on the oracle", f::Msgroup.new([symbol.call("x")])]
+  rows << ["msgroup-formula", "measured on the oracle", f::Msgroup.new([so_sum.call])]
+  rows << ["msgroup-nil", "measured on the oracle", f::Msgroup.new(nil)]
+  rows << ["msgroup-empty", "measured on the oracle", f::Msgroup.new([])]
+  rows << ["msgroup-hidden", "measured on the oracle", hidden.call(f::Msgroup.new([symbol.call("x")]))]
+
+  # `Mglyph#parameter_one` is an OPTIONS HASH (`{alt:, src:, index:}`), not a
+  # node — `hide_function_name` never reads it, so there is no hidden shape.
+  # `ignoring_index` (`mglyph.rb:66-70`) has three answers worth telling apart:
+  # zero (ignored), a control code below 32 that is NOT one of 9/10/13 (kept,
+  # so NOT ignored), and an ordinary non-zero index (not ignored) — `alt=x`
+  # throughout so every OMML/ASCII/LaTeX/UnicodeMath byte traces to one value.
+  rows << ["mglyph-index-0", "measured on the oracle", f::Mglyph.new({ alt: "x", index: 0 })]
+  rows << ["mglyph-index-9", "measured on the oracle", f::Mglyph.new({ alt: "x", index: 9 })]
+  rows << ["mglyph-index-65", "measured on the oracle", f::Mglyph.new({ alt: "x", index: 65 })]
+  rows << ["mglyph-empty", "measured on the oracle", f::Mglyph.new({})]
+
+  # `Ms#parameter_one` is a bare STRING (`value=` even joins an Array with a
+  # space before storing it), read RAW — no child render at all — so its
+  # shapes are string content, not a node tree.
+  rows << ["ms-so", "measured on the oracle", f::Ms.new("so")]
+  rows << ["ms-empty", "measured on the oracle", f::Ms.new("")]
+  rows << ["ms-nil", "measured on the oracle", f::Ms.new(nil)]
 
   %w[Ln Det Gcd Max Hom Cancel Phantom].each do |name|
     klass = f.const_get(name)
@@ -585,6 +622,46 @@ end
 
 # The `unary-function` group's rows, through the caller's `add` lambda: the
 # parsed inputs first, then the hand-built models.
+# `Underover` hand-built shapes for the `underover` group: a `TernaryFunction`
+# subclass the AsciiMath transform's `get_class` census never reaches (it
+# arrives only through the UnicodeMath parser's prescript machinery and the
+# gem's own linebreak splitting, `core/linebreak.rb`), so it rides alongside
+# `unary-function` rather than inside it. A plain base with both scripts, each
+# script alone, all three nil, and a base whose `omml_tag_name` is `"undOvr"`
+# (a bare `Sum` symbol) — the one shape that sends OMML's `false` arm through
+# `underover` a SECOND time instead of the plain `m:sSubSup`.
+def underover_models
+  m = Plurimath::Math
+  f = m::Function
+  symbol = ->(value) { m::Symbols::Symbol.new(value) }
+  [
+    ["symbol-all", f::Underover.new(symbol.call("x"), symbol.call("a"), symbol.call("b"))],
+    ["sub-only", f::Underover.new(symbol.call("x"), symbol.call("a"), nil)],
+    ["sup-only", f::Underover.new(symbol.call("x"), nil, symbol.call("b"))],
+    ["all-nil", f::Underover.new(nil, nil, nil)],
+    ["undover-base", f::Underover.new(m::Symbols::Sum.new, symbol.call("a"), symbol.call("b"))],
+  ]
+end
+
+# `omml_display_style` is set only for the omml payload: `Underover`'s own
+# `to_omml_without_math_tag` branches explicitly on `display_style`, which no
+# other format reads, so only omml carries the true/false rows beside the
+# omitted default (measured: the omitted default and `true` agree; `false`
+# differs).
+def underover_rows(add, omml_display_style: false)
+  underover_models.each do |label, node|
+    formula = Plurimath::Math::Formula.new([node])
+    input = { "model" => CorpusGenerator.serialize_node(formula, "model") }
+    add.call("underover-model-#{label}", "underover", "measured on the oracle", input, {}, formula)
+    next unless omml_display_style
+
+    add.call("underover-model-#{label}-display-true", "underover", "measured on the oracle",
+             input, { "displayStyle" => true }, formula)
+    add.call("underover-model-#{label}-display-false", "underover", "measured on the oracle",
+             input, { "displayStyle" => false }, formula)
+  end
+end
+
 def unary_function_rows(add)
   UNARY_FUNCTION_TEXT_INPUTS.each_with_index do |(input_format, text, source), index|
     add.call(format("unary-function-text-%03d", index + 1), "unary-function", source,
@@ -778,6 +855,7 @@ def rows_for(format, oracle)
   # group is appended by the caller).
   if UNARY_ONLY_FORMATS.include?(format)
     unary_function_rows(add)
+    underover_rows(add)
     return rows
   end
 
@@ -814,6 +892,7 @@ def rows_for(format, oracle)
   unless DISPLAY_STYLE_FORMATS.include?(format)
     unary_function_rows(add)
     nary_mask_rows(add)
+    underover_rows(add)
     return rows
   end
 
@@ -849,6 +928,7 @@ def rows_for(format, oracle)
            { "splitOnLinebreak" => true, "displayStyle" => false })
   unary_function_rows(add)
   table_frac_nary_rows(add, oracle)
+  underover_rows(add, omml_display_style: true)
   rows
 end
 

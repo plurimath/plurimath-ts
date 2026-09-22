@@ -849,17 +849,17 @@ describe("HTML measured boundary refusals", () => {
           "so the gem raises ArgumentError for every Phantom",
       },
     );
-    // `Semantics` is a binary alias no lane has measured for HTML, and `Underover`
-    // DOES render on the gem — `"<i>x</i>"` for a single symbol slot — but no
-    // corpus case constructs it, so nothing in this suite would hold the port's
-    // bytes for it honest. Both refuse until something does.
+    // `Semantics` is a binary alias no lane has measured for HTML.
     expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Semantics" })), {
       kind: "binaryFunction",
       message: 'BinaryFunction alias "Semantics" has not been measured for HTML in this slice',
     });
-    expectHtmlError(() => toHtml(new TernaryFunctionNode({ name: "Underover" })), {
+    // `Underover` renders now (measured and case-armed, the carrier default —
+    // `src/render/ternary-function/html.ts`); the base `TernaryFunction`
+    // class itself has no `to_html` of its own and stays refused.
+    expectHtmlError(() => toHtml(new TernaryFunctionNode({ name: "TernaryFunction" })), {
       kind: "ternaryFunction",
-      message: 'TernaryFunction alias "Underover" has not been measured for HTML in this slice',
+      message: 'TernaryFunction alias "TernaryFunction" has not been measured for HTML in this slice',
     });
   });
 

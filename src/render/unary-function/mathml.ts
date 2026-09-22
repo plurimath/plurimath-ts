@@ -21,7 +21,7 @@
  *   - a list parameter compacts nil entries before rendering (sin-list-nil).
  */
 
-import type { NodeParameter } from "../../core/index";
+import type { NodeOptions, NodeParameter } from "../../core/index";
 import { RenderError, TextNode } from "../../core/index";
 import {
   describeSlot,
@@ -140,6 +140,40 @@ export function renderUnaryFunction(
       );
     case "Tr":
       return renderTr(node, context);
+    case "Longdiv":
+    case "Merror":
+    case "Scarries": {
+      // `longdiv.rb:14-17`, `merror.rb:12-14`, `scarries.rb:14-17`:
+      // `XmlHelper.update_nodes(ox_element("m#{tag}"), mathml_value(intent, options:))`
+      // — `mlongdiv`/`merror`/`mscarries`, no `hide_function_name` reads at all.
+      const tag = name === "Longdiv" ? "mlongdiv" : name === "Merror" ? "merror" : "mscarries";
+      return new XmlElement(tag).append(
+        mathmlValue(node.parameterOne, context, `${name.toLowerCase()}.parameterOne`),
+      );
+    }
+    case "Msline":
+      // `msline.rb:11`: `ox_element("msline")` — always childless, whatever
+      // the slot holds.
+      return new XmlElement("msline");
+    case "Msgroup":
+      // `msgroup.rb:18-23`: `<msgroup>` over `parameter_one.map { |object|
+      // object&.to_mathml_without_math_tag(intent, options:) }` — a STRICT
+      // list (`nil.map` raises), each member read WITH `&.` (a nil entry
+      // drops out silently, unlike the ascii/latex twins).
+      return new XmlElement("msgroup").append(
+        renderMsgroupChildren(node.parameterOne, context, node.kind),
+      );
+    case "Mglyph":
+      // `mglyph.rb:17-19`: `ox_element("mglyph", attributes: parameter_one)` —
+      // the whole options record becomes attributes, in insertion order.
+      return renderMglyph(node.parameterOne, node.kind);
+    case "Ms":
+      // `ms.rb:8-10`: `XmlHelper.ox_element("ms") << parameter_one` — the raw
+      // slot appended directly (no interpolation), so only a STRING answers;
+      // nil and anything else raise (measured: `Ms.new(nil).to_mathml` and
+      // `Ms.new([...]).to_mathml` both raise, unlike the ascii/latex/omml/
+      // unicodemath twins, which stringify or interpolate the slot first).
+      return renderMs(node.parameterOne, node.kind);
     default:
       if (!MEASURED_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
       return renderUnaryMathmlDefault(
@@ -288,4 +322,91 @@ export function renderUnaryMathmlDefault(
     );
   }
   return unaryElement;
+}
+
+/**
+ * `Msgroup#to_mathml_without_math_tag` (`msgroup.rb:18-23`): the slot MUST be
+ * a list (`nil.map` raises), and each member is read WITH `&.` — a nil entry
+ * answers nil and `update_nodes` drops it, unlike the ascii/latex twins which
+ * raise on one.
+ */
+function renderMsgroupChildren(
+  value: NodeParameter | undefined,
+  context: RenderContext,
+  kind: string,
+): readonly (MathmlRendered | null)[] {
+  if (!Array.isArray(value)) {
+    throw new RenderError(
+      `msgroup.parameterOne: is ${describeSlot(value)}, not a list — the gem raises NoMethodError calling map`,
+      FORMAT,
+      kind,
+    );
+  }
+  return value.map((item, index) =>
+    item === null || item === undefined
+      ? null
+      : renderChild(item, context, `msgroup.parameterOne[${index}]`),
+  );
+}
+
+/** The slot as an options record — `Mglyph.new`'s default and the only shape measured. */
+function mglyphRecord(value: NodeParameter | undefined, kind: string): NodeOptions {
+  if (
+    value !== null &&
+    value !== undefined &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    !("kind" in value)
+  ) {
+    return value as NodeOptions;
+  }
+  throw new RenderError(
+    `mglyph.parameterOne: is ${describeSlot(value)}, not an options record — the gem calls [] on it, ` +
+      "which raises for anything else",
+    FORMAT,
+    kind,
+  );
+}
+
+/**
+ * `mglyph.rb:17-19`: `ox_element("mglyph", attributes: parameter_one)` — every
+ * entry in the record becomes an XML attribute, in the record's own order.
+ * Only a string, integer or boolean value is measured here — `Ox` stringifies
+ * through Ruby's `to_s`, and reproducing that for an arbitrary type is out of
+ * scope for the shapes this port's parsers and fixtures build.
+ */
+function renderMglyph(value: NodeParameter | undefined, kind: string): XmlElement {
+  const element = new XmlElement("mglyph");
+  for (const [key, raw] of Object.entries(mglyphRecord(value, kind))) {
+    element.setAttribute(key, mglyphAttributeString(raw, key, kind));
+  }
+  return element;
+}
+
+function mglyphAttributeString(value: unknown, key: string, kind: string): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isInteger(value)) return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  throw new RenderError(
+    `mglyph.parameterOne.${key}: is ${describeSlot(value)} — only a string, integer or boolean is ` +
+      "measured as an ox_element attribute value",
+    FORMAT,
+    kind,
+  );
+}
+
+/**
+ * `ms.rb:8-10`: `ox_element("ms") << parameter_one` — appended directly, not
+ * interpolated. `Ox`'s `<<` accepts a String (or an element); a nil slot and
+ * an Array both raise `TypeError` in the gem (measured), which this reports
+ * as the render boundary's `RenderError`.
+ */
+function renderMs(value: NodeParameter | undefined, kind: string): XmlElement {
+  if (typeof value === "string") return new XmlElement("ms").append(value);
+  throw new RenderError(
+    `ms.parameterOne: is ${describeSlot(value)} — the gem appends it directly with <<, which raises ` +
+      "for anything but a string",
+    FORMAT,
+    kind,
+  );
 }

@@ -58,6 +58,15 @@ export function renderTernaryFunction(
     // `Rule#to_omml_without_math_tag` (`rule.rb:29`): one empty run, in a list.
     case "Rule":
       return [new XmlElement("m:r").append(new XmlElement("m:t"))];
+    case "Underover":
+      // `Underover#to_omml_without_math_tag` (`underover.rb`): a falsy
+      // `display_style` delegates to a FRESH `PowerBase` over the same three
+      // slots — including its own `undOvr`-base recursion into `underover` —
+      // and a truthy one calls `underover` directly. Both arms are already
+      // this file's own helpers, over the SAME node (the three slots are all
+      // `renderPowerBase`/`underover` read). Measured on the pinned oracle:
+      // `display_style: true` and the omitted default agree, `false` differs.
+      return context.displaystyle ? underover(node, context) : renderPowerBase(node, context);
     case "TernaryFunction":
       throw new RenderError(
         "TernaryFunction has no to_omml_without_math_tag in the pinned gem and refuses instead of emitting markup",

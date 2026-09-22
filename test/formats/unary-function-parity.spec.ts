@@ -40,6 +40,7 @@ interface Row {
     readonly format?: string;
     readonly text?: string;
   };
+  readonly options: Readonly<Record<string, unknown>>;
   readonly expected?: string;
   readonly raises?: string;
   readonly raisedIn?: string;
@@ -89,7 +90,16 @@ const PORT_REFUSES: Readonly<Record<Format, Readonly<Record<string, RegExp>>>> =
     // `text/omml.ts` does not carry.
     "model-mbox-unicode-token": /unicode\[:name\] substitution/,
   },
-  unicodemath: {},
+  // `Scarries#to_unicodemath` is the carrier default and the gem renders it
+  // (`"scarries⁡x"`), but this port's unicodemath carrier deliberately does
+  // not admit `Scarries` — see the module note in
+  // `src/render/unary-function/unicodemath.ts` (`TODO.plan/deferred.md`).
+  unicodemath: {
+    "model-alias-scarries-symbol": /Scarries/,
+    "model-alias-scarries-formula": /Scarries/,
+    "model-alias-scarries-nil": /Scarries/,
+    "model-alias-scarries-hidden": /Scarries/,
+  },
 };
 
 function build(row: Row): MathNode {
@@ -111,7 +121,18 @@ function load(format: Format): readonly Row[] {
   const fixture = JSON.parse(
     readFileSync(join(HERE, format, "render-options-fixtures.json"), "utf8"),
   ) as Fixture;
-  return fixture.cases.filter((row) => row.group === GROUP);
+  // `underover` rides alongside: `Underover` is a `TernaryFunction` subclass
+  // the `get_class` census never reaches, hand-built by the generator's
+  // `underover_rows` (see `scripts/generate-render-options-fixtures.rb`) the
+  // same way this group's own hand-built rows are. Only the OPTION-FREE rows
+  // (OMML also carries `displayStyle: true`/`false` variants, which this file
+  // cannot assert — every render call here is the plain `to_<format>` with no
+  // options — and which `split-display-parity.spec.ts` owns instead).
+  return fixture.cases.filter(
+    (row) =>
+      row.group === GROUP ||
+      (row.group === "underover" && Object.keys(row.options).length === 0),
+  );
 }
 
 /** A row's id, without the `unary-function-` prefix every one carries. */

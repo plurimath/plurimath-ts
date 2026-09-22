@@ -22,6 +22,7 @@ import {
   type RenderContext,
   renderChild,
   s,
+  slotKind,
   unreachableName,
 } from "../../formats/latex/render-shared";
 
@@ -38,6 +39,8 @@ export function renderTernaryFunction(
       return renderMultiscript(node, context);
     case "Rule":
       return renderRule(node, context);
+    case "Underover":
+      return renderUnderover(node, context);
     default:
       throw unreachableName(node.kind, node.name);
   }
@@ -94,6 +97,39 @@ function renderRule(node: NodeOf<"ternaryFunction">, context: RenderContext): st
     ? `[${s(renderChild(node.parameterOne, context, "ternaryFunction.parameterOne"))}]`
     : "";
   return `\\rule${first}${braced(node.parameterTwo, context, "ternaryFunction.parameterTwo")}${braced(node.parameterThree, context, "ternaryFunction.parameterThree")}`;
+}
+
+/**
+ * `Underover#to_latex` (`underover.rb`): the base through `first_field_wrap`
+ * with `type: "latex"` (braced only if the field is a `Formula`, unwrapped
+ * otherwise — the same judgement `asciiWrap` makes on the asciimath twin), a
+ * subscript and superscript each through `wrapped(type: "latex")` — always
+ * braced when present, which is exactly `braced` below. All three slots are
+ * read Ruby-falsy (`if parameter_one`), not `&.`.
+ */
+function renderUnderover(node: NodeOf<"ternaryFunction">, context: RenderContext): string {
+  const one = present(node.parameterOne)
+    ? latexWrap(node.parameterOne, context, "ternaryFunction.parameterOne")
+    : "";
+  const two = present(node.parameterTwo)
+    ? `_${braced(node.parameterTwo, context, "ternaryFunction.parameterTwo")}`
+    : "";
+  const three = present(node.parameterThree)
+    ? `^${braced(node.parameterThree, context, "ternaryFunction.parameterThree")}`
+    : "";
+  return `${one}${two}${three}`;
+}
+
+/**
+ * `TernaryFunction#latex_wrap` (`ternary_function.rb:198-206`): braces ONLY a
+ * `Formula` (`Mrow`/`Mstyle` included, since they subclass it); the
+ * `obrace`/`ubrace` early return is dead code here too, mirroring
+ * `asciiWrap`'s note on the asciimath side.
+ */
+function latexWrap(value: NodeParameter | undefined, context: RenderContext, at: string): string {
+  const rendered = s(renderChild(value, context, at));
+  const kind = slotKind(value);
+  return kind === "formula" || kind === "mrow" ? `{${rendered}}` : rendered;
 }
 
 /** `"{#{field.to_latex(options:)}}" if field`. */

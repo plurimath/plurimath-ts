@@ -99,13 +99,24 @@ const MEASURED_LABELS: ReadonlyMap<string, string> = new Map(
     "Cancel",
     "Hom",
     "Substack",
-  ].map((name) => [name, name.toLowerCase()]),
+    "Longdiv",
+    "Merror",
+    "Msline",
+    "Scarries",
+  ]
+    .map((name): readonly [string, string] => [name, name.toLowerCase()])
+    .concat([
+      // `Sup` resolves through `Mathml::Constants::UNICODE_SYMBOLS.invert`
+      // rather than its downcased class name (measured: `&#x2283;`, not `sup`).
+      ["Sup", "&#x2283;"],
+    ]),
 );
 
 export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
   if (node.name === "Tr") return renderTr(node.parameterOne, context);
   if (node.name === "Left") return renderLeft(node);
   if (node.name === "Mbox") return renderMbox(node);
+  if (node.name === "Ms") return renderMs(node);
   if (node.name === "Phantom") {
     throw new RenderError(
       "Phantom#to_html takes no keyword arguments and Formula#to_html passes options:, " +
@@ -145,6 +156,24 @@ function renderMbox(node: NodeOf<"unaryFunction">): string {
   throw new RenderError(
     `mbox.parameterOne: holds ${describeSlot(slot)} — the gem returns the slot unrendered, ` +
       "and only a string is a value every parent can take",
+    FORMAT,
+    node.kind,
+  );
+}
+
+/**
+ * `Ms` has no `to_html` of its own, so it takes `UnaryFunction#to_html`
+ * unchanged (`unary_function.rb:65-74`) — but `parameter_one` here is a bare
+ * STRING, not a node, so the branch that calls `parameter_one.to_html(options:)`
+ * raises `NoMethodError` for anything truthy (measured: `Ms.new("so")` and
+ * `Ms.new("")` both raise). Only the FALSY slot survives, giving the label
+ * alone: `Ms.new(nil).to_html` is `<i>ms</i>`.
+ */
+function renderMs(node: NodeOf<"unaryFunction">): string {
+  if (node.parameterOne === null || node.parameterOne === undefined) return "<i>ms</i>";
+  throw new RenderError(
+    `ms.parameterOne: is ${describeSlot(node.parameterOne)} — the carrier default calls to_html on ` +
+      "it directly, which raises for a plain string",
     FORMAT,
     node.kind,
   );

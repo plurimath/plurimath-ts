@@ -1,4 +1,4 @@
-import type { NodeParameter } from "../../core/index";
+import type { NodeOptions, NodeParameter } from "../../core/index";
 import { RenderError, TableNode, TextNode } from "../../core/index";
 import {
   controlProperties,
@@ -53,7 +53,11 @@ import { renderText } from "../text/omml";
  * `Tr`, and the twenty named at their arms in `renderUnaryFunction` — `Ln`, `Det`,
  * `Gcd`, `Max`, `Hom`, `Exp`, `Lcm`, `Min`, `Dim`, `Glb`, `Lub`, `Lg`, `Ker`, `Deg`,
  * `Liminf` and `Limsup` (a name run then the value), `Cancel` (the value
- * alone), `Phantom`, `Substack` and `Mbox`.
+ * alone), `Phantom`, `Substack` and `Mbox` — plus `Longdiv`, `Scarries` and
+ * `Msgroup` (`omml_value` alone, like `Cancel`, no strict-list requirement),
+ * `Merror` and `Msline` (always empty), `Sup` (a `sup` run unless hidden, then
+ * the value — no empty-slot guard), `Mglyph` (one run, alt text or a numeric
+ * entity) and `Ms` (one bare `m:t`, no `m:r` around it).
  */
 const OMML_BASE_UNARY_CLASSES: ReadonlySet<string> = new Set([
   "Arccos",
@@ -128,6 +132,34 @@ export function renderUnaryFunction(
       // bare `m:t` — no run around it, which is the formula boundary's job for
       // a `Text` and not for this class.
       return renderText(mboxText(node.parameterOne));
+    case "Longdiv":
+    case "Scarries":
+    case "Msgroup":
+      // `longdiv.rb:22-24`, `scarries.rb:22-24`, `msgroup.rb:26-28`:
+      // `omml_value(display_style, options:)` alone — no wrapper element, no
+      // `hide_function_name` read, and (unlike the ascii/latex/mathml twins)
+      // no strict-list requirement: `omml_value` itself compacts a list or
+      // wraps one scalar, so a nil slot renders as nothing at all rather than
+      // raising.
+      return renderUnaryValue(
+        node.parameterOne,
+        context,
+        node.kind,
+        `${node.name.toLowerCase()}.parameterOne`,
+      );
+    case "Merror":
+    case "Msline":
+      // `merror.rb:11`, `msline.rb:11`: `def to_omml_without_math_tag(_, **); end`
+      // — always nil, whatever the slot holds.
+      return [];
+    case "Sup":
+      return renderSup(node, context);
+    case "Mglyph":
+      return renderMglyph(node.parameterOne, node.kind);
+    case "Ms":
+      // `ms.rb:16-18`: one bare `m:t` run, no `m:r` around it — the slot
+      // interpolated raw, like the ascii/latex twins.
+      return [textElement(`“${msValue(node.parameterOne, node.kind)}”`)];
     default:
       if (OMML_BASE_UNARY_CLASSES.has(node.name)) {
         return renderUnaryCarrier(node, context, node.name.toLowerCase());
@@ -316,4 +348,85 @@ function renderTr(node: NodeOf<"unaryFunction">, context: RenderContext): OmmlRe
   );
   if (cells.length === 1) return rendered;
   return new XmlElement("m:mr").append(...rendered);
+}
+
+/**
+ * `Sup#to_omml_without_math_tag` (`function/sup.rb:20-24`): a `sup` run
+ * pushed unless hidden, THEN the value — no empty-slot guard the way the
+ * carrier's `renderUnaryCarrier` has, so an absent slot still gets the name
+ * run (measured: `Sup.new(nil).to_omml` is the bare `sup` run) and hiding it
+ * on an absent slot renders nothing at all.
+ */
+function renderSup(node: NodeOf<"unaryFunction">, context: RenderContext): OmmlRendered {
+  const nameRun = present(node.hideFunctionName) ? [] : [plainRun("sup")];
+  return [...nameRun, ...renderUnaryValue(node.parameterOne, context, node.kind, "sup.parameterOne")];
+}
+
+/** The slot as an options record — `Mglyph.new`'s default and the only shape measured. */
+function mglyphRecord(value: NodeParameter | undefined, kind: string): NodeOptions {
+  if (
+    value !== null &&
+    value !== undefined &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    !("kind" in value)
+  ) {
+    return value as NodeOptions;
+  }
+  throw new RenderError(
+    `mglyph.parameterOne: is ${describeSlot(value)}, not an options record — the gem calls [] on it, ` +
+      "which raises for anything else",
+    FORMAT,
+    kind,
+  );
+}
+
+/** `parameter_one[:index].to_i` — only nil (Ruby's `to_i` default 0) and an integer are measured. */
+function mglyphIndex(value: unknown, kind: string): number {
+  if (value === null || value === undefined) return 0;
+  if (typeof value === "number" && Number.isInteger(value)) return value;
+  throw new RenderError(
+    `mglyph.parameterOne.index: is ${describeSlot(value)} — only an integer or nil is measured`,
+    FORMAT,
+    kind,
+  );
+}
+
+/** `Mglyph#ignoring_index` (`mglyph.rb:66-70`). */
+function mglyphIgnoringIndex(index: number): boolean {
+  return index === 0 || (index < 32 && ![9, 10, 13].includes(index)) || [65534, 65535].includes(index);
+}
+
+/** `parameter_one[:alt].to_s` — nil answers `""`, a string is itself. */
+function mglyphAltToS(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  return String(value);
+}
+
+/**
+ * `Mglyph#to_omml_without_math_tag` (`mglyph.rb:17-22`): one run holding
+ * either the alt text (`ignoring_index`) or a `&#xHH;` numeric entity built
+ * from the index — `glyph_user_index` is plain uppercase hex with no leading
+ * zero, measured (`index: 65` → `&#x41;`, `index: 9` → `&#x9;`).
+ */
+function renderMglyph(value: NodeParameter | undefined, kind: string): OmmlRendered {
+  const record = mglyphRecord(value, kind);
+  const index = mglyphIndex(record.index, kind);
+  const text = mglyphIgnoringIndex(index)
+    ? mglyphAltToS(record.alt)
+    : `&#x${index.toString(16).toUpperCase()};`;
+  return [plainRun(text)];
+}
+
+/** `ms.rb:13-15`/`ms.rb:16-18`: the slot interpolated raw; only nil and a string are measured. */
+function msValue(value: NodeParameter | undefined, kind: string): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  throw new RenderError(
+    `ms.parameterOne: is ${describeSlot(value)} — only a string or nil is measured; interpolating ` +
+      "anything else risks a non-reproducible #inspect",
+    FORMAT,
+    kind,
+  );
 }

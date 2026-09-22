@@ -187,8 +187,15 @@ describe("ternary-function refusals the port keeps", () => {
     expect(() => toHtml(node)).toThrow(/a bare list|a list/);
   });
 
-  it("an alias no fixture measures (Underover) stays refused in every format", () => {
-    const node = new TernaryFunctionNode({ name: "Underover" });
+  it("the base TernaryFunction class itself stays refused in every format", () => {
+    // `Underover` — this describe block's previous example — is measured and
+    // case-armed in every format now (`test/formats/unary-function-parity.spec.ts`'s
+    // sibling coverage via the `underover` group in
+    // `test/formats/{mathml,omml}/render-options-fixtures.json`, plus
+    // `test/formats/split-display-parity.spec.ts` for OMML's `displayStyle`).
+    // `TernaryFunction` itself has no `to_<format>` of its own in the pinned
+    // gem — every concrete subclass supplies one — so it stays refused.
+    const node = new TernaryFunctionNode({ name: "TernaryFunction" });
     for (const target of TARGETS) {
       expect(() => RENDERERS[target](node), target).toThrow(RenderError);
     }

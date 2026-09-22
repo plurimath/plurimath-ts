@@ -68,10 +68,15 @@ const OWN_GROUPS: ReadonlySet<string> = new Set([
   "parsed-linebreak",
   "display-style-spec",
   "display-style-probe",
+  // `Underover` — a `TernaryFunction` subclass hand-built by
+  // `underover_rows` in the generator, not reachable from `get_class`
+  // reachability. OMML also carries its `displayStyle: true`/`false` rows,
+  // since `Underover#to_omml_without_math_tag` branches on it explicitly.
+  "underover",
 ]);
 
 /** Rows the gem renders that the port renders too, per format (a pin, not a knob). */
-const RENDERED_BASELINE = { mathml: 178, omml: 219 } as const;
+const RENDERED_BASELINE = { mathml: 197, omml: 252 } as const;
 
 interface Fixture {
   readonly schema: string;
@@ -86,62 +91,23 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const CENSUS_ALIASES = aliasIndex(readCensus());
 
 /**
- * Rows the gem renders and this port's KIND renderers do not, by id: 14 for
- * MathML and 46 for OMML. Every one refuses on a node kind or alias the
- * per-kind renderer has not measured (`Longdiv`, `Underover`, the unmeasured
- * unary aliases, an `Nary` operator that is not a Symbol, Sum or Prod...). For
- * all but eight the same refusal occurs without `splitOnLinebreak`; the eight
- * (MathML and OMML `line-break-024` and `029`, each with its `-display-false`
- * variant) render unsplit, and only refuse because splitting yields a
- * transformed alias the kind renderer has not measured — a kind-renderer gap,
- * not a walker mismatch (the split itself is
- * checked against the gem for every row below). The
- * split itself is checked for every one of them in the walk tests below, which
- * need no renderer; here each is pinned as a refusal, and the message must be a
- * kind file's own (`KIND_REFUSAL`), so a fault in the walker cannot hide in
- * the set. An entry that starts rendering fails its test until it is dropped.
+ * Rows the gem renders and this port's KIND renderers do not, by id: 0 for
+ * MathML and 2 for OMML (freshly measured after `Longdiv`, `Merror`,
+ * `Mglyph`, `Ms`, `Msgroup`, `Msline`, `Scarries`, `Sup` and `Underover`
+ * gained kind-renderer support — every entry that named one of those kinds
+ * now renders and was dropped from this list). OMML's remaining pair,
+ * `line-break-073`, refuses on an UNRELATED unmeasured kind the split
+ * transforms this specific formula into. The message must be a kind file's
+ * own (`KIND_REFUSAL`), so a fault in the walker cannot hide in the set. An
+ * entry that starts rendering fails its test until it is dropped.
  */
 const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonly string[] } = {
-  mathml: [
-    "line-break-002",
-    "line-break-002-display-false",
-    "line-break-024",
-    "line-break-024-display-false",
-    "line-break-029",
-    "line-break-029-display-false",
-    "line-break-056",
-    "line-break-056-display-false",
-    "line-break-058",
-    "line-break-058-display-false",
-    "line-break-059",
-    "line-break-059-display-false",
-    "line-break-077",
-    "line-break-077-display-false",
-  ],
+  mathml: [],
   omml: [
-    "line-break-002",
-    "line-break-002-display-false",
-    "line-break-008",
-    "line-break-008-display-false",
-    "line-break-014",
-    "line-break-014-display-false",
-    "line-break-024",
-    "line-break-024-display-false",
-    "line-break-029",
-    "line-break-029-display-false",
-    "line-break-056",
-    "line-break-056-display-false",
-    "line-break-058",
-    "line-break-058-display-false",
-    "line-break-059",
-    "line-break-059-display-false",
     "line-break-073",
     "line-break-073-display-false",
-    "line-break-077",
-    "line-break-077-display-false",
   ],
 };
-
 /** What a kind renderer says when it has not measured a kind, alias or slot. */
 const KIND_REFUSAL =
   /has not been measured|No measured \w+ rendering|only the measured generic|only a Symbol, Sum or Prod/;

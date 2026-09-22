@@ -78,9 +78,28 @@ export function renderTernaryFunction(
     // `def to_unicodemath(**) = ""` (`rule.rb:37`): no slot is read at all.
     case "Rule":
       return "";
+    case "Underover":
+      return renderUnderover(node, context);
     default:
       throw missingRenderer(node.name, "ternaryFunction");
   }
+}
+
+/**
+ * `Underover#to_unicodemath` (`underover.rb`): the base, then a subscript
+ * (`┬`) and superscript (`┴`) each through `unicodemath_parens` when its slot
+ * is truthy — no swap, and none of `PowerBase`/`Limits`'s mini/prime/Base/
+ * Power special-casing.
+ */
+function renderUnderover(node: NodeOf<"ternaryFunction">, context: RenderContext): string {
+  const base = renderOptionalChild(node.parameterOne, context);
+  const sub = present(node.parameterTwo)
+    ? `┬${unicodemathParens(slotNode(node.parameterTwo, "ternaryFunction.parameterTwo"), context) ?? ""}`
+    : "";
+  const sup = present(node.parameterThree)
+    ? `┴${unicodemathParens(slotNode(node.parameterThree, "ternaryFunction.parameterThree"), context) ?? ""}`
+    : "";
+  return `${base}${sub}${sup}`;
 }
 
 function renderPowerBase(node: NodeOf<"ternaryFunction">, context: RenderContext): string {

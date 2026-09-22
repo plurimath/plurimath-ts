@@ -12,7 +12,7 @@
  * keeps them — `cancel` is not in the table).
  */
 
-import type { NodeParameter } from "../../core/index";
+import type { NodeOptions, NodeParameter } from "../../core/index";
 import { RenderError, TextNode } from "../../core/index";
 import {
   classBasename,
@@ -160,6 +160,29 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
       }
       return `[${cells.map((cell) => s(renderChild(cell, context, "tr.parameterOne"))).join(", ")}]`;
     }
+    case "Longdiv":
+    case "Scarries":
+      // `longdiv.rb:8-10`, `scarries.rb:9-11`: `asciimath_value(options:)` alone
+      // — no class-name prefix, unlike the carrier default these two would
+      // otherwise take.
+      return asciimathValue(node.parameterOne, context, `${name.toLowerCase()}.parameterOne`);
+    case "Merror":
+    case "Msline":
+      // `merror.rb:7`, `msline.rb:7`: `def to_asciimath(**); end` — always nil,
+      // whatever the slot holds.
+      return "";
+    case "Msgroup":
+      // `msgroup.rb:8-12`: `parameter_one.map { |param| param.to_asciimath(options:) }.join` —
+      // a STRICT list (a nil slot raises calling `map`), no `&.` on each member
+      // (a nil entry raises too), and no separator.
+      return renderMsgroupList(node.parameterOne, context, node.kind);
+    case "Mglyph":
+      // `mglyph.rb:9-11`: `parameter_one[:alt]` — the alt attribute alone,
+      // unrendered.
+      return mglyphAlt(node.parameterOne, node.kind);
+    case "Ms":
+      // `ms.rb:9-11`: `"\"“#{parameter_one}”\""` — the slot interpolated RAW.
+      return `"“${msValue(node.parameterOne, node.kind)}”"`;
     default:
       if (!MEASURED_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
       return renderUnaryDefault(name.toLowerCase(), node.parameterOne, context);
@@ -221,4 +244,76 @@ export function asciimathValue(
       .join("");
   }
   return s(renderChild(value, context, at));
+}
+
+/**
+ * `Msgroup#to_asciimath` (`msgroup.rb:8-12`): `parameter_one.map { |param|
+ * param.to_asciimath(options:) }.join`. Unlike `asciimathValue`, the slot MUST
+ * already be a list (`nil.map` raises) and each member is read WITHOUT `&.`
+ * (a nil entry raises too, and there is no `compact`).
+ */
+function renderMsgroupList(value: NodeParameter | undefined, context: RenderContext, kind: string): string {
+  if (!Array.isArray(value)) {
+    throw new RenderError(
+      `msgroup.parameterOne: is ${describeSlot(value)}, not a list — the gem raises NoMethodError calling map`,
+      FORMAT,
+      kind,
+    );
+  }
+  return value
+    .map((item, index) => {
+      if (item === null || item === undefined) {
+        throw new RenderError(
+          `msgroup.parameterOne[${index}]: is nil — the gem raises NoMethodError calling to_asciimath on it`,
+          FORMAT,
+          kind,
+        );
+      }
+      return s(renderChild(item, context, `msgroup.parameterOne[${index}]`));
+    })
+    .join("");
+}
+
+/** The slot as an options record — `Mglyph.new`'s default and the only shape measured. */
+function mglyphRecord(value: NodeParameter | undefined, kind: string): NodeOptions {
+  if (
+    value !== null &&
+    value !== undefined &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    !("kind" in value)
+  ) {
+    return value as NodeOptions;
+  }
+  throw new RenderError(
+    `mglyph.parameterOne: is ${describeSlot(value)}, not an options record — the gem calls [] on it, ` +
+      "which raises for anything else",
+    FORMAT,
+    kind,
+  );
+}
+
+/** `mglyph.rb:9-11`: `parameter_one[:alt]`, interpolated raw; an absent key is nil → `""`. */
+function mglyphAlt(value: NodeParameter | undefined, kind: string): string {
+  const alt = mglyphRecord(value, kind).alt;
+  if (alt === null || alt === undefined) return "";
+  if (typeof alt === "string") return alt;
+  throw new RenderError(
+    `mglyph.parameterOne.alt: is ${describeSlot(alt)}, not a string — the gem interpolates it raw, ` +
+      "and only a string is measured",
+    FORMAT,
+    kind,
+  );
+}
+
+/** `ms.rb:9-11`: `parameter_one` interpolated raw; only nil and a string are measured. */
+function msValue(value: NodeParameter | undefined, kind: string): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  throw new RenderError(
+    `ms.parameterOne: is ${describeSlot(value)} — only a string or nil is measured; interpolating ` +
+      "anything else risks a non-reproducible #inspect",
+    FORMAT,
+    kind,
+  );
 }

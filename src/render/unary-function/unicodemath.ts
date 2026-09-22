@@ -31,7 +31,7 @@
  *     renders `"╱(a)"`, exactly like `Cancel(Symbol("a"))`.
  */
 
-import type { NodeParameter } from "../../core/index";
+import type { NodeOptions, NodeParameter } from "../../core/index";
 import { RenderError, TextNode } from "../../core/index";
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
 import {
@@ -149,6 +149,31 @@ export function renderUnaryFunction(
       return renderSubstack(node, context);
     case "Tr":
       return renderTr(node, context);
+    case "Longdiv":
+      // `longdiv.rb:26`: `parameter_one&.to_unicodemath(options:)` — nil-safe,
+      // no class-name prefix and no `⁡` APPLY character, unlike the carrier
+      // default.
+      return unaryValue(node, context, "longdiv.parameterOne");
+    case "Merror":
+    case "Msline":
+      // `merror.rb:9`, `msline.rb:9`: `def to_unicodemath(**); end` — always
+      // Ruby nil, whatever the slot holds.
+      return null;
+    case "Msgroup":
+      // `msgroup.rb:38-40`: `parameter_one.map { |p| p.to_unicodemath(options:) }.join` —
+      // a STRICT list, no `&.` per member, no `⁡`.
+      return renderMsgroupList(node.parameterOne, context, node.kind);
+    case "Mglyph":
+      // `mglyph.rb:23`: `parameter_one[:alt] if parameter_one` — returned raw,
+      // not interpolated: an absent slot or a missing `alt` key both answer
+      // Ruby nil.
+      return mglyphAlt(node.parameterOne, node.kind);
+    case "Ms":
+      // `ms.rb:19-21`: `Text.new(parameter_one).to_unicodemath(options:)` —
+      // the same fresh-`Text` delegation `mbox.rb` uses, so the same nil-vs-
+      // empty-string distinction applies (measured: `Ms.new(nil)` → Ruby nil,
+      // `Ms.new("")` → `""`, `Ms.new("so")` → `"so"`).
+      return renderText(mboxText(node.parameterOne));
     default: {
       if (!MEASURED_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
       // `UnaryFunction#to_unicodemath` (`unary_function.rb:90`):
@@ -304,4 +329,64 @@ function renderTr(node: NodeOf<"unaryFunction">, context: RenderContext): string
   // `Array#join` writes a nil element as "" — measured: a row whose first td
   // renders nil gives `"&b"`, a leading empty field rather than a dropped one.
   return tds.map((td) => renderChild(td, context, "tr.parameterOne") ?? "").join("&");
+}
+
+/**
+ * `Msgroup#to_unicodemath` (`msgroup.rb:38-40`): `parameter_one.map { |p|
+ * p.to_unicodemath(options:) }.join`. The slot must already be a list (a nil
+ * slot raises calling `map`), and each member is read WITHOUT `&.` (a nil
+ * entry raises too).
+ */
+function renderMsgroupList(value: NodeParameter | undefined, context: RenderContext, kind: string): string {
+  if (!Array.isArray(value)) {
+    throw new RenderError(
+      `msgroup.parameterOne: is ${describeSlot(value)}, not a list — the gem raises NoMethodError calling map`,
+      FORMAT,
+      kind,
+    );
+  }
+  return value
+    .map((item, index) => {
+      if (item === null || item === undefined) {
+        throw new RenderError(
+          `msgroup.parameterOne[${index}]: is nil — the gem raises NoMethodError calling to_unicodemath on it`,
+          FORMAT,
+          kind,
+        );
+      }
+      return renderChild(item, context, `msgroup.parameterOne[${index}]`) ?? "";
+    })
+    .join("");
+}
+
+/** The slot as an options record — `Mglyph.new`'s default and the only shape measured. */
+function mglyphRecord(value: NodeParameter | undefined, kind: string): NodeOptions {
+  if (
+    value !== null &&
+    value !== undefined &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    !("kind" in value)
+  ) {
+    return value as NodeOptions;
+  }
+  throw new RenderError(
+    `mglyph.parameterOne: is ${describeSlot(value)}, not an options record — the gem calls [] on it, ` +
+      "which raises for anything else",
+    FORMAT,
+    kind,
+  );
+}
+
+/** `mglyph.rb:23`: `parameter_one[:alt] if parameter_one` — returned raw, not interpolated. */
+function mglyphAlt(value: NodeParameter | undefined, kind: string): string | null {
+  if (value === null || value === undefined) return null;
+  const alt = mglyphRecord(value, kind).alt;
+  if (alt === null || alt === undefined) return null;
+  if (typeof alt === "string") return alt;
+  throw new RenderError(
+    `mglyph.parameterOne.alt: is ${describeSlot(alt)}, not a string — only a string is measured here`,
+    FORMAT,
+    kind,
+  );
 }

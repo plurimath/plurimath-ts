@@ -27,8 +27,13 @@ import {
   wrapped,
 } from "../../formats/asciimath/render-shared";
 
-/** The names that take the carrier default: `Limits` inherits it unchanged. */
-const CARRIER_DEFAULT_NAMES: ReadonlySet<string> = new Set(["PowerBase", "Limits"]);
+/**
+ * The names that take the carrier default: `Limits` inherits it unchanged,
+ * and `Underover#to_asciimath` (`underover.rb`) is a byte-identical copy of
+ * `TernaryFunction#to_asciimath` (measured and read side by side — same three
+ * guarded assignments, same interpolation).
+ */
+const CARRIER_DEFAULT_NAMES: ReadonlySet<string> = new Set(["PowerBase", "Limits", "Underover"]);
 
 export function renderTernaryFunction(
   node: NodeOf<"ternaryFunction">,

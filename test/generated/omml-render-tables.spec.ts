@@ -6,9 +6,11 @@
  * test would pass against empty tables. Every pinned value was measured by
  * rendering live gem instances under the oracle's bundle against plurimath
  * 0.11.6 at 00c52783877b38f6b8e6e109f1803f96bb34fc62; the generator re-runs
- * the same measurements — one verifying `to_omml` render per entry — on
- * every regeneration, so a truncated, reordered or emptied table fails here
- * instead of quietly changing what the renderer emits.
+ * the same measurements on every regeneration — a live `to_omml` render for
+ * every WORD-shaped key, the only kind the grammar's `unicode[:\w+]` syntax
+ * can reach (95 of 144 UNICODE entries, 1 of 17 SYMBOLS entries) — so a
+ * truncated, reordered or emptied table fails here instead of quietly
+ * changing what the renderer emits.
  *
  * `OMML_UNICODE_INVERT` and `OMML_SYMBOLS_INVERT` invert the SAME Ruby
  * constants (`Mathml::Constants::UNICODE_SYMBOLS`/`SYMBOLS`) the mathml

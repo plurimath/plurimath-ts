@@ -2859,10 +2859,14 @@ describe("generated OMML symbol data", () => {
     // constant the mathml render-tables slice inverts, re-measured here as
     // this format's own generated copy (ARCHITECTURE.md §3 rule 4). Measured
     // on the pinned oracle: `unicode[:kappa]` hits the UNICODE_SYMBOLS
-    // invert (`&#x3ba;`), `unicode[:tilde]` falls through to the SYMBOLS
-    // invert (`~`), and a name in neither table is not a parity gap — the
-    // gem's own `gsub` block substitutes the empty string for the `nil`
-    // `symbol_value` answer, so this table renders it empty too.
+    // invert (`&#x3ba;`). `unicode[:tilde]` also resolves to `~`, but through
+    // UNICODE_SYMBOLS, not the SYMBOLS fallback — `tilde` is the only
+    // word-shaped key `SYMBOLS.invert` carries, and the gem's own hash
+    // duplicates it in UNICODE_SYMBOLS too, so no word-shaped name currently
+    // demonstrates a genuine fallback (an oracle-side fact, not a port gap).
+    // A name in neither table is not a parity gap — the gem's own `gsub`
+    // block substitutes the empty string for the `nil` `symbol_value`
+    // answer, so this table renders it empty too.
     expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:kappa]" }))).toBe(
       xml("<m:t>&#x3ba;</m:t>"),
     );

@@ -4904,9 +4904,12 @@ module CorpusGenerator
         are byte-identical to those, but generated and verified as this
         format's own copy: ARCHITECTURE.md §3 rule 4 forbids an omml kind file
         importing another format's `generated/` slice, so the omml renderer
-        needs its own, and each entry here is re-verified through a live
+        needs its own. Every entry whose key is reachable through the
+        grammar's `unicode[:\w+]` name syntax is re-verified through a live
         `to_omml` render (`<m:t>…</m:t>`) rather than assumed from the mathml
-        measurement.
+        measurement; a non-word key can't be spelled through that syntax, so
+        it is carried over unverified (measured: 95 of 144 UNICODE entries
+        and 1 of 17 SYMBOLS entries are word-shaped and live-probed).
 
         A name absent from both tables is not a parity gap: `Text#symbol_value`
         returns `nil` there, and the `gsub` block around it substitutes the

@@ -3174,18 +3174,24 @@ module CorpusGenerator
     names.sort
   end
 
-  # The ids the corpus and sweep put in a `Color` first slot — a policy list,
-  # deliberately minimal (TODO.plan/deferred.md, "Color renders only the
-  # measured AsciiMath fragment"): the renderer refuses any other id loudly
-  # rather than importing the asciimath format (ARCHITECTURE.md §3).
-  LATEX_COLOR_SLICE_IDS = %w[Plus Eqno].freeze
-
   # Symbol id -> the `to_asciimath` value `Color#to_latex` interpolates for
   # its first slot (color.rb:41), measured per id and verified through a full
-  # Color render — the `/\s/` strip included.
+  # Color render — the `/\s/` strip included. Every static symbol class
+  # (TODO.plan/deferred.md, "Color renders only the measured AsciiMath
+  # fragment": the 2026-08-21 sweep found all 1,393 ids the corpus+sweep were
+  # missing already carried, byte-identical, by the mathml slice's own
+  # `mathml_color_symbol_literals` — same measurement, re-taken here rather
+  # than shared because per-format slices are self-contained by design
+  # (ARCHITECTURE.md §3)). The renderer still raises a parity-gap
+  # RenderError for any id this measurement cannot reach (there are none:
+  # `static_symbol_classes` is exhaustive) and, independently of this table,
+  # for a first slot whose node KIND isn't one `colorAsciimathValue` handles
+  # — the four `fontStyle`/`fenced` operands a token sweep turns up parse to
+  # a composite whose `to_asciimath` is a full sub-render this format does
+  # not own; that refusal is unrelated to symbol-id coverage and stays.
   def latex_color_asciimath_symbols
-    LATEX_COLOR_SLICE_IDS.map do |id|
-      klass = Object.const_get("Plurimath::#{SYMBOL_NAMESPACE}#{id}")
+    static_symbol_classes(symbol_classes).map do |klass|
+      id = symbol_id(klass)
       value = symbol_instance(klass).to_asciimath(options: {})
       unless value.is_a?(::String) && !value.empty?
         raise Error, "#{id}#to_asciimath returned #{value.inspect}; the color " \
@@ -5036,10 +5042,14 @@ module CorpusGenerator
         "ReadonlyMap<string, string>",
         tables["color_asciimath"],
         doc: "Symbol id -> the `to_asciimath` value `Color#to_latex`\n" \
-             "interpolates for its first slot, for exactly the ids the\n" \
-             "corpus+sweep put there — a deliberately minimal policy slice\n" \
-             "(TODO.plan/deferred.md); the renderer raises a parity-gap\n" \
-             "RenderError for any other id.",
+             "interpolates for its first slot, for every static symbol\n" \
+             "class (TODO.plan/deferred.md, \"Color renders only the\n" \
+             "measured AsciiMath fragment\") — the same measurement\n" \
+             "`MATHML_COLOR_SYMBOL_LITERALS` re-emits mathml-side, so the\n" \
+             "two copies cannot drift. A first-slot node whose KIND is not\n" \
+             "one the renderer's asciimath fragment handles (a `fontStyle`\n" \
+             "or `fenced` composite) still raises a parity-gap RenderError,\n" \
+             "independently of this table.",
       ),
       ts_const(
         "LATEX_UNARY_CARRIER_NAMES",

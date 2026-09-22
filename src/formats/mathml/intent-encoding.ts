@@ -34,7 +34,7 @@ const FORMAT = "mathml";
 
 /** Ruby's `NoMethodError` (and its `TypeError`/`NameError` cousins) at one read site. */
 export function gemCrash(at: string, why: string): RenderError {
-  return new RenderError(`intent: ${at} — ${why}; the gem raises here`, FORMAT, "formula");
+  return new RenderError(`intent: ${at} — ${why}`, FORMAT, "formula");
 }
 
 /** The receiver of `.name` / `.nodes` / `[]=`: only an element answers them. */

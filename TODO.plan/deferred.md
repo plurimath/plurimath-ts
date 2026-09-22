@@ -648,12 +648,13 @@ emits the rest of the data now measures and emits them into
   `Table::Matrix` render per `to_matrices` paren (the NoMethodError miss
   verified), a `Table::Array` render per alignment (the `.` fallback
   verified);
-- `COLOR_ASCIIMATH_SYMBOLS` — `to_asciimath` measured for exactly the ids the
-  renderer names (`Plus`, `Eqno`), each verified through a full `Color`
-  render.
+- `COLOR_ASCIIMATH_SYMBOLS` — widened to every static symbol class (1,459
+  ids, matching `MATHML_COLOR_SYMBOL_LITERALS`), each verified through a
+  full `Color` render; see "LaTeX: Color renders only the measured
+  AsciiMath fragment" below for the closure.
 
-All sixty-eight entries stay pinned by literal probe-backed tests
-(`test/generated/latex-render-tables.spec.ts` and the behavioural pins in
+All 1,525 entries across the six tables stay pinned by literal probe-backed
+tests (`test/generated/latex-render-tables.spec.ts` and the behavioural pins in
 `test/formats/latex/renderer.spec.ts`), independent of the generated data
 they check; a gem bump now re-measures the tables on regeneration.
 

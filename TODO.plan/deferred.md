@@ -648,12 +648,13 @@ emits the rest of the data now measures and emits them into
   `Table::Matrix` render per `to_matrices` paren (the NoMethodError miss
   verified), a `Table::Array` render per alignment (the `.` fallback
   verified);
-- `COLOR_ASCIIMATH_SYMBOLS` — `to_asciimath` measured for exactly the ids the
-  renderer names (`Plus`, `Eqno`), each verified through a full `Color`
-  render.
+- `COLOR_ASCIIMATH_SYMBOLS` — widened to every static symbol class (1,459
+  ids, matching `MATHML_COLOR_SYMBOL_LITERALS`), each verified through a
+  full `Color` render; see "LaTeX: Color renders only the measured
+  AsciiMath fragment" below for the closure.
 
-All sixty-eight entries stay pinned by literal probe-backed tests
-(`test/generated/latex-render-tables.spec.ts` and the behavioural pins in
+All 1,525 entries across the six tables stay pinned by literal probe-backed
+tests (`test/generated/latex-render-tables.spec.ts` and the behavioural pins in
 `test/formats/latex/renderer.spec.ts`), independent of the generated data
 they check; a gem bump now re-measures the tables on regeneration.
 
@@ -781,49 +782,40 @@ those nondeterministic bytes, matching the policy already recorded for LaTeX's
 node-valued paren slots. Constructor-normalized Symbol/Paren and Number string or nil
 values still render byte-for-byte; forged container values refuse at the runtime boundary.
 
-### LaTeX: Color renders only the measured AsciiMath fragment
+### LaTeX renderer: `Color`'s attribute is the gem's one cross-format call
 
-**Trigger: corpus or sweep growth that exercises a new color operand.**
+**Trigger: a consumer report with a color argument beyond the measured
+shapes, or the P2 renderer round deciding a shared cross-format helper.**
 
-`Color`'s first slot renders through the gem's `to_asciimath`. The port
-carries only the measured fragment (base symbols, numbers, quoted text,
-formula joins, `Plus`, `Eqno`) and raises `RenderError` for other symbol ids
-the gem would render — a loud gap, not a silent wrong byte. (The generated
-color-asciimath slice landed 2026-08-06 carrying exactly this fragment; the
-gap itself remains until the corpus exercises more operands.)
+`Color#to_latex` builds its brace argument from `parameter_one.to_asciimath`
+(color.rb:41) — the latex path calling the asciimath renderer, which §3's
+independent format slices deliberately cannot do. The port reproduces the
+measured first-slot shapes from the latex slice's own generated literal
+table (`LATEX_COLOR_ASCIIMATH_SYMBOLS`): formulas/mrows of symbols, every
+static symbol id, numbers and texts. Any other first-slot node KIND (a
+`fontStyle` or `fenced` node renders its own full asciimath in the gem)
+raises a named `RenderError` instead of approximating a full asciimath
+render this format does not own — the same policy, and the same measured
+exception, MathML's `Color` entry above already carries.
 
-**The trigger fired, 2026-08-21.** Every gem-declared AsciiMath symbol token
-swept through `color(<token>)(y)` — 3,217 of them, the measured size of
-`Utility.symbols_hash(:asciimath)` on the pinned oracle (00c52783). 3,216
-parse to a top-level `Color`; only `-:` does not, and neither does the gem
-(both sides answer `c o l o r ( - \rangle ( y )`). Of those 3,216, `toLatex`
-raises for 3,209 and `toMathml` for 4.
-
-The seven `toLatex` does render (`+`, `#`, `&#x2b;`, `&#x23;`, `"P{plus}"`,
-`"P{eqno}"`, `"P{octothorpe}"`) are byte-identical to the gem, so the
-fragment is narrow, not wrong — and narrow is all the committed inputs ask
-for: the shared corpus has two color cases (`color(red)(x)`,
-`color(blue)(x) + y`) and the 1,642-input sweep three (`color(red)(x)`,
-`color(blue)(y+1)`, `color(#ff0000)(z)`), whose first slots between them
-need only letter symbols, a number and `Eqno`. Everything past that the gem
-renders and this port refuses: `color(alpha)(y)` is `{\color{alpha} y}` from
-the gem and a `RenderError` here, and an every-40th sample of the 3,217 came
-back from the gem as a `{\color{...} y}` render, 81 out of 81.
-
-Sized, now that the trigger has fired. 3,205 of the 3,209 refusals are one
-missing symbol literal each, over 1,393 distinct ids, against the 2 entries
-(`Plus`, `Eqno`) `LATEX_COLOR_ASCIIMATH_SYMBOLS` carries — and all 1,393 are
-already carried mathml-side by `MATHML_COLOR_SYMBOL_LITERALS`, whose 1,459
-entries are identical to `ASCIIMATH_SYMBOLS` key for key and value for
-value. So closing the bulk is the re-emission `generate-corpus.rb` already
-performs for the mathml slice, not new parity measurement. The remaining 4
-(`ZZ`, `:`, `:.`, `:'` — `fontStyle` and `fenced` nodes) are exactly the
-four `toMathml` refuses as well, and stay refused for the reason the mathml
-entry gives: their operand's render is a composite's full asciimath, which
-§3 keeps out of this format.
-
-The decision is unchanged — still DEFERRED. What changed is that it is a
-sized decision, and the trigger this entry names has now fired once.
+This was previously a sized, still-open gap: a 2026-08-21 sweep of every
+gem-declared AsciiMath symbol token through `color(<token>)(y)` — 3,217 of
+them, the measured size of `Utility.symbols_hash(:asciimath)` on the pinned
+oracle (00c52783) — found `toLatex` raising for 3,209 of the 3,216 that
+parse to a top-level `Color` (only `-:` does not parse, on either side).
+3,205 of those 3,209 were one missing symbol-id literal each, over 1,393
+distinct ids, against the 2 entries (`Plus`, `Eqno`)
+`LATEX_COLOR_ASCIIMATH_SYMBOLS` carried at the time — and all 1,393 turned
+out already measured, byte-identical, by `MATHML_COLOR_SYMBOL_LITERALS`
+(1,459 entries, key for key and value for value). Closing the bulk was the
+re-emission `generate-corpus.rb` already performs for the mathml slice, not
+new parity measurement — `latex_color_asciimath_symbols` now iterates
+`static_symbol_classes` exactly as `mathml_color_symbol_literals` does,
+2026-09-22. The remaining 4 (`ZZ`, `:`, `:.`, `:'` — tokens whose parsed
+first slot is a `fontStyle` or `fenced` composite) are exactly the four
+`toMathml` refuses too, and stay refused for the reason above: their
+operand's render is a composite's full asciimath, which §3 keeps out of
+this format.
 
 ### LaTeX: no symbol-exception context axis is threaded
 

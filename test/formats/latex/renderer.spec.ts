@@ -1345,12 +1345,31 @@ describe("color", () => {
     ).toBe("{\\color{+} z}");
   });
 
-  it("refuses an operand outside the measured fragment as a parity gap", () => {
-    expect(() =>
+  it("covers every static symbol id, not just the corpus+sweep's two (TODO.plan/deferred.md)", () => {
+    // The 2026-08-21 sweep found the port's table carrying only `Plus` and
+    // `Eqno` while the gem renders 1,393 more distinct ids; all 1,393 turned
+    // out already measured, byte-identical, by the mathml slice's own
+    // `MATHML_COLOR_SYMBOL_LITERALS` — so the table was widened to the same
+    // exhaustive `static_symbol_classes` set. `Sigma` and `Alpha` were among
+    // the 3,209 refusals the sweep counted (oracle:
+    // `Color(Sigma, Symbol("z")).to_latex(options: {})` is `{\color{sigma} z}`;
+    // `Alpha`'s own `to_asciimath` is `"alpha"`).
+    expect(
       toLatex(
         new ColorNode({ parameterOne: new SymbolNode({ id: "Sigma" }), parameterTwo: sym("z") }),
       ),
-    ).toThrow(RenderError);
+    ).toBe("{\\color{sigma} z}");
+    expect(
+      toLatex(
+        new ColorNode({ parameterOne: new SymbolNode({ id: "Alpha" }), parameterTwo: sym("z") }),
+      ),
+    ).toBe("{\\color{alpha} z}");
+  });
+
+  it("refuses an operand whose node KIND the asciimath fragment does not handle", () => {
+    // A node kind outside {symbol, number, text, formula, mrow} is a parity
+    // gap regardless of the id table's coverage — `SqrtNode` never carries a
+    // measured asciimath rendering.
     expect(() =>
       toLatex(
         new ColorNode({
@@ -1358,6 +1377,63 @@ describe("color", () => {
           parameterTwo: sym("z"),
         }),
       ),
+    ).toThrow(RenderError);
+  });
+
+  it("keeps the 4 genuine refusals the 2026-08-21 sweep found: fontStyle and fenced operands", () => {
+    // Every gem-declared asciimath token was swept through `color(<token>)(y)`
+    // on the pinned oracle (00c52783): 3,209 of 3,216 `Color` parses raised
+    // here, all but 4 for a missing symbol-id literal (now closed above). The
+    // remaining 4 — tokens `ZZ`, `:`, `:.`, `:'` — parse a first slot whose
+    // asciimath render is a COMPOSITE's full render, not a symbol literal,
+    // and stay refused because rendering it would mean importing the
+    // asciimath format (ARCHITECTURE.md §3) — the same reason `toMathml`
+    // refuses them (mathml.ts's `colorAsciimath`, `default:` branch).
+    //
+    // `ZZ` parses `parameter_one` to a Formula wrapping a
+    // `FontStyle::DoubleStruck` (oracle: its `to_asciimath` is
+    // `"mathbb(Z)"`); the nested `fontStyle` kind reaches the formula-join's
+    // recursive call, which does not handle it.
+    const zz = new FormulaNode({
+      value: [
+        new FontStyleNode({
+          name: "DoubleStruck",
+          parameterOne: sym("Z"),
+          parameterTwo: "mathbf",
+        }),
+      ],
+    });
+    expect(() => toLatex(new ColorNode({ parameterOne: zz, parameterTwo: sym("z") }))).toThrow(
+      RenderError,
+    );
+
+    // `:`, `:.` and `:'` all parse `parameter_one` DIRECTLY to a `Fenced`
+    // node (oracle `to_asciimath`: `<<)`, `<<.)`, `<<prime)` — a "<<" open
+    // paren this port's asciimath slice does not carry either way), so the
+    // top-level `fenced` kind is the one that refuses.
+    const colon = new FencedNode({
+      parameterOne: paren("Paren::Langle"),
+      parameterTwo: [],
+      parameterThree: paren("Paren::Rround"),
+    });
+    expect(() => toLatex(new ColorNode({ parameterOne: colon, parameterTwo: sym("z") }))).toThrow(
+      RenderError,
+    );
+    const colonDot = new FencedNode({
+      parameterOne: paren("Paren::Langle"),
+      parameterTwo: [new SymbolNode({ id: "Period" })],
+      parameterThree: paren("Paren::Rround"),
+    });
+    expect(() =>
+      toLatex(new ColorNode({ parameterOne: colonDot, parameterTwo: sym("z") })),
+    ).toThrow(RenderError);
+    const colonPrime = new FencedNode({
+      parameterOne: paren("Paren::Langle"),
+      parameterTwo: [new SymbolNode({ id: "Prime" })],
+      parameterThree: paren("Paren::Rround"),
+    });
+    expect(() =>
+      toLatex(new ColorNode({ parameterOne: colonPrime, parameterTwo: sym("z") })),
     ).toThrow(RenderError);
   });
 });

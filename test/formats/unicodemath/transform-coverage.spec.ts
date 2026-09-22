@@ -86,7 +86,7 @@ describe("transform rule coverage", () => {
     expect(reached).toBeGreaterThan(90);
   });
 
-  it("registers the 155 rules the slice carries", () => {
+  it("registers the 188 rules the slice carries", () => {
     // 78 corpus-derived (86 the pinned corpus fires on the oracle, minus the
     // eight-rule table/matrix family the first slice deferred: `transform.rb:8`,
     // `:9`, `:14`, `:32`, `:1569`, `:1574`, `:1584`, `:1649`) plus 13
@@ -139,8 +139,12 @@ describe("transform rule coverage", () => {
     // needed `:49`, and RELATION's own probing separately reached `:30`) —
     // reached by the existing corpus and coverage groups, not a new
     // hand-picked one.
-    expect(build.ruleIds.length).toBe(154);
-    expect(new Set(build.ruleIds).size).toBe(154);
+    //
+    // Plus 10 from the ROOT/OVER-UNDER/ACCENT leftovers: `:341`, `:969`,
+    // `:977`, `:1404`, `:1506`, `:1530`, `:1538`, `:2221`, and two unwraps
+    // they need first, `:31` and `:118`.
+    expect(build.ruleIds.length).toBe(188);
+    expect(new Set(build.ruleIds).size).toBe(188);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

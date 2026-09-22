@@ -61,9 +61,10 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * other corpus string fires any of the eighteen). The TABLE increment ported
  * the family, so those six rows have moved out of `DEFERRED_INPUTS` and now
  * compare for real below, in `supported`, the same as every other corpus row.
- * Three more — `"✎(blue&y + z)"`, `"√(3&8)"`, `"√(n&x)"` — carry a `&` too but
- * measured on the oracle they route through `color`/`root`, not table, and
- * stay in this list. Six NARY rows — a large operator with a single-token
+ * `"✎(blue&y + z)"` (`:1201`) and `"√(3&8)"`/`"√(n&x)"` (`:1530`) also carry a
+ * `&` but route through `color`/`root`, not table; all three left this list
+ * once their rules were ported (corpus rows, so they compare for real below).
+ * Six NARY rows — a large operator with a single-token
  * `_(…)` script — moved the same way once `:1931`/`:1968` landed: `"∏_(k)▒
  * 〖k〗"`, `"∮_(C)▒〖f〗"`, `"⋃_(i) A_(i)"`, `"⋂_(i) A_(i)"`, `"∐_(i) A_(i)"`,
  * `"⨁_(i) A_(i)"`.
@@ -83,25 +84,16 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * increment above ported.
  */
 const DEFERRED_INPUTS: readonly string[] = [
-  // COLOR and ROOT: each of these three also carries a `&`, but measured on
-  // the oracle (the `ParseError` message names the unmatched key) they route
-  // through `{color=...}`/`{root=...}`, not the table family the TABLE
-  // increment ported.
-  "✎(blue&y + z)",
-  "√(3&8)",
-  "√(n&x)",
-
   // DECORATION (`transform.rb:1286`-`:1491`) is ported now (`transform.ts`'s
   // module header). Three of the six corpus rows that used to sit here moved
   // out to `supported` below: `"⏟(a b)"`, `"⏟(a + b)"` and `"⏟(x)_(y)"` all
   // route only through `hbracket_class`. The other three stay, blocked on
   // machinery DECORATION does not touch: `"((a)̅)̅"` needs the `accents`/
   // paren combination `{accents=other, close_paren=, open_paren=}` (the
-  // `atoms`-adjacent gap FRACTION's own header names), and `"(y)┴(x)"`/
-  // `"(y)┬x"` need `sup_exp`/`sub_exp` shapes SCRIPT does not carry either.
+  // `atoms`-adjacent gap FRACTION's own header names). `"(y)┴(x)"`/
+  // `"(y)┬x"` moved out with `:969`/`:977`, and `"√(3&8)"`/`"√(n&x)"` with
+  // `:1530`; each now compares for real, as a corpus row.
   "((a)̅)̅",
-  "(y)┴(x)",
-  "(y)┬x",
 
   // SCRIPT (`transform.rb:118`-`:2403`): a right-associative double exponent.
   "x^y^(z)",

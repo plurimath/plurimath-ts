@@ -207,7 +207,7 @@ describe("each method renders the gem's bytes", () => {
   });
 });
 
-describe("the two methods that cannot be honest yet", () => {
+describe("the one method that cannot be honest yet, and the one that now is", () => {
   /**
    * Measured on the oracle: `to_mathml(intent: false)` is byte-identical to
    * `to_mathml` with no keyword, so delegating the default path loses nothing.
@@ -216,8 +216,17 @@ describe("the two methods that cannot be honest yet", () => {
     expect(build().toMathml(false)).toBe(build().toMathml());
   });
 
-  it("toMathml(true) refuses rather than invent an intent attribute", () => {
-    expect(() => build().toMathml(true)).toThrow(UnsupportedFeatureError);
+  it("toMathml(true) is the gem's to_mathml(intent: true), not a refusal", () => {
+    const out = build().toMathml(true);
+    // The fixture is a fraction of two numbers: `frac_intent` reads it and
+    // tags nothing, so the bytes match the default render (measured with
+    // `intent: true` on the oracle's `frac(1)(2)`), while a tree that
+    // does carry an intent gets one.
+    expect(out).toBe(build().toMathml());
+    expect(new Plurimath("sum_(i=1)^n i", "asciimath").toMathml(true)).toContain(
+      'intent=":sum($l,n,$naryand)"',
+    );
+    expect(new Plurimath("sum_(i=1)^n i", "asciimath").toMathml(false)).not.toContain("intent");
   });
 
   it("toDisplay refuses, naming what is missing", () => {
@@ -237,7 +246,6 @@ describe("the two methods that cannot be honest yet", () => {
     const fields: Record<string, string> = {};
     for (const [label, run] of [
       ["ctor", () => new Plurimath(INPUT, "mathml")],
-      ["toMathml", () => build().toMathml(true)],
       ["toDisplay", () => build().toDisplay("latex")],
     ] as const) {
       try {
@@ -251,13 +259,11 @@ describe("the two methods that cannot be honest yet", () => {
     }
     expect(codes).toEqual({
       ctor: "UNSUPPORTED_FORMAT",
-      toMathml: "UNSUPPORTED_FEATURE",
       toDisplay: "UNSUPPORTED_FEATURE",
     });
     // stable identifiers, not sentences
     expect(fields).toEqual({
       ctor: "mathml",
-      toMathml: "toMathml(intent: true)",
       toDisplay: "toDisplay",
     });
     for (const value of Object.values(fields)) expect(value).not.toMatch(/\s\w+\s\w+\s\w+\s/);

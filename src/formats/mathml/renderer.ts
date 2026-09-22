@@ -25,6 +25,7 @@
 
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { splitOnLinebreak } from "../../core/linebreak";
 import { assertKnownOptions } from "../../core/render-options";
 import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
 import { dumpNodes, XmlElement } from "../../xml/index";
@@ -32,19 +33,20 @@ import { createRenderContext, NO_SPACING_CONTEXT, SPACING_CONTEXT } from "./rend
 import {
   deferredFeatureError,
   FORMAT,
+  intentPostProcessing,
   isOwnMissingSymbolDataError,
   renderChild,
   unreachableName,
 } from "./render-shared";
 
 /**
- * Renderer options, typed exactly (§5): the three implemented axes
- * (`formatter` joins `displayStyle`/`unaryFunctionSpacing` here, B2's Number
- * formatting slice — TODO.plan/feature-roadmap.md). The still-deferred
- * `to_mathml` keywords — `intent`, `unitsml`, `split_on_linebreak` — are
- * deliberately NOT in this type; passing one (any value but `undefined`) is a
- * named `RenderError` at runtime (`TODO.plan/deferred.md` carries each entry
- * and its trigger). A key that is neither — one `to_mathml` has no keyword
+ * Renderer options, typed exactly (§5): the five implemented axes
+ * (`formatter` joined `displayStyle`/`unaryFunctionSpacing` with B2's Number
+ * formatting slice, `splitOnLinebreak` with B3, `intent` with B4 —
+ * TODO.plan/feature-roadmap.md). The still-deferred `to_mathml` keyword —
+ * `unitsml` — is deliberately NOT in this type; passing it (any value but
+ * `undefined`) is a named `RenderError` at runtime (`TODO.plan/deferred.md`
+ * carries the entry and its trigger). A key that is neither — one `to_mathml` has no keyword
  * for at all — is refused by name too, at the entry (`ACCEPTED_OPTIONS`
  * below).
  */
@@ -71,6 +73,41 @@ export interface MathmlOptions {
    * renderers' own field, added here in the same shape.
    */
   readonly formatter?: FormatterOptions | null;
+  /**
+   * The gem's `split_on_linebreak:` keyword, default false. Ruby truthiness:
+   * `null` is off. When on, the formula is cut at each `Linebreak` and every
+   * line is rendered as its own complete `<math>` document, concatenated with
+   * nothing between (`line_breaked_mathml`, formula.rb:110). `displayStyle`,
+   * `unaryFunctionSpacing` and `formatter` apply to every line; the display
+   * style DEFAULT is the receiver's own, not each line's.
+   */
+  readonly splitOnLinebreak?: boolean | null | undefined;
+  /**
+   * The gem's `intent:` keyword, default false. Ruby truthiness: `null` (the
+   * gem's `nil`) is off, and so is an explicit `false` — measured
+   * byte-identical to leaving the keyword out. Every other JS-representable
+   * shape is on, byte-identical to `true` (measured against the oracle:
+   * `"false"`, `""`, `0`, `1`, `[]` and `{}` all match `intent: true`
+   * exactly, because the gem's `if intent` / `if intent` guards
+   * (`formula.rb`) are plain Ruby truthiness with no `.to_s` or numeric
+   * coercion — unlike `display_style`, which the gem does coerce via
+   * `.to_s == "true"`). The type below is widened to match; the runtime
+   * check at the call site (`intentValue !== undefined && intentValue !==
+   * null && intentValue !== false`) already implements this correctly for
+   * any shape and needs no change. When on, the renderer writes the MathML
+   * Core `intent` (and `arg`) attributes exactly as the gem's `intentify` /
+   * `intent_post_processing` do (`./intent-encoding.ts`,
+   * `./intent-post-processing.ts`); inputs on which the gem raises
+   * (a lone `UpcaseDd`, among others) raise `RenderError` here.
+   */
+  readonly intent?:
+    | boolean
+    | string
+    | number
+    | ReadonlyArray<unknown>
+    | Record<string, unknown>
+    | null
+    | undefined;
 }
 
 /**
@@ -80,27 +117,37 @@ export interface MathmlOptions {
  * `MathmlOptions` cannot be left out of the accepted set below. The values
  * carry nothing; only the keys are read.
  */
+/**
+ * An explicit JS `undefined` means "not given" (as `toOmml` already treats it),
+ * so the receiver's own `displaystyle` applies. Without this, `String(undefined)`
+ * is `"undefined"` and the option would wrongly read as false, where the gem — an
+ * omitted keyword — keeps the receiver's value.
+ */
+function hasDisplayStyle(opts: Record<string, unknown>): boolean {
+  return Object.hasOwn(opts, "displayStyle") && opts.displayStyle !== undefined;
+}
+
 const IMPLEMENTED_OPTIONS: { readonly [K in keyof Required<MathmlOptions>]: null } = {
   displayStyle: null,
   unaryFunctionSpacing: null,
   formatter: null,
+  splitOnLinebreak: null,
+  intent: null,
 };
 
 /** The still-deferred `to_mathml` keywords, each refused by name when present. */
 const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
-  ["intent", "the intent attribute pipeline (intentify, intent post-processing) is unmeasured"],
   ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md §5)"],
-  ["splitOnLinebreak", "line_breaked_mathml renders one <math> per line-broken slice; unmeasured"],
 ];
 
 /**
- * Every option key this entry accepts: the three implemented axes plus the
- * three still-deferred keywords. The deferred names belong here because
- * `to_mathml` really does take them — `intent:`, `unitsml:`,
- * `split_on_linebreak:` are three of its six keywords (formula.rb:76-83 on
- * the pinned oracle; `formatter:` moved from this list to `IMPLEMENTED_OPTIONS`
- * above) — so "unknown option" would be the wrong thing to say about one. They
- * are recognised, then refused by name with the reason, a few lines further
+ * Every option key this entry accepts: the five implemented axes plus the
+ * still-deferred keyword. The deferred name belongs here because `to_mathml`
+ * really does take it — `unitsml:` is one of its six keywords
+ * (formula.rb:76-83 on the pinned oracle; `formatter:`, `split_on_linebreak:`
+ * and `intent:` moved from this list to `IMPLEMENTED_OPTIONS` above) — so
+ * "unknown option" would be the wrong thing to say about it. It is
+ * recognised, then refused by name with the reason, a few lines further
  * down. Anything outside this list is a keyword `to_mathml` does not have
  * either, and is refused as unknown at the entry.
  */
@@ -173,19 +220,41 @@ function renderMath(
     throw unreachableName(node.kind, node.name);
   }
 
+  // `line_breaked_mathml` (formula.rb:110-119) renders each line as its own
+  // `to_mathml`, handing down the display style as the receiver's `display_style`
+  // keyword resolved BEFORE the split — a line is a fresh clone whose own
+  // `displaystyle` is the constructor default, so it must not be read there.
+  const splitValue = Object.hasOwn(opts, "splitOnLinebreak") ? opts.splitOnLinebreak : undefined;
+  if (splitValue !== undefined && splitValue !== null && splitValue !== false) {
+    const inherited: Record<string, unknown> = {
+      intent: Object.hasOwn(opts, "intent") ? opts.intent : undefined,
+      displayStyle: hasDisplayStyle(opts)
+        ? opts.displayStyle
+        : (node as { readonly displaystyle?: unknown }).displaystyle,
+    };
+    if (Object.hasOwn(opts, "unaryFunctionSpacing")) {
+      inherited.unaryFunctionSpacing = opts.unaryFunctionSpacing;
+    }
+    return splitOnLinebreak(node)
+      .map((line) => renderMath(line, inherited, numberFormat))
+      .join("");
+  }
+
   const spacingValue = Object.hasOwn(opts, "unaryFunctionSpacing")
     ? opts.unaryFunctionSpacing
     : undefined;
   const spacing =
     spacingValue === undefined ? true : spacingValue !== null && spacingValue !== false; // Ruby truthiness; nil compacts away
+  const intentValue = Object.hasOwn(opts, "intent") ? opts.intent : undefined;
+  const intent = intentValue !== undefined && intentValue !== null && intentValue !== false; // Ruby truthiness
   const context =
-    numberFormat === null
+    numberFormat === null && !intent
       ? spacing
         ? SPACING_CONTEXT
         : NO_SPACING_CONTEXT
-      : createRenderContext(spacing, numberFormat);
+      : createRenderContext(spacing, numberFormat, intent);
 
-  const displayValue = Object.hasOwn(opts, "displayStyle")
+  const displayValue = hasDisplayStyle(opts)
     ? opts.displayStyle
     : (node as { readonly displaystyle?: unknown }).displaystyle;
   // `boolean_display_style`: `display_style.to_s == "true"`.
@@ -207,9 +276,11 @@ function renderMath(
       node.kind,
     );
   }
-  for (const item of value) {
-    style.append(renderChild(item, context, `${node.kind}.value`));
-  }
+  const nodes = value.map((item) => renderChild(item, context, `${node.kind}.value`));
+  // `mathml_content` (formula.rb:133-139): the rendered children, then — under
+  // intent — the formula-level rewrite, in place, before they are appended.
+  if (intent) intentPostProcessing(nodes);
+  style.append(nodes);
   math.append(style);
 
   // `unitsml_post_processing` (formula.rb:450-473) rewrites elements

@@ -78,6 +78,14 @@ describe("the options matrix (probe-mathml-edges.rb)", () => {
     expect(toMathml(sinX(), { displayStyle: null })).toBe(math(SIN_SPACED, "false"));
   });
 
+  it("an explicit undefined displayStyle is 'not given' (the oracle's omitted keyword), not the string", () => {
+    expect(toMathml(sinX(), { displayStyle: undefined })).toBe(toMathml(sinX()));
+    expect(toMathml(sinX(), { displayStyle: undefined })).toBe(math(SIN_SPACED));
+    expect(toMathml(sinX(), { displayStyle: undefined, splitOnLinebreak: true })).toBe(
+      toMathml(sinX(), { splitOnLinebreak: true }),
+    );
+  });
+
   it("the formula's own displaystyle field is the default", () => {
     const off = new FormulaNode({
       value: [new UnaryFunctionNode({ name: "Sin", parameterOne: x() })],
@@ -163,11 +171,10 @@ describe("the formatter option (B2's MathML/OMML number-formatting slice)", () =
 });
 
 describe("the deferred options, refused by name", () => {
+  // `intent` left this list with B4 (`./intent-parity.spec.ts`); `intent: false`
+  // is the gem's default, measured byte-identical to the omitted keyword.
   const cases: readonly (readonly [string, Record<string, unknown>])[] = [
-    ["intent", { intent: true }],
-    ["intent", { intent: false }],
     ["unitsml", { unitsml: {} }],
-    ["splitOnLinebreak", { splitOnLinebreak: true }],
   ];
   for (const [name, options] of cases) {
     it(`${JSON.stringify(options)} raises a RenderError naming "${name}"`, () => {
@@ -182,6 +189,11 @@ describe("the deferred options, refused by name", () => {
       expect((caught as RenderError).message).toContain("deferred");
     });
   }
+
+  it("intent: false and null are the default, not a refusal", () => {
+    expect(toMathml(sinX(), { intent: false })).toBe(math(SIN_SPACED));
+    expect(toMathml(sinX(), { intent: null })).toBe(math(SIN_SPACED));
+  });
 
   it("an explicitly-undefined deferred key passes through as absent", () => {
     expect(toMathml(sinX(), { formatter: undefined, intent: undefined } as never)).toBe(

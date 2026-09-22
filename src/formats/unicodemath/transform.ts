@@ -2117,6 +2117,8 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.expr,
   ]);
 
+  // `:227`: a `\script`/`\double`/`\fraktur`/`\mitBbb` prefix plus one letter
+  // — the `UNICODED_FONTS` code point when the pair has one, else the letter.
   rule("227", { unicoded_font_class: simple("unicoded"), symbol: simple("symbol") }, (b) =>
     symbolsClass(unicodedFont(b.unicoded, b.symbol) ?? b.symbol),
   );

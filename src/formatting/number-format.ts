@@ -9,13 +9,17 @@
  * (`Fraction#format_groups`/`#change_format`, `fraction_group`/
  * `fraction_group_digits`).
  *
+ * Since B2's numeric-pipeline slice this also covers `precision` (keyword and
+ * `options.precision`), `significant`, `digitCount`, `padding`/`paddingDigits`/
+ * `paddingGroupDigits` and `numberSign` — the digit model is `numbers/`
+ * (`Source` -> `NumberParts` -> `FormattedNumber`, `numbers/number-renderer.ts`),
+ * and `applyNumberFormat` below is its text rendering.
+ *
  * Deliberately NOT here, and refused by name rather than silently ignored:
- * precision, significant digits, notation (`e`, `scientific`, `engineering`),
- * base notation, sign handling, and padding beyond the default. None of the
- * gem sources for those (`precision_resolver.rb`, `significant.rb`,
- * `notation_renderer.rb`, `base_notation.rb`, `sign_renderer.rb`,
- * `integer.rb`'s padding branch) has been read for this change —
- * TODO.plan/feature-roadmap.md's build order puts each on a later B2 slice.
+ * notation (`notation`, `e`, `times`, `exponentSign`), base notation (`base`,
+ * `basePrefix`, `basePostfix`, `hexCapital`) and `stringFormat` — each is a
+ * later lane (TODO.plan/feature-roadmap.md, Chain B), built on the seam
+ * `numbers/number-renderer.ts` documents.
  *
  * **Locale coverage.** Every locale `formatting/locales.ts` knows — all 96 of
  * `Formatter::SupportedLocales::LOCALES` — is accepted here too, sourcing its
@@ -58,9 +62,13 @@ import {
   isSupportedLocale,
   SUPPORTED_LOCALES,
 } from "./locales";
+import { formattedNumberText } from "./numbers/formatted-number";
+import { formatNumber, type NumericOptions } from "./numbers/number-renderer";
 
 /** `Formatter::Standard::DEFAULT_OPTIONS[:group_digits]`. */
 const DEFAULT_GROUP_DIGITS = 3;
+/** `FormatOptions::DEFAULT_PADDING` (`format_options.rb:13`). */
+const DEFAULT_PADDING = "0";
 /**
  * `FormatOptions#fraction_group`/`#fraction_group_digits`
  * (`format_options.rb:69-75`) do read with no default of their own —
@@ -98,13 +106,15 @@ function groupMarkerFor(locale: string): string {
 }
 
 /**
- * The `formatter.options` fields this slice implements — `Formatter::
- * Standard::DEFAULT_OPTIONS`' decimal/group/group_digits triple, plus
- * `fraction_group`/`fraction_group_digits`. Every other key that hash
- * accepts (`padding`, `significant`, `notation`, `precision`, `digit_count`,
- * `times`, `e`, `number_sign`, `exponent_sign`) is a later slice and is
- * refused as an unknown key by `assertKnownOptions` below, never silently
- * accepted and ignored.
+ * The `formatter.options` fields the numeric pipeline implements — `Formatter::
+ * Standard::DEFAULT_OPTIONS`' decimal/group/group_digits triple, the
+ * fraction-side grouping pair, and the digit-shaping keys `precision`,
+ * `significant`, `digit_count`, `padding`, `padding_digits`,
+ * `padding_group_digits` and `number_sign`. The remaining keys that hash
+ * accepts (`notation`, `times`, `e`, `exponent_sign`) and the base keys
+ * (`base`, `base_prefix`, `base_postfix`, `hex_capital`) belong to later
+ * lanes and are refused as unknown keys by `assertKnownOptions` below, never
+ * silently accepted and ignored.
  */
 export interface FormatterSymbolOptions {
   readonly decimal?: string;
@@ -112,25 +122,32 @@ export interface FormatterSymbolOptions {
   readonly groupDigits?: number;
   readonly fractionGroup?: string;
   readonly fractionGroupDigits?: number;
+  readonly precision?: number | null;
+  readonly significant?: number;
+  readonly digitCount?: number;
+  readonly padding?: string | null;
+  readonly paddingDigits?: number;
+  readonly paddingGroupDigits?: number;
+  readonly numberSign?: string | null;
 }
 
 /**
  * The `formatter:` render option — `Formatter::Standard.new(locale:,
  * string_format:, options:, precision:)`'s keyword shape, ported field for
  * field (TODO.plan/open-decisions.md, "plain options object", not a class
- * instance). `precision` and `stringFormat` are declared here — the gem
- * really does take them — so a caller passing one gets a named refusal
- * (`resolveNumberFormat` below) rather than "unknown option".
+ * instance). `stringFormat` is declared here — the gem really does take it —
+ * so a caller passing one gets a named refusal (`resolveNumberFormat` below)
+ * rather than "unknown option".
  */
 export interface FormatterOptions {
   readonly locale?: string | null;
   readonly options?: FormatterSymbolOptions | null;
-  readonly precision?: null;
+  readonly precision?: number | null;
   readonly stringFormat?: null;
 }
 
 /** What a text renderer's `Number` kind file needs to render one value. */
-export interface NumberFormat {
+export interface NumberFormat extends NumericOptions {
   readonly decimal: string;
   readonly group: string;
   readonly groupDigits: number;
@@ -150,6 +167,13 @@ const ACCEPTED_SYMBOL_KEYS: readonly string[] = [
   "groupDigits",
   "fractionGroup",
   "fractionGroupDigits",
+  "precision",
+  "significant",
+  "digitCount",
+  "padding",
+  "paddingDigits",
+  "paddingGroupDigits",
+  "numberSign",
 ];
 
 /** `undefined`/`null` mean "the gem's default", present-and-anything-else is refused. */
@@ -161,6 +185,75 @@ function refuseUnlessAbsent(value: unknown, key: string, format: string): void {
     format,
     "unknown",
   );
+}
+
+/**
+ * `FormatOptions#integer_option` (`format_options.rb:174`): a count must be a
+ * non-negative integer. Absent or `null` is the default; the gem's
+ * numeric-String/Symbol coercion is not ported (this port's options are
+ * typed numbers), so a string is refused rather than coerced.
+ */
+function countOption(value: unknown, key: string, fallback: number, format: string): number {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new RenderError(
+      `formatter.options.${key}: ${JSON.stringify(value)} is not a non-negative integer`,
+      format,
+      "unknown",
+    );
+  }
+  return value;
+}
+
+/**
+ * `FormatOptions#padding` (`format_options.rb:113`): the first character of
+ * the given string; absent, `null` and `""` all mean `"0"`.
+ */
+function paddingOption(value: unknown, format: string): string {
+  if (value === undefined || value === null) return DEFAULT_PADDING;
+  if (typeof value !== "string") {
+    throw new RenderError(
+      `formatter.options.padding: ${JSON.stringify(value)} is not a string`,
+      format,
+      "unknown",
+    );
+  }
+  return value === "" ? DEFAULT_PADDING : ([...value][0] as string);
+}
+
+/**
+ * `FormatOptions#number_sign` (`format_options.rb:109`, `symbol_option`): a
+ * String or Symbol, or absent. Any string is accepted, as the gem does — only
+ * `"plus"` changes the output (`FormattedNumber#sign_text`).
+ */
+function numberSignOption(value: unknown, format: string): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") {
+    throw new RenderError(
+      `formatter.options.numberSign: ${JSON.stringify(value)} is not a string`,
+      format,
+      "unknown",
+    );
+  }
+  return value;
+}
+
+/**
+ * `FormatOptions#resolve_precision` (`format_options.rb:146`): the keyword
+ * wins over `options[:precision]`, and either must be a non-negative integer.
+ * `null` is the gem's nil — the resolver then infers it from the value.
+ */
+function explicitPrecision(keyword: unknown, option: unknown, format: string): number | null {
+  const value = keyword === undefined || keyword === null ? option : keyword;
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new RenderError(
+      `formatter.precision: ${JSON.stringify(value)} is not a non-negative integer`,
+      format,
+      "unknown",
+    );
+  }
+  return value;
 }
 
 /**
@@ -177,7 +270,6 @@ export function resolveNumberFormat(
 ): NumberFormat | null {
   if (formatter === null || formatter === undefined) return null;
   assertKnownOptions(formatter, ACCEPTED_FORMATTER_KEYS, format);
-  refuseUnlessAbsent(formatter.precision, "precision", format);
   refuseUnlessAbsent(formatter.stringFormat, "stringFormat", format);
 
   const locale = formatter.locale;
@@ -199,20 +291,17 @@ export function resolveNumberFormat(
 
   assertKnownOptions(formatter.options, ACCEPTED_SYMBOL_KEYS, format);
   const options = formatter.options;
-  const groupDigits = options?.groupDigits ?? DEFAULT_GROUP_DIGITS;
-  if (!Number.isInteger(groupDigits) || groupDigits < 0) {
+  // `FormatOptions#validate_padding_options!` (`format_options.rb:236`) is
+  // keyed on the KEY being present, not on its value.
+  if (
+    options !== null &&
+    options !== undefined &&
+    Object.hasOwn(options, "paddingDigits") &&
+    Object.hasOwn(options, "paddingGroupDigits")
+  ) {
     throw new RenderError(
-      `formatter.options.groupDigits: ${JSON.stringify(groupDigits)} is not a non-negative ` +
-        "integer",
-      format,
-      "unknown",
-    );
-  }
-  const fractionGroupDigits = options?.fractionGroupDigits ?? DEFAULT_FRACTION_GROUP_DIGITS;
-  if (!Number.isInteger(fractionGroupDigits) || fractionGroupDigits < 0) {
-    throw new RenderError(
-      `formatter.options.fractionGroupDigits: ${JSON.stringify(fractionGroupDigits)} is not a ` +
-        "non-negative integer",
+      "formatter.options: paddingDigits and paddingGroupDigits conflict — the gem raises " +
+        "ConfigurationError (conflicting_formatter_options) when both keys are present",
       format,
       "unknown",
     );
@@ -221,35 +310,29 @@ export function resolveNumberFormat(
   return {
     decimal: options?.decimal ?? decimalDefault,
     group: options?.group ?? groupDefault,
-    groupDigits,
+    groupDigits: countOption(options?.groupDigits, "groupDigits", DEFAULT_GROUP_DIGITS, format),
     fractionGroup: options?.fractionGroup ?? DEFAULT_FRACTION_GROUP_MARKER,
-    fractionGroupDigits,
+    fractionGroupDigits: countOption(
+      options?.fractionGroupDigits,
+      "fractionGroupDigits",
+      DEFAULT_FRACTION_GROUP_DIGITS,
+      format,
+    ),
+    precision: explicitPrecision(formatter.precision, options?.precision, format),
+    significant: countOption(options?.significant, "significant", 0, format),
+    digitCount: countOption(options?.digitCount, "digitCount", 0, format),
+    padding: paddingOption(options?.padding, format),
+    paddingDigits: countOption(options?.paddingDigits, "paddingDigits", 0, format),
+    paddingGroupDigits: countOption(options?.paddingGroupDigits, "paddingGroupDigits", 0, format),
+    numberSign: numberSignOption(options?.numberSign, format),
   };
 }
 
 /**
- * A digit string the grammar can produce for a `Number` node's value: one or
- * more ASCII digits, optionally with a single `.`-separated fraction. Always
- * base 10, and always spelled with `.` — the marker every grammar's `number`
- * rule normalizes to regardless of the parse-time `locale` option
- * (`formatting/locales.ts`), so the render-time `formatter.options.decimal`
- * substitution below always starts from the same character.
- */
-const PLAIN_NUMBER_PATTERN = /^\d+(?:\.\d+)?$/;
-
-/** Whether `value` is a shape this slice's grouping/substitution measures. */
-export function isPlainFormattableNumber(value: unknown): value is string {
-  return typeof value === "string" && PLAIN_NUMBER_PATTERN.test(value);
-}
-
-/**
  * `Formatter::Numbers::Source::NUMERIC_PATTERN` (`source.rb:18`), verbatim —
- * signed, optionally-fractional, optionally-exponential digit strings. Wider
- * than `PLAIN_NUMBER_PATTERN` above (which is what this slice actually
- * formats): a value can match this and still fall through to the raw-value
- * path below, for shapes (negative sign, scientific notation) this slice does
- * not yet group or substitute into. What this pattern draws the line on is
- * `Source#validate_numeric!`'s OTHER branch — a value that fails it entirely.
+ * signed, optionally-fractional, optionally-exponential digit strings. This is
+ * what a `Number` node's value must match to be formatted at all
+ * (`Source#validate_numeric!`'s test); a value that fails it is refused below.
  */
 const GEM_NUMERIC_PATTERN = /^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
 
@@ -269,17 +352,13 @@ export function isGemNumericValue(value: unknown): value is string {
 }
 
 /**
- * Call once a `context.numberFormat` is active and `isPlainFormattableNumber`
- * has already said no: refuses exactly what `Source#validate_numeric!` does,
+ * Call once a `context.numberFormat` is active and `isGemNumericValue` has
+ * already said no: refuses exactly what `Source#validate_numeric!` does,
  * matching the gem's `Plurimath::Errors::InvalidNumber` refusal
  * (`[plurimath] Invalid number ... for number formatting`) with this port's
  * own `RenderError` boundary (`core/render-options.ts`'s convention — the
- * port's own error, never the gem's wording).
- *
- * A value that passes is not necessarily formatted by this slice — a
- * negative number or scientific notation is gem-valid but still out of this
- * slice's scope (module doc above) and falls through to the raw-value path,
- * unformatted, exactly as before this change.
+ * port's own error, never the gem's wording). A value that passes is
+ * formatted by `applyNumberFormat`; this returns for it.
  */
 export function refuseNonNumericUnderFormatter(value: unknown, format: string, kind: string): void {
   if (isGemNumericValue(value)) return;
@@ -294,89 +373,11 @@ export function refuseNonNumericUnderFormatter(value: unknown, format: string, k
 }
 
 /**
- * `Integer#format_groups`'s grouping loop (`integer.rb:29-36`) — chop `size`
- * digits off the right, repeat, join right-to-left with `separator`. The
- * gem's padding step ahead of it (`pad_integer`) is not reproduced: with
- * `Formatter::Standard::DEFAULT_OPTIONS`' `padding_digits: 0` and no
- * `padding_group_digits` in that hash, `padding_target_width` always answers
- * `string.length`, so padding is a no-op for every case this slice accepts
- * (`formatter.options` admits no padding key at all yet).
- */
-/**
- * `Parts#normalized` (`parts.rb:63`): `value.to_s.sub(/\A0+(?=.)/, "")` —
- * strip leading zeros, keeping the last one when every digit is a zero, so
- * `"000"`/`"00"` canonicalize to `"0"` and `"007"` to `"7"`. Only applied
- * under an active formatter — a lookahead-free reading of "000" without one
- * renders unchanged (verified live: `to_asciimath` with no `formatter:`
- * answers `"000"`), so this must not run on the raw, unformatted path.
- */
-function canonicalizeLeadingZeros(digits: string): string {
-  return digits.replace(/^0+(?=.)/, "");
-}
-
-function groupIntegerDigits(digits: string, separator: string, size: number): string {
-  if (size <= 0 || digits.length <= size) return digits;
-  const tokens: string[] = [];
-  let remaining = digits;
-  while (remaining.length > size) {
-    tokens.unshift(remaining.slice(remaining.length - size));
-    remaining = remaining.slice(0, remaining.length - size);
-  }
-  tokens.unshift(remaining);
-  return tokens.join(separator);
-}
-
-/**
- * `Fraction#change_format`'s grouping loop (`fraction.rb:62-69`) — chop
- * `size` digits off the LEFT, repeat, join left-to-right with `separator`.
- * The direction is the opposite of `groupIntegerDigits`: the gem's integer
- * side groups from the least-significant (rightmost) digit outward, so any
- * short leftover chunk lands at the front (`"123456"` grouped by 3 is
- * `"123,456"` — nothing short there, but `"1234567"` by 3 is `"1,234,567"`,
- * the short chunk first); the fraction side groups from the
- * most-significant (leftmost, i.e. nearest the decimal point) digit
- * outward, so any short leftover chunk lands at the end (measured on the
- * pinned oracle, `00c52783`, run directly against a live `Fraction`
- * instance: `format_groups("123456", 4)` with `fraction_group: "-"` answers
- * `"1234-56"`, the short chunk last). This slice's one testsuite oracle case
- * (`number-formatter-fraction-side-grouping`) does not itself exercise an
- * uneven split — 9 digits split by 3 leaves no remainder — so the
- * uneven-split direction is confirmed by the ad hoc gem run above and
- * `fraction_spec.rb`'s `format_groups` examples, not by that case's
- * byte-diffed port output.
- */
-function groupFractionDigits(digits: string, separator: string, size: number): string {
-  if (size <= 0 || digits.length <= size) return digits;
-  const tokens: string[] = [];
-  let remaining = digits;
-  while (remaining.length > 0) {
-    tokens.push(remaining.slice(0, size));
-    remaining = remaining.slice(size);
-  }
-  return tokens.join(separator);
-}
-
-/**
- * `Formatter::Numbers::TextRenderer.render` for the plain (non-base-notation)
- * path this slice covers: swap the decimal marker, group the integer
- * digits, and group the fraction digits — each side with its own separator,
- * digit count, and direction (`groupIntegerDigits` groups right-to-left,
- * `groupFractionDigits` left-to-right; see that function's header).
+ * `Formatter::Numbers::TextRenderer.render` for a number with no base
+ * notation: the numeric pipeline (`numbers/number-renderer.ts`) then the
+ * `FormattedNumber`'s text — sign, grouped integer digits, decimal marker,
+ * grouped fraction digits. `value` must satisfy `isGemNumericValue`.
  */
 export function applyNumberFormat(value: string, format: NumberFormat): string {
-  const dot = value.indexOf(".");
-  if (dot === -1) {
-    return groupIntegerDigits(canonicalizeLeadingZeros(value), format.group, format.groupDigits);
-  }
-  const integerPart = groupIntegerDigits(
-    canonicalizeLeadingZeros(value.slice(0, dot)),
-    format.group,
-    format.groupDigits,
-  );
-  const fractionPart = groupFractionDigits(
-    value.slice(dot + 1),
-    format.fractionGroup,
-    format.fractionGroupDigits,
-  );
-  return `${integerPart}${format.decimal}${fractionPart}`;
+  return formattedNumberText(formatNumber(value, format));
 }

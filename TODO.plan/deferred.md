@@ -290,22 +290,22 @@ slots it is byte-exact and pinned. The follow-up chooses: refuse admitted
 primitives in composite-feeding positions, or record these as permanent
 divergences case by case.
 
-### MathML renderer: four `to_mathml` options deferred by name
+### MathML renderer: one `to_mathml` option deferred by name
 
-**Trigger: `intent` — the P2 compat class (its only optional argument);
-`formatter` — P4 number formatting; `unitsml` — the UnitsML decision
-(ARCHITECTURE.md §5); `split_on_linebreak` — the first consumer request, or
-P2's OMML renderer, whose `to_omml` shares `new_line_support`.**
+**Trigger: `unitsml` — the UnitsML decision (ARCHITECTURE.md §5).**
 
-`toMathml` implements `display_style` and `unary_function_spacing` (both
-byte-matched against oracle probes in
-`test/formats/mathml/renderer.spec.ts`). The other four `Formula#to_mathml`
-keywords are refused BY NAME: passing `formatter`, `intent`, `unitsml` or
-`splitOnLinebreak` with any value but `undefined` — `intent: false` and
-`unitsml: {}` (the gem's inert defaults) included — raises a `RenderError`
+`toMathml` implements `display_style`, `unary_function_spacing`, `formatter`
+(B2's first slice), `split_on_linebreak` (B3, shared with `to_omml` through
+`src/core/linebreak.ts`) and `intent` (B4, the P2 compat class's only optional
+argument — `./intent-encoding.ts`, `./intent-post-processing.ts`), byte-matched
+against oracle probes in `test/formats/mathml/renderer.spec.ts`,
+`test/formats/mathml/intent-parity.spec.ts` and
+`test/formats/split-display-parity.spec.ts`. The remaining `Formula#to_mathml`
+keyword is refused BY NAME: passing `unitsml` with any value but `undefined` —
+`unitsml: {}` (the gem's inert default) included — raises a `RenderError`
 naming the option and this file. Silence was the alternative and is the one
 wrong answer: the corpus was generated with defaults, so a renderer that
-ignored `intent: true` would pass every pin and still be wrong for the first
+ignored `unitsml: {...}` would pass every pin and still be wrong for the first
 caller. The refusal extends to the tree side of unitsml: a hand-built node
 smuggling a `unitsml` ATTRIBUTE through an attributes/options hash is refused
 by the same name, which is what makes the gem's `unitsml_post_processing`
@@ -314,20 +314,35 @@ every tree this renderer emits.
 
 ### OMML renderer: generated symbol data deferred from the first slice
 
-**Trigger: the dedicated OMML symbol-data follow-up, using the repository's
-two-step generation protocol and a provenance digest from the clean pinned
-oracle.**
+**Resolved (2026-09-22), in two steps:**
 
-The first OMML vertical slice implements the shared structural wrapper for the
-base `Symbol`/abstract `Paren`, but deliberately does not hand-type the named
-symbol values measured by the OMML scope. Named symbols therefore raise
-`RenderError` instead of trusting a caller-provided value. The same refusal
-applies where another implemented kind needs that table: `Text`'s
-`unicode[:name]` substitutions, named Table parens, and a named Nary operator.
-The exact refusal contract is pinned in
-`test/formats/omml/renderer.spec.ts`. The follow-up removes these refusals only
-after generated values, an emptiness guard, provenance, and perturbed
-regeneration determinism land together.
+The per-class symbol literals (`OMML_SYMBOLS`, `OMML_SYMBOL_TAG_NAMES`) landed
+first (#63): named `Symbol` values, named Table parens (`Table#paren` reads
+the paren's class literal, never its stored value), and a named Nary
+operator's `chr` text all resolve through that table now, each pinned in
+`test/formats/omml/renderer.spec.ts`'s "generated OMML symbol data" block. An
+id the table does not carry still raises — not `RenderError` but the
+walk's own `MissingSymbolDataError` — because that IS a parity gap: the
+census found only 1,459 static classes, so anything else is one the port's
+model does not know exists.
+
+The one refusal that outlived that slice was `Text`'s `unicode[:name]`
+substitution: `Text#symbol_value` (text.rb:126-129) inverts
+`Mathml::Constants::UNICODE_SYMBOLS`/`SYMBOLS`, the SAME Ruby constant the
+mathml render-tables slice already inverted for its own renderer, but
+ARCHITECTURE.md §3 rule 4 forbids an omml kind file reading mathml's
+generated slice. The dedicated follow-up taught `scripts/generate-corpus.rb`
+to emit an independent OMML-owned copy (`OMML_UNICODE_INVERT`,
+`OMML_SYMBOLS_INVERT` in `src/generated/omml/render-tables.ts`) — measured
+against a live `to_omml` render rather than assumed from the mathml table,
+using the repository's two-step generation protocol (source commit, then a
+data commit regenerated from a clean pinned oracle checkout, with two
+independent runs proving determinism). A name absent from BOTH tables is not
+a parity gap either: `Text#symbol_value` falls through to `nil`, and the
+surrounding `gsub` block substitutes the empty string for that (Ruby's
+block-return-nil rule) rather than raising — measured directly on the pinned
+oracle — so `src/render/text/omml.ts` renders it empty, and nothing in this
+area still refuses.
 
 ### MathML renderer: `options[:mask]` supports only the inert decoding
 
@@ -633,12 +648,13 @@ emits the rest of the data now measures and emits them into
   `Table::Matrix` render per `to_matrices` paren (the NoMethodError miss
   verified), a `Table::Array` render per alignment (the `.` fallback
   verified);
-- `COLOR_ASCIIMATH_SYMBOLS` — `to_asciimath` measured for exactly the ids the
-  renderer names (`Plus`, `Eqno`), each verified through a full `Color`
-  render.
+- `COLOR_ASCIIMATH_SYMBOLS` — widened to every static symbol class (1,459
+  ids, matching `MATHML_COLOR_SYMBOL_LITERALS`), each verified through a
+  full `Color` render; see "LaTeX: Color renders only the measured
+  AsciiMath fragment" below for the closure.
 
-All sixty-eight entries stay pinned by literal probe-backed tests
-(`test/generated/latex-render-tables.spec.ts` and the behavioural pins in
+All 1,525 entries across the six tables stay pinned by literal probe-backed
+tests (`test/generated/latex-render-tables.spec.ts` and the behavioural pins in
 `test/formats/latex/renderer.spec.ts`), independent of the generated data
 they check; a gem bump now re-measures the tables on regeneration.
 
@@ -766,49 +782,40 @@ those nondeterministic bytes, matching the policy already recorded for LaTeX's
 node-valued paren slots. Constructor-normalized Symbol/Paren and Number string or nil
 values still render byte-for-byte; forged container values refuse at the runtime boundary.
 
-### LaTeX: Color renders only the measured AsciiMath fragment
+### LaTeX renderer: `Color`'s attribute is the gem's one cross-format call
 
-**Trigger: corpus or sweep growth that exercises a new color operand.**
+**Trigger: a consumer report with a color argument beyond the measured
+shapes, or the P2 renderer round deciding a shared cross-format helper.**
 
-`Color`'s first slot renders through the gem's `to_asciimath`. The port
-carries only the measured fragment (base symbols, numbers, quoted text,
-formula joins, `Plus`, `Eqno`) and raises `RenderError` for other symbol ids
-the gem would render — a loud gap, not a silent wrong byte. (The generated
-color-asciimath slice landed 2026-08-06 carrying exactly this fragment; the
-gap itself remains until the corpus exercises more operands.)
+`Color#to_latex` builds its brace argument from `parameter_one.to_asciimath`
+(color.rb:41) — the latex path calling the asciimath renderer, which §3's
+independent format slices deliberately cannot do. The port reproduces the
+measured first-slot shapes from the latex slice's own generated literal
+table (`LATEX_COLOR_ASCIIMATH_SYMBOLS`): formulas/mrows of symbols, every
+static symbol id, numbers and texts. Any other first-slot node KIND (a
+`fontStyle` or `fenced` node renders its own full asciimath in the gem)
+raises a named `RenderError` instead of approximating a full asciimath
+render this format does not own — the same policy, and the same measured
+exception, MathML's `Color` entry above already carries.
 
-**The trigger fired, 2026-08-21.** Every gem-declared AsciiMath symbol token
-swept through `color(<token>)(y)` — 3,217 of them, the measured size of
-`Utility.symbols_hash(:asciimath)` on the pinned oracle (00c52783). 3,216
-parse to a top-level `Color`; only `-:` does not, and neither does the gem
-(both sides answer `c o l o r ( - \rangle ( y )`). Of those 3,216, `toLatex`
-raises for 3,209 and `toMathml` for 4.
-
-The seven `toLatex` does render (`+`, `#`, `&#x2b;`, `&#x23;`, `"P{plus}"`,
-`"P{eqno}"`, `"P{octothorpe}"`) are byte-identical to the gem, so the
-fragment is narrow, not wrong — and narrow is all the committed inputs ask
-for: the shared corpus has two color cases (`color(red)(x)`,
-`color(blue)(x) + y`) and the 1,642-input sweep three (`color(red)(x)`,
-`color(blue)(y+1)`, `color(#ff0000)(z)`), whose first slots between them
-need only letter symbols, a number and `Eqno`. Everything past that the gem
-renders and this port refuses: `color(alpha)(y)` is `{\color{alpha} y}` from
-the gem and a `RenderError` here, and an every-40th sample of the 3,217 came
-back from the gem as a `{\color{...} y}` render, 81 out of 81.
-
-Sized, now that the trigger has fired. 3,205 of the 3,209 refusals are one
-missing symbol literal each, over 1,393 distinct ids, against the 2 entries
-(`Plus`, `Eqno`) `LATEX_COLOR_ASCIIMATH_SYMBOLS` carries — and all 1,393 are
-already carried mathml-side by `MATHML_COLOR_SYMBOL_LITERALS`, whose 1,459
-entries are identical to `ASCIIMATH_SYMBOLS` key for key and value for
-value. So closing the bulk is the re-emission `generate-corpus.rb` already
-performs for the mathml slice, not new parity measurement. The remaining 4
-(`ZZ`, `:`, `:.`, `:'` — `fontStyle` and `fenced` nodes) are exactly the
-four `toMathml` refuses as well, and stay refused for the reason the mathml
-entry gives: their operand's render is a composite's full asciimath, which
-§3 keeps out of this format.
-
-The decision is unchanged — still DEFERRED. What changed is that it is a
-sized decision, and the trigger this entry names has now fired once.
+This was previously a sized, still-open gap: a 2026-08-21 sweep of every
+gem-declared AsciiMath symbol token through `color(<token>)(y)` — 3,217 of
+them, the measured size of `Utility.symbols_hash(:asciimath)` on the pinned
+oracle (00c52783) — found `toLatex` raising for 3,209 of the 3,216 that
+parse to a top-level `Color` (only `-:` does not parse, on either side).
+3,205 of those 3,209 were one missing symbol-id literal each, over 1,393
+distinct ids, against the 2 entries (`Plus`, `Eqno`)
+`LATEX_COLOR_ASCIIMATH_SYMBOLS` carried at the time — and all 1,393 turned
+out already measured, byte-identical, by `MATHML_COLOR_SYMBOL_LITERALS`
+(1,459 entries, key for key and value for value). Closing the bulk was the
+re-emission `generate-corpus.rb` already performs for the mathml slice, not
+new parity measurement — `latex_color_asciimath_symbols` now iterates
+`static_symbol_classes` exactly as `mathml_color_symbol_literals` does,
+2026-09-22. The remaining 4 (`ZZ`, `:`, `:.`, `:'` — tokens whose parsed
+first slot is a `fontStyle` or `fenced` composite) are exactly the four
+`toMathml` refuses too, and stay refused for the reason above: their
+operand's render is a composite's full asciimath, which §3 keeps out of
+this format.
 
 ### LaTeX: no symbol-exception context axis is threaded
 
@@ -1023,21 +1030,25 @@ entry:
 value, or a parser is added that can produce one, or the model schema gains
 Ruby type information for option values.
 
-### OMML: the four `to_omml` keywords refuse rather than render
+### OMML: two `to_omml` keywords refuse rather than render
 
-**Trigger: any one of the four gains a measured rendering path — display style
-when the recursive override is measured across the whole renderer, line
-breaking when Word's break-run separator is measured, the formatter with P4,
-and UnitsML when [ARCHITECTURE.md](../ARCHITECTURE.md) §5 stops deferring it
-wholesale.**
+**Trigger: `formatter` gains an OMML rendering path with B2's OMML number
+slice, and UnitsML when [ARCHITECTURE.md](../ARCHITECTURE.md) §5 stops
+deferring it wholesale.**
 
 `Formula#to_omml` accepts `display_style`, `split_on_linebreak`, `formatter`
-and `unitsml`. The port names each one and refuses it, rather than accepting
-the keyword and quietly ignoring what it asks for — a silently dropped option
+and `unitsml`. `display_style` and `split_on_linebreak` are implemented (B3);
+the port names the other two and refuses them, rather than accepting the
+keyword and quietly ignoring what it asks for — a silently dropped option
 renders plausible OMML that is not what the caller asked for, which is the
 failure this port refuses to have.
 
-`src/formats/omml/renderer.ts` carries the four reasons next to the refusal and
+The per-node `toOmmlWithoutMathTag` keeps refusing `displayStyle` and
+`splitOnLinebreak` by name too: the gem's `to_omml_without_math_tag` takes the
+display style as a positional argument and has no line splitting, so neither
+keyword belongs on it.
+
+`src/formats/omml/renderer.ts` carries the reasons next to the refusal and
 points here; this is the entry it points at.
 
 ### OMML: `fenced` refuses the paren shapes whose gem output is not reproducible

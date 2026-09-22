@@ -685,6 +685,7 @@ RULE_COVERAGE = {
   #   "√(ab&cd)"       rule 1538 {first_value: sequence, second_value: sequence}
   #   "ab''"           rule 1506 {first_value: sequence, prime_accent_symbols}
   #   "x\prime\prime"  rule 1404 {first_value, prime_accent_symbols: sequence}
+  #   "x\\prime\\prime"  rule 1404 {first_value, prime_accent_symbols: sequence}
   #   "a⃗+b"           rule 341  {accents, expr: sequence}
   #   "ⓐa x"           rule 2221 {arg, arg_arguments, first_value}
   "root_overunder" => [

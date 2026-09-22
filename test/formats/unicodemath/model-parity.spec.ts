@@ -99,6 +99,26 @@ const DEFERRED_INPUTS: readonly string[] = [
   // the SCRIPT/SUBSUP/BASE builders landed; it is a `supported` corpus row now.
   // The UNICODE SPACE rows (NBSP, THREE-PER-EM) that sat here compare for real
   // now that the space-run combinators are ported.
+  // route only through `hbracket_class`. The other three stay, blocked on
+  // machinery DECORATION does not touch: `"((a)̅)̅"` needs the `accents`/
+  // paren combination `{accents=other, close_paren=, open_paren=}` (the
+  // `atoms`-adjacent gap FRACTION's own header names). `"(y)┴(x)"`/
+  // `"(y)┬x"` moved out with `:969`/`:977`, and `"√(3&8)"`/`"√(n&x)"` with
+  // `:1530`; each now compares for real, as a corpus row.
+  "((a)̅)̅",
+
+  // SCRIPT (`transform.rb:118`-`:2403`): a right-associative double exponent.
+  "x^y^(z)",
+
+  // UNICODE SPACE characters, not runs of ASCII spaces — the distinction
+  // matters, because a plain-space literal here silently fails to match the
+  // fixture and the case quietly rejoins the parity list. Measured from the
+  // fixture bytes: NBSP (U+00A0) and THREE-PER-EM SPACE (U+2004). The grammar
+  // maps only the ASCII space today.
+  "a \u00a0\u00a0 b",
+  "a \u00a0\u00a0 b \u00a0\u00a0 c",
+  "a \u2004 b",
+  "a \u00a0\u00a0\u00a0\u00a0 b",
 ];
 
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");

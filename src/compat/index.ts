@@ -131,18 +131,13 @@ export default class Plurimath {
    *
    * The false path delegates with no options at all, which is exact:
    * measured on the pinned oracle, `to_mathml(intent: false)` is
-   * byte-identical to `to_mathml` with no keyword. The true path raises,
-   * because the intent pipeline is deferred and unmeasured — refusing is
-   * honest where inventing an `intent=` attribute would not be.
+   * byte-identical to `to_mathml` with no keyword. The true path is the
+   * renderer's `intent: true` (B4), which is the gem's pipeline; a tree it
+   * raises on (a lone `UpcaseDd`, among others) raises `RenderError` here as
+   * the gem's `ParseError` does there.
    */
   toMathml(intent: boolean = false): string {
-    if (intent) {
-      throw new UnsupportedFeatureError(
-        "toMathml(intent: true)",
-        "the intent attribute pipeline is deferred and unmeasured",
-      );
-    }
-    return toMathml(this.data);
+    return intent ? toMathml(this.data, { intent: true }) : toMathml(this.data);
   }
 
   toHtml(): string {

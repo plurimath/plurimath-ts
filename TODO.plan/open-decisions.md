@@ -15,6 +15,7 @@ Nothing here blocks the active phase.
 | npm package name and release line | maintainer | before first publish |
 | Bundle budgets | maintainer | during P1, from real numbers |
 | Symbol data as shared data | maintainer + gem | after P1 |
+| Root `parse(input, format, options)` function | maintainer | not yet set |
 
 ## UnitsML, and what it means for 1.0
 
@@ -364,3 +365,12 @@ this repo — the wide reading accepts hand-picked fixtures as counting toward
 coverage, it does not relax how they are measured, and it does not close the
 per-branch gap above; a future slice that wants per-branch assurance needs a
 different invariant, not a different reading of this one.
+
+## Root `parse()` function
+
+`ARCHITECTURE.md` §4 describes a root `parse(input, format, options)` that
+forwards to a format's parser. `src/index.ts` does not export one (it exports
+`Plurimath`, `FORMATS`, `Format` and `/core`), so today a caller reaches a
+parser only through a per-format subpath or the compat class. Whether to build
+it, and with what options shape, is undecided; the docs describe it as
+documented-but-unbuilt until then.

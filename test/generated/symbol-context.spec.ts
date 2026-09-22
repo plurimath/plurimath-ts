@@ -4,7 +4,7 @@
  * Named `symbol-context` because that is the filter the `symbol-context-matrix`
  * gate runs (`gates.json`, active from P1-completion). It checks the generated
  * matrix itself and, since the renderers landed, drives that matrix through them
- * — the table axis behaviourally, and the intent axis as an asserted refusal.
+ * — the table axis and, since B4, the intent axis, both behaviourally.
  *
  * The matrix is measured, not written: the generator renders every symbol
  * across every axis of the committed manifest and keeps only the ones whose
@@ -25,6 +25,7 @@ import {
   CONTEXT_DEPENDENT_SYMBOLS,
   DYNAMIC_SYMBOLS,
   HOST_TEMPLATES,
+  PROBE_FAILURES,
   PROBE_SUMMARY,
   VALUE_DEPENDENT_SYMBOLS,
 } from "../../src/generated/context-axes";
@@ -175,6 +176,7 @@ describe("the probe that produced the matrix", () => {
 import {
   BinaryFunctionNode,
   FormulaNode,
+  RenderError,
   SymbolNode,
   TableNode,
   UnaryFunctionNode,
@@ -256,34 +258,58 @@ describe("the table axis, behaviourally", () => {
   });
 });
 
-describe("the intent axis is unreachable, and says so rather than being skipped", () => {
+describe("the intent axis, behaviourally", () => {
   /**
    * Five of the six MathML exceptions vary only on `intent`, and `toMathml`
-   * REFUSES that option by name — the intent pipeline (intentify, intent
-   * post-processing) is unmeasured (`src/formats/mathml/renderer.ts`,
-   * `DEFERRED_OPTIONS`). So this gate cannot become fully behavioural until
-   * that deferral lifts, and pretending otherwise by covering only the
-   * reachable axes would overstate what it proves.
+   * takes that option since B4 (`src/formats/mathml/renderer.ts`). The matrix's
+   * variants are therefore driven through the renderer like the table axis is,
+   * instead of being asserted as a refusal: each variant's tag, text and
+   * attributes must be exactly what the port emits under the option value the
+   * variant names.
    */
   const IntentOnly = ["Dd", "Ii", "Intercal", "Jj", "UpcaseDd"];
+  const intentExceptions = MATHML_SYMBOL_EXCEPTIONS.filter(
+    (entry) => entry.axes.length === 1 && entry.axes[0] === "intent",
+  );
 
   it("names every exception that varies only on intent", () => {
-    const intentOnly = MATHML_SYMBOL_EXCEPTIONS.filter(
-      (entry) => entry.axes.length === 1 && entry.axes[0] === "intent",
-    ).map((entry) => entry.id);
-    expect(intentOnly.sort()).toStrictEqual([...IntentOnly].sort());
+    expect(intentExceptions.map((entry) => entry.id).sort()).toStrictEqual([...IntentOnly].sort());
   });
 
-  it("refuses the option, so the deferral is real and not merely documented", () => {
-    expect(() =>
-      toMathml(new FormulaNode({ value: [new SymbolNode({ id: "Dd" })] }), {
-        intent: true,
-      } as never),
-    ).toThrow(/intent/);
+  /**
+   * Hosted behind a variable rather than bare: a formula that is ONLY
+   * `UpcaseDd` raises under intent (the gem defect below), and `y` in front
+   * keeps `validate_upcase_dd_derivatives?` from reading a missing second node.
+   */
+  const hosted = (id: string) =>
+    new FormulaNode({ value: [new SymbolNode({ value: "y" }), new SymbolNode({ id })] });
+
+  it.each(
+    intentExceptions.flatMap((entry) =>
+      entry.variants.map((variant) => [entry.id, variant] as const),
+    ),
+  )("%s renders the matrix's variant", (id, variant) => {
+    const attributes = Object.entries(variant.attributes)
+      .map(([name, value]) => ` ${name}="${value}"`)
+      .join("");
+    const out = toMathml(hosted(id), { intent: variant.when.intent === true });
+    expect(out).toContain(`<${variant.tag}${attributes}>${variant.text}</${variant.tag}>`);
   });
 
-  it("renders the intent:false variant, which is the one the port does cover", () => {
-    // The exception's `intent: false` row is reachable and is what ships today.
+  it("reproduces the probes the gem itself raised on (a lone UpcaseDd, formula.rb:649)", () => {
+    const failures = PROBE_FAILURES.filter(
+      (probe) => probe.format === "mathml" && probe.context.startsWith("intent=true"),
+    );
+    expect(failures.length).toBeGreaterThan(0);
+    for (const probe of failures) {
+      expect(probe.id).toBe("UpcaseDd");
+      expect(() =>
+        toMathml(new FormulaNode({ value: [new SymbolNode({ id: probe.id })] }), { intent: true }),
+      ).toThrow(RenderError);
+    }
+  });
+
+  it("renders the intent:false variant with no intent attribute at all", () => {
     const out = toMathml(new FormulaNode({ value: [new SymbolNode({ id: "Dd" })] }));
     expect(out).toContain("&#x2146;");
     expect(out).not.toContain("intent=");

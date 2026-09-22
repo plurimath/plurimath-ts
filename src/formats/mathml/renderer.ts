@@ -33,19 +33,20 @@ import { createRenderContext, NO_SPACING_CONTEXT, SPACING_CONTEXT } from "./rend
 import {
   deferredFeatureError,
   FORMAT,
+  intentPostProcessing,
   isOwnMissingSymbolDataError,
   renderChild,
   unreachableName,
 } from "./render-shared";
 
 /**
- * Renderer options, typed exactly (§5): the four implemented axes
+ * Renderer options, typed exactly (§5): the five implemented axes
  * (`formatter` joined `displayStyle`/`unaryFunctionSpacing` with B2's Number
- * formatting slice, `splitOnLinebreak` with B3 — TODO.plan/feature-roadmap.md).
- * The still-deferred `to_mathml` keywords — `intent`, `unitsml` — are
- * deliberately NOT in this type; passing one (any value but `undefined`) is a
- * named `RenderError` at runtime (`TODO.plan/deferred.md` carries each entry
- * and its trigger). A key that is neither — one `to_mathml` has no keyword
+ * formatting slice, `splitOnLinebreak` with B3, `intent` with B4 —
+ * TODO.plan/feature-roadmap.md). The still-deferred `to_mathml` keyword —
+ * `unitsml` — is deliberately NOT in this type; passing it (any value but
+ * `undefined`) is a named `RenderError` at runtime (`TODO.plan/deferred.md`
+ * carries the entry and its trigger). A key that is neither — one `to_mathml` has no keyword
  * for at all — is refused by name too, at the entry (`ACCEPTED_OPTIONS`
  * below).
  */
@@ -81,6 +82,32 @@ export interface MathmlOptions {
    * style DEFAULT is the receiver's own, not each line's.
    */
   readonly splitOnLinebreak?: boolean | null | undefined;
+  /**
+   * The gem's `intent:` keyword, default false. Ruby truthiness: `null` (the
+   * gem's `nil`) is off, and so is an explicit `false` — measured
+   * byte-identical to leaving the keyword out. Every other JS-representable
+   * shape is on, byte-identical to `true` (measured against the oracle:
+   * `"false"`, `""`, `0`, `1`, `[]` and `{}` all match `intent: true`
+   * exactly, because the gem's `if intent` / `if intent` guards
+   * (`formula.rb`) are plain Ruby truthiness with no `.to_s` or numeric
+   * coercion — unlike `display_style`, which the gem does coerce via
+   * `.to_s == "true"`). The type below is widened to match; the runtime
+   * check at the call site (`intentValue !== undefined && intentValue !==
+   * null && intentValue !== false`) already implements this correctly for
+   * any shape and needs no change. When on, the renderer writes the MathML
+   * Core `intent` (and `arg`) attributes exactly as the gem's `intentify` /
+   * `intent_post_processing` do (`./intent-encoding.ts`,
+   * `./intent-post-processing.ts`); inputs on which the gem raises
+   * (a lone `UpcaseDd`, among others) raise `RenderError` here.
+   */
+  readonly intent?:
+    | boolean
+    | string
+    | number
+    | ReadonlyArray<unknown>
+    | Record<string, unknown>
+    | null
+    | undefined;
 }
 
 /**
@@ -105,22 +132,22 @@ const IMPLEMENTED_OPTIONS: { readonly [K in keyof Required<MathmlOptions>]: null
   unaryFunctionSpacing: null,
   formatter: null,
   splitOnLinebreak: null,
+  intent: null,
 };
 
 /** The still-deferred `to_mathml` keywords, each refused by name when present. */
 const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
-  ["intent", "the intent attribute pipeline (intentify, intent post-processing) is unmeasured"],
   ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md §5)"],
 ];
 
 /**
- * Every option key this entry accepts: the four implemented axes plus the
- * two still-deferred keywords. The deferred names belong here because
- * `to_mathml` really does take them — `intent:` and `unitsml:` are two of its
- * six keywords (formula.rb:76-83 on the pinned oracle; `formatter:` and
- * `split_on_linebreak:` moved from this list to `IMPLEMENTED_OPTIONS`
- * above) — so "unknown option" would be the wrong thing to say about one. They
- * are recognised, then refused by name with the reason, a few lines further
+ * Every option key this entry accepts: the five implemented axes plus the
+ * still-deferred keyword. The deferred name belongs here because `to_mathml`
+ * really does take it — `unitsml:` is one of its six keywords
+ * (formula.rb:76-83 on the pinned oracle; `formatter:`, `split_on_linebreak:`
+ * and `intent:` moved from this list to `IMPLEMENTED_OPTIONS` above) — so
+ * "unknown option" would be the wrong thing to say about it. It is
+ * recognised, then refused by name with the reason, a few lines further
  * down. Anything outside this list is a keyword `to_mathml` does not have
  * either, and is refused as unknown at the entry.
  */
@@ -200,6 +227,7 @@ function renderMath(
   const splitValue = Object.hasOwn(opts, "splitOnLinebreak") ? opts.splitOnLinebreak : undefined;
   if (splitValue !== undefined && splitValue !== null && splitValue !== false) {
     const inherited: Record<string, unknown> = {
+      intent: Object.hasOwn(opts, "intent") ? opts.intent : undefined,
       displayStyle: hasDisplayStyle(opts)
         ? opts.displayStyle
         : (node as { readonly displaystyle?: unknown }).displaystyle,
@@ -217,12 +245,14 @@ function renderMath(
     : undefined;
   const spacing =
     spacingValue === undefined ? true : spacingValue !== null && spacingValue !== false; // Ruby truthiness; nil compacts away
+  const intentValue = Object.hasOwn(opts, "intent") ? opts.intent : undefined;
+  const intent = intentValue !== undefined && intentValue !== null && intentValue !== false; // Ruby truthiness
   const context =
-    numberFormat === null
+    numberFormat === null && !intent
       ? spacing
         ? SPACING_CONTEXT
         : NO_SPACING_CONTEXT
-      : createRenderContext(spacing, numberFormat);
+      : createRenderContext(spacing, numberFormat, intent);
 
   const displayValue = hasDisplayStyle(opts)
     ? opts.displayStyle
@@ -246,9 +276,11 @@ function renderMath(
       node.kind,
     );
   }
-  for (const item of value) {
-    style.append(renderChild(item, context, `${node.kind}.value`));
-  }
+  const nodes = value.map((item) => renderChild(item, context, `${node.kind}.value`));
+  // `mathml_content` (formula.rb:133-139): the rendered children, then — under
+  // intent — the formula-level rewrite, in place, before they are appended.
+  if (intent) intentPostProcessing(nodes);
+  style.append(nodes);
   math.append(style);
 
   // `unitsml_post_processing` (formula.rb:450-473) rewrites elements

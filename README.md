@@ -23,8 +23,11 @@ drift apart silently.
 
 ## Status
 
-Early development. Nothing is published to npm under this name yet, and the
-package is still `private`; the name it will publish under is an open decision
+Early development. The AsciiMath vertical has landed — corpus, model, grammar
+and transform — along with six renderers, exported as the `./asciimath`,
+`./html`, `./latex`, `./mathml`, `./omml` and `./unicodemath` subpaths. The
+package is still `private`, and nothing is published to npm under this name
+yet; the name it will publish under is an open decision
 ([open-decisions.md](TODO.plan/open-decisions.md#npm-package-name-and-release-line)).
 
 Measured against the built package (`pnpm build`, then `dist/`):

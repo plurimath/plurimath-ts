@@ -12,7 +12,7 @@ generator:
     scripts/probe-degenerate-slots.rb: ff67285d9741ce87311c506d610af80473fd4bd019e9c32c2a234b681618dab9
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 31e6bc6b04a369e62a9647ed7c27f81fb5bb99a4
+    commit: ab1dd6d7aa9d0ab72fef8d9d49e91c9cbcce79a3
     clean: true
     dirty_paths: []
   inventory:

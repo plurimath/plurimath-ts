@@ -114,11 +114,12 @@ function reduce(entry: PinnedCallCase): Reduced {
 const ALL = loadPinnedCorpus().calls.map(reduce);
 
 /**
- * In scope: only this slice's keys, no `string_format` (B2-O's), and locale
- * `en`. The locale-symbol cases are not this slice's — see the last group.
+ * In scope: only this slice's keys and no `string_format` (B2-O's). Locale is
+ * not a filter: `formatter.locale` is inert, as on the oracle, so the `-de-`,
+ * `-fr-` and unsupported-locale cases run here like any other.
  */
 const IN_SCOPE = ALL.filter(
-  (c) => c.keys.every((k) => IN_SCOPE_KEYS.has(k)) && c.stringFormat === null && c.locale === "en",
+  (c) => c.keys.every((k) => IN_SCOPE_KEYS.has(k)) && c.stringFormat === null,
 );
 
 function buildFormula(entry: PinnedCallCase): ConstructedMathNode {
@@ -127,7 +128,7 @@ function buildFormula(entry: PinnedCallCase): ConstructedMathNode {
 }
 
 describe("pinned calls/1 cases — the sets this spec partitions", () => {
-  it("has 66 cases, and every one but a string_format or non-en case is in scope", () => {
+  it("has 66 cases, and every one but a string_format case is in scope", () => {
     // 66 is measured, not recalled: the count of `corpus.calls` under the pinned testsuite.
     expect(ALL).toHaveLength(66);
     expect(IN_SCOPE.length).toBeGreaterThan(0);
@@ -149,6 +150,10 @@ describe("pinned calls/1 cases — the sets this spec partitions", () => {
       "sign-plus-scientific",
       "sign-plus-engineering",
       "base-",
+      "locale-de-standard-defaults",
+      "locale-fr-standard-defaults",
+      "locale-unsupported-falls-back",
+      "locale-de-explicit-separators",
     ]) {
       expect(
         ids.some((id) => id.includes(stem)),
@@ -353,23 +358,5 @@ describe("option validation", () => {
   it("refuses a non-string padding and number sign", () => {
     refuses({ options: { padding: 0 } } as never, /padding/);
     refuses({ options: { numberSign: true } } as never, /numberSign/);
-  });
-});
-
-describe("the locale-symbol cases (not this slice's)", () => {
-  it("names the four cases this spec leaves to the locale lane", () => {
-    // Measured through the port when this slice was written: -de- and -fr-
-    // standard-defaults answer the locale's own symbols ("1.234.567,891") where the oracle's
-    // Standard answers the "en" ones ("1,234,567.891") — see number-format.ts's header; the
-    // -unsupported-falls-back case (locale "xx") is refused where the gem falls back to "en";
-    // only -de-explicit-separators matches. None of that is numeric-pipeline behavior, and
-    // none of it is changed here.
-    const locale = ALL.filter((c) => c.locale !== "en").map((c) => c.entry.id);
-    expect(locale).toStrictEqual([
-      "number-formatter-locale-de-standard-defaults",
-      "number-formatter-locale-fr-standard-defaults",
-      "number-formatter-locale-unsupported-falls-back",
-      "number-formatter-locale-de-explicit-separators",
-    ]);
   });
 });

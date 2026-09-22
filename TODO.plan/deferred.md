@@ -550,6 +550,70 @@ per key, because Parslet binds on the matcher kind too — are listed as
 refused, because for this port that would mean a rule family the first slice has
 not reached.
 
+### `Formatter::Standard` ignores `locale:` for the decimal and group symbols
+
+```ruby
+Plurimath::Formatter::Standard.new(locale: "de").localized_number("1234567.891")
+# => "1,234,567.891"   (German symbols would be "1.234.567,891")
+Plurimath::NumberFormatter.new("de").localized_number("1234567.891")
+# => "1.234.567,891"   (the base class does apply the locale)
+```
+
+`Standard#set_default_options` fills every `DEFAULT_OPTIONS` key, including
+`decimal: "."` and `group: ","`, into the options hash before
+`SymbolResolver#resolve` merges the locale's `SupportedLocales` entry underneath
+it (`locale_symbols.merge(localizer_symbols_hash)`), so the locale never
+supplies anything. `decimal` and `group` are the only two keys any of the 96
+entries carries, so `locale:` is fully inert through `Standard`: measured on the
+oracle (`00c52783`) for `"1234567.891234"` in asciimath, latex, html, mathml,
+omml and unicodemath, `locale:` of `"en"`, `"de"`, `"fr"`, `"de-CH"`, `"ar"`,
+`"xx"`, `nil`, `42`, `:de` and `"DE"` all answer `1,234,567.891'234`; an
+unknown or non-string locale falls back to `:en` without raising
+(`NumberFormatter#supported_locale`).
+
+Evidence: pinned corpus cases `number-formatter-locale-de-standard-defaults`,
+`number-formatter-locale-fr-standard-defaults` and
+`number-formatter-locale-unsupported-falls-back` record the en symbols.
+Reproduce with `BUNDLE_GEMFILE=~/ruby_gems/plurimath-oracle/Gemfile mise x --
+bundle exec ruby -e 'require "plurimath"; puts Plurimath::Formatter::Standard.new(locale: "de").localized_number("1234567.891")'`.
+
+**The port reproduces this on purpose.** It stays byte-exact with the oracle
+(decision 2026-09-21): `resolveNumberFormat` accepts `locale` and ignores it,
+and `test/formatting/number-format-locales.spec.ts` plus the three corpus cases
+in `number-formatter-numeric-pipeline.spec.ts` pin it. The fix is scheduled for
+BOTH the Ruby gem and this port, after the byte-identical structure is
+complete: make `Standard` layer the locale's symbols under explicit options,
+then re-record the corpus and flip the port together. Not yet reported upstream.
+
+### Typed-options refuse the gem's numeric-String/Symbol coercions
+
+**Intentional, not a gap.** Three `formatter.options` fields the gem coerces
+from a numeric String (or Symbol) are typed as numbers/strings in this port
+and refuse a String/Symbol value instead of coercing it:
+
+- `countOption` (`src/formatting/number-format.ts:206`) — the count options
+  (`groupDigits`, `fractionGroupDigits`, `digitCount`, `paddingDigits`,
+  `paddingGroupDigits`, `significant`) — the gem's `integer_option` accepts a
+  numeric String/Symbol (`"3"`, `:"3"`) and coerces it; this port's fields are
+  typed `number`, so a string is refused rather than coerced.
+- `separatorOption` (`src/formatting/number-format.ts:275`) — the
+  decimal/group/fraction-group markers — the gem stringifies any non-Boolean
+  value (`to_s`/`inspect`) before use; this port's fields are typed `string`,
+  so a non-string (other than the handled `undefined`/`null`) is refused
+  rather than stringified.
+- `baseOption` (`src/formatting/number-format.ts:328`) — the `base` option —
+  the gem accepts a numeric String (`"16"`) and coerces it; this port's field
+  is typed `number`, so a string is refused rather than coerced.
+
+Each divergence is a typed-API boundary, the same shape as the locale
+divergence above: the gem's dynamically-typed `options` Hash accepts whatever
+Ruby can stringify, while this port's `FormatterSymbolOptions` fields are
+typed TypeScript numbers/strings. None of the three is reachable through valid
+typed TypeScript usage — only through a runtime cast or otherwise misusing the
+type system (`as never`, `any`, a `.js` caller) would a numeric-String value
+ever reach one of these functions. Not scheduled for a fix: there is no
+Ruby-gem defect to mirror here, unlike the locale case above.
+
 ## Parked ideas
 
 ### Entity handling in the P3 input parsers

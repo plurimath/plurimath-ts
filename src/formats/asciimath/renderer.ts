@@ -40,10 +40,10 @@ import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
  * (TODO.plan/feature-roadmap.md, "Number formatting"; TODO.plan/
  * open-decisions.md, "Number-formatter API shape") — `Formatter::Standard`'s
  * symbols and numeric pipeline (precision, significant digits, digit count,
- * padding, number sign), resolved by `resolveNumberFormat`
- * (`../../formatting/number-format.ts`), which itself refuses by name every
- * field of the gem's `formatter:` keyword not yet implemented
- * (notation, base, string format). The gem's other
+ * padding, number sign, notation, base), resolved by `resolveNumberFormat`
+ * (`../../formatting/number-format.ts`), which itself refuses by name the
+ * one field of the gem's `formatter:` keyword still not implemented
+ * (`string_format`). The gem's other
  * two `to_asciimath` keywords — `unitsml:`, `options:` (formula.rb:66 on the
  * pinned oracle) — are still not implemented at all.
  */

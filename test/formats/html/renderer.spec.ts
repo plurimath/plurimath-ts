@@ -859,7 +859,8 @@ describe("HTML measured boundary refusals", () => {
     // class itself has no `to_html` of its own and stays refused.
     expectHtmlError(() => toHtml(new TernaryFunctionNode({ name: "TernaryFunction" })), {
       kind: "ternaryFunction",
-      message: 'TernaryFunction alias "TernaryFunction" has not been measured for HTML in this slice',
+      message:
+        'TernaryFunction alias "TernaryFunction" has not been measured for HTML in this slice',
     });
   });
 

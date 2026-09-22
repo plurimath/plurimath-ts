@@ -359,7 +359,10 @@ function renderTr(node: NodeOf<"unaryFunction">, context: RenderContext): OmmlRe
  */
 function renderSup(node: NodeOf<"unaryFunction">, context: RenderContext): OmmlRendered {
   const nameRun = present(node.hideFunctionName) ? [] : [plainRun("sup")];
-  return [...nameRun, ...renderUnaryValue(node.parameterOne, context, node.kind, "sup.parameterOne")];
+  return [
+    ...nameRun,
+    ...renderUnaryValue(node.parameterOne, context, node.kind, "sup.parameterOne"),
+  ];
 }
 
 /** The slot as an options record — `Mglyph.new`'s default and the only shape measured. */
@@ -394,7 +397,9 @@ function mglyphIndex(value: unknown, kind: string): number {
 
 /** `Mglyph#ignoring_index` (`mglyph.rb:66-70`). */
 function mglyphIgnoringIndex(index: number): boolean {
-  return index === 0 || (index < 32 && ![9, 10, 13].includes(index)) || [65534, 65535].includes(index);
+  return (
+    index === 0 || (index < 32 && ![9, 10, 13].includes(index)) || [65534, 65535].includes(index)
+  );
 }
 
 /** `parameter_one[:alt].to_s` — nil answers `""`, a string is itself. */

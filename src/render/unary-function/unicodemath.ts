@@ -337,7 +337,11 @@ function renderTr(node: NodeOf<"unaryFunction">, context: RenderContext): string
  * slot raises calling `map`), and each member is read WITHOUT `&.` (a nil
  * entry raises too).
  */
-function renderMsgroupList(value: NodeParameter | undefined, context: RenderContext, kind: string): string {
+function renderMsgroupList(
+  value: NodeParameter | undefined,
+  context: RenderContext,
+  kind: string,
+): string {
   if (!Array.isArray(value)) {
     throw new RenderError(
       `msgroup.parameterOne: is ${describeSlot(value)}, not a list — the gem raises NoMethodError calling map`,

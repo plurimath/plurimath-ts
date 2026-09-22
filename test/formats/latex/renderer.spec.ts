@@ -111,7 +111,9 @@ describe("unary functions", () => {
     // `Underover` renders now (measured and case-armed in
     // `src/render/ternary-function/latex.ts`); the base `TernaryFunction`
     // class itself has no `to_latex` of its own and stays refused.
-    expect(() => toLatex(new TernaryFunctionNode({ name: "TernaryFunction" }))).toThrow(RenderError);
+    expect(() => toLatex(new TernaryFunctionNode({ name: "TernaryFunction" }))).toThrow(
+      RenderError,
+    );
   });
 
   /**

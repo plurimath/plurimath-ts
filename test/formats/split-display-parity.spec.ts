@@ -103,10 +103,7 @@ const CENSUS_ALIASES = aliasIndex(readCensus());
  */
 const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonly string[] } = {
   mathml: [],
-  omml: [
-    "line-break-073",
-    "line-break-073-display-false",
-  ],
+  omml: ["line-break-073", "line-break-073-display-false"],
 };
 /** What a kind renderer says when it has not measured a kind, alias or slot. */
 const KIND_REFUSAL =

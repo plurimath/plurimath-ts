@@ -130,8 +130,7 @@ function load(format: Format): readonly Row[] {
   // options — and which `split-display-parity.spec.ts` owns instead).
   return fixture.cases.filter(
     (row) =>
-      row.group === GROUP ||
-      (row.group === "underover" && Object.keys(row.options).length === 0),
+      row.group === GROUP || (row.group === "underover" && Object.keys(row.options).length === 0),
   );
 }
 

@@ -417,7 +417,11 @@ function renderTr(node: NodeOf<"unaryFunction">, context: RenderContext): string
  * param.to_latex(options:) }.join`. Like the asciimath twin, the slot must be
  * a list and each member is read without `&.`.
  */
-function renderMsgroupList(value: NodeParameter | undefined, context: RenderContext, kind: string): string {
+function renderMsgroupList(
+  value: NodeParameter | undefined,
+  context: RenderContext,
+  kind: string,
+): string {
   if (!Array.isArray(value)) {
     throw new RenderError(
       `msgroup.parameterOne: is ${describeSlot(value)}, not a list — the gem raises NoMethodError calling map`,

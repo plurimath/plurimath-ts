@@ -48,7 +48,7 @@ export const UNICODEMATH_PARSER_GENERATED_PROVENANCE: UnicodemathParserGenerated
     ],
     [
       "scripts/generate-corpus.rb",
-      "60afefa7bccb49b7f801c27a0fe3ce7605c63cd2e4afdccea7d4125fff2c01b3",
+      "54d7b3f2a691c63c26d5c5667c6690da32098a4a5e0a9aa5207e3a73d796074b",
     ],
     [
       "scripts/generate-unicodemath-parser-data.rb",

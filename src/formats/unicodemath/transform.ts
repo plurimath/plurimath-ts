@@ -2884,8 +2884,8 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // the plain, option-free shape the corpus already reaches; these six are its
   // option-carrying siblings, each still `numerator: simple, denominator:
   // simple` so none needs the `atoms`/`recursive_numerator` combinator the
-  // other ten `Utility.fractions` call sites depend on (deferred; see the
-  // header).
+  // other ten `Utility.fractions` call sites once depended on — those ten are
+  // ported too, registered just below (see the header).
   rule(
     "1614",
     { mini_numerator: simple("numerator"), mini_denominator: simple("denominator") },

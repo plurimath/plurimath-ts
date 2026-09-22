@@ -145,8 +145,9 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
 #
 # The other ten call sites — `:1619`, `:1624`, `:1629`, `:1634`, `:1639`,
 # `:1644`, `:2203`, `:2359`, `:2365`, `:2371` — all need a `sequence` numerator
-# or denominator and are deferred with the `atoms` combinator they depend on,
-# not carried by any input here.
+# or denominator; they turned out not to need the `atoms` combinator this
+# comment once expected, and are ported and covered by the "fractions_seq"
+# group below, not carried by any input here.
 #
 # "table": the `Td`/`Tr`/`Table`/`Mlabeledtr` family, measured at EIGHTEEN
 # rules, not the seventeen a prior survey counted (`transform.ts`'s module
@@ -287,15 +288,16 @@ RULE_COVERAGE_NARY_INPUTS = [
 # "atoms": the `{atom:, atoms:}` combinator (`grammar.ts:668`-`:670`,
 # `common_rules.rb:9-11`, `transform.rb:486`/`:496`) and `:1851`, the one
 # further `atom:`-keyed site (`atom`, `exclamation_symbol`) reachable WITHOUT
-# also wiring FRACTION's still-deferred SEQUENCE-numerator/denominator family
-# (`transform.rb:1619`-`:2371`) — every OTHER `atom:` site with a third key
+# also wiring FRACTION's SEQUENCE-numerator/denominator family
+# (`transform.rb:1619`-`:2371`, ported and covered by the "fractions_seq" group
+# above) — every OTHER `atom:` site with a third key
 # (`recursive_numerator`/`recursive_denominator`/`binary_symbols`/`operator`)
-# only ever appears inside a fraction's `numerator`/`denominator`, so its
-# result always lands back on one of those ten still-unported rules and can
-# never reach a passing parse on its own; `transform.ts`'s own comment at
-# `:735` records the measured input (`"1/a(b)"`, firing `:675` exactly as
-# coded there) that proves the point rather than asserting it. Measured on
-# the oracle, one input per rule:
+# only ever appears inside a fraction's `numerator`/`denominator`, and most of
+# those still land on a rule this slice does not carry for reasons outside
+# the fraction family itself (see `transform.ts`'s own accounting beside
+# `:675`); `transform.ts`'s own comment at `:735` records the measured input
+# (`"1/a(b)"`, firing `:675` exactly as coded there) that proves the point
+# rather than asserting it. Measured on the oracle, one input per rule:
 #
 #   "abc"  rule 486 (2-atom fold) + 496 (3rd atom onto the fold) + 49 (`:39`'s
 #          SEQUENCE twin, unwrapping the folded array off `factor`)

@@ -207,7 +207,193 @@ describe("each method renders the gem's bytes", () => {
   });
 });
 
-describe("the one method that cannot be honest yet, and the one that now is", () => {
+/**
+ * `toDisplay`, reached the way `plurimath-js` reaches it: a JS string
+ * compiled and RUN through Opal, not native Ruby. Opal compiles the gem's
+ * `case type; when :asciimath ...` to a JS `$eqeqeq` helper that, for a
+ * `Symbol === String` comparison, takes a fast path of plain JS `===`
+ * (Opal's `Symbol` literals ARE JS strings at runtime) — measured by
+ * compiling the exact `case`/`when` shape from `formula.rb:203-215` with
+ * Opal 1.8.3 (the version `plurimath-js` pins) and running the compiled JS
+ * with Node (`scripts/probe-opal-to-display.{rb,mjs}`; the full account,
+ * including why a standalone extraction rather than the full gem, is
+ * `src/compat/to-display.ts`'s module doc). So:
+ *
+ *   - a LOWERCASE valid name ("asciimath", "latex", "mathml", "omml",
+ *     "unicodemath") reaches the real per-node `to_<format>_math_zone` tree
+ *     dump, and its bytes DEPEND on the formula's content;
+ *   - an UPPERCASE or MIXED-CASE valid name ("LATEX", "Asciimath", …) is
+ *     still accepted by the type-validity check (which downcases before
+ *     checking membership) but matches no `case` arm, so it falls through
+ *     to the bare `"|_ Math zone\n"` placeholder — and THAT is content
+ *     independent, because no renderer ever runs on that path.
+ *
+ * Measured on the pinned oracle (`00c52783`), calling `to_display` with a
+ * real Symbol (proven equivalent to Opal's lowercase-string path by the
+ * measurement above):
+ *
+ *   bundle exec ruby -e 'require "plurimath";
+ *     f = Plurimath::Asciimath.new("frac(1)(2)").to_formula;
+ *     puts f.to_display(:asciimath).inspect'
+ *   # => "|_ Math zone\n  |_ \"frac(1)(2)\"\n     |_ \"frac(1)(2)\" fraction\n        |_ \"1\" numerator\n        |_ \"2\" denominator\n"
+ *
+ * (repeated with `:latex`/`:mathml`/`:omml`/`:unicodemath` for the other
+ * formats below, and with `:latex` on `Asciimath.new("alpha")`,
+ * `Asciimath.new("x^2")`, `Asciimath.new("sqrt(2)")` for the other node
+ * kinds this suite pins).
+ */
+describe("toDisplay", () => {
+  const ValidLangs = ["asciimath", "latex", "mathml", "omml", "unicodemath"] as const;
+
+  describe("a lowercase valid name reaches the real tree dump", () => {
+    it("asciimath", () => {
+      expect(build().toDisplay("asciimath")).toBe(
+        '|_ Math zone\n  |_ "frac(1)(2)"\n     |_ "frac(1)(2)" fraction\n' +
+          '        |_ "1" numerator\n        |_ "2" denominator\n',
+      );
+    });
+
+    it("latex", () => {
+      expect(build().toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "\\frac{1}{2}"\n     |_ "\\frac{1}{2}" fraction\n' +
+          '        |_ "1" numerator\n        |_ "2" denominator\n',
+      );
+    });
+
+    it("unicodemath", () => {
+      expect(build().toDisplay("unicodemath")).toBe(
+        '|_ Math zone\n  |_ "(1)/(2)"\n     |_ "(1)/(2)" fraction\n' +
+          '        |_ "1" numerator\n        |_ "2" denominator\n',
+      );
+    });
+
+    /**
+     * mathml/omml assert against the CONSTRUCT's own `toMathml`/`toOmml` for
+     * the root line (collapsed to one line, exactly as the gem's own
+     * newline-collapsing gsub does), rather than a giant literal, to keep this
+     * spec from being a second, harder-to-audit copy of the xmlns block
+     * `toMathml`/`toOmml` are already pinned against elsewhere in this file.
+     * The tree body's labeled lines ARE literal, oracle-measured strings.
+     */
+    it("mathml", () => {
+      const dump = build().toDisplay("mathml");
+      const collapsedRoot = build().toMathml().replace(/\n\s*/g, "");
+      expect(dump).toBe(
+        `|_ Math zone\n  |_ "${collapsedRoot}"\n` +
+          '     |_ "<mfrac><mn>1</mn><mn>2</mn></mfrac>" fraction\n' +
+          '        |_ "<mn>1</mn>" numerator\n        |_ "<mn>2</mn>" denominator\n',
+      );
+    });
+
+    it("omml", () => {
+      const dump = build().toDisplay("omml");
+      const collapsedRoot = build().toOmml().replace(/\n\s*/g, "");
+      const fragment =
+        '<m:f><m:fPr><m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math" ' +
+        'w:hAnsi="Cambria Math"/><w:i/></w:rPr></m:ctrlPr></m:fPr>' +
+        "<m:num><m:r><m:t>1</m:t></m:r></m:num><m:den><m:r><m:t>2</m:t></m:r></m:den></m:f>";
+      expect(dump).toBe(
+        `|_ Math zone\n  |_ "${collapsedRoot}"\n` +
+          `     |_ "${fragment}" fraction\n` +
+          '        |_ "<m:t>1</m:t>" numerator\n        |_ "<m:t>2</m:t>" denominator\n',
+      );
+    });
+
+    it("a Symbol leaf (unmerged: not one of plus/minus/circ/equal) prints as a quoted text line", () => {
+      expect(new Plurimath("alpha", "asciimath").toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "\\alpha"\n     |_ "\\alpha" text\n',
+      );
+    });
+
+    it("a BinaryFunction alias (Power, via the generic FUNCTION table) prints base/script", () => {
+      expect(new Plurimath("x^2", "asciimath").toDisplay("asciimath")).toBe(
+        '|_ Math zone\n  |_ "x^(2)"\n     |_ "x^(2)" superscript\n' +
+          '        |_ "x" base\n        |_ "2" script\n',
+      );
+    });
+
+    it("a UnaryFunction (Sqrt) prints the function-apply/function-name/argument shape", () => {
+      expect(new Plurimath("sqrt(2)", "asciimath").toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "\\sqrt{2}"\n     |_ "\\sqrt{2}" function apply\n' +
+          '        |_ "sqrt" function name\n        |_ "2" argument\n',
+      );
+    });
+
+    it("Fenced is a transparent pass-through whose merge-eligible children fold into one text run", () => {
+      expect(new Plurimath("(x+1)", "asciimath").toDisplay("asciimath")).toBe(
+        '|_ Math zone\n  |_ "(x + 1)"\n     |_ "x + 1" text\n',
+      );
+    });
+  });
+
+  describe("an uppercase or mixed-case valid name is the content-independent placeholder", () => {
+    it.each(["LATEX", "ASCIIMATH", "MATHML", "OMML", "UNICODEMATH", "Asciimath", "AsciiMath"])(
+      "%s",
+      (lang) => {
+        expect(build().toDisplay(lang)).toBe("|_ Math zone\n");
+      },
+    );
+
+    it("does not depend on the formula's content, unlike the lowercase path", () => {
+      const simple = new Plurimath("2", "asciimath").toDisplay("LATEX");
+      const frac = build().toDisplay("LATEX");
+      expect(simple).toBe("|_ Math zone\n");
+      expect(frac).toBe("|_ Math zone\n");
+      expect(simple).toBe(frac);
+      // The lowercase path, by contrast, DOES depend on content — this is
+      // the split the placeholder case-insensitivity previously erased.
+      expect(new Plurimath("2", "asciimath").toDisplay("latex")).not.toBe(
+        build().toDisplay("latex"),
+      );
+    });
+  });
+
+  it.each(ValidLangs)(
+    "a lowercase name's validity is unaffected by case-insensitivity (%s stays valid)",
+    (lang) => {
+      expect(() => build().toDisplay(lang)).not.toThrow();
+    },
+  );
+
+  it("rejects `html`, which is not one of the gem's MATH_ZONE_TYPES", () => {
+    expect(() => build().toDisplay("html")).toThrow(UnsupportedFormatError);
+  });
+
+  /**
+   * The constructor's `Format` union spells this input door `unicode`
+   * (`FORMATS` above); `to_display`'s type token is the gem's own spelling,
+   * `unicodemath`, and does not accept the constructor's name.
+   */
+  it("rejects `unicode`, distinct from the constructor's own format name", () => {
+    expect(() => build().toDisplay("unicode")).toThrow(UnsupportedFormatError);
+  });
+
+  it("names the rejected lang in the thrown error", () => {
+    expect(() => build().toDisplay("html")).toThrow(/html/);
+  });
+
+  /**
+   * Scoped out, not guessed: the gem's own `Nary` class defines no
+   * `to_*_math_zone` at all (`Math::Function::Nary < Core`), so this port
+   * refuses rather than fabricate one. `FontStyle`/`Vec`/`Substack`/
+   * `Msgroup`/`Unitsml` and OMML's own `Color` are refused the same way —
+   * see `src/compat/to-display.ts`'s module doc for the full, named list.
+   */
+  it("names the class and format when a scoped-out node kind is reached", () => {
+    // `bb x` (bold `x`) parses to a `FontStyle` node (measured:
+    // `Plurimath::Asciimath.new("bb x").to_formula` is one `FontStyle::Bold`
+    // wrapping a `Symbol`) -- FontStyle overrides the generic UnaryFunction
+    // shape with a bespoke "font family" header this slice does not carry
+    // (see `src/compat/to-display.ts`'s module doc), so every lowercase
+    // format refuses it rather than guess the wrong header shape.
+    expect(() => new Plurimath("bb x", "asciimath").toDisplay("asciimath")).toThrow(
+      UnsupportedFeatureError,
+    );
+    expect(() => new Plurimath("bb x", "asciimath").toDisplay("asciimath")).toThrow(/fontStyle/);
+  });
+});
+
+describe("the one method that cannot be honest yet", () => {
   /**
    * Measured on the oracle: `to_mathml(intent: false)` is byte-identical to
    * `to_mathml` with no keyword, so delegating the default path loses nothing.

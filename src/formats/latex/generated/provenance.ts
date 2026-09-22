@@ -47,7 +47,7 @@ export const LATEX_PARSER_GENERATED_PROVENANCE: LatexParserGeneratedProvenance =
     ],
     [
       "scripts/generate-corpus.rb",
-      "60afefa7bccb49b7f801c27a0fe3ce7605c63cd2e4afdccea7d4125fff2c01b3",
+      "cf156b8745fd974fb5fcc44781b0519d623c71e430fafab21fc779473c0738e9",
     ],
     [
       "scripts/generate-latex-parser-data.rb",

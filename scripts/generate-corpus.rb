@@ -3991,6 +3991,80 @@ module CorpusGenerator
     ).to_omml
   end
 
+  def omml_probe_formula(node)
+    Plurimath::Math::Formula.new([node]).to_omml
+  end
+
+  # `Text#symbol_value` (text.rb:126-129), the OMML half:
+  #
+  #     Mathml::Constants::UNICODE_SYMBOLS.invert[unicode] ||
+  #       Mathml::Constants::SYMBOLS.invert[unicode]
+  #
+  # is reached from `parse_text("omml")` exactly as it is from
+  # `parse_text("mathml")` — the same Ruby constant, the same invert, no
+  # OMML-specific data anywhere in the gem. `../generated/mathml/render-tables.ts`
+  # already carries this table for the mathml renderer, but §3 rule 4 forbids
+  # an omml kind file reading another format's generated slice, so this is a
+  # second, independently-measured OMML copy: same source constant, verified
+  # against a live `to_omml` render instead of `to_mathml`.
+  #
+  # `Mathml::Constants::UNICODE_SYMBOLS.invert`, name -> entity, in Ruby's
+  # invert order (last write wins — asserted collision-free by the mathml
+  # measurement this mirrors, so the order is not load-bearing here either).
+  def omml_unicode_invert
+    raw = Plurimath::Mathml::Constants::UNICODE_SYMBOLS
+    inverted = raw.invert.to_h { |name, entity| [name.to_s, entity.to_s] }
+    raise Error, "UNICODE_SYMBOLS is empty" if inverted.empty?
+
+    inverted.each do |name, entity|
+      next unless name.match?(/\A\w+\z/)
+
+      rendered = omml_probe_formula(Plurimath::Math::Function::Text.new("unicode[:#{name}]"))
+      next if rendered.include?("<m:t>#{entity}</m:t>")
+
+      raise Error, "Text unicode[:#{name}] rendered #{rendered.inspect}, " \
+                   "not containing <m:t>#{entity}</m:t>; the OMML invert table drifted"
+    end
+
+    inverted
+  end
+
+  # `Mathml::Constants::SYMBOLS.invert`, `Text#symbol_value`'s fallback lookup
+  # on the OMML path — the same mirror `omml_unicode_invert` documents above.
+  def omml_symbols_invert
+    inverted = Plurimath::Mathml::Constants::SYMBOLS.invert
+      .to_h { |name, text| [name.to_s, text.to_s] }
+    raise Error, "SYMBOLS is empty" if inverted.empty?
+
+    unicode_names = Plurimath::Mathml::Constants::UNICODE_SYMBOLS.values.map(&:to_s)
+    inverted.each do |name, text|
+      next unless name.match?(/\A\w+\z/)
+      # A name UNICODE_SYMBOLS also carries never reaches this fallback.
+      next if unicode_names.include?(name)
+
+      rendered = omml_probe_formula(Plurimath::Math::Function::Text.new("unicode[:#{name}]"))
+      next if rendered.include?("<m:t>#{text}</m:t>")
+
+      raise Error, "Text unicode[:#{name}] rendered #{rendered.inspect}, not containing " \
+                   "<m:t>#{text}</m:t>; the OMML SYMBOLS fallback drifted"
+    end
+
+    inverted
+  end
+
+  # `Text#symbol_value` falls through to `nil` when neither table carries the
+  # name — `parse_text`'s surrounding `gsub` block then substitutes the empty
+  # string (Ruby's block-return-nil rule), so an unmeasured
+  # `unicode[:name]` is not a parity gap: it is the gem's own miss behaviour.
+  # Measured directly: `Text.new("unicode[:nosuchname]")` on the pinned oracle
+  # renders `<m:t></m:t>`, no exception.
+  def build_omml_render_tables
+    {
+      "unicode_invert" => omml_unicode_invert,
+      "symbols_invert" => omml_symbols_invert,
+    }
+  end
+
   # The two extra exports the omml slice carries beyond the payload map.
   def omml_tag_name_sections(tag_names, total)
     overrides = tag_names.fetch("overrides")
@@ -4816,6 +4890,56 @@ module CorpusGenerator
     write_ts(File.join(out_root, "unicodemath", "render-tables.ts"), sections)
   end
 
+  def emit_omml_render_tables_file(out_root, tables)
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        OMML render tables: the one lookup `Text#to_omml_without_math_tag`
+        reads that `../symbols.ts`'s per-class literals do not supply,
+        consumed by `src/render/text/omml.ts`.
+
+        `Text#symbol_value` (text.rb:126-129) inverts
+        `Mathml::Constants::UNICODE_SYMBOLS` and `SYMBOLS` — the SAME Ruby
+        constant the mathml render-tables slice inverts for its own
+        `MATHML_UNICODE_INVERT`/`MATHML_SYMBOLS_INVERT`. The two exports below
+        are byte-identical to those, but generated and verified as this
+        format's own copy: ARCHITECTURE.md §3 rule 4 forbids an omml kind file
+        importing another format's `generated/` slice, so the omml renderer
+        needs its own. Every entry whose key is reachable through the
+        grammar's `unicode[:\w+]` name syntax is re-verified through a live
+        `to_omml` render (`<m:t>…</m:t>`) rather than assumed from the mathml
+        measurement; a non-word key can't be spelled through that syntax, so
+        it is carried over unverified (measured: 95 of 144 UNICODE entries
+        and 1 of 17 SYMBOLS entries are word-shaped and live-probed).
+
+        A name absent from both tables is not a parity gap: `Text#symbol_value`
+        returns `nil` there, and the `gsub` block around it substitutes the
+        empty string (Ruby's block-return-nil rule) rather than raising —
+        measured directly, `Text.new("unicode[:nosuchname]")` on the pinned
+        oracle renders `<m:t></m:t>`.
+      TEXT
+      ts_tuple_map(
+        "OMML_UNICODE_INVERT",
+        "ReadonlyMap<string, string>",
+        tables["unicode_invert"],
+        doc: "`Mathml::Constants::UNICODE_SYMBOLS.invert`, name -> entity,\n" \
+             "Ruby's invert semantics kept: a name mapped from several\n" \
+             "entities keeps the LAST one. Read once on the OMML render path:\n" \
+             "the `unicode[:name]` lookup `Text#parse_text` reaches via\n" \
+             "`Text#symbol_value` (`text.rb:126-128`).",
+      ),
+      ts_tuple_map(
+        "OMML_SYMBOLS_INVERT",
+        "ReadonlyMap<string, string>",
+        tables["symbols_invert"],
+        doc: "`Mathml::Constants::SYMBOLS.invert`, `Text#symbol_value`'s\n" \
+             "fallback lookup (`text.rb:128`). Only word-shaped names can\n" \
+             "reach it through the `unicode[:\\w+]` token regex.",
+      ),
+    ]
+
+    write_ts(File.join(out_root, "omml", "render-tables.ts"), sections)
+  end
+
   def emit_latex_render_tables_file(out_root, tables)
     sections = [
       ts_header(<<~TEXT.chomp),
@@ -5193,7 +5317,7 @@ module CorpusGenerator
 
   def write_symbol_data(out_root, data, registry, render_tables, mathml_tables,
                         latex_render_tables, unicodemath_render_tables,
-                        provenance)
+                        omml_render_tables, provenance)
     written = [
       File.join(out_root, INPUT_FORMAT, "input.ts"),
       File.join(out_root, INPUT_FORMAT, "grammar.ts"),
@@ -5202,6 +5326,7 @@ module CorpusGenerator
       File.join(out_root, "mathml", "render-tables.ts"),
       File.join(out_root, "latex", "render-tables.ts"),
       File.join(out_root, "unicodemath", "render-tables.ts"),
+      File.join(out_root, "omml", "render-tables.ts"),
     ]
     emit_input_file(out_root, data["tables"])
     emit_grammar_file(out_root, data["grammar"])
@@ -5210,6 +5335,7 @@ module CorpusGenerator
     emit_mathml_render_tables_file(out_root, mathml_tables)
     emit_latex_render_tables_file(out_root, latex_render_tables)
     emit_unicodemath_render_tables_file(out_root, unicodemath_render_tables)
+    emit_omml_render_tables_file(out_root, omml_render_tables)
 
     SYMBOL_FORMATS.each do |format|
       emit_symbols_file(out_root, format, data["static"],
@@ -5474,6 +5600,7 @@ module CorpusGenerator
     render_tables = build_render_tables(census)
     mathml_tables = build_mathml_render_tables(registry, census)
     unicodemath_render_tables = build_unicodemath_render_tables(registry)
+    omml_render_tables = build_omml_render_tables
     assert_corpus_symbols_covered!(pin_cases, exclusions, symbols)
 
     out_root = options[:out]
@@ -5498,7 +5625,7 @@ module CorpusGenerator
 
     emitted = write_symbol_data(options[:symbols_out], symbols, registry, render_tables,
                                 mathml_tables, latex_render_tables,
-                                unicodemath_render_tables, provenance)
+                                unicodemath_render_tables, omml_render_tables, provenance)
 
     written.each do |payload_path, manifest_path|
       puts "  #{relative(payload_path, REPO_ROOT)}"

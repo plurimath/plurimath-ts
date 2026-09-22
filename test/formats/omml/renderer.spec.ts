@@ -2853,19 +2853,34 @@ describe("generated OMML symbol data", () => {
     }
   });
 
-  it("refuses Text unicode substitutions, which this table does not carry", () => {
-    // Not a gap this slice can close: `Text#symbol_value` (text.rb:126-129)
-    // inverts `Mathml::Constants::UNICODE_SYMBOLS` and `SYMBOLS`, an
-    // entity-name map owned by mathml. The OMML symbol table holds symbol
-    // CLASS literals and has no entry for it.
-    expectRefusal(() => toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:kappa]" })), {
-      kind: "text",
-      message:
-        "text.parameterOne: unicode[:name] substitution reads " +
-        "Mathml::Constants::UNICODE_SYMBOLS and SYMBOLS inverted " +
-        "(text.rb:126-129), a MathML-owned entity map that no generated OMML " +
-        "table carries — the OMML symbol table holds class literals, not this",
-    });
+  it("substitutes Text's unicode[:name] tokens from the generated OMML-owned invert tables", () => {
+    // `Text#symbol_value` (text.rb:126-129) inverts
+    // `Mathml::Constants::UNICODE_SYMBOLS` and `SYMBOLS` — the SAME Ruby
+    // constant the mathml render-tables slice inverts, re-measured here as
+    // this format's own generated copy (ARCHITECTURE.md §3 rule 4). Measured
+    // on the pinned oracle: `unicode[:kappa]` hits the UNICODE_SYMBOLS
+    // invert (`&#x3ba;`). `unicode[:tilde]` also resolves to `~`, but through
+    // UNICODE_SYMBOLS, not the SYMBOLS fallback — `tilde` is the only
+    // word-shaped key `SYMBOLS.invert` carries, and the gem's own hash
+    // duplicates it in UNICODE_SYMBOLS too, so no word-shaped name currently
+    // demonstrates a genuine fallback (an oracle-side fact, not a port gap).
+    // A name in neither table is not a parity gap — the gem's own `gsub`
+    // block substitutes the empty string for the `nil` `symbol_value`
+    // answer, so this table renders it empty too.
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:kappa]" }))).toBe(
+      xml("<m:t>&#x3ba;</m:t>"),
+    );
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:tilde]" }))).toBe(
+      xml("<m:t>~</m:t>"),
+    );
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:nosuchname]" }))).toBe(
+      xml("<m:t></m:t>"),
+    );
+    // `encodeOmmlText` turns every space into `&#xa0;` BEFORE the token
+    // substitution runs, so a space next to a token survives as the entity.
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "a unicode[:kappa] b" }))).toBe(
+      xml("<m:t>a&#xa0;&#x3ba;&#xa0;b</m:t>"),
+    );
   });
 
   it("takes a Table paren from the table, never from its stored value", () => {

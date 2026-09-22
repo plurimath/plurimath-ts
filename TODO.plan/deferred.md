@@ -314,20 +314,35 @@ every tree this renderer emits.
 
 ### OMML renderer: generated symbol data deferred from the first slice
 
-**Trigger: the dedicated OMML symbol-data follow-up, using the repository's
-two-step generation protocol and a provenance digest from the clean pinned
-oracle.**
+**Resolved (2026-09-22), in two steps:**
 
-The first OMML vertical slice implements the shared structural wrapper for the
-base `Symbol`/abstract `Paren`, but deliberately does not hand-type the named
-symbol values measured by the OMML scope. Named symbols therefore raise
-`RenderError` instead of trusting a caller-provided value. The same refusal
-applies where another implemented kind needs that table: `Text`'s
-`unicode[:name]` substitutions, named Table parens, and a named Nary operator.
-The exact refusal contract is pinned in
-`test/formats/omml/renderer.spec.ts`. The follow-up removes these refusals only
-after generated values, an emptiness guard, provenance, and perturbed
-regeneration determinism land together.
+The per-class symbol literals (`OMML_SYMBOLS`, `OMML_SYMBOL_TAG_NAMES`) landed
+first (#63): named `Symbol` values, named Table parens (`Table#paren` reads
+the paren's class literal, never its stored value), and a named Nary
+operator's `chr` text all resolve through that table now, each pinned in
+`test/formats/omml/renderer.spec.ts`'s "generated OMML symbol data" block. An
+id the table does not carry still raises — not `RenderError` but the
+walk's own `MissingSymbolDataError` — because that IS a parity gap: the
+census found only 1,459 static classes, so anything else is one the port's
+model does not know exists.
+
+The one refusal that outlived that slice was `Text`'s `unicode[:name]`
+substitution: `Text#symbol_value` (text.rb:126-129) inverts
+`Mathml::Constants::UNICODE_SYMBOLS`/`SYMBOLS`, the SAME Ruby constant the
+mathml render-tables slice already inverted for its own renderer, but
+ARCHITECTURE.md §3 rule 4 forbids an omml kind file reading mathml's
+generated slice. The dedicated follow-up taught `scripts/generate-corpus.rb`
+to emit an independent OMML-owned copy (`OMML_UNICODE_INVERT`,
+`OMML_SYMBOLS_INVERT` in `src/generated/omml/render-tables.ts`) — measured
+against a live `to_omml` render rather than assumed from the mathml table,
+using the repository's two-step generation protocol (source commit, then a
+data commit regenerated from a clean pinned oracle checkout, with two
+independent runs proving determinism). A name absent from BOTH tables is not
+a parity gap either: `Text#symbol_value` falls through to `nil`, and the
+surrounding `gsub` block substitutes the empty string for that (Ruby's
+block-return-nil rule) rather than raising — measured directly on the pinned
+oracle — so `src/render/text/omml.ts` renders it empty, and nothing in this
+area still refuses.
 
 ### MathML renderer: `options[:mask]` supports only the inert decoding
 

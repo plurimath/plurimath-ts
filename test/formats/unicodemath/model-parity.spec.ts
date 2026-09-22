@@ -89,36 +89,23 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  */
 const DEFERRED_INPUTS: readonly string[] = [
   // DECORATION (`transform.rb:1286`-`:1491`) is ported now (`transform.ts`'s
-  // module header). Three of the six corpus rows that used to sit here moved
-  // out to `supported` below: `"⏟(a b)"`, `"⏟(a + b)"` and `"⏟(x)_(y)"` all
-  // route only through `hbracket_class`. `"((a)̅)̅"` moved out with `:2640`
-  // (the `accents` + paren combination, the FENCED slice), `"(y)┴(x)"`/
-  // `"(y)┬x"` with `:969`/`:977`, and `"√(3&8)"`/`"√(n&x)"` with `:1530`; each
-  // now compares for real, as a corpus row.
+  // module header). All the corpus rows that used to sit here have moved out
+  // to `supported` below: `"⏟(a b)"`, `"⏟(a + b)"` and `"⏟(x)_(y)"` route
+  // only through `hbracket_class`; `"((a)̅)̅"` moved out with `:2640` (the
+  // `accents` + paren combination, the FENCED slice); `"(y)┴(x)"`/`"(y)┬x"`
+  // moved out with `:969`/`:977`; `"√(3&8)"`/`"√(n&x)"` moved out with
+  // `:1530`. Each now compares for real, as a corpus row.
+  //
   // `"x^y^(z)"` (`:985`, a right-associative double exponent) sat here until
-  // the SCRIPT/SUBSUP/BASE builders landed; it is a `supported` corpus row now.
-  // The UNICODE SPACE rows (NBSP, THREE-PER-EM) that sat here compare for real
-  // now that the space-run combinators are ported.
-  // route only through `hbracket_class`. The other three stay, blocked on
-  // machinery DECORATION does not touch: `"((a)̅)̅"` needs the `accents`/
-  // paren combination `{accents=other, close_paren=, open_paren=}` (the
-  // `atoms`-adjacent gap FRACTION's own header names). `"(y)┴(x)"`/
-  // `"(y)┬x"` moved out with `:969`/`:977`, and `"√(3&8)"`/`"√(n&x)"` with
-  // `:1530`; each now compares for real, as a corpus row.
-  "((a)̅)̅",
-
-  // SCRIPT (`transform.rb:118`-`:2403`): a right-associative double exponent.
-  "x^y^(z)",
-
-  // UNICODE SPACE characters, not runs of ASCII spaces — the distinction
-  // matters, because a plain-space literal here silently fails to match the
-  // fixture and the case quietly rejoins the parity list. Measured from the
-  // fixture bytes: NBSP (U+00A0) and THREE-PER-EM SPACE (U+2004). The grammar
-  // maps only the ASCII space today.
-  "a \u00a0\u00a0 b",
-  "a \u00a0\u00a0 b \u00a0\u00a0 c",
-  "a \u2004 b",
-  "a \u00a0\u00a0\u00a0\u00a0 b",
+  // the SCRIPT/SUBSUP/BASE builders landed; it is a `supported` corpus row
+  // now.
+  //
+  // The UNICODE SPACE rows (NBSP, THREE-PER-EM) that sat here compare for
+  // real now that the space-run combinators are ported.
+  //
+  // This list is empty as a result -- `describe.skipIf` below keeps its
+  // suite alive for the day a new corpus pin adds a row this port hasn't
+  // reached.
 ];
 
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");

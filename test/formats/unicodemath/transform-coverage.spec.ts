@@ -219,8 +219,6 @@ describe("transform rule coverage", () => {
     // Slice tallies above are historical; the assertion is the one final count.
     expect(build.ruleIds.length).toBe(FINAL_COUNT);
     expect(new Set(build.ruleIds).size).toBe(FINAL_COUNT);
-    expect(build.ruleIds.length).toBe(188);
-    expect(new Set(build.ruleIds).size).toBe(188);
     // `transform.rb:845` shares its signature with `:870` and `rule` unshifts,
     // so `:870` wins every tie and `:845` can never match. Porting it would add
     // a rule this suite could never cover.

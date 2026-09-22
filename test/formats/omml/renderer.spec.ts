@@ -3386,16 +3386,6 @@ describe("OMML renderer boundary", () => {
 
   it.each([
     [
-      "displayStyle",
-      { displayStyle: false },
-      'The "displayStyle" feature of to_omml is deferred (TODO.plan/deferred.md): recursive display-style override is unmeasured across the complete OMML renderer',
-    ],
-    [
-      "splitOnLinebreak",
-      { splitOnLinebreak: true },
-      'The "splitOnLinebreak" feature of to_omml is deferred (TODO.plan/deferred.md): line-broken OMML emits multiple m:oMath siblings separated by Word break runs; unmeasured',
-    ],
-    [
       "formatter",
       { formatter: {} },
       'The "formatter" feature of to_omml is deferred (TODO.plan/deferred.md): number formatting is P4 scope; only the no-formatter path is measured',
@@ -3416,7 +3406,29 @@ describe("OMML renderer boundary", () => {
     });
   });
 
-  it("treats explicitly undefined deferred keys as absent", () => {
+  it.each([
+    [
+      "displayStyle",
+      { displayStyle: false },
+      'The "displayStyle" feature of to_omml is deferred (TODO.plan/deferred.md): the per-node entry takes no display-style keyword; the gem passes it positionally',
+    ],
+    [
+      "splitOnLinebreak",
+      { splitOnLinebreak: true },
+      'The "splitOnLinebreak" feature of to_omml is deferred (TODO.plan/deferred.md): line splitting belongs to the formula-level toOmml; the per-node entry has none',
+    ],
+  ] as const)(
+    "the per-node entry refuses %s by name; toOmml implements it",
+    (_name, options, message) => {
+      expectRefusal(() => toOmmlWithoutMathTag(symbol(), options as never), {
+        kind: "symbol",
+        message,
+      });
+      expect(toOmml(new FormulaNode({ value: [symbol()] }), options as never)).toBe(PUBLIC_X);
+    },
+  );
+
+  it("treats explicitly undefined optional keys as absent", () => {
     const options = {
       displayStyle: undefined,
       formatter: undefined,

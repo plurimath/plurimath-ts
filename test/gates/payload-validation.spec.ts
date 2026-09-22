@@ -132,6 +132,16 @@ const FIXTURE_SPECS = {
     usesCorpus: true,
     usesRenderInventory: false,
   },
+  // Calls that pass options to a renderer. Its inputs are the gem's own spec
+  // fixtures and measured probes, not the shared corpus, so it claims none.
+  "render-options-fixtures.json": {
+    generator: "scripts/generate-render-options-fixtures.rb",
+    schema: "plurimath-corpus/render-options/1",
+    rows: "cases",
+    shape: "render-options",
+    usesCorpus: false,
+    usesRenderInventory: false,
+  },
 } as const;
 
 /** Per-path overrides for the basenames more than one format now uses. */
@@ -200,6 +210,7 @@ const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "degenerate-fixtures.json"
   | "model-fixtures.json"
   | "parity-fixtures.json"
+  | "render-options-fixtures.json"
 )[];
 const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
@@ -744,6 +755,63 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               ["group", "id", "input", "expected"],
               `${record.relative}.cases[${index}]`,
             );
+          }
+          return hasExpected;
+        }).length;
+        expect(integerField(record.payload, "renderedCount", record.relative)).toBe(rendered);
+        expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
+          rows.length - rendered,
+        );
+      } else if (record.spec.shape === "render-options") {
+        // A row is a CALL: an input, the options passed, and what the gem
+        // answered. The options are what make it a different kind from a
+        // parity row, so they are checked as data here — a row whose keys the
+        // generator's keyword map does not know would have run a different call.
+        expectExactKeys(
+          record.payload,
+          ["$comment", "schema", "format", "caseCount", "renderedCount", "raisedCount", "cases"],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        const known = ["displayStyle", "splitOnLinebreak", "unaryFunctionSpacing"];
+        const rendered = rows.filter((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          stringField(item, "group", record.relative);
+          stringField(item, "source", record.relative);
+          const input = mapField(item, "input", at);
+          expect(
+            Number("model" in input) + Number("text" in input),
+            `${at}.input is a model or a text, not both`,
+          ).toBe(1);
+          if ("text" in input) {
+            expectExactKeys(input, ["format", "text"], `${at}.input`);
+            stringField(input, "format", at);
+            stringValue(input, "text", at);
+          } else {
+            expectExactKeys(input, ["model"], `${at}.input`);
+          }
+          const options = mapField(item, "options", at);
+          for (const key of Object.keys(options))
+            expect(known, `${at}.options.${key}`).toContain(key);
+          const hasExpected = typeof item.expected === "string";
+          const hasRefusal = typeof item.raises === "string";
+          expect(Number(hasExpected) + Number(hasRefusal), `${at} outcome`).toBe(1);
+          if (item.split !== undefined) {
+            expect(
+              options.splitOnLinebreak,
+              `${at}: a split is recorded only for a split call`,
+            ).toBe(true);
+            expect(arrayField(item, "split", at).length, `${at}.split`).toBeGreaterThan(0);
+          }
+          const base = ["group", "id", "source", "input", "options"];
+          const tail = item.split === undefined ? [] : ["split"];
+          if (hasRefusal) {
+            expectExactKeys(item, [...base, ...tail, "raises", "raisedIn"], at);
+            expect(stringField(item, "raises", at)).toBe("Plurimath::Math::ParseError");
+            expect(["parse", "render"]).toContain(stringField(item, "raisedIn", at));
+          } else {
+            expectExactKeys(item, [...base, ...tail, "expected"], at);
           }
           return hasExpected;
         }).length;

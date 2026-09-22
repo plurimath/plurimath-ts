@@ -2,8 +2,8 @@
  * Every ported transform rule is exercised by the fixture set.
  *
  * `model-parity.spec.ts` proves the port agrees with the gem on every parsed
- * input of `model-fixtures.json` (550 cases: 182 corpus, 365 coverage, 3
- * slice-boundary; 536 parsed, 14 raised). It
+ * input of `model-fixtures.json` (562 cases: 182 corpus, 374 coverage, 6
+ * slice-boundary; 548 parsed, 14 raised). It
  * cannot prove that a rule was ever REACHED — a rule with a typo in its action
  * passes vacuously if nothing routes to it — so `buildUnicodemathTransform`
  * counts each rule's firings, this suite drives the whole fixture set through
@@ -84,7 +84,7 @@ for (const entry of fixtures.cases) {
   reached += 1;
 }
 
-const FINAL_COUNT = 409;
+const FINAL_COUNT = 422;
 
 describe("transform rule coverage", () => {
   it("drove every parseable fixture through one transform", () => {

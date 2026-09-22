@@ -8,11 +8,11 @@ generator:
   path: scripts/generate-html-model-fixtures.rb
   sha256: cdd9d0ec782679441ff06683143452bf49c2b1922e915df13aa9e53ac533e7ac
   inputs:
-    scripts/generate-corpus.rb: cf156b8745fd974fb5fcc44781b0519d623c71e430fafab21fc779473c0738e9
+    scripts/generate-corpus.rb: 54d7b3f2a691c63c26d5c5667c6690da32098a4a5e0a9aa5207e3a73d796074b
     scripts/generate-html-model-fixtures.rb: cdd9d0ec782679441ff06683143452bf49c2b1922e915df13aa9e53ac533e7ac
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 53c37a0743ca0b694d22f1b7782e406c0a082659
+    commit: a13415d6f6a65234f139dbb9bb4167505e2343fb
     clean: true
     dirty_paths: []
 oracle:

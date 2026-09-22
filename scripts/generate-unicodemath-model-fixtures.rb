@@ -370,6 +370,24 @@ RULE_COVERAGE_NARY_INPUTS = [
 #   :2305  "a a^b ab"
 #   :2311  "a a_b ab"
 #   :2329  "|a| a b"
+#
+# Slice H (COMBINATORS-EARLY, the module header's eleventh increment) adds
+# nine more, folded into this same group rather than opening a new one, per
+# its own character (pure unwraps and one-symbol-lookup leaves) even where a
+# couple would as easily sit beside the "symbol" group above:
+#
+#   :43    "ⅇ" (moved here from `SLICE_BOUNDARY`, now that `:43` is ported)
+#   :48    "a_₁"
+#   :67    "ab₁^c" (two chained letters before the digit, so `:255`
+#          `{symbol: simple, expr: simple}` resolves `base` to an array
+#          without needing `:1776` — the digit-led "1a₁^b" still needs it,
+#          and stays a `SLICE_BOUNDARY` row)
+#   :69    "1a\'"
+#   :78    "1\\playground"
+#   :91    "1α! + β‼"
+#   :330   "1a /¬ b"
+#   :376   "a^b c d/(a b/c (a)_b^c d e)"
+#   :538   "a_ℲDb^c"
 RULE_COVERAGE = {
   "atoms" => [
     "abc",
@@ -860,6 +878,16 @@ RULE_COVERAGE = {
     "a a^b ab",
     "a a_b ab",
     "|a| a b",
+    # Slice H additions (see the comment block above this hash):
+    'ⅇ',
+    'a_₁',
+    'ab₁^c',
+    "1a\\'",
+    '1\\playground',
+    '1α! + β‼',
+    '1a /¬ b',
+    'a^b c d/(a b/c (a)_b^c d e)',
+    'a_ℲDb^c',
   ],
   # FENCED (slice G1): the `Fenced`-building rules of `transform.rb:2020`-`:2983`
   # (rule numbers are the lines `rule(` opens on). Each input was traced on the
@@ -1075,20 +1103,39 @@ RULE_COVERAGE = {
 # and each row was re-traced against the current port rather than trusted to
 # still be blocked by the same rule:
 #
-#   "1x₂"    still refused, but by TWO different rules, neither of them
-#            `:1054`: `:1776` `{digit: simple, expr: simple}` never fires, so
-#            `base` inside the `mini_sub` hash stays a raw hash rather than
-#            the SEQUENCE `:1054` needs (`:1054` itself fires fine once it
-#            is), and `:67` `{mini_sub: sequence}` still has to land after it
-#            to unwrap the outer key. The port's own message names the
-#            outermost casualty: `no rule matched {mini_sub=other}`.
+#   "1x₂"    still refused by `:1776` `{digit: simple, expr: simple}` alone
+#            now — `:67` (`{mini_sub: sequence}`), the other rule that used
+#            to block it, is ported (slice H): `:1776` never fires, so `base`
+#            inside the `mini_sub` hash stays a raw hash rather than the
+#            SEQUENCE `:1054` needs. Port message unchanged: `no rule matched
+#            {mini_sub=other}`.
 #   "1/2a"   still refused by `:658` `{digit: simple,
 #            recursive_denominator: simple}` exactly as before — `:1619` was
 #            never the blocker here, only the rule one level up that `:658`
 #            feeds. Port message: `no rule matched {frac=other}`.
-#   "ⅇ"      still refused, now by `:43` `{mitBbb: simple}` alone — `:227`
-#            fires fine once `:43` does. Port message:
-#            `no rule matched {fonts=other}`.
+#
+# `"ⅇ"` moved out when slice H ported `:43` (`{mitBbb: simple}`); it
+# compares for real now, in `RULE_COVERAGE["combinators"]`.
+#
+# Four more rows are slice H's own: each fires a rule the slice ports, but the
+# SAME input also fires a sibling combinator (`:945`, `:1776`, `:2251`) no
+# slice has claimed — every one of them a `{key: simple/sequence, key2:
+# simple/sequence}` combinator of this exact family, measured on the oracle
+# with the SAME `TracePoint :b_call` method as `RULE_COVERAGE`, just not one
+# of the 21 ids this slice was scoped to:
+#
+#   the 101-char "1w^h^e^e^e^e+1a+…" row for `:95`/`:945`
+#   the "1I(x,x')…ⅆx'']" row for `:346`/`:2251`
+#   the "1a_ℲDa + a_ℲCa + …" row for `:381`/`:1776`
+#   the "1A^* = ..." row for `:441`/`:1776`
+#
+# `:80` (`{intermediate_exp: sequence}`) is NOT ported at all: every oracle
+# input found that fires it does so nested one level under an `open_paren`/
+# `factor or frac`/`exp: sequence`/`close_paren` combo this slice does not
+# carry either (`:3422`, `:3477`, `:3510` fire fine; the ones still missing
+# are `:800`/`:1836`/`:1856`, unclaimed pure combinators of the same shape),
+# so no input was found reaching `:80` on its own — not proven unreachable,
+# only unreached (the module header's own phrase for this exact situation).
 #
 # Every row records a rule the port lacks, not one it has: each is a witness
 # a pure combinator (`RULE_COVERAGE["combinators"]`) needs and cannot have
@@ -1097,7 +1144,10 @@ RULE_COVERAGE = {
 SLICE_BOUNDARY = [
   "1x₂",
   "1/2a",
-  "ⅇ",
+  '1w^h^e^e^e^e+1a+"Testing this!"-(1/2/333/4+1+1)+abc₂⁹/W_c+ab+√(42&1g)+▭(255&▭(255&b))+∑_A▒a+1+∑┴a┬b▒b',
+  "1I(x,x') = g(x,x') [ε(x,x') + ∫_S▒ρ(x,x',x'')I(x',x'')ⅆx'']",
+  '1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa',
+  '1A^* = \\\\sum_{r}{ (-1)^r ⟨ A ⟩_r } = ⟨ A ⟩_+ - ⟨ A ⟩_-',
 ].freeze
 
 options = { oracle: nil, out: "test/formats/unicodemath", allow_dirty: false }

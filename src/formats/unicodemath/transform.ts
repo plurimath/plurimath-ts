@@ -14,8 +14,10 @@
  *
  * ## Where the slice boundary is, and why
  *
- * Current state: `unicodemathTransform()` registers 409 rules, the table/matrix
- * family included (see the TABLE increment below). The rest of this header is
+ * Current state: `unicodemathTransform()` registers as many rules as
+ * `transform-coverage.spec.ts`'s `FINAL_COUNT` asserts — read that constant
+ * rather than a number here, which would go stale the moment the next slice
+ * lands (measured 422 at the time slice H closed). The rest of this header is
  * the increment-by-increment history of how that set grew; its "this slice"
  * counts describe the first slice, not the present set.
  *
@@ -511,6 +513,52 @@
  * deferred witnesses `:284`, `:290`, `:296`, `:666`, which a fraction's
  * `recursive_*` run finally reaches. Not registered, because no input
  * reached them on the oracle: `:2787`, `:3074`, `:3266`.
+ *
+ * ## An eleventh increment: COMBINATORS-EARLY (slice H), the same
+ * `transform.rb:8`-`:538` region the pure-rule slice (A) already mined
+ *
+ * Thirteen more single/two-key unwraps and one-symbol-lookup leaves from the
+ * exact source region slice A drew its 56 from, each traced on the oracle
+ * with a `TracePoint :b_call` the same way as every earlier increment:
+ * `:43`, `:48`, `:67`, `:69`, `:78`, `:91`, `:95`, `:330`, `:346`, `:376`,
+ * `:381`, `:441`, `:538`. Nine carry a fixture in
+ * `RULE_COVERAGE["combinators"]` and compare for real: `:43` (`ⅇ`, moved out
+ * of `SLICE_BOUNDARY` now that it lands), `:48`, `:67`, `:69`, `:78`, `:91`,
+ * `:330`, `:376`, `:538`. See `FINAL_COUNT` for the running total this
+ * increment brings it to.
+ *
+ * Four more are registered but have no coverage fixture yet: `:95`, `:346`,
+ * `:381` and `:441` each fire on an oracle input, but every one found also
+ * fires a sibling pure combinator (`:945`, `:2251` and `:1776` respectively)
+ * that no slice has claimed — `:1776` (`{digit: simple, expr: simple}`) alone
+ * blocks three of the four. Each witness sits in `SLICE_BOUNDARY` instead
+ * (the generator's own comment above it names the exact blocker per row), so
+ * the port still refuses those inputs and `model-parity.spec.ts` proves that
+ * refusal rather than a parse.
+ *
+ * Three are dead in the gem, confirmed two ways: `:41`/`:42`/`:51`
+ * (`script`/`double`/`fraktur`) read `Constants::UNICODED_FONTS`, whose
+ * `script`/`fraktur`/`double` entries each carry exactly one key —
+ * `constants_rules.rb`'s `hash_values` takes the single-key branch for those
+ * three, which returns a bare untagged `str(hex_code)` with no `{script:
+ * ...}`/`{double: ...}`/`{fraktur: ...}` hash ever built — and separately,
+ * `common_rules.rb`'s `custom_fonts.as(:unicoded_font_class)` never tags
+ * `.as(:script)`/`.as(:double)`/`.as(:fraktur)` either. `:43`'s (`mitBbb`)
+ * sibling entry has five keys, so it takes `hash_values`'s OTHER branch,
+ * which does tag `.as(:mitBbb)` — the one measured difference between a dead
+ * id in this family and a reachable one.
+ *
+ * Two more are unreached rather than dead, the same distinction the ROOT /
+ * OVER-UNDER section above draws for `:1514`/`:346`(its own, pre-slice-H,
+ * unrelated to this increment's `:346`): `:75` (`expression: simple`, the
+ * `expression` grammar rule's own `alt6`) and `:83` (`sup_recursion: simple`,
+ * reached only when `recursive_baseless_sup_exp`'s `mini_sub_sup`-led
+ * alternative nests a terminal `baseless_sup` under `exp_iteration` — traced
+ * as plausible but not fired). Roughly 3,000 candidate inputs were traced on
+ * the oracle for these two alone (hand-built combinations plus every
+ * `unicodemath-tests` and pinned-corpus string already in scope), none of
+ * which fired either id; neither is registered, and neither counts toward
+ * `FINAL_COUNT`.
  *
  * ## Two model behaviours that are provably absent here
  *
@@ -1923,6 +1971,16 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // first alternative (a `(`-bracketed value) does not, so `:1286`/`:1315`
   // below see both shapes and this unwrap only fires on the second.
   rule("40", { hbrack: simple("hbrack") }, (b) => b.hbrack);
+  // Slice H: `:41`/`:42`/`:51` (`script`/`double`/`fraktur`) are NOT
+  // registered — see the module header, "COMBINATORS-EARLY". `:43`
+  // (`mitBbb`) is their reachable sibling: `Constants::UNICODED_FONTS`'s
+  // `mitBbb` entry has five keys, so `hash_values` (`constants_rules.rb`)
+  // takes its multi-key branch and tags `.as(:mitBbb).as(:unicoded_font_class)`
+  // before `:227` (already registered) consumes the result; `script`/
+  // `double`/`fraktur` each have exactly one key and take the single-key
+  // branch instead, which returns a bare untagged `str(hex_code)` — no
+  // `{script: ...}`/`{double: ...}`/`{fraktur: ...}` hash is ever built.
+  rule("43", { mitBbb: simple("mitBbb") }, () => "mitBbb");
   rule("44", { symbol: simple("symbol") }, (b) => symbolsClass(b.symbol));
   rule("45", { number: simple("number") }, (b) => newNumber(b.number));
   // `:39`'s SEQUENCE twin — already needed by RELATION/OPERATOR's `"2·3"`
@@ -1931,6 +1989,15 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // the gem always resolves, refused here as if it were the "factor=other"
   // bug case `GEM_UNMATCHED_SIGNATURES` names.
   rule("47", { backcolor: simple("color") }, (b) => b.color);
+  // Slice H: `baseless_sub`'s first alternative, when no operator follows
+  // the underscore, calls `baseless_sub_values(:sub_script)`
+  // (`sub_sup.rb`), whose `(mini_sub_sup | sub_sup_paren).as(:sub_script)`
+  // arm nests `sub_sup_paren`'s own `sub_paren.as(:sub_paren)` tag one level
+  // deeper: `{sub_script: {sub_paren: X}}`. Witness: `"a_₁"` (a bare
+  // underscore subscript of one subscript-styled digit) — `{sub_exp: {base:,
+  // sub: {sub_script: {sub_paren: {sub_digits: "&#x2081;"}}}}}` on the
+  // oracle.
+  rule("48", { sub_paren: simple("paren") }, (b) => b.paren);
   rule("49", { factor: sequence("factor") }, (b) => b.factor);
   rule("50", { operand: simple("operand") }, (b) => b.operand);
   rule("52", { accents: subtree("accent") }, (b) => unicodeAccents(b.accent));
@@ -1947,11 +2014,25 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("61", { close_paren: simple("paren") }, (b) => symbolsClass(b.paren));
   rule("62", { operator: simple("operator") }, (b) => symbolsClass(b.operator));
   rule("64", { unary_sub_sup: simple("unary") }, (b) => b.unary);
+  // Slice H: `mini_sub_value`'s `.as(:mini_sub)` result, folded into a
+  // SEQUENCE the way `atoms` folds `:atom` — reached whenever more than one
+  // `mini_sub_value` chains, which also fires `:1776` (`{digit: simple, expr:
+  // simple}`, unported — the "COMBINATORS-EARLY" note in the module header
+  // names it), so no fixture here reaches full parity yet; the witness
+  // (`"1a₁^b"`) sits in `SLICE_BOUNDARY` instead, still refused for that
+  // reason.
+  rule("67", { mini_sub: sequence("mini_sub") }, (b) => b.mini_sub);
   rule("68", { monospace: simple("monospace") }, (b) => b.monospace);
+  // Slice H: `Utility.slashed_values` on a single SIMPLE `slashed_value` —
+  // `:78` below is its SEQUENCE twin. Witness: `"1a\'"` (a backslash-prime
+  // slashed value).
+  rule("69", { slashed_value: simple("value") }, (b) => slashedValues(b.value));
   rule("71", { intermediate_exp: simple("expr") }, (b) => b.expr);
   rule("72", { decimal_number: simple("number") }, (b) => b.number);
   rule("73", { accents_subsup: simple("subsup") }, (b) => b.subsup);
   rule("74", { subsup_exp: simple("subsup_exp") }, (b) => b.subsup_exp);
+  // `:75` (`expression: simple`) is NOT registered — see the module header,
+  // "COMBINATORS-EARLY".
   rule("76", { open_paren: simple("open_paren") }, (b) => symbolsClass(b.open_paren));
   // DECORATION's three unwraps: `op_diacritic_belows`/`op_diacritic_overlays`
   // (`grammar.ts`'s `opDiacriticBelows`/`opDiacriticOverlays`) each wrap the
@@ -1961,8 +2042,17 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // gem. `:88` strips `diacriticsAccents`'s own outer `diacritics_accents`
   // wrapper once the rules below have built a node from its contents.
   rule("77", { override_subsup: simple("subsup") }, (b) => b.subsup);
+  // Slice H: `:69`'s SEQUENCE twin — `Utility.sequence_slashed_values`
+  // directly, the same helper `:2485` (FENCED) already calls.
+  rule("78", { slashed_value: sequence("values") }, (b) =>
+    sequenceSlashedValues(asArray(b.values)),
+  );
+  // `:80` (`intermediate_exp: sequence`) is NOT registered — see the module
+  // header, "COMBINATORS-EARLY".
   rule("81", { diacritic_belows: simple("belows") }, (b) => b.belows);
   rule("82", { unary_function: simple("function") }, (b) => b.function);
+  // `:83` (`sup_recursion: simple`) is NOT registered — see the module
+  // header, "COMBINATORS-EARLY".
   rule("88", { diacritics_accents: simple("accent") }, (b) => b.accent);
   // NARY (`transform.rb:84`-`:3588`, nineteen rules): every remaining
   // `nary_class`/`nary`/`nary_sub_sup` call site, all reusing `:1968`'s and
@@ -1977,8 +2067,17 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // claim (`:85`, slice A) so the integration dedupes by id.
   rule("85", { open_paren: sequence("open_paren") }, (b) => b.open_paren);
   rule("90", { unary_subsup: simple("unary_subsup") }, (b) => b.unary_subsup);
+  rule("91", { exclamation_symbol: simple("symbol") }, (b) => symbolsClass(b.symbol));
   rule("92", { alphanumeric: simple("alphanumeric") }, (b) => symbolsClass(b.alphanumeric));
   rule("94", { diacritic_overlays: simple("overlays") }, (b) => b.overlays);
+  // Slice H: `mini_sub_sup`'s own `.as(...)` result (`mini_sub`/`mini_sup`/
+  // `mini_subsup`), folded into a SEQUENCE by adjacency the way every other
+  // `<key>: sequence` combinator here folds its key. Reached only inside a
+  // long enough run of mixed atoms/scripts, which also fires `:945`
+  // (`{rect: simple, expr: sequence}`, unported), so no fixture here reaches
+  // full parity yet; the witness sits in `SLICE_BOUNDARY` instead, still
+  // refused for that reason.
+  rule("95", { mini_sub_sup: sequence("mini_sub_sup") }, (b) => b.mini_sub_sup);
   // PREREQUISITE of `:2597`'s witness (slice A's claim, registered here under
   // the same id): `sub_paren`'s `mini_intermediate_exp` wrapper, unwrapped.
   rule("97", { mini_intermediate_exp: simple("mini_expr") }, (b) => b.mini_expr);
@@ -2181,6 +2280,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     ...asArray(b.expr),
   ]);
 
+  // Slice H: `:184`'s SEQUENCE twin — an `ordinary_negated_operator` (`\not`
+  // over a plain symbol, not a relational/binary one) followed by more of the
+  // expression as a single item. Witness: `"1a /¬ b"`.
+  rule("330", { ordinary_negated_operator: simple("operator"), expr: simple("expr") }, (b) => [
+    newFormula([symbolsClass(b.operator), newBareSymbol("&#x338;")]),
+    b.expr,
+  ]);
+
   // A binary symbol leading a fraction's `recursive_denominator`/
   // `recursive_numerator` run (`1/2\not∘b`, `⊕b/c`). Slice B's rules, deferred
   // there until a fraction gave them a reaching input; ported with the
@@ -2217,6 +2324,17 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     unicodeAccents(b.accent),
     ...asArray(b.expr),
   ]);
+  // Slice H: `:341`'s `exp` (not `expr`) twin — reached only through
+  // `spaced_exp_bracket`/`td_value`'s `.as(:exp)` tag (inside a FENCED or
+  // table-cell run), which also fires `:2251` (`{factor: simple, operand:
+  // sequence, naryand_recursion: simple}`, unported), so no fixture here
+  // reaches full parity yet; the witness (a corpus-style differential
+  // expression ending `ⅆx''`) sits in `SLICE_BOUNDARY` instead, still
+  // refused for that reason.
+  rule("346", { accents: subtree("accent"), exp: sequence("exp") }, (b) => [
+    unicodeAccents(b.accent),
+    ...asArray(b.exp),
+  ]);
 
   // TEXT followed by more: a quoted run, then the rest of the expression as a
   // list (`:351`, `:361`) or a single item (`:366`, `:356`).
@@ -2235,6 +2353,24 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("366", { text: simple("text"), expr: simple("expr") }, (b) => [newText(b.text), b.expr]);
 
   rule("371", { subsup_exp: simple("subsup"), expr: sequence("expr") }, (b) => [
+    b.subsup,
+    ...asArray(b.expr),
+  ]);
+  // Slice H: `:371`'s `exp` (not `expr`) twin — like `:346` above, reached
+  // only through `spaced_exp_bracket`'s `.as(:exp)` recursion (a FENCED run
+  // with more than one trailing atom after the `subsup_exp`). Witness:
+  // `"a^b c d/(a b/c (a)_b^c d e)"`.
+  rule("376", { subsup_exp: simple("subsup"), exp: sequence("exp") }, (b) => [
+    b.subsup,
+    ...asArray(b.exp),
+  ]);
+  // Slice H: `:77`'s SEQUENCE-extended twin — `override_subsup` (a `Ⅎ`-sized
+  // override script, its own `{base:, size_overrides:, sub_script:}` already
+  // resolved by `:2132`) followed by more of the expression. Fires alongside
+  // `:1776` (unported, see `:67` above), so no fixture here reaches full
+  // parity yet; the witness (`"1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa"`) sits in
+  // `SLICE_BOUNDARY` instead, still refused for that reason.
+  rule("381", { override_subsup: simple("subsup"), expr: sequence("expr") }, (b) => [
     b.subsup,
     ...asArray(b.expr),
   ]);
@@ -2278,6 +2414,13 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
 
   rule("431", { subsup_exp: simple("subsup"), expr: simple("expr") }, (b) => [b.subsup, b.expr]);
   rule("436", { subsup_exp: simple("subsup"), exp: simple("exp") }, (b) => [b.subsup, b.exp]);
+  // Slice H: an nary integral's `int_exp` (`:29`'s own SIMPLE unwrap target)
+  // directly followed by one more `expr` item — the two-element list shape
+  // every neighbour here uses. Fires alongside `:1776` (unported, see `:67`
+  // above), so no fixture here reaches full parity yet; the witness
+  // (`"1A^* = \\sum_{r}{ (-1)^r ⟨ A ⟩_r } = ⟨ A ⟩_+ - ⟨ A ⟩_-"`) sits in
+  // `SLICE_BOUNDARY` instead, still refused for that reason.
+  rule("441", { int_exp: simple("int"), expr: simple("expr") }, (b) => [b.int, b.expr]);
   rule("446", { operator: simple("operator"), expr: simple("expr") }, (b) => [
     symbolsClass(b.operator),
     b.expr,
@@ -4616,6 +4759,16 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     symbolsClass(b.operator),
     b.sub_script,
   ]);
+  // Slice H: `sub_override`'s own `{size_overrides:, sub_script:}` pair,
+  // reached nested (not merged with `base`) through `subsup`'s
+  // no-`.absent?`-guarded `(sub_override | baseless_sub).as(:sub) >>
+  // baseless_sup.as(:sup)` alternative — a `Ⅎ`-sized subscript override
+  // alongside a plain superscript. Witness: `"a_ℲDb^c"`.
+  rule(
+    "538",
+    { size_overrides: simple("size_overrides"), sub_script: simple("sub_script") },
+    (b) => [b.size_overrides, b.sub_script],
+  );
   rule(
     "553",
     { sub_digits: simple("sub_digits"), sub_recursion_expr: sequence("sub_recursion_expr") },

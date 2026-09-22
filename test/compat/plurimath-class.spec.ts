@@ -520,7 +520,7 @@ describe("the one method that cannot be honest yet", () => {
     const fields: Record<string, string> = {};
     for (const [label, run] of [
       ["ctor", () => new Plurimath(INPUT, "mathml")],
-      ["toMathml", () => build().toMathml(true)],
+      ["toDisplay", () => new Plurimath("bb x", "asciimath").toDisplay("asciimath")],
     ] as const) {
       try {
         run();
@@ -533,12 +533,12 @@ describe("the one method that cannot be honest yet", () => {
     }
     expect(codes).toEqual({
       ctor: "UNSUPPORTED_FORMAT",
-      toMathml: "UNSUPPORTED_FEATURE",
+      toDisplay: "UNSUPPORTED_FEATURE",
     });
     // stable identifiers, not sentences
     expect(fields).toEqual({
       ctor: "mathml",
-      toMathml: "toMathml(intent: true)",
+      toDisplay: "toDisplay tree dump",
     });
     for (const value of Object.values(fields)) expect(value).not.toMatch(/\s\w+\s\w+\s\w+\s/);
   });

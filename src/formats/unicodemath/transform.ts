@@ -529,9 +529,10 @@
  *
  * Four more are registered but have no coverage fixture yet: `:95`, `:346`,
  * `:381` and `:441` each fire on an oracle input, but every one found also
- * fires a sibling pure combinator (`:945`, `:2251` and `:1776` respectively)
- * that no slice has claimed — `:1776` (`{digit: simple, expr: simple}`) alone
- * blocks three of the four. Each witness sits in `SLICE_BOUNDARY` instead
+ * fires a sibling pure combinator that no slice has claimed — `:95` needs
+ * `:945`, `:346` needs `:2251`, and `:381` and `:441` both need `:1776`
+ * (`{digit: simple, expr: simple}`), which alone blocks three of the four.
+ * Each witness sits in `SLICE_BOUNDARY` instead
  * (the generator's own comment above it names the exact blocker per row), so
  * the port still refuses those inputs and `model-parity.spec.ts` proves that
  * refusal rather than a parse.
@@ -548,17 +549,18 @@
  * which does tag `.as(:mitBbb)` — the one measured difference between a dead
  * id in this family and a reachable one.
  *
- * Two more are unreached rather than dead, the same distinction the ROOT /
+ * Three more are unreached rather than dead, the same distinction the ROOT /
  * OVER-UNDER section above draws for `:1514`/`:346`(its own, pre-slice-H,
  * unrelated to this increment's `:346`): `:75` (`expression: simple`, the
- * `expression` grammar rule's own `alt6`) and `:83` (`sup_recursion: simple`,
- * reached only when `recursive_baseless_sup_exp`'s `mini_sub_sup`-led
- * alternative nests a terminal `baseless_sup` under `exp_iteration` — traced
- * as plausible but not fired). Roughly 3,000 candidate inputs were traced on
- * the oracle for these two alone (hand-built combinations plus every
- * `unicodemath-tests` and pinned-corpus string already in scope), none of
- * which fired either id; neither is registered, and neither counts toward
- * `FINAL_COUNT`.
+ * `expression` grammar rule's own `alt6`), `:80` (`intermediate_exp:
+ * sequence`, next to already-ported `:78`'s SIMPLE twin, with no known
+ * firing shape), and `:83` (`sup_recursion: simple`, reached only when
+ * `recursive_baseless_sup_exp`'s `mini_sub_sup`-led alternative nests a
+ * terminal `baseless_sup` under `exp_iteration` — traced as plausible but
+ * not fired). Roughly 3,000 candidate inputs were traced on the oracle for
+ * these three (hand-built combinations plus every `unicodemath-tests` and
+ * pinned-corpus string already in scope), none of which fired any of the
+ * three; none is registered, and none counts toward `FINAL_COUNT`.
  *
  * ## Two model behaviours that are provably absent here
  *
@@ -2016,11 +2018,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("64", { unary_sub_sup: simple("unary") }, (b) => b.unary);
   // Slice H: `mini_sub_value`'s `.as(:mini_sub)` result, folded into a
   // SEQUENCE the way `atoms` folds `:atom` — reached whenever more than one
-  // `mini_sub_value` chains, which also fires `:1776` (`{digit: simple, expr:
-  // simple}`, unported — the "COMBINATORS-EARLY" note in the module header
-  // names it), so no fixture here reaches full parity yet; the witness
-  // (`"1a₁^b"`) sits in `SLICE_BOUNDARY` instead, still refused for that
-  // reason.
+  // `mini_sub_value` chains. Two chained letters ahead of the digit
+  // subscript (`"ab₁^c"`) let `:255` resolve `base` as an array without
+  // needing the unported `:1776`, so this rule reaches full
+  // `RULE_COVERAGE["combinators"]` parity.
   rule("67", { mini_sub: sequence("mini_sub") }, (b) => b.mini_sub);
   rule("68", { monospace: simple("monospace") }, (b) => b.monospace);
   // Slice H: `Utility.slashed_values` on a single SIMPLE `slashed_value` —

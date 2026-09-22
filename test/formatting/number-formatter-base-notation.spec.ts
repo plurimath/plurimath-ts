@@ -166,12 +166,4 @@ describe("option validation", () => {
       expect(() => resolveNumberFormat({ options }, "latex")).not.toThrow();
     }
   });
-
-  it("still refuses every notation key by name", () => {
-    for (const key of ["notation", "e", "times", "exponentSign"]) {
-      expect(() => resolveNumberFormat({ options: { [key]: "x" } } as never, "latex")).toThrow(
-        new RegExp(`"${key}"`),
-      );
-    }
-  });
 });

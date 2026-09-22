@@ -1,6 +1,6 @@
 /**
  * `Formatter::Numbers::PrecisionResolver` (`precision_resolver.rb`) — which
- * precision wins for one render call, cut down to the basic base-10 path.
+ * precision wins for one render call, for the plain path and the notation path.
  *
  * An explicit precision (the `precision:` keyword, else `options[:precision]`)
  * always wins; without one, plain decimal rendering keeps the value's own
@@ -8,10 +8,9 @@
  * nothing is padded.
  *
  * The base rule sits between them (`significant_base_precision`, only for a
- * target base other than 10 with a positive `significant`). The coefficient-
- * width rule is not here because the path that reaches it is not: it applies
- * only for a supported notation. The notation lane adds its rule to this
- * function, in the gem's order (explicit, then base, then notation).
+ * target base other than 10 with a positive `significant`). The notation
+ * rule (`resolveNotationPrecision`) comes last, in the gem's order (explicit,
+ * then base, then notation).
  */
 
 import { type NumberBase, significantBasePrecision } from "./base-notation";
@@ -38,10 +37,14 @@ export function resolvePrecision(
 export function resolveNotationPrecision(
   source: Source,
   explicit: number | null,
-  significant: number,
+  base: { readonly base: NumberBase; readonly significant: number },
   digitCount: number,
 ): number {
   if (explicit !== null) return explicit;
+  // The gem's order is explicit, then the base rule, then the notation rule.
+  const baseRule = significantBasePrecision(source, base.base, base.significant);
+  if (baseRule !== null) return baseRule;
+  const significant = base.significant;
   const budget = Math.max(significant, digitCount);
   if (budget > 0) return Math.max(budget - 1, source.notationPrecision);
   return source.notationPrecision;

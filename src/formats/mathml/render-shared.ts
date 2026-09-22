@@ -25,14 +25,7 @@ import {
 import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS, rubyClassName } from "../../core/normalize";
 import { assertReproducibleRubyHashOrder } from "../../core/ruby-semantics";
-import {
-  formatNumberValue,
-  formattedExponent,
-  formattedNotationText,
-  formattedNumberText,
-  isFormattedNotation,
-  type NumberFormat,
-} from "../../formatting/index";
+import { formatNumberForMathml, type NumberFormat } from "../../formatting/index";
 import { XmlElement } from "../../xml/index";
 
 export const FORMAT = "mathml";
@@ -47,31 +40,38 @@ export const FORMAT = "mathml";
  */
 export type { NumberFormat } from "../../formatting/index";
 export {
-  formatNumberForMathml,
   isGemNumericValue,
   refuseNonNumericUnderFormatter,
 } from "../../formatting/index";
 
 /**
  * `Formatter::Numbers::MathmlRenderer.render` for a formatted number: `<mn>`
- * over the text, except a `scientific`/`engineering` notation, which is
+ * over the text (`plain_element`); a `scientific`/`engineering` notation is
  * `<mrow><mn>coefficient</mn><mo>times</mo><msup><mn>10</mn><mn>exponent</mn>
- * </msup></mrow>` (`render_notation`). The `e` notation stays one `<mn>`.
- * `value` must satisfy `isGemNumericValue`.
+ * </msup></mrow>` (`render_notation`), the `e` notation one `<mn>`; a semantic
+ * base (`render_semantic_base`) is the `<msub>` of the digits over the base,
+ * in an `<mrow>` after an `<mo>` sign when there is one. `value` must satisfy
+ * `isGemNumericValue`.
  */
 export function renderFormattedNumber(value: string, format: NumberFormat): XmlElement {
-  const result = formatNumberValue(value, format);
-  if (!isFormattedNotation(result)) return new XmlElement("mn").append(formattedNumberText(result));
-  if (result.style === "e") return new XmlElement("mn").append(formattedNotationText(result));
-
-  return new XmlElement("mrow").append([
-    new XmlElement("mn").append(formattedNumberText(result.coefficient)),
-    new XmlElement("mo").append(result.timesSymbol),
-    new XmlElement("msup").append([
-      new XmlElement("mn").append("10"),
-      new XmlElement("mn").append(formattedExponent(result)),
-    ]),
+  const number = formatNumberForMathml(value, format);
+  if (number.kind === "plain") return new XmlElement("mn").append(number.text);
+  if (number.kind === "notation") {
+    return new XmlElement("mrow").append([
+      new XmlElement("mn").append(number.coefficient),
+      new XmlElement("mo").append(number.times),
+      new XmlElement("msup").append([
+        new XmlElement("mn").append("10"),
+        new XmlElement("mn").append(number.exponent),
+      ]),
+    ]);
+  }
+  const sub = new XmlElement("msub").append([
+    new XmlElement("mn").append(number.digits),
+    new XmlElement("mn").append(String(number.base)),
   ]);
+  if (number.sign === null) return sub;
+  return new XmlElement("mrow").append([new XmlElement("mo").append(number.sign), sub]);
 }
 
 /**

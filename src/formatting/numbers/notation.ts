@@ -1,7 +1,7 @@
 /**
  * `Formatter::Numbers::NotationRenderer` (`notation_renderer.rb`) and
  * `FormattedNotation` (`formatted_notation.rb`) — the `e`, `scientific` and
- * `engineering` notations, for base 10.
+ * `engineering` notations.
  *
  * The gem takes this branch before `NumberRenderer#format`
  * (`NumberFormatter#formatted_number`): the value is split into a
@@ -13,8 +13,10 @@
  * format can lay it out its own way (`number-format.ts`'s `formatNumberValue`,
  * `render/number/mathml.ts`).
  *
- * Base notation (`base`, prefix/postfix) is another lane's: the coefficient
- * here is always base 10.
+ * A base other than 10 converts the coefficient's digits (`formatParts` does
+ * it; the coefficient's own digits are still found in base 10, as the gem's
+ * `notation_parts` does), and the precision follows the gem's order: explicit,
+ * then the base rule, then the notation rule (`resolveNotationPrecision`).
  */
 
 import { type FormattedNumber, formattedNumberText } from "./formatted-number";
@@ -158,7 +160,7 @@ export function renderNotation(
   const precision = resolveNotationPrecision(
     source,
     options.precision,
-    options.significant,
+    { base: options.baseNotation.base, significant: options.significant },
     options.digitCount,
   );
 

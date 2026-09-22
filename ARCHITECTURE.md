@@ -117,11 +117,10 @@ src/
                      context wiring (render.ts) and the format-scoped render
                      helpers (render-shared.ts). Imports: pegkit, core, its
                      own data slice, its own kind files under src/render.
-    latex/           Renderer landed: index.ts, renderer.ts (toLatex), render.ts,
-                     render-shared.ts — the same shape as asciimath/ minus the
-                     parse half. The parser half is arriving in P3: grammar.ts
-                     and its tables are in; the transform and a `parseLatex`
-                     entry are not, so index.ts still publishes output only.
+    latex/           Both halves landed: index.ts (parseLatex, toLatex),
+                     parser.ts, grammar.ts, transform.ts, preprocess.ts,
+                     registry.ts, renderer.ts, render.ts, render-shared.ts —
+                     the same shape as asciimath/.
       generated/     The LaTeX grammar's own constant tables, written by
                      scripts/generate-latex-parser-data.rb. Part of the layer
                      (rule 1), like core/generated and formatting/generated,
@@ -131,23 +130,20 @@ src/
                      generated from, and a second generator writing there
                      would falsify that. Merging the two is a rename, for a
                      change that can regenerate the corpus outputs alongside.
-    unicodemath/     Same shape as latex/: renderer landed (toUnicodemath), and
-                     grammar.ts with its generated/ tables; transform and a
-                     `parseUnicodemath` entry are not in, so index.ts publishes
-                     output only.
+    unicodemath/     Same shape as latex/: index.ts exports `parseUnicodemath`
+                     and `toUnicodemath`. The parser covers part of the gem's
+                     grammar: a construct whose transform rule is not ported
+                     raises `ParseError` naming the missing rule family.
     mathml/          toMathml(MathNode) → string. Imports: core, xml, its slice.
-    html/            Source renderer landed: index.ts, renderer.ts, render.ts,
-                     and render-shared.ts. Its package subpath is a later phase.
-                     The parser half has begun: grammar.ts, ported rule for rule
-                     from html/parse.rb, with the transform and a `parseHtml`
-                     entry still to come — so index.ts publishes output only and
-                     grammar.ts is not a build entry.
+    html/            Both halves landed: index.ts exports `parseHtml` and
+                     `toHtml`; grammar.ts is ported rule for rule from
+                     html/parse.rb, with transform.ts, parser.ts, renderer.ts,
+                     render.ts and render-shared.ts beside it.
       generated/     The HTML grammar's own constant tables, written by
                      scripts/generate-html-parser-data.rb. Same rule-1 placement
                      and same reason as latex/generated above.
-    omml/            Renderer internals landed: renderer.ts, render.ts, and
-                     render-shared.ts. Its format index and package subpath are
-                     a later phase.
+    omml/            Output only: index.ts exports `toOmml` (renderer.ts,
+                     render.ts, render-shared.ts). It has no parser.
     ...              Every format module is independent of every other.
   render/            Renderer code, node-major (§5, "How this maps to the
                      gem"): one directory per node kind, one file per format
@@ -179,6 +175,9 @@ src/
                      points, so a renderer never pulls the parser.
   compat/            The frozen `Plurimath` class. Imports: everything.
                      Only the root entry re-exports it.
+  cli/               The `plurimath` executable (package.json `bin`, built to
+                     dist/cli.mjs): `plurimath convert --from F --to F`,
+                     through the compat class. Not a subpath of the library.
   generated/
     asciimath/       Input tables for the asciimath parser (own file).
     mathml/          Output descriptors for the mathml renderer (own file).
@@ -290,25 +289,27 @@ them (2026-08-21, #33) on the same terms: a text format like `/latex`, so its
 forbidden set carries the XML layer and the grammar alongside the other three
 formats, and the boundary gate's inventory read 38 kinds x 4 formats at that
 point.
-`/html` joined them on the same terms: output only, so like `/latex` its
-forbidden set carries both the grammar and the XML layer, its markup being
-built as strings rather than through the element tree. The gate's inventory now
-reads 38 kinds x 6 formats -- it counts every format with render files present,
-so OMML is in that six while its own subpath is still unpublished.
+`/html` and `/omml` are build entries too, each with its own isolation policy in
+`scripts/gate-package.mjs`; `/html` began output-only and now also exports
+`parseHtml`. The gate's inventory counts every format with render files
+present: 38 kinds x 6 formats.
 
 ## 4. Public API
 
 `package.json` `exports` map:
 
 ```
-@plurimath/plurimath-ts             → root: everything the package publishes
-                                      (today core; convenience + compat when they land)
+@plurimath/plurimath-ts             → root: default-exports the compat `Plurimath`
+                                      class, plus FORMATS, the Format type, and
+                                      everything /core exports
 @plurimath/plurimath-ts/core        → FormulaNode, node types, errors
 @plurimath/plurimath-ts/asciimath   → parseAsciimath, toAsciimath
-@plurimath/plurimath-ts/html        → toHtml (partial coverage; parser when ported)
+@plurimath/plurimath-ts/html        → parseHtml, toHtml
 @plurimath/plurimath-ts/latex       → parseLatex, toLatex
 @plurimath/plurimath-ts/mathml      → toMathml (parser when ported)
-@plurimath/plurimath-ts/unicodemath → toUnicodemath (parser when ported)
+@plurimath/plurimath-ts/omml        → toOmml (output only)
+@plurimath/plurimath-ts/unicodemath → parseUnicodemath (partial grammar), toUnicodemath
+bin: plurimath                      → dist/cli.mjs, `plurimath convert` (not a library subpath)
 @plurimath/plurimath-ts/formatting  → (NOT YET PUBLISHED — see below)
 @plurimath/plurimath-ts/evaluation  → (FUTURE — not published; evaluation lands in P4+, §9)
 @plurimath/plurimath-ts/unitsml     → (FUTURE — not published; UnitsML is deferred, §5)
@@ -367,14 +368,23 @@ function toAsciimath(node: MathNode, options?: AsciimathOptions | null): string;
 function toMathml(node: MathNode, options?: MathmlOptions | null): string;
 function toLatex(node: MathNode, options?: LatexOptions | null): string;
 function toUnicodemath(node: MathNode, options?: UnicodemathOptions | null): string;
+function toHtml(node: MathNode, options?: HtmlOptions | null): string;
+function toOmml(node: MathNode, options?: OmmlOptions | null): string;
+// parseLatex, parseHtml and parseUnicodemath follow parseAsciimath's shape, with
+// LatexParseOptions, HtmlParseOptions and UnicodemathParseOptions.
 ```
 
-Root convenience:
+Root convenience — **as designed; not built.** `src/index.ts` exports the
+compat class as `default` and `Plurimath`, plus `FORMATS`, `Format` and
+everything `/core` exports (measured against `dist/index.js`, 2026-09-21). It
+does not export the `parse` function below or per-format re-exports such as
+`toMathml`; whether it should is an open decision
+([open-decisions.md](TODO.plan/open-decisions.md#root-parse-function)).
 
 ```ts
 function parse(input: string, format: InputFormat, options?: ParseOptions): FormulaNode;
 export { toMathml, toLatex, ... };            // re-exports
-export default class Plurimath { ... }        // compat, below
+export default class Plurimath { ... }        // compat, below (this part exists)
 ```
 
 The root `parse` forwards `options` to the selected format's parser, so root
@@ -413,14 +423,16 @@ exposed as a name-compatible `readonly data: FormulaNode` — settled 2026-09-04
 (§11). The document does not claim a fully exact ABI.
 
 The freeze will be enforced by a checked-in declaration fixture (type-level
-test) plus one runtime test per method; no api-extractor needed. Neither the
-compat class nor that fixture exists yet. The ~80-line budget
-is guidance; exact compatibility overrides it.
+test) plus one runtime test per method; no api-extractor needed. The compat
+class exists (`src/compat/index.ts`); the P2 exit criterion for its
+declaration fixture is still unchecked in
+[p2-output-formats/README.md](TODO.plan/p2-output-formats/README.md). The
+~80-line budget is guidance; exact compatibility overrides it.
 
-**The compat class is not built in P0.** It has nothing to wrap until an input
-format exists. It lands with the first release that claims compatibility
-value, and its fixture freezes then — building and freezing a default export
-around an empty library first would be pure ceremony.
+**Constructor and methods today** (measured against `dist/`, 2026-09-21): the
+constructor builds from `asciimath`, `latex`, `html` and `unicode`; `mathml`,
+`omml` and any other name throw `UnsupportedFormatError`. `toDisplay` and
+`toMathml(true)` throw `UnsupportedFeatureError`; the other methods render.
 
 **Availability constraint.** The compat constructor accepts six input formats,
 but input formats land across phases (§9). The compat class is therefore only

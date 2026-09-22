@@ -1139,3 +1139,13 @@ codepoint: `#` before `{`, `$` or `@`, which Ruby escapes and JSON does not.
 it: section 3 rule 8 gives a kind file its own format's `render-shared` and no
 other's, so a shared spelling would have to move into core, which is a layering
 decision rather than a bug fix.
+
+## Number formatting: an absurd exponent fails in both implementations, differently
+
+`1e100000000000000000000` (an exponent past 64 bits) with `notation: "e"`. The
+oracle raises `RangeError` ("bignum too big to convert into 'long'"); this port
+raises `RangeError` ("Invalid string length"). Both refuse the input, so no
+output can disagree; only the message differs. Found in a strict review of the
+B2 notations branch. Not engineered around: no caller can act on the
+difference, and an exact match would mean re-implementing the gem's
+`Integer#to_i` overflow check for a value no formula holds.

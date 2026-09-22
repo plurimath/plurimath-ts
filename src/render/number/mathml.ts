@@ -10,28 +10,27 @@
  * With a formatter active, and a gem-numeric value (`isGemNumericValue`), the
  * same numeric pipeline the four text renderers already thread through
  * (`../../formatting/number-format.ts`) — `<mn>` wraps the formatted string
- * instead of the raw one. A value that is not numeric refuses, matching
+ * instead of the raw one; a `scientific`/`engineering` notation is the
+ * structured `<mrow>` `renderFormattedNumber` builds. A value that is not numeric refuses, matching
  * `Formatter::Numbers::Source#validate_numeric!`
  * (`refuseNonNumericUnderFormatter`).
  */
 
 import {
-  applyNumberFormat,
   FORMAT,
   interpolatedValue,
   isGemNumericValue,
   type NodeOf,
   type RenderContext,
   refuseNonNumericUnderFormatter,
+  renderFormattedNumber,
 } from "../../formats/mathml/render-shared";
 import { XmlElement } from "../../xml/index";
 
 export function renderNumber(node: NodeOf<"number">, context: RenderContext): XmlElement {
   const value = node.value;
   if (context.numberFormat !== null) {
-    if (isGemNumericValue(value)) {
-      return new XmlElement("mn").append(applyNumberFormat(value, context.numberFormat));
-    }
+    if (isGemNumericValue(value)) return renderFormattedNumber(value, context.numberFormat);
     refuseNonNumericUnderFormatter(value, FORMAT, node.kind);
   }
   return new XmlElement("mn").append(interpolatedValue(value, node.kind, "number.value"));

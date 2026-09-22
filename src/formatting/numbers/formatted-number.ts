@@ -5,12 +5,20 @@
  * can render them its own way. The four text formats and MathML all read
  * `formattedNumberText`.
  *
- * `baseNotation` (prefix, postfix, the semantic `_(16)` form) is deliberately
- * absent: it belongs to the base lane, which adds it here and to
- * `formattedNumberText`'s `to_s` counterpart without touching the digit
- * pipeline.
+ * `baseNotation` carries the base, prefix and postfix. It is not applied to
+ * the digit strings here: `digitsString` is the digits alone (hex-capitalized
+ * when `hex_capital` is `true`), `formattedNumberText` adds the sign and the
+ * affixes, and how a target draws a semantic base (`ff_(16)`, `<msub>`) is
+ * `text-renderer.ts`'s and the MathML renderer's.
  */
 
+import {
+  type BaseNotation,
+  isDefaultBase,
+  upcaseHexDigits,
+  upcasesHex,
+  wrapBase,
+} from "./base-notation";
 import type { Sign } from "./parts";
 
 export interface FormattedNumber {
@@ -19,6 +27,7 @@ export interface FormattedNumber {
   /** Already grouped; `""` when the number has no fraction. */
   readonly fractionPart: string;
   readonly decimalSeparator: string;
+  readonly baseNotation: BaseNotation;
   /** `number_sign` as the gem normalizes it: only `"plus"` has an effect. */
   readonly numberSign: string | null;
 }
@@ -32,14 +41,30 @@ export function signText(number: FormattedNumber): string | null {
   return number.numberSign === "plus" ? "+" : null;
 }
 
-/** `FormattedNumber#digits_string` — the digits and decimal marker, without the sign. */
+/**
+ * `FormattedNumber#digits_string` — the digits and decimal marker, without the
+ * sign, prefix or postfix. `hex_capital: true` upper-cases all of it, the
+ * separators included (`FormattedNumber#upcase_hex`).
+ */
 export function digitsString(number: FormattedNumber): string {
-  return number.fractionPart === ""
-    ? number.integerPart
-    : `${number.integerPart}${number.decimalSeparator}${number.fractionPart}`;
+  const assembled =
+    number.fractionPart === ""
+      ? number.integerPart
+      : `${number.integerPart}${number.decimalSeparator}${number.fractionPart}`;
+  return upcasesHex(number.baseNotation) ? upcaseHexDigits(assembled) : assembled;
 }
 
-/** `FormattedNumber#to_s` for a number with no base notation: the sign then the digits. */
+/** `FormattedNumber#base_notation?`. */
+export function hasBaseNotation(number: FormattedNumber): boolean {
+  return !isDefaultBase(number.baseNotation);
+}
+
+/**
+ * `FormattedNumber#to_s`: the sign, then the digits wrapped in the base
+ * prefix and postfix (a base-10 number has neither).
+ */
 export function formattedNumberText(number: FormattedNumber): string {
-  return `${signText(number) ?? ""}${digitsString(number)}`;
+  const digits = digitsString(number);
+  const wrapped = hasBaseNotation(number) ? wrapBase(digits, number.baseNotation) : digits;
+  return `${signText(number) ?? ""}${wrapped}`;
 }

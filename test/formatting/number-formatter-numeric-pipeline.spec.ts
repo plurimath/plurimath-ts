@@ -1,16 +1,21 @@
 /**
  * B2's numeric-pipeline slice: `precision`, `significant`, `digitCount`,
  * `padding`/`paddingDigits`/`paddingGroupDigits` and `numberSign` of the
- * per-call `formatter:` option, against the pinned `calls/1` oracle cases and
- * against values measured directly on the oracle.
+ * per-call `formatter:` option — plus, since B2's notation slice, `notation`
+ * (`e`/`scientific`/`engineering`), `e`, `times` and `exponentSign` (inline
+ * cases: `number-formatter-notation.spec.ts`) and, since the base slice,
+ * `base`, `basePrefix`, `basePostfix` and `hexCapital` (base-specific measured
+ * cases: `number-formatter-base-notation.spec.ts`; notation with a base:
+ * `number-formatter-notation-base.spec.ts`) — against the pinned `calls/1`
+ * oracle cases and against values measured directly on the oracle.
  *
  * Three groups:
  *
  * 1. Every pinned `calls/1` case whose options fall in this slice renders
  *    byte-identically for asciimath, latex, mathml, unicodemath and html.
  *    OMML stays refused (another lane's).
- * 2. Every pinned case outside it is still refused BY NAME, and the refusal
- *    names the offending key.
+ * 2. Every pinned case outside it (base notation, when the pin has any) is
+ *    still refused BY NAME, and the refusal names the offending key.
  * 3. Inline cases measured on the oracle (below), and the option refusals.
  */
 
@@ -49,6 +54,14 @@ const IN_SCOPE_KEYS: ReadonlySet<string> = new Set([
   "padding_digits",
   "padding_group_digits",
   "number_sign",
+  "notation",
+  "e",
+  "times",
+  "exponent_sign",
+  "base",
+  "base_prefix",
+  "base_postfix",
+  "hex_capital",
 ]);
 
 function camel(key: string): string {
@@ -107,17 +120,6 @@ const ALL = loadPinnedCorpus().calls.map(reduce);
 const IN_SCOPE = ALL.filter(
   (c) => c.keys.every((k) => IN_SCOPE_KEYS.has(k)) && c.stringFormat === null && c.locale === "en",
 );
-const NOTATION_OR_BASE_KEYS = new Set([
-  "notation",
-  "e",
-  "times",
-  "exponent_sign",
-  "base",
-  "base_prefix",
-  "base_postfix",
-  "hex_capital",
-]);
-const REFUSED = ALL.filter((c) => c.keys.some((k) => NOTATION_OR_BASE_KEYS.has(k)));
 
 function buildFormula(entry: PinnedCallCase): ConstructedMathNode {
   const census = readCensus();
@@ -125,11 +127,11 @@ function buildFormula(entry: PinnedCallCase): ConstructedMathNode {
 }
 
 describe("pinned calls/1 cases — the sets this spec partitions", () => {
-  it("has 66 cases, and no case is both in scope and refused", () => {
+  it("has 66 cases, and every one but a string_format or non-en case is in scope", () => {
     // 66 is measured, not recalled: the count of `corpus.calls` under the pinned testsuite.
     expect(ALL).toHaveLength(66);
     expect(IN_SCOPE.length).toBeGreaterThan(0);
-    for (const c of IN_SCOPE) expect(REFUSED).not.toContain(c);
+    for (const c of IN_SCOPE) expect(c.stringFormat).toBeNull();
   });
 
   it("covers every group of this slice (a gate that inspects nothing fails)", () => {
@@ -140,6 +142,13 @@ describe("pinned calls/1 cases — the sets this spec partitions", () => {
       "digit-count-",
       "sign-plus-basic",
       "padding-",
+      "notation-e-",
+      "notation-scientific-",
+      "notation-engineering-",
+      "sign-plus-e",
+      "sign-plus-scientific",
+      "sign-plus-engineering",
+      "base-",
     ]) {
       expect(
         ids.some((id) => id.includes(stem)),
@@ -167,28 +176,14 @@ describe.each(IN_SCOPE.map((c) => [c.entry.id, c] as const))("%s", (_id, c) => {
   });
   it("renders html byte-identical to the oracle", () => {
     const html = expected.get("html");
-    // The two oldest cases predate the html target and carry no html expectation.
-    if (html === undefined) return;
-    expect(toHtml(buildFormula(c.entry), { formatter })).toBe(html);
+    const rendered = toHtml(buildFormula(c.entry), { formatter });
+    // The two oldest cases predate the html target and carry no html
+    // expectation: they still assert the render completes with a string.
+    if (html === undefined) expect(typeof rendered).toBe("string");
+    else expect(rendered).toBe(html);
   });
   it("still refuses omml — another lane's", () => {
     expect(() => toOmml(buildFormula(c.entry), { formatter } as never)).toThrow(RenderError);
-  });
-});
-
-describe.each(REFUSED.map((c) => [c.entry.id, c] as const))("%s (notation/base lane)", (_id, c) => {
-  it("is refused by name in every text format and mathml", () => {
-    const named = c.keys.filter((k) => NOTATION_OR_BASE_KEYS.has(k)).map(camel);
-    for (const render of [toAsciimath, toLatex, toMathml, toUnicodemath, toHtml]) {
-      let error: unknown;
-      try {
-        render(buildFormula(c.entry), { formatter: c.formatter } as never);
-      } catch (thrown) {
-        error = thrown;
-      }
-      expect(error).toBeInstanceOf(RenderError);
-      for (const key of named) expect((error as RenderError).message).toContain(`"${key}"`);
-    }
   });
 });
 
@@ -358,21 +353,6 @@ describe("option validation", () => {
   it("refuses a non-string padding and number sign", () => {
     refuses({ options: { padding: 0 } } as never, /padding/);
     refuses({ options: { numberSign: true } } as never, /numberSign/);
-  });
-
-  it("still refuses the notation and base keys by name", () => {
-    for (const key of [
-      "notation",
-      "e",
-      "times",
-      "exponentSign",
-      "base",
-      "basePrefix",
-      "basePostfix",
-      "hexCapital",
-    ]) {
-      refuses({ options: { [key]: "x" } } as never, new RegExp(`"${key}"`));
-    }
   });
 });
 

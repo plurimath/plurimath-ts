@@ -305,6 +305,99 @@ describe("toDisplay", () => {
       );
     });
 
+    /**
+     * `Text#to_<format>_math_zone` (`function/text.rb:86-105`): a bare
+     * `Number` merges to a synthetic `Text` (`ModelHelper#filter_math_zone_values`)
+     * whose math-zone tail line depends on the FORMAT, not on a shared
+     * shortcut. Measured on the oracle,
+     * `Plurimath::Asciimath.new("2").to_formula.to_display(<format>)`:
+     *
+     *   - LATEX IS THE ODD FORMAT OUT: `to_latex_math_zone` calls
+     *     `to_asciimath`, not `to_latex` — the tail line is `"2" text`,
+     *     never `\text{2} text`.
+     *   - asciimath/unicodemath call their OWN normal renderer (unaffected —
+     *     same value either way here).
+     *   - mathml/omml use the FRAGMENT dump (`<mtext>2</mtext>` /
+     *     `<m:t>2</m:t>`), not the full-document renderer, which requires a
+     *     `Formula`-shaped root and cannot run on a bare leaf.
+     */
+    it("a bare Number leaf's math-zone tail line depends on the format, not a shared shortcut", () => {
+      const two = () => new Plurimath("2", "asciimath");
+      expect(two().toDisplay("asciimath")).toBe('|_ Math zone\n  |_ "2"\n     |_ "2" text\n');
+      expect(two().toDisplay("latex")).toBe('|_ Math zone\n  |_ "2"\n     |_ "2" text\n');
+      expect(two().toDisplay("unicodemath")).toBe('|_ Math zone\n  |_ "2"\n     |_ "2" text\n');
+
+      const mathmlRoot = two().toMathml().replace(/\n\s*/g, "");
+      expect(two().toDisplay("mathml")).toBe(
+        `|_ Math zone\n  |_ "${mathmlRoot}"\n     |_ "<mtext>2</mtext>" text\n`,
+      );
+
+      const ommlRoot = two().toOmml().replace(/\n\s*/g, "");
+      expect(two().toDisplay("omml")).toBe(
+        `|_ Math zone\n  |_ "${ommlRoot}"\n     |_ "<m:t>2</m:t>" text\n`,
+      );
+    });
+
+    /**
+     * `Symbol#to_omml_math_zone` (`symbols/symbol.rb:190-193`) goes through
+     * `Symbol#omml_nodes`/`#t_tag` (`:156-163`), which always wraps the bare
+     * per-symbol value in ONE `<m:t>...</m:t>` -- a DIFFERENT path from
+     * `to_omml_without_math_tag` (the bare value alone) and from
+     * `insert_t_tag` (`<m:r><m:t>...</m:t></m:r>`, one level MORE wrapping).
+     * Measured: `Plurimath::Asciimath.new("alpha").to_formula.to_display(:omml)`
+     * tail line is `"<m:t>&#x3b1;</m:t>" text`.
+     */
+    it("a bare Symbol leaf's OMML math-zone line wraps the value in one <m:t>, no more and no less", () => {
+      const alpha = () => new Plurimath("alpha", "asciimath");
+      const ommlRoot = alpha().toOmml().replace(/\n\s*/g, "");
+      expect(alpha().toDisplay("omml")).toBe(
+        `|_ Math zone\n  |_ "${ommlRoot}"\n     |_ "<m:t>&#x3b1;</m:t>" text\n`,
+      );
+
+      const mathmlRoot = alpha().toMathml().replace(/\n\s*/g, "");
+      expect(alpha().toDisplay("mathml")).toBe(
+        `|_ Math zone\n  |_ "${mathmlRoot}"\n     |_ "<mi>&#x3b1;</mi>" text\n`,
+      );
+    });
+
+    /**
+     * A Table cell's Text content goes through the SAME `Text#to_latex_math_zone`
+     * split as a bare leaf (above) -- measured:
+     * `Plurimath::Asciimath.new("[[a,b],[c,d]]").to_formula.to_display(:latex)`.
+     */
+    it("a Table cell's text content under the LaTeX zone uses asciimath's renderer too", () => {
+      expect(new Plurimath("[[a,b],[c,d]]", "asciimath").toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "\\left [\\begin{matrix}a & b \\\\ c & d\\end{matrix}\\right ]"\n' +
+          '     |_ "table" function apply\n        |_ "tr" function apply\n' +
+          '        |  |_ "td" function apply\n        |  |  |_ "a" text\n' +
+          '        |  |_ "td" function apply\n        |     |_ "b" text\n' +
+          '        |_ "tr" function apply\n           |_ "td" function apply\n' +
+          '           |  |_ "c" text\n           |_ "td" function apply\n' +
+          '              |_ "d" text\n',
+      );
+    });
+
+    /**
+     * `Substack < UnaryFunction` (`substack.rb:6-40`) has NO `to_*_math_zone`
+     * overrides at all -- it inherits `UnaryFunction`'s (`unary_function.rb:94-155`)
+     * unchanged. The refusal below is still correct, but for a DIFFERENT
+     * reason than "Substack has bespoke math-zone methods": `parameter_one`
+     * is an ARRAY of rows, and `UnaryFunction`'s inherited math-zone methods
+     * call `parameter_one.to_latex(...)` directly, which is `NoMethodError`
+     * on an `Array` in the gem itself. Measured:
+     * `Plurimath::Latex.new('\substack{a \\\\ b}').to_formula.to_display(:latex)`
+     * raises `NoMethodError: undefined method 'to_latex' for an instance of
+     * Array` in the oracle, at the very header line (before `UnaryFunction`'s
+     * own math-zone body is ever reached) -- this port raises `RenderError`
+     * at the same point, for the same reason.
+     */
+    it("Substack still refuses every format, now for the measured reason (inherited UnaryFunction, Array field)", () => {
+      const substack = new Plurimath(String.raw`\substack{a \\ b}`, "latex");
+      for (const lang of ValidLangs) {
+        expect(() => substack.toDisplay(lang)).toThrow();
+      }
+    });
+
     it("a BinaryFunction alias (Power, via the generic FUNCTION table) prints base/script", () => {
       expect(new Plurimath("x^2", "asciimath").toDisplay("asciimath")).toBe(
         '|_ Math zone\n  |_ "x^(2)"\n     |_ "x^(2)" superscript\n' +

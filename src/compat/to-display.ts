@@ -81,8 +81,23 @@
  *
  *   - Fully ported: `Formula`/`Mrow` structural recursion with
  *     `ModelHelper.filter_math_zone_values`' leaf-run merging; `Number`,
- *     `Symbol`, `Text` leaves; every `BinaryFunction`/`TernaryFunction`
- *     subclass reachable from asciimath/latex/html/unicode input that this
+ *     `Symbol`, `Text` leaves UNDER EVERY FORMAT INCLUDING OMML — each
+ *     leaf's OWN `to_<format>_math_zone` is used, not a shared shortcut:
+ *     `Text#to_latex_math_zone` calls `to_asciimath`, not `to_latex`
+ *     (`function/text.rb:90-92`, the gem's own inconsistency, reproduced
+ *     rather than "fixed" — measured, a Number `2` under the LaTeX zone
+ *     prints `"2" text`, never `\text{2} text`); `Text#to_mathml_math_zone`/
+ *     `#to_omml_math_zone` call `dump_mathml`/`dump_omml` — the FRAGMENT dump,
+ *     not the full-document renderer, which requires a `Formula`-shaped root
+ *     and cannot run on a bare leaf; `Symbol#to_omml_math_zone` goes through
+ *     `Symbol#omml_nodes`/`#t_tag` (`symbols/symbol.rb:156-163`), which wraps
+ *     the bare per-symbol value in ONE `<m:t>...</m:t>` — measured, a
+ *     standalone `alpha` prints `"<m:t>&#x3b1;</m:t>" text`, not the bare
+ *     `"&#x3b1;" text` `to_omml_without_math_tag` alone would give, and not
+ *     `<m:r><m:t>...</m:t></m:r>` (that `<m:r>` belongs to `insert_t_tag`, a
+ *     different method this path never calls); every `BinaryFunction`/
+ *     `TernaryFunction` subclass reachable from asciimath/latex/html/unicode
+ *     input that this
  *     compat class supports, keyed by the gem's own `FUNCTION` constants
  *     (`frac`, `power`, `base`, `root`, `over`, `overset`, `underset`,
  *     `stackrel`, `lim`, `log`, `mod`, `semantics`, `menclose`, `color`,
@@ -102,14 +117,39 @@
  *     itself; refusing here is PARITY, not a gap); `FontStyle`/`Vec`/`Color`
  *     under OMML specifically (each overrides the generic
  *     `BinaryFunction`/`UnaryFunction` shape with a bespoke, format-specific
- *     header this slice does not carry); `Substack`, `Msgroup`, `Unitsml`
- *     (each has its own bespoke `to_*_math_zone`, unmeasured here); a raw
- *     `Symbol`/`Number`/`Text` sibling RUN under the OMML zone specifically
- *     (the gem's `ModelHelper#symbol_to_text` OMML branch returns an ARRAY
- *     of `Ox` elements that Ruby's `Array#join` then flattens through
- *     `to_s` — a path this port cannot reproduce without guessing Ruby's
- *     `Ox::Element#to_s`, so it refuses rather than fabricate one; every
- *     OTHER OMML shape — the root line, and recursion through
+ *     header this slice does not carry); `Msgroup`/`Unitsml` (each has its
+ *     own bespoke `to_*_math_zone`, unmeasured here); `Substack` — NOT for
+ *     the reason a prior version of this doc claimed. `substack.rb:6-40`
+ *     defines only ordinary format serializers (`to_asciimath`, `to_latex`,
+ *     …); it has NO `to_*_math_zone` overrides at all and inherits
+ *     `UnaryFunction`'s (`unary_function.rb:94-155`) unchanged, the same as
+ *     `sqrt`/`ceil`/etc. above. The refusal is still correct, but for a
+ *     different, measured reason: `UnaryFunction`'s inherited math-zone
+ *     methods print the "function apply"/"function name" header and then
+ *     call `latex_fields_to_print(parameter_one, ...)` (and the
+ *     asciimath/mathml/omml/unicodemath equivalents), which call
+ *     `parameter_one.to_latex(...)` DIRECTLY — but `Substack#parameter_one`
+ *     is an ARRAY of rows (`to_latex`'s own body maps over
+ *     `parameter_one&.compact&.map { |param| param.to_latex(...) }`), and
+ *     `Array` has no `to_latex` method. Calling `to_display` on a real
+ *     `Substack` raises `NoMethodError: undefined method 'to_latex' for an
+ *     instance of Array` in the gem itself (measured on the pinned oracle,
+ *     every format) — BEFORE `UnaryFunction`'s own math-zone body is even
+ *     reached, at the header line that renders `parameter_one` as a field.
+ *     Refusing here is PARITY with that crash, not a gap this slice chose to
+ *     skip; a raw `Symbol`/`Number`/`Text` sibling RUN (more than one
+ *     merge-eligible leaf folded together) under the OMML zone specifically
+ *     (the gem's `ModelHelper#symbol_to_text` OMML branch — measured, for
+ *     the reachable merge-eligible symbol classes, `Plus`/`Minus`/`Circ`/
+ *     `Equal`/a bare generic `Symbol` — actually returns a PLAIN STRING
+ *     (`Symbols::Symbol#to_omml_without_math_tag`'s `value`, not an `Ox`
+ *     element array as a prior version of this doc claimed), joined with the
+ *     other run members and re-encoded through `Text#first_value`'s
+ *     omml-specific entity/`&#xa0;` substitution before being wrapped in one
+ *     `<m:t>`; reproducing that substitution faithfully was out of scope for
+ *     this pass and is left as a named follow-up rather than guessed at
+ *     here); every OTHER OMML shape — the root line, standalone Number/
+ *     Symbol/Text leaves (see above), and recursion through
  *     `Formula`/`Fenced`/the function families above — IS ported and
  *     measured); a bare `string` entry in a node sequence (measured: the gem
  *     parses `"left(right)"` to `[Left, "", Right]`; calling `.class_name`
@@ -407,7 +447,15 @@ const TABLE_LIKE_LABEL: Record<string, string> = {
 /** `Left`/`Right`: both override every `to_*_math_zone` with a no-op. */
 const NO_OP_CLASS_NAMES = new Set(["left", "right"]);
 
-/** Fields the gem's `Nary` genuinely has no `to_*_math_zone` for at all — parity, not a gap. */
+/**
+ * Each refused for its OWN measured reason (module doc above has the full
+ * account): `nary` genuinely has no `to_*_math_zone` at all (parity, not a
+ * gap); `substack` inherits `UnaryFunction`'s but crashes on it in the gem
+ * itself (`parameter_one` is an Array, not a single node — NOT because it
+ * has bespoke math-zone methods); `msgroup`/`unitsml` each have real bespoke
+ * `to_*_math_zone` overrides, unmeasured here; `fontstyle`/`vec` override the
+ * generic Unary/BinaryFunction OMML header.
+ */
 const UNSUPPORTED_CLASS_NAMES = new Set([
   "nary",
   "substack",
@@ -499,22 +547,56 @@ function mathZoneOf(
   }
 
   if (name === "text") {
-    // `Text#to_<format>_math_zone`: ascii/latex/unicodemath already embed
-    // their own quotes (`Text#to_asciimath` returns `"\"...\""`); mathml/omml
-    // add them here, matching the gem's own split.
-    if (options.format === "mathml" || options.format === "omml") {
-      return `${spacing}"${ops.render(node, options.displayStyle)}" text\n`;
+    // `Text#to_<format>_math_zone` (`function/text.rb:86-105`), measured per
+    // format rather than assumed uniform:
+    //
+    //   - asciimath/unicodemath call their OWN normal renderer
+    //     (`to_asciimath`/`to_unicodemath`), which already embeds its own
+    //     quotes for asciimath (`Text#to_asciimath` returns `"\"...\""`).
+    //   - LATEX IS THE ODD ONE OUT: `to_latex_math_zone` calls `to_asciimath`,
+    //     NOT `to_latex` (`text.rb:90-92`) — measured: a Number `2` under the
+    //     LaTeX zone prints `"2" text`, never `\text{2} text`; a Table cell
+    //     `"a"` under LaTeX prints `"a" text` the same way. Checked against
+    //     every OTHER format's own `to_<format>_math_zone` on the same
+    //     oracle: none of asciimath/mathml/omml/unicodemath substitutes a
+    //     different renderer the way latex does — latex is the only format
+    //     whose math-zone text differs from its own normal text rendering.
+    //   - mathml/omml call `dump_mathml`/`dump_omml` — the FRAGMENT dump
+    //     (`<mtext>...</mtext>` / `<m:t>...</m:t>`), not the full-document
+    //     renderer (`to_mathml`/`to_omml`), which requires a `Formula`-shaped
+    //     root and raises on a bare leaf. This is the same fragment dump the
+    //     `Symbol` branch below already uses.
+    if (options.format === "mathml") {
+      return `${spacing}"${dumpMathmlFragment(node)}" text\n`;
+    }
+    if (options.format === "omml") {
+      return `${spacing}"${dumpOmmlFragment(node, options.displayStyle)}" text\n`;
+    }
+    if (options.format === "latex") {
+      return `${spacing}${toAsciimath(node)} text\n`;
     }
     return `${spacing}${ops.render(node, options.displayStyle)} text\n`;
   }
 
   if (isSymbolKind(node)) {
     // `Symbol#to_<format>_math_zone`: always explicitly quoted, every format.
+    // mathml/omml use the FRAGMENT dump, same as the `Text` branch above.
+    // OMML NEEDS AN EXTRA WRAP: `dump_omml` here calls the gem's
+    // `Symbol#omml_nodes`/`#t_tag` (`symbols/symbol.rb:156-163`), which always
+    // wraps the bare per-symbol value in ONE `<m:t>...</m:t>` — a DIFFERENT
+    // path from `to_omml_without_math_tag` (the bare value alone, used when a
+    // symbol is a FIELD inside a larger structure and its parent supplies the
+    // wrapper). `dumpOmmlFragment` reproduces the bare path, so the `<m:t>`
+    // has to be added here. Measured on the oracle: a standalone Symbol
+    // (`alpha`) under the OMML zone prints `"<m:t>&#x3b1;</m:t>" text` — NOT
+    // `"&#x3b1;" text` (missing the tag) and NOT `<m:r><m:t>...</m:t></m:r>`
+    // (that `<m:r>` wrapper belongs to `insert_t_tag`, a different method
+    // this path never calls).
     const rendered =
       options.format === "mathml"
         ? dumpMathmlFragment(node)
         : options.format === "omml"
-          ? dumpOmmlFragment(node, options.displayStyle)
+          ? `<m:t>${dumpOmmlFragment(node, options.displayStyle)}</m:t>`
           : ops.render(node, options.displayStyle);
     return `${spacing}"${rendered}" text\n`;
   }

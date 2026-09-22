@@ -22,16 +22,16 @@
  * `unicode_math/transform.rb` registers 516 rules — 519 counting the three the
  * `BaseNumberPrefix::Transform` mixin adds — and porting them in one unit is
  * not reviewable. The boundary is drawn by what the repository can *check*
- * today: the pinned corpus carries no UnicodeMath INPUT cases, but it carries
- * 103 distinct `expected.unicodemath` strings — UnicodeMath the gem itself
+ * today: at the time this slice was cut, the pinned corpus carried no
+ * UnicodeMath INPUT cases, but it carried 103 distinct `expected.unicodemath` strings — UnicodeMath the gem itself
  * emitted — and feeding those back through `Plurimath::Math.parse(text,
  * :unicode)` is a round trip whose every answer is the oracle's.
  *
  * Measured on the oracle, with every registered block wrapped in a counter:
- * the gem parses 97 of those 103 and refuses 6, and the 97 fire **86** distinct
+ * the gem parsed 97 of those 103 (the corpus size at the time) and refused 6, and the 97 fired **86** distinct
  * rules. This slice ports **78** of them: the 86 minus the eight-rule
  * table/matrix family (`transform.rb:8`, `:9`, `:14`, `:32`, `:1569`, `:1574`,
- * `:1584`, `:1649`), which serves exactly two of the 103 inputs and needs
+ * `:1584`, `:1649`), which served exactly two of those 103 inputs (at the time) and needs
  * `get_table_class`, `Td`/`Tr` construction and per-subclass table paren
  * defaults that no other rule here touches.
  *
@@ -176,7 +176,7 @@
  * named there as the reason a labelled input was refused, and this increment
  * is that reason resolved.
  *
- * The family serves exactly two of the 103 corpus strings — `"⒨(a@b)"` and
+ * The family served exactly two of the 103 corpus strings (at the time this slice was cut) — `"⒨(a@b)"` and
  * `"ⓢ(a&b@c&d)"`, `model-parity.spec.ts` compares both for real now — so the
  * rest of its eighteen rules' coverage comes from hand-picked witnesses in
  * `generate-unicodemath-model-fixtures.rb`'s own `"table"` group — the same
@@ -5014,8 +5014,10 @@ export function unicodemathTransform(): Transform {
  *
  * Measured, not reasoned about: every registered block was wrapped on the
  * oracle and every hash that reached `transform_elt` without matching a rule
- * was recorded with its value shapes, over the same 103 corpus strings the
- * fixtures carry. Nine signatures came back, across FIVE inputs:
+ * was recorded with its value shapes, over the 103 corpus strings the
+ * fixtures carried at the time (the pinned corpus is 182 strings now; this
+ * table was not re-swept against the larger set). Nine signatures came back,
+ * across FIVE inputs:
  *
  *   - `(a)/(+) b` — `close_paren=simple,open_paren=simple,operator=simple`,
  *     `intermediate_exp=other`, `factor=other`,

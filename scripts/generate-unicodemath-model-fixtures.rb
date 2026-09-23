@@ -1081,6 +1081,86 @@ RULE_COVERAGE = {
     "[+∞,1]",
     "[−∞,1]",
   ],
+  # INTERMEDIATE/SLASHED/PAREN-TAIL (slice J): `transform.rb:1514`-`:2426`
+  # plus `:2777`/`:2787`/`:3074`. A separate group so parallel slices' own
+  # coverage additions don't collide with this one. Rule numbers are the
+  # lines `rule(` opens on, each traced on the oracle with the same
+  # `TracePoint :b_call` method every earlier increment used.
+  #
+  #   "⒭ab▒c"                      1514  root, multi-character radix
+  #   "a¹²bc/d"                    1746  mini_sup + SEQUENCE recursive_numerator
+  #   "a¹²b/c"                     1751  mini_sup + SIMPLE recursive_numerator
+  #   "1a/b"                       1761  digit + SIMPLE recursive_numerator
+  #   "1bc/d"                      1766  digit + SEQUENCE recursive_numerator
+  #   "1a2_x"                      1771  digit + SEQUENCE expr
+  #   "1x₂"                        67, 1776  digit + SIMPLE expr (moved from
+  #                                SLICE_BOUNDARY, `:1776`'s own blocker)
+  #   "a^2 b/c"                    1781  sup_exp + SIMPLE recursive_numerator
+  #   "a^2 bc/c"                   1786  sup_exp + SEQUENCE recursive_numerator
+  #   "∑_(k=0)^n n⒞k a^k b"        1801  frac + SEQUENCE naryand_recursion
+  #   "(a|b"                       1836  intermediate_exp + SIMPLE expr
+  #   "(a)!"                       1846  intermediate_exp + exclamation_symbol
+  #   "(a|bc"                      1856  intermediate_exp + SEQUENCE expr
+  #   "a\'b"                       1894  slashed_value + SIMPLE expr
+  #   "1(a\'b)"                    1899  slashed_value + SIMPLE exp
+  #   "\a2b c"                     1904  SEQUENCE slashed_value + SIMPLE expr
+  #   "\a2b cd"                    1909  SEQUENCE slashed_value + SEQUENCE expr
+  #   "a\'bc"                      1914  slashed_value + SEQUENCE expr
+  #   "├]a┤["                      2010, 2015  the unmasked paren-prefix pair
+  #   "├1]a┤4["                    2061, 2073  that pair's masked siblings
+  #   "(𝑘−𝑧−1)⒞𝑘"                  2079  char + SEQUENCE diacritics + number
+  #   "1I(x,x') = g(x,x') [ε(x,x') + ∫_S▒ρ(x,x',x'')I(x',x'')ⅆx'']"
+  #                                346, 2251  factor + SEQUENCE operand +
+  #                                SIMPLE naryand_recursion (moved from
+  #                                SLICE_BOUNDARY, `:346`'s own blocker)
+  #   "1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa"
+  #                                381, 1776  (moved from SLICE_BOUNDARY)
+  #   "1A^* = \sum_{r}{ (-1)^r ⟨ A ⟩_r } = ⟨ A ⟩_+ - ⟨ A ⟩_-"
+  #                                441, 1776  (moved from SLICE_BOUNDARY)
+  #   "(x + y + z) ∧ (x + 3y - 3z) = - 6y z + 4z x + 2x y"
+  #                                2275  factor + SIMPLE operand + SEQUENCE exp
+  #   "∑_1\of (\forall y\exists 1) ⫷if resolveCW == true⫸"
+  #                                2281  factor + SIMPLE operand + SIMPLE exp
+  #   "f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"
+  #                                2287  factor + SEQUENCE operand + SEQUENCE exp
+  #   "a_δ₁ρ₁σ₂^3β"                2335  sub_script + mini_sub + exp_iteration
+  #   "N₀₊₍₂₋₅₎₌₋₃"                2426  mini_intermediate_exp + sub_operators
+  #                                + SEQUENCE sub_recursions
+  #
+  # `:2245`, `:2323`, `:2035`, `:2041`, `:2097`, `:1841`, `:2341`, `:2777`,
+  # `:2403`, `:2787` and `:3074` carry no row here — see the module header's
+  # own "thirteenth increment" section for each one's disposition.
+  "intermediate_paren_tail" => [
+    "⒭ab▒c",
+    "a¹²bc/d",
+    "a¹²b/c",
+    "1a/b",
+    "1bc/d",
+    "1a2_x",
+    "1x₂",
+    "a^2 b/c",
+    "a^2 bc/c",
+    "∑_(k=0)^n n⒞k a^k b",
+    "(a|b",
+    "(a)!",
+    "(a|bc",
+    "a\\'b",
+    "1(a\\'b)",
+    "\\a2b c",
+    "\\a2b cd",
+    "a\\'bc",
+    "├]a┤[",
+    "├1]a┤4[",
+    "(𝑘−𝑧−1)⒞𝑘",
+    "1I(x,x') = g(x,x') [ε(x,x') + ∫_S▒ρ(x,x',x'')I(x',x'')ⅆx'']",
+    '1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa',
+    '1A^* = \\\\sum_{r}{ (-1)^r ⟨ A ⟩_r } = ⟨ A ⟩_+ - ⟨ A ⟩_-',
+    "(x + y + z) ∧ (x + 3y - 3z) = - 6y z + 4z x + 2x y",
+    "∑_1\\of (\\forall y\\exists 1) ⫷if resolveCW == true⫸",
+    "f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx",
+    "a_δ₁ρ₁σ₂^3β",
+    "N₀₊₍₂₋₅₎₌₋₃",
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`
@@ -1103,12 +1183,6 @@ RULE_COVERAGE = {
 # and each row was re-traced against the current port rather than trusted to
 # still be blocked by the same rule:
 #
-#   "1x₂"    still refused by `:1776` `{digit: simple, expr: simple}` alone
-#            now — `:67` (`{mini_sub: sequence}`), the other rule that used
-#            to block it, is ported (slice H): `:1776` never fires, so `base`
-#            inside the `mini_sub` hash stays a raw hash rather than the
-#            SEQUENCE `:1054` needs. Port message unchanged: `no rule matched
-#            {mini_sub=other}`.
 #   "1/2a"   still refused by `:658` `{digit: simple,
 #            recursive_denominator: simple}` exactly as before — `:1619` was
 #            never the blocker here, only the rule one level up that `:658`
@@ -1117,37 +1191,38 @@ RULE_COVERAGE = {
 # `"ⅇ"` moved out when slice H ported `:43` (`{mitBbb: simple}`); it
 # compares for real now, in `RULE_COVERAGE["combinators"]`.
 #
-# Four more rows are slice H's own: each fires a rule the slice ports, but the
-# SAME input also fires a sibling combinator (`:945`, `:1776`, `:2251`) no
-# slice has claimed — every one of them a `{key: simple/sequence, key2:
-# simple/sequence}` combinator of this exact family, measured on the oracle
-# with the SAME `TracePoint :b_call` method as `RULE_COVERAGE`, just not one
-# of the 21 ids this slice was scoped to:
+# `"1x₂"` and slice H's own three rows below moved out when slice J ported
+# `:1776` and `:2251` (both `{key: simple, key2: simple/sequence}`
+# combinators of this exact family, outside the 21 ids slice H was scoped
+# to) — each re-traced against the current port and now parses:
 #
-#   the 101-char "1w^h^e^e^e^e+1a+…" row for `:95`/`:945`
-#   the "1I(x,x')…ⅆx'']" row for `:346`/`:2251`
-#   the "1a_ℲDa + a_ℲCa + …" row for `:381`/`:1776`
-#   the "1A^* = ..." row for `:441`/`:1776`
+#   "1x₂" fired `:67` (ported by slice H) and `:1776` (ported by slice J);
+#   the 101-char "1w^h^e^e^e^e+1a+…" row still fires `:95`/`:945` — `:945` is
+#   slice I's own claim, so this row alone stays here for integration to
+#   resolve;
+#   the "1I(x,x')…ⅆx'']" row fired `:346`/`:2251`, both now ported;
+#   the "1a_ℲDa + a_ℲCa + …" row fired `:381`/`:1776`, both now ported;
+#   the "1A^* = ..." row fired `:441`/`:1776`, both now ported.
+#
+# All four moved into `RULE_COVERAGE["intermediate_paren_tail"]` below.
 #
 # `:80` (`{intermediate_exp: sequence}`) is NOT ported at all: every oracle
 # input found that fires it does so nested one level under an `open_paren`/
 # `factor or frac`/`exp: sequence`/`close_paren` combo this slice does not
-# carry either (`:3422`, `:3477`, `:3510` fire fine; the ones still missing
-# are `:800`/`:1836`/`:1856`, unclaimed pure combinators of the same shape),
-# so no input was found reaching `:80` on its own — not proven unreachable,
-# only unreached (the module header's own phrase for this exact situation).
+# carry either (`:3422`, `:3477`, `:3510` fire fine; the one still missing is
+# `:800`, an unclaimed pure combinator of the same shape — `:1836`/`:1856`,
+# named here in an earlier pass, are ported by slice J now but did not
+# unlock `:80` on any input re-tried), so no input was found reaching `:80`
+# on its own — not proven unreachable, only unreached (the module header's
+# own phrase for this exact situation).
 #
 # Every row records a rule the port lacks, not one it has: each is a witness
 # a pure combinator (`RULE_COVERAGE["combinators"]`) needs and cannot have
 # until the builder beside it lands. When that builder does, the row's refusal
 # stops and `model-parity.spec.ts` fails until it moves into a coverage group.
 SLICE_BOUNDARY = [
-  "1x₂",
   "1/2a",
   '1w^h^e^e^e^e+1a+"Testing this!"-(1/2/333/4+1+1)+abc₂⁹/W_c+ab+√(42&1g)+▭(255&▭(255&b))+∑_A▒a+1+∑┴a┬b▒b',
-  "1I(x,x') = g(x,x') [ε(x,x') + ∫_S▒ρ(x,x',x'')I(x',x'')ⅆx'']",
-  '1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa',
-  '1A^* = \\\\sum_{r}{ (-1)^r ⟨ A ⟩_r } = ⟨ A ⟩_+ - ⟨ A ⟩_-',
 ].freeze
 
 options = { oracle: nil, out: "test/formats/unicodemath", allow_dirty: false }

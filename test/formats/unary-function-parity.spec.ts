@@ -85,11 +85,7 @@ const PORT_REFUSES: Readonly<Record<Format, Readonly<Record<string, RegExp>>>> =
   html: {
     "model-mbox-nil": /mbox\.parameterOne: holds nil/,
   },
-  omml: {
-    // `unicode[:alpha]` substitution reads a MathML-owned entity table that
-    // `text/omml.ts` does not carry.
-    "model-mbox-unicode-token": /unicode\[:name\] substitution/,
-  },
+  omml: {},
   // `Scarries#to_unicodemath` is the carrier default and the gem renders it
   // (`"scarries⁡x"`), but this port's unicodemath carrier deliberately does
   // not admit `Scarries` — see the module note in

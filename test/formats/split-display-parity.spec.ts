@@ -24,7 +24,7 @@
  *
  * Every fixture row is asserted: byte-for-byte where the gem renders, a
  * `RenderError`/`ParseError` where it refused. A row the port cannot yet
- * reproduce is named in `PORT_REFUSES` below (34 rows, all kind-renderer
+ * reproduce is named in `PORT_REFUSES` below (2 rows, all kind-renderer
  * refusals).
  */
 import { readFileSync } from "node:fs";

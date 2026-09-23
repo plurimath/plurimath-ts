@@ -168,13 +168,66 @@ function gemEvaluatedClass(node: MathNode): string | null {
 }
 
 /**
- * Ruby: `Core#evaluate`'s default fallback message, `class_name.sub(...)` —
- * approximated here, not reproduced exactly, for node kinds this slice never
- * had reason to resolve against the gem's own class names (message text is
- * never API, `core/errors.ts`'s header). `binaryFunction`/`unaryFunction`/
- * `ternaryFunction` carry their Ruby class basename in `name`
- * (`core/nodes.ts`). `Symbols::Equal` has its own phrase in the gem's
- * `unsupported_message` ("equation"; measured: `1=1`), reproduced here.
+ * Every remaining node `kind` this port models (`core/nodes.ts`'s
+ * `NODE_KINDS`) to the Ruby class basename `Core#evaluate`'s fallback would
+ * print — `node.class.name.sub(/^Plurimath::Math::/, "")` — for the bare
+ * carrier of that kind (the ones `describeUnsupportedNode`'s `switch` does
+ * not resolve some other way: `number`, `symbol`, `binaryFunction`,
+ * `unaryFunction`, `ternaryFunction`, `fontStyle` and `table`, the last two
+ * handled separately below because each also carries a `name` for its
+ * aliased subclass, `core/nodes.ts`'s `FontStyleNode`/`TableNode`).
+ *
+ * Every entry is measured directly on the oracle (`Math::Function::<Basename>.
+ * name.sub(...)`), not inferred from the module path — `mrow`'s gem class is
+ * `Plurimath::Math::Formula::Mrow`, under `Formula`, not `Function`, the one
+ * exception a naming-by-convention guess would have missed.
+ */
+const DEFAULT_UNSUPPORTED_CLASS: Readonly<Record<string, string>> = {
+  abs: "Function::Abs",
+  bar: "Function::Bar",
+  base: "Function::Base",
+  ceil: "Function::Ceil",
+  color: "Function::Color",
+  ddot: "Function::Ddot",
+  dot: "Function::Dot",
+  fenced: "Function::Fenced",
+  floor: "Function::Floor",
+  formula: "Formula",
+  frac: "Function::Frac",
+  hat: "Function::Hat",
+  int: "Function::Int",
+  linebreak: "Function::Linebreak",
+  mpadded: "Function::Mpadded",
+  mrow: "Formula::Mrow",
+  nary: "Function::Nary",
+  norm: "Function::Norm",
+  obrace: "Function::Obrace",
+  oint: "Function::Oint",
+  overleftrightarrow: "Function::Overleftrightarrow",
+  overset: "Function::Overset",
+  prod: "Function::Prod",
+  sqrt: "Function::Sqrt",
+  sum: "Function::Sum",
+  text: "Function::Text",
+  tilde: "Function::Tilde",
+  ubrace: "Function::Ubrace",
+  ul: "Function::Ul",
+  underset: "Function::Underset",
+  vec: "Function::Vec",
+};
+
+/**
+ * Ruby: `Core#evaluate`'s default fallback message, `class_name.sub(...)`.
+ * `binaryFunction`/`unaryFunction`/`ternaryFunction` carry their Ruby class
+ * basename in `name` (`core/nodes.ts`); `fontStyle`/`table` do too, but their
+ * BARE carrier (no `name`) is itself a concrete gem class
+ * (`Function::FontStyle`, `Function::Table`), unlike the three function
+ * carriers, none of which the gem ever instantiates un-aliased — so a bare
+ * `fontStyle`/`table` reports its own class, and only a named one reports the
+ * aliased subclass (`DEFAULT_UNSUPPORTED_CLASS` has neither key: both are
+ * resolved here, next to the `name` read that decides between them).
+ * `Symbols::Equal` has its own phrase in the gem's `unsupported_message`
+ * ("equation"; measured: `1=1`), reproduced here.
  */
 function describeUnsupportedNode(node: MathNode): string {
   switch (node.kind) {
@@ -189,8 +242,12 @@ function describeUnsupportedNode(node: MathNode): string {
     case "unaryFunction":
     case "ternaryFunction":
       return `Function::${node.name}`;
+    case "fontStyle":
+      return node.name ? `Function::FontStyle::${node.name}` : "Function::FontStyle";
+    case "table":
+      return node.name ? `Function::Table::${node.name}` : "Function::Table";
     default:
-      return node.kind;
+      return DEFAULT_UNSUPPORTED_CLASS[node.kind] ?? node.kind;
   }
 }
 

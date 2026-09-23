@@ -41,6 +41,14 @@ export type EvaluationErrorCode =
 export class EvaluationError extends PlurimathError {
   readonly code: EvaluationErrorCode = "EVAL_ERROR";
 
+  /**
+   * Not useless despite forwarding unchanged: `PlurimathError`'s constructor
+   * is `protected`, so omitting this one would make TypeScript infer the
+   * same protected constructor here too, and `MathDomainError` below, which
+   * in turn omits its own, would inherit `protected` and stop being publicly
+   * constructible. Declaring it, unchanged, is what re-opens it to `public`.
+   */
+  // biome-ignore lint/complexity/noUselessConstructor: see the comment above.
   constructor(message: string) {
     super(message);
   }
@@ -63,14 +71,13 @@ export class DivisionByZeroError extends EvaluationError {
  * `#initialize` of its own — it is raised both with the wrapped
  * `::Math::DomainError#message` (from `evaluator.rb`'s `rescue`) and with a
  * literal message (`real_result`'s "result is not a real number"), so the
- * message is a required constructor argument here rather than fixed.
+ * message stays a required constructor argument here rather than fixed —
+ * inherited unchanged from `EvaluationError`, which already declares the same
+ * public `(message: string)` constructor, so restating it here would only
+ * forward it, which is the useless case `EvaluationError`'s own comment is not.
  */
 export class MathDomainError extends EvaluationError {
   override readonly code: EvaluationErrorCode = "EVAL_MATH_DOMAIN";
-
-  constructor(message: string) {
-    super(message);
-  }
 }
 
 /** Ruby: `NonFiniteResultError#initialize` (`non_finite_result_error.rb`). */

@@ -30,14 +30,39 @@ export type EvaluationBindings = Readonly<Record<string, number>>;
 export type NormalizedBindings = ReadonlyMap<string, number>;
 
 /**
- * The JS-native label `InvalidBindingError` reports in place of a Ruby class
- * name (`value.class`) — `typeof value`, with `null` and `Array` singled out
- * because `typeof null === "object"` and `typeof [] === "object"` would
- * otherwise both read "object", the least informative label available.
+ * The Ruby class name `InvalidBindingError` interpolates for `value.class`
+ * (`errors.ts`'s header) — mapped from the JS runtime type of a value that
+ * reached this typed surface anyway (an untyped caller, `bindings.ts`'s own
+ * header). Each mapped case is measured on the oracle
+ * (`Formula#evaluate({a: <value>})`'s `InvalidBindingError#message`,
+ * `scripts/generate-evaluation-fixtures.rb`'s `invalid-binding-*` rows):
+ * a JS string is the Ruby value a caller would hand across as a `String`
+ * binding, `true`/`false` correspond to Ruby's two boolean singleton
+ * classes (`TrueClass`/`FalseClass`, not one shared `Boolean` — Ruby has no
+ * such class), `null`/`undefined` are both `NilClass` (Ruby has one nil, JS
+ * has two spellings of "absent"), a JS array is the Ruby value a caller
+ * would build a `Hash`-like `Array` binding from, and a plain object is a
+ * `Hash`, the structural analogue the gem's own bindings argument is.
+ *
+ * `bigint`, `function` and `symbol` have no oracle-measurable Ruby analogue:
+ * nothing in the gem's own `Numeric`/String/Symbol-keyed world receives a
+ * value shaped like a JS function or a JS `Symbol` (an unrelated runtime
+ * concept from Ruby's own `Symbol`, `bindings.ts`'s header) or a `bigint`
+ * (which normalizeBindings's own JS-numeric check rejects same as any other
+ * non-`number`, never one the gem could have received as a Ruby `Numeric`
+ * either). Each is labeled with its own JS type name, capitalized to match
+ * the shape of the measured labels, rather than invented Ruby class fiction.
  */
 export function describeBindingValueType(value: unknown): string {
-  if (value === null) return "null";
-  if (Array.isArray(value)) return "array";
+  if (value === null || value === undefined) return "NilClass";
+  if (value === true) return "TrueClass";
+  if (value === false) return "FalseClass";
+  if (typeof value === "string") return "String";
+  if (Array.isArray(value)) return "Array";
+  if (typeof value === "object") return "Hash";
+  if (typeof value === "bigint") return "BigInt";
+  if (typeof value === "function") return "Function";
+  if (typeof value === "symbol") return "Symbol";
   return typeof value;
 }
 

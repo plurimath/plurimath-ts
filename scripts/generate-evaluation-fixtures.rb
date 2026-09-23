@@ -10,11 +10,16 @@
 #   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
 #     scripts/generate-evaluation-fixtures.rb --oracle /path/to/plurimath
 #
-# Every row is hand-built AsciiMath — one input format keeps the surface
-# small, matching the slice's own scope — with bindings, covering every
-# in-scope operator, implicit multiplication, nesting, each reachable error
-# class, the non-real `^` case, overflow, an unbound variable and a bad
-# binding value. `expected` is recorded as a STRING (`Integer#inspect` /
+# Every row is hand-built — mostly AsciiMath, with a smaller `LATEX_ROWS` set
+# covering the same operator and error surface through the OTHER input format
+# `evaluate()` accepts (`bindings.ts`'s header: a `FormulaNode` from any
+# parsed format, not only AsciiMath) — with bindings, covering every in-scope
+# operator, implicit multiplication, nesting, each reachable error class, the
+# non-real `^` case, overflow, an unbound variable and a bad binding value.
+# A row that raises records `message` (`Exception#message`) alongside
+# `raises` (the class name): `evaluate.spec.ts` checks both, byte-exact, not
+# only the class and its `code` — a wrong phrase with the right class would
+# otherwise pass silently. `expected` is recorded as a STRING (`Integer#inspect` /
 # `Float#inspect`), never a JSON number: Ruby's `Integer`/`Float` distinction
 # (`2+3` => `5`, `6/3` => `2.0`) would be lost the instant a JSON number
 # round-tripped through a JS parser. `evaluate.spec.ts` checks both the value
@@ -112,19 +117,25 @@ def json_safe(value)
   value
 end
 
-def evaluate_row(id, group, source, text, bindings, port_refusal)
+FORMAT_PARSERS = {
+  "asciimath" => Plurimath::Asciimath::Parser,
+  "latex" => Plurimath::Latex::Parser,
+}.freeze
+
+def evaluate_row(id, group, source, format, text, bindings, port_refusal)
   bindings.each do |name, value|
     next unless value.is_a?(Float) && value.finite? && value == value.round
 
     abort "REFUSING: #{id}: binding #{name} is the integral Float #{value.inspect}, " \
           "which a JS number cannot tell apart from the Integer #{value.to_i}"
   end
-  formula = Plurimath::Asciimath::Parser.new(text).parse
+  parser_class = FORMAT_PARSERS.fetch(format) { abort "REFUSING: #{id}: unknown format #{format}" }
+  formula = parser_class.new(text).parse
   row = {
     "id" => id,
     "group" => group,
     "source" => source,
-    "input" => { "format" => "asciimath", "text" => text },
+    "input" => { "format" => format, "text" => text },
     "bindings" => bindings.transform_values { |v| json_safe(v) },
   }
   begin
@@ -144,6 +155,7 @@ def evaluate_row(id, group, source, text, bindings, port_refusal)
     row["expected"] = result.inspect
   rescue EVALUATION_ERROR => e
     row["raises"] = e.class.name
+    row["message"] = e.message
   rescue ArgumentError => e
     abort "REFUSING: #{id}: ArgumentError #{e.message} without an argument-error marker" unless port_refusal == "argument-error"
     row["raises"] = "ArgumentError"
@@ -159,6 +171,87 @@ def evaluate_row(id, group, source, text, bindings, port_refusal)
 end
 
 MAX_SAFE_INTEGER = (2**53) - 1
+
+# `numeric.ts`'s own `INTEGER_BIT_LIMIT` (`1 << 22`), read from its source
+# rather than restated as a literal, so a `size-limit` row is validated
+# against the port's ACTUAL limit and a future change to it cannot silently
+# make this validation check the wrong number.
+NUMERIC_TS_SOURCE = File.read(File.join(__dir__, "..", "src", "evaluation", "numeric.ts"))
+INTEGER_BIT_LIMIT_MATCH = NUMERIC_TS_SOURCE.match(/INTEGER_BIT_LIMIT = 1 << (\d+)/)
+abort "REFUSING: could not read INTEGER_BIT_LIMIT out of numeric.ts" unless INTEGER_BIT_LIMIT_MATCH
+INTEGER_BIT_LIMIT = 1 << INTEGER_BIT_LIMIT_MATCH[1].to_i
+
+# `size-limit` rows: the exact intermediate value the port refuses, computed
+# independently in plain Ruby (arbitrary-precision `Integer`), keyed by row
+# id. Validated bit length must exceed `INTEGER_BIT_LIMIT` (item 6: "size-limit
+# means the operand really exceeds the limit").
+SIZE_LIMIT_INTERMEDIATES = {
+  "size-limit-huge-power-times-zero" => -> { 2**5_000_000 },
+}.freeze
+
+# `pow-rounding-band` rows: the exact integer base and non-negative integer
+# exponent of the `Float**Float` call at issue, keyed by row id. Validated by
+# reproducing `pow.ts`'s own halfway test exactly, in `Integer`/`Rational`
+# arithmetic (item 6: "pow-rounding-band means the exact result lies within
+# the band, computed exactly").
+POW_ROUNDING_BAND_OPERANDS = {
+  "pow-exact-halfway" => [123_456_789, 2],
+}.freeze
+
+# `pow.ts`'s `roundDyadic` halfway test, ported to exact `Integer` arithmetic:
+# `exact` an exact positive `Integer`, `mantissa_bits` the double significand
+# width (53, sign bit included as the implicit leading one). Returns whether
+# the correctly-rounded double for `exact` sits within 0.04 ULP of a midpoint
+# between two doubles — the same `|2*remainder - full| * 25 < 2*full` test
+# `pow.ts`'s `roundDyadic` applies to its own fixed-point mantissa.
+def exact_value_in_pow_rounding_band?(exact)
+  bit_length = exact.bit_length
+  shift = bit_length - 53
+  return false if shift <= 0 # exactly representable: no rounding at all, let alone a band case.
+
+  quotient = exact >> shift
+  remainder = exact - (quotient << shift)
+  full = 1 << shift
+  offset = 2 * remainder - full
+  offset.abs * 25 < 2 * full
+end
+
+def validate_port_refusal!(id, port_refusal, row)
+  case port_refusal
+  when "unported"
+    # "the oracle succeeds" (item 6) means "the gem genuinely evaluates this
+    # class" — the class's own `#evaluate` ran, whether it returned a value
+    # or raised some OTHER evaluation error along the way (measured:
+    # `unported-sin-missing-variable`'s `sin(x)` raises `MissingVariableError`
+    # from evaluating its argument, never reaching `Sin`'s own trig step; the
+    # port refuses before evaluating that argument at all, since it has not
+    # ported `Sin#evaluate` to run it). What would falsify "unported" is the
+    # GEM refusing the same construct itself, i.e. its own
+    # `UnsupportedExpressionError` — that would mean the port and the gem
+    # agree the construct is unsupported, which is the plain
+    # `error-unsupported` case, not this one.
+    if row["raises"] == "Plurimath::Errors::Evaluation::UnsupportedExpressionError"
+      abort "REFUSING: #{id}: marked unported, but the oracle itself refuses this construct"
+    end
+  when "size-limit"
+    intermediate = SIZE_LIMIT_INTERMEDIATES[id]
+    abort "REFUSING: #{id}: marked size-limit, but no SIZE_LIMIT_INTERMEDIATES entry" unless intermediate
+    bits = intermediate.call.bit_length
+    unless bits > INTEGER_BIT_LIMIT
+      abort "REFUSING: #{id}: marked size-limit, but the operand is #{bits} bits, " \
+            "not beyond the port's #{INTEGER_BIT_LIMIT}-bit limit"
+    end
+  when "pow-rounding-band"
+    operands = POW_ROUNDING_BAND_OPERANDS[id]
+    abort "REFUSING: #{id}: marked pow-rounding-band, but no POW_ROUNDING_BAND_OPERANDS entry" unless operands
+    base, exponent = operands
+    exact = base.to_i.abs**exponent.to_i
+    unless exact_value_in_pow_rounding_band?(exact)
+      abort "REFUSING: #{id}: marked pow-rounding-band, but #{base}^#{exponent} is not within " \
+            "0.04 ULP of a double midpoint"
+    end
+  end
+end
 
 ROWS = [
   # Additive / multiplicative / unary, `Number#evaluate`'s Integer-vs-Float split.
@@ -215,13 +308,44 @@ ROWS = [
   ["overflow-nan-binding", "error-non-finite", "a+1"],
   ["invalid-binding-string", "error-invalid-binding", "a+1"],
   ["invalid-binding-boolean", "error-invalid-binding", "a+1"],
+  ["invalid-binding-false", "error-invalid-binding", "a+1"],
   ["invalid-binding-nil", "error-invalid-binding", "a+1"],
+  ["invalid-binding-array", "error-invalid-binding", "a+1"],
+  ["invalid-binding-hash", "error-invalid-binding", "a+1"],
   ["malformed-two-numbers", "error-unsupported", "2 3"],
   ["equation-unsupported", "error-unsupported", "1=1"],
   ["core-default-int", "error-unsupported", "int x"],
   ["core-default-base", "error-unsupported", "a_1"],
   ["core-default-lim", "error-unsupported", "lim_(x->0) x"],
   ["comma-in-group", "error-unsupported", "(2,3)"],
+  # `Core#evaluate`'s class-based fallback, one row per node kind this port
+  # models as its own `kind` (`evaluator.ts`'s `DEFAULT_UNSUPPORTED_CLASS`) —
+  # each checks the exact "Function::<Basename>" (or "Formula::<Basename>")
+  # phrase, not merely the error class, matching the class-based fallback's
+  # own text (`evaluator.rb`'s `unsupported_message`).
+  ["core-default-bar", "error-unsupported", "bar(x)"],
+  ["core-default-ddot", "error-unsupported", "ddot(x)"],
+  ["core-default-dot", "error-unsupported", "dot(x)"],
+  ["core-default-hat", "error-unsupported", "hat(x)"],
+  ["core-default-obrace", "error-unsupported", "obrace(x)"],
+  ["core-default-ubrace", "error-unsupported", "ubrace(x)"],
+  ["core-default-overset", "error-unsupported", "overset(x)(y)"],
+  ["core-default-underset", "error-unsupported", "underset(x)(y)"],
+  ["core-default-vec", "error-unsupported", "vec(x)"],
+  ["core-default-tilde", "error-unsupported", "tilde(x)"],
+  ["core-default-color", "error-unsupported", "color(red)(x)"],
+  ["core-default-norm", "error-unsupported", "norm(x)"],
+  ["core-default-table", "error-unsupported", "((1,2),(3,4))"],
+  # `bb(x)` parses to the ALIASED `Function::FontStyle::Bold`, not the bare
+  # `Function::FontStyle` — measured: no AsciiMath spelling this port's
+  # grammar accepts reaches the bare carrier, so only the aliased phrase has
+  # a row (`evaluator.ts`'s `describeUnsupportedNode` covers both).
+  ["core-default-fontstyle-bold", "error-unsupported", "bb(x)"],
+  # `\` then a newline then a space is AsciiMath's own linebreak spelling
+  # (`Function::Linebreak#to_asciimath`); a literal one is unrepresentable in
+  # this array literal's other single-line strings, so this row alone uses a
+  # heredoc-free escape.
+  ["core-default-linebreak", "error-unsupported", "\\\n x"],
 
   # Loose parens: a paren the grammar does not pair into `Fenced` reaches the
   # evaluator as a bare `Symbols::Paren::*` token (`ExpressionParser#parse_group`).
@@ -344,6 +468,28 @@ ROWS = [
   ["random-nested-groups", "random", "((2+a)(b-1))^2/(-(c))"],
 ].freeze
 
+# LaTeX-input rows: the same operator and error surface as `ROWS` above, in a
+# second input format — `evaluate()` accepts a `FormulaNode` from ANY parsed
+# format, not only AsciiMath (`bindings.ts`'s header), and every row above
+# until this point was AsciiMath, which checked nothing about how a LaTeX
+# parse feeds the same evaluator.
+LATEX_ROWS = [
+  ["latex-add-integers", "arithmetic", "2+3"],
+  ["latex-divide-inexact", "arithmetic", "1/2"],
+  ["latex-power-braced", "power", "2^{3}"],
+  ["latex-frac", "arithmetic", "\\frac{1}{2}"],
+  ["latex-sqrt", "unported", "\\sqrt{4}"],
+  ["latex-variable-lookup", "symbol", "a+1"],
+  ["latex-missing-variable", "error-missing-variable", "b+1"],
+  ["latex-division-by-zero", "error-division-by-zero", "1/0"],
+  ["latex-invalid-binding-string", "error-invalid-binding", "a+1"],
+  ["latex-core-default-bar", "error-unsupported", "\\bar{x}"],
+  ["latex-core-default-hat", "error-unsupported", "\\hat{x}"],
+  ["latex-core-default-vec", "error-unsupported", "\\vec{x}"],
+  ["latex-big-integer-power", "representability", "2^{100}"],
+  ["latex-rational-integer-negative-power", "representability", "2^{-1}"],
+].freeze
+
 # Bindings, keyed by the row id above where non-empty; every other row
 # evaluates against `{}`.
 BINDINGS = {
@@ -354,7 +500,10 @@ BINDINGS = {
   "overflow-nan-binding" => { "a" => Float::NAN },
   "invalid-binding-string" => { "a" => "x" },
   "invalid-binding-boolean" => { "a" => true },
+  "invalid-binding-false" => { "a" => false },
   "invalid-binding-nil" => { "a" => nil },
+  "invalid-binding-array" => { "a" => [1, 2] },
+  "invalid-binding-hash" => { "a" => { "b" => 1 } },
   "integer-times-float" => { "a" => 2, "b" => 3.5 },
   "float-binding-squared" => { "a" => 1.5 },
   "power-minus-one-to-infinity" => { "a" => Float::INFINITY },
@@ -385,6 +534,8 @@ BINDINGS = {
   "random-minus-one-to-float" => { "c" => -1 },
   "random-mixed-kinds" => { "a" => 3, "b" => -2.5, "c" => 4 },
   "random-nested-groups" => { "a" => 1, "b" => 0.5, "c" => -3 },
+  "latex-variable-lookup" => { "a" => 2 },
+  "latex-invalid-binding-string" => { "a" => "x" },
 }.freeze
 
 # Rows the port refuses with `UnsupportedFeatureError`, each with its reason
@@ -412,16 +563,25 @@ PORT_REFUSALS = {
   "unported-max-argument-list" => "unported",
   "unported-log" => "unported",
   "unported-text" => "unported",
+  "latex-sqrt" => "unported",
+  "latex-big-integer-power" => "big-integer",
+  "latex-rational-integer-negative-power" => "rational",
 }.freeze
 
-unknown = (BINDINGS.keys + PORT_REFUSALS.keys) - ROWS.map(&:first)
+ALL_ROW_IDS = (ROWS + LATEX_ROWS).map(&:first)
+unknown = (BINDINGS.keys + PORT_REFUSALS.keys) - ALL_ROW_IDS
 abort "REFUSING: BINDINGS/PORT_REFUSALS name unknown rows: #{unknown.join(', ')}" unless unknown.empty?
 
-rows = ROWS.map do |id, group, text|
-  bindings = BINDINGS.fetch(id, {})
-  evaluate_row(id, group, "hand-built for scripts/generate-evaluation-fixtures.rb", text, bindings,
-               PORT_REFUSALS[id])
-end
+SOURCE = "hand-built for scripts/generate-evaluation-fixtures.rb"
+
+rows = ROWS.map { |id, group, text| [id, group, text, "asciimath"] }
+  .concat(LATEX_ROWS.map { |id, group, text| [id, group, text, "latex"] })
+  .map do |id, group, text, format|
+    bindings = BINDINGS.fetch(id, {})
+    row = evaluate_row(id, group, SOURCE, format, text, bindings, PORT_REFUSALS[id])
+    validate_port_refusal!(id, PORT_REFUSALS[id], row)
+    row
+  end
 
 ids = rows.map { |r| r["id"] }
 duplicates = ids.tally.select { |_, n| n > 1 }.keys

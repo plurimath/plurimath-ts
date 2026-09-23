@@ -1,0 +1,168 @@
+#!/usr/bin/env node
+// Measures the two numbers `pow.ts`'s header cites — how often V8's `**`
+// disagrees with the platform C library's `pow` (which Ruby's `Float#**`
+// calls), and how often the EXACT result of a random `x**y` lies within 0.04
+// ULP of a double midpoint, the band `correctlyRoundedPow` refuses — over a
+// seeded, reproducible sample, so both figures can be checked again by
+// anyone, on any machine, and challenged if they come out different there.
+//
+//   node scripts/measure-pow-rounding-band.mjs [pairCount]
+//
+// Requires a `ruby` on PATH (any Ruby works: this measures the platform's own
+// `pow`, not anything the plurimath gem provides — `Float#**` is core Ruby).
+// `correctlyRoundedPow` itself is loaded straight out of `pow.ts` through
+// `esbuild`, not `dist/`, so the measurement always reflects the checked-out
+// source, never a stale build.
+//
+// Writes `test/formats/evaluation/pow-rounding-band-corpus.json`: every
+// sampled pair `correctlyRoundedPow` refused, which `test/evaluation/
+// pow-rounding-band.spec.ts` re-checks on every run WITHOUT re-measuring
+// (no `ruby` subprocess, no re-sampling) — that corpus is what makes the
+// band a committed, checked fact rather than a comment's unverifiable claim.
+
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { build } from "esbuild";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = join(HERE, "..");
+
+/** Fixed so a rerun samples the exact same pairs — mulberry32, a small, public PRNG. */
+const SEED = 20260923;
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** A random positive finite double with exponent in `[expMin, expMax]`. */
+function randomPositiveDouble(rng, expMin, expMax) {
+  const exponent = Math.floor(rng() * (expMax - expMin + 1)) + expMin;
+  const mantissa = 1 + rng(); // [1, 2)
+  return mantissa * 2 ** exponent;
+}
+
+/** A random finite `y`: ~30% exact integers (where an exact-power tie is possible at any
+ * magnitude), ~70% fractional, both magnitudes up to 60 — wide enough to reach the
+ * log/exp path (`pow.ts`'s `logExpPower`) as well as the exact-integer-power path. */
+function randomExponent(rng) {
+  const magnitude = rng() * 60;
+  const signed = rng() < 0.5 ? -magnitude : magnitude;
+  return rng() < 0.3 ? Math.round(signed) : signed;
+}
+
+const pairCount = Number(process.argv[2] ?? 100_000);
+const rng = mulberry32(SEED);
+const pairs = Array.from({ length: pairCount }, () => ({
+  x: randomPositiveDouble(rng, -20, 20),
+  y: randomExponent(rng),
+})).filter(({ y }) => y !== 0);
+
+// One Ruby process for the whole sample (100,000 subprocess spawns would
+// dominate the wall-clock cost) — `Float#**` is core Ruby, no gem load needed.
+const rubyScript = `
+  require "json"
+  pairs = JSON.parse(STDIN.read)
+  results = pairs.map { |p| p["x"].to_f ** p["y"].to_f }
+  puts JSON.generate(results.map { |r| r.to_s })
+`;
+const rubyOut = execFileSync("ruby", ["-e", rubyScript], {
+  input: JSON.stringify(pairs),
+  maxBuffer: 1 << 28,
+  encoding: "utf8",
+});
+const rubyAnswers = JSON.parse(rubyOut).map(Number);
+
+const outfile = join(mkdtempSync(join(tmpdir(), "pow-measure-")), "pow.mjs");
+await build({
+  entryPoints: [join(REPO_ROOT, "src/evaluation/pow.ts")],
+  bundle: true,
+  format: "esm",
+  platform: "node",
+  outfile,
+});
+const { correctlyRoundedPow } = await import(outfile);
+
+let mismatches = 0;
+let inBand = 0;
+let inBandButPortDisagreesWithRuby = 0;
+let outOfBandPortDisagreesWithRuby = 0;
+const boundaryPairs = [];
+
+for (let i = 0; i < pairs.length; i++) {
+  const { x, y } = pairs[i];
+  const rubyAnswer = rubyAnswers[i];
+  const v8Answer = x ** y;
+  if (!Object.is(v8Answer, rubyAnswer)) mismatches++;
+
+  let portAnswer;
+  let refused = false;
+  try {
+    portAnswer = correctlyRoundedPow(x, y);
+  } catch {
+    refused = true;
+  }
+
+  if (refused) {
+    inBand++;
+    boundaryPairs.push({ x, y, rubyAnswer });
+  } else if (!Object.is(portAnswer, rubyAnswer)) {
+    outOfBandPortDisagreesWithRuby++;
+  }
+}
+
+const platform = {
+  node: process.version,
+  arch: process.arch,
+  os: process.platform,
+  rubyVersion: execFileSync("ruby", ["-v"], { encoding: "utf8" }).trim(),
+};
+
+// The full sample's boundary count can run into the thousands (module
+// header: this measured ~8% of the sample, not the ~0.045% an older,
+// unreproduced comment had claimed). Committing all of them would make the
+// corpus file itself the size of a small fixture set for no added test
+// value: `pow-rounding-band.spec.ts` only needs ENOUGH refused pairs to
+// prove `correctlyRoundedPow` actually refuses at the boundary it claims to,
+// not every pair that landed there. `inBandCount`/`inBandRate` still report
+// the true figure over the full sample; `boundaryPairs` is a fixed-size
+// prefix of it.
+const COMMITTED_BOUNDARY_PAIRS = 200;
+
+const summary = {
+  $comment: "GENERATED by scripts/measure-pow-rounding-band.mjs. Do not edit.",
+  seed: SEED,
+  pairCount: pairs.length,
+  platform,
+  measuredAt: new Date().toISOString(),
+  v8VsGlibcMismatches: mismatches,
+  v8VsGlibcMismatchRate: mismatches / pairs.length,
+  inBandCount: inBand,
+  inBandRate: inBand / pairs.length,
+  outOfBandPortDisagreesWithRubyCount: outOfBandPortDisagreesWithRuby,
+  committedBoundaryPairCount: Math.min(boundaryPairs.length, COMMITTED_BOUNDARY_PAIRS),
+  boundaryPairs: boundaryPairs.slice(0, COMMITTED_BOUNDARY_PAIRS),
+};
+
+const outDir = join(REPO_ROOT, "test", "formats", "evaluation");
+mkdirSync(outDir, { recursive: true });
+const corpusPath = join(outDir, "pow-rounding-band-corpus.json");
+writeFileSync(corpusPath, `${JSON.stringify(summary, null, 2)}\n`);
+
+console.log(`seed ${SEED}, ${pairs.length} pairs, platform ${platform.os}/${platform.arch}, ${platform.node}, ${platform.rubyVersion}`);
+console.log(`V8 vs glibc pow mismatches: ${mismatches} (${((mismatches / pairs.length) * 100).toFixed(2)}%)`);
+console.log(`within 0.04 ULP of a midpoint (refused): ${inBand} (${((inBand / pairs.length) * 100).toFixed(3)}%)`);
+console.log(`port disagrees with Ruby OUTSIDE the band (should be 0): ${outOfBandPortDisagreesWithRuby}`);
+console.log(`-> ${corpusPath}`);
+
+if (outOfBandPortDisagreesWithRuby > 0) {
+  console.error("REFUSING: correctlyRoundedPow disagreed with Ruby's own pow outside the declared band");
+  process.exitCode = 1;
+}

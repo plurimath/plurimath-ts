@@ -31,7 +31,33 @@
  * - An Integer longer than `INTEGER_BIT_LIMIT` bits, or a Rational part longer
  *   than `RATIONAL_BIT_LIMIT` bits, is refused as a resource limit: Ruby (with
  *   GMP) keeps going, but V8's `BigInt` takes seconds per operation at that
- *   size and has no fast gcd.
+ *   size and has no fast gcd — measured directly, `scripts/
+ *   measure-numeric-size-limits.mjs` (Node v20.20.2, Linux x86_64,
+ *   2026-09-23; re-run it before trusting these on another machine):
+ *   multiplying two `INTEGER_BIT_LIMIT`-bit (4,194,304-bit) Integers took
+ *   181ms, doubling to 359ms/8,388,608 bits and 813ms/16,777,216 bits — a
+ *   single `evaluate()` call can chain several multiplications, so the limit
+ *   sits with headroom under a one-second budget for the whole call, not
+ *   pinned to where ONE multiplication alone would cross it (roughly
+ *   16,000,000-33,000,000 bits, from the same run). `2^5000000*0` (this
+ *   module's own `size-limit` fixture row) is a case where Ruby, with GMP,
+ *   answers `0` and this port refuses instead: raising `INTEGER_BIT_LIMIT` to
+ *   admit it would cost nothing by this measurement (a plain multiply by
+ *   `2^5000000` is still far under the one-second budget), but doing so is a
+ *   design decision about the LIMIT's value, left to the maintainer rather
+ *   than made here as a side effect of a measurement pass.
+ *
+ *   `RATIONAL_BIT_LIMIT` (65,536 bits) is the tighter case: `rational()`'s own
+ *   pre-reduction guard admits a numerator/denominator up to TWICE that
+ *   (131,072 bits) into `gcd` before its post-reduction check narrows the
+ *   RESULT back down — and gcd on two random 65,536-bit Integers already
+ *   measured 1,426ms, 131,072-bit ones 6,996ms. That is, at the boundary this
+ *   module already allows, a single Rational construction can measurably
+ *   exceed the one-second budget the Integer reasoning above uses — a real,
+ *   currently-present cost this comment records rather than hides, not a
+ *   justification for the current bound: lowering the pre-reduction guard
+ *   (or `RATIONAL_BIT_LIMIT` itself) is, again, the maintainer's call, not
+ *   one this pass makes unilaterally.
  */
 
 import { UnsupportedFeatureError } from "../core/errors";

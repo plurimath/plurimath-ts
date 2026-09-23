@@ -34,6 +34,7 @@ import {
   UnsupportedExpressionError,
 } from "../../src/evaluation/index";
 import { parseAsciimath } from "../../src/formats/asciimath/index";
+import { parseLatex } from "../../src/formats/latex/index";
 
 interface Row {
   readonly id: string;
@@ -43,7 +44,20 @@ interface Row {
   readonly bindings: Readonly<Record<string, number | string | boolean | null>>;
   readonly expected?: string;
   readonly raises?: string;
+  readonly message?: string;
   readonly portRefusal?: string;
+}
+
+/** The parser for a row's `input.format` — every format `evaluate()` fixtures cover so far. */
+function parseRowInput(input: Row["input"]): ReturnType<typeof parseAsciimath> {
+  switch (input.format) {
+    case "asciimath":
+      return parseAsciimath(input.text);
+    case "latex":
+      return parseLatex(input.text);
+    default:
+      throw new Error(`unknown fixture input format: ${input.format}`);
+  }
 }
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -113,7 +127,7 @@ describe("evaluate() against the oracle fixtures", () => {
   });
 
   it.each(rows.map((row) => [row.id, row] as const))("%s", (_id, row) => {
-    const formula = parseAsciimath(row.input.text);
+    const formula = parseRowInput(row.input);
     const bindings = toBindings(row.bindings);
     expect(Number(row.expected !== undefined) + Number(row.raises !== undefined), row.id).toBe(1);
     if (row.portRefusal !== undefined) {
@@ -146,6 +160,14 @@ describe("evaluate() against the oracle fixtures", () => {
     }
     expect(thrown, row.id).toBeInstanceOf(errorClass);
     expect((thrown as { code: string }).code, row.id).toBe(expectedCode);
+    // Byte-exact, not merely "some message": a wrong phrase behind the right
+    // class and `code` would otherwise pass silently (item 2's finding —
+    // `describeUnsupportedNode`'s old `linebreak` vs the gem's own
+    // `Function::Linebreak`, `evaluator.ts`). Every raised row records one
+    // (the generator's header); a missing one here is the generator failing
+    // to keep that promise, not something to skip past.
+    expect(row.message, row.id).toBeDefined();
+    expect((thrown as Error).message, row.id).toBe(row.message);
   });
 
   it("covers every refusal reason and both kinds", () => {

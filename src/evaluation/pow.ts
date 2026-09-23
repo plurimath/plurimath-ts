@@ -4,19 +4,40 @@
  *
  * JavaScript's `**` is not that function: V8 computes it with its own
  * algorithm, which differs from glibc's `pow` — what the oracle's Ruby calls —
- * for about 5% of ordinary inputs (measured: 4,825 of 100,000 random pairs,
- * checked against Python, which calls the same `pow`; `4^0.5^(-2.5)` is
- * `0.1767766952966369` in Ruby, `0.17677669529663687` from `**`).
+ * for a double-digit fraction of ordinary inputs (`4^0.5^(-2.5)` is
+ * `0.1767766952966369` in Ruby, `0.17677669529663687` from `**`), reproducibly
+ * measured by `scripts/measure-pow-rounding-band.mjs`
+ * (seed `20260923`, 99,747 finite, non-zero pairs after filtering, Linux
+ * x86_64, Node v20.20.2, Ruby 4.0.1, measured 2026-09-23):
+ * **9,768 mismatches (9.79%)** against Ruby's own `**`, over `x` and `y`
+ * sampled across a wide exponent range, not narrowed to "ordinary" inputs —
+ * a different, wider domain from whatever produced this comment's earlier,
+ * unreproducible "about 5%" / "4,825 of 100,000" claim, which cited Python
+ * rather than the oracle's own Ruby and recorded neither its sampling domain
+ * nor a seed. That earlier figure is retracted, not reconciled: nothing here
+ * shows it was wrong for whatever it measured, only that it cannot be
+ * reproduced from this repository and this one now can be, by anyone, with
+ * this script.
  *
  * glibc's `pow` is not correctly rounded either. Its source documents a
  * worst-case error of 0.54 ULP (`sysdeps/ieee754/dbl-64/e_pow.c`): 0.5 from
  * the final rounding plus up to 0.04 from the approximation. So when the
  * exact result lies within 0.04 ULP of the midpoint between two doubles,
- * glibc may return either one (measured: 45 of the 100,000 pairs, every one
- * within 0.0037 ULP of a midpoint; exact halfway cases such as
- * `123456789^2.0`, `63^9` and `3^34` round either way). Outside that band the
- * correctly rounded double is the only value within 0.54 ULP, so it is
- * exactly glibc's answer. This module therefore:
+ * glibc may return either one (exact halfway cases such as `123456789^2.0`,
+ * `63^9` and `3^34` round either way, `test/formats/evaluation/
+ * pow-rounding-band-corpus.json`'s worked example). The SAME measurement run
+ * found the exact result within that 0.04 ULP band for **7,937 of the
+ * 99,747 pairs (7.96%)** — geometric proximity to the boundary glibc's own
+ * documented error bound could reach, not a count of pairs where glibc is
+ * actually shown to round the "wrong" way (that would need an independent
+ * correctly-rounded reference beyond this measurement's scope) — and, across
+ * every one of the OTHER 91,810 pairs, this module's own answer matched
+ * Ruby's exactly (`outOfBandPortDisagreesWithRubyCount: 0` in the same
+ * corpus file), the check that matters for this module's own correctness:
+ * outside the band it claims, its answer and glibc's have never (in this
+ * sample) disagreed. Outside the band the correctly rounded double is the
+ * only value within 0.54 ULP, so it is exactly glibc's answer. This module
+ * therefore:
  *
  * - computes the exact result to far more than 53 bits — exactly with
  *   `BigInt` for an integer exponent, through `exp(y * ln x)` in 320-bit
@@ -110,6 +131,26 @@ function roundDyadic(
   return Number(quotient) * 2 ** lsb;
 }
 
+/**
+ * The largest exact result this falls back from, in bits (`bitLength(mantissa)
+ * * magnitude`, below) — chosen from a direct measurement of V8's `BigInt`
+ * exponentiation-by-squaring at this size and above (a 53-bit mantissa raised
+ * to enough of a power to reach each size, Node v20.20.2, Linux x86_64,
+ * 2026-09-23): 409,600 bits took 11.5ms; 4,096,000 bits, 163ms; 8,000,000
+ * bits, 324ms; 16,000,000 bits, 626ms; 24,000,000 bits, 1,153ms — the cost
+ * stays comfortably sub-second (roughly linear in this range) up to about
+ * 20,000,000 bits and only crosses one second beyond it. `1 << 20`
+ * (1,048,576 bits, measured at 36ms) keeps a wide, deliberate safety margin
+ * under that crossing — nowhere near where "unreasonable" starts — rather
+ * than sitting at the edge of it, since a single `evaluate()` call may chain
+ * several such powers. The result is otherwise well within reach: this is
+ * not the memory-driven `INTEGER_BIT_LIMIT`/`RATIONAL_BIT_LIMIT` reasoning
+ * (`numeric.ts`'s header), it exists only because a Float's integer-valued
+ * exponent can itself be astronomically large (`Number.MAX_SAFE_INTEGER`),
+ * which would otherwise demand an exact result with billions of bits.
+ */
+const EXACT_INTEGER_POWER_BIT_LIMIT = 1 << 20;
+
 /** `x^n` for an integer `n`, exactly rounded; `null` when too large to compute exactly. */
 function exactIntegerPower(x: number, n: number): number | null {
   let { mantissa, exponent } = decompose(x);
@@ -118,7 +159,7 @@ function exactIntegerPower(x: number, n: number): number | null {
     exponent += 1;
   }
   const magnitude = Math.abs(n);
-  if (bitLength(mantissa) * magnitude > 4096) return null;
+  if (bitLength(mantissa) * magnitude > EXACT_INTEGER_POWER_BIT_LIMIT) return null;
   const power = mantissa ** BigInt(magnitude);
   if (n > 0) return roundDyadic(power, exponent * magnitude, false);
   // x^-n = 2^(-exponent*n) / mantissa^n: divide with enough quotient bits

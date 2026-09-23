@@ -3,8 +3,10 @@
  * and `#wrapped` (:168, hoisted to `../../formats/asciimath/render-shared.ts`) — plus the name arms for
  * the gem classes the census folds into this carrier with their *own*
  * `to_asciimath` overrides: `power.rb`, `mod.rb`, `td.rb`, `lim.rb`,
- * `log.rb`, `stackrel.rb`. Of the reachable names only `Root` falls through
- * to the carrier default, and it has no override.
+ * `log.rb`, `stackrel.rb` — and for the classes the AsciiMath transform never
+ * builds (the reachability census below lists none of them): `over.rb`,
+ * `inf.rb`, `menclose.rb`, and `Mlabeledtr`, which has no override and takes
+ * the carrier default beside `Root`.
  */
 
 import type { NodeParameter } from "../../core/index";
@@ -43,7 +45,7 @@ const REACHABLE_BINARY_NAMES: ReadonlySet<string> = new Set([
 export function renderBinaryFunction(
   node: NodeOf<"binaryFunction">,
   context: RenderContext,
-): string {
+): string | null {
   const name = node.name;
   switch (name) {
     case "Power": {
@@ -88,9 +90,24 @@ export function renderBinaryFunction(
         })
         .join(" ");
     }
+    case "Menclose": {
+      // `menclose.rb:25` — `parameter_two&.to_asciimath`: the enclosure type
+      // is dropped, and an absent slot answers nil, not `""` (a caller can
+      // observe the difference, as `Nary` does for `FontStyle`).
+      if (node.parameterTwo === null || node.parameterTwo === undefined) return null;
+      return renderChild(node.parameterTwo, context, "menclose.parameterTwo");
+    }
+    case "Over":
+      // `over.rb:13` — the carrier's `wrapped` slots under the literal `frac`.
+      return `frac${wrapped(node.parameterOne, context, "over.parameterOne")}${wrapped(node.parameterTwo, context, "over.parameterTwo")}`;
+    case "Mlabeledtr":
+      // No `to_asciimath` of its own: `BinaryFunction#to_asciimath` under
+      // `class_name`.
+      return `mlabeledtr${wrapped(node.parameterOne, context, "mlabeledtr.parameterOne")}${wrapped(node.parameterTwo, context, "mlabeledtr.parameterTwo")}`;
+    case "Inf":
     case "Lim":
     case "Log": {
-      // `lim.rb:13` / `log.rb:32` — subsup prefixes, no strip.
+      // `lim.rb:13` / `log.rb:32` / `inf.rb:7` — subsup prefixes, no strip.
       const keyword = name.toLowerCase();
       const one = present(node.parameterOne)
         ? `_${wrapped(node.parameterOne, context, `${keyword}.parameterOne`)}`

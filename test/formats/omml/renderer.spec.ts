@@ -3438,11 +3438,6 @@ describe("OMML renderer boundary", () => {
 
   it.each([
     [
-      "formatter",
-      { formatter: {} },
-      'The "formatter" feature of to_omml is deferred (TODO.plan/deferred.md): number formatting is P4 scope; only the no-formatter path is measured',
-    ],
-    [
       "unitsml",
       { unitsml: {} },
       'The "unitsml" feature of to_omml is deferred (TODO.plan/deferred.md): UnitsML is deferred wholesale (ARCHITECTURE.md section 5)',
@@ -3505,32 +3500,33 @@ describe("OMML renderer boundary", () => {
     });
   });
 
-  // `Cancel` and `Menclose` are chosen deliberately: both are real aliases the
-  // census records (`Math::Function::Cancel`, `Math::Function::Menclose`), and
+  // `Vec` and `Menclose` are chosen deliberately: both are real aliases the
+  // census records (`Math::Function::Vec`, `Math::Function::Menclose`), and
   // both OWN a `to_omml_without_math_tag` — measured on the oracle at
   // `00c52783` by reading the method's `owner` for all 48 unary and 14 binary
-  // aliases. So this pins the refusal for a class the gem really renders
+  // aliases (the 15 base names answer `UnaryFunction`; `Vec` is not one of
+  // them). So this pins the refusal for a class the gem really renders
   // differently, not for a name the gem has never heard of.
   it("refuses unmeasured carrier aliases instead of transforming their names", () => {
     expectRefusal(
-      () => toOmmlWithoutMathTag(new UnaryFunctionNode({ name: "Cancel", parameterOne: symbol() })),
+      () => toOmmlWithoutMathTag(new UnaryFunctionNode({ name: "Vec", parameterOne: symbol() })),
       {
         kind: "unaryFunction",
-        message: 'UnaryFunction alias "Cancel" has not been measured for OMML in this slice',
+        message: 'UnaryFunction alias "Vec" has not been measured for OMML in this slice',
       },
     );
     expectRefusal(
       () =>
         toOmmlWithoutMathTag(
           new BinaryFunctionNode({
-            name: "Menclose",
+            name: "Semantics",
             parameterOne: symbol(),
             parameterTwo: symbol(),
           }),
         ),
       {
         kind: "binaryFunction",
-        message: 'BinaryFunction alias "Menclose" has not been measured for OMML in this slice',
+        message: 'BinaryFunction alias "Semantics" has not been measured for OMML in this slice',
       },
     );
     expectRefusal(
@@ -4235,6 +4231,15 @@ describe("OMML Text control-character encoding", () => {
     expect(toOmml(parseAsciimath(`"a${String.fromCodePoint(0x7f)}b"`))).toBe(
       publicText("a&#x7f;b"),
     );
+  });
+
+  it("refuses a lone-surrogate entity, where the gem raises RangeError", () => {
+    expectRefusal(() => toOmmlWithoutMathTag(new TextNode({ parameterOne: "x&#xd800;y" })), {
+      kind: "text",
+      message:
+        "text.parameterOne: the entities here name a code point UTF-8 cannot hold — " +
+        "the gem raises RangeError here (invalid codepoint 0xD800 in UTF-8)",
+    });
   });
 });
 

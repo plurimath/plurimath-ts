@@ -47,20 +47,56 @@ export function renderTernaryFunction(
   node: NodeOf<"ternaryFunction">,
   context: RenderContext,
 ): OmmlRendered {
-  if (node.name === "TernaryFunction") {
-    throw new RenderError(
-      "TernaryFunction has no to_omml_without_math_tag in the pinned gem and refuses instead of emitting markup",
-      FORMAT,
-      node.kind,
-    );
+  switch (node.name) {
+    case "PowerBase":
+      return renderPowerBase(node, context);
+    // `Limits#to_omml_without_math_tag` (`limits.rb:31`) is `underover`.
+    case "Limits":
+      return underover(node, context);
+    case "Multiscript":
+      return renderMultiscript(node, context);
+    // `Rule#to_omml_without_math_tag` (`rule.rb:29`): one empty run, in a list.
+    case "Rule":
+      return [new XmlElement("m:r").append(new XmlElement("m:t"))];
+    case "Underover":
+      // `Underover#to_omml_without_math_tag` (`underover.rb`): a falsy
+      // `display_style` delegates to a FRESH `PowerBase` over the same three
+      // slots — including its own `undOvr`-base recursion into `underover` —
+      // and a truthy one calls `underover` directly. Both arms are already
+      // this file's own helpers, over the SAME node (the three slots are all
+      // `renderPowerBase`/`underover` read). Measured on the pinned oracle:
+      // `display_style: true` and the omitted default agree, `false` differs.
+      return context.displaystyle ? underover(node, context) : renderPowerBase(node, context);
+    case "TernaryFunction":
+      throw new RenderError(
+        "TernaryFunction has no to_omml_without_math_tag in the pinned gem and refuses instead of emitting markup",
+        FORMAT,
+        node.kind,
+      );
+    default:
+      throw new RenderError(
+        `TernaryFunction alias "${node.name}" has not been measured for OMML in this slice`,
+        FORMAT,
+        node.kind,
+      );
   }
-  if (node.name !== "PowerBase") {
-    throw new RenderError(
-      `TernaryFunction alias "${node.name}" has not been measured for OMML in this slice`,
-      FORMAT,
-      node.kind,
-    );
-  }
+}
+
+/**
+ * `Multiscript#to_omml_without_math_tag` (`multiscript.rb:56`): an `m:sPre`
+ * with no properties element, whose base, sub and sup each go through
+ * `omml_parameter` — a nil slot is the placeholder run and a list is one
+ * inserted child per element (an empty list leaves the slot bare).
+ */
+function renderMultiscript(node: NodeOf<"ternaryFunction">, context: RenderContext): XmlElement {
+  return new XmlElement("m:sPre").append(
+    ommlSlot(node.parameterOne, "e", context, node.kind, "multiscript.parameterOne"),
+    ommlSlot(node.parameterTwo, "sub", context, node.kind, "multiscript.parameterTwo"),
+    ommlSlot(node.parameterThree, "sup", context, node.kind, "multiscript.parameterThree"),
+  );
+}
+
+function renderPowerBase(node: NodeOf<"ternaryFunction">, context: RenderContext): OmmlRendered {
   if (Array.isArray(node.parameterOne)) {
     throw new RenderError(
       "powerBase.parameterOne: cannot inspect a list for omml_tag_name — the gem raises NoMethodError here",
@@ -88,25 +124,31 @@ export function renderTernaryFunction(
   // symbol slice was wired there was no way to answer that question for a
   // symbol base, and this file assumed the `m:sSubSup` arm for everything.
   if (hasNodeKind(node.parameterOne) && ommlTagName(node.parameterOne as MathNode) === "undOvr") {
-    // `TernaryFunction#underover` (`ternary_function.rb:243-255`) builds the
-    // structure out of two OTHER nodes and renders those: an `Overset` of the
-    // base and the SUPERSCRIPT, then — only when `parameter_two` is truthy —
-    // an `Underset` of that over the subscript. `unless parameter_two` is
-    // Ruby-falsy, so a `false` subscript takes the overset-only arm exactly as
-    // `nil` does.
-    const overset = new OversetNode({
-      parameterOne: node.parameterOne,
-      parameterTwo: node.parameterThree,
-    });
-    if (!present(node.parameterTwo)) return context.render(overset);
-    return context.render(
-      new UndersetNode({ parameterOne: overset, parameterTwo: node.parameterTwo }),
-    );
+    return underover(node, context);
   }
   return new XmlElement("m:sSubSup").append(
     structuralProperties("sSubSup"),
     ommlSlot(node.parameterOne, "e", context, node.kind, "powerBase.parameterOne"),
     ommlSlot(node.parameterTwo, "sub", context, node.kind, "powerBase.parameterTwo"),
     ommlSlot(node.parameterThree, "sup", context, node.kind, "powerBase.parameterThree"),
+  );
+}
+
+/**
+ * `TernaryFunction#underover` (`ternary_function.rb:243-255`) builds the
+ * structure out of two OTHER nodes and renders those: an `Overset` of the
+ * base and the SUPERSCRIPT, then — only when `parameter_two` is truthy —
+ * an `Underset` of that over the subscript. `unless parameter_two` is
+ * Ruby-falsy, so a `false` subscript takes the overset-only arm exactly as
+ * `nil` does.
+ */
+function underover(node: NodeOf<"ternaryFunction">, context: RenderContext): OmmlRendered {
+  const overset = new OversetNode({
+    parameterOne: node.parameterOne,
+    parameterTwo: node.parameterThree,
+  });
+  if (!present(node.parameterTwo)) return context.render(overset);
+  return context.render(
+    new UndersetNode({ parameterOne: overset, parameterTwo: node.parameterTwo }),
   );
 }

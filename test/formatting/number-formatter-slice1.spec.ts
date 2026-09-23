@@ -14,10 +14,9 @@
  * `formatter` is implemented as of the MathML/OMML number-formatting slice,
  * TODO.plan/feature-roadmap.md) — the same payload the four text renderers
  * check against. OMML has no `expected.omml` field in this payload (`targets`
- * carries only asciimath/latex/mathml/unicodemath), so OMML's `formatter`
- * support is not exercised here and stays deferred by name
- * (`src/formats/omml/renderer.ts`, `DEFERRED_OPTIONS`) until an oracle case
- * carries an OMML expectation.
+ * carries only asciimath/latex/mathml/unicodemath), so OMML's `formatter` is
+ * checked elsewhere (`number-formatter-numeric-pipeline.spec.ts` for the pinned
+ * cases that record OMML, `number-formatter-omml.spec.ts` for measured ones).
  */
 
 import { describe, expect, it } from "vitest";

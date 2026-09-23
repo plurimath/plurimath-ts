@@ -8,12 +8,13 @@
  * and the numeric pipeline in `numbers/` (precision, significant digits, digit
  * count, padding, number sign), notation (`e`, `scientific`, `engineering`,
  * with `e`, `times` and `exponentSign`), and base notation (`base`, prefix,
- * postfix, hex capitalization). This is the shape, not the content: it exists
+ * postfix, hex capitalization), and string-format templates
+ * (`string-format.ts`). This is the shape, not the content: it exists
  * so a format's grammar and renderer can take these as parameters instead of
  * reaching for a global, and so the later work is filling in data rather
  * than restructuring rules.
  *
- * **What is not here, on purpose:** string formats, currency, and the rest of
+ * **What is not here, on purpose:** currency, and the rest of
  * the Ruby `Formatter::Numbers` port — see `number-format.ts`'s header and
  * `numbers/number-renderer.ts` (the seam they plug into). ARCHITECTURE.md §9
  * puts the rest in P4, and §10 lists `formatting` as "minimal normalization

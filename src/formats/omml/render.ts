@@ -37,7 +37,7 @@ import { renderUl } from "../../render/ul/omml";
 import { renderUnaryFunction } from "../../render/unary-function/omml";
 import { renderUnderset } from "../../render/underset/omml";
 import { renderVec } from "../../render/vec/omml";
-import type { OmmlRendered, RenderContext, RenderFn } from "./render-shared";
+import type { NumberFormat, OmmlRendered, RenderContext, RenderFn } from "./render-shared";
 
 /** One measured renderer per `NodeKind`; the mapped type makes omissions compile errors. */
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
@@ -99,9 +99,13 @@ function insertNode(node: MathNode, context: RenderContext): OmmlRendered {
   }
 }
 
-export function createRenderContext(displaystyle: boolean): RenderContext {
+export function createRenderContext(
+  displaystyle: boolean,
+  numberFormat: NumberFormat | null = null,
+): RenderContext {
   const context: RenderContext = {
     displaystyle,
+    numberFormat,
     insert(node) {
       return insertNode(node, context);
     },
@@ -109,7 +113,9 @@ export function createRenderContext(displaystyle: boolean): RenderContext {
       return renderNode(node, context);
     },
     withDisplaystyle(childDisplaystyle) {
-      return childDisplaystyle === displaystyle ? context : createRenderContext(childDisplaystyle);
+      return childDisplaystyle === displaystyle
+        ? context
+        : createRenderContext(childDisplaystyle, numberFormat);
     },
   };
   return context;

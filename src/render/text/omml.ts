@@ -1,6 +1,6 @@
 import { RenderError } from "../../core/index";
-import { htmlEntityToUnicode } from "../../core/nodes";
 import {
+  decodeEntities,
   FORMAT,
   type NodeOf,
   type RenderContext,
@@ -39,8 +39,8 @@ function hexEncoded(codepoint: number): boolean {
   return codepoint < 0x20 || codepoint > 0x7e || BASIC_ENTITY_CODEPOINTS.has(codepoint);
 }
 
-function encodeOmmlText(value: string): string {
-  const decoded = htmlEntityToUnicode(value.replaceAll(" ", "&#xa0;"));
+function encodeOmmlText(value: string, kind: string): string {
+  const decoded = decodeEntities(value.replaceAll(" ", "&#xa0;"), kind, "text.parameterOne");
   let encoded = "";
   // Code points, not UTF-16 units: Ruby's `gsub` matches whole characters, so
   // an astral character encodes to one reference built from its own codepoint.
@@ -70,7 +70,7 @@ function encodeOmmlText(value: string): string {
  */
 export function renderText(node: NodeOf<"text">): XmlElement {
   const value = requireString(node.parameterOne, node.kind, "text.parameterOne");
-  const encoded = encodeOmmlText(value);
+  const encoded = encodeOmmlText(value, node.kind);
   const substituted = encoded.replace(
     UNICODE_TOKEN,
     (_token, name: string) => OMML_UNICODE_INVERT.get(name) ?? OMML_SYMBOLS_INVERT.get(name) ?? "",

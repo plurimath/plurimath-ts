@@ -65,14 +65,10 @@ export const FORMATS: readonly Format[] = [
  *   - `html`: `test/compat/html-battery.spec.ts`, 50/50 hand-typed inputs
  *     parsed to an exact match against the oracle.
  *   - `unicode`: `test/compat/unicodemath-battery.spec.ts`,
- *     `test/compat/unicodemath-battery-fixtures.json`, 47/49 hand-typed
+ *     `test/compat/unicodemath-battery-fixtures.json`, 49/49 hand-typed
  *     inputs parsed to an exact match (the 50th is a shared refusal both the
- *     port and the gem raise on), with two documented `KNOWN_PORT_GAPS`
- *     where the oracle parses but the 140-rule transform slice does not yet
- *     carry the needed rule family: chained interpunct multiplication
- *     (`a·b·c`) and primed function application (`f'(x)`). Both gaps raise
- *     `ParseError` rather than return a wrong model, so the divergence is a
- *     refusal gap, not a silent one.
+ *     port and the gem raise on); `KNOWN_PORT_GAPS`, where a divergence would
+ *     be recorded as a refusal gap, is empty.
  *
  * A partial parser behind this constructor is worse than an absent one, so
  * registration follows the same rule that kept `unicode` out before this

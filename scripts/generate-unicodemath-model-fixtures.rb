@@ -15,14 +15,17 @@
 # must match, over inputs nobody wrote by hand.
 #
 # Unlike the LaTeX fixtures there was no hand-picked COVERAGE list, for as long
-# as the corpus alone could define the slice: the rules the 103
+# as the corpus alone could define the slice: the rules its
 # `expected.unicodemath` strings fire, measured on the oracle, were the rules
-# the port carried. That method was EXHAUSTED against the 103-string corpus
-# outside the deferred table/matrix family — no other unported rule fired on
-# it at the time — so RULE_COVERAGE below drives rule families chosen by what
-# they BUILD instead, same shape as the LaTeX generator's own list: grouped
-# by family, each input
-# checked against the oracle before being written down.
+# the port carried. That method was EXHAUSTED against the corpus as it stood
+# at the time (103 distinct strings) outside the deferred table/matrix family
+# — no other unported rule fired on it then — so RULE_COVERAGE below drives
+# rule families chosen by what they BUILD instead, same shape as the LaTeX
+# generator's own list: grouped by family, each input
+# checked against the oracle before being written down. The corpus has since
+# grown (see `corpusUnicodemathCount` in the generated fixtures for its
+# current size) and continues to be exhausted for corpus-reachable rules
+# independently of RULE_COVERAGE.
 #
 # There is a third, small BOUNDARY list, which is the opposite thing again.
 # Each of its inputs fires a rule the slice does NOT carry, so the port must
@@ -142,8 +145,9 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
 #
 # The other ten call sites — `:1619`, `:1624`, `:1629`, `:1634`, `:1639`,
 # `:1644`, `:2203`, `:2359`, `:2365`, `:2371` — all need a `sequence` numerator
-# or denominator and are deferred with the `atoms` combinator they depend on,
-# not carried by any input here.
+# or denominator; they turned out not to need the `atoms` combinator this
+# comment once expected, and are ported and covered by the "fractions_seq"
+# group below, not carried by any input here.
 #
 # "table": the `Td`/`Tr`/`Table`/`Mlabeledtr` family, measured at EIGHTEEN
 # rules, not the seventeen a prior survey counted (`transform.ts`'s module
@@ -284,23 +288,189 @@ RULE_COVERAGE_NARY_INPUTS = [
 # "atoms": the `{atom:, atoms:}` combinator (`grammar.ts:668`-`:670`,
 # `common_rules.rb:9-11`, `transform.rb:486`/`:496`) and `:1851`, the one
 # further `atom:`-keyed site (`atom`, `exclamation_symbol`) reachable WITHOUT
-# also wiring FRACTION's still-deferred SEQUENCE-numerator/denominator family
-# (`transform.rb:1619`-`:2371`) — every OTHER `atom:` site with a third key
+# also wiring FRACTION's SEQUENCE-numerator/denominator family
+# (`transform.rb:1619`-`:2371`, ported and covered by the "fractions_seq" group
+# above) — every OTHER `atom:` site with a third key
 # (`recursive_numerator`/`recursive_denominator`/`binary_symbols`/`operator`)
-# only ever appears inside a fraction's `numerator`/`denominator`, so its
-# result always lands back on one of those ten still-unported rules and can
-# never reach a passing parse on its own; `transform.ts`'s own comment at
-# `:735` records the measured input (`"1/a(b)"`, firing `:675` exactly as
-# coded there) that proves the point rather than asserting it. Measured on
-# the oracle, one input per rule:
+# only ever appears inside a fraction's `numerator`/`denominator`, and most of
+# those still land on a rule this slice does not carry for reasons outside
+# the fraction family itself (see `transform.ts`'s own accounting beside
+# `:675`); `transform.ts`'s own comment at `:735` records the measured input
+# (`"1/a(b)"`, firing `:675` exactly as coded there) that proves the point
+# rather than asserting it. Measured on the oracle, one input per rule:
 #
 #   "abc"  rule 486 (2-atom fold) + 496 (3rd atom onto the fold) + 49 (`:39`'s
 #          SEQUENCE twin, unwrapping the folded array off `factor`)
 #   "a!"   rule 1851 {atom, exclamation_symbol}, then `:49` again
+#
+# "combinators": the transform rules whose body BUILDS nothing (no `Math::` and
+# no `Utility.` in the block): single-key unwraps and the list-join
+# combinators (`[a, b]`, `[a] + b`, `a + b`) that fold adjacent `factor`/
+# `operand`/`expr`/`exp`/script/`atom` values into one sequence. Each input
+# below is the shortest oracle-parsed one, traced with every registered block
+# wrapped in a counter (rule numbers are the lines `rule(` opens on) and then
+# compared against the port, so an input here is one the port parses to the
+# gem's own model, not merely one that reaches the rule. Rules fired also by
+# a pre-existing row (`:104`, `:2233`) are listed with the input this group
+# adds for them. `:765` and `:1791` used to be the only two `SLICE_BOUNDARY` rows.
+#
+#   :36    "..."
+#   :59    "a²"
+#   :60    "x₂"
+#   :64    "lim_(n → b)"
+#   :73    "a'^(c)"
+#   :104   "a \u2002 b"
+#   :222   "x̄2x"
+#   :371   "a^2_b 2x"
+#   :386   "sin a 2x"
+#   :406   "ȧȧ"
+#   :411   "🐟🐠🐡"
+#   :431   "a^2_b+"
+#   :436   "a^b c d/(a b/c (a)_b^c d)"
+#   :491   "ȧ2x"
+#   :543   "^a b 2x"
+#   :548   "^a b+"
+#   :700   "a'^a b"
+#   :705   "x'_a a! a!"
+#   :765   "a^b c"
+#   :770   "(a b/c x^(a b) c) a!"
+#   :775   "a_b++"
+#   :785   "(2 x_a y a/b^c) ^a_b c"
+#   :790   "a_b+"
+#   :805   "∑_a^b c^a b"
+#   :810   "■(a b&c d) x"
+#   :815   "■(a b c&d)a x"
+#   :855   "ab++"
+#   :885   "\uffd7(a)a'"
+#   :895   "\uffd7(a)a!"
+#   :900   "a!+"
+#   :905   "a!1"
+#   :910   "x₂+"
+#   :915   "x₂++"
+#   :935   "▢(a + b) ."
+#   :940   "▭a b a_b"
+#   :950   "■(a&b@c&d)2x"
+#   :955   "■(a&) a"
+#   :1716  "a a^b"
+#   :1721  "a a_b"
+#   :1726  "a ^a b"
+#   :1731  "a a²"
+#   :1736  "a²+"
+#   :1741  "a²2x"
+#   :1791  "x a/b c"
+#   :1796  "(a b)^c/(a b/c x₁)"
+#   :1821  "(a b/c x^(a b) c) a!"
+#   :2029  "a x² ab"
+#   :2233  "1ab+"
+#   :2239  "2xa÷b"
+#   :2257  "n!a - b"
+#   :2263  "ab1a b"
+#   :2293  "a c^2+"
+#   :2299  "a a_b +"
+#   :2305  "a a^b ab"
+#   :2311  "a a_b ab"
+#   :2329  "|a| a b"
 RULE_COVERAGE = {
   "atoms" => [
     "abc",
     "a!",
+  ],
+  # "script-subsup-nary": the SCRIPT/SUBSUP/BASE builders and the NARY
+  # remainder (`transform.rb:53`-`:3047`). One input per rule, each traced on
+  # the oracle with every registered block mapped to the `rule(` line it sits
+  # under (a `TracePoint :b_call` over `transform.rb`), and kept only where the
+  # port carries every OTHER rule the input fires. `x^y^(z)` (`:985`), the one
+  # corpus input this family reaches, is already a corpus row.
+  #
+  #   "aᵃ"            53   {sup_alpha}, a mini-sup symbol
+  #   "a1^1_1"        86   {subsup_exp: sequence} — the array `:2142` returns
+  #                        when the base is a sequence, and `:2142` itself
+  #   "a⁺"            113  {sup_operators}, bare
+  #   "a^+n"          511  {operator, sup_script simple}, with `:1148`
+  #   "a^+ab"         516  {operator, sup_script sequence}, with `:1148`
+  #   "a^!!b"         521  {combined_symbols, sup_script}, with `:1148` — the
+  #                        input slice B recorded as waiting on `:1148`
+  #   "a_+1"          533  {operator, sub_script}, with `:1078`
+  #   "a₁₁₁"          553  {sub_digits, sub_recursion_expr sequence}
+  #   "a₁₂"           561  {sub_digits, sub_recursion_expr simple}
+  #   "aⁿ⁺¹"          567  {sup_alpha, sup_recursion_expr sequence}, `:652`
+  #   "a₁ⁿⁿ"          575  {sup_alpha, sup_recursion_expr simple}
+  #   "a²³⁴"          584  {sup_digits, sup_recursion_expr sequence}
+  #   "a²³"           592  {sup_digits, sup_recursion_expr simple}
+  #   "a^+^b"         614  {operator, sup_recursion} -> `recursive_sup`
+  #   "a_+_b"         622  {operator, sub_recursion simple} -> `recursive_sub`
+  #   "a_+_ab"        630  {operator, sub_recursion sequence}
+  #   "a_b_c"         635  {sub_script, sub_recursion} -> `recursive_sub`
+  #   "a₁₊₁"          640  {sub_operators, sub_recursions simple}
+  #   "a₁₊₁₂"         646  {sub_operators, sub_recursions sequence}
+  #   "aⁿ⁺¹"          652  {sup_operators, sup_recursions simple}, with `:567`
+  #   "a^b^c"         985  {sup_script, sup_recursion} -> `recursive_sup`
+  #   "a^cd^e"        1011 {sup_script sequence, sup_recursion}
+  #   "a1_1"          1054 {base sequence, sub simple}
+  #   "a1_cd"         1069 {base sequence, sub sequence}
+  #   "+_c1"          1078 {base simple, sub sequence}
+  #   "a1^1"          1139 {base sequence, sup simple}
+  #   "a^!!b"         1148 {base simple, sup sequence}
+  #   "a1^cd xy"      1164 {base sequence, sup sequence}
+  #   "lim^n ab"      1183 {unary_sub_sup, first_value sequence}
+  #   "∑_c1"          1919 {nary_class, sub sequence}
+  #   "a1^1_1"        2142 {base sequence, sup simple, sub simple}
+  #   "2₁₂ⁿ"          2153 {base simple, sup simple, sub sequence}
+  #   "+^c1_c1"       2163 {base simple, sup sequence, sub sequence}
+  #   "+^c1_1"        2173 {base simple, sup sequence, sub simple}
+  #   "∑₁₂²"          2183 {nary_class, sub sequence, sup simple}
+  #   "∑^c1_c1"       2827 {nary_class, sub sequence, sup sequence}
+  #   "∑^c1_1"        2841 {nary_class, sub simple, sup sequence}
+  #   "\\amalg13_cd"   2884 {nary_class, mask, sub sequence}
+  #   "\\amalg13^c1_c1" 2993 {nary_class, mask, sub sequence, sup sequence}
+  #   "\\amalg13^c1_1"  3020 {nary_class, mask, sub simple, sup sequence}
+  #   "\\amalg13^1_c1"  3047 {nary_class, mask, sub sequence, sup simple}
+  #
+  #   "⏟ab_1"         1375 {hbracket_class, scripted_first_value sequence} —
+  #                        the `:1054` array the `decoration` group could not
+  #                        build (fires `:1054`, `:38`)
+  "script-subsup-nary" => [
+    "a^b1",
+    "a_b1",
+    "aᵃ",
+    "a1^1_1",
+    "a⁺",
+    "a^+n",
+    "a^+ab",
+    "a^!!b",
+    "a_+1",
+    "a₁₁₁",
+    "a₁₂",
+    "aⁿ⁺¹",
+    "a₁ⁿⁿ",
+    "a²³⁴",
+    "a²³",
+    "a^+^b",
+    "a_+_b",
+    "a_+_ab",
+    "a_b_c",
+    "a₁₊₁",
+    "a₁₊₁₂",
+    "a^b^c",
+    "a^cd^e",
+    "a1_1",
+    "a1_cd",
+    "+_c1",
+    "a1^1",
+    "a1^cd xy",
+    "lim^n ab",
+    "∑_c1",
+    "2₁₂ⁿ",
+    "+^c1_c1",
+    "+^c1_1",
+    "∑₁₂²",
+    "∑^c1_c1",
+    "∑^c1_1",
+    "\\amalg13_cd",
+    "\\amalg13^c1_c1",
+    "\\amalg13^c1_1",
+    "\\amalg13^1_c1",
+    "⏟ab_1",
   ],
   "multiscript" => [
     "^3 X",
@@ -338,6 +508,71 @@ RULE_COVERAGE = {
     "x\\sdiv y",
     "x\\ldiv y",
     "x\\ndiv y",
+  ],
+  # "fractions_seq": slice E — the `Utility.fractions`/`Utility.unicode_fractions`
+  # call sites the "fraction" group above could not reach (a SEQUENCE side, a
+  # vulgar-fraction entity), plus the slice B rules a fraction's
+  # `recursive_numerator`/`recursive_denominator` finally gives a reaching
+  # input. Each traced on the oracle (rule numbers are the lines `rule(` opens
+  # on); rules named in a comment are the ones the row was chosen for, the
+  # others fire as prerequisites.
+  #
+  #   "½"                    96    {unicode_fractions}
+  #   "½ a"                  217   {unicode_fractions, expr: simple}
+  #   "½ a b"                212   {unicode_fractions, expr: sequence}
+  #   "(½ a b)"              3277  bracketed run led by a vulgar fraction
+  #   "1/a(b)"               1619  numerator simple, denominator sequence
+  #   "²/₃₄"                 1624  mini_numerator simple, mini_denominator sequence
+  #   "a(b)/c"               1629  numerator sequence, denominator simple
+  #   "²³/₃"                 1634  mini, sequence numerator
+  #   "a(b)/c(d)"            1639  both sequences
+  #   "²³/₃₄"                1644  mini, both sequences
+  #   "a(b)\atop c"          2203  atop, sequence numerator
+  #   "1\sdiv a(b)"          2359  bevelled, sequence denominator
+  #   "1\ldiv a(b)"          2365  ldiv, sequence denominator
+  #   "1\ndiv a(b)"          2371  no_display_style, sequence denominator
+  #   "a∘b/c"                2048  {atom, binary_symbols, recursive_numerator}
+  #   "1/2\not∘b"           284   {binary_symbols, recursive_denominator: simple}
+  #   "1/2\not∘⊆⊈"          290   same, recursive_denominator sequence
+  #   "⊕b/c"                 296   {binary_symbols, recursive_numerator}
+  #   "a\not∈b"             666   {relational_symbols, recursive_denominator}
+  #   "(1/2 a)"              3411  bracketed frac + simple exp
+  #   "(1/2 a b)"            3422  bracketed frac + sequence exp
+  #   "¹/₂≤₃/b"              2393  {frac, relational_symbols, expr}
+  #   "++¹/₂ḟa"              2797  {operator, frac, expr: sequence}
+  #   "├1(1/2┤2)"            2685  masked open + masked close around a `frac`
+  #   "├0(1/2┤10)"           2685  the `1.25**0` -> "1.0em" and two-digit branch
+  #   "(1/2┤3)"              2707  plain open, masked close
+  #
+  # Prerequisites the rows above need, registered by the port under the
+  # owning slice's id: 396, 561, 592, 675, 1756.
+  "fractions_seq" => [
+    "½",
+    "½ a",
+    "½ a b",
+    "(½ a b)",
+    "1/a(b)",
+    "²/₃₄",
+    "a(b)/c",
+    "²³/₃",
+    "a(b)/c(d)",
+    "²³/₃₄",
+    "a(b)\\atop c",
+    "1\\sdiv a(b)",
+    "1\\ldiv a(b)",
+    "1\\ndiv a(b)",
+    "a∘b/c",
+    "1/2\\not∘b",
+    "1/2\\not∘⊆⊈",
+    "⊕b/c",
+    "a\\not∈b",
+    "(1/2 a)",
+    "(1/2 a b)",
+    "¹/₂≤₃/b",
+    "++¹/₂ḟa",
+    "├1(1/2┤2)",
+    "├0(1/2┤10)",
+    "(1/2┤3)",
   ],
   "table" => [
     "■(a)",
@@ -393,13 +628,8 @@ RULE_COVERAGE = {
   #           simple — a scripted base resolves through `:1116` before
   #           `hbracket_class` sees it, so this is the SIMPLE
   #           `scripted_first_value` shape, not the SEQUENCE one. `:1375`,
-  #           the SEQUENCE twin, needs a `scripted_first_value` built from a
-  #           three-key `{base:, sub:, sup:}` or a `{base:, sub: sequence}`
-  #           shape this slice's `:1019`/`:1116` do not carry (both are
-  #           `simple`/`simple` only) — measured by trying several
-  #           `subsup_exp` and `pre_script` inputs, all of which hit that gap
-  #           first — so `:1375` is transcribed from the gem but UNWITNESSED
-  #           here; see `transform.ts`'s module header.
+  #           the SEQUENCE twin, needs a sequence-shaped scripted base and is
+  #           witnessed by `"⏟ab_1"` in the "script-subsup-nary" group.
   #   "3x⃝"   rule 1420, `first_value` SEQUENCE/`overlay_after` simple — the
   #           same `{factor:, operand:}` sequence as `"⎵3x"` above, with
   #           `Array#pop` peeling the diacritic onto only the LAST factor.
@@ -454,6 +684,7 @@ RULE_COVERAGE = {
   #
   #   "√(ab&cd)"       rule 1538 {first_value: sequence, second_value: sequence}
   #   "ab''"           rule 1506 {first_value: sequence, prime_accent_symbols}
+  #   "x\prime\prime"  rule 1404 {first_value, prime_accent_symbols: sequence}
   #   "x\\prime\\prime"  rule 1404 {first_value, prime_accent_symbols: sequence}
   #   "a⃗+b"           rule 341  {accents, expr: sequence}
   #   "ⓐa x"           rule 2221 {arg, arg_arguments, first_value}
@@ -545,6 +776,283 @@ RULE_COVERAGE = {
     "\\mbfsansA∈x",
     "\\BbbA≤x",
   ],
+  # Symbol, operator and number leaves. Each input was traced on the oracle
+  # (a `TracePoint :b_call` over every `rule(` block of `unicode_math/
+  # transform.rb` and of `base_number_prefix.rb`) to fire the rule named beside
+  # it. Every input's port parse deep-equals the oracle's model.
+  "symbol" => [
+    "0x1F",           # base_number_prefix.rb:36 hex_number
+    "0b101",          # base_number_prefix.rb:37 binary_number
+    "0o17",           # base_number_prefix.rb:38 octal_number
+    "×",              # :109
+    "/+",             # :134
+    ",5",             # :191
+    "∫_a^b −a",       # :250
+    "∫_a^b a·b",      # :243, :396
+    "(a×b c)",        # :266
+    "×b c",           # :272
+    "∫_a^b ×b",       # :278
+    "∫_a^b abc",      # :302
+    "/+ b",           # :309
+    "/+ b c",         # :320
+    "(a∣b)",          # :451
+    "(a∣b c)",        # :456
+    "(a −b)",         # :466
+    "(a −b c)",       # :476
+    "−a b",           # :481
+    "(a -+b)",        # :527
+    "··2",            # :2085
+    "a··b",           # :2091
+  ],
+  "combinators" => [
+    "...",
+    "a²",
+    "x₂",
+    "lim_(n → b)",
+    "a'^(c)",
+    "a \u2002 b",
+    "x̄2x",
+    "a^2_b 2x",
+    "sin a 2x",
+    "ȧȧ",
+    "🐟🐠🐡",
+    "a^2_b+",
+    "a^b c d/(a b/c (a)_b^c d)",
+    "ȧ2x",
+    "^a b 2x",
+    "^a b+",
+    "a'^a b",
+    "x'_a a! a!",
+    "a^b c",
+    "(a b/c x^(a b) c) a!",
+    "a_b++",
+    "(2 x_a y a/b^c) ^a_b c",
+    "a_b+",
+    "∑_a^b c^a b",
+    "■(a b&c d) x",
+    "■(a b c&d)a x",
+    "ab++",
+    "\uffd7(a)a'",
+    "\uffd7(a)a!",
+    "a!+",
+    "a!1",
+    "x₂+",
+    "x₂++",
+    "▢(a + b) .",
+    "▭a b a_b",
+    "■(a&b@c&d)2x",
+    "■(a&) a",
+    "a a^b",
+    "a a_b",
+    "a ^a b",
+    "a a²",
+    "a²+",
+    "a²2x",
+    "x a/b c",
+    "(a b)^c/(a b/c x₁)",
+    "a x² ab",
+    "1ab+",
+    "2xa÷b",
+    "n!a - b",
+    "ab1a b",
+    "a c^2+",
+    "a a_b +",
+    "a a^b ab",
+    "a a_b ab",
+    "|a| a b",
+  ],
+  # FENCED (slice G1): the `Fenced`-building rules of `transform.rb:2020`-`:2983`
+  # (rule numbers are the lines `rule(` opens on). Each input was traced on the
+  # oracle with a `TracePoint :b_call` mapped to those lines and fires the rule
+  # beside it; the SEQUENCE-paren rules carry a size prefix, which only the
+  # unicode glyphs `├`/`┤` produce -- the spelled `\left1(`/`\right)` forms
+  # leave an unmatched hash in the gem:
+  #
+  #   :2020  `()`, `[]`                      open_paren + close_paren, no content
+  #   :2457  `x_├1(a)`, `a_├2[a]`            opener SEQUENCE (size prefix) in a script
+  #   :2485  `(\a)`, `(\a2)`, `(\a2b)`      slashed_value SEQUENCE: text, number, symbol arms
+  #   :2495  `(⟡(1&a))`                      phantom
+  #   :2505  `(▭(a))`, `(⟡(a))`              unary_function
+  #   :2515  `(▭(5&a))`                      rect
+  #   :2525  `(a┤`                           factor + paren_close_prefix
+  #   :2536  `├a)`                           paren_open_prefix + factor
+  #   :2547  `(∫a)`                          nary
+  #   :2557  `(a_b)`                         sub_exp
+  #   :2567  `(a_b^c)`                       subsup_exp
+  #   :2577  `(sin a)`                       unary_subsup
+  #   :2587  `(a²)`                          mini_sup
+  #   :2597  `x₍₁₂₎`                        sub_open_paren + mini_expr SEQUENCE
+  #   :2609  `("t")`                         text
+  #   :2640  `(a̅)`, `((a)̅)`, `[a̅]`          accents
+  #   :2650  `├1(a)`, `├0(a]`, `├12(a)`       open_paren SEQUENCE + factor (`├12(` is a
+  #                                          two-digit prefix: `1.25**12`)
+  #   :2668  `├1(a┤`                         open SEQUENCE + paren_close_prefix
+  #   :2724  `├1(a┤1)`, `├2[a┤0)`            both parens SEQUENCE
+  #   :2746  `(/=)`                          negated_operator
+  #   :2761  `(■(a&b)┤`                      table + paren_close_prefix
+  #   :2769  `(■(a&b))`, `[■(a&b)]`          table + close_paren
+  #   :2983  `(_a^b c)`                      pre_script
+  #
+  # `:2685`/`:2707` (SEQUENCE parens around a fraction) are slice E's.
+  #
+  # Six rules other slices own also fire on these inputs and are registered
+  # under their own ids so the witnesses compare: `:85`, `:2055`/`:2067` (the
+  # size-prefix arms), `:60` and `:97` (slice A), `:561` (slice F). `x₍₁₂₎` is
+  # spelled bare on purpose: `(x₍₁₂₎)` parses on the oracle to an unmatched
+  # `{open_paren:, mini_sub:, close_paren:}` hash, not a model.
+  #
+  # `x_├1(2┤1)` is the other kind of witness this group carries: not a rule
+  # firing, but a GEM BUG the same shape as `"±"` in `relation` above. Traced
+  # with every `unicode_math/transform.rb` block wrapped in a counter, NONE of
+  # the gem's 516 rules ever fires on a `sub_exp` key for this input (every
+  # `x_├N(M┤K)` size-prefix-plus-sub variant checked behaves the same way), so
+  # the root `{sub_exp: {base:, sub:}}` hash — nested four deep, unlike `"±"`'s
+  # single level — survives untouched and `Kernel#Array` folds only the
+  # OUTERMOST layer. `GEM_UNMATCHED_SIGNATURES` in `transform.ts` carries the
+  # nested hashes' own shapes (`sub_exp=other` down to `close_paren=sequence`)
+  # so this row compares for real rather than being refused.
+  "fenced_g1" => [
+    "()",
+    "[]",
+    "x_├1(a)",
+    "a_├2[a]",
+    "(\\a)",
+    "(\\a2)",
+    "(\\a2b)",
+    "(⟡(1&a))",
+    "(▭(a))",
+    "(⟡(a))",
+    "(▭(5&a))",
+    "(a┤",
+    "├a)",
+    "(∫a)",
+    "(a_b)",
+    "(a_b^c)",
+    "(sin a)",
+    "(a²)",
+    "x₍₁₂₎",
+    "(\"t\")",
+    "(a̅)",
+    "((a)̅)",
+    "[a̅]",
+    "├1(a)",
+    "├0(a]",
+    "├12(a)",
+    "├1(a┤",
+    "├1(a┤1)",
+    "├2[a┤0)",
+    "(/=)",
+    "(■(a&b)┤",
+    "(■(a&b))",
+    "[■(a&b)]",
+    "(_a^b c)",
+    "x_├1(2┤1)",
+  # "fenced_g2": the bracket-pair family, `transform.rb:3000` to the end of the
+  ],
+  # file -- every `Fenced.new(open_paren, ..., close_paren)` rule (a few wrap the
+  # Fenced in a `Power`) that binds `open_paren`/`close_paren` -- plus B's two
+  # interval-infinity rules. One input per rule, each traced on the oracle with
+  # every registered block wrapped in a counter (rule numbers are the lines
+  # `rule(` calls OPEN on):
+  #
+  #   :3085 `├1(a b c┤1)`     prefixed pair: open/close arrive as SEQUENCES;
+  #         `├0(a b c┤3)` takes the `1.0em` (a whole float) and `1.953125em` sizes
+  #   :3108 `(⒜x - ⒜y)`       unary_function + exp SEQUENCE
+  #   :3119 `∫_a▒(x)ab`       factor + naryand_recursion SEQUENCE
+  #   :3143 `∫_a▒(x)y`        factor + naryand_recursion simple; `|(x)|` in
+  #         place of `(x)` on both takes the `unfenced_value` branch
+  #   :3132 `(lim_x+a)`       unary_subsup + exp
+  #   :3167 `(x₁+a)`          mini_sub + exp SEQUENCE
+  #   :3178 `(x₂³+a)`         mini_sub_sup + exp SEQUENCE
+  #   :3200 `(x⁵+a)`          mini_sup + exp SEQUENCE
+  #   :3255 `(a′+a)`          accents + exp SEQUENCE
+  #   :3277 `(½+a)`           unicode_fractions + exp SEQUENCE
+  #   :3288 `(−=a)`           unicode_symbols + exp SEQUENCE
+  #   :3299 `(−1)^n`          unicode_symbols + exp
+  #   :3310 `∑ (−1)^n`        unicode_symbols + exp + sup (a Power around the Fenced)
+  #   :3345 `(x_1+a)`         sub_exp + exp SEQUENCE
+  #   :3367 `(x_2 a)`         sub_exp + exp
+  #   :3389 `(x^2 =)`         sup_exp + exp
+  #   :3400 `(ￗ(a) b c)`     monospace + exp SEQUENCE
+  #   :3411 `(a/b a)`         frac + exp
+  #   :3422 `(a/b+a)`         frac + exp SEQUENCE
+  #   :3455 `(x_1^2+a)`       subsup_exp + exp SEQUENCE
+  #   :3499 `(−≤a)`           symbol + expr SEQUENCE
+  #   :3510 `(ab +a)`         factor SEQUENCE + exp SEQUENCE
+  #   :3521 `(n!)`            factor SEQUENCE alone
+  #   :3531 `(a,1)`           factor + operand (the `,1` is `:191`'s decimal number)
+  #   :3542 `(a≤a)`           factor + operand SEQUENCE
+  #   :3553 `(ab≤a)`          factor SEQUENCE + operand SEQUENCE
+  #   :3564 `("t"a b)`        text + operand + exp
+  #   :3576 `("t"x=a)`        text + operand + exp SEQUENCE
+  #   :3640 `(\mbfA a)`       fonts + exp
+  #   :3651 `(= ab)`          operator + exp SEQUENCE
+  #   :3676 `(+a)`            operator + exp
+  #   :3711 `(a x^2 b c)`     factor + sup_exp + exp SEQUENCE
+  #   :3723 `∑▒(a_t b)^2`     sub_exp + exp + sup; `^(n+1)` takes the
+  #         `unfenced_value` branch on a parenthesised sup
+  #   :3739 `∑▒(a_t-b_t)^2`   sub_exp + exp SEQUENCE + sup; likewise `^(n+1)`
+  #   :3755 `∑▒(-1)^k`        operator + exp + sup
+  #   :3792 `(2x+3y)`         factor + operand + exp SEQUENCE
+  #   :3804 `(a≤a b c)`       factor + operand SEQUENCE + exp SEQUENCE
+  #   :3840 `(ￗ(a)←ￗ(b) c d)` monospace + relational_symbols + expr + exp SEQUENCE
+  #   :3897 `(1,2]`           interval, left and right both simple
+  #   :3909 `(1,ab]`          interval, right SEQUENCE
+  #   :3922 `(ab,1]`          interval, left SEQUENCE
+  #   :3935 `(a,b]`           interval, both SEQUENCE
+  #   :196  `[+∞,1]`          B: `{positive, infty}` -> [sign, infinity]
+  #   :204  `[−∞,1]`          B: `{negative, infty}`
+  "fenced_g2" => [
+    "├1(a b c┤1)",
+    "├0(a b c┤3)",
+    "(⒜x - ⒜y)",
+    "∫_a▒(x)ab",
+    "∫_a▒(x)y",
+    "∫_a▒|(x)|ab",
+    "∫_a▒|(x)|y",
+    "(lim_x+a)",
+    "(x₁+a)",
+    "(x₂³+a)",
+    "(x⁵+a)",
+    "(a′+a)",
+    "(½+a)",
+    "(−=a)",
+    "(−1)^n",
+    "∑ (−1)^n",
+    "(x_1+a)",
+    "(x_2 a)",
+    "(x^2 =)",
+    "(ￗ(a) b c)",
+    "(a/b a)",
+    "(a/b+a)",
+    "(x_1^2+a)",
+    "(−≤a)",
+    "(ab +a)",
+    "(n!)",
+    "(a,1)",
+    "(a≤a)",
+    "(ab≤a)",
+    "(\"t\"a b)",
+    "(\"t\"x=a)",
+    "(\\mbfA a)",
+    "(= ab)",
+    "(+a)",
+    "(a x^2 b c)",
+    "∑▒(a_t b)^2",
+    "∑▒(a_t b)^(n+1)",
+    "∑▒(a_t-b_t)^2",
+    "∑▒(a_t-b_t)^(n+1)",
+    "∑▒(-1)^k",
+    "(2x+3y)",
+    "(a≤a b c)",
+    "(ￗ(a)←ￗ(b) c d)",
+    "(1,2]",
+    "(1,ab]",
+    "(ab,1]",
+    "(a,b]",
+    "[+∞,1]",
+    "[−∞,1]",
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`
@@ -561,14 +1069,35 @@ RULE_COVERAGE = {
 # `RULE_COVERAGE["relation"]` once their rule landed, the same ratchet
 # `DEFERRED_INPUTS` in `model-parity.spec.ts` documents for the corpus side.
 #
-#   "a^b c"    rule 765  `{expr: simple, sup_exp: simple}`.
-#   "x a/b c"  rule 1791 `{expr: simple, frac: simple}` — the same KEY SET the
-#              corpus's `(a)/(+) b` leaves unmatched, but with both values
-#              resolved. A key set is not a signature: the gem matches this one
-#              and leaves that one alone.
+# ("a^b1" and "a_b1" moved to `RULE_COVERAGE["script-subsup-nary"]` when
+# slice F ported rules 1148 and 1078.) `:1054`, `:1619` and `:227` — the
+# rules originally cited beside these three rows — are ALL ported now too,
+# and each row was re-traced against the current port rather than trusted to
+# still be blocked by the same rule:
+#
+#   "1x₂"    still refused, but by TWO different rules, neither of them
+#            `:1054`: `:1776` `{digit: simple, expr: simple}` never fires, so
+#            `base` inside the `mini_sub` hash stays a raw hash rather than
+#            the SEQUENCE `:1054` needs (`:1054` itself fires fine once it
+#            is), and `:67` `{mini_sub: sequence}` still has to land after it
+#            to unwrap the outer key. The port's own message names the
+#            outermost casualty: `no rule matched {mini_sub=other}`.
+#   "1/2a"   still refused by `:658` `{digit: simple,
+#            recursive_denominator: simple}` exactly as before — `:1619` was
+#            never the blocker here, only the rule one level up that `:658`
+#            feeds. Port message: `no rule matched {frac=other}`.
+#   "ⅇ"      still refused, now by `:43` `{mitBbb: simple}` alone — `:227`
+#            fires fine once `:43` does. Port message:
+#            `no rule matched {fonts=other}`.
+#
+# Every row records a rule the port lacks, not one it has: each is a witness
+# a pure combinator (`RULE_COVERAGE["combinators"]`) needs and cannot have
+# until the builder beside it lands. When that builder does, the row's refusal
+# stops and `model-parity.spec.ts` fails until it moves into a coverage group.
 SLICE_BOUNDARY = [
-  "a^b c",
-  "x a/b c",
+  "1x₂",
+  "1/2a",
+  "ⅇ",
 ].freeze
 
 options = { oracle: nil, out: "test/formats/unicodemath", allow_dirty: false }

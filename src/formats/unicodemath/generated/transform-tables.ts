@@ -17,10 +17,10 @@
  * `src/formats/unicodemath/registry.ts` binds these to `core`
  * constructors; nothing restates them.
  *
- * This is the FIRST transform slice, so the emitted set is what that slice
- * consumes and no more. `Utility.get_table_class` has no table here: the
- * table/matrix rules are deferred, and data nothing reads cannot be kept
- * honest.
+ * The emitted set is what the registered transform rules consume and no
+ * more. `Utility.get_table_class` has no table here: the port resolves it
+ * with `getTableClass` in `transform.ts` (a name transform, not a lookup),
+ * so a table would be data nothing reads, and that cannot be kept honest.
  */
 
 /**
@@ -3935,6 +3935,79 @@ export const UNICODEMATH_BELOWS_NOTATIONS: ReadonlyMap<string, string> = new Map
 ]);
 
 /**
+ * `Constants::SUP_ALPHABETS`: character -> superscript entity. The grammar
+ * table above carries `.values` only; the mini-sized script rules
+ * (`transform.rb:53`, `:567`, `:575`) recover the character with
+ * `.key(entity)`, so the pairs are emitted here.
+ */
+export const UNICODEMATH_SUP_ALPHABETS_BY_KEY: ReadonlyMap<string, string> = new Map([
+  ["a", "&#x1d43;"],
+  ["b", "&#x1d47;"],
+  ["c", "&#x1d9c;"],
+  ["d", "&#x1d48;"],
+  ["e", "&#x1d49;"],
+  ["f", "&#x1da0;"],
+  ["g", "&#x1d4d;"],
+  ["h", "&#x2b0;"],
+  ["i", "&#x2071;"],
+  ["j", "&#x2b2;"],
+  ["k", "&#x1d4f;"],
+  ["l", "&#x2e1;"],
+  ["m", "&#x1d50;"],
+  ["n", "&#x207f;"],
+  ["o", "&#x1d52;"],
+  ["p", "&#x1d56;"],
+  ["r", "&#x2b3;"],
+  ["s", "&#x2e2;"],
+  ["t", "&#x1d57;"],
+  ["u", "&#x1d58;"],
+  ["v", "&#x1d5b;"],
+  ["w", "&#x2b7;"],
+  ["x", "&#x2e3;"],
+  ["y", "&#x2b8;"],
+  ["z", "&#x1dbb;"],
+]);
+
+/**
+ * `Constants::SUB_OPERATORS`: character -> subscript entity, for the
+ * `.key(entity)` in `transform.rb:640`/`:646`/`:2426`.
+ */
+export const UNICODEMATH_SUB_OPERATORS_BY_KEY: ReadonlyMap<string, string> = new Map([
+  ["+", "&#x208a;"],
+  ["-", "&#x208b;"],
+  ["=", "&#x208c;"],
+  ["ₔ", "&#x2094;"],
+]);
+
+/**
+ * `Constants::SUP_OPERATORS`: character -> superscript entity, for the
+ * `.key(entity)` in `transform.rb:113`/`:652`.
+ */
+export const UNICODEMATH_SUP_OPERATORS_BY_KEY: ReadonlyMap<string, string> = new Map([
+  ["+", "&#x207a;"],
+  ["-", "&#x207b;"],
+  ["=", "&#x207c;"],
+]);
+
+/**
+ * `Constants::SUB_PARENTHESIS[:open]`: key -> entity. The grammar reads
+ * only `.values` (`UNICODEMATH_SUB_OPEN_PARENTHESIS`); the
+ * `sub_open_paren` rule (`transform.rb:2597`) inverts it with `Hash#key`
+ * to recover the plain-text paren the entity stands for.
+ */
+export const UNICODEMATH_SUB_PARENTHESIS_OPEN: ReadonlyMap<string, string> = new Map([
+  ["(", "&#x208d;"],
+]);
+
+/**
+ * `Constants::SUB_PARENTHESIS[:close]`: `:open`'s twin, inverted the same
+ * way for the closing paren.
+ */
+export const UNICODEMATH_SUB_PARENTHESIS_CLOSE: ReadonlyMap<string, string> = new Map([
+  [")", "&#x208e;"],
+]);
+
+/**
  * `Constants::BINARY_FUNCTIONS`: the `class_name` values the sub- and
  * sup-script rules treat as "a function still missing its argument", so
  * the script fills `parameter_one`/`parameter_two` instead of wrapping.
@@ -3988,6 +4061,34 @@ export const UNICODEMATH_MASK_CLASSES: ReadonlyMap<string, string> = new Map([
   ["32", "verticalstrike"],
   ["64", "downdiagonalstrike"],
   ["128", "updiagonalstrike"],
+]);
+
+/**
+ * `Constants::UNICODE_FRACTIONS`: each vulgar-fraction entity mapped to its
+ * `[numerator, denominator]` as text. `Utility.unicode_fractions`
+ * (`utility.rb:69-76`) reads `.first` and `.last` of this pair and builds
+ * `Math::Number.new(x.to_s)` from each. The parser's own key-only view is
+ * `UNICODEMATH_UNICODE_FRACTIONS`.
+ */
+export const UNICODEMATH_FRACTION_PARTS: ReadonlyMap<string, readonly [string, string]> = new Map([
+  ["&#x2153;", ["1", "3"]],
+  ["&#x2154;", ["2", "3"]],
+  ["&#x2155;", ["1", "5"]],
+  ["&#x2156;", ["2", "5"]],
+  ["&#x2157;", ["3", "5"]],
+  ["&#x2158;", ["4", "5"]],
+  ["&#x2159;", ["1", "6"]],
+  ["&#x215a;", ["5", "6"]],
+  ["&#x2150;", ["1", "7"]],
+  ["&#x215b;", ["1", "8"]],
+  ["&#x215c;", ["3", "8"]],
+  ["&#x215d;", ["5", "8"]],
+  ["&#x215e;", ["7", "8"]],
+  ["&#x2151;", ["1", "9"]],
+  ["&#x2189;", ["0", "3"]],
+  ["&#xbd;", ["1", "2"]],
+  ["&#xbc;", ["1", "4"]],
+  ["&#xbe;", ["3", "4"]],
 ]);
 
 /**

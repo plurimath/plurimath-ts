@@ -13,7 +13,9 @@
 
 import { describe, expect, it } from "vitest";
 import Plurimath, { FORMATS, type Format } from "../../src/compat/index";
+import { buildTreeDump } from "../../src/compat/to-display";
 import { equals, UnsupportedFeatureError, UnsupportedFormatError } from "../../src/core/index";
+import { NaryNode } from "../../src/core/nodes";
 import { parseHtml } from "../../src/formats/html/index";
 import { parseUnicodemath } from "../../src/formats/unicodemath/index";
 import RootDefault, { Plurimath as RootNamed } from "../../src/index";
@@ -398,6 +400,169 @@ describe("toDisplay", () => {
       }
     });
 
+    /**
+     * `FontStyle#to_<format>_math_zone` (`font_style.rb:165-214`): the
+     * generic UnaryFunction "function apply" header, plus a "font family"
+     * line before the "argument" field. Measured:
+     * `Plurimath::Asciimath.new("bb x").to_formula.to_display(:asciimath)`
+     * -- asciimath/latex print `parameter_two` BARE (the alias tag "bb"
+     * itself, not the canonical family name).
+     */
+    it("FontStyle prints a bespoke font-family header under asciimath/latex", () => {
+      expect(new Plurimath("bb x", "asciimath").toDisplay("asciimath")).toBe(
+        '|_ Math zone\n  |_ "mathbf(x)"\n     |_ "mathbf(x)" function apply\n' +
+          '        |_ "bb" font family\n        |_ "x" argument\n',
+      );
+      expect(new Plurimath("bb x", "asciimath").toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "\\mathbf{x}"\n     |_ "\\mathbf{x}" function apply\n' +
+          '        |_ "bb" font family\n        |_ "x" argument\n',
+      );
+    });
+
+    /**
+     * mathml/omml print the CANONICAL family name ("bold", not the alias
+     * tag "bb" that constructed it) -- measured on the same oracle input.
+     */
+    it("FontStyle's font-family line is the canonical name under mathml/omml, not the alias tag", () => {
+      expect(new Plurimath("bb x", "asciimath").toDisplay("mathml")).toBe(
+        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
+          '<mstyle displaystyle="true"><mstyle mathvariant="bold"><mi>x</mi></mstyle></mstyle>' +
+          '</math>"\n     |_ "<mstyle mathvariant="bold"><mi>x</mi></mstyle>" function apply\n' +
+          '        |_ "bold" font family\n        |_ "<mi>x</mi>" argument\n',
+      );
+      expect(
+        new Plurimath("bb x", "asciimath")
+          .toDisplay("omml")
+          .endsWith(
+            '     |_ "<m:r><m:rPr><m:sty m:val="b"/></m:rPr><m:t>x</m:t></m:r>" function apply\n' +
+              '        |_ "bold" font family\n        |_ "<m:t>x</m:t>" argument\n',
+          ),
+      ).toBe(true);
+    });
+
+    /**
+     * `font_style.rb`'s `to_unicodemath_math_zone` (:242-254) calls
+     * `dump_unicodemath`, a method the gem never defines anywhere (`grep -rn
+     * 'def dump_unicodemath'` across the gem: zero hits) -- measured on the
+     * oracle: EVERY FontStyle subclass raises `NoMethodError` under
+     * `to_display(:unicodemath)`. Refusing here is parity with that crash,
+     * not a scope gap.
+     */
+    it("FontStyle refuses unicodemath, matching the gem's own NoMethodError crash there", () => {
+      expect(() => new Plurimath("bb x", "asciimath").toDisplay("unicodemath")).toThrow(
+        UnsupportedFeatureError,
+      );
+    });
+
+    /**
+     * `Vec#to_<format>_math_zone` (`vec.rb:47-95`): asciimath/latex keep the
+     * generic header but rename the field "supscript"; mathml/omml swap the
+     * header for "overset" and print an explicit "base" (arrow) line before
+     * the recursive field; unicodemath inherits `UnaryFunction`'s unchanged
+     * generic shape (field name "argument"). Measured:
+     * `Plurimath::Asciimath.new("vec(v)").to_formula.to_display(:<format>)`.
+     */
+    it("Vec prints its bespoke supscript field under asciimath/latex/unicodemath", () => {
+      expect(new Plurimath("vec(v)", "asciimath").toDisplay("asciimath")).toBe(
+        '|_ Math zone\n  |_ "vec(v)"\n     |_ "vec(v)" function apply\n' +
+          '        |_ "vec" function name\n        |_ "v" supscript\n',
+      );
+      expect(new Plurimath("vec(v)", "asciimath").toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "\\vec{v}"\n     |_ "\\vec{v}" function apply\n' +
+          '        |_ "vec" function name\n        |_ "v" supscript\n',
+      );
+      expect(new Plurimath("vec(v)", "asciimath").toDisplay("unicodemath")).toBe(
+        '|_ Math zone\n  |_ "(v)⃗"\n     |_ "(v)⃗" function apply\n' +
+          '        |_ "vec" function name\n        |_ "v" argument\n',
+      );
+    });
+
+    it("Vec swaps in an overset header with an explicit base line under mathml/omml", () => {
+      expect(new Plurimath("vec(v)", "asciimath").toDisplay("mathml")).toBe(
+        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
+          '<mstyle displaystyle="true"><mover><mi>v</mi><mo>&#x2192;</mo></mover></mstyle></math>"\n' +
+          '     |_ "<mover><mi>v</mi><mo>&#x2192;</mo></mover>" overset\n' +
+          '        |_ "<mo>&#x2192;</mo>" base\n        |_ "<mi>v</mi>" supscript\n',
+      );
+      expect(
+        new Plurimath("vec(v)", "asciimath")
+          .toDisplay("omml")
+          .endsWith(
+            '"\n     |_ "<m:limUpp><m:limUppPr><m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math" ' +
+              'w:hAnsi="Cambria Math"/><w:i/></w:rPr></m:ctrlPr></m:limUppPr><m:e><m:r><m:t>v</m:t>' +
+              '</m:r></m:e><m:lim><m:r><m:t>→</m:t></m:r></m:lim></m:limUpp>" overset\n' +
+              '        |_ "<m:t>&#x2192;</m:t>" base\n        |_ "<m:t>v</m:t>" supscript\n',
+          ),
+      ).toBe(true);
+    });
+
+    /**
+     * `Color#to_omml_math_zone` (`color.rb:53-63`) is `Color`'s OWN OMML
+     * override: a "color" header (not "function apply"), and only
+     * `parameter_two` printed ("text") -- `parameter_one` (`mathcolor`) is
+     * never a field line here, unlike `Color`'s generic BinaryFunction shape
+     * every OTHER format uses. Measured:
+     * `Plurimath::Asciimath.new("color(red)(x)").to_formula.to_display(:omml)`.
+     */
+    it("Color's own OMML override prints a color header with only the text field", () => {
+      expect(
+        new Plurimath("color(red)(x)", "asciimath")
+          .toDisplay("omml")
+          .endsWith('" color\n        |_ "<m:t>x</m:t>" text\n'),
+      ).toBe(true);
+    });
+
+    /**
+     * The multi-item Symbol/Number/Text merge run under the OMML zone: a
+     * prior version of this file refused this, believing
+     * `ModelHelper#symbol_to_text`'s OMML branch returned an array of Ox
+     * elements. Measured on the oracle (`x+y=2` under `to_display(:omml)`):
+     * `Symbols::Symbol#to_omml_without_math_tag` returns the bare per-symbol
+     * VALUE STRING, exactly like every other format's branch -- the merge
+     * run joins those strings with " " into one synthetic `Text` node, whose
+     * own (already-ported) OMML math-zone rendering re-encodes the joined
+     * spaces as `&#xa0;` and wraps the whole run in one `<m:t>`.
+     */
+    it("a multi-item Symbol/Number run folds into one <m:t> under the OMML zone", () => {
+      expect(new Plurimath("x+y=2", "asciimath").toDisplay("omml")).toBe(
+        '|_ Math zone\n  |_ "<m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" ' +
+          'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" ' +
+          'xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" ' +
+          'xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+          'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
+          'xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
+          'xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" ' +
+          'xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" ' +
+          'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ' +
+          'xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" ' +
+          'xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" ' +
+          'xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" ' +
+          'xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" ' +
+          'xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">' +
+          "<m:oMath><m:r><m:t>x</m:t></m:r><m:r><m:t>+</m:t></m:r><m:r><m:t>y</m:t></m:r>" +
+          '<m:r><m:t>=</m:t></m:r><m:r><m:t>2</m:t></m:r></m:oMath></m:oMathPara>"\n' +
+          '     |_ "<m:t>x&#xa0;+&#xa0;y&#xa0;=&#xa0;2</m:t>" text\n',
+      );
+    });
+
+    /**
+     * A pre-existing gap this slice's Vec/merge-run work surfaced: `dump_omml`
+     * calls `field.omml_nodes(...)`, and `Symbols::Symbol` overrides
+     * `omml_nodes` to wrap the bare value in one `<m:t>...</m:t>`
+     * (`symbols/symbol.rb:156-163`) -- a DIFFERENT method from
+     * `to_omml_without_math_tag`. This applies to a Symbol FIELD inside any
+     * structure, not only a standalone leaf. Measured:
+     * `Plurimath::Asciimath.new("x^2").to_formula.to_display(:omml)`'s "base"
+     * field is `"<m:t>x</m:t>" base`, never the bare `"x" base` a Number
+     * sibling ("2" "script") never exhibited (Number's own OMML fragment
+     * already wraps unconditionally).
+     */
+    it("a Symbol field under the OMML zone is <m:t>-wrapped like a standalone Symbol leaf", () => {
+      expect(new Plurimath("x^2", "asciimath").toDisplay("omml")).toContain(
+        '"<m:t>x</m:t>" base\n        |_ "<m:t>2</m:t>" script\n',
+      );
+    });
+
     it("a BinaryFunction alias (Power, via the generic FUNCTION table) prints base/script", () => {
       expect(new Plurimath("x^2", "asciimath").toDisplay("asciimath")).toBe(
         '|_ Math zone\n  |_ "x^(2)"\n     |_ "x^(2)" superscript\n' +
@@ -468,21 +633,16 @@ describe("toDisplay", () => {
   /**
    * Scoped out, not guessed: the gem's own `Nary` class defines no
    * `to_*_math_zone` at all (`Math::Function::Nary < Core`), so this port
-   * refuses rather than fabricate one. `FontStyle`/`Vec`/`Substack`/
-   * `Msgroup`/`Unitsml` and OMML's own `Color` are refused the same way —
-   * see `src/compat/to-display.ts`'s module doc for the full, named list.
+   * refuses rather than fabricate one — genuinely unreachable from any
+   * supported input format too (measured: no asciimath/latex/html/
+   * unicodemath transform ever constructs a `NaryNode`), so it is built
+   * directly here rather than parsed. `Substack`/`Msgroup`/`Unitsml` are
+   * refused the same way, each for its own measured reason — see
+   * `src/compat/to-display.ts`'s module doc for the full, named list.
    */
   it("names the class and format when a scoped-out node kind is reached", () => {
-    // `bb x` (bold `x`) parses to a `FontStyle` node (measured:
-    // `Plurimath::Asciimath.new("bb x").to_formula` is one `FontStyle::Bold`
-    // wrapping a `Symbol`) -- FontStyle overrides the generic UnaryFunction
-    // shape with a bespoke "font family" header this slice does not carry
-    // (see `src/compat/to-display.ts`'s module doc), so every lowercase
-    // format refuses it rather than guess the wrong header shape.
-    expect(() => new Plurimath("bb x", "asciimath").toDisplay("asciimath")).toThrow(
-      UnsupportedFeatureError,
-    );
-    expect(() => new Plurimath("bb x", "asciimath").toDisplay("asciimath")).toThrow(/fontStyle/);
+    expect(() => buildTreeDump(new NaryNode(), "asciimath")).toThrow(UnsupportedFeatureError);
+    expect(() => buildTreeDump(new NaryNode(), "asciimath")).toThrow(/nary/);
   });
 });
 
@@ -520,7 +680,7 @@ describe("the one method that cannot be honest yet", () => {
     const fields: Record<string, string> = {};
     for (const [label, run] of [
       ["ctor", () => new Plurimath(INPUT, "mathml")],
-      ["toDisplay", () => new Plurimath("bb x", "asciimath").toDisplay("asciimath")],
+      ["toDisplay", () => buildTreeDump(new NaryNode(), "asciimath")],
     ] as const) {
       try {
         run();

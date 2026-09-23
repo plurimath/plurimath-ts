@@ -89,39 +89,77 @@
  *     prints `"2" text`, never `\text{2} text`); `Text#to_mathml_math_zone`/
  *     `#to_omml_math_zone` call `dump_mathml`/`dump_omml` — the FRAGMENT dump,
  *     not the full-document renderer, which requires a `Formula`-shaped root
- *     and cannot run on a bare leaf; `Symbol#to_omml_math_zone` goes through
- *     `Symbol#omml_nodes`/`#t_tag` (`symbols/symbol.rb:156-163`), which wraps
- *     the bare per-symbol value in ONE `<m:t>...</m:t>` — measured, a
- *     standalone `alpha` prints `"<m:t>&#x3b1;</m:t>" text`, not the bare
- *     `"&#x3b1;" text` `to_omml_without_math_tag` alone would give, and not
- *     `<m:r><m:t>...</m:t></m:r>` (that `<m:r>` belongs to `insert_t_tag`, a
- *     different method this path never calls); every `BinaryFunction`/
- *     `TernaryFunction` subclass reachable from asciimath/latex/html/unicode
- *     input that this
- *     compat class supports, keyed by the gem's own `FUNCTION` constants
- *     (`frac`, `power`, `base`, `root`, `over`, `overset`, `underset`,
- *     `stackrel`, `lim`, `log`, `mod`, `semantics`, `menclose`, `color`,
- *     `underover`, `powerBase`, `int`, `oint`, `prod`, `sum`, `limits`,
- *     `rule`, `multiscript`); every `UnaryFunction` subclass (generic
- *     "argument" field: `sqrt`, `ceil`, `floor`, `hat`, `dot`, `ddot`,
- *     `tilde`, `ubrace`, `ul`, `obrace`, `overleftrightarrow`, `abs`, `bar`,
- *     `mpadded`, `norm`, and the bare `unaryFunction`/`binaryFunction`/
- *     `ternaryFunction` alias carriers); `Fenced` (transparent pass-through
- *     of its filtered children); `Table`/`Tr`/`Td` (wrap-into-`Formula` and
- *     recurse); `Left`/`Right` (no-op, matching the gem's empty override).
+ *     and cannot run on a bare leaf; `dump_omml` calls `field.omml_nodes(...)`,
+ *     and `Symbol` overrides `omml_nodes` to wrap the bare value in ONE
+ *     `<m:t>...</m:t>` (`symbols/symbol.rb:156-163`, `ommlSymbolWrapped`
+ *     below) — measured to apply to a Symbol EVERY time `dump_omml` renders
+ *     one, standalone leaf ("`alpha` prints `"<m:t>&#x3b1;</m:t>" text`, not
+ *     the bare `"&#x3b1;" text` `to_omml_without_math_tag` alone would give,
+ *     and not `<m:r><m:t>...</m:t></m:r>` — that `<m:r>` belongs to
+ *     `insert_t_tag`, a different method this path never calls") AND a
+ *     Symbol FIELD inside any other structure alike (plain `x^2`'s "base"
+ *     field is `"<m:t>x</m:t>" base`, never bare `"x" base`); the multi-item
+ *     Symbol/Number/Text merge run under the OMML zone specifically (the
+ *     gem's `ModelHelper#symbol_to_text` OMML branch — measured, for the
+ *     reachable merge-eligible symbol classes, `Plus`/`Minus`/`Circ`/`Equal`/
+ *     a bare generic `Symbol` — returns a PLAIN STRING
+ *     (`Symbols::Symbol#to_omml_without_math_tag`'s `value`; NOT an array of
+ *     Ox elements, as a prior version of this doc claimed), joined with the
+ *     other run members and re-encoded through `Text#first_value`'s
+ *     omml-specific entity/`&#xa0;` substitution before being wrapped in one
+ *     `<m:t>` by the merged run's own (already-ported) `Text` math-zone
+ *     rendering — no extra machinery needed once the join itself stopped
+ *     guessing); every `BinaryFunction`/`TernaryFunction` subclass reachable
+ *     from asciimath/latex/html/unicode input that this compat class
+ *     supports, keyed by the gem's own `FUNCTION` constants (`frac`,
+ *     `power`, `base`, `root`, `over`, `overset`, `underset`, `stackrel`,
+ *     `lim`, `log`, `mod`, `semantics`, `menclose`, `color`, `underover`,
+ *     `powerBase`, `int`, `oint`, `prod`, `sum`, `limits`, `rule`,
+ *     `multiscript`) — `Color`'s OWN OMML override (`color.rb:53-63`: a
+ *     "color" header, not "function apply", and only `parameter_two`
+ *     printed) on top of that generic shape for every OTHER format; every
+ *     `UnaryFunction` subclass (generic "argument" field: `sqrt`, `ceil`,
+ *     `floor`, `hat`, `dot`, `ddot`, `tilde`, `ubrace`, `ul`, `obrace`,
+ *     `overleftrightarrow`, `abs`, `bar`, `mpadded`, `norm`, and the bare
+ *     `unaryFunction`/`binaryFunction`/`ternaryFunction` alias carriers);
+ *     `FontStyle` (`font_style.rb:165-240`, all 14 named subclasses plus the
+ *     bare carrier reachable from LaTeX's unmapped `:fonts` keywords) under
+ *     asciimath/latex/mathml/omml — a bespoke "font family" header line,
+ *     BARE `parameter_two` for asciimath/latex vs. the canonical family name
+ *     for mathml/omml (measured identical between those two, including the
+ *     bare carrier's format-specific fallback: mathml prints the raw
+ *     keyword, omml prints ""); `Vec` (`vec.rb:47-95`) under every format —
+ *     a bespoke "supscript" field for asciimath/latex, an "overset"
+ *     header plus an explicit "base" (arrow) line for mathml/omml, and
+ *     `UnaryFunction`'s untouched generic shape for unicodemath (`vec.rb`
+ *     never overrides `to_unicodemath_math_zone` at all); `Fenced`
+ *     (transparent pass-through of its filtered children); `Table`/`Tr`/`Td`
+ *     (wrap-into-`Formula` and recurse); `Left`/`Right` (no-op, matching the
+ *     gem's empty override).
  *
  *   - NOT ported, and refused with `UnsupportedFeatureError` naming the gap
  *     rather than guessed: `Nary` (the gem's own `Nary` class defines NO
  *     `to_*_math_zone` override and inherits none — `Math::Function::Nary <
  *     Core` — so calling it for real raises `NoMethodError` in the gem
- *     itself; refusing here is PARITY, not a gap); `FontStyle`/`Vec`/`Color`
- *     under OMML specifically (each overrides the generic
- *     `BinaryFunction`/`UnaryFunction` shape with a bespoke, format-specific
- *     header this slice does not carry); `Msgroup`/`Unitsml` (each has its
- *     own bespoke `to_*_math_zone`, unmeasured here); `Substack` — NOT for
- *     the reason a prior version of this doc claimed. `substack.rb:6-40`
- *     defines only ordinary format serializers (`to_asciimath`, `to_latex`,
- *     …); it has NO `to_*_math_zone` overrides at all and inherits
+ *     itself; refusing here is PARITY, not a gap — and genuinely
+ *     unreachable from any supported input format too: no asciimath/latex/
+ *     html/unicodemath transform in this port ever constructs a `NaryNode`);
+ *     `FontStyle` under unicodemath specifically — `to_unicodemath_math_zone`
+ *     (`font_style.rb:242-254`) calls `dump_unicodemath`, a method the gem
+ *     never defines anywhere (`grep -rn 'def dump_unicodemath'` across the
+ *     whole gem: zero hits — only `dump_mathml`/`dump_omml` exist,
+ *     `core.rb:163-169`); measured on the oracle: EVERY FontStyle subclass
+ *     raises `NoMethodError` under `to_display(:unicodemath)`, so this is
+ *     parity with a gem crash, not a scope gap; `Msgroup` — has its own
+ *     bespoke `to_*_math_zone` overrides (`msgroup.rb:34-80`) but is
+ *     genuinely UNREACHABLE from any of this compat class's supported input
+ *     formats (measured: no asciimath/latex/html/unicodemath grammar or
+ *     transform file in the gem references `Msgroup` at all — checked
+ *     before refusing, not assumed); `Unitsml` (needs external UnitsML
+ *     conversion this slice does not carry); `Substack` — NOT for the
+ *     reason a prior version of this doc claimed. `substack.rb:6-40` defines
+ *     only ordinary format serializers (`to_asciimath`, `to_latex`, …); it
+ *     has NO `to_*_math_zone` overrides at all and inherits
  *     `UnaryFunction`'s (`unary_function.rb:94-155`) unchanged, the same as
  *     `sqrt`/`ceil`/etc. above. The refusal is still correct, but for a
  *     different, measured reason: `UnaryFunction`'s inherited math-zone
@@ -137,21 +175,7 @@
  *     every format) — BEFORE `UnaryFunction`'s own math-zone body is even
  *     reached, at the header line that renders `parameter_one` as a field.
  *     Refusing here is PARITY with that crash, not a gap this slice chose to
- *     skip; a raw `Symbol`/`Number`/`Text` sibling RUN (more than one
- *     merge-eligible leaf folded together) under the OMML zone specifically
- *     (the gem's `ModelHelper#symbol_to_text` OMML branch — measured, for
- *     the reachable merge-eligible symbol classes, `Plus`/`Minus`/`Circ`/
- *     `Equal`/a bare generic `Symbol` — actually returns a PLAIN STRING
- *     (`Symbols::Symbol#to_omml_without_math_tag`'s `value`, not an `Ox`
- *     element array as a prior version of this doc claimed), joined with the
- *     other run members and re-encoded through `Text#first_value`'s
- *     omml-specific entity/`&#xa0;` substitution before being wrapped in one
- *     `<m:t>`; reproducing that substitution faithfully was out of scope for
- *     this pass and is left as a named follow-up rather than guessed at
- *     here); every OTHER OMML shape — the root line, standalone Number/
- *     Symbol/Text leaves (see above), and recursion through
- *     `Formula`/`Fenced`/the function families above — IS ported and
- *     measured); a bare `string` entry in a node sequence (measured: the gem
+ *     skip; a bare `string` entry in a node sequence (measured: the gem
  *     parses `"left(right)"` to `[Left, "", Right]`; calling `.class_name`
  *     on that bare string is `NoMethodError` in the gem too, so this is
  *     refused as unreachable rather than silently skipped).
@@ -161,6 +185,7 @@ import {
   type MathNode,
   type NodeSequence,
   RenderError,
+  type SymbolNode,
   TextNode,
   UnsupportedFeatureError,
 } from "../core/index";
@@ -174,6 +199,11 @@ import { createRenderContext as createOmmlContext } from "../formats/omml/render
 import { serializeRendered } from "../formats/omml/render-shared";
 import { toOmml } from "../formats/omml/renderer";
 import { toUnicodemath } from "../formats/unicodemath/index";
+import {
+  MATHML_FONT_STYLE_CARRIER_VARIANTS,
+  MATHML_FONT_STYLE_VARIANTS,
+} from "../generated/mathml/render-tables";
+import { renderSymbol as renderSymbolOmml } from "../render/symbol/omml";
 import { dumpNodes, type XmlElement } from "../xml/index";
 
 export type DisplayFormat = "asciimath" | "latex" | "mathml" | "omml" | "unicodemath";
@@ -208,7 +238,7 @@ const UNARY_CLASS_NAMES = new Set([
   "norm",
 ]);
 
-function isSymbolKind(node: MathNode): boolean {
+function isSymbolKind(node: MathNode): node is SymbolNode {
   return node.kind === "symbol";
 }
 
@@ -235,13 +265,18 @@ function mergeLeafText(node: MathNode, format: DisplayFormat): string {
       case "mathml":
         return mathmlNodeText(node);
       case "omml":
-        throw new UnsupportedFeatureError(
-          FEATURE,
-          "a Symbol folded into a text run under the OMML zone: the gem's " +
-            "ModelHelper#symbol_to_text OMML branch returns an array of Ox " +
-            "elements that Ruby's Array#join flattens through Ox::Element#to_s, " +
-            "a shape this port refuses to guess rather than fabricate",
-        );
+        // `ModelHelper#symbol_to_text`'s OMML branch is
+        // `symbol.to_omml_without_math_tag(true, options:)` — measured on the
+        // oracle (`x+y=2` under `to_display(:omml)`) to return the bare
+        // per-symbol VALUE STRING, the same `Symbols::Symbol#to_omml_without_
+        // math_tag` (`symbols/symbol.rb:67-72`) every OTHER OMML path already
+        // renders through, NOT an array of Ox elements — a prior version of
+        // this file guessed the array shape and was wrong. `renderSymbolOmml`
+        // is that same function; `Array#join`'s nil-to-"" coercion is
+        // reproduced explicitly since a bare `null` return (the gem's
+        // hard-coded `"&#x2062;"` invisible-times carve-out) would otherwise
+        // print the literal string "null".
+        return renderSymbolOmml(node) ?? "";
     }
   }
   const value = (node as unknown as Record<string, unknown>).value;
@@ -291,6 +326,26 @@ function dumpOmmlFragment(node: MathNode, displayStyle: boolean): string {
   return collapseXml(serializeRendered(context.render(node)));
 }
 
+/**
+ * `Core#dump_omml(field, ...)` calls `field.omml_nodes(display_style,
+ * options:)`, and `Core`'s own default IS `to_omml_without_math_tag`
+ * (`core.rb:181-183`) — but `Symbols::Symbol` OVERRIDES `omml_nodes` to
+ * `Array(t_tag(options:))` (`symbols/symbol.rb:156-163`), wrapping the bare
+ * value in ONE `<m:t>...</m:t>`, a DIFFERENT method from
+ * `to_omml_without_math_tag` that `dumpOmmlFragment` (this file's own
+ * `render(node)` call) reproduces bare. This applies every time `dump_omml`
+ * is called with a bare Symbol as ITS OWN argument — a standalone Symbol
+ * leaf under the OMML zone, AND a Symbol FIELD inside any other structure
+ * (`fields_to_print`'s `dump_omml(field, ...)` alike) — measured both ways
+ * on the oracle: a standalone `alpha` prints `"<m:t>&#x3b1;</m:t>" text`,
+ * and plain `x^2`'s "base" field prints `"<m:t>x</m:t>" base`, never the
+ * bare `"x" base` `dumpOmmlFragment` alone would give a Symbol.
+ */
+function ommlSymbolWrapped(node: MathNode, displayStyle: boolean): string {
+  const inner = dumpOmmlFragment(node, displayStyle);
+  return isSymbolKind(node) ? `<m:t>${inner}</m:t>` : inner;
+}
+
 /** One per-format adapter: root rendering, field rendering, and the two XML-only fragment dumps. */
 interface FormatOps {
   /** `field&.to_<format>(options:)` (or, for mathml/omml, the full document at the ROOT only). */
@@ -318,7 +373,7 @@ const FORMAT_OPS: Record<DisplayFormat, FormatOps> = {
   },
   omml: {
     render: (node, displayStyle) => collapseXml(toOmml(node, { displayStyle })),
-    quoted: (node, displayStyle) => `"${dumpOmmlFragment(node, displayStyle)}"`,
+    quoted: (node, displayStyle) => `"${ommlSymbolWrapped(node, displayStyle)}"`,
   },
 };
 
@@ -452,18 +507,15 @@ const NO_OP_CLASS_NAMES = new Set(["left", "right"]);
  * account): `nary` genuinely has no `to_*_math_zone` at all (parity, not a
  * gap); `substack` inherits `UnaryFunction`'s but crashes on it in the gem
  * itself (`parameter_one` is an Array, not a single node — NOT because it
- * has bespoke math-zone methods); `msgroup`/`unitsml` each have real bespoke
- * `to_*_math_zone` overrides, unmeasured here; `fontstyle`/`vec` override the
- * generic Unary/BinaryFunction OMML header.
+ * has bespoke math-zone methods); `msgroup` has real bespoke `to_*_math_zone`
+ * overrides but no reachable TS node kind constructs one from any supported
+ * input (measured: no asciimath/latex/html/unicodemath grammar file
+ * references `Msgroup` at all) — refused as unreachable, not unported;
+ * `unitsml` needs external UnitsML conversion this slice does not carry.
+ * `fontStyle` and `vec` are handled by their own dedicated functions below,
+ * not this generic refusal list.
  */
-const UNSUPPORTED_CLASS_NAMES = new Set([
-  "nary",
-  "substack",
-  "msgroup",
-  "unitsml",
-  "fontstyle",
-  "vec",
-]);
+const UNSUPPORTED_CLASS_NAMES = new Set(["nary", "substack", "msgroup", "unitsml"]);
 
 function fieldNode(
   node: MathNode,
@@ -581,13 +633,10 @@ function mathZoneOf(
   if (isSymbolKind(node)) {
     // `Symbol#to_<format>_math_zone`: always explicitly quoted, every format.
     // mathml/omml use the FRAGMENT dump, same as the `Text` branch above.
-    // OMML NEEDS AN EXTRA WRAP: `dump_omml` here calls the gem's
-    // `Symbol#omml_nodes`/`#t_tag` (`symbols/symbol.rb:156-163`), which always
-    // wraps the bare per-symbol value in ONE `<m:t>...</m:t>` — a DIFFERENT
-    // path from `to_omml_without_math_tag` (the bare value alone, used when a
-    // symbol is a FIELD inside a larger structure and its parent supplies the
-    // wrapper). `dumpOmmlFragment` reproduces the bare path, so the `<m:t>`
-    // has to be added here. Measured on the oracle: a standalone Symbol
+    // OMML goes through `ommlSymbolWrapped` — the SAME `<m:t>` wrap
+    // `dump_omml`'s `Symbol#omml_nodes` override applies to every bare
+    // Symbol it is handed, standalone leaf or field alike (see that
+    // function's own doc). Measured on the oracle: a standalone Symbol
     // (`alpha`) under the OMML zone prints `"<m:t>&#x3b1;</m:t>" text` — NOT
     // `"&#x3b1;" text` (missing the tag) and NOT `<m:r><m:t>...</m:t></m:r>`
     // (that `<m:r>` wrapper belongs to `insert_t_tag`, a different method
@@ -596,7 +645,7 @@ function mathZoneOf(
       options.format === "mathml"
         ? dumpMathmlFragment(node)
         : options.format === "omml"
-          ? `<m:t>${dumpOmmlFragment(node, options.displayStyle)}</m:t>`
+          ? ommlSymbolWrapped(node, options.displayStyle)
           : ops.render(node, options.displayStyle);
     return `${spacing}"${rendered}" text\n`;
   }
@@ -631,7 +680,30 @@ function mathZoneOf(
     return header + body;
   }
 
-  if (UNSUPPORTED_CLASS_NAMES.has(name) || (name === "color" && options.format === "omml")) {
+  // `FontStyle` (`font_style.rb:165-254`): a bespoke "font family" header,
+  // gated on `node.kind` rather than `classNameOf` because a NAMED subclass
+  // (`bb x` -> `Bold`) classifies as its OWN lowercase name ("bold"), while
+  // only the bare carrier classifies as "fontstyle" — both shapes are the
+  // same math-zone method family, so both go through one dispatcher.
+  if (node.kind === "fontStyle") {
+    return renderFontStyle(node, spacing, last, options);
+  }
+
+  // `Vec` (`vec.rb:47-95`): bespoke `supscript` field, and mathml/omml swap
+  // the "function apply"/"function name" header for an "overset" header plus
+  // an explicit "base" (arrow) line before the recursive field.
+  if (name === "vec") {
+    return renderVec(node, spacing, last, options);
+  }
+
+  // `Color`'s own OMML override (`color.rb:53-63`): a "color" header (not
+  // "function apply") and only `parameter_two` ("text") printed — every
+  // OTHER format keeps `Color`'s generic `BINARY_META` entry below.
+  if (name === "color" && options.format === "omml") {
+    return renderColorOmml(node, spacing, last, options);
+  }
+
+  if (UNSUPPORTED_CLASS_NAMES.has(name)) {
     throw new UnsupportedFeatureError(
       FEATURE,
       `"${name}" under ${options.format} has no ported to_${options.format}_math_zone in this ` +
@@ -770,6 +842,172 @@ function renderUnary(
   fieldsToPrint(
     fieldNode(node, "parameterOne"),
     { spacing: newSpacing, fieldName: "argument", additionalSpace: "   |_ ", options },
+    out,
+  );
+  return out.join("");
+}
+
+/**
+ * `FontStyle#font_family` (`font_style.rb:216-240`) — the mathml/omml
+ * branch only; asciimath/latex print `parameter_two` bare (handled directly
+ * by the caller). Measured identical between mathml and omml for every one
+ * of the 14 named subclasses (`MATHML_FONT_STYLE_VARIANTS`, keyed by the
+ * gem's own canonical family name, e.g. `Bold` -> `"bold"` — NOT the alias
+ * tag that constructed it: `bb x`, `bold x`, and `\mathbf{x}` all print
+ * "bold" font family under mathml/omml, but "bb"/"bold"/"mathbf"
+ * respectively under asciimath/latex).
+ *
+ * The bare carrier (`node.name` unset — reachable from LaTeX's
+ * `\mathbold`/`\mathsfit`/`\mathsfbf`/`\mathsfbfit`/`\mathds`/
+ * `\displaystyle`, grammar-legal `:fonts` keywords `Utility::FONT_STYLES`
+ * does not map) diverges BY FORMAT, measured on `\mathbold{x}`: mathml falls
+ * back to the raw keyword itself ("mathbold" font family, via
+ * `MATHML_FONT_STYLE_CARRIER_VARIANTS`' own keyword-or-passthrough
+ * fallback); omml's `supported_fonts` never falls back to the keyword at
+ * all — `font_classes(parameter_to_class)` is empty for an unresolved
+ * carrier, so `Omml::SUPPORTED_FONTS.values.find` returns nil and Ruby
+ * string interpolation prints "" (measured: the same input -> "" font
+ * family under omml — a THIRD shape, not mathml's).
+ */
+function fontStyleFamily(node: MathNode, omml: boolean): string {
+  const name = (node as unknown as { readonly name?: string }).name;
+  if (name !== undefined) {
+    const mapped = MATHML_FONT_STYLE_VARIANTS.get(name);
+    if (mapped !== undefined) return mapped;
+  }
+  if (omml) return "";
+  const keyword = fieldNode(node, "parameterTwo");
+  if (typeof keyword !== "string") return "";
+  return MATHML_FONT_STYLE_CARRIER_VARIANTS.get(keyword) ?? keyword;
+}
+
+/**
+ * `FontStyle#to_<format>_math_zone` (`font_style.rb:165-254`): the generic
+ * UnaryFunction "function apply" header, but with an extra "font family"
+ * line before the "argument" field — measured on the oracle for all 8
+ * default-constructor subclasses (`Bold`, `DoubleStruck`, `Fraktur`,
+ * `Italic`, `Monospace`, `Normal`, `SansSerif`, `Script`) plus the bare
+ * carrier (`\mathbold{x}`), every format.
+ *
+ * unicodemath is refused outright: `to_unicodemath_math_zone` (:242-254)
+ * calls `dump_unicodemath(self, options:)`, and `dump_unicodemath` is not
+ * defined ANYWHERE in the gem (`grep -rn 'def dump_unicodemath'` — zero
+ * hits; only `dump_mathml`/`dump_omml` exist, `core.rb:163-169`). Measured
+ * on the oracle: EVERY FontStyle subclass raises `NoMethodError` under
+ * `to_display(:unicodemath)`, so refusing here is parity with a gem crash,
+ * not a scope gap — the module doc's earlier claim that FontStyle overrides
+ * "the generic Unary/BinaryFunction OMML header" undersold this: OMML is
+ * fully portable; unicodemath is the one that cannot run at all.
+ */
+function renderFontStyle(
+  node: MathNode,
+  spacing: string,
+  last: boolean,
+  options: PrintOptions,
+): string {
+  if (options.format === "unicodemath") {
+    throw new UnsupportedFeatureError(
+      FEATURE,
+      "a FontStyle under unicodemath: font_style.rb's own " +
+        "to_unicodemath_math_zone calls dump_unicodemath, a method the gem " +
+        "never defines anywhere — every FontStyle subclass raises " +
+        "NoMethodError under to_display(:unicodemath) in the oracle too " +
+        "(measured), so this is refused as parity with that crash, not a gap",
+    );
+  }
+  const newSpacing = gsubSpacing(spacing, last);
+  const ops = FORMAT_OPS[options.format];
+  const headerValue =
+    options.format === "mathml"
+      ? dumpMathmlFragment(node)
+      : options.format === "omml"
+        ? dumpOmmlFragment(node, options.displayStyle)
+        : ops.render(node, options.displayStyle);
+  const family =
+    options.format === "mathml" || options.format === "omml"
+      ? fontStyleFamily(node, options.format === "omml")
+      : String(fieldNode(node, "parameterTwo"));
+  const out: string[] = [
+    `${spacing}"${headerValue}" function apply\n`,
+    `${newSpacing}|_ "${family}" font family\n`,
+  ];
+  fieldsToPrint(
+    fieldNode(node, "parameterOne"),
+    { spacing: newSpacing, fieldName: "argument", additionalSpace: "|  |_ ", options },
+    out,
+  );
+  return out.join("");
+}
+
+/**
+ * `Vec#to_<format>_math_zone` (`vec.rb:47-95`): asciimath/latex keep the
+ * generic "function apply"/"function name" header but rename the field
+ * "supscript" (not "argument"); mathml/omml replace the header with
+ * "overset" and print an explicit "base" line (the arrow glyph, `<mo>`/
+ * `<m:t>`) BEFORE the recursive "supscript" field — `vec.rb` never calls
+ * `fields_to_print` for that base line, so it is written directly, not
+ * recursed into. unicodemath overrides neither `to_unicodemath_math_zone`
+ * nor `to_unicodemath`'s math-zone family at all — it inherits
+ * `UnaryFunction`'s generic shape unchanged (field name "argument"),
+ * measured on `vec(v)` under `to_display(:unicodemath)`.
+ */
+function renderVec(node: MathNode, spacing: string, last: boolean, options: PrintOptions): string {
+  const newSpacing = gsubSpacing(spacing, last);
+  const ops = FORMAT_OPS[options.format];
+  if (options.format === "mathml" || options.format === "omml") {
+    const headerValue =
+      options.format === "mathml"
+        ? dumpMathmlFragment(node)
+        : dumpOmmlFragment(node, options.displayStyle);
+    const baseLine =
+      options.format === "mathml"
+        ? `${newSpacing}|_ "<mo>&#x2192;</mo>" base\n`
+        : `${newSpacing}|_ "<m:t>&#x2192;</m:t>" base\n`;
+    const out: string[] = [`${spacing}"${headerValue}" overset\n`, baseLine];
+    fieldsToPrint(
+      fieldNode(node, "parameterOne"),
+      { spacing: newSpacing, fieldName: "supscript", additionalSpace: "|  |_ ", options },
+      out,
+    );
+    return out.join("");
+  }
+  // unicodemath never overrides `to_unicodemath_math_zone` at all — it
+  // inherits `UnaryFunction`'s generic shape unchanged, additional_space
+  // included ("   |_ ", not "|  |_ " — measured on `vec(x/y)`, where the
+  // nested fraction's indentation only tells the two apart).
+  const isUnicodemath = options.format === "unicodemath";
+  const fieldName = isUnicodemath ? "argument" : "supscript";
+  const additionalSpace = isUnicodemath ? "   |_ " : "|  |_ ";
+  const out: string[] = [
+    `${spacing}"${ops.render(node, options.displayStyle)}" function apply\n`,
+    `${newSpacing}|_ "vec" function name\n`,
+  ];
+  fieldsToPrint(
+    fieldNode(node, "parameterOne"),
+    { spacing: newSpacing, fieldName, additionalSpace, options },
+    out,
+  );
+  return out.join("");
+}
+
+/**
+ * `Color#to_omml_math_zone` (`color.rb:53-63`): its OWN header label
+ * ("color", not "function apply") and only `parameter_two` printed as
+ * "text" — `parameter_one` (`mathcolor`) is never a field line here, unlike
+ * `Color`'s generic `BINARY_META` entry every other format uses.
+ */
+function renderColorOmml(
+  node: MathNode,
+  spacing: string,
+  last: boolean,
+  options: PrintOptions,
+): string {
+  const newSpacing = gsubSpacing(spacing, last);
+  const headerValue = dumpOmmlFragment(node, options.displayStyle);
+  const out: string[] = [`${spacing}"${headerValue}" color\n`];
+  fieldsToPrint(
+    fieldNode(node, "parameterTwo"),
+    { spacing: newSpacing, fieldName: "text", additionalSpace: "|  |_ ", options },
     out,
   );
   return out.join("");

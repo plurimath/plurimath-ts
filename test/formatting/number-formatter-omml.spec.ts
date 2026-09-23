@@ -9,9 +9,22 @@
 
 import { describe, expect, it } from "vitest";
 import { RenderError } from "../../src/core/errors";
-import { FormulaNode, FracNode, NumberNode, SymbolNode } from "../../src/core/nodes";
+import {
+  BinaryFunctionNode,
+  FencedNode,
+  FormulaNode,
+  FracNode,
+  type MathNode,
+  NumberNode,
+  SqrtNode,
+  SumNode,
+  SymbolNode,
+  TableNode,
+  UnaryFunctionNode,
+} from "../../src/core/nodes";
 import { toOmml, toOmmlWithoutMathTag } from "../../src/formats/omml/renderer";
-import { MEASURED } from "./number-formatter-omml-cases";
+import type { FormatterOptions } from "../../src/formatting/index";
+import { MEASURED, type OmmlShape } from "./number-formatter-omml-cases";
 
 function compact(xml: string): string {
   return xml.replace(/>\s+</g, "><");
@@ -25,33 +38,66 @@ function omathInside(xml: string): string {
 
 const number = (value: string) => new NumberNode({ value });
 
+/** The shapes the cases file names, built as the gem objects its header lists. */
+const SHAPES: { readonly [K in Exclude<OmmlShape, "bare">]: (value: string) => MathNode } = {
+  formula: (value) => number(value),
+  frac: (value) => new FracNode({ parameterOne: number(value), parameterTwo: number("2") }),
+  power: (value) =>
+    new BinaryFunctionNode({
+      name: "Power",
+      parameterOne: number(value),
+      parameterTwo: number("3"),
+    }),
+  sqrt: (value) => new SqrtNode({ parameterOne: number(value) }),
+  fenced: (value) =>
+    new FencedNode({
+      options: {},
+      parameterOne: new SymbolNode({ value: "(" }),
+      parameterTwo: [number(value)],
+      parameterThree: new SymbolNode({ value: ")" }),
+    }),
+  sum: (value) =>
+    new SumNode({
+      parameterOne: number(value),
+      parameterTwo: number("3"),
+      parameterThree: number(value),
+    }),
+  table: (value) =>
+    new TableNode({
+      openParen: new SymbolNode({ value: "[" }),
+      closeParen: new SymbolNode({ value: "]" }),
+      options: {},
+      value: [
+        new UnaryFunctionNode({
+          name: "Tr",
+          parameterOne: [new BinaryFunctionNode({ name: "Td", parameterOne: [number(value)] })],
+        }),
+      ],
+    }),
+};
+
+function render(value: string, formatter: FormatterOptions, shape: OmmlShape): string {
+  if (shape === "bare") return compact(toOmmlWithoutMathTag(number(value), { formatter }));
+  return omathInside(toOmml(new FormulaNode({ value: [SHAPES[shape](value)] }), { formatter }));
+}
+
 describe("measured OMML formatter cases", () => {
-  it("has 25 or more cases, with sSup, sSub and plain per-node shapes among them", () => {
+  it("has 100 or more cases, every shape among them, both number paths drawn", () => {
     // Counts are measured: this is the length of the generated table.
-    expect(MEASURED.length).toBeGreaterThanOrEqual(25);
-    expect(MEASURED.some((row) => row[4].startsWith("<m:sSup>"))).toBe(true);
-    expect(MEASURED.some((row) => row[4].startsWith("<m:sSub>"))).toBe(true);
-    expect(MEASURED.some((row) => row[4].startsWith("<m:t>"))).toBe(true);
+    expect(MEASURED.length).toBeGreaterThanOrEqual(100);
+    const shapes = new Set(MEASURED.map((row) => row[2]));
+    for (const shape of [...Object.keys(SHAPES), "bare"])
+      expect(shapes.has(shape as OmmlShape)).toBe(true);
+    const bare = MEASURED.filter((row) => row[2] === "bare").map((row) => row[3]);
+    expect(bare.some((xml) => xml.startsWith("<m:sSup>"))).toBe(true);
+    expect(bare.some((xml) => xml.startsWith("<m:sSub>"))).toBe(true);
+    expect(bare.some((xml) => xml.startsWith("<m:t>"))).toBe(true);
   });
 
-  it.each(MEASURED.map((row) => [row[0], JSON.stringify(row[1]), row] as const))(
-    "%s with %s",
-    (_value, _formatter, [value, formatter, inserted, denominator, bare]) => {
-      const run = (text: string) => `<m:r><m:t>${text}</m:t></m:r>`;
-      expect(omathInside(toOmml(new FormulaNode({ value: [number(value)] }), { formatter }))).toBe(
-        run(inserted),
-      );
-      const frac = omathInside(
-        toOmml(
-          new FormulaNode({
-            value: [new FracNode({ parameterOne: number(value), parameterTwo: number("2") })],
-          }),
-          { formatter },
-        ),
-      );
-      expect(frac).toContain(`<m:num>${run(inserted)}</m:num>`);
-      expect(frac).toContain(`<m:den>${run(denominator)}</m:den>`);
-      expect(compact(toOmmlWithoutMathTag(number(value), { formatter }))).toBe(bare);
+  it.each(MEASURED.map((row) => [row[2], row[0], JSON.stringify(row[1]), row] as const))(
+    "%s: %s with %s",
+    (_shape, _value, _formatter, [value, formatter, shape, expected]) => {
+      expect(render(value, formatter, shape)).toBe(expected);
     },
   );
 });

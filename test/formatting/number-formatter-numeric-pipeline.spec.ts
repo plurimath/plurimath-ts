@@ -109,7 +109,20 @@ function reduce(entry: PinnedCallCase): Reduced {
   };
 }
 
-const ALL = loadPinnedCorpus().calls.map(reduce);
+const CORPUS = loadPinnedCorpus();
+const ALL = CORPUS.calls.map(reduce);
+
+/**
+ * The ids of the cases whose payload declares an `omml` target — every case in
+ * such a payload must then carry an OMML expectation (`corpus-pin.ts` checks
+ * outcomes cover exactly the declared targets), so a case missing one fails
+ * rather than being skipped.
+ */
+const OMML_CASE_IDS: ReadonlySet<string> = new Set(
+  CORPUS.callsPayloads
+    .filter((payload) => payload.targets.includes("omml"))
+    .flatMap((payload) => payload.cases.map((entry) => entry.id)),
+);
 
 /**
  * In scope: every case whose option keys this port implements — all of them
@@ -133,9 +146,13 @@ describe("pinned calls/1 cases — the sets this spec partitions", () => {
     expect(IN_SCOPE.filter((c) => c.stringFormat !== null)).toHaveLength(2);
   });
 
-  it("records OMML for most cases, so the OMML check below inspects something", () => {
+  it("records OMML for exactly the 64 cases whose payload declares it", () => {
+    // 64 is measured, not recalled: the cases of the pinned calls/1 payloads
+    // whose `targets` include omml. The other two (`number-formatting.yaml`)
+    // predate the omml target.
+    expect(OMML_CASE_IDS.size).toBe(64);
     const withOmml = IN_SCOPE.filter((c) => c.entry.expected.get("omml") !== undefined);
-    expect(withOmml.length).toBeGreaterThanOrEqual(60);
+    expect(withOmml.map((c) => c.entry.id).sort()).toStrictEqual([...OMML_CASE_IDS].sort());
   });
 
   it("covers every group of this slice (a gate that inspects nothing fails)", () => {
@@ -192,9 +209,19 @@ describe.each(IN_SCOPE.map((c) => [c.entry.id, c] as const))("%s", (_id, c) => {
     if (html === undefined) expect(typeof rendered).toBe("string");
     else expect(rendered).toBe(html);
   });
-  const omml = expected.get("omml");
-  it.skipIf(omml === undefined)("renders omml byte-identical to the oracle", () => {
-    expect(toOmml(buildFormula(c.entry), { formatter })).toBe(omml);
+  it("renders omml byte-identical to the oracle, wherever the payload declares omml", () => {
+    const omml = expected.get("omml");
+    const rendered = toOmml(buildFormula(c.entry), { formatter });
+    if (OMML_CASE_IDS.has(c.entry.id)) {
+      // A declared target with no expectation fails here, never skips.
+      expect(omml).toBeTypeOf("string");
+      expect(rendered).toBe(omml);
+    } else {
+      // A payload without the omml target: no expectation to compare, but the
+      // render must still complete.
+      expect(omml).toBeUndefined();
+      expect(typeof rendered).toBe("string");
+    }
   });
 });
 

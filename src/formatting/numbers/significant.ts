@@ -3,7 +3,8 @@
  * rounding on `NumberParts`, applied before any symbol is localized so
  * rounding never re-reads grouped or decimal-localized text.
  *
- * Rounds half up on the first discarded digit, carries through the kept
+ * Rounds half up on the first discarded digit (the base's half-way digit: `5`
+ * in base 10, `8` in base 16), carries through the kept
  * digits (`1999` to two significant digits is `2000`), and pads an integer
  * out with trailing zeros where digits were dropped (`112` to two is `110`).
  * A value with fewer significant digits than asked for is left as it is: the
@@ -23,14 +24,18 @@ import {
 import type { NumberParts } from "./parts";
 
 /** `Significant#apply_parts` — `significant` is the caller's positive digit budget. */
-export function applySignificant(parts: NumberParts, significant: number): NumberParts {
+export function applySignificant(
+  parts: NumberParts,
+  significant: number,
+  base: number,
+): NumberParts {
   const string = parts.fractional
     ? `${parts.integerDigits}${DECIMAL_POINT}${parts.fractionDigits}`
     : parts.integerDigits;
   const chars = [...string];
   if (skipsSignificantProcessing(chars, significant)) return parts;
 
-  const signified = signify(chars, significant).join("");
+  const signified = signify(chars, significant, base).join("");
   const pointAt = signified.indexOf(DECIMAL_POINT);
   if (pointAt === -1) return parts.withDigits({ integerDigits: signified, fractionDigits: "" });
   return parts.withDigits({
@@ -72,7 +77,7 @@ function processChars(
 }
 
 /** `Significant#signify`. */
-function signify(chars: readonly string[], significant: number): string[] {
+function signify(chars: readonly string[], significant: number, base: number): string[] {
   const taken = processChars(chars, significant);
   const { newChars, fractionPart } = taken;
   if (taken.remaining > 0) {
@@ -83,7 +88,7 @@ function signify(chars: readonly string[], significant: number): string[] {
   let remainChars = digitCount(chars, fractionPart ? undefined : DECIMAL_POINT) - significant;
   let result = newChars;
   if (remainChars > 0) {
-    result = roundChars(chars, newChars, fractionPart);
+    result = roundChars(chars, newChars, fractionPart, base);
     if (fractionPart) remainChars = remainingFractionChars(result, significant);
   }
   const complete = fractionPart && significantDigitCount(result) === significant;
@@ -92,31 +97,38 @@ function signify(chars: readonly string[], significant: number): string[] {
 }
 
 /** `Significant#round_chars`: bump the kept digits when the first dropped digit rounds up. */
-function roundChars(chars: readonly string[], result: string[], fractionPart: boolean): string[] {
+function roundChars(
+  chars: readonly string[],
+  result: string[],
+  fractionPart: boolean,
+  base: number,
+): string[] {
   // The next digit to look at, stepping over a decimal point that was not copied.
   const at = isDigit(chars[result.length]) ? result.length : result.length + 1;
-  if (!(at < chars.length && roundsUp(chars[at]))) return result;
+  if (!(at < chars.length && roundsUp(chars[at], base))) return result;
 
   const reversed = [...result].reverse();
-  const rounded = fractionPart ? incrementFractional(reversed) : incrementInteger(reversed);
+  const rounded = fractionPart
+    ? incrementFractional(reversed, base)
+    : incrementInteger(reversed, base);
   return rounded.reverse();
 }
 
 /** `Significant#increment_fractional`. */
-function incrementFractional(reversed: readonly string[]): string[] {
+function incrementFractional(reversed: readonly string[], base: number): string[] {
   const pointAt = reversed.indexOf(DECIMAL_POINT);
-  if (pointAt === -1) return incrementInteger(reversed);
+  if (pointAt === -1) return incrementInteger(reversed, base);
 
   const fraction = reversed.slice(0, pointAt);
   const integer = reversed.slice(pointAt + 1);
-  const bumped = incrementReversed(fraction, "");
+  const bumped = incrementReversed(fraction, "", base);
   if (!bumped.carry) return [...bumped.digits, DECIMAL_POINT, ...integer];
-  return [...bumped.digits, "", ...incrementInteger(integer)];
+  return [...bumped.digits, "", ...incrementInteger(integer, base)];
 }
 
 /** `Significant#increment_integer`. */
-function incrementInteger(reversed: readonly string[]): string[] {
-  const { digits, carry } = incrementReversed(reversed, "0");
+function incrementInteger(reversed: readonly string[], base: number): string[] {
+  const { digits, carry } = incrementReversed(reversed, "0", base);
   if (carry) digits.push("1");
   return digits;
 }

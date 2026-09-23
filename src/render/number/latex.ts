@@ -53,7 +53,7 @@ export function renderNumber(node: NodeOf<"number">, context: RenderContext): st
     return rubyArrayInspectOrThrow(value, FORMAT, node.kind, "number.value");
   }
   if (context.numberFormat !== null) {
-    if (isGemNumericValue(value)) return applyNumberFormat(value, context.numberFormat);
+    if (isGemNumericValue(value)) return applyNumberFormat(value, context.numberFormat, FORMAT);
     // `Formatter::Numbers::Source#validate_numeric!` raises for anything that
     // is not a gem-numeric string.
     refuseNonNumericUnderFormatter(value, FORMAT, node.kind);

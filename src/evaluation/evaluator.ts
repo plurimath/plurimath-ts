@@ -202,20 +202,24 @@ export class Evaluator {
     if (base < 0 && !Number.isInteger(exponent)) {
       throw new MathDomainError("result is not a real number");
     }
-    return this.realResult(base ** exponent);
+    return base ** exponent;
   }
 
   /**
-   * Ruby: `Evaluator#real_result` — non-real values are rejected per
-   * subexpression; non-finite values are only rejected on the final result
-   * (`evaluate()`, below), so an asymptotic value like `1/exp(1000)` (0.0)
-   * still evaluates. `NaN` from JavaScript's `**`/arithmetic is the one case
-   * `power()` already turns into `MathDomainError` before this runs, so this
-   * check exists for parity with the gem's structure rather than to catch a
-   * live JavaScript case.
+   * Ruby: `Evaluator#real_result` — checks `value.real?`, which rejects a
+   * `Complex` but ACCEPTS a real `Float::NAN` (measured: `Float::NAN.real?`
+   * is `true`; `a+1` with `a: Float::NAN` raises `NonFiniteResultError`, from
+   * the FINAL finite check below, never `MathDomainError`). JavaScript has no
+   * `Complex`, so every `number` — `NaN` included — is already "real" by
+   * construction; this is a passthrough, not a no-op stand-in for a check
+   * this port cannot make. The one place a value is genuinely non-real
+   * (a negative base to a non-integer power) is caught earlier, in `power()`,
+   * on the actual mathematical rule that makes it so — BEFORE computing `**`,
+   * so it does not depend on whether the computed value happens to be `NaN`
+   * (which `power()` must also accept as a legitimate propagating operand,
+   * e.g. `power(NaN, 2)`, itself real per the same Ruby rule).
    */
   private realResult(value: number): number {
-    if (Number.isNaN(value)) throw new MathDomainError("result is not a real number");
     return value;
   }
 

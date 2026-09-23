@@ -157,4 +157,26 @@ describe("evaluate() — measurements not covered by the oracle fixtures", () =>
       "wrong type for binding key (given Array, expected String or Symbol)",
     );
   });
+
+  /**
+   * `mod`, `sin`/every trig function, and `Sum`/`Prod` are OUT of scope for
+   * this slice — refused as `UnsupportedExpressionError`, not implemented.
+   * This is a DELIBERATE divergence from the oracle, not a bug: the gem does
+   * not refuse any of these the same way. `7 mod 3` fully evaluates to `1`
+   * (`Function::Mod#evaluate` exists in the gem); `sin(x)` and
+   * `sum_(i=1)^n i` reach `MissingVariableError` first, because the gem's own
+   * trig/n-ary `#evaluate` evaluates its argument eagerly before doing
+   * anything else — measured against the oracle, `scripts/
+   * generate-evaluation-fixtures.rb`'s "mod/sin/sum rows" comment has the
+   * detail. A fixture recording the oracle's actual answer here would assert
+   * the wrong thing about this port, which is why these three are hand-
+   * written instead of fixture-driven.
+   */
+  it.each([
+    ["mod, fully supported by the gem, refused here", "7 mod 3"],
+    ["sin, argument evaluated eagerly by the gem before its own refusal", "sin(x)"],
+    ["sum, argument evaluated eagerly by the gem before its own refusal", "sum_(i=1)^n i"],
+  ])("%s: %s raises UnsupportedExpressionError", (_label, text) => {
+    expect(() => evaluate(parseAsciimath(text))).toThrow(UnsupportedExpressionError);
+  });
 });

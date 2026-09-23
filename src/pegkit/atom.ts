@@ -90,15 +90,40 @@ export const DEPTH_LIMIT_MESSAGE = "Input is nested too deeply to parse";
 export const STACK_EXHAUSTED_MESSAGE = "Input exhausted the parser stack";
 
 /**
- * Cross-engine wording for recursion errors: V8 and JavaScriptCore include
- * "Maximum call stack" or "stack size exceeded"; SpiderMonkey uses "too much
- * recursion". For a `RangeError` or named `InternalError`, this broad heuristic
- * accepts a message containing any listed fragment. That covers the configured
- * engine spellings; it does not prove that an arbitrary synthetic error
- * exhausted the stack.
+ * Cross-engine wording for recursion errors, matched as a COMPLETE message,
+ * never a substring. V8 (Node, this package's only supported runtime —
+ * `package.json` `engines.node`) was measured directly: node 20.20.2, 22.23.2
+ * and 24.18.0 (the CI matrix), both on the main thread and inside a
+ * `worker_threads` worker (what a vitest `threads` pool runs tests in), every
+ * one throwing `RangeError: Maximum call stack size exceeded` for genuine
+ * unbounded recursion — the same, exact, whole message on all six
+ * combinations, 2026-09-23. The JavaScriptCore and SpiderMonkey entries are
+ * carried forward from the earlier substring version of this set (this
+ * package ships no browser build today, and neither engine was reachable to
+ * re-measure from this checkout) — kept for the day a browser consumer needs
+ * them, but not vouched for as measured.
+ *
+ * A substring match here is the bug this set replaces: `new
+ * RangeError("stack overflow")` and `new RangeError("maximum call stack size
+ * exceeded while allocating a buffer")` are both real shapes a hostile or
+ * merely unlucky caller can construct, and a `/maximum call stack|stack
+ * overflow/i` test read either as genuine engine stack exhaustion. Neither is
+ * a message V8 (or, so far as recorded, JavaScriptCore or SpiderMonkey) ever
+ * emits for a real overflow, so exact equality — case-folded, since the
+ * existing SpiderMonkey/JavaScriptCore entries below were never verified to
+ * match V8's capitalisation — excludes both while still recognising every
+ * message this set names.
  */
-const STACK_OVERFLOW_TEXT =
-  /maximum call stack|stack size exceeded|too much recursion|stack overflow/i;
+const STACK_OVERFLOW_MESSAGES: ReadonlySet<string> = new Set([
+  "maximum call stack size exceeded", // V8 (Node) — measured, see above
+  "stack size exceeded", // JavaScriptCore — carried forward, not measured here
+  "too much recursion", // SpiderMonkey — carried forward, not measured here
+]);
+
+/** Whether `message` is one of the complete, known engine overflow messages. */
+function isStackOverflowMessage(message: string): boolean {
+  return STACK_OVERFLOW_MESSAGES.has(message.toLowerCase());
+}
 
 /**
  * Regex-compilation `SyntaxError` needs a stricter rule because it can also
@@ -138,9 +163,10 @@ function isRegexCompileOverflow(message: string): boolean {
  * `RangeError` — reading "Invalid regular expression: /[0-9]/uy: <reason>".
  * Node 24.18.0 / V8 13.6 emitted "Maximum call stack size exceeded" in the
  * reported regression; "Stack overflow" is the alternate observed reason.
- * Both reasons matched `STACK_OVERFLOW_TEXT`. The earlier classifier rejected
- * the error because a `SyntaxError` is neither a `RangeError` nor an
- * `InternalError`.
+ * Both reasons matched the RangeError/InternalError text this file used to
+ * check with a substring regex (now `STACK_OVERFLOW_MESSAGES`, an exact-match
+ * set). The earlier classifier rejected the error because a `SyntaxError` is
+ * neither a `RangeError` nor an `InternalError`.
  *
  * V8 includes the failing regex in the message, so the classifier accepts the
  * message shape rather than one grammar literal. It then checks the complete
@@ -152,7 +178,7 @@ export function isStackOverflow(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   if (error instanceof SyntaxError) return isRegexCompileOverflow(error.message);
   const recursionClass = error instanceof RangeError || error.name === "InternalError";
-  return recursionClass && STACK_OVERFLOW_TEXT.test(error.message);
+  return recursionClass && isStackOverflowMessage(error.message);
 }
 
 type ParseResult =

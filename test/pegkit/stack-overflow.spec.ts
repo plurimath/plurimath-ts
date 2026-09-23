@@ -81,6 +81,20 @@ describe("engine stack-overflow shapes", () => {
     ["a RangeError that is not recursion", new RangeError("Invalid array length")],
     ["an unrelated Error whose text matches", new Error("maximum call stack")],
     ["a non-Error", "Maximum call stack size exceeded"],
+    // The bug a review found: the RangeError/InternalError branch used to
+    // substring-match `/maximum call stack|stack overflow/i`, so a caller
+    // (hostile, or merely unlucky) throwing either of these two — both real,
+    // constructible `RangeError`s that are NOT V8's own exhausted-stack
+    // message — was misclassified as genuine stack exhaustion. Neither is
+    // one of the exact, measured whole messages `STACK_OVERFLOW_MESSAGES`
+    // now requires (V8, Node 20.20.2/22.23.2/24.18.0: always exactly
+    // "Maximum call stack size exceeded", measured 2026-09-23 — see the
+    // constant's own comment in `src/pegkit/atom.ts`).
+    ["a decoy naming 'stack overflow' with no engine wording", new RangeError("stack overflow")],
+    [
+      "a decoy extending V8's own wording with unrelated text",
+      new RangeError("maximum call stack size exceeded while allocating a buffer"),
+    ],
   ])("does not mistake %s for one", (_label, error) => {
     expect(isStackOverflow(error)).toBe(false);
   });

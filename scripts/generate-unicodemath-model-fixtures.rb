@@ -1081,6 +1081,68 @@ RULE_COVERAGE = {
     "[+∞,1]",
     "[−∞,1]",
   ],
+  # FRACTION-ATOMS-TAIL (slice I): the `transform.rb:658`-`:1003` region — four
+  # ATOMS-meeting-FRACTION array folds, a digit-onto-`recursive_denominator`
+  # sibling of `:561`/`:592`, and the `[a, b]`/`a + b` list-joins over
+  # `accents_subsup`/`operand`/`factor`+`unary_subsup`/`sub_exp`/`exp`/
+  # `monospace`/`sub_script`+`sup_script` (with `mini_sub`/`mini_sup`). Rule
+  # numbers are the lines `rule(` calls OPEN on, each traced on the oracle
+  # with the same `TracePoint :b_call` method as every earlier group:
+  #
+  #   :658  "1/2a"                digit + recursive_denominator, both simple
+  #         (the `SLICE_BOUNDARY` witness this slice retires)
+  #   :680  "1/a2b"                atom simple + recursive_denominator SEQUENCE
+  #   :685  "1/𝜕𝑓(𝑥,𝑦)"           atom SEQUENCE + recursive_denominator simple
+  #   :690  "𝜕𝑓(𝑥,𝑦)/1"           atom SEQUENCE + recursive_numerator simple
+  #   :715  "∫▒dα'₂ x"             accents_subsup + naryand_recursion, both simple
+  #   :720  "1f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^-2πⅈxξ ⅆx"
+  #                               sup_exp + naryand_recursion SEQUENCE (also :755)
+  #   :755  (same row as :720)    operand SEQUENCE + expr SEQUENCE
+  #   :795  "(β_(x) x + β_(y) y + β_(z) z)"
+  #                               sub_exp + exp, both simple
+  #   :820  "1|x| = {█(&x\" if \"x ≥ 0@−&x\" if \"x < 0)┤"
+  #                               exp SEQUENCE + expr SEQUENCE
+  #   :840  "1𝑍(𝛾+𝑖𝜔−𝑖𝜈)=𝑖/√𝜋 ∫_−∞^∞ 𝑒^(−(𝜔−𝜔′)^2)/(𝛾+𝑖(𝜔′−𝜈)) ⅆ𝜔′"
+  #                               operand + expr, both simple
+  #   :860  "1⟨ α_1 + α_x x + α_y y + α_z z + α_(y z) yz + α_(z x) z x + α_(x y) x y + α_(x y z) x y z ⟩_-5 = 0"
+  #                               factor SEQUENCE + exp SEQUENCE
+  #   :890  "π_(ￗ(X)←ￗ(A)+ￗ(C), ￗ(Y)←¬ￗ(B))"
+  #                               monospace + exp SEQUENCE
+  #   :920  "x_₁a₂"                sub_script + mini_sub, both simple
+  #   :945  "╳(a) ▭(207&a + b) ▭(a + b) ╱(f + g) ╲(u + i)"
+  #                               rect + expr SEQUENCE
+  #   :993  "x^₁a²"                sup_script + mini_sup, both simple
+  #   :998  "x^₁a₂"                sup_script + mini_sub, both simple
+  #
+  # Six candidates traced on the oracle fire the rule the row targets but ALSO
+  # fire a sibling rule no slice claims, so the port would refuse them and
+  # they cannot compare for real: `:710`, `:750`, `:780` and `:800` sit in
+  # `SLICE_BOUNDARY` instead, each with its blocker named beside it. `:695`
+  # (`atom: sequence, recursive_denominator: sequence`) and `:760` (`factor:
+  # simple, unary_subsup: sequence`), `:850` (`operand: simple, expr:
+  # sequence`), `:880` (`monospace: simple, exp: simple`) and `:925`/`:930`
+  # (`expression: simple` + `expr: sequence`/simple) are registered nowhere:
+  # ~2,700 candidate inputs (the gem's own `unicodemath-tests`/spec examples
+  # plus hand-built variants) were traced and none fires any of them —
+  # unreached, not proven unreachable. See the module header for the full
+  # accounting.
+  "fraction_atoms_tail" => [
+    "1/2a",
+    "1/a2b",
+    "1/𝜕𝑓(𝑥,𝑦)",
+    "𝜕𝑓(𝑥,𝑦)/1",
+    "∫▒dα'₂ x",
+    "1f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^-2πⅈxξ ⅆx",
+    "(β_(x) x + β_(y) y + β_(z) z)",
+    "1|x| = {█(&x\" if \"x ≥ 0@−&x\" if \"x < 0)┤",
+    "1𝑍(𝛾+𝑖𝜔−𝑖𝜈)=𝑖/√𝜋 ∫_−∞^∞ 𝑒^(−(𝜔−𝜔′)^2)/(𝛾+𝑖(𝜔′−𝜈)) ⅆ𝜔′",
+    "1⟨ α_1 + α_x x + α_y y + α_z z + α_(y z) yz + α_(z x) z x + α_(x y) x y + α_(x y z) x y z ⟩_-5 = 0",
+    'π_(ￗ(X)←ￗ(A)+ￗ(C),' + " " + 'ￗ(Y)←¬ￗ(B))',
+    "x_₁a₂",
+    "╳(a) ▭(207&a + b) ▭(a + b) ╱(f + g) ╲(u + i)",
+    "x^₁a²",
+    "x^₁a₂",
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`
@@ -1141,13 +1203,35 @@ RULE_COVERAGE = {
 # a pure combinator (`RULE_COVERAGE["combinators"]`) needs and cannot have
 # until the builder beside it lands. When that builder does, the row's refusal
 # stops and `model-parity.spec.ts` fails until it moves into a coverage group.
+#
+# "1/2a" USED to be here, proving `:658`'s absence — it moved up into
+# `RULE_COVERAGE["fraction_atoms_tail"]` once slice I ported `:658`.
+#
+# The 101-char "1w^h^e^e^e^e+…" row is re-traced against the current port
+# rather than trusted to still be blocked by the same rule: slice I ported
+# `:945`, one of its two named blockers, but the row still refuses — the SAME
+# input also fires `:1776` (`{digit: simple, expr: simple}`), not claimed by
+# this slice, so the refusal continues for that reason alone now.
+#
+# Four more rows are slice I's own: each fires a rule the slice ports, but the
+# SAME input also fires a sibling combinator no slice has claimed (`:1776`,
+# `:2335`, `:2287`, or `:80`/`:1836`/`:1856`), traced on the oracle with the
+# same `TracePoint :b_call` method as `RULE_COVERAGE`:
+#
+#   the "1W_δ₁ρ₁σ₂^3β=…" row for `:710` (also fires `:1776`, `:2335`)
+#   the "1f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx" row for `:750` (also fires `:2287`)
+#   the "1A_n \⌊ B_m = …" row for `:780` (also fires `:1776`)
+#   the "1𝜌 = ∑_𝜓▒P_𝜓 |𝜓⟩⟨𝜓| + 1" row for `:800` (also fires `:80`, `:1836`, `:1856`)
 SLICE_BOUNDARY = [
   "1x₂",
-  "1/2a",
   '1w^h^e^e^e^e+1a+"Testing this!"-(1/2/333/4+1+1)+abc₂⁹/W_c+ab+√(42&1g)+▭(255&▭(255&b))+∑_A▒a+1+∑┴a┬b▒b',
   "1I(x,x') = g(x,x') [ε(x,x') + ∫_S▒ρ(x,x',x'')I(x',x'')ⅆx'']",
   '1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa',
   '1A^* = \\\\sum_{r}{ (-1)^r ⟨ A ⟩_r } = ⟨ A ⟩_+ - ⟨ A ⟩_-',
+  "1W_δ₁ρ₁σ₂^3β=U_δ₁ρ₁^3β+1/8π^2⁢∫_α₁^α₂▒dα'₂[(U_δ₁ρ₁^2β-α'₂U_δ₁ρ₁^1β)/U_δ₁ρ₁^0β]",
+  "1f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx",
+  '1A_n \⌊ B_m = ⟨ A_n B_m ⟩_{n-m}',
+  "1𝜌 = ∑_𝜓▒P_𝜓 |𝜓⟩⟨𝜓| + 1",
 ].freeze
 
 options = { oracle: nil, out: "test/formats/unicodemath", allow_dirty: false }

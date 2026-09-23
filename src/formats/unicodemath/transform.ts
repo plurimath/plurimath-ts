@@ -529,13 +529,17 @@
  *
  * Four more are registered but have no coverage fixture yet: `:95`, `:346`,
  * `:381` and `:441` each fire on an oracle input, but every one found also
- * fires a sibling pure combinator that no slice has claimed — `:95` needs
+ * fires a sibling pure combinator that no slice has claimed — `:95` needed
  * `:945`, `:346` needs `:2251`, and `:381` and `:441` both need `:1776`
  * (`{digit: simple, expr: simple}`), which alone blocks three of the four.
  * Each witness sits in `SLICE_BOUNDARY` instead
  * (the generator's own comment above it names the exact blocker per row), so
  * the port still refuses those inputs and `model-parity.spec.ts` proves that
- * refusal rather than a parse.
+ * refusal rather than a parse. Slice I below ports `:945`, `:95`'s own named
+ * blocker, but re-tracing the same witness on the current port finds it
+ * fires `:1776` too — a SECOND, previously-masked blocker also outside this
+ * slice's boundary — so the row stays in `SLICE_BOUNDARY`, now for that
+ * reason alone.
  *
  * Three are dead in the gem, confirmed two ways: `:41`/`:42`/`:51`
  * (`script`/`double`/`fraktur`) read `Constants::UNICODED_FONTS`, whose
@@ -561,6 +565,56 @@
  * these three (hand-built combinations plus every `unicodemath-tests` and
  * pinned-corpus string already in scope), none of which fired any of the
  * three; none is registered, and none counts toward `FINAL_COUNT`.
+ *
+ * ## A twelfth increment: FRACTION/ATOMS-TAIL (slice I)
+ *
+ * Twenty-seven candidate ids from `transform.rb:658`-`:1003`: four more
+ * ATOMS-meeting-FRACTION array folds (`:680`/`:685`/`:690`/`:695`, siblings
+ * of `:675` above), `:658` (a digit onto a fraction's `recursive_
+ * denominator`, the sibling `:561`/`:592` already carry for the mini-digit
+ * shapes), and the rest the same "builds nothing" list-join family the
+ * COMBINATORS increment above named — `[a, b]`/`a + b` over
+ * `accents_subsup`, `operand`, `factor`+`unary_subsup`, `sub_exp`, `exp`,
+ * `monospace`, and `sub_script`/`sup_script`+`mini_sub`/`mini_sup`. `:845`,
+ * the tie-loss the header's own "Order is behaviour" section already
+ * documents, was excluded from the count before this increment started.
+ *
+ * TWENTY are ported, each with a `RULE_COVERAGE["fraction_atoms_tail"]`
+ * witness that compares for real: `:658`, `:680`, `:685`, `:690`, `:715`,
+ * `:720`, `:755`, `:795`, `:820`, `:840`, `:860`, `:890`, `:920`, `:945`,
+ * `:993`, `:998` carry their own row; `:710`, `:750`, `:780` and `:800` are
+ * registered too (the code is correct, traced against the oracle) but reach
+ * no CLEAN witness — every input found that fires one of them also fires a
+ * sibling combinator no slice has claimed (`:1776`, `:2335`, `:2287`, or
+ * `:80`/`:1836`/`:1856`), so each sits in `SLICE_BOUNDARY` instead, with its
+ * blocker named beside it, the same pattern slice H used for `:95`/`:346`/
+ * `:381`/`:441`.
+ *
+ * `:658` retires the `"1/2a"` row `SLICE_BOUNDARY` carried since an early
+ * increment: porting `:658` alone was enough, the SEQUENCE-numerator/
+ * denominator sites it feeds (`:1619`) were already ported by slice E.
+ * `:945` was the OTHER named blocker for `:95`'s own `SLICE_BOUNDARY` row
+ * (COMBINATORS-EARLY above); porting it here does not retire that row —
+ * re-tracing the same witness on the current port finds `:1776` still fires
+ * on it, a second blocker the original probe never isolated because `:945`
+ * masked it.
+ *
+ * `:1003` (`{sub_script: simple, recursion: simple} -> Utility.
+ * recursive_sub`) is DEAD by construction: `grep -rn "as(:recursion)"` over
+ * the whole gem finds exactly one hit, `:1003`'s own pattern-match line — no
+ * grammar production anywhere tags `.as(:recursion)`, so the key this rule
+ * matches on is never produced.
+ *
+ * SIX are traced-but-unreached, not proven unreachable: `:695` (`atom:
+ * sequence, recursive_denominator: sequence`), `:760` (`factor: simple,
+ * unary_subsup: sequence`), `:850` (`operand: simple, expr: sequence`),
+ * `:880` (`monospace: simple, exp: simple`), and `:925`/`:930`
+ * (`expression: simple` + `expr: sequence`/simple). Roughly 2,700 candidate
+ * inputs were traced on the oracle for these six (the gem's own
+ * `unicodemath-tests` and rspec fixture examples, plus hand-built fraction
+ * and subscript variants), none of which fired any of them.
+ *
+ * See `FINAL_COUNT` for the running total this increment brings it to.
  *
  * ## Two model behaviours that are provably absent here
  *
@@ -2529,6 +2583,15 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     newMlabeledtr(b.value, newText(b.id)),
   );
 
+  // FRACTION-ATOMS-TAIL (slice I): a digit folded onto a fraction's
+  // `recursive_denominator`, the sibling `:561`/`:592` already carry for the
+  // mini-digit shapes — `"1/2a"` (the `SLICE_BOUNDARY` witness this retires).
+  rule(
+    "658",
+    { digit: simple("digit"), recursive_denominator: simple("recursive_denominator") },
+    (b) => [b.digit, b.recursive_denominator],
+  );
+
   // FRACTION (slice E): a relational symbol leading a fraction's
   // `recursive_denominator` (`a\not∈b`). Slice B's rule, deferred there until a
   // fraction reached it.
@@ -2551,6 +2614,35 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     { atom: simple("atom"), recursive_denominator: simple("recursive_denominator") },
     (b) => [b.atom, b.recursive_denominator],
   );
+  // FRACTION-ATOMS-TAIL (slice I): two of the other three ATOMS-meeting-
+  // FRACTION array folds the comment below once deferred whole — `:675`'s
+  // own sequence-typed siblings, reached once the atom run ahead of a
+  // `recursive_denominator`/`recursive_numerator` is itself two-or-more atoms
+  // long (already folded to an array by `:486`/`:496` above). The fourth,
+  // `:695` (`atom: sequence, recursive_denominator: sequence`), is NOT
+  // registered: ~2,700 candidate inputs were traced on the oracle (the gem's
+  // own `unicodemath-tests`/spec examples plus hand-built fraction variants),
+  // and none fires it — every atom-sequence-plus-digit denominator tried
+  // either merges the digit into the SAME atoms run (no `recursive_
+  // denominator` key at all) or leaves an unmatched `{atom:, atoms:,
+  // recursive_denominator:}` three-key hash (a gem bug shape, the same kind
+  // `GEM_UNMATCHED_SIGNATURES` already documents elsewhere). Unreached, not
+  // proven unreachable.
+  rule(
+    "680",
+    { atom: simple("atom"), recursive_denominator: sequence("recursive_denominator") },
+    (b) => [b.atom, ...asArray(b.recursive_denominator)],
+  );
+  rule(
+    "685",
+    { atom: sequence("atom"), recursive_denominator: simple("recursive_denominator") },
+    (b) => [...asArray(b.atom), b.recursive_denominator],
+  );
+  rule(
+    "690",
+    { atom: sequence("atom"), recursive_numerator: simple("recursive_numerator") },
+    (b) => [...asArray(b.atom), b.recursive_numerator],
+  );
 
   rule("700", { accents_subsup: simple("accents_subsup"), expr: simple("expr") }, (b) => [
     b.accents_subsup,
@@ -2560,6 +2652,27 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.accents_subsup,
     ...asArray(b.expr),
   ]);
+  // FRACTION-ATOMS-TAIL (slice I): `:705`'s `exp`-keyed sibling. Every input
+  // found that fires it also fires `:1776` (`{digit: simple, expr: simple}`)
+  // and `:2335` (`{sub_script: simple, mini_sub: simple, exp_iteration:
+  // simple}`, a 3-key sibling of `:920`) — neither claimed by any slice — so
+  // the row for it sits in `SLICE_BOUNDARY`, still refused for that reason.
+  rule("710", { accents_subsup: simple("accents_subsup"), exp: simple("exp") }, (b) => [
+    b.accents_subsup,
+    b.exp,
+  ]);
+  rule(
+    "715",
+    { accents_subsup: simple("accents_subsup"), naryand_recursion: simple("naryand_recursion") },
+    (b) => [b.accents_subsup, b.naryand_recursion],
+  );
+  // FRACTION-ATOMS-TAIL (slice I): `:715`'s `sup_exp`-led sibling, the same
+  // `naryand_recursion` combinator one key over.
+  rule(
+    "720",
+    { sup_exp: simple("sup_exp"), naryand_recursion: sequence("naryand_recursion") },
+    (b) => [b.sup_exp, ...asArray(b.naryand_recursion)],
+  );
   // NARY continued — a bare `nary` (already resolved by `:20`/`:175` above)
   // followed by its `naryand_recursion` continuation, the two-element array
   // every such pairing here folds into.
@@ -2582,13 +2695,11 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // (`transform.rb:1619`-`:2371`, the module header's own "other ten call
   // sites"). That top-side blocker is gone now: all ten of those sites are
   // ported (`:1619`, `:1624`, `:1629`, `:1634`, `:1639`, `:1644`, `:2203`,
-  // `:2359`, `:2365`, `:2371`), and three of the eleven ATOMS-meeting-
-  // FRACTION keys were ported alongside prerequisites that needed them
-  // (`:675` above, `:1756`, `:2048`). The remaining eight — `:680`, `:685`,
-  // `:690`, `:695`, `:2035`, `:2041`, `:2787`, `:3074` — are still unported,
-  // but no longer for the reason this comment originally gave: nothing left
-  // blocks a passing witness for them, porting them is simply outside this
-  // slice's boundary and is the next slice's work, not a dependency gap.
+  // `:2359`, `:2365`, `:2371`), and six of the eleven ATOMS-meeting-FRACTION
+  // keys are ported — `:675`/`:1756`/`:2048` alongside the prerequisites
+  // that needed them, and `:680`/`:685`/`:690` above by this slice (`I`).
+  // `:695` is traced-but-unreached (see its own comment above); `:2035`,
+  // `:2041`, `:2787`, `:3074` are simply outside this slice's boundary.
 
   rule("735", { factor: simple("factor"), operand: simple("operand") }, (b) => [
     b.factor,
@@ -2606,10 +2717,33 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.factor,
     ...asArray(b.operand),
   ]);
+  // FRACTION-ATOMS-TAIL (slice I): an `operand` chain (already folded to a
+  // single node) followed by one more expr — `:755` below is its
+  // SEQUENCE-`expr` twin. Every input found that fires it also fires `:2287`
+  // (`{factor: simple, operand: simple, exp: simple}`), not claimed by any
+  // slice, so the row for it sits in `SLICE_BOUNDARY`, still refused for
+  // that reason.
+  rule("750", { operand: sequence("operand"), expr: simple("expr") }, (b) => [
+    ...asArray(b.operand),
+    b.expr,
+  ]);
+  rule("755", { operand: sequence("operand"), expr: sequence("expr") }, (b) => [
+    ...asArray(b.operand),
+    ...asArray(b.expr),
+  ]);
   rule("765", { sup_exp: simple("sup_exp"), expr: simple("expr") }, (b) => [b.sup_exp, b.expr]);
   rule("770", { sup_exp: simple("sup_exp"), exp: simple("exp") }, (b) => [b.sup_exp, b.exp]);
   rule("775", { sub_exp: simple("sub_exp"), expr: sequence("expr") }, (b) => [
     b.sub_exp,
+    ...asArray(b.expr),
+  ]);
+  // FRACTION-ATOMS-TAIL (slice I): `:775`'s SEQUENCE-`sub_exp` twin. Every
+  // input found that fires it also fires `:1776` (`{digit: simple, expr:
+  // simple}`), no slice has claimed — the module header's own witness for
+  // `:75`'s SLICE_BOUNDARY family names the same blocker. The row for it
+  // sits in `SLICE_BOUNDARY`, still refused for that reason.
+  rule("780", { sub_exp: sequence("sub_exp"), expr: sequence("expr") }, (b) => [
+    ...asArray(b.sub_exp),
     ...asArray(b.expr),
   ]);
   rule("785", { sub_exp: simple("sub_exp"), exp: sequence("exp") }, (b) => [
@@ -2617,20 +2751,45 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     ...asArray(b.exp),
   ]);
   rule("790", { sub_exp: simple("sub_exp"), expr: simple("expr") }, (b) => [b.sub_exp, b.expr]);
+  // FRACTION-ATOMS-TAIL (slice I): `:790`'s `exp`-keyed twin.
+  rule("795", { sub_exp: simple("sub_exp"), exp: simple("exp") }, (b) => [b.sub_exp, b.exp]);
   rule("805", { sup_exp: simple("sup_exp"), naryand_recursion: simple("naryand") }, (b) => [
     b.sup_exp,
     b.naryand,
   ]);
+  // FRACTION-ATOMS-TAIL (slice I): `:805`'s SEQUENCE-`naryand_recursion`
+  // twin, bound under `sub_exp` rather than `sup_exp`. Every witness found
+  // also fires `:80` (`{intermediate_exp: sequence}`), `:1836` and `:1856` —
+  // none claimed by any slice — so the row for it sits in `SLICE_BOUNDARY`,
+  // still refused for that reason.
+  rule(
+    "800",
+    { sub_exp: simple("sub_exp"), naryand_recursion: sequence("naryand") },
+    (b) => [b.sub_exp, ...asArray(b.naryand)],
+  );
   rule("810", { exp: simple("exp"), expr: simple("expr") }, (b) => [b.exp, b.expr]);
   rule("815", { exp: simple("exp"), expr: sequence("expr") }, (b) => [b.exp, ...asArray(b.expr)]);
+  // FRACTION-ATOMS-TAIL (slice I): `:815`'s SEQUENCE-`exp` twin.
+  rule("820", { exp: sequence("exp"), expr: sequence("expr") }, (b) => [
+    ...asArray(b.exp),
+    ...asArray(b.expr),
+  ]);
   rule("825", { sup_exp: simple("sup_exp"), expr: sequence("expr") }, (b) => [
     b.sup_exp,
     ...asArray(b.expr),
   ]);
   rule("835", { factor: simple("factor"), expr: simple("expr") }, (b) => [b.factor, b.expr]);
+  // FRACTION-ATOMS-TAIL (slice I): the `operand`-keyed sibling of `:835`/
+  // `:865` below — an `operand` chain (already folded to a single node by
+  // `:735`'s own family) followed by one more simple/SEQUENCE `expr`.
+  rule("840", { operand: simple("operand"), expr: simple("expr") }, (b) => [b.operand, b.expr]);
   rule("855", { factor: sequence("factor"), expr: sequence("expr") }, (b) => [
     ...asArray(b.factor),
     ...asArray(b.expr),
+  ]);
+  rule("860", { factor: sequence("factor"), exp: sequence("exp") }, (b) => [
+    ...asArray(b.factor),
+    ...asArray(b.exp),
   ]);
   rule("865", { factor: simple("factor"), expr: sequence("expr") }, (b) => [
     b.factor,
@@ -2647,6 +2806,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("885", { monospace: simple("monospace"), expr: simple("expr") }, (b) => [
     b.monospace,
     b.expr,
+  ]);
+  // FRACTION-ATOMS-TAIL (slice I): `:885`'s `exp`-keyed SEQUENCE sibling
+  // (`:895` below is its `expr`-keyed one) — `:880` (`monospace`+`exp`
+  // simple/simple) is its remaining twin; no input traced fires it, so it is
+  // NOT registered (unreached, not proven unreachable — see the header).
+  rule("890", { monospace: simple("monospace"), exp: sequence("exp") }, (b) => [
+    b.monospace,
+    ...asArray(b.exp),
   ]);
   rule("895", { monospace: simple("monospace"), expr: sequence("expr") }, (b) => [
     b.monospace,
@@ -2665,12 +2832,25 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.mini_sub,
     ...asArray(b.expr),
   ]);
+  // FRACTION-ATOMS-TAIL (slice I): a `sub_script` folded onto a `mini_sub`
+  // that follows it directly (`x_₁a₂`) — `:993`/`:998` below are its
+  // `sup_script`-led siblings.
+  rule("920", { sub_script: simple("sub_script"), mini_sub: simple("mini_sub") }, (b) => [
+    b.sub_script,
+    b.mini_sub,
+  ]);
   rule("935", { unary_function: simple("unary_function"), expr: simple("expr") }, (b) => [
     b.unary_function,
     b.expr,
   ]);
   rule("940", { unary_function: simple("unary_function"), expr: sequence("expr") }, (b) => [
     b.unary_function,
+    ...asArray(b.expr),
+  ]);
+  // FRACTION-ATOMS-TAIL (slice I): a `rect` folded onto a SEQUENCE `expr`
+  // (`▭(a + b) ▭(a + b)`, two rects in a row).
+  rule("945", { rect: simple("rect"), expr: sequence("expr") }, (b) => [
+    b.rect,
     ...asArray(b.expr),
   ]);
   rule("950", { table: simple("table"), expr: sequence("expr") }, (b) => [
@@ -4836,6 +5016,23 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("985", { sup_script: simple("sup_script"), sup_recursion: simple("sup_recursion") }, (b) =>
     recursiveSup(b.sup_script, unfencedValue(b.sup_recursion, true)),
   );
+  // FRACTION-ATOMS-TAIL (slice I): `:920`'s `sup_script`-led siblings —
+  // `sup_script`+`mini_sup` (`x^₁a²`) and `sup_script`+`mini_sub` (`x^₁a₂`).
+  rule("993", { sup_script: simple("sup_script"), mini_sup: simple("mini_sup") }, (b) => [
+    b.sup_script,
+    b.mini_sup,
+  ]);
+  rule("998", { sup_script: simple("sup_script"), mini_sub: simple("mini_sub") }, (b) => [
+    b.sup_script,
+    b.mini_sub,
+  ]);
+  // `:1003` (`{sub_script: simple, recursion: simple} -> Utility.
+  // recursive_sub`) is DEAD by construction: `grep -rn "as(:recursion)"` over
+  // the whole gem finds exactly one hit, this rule's own pattern-match line —
+  // no grammar production anywhere tags `.as(:recursion)` (every sibling
+  // that feeds `recursive_sub`/`recursive_sup` uses `sub_recursion`/
+  // `sup_recursion` instead, both already ported at `:635`/`:985`), so the
+  // key this rule matches on is never produced and it can never fire.
   rule(
     "1011",
     { sup_script: sequence("sup_script"), sup_recursion: simple("sup_recursion") },

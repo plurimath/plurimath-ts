@@ -433,7 +433,7 @@ through the shape walk, for a shape no parser produces. The refusal is pinned
 by `test/formats/omml/renderer.spec.ts`, "OMML fenced delimiter recursion
 markers", so it cannot drift into some other behaviour unnoticed.
 
-### OMML Fenced: a lone surrogate is refused, not rendered as the gem's byte escapes
+### OMML Fenced: a lone surrogate renders as the gem's byte escapes (resolved)
 
 **Resolved (2026-09-22).** Ruby cannot BUILD the code point —
 `0xD800.chr(Encoding::UTF_8)` raises `RangeError: invalid codepoint 0xD800 in

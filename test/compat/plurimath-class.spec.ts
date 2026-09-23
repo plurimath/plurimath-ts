@@ -380,6 +380,32 @@ describe("toDisplay", () => {
     });
 
     /**
+     * `Table#to_*_math_zone` (`table.rb:115-155`) is defined once on the base
+     * class and never overridden by a named subclass -- `\begin{matrix}...`
+     * builds a `Matrix < Table` node, whose `class_name` is `"matrix"`, NOT
+     * `"table"`. A prior version of this file keyed the header label AND the
+     * wrapped-field lookup off `classNameOf`, so a `Matrix` (or `Pmatrix`/
+     * `Bmatrix`/`Vmatrix`) node fell through every branch and refused --
+     * `UNSUPPORTED_FEATURE` on all five formats, even though the gem answers
+     * every one. Measured:
+     * `Plurimath::Latex.new("\\begin{matrix}a&b\\\\c&d\\end{matrix}")
+     * .to_formula.to_display(:latex)`, oracle 00c52783.
+     */
+    it("a Matrix (Table subclass) prints the same 'table' header a bare Table does", () => {
+      expect(
+        new Plurimath("\\begin{matrix}a&b\\\\c&d\\end{matrix}", "latex").toDisplay("latex"),
+      ).toBe(
+        '|_ Math zone\n  |_ "\\begin{matrix}a & b \\\\ c & d\\end{matrix}"\n' +
+          '     |_ "table" function apply\n        |_ "tr" function apply\n' +
+          '        |  |_ "td" function apply\n        |  |  |_ "a" text\n' +
+          '        |  |_ "td" function apply\n        |     |_ "b" text\n' +
+          '        |_ "tr" function apply\n           |_ "td" function apply\n' +
+          '           |  |_ "c" text\n           |_ "td" function apply\n' +
+          '              |_ "d" text\n',
+      );
+    });
+
+    /**
      * `Substack < UnaryFunction` (`substack.rb:6-40`) has NO `to_*_math_zone`
      * overrides at all -- it inherits `UnaryFunction`'s (`unary_function.rb:94-155`)
      * unchanged. The refusal below is still correct, but for a DIFFERENT
@@ -546,6 +572,31 @@ describe("toDisplay", () => {
     });
 
     /**
+     * A standalone Symbol leaf's stored OMML literal is sometimes the bare
+     * ASCII character (`Less` → `"<"`, `Greater` → `">"`), unlike an
+     * already-entity-form literal such as `Minus` → `"&#x2212;"`. A prior
+     * version of `ommlSymbolWrapped` built its `<m:t>...</m:t>` wrap with a
+     * raw template string, which escaped neither -- `<`/`>` leaked into the
+     * tree-dump quoting unescaped, unlike the identical characters in the
+     * SAME node's full-document render just above (which goes through the
+     * real XML serializer). Measured:
+     * `Plurimath::UnicodeMath.new("x<->y").to_formula.to_display(:omml)`,
+     * oracle 00c52783.
+     */
+    it("standalone Symbol leaves whose OMML literal is a bare XML metacharacter get escaped", () => {
+      const build = () => new Plurimath("x<->y", "unicode");
+      const ommlRoot = build().toOmml().replace(/\n\s*/g, "");
+      expect(build().toDisplay("omml")).toBe(
+        `|_ Math zone\n  |_ "${ommlRoot}"\n` +
+          '     |_ "<m:t>x</m:t>" text\n' +
+          '     |_ "<m:t>&lt;</m:t>" text\n' +
+          '     |_ "<m:t>&#x2212;</m:t>" text\n' +
+          '     |_ "<m:t>&gt;</m:t>" text\n' +
+          '     |_ "<m:t>y</m:t>" text\n',
+      );
+    });
+
+    /**
      * A pre-existing gap this slice's Vec/merge-run work surfaced: `dump_omml`
      * calls `field.omml_nodes(...)`, and `Symbols::Symbol` overrides
      * `omml_nodes` to wrap the bare value in one `<m:t>...</m:t>`
@@ -580,6 +631,83 @@ describe("toDisplay", () => {
     it("Fenced is a transparent pass-through whose merge-eligible children fold into one text run", () => {
       expect(new Plurimath("(x+1)", "asciimath").toDisplay("asciimath")).toBe(
         '|_ Math zone\n  |_ "(x + 1)"\n     |_ "x + 1" text\n',
+      );
+    });
+
+    /**
+     * `\left|...\right|` parses to a bare `[Left, Formula(x-y), Right]`
+     * sequence at the TOP `mrow` level -- no `Fenced` node at all (measured
+     * on the oracle's own model dump). `Left`/`Right` are NOT no-ops on any
+     * of the five `to_*_math_zone` overrides (`left.rb`/`right.rb`); a prior
+     * version of this file treated both classes as always printing nothing,
+     * dropping the two delimiter lines entirely. Measured:
+     * `Plurimath::Latex.new("\\left|x-y\\right|").to_formula.to_display(:<format>)`,
+     * oracle 00c52783 -- all five formats.
+     */
+    it("Left/Right each print their own delimiter line, not a no-op", () => {
+      const build = () => new Plurimath("\\left|x-y\\right|", "latex");
+      expect(build().toDisplay("asciimath")).toBe(
+        '|_ Math zone\n  |_ "left| x - y right|"\n     |_ "|" left\n     |_ "x - y" text\n' +
+          '     |_ "|" right\n',
+      );
+      expect(build().toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "\\left | x - y \\right |"\n     |_ "|" left\n     |_ "x - y" text\n' +
+          '     |_ "|" right\n',
+      );
+      expect(build().toDisplay("unicodemath")).toBe(
+        '|_ Math zone\n  |_ "| x − y |"\n     |_ "|" left\n     |_ "x − y" text\n     |_ "|" right\n',
+      );
+
+      const mathmlRoot = build().toMathml().replace(/\n\s*/g, "");
+      expect(build().toDisplay("mathml")).toBe(
+        `|_ Math zone\n  |_ "${mathmlRoot}"\n` +
+          '     |_ "<mo>|</mo>" left\n     |_ "<mtext>x &#x2212; y</mtext>" text\n' +
+          '     |_ "<mo>|</mo>" right\n',
+      );
+
+      const ommlRoot = build().toOmml().replace(/\n\s*/g, "");
+      expect(build().toDisplay("omml")).toBe(
+        `|_ Math zone\n  |_ "${ommlRoot}"\n` +
+          '     |_ "<m:t>|</m:t>" left\n' +
+          '     |_ "<m:t>x&#xa0;&#x2212;&#xa0;y</m:t>" text\n' +
+          '     |_ "<m:t>|</m:t>" right\n',
+      );
+    });
+
+    /**
+     * `Left#left_paren`/`Right#right_paren` (used by the mathml/omml
+     * overrides) and `UnaryFunction#latex_paren` (inherited, used by the
+     * asciimath/latex overrides) are TWO DIFFERENT transforms of the same
+     * stored `parameter_one`. The port resolves `\lfloor`/`\{` etc. to an
+     * entity/literal FORWARD at parse time (`leftRightObjects`,
+     * `latex/transform.ts`); `latex_paren` looks that value back up in the
+     * SAME table, reversed, to recover the original macro spelling -- so
+     * asciimath/latex print `"\lfloor"`/`"\{"`, never the resolved
+     * `"&#x230a;"`/`"{"` `left_paren` would give under mathml/omml. Measured:
+     * `Plurimath::Latex.new("\\left\\lfloor x\\right\\rfloor")
+     * .to_formula.to_display(:asciimath/:latex)` and the brace case (which
+     * ALSO exercises `left_paren`'s OWN `"\{" -> "{"` swap not applying to
+     * `latex_paren`'s reverse lookup), oracle 00c52783.
+     */
+    it("asciimath/latex reverse-lookup the original delimiter macro, not the resolved literal", () => {
+      const lfloor = () => new Plurimath("\\left\\lfloor x\\right\\rfloor", "latex");
+      expect(lfloor().toDisplay("asciimath")).toBe(
+        '|_ Math zone\n  |_ "left&#x230a; x right&#x230b;"\n' +
+          '     |_ "\\lfloor" left\n     |_ "x" text\n     |_ "\\rfloor" right\n',
+      );
+      expect(lfloor().toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "\\left \\lfloor x \\right \\rfloor"\n' +
+          '     |_ "\\lfloor" left\n     |_ "x" text\n     |_ "\\rfloor" right\n',
+      );
+
+      const braces = () => new Plurimath("\\left\\{x,y\\right\\}", "latex");
+      expect(braces().toDisplay("asciimath")).toBe(
+        '|_ Math zone\n  |_ "left{ x , y right}"\n     |_ "\\{" left\n     |_ "x" text\n' +
+          '     |_ "," text\n     |_ "y" text\n     |_ "\\}" right\n',
+      );
+      expect(braces().toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "\\left \\{ x , y \\right \\}"\n     |_ "\\{" left\n     |_ "x" text\n' +
+          '     |_ "," text\n     |_ "y" text\n     |_ "\\}" right\n',
       );
     });
 

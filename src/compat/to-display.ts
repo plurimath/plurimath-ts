@@ -191,6 +191,7 @@ import {
 } from "../core/index";
 import { rubyClassName } from "../core/normalize";
 import { toAsciimath } from "../formats/asciimath/index";
+import { LATEX_LEFT_RIGHT_PARENTHESIS } from "../formats/latex/generated/transform-tables";
 import { toLatex } from "../formats/latex/index";
 import { toMathml } from "../formats/mathml/index";
 import { SPACING_CONTEXT } from "../formats/mathml/render";
@@ -204,7 +205,7 @@ import {
   MATHML_FONT_STYLE_VARIANTS,
 } from "../generated/mathml/render-tables";
 import { renderSymbol as renderSymbolOmml } from "../render/symbol/omml";
-import { dumpNodes, type XmlElement } from "../xml/index";
+import { dumpNodes, XmlElement } from "../xml/index";
 
 export type DisplayFormat = "asciimath" | "latex" | "mathml" | "omml" | "unicodemath";
 
@@ -343,7 +344,16 @@ function dumpOmmlFragment(node: MathNode, displayStyle: boolean): string {
  */
 function ommlSymbolWrapped(node: MathNode, displayStyle: boolean): string {
   const inner = dumpOmmlFragment(node, displayStyle);
-  return isSymbolKind(node) ? `<m:t>${inner}</m:t>` : inner;
+  if (!isSymbolKind(node)) return inner;
+  // `t_tag(options:)` builds a REAL `<m:t>` element and hands it to Ox, so
+  // the bare literal here goes through the same escape-then-undo pipeline
+  // `dumpNodes` gives every other OMML fragment (`serializer.ts`'s
+  // `REPLACABLES`) — not a raw template-string wrap, which left an
+  // unescaped literal `<`/`>`/`&` (measured: id `Less`'s stored literal is
+  // the bare character `<`, unlike `Minus`'s already-entity-form
+  // `&#x2212;`) sitting inside markup instead of being XML-escaped.
+  const element = new XmlElement("m:t").append(inner);
+  return dumpNodes(element, { indent: -1 });
 }
 
 /** One per-format adapter: root rendering, field rendering, and the two XML-only fragment dumps. */
@@ -503,13 +513,49 @@ const TERNARY_META: Record<string, TernaryMeta> = {
   multiscript: { label: "multiscript", first: "base", second: "subscript", third: "supscript" },
 };
 
-/** Kinds whose Ruby ancestor is `Math::Function::Table` and wraps `value` into a synthetic `Formula`. */
-const TABLE_LIKE_LABEL: Record<string, string> = {
-  table: "table",
-};
+/**
+ * `Left#left_paren`/`Right#right_paren`: the stored delimiter, with the one
+ * escaped-brace special case each substitutes its own bracket for
+ * (`parameter_one == "\\{"` → `"{"`, `"\\}"` → `"}"`). Every one of the five
+ * `to_*_math_zone` overrides on `Left`/`Right` calls this (or the raw
+ * `parameter_one` — unicodemath's own carve-out below), never a no-op: a
+ * prior version of this file treated both classes as no-ops here, dropping
+ * `\left|x-y\right|`'s two delimiter lines entirely (measured against the
+ * oracle, all five `toDisplay` formats).
+ */
+function leftRightParen(node: MathNode, isLeft: boolean): string {
+  const raw = fieldNode(node, "parameterOne");
+  const value = typeof raw === "string" ? raw : null;
+  if (value === null) return "";
+  if (isLeft) return value === "\\{" ? "{" : value;
+  return value === "\\}" ? "}" : value;
+}
 
-/** `Left`/`Right`: both override every `to_*_math_zone` with a no-op. */
-const NO_OP_CLASS_NAMES = new Set(["left", "right"]);
+/**
+ * `UnaryFunction#latex_paren`: `Latex::Constants::LEFT_RIGHT_PARENTHESIS
+ * .invert[parameter_one] || "."` — a HARD-CODED reverse lookup back through
+ * the same LaTeX table `leftRightObjects` used to resolve the delimiter
+ * forward (`transform.ts`), used ONLY by `to_asciimath_math_zone`/
+ * `to_latex_math_zone` on `Left`/`Right` (inherited from `UnaryFunction`,
+ * not the `left_paren`/`right_paren` override above, which mathml/omml use
+ * instead). Two values collide on `"&#x2016;"` (`\Vert` and `\|`); `invert`
+ * keeps the LAST key for a repeated value in Ruby Hash insertion order, so
+ * this does the same left-to-right overwrite, and `\|` (listed after
+ * `\Vert`) wins — measured against the oracle on `\left\|x\right\|`.
+ */
+const INVERTED_LATEX_LEFT_RIGHT_PARENTHESIS: ReadonlyMap<string, string> = (() => {
+  const inverted = new Map<string, string>();
+  for (const [key, value] of LATEX_LEFT_RIGHT_PARENTHESIS) inverted.set(value, key);
+  return inverted;
+})();
+
+/** `UnaryFunction#latex_paren`'s own default when the resolved value has no reverse entry. */
+function latexParenMathZone(node: MathNode): string {
+  const raw = fieldNode(node, "parameterOne");
+  const value = typeof raw === "string" ? raw : null;
+  if (value === null) return ".";
+  return INVERTED_LATEX_LEFT_RIGHT_PARENTHESIS.get(value) ?? ".";
+}
 
 /**
  * Each refused for its OWN measured reason (module doc above has the full
@@ -659,7 +705,34 @@ function mathZoneOf(
     return `${spacing}"${rendered}" text\n`;
   }
 
-  if (NO_OP_CLASS_NAMES.has(name)) return "";
+  if (name === "left" || name === "right") {
+    const isLeft = name === "left";
+    const label = isLeft ? "left" : "right";
+    let quoted: string;
+    if (options.format === "unicodemath") {
+      // `to_unicodemath_math_zone` is the one format that skips both
+      // `left_paren`/`right_paren` AND `latex_paren`, printing the raw
+      // `parameter_one` untransformed.
+      const raw = fieldNode(node, "parameterOne");
+      quoted = typeof raw === "string" ? raw : "";
+    } else if (options.format === "mathml") {
+      quoted = dumpNodes(new XmlElement("mo").append(leftRightParen(node, isLeft)), {
+        indent: -1,
+      });
+    } else if (options.format === "omml") {
+      quoted = dumpNodes(new XmlElement("m:t").append(leftRightParen(node, isLeft)), {
+        indent: -1,
+      });
+    } else {
+      // asciimath/latex both go through `UnaryFunction#latex_paren`'s
+      // reverse lookup, NOT `Left#left_paren`/`Right#right_paren` — see
+      // `latexParenMathZone`'s own doc for why the two diverge (measured:
+      // `\left\lfloor x\right\rfloor` prints `"\lfloor" left`, not the
+      // resolved `"&#x230a;"` `left_paren` would give).
+      quoted = latexParenMathZone(node);
+    }
+    return `${spacing}"${quoted}" ${label}\n`;
+  }
 
   if (name === "fenced") {
     const sequence = [
@@ -679,9 +752,17 @@ function mathZoneOf(
     return parts.join("");
   }
 
-  if (name in TABLE_LIKE_LABEL || name === "tr" || name === "td") {
-    const literal = name in TABLE_LIKE_LABEL ? TABLE_LIKE_LABEL[name] : name;
-    const wrapped = fieldNode(node, name === "table" ? "value" : "parameterOne");
+  if (node.kind === "table" || name === "tr" || name === "td") {
+    // `Table#to_*_math_zone` (`table.rb:115-155`) is defined ONCE on the base
+    // class and never overridden by any subclass (`Matrix`, `Pmatrix`,
+    // `Bmatrix`, `Vmatrix`, …, measured: no `math_zone` method anywhere
+    // under `math/function/table/`), so the header is the literal string
+    // `"table"` regardless of which subclass built the node — gated on
+    // `node.kind`, not `classNameOf`, for the same reason `FontStyle` below
+    // is: a named subclass classifies as its OWN lowercase name (`matrix`),
+    // never as `"table"`.
+    const literal = node.kind === "table" ? "table" : name;
+    const wrapped = fieldNode(node, node.kind === "table" ? "value" : "parameterOne");
     const innerSequence: NodeSequence = Array.isArray(wrapped) ? (wrapped as NodeSequence) : [];
     const newSpacing = gsubSpacing(spacing, last);
     const header = `${spacing}"${literal}" function apply\n`;

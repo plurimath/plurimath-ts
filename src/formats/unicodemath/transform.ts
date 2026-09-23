@@ -579,15 +579,14 @@
  * the tie-loss the header's own "Order is behaviour" section already
  * documents, was excluded from the count before this increment started.
  *
- * SEVENTEEN are ported, sixteen with a `RULE_COVERAGE["fraction_atoms_tail"]`
+ * SIXTEEN are ported, fifteen with a `RULE_COVERAGE["fraction_atoms_tail"]`
  * witness that compares for real: `:658`, `:680`, `:685`, `:690`, `:715`,
- * `:720`, `:755`, `:795`, `:820`, `:840`, `:860`, `:890`, `:920`, `:945`,
- * `:993`, `:998`. The seventeenth, `:710`, is registered too (the code is
- * correct, traced against the oracle) but reaches no CLEAN witness — the one
- * input found that fires it also fires `:1776` and `:2335`, neither claimed
- * by any slice, so it sits in `SLICE_BOUNDARY` instead, with its blockers
- * named beside it, the same pattern slice H used for `:95`/`:346`/`:381`/
- * `:441`.
+ * `:720`, `:755`, `:795`, `:820`, `:860`, `:890`, `:920`, `:945`, `:993`,
+ * `:998`. The sixteenth, `:710`, is registered too (the code is correct,
+ * traced against the oracle) but reaches no CLEAN witness — the one input
+ * found that fires it also fires `:1776` and `:2335`, neither claimed by any
+ * slice, so it sits in `SLICE_BOUNDARY` instead, with its blockers named
+ * beside it, the same pattern slice H used for `:95`/`:346`/`:381`/`:441`.
  *
  * `:658` retires the `"1/2a"` row `SLICE_BOUNDARY` carried since an early
  * increment: porting `:658` alone was enough, the SEQUENCE-numerator/
@@ -604,7 +603,7 @@
  * grammar production anywhere tags `.as(:recursion)`, so the key this rule
  * matches on is never produced.
  *
- * NINE are traced-but-unreached, not proven unreachable, in two different
+ * TEN are traced-but-unreached, not proven unreachable, in two different
  * senses of "unreached". `:695` (`atom: sequence, recursive_denominator:
  * sequence`), `:760` (`factor: simple, unary_subsup: sequence`), `:850`
  * (`operand: simple, expr: sequence`), `:880` (`monospace: simple, exp:
@@ -612,13 +611,15 @@
  * simple) are unreached on the ORACLE itself: roughly 2,700 candidate inputs
  * were traced (the gem's own `unicodemath-tests` and rspec fixture examples,
  * plus hand-built fraction and subscript variants), and none fires any of
- * them. `:750`, `:780` and `:800` are the opposite case — the oracle fires
- * each on a real input, but re-tracing that SAME string through this port's
- * own firing counters (`buildUnicodemathTransform`) shows this port's
- * grammar resolving it a different way, so the rule never fires here at
- * all. Neither a coverage nor a `SLICE_BOUNDARY` row can prove anything
- * about a rule that never fires on the port, so none of the nine is
- * registered.
+ * them. `:750`, `:780`, `:800` and `:840` are the opposite case — the oracle
+ * fires each on a real input, but re-tracing that SAME string through this
+ * port's own firing counters (`buildUnicodemathTransform`) shows this port's
+ * grammar resolving it a different way (for `:840`, a bare `nary`'s
+ * `naryand` chain landing on a shape no oracle rule matches either — the
+ * same pre-existing gap `:715`'s own witness needed a sub/sup-bearing nary
+ * to route around), so the rule never fires here at all. Neither a coverage
+ * nor a `SLICE_BOUNDARY` row can prove anything about a rule that never
+ * fires on the port, so none of the ten is registered.
  *
  * See `FINAL_COUNT` for the running total this increment brings it to.
  *
@@ -2776,10 +2777,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     ...asArray(b.expr),
   ]);
   rule("835", { factor: simple("factor"), expr: simple("expr") }, (b) => [b.factor, b.expr]);
-  // FRACTION-ATOMS-TAIL (slice I): the `operand`-keyed sibling of `:835`/
-  // `:865` below — an `operand` chain (already folded to a single node by
-  // `:735`'s own family) followed by one more simple/SEQUENCE `expr`.
-  rule("840", { operand: simple("operand"), expr: simple("expr") }, (b) => [b.operand, b.expr]);
+  // FRACTION-ATOMS-TAIL (slice I): `:840` (`operand: simple, expr: simple`,
+  // the `operand`-keyed sibling of `:835`/`:865` below) is NOT registered
+  // for the same measured reason as `:750`/`:780`/`:800` above: the one
+  // oracle input found that fires it drives a `nary`'s `naryand` chain
+  // through this port's grammar to a shape with no matching rule at all
+  // (`{nary=other}`, the same pre-existing gap `:715`'s own witness had to
+  // route around), so `:840` itself never gets a chance to fire on the
+  // port. Unreached on this port, not proven unreachable in the abstract.
   rule("855", { factor: sequence("factor"), expr: sequence("expr") }, (b) => [
     ...asArray(b.factor),
     ...asArray(b.expr),

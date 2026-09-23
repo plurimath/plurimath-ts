@@ -1100,10 +1100,8 @@ RULE_COVERAGE = {
   #   :755  (same row as :720)    operand SEQUENCE + expr SEQUENCE
   #   :795  "(β_(x) x + β_(y) y + β_(z) z)"
   #                               sub_exp + exp, both simple
-  #   :820  "{█(&x\" if \"x ≥ 0@−&x\" if \"x < 0)┤"
+  #   :820  "{█(x\" if \"a ≥ 0@−x\" if \"a < 0)┤"
   #                               exp SEQUENCE + expr SEQUENCE
-  #   :840  "𝑖/√𝜋 ∫_−∞^∞ 𝑒^(−(𝜔−𝜔′)^2)/(𝛾+𝑖(𝜔′−𝜈)) ⅆ𝜔′"
-  #                               operand + expr, both simple
   #   :860  "1⟨ α_1 + α_x x + α_y y + α_z z + α_(y z) yz + α_(z x) z x + α_(x y) x y + α_(x y z) x y z ⟩_-5 = 0"
   #                               factor SEQUENCE + exp SEQUENCE
   #   :890  "π_(ￗ(X)←ￗ(A)+ￗ(C), ￗ(Y)←¬ￗ(B))"
@@ -1117,17 +1115,19 @@ RULE_COVERAGE = {
   # One candidate traced on the oracle fires the rule the row targets but ALSO
   # fires a sibling rule no slice claims, so the port would refuse it and it
   # cannot compare for real: `:710` sits in `SLICE_BOUNDARY` instead, with its
-  # blocker named beside it. Eight more are registered nowhere: `:695` (`atom:
-  # sequence, recursive_denominator: sequence`), `:750`/`:780`/`:800` (traced
-  # firing on the oracle, but re-tracing the same string through this port's
-  # own firing counters finds its grammar resolves it a different way, so the
-  # rule never fires on the port at all), `:760` (`factor: simple,
-  # unary_subsup: sequence`), `:850` (`operand: simple, expr: sequence`),
-  # `:880` (`monospace: simple, exp: simple`) and `:925`/`:930` (`expression:
-  # simple` + `expr: sequence`/simple) — the last five traced-but-unreached on
-  # the oracle itself, ~2,700 candidate inputs (the gem's own
-  # `unicodemath-tests`/spec examples plus hand-built variants), none of which
-  # fires any of them. See the module header for the full accounting.
+  # blocker named beside it. Nine more are registered nowhere: `:695` (`atom:
+  # sequence, recursive_denominator: sequence`), `:750`/`:780`/`:800`/`:840`
+  # (traced firing on the oracle, but re-tracing the same string through this
+  # port's own firing counters finds its grammar resolves it a different way
+  # — for `:840`, the same pre-existing bare-`nary` gap `:715`'s own witness
+  # routes around — so the rule never fires on the port at all), `:760`
+  # (`factor: simple, unary_subsup: sequence`), `:850` (`operand: simple,
+  # expr: sequence`), `:880` (`monospace: simple, exp: simple`) and
+  # `:925`/`:930` (`expression: simple` + `expr: sequence`/simple) — the last
+  # five traced-but-unreached on the oracle itself, ~2,700 candidate inputs
+  # (the gem's own `unicodemath-tests`/spec examples plus hand-built
+  # variants), none of which fires any of them. See the module header for the
+  # full accounting.
   "fraction_atoms_tail" => [
     "1/2a",
     "1/a2b",
@@ -1136,8 +1136,7 @@ RULE_COVERAGE = {
     "∫_a^b▒dα'₂ x",
     "1f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^-2πⅈxξ ⅆx",
     "(β_(x) x + β_(y) y + β_(z) z)",
-    "{█(&x\" if \"x ≥ 0@−&x\" if \"x < 0)┤",
-    "𝑖/√𝜋 ∫_−∞^∞ 𝑒^(−(𝜔−𝜔′)^2)/(𝛾+𝑖(𝜔′−𝜈)) ⅆ𝜔′",
+    "{█(x\" if \"a ≥ 0@−x\" if \"a < 0)┤",
     "1⟨ α_1 + α_x x + α_y y + α_z z + α_(y z) yz + α_(z x) z x + α_(x y) x y + α_(x y z) x y z ⟩_-5 = 0",
     'π_(ￗ(X)←ￗ(A)+ￗ(C),' + " " + 'ￗ(Y)←¬ￗ(B))',
     "x_₁a₂",

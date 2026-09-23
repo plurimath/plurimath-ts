@@ -437,11 +437,18 @@ describe("whitespace-only input fails at render, with a typed error", () => {
  * deferred.md finding — `MAX_DEPTH` never fires — from AsciiMath to all four
  * grammars, and the "guard" assertion below fails if it ever does.
  *
- * Where the gem parses and the port refuses (measured, 2026-09-21), the row
- * says so. All are UnicodeMath, whose transform is a slice: `finalize` throws
- * for a rule family it does not carry, and that reaches the caller as a typed
- * `ParseError` (a refusal at the transform, not the grammar). Pinning them as
- * refusals keeps the pin honest — they will need updating when the family lands.
+ * Where the gem parses and the port's outcome still differs (re-measured
+ * 2026-09-23, after the UnicodeMath transform slices A, E, F, G1, G2 and H
+ * landed), the row says so. All are UnicodeMath. Three rows this comment used
+ * to describe as transform refusals (2026-09-21: `finalize` threw for a rule
+ * family outside the slice, surfacing as `ParseError`) now transform and
+ * parse — the trigger those rows were pinned against firing, as the comment
+ * beside them says. The remaining two differences are render-time, not
+ * parse-time: `<sup` alone parses into an untransformed tuple that every
+ * renderer refuses as a bare list (`RenderError`, the same non-model-tree gap
+ * `deferred.md` records for the gem itself), and the lone surrogate parses and
+ * is refused only by `toUnicodemath`'s encoder, matching how the LaTeX and
+ * HTML rows above already behave. Both are the clean `RENDER_ERROR` code.
  */
 type GrammarName = "latex" | "html" | "unicodemath";
 
@@ -563,13 +570,23 @@ const GRAMMAR_CASES: ReadonlyArray<GrammarCase> = [
   // The port takes ~1.4s and ~3.3s; sizes stay where the port is quick.
   ["unicodemath", "300 characters of one symbol", repeat("a", 300), "parsed"],
   ["unicodemath", "60 symbols", repeat("x ", 60), "parsed"],
-  // Gem parses every input below. The port refuses the first three at the
-  // transform, a rule family outside its slice; the fourth is refused by the
-  // grammar in both. See the header comment.
-  ["unicodemath", "NUL character", "x\u0000y", "PARSE_ERROR"],
-  ["unicodemath", "trailing backslash", "\\", "PARSE_ERROR"],
-  ["unicodemath", "unfinished <sup", "<sup", "PARSE_ERROR"],
-  ["unicodemath", "lone surrogate", "x\uD800y", "PARSE_ERROR"],
+  // Gem parses every input below. Measured 2026-09-21, the port refused the
+  // first three at the transform (a rule family outside its slice then) and
+  // the fourth at the grammar. Re-measured 2026-09-23 after the UnicodeMath
+  // transform slices A, E, F, G1, G2 and H landed: the trigger this comment
+  // named ("they will need updating when the family lands") fired. NUL and
+  // the trailing backslash now transform and parse, matching the gem. `<sup`
+  // now parses too, but into an untransformed `["factor", {...}]` tuple — the
+  // same shape `deferred.md` ("UnicodeMath input returns a non-model tree
+  // instead of raising") already documents the gem itself producing for other
+  // inputs — so every renderer refuses it as a bare list, RENDER_ERROR rather
+  // than PARSE_ERROR. The lone surrogate now reaches the same
+  // parse-then-render path as its LaTeX and HTML rows above: it parses, and
+  // `toUnicodemath` alone refuses to encode it. See the header comment.
+  ["unicodemath", "NUL character", "x\u0000y", "parsed"],
+  ["unicodemath", "trailing backslash", "\\", "parsed"],
+  ["unicodemath", "unfinished <sup", "<sup", "RENDER_ERROR"],
+  ["unicodemath", "lone surrogate", "x\uD800y", "RENDER_ERROR"],
   ["unicodemath", "NUL alone", "\u0000", "parsed"],
 ];
 

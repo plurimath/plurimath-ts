@@ -136,7 +136,11 @@ ROWS = [
   ["power-fraction-exponent", "power", "4^0.5"],
   ["power-negative-base-integer-exponent", "power", "(-2)^3"],
   ["power-chained", "power", "2^3^2"],
-  ["power-parenthesized-negative-exponent", "power", "2^(-1)"],
+  # `2^(-1)` (an Integer exponent) would evaluate to Ruby's Rational `(1/2)`,
+  # a THIRD return-type surface this slice does not cover (`evaluate.spec.ts`'s
+  # module header and `open-decisions.md` cover only Integer/Float); `-1.0`
+  # keeps the exponent a Float, which `**` always answers as a Float.
+  ["power-parenthesized-negative-exponent", "power", "2^(-1.0)"],
   ["power-non-real", "power", "(-1)^0.5"],
   ["power-non-real-root", "power", "(-8)^(1/3)"],
   ["power-zero-base-negative-exponent", "power", "0^(-1)"],
@@ -164,11 +168,20 @@ ROWS = [
   ["invalid-binding-string", "error-invalid-binding", "a+1"],
   ["invalid-binding-boolean", "error-invalid-binding", "a+1"],
   ["invalid-binding-nil", "error-invalid-binding", "a+1"],
-  ["mod-unsupported", "error-unsupported", "7 mod 3"],
-  ["sin-unsupported", "error-unsupported", "sin(x)"],
-  ["sum-unsupported", "error-unsupported", "sum_(i=1)^n i"],
   ["malformed-two-numbers", "error-unsupported", "2 3"],
 ].freeze
+
+# `mod`, `sin`, `sum`/`Prod` and friends are OUT of scope for this slice
+# (`TODO.plan/feature-roadmap.md`'s evaluation entry) — deliberately refused
+# with `UnsupportedExpressionError` rather than fully implemented. The oracle
+# itself does NOT refuse all of them the same way: `7 mod 3` fully evaluates
+# to `1` (`Function::Mod#evaluate` exists), and `sin(x)`/`sum_(i=1)^n i`
+# reach `MissingVariableError` first (their argument is evaluated eagerly,
+# before the gem's own unary/n-ary trig or sum logic runs) — neither is the
+# port's chosen `UnsupportedExpressionError`. Recording the ORACLE's answer
+# for these as a parity fixture would assert the wrong thing about the port,
+# so they are not here; `evaluate.spec.ts`'s own "not covered by the oracle
+# fixtures" section documents the chosen divergence directly instead.
 
 # Bindings, keyed by the row id above where non-empty; every other row
 # evaluates against `{}`.

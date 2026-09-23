@@ -12,7 +12,7 @@ generator:
     scripts/generate-unicodemath-model-fixtures.rb: f0cf73104533db0c423e1c21952a7810ad6ca1876aee271e93ba548e8fd6bfe5
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 835e10feb38b49b920ce87c633e13a979b6fc79e
+    commit: 2fa6e8e3ac8248d2e283a9255e60d2436058030d
     clean: true
     dirty_paths: []
 oracle:

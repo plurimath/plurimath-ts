@@ -11,9 +11,8 @@
  * significant x digit_count x padding x zero x large values — rendered through
  * a whole formula for every target, plus the option validation.
  *
- * OMML has no formatter path in this tree, so it is covered here only through
- * the shared function (`formatNumberValue`'s `FormattedNumber`), not as a
- * rendered target.
+ * OMML is covered here through the shared function and its insert-path text
+ * (below); its two render paths are `number-formatter-omml.spec.ts`'s.
  */
 
 import { describe, expect, it } from "vitest";
@@ -82,7 +81,7 @@ describe("measured base-notation cases", () => {
   );
 });
 
-describe("the shared function (what OMML will read)", () => {
+describe("the shared function (what OMML reads)", () => {
   const format = (formatter: FormatterOptions) => {
     const resolved = resolveNumberFormat(formatter, "omml");
     if (resolved === null) throw new Error("expected an active formatter");
@@ -114,9 +113,11 @@ describe("the shared function (what OMML will read)", () => {
     ).toStrictEqual({ kind: "plain", text: "ff" });
   });
 
-  it("renders OMML as refused, not silently, until its formatter path lands", () => {
-    expect(() => toOmml(formula("255"), { formatter: { options: { base: 16 } } } as never)).toThrow(
-      RenderError,
+  it("is what OMML's insert path writes: the prefixed text, not a subscript", () => {
+    // Measured, oracle 00c52783: `Formula.new([Number.new("255")]).to_omml(formatter:
+    // Standard.new(options: { base: 16 }))` writes `<m:t>0xff</m:t>`.
+    expect(toOmml(formula("255"), { formatter: { options: { base: 16 } } })).toContain(
+      "<m:t>0xff</m:t>",
     );
   });
 });

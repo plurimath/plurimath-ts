@@ -1100,26 +1100,81 @@ entry:
 value, or a parser is added that can produce one, or the model schema gains
 Ruby type information for option values.
 
-### OMML: two `to_omml` keywords refuse rather than render
+### OMML: the `unitsml` keyword refuses rather than renders
 
-**Trigger: `formatter` gains an OMML rendering path with B2's OMML number
-slice, and UnitsML when [ARCHITECTURE.md](../ARCHITECTURE.md) §5 stops
+**Trigger: UnitsML when [ARCHITECTURE.md](../ARCHITECTURE.md) §5 stops
 deferring it wholesale.**
 
 `Formula#to_omml` accepts `display_style`, `split_on_linebreak`, `formatter`
-and `unitsml`. `display_style` and `split_on_linebreak` are implemented (B3);
-the port names the other two and refuses them, rather than accepting the
-keyword and quietly ignoring what it asks for — a silently dropped option
-renders plausible OMML that is not what the caller asked for, which is the
-failure this port refuses to have.
+and `unitsml`. The first three are implemented (B3, B2); the port names
+`unitsml` and refuses it, rather than accepting the keyword and quietly
+ignoring what it asks for — a silently dropped option renders plausible OMML
+that is not what the caller asked for, which is the failure this port refuses
+to have.
 
-The per-node `toOmmlWithoutMathTag` keeps refusing `displayStyle` and
-`splitOnLinebreak` by name too: the gem's `to_omml_without_math_tag` takes the
-display style as a positional argument and has no line splitting, so neither
-keyword belongs on it.
+The per-node `toOmmlWithoutMathTag` takes `formatter` (the gem's
+`to_omml_without_math_tag` reads it from its `options:` hash) and keeps
+refusing `displayStyle` and `splitOnLinebreak` by name: the gem's per-node
+method takes the display style as a positional argument and has no line
+splitting, so neither keyword belongs on it.
 
 `src/formats/omml/renderer.ts` carries the reasons next to the refusal and
 points here; this is the entry it points at.
+
+### OMML: a semantic base renders as prefixed text on the insert path
+
+```ruby
+f = Plurimath::Formatter::Standard.new(options: { base: 16 })
+Plurimath::Math::Formula.new([Plurimath::Math::Number.new("255")]).to_omml(formatter: f)
+# => ... <m:r><m:t>0xff</m:t></m:r> ...          (asciimath: "ff_(16)")
+Plurimath::Math::Number.new("255").to_omml_without_math_tag(true, options: { formatter: f })
+# => <m:sSub> ... <m:t>ff</m:t> ... <m:sub> ... <m:t>16</m:t> ...
+```
+
+`Number` has two OMML paths. `to_omml_without_math_tag` hands the formatter's
+result to `Formatter::Numbers::OmmlRenderer.render`, which draws a semantic
+base (a base other than 10 with neither `base_prefix` nor `base_postfix`
+given) as an `m:sSub` and a `scientific`/`engineering` notation as an
+`m:sSup`. But every number inside a formula — a formula's items, a
+fraction's slots, a power's base, a root, a fence, an n-ary's limits —
+goes through `insert_t_tag`/`t_tag`, which writes
+`format_value_with_options(options).to_s`: the semantic base comes out as
+`FormattedNumber#to_s` with the default prefix (`0xff`, `0b11,111,111`,
+`0o377`), and a notation as the flat `1.234'567'891 x 10^6`. So the same
+number renders differently depending on which path reached it, and the
+insert path — the common one — drops the subscript form every other target
+keeps (`ff_(16)`, `\mathrm{ff}_{16}`, `<msub>`). Measured on the oracle
+(`00c52783`); `test/formatting/number-formatter-omml-cases.ts` pins both
+paths.
+
+**The port reproduces this on purpose** (byte-exact with the oracle,
+`src/render/number/omml.ts`). Fix in BOTH the gem and this port after the
+byte-identical structure is complete: route `insert_t_tag` through
+`OmmlRenderer` (or at least give the semantic base a subscript there), then
+re-record and flip the port together. Not yet reported upstream.
+
+### `string_format:` templates: an unanchored first match, silently ignored when absent
+
+`SymbolResolver::LOCALIZE_NUMBER_REGEX`
+(`(?<group>[^#])?(?<groupdigits>#+0)(?<decimal>.)(?<fractdigits>#+)(?<fractgroup>[^#])?`)
+is matched unanchored and only its first match is read, so, measured on the
+oracle (`00c52783`) rendering `1234567.1234567`:
+
+- a template whose fraction digits are `0` rather than `#` — `"#,##0.00"`,
+  the most familiar spreadsheet spelling — or whose integer side does not end
+  in `0` (`"#.###,##"`, `"#,###.##"`) matches nothing, and the template is
+  ignored without any error: the default `1,234,567.123'456'7` comes back;
+- any character but `"\n"` is taken as the decimal marker, `"\r"` and tab
+  included (`"#,##0\r###"` answers `1,234,567\r1234567`);
+- the first match can start inside the template: `"#0##0.##"` reads decimal
+  `"#"` and fraction group `"0"` and answers `1234567#1020304050607`, and
+  `"0##0.##"` takes `"0"` as the group marker (`102340567.1234567`).
+
+**The port reproduces this on purpose** (`src/formatting/string-format.ts`,
+cases in `test/formatting/string-format-cases.ts`). Fix in BOTH the gem and
+this port after the byte-identical structure is complete — anchor the
+pattern, accept `0` fraction digits, and raise on a template that does not
+parse — then re-record and flip the port together. Not yet reported upstream.
 
 ### OMML: `fenced` refuses the paren shapes whose gem output is not reproducible
 

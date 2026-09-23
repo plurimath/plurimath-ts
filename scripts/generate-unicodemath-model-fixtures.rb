@@ -1114,18 +1114,20 @@ RULE_COVERAGE = {
   #   :993  "x^₁a²"                sup_script + mini_sup, both simple
   #   :998  "x^₁a₂"                sup_script + mini_sub, both simple
   #
-  # Six candidates traced on the oracle fire the rule the row targets but ALSO
-  # fire a sibling rule no slice claims, so the port would refuse them and
-  # they cannot compare for real: `:710`, `:750`, `:780` and `:800` sit in
-  # `SLICE_BOUNDARY` instead, each with its blocker named beside it. `:695`
-  # (`atom: sequence, recursive_denominator: sequence`) and `:760` (`factor:
-  # simple, unary_subsup: sequence`), `:850` (`operand: simple, expr:
-  # sequence`), `:880` (`monospace: simple, exp: simple`) and `:925`/`:930`
-  # (`expression: simple` + `expr: sequence`/simple) are registered nowhere:
-  # ~2,700 candidate inputs (the gem's own `unicodemath-tests`/spec examples
-  # plus hand-built variants) were traced and none fires any of them —
-  # unreached, not proven unreachable. See the module header for the full
-  # accounting.
+  # One candidate traced on the oracle fires the rule the row targets but ALSO
+  # fires a sibling rule no slice claims, so the port would refuse it and it
+  # cannot compare for real: `:710` sits in `SLICE_BOUNDARY` instead, with its
+  # blocker named beside it. Eight more are registered nowhere: `:695` (`atom:
+  # sequence, recursive_denominator: sequence`), `:750`/`:780`/`:800` (traced
+  # firing on the oracle, but re-tracing the same string through this port's
+  # own firing counters finds its grammar resolves it a different way, so the
+  # rule never fires on the port at all), `:760` (`factor: simple,
+  # unary_subsup: sequence`), `:850` (`operand: simple, expr: sequence`),
+  # `:880` (`monospace: simple, exp: simple`) and `:925`/`:930` (`expression:
+  # simple` + `expr: sequence`/simple) — the last five traced-but-unreached on
+  # the oracle itself, ~2,700 candidate inputs (the gem's own
+  # `unicodemath-tests`/spec examples plus hand-built variants), none of which
+  # fires any of them. See the module header for the full accounting.
   "fraction_atoms_tail" => [
     "1/2a",
     "1/a2b",
@@ -1213,15 +1215,19 @@ RULE_COVERAGE = {
 # input also fires `:1776` (`{digit: simple, expr: simple}`), not claimed by
 # this slice, so the refusal continues for that reason alone now.
 #
-# Four more rows are slice I's own: each fires a rule the slice ports, but the
-# SAME input also fires a sibling combinator no slice has claimed (`:1776`,
-# `:2335`, `:2287`, or `:80`/`:1836`/`:1856`), traced on the oracle with the
-# same `TracePoint :b_call` method as `RULE_COVERAGE`:
+# One more row is slice I's own: it fires a rule the slice ports, but the SAME
+# input also fires a sibling combinator no slice has claimed, traced on the
+# oracle with the same `TracePoint :b_call` method as `RULE_COVERAGE`:
 #
-#   the "1W_δ₁ρ₁σ₂^3β=…" row for `:710` (also fires `:1776`, `:2335`)
-#   the "1f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx" row for `:750` (also fires `:2287`)
-#   the "1A_n \⌊ B_m = …" row for `:780` (also fires `:1776`)
-#   the "1𝜌 = ∑_𝜓▒P_𝜓 |𝜓⟩⟨𝜓| + 1" row for `:800` (also fires `:80`, `:1836`, `:1856`)
+#   the "1W_δ₁ρ₁σ₂^3β=…" row for `:710` (also fires `:1776` and `:2335`)
+#
+# `:750`, `:780` and `:800` are traced-but-unreached instead, not blocked: the
+# oracle fires each on an input, but re-tracing the SAME string through this
+# port's own firing counters (`buildUnicodemathTransform`) finds the port's
+# grammar resolves it a different way, so the rule never fires here at all —
+# no witness sits in `SLICE_BOUNDARY` for them because there is no refusal to
+# prove, only an unreached rule. See the module header for the full
+# accounting.
 SLICE_BOUNDARY = [
   "1x₂",
   '1w^h^e^e^e^e+1a+"Testing this!"-(1/2/333/4+1+1)+abc₂⁹/W_c+ab+√(42&1g)+▭(255&▭(255&b))+∑_A▒a+1+∑┴a┬b▒b',
@@ -1229,9 +1235,6 @@ SLICE_BOUNDARY = [
   '1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa',
   '1A^* = \\\\sum_{r}{ (-1)^r ⟨ A ⟩_r } = ⟨ A ⟩_+ - ⟨ A ⟩_-',
   "1W_δ₁ρ₁σ₂^3β=U_δ₁ρ₁^3β+1/8π^2⁢∫_α₁^α₂▒dα'₂[(U_δ₁ρ₁^2β-α'₂U_δ₁ρ₁^1β)/U_δ₁ρ₁^0β]",
-  "1f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx",
-  '1A_n \⌊ B_m = ⟨ A_n B_m ⟩_{n-m}',
-  "1𝜌 = ∑_𝜓▒P_𝜓 |𝜓⟩⟨𝜓| + 1",
 ].freeze
 
 options = { oracle: nil, out: "test/formats/unicodemath", allow_dirty: false }

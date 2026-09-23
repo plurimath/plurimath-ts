@@ -579,16 +579,15 @@
  * the tie-loss the header's own "Order is behaviour" section already
  * documents, was excluded from the count before this increment started.
  *
- * TWENTY are ported, each with a `RULE_COVERAGE["fraction_atoms_tail"]`
+ * SEVENTEEN are ported, sixteen with a `RULE_COVERAGE["fraction_atoms_tail"]`
  * witness that compares for real: `:658`, `:680`, `:685`, `:690`, `:715`,
  * `:720`, `:755`, `:795`, `:820`, `:840`, `:860`, `:890`, `:920`, `:945`,
- * `:993`, `:998` carry their own row; `:710`, `:750`, `:780` and `:800` are
- * registered too (the code is correct, traced against the oracle) but reach
- * no CLEAN witness — every input found that fires one of them also fires a
- * sibling combinator no slice has claimed (`:1776`, `:2335`, `:2287`, or
- * `:80`/`:1836`/`:1856`), so each sits in `SLICE_BOUNDARY` instead, with its
- * blocker named beside it, the same pattern slice H used for `:95`/`:346`/
- * `:381`/`:441`.
+ * `:993`, `:998`. The seventeenth, `:710`, is registered too (the code is
+ * correct, traced against the oracle) but reaches no CLEAN witness — the one
+ * input found that fires it also fires `:1776` and `:2335`, neither claimed
+ * by any slice, so it sits in `SLICE_BOUNDARY` instead, with its blockers
+ * named beside it, the same pattern slice H used for `:95`/`:346`/`:381`/
+ * `:441`.
  *
  * `:658` retires the `"1/2a"` row `SLICE_BOUNDARY` carried since an early
  * increment: porting `:658` alone was enough, the SEQUENCE-numerator/
@@ -605,14 +604,21 @@
  * grammar production anywhere tags `.as(:recursion)`, so the key this rule
  * matches on is never produced.
  *
- * SIX are traced-but-unreached, not proven unreachable: `:695` (`atom:
- * sequence, recursive_denominator: sequence`), `:760` (`factor: simple,
- * unary_subsup: sequence`), `:850` (`operand: simple, expr: sequence`),
- * `:880` (`monospace: simple, exp: simple`), and `:925`/`:930`
- * (`expression: simple` + `expr: sequence`/simple). Roughly 2,700 candidate
- * inputs were traced on the oracle for these six (the gem's own
- * `unicodemath-tests` and rspec fixture examples, plus hand-built fraction
- * and subscript variants), none of which fired any of them.
+ * NINE are traced-but-unreached, not proven unreachable, in two different
+ * senses of "unreached". `:695` (`atom: sequence, recursive_denominator:
+ * sequence`), `:760` (`factor: simple, unary_subsup: sequence`), `:850`
+ * (`operand: simple, expr: sequence`), `:880` (`monospace: simple, exp:
+ * simple`) and `:925`/`:930` (`expression: simple` + `expr: sequence`/
+ * simple) are unreached on the ORACLE itself: roughly 2,700 candidate inputs
+ * were traced (the gem's own `unicodemath-tests` and rspec fixture examples,
+ * plus hand-built fraction and subscript variants), and none fires any of
+ * them. `:750`, `:780` and `:800` are the opposite case — the oracle fires
+ * each on a real input, but re-tracing that SAME string through this port's
+ * own firing counters (`buildUnicodemathTransform`) shows this port's
+ * grammar resolving it a different way, so the rule never fires here at
+ * all. Neither a coverage nor a `SLICE_BOUNDARY` row can prove anything
+ * about a rule that never fires on the port, so none of the nine is
+ * registered.
  *
  * See `FINAL_COUNT` for the running total this increment brings it to.
  *
@@ -2717,16 +2723,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.factor,
     ...asArray(b.operand),
   ]);
-  // FRACTION-ATOMS-TAIL (slice I): an `operand` chain (already folded to a
-  // single node) followed by one more expr — `:755` below is its
-  // SEQUENCE-`expr` twin. Every input found that fires it also fires `:2287`
-  // (`{factor: simple, operand: simple, exp: simple}`), not claimed by any
-  // slice, so the row for it sits in `SLICE_BOUNDARY`, still refused for
-  // that reason.
-  rule("750", { operand: sequence("operand"), expr: simple("expr") }, (b) => [
-    ...asArray(b.operand),
-    b.expr,
-  ]);
+  // FRACTION-ATOMS-TAIL (slice I): `:750` (`operand: sequence, expr:
+  // simple`, `:755` below's own SEQUENCE-`expr` twin) is NOT registered:
+  // every oracle input found that fires `:750` builds an `operand`/`sub_exp`
+  // chain this port's grammar resolves to a DIFFERENT shape for the
+  // identical string — `buildUnicodemathTransform`'s own firing counters,
+  // compared against the oracle's on the same input, show `:750` never
+  // firing on the port even where the oracle's fires it. Unreached on this
+  // port, not proven unreachable in the abstract.
   rule("755", { operand: sequence("operand"), expr: sequence("expr") }, (b) => [
     ...asArray(b.operand),
     ...asArray(b.expr),
@@ -2737,15 +2741,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.sub_exp,
     ...asArray(b.expr),
   ]);
-  // FRACTION-ATOMS-TAIL (slice I): `:775`'s SEQUENCE-`sub_exp` twin. Every
-  // input found that fires it also fires `:1776` (`{digit: simple, expr:
-  // simple}`), no slice has claimed — the module header's own witness for
-  // `:75`'s SLICE_BOUNDARY family names the same blocker. The row for it
-  // sits in `SLICE_BOUNDARY`, still refused for that reason.
-  rule("780", { sub_exp: sequence("sub_exp"), expr: sequence("expr") }, (b) => [
-    ...asArray(b.sub_exp),
-    ...asArray(b.expr),
-  ]);
+  // FRACTION-ATOMS-TAIL (slice I): `:775`'s SEQUENCE-`sub_exp` twin, `:780`
+  // (`sub_exp: sequence, expr: sequence`), is NOT registered for the same
+  // measured reason as `:750` above: every oracle input that fires it drives
+  // `sub_exp` through this port's grammar to a plain (non-sequence) value
+  // instead, so `:780` never fires on the port even on the identical string.
+  // Unreached on this port, not proven unreachable in the abstract.
   rule("785", { sub_exp: simple("sub_exp"), exp: sequence("exp") }, (b) => [
     b.sub_exp,
     ...asArray(b.exp),
@@ -2758,15 +2759,11 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.naryand,
   ]);
   // FRACTION-ATOMS-TAIL (slice I): `:805`'s SEQUENCE-`naryand_recursion`
-  // twin, bound under `sub_exp` rather than `sup_exp`. Every witness found
-  // also fires `:80` (`{intermediate_exp: sequence}`), `:1836` and `:1856` —
-  // none claimed by any slice — so the row for it sits in `SLICE_BOUNDARY`,
-  // still refused for that reason.
-  rule(
-    "800",
-    { sub_exp: simple("sub_exp"), naryand_recursion: sequence("naryand") },
-    (b) => [b.sub_exp, ...asArray(b.naryand)],
-  );
+  // twin, bound under `sub_exp` rather than `sup_exp` — `:800` — is NOT
+  // registered for the same measured reason as `:750`/`:780` above: every
+  // oracle input that fires it never reaches it on this port, the grammar
+  // having already resolved the same string a different way. Unreached on
+  // this port, not proven unreachable in the abstract.
   rule("810", { exp: simple("exp"), expr: simple("expr") }, (b) => [b.exp, b.expr]);
   rule("815", { exp: simple("exp"), expr: sequence("expr") }, (b) => [b.exp, ...asArray(b.expr)]);
   // FRACTION-ATOMS-TAIL (slice I): `:815`'s SEQUENCE-`exp` twin.

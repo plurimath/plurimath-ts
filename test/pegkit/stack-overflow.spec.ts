@@ -17,8 +17,14 @@ function internalError(message: string): Error {
 
 describe("engine stack-overflow shapes", () => {
   it.each([
-    ["V8 / JavaScriptCore call stack", new RangeError("Maximum call stack size exceeded")],
-    ["JavaScriptCore wording", new RangeError("stack size exceeded")],
+    ["V8 (Node, Chrome) call stack", new RangeError("Maximum call stack size exceeded")],
+    // MDN's "too much recursion" reference page and WebKit bug 80797 both
+    // quote Safari's wording with a trailing period — a distinct string from
+    // V8's, which has none — see `STACK_OVERFLOW_MESSAGES`'s own comment.
+    [
+      "JavaScriptCore (Safari) wording, trailing period",
+      new RangeError("Maximum call stack size exceeded."),
+    ],
     ["SpiderMonkey", internalError("too much recursion")],
     [
       "V8 regex compilation, Node 24 wording",
@@ -94,6 +100,16 @@ describe("engine stack-overflow shapes", () => {
     [
       "a decoy extending V8's own wording with unrelated text",
       new RangeError("maximum call stack size exceeded while allocating a buffer"),
+    ],
+    // The truncated "stack size exceeded" entry this file used to carry as
+    // JavaScriptCore's wording cited no source, is not in MDN's "too much
+    // recursion" reference page or WebKit bug 80797 (both give Safari's full
+    // wording, trailing period included — see `STACK_OVERFLOW_MESSAGES`'s own
+    // comment), and nothing found suggests any engine emits it alone. Kept as
+    // a negative case so a future substring-widening cannot resurrect it.
+    [
+      "the dropped, unsourced 'stack size exceeded' spelling",
+      new RangeError("stack size exceeded"),
     ],
   ])("does not mistake %s for one", (_label, error) => {
     expect(isStackOverflow(error)).toBe(false);

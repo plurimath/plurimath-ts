@@ -26,6 +26,7 @@
  * opposite of the real behaviour. The leniency cases below pin what happens.
  */
 
+import { isMainThread } from "node:worker_threads";
 import { describe, expect, it } from "vitest";
 import { ParseError, type PlurimathErrorCode } from "../../src/core/errors";
 import { parseAsciimath } from "../../src/formats/asciimath/parser";
@@ -682,13 +683,23 @@ describe("every LaTeX, HTML and UnicodeMath adversarial input reaches the outcom
 });
 
 describe("the new grammars refuse deep input through a guard that says which guard it was", () => {
-  /** The message of the refusal, or `"parsed"`; a non-`ParseError` is rethrown. */
+  /**
+   * The message of the refusal, or `"parsed"`; a non-`ParseError` is rethrown.
+   *
+   * `cleanErrorCode` alone does not prove that: it deliberately accepts any
+   * `Error` carrying `code: "PARSE_ERROR"`, `ParseError` instance or not (the
+   * dual ESM/CJS cross-copy case its own comment explains) — so a plain
+   * `Error` with a spoofed `.code` would have passed this guard silently
+   * until `instanceof ParseError` was added below, contradicting what this
+   * comment already claimed.
+   */
   function guardFor(grammar: GrammarName, input: string): string {
     try {
       PARSERS[grammar](input);
       return "parsed";
     } catch (error) {
       if (cleanErrorCode(error) !== "PARSE_ERROR") throw error;
+      expect(error).toBeInstanceOf(ParseError);
       return (error as Error).message;
     }
   }
@@ -718,11 +729,15 @@ describe("the new grammars refuse deep input through a guard that says which gua
       // `MAX_DEPTH`'s own mechanism without depending on any of this. This
       // pins the refusal invariant, driven off the table so a row that stops
       // refusing, or starts throwing something untyped, still fails here.
-      const jsonNestingCap = /nesting of \d+ is too deep/;
+      // The exact production message: `JSON_MAX_NESTING` in
+      // `src/formats/html/parser.ts` is a fixed constant (100), not a value
+      // that varies by input or environment, so the message it builds is one
+      // known literal string, not a family matched by a `\d+` wildcard.
+      const JsonNestingCapMessage = "nesting of 100 is too deep";
       expect(deepRows.length).toBeGreaterThan(0);
       for (const [grammar, label, input] of deepRows) {
         const message = guardFor(grammar, input);
-        const recognised = DEPTH_REFUSAL_MESSAGES.has(message) || jsonNestingCap.test(message);
+        const recognised = DEPTH_REFUSAL_MESSAGES.has(message) || message === JsonNestingCapMessage;
         expect(recognised, `${grammar}: ${label}: got "${message}"`).toBe(true);
       }
     },
@@ -744,16 +759,26 @@ describe("the new grammars refuse deep input through a guard that says which gua
     GRAMMAR_CASE_TIMEOUT_MS,
   );
 
-  it(
-    "does not refuse any pinned row through MAX_DEPTH on this run's actual pool",
+  it.skipIf(!isMainThread)(
+    "does not refuse any pinned row through MAX_DEPTH on vitest's forks pool" +
+      " (skipped under a threads pool, where this genuinely does not hold)",
     () => {
-      // Scoped to "this run", deliberately: measured 2026-09-23, this holds
-      // under vitest's default `forks` pool (what this repository's CI uses,
-      // unconfigured) on Node 20.20.2/22.23.2/24.18.0, and does NOT hold under
-      // `--pool=threads` on any of the same three versions — see the first
-      // test in this block and TODO.plan/deferred.md's "parser's depth bound"
-      // entry. `MAX_DEPTH`'s own mechanism is proven independently of any
-      // pool or engine stack size in `test/pegkit/depth-limit.spec.ts`.
+      // Genuinely pool-scoped, not just worded that way: measured 2026-09-23,
+      // this holds under vitest's default `forks` pool (what this
+      // repository's CI uses, unconfigured) on Node 20.20.2/22.23.2/24.18.0,
+      // and does NOT hold under `--pool=threads` on any of the same three
+      // versions — see the first test in this block and
+      // TODO.plan/deferred.md's "parser's depth bound" entry. `MAX_DEPTH`'s
+      // own mechanism is proven independently of any pool or engine stack
+      // size in `test/pegkit/depth-limit.spec.ts`.
+      //
+      // `node:worker_threads`' `isMainThread` is `true` in a `forks` worker
+      // (a forked child process is not a `Worker` at all, so it defaults to
+      // `true` outside any worker context — confirmed directly against this
+      // repository's actual default configuration) and `false` inside a
+      // `threads` worker, which is exactly the axis this test needs to gate
+      // on: skip with a named reason under `threads`, where the claim below
+      // is known to be false, rather than fail there.
       for (const [grammar, label, input, expected] of GRAMMAR_CASES) {
         if (expected !== "PARSE_ERROR") continue;
         expect(guardFor(grammar, input), `${grammar}: ${label}`).not.toBe(DEPTH_LIMIT_MESSAGE);

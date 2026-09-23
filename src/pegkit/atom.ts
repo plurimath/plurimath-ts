@@ -93,31 +93,54 @@ export const STACK_EXHAUSTED_MESSAGE = "Input exhausted the parser stack";
  * Cross-engine wording for recursion errors, matched as a COMPLETE message,
  * never a substring. V8 (Node, this package's only supported runtime —
  * `package.json` `engines.node`) was measured directly: node 20.20.2, 22.23.2
- * and 24.18.0 (the CI matrix), both on the main thread and inside a
- * `worker_threads` worker (what a vitest `threads` pool runs tests in), every
- * one throwing `RangeError: Maximum call stack size exceeded` for genuine
- * unbounded recursion — the same, exact, whole message on all six
- * combinations, 2026-09-23. The JavaScriptCore and SpiderMonkey entries are
- * carried forward from the earlier substring version of this set (this
- * package ships no browser build today, and neither engine was reachable to
- * re-measure from this checkout) — kept for the day a browser consumer needs
- * them, but not vouched for as measured.
+ * and 24.18.0, both on the main thread and inside a `worker_threads` worker
+ * (what a vitest `threads` pool runs tests in), every one throwing
+ * `RangeError: Maximum call stack size exceeded` for genuine unbounded
+ * recursion — the same, exact, whole message on all six combinations,
+ * 2026-09-23. Those three patch versions were measured LOCALLY, via `mise`;
+ * CI's own matrix (`.github/workflows/ci.yml`) pins only the majors 20/22/24
+ * and resolves whatever patch is current at each run, so this is evidence of
+ * the wording, not a promise CI runs these exact builds.
+ *
+ * JavaScriptCore (Safari) and SpiderMonkey (Firefox) were not reachable to
+ * measure from this checkout (this package ships no browser build today), but
+ * their wording is DOCUMENTED rather than carried forward unsourced: MDN's
+ * "too much recursion" reference page (Message section, fetched 2026-09-23)
+ * gives, verbatim —
+ *
+ * ```
+ * RangeError: Maximum call stack size exceeded (Chrome)
+ * InternalError: too much recursion (Firefox)
+ * RangeError: Maximum call stack size exceeded. (Safari)
+ * ```
+ *
+ * — and independently, WebKit bug 80797 quotes the same Safari wording,
+ * TRAILING PERIOD included: `"RangeError: Maximum call stack size
+ * exceeded."`. That period makes it a distinct string from V8's, which has
+ * none — measured directly above — so it needs its own set entry, not a
+ * shared one. The earlier "stack size exceeded" entry this replaces cited no
+ * source and does not appear in either document; nothing found suggests any
+ * engine ever emits that shorter string on its own, so it is dropped rather
+ * than carried forward. MDN's page also confirms error TYPE per engine —
+ * `RangeError` for Chrome and Safari, `InternalError` for Firefox — matching
+ * the class check this file already applies below (`recursionClass`) before
+ * ever consulting this set.
  *
  * A substring match here is the bug this set replaces: `new
  * RangeError("stack overflow")` and `new RangeError("maximum call stack size
  * exceeded while allocating a buffer")` are both real shapes a hostile or
  * merely unlucky caller can construct, and a `/maximum call stack|stack
  * overflow/i` test read either as genuine engine stack exhaustion. Neither is
- * a message V8 (or, so far as recorded, JavaScriptCore or SpiderMonkey) ever
- * emits for a real overflow, so exact equality — case-folded, since the
- * existing SpiderMonkey/JavaScriptCore entries below were never verified to
- * match V8's capitalisation — excludes both while still recognising every
- * message this set names.
+ * a message any of the three documented engines ever emits for a real
+ * overflow, so exact equality — case-folded, since the JavaScriptCore/
+ * SpiderMonkey wording above was not verified against a live engine's
+ * capitalisation — excludes both while still recognising every message this
+ * set names.
  */
 const STACK_OVERFLOW_MESSAGES: ReadonlySet<string> = new Set([
-  "maximum call stack size exceeded", // V8 (Node) — measured, see above
-  "stack size exceeded", // JavaScriptCore — carried forward, not measured here
-  "too much recursion", // SpiderMonkey — carried forward, not measured here
+  "maximum call stack size exceeded", // V8 (Node, Chrome) — measured, see above
+  "maximum call stack size exceeded.", // JavaScriptCore (Safari) — MDN + WebKit bug 80797, trailing period
+  "too much recursion", // SpiderMonkey (Firefox) — MDN, not measured here
 ]);
 
 /** Whether `message` is one of the complete, known engine overflow messages. */

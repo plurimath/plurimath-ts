@@ -1019,10 +1019,15 @@ are refused, which is a parity decision (the gem `SystemStackError`s at ~300
 nesting, so the port is far more permissive today either way), and it wants its
 own change with its own measurements rather than riding along with a test gate.
 
-The immediate risk is contained: both paths end in a typed error, the
-adversarial gate asserts `STACK_EXHAUSTED_MESSAGE` for **every** row it pins as
-rejected (driven off the case table, so the two cannot drift apart), and the two
-messages are distinct so a silent swap cannot pass unnoticed.
+The immediate risk was contained at the time this was written: both paths end
+in a typed error, and the adversarial gate asserted `STACK_EXHAUSTED_MESSAGE`
+for **every** row it pinned as rejected — true for `MAX_DEPTH`'s observed
+behaviour then, but since superseded. **This is no longer what the gate
+asserts** (see the 2026-09-23 update below): it now checks membership in the
+current three-message set (`STACK_EXHAUSTED_MESSAGE`, `DEPTH_LIMIT_MESSAGE`,
+or, for HTML, the JSON-nesting cap), driven off the case table so the
+messages still cannot drift apart, and the messages stay distinct so a silent
+swap cannot pass unnoticed.
 
 **Update 2026-09-21: the trigger fired and the gate now covers LaTeX, HTML and
 UnicodeMath.** `test/adversarial/adversarial-inputs.spec.ts` pins, per grammar,
@@ -1046,11 +1051,15 @@ only for the one pool this repository happens to test under.** A review
 running the same gate on Node 24 saw rows that were pinned to
 `STACK_EXHAUSTED_MESSAGE` come back `DEPTH_LIMIT_MESSAGE` instead (e.g. "latex:
 1,000 nested braces"). Reproduced directly this session, isolating the
-variable: on the SAME build and the SAME three CI Node versions
-(20.20.2/22.23.2/24.18.0), vitest's default `forks` pool (what this
-repository's CI actually runs, unconfigured — no `pool` setting anywhere in
-this repo) never once produced a `MAX_DEPTH` refusal, on any of the 94
-adversarial-gate assertions; `--pool=threads` flips several of them. The
+variable: on the SAME build and the same three Node majors CI pins
+(20/22/24 — installed and measured LOCALLY, via `mise`, at patches
+20.20.2/22.23.2/24.18.0; CI's own matrix, `.github/workflows/ci.yml`, pins
+only the majors and resolves whatever patch is current at each run, so these
+exact patches are this measurement's, not a guarantee of what CI runs),
+vitest's default `forks` pool (what this repository's CI actually runs,
+unconfigured — no `pool` setting anywhere in this repo) never once produced a
+`MAX_DEPTH` refusal, on any of the 94 adversarial-gate assertions;
+`--pool=threads` flips several of them. The
 mechanism, also measured directly: a trivial recursive function with no
 grammar overhead reaches roughly 12,300–13,700 frames before `RangeError`
 under `forks` on this machine (both Node 20 and 24), comfortably BELOW
@@ -1072,15 +1081,24 @@ same clean, typed `ParseError`/`PARSE_ERROR` refusal — the property that is
 actually invariant, and the property PORTING-STANDARDS' "refuse, don't crash
 or hang" bar cares about. The gate's own tests were rewritten (2026-09-23) to
 pin exactly that instead of a specific guard: `guardFor` in both "guard that
-says which guard it was" describe blocks now asserts the error's class and
-code before returning its message, and the row-level assertions check
-membership in the set of known clean-refusal messages rather than equality
-with one of them. One test in each block is still guard-specific, and is
-scoped honestly to say so: "does not refuse any pinned row through MAX_DEPTH
-on this run's actual pool" documents in its own name and comment that the
-claim holds for `forks`, not universally. `MAX_DEPTH`'s own mechanism — that it
-fires exactly one past its threshold, found by binary search rather than
-importing the private constant — is proven independently of any pool or
+says which guard it was" describe blocks now asserts the error's class
+(`instanceof ParseError`) and code (`cleanErrorCode`) before returning its
+message, and the row-level assertions check membership in the set of known
+clean-refusal messages rather than equality with one of them. **The
+`instanceof ParseError` half of that was itself a gap a follow-up review
+found and closed the same day**: the LaTeX/HTML/UnicodeMath block's `guardFor`
+originally checked `cleanErrorCode(error) !== "PARSE_ERROR"` alone, which
+(by design, for the dual ESM/CJS cross-copy case `cleanErrorCode`'s own
+comment explains) accepts any `Error` carrying a `code: "PARSE_ERROR"`
+property whether or not it is really a `ParseError` — so the claim in this
+paragraph was not yet true when first written. It is true now. One test in
+each block is still guard-specific: "does not refuse any pinned row through
+MAX_DEPTH on vitest's forks pool" is `it.skipIf`'d on
+`!isMainThread` (`node:worker_threads`) rather than merely commented as
+pool-scoped, so it SKIPS with that reason under `--pool=threads`, where the
+claim is known false, instead of failing there. `MAX_DEPTH`'s own mechanism —
+that it fires exactly one past its threshold, found by binary search rather
+than importing the private constant — is proven independently of any pool or
 engine stack size in the new `test/pegkit/depth-limit.spec.ts`, by mutating
 `ParseContext.depth` directly through the `dynamic()` atom rather than by
 constructing enough real nested atoms to reach it.

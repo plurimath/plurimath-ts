@@ -888,6 +888,9 @@ RULE_COVERAGE = {
     '1a /¬ b',
     'a^b c d/(a b/c (a)_b^c d e)',
     'a_ℲDb^c',
+    # `:95`'s witness, moved out of `SLICE_BOUNDARY` once slices I and J
+    # landed its two other blockers, `:945` and `:1776`:
+    '1w^h^e^e^e^e+1a+"Testing this!"-(1/2/333/4+1+1)+abc₂⁹/W_c+ab+√(42&1g)+▭(255&▭(255&b))+∑_A▒a+1+∑┴a┬b▒b',
   ],
   # FENCED (slice G1): the `Fenced`-building rules of `transform.rb:2020`-`:2983`
   # (rule numbers are the lines `rule(` opens on). Each input was traced on the
@@ -1115,12 +1118,12 @@ RULE_COVERAGE = {
   # One candidate traced on the oracle fires the rule the row targets but ALSO
   # fires a sibling rule no slice claims, so the port would refuse it and it
   # cannot compare for real: `:710` sits in `SLICE_BOUNDARY` instead, with its
-  # blocker named beside it. Nine more are registered nowhere: `:695` (`atom:
+  # blocker named beside it. Ten more are registered nowhere: `:695` (`atom:
   # sequence, recursive_denominator: sequence`), `:750`/`:780`/`:800`/`:840`
-  # (traced firing on the oracle, but re-tracing the same string through this
-  # port's own firing counters finds its grammar resolves it a different way
-  # — for `:840`, the same pre-existing bare-`nary` gap `:715`'s own witness
-  # routes around — so the rule never fires on the port at all), `:760`
+  # (they fire on the oracle, and their hashes reach the port too, left
+  # unmatched, so the port refuses their witnesses; a scratch registration
+  # made every witness found deep-equal the oracle — see the module header),
+  # `:760`
   # (`factor: simple, unary_subsup: sequence`), `:850` (`operand: simple,
   # expr: sequence`), `:880` (`monospace: simple, exp: simple`) and
   # `:925`/`:930` (`expression: simple` + `expr: sequence`/simple) — the last
@@ -1186,11 +1189,11 @@ RULE_COVERAGE = {
   #   "N₀₊₍₂₋₅₎₌₋₃"                2426  mini_intermediate_exp + sub_operators
   #                                + SEQUENCE sub_recursions
   #
-  # `:2287`'s own witness sits in `SLICE_BOUNDARY` instead, not here: the only
-  # two `unicodemath-tests` strings that fire it both ALSO need `:278`
-  # (`binary_symbols`+`naryand_recursion`, outside this slice) to finish
+  # `:2287`'s own witness sits in `SLICE_BOUNDARY` instead, not here: the
+  # Fourier-transform string also needs the unregistered `:750` to finish
   # parsing, so it cannot compare for real yet — see `SLICE_BOUNDARY`'s own
-  # comment. `:2245`, `:2323`, `:2035`, `:2041`, `:2097`, `:1841`, `:2341`,
+  # comment. (This first named `:278`, which the oracle does not fire on that
+  # string and which is ported.) `:2245`, `:2323`, `:2035`, `:2041`, `:2097`, `:1841`, `:2341`,
   # `:2777`, `:2403`, `:2787` and `:3074` carry no row anywhere — see the
   # module header's own "thirteenth increment" section for each one's
   # disposition.
@@ -1249,93 +1252,67 @@ RULE_COVERAGE = {
 # `DEFERRED_INPUTS` in `model-parity.spec.ts` documents for the corpus side.
 #
 # ("a^b1" and "a_b1" moved to `RULE_COVERAGE["script-subsup-nary"]` when
-# slice F ported rules 1148 and 1078.) `:1054`, `:1619` and `:227` — the
-# rules originally cited beside these three rows — are ALL ported now too,
-# and each row was re-traced against the current port rather than trusted to
-# still be blocked by the same rule:
+# slice F ported rules 1148 and 1078.) "1/2a" moved up into
+# `RULE_COVERAGE["fraction_atoms_tail"]` once slice I ported `:658`, its
+# blocker. `"ⅇ"` moved out when slice H ported `:43` (`{mitBbb: simple}`);
+# it compares for real now, in `RULE_COVERAGE["combinators"]`.
 #
-#   "1/2a"   still refused by `:658` `{digit: simple,
-#            recursive_denominator: simple}` exactly as before — `:1619` was
-#            never the blocker here, only the rule one level up that `:658`
-#            feeds. Port message: `no rule matched {frac=other}`.
+# Slices H, I and J each left rows here that named a rule another of the
+# three was porting. With all three together, every row was re-traced
+# against the CURRENT port — the port's own firing counters and a real
+# `parseUnicodemath` call, compared against the oracle's `TracePoint :b_call`
+# trace and model for the same string — rather than trusted to still be
+# blocked the way its slice left it:
 #
-# `"ⅇ"` moved out when slice H ported `:43` (`{mitBbb: simple}`); it
-# compares for real now, in `RULE_COVERAGE["combinators"]`.
+#   "1x₂" (`:67`+`:1776`), the "1I(x,x')…ⅆx'']" row (`:346`+`:2251`) and the
+#   "1A^* = …" row (`:441`+`:1776`) parse and deep-equal the oracle's model;
+#   all three are in `RULE_COVERAGE["intermediate_paren_tail"]`.
+#   The 101-char "1w^h^e^e^e^e+1a+…" row (`:95`, which needed `:945` and
+#   `:1776`) parses and deep-equals the oracle's model; it is in
+#   `RULE_COVERAGE["combinators"]`.
 #
-# `"1x₂"` and two of slice H's own three rows below moved out when slice J
-# ported `:1776` and `:2251` (both `{key: simple, key2: simple/sequence}`
-# combinators of this exact family, outside the 21 ids slice H was scoped
-# to) — each re-traced against the CURRENT port, not trusted to still be
-# blocked the same way:
+# Three rows stay, each with the blocker that refuses it on the port now:
 #
-#   "1x₂" fired `:67` (ported by slice H) and `:1776` (ported by slice J),
-#   and now parses;
-#   the 101-char "1w^h^e^e^e^e+1a+…" row still fires `:95`/`:945` — `:945` is
-#   slice I's own claim, so this row stays here for integration to resolve;
-#   the "1I(x,x')…ⅆx'']" row fired `:346`/`:2251`, both now ported, and now
-#   parses — moved into `RULE_COVERAGE["intermediate_paren_tail"]` below;
-#   the "1a_ℲDa + a_ℲCa + …" row fires `:381`/`:1776` too, but a DIFFERENT
-#   rule blocks the FULL parse now: `:1776` turns `base` into a SEQUENCE
-#   (`[Number, Symbol]`), and no `base: sequence, size_overrides: simple,
-#   sub_script: simple` rule exists anywhere in the 519 (only a `base:
-#   sequence, sup:, sub:` shape at `:2142`, a different key set) — so
-#   `override_subsup`'s own three-key hash stays unmatched. `:1776` landing
-#   moved the refusal one level up, not away; the row stays here, its own
-#   comment corrected rather than left stale.
+#   the "1a_ℲDa + a_ℲCa + …" row fires `:381`/`:1776` (both ported), and
+#   every rule the oracle fires on it also fires on the port. `:1776` turns
+#   `base` into a SEQUENCE (`[Number, Symbol]`), and no `base: sequence,
+#   size_overrides: simple, sub_script: simple` rule exists anywhere in the
+#   519 (only a `base: sequence, sup:, sub:` shape at `:2142`, a different
+#   key set), so `override_subsup`'s own three-key hash is left unmatched by
+#   the GEM too — its model carries a raw `["override_subsup", {...}]` pair —
+#   and the port refuses `{expr=sequence,override_subsup=other}`, a signature
+#   `GEM_UNMATCHED_SIGNATURES` does not list.
 #
-# All but that last row moved into `RULE_COVERAGE["intermediate_paren_tail"]`
-# below.
+#   the "1W_δ₁ρ₁σ₂^3β=…" row fires `:710` (slice I). Its two earlier
+#   blockers, `:1776` and `:2335`, are both ported (slice J), and every rule
+#   the oracle fires on it also fires on the port. What refuses it now is the
+#   same kind of gem-side gap: `subsup_exp`'s `{base: sequence, sub:
+#   sequence, sup: sequence}` hash matches no rule in the gem (`:2142` needs a
+#   SIMPLE `sub` and `sup`), so the gem's model carries a raw `["subsup_exp",
+#   {...}]` pair and the port refuses `{expr=sequence,subsup_exp=other}`.
+#   `:710` still counts as covered by this row: the coverage suite counts
+#   every action call across the whole tree, not only the ones on the path to
+#   a final node.
 #
-# `:80` (`{intermediate_exp: sequence}`) IS now registered by slice J: once
-# `:1836`/`:1856` needed it to finish a real parse (see their own comment
-# at their registration site), the input that revealed the need also gave a
-# reaching witness — the SAME `factor.as(:intermediate_exp)` double-wrap the
-# module header's earlier survey had already traced to, just not with an
-# input that got far enough to prove it. The prior survey's other finding
-# stands: `:3422`, `:3477`, `:3510` fire fine on their own inputs; the one
-# still missing is `:800`, an unclaimed pure combinator of the same shape.
+#   `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` fires `:2287` (slice J), and still
+#   counts as its coverage witness for the same reason. The rule that blocks
+#   it is `:750` (`operand: sequence, expr: simple`), which the oracle fires
+#   on this string and no slice registers. With it absent the inner
+#   `{operand:, expr:}` hash stays unmatched, so `:341` (`accents` + SEQUENCE
+#   `expr`, ported) cannot match one level up and the port refuses
+#   `{accents=other,expr=other}`. An earlier note named `:278` here; the
+#   oracle trace does not fire `:278` on this string, and `:278` is ported
+#   anyway.
 #
-# One more row is slice J's own: `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` fires
-# `:2287` (`factor`+SEQUENCE `operand`+SEQUENCE `exp`, ported this slice), but
-# the SAME input's own differential tail (`ⅆx` chained after `ⅇ^(x)` inside
-# the integral's `naryand`) needs `:278` (`binary_symbols`+
-# `naryand_recursion`, outside this slice's 40 ids) to finish parsing — the
-# only other `unicodemath-tests` string that fires `:2287` (the `π_(...)`
-# one) needs the same rule. `:2287` still fires on this row for the
-# COVERAGE suite (`buildUnicodemathTransform` counts every action call
-# across the whole tree, not just the ones on the path to a final node), so
-# it stays a real coverage witness even while the row itself stays a
-# boundary one.
+# Every row records a refusal the port must keep until its blocker is
+# resolved. When one is, the row's refusal stops and `model-parity.spec.ts`
+# fails until it moves into a coverage group.
 #
-# Every row records a rule the port lacks, not one it has: each is a witness
-# a pure combinator (`RULE_COVERAGE["combinators"]`) needs and cannot have
-# until the builder beside it lands. When that builder does, the row's refusal
-# stops and `model-parity.spec.ts` fails until it moves into a coverage group.
-#
-# "1/2a" USED to be here, proving `:658`'s absence — it moved up into
-# `RULE_COVERAGE["fraction_atoms_tail"]` once slice I ported `:658`.
-#
-# The 101-char "1w^h^e^e^e^e+…" row is re-traced against the current port
-# rather than trusted to still be blocked by the same rule: slice I ported
-# `:945`, one of its two named blockers, but the row still refuses — the SAME
-# input also fires `:1776` (`{digit: simple, expr: simple}`), not claimed by
-# this slice, so the refusal continues for that reason alone now.
-#
-# One more row is slice I's own: it fires a rule the slice ports, but the SAME
-# input also fires a sibling combinator no slice has claimed, traced on the
-# oracle with the same `TracePoint :b_call` method as `RULE_COVERAGE`:
-#
-#   the "1W_δ₁ρ₁σ₂^3β=…" row for `:710` (also fires `:1776` and `:2335`)
-#
-# `:750`, `:780` and `:800` are traced-but-unreached instead, not blocked: the
-# oracle fires each on an input, but re-tracing the SAME string through this
-# port's own firing counters (`buildUnicodemathTransform`) finds the port's
-# grammar resolves it a different way, so the rule never fires here at all —
-# no witness sits in `SLICE_BOUNDARY` for them because there is no refusal to
-# prove, only an unreached rule. See the module header for the full
-# accounting.
+# `:750`, `:780`, `:800` and `:840` are not registered, and have no row here.
+# Their hashes reach the port and are left unmatched, so the port refuses
+# their witnesses. Registering them in a scratch copy made every witness
+# found deep-equal the oracle. See the module header.
 SLICE_BOUNDARY = [
-  '1w^h^e^e^e^e+1a+"Testing this!"-(1/2/333/4+1+1)+abc₂⁹/W_c+ab+√(42&1g)+▭(255&▭(255&b))+∑_A▒a+1+∑┴a┬b▒b',
   '1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa',
   "1W_δ₁ρ₁σ₂^3β=U_δ₁ρ₁^3β+1/8π^2⁢∫_α₁^α₂▒dα'₂[(U_δ₁ρ₁^2β-α'₂U_δ₁ρ₁^1β)/U_δ₁ρ₁^0β]",
   "f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx",

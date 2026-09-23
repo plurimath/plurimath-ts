@@ -236,22 +236,21 @@ describe.skipIf(deferred.length === 0)("the rule families this slice defers", ()
  * those inputs moved out into `RULE_COVERAGE` groups and compare for real.
  * `"ⅇ"` moved out the same way when slice H ported `:43`, and `"ab₁^c"` was
  * added and moved out again in the same pass once it proved `:67` ported
- * clean. The six inputs still in `SLICE_BOUNDARY` were re-traced against the
- * CURRENT port rather than trusted to still be blocked by the rule once
+ * clean. `"1/2a"` moved out when `:658` was ported, and `"1x₂"`, the long
+ * `"1I(x,x') = …"` row, the `"1A^* = …"` row and the 101-char
+ * `"1w^h^e^e^e^e+…"` row moved out once `:945`, `:1776` and `:2251` were
+ * ported. The three inputs still in `SLICE_BOUNDARY` were re-traced against
+ * the CURRENT port rather than trusted to still be blocked by the rule once
  * named beside them — see the generator's own comment above `SLICE_BOUNDARY`
  * for the measurement:
  *
- *   - `"1x₂"` is blocked by `:1776` (`{digit: simple, expr: simple}`, which
- *     must fire before `:1054` — already ported — ever sees the SEQUENCE
- *     shape it needs); `:67` (`{mini_sub: sequence}`), the other rule that
- *     used to block it, is ported now (slice H).
- *   - `"1/2a"` is blocked by `:658` (`{digit: simple,
- *     recursive_denominator: simple}`); `:1619`, one level up, is ported.
- *   - Four more are slice H's own boundary rows, each blocked by a sibling
- *     combinator (`:945`, `:1776`, `:2251`) no slice has claimed yet — the
- *     generator's own comment above `SLICE_BOUNDARY` names which rule blocks
- *     which row. `:80` (`{intermediate_exp: sequence}`) is not ported at
- *     all — see the module header.
+ *   - `"1a_ℲDa + …"` and `"1W_δ₁ρ₁σ₂^3β=…"` fire every rule the oracle fires
+ *     on them, but each leaves a hash no rule in the gem matches either
+ *     (`override_subsup` over a SEQUENCE `base`; `subsup_exp` with `base`,
+ *     `sub` and `sup` all SEQUENCE). The gem's model carries the raw pair,
+ *     and the port refuses the signature.
+ *   - `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` is blocked by `:750` (`{operand:
+ *     sequence, expr: simple}`), which no slice registers.
  */
 describe("inputs whose rules sit outside the slice", () => {
   it.each(boundary.map((entry) => [entry.input, entry] as const))(

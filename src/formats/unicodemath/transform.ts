@@ -328,8 +328,10 @@
  * on the oracle: `:1514` (`root_first_value`, the `binary_root` grammar rule —
  * `\root`/`⒭` inputs were either parse refusals or parsed without firing it,
  * and `√`/`\surd` are caught by `sqrt` first) and `:346` (`accents` + SEQUENCE
- * `exp`). Neither is proven unreachable, only unreached. `:1375` stays
- * unregistered for the reason given at its position.
+ * `exp`). Neither is proven unreachable, only unreached. Both were
+ * registered later, once a witness turned up: `:346` by slice H and `:1514`
+ * by slice J (see their sections below). `:1375`, left out here, was
+ * registered by slice F (see its position).
  *
  * Everything outside those 164 is genuinely ABSENT rather than stubbed. A
  * ## An eighth increment: SYMBOL/OPERATOR/NUMBER leaves
@@ -529,19 +531,21 @@
  * `:330`, `:376`, `:538`. See `FINAL_COUNT` for the running total this
  * increment brings it to.
  *
- * Four more are registered but have no coverage fixture yet: `:95`, `:346`,
- * `:381` and `:441` each fire on an oracle input, but every one found also
- * fires a sibling pure combinator that no slice has claimed — `:95` needed
- * `:945`, `:346` needs `:2251`, and `:381` and `:441` both need `:1776`
- * (`{digit: simple, expr: simple}`), which alone blocks three of the four.
- * Each witness sits in `SLICE_BOUNDARY` instead
- * (the generator's own comment above it names the exact blocker per row), so
- * the port still refuses those inputs and `model-parity.spec.ts` proves that
- * refusal rather than a parse. Slice I below ports `:945`, `:95`'s own named
- * blocker, but re-tracing the same witness on the current port finds it
- * fires `:1776` too — a SECOND, previously-masked blocker also outside this
- * slice's boundary — so the row stays in `SLICE_BOUNDARY`, now for that
- * reason alone.
+ * Four more had no clean coverage fixture when this increment landed: `:95`,
+ * `:346`, `:381` and `:441` each fire on an oracle input, but every one
+ * found also fired a sibling pure combinator no slice had claimed yet —
+ * `:95` needed `:945` and `:1776`, `:346` needed `:2251`, and `:381` and
+ * `:441` both needed `:1776` (`{digit: simple, expr: simple}`) — so each
+ * witness sat in `SLICE_BOUNDARY`. Slices I and J below ported all three
+ * blockers (`:945`; `:1776` and `:2251`), and re-tracing the witnesses on the
+ * integrated port moved three of them into coverage groups: `:95`'s into
+ * `RULE_COVERAGE["combinators"]`, `:346`'s and `:441`'s into
+ * `RULE_COVERAGE["intermediate_paren_tail"]`. `:381`'s witness still refuses,
+ * for a reason no port of a rule can fix: `:1776` turns its `base` into a
+ * SEQUENCE, and the gem has no `base: sequence, size_overrides:, sub_script:`
+ * rule, so the gem itself leaves that hash unmatched (the generator's comment
+ * above `SLICE_BOUNDARY` has the measurement). `:381` still fires on that
+ * row, so it stays covered.
  *
  * Three are dead in the gem, confirmed two ways: `:41`/`:42`/`:51`
  * (`script`/`double`/`fraktur`) read `Constants::UNICODED_FONTS`, whose
@@ -556,8 +560,8 @@
  * id in this family and a reachable one.
  *
  * Three more are unreached rather than dead, the same distinction the ROOT /
- * OVER-UNDER section above draws for `:1514`/`:346`(its own, pre-slice-H,
- * unrelated to this increment's `:346`): `:75` (`expression: simple`, the
+ * OVER-UNDER section above drew for `:1514`/`:346` (the same `:346` this
+ * increment registers; slice J registers `:1514`): `:75` (`expression: simple`, the
  * `expression` grammar rule's own `alt6`), `:80` (`intermediate_exp:
  * sequence`, next to already-ported `:78`'s SIMPLE twin, with no known
  * firing shape at the time), and `:83` (`sup_recursion: simple`, reached
@@ -589,18 +593,23 @@
  * `:720`, `:755`, `:795`, `:820`, `:860`, `:890`, `:920`, `:945`, `:993`,
  * `:998`. The sixteenth, `:710`, is registered too (the code is correct,
  * traced against the oracle) but reaches no CLEAN witness — the one input
- * found that fires it also fires `:1776` and `:2335`, neither claimed by any
- * slice, so it sits in `SLICE_BOUNDARY` instead, with its blockers named
- * beside it, the same pattern slice H used for `:95`/`:346`/`:381`/`:441`.
+ * found that fires it also fired `:1776` and `:2335`, then unclaimed, so it
+ * sits in `SLICE_BOUNDARY` instead, the same pattern slice H used for
+ * `:95`/`:346`/`:381`/`:441`. Slice J below ported both, and the row still
+ * refuses on the integrated port: its `subsup_exp` hash (`base`, `sub` and
+ * `sup` all SEQUENCE) matches no rule in the gem either, so the gem's own
+ * model leaves it unmatched. `:710` still fires on that row, so it stays
+ * covered.
  *
  * `:658` retires the `"1/2a"` row `SLICE_BOUNDARY` carried since an early
  * increment: porting `:658` alone was enough, the SEQUENCE-numerator/
  * denominator sites it feeds (`:1619`) were already ported by slice E.
  * `:945` was the OTHER named blocker for `:95`'s own `SLICE_BOUNDARY` row
- * (COMBINATORS-EARLY above); porting it here does not retire that row —
- * re-tracing the same witness on the current port finds `:1776` still fires
- * on it, a second blocker the original probe never isolated because `:945`
- * masked it.
+ * (COMBINATORS-EARLY above). Porting it alone did not retire that row:
+ * `:1776` also fires on it, a second blocker the original probe never
+ * isolated because `:945` masked it. With slice J's `:1776` alongside, the
+ * row parses and deep-equals the oracle's model, and it is in
+ * `RULE_COVERAGE["combinators"]` now.
  *
  * `:1003` (`{sub_script: simple, recursion: simple} -> Utility.
  * recursive_sub`) is DEAD by construction: `grep -rn "as(:recursion)"` over
@@ -608,23 +617,32 @@
  * grammar production anywhere tags `.as(:recursion)`, so the key this rule
  * matches on is never produced.
  *
- * TEN are traced-but-unreached, not proven unreachable, in two different
- * senses of "unreached". `:695` (`atom: sequence, recursive_denominator:
+ * TEN are not registered. `:695` (`atom: sequence, recursive_denominator:
  * sequence`), `:760` (`factor: simple, unary_subsup: sequence`), `:850`
  * (`operand: simple, expr: sequence`), `:880` (`monospace: simple, exp:
  * simple`) and `:925`/`:930` (`expression: simple` + `expr: sequence`/
- * simple) are unreached on the ORACLE itself: roughly 2,700 candidate inputs
- * were traced (the gem's own `unicodemath-tests` and rspec fixture examples,
- * plus hand-built fraction and subscript variants), and none fires any of
- * them. `:750`, `:780`, `:800` and `:840` are the opposite case — the oracle
- * fires each on a real input, but re-tracing that SAME string through this
- * port's own firing counters (`buildUnicodemathTransform`) shows this port's
- * grammar resolving it a different way (for `:840`, a bare `nary`'s
- * `naryand` chain landing on a shape no oracle rule matches either — the
- * same pre-existing gap `:715`'s own witness needed a sub/sup-bearing nary
- * to route around), so the rule never fires here at all. Neither a coverage
- * nor a `SLICE_BOUNDARY` row can prove anything about a rule that never
- * fires on the port, so none of the ten is registered.
+ * simple) are traced-but-unreached on the ORACLE itself, not proven
+ * unreachable: roughly 2,700 candidate inputs were traced (the gem's own
+ * `unicodemath-tests` and rspec fixture examples, plus hand-built fraction
+ * and subscript variants), and none fires any of them.
+ *
+ * `:750` (`operand: sequence, expr: simple`), `:780` (`sub_exp: sequence,
+ * expr: sequence`), `:800` (`sub_exp: simple, naryand_recursion: sequence`)
+ * and `:840` (`operand: simple, expr: simple`) are a different case: the
+ * oracle fires each on real inputs, and so does this port's grammar. This
+ * slice first recorded them as never reached on the port, because its
+ * grammar resolved the witnesses some other way. Measured again on the
+ * integrated port, that is not so. Each witness leaves the rule's own hash
+ * unmatched in the port's transformed tree, and the port refuses the input.
+ * `:780`'s witnesses are refused with that exact signature, `{expr=sequence,
+ * sub_exp=sequence}`. Registering the four rules in a scratch copy made all
+ * 23 oracle witnesses found for them (`unicodemath-tests` strings, with and
+ * without the display prefix) parse to models that deep-equal the oracle's.
+ * Examples: `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` for `:750`, `"1b_1 +_1^2 c"`
+ * for `:780`, `"𝜌 = ∑_𝜓▒P_𝜓 |𝜓⟩⟨𝜓| + 1"` for `:800` and
+ * `"𝑍(𝛾+𝑖𝜔−𝑖𝜈)=𝑖/√𝜋 ∫_−∞^∞ …ⅆ𝜔′"` for `:840`. They are still unregistered
+ * here, because this integration does not port rules; they are ready for a
+ * slice that does.
  *
  * See `FINAL_COUNT` for the running total this increment brings it to.
  *
@@ -687,8 +705,8 @@
  * landing in the same slice. `:2275`/`:2281`/`:2287` are `:2269`/`:2317`'s
  * `exp`-keyed siblings (`spacedExpBracket`'s own tag, not `expression`'s
  * `expr`), reached inside a mismatched-bracket or table-cell run — `:2287`'s
- * own real-input witness needs `:278` (see below), so it lives in
- * `SLICE_BOUNDARY`, not `RULE_COVERAGE`.
+ * own real-input witness needs `:750` to finish parsing (see below), so it
+ * lives in `SLICE_BOUNDARY`, not `RULE_COVERAGE`.
  * `:2335` is `:2103`'s multi-symbol subscript-run sibling
  * (`"a_δ₁ρ₁σ₂^3β"`). `:2426` is `:640`/`:646`'s `sub_operators`/
  * `sub_recursions` pair with a `mini_intermediate_exp` riding ahead of it,
@@ -700,21 +718,24 @@
  * blocked, and both now parse: `"1x₂"` (`:67`+`:1776`) and the long
  * `"1I(x,x') = …"` row (`:346`+`:2251`), both moved into
  * `RULE_COVERAGE["intermediate_paren_tail"]` below, alongside the new group's
- * own witnesses. `:95` needs `:945` besides `:1776`, `:945` is slice I's own
- * claim, and that row is left in `SLICE_BOUNDARY` for integration to
- * resolve. TWO more rows fire their named rule but hit a DIFFERENT, still
- * unported one and stay in `SLICE_BOUNDARY`: `"1a_ℲDa + …"` fires
+ * own witnesses. `:95`'s row needed slice I's `:945` besides `:1776`; with
+ * both slices integrated it parses too and sits in
+ * `RULE_COVERAGE["combinators"]`. TWO more rows fire their named rule but
+ * still refuse, and stay in `SLICE_BOUNDARY`: `"1a_ℲDa + …"` fires
  * `:381`/`:1776` (both ported), but `:1776` turns `base` into a SEQUENCE
  * (`[Number, Symbol]`), and no `base: sequence, size_overrides: simple,
  * sub_script: simple` rule exists anywhere in the 519 (only a `base:
  * sequence, sup:, sub:` shape at `:2142`, a different key set), so
- * `override_subsup`'s own three-key hash stays unmatched one level up —
- * `:1776` landing moved the refusal, not away. `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ
- * ^(-2πⅈxξ)ⅆx"` fires `:2287` (ported), but its own differential tail needs
- * `:278` (`binary_symbols`+`naryand_recursion`, outside this slice's 40
- * ids) to finish parsing; `:2287` still counts as covered by this row, since
- * `buildUnicodemathTransform` counts every action call across the whole
- * tree, not just the ones on the path to a final node.
+ * `override_subsup`'s own three-key hash stays unmatched one level up, in
+ * the gem's model as well as here — `:1776` landing moved the refusal, not
+ * away. `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` fires `:2287` (ported), but it
+ * also produces `:750`'s `{operand: sequence, expr: simple}` hash, on the
+ * oracle and on this port alike, and no slice registers `:750`; the hash
+ * stays unmatched and `:341` cannot match above it. (This section first
+ * named `:278` as the blocker; the oracle trace does not fire `:278` on this
+ * string, and `:278` is ported.) `:2287` still counts as covered by this
+ * row, since `buildUnicodemathTransform` counts every action call across the
+ * whole tree, not just the ones on the path to a final node.
  *
  * ELEVEN are not registered, five for a shared structural reason and six for
  * want of a reaching input or a proven defect: `:1841`
@@ -739,8 +760,9 @@
  * neither. `:2403` (`base`+SEQUENCE `sub`+`sub_recursion`) carries a proven
  * DEFECT rather than an ordinary gap: its `Constants::BINARY_FUNCTIONS`
  * branch reads a bare local `sub_value` the block never assigns
- * (`transform.rb:2407`) — the same typo `:1078`'s own twin branch carries
- * (`transform.rb:1081`, also unregistered) — so taking that branch on the
+ * (`transform.rb:2407`) — the same typo `:1078`'s own first arm carries
+ * (`transform.rb:1081`; `:1078` is registered, by slice F, which ports that
+ * arm as a refusal) — so taking that branch on the
  * oracle raises rather than returns; slice F tried this id and found no
  * reaching input, and this slice's own search (every `BINARY_FUNCTIONS` name
  * paired with a multi-character subscript, plus the 675 `unicodemath-tests`
@@ -792,7 +814,7 @@
  * One FIRES: `:3966` (`factor: sequence`, `operand: simple`, `exp: simple`).
  * Witness `(n!a c)` — traced with `TracePoint :b_call`, firing exactly once
  * at the rule's `do` line. `factor` is a SEQUENCE here only because
- * `:1852`'s `{atom:, exclamation_symbol:}` rule returns a two-element array
+ * `:1851`'s `{atom:, exclamation_symbol:}` rule returns a two-element array
  * (`[atom, symbol]`) for `n!`, not because the source repeats a `factor` key
  * — the same array-valued-inner-key mechanism `:3510`/`:3521` already rely
  * on. It is ported (see `fenced("3966", ...)` above) and its witness sits in
@@ -2934,13 +2956,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     ...asArray(b.operand),
   ]);
   // FRACTION-ATOMS-TAIL (slice I): `:750` (`operand: sequence, expr:
-  // simple`, `:755` below's own SEQUENCE-`expr` twin) is NOT registered:
-  // every oracle input found that fires `:750` builds an `operand`/`sub_exp`
-  // chain this port's grammar resolves to a DIFFERENT shape for the
-  // identical string — `buildUnicodemathTransform`'s own firing counters,
-  // compared against the oracle's on the same input, show `:750` never
-  // firing on the port even where the oracle's fires it. Unreached on this
-  // port, not proven unreachable in the abstract.
+  // simple`, `:755` below's own SEQUENCE-`expr` twin) is NOT registered.
+  // Its hash does reach the port: it is left unmatched in the port's
+  // transformed tree for its oracle witnesses (the module header's slice I
+  // section lists them), and the port refuses them. Registering it in a
+  // scratch copy made those witnesses deep-equal the oracle. This
+  // integration does not port rules, so it stays out.
   rule("755", { operand: sequence("operand"), expr: sequence("expr") }, (b) => [
     ...asArray(b.operand),
     ...asArray(b.expr),
@@ -2952,11 +2973,11 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     ...asArray(b.expr),
   ]);
   // FRACTION-ATOMS-TAIL (slice I): `:775`'s SEQUENCE-`sub_exp` twin, `:780`
-  // (`sub_exp: sequence, expr: sequence`), is NOT registered for the same
-  // measured reason as `:750` above: every oracle input that fires it drives
-  // `sub_exp` through this port's grammar to a plain (non-sequence) value
-  // instead, so `:780` never fires on the port even on the identical string.
-  // Unreached on this port, not proven unreachable in the abstract.
+  // (`sub_exp: sequence, expr: sequence`), is NOT registered. Its hash
+  // reaches the port the same way `:750`'s does: the port refuses its
+  // oracle witnesses with that exact signature, `{expr=sequence,
+  // sub_exp=sequence}`, and a scratch registration made them deep-equal the
+  // oracle. It stays out for the same reason.
   rule("785", { sub_exp: simple("sub_exp"), exp: sequence("exp") }, (b) => [
     b.sub_exp,
     ...asArray(b.exp),
@@ -2970,10 +2991,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   ]);
   // FRACTION-ATOMS-TAIL (slice I): `:805`'s SEQUENCE-`naryand_recursion`
   // twin, bound under `sub_exp` rather than `sup_exp` — `:800` — is NOT
-  // registered for the same measured reason as `:750`/`:780` above: every
-  // oracle input that fires it never reaches it on this port, the grammar
-  // having already resolved the same string a different way. Unreached on
-  // this port, not proven unreachable in the abstract.
+  // registered. Its hash reaches the port the same way `:750`'s does, and a
+  // scratch registration made its oracle witnesses deep-equal the oracle. It
+  // stays out for the same reason.
   rule("810", { exp: simple("exp"), expr: simple("expr") }, (b) => [b.exp, b.expr]);
   rule("815", { exp: simple("exp"), expr: sequence("expr") }, (b) => [b.exp, ...asArray(b.expr)]);
   // FRACTION-ATOMS-TAIL (slice I): `:815`'s SEQUENCE-`exp` twin.
@@ -2987,13 +3007,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   ]);
   rule("835", { factor: simple("factor"), expr: simple("expr") }, (b) => [b.factor, b.expr]);
   // FRACTION-ATOMS-TAIL (slice I): `:840` (`operand: simple, expr: simple`,
-  // the `operand`-keyed sibling of `:835`/`:865` below) is NOT registered
-  // for the same measured reason as `:750`/`:780`/`:800` above: the one
-  // oracle input found that fires it drives a `nary`'s `naryand` chain
-  // through this port's grammar to a shape with no matching rule at all
-  // (`{nary=other}`, the same pre-existing gap `:715`'s own witness had to
-  // route around), so `:840` itself never gets a chance to fire on the
-  // port. Unreached on this port, not proven unreachable in the abstract.
+  // the `operand`-keyed sibling of `:835`/`:865` below) is NOT registered.
+  // Its hash reaches the port the same way `:750`'s does, and a scratch
+  // registration made its oracle witnesses deep-equal the oracle. It stays
+  // out for the same reason.
   rule("855", { factor: sequence("factor"), expr: sequence("expr") }, (b) => [
     ...asArray(b.factor),
     ...asArray(b.expr),

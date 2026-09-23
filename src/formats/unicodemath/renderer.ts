@@ -49,6 +49,7 @@ import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { assertKnownOptions } from "../../core/render-options";
 import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
+import { isStackOverflow } from "../../pegkit/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
 
@@ -108,8 +109,16 @@ export function toUnicodemath(node: MathNode, options?: UnicodemathOptions | nul
     if (error instanceof RenderError || isOwnMissingSymbolDataError(error)) throw error;
     // A render-phase stack exhaustion the validator's smaller frames
     // survived is genuine depth, branded with the validator's own too-deep
-    // words rather than the generic mid-walk wrap.
-    if (error instanceof RangeError) {
+    // words rather than the generic mid-walk wrap. `isStackOverflow`
+    // (pegkit/atom.ts) is the parser's own guard against the same ambiguity,
+    // reused rather than re-heuristicized: a bare `instanceof RangeError` here
+    // also matches `UndecodableEntityError` (core/nodes.ts, itself a
+    // `RangeError` subclass) surfacing from an ordinary entity-decode refusal
+    // mid-render — measured on a lone surrogate, which parses and then reaches
+    // here — a real but unrelated failure this branding must not swallow.
+    // `isStackOverflow` reads the engine's own wording instead of the class
+    // alone, so only a genuine recursion failure takes this message.
+    if (isStackOverflow(error)) {
       throw new RenderError(
         "node: the tree nests too deep for the walk's call stack. The ceiling is " +
           "environment-dependent and lower than the gem's — the gem's own render " +

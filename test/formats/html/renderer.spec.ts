@@ -884,3 +884,37 @@ describe("HTML measured boundary refusals", () => {
     });
   });
 });
+
+describe("inputs that defeat the walk itself", () => {
+  it("does not relabel an unrelated RangeError as stack exhaustion", () => {
+    // Mirrors `test/adversarial/adversarial-inputs.spec.ts`'s guard test of
+    // the same name for the PARSE side, and the matching test on the other
+    // four renderers. A hostile getter throwing a `RangeError` whose message
+    // has nothing to do with recursion — the same shape `UndecodableEntityError`
+    // (core/nodes.ts) actually takes when a renderer's own entity decode
+    // refuses input mid-walk, as measured on the unicodemath and omml
+    // renderers — must not take the "nests too deep" branding meant for
+    // genuine engine stack exhaustion. Seen red without the fix: this walk
+    // used a bare `instanceof RangeError` check, so the sentinel message below
+    // was replaced by "the tree nests too deep for the HTML walk's call stack".
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new RangeError("sentinel, nothing to do with recursion");
+        return "1";
+      },
+    };
+    let failure: string | null = null;
+    try {
+      toHtml(node as never);
+    } catch (error) {
+      expect(error).toBeInstanceOf(RenderError);
+      failure = (error as RenderError).message;
+    }
+    expect(failure).not.toBeNull();
+    expect(failure).toContain("sentinel, nothing to do with recursion");
+    expect(failure).not.toContain("nests too deep");
+  });
+});

@@ -39,6 +39,7 @@ import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { assertKnownOptions } from "../../core/render-options";
 import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
+import { isStackOverflow } from "../../pegkit/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
 
@@ -110,14 +111,15 @@ export function toLatex(node: MathNode, options?: LatexOptions | null): string {
     // A render-phase stack exhaustion the validator's smaller frames
     // survived is genuine depth, branded with the validator's own too-deep
     // words (`core/validate.ts` — the parity window they describe is
-    // TODO.plan/deferred.md's), never the generic mid-walk wrap. One honest
-    // limit the validator does not share: its reads are wrapped at the read
-    // site, so a RangeError at ITS entry can only be the walk's own — the
-    // render walk's reads are bare, so a getter that answered validation and
-    // then threw a deliberate RangeError mid-render takes this branding too.
-    // No Ruby ivar read runs code, so the shape has no gem behaviour to
-    // diverge from, and both spellings keep the RenderError contract.
-    if (error instanceof RangeError) {
+    // TODO.plan/deferred.md's), never the generic mid-walk wrap. `isStackOverflow`
+    // (pegkit/atom.ts) is the parser's own guard against the same ambiguity,
+    // reused rather than re-heuristicized: a bare `instanceof RangeError` here
+    // would also catch `UndecodableEntityError` (core/nodes.ts, itself a
+    // `RangeError` subclass) surfacing from an ordinary entity-decode refusal
+    // mid-render — a real but unrelated failure that this branding must not
+    // swallow. `isStackOverflow` reads the engine's own wording instead of the
+    // class alone, so only a genuine recursion failure takes this message.
+    if (isStackOverflow(error)) {
       throw new RenderError(
         "node: the tree nests too deep for the walk's call stack. The ceiling is " +
           "environment-dependent and lower than the gem's — the gem's own render " +

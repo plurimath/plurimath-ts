@@ -12,6 +12,7 @@ export {
   choice,
   dynamic,
   isHash,
+  isStackOverflow,
   match,
   ParseFailed,
   rule,

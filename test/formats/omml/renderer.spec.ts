@@ -4370,3 +4370,52 @@ describe("OMML Ruby-false parameter slots", () => {
     ).toBe(naryContractXml([["&#8203;"], ["&#8203;"], ["&#8203;"]], [symbol(), symbol()]));
   });
 });
+
+describe("inputs that defeat the walk itself", () => {
+  it("a Text value spelling an unpaired surrogate as a numeric entity refuses by name, not as too-deep", () => {
+    // The bug this test was written for: `render/text/omml.ts` calls
+    // `htmlEntityToUnicode` directly rather than through this format's
+    // `decodeEntities` wrapper, so `UndecodableEntityError` (core/nodes.ts,
+    // itself a `RangeError` subclass) reached `atBoundary`'s catch unwrapped.
+    // A bare `instanceof RangeError` there could not tell that refusal apart
+    // from genuine engine stack exhaustion. Seen red without the fix: this
+    // case raised "node: the tree nests too deep for the OMML walk's call
+    // stack" instead of naming the entity decode failure.
+    const formula = new FormulaNode({ value: [new TextNode({ parameterOne: "x&#xd800;y" })] });
+    let failure: string | null = null;
+    try {
+      toOmml(formula);
+    } catch (error) {
+      expect(error).toBeInstanceOf(RenderError);
+      failure = (error as RenderError).message;
+    }
+    expect(failure).not.toBeNull();
+    expect(failure).toContain("invalid codepoint 0xD800");
+    expect(failure).not.toContain("nests too deep");
+  });
+
+  it("does not relabel an unrelated RangeError as stack exhaustion", () => {
+    // Mirrors `test/adversarial/adversarial-inputs.spec.ts`'s guard test of
+    // the same name for the PARSE side, and the matching test on the other
+    // four renderers.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new RangeError("sentinel, nothing to do with recursion");
+        return "1";
+      },
+    };
+    let failure: string | null = null;
+    try {
+      toOmmlWithoutMathTag(node as never);
+    } catch (error) {
+      expect(error).toBeInstanceOf(RenderError);
+      failure = (error as RenderError).message;
+    }
+    expect(failure).not.toBeNull();
+    expect(failure).toContain("sentinel, nothing to do with recursion");
+    expect(failure).not.toContain("nests too deep");
+  });
+});

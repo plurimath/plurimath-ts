@@ -2,6 +2,7 @@ import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { splitOnLinebreak } from "../../core/linebreak";
 import { assertKnownOptions } from "../../core/render-options";
+import { isStackOverflow } from "../../pegkit/index";
 import { dumpNodes, XmlElement } from "../../xml/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError, serializeRendered } from "./render-shared";
@@ -228,7 +229,16 @@ function atBoundary<T>(render: () => T): T {
     // the class is constructible by the input too, and a hostile getter
     // throwing one mid-render is an input failure, not a symbol-table miss.
     if (error instanceof RenderError || isOwnMissingSymbolDataError(error)) throw error;
-    if (error instanceof RangeError) {
+    // `isStackOverflow` (pegkit/atom.ts), not a bare `instanceof RangeError`:
+    // the class alone also matches `UndecodableEntityError` (core/nodes.ts),
+    // an ordinary entity-decode refusal that is a `RangeError` subclass but
+    // has nothing to do with recursion. Reachable here: `render/text/omml.ts`
+    // calls `htmlEntityToUnicode` directly rather than through this format's
+    // `decodeEntities` wrapper, so a `Text` value spelling an unpaired
+    // surrogate as a numeric entity (`"&#xd800;"`) threw this branch's
+    // stack-exhaustion message before this fix — see the asciimath/latex/
+    // unicodemath renderers' matching comment for the same finding.
+    if (isStackOverflow(error)) {
       throw new RenderError(
         "node: the tree nests too deep for the OMML walk's call stack",
         FORMAT,

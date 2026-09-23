@@ -142,6 +142,17 @@ const FIXTURE_SPECS = {
     usesCorpus: false,
     usesRenderInventory: false,
   },
+  // `evaluate(formula, bindings)` calls (B6's first slice). Hand-built
+  // AsciiMath, like `render-options`, not the shared corpus, which has no
+  // `evaluate` call kind.
+  "evaluation-fixtures.json": {
+    generator: "scripts/generate-evaluation-fixtures.rb",
+    schema: "plurimath-corpus/evaluation/1",
+    rows: "cases",
+    shape: "evaluation",
+    usesCorpus: false,
+    usesRenderInventory: false,
+  },
 } as const;
 
 /** Per-path overrides for the basenames more than one format now uses. */
@@ -211,6 +222,7 @@ const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "model-fixtures.json"
   | "parity-fixtures.json"
   | "render-options-fixtures.json"
+  | "evaluation-fixtures.json"
 )[];
 const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
@@ -818,6 +830,49 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         expect(integerField(record.payload, "renderedCount", record.relative)).toBe(rendered);
         expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
           rows.length - rendered,
+        );
+      } else if (record.spec.shape === "evaluation") {
+        // A row is an `evaluate(formula, bindings)` CALL: an AsciiMath input,
+        // the bindings passed, and the gem's answer — `render-options`'s shape,
+        // with `bindings` (arbitrary JSON scalars, including a deliberately
+        // wrong type for `InvalidBindingError` rows and the non-finite-literal
+        // strings `evaluate.spec.ts`'s header explains) standing in for
+        // `options`, and no `split`/`raisedIn` (this generator never parses a
+        // linebreak-bearing input, and every refusal it records comes from
+        // `evaluate`, never a parse).
+        expectExactKeys(
+          record.payload,
+          ["$comment", "schema", "format", "caseCount", "evaluatedCount", "raisedCount", "cases"],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        const evaluated = rows.filter((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          stringField(item, "group", record.relative);
+          stringField(item, "source", record.relative);
+          const input = mapField(item, "input", at);
+          expectExactKeys(input, ["format", "text"], `${at}.input`);
+          stringField(input, "format", at);
+          stringValue(input, "text", at);
+          mapField(item, "bindings", at);
+          const hasExpected = typeof item.expected === "string";
+          const hasRefusal = typeof item.raises === "string";
+          expect(Number(hasExpected) + Number(hasRefusal), `${at} outcome`).toBe(1);
+          const base = ["group", "id", "source", "input", "bindings"];
+          if (hasRefusal) {
+            expectExactKeys(item, [...base, "raises"], at);
+            expect(stringField(item, "raises", at)).toMatch(
+              /^Plurimath::Errors::Evaluation::[A-Za-z]+Error$/,
+            );
+          } else {
+            expectExactKeys(item, [...base, "expected"], at);
+          }
+          return hasExpected;
+        }).length;
+        expect(integerField(record.payload, "evaluatedCount", record.relative)).toBe(evaluated);
+        expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
+          rows.length - evaluated,
         );
       } else if (record.spec.shape === "format-model") {
         // The parse-side twin of the branch above, shared by every format whose

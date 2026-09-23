@@ -13,3 +13,6 @@
 
 export { default as Plurimath, default, FORMATS, type Format } from "./compat/index";
 export * from "./core/index";
+// §3 rule 6: evaluation imports core only, and only this root entry re-exports
+// it, so `parse(...).evaluate` style usage is available batteries-included.
+export * from "./evaluation/index";

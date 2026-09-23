@@ -567,6 +567,17 @@ not reached.
 
 ## Parked ideas
 
+### One evaluation error type, instead of eight
+
+`TODO.plan/open-decisions.md`'s "Evaluation error family (B6, first slice)"
+settled on mirroring the gem's `Errors::Evaluation::*` one to one — eight
+classes — for this slice. The maintainer's own preference is the opposite:
+one `EvaluationError` type, most likely carrying a reason code rather than a
+class per failure. Parked rather than built now because changing it later
+means changing it in the gem too — a single-error-type design is not this
+port's call to make unilaterally against the gem's own shape — so it waits
+for that to be decided for both together, not before.
+
 ### Entity handling in the P3 input parsers
 
 Not an idea so much as a note that must survive to Phase 3. The gem normalises

@@ -374,3 +374,22 @@ forwards to a format's parser. `src/index.ts` does not export one (it exports
 parser only through a per-format subpath or the compat class. Whether to build
 it, and with what options shape, is undecided; the docs describe it as
 documented-but-unbuilt until then.
+
+## Evaluation error family (B6, first slice)
+
+`feature-roadmap.md`'s evaluation entry names eight error classes under the
+gem's `Errors::Evaluation::*` (`Error` plus `DivisionByZeroError`,
+`MathDomainError`, `NonFiniteResultError`, `UnsupportedExpressionError`,
+`MissingVariableError`, `InvalidBindingError`, `InvalidBindingKeyError`). The
+question for the port: one `EvaluationError` type carrying a reason code, or
+eight classes mirroring the gem one to one.
+
+**SETTLED 2026-09-23** (the user): mirror the gem — eight separate classes,
+each a `PlurimathError` with its own `code` joining `PlurimathErrorCode`
+(`src/core/errors.ts`), built exactly like every other error family (dual
+ESM/CJS, `code` not `instanceof`). `src/evaluation/errors.ts` has the
+implementation and the oracle-measured message text for each. The
+maintainer's own preference is the opposite — one evaluation error type — and
+is deferred rather than dropped: `TODO.plan/deferred.md`'s "Parked ideas" has
+the entry, to be changed in both the gem and the port together once the
+byte-identical structure is done.

@@ -1094,15 +1094,15 @@ RULE_COVERAGE = {
   #   :680  "1/a2b"                atom simple + recursive_denominator SEQUENCE
   #   :685  "1/𝜕𝑓(𝑥,𝑦)"           atom SEQUENCE + recursive_denominator simple
   #   :690  "𝜕𝑓(𝑥,𝑦)/1"           atom SEQUENCE + recursive_numerator simple
-  #   :715  "∫▒dα'₂ x"             accents_subsup + naryand_recursion, both simple
+  #   :715  "∫_a^b▒dα'₂ x"          accents_subsup + naryand_recursion, both simple
   #   :720  "1f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^-2πⅈxξ ⅆx"
   #                               sup_exp + naryand_recursion SEQUENCE (also :755)
   #   :755  (same row as :720)    operand SEQUENCE + expr SEQUENCE
   #   :795  "(β_(x) x + β_(y) y + β_(z) z)"
   #                               sub_exp + exp, both simple
-  #   :820  "1|x| = {█(&x\" if \"x ≥ 0@−&x\" if \"x < 0)┤"
+  #   :820  "{█(&x\" if \"x ≥ 0@−&x\" if \"x < 0)┤"
   #                               exp SEQUENCE + expr SEQUENCE
-  #   :840  "1𝑍(𝛾+𝑖𝜔−𝑖𝜈)=𝑖/√𝜋 ∫_−∞^∞ 𝑒^(−(𝜔−𝜔′)^2)/(𝛾+𝑖(𝜔′−𝜈)) ⅆ𝜔′"
+  #   :840  "𝑖/√𝜋 ∫_−∞^∞ 𝑒^(−(𝜔−𝜔′)^2)/(𝛾+𝑖(𝜔′−𝜈)) ⅆ𝜔′"
   #                               operand + expr, both simple
   #   :860  "1⟨ α_1 + α_x x + α_y y + α_z z + α_(y z) yz + α_(z x) z x + α_(x y) x y + α_(x y z) x y z ⟩_-5 = 0"
   #                               factor SEQUENCE + exp SEQUENCE
@@ -1131,11 +1131,11 @@ RULE_COVERAGE = {
     "1/a2b",
     "1/𝜕𝑓(𝑥,𝑦)",
     "𝜕𝑓(𝑥,𝑦)/1",
-    "∫▒dα'₂ x",
+    "∫_a^b▒dα'₂ x",
     "1f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^-2πⅈxξ ⅆx",
     "(β_(x) x + β_(y) y + β_(z) z)",
-    "1|x| = {█(&x\" if \"x ≥ 0@−&x\" if \"x < 0)┤",
-    "1𝑍(𝛾+𝑖𝜔−𝑖𝜈)=𝑖/√𝜋 ∫_−∞^∞ 𝑒^(−(𝜔−𝜔′)^2)/(𝛾+𝑖(𝜔′−𝜈)) ⅆ𝜔′",
+    "{█(&x\" if \"x ≥ 0@−&x\" if \"x < 0)┤",
+    "𝑖/√𝜋 ∫_−∞^∞ 𝑒^(−(𝜔−𝜔′)^2)/(𝛾+𝑖(𝜔′−𝜈)) ⅆ𝜔′",
     "1⟨ α_1 + α_x x + α_y y + α_z z + α_(y z) yz + α_(z x) z x + α_(x y) x y + α_(x y z) x y z ⟩_-5 = 0",
     'π_(ￗ(X)←ￗ(A)+ￗ(C),' + " " + 'ￗ(Y)←¬ￗ(B))',
     "x_₁a₂",

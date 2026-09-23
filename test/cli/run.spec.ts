@@ -60,6 +60,29 @@ describe("run", () => {
     expect(out.join("").endsWith("\n\n")).toBe(false);
   });
 
+  it.each([
+    ["LF", "x^2\n"],
+    ["CRLF", "x^2\r\n"],
+  ])(
+    "strips one trailing %s, so piping `echo` gives the same result as `printf`",
+    async (_name, piped) => {
+      const bare = fakeIo({ stdin: "x^2" });
+      const withNewline = fakeIo({ stdin: piped });
+      const args = ["convert", "--from", "html", "--to", "asciimath"];
+      expect(await run(args, bare.io)).toBe(EXIT_OK);
+      expect(await run(args, withNewline.io)).toBe(EXIT_OK);
+      expect(withNewline.out.join("")).toBe(bare.out.join(""));
+      expect(withNewline.out.join("")).not.toContain("&#xa;");
+    },
+  );
+
+  it("strips only the final newline, not earlier ones", async () => {
+    const { io, out } = fakeIo({ stdin: "a\n\n" });
+    const args = ["convert", "--from", "html", "--to", "asciimath"];
+    expect(await run(args, io)).toBe(EXIT_OK);
+    expect(out.join("")).toContain("&#xa;");
+  });
+
   it("exits 2 with a usage error for a bad argument combination, and does not touch I/O", async () => {
     const { io, err } = fakeIo();
     const code = await run(["convert", "--from", "bogus", "--to", "latex"], io);

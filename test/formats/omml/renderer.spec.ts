@@ -2413,6 +2413,14 @@ describe("OMML Nary operator entity decoding", () => {
  * Each row is the oracle's own `m:begChr` at `00c52783`, from a `Formula`
  * delimiter holding one string. The escaped rows are what the port used to get
  * wrong: it emitted the raw character for every one of them.
+ *
+ * A lone UTF-16 surrogate (0xD800..0xDFFF) escapes differently: Ruby's
+ * `String#inspect` byte-escapes it as `\xHH\xHH\xHH`, the standard 3-byte
+ * UTF-8 encoding formula applied without the surrogate-rejection check Ruby
+ * normally runs, because a String built with `[cp].pack("U*")` can carry
+ * those bytes even though Ruby cannot construct the code point directly.
+ * Swept over all 2,048 lone surrogates on the oracle: zero disagreements
+ * with the byte1/2/3 formula.
  */
 describe("OMML fenced delimiter Ruby #inspect escapes", () => {
   it.each([
@@ -2456,15 +2464,44 @@ describe("OMML fenced delimiter Ruby #inspect escapes", () => {
     );
   });
 
-  it("refuses a lone surrogate the gem would render as byte escapes", () => {
-    expectRefusal(
-      () => toOmmlWithoutMathTag(fencedListDelimiter([`a${String.fromCharCode(0xd800)}b`])),
-      {
-        kind: "fenced",
-        message:
-          'fenced.parameterOne[0]: a "formula" node contains the lone surrogate U+D800, ' +
-          "which this port refuses rather than emit the gem's byte escapes",
-      },
+  it.each([
+    ["a lone high surrogate", [0x61, 0xd800, 0x62], "a\\xED\\xA0\\x80b"],
+    ["a lone low surrogate", [0x61, 0xdc00, 0x62], "a\\xED\\xB0\\x80b"],
+    ["the surrogate range's high edge", [0x61, 0xdfff, 0x62], "a\\xED\\xBF\\xBFb"],
+    [
+      "two lone high surrogates adjacent, which stay ungrouped",
+      [0xd800, 0xd801],
+      "\\xED\\xA0\\x80\\xED\\xA0\\x81",
+    ],
+    [
+      "two lone low surrogates adjacent, which stay ungrouped",
+      [0xdc00, 0xdc01],
+      "\\xED\\xB0\\x80\\xED\\xB0\\x81",
+    ],
+    [
+      "a C1 control then a lone surrogate, ordering unchanged",
+      [0x80, 0xd800],
+      "\\u0080\\xED\\xA0\\x80",
+    ],
+    [
+      "a lone surrogate then a C1 control, ordering unchanged",
+      [0xd800, 0x80],
+      "\\xED\\xA0\\x80\\u0080",
+    ],
+    [
+      "a noncharacter then a lone surrogate, ordering unchanged",
+      [0xfdd0, 0xd800],
+      "\\uFDD0\\xED\\xA0\\x80",
+    ],
+    [
+      "a lone surrogate then a noncharacter, ordering unchanged",
+      [0xd800, 0xfdd0],
+      "\\xED\\xA0\\x80\\uFDD0",
+    ],
+  ] as [string, number[], string][])("escapes %s", (_case, codepoints, inspected) => {
+    expectDirectAndInsertion(
+      fencedListDelimiter([String.fromCharCode(...codepoints)]),
+      fencedXml(`[&quot;${inspected}&quot;]`, null),
     );
   });
 });
@@ -2853,19 +2890,34 @@ describe("generated OMML symbol data", () => {
     }
   });
 
-  it("refuses Text unicode substitutions, which this table does not carry", () => {
-    // Not a gap this slice can close: `Text#symbol_value` (text.rb:126-129)
-    // inverts `Mathml::Constants::UNICODE_SYMBOLS` and `SYMBOLS`, an
-    // entity-name map owned by mathml. The OMML symbol table holds symbol
-    // CLASS literals and has no entry for it.
-    expectRefusal(() => toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:kappa]" })), {
-      kind: "text",
-      message:
-        "text.parameterOne: unicode[:name] substitution reads " +
-        "Mathml::Constants::UNICODE_SYMBOLS and SYMBOLS inverted " +
-        "(text.rb:126-129), a MathML-owned entity map that no generated OMML " +
-        "table carries — the OMML symbol table holds class literals, not this",
-    });
+  it("substitutes Text's unicode[:name] tokens from the generated OMML-owned invert tables", () => {
+    // `Text#symbol_value` (text.rb:126-129) inverts
+    // `Mathml::Constants::UNICODE_SYMBOLS` and `SYMBOLS` — the SAME Ruby
+    // constant the mathml render-tables slice inverts, re-measured here as
+    // this format's own generated copy (ARCHITECTURE.md §3 rule 4). Measured
+    // on the pinned oracle: `unicode[:kappa]` hits the UNICODE_SYMBOLS
+    // invert (`&#x3ba;`). `unicode[:tilde]` also resolves to `~`, but through
+    // UNICODE_SYMBOLS, not the SYMBOLS fallback — `tilde` is the only
+    // word-shaped key `SYMBOLS.invert` carries, and the gem's own hash
+    // duplicates it in UNICODE_SYMBOLS too, so no word-shaped name currently
+    // demonstrates a genuine fallback (an oracle-side fact, not a port gap).
+    // A name in neither table is not a parity gap — the gem's own `gsub`
+    // block substitutes the empty string for the `nil` `symbol_value`
+    // answer, so this table renders it empty too.
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:kappa]" }))).toBe(
+      xml("<m:t>&#x3ba;</m:t>"),
+    );
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:tilde]" }))).toBe(
+      xml("<m:t>~</m:t>"),
+    );
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:nosuchname]" }))).toBe(
+      xml("<m:t></m:t>"),
+    );
+    // `encodeOmmlText` turns every space into `&#xa0;` BEFORE the token
+    // substitution runs, so a space next to a token survives as the entity.
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "a unicode[:kappa] b" }))).toBe(
+      xml("<m:t>a&#xa0;&#x3ba;&#xa0;b</m:t>"),
+    );
   });
 
   it("takes a Table paren from the table, never from its stored value", () => {

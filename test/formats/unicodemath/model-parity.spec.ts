@@ -61,9 +61,10 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * other corpus string fires any of the eighteen). The TABLE increment ported
  * the family, so those six rows have moved out of `DEFERRED_INPUTS` and now
  * compare for real below, in `supported`, the same as every other corpus row.
- * Three more — `"✎(blue&y + z)"`, `"√(3&8)"`, `"√(n&x)"` — carry a `&` too but
- * measured on the oracle they route through `color`/`root`, not table, and
- * stay in this list. Six NARY rows — a large operator with a single-token
+ * `"✎(blue&y + z)"` (`:1201`) and `"√(3&8)"`/`"√(n&x)"` (`:1530`) also carry a
+ * `&` but route through `color`/`root`, not table; all three left this list
+ * once their rules were ported (corpus rows, so they compare for real below).
+ * Six NARY rows — a large operator with a single-token
  * `_(…)` script — moved the same way once `:1931`/`:1968` landed: `"∏_(k)▒
  * 〖k〗"`, `"∮_(C)▒〖f〗"`, `"⋃_(i) A_(i)"`, `"⋂_(i) A_(i)"`, `"∐_(i) A_(i)"`,
  * `"⨁_(i) A_(i)"`.
@@ -77,44 +78,34 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * input that starts parsing CORRECTLY fails here just as loudly as one that
  * starts parsing wrongly.
  *
+ * The four UNICODE SPACE rows (NBSP and THREE-PER-EM SPACE runs, `"a \u00a0\u00a0 b"`
+ * and its three siblings) left this list when `:104`, the `spaces` leaf, was
+ * ported: with it registered all four parse to the oracle's model.
+ *
  * The list grew from two to twenty-six when the corpus pin advanced to
  * `281d7003` (PR #84), which added cases reaching four families this port has
  * not started, then shrank by the six table/matrix-only rows the TABLE
  * increment above ported.
  */
 const DEFERRED_INPUTS: readonly string[] = [
-  // COLOR and ROOT: each of these three also carries a `&`, but measured on
-  // the oracle (the `ParseError` message names the unmatched key) they route
-  // through `{color=...}`/`{root=...}`, not the table family the TABLE
-  // increment ported.
-  "✎(blue&y + z)",
-  "√(3&8)",
-  "√(n&x)",
-
   // DECORATION (`transform.rb:1286`-`:1491`) is ported now (`transform.ts`'s
-  // module header). Three of the six corpus rows that used to sit here moved
-  // out to `supported` below: `"⏟(a b)"`, `"⏟(a + b)"` and `"⏟(x)_(y)"` all
-  // route only through `hbracket_class`. The other three stay, blocked on
-  // machinery DECORATION does not touch: `"((a)̅)̅"` needs the `accents`/
-  // paren combination `{accents=other, close_paren=, open_paren=}` (the
-  // `atoms`-adjacent gap FRACTION's own header names), and `"(y)┴(x)"`/
-  // `"(y)┬x"` need `sup_exp`/`sub_exp` shapes SCRIPT does not carry either.
-  "((a)̅)̅",
-  "(y)┴(x)",
-  "(y)┬x",
-
-  // SCRIPT (`transform.rb:118`-`:2403`): a right-associative double exponent.
-  "x^y^(z)",
-
-  // UNICODE SPACE characters, not runs of ASCII spaces — the distinction
-  // matters, because a plain-space literal here silently fails to match the
-  // fixture and the case quietly rejoins the parity list. Measured from the
-  // fixture bytes: NBSP (U+00A0) and THREE-PER-EM SPACE (U+2004). The grammar
-  // maps only the ASCII space today.
-  "a \u00a0\u00a0 b",
-  "a \u00a0\u00a0 b \u00a0\u00a0 c",
-  "a \u2004 b",
-  "a \u00a0\u00a0\u00a0\u00a0 b",
+  // module header). All the corpus rows that used to sit here have moved out
+  // to `supported` below: `"⏟(a b)"`, `"⏟(a + b)"` and `"⏟(x)_(y)"` route
+  // only through `hbracket_class`; `"((a)̅)̅"` moved out with `:2640` (the
+  // `accents` + paren combination, the FENCED slice); `"(y)┴(x)"`/`"(y)┬x"`
+  // moved out with `:969`/`:977`; `"√(3&8)"`/`"√(n&x)"` moved out with
+  // `:1530`. Each now compares for real, as a corpus row.
+  //
+  // `"x^y^(z)"` (`:985`, a right-associative double exponent) sat here until
+  // the SCRIPT/SUBSUP/BASE builders landed; it is a `supported` corpus row
+  // now.
+  //
+  // The UNICODE SPACE rows (NBSP, THREE-PER-EM) that sat here compare for
+  // real now that the space-run combinators are ported.
+  //
+  // This list is empty as a result -- `describe.skipIf` below keeps its
+  // suite alive for the day a new corpus pin adds a row this port hasn't
+  // reached.
 ];
 
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");
@@ -218,7 +209,9 @@ describe("the parsed model, for the hand-picked coverage inputs", () => {
   );
 });
 
-describe("the rule families this slice defers", () => {
+// Empty now that every corpus row this list once held is ported; the suite
+// comes back to life the day a new corpus pin adds a refused row.
+describe.skipIf(deferred.length === 0)("the rule families this slice defers", () => {
   it.each(deferred.map((entry) => [entry.input, entry] as const))(
     "%j: refuses loudly, naming the unmatched keys",
     (_input, entry) => {
@@ -233,21 +226,32 @@ describe("the rule families this slice defers", () => {
 });
 
 /**
- * The slice EDGE: inputs the corpus reaches that fire an unported rule.
+ * The slice EDGE: hand-picked inputs (`SLICE_BOUNDARY` in the fixture
+ * generator) that fire a `transform.rb` rule the port still does not carry,
+ * so the gem answers with a perfectly ordinary model while the port must
+ * REFUSE loudly instead of answering differently.
  *
- * Each of these fires one `transform.rb` rule the port does not carry — `:99`,
- * `:765`, `:745`, `:1791` — and the gem answers each with a perfectly ordinary
- * model, recorded in the fixture row beside it. The port must REFUSE rather
- * than answer differently, and two of the four are here because it did not:
+ * `:99`, `:745`, `:765` and `:1791` — the rules `±`, `a≤b` and `x a/b c` used
+ * to prove absent here — are all ported now (RELATION and FRACTION landed);
+ * those inputs moved out into `RULE_COVERAGE` groups and compare for real.
+ * `"ⅇ"` moved out the same way when slice H ported `:43`, and `"ab₁^c"` was
+ * added and moved out again in the same pass once it proved `:67` ported
+ * clean. The six inputs still in `SLICE_BOUNDARY` were re-traced against the
+ * CURRENT port rather than trusted to still be blocked by the rule once
+ * named beside them — see the generator's own comment above `SLICE_BOUNDARY`
+ * for the measurement:
  *
- *   - `±` reaches the transform as a ROOT hash, and `Kernel#Array`'s fold into
- *     `[key, value]` pairs used to happen before anything validated it, so the
- *     port returned `Formula([["combined_symbols", "&#xb1;"]])` where the gem
- *     returns `Formula([Pm])`.
- *   - `x a/b c` leaves `{frac:, expr:}` — the same KEY SET the corpus's
- *     `(a)/(+) b` leaves unmatched, but with both values resolved, which is the
- *     case rule `:1791` matches. A key-set allowlist admitted it; the shape
- *     signature the port now records does not.
+ *   - `"1x₂"` is blocked by `:1776` (`{digit: simple, expr: simple}`, which
+ *     must fire before `:1054` — already ported — ever sees the SEQUENCE
+ *     shape it needs); `:67` (`{mini_sub: sequence}`), the other rule that
+ *     used to block it, is ported now (slice H).
+ *   - `"1/2a"` is blocked by `:658` (`{digit: simple,
+ *     recursive_denominator: simple}`); `:1619`, one level up, is ported.
+ *   - Four more are slice H's own boundary rows, each blocked by a sibling
+ *     combinator (`:945`, `:1776`, `:2251`) no slice has claimed yet — the
+ *     generator's own comment above `SLICE_BOUNDARY` names which rule blocks
+ *     which row. `:80` (`{intermediate_exp: sequence}`) is not ported at
+ *     all — see the module header.
  */
 describe("inputs whose rules sit outside the slice", () => {
   it.each(boundary.map((entry) => [entry.input, entry] as const))(

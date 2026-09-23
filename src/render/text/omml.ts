@@ -7,9 +7,11 @@ import {
   requireString,
   textElement,
 } from "../../formats/omml/render-shared";
+import { OMML_SYMBOLS_INVERT, OMML_UNICODE_INVERT } from "../../generated/omml/render-tables";
 import { XmlElement } from "../../xml/index";
 
-const UNICODE_TOKEN = /unicode\[:\w+\]/;
+/** `Text::PARSER_REGEX` (`text.rb:7`): `unicode\[:(?<unicode>\w{1,})\]`. */
+const UNICODE_TOKEN = /unicode\[:(\w+)\]/g;
 
 /**
  * `Text#first_value("omml")` (text.rb:144-151) re-encodes through
@@ -49,20 +51,31 @@ function encodeOmmlText(value: string): string {
   return encoded;
 }
 
-/** `Text#to_omml_without_math_tag`: direct `m:t`, with generated lookup deferred. */
+/**
+ * `Text#to_omml_without_math_tag`: `parse_text("omml") || parameter_one`
+ * (text.rb:39-43), where `parse_text` (text.rb:131-146) first runs
+ * `first_value("omml")` through `encodeOmmlText` above, THEN substitutes every
+ * `unicode[:name]` token in the ENCODED string through `Text#symbol_value`
+ * (text.rb:126-129) — `Mathml::Constants::UNICODE_SYMBOLS.invert[name] ||
+ * SYMBOLS.invert[name]`. Order matters only in principle: every character a
+ * token is built from (`u n i c o d e [ : ] \w`) is printable ASCII outside
+ * `BASIC_ENTITY_CODEPOINTS`, so `encodeOmmlText` never touches a token, and
+ * running the substitution first would read the same bytes.
+ *
+ * A name absent from BOTH tables is not a parity gap: Ruby's `gsub` block
+ * substitutes the empty string for a `nil` return (measured,
+ * `Text.new("unicode[:nosuchname]")` renders `<m:t></m:t>` on the pinned
+ * oracle) rather than raising, so a miss here renders empty exactly the same
+ * way.
+ */
 export function renderText(node: NodeOf<"text">): XmlElement {
   const value = requireString(node.parameterOne, node.kind, "text.parameterOne");
-  if (UNICODE_TOKEN.test(value)) {
-    throw new RenderError(
-      "text.parameterOne: unicode[:name] substitution reads " +
-        "Mathml::Constants::UNICODE_SYMBOLS and SYMBOLS inverted " +
-        "(text.rb:126-129), a MathML-owned entity map that no generated OMML " +
-        "table carries — the OMML symbol table holds class literals, not this",
-      FORMAT,
-      node.kind,
-    );
-  }
-  return textElement(encodeOmmlText(value));
+  const encoded = encodeOmmlText(value);
+  const substituted = encoded.replace(
+    UNICODE_TOKEN,
+    (_token, name: string) => OMML_UNICODE_INVERT.get(name) ?? OMML_SYMBOLS_INVERT.get(name) ?? "",
+  );
+  return textElement(substituted);
 }
 
 /** Default-language Text insertion adds `m:rPr/m:sty`; `lang: omml` is unmeasured. */

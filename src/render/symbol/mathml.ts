@@ -18,20 +18,25 @@
  *   - subclasses IGNORE `options[:rspace]` (probe plus-rspace) — only the
  *     base class reads it;
  *   - the intent-axis exceptions (`Dd`, `Ii`, `Jj`, `UpcaseDd`, `Intercal`)
- *     differ only under `intent: true`, which this port refuses at the
- *     boundary, so the static descriptor is always the right variant.
+ *     differ only under `intent: true`, where each writes an `intent`
+ *     attribute on its `<mi>` (`SYMBOL_EXCEPTIONS` below); with intent off
+ *     the static descriptor is the right variant.
  */
 
+import { RenderError } from "../../core/index";
 import { htmlEntityToUnicode, RUBY_ABSTRACT_CLASSES } from "../../core/nodes";
 import { NODE_SPECS } from "../../core/normalize";
 import {
   classBasename,
+  FORMAT,
   hashOrNil,
   missingSymbolDataError,
   type NodeOf,
+  type RenderContext,
   requireStringForAppend,
   setDecodedAttribute,
 } from "../../formats/mathml/render-shared";
+import { MATHML_SYMBOL_EXCEPTIONS } from "../../generated/mathml/exceptions";
 import { MATHML_SYMBOLS } from "../../generated/mathml/symbols";
 import { XmlElement } from "../../xml/index";
 
@@ -54,14 +59,54 @@ const VALUE_RENDERED_SYMBOL_IDS: ReadonlySet<string> = new Set(
  */
 const VALUE_DEPENDENT_IDS: ReadonlySet<string> = new Set(["Plus", "Comma"]);
 
-export function renderSymbol(node: NodeOf<"symbol">): XmlElement {
+/**
+ * The context-axis exception matrix (`../../generated/mathml/exceptions.ts`),
+ * by id: the five classes whose `to_mathml_without_math_tag(intent, **)` reads
+ * `intent` (`Dd`, `UpcaseDd`, `Ii`, `Jj`, `Intercal` — `attributes = { intent:
+ * encoded } if intent`, where `Intercal` alone writes the word `transpose`).
+ * Measured by rendering every symbol on the committed axis manifest, never
+ * hand-listed; `intent` is the one axis the mathml walk models here.
+ */
+interface SymbolVariant {
+  readonly tag: string;
+  readonly text: string;
+  readonly attributes?: Readonly<Record<string, string>>;
+}
+
+const SYMBOL_EXCEPTIONS = new Map(
+  MATHML_SYMBOL_EXCEPTIONS.map((exception) => [exception.id, exception]),
+);
+
+export function renderSymbol(node: NodeOf<"symbol">, context: RenderContext): XmlElement {
   const id = node.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
   if (VALUE_RENDERED_SYMBOL_IDS.has(id)) return renderBaseSymbol(node);
 
   const descriptor = MATHML_SYMBOLS.get(id);
   if (descriptor === undefined) throw missingSymbolDataError(id);
-  const element = new XmlElement(descriptor.tag);
-  let text: string = descriptor.text;
+  let variant: SymbolVariant = descriptor;
+  const exception = SYMBOL_EXCEPTIONS.get(id);
+  if (exception !== undefined) {
+    const axes: Record<string, boolean> = { intent: context.intent };
+    const claimed = exception.variants.find((candidate) =>
+      Object.entries(candidate.when).every(([axis, expected]) => {
+        const actual = axes[axis];
+        if (actual === undefined) {
+          throw new RenderError(
+            `symbol "${id}": exception matrix names axis "${axis}", which this renderer does not model`,
+            FORMAT,
+            node.kind,
+          );
+        }
+        return actual === expected;
+      }),
+    );
+    if (claimed !== undefined) variant = claimed;
+  }
+  const element = new XmlElement(variant.tag);
+  for (const [name, text] of Object.entries(variant.attributes ?? {})) {
+    element.setAttribute(name, text);
+  }
+  let text: string = variant.text;
   if (VALUE_DEPENDENT_IDS.has(id) && node.value !== null && node.value !== undefined) {
     // `value || "+"`: Ruby's || keeps "" — only nil falls through.
     text = requireStringForAppend(node.value, node.kind, `symbol(${id}).value`);

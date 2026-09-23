@@ -25,6 +25,11 @@
  *   5. `mathml_paren_present?` on either paren wraps `<mrow>` with
  *      `<mo>text</mo>` fences from the generated per-id paren table; a
  *      paren whose gem readers are missing crashes (probe table-lbbrack).
+ *
+ * Under intent (`to_mathml(intent: true)`) each table kind writes its own
+ * attributes, in the gem's order — see `tableIntent` for the per-name table.
+ * `Vmatrix`, `Pmatrix`, `Eqarray` and `Cases` are measured byte-identical to
+ * the base only with intent OFF; with it on they overwrite the base's marks.
  */
 
 import type { NodeParameter } from "../../core/index";
@@ -32,6 +37,7 @@ import { RenderError } from "../../core/index";
 import {
   describeSlot,
   FORMAT,
+  gemCrash,
   hashOrNil,
   type MathmlRendered,
   type NodeOf,
@@ -62,12 +68,19 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): Math
       return renderMatrix(node, context);
     case "array":
       // `Array#to_mathml_without_math_tag`: the mtable alone — `attributes(intent)`
-      // is `table_attribute` at intent: false — never fenced (probe array).
-      return mtableWithAttributes(node, context);
+      // is `table_attribute` at intent: false, and `table_attribute.merge(intent:
+      // ":equations")` under it — never fenced (probe array).
+      return mtableWithAttributes(node, context, "equations");
     case "bmatrix": {
       // `Bmatrix`: ALWAYS `<mrow>` fenced, even around empty paren texts.
-      const mtable = mtableWithAttributes(node, context);
-      return new XmlElement("mrow").append(
+      const mtable = mtableWithAttributes(node, context, "matrix");
+      const fence = new XmlElement("mrow");
+      if (context.intent) {
+        // `intent_attr`: the curly-braced marker for a `Lcurly` open, else bracketed.
+        const curly = parenId(node.openParen) === "Paren::Lcurly";
+        fence.setAttribute("intent", curly ? ":curly-braced-matrix" : ":bracketed-matrix");
+      }
+      return fence.append(
         new XmlElement("mo").append(parenText(node, node.openParen, "table.openParen")),
         mtable,
         new XmlElement("mo").append(parenText(node, node.closeParen, "table.closeParen")),
@@ -79,11 +92,16 @@ export function renderTable(node: NodeOf<"table">, context: RenderContext): Math
 }
 
 function renderBaseTable(node: NodeOf<"table">, context: RenderContext): MathmlRendered {
-  const mtable = mtableWithAttributes(node, context);
+  const result = renderBaseTableBody(node, context);
+  return context.intent ? tableIntent(node, result) : result;
+}
+
+function renderBaseTableBody(node: NodeOf<"table">, context: RenderContext): MathmlRendered {
+  const mtable = mtableWithAttributes(node, context, "matrix");
 
   const openId = parenId(node.openParen);
   if (openId !== undefined && NORM_PAREN_IDS.has(openId)) {
-    // `norm_table` (`table.rb:332-341`).
+    // `norm_table` (`table.rb:332-341`) — no `:fenced` mark, unlike the branch below.
     return new XmlElement("mrow").append(
       new XmlElement("mo").append("&#x2016;"),
       mtable,
@@ -95,7 +113,9 @@ function renderBaseTable(node: NodeOf<"table">, context: RenderContext): MathmlR
     parenPresent(node, node.openParen, "table.openParen") ||
     parenPresent(node, node.closeParen, "table.closeParen")
   ) {
-    return new XmlElement("mrow").append(
+    const fence = new XmlElement("mrow");
+    if (context.intent) fence.setAttribute("intent", ":fenced");
+    return fence.append(
       new XmlElement("mo").append(parenText(node, node.openParen, "table.openParen")),
       mtable,
       new XmlElement("mo").append(parenText(node, node.closeParen, "table.closeParen")),
@@ -103,6 +123,46 @@ function renderBaseTable(node: NodeOf<"table">, context: RenderContext): MathmlR
   }
 
   return mtable;
+}
+
+/**
+ * What the four `Table` subclasses that only `super` and then re-tag do under
+ * intent (`table/pmatrix.rb:28`, `vmatrix.rb:28`, `eqarray.rb:23`,
+ * `cases.rb:23`); `Align`, `Split` and `Multline` define nothing and keep the
+ * base's marks. Each re-tags the ELEMENT the base answered — the `<mrow>` when
+ * it fenced, the bare `<mtable>` when it did not — overwriting the base's
+ * `:fenced` / `:matrix(..)` in place (an attribute keeps its position when
+ * rewritten). `Eqarray` and `Cases` additionally mark the inner `<mtable>`
+ * `:cases`; `Cases` sends that write to nil when there is no inner mtable
+ * (a bare, unfenced result) and raises, where `Eqarray` skips it.
+ */
+function tableIntent(node: NodeOf<"table">, result: MathmlRendered): MathmlRendered {
+  if (!(result instanceof XmlElement)) return result;
+  switch (node.name) {
+    case "Pmatrix":
+      result.setAttribute("intent", ":parenthesized-matrix");
+      break;
+    case "Vmatrix":
+      result.setAttribute(
+        "intent",
+        classNameLike(node.openParen) === "norm" ? ":normed-matrix" : ":determinant",
+      );
+      break;
+    case "Eqarray":
+    case "Cases": {
+      const inner = result.children.find(
+        (child): child is XmlElement => typeof child !== "string" && child.name === "mtable",
+      );
+      if (inner !== undefined) {
+        inner.setAttribute("intent", ":cases");
+      } else if (node.name === "Cases") {
+        throw gemCrash("Cases#set_table_intent", "nil has no []= (no inner mtable to mark)");
+      }
+      result.setAttribute("intent", ":equations");
+      break;
+    }
+  }
+  return result;
 }
 
 /**
@@ -135,10 +195,23 @@ function classNameLike(value: NodeParameter | undefined): string | undefined {
   return basename.toLowerCase();
 }
 
-/** `<mtable>` with `table_attribute` and the rendered rows. */
-function mtableWithAttributes(node: NodeOf<"table">, context: RenderContext): XmlElement {
+/**
+ * `<mtable>` with `table_attribute` and the rendered rows. `intent` says which
+ * mark the calling kind writes under intent: `"matrix"` — `Table` and
+ * `Bmatrix` set `:matrix(rows,columns)` AFTER the attributes (`table_tag["intent"]
+ * = ...`); `"equations"` — `Array` merges `intent: ":equations"` into the
+ * attribute hash.
+ */
+function mtableWithAttributes(
+  node: NodeOf<"table">,
+  context: RenderContext,
+  intent?: "matrix" | "equations",
+): XmlElement {
   const mtable = new XmlElement("mtable");
-  applyTableAttributes(mtable, node);
+  applyTableAttributes(mtable, node, context.intent && intent === "equations");
+  if (context.intent && intent === "matrix") {
+    mtable.setAttribute("intent", `:matrix(${matrixRows(node)},${matrixColumns(node)})`);
+  }
   const rows = node.value;
   if (rows !== null && rows !== undefined) {
     if (!Array.isArray(rows)) {
@@ -160,7 +233,11 @@ function mtableWithAttributes(node: NodeOf<"table">, context: RenderContext): Xm
  * `table_attribute(:mathml)` → `mathml_attrs(column_lines)`. The gem runs
  * this BEFORE anything renders, so its crashes precede the rows'.
  */
-function applyTableAttributes(mtable: XmlElement, node: NodeOf<"table">): void {
+function applyTableAttributes(
+  mtable: XmlElement,
+  node: NodeOf<"table">,
+  equationsIntent: boolean,
+): void {
   const columns = columnLines(node);
   const needsLines = columns.includes("solid");
   const needsAlign = closeParenIsCloseParen(node.closeParen);
@@ -182,8 +259,24 @@ function applyTableAttributes(mtable: XmlElement, node: NodeOf<"table">): void {
   }
   if (needsLines) args.columnlines = columns.join(" ");
   if (needsAlign) args.columnalign = "left";
-  if (options === null && !needsLines && !needsAlign) return; // attributes: nil
+  if (options === null && !needsLines && !needsAlign) {
+    if (!equationsIntent) return; // attributes: nil
+    // `table_attribute.merge(...)` on the nil `table_attribute`.
+    throw gemCrash("Array#attributes", "nil has no merge (no options and no column attributes)");
+  }
+  if (equationsIntent) args.intent = ":equations";
   setAttributesFromHash(mtable, args, node.kind, "table.options");
+}
+
+/** `value.length` in `:matrix(#{value.length},#{td_count})` — `columnLines` has already required a list. */
+function matrixRows(node: NodeOf<"table">): number {
+  return (node.value as readonly unknown[]).length;
+}
+
+/** `td_count` (:441): `value&.first&.parameter_one&.length`, likewise already a list. */
+function matrixColumns(node: NodeOf<"table">): number {
+  const first = (node.value as readonly { readonly parameterOne: readonly unknown[] }[])[0];
+  return (first as { readonly parameterOne: readonly unknown[] }).parameterOne.length;
 }
 
 /**

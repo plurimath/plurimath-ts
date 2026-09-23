@@ -132,14 +132,17 @@ function build(row: Row): MathNode {
 /**
  * The rows this spec owns. The same payload carries the `unary-function` group,
  * which `unary-function-parity.spec.ts` asserts (in all six formats, with a
- * UnicodeMath parser this file's `build` has no arm for); the counts are
+ * UnicodeMath parser this file's `build` has no arm for), and the `intent*`
+ * groups, which `./mathml/intent-parity.spec.ts` reads (B4); the counts are
  * recomputed over what is left, and the payload gate checks the file's own.
  */
 function load(format: "mathml" | "omml"): Fixture {
   const whole = JSON.parse(
     readFileSync(join(HERE, format, "render-options-fixtures.json"), "utf8"),
   ) as Fixture;
-  const cases = whole.cases.filter((row) => row.group !== "unary-function");
+  const cases = whole.cases.filter(
+    (row) => row.group !== "unary-function" && !row.group.startsWith("intent"),
+  );
   return {
     ...whole,
     cases,

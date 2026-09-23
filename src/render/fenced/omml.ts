@@ -230,7 +230,7 @@ function containsNodeObject(value: unknown, seen = new Set<object>()): boolean {
 
 function rubyInspect(value: unknown, kind: DelimiterKind, at: string): string {
   if (value === null || value === undefined) return "nil";
-  if (typeof value === "string") return rubyInspectString(value, kind, at);
+  if (typeof value === "string") return rubyInspectString(value);
   if (typeof value === "boolean") return String(value);
   if (typeof value === "number") {
     const printed = rubyNumberToS(value);
@@ -248,8 +248,7 @@ function rubyInspect(value: unknown, kind: DelimiterKind, at: string): string {
     assertReproducibleRubyHashOrder(value, FORMAT, "fenced", at);
     return `{${Object.entries(value as Record<string, unknown>)
       .map(
-        ([key, item]) =>
-          `${rubyInspectString(key, kind, `${at}.${key}`)} => ${rubyInspect(item, kind, `${at}.${key}`)}`,
+        ([key, item]) => `${rubyInspectString(key)} => ${rubyInspect(item, kind, `${at}.${key}`)}`,
       )
       .join(", ")}}`;
   }
@@ -285,7 +284,7 @@ function rubyInspect(value: unknown, kind: DelimiterKind, at: string): string {
  */
 const RUBY_NONPRINTING = /[\p{Cc}\p{Cn}\p{Cs}\p{Zl}\p{Zp}]/u;
 
-function rubyInspectString(value: string, kind: DelimiterKind, at: string): string {
+function rubyInspectString(value: string): string {
   let inspected = '"';
   for (let index = 0; index < value.length; ) {
     const codepoint = value.codePointAt(index) as number;
@@ -326,7 +325,7 @@ function rubyInspectString(value: string, kind: DelimiterKind, at: string): stri
         inspected += next === "{" || next === "@" || next === "$" ? "\\#" : "#";
         break;
       default:
-        inspected += inspectCodepoint(codepoint, character, kind, at);
+        inspected += inspectCodepoint(codepoint, character);
     }
     index += character.length;
   }
@@ -336,35 +335,32 @@ function rubyInspectString(value: string, kind: DelimiterKind, at: string): stri
 /**
  * The escape spelling, also measured: `\uXXXX` up to U+FFFF and `\u{XXXXX}`
  * above it, hex in upper case, and consecutive escapes never grouped —
- * `"͸͹\u{10FFFE}\u{10FFFF}"`.
+ * `"͸͹\u{10FFFE}\u{10FFFF}"`. A lone UTF-16 surrogate escapes differently —
+ * `\xHH\xHH\xHH`, the 3-byte UTF-8 encoding Ruby's String carries for it —
+ * because `String#inspect` byte-escapes invalid encoding rather than naming
+ * the code point; see the surrogate branch below for the measurement.
  */
-function inspectCodepoint(
-  codepoint: number,
-  character: string,
-  kind: DelimiterKind,
-  at: string,
-): string {
+function inspectCodepoint(codepoint: number, character: string): string {
   if (codepoint >= 0xd800 && codepoint <= 0xdfff) {
     // A lone UTF-16 surrogate. Ruby cannot BUILD the code point —
     // `0xD800.chr(Encoding::UTF_8)` raises `RangeError: invalid codepoint
     // 0xD800 in UTF-8` — but a String can still carry the bytes: measured on
     // the oracle's Ruby 4.0.1, `[0xD800].pack("U*")` gives a UTF-8 String
-    // whose `valid_encoding?` is false and whose `inspect` is
-    // `"\xED\xA0\x80"`, byte escapes rather than `\uD800`.
-    //
-    // So this refusal is NOT what the gem would do with the same bytes.
-    // Measured on the oracle at `00c52783`, a Formula delimiter valued
-    // `["a\uD800b"]` emits `<m:begChr m:val="[&quot;a\xED\xA0\x80b&quot;]"/>`,
-    // and that output is ASCII-only — so it is representable here, and this
-    // divergence is closable rather than structural. Doing so is a code change
-    // outside this unit; `TODO.plan/deferred.md` carries it with its trigger.
-    throw new RenderError(
-      `${at}: a "${kind}" node contains the lone surrogate U+${codepoint
-        .toString(16)
-        .toUpperCase()}, which this port refuses rather than emit the gem's byte escapes`,
-      FORMAT,
-      "fenced",
-    );
+    // whose `valid_encoding?` is false, whose bytes are the standard 3-byte
+    // UTF-8 encoding of the surrogate applied without the rejection check
+    // Ruby normally runs, and whose `#inspect` prints those bytes as
+    // `"\xED\xA0\x80"` rather than `\uD800`. Swept over all 2,048 lone
+    // surrogates (0xD800..0xDFFF) on the oracle at `00c52783`: every one
+    // agrees with the byte1/2/3 formula below, zero disagreements. Two lone
+    // surrogates adjacent (either side) stay ungrouped, matching this file's
+    // "consecutive escapes never grouped" finding for `\u`-escapes; a lone
+    // surrogate next to a C1 control or a noncharacter changes neither
+    // side's spelling nor their order — all measured on the oracle, not
+    // reasoned about.
+    const b1 = 0xe0 | (codepoint >> 12);
+    const b2 = 0x80 | ((codepoint >> 6) & 0x3f);
+    const b3 = 0x80 | (codepoint & 0x3f);
+    return [b1, b2, b3].map((byte) => `\\x${byte.toString(16).toUpperCase()}`).join("");
   }
   if (!RUBY_NONPRINTING.test(character)) return character;
   const hex = codepoint.toString(16).toUpperCase();

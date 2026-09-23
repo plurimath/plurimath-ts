@@ -6,10 +6,12 @@
 # UnicodeMath *transform* reads, consumed by
 # `src/formats/unicodemath/registry.ts`.
 #
-# `UnicodeMath::Constants` holds 42 constants. 33 of them the grammar reaches,
-# plus one derived table; three more — `BINARY_FUNCTIONS`, `NARY_CLASSES` and
-# `PREFIXED_PRIMES` — the transform reaches, and are emitted here too. The list
-# is not a judgement call: `unicode_math/parsing_rules/constants_rules.rb` is the
+# `UnicodeMath::Constants` holds 42 constants. 32 of them the grammar reaches,
+# plus one derived table (`Constants.wrapper_symbols`, not a stored constant);
+# eight more — see `TRANSFORM_CONSTANT_SOURCES` below — the transform reaches,
+# and are emitted here too; the remaining two (`UNCONSUMED_CONSTANTS`) are read
+# by neither. The list is not a judgement call:
+# `unicode_math/parsing_rules/constants_rules.rb` is the
 # single file that turns constants into rules, and every `Constants::` reference
 # under `unicode_math/` was enumerated to build `TABLES` and
 # `TRANSFORM_CONSTANT_SOURCES` below.
@@ -31,7 +33,7 @@
 # named symbols share one code point and the gem never deduplicates. The
 # emitted shape is therefore an **ordered array of strings**, which cannot
 # collapse; a `Map`, a `Set`, or an object keyed by the text would silently
-# shorten those ten tables. The repeats are dead alternatives in the gem too
+# shorten those nine tables. The repeats are dead alternatives in the gem too
 # (Parslet's `|` is ordered, so the second occurrence is unreachable), and they
 # are carried anyway so the emitted array is the gem's array rather than an
 # improved one.
@@ -198,6 +200,8 @@ module UnicodeMathParserDataGenerator
     "UNDER_HORIZONTAL_BRACKETS" => "UNICODEMATH_UNDER_HORIZONTAL_BRACKETS",
     "OVERLAYS_NOTATIONS" => "UNICODEMATH_OVERLAYS_NOTATIONS",
     "BELOWS_NOTATIONS" => "UNICODEMATH_BELOWS_NOTATIONS",
+    "PHANTOM_SYMBOLS" => "UNICODEMATH_PHANTOM_FUNCTIONS",
+    "UNICODE_FRACTIONS" => "UNICODEMATH_FRACTION_PARTS",
   }.freeze
 
   # `Constants` entries neither the grammar nor the ported transform slice
@@ -218,7 +222,7 @@ module UnicodeMathParserDataGenerator
   # emitted through `TRANSFORM_CONSTANT_SOURCES` below, the same path
   # `NARY_CLASSES` and `PREFIXED_PRIMES` already use.
   UNCONSUMED_CONSTANTS = %w[
-    PARENTHESIS_MATRICES PHANTOM_SYMBOLS UNDEF_UNARY_FUNCTIONS
+    PARENTHESIS_MATRICES UNDEF_UNARY_FUNCTIONS
   ].freeze
 
   # `UNICODED_FONTS` reaches the grammar through its own builder,
@@ -508,8 +512,9 @@ module UnicodeMathParserDataGenerator
   #                   `if Constants::NARY_CLASSES.key?(nary_function.to_sym)`,
   #                   so the reachable names are `NARY_CLASSES.keys`.
   #
-  # `matrix` (`get_table_class`) is the third, and this slice defers the
-  # table/matrix rules, so no table-class table is emitted: emitting one would
+  # `matrix` (`get_table_class`) is the third. The table/matrix rules are
+  # registered in `transform.ts`, but `getTableClass` there is a name transform
+  # rather than a lookup, so no table-class table is emitted: emitting one would
   # ship data nothing reads.
   def get_class_sources
     sources = Hash.new { |hash, key| hash[key] = [] }
@@ -753,6 +758,35 @@ module UnicodeMathParserDataGenerator
     end
   end
 
+  # `Constants::UNICODE_FRACTIONS` as `[entity, [numerator, denominator]]`, the
+  # two integers as the Strings `Utility.unicode_fractions` hands to
+  # `Math::Number.new` (`.to_s`), so the port copies text and never re-derives it.
+  def unicode_fraction_rows
+    constants::UNICODE_FRACTIONS.map do |entity, parts|
+      unless parts.is_a?(::Array) && parts.length == 2 && parts.all?(::Integer)
+        raise Error, "UNICODE_FRACTIONS[#{entity.inspect}] is #{parts.inspect}; expected [Integer, Integer]"
+      end
+
+      [entity.to_s, parts.map(&:to_s)]
+    end
+  end
+
+  # `Constants::PHANTOM_SYMBOLS` as `[name, [[function_name, attributes], ...]]`,
+  # every hash below the top written as ordered `[key, value]` pairs.
+  def phantom_rows
+    constants::PHANTOM_SYMBOLS.map do |name, functions|
+      [name.to_s, functions.map { |function, attributes| [function.to_s, attribute_pairs(attributes, name)] }]
+    end
+  end
+
+  def attribute_pairs(value, where)
+    case value
+    when ::Hash then value.map { |key, inner| [key.to_s, attribute_pairs(inner, where)] }
+    when ::String, true, false then value
+    else raise Error, "PHANTOM_SYMBOLS[#{where.inspect}] holds a #{value.class}; expected Hash, String or boolean"
+    end
+  end
+
   # --- payloads ------------------------------------------------------------
 
   def ts_header(description)
@@ -917,6 +951,25 @@ module UnicodeMathParserDataGenerator
   end
 
   # One `[key, [values...]]` Map row, collapsed when Biome would collapse it.
+  # Whether Biome prints `value` expanded: an array holding a broken child, or
+  # two or more arrays that each hold two or more elements.
+  def ts_breaks?(value)
+    return false unless value.is_a?(::Array)
+
+    value.any? { |item| ts_breaks?(item) } ||
+      (value.size > 1 && value.all? { |item| item.is_a?(::Array) && item.size > 1 })
+  end
+
+  # `value` as Biome prints it (`assert_ts_width!` still checks the line width):
+  # flat unless `ts_breaks?`, else one element per line.
+  def ts_broken(value, indent)
+    return CoreDataGenerator.ts_flat(value) unless ts_breaks?(value)
+
+    pad = "  " * indent
+    lines = value.map { |item| "#{pad}  #{ts_broken(item, indent + 1)}," }
+    (["["] + lines + ["#{pad}]"]).join("\n")
+  end
+
   def ts_nested_row(key, values)
     quoted = values.map { |value| CoreDataGenerator.ts_string(value) }
     flat = "  [#{CoreDataGenerator.ts_string(key)}, [#{quoted.join(', ')}]],"
@@ -942,10 +995,10 @@ module UnicodeMathParserDataGenerator
         `src/formats/unicodemath/registry.ts` binds these to `core`
         constructors; nothing restates them.
 
-        This is the FIRST transform slice, so the emitted set is what that slice
-        consumes and no more. `Utility.get_table_class` has no table here: the
-        table/matrix rules are deferred, and data nothing reads cannot be kept
-        honest.
+        The emitted set is what the registered transform rules consume and no
+        more. `Utility.get_table_class` has no table here: the port resolves it
+        with `getTableClass` in `transform.ts` (a name transform, not a lookup),
+        so a table would be data nothing reads, and that cannot be kept honest.
       TEXT
       [
         CoreDataGenerator.ts_doc(
@@ -1097,6 +1150,40 @@ module UnicodeMathParserDataGenerator
              "(only `&#x332;`, `\"bottom\"`) a `Menclose` carrying this table's value\n" \
              "as its notation string.",
       ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_SUP_ALPHABETS_BY_KEY", "ReadonlyMap<string, string>",
+        data[:sup_alphabets],
+        doc: "`Constants::SUP_ALPHABETS`: character -> superscript entity. The grammar\n" \
+             "table above carries `.values` only; the mini-sized script rules\n" \
+             "(`transform.rb:53`, `:567`, `:575`) recover the character with\n" \
+             "`.key(entity)`, so the pairs are emitted here.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_SUB_OPERATORS_BY_KEY", "ReadonlyMap<string, string>",
+        data[:sub_operators],
+        doc: "`Constants::SUB_OPERATORS`: character -> subscript entity, for the\n" \
+             "`.key(entity)` in `transform.rb:640`/`:646`/`:2426`.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_SUP_OPERATORS_BY_KEY", "ReadonlyMap<string, string>",
+        data[:sup_operators],
+        doc: "`Constants::SUP_OPERATORS`: character -> superscript entity, for the\n" \
+             "`.key(entity)` in `transform.rb:113`/`:652`.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_SUB_PARENTHESIS_OPEN", "ReadonlyMap<string, string>",
+        data[:sub_parenthesis_open],
+        doc: "`Constants::SUB_PARENTHESIS[:open]`: key -> entity. The grammar reads\n" \
+             "only `.values` (`UNICODEMATH_SUB_OPEN_PARENTHESIS`); the\n" \
+             "`sub_open_paren` rule (`transform.rb:2597`) inverts it with `Hash#key`\n" \
+             "to recover the plain-text paren the entity stands for.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_SUB_PARENTHESIS_CLOSE", "ReadonlyMap<string, string>",
+        data[:sub_parenthesis_close],
+        doc: "`Constants::SUB_PARENTHESIS[:close]`: `:open`'s twin, inverted the same\n" \
+             "way for the closing paren.",
+      ),
       ts_string_list(
         "UNICODEMATH_BINARY_FUNCTIONS", data[:binary_functions],
         "`Constants::BINARY_FUNCTIONS`: the `class_name` values the sub- and\n" \
@@ -1114,6 +1201,51 @@ module UnicodeMathParserDataGenerator
              "A MISS yields Ruby nil, and `Menclose.new(nil, value)` is a legal\n" \
              "node, so this table is deliberately not exhaustive over the tag.",
       ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_MASK_CLASSES", "ReadonlyMap<string, string>", data[:mask_classes],
+        doc: "`Plurimath::Utility::MASK_CLASSES` (`utility.rb:123-132`): the bit value\n" \
+             "(as text) -> the `Menclose` notation word `Utility.enclosure_attrs`\n" \
+             "(`unicode_math/utility.rb:213-226`) emits for that bit of a `rect_value`\n" \
+             "mask.",
+      ),
+      CoreDataGenerator.ts_tuple_map(
+        "UNICODEMATH_FRACTION_PARTS", "ReadonlyMap<string, readonly [string, string]>",
+        data[:unicode_fraction_parts],
+        doc: "`Constants::UNICODE_FRACTIONS`: each vulgar-fraction entity mapped to its\n" \
+             "`[numerator, denominator]` as text. `Utility.unicode_fractions`\n" \
+             "(`utility.rb:69-76`) reads `.first` and `.last` of this pair and builds\n" \
+             "`Math::Number.new(x.to_s)` from each. The parser's own key-only view is\n" \
+             "`UNICODEMATH_UNICODE_FRACTIONS`.",
+      ),
+      [
+        CoreDataGenerator.ts_doc(
+          "One `PHANTOM_SYMBOLS` attribute value: a boolean, a string, or a hash\n" \
+          "written as an ordered list of `[key, value]` pairs — the emitter has no\n" \
+          "object-literal form, and pairs keep the gem's key order, which\n" \
+          "`transform.rb:1224` iterates.",
+        ),
+        "export type UnicodemathPhantomAttribute =",
+        "  | boolean",
+        "  | string",
+        "  | readonly (readonly [key: string, value: UnicodemathPhantomAttribute])[];",
+        "",
+        "export type UnicodemathPhantomSpec = readonly (readonly [",
+        "  functionName: string,",
+        "  attributes: UnicodemathPhantomAttribute,",
+        "])[];",
+      ].join("\n"),
+      [
+        CoreDataGenerator.ts_doc(
+          "`Constants::PHANTOM_SYMBOLS`: the unary-symbol name -> its ordered\n" \
+          "`{function_name => attributes}` hash, as pairs. `transform.rb:1224` walks\n" \
+          "it in order, building a `Phantom` where the name is `phantom` and its\n" \
+          "attributes are truthy and an `Mpadded` where the name is `mpadded`.",
+        ),
+        "export const UNICODEMATH_PHANTOM_FUNCTIONS: " \
+        "ReadonlyMap<string, UnicodemathPhantomSpec> = new Map([",
+        *data[:phantom_functions].map { |row| "  #{ts_broken(row, 1)}," },
+        "]);",
+      ].join("\n"),
       [
         CoreDataGenerator.ts_doc(
           "The classes the ported transform rules ask `is_a?` about, each with\n" \
@@ -1261,10 +1393,22 @@ module UnicodeMathParserDataGenerator
       ),
       overlays_notations: string_pairs(constants::OVERLAYS_NOTATIONS, "OVERLAYS_NOTATIONS"),
       belows_notations: string_pairs(constants::BELOWS_NOTATIONS, "BELOWS_NOTATIONS"),
+      sup_alphabets: string_pairs(constants::SUP_ALPHABETS, "SUP_ALPHABETS"),
+      sub_operators: string_pairs(constants::SUB_OPERATORS, "SUB_OPERATORS"),
+      sup_operators: string_pairs(constants::SUP_OPERATORS, "SUP_OPERATORS"),
+      sub_parenthesis_open: string_pairs(
+        constants::SUB_PARENTHESIS.fetch(:open), "SUB_PARENTHESIS[:open]"
+      ),
+      sub_parenthesis_close: string_pairs(
+        constants::SUB_PARENTHESIS.fetch(:close), "SUB_PARENTHESIS[:close]"
+      ),
       binary_functions: constants::BINARY_FUNCTIONS.dup,
       menclose: string_pairs(
         Plurimath::Utility::UNICODEMATH_MENCLOSE_FUNCTIONS, "UNICODEMATH_MENCLOSE_FUNCTIONS"
       ),
+      mask_classes: string_pairs(Plurimath::Utility::MASK_CLASSES, "MASK_CLASSES"),
+      unicode_fraction_parts: unicode_fraction_rows,
+      phantom_functions: phantom_rows,
       primes: string_pairs(Plurimath::Utility.primes_constants, "primes_constants"),
       is_a: is_a_rows(gem_dir),
     }

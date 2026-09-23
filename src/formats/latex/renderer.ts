@@ -46,10 +46,11 @@ import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
  * Renderer options, typed exactly (§5). `formatter` is B2's first slice
  * (TODO.plan/feature-roadmap.md, "Number formatting"; TODO.plan/
  * open-decisions.md, "Number-formatter API shape") — `Formatter::Standard`'s
- * default-symbol behavior only, resolved by `resolveNumberFormat`
+ * symbols and numeric pipeline (precision, significant digits, digit count,
+ * padding, number sign), resolved by `resolveNumberFormat`
  * (`../../formatting/number-format.ts`), which itself refuses by name every
- * field of the gem's `formatter:` keyword this slice does not implement
- * (precision, notation, base, ...). The gem's other
+ * field of the gem's `formatter:` keyword not yet implemented
+ * (notation, base, string format). The gem's other
  * two `to_latex` keywords — `unitsml:`, `options:` (formula.rb:141 on the
  * pinned oracle) — are still not implemented at all.
  */

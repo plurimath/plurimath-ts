@@ -4,8 +4,10 @@
  * `invert_unicode_symbols`, generated); otherwise ALWAYS `<msubsup>` with
  * `<mrow/>` placeholders for missing sub/sup (`validate_mathml_tag`,
  * ternary_function.rb:237 — probes int-sub / int-sup); a third slot appends
- * behind the msubsup in an outer `<mrow>` (identity `wrap_mrow`, intent
- * off — probe int-all). `options[:mask]` is checked by KEY (`function/int.rb:59`):
+ * behind the msubsup in an outer `<mrow>` (probe int-all); under intent it
+ * is wrapped in `<mrow>` unless it is one (`wrap_mrow`) and the outer
+ * `<mrow>` is tagged `:integral(...)` — a script with no third slot is
+ * returned untagged. `options[:mask]` is checked by KEY (`function/int.rb:59`):
  * only the inert `limits_default` decoding is supported
  * (`assertMaskIsInert`).
  */
@@ -14,10 +16,11 @@ import {
   assertMaskIsInert,
   hashOrNil,
   type NodeOf,
+  naryandIntent,
   present,
   type RenderContext,
   renderChild,
-  requireElement,
+  wrapMrow,
 } from "../../formats/mathml/render-shared";
 import { MATHML_UNICODE_INVERT } from "../../generated/mathml/render-tables";
 import { XmlElement } from "../../xml/index";
@@ -37,12 +40,14 @@ export function renderInt(node: NodeOf<"int">, context: RenderContext): XmlEleme
     assertMaskIsInert(options.mask, node.kind, "int.options.mask");
   }
   if (node.parameterThree === null || node.parameterThree === undefined) return msubsup;
-  const third = requireElement(
+  const third = wrapMrow(
     renderChild(node.parameterThree, context, "int.parameterThree"),
+    context.intent,
     node.kind,
     "int.parameterThree",
   );
-  return new XmlElement("mrow").append(msubsup, third);
+  const mrow = new XmlElement("mrow").append(msubsup, third);
+  return context.intent ? naryandIntent(mrow, ":integral") : mrow;
 }
 
 /**

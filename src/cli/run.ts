@@ -40,6 +40,7 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
   let input: string;
   try {
     input = file === undefined ? await io.readStdin() : io.readFile(file);
+    input = input.replace(/\r?\n$/, "");
   } catch (error) {
     io.writeErr(`plurimath: could not read input: ${(error as Error).message}\n`);
     return EXIT_RUNTIME_ERROR;

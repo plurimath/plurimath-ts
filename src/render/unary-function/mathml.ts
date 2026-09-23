@@ -26,6 +26,7 @@ import { RenderError, TextNode } from "../../core/index";
 import {
   describeSlot,
   FORMAT,
+  functionIntent,
   type MathmlRendered,
   mathmlValue,
   type NodeOf,
@@ -311,6 +312,8 @@ export function renderUnaryMathmlDefault(
   if (present(parameterOne)) {
     parts.push(...mathmlValue(parameterOne, context, `${className}.parameterOne`));
     unaryElement = new XmlElement("mrow").append(parts);
+    // `intentify(mrow, intent, func_name: :function, intent_name: ":function")`.
+    if (context.intent) functionIntent(unaryElement, ":function");
   } else {
     // `new_arr.first` — Ruby nil when the name was hidden.
     unaryElement = parts.length > 0 ? (parts[0] as MathmlRendered) : null;

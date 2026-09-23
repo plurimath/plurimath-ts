@@ -29,6 +29,7 @@ import { parseLatex, toLatex } from "../formats/latex/index";
 import { toMathml } from "../formats/mathml/index";
 import { toOmml } from "../formats/omml/renderer";
 import { parseUnicodemath, toUnicodemath } from "../formats/unicodemath/index";
+import { buildTreeDump, type DisplayFormat } from "./to-display";
 
 /**
  * The input formats the published constructor accepts.
@@ -64,14 +65,10 @@ export const FORMATS: readonly Format[] = [
  *   - `html`: `test/compat/html-battery.spec.ts`, 50/50 hand-typed inputs
  *     parsed to an exact match against the oracle.
  *   - `unicode`: `test/compat/unicodemath-battery.spec.ts`,
- *     `test/compat/unicodemath-battery-fixtures.json`, 47/49 hand-typed
+ *     `test/compat/unicodemath-battery-fixtures.json`, 49/49 hand-typed
  *     inputs parsed to an exact match (the 50th is a shared refusal both the
- *     port and the gem raise on), with two documented `KNOWN_PORT_GAPS`
- *     where the oracle parses but the 140-rule transform slice does not yet
- *     carry the needed rule family: chained interpunct multiplication
- *     (`a·b·c`) and primed function application (`f'(x)`). Both gaps raise
- *     `ParseError` rather than return a wrong model, so the divergence is a
- *     refusal gap, not a silent one.
+ *     port and the gem raise on); `KNOWN_PORT_GAPS`, where a divergence would
+ *     be recorded as a refusal gap, is empty.
  *
  * A partial parser behind this constructor is worse than an absent one, so
  * registration follows the same rule that kept `unicode` out before this
@@ -90,6 +87,15 @@ const PARSERS: Partial<Record<Format, (input: string) => FormulaNode>> = {
   html: parseHtml,
   unicode: parseUnicodemath,
 };
+
+/**
+ * The gem's `Formula::MATH_ZONE_TYPES` (`math/formula.rb:16`), downcased for
+ * the case-insensitive comparison `to_display` itself does
+ * (`type.downcase.to_sym`, `math/formula.rb:205`). Note this is `unicodemath`,
+ * not `unicode` -- `to_display`'s type token is the gem's own spelling, not
+ * this class's constructor `Format`.
+ */
+const DISPLAY_TYPES: readonly string[] = ["omml", "latex", "mathml", "asciimath", "unicodemath"];
 
 export default class Plurimath {
   /**
@@ -135,18 +141,13 @@ export default class Plurimath {
    *
    * The false path delegates with no options at all, which is exact:
    * measured on the pinned oracle, `to_mathml(intent: false)` is
-   * byte-identical to `to_mathml` with no keyword. The true path raises,
-   * because the intent pipeline is deferred and unmeasured — refusing is
-   * honest where inventing an `intent=` attribute would not be.
+   * byte-identical to `to_mathml` with no keyword. The true path is the
+   * renderer's `intent: true` (B4), which is the gem's pipeline; a tree it
+   * raises on (a lone `UpcaseDd`, among others) raises `RenderError` here as
+   * the gem's `ParseError` does there.
    */
   toMathml(intent: boolean = false): string {
-    if (intent) {
-      throw new UnsupportedFeatureError(
-        "toMathml(intent: true)",
-        "the intent attribute pipeline is deferred and unmeasured",
-      );
-    }
-    return toMathml(this.data);
+    return intent ? toMathml(this.data, { intent: true }) : toMathml(this.data);
   }
 
   toHtml(): string {
@@ -158,18 +159,53 @@ export default class Plurimath {
   }
 
   /**
-   * `Formula#to_display`, which the port does not have.
+   * `Formula#to_display` (`math/formula.rb:197-237`), reached the way THIS
+   * class reaches it: `this.data.$to_display(lang)` compiled and RUN through
+   * Opal (`plurimath-js/src/index.ts:31-33`), not native Ruby.
    *
-   * Not a thin wrapper over the renderers: the gem defines a per-format
-   * `to_<format>_math_zone` on each node class — 16, 16, 16, 17 and 16
-   * definitions across the five `MATH_ZONE_TYPES` — so this is its own port,
-   * not a switch. It raises rather than approximate one.
+   * A prior version of this method believed a Ruby String could never match
+   * `case type; when :asciimath ...` (`Symbol#===` on a String is `false` in
+   * native MRI), so it always returned the bare placeholder. That is correct
+   * for native MRI and WRONG for Opal, MEASURED (not read from source) by
+   * compiling the exact `case`/`when` shape from `formula.rb:203-215` with
+   * the same Opal version `plurimath-js` pins (1.8.3, `vendor/opal` at
+   * `6b4253a`) and RUNNING the compiled JS with Node — a standalone
+   * extraction rather than the full gem, because compiling the full gem
+   * through `plurimath-js/build.sh` (its entire dependency graph:
+   * lutaml-model, unitsml, omml, oga, parslet) did not finish inside this
+   * task's time budget; the dispatch mechanism a bare `case`/`when` compiles
+   * to does not depend on anything else in the file, so the extraction is
+   * sound (`./to-display.ts`'s module doc has the full account, the
+   * compiled JS excerpt, and the checked-in reproduction script). Measured:
+   *
+   *   probe.$to_display("latex")      // => "|_ Math zone\nLATEX-MATCHED"  (real dispatch)
+   *   probe.$to_display("LATEX")      // => "|_ Math zone\n"               (no arm matches)
+   *   probe.$to_display("Asciimath")  // => "|_ Math zone\n"               (no arm matches)
+   *
+   * So: a LOWERCASE valid name reaches the real per-node
+   * `to_<format>_math_zone` tree dump (`./to-display.ts`, ported from the
+   * gem's 17 math_zone files and cross-checked against the pinned oracle
+   * calling `to_display` with a real Symbol — proven equivalent to Opal's
+   * lowercase-string path by the measurement above). An UPPERCASE or
+   * MIXED-CASE valid name is still accepted by the type-validity check
+   * (which downcases before checking membership) but matches no `case` arm,
+   * so it falls through to the bare `"|_ Math zone\n"` placeholder — content
+   * independent, because no renderer ever runs on that path.
+   *
+   * `UnsupportedFormatError`, not `UnsupportedFeatureError`, for a bad
+   * `lang`: this is a token rejected for not being one of a fixed set,
+   * exactly what that error already means for the constructor's `format`
+   * (`PARSERS` above) -- message text is not API (`core/errors.ts:1-8`), so
+   * reusing it costs nothing and keeps the error taxonomy to two axes:
+   * format-token validation, and no-parser-yet.
    */
-  toDisplay(_lang: string): string {
-    throw new UnsupportedFeatureError(
-      "toDisplay",
-      "the per-format math-zone renderers it needs are not ported",
-    );
+  toDisplay(lang: string): string {
+    const lower = lang.toLowerCase();
+    if (!DISPLAY_TYPES.includes(lower)) {
+      throw new UnsupportedFormatError(lang);
+    }
+    if (lang !== lower) return "|_ Math zone\n";
+    return buildTreeDump(this.data, lower as DisplayFormat);
   }
 
   toUnicodemath(): string {

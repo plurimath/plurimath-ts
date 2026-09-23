@@ -4,16 +4,19 @@
  * probe sum-hide) returned bare when no value exists; otherwise
  * `<munderover>`/`<munder>`/`<mover>` by the first two slots (`sum_tag`,
  * :163 — probes sum-under / sum-over), nil slots contributing nothing; a
- * third slot appends behind it in an outer `<mrow>` (probe sum-all;
- * `ternary_intentify` identity, intent off).
+ * third slot appends behind it in an outer `<mrow>` (probe sum-all). Under
+ * intent the third slot is wrapped in `<mrow>` unless it is one
+ * (`wrap_mrow`) and `ternary_intentify` tags the outer `<mrow>`
+ * `:sum(...)`; `Sum` (unlike `Prod`) leaves a two-slot script untagged.
  */
 
 import {
   type NodeOf,
+  naryandIntent,
   present,
   type RenderContext,
   renderChild,
-  requireElement,
+  wrapMrow,
 } from "../../formats/mathml/render-shared";
 import { MATHML_UNICODE_INVERT } from "../../generated/mathml/render-tables";
 import { XmlElement } from "../../xml/index";
@@ -24,7 +27,10 @@ export function renderSum(node: NodeOf<"sum">, context: RenderContext): XmlEleme
 
 /**
  * The shared body: `function/sum.rb` and `function/prod.rb` repeat it verbatim (`sum_tag` /
- * `prod_tag_name` are the same underover choice). Exported for
+ * `prod_tag_name` are the same underover choice); where they differ is the
+ * intent path — `Prod#to_mathml_without_math_tag` also runs
+ * `ternary_intentify` on a script with no third slot, `Sum` returns it bare
+ * (function/prod.rb:71-73, function/sum.rb:77). Exported for
  * `../prod/mathml.ts`.
  */
 export function renderBigUnderover(
@@ -54,11 +60,16 @@ export function renderBigUnderover(
       ? null
       : renderChild(node.parameterTwo, context, `${className}.parameterTwo`),
   );
-  if (node.parameterThree === null || node.parameterThree === undefined) return script;
-  const third = requireElement(
+  const intentName = className === "sum" ? ":sum" : ":product";
+  if (node.parameterThree === null || node.parameterThree === undefined) {
+    return className === "prod" && context.intent ? naryandIntent(script, intentName) : script;
+  }
+  const third = wrapMrow(
     renderChild(node.parameterThree, context, `${className}.parameterThree`),
+    context.intent,
     node.kind,
     `${className}.parameterThree`,
   );
-  return new XmlElement("mrow").append(script, third);
+  const mrow = new XmlElement("mrow").append(script, third);
+  return context.intent ? naryandIntent(mrow, intentName) : mrow;
 }

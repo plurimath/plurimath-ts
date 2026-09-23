@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-unicodemath-model-fixtures.rb
-  sha256: 9371d4277f46e5cdcaea53c50e5add551363f22279ef2dc3498c5512a1dca4a9
+  sha256: 27aae39b7b085946e31774fc8dc440bb85e604dfce864b2d3c68b0672bfa4fab
   inputs:
     scripts/generate-corpus.rb: 54d7b3f2a691c63c26d5c5667c6690da32098a4a5e0a9aa5207e3a73d796074b
-    scripts/generate-unicodemath-model-fixtures.rb: 9371d4277f46e5cdcaea53c50e5add551363f22279ef2dc3498c5512a1dca4a9
+    scripts/generate-unicodemath-model-fixtures.rb: 27aae39b7b085946e31774fc8dc440bb85e604dfce864b2d3c68b0672bfa4fab
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: c50ab914cae5248073c639795eca3ff8d9766057
+    commit: 67f581e2c267a818e2575fa56b1862b365503f17
     clean: true
     dirty_paths: []
 oracle:
@@ -115,5 +115,5 @@ corpus:
 payload:
   path: model-fixtures.json
   schema: plurimath-corpus/unicodemath-model/1
-  sha256: b40c06480b1708b10f67dba2a1535d38720f0193f957938dd2e2cef2b469ecee
-  bytes: 948499
+  sha256: edf26c56aa3974452f6170edc1f25f47bace411df1ad5e3e9ed6db2d22b8b71d
+  bytes: 1014468

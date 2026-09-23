@@ -4,19 +4,21 @@
  *
  * The rows are `test/formats/evaluation/evaluation-fixtures.json`, written by
  * `scripts/generate-evaluation-fixtures.rb` from the pinned gem (plurimath
- * 0.11.6, `00c52783`) — every in-scope operator, implicit multiplication,
- * nesting, each reachable error class, the non-real `^` case, overflow, an
- * unbound variable and a bad binding value. `expected` is a STRING there
- * (Ruby's `Integer`/`Float#inspect`), never a JSON number, so this file
- * converts it back with `Number(...)` rather than comparing strings — both
- * languages print the shortest round-trip decimal for an IEEE-754 double, so
- * `Number(row.expected)` and the port's own `number` result are the same bit
- * pattern whichever of the two produced the string.
+ * 0.11.6, `00c52783`). `expected` is Ruby's `Integer#inspect`/`Float#inspect`
+ * STRING, so each row checks two things: the value (`Object.is`, so `-0.0`
+ * and `0` stay apart) and the Ruby kind the string records (`5` is an
+ * Integer, `2.0` a Float) against the kind the port tracks internally
+ * (`src/evaluation/numeric.ts`) — the tracking that decides where the port
+ * must refuse. A row with `portRefusal` is one the port refuses with
+ * `UnsupportedFeatureError` whatever the oracle answered: an unported
+ * gem-evaluated node, or a result a JS number cannot hold exactly.
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { UnsupportedFeatureError } from "../../src/core/errors";
+import { Evaluator } from "../../src/evaluation/evaluator";
 import {
   DivisionByZeroError,
   type EvaluationBindings,
@@ -39,6 +41,7 @@ interface Row {
   readonly bindings: Readonly<Record<string, number | string | boolean | null>>;
   readonly expected?: string;
   readonly raises?: string;
+  readonly portRefusal?: string;
 }
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -111,8 +114,20 @@ describe("evaluate() against the oracle fixtures", () => {
     const formula = parseAsciimath(row.input.text);
     const bindings = toBindings(row.bindings);
     expect(Number(row.expected !== undefined) + Number(row.raises !== undefined), row.id).toBe(1);
+    if (row.portRefusal !== undefined) {
+      expect(() => evaluate(formula, bindings), row.id).toThrow(UnsupportedFeatureError);
+      return;
+    }
     if (row.expected !== undefined) {
-      expect(evaluate(formula, bindings), row.id).toBe(Number(row.expected));
+      // Only an Integer or a Float in the safe range may go unrefused; the
+      // generator aborts otherwise, and this keeps that promise checked.
+      expect(row.expected, row.id).toMatch(/^-?\d+$|[.eIN]/);
+      const rubyKind = /^-?\d+$/.test(row.expected) ? "integer" : "float";
+      const result = Evaluator.runWithKind(formula, bindings);
+      expect(result.value, row.id).toBe(Number(row.expected));
+      expect(result.kind, row.id).toBe(rubyKind);
+      if (rubyKind === "integer") expect(Number.isSafeInteger(result.value), row.id).toBe(true);
+      expect(evaluate(formula, bindings), row.id).toBe(result.value);
       return;
     }
     const raises = row.raises as string;
@@ -129,6 +144,19 @@ describe("evaluate() against the oracle fixtures", () => {
     }
     expect(thrown, row.id).toBeInstanceOf(errorClass);
     expect((thrown as { code: string }).code, row.id).toBe(expectedCode);
+  });
+
+  it("covers every refusal reason and both kinds", () => {
+    const reasons = new Set(rows.flatMap((row) => (row.portRefusal ? [row.portRefusal] : [])));
+    expect([...reasons].sort()).toEqual([
+      "big-integer",
+      "pow-rounding-band",
+      "rational",
+      "unported",
+    ]);
+    const plain = rows.filter((row) => row.portRefusal === undefined && row.expected !== undefined);
+    expect(plain.some((row) => /^-?\d+$/.test(row.expected as string))).toBe(true);
+    expect(plain.some((row) => !/^-?\d+$/.test(row.expected as string))).toBe(true);
   });
 });
 
@@ -156,27 +184,5 @@ describe("evaluate() — measurements not covered by the oracle fixtures", () =>
     expect(error.message).toBe(
       "wrong type for binding key (given Array, expected String or Symbol)",
     );
-  });
-
-  /**
-   * `mod`, `sin`/every trig function, and `Sum`/`Prod` are OUT of scope for
-   * this slice — refused as `UnsupportedExpressionError`, not implemented.
-   * This is a DELIBERATE divergence from the oracle, not a bug: the gem does
-   * not refuse any of these the same way. `7 mod 3` fully evaluates to `1`
-   * (`Function::Mod#evaluate` exists in the gem); `sin(x)` and
-   * `sum_(i=1)^n i` reach `MissingVariableError` first, because the gem's own
-   * trig/n-ary `#evaluate` evaluates its argument eagerly before doing
-   * anything else — measured against the oracle, `scripts/
-   * generate-evaluation-fixtures.rb`'s "mod/sin/sum rows" comment has the
-   * detail. A fixture recording the oracle's actual answer here would assert
-   * the wrong thing about this port, which is why these three are hand-
-   * written instead of fixture-driven.
-   */
-  it.each([
-    ["mod, fully supported by the gem, refused here", "7 mod 3"],
-    ["sin, argument evaluated eagerly by the gem before its own refusal", "sin(x)"],
-    ["sum, argument evaluated eagerly by the gem before its own refusal", "sum_(i=1)^n i"],
-  ])("%s: %s raises UnsupportedExpressionError", (_label, text) => {
-    expect(() => evaluate(parseAsciimath(text))).toThrow(UnsupportedExpressionError);
   });
 });

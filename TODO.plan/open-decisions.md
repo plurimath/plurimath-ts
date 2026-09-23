@@ -393,3 +393,35 @@ maintainer's own preference is the opposite — one evaluation error type — an
 is deferred rather than dropped: `TODO.plan/deferred.md`'s "Parked ideas" has
 the entry, to be changed in both the gem and the port together once the
 byte-identical structure is done.
+
+## Evaluation return type (B6, first slice)
+
+The gem's `Formula#evaluate` returns whatever Ruby's arithmetic produces: an
+`Integer` (`2+3` is `5`), a `Float` (`6/3` is `2.0`), an arbitrary-precision
+`Integer` (`2^100`), or a `Rational` (`2^(-1)` is `(1/2)`). JavaScript has one
+`number` type. The question for the port: what `evaluate` returns, and what
+happens where Ruby's answer has no exact JS `number`.
+
+**SETTLED 2026-09-23** (the user): follow Plurimath's documented behaviour.
+The gem README's "Evaluating formulas" section (`README.adoc:289-363` at the
+pinned oracle `00c52783`) documents `evaluate` as computing "numeric results"
+(examples `5.0` and `9`) and says "Division uses `Float` arithmetic"; it
+documents no arbitrary-precision Integer or Rational result. So `evaluate`
+returns a JS `number` for every documented case, and throws
+`UnsupportedFeatureError` (a port limitation, not an evaluation error) where
+Ruby's answer cannot be represented exactly: an Integer outside
+`Number.isSafeInteger`, or a Rational (an Integer raised to a negative
+Integer power). Ruby's Integer-versus-Float distinction (`9` versus `5.0`) is
+not observable in JavaScript. `src/evaluation/numeric.ts` tracks Ruby's kind
+internally, following Ruby's promotion rules as measured on the oracle, so
+the refusal fires exactly at the operation where Ruby would produce such a
+value; `test/evaluation/evaluate.spec.ts` checks that kind against the oracle
+for every fixture row. A binding holding a safe integer is read as a Ruby
+Integer, any other number as a Float.
+
+The same reasoning covers Float powers: Ruby's `**` calls the C library's
+`pow`, which JavaScript's `**` does not reproduce, and glibc's `pow` itself is
+not correctly rounded within 0.04 ULP of a midpoint (its documented 0.54 ULP
+worst case). `src/evaluation/pow.ts` returns the correctly rounded result,
+which is glibc's everywhere outside that band, and refuses inside it with
+`UnsupportedFeatureError`.

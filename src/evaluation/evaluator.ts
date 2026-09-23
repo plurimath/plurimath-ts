@@ -10,20 +10,23 @@
  * one method per class), this port's nodes are plain data (ARCHITECTURE.md
  * §5) — `dispatch` below is the single `switch (node.kind)` that stands in
  * for it, one branch per node kind this slice supports. Every other kind
- * falls through to the same place `Core#evaluate`'s default lands in the gem:
- * `unsupported`.
+ * lands in `unported`, which tells apart the two reasons a node is not
+ * evaluated here: the gem evaluates it but this slice has not ported that yet
+ * (`UnsupportedFeatureError`), or the gem itself refuses it through
+ * `Core#evaluate`'s default (`UnsupportedExpressionError`, as the gem raises).
+ *
+ * Every intermediate value is a `RubyNumeric` (`numeric.ts`): the number and
+ * the Ruby kind (Integer or Float) the gem would hold, so Ruby's promotion
+ * rules — and the refusals where Ruby's answer has no exact JS `number` — are
+ * applied where the gem applies them.
  */
 
+import { UnsupportedFeatureError } from "../core/errors";
 import { type FormulaNode, type MathNode, NODE_KINDS, type NodeParameter } from "../core/nodes";
 import { type EvaluationBindings, type NormalizedBindings, normalizeBindings } from "./bindings";
-import {
-  DivisionByZeroError,
-  MathDomainError,
-  MissingVariableError,
-  NonFiniteResultError,
-  UnsupportedExpressionError,
-} from "./errors";
+import { MissingVariableError, NonFiniteResultError, UnsupportedExpressionError } from "./errors";
 import { ExpressionParser } from "./expression-parser";
+import { divide, float, fromBinding, integer, power, type RubyNumeric } from "./numeric";
 import { reservedConstant, type SymbolData, variableName } from "./operators";
 
 /**
@@ -60,8 +63,9 @@ function isMathNode(node: unknown): node is MathNode {
 
 /**
  * Ruby: `Number#evaluate` (`number.rb`) — an integer-shaped literal parses as
- * an Integer, everything else as a Float; both collapse to the same JS
- * `number` here; see `evaluate.spec.ts`'s "Number#evaluate" measurements.
+ * an Integer (`raw_value.to_i`), everything else as a Float (`Float(raw)`).
+ * An Integer literal beyond the safe range is refused by `integer()`, the
+ * same as any other Integer JavaScript cannot hold exactly.
  * `Float()`'s strictness (rejects trailing garbage, hex, leading/trailing
  * whitespace `Float` itself tolerates in Ruby only via `String#to_f`) is
  * mirrored with an explicit pattern rather than JavaScript's looser `Number()`
@@ -77,10 +81,83 @@ function isMathNode(node: unknown): node is MathNode {
 const INTEGER_PATTERN = /^[+-]?\d+$/;
 const FLOAT_PATTERN = /^[+-]?(\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
 
-function evaluateNumber(node: NumberData): number {
+function evaluateNumber(node: NumberData): RubyNumeric {
   const raw = String(node.value ?? "");
-  if (INTEGER_PATTERN.test(raw) || FLOAT_PATTERN.test(raw)) return Number(raw);
+  if (INTEGER_PATTERN.test(raw)) return integer(Number(raw));
+  if (FLOAT_PATTERN.test(raw)) return float(Number(raw));
   throw new UnsupportedExpressionError(`number \`${raw}\``);
+}
+
+/**
+ * The gem classes whose `#evaluate` is their own rather than `Core`'s
+ * refusing default — measured on the oracle by listing every
+ * `Plurimath::Math` class for which `instance_method(:evaluate).owner` is not
+ * `Core` (no subclass inherits one; `Symbols::*` subclasses all share
+ * `Symbols::Symbol#evaluate`, handled by `evaluateSymbol`). A node of one of
+ * these classes that this slice does not evaluate is a PORT gap,
+ * `UnsupportedFeatureError`; any other class is refused by the gem itself,
+ * which this port mirrors as `UnsupportedExpressionError`.
+ *
+ * The `binaryFunction`/`unaryFunction`/`ternaryFunction` carriers hold the
+ * Ruby class basename in `name` (`core/nodes.ts`); the other kinds map to one
+ * gem class each.
+ */
+const GEM_EVALUATED_FUNCTIONS: ReadonlySet<string> = new Set([
+  "Abs",
+  "Arccos",
+  "Arcsin",
+  "Arctan",
+  "Ceil",
+  "Cos",
+  "Cosh",
+  "Cot",
+  "Coth",
+  "Csc",
+  "Csch",
+  "Exp",
+  "Floor",
+  "Gcd",
+  "Lcm",
+  "Lg",
+  "Ln",
+  "Log",
+  "Max",
+  "Min",
+  "Mod",
+  "Prod",
+  "Root",
+  "Sec",
+  "Sech",
+  "Sin",
+  "Sinh",
+  "Sqrt",
+  "Sum",
+  "Tan",
+  "Tanh",
+  "Text",
+]);
+
+/** Node kinds whose single gem class is in `GEM_EVALUATED_FUNCTIONS`. */
+const GEM_EVALUATED_KINDS: ReadonlyMap<string, string> = new Map([
+  ["abs", "Abs"],
+  ["ceil", "Ceil"],
+  ["floor", "Floor"],
+  ["prod", "Prod"],
+  ["sqrt", "Sqrt"],
+  ["sum", "Sum"],
+  ["text", "Text"],
+]);
+
+/** The gem class a node would be, when the gem evaluates that class; `null` otherwise. */
+function gemEvaluatedClass(node: MathNode): string | null {
+  switch (node.kind) {
+    case "binaryFunction":
+    case "unaryFunction":
+    case "ternaryFunction":
+      return GEM_EVALUATED_FUNCTIONS.has(node.name) ? node.name : null;
+    default:
+      return GEM_EVALUATED_KINDS.get(node.kind) ?? null;
+  }
 }
 
 /**
@@ -89,15 +166,15 @@ function evaluateNumber(node: NumberData): number {
  * had reason to resolve against the gem's own class names (message text is
  * never API, `core/errors.ts`'s header). `binaryFunction`/`unaryFunction`/
  * `ternaryFunction` carry their Ruby class basename in `name`
- * (`core/nodes.ts`), which is the one case worth being precise about: it is
- * what distinguishes `Function::Mod` (measured, `evaluate.spec.ts`) from
- * every other deferred binary function sharing this fallback.
+ * (`core/nodes.ts`). `Symbols::Equal` has its own phrase in the gem's
+ * `unsupported_message` ("equation"; measured: `1=1`), reproduced here.
  */
 function describeUnsupportedNode(node: MathNode): string {
   switch (node.kind) {
     case "number":
       return `number \`${node.value}\``;
     case "symbol":
+      if (node.id === "Equal") return "equation";
       return node.id === "Symbol" && node.value
         ? `symbol \`${node.value}\``
         : `Symbols::${node.id}`;
@@ -136,12 +213,12 @@ export class Evaluator {
     this.bindings = normalizeBindings(bindings);
   }
 
-  evaluateFormula(formula: FormulaNode | Extract<MathNode, { kind: "formula" }>): number {
+  evaluateFormula(formula: FormulaNode | Extract<MathNode, { kind: "formula" }>): RubyNumeric {
     return this.realResult(new ExpressionParser(this, formula.value ?? []).parse());
   }
 
   /** Ruby: `Evaluator#evaluate_nodes` — a `Fenced` body, evaluated as its own formula. */
-  evaluateNodes(nodes: NodeParameter): number {
+  evaluateNodes(nodes: NodeParameter): RubyNumeric {
     return this.realResult(new ExpressionParser(this, toNodeArray(nodes)).parse());
   }
 
@@ -156,53 +233,21 @@ export class Evaluator {
    * array or a `NodeOptions` object, neither reachable through the AsciiMath
    * grammar this slice covers).
    */
-  evaluateNode(node: NodeParameter | undefined): number {
+  evaluateNode(node: NodeParameter | undefined): RubyNumeric {
     if (node === undefined || node === null) this.unsupported("missing operand");
     if (!isMathNode(node)) this.unsupported("malformed token");
     if (node.kind === "formula") return this.evaluateFormula(node);
     return this.realResult(this.dispatch(node));
   }
 
-  /** Ruby: `Evaluator#value_for`. */
-  valueFor(name: string): number {
+  /**
+   * Ruby: `Evaluator#value_for`. The binding's Ruby kind is inferred from the
+   * JS value (`numeric.ts`'s `fromBinding`: a safe integer is an Integer).
+   */
+  valueFor(name: string): RubyNumeric {
     const value = this.bindings.get(name);
     if (value === undefined) throw new MissingVariableError(name);
-    return value;
-  }
-
-  /** Ruby: `Evaluator#divide`. */
-  divide(dividend: number, divisor: number): number {
-    if (divisor === 0) throw new DivisionByZeroError();
-    return dividend / divisor;
-  }
-
-  /**
-   * Ruby: `Evaluator#power`, calling `base**exponent` and rejecting a
-   * non-real result. Ruby's `**` promotes a negative base with a non-integer
-   * exponent to `Complex`, which `real_result` then rejects
-   * (`(-1)**0.5` measured as `MathDomainError: "result is not a real
-   * number"`); JavaScript's `**` has no complex numbers and computes `NaN`
-   * for the same input, which is indistinguishable from a `NaN` PROPAGATING
-   * through a real Float operand (Ruby: `Float::NAN ** 2` is `NaN`, still a
-   * real Float, rejected only by the FINAL finite check as
-   * `NonFiniteResultError` — measured, `evaluate.spec.ts`). The domain check
-   * below is evaluated BEFORE computing the power, on the real-number rule
-   * that actually distinguishes the two Ruby outcomes (negative base,
-   * non-integer exponent), so a genuinely non-real result and a propagating
-   * `NaN` land on the same errors the gem raises for each.
-   *
-   * `0 ** negative` also has a Ruby-specific detour: `Integer#**` raises
-   * `ZeroDivisionError` directly for `0 ** -1` (measured), which the
-   * evaluator's own `rescue ::ZeroDivisionError` turns into
-   * `DivisionByZeroError` — mirrored explicitly here since JavaScript's `**`
-   * would otherwise compute `Infinity`.
-   */
-  power(base: number, exponent: number): number {
-    if (base === 0 && exponent < 0) throw new DivisionByZeroError();
-    if (base < 0 && !Number.isInteger(exponent)) {
-      throw new MathDomainError("result is not a real number");
-    }
-    return base ** exponent;
+    return fromBinding(value);
   }
 
   /**
@@ -212,25 +257,35 @@ export class Evaluator {
    * the FINAL finite check below, never `MathDomainError`). JavaScript has no
    * `Complex`, so every `number` — `NaN` included — is already "real" by
    * construction; this is a passthrough, not a no-op stand-in for a check
-   * this port cannot make. The one place a value is genuinely non-real
-   * (a negative base to a non-integer power) is caught earlier, in `power()`,
-   * on the actual mathematical rule that makes it so — BEFORE computing `**`,
-   * so it does not depend on whether the computed value happens to be `NaN`
-   * (which `power()` must also accept as a legitimate propagating operand,
-   * e.g. `power(NaN, 2)`, itself real per the same Ruby rule).
+   * this port cannot make. The one operation in this slice that can produce
+   * a `Complex` in Ruby, `**`, raises the gem's `MathDomainError` itself
+   * (`numeric.ts`'s `power`), on the same test Ruby uses to return one.
    */
-  private realResult(value: number): number {
+  private realResult(value: RubyNumeric): RubyNumeric {
     return value;
   }
 
-  /** Ruby: `Evaluator#unsupported`. */
+  /** Ruby: `Evaluator#unsupported` — a refusal the gem itself makes. */
   unsupported(nodeOrMessage: MathNode | string): never {
     const detail =
       typeof nodeOrMessage === "string" ? nodeOrMessage : describeUnsupportedNode(nodeOrMessage);
     throw new UnsupportedExpressionError(detail);
   }
 
-  private dispatch(node: MathNode): number {
+  /**
+   * A node `dispatch` has no branch for: a port gap when the gem evaluates
+   * that class (`gemEvaluatedClass`), the gem's own refusal otherwise.
+   */
+  private unported(node: MathNode): never {
+    const gemClass = gemEvaluatedClass(node);
+    if (gemClass === null) return this.unsupported(node);
+    throw new UnsupportedFeatureError(
+      "evaluate",
+      `Function::${gemClass} is evaluated by the gem but not ported to this slice yet`,
+    );
+  }
+
+  private dispatch(node: MathNode): RubyNumeric {
     switch (node.kind) {
       case "number":
         return evaluateNumber(node);
@@ -246,37 +301,40 @@ export class Evaluator {
       // `FracNode` (`parseAsciimath("6/3")`), never a loose divide-operator
       // token — `ExpressionParser`'s header has the rest of this finding.
       case "frac":
-        return this.divide(
-          this.evaluateNode(node.parameterOne),
-          this.evaluateNode(node.parameterTwo),
-        );
+        return divide(this.evaluateNode(node.parameterOne), this.evaluateNode(node.parameterTwo));
       case "binaryFunction":
         if (node.name === "Power") {
-          return this.power(
-            this.evaluateNode(node.parameterOne),
-            this.evaluateNode(node.parameterTwo),
-          );
+          return power(this.evaluateNode(node.parameterOne), this.evaluateNode(node.parameterTwo));
         }
-        return this.unsupported(node);
+        return this.unported(node);
       default:
-        return this.unsupported(node);
+        return this.unported(node);
     }
   }
 
-  /** Ruby: `Symbols::Symbol#evaluate`. */
-  private evaluateSymbol(node: SymbolData): number {
+  /** Ruby: `Symbols::Symbol#evaluate`. `::Math::PI` is a Float. */
+  private evaluateSymbol(node: SymbolData): RubyNumeric {
     const constant = reservedConstant(node);
-    if (constant !== null) return constant;
+    if (constant !== null) return float(constant);
     const name = variableName(node);
     if (name === null) return this.unsupported(node);
     return this.valueFor(name);
   }
 
-  /** Ruby: `Evaluator#evaluate` — the entry point `evaluate.ts` calls. */
-  static run(formula: FormulaNode, bindings: EvaluationBindings = {}): number {
+  /**
+   * Ruby: `Evaluator#evaluate` — the entry point `index.ts`'s `evaluate`
+   * calls (through `run`). Returns the Ruby kind alongside the value, so the
+   * oracle fixtures can check the kind tracking itself; the kind is not part
+   * of the public result.
+   */
+  static runWithKind(formula: FormulaNode, bindings: EvaluationBindings = {}): RubyNumeric {
     const evaluator = new Evaluator(bindings);
     const result = evaluator.evaluateFormula(formula);
-    if (!Number.isFinite(result)) throw new NonFiniteResultError();
+    if (!Number.isFinite(result.value)) throw new NonFiniteResultError();
     return result;
+  }
+
+  static run(formula: FormulaNode, bindings: EvaluationBindings = {}): number {
+    return Evaluator.runWithKind(formula, bindings).value;
   }
 }

@@ -14,11 +14,25 @@
 # small, matching the slice's own scope — with bindings, covering every
 # in-scope operator, implicit multiplication, nesting, each reachable error
 # class, the non-real `^` case, overflow, an unbound variable and a bad
-# binding value. `expected` is recorded as a STRING, never a JSON number:
-# Ruby's `Integer`/`Float` distinction (`2+3` => `5`, `6/3` => `2.0`) would be
-# lost the instant a JSON number round-tripped through a JS parser, and
-# `evaluate.spec.ts` compares against `Number(expected)` deliberately, not
-# against the string itself, once it has recorded what shape the value was.
+# binding value. `expected` is recorded as a STRING (`Integer#inspect` /
+# `Float#inspect`), never a JSON number: Ruby's `Integer`/`Float` distinction
+# (`2+3` => `5`, `6/3` => `2.0`) would be lost the instant a JSON number
+# round-tripped through a JS parser. `evaluate.spec.ts` checks both the value
+# and the Ruby kind the string records against the port's internal kind.
+#
+# `portRefusal` marks a row the port refuses with `UnsupportedFeatureError`
+# although the oracle answers or raises something else: a construct the gem
+# evaluates that this slice has not ported (`mod`, `sin`, `sum`, ...), or a
+# result a JS number cannot hold exactly (a Rational, an Integer beyond
+# `Number.MAX_SAFE_INTEGER`, a Float power within glibc's rounding band —
+# `src/evaluation/numeric.ts` and `pow.ts`). The oracle's own answer is still
+# recorded, so the refusal is visibly a refusal of THAT answer. A Rational or
+# out-of-range Integer answer without a `portRefusal` aborts generation.
+#
+# A binding value is either an Integer or a non-integral Float (or a
+# non-finite Float): JavaScript cannot express `2.0` apart from `2`, and the
+# port reads a safe-integer binding as a Ruby Integer (`numeric.ts`'s
+# `fromBinding`), so an integral Float binding would test nothing real.
 #
 # `InvalidBindingKeyError` has no row here: this port's public bindings type
 # is a plain JS object (`src/evaluation/bindings.ts`), and every JS object key
@@ -92,7 +106,13 @@ def json_safe(value)
   value
 end
 
-def evaluate_row(id, group, source, text, bindings)
+def evaluate_row(id, group, source, text, bindings, port_refusal)
+  bindings.each do |name, value|
+    next unless value.is_a?(Float) && value.finite? && value == value.round
+
+    abort "REFUSING: #{id}: binding #{name} is the integral Float #{value.inspect}, " \
+          "which a JS number cannot tell apart from the Integer #{value.to_i}"
+  end
   formula = Plurimath::Asciimath::Parser.new(text).parse
   row = {
     "id" => id,
@@ -103,12 +123,21 @@ def evaluate_row(id, group, source, text, bindings)
   }
   begin
     result = formula.evaluate(symbolize(bindings))
+    unless result.is_a?(Integer) || result.is_a?(Float)
+      abort "REFUSING: #{id}: #{result.inspect} is a #{result.class}" unless port_refusal
+    end
+    if result.is_a?(Integer) && result.abs > MAX_SAFE_INTEGER && !port_refusal
+      abort "REFUSING: #{id}: #{result} is beyond Number.MAX_SAFE_INTEGER"
+    end
     row["expected"] = result.inspect
   rescue EVALUATION_ERROR => e
     row["raises"] = e.class.name
   end
+  row["portRefusal"] = port_refusal if port_refusal
   row
 end
+
+MAX_SAFE_INTEGER = (2**53) - 1
 
 ROWS = [
   # Additive / multiplicative / unary, `Number#evaluate`'s Integer-vs-Float split.
@@ -136,10 +165,8 @@ ROWS = [
   ["power-fraction-exponent", "power", "4^0.5"],
   ["power-negative-base-integer-exponent", "power", "(-2)^3"],
   ["power-chained", "power", "2^3^2"],
-  # `2^(-1)` (an Integer exponent) would evaluate to Ruby's Rational `(1/2)`,
-  # a THIRD return-type surface this slice does not cover (`evaluate.spec.ts`'s
-  # module header and `open-decisions.md` cover only Integer/Float); `-1.0`
-  # keeps the exponent a Float, which `**` always answers as a Float.
+  # `-1.0` keeps the exponent a Float, which `**` always answers as a Float;
+  # the Integer `-1` gives a Rational — see the "representability" group.
   ["power-parenthesized-negative-exponent", "power", "2^(-1.0)"],
   ["power-non-real", "power", "(-1)^0.5"],
   ["power-non-real-root", "power", "(-8)^(1/3)"],
@@ -169,19 +196,99 @@ ROWS = [
   ["invalid-binding-boolean", "error-invalid-binding", "a+1"],
   ["invalid-binding-nil", "error-invalid-binding", "a+1"],
   ["malformed-two-numbers", "error-unsupported", "2 3"],
-].freeze
+  ["equation-unsupported", "error-unsupported", "1=1"],
+  ["core-default-int", "error-unsupported", "int x"],
+  ["core-default-base", "error-unsupported", "a_1"],
+  ["core-default-lim", "error-unsupported", "lim_(x->0) x"],
+  ["comma-in-group", "error-unsupported", "(2,3)"],
 
-# `mod`, `sin`, `sum`/`Prod` and friends are OUT of scope for this slice
-# (`TODO.plan/feature-roadmap.md`'s evaluation entry) — deliberately refused
-# with `UnsupportedExpressionError` rather than fully implemented. The oracle
-# itself does NOT refuse all of them the same way: `7 mod 3` fully evaluates
-# to `1` (`Function::Mod#evaluate` exists), and `sin(x)`/`sum_(i=1)^n i`
-# reach `MissingVariableError` first (their argument is evaluated eagerly,
-# before the gem's own unary/n-ary trig or sum logic runs) — neither is the
-# port's chosen `UnsupportedExpressionError`. Recording the ORACLE's answer
-# for these as a parity fixture would assert the wrong thing about the port,
-# so they are not here; `evaluate.spec.ts`'s own "not covered by the oracle
-# fixtures" section documents the chosen divergence directly instead.
+  # Loose parens: a paren the grammar does not pair into `Fenced` reaches the
+  # evaluator as a bare `Symbols::Paren::*` token (`ExpressionParser#parse_group`).
+  ["loose-vert-group", "loose-paren", "|2|"],
+  ["loose-vert-implicit-mul", "loose-paren", "3|2|"],
+  ["unclosed-round-fenced", "loose-paren", "(2+3"],
+  ["stray-close-paren", "loose-paren", "2+3)"],
+  ["unmatched-vert", "loose-paren", "|2"],
+
+  # Ruby's Integer-vs-Float kinds, including `-0` (an Integer `0`) versus `-0.0`.
+  ["integer-negative-zero", "kind", "-0"],
+  ["integer-zero-times-negative", "kind", "0*(-3)"],
+  ["float-negative-zero", "kind", "-0.0"],
+  ["integer-times-float", "kind", "a b"],
+  ["float-binding-squared", "kind", "a^2"],
+  ["integer-base-float-exponent", "kind", "(-2)^2.0"],
+  ["integer-one-to-negative", "kind", "1^(-1)"],
+  ["integer-minus-one-to-negative-odd", "kind", "(-1)^(-3)"],
+  ["integer-zero-to-zero", "kind", "0^0"],
+  ["integer-largest-safe-power", "kind", "3^33"],
+  ["integer-largest-safe-literal", "kind", "9007199254740991"],
+
+  # Infinities and zero bases in power position (`Integer#**`/`Float#**`).
+  ["power-minus-one-to-infinity", "power-special", "(-1)^a"],
+  ["power-minus-two-to-minus-infinity", "power-special", "(-2)^a"],
+  ["power-zero-to-negative-float", "power-special", "0^(-1.0)"],
+  ["power-zero-to-negative-integer-binding", "power-special", "0^a"],
+  ["power-float-zero-to-negative-integer", "power-special", "0.0^(-1)"],
+  ["power-zero-to-nan", "power-special", "0^a"],
+  ["power-zero-to-minus-infinity", "power-special", "0^a"],
+  ["power-negative-to-nan", "power-special", "(-2)^a"],
+  ["power-minus-infinity-to-half", "power-special", "a^b"],
+  ["power-minus-infinity-to-three", "power-special", "a^b"],
+  ["power-infinity-to-minus-one", "power-special", "a^b"],
+  ["power-one-to-nan", "power-special", "1^a"],
+  ["power-one-to-infinity", "power-special", "1^a"],
+  ["power-nan-to-zero", "power-special", "a^0"],
+  ["infinity-plus-one", "infinity", "a+1"],
+  ["infinity-minus-infinity", "infinity", "a-a"],
+  ["one-over-infinity", "infinity", "1/a"],
+  ["infinity-times-zero", "infinity", "a*0"],
+  ["infinite-intermediate-divided-away", "infinity", "2^(1/0.0^(-0.1))"],
+
+  # Float powers go through C's `pow`, which JavaScript's `**` does not match.
+  ["pow-rounding-chained", "pow-rounding", "a^b^c"],
+  ["pow-rounding-inverse-sqrt", "pow-rounding", "a^b^c"],
+  ["pow-rounding-in-sum", "pow-rounding", "0.1/(-1)2.0^c+9/4"],
+  ["pow-float-literal", "pow-rounding", "2^1.5"],
+
+  # Results a JS number cannot hold exactly: refused by the port.
+  ["rational-integer-negative-power", "representability", "2^(-1)"],
+  ["rational-intermediate-to-float", "representability", "2^(-1)*2.0"],
+  ["rational-zero-numerator", "representability", "a 3^(-1)"],
+  ["rational-in-sum", "representability", "5+7^(-9)"],
+  ["big-integer-power", "representability", "2^100"],
+  ["big-integer-cancels", "representability", "3^35+1-3^35"],
+  ["big-integer-literal", "representability", "99999999999999999999"],
+  ["big-integer-just-past-safe", "representability", "9007199254740991+1"],
+  ["big-integer-intermediate-to-float", "representability", "100^100-10.0"],
+  ["pow-exact-halfway", "representability", "123456789^2.0"],
+
+  # Gem-evaluated nodes this slice has not ported.
+  ["unported-mod", "unported", "7 mod 3"],
+  ["unported-sin-missing-variable", "unported", "sin(x)"],
+  ["unported-sum", "unported", "sum_(i=1)^3 i"],
+  ["unported-sqrt", "unported", "sqrt(4)"],
+  ["unported-abs", "unported", "abs(-2)"],
+  ["unported-floor", "unported", "floor(2.5)"],
+  ["unported-max-argument-list", "unported", "max(2,3)"],
+  ["unported-log", "unported", "log(100)"],
+  ["unported-text", "unported", "text(ab)"],
+
+  # A sample of scripts/-generated random expressions, re-checked here.
+  ["random-float-product", "random", "+12*3.14"],
+  ["random-implicit-negative-group", "random", "10.0-(-5)0.2"],
+  ["random-integer-power-sum", "random", "-b^10+4"],
+  ["random-integer-large-power", "random", "9^10"],
+  ["random-nan-power", "random", "a^c-a"],
+  ["random-negative-infinity-power", "random", "c^(-(+2.0-100*3))"],
+  ["random-zero-division-in-power", "random", "b^2 2.0^(3)+10.0/(0^(-9)+c^0(-2.0))"],
+  ["random-negative-zero-divisor", "random", "2.25/(-0.0)*3^2"],
+  ["random-split-literal", "random", "1 1000000+1"],
+  ["random-complex-power", "random", "(1 b^1.5-7)+((-0)*0.2+b*0)"],
+  ["random-minus-one-to-float", "random", "-c^pi (-(-(-(-1))))"],
+  ["random-float-zero-to-negative", "random", "0.0^(-5)+(-2)"],
+  ["random-mixed-kinds", "random", "-a b/c+a^2"],
+  ["random-nested-groups", "random", "((2+a)(b-1))^2/(-(c))"],
+].freeze
 
 # Bindings, keyed by the row id above where non-empty; every other row
 # evaluates against `{}`.
@@ -194,11 +301,70 @@ BINDINGS = {
   "invalid-binding-string" => { "a" => "x" },
   "invalid-binding-boolean" => { "a" => true },
   "invalid-binding-nil" => { "a" => nil },
+  "integer-times-float" => { "a" => 2, "b" => 3.5 },
+  "float-binding-squared" => { "a" => 1.5 },
+  "power-minus-one-to-infinity" => { "a" => Float::INFINITY },
+  "power-minus-two-to-minus-infinity" => { "a" => -Float::INFINITY },
+  "power-zero-to-negative-integer-binding" => { "a" => -1 },
+  "power-zero-to-nan" => { "a" => Float::NAN },
+  "power-zero-to-minus-infinity" => { "a" => -Float::INFINITY },
+  "power-negative-to-nan" => { "a" => Float::NAN },
+  "power-minus-infinity-to-half" => { "a" => -Float::INFINITY, "b" => 0.5 },
+  "power-minus-infinity-to-three" => { "a" => -Float::INFINITY, "b" => 3 },
+  "power-infinity-to-minus-one" => { "a" => Float::INFINITY, "b" => -1 },
+  "power-one-to-nan" => { "a" => Float::NAN },
+  "power-one-to-infinity" => { "a" => Float::INFINITY },
+  "power-nan-to-zero" => { "a" => Float::NAN },
+  "infinity-plus-one" => { "a" => Float::INFINITY },
+  "infinity-minus-infinity" => { "a" => Float::INFINITY },
+  "one-over-infinity" => { "a" => Float::INFINITY },
+  "infinity-times-zero" => { "a" => Float::INFINITY },
+  "pow-rounding-chained" => { "a" => -0.1, "b" => -5, "c" => 6 },
+  "pow-rounding-inverse-sqrt" => { "a" => 4, "b" => 0.5, "c" => -2.5 },
+  "pow-rounding-in-sum" => { "c" => 1.5 },
+  "rational-zero-numerator" => { "a" => 0 },
+  "random-integer-power-sum" => { "b" => 2 },
+  "random-nan-power" => { "a" => Float::NAN, "c" => -5 },
+  "random-negative-infinity-power" => { "c" => -Float::INFINITY },
+  "random-zero-division-in-power" => { "b" => 0.25, "c" => -0.1 },
+  "random-complex-power" => { "b" => -0.1 },
+  "random-minus-one-to-float" => { "c" => -1 },
+  "random-mixed-kinds" => { "a" => 3, "b" => -2.5, "c" => 4 },
+  "random-nested-groups" => { "a" => 1, "b" => 0.5, "c" => -3 },
 }.freeze
+
+# Rows the port refuses with `UnsupportedFeatureError` (see the header), each
+# with the reason: `unported` (a gem-evaluated node this slice lacks),
+# `rational`, `big-integer`, or `pow-rounding-band`.
+PORT_REFUSALS = {
+  "rational-integer-negative-power" => "rational",
+  "rational-intermediate-to-float" => "rational",
+  "rational-zero-numerator" => "rational",
+  "rational-in-sum" => "rational",
+  "big-integer-power" => "big-integer",
+  "big-integer-cancels" => "big-integer",
+  "big-integer-literal" => "big-integer",
+  "big-integer-just-past-safe" => "big-integer",
+  "big-integer-intermediate-to-float" => "big-integer",
+  "pow-exact-halfway" => "pow-rounding-band",
+  "unported-mod" => "unported",
+  "unported-sin-missing-variable" => "unported",
+  "unported-sum" => "unported",
+  "unported-sqrt" => "unported",
+  "unported-abs" => "unported",
+  "unported-floor" => "unported",
+  "unported-max-argument-list" => "unported",
+  "unported-log" => "unported",
+  "unported-text" => "unported",
+}.freeze
+
+unknown = (BINDINGS.keys + PORT_REFUSALS.keys) - ROWS.map(&:first)
+abort "REFUSING: BINDINGS/PORT_REFUSALS name unknown rows: #{unknown.join(', ')}" unless unknown.empty?
 
 rows = ROWS.map do |id, group, text|
   bindings = BINDINGS.fetch(id, {})
-  evaluate_row(id, group, "hand-built for scripts/generate-evaluation-fixtures.rb", text, bindings)
+  evaluate_row(id, group, "hand-built for scripts/generate-evaluation-fixtures.rb", text, bindings,
+               PORT_REFUSALS[id])
 end
 
 ids = rows.map { |r| r["id"] }

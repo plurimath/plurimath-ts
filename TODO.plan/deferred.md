@@ -569,7 +569,7 @@ not reached.
 
 ### One evaluation error type, instead of eight
 
-`TODO.plan/open-decisions.md`'s "Evaluation error family (B6, first slice)"
+**Parked, 2026-09-23.** `TODO.plan/open-decisions.md`'s "Evaluation error family (B6, first slice)"
 settled on mirroring the gem's `Errors::Evaluation::*` one to one — eight
 classes — for this slice. The maintainer's own preference is the opposite:
 one `EvaluationError` type, most likely carrying a reason code rather than a

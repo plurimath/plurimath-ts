@@ -81,17 +81,60 @@ export function variableName(node: SymbolData): string | null {
 }
 
 /**
+ * Ruby: `Core#open?`/`#close?`, overridden to `true` by the `Symbols::Paren::*`
+ * classes below — measured on the oracle by calling both predicates on every
+ * `Plurimath::Math` class. The table is copied as measured, quirks included:
+ * `Vert` answers both, and `Rbbrack`, `CloseParen` and `UpcaseRangle` answer
+ * `open?` rather than `close?`. These reach the evaluator as loose tokens
+ * whenever the grammar does not pair them into a `Fenced` node (measured:
+ * AsciiMath `|2|` is `[Paren::Vert, Number(2), Paren::Vert]`).
+ */
+const OPEN_PARENS: ReadonlySet<string> = new Set([
+  "Paren::CloseParen",
+  "Paren::Langle",
+  "Paren::Lbbrack",
+  "Paren::Lbrace",
+  "Paren::Lbrack",
+  "Paren::Lceil",
+  "Paren::Lcurly",
+  "Paren::Lfloor",
+  "Paren::Lround",
+  "Paren::Lsquare",
+  "Paren::Norm",
+  "Paren::OpenParen",
+  "Paren::Rbbrack",
+  "Paren::UpcaseLangle",
+  "Paren::UpcaseRangle",
+  "Paren::Vert",
+]);
+
+const CLOSE_PARENS: ReadonlySet<string> = new Set([
+  "Paren::Rangle",
+  "Paren::Rbrace",
+  "Paren::Rbrack",
+  "Paren::Rceil",
+  "Paren::Rcurly",
+  "Paren::Rfloor",
+  "Paren::Rround",
+  "Paren::Rsquare",
+  "Paren::Vert",
+]);
+
+/** Ruby: `ExpressionParser#open_paren?` (`node&.open?`). */
+export function isOpenParen(node: MathNode | string | undefined | null): boolean {
+  return node !== undefined && node !== null && isSymbol(node) && OPEN_PARENS.has(node.id);
+}
+
+/** Ruby: `ExpressionParser#close_paren?` (`node&.close?`). */
+export function isCloseParen(node: MathNode | string | undefined | null): boolean {
+  return node !== undefined && node !== null && isSymbol(node) && CLOSE_PARENS.has(node.id);
+}
+
+/**
  * Ruby: `ExpressionParser#operand_start?` — a token can start an operand if
- * it is present and not an operator. The gem also excludes a close-paren
- * token, which never appears loose in a flat sequence for AsciiMath: its
- * grammar always resolves grouping parens into a `Fenced` node at parse time
- * (measured: `parseAsciimath("(3+4)")` and `parseAsciimath("2(3+4)")` both
- * carry a `fenced` node, never a loose `Paren::Lround`/`Paren::Rround`
- * symbol) — `Evaluator#evaluateFenced` recurses into `Fenced`'s body instead,
- * so there is no loose close-paren case for this format's operand ladder to
- * reject.
+ * it is present, not an operator, and not a close paren.
  */
 export function isOperandStart(node: MathNode | string | undefined | null): boolean {
   if (node === undefined || node === null) return false;
-  return !isOperator(node);
+  return !isOperator(node) && !isCloseParen(node);
 }

@@ -22,7 +22,7 @@
  * gets something meaningful; one that WRITES it was broken by either choice.
  */
 
-import { type FormulaNode, UnsupportedFeatureError, UnsupportedFormatError } from "../core/index";
+import { type FormulaNode, UnsupportedFormatError } from "../core/index";
 import { parseAsciimath, toAsciimath } from "../formats/asciimath/index";
 import { parseHtml, toHtml } from "../formats/html/index";
 import { parseLatex, toLatex } from "../formats/latex/index";

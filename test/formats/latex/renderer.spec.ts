@@ -100,13 +100,20 @@ describe("unary functions", () => {
   });
 
   it("refuses a class name outside the AsciiMath-reachable set", () => {
-    // Merror, not Mbox: Mbox is arm-rendered below, and the two are otherwise
+    // None, not Mbox: Mbox is arm-rendered below, and the two are otherwise
     // the same case — measured on the pinned oracle 00c52783,
-    // `Merror.instance_method(:to_latex).owner` is Merror, so a carrier-default
-    // render of the name would diverge silently.
-    expect(() => toLatex(unary("Merror", x()))).toThrow(RenderError);
-    expect(() => toLatex(new BinaryFunctionNode({ name: "Menclose" }))).toThrow(RenderError);
-    expect(() => toLatex(new TernaryFunctionNode({ name: "Multiscript" }))).toThrow(RenderError);
+    // `None.instance_method(:to_latex).owner` is None, so a carrier-default
+    // render of the name would diverge silently. (`Merror`, `Longdiv`,
+    // `Mglyph`, `Ms`, `Msgroup`, `Msline` and `Scarries` are the same shape
+    // but are all measured and case-armed elsewhere in this file now.)
+    expect(() => toLatex(unary("None", x()))).toThrow(RenderError);
+    expect(() => toLatex(new BinaryFunctionNode({ name: "Semantics" }))).toThrow(RenderError);
+    // `Underover` renders now (measured and case-armed in
+    // `src/render/ternary-function/latex.ts`); the base `TernaryFunction`
+    // class itself has no `to_latex` of its own and stays refused.
+    expect(() => toLatex(new TernaryFunctionNode({ name: "TernaryFunction" }))).toThrow(
+      RenderError,
+    );
   });
 
   /**

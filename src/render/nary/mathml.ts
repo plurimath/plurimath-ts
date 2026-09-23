@@ -7,18 +7,18 @@
  * behind the script, wrapped in `<mrow>` UNLESS its render already is one —
  * the gem's one literal-true `wrap_mrow` (probes nary-p4-sym /
  * nary-p4-formula). `self.options[:mask]` reads truthily (`nary.rb:56`):
- * a nil options hash crashes the gem, and a live mask is refused
- * (`assertMaskIsInert`). Under intent the outer `<mrow>` is tagged by
+ * a nil options hash crashes the gem, and a live mask rewrites the script
+ * tag in place (`maskedNaryScript`). Under intent the outer `<mrow>` is tagged by
  * `naryand_intent` with the operator's own name (`intentName`).
  */
 
 import type { NodeParameter } from "../../core/index";
 import { RenderError } from "../../core/index";
 import {
-  assertMaskIsInert,
   describeSlot,
   FORMAT,
   hashOrNil,
+  maskedNaryScript,
   type NodeOf,
   naryandIntent,
   present,
@@ -94,9 +94,15 @@ export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlEle
     );
   }
   const hash = hashOrNil(options, node.kind, "nary.options");
-  const script = new XmlElement(naryTagName(node, hash)).append(children);
+  let script = new XmlElement(naryTagName(node, hash)).append(children);
   if (hash !== null && present(hash.mask)) {
-    assertMaskIsInert(hash.mask, node.kind, "nary.options.mask");
+    script = maskedNaryScript(
+      script,
+      hash.mask,
+      { lowerIsNil: isNil(node.parameterTwo), upperIsNil: isNil(node.parameterThree) },
+      node.kind,
+      "nary.options.mask",
+    );
   }
   if (!present(node.parameterFour)) return script;
   // `wrap_mrow(..., true)`: the literal `true` wraps whatever is not an `<mrow>`.
@@ -122,4 +128,9 @@ function naryTagName(node: NodeOf<"nary">, options: Record<string, unknown> | nu
   if (present(node.parameterTwo)) return tag === "munderover" ? "munder" : "msub";
   if (present(node.parameterThree)) return tag === "munderover" ? "mover" : "msup";
   return "mrow";
+}
+
+/** Ruby `nil?`: `false` is not nil, unlike in the truthiness tests above. */
+function isNil(value: unknown): boolean {
+  return value === null || value === undefined;
 }

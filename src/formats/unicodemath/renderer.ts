@@ -58,10 +58,8 @@ import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
  * (TODO.plan/feature-roadmap.md, "Number formatting"; TODO.plan/
  * open-decisions.md, "Number-formatter API shape") — `Formatter::Standard`'s
  * symbols and numeric pipeline (precision, significant digits, digit count,
- * padding, number sign, notation, base), resolved by `resolveNumberFormat`
- * (`../../formatting/number-format.ts`), which itself refuses by name the
- * one field of the gem's `formatter:` keyword still not implemented
- * (`string_format`). The
+ * padding, number sign, notation, base, string format), resolved by
+ * `resolveNumberFormat` (`../../formatting/number-format.ts`). The
  * gem's other two `to_unicodemath` keywords — `unitsml:`, `options:`
  * (formula.rb:187 on the pinned oracle) — are still not implemented at all.
  */

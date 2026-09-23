@@ -15,6 +15,7 @@ import {
   present,
   type RenderContext,
   requireNodeList,
+  requireString,
   structuralProperties,
   styledRun,
 } from "../../formats/omml/render-shared";
@@ -56,8 +57,27 @@ export function renderBinaryFunction(
   context: RenderContext,
 ): OmmlRendered {
   switch (node.name) {
+    case "Inf":
+      return renderUnderover(node, context, "inf");
     case "Lim":
       return renderUnderover(node, context, "lim");
+    case "Menclose":
+      return renderMenclose(node, context);
+    case "Over":
+      // `over.rb:34`: `m:f` with the same `m:fPr` `Frac` writes without options.
+      return new XmlElement("m:f").append(
+        structuralProperties("f"),
+        ommlSlot(node.parameterOne, "num", context, node.kind, "over.parameterOne"),
+        ommlSlot(node.parameterTwo, "den", context, node.kind, "over.parameterTwo"),
+      );
+    case "Stackrel":
+      // `stackrel.rb:35`: `m:limUpp` with the SECOND slot as the base and the
+      // first as the limit — the reverse of `Overset`.
+      return new XmlElement("m:limUpp").append(
+        structuralProperties("limUpp"),
+        ommlSlot(node.parameterTwo, "e", context, node.kind, "stackrel.parameterTwo"),
+        ommlSlot(node.parameterOne, "lim", context, node.kind, "stackrel.parameterOne"),
+      );
     case "Log":
       return renderLog(node, context);
     case "Mod":
@@ -138,8 +158,9 @@ function renderMod(node: NodeOf<"binaryFunction">, context: RenderContext): Omml
 }
 
 /**
- * `BinaryFunction#underover` (binary_function.rb:174-196), which `Lim` is:
- * `Lim#to_omml_without_math_tag` (lim.rb:66-68) is one delegating line.
+ * `BinaryFunction#underover` (binary_function.rb:174-196), which `Lim` and
+ * `Inf` are: `Lim#to_omml_without_math_tag` (lim.rb:66-68) and `Inf`'s
+ * (inf.rb:43) are each one delegating line.
  *
  * ```ruby
  * return r_element(class_name, rpr_tag: false) unless any_value_exist?
@@ -266,6 +287,65 @@ function renderRoot(node: NodeOf<"binaryFunction">, context: RenderContext): Xml
     ommlSlot(node.parameterOne, "deg", context, node.kind, "root.parameterOne"),
     ommlSlot(node.parameterTwo, "e", context, node.kind, "root.parameterTwo"),
   );
+}
+
+/**
+ * `Menclose#to_omml_without_math_tag` (menclose.rb:48) with its `borderboxpr`,
+ * `four_sided_notations` and `strikes_notations` helpers (:74, :83, :93):
+ *
+ * `m:borderBox` over `[borderboxpr, omml_parameter(parameter_two, "e")]`.
+ * `borderboxpr` is nil — no properties element at all — only when the
+ * enclosure type is EXACTLY `box`, `circle` or `roundedbox`. Otherwise the
+ * `m:borderBoxPr` lists a `hide*` flag for each of `top`/`bottom`/`left`/
+ * `right` the type does NOT mention (skipped entirely when the type contains
+ * `box`, `circle` or `roundedbox` as a substring), then a `strike*` flag for
+ * each of the four strike names it DOES contain. All the tests are `String#include?`,
+ * so they are substring tests, not word tests.
+ *
+ * The type is read with `include?` and no guard, so anything but a string
+ * there — nil included — is a `NoMethodError` in the gem, measured on the
+ * oracle at `00c52783` for a `Symbol`, `Formula` and nil; a `RenderError` here.
+ */
+function renderMenclose(node: NodeOf<"binaryFunction">, context: RenderContext): XmlElement {
+  const notation = requireString(node.parameterOne, node.kind, "menclose.parameterOne");
+  const borderBox = new XmlElement("m:borderBox");
+  if (!MENCLOSE_PLAIN_BOXES.includes(notation)) {
+    const properties = new XmlElement("m:borderBoxPr");
+    if (!MENCLOSE_PLAIN_BOXES.some((box) => notation.includes(box))) {
+      for (const [side, flag] of MENCLOSE_SIDES) {
+        if (!notation.includes(side)) properties.append(onFlag(flag));
+      }
+    }
+    for (const [strike, flag] of MENCLOSE_STRIKES) {
+      if (notation.includes(strike)) properties.append(onFlag(flag));
+    }
+    borderBox.append(properties);
+  }
+  return borderBox.append(
+    ommlSlot(node.parameterTwo, "e", context, node.kind, "menclose.parameterTwo"),
+  );
+}
+
+const MENCLOSE_PLAIN_BOXES: readonly string[] = ["box", "circle", "roundedbox"];
+
+/** `Menclose::FOUR_SIDED_NOTATIONS` (menclose.rb:12), in the gem's order. */
+const MENCLOSE_SIDES: readonly (readonly [string, string])[] = [
+  ["top", "hideTop"],
+  ["bottom", "hideBot"],
+  ["left", "hideLeft"],
+  ["right", "hideRight"],
+];
+
+/** `Menclose::STRIKES_NOTATIONS` (menclose.rb:18), in the gem's order. */
+const MENCLOSE_STRIKES: readonly (readonly [string, string])[] = [
+  ["horizontalstrike", "strikeH"],
+  ["verticalstrike", "strikeV"],
+  ["updiagonalstrike", "strikeBLTR"],
+  ["downdiagonalstrike", "strikeTLBR"],
+];
+
+function onFlag(name: string): XmlElement {
+  return new XmlElement(`m:${name}`).setAttribute("m:val", "on");
 }
 
 function renderTd(node: NodeOf<"binaryFunction">, context: RenderContext): XmlElement {

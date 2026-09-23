@@ -8,6 +8,7 @@ import {
 } from "../../core/index";
 import { htmlEntityToUnicode, RUBY_ABSTRACT_CLASSES } from "../../core/nodes";
 import { NODE_SPECS } from "../../core/normalize";
+import type { NumberFormat } from "../../formatting/index";
 import {
   OMML_DEFAULT_SYMBOL_TAG_NAME,
   OMML_SYMBOL_TAG_NAMES,
@@ -17,10 +18,34 @@ import { dumpNodes, XmlElement } from "../../xml/index";
 
 export const FORMAT = "omml";
 
+/**
+ * Re-exported for `../../render/number/omml.ts`. A kind file may import only
+ * its own format's `render-shared.ts`, never `formatting` directly
+ * (`.dependency-cruiser.cjs`, "render-kind-file-imports-allowed-set-only"),
+ * so the number-formatting helpers pass through here — the MathML
+ * render-shared.ts counterpart. `formatNumberForMathml` is read by OMML too:
+ * `Formatter::Numbers::OmmlRenderer.render` branches exactly as
+ * `MathmlRenderer.render` does (plain text, `scientific`/`engineering`
+ * notation, semantic base), and only the elements drawn differ.
+ */
+export type { NumberFormat } from "../../formatting/index";
+export {
+  applyNumberFormat,
+  formatNumberForMathml,
+  isGemNumericValue,
+  refuseNonNumericUnderFormatter,
+} from "../../formatting/index";
+
 export type OmmlRendered = XmlElement | string | null | readonly OmmlRendered[];
 
 export interface RenderContext {
   readonly displaystyle: boolean;
+  /**
+   * The `formatter:` option: `null` with none (a `Number` renders its raw
+   * value), or the resolved symbols (`../../formatting/number-format.ts`).
+   * Fixed for a whole render — a derived display-style context keeps it.
+   */
+  readonly numberFormat: NumberFormat | null;
   readonly insert: (node: MathNode) => OmmlRendered;
   readonly render: (node: MathNode) => OmmlRendered;
   readonly withDisplaystyle: (displaystyle: boolean) => RenderContext;

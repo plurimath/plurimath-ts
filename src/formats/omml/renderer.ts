@@ -2,6 +2,7 @@ import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { splitOnLinebreak } from "../../core/linebreak";
 import { assertKnownOptions } from "../../core/render-options";
+import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
 import { isStackOverflow } from "../../pegkit/index";
 import { dumpNodes, XmlElement } from "../../xml/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
@@ -9,10 +10,10 @@ import { FORMAT, isOwnMissingSymbolDataError, serializeRendered } from "./render
 
 /**
  * `Formula#to_omml`'s options (formula.rb:157 on the pinned oracle), typed
- * exactly (§5). The two implemented keywords; `formatter:` and `unitsml:` are
- * deliberately NOT here — passing one (any value but `undefined`) is a named
- * `RenderError` at runtime (`DEFERRED_OPTIONS`), and a key `to_omml` has no
- * keyword for at all is refused as unknown at the entry.
+ * exactly (§5). The three implemented keywords; `unitsml:` is deliberately
+ * NOT here — passing it (any value but `undefined`) is a named `RenderError`
+ * at runtime (`DEFERRED_OPTIONS`), and a key `to_omml` has no keyword for at
+ * all is refused as unknown at the entry.
  */
 export interface OmmlOptions {
   /**
@@ -32,6 +33,14 @@ export interface OmmlOptions {
    * `m:oMathPara` (`src/core/linebreak.ts` holds the shared walk).
    */
   readonly splitOnLinebreak?: boolean | null | undefined;
+  /**
+   * `Formatter::Standard`'s symbols, numeric pipeline, notation, base and
+   * string format, resolved by `resolveNumberFormat`
+   * (`../../formatting/number-format.ts`) — the other renderers' own field.
+   * A number inside the formula renders its formatted text; see
+   * `../../render/number/omml.ts` for the two paths the gem takes.
+   */
+  readonly formatter?: FormatterOptions | null;
 }
 
 /**
@@ -41,11 +50,11 @@ export interface OmmlOptions {
 const IMPLEMENTED_OPTIONS: { readonly [K in keyof Required<OmmlOptions>]: null } = {
   displayStyle: null,
   splitOnLinebreak: null,
+  formatter: null,
 };
 
 /** Public `Formula#to_omml` keywords whose rendering paths are not implemented. */
 const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
-  ["formatter", "number formatting is P4 scope; only the no-formatter path is measured"],
   ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md section 5)"],
 ];
 
@@ -79,8 +88,14 @@ const ACCEPTED_OPTIONS: readonly string[] = [
   ...DEFERRED_OPTIONS.map(([name]) => name),
 ];
 
-/** The per-node entry's options: none are implemented (`NODE_ENTRY_REFUSED`). */
-export type OmmlNodeOptions = Record<string, never>;
+/**
+ * The per-node entry's options: `formatter:` only (`to_omml_without_math_tag`
+ * reads it from its `options:` hash, as `to_omml` does); the rest are refused
+ * by name (`NODE_ENTRY_REFUSED`).
+ */
+export interface OmmlNodeOptions {
+  readonly formatter?: FormatterOptions | null;
+}
 
 const OMML_NAMESPACES: readonly (readonly [string, string])[] = [
   ["xmlns:m", "http://schemas.openxmlformats.org/officeDocument/2006/math"],
@@ -112,7 +127,9 @@ export function toOmmlWithoutMathTag(node: MathNode, options?: OmmlNodeOptions |
   assertMathNodeShape(node, FORMAT);
   return atBoundary(() => {
     assertSupportedOptions(options, node.kind, NODE_ENTRY_REFUSED);
-    return serializeRendered(ROOT_CONTEXT.render(node));
+    const numberFormat = resolveNumberFormat(options?.formatter, FORMAT);
+    const context = numberFormat === null ? ROOT_CONTEXT : createRenderContext(true, numberFormat);
+    return serializeRendered(context.render(node));
   });
 }
 
@@ -139,7 +156,10 @@ export function toOmml(node: MathNode, options?: OmmlOptions | null): string {
         ? values.displayStyle
         : node.displaystyle;
     // `boolean_display_style`: `display_style.to_s == "true"`.
-    const context = createRenderContext(String(displayValue) === "true");
+    const context = createRenderContext(
+      String(displayValue) === "true",
+      resolveNumberFormat(options?.formatter, FORMAT),
+    );
     // Ruby truthiness: only `nil` and `false` are off (`undefined` is absent).
     const splitValue = Object.hasOwn(values, "splitOnLinebreak")
       ? values.splitOnLinebreak

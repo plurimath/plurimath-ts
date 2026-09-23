@@ -24,7 +24,7 @@
  *
  * Every fixture row is asserted: byte-for-byte where the gem renders, a
  * `RenderError`/`ParseError` where it refused. A row the port cannot yet
- * reproduce is named in `PORT_REFUSES` below (104 rows, all kind-renderer
+ * reproduce is named in `PORT_REFUSES` below (2 rows, all kind-renderer
  * refusals).
  */
 import { readFileSync } from "node:fs";
@@ -58,8 +58,25 @@ interface Row {
   readonly split?: readonly unknown[];
 }
 
+/**
+ * The groups this file asserts. The fixture files also carry the groups of
+ * other specs (`table-frac-nary-parity.spec.ts`), which own their own counts.
+ */
+const OWN_GROUPS: ReadonlySet<string> = new Set([
+  "line-break-spec",
+  "line-break-spec-display-style",
+  "parsed-linebreak",
+  "display-style-spec",
+  "display-style-probe",
+  // `Underover` — a `TernaryFunction` subclass hand-built by
+  // `underover_rows` in the generator, not reachable from `get_class`
+  // reachability. OMML also carries its `displayStyle: true`/`false` rows,
+  // since `Underover#to_omml_without_math_tag` branches on it explicitly.
+  "underover",
+]);
+
 /** Rows the gem renders that the port renders too, per format (a pin, not a knob). */
-const RENDERED_BASELINE = { mathml: 166, omml: 161 } as const;
+const RENDERED_BASELINE = { mathml: 197, omml: 252 } as const;
 
 interface Fixture {
   readonly schema: string;
@@ -74,133 +91,23 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const CENSUS_ALIASES = aliasIndex(readCensus());
 
 /**
- * Rows the gem renders and this port's KIND renderers do not, by id: 26 for
- * MathML and 78 for OMML. Every one refuses on a node kind or alias the
- * per-kind renderer has not measured (`Longdiv`, `Phantom`, `Underover`, the
- * unmeasured unary aliases...). For all but six the same refusal occurs without
- * `splitOnLinebreak`; the six (MathML `line-break-029`, OMML `012` and `029`,
- * each with its `-display-false` variant) render unsplit, and only refuse
- * because splitting yields a transformed alias the kind renderer has not
- * measured — a kind-renderer gap, not a walker mismatch (the split itself is
- * checked against the gem for every row below). The
- * split itself is checked for every one of them in the walk tests below, which
- * need no renderer; here each is pinned as a refusal, and the message must be a
- * kind file's own (`KIND_REFUSAL`), so a fault in the walker cannot hide in
- * the set. An entry that starts rendering fails its test until it is dropped.
+ * Rows the gem renders and this port's KIND renderers do not, by id: 0 for
+ * MathML and 2 for OMML (freshly measured after `Longdiv`, `Merror`,
+ * `Mglyph`, `Ms`, `Msgroup`, `Msline`, `Scarries`, `Sup` and `Underover`
+ * gained kind-renderer support — every entry that named one of those kinds
+ * now renders and was dropped from this list). OMML's remaining pair,
+ * `line-break-073`, refuses on an UNRELATED unmeasured kind the split
+ * transforms this specific formula into. The message must be a kind file's
+ * own (`KIND_REFUSAL`), so a fault in the walker cannot hide in the set. An
+ * entry that starts rendering fails its test until it is dropped.
  */
 const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonly string[] } = {
-  mathml: [
-    "line-break-002",
-    "line-break-002-display-false",
-    "line-break-024",
-    "line-break-024-display-false",
-    "line-break-029",
-    "line-break-029-display-false",
-    "line-break-056",
-    "line-break-056-display-false",
-    "line-break-057",
-    "line-break-057-display-false",
-    "line-break-058",
-    "line-break-058-display-false",
-    "line-break-059",
-    "line-break-059-display-false",
-    "line-break-072",
-    "line-break-072-display-false",
-    "line-break-076",
-    "line-break-076-display-false",
-    "line-break-077",
-    "line-break-077-display-false",
-    "line-break-083",
-    "line-break-083-display-false",
-    "line-break-084",
-    "line-break-084-display-false",
-    "line-break-090",
-    "line-break-090-display-false",
-  ],
-  omml: [
-    "asciimath-spec-omml-08",
-    "asciimath-spec-omml-08-display-false",
-    "asciimath-spec-omml-11",
-    "asciimath-spec-omml-11-display-false",
-    "line-break-002",
-    "line-break-002-display-false",
-    "line-break-008",
-    "line-break-008-display-false",
-    "line-break-009",
-    "line-break-009-display-false",
-    "line-break-012",
-    "line-break-012-display-false",
-    "line-break-013",
-    "line-break-013-display-false",
-    "line-break-014",
-    "line-break-014-display-false",
-    "line-break-015",
-    "line-break-015-display-false",
-    "line-break-017",
-    "line-break-017-display-false",
-    "line-break-018",
-    "line-break-018-display-false",
-    "line-break-020",
-    "line-break-020-display-false",
-    "line-break-021",
-    "line-break-021-display-false",
-    "line-break-022",
-    "line-break-022-display-false",
-    "line-break-024",
-    "line-break-024-display-false",
-    "line-break-026",
-    "line-break-026-display-false",
-    "line-break-027",
-    "line-break-027-display-false",
-    "line-break-028",
-    "line-break-028-display-false",
-    "line-break-029",
-    "line-break-029-display-false",
-    "line-break-030",
-    "line-break-030-display-false",
-    "line-break-031",
-    "line-break-031-display-false",
-    "line-break-032",
-    "line-break-032-display-false",
-    "line-break-034",
-    "line-break-034-display-false",
-    "line-break-037",
-    "line-break-037-display-false",
-    "line-break-050",
-    "line-break-050-display-false",
-    "line-break-055",
-    "line-break-055-display-false",
-    "line-break-056",
-    "line-break-056-display-false",
-    "line-break-057",
-    "line-break-057-display-false",
-    "line-break-058",
-    "line-break-058-display-false",
-    "line-break-059",
-    "line-break-059-display-false",
-    "line-break-064",
-    "line-break-064-display-false",
-    "line-break-072",
-    "line-break-072-display-false",
-    "line-break-073",
-    "line-break-073-display-false",
-    "line-break-076",
-    "line-break-076-display-false",
-    "line-break-077",
-    "line-break-077-display-false",
-    "line-break-083",
-    "line-break-083-display-false",
-    "line-break-084",
-    "line-break-084-display-false",
-    "line-break-085",
-    "line-break-085-display-false",
-    "line-break-090",
-    "line-break-090-display-false",
-  ],
+  mathml: [],
+  omml: ["line-break-073", "line-break-073-display-false"],
 };
-
 /** What a kind renderer says when it has not measured a kind, alias or slot. */
-const KIND_REFUSAL = /has not been measured|No measured \w+ rendering|only the measured generic/;
+const KIND_REFUSAL =
+  /has not been measured|No measured \w+ rendering|only the measured generic|only a Symbol, Sum or Prod/;
 
 const RENDERERS = {
   mathml: (node: MathNode, options: Record<string, unknown>) => toMathml(node, options as never),
@@ -223,16 +130,19 @@ function build(row: Row): MathNode {
 }
 
 /**
- * The rows this spec owns: everything but the `intent*` groups, which
- * `./mathml/intent-parity.spec.ts` reads from the same file (B4). The counts
- * are recomputed over what is kept, because the file's own counts include them;
- * `payload-validation.spec.ts` checks those against the file.
+ * The rows this spec owns. The same payload carries the `unary-function` group,
+ * which `unary-function-parity.spec.ts` asserts (in all six formats, with a
+ * UnicodeMath parser this file's `build` has no arm for), and the `intent*`
+ * groups, which `./mathml/intent-parity.spec.ts` reads (B4); the counts are
+ * recomputed over what is left, and the payload gate checks the file's own.
  */
 function load(format: "mathml" | "omml"): Fixture {
   const whole = JSON.parse(
     readFileSync(join(HERE, format, "render-options-fixtures.json"), "utf8"),
   ) as Fixture;
-  const cases = whole.cases.filter((row) => !row.group.startsWith("intent"));
+  const cases = whole.cases.filter(
+    (row) => row.group !== "unary-function" && !row.group.startsWith("intent"),
+  );
   return {
     ...whole,
     cases,
@@ -246,16 +156,21 @@ for (const format of ["mathml", "omml"] as const) {
   const fixture = load(format);
   const render = RENDERERS[format];
   const refuses = new Set(PORT_REFUSES[format]);
-  const rendered = fixture.cases.filter((row) => row.expected !== undefined);
-  const refused = fixture.cases.filter((row) => row.raises !== undefined);
+  const own = fixture.cases.filter((row) => OWN_GROUPS.has(row.group));
+  const rendered = own.filter((row) => row.expected !== undefined);
+  const refused = own.filter((row) => row.raises !== undefined);
 
   describe(`${format} render-options fixture`, () => {
     it("counts its own rows", () => {
       expect(fixture.schema).toBe("plurimath-corpus/render-options/1");
       expect(fixture.format).toBe(format);
       expect(fixture.caseCount).toBe(fixture.cases.length);
-      expect(fixture.renderedCount).toBe(rendered.length);
-      expect(fixture.raisedCount).toBe(refused.length);
+      expect(fixture.renderedCount).toBe(
+        fixture.cases.filter((row) => row.expected !== undefined).length,
+      );
+      expect(fixture.raisedCount).toBe(
+        fixture.cases.filter((row) => row.raises !== undefined).length,
+      );
       expect(new Set(fixture.cases.map((row) => row.id)).size).toBe(fixture.cases.length);
     });
 

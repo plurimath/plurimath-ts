@@ -386,13 +386,21 @@ const FORMAT_OPS: Record<DisplayFormat, FormatOps> = {
  * `find { |value| !(value.is_a?(Text) || value.is_a?(Symbol)) }` — checked
  * against the UNMERGED classification directly, so this never renders a
  * field (and so never throws on the OMML symbol-merge gap) just to answer
- * "should I recurse".
+ * "should I recurse". `is_a?(Symbol)` is a Ruby class-hierarchy check, true
+ * for every named Symbol subclass (`Rightarrow`, `Elementof`, …) even though
+ * `filter_math_zone_values`'s OWN merge test is narrower — literal
+ * `class_name` equality against `MERGE_CLASS_NAMES` — and does NOT fold
+ * those subclasses into a run. `isSymbolKind` (node kind, not `classNameOf`)
+ * is the survives-check's other half for exactly that reason: measured on
+ * `lim_(x->0) ...`'s "x \to 0" subscript, whose `Rightarrow` symbol must
+ * count as surviving-but-Symbol (no recursion) even though it never merges
+ * with the `x`/`0` Text run.
  */
 function validateMathZone(node: MathNode): boolean {
   if (node.kind === "formula" || node.kind === "mrow") {
     for (const item of sequenceOf(node)) {
       if (typeof item === "string") continue; // folds into nothing surviving; never itself "structure"
-      if (!MERGE_CLASS_NAMES.has(classNameOf(item))) return true;
+      if (!MERGE_CLASS_NAMES.has(classNameOf(item)) && !isSymbolKind(item)) return true;
     }
     return false;
   }

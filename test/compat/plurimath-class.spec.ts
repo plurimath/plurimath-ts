@@ -582,6 +582,143 @@ describe("toDisplay", () => {
         '|_ Math zone\n  |_ "(x + 1)"\n     |_ "x + 1" text\n',
       );
     });
+
+    /**
+     * `Lim`'s "limit subscript" field (`x -> 0`) is a `Formula` whose value
+     * is `[Symbol(x), Rightarrow, Number(0)]`. The gem's
+     * `ModelHelper.validate_math_zone` survival check is `is_a?(Symbol)` —
+     * true for EVERY Symbol subclass, including `Rightarrow` — even though
+     * `filter_math_zone_values`'s own merge test only matches `Rightarrow`'s
+     * `class_name` ("rightarrow") when it is literally "symbol"/"plus"/
+     * "minus"/"circ"/"equal", so `Rightarrow` never merges into the `x`/`0`
+     * text run. Both are true at once: `Rightarrow` stays unmerged AND still
+     * counts as "no structure survived", so the field never recurses.
+     * Measured: `Plurimath::Asciimath.new("lim_(x->0) frac(sin(x))(x)")
+     * .to_formula.to_display(:<format>)`, oracle 00c52783 — the "limit
+     * subscript" line has no children under it in any of the 5 formats.
+     */
+    it("Lim's limit-subscript field does not recurse past its Rightarrow child", () => {
+      const build = () => new Plurimath("lim_(x->0) frac(sin(x))(x)", "asciimath");
+      expect(build().toDisplay("asciimath")).toBe(
+        '|_ Math zone\n  |_ "lim_(x to 0) frac(sin(x))(x)"\n' +
+          '     |_ "lim_(x to 0)" limit\n' +
+          '     |  |_ "x to 0" limit subscript\n' +
+          '     |_ "frac(sin(x))(x)" fraction\n' +
+          '        |_ "sin(x)" numerator\n' +
+          '        |  |_ "sin(x)" function apply\n' +
+          '        |     |_ "sin" function name\n' +
+          '        |     |_ "(x)" argument\n' +
+          '        |        |_ "x" text\n' +
+          '        |_ "x" denominator\n',
+      );
+      expect(build().toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "\\lim_{x \\to 0} \\frac{\\sin{( x )}}{x}"\n' +
+          '     |_ "\\lim_{x \\to 0}" limit\n' +
+          '     |  |_ "x \\to 0" limit subscript\n' +
+          '     |_ "\\frac{\\sin{( x )}}{x}" fraction\n' +
+          '        |_ "\\sin{( x )}" numerator\n' +
+          '        |  |_ "\\sin{( x )}" function apply\n' +
+          '        |     |_ "sin" function name\n' +
+          '        |     |_ "( x )" argument\n' +
+          '        |        |_ "x" text\n' +
+          '        |_ "x" denominator\n',
+      );
+      expect(build().toDisplay("unicodemath")).toBe(
+        '|_ Math zone\n  |_ "lim_(x → 0) (sin⁡(x))/(x)"\n' +
+          '     |_ "lim_(x → 0)" limit\n' +
+          '     |  |_ "x → 0" limit subscript\n' +
+          '     |_ "(sin⁡(x))/(x)" fraction\n' +
+          '        |_ "sin⁡(x)" numerator\n' +
+          '        |  |_ "sin⁡(x)" function apply\n' +
+          '        |     |_ "sin" function name\n' +
+          '        |     |_ "(x)" argument\n' +
+          '        |        |_ "x" text\n' +
+          '        |_ "x" denominator\n',
+      );
+      expect(build().toDisplay("mathml")).toBe(
+        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
+          '<mstyle displaystyle="true"><munder><mo>lim</mo><mrow><mi>x</mi><mo>&#x2192;</mo>' +
+          '<mn>0</mn></mrow></munder><mfrac><mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi>' +
+          "<mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow><mi>x</mi></mfrac></mstyle>" +
+          '</math>"\n' +
+          '     |_ "<munder><mo>lim</mo><mrow><mi>x</mi><mo>&#x2192;</mo><mn>0</mn></mrow></munder>"' +
+          " limit\n" +
+          '     |  |_ "<mrow><mi>x</mi><mo>&#x2192;</mo><mn>0</mn></mrow>" limit subscript\n' +
+          '     |_ "<mfrac><mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
+          '<mi>x</mi><mo>)</mo></mrow></mrow></mrow><mi>x</mi></mfrac>" fraction\n' +
+          '        |_ "<mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
+          '<mi>x</mi><mo>)</mo></mrow></mrow></mrow>" numerator\n' +
+          '        |  |_ "<mrow><mo rspace="thickmathspace"/><mrow><mi>sin</mi><mrow><mo>(</mo>' +
+          '<mi>x</mi><mo>)</mo></mrow></mrow></mrow>" function apply\n' +
+          '        |     |_ "sin" function name\n' +
+          '        |     |_ "<mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow>" argument\n' +
+          '        |        |_ "<mtext>x</mtext>" text\n' +
+          '        |_ "<mi>x</mi>" denominator\n',
+      );
+      expect(build().toDisplay("omml")).toBe(
+        '|_ Math zone\n  |_ "<m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/' +
+          '2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" ' +
+          'xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" ' +
+          'xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+          'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
+          'xmlns:v="urn:schemas-microsoft-com:vml" ' +
+          'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
+          'xmlns:w10="urn:schemas-microsoft-com:office:word" ' +
+          'xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" ' +
+          'xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" ' +
+          'xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" ' +
+          'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ' +
+          'xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" ' +
+          'xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" ' +
+          'xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" ' +
+          'xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" ' +
+          'xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">' +
+          '<m:oMath><m:limLow><m:limLowPr><m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math" ' +
+          'w:hAnsi="Cambria Math"/><w:i/></w:rPr></m:ctrlPr></m:limLowPr><m:e><m:limUpp>' +
+          '<m:limUppPr><m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>' +
+          "<w:i/></w:rPr></m:ctrlPr></m:limUppPr><m:e><m:r><m:t>lim</m:t></m:r></m:e><m:lim>" +
+          "<m:r><m:t>&#8203;</m:t></m:r></m:lim></m:limUpp></m:e><m:lim><m:r><m:t>x</m:t></m:r>" +
+          "<m:r><m:t>&#x2192;</m:t></m:r><m:r><m:t>0</m:t></m:r></m:lim></m:limLow><m:f><m:fPr>" +
+          '<m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/><w:i/></w:rPr>' +
+          "</m:ctrlPr></m:fPr><m:num><m:func><m:funcPr><m:ctrlPr><w:rPr><w:rFonts " +
+          'w:ascii="Cambria Math" w:hAnsi="Cambria Math"/><w:i/></w:rPr></m:ctrlPr></m:funcPr>' +
+          '<m:fName><m:r><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/></w:rPr>' +
+          '<m:t>sin</m:t></m:r></m:fName><m:e><m:d><m:dPr><m:begChr m:val="("/><m:sepChr m:val=""/>' +
+          '<m:endChr m:val=")"/></m:dPr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:d></m:e></m:func>' +
+          '</m:num><m:den><m:r><m:t>x</m:t></m:r></m:den></m:f></m:oMath></m:oMathPara>"\n' +
+          '     |_ "<m:limLow><m:limLowPr><m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math" ' +
+          'w:hAnsi="Cambria Math"/><w:i/></w:rPr></m:ctrlPr></m:limLowPr><m:e><m:limUpp>' +
+          '<m:limUppPr><m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>' +
+          "<w:i/></w:rPr></m:ctrlPr></m:limUppPr><m:e><m:r><m:t>lim</m:t></m:r></m:e><m:lim>" +
+          "<m:r><m:t>&#8203;</m:t></m:r></m:lim></m:limUpp></m:e><m:lim><m:r><m:t>x</m:t></m:r>" +
+          '<m:r><m:t>&#x2192;</m:t></m:r><m:r><m:t>0</m:t></m:r></m:lim></m:limLow>" limit\n' +
+          '     |  |_ "<m:r><m:t>x</m:t></m:r><m:r><m:t>&#x2192;</m:t></m:r><m:r><m:t>0</m:t></m:r>"' +
+          " limit subscript\n" +
+          '     |_ "<m:f><m:fPr><m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math" ' +
+          'w:hAnsi="Cambria Math"/><w:i/></w:rPr></m:ctrlPr></m:fPr><m:num><m:func><m:funcPr>' +
+          '<m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/><w:i/></w:rPr>' +
+          '</m:ctrlPr></m:funcPr><m:fName><m:r><w:rPr><w:rFonts w:ascii="Cambria Math" ' +
+          'w:hAnsi="Cambria Math"/></w:rPr><m:t>sin</m:t></m:r></m:fName><m:e><m:d><m:dPr>' +
+          '<m:begChr m:val="("/><m:sepChr m:val=""/><m:endChr m:val=")"/></m:dPr><m:e><m:r>' +
+          "<m:t>x</m:t></m:r></m:e></m:d></m:e></m:func></m:num><m:den><m:r><m:t>x</m:t></m:r>" +
+          '</m:den></m:f>" fraction\n' +
+          '        |_ "<m:func><m:funcPr><m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math" ' +
+          'w:hAnsi="Cambria Math"/><w:i/></w:rPr></m:ctrlPr></m:funcPr><m:fName><m:r><w:rPr>' +
+          '<w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/></w:rPr><m:t>sin</m:t></m:r>' +
+          '</m:fName><m:e><m:d><m:dPr><m:begChr m:val="("/><m:sepChr m:val=""/><m:endChr m:val=")"/>' +
+          '</m:dPr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:d></m:e></m:func>" numerator\n' +
+          '        |  |_ "<m:func><m:funcPr><m:ctrlPr><w:rPr><w:rFonts w:ascii="Cambria Math" ' +
+          'w:hAnsi="Cambria Math"/><w:i/></w:rPr></m:ctrlPr></m:funcPr><m:fName><m:r><w:rPr>' +
+          '<w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/></w:rPr><m:t>sin</m:t></m:r>' +
+          '</m:fName><m:e><m:d><m:dPr><m:begChr m:val="("/><m:sepChr m:val=""/><m:endChr m:val=")"/>' +
+          '</m:dPr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:d></m:e></m:func>" function apply\n' +
+          '        |     |_ "sin" function name\n' +
+          '        |     |_ "<m:d><m:dPr><m:begChr m:val="("/><m:sepChr m:val=""/>' +
+          '<m:endChr m:val=")"/></m:dPr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:d>" argument\n' +
+          '        |        |_ "<m:t>x</m:t>" text\n' +
+          '        |_ "<m:t>x</m:t>" denominator\n',
+      );
+    });
   });
 
   describe("an uppercase or mixed-case valid name is the content-independent placeholder", () => {

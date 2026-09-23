@@ -554,13 +554,16 @@
  * unrelated to this increment's `:346`): `:75` (`expression: simple`, the
  * `expression` grammar rule's own `alt6`), `:80` (`intermediate_exp:
  * sequence`, next to already-ported `:78`'s SIMPLE twin, with no known
- * firing shape), and `:83` (`sup_recursion: simple`, reached only when
- * `recursive_baseless_sup_exp`'s `mini_sub_sup`-led alternative nests a
- * terminal `baseless_sup` under `exp_iteration` — traced as plausible but
- * not fired). Roughly 3,000 candidate inputs were traced on the oracle for
- * these three (hand-built combinations plus every `unicodemath-tests` and
- * pinned-corpus string already in scope), none of which fired any of the
- * three; none is registered, and none counts toward `FINAL_COUNT`.
+ * firing shape at the time), and `:83` (`sup_recursion: simple`, reached
+ * only when `recursive_baseless_sup_exp`'s `mini_sub_sup`-led alternative
+ * nests a terminal `baseless_sup` under `exp_iteration` — traced as
+ * plausible but not fired). Roughly 3,000 candidate inputs were traced on
+ * the oracle for these three (hand-built combinations plus every
+ * `unicodemath-tests` and pinned-corpus string already in scope), none of
+ * which fired any of the three at the time; none was registered by this
+ * increment. `:80` was ported later, by slice J below, once that slice's
+ * own `:1836`/`:1856` witnesses turned out to need it to finish a real
+ * parse — `:75` and `:83` remain unreached.
  *
  * ## A thirteenth increment: INTERMEDIATE/SLASHED/PAREN-TAIL (slice J)
  *
@@ -2139,8 +2142,16 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("78", { slashed_value: sequence("values") }, (b) =>
     sequenceSlashedValues(asArray(b.values)),
   );
-  // `:80` (`intermediate_exp: sequence`) is NOT registered — see the module
-  // header, "COMBINATORS-EARLY".
+  // Slice J: `:80` — `:31`'s own `intermediate_exp` twin, the SAME single-key
+  // unwrap shape. `factor`'s `expBracket.as("intermediate_exp")` wraps the
+  // mismatched-bracket alternative's OWN `{intermediate_exp:, expr:}` pair a
+  // second time, so once that inner pair resolves through `:1836`/`:1856`
+  // below to an array, the OUTER hash is left holding `intermediate_exp` as
+  // its only key with that array as its value — exactly `:80`'s shape.
+  // Registered now because `:1836`/`:1856`'s own witnesses need it to finish
+  // a real parse; every earlier survey missed it for want of a reaching
+  // input, not for any difficulty in the rule itself.
+  rule("80", { intermediate_exp: sequence("expr") }, (b) => b.expr);
   rule("81", { diacritic_belows: simple("belows") }, (b) => b.belows);
   rule("82", { unary_function: simple("function") }, (b) => b.function);
   // `:83` (`sup_recursion: simple`) is NOT registered — see the module

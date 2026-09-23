@@ -1113,23 +1113,24 @@ RULE_COVERAGE = {
   #                                346, 2251  factor + SEQUENCE operand +
   #                                SIMPLE naryand_recursion (moved from
   #                                SLICE_BOUNDARY, `:346`'s own blocker)
-  #   "1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa"
-  #                                381, 1776  (moved from SLICE_BOUNDARY)
   #   "1A^* = \sum_{r}{ (-1)^r ⟨ A ⟩_r } = ⟨ A ⟩_+ - ⟨ A ⟩_-"
   #                                441, 1776  (moved from SLICE_BOUNDARY)
   #   "(x + y + z) ∧ (x + 3y - 3z) = - 6y z + 4z x + 2x y"
   #                                2275  factor + SIMPLE operand + SEQUENCE exp
   #   "∑_1\of (\forall y\exists 1) ⫷if resolveCW == true⫸"
   #                                2281  factor + SIMPLE operand + SIMPLE exp
-  #   "f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"
-  #                                2287  factor + SEQUENCE operand + SEQUENCE exp
   #   "a_δ₁ρ₁σ₂^3β"                2335  sub_script + mini_sub + exp_iteration
   #   "N₀₊₍₂₋₅₎₌₋₃"                2426  mini_intermediate_exp + sub_operators
   #                                + SEQUENCE sub_recursions
   #
-  # `:2245`, `:2323`, `:2035`, `:2041`, `:2097`, `:1841`, `:2341`, `:2777`,
-  # `:2403`, `:2787` and `:3074` carry no row here — see the module header's
-  # own "thirteenth increment" section for each one's disposition.
+  # `:2287`'s own witness sits in `SLICE_BOUNDARY` instead, not here: the only
+  # two `unicodemath-tests` strings that fire it both ALSO need `:278`
+  # (`binary_symbols`+`naryand_recursion`, outside this slice) to finish
+  # parsing, so it cannot compare for real yet — see `SLICE_BOUNDARY`'s own
+  # comment. `:2245`, `:2323`, `:2035`, `:2041`, `:2097`, `:1841`, `:2341`,
+  # `:2777`, `:2403`, `:2787` and `:3074` carry no row anywhere — see the
+  # module header's own "thirteenth increment" section for each one's
+  # disposition.
   "intermediate_paren_tail" => [
     "⒭ab▒c",
     "a¹²bc/d",
@@ -1153,11 +1154,9 @@ RULE_COVERAGE = {
     "├1]a┤4[",
     "(𝑘−𝑧−1)⒞𝑘",
     "1I(x,x') = g(x,x') [ε(x,x') + ∫_S▒ρ(x,x',x'')I(x',x'')ⅆx'']",
-    '1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa',
     '1A^* = \\\\sum_{r}{ (-1)^r ⟨ A ⟩_r } = ⟨ A ⟩_+ - ⟨ A ⟩_-',
     "(x + y + z) ∧ (x + 3y - 3z) = - 6y z + 4z x + 2x y",
     "∑_1\\of (\\forall y\\exists 1) ⫷if resolveCW == true⫸",
-    "f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx",
     "a_δ₁ρ₁σ₂^3β",
     "N₀₊₍₂₋₅₎₌₋₃",
   ],
@@ -1191,30 +1190,50 @@ RULE_COVERAGE = {
 # `"ⅇ"` moved out when slice H ported `:43` (`{mitBbb: simple}`); it
 # compares for real now, in `RULE_COVERAGE["combinators"]`.
 #
-# `"1x₂"` and slice H's own three rows below moved out when slice J ported
-# `:1776` and `:2251` (both `{key: simple, key2: simple/sequence}`
+# `"1x₂"` and two of slice H's own three rows below moved out when slice J
+# ported `:1776` and `:2251` (both `{key: simple, key2: simple/sequence}`
 # combinators of this exact family, outside the 21 ids slice H was scoped
-# to) — each re-traced against the current port and now parses:
+# to) — each re-traced against the CURRENT port, not trusted to still be
+# blocked the same way:
 #
-#   "1x₂" fired `:67` (ported by slice H) and `:1776` (ported by slice J);
+#   "1x₂" fired `:67` (ported by slice H) and `:1776` (ported by slice J),
+#   and now parses;
 #   the 101-char "1w^h^e^e^e^e+1a+…" row still fires `:95`/`:945` — `:945` is
-#   slice I's own claim, so this row alone stays here for integration to
-#   resolve;
-#   the "1I(x,x')…ⅆx'']" row fired `:346`/`:2251`, both now ported;
-#   the "1a_ℲDa + a_ℲCa + …" row fired `:381`/`:1776`, both now ported;
-#   the "1A^* = ..." row fired `:441`/`:1776`, both now ported.
+#   slice I's own claim, so this row stays here for integration to resolve;
+#   the "1I(x,x')…ⅆx'']" row fired `:346`/`:2251`, both now ported, and now
+#   parses — moved into `RULE_COVERAGE["intermediate_paren_tail"]` below;
+#   the "1a_ℲDa + a_ℲCa + …" row fires `:381`/`:1776` too, but a DIFFERENT
+#   rule blocks the FULL parse now: `:1776` turns `base` into a SEQUENCE
+#   (`[Number, Symbol]`), and no `base: sequence, size_overrides: simple,
+#   sub_script: simple` rule exists anywhere in the 519 (only a `base:
+#   sequence, sup:, sub:` shape at `:2142`, a different key set) — so
+#   `override_subsup`'s own three-key hash stays unmatched. `:1776` landing
+#   moved the refusal one level up, not away; the row stays here, its own
+#   comment corrected rather than left stale.
 #
-# All four moved into `RULE_COVERAGE["intermediate_paren_tail"]` below.
+# All but that last row moved into `RULE_COVERAGE["intermediate_paren_tail"]`
+# below.
 #
-# `:80` (`{intermediate_exp: sequence}`) is NOT ported at all: every oracle
-# input found that fires it does so nested one level under an `open_paren`/
-# `factor or frac`/`exp: sequence`/`close_paren` combo this slice does not
-# carry either (`:3422`, `:3477`, `:3510` fire fine; the one still missing is
-# `:800`, an unclaimed pure combinator of the same shape — `:1836`/`:1856`,
-# named here in an earlier pass, are ported by slice J now but did not
-# unlock `:80` on any input re-tried), so no input was found reaching `:80`
-# on its own — not proven unreachable, only unreached (the module header's
-# own phrase for this exact situation).
+# `:80` (`{intermediate_exp: sequence}`) IS now registered by slice J: once
+# `:1836`/`:1856` needed it to finish a real parse (see their own comment
+# at their registration site), the input that revealed the need also gave a
+# reaching witness — the SAME `factor.as(:intermediate_exp)` double-wrap the
+# module header's earlier survey had already traced to, just not with an
+# input that got far enough to prove it. The prior survey's other finding
+# stands: `:3422`, `:3477`, `:3510` fire fine on their own inputs; the one
+# still missing is `:800`, an unclaimed pure combinator of the same shape.
+#
+# One more row is slice J's own: `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` fires
+# `:2287` (`factor`+SEQUENCE `operand`+SEQUENCE `exp`, ported this slice), but
+# the SAME input's own differential tail (`ⅆx` chained after `ⅇ^(x)` inside
+# the integral's `naryand`) needs `:278` (`binary_symbols`+
+# `naryand_recursion`, outside this slice's 40 ids) to finish parsing — the
+# only other `unicodemath-tests` string that fires `:2287` (the `π_(...)`
+# one) needs the same rule. `:2287` still fires on this row for the
+# COVERAGE suite (`buildUnicodemathTransform` counts every action call
+# across the whole tree, not just the ones on the path to a final node), so
+# it stays a real coverage witness even while the row itself stays a
+# boundary one.
 #
 # Every row records a rule the port lacks, not one it has: each is a witness
 # a pure combinator (`RULE_COVERAGE["combinators"]`) needs and cannot have
@@ -1223,6 +1242,8 @@ RULE_COVERAGE = {
 SLICE_BOUNDARY = [
   "1/2a",
   '1w^h^e^e^e^e+1a+"Testing this!"-(1/2/333/4+1+1)+abc₂⁹/W_c+ab+√(42&1g)+▭(255&▭(255&b))+∑_A▒a+1+∑┴a┬b▒b',
+  '1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa',
+  "f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx",
 ].freeze
 
 options = { oracle: nil, out: "test/formats/unicodemath", allow_dirty: false }

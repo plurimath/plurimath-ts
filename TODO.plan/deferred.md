@@ -965,18 +965,82 @@ UnicodeMath.** `test/adversarial/adversarial-inputs.spec.ts` pins, per grammar,
 parses at nesting 20 and refusals at 1,000 for nested braces/`\frac`/`\sqrt`/
 parens/`\left(`/superscripts (LaTeX), `<mrow>`/`<sup>`/parens (HTML) and
 parens/brackets/roots/fractions (UnicodeMath), plus unterminated and unmatched
-closers, long runs, NUL and lone surrogates. Every 1,000-deep refusal is the
-`RangeError` path (`STACK_EXHAUSTED_MESSAGE`); HTML at exactly 100 levels is the
-JSON round trip's `nesting of 100 is too deep`, which the gem raises too. The
-result is unchanged: **`MAX_DEPTH` was not observed to fire for any of the four
-grammars**, and a spec assertion fails if it ever does. Against the gem
-(measured on `00c52783`): LaTeX and UnicodeMath parse at 20 and overflow the
-Ruby stack (`SystemStackError`) by 100; the port's ceiling is at or above the
-gem's at every depth measured on both sides, so the port is never stricter
-than the gem at a measured depth (LaTeX `\frac` is the near-tie: refused from
-70 here, gem parses 60 and overflows at 80). Still open: the deterministic
-bound itself, and a runtime change (engine, worker stack size), which the
-n=20 / n=1,000 pins are placed to survive but would move the unpinned band.
+closers, long runs, NUL and lone surrogates. On this measurement, every
+1,000-deep refusal was the `RangeError` path (`STACK_EXHAUSTED_MESSAGE`); HTML
+at exactly 100 levels was the JSON round trip's `nesting of 100 is too deep`,
+which the gem raises too. Against the gem (measured on `00c52783`): LaTeX and
+UnicodeMath parse at 20 and overflow the Ruby stack (`SystemStackError`) by
+100; the port's ceiling is at or above the gem's at every depth measured on
+both sides, so the port is never stricter than the gem at a measured depth
+(LaTeX `\frac` is the near-tie: refused from 70 here, gem parses 60 and
+overflows at 80). The claim that follows — that `MAX_DEPTH` never fires — did
+not survive the next trigger below and has been corrected there.
+
+**Update 2026-09-23: the "runtime change" trigger fired, and `MAX_DEPTH`
+*does* fire — the 2026-09-21 claim was wrong as a universal statement, right
+only for the one pool this repository happens to test under.** A review
+running the same gate on Node 24 saw rows that were pinned to
+`STACK_EXHAUSTED_MESSAGE` come back `DEPTH_LIMIT_MESSAGE` instead (e.g. "latex:
+1,000 nested braces"). Reproduced directly this session, isolating the
+variable: on the SAME build and the SAME three CI Node versions
+(20.20.2/22.23.2/24.18.0), vitest's default `forks` pool (what this
+repository's CI actually runs, unconfigured — no `pool` setting anywhere in
+this repo) never once produced a `MAX_DEPTH` refusal, on any of the 94
+adversarial-gate assertions; `--pool=threads` flips several of them. The
+mechanism, also measured directly: a trivial recursive function with no
+grammar overhead reaches roughly 12,300–13,700 frames before `RangeError`
+under `forks` on this machine (both Node 20 and 24), comfortably BELOW
+`MAX_DEPTH` (20,000) — matching the 2026-08-17/2026-09-21 measurements exactly,
+which is why nothing here was wrong on the pool this repo actually runs — but
+roughly 49,700–55,200 frames inside a `worker_threads` worker (what a
+`threads` pool test runs inside), comfortably ABOVE it. That is the opposite
+of what this entry's own trigger note assumed ("a worker with a smaller
+stack"): on this machine a `worker_threads` worker's usable JS stack measured
+**larger** than a forked child's, not smaller, and that is what makes
+`MAX_DEPTH` win the race for some 1,000-deep rows under `threads` where it
+never did under `forks`. Under `--pool=threads`, "html: 1,000 nested parens"
+goes a step further and reaches neither depth guard at all before the JSON
+round trip's own nesting-100 cap catches the resulting tree in the post-parse
+walk — a third legitimate typed refusal for the same row.
+
+Both depth guards, and the JSON-nesting cap where HTML reaches it, are the
+same clean, typed `ParseError`/`PARSE_ERROR` refusal — the property that is
+actually invariant, and the property PORTING-STANDARDS' "refuse, don't crash
+or hang" bar cares about. The gate's own tests were rewritten (2026-09-23) to
+pin exactly that instead of a specific guard: `guardFor` in both "guard that
+says which guard it was" describe blocks now asserts the error's class and
+code before returning its message, and the row-level assertions check
+membership in the set of known clean-refusal messages rather than equality
+with one of them. One test in each block is still guard-specific, and is
+scoped honestly to say so: "does not refuse any pinned row through MAX_DEPTH
+on this run's actual pool" documents in its own name and comment that the
+claim holds for `forks`, not universally. `MAX_DEPTH`'s own mechanism — that it
+fires exactly one past its threshold, found by binary search rather than
+importing the private constant — is proven independently of any pool or
+engine stack size in the new `test/pegkit/depth-limit.spec.ts`, by mutating
+`ParseContext.depth` directly through the `dynamic()` atom rather than by
+constructing enough real nested atoms to reach it.
+
+One row was found to be more fragile still, and was deliberately left as
+found rather than folded into this fix: the pre-existing (2026-08-17)
+AsciiMath row `"tokens: 2,000 superscripts"` does not merely change GUARD
+under `--pool=threads` — it stops refusing altogether (`outcomeOf` returns
+`"parsed"`), because `threads`' larger stack budget on this machine is enough
+to fully parse 2,000 `^y` levels without exhausting either guard. This is a
+genuine environment-dependent OUTCOME flip, not just a message flip, on a row
+outside the LaTeX/HTML/UnicodeMath rows this update's trigger was about; it is
+recorded here rather than silently patched because closing it is a sizing
+decision (how much deeper the row needs to be pinned to clear `threads`' much
+larger budget too) that deserves its own measurement, not a rider on this
+entry.
+
+Still open: the deterministic bound itself remains undesigned (this entry's
+original "why not fix now" reasoning is unchanged), and the exact
+frames-per-real-stack-depth ratio is expected to keep moving with the engine,
+the pool, and the host — the n=20/n=1,000 pins are placed to survive that
+movement in OUTCOME, and, since 2026-09-23, the gate no longer asserts a
+specific guard for the rows in between, only that a refusal is one of the
+known clean shapes.
 
 ## AsciiMath rejection position: `right-unclosed`
 

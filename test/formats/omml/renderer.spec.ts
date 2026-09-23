@@ -4232,6 +4232,15 @@ describe("OMML Text control-character encoding", () => {
       publicText("a&#x7f;b"),
     );
   });
+
+  it("refuses a lone-surrogate entity, where the gem raises RangeError", () => {
+    expectRefusal(() => toOmmlWithoutMathTag(new TextNode({ parameterOne: "x&#xd800;y" })), {
+      kind: "text",
+      message:
+        "text.parameterOne: the entities here name a code point UTF-8 cannot hold — " +
+        "the gem raises RangeError here (invalid codepoint 0xD800 in UTF-8)",
+    });
+  });
 });
 
 const NARY_INTEGRAL_X = xml(

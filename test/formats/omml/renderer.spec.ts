@@ -3438,11 +3438,6 @@ describe("OMML renderer boundary", () => {
 
   it.each([
     [
-      "formatter",
-      { formatter: {} },
-      'The "formatter" feature of to_omml is deferred (TODO.plan/deferred.md): number formatting is P4 scope; only the no-formatter path is measured',
-    ],
-    [
       "unitsml",
       { unitsml: {} },
       'The "unitsml" feature of to_omml is deferred (TODO.plan/deferred.md): UnitsML is deferred wholesale (ARCHITECTURE.md section 5)',

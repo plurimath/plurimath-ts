@@ -11,12 +11,10 @@
  *
  * Three groups:
  *
- * 1. Every pinned `calls/1` case whose options fall in this slice renders
- *    byte-identically for asciimath, latex, mathml, unicodemath and html.
- *    OMML stays refused (another lane's).
- * 2. Every pinned case outside it (base notation, when the pin has any) is
- *    still refused BY NAME, and the refusal names the offending key.
- * 3. Inline cases measured on the oracle (below), and the option refusals.
+ * 1. Every pinned `calls/1` case — `string_format` ones included — renders
+ *    byte-identically for asciimath, latex, mathml, unicodemath and html, and
+ *    for OMML wherever the case records an OMML expectation.
+ * 2. Inline cases measured on the oracle (below), and the option refusals.
  */
 
 import { describe, expect, it } from "vitest";
@@ -106,7 +104,7 @@ function reduce(entry: PinnedCallCase): Reduced {
       precision,
       ...(args.string_format === null || args.string_format === undefined
         ? {}
-        : { stringFormat: args.string_format as never }),
+        : { stringFormat: String(args.string_format) }),
     },
   };
 }
@@ -114,13 +112,12 @@ function reduce(entry: PinnedCallCase): Reduced {
 const ALL = loadPinnedCorpus().calls.map(reduce);
 
 /**
- * In scope: only this slice's keys and no `string_format` (B2-O's). Locale is
- * not a filter: `formatter.locale` is inert, as on the oracle, so the `-de-`,
- * `-fr-` and unsupported-locale cases run here like any other.
+ * In scope: every case whose option keys this port implements — all of them
+ * today, `string_format` cases included. Locale is not a filter:
+ * `formatter.locale` is inert, as on the oracle, so the `-de-`, `-fr-` and
+ * unsupported-locale cases run here like any other.
  */
-const IN_SCOPE = ALL.filter(
-  (c) => c.keys.every((k) => IN_SCOPE_KEYS.has(k)) && c.stringFormat === null,
-);
+const IN_SCOPE = ALL.filter((c) => c.keys.every((k) => IN_SCOPE_KEYS.has(k)));
 
 function buildFormula(entry: PinnedCallCase): ConstructedMathNode {
   const census = readCensus();
@@ -128,11 +125,17 @@ function buildFormula(entry: PinnedCallCase): ConstructedMathNode {
 }
 
 describe("pinned calls/1 cases — the sets this spec partitions", () => {
-  it("has 66 cases, and every one but a string_format case is in scope", () => {
-    // 66 is measured, not recalled: the count of `corpus.calls` under the pinned testsuite.
+  it("has 66 cases, every one in scope, two of them string_format cases", () => {
+    // 66 and 2 are measured, not recalled: the count of `corpus.calls` under the
+    // pinned testsuite, and of those whose `string_format` is not nil.
     expect(ALL).toHaveLength(66);
-    expect(IN_SCOPE.length).toBeGreaterThan(0);
-    for (const c of IN_SCOPE) expect(c.stringFormat).toBeNull();
+    expect(IN_SCOPE).toHaveLength(66);
+    expect(IN_SCOPE.filter((c) => c.stringFormat !== null)).toHaveLength(2);
+  });
+
+  it("records OMML for most cases, so the OMML check below inspects something", () => {
+    const withOmml = IN_SCOPE.filter((c) => c.entry.expected.get("omml") !== undefined);
+    expect(withOmml.length).toBeGreaterThanOrEqual(60);
   });
 
   it("covers every group of this slice (a gate that inspects nothing fails)", () => {
@@ -154,6 +157,8 @@ describe("pinned calls/1 cases — the sets this spec partitions", () => {
       "locale-fr-standard-defaults",
       "locale-unsupported-falls-back",
       "locale-de-explicit-separators",
+      "string-format-alone",
+      "string-format-with-options",
     ]) {
       expect(
         ids.some((id) => id.includes(stem)),
@@ -187,20 +192,10 @@ describe.each(IN_SCOPE.map((c) => [c.entry.id, c] as const))("%s", (_id, c) => {
     if (html === undefined) expect(typeof rendered).toBe("string");
     else expect(rendered).toBe(html);
   });
-  it("still refuses omml — another lane's", () => {
-    expect(() => toOmml(buildFormula(c.entry), { formatter } as never)).toThrow(RenderError);
+  const omml = expected.get("omml");
+  it.skipIf(omml === undefined)("renders omml byte-identical to the oracle", () => {
+    expect(toOmml(buildFormula(c.entry), { formatter })).toBe(omml);
   });
-});
-
-describe("string_format cases (B2-O's) are refused by name", () => {
-  it.each(ALL.filter((c) => c.stringFormat !== null).map((c) => [c.entry.id, c] as const))(
-    "%s",
-    (_id, c) => {
-      expect(() => toAsciimath(buildFormula(c.entry), { formatter: c.formatter })).toThrow(
-        /formatter\.stringFormat/,
-      );
-    },
-  );
 });
 
 /**

@@ -252,12 +252,10 @@ function atBoundary<T>(render: () => T): T {
     // `isStackOverflow` (pegkit/atom.ts), not a bare `instanceof RangeError`:
     // the class alone also matches `UndecodableEntityError` (core/nodes.ts),
     // an ordinary entity-decode refusal that is a `RangeError` subclass but
-    // has nothing to do with recursion. Reachable here: `render/text/omml.ts`
-    // calls `htmlEntityToUnicode` directly rather than through this format's
-    // `decodeEntities` wrapper, so a `Text` value spelling an unpaired
-    // surrogate as a numeric entity (`"&#xd800;"`) threw this branch's
-    // stack-exhaustion message before this fix — see the asciimath/latex/
-    // unicodemath renderers' matching comment for the same finding.
+    // has nothing to do with recursion. This format's kind files decode
+    // through `decodeEntities` (render-shared.ts), which turns that error
+    // into a `RenderError` first; the narrow check keeps any other
+    // `RangeError` from being reported as stack exhaustion.
     if (isStackOverflow(error)) {
       throw new RenderError(
         "node: the tree nests too deep for the OMML walk's call stack",

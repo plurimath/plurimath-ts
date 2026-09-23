@@ -558,13 +558,16 @@
  * unrelated to this increment's `:346`): `:75` (`expression: simple`, the
  * `expression` grammar rule's own `alt6`), `:80` (`intermediate_exp:
  * sequence`, next to already-ported `:78`'s SIMPLE twin, with no known
- * firing shape), and `:83` (`sup_recursion: simple`, reached only when
- * `recursive_baseless_sup_exp`'s `mini_sub_sup`-led alternative nests a
- * terminal `baseless_sup` under `exp_iteration` — traced as plausible but
- * not fired). Roughly 3,000 candidate inputs were traced on the oracle for
- * these three (hand-built combinations plus every `unicodemath-tests` and
- * pinned-corpus string already in scope), none of which fired any of the
- * three; none is registered, and none counts toward `FINAL_COUNT`.
+ * firing shape at the time), and `:83` (`sup_recursion: simple`, reached
+ * only when `recursive_baseless_sup_exp`'s `mini_sub_sup`-led alternative
+ * nests a terminal `baseless_sup` under `exp_iteration` — traced as
+ * plausible but not fired). Roughly 3,000 candidate inputs were traced on
+ * the oracle for these three (hand-built combinations plus every
+ * `unicodemath-tests` and pinned-corpus string already in scope), none of
+ * which fired any of the three at the time; none was registered by this
+ * increment. `:80` was ported later, by slice J below, once that slice's
+ * own `:1836`/`:1856` witnesses turned out to need it to finish a real
+ * parse — `:75` and `:83` remain unreached.
  *
  * ## A twelfth increment: FRACTION/ATOMS-TAIL (slice I)
  *
@@ -622,6 +625,125 @@
  * fires on the port, so none of the ten is registered.
  *
  * See `FINAL_COUNT` for the running total this increment brings it to.
+ *
+ * ## A thirteenth increment: INTERMEDIATE/SLASHED/PAREN-TAIL (slice J)
+ *
+ * Forty candidate rules from `transform.rb:1514`-`:2426`, plus `:2777`,
+ * `:2787` and `:3074`: the `ROOT`/`OVER-UNDER`/`ACCENT` increment's own
+ * `:1514` leftover, the `mini_sup`/`digit`/`sup_exp` combos onto a
+ * fraction's `recursive_numerator`, the `intermediate_exp` family
+ * `expBracket`'s mismatched-bracket alternative builds, the five
+ * `slashed_value`x`expr` combos, the unmasked paren-prefix pair, the last two
+ * masked-paren-mask rules, `:2079`, the `factor`/`operand`(+third key)
+ * list-joins from `:2245` to `:2341`, `:2403`, `:2426`, and the ATOMS-tail
+ * pair the FRACTION section above deferred. Traced the same way every prior
+ * increment was: `unicode_math/transform.rb`, every registered block wrapped
+ * in a firing counter, against the 675 `unicodemath-tests` strings, the
+ * pinned corpus, and hand-built candidates — and, unlike every earlier
+ * increment, checked all the way through a real `parseUnicodemath` call on
+ * the PORT for each candidate witness, not just an oracle trace: three
+ * witnesses that fired their named rule on the oracle turned out to need a
+ * SECOND, out-of-scope rule to finish parsing on the port, caught only by
+ * that extra step (see below).
+ *
+ * **Twenty-nine** are registered, plus one prerequisite (`:80`) under its own
+ * id. `:1514` (`root_first_value`/`root_second_value`, a multi-character root
+ * radix — `"⒭ab▒c"`, `▒` being `root_invisible_character`'s own separator
+ * since `binary_root` carries no literal one) finally resolves the ROOT
+ * increment's own open question.
+ * `:1746`/`:1751`/`:1761`/`:1766`/`:1771`/`:1776`/`:1781`/`:1786` are the
+ * `mini_sup`/`digit`/`sup_exp` heads a fraction's `recursive_numerator` (or,
+ * for `:1771`/`:1776`, `alpha_numeric_values`'s own `expr` continuation)
+ * chains onto; `:1776` is one of the two blockers `SLICE_BOUNDARY`'s `"1x₂"`
+ * row named (`:67`, the other, was already ported by slice H) and one of the
+ * two `:381`/`:441` need. `:1801` is a fraction leading two-plus more
+ * `naryand_recursion` items under a nary (`"∑_(k=0)^n n⒞k a^k b"`, `n⒞k` a
+ * `\choose` `Frac`); the gem carries no SIMPLE sibling for this shape.
+ * `:1836`/`:1846`/`:1856` are `expBracket`'s own MISMATCHED-bracket
+ * alternative (`mixBracketed`, `"(a|"`/`"|a)"`) and `factor`'s plain-paren
+ * arm, each paired with `expr`/`exclamation_symbol`. `factor`'s own
+ * `expBracket.as(:intermediate_exp)` wraps the mismatched alternative's
+ * `{intermediate_exp:, expr:}` pair a SECOND time, so `:1836`/`:1856`'s own
+ * witnesses only finish parsing once the outer wrap's `{intermediate_exp:
+ * ARRAY}` also has a rule — `:80`, a plain single-key unwrap the same shape
+ * as `:71`, registered here for the same reason the earlier "COMBINATORS-
+ * EARLY" survey named it unreached rather than hard: nobody had a witness
+ * that got far enough to need it, until now. The five
+ * `slashed_value`x`expr`/`exp` combos (`:1894`/`:1899`/`:1904`/`:1909`/
+ * `:1914`) reuse `slashedValues`/`sequenceSlashedValues` unchanged.
+ * `:2010`/`:2015` are the UNMASKED paren-prefix pair — `[Number(""), paren]`,
+ * the same shape the masked triple already carried, with an empty size —
+ * reached when the prefix's own inner bracket mismatch never finds a partner
+ * until the outer `expBracket` closes (`"├]a┤["` fires both at once, distinct
+ * from the ported masked triple's `\left`/`\right` spelling, which resolves
+ * through `:2536`/`:2527` instead whenever real content sits between the
+ * prefix and its own match). `:2061`/`:2073` are that pair's MASKED
+ * siblings (`"├1]a┤4["`). `:2079` is `:2085`'s SEQUENCE-`diacritics` twin
+ * (`"(𝑘−𝑧−1)⒞𝑘"`). `:2251` reuses `SLICE_BOUNDARY`'s own `"1I(x,x') = …
+ * ∫_S▒ρ(x,x',x'')I(x',x'')ⅆx'']"` witness, the input that row already named
+ * as firing `:2251` — one of `:346`'s two blockers, the other (`:1776`)
+ * landing in the same slice. `:2275`/`:2281`/`:2287` are `:2269`/`:2317`'s
+ * `exp`-keyed siblings (`spacedExpBracket`'s own tag, not `expression`'s
+ * `expr`), reached inside a mismatched-bracket or table-cell run — `:2287`'s
+ * own real-input witness needs `:278` (see below), so it lives in
+ * `SLICE_BOUNDARY`, not `RULE_COVERAGE`.
+ * `:2335` is `:2103`'s multi-symbol subscript-run sibling
+ * (`"a_δ₁ρ₁σ₂^3β"`). `:2426` is `:640`/`:646`'s `sub_operators`/
+ * `sub_recursions` pair with a `mini_intermediate_exp` riding ahead of it,
+ * building a mini-sub-sized `Math::Number` rather than `:640`'s `Symbol`
+ * (`"N₀₊₍₂₋₅₎₌₋₃"`).
+ *
+ * Once `:1776` and `:2251` landed, two `SLICE_BOUNDARY` rows from slice H
+ * were re-traced against the CURRENT port rather than trusted to still be
+ * blocked, and both now parse: `"1x₂"` (`:67`+`:1776`) and the long
+ * `"1I(x,x') = …"` row (`:346`+`:2251`), both moved into
+ * `RULE_COVERAGE["intermediate_paren_tail"]` below, alongside the new group's
+ * own witnesses. `:95` needs `:945` besides `:1776`, `:945` is slice I's own
+ * claim, and that row is left in `SLICE_BOUNDARY` for integration to
+ * resolve. TWO more rows fire their named rule but hit a DIFFERENT, still
+ * unported one and stay in `SLICE_BOUNDARY`: `"1a_ℲDa + …"` fires
+ * `:381`/`:1776` (both ported), but `:1776` turns `base` into a SEQUENCE
+ * (`[Number, Symbol]`), and no `base: sequence, size_overrides: simple,
+ * sub_script: simple` rule exists anywhere in the 519 (only a `base:
+ * sequence, sup:, sub:` shape at `:2142`, a different key set), so
+ * `override_subsup`'s own three-key hash stays unmatched one level up —
+ * `:1776` landing moved the refusal, not away. `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ
+ * ^(-2πⅈxξ)ⅆx"` fires `:2287` (ported), but its own differential tail needs
+ * `:278` (`binary_symbols`+`naryand_recursion`, outside this slice's 40
+ * ids) to finish parsing; `:2287` still counts as covered by this row, since
+ * `buildUnicodemathTransform` counts every action call across the whole
+ * tree, not just the ones on the path to a final node.
+ *
+ * ELEVEN are not registered, five for a shared structural reason and six for
+ * want of a reaching input or a proven defect: `:1841`
+ * (`intermediate_exp`+`operator`), `:2341`
+ * (`intermediate_exp`+`expr`+`expression`) and `:2777`
+ * (`intermediate_exp`+`operator`+`expr`) are UNREACHED for the same reason —
+ * every grammar path that pairs `intermediate_exp` with a further tag either
+ * resolves that tag to `expr` (through `expBracket`'s own `mixBracketed`
+ * alternative, consumed by `:1836`/`:1856`) or to `exclamation_symbol`
+ * (through `factor`'s own seq, consumed by `:1846`); a bare `{operator:}`
+ * hash unwraps via `:62` before any parent hash could ever see `operator`
+ * survive as a sibling key, and no grammar production tags `intermediate_exp`
+ * and `operator` from the same `seq`. `:2035` (`atom`+SEQUENCE
+ * `atoms`+`recursive_denominator`), `:2041` (`atom`+`binary_symbols`+
+ * `factor`), `:2097` (`sub_script`+`mini_sup`+`operand`), `:2245`
+ * (`:2251`'s own SEQUENCE-`naryand_recursion` twin) and `:2323`
+ * (`factor`+`operand`+`recursive_denominator`) found no reaching input
+ * across the 675 `unicodemath-tests` strings, the pinned corpus, or this
+ * slice's own hand-built candidates. `:2787`/`:3074` (`atom`+`operator`+
+ * `frac`[+SEQUENCE `expr`]) were deferred whole by the FRACTION section
+ * above; this slice re-tried deliberately with the same method and reached
+ * neither. `:2403` (`base`+SEQUENCE `sub`+`sub_recursion`) carries a proven
+ * DEFECT rather than an ordinary gap: its `Constants::BINARY_FUNCTIONS`
+ * branch reads a bare local `sub_value` the block never assigns
+ * (`transform.rb:2407`) — the same typo `:1078`'s own twin branch carries
+ * (`transform.rb:1081`, also unregistered) — so taking that branch on the
+ * oracle raises rather than returns; slice F tried this id and found no
+ * reaching input, and this slice's own search (every `BINARY_FUNCTIONS` name
+ * paired with a multi-character subscript, plus the 675 `unicodemath-tests`
+ * strings) found none either. None of these eleven counts toward
+ * `FINAL_COUNT`.
  *
  * ## Two model behaviours that are provably absent here
  *
@@ -2109,8 +2231,16 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("78", { slashed_value: sequence("values") }, (b) =>
     sequenceSlashedValues(asArray(b.values)),
   );
-  // `:80` (`intermediate_exp: sequence`) is NOT registered — see the module
-  // header, "COMBINATORS-EARLY".
+  // Slice J: `:80` — `:31`'s own `intermediate_exp` twin, the SAME single-key
+  // unwrap shape. `factor`'s `expBracket.as("intermediate_exp")` wraps the
+  // mismatched-bracket alternative's OWN `{intermediate_exp:, expr:}` pair a
+  // second time, so once that inner pair resolves through `:1836`/`:1856`
+  // below to an array, the OUTER hash is left holding `intermediate_exp` as
+  // its only key with that array as its value — exactly `:80`'s shape.
+  // Registered now because `:1836`/`:1856`'s own witnesses need it to finish
+  // a real parse; every earlier survey missed it for want of a reaching
+  // input, not for any difficulty in the rule itself.
+  rule("80", { intermediate_exp: sequence("expr") }, (b) => b.expr);
   rule("81", { diacritic_belows: simple("belows") }, (b) => b.belows);
   rule("82", { unary_function: simple("function") }, (b) => b.function);
   // `:83` (`sup_recursion: simple`) is NOT registered — see the module
@@ -3146,6 +3276,20 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => newPower(unfencedValue(b.first_value, true), updatedPrimes(b.prime)),
   );
 
+  // Slice J: `:1514` — `binary_root`'s own `root_first_value`/`root_second_value`
+  // pair (`grammar.ts`'s `binaryRoot`, `\root`/`⒭`/`&#x24ad;`), distinct from
+  // `:1530`'s plain `first_value`/`second_value` shape below. Reached only
+  // when the radix is MULTI-character: `"⒭ab▒c"` (root of `a b`, over `c`) —
+  // `▒` is `root_invisible_character`'s own separator, since `binary_root`
+  // carries no literal delimiter between the two operands. A single-character
+  // radix leaves `root_first_value` `simple`, which the module header records
+  // as unreached before this slice; that sibling is still not registered.
+  rule(
+    "1514",
+    { root_first_value: sequence("first_value"), root_second_value: simple("second_value") },
+    (b) => newRoot(filterValues(b.first_value), unfencedValue(b.second_value, true)),
+  );
+
   rule(
     "1522",
     { first_value: simple("first_value"), second_value: sequence("second_value") },
@@ -3286,8 +3430,65 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.mini_sup,
     ...asArray(b.expr),
   ]);
+  // Slice J: `mini_sup`/`digit`/`sup_exp` folded onto a fraction's
+  // `recursive_numerator` — the five siblings `:1756`'s own `atom` version
+  // above left unregistered, each reached the same way: a mini-sized
+  // superscript, a digit run, or a built superscript `Power` immediately
+  // ahead of more numerator content, over a denominator (`a¹²bc/d`,
+  // `"1a/b"`, `"a^2 bc/c"`). `:1781`/`:1786` need a SPACE before the
+  // continuation — `grammar.ts`'s `numerator` production requires one at
+  // that alternative, unlike the bare-adjacent `mini_sup`/`digit` forms.
+  rule(
+    "1746",
+    { mini_sup: simple("mini_sup"), recursive_numerator: sequence("recursive_numerator") },
+    (b) => [b.mini_sup, ...asArray(b.recursive_numerator)],
+  );
+  rule(
+    "1751",
+    { mini_sup: simple("mini_sup"), recursive_numerator: simple("recursive_numerator") },
+    (b) => [b.mini_sup, b.recursive_numerator],
+  );
+  rule("1761", { digit: simple("digit"), recursive_numerator: simple("numerator") }, (b) => [
+    b.digit,
+    b.numerator,
+  ]);
+  rule("1766", { digit: simple("digit"), recursive_numerator: sequence("numerator") }, (b) => [
+    b.digit,
+    ...asArray(b.numerator),
+  ]);
+  // `:1771`/`:1776`: `digit`+`expr` — `alpha_numeric_values`'s own
+  // `(number|n_ascii) >> alpha_numeric_values.as(:expr)` recursion
+  // (`sub_sup.rb:259`), reached wherever a digit leads a mixed run feeding a
+  // multi-character `base` (`"1a_x"` for the SIMPLE `expr`, `"1ab_x"`/
+  // `"1a2_x"` for the SEQUENCE one — `:1054` then folds the base into an
+  // array). `:1776` is one of the two blockers `SLICE_BOUNDARY`'s `"1x₂"`
+  // row names (`:67` is the other, already ported by slice H) and one of the
+  // two `:381`/`:441` need alongside `:1776` itself.
+  rule("1771", { digit: simple("digit"), expr: sequence("expr") }, (b) => [
+    b.digit,
+    ...asArray(b.expr),
+  ]);
+  rule("1776", { digit: simple("digit"), expr: simple("expr") }, (b) => [b.digit, b.expr]);
+  rule(
+    "1781",
+    { sup_exp: simple("sup"), recursive_numerator: simple("recursive_numerator") },
+    (b) => [b.sup, b.recursive_numerator],
+  );
+  rule(
+    "1786",
+    { sup_exp: simple("sup"), recursive_numerator: sequence("recursive_numerator") },
+    (b) => [b.sup, ...asArray(b.recursive_numerator)],
+  );
   rule("1791", { frac: simple("frac"), expr: simple("expr") }, (b) => [b.frac, b.expr]);
   rule("1796", { frac: simple("frac"), exp: simple("exp") }, (b) => [b.frac, b.exp]);
+  // A fraction followed by TWO OR MORE more `naryand_recursion` items under a
+  // nary (no SIMPLE sibling exists in the gem for this shape — measured, see
+  // the module header). Witness: `"∑_(k=0)^n n⒞k a^k b"`, `n⒞k` a `\choose`
+  // `Frac` immediately followed by two bare naryand items `a^k` and `b`.
+  rule("1801", { frac: simple("frac"), naryand_recursion: sequence("naryand") }, (b) => [
+    b.frac,
+    ...asArray(b.naryand),
+  ]);
 
   // PREREQUISITE (slice A's `:1756`, registered here under the same id): an
   // atom folded onto a fraction's `recursive_numerator` (`a(b)/c`).
@@ -3314,11 +3515,44 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   ]);
   rule("1831", { nary: simple("nary"), expr: simple("expr") }, (b) => [b.nary, b.expr]);
 
+  // `:1836`/`:1846`/`:1856`: `expBracket`'s own MISMATCHED-bracket
+  // alternative (`grammar.ts`'s `mixBracketed`, e.g. `(a|`/`|a)`) resolves to
+  // `{intermediate_exp:, expr:}` internally, and `factor`'s plain-paren arm
+  // resolves to a bare `intermediate_exp` beside `exclamationSymbolsMaybe`'s
+  // `!` — the three shapes `:71`/`:80` (single-key `intermediate_exp`) do NOT
+  // catch this INNER hash, since those only match when NOTHING else rides
+  // along. `factor`'s own `expBracket.as(:intermediate_exp)` wraps whatever
+  // `:1836`/`:1856` return a SECOND time, so a full parse through either also
+  // needs `:80` (registered below, at its own id) to unwrap that outer
+  // single-key `{intermediate_exp: ARRAY}`. Witnesses: `"(a|b"` (SIMPLE
+  // `expr`), `"(a)!"` (`exclamation_symbol`, no double-wrap since the
+  // plain-paren arm returns a resolved value directly), `"(a|bc"` (SEQUENCE
+  // `expr`).
+  rule("1836", { intermediate_exp: simple("exp"), expr: simple("expr") }, (b) => [b.exp, b.expr]);
+  // `:1841` (`intermediate_exp`+`operator`) is NOT registered: every
+  // `expBracket` path that pairs `intermediate_exp` with a further tag
+  // either resolves that tag to `expr` (`:1836`/`:1856`, since a bare
+  // `{operator:}` unwraps via `:62` before the parent ever sees it) or to
+  // `exclamation_symbol` (`:1846`, `factor`'s own seq). No candidate input —
+  // the 675 `unicodemath-tests` strings, the pinned corpus, and roughly a
+  // hundred hand-built paren/operator combinations — fired it; the module
+  // header's own "unreached, not proven unreachable" status applies. `:2777`,
+  // its three-key `+expr` sibling below, is unreached for the same reason.
+  rule(
+    "1846",
+    { intermediate_exp: simple("exp"), exclamation_symbol: simple("exclamation_symbol") },
+    (b) => [b.exp, symbolsClass(b.exclamation_symbol)],
+  );
+
   // ATOMS meeting `exclamation_symbols` (`!`/`!!`, `grammar.ts:705`) directly
   // rather than through `atoms`.
   rule("1851", { atom: simple("atom"), exclamation_symbol: simple("exclamation_symbol") }, (b) => [
     b.atom,
     symbolsClass(b.exclamation_symbol),
+  ]);
+  rule("1856", { intermediate_exp: simple("exp"), expr: sequence("expr") }, (b) => [
+    b.exp,
+    ...asArray(b.expr),
   ]);
 
   rule("1861", { nary_sub_sup: simple("subsup_exp"), naryand: simple("naryand") }, (b) => {
@@ -3358,6 +3592,34 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       filterValues(b.naryand),
     );
   });
+
+  // The five `slashed_value`x`expr`/`exp` combos `:69`/`:78` (both already
+  // ported, `slashedValues`/`sequenceSlashedValues`) leave paired with more
+  // content: SIMPLE `slashed_value`+SIMPLE `expr` (`"a\'b"`), the same pair
+  // through the `exp` key `masked_recursive_value`'s own recursion opens up
+  // (`"1(a\'b)"`), SEQUENCE `slashed_value` (two-plus adjacent backslash
+  // escapes, `"\a2b c"`/`"\a2b cd"`) against SIMPLE/SEQUENCE `expr`, and
+  // SIMPLE `slashed_value` against SEQUENCE `expr` (`"a\'bc"`).
+  rule("1894", { slashed_value: simple("value"), expr: simple("expr") }, (b) => [
+    slashedValues(b.value),
+    b.expr,
+  ]);
+  rule("1899", { slashed_value: simple("value"), exp: simple("expr") }, (b) => [
+    slashedValues(b.value),
+    b.expr,
+  ]);
+  rule("1904", { slashed_value: sequence("values"), expr: simple("expr") }, (b) => [
+    ...sequenceSlashedValues(asArray(b.values)),
+    b.expr,
+  ]);
+  rule("1909", { slashed_value: sequence("values"), expr: sequence("expr") }, (b) => [
+    ...sequenceSlashedValues(asArray(b.values)),
+    ...asArray(b.expr),
+  ]);
+  rule("1914", { slashed_value: simple("value"), expr: sequence("expr") }, (b) => [
+    slashedValues(b.value),
+    ...asArray(b.expr),
+  ]);
 
   rule("1968", { nary_class: simple("nary_class"), naryand: simple("naryand") }, (b) => {
     const name = naryFunctionName(b.nary_class);
@@ -3408,6 +3670,27 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     newMultiscript(newPowerBase(b.base), [b.pre_sub], []),
   );
 
+  // Slice J: the UNMASKED paren-prefix pair — `paren_close_prefix`+`open_paren`
+  // and `paren_open_prefix`+`close_paren`, each built as `[Number(""), paren]`
+  // so the size-prefix SEQUENCE-paren rules downstream (`:2650` et al.) can
+  // consume it uniformly, with an EMPTY size where the masked triple below
+  // carries a real digit run. Reached when the prefix's own inner mismatch
+  // (`grammar.ts`'s `openParen`/`closeParen`, each trying the OTHER bracket
+  // kind first) consumes a bracket that never gets a matching partner until
+  // the outer `expBracket` closes: `"├]a┤["` fires both at once (`├`/`┤` are
+  // `paren_open_prefix`/`paren_close_prefix`'s own glyphs, distinct from the
+  // MASKED triple's `\left`/`\right`, which resolve through `:2536`/`:2527`
+  // instead whenever real content sits between the prefix and its own
+  // matching bracket).
+  rule("2010", { paren_close_prefix: simple("prefix"), open_paren: simple("paren") }, (b) => [
+    newNumber(""),
+    b.paren,
+  ]);
+  rule("2015", { paren_open_prefix: simple("prefix"), close_paren: simple("paren") }, (b) => [
+    newNumber(""),
+    b.paren,
+  ]);
+
   // FENCED: a fence with nothing inside — `()` — is the one shape whose value
   // is the EMPTY array, not a one-element list around a binding.
   rule("2020", { open_paren: simple("open_paren"), close_paren: simple("close_paren") }, (b) =>
@@ -3431,6 +3714,19 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) => [b.open_paren_mask, b.open_paren],
   );
+  // Slice J: `:2061`/`:2073`, `:2055`/`:2067`'s own mismatched-bracket
+  // twins — a `close_paren_mask` (or `open_paren_mask`) prefixed by the
+  // OTHER prefix keyword, the masked sibling of the unmasked `:2010`/`:2015`
+  // pair above. Witness: `"├1]a┤4["` fires both `:2061` and `:2073` at once.
+  rule(
+    "2061",
+    {
+      paren_close_prefix: simple("paren_close_prefix"),
+      close_paren_mask: simple("close_paren_mask"),
+      open_paren: simple("open_paren"),
+    },
+    (b) => [b.close_paren_mask, b.open_paren],
+  );
   rule(
     "2067",
     {
@@ -3440,7 +3736,25 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     },
     (b) => [b.close_paren_mask, b.close_paren],
   );
+  rule(
+    "2073",
+    {
+      paren_open_prefix: simple("paren_open_prefix"),
+      open_paren_mask: simple("open_paren_mask"),
+      close_paren: simple("close_paren"),
+    },
+    (b) => [b.open_paren_mask, b.close_paren],
+  );
 
+  // `:2079`: `:2085`'s SEQUENCE-`diacritics` twin (`char`+`diacritics`+
+  // `number`), reached by a run of two-plus diacritics ahead of a trailing
+  // number: `"(𝑘−𝑧−1)⒞𝑘"`'s own `⒞` (`\choose`) leads with a `char`+
+  // `diacritics` pair here on the oracle.
+  rule(
+    "2079",
+    { char: simple("char"), diacritics: sequence("diacritics"), number: simple("number") },
+    (b) => [b.char, ...asArray(b.diacritics), newNumber(b.number)],
+  );
   rule(
     "2085",
     { char: simple("char"), diacritics: simple("diacritics"), number: simple("number") },
@@ -3471,9 +3785,22 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => [b.atom, symbolsClass(BINARY_SYMBOLS.get(rubyToS(b.symbols)) ?? b.symbols), b.numerator],
   );
 
+  // `:2035` (`atom`+SEQUENCE `atoms`+`recursive_denominator`) and `:2041`
+  // (`atom`+`binary_symbols`+`factor`, `:2048`'s own `factor` twin above) are
+  // NOT registered: the ATOMS-meeting-FRACTION section of the module header
+  // already named both as outside a prior slice's boundary without claiming
+  // unreachability, and this slice's own search — the 675 `unicodemath-tests`
+  // strings plus roughly two dozen hand-built atom-run/binary-symbol inputs —
+  // found no input firing either. Unreached, not proven unreachable.
+
   // PREREQUISITES (slice A's `:2055`/`:2067`, registered here under the same
   // ids): a size-prefixed paren (`├1(`, `┤2)`) folds its mask and its paren
   // into the two-element run `:2685`/`:2707` read.
+
+  // `:2097` (`sub_script`+`mini_sup`+`operand`) is NOT registered: no input
+  // among the 675 `unicodemath-tests` strings or this slice's own hand-built
+  // sub-script/mini-sup/operand combinations fired it. Unreached, not proven
+  // unreachable.
 
   rule("2103", { base: simple("base"), sup: simple("sup"), sub: simple("sub") }, (b) => {
     const underover = ["underset", "overset"];
@@ -3578,6 +3905,23 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     { factor: simple("factor"), operand: sequence("operand"), expr: sequence("expr") },
     (b) => [b.factor, ...asArray(b.operand), ...asArray(b.expr)],
   );
+  // `:2245`/`:2251`: `factor`+SEQUENCE `operand`+`naryand_recursion`
+  // (SEQUENCE/SIMPLE). `:2251` is one of the two blockers Slice H's own
+  // `SLICE_BOUNDARY` names for its `:346` row (`:2251` itself) and reuses the
+  // SAME witness that row already carries — the long `"1I(x,x') = g(x,x')
+  // […] ∫_S▒ρ(x,x',x'')I(x',x'')ⅆx'']"` input, traced on the oracle to fire
+  // both `:346` and `:2251` together. `:2245`, its SEQUENCE-`naryand_recursion`
+  // twin, is NOT registered: no input tried (including every 675
+  // `unicodemath-tests` string) fires it. Unreached, not proven unreachable.
+  rule(
+    "2251",
+    {
+      factor: simple("factor"),
+      operand: sequence("operand"),
+      naryand_recursion: simple("naryand_recursion"),
+    },
+    (b) => [b.factor, ...asArray(b.operand), b.naryand_recursion],
+  );
   rule(
     "2257",
     { factor: sequence("factor"), operand: simple("operand"), expr: sequence("expr") },
@@ -3596,6 +3940,28 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     "2269",
     { factor: simple("factor"), operand: simple("operand"), expr: sequence("expr") },
     (b) => [b.factor, b.operand, ...asArray(b.expr)],
+  );
+  // `:2275`/`:2281`/`:2287`: `factor`+`operand`+`exp` (`:2269`/`:2317`'s own
+  // `exp`-keyed siblings — `exp` is `spacedExpBracket`'s tag, reached inside a
+  // mismatched-bracket or table-cell run rather than `expression`'s `expr`).
+  // Witnesses: a long real `unicodemath-tests` relation chain for the
+  // SEQUENCE-`exp` pair, `"∑_1\of (\forall y\exists 1) …"` for the SIMPLE
+  // triple, and `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` (`unicodemath-tests`'
+  // Fourier-transform example) for the SEQUENCE-`operand` form.
+  rule(
+    "2275",
+    { factor: simple("factor"), operand: simple("operand"), exp: sequence("exp") },
+    (b) => [b.factor, b.operand, ...asArray(b.exp)],
+  );
+  rule(
+    "2281",
+    { factor: simple("factor"), operand: simple("operand"), exp: simple("exp") },
+    (b) => [b.factor, b.operand, b.exp],
+  );
+  rule(
+    "2287",
+    { factor: simple("factor"), operand: sequence("operand"), exp: sequence("exp") },
+    (b) => [b.factor, ...asArray(b.operand), ...asArray(b.exp)],
   );
   rule(
     "2293",
@@ -3623,11 +3989,32 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => [b.factor, b.operand, b.expr],
   );
 
+  // `:2323` (`factor`+`operand`+`recursive_denominator`) is NOT registered:
+  // no input among the 675 `unicodemath-tests` strings or this slice's own
+  // candidates fires it. Unreached, not proven unreachable.
+
   rule(
     "2329",
     { factor: simple("factor"), expr: simple("expr"), expression: simple("expression") },
     (b) => [b.factor, b.expr, b.expression],
   );
+  // `:2335`: `sub_script`+`mini_sub`+`exp_iteration`, `:2103`'s own
+  // multi-key subscript-run sibling. Witness: `"a_δ₁ρ₁σ₂^3β"` (a three-symbol
+  // subscript run under a superscript).
+  rule(
+    "2335",
+    {
+      sub_script: simple("sub_script"),
+      mini_sub: simple("mini_sub"),
+      exp_iteration: simple("exp"),
+    },
+    (b) => [b.sub_script, b.mini_sub, b.exp],
+  );
+  // `:2341` (`intermediate_exp`+`expr`+`expression`, `:2329`'s own
+  // `intermediate_exp` twin) is NOT registered for the same structural
+  // reason as `:1841`/`:2777` above: no grammar path pairs a bare
+  // `intermediate_exp` with a second `expr`/`expression` tier without first
+  // resolving through `:1836`/`:1856`. Unreached, not proven unreachable.
   // FRACTION concluded — `bevelled` (`\sdiv`/`\sdivide`/`\sfrac`/`&#x2044;`),
   // `ldiv` (`\ldiv`/`&#x2215;`) and `no_display_style` (`\ndiv`/`\oslash`/
   // `&#x2298;`), each still `numerator: simple, denominator: simple`. The last
@@ -3705,6 +4092,42 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     "2393",
     { frac: simple("frac"), relational_symbols: simple("symbols"), expr: simple("expr") },
     (b) => [b.frac, symbolsClass(b.symbols), b.expr],
+  );
+
+  // `:2403` (`base`+SEQUENCE `sub`+`sub_recursion`) is NOT registered: its
+  // `Constants::BINARY_FUNCTIONS` branch reads a bare local `sub_value` the
+  // block never assigns (`transform.rb:2407`) — the SAME typo `:1078`'s
+  // twin branch carries (`transform.rb:1081`, also unregistered) — so taking
+  // that branch on the oracle would raise `NameError`/`NoMethodError` rather
+  // than return a value, a defect proven by reading the source (`grep -n
+  // sub_value unicode_math/transform.rb` finds no assignment in either
+  // block). Reaching it needs a `base` whose `class_name` is one of
+  // `Constants::BINARY_FUNCTIONS` with no `parameter_one` yet, immediately
+  // followed by a SEQUENCE `sub`; slice F tried this shape and found no
+  // reaching input, and this slice's own search — the 675 `unicodemath-tests`
+  // strings plus every `BINARY_FUNCTIONS` name paired with a multi-character
+  // subscript — found none either, buggy branch or not. Unreached, not
+  // proven unreachable.
+
+  // `:2426`: `mini_intermediate_exp`+`sub_operators`+SEQUENCE `sub_recursions`
+  // — `:640`/`:646`'s own `sub_operators`+`sub_recursions` pair (registered
+  // above), here with a `mini_intermediate_exp` (a subscript-sized
+  // parenthesised run, `subParen`'s own `mini_intermediate_exp` alt) riding
+  // ahead of it. The `Math::Number` it builds is mini-sub-sized, unlike
+  // `:640`'s `Math::Symbols::Symbol` — transcribed as measured, the gem's own
+  // choice for this one call site. Witness: `"N₀₊₍₂₋₅₎₌₋₃"`.
+  rule(
+    "2426",
+    {
+      mini_intermediate_exp: simple("mini_exp"),
+      sub_operators: simple("sub_operators"),
+      sub_recursions: sequence("sub_recursions"),
+    },
+    (b) => [
+      b.mini_exp,
+      miniSubNumber(SUB_OPERATORS_INVERTED.get(rubyToS(b.sub_operators)) ?? ""),
+      ...asArray(b.sub_recursions),
+    ],
   );
 
   // `Utility.unfenced_value(operand, ...)` on the first line is computed and
@@ -4088,9 +4511,18 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => parenthesisedTable(b.table, b.open_paren, b.close_paren),
   );
 
+  // `:2777` (`intermediate_exp`+`operator`+`expr`) is NOT registered — see
+  // `:1841`/`:2341` above for why: `intermediate_exp` never survives as a
+  // sibling of a bare `operator` tag, only of `expr`/`exclamation_symbol`
+  // through `expBracket`'s and `factor`'s own productions.
+
   // ATOMS meeting a bare `operator` and a `frac` directly (`:2787`) and that
   // shape's SEQUENCE-`expr` extension (`:3074`) are deferred with `:30`
-  // above: no probed input reached either.
+  // above: no probed input reached either. Slice J re-tried deliberately —
+  // every `BINARY_FUNCTIONS`/atom pairing this file's `element`/`atom`
+  // productions can build, ahead of a `frac`, plus the 675
+  // `unicodemath-tests` strings — and found no reaching input either;
+  // unreached, not proven unreachable.
 
   // An operator, a `frac` and a SEQUENCE `expr` (`++¹/₂ḟa`). The ATOMS-led
   // `:2787` and its `expr` extension `:3074` are not registered: no probed
@@ -5265,6 +5697,13 @@ function sequenceSlashedValues(values: readonly unknown[]): unknown[] {
 /** `Math::Symbols::Symbol.new(text, mini_sub_sized: true)`. */
 function miniSubSymbol(text: string): UnicodemathDraft {
   const draft = newBareSymbol(text);
+  draft.fields.miniSubSized = true;
+  return draft;
+}
+
+/** `Math::Number.new(text, mini_sub_sized: true)` — `:2426`'s own `Number`. */
+function miniSubNumber(text: string): UnicodemathDraft {
+  const draft = newNumber(text);
   draft.fields.miniSubSized = true;
   return draft;
 }

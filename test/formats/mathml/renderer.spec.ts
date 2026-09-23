@@ -595,12 +595,14 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
   });
 
   it("unmeasured carrier names raise instead of rendering a silent default", () => {
-    // Merror, not Mbox: Mbox has an arm now (below). Measured on the pinned
-    // oracle 00c52783, `Merror.instance_method(:to_mathml_without_math_tag)
-    // .owner` is Merror, so a carrier-default render of the name would diverge
-    // silently.
+    // None, not Mbox: Mbox has an arm now (below). Measured on the pinned
+    // oracle 00c52783, `None.instance_method(:to_mathml_without_math_tag)
+    // .owner` is None, so a carrier-default render of the name would diverge
+    // silently. (`Merror`, `Longdiv`, `Scarries`, `Msline`, `Msgroup`,
+    // `Mglyph` and `Ms` are the same shape but are all measured and
+    // case-armed elsewhere in this file now.)
     expect(() =>
-      toMathml(formula(new UnaryFunctionNode({ name: "Merror", parameterOne: x() }))),
+      toMathml(formula(new UnaryFunctionNode({ name: "None", parameterOne: x() }))),
     ).toThrow(RenderError);
     expect(() =>
       toMathml(formula(new TableNode({ name: "Nosuch", value: [tr(td(x()))] }))),

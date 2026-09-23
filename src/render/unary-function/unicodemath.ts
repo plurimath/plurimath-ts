@@ -2,8 +2,8 @@
  * Mirrors `function/unary_function.rb` — `UnaryFunction#to_unicodemath` (:90) —
  * plus the name arms for the gem classes the census folds into this carrier
  * with their *own* `to_unicodemath` overrides: `cancel.rb` (:21), `left.rb`
- * (:34), `right.rb` (:34), `mbox.rb` (:27), `tr.rb` (:65). Every other name in
- * `MEASURED_UNARY_NAMES` below renders the carrier default.
+ * (:34), `right.rb` (:34), `mbox.rb` (:27), `tr.rb` (:65), `phantom.rb` (:35) and `substack.rb`
+ * (:37). Every other name in `MEASURED_UNARY_NAMES` below renders the carrier default.
  *
  * The reachable four were **measured**, not read off the class list: for each
  * of the 35 reachable names, `Klass.instance_method(:to_unicodemath).owner` on
@@ -31,7 +31,7 @@
  *     renders `"╱(a)"`, exactly like `Cancel(Symbol("a"))`.
  */
 
-import type { NodeParameter } from "../../core/index";
+import type { NodeOptions, NodeParameter } from "../../core/index";
 import { RenderError, TextNode } from "../../core/index";
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
 import {
@@ -46,6 +46,7 @@ import {
   unreachableName,
 } from "../../formats/unicodemath/render-shared";
 import { UNICODEMATH_UNARY_CARRIER_NAMES } from "../../generated/unicodemath/render-tables";
+import { phantomGlyph } from "../mpadded/unicodemath";
 import { renderText } from "../text/unicodemath";
 
 /** U+2061 FUNCTION APPLICATION — invisible, but a real character. */
@@ -142,8 +143,37 @@ export function renderUnaryFunction(
       // `Text#initialize` defaults its slot to `""` where `Mbox.new` leaves
       // nil, and `""` renders two quotation marks where nil renders nothing.
       return renderText(mboxText(node.parameterOne));
+    case "Phantom":
+      return renderPhantom(node, context);
+    case "Substack":
+      return renderSubstack(node, context);
     case "Tr":
       return renderTr(node, context);
+    case "Longdiv":
+      // `longdiv.rb:26`: `parameter_one&.to_unicodemath(options:)` — nil-safe,
+      // no class-name prefix and no `⁡` APPLY character, unlike the carrier
+      // default.
+      return unaryValue(node, context, "longdiv.parameterOne");
+    case "Merror":
+    case "Msline":
+      // `merror.rb:9`, `msline.rb:9`: `def to_unicodemath(**); end` — always
+      // Ruby nil, whatever the slot holds.
+      return null;
+    case "Msgroup":
+      // `msgroup.rb:38-40`: `parameter_one.map { |p| p.to_unicodemath(options:) }.join` —
+      // a STRICT list, no `&.` per member, no `⁡`.
+      return renderMsgroupList(node.parameterOne, context, node.kind);
+    case "Mglyph":
+      // `mglyph.rb:23`: `parameter_one[:alt] if parameter_one` — returned raw,
+      // not interpolated: an absent slot or a missing `alt` key both answer
+      // Ruby nil.
+      return mglyphAlt(node.parameterOne, node.kind);
+    case "Ms":
+      // `ms.rb:19-21`: `Text.new(parameter_one).to_unicodemath(options:)` —
+      // the same fresh-`Text` delegation `mbox.rb` uses, so the same nil-vs-
+      // empty-string distinction applies (measured: `Ms.new(nil)` → Ruby nil,
+      // `Ms.new("")` → `""`, `Ms.new("so")` → `"so"`).
+      return renderText(mboxText(node.parameterOne));
     default: {
       if (!MEASURED_UNARY_NAMES.has(name)) throw unreachableName(node.kind, name);
       // `UnaryFunction#to_unicodemath` (`unary_function.rb:90`):
@@ -196,6 +226,51 @@ function renderCancel(node: NodeOf<"unaryFunction">, context: RenderContext): st
   // A `Fenced` child returns its own render unwrapped, so `╱(a)` either way
   // (measured, both shapes).
   return `${CANCEL_MARK}${unicodemathParens(field, context) ?? ""}`;
+}
+
+/**
+ * `Phantom#to_unicodemath` (`phantom.rb:35`). Two branches, chosen on the
+ * slot:
+ *
+ * ```ruby
+ * if parameter_one.is_a?(Math::Function::Mpadded) && parameter_one&.options&.dig(:phantom)
+ *   "#{phantom_unicode}#{unicodemath_parens(parameter_one.parameter_one, options: options)}"
+ * else
+ *   "⟡#{unicodemath_parens(parameter_one, options: options)}"
+ * end
+ * ```
+ *
+ * The first is what the UnicodeMath parser builds for `⬄x` and `⇳x`: a
+ * `Phantom` around an `Mpadded` whose options are one of `PHANTOM_SYMBOLS`. The
+ * glyph is the same reverse lookup `Mpadded#to_unicodemath` does, so it comes
+ * from the same helper. `unicodemath_parens` calls `to_unicodemath` on its
+ * argument unguarded, so an absent slot raises rather than rendering `⟡`.
+ */
+function renderPhantom(node: NodeOf<"unaryFunction">, context: RenderContext): string {
+  const field = node.parameterOne;
+  if (isNode(field) && field.kind === "mpadded") {
+    const options = field.options;
+    if (options !== null && options !== undefined && present(options.phantom)) {
+      return `${phantomGlyph(options)}${unicodemathParens(field.parameterOne, context) ?? ""}`;
+    }
+  }
+  return `⟡${unicodemathParens(field, context) ?? ""}`;
+}
+
+/**
+ * `Substack#to_unicodemath` (`substack.rb:37`):
+ * `"■(#{compact.map(to_unicodemath).join('@')})"`. An absent slot leaves the
+ * parentheses empty (`&.`) and a non-list slot dies in `compact`; a row that
+ * renders nil joins as the empty string.
+ */
+function renderSubstack(node: NodeOf<"unaryFunction">, context: RenderContext): string {
+  const rows = node.parameterOne;
+  if (rows === null || rows === undefined) return "■()";
+  if (!Array.isArray(rows)) throw slotCrash("substack.parameterOne", rows, node.kind);
+  return `■(${rows
+    .filter((row) => row !== null && row !== undefined)
+    .map((row) => renderChild(row, context, "substack.parameterOne") ?? "")
+    .join("@")})`;
 }
 
 /**
@@ -254,4 +329,68 @@ function renderTr(node: NodeOf<"unaryFunction">, context: RenderContext): string
   // `Array#join` writes a nil element as "" — measured: a row whose first td
   // renders nil gives `"&b"`, a leading empty field rather than a dropped one.
   return tds.map((td) => renderChild(td, context, "tr.parameterOne") ?? "").join("&");
+}
+
+/**
+ * `Msgroup#to_unicodemath` (`msgroup.rb:38-40`): `parameter_one.map { |p|
+ * p.to_unicodemath(options:) }.join`. The slot must already be a list (a nil
+ * slot raises calling `map`), and each member is read WITHOUT `&.` (a nil
+ * entry raises too).
+ */
+function renderMsgroupList(
+  value: NodeParameter | undefined,
+  context: RenderContext,
+  kind: string,
+): string {
+  if (!Array.isArray(value)) {
+    throw new RenderError(
+      `msgroup.parameterOne: is ${describeSlot(value)}, not a list — the gem raises NoMethodError calling map`,
+      FORMAT,
+      kind,
+    );
+  }
+  return value
+    .map((item, index) => {
+      if (item === null || item === undefined) {
+        throw new RenderError(
+          `msgroup.parameterOne[${index}]: is nil — the gem raises NoMethodError calling to_unicodemath on it`,
+          FORMAT,
+          kind,
+        );
+      }
+      return renderChild(item, context, `msgroup.parameterOne[${index}]`) ?? "";
+    })
+    .join("");
+}
+
+/** The slot as an options record — `Mglyph.new`'s default and the only shape measured. */
+function mglyphRecord(value: NodeParameter | undefined, kind: string): NodeOptions {
+  if (
+    value !== null &&
+    value !== undefined &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    !("kind" in value)
+  ) {
+    return value as NodeOptions;
+  }
+  throw new RenderError(
+    `mglyph.parameterOne: is ${describeSlot(value)}, not an options record — the gem calls [] on it, ` +
+      "which raises for anything else",
+    FORMAT,
+    kind,
+  );
+}
+
+/** `mglyph.rb:23`: `parameter_one[:alt] if parameter_one` — returned raw, not interpolated. */
+function mglyphAlt(value: NodeParameter | undefined, kind: string): string | null {
+  if (value === null || value === undefined) return null;
+  const alt = mglyphRecord(value, kind).alt;
+  if (alt === null || alt === undefined) return null;
+  if (typeof alt === "string") return alt;
+  throw new RenderError(
+    `mglyph.parameterOne.alt: is ${describeSlot(alt)}, not a string — only a string is measured here`,
+    FORMAT,
+    kind,
+  );
 }

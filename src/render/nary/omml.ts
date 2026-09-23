@@ -2,12 +2,12 @@ import { hasNodeKind, RenderError } from "../../core/index";
 import {
   controlProperties,
   decodeEntities,
+  describeSlot,
   FORMAT,
   type NodeOf,
   naryAttrValue,
   ommlSlot,
   type RenderContext,
-  requireEmptyOptions,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
@@ -40,17 +40,36 @@ function isNil(value: unknown): boolean {
   return value === null || value === undefined;
 }
 
+/**
+ * `parameter_one.nary_attr_value(options:)`. Three classes answer it: `Symbol`
+ * (`symbols/symbol.rb:101-105`, `naryAttrValue`), and `Sum` and `Prod`, whose
+ * readers return the literal `"∑"` and `"∏"` (`function/sum.rb:131-133`,
+ * `function/prod.rb:125-127`) and never look at their own slots. A `Nary` whose
+ * operator is a `Sum` or `Prod` is what the gem's `omml_spec.rb` builds for
+ * `EX_182`/`EX_183`. Any other class has no such reader and the gem raises
+ * `NoMethodError`, so anything else stays a refusal (`null`).
+ */
+function operatorText(first: unknown, kind: string): string | null {
+  if (!hasNodeKind(first)) return null;
+  switch ((first as { readonly kind: string }).kind) {
+    case "symbol":
+      return naryAttrValue(first as NodeOf<"symbol">, kind, "nary.parameterOne");
+    case "sum":
+      return "∑";
+    case "prod":
+      return "∏";
+    default:
+      return null;
+  }
+}
+
 export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlElement {
-  requireEmptyOptions(node.options, node.kind, "nary.options");
+  const limitLocation = limitLocationValue(node);
   const first = node.parameterOne;
-  const rawOperator = isNil(first)
-    ? ""
-    : hasNodeKind(first) && (first as { readonly kind: string }).kind === "symbol"
-      ? naryAttrValue(first as NodeOf<"symbol">, node.kind, "nary.parameterOne")
-      : null;
+  const rawOperator = isNil(first) ? "" : operatorText(first, node.kind);
   if (rawOperator === null) {
     throw new RenderError(
-      "nary.parameterOne: only the measured generic Symbol operator is implemented in this slice",
+      "nary.parameterOne: only a Symbol, Sum or Prod operator is implemented in this slice",
       FORMAT,
       node.kind,
     );
@@ -75,7 +94,7 @@ export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlEle
     firstValue === SUPPRESSED_NARY_OPERATOR
       ? null
       : new XmlElement("m:chr").setAttribute("m:val", operatorValue),
-    new XmlElement("m:limLoc").setAttribute("m:val", "subSup"),
+    new XmlElement("m:limLoc").setAttribute("m:val", limitLocation),
     // `Nary#hide_tags` is `return nar unless field.nil?` — an explicit nil test,
     // NOT Ruby-falsy: a `false` slot keeps its hide tag off. An absent field
     // reads as `nil` in Ruby, so `undefined` counts alongside `null` here.
@@ -88,5 +107,41 @@ export function renderNary(node: NodeOf<"nary">, context: RenderContext): XmlEle
     ommlSlot(node.parameterTwo, "sub", context, node.kind, "nary.parameterTwo"),
     ommlSlot(node.parameterThree, "sup", context, node.kind, "nary.parameterThree"),
     ommlSlot(node.parameterFour, "e", context, node.kind, "nary.parameterFour"),
+  );
+}
+
+/**
+ * The `m:limLoc` value, `Nary#chr_value` (nary.rb:155-166):
+ * `(self.options[:type] || "subSup").to_s`. The options read is unguarded, so a
+ * slot that is not a hash raises — nil with `NoMethodError`, a String or Array
+ * with `TypeError`, `false` with `NoMethodError` (all measured on the oracle at
+ * `00c52783`). `type` itself is `||`-defaulted, so nil and `false` give
+ * `"subSup"` (measured), and anything else is stringified: `"undOvr"` is the
+ * one value the gem's own parsers build, `5` gave `"5"` and `:abc` gave
+ * `"abc"`. Only what this port can spell exactly is stringified — a string, an
+ * integer, `true`; a Float, a list or a node has a Ruby `to_s` this file will
+ * not guess.
+ *
+ * Every other key is never read here: `mask` is a MathML-only option, and
+ * `{mask: 13}` gives the same `m:naryPr` as `{}` (measured).
+ */
+function limitLocationValue(node: NodeOf<"nary">): string {
+  const options: unknown = node.options;
+  if (typeof options !== "object" || options === null || Array.isArray(options)) {
+    throw new RenderError(
+      `nary.options: is ${describeSlot(options)}, not a hash — the gem raises reading options[:type]`,
+      FORMAT,
+      node.kind,
+    );
+  }
+  const type = (options as Readonly<Record<string, unknown>>).type;
+  if (type === null || type === undefined || type === false) return "subSup";
+  if (typeof type === "string") return type;
+  if (type === true) return "true";
+  if (typeof type === "number" && Number.isInteger(type)) return String(type);
+  throw new RenderError(
+    `nary.options.type: holds ${describeSlot(type)}, whose Ruby to_s is not reproduced here`,
+    FORMAT,
+    node.kind,
   );
 }

@@ -26,7 +26,7 @@ import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS, rubyClassName } from "../../core/normalize";
 import { assertReproducibleRubyHashOrder } from "../../core/ruby-semantics";
 import { formatNumberForMathml, type NumberFormat } from "../../formatting/index";
-import { XmlElement } from "../../xml/index";
+import { type XmlChild, XmlElement } from "../../xml/index";
 
 export const FORMAT = "mathml";
 
@@ -449,23 +449,20 @@ export function interpolatedValue(value: unknown, kind: string, at: string): str
 }
 
 /**
- * `options[:mask]` handling on `Int` (`function/int.rb:59`, key presence) and `Nary`
- * (`nary.rb:56`, truthiness): the gem decodes the mask integer into limit
- * options (`Core#get_mask_options`, core.rb:543-570 — Ruby `to_i` with
- * FLOORED modulo) and rewrites the script tag. This port supports exactly
- * the no-op decoding — a mask whose only option is `limits_default`
- * (`mask.to_i` congruent to 0 mod 4 with no %32 flag, e.g. `nil` or `0`),
- * probed as byte-identical to no mask at all (probe int-mask-key-nil) —
- * and refuses every live mask BY NAME (`mask 1` renames `msubsup` to
- * `munderover`, probed; the placeholder/opposite machinery is UnicodeMath
- * -input scope, TODO.plan/deferred.md).
+ * `options[:mask]` handling on `Int` (`function/int.rb:59`, key presence): the
+ * gem decodes the mask integer into limit options (`Core#get_mask_options`,
+ * core.rb:543-570 — Ruby `to_i` with FLOORED modulo) and rewrites the script
+ * tag. `Int` supports exactly the no-op decoding — a mask whose only option is
+ * `limits_default` (`mask.to_i` congruent to 0 mod 4 with no %32 flag, e.g.
+ * `nil` or `0`), probed as byte-identical to no mask at all (probe
+ * int-mask-key-nil) — and refuses every live mask BY NAME (`mask 1` renames
+ * `msubsup` to `munderover`, probed). `Nary` (`nary.rb:56`, truthiness) applies
+ * the rewrite: `maskedNaryScript` below.
  */
 export function assertMaskIsInert(mask: unknown, kind: string, at: string): void {
   const value = rubyToI(mask, kind, at);
-  const floored = (n: number, m: number): number => ((n % m) + m) % m;
-  const low = floored(value, 4);
-  const high = floored(value - low, 32);
-  if (low === 0 && high === 0) return;
+  const decoded = maskOptions(value);
+  if (decoded.length === 1 && decoded[0] === "limits_default") return;
   throw deferredFeatureError(
     "mask",
     `${at} holds mask ${String(value)}, which rewrites the script tag ` +
@@ -473,6 +470,137 @@ export function assertMaskIsInert(mask: unknown, kind: string, at: string): void
     kind,
   );
 }
+
+/** Ruby's floored modulo: the result takes the divisor's sign. */
+function floored(n: number, m: number): number {
+  return ((n % m) + m) % m;
+}
+
+/**
+ * `Core#get_mask_options` (core.rb:543-570): the mask integer read as a limit
+ * code in its low two bits and a placeholder/opposite code in the next three,
+ * both by FLOORED modulo, so a negative mask decodes too: `-1` is
+ * `upper_limit_as_super_script` (`-1 % 4` is 3) plus `limits_opposite` and both
+ * placeholders (`-4 % 32` is 28). A `%32` remainder outside the seven listed values (bits above 32 are
+ * ignored) adds nothing.
+ */
+function maskOptions(mask: number): string[] {
+  const options: string[] = [];
+  const low = floored(mask, 4);
+  const limits = [
+    "limits_default",
+    "limits_under_over",
+    "limits_sub_sup",
+    "upper_limit_as_super_script",
+  ];
+  options.push(limits[low] as string);
+  switch (floored(mask - low, 32)) {
+    case 4:
+      options.push("limits_opposite");
+      break;
+    case 8:
+      options.push("show_low_limit_place_holder");
+      break;
+    case 12:
+      options.push("limits_opposite", "show_low_limit_place_holder");
+      break;
+    case 16:
+      options.push("show_up_limit_place_holder");
+      break;
+    case 20:
+      options.push("limits_opposite", "show_up_limit_place_holder");
+      break;
+    case 24:
+      options.push("show_low_limit_place_holder", "show_up_limit_place_holder");
+      break;
+    case 28:
+      options.push("limits_opposite", "show_low_limit_place_holder", "show_up_limit_place_holder");
+      break;
+    default:
+      break;
+  }
+  return options;
+}
+
+/**
+ * `Core#masked_tag` (core.rb:502-541) as `Nary#to_mathml_without_math_tag`
+ * (nary.rb:56) uses it: `masked_tag(subsup_tag) if self.options[:mask]` — the
+ * return value is DISCARDED, so only what the method does to the tag IN PLACE
+ * reaches the document. That is the tag's name and node list:
+ *
+ *   - a show-upper-placeholder mask on a slot that is `nil` renames the tag
+ *     (`msub` to `msubsup`, anything else to `munderover`) and inserts
+ *     `<mo>&#x2b1a;</mo>` at index 2; the lower one likewise (`msup` to
+ *     `msubsup`) at index 1;
+ *   - `limits_opposite` swaps the last two children of an `msubsup` or
+ *     `munderover`;
+ *   - `limits_under_over` / `limits_sub_sup` rename among the msub/msup/msubsup
+ *     and munder/mover/munderover families.
+ *
+ * The `upper_limit_as_super_script` arm builds a fresh `munder` and returns it,
+ * which `Nary` throws away, so it changes nothing — but it reads
+ * `tag.nodes[1].name` first, and that read raises for a tag with no second
+ * child.
+ *
+ * Every place the gem would carry a Ruby `nil` in a node list (`Array#insert`
+ * past the end pads with one, and a swap of a missing child is one) is a place
+ * it raises: measured for a bare `Nary` (no limit slots) under masks 16, 13
+ * and 3. Those refuse here as a `RenderError` naming the mask.
+ *
+ * The tag is returned as a new element because `XmlElement.name` is read-only.
+ */
+export function maskedNaryScript(
+  script: XmlElement,
+  mask: unknown,
+  slots: { readonly lowerIsNil: boolean; readonly upperIsNil: boolean },
+  kind: string,
+  at: string,
+): XmlElement {
+  const options = maskOptions(rubyToI(mask, kind, at));
+  let name = script.name;
+  const nodes: XmlChild[] = [...script.children];
+  const refuse = (why: string): RenderError =>
+    new RenderError(`${at}: ${why} — the gem raises on the nil it would carry`, FORMAT, kind);
+  const insertPlaceholder = (index: number): void => {
+    if (index > nodes.length) throw refuse(`the placeholder goes at index ${index}, past the end`);
+    nodes.splice(index, 0, new XmlElement("mo").append("&#x2b1a;"));
+  };
+  if (options.includes("show_up_limit_place_holder") && slots.upperIsNil) {
+    name = name === "msub" ? "msubsup" : "munderover";
+    insertPlaceholder(2);
+  }
+  if (options.includes("show_low_limit_place_holder") && slots.lowerIsNil) {
+    name = name === "msup" ? "msubsup" : "munderover";
+    insertPlaceholder(1);
+  }
+  if (options.includes("limits_opposite") && (name === "munderover" || name === "msubsup")) {
+    const [first, second, third] = nodes;
+    if (first === undefined || second === undefined || third === undefined) {
+      throw refuse("limits_opposite swaps three children and one is missing");
+    }
+    nodes.splice(0, nodes.length, first, third, second);
+  }
+  if (options.includes("limits_under_over")) {
+    name = UNDER_OVER_NAMES.get(name) ?? name;
+  } else if (options.includes("limits_sub_sup")) {
+    name = SUB_SUP_NAMES.get(name) ?? name;
+  } else if (options.includes("upper_limit_as_super_script") && nodes[1] === undefined) {
+    throw refuse("upper_limit_as_super_script reads the name of a second child that is missing");
+  }
+  return new XmlElement(name).append(nodes);
+}
+
+const UNDER_OVER_NAMES: ReadonlyMap<string, string> = new Map([
+  ["msubsup", "munderover"],
+  ["msub", "munder"],
+  ["msup", "mover"],
+]);
+
+const SUB_SUP_NAMES: ReadonlyMap<string, string> = new Map([
+  ["munderover", "msubsup"],
+  ["munder", "msub"],
+  ["mover", "msup"],
+]);
 
 /** Ruby `to_i` for the mask read: nil is 0, a Float truncates, a String parses its leading integer; `true`, hashes and nodes raise NoMethodError in the gem. */
 function rubyToI(value: unknown, kind: string, at: string): number {

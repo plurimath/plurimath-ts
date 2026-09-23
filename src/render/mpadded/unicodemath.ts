@@ -51,7 +51,7 @@ export function renderMpadded(node: NodeOf<"mpadded">, context: RenderContext): 
 }
 
 /** `mpadded_symbol` then `mpadded_unicode` (`mpadded.rb:101`, `:105`). */
-function phantomGlyph(options: Record<string, unknown>): string {
+export function phantomGlyph(options: Record<string, unknown>): string {
   const name = UNICODEMATH_PHANTOM_SYMBOLS.get(canonicalKey(options));
   if (name === undefined) return "";
   return UNICODEMATH_UNARY_SYMBOLS.get(name) ?? "";

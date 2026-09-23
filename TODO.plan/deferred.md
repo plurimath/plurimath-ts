@@ -179,13 +179,18 @@ the ten aliases some corpus case constructs — `Power`, `Mod`, `Lim`, `Log`,
 `Root`, `Td` (binary), `PowerBase` (ternary), `Sin`, `Cos`, `Tr` (unary) — so
 every admitted arm is held to the gem's bytes by `render-parity.spec.ts`, and
 `power`/`powerBase` additionally by the full `degenerate-slots` slot matrix.
+The unary file has since admitted seven more carrier-default names (`Ln`,
+`Det`, `Gcd`, `Max`, `Cancel`, `Hom`, `Substack`) and arms for `Left` and
+`Mbox`, held by `test/formats/unary-function-parity.spec.ts` against the gem's
+own bytes; `Phantom` refuses because the gem raises on it.
 `MEASURED_LABELS` in the unary file is one of TWO hand-typed gem-derived tables there:
 `Core#invert_unicode_symbols` is `UNICODE_SYMBOLS.invert[class_name] ||
 class_name`, so the label is NOT reliably the downcased class name — of the
 names reachable through that carrier, `Sup` resolves to `&#x2283;` — and the
 port cannot compute it without the mathml table it may not import. Names that
-render on the gem but no case constructs (`Stackrel`, `Underover`, `Limits`,
-`Multiscript`) stay refused rather than admitted untested. Two never become
+render on the gem but no case constructs (`Stackrel`, `Underover`) stay refused
+rather than admitted untested (`Limits` and `Multiscript` are now admitted, held
+to the gem by `test/formats/ternary-function/`). Two never become
 admissible as written: `Menclose#to_html` interpolates `parameter_one` raw
 into a `notation=` attribute (a heap address, not reproducible), and
 `Rule#to_html` takes no `options:` keyword at all, so the gem itself raises

@@ -294,10 +294,10 @@
  * atom`) turned out to be reachable after all — the RELATION/OPERATOR
  * increment above measured and ported it directly, correcting this
  * increment's own original "dead by construction" finding, so it is not
- * counted among the twelve here. `:491` remains dead by construction: this
- * grammar's right recursion always captures `atom` one leaf at a time for
- * the shape `:491` binds, so nothing ever leaves it a SEQUENCE at that
- * position (the same kind of measured absence as `:845`'s deadness above).
+ * counted among the twelve here. `:491` was also first recorded here as
+ * dead by construction; that finding was wrong too — `"ȧ2x"` fires it on the
+ * oracle, and it is registered with that witness in `RULE_COVERAGE`'s
+ * "combinators" group.
  * Of the eleven that only ever appear inside FRACTION's own
  * `numerator`/`denominator` grammar productions — `:675`, `:680`, `:685`,
  * `:690`, `:695`, `:1756`, `:2035`, `:2041`, `:2048`, `:2787`, `:3074` —
@@ -2660,10 +2660,11 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   ]);
   // Slice H: `:77`'s SEQUENCE-extended twin — `override_subsup` (a `Ⅎ`-sized
   // override script, its own `{base:, size_overrides:, sub_script:}` already
-  // resolved by `:2132`) followed by more of the expression. Fires alongside
-  // `:1776` (unported, see `:67` above), so no fixture here reaches full
-  // parity yet; the witness (`"1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa"`) sits in
-  // `SLICE_BOUNDARY` instead, still refused for that reason.
+  // resolved by `:2132`) followed by more of the expression. Its witness
+  // (`"1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa"`) stays in `SLICE_BOUNDARY`:
+  // `:1776` is ported now, but it turns `base` into a SEQUENCE, and no rule in
+  // the gem matches `override_subsup` over a SEQUENCE `base`, so the gem's own
+  // model keeps the raw pair and the port refuses it.
   rule("381", { override_subsup: simple("subsup"), expr: sequence("expr") }, (b) => [
     b.subsup,
     ...asArray(b.expr),
@@ -2710,10 +2711,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("436", { subsup_exp: simple("subsup"), exp: simple("exp") }, (b) => [b.subsup, b.exp]);
   // Slice H: an nary integral's `int_exp` (`:29`'s own SIMPLE unwrap target)
   // directly followed by one more `expr` item — the two-element list shape
-  // every neighbour here uses. Fires alongside `:1776` (unported, see `:67`
-  // above), so no fixture here reaches full parity yet; the witness
-  // (`"1A^* = \\sum_{r}{ (-1)^r ⟨ A ⟩_r } = ⟨ A ⟩_+ - ⟨ A ⟩_-"`) sits in
-  // `SLICE_BOUNDARY` instead, still refused for that reason.
+  // every neighbour here uses. Its witness also fires `:1776`; with `:1776`
+  // ported (slice J), it compares for real in `RULE_COVERAGE`'s
+  // "intermediate_paren_tail" group.
   rule("441", { int_exp: simple("int"), expr: simple("expr") }, (b) => [b.int, b.expr]);
   rule("446", { operator: simple("operator"), expr: simple("expr") }, (b) => [
     symbolsClass(b.operator),

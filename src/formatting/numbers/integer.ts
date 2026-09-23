@@ -1,11 +1,14 @@
 /**
- * `Formatter::Numbers::Integer` (`integer.rb`) for base 10 — the integer
- * side's padding and digit grouping (`Integer#format_groups`). The
- * base-conversion half (`number_to_base`, hex capitalization) is the base
- * lane's.
+ * `Formatter::Numbers::Integer` (`integer.rb`) — the integer side's hex
+ * capitalization, padding and digit grouping (`Integer#format_groups`). The
+ * base conversion (`number_to_base`) is `base-notation.ts`'s `numberToBase`,
+ * applied by `number-renderer.ts` before the fraction step.
  */
 
+import { type BaseNotation, capitalizeHexDigits } from "./base-notation";
+
 export interface IntegerFormat {
+  readonly baseNotation: BaseNotation;
   readonly group: string;
   readonly groupDigits: number;
   readonly padding: string;
@@ -29,12 +32,12 @@ function padInteger(digits: string, format: IntegerFormat): string {
 }
 
 /**
- * `Integer#format_groups` (`integer.rb:24`) — pad, then chop `groupDigits`
+ * `Integer#format_groups` (`integer.rb:24`) — capitalize (`numbers_only`), pad, then chop `groupDigits`
  * digits off the right, repeatedly, and join right-to-left with the group
  * marker. `groupDigits: 0` disables grouping (the padding still applies).
  */
-export function formatIntegerGroups(digits: string, format: IntegerFormat): string {
-  const padded = padInteger(digits, format);
+export function formatIntegerGroups(integerDigits: string, format: IntegerFormat): string {
+  const padded = padInteger(capitalizeHexDigits(integerDigits, format.baseNotation), format);
   const size = format.groupDigits;
   if (size <= 0 || padded.length <= size) return padded;
 

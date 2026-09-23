@@ -1118,16 +1118,12 @@ RULE_COVERAGE = {
   # One candidate traced on the oracle fires the rule the row targets but ALSO
   # fires a sibling rule no slice claims, so the port would refuse it and it
   # cannot compare for real: `:710` sits in `SLICE_BOUNDARY` instead, with its
-  # blocker named beside it. Ten more are registered nowhere: `:695` (`atom:
-  # sequence, recursive_denominator: sequence`), `:750`/`:780`/`:800`/`:840`
-  # (they fire on the oracle, and their hashes reach the port too, left
-  # unmatched, so the port refuses their witnesses; a scratch registration
-  # made every witness found deep-equal the oracle — see the module header),
-  # `:760`
+  # blocker named beside it. Six more are registered nowhere: `:695` (`atom:
+  # sequence, recursive_denominator: sequence`), `:760`
   # (`factor: simple, unary_subsup: sequence`), `:850` (`operand: simple,
   # expr: sequence`), `:880` (`monospace: simple, exp: simple`) and
-  # `:925`/`:930` (`expression: simple` + `expr: sequence`/simple) — the last
-  # five traced-but-unreached on the oracle itself, ~2,700 candidate inputs
+  # `:925`/`:930` (`expression: simple` + `expr: sequence`/simple) — all six
+  # traced-but-unreached on the oracle itself, ~2,700 candidate inputs
   # (the gem's own `unicodemath-tests`/spec examples plus hand-built
   # variants), none of which fires any of them. See the module header for the
   # full accounting.
@@ -1146,6 +1142,13 @@ RULE_COVERAGE = {
     "╳(a) ▭(207&a + b) ▭(a + b) ╱(f + g) ╲(u + i)",
     "x^₁a²",
     "x^₁a₂",
+    # :750 (and slice J's :2287), :780, :800, :840 — ported after
+    # integration; each fired on the oracle and left its own hash unmatched
+    # on the port until registered.
+    "f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx",
+    "1b_1 +_1^2 c",
+    "𝜌 = ∑_𝜓▒P_𝜓 |𝜓⟩⟨𝜓| + 1",
+    '𝑍(𝛾+𝑖𝜔−𝑖𝜈)=𝑖/√𝜋 ∫_−∞^∞ 𝑒^(−(𝜔−𝜔′)^2 \\\\/(Δ𝜔)^2)/(𝛾+𝑖(𝜔′−𝜈)) ⅆ𝜔′',
   ],
   # INTERMEDIATE/SLASHED/PAREN-TAIL (slice J): `transform.rb:1514`-`:2426`
   # plus `:2777`/`:2787`/`:3074`. A separate group so parallel slices' own
@@ -1189,11 +1192,10 @@ RULE_COVERAGE = {
   #   "N₀₊₍₂₋₅₎₌₋₃"                2426  mini_intermediate_exp + sub_operators
   #                                + SEQUENCE sub_recursions
   #
-  # `:2287`'s own witness sits in `SLICE_BOUNDARY` instead, not here: the
-  # Fourier-transform string also needs the unregistered `:750` to finish
-  # parsing, so it cannot compare for real yet — see `SLICE_BOUNDARY`'s own
-  # comment. (This first named `:278`, which the oracle does not fire on that
-  # string and which is ported.) `:2245`, `:2323`, `:2035`, `:2041`, `:2097`, `:1841`, `:2341`,
+  # `:2287`'s own witness, the Fourier-transform string, is not in this group:
+  # it also needs slice I's `:750`, and sits in `RULE_COVERAGE[
+  # "fraction_atoms_tail"]` as `:750`'s witness. (This first named `:278`,
+  # which the oracle does not fire on that string and which is ported.) `:2245`, `:2323`, `:2035`, `:2041`, `:2097`, `:1841`, `:2341`,
   # `:2777`, `:2403`, `:2787` and `:3074` carry no row anywhere — see the
   # module header's own "thirteenth increment" section for each one's
   # disposition.
@@ -1271,7 +1273,7 @@ RULE_COVERAGE = {
 #   `:1776`) parses and deep-equals the oracle's model; it is in
 #   `RULE_COVERAGE["combinators"]`.
 #
-# Three rows stay, each with the blocker that refuses it on the port now:
+# Two rows stay, each with the blocker that refuses it on the port now:
 #
 #   the "1a_ℲDa + a_ℲCa + …" row fires `:381`/`:1776` (both ported), and
 #   every rule the oracle fires on it also fires on the port. `:1776` turns
@@ -1294,28 +1296,20 @@ RULE_COVERAGE = {
 #   every action call across the whole tree, not only the ones on the path to
 #   a final node.
 #
-#   `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` fires `:2287` (slice J), and still
-#   counts as its coverage witness for the same reason. The rule that blocks
-#   it is `:750` (`operand: sequence, expr: simple`), which the oracle fires
-#   on this string and no slice registers. With it absent the inner
-#   `{operand:, expr:}` hash stays unmatched, so `:341` (`accents` + SEQUENCE
-#   `expr`, ported) cannot match one level up and the port refuses
-#   `{accents=other,expr=other}`. An earlier note named `:278` here; the
-#   oracle trace does not fire `:278` on this string, and `:278` is ported
-#   anyway.
-#
 # Every row records a refusal the port must keep until its blocker is
 # resolved. When one is, the row's refusal stops and `model-parity.spec.ts`
 # fails until it moves into a coverage group.
 #
-# `:750`, `:780`, `:800` and `:840` are not registered, and have no row here.
-# Their hashes reach the port and are left unmatched, so the port refuses
-# their witnesses. Registering them in a scratch copy made every witness
-# found deep-equal the oracle. See the module header.
+# `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` (`:2287`'s witness) was here too,
+# blocked by `:750` (`operand: sequence, expr: simple`): with `:750` absent
+# the inner `{operand:, expr:}` hash stayed unmatched and `:341` could not
+# match one level up. (An earlier note named `:278`; the oracle does not fire
+# `:278` on this string, and `:278` is ported.) `:750` is ported now, the row
+# deep-equals the oracle's model, and it is in
+# `RULE_COVERAGE["fraction_atoms_tail"]`.
 SLICE_BOUNDARY = [
   '1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa',
   "1W_δ₁ρ₁σ₂^3β=U_δ₁ρ₁^3β+1/8π^2⁢∫_α₁^α₂▒dα'₂[(U_δ₁ρ₁^2β-α'₂U_δ₁ρ₁^1β)/U_δ₁ρ₁^0β]",
-  "f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx",
 ].freeze
 
 options = { oracle: nil, out: "test/formats/unicodemath", allow_dirty: false }

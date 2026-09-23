@@ -239,7 +239,8 @@ describe.skipIf(deferred.length === 0)("the rule families this slice defers", ()
  * clean. `"1/2a"` moved out when `:658` was ported, and `"1x₂"`, the long
  * `"1I(x,x') = …"` row, the `"1A^* = …"` row and the 101-char
  * `"1w^h^e^e^e^e+…"` row moved out once `:945`, `:1776` and `:2251` were
- * ported. The three inputs still in `SLICE_BOUNDARY` were re-traced against
+ * ported, and `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` moved out once `:750` was
+ * ported. The two inputs still in `SLICE_BOUNDARY` were re-traced against
  * the CURRENT port rather than trusted to still be blocked by the rule once
  * named beside them — see the generator's own comment above `SLICE_BOUNDARY`
  * for the measurement:
@@ -249,8 +250,6 @@ describe.skipIf(deferred.length === 0)("the rule families this slice defers", ()
  *     (`override_subsup` over a SEQUENCE `base`; `subsup_exp` with `base`,
  *     `sub` and `sup` all SEQUENCE). The gem's model carries the raw pair,
  *     and the port refuses the signature.
- *   - `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` is blocked by `:750` (`{operand:
- *     sequence, expr: simple}`), which no slice registers.
  */
 describe("inputs whose rules sit outside the slice", () => {
   it.each(boundary.map((entry) => [entry.input, entry] as const))(

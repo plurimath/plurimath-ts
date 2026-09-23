@@ -588,10 +588,11 @@
  * the tie-loss the header's own "Order is behaviour" section already
  * documents, was excluded from the count before this increment started.
  *
- * SIXTEEN are ported, fifteen with a `RULE_COVERAGE["fraction_atoms_tail"]`
+ * TWENTY are ported, nineteen with a `RULE_COVERAGE["fraction_atoms_tail"]`
  * witness that compares for real: `:658`, `:680`, `:685`, `:690`, `:715`,
- * `:720`, `:755`, `:795`, `:820`, `:860`, `:890`, `:920`, `:945`, `:993`,
- * `:998`. The sixteenth, `:710`, is registered too (the code is correct,
+ * `:720`, `:750`, `:755`, `:780`, `:795`, `:800`, `:820`, `:840`, `:860`,
+ * `:890`, `:920`, `:945`, `:993`, `:998`. The twentieth, `:710`, is
+ * registered too (the code is correct,
  * traced against the oracle) but reaches no CLEAN witness — the one input
  * found that fires it also fired `:1776` and `:2335`, then unclaimed, so it
  * sits in `SLICE_BOUNDARY` instead, the same pattern slice H used for
@@ -617,32 +618,31 @@
  * grammar production anywhere tags `.as(:recursion)`, so the key this rule
  * matches on is never produced.
  *
- * TEN are not registered. `:695` (`atom: sequence, recursive_denominator:
+ * SIX are not registered: `:695` (`atom: sequence, recursive_denominator:
  * sequence`), `:760` (`factor: simple, unary_subsup: sequence`), `:850`
  * (`operand: simple, expr: sequence`), `:880` (`monospace: simple, exp:
  * simple`) and `:925`/`:930` (`expression: simple` + `expr: sequence`/
- * simple) are traced-but-unreached on the ORACLE itself, not proven
+ * simple). They are traced-but-unreached on the ORACLE itself, not proven
  * unreachable: roughly 2,700 candidate inputs were traced (the gem's own
  * `unicodemath-tests` and rspec fixture examples, plus hand-built fraction
  * and subscript variants), and none fires any of them.
  *
  * `:750` (`operand: sequence, expr: simple`), `:780` (`sub_exp: sequence,
  * expr: sequence`), `:800` (`sub_exp: simple, naryand_recursion: sequence`)
- * and `:840` (`operand: simple, expr: simple`) are a different case: the
- * oracle fires each on real inputs, and so does this port's grammar. This
- * slice first recorded them as never reached on the port, because its
- * grammar resolved the witnesses some other way. Measured again on the
- * integrated port, that is not so. Each witness leaves the rule's own hash
- * unmatched in the port's transformed tree, and the port refuses the input.
- * `:780`'s witnesses are refused with that exact signature, `{expr=sequence,
- * sub_exp=sequence}`. Registering the four rules in a scratch copy made all
- * 23 oracle witnesses found for them (`unicodemath-tests` strings, with and
- * without the display prefix) parse to models that deep-equal the oracle's.
- * Examples: `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` for `:750`, `"1b_1 +_1^2 c"`
- * for `:780`, `"𝜌 = ∑_𝜓▒P_𝜓 |𝜓⟩⟨𝜓| + 1"` for `:800` and
- * `"𝑍(𝛾+𝑖𝜔−𝑖𝜈)=𝑖/√𝜋 ∫_−∞^∞ …ⅆ𝜔′"` for `:840`. They are still unregistered
- * here, because this integration does not port rules; they are ready for a
- * slice that does.
+ * and `:840` (`operand: simple, expr: simple`) were left out at first, on
+ * the belief that this port's grammar resolved their oracle witnesses some
+ * other way so the rules could never fire here. That was wrong. The port's
+ * grammar builds the same hash for each witness; the rule was simply
+ * unported, so the hash stayed unmatched and the port refused the input
+ * (`:780`'s witnesses with exactly `{expr=sequence,sub_exp=sequence}`).
+ * With the four registered, all 23 oracle witnesses found for them
+ * (`unicodemath-tests` strings, with and without the display prefix) parse
+ * to models that deep-equal the oracle's. One witness per rule is in
+ * `RULE_COVERAGE["fraction_atoms_tail"]`: `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"`
+ * for `:750` (it also covers slice J's `:2287`, and was a `SLICE_BOUNDARY`
+ * row until `:750` landed), `"1b_1 +_1^2 c"` for `:780`,
+ * `"𝜌 = ∑_𝜓▒P_𝜓 |𝜓⟩⟨𝜓| + 1"` for `:800` and
+ * `"𝑍(𝛾+𝑖𝜔−𝑖𝜈)=𝑖/√𝜋 ∫_−∞^∞ …ⅆ𝜔′"` for `:840`.
  *
  * See `FINAL_COUNT` for the running total this increment brings it to.
  *
@@ -696,7 +696,7 @@
  * reached when the prefix's own inner bracket mismatch never finds a partner
  * until the outer `expBracket` closes (`"├]a┤["` fires both at once, distinct
  * from the ported masked triple's `\left`/`\right` spelling, which resolves
- * through `:2536`/`:2527` instead whenever real content sits between the
+ * through `:2536`/`:2525` instead whenever real content sits between the
  * prefix and its own match). `:2061`/`:2073` are that pair's MASKED
  * siblings (`"├1]a┤4["`). `:2079` is `:2085`'s SEQUENCE-`diacritics` twin
  * (`"(𝑘−𝑧−1)⒞𝑘"`). `:2251` reuses `SLICE_BOUNDARY`'s own `"1I(x,x') = …
@@ -705,8 +705,9 @@
  * landing in the same slice. `:2275`/`:2281`/`:2287` are `:2269`/`:2317`'s
  * `exp`-keyed siblings (`spacedExpBracket`'s own tag, not `expression`'s
  * `expr`), reached inside a mismatched-bracket or table-cell run — `:2287`'s
- * own real-input witness needs `:750` to finish parsing (see below), so it
- * lives in `SLICE_BOUNDARY`, not `RULE_COVERAGE`.
+ * own real-input witness also needs `:750` to finish parsing (see below);
+ * it sat in `SLICE_BOUNDARY` until slice I's `:750` was ported, and now
+ * compares for real in `RULE_COVERAGE["fraction_atoms_tail"]`.
  * `:2335` is `:2103`'s multi-symbol subscript-run sibling
  * (`"a_δ₁ρ₁σ₂^3β"`). `:2426` is `:640`/`:646`'s `sub_operators`/
  * `sub_recursions` pair with a `mini_intermediate_exp` riding ahead of it,
@@ -720,8 +721,8 @@
  * `RULE_COVERAGE["intermediate_paren_tail"]` below, alongside the new group's
  * own witnesses. `:95`'s row needed slice I's `:945` besides `:1776`; with
  * both slices integrated it parses too and sits in
- * `RULE_COVERAGE["combinators"]`. TWO more rows fire their named rule but
- * still refuse, and stay in `SLICE_BOUNDARY`: `"1a_ℲDa + …"` fires
+ * `RULE_COVERAGE["combinators"]`. TWO more rows fired their named rule but
+ * still refused. `"1a_ℲDa + …"` still does, and stays in `SLICE_BOUNDARY`: it fires
  * `:381`/`:1776` (both ported), but `:1776` turns `base` into a SEQUENCE
  * (`[Number, Symbol]`), and no `base: sequence, size_overrides: simple,
  * sub_script: simple` rule exists anywhere in the 519 (only a `base:
@@ -730,12 +731,12 @@
  * the gem's model as well as here — `:1776` landing moved the refusal, not
  * away. `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` fires `:2287` (ported), but it
  * also produces `:750`'s `{operand: sequence, expr: simple}` hash, on the
- * oracle and on this port alike, and no slice registers `:750`; the hash
- * stays unmatched and `:341` cannot match above it. (This section first
+ * oracle and on this port alike. Until `:750` was registered that hash
+ * stayed unmatched and `:341` could not match above it. (This section first
  * named `:278` as the blocker; the oracle trace does not fire `:278` on this
- * string, and `:278` is ported.) `:2287` still counts as covered by this
- * row, since `buildUnicodemathTransform` counts every action call across the
- * whole tree, not just the ones on the path to a final node.
+ * string, and `:278` is ported.) With `:750` ported (slice I's section
+ * above), the row parses, deep-equals the oracle's model, and has left
+ * `SLICE_BOUNDARY` for `RULE_COVERAGE["fraction_atoms_tail"]`.
  *
  * ELEVEN are not registered, five for a shared structural reason and six for
  * want of a reaching input or a proven defect: `:1841`
@@ -2955,13 +2956,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.factor,
     ...asArray(b.operand),
   ]);
-  // FRACTION-ATOMS-TAIL (slice I): `:750` (`operand: sequence, expr:
-  // simple`, `:755` below's own SEQUENCE-`expr` twin) is NOT registered.
-  // Its hash does reach the port: it is left unmatched in the port's
-  // transformed tree for its oracle witnesses (the module header's slice I
-  // section lists them), and the port refuses them. Registering it in a
-  // scratch copy made those witnesses deep-equal the oracle. This
-  // integration does not port rules, so it stays out.
+  // FRACTION-ATOMS-TAIL (slice I): `:750`, `:755`'s SIMPLE-`expr` twin
+  // (`operand + [expr]`).
+  rule("750", { operand: sequence("operand"), expr: simple("expr") }, (b) => [
+    ...asArray(b.operand),
+    b.expr,
+  ]);
   rule("755", { operand: sequence("operand"), expr: sequence("expr") }, (b) => [
     ...asArray(b.operand),
     ...asArray(b.expr),
@@ -2972,12 +2972,12 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     b.sub_exp,
     ...asArray(b.expr),
   ]);
-  // FRACTION-ATOMS-TAIL (slice I): `:775`'s SEQUENCE-`sub_exp` twin, `:780`
-  // (`sub_exp: sequence, expr: sequence`), is NOT registered. Its hash
-  // reaches the port the same way `:750`'s does: the port refuses its
-  // oracle witnesses with that exact signature, `{expr=sequence,
-  // sub_exp=sequence}`, and a scratch registration made them deep-equal the
-  // oracle. It stays out for the same reason.
+  // FRACTION-ATOMS-TAIL (slice I): `:780`, `:775`'s SEQUENCE-`sub_exp` twin
+  // (`sub_exp + expr`).
+  rule("780", { sub_exp: sequence("sub_exp"), expr: sequence("expr") }, (b) => [
+    ...asArray(b.sub_exp),
+    ...asArray(b.expr),
+  ]);
   rule("785", { sub_exp: simple("sub_exp"), exp: sequence("exp") }, (b) => [
     b.sub_exp,
     ...asArray(b.exp),
@@ -2985,15 +2985,17 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("790", { sub_exp: simple("sub_exp"), expr: simple("expr") }, (b) => [b.sub_exp, b.expr]);
   // FRACTION-ATOMS-TAIL (slice I): `:790`'s `exp`-keyed twin.
   rule("795", { sub_exp: simple("sub_exp"), exp: simple("exp") }, (b) => [b.sub_exp, b.exp]);
+  // FRACTION-ATOMS-TAIL (slice I): `:800`, `:805`'s SEQUENCE-
+  // `naryand_recursion` twin bound under `sub_exp` rather than `sup_exp`
+  // (`[sub_exp] + naryand`).
+  rule("800", { sub_exp: simple("sub_exp"), naryand_recursion: sequence("naryand") }, (b) => [
+    b.sub_exp,
+    ...asArray(b.naryand),
+  ]);
   rule("805", { sup_exp: simple("sup_exp"), naryand_recursion: simple("naryand") }, (b) => [
     b.sup_exp,
     b.naryand,
   ]);
-  // FRACTION-ATOMS-TAIL (slice I): `:805`'s SEQUENCE-`naryand_recursion`
-  // twin, bound under `sub_exp` rather than `sup_exp` — `:800` — is NOT
-  // registered. Its hash reaches the port the same way `:750`'s does, and a
-  // scratch registration made its oracle witnesses deep-equal the oracle. It
-  // stays out for the same reason.
   rule("810", { exp: simple("exp"), expr: simple("expr") }, (b) => [b.exp, b.expr]);
   rule("815", { exp: simple("exp"), expr: sequence("expr") }, (b) => [b.exp, ...asArray(b.expr)]);
   // FRACTION-ATOMS-TAIL (slice I): `:815`'s SEQUENCE-`exp` twin.
@@ -3006,11 +3008,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     ...asArray(b.expr),
   ]);
   rule("835", { factor: simple("factor"), expr: simple("expr") }, (b) => [b.factor, b.expr]);
-  // FRACTION-ATOMS-TAIL (slice I): `:840` (`operand: simple, expr: simple`,
-  // the `operand`-keyed sibling of `:835`/`:865` below) is NOT registered.
-  // Its hash reaches the port the same way `:750`'s does, and a scratch
-  // registration made its oracle witnesses deep-equal the oracle. It stays
-  // out for the same reason.
+  // FRACTION-ATOMS-TAIL (slice I): `:840`, the `operand`-keyed sibling of
+  // `:835` (`[operand, expr]`).
+  rule("840", { operand: simple("operand"), expr: simple("expr") }, (b) => [b.operand, b.expr]);
   rule("855", { factor: sequence("factor"), expr: sequence("expr") }, (b) => [
     ...asArray(b.factor),
     ...asArray(b.expr),
@@ -3775,7 +3775,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // kind first) consumes a bracket that never gets a matching partner until
   // the outer `expBracket` closes: `"├]a┤["` fires both at once (`├`/`┤` are
   // `paren_open_prefix`/`paren_close_prefix`'s own glyphs, distinct from the
-  // MASKED triple's `\left`/`\right`, which resolve through `:2536`/`:2527`
+  // MASKED triple's `\left`/`\right`, which resolve through `:2536`/`:2525`
   // instead whenever real content sits between the prefix and its own
   // matching bracket).
   rule("2010", { paren_close_prefix: simple("prefix"), open_paren: simple("paren") }, (b) => [

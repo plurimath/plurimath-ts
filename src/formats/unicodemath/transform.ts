@@ -441,8 +441,10 @@
  * `:3488`, `:3618`, `:3629`, `:3698`, `:3780`, `:3816`, `:3828`, `:3885`,
  * `:3966`. Eighteen of them bind `expr` (not `exp`) next to the fence's other
  * keys, and the two reached rules that bind `expr` (`:3499`, `:3840`) each also
- * carry a `symbol` or `relational_symbols` key. None of the twenty-one is shown
- * unreachable, only unreached.
+ * carry a `symbol` or `relational_symbols` key. Slice K below re-derives each
+ * of the twenty-one by grammar and TracePoint: eighteen are DEAD (not merely
+ * unreached), one (`:3966`) FIRES and is now registered, and two remain
+ * UNREACHED.
  *
  * `fenced` below is the one helper: the thirty-one rules that differ only in
  * the keys they bind and the list they build share its `parenClass` guard
@@ -744,6 +746,83 @@
  * paired with a multi-character subscript, plus the 675 `unicodemath-tests`
  * strings) found none either. None of these eleven counts toward
  * `FINAL_COUNT`.
+ *
+ * ## A fourteenth increment: FENCED-TAIL (slice K), the twenty-one G2 deferred
+ *
+ * Slice G2 above traced 5,172 oracle runs over 5,155 distinct generated
+ * bracket inputs and none of `:3156`, `:3189`, `:3211`, `:3222`, `:3244`,
+ * `:3266`, `:3323`, `:3334`, `:3356`, `:3378`, `:3444`, `:3466`, `:3488`,
+ * `:3618`, `:3629`, `:3698`, `:3780`, `:3816`, `:3828`, `:3885`, `:3966`
+ * fired. This increment re-derives each one by grammar, not generation: read
+ * the oracle's `parse.rb`/`sub_sup.rb` for the alternative that could build
+ * the key set, hand-build an input for that alternative, and confirm with a
+ * `TracePoint :b_call` (mapping `tp.lineno` back to the nearest preceding
+ * `rule(` line, as every earlier increment does).
+ *
+ * Eighteen are DEAD, not merely unreached, and share one proof: `:3156`,
+ * `:3189`, `:3211`, `:3222`, `:3244`, `:3266`, `:3323`, `:3334`, `:3356`,
+ * `:3378`, `:3444`, `:3466`, `:3488`, `:3618`, `:3629`, `:3698`, `:3780`,
+ * `:3816` each pair one of the fence's content keys (`mini_sub`, `mini_sup`,
+ * `intermediate_exp`, `factor`, `accents`, `unicode_fractions`, `operator`,
+ * `sub_exp`, `sup_exp`, `subsup_exp`, `fonts`) directly with `expr`, with no
+ * other key. `parse.rb`'s `expression` rule is an ordered choice whose third
+ * alternative is bare `element` (`element` alone, no trailing requirement)
+ * and whose fourth is `element >> space? >> expression.as(:expr)` — the
+ * shape these eighteen need. Parslet's `|` does not backtrack once a branch
+ * succeeds (`parslet-2.0.0/lib/parslet/atoms/alternative.rb`), and alt3
+ * unconditionally succeeds whenever alt4 would too, since alt3 needs
+ * strictly less input; whatever remains after `element` is left for the
+ * ENCLOSING `spaced_exp_bracket`'s own `.as(:exp)` wrapper instead, which is
+ * exactly why the sibling rules at the same fence positions all bind `exp`,
+ * not `expr` (`:3167`, `:3178`, `:3200`, `:3255`, `:3277`, `:3345`, `:3367`,
+ * `:3455`, `:3466`'s own `exp` twin, `:3640`, `:3651`, `:3711`, `:3792`, and
+ * more). The two rules that DO reach a top-level `expr` (`:3499`, `:3840`)
+ * only do because they carry an extra `symbol`/`relational_symbols` key —
+ * `expression`'s alt1/alt2 (`element >> other.as(:other) >> expr`) and
+ * `spaced_exp_bracket`'s own negation alternative
+ * (`str("&#x2212;").as(:symbol) >> ... .as(:expr)`) are the only other
+ * places `expr` surfaces at this level, and both require a key none of the
+ * eighteen have. Confirmed empirically too: zero `TracePoint` fires across
+ * over forty hand-built inputs spanning every one of the eighteen content
+ * keys (double subscripts, nested `intermediate_exp` parens, trailing
+ * `+a`/`+a+b` tails, `\mbfA`-style fonts, bare operators). This is the same
+ * kind of proof `:491`/`:845` use elsewhere in this file: an ordering fact
+ * about the grammar, not an absence of trying.
+ *
+ * One FIRES: `:3966` (`factor: sequence`, `operand: simple`, `exp: simple`).
+ * Witness `(n!a c)` — traced with `TracePoint :b_call`, firing exactly once
+ * at the rule's `do` line. `factor` is a SEQUENCE here only because
+ * `:1852`'s `{atom:, exclamation_symbol:}` rule returns a two-element array
+ * (`[atom, symbol]`) for `n!`, not because the source repeats a `factor` key
+ * — the same array-valued-inner-key mechanism `:3510`/`:3521` already rely
+ * on. It is ported (see `fenced("3966", ...)` above) and its witness sits in
+ * `RULE_COVERAGE["fenced_tail"]` in `generate-unicodemath-model-fixtures.rb`.
+ *
+ * Two remain UNREACHED — a plausible grammar path exists, no input found it:
+ * `:3828` (`factor: simple`, `sub_exp: sequence`, `exp: simple`) needs
+ * `sub_exp`'s value to be array-valued the same way `:3966`'s `factor` is;
+ * roughly twenty hand-built inputs tried double subscripts
+ * (`x_1_2`, `x__1`, `x_1__2`), a parenthesised subscript base
+ * (`x_(1)_2`), and an exclamation-mark base under a subscript (`n!_2`,
+ * `n!_2!_3`) — none produced an array-valued `sub_exp`. `:3885`
+ * (`paren_open_prefix`/`accents_subsup`/`exp`/`paren_close_prefix`, no
+ * `open_paren`/`close_paren` key at all) needs the BARE fallback of
+ * `parse.rb`'s `open_paren`/`close_paren` rules — `\left`/`\right` with no
+ * bracket character immediately following — inside an `exp_bracket` context
+ * that still binds `factor`+`accents_subsup`+`exp` alongside it; every
+ * `\left ... \right` input tried (about a dozen, varying the accent and
+ * subscript/superscript on the base) either failed to parse or resolved
+ * through an unrelated top-level rule set (`:18`, `:34`, `:39`, `:44`,
+ * `:45`, `:49`, `:50`, `:55`, `:78`, `:92`, `:145`, `:486`, `:1019`,
+ * `:1721`), never through the fence path at all — the size-prefixed masked
+ * form (`\left1(...)`) tags as `open_paren`, not the bare `paren_open_prefix`
+ * this rule needs. Neither is registered.
+ *
+ * `:3156`'s `.deferred` note (`.codex-context/tasks/unicodemath-rule-
+ * claims/G2.deferred`, local-only) is updated to match this section rather
+ * than repeat G2's "no port stop-message exists" wording, which read as
+ * settled fact rather than the still-open question this increment answers.
+ * Running count: 235 + 1 = **`FINAL_COUNT`** (see `transform-coverage.spec.ts`).
  *
  * ## Two model behaviours that are provably absent here
  *
@@ -5307,6 +5386,22 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       base: simple("base"),
     },
     (b) => newMultiscript(newPowerBase(b.base), [b.pre_sub], [b.pre_sup]),
+  );
+
+  // Slice K's one FIRES disposition (module header, "FENCED-TAIL"): `factor`
+  // is a SEQUENCE here only because `atom`+`exclamation_symbol` (`:1852`)
+  // returns a two-element array, not because the source repeats a `factor`
+  // key -- the same array-valued-inner-key mechanism `:3510`/`:3521` already
+  // rely on, confirmed with a `TracePoint :b_call` witness (`n!a c` inside
+  // the fence).
+  fenced(
+    "3966",
+    {
+      factor: sequence("factor"),
+      operand: simple("operand"),
+      exp: simple("exp"),
+    },
+    (b) => [...asArray(b.factor), b.operand, b.exp],
   );
 
   rule(

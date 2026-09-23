@@ -103,7 +103,7 @@ export function renderNumber(node: NodeOf<"number">, context: RenderContext): st
   if (present(node.miniSupSized)) return UNICODEMATH_SUP_DIGITS.get(value) ?? null;
 
   if (context.numberFormat !== null) {
-    if (isGemNumericValue(value)) return applyNumberFormat(value, context.numberFormat);
+    if (isGemNumericValue(value)) return applyNumberFormat(value, context.numberFormat, FORMAT);
     // `Formatter::Numbers::Source#validate_numeric!` raises for anything that
     // is not a gem-numeric string.
     refuseNonNumericUnderFormatter(value, FORMAT, node.kind);

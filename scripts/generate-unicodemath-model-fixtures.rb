@@ -1081,6 +1081,15 @@ RULE_COVERAGE = {
     "[+∞,1]",
     "[−∞,1]",
   ],
+  # "fenced_tail": slice K, G2's twenty-one deferred bracket-pair rules
+  # (`transform.rb:3156`-`:3966`), re-derived by grammar and `TracePoint`
+  # rather than generation (see the module header, "A fourteenth increment:
+  # FENCED-TAIL"). Eighteen turned out DEAD and two UNREACHED; one FIRES:
+  #
+  #   :3966 `(n!a c)`   factor SEQUENCE (`n!` -> `[n, !]`) + operand + exp
+  "fenced_tail" => [
+    "(n!a c)",
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`

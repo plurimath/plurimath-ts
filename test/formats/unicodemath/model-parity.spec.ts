@@ -234,18 +234,24 @@ describe.skipIf(deferred.length === 0)("the rule families this slice defers", ()
  * `:99`, `:745`, `:765` and `:1791` — the rules `±`, `a≤b` and `x a/b c` used
  * to prove absent here — are all ported now (RELATION and FRACTION landed);
  * those inputs moved out into `RULE_COVERAGE` groups and compare for real.
- * The three inputs still in `SLICE_BOUNDARY` were re-traced against the
+ * `"ⅇ"` moved out the same way when slice H ported `:43`, and `"ab₁^c"` was
+ * added and moved out again in the same pass once it proved `:67` ported
+ * clean. The six inputs still in `SLICE_BOUNDARY` were re-traced against the
  * CURRENT port rather than trusted to still be blocked by the rule once
- * named beside them — see the generator's own comment above
- * `SLICE_BOUNDARY` for the measurement:
+ * named beside them — see the generator's own comment above `SLICE_BOUNDARY`
+ * for the measurement:
  *
  *   - `"1x₂"` is blocked by `:1776` (`{digit: simple, expr: simple}`, which
  *     must fire before `:1054` — already ported — ever sees the SEQUENCE
- *     shape it needs) and by `:67` (`{mini_sub: sequence}`) above it.
+ *     shape it needs); `:67` (`{mini_sub: sequence}`), the other rule that
+ *     used to block it, is ported now (slice H).
  *   - `"1/2a"` is blocked by `:658` (`{digit: simple,
  *     recursive_denominator: simple}`); `:1619`, one level up, is ported.
- *   - `"ⅇ"` is blocked by `:43` (`{mitBbb: simple}`); `:227`, which consumes
- *     its result, is ported.
+ *   - Four more are slice H's own boundary rows, each blocked by a sibling
+ *     combinator (`:945`, `:1776`, `:2251`) no slice has claimed yet — the
+ *     generator's own comment above `SLICE_BOUNDARY` names which rule blocks
+ *     which row. `:80` (`{intermediate_exp: sequence}`) is not ported at
+ *     all — see the module header.
  */
 describe("inputs whose rules sit outside the slice", () => {
   it.each(boundary.map((entry) => [entry.input, entry] as const))(

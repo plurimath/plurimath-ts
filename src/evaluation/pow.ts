@@ -64,11 +64,18 @@ function nearHalfwayRefusal(): never {
 
 /**
  * Rounds `mantissa * 2^exponent` (plus a positive amount smaller than one unit
- * of `mantissa` when `sticky` is set) to the nearest double, refusing a value
- * within 0.04 ULP of a midpoint (module header). Handles subnormal results
- * and overflow to `Infinity`.
+ * of `mantissa` when `sticky` is set) to the nearest double. With
+ * `refuseNearHalf` (the `pow` path) a value within 0.04 ULP of a midpoint is
+ * refused (module header); without it, an exact tie rounds to even — IEEE
+ * round-to-nearest, what C's `ldexp` does on this platform. Handles subnormal
+ * results and overflow to `Infinity`.
  */
-function roundDyadic(mantissa: bigint, exponent: number, sticky: boolean): number {
+function roundDyadic(
+  mantissa: bigint,
+  exponent: number,
+  sticky: boolean,
+  refuseNearHalf = true,
+): number {
   if (mantissa === 0n) return 0;
   const top = bitLength(mantissa) - 1 + exponent;
   // Beyond the double range there is nothing to round: at or above 2^1024 the
@@ -92,8 +99,11 @@ function roundDyadic(mantissa: bigint, exponent: number, sticky: boolean): numbe
     // Position within the ULP is remainder/full; refuse when
     // |remainder/full - 1/2| < 0.04, i.e. |2 remainder - full| * 25 < 2 full.
     const offset = 2n * remainder - full;
-    if ((offset < 0n ? -offset : offset) * 25n < 2n * full) nearHalfwayRefusal();
-    if (offset > 0n) quotient += 1n;
+    if (refuseNearHalf && (offset < 0n ? -offset : offset) * 25n < 2n * full) {
+      nearHalfwayRefusal();
+    }
+    if (offset > 0n || (offset === 0n && sticky)) quotient += 1n;
+    else if (offset === 0n && (quotient & 1n) === 1n) quotient += 1n;
   }
   // `quotient` has at most 54 bits and `2 ** lsb` is a power of two, so the
   // product is exact — or overflows to `Infinity`, which is the right answer.
@@ -187,4 +197,16 @@ export function correctlyRoundedPow(x: number, y: number): number {
     if (exact !== null) return exact;
   }
   return logExpPower(x, y);
+}
+
+/**
+ * C's `ldexp(d, shift)`: `d * 2^shift`, exact unless the result is subnormal
+ * or overflows, where it rounds to nearest, ties to even. Ruby's
+ * `Integer#fdiv` and `Rational#to_f` end with it (`bignum.c`'s `big_fdiv`).
+ */
+export function ldexp(d: number, shift: number): number {
+  if (d === 0 || !Number.isFinite(d)) return d;
+  const { mantissa, exponent } = decompose(Math.abs(d));
+  const magnitude = roundDyadic(mantissa, exponent + shift, false, false);
+  return d < 0 ? -magnitude : magnitude;
 }

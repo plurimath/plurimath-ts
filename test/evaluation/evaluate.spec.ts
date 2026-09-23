@@ -11,7 +11,9 @@
  * (`src/evaluation/numeric.ts`) — the tracking that decides where the port
  * must refuse. A row with `portRefusal` is one the port refuses with
  * `UnsupportedFeatureError` whatever the oracle answered: an unported
- * gem-evaluated node, or a result a JS number cannot hold exactly.
+ * gem-evaluated node, a FINAL result a JS number cannot hold exactly, a Float
+ * power inside glibc's rounding band, a Ruby `ArgumentError`, or an exact
+ * intermediate beyond the port's size limit (the generator's header).
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -149,9 +151,11 @@ describe("evaluate() against the oracle fixtures", () => {
   it("covers every refusal reason and both kinds", () => {
     const reasons = new Set(rows.flatMap((row) => (row.portRefusal ? [row.portRefusal] : [])));
     expect([...reasons].sort()).toEqual([
+      "argument-error",
       "big-integer",
       "pow-rounding-band",
       "rational",
+      "size-limit",
       "unported",
     ]);
     const plain = rows.filter((row) => row.portRefusal === undefined && row.expected !== undefined);

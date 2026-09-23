@@ -409,14 +409,23 @@ pinned oracle `00c52783`) documents `evaluate` as computing "numeric results"
 documents no arbitrary-precision Integer or Rational result. So `evaluate`
 returns a JS `number` for every documented case, and throws
 `UnsupportedFeatureError` (a port limitation, not an evaluation error) where
-Ruby's answer cannot be represented exactly: an Integer outside
-`Number.isSafeInteger`, or a Rational (an Integer raised to a negative
-Integer power). Ruby's Integer-versus-Float distinction (`9` versus `5.0`) is
-not observable in JavaScript. `src/evaluation/numeric.ts` tracks Ruby's kind
-internally, following Ruby's promotion rules as measured on the oracle, so
-the refusal fires exactly at the operation where Ruby would produce such a
-value; `test/evaluation/evaluate.spec.ts` checks that kind against the oracle
-for every fixture row. A binding holding a safe integer is read as a Ruby
+Ruby's FINAL answer cannot be represented exactly: an Integer outside
+`Number.isSafeInteger`, or a Rational. Ruby's Integer-versus-Float
+distinction (`9` versus `5.0`) is not observable in JavaScript.
+
+Refined the same day (the user): intermediates are computed EXACTLY, as Ruby
+computes them, and only the final result is checked. `src/evaluation/
+numeric.ts` holds a Ruby Integer as a `bigint`, a Rational as an exact reduced
+`bigint` pair and a Float as a `number`, and follows Ruby 4.0.1's arithmetic
+for every kind pair — `2^100/2^99` is `2.0`, `2^(-1)*2.0` is `1.0`, and an
+evaluation error raised later in the expression (`2^100+x`) still wins. The
+conversions to Float reproduce Ruby's own: `Number(bigint)` for an Integer
+(round to nearest, ties to even, as `big2dbl` does) and `bignum.c`'s
+truncating `big_fdiv` for a Rational. Where Ruby raises `ArgumentError`, and
+beyond the port's size limit for exact values, the port refuses on the spot
+(`deferred.md`, "exact intermediates beyond the port's size limit").
+`test/evaluation/evaluate.spec.ts` checks the kind of every fixture row
+against the oracle. A binding holding a safe integer is read as a Ruby
 Integer, any other number as a Float.
 
 The same reasoning covers Float powers: Ruby's `**` calls the C library's
@@ -424,4 +433,5 @@ The same reasoning covers Float powers: Ruby's `**` calls the C library's
 not correctly rounded within 0.04 ULP of a midpoint (its documented 0.54 ULP
 worst case). `src/evaluation/pow.ts` returns the correctly rounded result,
 which is glibc's everywhere outside that band, and refuses inside it with
-`UnsupportedFeatureError`.
+`UnsupportedFeatureError` — the documented bound kept on purpose (the user,
+2026-09-23); `deferred.md` records it as a known divergence.

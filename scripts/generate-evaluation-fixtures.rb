@@ -21,13 +21,19 @@
 # and the Ruby kind the string records against the port's internal kind.
 #
 # `portRefusal` marks a row the port refuses with `UnsupportedFeatureError`
-# although the oracle answers or raises something else: a construct the gem
-# evaluates that this slice has not ported (`mod`, `sin`, `sum`, ...), or a
-# result a JS number cannot hold exactly (a Rational, an Integer beyond
-# `Number.MAX_SAFE_INTEGER`, a Float power within glibc's rounding band —
-# `src/evaluation/numeric.ts` and `pow.ts`). The oracle's own answer is still
-# recorded, so the refusal is visibly a refusal of THAT answer. A Rational or
-# out-of-range Integer answer without a `portRefusal` aborts generation.
+# although the oracle answers or raises something else, and says why:
+# `unported` (a construct the gem evaluates that this slice has not ported:
+# `mod`, `sin`, `sum`, ...), `rational` / `big-integer` (a FINAL result a JS
+# number cannot hold exactly — intermediate ones are computed exactly, as
+# Ruby does), `pow-rounding-band` (a Float power within glibc's rounding
+# band), `argument-error` (Ruby raises `ArgumentError`, not an evaluation
+# error; recorded as `raises: "ArgumentError"`), or `size-limit` (an exact
+# intermediate beyond the port's resource limit) — `src/evaluation/numeric.ts`
+# and `pow.ts`. The oracle's own answer is still recorded, so the refusal is
+# visibly a refusal of THAT answer. A Rational or out-of-range Integer answer
+# without a `portRefusal` aborts generation, and so does a `rational`,
+# `big-integer` or `argument-error` marker the oracle's answer does not bear
+# out.
 #
 # A binding value is either an Integer or a non-integral Float (or a
 # non-finite Float): JavaScript cannot express `2.0` apart from `2`, and the
@@ -129,9 +135,24 @@ def evaluate_row(id, group, source, text, bindings, port_refusal)
     if result.is_a?(Integer) && result.abs > MAX_SAFE_INTEGER && !port_refusal
       abort "REFUSING: #{id}: #{result} is beyond Number.MAX_SAFE_INTEGER"
     end
+    if port_refusal == "rational" && !result.is_a?(Rational)
+      abort "REFUSING: #{id}: marked rational, but the oracle answered #{result.inspect}"
+    end
+    if port_refusal == "big-integer" && !(result.is_a?(Integer) && result.abs > MAX_SAFE_INTEGER)
+      abort "REFUSING: #{id}: marked big-integer, but the oracle answered #{result.inspect}"
+    end
     row["expected"] = result.inspect
   rescue EVALUATION_ERROR => e
     row["raises"] = e.class.name
+  rescue ArgumentError => e
+    abort "REFUSING: #{id}: ArgumentError #{e.message} without an argument-error marker" unless port_refusal == "argument-error"
+    row["raises"] = "ArgumentError"
+  end
+  if %w[rational big-integer].include?(port_refusal) && row.key?("raises")
+    abort "REFUSING: #{id}: marked #{port_refusal}, but the oracle raised #{row['raises']}"
+  end
+  if port_refusal == "argument-error" && row["raises"] != "ArgumentError"
+    abort "REFUSING: #{id}: marked argument-error, but the oracle did not raise ArgumentError"
   end
   row["portRefusal"] = port_refusal if port_refusal
   row
@@ -252,15 +273,48 @@ ROWS = [
 
   # Results a JS number cannot hold exactly: refused by the port.
   ["rational-integer-negative-power", "representability", "2^(-1)"],
-  ["rational-intermediate-to-float", "representability", "2^(-1)*2.0"],
+  ["rational-intermediate-to-float", "exact-intermediate", "2^(-1)*2.0"],
   ["rational-zero-numerator", "representability", "a 3^(-1)"],
   ["rational-in-sum", "representability", "5+7^(-9)"],
   ["big-integer-power", "representability", "2^100"],
-  ["big-integer-cancels", "representability", "3^35+1-3^35"],
+  ["big-integer-cancels", "exact-intermediate", "3^35+1-3^35"],
   ["big-integer-literal", "representability", "99999999999999999999"],
   ["big-integer-just-past-safe", "representability", "9007199254740991+1"],
-  ["big-integer-intermediate-to-float", "representability", "100^100-10.0"],
+  ["big-integer-intermediate-to-float", "exact-intermediate", "100^100-10.0"],
   ["pow-exact-halfway", "representability", "123456789^2.0"],
+  ["rational-den-one-final", "representability", "2^(-1)+2^(-1)"],
+  ["rational-power-den-one-exponent", "representability", "4^(2^(-1)*2)"],
+  ["rational-one-to-rational", "representability", "1^(2^(-1))"],
+  ["argument-error-bignum-exponent", "representability", "2^(2^62)"],
+  ["argument-error-negative-fixnum-min", "representability", "3^(-2^62)"],
+  ["size-limit-huge-power-times-zero", "representability", "2^5000000*0"],
+
+  # Exact intermediates Ruby carries on with (`numeric.ts`): big Integers and
+  # Rationals whose final value is a representable Integer or Float.
+  ["big-integers-divided", "exact-intermediate", "2^100/2^99"],
+  ["big-integer-difference", "exact-intermediate", "2^60-2^60+7"],
+  ["big-integer-product-quotient", "exact-intermediate", "(3^40*3^40)/3^79"],
+  ["rational-sum-to-float", "exact-intermediate", "(2^(-1)+2^(-1))*1.0"],
+  ["rational-den-one-exponent-to-float", "exact-intermediate", "4^(2^(-1)*2)*1.0"],
+  ["integer-to-rational-power", "exact-intermediate", "2^(2^(-1))"],
+  ["rational-cubed-to-float", "exact-intermediate", "(2^(-1))^3*8.0"],
+  ["rational-negative-power", "exact-intermediate", "(2^(-1))^(-2)+0.0"],
+  ["rational-to-float-power", "exact-intermediate", "(2^(-1))^0.5"],
+  ["rational-one-plus-float", "exact-intermediate", "1^(2^(-1))+0.0"],
+  ["rational-zero-plus-float", "exact-intermediate", "0^(2^(-1))+0.0"],
+  ["rational-reciprocal-divisor", "exact-intermediate", "1/2^(-1)"],
+  ["rational-to-float-big-denominator", "exact-intermediate", "3*2^(-60)*1.0"],
+  ["big-integer-to-float-rounding", "exact-intermediate", "(2^70+2^17+1)*1.0"],
+  ["rational-minus-float", "exact-intermediate", "7^(-2)-0.5"],
+
+  # A gem error raised later in evaluation order wins over an intermediate
+  # value a JS number could not hold.
+  ["later-missing-variable-after-big-integer", "exact-intermediate", "2^100+x"],
+  ["later-missing-variable-after-rational", "exact-intermediate", "2^(-1)*y"],
+  ["later-division-by-zero-after-big-integer", "exact-intermediate", "3^40*(1/0)"],
+  ["later-zero-to-negative-rational", "exact-intermediate", "0^(-2^(-1))"],
+  ["later-stray-token-after-big-integer", "exact-intermediate", "10 99999999^10+-2"],
+  ["later-complex-after-rational", "exact-intermediate", "(-2)^(2^(-1))"],
 
   # Gem-evaluated nodes this slice has not ported.
   ["unported-mod", "unported", "7 mod 3"],
@@ -333,19 +387,21 @@ BINDINGS = {
   "random-nested-groups" => { "a" => 1, "b" => 0.5, "c" => -3 },
 }.freeze
 
-# Rows the port refuses with `UnsupportedFeatureError` (see the header), each
-# with the reason: `unported` (a gem-evaluated node this slice lacks),
-# `rational`, `big-integer`, or `pow-rounding-band`.
+# Rows the port refuses with `UnsupportedFeatureError`, each with its reason
+# (see the header).
 PORT_REFUSALS = {
   "rational-integer-negative-power" => "rational",
-  "rational-intermediate-to-float" => "rational",
   "rational-zero-numerator" => "rational",
   "rational-in-sum" => "rational",
+  "rational-den-one-final" => "rational",
+  "rational-power-den-one-exponent" => "rational",
+  "rational-one-to-rational" => "rational",
   "big-integer-power" => "big-integer",
-  "big-integer-cancels" => "big-integer",
   "big-integer-literal" => "big-integer",
   "big-integer-just-past-safe" => "big-integer",
-  "big-integer-intermediate-to-float" => "big-integer",
+  "argument-error-bignum-exponent" => "argument-error",
+  "argument-error-negative-fixnum-min" => "argument-error",
+  "size-limit-huge-power-times-zero" => "size-limit",
   "pow-exact-halfway" => "pow-rounding-band",
   "unported-mod" => "unported",
   "unported-sin-missing-variable" => "unported",

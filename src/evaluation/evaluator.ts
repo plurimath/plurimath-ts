@@ -15,10 +15,9 @@
  * (`UnsupportedFeatureError`), or the gem itself refuses it through
  * `Core#evaluate`'s default (`UnsupportedExpressionError`, as the gem raises).
  *
- * Every intermediate value is a `RubyNumeric` (`numeric.ts`): the number and
- * the Ruby kind (Integer or Float) the gem would hold, so Ruby's promotion
- * rules — and the refusals where Ruby's answer has no exact JS `number` — are
- * applied where the gem applies them.
+ * Every intermediate value is a `RubyNumeric` (`numeric.ts`): the exact
+ * Integer, Rational or Float the gem would hold, combined by Ruby's own
+ * promotion rules. Only the final value is checked for an exact JS `number`.
  */
 
 import { UnsupportedFeatureError } from "../core/errors";
@@ -26,7 +25,16 @@ import { type FormulaNode, type MathNode, NODE_KINDS, type NodeParameter } from 
 import { type EvaluationBindings, type NormalizedBindings, normalizeBindings } from "./bindings";
 import { MissingVariableError, NonFiniteResultError, UnsupportedExpressionError } from "./errors";
 import { ExpressionParser } from "./expression-parser";
-import { divide, float, fromBinding, integer, power, type RubyNumeric } from "./numeric";
+import {
+  divide,
+  type FinalNumeric,
+  finalResult,
+  float,
+  fromBinding,
+  integer,
+  power,
+  type RubyNumeric,
+} from "./numeric";
 import { reservedConstant, type SymbolData, variableName } from "./operators";
 
 /**
@@ -63,9 +71,8 @@ function isMathNode(node: unknown): node is MathNode {
 
 /**
  * Ruby: `Number#evaluate` (`number.rb`) — an integer-shaped literal parses as
- * an Integer (`raw_value.to_i`), everything else as a Float (`Float(raw)`).
- * An Integer literal beyond the safe range is refused by `integer()`, the
- * same as any other Integer JavaScript cannot hold exactly.
+ * an Integer (`raw_value.to_i`, exact at any size), everything else as a
+ * Float (`Float(raw)`).
  * `Float()`'s strictness (rejects trailing garbage, hex, leading/trailing
  * whitespace `Float` itself tolerates in Ruby only via `String#to_f`) is
  * mirrored with an explicit pattern rather than JavaScript's looser `Number()`
@@ -83,7 +90,7 @@ const FLOAT_PATTERN = /^[+-]?(\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
 
 function evaluateNumber(node: NumberData): RubyNumeric {
   const raw = String(node.value ?? "");
-  if (INTEGER_PATTERN.test(raw)) return integer(Number(raw));
+  if (INTEGER_PATTERN.test(raw)) return integer(BigInt(raw));
   if (FLOAT_PATTERN.test(raw)) return float(Number(raw));
   throw new UnsupportedExpressionError(`number \`${raw}\``);
 }
@@ -323,15 +330,16 @@ export class Evaluator {
 
   /**
    * Ruby: `Evaluator#evaluate` — the entry point `index.ts`'s `evaluate`
-   * calls (through `run`). Returns the Ruby kind alongside the value, so the
-   * oracle fixtures can check the kind tracking itself; the kind is not part
-   * of the public result.
+   * calls (through `run`). Returns the Ruby kind of the final value alongside
+   * it, so the oracle fixtures can check the kind tracking itself; the kind
+   * is not part of the public result. A final Rational or unsafe Integer is
+   * refused in `finalResult`.
    */
-  static runWithKind(formula: FormulaNode, bindings: EvaluationBindings = {}): RubyNumeric {
+  static runWithKind(formula: FormulaNode, bindings: EvaluationBindings = {}): FinalNumeric {
     const evaluator = new Evaluator(bindings);
-    const result = evaluator.evaluateFormula(formula);
-    if (!Number.isFinite(result.value)) throw new NonFiniteResultError();
-    return result;
+    return finalResult(evaluator.evaluateFormula(formula), () => {
+      throw new NonFiniteResultError();
+    });
   }
 
   static run(formula: FormulaNode, bindings: EvaluationBindings = {}): number {

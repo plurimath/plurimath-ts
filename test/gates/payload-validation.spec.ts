@@ -864,15 +864,25 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           const base = ["group", "id", "source", "input", "bindings"];
           if ("portRefusal" in item) {
             expect(
-              ["big-integer", "pow-rounding-band", "rational", "unported"],
+              [
+                "argument-error",
+                "big-integer",
+                "pow-rounding-band",
+                "rational",
+                "size-limit",
+                "unported",
+              ],
               `${at}.portRefusal`,
             ).toContain(stringField(item, "portRefusal", at));
             base.push("portRefusal");
           }
+          // Ruby's own `ArgumentError` is not an evaluation error; it appears
+          // only on a row the port refuses for exactly that reason.
+          const argumentError = item.portRefusal === "argument-error";
           if (hasRefusal) {
             expectExactKeys(item, [...base, "raises"], at);
             expect(stringField(item, "raises", at)).toMatch(
-              /^Plurimath::Errors::Evaluation::[A-Za-z]+Error$/,
+              argumentError ? /^ArgumentError$/ : /^Plurimath::Errors::Evaluation::[A-Za-z]+Error$/,
             );
           } else {
             expectExactKeys(item, [...base, "expected"], at);

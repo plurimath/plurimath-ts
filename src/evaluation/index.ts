@@ -50,15 +50,18 @@ export type EvaluationOptions = Record<string, never>;
  * Returns a `number` — the gem's README documents numeric results (`5.0`,
  * `9`) and Float division, and nothing beyond them. Ruby's Integer-versus-
  * Float distinction (`9` versus `5.0`) is not observable in JavaScript: both
- * come back as the same `number`. Where Ruby's answer has no exact JS
- * `number` — an Integer outside `Number.isSafeInteger` (`2^100`) or a
- * Rational (an Integer to a negative Integer power, `2^(-1)`) — this throws
- * `UnsupportedFeatureError` instead of answering with a rounded value.
+ * come back as the same `number`. Intermediate values are computed exactly,
+ * as Ruby computes them (`2^100/2^99` is `2`); where Ruby's FINAL answer has
+ * no exact JS `number` — an Integer outside `Number.isSafeInteger` (`2^100`)
+ * or a Rational (`2^(-1)`) — this throws `UnsupportedFeatureError` instead of
+ * answering with a rounded value.
  * A binding holding a safe integer is taken as a Ruby Integer and any other
  * number as a Float, since JavaScript cannot tell `2` from `2.0`.
  *
  * @throws {UnsupportedFeatureError} a construct the gem evaluates that this
- *   slice has not ported, or a result JavaScript cannot represent exactly.
+ *   slice has not ported; a final result JavaScript cannot represent exactly;
+ *   a Float power inside glibc's rounding band; a Ruby `ArgumentError`; or an
+ *   exact intermediate beyond the port's size limit.
  * @throws {EvaluationError} one of the gem's own evaluation errors
  *   (`DivisionByZeroError`, `MathDomainError`, `NonFiniteResultError`,
  *   `UnsupportedExpressionError`, `MissingVariableError`,

@@ -15,11 +15,13 @@
  * localizes its coefficient back through `formatParts`, so a notation module
  * calls `formatParts` and adds its own result type beside `FormattedNumber`.
  * Base notation wraps the finished digits (`FormattedNumber#base_notation`)
- * and converts them inside `formatParts`' integer and fraction steps, so a
- * base module extends `FormattedNumber` and the two `Integer`/`Fraction`
- * conversion hooks. Neither rewrites this file's order of steps.
+ * and converts them inside `formatParts`' integer and fraction steps
+ * (`base-notation.ts`: `numberToBase` before `applyFraction`, whose
+ * `changeBase` generates the fraction digits). Neither rewrites this file's
+ * order of steps.
  */
 
+import { isDefaultBase, numberToBase } from "./base-notation";
 import type { FormattedNumber } from "./formatted-number";
 import { applyFraction, type FractionFormat, formatFractionGroups } from "./fraction";
 import { formatIntegerGroups, type IntegerFormat } from "./integer";
@@ -39,25 +41,38 @@ export interface NumericOptions extends IntegerFormat, FractionFormat {
 
 /**
  * `NumberRenderer#format_parts` (`number_renderer.rb:29`): everything after
- * the parts exist. The fraction is truncated to `precision` first (a second
- * time after `Source#to_parts`, which the gem does too).
+ * the parts exist. In base 10 the fraction is truncated to `precision` first
+ * (a second time after `Source#to_parts`, which the gem does too); for another
+ * base it is not (`decimal_precision_for`), because `precision` counts
+ * target-base digits and the decimal fraction must reach `changeBase` whole.
+ * The integer digits are converted to the base (`renderable_parts`) before the
+ * fraction step.
  */
 export function formatParts(
   parts: NumberParts,
   precision: number,
   options: NumericOptions,
 ): FormattedNumber {
-  let current = parts.withDigits({
-    fractionDigits: precision > 0 ? parts.fractionDigits.slice(0, precision) : "",
+  const { baseNotation } = options;
+  let current = isDefaultBase(baseNotation)
+    ? parts.withDigits({
+        fractionDigits: precision > 0 ? parts.fractionDigits.slice(0, precision) : "",
+      })
+    : parts;
+  current = current.withDigits({
+    integerDigits: numberToBase(current.integerDigits, baseNotation.base),
   });
   current = applyFraction(current, precision, options);
-  if (options.significant > 0) current = applySignificant(current, options.significant);
+  if (options.significant > 0) {
+    current = applySignificant(current, options.significant, baseNotation.base);
+  }
 
   return {
     sign: current.sign,
     integerPart: formatIntegerGroups(current.integerDigits, options),
     fractionPart: current.fractional ? formatFractionGroups(current.fractionDigits, options) : "",
     decimalSeparator: options.decimal,
+    baseNotation,
     numberSign: options.numberSign,
   };
 }
@@ -68,6 +83,11 @@ export function formatParts(
  */
 export function formatNumber(raw: string, options: NumericOptions): FormattedNumber {
   const source = new Source(raw);
-  const precision = resolvePrecision(source, options.precision);
-  return formatParts(source.toParts(precision), precision, options);
+  const precision = resolvePrecision(source, options.precision, {
+    base: options.baseNotation.base,
+    significant: options.significant,
+  });
+  // `Source#to_parts` gets `decimal_precision_for(precision)`: nil (no truncation) for another base.
+  const parts = source.toParts(isDefaultBase(options.baseNotation) ? precision : null);
+  return formatParts(parts, precision, options);
 }

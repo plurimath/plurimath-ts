@@ -380,7 +380,8 @@ const FORMAT_OPS: Record<DisplayFormat, FormatOps> = {
 /**
  * `Core::TEXT_CLASSES`-gated recursion guard: `ModelHelper.validate_math_zone`.
  *
- * Classifies by node KIND only (never renders): a `Formula`/`Mrow` recurses
+ * Classifies without rendering, using the node kind plus `MERGE_CLASS_NAMES`
+ * membership (via `classNameOf`): a `Formula`/`Mrow` recurses
  * when at least one child survives `filter_math_zone_values` as itself
  * (i.e. is not folded into a merge run), matching the gem's own
  * `find { |value| !(value.is_a?(Text) || value.is_a?(Symbol)) }` — checked

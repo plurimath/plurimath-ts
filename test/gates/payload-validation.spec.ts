@@ -839,7 +839,9 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         // strings `evaluate.spec.ts`'s header explains) standing in for
         // `options`, and no `split`/`raisedIn` (this generator never parses a
         // linebreak-bearing input, and every refusal it records comes from
-        // `evaluate`, never a parse).
+        // `evaluate`, never a parse). An optional `portRefusal` names why the
+        // port refuses the row with `UnsupportedFeatureError` whatever the gem
+        // answered (the generator's header).
         expectExactKeys(
           record.payload,
           ["$comment", "schema", "format", "caseCount", "evaluatedCount", "raisedCount", "cases"],
@@ -860,6 +862,13 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           const hasRefusal = typeof item.raises === "string";
           expect(Number(hasExpected) + Number(hasRefusal), `${at} outcome`).toBe(1);
           const base = ["group", "id", "source", "input", "bindings"];
+          if ("portRefusal" in item) {
+            expect(
+              ["big-integer", "pow-rounding-band", "rational", "unported"],
+              `${at}.portRefusal`,
+            ).toContain(stringField(item, "portRefusal", at));
+            base.push("portRefusal");
+          }
           if (hasRefusal) {
             expectExactKeys(item, [...base, "raises"], at);
             expect(stringField(item, "raises", at)).toMatch(

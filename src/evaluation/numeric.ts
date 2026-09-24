@@ -477,12 +477,18 @@ function floatBasePower(base: number, exponent: RubyNumeric): RubyNumeric {
  * longer than `limit` bits, decided before computing it: a part of bit length
  * `b > 1` is at least `2^(b-1)`, so its power is at least `2^((b-1)*e)`, which
  * has `(b-1)*e + 1` bits. A part of `0`, `1` or `-1` (`b <= 1`) never grows and
- * is never refused here. `rationalBasePower` refuses on this with the same
- * `tooLarge()` that `rational()`'s pre-reduction bound gives after computing,
- * so no input's outcome changes; the only difference is the power a refused
- * result would have cost (measured before this check, Node v20.20.2, Linux
- * x86_64, 2026-09-24: `(1/3)^2000000` took 96ms to compute `3^2000000` and
- * then be refused).
+ * is never refused here.
+ *
+ * `rationalBasePower` consults this only when the exponent's magnitude is a
+ * Fixnum. There, every refusal the computation could make is `tooLarge()`
+ * (`exactPower`'s bound, then `rational()`'s pre-reduction bound), so
+ * refusing on this with the same `tooLarge()` leaves every outcome unchanged
+ * and only skips the power a refused result would have cost (measured before
+ * this check, Node v20.20.2, Linux x86_64, 2026-09-24: `(1/3)^2000000` took
+ * 96ms to compute `3^2000000` and then be refused). The one Fixnum exponent
+ * whose magnitude is not a Fixnum, `-2^62`, is left to `integerPower`, which
+ * refuses it as Ruby's `ArgumentError` (`exponentTooLarge`) for any part it
+ * would grow, and refusing it here as a size limit would change that answer.
  */
 export function powerCertainlyExceeds(part: bigint, exponent: bigint, limit: number): boolean {
   const b = bitLength(part);
@@ -525,8 +531,12 @@ function rationalBasePower(num: bigint, den: bigint, exponent: RubyNumeric): Rub
     // A positive Fixnum exponent keeps an Integer base an Integer.
     const raise = (b: bigint, n: bigint): bigint => (integerPower(b, n) as IntegerValue).value;
     const magnitude = e < 0n ? -e : e;
-    if (powerCertainlyExceeds(num, magnitude, 2 * RATIONAL_BIT_LIMIT)) tooLarge();
-    if (powerCertainlyExceeds(den, magnitude, 2 * RATIONAL_BIT_LIMIT)) tooLarge();
+    // `-2^62`'s magnitude is not a Fixnum: `integerPower` raises Ruby's
+    // `ArgumentError` for it, which must win (`powerCertainlyExceeds`).
+    if (isFixnum(magnitude)) {
+      if (powerCertainlyExceeds(num, magnitude, 2 * RATIONAL_BIT_LIMIT)) tooLarge();
+      if (powerCertainlyExceeds(den, magnitude, 2 * RATIONAL_BIT_LIMIT)) tooLarge();
+    }
     if (e > 0n) return rational(raise(num, e), raise(den, e));
     return rational(raise(den, -e), raise(num, -e));
   }

@@ -160,3 +160,28 @@ describe("power: Rational-part pre-check at 2 * RATIONAL_BIT_LIMIT", () => {
     refusal(() => power(half, integer(huge)));
   });
 });
+
+describe("power: the Rational pre-check keeps Ruby's ArgumentError precedence", () => {
+  // The messages each exponent gave before the pre-check existed, pinned.
+  const exponentTooLarge =
+    "evaluate is not supported yet: Ruby raises ArgumentError (exponent is too large) here, " +
+    "which is not an evaluation error";
+  const sizeLimit =
+    "evaluate is not supported yet: an exact intermediate value exceeds this port's size limit " +
+    `(${INTEGER_BIT_LIMIT} bits for an Integer, ${RATIONAL_BIT_LIMIT} for a Rational part)`;
+  const fixnumMin = -(1n << 62n);
+  const fixnumMax = (1n << 62n) - 1n;
+
+  it.each([
+    ["-2^62 (Fixnum min; its magnitude is a Bignum)", fixnumMin, exponentTooLarge],
+    ["-2^62 - 1 (a Bignum)", fixnumMin - 1n, exponentTooLarge],
+    ["+2^62 (a Bignum)", fixnumMax + 1n, exponentTooLarge],
+    ["+2^62 + 1 (a Bignum)", fixnumMax + 2n, exponentTooLarge],
+    ["-2^62 + 1 (Fixnum magnitude)", fixnumMin + 1n, sizeLimit],
+    ["+2^62 - 1 (Fixnum max)", fixnumMax, sizeLimit],
+  ])("(1/2) and (3/2) to %s", (_label, e, message) => {
+    for (const base of [rational(1n, 2n), rational(3n, 2n)]) {
+      expect(refusal(() => power(base, integer(e))).message).toBe(message);
+    }
+  });
+});

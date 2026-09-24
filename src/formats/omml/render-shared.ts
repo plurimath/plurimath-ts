@@ -333,6 +333,26 @@ export function symbolValueOrGenerated(
 }
 
 /**
+ * `Symbol#t_tag` itself (`symbols/symbol.rb:160-165`), the element and not
+ * only its text: `return t_element unless output` writes a BARE `m:t` when
+ * `value || to_omml_without_math_tag` is nil — which happens only for the two
+ * value-rendered ids (`VALUE_RENDERED_SYMBOL_IDS`) holding nil, since every
+ * named id answers its non-nil literal. Measured on the pinned oracle
+ * `00c52783`: `Symbol.new(nil)` renders `<m:r><m:t/></m:r>` in a `Formula`
+ * alone, inside a `Frac` and inside an `Mrow`, and a bold `FontStyle` over it
+ * writes
+ * `<m:t/>` after its `m:rPr` — self-closed, where `Symbol.new("")` writes
+ * `<m:t></m:t>`.
+ */
+export function symbolTextTag(node: NodeOf<"symbol">, errorKind: string, at?: string): XmlElement {
+  const id = node.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
+  if ((node.value === null || node.value === undefined) && VALUE_RENDERED_SYMBOL_IDS.has(id)) {
+    return new XmlElement("m:t");
+  }
+  return textElement(symbolValueOrGenerated(node, errorKind, at));
+}
+
+/**
  * `Symbol#nary_attr_value` (`symbols/symbol.rb:101-105`):
  *
  * ```ruby

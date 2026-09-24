@@ -507,19 +507,15 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
  * nil, false, `[]` and a bare node — `Sin` is one of the 15 `UnaryFunction`
  * aliases whose OMML method is the base one — and `table[0]=empty-array`, the
  * single-column `m:eqArr` branch a row-less table takes. All five reproduce
- * the gem's bytes now.
+ * the gem's bytes now. `td[0]=empty-array` closed too: `Td#to_omml_without_math_tag`
+ * (td.rb:43-50) answers a bare `<m:e/>` for an empty cell before its content
+ * branch runs, and `renderTd` now matches.
  */
 export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
-  // `Td#initialize` calls `super(Array(parameter_one), ...)`, so nil becomes the
-  // empty list. `BinaryFunctionNode` now coerces it the same way, so this row
-  // no longer refuses for a missing `Array()`: it reaches `renderTd` as `[]`
-  // and refuses in the empty-cell branch, exactly as `td[0]=empty-array` does.
-  // Measured on the pinned oracle `00c52783`: the gem renders `<m:e/>` alone
-  // and `<m:eqArr>…<m:e/></m:eqArr>` inside a `Table`, the same bytes as for
-  // `[]`, so this row closes with that branch.
-  "td[0]=nil": "Td(nil) is Td([]) now; renderTd's empty-cell branch is still deferred",
-  "td[0]=empty-array": "renderTd's empty-cell branch is deferred until separately measured",
-
+  // Both `td` rows are closed: `Td#initialize` coerces nil with `Array()`
+  // and `BinaryFunctionNode` now does the same, so `td[0]=nil` reaches
+  // `renderTd` as `[]` and renders the bare `<m:e/>` the gem does (measured on
+  // the pinned oracle `00c52783`, alone and inside a `Table`).
   // The `number`, `symbol` and `text` rows that stood here are closed, each
   // measured on the pinned oracle `00c52783` with the same bytes in a
   // `Formula` alone, inside a `Frac` and inside an `Mrow`: `Number`

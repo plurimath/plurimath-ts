@@ -1,7 +1,5 @@
-import { RenderError } from "../../core/index";
 import {
   decodeEntities,
-  FORMAT,
   type NodeOf,
   type RenderContext,
   requireString,
@@ -86,14 +84,18 @@ export function renderText(node: NodeOf<"text">): XmlElement {
   return textElement(substituted);
 }
 
-/** Default-language Text insertion adds `m:rPr/m:sty`; `lang: omml` is unmeasured. */
+/**
+ * `Text#insert_t_tag` (text.rb:49-59): `m:rPr/m:sty` is added for every
+ * `@lang` EXCEPT the string `"omml"` — `@lang&.to_s != "omml"` — so a `null`
+ * lang (the common case) gets the style run same as any other non-`"omml"`
+ * lang, and only `lang: "omml"` skips it. Measured on the oracle at
+ * `00c52783`: `Text.new("hello", lang: :omml).insert_t_tag` yields
+ * `<m:r><m:t>hello</m:t></m:r>` with no `m:rPr`, while `lang: nil` and
+ * `lang: "somethingelse"` both add the `m:rPr/m:sty` wrapper.
+ */
 export function renderTextInserted(node: NodeOf<"text">, _context: RenderContext): XmlElement {
-  if (node.lang !== null && node.lang !== undefined) {
-    throw new RenderError(
-      `Text lang "${node.lang}" has not been measured for OMML insertion in this slice`,
-      FORMAT,
-      node.kind,
-    );
+  if (node.lang === "omml") {
+    return new XmlElement("m:r").append(renderText(node));
   }
   const properties = new XmlElement("m:rPr").append(
     new XmlElement("m:sty").setAttribute("m:val", "p"),

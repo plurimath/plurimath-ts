@@ -2,10 +2,8 @@
 # `payload.sha256` covers the whole payload file, including its final newline.
 ---
 schema: plurimath-corpus/manifest/2
-committable: false
-warnings:
-- generated with --allow-dirty
-- 'generator checkout dirty: TODO.plan/deferred.md, corpus/census.manifest.yaml, corpus/exclusions.manifest.yaml, scripts/generate-corpus.rb, src/core/generated/provenance.ts, src/formats/html/generated/provenance.ts, src/formats/latex/generated/provenance.ts, src/formats/mathml/render-shared.ts, src/formats/unicodemath/generated/provenance.ts, src/formatting/generated/provenance.ts, src/generated/provenance.ts, src/render/binary-function/mathml.ts, src/render/unary-function/html.ts, src/render/unary-function/unicodemath.ts, test/formats/asciimath/render-options-fixtures.json, test/formats/asciimath/render-options-fixtures.manifest.yaml, test/formats/binary-function/render-kinds-fixtures.manifest.yaml, test/formats/html/degenerate-fixtures.manifest.yaml, test/formats/html/model-fixtures.json, test/formats/html/model-fixtures.manifest.yaml, test/formats/html/parity-fixtures.manifest.yaml, test/formats/html/render-options-fixtures.json, test/formats/html/render-options-fixtures.manifest.yaml, test/formats/latex/render-options-fixtures.json, test/formats/latex/render-options-fixtures.manifest.yaml, test/formats/mathml/intent-parity.spec.ts, test/formats/mathml/render-options-fixtures.json, test/formats/mathml/render-options-fixtures.manifest.yaml, test/formats/omml/degenerate-fixtures.manifest.yaml, test/formats/omml/parity-fixtures.manifest.yaml, test/formats/omml/render-options-fixtures.json, test/formats/omml/render-options-fixtures.manifest.yaml, test/formats/unary-function-parity.spec.ts, test/formats/unicodemath/render-options-fixtures.json, test/formats/unicodemath/render-options-fixtures.manifest.yaml'
+committable: true
+warnings: []
 generator:
   path: scripts/generate-latex-model-fixtures.rb
   sha256: 340f074adc74f2e60df794e219124108b2d0c10b50afb850ab8a2ee8d4d2453d
@@ -14,44 +12,9 @@ generator:
     scripts/generate-latex-model-fixtures.rb: 340f074adc74f2e60df794e219124108b2d0c10b50afb850ab8a2ee8d4d2453d
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: f488d3f79bcc0b7c0c94404ec82863127300fb3c
-    clean: false
-    dirty_paths:
-    - TODO.plan/deferred.md
-    - corpus/census.manifest.yaml
-    - corpus/exclusions.manifest.yaml
-    - scripts/generate-corpus.rb
-    - src/core/generated/provenance.ts
-    - src/formats/html/generated/provenance.ts
-    - src/formats/latex/generated/provenance.ts
-    - src/formats/mathml/render-shared.ts
-    - src/formats/unicodemath/generated/provenance.ts
-    - src/formatting/generated/provenance.ts
-    - src/generated/provenance.ts
-    - src/render/binary-function/mathml.ts
-    - src/render/unary-function/html.ts
-    - src/render/unary-function/unicodemath.ts
-    - test/formats/asciimath/render-options-fixtures.json
-    - test/formats/asciimath/render-options-fixtures.manifest.yaml
-    - test/formats/binary-function/render-kinds-fixtures.manifest.yaml
-    - test/formats/html/degenerate-fixtures.manifest.yaml
-    - test/formats/html/model-fixtures.json
-    - test/formats/html/model-fixtures.manifest.yaml
-    - test/formats/html/parity-fixtures.manifest.yaml
-    - test/formats/html/render-options-fixtures.json
-    - test/formats/html/render-options-fixtures.manifest.yaml
-    - test/formats/latex/render-options-fixtures.json
-    - test/formats/latex/render-options-fixtures.manifest.yaml
-    - test/formats/mathml/intent-parity.spec.ts
-    - test/formats/mathml/render-options-fixtures.json
-    - test/formats/mathml/render-options-fixtures.manifest.yaml
-    - test/formats/omml/degenerate-fixtures.manifest.yaml
-    - test/formats/omml/parity-fixtures.manifest.yaml
-    - test/formats/omml/render-options-fixtures.json
-    - test/formats/omml/render-options-fixtures.manifest.yaml
-    - test/formats/unary-function-parity.spec.ts
-    - test/formats/unicodemath/render-options-fixtures.json
-    - test/formats/unicodemath/render-options-fixtures.manifest.yaml
+    commit: 17f0bb4bdd149b805683b372309ec988d0c632e7
+    clean: true
+    dirty_paths: []
 oracle:
   gem: plurimath
   version: 0.11.6

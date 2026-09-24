@@ -99,10 +99,10 @@ describe("textFunctionSpans", () => {
     expect(matches).toBeGreaterThan(10_000);
   });
 
-  // 50,000 repetitions is 350,000 code units. The regex above takes about
-  // 18 seconds on it (measured with Node 24 while this was written); the
-  // scanner takes milliseconds, so the bound here is generous and still two
-  // orders of magnitude under the regex.
+  // 50,000 repetitions is 350,000 code units. The regex above is quadratic
+  // on it: two runs on this repo's host took 18.5 s and 48.7 s, depending on
+  // load. The scanner takes milliseconds, so the bound here is generous and
+  // still far under the regex.
   it.each(["\\mbox{{", "\\text{{", "\\mbox{", "\\text{\\mbox{"])(
     "scans 50,000 unclosed %j openings in linear time",
     (opening) => {

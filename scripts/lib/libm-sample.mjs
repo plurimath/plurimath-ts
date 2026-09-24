@@ -38,8 +38,9 @@ function arctanInverse(n, bits) {
   return sum;
 }
 
-const PI_BITS = 1700n;
-const PI_SCALED = 16n * arctanInverse(5n, PI_BITS) - 4n * arctanInverse(239n, PI_BITS);
+/** `pi * 2^PI_BITS`, exact to the last bit or so (Machin's formula). */
+export const PI_BITS = 1700n;
+export const PI_SCALED = 16n * arctanInverse(5n, PI_BITS) - 4n * arctanInverse(239n, PI_BITS);
 
 /** The double nearest `k * pi / 2`, for a positive `bigint` `k`. */
 function nearestToHalfPiMultiple(k) {

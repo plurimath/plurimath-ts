@@ -9,7 +9,8 @@
  *
  * - the port's correctly rounded result, band off, IS the reference's, for
  *   every row — the BigInt implementation is right on its own terms;
- * - with the band (and, for sin/cos/tan, the reduction guard) on, the port
+ * - with its default behaviour (the region's band; for sin/cos/tan, the
+ *   reduction guard and exceptions table), the port
  *   either refuses or returns exactly glibc's double — never a third answer —
  *   and it refuses every row where glibc missed the correctly rounded double;
  * - the bands the corpus was measured against are the bands `libm.ts` uses,
@@ -43,7 +44,7 @@ interface CategorySummary {
 }
 
 interface FunctionCorpus {
-  readonly bandInverse: number | null;
+  readonly bandInverse: { readonly small: number; readonly large: number } | null;
   readonly summary: Readonly<Record<string, CategorySummary>>;
   readonly rows: readonly Row[];
 }
@@ -88,8 +89,11 @@ describe("libm.ts against the glibc corpus (scripts/measure-libm-glibc-accuracy.
     expect(Object.keys(corpus.functions).sort()).toEqual([...LIBM_FUNCTIONS, "sqrt"].sort());
   });
 
-  it.each(LIBM_FUNCTIONS)("%s: the corpus was measured at the band libm.ts uses", (fn) => {
-    expect(corpus.functions[fn]?.bandInverse).toBe(Number(BANDS[fn].inverse));
+  it.each(LIBM_FUNCTIONS)("%s: the corpus was measured at the bands libm.ts uses", (fn) => {
+    expect(corpus.functions[fn]?.bandInverse).toEqual({
+      small: Number(BANDS[fn].small.inverse),
+      large: Number(BANDS[fn].large.inverse),
+    });
   });
 
   it.each([...LIBM_FUNCTIONS, "sqrt"])(

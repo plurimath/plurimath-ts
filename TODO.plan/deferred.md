@@ -522,47 +522,67 @@ correctly rounded, and glibc's and `Math.sqrt` both are.
 
 Each band is the worst glibc miss over 100,000 seeded uniform samples plus
 hand-typed values (`0.1`, `pi/4`, `90`, ...) times two, rounded up to a clean
-fraction (`scripts/measure-libm-glibc-accuracy.mjs`, seed `20260924`,
-reference BigDecimal at 110 digits, 665 s for 976,553 samples, 976,551 of them with a result in the double range). The
-measurement also checks the port's own correctly rounded result against the
-reference on every sample (0 disagreements), and that, outside the band, the
-port equals glibc on every sample (0 disagreements):
+fraction, per argument region: `|x| < 1024` and `|x| >= 1024`, the latter
+also counting the `large` samples (`scripts/measure-libm-glibc-accuracy.mjs`,
+seed `20260924`, reference BigDecimal at 110 digits, 976,553 samples,
+976,551 of them with a result in the double range). A region with no
+measured miss keeps the other region's band. The measurement also checks the
+port's own correctly rounded result against the reference on every sample
+(0 disagreements), and that, where the port answers, it equals glibc on every
+sample (0 disagreements in every category). Refusal rates are before the
+region split (a single band, guard below 1024) and after:
 
-| Function | glibc correctly rounded (uniform) | Worst miss (ULP from midpoint) | Band | Uniform refused |
-| --- | --- | --- | --- | --- |
-| sin | 99.9160% | 0.011730 | 1/40 | 4.90% |
-| cos | 99.9400% | 0.014086 | 1/32 | 6.38% |
-| tan | 99.8380% | 0.043039 | 1/10 | 20.12% |
-| asin | 99.8660% | 0.007770 | 1/60 | 3.39% |
-| acos | 99.9520% | 0.009629 | 1/50 | 3.81% |
-| atan | 99.9670% | 0.012025 | 1/40 | 5.04% |
-| exp | 99.9210% | 0.005751 | 1/80 | 2.53% |
-| log | 99.9860% | 0.003879 | 1/125 | 1.61% |
-| sqrt | 100.0000% | — | none | 0% |
+| Function | glibc correct (uniform) | Worst miss `<1024` / `>=1024` | Band `<1024` / `>=1024` | Uniform refused | Typed refused |
+| --- | --- | --- | --- | --- | --- |
+| sin | 99.9160% | 0.011619 / 0.011730 | 1/40 / 1/40 | 4.90% -> 4.90% | 6 -> 2 of 96 |
+| cos | 99.9400% | 0.008919 / 0.014086 | 1/50 / 1/32 (was 1/32) | 6.38% -> 4.61% | 10 -> 4 of 96 |
+| tan | 99.8380% | 0.043039 / 0.017810 | 1/11 / 1/25 (was 1/10) | 20.12% -> 15.42% | 18 -> 8 of 96 |
+| asin | 99.8660% | 0.007770 / — | 1/60 | 3.39% | 4 of 32 |
+| acos | 99.9520% | 0.009629 / — | 1/50 | 3.81% | 5 of 32 |
+| atan | 99.9670% | 0.012025 / none measured | 1/40 | 5.04% | 6 of 96 |
+| exp | 99.9210% | 0.005751 / — | 1/80 | 2.53% | 1 of 94 |
+| log | 99.9860% | 0.003879 / none measured | 1/125 | 1.61% | 0 of 48 |
+| sqrt | 100.0000% | — | none | 0% | 0 |
 
-A band cannot fix sin/cos/tan near a multiple of `pi/2`, where the result
-is tiny (or `tan`'s huge) and glibc's error in its reduced argument dominates:
-over the hardest reduction cases at every binary exponent (continued-fraction
-convergents of `pi/2`, down to `|r|` near `2^-61`), glibc missed 450 (sin),
-863 (cos) and 1,311 (tan) of 1,971, by up to thousands of ULP
-(`cos(6381956970095103 * 2^797)` is 8 ULP out, `tan(6pi)` misses at 0.18 ULP
-from the midpoint). So sin/cos/tan also refuse when the result is computed
-from `sin r` and `|r|` is under `2^-35` (`|x| < 2^26`) or `2^-24` (above),
-16 times above the worst reduced-argument error measured on either side
-(`2^-102.3`, `2^-91.7`). A random argument almost never lands there, but the
-multiples of `pi` a person types where the result is zero or a pole —
-`sin(pi)`, `cos(pi/2)`, `tan(pi/2)`, `csc(pi)` — do, and are refused although
-glibc happens to round them correctly: nothing the port can compute shows
-that it will. `cos(pi)` and `sin(pi/2)` are not refused. If those cases are
-wanted, the route is a measured table of glibc's answers for them, not a
-narrower guard.
+tan's wide band below 1024 comes from one sampled miss at 0.043 ULP
+(`tan(14.072284240275621)`, whose value is 15.4); the next worst is 0.029.
 
-Hand-typed values refused (band or guard): sin 6 of 96, cos 10 of 96, tan 18
-of 96, atan 6 of 96, asin 4 of 32, acos 5 of 32, exp 1 of 94, log 0 of 48 —
-`tan(pi/4)` and `arccos(0.5)` among them, whose exact results lie 0.0515 and
-0.0172 ULP from a midpoint. `test/evaluation/libm-rounding-band.spec.ts`
-re-checks the committed corpus without Ruby. As with `pow`, the parity is
-with the oracle's platform: another libm can differ in these last bits.
+A band cannot fix sin/cos/tan near a multiple of `pi/2`, where the result is
+tiny (or `tan`'s huge) and glibc's error in its reduced argument `r`
+dominates: over the hardest reduction cases at every binary exponent
+(continued-fraction convergents of `pi/2`), glibc missed 450 (sin), 863
+(cos) and 1,311 (tan) of 1,971, by up to thousands of ULP. Two measurements
+now decide where the port refuses there:
+
+- **Below 1024, exhaustively** (`scripts/measure-libm-reduction-exhaustive.mjs`,
+  summary `test/evaluation/libm-reduction-exhaustive.json`): every double
+  within `2^-35` of a nonzero multiple of `pi/2` — 1,748,992 doubles near
+  651 multiples, both signs, 3,497,984 arguments per function. glibc's `sin`
+  was correctly rounded on all of them; `cos` missed 2, both outside its
+  band; `tan` missed 28, 24 inside its band and 4 outside. Those outside the
+  band are 3 magnitudes — `cos(1.5707963267948968)` (the double just above
+  `pi/2`), `tan(3pi)` and `tan(6pi)` — which
+  `src/evaluation/libm-reduction-exceptions.ts` refuses, both signs. Nothing
+  else below 1024 is reduction-guarded, and with that table the port refuses
+  or returns glibc's double on every argument checked. `sin(pi)`,
+  `cos(pi/2)`, `tan(pi/2)`, `sin(2pi)` and `csc(pi)` now answer.
+- **From 1024 up, by a guard** (`scripts/measure-libm-reduction-error.mjs`):
+  refuse a result computed from `sin r` when `|r| < 2^-bits`, with `bits` from
+  the largest reduced-argument error measured on the hard cases, minus 67 (so
+  an admitted result's relative error from the reduction stays under
+  `2^-67`). From `2^26` up, 3,852 sin-r results: largest error `2^-91.7`,
+  guard `2^-24`. In `[1024, 2^26)` glibc was exact on all 50 sin-r hard
+  cases, so that tier's guard is sized from the whole range below `2^26`
+  (90 results, largest error `2^-102.3`, from `tan(4.712388980384691)`):
+  `2^-35`. glibc missed none of the hard cases on the `cos r` branches, which
+  are not guarded.
+
+`tan(pi/4)` and `arccos(0.5)` are still refused by the band: their exact
+results lie 0.0515 and 0.0172 ULP from a midpoint.
+`test/evaluation/libm-rounding-band.spec.ts` and
+`test/evaluation/libm-reduction-exhaustive.spec.ts` re-check the committed
+corpora without Ruby. As with `pow`, the parity is with the oracle's
+platform: another libm can differ in these last bits.
 
 ### Evaluation: exact intermediates beyond the port's size limit, and Ruby's `ArgumentError`
 

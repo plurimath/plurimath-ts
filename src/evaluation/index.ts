@@ -51,6 +51,15 @@ export interface EvaluationOptions {
    * `UnsupportedExpressionError` ("iteration range larger than N steps")
    * before any step runs. Defaults to the gem's `100_000`
    * (`configuration.rb`); `null` disables the cap, as `nil` does in the gem.
+   *
+   * **Availability caveat:** without a cap, `evaluate()` runs one body
+   * evaluation per step, synchronously, so its time grows linearly with the
+   * range and has no bound: an untrusted formula such as
+   * `sum_(i=1)^(10^9) 1` then blocks the calling thread for about eleven
+   * minutes (extrapolated from the rate below), as it would the gem. Measured (`scripts/measure-uncapped-iteration.mjs`, Node
+   * v20.20.2, Linux x86_64, 2026-09-24, median of five): 65 ms for 100,000
+   * steps, 642 ms for 1,000,001, 1,295 ms for 2,000,001. Keep a cap when the
+   * formula comes from outside.
    */
   readonly evaluationMaxIterations?: number | null | undefined;
 }

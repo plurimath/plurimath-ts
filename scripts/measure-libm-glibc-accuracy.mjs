@@ -17,15 +17,17 @@
 //
 // - how often glibc returns the correctly rounded double, and, where it does
 //   not, the worst miss's distance from the midpoint; the band this module
-//   recommends is that worst miss (over the `uniform` and `human` samples)
-//   times two, and a miss further than 0.1 ULP from the midpoint is reported
-//   as one a band cannot fix;
+//   recommends for each region (`|x|` below or above `libm.ts`'s
+//   SMALL_ARGUMENT) is that region's worst miss over the `uniform`, `human`
+//   and `large` samples, times two, and a miss further than 0.1 ULP from the
+//   midpoint is reported as one a band cannot fix;
 // - whether the port's own correctly rounded result (`libm.ts`, band off)
 //   equals the reference for every sample — the check that the BigInt
 //   implementation is right, independently of glibc;
-// - at the band `libm.ts` actually uses (with, for sin/cos/tan, its
-//   reduction guard), how often the port refuses, and how often, when it
-//   does not refuse, it disagrees with glibc (which must be never).
+// - with `libm.ts`'s default behaviour (region band; for sin/cos/tan, its
+//   reduction guard and exceptions table), how often the port refuses, and
+//   how often, when it does not refuse, it disagrees with glibc (which must
+//   be never).
 //
 // `libm.ts` itself is loaded through `esbuild` from the checked-out source,
 // never from `dist/`, as `measure-pow-rounding-band.mjs` does.
@@ -58,7 +60,7 @@ await build({
   outfile,
   logLevel: "error",
 });
-const { BANDS, CORRECTLY_ROUNDED } = await import(outfile);
+const { BANDS, CORRECTLY_ROUNDED, SMALL_ARGUMENT } = await import(outfile);
 
 function hexOf(x) {
   const view = new DataView(new ArrayBuffer(8));
@@ -144,10 +146,11 @@ const corpus = {
 };
 let failed = false;
 
+/** The port's answer: `band` null for band off, undefined for its default behaviour. */
 function portAnswer(fn, x, band) {
   if (fn === "sqrt") return Math.sqrt(x);
   try {
-    return CORRECTLY_ROUNDED[fn](x, band);
+    return band === null ? CORRECTLY_ROUNDED[fn](x, null) : CORRECTLY_ROUNDED[fn](x);
   } catch (error) {
     if (error?.code === "UNSUPPORTED_FEATURE") return "refused";
     throw error;
@@ -156,8 +159,13 @@ function portAnswer(fn, x, band) {
 
 for (const fn of FUNCTIONS) {
   const samples = sampled[fn];
-  const band = fn === "sqrt" ? null : BANDS[fn];
-  const radius = band === null ? 0 : 1 / Number(band.inverse);
+  const bands = fn === "sqrt" ? null : BANDS[fn];
+  // Band sizing per region: `uniform` and `human` samples, plus `large` ones
+  // for the large region. The categories near multiples of pi/2 are the
+  // reduction guard's (and, below SMALL_ARGUMENT, the exhaustive
+  // measurement's), not the band's.
+  const regionWorst = { small: 0, large: 0 };
+  const sizesBand = (category) => ["uniform", "human", "large"].includes(category);
   const byCategory = {};
   const corpusRows = [];
   let uniformKept = 0;
@@ -179,7 +187,13 @@ for (const fn of FUNCTIONS) {
     stats.n += 1;
     const glibcCorrect = glibcHex === crHex;
     if (glibcCorrect) stats.correct += 1;
-    else stats.misses.push({ x, distance, glibcHex, crHex });
+    else {
+      stats.misses.push({ x, distance, glibcHex, crHex });
+      if (sizesBand(category)) {
+        const region = Math.abs(x) < SMALL_ARGUMENT ? "small" : "large";
+        regionWorst[region] = Math.max(regionWorst[region], distance);
+      }
+    }
     const unbanded = hexOf(portAnswer(fn, x, null));
     if (unbanded !== crHex) {
       implementationDisagreements += 1;
@@ -187,7 +201,7 @@ for (const fn of FUNCTIONS) {
         implementationExamples.push(`x=${x} port=${unbanded} reference=${crHex}`);
       }
     }
-    const banded = portAnswer(fn, x, band);
+    const banded = portAnswer(fn, x, undefined);
     if (banded === "refused") stats.refused += 1;
     else if (hexOf(banded) !== glibcHex) stats.outOfBandDisagreements += 1;
     const keep =
@@ -198,11 +212,11 @@ for (const fn of FUNCTIONS) {
     }
   });
 
-  console.log(`\n${fn}: band ${band === null ? "none" : `1/${band.inverse} (${radius} ULP)`}`);
-  let worstBanded = 0;
+  console.log(
+    `\n${fn}: band ${bands === null ? "none" : `1/${bands.small.inverse} below ${SMALL_ARGUMENT}, 1/${bands.large.inverse} above`}`,
+  );
   for (const [category, stats] of Object.entries(byCategory)) {
     const worst = stats.misses.reduce((m, miss) => Math.max(m, miss.distance), 0);
-    if (category === "uniform" || category === "human") worstBanded = Math.max(worstBanded, worst);
     const far = stats.misses.filter((miss) => miss.distance > FAR_MISS);
     console.log(
       `  ${category.padEnd(13)} n=${stats.n} glibc correctly rounded ${stats.correct} ` +
@@ -218,18 +232,28 @@ for (const fn of FUNCTIONS) {
     }
     if (stats.outOfBandDisagreements > 0) failed = true;
   }
-  console.log(
-    `  recommended band (worst uniform/human miss x ${MARGIN}): ${(worstBanded * MARGIN).toFixed(6)} ULP; ` +
-      `port vs reference disagreements (band off): ${implementationDisagreements}`,
-  );
+  for (const region of ["small", "large"]) {
+    console.log(
+      `  ${region} region (|x| ${region === "small" ? "<" : ">="} ${SMALL_ARGUMENT}): worst miss ` +
+        `${regionWorst[region].toFixed(6)}, recommended band (x ${MARGIN}) ` +
+        `${(regionWorst[region] * MARGIN).toFixed(6)} ULP` +
+        (bands === null ? "" : `; libm.ts 1/${bands[region].inverse}`),
+    );
+    if (bands !== null && regionWorst[region] * MARGIN > 1 / Number(bands[region].inverse)) {
+      console.log(`  WARNING: the ${region} band in libm.ts is narrower than the recommendation`);
+      failed = true;
+    }
+    if (bands === null && regionWorst[region] > 0) failed = true;
+  }
+  console.log(`  port vs reference disagreements (band off): ${implementationDisagreements}`);
   for (const example of implementationExamples) console.log(`    ${example}`);
   if (implementationDisagreements > 0) failed = true;
-  if (band !== null && worstBanded * MARGIN > radius) {
-    console.log(`  WARNING: the band in libm.ts is narrower than the recommendation`);
-    failed = true;
-  }
   corpus.functions[fn] = {
-    bandInverse: band === null ? null : Number(band.inverse),
+    bandInverse:
+      bands === null
+        ? null
+        : { small: Number(bands.small.inverse), large: Number(bands.large.inverse) },
+    regionWorstMissDistance: regionWorst,
     summary: Object.fromEntries(
       Object.entries(byCategory).map(([category, stats]) => [
         category,

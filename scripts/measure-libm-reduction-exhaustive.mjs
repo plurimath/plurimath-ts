@@ -1,0 +1,326 @@
+#!/usr/bin/env node
+// Exhaustive check of `src/evaluation/libm.ts`'s sin/cos/tan where range
+// reduction is hardest below `SMALL_ARGUMENT` (1024): EVERY double `x` with
+// `0 < |x| < 1024` that lies within `2^-35` of a nonzero multiple `k pi/2` —
+// the region the reduction guard covered before this measurement, both signs,
+// no sampling — against the platform C library's own `Math.sin`/`cos`/`tan`
+// (the oracle's Ruby, glibc on its host), bit for bit.
+//
+//   node scripts/measure-libm-reduction-exhaustive.mjs [--write]
+//
+// For each function and each argument it records whether glibc returned the
+// port's correctly rounded double (`libm.ts`, band off), and, where it did
+// not, whether the exact result lies inside that function's `small` band
+// (the port refuses it by the band alone) and how far from the midpoint. A
+// miss OUTSIDE the band is one the band would answer wrongly; `--write`
+// writes those to `src/evaluation/libm-reduction-exceptions.ts`, which
+// `libm.ts` refuses explicitly, and the summary to
+// `test/evaluation/libm-reduction-exhaustive.json`. It also checks every
+// argument with the port's default behaviour (region band, exceptions
+// table, as built at the start of the run): the port must refuse or return
+// glibc's double, and the script fails otherwise. When `--write` changes the
+// table, that check ran against the old one and fails; run `--write` again,
+// which verifies the new table and records a passing summary.
+//
+// Requires `ruby` on PATH (any Ruby: `Math.sin` is core Ruby calling the C
+// library). `libm.ts` is loaded through `esbuild` from the checked-out
+// source. Runs one worker per CPU; about three minutes on 8 cores.
+
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { cpus, tmpdir } from "node:os";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
+
+const FUNCTIONS = ["sin", "cos", "tan"];
+const GUARD_BITS = 35n;
+const LIMIT = 1024;
+
+function hexOf(x) {
+  const view = new DataView(new ArrayBuffer(8));
+  view.setFloat64(0, x);
+  return view.getBigUint64(0).toString(16).padStart(16, "0");
+}
+
+if (isMainThread) {
+  const HERE = dirname(fileURLToPath(import.meta.url));
+  const REPO_ROOT = join(HERE, "..");
+  const write = process.argv.includes("--write");
+  const { build } = await import("esbuild");
+  const { PI_BITS, PI_SCALED } = await import("./lib/libm-sample.mjs");
+  const scratch = mkdtempSync(join(tmpdir(), "libm-exhaustive-"));
+  const bundle = join(scratch, "libm.mjs");
+  await build({
+    entryPoints: [join(REPO_ROOT, "src/evaluation/libm.ts")],
+    bundle: true,
+    format: "esm",
+    platform: "node",
+    outfile: bundle,
+    logLevel: "error",
+  });
+  const { SMALL_ARGUMENT, BANDS } = await import(bundle);
+  if (SMALL_ARGUMENT !== LIMIT) throw new Error(`libm.ts SMALL_ARGUMENT is ${SMALL_ARGUMENT}`);
+
+  // x * 2^SCALE against k * pi/2 * 2^SCALE = k * PI_SCALED, exactly.
+  const SCALE = PI_BITS + 1n;
+  const bound = 1n << (SCALE - GUARD_BITS);
+  const view = new DataView(new ArrayBuffer(8));
+  const bitsOf = (x) => {
+    view.setFloat64(0, x);
+    return view.getBigUint64(0);
+  };
+  const fromBits = (b) => {
+    view.setBigUint64(0, b);
+    return view.getFloat64(0);
+  };
+  const scaled = (x) => {
+    const b = bitsOf(x);
+    const m = (b & ((1n << 52n) - 1n)) | (1n << 52n);
+    const e = BigInt(Number((b >> 52n) & 0x7ffn) - 1075);
+    return m << (e + SCALE);
+  };
+  const inside = (x, centre) => {
+    const d = scaled(x) - centre;
+    return (d < 0n ? -d : d) < bound;
+  };
+  const points = [];
+  let multiples = 0;
+  for (let k = 1n; ; k += 1n) {
+    const centre = k * PI_SCALED;
+    const approx = (Number(k) * Math.PI) / 2;
+    if (approx - 1 > LIMIT) break;
+    let b = bitsOf(approx);
+    while (inside(fromBits(b), centre)) b -= 1n;
+    b += 1n;
+    let any = false;
+    for (; inside(fromBits(b), centre); b += 1n) {
+      const x = fromBits(b);
+      if (x < LIMIT) {
+        points.push(x);
+        any = true;
+      }
+    }
+    if (any) multiples += 1;
+  }
+  const n = points.length;
+  console.log(
+    `${n} doubles within 2^-${GUARD_BITS} of ${multiples} multiples of pi/2 below ${LIMIT} (each also negated)`,
+  );
+
+  // glibc, both signs, through one Ruby process over binary files.
+  const inputPath = join(scratch, "x.bin");
+  const input = new Float64Array(points);
+  writeFileSync(inputPath, new Uint8Array(input.buffer));
+  const glibcPath = join(scratch, "glibc.bin");
+  execFileSync(
+    "ruby",
+    [
+      "-e",
+      `xs = File.binread(ARGV[0]).unpack("E*")
+       out = +""
+       %i[sin cos tan].each { |f| [1, -1].each { |s| out << xs.map { |x| Math.public_send(f, s * x) }.pack("E*") } }
+       File.binwrite(ARGV[1], out)`,
+      inputPath,
+      glibcPath,
+    ],
+    { stdio: "inherit" },
+  );
+  const glibc = new Float64Array(readFileSync(glibcPath).buffer.slice(0));
+  if (glibc.length !== 6 * n) throw new Error("glibc output length mismatch");
+
+  const shared = new SharedArrayBuffer(8 * n);
+  new Float64Array(shared).set(input);
+  const glibcShared = new SharedArrayBuffer(8 * 6 * n);
+  new Float64Array(glibcShared).set(glibc);
+  const workers = Math.max(1, cpus().length);
+  const started = Date.now();
+  const results = await Promise.all(
+    Array.from({ length: workers }, (_, w) => {
+      const from = Math.floor((w * n) / workers);
+      const to = Math.floor(((w + 1) * n) / workers);
+      return new Promise((resolve, reject) => {
+        const worker = new Worker(fileURLToPath(import.meta.url), {
+          workerData: { bundle, shared, glibcShared, n, from, to },
+        });
+        worker.on("message", resolve);
+        worker.on("error", reject);
+      });
+    }),
+  );
+  const summary = {};
+  const exceptions = {};
+  let failed = false;
+  for (const fn of FUNCTIONS) {
+    const total = {
+      points: 0,
+      glibcCorrectlyRounded: 0,
+      misses: 0,
+      missesInsideBand: 0,
+      missesOutsideBand: 0,
+      worstMissDistance: 0,
+      refusedByBand: 0,
+      defaultDisagreements: 0,
+    };
+    const outside = new Set();
+    for (const part of results) {
+      const r = part[fn];
+      for (const key of Object.keys(total)) {
+        if (key === "worstMissDistance") total[key] = Math.max(total[key], r[key]);
+        else total[key] += r[key];
+      }
+      for (const x of r.outside) outside.add(x);
+    }
+    summary[fn] = { bandInverse: Number(BANDS[fn].small.inverse), ...total };
+    exceptions[fn] = [...outside].sort((a, b) => a - b);
+    console.log(
+      `${fn}: ${total.points} arguments; glibc correctly rounded ${total.glibcCorrectlyRounded}, ` +
+        `misses ${total.misses} (inside the 1/${BANDS[fn].small.inverse} band ${total.missesInsideBand}, ` +
+        `outside ${total.missesOutsideBand}, worst ${total.worstMissDistance.toFixed(6)} ULP from ` +
+        `midpoint); refused by the band ${total.refusedByBand}; default-path disagreements with ` +
+        `glibc ${total.defaultDisagreements}`,
+    );
+    if (total.defaultDisagreements > 0) failed = true;
+  }
+  console.log(`checked in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+
+  const named = {};
+  for (const [label, x] of [
+    ["sin(pi)", Math.PI],
+    ["cos(pi/2)", Math.PI / 2],
+    ["tan(pi/2)", Math.PI / 2],
+    ["sin(2pi)", 2 * Math.PI],
+    ["tan(6pi)", 6 * Math.PI],
+  ]) {
+    const fn = label.slice(0, 3);
+    const i = points.indexOf(x);
+    const g = i < 0 ? null : glibc[FUNCTIONS.indexOf(fn) * 2 * n + i];
+    named[label] = { inRegion: i >= 0, glibc: g === null ? null : hexOf(g) };
+  }
+
+  if (write) {
+    // One line per function, as biome formats a short set; a table long
+    // enough to wrap would need `pnpm exec biome check --write` after this.
+    const lines = (fn) => `  ${fn}: new Set<number>([${exceptions[fn].join(", ")}]),`;
+    const source = readFileSync(
+      join(REPO_ROOT, "src/evaluation/libm-reduction-exceptions.ts"),
+      "utf8",
+    );
+    const head = source.slice(0, source.indexOf("export const REDUCTION_EXCEPTIONS"));
+    writeFileSync(
+      join(REPO_ROOT, "src/evaluation/libm-reduction-exceptions.ts"),
+      `${head}export const REDUCTION_EXCEPTIONS: Readonly<Record<"sin" | "cos" | "tan", ReadonlySet<number>>> = {\n` +
+        `${FUNCTIONS.map(lines).join("\n")}\n};\n`,
+    );
+    const platform = {
+      node: process.version,
+      arch: process.arch,
+      os: process.platform,
+      rubyVersion: execFileSync("ruby", ["-v"], { encoding: "utf8" }).trim(),
+      libc: execFileSync("getconf", ["GNU_LIBC_VERSION"], { encoding: "utf8" }).trim(),
+    };
+    writeFileSync(
+      join(REPO_ROOT, "test/evaluation/libm-reduction-exhaustive.json"),
+      `${JSON.stringify(
+        {
+          $comment:
+            "GENERATED by scripts/measure-libm-reduction-exhaustive.mjs --write. Do not edit.",
+          platform,
+          limit: LIMIT,
+          guardBits: Number(GUARD_BITS),
+          multiples,
+          doubles: n,
+          functions: summary,
+          exceptions: Object.fromEntries(FUNCTIONS.map((fn) => [fn, exceptions[fn].map(hexOf)])),
+          named,
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    console.log(
+      "wrote src/evaluation/libm-reduction-exceptions.ts, test/evaluation/libm-reduction-exhaustive.json",
+    );
+  }
+  if (failed) process.exitCode = 1;
+} else {
+  const { bundle, shared, glibcShared, n, from, to } = workerData;
+  const { CORRECTLY_ROUNDED, BANDS } = await import(bundle);
+  const xs = new Float64Array(shared);
+  const glibc = new Float64Array(glibcShared);
+  const refuses = (fn, x, band, guard) => {
+    try {
+      return [false, CORRECTLY_ROUNDED[fn](x, band, guard)];
+    } catch (error) {
+      if (error?.code === "UNSUPPORTED_FEATURE") return [true, null];
+      throw error;
+    }
+  };
+  // Distance of the exact result from the midpoint: the port refuses at band
+  // 1/inverse exactly when distance < 1/inverse, so bisect for the largest
+  // inverse (up to 2^60) at which it still answers; distance is about 1/that,
+  // resolved only to the integer inverse (0.0588 means between 1/18 and 1/17).
+  const inBand = (fn, x, inverse) =>
+    refuses(
+      fn,
+      x,
+      {
+        inverse,
+        refuse: () => {
+          throw Object.assign(new Error("in band"), { code: "UNSUPPORTED_FEATURE" });
+        },
+      },
+      false,
+    )[0];
+  const distance = (fn, x) => {
+    let lo = 2n; // radius 1/2: always refused
+    let hi = 1n << 60n;
+    if (inBand(fn, x, hi)) return 0;
+    while (hi - lo > 1n) {
+      const mid = (lo + hi) / 2n;
+      if (inBand(fn, x, mid)) lo = mid;
+      else hi = mid;
+    }
+    return 1 / Number(hi);
+  };
+  const out = {};
+  FUNCTIONS.forEach((fn, f) => {
+    const r = {
+      points: 0,
+      glibcCorrectlyRounded: 0,
+      misses: 0,
+      missesInsideBand: 0,
+      missesOutsideBand: 0,
+      worstMissDistance: 0,
+      refusedByBand: 0,
+      defaultDisagreements: 0,
+      outside: [],
+    };
+    const band = BANDS[fn].small;
+    for (let i = from; i < to; i += 1) {
+      for (let s = 0; s < 2; s += 1) {
+        const x = s === 0 ? xs[i] : -xs[i];
+        const g = glibc[(2 * f + s) * n + i];
+        r.points += 1;
+        const [refused, banded] = refuses(fn, x, band, false);
+        if (refused) r.refusedByBand += 1;
+        const correct = refused ? CORRECTLY_ROUNDED[fn](x, null) : banded;
+        const miss = !Object.is(correct, g);
+        if (!miss) r.glibcCorrectlyRounded += 1;
+        else {
+          r.misses += 1;
+          r.worstMissDistance = Math.max(r.worstMissDistance, distance(fn, x));
+          if (refused) r.missesInsideBand += 1;
+          else {
+            r.missesOutsideBand += 1;
+            r.outside.push(Math.abs(x));
+          }
+        }
+        const [defaultRefused, answer] = refuses(fn, x);
+        if (!defaultRefused && !Object.is(answer, g)) r.defaultDisagreements += 1;
+      }
+    }
+    out[fn] = r;
+  });
+  parentPort.postMessage(out);
+}

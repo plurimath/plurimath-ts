@@ -528,17 +528,21 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
       member.
 - [ ] The built ESM and CJS declarations match the canonical fixture and the gate has
       non-vacuity and negative proofs for member, name, optionality, and return-type drift.
-- [ ] All six constructor formats are asserted in the source-head declaration order:
-      `asciimath` constructs; `latex`, `mathml`, `html`, `unicode`, and `omml` raise the
-      port's structured `UnsupportedFormatError` until their parsers land.
+- [x] All six constructor formats are asserted in the source-head declaration order:
+      `asciimath`, `latex`, `html` and `unicode` construct (#76, #88, #119); `mathml`
+      and `omml` raise the port's structured `UnsupportedFormatError` until their
+      parsers land.
+      (done: `test/compat/plurimath-class.spec.ts:74` for the order, `:98-146` per format; checked 2026-09-24)
 - [ ] `toDisplay` matches the JS oracle for `omml`, `latex`, `mathml`, `asciimath`, and
       `unicodemath`, and the invalid language path matches the measured invalid-type
       behavior. The oracle fixtures also record the native-Ruby recognized-string result
       `"|_ Math zone\n"` and do not substitute that result for an Opal-wrapper measurement.
-- [ ] `toMathml()`, `toMathml(false)`, and `toMathml(true)` produce the measured default,
+- [x] `toMathml()`, `toMathml(false)`, and `toMathml(true)` produce the measured default,
       false, and intent-bearing results.
-- [ ] `toAsciimath`, `toLatex`, `toHtml`, `toOmml`, and `toUnicodemath` each have a
+      (done: `test/compat/plurimath-class.spec.ts:200`, `:933`, `:937`; checked 2026-09-24)
+- [x] `toAsciimath`, `toLatex`, `toHtml`, `toOmml`, and `toUnicodemath` each have a
       runtime assertion through a compat instance created from AsciiMath.
+      (done: `test/compat/plurimath-class.spec.ts:188-209`; checked 2026-09-24)
 - [ ] HTML and OMML corpus targets are nonempty and complete per payload; their
       cross-format and package-isolation gates pass against built artifacts.
 - [ ] The root package exports the default class under ESM and CJS, the real packed

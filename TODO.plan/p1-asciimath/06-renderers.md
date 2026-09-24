@@ -90,12 +90,15 @@ turns it into a named property with a one-line diff.
 
 ## Done when
 
-- [ ] `toAsciimath`, `toLatex` and `toMathml` match the gem byte-for-byte
+- [x] `toAsciimath`, `toLatex` and `toMathml` match the gem byte-for-byte
   across the **reachable** pinned corpus.
-- [ ] The runtime-boundary tests pass: a valid structural object renders, while an
+  (done: the corpus and round-trip layers of `test/formats/{asciimath,latex,mathml}/render-parity.spec.ts`, 236 reachable cases; checked 2026-09-24)
+- [x] The runtime-boundary tests pass: a valid structural object renders, while an
   unknown kind and a malformed known kind each raise `RenderError`.
-- [ ] The package-isolation gate shows `/asciimath` carrying no MathML or LaTeX
+  (done: `test/formats/asciimath/renderer.spec.ts:864` and `:1089`, `test/formats/latex/renderer.spec.ts:2375`; checked 2026-09-24)
+- [x] The package-isolation gate shows `/asciimath` carrying no MathML or LaTeX
   data, and `/mathml` carrying no parser.
+  (done: `scripts/gate-package.mjs:191` and `:200`; `pnpm gate:package` exits 0 under Node 24; checked 2026-09-24)
 - [ ] The MathML option matrix lists all six options, each marked implemented
   here or deferred to a named phase, and every implemented one matches the gem
   byte-for-byte on the fixture's inputs.
@@ -103,5 +106,6 @@ turns it into a named property with a one-line diff.
   is shown failing on its own — break one property in the serializer, watch
   exactly that assertion fail, restore. A fixture never seen failing proves
   nothing.
-- [ ] Every numeric form in the pinned corpus renders byte-identically in all
+- [x] Every numeric form in the pinned corpus renders byte-identically in all
   three formats with no formatter configured.
+  (done: the render-parity specs render all 236 reachable cases with no formatter, the `numbers` group among them; checked 2026-09-24)

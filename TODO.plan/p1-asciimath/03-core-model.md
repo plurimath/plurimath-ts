@@ -59,14 +59,20 @@ now; renderers may reject them with `RenderError`, but may not omit their case
 
 ## Done when
 
-- [ ] `MathNode` covers every concrete kind in the census.
-- [ ] `equals()` agrees with the gem on Ruby-derived equal and unequal pairs,
+- [x] `MathNode` covers every concrete kind in the census.
+  (done: `test/core/nodes.spec.ts:53`; checked 2026-09-24)
+- [x] `equals()` agrees with the gem on Ruby-derived equal and unequal pairs,
   including the three `comparable_value` cases above. The known-divergence
   block in `test/core/equality.spec.ts` is deleted, not amended.
-- [ ] `node.equals(other)` works as a method on every node class.
-- [ ] Constructors materialize Ruby's assigned defaults, and `normalize` still
+  (done: `test/core/equality.spec.ts:181-205` and `:257` for the three cases, `:493` for the corpus matrix; no known-divergence block remains; checked 2026-09-24)
+- [x] `node.equals(other)` works as a method on every node class.
+  (done: `test/core/nodes.spec.ts:795`, per kind; checked 2026-09-24)
+- [x] Constructors materialize Ruby's assigned defaults, and `normalize` still
   distinguishes assigned-`nil` from never-assigned.
-- [ ] A round trip through `normalize` matches the gem's serialization for the seed
+  (done: `test/core/nodes.spec.ts:206` and `:218`, `test/core/normalize.spec.ts:112`; checked 2026-09-24)
+- [x] A round trip through `normalize` matches the gem's serialization for the seed
   corpus.
-- [ ] `pnpm boundaries` reports `core` importing nothing from another layer.
+  (done: `test/core/normalize.spec.ts:36`; checked 2026-09-24)
+- [x] `pnpm boundaries` reports `core` importing nothing from another layer.
   `core/generated/` is core's own data and is expected (§3 rule 1).
+  (done: `pnpm boundaries` exits 0 under rule `layer-1-imports-nothing`, `.dependency-cruiser.cjs:10`; no file under `src/core/` imports another `src/` layer; checked 2026-09-24)

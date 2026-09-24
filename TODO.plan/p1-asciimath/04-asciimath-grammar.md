@@ -37,10 +37,12 @@ moving an alternative changes what parses.
 
 ## Done when
 
-- [ ] For every **reachable** pinned corpus case, the parse tree is deep-equal to
+- [x] For every **reachable** pinned corpus case, the parse tree is deep-equal to
   the tree recorded from Parslet.
-- [ ] Offsets in a `ParseError` index the original input, including after a
+  (done: `test/formats/asciimath/grammar.spec.ts:117`, all 91 AsciiMath-input cases; checked 2026-09-24)
+- [x] Offsets in a `ParseError` index the original input, including after a
   length-changing preprocessing token.
+  (done: `test/formats/asciimath/failure-parity.spec.ts:963` and `:977`, `test/formats/asciimath/preprocess.spec.ts:93`; checked 2026-09-24)
 - [ ] Each rule that can fail has a failure-position test, not only a
   success-tree test. Two pegkit failure-position bugs survived a conformance
   suite that only tested what parses; `ParseError.index` is public contract.

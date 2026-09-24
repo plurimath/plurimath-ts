@@ -100,5 +100,6 @@ Per format:
       does not exist for that format. Entities apply here, unlike in P1.
 - [ ] Locale behaviour matching the gem for that parser, or a recorded
       divergence if it is deliberately not implemented.
-- [ ] Isolation assertions for its subpath.
+- [x] Isolation assertions for its subpath.
+  (done: `scripts/gate-package.mjs:195`, `:199`, `:207` for `./html`, `./latex`, `./unicodemath`; `pnpm gate:package` exits 0; checked 2026-09-24)
 - [ ] Review round with findings resolved, and sign-off recorded.

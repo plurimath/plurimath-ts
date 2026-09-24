@@ -69,15 +69,18 @@ land with them, and only the unused modes wait for a phase of their own.
 
 ## Exit criteria
 
-- [ ] Formatting: cases for each mode this phase adds — locale grouping,
+- [x] Formatting: cases for each mode this phase adds — locale grouping,
       significant digits, precision, scientific, engineering, base notation —
       with a nonzero count asserted per mode, so a mode with no case fails
       rather than passing quietly.
-- [ ] Evaluation: cases pairing a formula and bindings with the gem's result,
+      (done: `test/formatting/number-formatter-numeric-pipeline.spec.ts:158` over the pinned `calls/1` cases; checked 2026-09-24)
+- [x] Evaluation: cases pairing a formula and bindings with the gem's result,
       count asserted nonzero, including one that hits the iteration cap — with
       the cap lowered for the test, not by running 100,000 iterations.
+      (done: #155, merged with checks green (`gh pr view 155`); at `39f5dd4`, `test/evaluation/evaluate.spec.ts:174-175`, and fixture rows `sum-custom-cap-within`/`-over` with the cap lowered to 5; checked 2026-09-24)
 - [ ] MathML/OMML input, if it is built here: parse-direction cases for both,
       each with a nonzero count.
 - [ ] Isolation assertions proving locale data stays out of unrelated subpaths.
-- [ ] MathML/OMML input strategy decided and recorded before implementation.
+- [x] MathML/OMML input strategy decided and recorded before implementation.
+  (done: `open-decisions.md`, SETTLED 2026-09-16, #122; checked 2026-09-24)
 - [ ] Review round with findings resolved, and sign-off recorded.

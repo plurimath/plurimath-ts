@@ -142,13 +142,16 @@ module.exports = {
       comment: "Rule 6: evaluation imports core only.",
       severity: "error",
       from: { path: "^src/evaluation/" },
-      to: { path: "^src/", pathNot: "^src/core/" },
+      // Splitting evaluation into more than one file (errors, bindings,
+      // operators, the expression parser, the evaluator) is not a layering
+      // breach — the same reasoning as rule 2's leaf-services exemption above.
+      to: { path: "^src/", pathNot: "^src/core/|^src/evaluation/" },
     },
     {
       name: "nothing-imports-evaluation",
       comment: "Rule 6: no format or leaf service imports evaluation; only the root entry does.",
       severity: "error",
-      from: { path: "^src/", pathNot: "^src/index\\.ts$" },
+      from: { path: "^src/", pathNot: "^src/index\\.ts$|^src/evaluation/" },
       to: { path: "^src/evaluation/" },
     },
     {

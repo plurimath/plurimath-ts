@@ -374,3 +374,64 @@ forwards to a format's parser. `src/index.ts` does not export one (it exports
 parser only through a per-format subpath or the compat class. Whether to build
 it, and with what options shape, is undecided; the docs describe it as
 documented-but-unbuilt until then.
+
+## Evaluation error family (B6, first slice)
+
+`feature-roadmap.md`'s evaluation entry names eight error classes under the
+gem's `Errors::Evaluation::*` (`Error` plus `DivisionByZeroError`,
+`MathDomainError`, `NonFiniteResultError`, `UnsupportedExpressionError`,
+`MissingVariableError`, `InvalidBindingError`, `InvalidBindingKeyError`). The
+question for the port: one `EvaluationError` type carrying a reason code, or
+eight classes mirroring the gem one to one.
+
+**SETTLED 2026-09-23** (the user): mirror the gem — eight separate classes,
+each a `PlurimathError` with its own `code` joining `PlurimathErrorCode`
+(`src/core/errors.ts`), built exactly like every other error family (dual
+ESM/CJS, `code` not `instanceof`). `src/evaluation/errors.ts` has the
+implementation and the oracle-measured message text for each. The
+maintainer's own preference is the opposite — one evaluation error type — and
+is deferred rather than dropped: `TODO.plan/deferred.md`'s "Parked ideas" has
+the entry, to be changed in both the gem and the port together once the
+byte-identical structure is done.
+
+## Evaluation return type (B6, first slice)
+
+The gem's `Formula#evaluate` returns whatever Ruby's arithmetic produces: an
+`Integer` (`2+3` is `5`), a `Float` (`6/3` is `2.0`), an arbitrary-precision
+`Integer` (`2^100`), or a `Rational` (`2^(-1)` is `(1/2)`). JavaScript has one
+`number` type. The question for the port: what `evaluate` returns, and what
+happens where Ruby's answer has no exact JS `number`.
+
+**SETTLED 2026-09-23** (the user): follow Plurimath's documented behaviour.
+The gem README's "Evaluating formulas" section (`README.adoc:289-363` at the
+pinned oracle `00c52783`) documents `evaluate` as computing "numeric results"
+(examples `5.0` and `9`) and says "Division uses `Float` arithmetic"; it
+documents no arbitrary-precision Integer or Rational result. So `evaluate`
+returns a JS `number` for every documented case, and throws
+`UnsupportedFeatureError` (a port limitation, not an evaluation error) where
+Ruby's FINAL answer cannot be represented exactly: an Integer outside
+`Number.isSafeInteger`, or a Rational. Ruby's Integer-versus-Float
+distinction (`9` versus `5.0`) is not observable in JavaScript.
+
+Refined the same day (the user): intermediates are computed EXACTLY, as Ruby
+computes them, and only the final result is checked. `src/evaluation/
+numeric.ts` holds a Ruby Integer as a `bigint`, a Rational as an exact reduced
+`bigint` pair and a Float as a `number`, and follows Ruby 4.0.1's arithmetic
+for every kind pair — `2^100/2^99` is `2.0`, `2^(-1)*2.0` is `1.0`, and an
+evaluation error raised later in the expression (`2^100+x`) still wins. The
+conversions to Float reproduce Ruby's own: `Number(bigint)` for an Integer
+(round to nearest, ties to even, as `big2dbl` does) and `bignum.c`'s
+truncating `big_fdiv` for a Rational. Where Ruby raises `ArgumentError`, and
+beyond the port's size limit for exact values, the port refuses on the spot
+(`deferred.md`, "exact intermediates beyond the port's size limit").
+`test/evaluation/evaluate.spec.ts` checks the kind of every fixture row
+against the oracle. A binding holding a safe integer is read as a Ruby
+Integer, any other number as a Float.
+
+The same reasoning covers Float powers: Ruby's `**` calls the C library's
+`pow`, which JavaScript's `**` does not reproduce, and glibc's `pow` itself is
+not correctly rounded within 0.04 ULP of a midpoint (its documented 0.54 ULP
+worst case). `src/evaluation/pow.ts` returns the correctly rounded result,
+which is glibc's everywhere outside that band, and refuses inside it with
+`UnsupportedFeatureError` — the documented bound kept on purpose (the user,
+2026-09-23); `deferred.md` records it as a known divergence.

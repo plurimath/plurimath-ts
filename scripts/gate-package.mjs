@@ -99,12 +99,31 @@ const CORE_EXPORTS = [
 ];
 
 /**
+ * `evaluate(formula, bindings)` and its `Errors::Evaluation::*` family
+ * (`src/evaluation/index.ts`) — root-only, like the compat class below: §3
+ * rule 6 lets `evaluation` import `core` but nothing reaches it from a format
+ * subpath, so it has no home there, only at the root `export * from
+ * "./evaluation/index"` (`src/index.ts`).
+ */
+const EVALUATION_EXPORTS = [
+  "DivisionByZeroError",
+  "EvaluationError",
+  "InvalidBindingError",
+  "InvalidBindingKeyError",
+  "MathDomainError",
+  "MissingVariableError",
+  "NonFiniteResultError",
+  "UnsupportedExpressionError",
+  "evaluate",
+];
+
+/**
  * The root additionally carries the `plurimath-js` compat class (ARCHITECTURE.md
  * §4). It is only at the root: it delegates to every renderer, so putting it
  * behind a format subpath would drag all of them into that subpath's graph and
  * break the slim-bundle guarantee the subpaths exist for.
  */
-const ROOT_EXPORTS = [...CORE_EXPORTS, "FORMATS", "Plurimath"].sort();
+const ROOT_EXPORTS = [...CORE_EXPORTS, ...EVALUATION_EXPORTS, "FORMATS", "Plurimath"].sort();
 
 /**
  * Subpaths whose BUILT artifact must expose a default export, and what it must

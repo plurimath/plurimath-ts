@@ -63,9 +63,18 @@ function operatorText(first: unknown, kind: string): string | null {
     case "prod":
       return "∏";
     case "formula": {
+      // Formula#nary_attr_value (formula.rb:294-296) forwards to
+      // `value.first`; on an empty Formula that is nil, and the gem raises
+      // NoMethodError (measured: "undefined method 'nary_attr_value' for nil").
       const value = (first as NodeOf<"formula">).value;
-      const head = value === null || value.length === 0 ? undefined : value[0];
-      return operatorText(head, kind);
+      if (value === null || value.length === 0) {
+        throw new RenderError(
+          "nary.parameterOne: an empty Formula has no operator — the gem raises NoMethodError here",
+          FORMAT,
+          kind,
+        );
+      }
+      return operatorText(value[0], kind);
     }
     default:
       return null;

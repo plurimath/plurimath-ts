@@ -1072,6 +1072,23 @@ describe("OMML first vertical slice", () => {
     ).toBe(NARY_X);
   });
 
+  it("refuses a Nary whose operator is an empty Formula, as the gem raises NoMethodError", () => {
+    // Formula#nary_attr_value (formula.rb:294-296) calls value.first on an
+    // empty array; measured: "undefined method 'nary_attr_value' for nil".
+    const render = () =>
+      toOmmlWithoutMathTag(
+        new NaryNode({
+          options: {},
+          parameterOne: new FormulaNode({ value: [] }),
+          parameterFour: symbol(),
+        }),
+      );
+    expect(render).toThrow(RenderError);
+    expect(render).toThrow(
+      "nary.parameterOne: an empty Formula has no operator — the gem raises NoMethodError here",
+    );
+  });
+
   it("pins the measured Td, Tr, and two-column Table tree", () => {
     expect(toOmmlWithoutMathTag(td())).toBe(TD_X);
     expect(toOmmlWithoutMathTag(tr())).toBe(TR_X);

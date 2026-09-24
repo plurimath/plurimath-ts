@@ -67,17 +67,50 @@
 import { htmlEntitySpans } from "../../core/nodes";
 import { type PreprocessSegment, SourceMap } from "../../pegkit/index";
 
+/** One match of `TEXT_REGEX`: where it starts and how many code units it spans. */
+export interface TextFunctionSpan {
+  readonly start: number;
+  readonly length: number;
+}
+
 /**
- * `Latex::Parser::TEXT_REGEX` (`latex/parser.rb:8`), verbatim:
- * `%r(\\(?:mbox|text)\{[^}]+\})`. `[^}]+` is greedy but cannot cross a `}`, so
- * the body is the shortest non-empty run up to the first closing brace — an
- * EMPTY body (`\text{}`) does not match and is not exempted.
+ * Every match of `Latex::Parser::TEXT_REGEX` (`latex/parser.rb:8`),
+ * `%r(\\(?:mbox|text)\{[^}]+\})`, as a global scan returns them: left to
+ * right, non-overlapping, resuming after each match. `[^}]+` is greedy but
+ * cannot cross a `}`, so the body is everything up to the first closing brace
+ * and must be non-empty: an EMPTY body (`\text{}`) does not match at that
+ * opening and is not exempted.
  *
- * A factory, not a constant: a global regex carries `lastIndex`, and this is
- * used twice per call.
+ * Hand-written rather than a regex because a backtracking engine retries
+ * `[^}]+` from every `\mbox{` and `\text{` opening, so a run of openings with
+ * no `}` after them costs time quadratic in the input. Here the first `}` at or
+ * after a body start is found once and reused: body starts only increase, so a
+ * `}` found at or beyond the current body start is still the first one, and no
+ * `}` at all means no later opening can match either. The whole scan is linear.
+ * `test/formats/latex/text-function-scan.spec.ts` checks it against the regex
+ * on seeded random input.
  */
-function textFunctionPattern(): RegExp {
-  return /\\(?:mbox|text)\{[^}]+\}/g;
+export function textFunctionSpans(text: string): TextFunctionSpan[] {
+  const spans: TextFunctionSpan[] = [];
+  // The first `}` at or after the last lookup; stale once it falls behind `body`.
+  let close = -1;
+  let at = text.indexOf("\\");
+  while (at !== -1) {
+    const name = text.slice(at + 1, at + 6);
+    if (name === "mbox{" || name === "text{") {
+      const body = at + 6;
+      if (close < body) close = text.indexOf("}", body);
+      // No `}` from here on: no later opening can match either.
+      if (close === -1) break;
+      if (close > body) {
+        spans.push({ start: at, length: close + 1 - at });
+        at = text.indexOf("\\", close + 1);
+        continue;
+      }
+    }
+    at = text.indexOf("\\", at + 1);
+  }
+  return spans;
 }
 
 /**
@@ -244,7 +277,9 @@ export function preprocess(input: string): PreprocessedLatex {
   // `text.scan(TEXT_REGEX)` on the RAW input: the bodies are saved before any
   // encoding and restored verbatim afterwards, which is what exempts
   // `\text{...}` from entity normalisation and space stripping.
-  const textFunctions = input.match(textFunctionPattern()) ?? [];
+  const textFunctions = textFunctionSpans(input).map((span) =>
+    input.slice(span.start, span.start + span.length),
+  );
 
   let working = identity(input);
 
@@ -302,13 +337,15 @@ export function preprocess(input: string): PreprocessedLatex {
   // `"\\text{ }"` saves one and restores none, and keeps the `\text{}` the
   // space-stripping pass left. Both directions are covered in
   // `test/formats/latex/preprocess.spec.ts`, expectations taken from the gem.
-  let restored = 0;
-  working = regexPass(working, textFunctionPattern(), () => {
-    const saved = textFunctions[restored];
-    restored += 1;
-    // `?? ""` is `nil.to_s`, not a fallback chosen here.
-    return saved ?? "";
-  });
+  working = applyRewrites(
+    working,
+    textFunctionSpans(working.text).map((span, restored) => ({
+      start: span.start,
+      length: span.length,
+      // `?? ""` is `nil.to_s`, not a fallback chosen here.
+      text: textFunctions[restored] ?? "",
+    })),
+  );
 
   return { text: working.text, map: SourceMap.fromSegments(toSegments(working, input.length)) };
 }

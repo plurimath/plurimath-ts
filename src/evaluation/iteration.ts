@@ -32,13 +32,24 @@ function isSymbol(node: unknown): node is SymbolData {
   return typeof node === "object" && node !== null && (node as MathNode).kind === "symbol";
 }
 
+/** The characters Ruby's `String#strip` removes: NUL and ASCII whitespace. */
+const RUBY_STRIP_CHARS = new Set(["\0", "\t", "\n", "\v", "\f", "\r", " "]);
+
 /**
  * Ruby's `String#strip`: leading and trailing ASCII whitespace and NUL
  * (`"\0\t\n\v\f\r "`), and nothing else — unlike `String.prototype.trim`,
  * which also strips Unicode spaces such as U+00A0 that Ruby keeps.
+ *
+ * Index scans, not a `/[...]+$/` regex: a trailing-class regex retries a long
+ * inner run of these characters from every start position, which is
+ * quadratic in the run's length on a string that does not end in one.
  */
 function rubyStrip(value: string): string {
-  return value.replace(/^[\0\t\n\v\f\r ]+/, "").replace(/[\0\t\n\v\f\r ]+$/, "");
+  let start = 0;
+  let end = value.length;
+  while (start < end && RUBY_STRIP_CHARS.has(value[start] as string)) start++;
+  while (end > start && RUBY_STRIP_CHARS.has(value[end - 1] as string)) end--;
+  return value.slice(start, end);
 }
 
 /**

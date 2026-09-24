@@ -22,7 +22,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { UnsupportedFeatureError } from "../../src/core/errors";
-import { FormulaNode, NumberNode } from "../../src/core/nodes";
+import { FormulaNode, NumberNode, TextNode } from "../../src/core/nodes";
 import {
   DEFAULT_MAX_ITERATIONS,
   Evaluator,
@@ -312,5 +312,18 @@ describe("evaluate's number literal pattern", () => {
       value: [new NumberNode({ value: `${"0".repeat(200_000)}x` })],
     });
     expect(() => evaluate(formula)).toThrow(UnsupportedExpressionError);
+  });
+});
+
+describe("evaluate's Text variable-name strip", () => {
+  it("strips in linear time when a long inner run of strip characters precedes the end", () => {
+    // Measured on the gem: Text.new("a\0\0a") keeps its inner NULs after
+    // String#strip and raises MissingVariableError. The earlier trailing-class
+    // regex took 9.7 s at 50,000 NULs; four times that length is at least
+    // sixteen times slower, far past the default 5 s timeout.
+    const formula = new FormulaNode({
+      value: [new TextNode({ parameterOne: `a${"\0".repeat(200_000)}a` })],
+    });
+    expect(() => evaluate(formula)).toThrow(MissingVariableError);
   });
 });

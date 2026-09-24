@@ -472,6 +472,24 @@ function floatBasePower(base: number, exponent: RubyNumeric): RubyNumeric {
   return float(cPow(base, dy));
 }
 
+/**
+ * Whether `part ** exponent` (`exponent` a positive Integer) is certain to be
+ * longer than `limit` bits, decided before computing it: a part of bit length
+ * `b > 1` is at least `2^(b-1)`, so its power is at least `2^((b-1)*e)`, which
+ * has `(b-1)*e + 1` bits. A part of `0`, `1` or `-1` (`b <= 1`) never grows and
+ * is never refused here. `rationalBasePower` refuses on this with the same
+ * `tooLarge()` that `rational()`'s pre-reduction bound gives after computing,
+ * so no input's outcome changes; the only difference is the power a refused
+ * result would have cost (measured before this check, Node v20.20.2, Linux
+ * x86_64, 2026-09-24: `(1/3)^2000000` took 96ms to compute `3^2000000` and
+ * then be refused).
+ */
+export function powerCertainlyExceeds(part: bigint, exponent: bigint, limit: number): boolean {
+  const b = bitLength(part);
+  if (b <= 1) return false;
+  return BigInt(b - 1) * exponent + 1n > BigInt(limit);
+}
+
 function isNegative(x: Exact): boolean {
   return x.kind === "integer" ? x.value < 0n : x.num < 0n;
 }
@@ -506,6 +524,9 @@ function rationalBasePower(num: bigint, den: bigint, exponent: RubyNumeric): Rub
     const e = power.value;
     // A positive Fixnum exponent keeps an Integer base an Integer.
     const raise = (b: bigint, n: bigint): bigint => (integerPower(b, n) as IntegerValue).value;
+    const magnitude = e < 0n ? -e : e;
+    if (powerCertainlyExceeds(num, magnitude, 2 * RATIONAL_BIT_LIMIT)) tooLarge();
+    if (powerCertainlyExceeds(den, magnitude, 2 * RATIONAL_BIT_LIMIT)) tooLarge();
     if (e > 0n) return rational(raise(num, e), raise(den, e));
     return rational(raise(den, -e), raise(num, -e));
   }

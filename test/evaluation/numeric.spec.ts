@@ -16,6 +16,8 @@ import {
   INTEGER_BIT_LIMIT,
   integer,
   multiply,
+  power,
+  powerCertainlyExceeds,
   productCertainlyExceeds,
   RATIONAL_BIT_LIMIT,
   type RubyNumeric,
@@ -116,5 +118,45 @@ describe("multiply: Rational numerator pre-check at 2 * RATIONAL_BIT_LIMIT", () 
       num: 1n,
       den: 3n,
     });
+  });
+});
+
+describe("power: Rational-part pre-check at 2 * RATIONAL_BIT_LIMIT", () => {
+  // A part of bit length b > 1 raised to e has at least (b-1)*e + 1 bits.
+  const half = rational(1n, 2n);
+
+  it("computes an ordinary Rational power within the limit", () => {
+    expect(power(half, integer(BigInt(RATIONAL_BIT_LIMIT - 1)))).toEqual({
+      kind: "rational",
+      num: 1n,
+      den: 1n << BigInt(RATIONAL_BIT_LIMIT - 1),
+    });
+  });
+
+  it("lower bound == bound: computed, then refused by the post-check", () => {
+    const e = BigInt(R2 - 1); // (2-1)*e + 1 == R2
+    expect(powerCertainlyExceeds(2n, e, R2)).toBe(false);
+    // 2^(R2-1) has exactly R2 bits: it passes rational()'s pre-reduction
+    // bound, and a reduced part of R2 bits is then over RATIONAL_BIT_LIMIT.
+    refusal(() => power(half, integer(e)));
+  });
+
+  it("lower bound == bound+1: refused without computing, with the post-check's refusal", () => {
+    const e = BigInt(R2); // (2-1)*e + 1 == R2 + 1
+    expect(powerCertainlyExceeds(2n, e, R2)).toBe(true);
+    const pre = refusal(() => power(half, integer(e)));
+    const preNegative = refusal(() => power(half, integer(-e)));
+    const post = refusal(() => power(half, integer(BigInt(R2 - 1))));
+    expect(pre.message).toBe(post.message);
+    expect(pre.code).toBe(post.code);
+    expect(preNegative.message).toBe(post.message);
+  });
+
+  it("a 0, 1 or -1 part is never refused, however large the exponent", () => {
+    const huge = (1n << 62n) - 1n;
+    for (const part of [0n, 1n, -1n]) expect(powerCertainlyExceeds(part, huge, R2)).toBe(false);
+    // The 1 numerator is skipped; only the 2 denominator decides the refusal.
+    expect(powerCertainlyExceeds(2n, huge, R2)).toBe(true);
+    refusal(() => power(half, integer(huge)));
   });
 });

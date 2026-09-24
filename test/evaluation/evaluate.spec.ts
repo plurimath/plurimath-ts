@@ -1,6 +1,7 @@
 /**
- * Oracle-backed parity for `evaluate(formula, bindings)` (roadmap B6, first
- * slice: `Number`/`Symbol`/binary-arithmetic evaluation only).
+ * Oracle-backed parity for `evaluate(formula, bindings, options)` (roadmap
+ * B6: arithmetic, the exact functions and iterations, and the `Math` module
+ * functions).
  *
  * The rows are `test/formats/evaluation/evaluation-fixtures.json`, written by
  * `scripts/generate-evaluation-fixtures.rb` from the pinned gem (plurimath
@@ -12,20 +13,27 @@
  * must refuse. A row with `portRefusal` is one the port refuses with
  * `UnsupportedFeatureError` whatever the oracle answered: an unported
  * gem-evaluated node, a FINAL result a JS number cannot hold exactly, a Float
- * power inside glibc's rounding band, a Ruby `ArgumentError`, or an exact
- * intermediate beyond the port's size limit (the generator's header).
+ * power or `Math` function result inside glibc's rounding band, a sin/cos/tan
+ * argument inside `libm.ts`'s reduction guard, a Ruby `ArgumentError`, or an
+ * exact intermediate beyond the port's size limit (the generator's header).
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { UnsupportedFeatureError } from "../../src/core/errors";
-import { FormulaNode, NumberNode } from "../../src/core/nodes";
-import { Evaluator, GEM_EVALUATED_FUNCTIONS } from "../../src/evaluation/evaluator";
+import { FormulaNode, NumberNode, TextNode } from "../../src/core/nodes";
+import {
+  DEFAULT_MAX_ITERATIONS,
+  Evaluator,
+  type EvaluatorSettings,
+  GEM_EVALUATED_FUNCTIONS,
+} from "../../src/evaluation/evaluator";
 import {
   DivisionByZeroError,
   type EvaluationBindings,
   type EvaluationErrorCode,
+  type EvaluationOptions,
   evaluate,
   InvalidBindingError,
   InvalidBindingKeyError,
@@ -47,6 +55,13 @@ interface Row {
   readonly raises?: string;
   readonly message?: string;
   readonly portRefusal?: string;
+  readonly options?: EvaluationOptions;
+}
+
+/** The evaluator settings a row's `options` (the gem configuration it ran under) resolve to. */
+function toSettings(row: Row): EvaluatorSettings {
+  const cap = row.options?.evaluationMaxIterations;
+  return { maxIterations: cap === undefined ? DEFAULT_MAX_ITERATIONS : cap };
 }
 
 /** The parser for a row's `input.format` — every format `evaluate()` fixtures cover so far. */
@@ -165,7 +180,9 @@ describe("evaluate() against the oracle fixtures", () => {
     const bindings = toBindings(row.bindings);
     expect(Number(row.expected !== undefined) + Number(row.raises !== undefined), row.id).toBe(1);
     if (row.portRefusal !== undefined) {
-      expect(() => evaluate(formula, bindings), row.id).toThrow(UnsupportedFeatureError);
+      expect(() => evaluate(formula, bindings, row.options), row.id).toThrow(
+        UnsupportedFeatureError,
+      );
       return;
     }
     if (row.expected !== undefined) {
@@ -173,11 +190,11 @@ describe("evaluate() against the oracle fixtures", () => {
       // generator aborts otherwise, and this keeps that promise checked.
       expect(row.expected, row.id).toMatch(/^-?\d+$|[.eIN]/);
       const rubyKind = /^-?\d+$/.test(row.expected) ? "integer" : "float";
-      const result = Evaluator.runWithKind(formula, bindings);
+      const result = Evaluator.runWithKind(formula, bindings, toSettings(row));
       expect(result.value, row.id).toBe(Number(row.expected));
       expect(result.kind, row.id).toBe(rubyKind);
       if (rubyKind === "integer") expect(Number.isSafeInteger(result.value), row.id).toBe(true);
-      expect(evaluate(formula, bindings), row.id).toBe(result.value);
+      expect(evaluate(formula, bindings, row.options), row.id).toBe(result.value);
       return;
     }
     const raises = row.raises as string;
@@ -188,7 +205,7 @@ describe("evaluate() against the oracle fixtures", () => {
     }
     let thrown: unknown;
     try {
-      evaluate(formula, bindings);
+      evaluate(formula, bindings, row.options);
     } catch (error) {
       thrown = error;
     }
@@ -209,6 +226,8 @@ describe("evaluate() against the oracle fixtures", () => {
     expect([...reasons].sort()).toEqual([
       "argument-error",
       "big-integer",
+      "libm-reduction",
+      "libm-rounding-band",
       "pow-rounding-band",
       "rational",
       "size-limit",
@@ -235,7 +254,7 @@ describe("evaluate() refuses every unported fixture row from the unported path",
     const formula = parseRowInput(row.input);
     let thrown: unknown;
     try {
-      evaluate(formula, toBindings(row.bindings));
+      evaluate(formula, toBindings(row.bindings), row.options);
     } catch (error) {
       thrown = error;
     }
@@ -256,6 +275,14 @@ describe("evaluate() — measurements not covered by the oracle fixtures", () =>
 
   it("defaults bindings to an empty object", () => {
     expect(() => evaluate(parseAsciimath("a"))).toThrow(MissingVariableError);
+  });
+
+  // The per-call cap stands in for the gem's global configuration, which the
+  // fixtures exercise (`sum-custom-cap-*`, `sum-no-cap`); an untyped caller
+  // passing something the gem's `<=` could not compare is refused up front.
+  it("rejects an evaluationMaxIterations that is neither a number nor null", () => {
+    const options = { evaluationMaxIterations: "5" } as unknown as EvaluationOptions;
+    expect(() => evaluate(parseAsciimath("sum_(i=1)^3 i"), {}, options)).toThrow(TypeError);
   });
 
   /**
@@ -285,5 +312,25 @@ describe("evaluate's number literal pattern", () => {
       value: [new NumberNode({ value: `${"0".repeat(200_000)}x` })],
     });
     expect(() => evaluate(formula)).toThrow(UnsupportedExpressionError);
+  });
+});
+
+describe("evaluate's Text variable-name strip", () => {
+  it("strips in linear time when a long inner run of strip characters precedes the end", () => {
+    // Measured on the gem: Text.new("a\0\0a") keeps its inner NULs after
+    // String#strip and raises MissingVariableError. The earlier trailing-class
+    // regex took 9.7 s at 50,000 NULs; four times that length is at least
+    // sixteen times slower, far past the default 5 s timeout.
+    const formula = new FormulaNode({
+      value: [new TextNode({ parameterOne: `a${"\0".repeat(200_000)}a` })],
+    });
+    expect(() => evaluate(formula)).toThrow(MissingVariableError);
+  });
+
+  it("keeps inner NULs and strips outer ones, as Ruby's String#strip does", () => {
+    // Measured on the gem: Text.new("\0a\0\0a\0") raises MissingVariableError
+    // with "missing value for variable `a\u0000\u0000a`".
+    const inner = new FormulaNode({ value: [new TextNode({ parameterOne: "\0a\0\0a\0" })] });
+    expect(() => evaluate(inner)).toThrow("missing value for variable `a\0\0a`");
   });
 });

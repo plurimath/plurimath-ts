@@ -513,6 +513,87 @@ another libm (macOS, for example) can itself differ from the Linux oracle in
 the last digit of a Float power, so this parity is with the oracle's platform,
 not with every Ruby.
 
+### Evaluation: `Math` function results inside glibc's rounding band are refused
+
+**Measured 2026-09-24.** `Sin`, `Cos`, `Tan`, `Arcsin`, `Arccos`, `Arctan`,
+`Exp` and `Ln` call the platform C library (glibc 2.35 on the oracle's Linux
+host), which is not correctly rounded; `Cot`, `Sec` and `Csc` divide `1.0` by
+`tan`/`cos`/`sin`, which IEEE division keeps exact given the same operand.
+`src/evaluation/libm.ts` computes each result in `BigInt` fixed point,
+returns the correctly rounded double, and refuses with
+`UnsupportedFeatureError` where the exact result lies within the function's
+band of a double midpoint. `Sqrt` needs no band: IEEE 754 requires it
+correctly rounded, and glibc's and `Math.sqrt` both are.
+
+Each band is the worst glibc miss over 100,000 seeded uniform samples plus
+hand-typed values (`0.1`, `pi/4`, `90`, ...) times two, rounded up to a clean
+fraction, per argument region: `|x| < 1024` and `|x| >= 1024`, the latter
+also counting the `large` samples (`scripts/measure-libm-glibc-accuracy.mjs`,
+seed `20260924`, reference BigDecimal at 110 digits, 976,553 samples,
+976,551 of them with a result in the double range). A region with no
+measured miss keeps the other region's band. The measurement also checks the
+port's own correctly rounded result against the reference on every sample
+(0 disagreements), and that, where the port answers, it equals glibc on every
+sample (0 disagreements in every category). Refusal rates are before the
+region split (a single band, guard below 1024) and after:
+
+| Function | glibc correct (uniform) | Worst miss `<1024` / `>=1024` | Band `<1024` / `>=1024` | Uniform refused | Typed refused |
+| --- | --- | --- | --- | --- | --- |
+| sin | 99.9160% | 0.011619 / 0.011730 | 1/40 / 1/40 | 4.90% -> 4.90% | 6 -> 2 of 96 |
+| cos | 99.9400% | 0.008919 / 0.014086 | 1/50 / 1/32 (was 1/32) | 6.38% -> 4.61% | 10 -> 4 of 96 |
+| tan | 99.8380% | 0.043039 / 0.017810 | 1/11 / 1/25 (was 1/10) | 20.12% -> 15.42% | 18 -> 8 of 96 |
+| asin | 99.8660% | 0.007770 / — | 1/60 | 3.39% | 4 of 32 |
+| acos | 99.9520% | 0.009629 / — | 1/50 | 3.81% | 5 of 32 |
+| atan | 99.9670% | 0.012025 / none measured | 1/40 | 5.04% | 6 of 96 |
+| exp | 99.9210% | 0.005751 / — | 1/80 | 2.53% | 1 of 94 |
+| log | 99.9860% | 0.003879 / none measured | 1/125 | 1.61% | 0 of 48 |
+| sqrt | 100.0000% | — | none | 0% | 0 |
+
+tan's wide band below 1024 comes from one sampled miss at 0.043 ULP
+(`tan(14.072284240275621)`, whose value is 15.4); the next worst is 0.029.
+
+A band cannot fix sin/cos/tan near a multiple of `pi/2`, where the result is
+tiny (or `tan`'s huge) and glibc's error in its reduced argument `r`
+dominates: over the hardest reduction cases at every binary exponent
+(continued-fraction convergents of `pi/2`), glibc missed 450 (sin), 863
+(cos) and 1,311 (tan) of 1,971, by up to thousands of ULP. Two measurements
+now decide where the port refuses there:
+
+- **Below 1024, exhaustively** (`scripts/measure-libm-reduction-exhaustive.mjs`,
+  summary `test/evaluation/libm-reduction-exhaustive.json`): every double
+  within `2^-35` of a nonzero multiple of `pi/2` — 1,748,992 doubles near
+  651 multiples, both signs, 3,497,984 arguments per function. glibc's `sin`
+  was correctly rounded on all of them; `cos` missed 2, both outside its
+  band; `tan` missed 28, 24 inside its band and 4 outside. Those outside the
+  band are 6 arguments, 3 magnitudes in both signs — `cos(±1.5707963267948968)`
+  (the double just above `pi/2`), `tan(±3pi)` and `tan(±6pi)`. Rather than
+  refuse them, the port answers each with glibc's own double:
+  `src/evaluation/libm-measured-results.ts`, which the script generates,
+  maps each signed input's bits to the bits Ruby's `Math.cos`/`Math.tan`
+  returned for it — each sign measured on its own, not derived from `cos`
+  being even or `tan` odd (the table bears both out). Nothing else below
+  1024 is reduction-guarded, and the port refuses or returns glibc's double
+  on every argument checked. `sin(pi)`, `cos(pi/2)`, `tan(pi/2)`,
+  `sin(2pi)`, `csc(pi)`, `tan(3pi)` and `tan(6pi)` all answer, matching the
+  gem (the evaluation fixtures' `libm-measured-*` rows).
+- **From 1024 up, by a guard** (`scripts/measure-libm-reduction-error.mjs`):
+  refuse a result computed from `sin r` when `|r| < 2^-bits`, with `bits` from
+  the largest reduced-argument error measured on the hard cases, minus 67 (so
+  an admitted result's relative error from the reduction stays under
+  `2^-67`). From `2^26` up, 3,852 sin-r results: largest error `2^-91.7`,
+  guard `2^-24`. In `[1024, 2^26)` glibc was exact on all 50 sin-r hard
+  cases, so that tier's guard is sized from the whole range below `2^26`
+  (90 results, largest error `2^-102.3`, from `tan(4.712388980384691)`):
+  `2^-35`. glibc missed none of the hard cases on the `cos r` branches, which
+  are not guarded.
+
+`tan(pi/4)` and `arccos(0.5)` are still refused by the band: their exact
+results lie 0.0515 and 0.0172 ULP from a midpoint.
+`test/evaluation/libm-rounding-band.spec.ts` and
+`test/evaluation/libm-reduction-exhaustive.spec.ts` re-check the committed
+corpora without Ruby. As with `pow`, the parity is with the oracle's
+platform: another libm can differ in these last bits.
+
 ### Evaluation: exact intermediates beyond the port's size limit, and Ruby's `ArgumentError`
 
 **Decided 2026-09-23.** `src/evaluation/numeric.ts` computes Ruby's Integers
@@ -535,6 +616,20 @@ cannot hold. Two kinds of intermediate are refused on the spot with
 Defects in the Ruby gem, found while building the port. All reproduce on a
 clean checkout. None is worked around here — the corpus records the gem's
 real behaviour, including its bugs.
+
+### README documents the wrong `evaluation_max_iterations` default
+
+The gem's README (`README.adoc` lines 323-324, pinned oracle `00c52783`) says
+`Sum`/`Prod` iterations "are capped at
+`Plurimath.configuration.evaluation_max_iterations` (default 1,000,000)". The
+code says `100_000`: `lib/plurimath/configuration.rb`'s
+`DEFAULT_MAX_ITERATIONS`, and measured — `sum_(i=1)^100001 i` raises
+`UnsupportedExpressionError` ("iteration range larger than 100000 steps")
+while `sum_(i=1)^100000 1` answers `100000`
+(`scripts/generate-evaluation-fixtures.rb`'s `sum-over-cap` and `sum-at-cap`
+rows). The port follows the code: `evaluate()`'s `evaluationMaxIterations`
+option defaults to `100_000` (`src/evaluation/index.ts`). The README is what
+needs fixing upstream.
 
 ### `Matrix#to_mathml_without_math_tag` crashes on any fenced non-round matrix
 

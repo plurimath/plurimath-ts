@@ -37,8 +37,40 @@ import {
 /** The subset of `Evaluator` this parser calls back into. */
 export interface ExpressionEvaluator {
   evaluateNode(node: MathNode | string | undefined | null): RubyNumeric;
+  evaluateNegatedMod(node: MathNode): RubyNumeric;
   unsupported(nodeOrMessage: MathNode | string): never;
 }
+
+function isNode(node: MathNode | string | undefined): node is MathNode {
+  return node !== undefined && typeof node !== "string";
+}
+
+/** Ruby: `current.is_a?(Function::Mod)`. */
+function isMod(node: MathNode | string | undefined): boolean {
+  return isNode(node) && node.kind === "binaryFunction" && node.name === "Mod";
+}
+
+/** Ruby: `current.is_a?(Function::Fenced)`. */
+function isFenced(node: MathNode | string | undefined): boolean {
+  return isNode(node) && node.kind === "fenced";
+}
+
+/**
+ * The node kinds whose gem class is a `Function::UnaryFunction` subclass the
+ * gem evaluates: the `unaryFunction` carrier (`Sin`, `Max`, ...) and the
+ * classes this port models as their own kind. Every other `UnaryFunction`
+ * subclass (`Bar`, `Vec`, ...) has no `#evaluate` of its own, so binding it to
+ * its argument first (`next_argument?`) or not reaches the same
+ * `unsupported(node)` refusal with the same class name, and it is left out.
+ */
+const UNARY_FUNCTION_KINDS: ReadonlySet<string> = new Set([
+  "unaryFunction",
+  "abs",
+  "ceil",
+  "floor",
+  "sqrt",
+  "text",
+]);
 
 type Predicate = (node: MathNode | string) => boolean;
 
@@ -77,8 +109,20 @@ export class ExpressionParser {
 
   private parseUnary(): RubyNumeric {
     if (this.take(isPlusOperator)) return this.parseUnary();
-    if (this.take(isMinusOperator)) return negate(this.parseUnary());
+    if (this.take(isMinusOperator)) return this.negatedUnary();
     return this.parsePower();
+  }
+
+  /**
+   * Ruby: `ExpressionParser#negated_unary` — unary minus binds tighter than
+   * `mod`, so `-7 mod 3` negates the dividend: `(-7) mod 3` is `2`, not
+   * `-(7 mod 3)`.
+   */
+  private negatedUnary(): RubyNumeric {
+    if (!this.eof() && isMod(this.current())) {
+      return this.evaluator.evaluateNegatedMod(this.nextToken() as MathNode);
+    }
+    return negate(this.parseUnary());
   }
 
   /** Ruby: `ExpressionParser#parse_power` — a loose `^` chain, left to right. */
@@ -91,14 +135,74 @@ export class ExpressionParser {
   /** Ruby: `ExpressionParser#parse_exponent` — an exponent may carry its own signs. */
   private parseExponent(): RubyNumeric {
     if (this.take(isPlusOperator)) return this.parseExponent();
-    if (this.take(isMinusOperator)) return negate(this.parseExponent());
+    if (this.take(isMinusOperator)) return this.negatedExponent();
     return this.parseOperand();
   }
 
+  /** Ruby: `ExpressionParser#negated_exponent` — `negatedUnary`'s rule, in exponent position. */
+  private negatedExponent(): RubyNumeric {
+    if (!this.eof() && isMod(this.current())) {
+      return this.evaluator.evaluateNegatedMod(this.nextToken() as MathNode);
+    }
+    return negate(this.parseExponent());
+  }
+
+  /**
+   * Ruby: `ExpressionParser#parse_operand`. A unary function parsed apart
+   * from its argument (`parameter_one` empty, a `Fenced` group next) is bound
+   * to that group first (`next_argument?`/`bind_argument`); an n-ary
+   * `Sum`/`Prod` with both bounds but no body adopts the next operand as its
+   * body (`nary_body?`/`bind_nary_body`). The gem's third case,
+   * `log_argument?` (a `Log` followed by a `Fenced` group), is not ported:
+   * `Log` itself is not, and `evaluateNode` refuses it as unported whether or
+   * not the group is bound to it first.
+   */
   private parseOperand(): RubyNumeric {
     if (this.eof()) this.evaluator.unsupported("empty expression");
     if (isOpenParen(this.current())) return this.parseGroup();
-    return this.evaluator.evaluateNode(this.nextToken());
+    let node = this.nextToken();
+    if (this.nextArgument(node)) {
+      return this.evaluator.evaluateNode({
+        ...(node as MathNode),
+        parameterOne: this.nextToken(),
+      } as MathNode);
+    }
+    if (this.naryBody(node)) node = this.bindNaryBody(node as MathNode);
+    return this.evaluator.evaluateNode(node);
+  }
+
+  /** Ruby: `ExpressionParser#next_argument?`. */
+  private nextArgument(node: MathNode | string): boolean {
+    return (
+      isNode(node) &&
+      UNARY_FUNCTION_KINDS.has(node.kind) &&
+      (node as { parameterOne?: unknown }).parameterOne == null &&
+      !this.eof() &&
+      isFenced(this.current())
+    );
+  }
+
+  /** Ruby: `ExpressionParser#nary_body?`. */
+  private naryBody(node: MathNode | string): boolean {
+    if (!isNode(node) || (node.kind !== "sum" && node.kind !== "prod")) return false;
+    return (
+      node.parameterThree == null &&
+      node.parameterOne != null &&
+      node.parameterTwo != null &&
+      !this.eof() &&
+      isOperandStart(this.current())
+    );
+  }
+
+  /**
+   * Ruby: `ExpressionParser#bind_nary_body` — the body is the single next
+   * operand, itself completed first when it is another bodiless `Sum`/`Prod`
+   * (nested `sum sum ...`).
+   */
+  private bindNaryBody(node: MathNode): MathNode {
+    let body = this.nextToken();
+    if (this.naryBody(body)) body = this.bindNaryBody(body as MathNode);
+    return { ...node, parameterThree: body } as MathNode;
   }
 
   /**

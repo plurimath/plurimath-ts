@@ -151,7 +151,8 @@ this exception entry now only documents how each set came to be measured.
 `MEASURED_UNARY_NAMES` in all four `src/render/unary-function/*.ts` adds two
 names to its generated census projection the same way: `Tr`, which the
 transform constructs without `get_class`, and `Hom`, which the transform
-never constructs at all. `Hom` was admitted 2026-08-21 on this measurement
+never constructs at all. `unicodemath.ts` also adds `Scarries` (see the
+paragraph on it below). `Hom` was admitted 2026-08-21 on this measurement
 (probe-unary-carrier-defaults.rb on the pinned oracle, in the PR record): of
 the 48 classes the census aliases onto `Math::Function::UnaryFunction`, 34
 are reachable through `get_class`, `Tr` is transform-built, and of the

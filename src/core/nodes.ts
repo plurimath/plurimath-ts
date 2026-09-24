@@ -691,10 +691,10 @@ export class BinaryFunctionNode extends NodeBase {
     // `Td.new(nil)` renders `<td></td>` in HTML and `<m:e/>` in OMML, the same
     // bytes as `Td.new([])`, alone and inside a `Table`. A Hash also
     // survives `parameter_one&.delete_if` and is coerced (`{}` to `[]`,
-    // `{a: 1}` to `[[:a, 1]]`), but no slot in this port's model holds a
-    // plain hash; any other non-Array argument (a String, an Integer) makes
-    // `delete_if` raise first. So nil is the only value that reaches this
-    // constructor and changes under the coercion.
+    // `{a: 1}` to `[[:a, 1]]`); `NodeParameter` admits an options hash, but
+    // this port does not reproduce that coercion, and no parser builds a Td
+    // around one. Any other non-Array argument (a String, an Integer) makes
+    // `delete_if` raise first. Only nil is coerced here.
     const parameterOne = init.name === "Td" && init.parameterOne === null ? [] : init.parameterOne;
     this.parameterOne = assignedParameter(parameterOne, aliasFallback(alias.parameterOne, null));
     this.parameterTwo = assignedParameter(

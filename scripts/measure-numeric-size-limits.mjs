@@ -57,9 +57,9 @@ for (const bits of [1 << 22, 1 << 23, 1 << 24, 1 << 25]) {
 }
 
 console.log("");
-console.log("-- gcd (RATIONAL_BIT_LIMIT = 1<<16 = 65,536 bits; the pre-reduction");
+console.log("-- gcd (RATIONAL_BIT_LIMIT = 1<<13 = 8,192 bits; the pre-reduction");
 console.log("   guard in `rational()` admits up to 2x that into gcd) --");
-for (const bits of [1 << 16, 1 << 17, 1 << 18]) {
+for (const bits of [1 << 13, 1 << 14, 1 << 15, 1 << 16]) {
   const a = randomBig(rng, bits);
   const b = randomBig(rng, bits);
   console.log(`  ${bits.toLocaleString()} bits: ${timeMs(() => euclidGcd(a, b)).toFixed(2)}ms`);

@@ -201,9 +201,13 @@ POW_ROUNDING_BAND_OPERANDS = {
 # `pow.ts`'s `roundDyadic` halfway test, ported to exact `Integer` arithmetic:
 # `exact` an exact positive `Integer`, `mantissa_bits` the double significand
 # width (53, sign bit included as the implicit leading one). Returns whether
-# the correctly-rounded double for `exact` sits within 0.04 ULP of a midpoint
-# between two doubles — the same `|2*remainder - full| * 25 < 2*full` test
-# `pow.ts`'s `roundDyadic` applies to its own fixed-point mantissa.
+# the correctly-rounded double for `exact` sits within 1/80 (0.0125) ULP of a
+# midpoint between two doubles — the same `|2*remainder - full| * 80 < 2*full`
+# test `pow.ts`'s `roundDyadic` applies to its own fixed-point mantissa
+# (`NEAR_HALFWAY_BAND_INVERSE`, sized from `scripts/measure-pow-glibc-accuracy.mjs`'s
+# measurement of where glibc actually misses, not a fixed geometric width).
+NEAR_HALFWAY_BAND_INVERSE = 80
+
 def exact_value_in_pow_rounding_band?(exact)
   bit_length = exact.bit_length
   shift = bit_length - 53
@@ -213,7 +217,7 @@ def exact_value_in_pow_rounding_band?(exact)
   remainder = exact - (quotient << shift)
   full = 1 << shift
   offset = 2 * remainder - full
-  offset.abs * 25 < 2 * full
+  offset.abs * NEAR_HALFWAY_BAND_INVERSE < 2 * full
 end
 
 def validate_port_refusal!(id, port_refusal, row)

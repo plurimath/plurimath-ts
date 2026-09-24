@@ -21,30 +21,56 @@
  *
  * glibc's `pow` is not correctly rounded either. Its source documents a
  * worst-case error of 0.54 ULP (`sysdeps/ieee754/dbl-64/e_pow.c`): 0.5 from
- * the final rounding plus up to 0.04 from the approximation. So when the
- * exact result lies within 0.04 ULP of the midpoint between two doubles,
- * glibc may return either one (exact halfway cases such as `123456789^2.0`,
- * `63^9` and `3^34` round either way, `test/formats/evaluation/
- * pow-rounding-band-corpus.json`'s worked example). The SAME measurement run
- * found the exact result within that 0.04 ULP band for **7,937 of the
- * 99,747 pairs (7.96%)** — geometric proximity to the boundary glibc's own
- * documented error bound could reach, not a count of pairs where glibc is
- * actually shown to round the "wrong" way (that would need an independent
- * correctly-rounded reference beyond this measurement's scope) — and, across
- * every one of the OTHER 91,810 pairs, this module's own answer matched
- * Ruby's exactly (`outOfBandPortDisagreesWithRubyCount: 0` in the same
- * corpus file), the check that matters for this module's own correctness:
- * outside the band it claims, its answer and glibc's have never (in this
- * sample) disagreed. Outside the band the correctly rounded double is the
- * only value within 0.54 ULP, so it is exactly glibc's answer. This module
- * therefore:
+ * the final rounding plus up to 0.04 from the approximation — but that 0.04
+ * is glibc's OWN worst-case bound on its approximation error, not a measured
+ * rate of actual wrong answers, and sizing the refusal band directly from it
+ * over-refuses: geometric proximity to a midpoint (some fraction `f` of
+ * inputs sit within any fixed radius `r` of one, roughly `2r` of them for `r`
+ * small) is not the same thing as glibc actually rounding the wrong way
+ * there. `scripts/measure-pow-glibc-accuracy.mjs` measures the latter
+ * directly, the same method
+ * `.codex-context/evidence/2026-09-23-libm/libm/reference.rb` (a sibling
+ * measurement, same repository, 2026-09-23) used for `sin`/`cos`/`tan`/
+ * `asin`/`acos`/etc: an arbitrary-precision reference (`BigDecimal`/`BigMath`
+ * at 70 decimal digits, or an exact `Rational` power for an integer
+ * exponent), the double it correctly rounds to, and the sampled value's
+ * distance from the midpoint between that double and its neighbor, as a
+ * fraction of one ULP (0 = an exact tie, 0.5 = as far from a tie as
+ * possible). Measured (seed `20260923`, the SAME 99,747 pairs
+ * `measure-pow-rounding-band.mjs` uses, plus 10 hand-typed cases such as
+ * `2^0.5`, `10^-3`, `1.1^10`, `3^0.2` a reviewer would actually write —
+ * `scripts/lib/pow-sample.mjs`'s `HUMAN_TYPED_CASES` — Linux x86_64, Ruby
+ * 4.0.1, measured 2026-09-23, 99,034 in-domain pairs): glibc's `pow` is
+ * correctly rounded for **98,940 of them (99.9051%)**; of the **94
+ * mismatches**, the worst sat **0.006035 ULP** from the midpoint — an order
+ * of magnitude tighter than the 0.04 the old, ungrounded band used, and
+ * consistent with the sibling measurement's finding that `sin`/`cos`/`tan`/
+ * `asin`/`acos` misses all sat within 0.022 ULP. `EXACT_HALFWAY_BAND` below
+ * is that worst miss times a 2x margin (0.012071 ULP), which this module
+ * rounds UP to the clean, easily-verified fraction **1/80 (0.0125 ULP)** —
+ * still comfortably above the measured requirement, not at the edge of it.
+ * No miss in this sample sat anywhere near the "stop and report instead of
+ * widening the band" line (> 0.1 ULP); if a future, larger sample ever finds
+ * one, that is a sign the band needs a different kind of fix, not a wider
+ * number.
+ *
+ * Outside the band, the correctly rounded double is the only value within
+ * 0.54 ULP of glibc's answer, so it IS glibc's answer — the property that
+ * makes refusing INSIDE the band, and only inside it, sound. Re-measuring
+ * `measure-pow-rounding-band.mjs` at the new band width, on the SAME 99,747
+ * pairs, confirms both halves of that: the refusal rate falls from 7.96%
+ * (the old 0.04 band) to **2.46% (2,450 pairs)**, and, still, **zero**
+ * disagreements with Ruby's own `**` outside it (`test/evaluation/
+ * pow-rounding-band-corpus.json`'s `outOfBandPortDisagreesWithRubyCount`).
+ * This module therefore:
  *
  * - computes the exact result to far more than 53 bits — exactly with
  *   `BigInt` for an integer exponent, through `exp(y * ln x)` in 320-bit
  *   fixed point otherwise — and returns the correctly rounded double;
  * - refuses with `UnsupportedFeatureError` when the exact result lies within
- *   0.04 ULP of a midpoint, because the gem's answer there depends on the
- *   platform's `pow`, not on anything this port can reproduce.
+ *   `EXACT_HALFWAY_BAND` ULP of a midpoint, because the gem's answer there
+ *   depends on the platform's `pow`, not on anything this port can
+ *   reproduce.
  */
 
 import { UnsupportedFeatureError } from "../core/errors";
@@ -75,10 +101,21 @@ function bitLength(value: bigint): number {
   return value === 0n ? 0 : value.toString(2).length;
 }
 
+/**
+ * The refusal band's radius, as a fraction of one ULP, and its reciprocal —
+ * `1/80` (module header: measured worst glibc miss 0.006035 ULP, x2 margin
+ * 0.012071, rounded UP to this clean fraction). `roundDyadic` uses the
+ * reciprocal directly (`offset * NEAR_HALFWAY_BAND_INVERSE < 2n * full` is
+ * `|offset/full| < 2/80 = 2 * (1/80)`, exactly the `|frac - 1/2| < 1/80` band
+ * test) so the comparison stays exact `BigInt` arithmetic, never a `Number`
+ * approximation of `1/80`.
+ */
+const NEAR_HALFWAY_BAND_INVERSE = 80n;
+
 function nearHalfwayRefusal(): never {
   throw new UnsupportedFeatureError(
     "evaluate",
-    "the exact power lies within 0.04 ULP of halfway between two doubles, where " +
+    "the exact power lies within 1/80 (0.0125) ULP of halfway between two doubles, where " +
       "Ruby's answer depends on the rounding of the platform C library's pow",
   );
 }
@@ -86,10 +123,10 @@ function nearHalfwayRefusal(): never {
 /**
  * Rounds `mantissa * 2^exponent` (plus a positive amount smaller than one unit
  * of `mantissa` when `sticky` is set) to the nearest double. With
- * `refuseNearHalf` (the `pow` path) a value within 0.04 ULP of a midpoint is
- * refused (module header); without it, an exact tie rounds to even — IEEE
- * round-to-nearest, what C's `ldexp` does on this platform. Handles subnormal
- * results and overflow to `Infinity`.
+ * `refuseNearHalf` (the `pow` path) a value within `NEAR_HALFWAY_BAND_INVERSE`'s
+ * band of a midpoint is refused (module header); without it, an exact tie
+ * rounds to even — IEEE round-to-nearest, what C's `ldexp` does on this
+ * platform. Handles subnormal results and overflow to `Infinity`.
  */
 function roundDyadic(
   mantissa: bigint,
@@ -118,9 +155,12 @@ function roundDyadic(
     const remainder = mantissa - (quotient << bigShift);
     const full = 1n << bigShift;
     // Position within the ULP is remainder/full; refuse when
-    // |remainder/full - 1/2| < 0.04, i.e. |2 remainder - full| * 25 < 2 full.
+    // |remainder/full - 1/2| < 1/80, i.e. |2 remainder - full| * 80 < 2 full.
     const offset = 2n * remainder - full;
-    if (refuseNearHalf && (offset < 0n ? -offset : offset) * 25n < 2n * full) {
+    if (
+      refuseNearHalf &&
+      (offset < 0n ? -offset : offset) * NEAR_HALFWAY_BAND_INVERSE < 2n * full
+    ) {
       nearHalfwayRefusal();
     }
     if (offset > 0n || (offset === 0n && sticky)) quotient += 1n;

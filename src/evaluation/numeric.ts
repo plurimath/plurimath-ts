@@ -47,17 +47,22 @@
  *   design decision about the LIMIT's value, left to the maintainer rather
  *   than made here as a side effect of a measurement pass.
  *
- *   `RATIONAL_BIT_LIMIT` (65,536 bits) is the tighter case: `rational()`'s own
- *   pre-reduction guard admits a numerator/denominator up to TWICE that
- *   (131,072 bits) into `gcd` before its post-reduction check narrows the
- *   RESULT back down — and gcd on two random 65,536-bit Integers already
- *   measured 1,426ms, 131,072-bit ones 6,996ms. That is, at the boundary this
- *   module already allows, a single Rational construction can measurably
- *   exceed the one-second budget the Integer reasoning above uses — a real,
- *   currently-present cost this comment records rather than hides, not a
- *   justification for the current bound: lowering the pre-reduction guard
- *   (or `RATIONAL_BIT_LIMIT` itself) is, again, the maintainer's call, not
- *   one this pass makes unilaterally.
+ *   `RATIONAL_BIT_LIMIT` is `gcd`'s case, sized by the SAME one-second
+ *   criterion as `INTEGER_BIT_LIMIT` above, applied to the worst case
+ *   `rational()`'s own pre-reduction guard actually admits into `gcd`: TWICE
+ *   the limit (a numerator/denominator up to `2 * RATIONAL_BIT_LIMIT` bits,
+ *   before the post-reduction check narrows the RESULT back down). An
+ *   earlier pass left this at `1 << 16` (65,536 bits) — measured (Node
+ *   v20.20.2, Linux x86_64, 2026-09-24): gcd on two random 65,536-bit
+ *   Integers took 1,426-3,102ms across repeated runs (gcd's cost is
+ *   data-dependent, unlike a plain multiply, so it varies run to run) and
+ *   131,072-bit ones (the actual worst case that bound admitted) up to
+ *   6,996ms — multiple seconds, not "well under one second". Lowered to
+ *   `1 << 13` (8,192 bits): the admitted worst case is then 16,384-bit gcd,
+ *   measured 122-252ms across three repeated runs — comfortable margin under
+ *   one second even accounting for gcd's run-to-run variance, the same bar
+ *   `INTEGER_BIT_LIMIT` meets. `scripts/measure-numeric-size-limits.mjs`
+ *   reproduces this.
  */
 
 import { UnsupportedFeatureError } from "../core/errors";
@@ -88,7 +93,7 @@ const FEATURE = "evaluate";
 
 /** Port resource limits (module header). */
 const INTEGER_BIT_LIMIT = 1 << 22;
-const RATIONAL_BIT_LIMIT = 1 << 16;
+const RATIONAL_BIT_LIMIT = 1 << 13;
 
 /** Ruby's Fixnum range on 64-bit platforms; `Integer#**` and `Integer#fdiv` branch on it. */
 const FIXNUM_MIN = -(1n << 62n);

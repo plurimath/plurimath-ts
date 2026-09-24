@@ -1,10 +1,13 @@
 #!/usr/bin/env node
 // Measures the two numbers `pow.ts`'s header cites — how often V8's `**`
 // disagrees with the platform C library's `pow` (which Ruby's `Float#**`
-// calls), and how often the EXACT result of a random `x**y` lies within 0.04
-// ULP of a double midpoint, the band `correctlyRoundedPow` refuses — over a
-// seeded, reproducible sample, so both figures can be checked again by
-// anyone, on any machine, and challenged if they come out different there.
+// calls), and how often the EXACT result of a random `x**y` lies within the
+// band (1/80 ULP of a double midpoint, `pow.ts`'s `NEAR_HALFWAY_BAND_INVERSE`
+// — sized by `measure-pow-glibc-accuracy.mjs`'s measurement of where glibc
+// actually misses, not by this geometric-proximity count) that
+// `correctlyRoundedPow` refuses — over a seeded, reproducible sample, so both
+// figures can be checked again by anyone, on any machine, and challenged if
+// they come out different there.
 //
 //   node scripts/measure-pow-rounding-band.mjs [pairCount]
 //
@@ -26,44 +29,13 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { generatePairs, SEED } from "./lib/pow-sample.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..");
 
-/** Fixed so a rerun samples the exact same pairs — mulberry32, a small, public PRNG. */
-const SEED = 20260923;
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** A random positive finite double with exponent in `[expMin, expMax]`. */
-function randomPositiveDouble(rng, expMin, expMax) {
-  const exponent = Math.floor(rng() * (expMax - expMin + 1)) + expMin;
-  const mantissa = 1 + rng(); // [1, 2)
-  return mantissa * 2 ** exponent;
-}
-
-/** A random finite `y`: ~30% exact integers (where an exact-power tie is possible at any
- * magnitude), ~70% fractional, both magnitudes up to 60 — wide enough to reach the
- * log/exp path (`pow.ts`'s `logExpPower`) as well as the exact-integer-power path. */
-function randomExponent(rng) {
-  const magnitude = rng() * 60;
-  const signed = rng() < 0.5 ? -magnitude : magnitude;
-  return rng() < 0.3 ? Math.round(signed) : signed;
-}
-
 const pairCount = Number(process.argv[2] ?? 100_000);
-const rng = mulberry32(SEED);
-const pairs = Array.from({ length: pairCount }, () => ({
-  x: randomPositiveDouble(rng, -20, 20),
-  y: randomExponent(rng),
-})).filter(({ y }) => y !== 0);
+const pairs = generatePairs(pairCount);
 
 // One Ruby process for the whole sample (100,000 subprocess spawns would
 // dominate the wall-clock cost) — `Float#**` is core Ruby, no gem load needed.
@@ -124,11 +96,10 @@ const platform = {
   rubyVersion: execFileSync("ruby", ["-v"], { encoding: "utf8" }).trim(),
 };
 
-// The full sample's boundary count can run into the thousands (module
-// header: this measured ~8% of the sample, not the ~0.045% an older,
-// unreproduced comment had claimed). Committing all of them would make the
-// corpus file itself the size of a small fixture set for no added test
-// value: `pow-rounding-band.spec.ts` only needs ENOUGH refused pairs to
+// The full sample's boundary count can run into the thousands. Committing
+// all of them would make the corpus file itself the size of a small fixture
+// set for no added test value: `pow-rounding-band.spec.ts` only needs ENOUGH
+// refused pairs to
 // prove `correctlyRoundedPow` actually refuses at the boundary it claims to,
 // not every pair that landed there. `inBandCount`/`inBandRate` still report
 // the true figure over the full sample; `boundaryPairs` is a fixed-size
@@ -167,7 +138,7 @@ console.log(
   `V8 vs glibc pow mismatches: ${mismatches} (${((mismatches / pairs.length) * 100).toFixed(2)}%)`,
 );
 console.log(
-  `within 0.04 ULP of a midpoint (refused): ${inBand} (${((inBand / pairs.length) * 100).toFixed(3)}%)`,
+  `within 1/80 ULP of a midpoint (refused): ${inBand} (${((inBand / pairs.length) * 100).toFixed(3)}%)`,
 );
 console.log(
   `port disagrees with Ruby OUTSIDE the band (should be 0): ${outOfBandPortDisagreesWithRuby}`,

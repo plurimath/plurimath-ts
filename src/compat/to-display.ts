@@ -525,10 +525,19 @@ const TERNARY_META: Record<string, TernaryMeta> = {
  */
 function leftRightParen(node: MathNode, isLeft: boolean): string {
   const raw = fieldNode(node, "parameterOne");
-  const value = typeof raw === "string" ? raw : null;
-  if (value === null) return "";
-  if (isLeft) return value === "\\{" ? "{" : value;
-  return value === "\\}" ? "}" : value;
+  if (typeof raw !== "string") {
+    // `\left.` stores no delimiter. The mathml/omml overrides append the nil
+    // `left_paren` to an Ox element unconditionally (left.rb:50-58,
+    // right.rb:50-58), which raises (measured on the oracle:
+    // "undefined method 'xml_nodes' for nil").
+    throw new RenderError(
+      `${isLeft ? "Left" : "Right"} holds no delimiter — the gem raises NoMethodError here`,
+      "toDisplay",
+      isLeft ? "left" : "right",
+    );
+  }
+  if (isLeft) return raw === "\\{" ? "{" : raw;
+  return raw === "\\}" ? "}" : raw;
 }
 
 /**

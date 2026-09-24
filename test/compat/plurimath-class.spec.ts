@@ -644,6 +644,20 @@ describe("toDisplay", () => {
      * `Plurimath::Latex.new("\\left|x-y\\right|").to_formula.to_display(:<format>)`,
      * oracle 00c52783 -- all five formats.
      */
+    it("refuses a \\left. / \\right. delimiter under mathml and omml, as the gem raises", () => {
+      // left.rb/right.rb append the nil delimiter to an Ox element; measured on
+      // the oracle: NoMethodError "undefined method 'xml_nodes' for nil" for
+      // both formats, while asciimath and latex render (5 lines each).
+      const build = () => new Plurimath("\\left.x\\right.", "latex");
+      for (const format of ["mathml", "omml"] as const) {
+        expect(() => build().toDisplay(format)).toThrow(
+          "Left holds no delimiter — the gem raises NoMethodError here",
+        );
+      }
+      expect(build().toDisplay("asciimath").split("\n").filter(Boolean)).toHaveLength(5);
+      expect(build().toDisplay("latex").split("\n").filter(Boolean)).toHaveLength(5);
+    });
+
     it("Left/Right each print their own delimiter line, not a no-op", () => {
       const build = () => new Plurimath("\\left|x-y\\right|", "latex");
       expect(build().toDisplay("asciimath")).toBe(

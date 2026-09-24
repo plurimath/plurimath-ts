@@ -508,10 +508,14 @@ describe("Hom, a carrier-default unary name the AsciiMath transform cannot build
   });
 
   it("still refuses a name whose gem class overrides to_unicodemath", () => {
-    // Merror, not Mbox: Mbox is arm-rendered below, Merror is the same case
-    // left unmeasured.
+    // None, not Mbox: Mbox is arm-rendered below, None is the same case left
+    // unmeasured. (`Merror`, `Longdiv`, `Msline`, `Msgroup`, `Mglyph` and `Ms`
+    // are the same shape but are all measured and case-armed elsewhere in
+    // this file now; `Scarries` overrides nothing here — it takes the carrier
+    // default — but stays deliberately unadmitted, pinned separately in
+    // `test/formats/unary-function-parity.spec.ts`.)
     expect(() =>
-      toUnicodemath(new UnaryFunctionNode({ name: "Merror", parameterOne: sym("x") })),
+      toUnicodemath(new UnaryFunctionNode({ name: "None", parameterOne: sym("x") })),
     ).toThrow(RenderError);
   });
 });

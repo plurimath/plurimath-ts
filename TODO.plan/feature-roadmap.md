@@ -196,7 +196,7 @@ the default, and one publishing gap.
 reason was found. **Blocks:** nothing recorded; `ARCHITECTURE.md` §4's subpath
 list also omits it, so the list changes with it.
 
-#### Number formatting (`formatter:`) — only the no-formatter path
+#### Number formatting (`formatter:`) — landed (B2)
 
 **Gem:** every `Formula#to_*` takes `formatter:` (`math/formula.rb:66-197`),
 and `Plurimath.configuration.number_formatter` sets one globally.
@@ -215,27 +215,22 @@ and `Plurimath.configuration.number_formatter` sets one globally.
 | sign handling | `sign_renderer.rb` |
 | per-format output of a formatted number | `text_renderer.rb`, `mathml_renderer.rb`, `omml_renderer.rb` |
 
-**Port:** `src/formatting/` resolves a locale to a decimal marker, which the
-grammars read at parse time. Every renderer refuses a `formatter` option — by
-name in the MathML and OMML renderers (`src/formats/mathml/renderer.ts:79`,
-`src/formats/omml/renderer.ts:28`), as an unknown key in the other four. The
-`/formatting` subpath is deliberately unpublished (`ARCHITECTURE.md` §4).
-Parsing base-prefixed literals (`0x`, `0b`, `0o`) is already ported in the
-grammars; rendering them in base notation is not.
+**Port:** every renderer takes `formatter:` — all six targets — as a plain
+options object mirroring `Formatter::Standard.new(locale:, string_format:,
+options:, precision:)` (`src/formatting/number-format.ts`): locale symbols
+(the locale is inert, as `Standard` makes it — [deferred](deferred.md)),
+digit grouping and padding, precision and significant digits, the three
+notations, base notation, and `string_format` templates
+(`src/formatting/string-format.ts`). OMML draws both of the gem's number paths
+(`src/render/number/omml.ts`). Checked against every pinned `calls/1` case
+and against cases measured on the oracle (`test/formatting/`). There is no
+global `configure()` (`ARCHITECTURE.md` §5, §3 rule 7), and the `/formatting`
+subpath is deliberately unpublished (`ARCHITECTURE.md` §4).
 
-**Blocks:**
-
-1. **No shared case exercises a formatter.** `plurimath-testsuite`'s
-   `scripts/generate-corpus.rb` records configuration only as a diff from
-   defaults, and its default for `number_formatter` is `nil` (`:451`); the
-   schema has no case shape carrying one (`schema/rejections.json:58` notes
-   that a later kind of case "gets a schema version instead"). There is nothing
-   to port against until that exists.
-2. **A design question.** The gem configures the formatter through
-   module-level mutable state (`Plurimath.configure`, `plurimath.rb:39-56`).
-   `ARCHITECTURE.md` §5 rejects a global `configure()` for this port (§3 rule
-   7), so the formatter arrives as a per-call option, and its type — a class
-   instance, or a plain options object — is undecided.
+**Blocks:** none. Two gem quirks are reproduced, not fixed — OMML's insert
+path writes a semantic base as prefixed text, and `string_format` templates
+match unanchored and are ignored silently when they do not parse
+([deferred](deferred.md), "fix in both repos later").
 
 #### MathML `intent` — landed (B4)
 

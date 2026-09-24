@@ -24,9 +24,9 @@
  * under the numeric pipeline and under notation alike (the coefficient is
  * converted to the base).
  *
- * Deliberately NOT here, and refused by name rather than silently ignored:
- * `stringFormat` — a later lane (TODO.plan/feature-roadmap.md, Chain B),
- * built on the seam `numbers/number-renderer.ts` documents.
+ * `stringFormat` (the gem's `string_format:`) is `./string-format.ts`'s: a
+ * template whose first match overrides five symbols, merged over every other
+ * symbol layer (`resolveNumberFormat` below).
  *
  * **Locale.** `formatter.locale` is accepted and INERT, byte-for-byte as in
  * the oracle (v0.11.6, `00c52783`). `Formatter::Standard#set_default_options`
@@ -68,6 +68,7 @@ import {
 } from "./numbers/notation";
 import { formatNumber, type NumericOptions } from "./numbers/number-renderer";
 import { renderNumberText, semanticBaseParts, type TextTarget } from "./numbers/text-renderer";
+import { parseStringFormat } from "./string-format";
 
 /** `Formatter::Standard::DEFAULT_OPTIONS[:group_digits]`. */
 const DEFAULT_GROUP_DIGITS = 3;
@@ -142,16 +143,19 @@ export interface FormatterSymbolOptions {
  * The `formatter:` render option — `Formatter::Standard.new(locale:,
  * string_format:, options:, precision:)`'s keyword shape, ported field for
  * field (TODO.plan/open-decisions.md, "plain options object", not a class
- * instance). `stringFormat` is declared here — the gem really does take it —
- * so a caller passing one gets a named refusal (`resolveNumberFormat` below)
- * rather than "unknown option".
+ * instance).
  */
 export interface FormatterOptions {
   /** Accepted and inert: see the module header ("Locale"). */
   readonly locale?: unknown;
   readonly options?: FormatterSymbolOptions | null;
   readonly precision?: number | null;
-  readonly stringFormat?: null;
+  /**
+   * The gem's `string_format:` template (`./string-format.ts`). A String or
+   * `null`; `NumberFormatter#validated_localize_number` raises
+   * `ConfigurationError` for anything else, and so does this port.
+   */
+  readonly stringFormat?: string | null;
 }
 
 /** What a text renderer's `Number` kind file needs to render one value. */
@@ -192,15 +196,22 @@ const ACCEPTED_SYMBOL_KEYS: readonly string[] = [
   "hexCapital",
 ];
 
-/** `undefined`/`null` mean "the gem's default", present-and-anything-else is refused. */
-function refuseUnlessAbsent(value: unknown, key: string, format: string): void {
-  if (value === null || value === undefined) return;
-  throw new RenderError(
-    `formatter.${key}: not implemented by this slice (TODO.plan/feature-roadmap.md, ` +
-      "Number formatting) — pass null, undefined, or omit the key",
-    format,
-    "unknown",
-  );
+/**
+ * `NumberFormatter#validated_localize_number` (`number_formatter.rb:125`): nil
+ * or a String; anything else (a Symbol included — measured, `:"#,##0.## #"`
+ * raises) is `ConfigurationError` (`invalid_formatter_option`).
+ */
+function stringFormatOption(value: unknown, format: string): string | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") {
+    throw new RenderError(
+      `formatter.stringFormat: ${JSON.stringify(value)} is not a string — the gem raises ` +
+        "ConfigurationError (invalid_formatter_option) for anything but a String or nil",
+      format,
+      "unknown",
+    );
+  }
+  return value;
 }
 
 /**
@@ -411,7 +422,7 @@ export function resolveNumberFormat(
 ): NumberFormat | null {
   if (formatter === null || formatter === undefined) return null;
   assertKnownOptions(formatter, ACCEPTED_FORMATTER_KEYS, format);
-  refuseUnlessAbsent(formatter.stringFormat, "stringFormat", format);
+  const stringFormat = stringFormatOption(formatter.stringFormat, format);
 
   assertKnownOptions(formatter.options, ACCEPTED_SYMBOL_KEYS, format);
   const options = formatter.options;
@@ -431,7 +442,7 @@ export function resolveNumberFormat(
     );
   }
 
-  return {
+  const resolved: NumberFormat = {
     decimal: separatorOption(options?.decimal, "decimal", DEFAULT_DECIMAL_MARKER, "", format),
     group: separatorOption(
       options?.group,
@@ -472,6 +483,14 @@ export function resolveNumberFormat(
       hexCapitalOption(options?.hexCapital, format),
     ),
   };
+  // `SymbolResolver#resolve` merges the template's overrides LAST — over the
+  // locale's entry and over `options` with Standard's defaults filled in — so
+  // a matching template wins over an explicit `decimal`/`group`/... (corpus
+  // case `number-formatter-string-format-with-options`). The explicit values
+  // are still validated above: a typed option this port refuses is refused
+  // whether or not a template would have overridden it.
+  const overrides = stringFormat === null ? null : parseStringFormat(stringFormat);
+  return overrides === null ? resolved : { ...resolved, ...overrides };
 }
 
 /**

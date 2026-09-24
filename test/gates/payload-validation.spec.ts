@@ -142,6 +142,16 @@ const FIXTURE_SPECS = {
     usesCorpus: false,
     usesRenderInventory: false,
   },
+  // One input per row, and the gem's answer to EVERY target format for it —
+  // the `BinaryFunction` kinds no AsciiMath input builds. Claims no corpus.
+  "render-kinds-fixtures.json": {
+    generator: "scripts/generate-render-options-fixtures.rb",
+    schema: "plurimath-corpus/render-binary-kinds/1",
+    rows: "cases",
+    shape: "render-kinds",
+    usesCorpus: false,
+    usesRenderInventory: false,
+  },
   // `evaluate(formula, bindings)` calls (B6's first slice). Hand-built
   // AsciiMath, like `render-options`, not the shared corpus, which has no
   // `evaluate` call kind.
@@ -222,6 +232,7 @@ const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "model-fixtures.json"
   | "parity-fixtures.json"
   | "render-options-fixtures.json"
+  | "render-kinds-fixtures.json"
   | "evaluation-fixtures.json"
 )[];
 const LEGACY_FORMAT_FIXTURES = [
@@ -830,6 +841,95 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         expect(integerField(record.payload, "renderedCount", record.relative)).toBe(rendered);
         expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
           rows.length - rendered,
+        );
+      } else if (record.spec.shape === "render-kinds") {
+        // A row is one INPUT and the gem's answer for each target format: bytes
+        // (`expected`), a refusal (`raises`), or `unreproducible` where the gem
+        // printed a node's heap address. Exactly one per target.
+        expectExactKeys(
+          record.payload,
+          [
+            "$comment",
+            "schema",
+            "format",
+            "caseCount",
+            "renderedCount",
+            "raisedCount",
+            "unreproducibleCount",
+            "cases",
+          ],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        const targets = ["asciimath", "latex", "mathml", "html", "omml", "unicodemath"];
+        let expected = 0;
+        let raised = 0;
+        let unreproducible = 0;
+        rows.forEach((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          stringField(item, "group", record.relative);
+          stringField(item, "source", record.relative);
+          const input = mapField(item, "input", at);
+          if ("text" in input) {
+            stringField(input, "format", at);
+            stringValue(input, "text", at);
+            expectExactKeys(
+              input,
+              ["format", "text", ...("model" in input ? ["model"] : [])],
+              `${at}.input`,
+            );
+          } else {
+            expectExactKeys(input, ["model"], `${at}.input`);
+          }
+          if ("model" in input) mapField(input, "model", `${at}.input`);
+          const restricted = item.formats === undefined ? targets : arrayField(item, "formats", at);
+          expect(restricted.length, `${at}.formats`).toBeGreaterThan(0);
+          for (const target of restricted) expect(targets, `${at}.formats`).toContain(target);
+          expectExactKeys(
+            item,
+            [
+              "group",
+              "id",
+              "source",
+              "input",
+              "results",
+              ...("options" in item ? ["options"] : []),
+              ...("formats" in item ? ["formats"] : []),
+            ],
+            at,
+          );
+          if ("options" in item) {
+            const options = mapField(item, "options", at);
+            expectExactKeys(options, ["displayStyle"], `${at}.options`);
+            expect(restricted, `${at}: displayStyle is an omml option`).toStrictEqual(["omml"]);
+          }
+          const results = mapField(item, "results", at);
+          expect(Object.keys(results).sort(), `${at}.results`).toStrictEqual(
+            [...restricted].sort(),
+          );
+          for (const target of restricted) {
+            const result = mapField(results, target as string, `${at}.results`);
+            const where = `${at}.results.${target as string}`;
+            if (typeof result.expected === "string") {
+              expectExactKeys(result, ["expected"], where);
+              expected += 1;
+            } else if (typeof result.raises === "string") {
+              expectExactKeys(result, ["raises", "raisedIn"], where);
+              expect(stringField(result, "raises", where)).toBe("Plurimath::Math::ParseError");
+              expect(stringField(result, "raisedIn", where)).toBe("render");
+              raised += 1;
+            } else {
+              expectExactKeys(result, ["unreproducible"], where);
+              stringField(result, "unreproducible", where);
+              unreproducible += 1;
+            }
+          }
+        });
+        expect(integerField(record.payload, "renderedCount", record.relative)).toBe(expected);
+        expect(integerField(record.payload, "raisedCount", record.relative)).toBe(raised);
+        expect(integerField(record.payload, "unreproducibleCount", record.relative)).toBe(
+          unreproducible,
         );
       } else if (record.spec.shape === "evaluation") {
         // A row is an `evaluate(formula, bindings)` CALL: an AsciiMath input,

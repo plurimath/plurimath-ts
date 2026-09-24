@@ -67,12 +67,10 @@ export interface MathmlOptions {
   readonly unaryFunctionSpacing?: boolean | null | undefined;
   /**
    * `Formatter::Standard`'s symbols and numeric pipeline (precision,
-   * significant digits, digit count, padding, number sign, notation, base),
-   * resolved by `resolveNumberFormat` (`../../formatting/number-format.ts`),
-   * which itself refuses by name the one field of the gem's `formatter:`
-   * keyword still not implemented (`string_format`) — the
-   * html/asciimath/latex/unicodemath renderers' own field, added here in the
-   * same shape.
+   * significant digits, digit count, padding, number sign, notation, base,
+   * string format), resolved by `resolveNumberFormat`
+   * (`../../formatting/number-format.ts`) — the html/asciimath/latex/
+   * unicodemath renderers' own field, added here in the same shape.
    */
   readonly formatter?: FormatterOptions | null;
   /**

@@ -7,7 +7,7 @@ MathML/OMML *input*. On `main`: number formatting (#126, #133, #143, #146), and
 evaluation's arithmetic and function slices (#152, #155), with eight functions
 still unported pending a licensing decision (`src/evaluation/index.ts`).
 MathML/OMML input is deferred (settled 2026-09-16, #122;
-[open decisions](../open-decisions.md)). No exit criterion below is checked.
+[open decisions](../open-decisions.md)). Three of the six exit criteria below are checked.
 
 Numbered work items are added to this directory when the phase opens.
 

@@ -4,8 +4,8 @@
 LaTeX, UnicodeMath and HTML parsers. Each is locked by its own corpus before
 the next begins. On `main`: the LaTeX (#76) and HTML (#88) parsers, and a
 partial UnicodeMath parser registering 473 of the gem's 519 transform rules
-(`FINAL_COUNT` in `test/formats/unicodemath/transform-coverage.spec.ts`). No
-exit criterion below is checked.
+(`FINAL_COUNT` in `test/formats/unicodemath/transform-coverage.spec.ts`). One
+of the five exit criteria below is checked.
 
 Each format opens as its own directory here (`latex/`, `unicodemath/`,
 `html/`) with numbered work items when it starts.

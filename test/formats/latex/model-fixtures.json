@@ -4121,19 +4121,19 @@
                 }
               },
               "second_value": {
-                "expression": {
-                  "class": "Math::Symbols::Symbol",
-                  "fields": {
-                    "value": "z"
-                  }
-                },
+                "symbols": "y",
                 "sequence": {
                   "class": "Math::Symbols::Plus",
                   "fields": {
                     "value": null
                   }
                 },
-                "symbols": "y"
+                "expression": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "z"
+                  }
+                }
               }
             }
           ]
@@ -9323,14 +9323,14 @@
           "value": [
             {
               "left_right": {
+                "left": "\\left",
+                "left_paren": "(",
                 "expression": {
                   "class": "Math::Symbols::Symbol",
                   "fields": {
                     "value": "x"
                   }
-                },
-                "left": "\\left",
-                "left_paren": "("
+                }
               }
             }
           ]

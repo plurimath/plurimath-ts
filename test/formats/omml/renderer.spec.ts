@@ -1072,6 +1072,23 @@ describe("OMML first vertical slice", () => {
     ).toBe(NARY_X);
   });
 
+  it("refuses a Nary whose operator is an empty Formula, as the gem raises NoMethodError", () => {
+    // Formula#nary_attr_value (formula.rb:294-296) calls value.first on an
+    // empty array; measured: "undefined method 'nary_attr_value' for nil".
+    const render = () =>
+      toOmmlWithoutMathTag(
+        new NaryNode({
+          options: {},
+          parameterOne: new FormulaNode({ value: [] }),
+          parameterFour: symbol(),
+        }),
+      );
+    expect(render).toThrow(RenderError);
+    expect(render).toThrow(
+      "nary.parameterOne: an empty Formula has no operator — the gem raises NoMethodError here",
+    );
+  });
+
   it("pins the measured Td, Tr, and two-column Table tree", () => {
     expect(toOmmlWithoutMathTag(td())).toBe(TD_X);
     expect(toOmmlWithoutMathTag(tr())).toBe(TR_X);
@@ -1612,6 +1629,20 @@ describe("OMML Ruby-falsy parity", () => {
         ? new ObraceNode({ attributes: {}, parameterOne: false as unknown as NodeParameter })
         : new UbraceNode({ attributes: {}, parameterOne: false as unknown as NodeParameter });
     expectDirectAndInsertion(node, xml("<m:r>", `  <m:t>${brace}</m:t>`, "</m:r>"));
+  });
+
+  // `Symbol#t_tag` is `return t_element unless output`, so a valueless Symbol
+  // writes a SELF-CLOSED `m:t`, where a nil Number or Text writes an empty
+  // one (`t_element << nil`). Measured on the pinned oracle `00c52783`:
+  // `FontStyle::Bold.new(<child>, "bold").to_omml_without_math_tag` for each.
+  it.each([
+    ["Symbol", () => new SymbolNode({ value: null }), "<m:t/>"],
+    ["Number", () => new NumberNode({ value: null }), "<m:t></m:t>"],
+    ["Text", () => new TextNode({ parameterOne: null as unknown as string }), "<m:t></m:t>"],
+  ] as const)("writes a nil-valued %s under Bold as the gem does", (_name, child, text) => {
+    expect(toOmmlWithoutMathTag(new FontStyleNode({ name: "Bold", parameterOne: child() }))).toBe(
+      xml("<m:r>", "  <m:rPr>", '    <m:sty m:val="b"/>', "  </m:rPr>", `  ${text}`, "</m:r>"),
+    );
   });
 
   // `Core#omml_parameter` is `return empty_tag(tag) unless field` — Ruby-falsy,
@@ -4373,5 +4404,54 @@ describe("OMML Ruby-false parameter slots", () => {
         }),
       ),
     ).toBe(naryContractXml([["&#8203;"], ["&#8203;"], ["&#8203;"]], [symbol(), symbol()]));
+  });
+});
+
+describe("inputs that defeat the walk itself", () => {
+  it("a Text value spelling an unpaired surrogate as a numeric entity refuses by name, not as too-deep", () => {
+    // The bug this test was written for: `render/text/omml.ts` calls
+    // `htmlEntityToUnicode` directly rather than through this format's
+    // `decodeEntities` wrapper, so `UndecodableEntityError` (core/nodes.ts,
+    // itself a `RangeError` subclass) reached `atBoundary`'s catch unwrapped.
+    // A bare `instanceof RangeError` there could not tell that refusal apart
+    // from genuine engine stack exhaustion. Seen red without the fix: this
+    // case raised "node: the tree nests too deep for the OMML walk's call
+    // stack" instead of naming the entity decode failure.
+    const formula = new FormulaNode({ value: [new TextNode({ parameterOne: "x&#xd800;y" })] });
+    let failure: string | null = null;
+    try {
+      toOmml(formula);
+    } catch (error) {
+      expect(error).toBeInstanceOf(RenderError);
+      failure = (error as RenderError).message;
+    }
+    expect(failure).not.toBeNull();
+    expect(failure).toContain("invalid codepoint 0xD800");
+    expect(failure).not.toContain("nests too deep");
+  });
+
+  it("does not relabel an unrelated RangeError as stack exhaustion", () => {
+    // Mirrors `test/adversarial/adversarial-inputs.spec.ts`'s guard test of
+    // the same name for the PARSE side, and the matching test on the other
+    // four renderers.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new RangeError("sentinel, nothing to do with recursion");
+        return "1";
+      },
+    };
+    let failure: string | null = null;
+    try {
+      toOmmlWithoutMathTag(node as never);
+    } catch (error) {
+      expect(error).toBeInstanceOf(RenderError);
+      failure = (error as RenderError).message;
+    }
+    expect(failure).not.toBeNull();
+    expect(failure).toContain("sentinel, nothing to do with recursion");
+    expect(failure).not.toContain("nests too deep");
   });
 });

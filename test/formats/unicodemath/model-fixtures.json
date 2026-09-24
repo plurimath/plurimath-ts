@@ -2611,15 +2611,6 @@
             [
               "frac",
               {
-                "denominator": {
-                  "factor": {
-                    "intermediate_exp": {
-                      "close_paren": ")",
-                      "open_paren": "(",
-                      "operator": "+"
-                    }
-                  }
-                },
                 "numerator": {
                   "class": "Math::Function::Fenced",
                   "fields": {
@@ -2644,6 +2635,15 @@
                         }
                       }
                     ]
+                  }
+                },
+                "denominator": {
+                  "factor": {
+                    "intermediate_exp": {
+                      "open_paren": "(",
+                      "operator": "+",
+                      "close_paren": ")"
+                    }
                   }
                 }
               }
@@ -11223,8 +11223,8 @@
                     "class": "Math::Function::Frac",
                     "fields": {
                       "options": {
-                        "choose": true,
-                        "linethickness": "0"
+                        "linethickness": "0",
+                        "choose": true
                       },
                       "parameter_one": {
                         "class": "Math::Symbols::Symbol",
@@ -12882,16 +12882,16 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
-                  "close_paren": {
-                    "maxsize": "1.5625em",
-                    "minsize": "1.5625em"
+                  "open_prefixed": true,
+                  "open_paren": {
+                    "minsize": "1.25em",
+                    "maxsize": "1.25em"
                   },
                   "close_prefixed": true,
-                  "open_paren": {
-                    "maxsize": "1.25em",
-                    "minsize": "1.25em"
-                  },
-                  "open_prefixed": true
+                  "close_paren": {
+                    "minsize": "1.5625em",
+                    "maxsize": "1.5625em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Lround",
@@ -12952,16 +12952,16 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
-                  "close_paren": {
-                    "maxsize": "9.313225746154785em",
-                    "minsize": "9.313225746154785em"
+                  "open_prefixed": true,
+                  "open_paren": {
+                    "minsize": "1.0em",
+                    "maxsize": "1.0em"
                   },
                   "close_prefixed": true,
-                  "open_paren": {
-                    "maxsize": "1.0em",
-                    "minsize": "1.0em"
-                  },
-                  "open_prefixed": true
+                  "close_paren": {
+                    "minsize": "9.313225746154785em",
+                    "maxsize": "9.313225746154785em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Lround",
@@ -13022,11 +13022,11 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
+                  "close_prefixed": true,
                   "close_paren": {
-                    "maxsize": "1.953125em",
-                    "minsize": "1.953125em"
-                  },
-                  "close_prefixed": true
+                    "minsize": "1.953125em",
+                    "maxsize": "1.953125em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Lround",
@@ -17198,8 +17198,8 @@
               "fields": {
                 "options": {
                   "mpadded": {
-                    "depth": "0",
-                    "height": "0"
+                    "height": "0",
+                    "depth": "0"
                   },
                   "phantom": false
                 },
@@ -22746,11 +22746,11 @@
                   "class": "Math::Function::Fenced",
                   "fields": {
                     "options": {
+                      "open_prefixed": true,
                       "open_paren": {
-                        "maxsize": "1.25em",
-                        "minsize": "1.25em"
-                      },
-                      "open_prefixed": true
+                        "minsize": "1.25em",
+                        "maxsize": "1.25em"
+                      }
                     },
                     "parameter_one": {
                       "class": "Math::Symbols::Paren::Lround",
@@ -22805,11 +22805,11 @@
                   "class": "Math::Function::Fenced",
                   "fields": {
                     "options": {
+                      "open_prefixed": true,
                       "open_paren": {
-                        "maxsize": "1.5625em",
-                        "minsize": "1.5625em"
-                      },
-                      "open_prefixed": true
+                        "minsize": "1.5625em",
+                        "maxsize": "1.5625em"
+                      }
                     },
                     "parameter_one": {
                       "class": "Math::Symbols::Paren::Lsquare",
@@ -23831,11 +23831,11 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
+                  "open_prefixed": true,
                   "open_paren": {
-                    "maxsize": "1.25em",
-                    "minsize": "1.25em"
-                  },
-                  "open_prefixed": true
+                    "minsize": "1.25em",
+                    "maxsize": "1.25em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Lround",
@@ -23879,11 +23879,11 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
+                  "open_prefixed": true,
                   "open_paren": {
-                    "maxsize": "1.0em",
-                    "minsize": "1.0em"
-                  },
-                  "open_prefixed": true
+                    "minsize": "1.0em",
+                    "maxsize": "1.0em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Lround",
@@ -23927,11 +23927,11 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
+                  "open_prefixed": true,
                   "open_paren": {
-                    "maxsize": "14.551915228366852em",
-                    "minsize": "14.551915228366852em"
-                  },
-                  "open_prefixed": true
+                    "minsize": "14.551915228366852em",
+                    "maxsize": "14.551915228366852em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Lround",
@@ -23975,11 +23975,11 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
+                  "open_prefixed": true,
                   "open_paren": {
-                    "maxsize": "1.25em",
-                    "minsize": "1.25em"
-                  },
-                  "open_prefixed": true
+                    "minsize": "1.25em",
+                    "maxsize": "1.25em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Lround",
@@ -24023,16 +24023,16 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
-                  "close_paren": {
-                    "maxsize": "1.25em",
-                    "minsize": "1.25em"
+                  "open_prefixed": true,
+                  "open_paren": {
+                    "minsize": "1.25em",
+                    "maxsize": "1.25em"
                   },
                   "close_prefixed": true,
-                  "open_paren": {
-                    "maxsize": "1.25em",
-                    "minsize": "1.25em"
-                  },
-                  "open_prefixed": true
+                  "close_paren": {
+                    "minsize": "1.25em",
+                    "maxsize": "1.25em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Lround",
@@ -24076,16 +24076,16 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
-                  "close_paren": {
-                    "maxsize": "1.0em",
-                    "minsize": "1.0em"
+                  "open_prefixed": true,
+                  "open_paren": {
+                    "minsize": "1.5625em",
+                    "maxsize": "1.5625em"
                   },
                   "close_prefixed": true,
-                  "open_paren": {
-                    "maxsize": "1.5625em",
-                    "minsize": "1.5625em"
-                  },
-                  "open_prefixed": true
+                  "close_paren": {
+                    "minsize": "1.0em",
+                    "maxsize": "1.0em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Lsquare",
@@ -24477,20 +24477,6 @@
                 "sub": {
                   "sub_script": {
                     "int_exp": {
-                      "closer": {
-                        "close_paren": [
-                          {
-                            "class": "Math::Number",
-                            "fields": {
-                              "base": null,
-                              "mini_sub_sized": false,
-                              "mini_sup_sized": false,
-                              "value": "1"
-                            }
-                          },
-                          ")"
-                        ]
-                      },
                       "opener": [
                         {
                           "class": "Math::Number",
@@ -24511,6 +24497,20 @@
                           "mini_sup_sized": false,
                           "value": "2"
                         }
+                      },
+                      "closer": {
+                        "close_paren": [
+                          {
+                            "class": "Math::Number",
+                            "fields": {
+                              "base": null,
+                              "mini_sub_sized": false,
+                              "mini_sup_sized": false,
+                              "value": "1"
+                            }
+                          },
+                          ")"
+                        ]
                       }
                     }
                   }
@@ -24537,16 +24537,16 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
-                  "close_paren": {
-                    "maxsize": "1.25em",
-                    "minsize": "1.25em"
+                  "open_prefixed": true,
+                  "open_paren": {
+                    "minsize": "1.25em",
+                    "maxsize": "1.25em"
                   },
                   "close_prefixed": true,
-                  "open_paren": {
-                    "maxsize": "1.25em",
-                    "minsize": "1.25em"
-                  },
-                  "open_prefixed": true
+                  "close_paren": {
+                    "minsize": "1.25em",
+                    "maxsize": "1.25em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Lround",
@@ -24602,16 +24602,16 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
-                  "close_paren": {
-                    "maxsize": "1.953125em",
-                    "minsize": "1.953125em"
+                  "open_prefixed": true,
+                  "open_paren": {
+                    "minsize": "1.0em",
+                    "maxsize": "1.0em"
                   },
                   "close_prefixed": true,
-                  "open_paren": {
-                    "maxsize": "1.0em",
-                    "minsize": "1.0em"
-                  },
-                  "open_prefixed": true
+                  "close_paren": {
+                    "minsize": "1.953125em",
+                    "maxsize": "1.953125em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Lround",
@@ -31029,8 +31029,8 @@
                               "class": "Math::Function::Frac",
                               "fields": {
                                 "options": {
-                                  "choose": true,
-                                  "linethickness": "0"
+                                  "linethickness": "0",
+                                  "choose": true
                                 },
                                 "parameter_one": {
                                   "class": "Math::Symbols::Symbol",
@@ -31487,8 +31487,8 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
-                  "close_prefixed": true,
-                  "open_prefixed": true
+                  "open_prefixed": true,
+                  "close_prefixed": true
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Rsquare",
@@ -31532,16 +31532,16 @@
               "class": "Math::Function::Fenced",
               "fields": {
                 "options": {
-                  "close_paren": {
-                    "maxsize": "2.44140625em",
-                    "minsize": "2.44140625em"
+                  "open_prefixed": true,
+                  "open_paren": {
+                    "minsize": "1.25em",
+                    "maxsize": "1.25em"
                   },
                   "close_prefixed": true,
-                  "open_paren": {
-                    "maxsize": "1.25em",
-                    "minsize": "1.25em"
-                  },
-                  "open_prefixed": true
+                  "close_paren": {
+                    "minsize": "2.44140625em",
+                    "maxsize": "2.44140625em"
+                  }
                 },
                 "parameter_one": {
                   "class": "Math::Symbols::Paren::Rsquare",
@@ -31602,8 +31602,8 @@
                     "class": "Math::Function::Frac",
                     "fields": {
                       "options": {
-                        "choose": true,
-                        "linethickness": "0"
+                        "linethickness": "0",
+                        "choose": true
                       },
                       "parameter_one": {
                         "class": "Math::Formula",

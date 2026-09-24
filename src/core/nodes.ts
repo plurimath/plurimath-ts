@@ -685,10 +685,18 @@ export class BinaryFunctionNode extends NodeBase {
     const alias = aliasDefaults("binaryFunction", init.name);
     this.name = init.name;
     this.hideFunctionName = init.hideFunctionName;
-    this.parameterOne = assignedParameter(
-      init.parameterOne,
-      aliasFallback(alias.parameterOne, null),
-    );
+    // `Td#initialize` passes `Array(parameter_one)` to `super`, so an EXPLICIT
+    // nil becomes `[]` exactly as an omitted one does (the alias default
+    // covers only omission). Measured on the pinned oracle `00c52783`:
+    // `Td.new(nil)` renders `<td></td>` in HTML and `<m:e/>` in OMML, the same
+    // bytes as `Td.new([])`, alone and inside a `Table`. A Hash also
+    // survives `parameter_one&.delete_if` and is coerced (`{}` to `[]`,
+    // `{a: 1}` to `[[:a, 1]]`); `NodeParameter` admits an options hash, but
+    // this port does not reproduce that coercion, and no parser builds a Td
+    // around one. Any other non-Array argument (a String, an Integer) makes
+    // `delete_if` raise first. Only nil is coerced here.
+    const parameterOne = init.name === "Td" && init.parameterOne === null ? [] : init.parameterOne;
+    this.parameterOne = assignedParameter(parameterOne, aliasFallback(alias.parameterOne, null));
     this.parameterTwo = assignedParameter(
       init.parameterTwo,
       aliasFallback(alias.parameterTwo, null),

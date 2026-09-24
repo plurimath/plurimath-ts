@@ -5,8 +5,7 @@ import {
   type NodeOf,
   type OmmlRendered,
   type RenderContext,
-  symbolValueOrGenerated,
-  textElement,
+  symbolTextTag,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
@@ -60,7 +59,7 @@ export function renderFontStyle(node: NodeOf<"fontStyle">, context: RenderContex
   const parameter = node.parameterOne as MathNode;
   const child =
     parameter.kind === "symbol"
-      ? textElement(symbolValueOrGenerated(parameter, node.kind, "fontStyle.parameterOne"))
+      ? symbolTextTag(parameter, node.kind, "fontStyle.parameterOne")
       : context.render(parameter);
   const children = flattenRendered(child);
   if (children.length === 0) return styledRun(properties);

@@ -348,16 +348,17 @@ function onFlag(name: string): XmlElement {
   return new XmlElement(`m:${name}`).setAttribute("m:val", "on");
 }
 
+/**
+ * `Td#to_omml_without_math_tag` (td.rb:43-50): `return [me] if parameter_one
+ * && parameter_one.empty?` answers the bare `<m:e/>` for an empty cell before
+ * `omml_content` (and its `Utility.symbol_value(parameter_one.first, "|")`
+ * MathML/LaTeX guard, which this method never reaches) run at all. Measured
+ * on the oracle at `00c52783`: an empty `Td` in a `Table` renders `<m:e/>`.
+ */
 function renderTd(node: NodeOf<"binaryFunction">, context: RenderContext): XmlElement {
   const values = requireNodeList(node.parameterOne, node.kind, "td.parameterOne");
-  if (values.length === 0) {
-    throw new RenderError(
-      "td.parameterOne: the empty-cell branch is deferred until separately measured",
-      FORMAT,
-      node.kind,
-    );
-  }
   const cell = new XmlElement("m:e");
+  if (values.length === 0) return cell;
   values.forEach((value, index) => {
     cell.append(insertChild(value, context, `td.parameterOne[${index}]`));
   });

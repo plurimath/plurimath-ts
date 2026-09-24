@@ -89,54 +89,30 @@ const GROUPS = {
 const MEASURED = { omml: [156, 2], mathml: [108, 22] } as const;
 
 /**
- * Rows the gem renders and this port refuses, by id, each with the refusal it
- * must give. None of them is a Table, Frac or Nary refusal — those kinds render
- * every other row — so the message is pinned to name the kind that is not yet
- * ported, and a row that starts rendering fails until it is dropped here:
+ * Rows the gem renders that this port used to refuse — all three now render
+ * byte-identically, so `PORT_REFUSES.omml` is empty:
  *
- *   - 20 `ExpectedValues` models hold a `Text` whose `lang` is `omml`, which the
- *     `Text` renderer has not measured (`src/render/text/omml.ts`);
- *   - 2 hold an empty `Td`, deferred in `src/render/binary-function/omml.ts`;
- *   - 1 probe gives a Table a paren `Symbol` with a nil value, which the gem
- *     writes as an empty `m:begChr` and `symbolOmmlValue` refuses.
+ *   - the 20 `ExpectedValues` models holding a `Text` whose `lang` is `omml`:
+ *     `insert_t_tag` (text.rb:49-59) skips the `m:rPr/m:sty` wrapper for
+ *     exactly that lang and adds it for every other lang including `nil`
+ *     (measured on the oracle), and `src/render/text/omml.ts` now matches;
+ *   - the 2 rows holding an empty `Td`: `Td#to_omml_without_math_tag`
+ *     (td.rb:43-50) answers a bare `<m:e/>` before its content branch runs,
+ *     and `src/render/binary-function/omml.ts` now matches;
+ *   - the 1 probe giving a `Table` a paren `Symbol` with a nil value:
+ *     `Table#paren` calls `to_omml_without_math_tag` directly, not `t_tag`,
+ *     so a valueless base/abstract paren answers `nil` rather than raising,
+ *     and the gem's attribute writer turns that into the empty string
+ *     (`<m:begChr m:val=""/>`, measured) — `symbolOmmlValueOrNull` in
+ *     `src/formats/omml/render-shared.ts` now matches.
  */
-const TEXT_LANG_OMML = /^Text lang "omml" has not been measured for OMML insertion/;
-const EMPTY_TD = /^td\.parameterOne: the empty-cell branch is deferred/;
 const PORT_REFUSES: Readonly<Record<string, ReadonlyMap<string, RegExp>>> = {
-  omml: new Map<string, RegExp>([
-    ...[
-      "tfn-spec-ex_001",
-      "tfn-spec-ex_045",
-      "tfn-spec-ex_047",
-      "tfn-spec-ex_049",
-      "tfn-spec-ex_068",
-      "tfn-spec-ex_069",
-      "tfn-spec-ex_070",
-      "tfn-spec-ex_071",
-      "tfn-spec-ex_072",
-      "tfn-spec-ex_133",
-      "tfn-spec-ex_156",
-      "tfn-spec-ex_157",
-      "tfn-spec-ex_158",
-      "tfn-spec-ex_159",
-      "tfn-spec-ex_160",
-      "tfn-spec-ex_161",
-      "tfn-spec-ex_162",
-      "tfn-spec-ex_176",
-      "tfn-spec-ex_177",
-      "tfn-spec-exissue158",
-    ].map((id): [string, RegExp] => [id, TEXT_LANG_OMML]),
-    ...["tfn-spec-ex_169", "tfn-spec-ex_171"].map((id): [string, RegExp] => [id, EMPTY_TD]),
-    [
-      "tfn-probe-table-nil-valued-paren",
-      /^table\.openParen\.value: holds nil, not a measured string value/,
-    ],
-  ]),
+  omml: new Map<string, RegExp>(),
   mathml: new Map<string, RegExp>(),
 };
 
 /** Rows the gem renders that the port renders byte-identically (a pin, not a knob). */
-const MATCHING = { omml: 133, mathml: 108 } as const;
+const MATCHING = { omml: 156, mathml: 108 } as const;
 
 const RENDERERS = {
   mathml: (node: MathNode) => toMathml(node),

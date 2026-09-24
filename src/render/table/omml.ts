@@ -11,7 +11,7 @@ import {
   requireElement,
   requireNodeList,
   structuralProperties,
-  symbolOmmlValue,
+  symbolOmmlValueOrNull,
 } from "../../formats/omml/render-shared";
 import { XmlElement } from "../../xml/index";
 
@@ -234,5 +234,10 @@ function requireParenValue(value: unknown, node: NodeOf<"table">, at: string): s
   // The literal is then decoded ONCE on its way into the attribute, as
   // `update_attrs` does for every attribute the gem writes: `Paren::Norm`'s
   // `&#x2016;` reaches the document as `‖` (measured, `\begin{Vmatrix}a\end{Vmatrix}`).
-  return decodeEntities(symbolOmmlValue(value as NodeOf<"symbol">, node.kind, at), node.kind, at);
+  //
+  // A valueless base/abstract paren answers `nil` here (`symbolOmmlValueOrNull`),
+  // which the gem's attribute writer turns into the empty string, not a raise
+  // — measured: `<m:begChr m:val=""/>`.
+  const raw = symbolOmmlValueOrNull(value as NodeOf<"symbol">, node.kind, at);
+  return decodeEntities(raw ?? "", node.kind, at);
 }

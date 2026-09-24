@@ -1,6 +1,7 @@
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { assertKnownOptions } from "../../core/render-options";
+import { isStackOverflow } from "../../core/stack-overflow";
 import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
@@ -60,7 +61,12 @@ export function toHtml(node: MathNode, options?: HtmlOptions | null): string {
     // the class is constructible by the input too, and a hostile getter
     // throwing one mid-render is an input failure, not a symbol-table miss.
     if (error instanceof RenderError || isOwnMissingSymbolDataError(error)) throw error;
-    if (error instanceof RangeError) {
+    // `isStackOverflow` (pegkit/atom.ts), not a bare `instanceof RangeError`:
+    // the class alone also matches `UndecodableEntityError` (core/nodes.ts),
+    // an ordinary entity-decode refusal that is a `RangeError` subclass but
+    // has nothing to do with recursion — see the asciimath/latex/unicodemath
+    // renderers' matching comment for the measured case that found this.
+    if (isStackOverflow(error)) {
       throw new RenderError(
         "node: the tree nests too deep for the HTML walk's call stack",
         FORMAT,

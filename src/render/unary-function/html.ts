@@ -146,16 +146,20 @@ function renderLeft(node: NodeOf<"unaryFunction">): string {
  * `Mbox#to_html` (`mbox.rb:20`) answers `parameter_one` ITSELF, not a
  * rendering of it. Measured on the pinned oracle `00c52783`, through a
  * `Formula`: `Mbox.new("hi")` gives `hi`, `"unicode[:alpha]"` and `"a<b&c"`
- * come back verbatim, nil and `""` give nothing, `false` gives `false`, and a
- * node gives its `#inspect` address. Only the string is admitted — the one
- * slot whose bytes are the same in every parent; the rest are refused.
+ * come back verbatim, nil and `""` give nothing (`Mbox.new(nil).to_html` is
+ * bare `nil`, but `Formula#to_html` joins its rendered children and Ruby's
+ * `Array#join`/string interpolation of `nil` is the empty string — measured:
+ * `Formula.new([Mbox.new(nil)]).to_html` is `""`), `false` gives `false`, and
+ * a node gives its `#inspect` address. A string or nil is admitted — the
+ * slots whose bytes are the same in every parent; the rest are refused.
  */
 function renderMbox(node: NodeOf<"unaryFunction">): string {
   const slot = node.parameterOne;
   if (typeof slot === "string") return slot;
+  if (slot === null || slot === undefined) return "";
   throw new RenderError(
     `mbox.parameterOne: holds ${describeSlot(slot)} — the gem returns the slot unrendered, ` +
-      "and only a string is a value every parent can take",
+      "and only a string or nil is a value every parent can take",
     FORMAT,
     node.kind,
   );

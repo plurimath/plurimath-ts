@@ -26,6 +26,7 @@
  * cases, with the oracle command, are `test/formatting/number-formatter-omml.spec.ts`.
  */
 
+import { rubyArrayInspectOrThrow, rubyNumberToS } from "../../core/ruby-semantics";
 import {
   applyNumberFormat,
   FORMAT,
@@ -60,6 +61,34 @@ function formatting(
   return { value, format };
 }
 
+/**
+ * The raw (no-formatter) value both paths write into `m:t`: `result.to_s`,
+ * so Ruby spells any value it can. Measured on the pinned oracle `00c52783`,
+ * with the same `m:t` bytes in a `Formula` alone, inside a `Frac`, inside an
+ * `Mrow` and from `to_omml_without_math_tag` directly: nil writes `<m:t></m:t>`,
+ * `false`/`true` write `false`/`true`, `0` writes `0`, `[]` writes `[]` (an
+ * Array's `to_s` is `inspect`).
+ *
+ * A finite number takes `rubyNumberToS`'s Integer reading, the answer that
+ * helper documents for a `to_s` slot and the one `Symbol#initialize`'s port
+ * already takes (`src/core/nodes.ts`); measured, `Number.new(0.0)` writes
+ * `0.0`, which one JavaScript `0` cannot ask for. A node still refuses: Ruby
+ * spells it `#<Plurimath::Math::Symbols::Symbol:0x…>`, a heap address.
+ */
+function rawValue(node: NodeOf<"number">): string {
+  const value: unknown = node.value;
+  if (value === null || value === undefined) return "";
+  if (typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    return rubyArrayInspectOrThrow(value, FORMAT, node.kind, "number.value");
+  }
+  if (typeof value === "number") {
+    const printed = rubyNumberToS(value);
+    if (printed !== null) return printed;
+  }
+  return requireString(value, node.kind, "number.value");
+}
+
 /** `OmmlRenderer#render_notation`'s and `#render_semantic_base`'s two-slot script. */
 function script(name: "sSup" | "sSub", base: readonly string[], scriptText: string): XmlElement {
   const scriptSlot = name === "sSup" ? "sup" : "sub";
@@ -73,7 +102,7 @@ function script(name: "sSup" | "sSub", base: readonly string[], scriptText: stri
 /** `Number#to_omml_without_math_tag`: `OmmlRenderer.render` over the formatter's result. */
 export function renderNumber(node: NodeOf<"number">, context: RenderContext): XmlElement {
   const active = formatting(node, context);
-  if (active === null) return textElement(requireString(node.value, node.kind, "number.value"));
+  if (active === null) return textElement(rawValue(node));
   const number = formatNumberForMathml(active.value, active.format);
   switch (number.kind) {
     case "plain":
@@ -88,6 +117,6 @@ export function renderNumber(node: NodeOf<"number">, context: RenderContext): Xm
 /** `Number#insert_t_tag`: the formatter's result as flat text (`to_s`) in `m:r`/`m:t`. */
 export function renderNumberInserted(node: NodeOf<"number">, context: RenderContext): XmlElement {
   const active = formatting(node, context);
-  if (active === null) return plainRun(requireString(node.value, node.kind, "number.value"));
+  if (active === null) return plainRun(rawValue(node));
   return plainRun(applyNumberFormat(active.value, active.format));
 }

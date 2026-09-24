@@ -26,12 +26,16 @@
  * opposite of the real behaviour. The leniency cases below pin what happens.
  */
 
+import { isMainThread } from "node:worker_threads";
 import { describe, expect, it } from "vitest";
 import { ParseError, type PlurimathErrorCode } from "../../src/core/errors";
 import { parseAsciimath } from "../../src/formats/asciimath/parser";
 import { toAsciimath } from "../../src/formats/asciimath/renderer";
+import { parseHtml } from "../../src/formats/html/parser";
+import { parseLatex } from "../../src/formats/latex/parser";
 import { toLatex } from "../../src/formats/latex/renderer";
 import { toMathml } from "../../src/formats/mathml/renderer";
+import { parseUnicodemath } from "../../src/formats/unicodemath/parser";
 import { toUnicodemath } from "../../src/formats/unicodemath/renderer";
 import { DEPTH_LIMIT_MESSAGE, dynamic, STACK_EXHAUSTED_MESSAGE } from "../../src/pegkit/atom";
 
@@ -68,6 +72,9 @@ type Outcome = "parsed" | "PARSE_ERROR" | "RENDER_ERROR";
 
 type ParsedFormula = ReturnType<typeof parseAsciimath>;
 
+/** A grammar's public parse entry point, as `outcomeOf` drives it. */
+type Parse = (input: string) => ParsedFormula;
+
 const RENDERERS: ReadonlyArray<readonly [string, (node: ParsedFormula) => string]> = [
   ["toAsciimath", toAsciimath],
   ["toLatex", toLatex],
@@ -76,10 +83,14 @@ const RENDERERS: ReadonlyArray<readonly [string, (node: ParsedFormula) => string
 ];
 
 /** Runs one input all the way to a clean outcome, or rethrows what it got. */
-function outcomeOf(input: string, renderers: typeof RENDERERS = RENDERERS): Outcome {
+function outcomeOf(
+  input: string,
+  renderers: typeof RENDERERS = RENDERERS,
+  parse: Parse = parseAsciimath,
+): Outcome {
   let node: ParsedFormula;
   try {
-    node = parseAsciimath(input);
+    node = parse(input);
   } catch (error) {
     const code = cleanErrorCode(error);
     if (code === null) throw error;
@@ -264,26 +275,50 @@ describe("a typed failure in one renderer does not hide a crash in a later one",
   });
 });
 
+/** The two typed depth-refusal messages `guardFor` may return, and nothing else. */
+const DEPTH_REFUSAL_MESSAGES: ReadonlySet<string> = new Set([
+  STACK_EXHAUSTED_MESSAGE,
+  DEPTH_LIMIT_MESSAGE,
+]);
+
 describe("deep input is refused by a guard that says which guard it was", () => {
-  /** The message identifying which of the two guards produced a rejection. */
+  /**
+   * The message identifying which of the two guards produced a rejection.
+   * Also enforces the invariant this file now pins TO, rather than to a
+   * specific guard (see the test below): every rejection is a typed
+   * `ParseError` carrying code `PARSE_ERROR` — never a raw engine exception, a
+   * hang, or an error of any other class or code.
+   */
   function guardFor(input: string): string {
     try {
       parseAsciimath(input);
       return "parsed";
     } catch (error) {
+      expect(error).toBeInstanceOf(ParseError);
+      expect((error as ParseError).code).toBe("PARSE_ERROR");
       return (error as Error).message;
     }
   }
 
-  it("refuses every rejected shape through the stack guard, not the depth cap", () => {
-    // Measured, and the opposite of what this spec first claimed. Driven off
-    // the table rather than a hand-picked sample, so a row that changes guard
-    // — or stops being stack-driven — fails here instead of quietly diverging
-    // from the prose.
+  it("refuses every rejected shape through a typed depth guard, whichever one wins the race", () => {
+    // NOT which specific guard fires: measured directly (2026-09-23) across
+    // Node 20.20.2/22.23.2/24.18.0, every row here is the stack guard
+    // (`STACK_EXHAUSTED_MESSAGE`) under vitest's default `forks` pool — but
+    // under `--pool=threads`, the SAME build on the SAME three Node versions,
+    // some flip to the depth cap (`DEPTH_LIMIT_MESSAGE`) instead. A
+    // `worker_threads` worker's usable JS stack measured roughly 4x deeper
+    // than a forked child's on this machine (~50k vs ~13k plain-recursion
+    // frames — `test/pegkit/depth-limit.spec.ts`'s header), which moves
+    // `MAX_DEPTH` (20,000) from "always loses the race" to "sometimes wins
+    // it" for these specific rows. Both are the same clean, typed refusal
+    // (`guardFor` enforces `ParseError`/`PARSE_ERROR` above); this pins that
+    // invariant, driven off the table so a row that stops refusing at all —
+    // or starts throwing something untyped — still fails here.
     const rejecting = CASES.filter(([, , expected]) => expected === "PARSE_ERROR");
     expect(rejecting.length).toBeGreaterThan(0);
     for (const [label, input] of rejecting) {
-      expect(guardFor(input), label).toBe(STACK_EXHAUSTED_MESSAGE);
+      const message = guardFor(input);
+      expect(DEPTH_REFUSAL_MESSAGES.has(message), `${label}: got "${message}"`).toBe(true);
     }
   });
 
@@ -336,8 +371,14 @@ describe("deep input is refused by a guard that says which guard it was", () => 
   it("keeps the two guards distinguishable", () => {
     // The point of separate messages: while they were identical, this file
     // asserted "the depth cap fired" for a rejection the cap had no part in,
-    // and would have kept passing if the cap were deleted. `MAX_DEPTH` has not
-    // been observed to fire for any AsciiMath input — see `deferred.md`.
+    // and would have kept passing if the cap were deleted. `MAX_DEPTH` DOES
+    // fire on some AsciiMath input — under `--pool=threads`, not the default
+    // `forks` pool this suite normally runs under — see `deferred.md`'s
+    // "parser's depth bound" entry for the measurement. Which guard fires is
+    // therefore environment-dependent (the row-level test above no longer
+    // pins a specific one); the two messages staying distinct is what still
+    // lets `test/pegkit/depth-limit.spec.ts` prove each guard's own mechanism
+    // independently, and is the one thing this test still pins.
     expect(DEPTH_LIMIT_MESSAGE).not.toBe(STACK_EXHAUSTED_MESSAGE);
   });
 
@@ -381,4 +422,368 @@ describe("whitespace-only input fails at render, with a typed error", () => {
     expect(outcomeOf("   ")).toBe("RENDER_ERROR");
     expect(() => toAsciimath(parseAsciimath("   "))).toThrow(/cannot render the bare string/);
   });
+});
+
+/**
+ * The LaTeX, HTML and UnicodeMath grammars — the same bar, the same guards.
+ *
+ * This spec exercised only AsciiMath while three more grammars landed, so
+ * nothing had asked whether they refuse pathological input cleanly. The rows
+ * below do, and every gem figure in them was measured against the pinned
+ * oracle (`plurimath-oracle` at `00c52783`, 2026-09-21) through
+ * `Plurimath::Math.parse(input, type)`; every port figure through the public
+ * `parseLatex` / `parseHtml` / `parseUnicodemath` on the same day.
+ *
+ * What the gem does, by shape (nesting depth `n` counts input levels; "parses"
+ * means `Math.parse` returned, not that any renderer was run):
+ *
+ * | shape | gem | this port |
+ * |---|---|---|
+ * | LaTeX `{`, `\frac`, `\sqrt`, `(`, `\left(`, `^{` at n=20 | parses | parses |
+ * | LaTeX `{` at n=80, `\frac` at n=60 | parses | parses |
+ * | LaTeX `\frac` at n=80 (also `{` at 100) | `SystemStackError` | `\frac` refused from n=70; `{` parses at 100, refused at 150 |
+ * | LaTeX all shapes at n=1000 | `SystemStackError` (100 and 300 measured) | `ParseError`, stack guard |
+ * | UnicodeMath `(`, `√(`, `(…)/(…)`, `[` at n=20 | parses | parses |
+ * | UnicodeMath `(` and `(…)/(…)` at n=80 | parses | parses |
+ * | UnicodeMath the same at n=100 | `SystemStackError` | parses (`(`, `[`, `(…)/(…)` to 250, `√(` to 150) |
+ * | UnicodeMath all shapes at n=1000 | `SystemStackError` (100 and 300 measured) | `ParseError`, stack guard |
+ * | HTML `<mrow>`/`<sup>` at n=20..80 | parses | parses at 20 (80 not measured on the port) |
+ * | HTML `<mrow>`/`<sup>` at n=100 | `ParseError` (JSON nesting) | `ParseError`, `nesting of 100 is too deep` |
+ * | HTML `<mrow>`/`<sup>` at n=300 | `SystemStackError` | `ParseError` (`<sup>`: nesting message; `<mrow>`: stack guard) |
+ * | unmatched closers, n up to 300 (1000 for the port) | `ParseError` | `ParseError` |
+ *
+ * The gem's own nesting ceiling therefore sits between 60 and 100 levels in
+ * LaTeX and between 80 and 100 in UnicodeMath, and the port's sits at or above
+ * it at every point measured on both sides, with one near-tie: LaTeX `\frac`
+ * is refused from n=70 on the port, while the gem parsed 60 and overflowed at
+ * 80 and was not measured between. So no measured depth is one where the gem
+ * parses and the port refuses. The ceilings move with the engine's stack size,
+ * so, as the AsciiMath table does, parses are pinned at n=20 and refusals at
+ * n=1000, both far from any transition; the band in between is described here
+ * rather than asserted.
+ *
+ * Every refusal in the table is one of the two depth guards (the stack guard,
+ * `STACK_EXHAUSTED_MESSAGE`, or `MAX_DEPTH`'s `DEPTH_LIMIT_MESSAGE`) or, for
+ * HTML only, the JSON round trip's own `nesting of 100 is too deep`. WHICH
+ * guard fires is not invariant — measured 2026-09-23, `MAX_DEPTH` never fires
+ * under vitest's default `forks` pool (matching the original 2026-08-17/
+ * 2026-09-21 measurements) but does under `--pool=threads`, on the same three
+ * CI Node versions either way — so the assertion below pins the refusal
+ * itself (a typed `ParseError`, code `PARSE_ERROR`), not which named guard
+ * produced it. See `TODO.plan/deferred.md`'s "parser's depth bound" entry for
+ * the measurement, and `test/pegkit/depth-limit.spec.ts` for `MAX_DEPTH`'s own
+ * mechanism, proven independently of any pool or engine stack size.
+ *
+ * Where the gem parses and the port's outcome still differs (re-measured
+ * 2026-09-23, after the UnicodeMath transform slices A, E, F, G1, G2 and H
+ * landed), the row says so. All are UnicodeMath. Three rows this comment used
+ * to describe as transform refusals (2026-09-21: `finalize` threw for a rule
+ * family outside the slice, surfacing as `ParseError`) now transform and
+ * parse — the trigger those rows were pinned against firing, as the comment
+ * beside them says. The remaining two differences are render-time, not
+ * parse-time: `<sup` alone parses into an untransformed tuple that every
+ * renderer refuses as a bare list (`RenderError`, the same non-model-tree gap
+ * `deferred.md` records for the gem itself), and the lone surrogate parses and
+ * is refused only by `toUnicodemath`'s encoder, matching how the LaTeX and
+ * HTML rows above already behave. Both are the clean `RENDER_ERROR` code. The
+ * lone-surrogate row on all three grammars is a DELIBERATE divergence, not a
+ * gem measurement: Ruby cannot hold `"x\uD800y"` as a UTF-8 string at all, so
+ * there is no gem call any of these rows reproduce — see the row's own
+ * comment, below, for what the gem does with the nearest input it CAN take.
+ */
+type GrammarName = "latex" | "html" | "unicodemath";
+
+const PARSERS: Readonly<Record<GrammarName, Parse>> = {
+  latex: parseLatex,
+  html: parseHtml,
+  unicodemath: parseUnicodemath,
+};
+
+const repeat = (unit: string, count: number): string => unit.repeat(count);
+const wrapped = (open: string, core: string, close: string, depth: number): string =>
+  `${repeat(open, depth)}${core}${repeat(close, depth)}`;
+/** `template(inner)` applied `depth` times to `1`. */
+const layered = (template: (inner: string) => string, depth: number): string => {
+  let value = "1";
+  for (let level = 0; level < depth; level += 1) value = template(value);
+  return value;
+};
+
+const DEEP = 1000;
+const SHALLOW = 20;
+
+type GrammarCase = readonly [grammar: GrammarName, label: string, input: string, expected: Outcome];
+
+const GRAMMAR_CASES: ReadonlyArray<GrammarCase> = [
+  // --- LaTeX. Gem: parses at 20; SystemStackError at 100 for every shape
+  // below (measured). Port: parses at 20; the stack guard at 1000.
+  ["latex", "20 nested braces", wrapped("{", "x", "}", SHALLOW), "parsed"],
+  ["latex", "1,000 nested braces", wrapped("{", "x", "}", DEEP), "PARSE_ERROR"],
+  ["latex", "20 nested \\frac", layered((v) => `\\frac{${v}}{2}`, SHALLOW), "parsed"],
+  ["latex", "1,000 nested \\frac", layered((v) => `\\frac{${v}}{2}`, DEEP), "PARSE_ERROR"],
+  ["latex", "20 nested \\sqrt", wrapped("\\sqrt{", "2", "}", SHALLOW), "parsed"],
+  ["latex", "1,000 nested \\sqrt", wrapped("\\sqrt{", "2", "}", DEEP), "PARSE_ERROR"],
+  ["latex", "20 nested parens", wrapped("(", "x", ")", SHALLOW), "parsed"],
+  ["latex", "1,000 nested parens", wrapped("(", "x", ")", DEEP), "PARSE_ERROR"],
+  ["latex", "20 nested \\left(", wrapped("\\left(", "x", "\\right)", SHALLOW), "parsed"],
+  ["latex", "1,000 nested \\left(", wrapped("\\left(", "x", "\\right)", DEEP), "PARSE_ERROR"],
+  [
+    "latex",
+    "20 nested superscripts",
+    `x${repeat("^{y", SHALLOW)}${repeat("}", SHALLOW)}`,
+    "parsed",
+  ],
+  [
+    "latex",
+    "1,000 nested superscripts",
+    `x${repeat("^{y", DEEP)}${repeat("}", DEEP)}`,
+    "PARSE_ERROR",
+  ],
+  // Gem: ParseError at 20, SystemStackError at 100 and 300.
+  ["latex", "20 unterminated braces", `${repeat("{", SHALLOW)}x`, "PARSE_ERROR"],
+  ["latex", "1,000 unterminated braces", `${repeat("{", DEEP)}x`, "PARSE_ERROR"],
+  // Gem: ParseError at 20, 100 and 300.
+  ["latex", "1,000 unmatched closing braces", `x${repeat("}", DEEP)}`, "PARSE_ERROR"],
+  // Gem: `\left(` with no `\right` parses. Trailing backslash: ParseError.
+  ["latex", "\\left( never closed", "\\left(", "parsed"],
+  ["latex", "trailing backslash", "\\", "PARSE_ERROR"],
+  // Gem parses 300 of each (20.7s for `a`, 28.8s for `x `; the port ~0.8s).
+  ["latex", "300 symbols", repeat("x ", 300), "parsed"],
+  ["latex", "300 characters of one symbol", repeat("a", 300), "parsed"],
+  // Gem: NUL parses. A lone surrogate is not representable in the gem's UTF-8
+  // strings — the nearest input, the same three bytes as invalid UTF-8, is a
+  // ParseError there — so this row pins the port's own behaviour: it parses,
+  // and only `toUnicodemath` then refuses to encode it.
+  ["latex", "NUL character", "x\u0000y", "parsed"],
+  ["latex", "lone surrogate", "x\uD800y", "RENDER_ERROR"],
+
+  // --- HTML. Gem: `<mrow>`/`<sup>` parse at 20-60, ParseError at 100 (the JSON
+  // round trip's nesting-100 cap), SystemStackError at 300.
+  ["html", "20 nested <mrow>", wrapped("<mrow>", "x", "</mrow>", SHALLOW), "parsed"],
+  ["html", "100 nested <mrow>", wrapped("<mrow>", "x", "</mrow>", 100), "PARSE_ERROR"],
+  ["html", "1,000 nested <mrow>", wrapped("<mrow>", "x", "</mrow>", DEEP), "PARSE_ERROR"],
+  ["html", "20 nested <sup>", wrapped("<sup>", "x", "</sup>", SHALLOW), "parsed"],
+  ["html", "100 nested <sup>", wrapped("<sup>", "x", "</sup>", 100), "PARSE_ERROR"],
+  ["html", "1,000 nested <sup>", wrapped("<sup>", "x", "</sup>", DEEP), "PARSE_ERROR"],
+  ["html", "1,000 nested parens", wrapped("(", "x", ")", DEEP), "PARSE_ERROR"],
+  // Gem: ParseError at 20, 100; SystemStackError at 300.
+  ["html", "20 unterminated <sup>", `${repeat("<sup>", SHALLOW)}x`, "PARSE_ERROR"],
+  ["html", "1,000 unterminated <sup>", `${repeat("<sup>", DEEP)}x`, "PARSE_ERROR"],
+  // Gem: ParseError at 20, 100 and 300.
+  ["html", "1,000 unmatched </sup>", `x${repeat("</sup>", DEEP)}`, "PARSE_ERROR"],
+  // Gem: 100 letters parse; 300 raise SystemStackError. The port refuses 300
+  // with the JSON nesting message: a nesting-depth cutoff the gem also has, just
+  // reached earlier than the gem's stack.
+  ["html", "100 characters of one symbol", repeat("a", 100), "parsed"],
+  ["html", "300 characters of one symbol", repeat("a", 300), "PARSE_ERROR"],
+  // Gem: `<` and `<sup` are ParseErrors; NUL parses; `&#55296;` (a surrogate
+  // code point) raises RangeError, wrapped as ParseError; "   " parses.
+  ["html", "bare <", "<", "PARSE_ERROR"],
+  ["html", "unfinished <sup", "<sup", "PARSE_ERROR"],
+  ["html", "NUL character", "x\u0000y", "parsed"],
+  ["html", "surrogate numeric entity", "&#55296;", "PARSE_ERROR"],
+  ["html", "lone surrogate", "x\uD800y", "RENDER_ERROR"],
+  ["html", "whitespace only", "   ", "RENDER_ERROR"],
+
+  // --- UnicodeMath. Gem: parses at 20 (60 for `(` and `(…)/(…)`), SystemStackError
+  // at 100. Port: parses at 20; the stack guard at 1000.
+  ["unicodemath", "20 nested parens", wrapped("(", "x", ")", SHALLOW), "parsed"],
+  ["unicodemath", "1,000 nested parens", wrapped("(", "x", ")", DEEP), "PARSE_ERROR"],
+  ["unicodemath", "20 nested brackets", wrapped("[", "x", "]", SHALLOW), "parsed"],
+  ["unicodemath", "1,000 nested brackets", wrapped("[", "x", "]", DEEP), "PARSE_ERROR"],
+  ["unicodemath", "20 nested roots", wrapped("√(", "2", ")", SHALLOW), "parsed"],
+  ["unicodemath", "1,000 nested roots", wrapped("√(", "2", ")", DEEP), "PARSE_ERROR"],
+  ["unicodemath", "20 nested fractions", layered((v) => `(${v})/(2)`, SHALLOW), "parsed"],
+  ["unicodemath", "1,000 nested fractions", layered((v) => `(${v})/(2)`, DEEP), "PARSE_ERROR"],
+  // Gem: ParseError at 20 (`x^(y)^(y)…` is not a valid chain); SystemStackError at 100.
+  [
+    "unicodemath",
+    "1,000 nested superscripts",
+    `x${repeat("^(", DEEP)}y${repeat(")", DEEP)}`,
+    "PARSE_ERROR",
+  ],
+  // Gem: ParseError at 20; SystemStackError at 100.
+  ["unicodemath", "20 unterminated parens", `${repeat("(", SHALLOW)}x`, "PARSE_ERROR"],
+  ["unicodemath", "1,000 unterminated parens", `${repeat("(", DEEP)}x`, "PARSE_ERROR"],
+  // Gem: ParseError at 20, 100, 300.
+  ["unicodemath", "1,000 unmatched closing parens", `x${repeat(")", DEEP)}`, "PARSE_ERROR"],
+  // Gem parses 300 `a` (12s) and 100 `x ` (29.6s); 300 `x ` timed out past 60s.
+  // The port takes ~1.4s and ~3.3s; sizes stay where the port is quick.
+  ["unicodemath", "300 characters of one symbol", repeat("a", 300), "parsed"],
+  ["unicodemath", "60 symbols", repeat("x ", 60), "parsed"],
+  // Gem parses every input below. Measured 2026-09-21, the port refused the
+  // first three at the transform (a rule family outside its slice then) and
+  // the fourth at the grammar. Re-measured 2026-09-23 after the UnicodeMath
+  // transform slices A, E, F, G1, G2 and H landed: the trigger this comment
+  // named ("they will need updating when the family lands") fired. NUL and
+  // the trailing backslash now transform and parse, matching the gem. `<sup`
+  // now parses too, but into an untransformed `["factor", {...}]` tuple — the
+  // same shape `deferred.md` ("UnicodeMath input returns a non-model tree
+  // instead of raising") already documents the gem itself producing for other
+  // inputs — so every renderer refuses it as a bare list, RENDER_ERROR rather
+  // than PARSE_ERROR. The lone surrogate row is NOT gem parity, and is pinned
+  // as a deliberate divergence, not a measurement of the gem's behaviour on
+  // this exact input: Ruby cannot hold `"x\uD800y"` as a UTF-8 string at all
+  // (`0xD800.chr(Encoding::UTF_8)` raises `RangeError: invalid codepoint
+  // 0xD800 in UTF-8`, the same fact `deferred.md`'s OMML Fenced entry
+  // measures), so there is no gem call this row could reproduce. The nearest
+  // input the gem CAN receive — the same three bytes, fed as invalid UTF-8 —
+  // raises `Plurimath::Math::ParseError` there (measured, same as the LaTeX
+  // row above). This row instead pins the port's own internal behaviour, for
+  // its own sake: it parses (matching how the LaTeX and HTML rows above
+  // behave on the same JavaScript string, which CAN hold an unpaired
+  // surrogate), and `toUnicodemath` alone then refuses to encode it. See the
+  // header comment.
+  ["unicodemath", "NUL character", "x\u0000y", "parsed"],
+  ["unicodemath", "trailing backslash", "\\", "parsed"],
+  ["unicodemath", "unfinished <sup", "<sup", "RENDER_ERROR"],
+  ["unicodemath", "lone surrogate", "x\uD800y", "RENDER_ERROR"],
+  ["unicodemath", "NUL alone", "\u0000", "parsed"],
+];
+
+/**
+ * Explicit, and the same 60 seconds for every row. Vitest's default is 5s, and
+ * under host load the slowest rows here (UnicodeMath at a few hundred
+ * characters) have run several times slower than the measured figures. Like
+ * `SLOWEST_ALLOWED_MS`, this cannot interrupt a non-returning loop.
+ */
+const GRAMMAR_CASE_TIMEOUT_MS = 60_000;
+
+describe("every LaTeX, HTML and UnicodeMath adversarial input reaches the outcome it is pinned to", () => {
+  const seen = new Map<GrammarName, Outcome[]>();
+
+  it.each(GRAMMAR_CASES)(
+    "%s: %s",
+    (grammar, label, input, expected) => {
+      const started = performance.now();
+      const outcome = outcomeOf(input, RENDERERS, PARSERS[grammar]);
+      const elapsed = performance.now() - started;
+      seen.set(grammar, [...(seen.get(grammar) ?? []), outcome]);
+      expect(outcome).toBe(expected);
+      expect(elapsed, `${grammar}: ${label} took ${Math.round(elapsed)}ms`).toBeLessThan(
+        SLOWEST_ALLOWED_MS,
+      );
+    },
+    GRAMMAR_CASE_TIMEOUT_MS,
+  );
+
+  it("exercised every case", () => {
+    const total = [...seen.values()].reduce((sum, outcomes) => sum + outcomes.length, 0);
+    expect(GRAMMAR_CASES.length).toBeGreaterThan(0);
+    expect(total).toBe(GRAMMAR_CASES.length);
+  });
+
+  it("gives every grammar both a parse and a refusal, so none is carried by one shape", () => {
+    for (const grammar of Object.keys(PARSERS) as GrammarName[]) {
+      const outcomes = new Set(seen.get(grammar));
+      expect(outcomes.has("parsed"), `${grammar} never parses`).toBe(true);
+      expect(outcomes.has("PARSE_ERROR"), `${grammar} never refuses`).toBe(true);
+    }
+  });
+});
+
+describe("the new grammars refuse deep input through a guard that says which guard it was", () => {
+  /**
+   * The message of the refusal, or `"parsed"`; a non-`ParseError` is rethrown.
+   *
+   * `cleanErrorCode` alone does not prove that: it deliberately accepts any
+   * `Error` carrying `code: "PARSE_ERROR"`, `ParseError` instance or not (the
+   * dual ESM/CJS cross-copy case its own comment explains) — so a plain
+   * `Error` with a spoofed `.code` would have passed this guard silently
+   * until `instanceof ParseError` was added below, contradicting what this
+   * comment already claimed.
+   */
+  function guardFor(grammar: GrammarName, input: string): string {
+    try {
+      PARSERS[grammar](input);
+      return "parsed";
+    } catch (error) {
+      if (cleanErrorCode(error) !== "PARSE_ERROR") throw error;
+      expect(error).toBeInstanceOf(ParseError);
+      return (error as Error).message;
+    }
+  }
+
+  const deepRows = GRAMMAR_CASES.filter(
+    ([, label, , expected]) => expected === "PARSE_ERROR" && label.startsWith("1,000 nested"),
+  );
+
+  it(
+    "refuses every 1,000-deep nesting row through a typed depth guard, whichever one wins the race",
+    () => {
+      // NOT which specific guard fires. A review measured this directly
+      // (2026-09-23): on the same build, the same three CI Node versions
+      // (20.20.2/22.23.2/24.18.0), vitest's default `forks` pool sends every
+      // row here through the stack guard, exactly as this test used to
+      // assert — but `--pool=threads` flips some of them, because a
+      // `worker_threads` worker's usable JS stack measured roughly 4x deeper
+      // than a forked child's on this machine (~50k vs ~13k plain-recursion
+      // frames before `RangeError`). That moves `MAX_DEPTH` (20,000) from
+      // "always loses the race against real recursion" to "sometimes wins
+      // it" (the depth cap), and — for HTML specifically, whose parens finish
+      // parsing before either depth guard fires once the stack is that much
+      // deeper — lets the JSON round trip's OWN nesting-100 cap catch the
+      // resulting 1,000-level tree during the post-parse walk. All three are
+      // the same clean, typed refusal: `guardFor` above rethrows anything
+      // that is not `PARSE_ERROR`. `test/pegkit/depth-limit.spec.ts` covers
+      // `MAX_DEPTH`'s own mechanism without depending on any of this. This
+      // pins the refusal invariant, driven off the table so a row that stops
+      // refusing, or starts throwing something untyped, still fails here.
+      // The exact production message: `JSON_MAX_NESTING` in
+      // `src/formats/html/parser.ts` is a fixed constant (100), not a value
+      // that varies by input or environment, so the message it builds is one
+      // known literal string, not a family matched by a `\d+` wildcard.
+      const JsonNestingCapMessage = "nesting of 100 is too deep";
+      expect(deepRows.length).toBeGreaterThan(0);
+      for (const [grammar, label, input] of deepRows) {
+        const message = guardFor(grammar, input);
+        const recognised = DEPTH_REFUSAL_MESSAGES.has(message) || message === JsonNestingCapMessage;
+        expect(recognised, `${grammar}: ${label}: got "${message}"`).toBe(true);
+      }
+    },
+    GRAMMAR_CASE_TIMEOUT_MS,
+  );
+
+  it(
+    "refuses 100-deep HTML with the JSON nesting cap the gem also has",
+    () => {
+      // Unaffected by the stack-guard/depth-cap race above: this cap is a
+      // fixed tree-depth count in the post-parse JSON round trip, not
+      // recursion, so it fires at exactly 100 levels regardless of engine
+      // stack size or pool.
+      for (const [grammar, label, input, expected] of GRAMMAR_CASES) {
+        if (grammar !== "html" || expected !== "PARSE_ERROR" || !label.startsWith("100 ")) continue;
+        expect(guardFor(grammar, input), label).toMatch(/nesting of 100 is too deep/);
+      }
+    },
+    GRAMMAR_CASE_TIMEOUT_MS,
+  );
+
+  it.skipIf(!isMainThread)(
+    "does not refuse any pinned row through MAX_DEPTH on vitest's forks pool" +
+      " (skipped under a threads pool, where this genuinely does not hold)",
+    () => {
+      // Genuinely pool-scoped, not just worded that way: measured 2026-09-23,
+      // this holds under vitest's default `forks` pool (what this
+      // repository's CI uses, unconfigured) on Node 20.20.2/22.23.2/24.18.0,
+      // and does NOT hold under `--pool=threads` on any of the same three
+      // versions — see the first test in this block and
+      // TODO.plan/deferred.md's "parser's depth bound" entry. `MAX_DEPTH`'s
+      // own mechanism is proven independently of any pool or engine stack
+      // size in `test/pegkit/depth-limit.spec.ts`.
+      //
+      // `node:worker_threads`' `isMainThread` is `true` in a `forks` worker
+      // (a forked child process is not a `Worker` at all, so it defaults to
+      // `true` outside any worker context — confirmed directly against this
+      // repository's actual default configuration) and `false` inside a
+      // `threads` worker, which is exactly the axis this test needs to gate
+      // on: skip with a named reason under `threads`, where the claim below
+      // is known to be false, rather than fail there.
+      for (const [grammar, label, input, expected] of GRAMMAR_CASES) {
+        if (expected !== "PARSE_ERROR") continue;
+        expect(guardFor(grammar, input), `${grammar}: ${label}`).not.toBe(DEPTH_LIMIT_MESSAGE);
+      }
+    },
+    GRAMMAR_CASE_TIMEOUT_MS,
+  );
 });

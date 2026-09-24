@@ -93,10 +93,11 @@ const CANCEL_MARK = "╱";
  *
  * `Scarries` is the one other census-aliased class outside the reachable set
  * whose `to_unicodemath` is the carrier's own (`"scarries⁡x"`, measured) —
- * deliberately NOT admitted here, because this port has no `Scarries`
- * behaviour measured in any other format and admitting a name in one format
- * alone is a trap for the next reader. It is recorded in
- * `TODO.plan/deferred.md` instead.
+ * admitted here for the same reason `Hom` is: `asciimath.ts`, `latex.ts`,
+ * `mathml.ts` and `omml.ts` already carry its OWN overrides for those
+ * formats (`scarries.rb`'s `asciimath_value`/`latex_value`/`mscarries`/
+ * `omml_value`, none of which touch `to_unicodemath`), so it is not the
+ * one-format-alone case `TODO.plan/deferred.md` used to record this under.
  *
  * A name outside the set raises rather than rendering the carrier default,
  * because the gem class it denotes may override `to_unicodemath` — the very
@@ -112,6 +113,7 @@ const MEASURED_UNARY_NAMES: ReadonlySet<string> = new Set([
   ...UNICODEMATH_UNARY_CARRIER_NAMES,
   "Tr",
   "Hom",
+  "Scarries",
 ]);
 
 export function renderUnaryFunction(

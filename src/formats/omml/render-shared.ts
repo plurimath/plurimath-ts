@@ -290,6 +290,31 @@ export function symbolOmmlValue(node: NodeOf<"symbol">, errorKind: string, at?: 
 }
 
 /**
+ * `Table#paren` (`table.rb:375-377`) is `parenthesis.to_omml_without_math_tag(true)`
+ * called DIRECTLY, never through `t_tag`'s `value ||` fallback — so, unlike
+ * every other caller of `to_omml_without_math_tag` in this walk, a nil-valued
+ * base class or abstract `Paren` reaches this exactly and answers `nil`
+ * (measured on the oracle at `00c52783`: `Table` with an `open_paren` built
+ * from a valueless `Symbol` writes `<m:begChr m:val=""/>`, the empty string an
+ * XML writer gives a nil attribute — never a raise). `symbolOmmlValue` above
+ * stays strict for its OTHER callers (`t_tag`'s fallback branch, reached only
+ * once `value` is already known absent, and `nary_attr_value`'s), which this
+ * walk has not measured landing on `nil` and so still refuses; this is the
+ * one call site allowed to see it.
+ */
+export function symbolOmmlValueOrNull(
+  node: NodeOf<"symbol">,
+  errorKind: string,
+  at: string,
+): string | null {
+  const id = node.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
+  if (VALUE_RENDERED_SYMBOL_IDS.has(id) && (node.value === null || node.value === undefined)) {
+    return null;
+  }
+  return symbolOmmlValue(node, errorKind, at);
+}
+
+/**
  * `Symbol#t_tag` (`symbols/symbol.rb:160-165`):
  * `value || to_omml_without_math_tag(nil, options:)` — an explicit value wins
  * over the subclass literal, which is the one place a named symbol's stored
@@ -305,6 +330,26 @@ export function symbolValueOrGenerated(
     return requireString(node.value, errorKind, at === undefined ? "symbol.value" : `${at}.value`);
   }
   return symbolOmmlValue(node, errorKind, at);
+}
+
+/**
+ * `Symbol#t_tag` itself (`symbols/symbol.rb:160-165`), the element and not
+ * only its text: `return t_element unless output` writes a BARE `m:t` when
+ * `value || to_omml_without_math_tag` is nil — which happens only for the two
+ * value-rendered ids (`VALUE_RENDERED_SYMBOL_IDS`) holding nil, since every
+ * named id answers its non-nil literal. Measured on the pinned oracle
+ * `00c52783`: `Symbol.new(nil)` renders `<m:r><m:t/></m:r>` in a `Formula`
+ * alone, inside a `Frac` and inside an `Mrow`, and a bold `FontStyle` over it
+ * writes
+ * `<m:t/>` after its `m:rPr` — self-closed, where `Symbol.new("")` writes
+ * `<m:t></m:t>`.
+ */
+export function symbolTextTag(node: NodeOf<"symbol">, errorKind: string, at?: string): XmlElement {
+  const id = node.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
+  if ((node.value === null || node.value === undefined) && VALUE_RENDERED_SYMBOL_IDS.has(id)) {
+    return new XmlElement("m:t");
+  }
+  return textElement(symbolValueOrGenerated(node, errorKind, at));
 }
 
 /**

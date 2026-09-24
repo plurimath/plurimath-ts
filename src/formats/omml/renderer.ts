@@ -2,6 +2,7 @@ import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { splitOnLinebreak } from "../../core/linebreak";
 import { assertKnownOptions } from "../../core/render-options";
+import { isStackOverflow } from "../../core/stack-overflow";
 import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
 import { dumpNodes, XmlElement } from "../../xml/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
@@ -248,7 +249,14 @@ function atBoundary<T>(render: () => T): T {
     // the class is constructible by the input too, and a hostile getter
     // throwing one mid-render is an input failure, not a symbol-table miss.
     if (error instanceof RenderError || isOwnMissingSymbolDataError(error)) throw error;
-    if (error instanceof RangeError) {
+    // `isStackOverflow` (pegkit/atom.ts), not a bare `instanceof RangeError`:
+    // the class alone also matches `UndecodableEntityError` (core/nodes.ts),
+    // an ordinary entity-decode refusal that is a `RangeError` subclass but
+    // has nothing to do with recursion. This format's kind files decode
+    // through `decodeEntities` (render-shared.ts), which turns that error
+    // into a `RenderError` first; the narrow check keeps any other
+    // `RangeError` from being reported as stack exhaustion.
+    if (isStackOverflow(error)) {
       throw new RenderError(
         "node: the tree nests too deep for the OMML walk's call stack",
         FORMAT,

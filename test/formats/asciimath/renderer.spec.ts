@@ -809,10 +809,12 @@ describe("inputs that defeat the walk itself", () => {
         failures.push(`depth ${depth}: ${(error as RenderError).message}`);
       }
     }
-    // Which depths overflow depends on the worker's stack: vitest's default
-    // `forks` pool (where `isMainThread` is true) overflows inside this
-    // window, a `threads` worker's larger stack may not. The branding below
-    // holds on every pool; that some depth fails is asserted only on forks.
+    // Which depths overflow depends on the worker's stack. In vitest's
+    // fork-based pools (`forks`, the default CI uses, and `vmForks`) each test
+    // file runs in a child process, where `isMainThread` is true, and this
+    // window overflows. A `threads` or `vmThreads` worker's larger stack may
+    // not. The branding below holds on every pool; that some depth fails is
+    // asserted only in the fork-based pools.
     if (isMainThread) expect(failures).not.toEqual([]);
     for (const failure of failures) {
       expect(failure).toContain("nests too deep");

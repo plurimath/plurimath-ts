@@ -20,11 +20,17 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { UnsupportedFeatureError } from "../../src/core/errors";
-import { Evaluator, GEM_EVALUATED_FUNCTIONS } from "../../src/evaluation/evaluator";
+import {
+  DEFAULT_MAX_ITERATIONS,
+  Evaluator,
+  type EvaluatorSettings,
+  GEM_EVALUATED_FUNCTIONS,
+} from "../../src/evaluation/evaluator";
 import {
   DivisionByZeroError,
   type EvaluationBindings,
   type EvaluationErrorCode,
+  type EvaluationOptions,
   evaluate,
   InvalidBindingError,
   InvalidBindingKeyError,
@@ -46,6 +52,13 @@ interface Row {
   readonly raises?: string;
   readonly message?: string;
   readonly portRefusal?: string;
+  readonly options?: EvaluationOptions;
+}
+
+/** The evaluator settings a row's `options` (the gem configuration it ran under) resolve to. */
+function toSettings(row: Row): EvaluatorSettings {
+  const cap = row.options?.evaluationMaxIterations;
+  return { maxIterations: cap === undefined ? DEFAULT_MAX_ITERATIONS : cap };
 }
 
 /** The parser for a row's `input.format` — every format `evaluate()` fixtures cover so far. */
@@ -164,7 +177,9 @@ describe("evaluate() against the oracle fixtures", () => {
     const bindings = toBindings(row.bindings);
     expect(Number(row.expected !== undefined) + Number(row.raises !== undefined), row.id).toBe(1);
     if (row.portRefusal !== undefined) {
-      expect(() => evaluate(formula, bindings), row.id).toThrow(UnsupportedFeatureError);
+      expect(() => evaluate(formula, bindings, row.options), row.id).toThrow(
+        UnsupportedFeatureError,
+      );
       return;
     }
     if (row.expected !== undefined) {
@@ -172,11 +187,11 @@ describe("evaluate() against the oracle fixtures", () => {
       // generator aborts otherwise, and this keeps that promise checked.
       expect(row.expected, row.id).toMatch(/^-?\d+$|[.eIN]/);
       const rubyKind = /^-?\d+$/.test(row.expected) ? "integer" : "float";
-      const result = Evaluator.runWithKind(formula, bindings);
+      const result = Evaluator.runWithKind(formula, bindings, toSettings(row));
       expect(result.value, row.id).toBe(Number(row.expected));
       expect(result.kind, row.id).toBe(rubyKind);
       if (rubyKind === "integer") expect(Number.isSafeInteger(result.value), row.id).toBe(true);
-      expect(evaluate(formula, bindings), row.id).toBe(result.value);
+      expect(evaluate(formula, bindings, row.options), row.id).toBe(result.value);
       return;
     }
     const raises = row.raises as string;
@@ -187,7 +202,7 @@ describe("evaluate() against the oracle fixtures", () => {
     }
     let thrown: unknown;
     try {
-      evaluate(formula, bindings);
+      evaluate(formula, bindings, row.options);
     } catch (error) {
       thrown = error;
     }
@@ -234,7 +249,7 @@ describe("evaluate() refuses every unported fixture row from the unported path",
     const formula = parseRowInput(row.input);
     let thrown: unknown;
     try {
-      evaluate(formula, toBindings(row.bindings));
+      evaluate(formula, toBindings(row.bindings), row.options);
     } catch (error) {
       thrown = error;
     }
@@ -255,6 +270,14 @@ describe("evaluate() — measurements not covered by the oracle fixtures", () =>
 
   it("defaults bindings to an empty object", () => {
     expect(() => evaluate(parseAsciimath("a"))).toThrow(MissingVariableError);
+  });
+
+  // The per-call cap stands in for the gem's global configuration, which the
+  // fixtures exercise (`sum-custom-cap-*`, `sum-no-cap`); an untyped caller
+  // passing something the gem's `<=` could not compare is refused up front.
+  it("rejects an evaluationMaxIterations that is neither a number nor null", () => {
+    const options = { evaluationMaxIterations: "5" } as unknown as EvaluationOptions;
+    expect(() => evaluate(parseAsciimath("sum_(i=1)^3 i"), {}, options)).toThrow(TypeError);
   });
 
   /**

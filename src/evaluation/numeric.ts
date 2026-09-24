@@ -66,7 +66,7 @@
  */
 
 import { UnsupportedFeatureError } from "../core/errors";
-import { DivisionByZeroError, MathDomainError } from "./errors";
+import { DivisionByZeroError, MathDomainError, NonFiniteResultError } from "./errors";
 import { correctlyRoundedPow, ldexp } from "./pow";
 
 /** Ruby's `Integer`, `Rational` or `Float`. */
@@ -586,4 +586,195 @@ export function finalResult(result: RubyNumeric, nonFinite: () => never): FinalN
           "cannot hold exactly",
       );
   }
+}
+
+/**
+ * Ruby: `Integer#abs`, `Rational#abs`, `Float#abs` (`fabs`: `-0.0.abs` is
+ * `0.0`, `NaN` stays `NaN`). The kind is kept.
+ */
+export function absolute(x: RubyNumeric): RubyNumeric {
+  switch (x.kind) {
+    case "integer":
+      return integer(abs(x.value));
+    case "rational":
+      return rational(abs(x.num), x.den);
+    case "float":
+      return float(Math.abs(x.value));
+  }
+}
+
+/** Floor division of two bigints (`rb_int_idiv`: rounds toward negative infinity). */
+function floorDiv(a: bigint, b: bigint): bigint {
+  const q = a / b;
+  return a % b !== 0n && a < 0n !== b < 0n ? q - 1n : q;
+}
+
+/**
+ * Ruby: `Float#floor`/`Float#ceil` with no digits end in `dbl2ival`, which
+ * raises `FloatDomainError` for `NaN` and the infinities; `Evaluator#evaluate`
+ * rescues that as `NonFiniteResultError`. A finite double's floor is already
+ * an integer-valued double, so `BigInt` converts it exactly.
+ */
+function floatToInteger(value: number): IntegerValue {
+  if (!Number.isFinite(value)) throw new NonFiniteResultError();
+  return integer(BigInt(value));
+}
+
+/**
+ * Ruby: `Integer#floor` (itself), `Rational#floor` (`nurat_floor`:
+ * `rb_int_idiv(num, den)`), `Float#floor` (`floor()`, then `dbl2ival`). The
+ * result is always an Integer.
+ */
+export function floorOf(x: RubyNumeric): RubyNumeric {
+  switch (x.kind) {
+    case "integer":
+      return x;
+    case "rational":
+      return integer(floorDiv(x.num, x.den));
+    case "float":
+      return floatToInteger(Math.floor(x.value));
+  }
+}
+
+/** Ruby: `Integer#ceil`, `Rational#ceil` (`-((-num).div(den))`), `Float#ceil`. */
+export function ceilOf(x: RubyNumeric): RubyNumeric {
+  switch (x.kind) {
+    case "integer":
+      return x;
+    case "rational":
+      return integer(-floorDiv(-x.num, x.den));
+    case "float":
+      return floatToInteger(Math.ceil(x.value));
+  }
+}
+
+/**
+ * `numeric.c`'s `flodivmod`, modulus only (`ruby_float_mod`): a `NaN`
+ * divisor gives `NaN`; a zero dividend, or an infinite divisor with a finite
+ * dividend, gives the dividend itself; otherwise C's `fmod`, which
+ * JavaScript's `%` on two numbers is exactly (ECMAScript's `Number::remainder`
+ * is the truncating remainder `fmod` computes, special values included). The
+ * result then takes the divisor's sign: `if (y*mod < 0) mod += y`. The zero
+ * divisor is rejected before this is reached (`modulo`).
+ */
+function floatModulo(x: number, y: number): number {
+  if (Number.isNaN(y)) return y;
+  let mod = x === 0 || (!Number.isFinite(y) && Number.isFinite(x)) ? x : x % y;
+  if (y * mod < 0) mod += y;
+  return mod;
+}
+
+/**
+ * `Numeric#%` (`num_modulo`), the path a Rational dividend takes, and an
+ * Integer dividend with a Rational divisor after `Rational#coerce`:
+ * `x - y * (x / y).floor`. With an exact divisor every step is exact
+ * (`Rational#/` is exact, `floor` an Integer); with a Float divisor `x / y`
+ * is a Float, whose `floor` raises `FloatDomainError` for `NaN` or an
+ * infinity (`NonFiniteResultError`), and the rest is Float arithmetic.
+ */
+function numericModulo(x: Exact, y: RubyNumeric): RubyNumeric {
+  if (y.kind === "float") {
+    const quotient = floatToInteger(Math.floor(toDouble(x) / y.value));
+    return subtract(x, multiply(y, quotient));
+  }
+  const [an, ad] = parts(x);
+  const [bn, bd] = parts(y);
+  const quotient = integer(floorDiv(an * bd, ad * bn));
+  return subtract(x, multiply(y, quotient));
+}
+
+/**
+ * Ruby: `Evaluator#modulo` — `raise DivisionByZeroError if divisor.zero?`,
+ * then `dividend % divisor`, dispatched on the operand classes:
+ * Integer % Integer is the floored modulo (the result takes the divisor's
+ * sign); an Integer or Float with a Float, or a Float with an Integer, is
+ * `ruby_float_mod` on both converted to doubles (`fix_mod`, `flo_mod`, and a
+ * Bignum's `rb_num_coerce_bin` through `Float#coerce`); a Float with a
+ * Rational coerces the Rational with `to_f` first (`Rational#coerce`); a
+ * Rational dividend, or an Integer one with a Rational divisor, is
+ * `numericModulo`.
+ */
+export function modulo(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric {
+  if (isZero(divisor)) throw new DivisionByZeroError();
+  if (dividend.kind === "integer" && divisor.kind === "integer") {
+    const r = dividend.value % divisor.value;
+    return integer(r !== 0n && r < 0n !== divisor.value < 0n ? r + divisor.value : r);
+  }
+  if (dividend.kind === "float" || (dividend.kind === "integer" && divisor.kind === "float")) {
+    return float(floatModulo(toDouble(dividend), toDouble(divisor)));
+  }
+  return numericModulo(dividend, divisor);
+}
+
+/**
+ * Ruby's `<=>` between two real numbers, as `Array#max`/`#min` call it
+ * (`array.c`'s `ary_max_generic` and its Fixnum/Float fast paths all reduce
+ * to `best <=> candidate`): Integer and Rational pairs compare exactly
+ * (`rb_rational_cmp`); an Integer against a Float compares exactly too
+ * (`rb_integer_float_cmp`, so `2^53+1 > 2.0^53`); a Rational against a
+ * Float compares the Rational's `to_f` (`rb_rational_cmp`'s `T_FLOAT` case,
+ * and `Float#<=>` through `Rational#coerce`). `null` is Ruby's `nil` — any
+ * comparison with `NaN` — on which `Array#max` raises `ArgumentError`.
+ */
+export function compare(a: RubyNumeric, b: RubyNumeric): -1 | 0 | 1 | null {
+  if (isExact(a) && isExact(b)) {
+    const [an, ad] = parts(a);
+    const [bn, bd] = parts(b);
+    const difference = an * bd - bn * ad;
+    return difference < 0n ? -1 : difference > 0n ? 1 : 0;
+  }
+  if (a.kind === "integer" && b.kind === "float") return integerFloatCompare(a.value, b.value);
+  if (a.kind === "float" && b.kind === "integer") {
+    const reverse = integerFloatCompare(b.value, a.value);
+    return reverse === null ? null : reverse === 0 ? 0 : reverse === 1 ? -1 : 1;
+  }
+  const x = toDouble(a);
+  const y = toDouble(b);
+  if (Number.isNaN(x) || Number.isNaN(y)) return null;
+  return x < y ? -1 : x > y ? 1 : 0;
+}
+
+/** `bignum.c`'s `rb_integer_float_cmp`: an exact comparison of an Integer with a double. */
+function integerFloatCompare(x: bigint, y: number): -1 | 0 | 1 | null {
+  if (Number.isNaN(y)) return null;
+  if (y === Infinity) return -1;
+  if (y === -Infinity) return 1;
+  // A finite double is an exact dyadic rational; compare `x` with its integer
+  // part exactly, then let the fractional part break a tie.
+  const whole = BigInt(Math.trunc(y));
+  if (x < whole) return -1;
+  if (x > whole) return 1;
+  const fraction = y - Math.trunc(y);
+  return fraction > 0 ? -1 : fraction < 0 ? 1 : 0;
+}
+
+/** Ruby: `Integer#gcd` — always non-negative; `0.gcd(0)` is `0`. */
+export function integerGcd(a: bigint, b: bigint): bigint {
+  return integer(gcd(a, b)).value;
+}
+
+/**
+ * Ruby: `Integer#lcm` (`f_lcm`) — `0` when either operand is `0`, otherwise
+ * `|a * b| / gcd(a, b)`, always non-negative. Refused before multiplying
+ * when the quotient's operand `|a| / gcd * |b|` cannot fit the Integer size
+ * limit, the same check `multiply` makes.
+ */
+export function integerLcm(a: bigint, b: bigint): bigint {
+  if (a === 0n || b === 0n) return 0n;
+  const reduced = abs(a) / gcd(a, b);
+  if (productCertainlyExceeds(reduced, b, INTEGER_BIT_LIMIT)) tooLarge();
+  return integer(reduced * abs(b)).value;
+}
+
+/**
+ * Ruby: `rb_num_to_dbl`, the conversion every `Math` module function applies
+ * to its argument (`math.c`'s `Get_Double`): an Integer by `big2dbl` (as
+ * `toDouble`), a Float as itself, and a Rational by
+ * `rat2dbl_without_to_f` — `(double)num / (double)den`, each part converted
+ * on its own and then divided in IEEE arithmetic, which is NOT
+ * `Rational#to_f`: a part beyond the double range becomes `Infinity` first
+ * (`Math.sin(Rational(1, 2**2000))` is `sin(1/Infinity)`, `0.0`).
+ */
+export function mathArgument(x: RubyNumeric): number {
+  return x.kind === "rational" ? Number(x.num) / Number(x.den) : toDouble(x);
 }

@@ -531,6 +531,20 @@ Defects in the Ruby gem, found while building the port. All reproduce on a
 clean checkout. None is worked around here — the corpus records the gem's
 real behaviour, including its bugs.
 
+### README documents the wrong `evaluation_max_iterations` default
+
+The gem's README (`README.adoc` lines 323-324, pinned oracle `00c52783`) says
+`Sum`/`Prod` iterations "are capped at
+`Plurimath.configuration.evaluation_max_iterations` (default 1,000,000)". The
+code says `100_000`: `lib/plurimath/configuration.rb`'s
+`DEFAULT_MAX_ITERATIONS`, and measured — `sum_(i=1)^100001 i` raises
+`UnsupportedExpressionError` ("iteration range larger than 100000 steps")
+while `sum_(i=1)^100000 1` answers `100000`
+(`scripts/generate-evaluation-fixtures.rb`'s `sum-over-cap` and `sum-at-cap`
+rows). The port follows the code: `evaluate()`'s `evaluationMaxIterations`
+option defaults to `100_000` (`src/evaluation/index.ts`). The README is what
+needs fixing upstream.
+
 ### `Matrix#to_mathml_without_math_tag` crashes on any fenced non-round matrix
 
 ```ruby

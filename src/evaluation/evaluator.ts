@@ -21,17 +21,37 @@
  */
 
 import { UnsupportedFeatureError } from "../core/errors";
-import { type FormulaNode, type MathNode, NODE_KINDS, type NodeParameter } from "../core/nodes";
-import { type EvaluationBindings, type NormalizedBindings, normalizeBindings } from "./bindings";
-import { MissingVariableError, NonFiniteResultError, UnsupportedExpressionError } from "./errors";
-import { ExpressionParser } from "./expression-parser";
 import {
+  type FormulaNode,
+  type MathNode,
+  NODE_KINDS,
+  type NodeParameter,
+  type NodeSequence,
+} from "../core/nodes";
+import { type EvaluationBindings, normalizeBindings } from "./bindings";
+import {
+  MathDomainError,
+  MissingVariableError,
+  NonFiniteResultError,
+  UnsupportedExpressionError,
+} from "./errors";
+import { ExpressionParser } from "./expression-parser";
+import { Iteration, nodeVariableName } from "./iteration";
+import {
+  absolute,
+  ceilOf,
+  compare,
   divide,
   type FinalNumeric,
   finalResult,
   float,
+  floorOf,
   fromBinding,
   integer,
+  integerGcd,
+  integerLcm,
+  modulo,
+  negate,
   power,
   type RubyNumeric,
 } from "./numeric";
@@ -262,19 +282,156 @@ function describeUnsupportedNode(node: MathNode): string {
  * evaluates as `UnsupportedExpressionError("empty expression")` — the same
  * refusal an actually-empty `Fenced` body gets.
  */
-function toNodeArray(nodes: NodeParameter): readonly (MathNode | string)[] {
+function toNodeArray(nodes: NodeParameter | NodeSequence): NodeSequence {
   if (nodes === null) return [];
-  if (Array.isArray(nodes)) return nodes as readonly (MathNode | string)[];
+  if (Array.isArray(nodes)) return nodes as NodeSequence;
   if (typeof nodes === "string") return [nodes];
   if (typeof nodes === "object" && "kind" in nodes) return [nodes as MathNode];
   return [];
 }
 
-export class Evaluator {
-  private readonly bindings: NormalizedBindings;
+/** The per-call settings `index.ts`'s `EvaluationOptions` carries, resolved. */
+export interface EvaluatorSettings {
+  /**
+   * Ruby: `Plurimath.configuration.evaluation_max_iterations` — the cap on a
+   * `Sum`/`Prod` step count, `null` for none. `configuration.rb`'s
+   * `DEFAULT_MAX_ITERATIONS` is `100_000` (the gem's README says 1,000,000;
+   * the code, which is what runs, says 100,000 — `TODO.plan/deferred.md`).
+   */
+  readonly maxIterations: number | null;
+}
 
-  constructor(bindings: EvaluationBindings = {}) {
-    this.bindings = normalizeBindings(bindings);
+/** Ruby: `Configuration::DEFAULT_MAX_ITERATIONS` (`configuration.rb`). */
+export const DEFAULT_MAX_ITERATIONS = 100_000;
+
+const DEFAULT_SETTINGS: EvaluatorSettings = { maxIterations: DEFAULT_MAX_ITERATIONS };
+
+/** The `binaryFunction`/`unaryFunction` carriers, whose `name` is the gem class basename. */
+type FunctionNode = Extract<MathNode, { kind: "binaryFunction" | "unaryFunction" }>;
+
+/** One gem class's `#evaluate`, over the carrier node it arrives as. */
+type FunctionEvaluator = (evaluator: Evaluator, node: FunctionNode) => RubyNumeric;
+
+/** The `parameterTwo` of a carrier, which only `binaryFunction` has. */
+function secondParameter(node: FunctionNode): NodeParameter | undefined {
+  return node.kind === "binaryFunction" ? node.parameterTwo : undefined;
+}
+
+/**
+ * Ruby: `Gcd#evaluate`/`Lcm#evaluate` — every argument is evaluated first
+ * (`function_arguments`), then all must be Integers (`MathDomainError`
+ * otherwise), then `values.reduce(:gcd)`: a single argument is returned as
+ * it is, sign included (`gcd(-4)` is `-4`), since `reduce` never calls
+ * `gcd` on one element.
+ */
+function reduceIntegers(
+  evaluator: Evaluator,
+  node: FunctionNode,
+  name: "gcd" | "lcm",
+  step: (a: bigint, b: bigint) => bigint,
+): RubyNumeric {
+  const values = evaluator.functionArguments(node.parameterOne);
+  const integers: bigint[] = [];
+  for (const value of values) {
+    if (value.kind !== "integer") throw new MathDomainError(`${name} requires integer arguments`);
+    integers.push(value.value);
+  }
+  let result = integers[0] as bigint;
+  for (const value of integers.slice(1)) result = step(result, value);
+  return integer(result);
+}
+
+/**
+ * Ruby: `Array#max`/`Array#min` over `function_arguments` — the first
+ * argument is the running best and each later one replaces it only when
+ * strictly better by `best <=> candidate` (`array.c`'s `ary_max_generic` and
+ * its fast paths), so of equal values the FIRST is kept, kind included
+ * (`max(2,2.0)` is the Integer `2`, `max(2.0,2)` the Float `2.0`). A
+ * comparison with `NaN` is `nil`, on which Ruby raises `ArgumentError`
+ * ("comparison of Float with 1 failed") — not an evaluation error, so it
+ * escapes `Formula#evaluate`, and this port refuses at the same point
+ * instead. A single argument is never compared, so `max(NaN)` is `NaN`.
+ */
+function extremum(evaluator: Evaluator, node: FunctionNode, sign: 1 | -1): RubyNumeric {
+  const values = evaluator.functionArguments(node.parameterOne);
+  let best = values[0] as RubyNumeric;
+  for (const candidate of values.slice(1)) {
+    const order = compare(best, candidate);
+    if (order === null) {
+      throw new UnsupportedFeatureError(
+        "evaluate",
+        "Ruby raises ArgumentError (comparison with NaN failed) here, which is not an evaluation error",
+      );
+    }
+    if (order === -sign) best = candidate;
+  }
+  return best;
+}
+
+/**
+ * Every `binaryFunction`/`unaryFunction` class this port evaluates, keyed by
+ * the gem class basename the carrier's `name` holds (`core/nodes.ts`), each
+ * one Ruby's `Function::<Name>#evaluate`. A name not here falls through to
+ * `Evaluator#unported`. `scripts/generate-evaluation-fixtures.rb` reads the
+ * keys of this table out of this file to validate its `unported` rows, so it
+ * stays a literal `new Map([...])` of `["Name", ...]` entries.
+ */
+const FUNCTION_EVALUATORS: ReadonlyMap<string, FunctionEvaluator> = new Map<
+  string,
+  FunctionEvaluator
+>([
+  // Ruby: `Power#evaluate` — `evaluator.power(base, exponent)`.
+  [
+    "Power",
+    (ev, node) => power(ev.evaluateNode(node.parameterOne), ev.evaluateNode(secondParameter(node))),
+  ],
+  // Ruby: `Mod#evaluate` — `evaluator.modulo(a, b)`.
+  [
+    "Mod",
+    (ev, node) =>
+      modulo(ev.evaluateNode(node.parameterOne), ev.evaluateNode(secondParameter(node))),
+  ],
+  // Ruby: `Root#evaluate` — `power(radicand, divide(1.0, index))`, the index
+  // in `parameter_one`, the radicand in `parameter_two`, evaluated in that
+  // order: radicand first.
+  [
+    "Root",
+    (ev, node) => {
+      const radicand = ev.evaluateNode(secondParameter(node));
+      return power(radicand, divide(float(1), ev.evaluateNode(node.parameterOne)));
+    },
+  ],
+  ["Gcd", (ev, node) => reduceIntegers(ev, node, "gcd", integerGcd)],
+  ["Lcm", (ev, node) => reduceIntegers(ev, node, "lcm", integerLcm)],
+  ["Max", (ev, node) => extremum(ev, node, 1)],
+  ["Min", (ev, node) => extremum(ev, node, -1)],
+]);
+
+/**
+ * Ruby: `Evaluator#split_on_commas` — a `Symbols::Comma` token starts a new
+ * segment; there is always at least one (possibly empty) segment.
+ */
+function splitOnCommas(nodes: readonly (MathNode | string)[]): (MathNode | string)[][] {
+  const segments: (MathNode | string)[][] = [[]];
+  for (const node of nodes) {
+    if (typeof node !== "string" && node.kind === "symbol" && node.id === "Comma") {
+      segments.push([]);
+    } else {
+      (segments[segments.length - 1] as (MathNode | string)[]).push(node);
+    }
+  }
+  return segments;
+}
+
+export class Evaluator {
+  private readonly bindings: Map<string, RubyNumeric>;
+  readonly maxIterations: number | null;
+
+  constructor(bindings: EvaluationBindings = {}, settings: EvaluatorSettings = DEFAULT_SETTINGS) {
+    this.bindings = new Map(
+      [...normalizeBindings(bindings)].map(([name, value]) => [name, fromBinding(value)] as const),
+    );
+    this.maxIterations = settings.maxIterations;
   }
 
   evaluateFormula(formula: FormulaNode | Extract<MathNode, { kind: "formula" }>): RubyNumeric {
@@ -282,7 +439,7 @@ export class Evaluator {
   }
 
   /** Ruby: `Evaluator#evaluate_nodes` — a `Fenced` body, evaluated as its own formula. */
-  evaluateNodes(nodes: NodeParameter): RubyNumeric {
+  evaluateNodes(nodes: NodeParameter | NodeSequence): RubyNumeric {
     return this.realResult(new ExpressionParser(this, toNodeArray(nodes)).parse());
   }
 
@@ -305,13 +462,60 @@ export class Evaluator {
   }
 
   /**
-   * Ruby: `Evaluator#value_for`. The binding's Ruby kind is inferred from the
-   * JS value (`numeric.ts`'s `fromBinding`: a safe integer is an Integer).
+   * Ruby: `Mod#evaluate_negated` — `-a mod b` negates the dividend, not the
+   * result (`(-7) mod 3` is `2`), reached from `ExpressionParser`'s unary
+   * minus when the next token is a `Mod`.
+   */
+  evaluateNegatedMod(node: MathNode): RubyNumeric {
+    const mod = node as FunctionNode;
+    return modulo(
+      negate(this.evaluateNode(mod.parameterOne)),
+      this.evaluateNode(secondParameter(mod)),
+    );
+  }
+
+  /**
+   * Ruby: `Evaluator#value_for`. A caller's binding's Ruby kind is inferred
+   * from the JS value when the evaluator is built (`numeric.ts`'s
+   * `fromBinding`: a safe integer is an Integer); an iteration index is
+   * always an Integer.
    */
   valueFor(name: string): RubyNumeric {
     const value = this.bindings.get(name);
     if (value === undefined) throw new MissingVariableError(name);
-    return fromBinding(value);
+    return value;
+  }
+
+  /**
+   * Ruby: `Evaluator#with_binding` — binds `name` for the duration of `body`,
+   * shadowing any outer binding of the same name and restoring it (or
+   * removing the name again) afterwards, whether `body` returns or throws.
+   */
+  withBinding<T>(name: string, value: RubyNumeric, body: () => T): T {
+    const hadKey = this.bindings.has(name);
+    const previous = this.bindings.get(name);
+    this.bindings.set(name, value);
+    try {
+      return body();
+    } finally {
+      if (hadKey) this.bindings.set(name, previous as RubyNumeric);
+      else this.bindings.delete(name);
+    }
+  }
+
+  /**
+   * Ruby: `Evaluator#function_arguments` — a `Fenced` argument's body split
+   * on commas (`max(2,3)`), anything else as a one-segment list
+   * (`Array(node)`: a bare operand, or `nil` as an empty segment), each
+   * segment evaluated as its own formula (`evaluate_arguments`), so an empty
+   * one (`max()`, `max(,2)`) raises "empty expression".
+   */
+  functionArguments(node: NodeParameter): RubyNumeric[] {
+    const nodes =
+      isMathNode(node) && node.kind === "fenced"
+        ? toNodeArray(node.parameterTwo)
+        : toNodeArray(node);
+    return splitOnCommas(nodes).map((segment) => this.evaluateNodes(segment));
   }
 
   /**
@@ -366,11 +570,39 @@ export class Evaluator {
       // token — `ExpressionParser`'s header has the rest of this finding.
       case "frac":
         return divide(this.evaluateNode(node.parameterOne), this.evaluateNode(node.parameterTwo));
-      case "binaryFunction":
-        if (node.name === "Power") {
-          return power(this.evaluateNode(node.parameterOne), this.evaluateNode(node.parameterTwo));
+      // Ruby: `Abs`/`Ceil`/`Floor#evaluate` — the operand's own `abs`/`ceil`/`floor`.
+      case "abs":
+        return absolute(this.evaluateNode(node.parameterOne));
+      case "ceil":
+        return ceilOf(this.evaluateNode(node.parameterOne));
+      case "floor":
+        return floorOf(this.evaluateNode(node.parameterOne));
+      // Ruby: `Sum`/`Prod#evaluate` — all three slots are required
+      // (`unsupported(self)` otherwise), then `Iteration#accumulate(0, :+)` /
+      // `(1, :*)`.
+      case "sum":
+      case "prod":
+        if (node.parameterOne == null || node.parameterTwo == null || node.parameterThree == null) {
+          return this.unsupported(node);
         }
+        return new Iteration(
+          this,
+          node.parameterOne,
+          node.parameterTwo,
+          node.parameterThree,
+        ).accumulate(node.kind === "sum" ? 0n : 1n, node.kind === "sum" ? "+" : "*");
+      // Ruby: `Text#evaluate` — a plain, non-blank text names a variable.
+      case "text": {
+        const name = nodeVariableName(node);
+        if (name === null) return this.unsupported(node);
+        return this.valueFor(name);
+      }
+      case "binaryFunction":
+      case "unaryFunction": {
+        const evaluateFunction = FUNCTION_EVALUATORS.get(node.name);
+        if (evaluateFunction !== undefined) return evaluateFunction(this, node);
         return this.unported(node);
+      }
       default:
         return this.unported(node);
     }
@@ -392,14 +624,22 @@ export class Evaluator {
    * is not part of the public result. A final Rational or unsafe Integer is
    * refused in `finalResult`.
    */
-  static runWithKind(formula: FormulaNode, bindings: EvaluationBindings = {}): FinalNumeric {
-    const evaluator = new Evaluator(bindings);
+  static runWithKind(
+    formula: FormulaNode,
+    bindings: EvaluationBindings = {},
+    settings: EvaluatorSettings = DEFAULT_SETTINGS,
+  ): FinalNumeric {
+    const evaluator = new Evaluator(bindings, settings);
     return finalResult(evaluator.evaluateFormula(formula), () => {
       throw new NonFiniteResultError();
     });
   }
 
-  static run(formula: FormulaNode, bindings: EvaluationBindings = {}): number {
-    return Evaluator.runWithKind(formula, bindings).value;
+  static run(
+    formula: FormulaNode,
+    bindings: EvaluationBindings = {},
+    settings: EvaluatorSettings = DEFAULT_SETTINGS,
+  ): number {
+    return Evaluator.runWithKind(formula, bindings, settings).value;
   }
 }

@@ -4,29 +4,27 @@
  * back, and the root entry re-exports it so `parse(...).evaluate` style usage
  * is available from the batteries-included entry.
  *
- * **This slice (B6, first slice):** `Number`/`Symbol`/binary-arithmetic
- * evaluation only — `+`, binary and unary `-`, unary `+`, `*`, `/`, `^`,
- * implicit multiplication, and grouping parentheses, over AsciiMath input.
- * Every node the gem evaluates but this slice has not ported (`mod`,
- * `Sum`/`Prod` and their iteration cap, every trig/hyperbolic/log/exp/gcd/
- * lcm/min/max/abs/ceil/floor/sqrt/root function, `Fenced` argument lists,
- * `Text#evaluate`) raises `core`'s `UnsupportedFeatureError` (feature
+ * **Ported:** `Number`/`Symbol`/binary-arithmetic evaluation (`+`, binary and
+ * unary `-`, unary `+`, `*`, `/`, `^`, implicit multiplication, grouping
+ * parentheses); `Abs`, `Ceil`, `Floor`, `Gcd`, `Lcm`, `Min`, `Max` (with
+ * comma argument lists), `Mod`, `Root`, `Text` variable lookup, and the
+ * bounded `Sum`/`Prod` iterations with their step cap. Every node the gem
+ * evaluates but this port has not ported (the `Math` module functions:
+ * `Sin`, `Cos`, `Exp`, `Ln`, `Sqrt` and the rest) raises `core`'s `UnsupportedFeatureError` (feature
  * `"evaluate"`): a port gap, not an answer about the expression.
  * `UnsupportedExpressionError` is kept for exactly the refusals the gem
  * itself makes — a malformed number, a missing operand, a stray operator or
  * token, and a node class with no `#evaluate` of its own —
  * `TODO.plan/feature-roadmap.md`'s evaluation entry has the rest of the plan.
  *
- * `options` is reserved for later slices (the gem's `Formula#evaluate` itself
- * takes only `bindings` — this module-function signature is the port's own,
- * per §3 — a per-call iteration cap being the leading candidate, alongside
- * the formatter's own per-call design in `feature-roadmap.md`) and currently
- * accepts no keys.
+ * `options` is the port's own (the gem's `Formula#evaluate` takes only
+ * `bindings`, and reads its one evaluation setting from global
+ * configuration): `EvaluationOptions` below.
  */
 
 import type { FormulaNode } from "../core/nodes";
 import type { EvaluationBindings } from "./bindings";
-import { Evaluator } from "./evaluator";
+import { DEFAULT_MAX_ITERATIONS, Evaluator } from "./evaluator";
 
 export type { EvaluationBindings } from "./bindings";
 export type { EvaluationErrorCode } from "./errors";
@@ -41,8 +39,25 @@ export {
   UnsupportedExpressionError,
 } from "./errors";
 
-/** Reserved for later slices (see the module header); accepts no keys yet. */
-export type EvaluationOptions = Record<string, never>;
+/** Per-call evaluation settings. */
+export interface EvaluationOptions {
+  /**
+   * Ruby: `Plurimath.configuration.evaluation_max_iterations` — the most
+   * steps one `Sum`/`Prod` may take (`to - from + 1`); a larger range raises
+   * `UnsupportedExpressionError` ("iteration range larger than N steps")
+   * before any step runs. Defaults to the gem's `100_000`
+   * (`configuration.rb`); `null` disables the cap, as `nil` does in the gem.
+   */
+  readonly evaluationMaxIterations?: number | null | undefined;
+}
+
+/** The cap an `EvaluationOptions` asks for, checked for an untyped caller. */
+function maxIterationsOption(options: EvaluationOptions): number | null {
+  const value = options.evaluationMaxIterations;
+  if (value === undefined) return DEFAULT_MAX_ITERATIONS;
+  if (value === null || typeof value === "number") return value;
+  throw new TypeError(`evaluationMaxIterations must be a number or null (given ${typeof value})`);
+}
 
 /**
  * Ruby: `Formula#evaluate(bindings = {})`, as the module function §3 reserves.
@@ -59,9 +74,12 @@ export type EvaluationOptions = Record<string, never>;
  * number as a Float, since JavaScript cannot tell `2` from `2.0`.
  *
  * @throws {UnsupportedFeatureError} a construct the gem evaluates that this
- *   slice has not ported; a final result JavaScript cannot represent exactly;
- *   a Float power inside glibc's rounding band; a Ruby `ArgumentError`; or an
- *   exact intermediate beyond the port's size limit.
+ *   port has not ported; a final result JavaScript cannot represent exactly;
+ *   a Float power or `Math` function result inside glibc's rounding band; a
+ *   Ruby `ArgumentError`; or an exact intermediate beyond the port's size
+ *   limit.
+ * @throws {TypeError} `options.evaluationMaxIterations` is neither a number
+ *   nor `null`.
  * @throws {EvaluationError} one of the gem's own evaluation errors
  *   (`DivisionByZeroError`, `MathDomainError`, `NonFiniteResultError`,
  *   `UnsupportedExpressionError`, `MissingVariableError`,
@@ -70,7 +88,7 @@ export type EvaluationOptions = Record<string, never>;
 export function evaluate(
   formula: FormulaNode,
   bindings: EvaluationBindings = {},
-  _options: EvaluationOptions = {},
+  options: EvaluationOptions = {},
 ): number {
-  return Evaluator.run(formula, bindings);
+  return Evaluator.run(formula, bindings, { maxIterations: maxIterationsOption(options) });
 }

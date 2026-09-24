@@ -122,7 +122,24 @@ FORMAT_PARSERS = {
   "latex" => Plurimath::Latex::Parser,
 }.freeze
 
-def evaluate_row(id, group, source, format, text, bindings, port_refusal)
+# Per-row gem configuration, standing in for the port's per-call
+# `EvaluationOptions` (`src/evaluation/index.ts`): `evaluationMaxIterations`
+# is `Plurimath.configuration.evaluation_max_iterations`, set for the one
+# `evaluate` call and restored after it, `nil` recorded as JSON `null`.
+def with_options(options)
+  return yield unless options.key?("evaluationMaxIterations")
+
+  configuration = Plurimath.configuration
+  previous = configuration.evaluation_max_iterations
+  configuration.evaluation_max_iterations = options["evaluationMaxIterations"]
+  begin
+    yield
+  ensure
+    configuration.evaluation_max_iterations = previous
+  end
+end
+
+def evaluate_row(id, group, source, format, text, bindings, port_refusal, options = {})
   bindings.each do |name, value|
     next unless value.is_a?(Float) && value.finite? && value == value.round
 
@@ -138,8 +155,9 @@ def evaluate_row(id, group, source, format, text, bindings, port_refusal)
     "input" => { "format" => format, "text" => text },
     "bindings" => bindings.transform_values { |v| json_safe(v) },
   }
+  row["options"] = options unless options.empty?
   begin
-    result = formula.evaluate(symbolize(bindings))
+    result = with_options(options) { formula.evaluate(symbolize(bindings)) }
     unless result.is_a?(Integer) || result.is_a?(Float)
       abort "REFUSING: #{id}: #{result.inspect} is a #{result.class}" unless port_refusal
     end
@@ -213,7 +231,19 @@ DISPATCH_SOURCE = evaluator_ts_block(
 )
 abort "REFUSING: GEM_EVALUATED_FUNCTIONS read as empty" if GEM_EVALUATED_FUNCTION_NAMES.empty?
 abort "REFUSING: GEM_EVALUATED_KINDS read as empty" if GEM_EVALUATED_KIND_CLASSES.empty?
+# `FUNCTION_EVALUATORS` is the table `dispatch` looks a `binaryFunction`/
+# `unaryFunction` carrier's `name` up in; its keys are the carrier classes the
+# port evaluates.
+FUNCTION_EVALUATOR_NAMES = evaluator_ts_block(
+  /const FUNCTION_EVALUATORS: ReadonlyMap<string, FunctionEvaluator> = new Map<\s*string,\s*FunctionEvaluator\s*>\(\[\n(.*?)\n\]\);/m,
+  "FUNCTION_EVALUATORS",
+).scan(/^\s*\[\s*"(\w+)",/).flatten
+abort "REFUSING: FUNCTION_EVALUATORS read as empty" if FUNCTION_EVALUATOR_NAMES.empty?
+unless DISPATCH_SOURCE.include?("FUNCTION_EVALUATORS.get(node.name)")
+  abort "REFUSING: Evaluator#dispatch no longer looks carriers up in FUNCTION_EVALUATORS"
+end
 DISPATCHED_CLASSES = DISPATCH_SOURCE.scan(/node\.name === "(\w+)"/).flatten +
+                     FUNCTION_EVALUATOR_NAMES +
                      DISPATCH_SOURCE.scan(/case "(\w+)":/).flatten.filter_map { |kind| GEM_EVALUATED_KIND_CLASSES[kind] }
 UNPORTED_GEM_CLASSES = (GEM_EVALUATED_FUNCTION_NAMES - DISPATCHED_CLASSES).to_h do |name|
   klass = Plurimath::Math::Function.const_get(name, false) if Plurimath::Math::Function.const_defined?(name, false)
@@ -515,16 +545,160 @@ ROWS = [
   ["later-stray-token-after-big-integer", "exact-intermediate", "10 99999999^10+-2"],
   ["later-complex-after-rational", "exact-intermediate", "(-2)^(2^(-1))"],
 
+  # `Abs`/`Ceil`/`Floor#evaluate` — the operand's own `abs`/`ceil`/`floor`;
+  # `ceil`/`floor` always answer an Integer, and raise `FloatDomainError`
+  # (`NonFiniteResultError`) for a non-finite Float.
+  ["abs-integer", "abs", "abs(-2)"],
+  ["abs-float", "abs", "abs(-2.5)"],
+  ["abs-negative-zero", "abs", "abs(-0.0)"],
+  ["abs-rational", "abs", "abs(-2^(-1))"],
+  ["abs-rational-to-float", "abs", "abs(-2^(-1))*1.0"],
+  ["abs-nan", "abs", "abs(a)"],
+  ["abs-missing-variable", "abs", "abs(x)"],
+  ["abs-nested", "abs", "abs(abs(-3)-5)"],
+  ["ceil-float", "ceil-floor", "ceil(2.5)"],
+  ["ceil-negative-to-zero", "ceil-floor", "ceil(-0.5)"],
+  ["ceil-integer", "ceil-floor", "ceil(7)"],
+  ["ceil-rational", "ceil-floor", "ceil(3*2^(-1))"],
+  ["ceil-negative-rational", "ceil-floor", "ceil(-3*2^(-1))"],
+  ["floor-negative-float", "ceil-floor", "floor(-2.5)"],
+  ["floor-rational", "ceil-floor", "floor(3*2^(-1))"],
+  ["floor-negative-rational", "ceil-floor", "floor(-3*2^(-1))"],
+  ["floor-infinity", "ceil-floor", "floor(a)"],
+  ["floor-nan", "ceil-floor", "floor(a)"],
+  ["ceil-minus-infinity", "ceil-floor", "ceil(a)"],
+  ["floor-huge-float", "ceil-floor", "floor(10.0^300)"],
+  ["floor-huge-float-cancels", "ceil-floor", "floor(10.0^300)-floor(10.0^300)+1"],
+  ["floor-float-binding", "ceil-floor", "floor(a)"],
+
+  # `Gcd`/`Lcm#evaluate` — comma argument lists (`function_arguments`), every
+  # argument evaluated before the Integer check.
+  ["gcd-two", "gcd-lcm", "gcd(4,6)"],
+  ["gcd-three", "gcd-lcm", "gcd(12,18,8)"],
+  ["gcd-single-negative", "gcd-lcm", "gcd(-4)"],
+  ["gcd-negative-pair", "gcd-lcm", "gcd(-4,6)"],
+  ["gcd-zeros", "gcd-lcm", "gcd(0,0)"],
+  ["gcd-big-operands", "gcd-lcm", "gcd(2^70,3*2^40)"],
+  ["gcd-float-argument", "gcd-lcm", "gcd(4.0,6)"],
+  ["gcd-rational-argument", "gcd-lcm", "gcd(2^(-1),2)"],
+  ["gcd-missing-variable-before-domain", "gcd-lcm", "gcd(4.0,x)"],
+  ["gcd-empty-argument", "gcd-lcm", "gcd(4,)"],
+  ["gcd-bare-operand", "gcd-lcm", "gcd 12"],
+  ["lcm-two", "gcd-lcm", "lcm(4,6)"],
+  ["lcm-negative", "gcd-lcm", "lcm(-4,6)"],
+  ["lcm-zero", "gcd-lcm", "lcm(0,6)"],
+  ["lcm-three", "gcd-lcm", "lcm(2,3,4)"],
+  ["lcm-float-argument", "gcd-lcm", "lcm(2.5,2)"],
+  ["lcm-big-result", "gcd-lcm", "lcm(2^40,3^20)"],
+
+  # `Min`/`Max#evaluate` — `Array#min`/`#max`: the first of equal values wins,
+  # kind included; Integer/Float comparisons are exact; `NaN` against
+  # anything raises Ruby's `ArgumentError`.
+  ["max-two", "min-max", "max(2,3)"],
+  ["min-two", "min-max", "min(2,3)"],
+  ["max-list", "min-max", "max(1,5,3,5)"],
+  ["min-list", "min-max", "min(4,-1.5,2)"],
+  ["max-tie-integer-first", "min-max", "max(2,2.0)"],
+  ["max-tie-float-first", "min-max", "max(2.0,2)"],
+  ["min-tie-zero-first", "min-max", "min(0,-0.0)"],
+  ["min-tie-negative-zero-first", "min-max", "min(-0.0,0)"],
+  ["max-exact-integer-float-compare", "min-max", "max(2.0^53,2^53+1)-2^53"],
+  ["max-rational-result", "min-max", "max(2^(-1),0.1)"],
+  ["max-rational-loses", "min-max", "max(2^(-1),0.6)"],
+  ["max-bare-operand", "min-max", "max 2"],
+  ["max-empty", "min-max", "max()"],
+  ["max-empty-first-argument", "min-max", "max(,2)"],
+  ["max-single-nan", "min-max", "max(a)"],
+  ["max-nan-first", "min-max", "max(a,1)"],
+  ["min-nan-last", "min-max", "min(1,a)"],
+  ["max-infinity", "min-max", "max(a,1)"],
+  ["max-expression-arguments", "min-max", "max(1+2,2*2)"],
+
+  # `Mod#evaluate` — `evaluator.modulo`: Ruby's `%` for each pair of kinds,
+  # `DivisionByZeroError` on a zero divisor, and `evaluate_negated` for a
+  # leading minus (`-7 mod 3` is `(-7) mod 3`).
+  ["mod-integers", "mod", "7 mod 3"],
+  ["mod-negated-dividend", "mod", "-7 mod 3"],
+  ["mod-negative-divisor-token", "mod", "7 mod -3"],
+  ["mod-float-dividend", "mod", "7.5 mod 2"],
+  ["mod-negative-float-dividend", "mod", "-7.5 mod 2"],
+  ["mod-integer-by-float", "mod", "7 mod 2.5"],
+  ["mod-negative-zero", "mod", "-0.0 mod 3"],
+  ["mod-zero-divisor", "mod", "7 mod 0"],
+  ["mod-zero-float-divisor", "mod", "7 mod 0.0"],
+  ["mod-by-infinity", "mod", "5 mod a"],
+  ["mod-negative-by-infinity", "mod", "-5 mod a"],
+  ["mod-by-minus-infinity", "mod", "5 mod a"],
+  ["mod-infinity-dividend", "mod", "a mod 3"],
+  ["mod-by-nan", "mod", "7 mod a"],
+  ["mod-rational-dividend", "mod", "2^(-1) mod 3"],
+  ["mod-rational-dividend-to-float", "mod", "(2^(-1) mod 3)*1.0"],
+  ["mod-integer-by-rational", "mod", "(7 mod 3^(-1))*1.0"],
+  ["mod-rational-by-float", "mod", "2^(-1) mod 0.3"],
+  ["mod-rational-by-infinity", "mod", "2^(-1) mod a"],
+  ["mod-rational-by-nan", "mod", "2^(-1) mod a"],
+  ["mod-big-integer", "mod", "2^100 mod 7"],
+  ["mod-big-integer-by-float", "mod", "2^100 mod 7.0"],
+  ["mod-float-by-big-integer", "mod", "10.0 mod 2^100"],
+  ["mod-missing-variable", "mod", "x mod 3"],
+  ["mod-in-sum", "mod", "1+7 mod 3"],
+
+  # `Sum`/`Prod#evaluate` — `Iteration#accumulate`: an `i=<start>` lower
+  # bound, Integer bounds, a step count within the cap
+  # (`Plurimath.configuration.evaluation_max_iterations`, default 100,000),
+  # and the index bound over the body, shadowing and then restoring any
+  # outer binding of the same name.
+  ["sum-basic", "iteration", "sum_(i=1)^3 i"],
+  ["prod-basic", "iteration", "prod_(i=1)^4 i"],
+  ["sum-empty-range", "iteration", "sum_(i=3)^1 i"],
+  ["prod-empty-range", "iteration", "prod_(i=5)^1 i"],
+  ["sum-negative-range", "iteration", "sum_(i=-2)^2 i"],
+  ["sum-float-body", "iteration", "sum_(i=1)^3 0.1"],
+  ["sum-rational-body", "iteration", "sum_(i=1)^3 2^(-i)"],
+  ["sum-rational-body-to-float", "iteration", "(sum_(i=1)^3 2^(-i))*1.0"],
+  ["sum-nested", "iteration", "sum_(i=1)^3 sum_(j=1)^i j"],
+  ["sum-text-body", "iteration", "sum_(i=1)^3 text(i)"],
+  ["sum-shadows-binding", "iteration", "sum_(i=1)^3 i+i"],
+  ["sum-upper-bound-variable", "iteration", "sum_(i=1)^n i"],
+  ["prod-largest-safe", "iteration", "prod_(i=1)^18 i"],
+  ["prod-big-integer", "iteration", "prod_(i=1)^25 i"],
+  ["sum-at-cap", "iteration", "sum_(i=1)^100000 1"],
+  ["sum-over-cap", "iteration", "sum_(i=1)^100001 i"],
+  ["sum-over-cap-huge", "iteration", "sum_(i=1)^(2^100) i"],
+  ["sum-custom-cap-within", "iteration", "sum_(i=1)^5 i"],
+  ["sum-custom-cap-over", "iteration", "sum_(i=1)^6 i"],
+  ["sum-no-cap", "iteration", "sum_(i=1)^100001 1"],
+  ["sum-float-lower-bound", "iteration", "sum_(i=1.0)^3 i"],
+  ["sum-float-upper-bound", "iteration", "sum_(i=1)^3.0 i"],
+  ["sum-float-binding-bound", "iteration", "sum_(i=a)^3 i"],
+  ["sum-rational-bound", "iteration", "sum_(i=2^(-1)*2)^3 i"],
+  ["sum-reserved-index", "iteration", "sum_(pi=1)^3 i"],
+  ["sum-malformed-bounds", "iteration", "sum_(i)^3 i"],
+  ["sum-empty-start", "iteration", "sum_(i=)^3 i"],
+  ["sum-missing-upper", "iteration", "sum_(i=1) i"],
+  ["sum-bare", "iteration", "sum i"],
+  ["sum-missing-variable-body", "iteration", "sum_(i=1)^3 x"],
+  ["sum-division-by-zero-body", "iteration", "sum_(i=0)^2 1/i"],
+
+  # `Root#evaluate` — `power(radicand, divide(1.0, index))`, radicand first.
+  ["root-cube", "root", "root(3)(8)"],
+  ["root-square", "root", "root(2)(9)"],
+  ["root-irrational", "root", "root(2)(2)"],
+  ["root-zero-index", "root", "root(0)(8)"],
+  ["root-negative-radicand", "root", "root(3)(-8)"],
+  ["root-missing-index-after-radicand", "root", "root(x)(y)"],
+
+  # `Text#evaluate` — a plain, non-blank text names a variable.
+  ["text-variable", "text", "text(ab)"],
+  ["text-missing-variable", "text", "text(ab)"],
+  ["text-stripped", "text", "text( ab )"],
+  ["text-empty", "text", "text()"],
+  ["text-in-arithmetic", "text", "2 text(ab)+1"],
+
   # Gem-evaluated nodes this slice has not ported.
-  ["unported-mod", "unported", "7 mod 3"],
   ["unported-sin-missing-variable", "unported", "sin(x)"],
-  ["unported-sum", "unported", "sum_(i=1)^3 i"],
   ["unported-sqrt", "unported", "sqrt(4)"],
-  ["unported-abs", "unported", "abs(-2)"],
-  ["unported-floor", "unported", "floor(2.5)"],
-  ["unported-max-argument-list", "unported", "max(2,3)"],
   ["unported-log", "unported", "log(100)"],
-  ["unported-text", "unported", "text(ab)"],
 
   # A sample of scripts/-generated random expressions, re-checked here.
   ["random-float-product", "random", "+12*3.14"],
@@ -563,6 +737,21 @@ LATEX_ROWS = [
   ["latex-core-default-vec", "error-unsupported", "\\vec{x}"],
   ["latex-big-integer-power", "representability", "2^{100}"],
   ["latex-rational-integer-negative-power", "representability", "2^{-1}"],
+  ["latex-gcd", "gcd-lcm", "\\gcd(4,6)"],
+  ["latex-max", "min-max", "\\max(2,3.5)"],
+  ["latex-min", "min-max", "\\min(1,2)"],
+  ["latex-mod", "mod", "7 \\mod 3"],
+  ["latex-bmod-negated", "mod", "-7 \\bmod 3"],
+  ["latex-sum", "iteration", "\\sum_{i=1}^{3} i"],
+  ["latex-prod", "iteration", "\\prod_{i=1}^{4} i"],
+  ["latex-sum-over-cap", "iteration", "\\sum_{i=1}^{100001} i"],
+  ["latex-sum-float-bound", "iteration", "\\sum_{i=1}^{3.5} i"],
+  ["latex-root", "root", "\\sqrt[3]{8}"],
+  ["latex-text-variable", "text", "\\text{ab}"],
+  ["latex-lfloor-is-a-group", "ceil-floor", "\\lfloor 2.5 \\rfloor"],
+  ["latex-lceil-is-a-group", "ceil-floor", "\\lceil 2.5 \\rceil"],
+  ["latex-abs-vert", "abs", "\\left|x\\right|"],
+  ["latex-mod-zero", "mod", "7 \\bmod 0"],
 ].freeze
 
 # Bindings, keyed by the row id above where non-empty; every other row
@@ -611,6 +800,38 @@ BINDINGS = {
   "random-nested-groups" => { "a" => 1, "b" => 0.5, "c" => -3 },
   "latex-variable-lookup" => { "a" => 2 },
   "latex-invalid-binding-string" => { "a" => "x" },
+  "abs-nan" => { "a" => Float::NAN },
+  "floor-infinity" => { "a" => Float::INFINITY },
+  "floor-nan" => { "a" => Float::NAN },
+  "ceil-minus-infinity" => { "a" => -Float::INFINITY },
+  "floor-float-binding" => { "a" => -3.75 },
+  "max-single-nan" => { "a" => Float::NAN },
+  "max-nan-first" => { "a" => Float::NAN },
+  "min-nan-last" => { "a" => Float::NAN },
+  "max-infinity" => { "a" => Float::INFINITY },
+  "mod-by-infinity" => { "a" => Float::INFINITY },
+  "mod-negative-by-infinity" => { "a" => Float::INFINITY },
+  "mod-by-minus-infinity" => { "a" => -Float::INFINITY },
+  "mod-infinity-dividend" => { "a" => Float::INFINITY },
+  "mod-by-nan" => { "a" => Float::NAN },
+  "mod-rational-by-infinity" => { "a" => Float::INFINITY },
+  "mod-rational-by-nan" => { "a" => Float::NAN },
+  "sum-shadows-binding" => { "i" => 7 },
+  "sum-upper-bound-variable" => { "n" => 4 },
+  "sum-float-binding-bound" => { "a" => 1.5 },
+  "text-variable" => { "ab" => 3 },
+  "text-stripped" => { "ab" => 3 },
+  "text-in-arithmetic" => { "ab" => 4 },
+  "latex-text-variable" => { "ab" => 5 },
+  "latex-abs-vert" => { "x" => -2 },
+}.freeze
+
+# Per-row gem configuration (`with_options`), keyed by row id; every other row
+# runs with the gem's defaults.
+OPTIONS = {
+  "sum-custom-cap-within" => { "evaluationMaxIterations" => 5 },
+  "sum-custom-cap-over" => { "evaluationMaxIterations" => 5 },
+  "sum-no-cap" => { "evaluationMaxIterations" => nil },
 }.freeze
 
 # Rows the port refuses with `UnsupportedFeatureError`, each with its reason
@@ -629,23 +850,26 @@ PORT_REFUSALS = {
   "argument-error-negative-fixnum-min" => "argument-error",
   "size-limit-huge-power-times-zero" => "size-limit",
   "pow-exact-halfway" => "pow-rounding-band",
-  "unported-mod" => "unported",
   "unported-sin-missing-variable" => "unported",
-  "unported-sum" => "unported",
   "unported-sqrt" => "unported",
-  "unported-abs" => "unported",
-  "unported-floor" => "unported",
-  "unported-max-argument-list" => "unported",
   "unported-log" => "unported",
-  "unported-text" => "unported",
   "latex-sqrt" => "unported",
+  "abs-rational" => "rational",
+  "floor-huge-float" => "big-integer",
+  "lcm-big-result" => "big-integer",
+  "max-rational-result" => "rational",
+  "max-nan-first" => "argument-error",
+  "min-nan-last" => "argument-error",
+  "mod-rational-dividend" => "rational",
+  "sum-rational-body" => "rational",
+  "prod-big-integer" => "big-integer",
   "latex-big-integer-power" => "big-integer",
   "latex-rational-integer-negative-power" => "rational",
 }.freeze
 
 ALL_ROW_IDS = (ROWS + LATEX_ROWS).map(&:first)
-unknown = (BINDINGS.keys + PORT_REFUSALS.keys) - ALL_ROW_IDS
-abort "REFUSING: BINDINGS/PORT_REFUSALS name unknown rows: #{unknown.join(', ')}" unless unknown.empty?
+unknown = (BINDINGS.keys + PORT_REFUSALS.keys + OPTIONS.keys) - ALL_ROW_IDS
+abort "REFUSING: BINDINGS/PORT_REFUSALS/OPTIONS name unknown rows: #{unknown.join(', ')}" unless unknown.empty?
 
 SOURCE = "hand-built for scripts/generate-evaluation-fixtures.rb"
 
@@ -653,7 +877,7 @@ rows = ROWS.map { |id, group, text| [id, group, text, "asciimath"] }
   .concat(LATEX_ROWS.map { |id, group, text| [id, group, text, "latex"] })
   .map do |id, group, text, format|
     bindings = BINDINGS.fetch(id, {})
-    row = evaluate_row(id, group, SOURCE, format, text, bindings, PORT_REFUSALS[id])
+    row = evaluate_row(id, group, SOURCE, format, text, bindings, PORT_REFUSALS[id], OPTIONS.fetch(id, {}))
     validate_port_refusal!(id, PORT_REFUSALS[id], row)
     row
   end

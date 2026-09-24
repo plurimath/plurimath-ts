@@ -92,8 +92,8 @@ type Exact = IntegerValue | RationalValue;
 const FEATURE = "evaluate";
 
 /** Port resource limits (module header). */
-const INTEGER_BIT_LIMIT = 1 << 22;
-const RATIONAL_BIT_LIMIT = 1 << 13;
+export const INTEGER_BIT_LIMIT = 1 << 22;
+export const RATIONAL_BIT_LIMIT = 1 << 13;
 
 /** Ruby's Fixnum range on 64-bit platforms; `Integer#**` and `Integer#fdiv` branch on it. */
 const FIXNUM_MIN = -(1n << 62n);
@@ -250,9 +250,35 @@ function parts(x: Exact): readonly [bigint, bigint] {
 }
 
 /**
+ * Whether the product of `x` and `y` is certain to be longer than `limit`
+ * bits, decided from their bit lengths alone, before any multiplication: the
+ * product of a nonzero `a`-bit and a nonzero `b`-bit Integer has `a+b-1` or
+ * `a+b` bits, so it certainly exceeds `limit` exactly when `a+b-1` does. At
+ * `a+b-1 == limit` it may land on either side, so this answers `false` and
+ * the caller computes the product for its own size check to decide. A zero
+ * factor gives `0`, which never exceeds a limit.
+ */
+export function productCertainlyExceeds(x: bigint, y: bigint, limit: number): boolean {
+  if (x === 0n || y === 0n) return false;
+  return bitLength(x) + bitLength(y) - 1 > limit;
+}
+
+/**
  * Ruby `+`: Integer + Integer is an Integer; an Integer or Rational with a
  * Rational is an exact Rational (the Integer coerced to `Rational(n, 1)`);
  * anything with a Float converts the other operand with `toDouble` first.
+ *
+ * `add` and `subtract` check size AFTER computing, unlike `multiply`: an
+ * Integer sum or difference is at most one bit longer than its longer operand
+ * and costs linear time, so the most a refused result can have cost is one
+ * linear pass over an operand `integer()` already admitted. Their Rational
+ * cross-products (`an * bd`, `bn * ad`) have one factor that is always a
+ * Rational part (at most `RATIONAL_BIT_LIMIT` bits) or `1n` — Integer + Integer
+ * never reaches them — so each is at most an admitted Integer times an
+ * 8,192-bit value: measured (Node v20.20.2, Linux x86_64, 2026-09-24) at
+ * 7-9ms across five runs for a 4,194,304-bit Integer plus, or minus, a
+ * Rational whose numerator and denominator are both 8,192 bits, refusal
+ * included.
  */
 export function add(left: RubyNumeric, right: RubyNumeric): RubyNumeric {
   if (left.kind === "integer" && right.kind === "integer") return integer(left.value + right.value);
@@ -271,12 +297,26 @@ export function subtract(left: RubyNumeric, right: RubyNumeric): RubyNumeric {
   return rational(an * bd - bn * ad, ad * bd);
 }
 
-/** Ruby `*`, with `add`'s promotion rules. */
+/**
+ * Ruby `*`, with `add`'s promotion rules. A product is refused BEFORE it is
+ * computed when `productCertainlyExceeds` shows the check after it would
+ * refuse anyway — `integer()`'s `INTEGER_BIT_LIMIT`, or `rational()`'s
+ * pre-reduction bound of `2 * RATIONAL_BIT_LIMIT` on the numerator — with the
+ * same `tooLarge()` refusal, so no input's outcome changes; only the
+ * multiplication a refused result would have cost is skipped. The Rational
+ * denominator `ad * bd` needs no such check: each factor is a Rational part
+ * (at most `RATIONAL_BIT_LIMIT` bits) or `1n`, so the product never exceeds
+ * `2 * RATIONAL_BIT_LIMIT`.
+ */
 export function multiply(left: RubyNumeric, right: RubyNumeric): RubyNumeric {
-  if (left.kind === "integer" && right.kind === "integer") return integer(left.value * right.value);
+  if (left.kind === "integer" && right.kind === "integer") {
+    if (productCertainlyExceeds(left.value, right.value, INTEGER_BIT_LIMIT)) tooLarge();
+    return integer(left.value * right.value);
+  }
   if (!isExact(left) || !isExact(right)) return float(toDouble(left) * toDouble(right));
   const [an, ad] = parts(left);
   const [bn, bd] = parts(right);
+  if (productCertainlyExceeds(an, bn, 2 * RATIONAL_BIT_LIMIT)) tooLarge();
   return rational(an * bn, ad * bd);
 }
 

@@ -181,6 +181,66 @@ INTEGER_BIT_LIMIT_MATCH = NUMERIC_TS_SOURCE.match(/INTEGER_BIT_LIMIT = 1 << (\d+
 abort "REFUSING: could not read INTEGER_BIT_LIMIT out of numeric.ts" unless INTEGER_BIT_LIMIT_MATCH
 INTEGER_BIT_LIMIT = 1 << INTEGER_BIT_LIMIT_MATCH[1].to_i
 
+# The gem classes the port refuses as `unported`, read from
+# `evaluator.ts`'s own source the way `INTEGER_BIT_LIMIT` is read above, so an
+# `unported` row is validated against the port's ACTUAL dispatch: every name in
+# `GEM_EVALUATED_FUNCTIONS` (the gem-evaluated classes the port knows of),
+# minus any that `dispatch` handles itself — by `node.name === "..."` on a
+# function carrier, or by a `case "<kind>":` whose kind `GEM_EVALUATED_KINDS`
+# maps to that class. Each remaining name must also be, on the loaded gem, a
+# `Function` class whose `#evaluate` is its own rather than `Core`'s refusing
+# default, or the port's list has drifted from the oracle.
+EVALUATOR_TS_SOURCE = File.read(File.join(__dir__, "..", "src", "evaluation", "evaluator.ts"))
+
+def evaluator_ts_block(pattern, what)
+  match = EVALUATOR_TS_SOURCE.match(pattern)
+  abort "REFUSING: could not read #{what} out of evaluator.ts" unless match
+
+  match[1]
+end
+
+GEM_EVALUATED_FUNCTION_NAMES = evaluator_ts_block(
+  /const GEM_EVALUATED_FUNCTIONS: ReadonlySet<string> = new Set\(\[(.*?)\]\);/m,
+  "GEM_EVALUATED_FUNCTIONS",
+).scan(/"(\w+)"/).flatten
+GEM_EVALUATED_KIND_CLASSES = evaluator_ts_block(
+  /const GEM_EVALUATED_KINDS: ReadonlyMap<string, string> = new Map\(\[(.*?)\]\);/m,
+  "GEM_EVALUATED_KINDS",
+).scan(/\["(\w+)", "(\w+)"\]/).to_h
+DISPATCH_SOURCE = evaluator_ts_block(
+  /private dispatch\(node: MathNode\): RubyNumeric \{\n(.*?)\n  \}\n/m,
+  "Evaluator#dispatch",
+)
+abort "REFUSING: GEM_EVALUATED_FUNCTIONS read as empty" if GEM_EVALUATED_FUNCTION_NAMES.empty?
+abort "REFUSING: GEM_EVALUATED_KINDS read as empty" if GEM_EVALUATED_KIND_CLASSES.empty?
+DISPATCHED_CLASSES = DISPATCH_SOURCE.scan(/node\.name === "(\w+)"/).flatten +
+                     DISPATCH_SOURCE.scan(/case "(\w+)":/).flatten.filter_map { |kind| GEM_EVALUATED_KIND_CLASSES[kind] }
+UNPORTED_GEM_CLASSES = (GEM_EVALUATED_FUNCTION_NAMES - DISPATCHED_CLASSES).to_h do |name|
+  klass = Plurimath::Math::Function.const_get(name, false) if Plurimath::Math::Function.const_defined?(name, false)
+  unless klass.is_a?(Class) && klass.instance_method(:evaluate).owner != Plurimath::Math::Core
+    abort "REFUSING: evaluator.ts's GEM_EVALUATED_FUNCTIONS names #{name}, which the oracle does not " \
+          "evaluate with its own Function::#{name}#evaluate"
+  end
+  [klass.name, name]
+end.freeze
+abort "REFUSING: evaluator.ts leaves no gem-evaluated class unported" if UNPORTED_GEM_CLASSES.empty?
+
+# Every node of a parsed gem formula, depth first: the `Plurimath::Math::Core`
+# values reachable through its instance variables, arrays and hashes.
+def gem_nodes(value, seen = {}.compare_by_identity, out = [])
+  case value
+  when Array then value.each { |v| gem_nodes(v, seen, out) }
+  when Hash then value.each_value { |v| gem_nodes(v, seen, out) }
+  when Plurimath::Math::Core
+    return out if seen[value]
+
+    seen[value] = true
+    out << value
+    value.instance_variables.each { |iv| gem_nodes(value.instance_variable_get(iv), seen, out) }
+  end
+  out
+end
+
 # `size-limit` rows: the exact intermediate value the port refuses, computed
 # independently in plain Ruby (arbitrary-precision `Integer`), keyed by row
 # id. Validated bit length must exceed `INTEGER_BIT_LIMIT` (item 6: "size-limit
@@ -236,6 +296,17 @@ def validate_port_refusal!(id, port_refusal, row)
     # `error-unsupported` case, not this one.
     if row["raises"] == "Plurimath::Errors::Evaluation::UnsupportedExpressionError"
       abort "REFUSING: #{id}: marked unported, but the oracle itself refuses this construct"
+    end
+    # And the label's positive claim: the formula really contains a class the
+    # gem evaluates and the port has not ported (`UNPORTED_GEM_CLASSES`). A
+    # row without one would be refused by the port for some other reason, or
+    # not at all — `x+1` raising `MissingVariableError` is not `unported`.
+    input = row["input"]
+    formula = FORMAT_PARSERS.fetch(input["format"]).new(input["text"]).parse
+    unported = gem_nodes(formula).filter_map { |node| UNPORTED_GEM_CLASSES[node.class.name] }.uniq
+    if unported.empty?
+      abort "REFUSING: #{id}: marked unported, but its formula contains no gem-evaluated class " \
+            "evaluator.ts leaves unported (#{UNPORTED_GEM_CLASSES.values.sort.join(', ')})"
     end
   when "size-limit"
     intermediate = SIZE_LIMIT_INTERMEDIATES[id]

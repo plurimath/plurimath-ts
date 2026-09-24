@@ -20,7 +20,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { UnsupportedFeatureError } from "../../src/core/errors";
-import { Evaluator } from "../../src/evaluation/evaluator";
+import { Evaluator, GEM_EVALUATED_FUNCTIONS } from "../../src/evaluation/evaluator";
 import {
   DivisionByZeroError,
   type EvaluationBindings,
@@ -121,6 +121,39 @@ function toBindings(raw: Row["bindings"]): EvaluationBindings {
   return bindings as EvaluationBindings;
 }
 
+/**
+ * The refusal `Evaluator#unported` throws, and nothing else in `src/` does:
+ * the gem class it names is captured.
+ */
+const UNPORTED_REFUSAL =
+  /^evaluate is not supported yet: Function::(\w+) is evaluated by the gem but not ported to this slice yet$/;
+
+/**
+ * The gem class basenames a parsed formula's nodes stand for, read from the
+ * tree directly rather than through `evaluator.ts`'s own maps: a function
+ * carrier (`binaryFunction`/`unaryFunction`/`ternaryFunction`) holds the
+ * basename in `name`; every other node kind is the basename in camelCase
+ * (`sqrt` is `Sqrt`).
+ */
+function gemClassesIn(
+  value: unknown,
+  seen = new Set<object>(),
+  out = new Set<string>(),
+): Set<string> {
+  if (typeof value !== "object" || value === null || seen.has(value)) return out;
+  seen.add(value);
+  const node = value as { kind?: unknown; name?: unknown };
+  if (typeof node.kind === "string") {
+    if (/^(binary|unary|ternary)Function$/.test(node.kind) && typeof node.name === "string") {
+      out.add(node.name);
+    } else {
+      out.add(node.kind.charAt(0).toUpperCase() + node.kind.slice(1));
+    }
+  }
+  for (const child of Object.values(value)) gemClassesIn(child, seen, out);
+  return out;
+}
+
 describe("evaluate() against the oracle fixtures", () => {
   it("has fixture rows to check", () => {
     expect(rows.length).toBeGreaterThan(0);
@@ -183,6 +216,35 @@ describe("evaluate() against the oracle fixtures", () => {
     const plain = rows.filter((row) => row.portRefusal === undefined && row.expected !== undefined);
     expect(plain.some((row) => /^-?\d+$/.test(row.expected as string))).toBe(true);
     expect(plain.some((row) => !/^-?\d+$/.test(row.expected as string))).toBe(true);
+  });
+});
+
+// The generator proves each `unported` label against `evaluator.ts`'s source
+// text; this proves it against the port's behaviour, so a dispatch change
+// that starts evaluating one of these classes fails here instead of leaving a
+// stale label that source-text matching cannot see.
+describe("evaluate() refuses every unported fixture row from the unported path", () => {
+  const unported = rows.filter((row) => row.portRefusal === "unported");
+
+  it("has unported rows to check", () => {
+    expect(unported.length).toBeGreaterThan(0);
+  });
+
+  it.each(unported.map((row) => [row.id, row] as const))("%s", (_id, row) => {
+    const formula = parseRowInput(row.input);
+    let thrown: unknown;
+    try {
+      evaluate(formula, toBindings(row.bindings));
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown, row.id).toBeInstanceOf(UnsupportedFeatureError);
+    expect((thrown as UnsupportedFeatureError).feature, row.id).toBe("evaluate");
+    const match = UNPORTED_REFUSAL.exec((thrown as Error).message);
+    expect(match, `${row.id}: ${(thrown as Error).message}`).not.toBeNull();
+    const gemClass = (match as RegExpExecArray)[1] as string;
+    expect(GEM_EVALUATED_FUNCTIONS.has(gemClass), `${row.id}: ${gemClass}`).toBe(true);
+    expect([...gemClassesIn(formula)], row.id).toContain(gemClass);
   });
 });
 

@@ -109,7 +109,7 @@ function evaluateNumber(node: NumberData): RubyNumeric {
  * Ruby class basename in `name` (`core/nodes.ts`); the other kinds map to one
  * gem class each.
  */
-const GEM_EVALUATED_FUNCTIONS: ReadonlySet<string> = new Set([
+export const GEM_EVALUATED_FUNCTIONS: ReadonlySet<string> = new Set([
   "Abs",
   "Arccos",
   "Arcsin",

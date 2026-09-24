@@ -30946,8 +30946,8 @@
                     "fields": {
                       "options": {
                         "mpadded": {
-                          "depth": "0",
-                          "height": "0"
+                          "height": "0",
+                          "depth": "0"
                         },
                         "phantom": false
                       },
@@ -38290,8 +38290,8 @@
                 "class": "Math::Function::Frac",
                 "fields": {
                   "options": {
-                    "bevelled": "true",
-                    "linethickness": "0"
+                    "linethickness": "0",
+                    "bevelled": "true"
                   },
                   "parameter_one": {
                     "class": "Math::Symbols::Symbol",

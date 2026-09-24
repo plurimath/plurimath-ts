@@ -571,6 +571,15 @@ module CorpusGenerator
     klass.name.to_s.sub("Plurimath::", "")
   end
 
+  # Insertion order, not alphabetical: a hash whose iteration order the gem
+  # writes out verbatim (`Mpadded#options` straight into `set_attr`, which
+  # emits attributes in Hash order — measured, `mpadded.rb`,
+  # `xml_engine/ox_engine/element.rb:104-110`) needs that order preserved
+  # through the round trip, or a byte-exact render can never be reproduced
+  # from the recorded model no matter what the renderer does. Alphabetizing
+  # here previously hid that: for `{depth:, height:}` alphabetical happens
+  # to equal insertion order, and only `{height:, depth:}`
+  # (`unary-function-model-phantom-mpadded-smash`) exposed the mismatch.
   def serialize_hash(hash, path)
     result = {}
     hash.each do |key, value|
@@ -579,7 +588,7 @@ module CorpusGenerator
 
       result[name] = serialize_value(value, "#{path}.#{name}")
     end
-    result.sort.to_h
+    result
   end
 
   # Fails on an unrecognized type rather than falling back to `to_s`: an

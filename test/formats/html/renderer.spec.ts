@@ -831,7 +831,7 @@ describe("HTML measured boundary refusals", () => {
       kind: "unaryFunction",
       message:
         "mbox.parameterOne: holds an object — the gem returns the slot unrendered, " +
-        "and only a string is a value every parent can take",
+        "and only a string or nil is a value every parent can take",
     });
     // `Left#to_html` interpolates the slot raw, so a node is the same address.
     expectHtmlError(() => toHtml(new UnaryFunctionNode({ name: "Left", parameterOne: symbol() })), {

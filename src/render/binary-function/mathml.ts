@@ -50,6 +50,7 @@ const REACHABLE_BINARY_NAMES: ReadonlySet<string> = new Set([
   "Td",
   "Inf",
   "Intent",
+  "Arg",
 ]);
 
 export function renderBinaryFunction(
@@ -145,6 +146,8 @@ export function renderBinaryFunction(
     }
     case "Intent":
       return renderIntentFunction(node, context);
+    case "Arg":
+      return renderArg(node, context);
     case "Lim":
     case "Inf": {
       // `lim.rb:37`: `<mo>lim</mo>` bare without values; else
@@ -332,23 +335,58 @@ function renderIntentFunction(node: NodeOf<"binaryFunction">, context: RenderCon
   return element;
 }
 
-/** `parameter_two.value`: `Text#value` is its `parameter_one`; a `Symbol`/`Number` its `value`. */
-function valueOfSecond(node: NodeOf<"binaryFunction">): unknown {
-  const two = node.parameterTwo;
-  switch (slotKind(two)) {
+/**
+ * `Arg#to_mathml_without_math_tag` (`arg.rb:7-13`): render `parameter_one`,
+ * then write an `arg` attribute onto that SAME rendered element (not a fresh
+ * wrapper) holding the entity-decoded `parameter_two.value`. `Arg` is not
+ * intent-bearing — the attribute is written whatever `intent` or the
+ * `intent:` option say, unlike every `functionIntent`/`Intent#`-style
+ * writer. A `parameter_one` that renders to anything but one element (a
+ * wrapperless `Formula` splices a list) has no `.attributes` and raises,
+ * same as `Intent`.
+ */
+function renderArg(node: NodeOf<"binaryFunction">, context: RenderContext): XmlElement {
+  const rendered = renderChild(node.parameterOne, context, "arg.parameterOne");
+  const element = requireElement(rendered, node.kind, "arg.parameterOne");
+  const value = dotValue(node.parameterTwo, node.kind, "arg.parameterTwo");
+  if (value !== null && value !== undefined && typeof value !== "string") {
+    throw new RenderError(
+      "arg.parameterTwo: value is not a String — html_entity_to_unicode raises on it",
+      FORMAT,
+      node.kind,
+    );
+  }
+  element.setAttribute("arg", htmlEntityToUnicode((value as string | null | undefined) ?? ""));
+  return element;
+}
+
+/**
+ * `slot.value`: `Text#value` is its `parameter_one`; a `Symbol`/`Number` its
+ * own `value` accessor. Shared by `Intent#encoded_intent` (`intent.rb:25-34`)
+ * and `Arg#to_mathml_without_math_tag` (`arg.rb:9-13`), both of which call
+ * `.value` on a slot unconditionally — anything else raises `NoMethodError`
+ * in the gem.
+ */
+function dotValue(slot: NodeParameter | undefined, kind: string, at: string): unknown {
+  switch (slotKind(slot)) {
     case "text":
-      return (two as { readonly parameterOne?: unknown }).parameterOne;
+      return (slot as { readonly parameterOne?: unknown }).parameterOne;
     case "symbol":
     case "number":
-      return (two as { readonly value?: unknown }).value;
+      return (slot as { readonly value?: unknown }).value;
     default:
       throw new RenderError(
-        `intent.parameterTwo: ${describeSlot(two)} — the gem sends .value to it and raises ` +
+        `${at}: ${describeSlot(slot)} — the gem sends .value to it and raises ` +
           "or feeds the result to html_entity_to_unicode",
         FORMAT,
-        node.kind,
+        kind,
       );
   }
+}
+
+/** `parameter_two.value`: `Text#value` is its `parameter_one`; a `Symbol`/`Number` its `value`. */
+function valueOfSecond(node: NodeOf<"binaryFunction">): unknown {
+  return dotValue(node.parameterTwo, node.kind, "intent.parameterTwo");
 }
 
 /** `Intent#encoded_intent` (`intent.rb:25-34`). */

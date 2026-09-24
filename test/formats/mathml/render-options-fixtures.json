@@ -24261,8 +24261,8 @@
                           "class": "Math::Function::Frac",
                           "fields": {
                             "options": {
-                              "choose": true,
-                              "linethickness": "0"
+                              "linethickness": "0",
+                              "choose": true
                             },
                             "parameter_one": {
                               "class": "Math::Symbols::Symbol",
@@ -24335,8 +24335,8 @@
                           "class": "Math::Function::Frac",
                           "fields": {
                             "options": {
-                              "choose": true,
-                              "linethickness": "0"
+                              "linethickness": "0",
+                              "choose": true
                             },
                             "parameter_one": {
                               "class": "Math::Symbols::Symbol",
@@ -38676,8 +38676,8 @@
                     "fields": {
                       "options": {
                         "mpadded": {
-                          "depth": "0",
-                          "height": "0"
+                          "height": "0",
+                          "depth": "0"
                         },
                         "phantom": false
                       },

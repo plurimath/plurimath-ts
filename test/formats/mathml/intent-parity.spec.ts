@@ -69,18 +69,12 @@ const refused = rows.filter((row) => row.raises !== undefined);
 
 /**
  * Rows the gem renders that this port refuses, by id, each with the reason.
- * Both are `Function::Arg` (ⓐ), which the gem writes an `arg` attribute for
- * whatever the intent option says; it is not intent-bearing, and its symbol-
- * keyed `attributes[:arg]` write is not something `XmlElement` models, so the
- * mathml carrier does not name it (`unreachableName`) and the rows are pinned
- * as that refusal. An entry that starts rendering fails its test until dropped.
+ * Empty: `Function::Arg` (ⓐ) — the gem writes an `arg` attribute holding
+ * `parameter_two.value`, whatever the intent option says, since `Arg` is not
+ * itself intent-bearing — used to be pinned here; `binary-function/mathml.ts`
+ * now has its own `Arg` arm.
  */
-const PORT_REFUSES: Readonly<Record<string, string>> = {
-  "intent-unicodemath-528": 'binaryFunction name "Arg"',
-  "intent-unicodemath-528-off": 'binaryFunction name "Arg"',
-  "intent-unicodemath-536": 'binaryFunction name "Arg"',
-  "intent-unicodemath-536-off": 'binaryFunction name "Arg"',
-};
+const PORT_REFUSES: Readonly<Record<string, string>> = {};
 
 function build(row: Row): MathNode {
   if (row.input.model !== undefined) return buildNode(row.input.model, ALIASES);

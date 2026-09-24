@@ -491,6 +491,40 @@ render `m:val="raw"` where the gem never gets as far as rendering. No other
 carrier or renderer models it; a hand-built tree that would have raised in a
 different gem constructor still renders here.
 
+### Evaluation: Float powers inside glibc's rounding band are refused
+
+**Decided 2026-09-23 (keep the documented bound).** The oracle's Float
+`pow` — every Float case of Ruby's `**` — comes from the platform C library:
+glibc on Linux, where the oracle is measured. glibc's `pow` documents a
+worst-case error of 0.54 ULP (`sysdeps/ieee754/dbl-64/e_pow.c`), so when the
+exact result lies within 0.04 ULP of the midpoint between two doubles it may
+return either one. `src/evaluation/pow.ts` reproduces glibc's results by
+correct rounding — outside that band the correctly rounded double is the only
+value within 0.54 ULP, so it is glibc's answer — and refuses inside the band
+with `UnsupportedFeatureError`. A refusal is recoverable; a wrong last digit is
+not. Measured: 0 wrong answers on 200,000 random pairs against glibc; about 5%
+of general Float powers fall in the band (exact results never do). Ruby on
+another libm (macOS, for example) can itself differ from the Linux oracle in
+the last digit of a Float power, so this parity is with the oracle's platform,
+not with every Ruby.
+
+### Evaluation: exact intermediates beyond the port's size limit, and Ruby's `ArgumentError`
+
+**Decided 2026-09-23.** `src/evaluation/numeric.ts` computes Ruby's Integers
+and Rationals exactly (`bigint`) and refuses only a FINAL result a JS number
+cannot hold. Two kinds of intermediate are refused on the spot with
+`UnsupportedFeatureError` instead:
+
+- where Ruby itself raises `ArgumentError: exponent is too large` (an Integer
+  or Rational raised to an Integer outside the 62-bit Fixnum range, or a power
+  beyond Ruby's 2^34-bit result limit). That is not an evaluation error — it
+  escapes `Formula#evaluate` — and Ruby's evaluation stops there too;
+- an Integer longer than 2^22 bits, or a Rational numerator or denominator
+  longer than 2^16 bits. Ruby (linked with GMP) keeps going, but V8's `BigInt`
+  takes seconds per operation at that size and has no fast gcd. This is a
+  resource limit, not Ruby behaviour: an evaluation error Ruby would raise
+  later in the same expression is reported as this refusal instead.
+
 ## Upstream issues
 
 Defects in the Ruby gem, found while building the port. All reproduce on a
@@ -636,6 +670,17 @@ ever reach one of these functions. Not scheduled for a fix: there is no
 Ruby-gem defect to mirror here, unlike the locale case above.
 
 ## Parked ideas
+
+### One evaluation error type, instead of eight
+
+**Parked, 2026-09-23.** `TODO.plan/open-decisions.md`'s "Evaluation error family (B6, first slice)"
+settled on mirroring the gem's `Errors::Evaluation::*` one to one — eight
+classes — for this slice. The maintainer's own preference is the opposite:
+one `EvaluationError` type, most likely carrying a reason code rather than a
+class per failure. Parked rather than built now because changing it later
+means changing it in the gem too — a single-error-type design is not this
+port's call to make unilaterally against the gem's own shape — so it waits
+for that to be decided for both together, not before.
 
 ### Entity handling in the P3 input parsers
 

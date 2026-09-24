@@ -166,10 +166,14 @@ because the gem's LaTeX parser DOES build it — `Math.parse("\hom{x}",
 :latex)` returns a `Hom` — so the name arrives the moment P3 lands a LaTeX
 input format.
 
-One name is measured and deliberately still refused: `Scarries` inherits
-`to_unicodemath` from the carrier (`"scarries⁡x"`) while overriding the other
-three. Admitting it in one format alone would leave a name that renders in
-UnicodeMath and raises everywhere else, which is a worse trap than the gap.
+`Scarries` was the one name measured and deliberately left refused here, on
+the ground that admitting it in UnicodeMath alone — while it raised in every
+other format — would be a worse trap than the gap. That ground no longer
+holds: `asciimath.ts`, `latex.ts`, `mathml.ts` and `omml.ts` already carry
+their own `Scarries` arms (`scarries.rb` overrides all four of those
+`to_*` methods; `to_html` and `to_unicodemath` are the two the carrier
+default still owns), so UnicodeMath was the outlier, not the exception, and
+`Scarries` is now admitted there too (`"scarries⁡x"`, measured).
 
 The HTML slice hand-lists the same way, and for the same reason — no
 `src/generated/html/` slice carries a reachable-name set, and §3's
@@ -214,9 +218,9 @@ and a clear shape: a codepoint sweep in `generate-corpus.rb` beside
 named-escape set is EXACTLY those ten so completeness is enforced rather than
 claimed in prose. That is its own change, not a rider on a corpus pin.
 
-**Trigger for revisiting: a generator that owns these sets per format, the
-first consumer that needs `Scarries`, or any third hand-typed table appearing
-in that file — two is an exception, three is a habit.**
+**Trigger for revisiting: a generator that owns these sets per format, or any
+third hand-typed table appearing in that file — two is an exception, three is
+a habit.** (`Scarries` was the other named trigger; it is admitted now, above.)
 
 ### Three AsciiMath render tables — generated
 

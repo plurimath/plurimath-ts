@@ -70,32 +70,13 @@ const RENDERERS: Readonly<Record<Format, (node: MathNode) => string>> = {
  * refused, and the reason is named at the entry. An entry that starts rendering
  * fails its test until it is dropped.
  */
-const MPADDED_HASH = /mpadded\.options\.mpadded: attribute holds an object/;
 const PORT_REFUSES: Readonly<Record<Format, Readonly<Record<string, RegExp>>>> = {
   asciimath: {},
   latex: {},
-  // `Phantom` renders; its `Mpadded` argument's options hash does not (a nested
-  // hash attribute, `Mpadded`'s own mathml file).
-  mathml: {
-    "model-phantom-mpadded-hphantom": MPADDED_HASH,
-    "model-phantom-mpadded-vphantom": MPADDED_HASH,
-    "model-phantom-mpadded-smash": MPADDED_HASH,
-  },
-  // `Mbox#to_html` answers its slot itself: a string is admitted, nil is not.
-  html: {
-    "model-mbox-nil": /mbox\.parameterOne: holds nil/,
-  },
+  mathml: {},
+  html: {},
   omml: {},
-  // `Scarries#to_unicodemath` is the carrier default and the gem renders it
-  // (`"scarries⁡x"`), but this port's unicodemath carrier deliberately does
-  // not admit `Scarries` — see the module note in
-  // `src/render/unary-function/unicodemath.ts` (`TODO.plan/deferred.md`).
-  unicodemath: {
-    "model-alias-scarries-symbol": /Scarries/,
-    "model-alias-scarries-formula": /Scarries/,
-    "model-alias-scarries-nil": /Scarries/,
-    "model-alias-scarries-hidden": /Scarries/,
-  },
+  unicodemath: {},
 };
 
 function build(row: Row): MathNode {

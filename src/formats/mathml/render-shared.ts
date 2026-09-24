@@ -293,15 +293,21 @@ export function wrapMrow(
  * (ox_engine/element.rb:104-110): `value.to_s`, then the entity decode. The `to_s` is
  * reproducible for exactly the shapes `interpolatedValue` accepts on the
  * asciimath side — nil → `""` (an EMPTY attribute, not a skipped one),
- * strings, booleans, the non-finite floats — and ambiguous for a finite
- * number (Ruby `5` vs `5.0`) or bytes `String()` cannot match (a hash's
- * `{a: 1}`, a node's address-bearing inspect), which raise instead.
+ * strings, booleans, the non-finite floats — a nested plain hash (Ruby's
+ * `Hash#to_s`, which is `Hash#inspect`; `Mpadded#to_mathml_without_math_tag`
+ * hands its whole `options` straight to `set_attr`, and `options[:mpadded]`
+ * is itself a hash for the `\hphantom`/`\vphantom`/`\smash` shapes — measured
+ * on the oracle, `mpadded.rb`, `unicode_math/constants.rb::PHANTOM_SYMBOLS`)
+ * — and ambiguous for a finite number (Ruby `5` vs `5.0`) or bytes
+ * `String()` cannot match (a node's address-bearing inspect), which raise
+ * instead.
  */
 export function attributeText(value: unknown, kind: string, at: string): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
   if (typeof value === "boolean") return String(value);
   if (typeof value === "number" && !Number.isFinite(value)) return String(value);
+  if (isPlainHash(value)) return rubyHashInspect(value, kind, at);
   throw new RenderError(
     `${at}: attribute holds ${describeSlot(value)} — Ruby's to_s of it is bytes ` +
       "String() cannot reliably match",
@@ -318,6 +324,73 @@ export function isPlainHash(value: unknown): value is Record<string, unknown> {
     !Array.isArray(value) &&
     slotKind(value as NodeParameter) === undefined
   );
+}
+
+/**
+ * A bare Ruby symbol/method-name shape (`/^[A-Za-z_]\w*[?!]?$/`): the label
+ * syntax `Hash#inspect` prints as `key: value` (Ruby >= 3.4, the pinned
+ * oracle's 4.0.1). Every key this port ever sees here came off a fixture's
+ * JSON object, so a Ruby String key and a Ruby Symbol key are indistinguishable
+ * by the time they reach this function — this treats every key as a symbol,
+ * which is what `Mpadded#options` actually holds (`mpadded:`, `phantom:`,
+ * `depth:`, `height:`, `width:`). A string-keyed hash would print
+ * `"key" => value` instead and is not reproducible from here; nothing
+ * measured on the oracle needs one yet.
+ */
+function isRubySymbolShaped(key: string): boolean {
+  return /^[A-Za-z_]\w*[?!]?$/.test(key);
+}
+
+/**
+ * One hash ENTRY's value as `Hash#inspect` prints it — `Object#inspect`,
+ * not `#to_s`: `nil` prints `"nil"`, a string prints quoted. Recognises only
+ * the shapes measured on the oracle inside `Mpadded#options[:mpadded]`
+ * (strings and booleans); a finite number or anything else this port cannot
+ * reproduce byte-for-byte raises, same as `attributeText`'s own top level.
+ */
+function rubyInspectValue(value: unknown, kind: string, at: string): string {
+  if (value === null || value === undefined) return "nil";
+  if (typeof value === "boolean") return String(value);
+  if (typeof value === "string") {
+    if (!/^[\x20-\x7e]*$/.test(value) || value.includes('"') || value.includes("\\")) {
+      throw new RenderError(
+        `${at}: nested hash string holds bytes Ruby's String#inspect escaping ` +
+          "is not reproduced for here (only plain printable ASCII is)",
+        FORMAT,
+        kind,
+      );
+    }
+    return `"${value}"`;
+  }
+  if (isPlainHash(value)) return rubyHashInspect(value, kind, at);
+  throw new RenderError(
+    `${at}: nested hash value holds ${describeSlot(value)} — Ruby's inspect of it is ` +
+      "bytes this port does not reproduce",
+    FORMAT,
+    kind,
+  );
+}
+
+/**
+ * `Hash#to_s`/`#inspect` of a plain hash, entry order preserved (the same
+ * order `assertReproducibleRubyHashOrder` already requires of the outer
+ * hash). Measured on the oracle: `{depth: "0", height: "0"}.to_s` gives
+ * `'{depth: "0", height: "0"}'`.
+ */
+function rubyHashInspect(hash: Record<string, unknown>, kind: string, at: string): string {
+  assertReproducibleRubyHashOrder(hash, FORMAT, kind, at);
+  const entries = Object.entries(hash).map(([key, value]) => {
+    if (!isRubySymbolShaped(key)) {
+      throw new RenderError(
+        `${at}.${key}: nested hash key is not symbol-shaped — this port only reproduces ` +
+          "Hash#inspect for symbol keys",
+        FORMAT,
+        kind,
+      );
+    }
+    return `${key}: ${rubyInspectValue(value, kind, `${at}.${key}`)}`;
+  });
+  return `{${entries.join(", ")}}`;
 }
 
 /**

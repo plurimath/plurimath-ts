@@ -565,12 +565,17 @@ now decide where the port refuses there:
   651 multiples, both signs, 3,497,984 arguments per function. glibc's `sin`
   was correctly rounded on all of them; `cos` missed 2, both outside its
   band; `tan` missed 28, 24 inside its band and 4 outside. Those outside the
-  band are 3 magnitudes — `cos(1.5707963267948968)` (the double just above
-  `pi/2`), `tan(3pi)` and `tan(6pi)` — which
-  `src/evaluation/libm-reduction-exceptions.ts` refuses, both signs. Nothing
-  else below 1024 is reduction-guarded, and with that table the port refuses
-  or returns glibc's double on every argument checked. `sin(pi)`,
-  `cos(pi/2)`, `tan(pi/2)`, `sin(2pi)` and `csc(pi)` now answer.
+  band are 6 arguments, 3 magnitudes in both signs — `cos(±1.5707963267948968)`
+  (the double just above `pi/2`), `tan(±3pi)` and `tan(±6pi)`. Rather than
+  refuse them, the port answers each with glibc's own double:
+  `src/evaluation/libm-measured-results.ts`, which the script generates,
+  maps each signed input's bits to the bits Ruby's `Math.cos`/`Math.tan`
+  returned for it — each sign measured on its own, not derived from `cos`
+  being even or `tan` odd (the table bears both out). Nothing else below
+  1024 is reduction-guarded, and the port refuses or returns glibc's double
+  on every argument checked. `sin(pi)`, `cos(pi/2)`, `tan(pi/2)`,
+  `sin(2pi)`, `csc(pi)`, `tan(3pi)` and `tan(6pi)` all answer, matching the
+  gem (the evaluation fixtures' `libm-measured-*` rows).
 - **From 1024 up, by a guard** (`scripts/measure-libm-reduction-error.mjs`):
   refuse a result computed from `sin r` when `|r| < 2^-bits`, with `bits` from
   the largest reduced-argument error measured on the hard cases, minus 67 (so

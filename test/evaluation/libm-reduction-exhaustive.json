@@ -21,7 +21,8 @@
       "missesOutsideBand": 0,
       "worstMissDistance": 0,
       "refusedByBand": 63418,
-      "defaultDisagreements": 0
+      "defaultDisagreements": 0,
+      "outsideBandNotAnsweredByDefault": 0
     },
     "cos": {
       "bandInverse": 50,
@@ -32,7 +33,8 @@
       "missesOutsideBand": 2,
       "worstMissDistance": 0.058823529411764705,
       "refusedByBand": 52130,
-      "defaultDisagreements": 0
+      "defaultDisagreements": 0,
+      "outsideBandNotAnsweredByDefault": 0
     },
     "tan": {
       "bandInverse": 11,
@@ -43,13 +45,19 @@
       "missesOutsideBand": 4,
       "worstMissDistance": 0.16666666666666666,
       "refusedByBand": 617694,
-      "defaultDisagreements": 0
+      "defaultDisagreements": 0,
+      "outsideBandNotAnsweredByDefault": 0
     }
   },
-  "exceptions": {
+  "measuredResults": {
     "sin": [],
-    "cos": ["3ff921fb54442d19"],
-    "tan": ["4022d97c7f3321d2", "4032d97c7f3321d2"]
+    "cos": [["bff921fb54442d19", "bca72cece675d1fc"], ["3ff921fb54442d19", "bca72cece675d1fc"]],
+    "tan": [
+      ["c032d97c7f3321d2", "3cca79394c9e8a0b"],
+      ["c022d97c7f3321d2", "3cba79394c9e8a0b"],
+      ["4022d97c7f3321d2", "bcba79394c9e8a0b"],
+      ["4032d97c7f3321d2", "bcca79394c9e8a0b"]
+    ]
   },
   "named": {
     "sin(pi)": {

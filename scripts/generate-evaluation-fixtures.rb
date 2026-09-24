@@ -335,26 +335,15 @@ LIBM_LARGE_ARGUMENT = 2**libm_constant(/export const LARGE_ARGUMENT = 2 \*\* (\d
 LIBM_SMALL_GUARD_BITS = libm_constant(/export const SMALL_ARGUMENT_GUARD_BITS = (\d+)n;/, "SMALL_ARGUMENT_GUARD_BITS")
 LIBM_LARGE_GUARD_BITS = libm_constant(/export const LARGE_ARGUMENT_GUARD_BITS = (\d+)n;/, "LARGE_ARGUMENT_GUARD_BITS")
 
-# `libm-reduction-exceptions.ts`'s table, the arguments below
-# `SMALL_ARGUMENT` the port refuses (magnitudes, as JS number literals).
-LIBM_EXCEPTIONS_SOURCE = File.read(File.join(__dir__, "..", "src", "evaluation", "libm-reduction-exceptions.ts"))
-LIBM_REDUCTION_EXCEPTIONS = %w[sin cos tan].to_h do |fn|
-  block = LIBM_EXCEPTIONS_SOURCE.match(/^  #{fn}: new Set<number>\(\[(.*?)\]\),/m)
-  abort "REFUSING: could not read REDUCTION_EXCEPTIONS.#{fn} out of libm-reduction-exceptions.ts" unless block
-
-  [fn, block[1].scan(/[-+0-9.e]+/).map { |literal| Float(literal) }]
-end
-
 require_relative "lib/libm-reference"
 
 # `libm-rounding-band` and `libm-reduction` rows: the C function and the
 # double argument it is called with, keyed by row id. A `libm-rounding-band`
 # row's exact result must lie within that function's band of a double
 # midpoint (`LibmReference.rounded`, BigDecimal at 110 digits), using the
-# band of the argument's region; a `libm-reduction` row's argument must be,
-# below `SMALL_ARGUMENT`, an entry of the exhaustively measured exceptions
-# table, and above it a reduced one within the reduction guard of a multiple
-# of pi/2 (`LibmReference.half_pi_distance`).
+# band of the argument's region; a `libm-reduction` row's argument must be at
+# or above `SMALL_ARGUMENT` (there is no guard below it), a reduced one within
+# the reduction guard of a multiple of pi/2 (`LibmReference.half_pi_distance`).
 LIBM_REFUSAL_OPERANDS = {
   "libm-band-sin-glibc-miss" => ["sin", -6.428541877306998],
   "libm-band-cos-glibc-miss" => ["cos", -317.75792610645294],
@@ -371,9 +360,6 @@ LIBM_REFUSAL_OPERANDS = {
   "tan-pi-over-four" => ["tan", Math::PI / 4],
   "arccos-half" => ["acos", 0.5],
   "libm-reduction-cos-hardest-argument" => ["cos", 6_381_956_970_095_103 * 2.0**797],
-  "libm-reduction-tan-six-pi" => ["tan", 6 * Math::PI],
-  "libm-reduction-tan-three-pi" => ["tan", 3 * Math::PI],
-  "libm-reduction-cos-above-half-pi" => ["cos", 1.5707963267948968],
 }.freeze
 
 def validate_libm_refusal!(id, port_refusal)
@@ -393,11 +379,8 @@ def validate_libm_refusal!(id, port_refusal)
       abort "REFUSING: #{id}: marked libm-reduction, but #{fn}(#{x}) is not a reduced sin/cos/tan argument"
     end
     if x.abs < LIBM_SMALL_ARGUMENT
-      unless LIBM_REDUCTION_EXCEPTIONS.fetch(fn).include?(x.abs)
-        abort "REFUSING: #{id}: marked libm-reduction, but #{fn}(#{x}) is below #{LIBM_SMALL_ARGUMENT} " \
-              "and not in libm-reduction-exceptions.ts"
-      end
-      return
+      abort "REFUSING: #{id}: marked libm-reduction, but #{fn}(#{x}) is below #{LIBM_SMALL_ARGUMENT}, " \
+            "where libm.ts has no reduction guard"
     end
     bits = x.abs < LIBM_LARGE_ARGUMENT ? LIBM_SMALL_GUARD_BITS : LIBM_LARGE_GUARD_BITS
     distance = LibmReference.half_pi_distance(x)
@@ -903,16 +886,24 @@ ROWS = [
   ["libm-band-sec-glibc-miss", "math-band", "sec(a)"],
   ["libm-band-csc-glibc-miss", "math-band", "csc(a)"],
 
-  # `libm-reduction`: sin/cos/tan arguments where glibc's range reduction
-  # decides the last bits — the double closest to a multiple of pi/2 of all
-  # (glibc's `cos` is 8 ULP out there), refused by the reduction guard above
-  # SMALL_ARGUMENT, and `6pi` and `3pi`, below it, where the exhaustive
-  # measurement found glibc's `tan` wrong outside the band. `cos` at the
-  # double just above pi/2 is the table's third entry.
+  # `libm-reduction`: a sin/cos/tan argument above SMALL_ARGUMENT where
+  # glibc's range reduction decides the last bits — the double closest to a
+  # multiple of pi/2 of all (glibc's `cos` is 8 ULP out there) — refused by
+  # the reduction guard.
   ["libm-reduction-cos-hardest-argument", "math-reduction", "cos(6381956970095103*2.0^797)"],
-  ["libm-reduction-tan-six-pi", "math-reduction", "tan(6pi)"],
-  ["libm-reduction-tan-three-pi", "math-reduction", "tan(3pi)"],
-  ["libm-reduction-cos-above-half-pi", "math-reduction", "cos(a)"],
+
+  # The 6 arguments below SMALL_ARGUMENT where the exhaustive measurement
+  # found glibc wrong outside the band: answered with glibc's own measured
+  # double (`libm-measured-results.ts`), so they match the gem, each sign
+  # measured and checked on its own. `cot(3pi)` divides by the measured
+  # `tan(3pi)`.
+  ["libm-measured-tan-three-pi", "math-measured", "tan(3pi)"],
+  ["libm-measured-tan-minus-three-pi", "math-measured", "tan(-3pi)"],
+  ["libm-measured-tan-six-pi", "math-measured", "tan(6pi)"],
+  ["libm-measured-tan-minus-six-pi", "math-measured", "tan(-6pi)"],
+  ["libm-measured-cos-above-half-pi", "math-measured", "cos(a)"],
+  ["libm-measured-cos-minus-above-half-pi", "math-measured", "cos(a)"],
+  ["libm-measured-cot-three-pi", "math-measured", "cot(3pi)"],
 
   # Gem-evaluated nodes this port has not ported: the hyperbolic functions
   # and `Log`/`Lg`, pending a licensing decision about copying C-library
@@ -984,6 +975,7 @@ LATEX_ROWS = [
   ["latex-sin-bare", "math-trig", "\\sin x"],
   ["latex-sin-pi", "math-trig", "\\sin(\\pi)"],
   ["latex-libm-band-sin-glibc-miss", "math-band", "\\sin(a)"],
+  ["latex-libm-measured-tan-three-pi", "math-measured", "\\tan(3\\pi)"],
   ["latex-cos-braced", "math-trig", "\\cos{0}"],
   ["latex-tan", "math-trig", "\\tan(2)"],
   ["latex-cot-zero", "math-reciprocal", "\\cot(0)"],
@@ -1095,7 +1087,8 @@ BINDINGS = {
   "libm-band-sec-glibc-miss" => { "a" => -317.75792610645294 },
   "libm-band-csc-glibc-miss" => { "a" => -6.428541877306998 },
   "latex-libm-band-sin-glibc-miss" => { "a" => -6.428541877306998 },
-  "libm-reduction-cos-above-half-pi" => { "a" => 1.5707963267948968 },
+  "libm-measured-cos-above-half-pi" => { "a" => 1.5707963267948968 },
+  "libm-measured-cos-minus-above-half-pi" => { "a" => -1.5707963267948968 },
 }.freeze
 
 # Per-row gem configuration (`with_options`), keyed by row id; every other row
@@ -1149,9 +1142,6 @@ PORT_REFUSALS = {
   "tan-pi-over-four" => "libm-rounding-band",
   "arccos-half" => "libm-rounding-band",
   "libm-reduction-cos-hardest-argument" => "libm-reduction",
-  "libm-reduction-tan-six-pi" => "libm-reduction",
-  "libm-reduction-tan-three-pi" => "libm-reduction",
-  "libm-reduction-cos-above-half-pi" => "libm-reduction",
   "abs-rational" => "rational",
   "floor-huge-float" => "big-integer",
   "lcm-big-result" => "big-integer",

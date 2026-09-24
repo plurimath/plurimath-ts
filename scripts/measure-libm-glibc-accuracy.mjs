@@ -25,7 +25,7 @@
 //   equals the reference for every sample — the check that the BigInt
 //   implementation is right, independently of glibc;
 // - with `libm.ts`'s default behaviour (region band; for sin/cos/tan, its
-//   reduction guard and exceptions table), how often the port refuses, and
+//   reduction guard and measured-results table), how often the port refuses, and
 //   how often, when it does not refuse, it disagrees with glibc (which must
 //   be never).
 //

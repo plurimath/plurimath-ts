@@ -8,18 +8,18 @@
  *
  * - the measurement found no argument where the port's default behaviour
  *   answers something other than glibc's double;
- * - the exceptions it found (glibc wrong outside the band) are exactly the
- *   committed `REDUCTION_EXCEPTIONS`, and the port refuses each, both signs;
- * - `sin(pi)`, `cos(pi/2)`, `tan(pi/2)` and `sin(2pi)` answer with glibc's
- *   recorded double, and `tan(6pi)` is refused.
+ * - the arguments it found glibc wrong on outside the band are exactly the
+ *   committed `MEASURED_RESULTS`, each sign its own entry, and the port
+ *   answers each with the glibc bits the measurement recorded;
+ * - `sin(pi)`, `cos(pi/2)`, `tan(pi/2)`, `sin(2pi)` and `tan(6pi)` answer
+ *   with glibc's recorded double.
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { UnsupportedFeatureError } from "../../src/core/errors";
 import { CORRECTLY_ROUNDED, SMALL_ARGUMENT } from "../../src/evaluation/libm";
-import { REDUCTION_EXCEPTIONS } from "../../src/evaluation/libm-reduction-exceptions";
+import { MEASURED_RESULTS } from "../../src/evaluation/libm-measured-results";
 
 type Trig = "sin" | "cos" | "tan";
 
@@ -30,7 +30,7 @@ interface Summary {
   readonly functions: Readonly<
     Record<Trig, { readonly points: number; readonly defaultDisagreements: number }>
   >;
-  readonly exceptions: Readonly<Record<Trig, readonly string[]>>;
+  readonly measuredResults: Readonly<Record<Trig, readonly (readonly [string, string])[]>>;
   readonly named: Readonly<Record<string, { readonly inRegion: boolean; readonly glibc: string }>>;
 }
 
@@ -65,12 +65,25 @@ describe("libm.ts below SMALL_ARGUMENT near multiples of pi/2 (exhaustive measur
     expect(summary.functions[fn].defaultDisagreements).toBe(0);
   });
 
-  it.each(TRIG)("%s: the exceptions found are the committed table, and each refuses", (fn) => {
-    const measured = summary.exceptions[fn].map(fromHex);
-    expect([...REDUCTION_EXCEPTIONS[fn]].sort((a, b) => a - b)).toEqual(measured);
-    for (const x of measured) {
-      expect(() => CORRECTLY_ROUNDED[fn](x), `${fn}(${x})`).toThrow(UnsupportedFeatureError);
-      expect(() => CORRECTLY_ROUNDED[fn](-x), `${fn}(${-x})`).toThrow(UnsupportedFeatureError);
+  it.each(TRIG)("%s: the measured table is the one committed, and answers glibc's bits", (fn) => {
+    const recorded = summary.measuredResults[fn];
+    const committed = [...MEASURED_RESULTS[fn]].map(([x, g]) => [
+      x.toString(16).padStart(16, "0"),
+      g.toString(16).padStart(16, "0"),
+    ]);
+    expect(committed.sort()).toEqual([...recorded].map((pair) => [...pair]).sort());
+    for (const [x, glibc] of recorded) {
+      expect(hexOf(CORRECTLY_ROUNDED[fn](fromHex(x))), `${fn}(${fromHex(x)})`).toBe(glibc);
+    }
+  });
+
+  it("measured both signs of every table entry, each against glibc", () => {
+    expect(summary.measuredResults.sin).toEqual([]);
+    expect(summary.measuredResults.cos.length).toBe(2);
+    expect(summary.measuredResults.tan.length).toBe(4);
+    for (const fn of TRIG) {
+      const inputs = new Set(summary.measuredResults[fn].map(([x]) => x));
+      for (const x of inputs) expect(inputs.has(hexOf(-fromHex(x))), `${fn} ${x}`).toBe(true);
     }
   });
 
@@ -85,8 +98,11 @@ describe("libm.ts below SMALL_ARGUMENT near multiples of pi/2 (exhaustive measur
     expect(hexOf(CORRECTLY_ROUNDED[fn](x))).toBe(recorded?.glibc);
   });
 
-  it("tan(6pi) is refused: glibc misses it outside the band", () => {
-    expect(summary.named["tan(6pi)"]?.inRegion).toBe(true);
-    expect(() => CORRECTLY_ROUNDED.tan(6 * Math.PI)).toThrow(UnsupportedFeatureError);
+  it("tan(6pi), which glibc misses outside the band, answers with glibc's double", () => {
+    const recorded = summary.named["tan(6pi)"];
+    expect(recorded?.inRegion).toBe(true);
+    expect(hexOf(CORRECTLY_ROUNDED.tan(6 * Math.PI))).toBe(recorded?.glibc);
+    expect(() => CORRECTLY_ROUNDED.tan(6 * Math.PI, null)).not.toThrow();
+    expect(hexOf(CORRECTLY_ROUNDED.tan(6 * Math.PI, null))).not.toBe(recorded?.glibc);
   });
 });

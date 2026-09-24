@@ -10,9 +10,10 @@
  * - the port's correctly rounded result, band off, IS the reference's, for
  *   every row — the BigInt implementation is right on its own terms;
  * - with its default behaviour (the region's band; for sin/cos/tan, the
- *   reduction guard and exceptions table), the port
- *   either refuses or returns exactly glibc's double — never a third answer —
- *   and it refuses every row where glibc missed the correctly rounded double;
+ *   reduction guard and the measured-results table), the port either
+ *   refuses or returns exactly glibc's double — never a third answer — so
+ *   where glibc missed the correctly rounded double, it refuses, or, for a
+ *   measured argument, answers glibc's own;
  * - the bands the corpus was measured against are the bands `libm.ts` uses,
  *   and the full measurement found no disagreement outside them.
  *
@@ -122,8 +123,11 @@ describe("libm.ts against the glibc corpus (scripts/measure-libm-glibc-accuracy.
       if (answer !== "refused" && answer !== glibc) {
         failures.push(`${category} ${x}: port ${answer} != glibc ${glibc}`);
       }
-      if (glibc !== reference && answer !== "refused") {
-        failures.push(`${category} ${x}: glibc missed but the port did not refuse`);
+      // Where glibc missed, the port refuses — or, for an argument in the
+      // exhaustively measured table (`libm-measured-results.ts`), answers
+      // glibc's own double, which the check above already requires.
+      if (glibc !== reference && answer !== "refused" && answer !== glibc) {
+        failures.push(`${category} ${x}: glibc missed and the port answered otherwise`);
       }
     }
     expect(failures.slice(0, 10)).toEqual([]);

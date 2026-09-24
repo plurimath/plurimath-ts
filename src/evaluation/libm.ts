@@ -20,9 +20,10 @@
  *   glibc's rounding rather than on anything this port can reproduce — and,
  *   for `sin`/`cos`/`tan`, where glibc's range reduction decides the last
  *   bits: at `|x| >= SMALL_ARGUMENT`, when the argument lies within the
- *   reduction guard of a multiple of `pi/2` (`LARGE_ARGUMENT`); below it, at
- *   exactly the arguments the exhaustive measurement found glibc wrong on
- *   outside the band (`REDUCTION_EXCEPTIONS`).
+ *   reduction guard of a multiple of `pi/2` (`LARGE_ARGUMENT`). Below it,
+ *   the few arguments the exhaustive measurement found glibc wrong on
+ *   outside the band are not refused but answered with glibc's own measured
+ *   double (`MEASURED_RESULTS`).
  *
  * Each band is sized by `scripts/measure-libm-glibc-accuracy.mjs` the way
  * `pow.ts`'s was, per argument region: the worst distance from the midpoint
@@ -32,9 +33,9 @@
  * reduction matters most — was checked against glibc, both signs, by
  * `scripts/measure-libm-reduction-exhaustive.mjs`: 1,748,992 doubles near
  * 651 multiples. glibc's `sin` was correctly rounded on all of them; `cos`
- * missed 2 and `tan` 28, and the 3 magnitudes among those outside the band
- * are the exceptions table. With it, the port refuses or returns glibc's
- * double on every one.
+ * missed 2 and `tan` 28, and the 6 arguments among those outside the band
+ * (3 magnitudes, both signs) are answered from the measured table. With it,
+ * the port refuses or returns glibc's double on every one.
  * Outside the band the correctly rounded double is glibc's answer; inside
  * it the port refuses. `sqrt` needs no band: IEEE 754 requires it correctly
  * rounded, JavaScript's `Math.sqrt` and glibc's both are, and the
@@ -50,7 +51,7 @@
 
 import { UnsupportedFeatureError } from "../core/errors";
 import { MathDomainError } from "./errors";
-import { REDUCTION_EXCEPTIONS } from "./libm-reduction-exceptions";
+import { MEASURED_RESULTS } from "./libm-measured-results";
 import { bitLength, mathArgument, type RubyNumeric } from "./numeric";
 import {
   decompose,
@@ -85,7 +86,7 @@ function band(fn: LibmFunction, inverse: bigint, radius: string): RoundingBand {
  * The argument magnitude below which a function uses its `small` band, and
  * below which `sin`/`cos`/`tan` are not reduction-guarded: every double under
  * it that lies near a multiple of `pi/2` is covered by the exhaustive
- * measurement instead (`REDUCTION_EXCEPTIONS`).
+ * measurement instead (`MEASURED_RESULTS`).
  */
 export const SMALL_ARGUMENT = 1024;
 
@@ -159,23 +160,37 @@ function reductionRefusal(fn: "sin" | "cos" | "tan", detail: string): never {
  * either), because only there is it tiny, or for `tan` huge, when `r` is.
  * Where it is `cos r`, near `±1`, an error in `r` barely moves it:
  * `measure-libm-reduction-error.mjs` counts glibc's misses on those branches.
- * Below `SMALL_ARGUMENT` nothing is guarded; only the doubles the exhaustive
- * measurement found glibc wrong on outside the band are refused
- * (`REDUCTION_EXCEPTIONS`).
+ * Below `SMALL_ARGUMENT` nothing is guarded: the exhaustive measurement
+ * covers that region, and the arguments it found glibc wrong on outside the
+ * band are answered from `MEASURED_RESULTS` before this is reached.
  */
 function guardReduction(fn: "sin" | "cos" | "tan", x: number, reduced: Reduced): void {
-  if (x < SMALL_ARGUMENT) {
-    if (REDUCTION_EXCEPTIONS[fn].has(x)) {
-      reductionRefusal(fn, "is one where glibc's result was measured outside the band");
-    }
-    return;
-  }
-  if (!reduced.reduced) return;
+  if (x < SMALL_ARGUMENT || !reduced.reduced) return;
   const fromSinR = fn === "tan" || (reduced.quadrant % 2 === 0) === (fn === "sin");
   if (!fromSinR) return;
   const bits = x < LARGE_ARGUMENT ? SMALL_ARGUMENT_GUARD_BITS : LARGE_ARGUMENT_GUARD_BITS;
   const magnitude = reduced.r < 0n ? -reduced.r : reduced.r;
   if (magnitude < ONE >> bits) reductionRefusal(fn, `lies within 2^-${bits} of a multiple of pi/2`);
+}
+
+/** The bits of a double, as `MEASURED_RESULTS` keys them. */
+function bitsOf(x: number): bigint {
+  const view = new DataView(new ArrayBuffer(8));
+  view.setFloat64(0, x);
+  return view.getBigUint64(0);
+}
+
+/**
+ * glibc's own result for `fn(x)` when `x` is one of the measured arguments
+ * (`MEASURED_RESULTS`: signed inputs, each sign measured on its own), or
+ * `undefined`.
+ */
+function measuredResult(fn: "sin" | "cos" | "tan", x: number): number | undefined {
+  const result = MEASURED_RESULTS[fn].get(bitsOf(x));
+  if (result === undefined) return undefined;
+  const view = new DataView(new ArrayBuffer(8));
+  view.setBigUint64(0, result);
+  return view.getFloat64(0);
 }
 
 /**
@@ -335,6 +350,10 @@ function correctlyRoundedSin(
   guard: boolean = rounding !== null,
 ): number {
   if (!Number.isFinite(x)) return Number.NaN;
+  if (guard) {
+    const measured = measuredResult("sin", x);
+    if (measured !== undefined) return measured;
+  }
   if (Math.abs(x) < TINY) return x;
   const reduced = reduce(Math.abs(x));
   if (guard) guardReduction("sin", Math.abs(x), reduced);
@@ -350,6 +369,10 @@ function correctlyRoundedCos(
   guard: boolean = rounding !== null,
 ): number {
   if (!Number.isFinite(x)) return Number.NaN;
+  if (guard) {
+    const measured = measuredResult("cos", x);
+    if (measured !== undefined) return measured;
+  }
   if (x === 0) return 1;
   const reduced = reduce(Math.abs(x));
   if (guard) guardReduction("cos", Math.abs(x), reduced);
@@ -364,6 +387,10 @@ function correctlyRoundedTan(
   guard: boolean = rounding !== null,
 ): number {
   if (!Number.isFinite(x)) return Number.NaN;
+  if (guard) {
+    const measured = measuredResult("tan", x);
+    if (measured !== undefined) return measured;
+  }
   if (Math.abs(x) < TINY) return x;
   const reduced = reduce(Math.abs(x));
   if (guard) guardReduction("tan", Math.abs(x), reduced);
@@ -428,9 +455,11 @@ function correctlyRoundedLog(x: number, rounding: RoundingBand | null = bandFor(
 }
 
 /**
- * The correctly rounded C function, refusing inside its band (and, for
- * `sin`/`cos`/`tan`, the reduction guard) — or, with a `null` band, never
- * refusing — for the measurement script and the spec.
+ * The C function as the port answers it: by default, correctly rounded,
+ * refusing inside its band, and for `sin`/`cos`/`tan` with the reduction
+ * guard and the measured results; with a `null` band, the plain correctly
+ * rounded double, never refused and never taken from the measured table —
+ * what the measurement scripts compare with the reference.
  */
 export const CORRECTLY_ROUNDED: Readonly<
   Record<LibmFunction, (x: number, rounding?: RoundingBand | null, guard?: boolean) => number>

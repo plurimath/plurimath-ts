@@ -38,8 +38,8 @@
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { assertKnownOptions } from "../../core/render-options";
+import { isStackOverflow } from "../../core/stack-overflow";
 import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
-import { isStackOverflow } from "../../pegkit/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
 

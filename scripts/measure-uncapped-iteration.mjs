@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 // Measures what `evaluate()`'s `evaluationMaxIterations: null` costs: an
 // uncapped `Sum` runs one body evaluation per step, so its time grows
-// linearly with the range, without bound — the figure `src/evaluation/index.ts`'s
-// `EvaluationOptions` cites. The gem's `nil` cap behaves the same.
+// linearly with the range, without bound, as `src/evaluation/index.ts`'s
+// `EvaluationOptions` states. The gem's `nil` cap behaves the same. The
+// timings are this host's, under its current load: they vary between runs
+// and machines (runs under the same Node 20.20.2 on this host have differed
+// by two to three times), so they show the linear growth, not a fixed cost.
 //
 //   node scripts/measure-uncapped-iteration.mjs
 //

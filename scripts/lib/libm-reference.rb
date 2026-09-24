@@ -23,6 +23,9 @@
 #
 #   ruby scripts/lib/libm-reference.rb <sin|cos|tan|asin|acos|atan|exp|log|sqrt>
 #
+# Needs a bigdecimal with `BigMath.asin`/`acos`/`atan`/`tan` (checked with Ruby
+# 4.0.1 with bigdecimal 4.1.2, the oracle's locked bundle, and 4.1.3, its default).
+#
 # Prints a JSON array of `[glibc_hex, correctly_rounded_hex, distance]`, with
 # `nil` for the last two where the reference is outside the double range.
 # `scripts/generate-evaluation-fixtures.rb` requires this file for

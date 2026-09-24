@@ -53,13 +53,12 @@ export interface EvaluationOptions {
    * (`configuration.rb`); `null` disables the cap, as `nil` does in the gem.
    *
    * **Availability caveat:** without a cap, `evaluate()` runs one body
-   * evaluation per step, synchronously, so its time grows linearly with the
-   * range and has no bound: an untrusted formula such as
-   * `sum_(i=1)^(10^9) 1` then blocks the calling thread for about eleven
-   * minutes (extrapolated from the rate below), as it would the gem. Measured (`scripts/measure-uncapped-iteration.mjs`, Node
-   * v20.20.2, Linux x86_64, 2026-09-24, median of five): 65 ms for 100,000
-   * steps, 642 ms for 1,000,001, 1,295 ms for 2,000,001. Keep a cap when the
-   * formula comes from outside.
+   * evaluation per step, synchronously on the calling thread, so its time is
+   * linear in the range and has no bound — as with the gem's `nil`. An
+   * untrusted formula can then block the caller for as long as its range
+   * is large. Keep a cap when the formula comes from outside.
+   * `scripts/measure-uncapped-iteration.mjs` times uncapped sums on the
+   * current host; its figures depend on the machine and its load.
    */
   readonly evaluationMaxIterations?: number | null | undefined;
 }

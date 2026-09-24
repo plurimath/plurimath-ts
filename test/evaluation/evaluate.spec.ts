@@ -278,10 +278,11 @@ describe("evaluate() — measurements not covered by the oracle fixtures", () =>
 
 describe("evaluate's number literal pattern", () => {
   it("rejects a long malformed digit run in linear time", () => {
-    // A quadratic-backtracking pattern took about 20 s on this input; the
-    // default 5 s test timeout fails any regression.
+    // The earlier quadratic pattern took 4.6-20 s at 50,000 digits. Four
+    // times the length is at least sixteen times that, far past the default
+    // 5 s timeout, while the linear pattern stays in milliseconds.
     const formula = new FormulaNode({
-      value: [new NumberNode({ value: `${"0".repeat(50_000)}x` })],
+      value: [new NumberNode({ value: `${"0".repeat(200_000)}x` })],
     });
     expect(() => evaluate(formula)).toThrow(UnsupportedExpressionError);
   });

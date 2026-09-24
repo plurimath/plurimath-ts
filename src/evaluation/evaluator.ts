@@ -87,10 +87,11 @@ function isMathNode(node: unknown): node is MathNode {
  */
 const INTEGER_PATTERN = /^[+-]?\d+$/;
 // The fractional digits are allowed only after a literal dot, so every
-// string has one way to match. The earlier `\d+\.?\d*` let both digit runs
-// claim the same digits when no dot is present, and a long digit string that
-// then failed (`"0".repeat(50000) + "x"`) backtracked quadratically: about 20
-// s, against about 1 ms for this form. Both forms accept the same strings.
+// accepted string has one way to match. The earlier `\d+\.?\d*` let both
+// digit runs claim the same digits when no dot is present, so a long digit
+// run that then failed backtracked quadratically: 4.6-20 s for
+// `"0".repeat(50000) + "x"` across runs on this repo's host, against under
+// 1 ms for this form. Both forms accept the same language.
 const FLOAT_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 
 function evaluateNumber(node: NumberData): RubyNumeric {

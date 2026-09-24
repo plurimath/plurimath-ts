@@ -1,6 +1,6 @@
 /**
  * Checks the committed boundary corpus `scripts/measure-pow-rounding-band.mjs`
- * writes (`test/formats/evaluation/pow-rounding-band-corpus.json`, `pow.ts`'s
+ * writes (`test/evaluation/pow-rounding-band-corpus.json`, `pow.ts`'s
  * header) — WITHOUT re-measuring: no `ruby` subprocess, no re-sampling. Two
  * things this file makes a checked fact rather than a comment's claim:
  *
@@ -40,10 +40,7 @@ interface Corpus {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const corpus = JSON.parse(
-  readFileSync(
-    join(HERE, "..", "formats", "evaluation", "pow-rounding-band-corpus.json"),
-    "utf8",
-  ),
+  readFileSync(join(HERE, "pow-rounding-band-corpus.json"), "utf8"),
 ) as Corpus;
 
 describe("correctlyRoundedPow's boundary corpus (scripts/measure-pow-rounding-band.mjs)", () => {

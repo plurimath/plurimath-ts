@@ -877,13 +877,21 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
             base.push("portRefusal");
           }
           // Ruby's own `ArgumentError` is not an evaluation error; it appears
-          // only on a row the port refuses for exactly that reason.
+          // only on a row the port refuses for exactly that reason, and the
+          // generator never records ITS message (the port does not reproduce
+          // that class's text) — every other raised row does (`evaluate.spec.ts`
+          // checks it byte-exact, not only the class and `code`).
           const argumentError = item.portRefusal === "argument-error";
           if (hasRefusal) {
-            expectExactKeys(item, [...base, "raises"], at);
+            expectExactKeys(
+              item,
+              argumentError ? [...base, "raises"] : [...base, "raises", "message"],
+              at,
+            );
             expect(stringField(item, "raises", at)).toMatch(
               argumentError ? /^ArgumentError$/ : /^Plurimath::Errors::Evaluation::[A-Za-z]+Error$/,
             );
+            if (!argumentError) stringField(item, "message", at);
           } else {
             expectExactKeys(item, [...base, "expected"], at);
           }

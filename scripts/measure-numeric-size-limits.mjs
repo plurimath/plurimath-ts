@@ -27,7 +27,9 @@ function mulberry32(seed) {
 function randomBig(rng, bits) {
   let hex = "";
   for (let i = 0; i < Math.ceil(bits / 32); i++) {
-    hex += Math.floor(rng() * 0x100000000).toString(16).padStart(8, "0");
+    hex += Math.floor(rng() * 0x100000000)
+      .toString(16)
+      .padStart(8, "0");
   }
   return BigInt(`0x${hex}`) | (1n << BigInt(bits - 1));
 }

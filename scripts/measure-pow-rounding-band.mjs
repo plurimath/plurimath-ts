@@ -14,14 +14,14 @@
 // `esbuild`, not `dist/`, so the measurement always reflects the checked-out
 // source, never a stale build.
 //
-// Writes `test/formats/evaluation/pow-rounding-band-corpus.json`: every
+// Writes `test/evaluation/pow-rounding-band-corpus.json`: every
 // sampled pair `correctlyRoundedPow` refused, which `test/evaluation/
 // pow-rounding-band.spec.ts` re-checks on every run WITHOUT re-measuring
 // (no `ruby` subprocess, no re-sampling) — that corpus is what makes the
 // band a committed, checked fact rather than a comment's unverifiable claim.
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -92,7 +92,6 @@ const { correctlyRoundedPow } = await import(outfile);
 
 let mismatches = 0;
 let inBand = 0;
-let inBandButPortDisagreesWithRuby = 0;
 let outOfBandPortDisagreesWithRuby = 0;
 const boundaryPairs = [];
 
@@ -151,18 +150,33 @@ const summary = {
   boundaryPairs: boundaryPairs.slice(0, COMMITTED_BOUNDARY_PAIRS),
 };
 
-const outDir = join(REPO_ROOT, "test", "formats", "evaluation");
+// `test/evaluation/`, not `test/formats/evaluation/`: the latter is the
+// oracle-fixture family `test/gates/payload-validation.spec.ts` accounts for
+// payload-by-payload against the gem's own provenance manifest; this corpus
+// is a JS-side timing/geometry measurement with no gem provenance to record,
+// a different kind of artifact entirely.
+const outDir = join(REPO_ROOT, "test", "evaluation");
 mkdirSync(outDir, { recursive: true });
 const corpusPath = join(outDir, "pow-rounding-band-corpus.json");
 writeFileSync(corpusPath, `${JSON.stringify(summary, null, 2)}\n`);
 
-console.log(`seed ${SEED}, ${pairs.length} pairs, platform ${platform.os}/${platform.arch}, ${platform.node}, ${platform.rubyVersion}`);
-console.log(`V8 vs glibc pow mismatches: ${mismatches} (${((mismatches / pairs.length) * 100).toFixed(2)}%)`);
-console.log(`within 0.04 ULP of a midpoint (refused): ${inBand} (${((inBand / pairs.length) * 100).toFixed(3)}%)`);
-console.log(`port disagrees with Ruby OUTSIDE the band (should be 0): ${outOfBandPortDisagreesWithRuby}`);
+console.log(
+  `seed ${SEED}, ${pairs.length} pairs, platform ${platform.os}/${platform.arch}, ${platform.node}, ${platform.rubyVersion}`,
+);
+console.log(
+  `V8 vs glibc pow mismatches: ${mismatches} (${((mismatches / pairs.length) * 100).toFixed(2)}%)`,
+);
+console.log(
+  `within 0.04 ULP of a midpoint (refused): ${inBand} (${((inBand / pairs.length) * 100).toFixed(3)}%)`,
+);
+console.log(
+  `port disagrees with Ruby OUTSIDE the band (should be 0): ${outOfBandPortDisagreesWithRuby}`,
+);
 console.log(`-> ${corpusPath}`);
 
 if (outOfBandPortDisagreesWithRuby > 0) {
-  console.error("REFUSING: correctlyRoundedPow disagreed with Ruby's own pow outside the declared band");
+  console.error(
+    "REFUSING: correctlyRoundedPow disagreed with Ruby's own pow outside the declared band",
+  );
   process.exitCode = 1;
 }

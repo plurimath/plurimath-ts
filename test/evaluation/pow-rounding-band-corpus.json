@@ -8,7 +8,7 @@
     "os": "linux",
     "rubyVersion": "ruby 4.0.1 (2026-01-13 revision e04267a14b) +PRISM [x86_64-linux]"
   },
-  "measuredAt": "2026-09-23T15:59:38.838Z",
+  "measuredAt": "2026-09-24T08:00:47.699Z",
   "v8VsGlibcMismatches": 9768,
   "v8VsGlibcMismatchRate": 0.09792775722578123,
   "inBandCount": 7937,

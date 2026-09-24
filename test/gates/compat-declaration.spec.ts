@@ -16,9 +16,15 @@
  *   3. The comparison is not vacuous and fails for each drift class it
  *      claims: a missing, added or renamed member, a renamed parameter, a
  *      flipped optional marker, a changed return or property type, a changed
- *      `Format` literal, a missing CJS declaration, and a missing default
- *      export. Each mutation is applied to a declaration text that first
- *      passes as the control.
+ *      `Format` literal, a class-level type parameter, `abstract`, `extends`
+ *      or `implements`, an added, removed or reordered overload, a missing
+ *      CJS declaration, a missing default export, and an unvalidated
+ *      TypeScript version. Each mutation is applied to a declaration text
+ *      that first passes as the control; one set of them starts from the
+ *      committed source-head file rather than from the fixture.
+ *
+ * JSDoc is not compared (see the extractor's header): these proofs cover the
+ * type surface only.
  *
  * The same `checkDeclarationFiles` the gate calls is exercised, so what is
  * proven is the shipped check, not a restatement of it.
@@ -30,11 +36,13 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  assertValidatedTypescript,
   type ClassSurface,
   checkDeclarationFiles,
   type DeclaredMember,
   diffSurfaces,
   readDefaultClassSurface,
+  VALIDATED_TYPESCRIPT_VERSION,
 } from "../../scripts/lib/compat-declaration.mjs";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -256,6 +264,39 @@ describe("compat declaration check", () => {
       "memberOrder:",
     ],
     [
+      "an added member modifier",
+      mutate("toLatex(): string;", "static toLatex(): string;"),
+      'method toLatex.modifiers: expected [], got ["static"]',
+    ],
+    [
+      "an added class type parameter",
+      mutate("declare class Plurimath {", "declare class Plurimath<T = unknown> {"),
+      'typeParameters: expected [], got ["T = unknown"]',
+    ],
+    [
+      "an added abstract modifier",
+      mutate("declare class Plurimath {", "declare abstract class Plurimath {"),
+      'modifiers: expected [], got ["abstract"]',
+    ],
+    [
+      "an added extends clause",
+      mutate("declare class Plurimath {", "declare class Plurimath extends Error {"),
+      'heritage: expected [], got [{"token":"extends","types":["Error"]}]',
+    ],
+    [
+      "an added implements clause",
+      mutate("declare class Plurimath {", "declare class Plurimath implements Iterable<string> {"),
+      'heritage: expected [], got [{"token":"implements","types":["Iterable<string>"]}]',
+    ],
+    [
+      "an added overload of a single-signature method",
+      mutate(
+        "  toDisplay(lang: string): string;\n",
+        "  toDisplay(lang: string): string;\n  toDisplay(lang: string, strict: boolean): string;\n",
+      ),
+      "method toDisplay#2: expected null",
+    ],
+    [
       "no default export",
       mutate(", Plurimath as default", ""),
       "dist/index.d.ts: no value export named default",
@@ -292,11 +333,124 @@ describe("compat declaration check", () => {
     }
   });
 
+  it("refuses any TypeScript other than the validated version, naming both", () => {
+    expect(() => assertValidatedTypescript(VALIDATED_TYPESCRIPT_VERSION)).not.toThrow();
+    expect(VALIDATED_TYPESCRIPT_VERSION).toBe("7.0.2");
+    for (const bumped of ["7.0.3", "7.1.0", "8.0.0"]) {
+      expect(() => assertValidatedTypescript(bumped)).toThrow(
+        `installed typescript is ${bumped}, but this extractor was validated on 7.0.2 only`,
+      );
+    }
+  });
+
   it("fails on CJS drift independently of ESM", () => {
     const failures = check(CONTROL, mutate("toMathml(intent?: boolean)", "toMathml()"));
     expect(failures).toContain(
       "dist/index.d.cts: method toMathml.parameters.length: expected 1, got 0",
     );
     for (const failure of failures) expect(failure.startsWith("dist/index.d.cts")).toBe(true);
+  });
+});
+
+/**
+ * Overloads are not in the compat surface, but a surface with them must still
+ * pass its own comparison, and adding, removing or reordering a signature must
+ * be a failure that names it. The expected surface here is extracted from
+ * OVERLOADED itself.
+ */
+describe("compat declaration check: overloads", () => {
+  const Overloaded = `declare class P {
+  f(a: string): string;
+  f(a: number): string;
+  g(): void;
+}
+export { P as default };
+`;
+  const expected = readDefaultClassSurface({ "entry.d.ts": Overloaded }, "entry.d.ts");
+  const checkOverloads = (text: string) =>
+    checkDeclarationFiles({ "overloaded.d.ts": text }, expected);
+
+  it("records each signature separately and passes against itself", () => {
+    expect(expected.members.map((m) => m.name)).toEqual(["f", "f", "g"]);
+    expect(checkOverloads(Overloaded)).toEqual([]);
+  });
+
+  it.each([
+    [
+      "an added overload",
+      Overloaded.replace("  g(): void;", "  f(a: boolean): string;\n  g(): void;"),
+      "method f#3: expected null",
+    ],
+    [
+      "a removed overload",
+      Overloaded.replace("  f(a: number): string;\n", ""),
+      'method f#1: expected {"kind":"method","name":"f"',
+    ],
+    [
+      "reordered overloads",
+      Overloaded.replace(
+        "  f(a: string): string;\n  f(a: number): string;",
+        "  f(a: number): string;\n  f(a: string): string;",
+      ),
+      'method f#1.parameters[0].type: expected "string", got "number"',
+    ],
+  ])("fails on %s", (_label, mutated, fragment) => {
+    expect(mutated).not.toBe(Overloaded);
+    expect(checkOverloads(mutated).join("\n")).toContain(fragment);
+  });
+});
+
+/**
+ * Proofs that do not start from the fixture: the control is the committed
+ * source-head declaration itself (`index.d.ts.txt`, sha256-pinned above), and
+ * the expected surface is read from that same file. Each mutation of the real
+ * tsc output must fail naming what it changed.
+ */
+describe("compat declaration check: source-head control", () => {
+  const SourceHead = readTarget("source-head-ce297e2/index.d.ts.txt");
+  const expected = readDefaultClassSurface({ "entry.d.ts": SourceHead }, "entry.d.ts");
+  const checkSourceHead = (text: string) =>
+    checkDeclarationFiles({ "source-head index.d.ts": text }, expected);
+  const edit = (from: string, to: string) => {
+    const at = SourceHead.indexOf(from);
+    if (at === -1 || SourceHead.indexOf(from, at + 1) !== -1) {
+      throw new Error(`mutation target must occur exactly once in source head: ${from}`);
+    }
+    return SourceHead.replace(from, to);
+  };
+
+  it("passes unmutated, with the seven source-head methods", () => {
+    expect(checkSourceHead(SourceHead)).toEqual([]);
+    expect(expected.members.filter((m) => m.kind === "method")).toHaveLength(7);
+  });
+
+  it.each([
+    [
+      "a dropped member",
+      edit("    toUnicodemath(): string;\n", ""),
+      "method toUnicodemath: expected",
+    ],
+    [
+      "a renamed parameter",
+      edit("toDisplay(lang: string)", "toDisplay(language: string)"),
+      'method toDisplay.parameters[0].name: expected "lang", got "language"',
+    ],
+    [
+      "a flipped optional marker",
+      edit("toMathml(intent?: boolean)", "toMathml(intent: boolean)"),
+      "method toMathml.parameters[0].optional: expected true, got false",
+    ],
+    [
+      "a changed return type",
+      edit("toOmml(): string;", "toOmml(): unknown;"),
+      'method toOmml.returnType: expected "string", got "unknown"',
+    ],
+    [
+      "an added extends clause",
+      edit("export default class Plurimath {", "export default class Plurimath extends Object {"),
+      'heritage: expected [], got [{"token":"extends","types":["Object"]}]',
+    ],
+  ])("fails on %s", (_label, mutated, fragment) => {
+    expect(checkSourceHead(mutated).join("\n")).toContain(fragment);
   });
 });

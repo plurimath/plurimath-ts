@@ -15,16 +15,53 @@
  * as surely as a removed one. An assignability check would not do: structural
  * typing accepts extra members, and parameter names take no part in it.
  *
+ * What is compared is the TYPE surface, and only that: the class's name, its
+ * own modifiers (other than the `export`/`default`/`declare` of how it is
+ * exported), its type parameters and heritage clauses, and every member's
+ * kind, name, modifiers, optional marker, type parameters, parameters (name,
+ * optional, rest, type) and return or property type, with each overload
+ * signature recorded separately and in order. JSDoc and other comments are
+ * ignored by design, so the fixture pins no documentation; a type written
+ * differently but meaning the same (`Array<string>` for `string[]`) is a
+ * difference, because types are compared as their source text.
+ *
  * TypeScript 7 has no in-process parser; `typescript/unstable/sync` drives the
  * bundled native compiler over a pipe. The texts are served to it from a
  * virtual filesystem, so nothing is written to disk and nothing is resolved:
  * `noResolve` keeps the parse to the files handed in.
  */
 
+import { createRequire } from "node:module";
 import { SyntaxKind } from "typescript/unstable/ast";
 import { skipTrivia } from "typescript/unstable/ast/scanner";
 import { createVirtualFileSystem } from "typescript/unstable/fs";
 import { API } from "typescript/unstable/sync";
+
+/**
+ * The only TypeScript this extractor has been validated against. The
+ * `unstable/*` API it drives carries no compatibility promise, and
+ * package.json allows `^7.0.0`, so a bump must fail here loudly and force a
+ * re-check (re-run test/gates/compat-declaration.spec.ts and confirm every
+ * negative proof still fails for the reason it names) rather than let a
+ * changed AST shape quietly weaken the gate.
+ */
+export const VALIDATED_TYPESCRIPT_VERSION = "7.0.2";
+
+/** Throws unless `version` is the validated TypeScript version. */
+export function assertValidatedTypescript(version) {
+  if (version !== VALIDATED_TYPESCRIPT_VERSION) {
+    throw new Error(
+      `compat-declaration: installed typescript is ${version}, but this extractor was validated ` +
+        `on ${VALIDATED_TYPESCRIPT_VERSION} only (its typescript/unstable/* API has no stability ` +
+        `promise). Re-validate scripts/lib/compat-declaration.mjs against ${version}, then update ` +
+        "VALIDATED_TYPESCRIPT_VERSION.",
+    );
+  }
+}
+
+const INSTALLED_TYPESCRIPT_VERSION = createRequire(import.meta.url)(
+  "typescript/package.json",
+).version;
 
 const VIRTUAL_ROOT = "/compat-declaration";
 
@@ -38,6 +75,7 @@ const VIRTUAL_ROOT = "/compat-declaration";
  * closes; `visit` must return plain data, not nodes.
  */
 export function withParsedDeclarations(files, visit) {
+  assertValidatedTypescript(INSTALLED_TYPESCRIPT_VERSION);
   const names = Object.keys(files);
   if (names.length === 0) throw new Error("withParsedDeclarations: no files given");
   const virtual = { [`${VIRTUAL_ROOT}/tsconfig.json`]: "" };
@@ -77,11 +115,12 @@ const nodeText = (node, sourceFile) =>
 
 const hasModifier = (node, kind) => (node.modifiers ?? []).some((m) => m.kind === kind);
 
-/** `ReadonlyKeyword` -> `readonly`; anything unexpected keeps its full kind name. */
-const modifierName = (modifier) => {
-  const name = SyntaxKind[modifier.kind];
-  return name.endsWith("Keyword") ? name.slice(0, -"Keyword".length).toLowerCase() : name;
-};
+/**
+ * A modifier as written (`readonly`, `abstract`). Read from the source text,
+ * not from `SyntaxKind[kind]`: that reverse lookup is ambiguous where the enum
+ * aliases a value, and `abstract` came back as `FirstContextualKeyword`.
+ */
+const modifierName = (modifier, sourceFile) => nodeText(modifier, sourceFile);
 
 /**
  * Every type alias in the file set, by the dotted name a reference would use:
@@ -167,7 +206,9 @@ function describeMember(member, sourceFile, aliases) {
   if (kind !== "constructor" && kind !== "index") {
     described.name = member.name === undefined ? null : nodeText(member.name, sourceFile);
   }
-  described.modifiers = (member.modifiers ?? []).map(modifierName);
+  described.modifiers = (member.modifiers ?? []).map((modifier) =>
+    modifierName(modifier, sourceFile),
+  );
   if (kind === "property") {
     described.optional = member.questionToken !== undefined;
     described.type = describeType(member.type, sourceFile, aliases);
@@ -183,6 +224,17 @@ function describeMember(member, sourceFile, aliases) {
   }
   return described;
 }
+
+/**
+ * How the class is exported (`export default class`, or tsdown's `declare
+ * class` plus an `export { ... as default }` block) is not part of its
+ * surface; the default export itself is checked by `defaultExportName`.
+ */
+const EXPORT_FORM_MODIFIERS = new Set([
+  SyntaxKind.ExportKeyword,
+  SyntaxKind.DefaultKeyword,
+  SyntaxKind.DeclareKeyword,
+]);
 
 /** The local name the file exports as `default`, or undefined. */
 function defaultExportName(sourceFile) {
@@ -212,7 +264,8 @@ function defaultExportName(sourceFile) {
 
 /**
  * The public surface of the class `entry` exports as `default`:
- * `{ className, members }`, members in declaration order.
+ * `{ className, modifiers, typeParameters, heritage, members }`, members in
+ * declaration order, one entry per overload signature.
  *
  * Throws when there is no default export, when it names no class declared in
  * that file, or when the class has no members — each would otherwise make the
@@ -233,7 +286,18 @@ export function extractDefaultClassSurface(sourceFiles, entry) {
   const aliases = collectAliases(sourceFiles);
   const members = declaration.members.map((member) => describeMember(member, sourceFile, aliases));
   if (members.length === 0) throw new Error(`${entry}: class ${className} has no members`);
-  return { className, members };
+  return {
+    className,
+    modifiers: (declaration.modifiers ?? [])
+      .filter((modifier) => !EXPORT_FORM_MODIFIERS.has(modifier.kind))
+      .map((modifier) => modifierName(modifier, sourceFile)),
+    typeParameters: (declaration.typeParameters ?? []).map((p) => nodeText(p, sourceFile)),
+    heritage: (declaration.heritageClauses ?? []).map((clause) => ({
+      token: clause.token === SyntaxKind.ExtendsKeyword ? "extends" : "implements",
+      types: clause.types.map((type) => nodeText(type, sourceFile)),
+    })),
+    members,
+  };
 }
 
 /** Parses `files` and extracts `entry`'s default-exported class surface. */
@@ -243,10 +307,30 @@ export function readDefaultClassSurface(files, entry) {
   );
 }
 
-const memberKey = (member) =>
+const baseKey = (member) =>
   member.kind === "constructor" || member.kind === "index"
     ? member.kind
     : `${member.kind} ${member.name}`;
+
+/**
+ * One key per member, in order. A name declared once keys as itself
+ * (`method toMathml`); an overloaded one keys each signature by its position,
+ * `method f#1`, `method f#2`, ..., so adding, removing or reordering an
+ * overload is a named difference rather than two signatures collapsing into
+ * one map entry.
+ */
+const memberKeys = (members) => {
+  const counts = new Map();
+  for (const member of members) counts.set(baseKey(member), (counts.get(baseKey(member)) ?? 0) + 1);
+  const seen = new Map();
+  return members.map((member) => {
+    const key = baseKey(member);
+    if (counts.get(key) === 1) return key;
+    const index = (seen.get(key) ?? 0) + 1;
+    seen.set(key, index);
+    return `${key}#${index}`;
+  });
+};
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -265,11 +349,16 @@ export function diffSurfaces(expected, actual) {
     if (!same(want, got)) differences.push({ path, expected: want, actual: got });
   };
   note("className", expected.className, actual.className);
+  note("modifiers", expected.modifiers, actual.modifiers);
+  note("typeParameters", expected.typeParameters, actual.typeParameters);
+  note("heritage", expected.heritage, actual.heritage);
 
-  const actualByKey = new Map(actual.members.map((member) => [memberKey(member), member]));
-  const expectedKeys = new Set(expected.members.map(memberKey));
-  for (const want of expected.members) {
-    const key = memberKey(want);
+  const wantKeys = memberKeys(expected.members);
+  const gotKeys = memberKeys(actual.members);
+  const actualByKey = new Map(actual.members.map((member, i) => [gotKeys[i], member]));
+  const expectedKeys = new Set(wantKeys);
+  for (const [index, want] of expected.members.entries()) {
+    const key = wantKeys[index];
     const got = actualByKey.get(key);
     if (got === undefined) {
       differences.push({ path: key, expected: want, actual: null });
@@ -294,12 +383,12 @@ export function diffSurfaces(expected, actual) {
       diffType(`${path}.type`, wantParameters[i].type, gotParameters[i].type, note);
     }
   }
-  for (const got of actual.members) {
-    if (!expectedKeys.has(memberKey(got))) {
-      differences.push({ path: memberKey(got), expected: null, actual: got });
+  for (const [index, got] of actual.members.entries()) {
+    if (!expectedKeys.has(gotKeys[index])) {
+      differences.push({ path: gotKeys[index], expected: null, actual: got });
     }
   }
-  note("memberOrder", expected.members.map(memberKey), actual.members.map(memberKey));
+  note("memberOrder", wantKeys, gotKeys);
   return differences;
 }
 

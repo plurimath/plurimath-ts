@@ -535,7 +535,13 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
 - [x] The built ESM and CJS declarations match the canonical fixture and the gate has
       non-vacuity and negative proofs for member, name, optionality, and return-type drift.
       `scripts/gate-package.mjs` step 4 (via `scripts/lib/compat-declaration.mjs`);
-      proofs in `test/gates/compat-declaration.spec.ts`.
+      proofs in `test/gates/compat-declaration.spec.ts`. "Match" means the type
+      surface the extractor records: the class's name, non-export modifiers, type
+      parameters and heritage clauses, and each member's kind, name, modifiers,
+      optional marker, parameters and return or property type, one entry per
+      overload signature, with types compared as source text. JSDoc and comments
+      are not compared. The extractor refuses any TypeScript but the `7.0.2` it
+      was validated on.
 - [ ] All six constructor formats are asserted in the source-head declaration order:
       `asciimath` constructs; `latex`, `mathml`, `html`, `unicode`, and `omml` raise the
       port's structured `UnsupportedFormatError` until their parsers land.

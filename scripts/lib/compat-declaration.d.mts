@@ -23,6 +23,9 @@ export interface DeclaredMember {
 
 export interface ClassSurface {
   className: string;
+  modifiers?: string[];
+  typeParameters?: string[];
+  heritage?: { token: "extends" | "implements"; types: string[] }[];
   members: DeclaredMember[];
 }
 
@@ -31,6 +34,10 @@ export interface SurfaceDifference {
   expected: unknown;
   actual: unknown;
 }
+
+export const VALIDATED_TYPESCRIPT_VERSION: string;
+
+export function assertValidatedTypescript(version: string): void;
 
 export function withParsedDeclarations<T>(
   files: Record<string, string>,

@@ -24,6 +24,9 @@
   },
   "surface": {
     "className": "Plurimath",
+    "modifiers": [],
+    "typeParameters": [],
+    "heritage": [],
     "members": [
       {
         "kind": "property",

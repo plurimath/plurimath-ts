@@ -22,6 +22,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { UnsupportedFeatureError } from "../../src/core/errors";
+import { FormulaNode, NumberNode } from "../../src/core/nodes";
 import {
   DEFAULT_MAX_ITERATIONS,
   Evaluator,
@@ -299,5 +300,17 @@ describe("evaluate() — measurements not covered by the oracle fixtures", () =>
     expect(error.message).toBe(
       "wrong type for binding key (given Array, expected String or Symbol)",
     );
+  });
+});
+
+describe("evaluate's number literal pattern", () => {
+  it("rejects a long malformed digit run in linear time", () => {
+    // The earlier quadratic pattern took 4.6-20 s at 50,000 digits. Four
+    // times the length is at least sixteen times that, far past the default
+    // 5 s timeout, while the linear pattern stays in milliseconds.
+    const formula = new FormulaNode({
+      value: [new NumberNode({ value: `${"0".repeat(200_000)}x` })],
+    });
+    expect(() => evaluate(formula)).toThrow(UnsupportedExpressionError);
   });
 });

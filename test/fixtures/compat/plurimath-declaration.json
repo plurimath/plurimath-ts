@@ -1,0 +1,148 @@
+{
+  "$comment": "The canonical declaration surface of the root default export, the plurimath-js compat class (TODO.plan/p2-output-formats/03-compat-class.md). scripts/gate-package.mjs compares the BUILT dist/index.d.ts and dist/index.d.cts against `surface` exactly; test/gates/compat-declaration.spec.ts proves that comparison fails for member, name, optionality and return-type drift, and that `sourceHeadDifferences` lists every way `surface` departs from the declaration target.",
+  "target": {
+    "$comment": "Settled 2026-09-04: the declaration target is plurimath-js SOURCE HEAD, not the published @plurimath/plurimath@0.2.2 artifact (seven methods, toMathml(intent?: boolean), `unicode` rather than `mahtml`), and `data` is exposed as `readonly data: FormulaNode`.",
+    "repository": "https://github.com/plurimath/plurimath-js",
+    "commit": "ce297e291703ed47f6e569c9216fc7ef454cd6ce",
+    "inputs": {
+      "src/index.ts": "e9410a56ae220377018c8ac5ffb3557a14882a0a",
+      "src/plurimath-opal.d.ts": "09d218df8b86c12a9a3b2b8baeed25c3f24783a4",
+      "tsconfig.json": "9fedf9df78bf1ae71b6f83a65aa6f5c5ac85362d"
+    },
+    "$comment-inputs": "git blob ids at that commit: `git -C <plurimath-js clone> rev-parse ce297e2:<path>`.",
+    "producer": "tsc 5.7.2 (the clone's own node_modules/.bin/tsc, the declaration step build.sh names) run with `-p src/tsconfig.json --emitDeclarationOnly` over the three inputs extracted with `git show ce297e2:<path>` into scratch; tsconfig.json's outDir was the only edit, pointing emit away from the clone. Exit 0.",
+    "files": {
+      "source-head-ce297e2/index.d.ts.txt": {
+        "from": "tsc output index.d.ts",
+        "sha256": "7bd33de5ae57e7c09c2fe7d1da34387cc54502b2cb499d637fc7bb14b66ef181"
+      },
+      "source-head-ce297e2/plurimath-opal.d.ts.txt": {
+        "from": "src/plurimath-opal.d.ts at ce297e2, verbatim (it declares the Format union index.d.ts references)",
+        "sha256": "71cc57d00f6deb319cf6a5941ce1d7938401a8d8fd58594938dbf625496f7cef"
+      }
+    }
+  },
+  "surface": {
+    "className": "Plurimath",
+    "members": [
+      {
+        "kind": "property",
+        "name": "data",
+        "modifiers": ["readonly"],
+        "optional": false,
+        "type": "FormulaNode"
+      },
+      {
+        "kind": "constructor",
+        "modifiers": [],
+        "parameters": [
+          {
+            "name": "data",
+            "optional": false,
+            "rest": false,
+            "type": "string"
+          },
+          {
+            "name": "format",
+            "optional": false,
+            "rest": false,
+            "type": {
+              "alias": "Format",
+              "literals": ["asciimath", "latex", "mathml", "html", "unicode", "omml"]
+            }
+          }
+        ]
+      },
+      {
+        "kind": "method",
+        "name": "toAsciimath",
+        "modifiers": [],
+        "optional": false,
+        "parameters": [],
+        "returnType": "string"
+      },
+      {
+        "kind": "method",
+        "name": "toLatex",
+        "modifiers": [],
+        "optional": false,
+        "parameters": [],
+        "returnType": "string"
+      },
+      {
+        "kind": "method",
+        "name": "toMathml",
+        "modifiers": [],
+        "optional": false,
+        "parameters": [
+          {
+            "name": "intent",
+            "optional": true,
+            "rest": false,
+            "type": "boolean"
+          }
+        ],
+        "returnType": "string"
+      },
+      {
+        "kind": "method",
+        "name": "toHtml",
+        "modifiers": [],
+        "optional": false,
+        "parameters": [],
+        "returnType": "string"
+      },
+      {
+        "kind": "method",
+        "name": "toOmml",
+        "modifiers": [],
+        "optional": false,
+        "parameters": [],
+        "returnType": "string"
+      },
+      {
+        "kind": "method",
+        "name": "toDisplay",
+        "modifiers": [],
+        "optional": false,
+        "parameters": [
+          {
+            "name": "lang",
+            "optional": false,
+            "rest": false,
+            "type": "string"
+          }
+        ],
+        "returnType": "string"
+      },
+      {
+        "kind": "method",
+        "name": "toUnicodemath",
+        "modifiers": [],
+        "optional": false,
+        "parameters": [],
+        "returnType": "string"
+      }
+    ]
+  },
+  "sourceHeadDifferences": [
+    {
+      "path": "property data.modifiers",
+      "sourceHead": [],
+      "port": ["readonly"],
+      "reason": "Settled 2026-09-04 (03-compat-class.md, \"The data property\"): a consumer that writes `data` breaks under either choice, so it is exposed read-only; the class installs it with writable: false."
+    },
+    {
+      "path": "property data.type",
+      "sourceHead": "Opal.Plurimath.Math.ParserResult",
+      "port": "FormulaNode",
+      "reason": "Settled 2026-09-04: same property name, this port's model behind it. ParserResult is an Opal runtime value this port cannot reproduce."
+    },
+    {
+      "path": "constructor.parameters[1].type.alias",
+      "sourceHead": "Opal.Plurimath.Math.Format",
+      "port": "Format",
+      "reason": "Name only: the port has no Opal namespace, so the union is its own exported alias. Its literals are identical to source head's, in the same order (no difference is recorded for `.literals`)."
+    }
+  ]
+}

@@ -20,6 +20,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { UnsupportedFeatureError } from "../../src/core/errors";
+import { FormulaNode, NumberNode } from "../../src/core/nodes";
 import { Evaluator, GEM_EVALUATED_FUNCTIONS } from "../../src/evaluation/evaluator";
 import {
   DivisionByZeroError,
@@ -272,5 +273,16 @@ describe("evaluate() — measurements not covered by the oracle fixtures", () =>
     expect(error.message).toBe(
       "wrong type for binding key (given Array, expected String or Symbol)",
     );
+  });
+});
+
+describe("evaluate's number literal pattern", () => {
+  it("rejects a long malformed digit run in linear time", () => {
+    // A quadratic-backtracking pattern took about 20 s on this input; the
+    // default 5 s test timeout fails any regression.
+    const formula = new FormulaNode({
+      value: [new NumberNode({ value: `${"0".repeat(50_000)}x` })],
+    });
+    expect(() => evaluate(formula)).toThrow(UnsupportedExpressionError);
   });
 });

@@ -1,9 +1,9 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Emits the oracle's answers for `Formula#evaluate(bindings)` calls — B6's
-# first slice (Number/Symbol/binary-arithmetic evaluation only,
-# `TODO.plan/feature-roadmap.md`). Port-local, like the render-options
+# Emits the oracle's answers for `Formula#evaluate(bindings)` calls — B6
+# (`TODO.plan/feature-roadmap.md`): Number/Symbol/binary arithmetic, the exact
+# functions and iterations, and the `Math` module functions. Port-local, like the render-options
 # fixtures: the shared corpus has no `evaluate` call kind, so this generator,
 # not `generate-corpus.rb`, owns them.
 #
@@ -14,8 +14,9 @@
 # covering the same operator and error surface through the OTHER input format
 # `evaluate()` accepts (`bindings.ts`'s header: a `FormulaNode` from any
 # parsed format, not only AsciiMath) — with bindings, covering every in-scope
-# operator, implicit multiplication, nesting, each reachable error class, the
-# non-real `^` case, overflow, an unbound variable and a bad binding value.
+# operator and function, implicit multiplication, nesting, each reachable
+# error class, the non-real `^` case, overflow, an unbound variable and a bad
+# binding value.
 # A row that raises records `message` (`Exception#message`) alongside
 # `raises` (the class name): `evaluate.spec.ts` checks both, byte-exact, not
 # only the class and its `code` — a wrong phrase with the right class would
@@ -27,14 +28,17 @@
 #
 # `portRefusal` marks a row the port refuses with `UnsupportedFeatureError`
 # although the oracle answers or raises something else, and says why:
-# `unported` (a construct the gem evaluates that this slice has not ported:
-# `mod`, `sin`, `sum`, ...), `rational` / `big-integer` (a FINAL result a JS
+# `unported` (a construct the gem evaluates that this port has not ported:
+# `sinh`, `log`, ...), `rational` / `big-integer` (a FINAL result a JS
 # number cannot hold exactly — intermediate ones are computed exactly, as
 # Ruby does), `pow-rounding-band` (a Float power within glibc's rounding
-# band), `argument-error` (Ruby raises `ArgumentError`, not an evaluation
+# band), `libm-rounding-band` (a `Math` function result within glibc's
+# rounding band), `libm-reduction` (a sin/cos/tan argument so close to a
+# multiple of pi/2 that glibc's range reduction is not accurate enough to
+# trust), `argument-error` (Ruby raises `ArgumentError`, not an evaluation
 # error; recorded as `raises: "ArgumentError"`), or `size-limit` (an exact
-# intermediate beyond the port's resource limit) — `src/evaluation/numeric.ts`
-# and `pow.ts`. The oracle's own answer is still recorded, so the refusal is
+# intermediate beyond the port's resource limit) — `src/evaluation/numeric.ts`,
+# `pow.ts` and `libm.ts`. The oracle's own answer is still recorded, so the refusal is
 # visibly a refusal of THAT answer. A Rational or out-of-range Integer answer
 # without a `portRefusal` aborts generation, and so does a `rational`,
 # `big-integer` or `argument-error` marker the oracle's answer does not bear
@@ -310,6 +314,82 @@ def exact_value_in_pow_rounding_band?(exact)
   offset.abs * NEAR_HALFWAY_BAND_INVERSE < 2 * full
 end
 
+# `libm.ts`'s refusal bands and reduction guard, read from its source the
+# way `INTEGER_BIT_LIMIT` is read above, so a `libm-rounding-band` or
+# `libm-reduction` row is validated against the port's ACTUAL figures.
+LIBM_TS_SOURCE = File.read(File.join(__dir__, "..", "src", "evaluation", "libm.ts"))
+LIBM_BAND_INVERSES = LIBM_TS_SOURCE.scan(/^  (\w+): band\("\1", (\d+)n,/).to_h { |fn, inverse| [fn, inverse.to_i] }
+abort "REFUSING: could not read BANDS out of libm.ts" unless LIBM_BAND_INVERSES.size == 8
+
+def libm_constant(pattern, what)
+  match = LIBM_TS_SOURCE.match(pattern)
+  abort "REFUSING: could not read #{what} out of libm.ts" unless match
+
+  match[1].to_i
+end
+
+LIBM_LARGE_ARGUMENT = 2**libm_constant(/export const LARGE_ARGUMENT = 2 \*\* (\d+);/, "LARGE_ARGUMENT")
+LIBM_SMALL_GUARD_BITS = libm_constant(/export const SMALL_ARGUMENT_GUARD_BITS = (\d+)n;/, "SMALL_ARGUMENT_GUARD_BITS")
+LIBM_LARGE_GUARD_BITS = libm_constant(/export const LARGE_ARGUMENT_GUARD_BITS = (\d+)n;/, "LARGE_ARGUMENT_GUARD_BITS")
+
+require_relative "lib/libm-reference"
+
+# `libm-rounding-band` and `libm-reduction` rows: the C function and the
+# double argument it is called with, keyed by row id. A `libm-rounding-band`
+# row's exact result must lie within that function's band of a double
+# midpoint (`LibmReference.rounded`, BigDecimal at 110 digits); a
+# `libm-reduction` row's argument must be a reduced one (beyond pi/4) within
+# the reduction guard of a multiple of pi/2 (`LibmReference.half_pi_distance`).
+LIBM_REFUSAL_OPERANDS = {
+  "libm-band-sin-glibc-miss" => ["sin", -6.428541877306998],
+  "libm-band-cos-glibc-miss" => ["cos", -317.75792610645294],
+  "libm-band-tan-glibc-miss" => ["tan", -3.203488953411579],
+  "libm-band-arcsin-glibc-miss" => ["asin", -0.6042156000621617],
+  "libm-band-arccos-glibc-miss" => ["acos", 0.5979652847163379],
+  "libm-band-arctan-glibc-miss" => ["atan", 0.1211596090142848],
+  "libm-band-exp-glibc-miss" => ["exp", -222.24369076996572],
+  "libm-band-ln-glibc-miss" => ["log", 0.566132013569586],
+  "libm-band-cot-glibc-miss" => ["tan", -3.203488953411579],
+  "libm-band-sec-glibc-miss" => ["cos", -317.75792610645294],
+  "libm-band-csc-glibc-miss" => ["sin", -6.428541877306998],
+  "latex-libm-band-sin-glibc-miss" => ["sin", -6.428541877306998],
+  "tan-pi-over-four" => ["tan", Math::PI / 4],
+  "arccos-half" => ["acos", 0.5],
+  "sin-pi" => ["sin", Math::PI],
+  "latex-sin-pi" => ["sin", Math::PI],
+  "cos-pi-over-two" => ["cos", Math::PI / 2],
+  "tan-pi-over-two" => ["tan", Math::PI / 2],
+  "cot-pi-over-two" => ["tan", Math::PI / 2],
+  "sec-pi-over-two" => ["cos", Math::PI / 2],
+  "csc-pi" => ["sin", Math::PI],
+  "libm-reduction-cos-hardest-argument" => ["cos", 6_381_956_970_095_103 * 2.0**797],
+  "libm-reduction-tan-six-pi" => ["tan", 6 * Math::PI],
+}.freeze
+
+def validate_libm_refusal!(id, port_refusal)
+  fn, x = LIBM_REFUSAL_OPERANDS[id]
+  abort "REFUSING: #{id}: marked #{port_refusal}, but no LIBM_REFUSAL_OPERANDS entry" unless fn
+
+  if port_refusal == "libm-rounding-band"
+    inverse = LIBM_BAND_INVERSES.fetch(fn) { abort "REFUSING: #{id}: libm.ts has no band for #{fn}" }
+    _rounded, distance = LibmReference.rounded(fn, x)
+    unless distance && distance < Rational(1, inverse)
+      abort "REFUSING: #{id}: marked libm-rounding-band, but #{fn}(#{x}) lies #{distance.inspect} ULP " \
+            "from a midpoint, outside libm.ts's 1/#{inverse} band"
+    end
+  else
+    unless %w[sin cos tan].include?(fn) && x.abs > Math::PI / 4
+      abort "REFUSING: #{id}: marked libm-reduction, but #{fn}(#{x}) is not a reduced sin/cos/tan argument"
+    end
+    bits = x.abs < LIBM_LARGE_ARGUMENT ? LIBM_SMALL_GUARD_BITS : LIBM_LARGE_GUARD_BITS
+    distance = LibmReference.half_pi_distance(x)
+    unless distance < Rational(1, 2**bits)
+      abort "REFUSING: #{id}: marked libm-reduction, but #{x} lies #{distance.to_f} from a multiple " \
+            "of pi/2, outside libm.ts's 2^-#{bits} guard"
+    end
+  end
+end
+
 def validate_port_refusal!(id, port_refusal, row)
   case port_refusal
   when "unported"
@@ -346,6 +426,8 @@ def validate_port_refusal!(id, port_refusal, row)
       abort "REFUSING: #{id}: marked size-limit, but the operand is #{bits} bits, " \
             "not beyond the port's #{INTEGER_BIT_LIMIT}-bit limit"
     end
+  when "libm-rounding-band", "libm-reduction"
+    validate_libm_refusal!(id, port_refusal)
   when "pow-rounding-band"
     operands = POW_ROUNDING_BAND_OPERANDS[id]
     abort "REFUSING: #{id}: marked pow-rounding-band, but no POW_ROUNDING_BAND_OPERANDS entry" unless operands
@@ -695,10 +777,134 @@ ROWS = [
   ["text-empty", "text", "text()"],
   ["text-in-arithmetic", "text", "2 text(ab)+1"],
 
-  # Gem-evaluated nodes this slice has not ported.
-  ["unported-sin-missing-variable", "unported", "sin(x)"],
-  ["unported-sqrt", "unported", "sqrt(4)"],
+  # The `Math` module functions (`libm.ts`): correctly rounded, refused
+  # inside each function's measured band (the `libm-rounding-band` rows
+  # below), with `math.c`'s argument conversion, domain errors and special
+  # cases.
+  ["sin-zero", "math-trig", "sin(0)"],
+  ["sin-negative-zero", "math-trig", "sin(-0.0)"],
+  ["sin-one", "math-trig", "sin(1)"],
+  ["sin-pi", "math-reduction", "sin(pi)"],
+  ["sin-pi-over-six", "math-trig", "sin(pi/6)"],
+  ["sin-bare-operand", "math-trig", "sin 2"],
+  ["sin-rational-argument", "math-trig", "sin(2^(-1))"],
+  ["sin-large-argument", "math-trig", "sin(10.0^300)"],
+  ["sin-huge-integer-argument", "math-trig", "sin(2^1100)"],
+  ["sin-infinity", "math-trig", "sin(a)"],
+  ["sin-nan", "math-trig", "sin(a)"],
+  ["sin-missing-variable", "math-trig", "sin(x)"],
+  ["sin-squared-missing-operand", "math-trig", "sin^2(a)"],
+  ["sin-in-arithmetic", "math-trig", "2 sin(a)+1"],
+  ["cos-zero", "math-trig", "cos(0)"],
+  ["cos-one", "math-trig", "cos(1)"],
+  ["cos-pi", "math-trig", "cos(pi)"],
+  ["cos-pi-over-two", "math-reduction", "cos(pi/2)"],
+  ["cos-degrees-typed", "math-trig", "cos(90)"],
+  ["tan-zero", "math-trig", "tan(0)"],
+  ["tan-one", "math-trig", "tan(1)"],
+  ["tan-pi-over-four", "math-trig", "tan(pi/4)"],
+  ["tan-pi-over-two", "math-reduction", "tan(pi/2)"],
+  ["tan-negative", "math-trig", "tan(-2.5)"],
+  ["cot-one", "math-reciprocal", "cot(1)"],
+  ["cot-zero", "math-reciprocal", "cot(0)"],
+  ["cot-negative-zero", "math-reciprocal", "cot(-0.0)"],
+  ["cot-pi-over-two", "math-reduction", "cot(pi/2)"],
+  ["sec-zero", "math-reciprocal", "sec(0)"],
+  ["sec-one", "math-reciprocal", "sec(1)"],
+  ["sec-pi-over-two", "math-reduction", "sec(pi/2)"],
+  ["csc-one", "math-reciprocal", "csc(1)"],
+  ["csc-zero", "math-reciprocal", "csc(0)"],
+  ["csc-pi", "math-reduction", "csc(pi)"],
+  ["csc-nan", "math-reciprocal", "csc(a)"],
+  ["arcsin-half", "math-inverse-trig", "arcsin(0.5)"],
+  ["arcsin-one", "math-inverse-trig", "arcsin(1)"],
+  ["arcsin-negative-zero", "math-inverse-trig", "arcsin(-0.0)"],
+  ["arcsin-out-of-domain", "math-inverse-trig", "arcsin(2)"],
+  ["arcsin-below-domain", "math-inverse-trig", "arcsin(-1.5)"],
+  ["arcsin-nan", "math-inverse-trig", "arcsin(a)"],
+  ["arccos-half", "math-inverse-trig", "arccos(0.5)"],
+  ["arccos-one", "math-inverse-trig", "arccos(1)"],
+  ["arccos-minus-one", "math-inverse-trig", "arccos(-1)"],
+  ["arccos-zero", "math-inverse-trig", "arccos(0)"],
+  ["arccos-out-of-domain", "math-inverse-trig", "arccos(2)"],
+  ["arctan-one", "math-inverse-trig", "arctan(1)"],
+  ["arctan-infinity", "math-inverse-trig", "arctan(a)"],
+  ["arctan-big-integer", "math-inverse-trig", "arctan(10^300)"],
+  ["arctan-negative", "math-inverse-trig", "arctan(-3)"],
+  ["exp-zero", "math-exp-log", "exp(0)"],
+  ["exp-one", "math-exp-log", "exp(1)"],
+  ["exp-negative", "math-exp-log", "exp(-2.5)"],
+  ["exp-overflow", "math-exp-log", "exp(1000)"],
+  ["exp-underflow", "math-exp-log", "exp(-1000)"],
+  ["exp-subnormal", "math-exp-log", "exp(-745)"],
+  ["exp-overflow-divided-away", "math-exp-log", "1/exp(1000)"],
+  ["exp-rational-argument", "math-exp-log", "exp(2^(-1))"],
+  ["ln-one", "math-exp-log", "ln(1)"],
+  ["ln-two", "math-exp-log", "ln(2)"],
+  ["ln-ten", "math-exp-log", "ln(10)"],
+  ["ln-small", "math-exp-log", "ln(0.001)"],
+  ["ln-zero", "math-exp-log", "ln(0)"],
+  ["ln-negative-zero", "math-exp-log", "ln(-0.0)"],
+  ["ln-negative", "math-exp-log", "ln(-1)"],
+  ["ln-infinity", "math-exp-log", "ln(a)"],
+  ["ln-big-integer", "math-exp-log", "ln(2^2000)"],
+  ["ln-big-integer-1024-bits", "math-exp-log", "ln(2^1023)"],
+  ["ln-big-integer-odd", "math-exp-log", "ln(3*2^1023+1)"],
+  ["ln-big-integer-negative", "math-exp-log", "ln(-(2^2000))"],
+  ["ln-rational-argument", "math-exp-log", "ln(2^(-1))"],
+  ["ln-rational-underflows", "math-exp-log", "ln(2^(-2000))"],
+  ["ln-rational-parts-overflow", "math-exp-log", "ln(2^1100*3^(-700))"],
+  ["exp-of-ln", "math-exp-log", "exp(ln(2))"],
+  ["sqrt-four", "math-sqrt", "sqrt(4)"],
+  ["sqrt-two", "math-sqrt", "sqrt(2)"],
+  ["sqrt-bare-operand", "math-sqrt", "sqrt 2"],
+  ["sqrt-zero", "math-sqrt", "sqrt(0)"],
+  ["sqrt-negative-zero", "math-sqrt", "sqrt(-0.0)"],
+  ["sqrt-negative", "math-sqrt", "sqrt(-1)"],
+  ["sqrt-infinity", "math-sqrt", "sqrt(a)"],
+  ["sqrt-nan", "math-sqrt", "sqrt(a)"],
+  ["sqrt-rational", "math-sqrt", "sqrt(2^(-1))"],
+  ["sqrt-big-integer", "math-sqrt", "sqrt(2^2000)"],
+  ["sqrt-in-sum", "math-sqrt", "sqrt(9)+sqrt(16)"],
+  ["sin-pi-over-two", "math-trig", "sin(pi/2)"],
+
+  # `libm-rounding-band`: an argument from `scripts/measure-libm-glibc-accuracy.mjs`'s
+  # seeded sample where glibc itself missed the correctly rounded double, so
+  # the gem's answer is one this port could not reproduce by correct rounding;
+  # the port refuses it as inside the band. `cot`/`sec`/`csc` refuse through
+  # the `tan`/`cos`/`sin` they are the reciprocal of.
+  ["libm-band-sin-glibc-miss", "math-band", "sin(a)"],
+  ["libm-band-cos-glibc-miss", "math-band", "cos(a)"],
+  ["libm-band-tan-glibc-miss", "math-band", "tan(a)"],
+  ["libm-band-arcsin-glibc-miss", "math-band", "arcsin(a)"],
+  ["libm-band-arccos-glibc-miss", "math-band", "arccos(a)"],
+  ["libm-band-arctan-glibc-miss", "math-band", "arctan(a)"],
+  ["libm-band-exp-glibc-miss", "math-band", "exp(a)"],
+  ["libm-band-ln-glibc-miss", "math-band", "ln(a)"],
+  ["libm-band-cot-glibc-miss", "math-band", "cot(a)"],
+  ["libm-band-sec-glibc-miss", "math-band", "sec(a)"],
+  ["libm-band-csc-glibc-miss", "math-band", "csc(a)"],
+
+  # `libm-reduction`: sin/cos/tan arguments so close to a multiple of pi/2
+  # that glibc's range reduction decides the last bits — including the double
+  # closest to a multiple of pi/2 of all (glibc's `cos` is 8 ULP out there)
+  # and `6pi`, where glibc's `tan` misses at 0.18 ULP from the midpoint.
+  ["libm-reduction-cos-hardest-argument", "math-reduction", "cos(6381956970095103*2.0^797)"],
+  ["libm-reduction-tan-six-pi", "math-reduction", "tan(6pi)"],
+
+  # Gem-evaluated nodes this port has not ported: the hyperbolic functions
+  # and `Log`/`Lg`, pending a licensing decision about copying C-library
+  # code. (`lg` is AsciiMath for the variables `l` and `g`; `\lg` is LaTeX's
+  # `Lg`, in `LATEX_ROWS`.)
+  ["unported-sinh", "unported", "sinh(1)"],
+  ["unported-cosh", "unported", "cosh(1)"],
+  ["unported-tanh", "unported", "tanh(1)"],
+  ["unported-sech", "unported", "sech(1)"],
+  ["unported-csch", "unported", "csch(1)"],
+  ["unported-coth", "unported", "coth(1)"],
   ["unported-log", "unported", "log(100)"],
+  ["unported-log-base", "unported", "log_2(8)"],
+  ["unported-sinh-missing-variable", "unported", "sinh(x)"],
 
   # A sample of scripts/-generated random expressions, re-checked here.
   ["random-float-product", "random", "+12*3.14"],
@@ -727,7 +933,7 @@ LATEX_ROWS = [
   ["latex-divide-inexact", "arithmetic", "1/2"],
   ["latex-power-braced", "power", "2^{3}"],
   ["latex-frac", "arithmetic", "\\frac{1}{2}"],
-  ["latex-sqrt", "unported", "\\sqrt{4}"],
+  ["latex-sqrt", "math-sqrt", "\\sqrt{4}"],
   ["latex-variable-lookup", "symbol", "a+1"],
   ["latex-missing-variable", "error-missing-variable", "b+1"],
   ["latex-division-by-zero", "error-division-by-zero", "1/0"],
@@ -752,6 +958,26 @@ LATEX_ROWS = [
   ["latex-lceil-is-a-group", "ceil-floor", "\\lceil 2.5 \\rceil"],
   ["latex-abs-vert", "abs", "\\left|x\\right|"],
   ["latex-mod-zero", "mod", "7 \\bmod 0"],
+  ["latex-sin", "math-trig", "\\sin(1)"],
+  ["latex-sin-bare", "math-trig", "\\sin x"],
+  ["latex-sin-pi", "math-reduction", "\\sin(\\pi)"],
+  ["latex-libm-band-sin-glibc-miss", "math-band", "\\sin(a)"],
+  ["latex-cos-braced", "math-trig", "\\cos{0}"],
+  ["latex-tan", "math-trig", "\\tan(2)"],
+  ["latex-cot-zero", "math-reciprocal", "\\cot(0)"],
+  ["latex-sec", "math-reciprocal", "\\sec(1)"],
+  ["latex-csc", "math-reciprocal", "\\csc(1)"],
+  ["latex-arcsin", "math-inverse-trig", "\\arcsin(0.5)"],
+  ["latex-arccos-out-of-domain", "math-inverse-trig", "\\arccos(2)"],
+  ["latex-arctan", "math-inverse-trig", "\\arctan 1"],
+  ["latex-exp", "math-exp-log", "\\exp(1)"],
+  ["latex-ln", "math-exp-log", "\\ln 2"],
+  ["latex-ln-negative", "math-exp-log", "\\ln(-1)"],
+  ["latex-sqrt-two", "math-sqrt", "\\sqrt{2}"],
+  ["latex-sqrt-negative", "math-sqrt", "\\sqrt{-1}"],
+  ["latex-unported-sinh", "unported", "\\sinh(1)"],
+  ["latex-unported-lg", "unported", "\\lg(100)"],
+  ["latex-unported-log", "unported", "\\log(100)"],
 ].freeze
 
 # Bindings, keyed by the row id above where non-empty; every other row
@@ -824,6 +1050,29 @@ BINDINGS = {
   "text-in-arithmetic" => { "ab" => 4 },
   "latex-text-variable" => { "ab" => 5 },
   "latex-abs-vert" => { "x" => -2 },
+  "sin-infinity" => { "a" => Float::INFINITY },
+  "sin-nan" => { "a" => Float::NAN },
+  "sin-squared-missing-operand" => { "a" => 0.5 },
+  "sin-in-arithmetic" => { "a" => 0.75 },
+  "csc-nan" => { "a" => Float::NAN },
+  "arcsin-nan" => { "a" => Float::NAN },
+  "arctan-infinity" => { "a" => Float::INFINITY },
+  "ln-infinity" => { "a" => Float::INFINITY },
+  "sqrt-infinity" => { "a" => Float::INFINITY },
+  "sqrt-nan" => { "a" => Float::NAN },
+  "latex-sin-bare" => { "x" => 0.5 },
+  "libm-band-sin-glibc-miss" => { "a" => -6.428541877306998 },
+  "libm-band-cos-glibc-miss" => { "a" => -317.75792610645294 },
+  "libm-band-tan-glibc-miss" => { "a" => -3.203488953411579 },
+  "libm-band-arcsin-glibc-miss" => { "a" => -0.6042156000621617 },
+  "libm-band-arccos-glibc-miss" => { "a" => 0.5979652847163379 },
+  "libm-band-arctan-glibc-miss" => { "a" => 0.1211596090142848 },
+  "libm-band-exp-glibc-miss" => { "a" => -222.24369076996572 },
+  "libm-band-ln-glibc-miss" => { "a" => 0.566132013569586 },
+  "libm-band-cot-glibc-miss" => { "a" => -3.203488953411579 },
+  "libm-band-sec-glibc-miss" => { "a" => -317.75792610645294 },
+  "libm-band-csc-glibc-miss" => { "a" => -6.428541877306998 },
+  "latex-libm-band-sin-glibc-miss" => { "a" => -6.428541877306998 },
 }.freeze
 
 # Per-row gem configuration (`with_options`), keyed by row id; every other row
@@ -850,10 +1099,41 @@ PORT_REFUSALS = {
   "argument-error-negative-fixnum-min" => "argument-error",
   "size-limit-huge-power-times-zero" => "size-limit",
   "pow-exact-halfway" => "pow-rounding-band",
-  "unported-sin-missing-variable" => "unported",
-  "unported-sqrt" => "unported",
+  "unported-sinh" => "unported",
+  "unported-cosh" => "unported",
+  "unported-tanh" => "unported",
+  "unported-sech" => "unported",
+  "unported-csch" => "unported",
+  "unported-coth" => "unported",
   "unported-log" => "unported",
-  "latex-sqrt" => "unported",
+  "unported-log-base" => "unported",
+  "unported-sinh-missing-variable" => "unported",
+  "latex-unported-sinh" => "unported",
+  "latex-unported-lg" => "unported",
+  "latex-unported-log" => "unported",
+  "libm-band-sin-glibc-miss" => "libm-rounding-band",
+  "libm-band-cos-glibc-miss" => "libm-rounding-band",
+  "libm-band-tan-glibc-miss" => "libm-rounding-band",
+  "libm-band-arcsin-glibc-miss" => "libm-rounding-band",
+  "libm-band-arccos-glibc-miss" => "libm-rounding-band",
+  "libm-band-arctan-glibc-miss" => "libm-rounding-band",
+  "libm-band-exp-glibc-miss" => "libm-rounding-band",
+  "libm-band-ln-glibc-miss" => "libm-rounding-band",
+  "libm-band-cot-glibc-miss" => "libm-rounding-band",
+  "libm-band-sec-glibc-miss" => "libm-rounding-band",
+  "libm-band-csc-glibc-miss" => "libm-rounding-band",
+  "latex-libm-band-sin-glibc-miss" => "libm-rounding-band",
+  "tan-pi-over-four" => "libm-rounding-band",
+  "arccos-half" => "libm-rounding-band",
+  "sin-pi" => "libm-reduction",
+  "latex-sin-pi" => "libm-reduction",
+  "cos-pi-over-two" => "libm-reduction",
+  "tan-pi-over-two" => "libm-reduction",
+  "cot-pi-over-two" => "libm-reduction",
+  "sec-pi-over-two" => "libm-reduction",
+  "csc-pi" => "libm-reduction",
+  "libm-reduction-cos-hardest-argument" => "libm-reduction",
+  "libm-reduction-tan-six-pi" => "libm-reduction",
   "abs-rational" => "rational",
   "floor-huge-float" => "big-integer",
   "lcm-big-result" => "big-integer",

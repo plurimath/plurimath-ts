@@ -38,6 +38,17 @@ import {
 import { ExpressionParser } from "./expression-parser";
 import { Iteration, nodeVariableName } from "./iteration";
 import {
+  mathAcos,
+  mathAsin,
+  mathAtan,
+  mathCos,
+  mathExp,
+  mathLog,
+  mathSin,
+  mathSqrt,
+  mathTan,
+} from "./libm";
+import {
   absolute,
   ceilOf,
   compare,
@@ -318,6 +329,26 @@ function secondParameter(node: FunctionNode): NodeParameter | undefined {
 }
 
 /**
+ * Ruby: a `Math` module function applied to the evaluated operand
+ * (`Sin#evaluate` is `::Math.sin(evaluator.evaluate_node(parameter_one))`),
+ * always a Float.
+ */
+function mathFunction(apply: (x: RubyNumeric) => number): FunctionEvaluator {
+  return (ev, node) => float(apply(ev.evaluateNode(node.parameterOne)));
+}
+
+/**
+ * Ruby: `Cot`/`Sec`/`Csc#evaluate` — `evaluator.divide(1.0, ::Math.tan(x))`
+ * (`cos`, `sin`): `DivisionByZeroError` when the `Math` result is exactly
+ * zero (`tan(0)`, `sin(0)`; no double's `cos` is), otherwise IEEE division,
+ * which is exact given the same operand — so the band of the `Math` function
+ * underneath is the only refusal these need.
+ */
+function reciprocal(apply: (x: RubyNumeric) => number): FunctionEvaluator {
+  return (ev, node) => divide(float(1), float(apply(ev.evaluateNode(node.parameterOne))));
+}
+
+/**
  * Ruby: `Gcd#evaluate`/`Lcm#evaluate` — every argument is evaluated first
  * (`function_arguments`), then all must be Integers (`MathDomainError`
  * otherwise), then `values.reduce(:gcd)`: a single argument is returned as
@@ -405,6 +436,17 @@ const FUNCTION_EVALUATORS: ReadonlyMap<string, FunctionEvaluator> = new Map<
   ["Lcm", (ev, node) => reduceIntegers(ev, node, "lcm", integerLcm)],
   ["Max", (ev, node) => extremum(ev, node, 1)],
   ["Min", (ev, node) => extremum(ev, node, -1)],
+  ["Sin", mathFunction(mathSin)],
+  ["Cos", mathFunction(mathCos)],
+  ["Tan", mathFunction(mathTan)],
+  ["Arcsin", mathFunction(mathAsin)],
+  ["Arccos", mathFunction(mathAcos)],
+  ["Arctan", mathFunction(mathAtan)],
+  ["Exp", mathFunction(mathExp)],
+  ["Ln", mathFunction(mathLog)],
+  ["Cot", reciprocal(mathTan)],
+  ["Sec", reciprocal(mathCos)],
+  ["Csc", reciprocal(mathSin)],
 ]);
 
 /**
@@ -577,6 +619,9 @@ export class Evaluator {
         return ceilOf(this.evaluateNode(node.parameterOne));
       case "floor":
         return floorOf(this.evaluateNode(node.parameterOne));
+      // Ruby: `Sqrt#evaluate` — `::Math.sqrt(operand)`.
+      case "sqrt":
+        return float(mathSqrt(this.evaluateNode(node.parameterOne)));
       // Ruby: `Sum`/`Prod#evaluate` — all three slots are required
       // (`unsupported(self)` otherwise), then `Iteration#accumulate(0, :+)` /
       // `(1, :*)`.

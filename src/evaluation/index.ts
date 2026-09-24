@@ -8,9 +8,13 @@
  * unary `-`, unary `+`, `*`, `/`, `^`, implicit multiplication, grouping
  * parentheses); `Abs`, `Ceil`, `Floor`, `Gcd`, `Lcm`, `Min`, `Max` (with
  * comma argument lists), `Mod`, `Root`, `Text` variable lookup, and the
- * bounded `Sum`/`Prod` iterations with their step cap. Every node the gem
- * evaluates but this port has not ported (the `Math` module functions:
- * `Sin`, `Cos`, `Exp`, `Ln`, `Sqrt` and the rest) raises `core`'s `UnsupportedFeatureError` (feature
+ * bounded `Sum`/`Prod` iterations with their step cap; and the `Math` module
+ * functions `Sin`, `Cos`, `Tan`, `Cot`, `Sec`, `Csc`, `Arcsin`, `Arccos`,
+ * `Arctan`, `Exp`, `Ln` and `Sqrt` (`libm.ts`: correctly rounded, refused
+ * where glibc's answer is not reliably the correctly rounded one). Every node
+ * the gem evaluates but this port has not ported (`Sinh`, `Cosh`, `Tanh`,
+ * `Sech`, `Csch`, `Coth`, `Lg` and `Log`, pending a licensing decision about
+ * copying C-library code) raises `core`'s `UnsupportedFeatureError` (feature
  * `"evaluate"`): a port gap, not an answer about the expression.
  * `UnsupportedExpressionError` is kept for exactly the refusals the gem
  * itself makes — a malformed number, a missing operand, a stray operator or

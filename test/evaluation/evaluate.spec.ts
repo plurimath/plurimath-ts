@@ -1,6 +1,7 @@
 /**
- * Oracle-backed parity for `evaluate(formula, bindings)` (roadmap B6, first
- * slice: `Number`/`Symbol`/binary-arithmetic evaluation only).
+ * Oracle-backed parity for `evaluate(formula, bindings, options)` (roadmap
+ * B6: arithmetic, the exact functions and iterations, and the `Math` module
+ * functions).
  *
  * The rows are `test/formats/evaluation/evaluation-fixtures.json`, written by
  * `scripts/generate-evaluation-fixtures.rb` from the pinned gem (plurimath
@@ -12,8 +13,9 @@
  * must refuse. A row with `portRefusal` is one the port refuses with
  * `UnsupportedFeatureError` whatever the oracle answered: an unported
  * gem-evaluated node, a FINAL result a JS number cannot hold exactly, a Float
- * power inside glibc's rounding band, a Ruby `ArgumentError`, or an exact
- * intermediate beyond the port's size limit (the generator's header).
+ * power or `Math` function result inside glibc's rounding band, a sin/cos/tan
+ * argument inside `libm.ts`'s reduction guard, a Ruby `ArgumentError`, or an
+ * exact intermediate beyond the port's size limit (the generator's header).
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -223,6 +225,8 @@ describe("evaluate() against the oracle fixtures", () => {
     expect([...reasons].sort()).toEqual([
       "argument-error",
       "big-integer",
+      "libm-reduction",
+      "libm-rounding-band",
       "pow-rounding-band",
       "rational",
       "size-limit",

@@ -970,6 +970,8 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               [
                 "argument-error",
                 "big-integer",
+                "libm-reduction",
+                "libm-rounding-band",
                 "pow-rounding-band",
                 "rational",
                 "size-limit",

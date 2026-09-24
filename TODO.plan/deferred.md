@@ -508,6 +508,62 @@ another libm (macOS, for example) can itself differ from the Linux oracle in
 the last digit of a Float power, so this parity is with the oracle's platform,
 not with every Ruby.
 
+### Evaluation: `Math` function results inside glibc's rounding band are refused
+
+**Measured 2026-09-24.** `Sin`, `Cos`, `Tan`, `Arcsin`, `Arccos`, `Arctan`,
+`Exp` and `Ln` call the platform C library (glibc 2.35 on the oracle's Linux
+host), which is not correctly rounded; `Cot`, `Sec` and `Csc` divide `1.0` by
+`tan`/`cos`/`sin`, which IEEE division keeps exact given the same operand.
+`src/evaluation/libm.ts` computes each result in `BigInt` fixed point,
+returns the correctly rounded double, and refuses with
+`UnsupportedFeatureError` where the exact result lies within the function's
+band of a double midpoint. `Sqrt` needs no band: IEEE 754 requires it
+correctly rounded, and glibc's and `Math.sqrt` both are.
+
+Each band is the worst glibc miss over 100,000 seeded uniform samples plus
+hand-typed values (`0.1`, `pi/4`, `90`, ...) times two, rounded up to a clean
+fraction (`scripts/measure-libm-glibc-accuracy.mjs`, seed `20260924`,
+reference BigDecimal at 110 digits, 665 s for 976,553 samples, 976,551 of them with a result in the double range). The
+measurement also checks the port's own correctly rounded result against the
+reference on every sample (0 disagreements), and that, outside the band, the
+port equals glibc on every sample (0 disagreements):
+
+| Function | glibc correctly rounded (uniform) | Worst miss (ULP from midpoint) | Band | Uniform refused |
+| --- | --- | --- | --- | --- |
+| sin | 99.9160% | 0.011730 | 1/40 | 4.90% |
+| cos | 99.9400% | 0.014086 | 1/32 | 6.38% |
+| tan | 99.8380% | 0.043039 | 1/10 | 20.12% |
+| asin | 99.8660% | 0.007770 | 1/60 | 3.39% |
+| acos | 99.9520% | 0.009629 | 1/50 | 3.81% |
+| atan | 99.9670% | 0.012025 | 1/40 | 5.04% |
+| exp | 99.9210% | 0.005751 | 1/80 | 2.53% |
+| log | 99.9860% | 0.003879 | 1/125 | 1.61% |
+| sqrt | 100.0000% | — | none | 0% |
+
+A band cannot fix sin/cos/tan near a multiple of `pi/2`, where the result
+is tiny (or `tan`'s huge) and glibc's error in its reduced argument dominates:
+over the hardest reduction cases at every binary exponent (continued-fraction
+convergents of `pi/2`, down to `|r|` near `2^-61`), glibc missed 450 (sin),
+863 (cos) and 1,311 (tan) of 1,971, by up to thousands of ULP
+(`cos(6381956970095103 * 2^797)` is 8 ULP out, `tan(6pi)` misses at 0.18 ULP
+from the midpoint). So sin/cos/tan also refuse when the result is computed
+from `sin r` and `|r|` is under `2^-35` (`|x| < 2^26`) or `2^-24` (above),
+16 times above the worst reduced-argument error measured on either side
+(`2^-102.3`, `2^-91.7`). A random argument almost never lands there, but the
+multiples of `pi` a person types where the result is zero or a pole —
+`sin(pi)`, `cos(pi/2)`, `tan(pi/2)`, `csc(pi)` — do, and are refused although
+glibc happens to round them correctly: nothing the port can compute shows
+that it will. `cos(pi)` and `sin(pi/2)` are not refused. If those cases are
+wanted, the route is a measured table of glibc's answers for them, not a
+narrower guard.
+
+Hand-typed values refused (band or guard): sin 6 of 96, cos 10 of 96, tan 18
+of 96, atan 6 of 96, asin 4 of 32, acos 5 of 32, exp 1 of 94, log 0 of 48 —
+`tan(pi/4)` and `arccos(0.5)` among them, whose exact results lie 0.0515 and
+0.0172 ULP from a midpoint. `test/evaluation/libm-rounding-band.spec.ts`
+re-checks the committed corpus without Ruby. As with `pow`, the parity is
+with the oracle's platform: another libm can differ in these last bits.
+
 ### Evaluation: exact intermediates beyond the port's size limit, and Ruby's `ArgumentError`
 
 **Decided 2026-09-23.** `src/evaluation/numeric.ts` computes Ruby's Integers

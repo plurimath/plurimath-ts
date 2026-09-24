@@ -41,11 +41,15 @@ function isNil(value: unknown): boolean {
 }
 
 /**
- * `parameter_one.nary_attr_value(options:)`. Three classes answer it: `Symbol`
- * (`symbols/symbol.rb:101-105`, `naryAttrValue`), and `Sum` and `Prod`, whose
+ * `parameter_one.nary_attr_value(options:)`. Four classes answer it: `Symbol`
+ * (`symbols/symbol.rb:101-105`, `naryAttrValue`), `Sum` and `Prod`, whose
  * readers return the literal `"∑"` and `"∏"` (`function/sum.rb:131-133`,
- * `function/prod.rb:125-127`) and never look at their own slots. A `Nary` whose
- * operator is a `Sum` or `Prod` is what the gem's `omml_spec.rb` builds for
+ * `function/prod.rb:125-127`) and never look at their own slots, and `Formula`
+ * (`formula.rb:294-296`), which FORWARDS to `value.first.nary_attr_value` —
+ * so a `Nary` operator slot that was split into a one-element `Formula` by
+ * `splitOnLinebreak` (line-break-073) reads through to whatever that single
+ * element is, recursively if it is itself a `Formula`. A `Nary` whose operator
+ * is a `Sum` or `Prod` is what the gem's `omml_spec.rb` builds for
  * `EX_182`/`EX_183`. Any other class has no such reader and the gem raises
  * `NoMethodError`, so anything else stays a refusal (`null`).
  */
@@ -58,6 +62,11 @@ function operatorText(first: unknown, kind: string): string | null {
       return "∑";
     case "prod":
       return "∏";
+    case "formula": {
+      const value = (first as NodeOf<"formula">).value;
+      const head = value === null || value.length === 0 ? undefined : value[0];
+      return operatorText(head, kind);
+    }
     default:
       return null;
   }

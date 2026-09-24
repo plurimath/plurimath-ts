@@ -76,7 +76,7 @@ const OWN_GROUPS: ReadonlySet<string> = new Set([
 ]);
 
 /** Rows the gem renders that the port renders too, per format (a pin, not a knob). */
-const RENDERED_BASELINE = { mathml: 197, omml: 252 } as const;
+const RENDERED_BASELINE = { mathml: 197, omml: 254 } as const;
 
 interface Fixture {
   readonly schema: string;
@@ -92,18 +92,16 @@ const CENSUS_ALIASES = aliasIndex(readCensus());
 
 /**
  * Rows the gem renders and this port's KIND renderers do not, by id: 0 for
- * MathML and 2 for OMML (freshly measured after `Longdiv`, `Merror`,
- * `Mglyph`, `Ms`, `Msgroup`, `Msline`, `Scarries`, `Sup` and `Underover`
- * gained kind-renderer support — every entry that named one of those kinds
- * now renders and was dropped from this list). OMML's remaining pair,
- * `line-break-073`, refuses on an UNRELATED unmeasured kind the split
- * transforms this specific formula into. The message must be a kind file's
- * own (`KIND_REFUSAL`), so a fault in the walker cannot hide in the set. An
- * entry that starts rendering fails its test until it is dropped.
+ * MathML and 0 for OMML. `line-break-073`/`line-break-073-display-false` used
+ * to refuse here: `splitOnLinebreak` turns a `Nary`'s `Sum`/`Prod` operator
+ * slot into a one-element `Formula`, and `Nary#nary_attr_value` in
+ * `src/render/nary/omml.ts` did not know `Formula` forwards to its first
+ * value the way the gem's `Formula#nary_attr_value` (`formula.rb:294-296`)
+ * does. Both now render byte-identically.
  */
 const PORT_REFUSES: { readonly mathml: readonly string[]; readonly omml: readonly string[] } = {
   mathml: [],
-  omml: ["line-break-073", "line-break-073-display-false"],
+  omml: [],
 };
 /** What a kind renderer says when it has not measured a kind, alias or slot. */
 const KIND_REFUSAL =

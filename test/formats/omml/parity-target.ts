@@ -507,7 +507,9 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
  * nil, false, `[]` and a bare node — `Sin` is one of the 15 `UnaryFunction`
  * aliases whose OMML method is the base one — and `table[0]=empty-array`, the
  * single-column `m:eqArr` branch a row-less table takes. All five reproduce
- * the gem's bytes now.
+ * the gem's bytes now. `td[0]=empty-array` closed too: `Td#to_omml_without_math_tag`
+ * (td.rb:43-50) answers a bare `<m:e/>` for an empty cell before its content
+ * branch runs, and `renderTd` now matches.
  */
 export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
   // `Td#initialize` calls `super(Array(parameter_one), ...)`, so nil becomes the
@@ -515,7 +517,6 @@ export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
   // slot unconditionally, leaving it null, and `renderTd` refuses a non-list.
   // The port is missing Ruby's `Array()` coercion.
   "td[0]=nil": "Td#initialize coerces nil to [] with Array(); BinaryFunctionNode does not",
-  "td[0]=empty-array": "renderTd's empty-cell branch is deferred until separately measured",
 
   // `Number#initialize` stores its argument as-is and `Number#to_omml`
   // interpolates it, so Ruby spells any object into `<m:t>`. `requireString`

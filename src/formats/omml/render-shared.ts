@@ -290,6 +290,31 @@ export function symbolOmmlValue(node: NodeOf<"symbol">, errorKind: string, at?: 
 }
 
 /**
+ * `Table#paren` (`table.rb:375-377`) is `parenthesis.to_omml_without_math_tag(true)`
+ * called DIRECTLY, never through `t_tag`'s `value ||` fallback — so, unlike
+ * every other caller of `to_omml_without_math_tag` in this walk, a nil-valued
+ * base class or abstract `Paren` reaches this exactly and answers `nil`
+ * (measured on the oracle at `00c52783`: `Table` with an `open_paren` built
+ * from a valueless `Symbol` writes `<m:begChr m:val=""/>`, the empty string an
+ * XML writer gives a nil attribute — never a raise). `symbolOmmlValue` above
+ * stays strict for its OTHER callers (`t_tag`'s fallback branch, reached only
+ * once `value` is already known absent, and `nary_attr_value`'s), which this
+ * walk has not measured landing on `nil` and so still refuses; this is the
+ * one call site allowed to see it.
+ */
+export function symbolOmmlValueOrNull(
+  node: NodeOf<"symbol">,
+  errorKind: string,
+  at: string,
+): string | null {
+  const id = node.id ?? classBasename(NODE_SPECS.symbol.rubyClass);
+  if (VALUE_RENDERED_SYMBOL_IDS.has(id) && (node.value === null || node.value === undefined)) {
+    return null;
+  }
+  return symbolOmmlValue(node, errorKind, at);
+}
+
+/**
  * `Symbol#t_tag` (`symbols/symbol.rb:160-165`):
  * `value || to_omml_without_math_tag(nil, options:)` — an explicit value wins
  * over the subclass literal, which is the one place a named symbol's stored

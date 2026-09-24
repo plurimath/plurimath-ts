@@ -139,10 +139,10 @@ file, `ParseError`, `RenderError`). Conversion errors print as
 `plurimath: [CODE] message` on stderr; usage and file-read errors print
 `plurimath: <message>` without a code. The only command is `convert`, and there is no `--version`.
 
-The CLI does not strip a trailing newline from its input. `echo` therefore adds
-one: measured, `echo 'x^2' | plurimath convert --from unicodemath --to latex`
-fails with `ParseError`, and the same through `--from html` renders the newline
-as `&#xa;` in the output. Use `printf` without `\n` for those two formats.
+The CLI strips one trailing newline (`\n` or `\r\n`) from its input, so
+`echo 'x^2' | plurimath convert --from unicodemath --to latex` prints `x^{2}`.
+Only that final newline is removed; any other whitespace reaches the parser
+unchanged.
 
 ### Errors
 

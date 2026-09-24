@@ -326,4 +326,11 @@ describe("evaluate's Text variable-name strip", () => {
     });
     expect(() => evaluate(formula)).toThrow(MissingVariableError);
   });
+
+  it("keeps inner NULs and strips outer ones, as Ruby's String#strip does", () => {
+    // Measured on the gem: Text.new("\0a\0\0a\0") raises MissingVariableError
+    // with "missing value for variable `a\u0000\u0000a`".
+    const inner = new FormulaNode({ value: [new TextNode({ parameterOne: "\0a\0\0a\0" })] });
+    expect(() => evaluate(inner)).toThrow("missing value for variable `a\0\0a`");
+  });
 });

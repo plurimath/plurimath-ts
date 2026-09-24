@@ -689,9 +689,12 @@ export class BinaryFunctionNode extends NodeBase {
     // nil becomes `[]` exactly as an omitted one does (the alias default
     // covers only omission). Measured on the pinned oracle `00c52783`:
     // `Td.new(nil)` renders `<td></td>` in HTML and `<m:e/>` in OMML, the same
-    // bytes as `Td.new([])`, alone and inside a `Table`. Any other non-Array
-    // argument makes `parameter_one&.delete_if` raise before `Array()` runs,
-    // so nil is the only value the coercion changes.
+    // bytes as `Td.new([])`, alone and inside a `Table`. A Hash also
+    // survives `parameter_one&.delete_if` and is coerced (`{}` to `[]`,
+    // `{a: 1}` to `[[:a, 1]]`), but no slot in this port's model holds a
+    // plain hash; any other non-Array argument (a String, an Integer) makes
+    // `delete_if` raise first. So nil is the only value that reaches this
+    // constructor and changes under the coercion.
     const parameterOne = init.name === "Td" && init.parameterOne === null ? [] : init.parameterOne;
     this.parameterOne = assignedParameter(parameterOne, aliasFallback(alias.parameterOne, null));
     this.parameterTwo = assignedParameter(

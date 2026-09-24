@@ -25,7 +25,10 @@ import { execFileSync } from "node:child_process";
 import { generatePairs, HUMAN_TYPED_CASES } from "./lib/pow-sample.mjs";
 
 const pairCount = Number(process.argv[2] ?? 100_000);
-const pairs = [...generatePairs(pairCount), ...HUMAN_TYPED_CASES.map((p) => ({ ...p, human: true }))];
+const pairs = [
+  ...generatePairs(pairCount),
+  ...HUMAN_TYPED_CASES.map((p) => ({ ...p, human: true })),
+];
 
 // One Ruby process for the whole sample. `BigDecimal`/`BigMath` at PREC=70
 // (~230 bits, vastly more than the 53 a double needs) is the same precision
@@ -138,7 +141,9 @@ const MARGIN = 2;
 const recommendedBand = maxMismatchDist * MARGIN;
 
 const rubyVersion = execFileSync("ruby", ["-v"], { encoding: "utf8" }).trim();
-console.log(`seed present in sample: ${pairCount} generated + ${HUMAN_TYPED_CASES.length} human-typed`);
+console.log(
+  `seed present in sample: ${pairCount} generated + ${HUMAN_TYPED_CASES.length} human-typed`,
+);
 console.log(`ruby: ${rubyVersion}`);
 console.log(`in-domain pairs: ${inDomain}`);
 console.log(
@@ -146,7 +151,9 @@ console.log(
 );
 console.log(`glibc mismatches: ${mismatchDists.length}`);
 console.log(`max dist-from-midpoint over glibc mismatches: ${maxMismatchDist.toFixed(6)} ULP`);
-console.log(`recommended band (max mismatch dist x ${MARGIN} margin): ${recommendedBand.toFixed(6)} ULP`);
+console.log(
+  `recommended band (max mismatch dist x ${MARGIN} margin): ${recommendedBand.toFixed(6)} ULP`,
+);
 if (mismatchExamples.length > 0) {
   console.log("mismatch examples (up to 10):");
   for (const example of mismatchExamples) {

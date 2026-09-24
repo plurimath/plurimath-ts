@@ -606,13 +606,14 @@ name for real, so that case takes the `m:sSubSup` arm the gem takes and the
 false claim is gone.
 
 `[dist-sizes]` was not re-run as a before/after pair, and no size ceiling
-applies: `./omml` is not a published subpath yet. `tsdown.config.ts` builds
-seven entries and none of them is `src/formats/omml/`, `package.json` exports
-no `./omml`, and no OMML module is reachable from any entry that does exist —
-`grep -rl oMathPara dist/` after a full build matches nothing. So this slice
-cannot move any subpath's bytes. `package-isolation` was re-run anyway and
+applied: `./omml` was not a published subpath yet. `tsdown.config.ts` built
+seven entries and none of them was `src/formats/omml/`, `package.json` exported
+no `./omml`, and no OMML module was reachable from any entry that did exist —
+`grep -rl oMathPara dist/` after a full build matched nothing. So this slice
+could not move any subpath's bytes. `package-isolation` was re-run anyway and
 passed; the isolation and size measurements this file asks for belong to the
-slice that publishes `./omml`, which has not landed.
+slice that publishes `./omml`, which had not landed then. It has since: #112
+published `./omml`, and `package.json#exports` lists it.
 
 ### Recommended slice order
 

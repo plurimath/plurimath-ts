@@ -115,8 +115,10 @@ The constructor names six formats (`FORMATS`): `asciimath`, `latex`, `mathml`,
 construct (`asciimath`, `latex`, `html`, `unicode`); `mathml` and `omml` throw
 `UnsupportedFormatError`, as does any unknown name, including `unicodemath`.
 Methods: `toAsciimath`, `toLatex`, `toMathml`, `toHtml`, `toOmml`,
-`toUnicodemath` all work; `toDisplay` and `toMathml(true)` throw
-`UnsupportedFeatureError`.
+`toUnicodemath` all work. `toMathml(true)` renders the gem's `intent`
+attributes (#136). `toDisplay(lang)` returns the gem's tree dump (#139, #150),
+and throws `UnsupportedFeatureError` for the few node kinds it refuses
+(`src/compat/to-display.ts`, module doc).
 
 ### Command line
 
@@ -156,7 +158,7 @@ import { ParseError, UnsupportedFeatureError, UnsupportedFormatError } from "@pl
 |---|---|---|
 | `ParseError` | `PARSE_ERROR` | input does not parse, e.g. `parseLatex("\\frac{1")` |
 | `UnsupportedFormatError` | `UNSUPPORTED_FORMAT` | `new Plurimath("<math/>", "mathml")` |
-| `UnsupportedFeatureError` | `UNSUPPORTED_FEATURE` | `toDisplay(...)`, `toMathml(true)` |
+| `UnsupportedFeatureError` | `UNSUPPORTED_FEATURE` | `new Plurimath("mathbf(x)", "asciimath").toDisplay("unicodemath")` |
 | `RenderError` | `RENDER_ERROR` | a node the renderer refuses, e.g. `toOmml(parseAsciimath("cancel(x)"))` |
 
 `ParseError` and `RenderError` are different failures: the first means the
@@ -168,7 +170,8 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
 
 - Reading MathML or OMML (no parser; the compat constructor and the CLI refuse
   them).
-- `Plurimath#toDisplay` and `toMathml(true)`.
+- `evaluate()` beyond its arithmetic slice (#152): every other node the gem
+  evaluates raises `UnsupportedFeatureError`.
 - A root `parse()` function.
 - UnicodeMath input beyond the grammar slice ported so far: unmatched rules
   raise `ParseError`.

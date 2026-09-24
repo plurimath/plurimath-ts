@@ -1,8 +1,12 @@
 # P4 — The remaining parity modules
 
-**Status: planned.** What is left of the gem once every format is ported: the
+**Status: started ahead of plan** (`gates.json#currentMilestone` is `P2`).
+What is left of the gem once every format is ported: the
 number-formatter modes nothing earlier exercises, expression evaluation, and
-MathML/OMML *input*.
+MathML/OMML *input*. On `main`: number formatting (#126, #133, #143, #146) and
+evaluation's arithmetic slice (#152); its function slice is PR #155, open.
+MathML/OMML input is deferred (settled 2026-09-16, #122;
+[open decisions](../open-decisions.md)). No exit criterion below is checked.
 
 Numbered work items are added to this directory when the phase opens.
 

@@ -433,8 +433,8 @@ overrides it.
 and latex first, then html and unicode as their batteries landed — §"The
 parser each input format uses" above). It is still not *complete*: `mathml`
 and `omml` construction still raise `UnsupportedFormatError` until their
-parsers exist (§11's availability constraint, below). `toDisplay` still
-throws `UnsupportedFeatureError`; `toMathml(true)` now renders (B4, `intent`).
+parsers exist (§11's availability constraint, below). `toDisplay` renders the
+gem's tree dump (#139, #150); `toMathml(true)` now renders (B4, `intent`).
 
 **Availability constraint.** The compat constructor accepts six input formats,
 but input formats land across phases (§9). The compat class is therefore only

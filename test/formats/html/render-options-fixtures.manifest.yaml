@@ -2,19 +2,24 @@
 # `payload.sha256` covers the whole payload file, including its final newline.
 ---
 schema: plurimath-corpus/manifest/2
-committable: true
-warnings: []
+committable: false
+warnings:
+- generated with --allow-dirty
+- 'generator checkout dirty: scripts/generate-corpus.rb, src/formats/mathml/render-shared.ts, test/formats/unary-function-parity.spec.ts'
 generator:
   path: scripts/generate-render-options-fixtures.rb
   sha256: d4fdf3313cf6f66f37ea04bb4ff4d896ee26c6bcb0a3ff9ee3c85fa0d4c29b69
   inputs:
-    scripts/generate-corpus.rb: 54d7b3f2a691c63c26d5c5667c6690da32098a4a5e0a9aa5207e3a73d796074b
+    scripts/generate-corpus.rb: e11dfe4822a0f61f2e67e817f117540dc984bc42dab12e54d795f2bd98925614
     scripts/generate-render-options-fixtures.rb: d4fdf3313cf6f66f37ea04bb4ff4d896ee26c6bcb0a3ff9ee3c85fa0d4c29b69
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 06d23ef58a6e6ee60f5bf2319be8611d49148fd3
-    clean: true
-    dirty_paths: []
+    commit: f488d3f79bcc0b7c0c94404ec82863127300fb3c
+    clean: false
+    dirty_paths:
+    - scripts/generate-corpus.rb
+    - src/formats/mathml/render-shared.ts
+    - test/formats/unary-function-parity.spec.ts
 oracle:
   gem: plurimath
   version: 0.11.6
@@ -105,5 +110,5 @@ dependencies:
 payload:
   path: render-options-fixtures.json
   schema: plurimath-corpus/render-options/1
-  sha256: 982b9e2503d1f906d0934f47987e005516884489c5a2894dc61c970de6d27749
+  sha256: 5d443c295097973dc0a5688064eab4a728186ffa009d45dcf05e79445a5c592a
   bytes: 268095

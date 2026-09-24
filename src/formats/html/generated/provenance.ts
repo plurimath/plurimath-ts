@@ -48,7 +48,7 @@ export const HTML_PARSER_GENERATED_PROVENANCE: HtmlParserGeneratedProvenance = {
     ],
     [
       "scripts/generate-corpus.rb",
-      "54d7b3f2a691c63c26d5c5667c6690da32098a4a5e0a9aa5207e3a73d796074b",
+      "e11dfe4822a0f61f2e67e817f117540dc984bc42dab12e54d795f2bd98925614",
     ],
     [
       "scripts/generate-html-parser-data.rb",
@@ -59,8 +59,8 @@ export const HTML_PARSER_GENERATED_PROVENANCE: HtmlParserGeneratedProvenance = {
   oracleVersion: "0.11.6",
   oracleCommit: "00c52783877b38f6b8e6e109f1803f96bb34fc62",
   oracleClean: true,
-  generatorClean: true,
+  generatorClean: false,
   rubyEngine: "ruby",
   rubyVersion: "4.0.1",
-  committable: true,
+  committable: false,
 };

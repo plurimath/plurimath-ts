@@ -7014,8 +7014,8 @@
                     "fields": {
                       "options": {
                         "mpadded": {
-                          "depth": "0",
-                          "height": "0"
+                          "height": "0",
+                          "depth": "0"
                         },
                         "phantom": false
                       },

@@ -64,28 +64,6 @@
           "left_right_wrapper": true,
           "value": [
             {
-              "expression": [
-                {
-                  "class": "Math::Function::Text",
-                  "fields": {
-                    "lang": null,
-                    "parameter_one": "x"
-                  }
-                },
-                {
-                  "class": "Math::Symbols::Plus",
-                  "fields": {
-                    "value": null
-                  }
-                },
-                {
-                  "class": "Math::Function::Text",
-                  "fields": {
-                    "lang": null,
-                    "parameter_one": "y"
-                  }
-                }
-              ],
               "sequence": [
                 {
                   "class": "Math::Function::Text",
@@ -113,6 +91,28 @@
                   "fields": {
                     "lang": null,
                     "parameter_one": "e"
+                  }
+                }
+              ],
+              "expression": [
+                {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "x"
+                  }
+                },
+                {
+                  "class": "Math::Symbols::Plus",
+                  "fields": {
+                    "value": null
+                  }
+                },
+                {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "y"
                   }
                 }
               ]
@@ -736,6 +736,38 @@
           "value": [
             {
               "table_value": {
+                "tr_value": [
+                  {
+                    "class": "Math::Function::Td",
+                    "fields": {
+                      "parameter_one": [
+                        {
+                          "class": "Math::Function::Text",
+                          "fields": {
+                            "lang": null,
+                            "parameter_one": "a"
+                          }
+                        }
+                      ],
+                      "parameter_two": null
+                    }
+                  },
+                  {
+                    "class": "Math::Function::Td",
+                    "fields": {
+                      "parameter_one": [
+                        {
+                          "class": "Math::Function::Text",
+                          "fields": {
+                            "lang": null,
+                            "parameter_one": "b"
+                          }
+                        }
+                      ],
+                      "parameter_two": null
+                    }
+                  }
+                ],
                 "expression": {
                   "class": "Math::Function::Tr",
                   "fields": {
@@ -772,39 +804,7 @@
                       }
                     ]
                   }
-                },
-                "tr_value": [
-                  {
-                    "class": "Math::Function::Td",
-                    "fields": {
-                      "parameter_one": [
-                        {
-                          "class": "Math::Function::Text",
-                          "fields": {
-                            "lang": null,
-                            "parameter_one": "a"
-                          }
-                        }
-                      ],
-                      "parameter_two": null
-                    }
-                  },
-                  {
-                    "class": "Math::Function::Td",
-                    "fields": {
-                      "parameter_one": [
-                        {
-                          "class": "Math::Function::Text",
-                          "fields": {
-                            "lang": null,
-                            "parameter_one": "b"
-                          }
-                        }
-                      ],
-                      "parameter_two": null
-                    }
-                  }
-                ]
+                }
               }
             }
           ]
@@ -1137,22 +1137,52 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "sub_sup": {
+                "class": "Math::Function::Sum",
+                "fields": {
+                  "parameter_one": null,
+                  "parameter_three": null,
+                  "parameter_two": null
+                }
+              },
+              "sub_value": [
+                {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "i"
+                  }
+                },
+                {
+                  "class": "Math::Symbols::Equal",
+                  "fields": {
+                    "value": null
+                  }
+                },
+                {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                }
+              ],
+              "sup_value": {
+                "class": "Math::Function::Text",
+                "fields": {
+                  "lang": null,
+                  "parameter_one": "n"
+                }
+              },
               "expression": {
+                "symbol": "=",
                 "expression": {
                   "sub_sup": {
                     "sequence": {
                       "parse_parenthesis": {
-                        "expression": {
-                          "class": "Math::Number",
-                          "fields": {
-                            "base": null,
-                            "mini_sub_sized": false,
-                            "mini_sup_sized": false,
-                            "value": "2"
-                          }
-                        },
                         "lparen": "(",
-                        "rparen": ")",
                         "sequence": {
                           "class": "Math::Formula",
                           "fields": {
@@ -1211,7 +1241,17 @@
                               }
                             ]
                           }
-                        }
+                        },
+                        "expression": {
+                          "class": "Math::Number",
+                          "fields": {
+                            "base": null,
+                            "mini_sub_sized": false,
+                            "mini_sup_sized": false,
+                            "value": "2"
+                          }
+                        },
+                        "rparen": ")"
                       }
                     }
                   },
@@ -1224,46 +1264,6 @@
                       "value": "2"
                     }
                   }
-                },
-                "symbol": "="
-              },
-              "sub_sup": {
-                "class": "Math::Function::Sum",
-                "fields": {
-                  "parameter_one": null,
-                  "parameter_three": null,
-                  "parameter_two": null
-                }
-              },
-              "sub_value": [
-                {
-                  "class": "Math::Function::Text",
-                  "fields": {
-                    "lang": null,
-                    "parameter_one": "i"
-                  }
-                },
-                {
-                  "class": "Math::Symbols::Equal",
-                  "fields": {
-                    "value": null
-                  }
-                },
-                {
-                  "class": "Math::Number",
-                  "fields": {
-                    "base": null,
-                    "mini_sub_sized": false,
-                    "mini_sup_sized": false,
-                    "value": "1"
-                  }
-                }
-              ],
-              "sup_value": {
-                "class": "Math::Function::Text",
-                "fields": {
-                  "lang": null,
-                  "parameter_one": "n"
                 }
               }
             }
@@ -2785,6 +2785,7 @@
           "value": [
             {
               "unary_function": {
+                "unary": "sqrt",
                 "first_value": [
                   {
                     "class": "Math::Function::Text",
@@ -2808,8 +2809,7 @@
                       "value": "1"
                     }
                   }
-                ],
-                "unary": "sqrt"
+                ]
               }
             }
           ]
@@ -2830,6 +2830,7 @@
           "value": [
             {
               "unary_function": {
+                "unary": "sqrt",
                 "first_value": [
                   {
                     "class": "Math::Function::Power",
@@ -2879,8 +2880,7 @@
                       }
                     }
                   }
-                ],
-                "unary": "sqrt"
+                ]
               }
             }
           ]
@@ -3831,28 +3831,6 @@
           "left_right_wrapper": true,
           "value": [
             {
-              "expression": [
-                {
-                  "class": "Math::Function::Text",
-                  "fields": {
-                    "lang": null,
-                    "parameter_one": "y"
-                  }
-                },
-                {
-                  "class": "Math::Symbols::Plus",
-                  "fields": {
-                    "value": null
-                  }
-                },
-                {
-                  "class": "Math::Function::Text",
-                  "fields": {
-                    "lang": null,
-                    "parameter_one": "z"
-                  }
-                }
-              ],
               "sequence": [
                 {
                   "class": "Math::Function::Text",
@@ -3882,6 +3860,28 @@
                     "parameter_one": "e"
                   }
                 }
+              ],
+              "expression": [
+                {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "y"
+                  }
+                },
+                {
+                  "class": "Math::Symbols::Plus",
+                  "fields": {
+                    "value": null
+                  }
+                },
+                {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "z"
+                  }
+                }
               ]
             }
           ]
@@ -3901,26 +3901,6 @@
           "left_right_wrapper": true,
           "value": [
             {
-              "expression": [
-                {
-                  "class": "Math::Number",
-                  "fields": {
-                    "base": null,
-                    "mini_sub_sized": false,
-                    "mini_sup_sized": false,
-                    "value": "1"
-                  }
-                },
-                {
-                  "class": "Math::Number",
-                  "fields": {
-                    "base": null,
-                    "mini_sub_sized": false,
-                    "mini_sup_sized": false,
-                    "value": "2"
-                  }
-                }
-              ],
               "sequence": [
                 {
                   "class": "Math::Function::Text",
@@ -3941,6 +3921,26 @@
                   "fields": {
                     "lang": null,
                     "parameter_one": "d"
+                  }
+                }
+              ],
+              "expression": [
+                {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "2"
                   }
                 }
               ]
@@ -4611,24 +4611,22 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "sequence": {
+                "class": "Math::Function::Text",
+                "fields": {
+                  "lang": null,
+                  "parameter_one": "a"
+                }
+              },
               "expression": {
+                "sequence": {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "b"
+                  }
+                },
                 "expression": {
-                  "expression": [
-                    {
-                      "class": "Math::Function::Text",
-                      "fields": {
-                        "lang": null,
-                        "parameter_one": "d"
-                      }
-                    },
-                    {
-                      "class": "Math::Function::Text",
-                      "fields": {
-                        "lang": null,
-                        "parameter_one": "x"
-                      }
-                    }
-                  ],
                   "sequence": [
                     {
                       "class": "Math::Function::Text",
@@ -4665,21 +4663,23 @@
                         ]
                       }
                     }
+                  ],
+                  "expression": [
+                    {
+                      "class": "Math::Function::Text",
+                      "fields": {
+                        "lang": null,
+                        "parameter_one": "d"
+                      }
+                    },
+                    {
+                      "class": "Math::Function::Text",
+                      "fields": {
+                        "lang": null,
+                        "parameter_one": "x"
+                      }
+                    }
                   ]
-                },
-                "sequence": {
-                  "class": "Math::Function::Text",
-                  "fields": {
-                    "lang": null,
-                    "parameter_one": "b"
-                  }
-                }
-              },
-              "sequence": {
-                "class": "Math::Function::Text",
-                "fields": {
-                  "lang": null,
-                  "parameter_one": "a"
                 }
               }
             }
@@ -5852,6 +5852,7 @@
           "value": [
             {
               "unary_function": {
+                "unary": "sqrt",
                 "first_value": [
                   {
                     "class": "Math::Number",
@@ -5871,8 +5872,7 @@
                       "value": "2"
                     }
                   }
-                ],
-                "unary": "sqrt"
+                ]
               }
             }
           ]
@@ -9562,6 +9562,7 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "hex_number": "ff",
               "expression": [
                 {
                   "class": "Math::Symbols::Plus",
@@ -9578,8 +9579,7 @@
                     "value": "1"
                   }
                 }
-              ],
-              "hex_number": "ff"
+              ]
             }
           ]
         }
@@ -9953,14 +9953,14 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "sum_prod": "&#x2211;",
               "expression": {
                 "class": "Math::Function::Text",
                 "fields": {
                   "lang": null,
                   "parameter_one": "x"
                 }
-              },
-              "sum_prod": "&#x2211;"
+              }
             }
           ]
         }
@@ -9979,6 +9979,7 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "sum_prod": "&#x2211;",
               "expression": [
                 {
                   "class": "Math::Function::Text",
@@ -9994,8 +9995,7 @@
                     "parameter_one": "y"
                   }
                 }
-              ],
-              "sum_prod": "&#x2211;"
+              ]
             }
           ]
         }
@@ -10014,22 +10014,6 @@
           "left_right_wrapper": true,
           "value": [
             {
-              "expression": [
-                {
-                  "class": "Math::Function::Text",
-                  "fields": {
-                    "lang": null,
-                    "parameter_one": "x"
-                  }
-                },
-                {
-                  "class": "Math::Function::Text",
-                  "fields": {
-                    "lang": null,
-                    "parameter_one": "y"
-                  }
-                }
-              ],
               "sequence": [
                 {
                   "class": "Math::Function::Text",
@@ -10043,6 +10027,22 @@
                   "fields": {
                     "lang": null,
                     "parameter_one": "b"
+                  }
+                }
+              ],
+              "expression": [
+                {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "x"
+                  }
+                },
+                {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "y"
                   }
                 }
               ]
@@ -10259,6 +10259,22 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "sequence": [
+                {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "a"
+                  }
+                },
+                {
+                  "class": "Math::Function::Text",
+                  "fields": {
+                    "lang": null,
+                    "parameter_one": "b"
+                  }
+                }
+              ],
               "parse_parenthesis": {
                 "class": "Math::Formula",
                 "fields": {
@@ -10286,23 +10302,7 @@
                     }
                   ]
                 }
-              },
-              "sequence": [
-                {
-                  "class": "Math::Function::Text",
-                  "fields": {
-                    "lang": null,
-                    "parameter_one": "a"
-                  }
-                },
-                {
-                  "class": "Math::Function::Text",
-                  "fields": {
-                    "lang": null,
-                    "parameter_one": "b"
-                  }
-                }
-              ]
+              }
             }
           ]
         }
@@ -10321,14 +10321,14 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "hex_number": "1f",
               "expression": {
                 "class": "Math::Function::Text",
                 "fields": {
                   "lang": null,
                   "parameter_one": "x"
                 }
-              },
-              "hex_number": "1f"
+              }
             }
           ]
         }
@@ -10347,6 +10347,7 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "hex_number": "1f",
               "expression": [
                 {
                   "class": "Math::Function::Text",
@@ -10362,8 +10363,7 @@
                     "parameter_one": "y"
                   }
                 }
-              ],
-              "hex_number": "1f"
+              ]
             }
           ]
         }
@@ -10537,14 +10537,14 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "octal_number": "17",
               "expression": {
                 "class": "Math::Function::Text",
                 "fields": {
                   "lang": null,
                   "parameter_one": "x"
                 }
-              },
-              "octal_number": "17"
+              }
             }
           ]
         }
@@ -10563,6 +10563,7 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "octal_number": "17",
               "expression": [
                 {
                   "class": "Math::Function::Text",
@@ -10578,8 +10579,7 @@
                     "parameter_one": "y"
                   }
                 }
-              ],
-              "octal_number": "17"
+              ]
             }
           ]
         }
@@ -10645,6 +10645,13 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "td_value": {
+                "class": "Math::Function::Text",
+                "fields": {
+                  "lang": null,
+                  "parameter_one": "a"
+                }
+              },
               "parse_parenthesis": {
                 "class": "Math::Formula",
                 "fields": {
@@ -10671,13 +10678,6 @@
                       }
                     }
                   ]
-                }
-              },
-              "td_value": {
-                "class": "Math::Function::Text",
-                "fields": {
-                  "lang": null,
-                  "parameter_one": "a"
                 }
               }
             }
@@ -10698,6 +10698,21 @@
           "left_right_wrapper": true,
           "value": [
             {
+              "tr_value": {
+                "class": "Math::Function::Td",
+                "fields": {
+                  "parameter_one": [
+                    {
+                      "class": "Math::Function::Text",
+                      "fields": {
+                        "lang": null,
+                        "parameter_one": "a"
+                      }
+                    }
+                  ],
+                  "parameter_two": null
+                }
+              },
               "parse_parenthesis": {
                 "class": "Math::Formula",
                 "fields": {
@@ -10724,21 +10739,6 @@
                       }
                     }
                   ]
-                }
-              },
-              "tr_value": {
-                "class": "Math::Function::Td",
-                "fields": {
-                  "parameter_one": [
-                    {
-                      "class": "Math::Function::Text",
-                      "fields": {
-                        "lang": null,
-                        "parameter_one": "a"
-                      }
-                    }
-                  ],
-                  "parameter_two": null
                 }
               }
             }
@@ -10760,6 +10760,7 @@
           "value": [
             {
               "unary_function": {
+                "unary": "sqrt",
                 "first_value": [
                   {
                     "class": "Math::Function::Text",
@@ -10781,8 +10782,7 @@
                       "parameter_one": "b"
                     }
                   }
-                ],
-                "unary": "sqrt"
+                ]
               }
             }
           ]

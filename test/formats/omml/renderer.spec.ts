@@ -1614,6 +1614,20 @@ describe("OMML Ruby-falsy parity", () => {
     expectDirectAndInsertion(node, xml("<m:r>", `  <m:t>${brace}</m:t>`, "</m:r>"));
   });
 
+  // `Symbol#t_tag` is `return t_element unless output`, so a valueless Symbol
+  // writes a SELF-CLOSED `m:t`, where a nil Number or Text writes an empty
+  // one (`t_element << nil`). Measured on the pinned oracle `00c52783`:
+  // `FontStyle::Bold.new(<child>, "bold").to_omml_without_math_tag` for each.
+  it.each([
+    ["Symbol", () => new SymbolNode({ value: null }), "<m:t/>"],
+    ["Number", () => new NumberNode({ value: null }), "<m:t></m:t>"],
+    ["Text", () => new TextNode({ parameterOne: null as unknown as string }), "<m:t></m:t>"],
+  ] as const)("writes a nil-valued %s under Bold as the gem does", (_name, child, text) => {
+    expect(toOmmlWithoutMathTag(new FontStyleNode({ name: "Bold", parameterOne: child() }))).toBe(
+      xml("<m:r>", "  <m:rPr>", '    <m:sty m:val="b"/>', "  </m:rPr>", `  ${text}`, "</m:r>"),
+    );
+  });
+
   // `Core#omml_parameter` is `return empty_tag(tag) unless field` — Ruby-falsy,
   // so a `false` slot yields the same zero-width placeholder a `nil` slot does.
   it("fills a false Base slot with the nil placeholder", () => {

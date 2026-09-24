@@ -511,29 +511,22 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
  */
 export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
   // `Td#initialize` calls `super(Array(parameter_one), ...)`, so nil becomes the
-  // empty list and the gem renders `<m:e/>`. `BinaryFunctionNode` assigns the
-  // slot unconditionally, leaving it null, and `renderTd` refuses a non-list.
-  // The port is missing Ruby's `Array()` coercion.
-  "td[0]=nil": "Td#initialize coerces nil to [] with Array(); BinaryFunctionNode does not",
+  // empty list. `BinaryFunctionNode` now coerces it the same way, so this row
+  // no longer refuses for a missing `Array()`: it reaches `renderTd` as `[]`
+  // and refuses in the empty-cell branch, exactly as `td[0]=empty-array` does.
+  // Measured on the pinned oracle `00c52783`: the gem renders `<m:e/>` alone
+  // and `<m:eqArr>…<m:e/></m:eqArr>` inside a `Table`, the same bytes as for
+  // `[]`, so this row closes with that branch.
+  "td[0]=nil": "Td(nil) is Td([]) now; renderTd's empty-cell branch is still deferred",
   "td[0]=empty-array": "renderTd's empty-cell branch is deferred until separately measured",
 
-  // `Number#initialize` stores its argument as-is and `Number#to_omml`
-  // interpolates it, so Ruby spells any object into `<m:t>`. `requireString`
-  // takes a measured string and refuses the rest rather than guess at Ruby's
-  // spelling — 0 and "" reach it here only because JavaScript-falsy is wider
-  // than Ruby-falsy, which is the root cause this whole sweep exists for.
-  "number[0]=nil": "the gem interpolates nil as the empty string; requireString refuses nil",
-  "number[0]=false": 'the gem interpolates false as "false"; requireString refuses a boolean',
-  "number[0]=true": 'the gem interpolates true as "true"; requireString refuses a boolean',
-  "number[0]=zero": 'the gem interpolates 0 as "0"; requireString refuses a finite number',
-  "number[0]=empty-array": 'the gem interpolates [] as "[]"; requireString refuses a list',
-
-  // `Symbols::Symbol#initialize` stores `sym&.to_s`, so nil stays nil and the
-  // gem renders a bare `<m:t/>`. `requireString` refuses nil.
-  "symbol[0]=nil": "the gem renders nil as an empty <m:t/>; requireString refuses nil",
-
-  // `Text#initialize` stores its argument as-is and the gem interpolates it.
-  "text[0]=nil": "the gem interpolates nil as the empty string; requireString refuses nil",
+  // The `number`, `symbol` and `text` rows that stood here are closed, each
+  // measured on the pinned oracle `00c52783` with the same bytes in a
+  // `Formula` alone, inside a `Frac` and inside an `Mrow`: `Number`
+  // writes nil as `<m:t></m:t>`, false/true as `false`/`true`, 0 as `0` and
+  // `[]` as `[]` (`to_s`; `render/number/omml.ts`); a valueless `Symbol`
+  // writes a self-closed `<m:t/>` (`t_tag`'s `return t_element unless output`;
+  // `symbolTextTag`); `Text.new(nil)` writes `<m:t></m:t>` (`render/text/omml.ts`).
 };
 
 /**

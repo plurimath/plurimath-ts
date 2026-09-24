@@ -685,10 +685,15 @@ export class BinaryFunctionNode extends NodeBase {
     const alias = aliasDefaults("binaryFunction", init.name);
     this.name = init.name;
     this.hideFunctionName = init.hideFunctionName;
-    this.parameterOne = assignedParameter(
-      init.parameterOne,
-      aliasFallback(alias.parameterOne, null),
-    );
+    // `Td#initialize` passes `Array(parameter_one)` to `super`, so an EXPLICIT
+    // nil becomes `[]` exactly as an omitted one does (the alias default
+    // covers only omission). Measured on the pinned oracle `00c52783`:
+    // `Td.new(nil)` renders `<td></td>` in HTML and `<m:e/>` in OMML, the same
+    // bytes as `Td.new([])`, alone and inside a `Table`. Any other non-Array
+    // argument makes `parameter_one&.delete_if` raise before `Array()` runs,
+    // so nil is the only value the coercion changes.
+    const parameterOne = init.name === "Td" && init.parameterOne === null ? [] : init.parameterOne;
+    this.parameterOne = assignedParameter(parameterOne, aliasFallback(alias.parameterOne, null));
     this.parameterTwo = assignedParameter(
       init.parameterTwo,
       aliasFallback(alias.parameterTwo, null),

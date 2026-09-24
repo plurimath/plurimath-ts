@@ -69,7 +69,15 @@ function encodeOmmlText(value: string, kind: string): string {
  * way.
  */
 export function renderText(node: NodeOf<"text">): XmlElement {
-  const value = requireString(node.parameterOne, node.kind, "text.parameterOne");
+  // `text << (parse_text("omml") || parameter_one)` with a nil `parameter_one`
+  // writes an EMPTY-content `m:t`, not a self-closed one. Measured on the
+  // pinned oracle `00c52783`: `Text.new(nil)` writes `<m:t></m:t>` from
+  // `to_omml_without_math_tag` directly and in a `Formula` alone, inside a
+  // `Frac` and inside an `Mrow` — the same bytes as `Text.new("")`. `false`,
+  // `true`, `0` and `[]` make the gem raise, and still refuse here.
+  const raw = node.parameterOne;
+  const value =
+    raw === null || raw === undefined ? "" : requireString(raw, node.kind, "text.parameterOne");
   const encoded = encodeOmmlText(value, node.kind);
   const substituted = encoded.replace(
     UNICODE_TOKEN,

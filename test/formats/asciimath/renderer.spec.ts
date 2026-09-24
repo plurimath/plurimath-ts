@@ -9,6 +9,7 @@
  * runtime-boundary mapping.
  */
 
+import { isMainThread } from "node:worker_threads";
 import { describe, expect, it } from "vitest";
 import { MissingSymbolDataError, ParseError, RenderError } from "../../../src/core/errors";
 import {
@@ -808,7 +809,11 @@ describe("inputs that defeat the walk itself", () => {
         failures.push(`depth ${depth}: ${(error as RenderError).message}`);
       }
     }
-    expect(failures).not.toEqual([]);
+    // Which depths overflow depends on the worker's stack: vitest's default
+    // `forks` pool (where `isMainThread` is true) overflows inside this
+    // window, a `threads` worker's larger stack may not. The branding below
+    // holds on every pool; that some depth fails is asserted only on forks.
+    if (isMainThread) expect(failures).not.toEqual([]);
     for (const failure of failures) {
       expect(failure).toContain("nests too deep");
       expect(failure).not.toContain("mid-walk");

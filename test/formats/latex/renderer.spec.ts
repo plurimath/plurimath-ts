@@ -15,6 +15,7 @@
  * fails here by name.
  */
 
+import { isMainThread } from "node:worker_threads";
 import { describe, expect, it } from "vitest";
 import { MissingSymbolDataError, ParseError, RenderError } from "../../../src/core/errors";
 import {
@@ -1138,7 +1139,7 @@ describe("a list in a value slot the gem inspects", () => {
     //   Color(Number(["a b"]),    Symbol("x")) => "{\\color{[\"ab\"]} x}"
     //   Color(Number([" "]),      Symbol("x")) => "{\\color{[\"\"]} x}"
     // A `\n` inside the inspected string survives, because inspect already
-    // turned it into the two characters `\` and `n`:
+    // turned it into the two characters `` and `n`:
     //   Color(Number(["\n"]),     Symbol("x")) => "{\\color{[\"\\n\"]} x}"
     const color = (value: unknown) =>
       ({
@@ -2118,7 +2119,11 @@ describe("inputs that defeat the walk itself", () => {
         failures.push(`depth ${depth}: ${(error as RenderError).message}`);
       }
     }
-    expect(failures).not.toEqual([]);
+    // Which depths overflow depends on the worker's stack: vitest's default
+    // `forks` pool (where `isMainThread` is true) overflows inside this
+    // window, a `threads` worker's larger stack may not. The branding below
+    // holds on every pool; that some depth fails is asserted only on forks.
+    if (isMainThread) expect(failures).not.toEqual([]);
     for (const failure of failures) {
       expect(failure).toContain("nests too deep");
       expect(failure).not.toContain("mid-walk");

@@ -316,6 +316,20 @@ describe("compat declaration check", () => {
     for (const failure of failures) expect(failure.startsWith("dist/index.d.ts")).toBe(true);
   });
 
+  it("reports a second overload of a single-signature method as one addition, not a removal", () => {
+    const mutated = mutate(
+      "  toDisplay(lang: string): string;\n",
+      "  toDisplay(lang: string): string;\n  toDisplay(lang: string, strict: boolean): string;\n",
+    );
+    const surface = readDefaultClassSurface({ "entry.d.ts": mutated }, "entry.d.ts");
+    const differences = diffSurfaces(fixture.surface, surface);
+    // The unchanged signature keys as `toDisplay#1` on BOTH sides, so it
+    // matches; the only member difference is the added `#2`. `memberOrder`
+    // follows from the longer key list and names no removal.
+    expect(differences.map((d) => d.path)).toEqual(["method toDisplay#2", "memberOrder"]);
+    expect(differences[0]?.expected).toBeNull();
+  });
+
   it("fails on a member-count change even where the names alone would hide it", () => {
     const failures = check(mutate("  toUnicodemath(): string;\n", ""));
     expect(failures).toContain("dist/index.d.ts: 8 class members, fixture has 9");
@@ -384,7 +398,7 @@ export { P as default };
     [
       "a removed overload",
       Overloaded.replace("  f(a: number): string;\n", ""),
-      'method f#1: expected {"kind":"method","name":"f"',
+      'method f#2: expected {"kind":"method","name":"f","modifiers":[],"optional":false,"parameters":[{"name":"a","optional":false,"rest":false,"type":"number"}]',
     ],
     [
       "reordered overloads",

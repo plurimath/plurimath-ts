@@ -312,20 +312,30 @@ const baseKey = (member) =>
     ? member.kind
     : `${member.kind} ${member.name}`;
 
+/** The base keys declared more than once in `members`. */
+const overloadedKeys = (members) => {
+  const counts = new Map();
+  for (const member of members) counts.set(baseKey(member), (counts.get(baseKey(member)) ?? 0) + 1);
+  return new Set([...counts].filter(([, count]) => count > 1).map(([key]) => key));
+};
+
 /**
  * One key per member, in order. A name declared once keys as itself
  * (`method toMathml`); an overloaded one keys each signature by its position,
  * `method f#1`, `method f#2`, ..., so adding, removing or reordering an
  * overload is a named difference rather than two signatures collapsing into
  * one map entry.
+ *
+ * `overloaded` must be the union of BOTH sides' overloaded names, so the two
+ * sides are keyed alike: otherwise going from one signature to two would key
+ * the unchanged one `f` on one side and `f#1` on the other, and report it as
+ * removed and re-added.
  */
-const memberKeys = (members) => {
-  const counts = new Map();
-  for (const member of members) counts.set(baseKey(member), (counts.get(baseKey(member)) ?? 0) + 1);
+const memberKeys = (members, overloaded) => {
   const seen = new Map();
   return members.map((member) => {
     const key = baseKey(member);
-    if (counts.get(key) === 1) return key;
+    if (!overloaded.has(key)) return key;
     const index = (seen.get(key) ?? 0) + 1;
     seen.set(key, index);
     return `${key}#${index}`;
@@ -353,8 +363,12 @@ export function diffSurfaces(expected, actual) {
   note("typeParameters", expected.typeParameters, actual.typeParameters);
   note("heritage", expected.heritage, actual.heritage);
 
-  const wantKeys = memberKeys(expected.members);
-  const gotKeys = memberKeys(actual.members);
+  const overloaded = new Set([
+    ...overloadedKeys(expected.members),
+    ...overloadedKeys(actual.members),
+  ]);
+  const wantKeys = memberKeys(expected.members, overloaded);
+  const gotKeys = memberKeys(actual.members, overloaded);
   const actualByKey = new Map(actual.members.map((member, i) => [gotKeys[i], member]));
   const expectedKeys = new Set(wantKeys);
   for (const [index, want] of expected.members.entries()) {

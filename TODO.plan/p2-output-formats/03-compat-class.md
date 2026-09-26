@@ -538,10 +538,11 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
       proofs in `test/gates/compat-declaration.spec.ts`. "Match" means the type
       surface the extractor records: the class's name, non-export modifiers, type
       parameters and heritage clauses, and each member's kind, name, modifiers,
-      optional marker, parameters and return or property type, one entry per
-      overload signature, with types compared as source text. JSDoc and comments
-      are not compared. The extractor refuses any TypeScript but the `7.0.2` it
-      was validated on.
+      optional marker, type parameters, parameters and return or property type, one
+      entry per overload signature, with types compared as source text. JSDoc and
+      comments are not compared. The extractor refuses any TypeScript but the `7.0.2`
+      it was validated on. The spec runs 39 tests (vitest's count on the commit that
+      wrote this note).
 - [ ] All six constructor formats are asserted in the source-head declaration order:
       `asciimath` constructs; `latex`, `mathml`, `html`, `unicode`, and `omml` raise the
       port's structured `UnsupportedFormatError` until their parsers land.

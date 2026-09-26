@@ -523,11 +523,26 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
 
 - [x] The declaration target and the `data` result are chosen: source head `ce297e2`
       and `readonly data: FormulaNode` (2026-09-04).
-- [ ] The fixture records both decisions exactly — seven methods,
+- [x] The fixture records both decisions exactly — seven methods,
       `toMathml(intent?: boolean)`, `unicode` rather than `mahtml`, and the `data`
-      member.
-- [ ] The built ESM and CJS declarations match the canonical fixture and the gate has
+      member. `test/fixtures/compat/plurimath-declaration.json`; its surface is
+      re-derived from the verbatim source-head declaration beside it
+      (`source-head-ce297e2/`, sha256-pinned), and differs from it only in the three
+      reasoned `sourceHeadDifferences`: `data` gains `readonly`, `data`'s type is
+      `FormulaNode`, and the constructor's `format` names the port's own `Format`
+      alias (same six literals, same order). `test/gates/compat-declaration.spec.ts`
+      asserts both.
+- [x] The built ESM and CJS declarations match the canonical fixture and the gate has
       non-vacuity and negative proofs for member, name, optionality, and return-type drift.
+      `scripts/gate-package.mjs` step 4 (via `scripts/lib/compat-declaration.mjs`);
+      proofs in `test/gates/compat-declaration.spec.ts`. "Match" means the type
+      surface the extractor records: the class's name, non-export modifiers, type
+      parameters and heritage clauses, and each member's kind, name, modifiers,
+      optional marker, type parameters, parameters and return or property type, one
+      entry per overload signature, with types compared as source text. JSDoc and
+      comments are not compared. The extractor refuses any TypeScript but the `7.0.2`
+      it was validated on. The spec runs 39 tests (vitest's count on the commit that
+      wrote this note).
 - [ ] All six constructor formats are asserted in the source-head declaration order:
       `asciimath` constructs; `latex`, `mathml`, `html`, `unicode`, and `omml` raise the
       port's structured `UnsupportedFormatError` until their parsers land.

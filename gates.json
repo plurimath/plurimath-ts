@@ -37,7 +37,7 @@
       "class": "A",
       "activatesAt": "P0",
       "run": "pnpm gate:package",
-      "description": "Built ESM/CJS loads and exact exports for every published code entry, forbidden-layer checks for configured non-root entries, plus publint and attw; both of those pack the package first"
+      "description": "Built ESM/CJS loads and exact exports for every published code entry, forbidden-layer checks for configured non-root entries, the root compat class's built ESM and CJS declarations against test/fixtures/compat/plurimath-declaration.json, plus publint and attw; both of those pack the package first"
     },
     {
       "id": "runtime-boundary",

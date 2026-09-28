@@ -51,6 +51,8 @@
 
 import { UnsupportedFeatureError } from "../core/errors";
 import { MathDomainError } from "./errors";
+import { log2 } from "./libm-log2";
+import { log10 } from "./libm-log10";
 import { MEASURED_RESULTS } from "./libm-measured-results";
 import { bitLength, mathArgument, type RubyNumeric } from "./numeric";
 import {
@@ -519,26 +521,118 @@ export function mathExp(x: RubyNumeric): number {
 }
 
 /**
- * Ruby: `Math.log(x)` (`rb_math_log`, one argument). A positive Bignum of
- * 1,024 bits or more (`DBL_MAX_EXP`) would overflow a double, so
- * `get_double_rshift` first shifts it right by `numbits = bits - 53`, and the
- * result is `log(d) + numbits * M_LN2` in double arithmetic. Otherwise a
- * negative argument (`-0.0` is not) raises the domain error, a zero is
- * `-Infinity` (the "pole error"), and anything else is `log(d)`.
+ * Ruby: `math.c`'s `get_double_rshift` — a positive Bignum of 1,024 bits or
+ * more (`DBL_MAX_EXP`) would overflow a double, so it is first shifted right
+ * by `numbits = bits - 53` (`DBL_MANT_DIG`); anything else converts as it is
+ * (`Get_Double`), with `numbits` zero.
  */
-export function mathLog(x: RubyNumeric): number {
+function doubleRshift(x: RubyNumeric): { readonly d: number; readonly numbits: number } {
   if (x.kind === "integer" && x.value > 0n) {
     const bits = bitLength(x.value);
     if (bits >= 1024) {
       const numbits = bits - 53;
-      const d = Number(x.value >> BigInt(numbits));
-      return correctlyRoundedLog(d) + numbits * Math.LN2;
+      return { d: Number(x.value >> BigInt(numbits)), numbits };
     }
   }
-  const d = mathArgument(x);
+  return { d: mathArgument(x), numbits: 0 };
+}
+
+/**
+ * Ruby: `Math.log(x)` (`rb_math_log`, one argument) — `get_double_rshift`,
+ * then a negative argument (`-0.0` is not) raises the domain error, a zero is
+ * `-Infinity` (the "pole error"), and anything else is
+ * `log(d) + numbits * M_LN2` in double arithmetic.
+ */
+export function mathLog(x: RubyNumeric): number {
+  const { d, numbits } = doubleRshift(x);
   if (d < 0) domainError("log");
   if (d === 0) return -Infinity;
-  return correctlyRoundedLog(d);
+  const log = correctlyRoundedLog(d);
+  return numbits === 0 ? log : log + numbits * Math.LN2;
+}
+
+const BITS_VIEW = new DataView(new ArrayBuffer(8));
+
+/** The next double above (`direction` 1) or below (`-1`) the finite `x`. */
+function nextDouble(x: number, direction: 1 | -1): number {
+  if (x === 0) return direction * Number.MIN_VALUE;
+  const bits = bitsOf(x);
+  const away = x > 0 === direction > 0;
+  BITS_VIEW.setBigUint64(0, away ? bits + 1n : bits - 1n);
+  return BITS_VIEW.getFloat64(0);
+}
+
+/**
+ * glibc's `log10` (`libm-log10.ts`), whose one inexact input is glibc's
+ * `log` of the reduced argument. Arm's error analysis in optimized-routines'
+ * `math/log.c` puts that `log` within about 0.52 ULP of the exact value (at
+ * most 0.532 ULP over all its configurations); all this needs is that it
+ * is within one ULP, so it is the correctly rounded double or one of its
+ * two neighbours. When all three give the same `log10`, that is glibc's
+ * answer wherever `log` falls; otherwise the correctly rounded `log` is
+ * used, refused inside `log`'s band as `Math.log` is. The differential
+ * (`scripts/measure-libm-log-glibc.mjs`) is the measured check of this.
+ */
+function glibcLog10(d: number): number {
+  let reduced: number | null = null;
+  let nearestLog = 0;
+  const withLog = (pick: (log: number) => number): number =>
+    log10(d, (x) => {
+      if (reduced !== x) {
+        reduced = x;
+        nearestLog = correctlyRoundedLog(x, null);
+      }
+      return pick(nearestLog);
+    });
+  const nearest = withLog((log) => log);
+  if (reduced === null) return nearest;
+  const below = withLog((log) => nextDouble(log, -1));
+  const above = withLog((log) => nextDouble(log, 1));
+  if (Object.is(below, nearest) && Object.is(above, nearest)) return nearest;
+  const x = reduced as number;
+  correctlyRoundedLog(x, bandFor("log", x));
+  return nearest;
+}
+
+/** `log10(2)` in `Math.log10`'s Bignum term. */
+const LOG10_2 = glibcLog10(2);
+
+/**
+ * Ruby: `Math.log10` (`math_log10`) — `get_double_rshift`, the domain error
+ * for a negative argument, `-Infinity` for a zero, and otherwise
+ * `log10(d) + numbits * log10(2)`.
+ */
+export function mathLog10(x: RubyNumeric): number {
+  const { d, numbits } = doubleRshift(x);
+  if (d < 0) domainError("log10");
+  if (d === 0) return -Infinity;
+  return glibcLog10(d) + numbits * LOG10_2;
+}
+
+/** `math.c`'s `math_log_split`: `get_double_rshift` and the `log` domain check. */
+function logSplit(x: RubyNumeric): { readonly d: number; readonly numbits: number } {
+  const split = doubleRshift(x);
+  if (split.d < 0) domainError("log");
+  return split;
+}
+
+/**
+ * Ruby: `Math.log(x, base)` (`rb_math_log`, two arguments) — both split by
+ * `math_log_split`, `x` first; then a zero `x` is `-Infinity` (`NaN` when
+ * the base is also zero), a zero base `-0.0`, and otherwise
+ * `log2(d) / log2(b) + (numbits - numbits_2) / log2(b)` — `log_intermediate`
+ * is `log2` wherever the C library has one, as glibc does (`libm-log2.ts`).
+ * `numbits - numbits_2` is a `size_t` difference, so when the base has more
+ * excess bits than `x` it wraps modulo 2^64 before its conversion to double:
+ * measured, `Math.log(3**900, 2**2000)` is `3.547450783405683e+17`.
+ */
+export function mathLogBase(x: RubyNumeric, base: RubyNumeric): number {
+  const { d, numbits } = logSplit(x);
+  const { d: b, numbits: numbits2 } = logSplit(base);
+  if (d === 0) return b !== 0 ? -Infinity : Number.NaN;
+  if (b === 0) return -0;
+  const excess = Number(BigInt.asUintN(64, BigInt(numbits - numbits2)));
+  return log2(d) / log2(b) + excess / log2(b);
 }
 
 /**

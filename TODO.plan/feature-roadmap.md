@@ -310,7 +310,7 @@ constructs those classes lands, which is MathML and OMML input.
 
 ### Beyond conversion
 
-#### Evaluation (`Formula#evaluate`) — not started
+#### Evaluation (`Formula#evaluate`) — in progress
 
 **Gem:** `Formula#evaluate(bindings)` (`math/formula.rb:57`) runs
 `Math::Evaluation::Evaluator` and `ExpressionParser` (425 lines with
@@ -318,8 +318,13 @@ constructs those classes lands, which is MathML and OMML input.
 classes under `errors/evaluation/`; a bounded iteration cap,
 `Configuration::DEFAULT_MAX_ITERATIONS = 100_000`.
 
-**Port:** nothing. `ARCHITECTURE.md` §3 reserves `src/evaluation/`, importing
-`core` only.
+**Port:** `src/evaluation/` (`ARCHITECTURE.md` §3, importing `core` only)
+evaluates every gem-evaluated class except the six hyperbolic functions
+(`Sinh`, `Cosh`, `Tanh`, `Sech`, `Csch`, `Coth`), which stay refused as
+unported: glibc computes them through an `expm1` that no permissive upstream
+reproduces digit for digit (`deferred.md`, "Evaluation: the hyperbolic
+functions"). `Lg` and `Log` are ported (`libm-log10.ts`, from Sun's fdlibm;
+`libm-log2.ts`, from Arm's optimized-routines).
 
 **Blocks:** no shared case — the generator records
 `evaluation_max_iterations` only as provenance. The iteration cap is global

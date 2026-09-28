@@ -29,7 +29,7 @@
 # `portRefusal` marks a row the port refuses with `UnsupportedFeatureError`
 # although the oracle answers or raises something else, and says why:
 # `unported` (a construct the gem evaluates that this port has not ported:
-# `sinh`, `log`, ...), `rational` / `big-integer` (a FINAL result a JS
+# `sinh`, `cosh`, ...), `rational` / `big-integer` (a FINAL result a JS
 # number cannot hold exactly — intermediate ones are computed exactly, as
 # Ruby does), `pow-rounding-band` (a Float power within glibc's rounding
 # band), `libm-rounding-band` (a `Math` function result within glibc's
@@ -87,6 +87,21 @@ unless Gem.loaded_specs.key?("plurimath")
         "#{oracle}/Gemfile and run #{__FILE__} with `bundle exec ruby`, under " \
         "any Ruby that has it bundled (mise, rbenv, asdf, rvm, or the system " \
         "Ruby all work)."
+end
+
+# `Math` results depend on the Ruby as well as the C library (Ruby 4.0.1's
+# two-argument `Math.log` divides `log2` results, `math.c`'s
+# `log_intermediate`; another Ruby may compute it differently). The fixtures are the oracle's Ruby's answers, so no other Ruby may
+# write them.
+ORACLE_RUBY_VERSION = "4.0.1"
+unless RUBY_VERSION == ORACLE_RUBY_VERSION
+  abort "REFUSING: the oracle's Ruby is #{ORACLE_RUBY_VERSION}; this is #{RUBY_VERSION}"
+end
+ORACLE_GLIBC_VERSION = "2.35"
+host_glibc = `getconf GNU_LIBC_VERSION 2>/dev/null`.strip
+unless host_glibc == "glibc #{ORACLE_GLIBC_VERSION}"
+  abort "REFUSING: the oracle's C library is glibc #{ORACLE_GLIBC_VERSION}; this host has " \
+        "#{host_glibc.empty? ? 'no glibc' : host_glibc}"
 end
 
 loaded = $LOADED_FEATURES.grep(%r{/plurimath\.rb\z}).first
@@ -357,6 +372,8 @@ LIBM_REFUSAL_OPERANDS = {
   "libm-band-sec-glibc-miss" => ["cos", -317.75792610645294],
   "libm-band-csc-glibc-miss" => ["sin", -6.428541877306998],
   "latex-libm-band-sin-glibc-miss" => ["sin", -6.428541877306998],
+  # `log10(0.214)` calls `log` on its reduced argument, `0.214 * 2^2`.
+  "latex-lg-band-glibc-log" => ["log", 0.214 * 4],
   "tan-pi-over-four" => ["tan", Math::PI / 4],
   "arccos-half" => ["acos", 0.5],
   "libm-reduction-cos-hardest-argument" => ["cos", 6_381_956_970_095_103 * 2.0**797],
@@ -856,6 +873,44 @@ ROWS = [
   ["ln-rational-underflows", "math-exp-log", "ln(2^(-2000))"],
   ["ln-rational-parts-overflow", "math-exp-log", "ln(2^1100*3^(-700))"],
   ["exp-of-ln", "math-exp-log", "exp(ln(2))"],
+
+  # `Log` takes the `Fenced` group after it as its argument
+  # (`ExpressionParser#bind_log_argument`), then `::Math.log(x, base)`, which
+  # is `log2(x) / log2(base)` plus the Bignum excess-bits term.
+  ["log-default-base", "math-log", "log(100)"],
+  ["log-default-base-inexact", "math-log", "log(2)"],
+  ["log-base-two", "math-log", "log_2(8)"],
+  ["log-base-two-inexact", "math-log", "log_2(10)"],
+  ["log-base-exponent", "math-log", "log_2^3(8)"],
+  ["log-base-half", "math-log", "log_0.5(8)"],
+  ["log-base-rational", "math-log", "log_(2^(-1))(8)"],
+  ["log-base-float-ten", "math-log", "log_10.0(1000)"],
+  ["log-base-e-is-a-variable", "math-log", "log_e(10)"],
+  ["log-of-one", "math-log", "log_2(1)"],
+  ["log-of-one-base-below-one", "math-log", "log_0.5(1)"],
+  ["log-zero", "math-log", "log_2(0)"],
+  ["log-negative", "math-log", "log_2(-3)"],
+  ["log-base-one", "math-log", "log_1(3)"],
+  ["log-base-float-one", "math-log", "log_1.0(3)"],
+  ["log-base-negative", "math-log", "log_(-2)(3)"],
+  ["log-base-zero", "math-log", "log_0(3)"],
+  ["log-base-nan", "math-log", "log_a(3)"],
+  ["log-base-infinity", "math-log", "log_a(3)"],
+  ["log-argument-infinity", "math-log", "log_2(a)"],
+  ["log-argument-subnormal", "math-log", "log_2(a)"],
+  ["log-base-underflows-to-zero", "math-log", "log_(2^(-2000))(3)"],
+  ["log-big-integer", "math-log", "log_3(2^2000)"],
+  ["log-big-base", "math-log", "log_(2^2000)(3)"],
+  ["log-big-both-excess-wraps", "math-log", "log_(2^2000)(3^900)"],
+  ["log-big-both", "math-log", "log_(3^900)(2^2000)"],
+  ["log-without-group", "math-log", "log_2 8"],
+  ["log-bare", "math-log", "log"],
+  ["log-in-expression", "math-log", "2 log(10)+1"],
+  ["log-nested", "math-log", "log_2(log_2(16))"],
+  ["log-missing-variable", "math-log", "log_2(x)"],
+  # The base is checked before the argument is evaluated.
+  ["log-base-checked-before-argument", "math-log", "log_0(x)"],
+  ["log-negative-zero", "math-log", "log_2(-0.0)"],
   ["sqrt-four", "math-sqrt", "sqrt(4)"],
   ["sqrt-two", "math-sqrt", "sqrt(2)"],
   ["sqrt-bare-operand", "math-sqrt", "sqrt 2"],
@@ -905,18 +960,16 @@ ROWS = [
   ["libm-measured-cos-minus-above-half-pi", "math-measured", "cos(a)"],
   ["libm-measured-cot-three-pi", "math-measured", "cot(3pi)"],
 
-  # Gem-evaluated nodes this port has not ported: the hyperbolic functions
-  # and `Log`/`Lg`, pending a licensing decision about copying C-library
-  # code. (`lg` is AsciiMath for the variables `l` and `g`; `\lg` is LaTeX's
-  # `Lg`, in `LATEX_ROWS`.)
+  # Gem-evaluated nodes this port has not ported: the hyperbolic functions.
+  # glibc computes them through its `expm1`, whose polynomial glibc has
+  # re-associated away from Sun's fdlibm original, so the permissive upstream
+  # does not reproduce glibc's digits (`TODO.plan/deferred.md`).
   ["unported-sinh", "unported", "sinh(1)"],
   ["unported-cosh", "unported", "cosh(1)"],
   ["unported-tanh", "unported", "tanh(1)"],
   ["unported-sech", "unported", "sech(1)"],
   ["unported-csch", "unported", "csch(1)"],
   ["unported-coth", "unported", "coth(1)"],
-  ["unported-log", "unported", "log(100)"],
-  ["unported-log-base", "unported", "log_2(8)"],
   ["unported-sinh-missing-variable", "unported", "sinh(x)"],
 
   # A sample of scripts/-generated random expressions, re-checked here.
@@ -990,8 +1043,23 @@ LATEX_ROWS = [
   ["latex-sqrt-two", "math-sqrt", "\\sqrt{2}"],
   ["latex-sqrt-negative", "math-sqrt", "\\sqrt{-1}"],
   ["latex-unported-sinh", "unported", "\\sinh(1)"],
-  ["latex-unported-lg", "unported", "\\lg(100)"],
-  ["latex-unported-log", "unported", "\\log(100)"],
+  # `\lg` is `Lg` (in AsciiMath, `lg` is the variables `l` and `g`):
+  # `::Math.log10`, glibc's `log10` over glibc's `log`.
+  ["latex-lg", "math-lg", "\\lg(100)"],
+  ["latex-lg-inexact", "math-lg", "\\lg(2)"],
+  ["latex-lg-fraction", "math-lg", "\\lg(0.001)"],
+  ["latex-lg-rational-argument", "math-lg", "\\lg(2^{-1})"],
+  ["latex-lg-zero", "math-lg", "\\lg(0)"],
+  ["latex-lg-negative", "math-lg", "\\lg(-1)"],
+  ["latex-lg-negative-zero", "math-lg", "\\lg(-0.0)"],
+  ["latex-lg-big-integer", "math-lg", "\\lg(2^{2000})"],
+  ["latex-lg-subnormal", "math-lg", "\\lg(a)"],
+  ["latex-lg-infinity", "math-lg", "\\lg(a)"],
+  ["latex-lg-nan", "math-lg", "\\lg(a)"],
+  ["latex-lg-log-in-band-neighbours-agree", "math-lg", "\\lg(a)"],
+  ["latex-lg-band-glibc-log", "math-lg", "\\lg(a)"],
+  ["latex-log", "math-log", "\\log(100)"],
+  ["latex-log-base", "math-log", "\\log_{2}(8)"],
 ].freeze
 
 # Bindings, keyed by the row id above where non-empty; every other row
@@ -1038,6 +1106,15 @@ BINDINGS = {
   "random-minus-one-to-float" => { "c" => -1 },
   "random-mixed-kinds" => { "a" => 3, "b" => -2.5, "c" => 4 },
   "random-nested-groups" => { "a" => 1, "b" => 0.5, "c" => -3 },
+  "log-base-nan" => { "a" => Float::NAN },
+  "log-base-infinity" => { "a" => Float::INFINITY },
+  "log-argument-infinity" => { "a" => Float::INFINITY },
+  "log-argument-subnormal" => { "a" => 5e-324 },
+  "latex-lg-subnormal" => { "a" => 5e-324 },
+  "latex-lg-infinity" => { "a" => Float::INFINITY },
+  "latex-lg-nan" => { "a" => Float::NAN },
+  "latex-lg-log-in-band-neighbours-agree" => { "a" => 0.107 },
+  "latex-lg-band-glibc-log" => { "a" => 0.214 },
   "latex-variable-lookup" => { "a" => 2 },
   "latex-invalid-binding-string" => { "a" => "x" },
   "abs-nan" => { "a" => Float::NAN },
@@ -1121,12 +1198,9 @@ PORT_REFUSALS = {
   "unported-sech" => "unported",
   "unported-csch" => "unported",
   "unported-coth" => "unported",
-  "unported-log" => "unported",
-  "unported-log-base" => "unported",
   "unported-sinh-missing-variable" => "unported",
   "latex-unported-sinh" => "unported",
-  "latex-unported-lg" => "unported",
-  "latex-unported-log" => "unported",
+  "latex-lg-band-glibc-log" => "libm-rounding-band",
   "libm-band-sin-glibc-miss" => "libm-rounding-band",
   "libm-band-cos-glibc-miss" => "libm-rounding-band",
   "libm-band-tan-glibc-miss" => "libm-rounding-band",

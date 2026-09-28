@@ -44,6 +44,8 @@ import {
   mathCos,
   mathExp,
   mathLog,
+  mathLog10,
+  mathLogBase,
   mathSin,
   mathSqrt,
   mathTan,
@@ -450,6 +452,12 @@ const FUNCTION_EVALUATORS: ReadonlyMap<string, FunctionEvaluator> = new Map<
   ["Arctan", mathFunction(mathAtan)],
   ["Exp", mathFunction(mathExp)],
   ["Ln", mathFunction(mathLog)],
+  // Ruby: `Lg#evaluate` — `::Math.log10(x)`.
+  ["Lg", mathFunction(mathLog10)],
+  // Ruby: `Log#evaluate` — `evaluator.unsupported(self)`: a `Log` evaluates
+  // only with the `Fenced` argument `ExpressionParser` binds to it
+  // (`Evaluator#evaluateLogWithArgument`).
+  ["Log", (ev, node) => ev.unsupported(node)],
   ["Cot", reciprocal(mathTan)],
   ["Sec", reciprocal(mathCos)],
   ["Csc", reciprocal(mathSin)],
@@ -520,6 +528,24 @@ export class Evaluator {
       negate(this.evaluateNode(mod.parameterOne)),
       this.evaluateNode(secondParameter(mod)),
     );
+  }
+
+  /**
+   * Ruby: `Log#evaluate_with_argument`, wrapped in `bind_log_argument`'s
+   * `real_result` — the base (`parameter_one`, default the Integer `10`) is
+   * evaluated and checked first, then the argument, then `::Math.log(x,
+   * base)`, raised to the exponent (`parameter_two`) when there is one.
+   */
+  evaluateLogWithArgument(node: MathNode, argument: MathNode | string | undefined): RubyNumeric {
+    const log = node as FunctionNode;
+    const base = log.parameterOne != null ? this.evaluateNode(log.parameterOne) : integer(10n);
+    if (compare(base, integer(0n)) !== 1 || compare(base, integer(1n)) === 0) {
+      throw new MathDomainError("log base must be a positive number other than 1");
+    }
+    let result = float(mathLogBase(this.evaluateNode(argument), base));
+    const exponent = secondParameter(log);
+    if (exponent != null) result = power(result, this.evaluateNode(exponent));
+    return this.realResult(result);
   }
 
   /**

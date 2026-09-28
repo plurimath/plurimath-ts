@@ -594,6 +594,41 @@ results lie 0.0515 and 0.0172 ULP from a midpoint.
 corpora without Ruby. As with `pow`, the parity is with the oracle's
 platform: another libm can differ in these last bits.
 
+### Evaluation: the hyperbolic functions are not ported
+
+**Recorded 2026-09-28.** `Sinh`, `Cosh`, `Tanh` and their reciprocals
+`Csch`, `Sech`, `Coth` call Ruby's `Math.sinh`/`cosh`/`tanh`, which call
+glibc (2.35 on the oracle's host). glibc's `sinh`, `cosh` and `tanh`
+(`sysdeps/ieee754/dbl-64/e_sinh.c`, `e_cosh.c`, `s_tanh.c`) compute the same
+values as Sun's fdlibm originals, but every one of them calls glibc's `expm1`
+for small and moderate arguments (`tanh` for every `2^-55 <= |x| < 22`), and glibc's
+`s_expm1.c` evaluates its polynomial in a re-associated order (`R1 + h2 * R2
++ h4 * R3`) where fdlibm's uses Horner's rule. The change is glibc's own,
+under the LGPL, so it cannot be copied into this BSD-2-Clause port; and
+fdlibm's original does not give glibc's digits — measured: `tanh` built on
+fdlibm's `expm1` differs from Ruby's `Math.tanh` in the last bit on 22 of
+200,000 seeded arguments in `(-22, 22)`. They stay refused as unported
+(`UnsupportedFeatureError`) until a digit-exact permissive source, or
+another approach, is decided on.
+
+### Evaluation: `lg` near `log`'s rounding band
+
+`Math.log10` is glibc's `log10`, Sun's fdlibm formula over glibc's `log` of
+the reduced argument (`src/evaluation/libm-log10.ts`). glibc's `log` has an
+FMA variant chosen by the CPU, so the port takes it from `libm.ts`'s
+correctly rounded `log`. When that `log` lies inside its 1/125 ULP band, the
+port still answers if the correctly rounded `log` and both its neighbours
+give the same `log10` (Arm's analysis puts glibc's `log` within about 0.52
+ULP, and the rule needs only one), and refuses otherwise.
+`scripts/measure-libm-log-glibc.mjs` (seed 20260928, 2026-09-28; Ruby
+4.0.1, glibc 2.35, x86-64 with FMA) compared 308,199 doubles: 0 mismatches
+against Ruby's `Math.log10`, 991 refused (0.32%; 783 of them among the
+50,000 arguments within 1/16 of 1). `Math.log(x, base)` needs no band: its
+`log2` is transcribed from Arm's optimized-routines exactly (0 mismatches on
+the same 308,199 `Math.log2` arguments and 200,117 `Math.log(x, base)`
+pairs). A separate, Ruby-sampled run during development (908,197 arguments, 299,508
+pairs) also found 0 mismatches.
+
 ### Evaluation: exact intermediates beyond the port's size limit, and Ruby's `ArgumentError`
 
 **Decided 2026-09-23.** `src/evaluation/numeric.ts` computes Ruby's Integers

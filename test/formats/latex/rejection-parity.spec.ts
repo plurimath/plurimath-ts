@@ -38,7 +38,7 @@ const corpus = loadPinnedCorpus();
 /**
  * The LaTeX rejections, selected on the case's own `input_format` through the
  * shared selector rather than a filter written out here — the same one
- * `parseableCases` uses for AsciiMath, so the two suites cannot drift into
+ * `parseableCases` uses for AsciiMath, so the rejection suites cannot drift into
  * disagreeing about what "the cases this parser may be given" means. It throws
  * on an empty match, so a pin that drops `corpus/latex/rejections.yaml` fails
  * this file instead of quietly running zero cases.

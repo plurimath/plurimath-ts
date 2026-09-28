@@ -37,9 +37,9 @@
       "ebcdic-cp-us"
     ]
   },
-  "caseCount": 3084,
-  "readCount": 1052,
-  "raisedCount": 2032,
+  "caseCount": 3426,
+  "readCount": 1344,
+  "raisedCount": 2082,
   "cases": [
     {
       "id": "xml-29114363f749",
@@ -8680,6 +8680,44 @@
       "raises": "ArgumentError"
     },
     {
+      "id": "xml-186c99061ad7",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"646\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "??"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-42e36b3d29ba",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"646\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "US-ASCII"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "US-ASCII"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-4b51a456d5c7",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ANSI_X3.4-1968\"?><a>x</a>",
@@ -8728,6 +8766,44 @@
       "raises": "ArgumentError"
     },
     {
+      "id": "xml-f18822361e71",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ANSI_X3.4-1968\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "??"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-e99b6ab22988",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ANSI_X3.4-1968\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "US-ASCII"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "US-ASCII"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-9788210c2754",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ASCII\"?><a>x</a>",
@@ -8774,6 +8850,44 @@
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ASCII\"?><a><?p \u00e9?></a>",
       "raises": "ArgumentError"
+    },
+    {
+      "id": "xml-71cd76a2e09d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ASCII\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "??"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-bf8d10563187",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ASCII\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "US-ASCII"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "US-ASCII"
+            }
+          ]
+        ],
+        "children": []
+      }
     },
     {
       "id": "xml-0cf5a2613b98",
@@ -8839,6 +8953,44 @@
             "text": "??"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-23947b171b5a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ASCII-8BIT\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "??"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-6007a7264d37",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ASCII-8BIT\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "ASCII-8BIT"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "ASCII-8BIT"
+            }
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -8908,6 +9060,44 @@
       }
     },
     {
+      "id": "xml-77b27bbf109a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"BINARY\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "??"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-32ee346995a8",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"BINARY\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "ASCII-8BIT"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "ASCII-8BIT"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-fc11b7a4280d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Big5\"?><a>x</a>",
@@ -8968,6 +9158,38 @@
             "text": "\u77c7"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-e0a75f72d3df",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Big5\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u77c7"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-51657324d14e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Big5\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u77c7",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u77c7"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -9034,6 +9256,38 @@
       }
     },
     {
+      "id": "xml-0542f8ba91bf",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Big5-HKSCS\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u77c7"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-8393afc480e4",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Big5-HKSCS\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u77c7",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u77c7"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-81c4ab2b5d0a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Big5-HKSCS:2008\"?><a>x</a>",
@@ -9094,6 +9348,38 @@
             "text": "\u77c7"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-25cf84dff4fe",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Big5-HKSCS:2008\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u77c7"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-8d202b5e0af9",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Big5-HKSCS:2008\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u77c7",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u77c7"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -9160,6 +9446,38 @@
       }
     },
     {
+      "id": "xml-580e0296f7c1",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Big5-UAO\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u77c7"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-0894c06d4b4d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Big5-UAO\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u77c7",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u77c7"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-72873b97b60e",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CESU-8\"?><a>x</a>",
@@ -9220,6 +9538,38 @@
             "text": "\u00e9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-ca282d2c5250",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CESU-8\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00e9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-97dcb95ba675",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CESU-8\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00e9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00e9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -9286,6 +9636,38 @@
       }
     },
     {
+      "id": "xml-48c06526da3f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1250\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0102\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-0625f326aabb",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1250\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0102\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0102\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-b596630abde1",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1251\"?><a>x</a>",
@@ -9346,6 +9728,38 @@
             "text": "\u0413\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-cb4ae19d34ed",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1251\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0413\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-66e320f99809",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1251\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0413\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0413\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -9412,6 +9826,38 @@
       }
     },
     {
+      "id": "xml-211a924bd8d3",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1252\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-a7177949954d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1252\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-f0410f60126b",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1253\"?><a>x</a>",
@@ -9472,6 +9918,38 @@
             "text": "\u0393\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-5bf4f4720ffe",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1253\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0393\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-524820e96ad1",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1253\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0393\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0393\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -9538,6 +10016,38 @@
       }
     },
     {
+      "id": "xml-11bd809a3718",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1254\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-47c144bcd632",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1254\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-d73ebc725de2",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1255\"?><a>x</a>",
@@ -9598,6 +10108,38 @@
             "text": "\u05b3\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-95e7fc253630",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1255\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u05b3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-588ca9112272",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1255\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u05b3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u05b3\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -9664,6 +10206,38 @@
       }
     },
     {
+      "id": "xml-ce77b0be8ca7",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1256\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0623\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-3eb0bea257b6",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1256\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0623\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0623\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-cd1ce415fe04",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1257\"?><a>x</a>",
@@ -9727,6 +10301,38 @@
       }
     },
     {
+      "id": "xml-5bc82c464bd7",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1257\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0106\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-0ccbf0470646",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1257\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0106\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0106\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-1c71eb2f64a9",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1258\"?><a>x</a>",
@@ -9772,6 +10378,35 @@
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1258\"?><a><?p \u00e9?></a>",
       "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-c1d4a0c8ff35",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1258\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-0396314cef32",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP1258\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "Windows-1258"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "Windows-1258"
+            }
+          ]
+        ],
+        "children": []
+      }
     },
     {
       "id": "xml-13ca06fb6656",
@@ -9837,6 +10472,38 @@
       }
     },
     {
+      "id": "xml-285878d54bde",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP437\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u2310"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-63283af4c431",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP437\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u2310",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u2310"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-caa06c2db30c",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP50220\"?><a>x</a>",
@@ -9867,6 +10534,18 @@
       "raises": "Encoding::CompatibilityError"
     },
     {
+      "id": "xml-e468cce3a429",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP50220\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-c190eb9cb82f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP50220\"?><a xmlns=\"\u00e9\"/>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
       "id": "xml-a0548a6e46b6",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP50221\"?><a>x</a>",
@@ -9894,6 +10573,18 @@
       "id": "xml-c0ba218baa00",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP50221\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-bfa43c52182d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP50221\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-4ea70ab79d0a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP50221\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -9960,6 +10651,38 @@
       }
     },
     {
+      "id": "xml-3953336d28f6",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP51932\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8fbf"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-14228959d650",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP51932\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8fbf",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8fbf"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-6181fd7c7932",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP65000\"?><a>x</a>",
@@ -9987,6 +10710,18 @@
       "id": "xml-614db27a8b57",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP65000\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-17941bbaefb0",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP65000\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-226bd124f26d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP65000\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -10062,6 +10797,38 @@
       }
     },
     {
+      "id": "xml-7d2b39104e3f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP65001\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00e9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-95ca6381f751",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP65001\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00e9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00e9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-12a70b7bbba1",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP720\"?><a>x</a>",
@@ -10122,6 +10889,38 @@
             "text": "\u251c\u0631"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-6d79b544f6eb",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP720\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u0631"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-7b9ef41d2997",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP720\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u0631",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u0631"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -10188,6 +10987,38 @@
       }
     },
     {
+      "id": "xml-e62ad9da1c5b",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP737\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u03c3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-0f10f5ee1659",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP737\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u03c3",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u03c3"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-a5b63f9b4141",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP775\"?><a>x</a>",
@@ -10248,6 +11079,38 @@
             "text": "\u251c\u00ae"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-d28a7567a195",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP775\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u00ae"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-ec990bb77843",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP775\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u00ae",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u00ae"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -10314,6 +11177,38 @@
       }
     },
     {
+      "id": "xml-09c0f5b1a48a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP850\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u00ae"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-74d4822e4cad",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP850\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u00ae",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u00ae"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-ad22572f8d55",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP852\"?><a>x</a>",
@@ -10374,6 +11269,38 @@
             "text": "\u251c\u0119"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-d9edaafc15be",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP852\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u0119"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-b179b5ec7a18",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP852\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u0119",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u0119"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -10440,6 +11367,38 @@
       }
     },
     {
+      "id": "xml-b5baa205e5ab",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP855\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u0415"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-243796ea07f7",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP855\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u0415",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u0415"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-de2cc9d6ae43",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP857\"?><a>x</a>",
@@ -10500,6 +11459,38 @@
             "text": "\u251c\u00ae"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-27b5bc76d91f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP857\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u00ae"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-fee621072880",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP857\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u00ae",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u00ae"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -10566,6 +11557,38 @@
       }
     },
     {
+      "id": "xml-dd89268a056d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP860\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u00d2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-35c5e3b2c370",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP860\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u00d2",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u00d2"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-ba9653b0b207",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP861\"?><a>x</a>",
@@ -10626,6 +11649,38 @@
             "text": "\u251c\u2310"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-f6eac2905cc3",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP861\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u2310"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-ad7307c2514a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP861\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u2310",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u2310"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -10692,6 +11747,38 @@
       }
     },
     {
+      "id": "xml-4ede831763b0",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP862\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u2310"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-82fc232e3a48",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP862\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u2310",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u2310"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-62ba48aa1724",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP863\"?><a>x</a>",
@@ -10752,6 +11839,38 @@
             "text": "\u251c\u2310"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-211ea3c76997",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP863\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u2310"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-a2a11e28161b",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP863\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u2310",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u2310"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -10818,6 +11937,38 @@
       }
     },
     {
+      "id": "xml-b49ad40b55b1",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP864\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\ufe83\ufe8f"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-3e346176f6ae",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP864\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\ufe83\ufe8f",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\ufe83\ufe8f"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-462a670787f4",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP865\"?><a>x</a>",
@@ -10878,6 +12029,38 @@
             "text": "\u251c\u2310"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-d54408600f35",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP865\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u2310"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-30f921926dc9",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP865\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u2310",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u2310"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -10944,6 +12127,38 @@
       }
     },
     {
+      "id": "xml-fb8877ee791e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP866\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u0439"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-a5fe1684fab0",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP866\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u0439",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u0439"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-89cfde51401f",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP869\"?><a>x</a>",
@@ -11004,6 +12219,38 @@
             "text": "\u251c\u0396"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-06b144244ab9",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP869\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u0396"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-0fae8f908141",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP869\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u0396",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u0396"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -11070,6 +12317,38 @@
       }
     },
     {
+      "id": "xml-f210c292b573",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP874\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0e23\u0e09"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-45c47da0da22",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP874\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0e23\u0e09",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0e23\u0e09"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-e159033f20bb",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP878\"?><a>x</a>",
@@ -11130,6 +12409,38 @@
             "text": "\u0446\u2558"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-047436f194e8",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP878\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0446\u2558"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-24f6ba28856e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP878\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0446\u2558",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0446\u2558"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -11196,6 +12507,38 @@
       }
     },
     {
+      "id": "xml-2eb0d9e87cb4",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP932\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\uff83\uff69"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-3801a7f651a2",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP932\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\uff83\uff69",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\uff83\uff69"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-c0c47efd390d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP936\"?><a>x</a>",
@@ -11256,6 +12599,38 @@
             "text": "\u8305"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-2f88f2395c87",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP936\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8305"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-df1ddbfdadf2",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP936\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8305",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8305"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -11322,6 +12697,38 @@
       }
     },
     {
+      "id": "xml-1f845e158a3e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP949\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\ucc55"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-6a6852cf45e9",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP949\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\ucc55",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\ucc55"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-36369dfcf69f",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP950\"?><a>x</a>",
@@ -11382,6 +12789,38 @@
             "text": "\u77c7"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-e88aae118783",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP950\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u77c7"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-bc780d650ebf",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP950\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u77c7",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u77c7"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -11448,6 +12887,38 @@
       }
     },
     {
+      "id": "xml-35a5c9eddc0a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP951\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u77c7"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-f7e17431f554",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"CP951\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u77c7",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u77c7"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-83e902cc8a39",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"EUC-CN\"?><a>x</a>",
@@ -11508,6 +12979,38 @@
             "text": "\u8305"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-9c55380ffb22",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-CN\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8305"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-e2e3ef0ab541",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-CN\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8305",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8305"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -11574,6 +13077,38 @@
       }
     },
     {
+      "id": "xml-0c8ced81ace3",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-JIS-2004\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8fbf"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-ccc53ce849b4",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-JIS-2004\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8fbf",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8fbf"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-a21bd49c4d69",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"EUC-JISX0213\"?><a>x</a>",
@@ -11634,6 +13169,38 @@
             "text": "\u8fbf"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-c0f1e75d7f71",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-JISX0213\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8fbf"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-05245b9a8574",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-JISX0213\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8fbf",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8fbf"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -11700,6 +13267,38 @@
       }
     },
     {
+      "id": "xml-df86270a048d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-JP\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8fbf"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-bd2245b464f2",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-JP\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8fbf",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8fbf"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-73a91df03131",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"EUC-KR\"?><a>x</a>",
@@ -11763,6 +13362,38 @@
       }
     },
     {
+      "id": "xml-6b61e52e5abc",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-KR\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\ucc55"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-9d58679c57d1",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-KR\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\ucc55",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\ucc55"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-16fef6ddd11d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"EUC-TW\"?><a>x</a>",
@@ -11810,6 +13441,35 @@
       "raises": "Encoding::ConverterNotFoundError"
     },
     {
+      "id": "xml-a0c518810687",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-TW\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-a092e6aaa1ac",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"EUC-TW\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "EUC-TW"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "EUC-TW"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-46abf49cc531",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Emacs-Mule\"?><a>x</a>",
@@ -11847,6 +13507,35 @@
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Emacs-Mule\"?><a><?p \u00e9?></a>",
       "raises": "ArgumentError"
+    },
+    {
+      "id": "xml-bada2b055381",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Emacs-Mule\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-b24fd798ff7b",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Emacs-Mule\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "Emacs-Mule"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "Emacs-Mule"
+            }
+          ]
+        ],
+        "children": []
+      }
     },
     {
       "id": "xml-b34cd95dac3f",
@@ -11909,6 +13598,38 @@
             "text": "\u8305"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-470861240002",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"GB12345\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8305"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-372059c9909e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"GB12345\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8305",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8305"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -11975,6 +13696,38 @@
       }
     },
     {
+      "id": "xml-a79dae7a8933",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"GB18030\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8305"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-3f5d3c3d467c",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"GB18030\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8305",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8305"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-f432c2b0464b",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"GB1988\"?><a>x</a>",
@@ -12020,6 +13773,35 @@
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"GB1988\"?><a><?p \u00e9?></a>",
       "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-c461d005ebdf",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"GB1988\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-7d501d9347b5",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"GB1988\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "GB1988"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "GB1988"
+            }
+          ]
+        ],
+        "children": []
+      }
     },
     {
       "id": "xml-b8da388767af",
@@ -12082,6 +13864,38 @@
             "text": "\u8305"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-f8774fedc33e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"GB2312\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8305"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-7a0bcd7f9311",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"GB2312\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8305",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8305"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -12148,6 +13962,38 @@
       }
     },
     {
+      "id": "xml-442fd4323d38",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"GBK\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8305"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-9a4c55947913",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"GBK\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8305",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8305"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-ec6cc35b51e3",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM037\"?><a>x</a>",
@@ -12175,6 +14021,18 @@
       "id": "xml-9332f7722c97",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM037\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-3b34533832ea",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM037\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-fd9059ee505f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM037\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -12241,6 +14099,38 @@
       }
     },
     {
+      "id": "xml-71586aa53c26",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM437\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u2310"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-60541f6cb7ba",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM437\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u2310",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u2310"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-d4caac7fbf1a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM720\"?><a>x</a>",
@@ -12301,6 +14191,38 @@
             "text": "\u251c\u0631"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-bb62e13ec20d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM720\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u0631"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-ef3794a53dcc",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM720\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u0631",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u0631"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -12367,6 +14289,38 @@
       }
     },
     {
+      "id": "xml-32182f291428",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM737\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u03c3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-cf49abea7bbd",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM737\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u03c3",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u03c3"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-87ee6b96b009",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM775\"?><a>x</a>",
@@ -12427,6 +14381,38 @@
             "text": "\u251c\u00ae"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-43acb9243549",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM775\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u00ae"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-2464ecd5a82e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM775\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u00ae",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u00ae"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -12493,6 +14479,38 @@
       }
     },
     {
+      "id": "xml-f84eaea32b4c",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM850\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u00ae"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-144b43e8cfbf",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM850\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u00ae",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u00ae"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-61c165bd8587",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM852\"?><a>x</a>",
@@ -12553,6 +14571,38 @@
             "text": "\u251c\u0119"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-1f790691eb7a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM852\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u0119"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-5e8cbfe89ff3",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM852\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u0119",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u0119"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -12619,6 +14669,38 @@
       }
     },
     {
+      "id": "xml-25e976b61a18",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM855\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u0415"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-adb6601ff877",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM855\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u0415",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u0415"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-441f1b2a597a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM857\"?><a>x</a>",
@@ -12679,6 +14761,38 @@
             "text": "\u251c\u00ae"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-5b437bd32628",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM857\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u00ae"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-ea2711b536f6",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM857\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u00ae",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u00ae"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -12745,6 +14859,38 @@
       }
     },
     {
+      "id": "xml-7b7674150175",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM860\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u00d2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-74683fe9d455",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM860\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u00d2",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u00d2"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-78076bfcebf5",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM861\"?><a>x</a>",
@@ -12805,6 +14951,38 @@
             "text": "\u251c\u2310"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-da9751168728",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM861\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u2310"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-029da5db224b",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM861\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u2310",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u2310"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -12871,6 +15049,38 @@
       }
     },
     {
+      "id": "xml-9b0e15aab2b9",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM862\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u2310"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-4f314a13e77f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM862\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u2310",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u2310"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-f831cf56bd0c",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM863\"?><a>x</a>",
@@ -12931,6 +15141,38 @@
             "text": "\u251c\u2310"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-af97bab47c29",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM863\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u2310"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-a42c27b75301",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM863\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u2310",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u2310"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -12997,6 +15239,38 @@
       }
     },
     {
+      "id": "xml-3626956c1b65",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM864\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\ufe83\ufe8f"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-eccac7dd317c",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM864\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\ufe83\ufe8f",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\ufe83\ufe8f"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-9729c47001ed",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM865\"?><a>x</a>",
@@ -13057,6 +15331,38 @@
             "text": "\u251c\u2310"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-ce9486f9391d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM865\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u2310"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-fbb2fe551669",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM865\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u2310",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u2310"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -13123,6 +15429,38 @@
       }
     },
     {
+      "id": "xml-2ad44da3b865",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM866\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u0439"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-2db6fb1999d7",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM866\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u0439",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u0439"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-9bb0d8b4b917",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM869\"?><a>x</a>",
@@ -13186,6 +15524,38 @@
       }
     },
     {
+      "id": "xml-07f286cadf03",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM869\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u251c\u0396"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-e9040a094a8e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"IBM869\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u251c\u0396",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u251c\u0396"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-d94a6eaa49df",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP\"?><a>x</a>",
@@ -13213,6 +15583,18 @@
       "id": "xml-487141eb1891",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-7c47132480dd",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-2ef96f5f95e8",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -13246,6 +15628,18 @@
       "raises": "Encoding::CompatibilityError"
     },
     {
+      "id": "xml-a96c78fc19b1",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP-2\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-5f3a99bda41c",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP-2\"?><a xmlns=\"\u00e9\"/>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
       "id": "xml-912638c2464d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP-KDDI\"?><a>x</a>",
@@ -13273,6 +15667,18 @@
       "id": "xml-201bae80ea79",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP-KDDI\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-2ad700a51000",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP-KDDI\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-90dbacc0aff6",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP-KDDI\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -13310,6 +15716,38 @@
             "text": "\u00c3\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-8397faa26fe1",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-7af9ef46290e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -13376,6 +15814,38 @@
       }
     },
     {
+      "id": "xml-5ca51ea622fd",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-10\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u0110"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-28d34c649946",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-10\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u0110",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u0110"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-9cc5185a031d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-11\"?><a>x</a>",
@@ -13436,6 +15906,38 @@
             "text": "\u0e23\u0e09"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-b94fcc418307",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-11\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0e23\u0e09"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-58acaf04202f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-11\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0e23\u0e09",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0e23\u0e09"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -13502,6 +16004,38 @@
       }
     },
     {
+      "id": "xml-e9d5ffd94a81",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-13\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0106\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-c001d14c9c1c",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-13\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0106\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0106\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-0ac8476dfb22",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-14\"?><a>x</a>",
@@ -13562,6 +16096,38 @@
             "text": "\u00c3\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-defe6901856a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-14\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-df709c8df53e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-14\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -13628,6 +16194,38 @@
       }
     },
     {
+      "id": "xml-d1166f0241cd",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-15\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-f9f8c1cd879e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-15\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-1efee10b3a5b",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-16\"?><a>x</a>",
@@ -13691,6 +16289,38 @@
       }
     },
     {
+      "id": "xml-e1c6a4f452ee",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-16\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0102\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-e244cad9c4da",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-16\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0102\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0102\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-d2fa4ca753e3",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-2\"?><a>x</a>",
@@ -13751,6 +16381,38 @@
             "text": "\u0102\u0160"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-a19b08312322",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-2\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0102\u0160"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-a37f3441b294",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-2\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0102\u0160",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0102\u0160"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -13820,6 +16482,44 @@
       }
     },
     {
+      "id": "xml-f068d0042a21",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-3\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "?\u0130"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-19413e3a10c0",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-3\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "ISO-8859-3"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "ISO-8859-3"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-aee3f7425858",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-4\"?><a>x</a>",
@@ -13883,6 +16583,38 @@
       }
     },
     {
+      "id": "xml-c8cb1ffd27fa",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-4\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u0160"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-848eb7205d78",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-4\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u0160",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u0160"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-3d84e64e6882",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-5\"?><a>x</a>",
@@ -13943,6 +16675,38 @@
             "text": "\u0423\u0409"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-dc6a5b04a965",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-5\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0423\u0409"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-a694196fb0ca",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-5\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0423\u0409",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0423\u0409"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -14012,6 +16776,44 @@
       }
     },
     {
+      "id": "xml-ac34b1221a5f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-6\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0623?"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-6f542db024c2",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-6\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "ISO-8859-6"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "ISO-8859-6"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-b97b4e34627c",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-7\"?><a>x</a>",
@@ -14072,6 +16874,38 @@
             "text": "\u0393\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-bd52adaf6a66",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-7\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0393\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-ced7966f5c0d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-7\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0393\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0393\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -14141,6 +16975,44 @@
       }
     },
     {
+      "id": "xml-a4650034a14c",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-8\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "?\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-bbb2edc4a536",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-8\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "ISO-8859-8"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "ISO-8859-8"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-9628a382bee3",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-9\"?><a>x</a>",
@@ -14204,6 +17076,38 @@
       }
     },
     {
+      "id": "xml-62d20ad858dd",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-9\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-602f91156aff",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-9\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-09cfe9efe82c",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO2022-JP\"?><a>x</a>",
@@ -14234,6 +17138,18 @@
       "raises": "Encoding::CompatibilityError"
     },
     {
+      "id": "xml-413a0256a24a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO2022-JP\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-c1456ad38c9d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO2022-JP\"?><a xmlns=\"\u00e9\"/>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
       "id": "xml-1415bb916eca",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO2022-JP2\"?><a>x</a>",
@@ -14261,6 +17177,18 @@
       "id": "xml-c1b5c9e9a024",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO2022-JP2\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-3cd8eb159224",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO2022-JP2\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-8452ddc0bf08",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO2022-JP2\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -14327,6 +17255,38 @@
       }
     },
     {
+      "id": "xml-42bba5d1e847",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-1\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-f47a8b6b9b1b",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-1\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-43ff581fe1b2",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-10\"?><a>x</a>",
@@ -14387,6 +17347,38 @@
             "text": "\u00c3\u0110"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-c01f546c0b1d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-10\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u0110"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-97cbeda516fc",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-10\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u0110",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u0110"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -14453,6 +17445,38 @@
       }
     },
     {
+      "id": "xml-47d085420551",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-11\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0e23\u0e09"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-4723bc51a29e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-11\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0e23\u0e09",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0e23\u0e09"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-39e6925b9f4b",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-13\"?><a>x</a>",
@@ -14513,6 +17537,38 @@
             "text": "\u0106\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-74f4d5f0f06c",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-13\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0106\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-1abb01b2a98a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-13\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0106\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0106\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -14579,6 +17635,38 @@
       }
     },
     {
+      "id": "xml-4ecfba31d930",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-14\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-32b852655d82",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-14\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-94cc974dbe67",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-15\"?><a>x</a>",
@@ -14639,6 +17727,38 @@
             "text": "\u00c3\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-5bdf5b732696",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-15\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-b65e99ea4fc4",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-15\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -14705,6 +17825,38 @@
       }
     },
     {
+      "id": "xml-1a3601b64ccb",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-16\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0102\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-3440504ce663",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-16\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0102\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0102\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-0bbdc62efe9c",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-2\"?><a>x</a>",
@@ -14765,6 +17917,38 @@
             "text": "\u0102\u0160"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-28d9b1af319f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-2\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0102\u0160"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-98b0894adfce",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-2\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0102\u0160",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0102\u0160"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -14834,6 +18018,44 @@
       }
     },
     {
+      "id": "xml-6c6c6ad45df7",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-3\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "?\u0130"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-95f12f2757ca",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-3\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "ISO-8859-3"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "ISO-8859-3"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-671bbd7873b4",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-4\"?><a>x</a>",
@@ -14897,6 +18119,38 @@
       }
     },
     {
+      "id": "xml-e4977af772ab",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-4\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u0160"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-a32f634c979c",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-4\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u0160",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u0160"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-218cf35609fe",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-5\"?><a>x</a>",
@@ -14957,6 +18211,38 @@
             "text": "\u0423\u0409"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-1e140d1d78ca",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-5\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0423\u0409"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-f69081b7d2cc",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-5\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0423\u0409",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0423\u0409"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -15026,6 +18312,44 @@
       }
     },
     {
+      "id": "xml-dee96a2cd484",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-6\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0623?"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-6dc21fdf2936",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-6\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "ISO-8859-6"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "ISO-8859-6"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-0407a7206ea5",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-7\"?><a>x</a>",
@@ -15086,6 +18410,38 @@
             "text": "\u0393\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-c224c42b476f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-7\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0393\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-c24aa0a4600d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-7\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0393\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0393\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -15155,6 +18511,44 @@
       }
     },
     {
+      "id": "xml-07c06cc5b7da",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-8\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "?\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-16fd616a5ef7",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-8\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "ISO-8859-8"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "ISO-8859-8"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-0391e71ced92",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-9\"?><a>x</a>",
@@ -15215,6 +18609,38 @@
             "text": "\u00c3\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-004093c99688",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-9\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-ae1ff6c6bb30",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO8859-9\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -15281,6 +18707,38 @@
       }
     },
     {
+      "id": "xml-8c9fccddcd6c",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"KOI8-R\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0446\u2558"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-5abb6ba0daeb",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"KOI8-R\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0446\u2558",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0446\u2558"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-e60e4044683a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"KOI8-U\"?><a>x</a>",
@@ -15344,6 +18802,38 @@
       }
     },
     {
+      "id": "xml-320585584741",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"KOI8-U\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0446\u2558"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-636fe56dcd91",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"KOI8-U\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0446\u2558",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0446\u2558"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-a9748d3f853e",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"MacJapan\"?><a>x</a>",
@@ -15391,6 +18881,35 @@
       "raises": "Encoding::ConverterNotFoundError"
     },
     {
+      "id": "xml-461bdc9bd289",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"MacJapan\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-d00fc58f68cd",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"MacJapan\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "MacJapanese"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "MacJapanese"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-a396336e3cd2",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"MacJapanese\"?><a>x</a>",
@@ -15436,6 +18955,35 @@
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"MacJapanese\"?><a><?p \u00e9?></a>",
       "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-c2de2f3e041a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"MacJapanese\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-d87033179194",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"MacJapanese\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "MacJapanese"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "MacJapanese"
+            }
+          ]
+        ],
+        "children": []
+      }
     },
     {
       "id": "xml-eae542fea20b",
@@ -15498,6 +19046,38 @@
             "text": "\uff83\uff69"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-12e25f71448e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"PCK\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\uff83\uff69"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-df7eed8fc484",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"PCK\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\uff83\uff69",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\uff83\uff69"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -15564,6 +19144,38 @@
       }
     },
     {
+      "id": "xml-36ffa05d0638",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"SJIS\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\uff83\uff69"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-24f6de920990",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"SJIS\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\uff83\uff69",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\uff83\uff69"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-c9d6e9878bfa",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"SJIS-DoCoMo\"?><a>x</a>",
@@ -15624,6 +19236,38 @@
             "text": "\uff83\uff69"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-db52ce565aa6",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"SJIS-DoCoMo\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\uff83\uff69"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-57494720a9c2",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"SJIS-DoCoMo\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\uff83\uff69",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\uff83\uff69"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -15690,6 +19334,38 @@
       }
     },
     {
+      "id": "xml-50cbb6a0cb69",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"SJIS-KDDI\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\uff83\uff69"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-990b3e1add79",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"SJIS-KDDI\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\uff83\uff69",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\uff83\uff69"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-8302ba7020f5",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"SJIS-SoftBank\"?><a>x</a>",
@@ -15750,6 +19426,38 @@
             "text": "\uff83\uff69"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-af9c55ccaa38",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"SJIS-SoftBank\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\uff83\uff69"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-ab986bb861aa",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"SJIS-SoftBank\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\uff83\uff69",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\uff83\uff69"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -15816,6 +19524,38 @@
       }
     },
     {
+      "id": "xml-81711efcc81f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\uff83\uff69"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-b8a765704a01",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\uff83\uff69",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\uff83\uff69"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-0cc56dd4b23e",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"TIS-620\"?><a>x</a>",
@@ -15879,6 +19619,38 @@
       }
     },
     {
+      "id": "xml-8ac5a9145306",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"TIS-620\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0e23\u0e09"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-047513b8a8fc",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"TIS-620\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0e23\u0e09",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0e23\u0e09"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-1807aeb36d77",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UCS-2BE\"?><a>x</a>",
@@ -15906,6 +19678,18 @@
       "id": "xml-3041f3359b09",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UCS-2BE\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-3d41a89a7473",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UCS-2BE\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-4e227dfce0ab",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UCS-2BE\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -15939,6 +19723,18 @@
       "raises": "Encoding::CompatibilityError"
     },
     {
+      "id": "xml-b3ce444764c8",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UCS-4BE\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-aea424d6779e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UCS-4BE\"?><a xmlns=\"\u00e9\"/>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
       "id": "xml-0cb1129139fb",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UCS-4LE\"?><a>x</a>",
@@ -15966,6 +19762,18 @@
       "id": "xml-85db69a9c12a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UCS-4LE\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-7e1f8b7e2e69",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UCS-4LE\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-b87ead4801b7",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UCS-4LE\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -16011,6 +19819,44 @@
       "raises": "ArgumentError"
     },
     {
+      "id": "xml-54f415fd5363",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"US-ASCII\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "??"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-7eac1179197e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"US-ASCII\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "US-ASCII"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "US-ASCII"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-71eb0aa05414",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-16\"?><a>x</a>",
@@ -16032,6 +19878,18 @@
       "id": "xml-7ea41324e00e",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-16\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-c44b8d323ed0",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-16\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-4cc85f4dd7e8",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-16\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -16065,6 +19923,18 @@
       "raises": "Encoding::CompatibilityError"
     },
     {
+      "id": "xml-b79451acf542",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-16BE\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-7b8a1be32dc3",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-16BE\"?><a xmlns=\"\u00e9\"/>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
       "id": "xml-7f3fced22f12",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-16LE\"?><a>x</a>",
@@ -16092,6 +19962,18 @@
       "id": "xml-2d33db271012",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-16LE\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-71d1e279b923",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-16LE\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-e761e4731b99",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-16LE\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -16125,6 +20007,18 @@
       "raises": "Encoding::CompatibilityError"
     },
     {
+      "id": "xml-d67aed6bc7be",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-32\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-31e23759f659",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-32\"?><a xmlns=\"\u00e9\"/>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
       "id": "xml-081a8cfc9919",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-32BE\"?><a>x</a>",
@@ -16152,6 +20046,18 @@
       "id": "xml-8f57ab4885e6",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-32BE\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-399559089f72",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-32BE\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-65ca86a9befa",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-32BE\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -16185,6 +20091,18 @@
       "raises": "Encoding::CompatibilityError"
     },
     {
+      "id": "xml-1bf04d7e8452",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-32LE\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-704c8da8b78e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-32LE\"?><a xmlns=\"\u00e9\"/>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
       "id": "xml-db4927e694f5",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-7\"?><a>x</a>",
@@ -16212,6 +20130,18 @@
       "id": "xml-0b9616cf6e1a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-7\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-4f0c81f4f238",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-7\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-93a416de78cc",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-7\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -16269,6 +20199,38 @@
             "text": "\u00e9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-2eb3618292f2",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00e9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-eeb7ca195648",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-8\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00e9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00e9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -16335,6 +20297,38 @@
       }
     },
     {
+      "id": "xml-a5071169520f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-8-HFS\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00e9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-d4b4fd845de5",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-8-HFS\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00e9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00e9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-f6adedd642c2",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-8-MAC\"?><a>x</a>",
@@ -16395,6 +20389,38 @@
             "text": "\u00e9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-906b3adf7037",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-8-MAC\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00e9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-e70e0df880ac",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF-8-MAC\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00e9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00e9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -16461,6 +20487,38 @@
       }
     },
     {
+      "id": "xml-8de10779a365",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF8-DoCoMo\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00e9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-19b520bf80f5",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF8-DoCoMo\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00e9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00e9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-521298f9632d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF8-KDDI\"?><a>x</a>",
@@ -16521,6 +20579,38 @@
             "text": "\u00e9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-fcc6b8ce906c",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF8-KDDI\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00e9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-0f4b414b593c",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF8-KDDI\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00e9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00e9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -16587,6 +20677,38 @@
       }
     },
     {
+      "id": "xml-00fe823bbe35",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF8-MAC\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00e9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-aa7285115190",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF8-MAC\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00e9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00e9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-af8e5a90217a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF8-SoftBank\"?><a>x</a>",
@@ -16647,6 +20769,38 @@
             "text": "\u00e9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-1e755f5420ab",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF8-SoftBank\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00e9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-7dfa759c44ff",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"UTF8-SoftBank\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00e9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00e9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -16713,6 +20867,38 @@
       }
     },
     {
+      "id": "xml-aef78b1d10e0",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1250\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0102\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-f63789fe23fe",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1250\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0102\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0102\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-f596e6b5b7ea",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1251\"?><a>x</a>",
@@ -16773,6 +20959,38 @@
             "text": "\u0413\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-bd097a4678d9",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1251\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0413\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-2b5ac3721e85",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1251\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0413\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0413\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -16839,6 +21057,38 @@
       }
     },
     {
+      "id": "xml-949ee8ec9fc9",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1252\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-f54d3ac47c3a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1252\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-b3ae9a265087",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1253\"?><a>x</a>",
@@ -16899,6 +21149,38 @@
             "text": "\u0393\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-78fc9f7bd30f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1253\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0393\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-458b9377d4f0",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1253\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0393\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0393\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -16965,6 +21247,38 @@
       }
     },
     {
+      "id": "xml-4fd585002b4b",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1254\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u00c3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-0d9f0b2cff87",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1254\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u00c3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u00c3\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-c0705241df5a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1255\"?><a>x</a>",
@@ -17025,6 +21339,38 @@
             "text": "\u05b3\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-a3801d708111",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1255\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u05b3\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-d142cf76c330",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1255\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u05b3\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u05b3\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -17091,6 +21437,38 @@
       }
     },
     {
+      "id": "xml-113cba2b7cda",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1256\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0623\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-5c12ec865f9e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1256\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0623\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0623\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-4d59fe230128",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1257\"?><a>x</a>",
@@ -17154,6 +21532,38 @@
       }
     },
     {
+      "id": "xml-91a75d47f41f",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1257\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0106\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-660b1967265b",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1257\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0106\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0106\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-3e2b324b8550",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1258\"?><a>x</a>",
@@ -17199,6 +21609,35 @@
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1258\"?><a><?p \u00e9?></a>",
       "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-02cd5ce08a92",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1258\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-ef21e5296dd0",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-1258\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "Windows-1258"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "Windows-1258"
+            }
+          ]
+        ],
+        "children": []
+      }
     },
     {
       "id": "xml-b5de3c1a9696",
@@ -17261,6 +21700,38 @@
             "text": "\uff83\uff69"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-297f1201ea72",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-31J\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\uff83\uff69"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-cbd77f029640",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-31J\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\uff83\uff69",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\uff83\uff69"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -17327,6 +21798,38 @@
       }
     },
     {
+      "id": "xml-8baf12b6421a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-874\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u0e23\u0e09"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-03aa93addea8",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"Windows-874\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u0e23\u0e09",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u0e23\u0e09"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-0b7a7e53dc33",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"csWindows31J\"?><a>x</a>",
@@ -17390,6 +21893,38 @@
       }
     },
     {
+      "id": "xml-4b282c6d2e88",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"csWindows31J\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\uff83\uff69"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-71d219a284e6",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"csWindows31J\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\uff83\uff69",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\uff83\uff69"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-e4db968b02ae",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ebcdic-cp-us\"?><a>x</a>",
@@ -17417,6 +21952,18 @@
       "id": "xml-f6b678a25d24",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ebcdic-cp-us\"?><a><?p \u00e9?></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-3e3812564276",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ebcdic-cp-us\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-a5270345e9dc",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"ebcdic-cp-us\"?><a xmlns=\"\u00e9\"/>",
       "raises": "Encoding::CompatibilityError"
     },
     {
@@ -17483,6 +22030,38 @@
       }
     },
     {
+      "id": "xml-5e3835fa2d67",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"euc-jp-ms\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8fbf"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-3eb1400e3f9b",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"euc-jp-ms\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8fbf",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8fbf"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-8354e72577f8",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"eucCN\"?><a>x</a>",
@@ -17543,6 +22122,38 @@
             "text": "\u8305"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-198e0dda5832",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"eucCN\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8305"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-509f27e80855",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"eucCN\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8305",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8305"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -17609,6 +22220,38 @@
       }
     },
     {
+      "id": "xml-6db4f2c479e6",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"eucJP\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8fbf"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-f1b015c0d249",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"eucJP\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8fbf",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8fbf"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-c5e5ddbdd372",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"eucJP-ms\"?><a>x</a>",
@@ -17669,6 +22312,38 @@
             "text": "\u8fbf"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-8e0c589307a6",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"eucJP-ms\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u8fbf"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-9bbf64221353",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"eucJP-ms\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u8fbf",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u8fbf"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -17735,6 +22410,38 @@
       }
     },
     {
+      "id": "xml-fbbf3107e3c3",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"eucKR\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\ucc55"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-e89d40e6f4e6",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"eucKR\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\ucc55",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\ucc55"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-ca31611d0221",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"eucTW\"?><a>x</a>",
@@ -17782,6 +22489,35 @@
       "raises": "Encoding::ConverterNotFoundError"
     },
     {
+      "id": "xml-c5e3c5ab9003",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"eucTW\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-cf44bcb0d71e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"eucTW\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "EUC-TW"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "EUC-TW"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-81c1d0ffb66b",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macCentEuro\"?><a>x</a>",
@@ -17827,6 +22563,35 @@
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macCentEuro\"?><a><?p \u00e9?></a>",
       "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-5d52034fd53e",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macCentEuro\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-5ad70a18cec5",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macCentEuro\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "macCentEuro"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "macCentEuro"
+            }
+          ]
+        ],
+        "children": []
+      }
     },
     {
       "id": "xml-1dd5c7418503",
@@ -17889,6 +22654,38 @@
             "text": "\u221a\u0160"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-d33a250130ca",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macCroatian\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u221a\u0160"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-00fb1edf09cc",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macCroatian\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u221a\u0160",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u221a\u0160"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -17955,6 +22752,38 @@
       }
     },
     {
+      "id": "xml-0ab0a3d220d9",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macCyrillic\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u221a\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-e61abdc2ff63",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macCyrillic\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u221a\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u221a\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-8c566956ed1d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macGreek\"?><a>x</a>",
@@ -18015,6 +22844,38 @@
             "text": "\u039f\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-99f51d0e34bc",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macGreek\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u039f\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-423880ea1815",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macGreek\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u039f\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u039f\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -18081,6 +22942,38 @@
       }
     },
     {
+      "id": "xml-8f9b3aa32620",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macIceland\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u221a\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-190a61a3c162",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macIceland\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u221a\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u221a\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-766fb126c171",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macRoman\"?><a>x</a>",
@@ -18141,6 +23034,38 @@
             "text": "\u221a\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-3c2961e0bad8",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macRoman\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u221a\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-3179456fa844",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macRoman\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u221a\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u221a\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -18207,6 +23132,38 @@
       }
     },
     {
+      "id": "xml-c39df126f73a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macRomania\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u221a\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-5d3e21c2ee57",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macRomania\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u221a\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u221a\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-bd4e94594053",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macThai\"?><a>x</a>",
@@ -18252,6 +23209,35 @@
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macThai\"?><a><?p \u00e9?></a>",
       "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-7a5aab5d0a35",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macThai\"?><a><![CDATA[\u00e9]]></a>",
+      "raises": "Encoding::ConverterNotFoundError"
+    },
+    {
+      "id": "xml-77a03ca99e5d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macThai\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "macThai"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "macThai"
+            }
+          ]
+        ],
+        "children": []
+      }
     },
     {
       "id": "xml-78203a24bb3b",
@@ -18314,6 +23300,38 @@
             "text": "\u221a\u00a9"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-6d4b787182a1",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macTurkish\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u221a\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-bd853b4bab2d",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macTurkish\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u221a\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u221a\u00a9"
+          ]
+        ],
+        "children": []
       }
     },
     {
@@ -18380,6 +23398,38 @@
       }
     },
     {
+      "id": "xml-b025f0476e2a",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macUkraine\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "\u221a\u00a9"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-caf7808b639b",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"macUkraine\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": "\u221a\u00a9",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "\u221a\u00a9"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-c08b3e9d5918",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"stateless-ISO-2022-JP\"?><a>x</a>",
@@ -18428,6 +23478,44 @@
       "raises": "ArgumentError"
     },
     {
+      "id": "xml-b7319c33f8c4",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"stateless-ISO-2022-JP\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "??"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-ce3323e73850",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"stateless-ISO-2022-JP\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "stateless-ISO-2022-JP"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "stateless-ISO-2022-JP"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
       "id": "xml-d3e723db4420",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"stateless-ISO-2022-JP-KDDI\"?><a>x</a>",
@@ -18474,6 +23562,44 @@
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"stateless-ISO-2022-JP-KDDI\"?><a><?p \u00e9?></a>",
       "raises": "ArgumentError"
+    },
+    {
+      "id": "xml-862387e0bc01",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"stateless-ISO-2022-JP-KDDI\"?><a><![CDATA[\u00e9]]></a>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "??"
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-1032e4cbe8bf",
+      "group": "encoding-names",
+      "input": "<?xml version=\"1.0\" encoding=\"stateless-ISO-2022-JP-KDDI\"?><a xmlns=\"\u00e9\"/>",
+      "root": {
+        "element": "a",
+        "namespace": {
+          "bytes": "c3a9",
+          "encoding": "stateless-ISO-2022-JP-KDDI"
+        },
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            {
+              "bytes": "c3a9",
+              "encoding": "stateless-ISO-2022-JP-KDDI"
+            }
+          ]
+        ],
+        "children": []
+      }
     },
     {
       "id": "xml-a48f566f2b14",

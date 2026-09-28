@@ -557,6 +557,28 @@ describe("a pin that was not generated the canonical way is refused", () => {
     expect(() => loadPinnedCorpus(root)).toThrow("symbolic link");
   });
 
+  it("refuses a generator input reached through a symbolic-link directory", () => {
+    const root = damagedCopy((where) => {
+      const seeds = join(where, "scripts", "seeds");
+      const moved = join(where, "scripts", "real-seeds");
+      cpSync(seeds, moved, { recursive: true });
+      rmSync(seeds, { recursive: true });
+      symlinkSync(moved, seeds);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("passes through a symbolic link");
+  });
+
+  it("refuses a corpus/ directory that is a symbolic link", () => {
+    const root = damagedCopy((where) => {
+      const corpus = join(where, "corpus");
+      const outside = join(scratch(), "corpus");
+      cpSync(corpus, outside, { recursive: true });
+      rmSync(corpus, { recursive: true });
+      symlinkSync(outside, corpus);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("passes through a symbolic link");
+  });
+
   it("refuses a pending-format payload path that leaves corpus/", () => {
     const root = damagedCopy((where) => {
       editFile(join(where, "corpus", "provenance.yaml"), (text) =>

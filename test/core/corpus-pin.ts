@@ -485,24 +485,41 @@ function assertPlainRelativePath(path: string, where: string): void {
 }
 
 /**
- * Resolves a provenance path under `base` and refuses anything that could
- * point outside it: a symbolic link, or a real path that leaves `base`.
- * Returns the path even when nothing is there, so each caller reports a
- * missing file in its own words.
+ * Resolves a provenance path under `root` (the testsuite checkout) and
+ * refuses anything that could point outside it: a symbolic link at ANY
+ * component below `root` (so a symlinked `corpus/` or `scripts/seeds/` is
+ * refused as well as a symlinked file), or a real path that leaves `root`.
+ * `prefix` is the fixed directory the path is relative to (`corpus` for a
+ * payload), and is checked the same way. Returns the path even when nothing
+ * is there, so each caller reports a missing file in its own words.
  */
-function pinFile(base: string, relative: string, where: string): string {
+function pinFile(root: string, relative: string, where: string, prefix = ""): string {
   assertPlainRelativePath(relative, where);
-  const file = join(base, ...relative.split("/"));
-  if (!existsSync(file)) return file;
-  if (lstatSync(file).isSymbolicLink()) {
-    throw new Error(`${file}: ${where} names a symbolic link; the pin must hold the file itself.`);
+  const segments = [...(prefix === "" ? [] : prefix.split("/")), ...relative.split("/")];
+  let current = root;
+  for (const segment of segments) {
+    current = join(current, segment);
+    if (!existsSync(current) && !isSymbolicLink(current)) return join(root, ...segments);
+    if (isSymbolicLink(current)) {
+      throw new Error(
+        `${current}: ${where} passes through a symbolic link; the pin must hold real files.`,
+      );
+    }
   }
-  const realBase = realpathSync(base);
-  const real = realpathSync(file);
-  if (!real.startsWith(`${realBase}${sep}`)) {
-    throw new Error(`${file}: ${where} resolves to ${real}, outside ${realBase}.`);
+  const realRoot = realpathSync(root);
+  const real = realpathSync(current);
+  if (!real.startsWith(`${realRoot}${sep}`)) {
+    throw new Error(`${current}: ${where} resolves to ${real}, outside ${realRoot}.`);
   }
-  return file;
+  return current;
+}
+
+function isSymbolicLink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -603,7 +620,7 @@ export function isPendingReaderPayload(path: string): boolean {
 }
 
 function verifyPendingPayload(root: string, record: PayloadRecord): void {
-  const path = pinFile(join(root, "corpus"), record.path, "a provenance payload path");
+  const path = pinFile(root, record.path, "a provenance payload path", "corpus");
   if (!existsSync(path)) {
     throw submoduleError(root, `${path} is listed in corpus/provenance.yaml but is not on disk`);
   }
@@ -619,7 +636,7 @@ function readPayloadDocument(
   root: string,
   record: PayloadRecord,
 ): { path: string; document: Mapping; schema: string } {
-  const path = pinFile(join(root, "corpus"), record.path, "a provenance payload path");
+  const path = pinFile(root, record.path, "a provenance payload path", "corpus");
   if (!existsSync(path)) {
     throw submoduleError(root, `${path} is listed in corpus/provenance.yaml but is not on disk`);
   }

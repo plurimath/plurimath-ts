@@ -739,7 +739,7 @@ module CorpusGenerator
   end
 
   def verify_pending_pin_payload(entry)
-    path = pin_file(File.join(pin_root, "corpus"), entry.fetch("path"), "a provenance payload path")
+    path = pin_file(pin_root, entry.fetch("path"), "a provenance payload path", "corpus")
     missing_pin!("#{path} is listed in corpus/provenance.yaml but is not on disk") unless
       File.exist?(path)
 
@@ -762,21 +762,27 @@ module CorpusGenerator
     raise Error, "#{where}: #{path.inspect} is not a plain relative path"
   end
 
-  # Resolves a provenance path under `base`, refusing a symbolic link or a real
-  # path outside `base`. Mirrors `pinFile` in test/core/corpus-pin.ts.
-  def pin_file(base, relative, where)
+  # Resolves a provenance path under `root` (the testsuite checkout), refusing
+  # a symbolic link at ANY component below `root` -- `prefix` (`corpus` for a
+  # payload) included -- or a real path outside `root`. Mirrors `pinFile` in
+  # test/core/corpus-pin.ts.
+  def pin_file(root, relative, where, prefix = nil)
     assert_plain_relative_path!(relative, where)
-    file = File.join(base, *relative.split("/"))
-    return file unless File.exist?(file) || File.symlink?(file)
-    raise Error, "#{file}: #{where} names a symbolic link" if File.symlink?(file)
-
-    real_base = File.realpath(base)
-    real = File.realpath(file)
-    unless real.start_with?("#{real_base}/")
-      raise Error, "#{file}: #{where} resolves to #{real}, outside #{real_base}"
+    segments = (prefix ? prefix.split("/") : []) + relative.split("/")
+    current = root
+    segments.each do |segment|
+      current = File.join(current, segment)
+      raise Error, "#{current}: #{where} passes through a symbolic link" if File.symlink?(current)
+      return File.join(root, *segments) unless File.exist?(current)
     end
 
-    file
+    real_root = File.realpath(root)
+    real = File.realpath(current)
+    unless real.start_with?("#{real_root}/")
+      raise Error, "#{current}: #{where} resolves to #{real}, outside #{real_root}"
+    end
+
+    current
   end
 
   # The generator the provenance names, checked against its recorded sha256.
@@ -847,7 +853,7 @@ module CorpusGenerator
   CALLS_SCHEMA = "plurimath-corpus/calls/1"
 
   def read_pin_payload(entry)
-    path = pin_file(File.join(pin_root, "corpus"), entry.fetch("path"), "a provenance payload path")
+    path = pin_file(pin_root, entry.fetch("path"), "a provenance payload path", "corpus")
     missing_pin!("#{path} is listed in corpus/provenance.yaml but is not on disk") unless
       File.exist?(path)
 

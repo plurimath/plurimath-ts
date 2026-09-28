@@ -21,6 +21,9 @@
  *     neither of those was generated the canonical way (ARCHITECTURE.md §7);
  *   - a payload on disk is not in the provenance list, or vice versa;
  *   - a payload's bytes or sha256 disagree with the provenance;
+ *   - a generator input (`generator.inputs`, e.g. `scripts/seeds/mathml.yaml`)
+ *     is missing from the pinned checkout, or its bytes or sha256 disagree
+ *     with the provenance;
  *   - a payload has no group, no cases, or a case whose outcomes do not cover
  *     exactly the targets its group declares;
  *   - the pin yields no payloads or no cases at all.
@@ -53,7 +56,12 @@ export const LOCAL_CORPUS_ROOT = join(REPO_ROOT, "corpus");
 /** The one command that turns an uninitialised submodule into a usable one. */
 export const SUBMODULE_FIX = "git submodule update --init --recursive";
 
-const PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
+/**
+ * Only `/3`. It differs from `/2` by one required field, `generator.inputs`,
+ * and this reader only ever reads the one pinned commit, which records `/3`;
+ * accepting `/2` too would keep a branch alive that no pin can reach.
+ */
+const PROVENANCE_SCHEMA = "plurimath-corpus/provenance/3";
 const MANIFEST_SCHEMA = "plurimath-corpus/manifest/2";
 const REJECTIONS_SCHEMA = "plurimath-corpus/rejections/1";
 const CALLS_SCHEMA = "plurimath-corpus/calls/1";
@@ -271,6 +279,11 @@ export interface PinnedCorpus {
   /** `calls/1` payloads, kept apart because they carry a `call` no other kind has. */
   readonly callsPayloads: readonly PinnedCallsPayload[];
   readonly calls: readonly PinnedCallCase[];
+  /**
+   * Payloads in a `PENDING_READER_FORMATS` directory: byte-verified against
+   * the provenance, not parsed.
+   */
+  readonly pendingPayloads: readonly PayloadRecord[];
 }
 
 type Mapping = { readonly [key: string]: YamlValue };
@@ -428,6 +441,8 @@ function readProvenance(root: string): PinProvenance {
     );
   }
 
+  verifyGeneratorInputs(root, path, document);
+
   const oracle = asMapping(requiredPresent(document, "oracle", path), `${path} oracle`);
   const entries = requiredSequence(document, "payloads", path);
   if (entries.length === 0) {
@@ -454,6 +469,53 @@ function readProvenance(root: string): PinProvenance {
   };
 }
 
+/**
+ * `generator.inputs` lists the data files the generator read besides itself
+ * (the MathML and OMML seed lists), each with its sha256 and byte count,
+ * relative to the testsuite's root. Required, and may be empty. Every entry is
+ * checked against the file in the pinned checkout, exactly as a payload is: an
+ * edited seed means the payloads it produced are no longer vouched for.
+ */
+function verifyGeneratorInputs(root: string, path: string, document: Mapping): void {
+  const where = `${path} generator`;
+  const generator = asMapping(requiredPresent(document, "generator", path), where);
+  const inputs = requiredSequence(generator, "inputs", where);
+  const seen = new Set<string>();
+  const records = inputs.map((entry, index): PayloadRecord => {
+    const at = `${where}.inputs[${index}]`;
+    const record = asMapping(entry, at);
+    const inputPath = requiredString(record, "path", at);
+    if (
+      inputPath.startsWith("/") ||
+      inputPath.includes("\\") ||
+      inputPath.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
+    ) {
+      throw new Error(
+        `${at}: path "${inputPath}" is not a plain path relative to the testsuite root.`,
+      );
+    }
+    if (seen.has(inputPath)) throw new Error(`${at}: "${inputPath}" is listed twice.`);
+    seen.add(inputPath);
+    return {
+      path: inputPath,
+      sha256: requiredString(record, "sha256", at),
+      bytes: requiredInteger(record, "bytes", at),
+    };
+  });
+  // Shape first, then the files: a malformed entry is reported as such rather
+  // than as a digest mismatch on an earlier one.
+  for (const record of records) {
+    const file = join(root, ...record.path.split("/"));
+    if (!existsSync(file)) {
+      throw new Error(
+        `${file}: listed in generator.inputs but not on disk. Restore it with ` +
+          `\`git -C ${PIN_RELATIVE_PATH} checkout .\`.`,
+      );
+    }
+    verifyPayloadBytes(file, record);
+  }
+}
+
 function verifyPayloadBytes(path: string, record: PayloadRecord): string {
   const bytes = readFileSync(path);
   if (bytes.length !== record.bytes) {
@@ -472,6 +534,31 @@ function verifyPayloadBytes(path: string, record: PayloadRecord): string {
     );
   }
   return bytes.toString("utf8");
+}
+
+/**
+ * Input formats whose corpus directories this port does not read yet: the
+ * MathML and OMML payloads plurimath-testsuite#21 added. They are pending the
+ * MathML and OMML readers; nothing here parses those notations, and several
+ * of their payloads use YAML (multi-line quoted scalars) that `corpus-yaml`
+ * does not read either. Their bytes are still checked against the provenance,
+ * so the pin stays fully vouched for; only their contents are not loaded.
+ * Removing a format from this list is how its reader starts consuming it.
+ */
+export const PENDING_READER_FORMATS: readonly string[] = ["mathml", "omml"];
+
+/** Whether a payload path (relative to `corpus/`) is in a pending format's directory. */
+export function isPendingReaderPayload(path: string): boolean {
+  const format = path.split("/")[0];
+  return format !== undefined && path.includes("/") && PENDING_READER_FORMATS.includes(format);
+}
+
+function verifyPendingPayload(root: string, record: PayloadRecord): void {
+  const path = join(root, "corpus", ...record.path.split("/"));
+  if (!existsSync(path)) {
+    throw submoduleError(root, `${path} is listed in corpus/provenance.yaml but is not on disk`);
+  }
+  verifyPayloadBytes(path, record);
 }
 
 /**
@@ -860,7 +947,13 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
   const payloads: PinnedPayload[] = [];
   const rejectionPayloads: PinnedRejectionPayload[] = [];
   const callsPayloads: PinnedCallsPayload[] = [];
+  const pendingPayloads: PayloadRecord[] = [];
   for (const record of provenance.payloads) {
+    if (isPendingReaderPayload(record.path)) {
+      verifyPendingPayload(root, record);
+      pendingPayloads.push(record);
+      continue;
+    }
     const { path, document, schema } = readPayloadDocument(root, record);
     const caseSchema = readCaseSchema(schema);
     if (caseSchema !== undefined) {
@@ -931,6 +1024,7 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
     rejections,
     callsPayloads,
     calls,
+    pendingPayloads,
   };
 }
 

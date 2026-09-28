@@ -89,7 +89,7 @@ module CorpusGenerator
   # The submodule declared in .gitmodules. The cases it holds are read, never
   # written: plurimath-testsuite owns them.
   PIN_RELATIVE_PATH = "submodules/plurimath-testsuite"
-  PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2"
+  PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/3"
   SUBMODULE_FIX = "git submodule update --init --recursive"
 
   # --- symbol data ---------------------------------------------------------
@@ -708,6 +708,8 @@ module CorpusGenerator
                    "not Ox (§7)"
     end
 
+    verify_pin_generator_inputs!(provenance, provenance_path)
+
     payloads = provenance["payloads"] || []
     raise Error, "#{provenance_path} lists no payloads" if payloads.empty?
 
@@ -715,6 +717,46 @@ module CorpusGenerator
     raise Error, "the pin at #{pin_root} contains no cases" if cases.empty?
 
     cases
+  end
+
+  # `provenance/3` lists the data files the testsuite's generator read besides
+  # itself (the MathML and OMML seed lists) under `generator.inputs`, relative
+  # to the testsuite root. Each is checked against the pinned checkout the
+  # same way a payload is; the list is required and may be empty.
+  def verify_pin_generator_inputs!(provenance, provenance_path)
+    generator = provenance["generator"]
+    inputs = generator.is_a?(Hash) ? generator["inputs"] : nil
+    raise Error, "#{provenance_path}: generator.inputs must be a list" unless inputs.is_a?(Array)
+
+    seen = {}
+    records = inputs.each_with_index.map do |entry, index|
+      at = "#{provenance_path}: generator.inputs[#{index}]"
+      raise Error, "#{at} must be a mapping" unless entry.is_a?(Hash)
+
+      path, digest, size = entry.values_at("path", "sha256", "bytes")
+      unless path.is_a?(String) && digest.is_a?(String) && size.is_a?(Integer)
+        raise Error, "#{at} needs a string path, a string sha256 and an integer bytes"
+      end
+      if path.start_with?("/") || path.include?("\\") ||
+         path.split("/", -1).any? { |segment| ["", ".", ".."].include?(segment) }
+        raise Error, "#{at}: #{path.inspect} is not a plain path relative to the testsuite root"
+      end
+      raise Error, "#{at}: #{path.inspect} is listed twice" if seen[path]
+
+      seen[path] = true
+      [path, digest, size]
+    end
+
+    records.each do |path, digest, size|
+      file = File.join(pin_root, *path.split("/"))
+      missing_pin!("#{file} is listed in generator.inputs but is not on disk") unless File.file?(file)
+      bytes = File.binread(file)
+      next if bytes.bytesize == size && sha256(bytes) == digest
+
+      raise Error, "#{file} does not match corpus/provenance.yaml generator.inputs; the " \
+                   "pinned checkout was edited in place. Restore it with " \
+                   "`git -C #{PIN_RELATIVE_PATH} checkout .`"
+    end
   end
 
   # A `plurimath-corpus/calls/1` payload's cases record `Formula#to_<target>`

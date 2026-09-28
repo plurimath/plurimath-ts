@@ -371,9 +371,9 @@ export function parseableCases<Case extends { readonly inputFormat: string }>(
  * for anything driving `parseAsciimath`. A check that drives a DIFFERENT parser
  * needs the same filter against a different format, and writing that filter out
  * by hand is how a suite ends up with two selectors that disagree — one of them
- * throwing on an empty match and the other passing vacuously. `parseLatex`
- * landed in #76 and the LaTeX rejection corpus landed with the pin, so there is
- * now a second parser-driven suite; it selects through here.
+ * throwing on an empty match and the other passing vacuously. The LaTeX,
+ * UnicodeMath and HTML rejection suites each drive their own parser, and all
+ * of them select through here.
  *
  * The empty-match throw is the whole point and is repeated for every format: a
  * corpus that stops carrying a format must fail the suite that reads it rather

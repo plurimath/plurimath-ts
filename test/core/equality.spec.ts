@@ -394,7 +394,7 @@ describe("deep structure", () => {
  * withholds the same id `readCorpusCases` withholds, and runs `==` in both
  * directions over every pair. Its report, verbatim:
  *
- *   rows in pin:     264        rejections:      27
+ *   rows in pin:     354        rejections:     117
  *   cases pinned:    237        cases withheld:   1
  *   cases compared:  236        reflexive:      236
  *   comparisons:   27730        asymmetric:       0

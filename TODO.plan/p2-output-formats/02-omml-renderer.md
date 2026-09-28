@@ -271,13 +271,16 @@ shapes above.
 
 - [ ] `toOmml` matches the gem byte-for-byte across every reachable case in the pinned
       corpus, and the oracle expectations are generated rather than hand-typed.
-- [ ] All `36` own-root kinds are measured against the oracle, not inferred from MathML
+- [x] All `36` own-root kinds are measured against the oracle, not inferred from MathML
       or a sibling OMML kind; `mrow` has a separate inherited-behavior assertion
       (`[surface]`).
-- [ ] The `Formula`, `Mrow`, `Symbol`, `UnaryFunction`, and `BinaryFunction` defaults are
+      (done: `test/formats/omml/degenerate-fixtures.json` lists all 36 plus `mrow` and `ternaryFunction` in its oracle-generated inventory; `mrow` at `test/formats/omml/renderer.spec.ts:928`; checked 2026-09-24)
+- [x] The `Formula`, `Mrow`, `Symbol`, `UnaryFunction`, and `BinaryFunction` defaults are
       pinned to the exact fragments above.
-- [ ] A bare `ternary-function` raises, while the named `PowerBase` carrier renders its
+      (done: `test/formats/omml/renderer.spec.ts:928`, `:933`, `:1016`; checked 2026-09-24)
+- [x] A bare `ternary-function` raises, while the named `PowerBase` carrier renders its
       measured `sSubSup` tree.
+      (done: `test/formats/omml/renderer.spec.ts:1098` and `:1033`; checked 2026-09-24)
 - [ ] The OMML symbol slice is generated from the pinned oracle with provenance and an
       emptiness guard; regeneration is byte-identical across the repository's required
       perturbations.
@@ -288,6 +291,7 @@ shapes above.
       group's own case count.
 - [ ] The cross-format invariant gates cover OMML, including the differential runner on
       both halves.
-- [ ] `/omml` is a published subpath with package-isolation assertions, and its expected
+- [x] `/omml` is a published subpath with package-isolation assertions, and its expected
       exports and forbidden layers are listed explicitly in the package gate.
+      (done: #112; `scripts/gate-package.mjs:150` and `:204`; `pnpm gate:package` exits 0; checked 2026-09-24)
 - [ ] Review completes with no valid implementable findings left unresolved.

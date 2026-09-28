@@ -38,6 +38,8 @@ implementation. They are hand-ported (§10).
 ## Done when
 
 - [ ] Every symbol the pinned corpus touches resolves through generated data.
-- [ ] The probe output names the context-dependent symbols, and the list matches
+- [x] The probe output names the context-dependent symbols, and the list matches
   what the gem actually does rather than a hand-written guess.
-- [ ] A symbol id missing from a renderer slice raises `MissingSymbolDataError`.
+  (done: `test/generated/symbol-context.spec.ts:118`, the matrix is exactly the probe's difference set; checked 2026-09-24)
+- [x] A symbol id missing from a renderer slice raises `MissingSymbolDataError`.
+  (done: `test/formats/mathml/renderer.spec.ts:682`, `test/formats/html/renderer.spec.ts:890`; checked 2026-09-24)

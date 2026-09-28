@@ -189,7 +189,21 @@ const FIXTURE_SPEC_PATHS: { readonly [path: string]: FixtureSpec } = {
     usesCorpus: true,
     usesRenderInventory: false,
   },
+  // The XML reader's battery. Not a format, so it lives beside the XML module's
+  // other tests rather than under test/formats; `NON_FORMAT_FIXTURE_PAYLOADS`
+  // is what brings it into this gate.
+  "test/xml/reader-fixtures.json": {
+    generator: "scripts/generate-xml-reader-fixtures.rb",
+    schema: "plurimath-corpus/xml-reader/1",
+    rows: "cases",
+    shape: "xml-reader",
+    usesCorpus: false,
+    usesRenderInventory: false,
+  },
 };
+
+/** Generated, manifested fixtures that sit outside test/formats. */
+const NON_FORMAT_FIXTURE_PAYLOADS = ["test/xml/reader-fixtures.json"] as const;
 
 interface FixtureSpec {
   readonly generator: string;
@@ -469,12 +483,16 @@ const FORMAT_DIRECTORIES = readdirSync(FORMATS_ROOT, { withFileTypes: true })
   .map((entry) => entry.name)
   .sort();
 const ALL_FORMAT_JSON_PAYLOADS = filesUnder(FORMATS_ROOT, (name) => name.endsWith(".json"));
-const FIXTURE_PAYLOADS = FORMAT_DIRECTORIES.flatMap((format) =>
+const FORMAT_FIXTURE_PAYLOADS = FORMAT_DIRECTORIES.flatMap((format) =>
   FIXTURE_BASENAMES.filter((name) => existsSync(join(FORMATS_ROOT, format, name))).map(
     (name) => `test/formats/${format}/${name}`,
   ),
-).sort();
-const FIXTURE_MANIFESTS = filesUnder(FORMATS_ROOT, (name) => name.endsWith(".manifest.yaml"));
+);
+const FIXTURE_PAYLOADS = [...FORMAT_FIXTURE_PAYLOADS, ...NON_FORMAT_FIXTURE_PAYLOADS].sort();
+const FIXTURE_MANIFESTS = [
+  ...filesUnder(FORMATS_ROOT, (name) => name.endsWith(".manifest.yaml")),
+  ...filesUnder(join(REPO_ROOT, "test", "xml"), (name) => name.endsWith(".manifest.yaml")),
+].sort();
 const EXPECTED_FIXTURE_MANIFESTS = FIXTURE_PAYLOADS.map((relative) =>
   relative.replace(/\.json$/, ".manifest.yaml"),
 ).sort();
@@ -552,7 +570,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
   });
 
   it("accounts for every other per-format JSON payload as an explicit legacy gap", () => {
-    expect([...FIXTURE_PAYLOADS, ...LEGACY_FORMAT_FIXTURES].sort()).toStrictEqual(
+    expect([...FORMAT_FIXTURE_PAYLOADS, ...LEGACY_FORMAT_FIXTURES].sort()).toStrictEqual(
       ALL_FORMAT_JSON_PAYLOADS,
     );
   });
@@ -1097,6 +1115,52 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         ).length;
         expect(integerField(record.payload, corpusCountField, record.relative)).toBe(fromCorpus);
         expect(fromCorpus).toBeGreaterThan(50);
+      } else if (record.spec.shape === "xml-reader") {
+        // A row is one input and what the gem's reader did with it: the tree
+        // its models receive, or the exception class it refused with.
+        expectExactKeys(
+          record.payload,
+          [
+            "$comment",
+            "schema",
+            "format",
+            "adapter",
+            "fuzzSeed",
+            "encodingTable",
+            "caseCount",
+            "readCount",
+            "raisedCount",
+            "cases",
+          ],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        const read = rows.filter((row, index) => {
+          const item = mapping(row, `${record.relative}.cases[${index}]`);
+          stringField(item, "group", record.relative);
+          stringValue(item, "input", record.relative);
+          const hasRoot = item.root !== undefined;
+          if (hasRoot) {
+            expectExactKeys(
+              item,
+              ["group", "id", "input", "root"],
+              `${record.relative}.cases[${index}]`,
+            );
+            mapping(item.root, `${record.relative}.cases[${index}].root`);
+          } else {
+            expectExactKeys(
+              item,
+              ["group", "id", "input", "raises"],
+              `${record.relative}.cases[${index}]`,
+            );
+            stringField(item, "raises", record.relative);
+          }
+          return hasRoot;
+        }).length;
+        expect(integerField(record.payload, "readCount", record.relative)).toBe(read);
+        expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
+          rows.length - read,
+        );
       } else {
         expectExactKeys(
           record.payload,

@@ -7,7 +7,7 @@ MathML/OMML *input*. On `main`: number formatting (#126, #133, #143, #146), and
 evaluation's arithmetic and function slices (#152, #155), with eight functions
 still unported pending a licensing decision (`src/evaluation/index.ts`).
 MathML/OMML input is deferred (settled 2026-09-16, #122;
-[open decisions](../open-decisions.md)). Three of the six exit criteria below are checked.
+[open decisions](../open-decisions.md)). Two of the six exit criteria below are checked.
 
 Numbered work items are added to this directory when the phase opens.
 
@@ -74,10 +74,10 @@ land with them, and only the unused modes wait for a phase of their own.
       with a nonzero count asserted per mode, so a mode with no case fails
       rather than passing quietly.
       (done: `test/formatting/number-formatter-numeric-pipeline.spec.ts:158` over the pinned `calls/1` cases; checked 2026-09-24)
-- [x] Evaluation: cases pairing a formula and bindings with the gem's result,
+- [ ] Evaluation: cases pairing a formula and bindings with the gem's result,
       count asserted nonzero, including one that hits the iteration cap — with
       the cap lowered for the test, not by running 100,000 iterations.
-      (done: #155, merged with checks green (`gh pr view 155`); at `39f5dd4`, `test/evaluation/evaluate.spec.ts:174-175`, and fixture rows `sum-custom-cap-within`/`-over` with the cap lowered to 5; the nonzero assertion counts all rows, so nothing yet fails if the cap rows alone are removed; checked 2026-09-24)
+      (met except the cap assertion: #155, merged with checks green (`gh pr view 155`); at `39f5dd4`, `test/evaluation/evaluate.spec.ts:174-175`, and fixture rows `sum-custom-cap-within`/`-over` with the cap lowered to 5; but the nonzero assertion counts all rows, so removing the cap rows alone fails nothing — this box stays open until a test asserts a cap case is present; checked 2026-09-28)
 - [ ] MathML/OMML input, if it is built here: parse-direction cases for both,
       each with a nonzero count.
 - [ ] Isolation assertions proving locale data stays out of unrelated subpaths.

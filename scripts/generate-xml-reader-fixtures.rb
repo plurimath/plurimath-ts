@@ -304,34 +304,44 @@ module XmlReaderProbe
     when :element
       moxml = node.instance_variable_get(:@moxml_node)
       native = moxml.native
-      out = { "element" => node.name }
-      out["prefix"] = node.namespace_prefix if node.namespace_prefix
+      out = { "element" => string(node.name) }
+      out["prefix"] = string(node.namespace_prefix) if node.namespace_prefix
       uri = moxml.namespace&.uri
       out["namespace"] = string(uri) if uri
-      out["attributes"] = node.attributes.map { |name, attr| [name, attr.value] }
+      out["attributes"] = node.attributes.map { |name, attr| [string(name), string(attr.value)] }
       out["xmlns"] = (native.attributes || {}).filter_map do |name, value|
         name = name.to_s
-        [name, string(value)] if name.start_with?("xmlns")
+        [string(name), string(value)] if name.start_with?("xmlns")
       end
       out["children"] = node.children.map { |child| dump(child) }
       out
-    when :text then { "text" => node.text }
-    when :cdata then { "cdata" => node.text }
-    when :comment then { "comment" => node.text }
-    when :processing_instruction then { "pi" => node.name, "text" => node.text }
+    when :text then { "text" => string(node.text) }
+    when :cdata then { "cdata" => string(node.text) }
+    when :comment then { "comment" => string(node.text) }
+    when :processing_instruction then { "pi" => string(node.name), "text" => string(node.text) }
     else raise "unexpected node type #{node.node_type.inspect}"
     end
   end
 
+  # Every string the tree carries, as JSON can hold it.
+  #
   # Ox decodes `&#...;` in attribute values into raw bytes, and only text and
   # ordinary attribute values later pass through a regex that rejects invalid
   # UTF-8. A namespace declaration is never matched against one, so an
-  # invalid byte sequence can survive into it; JSON cannot carry that as a
-  # string, so it is recorded as its bytes.
+  # invalid byte sequence can survive into it: recorded as `invalidUtf8` bytes.
+  #
+  # Under an XML declaration naming another encoding, the gem's strings carry
+  # that encoding. They are recorded transcoded to UTF-8 when Ruby can do it,
+  # and as `bytes` plus the encoding's name when it cannot.
   def string(value)
-    return value if value.valid_encoding?
+    return value if value.nil?
+    if value.encoding == Encoding::UTF_8
+      return value.valid_encoding? ? value : { "invalidUtf8" => value.b.unpack1("H*") }
+    end
 
-    { "invalidUtf8" => value.b.unpack1("H*") }
+    value.encode(Encoding::UTF_8)
+  rescue EncodingError
+    { "bytes" => value.b.unpack1("H*"), "encoding" => value.encoding.name }
   end
 
   def measure(input)

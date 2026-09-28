@@ -563,22 +563,30 @@ const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: strin
   ...FIXTURE_GENERATOR_HASHES,
 ];
 
-/** A string, or a byte string the gem held as invalid UTF-8 (`{invalidUtf8: hex}`). */
+/**
+ * A string; or bytes the gem held as invalid UTF-8 (`{invalidUtf8}`); or bytes
+ * in a declared encoding Ruby could not transcode (`{bytes, encoding}`).
+ */
 function expectXmlReaderString(value: unknown, at: string): void {
   if (typeof value === "string") return;
   const record = mapping(value, at);
-  expectExactKeys(record, ["invalidUtf8"], at);
-  expect(stringField(record, "invalidUtf8", at)).toMatch(/^(?:[0-9a-f]{2})+$/);
+  if ("invalidUtf8" in record) {
+    expectExactKeys(record, ["invalidUtf8"], at);
+    expect(stringField(record, "invalidUtf8", at)).toMatch(/^(?:[0-9a-f]{2})+$/);
+    return;
+  }
+  expectExactKeys(record, ["bytes", "encoding"], at);
+  expect(stringField(record, "bytes", at)).toMatch(/^(?:[0-9a-f]{2})+$/);
+  stringField(record, "encoding", at);
 }
 
-function expectXmlReaderPairs(value: unknown, at: string, values: "string" | "reader"): void {
+function expectXmlReaderPairs(value: unknown, at: string): void {
   if (!Array.isArray(value)) throw new Error(`${at} must be an array`);
   for (const [index, pair] of value.entries()) {
     if (!Array.isArray(pair) || pair.length !== 2)
       throw new Error(`${at}[${index}] must be a pair`);
-    expect(typeof pair[0], `${at}[${index}][0]`).toBe("string");
-    if (values === "string") expect(typeof pair[1], `${at}[${index}][1]`).toBe("string");
-    else expectXmlReaderString(pair[1], `${at}[${index}][1]`);
+    expectXmlReaderString(pair[0], `${at}[${index}][0]`);
+    expectXmlReaderString(pair[1], `${at}[${index}][1]`);
   }
 }
 
@@ -589,13 +597,13 @@ function expectXmlReaderNode(value: unknown, at: string): void {
     expectXmlReaderElement(node, at);
   } else if ("pi" in node) {
     expectExactKeys(node, ["pi", "text"], at);
-    stringValue(node, "pi", at);
-    stringValue(node, "text", at);
+    expectXmlReaderString(node.pi, `${at}.pi`);
+    expectXmlReaderString(node.text, `${at}.text`);
   } else {
-    const [kind] = Object.keys(node);
+    const kind = String(Object.keys(node)[0]);
     expect(["text", "cdata", "comment"], `${at}: node kind`).toContain(kind);
-    expectExactKeys(node, [String(kind)], at);
-    stringValue(node, String(kind), at);
+    expectExactKeys(node, [kind], at);
+    expectXmlReaderString(node[kind], `${at}.${kind}`);
   }
 }
 
@@ -613,11 +621,11 @@ function expectXmlReaderElement(value: unknown, at: string): void {
     ],
     at,
   );
-  if (element.element !== null) stringValue(element, "element", at);
-  if ("prefix" in element) stringValue(element, "prefix", at);
+  if (element.element !== null) expectXmlReaderString(element.element, `${at}.element`);
+  if ("prefix" in element) expectXmlReaderString(element.prefix, `${at}.prefix`);
   if ("namespace" in element) expectXmlReaderString(element.namespace, `${at}.namespace`);
-  expectXmlReaderPairs(element.attributes, `${at}.attributes`, "string");
-  expectXmlReaderPairs(element.xmlns, `${at}.xmlns`, "reader");
+  expectXmlReaderPairs(element.attributes, `${at}.attributes`);
+  expectXmlReaderPairs(element.xmlns, `${at}.xmlns`);
   const children = arrayField(element, "children", at);
   for (const [index, child] of children.entries()) {
     expectXmlReaderNode(child, `${at}.children[${index}]`);

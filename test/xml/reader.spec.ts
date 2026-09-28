@@ -20,23 +20,26 @@ import {
   type XmlReadNode,
 } from "../../src/xml/index";
 
-type FixtureString = string | { readonly invalidUtf8: string };
+type FixtureString =
+  | string
+  | { readonly invalidUtf8: string }
+  | { readonly bytes: string; readonly encoding: string };
 
 interface FixtureElement {
-  readonly element: string | null;
-  readonly prefix?: string;
+  readonly element: FixtureString | null;
+  readonly prefix?: FixtureString;
   readonly namespace?: FixtureString;
-  readonly attributes: readonly (readonly [string, string])[];
-  readonly xmlns: readonly (readonly [string, FixtureString])[];
+  readonly attributes: readonly (readonly [FixtureString, FixtureString])[];
+  readonly xmlns: readonly (readonly [FixtureString, FixtureString])[];
   readonly children: readonly FixtureNode[];
 }
 
 type FixtureNode =
   | FixtureElement
-  | { readonly text: string }
-  | { readonly cdata: string }
-  | { readonly comment: string }
-  | { readonly pi: string; readonly text: string };
+  | { readonly text: FixtureString }
+  | { readonly cdata: FixtureString }
+  | { readonly comment: FixtureString }
+  | { readonly pi: FixtureString; readonly text: FixtureString };
 
 interface FixtureRow {
   readonly id: string;
@@ -68,28 +71,36 @@ const FIXTURE = JSON.parse(
  */
 function fixtureString(value: FixtureString): string {
   if (typeof value === "string") return value;
-  // biome-ignore lint/style/useNamingConvention: the DOM option is spelled `ignoreBOM`.
-  return new TextDecoder("utf-8", { ignoreBOM: true }).decode(
-    Buffer.from(value.invalidUtf8, "hex"),
-  );
+  if ("invalidUtf8" in value) {
+    // biome-ignore lint/style/useNamingConvention: the DOM option is spelled `ignoreBOM`.
+    return new TextDecoder("utf-8", { ignoreBOM: true }).decode(
+      Buffer.from(value.invalidUtf8, "hex"),
+    );
+  }
+  // A string in an encoding Ruby cannot transcode to UTF-8: only ever in the
+  // encoding divergence, and never equal to anything the reader returns.
+  return `\u0000${value.encoding}:${value.bytes}`;
 }
 
 function expectedNode(node: FixtureNode): XmlReadNode {
   if ("element" in node) return expectedElement(node);
-  if ("pi" in node) return { kind: "pi", target: node.pi, text: node.text };
-  if ("cdata" in node) return { kind: "cdata", text: node.cdata };
-  if ("comment" in node) return { kind: "comment", text: node.comment };
-  return { kind: "text", text: node.text };
+  if ("pi" in node)
+    return { kind: "pi", target: fixtureString(node.pi), text: fixtureString(node.text) };
+  if ("cdata" in node) return { kind: "cdata", text: fixtureString(node.cdata) };
+  if ("comment" in node) return { kind: "comment", text: fixtureString(node.comment) };
+  return { kind: "text", text: fixtureString(node.text) };
 }
 
 function expectedElement(node: FixtureElement): XmlReadElement {
   return {
     kind: "element",
-    name: node.element,
-    prefix: node.prefix ?? null,
+    name: node.element === null ? null : fixtureString(node.element),
+    prefix: node.prefix === undefined ? null : fixtureString(node.prefix),
     namespace: node.namespace === undefined ? null : fixtureString(node.namespace),
-    attributes: node.attributes,
-    xmlns: node.xmlns.map(([name, value]) => [name, fixtureString(value)] as const),
+    attributes: node.attributes.map(
+      ([name, value]) => [fixtureString(name), fixtureString(value)] as const,
+    ),
+    xmlns: node.xmlns.map(([name, value]) => [fixtureString(name), fixtureString(value)] as const),
     children: node.children.map(expectedNode),
   };
 }

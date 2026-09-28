@@ -11,8 +11,9 @@
 // Requires `ruby` on PATH — the oracle's Ruby, whose `Math.sinh` is glibc's.
 //
 // The exact value is the port's own `BigInt` computation (`exactHyperbolic`);
-// `--reference N` also checks the correctly rounded double of `N` samples per
-// function against `scripts/lib/libm-reference.rb` (BigDecimal), so the
+// every run also checks the correctly rounded double of about
+// `REFERENCE_COUNT` samples per function, and of every glibc miss in a banded
+// region, against `scripts/lib/libm-reference.rb` (BigDecimal), so the
 // port's arithmetic is checked independently of itself.
 //
 // Per function and region (`REGIONS`), over the seeded sample
@@ -271,6 +272,7 @@ function hyperbolicSamples(fn, branches, scale, regions) {
 function rubyAnswers(fn, hexes) {
   const script = `
     require "json"
+    abort "REFUSING: the oracle's Ruby is 4.0.1; this is #{RUBY_VERSION}" unless RUBY_VERSION == "4.0.1"
     xs = JSON.parse($stdin.read)
     out = xs.map do |h|
       x = [h].pack("H*").unpack1("G")

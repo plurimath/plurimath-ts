@@ -203,11 +203,11 @@ export const BRANCH = {
 
 /**
  * Each function's regions and bands, from
- * `scripts/measure-libm-hyperbolic-glibc.mjs` (seed `20260928`, 646,167
- * arguments per function; `TODO.plan/deferred.md`, "Evaluation: the
- * hyperbolic functions", has every figure). A band is the worst distance
- * from the midpoint of any measured glibc miss in the region, times two,
- * rounded up to a clean fraction. A region is refused (`null`) where glibc's
+ * `scripts/measure-libm-hyperbolic-glibc.mjs` (recorded with seed `20260928`,
+ * `test/evaluation/libm-hyperbolic-corpus.json`, and checked on two more
+ * seeds; `TODO.plan/deferred.md`, "Evaluation: the hyperbolic functions",
+ * has every figure). A band is at least twice the worst distance from the
+ * midpoint of any glibc miss measured in the region, as a clean fraction. A region is refused (`null`) where glibc's
  * misses reach within a few thousandths of an exact double, so its error
  * approaches or passes one ULP and no band short of the whole unit is safe:
  * the `expm1` branches of all three, and `sinh`/`cosh` between `ln(DBL_MAX)`

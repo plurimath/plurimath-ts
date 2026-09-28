@@ -464,9 +464,23 @@ HYPERBOLIC_REFUSAL_OPERANDS = {
   "coth-band-glibc-miss" => ["tanh", -2.0715767359361053],
 }.freeze
 
-def validate_hyperbolic_refusal!(id, port_refusal)
+# The C function each hyperbolic class calls (`Sech#evaluate` is
+# `divide(1.0, ::Math.cosh(x))`).
+HYPERBOLIC_C_FUNCTIONS = {
+  "sinh" => "sinh", "cosh" => "cosh", "tanh" => "tanh", "sech" => "cosh", "csch" => "sinh", "coth" => "tanh",
+}.freeze
+
+def validate_hyperbolic_refusal!(id, port_refusal, row)
   fn, x = HYPERBOLIC_REFUSAL_OPERANDS[id]
   abort "REFUSING: #{id}: marked #{port_refusal}, but no HYPERBOLIC_REFUSAL_OPERANDS entry" unless fn
+
+  # The operand table must describe the row itself: `<class>(<literal or a>)`.
+  match = row["input"]["text"].match(/\A\\?(sinh|cosh|tanh|sech|csch|coth)\((.+)\)\z/)
+  argument = match && (match[2] == "a" ? row["bindings"]["a"] : Float(match[2], exception: false))
+  unless match && HYPERBOLIC_C_FUNCTIONS[match[1]] == fn && argument.is_a?(Numeric) && argument.to_f == x
+    abort "REFUSING: #{id}: HYPERBOLIC_REFUSAL_OPERANDS says #{fn}(#{x}), but the row is " \
+          "#{row['input']['text']} with #{row['bindings'].inspect}"
+  end
 
   name, _below, inverse = HYPERBOLIC_REGIONS.fetch(fn).find { |_n, below, _i| x.abs < below }
   if port_refusal == "hyperbolic-region"
@@ -521,7 +535,7 @@ def validate_port_refusal!(id, port_refusal, row)
   when "libm-rounding-band", "libm-reduction"
     validate_libm_refusal!(id, port_refusal)
   when "hyperbolic-rounding-band", "hyperbolic-region"
-    validate_hyperbolic_refusal!(id, port_refusal)
+    validate_hyperbolic_refusal!(id, port_refusal, row)
   when "pow-rounding-band"
     operands = POW_ROUNDING_BAND_OPERANDS[id]
     abort "REFUSING: #{id}: marked pow-rounding-band, but no POW_ROUNDING_BAND_OPERANDS entry" unless operands

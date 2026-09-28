@@ -8,6 +8,9 @@
  *   1. every published subpath loads under ESM and CJS with its named exports
  *   2. each subpath's bundled graph contains only what it is allowed to
  *   3. publint and attw both pass, each against a real packed tarball
+ *   4. the root's default-exported compat class declares exactly the surface
+ *      checked in at test/fixtures/compat/plurimath-declaration.json, in both
+ *      the ESM and the CJS declaration file
  *
  * Executable subpaths are read from package.json#exports. Every one must have
  * non-empty export and graph policies below, so adding a subpath without both
@@ -23,6 +26,7 @@ import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
+import { checkDeclarationFiles } from "./lib/compat-declaration.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const pkg = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"));
@@ -368,6 +372,32 @@ for (const [subpath, conditions] of subpaths) {
         );
       }
     }
+  }
+}
+
+// 4. the compat class's declaration surface, from the BUILT declaration files
+// the root's `types` conditions name (TODO.plan/p2-output-formats/
+// 03-compat-class.md). test/gates/compat-declaration.spec.ts proves this check
+// fails on each drift class; this is where it runs against the real artifact.
+console.log("\ncompat class declarations");
+{
+  const fixture = JSON.parse(
+    readFileSync(resolve(root, "test/fixtures/compat/plurimath-declaration.json"), "utf8"),
+  );
+  const declarations = {};
+  for (const condition of ["import", "require"]) {
+    const target = pkg.exports["."]?.[condition]?.types;
+    const label = target ?? `(no "." ${condition} types condition)`;
+    const file = target === undefined ? undefined : resolve(root, target);
+    declarations[label] =
+      file !== undefined && existsSync(file) ? readFileSync(file, "utf8") : undefined;
+  }
+  const declarationFailures = checkDeclarationFiles(declarations, fixture.surface);
+  for (const message of declarationFailures) fail(message);
+  if (declarationFailures.length === 0) {
+    console.log(
+      `  ✓ ${Object.keys(declarations).join(" and ")} declare exactly the fixture's ${fixture.surface.members.length} members`,
+    );
   }
 }
 

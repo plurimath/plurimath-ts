@@ -254,7 +254,8 @@ module XmlReaderProbe
       # re-reads through the declared encoding: a name, a comment, a
       # processing instruction, CDATA and a namespace declaration.
       ["<a>x</a>", "<a>&#233;</a>", "<\u00E9/>", "<a><!--\u00E9--></a>",
-       "<a><?p \u00E9?></a>", "<a><![CDATA[\u00E9]]></a>", "<a xmlns=\"\u00E9\"/>"].map do |body|
+       "<a><?p \u00E9?></a>", "<a><![CDATA[\u00E9]]></a>", "<a xmlns=\"\u00E9\"/>",
+       "<a xmlns:p=\"\u00E9\" p:x=\"1\"/>"].map do |body|
         "<?xml version=\"1.0\" encoding=\"#{name}\"?>#{body}"
       end
     end

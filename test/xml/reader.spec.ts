@@ -130,6 +130,7 @@ const REENCODED_BODIES = new Set([
   "<a><?p \u00e9?></a>",
   "<a><![CDATA[\u00e9]]></a>",
   '<a xmlns="\u00e9"/>',
+  '<a xmlns:p="\u00e9" p:x="1"/>',
 ]);
 
 const UTF8_NAMES = new Set(FIXTURE.encodingTable.utf8.map((name) => name.toLowerCase()));
@@ -218,10 +219,11 @@ describe("readXml reproduces the gem's read", () => {
 });
 
 describe("the documented encoding divergence", () => {
-  it("exists in the fixtures, so its handling is exercised", () => {
-    // Measured: 3 bodies x the non-UTF-8 ASCII-compatible names, minus the rows
-    // where the gem happens to agree with UTF-8.
-    expect(DIVERGENT.length).toBeGreaterThan(100);
+  it("exists in the fixtures for every probe body, so its handling is exercised", () => {
+    // Every body diverges under at least one declared encoding; the exact
+    // counts per body are whatever the oracle measured, never asserted by hand.
+    const bodies = new Set(DIVERGENT.map((row) => DECLARATION.exec(row.input)?.[2]));
+    expect([...bodies].sort()).toStrictEqual([...REENCODED_BODIES].sort());
   });
 
   it("reads every such row exactly as the gem reads the body under UTF-8", () => {

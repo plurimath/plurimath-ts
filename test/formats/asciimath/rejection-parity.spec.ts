@@ -46,9 +46,9 @@ const corpus = loadPinnedCorpus();
  * pin that added `corpus/latex/rejections.yaml`, and reading it unscoped was not
  * merely noisy: `\frac{1` is a perfectly good AsciiMath expression, so
  * `parseAsciimath` ACCEPTED most of the LaTeX rejections and this suite reported
- * the port failing to refuse inputs it was never asked to refuse. The LaTeX half
- * is checked against `parseLatex` by
- * `test/formats/latex/rejection-parity.spec.ts`.
+ * the port failing to refuse inputs it was never asked to refuse. The other
+ * notations' rejections are checked against their own parsers, in
+ * `test/formats/{latex,unicodemath,html}/rejection-parity.spec.ts`.
  *
  * `parseableCases` throws on an empty match, so a pin that lost its AsciiMath
  * rejection payload fails here rather than running nothing.

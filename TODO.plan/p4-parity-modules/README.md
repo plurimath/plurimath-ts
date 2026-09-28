@@ -77,7 +77,7 @@ land with them, and only the unused modes wait for a phase of their own.
 - [x] Evaluation: cases pairing a formula and bindings with the gem's result,
       count asserted nonzero, including one that hits the iteration cap — with
       the cap lowered for the test, not by running 100,000 iterations.
-      (done: #155, merged with checks green (`gh pr view 155`); at `39f5dd4`, `test/evaluation/evaluate.spec.ts:174-175`, and fixture rows `sum-custom-cap-within`/`-over` with the cap lowered to 5; checked 2026-09-24)
+      (done: #155, merged with checks green (`gh pr view 155`); at `39f5dd4`, `test/evaluation/evaluate.spec.ts:174-175`, and fixture rows `sum-custom-cap-within`/`-over` with the cap lowered to 5; the nonzero assertion counts all rows, so nothing yet fails if the cap rows alone are removed; checked 2026-09-24)
 - [ ] MathML/OMML input, if it is built here: parse-direction cases for both,
       each with a nonzero count.
 - [ ] Isolation assertions proving locale data stays out of unrelated subpaths.

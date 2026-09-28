@@ -95,7 +95,7 @@ turns it into a named property with a one-line diff.
   (done: the corpus and round-trip layers of `test/formats/{asciimath,latex,mathml}/render-parity.spec.ts`, 236 reachable cases; checked 2026-09-24)
 - [x] The runtime-boundary tests pass: a valid structural object renders, while an
   unknown kind and a malformed known kind each raise `RenderError`.
-  (done: `test/formats/asciimath/renderer.spec.ts:864` and `:1089`, `test/formats/latex/renderer.spec.ts:2375`; checked 2026-09-24)
+  (done: `test/gates/runtime-boundary.spec.ts:79` renders a valid plain object and `:110` rejects an unknown kind, for every renderer; the gate leaves malformed slots to the format suites, where `test/formats/asciimath/renderer.spec.ts:1087` rejects a `FencedNode` with a null slot; checked 2026-09-28)
 - [x] The package-isolation gate shows `/asciimath` carrying no MathML or LaTeX
   data, and `/mathml` carrying no parser.
   (done: `scripts/gate-package.mjs:191` and `:200`; `pnpm gate:package` exits 0 under Node 24; checked 2026-09-24)

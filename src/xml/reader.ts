@@ -66,10 +66,12 @@
  *   instruction (target and text), CDATA section and namespace URI through
  *   the declared encoding, wherever it sits in the tree, so non-ASCII in any
  *   of them comes out transcoded, as `?`, or as a refusal, depending on the
- *   encoding. This reader keeps UTF-8 in all of them. The fixtures probe each
- *   of those places singly, under every encoding name Ruby knows, and pin
- *   each such row to the gem's own `encoding="UTF-8"` answer for the same
- *   body; a document combining several of them is not probed as a whole.
+ *   encoding. This reader keeps UTF-8 in all of them. The fixtures probe an
+ *   element name, a comment, PI text (not a PI target), CDATA, a default and
+ *   a prefixed namespace URI, each singly, under every encoding name Ruby
+ *   knows except the four environment-dependent ones below, and pin each
+ *   such row to the gem's own `encoding="UTF-8"` answer for the same body.
+ *   PI targets and documents combining several places are not probed.
  * - `locale`, `external`, `filesystem` and `internal` resolve through the Ruby
  *   process's environment; they are read as UTF-8, which is what they are in
  *   the oracle's environment (under `LC_ALL=C` the gem would differ).

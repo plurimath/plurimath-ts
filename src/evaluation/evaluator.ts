@@ -50,6 +50,7 @@ import {
   mathSqrt,
   mathTan,
 } from "./libm";
+import { mathCosh, mathSinh, mathTanh } from "./libm-hyperbolic";
 import {
   absolute,
   ceilOf,
@@ -461,6 +462,14 @@ const FUNCTION_EVALUATORS: ReadonlyMap<string, FunctionEvaluator> = new Map<
   ["Cot", reciprocal(mathTan)],
   ["Sec", reciprocal(mathCos)],
   ["Csc", reciprocal(mathSin)],
+  ["Sinh", mathFunction(mathSinh)],
+  ["Cosh", mathFunction(mathCosh)],
+  ["Tanh", mathFunction(mathTanh)],
+  // Ruby: `Sech`/`Csch`/`Coth#evaluate` — `evaluator.divide(1.0, ::Math.cosh(x))`
+  // (`sinh`, `tanh`): `csch` and `coth` of a zero raise `DivisionByZeroError`.
+  ["Sech", reciprocal(mathCosh)],
+  ["Csch", reciprocal(mathSinh)],
+  ["Coth", reciprocal(mathTanh)],
 ]);
 
 /**

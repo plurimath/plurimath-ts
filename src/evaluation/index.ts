@@ -13,9 +13,10 @@
  * `Arctan`, `Exp`, `Ln` and `Sqrt` (`libm.ts`: correctly rounded, refused
  * where glibc's answer is not reliably the correctly rounded one), `Lg`
  * (glibc's `log10`, `libm-log10.ts`) and `Log` with its base and exponent
- * (glibc's `log2`, `libm-log2.ts`). Every node the gem evaluates but this
- * port has not ported (`Sinh`, `Cosh`, `Tanh`, `Sech`, `Csch` and `Coth`:
- * `TODO.plan/deferred.md` has why) raises `core`'s `UnsupportedFeatureError`
+ * (glibc's `log2`, `libm-log2.ts`), and `Sinh`, `Cosh`, `Tanh`, `Sech`,
+ * `Csch` and `Coth` (`libm-hyperbolic.ts`: correctly rounded where glibc's
+ * answer reliably is, refused elsewhere; `TODO.plan/deferred.md` has the
+ * regions and why). A refusal raises `core`'s `UnsupportedFeatureError`
  * (feature `"evaluate"`): a port gap, not an answer about the expression.
  * `UnsupportedExpressionError` is kept for exactly the refusals the gem
  * itself makes — a malformed number, a missing operand, a stray operator or

@@ -210,7 +210,7 @@ function roundFixed(value: bigint, rounding: RoundingBand | null): number {
 }
 
 /** `|x|` in fixed point, truncated; `x` finite. */
-function toFixed(x: number): bigint {
+export function toFixed(x: number): bigint {
   if (x === 0) return 0n;
   const { mantissa, exponent } = decompose(Math.abs(x));
   const shift = exponent + Number(W);

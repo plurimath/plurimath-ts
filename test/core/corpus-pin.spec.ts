@@ -244,16 +244,16 @@ describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every payload the provenance records, matched by path", () => {
-    // 41 case payloads (19 AsciiMath, 18 LaTeX, 4 Unicode), 2 rejection
-    // payloads (one per input format that carries rejections), and 1 calls/1
-    // payload. Counted apart on purpose: a rejection payload carries no
+    // 41 case payloads (19 AsciiMath, 18 LaTeX, 4 Unicode), 4 rejection
+    // payloads (one per input format that carries rejections: AsciiMath,
+    // LaTeX, Unicode, HTML), and 7 calls/1 payloads. Counted apart on purpose: a rejection payload carries no
     // rendering and a calls payload carries a render under something other
     // than default options, so folding either into the case count would
     // inflate what "the corpus covers" claims.
     expect(corpus.payloads.length).toBe(41);
-    expect(corpus.rejectionPayloads.length).toBe(2);
+    expect(corpus.rejectionPayloads.length).toBe(4);
     expect(corpus.callsPayloads.length).toBe(7);
-    expect(corpus.provenance.payloads.length).toBe(50);
+    expect(corpus.provenance.payloads.length).toBe(52);
     assertExpectedPayloads(corpus);
   });
 
@@ -285,8 +285,8 @@ describe("the pin as shipped", () => {
       ["latex", 125],
       ["unicode", 20],
     ]);
-    // The rejections carry only two of the three notations, and are counted
-    // per format for the same reason. This is what makes scoping the
+    // The rejections carry four notations, HTML among them though HTML has no
+    // case payload, and are counted per format for the same reason. This is what makes scoping the
     // rejection suites load-bearing: each parser may only be handed the cases
     // written in the notation it reads (`test/formats/*/rejection-parity.spec.ts`).
     const rejectionsByFormat = new Map<string, number>();
@@ -298,7 +298,9 @@ describe("the pin as shipped", () => {
     }
     expect([...rejectionsByFormat.entries()].sort()).toStrictEqual([
       ["asciimath", 13],
+      ["html", 38],
       ["latex", 14],
+      ["unicode", 52],
     ]);
   });
 

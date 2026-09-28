@@ -739,7 +739,7 @@ module CorpusGenerator
   end
 
   def verify_pending_pin_payload(entry)
-    path = File.join(pin_root, "corpus", entry.fetch("path"))
+    path = pin_file(File.join(pin_root, "corpus"), entry.fetch("path"), "a provenance payload path")
     missing_pin!("#{path} is listed in corpus/provenance.yaml but is not on disk") unless
       File.exist?(path)
 
@@ -752,13 +752,59 @@ module CorpusGenerator
     []
   end
 
+  # A provenance path must be plain and relative: no leading `/`, no `\\`, no
+  # empty, `.` or `..` segment. Mirrors `assertPlainRelativePath` in
+  # test/core/corpus-pin.ts.
+  def assert_plain_relative_path!(path, where)
+    return unless path.start_with?("/") || path.include?("\\") ||
+                  path.split("/", -1).any? { |segment| ["", ".", ".."].include?(segment) }
+
+    raise Error, "#{where}: #{path.inspect} is not a plain relative path"
+  end
+
+  # Resolves a provenance path under `base`, refusing a symbolic link or a real
+  # path outside `base`. Mirrors `pinFile` in test/core/corpus-pin.ts.
+  def pin_file(base, relative, where)
+    assert_plain_relative_path!(relative, where)
+    file = File.join(base, *relative.split("/"))
+    return file unless File.exist?(file) || File.symlink?(file)
+    raise Error, "#{file}: #{where} names a symbolic link" if File.symlink?(file)
+
+    real_base = File.realpath(base)
+    real = File.realpath(file)
+    unless real.start_with?("#{real_base}/")
+      raise Error, "#{file}: #{where} resolves to #{real}, outside #{real_base}"
+    end
+
+    file
+  end
+
+  # The generator the provenance names, checked against its recorded sha256.
+  def verify_pin_generator!(generator, provenance_path)
+    path, digest = generator.values_at("path", "sha256")
+    unless path.is_a?(String) && digest.is_a?(String)
+      raise Error, "#{provenance_path}: generator needs a string path and sha256"
+    end
+
+    file = pin_file(pin_root, path, "#{provenance_path}: generator.path")
+    missing_pin!("#{file} is the recorded generator but is not on disk") unless File.file?(file)
+    return if sha256(File.binread(file)) == digest
+
+    raise Error, "#{file} does not match corpus/provenance.yaml generator.sha256; the " \
+                 "pinned checkout was edited in place. Restore it with " \
+                 "`git -C #{PIN_RELATIVE_PATH} checkout .`"
+  end
+
   # `provenance/3` lists the data files the testsuite's generator read besides
   # itself (the MathML and OMML seed lists) under `generator.inputs`, relative
   # to the testsuite root. Each is checked against the pinned checkout the
   # same way a payload is; the list is required and may be empty.
   def verify_pin_generator_inputs!(provenance, provenance_path)
     generator = provenance["generator"]
-    inputs = generator.is_a?(Hash) ? generator["inputs"] : nil
+    raise Error, "#{provenance_path}: generator must be a mapping" unless generator.is_a?(Hash)
+
+    verify_pin_generator!(generator, provenance_path)
+    inputs = generator["inputs"]
     raise Error, "#{provenance_path}: generator.inputs must be a list" unless inputs.is_a?(Array)
 
     seen = {}
@@ -770,10 +816,7 @@ module CorpusGenerator
       unless path.is_a?(String) && digest.is_a?(String) && size.is_a?(Integer)
         raise Error, "#{at} needs a string path, a string sha256 and an integer bytes"
       end
-      if path.start_with?("/") || path.include?("\\") ||
-         path.split("/", -1).any? { |segment| ["", ".", ".."].include?(segment) }
-        raise Error, "#{at}: #{path.inspect} is not a plain path relative to the testsuite root"
-      end
+      assert_plain_relative_path!(path, at)
       raise Error, "#{at}: #{path.inspect} is listed twice" if seen[path]
 
       seen[path] = true
@@ -781,7 +824,7 @@ module CorpusGenerator
     end
 
     records.each do |path, digest, size|
-      file = File.join(pin_root, *path.split("/"))
+      file = pin_file(pin_root, path, "#{provenance_path}: generator.inputs")
       missing_pin!("#{file} is listed in generator.inputs but is not on disk") unless File.file?(file)
       bytes = File.binread(file)
       next if bytes.bytesize == size && sha256(bytes) == digest
@@ -804,7 +847,7 @@ module CorpusGenerator
   CALLS_SCHEMA = "plurimath-corpus/calls/1"
 
   def read_pin_payload(entry)
-    path = File.join(pin_root, "corpus", entry.fetch("path"))
+    path = pin_file(File.join(pin_root, "corpus"), entry.fetch("path"), "a provenance payload path")
     missing_pin!("#{path} is listed in corpus/provenance.yaml but is not on disk") unless
       File.exist?(path)
 

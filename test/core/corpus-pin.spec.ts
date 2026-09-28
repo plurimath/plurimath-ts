@@ -11,7 +11,15 @@
  */
 
 import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -146,6 +154,10 @@ function syntheticPin(options: SyntheticOptions = {}): string {
     writeFileSync(join(root, "corpus", "asciimath", options.extraFile), TINY_PAYLOAD);
   }
 
+  const generator = "# A synthetic generator.\n";
+  mkdirSync(join(root, "scripts"), { recursive: true });
+  writeFileSync(join(root, "scripts", "generate-corpus.rb"), generator);
+
   const bytes = Buffer.from(body, "utf8");
   const provenance = [
     "# Synthetic provenance.",
@@ -155,6 +167,7 @@ function syntheticPin(options: SyntheticOptions = {}): string {
     "warnings: []",
     "generator:",
     "  path: scripts/generate-corpus.rb",
+    `  sha256: ${createHash("sha256").update(generator).digest("hex")}`,
     "  inputs: []",
     "oracle:",
     "  gem: plurimath",
@@ -526,6 +539,36 @@ describe("a pin that was not generated the canonical way is refused", () => {
     expect(() => loadPinnedCorpus(root)).toThrow("listed in generator.inputs but not on disk");
   });
 
+  it("refuses a generator edited in place", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "scripts", "generate-corpus.rb"), (text) => `${text}# edited\n`);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("generate-corpus.rb: sha256");
+  });
+
+  it("refuses a generator input replaced by a symbolic link", () => {
+    const root = damagedCopy((where) => {
+      const seed = join(where, "scripts", "seeds", "omml.yaml");
+      const outside = join(scratch(), "omml.yaml");
+      writeFileSync(outside, readFileSync(seed));
+      rmSync(seed);
+      symlinkSync(outside, seed);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("symbolic link");
+  });
+
+  it("refuses a pending-format payload path that leaves corpus/", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "corpus", "provenance.yaml"), (text) =>
+        text.replace("- path: mathml/roots.yaml", "- path: mathml/../../outside.yaml"),
+      );
+      // Moved to where the escaping path points, so only the path is wrong.
+      cpSync(join(where, "corpus", "mathml", "roots.yaml"), join(where, "outside.yaml"));
+      rmSync(join(where, "corpus", "mathml", "roots.yaml"));
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("not a plain relative path");
+  });
+
   it("refuses a provenance with no generator.inputs", () => {
     const root = syntheticPin({ provenance: (text) => text.replace("  inputs: []\n", "") });
     expect(() => loadPinnedCorpus(root)).toThrow("inputs");
@@ -539,7 +582,7 @@ describe("a pin that was not generated the canonical way is refused", () => {
           "  inputs:\n  - path: ../outside.yaml\n    sha256: x\n    bytes: 0\n",
         ),
     });
-    expect(() => loadPinnedCorpus(root)).toThrow("not a plain path");
+    expect(() => loadPinnedCorpus(root)).toThrow("not a plain relative path");
   });
 
   it("refuses a generator input listed twice", () => {

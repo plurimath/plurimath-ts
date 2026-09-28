@@ -31,8 +31,8 @@
 
 import { type SpawnSyncReturns, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseYaml, type YamlValue } from "./corpus-yaml";
 
@@ -470,6 +470,42 @@ function readProvenance(root: string): PinProvenance {
 }
 
 /**
+ * A provenance path must be a plain relative path: no leading `/`, no `\\`,
+ * and no empty, `.` or `..` segment. Stricter than the testsuite schema's
+ * pattern on purpose; every path the pin records meets it.
+ */
+function assertPlainRelativePath(path: string, where: string): void {
+  if (
+    path.startsWith("/") ||
+    path.includes("\\") ||
+    path.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
+  ) {
+    throw new Error(`${where}: path "${path}" is not a plain relative path.`);
+  }
+}
+
+/**
+ * Resolves a provenance path under `base` and refuses anything that could
+ * point outside it: a symbolic link, or a real path that leaves `base`.
+ * Returns the path even when nothing is there, so each caller reports a
+ * missing file in its own words.
+ */
+function pinFile(base: string, relative: string, where: string): string {
+  assertPlainRelativePath(relative, where);
+  const file = join(base, ...relative.split("/"));
+  if (!existsSync(file)) return file;
+  if (lstatSync(file).isSymbolicLink()) {
+    throw new Error(`${file}: ${where} names a symbolic link; the pin must hold the file itself.`);
+  }
+  const realBase = realpathSync(base);
+  const real = realpathSync(file);
+  if (!real.startsWith(`${realBase}${sep}`)) {
+    throw new Error(`${file}: ${where} resolves to ${real}, outside ${realBase}.`);
+  }
+  return file;
+}
+
+/**
  * `generator.inputs` lists the data files the generator read besides itself
  * (the MathML and OMML seed lists), each with its sha256 and byte count,
  * relative to the testsuite's root. Required, and may be empty. Every entry is
@@ -479,21 +515,34 @@ function readProvenance(root: string): PinProvenance {
 function verifyGeneratorInputs(root: string, path: string, document: Mapping): void {
   const where = `${path} generator`;
   const generator = asMapping(requiredPresent(document, "generator", path), where);
+  // The generator itself, which neither reader checked before `/3`: the
+  // payloads are only as trustworthy as the script that wrote them, and an
+  // input list verified against a generator nobody checked vouches for little.
+  const generatorPath = requiredString(generator, "path", where);
+  assertPlainRelativePath(generatorPath, `${where}.path`);
+  const generatorSha256 = requiredString(generator, "sha256", where);
+  const generatorFile = pinFile(root, generatorPath, where);
+  if (!existsSync(generatorFile)) {
+    throw new Error(
+      `${generatorFile}: the generator provenance names is not on disk. Restore it with ` +
+        `\`git -C ${PIN_RELATIVE_PATH} checkout .\`.`,
+    );
+  }
+  const generatorDigest = createHash("sha256").update(readFileSync(generatorFile)).digest("hex");
+  if (generatorDigest !== generatorSha256) {
+    throw new Error(
+      `${generatorFile}: sha256 ${generatorDigest}, provenance records ${generatorSha256}. ` +
+        "The pinned checkout has been edited in place; restore it with " +
+        `\`git -C ${PIN_RELATIVE_PATH} checkout .\`.`,
+    );
+  }
   const inputs = requiredSequence(generator, "inputs", where);
   const seen = new Set<string>();
   const records = inputs.map((entry, index): PayloadRecord => {
     const at = `${where}.inputs[${index}]`;
     const record = asMapping(entry, at);
     const inputPath = requiredString(record, "path", at);
-    if (
-      inputPath.startsWith("/") ||
-      inputPath.includes("\\") ||
-      inputPath.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
-    ) {
-      throw new Error(
-        `${at}: path "${inputPath}" is not a plain path relative to the testsuite root.`,
-      );
-    }
+    assertPlainRelativePath(inputPath, at);
     if (seen.has(inputPath)) throw new Error(`${at}: "${inputPath}" is listed twice.`);
     seen.add(inputPath);
     return {
@@ -505,7 +554,7 @@ function verifyGeneratorInputs(root: string, path: string, document: Mapping): v
   // Shape first, then the files: a malformed entry is reported as such rather
   // than as a digest mismatch on an earlier one.
   for (const record of records) {
-    const file = join(root, ...record.path.split("/"));
+    const file = pinFile(root, record.path, `${where}.inputs`);
     if (!existsSync(file)) {
       throw new Error(
         `${file}: listed in generator.inputs but not on disk. Restore it with ` +
@@ -554,7 +603,7 @@ export function isPendingReaderPayload(path: string): boolean {
 }
 
 function verifyPendingPayload(root: string, record: PayloadRecord): void {
-  const path = join(root, "corpus", ...record.path.split("/"));
+  const path = pinFile(join(root, "corpus"), record.path, "a provenance payload path");
   if (!existsSync(path)) {
     throw submoduleError(root, `${path} is listed in corpus/provenance.yaml but is not on disk`);
   }
@@ -570,7 +619,7 @@ function readPayloadDocument(
   root: string,
   record: PayloadRecord,
 ): { path: string; document: Mapping; schema: string } {
-  const path = join(root, "corpus", ...record.path.split("/"));
+  const path = pinFile(join(root, "corpus"), record.path, "a provenance payload path");
   if (!existsSync(path)) {
     throw submoduleError(root, `${path} is listed in corpus/provenance.yaml but is not on disk`);
   }

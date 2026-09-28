@@ -579,6 +579,15 @@ describe("a pin that was not generated the canonical way is refused", () => {
     expect(() => loadPinnedCorpus(root)).toThrow("passes through a symbolic link");
   });
 
+  it("refuses a symbolic-link directory hidden inside corpus/", () => {
+    const root = damagedCopy((where) => {
+      const outside = scratch();
+      writeFileSync(join(outside, "hidden.yaml"), TINY_PAYLOAD);
+      symlinkSync(outside, join(where, "corpus", "hidden"));
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("a symbolic link in the pinned corpus");
+  });
+
   it("refuses a pending-format payload path that leaves corpus/", () => {
     const root = damagedCopy((where) => {
       editFile(join(where, "corpus", "provenance.yaml"), (text) =>

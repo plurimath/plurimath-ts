@@ -396,6 +396,14 @@ function payloadFilesOnDisk(corpusDirectory: string): readonly string[] {
   const walk = (directory: string, prefix: string): void => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const child = join(directory, entry.name);
+      // A symbolic link is refused outright rather than skipped: `readdirSync`
+      // does not report a linked directory as a directory, so skipping it
+      // would hide every file behind it from the unrecorded-file check.
+      if (entry.isSymbolicLink()) {
+        throw new Error(
+          `${child}: a symbolic link in the pinned corpus; the pin must hold real files.`,
+        );
+      }
       if (entry.isDirectory()) walk(child, `${prefix}${entry.name}/`);
       else if (entry.name.endsWith(".yaml")) found.push(`${prefix}${entry.name}`);
     }

@@ -358,12 +358,14 @@ Arm's optimized-routines). The iteration cap is a per-call option,
 `EvaluationOptions`, defaulting to the gem's 100,000. Checked against
 port-local fixtures generated from the oracle
 (`test/formats/evaluation/evaluation-fixtures.json`,
-`scripts/generate-evaluation-fixtures.rb`). Still unported, and raising
-`UnsupportedFeatureError`: `Sinh`, `Cosh`, `Tanh`, `Sech`, `Csch` and `Coth`
-(`TODO.plan/deferred.md`, "Evaluation: the hyperbolic functions").
+`scripts/generate-evaluation-fixtures.rb`). `Sinh`, `Cosh`, `Tanh`, `Sech`,
+`Csch` and `Coth` are correctly rounded where glibc's answer reliably is and
+refused (`UnsupportedFeatureError`) in the regions where it is not
+(`src/evaluation/libm-hyperbolic.ts`; `TODO.plan/deferred.md`, "Evaluation:
+the hyperbolic functions").
 
-**Blocks:** the six hyperbolic functions have no permissive upstream that
-reproduces glibc's `expm1` digit for digit (`deferred.md`). There is no shared
+**Blocks:** nothing ported is missing; the hyperbolic refusal regions stay
+until a digit-exact permissive `expm1` exists (`deferred.md`). There is no shared
 case: `calls/1` carries only `number_formatter`. The `plurimath-js` compat
 surface has no `evaluate`, so this does not affect the drop-in claim.
 

@@ -170,9 +170,10 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
 
 - Reading MathML or OMML (no parser; the compat constructor and the CLI refuse
   them).
-- `evaluate()` over the gem's `Sinh`, `Cosh`, `Tanh`, `Sech`, `Csch`, `Coth`,
-  `Lg` and `Log` nodes: they raise `UnsupportedFeatureError`
-  (`src/evaluation/index.ts`).
+- `evaluate()` of `Sinh`, `Cosh`, `Tanh`, `Sech`, `Csch` and `Coth` where
+  the platform C library is not reliably within one ULP, such as `sinh(1)`
+  or `tanh(0.5)`: they raise `UnsupportedFeatureError`
+  (`src/evaluation/libm-hyperbolic.ts`).
 - A root `parse()` function.
 - UnicodeMath input beyond the grammar slice ported so far: unmatched rules
   raise `ParseError`.

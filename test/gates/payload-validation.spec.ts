@@ -941,7 +941,10 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         // linebreak-bearing input, and every refusal it records comes from
         // `evaluate`, never a parse). An optional `portRefusal` names why the
         // port refuses the row with `UnsupportedFeatureError` whatever the gem
-        // answered (the generator's header).
+        // answered (the generator's header). An optional `options` records the
+        // gem configuration the row ran under, as `evaluate()`'s per-call
+        // `EvaluationOptions` — today only `evaluationMaxIterations`, a
+        // number or `null` (no cap).
         expectExactKeys(
           record.payload,
           ["$comment", "schema", "format", "caseCount", "evaluatedCount", "raisedCount", "cases"],
@@ -967,6 +970,8 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               [
                 "argument-error",
                 "big-integer",
+                "libm-reduction",
+                "libm-rounding-band",
                 "pow-rounding-band",
                 "rational",
                 "size-limit",
@@ -975,6 +980,13 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               `${at}.portRefusal`,
             ).toContain(stringField(item, "portRefusal", at));
             base.push("portRefusal");
+          }
+          if ("options" in item) {
+            const options = mapField(item, "options", at);
+            expectExactKeys(options, ["evaluationMaxIterations"], `${at}.options`);
+            const cap = options.evaluationMaxIterations;
+            expect(cap === null || Number.isInteger(cap), `${at}.options cap`).toBe(true);
+            base.push("options");
           }
           // Ruby's own `ArgumentError` is not an evaluation error; it appears
           // only on a row the port refuses for exactly that reason, and the

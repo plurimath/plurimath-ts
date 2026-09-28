@@ -75,18 +75,21 @@
 
 import { UnsupportedFeatureError } from "../core/errors";
 
-/** Fixed-point fraction bits for the logarithm/exponential path. */
-const PRECISION = 320n;
-const ONE = 1n << PRECISION;
+/**
+ * Fixed-point fraction bits for the logarithm/exponential path — shared with
+ * `libm.ts`, whose `Math` functions use the same fixed point.
+ */
+export const PRECISION = 320n;
+export const ONE = 1n << PRECISION;
 
 /** An exact positive dyadic value `mantissa * 2^exponent`. */
-interface Dyadic {
+export interface Dyadic {
   readonly mantissa: bigint;
   readonly exponent: number;
 }
 
 /** Decomposes a finite, positive double into an integer mantissa and a binary exponent. */
-function decompose(x: number): Dyadic {
+export function decompose(x: number): Dyadic {
   const view = new DataView(new ArrayBuffer(8));
   view.setFloat64(0, x);
   const bits = view.getBigUint64(0);
@@ -112,27 +115,41 @@ function bitLength(value: bigint): number {
  */
 const NEAR_HALFWAY_BAND_INVERSE = 80n;
 
-function nearHalfwayRefusal(): never {
-  throw new UnsupportedFeatureError(
-    "evaluate",
-    "the exact power lies within 1/80 (0.0125) ULP of halfway between two doubles, where " +
-      "Ruby's answer depends on the rounding of the platform C library's pow",
-  );
+/**
+ * A refusal band: an exact result within `1/inverse` ULP of the midpoint
+ * between two doubles is refused with `refuse()` instead of rounded, because
+ * the platform C library's answer there is not reliably the correctly
+ * rounded one. `inverse` is a `bigint` so the band test stays exact.
+ */
+export interface RoundingBand {
+  readonly inverse: bigint;
+  readonly refuse: () => never;
 }
+
+const POW_BAND: RoundingBand = {
+  inverse: NEAR_HALFWAY_BAND_INVERSE,
+  refuse: () => {
+    throw new UnsupportedFeatureError(
+      "evaluate",
+      "the exact power lies within 1/80 (0.0125) ULP of halfway between two doubles, where " +
+        "Ruby's answer depends on the rounding of the platform C library's pow",
+    );
+  },
+};
 
 /**
  * Rounds `mantissa * 2^exponent` (plus a positive amount smaller than one unit
- * of `mantissa` when `sticky` is set) to the nearest double. With
- * `refuseNearHalf` (the `pow` path) a value within `NEAR_HALFWAY_BAND_INVERSE`'s
- * band of a midpoint is refused (module header); without it, an exact tie
- * rounds to even — IEEE round-to-nearest, what C's `ldexp` does on this
+ * of `mantissa` when `sticky` is set) to the nearest double. With a `band`
+ * (the `pow` path's, by default, or a `libm.ts` function's) a value within
+ * the band of a midpoint is refused (module header); with `null`, an exact
+ * tie rounds to even — IEEE round-to-nearest, what C's `ldexp` does on this
  * platform. Handles subnormal results and overflow to `Infinity`.
  */
-function roundDyadic(
+export function roundDyadic(
   mantissa: bigint,
   exponent: number,
   sticky: boolean,
-  refuseNearHalf = true,
+  band: RoundingBand | null = POW_BAND,
 ): number {
   if (mantissa === 0n) return 0;
   const top = bitLength(mantissa) - 1 + exponent;
@@ -155,13 +172,10 @@ function roundDyadic(
     const remainder = mantissa - (quotient << bigShift);
     const full = 1n << bigShift;
     // Position within the ULP is remainder/full; refuse when
-    // |remainder/full - 1/2| < 1/80, i.e. |2 remainder - full| * 80 < 2 full.
+    // |remainder/full - 1/2| < 1/inverse, i.e. |2 remainder - full| * inverse < 2 full.
     const offset = 2n * remainder - full;
-    if (
-      refuseNearHalf &&
-      (offset < 0n ? -offset : offset) * NEAR_HALFWAY_BAND_INVERSE < 2n * full
-    ) {
-      nearHalfwayRefusal();
+    if (band !== null && (offset < 0n ? -offset : offset) * band.inverse < 2n * full) {
+      band.refuse();
     }
     if (offset > 0n || (offset === 0n && sticky)) quotient += 1n;
     else if (offset === 0n && (quotient & 1n) === 1n) quotient += 1n;
@@ -212,7 +226,7 @@ function exactIntegerPower(x: number, n: number): number | null {
 }
 
 /** `2 * atanh(s)` for a fixed-point `s` with `|s| < 1/2`. */
-function twiceAtanh(s: bigint): bigint {
+export function twiceAtanh(s: bigint): bigint {
   // `>>` floors, so a negative term would settle at -1 instead of 0.
   if (s < 0n) return -twiceAtanh(-s);
   const square = (s * s) >> PRECISION;
@@ -226,10 +240,10 @@ function twiceAtanh(s: bigint): bigint {
 }
 
 /** `ln 2 = 2 atanh(1/3)`, fixed point. */
-const LN2 = twiceAtanh(ONE / 3n);
+export const LN2 = twiceAtanh(ONE / 3n);
 
 /** `ln x` for a finite, positive double, fixed point. */
-function fixedLog(x: number): bigint {
+export function fixedLog(x: number): bigint {
   const { mantissa, exponent } = decompose(x);
   // x = f * 2^k with f in [1/sqrt2, sqrt2), where the atanh series converges fast.
   let k = bitLength(mantissa) - 1 + exponent;
@@ -243,7 +257,7 @@ function fixedLog(x: number): bigint {
 }
 
 /** `exp(r)` for a fixed-point `|r| <= ln2`, fixed point. */
-function fixedExp(r: bigint): bigint {
+export function fixedExp(r: bigint): bigint {
   let term = ONE;
   let sum = 0n;
   for (let k = 1n; term !== 0n; k += 1n) {
@@ -288,6 +302,6 @@ export function correctlyRoundedPow(x: number, y: number): number {
 export function ldexp(d: number, shift: number): number {
   if (d === 0 || !Number.isFinite(d)) return d;
   const { mantissa, exponent } = decompose(Math.abs(d));
-  const magnitude = roundDyadic(mantissa, exponent + shift, false, false);
+  const magnitude = roundDyadic(mantissa, exponent + shift, false, null);
   return d < 0 ? -magnitude : magnitude;
 }

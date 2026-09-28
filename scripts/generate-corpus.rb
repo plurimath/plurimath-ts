@@ -713,10 +713,43 @@ module CorpusGenerator
     payloads = provenance["payloads"] || []
     raise Error, "#{provenance_path} lists no payloads" if payloads.empty?
 
-    cases = payloads.flat_map { |entry| read_pin_payload(entry) }
+    cases = payloads.flat_map do |entry|
+      next verify_pending_pin_payload(entry) if pending_reader_payload?(entry.fetch("path"))
+
+      read_pin_payload(entry)
+    end
     raise Error, "the pin at #{pin_root} contains no cases" if cases.empty?
 
     cases
+  end
+
+  # The MathML and OMML payloads plurimath-testsuite#21 added are pending this
+  # port's MathML and OMML readers. Their bytes are verified like any other
+  # payload's, but their cases are not returned: every consumer of
+  # `read_pin_cases` feeds the cases (or their rendered outputs) to parsers
+  # and fixtures built for the formats this port reads, and folding these in
+  # would silently widen every fixture. Mirrors `PENDING_READER_FORMATS` in
+  # test/core/corpus-pin.ts; removing a format from both is how its reader
+  # starts consuming it.
+  PENDING_READER_FORMATS = %w[mathml omml].freeze
+
+  def pending_reader_payload?(path)
+    format, rest = path.split("/", 2)
+    !rest.nil? && PENDING_READER_FORMATS.include?(format)
+  end
+
+  def verify_pending_pin_payload(entry)
+    path = File.join(pin_root, "corpus", entry.fetch("path"))
+    missing_pin!("#{path} is listed in corpus/provenance.yaml but is not on disk") unless
+      File.exist?(path)
+
+    bytes = File.binread(path)
+    if bytes.bytesize != entry.fetch("bytes") || sha256(bytes) != entry.fetch("sha256")
+      raise Error, "#{path} does not match corpus/provenance.yaml; the pinned corpus " \
+                   "was edited in place. Restore it with " \
+                   "`git -C #{PIN_RELATIVE_PATH} checkout .`"
+    end
+    []
   end
 
   # `provenance/3` lists the data files the testsuite's generator read besides

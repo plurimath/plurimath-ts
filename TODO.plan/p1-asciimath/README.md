@@ -1,7 +1,7 @@
 # P1 — AsciiMath vertical
 
-**Status: landed, with two exit items open** (the class-B runners item and the class-C
-sign-off below; neither was re-verified when this status was updated). The first end-to-end slice: AsciiMath in, model, and four
+**Status: landed, with one exit item open** (the class-C sign-off below; the
+class-B gates item was re-measured on 2026-09-28). The first end-to-end slice: AsciiMath in, model, and four
 renderers out, all proven against cases generated from the Ruby gem.
 
 ## What it delivers
@@ -23,8 +23,8 @@ Work in order; each depends on the ones before it.
 | 4 | [AsciiMath grammar](04-asciimath-grammar.md) | preprocessing + parse tree matching Parslet |
 | 5 | [AsciiMath transform](05-asciimath-transform.md) | parse tree → model |
 | 6 | [Renderers](06-renderers.md) | `toAsciimath`, `toLatex`, `toMathml` |
-| 7 | [Activate gates](07-activate-gates.md) | milestone `P1-baseline`, nine class-A gates green |
-| 8 | [Complete P1](08-p1-completion.md) | milestone `P1-completion`, the last three class-A gates and the third class-B runner |
+| 7 | [Activate gates](07-activate-gates.md) | milestone `P1-baseline`, ten class-A gates green |
+| 8 | [Complete P1](08-p1-completion.md) | milestone `P1-completion`, the last three class-A gates and two more class-B gates (`oracle-runner-unit-tests`, `differential-runner`) |
 
 Items 1–2 need a local checkout of the
 [Ruby gem](https://github.com/plurimath/plurimath), because they regenerate
@@ -104,16 +104,15 @@ has never been shown to reject anything.
 - [x] Package-isolation assertions for the real `/asciimath`, `/mathml`,
       `/latex` and `/unicodemath` subpaths.
 - [x] `pnpm check` reports thirteen active class-A gates (P1-completion in `gates.json`), all passing.
-- [ ] The three class-B runners are clean. `testsuite --check` exits 0 and
-      `differential` exits 0 with no divergences across
-      429 inputs (1,287 comparisons); the differential exceeds its 300s bound on
-      a loaded host, so it is measured on a quiet one. `repo --check` exits 1 on
-      `main` today — #40 hand-edited comments inside two generated render tables
-      and a fresh regeneration reverts them; a separate change moves those into
-      the generator.
+- [x] The four class-B gates in `gates.json` are clean, measured on `main`
+      a1c1755 against a clean `plurimath-oracle` at `00c52783`:
+      `pnpm test:oracle-unit` exits 0 (48 tests, 2026-09-28), `repo --check` exits 0 and
+      `testsuite --check` exits 0 (both re-run 2026-09-28 on a tree whose code and generated data equal a1c1755), and `differential`
+      exits 0 with no divergences across 429 inputs (1,716 comparisons, 2m33s,
+      2026-09-28).
 
-Both milestones additionally need the class-C evidence: a review round with
-findings resolved, and sign-off recorded.
+- [ ] Both milestones' class-C evidence: a review round with findings resolved,
+      and sign-off recorded.
 
 ## Scope discipline
 

@@ -606,13 +606,14 @@ name for real, so that case takes the `m:sSubSup` arm the gem takes and the
 false claim is gone.
 
 `[dist-sizes]` was not re-run as a before/after pair, and no size ceiling
-applies: `./omml` is not a published subpath yet. `tsdown.config.ts` builds
-seven entries and none of them is `src/formats/omml/`, `package.json` exports
-no `./omml`, and no OMML module is reachable from any entry that does exist —
-`grep -rl oMathPara dist/` after a full build matches nothing. So this slice
-cannot move any subpath's bytes. `package-isolation` was re-run anyway and
+applied: `./omml` was not a published subpath yet. `tsdown.config.ts` built
+seven entries and none of them was `src/formats/omml/`, `package.json` exported
+no `./omml`, and no OMML module was reachable from any entry that did exist —
+`grep -rl oMathPara dist/` after a full build matched nothing. So this slice
+could not move any subpath's bytes. `package-isolation` was re-run anyway and
 passed; the isolation and size measurements this file asks for belong to the
-slice that publishes `./omml`, which has not landed.
+slice that publishes `./omml`, which had not landed then. It has since: #112
+published `./omml`, and `package.json#exports` lists it.
 
 ### Recommended slice order
 
@@ -654,19 +655,22 @@ slice that publishes `./omml`, which has not landed.
 - [ ] One existing generator emits separate HTML and OMML symbol maps with
       `1,459` static rows each from the pinned oracle; HTML has `1,413` and OMML
       `1,415` distinct payloads under the measured baseline.
-- [ ] The dynamic `Symbol` root stays value-driven, the abstract `Paren`
+- [x] The dynamic `Symbol` root stays value-driven, the abstract `Paren`
       carrier stays absent, and named `Paren::*` subclasses are present.
-- [ ] HTML consumes strings directly; OMML consumes strings through one shared
+      (done: `src/generated/html/symbols.ts` and `src/generated/omml/symbols.ts` each carry 24 `Paren::*` ids and no bare `Paren` or `Symbol` key; the value-driven ids are routed first at `src/render/symbol/html.ts:74` and `src/formats/omml/render-shared.ts:282`; checked 2026-09-24)
+- [x] HTML consumes strings directly; OMML consumes strings through one shared
       wrapper, with no generated per-class XML templates.
+      (done: `src/render/symbol/html.ts:79`; `symbolOmmlValue`, `src/formats/omml/render-shared.ts:278-289`; no `<m:` template in `src/generated/omml/symbols.ts`; checked 2026-09-24)
 - [ ] The generator source commit precedes a separate generated-data commit,
       and all affected provenance files record clean, committable inputs.
 - [ ] The post-data HTML corpus run reports its actual rendered/throw split;
       the function-alias remainder is tracked separately rather than credited
       to symbol data.
-- [ ] `package-isolation` runs again *after* the HTML renderer imports
+- [x] `package-isolation` runs again *after* the HTML renderer imports
       `src/generated/html/` and again after OMML imports `src/generated/omml/`
       — not only on the generated-data commit, where neither table is reachable
       from any subpath and the gate would prove nothing.
+      (done: `pnpm gate:package` exits 0 with both renderers importing their tables; checked 2026-09-24)
 - [ ] Each new subpath appears in both `EXPECTED_EXPORTS` and `FORBIDDEN` in
       `scripts/gate-package.mjs`; a subpath missing from those tables skips
       both assertions silently. `./html` forbids `generated/omml/` and every

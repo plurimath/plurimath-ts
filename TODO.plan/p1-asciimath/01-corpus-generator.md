@@ -73,16 +73,21 @@ orientation — every key below is required, so a reader that ignores
 
 ## Done when
 
-- [ ] `.gitmodules` records `plurimath-testsuite`, and a fresh clone plus
+- [x] `.gitmodules` records `plurimath-testsuite`, and a fresh clone plus
   `git submodule update --init` gives the reader cases to load.
-- [ ] The reader loads every AsciiMath group in the pin and reports a nonzero
+  (done: `.gitmodules:1-3`; `git submodule update --init` in a fresh worktree, then `test/core/corpus-pin.spec.ts:246` passes; checked 2026-09-24)
+- [x] The reader loads every AsciiMath group in the pin and reports a nonzero
   case count; a test feeds it an empty directory and asserts it **fails**.
-- [ ] Every payload the reader discovers is checked against
+  (done: `test/core/corpus-pin.spec.ts:246` loads every payload, `:260` pins 237 cases, `:368` fails on an empty directory; checked 2026-09-24)
+- [x] Every payload the reader discovers is checked against
   `corpus/provenance.yaml`, and a corrupted byte in any payload fails the run.
+  (done: `test/core/corpus-pin.spec.ts:246`, and `:394` fails on a changed byte; checked 2026-09-24)
 - [ ] `corpus/census.yaml` and `corpus/exclusions.yaml` regenerate
   byte-identically on a second run from a clean checkout.
-- [ ] Nothing under `corpus/asciimath/` remains here, and no test path resolves
+- [x] Nothing under `corpus/asciimath/` remains here, and no test path resolves
   there.
-- [ ] A pin marked `committable: false`, or generated with a non-Ox engine,
+  (done: `ls corpus` lists only the census and exclusions files; `test/core/corpus-yaml.spec.ts:117`; checked 2026-09-24)
+- [x] A pin marked `committable: false`, or generated with a non-Ox engine,
   fails the reader — proven against a scratch copy of the provenance file, not
   argued from the code.
+  (done: `test/core/corpus-pin.spec.ts:417` and `:429`, each on a scratch copy of the provenance file; checked 2026-09-24)

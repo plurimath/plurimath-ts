@@ -5,31 +5,43 @@ this page is the inventory those phases draw from: every capability of the gem
 that this port does not support, or supports only in part, what stands in the
 way of each, and the order in which they should land.
 
-Everything below was measured on 2026-09-14 unless an entry says otherwise,
-against the pinned oracle (plurimath 0.11.6 at `00c52783`,
-`lib/plurimath/version.rb`) and this repository at `fdc043a`. The shared corpus
-pin is `plurimath-testsuite` at `281d700`. A figure taken from somewhere else
-names where it came from.
+Everything below was first measured on 2026-09-14, against the pinned oracle
+(plurimath 0.11.6 at `00c52783`, `lib/plurimath/version.rb`) and this
+repository at `fdc043a`, whose shared corpus pin was `plurimath-testsuite` at
+`281d700`. The port's status was re-checked on 2026-09-24 against `main` at
+`70f9482`, whose corpus pin is `plurimath-testsuite` at `07bf5e3`
+(`git ls-tree HEAD submodules/plurimath-testsuite`), and the evaluation entry
+against `main` at `39f5dd4`, where #155 merged. The oracle pin is unchanged, so
+figures about the gem stand. A figure taken from somewhere else names where it
+came from.
 
 ## The short version
 
 - **Two prerequisites decide most of the order.** An XML reader, which this
   port does not have, gates MathML input and OMML input, and — through MathML
-  input — a UnitsML bridge. A shared case shape that carries a render option, a
-  configuration or a call other than parse-then-render, which
-  `plurimath-testsuite` does not have, is the shared-data route for number
-  formatting, `intent`, line splitting, OMML display style, `toDisplay` and
-  evaluation. None of those six has a single shared case today; without that
-  shape each would need a port-local generator instead.
-- **Recommended first:** the options-carrying case kind in the testsuite,
-  alongside **MathML input** as the first feature port — the latter once the
-  maintainer chooses a native port over further deferral, which is still open.
-  The reasoning is under [Build order](#build-order).
+  input — a UnitsML bridge. A shared case shape that carries a render option,
+  a configuration or a call other than parse-then-render is the shared-data
+  route for number formatting, `intent`, line splitting, OMML display style,
+  `toDisplay` and evaluation. `plurimath-testsuite` now has one, the
+  `plurimath-corpus/calls/1` schema (testsuite #17), but its only call method
+  at `07bf5e3` is `number_formatter`, in 66 cases
+  (`grep -rhoE "method: [a-z_]+" corpus`). The other five have no shared
+  case; each landed checked against oracle-measured expectations kept in this
+  repository instead.
+- **Recommended first** was the options-carrying case kind in the testsuite,
+  alongside **MathML input** as the first feature port. The case kind landed
+  as `calls/1`. MathML input did not start: the maintainer settled on
+  continued deferral over a native port on 2026-09-16 (#122). The reasoning is
+  under [Build order](#build-order).
 - **Not blocked on anything but effort:** the rest of the UnicodeMath
-  transform, and publishing the OMML renderer on a subpath.
-- **Blocked on a person, not on code:** UnitsML (maintainer decision), native
-  MathML/OMML input versus further deferral, and whether the gem's CLI and
-  global configuration are in scope at all.
+  transform (473 of the gem's 519 rules registered). The OMML renderer has
+  been published on `./omml` since #112.
+- **Blocked on a person, not on code:** UnitsML (maintainer decision), and
+  the evaluation functions still unported, which wait on a licensing decision
+  about copying C-library code (`src/evaluation/index.ts` at `39f5dd4`).
+  Native MathML/OMML input versus further deferral is settled as deferral
+  (#122), and the CLI as in scope (#125); global configuration stays out of
+  scope (below).
 
 ## How "P4" is used here
 
@@ -40,11 +52,12 @@ nothing earlier reaches, evaluation, and MathML/OMML input
 ([p4-parity-modules](p4-parity-modules/README.md)). "P4" below means that
 whole phase; number formatting is named as number formatting.
 
-The phase table in `README.md` is behind the code: it lists P1 as active and
-P3 as planned, and `gates.json#currentMilestone` is still `P1-completion`,
-while the LaTeX, HTML and UnicodeMath parsers have all landed (`#76`, `#88`,
-`#83`). This page does not correct that table — that is a milestone decision —
-but it describes the code as it is.
+The phase table in `README.md` and `gates.json#currentMilestone` agree: both
+put the project in P2 (the milestone advanced in #121). Work from later phases
+is on `main` ahead of that milestone: the LaTeX, HTML and UnicodeMath parsers
+(P3; `#76`, `#88`, `#83`), and number formatting and evaluation (P4; `#126`,
+`#152`, `#155`). This page does not move the milestone — that is a maintainer
+decision — but it describes the code as it is.
 
 ## Inventory
 
@@ -59,10 +72,10 @@ The gem accepts seven parse types (`Math::VALID_TYPES`, `math.rb:16-24`):
 |---|---|---|---|
 | AsciiMath | `parseAsciimath` | registered | complete |
 | LaTeX | `parseLatex` | registered | complete — 117 rules registered (`test/formats/latex/transform-coverage.spec.ts:81`), the transform's header recording one gem rule as dead and unported |
-| HTML | `parseHtml` | **not registered** | transform complete: 78 of 78 rules (`test/formats/html/transform-coverage.spec.ts:170`) |
-| UnicodeMath | `parseUnicodemath` | **not registered, deliberately** | partial: 118 rules registered (`test/formats/unicodemath/transform-coverage.spec.ts:117`) of the gem's 519 |
-| MathML | none | not registered | not started |
-| OMML | none | not registered | not started |
+| HTML | `parseHtml` | registered (#119) | complete: 78 of 78 rules (`test/formats/html/transform-coverage.spec.ts:170`) |
+| UnicodeMath | `parseUnicodemath` | registered (#119) | partial: 473 rules registered (`FINAL_COUNT`, `test/formats/unicodemath/transform-coverage.spec.ts:87`) of the gem's 519 |
+| MathML | none | not registered | not started; deferred (#122) |
+| OMML | none | not registered | not started; deferred (#122) |
 | UnitsML | none | not in the compat union | deferred |
 
 #### UnicodeMath input — partial
@@ -70,31 +83,31 @@ The gem accepts seven parse types (`Math::VALID_TYPES`, `math.rb:16-24`):
 **Gem:** `unicode_math/transform.rb` registers 516 rules, 519 with the three
 `BaseNumberPrefix::Transform` adds (header of `src/formats/unicodemath/transform.ts`).
 
-**Port:** four increments have landed — the corpus-derived first slice (`#83`),
-multiscript and fraction (`#93`), and the table family (`#99`). The
-decoration family and the `atoms` combinator are recorded in that header as
-set aside. The compat constructor withholds `unicode` on a measured gate:
-parity on a 50-input hand-written battery, 38 of which pass today, with the
-relation and operator families (`=`, `≤`, `≥`, `→`, `∈`, `≈`, `≡`, binary `±`)
-and the prime named as what is missing (`src/compat/index.ts`, comment above
-`PARSERS`).
+**Port:** 473 of the 519 rules are registered (`FINAL_COUNT`,
+`test/formats/unicodemath/transform-coverage.spec.ts:87`). They landed as the
+corpus-derived first slice (`#83`), multiscript and fraction (`#93`), the
+table family (`#99`), the relation and operator family (`#114`), the NARY
+family minus the half behind `atoms` (`#116`), the decoration family (`#117`),
+the `atoms` combinator's directly-verifiable unwraps (`#118`), and slices C
+and D (`#131`), A, E, F, G1 and G2 (`#140`, 409 rules), H (`#141`, 422) and
+I, J and K (`#144`, 473). The compat constructor registers `unicode` (#119) on
+a measured gate: a hand-written battery of 50 inputs, 49 parsed to an exact
+match with the oracle and the 50th a refusal both sides share, with
+`KNOWN_PORT_GAPS` empty (`src/compat/index.ts`, comment above `PARSERS`).
 
-**Blocks:** nothing but effort. One open decision shapes the next slice — what
-the transform's coverage invariant requires ([open-decisions](open-decisions.md),
-last section). The decoration family also needs three gem constants
-generated before it can be ported rather than transcribed.
+**Blocks:** nothing but effort. The coverage-invariant question that shaped
+the next slice is settled: the wide reading, 2026-09-16 (#122;
+[open-decisions](open-decisions.md)).
 
-#### HTML input — complete but not wired into compat
+#### HTML input — complete, and registered in compat
 
-**Port:** `parseHtml` exists and is exported from `/html` (`#88`). `src/compat/index.ts`
-registers only `asciimath` and `latex`, and its comment still says HTML
-"arrive[s] later". No recorded reason for withholding it was found in
-`TODO.plan/` or the compat file.
+**Port:** `parseHtml` exists and is exported from `/html` (`#88`). The compat
+constructor registers `html` (#119), on the same standard as UnicodeMath: a
+hand-written, oracle-verified battery (#115) of 50 inputs, all 50 parsed to an
+exact match (`test/compat/html-battery.spec.ts`; `src/compat/index.ts`,
+comment above `PARSERS`).
 
-**Blocks:** a decision, not code. If the UnicodeMath standard applies — a
-hand-written battery reaching parity before compat claims the format — that
-battery has not been run for HTML. Until one or the other is recorded, the
-comment is stale.
+**Blocks:** nothing.
 
 #### MathML input — not started
 
@@ -115,29 +128,34 @@ records whether a single native reader makes it moot.
    serializer, so it changes before a reader lands. `deferred.md`'s XML-writer
    entry already records that the reader is a separate decision: evaluate
    existing parser libraries before building one.
-2. **The strategy is answered on evidence, but the answer is not yet on
-   `main`.** Bridging to the organisation's JavaScript package is closed:
+2. **The strategy is answered on evidence, and settled.** Bridging to the
+   organisation's JavaScript package is closed:
    `@plurimath/mml@0.1.0` publishes three files and none of the `dist/` its
    entry points name (`npm view`, re-run for this page: `dist.fileCount` 3),
    and it is Opal-compiled. The detailed measurements — the translator's 44
    dispatched element classes, the attribute surface it reads, entity and
-   unknown-element behaviour — are in PR #110, which is **open**, not merged.
+   unknown-element behaviour — landed with PR #110, in
+   [open-decisions.md](open-decisions.md#mathmlomml-input-strategy).
    This page cites it rather than repeating it. The `plurimath/mml-js`
    repository is that package's source, so it is the same option, not a
    second one. The choice evidence alone could not make — a native port or
    further deferral — is **settled 2026-09-16: continued deferral, not a
    native port, for now**
    ([open-decisions.md](open-decisions.md#mathmlomml-input-strategy), PR
-   #122, also open). This page's own build order below (Chain A, A2/A3) has
+   #122). PR #120, open, would make the compat constructor's refusal name the
+   missing XML reader; on `main` it is still the generic
+   `UnsupportedFormatError`. This page's own build order below (Chain A, A2/A3) has
    not yet been revised to reflect that a native port is deferred rather than
    the recommended next step.
 
-**Oracle data already available:** the corpus at `281d700` carries 217
-`mathml:` expected-output blocks (92 under `corpus/asciimath/`, 125 under
-`corpus/latex/`; counted by `grep`, not re-parsed). PR #110 measured 111 at an
-earlier pin, all of which re-parse through `Math.parse(text, :mathml)`, and
-found they reach 19 of the translator's 44 element classes. The 217 have not
-been re-parsed for this page.
+**Oracle data already available:** the corpus at `07bf5e3` carries 237
+`mathml:` expected-output blocks in parse cases (92 under `corpus/asciimath/`,
+125 under `corpus/latex/`, 20 under `corpus/unicode/`), plus 66 in the seven
+`calls/1` number-formatting files, which record formatted-number output rather
+than parse cases; counted by `git grep -c`, not re-parsed. PR #110 measured 111
+at an earlier pin, all of which re-parse through `Math.parse(text, :mathml)`,
+and found they reach 19 of the translator's 44 element classes. The 237 have
+not been re-parsed for this page.
 
 #### OMML input — not started
 
@@ -147,10 +165,12 @@ translating layer under `lib/plurimath/omml/`.
 **Port:** nothing.
 
 **Blocks:** the same XML reader as MathML. There is no JavaScript package to
-evaluate: `npm view @plurimath/omml` returns E404 (re-run for this page). And
-**no corpus case carries an OMML expectation** — the one `omml` string under
-`corpus/` at `281d700` is the gem version in `corpus/provenance.yaml:40`. Cases
-would have to be generated. The port's own OMML render fixtures
+evaluate: `npm view @plurimath/omml` returns E404 (re-run for this page on
+2026-09-14). And **no parse case carries an OMML expectation.** At `07bf5e3`
+the corpus's 64 `omml:` blocks are all in six `calls/1` number-formatting
+files, which record formatted-number output, and the one other `omml` string
+is the gem version in `corpus/provenance.yaml:47`. Cases would have to be
+generated. The port's own OMML render fixtures
 (`test/formats/omml/parity-fixtures.json`) are gem-emitted OMML, so they can
 seed a round-trip slice the way the gem's own UnicodeMath output seeded that
 transform's first slice.
@@ -185,16 +205,13 @@ option by name.
 ### Output formats and render options
 
 All six output formats render: AsciiMath, LaTeX, MathML, UnicodeMath, HTML
-and OMML. What is missing is the options each gem render method takes beyond
-the default, and one publishing gap.
+and OMML. Every render option this section lists has landed.
 
-#### OMML renderer — not published on a subpath
+#### OMML renderer — published on `./omml`
 
-`package.json#exports` lists `./core`, `./asciimath`, `./html`, `./latex`,
-`./mathml` and `./unicodemath`, and no `./omml`; `src/formats/omml/` has no
-`index.ts`. `toOmml` is reachable only through the compat class. No recorded
-reason was found. **Blocks:** nothing recorded; `ARCHITECTURE.md` §4's subpath
-list also omits it, so the list changes with it.
+Landed in #112: `package.json#exports` lists `./omml`,
+`src/formats/omml/index.ts` exports `toOmml`, and `ARCHITECTURE.md` §4's
+subpath list names it (`ARCHITECTURE.md:310`). **Blocks:** nothing.
 
 #### Number formatting (`formatter:`) — landed (B2)
 
@@ -286,31 +303,39 @@ NOT the default — for OMML as for MathML.
 
 **Blocks:** nothing.
 
-#### `toDisplay` (`Formula#to_display`) — not started
+#### `toDisplay` (`Formula#to_display`) — landed (B5)
 
 **Gem:** a tree dump in one of five notations (`math/formula.rb:197-237`),
 built from `to_<format>_math_zone` methods defined in 17 files under
 `math/`.
 
-**Port:** the compat `toDisplay` raises `UnsupportedFeatureError`
-(`src/compat/index.ts`).
+**Port:** the compat `toDisplay` returns that tree dump (#139, extended to the
+remaining kinds in #150; `src/compat/to-display.ts`). Measured on `70f9482`:
+`new Plurimath("x^2", "asciimath").toDisplay("latex")` begins
+`|_ Math zone\n  |_ "x^{2}"`. A few kinds are refused with
+`UnsupportedFeatureError`, most as parity with a crash in the gem itself
+(`Nary`, `FontStyle` under `unicodemath`, `Substack`), the rest as
+unreachable or out of scope (`Msgroup`, `Unitsml`, a bare string in a
+sequence); the module doc of `src/compat/to-display.ts` records each reason.
 
-**Blocks:** no shared case. All five renderers it composes already exist, so
-nothing else stands in front of it.
+**Blocks:** nothing. It has no shared case; `calls/1` carries only
+`number_formatter`.
 
 #### Measured name sets — partial by design
 
 The renderers refuse gem classes outside the set some input can construct, so
 a parity gap fails loudly rather than rendering a default. [deferred.md](deferred.md)
-records each: hand-listed name sets, the ten HTML aliases, `Scarries`, the
-LaTeX `Color` operands (3,209 of 3,216 swept first slots refuse), OMML
-`Fenced` paren shapes. These are not features to schedule on their own:
+records each: hand-listed name sets, the HTML function-name arms (the ten
+corpus aliases plus the unary names added since), the four LaTeX `Color`
+operands still refused (`ZZ`, `:`, `:.`, `:'`, of 3,216 swept first slots),
+OMML `Fenced` paren shapes. `Scarries`, once on this list, is now admitted in
+every format. These are not features to schedule on their own:
 `deferred.md` records that the measured set widens when an input format that
 constructs those classes lands, which is MathML and OMML input.
 
 ### Beyond conversion
 
-#### Evaluation (`Formula#evaluate`) — in progress
+#### Evaluation (`Formula#evaluate`) — landed through the function slice (B6)
 
 **Gem:** `Formula#evaluate(bindings)` (`math/formula.rb:57`) runs
 `Math::Evaluation::Evaluator` and `ExpressionParser` (425 lines with
@@ -318,19 +343,29 @@ constructs those classes lands, which is MathML and OMML input.
 classes under `errors/evaluation/`; a bounded iteration cap,
 `Configuration::DEFAULT_MAX_ITERATIONS = 100_000`.
 
-**Port:** `src/evaluation/` (`ARCHITECTURE.md` §3, importing `core` only)
-evaluates every gem-evaluated class except the six hyperbolic functions
-(`Sinh`, `Cosh`, `Tanh`, `Sech`, `Csch`, `Coth`), which stay refused as
-unported: glibc computes them through an `expm1` that no permissive upstream
-reproduces digit for digit (`deferred.md`, "Evaluation: the hyperbolic
-functions"). `Lg` and `Log` are ported (`libm-log10.ts`, from Sun's fdlibm;
-`libm-log2.ts`, from Arm's optimized-routines).
+**Port:** `evaluate(formula, bindings, options)` in `src/evaluation/`,
+importing `core` only and re-exported from the root entry alone
+(`src/index.ts`), with the gem's eight evaluation error classes
+(`src/evaluation/errors.ts`). Two slices have landed. The arithmetic slice
+(#152): numbers, symbols, `+`, binary and unary `-`, unary `+`, `*`, `/`,
+`^`, implicit multiplication and grouping parentheses. The function slice
+(#155): `Abs`, `Ceil`, `Floor`, `Gcd`, `Lcm`, `Min`, `Max`, `Mod`, `Root`,
+`Text` variable lookup, bounded `Sum`/`Prod`, and `Sin`, `Cos`, `Tan`, `Cot`,
+`Sec`, `Csc`, `Arcsin`, `Arccos`, `Arctan`, `Exp`, `Ln` and `Sqrt`, correctly
+rounded (`src/evaluation/libm.ts`). `Lg` and `Log` are ported digit-exact
+with glibc 2.35 (`libm-log10.ts`, from Sun's fdlibm; `libm-log2.ts`, from
+Arm's optimized-routines). The iteration cap is a per-call option,
+`EvaluationOptions`, defaulting to the gem's 100,000. Checked against
+port-local fixtures generated from the oracle
+(`test/formats/evaluation/evaluation-fixtures.json`,
+`scripts/generate-evaluation-fixtures.rb`). Still unported, and raising
+`UnsupportedFeatureError`: `Sinh`, `Cosh`, `Tanh`, `Sech`, `Csch` and `Coth`
+(`TODO.plan/deferred.md`, "Evaluation: the hyperbolic functions").
 
-**Blocks:** no shared case — the generator records
-`evaluation_max_iterations` only as provenance. The iteration cap is global
-configuration in the gem and meets the same per-call design question as the
-formatter. The `plurimath-js` compat surface has no `evaluate`, so this does
-not affect the drop-in claim.
+**Blocks:** the six hyperbolic functions have no permissive upstream that
+reproduces glibc's `expm1` digit for digit (`deferred.md`). There is no shared
+case: `calls/1` carries only `number_formatter`. The `plurimath-js` compat
+surface has no `evaluate`, so this does not affect the drop-in claim.
 
 #### Command-line interface — in scope, not yet built
 
@@ -338,11 +373,12 @@ not affect the drop-in claim.
 format, `--split-on-linebreak`, display style, `--math-rendering` (which is
 `to_display`), and an XML engine choice.
 
-**Port:** nothing yet. **SETTLED 2026-09-16: in scope**, and the direction is
-an idiomatic Node CLI rather than flag-for-flag parity with the gem's Thor
-command (`ARCHITECTURE.md` §10). **Blocks:** nothing but effort — everything
-it calls would exist once the render options above do, so it has no reason
-to go first.
+**Port:** **SETTLED 2026-09-16: in scope**, and the direction is an
+idiomatic Node CLI rather than flag-for-flag parity with the gem's Thor
+command (`ARCHITECTURE.md` §10; recorded in #125). The first slice landed in
+#127: `plurimath convert` with `--from` and `--to` only (`src/cli/args.ts`),
+and #129 strips one trailing newline from its input (`src/cli/run.ts:43`).
+**Blocks:** nothing but effort.
 
 #### Out of scope, recorded so it is not re-proposed
 
@@ -373,6 +409,12 @@ here. What they signal:
 
 Two independent chains, sharing no prerequisite. They can run side by side.
 
+Status on `main`: Chain A has not started, and A2/A3 are deferred (#122). On
+Chain B, B1 landed in the testsuite as `calls/1` (`number_formatter` only), B2
+in #126, #133, #143 and #146, B3 in #132, B4 in #136, B5 in #139 and #150, and
+B6 in #152 and #155, with eight functions left unported (see Evaluation,
+above).
+
 ```
 Chain A — reading XML                Chain B — options the corpus cannot express
 ────────────────────────             ───────────────────────────────────────────
@@ -383,8 +425,8 @@ A4  UnitsML, once settled            B4  intent
                                      B5  toDisplay
                                      B6  evaluation
 
-Not blocked: UnicodeMath transform completion → compat unicode;
-             /omml subpath; the compat html decision.
+Not blocked: UnicodeMath transform completion
+             (compat unicode and html: #119; /omml subpath: #112)
 ```
 
 ### First: the options-carrying case kind, and MathML input
@@ -408,19 +450,19 @@ chooses a native port, for four reasons:
 
 1. It is the largest remaining gap in the compat constructor, which names
    `mathml`.
-2. Its oracle data already exists: 217 expected-MathML strings at the current
-   pin.
+2. Its oracle data already exists: 237 expected-MathML strings in parse
+   cases at the current pin, `07bf5e3`.
 3. It carries three things with it: its XML reader is OMML input's
    prerequisite, its model path is a UnitsML bridge's prerequisite, and it
    constructs classes that let the measured name sets widen.
 4. Its investigation is done: PR #110 closes the bridge option on evidence
-   and measures what a native port involves. What remains is the maintainer's
-   choice between a native port and further deferral, then design (the §3
-   reader).
+   and measures what a native port involves. The maintainer's choice between
+   a native port and further deferral is made: deferral, for now (#122).
 
 **Why not number formatting first,** though it touches every renderer: it
 cannot start before B1, and once B1 lands its data is the largest of the
-five and the only one also facing an open API design question.
+five and the only one also facing an open API design question (since
+settled: a plain options object, [open-decisions](open-decisions.md)).
 
 **Why not evaluation first,** though it is the most self-contained: it imports
 only `core` and nothing depends on it, so it gains nothing from going early
@@ -455,24 +497,25 @@ and unblocks nothing; and the compat surface does not expose it.
 - **B4, `intent`,** landed: MathML only, but 318 lines of encoding plus the
   formula's own post-processing, and a known gem defect to reproduce.
 - **B5, `toDisplay`,** after the renderers it composes stop changing under B2
-  to B4, since it embeds their output.
+  to B4, since it embeds their output. Landed (#139, #150).
 - **B6, evaluation,** last on this chain, for the reasons above — though
-  nothing prevents it running earlier if a consumer asks.
+  nothing prevents it running earlier if a consumer asks. Landed through the
+  function slice (#152, #155).
 
 ### Alongside both chains
 
-The UnicodeMath transform's remaining families, ending with registering
-`unicode` in compat once the 50-input battery reaches parity; publishing
-`/omml`; and recording a decision for compat `html`. None waits on A or B.
+The UnicodeMath transform's remaining rules (473 of 519 registered). None
+waits on A or B. The other items once listed here have landed: `unicode` and
+`html` are registered in compat (#119), and `/omml` is published (#112).
 
 ## Open questions this page raises
 
 | Question | Why it matters |
 |---|---|
-| Is the options-carrying case kind a testsuite schema version, and who authors it? | B1 is chain B's shared-data route |
-| Does compat register `html` now, or after a hand-written battery like UnicodeMath's? | the compat comment is stale either way |
-| Is `/omml` published, and does §4's subpath list gain it? | `toOmml` is compat-only today |
+| ~~Is the options-carrying case kind a testsuite schema version, and who authors it?~~ | landed as the testsuite's `plurimath-corpus/calls/1` schema (`schema/calls.json`, testsuite #17) |
+| ~~Does compat register `html` now, or after a hand-written battery like UnicodeMath's?~~ | registered after a 50-input battery (#115, #119) |
+| ~~Is `/omml` published, and does §4's subpath list gain it?~~ | published, and listed in §4 (#112) |
 | ~~Is a CLI in scope, or does it join §10's YAGNI list?~~ | settled 2026-09-16: in scope, idiomatic Node CLI over gem-flag parity (`ARCHITECTURE.md` §10) |
-| Does the formatter arrive as a class instance or a plain options object? | settles before B2's first slice |
+| ~~Does the formatter arrive as a class instance or a plain options object?~~ | settled: a plain options object (`open-decisions.md`, #125) |
 | ~~Native MathML/OMML input, or further deferral?~~ | settled 2026-09-16: continued deferral (`open-decisions.md`); Chain A's A2/A3 ordering above still needs revising to match |
 | Does the port need an equivalent of `Plurimath.mml_adapter`? | the gem picks the `mml` XML backend globally (`plurimath.rb:34-37`); one native reader may make it moot |

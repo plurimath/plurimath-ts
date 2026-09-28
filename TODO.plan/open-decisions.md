@@ -166,8 +166,10 @@ port builds a native reader.
 ### What already exists here, and what does not
 
 Both formats are already OUTPUT ports and neither is an INPUT port.
-`src/formats/mathml/` and `src/formats/omml/` each contain only `renderer.ts`,
-`render-shared.ts` and `render.ts` — no parser, no transform, no grammar. The
+`src/formats/mathml/` and `src/formats/omml/` each contain `index.ts`,
+`renderer.ts`, `render-shared.ts` and `render.ts`, and `mathml/` adds the two
+`intent` modules — no parser, no transform, no grammar (`ls`, re-checked
+2026-09-24 at `70f9482`). The
 render side is oracle-locked too: `test/formats/omml/` and
 `test/formats/html/` carry generated parity and degenerate fixtures with
 provenance manifests.
@@ -270,7 +272,9 @@ Ox and Oga adapters — so there is a single answer, not an adapter-dependent on
 `ARCHITECTURE.md` §10 previously listed a CLI neither in scope nor under
 YAGNI. `lib/plurimath/cli.rb` is a Thor `convert` command with input/output
 format, `--split-on-linebreak`, display style, `--math-rendering`
-(`to_display`), and an XML engine choice; the port has nothing yet.
+(`to_display`), and an XML engine choice. The port had nothing then; its
+first slice, `plurimath convert` with `--from` and `--to` only
+(`src/cli/args.ts`), has since landed (#127).
 
 **SETTLED 2026-09-16: in scope**, direction is an idiomatic Node CLI rather
 than flag-for-flag parity with the gem's Thor command. Nothing blocks it but
@@ -370,7 +374,7 @@ different invariant, not a different reading of this one.
 
 `ARCHITECTURE.md` §4 describes a root `parse(input, format, options)` that
 forwards to a format's parser. `src/index.ts` does not export one (it exports
-`Plurimath`, `FORMATS`, `Format` and `/core`), so today a caller reaches a
+`Plurimath`, `FORMATS`, `Format`, `/core` and `evaluation`), so today a caller reaches a
 parser only through a per-format subpath or the compat class. Whether to build
 it, and with what options shape, is undecided; the docs describe it as
 documented-but-unbuilt until then.

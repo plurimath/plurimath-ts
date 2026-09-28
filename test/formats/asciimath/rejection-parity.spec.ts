@@ -46,9 +46,9 @@ const corpus = loadPinnedCorpus();
  * pin that added `corpus/latex/rejections.yaml`, and reading it unscoped was not
  * merely noisy: `\frac{1` is a perfectly good AsciiMath expression, so
  * `parseAsciimath` ACCEPTED most of the LaTeX rejections and this suite reported
- * the port failing to refuse inputs it was never asked to refuse. The LaTeX half
- * is checked against `parseLatex` by
- * `test/formats/latex/rejection-parity.spec.ts`.
+ * the port failing to refuse inputs it was never asked to refuse. The other
+ * notations' rejections are checked against their own parsers, in
+ * `test/formats/{latex,unicodemath,html}/rejection-parity.spec.ts`.
  *
  * `parseableCases` throws on an empty match, so a pin that lost its AsciiMath
  * rejection payload fails here rather than running nothing.
@@ -63,12 +63,12 @@ describe("the rejection corpus", () => {
     expect(rejections.length).toBe(13);
   });
 
-  it("selects a proper subset, and both halves are accounted for", () => {
+  it("selects a proper subset, and what it leaves out is accounted for", () => {
     // What the filter above leaves out is counted here rather than left
     // implicit. Without this, the scoping would still pass if the LaTeX
     // rejection payload vanished from the pin, and the filter would be dead
     // code that looked like a safeguard.
-    expect(corpus.rejections.length).toBe(27);
+    expect(corpus.rejections.length).toBe(117);
     expect(rejections.length).toBeLessThan(corpus.rejections.length);
     const byFormat = new Map<string, number>();
     for (const entry of corpus.rejections) {
@@ -76,7 +76,9 @@ describe("the rejection corpus", () => {
     }
     expect([...byFormat.entries()].sort()).toStrictEqual([
       ["asciimath", 13],
+      ["html", 38],
       ["latex", 14],
+      ["unicode", 52],
     ]);
   });
 

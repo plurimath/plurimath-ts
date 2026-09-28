@@ -148,9 +148,9 @@ describe(`${FORMAT} parity fixture covers the pinned corpus`, () => {
   });
 
   it("records every corpus rejection as a parse-phase refusal", () => {
-    // Scoped like the map above: a LaTeX rejection would have no fixture row,
-    // and rightly so. There is none at this pin, so the two lists are equal
-    // today — but the scope is what keeps that a fact rather than a coincidence.
+    // Scoped like the map above: the pin also carries LaTeX, UnicodeMath and
+    // HTML rejections, which have no fixture row here, and rightly so. The scope
+    // is what keeps them out.
     const rejections = parseableCases(pin.rejections);
     expect(rejections.length).toBeGreaterThan(0);
     for (const rejection of rejections) {

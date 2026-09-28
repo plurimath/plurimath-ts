@@ -57,11 +57,19 @@
  * ## Known divergences
  *
  * - An XML declaration naming an ASCII-compatible encoding other than UTF-8
- *   changes how Ruby labels the strings. Text and attribute values come out
- *   the same, and numeric references at or above U+0080 are refused, both
- *   reproduced. But the gem then transcodes element names, comments and PI
- *   text from that encoding, so non-ASCII in those places differs here
- *   (the fixture test lists each such row).
+ *   changes how Ruby labels the strings. Two consequences are reproduced:
+ *   text and attribute values still read as UTF-8, and a numeric reference
+ *   above U+007F writes a single raw byte in text (above U+00FF it is
+ *   refused), so it survives only where the bytes happen to form valid UTF-8
+ *   (`&#195;&#169;` is `é`); in an attribute value it is refused. Not
+ *   reproduced: the gem re-reads element names, comments and processing
+ *   instructions through the declared encoding, so non-ASCII there comes out
+ *   transcoded, as `?`, or as a refusal, depending on the encoding. This
+ *   reader keeps UTF-8 there (the fixture test pins every such row to the
+ *   gem's own `encoding="UTF-8"` answer for the same body).
+ * - `locale`, `external`, `filesystem` and `internal` resolve through the Ruby
+ *   process's environment; they are read as UTF-8, which is what they are in
+ *   the oracle's environment (under `LC_ALL=C` the gem would differ).
  * - Invalid UTF-8 can reach a namespace URI (`xmlns:m="&#xD800;"`) in the gem;
  *   a JavaScript string cannot hold it, so those bytes decode to U+FFFD.
  * - A JavaScript string with a lone surrogate has no UTF-8 form and no Ruby

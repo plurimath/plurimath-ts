@@ -563,6 +563,67 @@ const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: strin
   ...FIXTURE_GENERATOR_HASHES,
 ];
 
+/** A string, or a byte string the gem held as invalid UTF-8 (`{invalidUtf8: hex}`). */
+function expectXmlReaderString(value: unknown, at: string): void {
+  if (typeof value === "string") return;
+  const record = mapping(value, at);
+  expectExactKeys(record, ["invalidUtf8"], at);
+  expect(stringField(record, "invalidUtf8", at)).toMatch(/^(?:[0-9a-f]{2})+$/);
+}
+
+function expectXmlReaderPairs(value: unknown, at: string, values: "string" | "reader"): void {
+  if (!Array.isArray(value)) throw new Error(`${at} must be an array`);
+  for (const [index, pair] of value.entries()) {
+    if (!Array.isArray(pair) || pair.length !== 2)
+      throw new Error(`${at}[${index}] must be a pair`);
+    expect(typeof pair[0], `${at}[${index}][0]`).toBe("string");
+    if (values === "string") expect(typeof pair[1], `${at}[${index}][1]`).toBe("string");
+    else expectXmlReaderString(pair[1], `${at}[${index}][1]`);
+  }
+}
+
+/** One node of an xml-reader row's tree, recursively, with exact keys per kind. */
+function expectXmlReaderNode(value: unknown, at: string): void {
+  const node = mapping(value, at);
+  if ("element" in node) {
+    expectXmlReaderElement(node, at);
+  } else if ("pi" in node) {
+    expectExactKeys(node, ["pi", "text"], at);
+    stringValue(node, "pi", at);
+    stringValue(node, "text", at);
+  } else {
+    const [kind] = Object.keys(node);
+    expect(["text", "cdata", "comment"], `${at}: node kind`).toContain(kind);
+    expectExactKeys(node, [String(kind)], at);
+    stringValue(node, String(kind), at);
+  }
+}
+
+function expectXmlReaderElement(value: unknown, at: string): void {
+  const element = mapping(value, at);
+  expectExactKeys(
+    element,
+    [
+      "element",
+      ...("prefix" in element ? ["prefix"] : []),
+      ...("namespace" in element ? ["namespace"] : []),
+      "attributes",
+      "xmlns",
+      "children",
+    ],
+    at,
+  );
+  if (element.element !== null) stringValue(element, "element", at);
+  if ("prefix" in element) stringValue(element, "prefix", at);
+  if ("namespace" in element) expectXmlReaderString(element.namespace, `${at}.namespace`);
+  expectXmlReaderPairs(element.attributes, `${at}.attributes`, "string");
+  expectXmlReaderPairs(element.xmlns, `${at}.xmlns`, "reader");
+  const children = arrayField(element, "children", at);
+  for (const [index, child] of children.entries()) {
+    expectXmlReaderNode(child, `${at}.children[${index}]`);
+  }
+}
+
 describe("per-format generated fixtures have complete sidecar provenance", () => {
   it("pairs every discovered payload with one sidecar, and has no orphan sidecars", () => {
     expect(FIXTURE_PAYLOADS.length).toBeGreaterThan(0);
@@ -1146,7 +1207,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               ["group", "id", "input", "root"],
               `${record.relative}.cases[${index}]`,
             );
-            mapping(item.root, `${record.relative}.cases[${index}].root`);
+            expectXmlReaderElement(item.root, `${record.relative}.cases[${index}].root`);
           } else {
             expectExactKeys(
               item,

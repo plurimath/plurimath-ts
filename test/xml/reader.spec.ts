@@ -5,9 +5,9 @@
  * oracle's stack (Ox under Moxml under Lutaml, the `OxAdapter` that
  * `Mml.parse` and `Omml.parse` use) did with it: the tree its models receive,
  * or a refusal. `scripts/generate-xml-reader-fixtures.rb` measured them; the
- * sidecar manifest pins how. Every row must match, except the ones listed in
- * `KNOWN_DIVERGENCES` — and each of those must still diverge, exactly as
- * described, so the list cannot go stale in either direction.
+ * sidecar manifest pins how. Every row must match, except the one documented
+ * divergence (`divergenceBaseline`), whose rows must instead match the gem's
+ * own UTF-8 answer for the same body.
  */
 
 import { readFileSync } from "node:fs";
@@ -110,25 +110,39 @@ function actualOutcome(input: string): Outcome {
   }
 }
 
+const DECLARATION = /^<\?xml version="1\.0" encoding="([^"]*)"\?>(.*)$/s;
+
+/** The bodies that put non-ASCII where the gem re-reads through the declared encoding. */
+const REENCODED_BODIES = new Set(["<\u00e9/>", "<a><!--\u00e9--></a>", "<a><?p \u00e9?></a>"]);
+
+const UTF8_NAMES = new Set(FIXTURE.encodingTable.utf8.map((name) => name.toLowerCase()));
+const INCOMPATIBLE_NAMES = new Set(
+  FIXTURE.encodingTable.asciiIncompatible.map((name) => name.toLowerCase()),
+);
+const ROWS_BY_INPUT = new Map(FIXTURE.cases.map((row) => [row.input, row] as const));
+
 /**
- * Rows the reader knowingly does not reproduce. Both come from an XML
- * declaration naming an ASCII-compatible encoding other than UTF-8: the gem
- * labels its strings with that encoding and Lutaml transcodes element names
- * and comments from it, so non-ASCII there is re-read as Latin-1. The reader
- * keeps UTF-8. (Text and attribute values are unaffected, and pinned.)
+ * The one documented divergence (see `src/xml/reader.ts`): a declaration
+ * naming an ASCII-compatible, non-UTF-8 encoding makes the gem re-read element
+ * names, comments and PIs through it; the reader keeps UTF-8. For such a row,
+ * returns the gem's row for the same body under `encoding="UTF-8"` — what the
+ * reader must produce instead — or `undefined` when the row is not one.
  */
-const KNOWN_DIVERGENCES: {
-  readonly [id: string]: { readonly input: string; readonly got: string };
-} = {
-  "xml-a76b62d0adc2": {
-    input: '<?xml version="1.0" encoding="ISO-8859-1"?><a><!--é--></a>',
-    got: "é",
-  },
-  "xml-b447e375911d": {
-    input: '<?xml version="1.0" encoding="ISO-8859-1"?><é/>',
-    got: "é",
-  },
-};
+function divergenceBaseline(row: FixtureRow): FixtureRow | undefined {
+  const match = DECLARATION.exec(row.input);
+  if (match === null) return undefined;
+  const [, name = "", body = ""] = match;
+  const key = name.toLowerCase();
+  if (UTF8_NAMES.has(key) || INCOMPATIBLE_NAMES.has(key) || !REENCODED_BODIES.has(body)) {
+    return undefined;
+  }
+  const baseline = ROWS_BY_INPUT.get(`<?xml version="1.0" encoding="UTF-8"?>${body}`);
+  if (baseline === undefined) throw new Error(`no UTF-8 baseline row for ${row.id}`);
+  const same = JSON.stringify(expectedOutcome(baseline)) === JSON.stringify(expectedOutcome(row));
+  return same ? undefined : baseline;
+}
+
+const DIVERGENT = FIXTURE.cases.filter((row) => divergenceBaseline(row) !== undefined);
 
 describe("the fixture set itself", () => {
   it("loads every row the payload declares, and a real mix of outcomes", () => {
@@ -173,7 +187,7 @@ describe("readXml reproduces the gem's read", () => {
   it.each(groups)("%s", (group) => {
     const mismatches: string[] = [];
     for (const row of FIXTURE.cases) {
-      if (row.group !== group || row.id in KNOWN_DIVERGENCES) continue;
+      if (row.group !== group || divergenceBaseline(row) !== undefined) continue;
       const expected = expectedOutcome(row);
       const actual = actualOutcome(row.input);
       if (JSON.stringify(actual) !== JSON.stringify(expected)) {
@@ -186,14 +200,22 @@ describe("readXml reproduces the gem's read", () => {
   });
 });
 
-describe("known divergences", () => {
-  it.each(Object.entries(KNOWN_DIVERGENCES))("%s still diverges as documented", (id, known) => {
-    const row = FIXTURE.cases.find((candidate) => candidate.id === id);
-    expect(row?.input).toBe(known.input);
-    if (row === undefined) return;
-    const actual = actualOutcome(row.input);
-    expect(JSON.stringify(actual)).not.toBe(JSON.stringify(expectedOutcome(row)));
-    expect(JSON.stringify(actual)).toContain(JSON.stringify(known.got));
+describe("the documented encoding divergence", () => {
+  it("exists in the fixtures, so its handling is exercised", () => {
+    // Measured: 3 bodies x the non-UTF-8 ASCII-compatible names, minus the rows
+    // where the gem happens to agree with UTF-8.
+    expect(DIVERGENT.length).toBeGreaterThan(100);
+  });
+
+  it("reads every such row exactly as the gem reads the body under UTF-8", () => {
+    const mismatches: string[] = [];
+    for (const row of DIVERGENT) {
+      const baseline = divergenceBaseline(row);
+      if (baseline === undefined) continue;
+      const actual = JSON.stringify(actualOutcome(row.input));
+      if (actual !== JSON.stringify(expectedOutcome(baseline))) mismatches.push(row.id);
+    }
+    expect(mismatches).toStrictEqual([]);
   });
 });
 

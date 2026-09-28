@@ -1,7 +1,7 @@
 # P1 — AsciiMath vertical
 
-**Status: landed, with two exit items open** (the class-B runners item and the class-C
-sign-off below; neither was re-verified when this status was updated). The first end-to-end slice: AsciiMath in, model, and four
+**Status: landed, with one exit item open** (the class-C sign-off below; the
+class-B runners item was re-measured on 2026-09-28). The first end-to-end slice: AsciiMath in, model, and four
 renderers out, all proven against cases generated from the Ruby gem.
 
 ## What it delivers
@@ -104,13 +104,11 @@ has never been shown to reject anything.
 - [x] Package-isolation assertions for the real `/asciimath`, `/mathml`,
       `/latex` and `/unicodemath` subpaths.
 - [x] `pnpm check` reports thirteen active class-A gates (P1-completion in `gates.json`), all passing.
-- [ ] The three class-B runners are clean. `testsuite --check` exits 0 and
-      `differential` exits 0 with no divergences across
-      429 inputs (1,287 comparisons); the differential exceeds its 300s bound on
-      a loaded host, so it is measured on a quiet one. `repo --check` exits 1 on
-      `main` today — #40 hand-edited comments inside two generated render tables
-      and a fresh regeneration reverts them; a separate change moves those into
-      the generator.
+- [x] The three class-B runners are clean, measured on `main` a1c1755 against
+      a clean `plurimath-oracle` at `00c52783`: `repo --check` exits 0 and
+      `testsuite --check` exits 0 (both re-run 2026-09-28 on a tree whose code and generated data equal a1c1755), and `differential`
+      exits 0 with no divergences across 429 inputs (1,716 comparisons, 2m33s,
+      2026-09-28).
 
 Both milestones additionally need the class-C evidence: a review round with
 findings resolved, and sign-off recorded.

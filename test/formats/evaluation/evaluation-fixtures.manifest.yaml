@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-evaluation-fixtures.rb
-  sha256: ed5348f0aa2fa8f8970adcf1cfd82948a41e4b307d9e7bfd0982973cf620bc07
+  sha256: ca5d694a4df3911420c5308d6f7d3bd58afbc24992efcaefd14826d9925c4a0b
   inputs:
     scripts/generate-corpus.rb: e11dfe4822a0f61f2e67e817f117540dc984bc42dab12e54d795f2bd98925614
-    scripts/generate-evaluation-fixtures.rb: ed5348f0aa2fa8f8970adcf1cfd82948a41e4b307d9e7bfd0982973cf620bc07
+    scripts/generate-evaluation-fixtures.rb: ca5d694a4df3911420c5308d6f7d3bd58afbc24992efcaefd14826d9925c4a0b
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 8bdf65b43e9343a964e02e3dfae7020c19f19ae5
+    commit: 14b02c0f4a10b095fcc1d98caddd17fa8c48c7a9
     clean: true
     dirty_paths: []
 oracle:
@@ -105,5 +105,5 @@ dependencies:
 payload:
   path: evaluation-fixtures.json
   schema: plurimath-corpus/evaluation/1
-  sha256: 82dd04c7b8c87638339e11dd865a771e7742793914853dfe76912cf2998bf8b0
-  bytes: 148103
+  sha256: 533bc76aa66b1cec732b2ec9ebbab070651a31290e1471c91c25f57b391fb9ec
+  bytes: 162638

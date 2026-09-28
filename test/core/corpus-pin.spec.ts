@@ -579,6 +579,13 @@ describe("a pin that was not generated the canonical way is refused", () => {
     expect(() => loadPinnedCorpus(root)).toThrow("passes through a symbolic link");
   });
 
+  it("refuses a pin root that is itself a symbolic link", () => {
+    const real = damagedCopy(() => {});
+    const link = join(scratch(), "linked-pin");
+    symlinkSync(real, link);
+    expect(() => loadPinnedCorpus(link)).toThrow("is a symbolic link, not the submodule checkout");
+  });
+
   it("refuses a symbolic-link directory hidden inside corpus/", () => {
     const root = damagedCopy((where) => {
       const outside = scratch();

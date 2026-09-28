@@ -690,6 +690,11 @@ module CorpusGenerator
   # here rather than yielding an empty list, which would make every check below
   # pass while inspecting nothing.
   def read_pin_cases
+    # A symlinked submodule path would move the whole pin elsewhere while
+    # every containment check below, relative to it, still passed.
+    missing_pin!("#{pin_root} is a symbolic link, not the submodule checkout") if
+      File.symlink?(pin_root)
+
     provenance_path = File.join(pin_root, "corpus", "provenance.yaml")
     missing_pin!("#{provenance_path} does not exist") unless File.exist?(provenance_path)
 

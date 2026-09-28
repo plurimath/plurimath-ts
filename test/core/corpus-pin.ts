@@ -413,6 +413,12 @@ function payloadFilesOnDisk(corpusDirectory: string): readonly string[] {
 }
 
 function readProvenance(root: string): PinProvenance {
+  // The checkout itself must be a real directory: every containment check
+  // below is relative to it, so a symlinked submodule path would move the
+  // whole pin elsewhere while each check still passed.
+  if (isSymbolicLink(root)) {
+    throw submoduleError(root, `${root} is a symbolic link, not the submodule checkout`);
+  }
   const path = join(root, "corpus", "provenance.yaml");
   if (!existsSync(path)) {
     const detail = existsSync(root)

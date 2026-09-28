@@ -55,7 +55,7 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
 
 ## Done when
 
-- [x] `pnpm check` reports nine active class-A gates, all passing.
+- [x] `pnpm check` reports ten active class-A gates (P0 and P1-baseline in `gates.json`), all passing.
 - [x] `scripts/gate-oracle.rb repo --check` is clean against a clean gem checkout,
   and the testsuite regeneration check is reported separately from it. Both
   exit 0 on `main` a1c1755 against `plurimath-oracle` at the pinned

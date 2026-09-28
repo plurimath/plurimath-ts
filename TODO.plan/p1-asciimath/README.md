@@ -23,8 +23,8 @@ Work in order; each depends on the ones before it.
 | 4 | [AsciiMath grammar](04-asciimath-grammar.md) | preprocessing + parse tree matching Parslet |
 | 5 | [AsciiMath transform](05-asciimath-transform.md) | parse tree → model |
 | 6 | [Renderers](06-renderers.md) | `toAsciimath`, `toLatex`, `toMathml` |
-| 7 | [Activate gates](07-activate-gates.md) | milestone `P1-baseline`, nine class-A gates green |
-| 8 | [Complete P1](08-p1-completion.md) | milestone `P1-completion`, the last three class-A gates and the third class-B runner |
+| 7 | [Activate gates](07-activate-gates.md) | milestone `P1-baseline`, ten class-A gates green |
+| 8 | [Complete P1](08-p1-completion.md) | milestone `P1-completion`, the last three class-A gates and two more class-B gates (`oracle-runner-unit-tests`, `differential-runner`) |
 
 Items 1–2 need a local checkout of the
 [Ruby gem](https://github.com/plurimath/plurimath), because they regenerate

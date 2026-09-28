@@ -12,7 +12,7 @@ generator:
     scripts/generate-unicodemath-model-fixtures.rb: f27b4fbb54c11d0c6345c5f7f6bc2b7a6ff91cf11a414a2dcd0693efc473969b
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 5869fa84f988dbbb16105270e45d07600f8f81cb
+    commit: 113453789d6c6c3f77e2908df0578e1653207855
     clean: true
     dirty_paths: []
 oracle:
@@ -105,7 +105,7 @@ dependencies:
 corpus:
   path: submodules/plurimath-testsuite
   repository:
-    commit: 3751f9de14caa3ed17c123c8821faff829f05ed6
+    commit: 2102ed85a3601ef582c0b197812d777117dc8910
     clean: true
     dirty_paths: []
   provenance:

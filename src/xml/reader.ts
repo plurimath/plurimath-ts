@@ -62,8 +62,8 @@
  *   above U+007F writes a single raw byte in text (above U+00FF it is
  *   refused), so it survives only where the bytes happen to form valid UTF-8
  *   (`&#195;&#169;` is `é`); in an attribute value it is refused. Not
- *   reproduced: the gem re-reads element names, comments and processing
- *   instructions through the declared encoding, so non-ASCII there comes out
+ *   reproduced: the gem re-reads element names, comments, processing
+ *   instructions, CDATA and namespace URIs through the declared encoding, so non-ASCII there comes out
  *   transcoded, as `?`, or as a refusal, depending on the encoding. This
  *   reader keeps UTF-8 there (the fixture test pins every such row to the
  *   gem's own `encoding="UTF-8"` answer for the same body).

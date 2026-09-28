@@ -250,11 +250,11 @@ module XmlReaderProbe
 
   def encoding_inputs
     encoding_names.flat_map do |name|
-      # Plain text, a numeric reference, and non-ASCII in the three places
-      # the gem re-reads through the declared encoding: a name, a comment
-      # and a processing instruction.
+      # Plain text, a numeric reference, and non-ASCII in each place the gem
+      # re-reads through the declared encoding: a name, a comment, a
+      # processing instruction, CDATA and a namespace declaration.
       ["<a>x</a>", "<a>&#233;</a>", "<\u00E9/>", "<a><!--\u00E9--></a>",
-       "<a><?p \u00E9?></a>"].map do |body|
+       "<a><?p \u00E9?></a>", "<a><![CDATA[\u00E9]]></a>", "<a xmlns=\"\u00E9\"/>"].map do |body|
         "<?xml version=\"1.0\" encoding=\"#{name}\"?>#{body}"
       end
     end

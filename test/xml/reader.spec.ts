@@ -124,7 +124,13 @@ function actualOutcome(input: string): Outcome {
 const DECLARATION = /^<\?xml version="1\.0" encoding="([^"]*)"\?>(.*)$/s;
 
 /** The bodies that put non-ASCII where the gem re-reads through the declared encoding. */
-const REENCODED_BODIES = new Set(["<\u00e9/>", "<a><!--\u00e9--></a>", "<a><?p \u00e9?></a>"]);
+const REENCODED_BODIES = new Set([
+  "<\u00e9/>",
+  "<a><!--\u00e9--></a>",
+  "<a><?p \u00e9?></a>",
+  "<a><![CDATA[\u00e9]]></a>",
+  '<a xmlns="\u00e9"/>',
+]);
 
 const UTF8_NAMES = new Set(FIXTURE.encodingTable.utf8.map((name) => name.toLowerCase()));
 const INCOMPATIBLE_NAMES = new Set(
@@ -135,7 +141,7 @@ const ROWS_BY_INPUT = new Map(FIXTURE.cases.map((row) => [row.input, row] as con
 /**
  * The one documented divergence (see `src/xml/reader.ts`): a declaration
  * naming an ASCII-compatible, non-UTF-8 encoding makes the gem re-read element
- * names, comments and PIs through it; the reader keeps UTF-8. For such a row,
+ * names, comments, PIs, CDATA and namespace URIs through it; the reader keeps UTF-8. For such a row,
  * returns the gem's row for the same body under `encoding="UTF-8"` — what the
  * reader must produce instead — or `undefined` when the row is not one.
  */

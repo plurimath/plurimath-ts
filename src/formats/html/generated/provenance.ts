@@ -48,7 +48,7 @@ export const HTML_PARSER_GENERATED_PROVENANCE: HtmlParserGeneratedProvenance = {
     ],
     [
       "scripts/generate-corpus.rb",
-      "d6adefe78c50efe7614f8ccddc30ec2af17c0ce474b68c2d69178b965c51a2a2",
+      "1110c02714af8ad7ecfec6056443c8a225aeaf7250de8628008a631e57098581",
     ],
     [
       "scripts/generate-html-parser-data.rb",

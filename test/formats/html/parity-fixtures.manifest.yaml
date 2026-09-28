@@ -8,11 +8,11 @@ generator:
   path: scripts/generate-parity-fixtures.rb
   sha256: 4123ddb81e7bfaec3cf1a61ed21efa137489f7bc197a647a253fb27b2b8bba7e
   inputs:
-    scripts/generate-corpus.rb: d6adefe78c50efe7614f8ccddc30ec2af17c0ce474b68c2d69178b965c51a2a2
+    scripts/generate-corpus.rb: 1110c02714af8ad7ecfec6056443c8a225aeaf7250de8628008a631e57098581
     scripts/generate-parity-fixtures.rb: 4123ddb81e7bfaec3cf1a61ed21efa137489f7bc197a647a253fb27b2b8bba7e
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: f3d6d66d2f75801828c7f51cbac20a43d2af5db9
+    commit: c8f6ff2b2bcedec8ec03e1288f4462dc553a1b93
     clean: true
     dirty_paths: []
 oracle:

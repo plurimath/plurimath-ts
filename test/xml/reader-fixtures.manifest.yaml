@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-xml-reader-fixtures.rb
-  sha256: 026c5374a3aa12e75eef2b6f3c08b4da029ad746baf989f27179064eada9f62f
+  sha256: f27baebd70ab407f95c257c8fbbdfb7da75f05172b7b0bd9e55e052fa342e940
   inputs:
     scripts/generate-corpus.rb: e11dfe4822a0f61f2e67e817f117540dc984bc42dab12e54d795f2bd98925614
-    scripts/generate-xml-reader-fixtures.rb: 026c5374a3aa12e75eef2b6f3c08b4da029ad746baf989f27179064eada9f62f
+    scripts/generate-xml-reader-fixtures.rb: f27baebd70ab407f95c257c8fbbdfb7da75f05172b7b0bd9e55e052fa342e940
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 9d6da049c9deab1c06f83867cd4c6e79905c0cf1
+    commit: 3bf9b28e1787f2534e0da306790ac4e6c4fc696c
     clean: true
     dirty_paths: []
 oracle:
@@ -105,5 +105,5 @@ dependencies:
 payload:
   path: reader-fixtures.json
   schema: plurimath-corpus/xml-reader/1
-  sha256: 1fda1c8ec2acecf7568cfff1f621a890d6102447855d98833fc1337f670c8826
-  bytes: 4310260
+  sha256: 5bc8f31244a3bc8bee2c7503959afc511400b7270f499d42c2b7d61467d2b70b
+  bytes: 4468697

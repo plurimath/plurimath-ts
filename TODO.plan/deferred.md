@@ -609,8 +609,7 @@ glibc's digits: glibc evaluates the same polynomial in a different order.
 The port's `expm1` evaluates it as three short pieces combined with the
 even powers of its variable, written from fdlibm in this port's own words.
 The order came from comparing results against glibc 2.35 through Ruby's
-`Math`. `mise x ruby@4.0.1 node@24.18.0 -- node
-scripts/measure-libm-hyperbolic-glibc.mjs --expm1-order` repeats it: over
+`Math`. `PATH="$(mise where node@24.18.0)/bin:$(mise where ruby@4.0.1)/bin:$PATH" node scripts/measure-libm-hyperbolic-glibc.mjs --expm1-order` repeats it: over
 3,028,620 seeded arguments with `|x| < 44` (both signs, log- and
 linear-uniform, and 3,000 consecutive doubles either side of each of
 `expm1`'s branch points), the count of arguments whose `expm1` differs from
@@ -627,8 +626,7 @@ formula is plain double arithmetic. `csch` and `coth` of a zero raise the
 gem's `DivisionByZeroError`, and an overflowing result the gem's
 `NonFiniteResultError` (probed on the gem, 0.11.6).
 
-Measured by `mise x ruby@4.0.1 node@24.18.0 -- node
-scripts/measure-libm-hyperbolic-glibc.mjs` (Ruby 4.0.1, glibc
+Measured by `PATH="$(mise where node@24.18.0)/bin:$(mise where ruby@4.0.1)/bin:$PATH" node scripts/measure-libm-hyperbolic-glibc.mjs` (Ruby 4.0.1, glibc
 2.35, x86-64, 2026-09-29): seeded samples, both signs, log- and
 linear-uniform, dense near 0, near the overflow threshold and near
 saturation, 100,000 uniform and 5,000 log-uniform per computing region,

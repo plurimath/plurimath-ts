@@ -4,11 +4,13 @@
 // gem's `sech`/`csch`/`coth` (`1.0 / Math.cosh(x)`, and so on, raising
 // `DivisionByZeroError` on a zero).
 //
-//   mise x ruby@4.0.1 node@24.18.0 -- node scripts/measure-libm-hyperbolic-glibc.mjs [--write-corpus] [--scale N] [--seed N]
-//   mise x ruby@4.0.1 node@24.18.0 -- node scripts/measure-libm-hyperbolic-glibc.mjs --expm1-order [--seed N]
+//   PATH="$(mise where node@24.18.0)/bin:$(mise where ruby@4.0.1)/bin:$PATH" node scripts/measure-libm-hyperbolic-glibc.mjs [--write-corpus] [--scale N] [--seed N]
+//   PATH="$(mise where node@24.18.0)/bin:$(mise where ruby@4.0.1)/bin:$PATH" node scripts/measure-libm-hyperbolic-glibc.mjs --expm1-order [--seed N]
 //
 // Requires the oracle's Ruby (4.0.1, whose `Math.sinh` is glibc's) as `ruby`
-// on PATH; `mise.toml` pins only Node, so the command names both.
+// and Node v24.18.0 as `node`, and refuses anything else: `mise.toml` pins
+// only Node's major version, and `mise x` can resolve either tool to another
+// install, so the command puts both first on PATH itself.
 //
 // `--expm1-order` instead compares `libm-expm1.ts`'s `expm1` with Ruby's
 // `Math.expm1` in both polynomial orders (`splitOrder`, which the port uses,
@@ -359,6 +361,11 @@ async function expm1Order() {
       `split order ${split} differ, Horner order ${horner} differ`,
   );
   process.exit(split === 0 ? 0 : 1);
+}
+
+if (isMainThread && process.version !== "v24.18.0") {
+  console.error(`REFUSING: the measurement runs on Node v24.18.0; this is ${process.version}`);
+  process.exit(1);
 }
 
 if (isMainThread && process.argv.includes("--expm1-order")) {

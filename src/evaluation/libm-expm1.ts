@@ -121,8 +121,8 @@
  * comparison for both orders (figures in `TODO.plan/deferred.md`,
  * "Evaluation: the hyperbolic functions").
  *
- * Callers pass `|x| < 44` (`tanh`'s `2|x|` below 22), so `k <= 64` and
- * fdlibm's exponent adjustment never meets `k = 1024`.
+ * Callers pass `|x| < 44` (`tanh`'s `2|x|`, with `|x|` below 22), so
+ * `k <= 63` and fdlibm's exponent adjustment never meets `k = 1024`.
  */
 
 const view = new DataView(new ArrayBuffer(8));

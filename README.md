@@ -174,6 +174,10 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
   library's `exp`, which they call for `|x| >= 22` (`cosh` from `ln2/2`), is
   inside its rounding band, such as `sinh(22)`: they raise
   `UnsupportedFeatureError` (`src/evaluation/libm-hyperbolic.ts`).
+- `evaluate()` of `Lg` where the `log` that glibc's `log10` calls lies inside
+  `log`'s rounding band and the answer depends on its rounding, such as
+  `\lg(0.214)`: it raises `UnsupportedFeatureError`
+  (`src/evaluation/libm.ts`).
 - A root `parse()` function.
 - UnicodeMath input beyond the grammar slice ported so far: unmatched rules
   raise `ParseError`.

@@ -32,7 +32,7 @@
 import { type SpawnSyncReturns, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, join, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseYaml, type YamlValue } from "./corpus-yaml";
 
@@ -412,13 +412,34 @@ function payloadFilesOnDisk(corpusDirectory: string): readonly string[] {
   return found.sort();
 }
 
-function readProvenance(root: string): PinProvenance {
-  // The checkout itself must be a real directory: every containment check
-  // below is relative to it, so a symlinked submodule path would move the
-  // whole pin elsewhere while each check still passed.
-  if (isSymbolicLink(root)) {
-    throw submoduleError(root, `${root} is a symbolic link, not the submodule checkout`);
+/**
+ * The checkout itself must be a real directory, and so must every directory
+ * between `base` and it: every containment check below is relative to `root`,
+ * so a symlinked submodule path, or a symlinked `submodules/` above it, would
+ * move the whole pin elsewhere while each check still passed. Components
+ * above `base` are not checked, so a repository under a symlinked home
+ * directory still loads.
+ */
+function assertNoSymbolicLinkToRoot(root: string, base: string): void {
+  const below = relative(base, root);
+  if (below === "" || below === ".." || below.startsWith(`..${sep}`) || isAbsolute(below)) {
+    throw new Error(`${root} is not below ${base}; pass the directory it is checked from.`);
   }
+  let current = base;
+  for (const segment of below.split(sep)) {
+    current = join(current, segment);
+    if (isSymbolicLink(current)) {
+      const detail =
+        current === root
+          ? `${root} is a symbolic link, not the submodule checkout`
+          : `${current} is a symbolic link above the submodule checkout ${root}`;
+      throw submoduleError(root, detail);
+    }
+  }
+}
+
+function readProvenance(root: string, base: string): PinProvenance {
+  assertNoSymbolicLinkToRoot(root, base);
   const path = join(root, "corpus", "provenance.yaml");
   if (!existsSync(path)) {
     const detail = existsSync(root)
@@ -463,11 +484,17 @@ function readProvenance(root: string): PinProvenance {
     throw new Error(`${path}: "payloads" is empty; the pin records no corpus files.`);
   }
 
+  // The schema requires unique items; a path listed twice would be read, and
+  // counted, twice.
+  const seen = new Set<string>();
   const payloads = entries.map((entry, index) => {
     const where = `${path} payloads[${index}]`;
     const record = asMapping(entry, where);
+    const payloadPath = requiredString(record, "path", where);
+    if (seen.has(payloadPath)) throw new Error(`${where}: "${payloadPath}" is listed twice.`);
+    seen.add(payloadPath);
     return {
-      path: requiredString(record, "path", where),
+      path: payloadPath,
       sha256: requiredString(record, "sha256", where),
       bytes: requiredInteger(record, "bytes", where),
     };
@@ -1005,9 +1032,21 @@ function readCallsPayload(
 /**
  * Loads and verifies the whole pin. `root` is a parameter so the failure paths
  * can be proven against a scratch copy rather than argued from the code.
+ * `base` is where the symbolic-link check starts: the repository root for the
+ * real pin, and the parent of `root` by default for a scratch copy outside
+ * the repository, so only the root itself is checked there unless a test
+ * passes a higher base.
  */
-export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpus {
-  const provenance = readProvenance(root);
+export function loadPinnedCorpus(given: string = PINNED_CORPUS_ROOT, base?: string): PinnedCorpus {
+  // `resolve` drops a trailing separator or `.` component without following
+  // links: `lstat` of `link/` or `link/.` follows the link and would pass the
+  // symbolic-link check below.
+  const root = resolve(given);
+  const underRepo = root.startsWith(`${REPO_ROOT}${sep}`);
+  const provenance = readProvenance(
+    root,
+    base === undefined ? (underRepo ? REPO_ROOT : dirname(root)) : resolve(base),
+  );
   const corpusDirectory = join(root, "corpus");
 
   const onDisk = payloadFilesOnDisk(corpusDirectory).filter((path) => path !== "provenance.yaml");

@@ -16,6 +16,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -584,6 +585,47 @@ describe("a pin that was not generated the canonical way is refused", () => {
     const link = join(scratch(), "linked-pin");
     symlinkSync(real, link);
     expect(() => loadPinnedCorpus(link)).toThrow("is a symbolic link, not the submodule checkout");
+  });
+
+  it.each(["/", "/."])("refuses a symbolic-link pin root spelled with a trailing %s", (suffix) => {
+    const real = damagedCopy(() => {});
+    const link = join(scratch(), "linked-pin");
+    symlinkSync(real, link);
+    expect(() => loadPinnedCorpus(`${link}${suffix}`)).toThrow(
+      "is a symbolic link, not the submodule checkout",
+    );
+  });
+
+  it("loads a pin root below a real directory when checked from a base", () => {
+    const real = damagedCopy(() => {});
+    const base = scratch();
+    mkdirSync(join(base, "submodules"));
+    const root = join(base, "submodules", "plurimath-testsuite");
+    renameSync(real, root);
+    expect(() => loadPinnedCorpus(root, base)).not.toThrow();
+  });
+
+  it("refuses a pin root below a symbolic-link directory", () => {
+    const real = damagedCopy(() => {});
+    const base = scratch();
+    const outside = scratch();
+    renameSync(real, join(outside, "plurimath-testsuite"));
+    symlinkSync(outside, join(base, "submodules"));
+    const root = join(base, "submodules", "plurimath-testsuite");
+    expect(() => loadPinnedCorpus(root, base)).toThrow(
+      "is a symbolic link above the submodule checkout",
+    );
+  });
+
+  it("refuses a payload listed twice", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "corpus", "provenance.yaml"), (text) => {
+        const record = /- path: mathml\/roots\.yaml\n(?: {2}.*\n)+/.exec(text);
+        if (record === null) throw new Error("fixture: no mathml/roots.yaml record");
+        return text.replace(record[0], record[0] + record[0]);
+      });
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow('"mathml/roots.yaml" is listed twice');
   });
 
   it("refuses a symbolic-link directory hidden inside corpus/", () => {

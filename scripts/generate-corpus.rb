@@ -673,8 +673,10 @@ module CorpusGenerator
 
   # --- the pinned shared corpus, read-only ---------------------------------
 
+  # `expand_path` drops a trailing separator or `.` component without
+  # following links, so the symbolic-link check sees the link itself.
   def pin_root
-    File.join(REPO_ROOT, PIN_RELATIVE_PATH)
+    File.expand_path(PIN_RELATIVE_PATH, REPO_ROOT)
   end
 
   def missing_pin!(detail)
@@ -690,10 +692,18 @@ module CorpusGenerator
   # here rather than yielding an empty list, which would make every check below
   # pass while inspecting nothing.
   def read_pin_cases
-    # A symlinked submodule path would move the whole pin elsewhere while
-    # every containment check below, relative to it, still passed.
-    missing_pin!("#{pin_root} is a symbolic link, not the submodule checkout") if
-      File.symlink?(pin_root)
+    # A symlinked submodule path, or a symlinked `submodules/` above it, would
+    # move the whole pin elsewhere while every containment check below,
+    # relative to it, still passed. Components above REPO_ROOT are not
+    # checked, so a repository under a symlinked home directory still works.
+    current = REPO_ROOT
+    PIN_RELATIVE_PATH.split("/").each do |segment|
+      current = File.join(current, segment)
+      next unless File.symlink?(current)
+
+      missing_pin!("#{pin_root} is a symbolic link, not the submodule checkout") if current == pin_root
+      missing_pin!("#{current} is a symbolic link above the submodule checkout #{pin_root}")
+    end
 
     provenance_path = File.join(pin_root, "corpus", "provenance.yaml")
     missing_pin!("#{provenance_path} does not exist") unless File.exist?(provenance_path)
@@ -718,7 +728,13 @@ module CorpusGenerator
     payloads = provenance["payloads"] || []
     raise Error, "#{provenance_path} lists no payloads" if payloads.empty?
 
+    # The schema requires unique items; a path listed twice would be read twice.
+    seen = {}
     cases = payloads.flat_map do |entry|
+      path = entry.fetch("path")
+      raise Error, "#{provenance_path}: payload #{path.inspect} is listed twice" if seen[path]
+
+      seen[path] = true
       next verify_pending_pin_payload(entry) if pending_reader_payload?(entry.fetch("path"))
 
       read_pin_payload(entry)

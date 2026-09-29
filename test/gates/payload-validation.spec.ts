@@ -100,7 +100,7 @@ function gitFileSha256AtCommit(
  */
 const FORMATS_ROOT = join(REPO_ROOT, "test", "formats");
 const MANIFEST_SCHEMA = "plurimath-corpus/manifest/2";
-const PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
+const PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/3";
 const CANONICAL_XML_ENGINE = "Plurimath::XmlEngine::OxEngine";
 const SHA256 = /^[0-9a-f]{64}$/;
 const COMMIT = /^[0-9a-f]{40}$/;

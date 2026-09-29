@@ -11,7 +11,16 @@
  */
 
 import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -146,15 +155,21 @@ function syntheticPin(options: SyntheticOptions = {}): string {
     writeFileSync(join(root, "corpus", "asciimath", options.extraFile), TINY_PAYLOAD);
   }
 
+  const generator = "# A synthetic generator.\n";
+  mkdirSync(join(root, "scripts"), { recursive: true });
+  writeFileSync(join(root, "scripts", "generate-corpus.rb"), generator);
+
   const bytes = Buffer.from(body, "utf8");
   const provenance = [
     "# Synthetic provenance.",
     "---",
-    "schema: plurimath-corpus/provenance/2",
+    "schema: plurimath-corpus/provenance/3",
     "committable: true",
     "warnings: []",
     "generator:",
     "  path: scripts/generate-corpus.rb",
+    `  sha256: ${createHash("sha256").update(generator).digest("hex")}`,
+    "  inputs: []",
     "oracle:",
     "  gem: plurimath",
     "  version: 0.11.6",
@@ -230,6 +245,41 @@ const EXPECTED_PAYLOADS = [
 ];
 
 /**
+ * The pending-format payloads (`PENDING_READER_FORMATS`), named for the same
+ * reason `EXPECTED_PAYLOADS` is. Sorted as the provenance lists them.
+ */
+const EXPECTED_PENDING_PAYLOADS = [
+  "mathml/elementary-math.yaml",
+  "mathml/enclose.yaml",
+  "mathml/fences.yaml",
+  "mathml/fractions.yaml",
+  "mathml/layout.yaml",
+  "mathml/over-under.yaml",
+  "mathml/partial-render.yaml",
+  "mathml/rejections.yaml",
+  "mathml/roots.yaml",
+  "mathml/scripts.yaml",
+  "mathml/tables.yaml",
+  "mathml/text.yaml",
+  "mathml/tokens.yaml",
+  "omml/accents.yaml",
+  "omml/boxes.yaml",
+  "omml/delimiters.yaml",
+  "omml/equation-arrays.yaml",
+  "omml/fractions.yaml",
+  "omml/functions.yaml",
+  "omml/group-characters.yaml",
+  "omml/limits.yaml",
+  "omml/matrices.yaml",
+  "omml/nary.yaml",
+  "omml/partial-render.yaml",
+  "omml/rejections.yaml",
+  "omml/roots.yaml",
+  "omml/runs.yaml",
+  "omml/scripts.yaml",
+];
+
+/**
  * The assertion itself, so it can be applied to a damaged pin as well as to the
  * shipped one. Comparing a damaged pin's payloads to `EXPECTED_PAYLOADS` with
  * `not.toStrictEqual` would only show the arrays differ — it would pass whether
@@ -253,7 +303,12 @@ describe("the pin as shipped", () => {
     expect(corpus.payloads.length).toBe(41);
     expect(corpus.rejectionPayloads.length).toBe(4);
     expect(corpus.callsPayloads.length).toBe(7);
-    expect(corpus.provenance.payloads.length).toBe(52);
+    // Plus 28 MathML and OMML payloads (plurimath-testsuite#21), byte-verified
+    // but not parsed: they are pending the MathML and OMML readers.
+    expect(corpus.pendingPayloads.map((payload) => payload.path)).toStrictEqual(
+      EXPECTED_PENDING_PAYLOADS,
+    );
+    expect(corpus.provenance.payloads.length).toBe(80);
     assertExpectedPayloads(corpus);
   });
 
@@ -440,10 +495,186 @@ describe("a pin that was not generated the canonical way is refused", () => {
   it("refuses a provenance schema it does not know", () => {
     const root = damagedCopy((where) => {
       editFile(join(where, "corpus", "provenance.yaml"), (text) =>
-        text.replace("plurimath-corpus/provenance/2", "plurimath-corpus/provenance/3"),
+        text.replace("plurimath-corpus/provenance/3", "plurimath-corpus/provenance/4"),
       );
     });
     expect(() => loadPinnedCorpus(root)).toThrow("this reader knows");
+  });
+
+  it("refuses provenance/2, which has no generator.inputs to check", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "corpus", "provenance.yaml"), (text) =>
+        text.replace("plurimath-corpus/provenance/3", "plurimath-corpus/provenance/2"),
+      );
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("this reader knows");
+  });
+
+  it("records the MathML and OMML seed lists as generator inputs", () => {
+    const text = readFileSync(join(PINNED_CORPUS_ROOT, "corpus", "provenance.yaml"), "utf8");
+    expect(text).toContain("  - path: scripts/seeds/mathml.yaml\n");
+    expect(text).toContain("  - path: scripts/seeds/omml.yaml\n");
+  });
+
+  it("refuses a generator input edited in place", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "scripts", "seeds", "omml.yaml"), (text) => `${text}# edited\n`);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("omml.yaml");
+    expect(() => loadPinnedCorpus(root)).toThrow("bytes on disk");
+  });
+
+  it("refuses a generator input whose digest disagrees at the same length", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "scripts", "seeds", "mathml.yaml"), (text) =>
+        text.replace(/.$/su, (last) => (last === "\n" ? "\t" : "\n")),
+      );
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("mathml.yaml: sha256");
+  });
+
+  it("refuses a generator input missing from the checkout", () => {
+    const root = damagedCopy((where) => {
+      rmSync(join(where, "scripts", "seeds", "mathml.yaml"));
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("listed in generator.inputs but not on disk");
+  });
+
+  it("refuses a generator edited in place", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "scripts", "generate-corpus.rb"), (text) => `${text}# edited\n`);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("generate-corpus.rb: sha256");
+  });
+
+  it("refuses a generator input replaced by a symbolic link", () => {
+    const root = damagedCopy((where) => {
+      const seed = join(where, "scripts", "seeds", "omml.yaml");
+      const outside = join(scratch(), "omml.yaml");
+      writeFileSync(outside, readFileSync(seed));
+      rmSync(seed);
+      symlinkSync(outside, seed);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("symbolic link");
+  });
+
+  it("refuses a generator input reached through a symbolic-link directory", () => {
+    const root = damagedCopy((where) => {
+      const seeds = join(where, "scripts", "seeds");
+      const moved = join(where, "scripts", "real-seeds");
+      cpSync(seeds, moved, { recursive: true });
+      rmSync(seeds, { recursive: true });
+      symlinkSync(moved, seeds);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("passes through a symbolic link");
+  });
+
+  it("refuses a corpus/ directory that is a symbolic link", () => {
+    const root = damagedCopy((where) => {
+      const corpus = join(where, "corpus");
+      const outside = join(scratch(), "corpus");
+      cpSync(corpus, outside, { recursive: true });
+      rmSync(corpus, { recursive: true });
+      symlinkSync(outside, corpus);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("passes through a symbolic link");
+  });
+
+  it("refuses a pin root that is itself a symbolic link", () => {
+    const real = damagedCopy(() => {});
+    const link = join(scratch(), "linked-pin");
+    symlinkSync(real, link);
+    expect(() => loadPinnedCorpus(link)).toThrow("is a symbolic link, not the submodule checkout");
+  });
+
+  it.each(["/", "/."])("refuses a symbolic-link pin root spelled with a trailing %s", (suffix) => {
+    const real = damagedCopy(() => {});
+    const link = join(scratch(), "linked-pin");
+    symlinkSync(real, link);
+    expect(() => loadPinnedCorpus(`${link}${suffix}`)).toThrow(
+      "is a symbolic link, not the submodule checkout",
+    );
+  });
+
+  it("loads a pin root below a real directory when checked from a base", () => {
+    const real = damagedCopy(() => {});
+    const base = scratch();
+    mkdirSync(join(base, "submodules"));
+    const root = join(base, "submodules", "plurimath-testsuite");
+    renameSync(real, root);
+    expect(() => loadPinnedCorpus(root, base)).not.toThrow();
+  });
+
+  it("refuses a pin root below a symbolic-link directory", () => {
+    const real = damagedCopy(() => {});
+    const base = scratch();
+    const outside = scratch();
+    renameSync(real, join(outside, "plurimath-testsuite"));
+    symlinkSync(outside, join(base, "submodules"));
+    const root = join(base, "submodules", "plurimath-testsuite");
+    expect(() => loadPinnedCorpus(root, base)).toThrow(
+      "is a symbolic link above the submodule checkout",
+    );
+  });
+
+  it("refuses a payload listed twice", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "corpus", "provenance.yaml"), (text) => {
+        const record = /- path: mathml\/roots\.yaml\n(?: {2}.*\n)+/.exec(text);
+        if (record === null) throw new Error("fixture: no mathml/roots.yaml record");
+        return text.replace(record[0], record[0] + record[0]);
+      });
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow('"mathml/roots.yaml" is listed twice');
+  });
+
+  it("refuses a symbolic-link directory hidden inside corpus/", () => {
+    const root = damagedCopy((where) => {
+      const outside = scratch();
+      writeFileSync(join(outside, "hidden.yaml"), TINY_PAYLOAD);
+      symlinkSync(outside, join(where, "corpus", "hidden"));
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("a symbolic link in the pinned corpus");
+  });
+
+  it("refuses a pending-format payload path that leaves corpus/", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "corpus", "provenance.yaml"), (text) =>
+        text.replace("- path: mathml/roots.yaml", "- path: mathml/../../outside.yaml"),
+      );
+      // Moved to where the escaping path points, so only the path is wrong.
+      cpSync(join(where, "corpus", "mathml", "roots.yaml"), join(where, "outside.yaml"));
+      rmSync(join(where, "corpus", "mathml", "roots.yaml"));
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("not a plain relative path");
+  });
+
+  it("refuses a provenance with no generator.inputs", () => {
+    const root = syntheticPin({ provenance: (text) => text.replace("  inputs: []\n", "") });
+    expect(() => loadPinnedCorpus(root)).toThrow("inputs");
+  });
+
+  it("refuses a generator input path that leaves the testsuite root", () => {
+    const root = syntheticPin({
+      provenance: (text) =>
+        text.replace(
+          "  inputs: []\n",
+          "  inputs:\n  - path: ../outside.yaml\n    sha256: x\n    bytes: 0\n",
+        ),
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("not a plain relative path");
+  });
+
+  it("refuses a generator input listed twice", () => {
+    const root = syntheticPin({
+      provenance: (text) =>
+        text.replace(
+          "  inputs: []\n",
+          "  inputs:\n  - path: corpus/provenance.yaml\n    sha256: x\n    bytes: 0\n" +
+            "  - path: corpus/provenance.yaml\n    sha256: x\n    bytes: 0\n",
+        ),
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("listed twice");
   });
 });
 

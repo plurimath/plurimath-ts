@@ -89,7 +89,7 @@ module CorpusGenerator
   # The submodule declared in .gitmodules. The cases it holds are read, never
   # written: plurimath-testsuite owns them.
   PIN_RELATIVE_PATH = "submodules/plurimath-testsuite"
-  PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2"
+  PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/3"
   SUBMODULE_FIX = "git submodule update --init --recursive"
 
   # --- symbol data ---------------------------------------------------------
@@ -673,8 +673,10 @@ module CorpusGenerator
 
   # --- the pinned shared corpus, read-only ---------------------------------
 
+  # `expand_path` drops a trailing separator or `.` component without
+  # following links, so the symbolic-link check sees the link itself.
   def pin_root
-    File.join(REPO_ROOT, PIN_RELATIVE_PATH)
+    File.expand_path(PIN_RELATIVE_PATH, REPO_ROOT)
   end
 
   def missing_pin!(detail)
@@ -690,6 +692,19 @@ module CorpusGenerator
   # here rather than yielding an empty list, which would make every check below
   # pass while inspecting nothing.
   def read_pin_cases
+    # A symlinked submodule path, or a symlinked `submodules/` above it, would
+    # move the whole pin elsewhere while every containment check below,
+    # relative to it, still passed. Components above REPO_ROOT are not
+    # checked, so a repository under a symlinked home directory still works.
+    current = REPO_ROOT
+    PIN_RELATIVE_PATH.split("/").each do |segment|
+      current = File.join(current, segment)
+      next unless File.symlink?(current)
+
+      missing_pin!("#{pin_root} is a symbolic link, not the submodule checkout") if current == pin_root
+      missing_pin!("#{current} is a symbolic link above the submodule checkout #{pin_root}")
+    end
+
     provenance_path = File.join(pin_root, "corpus", "provenance.yaml")
     missing_pin!("#{provenance_path} does not exist") unless File.exist?(provenance_path)
 
@@ -708,13 +723,143 @@ module CorpusGenerator
                    "not Ox (§7)"
     end
 
+    verify_pin_generator_inputs!(provenance, provenance_path)
+
     payloads = provenance["payloads"] || []
     raise Error, "#{provenance_path} lists no payloads" if payloads.empty?
 
-    cases = payloads.flat_map { |entry| read_pin_payload(entry) }
+    # The schema requires unique items; a path listed twice would be read twice.
+    seen = {}
+    cases = payloads.flat_map do |entry|
+      path = entry.fetch("path")
+      raise Error, "#{provenance_path}: payload #{path.inspect} is listed twice" if seen[path]
+
+      seen[path] = true
+      next verify_pending_pin_payload(entry) if pending_reader_payload?(entry.fetch("path"))
+
+      read_pin_payload(entry)
+    end
     raise Error, "the pin at #{pin_root} contains no cases" if cases.empty?
 
     cases
+  end
+
+  # The MathML and OMML payloads plurimath-testsuite#21 added are pending this
+  # port's MathML and OMML readers. Their bytes are verified like any other
+  # payload's, but their cases are not returned: every consumer of
+  # `read_pin_cases` feeds the cases (or their rendered outputs) to parsers
+  # and fixtures built for the formats this port reads, and folding these in
+  # would silently widen every fixture. Mirrors `PENDING_READER_FORMATS` in
+  # test/core/corpus-pin.ts; removing a format from both is how its reader
+  # starts consuming it.
+  PENDING_READER_FORMATS = %w[mathml omml].freeze
+
+  def pending_reader_payload?(path)
+    format, rest = path.split("/", 2)
+    !rest.nil? && PENDING_READER_FORMATS.include?(format)
+  end
+
+  def verify_pending_pin_payload(entry)
+    path = pin_file(pin_root, entry.fetch("path"), "a provenance payload path", "corpus")
+    missing_pin!("#{path} is listed in corpus/provenance.yaml but is not on disk") unless
+      File.exist?(path)
+
+    bytes = File.binread(path)
+    if bytes.bytesize != entry.fetch("bytes") || sha256(bytes) != entry.fetch("sha256")
+      raise Error, "#{path} does not match corpus/provenance.yaml; the pinned corpus " \
+                   "was edited in place. Restore it with " \
+                   "`git -C #{PIN_RELATIVE_PATH} checkout .`"
+    end
+    []
+  end
+
+  # A provenance path must be plain and relative: no leading `/`, no `\\`, no
+  # empty, `.` or `..` segment. Mirrors `assertPlainRelativePath` in
+  # test/core/corpus-pin.ts.
+  def assert_plain_relative_path!(path, where)
+    return unless path.empty? || path.start_with?("/") || path.include?("\\") ||
+                  path.split("/", -1).any? { |segment| ["", ".", ".."].include?(segment) }
+
+    raise Error, "#{where}: #{path.inspect} is not a plain relative path"
+  end
+
+  # Resolves a provenance path under `root` (the testsuite checkout), refusing
+  # a symbolic link at ANY component below `root` -- `prefix` (`corpus` for a
+  # payload) included -- or a real path outside `root`. Mirrors `pinFile` in
+  # test/core/corpus-pin.ts.
+  def pin_file(root, relative, where, prefix = nil)
+    assert_plain_relative_path!(relative, where)
+    segments = (prefix ? prefix.split("/") : []) + relative.split("/")
+    current = root
+    segments.each do |segment|
+      current = File.join(current, segment)
+      raise Error, "#{current}: #{where} passes through a symbolic link" if File.symlink?(current)
+      return File.join(root, *segments) unless File.exist?(current)
+    end
+
+    real_root = File.realpath(root)
+    real = File.realpath(current)
+    unless real.start_with?("#{real_root}/")
+      raise Error, "#{current}: #{where} resolves to #{real}, outside #{real_root}"
+    end
+
+    current
+  end
+
+  # The generator the provenance names, checked against its recorded sha256.
+  def verify_pin_generator!(generator, provenance_path)
+    path, digest = generator.values_at("path", "sha256")
+    unless path.is_a?(String) && digest.is_a?(String)
+      raise Error, "#{provenance_path}: generator needs a string path and sha256"
+    end
+
+    file = pin_file(pin_root, path, "#{provenance_path}: generator.path")
+    missing_pin!("#{file} is the recorded generator but is not on disk") unless File.file?(file)
+    return if sha256(File.binread(file)) == digest
+
+    raise Error, "#{file} does not match corpus/provenance.yaml generator.sha256; the " \
+                 "pinned checkout was edited in place. Restore it with " \
+                 "`git -C #{PIN_RELATIVE_PATH} checkout .`"
+  end
+
+  # `provenance/3` lists the data files the testsuite's generator read besides
+  # itself (the MathML and OMML seed lists) under `generator.inputs`, relative
+  # to the testsuite root. Each is checked against the pinned checkout the
+  # same way a payload is; the list is required and may be empty.
+  def verify_pin_generator_inputs!(provenance, provenance_path)
+    generator = provenance["generator"]
+    raise Error, "#{provenance_path}: generator must be a mapping" unless generator.is_a?(Hash)
+
+    verify_pin_generator!(generator, provenance_path)
+    inputs = generator["inputs"]
+    raise Error, "#{provenance_path}: generator.inputs must be a list" unless inputs.is_a?(Array)
+
+    seen = {}
+    records = inputs.each_with_index.map do |entry, index|
+      at = "#{provenance_path}: generator.inputs[#{index}]"
+      raise Error, "#{at} must be a mapping" unless entry.is_a?(Hash)
+
+      path, digest, size = entry.values_at("path", "sha256", "bytes")
+      unless path.is_a?(String) && digest.is_a?(String) && size.is_a?(Integer)
+        raise Error, "#{at} needs a string path, a string sha256 and an integer bytes"
+      end
+      assert_plain_relative_path!(path, at)
+      raise Error, "#{at}: #{path.inspect} is listed twice" if seen[path]
+
+      seen[path] = true
+      [path, digest, size]
+    end
+
+    records.each do |path, digest, size|
+      file = pin_file(pin_root, path, "#{provenance_path}: generator.inputs")
+      missing_pin!("#{file} is listed in generator.inputs but is not on disk") unless File.file?(file)
+      bytes = File.binread(file)
+      next if bytes.bytesize == size && sha256(bytes) == digest
+
+      raise Error, "#{file} does not match corpus/provenance.yaml generator.inputs; the " \
+                   "pinned checkout was edited in place. Restore it with " \
+                   "`git -C #{PIN_RELATIVE_PATH} checkout .`"
+    end
   end
 
   # A `plurimath-corpus/calls/1` payload's cases record `Formula#to_<target>`
@@ -729,7 +874,7 @@ module CorpusGenerator
   CALLS_SCHEMA = "plurimath-corpus/calls/1"
 
   def read_pin_payload(entry)
-    path = File.join(pin_root, "corpus", entry.fetch("path"))
+    path = pin_file(pin_root, entry.fetch("path"), "a provenance payload path", "corpus")
     missing_pin!("#{path} is listed in corpus/provenance.yaml but is not on disk") unless
       File.exist?(path)
 

@@ -777,7 +777,7 @@ module CorpusGenerator
   # empty, `.` or `..` segment. Mirrors `assertPlainRelativePath` in
   # test/core/corpus-pin.ts.
   def assert_plain_relative_path!(path, where)
-    return unless path.start_with?("/") || path.include?("\\") ||
+    return unless path.empty? || path.start_with?("/") || path.include?("\\") ||
                   path.split("/", -1).any? { |segment| ["", ".", ".."].include?(segment) }
 
     raise Error, "#{where}: #{path.inspect} is not a plain relative path"

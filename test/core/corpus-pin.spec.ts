@@ -245,13 +245,6 @@ const EXPECTED_PAYLOADS = [
 ];
 
 /**
- * The assertion itself, so it can be applied to a damaged pin as well as to the
- * shipped one. Comparing a damaged pin's payloads to `EXPECTED_PAYLOADS` with
- * `not.toStrictEqual` would only show the arrays differ — it would pass whether
- * or not anything rejects the damaged pin, which is the difference between a
- * red-green proof and a restatement.
- */
-/**
  * The pending-format payloads (`PENDING_READER_FORMATS`), named for the same
  * reason `EXPECTED_PAYLOADS` is. Sorted as the provenance lists them.
  */
@@ -286,6 +279,13 @@ const EXPECTED_PENDING_PAYLOADS = [
   "omml/scripts.yaml",
 ];
 
+/**
+ * The assertion itself, so it can be applied to a damaged pin as well as to the
+ * shipped one. Comparing a damaged pin's payloads to `EXPECTED_PAYLOADS` with
+ * `not.toStrictEqual` would only show the arrays differ — it would pass whether
+ * or not anything rejects the damaged pin, which is the difference between a
+ * red-green proof and a restatement.
+ */
 function assertExpectedPayloads(corpus: PinnedCorpus): void {
   expect(corpus.payloads.map((payload) => payload.path)).toStrictEqual(EXPECTED_PAYLOADS);
 }

@@ -21,7 +21,7 @@
 # than trusting `Rational#to_f` to be correctly rounded (`numeric.ts`'s
 # `rationalToDouble` notes it is not guaranteed to be).
 #
-#   ruby scripts/lib/libm-reference.rb <sin|cos|tan|asin|acos|atan|exp|log|sqrt|sinh|cosh|tanh>
+#   ruby scripts/lib/libm-reference.rb <sin|cos|tan|asin|acos|atan|exp|log|sqrt>
 #
 # Needs a bigdecimal with `BigMath.asin`/`acos`/`atan`/`tan` (checked with Ruby
 # 4.0.1 with bigdecimal 4.1.2, the oracle's locked bundle, and 4.1.3, its default).
@@ -95,31 +95,6 @@ module LibmReference
     end
   end
 
-  # `sinh b`: the Taylor series below 1/1000 (where `(e^b - e^-b) / 2`
-  # would cancel away a tiny or subnormal argument's digits), else from `exp`.
-  def sinh(b)
-    if b.abs < BigDecimal("0.001")
-      square = b * b
-      term = b
-      sum = BigDecimal(0)
-      k = 1
-      while term.nonzero? && term.abs > BigDecimal("1e-#{DIGITS + 20}") * b.abs
-        sum += term
-        term = (term * square).div((k + 1) * (k + 2), DIGITS + 20)
-        k += 2
-      end
-      sum
-    else
-      e = BigMath.exp(b, DIGITS + 20)
-      (e - BigDecimal(1).div(e, DIGITS + 20)) / 2
-    end
-  end
-
-  def cosh(b)
-    e = BigMath.exp(b.abs, DIGITS + 20)
-    (e + BigDecimal(1).div(e, DIGITS + 20)) / 2
-  end
-
   def reference(fn, x)
     return nil unless x.finite?
 
@@ -136,9 +111,6 @@ module LibmReference
     when "exp" then BigMath.exp(b, DIGITS)
     when "log" then x.positive? ? BigMath.log(b, DIGITS) : nil
     when "sqrt" then x.positive? ? BigMath.sqrt(b, DIGITS) : nil
-    when "sinh" then x.abs > 800 ? nil : sinh(b)
-    when "cosh" then x.abs > 800 ? nil : cosh(b)
-    when "tanh" then b.abs > 40 ? BigDecimal(b.sign.positive? ? 1 : -1) * (1 - (2 * BigMath.exp(-2 * b.abs, DIGITS))) : sinh(b).div(cosh(b), DIGITS)
     else raise "unknown function #{fn}"
     end
   end

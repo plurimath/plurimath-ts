@@ -1,32 +1,30 @@
 #!/usr/bin/env node
-// Sizes `src/evaluation/libm-hyperbolic.ts`'s refusal bands from where
-// glibc's `sinh`, `cosh` and `tanh` (through the oracle's Ruby `Math`) actually
-// miss the correctly rounded double, per argument region, and runs the
-// differential of the port (bands on) against Ruby's `Math` for `sinh`,
-// `cosh`, `tanh` and the gem's `sech`/`csch`/`coth` (`1.0 / Math.cosh(x)`,
-// and so on, raising `DivisionByZeroError` on a zero).
+// The differential of `src/evaluation/libm-hyperbolic.ts` against Ruby's
+// `Math` (glibc 2.35 on the oracle's host): `sinh`, `cosh`, `tanh`, and the
+// gem's `sech`/`csch`/`coth` (`1.0 / Math.cosh(x)`, and so on, raising
+// `DivisionByZeroError` on a zero).
 //
-//   mise x -- node scripts/measure-libm-hyperbolic-glibc.mjs [--write-corpus] [--scale N]
+//   mise x ruby@4.0.1 node@24.18.0 -- node scripts/measure-libm-hyperbolic-glibc.mjs [--write-corpus] [--scale N] [--seed N]
+//   mise x ruby@4.0.1 node@24.18.0 -- node scripts/measure-libm-hyperbolic-glibc.mjs --expm1-order [--seed N]
 //
-// Requires `ruby` on PATH — the oracle's Ruby, whose `Math.sinh` is glibc's.
+// Requires the oracle's Ruby (4.0.1, whose `Math.sinh` is glibc's) as `ruby`
+// on PATH; `mise.toml` pins only Node, so the command names both.
 //
-// The exact value is the port's own `BigInt` computation (`exactHyperbolic`);
-// every run also checks the correctly rounded double of about
-// `REFERENCE_COUNT` samples per function, and of every glibc miss in a banded
-// region, against `scripts/lib/libm-reference.rb` (BigDecimal), so the
-// port's arithmetic is checked independently of itself.
+// `--expm1-order` instead compares `libm-expm1.ts`'s `expm1` with Ruby's
+// `Math.expm1` in both polynomial orders (`splitOrder`, which the port uses,
+// and fdlibm's `hornerOrder`), over a seeded sample of `|x| < 44` (the range
+// the hyperbolic functions call it on), and prints each order's mismatch
+// count. It exits nonzero if the split order has any mismatch.
 //
 // Per function and region (`REGIONS`), over the seeded sample
 // (`hyperbolicSamples` below: log-uniform and linear-uniform arguments, both
-// signs, thousands of consecutive doubles either side of every glibc branch
-// point and of the overflow threshold, subnormals, hand-typed values, zeros,
-// infinities and NaN), it prints: how often glibc returns the correctly
-// rounded double; the worst miss's distance from the midpoint (in ULP); any
-// "far" miss (glibc not one of the two doubles around the exact value), which
-// no band can fix; the band `2 * worst`, and the region's configured band.
-// It exits nonzero if a configured band is narrower than twice the worst
-// miss, if a far miss lies in a region that is not wholly refused, or if the
-// differential finds one answered input where the port differs from Ruby.
+// signs, dense uniform and log-uniform samples in every region, thousands of
+// consecutive doubles either side of every branch point and region edge,
+// subnormals, hand-typed values, zeros, infinities and NaN), it prints how
+// many arguments the port answers and refuses, and how many answers differ
+// from Ruby's. It exits nonzero if one answered argument differs from Ruby
+// (the function or its reciprocal), or if a region whose path never calls
+// `exp` (`direct`, `expm1`) refuses anything.
 
 import { spawn } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
@@ -40,11 +38,6 @@ import { mulberry32 } from "./lib/pow-sample.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..");
 const FUNCTIONS = ["sinh", "cosh", "tanh"];
-const subArg = process.argv.indexOf("--binades");
-const SUB =
-  subArg >= 0 && /^\d+$/.test(process.argv[subArg + 1] ?? "")
-    ? Number(process.argv[subArg + 1])
-    : 1;
 const seedArg = process.argv.indexOf("--seed");
 export const SEED = seedArg >= 0 ? Number(process.argv[seedArg + 1]) : 20260928;
 
@@ -82,38 +75,13 @@ if (!isMainThread) {
   const rows = [];
   for (const hex of hexes) {
     const x = fromBits(BigInt(`0x${hex}`));
-    const exact = mod.exactHyperbolic(fn, x);
-    const nearest = mod.roundHyperbolic(exact, null);
-    const pos = mod.midpointOffset(exact);
     let answered = null;
     try {
-      answered = mod.hyperbolic(fn, x);
+      answered = hexOf(mod.hyperbolic(fn, x));
     } catch {
       answered = null;
     }
-    // below / above: the doubles either side of the exact value.
-    let lower = null;
-    let upper = null;
-    let distance = null;
-    if (pos !== null) {
-      const a = Math.abs(nearest);
-      const nextUp = fromBits(bitsOf(a) + 1n);
-      const nextDown = a === 0 ? 0 : fromBits(bitsOf(a) - 1n);
-      // offset > 0: exact above the midpoint, nearest is the upper double.
-      const [lo, hi] = pos.offset > 0n ? [nextDown, a] : [a, nextUp];
-      lower = exact.negative ? -hi : lo;
-      upper = exact.negative ? -lo : hi;
-      const off = pos.offset < 0n ? -pos.offset : pos.offset;
-      // |offset| / (2 full), to 1e-9 ULP.
-      distance = Number((off * 1_000_000_000n) / (2n * pos.full)) / 1e9;
-    }
-    rows.push([
-      hexOf(nearest),
-      lower === null ? null : hexOf(lower),
-      upper === null ? null : hexOf(upper),
-      distance,
-      answered === null ? null : hexOf(answered),
-    ]);
+    rows.push(answered);
   }
   parentPort.postMessage(rows);
 }
@@ -217,7 +185,8 @@ function hyperbolicSamples(fn, branches, scale, regions) {
     out.push({ category, x });
     out.push({ category, x: -x });
   };
-  // Log-uniform over every exponent a result can have: 2^-1074 .. 2^9.
+  // Log-uniform over the exponents 2^-60 .. 2^9 (subnormals and the tiny
+  // tail are sampled separately below).
   for (let i = 0; i < 150_000 * scale; i += 1) add("log-uniform", randomDouble(rng, -60, 9));
   // Linear-uniform over the computed range, and per glibc branch.
   const top = fn === "tanh" ? 23 : 711;
@@ -229,15 +198,15 @@ function hyperbolicSamples(fn, branches, scale, regions) {
   } else {
     for (let i = 0; i < 30_000 * scale; i += 1) add("near-saturation", 15 + rng() * 8);
   }
-  // Every region with a band, densely, so its worst miss is well sampled.
+  // Every region that computes, densely.
   let from = 0;
   for (const r of regions) {
     const to = Math.min(r.below, 800);
-    if (r.inverse !== null && from < to) {
-      for (let i = 0; i < 100_000 * scale; i += 1) add("banded-region", from + rng() * (to - from));
+    if (r.path !== "direct" && from < to) {
+      for (let i = 0; i < 100_000 * scale; i += 1) add("region", from + rng() * (to - from));
       // log-uniform within the region, for the regions spanning binades
       const lo = Math.max(from, 2 ** -60);
-      for (let i = 0; i < 5_000 * scale; i += 1) add("banded-region", lo * (to / lo) ** rng());
+      for (let i = 0; i < 5_000 * scale; i += 1) add("region", lo * (to / lo) ** rng());
       for (const x of neighbours(from || Number.MIN_VALUE, 300 * scale)) add("region-edge", x);
     }
     from = r.below;
@@ -246,7 +215,19 @@ function hyperbolicSamples(fn, branches, scale, regions) {
   for (const b of Object.values(branches)) {
     for (const x of neighbours(b, 1500 * scale)) add("branch", x);
   }
-  for (const b of [2 ** -30, 23, 711, 19.06, 18.715]) {
+  // `expm1`'s own branch points (high words 0x3c900000, 0x3fd62e43,
+  // 0x3ff0a2b2, 0x4043687a), at `|x|` for `sinh`/`cosh` and at `|x|/2` for
+  // `tanh`, which calls it on `2|x|`.
+  const expm1Branches = [2 ** -54, 0.3465735912322998, 1.0397205352783203, 38.81622314453125];
+  for (const b of [
+    2 ** -30,
+    23,
+    711,
+    19.06,
+    18.715,
+    ...expm1Branches,
+    ...expm1Branches.map((e) => e / 2),
+  ]) {
     for (const x of neighbours(b, 500 * scale)) add("branch", x);
   }
   // Subnormals and the tiny tail.
@@ -316,12 +297,19 @@ function runWorkers(outfile, fn, hexes) {
   return Promise.all(jobs).then((parts) => parts.flat());
 }
 
-/** The BigDecimal reference (`scripts/lib/libm-reference.rb`): `[glibc, correctly rounded, distance]` rows. */
-function bigDecimalReference(fn, hexes) {
+/** Stored rows per region and kind (answered, refused). */
+const CORPUS_ROWS = 60;
+
+// ------------------------------------------------------------------ main ---
+/** Ruby's `Math.expm1` for each argument, as hex. */
+function rubyExpm1(hexes) {
+  const script = `
+    require "json"
+    abort "REFUSING: the oracle's Ruby is 4.0.1; this is #{RUBY_VERSION}" unless RUBY_VERSION == "4.0.1"
+    xs = JSON.parse($stdin.read)
+    print JSON.generate(xs.map { |h| [Math.expm1([h].pack("H*").unpack1("G"))].pack("G").unpack1("H*") })`;
   return new Promise((resolve, reject) => {
-    const child = spawn("ruby", [join(HERE, "lib", "libm-reference.rb"), fn], {
-      stdio: ["pipe", "pipe", "inherit"],
-    });
+    const child = spawn("ruby", ["-e", script], { stdio: ["pipe", "pipe", "inherit"] });
     let out = "";
     child.stdout.setEncoding("utf8");
     child.stdout.on("data", (c) => {
@@ -335,12 +323,48 @@ function bigDecimalReference(fn, hexes) {
   });
 }
 
-/** Stored rows per region and kind (answered, refused, glibc miss). */
-const CORPUS_ROWS = 60;
-/** Arguments per function checked against the BigDecimal reference, besides every glibc miss. */
-const REFERENCE_COUNT = 6_000;
+async function expm1Order() {
+  const outfile = join(mkdtempSync(join(tmpdir(), "libm-expm1-")), "expm1.mjs");
+  await build({
+    entryPoints: [join(REPO_ROOT, "src/evaluation/libm-expm1.ts")],
+    bundle: true,
+    format: "esm",
+    platform: "node",
+    outfile,
+    logLevel: "error",
+  });
+  const mod = await import(outfile);
+  const rng = mulberry32(SEED + 17);
+  const xs = [];
+  const add = (x) => {
+    if (Math.abs(x) < 44) xs.push(x, -x);
+  };
+  for (let i = 0; i < 1_000_000; i += 1) add(randomDouble(rng, -60, 5));
+  for (let i = 0; i < 500_000; i += 1) add(rng() * 44);
+  for (const b of [2 ** -54, 0.3465735912322998, 1.0397205352783203, 38.81622314453125]) {
+    for (const x of neighbours(b, 3000)) add(x);
+  }
+  const ruby = [];
+  for (let i = 0; i < xs.length; i += 200_000) {
+    for (const h of await rubyExpm1(xs.slice(i, i + 200_000).map(hexOf))) ruby.push(h);
+  }
+  let split = 0;
+  let horner = 0;
+  for (let i = 0; i < xs.length; i += 1) {
+    if (hexOf(mod.expm1(xs[i], mod.splitOrder)) !== ruby[i]) split += 1;
+    if (hexOf(mod.expm1(xs[i], mod.hornerOrder)) !== ruby[i]) horner += 1;
+  }
+  console.log(
+    `expm1 against Ruby Math.expm1, ${xs.length} arguments (seed ${SEED}): ` +
+      `split order ${split} differ, Horner order ${horner} differ`,
+  );
+  process.exit(split === 0 ? 0 : 1);
+}
 
-// ------------------------------------------------------------------ main ---
+if (isMainThread && process.argv.includes("--expm1-order")) {
+  await expm1Order();
+}
+
 if (isMainThread) {
   const glibcVersion = process.report.getReport().header.glibcVersionRuntime;
   if (glibcVersion !== "2.35") {
@@ -384,158 +408,67 @@ if (isMainThread) {
     const regions = new Map(
       mod.REGIONS[fn].map((r) => [
         r.name,
-        {
-          r,
-          n: 0,
-          miss: 0,
-          far: 0,
-          worst: 0,
-          worstX: null,
-          refused: 0,
-          farX: null,
-          answeredRows: [],
-          refusedRows: [],
-          missRows: [],
-        },
+        { r, n: 0, refused: 0, answeredRows: [], refusedRows: [] },
       ]),
     );
     const categories = new Map();
     let mismatches = 0;
     let recipMismatches = 0;
     const mismatchList = [];
-    const binades = new Map();
-    const referenceIndexes = [];
-    const stride = Math.max(1, Math.floor(samples.length / REFERENCE_COUNT));
     for (let i = 0; i < samples.length; i += 1) {
       const { x, category } = samples[i];
-      const [nearest, lower, upper, distance, answered] = rows[i];
+      const answered = rows[i];
       const [glibc, recip] = ruby[i];
       const region = regions.get(mod.regionFor(fn, x).name);
       region.n += 1;
-      const binade =
-        x === 0 || !Number.isFinite(x)
-          ? null
-          : Math.max(-80, Math.floor(Math.log2(Math.abs(x)) * SUB) / SUB);
-      const bin =
-        binade === null ? null : (binades.get(binade) ?? { n: 0, worst: 0, far: 0, miss: 0 });
-      if (bin) binades.set(binade, bin);
-      if (bin) bin.n += 1;
       const cat = categories.get(category) ?? { n: 0, refused: 0 };
       categories.set(category, cat);
       cat.n += 1;
-      const glibcIsNaN = Number.isNaN(fromBits(BigInt(`0x${glibc}`)));
-      let missed = false;
-      if (glibc !== nearest && !(glibcIsNaN && Number.isNaN(fromBits(BigInt(`0x${nearest}`))))) {
-        missed = true;
-        region.miss += 1;
-        if (bin) bin.miss += 1;
-        if (distance !== null && (glibc === lower || glibc === upper)) {
-          if (bin) bin.worst = Math.max(bin.worst, distance);
-          if (distance >= region.worst) {
-            region.worst = distance;
-            region.worstX = hexOf(x);
-          }
-        } else {
-          if (bin) bin.far += 1;
-          region.far += 1;
-          region.farX = hexOf(x);
-        }
-        if (region.r.band !== null) referenceIndexes.push(i);
-      }
-      if (i % stride === 0) referenceIndexes.push(i);
       const row = [hexOf(x), glibc, recip];
       if (answered === null) {
         region.refused += 1;
         cat.refused += 1;
-        if (missed && region.missRows.length < CORPUS_ROWS) region.missRows.push(row);
-        else if (region.refusedRows.length < CORPUS_ROWS) region.refusedRows.push(row);
-      } else if (
-        answered !== glibc &&
-        !(glibcIsNaN && Number.isNaN(fromBits(BigInt(`0x${answered}`))))
-      ) {
+        if (region.refusedRows.length < CORPUS_ROWS) region.refusedRows.push(row);
+        continue;
+      }
+      const glibcIsNaN = Number.isNaN(fromBits(BigInt(`0x${glibc}`)));
+      if (answered !== glibc && !(glibcIsNaN && Number.isNaN(fromBits(BigInt(`0x${answered}`))))) {
         mismatches += 1;
         mismatchList.push({ x: hexOf(x), answered, glibc });
-      } else {
-        // The reciprocal: IEEE division of the same operand.
-        const y = fromBits(BigInt(`0x${answered}`));
-        const port = y === 0 ? "ZeroDivision" : hexOf(1 / y);
-        if (port !== recip) recipMismatches += 1;
-        if (region.answeredRows.length < CORPUS_ROWS || category === "special")
-          region.answeredRows.push(row);
+        continue;
       }
+      // The reciprocal: IEEE division of the same operand.
+      const y = fromBits(BigInt(`0x${answered}`));
+      const port = y === 0 ? "ZeroDivision" : hexOf(1 / y);
+      if (port !== recip) recipMismatches += 1;
+      if (region.answeredRows.length < CORPUS_ROWS || category === "special")
+        region.answeredRows.push(row);
     }
-
-    // The port's correctly rounded double against the BigDecimal reference.
-    const refHexes = [...new Set(referenceIndexes)].map((i) => hexes[i]);
-    const refIndex = new Map(hexes.map((h, i) => [h, i]));
-    const reference = await bigDecimalReference(fn, refHexes);
-    let referenceDisagreements = 0;
-    for (let k = 0; k < refHexes.length; k += 1) {
-      const [, cr] = reference[k];
-      const [nearest] = rows[refIndex.get(refHexes[k])];
-      if (cr === null) continue;
-      if (cr !== nearest) {
-        referenceDisagreements += 1;
-        console.log(`    REFERENCE x=${refHexes[k]} port=${nearest} bigdecimal=${cr}`);
-      }
-    }
-    if (referenceDisagreements > 0) failed = true;
 
     console.log(`\n== ${fn}: ${samples.length} samples (seed ${SEED}, scale ${scale})`);
     const regionReport = [];
-    for (const {
-      r,
-      n,
-      miss,
-      far,
-      worst,
-      worstX,
-      refused,
-      farX,
-      answeredRows,
-      refusedRows,
-      missRows,
-    } of regions.values()) {
-      const configured = r.inverse === null ? "refused" : `1/${r.inverse}`;
-      const configuredRadius = r.inverse === null ? Infinity : 1 / Number(r.inverse);
-      const ok = r.inverse === null || (far === 0 && configuredRadius >= 2 * worst);
+    for (const { r, n, refused, answeredRows, refusedRows } of regions.values()) {
+      // Only an `exp` call can refuse; a region that makes none must answer all.
+      const ok = refused === 0 || r.path === "exp" || r.path === "exp-half";
       if (!ok) failed = true;
       console.log(
-        `  ${r.name.padEnd(44)} n=${String(n).padStart(8)} misses=${String(miss).padStart(6)} far=${far}` +
-          ` worst=${worst.toFixed(6)} ULP (x=${worstX}) band=${configured}` +
-          ` refused=${refused} (${((100 * refused) / Math.max(1, n)).toFixed(3)}%)${farX ? ` farX=${farX}` : ""}` +
+        `  ${r.name.padEnd(46)} ${r.path.padEnd(8)} n=${String(n).padStart(8)}` +
+          ` refused=${refused} (${((100 * refused) / Math.max(1, n)).toFixed(3)}%)` +
           `${ok ? "" : "  <-- FAIL"}`,
       );
-      regionReport.push({
-        name: r.name,
-        band: r.inverse === null ? null : Number(r.inverse),
-        n,
-        misses: miss,
-        far,
-        worstMidpointDistance: worst,
-        worstArgument: worstX,
-        refused,
-        answeredRows,
-        refusedRows,
-        missRows,
-      });
-    }
-    if (process.argv.includes("--binades")) {
-      for (const [e, b] of [...binades].sort((p, q) => p[0] - q[0])) {
-        console.log(
-          `  binade 2^${e.toFixed(3)} (${(2 ** e).toPrecision(6)}): n=${b.n} misses=${b.miss} far=${b.far} worst=${b.worst.toFixed(6)}`,
-        );
-      }
+      regionReport.push({ name: r.name, path: r.path, n, refused, answeredRows, refusedRows });
     }
     for (const [category, { n, refused }] of categories) {
       console.log(
         `  category ${category.padEnd(16)} n=${n} refused=${refused} (${((100 * refused) / n).toFixed(3)}%)`,
       );
     }
-    const answeredCount = samples.length - [...regions.values()].reduce((s, r) => s + r.refused, 0);
+    const refusedCount = [...regions.values()].reduce((s, r) => s + r.refused, 0);
+    const answeredCount = samples.length - refusedCount;
     console.log(
-      `  differential: ${answeredCount} answered, ${mismatches} differ from Ruby Math.${fn}; ` +
-        `reciprocal ${recipMismatches} differ; BigDecimal reference ${refHexes.length} checked, ${referenceDisagreements} differ`,
+      `  differential: ${answeredCount} answered, ${refusedCount} refused ` +
+        `(${((100 * refusedCount) / samples.length).toFixed(3)}%), ${mismatches} differ from Ruby Math.${fn}; ` +
+        `reciprocal ${recipMismatches} differ`,
     );
     for (const m of mismatchList.slice(0, 10))
       console.log(`    MISMATCH x=${m.x} port=${m.answered} ruby=${m.glibc}`);
@@ -543,10 +476,9 @@ if (isMainThread) {
     corpus.functions[fn] = {
       samples: samples.length,
       answered: answeredCount,
+      refused: refusedCount,
       mismatches,
       reciprocalMismatches: recipMismatches,
-      referenceChecked: refHexes.length,
-      referenceDisagreements,
       categories: Object.fromEntries(categories),
       regions: regionReport,
     };

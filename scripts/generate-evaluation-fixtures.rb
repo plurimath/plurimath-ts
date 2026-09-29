@@ -36,11 +36,10 @@
 # band), `libm-rounding-band` (a `Math` function result within glibc's
 # rounding band), `libm-reduction` (a sin/cos/tan argument so close to a
 # multiple of pi/2 that glibc's range reduction is not accurate enough to
-# trust), `hyperbolic-rounding-band` (a `sinh`/`cosh`/`tanh` result within
-# the band of its argument's region, `libm-hyperbolic.ts`),
-# `hyperbolic-region` (an argument in a region `libm-hyperbolic.ts` refuses
-# whole, where glibc is not reliably within one ULP), `argument-error` (Ruby raises `ArgumentError`, not an evaluation
-# error; recorded as `raises: "ArgumentError"`), or `size-limit` (an exact
+# trust), `hyperbolic-rounding-band` (a `sinh`/`cosh` whose call to `exp`
+# lies within `exp`'s rounding band, `libm-hyperbolic.ts`), `argument-error`
+# (Ruby raises `ArgumentError`, not an evaluation error; recorded as
+# `raises: "ArgumentError"`), or `size-limit` (an exact
 # intermediate beyond the port's resource limit) — `src/evaluation/numeric.ts`,
 # `pow.ts`, `libm.ts` and `libm-hyperbolic.ts`. The oracle's own answer is still recorded, so the refusal is
 # visibly a refusal of THAT answer. A Rational or out-of-range Integer answer
@@ -414,8 +413,8 @@ def validate_libm_refusal!(id, port_refusal)
 end
 
 # `libm-hyperbolic.ts`'s regions, read from its source the way `libm.ts`'s
-# bands are: per function, `[name, below, inverse or nil]` in order, `below`
-# resolved through its `BRANCH` table.
+# bands are: per function, `[name, below, path]` in order, `below` resolved
+# through its `BRANCH` table.
 HYPERBOLIC_TS_SOURCE = File.read(File.join(__dir__, "..", "src", "evaluation", "libm-hyperbolic.ts"))
 HYPERBOLIC_BRANCH_BLOCK = HYPERBOLIC_TS_SOURCE.match(/export const BRANCH = \{\n(.*?)\n\} as const;/m)
 abort "REFUSING: could not read BRANCH out of libm-hyperbolic.ts" unless HYPERBOLIC_BRANCH_BLOCK
@@ -433,35 +432,28 @@ HYPERBOLIC_BRANCH = HYPERBOLIC_BRANCH_BLOCK[1].scan(/^  (\w+): ([^,\n]+),$/).to_
   [name, hyperbolic_number(value)]
 end.freeze
 HYPERBOLIC_REGIONS = HYPERBOLIC_TS_SOURCE
-                     .scan(/^    region\("(\w+)", "([^"]+)", ([^,]+), (\d+n|null)\),$/)
+                     .scan(/^    region\("(\w+)", "([^"]+)", ([^,]+), "(direct|expm1|exp|exp-half)"\),$/)
                      .group_by(&:first)
                      .transform_values do |list|
-                       list.map { |_fn, name, below, inverse| [name, hyperbolic_number(below), inverse == "null" ? nil : inverse.to_i] }
+                       list.map { |_fn, name, below, path| [name, hyperbolic_number(below), path] }
                      end.freeze
 unless HYPERBOLIC_REGIONS.keys.sort == %w[cosh sinh tanh] && HYPERBOLIC_REGIONS.values.all? { |r| r.last[1] == Float::INFINITY }
   abort "REFUSING: could not read REGIONS out of libm-hyperbolic.ts"
 end
 
-# `hyperbolic-rounding-band` and `hyperbolic-region` rows: the C function and
-# its double argument, keyed by row id. A `hyperbolic-region` argument must
-# lie in a region `libm-hyperbolic.ts` refuses whole; a
-# `hyperbolic-rounding-band` argument's exact result must lie within its
-# region's band of a double midpoint (`LibmReference.rounded`, BigDecimal).
+# `hyperbolic-rounding-band` rows: the C function and its double argument,
+# keyed by row id. The argument must lie in a region whose path calls `exp`
+# (`exp(|x|)`, or `exp(|x|/2)` for `exp-half`), and that call's exact result
+# must lie within `libm.ts`'s `exp` band of a double midpoint
+# (`LibmReference.rounded`, BigDecimal).
 HYPERBOLIC_REFUSAL_OPERANDS = {
-  "sinh-refused-region" => ["sinh", 1.0],
-  "cosh-refused-region" => ["cosh", 1.0],
-  "tanh-refused-region" => ["tanh", 1.0],
-  "tanh-refused-region-tiny" => ["tanh", 1e-13],
-  "sech-refused-region" => ["cosh", 1.0],
-  "csch-refused-region" => ["sinh", 1.0],
-  "coth-refused-region" => ["tanh", 1.0],
-  "latex-sinh-refused-region" => ["sinh", 1.0],
-  "sinh-band-glibc-miss" => ["sinh", -197.348669279874],
-  "cosh-band-glibc-miss" => ["cosh", -61.50270066317171],
-  "tanh-band-glibc-miss" => ["tanh", -2.0715767359361053],
-  "sech-band-glibc-miss" => ["cosh", -0.3037910278799245],
-  "csch-band-glibc-miss" => ["sinh", -197.348669279874],
-  "coth-band-glibc-miss" => ["tanh", -2.0715767359361053],
+  "sinh-exp-band" => ["sinh", 22.0],
+  "cosh-exp-band" => ["cosh", 21.9],
+  "sinh-exp-half-band" => ["sinh", 709.7924],
+  "cosh-exp-half-band" => ["cosh", -709.7924],
+  "sech-exp-band" => ["cosh", 21.9],
+  "csch-exp-band" => ["sinh", -22.0],
+  "latex-sinh-exp-band" => ["sinh", 22.0],
 }.freeze
 
 # The C function each hyperbolic class calls (`Sech#evaluate` is
@@ -482,18 +474,19 @@ def validate_hyperbolic_refusal!(id, port_refusal, row)
           "#{row['input']['text']} with #{row['bindings'].inspect}"
   end
 
-  name, _below, inverse = HYPERBOLIC_REGIONS.fetch(fn).find { |_n, below, _i| x.abs < below }
-  if port_refusal == "hyperbolic-region"
-    return if inverse.nil?
-
-    abort "REFUSING: #{id}: marked hyperbolic-region, but #{fn}(#{x}) is in #{name}, which has a band"
-  end
-  abort "REFUSING: #{id}: marked hyperbolic-rounding-band, but #{fn}(#{x}) is in #{name}, refused whole" if inverse.nil?
-  _rounded, distance = LibmReference.rounded(fn, x)
+  name, _below, path = HYPERBOLIC_REGIONS.fetch(fn).find { |_n, below, _p| x.abs < below }
+  exp_argument = case path
+                 when "exp" then x.abs
+                 when "exp-half" then 0.5 * x.abs
+                 else abort "REFUSING: #{id}: marked #{port_refusal}, but #{fn}(#{x}) is in #{name}, which calls no exp"
+                 end
+  bands = LIBM_BAND_INVERSES.fetch("exp")
+  inverse = exp_argument < LIBM_SMALL_ARGUMENT ? bands[:small] : bands[:large]
+  _rounded, distance = LibmReference.rounded("exp", exp_argument)
   return if distance && distance < Rational(1, inverse)
 
-  abort "REFUSING: #{id}: marked hyperbolic-rounding-band, but #{fn}(#{x}) lies #{distance.inspect} ULP " \
-        "from a midpoint, outside #{name}'s 1/#{inverse} band"
+  abort "REFUSING: #{id}: marked #{port_refusal}, but exp(#{exp_argument}) lies #{distance.inspect} ULP " \
+        "from a midpoint, outside libm.ts's 1/#{inverse} exp band"
 end
 
 def validate_port_refusal!(id, port_refusal, row)
@@ -534,7 +527,7 @@ def validate_port_refusal!(id, port_refusal, row)
     end
   when "libm-rounding-band", "libm-reduction"
     validate_libm_refusal!(id, port_refusal)
-  when "hyperbolic-rounding-band", "hyperbolic-region"
+  when "hyperbolic-rounding-band"
     validate_hyperbolic_refusal!(id, port_refusal, row)
   when "pow-rounding-band"
     operands = POW_ROUNDING_BAND_OPERANDS[id]
@@ -1095,28 +1088,32 @@ ROWS = [
   ["coth-negative-saturated", "math-hyperbolic", "coth(-25)"],
   ["coth-infinity", "math-hyperbolic", "coth(a)"],
 
-  # `hyperbolic-region`: an argument where glibc's `expm1` branch is not
-  # reliably within one ULP (`TODO.plan/deferred.md`); the port refuses the
-  # whole region. `tanh(1e-13)` is one glibc misses: `1e-13 - 1 ULP`.
-  ["sinh-refused-region", "math-hyperbolic-refusal", "sinh(1)"],
-  ["cosh-refused-region", "math-hyperbolic-refusal", "cosh(1)"],
-  ["tanh-refused-region", "math-hyperbolic-refusal", "tanh(1)"],
-  ["tanh-refused-region-tiny", "math-hyperbolic-refusal", "tanh(a)"],
-  ["sech-refused-region", "math-hyperbolic-refusal", "sech(1)"],
-  ["csch-refused-region", "math-hyperbolic-refusal", "csch(1)"],
-  ["coth-refused-region", "math-hyperbolic-refusal", "coth(1)"],
+  # Arguments in the `expm1` regions, answered with glibc's own double, not
+  # the correctly rounded one where the two differ: glibc's
+  # `sinh(-1.8803256074855135)` is 0.85 ULP from the exact value, and its
+  # `tanh(1e-13)` is the double after `1e-13` (BigDecimal, 2026-09-29).
+  ["sinh-one", "math-hyperbolic", "sinh(1)"],
+  ["sinh-half", "math-hyperbolic", "sinh(0.5)"],
+  ["sinh-expm1-far-from-exact", "math-hyperbolic", "sinh(a)"],
+  ["cosh-one", "math-hyperbolic", "cosh(1)"],
+  ["cosh-quarter", "math-hyperbolic", "cosh(0.25)"],
+  ["tanh-one", "math-hyperbolic", "tanh(1)"],
+  ["tanh-half", "math-hyperbolic", "tanh(0.5)"],
+  ["tanh-glibc-above-exact", "math-hyperbolic", "tanh(a)"],
+  ["sech-one", "math-hyperbolic", "sech(1)"],
+  ["csch-one", "math-hyperbolic", "csch(1)"],
+  ["coth-one", "math-hyperbolic", "coth(1)"],
 
-  # `hyperbolic-rounding-band`: an argument from
-  # `scripts/measure-libm-hyperbolic-glibc.mjs`'s seeded sample where glibc
-  # missed the correctly rounded double inside a region with a band; the port
-  # refuses it as inside the band. `sech`/`csch`/`coth` refuse through the
-  # `cosh`/`sinh`/`tanh` they divide by.
-  ["sinh-band-glibc-miss", "math-hyperbolic-refusal", "sinh(a)"],
-  ["cosh-band-glibc-miss", "math-hyperbolic-refusal", "cosh(a)"],
-  ["tanh-band-glibc-miss", "math-hyperbolic-refusal", "tanh(a)"],
-  ["sech-band-glibc-miss", "math-hyperbolic-refusal", "sech(a)"],
-  ["csch-band-glibc-miss", "math-hyperbolic-refusal", "csch(a)"],
-  ["coth-band-glibc-miss", "math-hyperbolic-refusal", "coth(a)"],
+  # `hyperbolic-rounding-band`: a `sinh`/`cosh` argument whose `exp` call
+  # (`exp(|x|)`, or `exp(|x|/2)` near overflow) lies inside `exp`'s band; the
+  # port refuses it as `Math.exp` would be. `sech`/`csch` refuse through the
+  # `cosh`/`sinh` they divide by.
+  ["sinh-exp-band", "math-hyperbolic-refusal", "sinh(22)"],
+  ["cosh-exp-band", "math-hyperbolic-refusal", "cosh(21.9)"],
+  ["sinh-exp-half-band", "math-hyperbolic-refusal", "sinh(709.7924)"],
+  ["cosh-exp-half-band", "math-hyperbolic-refusal", "cosh(-709.7924)"],
+  ["sech-exp-band", "math-hyperbolic-refusal", "sech(21.9)"],
+  ["csch-exp-band", "math-hyperbolic-refusal", "csch(-22)"],
 
   # A sample of scripts/-generated random expressions, re-checked here.
   ["random-float-product", "random", "+12*3.14"],
@@ -1191,7 +1188,8 @@ LATEX_ROWS = [
   ["latex-sinh", "math-hyperbolic", "\\sinh(30)"],
   ["latex-tanh-negative-zero", "math-hyperbolic", "\\tanh(-0.0)"],
   ["latex-coth-zero", "math-hyperbolic", "\\coth(0)"],
-  ["latex-sinh-refused-region", "math-hyperbolic-refusal", "\\sinh(1)"],
+  ["latex-sinh-one", "math-hyperbolic", "\\sinh(1)"],
+  ["latex-sinh-exp-band", "math-hyperbolic-refusal", "\\sinh(22)"],
   # `\lg` is `Lg` (in AsciiMath, `lg` is the variables `l` and `g`):
   # `::Math.log10`, glibc's `log10` over glibc's `log`.
   ["latex-lg", "math-lg", "\\lg(100)"],
@@ -1267,13 +1265,8 @@ BINDINGS = {
   "sech-infinity" => { "a" => Float::INFINITY },
   "csch-minus-infinity" => { "a" => -Float::INFINITY },
   "coth-infinity" => { "a" => Float::INFINITY },
-  "tanh-refused-region-tiny" => { "a" => 1e-13 },
-  "sinh-band-glibc-miss" => { "a" => -197.348669279874 },
-  "cosh-band-glibc-miss" => { "a" => -61.50270066317171 },
-  "tanh-band-glibc-miss" => { "a" => -2.0715767359361053 },
-  "sech-band-glibc-miss" => { "a" => -0.3037910278799245 },
-  "csch-band-glibc-miss" => { "a" => -197.348669279874 },
-  "coth-band-glibc-miss" => { "a" => -2.0715767359361053 },
+  "sinh-expm1-far-from-exact" => { "a" => -1.8803256074855135 },
+  "tanh-glibc-above-exact" => { "a" => 1e-13 },
   "log-base-infinity" => { "a" => Float::INFINITY },
   "log-argument-infinity" => { "a" => Float::INFINITY },
   "log-argument-subnormal" => { "a" => 5e-324 },
@@ -1359,20 +1352,13 @@ PORT_REFUSALS = {
   "argument-error-negative-fixnum-min" => "argument-error",
   "size-limit-huge-power-times-zero" => "size-limit",
   "pow-exact-halfway" => "pow-rounding-band",
-  "sinh-refused-region" => "hyperbolic-region",
-  "cosh-refused-region" => "hyperbolic-region",
-  "tanh-refused-region" => "hyperbolic-region",
-  "tanh-refused-region-tiny" => "hyperbolic-region",
-  "sech-refused-region" => "hyperbolic-region",
-  "csch-refused-region" => "hyperbolic-region",
-  "coth-refused-region" => "hyperbolic-region",
-  "latex-sinh-refused-region" => "hyperbolic-region",
-  "sinh-band-glibc-miss" => "hyperbolic-rounding-band",
-  "cosh-band-glibc-miss" => "hyperbolic-rounding-band",
-  "tanh-band-glibc-miss" => "hyperbolic-rounding-band",
-  "sech-band-glibc-miss" => "hyperbolic-rounding-band",
-  "csch-band-glibc-miss" => "hyperbolic-rounding-band",
-  "coth-band-glibc-miss" => "hyperbolic-rounding-band",
+  "sinh-exp-band" => "hyperbolic-rounding-band",
+  "cosh-exp-band" => "hyperbolic-rounding-band",
+  "sinh-exp-half-band" => "hyperbolic-rounding-band",
+  "cosh-exp-half-band" => "hyperbolic-rounding-band",
+  "sech-exp-band" => "hyperbolic-rounding-band",
+  "csch-exp-band" => "hyperbolic-rounding-band",
+  "latex-sinh-exp-band" => "hyperbolic-rounding-band",
   "latex-lg-band-glibc-log" => "libm-rounding-band",
   "libm-band-sin-glibc-miss" => "libm-rounding-band",
   "libm-band-cos-glibc-miss" => "libm-rounding-band",

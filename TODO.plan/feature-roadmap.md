@@ -359,13 +359,13 @@ Arm's optimized-routines). The iteration cap is a per-call option,
 port-local fixtures generated from the oracle
 (`test/formats/evaluation/evaluation-fixtures.json`,
 `scripts/generate-evaluation-fixtures.rb`). `Sinh`, `Cosh`, `Tanh`, `Sech`,
-`Csch` and `Coth` are correctly rounded where glibc's answer reliably is and
-refused (`UnsupportedFeatureError`) in the regions where it is not
-(`src/evaluation/libm-hyperbolic.ts`; `TODO.plan/deferred.md`, "Evaluation:
-the hyperbolic functions").
+`Csch` and `Coth` are glibc's own, from fdlibm on an `expm1` that gives
+glibc's digits, and refused (`UnsupportedFeatureError`) only where they call
+`exp` inside its rounding band (`src/evaluation/libm-hyperbolic.ts`;
+`TODO.plan/deferred.md`, "Evaluation: the hyperbolic functions").
 
-**Blocks:** nothing ported is missing; the hyperbolic refusal regions stay
-until a digit-exact permissive `expm1` exists (`deferred.md`). There is no shared
+**Blocks:** nothing ported is missing; the hyperbolic refusals are those of
+`exp`'s rounding band (`deferred.md`). There is no shared
 case: `calls/1` carries only `number_formatter`. The `plurimath-js` compat
 surface has no `evaluate`, so this does not affect the drop-in claim.
 

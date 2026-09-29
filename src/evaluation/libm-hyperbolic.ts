@@ -1,187 +1,286 @@
+/* @(#)e_sinh.c 1.3 95/01/18, @(#)e_cosh.c 1.3 95/01/18, @(#)s_tanh.c 1.3 95/01/18 */
+/*
+ * ====================================================
+ * Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
+ *
+ * Developed at SunSoft, a Sun Microsystems, Inc. business.
+ * Permission to use, copy, modify, and distribute this
+ * software is freely granted, provided that this notice
+ * is preserved.
+ * ====================================================
+ */
+
+/* __ieee754_sinh(x)
+ * Method :
+ * mathematically sinh(x) if defined to be (exp(x)-exp(-x))/2
+ *	1. Replace x by |x| (sinh(-x) = -sinh(x)).
+ *	2.
+ *		                                    E + E/(E+1)
+ *	    0        <= x <= 22     :  sinh(x) := --------------, E=expm1(x)
+ *			       			        2
+ *
+ *	    22       <= x <= lnovft :  sinh(x) := exp(x)/2
+ *	    lnovft   <= x <= ln2ovft:  sinh(x) := exp(x/2)/2 * exp(x/2)
+ *	    ln2ovft  <  x	    :  sinh(x) := x*shuge (overflow)
+ *
+ * Special cases:
+ *	sinh(x) is |x| if x is +INF, -INF, or NaN.
+ *	only sinh(0)=0 is exact for finite x.
+ */
+
+/* __ieee754_cosh(x)
+ * Method :
+ * mathematically cosh(x) if defined to be (exp(x)+exp(-x))/2
+ *	1. Replace x by |x| (cosh(x) = cosh(-x)).
+ *	2.
+ *		                                        [ exp(x) - 1 ]^2
+ *	    0        <= x <= ln2/2  :  cosh(x) := 1 + -------------------
+ *			       			           2*exp(x)
+ *
+ *		                                  exp(x) +  1/exp(x)
+ *	    ln2/2    <= x <= 22     :  cosh(x) := -------------------
+ *			       			          2
+ *	    22       <= x <= lnovft :  cosh(x) := exp(x)/2
+ *	    lnovft   <= x <= ln2ovft:  cosh(x) := exp(x/2)/2 * exp(x/2)
+ *	    ln2ovft  <  x	    :  cosh(x) := huge*huge (overflow)
+ *
+ * Special cases:
+ *	cosh(x) is |x| if x is +INF, -INF, or NaN.
+ *	only cosh(0)=1 is exact for finite x.
+ */
+
+/* Tanh(x)
+ * Return the Hyperbolic Tangent of x
+ *
+ * Method :
+ *				       x    -x
+ *				      e  - e
+ *	0. tanh(x) is defined to be -----------
+ *				       x    -x
+ *				      e  + e
+ *	1. reduce x to non-negative by tanh(-x) = -tanh(x).
+ *	2.  0      <= x <= 2**-55 : tanh(x) := x*(one+x)
+ *					        -t
+ *	    2**-55 <  x <=  1     : tanh(x) := -----; t = expm1(-2x)
+ *					       t + 2
+ *						     2
+ *	    1      <= x <=  22.0  : tanh(x) := 1-  ----- ; t=expm1(2x)
+ *						   t + 2
+ *	    22.0   <  x <= INF    : tanh(x) := 1.
+ *
+ * Special cases:
+ *	tanh(NaN) is NaN;
+ *	only tanh(0)=0 is exact for finite argument.
+ */
+
 /**
- * Ruby's `Math.sinh`, `Math.cosh` and `Math.tanh` (`math.c`), standing in for
- * glibc's `sinh`, `cosh` and `tanh` the way `libm.ts` stands in for `sin`,
- * `exp` and the rest: no glibc code is transcribed. Each function
+ * Ruby's `Math.sinh`, `Math.cosh` and `Math.tanh` (`math.c`), which call the
+ * C library's: glibc 2.35 on the oracle's host. glibc's `sinh`, `cosh` and
+ * `tanh` are Sun's fdlibm 5.3 routines (`e_sinh.c`, `e_cosh.c`, `s_tanh.c`,
+ * notice and methods above), transcribed here with the same branch points,
+ * constants and operations, each a plain IEEE double operation, as it is in
+ * JavaScript. Their two calls out:
  *
- * - computes the exact result in `BigInt` fixed point (`pow.ts`'s 320
- *   fraction bits) from `e^x = 2^n e^r`, `|r| <= ln2/2`, and rounds it to the
- *   nearest double;
- * - refuses with `UnsupportedFeatureError` when that exact result lies within
- *   the band of the argument's region of a midpoint between two doubles,
- *   because there glibc (which is not correctly rounded) may return either
- *   neighbour, and Ruby prints whichever it returned.
+ * - `expm1`: `libm-expm1.ts`, fdlibm's with the polynomial order that gives
+ *   glibc's digits. Every region that goes only through it (`REGIONS`, path
+ *   `expm1`) answers glibc's double, bit for bit, and never refuses.
+ * - `__ieee754_exp`: glibc's `exp`, which this port stands in for with the
+ *   correctly rounded `exp` of `libm.ts`, refused inside `exp`'s band
+ *   (`BANDS.exp`, sized by `scripts/measure-libm-glibc-accuracy.mjs`). Outside
+ *   the band that double is glibc's, and the rest of the formula is again
+ *   plain double arithmetic, so a region through `exp` (paths `exp` and
+ *   `exp-half`) answers glibc's double wherever its `exp` call is answered.
  *
- * glibc 2.35 computes these through fdlibm's `expm1` and `exp` with branch
- * points at `|x| = 2^-28` (`sinh`), `2^-55` (`cosh`, `tanh`), `ln2/2`
- * (`cosh`), `1` (`sinh`, `tanh`), `22` and `ln(DBL_MAX)`, so its error differs
- * per branch; `REGIONS` gives each branch its own band, sized from
- * `scripts/measure-libm-hyperbolic-glibc.mjs` (the figures and the method
- * are in `TODO.plan/deferred.md`, "Evaluation: the hyperbolic functions").
- * A region whose measured error could put glibc's answer more than one
- * neighbour away, or near any midpoint, is refused outright.
+ * `scripts/measure-libm-hyperbolic-glibc.mjs` is the differential against
+ * Ruby's `Math` (`test/evaluation/libm-hyperbolic-corpus.json`;
+ * `TODO.plan/deferred.md`, "Evaluation: the hyperbolic functions").
  */
 
 import { UnsupportedFeatureError } from "../core/errors";
-import { toFixed } from "./libm";
+import { bandFor, CORRECTLY_ROUNDED } from "./libm";
+import { expm1 } from "./libm-expm1";
 import { mathArgument, type RubyNumeric } from "./numeric";
-import { fixedExp, LN2, ONE, PRECISION, type RoundingBand, roundDyadic } from "./pow";
-
-const W = PRECISION;
+import type { RoundingBand } from "./pow";
 
 /** The C library functions this module stands in for. */
 export type HyperbolicFunction = "sinh" | "cosh" | "tanh";
 
-/**
- * Below `2^-30`, `sinh x` and `tanh x` are `x (1 + O(x^2))` and `cosh x` is
- * `1 + x^2/2`, with the correction under `2^-61` relative: far inside half the
- * spacing of the doubles around `x` (or `1`), so the correctly rounded result
- * is `x` (or `1`) and nowhere near a midpoint. Returned directly, because
- * fixed point would lose a tiny or subnormal `x`'s relative precision.
- */
-const TINY = 2 ** -30;
+const view = new DataView(new ArrayBuffer(8));
 
-/** `sinh`/`cosh` overflow: `e^711 / 2 > 2^1024`. */
-const OVERFLOW = 711;
-
-/**
- * `tanh x` for `|x| >= 23`: `1 - 2e^-46` is within `2^-66` of `1`, far
- * nearer than the midpoint `1 - 2^-54` below it, so the result is `±1`.
- */
-const TANH_SATURATED = 23;
-
-/**
- * The exact result, before rounding: either a double that needs no rounding,
- * or `mantissa * 2^exponent` (magnitude, with a sticky low bit set: the value
- * is an approximation of an irrational number, never exact) and its sign.
- */
-export type ExactHyperbolic =
-  | { readonly kind: "double"; readonly value: number }
-  | {
-      readonly kind: "dyadic";
-      readonly mantissa: bigint;
-      readonly exponent: number;
-      readonly negative: boolean;
-    };
-
-/** `e^a = 2^n * scaled / ONE` for a fixed-point `a >= 0`. */
-function expScaled(a: bigint): { readonly n: bigint; readonly scaled: bigint; readonly r: bigint } {
-  const n = (a + LN2 / 2n) / LN2;
-  const r = a - n * LN2;
-  return { n, scaled: fixedExp(r), r };
+/** `__HI(x)`, as fdlibm's signed `int`. */
+function highWord(x: number): number {
+  view.setFloat64(0, x);
+  return view.getInt32(0);
 }
 
-function dyadic(value: bigint, fractionBits: bigint, negative: boolean): ExactHyperbolic {
-  return {
-    kind: "dyadic",
-    mantissa: (value << 1n) | 1n,
-    exponent: -Number(fractionBits) - 1,
-    negative,
+/** `__LO(x)`, as fdlibm's `unsigned`. */
+function lowWord(x: number): number {
+  view.setFloat64(0, x);
+  return view.getUint32(4);
+}
+
+const one = 1.0;
+const half = 0.5;
+const two = 2.0;
+const shuge = 1.0e307;
+const huge = 1.0e300;
+const tiny = 1.0e-300;
+
+/**
+ * `__ieee754_exp(a)` for the `fn` of `x`: the correctly rounded `exp(a)`,
+ * refused inside `exp`'s band, where glibc's `exp` may return either
+ * neighbour.
+ */
+function glibcExp(fn: HyperbolicFunction, a: number): number {
+  const expBand = bandFor("exp", a);
+  const band: RoundingBand = {
+    inverse: expBand.inverse,
+    refuse: () => {
+      throw new UnsupportedFeatureError(
+        "evaluate",
+        `the exact exp(${a}) that ${fn} calls lies within 1/${expBand.inverse} ULP of halfway ` +
+          "between two doubles, where Ruby's answer depends on the rounding of the platform C library's exp",
+      );
+    },
   };
+  return CORRECTLY_ROUNDED.exp(a, band);
 }
 
-/** `sinh x` or `cosh x`: `(2^n A -/+ 2^-n B) / 2`, `A = e^r`, `B = e^-r`. */
-function sinhCosh(fn: "sinh" | "cosh", x: number): ExactHyperbolic {
-  if (Number.isNaN(x)) return { kind: "double", value: x };
-  const a = Math.abs(x);
-  if (fn === "cosh") {
-    if (a === Infinity || a >= OVERFLOW) return { kind: "double", value: Infinity };
-    if (a < TINY) return { kind: "double", value: 1 };
-  } else {
-    if (a === Infinity || a >= OVERFLOW)
-      return { kind: "double", value: x > 0 ? Infinity : -Infinity };
-    if (a < TINY) return { kind: "double", value: x };
+/** `__ieee754_sinh(x)`. */
+function sinh(x: number): number {
+  /* High word of |x|. */
+  const jx = highWord(x);
+  const ix = jx & 0x7fffffff;
+
+  /* x is INF or NaN */
+  if (ix >= 0x7ff00000) return x + x;
+
+  let h = 0.5;
+  if (jx < 0) h = -h;
+  /* |x| in [0,22], return sign(x)*0.5*(E+E/(E+1)) */
+  if (ix < 0x40360000) {
+    /* |x|<22 */
+    if (ix < 0x3e300000) {
+      /* |x|<2**-28 */
+      if (shuge + x > one) return x; /* sinh(tiny) = tiny with inexact */
+    }
+    const t = expm1(Math.abs(x));
+    if (ix < 0x3ff00000) return h * (2.0 * t - (t * t) / (t + one));
+    return h * (t + t / (t + one));
   }
-  const { n, scaled, r } = expScaled(toFixed(a));
-  const inverse = fixedExp(-r);
-  const twice = fn === "sinh" ? (scaled << (2n * n)) - inverse : (scaled << (2n * n)) + inverse;
-  // twice / ONE / 2^n is 2 sinh (or 2 cosh); halve it once more.
-  return dyadic(twice, W + n + 1n, fn === "sinh" && x < 0);
+
+  /* |x| in [22, log(maxdouble)] return 0.5*exp(|x|) */
+  if (ix < 0x40862e42) return h * glibcExp("sinh", Math.abs(x));
+
+  /* |x| in [log(maxdouble), overflow threshold] */
+  const lx = lowWord(x);
+  if (ix < 0x408633ce || (ix === 0x408633ce && lx <= 0x8fb9f87d)) {
+    const w = glibcExp("sinh", 0.5 * Math.abs(x));
+    const t = h * w;
+    return t * w;
+  }
+
+  /* |x| > overflow threshold, sinh(x) overflow */
+  return x * shuge;
 }
 
-/** `tanh x = (e^2a - 1) / (e^2a + 1)` for `a = |x|`, with the sign of `x`. */
-function tanhExact(x: number): ExactHyperbolic {
-  if (Number.isNaN(x)) return { kind: "double", value: x };
-  const a = Math.abs(x);
-  if (a >= TANH_SATURATED) return { kind: "double", value: x > 0 ? 1 : -1 };
-  if (a < TINY) return { kind: "double", value: x };
-  const { n, scaled } = expScaled(toFixed(a) * 2n);
-  const e = scaled << n;
-  const extra = W + 64n;
-  const quotient = ((e - ONE) << extra) / (e + ONE);
-  return dyadic(quotient, extra, x < 0);
+/** `__ieee754_cosh(x)`. */
+function cosh(x: number): number {
+  /* High word of |x|. */
+  const ix = highWord(x) & 0x7fffffff;
+
+  /* x is INF or NaN */
+  if (ix >= 0x7ff00000) return x * x;
+
+  /* |x| in [0,0.5*ln2], return 1+expm1(|x|)^2/(2*exp(|x|)) */
+  if (ix < 0x3fd62e43) {
+    const t = expm1(Math.abs(x));
+    const w = one + t;
+    if (ix < 0x3c800000) return w; /* cosh(tiny) = 1 */
+    return one + (t * t) / (w + w);
+  }
+
+  /* |x| in [0.5*ln2,22], return (exp(|x|)+1/exp(|x|))/2 */
+  if (ix < 0x40360000) {
+    const t = glibcExp("cosh", Math.abs(x));
+    return half * t + half / t;
+  }
+
+  /* |x| in [22, log(maxdouble)] return half*exp(|x|) */
+  if (ix < 0x40862e42) return half * glibcExp("cosh", Math.abs(x));
+
+  /* |x| in [log(maxdouble), overflow threshold] */
+  const lx = lowWord(x);
+  if (ix < 0x408633ce || (ix === 0x408633ce && lx <= 0x8fb9f87d)) {
+    const w = glibcExp("cosh", half * Math.abs(x));
+    const t = half * w;
+    return t * w;
+  }
+
+  /* |x| > overflow threshold, cosh(x) overflow */
+  return huge * huge;
 }
 
-/** The exact result of `fn(x)` (`ExactHyperbolic`). */
-export function exactHyperbolic(fn: HyperbolicFunction, x: number): ExactHyperbolic {
-  return fn === "tanh" ? tanhExact(x) : sinhCosh(fn, x);
-}
+/** `tanh(x)`. */
+function tanh(x: number): number {
+  /* High word of |x|. */
+  const jx = highWord(x);
+  const ix = jx & 0x7fffffff;
 
-/** Rounds an exact result to the nearest double, refusing inside `band`. */
-export function roundHyperbolic(exact: ExactHyperbolic, band: RoundingBand | null): number {
-  if (exact.kind === "double") return exact.value;
-  const magnitude = roundDyadic(exact.mantissa, exact.exponent, true, band);
-  return exact.negative ? -magnitude : magnitude;
+  /* x is INF or NaN */
+  if (ix >= 0x7ff00000) {
+    if (jx >= 0) return one / x + one; /* tanh(+-inf)=+-1 */
+    return one / x - one; /* tanh(NaN) = NaN */
+  }
+
+  let z: number;
+  /* |x| < 22 */
+  if (ix < 0x40360000) {
+    /* |x|<22 */
+    if (ix < 0x3c800000) {
+      /* |x|<2**-55 */
+      return x * (one + x); /* tanh(small) = small */
+    }
+    if (ix >= 0x3ff00000) {
+      /* |x|>=1  */
+      const t = expm1(two * Math.abs(x));
+      z = one - two / (t + two);
+    } else {
+      const t = expm1(-two * Math.abs(x));
+      z = -t / (t + two);
+    }
+    /* |x| > 22, return +-1 */
+  } else {
+    z = one - tiny; /* raised inexact flag */
+  }
+  return jx >= 0 ? z : -z;
 }
 
 /**
- * The position of an exact result inside its last unit, as `offset / full`
- * with `offset = 2 * remainder - full` (so `0` is the midpoint and `±full`
- * the doubles either side), or `null` for a result that needs no rounding.
- * For the measurement script: the distance from the midpoint of a glibc
- * miss is `|offset| / (2 * full)` ULP.
+ * How a region's result is computed: `direct` (no call out: `x`, `1`, `±1`
+ * or overflow), `expm1` (through `expm1` only, never refused), `exp`
+ * (through `exp(|x|)`) or `exp-half` (through `exp(|x|/2)`), the last two
+ * refused where that `exp` is inside its band.
  */
-export function midpointOffset(
-  exact: ExactHyperbolic,
-): { readonly offset: bigint; readonly full: bigint } | null {
-  if (exact.kind === "double") return null;
-  // The same split `pow.ts`'s `roundDyadic` makes.
-  const bits = exact.mantissa.toString(2).length;
-  const top = bits - 1 + exact.exponent;
-  if (top >= 1024) return null;
-  const lsb = Math.max(top - 52, -1074);
-  const shift = BigInt(lsb - exact.exponent);
-  if (shift <= 0n) return null;
-  const quotient = exact.mantissa >> shift;
-  const full = 1n << shift;
-  const remainder = exact.mantissa - (quotient << shift);
-  return { offset: 2n * remainder - full, full };
-}
+export type HyperbolicPath = "direct" | "expm1" | "exp" | "exp-half";
 
-/**
- * One region of arguments, `|x| < below` (and at or above the previous
- * region's `below`), with its band — `1/inverse` ULP of a midpoint — or
- * `null`: every argument in it refused.
- */
+/** One region of arguments, `|x| < below` (and at or above the previous region's `below`). */
 export interface HyperbolicRegion {
   readonly name: string;
   readonly below: number;
-  readonly inverse: bigint | null;
-  readonly band: RoundingBand | null;
+  readonly path: HyperbolicPath;
 }
 
 function region(
-  fn: HyperbolicFunction,
+  _fn: HyperbolicFunction,
   name: string,
   below: number,
-  inverse: bigint | null,
+  path: HyperbolicPath,
 ): HyperbolicRegion {
-  const band: RoundingBand | null =
-    inverse === null
-      ? null
-      : {
-          inverse,
-          refuse: () => {
-            throw new UnsupportedFeatureError(
-              "evaluate",
-              `the exact ${fn} lies within 1/${inverse} ULP of halfway between two doubles (${name}), ` +
-                `where Ruby's answer depends on the rounding of the platform C library's ${fn}`,
-            );
-          },
-        };
-  return { name, below, inverse, band };
+  return { name, below, path };
 }
 
-/** glibc 2.35's branch points (fdlibm compares the high word only). */
+/** fdlibm's branch points, as the doubles its high-word comparisons split at. */
 export const BRANCH = {
   /** `2^-55`: `cosh` returns `1`, `tanh` returns `x (1 + x)` below it. */
   tiny: 2 ** -55,
@@ -189,69 +288,41 @@ export const BRANCH = {
   sinhTiny: 2 ** -28,
   /** High word `0x3fd62e43`, just above `ln2/2`: `cosh`'s `expm1` branch below it. */
   halfLn2: 0.3465735912322998,
-  one: 1,
   twentyTwo: 22,
-  /** High word `0x40862E42`, just below `ln(DBL_MAX)`: `exp(|x|) / 2` below it. */
+  /** High word `0x40862E42`, just below `ln(DBL_MAX)`: `exp(|x|)` below it. */
   lnMax: 709.7822265625,
   /**
    * The double after `0x408633CE 8fb9f87d` (`710.4758600739439`), from which
-   * glibc's `sinh` and `cosh` return `Infinity` without computing — as the
-   * exact result, `e^x / 2 >= 2^1024`, also rounds.
+   * `sinh` and `cosh` overflow without computing.
    */
   overflow: 710.475860073944,
 } as const;
 
 /**
- * Each function's regions and bands, from
- * `scripts/measure-libm-hyperbolic-glibc.mjs` (recorded with seed `20260928`,
- * `test/evaluation/libm-hyperbolic-corpus.json`, and checked on two more
- * seeds; `TODO.plan/deferred.md`, "Evaluation: the hyperbolic functions",
- * has every figure). A band is at least twice the worst distance from the
- * midpoint of any glibc miss measured in the region, as a clean fraction. A region is refused (`null`) where glibc's
- * misses reach within a few thousandths of an exact double, so its error
- * approaches or passes one ULP and no band short of the whole unit is safe:
- * the `expm1` branches of all three, and `sinh`/`cosh` between `ln(DBL_MAX)`
- * and the overflow threshold, where glibc computes `exp(|x|/2)^2 / 2`.
+ * Each function's regions, in the order `sinh`, `cosh` and `tanh` above test
+ * them, for the measurement script and the fixture generator (which read
+ * this table out of the source).
  */
 export const REGIONS: Readonly<Record<HyperbolicFunction, readonly HyperbolicRegion[]>> = {
   sinh: [
-    // glibc returns x itself, which is the correctly rounded result.
-    region("sinh", "|x| < 2^-28", BRANCH.sinhTiny, 512n),
-    region("sinh", "2^-28 <= |x| < 22", BRANCH.twentyTwo, null),
-    // exp(|x|)/2: worst miss 0.003156 ULP.
-    region("sinh", "22 <= |x| < ln(DBL_MAX)", BRANCH.lnMax, 80n),
-    region("sinh", "ln(DBL_MAX) <= |x| <= the overflow threshold", BRANCH.overflow, null),
-    region("sinh", "|x| past the overflow threshold", Infinity, 512n),
+    region("sinh", "|x| < 2^-28", BRANCH.sinhTiny, "direct"),
+    region("sinh", "2^-28 <= |x| < 22", BRANCH.twentyTwo, "expm1"),
+    region("sinh", "22 <= |x| < ln(DBL_MAX)", BRANCH.lnMax, "exp"),
+    region("sinh", "ln(DBL_MAX) <= |x| <= the overflow threshold", BRANCH.overflow, "exp-half"),
+    region("sinh", "|x| past the overflow threshold", Infinity, "direct"),
   ],
   cosh: [
-    region("cosh", "|x| < 2^-55", BRANCH.tiny, 512n),
-    region("cosh", "2^-55 <= |x| < 0.03125", 0.03125, 1024n),
-    region("cosh", "0.03125 <= |x| < 0.0625", 0.0625, 128n),
-    region("cosh", "0.0625 <= |x| < 0.09375", 0.09375, 64n),
-    region("cosh", "0.09375 <= |x| < 0.125", 0.125, 32n),
-    region("cosh", "0.125 <= |x| < 0.15625", 0.15625, 20n),
-    region("cosh", "0.15625 <= |x| < 0.1875", 0.1875, 14n),
-    region("cosh", "0.1875 <= |x| < 0.21875", 0.21875, 12n),
-    region("cosh", "0.21875 <= |x| < 0.25", 0.25, 7n),
-    region("cosh", "0.25 <= |x| < 0.28125", 0.28125, 6n),
-    region("cosh", "0.28125 <= |x| < 0.3125", 0.3125, 5n),
-    region("cosh", "0.3125 <= |x| < 22", BRANCH.twentyTwo, null),
-    region("cosh", "22 <= |x| < ln(DBL_MAX)", BRANCH.lnMax, 80n),
-    region("cosh", "ln(DBL_MAX) <= |x| <= the overflow threshold", BRANCH.overflow, null),
-    region("cosh", "|x| past the overflow threshold", Infinity, 512n),
+    region("cosh", "|x| < 2^-55", BRANCH.tiny, "direct"),
+    region("cosh", "2^-55 <= |x| < ln2/2", BRANCH.halfLn2, "expm1"),
+    region("cosh", "ln2/2 <= |x| < 22", BRANCH.twentyTwo, "exp"),
+    region("cosh", "22 <= |x| < ln(DBL_MAX)", BRANCH.lnMax, "exp"),
+    region("cosh", "ln(DBL_MAX) <= |x| <= the overflow threshold", BRANCH.overflow, "exp-half"),
+    region("cosh", "|x| past the overflow threshold", Infinity, "direct"),
   ],
   tanh: [
-    region("tanh", "|x| < 2^-55", BRANCH.tiny, 512n),
-    region("tanh", "2^-55 <= |x| < 1.625", 1.625, null),
-    region("tanh", "1.625 <= |x| < 1.75", 1.75, 3n),
-    region("tanh", "1.75 <= |x| < 1.875", 1.875, 4n),
-    region("tanh", "1.875 <= |x| < 2", 2, 5n),
-    region("tanh", "2 <= |x| < 2.25", 2.25, 7n),
-    region("tanh", "2.25 <= |x| < 2.5", 2.5, 11n),
-    region("tanh", "2.5 <= |x| < 2.75", 2.75, 20n),
-    region("tanh", "2.75 <= |x| < 3", 3, 30n),
-    region("tanh", "3 <= |x| < 3.5", 3.5, 64n),
-    region("tanh", "3.5 <= |x|", Infinity, 160n),
+    region("tanh", "|x| < 2^-55", BRANCH.tiny, "direct"),
+    region("tanh", "2^-55 <= |x| < 22", BRANCH.twentyTwo, "expm1"),
+    region("tanh", "22 <= |x|", Infinity, "direct"),
   ],
 };
 
@@ -262,40 +333,27 @@ export function regionFor(fn: HyperbolicFunction, x: number): HyperbolicRegion {
   return regions.find((r) => a < r.below) ?? (regions[regions.length - 1] as HyperbolicRegion);
 }
 
-function regionRefusal(fn: HyperbolicFunction, r: HyperbolicRegion): never {
-  throw new UnsupportedFeatureError(
-    "evaluate",
-    `the platform C library's ${fn} is not reliably within one ULP for ${r.name}, ` +
-      "so Ruby's answer there depends on it",
-  );
-}
+const FUNCTIONS: Readonly<Record<HyperbolicFunction, (x: number) => number>> = { sinh, cosh, tanh };
 
 /**
- * The port's answer for the C library's `fn(x)`: `NaN` for `NaN`, the exact
- * limit for an infinity, and otherwise the correctly rounded double — refused
- * inside the band of `x`'s region, or anywhere in a region with no band, even
- * where the correctly rounded result needs no computing (glibc's `tanh` of
- * `1e-13` is not `1e-13`).
+ * The port's answer for the C library's `fn(x)`: glibc's double, or
+ * `UnsupportedFeatureError` where the `exp` it calls is inside its band.
  */
 export function hyperbolic(fn: HyperbolicFunction, x: number): number {
-  const exact = exactHyperbolic(fn, x);
-  if (Number.isNaN(x) || !Number.isFinite(x)) return roundHyperbolic(exact, null);
-  const r = regionFor(fn, x);
-  if (r.band === null) regionRefusal(fn, r);
-  return roundHyperbolic(exact, r.band);
+  return FUNCTIONS[fn](x);
 }
 
 /** Ruby: `Math.sinh` — `sinh(Get_Double(x))`. */
 export function mathSinh(x: RubyNumeric): number {
-  return hyperbolic("sinh", mathArgument(x));
+  return sinh(mathArgument(x));
 }
 
 /** Ruby: `Math.cosh`. */
 export function mathCosh(x: RubyNumeric): number {
-  return hyperbolic("cosh", mathArgument(x));
+  return cosh(mathArgument(x));
 }
 
 /** Ruby: `Math.tanh`. */
 export function mathTanh(x: RubyNumeric): number {
-  return hyperbolic("tanh", mathArgument(x));
+  return tanh(mathArgument(x));
 }

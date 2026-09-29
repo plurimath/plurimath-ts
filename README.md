@@ -170,10 +170,10 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
 
 - Reading MathML or OMML (no parser; the compat constructor and the CLI refuse
   them).
-- `evaluate()` of `Sinh`, `Cosh`, `Tanh`, `Sech`, `Csch` and `Coth` where
-  the platform C library is not reliably within one ULP, such as `sinh(1)`
-  or `tanh(0.5)`: they raise `UnsupportedFeatureError`
-  (`src/evaluation/libm-hyperbolic.ts`).
+- `evaluate()` of `Sinh`, `Cosh`, `Sech` and `Csch` where the platform C
+  library's `exp`, which they call for `|x| >= 22` (`cosh` from `ln2/2`), is
+  inside its rounding band, such as `sinh(22)`: they raise
+  `UnsupportedFeatureError` (`src/evaluation/libm-hyperbolic.ts`).
 - A root `parse()` function.
 - UnicodeMath input beyond the grammar slice ported so far: unmatched rules
   raise `ParseError`.

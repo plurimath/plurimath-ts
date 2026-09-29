@@ -596,106 +596,79 @@ platform: another libm can differ in these last bits.
 
 ### Evaluation: the hyperbolic functions
 
-**Recorded 2026-09-28.** `Sinh`, `Cosh`, `Tanh` and their reciprocals
-`Sech`, `Csch`, `Coth` (`1.0 / Math.cosh(x)`, and so on) call Ruby's
-`Math.sinh`/`cosh`/`tanh`, which call glibc (2.35 on the oracle's host).
-glibc computes them through its `expm1` for small and moderate arguments,
-and glibc's `s_expm1.c` evaluates its polynomial in a re-associated order
-under the LGPL, so it cannot be copied into this BSD-2-Clause port; Sun's
-fdlibm original does not give glibc's digits (measured earlier: `tanh` on
-fdlibm's `expm1` differs from Ruby on 22 of 200,000 arguments in `(-22, 22)`).
+**Recorded 2026-09-28, revised 2026-09-29.** `Sinh`, `Cosh`, `Tanh` and
+their reciprocals `Sech`, `Csch`, `Coth` (`1.0 / Math.cosh(x)`, and so on)
+call Ruby's `Math.sinh`/`cosh`/`tanh`, which call glibc (2.35 on the
+oracle's host). glibc's three are Sun's fdlibm routines, computed through
+`expm1` for small and moderate arguments and through `exp` for large ones.
 
-`src/evaluation/libm-hyperbolic.ts` therefore transcribes nothing. It
-computes the exact result in 320-bit fixed point, rounds it to the nearest
-double, and answers only where every double glibc could return lies on the
-same side of the midpoint: per region, a band of `1/n` ULP around each
-midpoint is refused, sized at least twice the worst glibc miss measured in
-that region, and a region whose misses come within thousandths of an exact
-double (glibc's error near or past one ULP) is refused whole. NaN, the
-infinities, the signed zeros, glibc's own `x` and `1` below its tiny-argument
-branches, and overflow past glibc's threshold (`|x| > 710.4758600739439`)
-are answered exactly; `csch` and `coth` of a zero raise the gem's
-`DivisionByZeroError`, and an overflowing result the gem's
+`src/evaluation/libm-hyperbolic.ts` transcribes fdlibm's `e_sinh.c`,
+`e_cosh.c` and `s_tanh.c`, and `src/evaluation/libm-expm1.ts` fdlibm's
+`s_expm1.c` (Sun's notices kept). fdlibm's `expm1` alone does not give
+glibc's digits: glibc evaluates the same polynomial in a different order.
+The port's `expm1` evaluates it as three short pieces combined with the
+even powers of its variable, written from fdlibm in this port's own words.
+The order came from comparing results against glibc 2.35 through Ruby's
+`Math`. `mise x ruby@4.0.1 node@24.18.0 -- node
+scripts/measure-libm-hyperbolic-glibc.mjs --expm1-order` repeats it: over
+3,028,620 seeded arguments with `|x| < 44` (both signs, log- and
+linear-uniform, and 3,000 consecutive doubles either side of each of
+`expm1`'s branch points), the count of arguments whose `expm1` differs from
+Ruby's `Math.expm1` is 276 in fdlibm's Horner order and 0 in the split order
+(2026-09-29, seed 20260928).
+
+Every region that goes only through `expm1` therefore answers glibc's double
+and never refuses. Where `sinh` or `cosh` call `exp` (`sinh` from `|x| = 22`,
+`cosh` from `ln2/2`, and `exp(|x|/2)` from `ln(DBL_MAX)` to the overflow
+threshold), the port uses `libm.ts`'s correctly rounded `exp`, refused inside
+`exp`'s own band (1/80 ULP, "`Math` function results inside glibc's rounding
+band" above); outside it that double is glibc's, and the rest of fdlibm's
+formula is plain double arithmetic. `csch` and `coth` of a zero raise the
+gem's `DivisionByZeroError`, and an overflowing result the gem's
 `NonFiniteResultError` (probed on the gem, 0.11.6).
 
-Measured by `scripts/measure-libm-hyperbolic-glibc.mjs` (Ruby 4.0.1, glibc
-2.35, x86-64, 2026-09-28): seeded samples of 1,279,173 (`sinh`), 3,391,193
-(`cosh`) and 2,757,587 (`tanh`) arguments — log- and linear-uniform, dense
-near 0, near the overflow threshold and near saturation, 100,000 uniform and
-5,000 log-uniform per banded region, 1,500 consecutive doubles either side
-of every glibc branch point (`2^-55`, `2^-28`, `ln2/2`, `1`, `22`,
-`ln(DBL_MAX)`, the overflow threshold) and of every region edge, subnormals,
-hand-typed values, `±0`, `±Infinity` and NaN. The recorded run (seed
-20260928, `test/evaluation/libm-hyperbolic-corpus.json`) answered 974,371,
-2,943,727 and 1,895,243 of them with **0 differences** from Ruby's `Math`, 0
-in the reciprocal, and 0 disagreements between the port's correctly rounded
-double and a BigDecimal reference (`scripts/lib/libm-reference.rb`; 6,293,
-23,994 and 43,538 arguments, every glibc miss in a banded region among
-them). Two held-out seeds (4242 and 777, same sizes) also gave 0
-differences; the bands were widened until every region's worst miss over all
-three seeds sat under half its band.
+Measured by `mise x ruby@4.0.1 node@24.18.0 -- node
+scripts/measure-libm-hyperbolic-glibc.mjs` (Ruby 4.0.1, glibc
+2.35, x86-64, 2026-09-29): seeded samples, both signs, log- and
+linear-uniform, dense near 0, near the overflow threshold and near
+saturation, 100,000 uniform and 5,000 log-uniform per computing region,
+consecutive doubles either side of every branch point of the three
+functions and of `expm1` (at `|x|` and, for `tanh`, `|x|/2`), subnormals,
+hand-typed values, `±0`, `±Infinity` and NaN. Differences from Ruby's
+`Math`, in the function or its reciprocal:
 
-The regions, their bands, the worst miss (distance from the midpoint, in
-ULP: the larger of the recorded run and the seed-4242 run; the seed-777 run
-stayed under half of every band) and the share of the recorded run's sample
-refused in the region:
-
-| Function | Region | Band | Worst miss | Refused |
+| Seed (scale) | `sinh` answered / refused | `cosh` answered / refused | `tanh` answered / refused | Differences |
 | --- | --- | --- | --- | --- |
-| `sinh` | `|x| < 2^-28` (glibc returns `x`) | 1/512 | none | 0% |
-| `sinh` | `2^-28 <= |x| < 22` | whole region | 0.4998, and misses past one ULP | 100% |
-| `sinh` | `22 <= |x| < ln(DBL_MAX)` | 1/80 | 0.004244 | 2.5% |
-| `sinh` | `ln(DBL_MAX) <= |x| <= 710.4758600739439` | whole region | past one ULP | 100% |
-| `cosh` | `|x| < 2^-55` | 1/512 | none | 0% |
-| `cosh` | `2^-55 <= |x| < 0.03125` | 1/1024 | 0.000246 | 0.13% |
-| `cosh` | `0.03125 <= |x| < 0.0625` | 1/128 | 0.002836 | 1.5% |
-| `cosh` | `0.0625 <= |x| < 0.09375` | 1/64 | 0.005298 | 3.1% |
-| `cosh` | `0.09375 <= |x| < 0.125` | 1/32 | 0.012369 | 6.2% |
-| `cosh` | `0.125 <= |x| < 0.15625` | 1/20 | 0.017829 | 10.0% |
-| `cosh` | `0.15625 <= |x| < 0.1875` | 1/14 | 0.026787 | 14.3% |
-| `cosh` | `0.1875 <= |x| < 0.21875` | 1/12 | 0.029458 | 16.7% |
-| `cosh` | `0.21875 <= |x| < 0.25` | 1/7 | 0.050489 | 28.5% |
-| `cosh` | `0.25 <= |x| < 0.28125` | 1/6 | 0.064104 | 33.3% |
-| `cosh` | `0.28125 <= |x| < 0.3125` | 1/5 | 0.078052 | 39.8% |
-| `cosh` | `0.3125 <= |x| < 22` | whole region | 0.4978 | 100% |
-| `cosh` | `22 <= |x| < ln(DBL_MAX)` | 1/80 | 0.004002 | 2.5% |
-| `cosh` | `ln(DBL_MAX) <= |x| <= 710.4758600739439` | whole region | past one ULP | 100% |
-| `tanh` | `|x| < 2^-55` (glibc returns `x`) | 1/512 | none | 0% |
-| `tanh` | `2^-55 <= |x| < 1.625` | whole region | 0.49999, and misses past one ULP | 100% |
-| `tanh` | `1.625 <= |x| < 1.75` | 1/3 | 0.120171 | 66.8% |
-| `tanh` | `1.75 <= |x| < 1.875` | 1/4 | 0.086205 | 50.0% |
-| `tanh` | `1.875 <= |x| < 2` | 1/5 | 0.072740 | 39.9% |
-| `tanh` | `2 <= |x| < 2.25` | 1/7 | 0.057770 | 28.5% |
-| `tanh` | `2.25 <= |x| < 2.5` | 1/11 | 0.034736 | 18.2% |
-| `tanh` | `2.5 <= |x| < 2.75` | 1/20 | 0.018811 | 10.1% |
-| `tanh` | `2.75 <= |x| < 3` | 1/30 | 0.012991 | 6.8% |
-| `tanh` | `3 <= |x| < 3.5` | 1/64 | 0.006969 | 3.1% |
-| `tanh` | `3.5 <= |x|` | 1/160 | 0.002151 | 0.86% |
+| 20260928 (1), recorded in `test/evaluation/libm-hyperbolic-corpus.json` | 1,274,529 / 15,258 (1.183%) | 1,478,203 / 22,786 (1.518%) | 867,383 / 0 | 0 |
+| 4242 (2) | 2,549,175 / 30,212 (1.171%) | 2,955,495 / 46,294 (1.542%) | 1,734,583 / 0 | 0 |
+| 777 (2) | 2,548,609 / 30,778 (1.193%) | 2,956,287 / 45,502 (1.516%) | 1,734,583 / 0 | 0 |
 
-Why each whole-region refusal exists:
+Per region in the recorded run, every refusal is in a region that calls
+`exp`, at about the 2.5% that `exp`'s 1/80 band covers:
 
-- `sinh` for `2^-28 <= |x| < 22` and `tanh` for `2^-55 <= |x| < 1.625`:
-  glibc's result is `expm1` combined in double arithmetic, which reaches
-  1.10 ULP (`sinh(-1.8803256074855135)`) and 1.25 ULP (`tanh(-0.7)`) from
-  the exact value (checked against BigDecimal). Past one ULP, two doubles are
-  within glibc's error of every exact value, so no band can pick glibc's.
-  Between `1.25` and `1.625` glibc's `tanh` stays under one ULP, but its
-  misses reach 0.236 ULP from the midpoint, so twice that needs a band of
-  1/2, which refuses everything. `tanh(1e-13)` is one such miss: glibc returns
-  `1e-13` minus one ULP.
-- `cosh` for `0.3125 <= |x| < 22`: glibc's `exp(|x|)/2 + 0.5/exp(|x|)` (and
-  its `expm1` form up to `ln2/2`) misses within 0.0022 ULP of an exact
-  double, so its error approaches one ULP.
-- `sinh` and `cosh` for `ln(DBL_MAX) <= |x| <= 710.4758600739439`: glibc
-  computes `exp(|x|/2)^2 / 2` to avoid overflow, and misses by up to 1.03
-  ULP (`sinh(-710.4)`).
+| Function | Region | Path | Refused |
+| --- | --- | --- | --- |
+| `sinh` | `|x| < 2^-28` (returns `x`) | none | 0% |
+| `sinh` | `2^-28 <= |x| < 22` | `expm1` | 0% |
+| `sinh` | `22 <= |x| < ln(DBL_MAX)` | `exp(|x|)` | 2.490% |
+| `sinh` | `ln(DBL_MAX) <= |x| <= 710.4758600739439` | `exp(|x|/2)` | 2.486% |
+| `cosh` | `|x| < 2^-55` (returns `1`) | none | 0% |
+| `cosh` | `2^-55 <= |x| < ln2/2` | `expm1` | 0% |
+| `cosh` | `ln2/2 <= |x| < 22` | `exp(|x|)` | 2.458% |
+| `cosh` | `22 <= |x| < ln(DBL_MAX)` | `exp(|x|)` | 2.494% |
+| `cosh` | `ln(DBL_MAX) <= |x| <= 710.4758600739439` | `exp(|x|/2)` | 2.469% |
+| `tanh` | every region | `expm1` or none | 0% |
 
-Overall, the share refused of each sample: `sinh` 23.8%, `cosh` 13.2%,
-`tanh` 31.3%. Of the hand-typed values (`0.1`, `1`, `2`, `pi`, `700`, both
-signs), `sinh` refuses 74%, `cosh` 58% and `tanh` 44%, because they fall in
-the `expm1` regions. Closing these gaps needs glibc's own digits: a
-permissively licensed `expm1` that reproduces glibc's, or a decision to
-accept LGPL code.
+Of the 132 hand-typed values (`0.1`, `1`, `2`, `pi`, `700`, both signs),
+`sinh` and `cosh` each refuse 2 (`±22`: `exp(22)` lies 0.0068 ULP from a
+midpoint, BigDecimal) and `tanh` none. `sinh(1)`, `cosh(1)`, `tanh(0.5)` and
+`tanh(1)` answer.
+
+What remains: the `exp` band refusals, which close only with glibc's own
+`exp` digits (the same gap as `Math.exp`'s). The `expm1` order is measured,
+not proven: a glibc built to contract the polynomial into fused
+multiply-adds could round differently, and the measurement script refuses
+any glibc other than 2.35.
 
 ### Evaluation: `lg` near `log`'s rounding band
 

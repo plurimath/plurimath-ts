@@ -3,19 +3,18 @@
  * writes (`test/evaluation/libm-hyperbolic-corpus.json`) WITHOUT re-measuring:
  * no `ruby` subprocess. The corpus records, per function (`sinh`, `cosh`,
  * `tanh`) and per region of `libm-hyperbolic.ts`'s `REGIONS`, the measured
- * figures and sampled rows `[argument, glibc's result, 1.0 / result]` (or
+ * counts and sampled rows `[argument, glibc's result, 1.0 / result]` (or
  * `"ZeroDivision"`, where the gem's `divide` raises), and this makes these
  * checked facts:
  *
- * - the corpus was measured against the regions and bands in the source now;
- * - every band is at least twice the worst glibc miss measured in its region,
- *   and no banded region has a miss further than the neighbouring doubles;
- * - the port answers glibc's double, bit for bit, on every answered row, and
- *   its reciprocal (`sech`/`csch`/`coth`) is Ruby's;
- * - it refuses every refused row, and every glibc miss stored;
- * - the full measurement found no mismatch with Ruby, no reciprocal
- *   mismatch, and no disagreement with the BigDecimal reference, over at
- *   least 300,000 answered arguments per function.
+ * - the corpus was measured against the regions in the source now;
+ * - a region that never calls `exp` refused nothing;
+ * - the port answers glibc's double, bit for bit, on every stored answered
+ *   row, and its reciprocal (`sech`/`csch`/`coth`) is Ruby's;
+ * - it refuses every stored refused row;
+ * - the recorded measurement found no mismatch with Ruby and no reciprocal
+ *   mismatch, over at least 300,000 answered arguments per function. These
+ *   are the recorded figures, re-derived only by re-running the script.
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -28,23 +27,19 @@ type Row = readonly [x: string, glibc: string, reciprocal: string];
 
 interface RegionFigures {
   readonly name: string;
-  readonly band: number | null;
+  readonly path: string;
   readonly n: number;
-  readonly far: number;
   readonly refused: number;
-  readonly worstMidpointDistance: number;
   readonly answeredRows: readonly Row[];
   readonly refusedRows: readonly Row[];
-  readonly missRows: readonly Row[];
 }
 
 interface FunctionFigures {
   readonly samples: number;
   readonly answered: number;
+  readonly refused: number;
   readonly mismatches: number;
   readonly reciprocalMismatches: number;
-  readonly referenceChecked: number;
-  readonly referenceDisagreements: number;
   readonly regions: readonly RegionFigures[];
 }
 
@@ -75,27 +70,24 @@ describe.each(FUNCTIONS)("libm-hyperbolic-corpus.json: %s", (fn) => {
 
   it("records a measurement with no mismatch, over at least 300,000 answered arguments", () => {
     expect(figures.answered).toBeGreaterThanOrEqual(300_000);
+    expect(figures.answered + figures.refused).toBe(figures.samples);
     expect(figures.mismatches).toBe(0);
     expect(figures.reciprocalMismatches).toBe(0);
-    expect(figures.referenceChecked).toBeGreaterThan(0);
-    expect(figures.referenceDisagreements).toBe(0);
   });
 
-  it("was measured against the regions and bands in the source", () => {
-    expect(figures.regions.map((r) => [r.name, r.band])).toEqual(
-      REGIONS[fn].map((r) => [r.name, r.inverse === null ? null : Number(r.inverse)]),
+  it("was measured against the regions in the source", () => {
+    expect(figures.regions.map((r) => [r.name, r.path])).toEqual(
+      REGIONS[fn].map((r) => [r.name, r.path]),
     );
   });
 
-  it("sizes every band at least twice the worst miss measured in its region", () => {
+  it("refused nothing in a region that never calls exp", () => {
     for (const region of figures.regions) {
       expect(region.n, region.name).toBeGreaterThan(0);
-      if (region.band === null) {
-        expect(region.refused, region.name).toBe(region.n);
-        continue;
+      if (region.path === "direct" || region.path === "expm1") {
+        expect(region.refused, region.name).toBe(0);
+        expect(region.refusedRows, region.name).toEqual([]);
       }
-      expect(region.far, region.name).toBe(0);
-      expect(1 / region.band, region.name).toBeGreaterThanOrEqual(2 * region.worstMidpointDistance);
     }
   });
 
@@ -112,14 +104,13 @@ describe.each(FUNCTIONS)("libm-hyperbolic-corpus.json: %s", (fn) => {
     expect(figures.regions.some((r) => r.answeredRows.length > 0)).toBe(true);
   });
 
-  it("refuses every refused row and every stored glibc miss", () => {
+  it("refuses every refused row", () => {
     for (const region of figures.regions) {
-      for (const [x] of [...region.refusedRows, ...region.missRows]) {
+      for (const [x] of region.refusedRows) {
         expect(() => hyperbolic(fn, fromHex(x)), `${region.name} ${x}`).toThrow(
           UnsupportedFeatureError,
         );
       }
     }
-    expect(figures.regions.some((r) => r.missRows.length > 0)).toBe(true);
   });
 });

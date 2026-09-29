@@ -14,9 +14,10 @@
  * where glibc's answer is not reliably the correctly rounded one), `Lg`
  * (glibc's `log10`, `libm-log10.ts`) and `Log` with its base and exponent
  * (glibc's `log2`, `libm-log2.ts`), and `Sinh`, `Cosh`, `Tanh`, `Sech`,
- * `Csch` and `Coth` (`libm-hyperbolic.ts`: correctly rounded where glibc's
- * answer reliably is, refused elsewhere; `TODO.plan/deferred.md` has the
- * regions and why). A refusal raises `core`'s `UnsupportedFeatureError`
+ * `Csch` and `Coth` (`libm-hyperbolic.ts`: glibc's `sinh`, `cosh` and `tanh`
+ * from fdlibm, on an `expm1` that gives glibc's digits, refused only where
+ * `sinh`/`cosh` call `exp` inside `exp`'s band; `TODO.plan/deferred.md` has
+ * the regions). A refusal raises `core`'s `UnsupportedFeatureError`
  * (feature `"evaluate"`): a port gap, not an answer about the expression.
  * `UnsupportedExpressionError` is kept for exactly the refusals the gem
  * itself makes — a malformed number, a missing operand, a stray operator or

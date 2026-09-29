@@ -14,8 +14,8 @@
  * `UnsupportedFeatureError` whatever the oracle answered: a FINAL result a JS
  * number cannot hold exactly, a Float power or `Math` function result inside
  * glibc's rounding band, a sin/cos/tan argument inside `libm.ts`'s reduction
- * guard, a hyperbolic function argument in a region `libm-hyperbolic.ts`
- * refuses or inside its band, a Ruby `ArgumentError`, or an
+ * guard, a `sinh`/`cosh` argument whose `exp` call is inside `exp`'s band
+ * (`libm-hyperbolic.ts`), a Ruby `ArgumentError`, or an
  * exact intermediate beyond the port's size limit (the generator's header).
  */
 import { readFileSync } from "node:fs";
@@ -23,11 +23,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { UnsupportedFeatureError } from "../../src/core/errors";
-import { FormulaNode, NumberNode, TextNode } from "../../src/core/nodes";
+import { FormulaNode, type MathNode, NumberNode, TextNode } from "../../src/core/nodes";
 import {
   DEFAULT_MAX_ITERATIONS,
   Evaluator,
   type EvaluatorSettings,
+  refuseUndispatched,
 } from "../../src/evaluation/evaluator";
 import {
   DivisionByZeroError,
@@ -193,7 +194,6 @@ describe("evaluate() against the oracle fixtures", () => {
     expect([...reasons].sort()).toEqual([
       "argument-error",
       "big-integer",
-      "hyperbolic-region",
       "hyperbolic-rounding-band",
       "libm-reduction",
       "libm-rounding-band",
@@ -211,6 +211,27 @@ describe("evaluate() against the oracle fixtures", () => {
 describe("evaluate() has no unported fixture row", () => {
   it("marks no row unported", () => {
     expect(rows.filter((row) => row.portRefusal === "unported").map((row) => row.id)).toEqual([]);
+  });
+});
+
+// No parsed node reaches `refuseUndispatched`'s port-gap branch through
+// `evaluate` (every gem-evaluated class is dispatched), so both branches are
+// called here directly, on parsed nodes.
+describe("refuseUndispatched", () => {
+  const first = (text: string) =>
+    (parseAsciimath(text).value as readonly MathNode[])[0] as MathNode;
+
+  it("refuses a class the gem evaluates as a port gap", () => {
+    expect(() => refuseUndispatched(first("sinh(1)"))).toThrow(
+      new UnsupportedFeatureError(
+        "evaluate",
+        "Function::Sinh is evaluated by the gem but not ported to this slice yet",
+      ),
+    );
+  });
+
+  it("refuses any other class as the gem does", () => {
+    expect(() => refuseUndispatched(first("hat(x)"))).toThrow(UnsupportedExpressionError);
   });
 });
 

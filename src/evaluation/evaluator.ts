@@ -473,6 +473,24 @@ const FUNCTION_EVALUATORS: ReadonlyMap<string, FunctionEvaluator> = new Map<
 ]);
 
 /**
+ * The refusal for a node `Evaluator#dispatch` has no branch for: a port gap
+ * (`UnsupportedFeatureError`) when the gem evaluates that class
+ * (`gemEvaluatedClass`), the gem's own refusal (`UnsupportedExpressionError`)
+ * otherwise. Every class in `GEM_EVALUATED_FUNCTIONS` is dispatched now, so no
+ * parsed node reaches the port-gap branch through `evaluate`; it stays as the
+ * guard for a class listed before it is ported, and `evaluate.spec.ts` calls
+ * this directly to keep both branches tested.
+ */
+export function refuseUndispatched(node: MathNode): never {
+  const gemClass = gemEvaluatedClass(node);
+  if (gemClass === null) throw new UnsupportedExpressionError(describeUnsupportedNode(node));
+  throw new UnsupportedFeatureError(
+    "evaluate",
+    `Function::${gemClass} is evaluated by the gem but not ported to this slice yet`,
+  );
+}
+
+/**
  * Ruby: `Evaluator#split_on_commas` — a `Symbols::Comma` token starts a new
  * segment; there is always at least one (possibly empty) segment.
  */
@@ -623,17 +641,9 @@ export class Evaluator {
     throw new UnsupportedExpressionError(detail);
   }
 
-  /**
-   * A node `dispatch` has no branch for: a port gap when the gem evaluates
-   * that class (`gemEvaluatedClass`), the gem's own refusal otherwise.
-   */
+  /** A node `dispatch` has no branch for (`refuseUndispatched`). */
   private unported(node: MathNode): never {
-    const gemClass = gemEvaluatedClass(node);
-    if (gemClass === null) return this.unsupported(node);
-    throw new UnsupportedFeatureError(
-      "evaluate",
-      `Function::${gemClass} is evaluated by the gem but not ported to this slice yet`,
-    );
+    return refuseUndispatched(node);
   }
 
   private dispatch(node: MathNode): RubyNumeric {

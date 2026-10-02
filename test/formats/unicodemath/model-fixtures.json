@@ -33644,125 +33644,138 @@
       }
     },
     {
-      "id": "unicodemath-eac4487e8902",
+      "id": "unicodemath-1d3e33c001ce",
       "group": "remaining",
-      "input": "∫▒ρ(x,y)g(x)ⅆxⅆy",
-      "preprocessed": "&#x222b;&#x2592;&#x3c1;(x,y)g(x)&#x2146;x&#x2146;y",
+      "input": "∫_S▒ρ(x,y)g(x)ⅆxⅆy",
+      "preprocessed": "&#x222b;_S&#x2592;&#x3c1;(x,y)g(x)&#x2146;x&#x2146;y",
       "model": {
         "class": "Math::Formula",
         "fields": {
           "displaystyle": true,
-          "input_string": "∫▒ρ(x,y)g(x)ⅆxⅆy",
+          "input_string": "∫_S▒ρ(x,y)g(x)ⅆxⅆy",
           "left_right_wrapper": true,
           "value": [
-            [
-              "nary",
-              {
-                "nary_class": "&#x222b;",
-                "naryand": [
-                  {
-                    "class": "Math::Symbols::Rho",
-                    "fields": {
-                      "value": null
-                    }
-                  },
-                  {
-                    "class": "Math::Function::Fenced",
-                    "fields": {
-                      "options": {},
-                      "parameter_one": {
-                        "class": "Math::Symbols::Paren::Lround",
-                        "fields": {
-                          "value": null
-                        }
-                      },
-                      "parameter_three": {
-                        "class": "Math::Symbols::Paren::Rround",
-                        "fields": {
-                          "value": null
-                        }
-                      },
-                      "parameter_two": [
-                        {
-                          "class": "Math::Symbols::Symbol",
-                          "fields": {
-                            "value": "x"
-                          }
-                        },
-                        {
-                          "class": "Math::Symbols::Comma",
-                          "fields": {
-                            "value": null
-                          }
-                        },
-                        {
-                          "class": "Math::Symbols::Symbol",
-                          "fields": {
-                            "value": "y"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "class": "Math::Symbols::Symbol",
-                    "fields": {
-                      "value": "g"
-                    }
-                  },
-                  {
-                    "class": "Math::Function::Fenced",
-                    "fields": {
-                      "options": {},
-                      "parameter_one": {
-                        "class": "Math::Symbols::Paren::Lround",
-                        "fields": {
-                          "value": null
-                        }
-                      },
-                      "parameter_three": {
-                        "class": "Math::Symbols::Paren::Rround",
-                        "fields": {
-                          "value": null
-                        }
-                      },
-                      "parameter_two": [
-                        {
-                          "class": "Math::Symbols::Symbol",
-                          "fields": {
-                            "value": "x"
-                          }
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "class": "Math::Symbols::Dd",
-                    "fields": {
-                      "value": null
-                    }
-                  },
-                  {
-                    "class": "Math::Symbols::Symbol",
-                    "fields": {
-                      "value": "x"
-                    }
-                  },
-                  {
-                    "class": "Math::Symbols::Dd",
-                    "fields": {
-                      "value": null
-                    }
-                  },
-                  {
-                    "class": "Math::Symbols::Symbol",
-                    "fields": {
-                      "value": "y"
-                    }
+            {
+              "class": "Math::Function::Int",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "S"
                   }
-                ]
+                },
+                "parameter_three": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Rho",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Fenced",
+                        "fields": {
+                          "options": {},
+                          "parameter_one": {
+                            "class": "Math::Symbols::Paren::Lround",
+                            "fields": {
+                              "value": null
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Paren::Rround",
+                            "fields": {
+                              "value": null
+                            }
+                          },
+                          "parameter_two": [
+                            {
+                              "class": "Math::Symbols::Symbol",
+                              "fields": {
+                                "value": "x"
+                              }
+                            },
+                            {
+                              "class": "Math::Symbols::Comma",
+                              "fields": {
+                                "value": null
+                              }
+                            },
+                            {
+                              "class": "Math::Symbols::Symbol",
+                              "fields": {
+                                "value": "y"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "g"
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Fenced",
+                        "fields": {
+                          "options": {},
+                          "parameter_one": {
+                            "class": "Math::Symbols::Paren::Lround",
+                            "fields": {
+                              "value": null
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Paren::Rround",
+                            "fields": {
+                              "value": null
+                            }
+                          },
+                          "parameter_two": [
+                            {
+                              "class": "Math::Symbols::Symbol",
+                              "fields": {
+                                "value": "x"
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Dd",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "x"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Dd",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "y"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "parameter_two": null
               }
-            ]
+            }
           ]
         }
       }

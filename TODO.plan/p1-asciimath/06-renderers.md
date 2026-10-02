@@ -102,10 +102,11 @@ turns it into a named property with a one-line diff.
 - [ ] The MathML option matrix lists all six options, each marked implemented
   here or deferred to a named phase, and every implemented one matches the gem
   byte-for-byte on the fixture's inputs.
-- [ ] The byte-fidelity fixture covers the six properties above, and each one
+- [x] The byte-fidelity fixture covers the six properties above, and each one
   is shown failing on its own — break one property in the serializer, watch
   exactly that assertion fail, restore. A fixture never seen failing proves
   nothing.
+  (done: #9; `test/xml/ox-contract.expected.json` pins `attr-order`, `namespaced`, `empty-with-attr`, the text and attribute escape sweeps, `entity-text-passthrough` and the `mixed-*` whitespace cases; the PR records every fixture family seen failing under a targeted mutation; checked 2026-10-02)
 - [x] Every numeric form in the pinned corpus renders byte-identically in all
   three formats with no formatter configured.
   (done: the render-parity specs render all 236 reachable cases with no formatter, the `numbers` group among them; checked 2026-09-24)

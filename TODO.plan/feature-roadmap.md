@@ -413,8 +413,8 @@ Two independent chains, sharing no prerequisite. They can run side by side.
 Status on `main`: Chain A has not started, and A2/A3 are deferred (#122). On
 Chain B, B1 landed in the testsuite as `calls/1` (`number_formatter` only), B2
 in #126, #133, #143 and #146, B3 in #132, B4 in #136, B5 in #139 and #150, and
-B6 in #152, #155 and #161, which ported the last eight functions; some of
-them refuse near a rounding band (see Evaluation, above).
+B6 in #152 and #155, with every function now ported; some of them refuse
+near a rounding band (see Evaluation, above).
 
 ```
 Chain A — reading XML                Chain B — options the corpus cannot express

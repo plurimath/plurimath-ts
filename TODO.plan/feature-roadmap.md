@@ -142,9 +142,8 @@ records whether a single native reader makes it moot.
    ([open-decisions.md](open-decisions.md#mathmlomml-input-strategy), PR
    #122). PR #120, open, would make the compat constructor's refusal name the
    missing XML reader; on `main` it is still the generic
-   `UnsupportedFormatError`. This page's own build order below (Chain A, A2/A3) has
-   not yet been revised to reflect that a native port is deferred rather than
-   the recommended next step.
+   `UnsupportedFormatError`. The build order below marks Chain A deferred to
+   match.
 
 **Oracle data already available:** the corpus at `07bf5e3` carries 237
 `mathml:` expected-output blocks in parse cases (92 under `corpus/asciimath/`,
@@ -446,8 +445,11 @@ version rather than a change to existing cases. What it must carry: the input
 and format, the call (render method, options, configuration, or bindings),
 and the gem's answer or its error.
 
-**A2, MathML input, is the recommended first feature port** if the maintainer
-chooses a native port, for four reasons:
+**Chain A is deferred (#122).** A2, MathML input, was written up here as the
+recommended first feature port if the maintainer chose a native port; the
+choice was deferral, to be revisited once a working way to read MathML/OMML
+XML exists ([open-decisions](open-decisions.md#mathmlomml-input-strategy)).
+The four reasons it was recommended still describe what A2 carries:
 
 1. It is the largest remaining gap in the compat constructor, which names
    `mathml`.
@@ -470,6 +472,8 @@ only `core` and nothing depends on it, so it gains nothing from going early
 and unblocks nothing; and the compat surface does not expose it.
 
 ### Chain A, in order
+
+Deferred as a whole (#122); this is the order if the deferral is revisited.
 
 - **A1 → A2.** The reader is a §3 change and a library evaluation
   (`deferred.md`, XML writer entry), then the translator port. The corpus's
@@ -518,5 +522,5 @@ waits on A or B. The other items once listed here have landed: `unicode` and
 | ~~Is `/omml` published, and does §4's subpath list gain it?~~ | published, and listed in §4 (#112) |
 | ~~Is a CLI in scope, or does it join §10's YAGNI list?~~ | settled 2026-09-16: in scope, idiomatic Node CLI over gem-flag parity (`ARCHITECTURE.md` §10) |
 | ~~Does the formatter arrive as a class instance or a plain options object?~~ | settled: a plain options object (`open-decisions.md`, #125) |
-| ~~Native MathML/OMML input, or further deferral?~~ | settled 2026-09-16: continued deferral (`open-decisions.md`); Chain A's A2/A3 ordering above still needs revising to match |
+| ~~Native MathML/OMML input, or further deferral?~~ | settled 2026-09-16: continued deferral (`open-decisions.md`); Chain A above is marked deferred to match |
 | Does the port need an equivalent of `Plurimath.mml_adapter`? | the gem picks the `mml` XML backend globally (`plurimath.rb:34-37`); one native reader may make it moot |

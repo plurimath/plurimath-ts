@@ -114,6 +114,7 @@ makes a defect, not an improvement.
 
 - [ ] `toHtml` matches the gem byte-for-byte across the pinned corpus, for every case the
       corpus reaches.
+      (open: `test/formats/html/parity-target.ts` pins all 89 gem-renderable AsciiMath-input cases, 88 byte-identical and `text-unitsml-valid` a recorded divergence; the corpus's LaTeX-input cases are not swept; checked 2026-10-02)
 - [x] The 15 own-override kinds are each measured against the oracle, not derived from a
       sibling format.
 - [x] The three carrier defaults are pinned by a behavioural test each, so a later change

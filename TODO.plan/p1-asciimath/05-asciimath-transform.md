@@ -69,9 +69,10 @@ Two traps, both measured against the gem rather than inferred:
   reachable from `transform.rb`'s actions resolves in the registry, asserted
   against a generated list rather than by hand.
   (done: `test/formats/asciimath/registry.spec.ts:49-57`, against the generated census; checked 2026-09-24)
-- [ ] The pegkit conformance suite gains transform tests: a later rule beating
+- [x] The pegkit conformance suite gains transform tests: a later rule beating
   an earlier overlapping one on a tie, a pattern rejected because the node
   carries one key more, and a replacement not being re-visited. Each must be
   seen failing before it counts.
+  (done: #7; `test/pegkit/transform.spec.ts:31`, `:58`, `:88`; the PR records each test watched failing under a targeted perturbation; checked 2026-10-02)
 - [ ] `pnpm boundaries` shows `formats/asciimath` importing only `pegkit`, `core`,
   and its own generated data.

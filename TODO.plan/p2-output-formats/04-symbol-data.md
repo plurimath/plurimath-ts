@@ -652,20 +652,23 @@ published `./omml`, and `package.json#exports` lists it.
 
 ## Done when
 
-- [ ] One existing generator emits separate HTML and OMML symbol maps with
+- [x] One existing generator emits separate HTML and OMML symbol maps with
       `1,459` static rows each from the pinned oracle; HTML has `1,413` and OMML
       `1,415` distinct payloads under the measured baseline.
+      (done: #63; `scripts/generate-corpus.rb` emits `src/generated/html/symbols.ts` (`HTML_SYMBOLS`: 1,459 rows, 1,413 distinct values) and `src/generated/omml/symbols.ts` (`OMML_SYMBOLS`: 1,459 rows, 1,415 distinct values), counted by loading both maps; checked 2026-10-02)
 - [x] The dynamic `Symbol` root stays value-driven, the abstract `Paren`
       carrier stays absent, and named `Paren::*` subclasses are present.
       (done: `src/generated/html/symbols.ts` and `src/generated/omml/symbols.ts` each carry 24 `Paren::*` ids and no bare `Paren` or `Symbol` key; the value-driven ids are routed first at `src/render/symbol/html.ts:74` and `src/formats/omml/render-shared.ts:282`; checked 2026-09-24)
 - [x] HTML consumes strings directly; OMML consumes strings through one shared
       wrapper, with no generated per-class XML templates.
       (done: `src/render/symbol/html.ts:79`; `symbolOmmlValue`, `src/formats/omml/render-shared.ts:278-289`; no `<m:` template in `src/generated/omml/symbols.ts`; checked 2026-09-24)
-- [ ] The generator source commit precedes a separate generated-data commit,
+- [x] The generator source commit precedes a separate generated-data commit,
       and all affected provenance files record clean, committable inputs.
-- [ ] The post-data HTML corpus run reports its actual rendered/throw split;
+      (done: #63's commits put the generator change (`7de6b56`) before the generated data (`8fed2f0`); `payload-validation` passes with every manifest `committable: true`; checked 2026-10-02)
+- [x] The post-data HTML corpus run reports its actual rendered/throw split;
       the function-alias remainder is tracked separately rather than credited
       to symbol data.
+      (done: the "corpus split after consumption" table above, with the function aliases counted in their own rows; checked 2026-10-02)
 - [x] `package-isolation` runs again *after* the HTML renderer imports
       `src/generated/html/` and again after OMML imports `src/generated/omml/`
       — not only on the generated-data commit, where neither table is reachable
@@ -681,14 +684,18 @@ published `./omml`, and `package.json#exports` lists it.
       consumption commit, and the ESM and CJS closure bytes for every published
       subpath are recorded in this file beside the baseline table above. No
       existing subpath grows.
+      (open: recorded for the HTML consumption change above; not for the OMML one, as the note above on `[dist-sizes]` says; checked 2026-10-02)
 - [ ] `./html`'s ESM closure is at or below `163,840` bytes and `./omml`'s at
       or below `286,720`, or the measured overage is written into this file as
       an accepted cost with the numbers that justify it. An unrecorded overage
       blocks the slice.
-- [ ] The figures above are re-derived from `scripts/probes/` against the
+      (open: at the HTML consumption change `./html` measured 126,303, under the ceiling (table above); on `main` be45593 `scripts/probes/dist-sizes.mjs` measures `./html` at 294,219 and `./omml` at 258,886 ESM closure bytes. The `./html` figure now includes the HTML parser, which this budget predates, and no overage is recorded; checked 2026-10-02)
+- [x] The figures above are re-derived from `scripts/probes/` against the
       pinned oracle before the generator work starts. Drift is a change in the
       oracle to be investigated, never a number to round in this file.
-- [ ] `node scripts/check.mjs` exits `0` with all `12` active class-A gates, and
+      (done: #62 committed the `scripts/probes/` scripts and these figures, and is an ancestor of the generator change in #63; checked 2026-10-02)
+- [x] `node scripts/check.mjs` exits `0` with all `12` active class-A gates, and
       `scripts/gate-oracle.rb repo --check --gem
       "$PLURIMATH_ORACLE"` exits `0` from the clean final
       implementation tree.
+      (done: #63 records `pnpm check` exiting 0 with twelve active class-A gates; `repo --check` exits 0 on `main` be45593 against `plurimath-oracle` at `00c52783`; checked 2026-10-02)

@@ -82,8 +82,9 @@ orientation — every key below is required, so a reader that ignores
 - [x] Every payload the reader discovers is checked against
   `corpus/provenance.yaml`, and a corrupted byte in any payload fails the run.
   (done: `test/core/corpus-pin.spec.ts:246`, and `:394` fails on a changed byte; checked 2026-09-24)
-- [ ] `corpus/census.yaml` and `corpus/exclusions.yaml` regenerate
+- [x] `corpus/census.yaml` and `corpus/exclusions.yaml` regenerate
   byte-identically on a second run from a clean checkout.
+  (done: `scripts/gate-oracle.rb repo --check` regenerates both from a clean gem checkout and diffs them against the committed files; it exits 0 on `main` be45593 against `plurimath-oracle` at `00c52783`; checked 2026-10-02)
 - [x] Nothing under `corpus/asciimath/` remains here, and no test path resolves
   there.
   (done: `ls corpus` lists only the census and exclusions files; `test/core/corpus-yaml.spec.ts:117`; checked 2026-09-24)

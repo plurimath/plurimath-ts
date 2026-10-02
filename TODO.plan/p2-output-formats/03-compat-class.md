@@ -316,9 +316,10 @@ counts, measured with `git grep ... | wc -l` (exit `0`):
 | `omml` | 17 |
 | `unicodemath` | 16 |
 
-The port has no `toDisplay`, `math_zone`, or `Math zone` implementation: `grep` searched
-the existing `src/` and `test/` directories, found no matches, and exited `1`. At
-`abc068a`, the dependency boundary is therefore:
+At `abc068a`, the port had no `toDisplay`, `math_zone`, or `Math zone` implementation: `grep` searched
+the existing `src/` and `test/` directories, found no matches, and exited `1`. It has one
+now (#139, #150; `src/compat/to-display.ts`), so the table below is that revision's
+boundary, not `main`'s. At `abc068a`, the dependency boundary was:
 
 | `lang` | raw renderer files at `abc068a` | full `toDisplay` branch now |
 |---|---:|---|
@@ -552,6 +553,7 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
       `unicodemath`, and the invalid language path matches the measured invalid-type
       behavior. The oracle fixtures also record the native-Ruby recognized-string result
       `"|_ Math zone\n"` and do not substitute that result for an Opal-wrapper measurement.
+      (open: #139 and #150 landed `toDisplay`; `test/compat/plurimath-class.spec.ts:247` onward pins the five lowercase values to oracle bytes, `:866` the placeholder path, and `:895-910` the invalid path. Two parts are not met as written: an invalid `lang` raises `UnsupportedFormatError`, not the gem's `InvalidTypeError` (`src/compat/index.ts:195-206`), and the native-Ruby string result is recorded in `src/compat/to-display.ts`'s module doc rather than in a fixture; checked 2026-10-02)
 - [x] `toMathml()`, `toMathml(false)`, and `toMathml(true)` produce the measured default,
       false, and intent-bearing results.
       (done: `test/compat/plurimath-class.spec.ts:200`, `:933`, `:937`; checked 2026-09-24)
@@ -560,6 +562,7 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
       (done: `test/compat/plurimath-class.spec.ts:188-209`; checked 2026-09-24)
 - [ ] HTML and OMML corpus targets are nonempty and complete per payload; their
       cross-format and package-isolation gates pass against built artifacts.
-- [ ] The root package exports the default class under ESM and CJS, the real packed
+- [x] The root package exports the default class under ESM and CJS, the real packed
       artifact passes publint and attw, and review leaves no valid implementable finding
       unresolved.
+      (done: #66, merged with its one review thread resolved; `scripts/gate-package.mjs:144` and `:284-302` assert the ESM and CJS default export, `:404-411` run publint and attw on the packed tarball; `pnpm gate:package` exits 0; checked 2026-10-02)

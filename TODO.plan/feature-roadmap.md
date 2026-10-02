@@ -36,9 +36,7 @@ came from.
 - **Not blocked on anything but effort:** the rest of the UnicodeMath
   transform (473 of the gem's 519 rules registered). The OMML renderer has
   been published on `./omml` since #112.
-- **Blocked on a person, not on code:** UnitsML (maintainer decision), and
-  the evaluation functions still unported, which wait on a licensing decision
-  about copying C-library code (`src/evaluation/index.ts` at `39f5dd4`).
+- **Blocked on a person, not on code:** UnitsML (maintainer decision).
   Native MathML/OMML input versus further deferral is settled as deferral
   (#122), and the CLI as in scope (#125); global configuration stays out of
   scope (below).
@@ -415,8 +413,8 @@ Two independent chains, sharing no prerequisite. They can run side by side.
 Status on `main`: Chain A has not started, and A2/A3 are deferred (#122). On
 Chain B, B1 landed in the testsuite as `calls/1` (`number_formatter` only), B2
 in #126, #133, #143 and #146, B3 in #132, B4 in #136, B5 in #139 and #150, and
-B6 in #152 and #155, with eight functions left unported (see Evaluation,
-above).
+B6 in #152, #155 and #161, which ported the last eight functions; some of
+them refuse near a rounding band (see Evaluation, above).
 
 ```
 Chain A — reading XML                Chain B — options the corpus cannot express

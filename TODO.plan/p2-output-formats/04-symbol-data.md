@@ -290,9 +290,9 @@ The budget, per subpath, against the ESM closure:
   ceiling to `327,680`, about 11% above the measured closure.
 - `./omml` at or below `286,720` bytes (`280` KiB). MathML is the analogue
   that carries an XML layer, and its measured `271,868` leaves `14,852` bytes.
-  The two ceilings hold roughly the same absolute headroom, about `15` KiB
-  each, not the same proportion: `9.55` percent for `./html` against `5.46`
-  percent for `./omml`.
+  The two ceilings no longer hold the same headroom: `./html` has `33,461`
+  bytes (`11.37` percent of its measured closure) against `14,852` bytes
+  (`5.46` percent) for `./omml`.
 
 Landing above a ceiling is not forbidden, but it is a decision rather than a
 rounding error: the measured number goes into this file as an accepted cost
@@ -667,7 +667,7 @@ published `./omml`, and `package.json#exports` lists it.
       (done: `src/render/symbol/html.ts:79`; `symbolOmmlValue`, `src/formats/omml/render-shared.ts:278-289`; no `<m:` template in `src/generated/omml/symbols.ts`; checked 2026-09-24)
 - [x] The generator source commit precedes a separate generated-data commit,
       and all affected provenance files record clean, committable inputs.
-      (done: #63's commits put the generator change (`7de6b56`) before the generated data (`8fed2f0`); the `payload-validation` gate in `gates.json` asserts that every generated-data manifest records a clean, committable generator checkout (`test/gates/payload-validation.spec.ts:583`); checked 2026-10-02)
+      (done: #63's commits put the generator change (`7de6b56`) before the generated data (`8fed2f0`); the `payload-validation` gate in `gates.json` asserts that every generated-data manifest records a committable manifest (`test/gates/payload-validation.spec.ts:583`) recording a clean generator checkout with no dirty paths (`:627-630`); checked 2026-10-02)
 - [x] The post-data HTML corpus run reports its actual rendered/throw split;
       the function-alias remainder is tracked separately rather than credited
       to symbol data.

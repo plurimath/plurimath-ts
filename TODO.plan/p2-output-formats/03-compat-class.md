@@ -562,7 +562,7 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
       (done: `test/compat/plurimath-class.spec.ts:188-209`; checked 2026-09-24)
 - [ ] HTML and OMML corpus targets are nonempty and complete per payload; their
       cross-format and package-isolation gates pass against built artifacts.
-- [x] The root package exports the default class under ESM and CJS, the real packed
-      artifact passes publint and attw, and review leaves no valid implementable finding
+- [x] The root package exports the default class under ESM and CJS, the package root
+      passes publint, the real packed artifact passes attw, and review leaves no valid implementable finding
       unresolved.
-      (done: #66, merged with its one review thread resolved; `scripts/gate-package.mjs:144` and `:284-302` assert the ESM and CJS default export, `:404-411` run publint and attw on the packed tarball; `pnpm gate:package` exits 0; checked 2026-10-02)
+      (done: #66, merged with its one review thread resolved; `scripts/gate-package.mjs:144` and `:284-302` assert the ESM and CJS default export, `:404-405` run publint on the package root and `:407-411` run attw on the packed tarball (`--pack`); `pnpm gate:package` exits 0; checked 2026-10-02)

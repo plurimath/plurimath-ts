@@ -37,8 +37,8 @@ implementation. They are hand-ported (§10).
 
 ## Done when
 
-- [x] Every symbol the pinned corpus touches resolves through generated data.
-  (done: generated tables from #3 (AsciiMath, LaTeX, MathML) and #63 (HTML, OMML); each `src/render/symbol/<format>.ts` reads its `src/generated/<format>/symbols.ts` table and raises `MissingSymbolDataError` on a miss, and no corpus case raises it: the AsciiMath, LaTeX and MathML render-parity specs render all 236 reachable cases (`06-renderers.md`), and the HTML and OMML parity targets list no case the port refuses to render (the empty set at `test/formats/html/parity-target.ts:57` and `test/formats/omml/parity-target.ts:81`, emptied by #73 and #72); checked 2026-10-02)
+- [ ] Every symbol the pinned corpus touches resolves through generated data.
+  (open: generated tables from #3 (AsciiMath, LaTeX, MathML) and #63 (HTML, OMML); each `src/render/symbol/<format>.ts` reads its `src/generated/<format>/symbols.ts` table and raises `MissingSymbolDataError` on a miss, and no corpus case raises it: the AsciiMath, LaTeX and MathML render-parity specs render all 236 reachable cases (`06-renderers.md`), and the HTML and OMML parity targets list no case the port refuses to render (the empty set at `test/formats/html/parity-target.ts:57` and `test/formats/omml/parity-target.ts:81`, emptied by #73 and #72); but the HTML and OMML parity targets cover only the corpus's AsciiMath-input cases, and its LaTeX-input cases are not swept for either format (`p2-output-formats/01-html-renderer.md:117`, `p2-output-formats/02-omml-renderer.md:274`); checked 2026-10-02)
 - [x] The probe output names the context-dependent symbols, and the list matches
   what the gem actually does rather than a hand-written guess.
   (done: `test/generated/symbol-context.spec.ts:118`, the matrix is exactly the probe's difference set; checked 2026-09-24)

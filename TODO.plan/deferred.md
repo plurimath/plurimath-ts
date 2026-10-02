@@ -609,8 +609,8 @@ glibc's digits: glibc evaluates the same polynomial in a different order.
 The port's `expm1` evaluates it as three short pieces combined with the
 even powers of its variable, as one fdlibm expression. The order came from
 comparing results against glibc 2.35 through Ruby's `Math`, and was then
-confirmed by reading glibc 2.35's `s_expm1.c` (LGPL); only the grouping is
-taken from it, no code. `PATH="$(mise where node@24.18.0)/bin:$(mise where ruby@4.0.1)/bin:$PATH" node scripts/measure-libm-hyperbolic-glibc.mjs --expm1-order` repeats it: over
+confirmed by reading glibc 2.35's `s_expm1.c`, which keeps Sun's notice and
+credits the regrouping to Naohiko Shimizu (Tokai University, 1997). `PATH="$(mise where node@24.18.0)/bin:$(mise where ruby@4.0.1)/bin:$PATH" node scripts/measure-libm-hyperbolic-glibc.mjs --expm1-order` repeats it: over
 3,028,620 seeded arguments with `|x| < 44` (both signs, log- and
 linear-uniform, and 3,000 consecutive doubles either side of each of
 `expm1`'s branch points), the count of arguments whose `expm1` differs from

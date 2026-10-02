@@ -162,12 +162,14 @@ const Q5 = fromWords(0xbe8afdb7, 0x6e09c32d); /* -2.01099218183624371326e-07 */
 
 /**
  * fdlibm's `R1` polynomial in `z = hxs`, grouped as `(P1 + z²P2) + z⁴P3`, the
- * order `expm1` uses. The grouping is the one glibc 2.35's `s_expm1.c` uses
- * (LGPL); it was found by comparing results with glibc and confirmed by
- * reading that file. No glibc code is copied: the expression is fdlibm's.
+ * order `expm1` uses. The grouping is Naohiko Shimizu's 1997 change to
+ * fdlibm's `s_expm1.c` as glibc 2.35 carries it (that file keeps Sun's
+ * notice). It was found by comparing results with glibc and confirmed by
+ * reading that file; the expression here is fdlibm's, regrouped.
  */
 export function splitOrder(z: number): number {
-  return one + z * Q1 + z * z * (Q2 + z * Q3) + z * z * (z * z) * (Q4 + z * Q5);
+  const z2 = z * z;
+  return one + z * Q1 + z2 * (Q2 + z * Q3) + z2 * z2 * (Q4 + z * Q5);
 }
 
 /**

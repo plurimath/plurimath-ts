@@ -353,8 +353,8 @@ importing `core` only and re-exported from the root entry alone
 `Text` variable lookup, bounded `Sum`/`Prod`, and `Sin`, `Cos`, `Tan`, `Cot`,
 `Sec`, `Csc`, `Arcsin`, `Arccos`, `Arctan`, `Exp`, `Ln` and `Sqrt`, correctly
 rounded (`src/evaluation/libm.ts`). `Lg` and `Log` are ported digit-exact
-with glibc 2.35, `Lg` refusing where the `log` it calls lies near `log`'s
-rounding band (0.32% of the measured sample, `deferred.md`) (`libm-log10.ts`, from Sun's fdlibm; `libm-log2.ts`, from
+with glibc 2.35, `Lg` refusing where the `log` it calls lies inside
+`log`'s rounding band and the answer depends on its rounding (0.32% of the measured sample, `deferred.md`) (`libm-log10.ts`, from Sun's fdlibm; `libm-log2.ts`, from
 Arm's optimized-routines). The iteration cap is a per-call option,
 `EvaluationOptions`, defaulting to the gem's 100,000. Checked against
 port-local fixtures generated from the oracle

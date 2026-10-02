@@ -116,7 +116,10 @@
  * `P3 = Q4 + z Q5`, combined with the even powers `z^2` and `z^4` as
  * `(P1 + z^2 P2) + z^4 P3`. The two orders can round differently in the last
  * bit, and it is this one that gives glibc 2.35's digits. The idea came from
- * comparing results against glibc 2.35 (through Ruby's `Math.expm1`);
+ * comparing results against glibc 2.35 (through Ruby's `Math.expm1`), and
+ * glibc's `s_expm1.c` has the same grouping; that file keeps Sun's notice
+ * and notes a 1997 modification by Naohiko Shimizu (Tokai University) "for
+ * performance improvement on pipelined processors";
  * `scripts/measure-libm-hyperbolic-glibc.mjs --expm1-order` repeats that
  * comparison for both orders (figures in `TODO.plan/deferred.md`,
  * "Evaluation: the hyperbolic functions").
@@ -162,10 +165,8 @@ const Q5 = fromWords(0xbe8afdb7, 0x6e09c32d); /* -2.01099218183624371326e-07 */
 
 /**
  * fdlibm's `R1` polynomial in `z = hxs`, grouped as `(P1 + z²P2) + z⁴P3`, the
- * order `expm1` uses. The grouping is Naohiko Shimizu's 1997 change to
- * fdlibm's `s_expm1.c` as glibc 2.35 carries it (that file keeps Sun's
- * notice). It was found by comparing results with glibc and confirmed by
- * reading that file; the expression here is fdlibm's, regrouped.
+ * order `expm1` uses: fdlibm's terms, regrouped the way glibc 2.35's
+ * `s_expm1.c` groups them (see the header above for where that came from).
  */
 export function splitOrder(z: number): number {
   const z2 = z * z;

@@ -38,7 +38,7 @@ implementation. They are hand-ported (§10).
 ## Done when
 
 - [x] Every symbol the pinned corpus touches resolves through generated data.
-  (done: each `src/render/symbol/<format>.ts` reads its `src/generated/<format>/symbols.ts` table and raises `MissingSymbolDataError` on a miss, and no corpus case raises it: the AsciiMath, LaTeX and MathML render-parity specs render all 236 reachable cases (`06-renderers.md`), and the HTML and OMML parity targets refuse none (`PORT_REFUSES` is empty in `test/formats/{html,omml}/parity-target.ts`); checked 2026-10-02)
+  (done: generated tables from #3 (AsciiMath, LaTeX, MathML) and #63 (HTML, OMML); each `src/render/symbol/<format>.ts` reads its `src/generated/<format>/symbols.ts` table and raises `MissingSymbolDataError` on a miss, and no corpus case raises it: the AsciiMath, LaTeX and MathML render-parity specs render all 236 reachable cases (`06-renderers.md`), and the HTML and OMML parity targets list no case the port refuses to render (the empty set at `test/formats/html/parity-target.ts:57` and `test/formats/omml/parity-target.ts:81`, emptied by #73 and #72); checked 2026-10-02)
 - [x] The probe output names the context-dependent symbols, and the list matches
   what the gem actually does rather than a hand-written guess.
   (done: `test/generated/symbol-context.spec.ts:118`, the matrix is exactly the probe's difference set; checked 2026-09-24)

@@ -664,11 +664,11 @@ published `./omml`, and `package.json#exports` lists it.
       (done: `src/render/symbol/html.ts:79`; `symbolOmmlValue`, `src/formats/omml/render-shared.ts:278-289`; no `<m:` template in `src/generated/omml/symbols.ts`; checked 2026-09-24)
 - [x] The generator source commit precedes a separate generated-data commit,
       and all affected provenance files record clean, committable inputs.
-      (done: #63's commits put the generator change (`7de6b56`) before the generated data (`8fed2f0`); `payload-validation` passes with every manifest `committable: true`; checked 2026-10-02)
+      (done: #63's commits put the generator change (`7de6b56`) before the generated data (`8fed2f0`); the `payload-validation` gate in `gates.json` asserts that every generated-data manifest records a clean, committable generator checkout (`test/gates/payload-validation.spec.ts:583`); checked 2026-10-02)
 - [x] The post-data HTML corpus run reports its actual rendered/throw split;
       the function-alias remainder is tracked separately rather than credited
       to symbol data.
-      (done: the "corpus split after consumption" table above, with the function aliases counted in their own rows; checked 2026-10-02)
+      (done: #64; the "corpus split after consumption" table at line 478 of this file, which counts the cases blocked on function carriers in their own rows rather than as symbol data; checked 2026-10-02)
 - [x] `package-isolation` runs again *after* the HTML renderer imports
       `src/generated/html/` and again after OMML imports `src/generated/omml/`
       — not only on the generated-data commit, where neither table is reachable
@@ -698,4 +698,4 @@ published `./omml`, and `package.json#exports` lists it.
       `scripts/gate-oracle.rb repo --check --gem
       "$PLURIMATH_ORACLE"` exits `0` from the clean final
       implementation tree.
-      (done: #63 records `pnpm check` exiting 0 with twelve active class-A gates; `repo --check` exits 0 on `main` be45593 against `plurimath-oracle` at `00c52783`; checked 2026-10-02)
+      (done: #63's body records `pnpm check` exiting 0 with twelve active class-A gates, the count at that time, plus `repo --check` exiting 0. Measured again on `main` be45593: `repo --check` exits 0 against a clean gem checkout at `00c52783`, and `pnpm check` exits 0 with the thirteen class-A gates `gates.json` now activates; checked 2026-10-02)

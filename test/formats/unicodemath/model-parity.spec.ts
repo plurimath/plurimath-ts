@@ -271,11 +271,15 @@ describe("the inputs the gem refuses", () => {
     "%j: is refused here too",
     (_input, entry) => {
       // Every row here raised `Plurimath::Math::ParseError` inside `parse`
-      // (`raisedIn`), which for UnicodeMath means the grammar itself refused —
-      // there is no `rescue` under `lib/plurimath/unicode_math/`. The port's
-      // grammar throws `ParseFailed`, and this suite now stands AT the public
-      // boundary, so the refusal must arrive as a `ParseError` carrying the
-      // format token the gem names in its own message.
+      // (`raisedIn`). For most rows the grammar itself refused, and the port's
+      // grammar throws `ParseFailed`. One row is a transform-stage failure
+      // instead: `"lim_𝛿₁ⁿ𝜌ⁿⁿa_2"` takes `:2403`'s first arm, the gem raises
+      // `NameError` on the undefined local `sub_value` (`transform.rb:2407`),
+      // and `Math.parse` reports it as `ParseError`; the port's transform
+      // throws a `ReferenceError` there, which the public boundary also
+      // reports as `ParseError`. Either way this suite stands AT the public boundary,
+      // so the refusal must arrive as a `ParseError` carrying the format token
+      // the gem names in its own message.
       expect(entry.raisedIn).toBe("parse");
       let thrown: unknown;
       try {

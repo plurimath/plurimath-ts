@@ -1126,7 +1126,9 @@ RULE_COVERAGE = {
   # traced-but-unreached on the oracle itself, ~2,700 candidate inputs
   # (the gem's own `unicodemath-tests`/spec examples plus hand-built
   # variants), none of which fires any of them. See the module header for the
-  # full accounting.
+  # full accounting. Superseded for three of the six: the later REMAINING
+  # increment found inputs that fire `:695`, `:850` and `:880`, and their
+  # witnesses are rows in `RULE_COVERAGE["remaining"]` below.
   "fraction_atoms_tail" => [
     "1/2a",
     "1/a2b",
@@ -1198,7 +1200,9 @@ RULE_COVERAGE = {
   # which the oracle does not fire on that string and which is ported.) `:2245`, `:2323`, `:2035`, `:2041`, `:2097`, `:1841`, `:2341`,
   # `:2777`, `:2403`, `:2787` and `:3074` carry no row anywhere — see the
   # module header's own "thirteenth increment" section for each one's
-  # disposition.
+  # disposition. Superseded for four of them: the later REMAINING increment
+  # registered `:2035`, `:2097`, `:2245` and `:2403`, and their rows are in
+  # `RULE_COVERAGE["remaining"]` below.
   "intermediate_paren_tail" => [
     "⒭ab▒c",
     "a¹²bc/d",

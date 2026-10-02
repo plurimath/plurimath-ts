@@ -11,10 +11,11 @@
  * Integer, `2.0` a Float) against the kind the port tracks internally
  * (`src/evaluation/numeric.ts`) — the tracking that decides where the port
  * must refuse. A row with `portRefusal` is one the port refuses with
- * `UnsupportedFeatureError` whatever the oracle answered: an unported
- * gem-evaluated node, a FINAL result a JS number cannot hold exactly, a Float
- * power or `Math` function result inside glibc's rounding band, a sin/cos/tan
- * argument inside `libm.ts`'s reduction guard, a Ruby `ArgumentError`, or an
+ * `UnsupportedFeatureError` whatever the oracle answered: a FINAL result a JS
+ * number cannot hold exactly, a Float power or `Math` function result inside
+ * glibc's rounding band, a sin/cos/tan argument inside `libm.ts`'s reduction
+ * guard, a `sinh`/`cosh` argument whose `exp` call is inside `exp`'s band
+ * (`libm-hyperbolic.ts`), a Ruby `ArgumentError`, or an
  * exact intermediate beyond the port's size limit (the generator's header).
  */
 import { readFileSync } from "node:fs";
@@ -22,12 +23,12 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { UnsupportedFeatureError } from "../../src/core/errors";
-import { FormulaNode, NumberNode, TextNode } from "../../src/core/nodes";
+import { FormulaNode, type MathNode, NumberNode, TextNode } from "../../src/core/nodes";
 import {
   DEFAULT_MAX_ITERATIONS,
   Evaluator,
   type EvaluatorSettings,
-  GEM_EVALUATED_FUNCTIONS,
+  refuseUndispatched,
 } from "../../src/evaluation/evaluator";
 import {
   DivisionByZeroError,
@@ -137,39 +138,6 @@ function toBindings(raw: Row["bindings"]): EvaluationBindings {
   return bindings as EvaluationBindings;
 }
 
-/**
- * The refusal `Evaluator#unported` throws, and nothing else in `src/` does:
- * the gem class it names is captured.
- */
-const UNPORTED_REFUSAL =
-  /^evaluate is not supported yet: Function::(\w+) is evaluated by the gem but not ported to this slice yet$/;
-
-/**
- * The gem class basenames a parsed formula's nodes stand for, read from the
- * tree directly rather than through `evaluator.ts`'s own maps: a function
- * carrier (`binaryFunction`/`unaryFunction`/`ternaryFunction`) holds the
- * basename in `name`; every other node kind is the basename in camelCase
- * (`sqrt` is `Sqrt`).
- */
-function gemClassesIn(
-  value: unknown,
-  seen = new Set<object>(),
-  out = new Set<string>(),
-): Set<string> {
-  if (typeof value !== "object" || value === null || seen.has(value)) return out;
-  seen.add(value);
-  const node = value as { kind?: unknown; name?: unknown };
-  if (typeof node.kind === "string") {
-    if (/^(binary|unary|ternary)Function$/.test(node.kind) && typeof node.name === "string") {
-      out.add(node.name);
-    } else {
-      out.add(node.kind.charAt(0).toUpperCase() + node.kind.slice(1));
-    }
-  }
-  for (const child of Object.values(value)) gemClassesIn(child, seen, out);
-  return out;
-}
-
 describe("evaluate() against the oracle fixtures", () => {
   it("has fixture rows to check", () => {
     expect(rows.length).toBeGreaterThan(0);
@@ -226,12 +194,12 @@ describe("evaluate() against the oracle fixtures", () => {
     expect([...reasons].sort()).toEqual([
       "argument-error",
       "big-integer",
+      "hyperbolic-rounding-band",
       "libm-reduction",
       "libm-rounding-band",
       "pow-rounding-band",
       "rational",
       "size-limit",
-      "unported",
     ]);
     const plain = rows.filter((row) => row.portRefusal === undefined && row.expected !== undefined);
     expect(plain.some((row) => /^-?\d+$/.test(row.expected as string))).toBe(true);
@@ -239,32 +207,31 @@ describe("evaluate() against the oracle fixtures", () => {
   });
 });
 
-// The generator proves each `unported` label against `evaluator.ts`'s source
-// text; this proves it against the port's behaviour, so a dispatch change
-// that starts evaluating one of these classes fails here instead of leaving a
-// stale label that source-text matching cannot see.
-describe("evaluate() refuses every unported fixture row from the unported path", () => {
-  const unported = rows.filter((row) => row.portRefusal === "unported");
+// Every class the gem evaluates is ported: no row may be refused as unported.
+describe("evaluate() has no unported fixture row", () => {
+  it("marks no row unported", () => {
+    expect(rows.filter((row) => row.portRefusal === "unported").map((row) => row.id)).toEqual([]);
+  });
+});
 
-  it("has unported rows to check", () => {
-    expect(unported.length).toBeGreaterThan(0);
+// No parsed node reaches `refuseUndispatched`'s port-gap branch through
+// `evaluate` (every gem-evaluated class is dispatched), so both branches are
+// called here directly, on parsed nodes.
+describe("refuseUndispatched", () => {
+  const first = (text: string) =>
+    (parseAsciimath(text).value as readonly MathNode[])[0] as MathNode;
+
+  it("refuses a class the gem evaluates as a port gap", () => {
+    expect(() => refuseUndispatched(first("sinh(1)"))).toThrow(
+      new UnsupportedFeatureError(
+        "evaluate",
+        "Function::Sinh is evaluated by the gem but not ported to this slice yet",
+      ),
+    );
   });
 
-  it.each(unported.map((row) => [row.id, row] as const))("%s", (_id, row) => {
-    const formula = parseRowInput(row.input);
-    let thrown: unknown;
-    try {
-      evaluate(formula, toBindings(row.bindings), row.options);
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown, row.id).toBeInstanceOf(UnsupportedFeatureError);
-    expect((thrown as UnsupportedFeatureError).feature, row.id).toBe("evaluate");
-    const match = UNPORTED_REFUSAL.exec((thrown as Error).message);
-    expect(match, `${row.id}: ${(thrown as Error).message}`).not.toBeNull();
-    const gemClass = (match as RegExpExecArray)[1] as string;
-    expect(GEM_EVALUATED_FUNCTIONS.has(gemClass), `${row.id}: ${gemClass}`).toBe(true);
-    expect([...gemClassesIn(formula)], row.id).toContain(gemClass);
+  it("refuses any other class as the gem does", () => {
+    expect(() => refuseUndispatched(first("hat(x)"))).toThrow(UnsupportedExpressionError);
   });
 });
 

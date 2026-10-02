@@ -36,9 +36,7 @@ came from.
 - **Not blocked on anything but effort:** the rest of the UnicodeMath
   transform (473 of the gem's 519 rules registered). The OMML renderer has
   been published on `./omml` since #112.
-- **Blocked on a person, not on code:** UnitsML (maintainer decision), and
-  the evaluation functions still unported, which wait on a licensing decision
-  about copying C-library code (`src/evaluation/index.ts` at `39f5dd4`).
+- **Blocked on a person, not on code:** UnitsML (maintainer decision).
   Native MathML/OMML input versus further deferral is settled as deferral
   (#122), and the CLI as in scope (#125); global configuration stays out of
   scope (below).
@@ -352,16 +350,21 @@ importing `core` only and re-exported from the root entry alone
 (#155): `Abs`, `Ceil`, `Floor`, `Gcd`, `Lcm`, `Min`, `Max`, `Mod`, `Root`,
 `Text` variable lookup, bounded `Sum`/`Prod`, and `Sin`, `Cos`, `Tan`, `Cot`,
 `Sec`, `Csc`, `Arcsin`, `Arccos`, `Arctan`, `Exp`, `Ln` and `Sqrt`, correctly
-rounded (`src/evaluation/libm.ts`). The iteration cap is a per-call option,
+rounded (`src/evaluation/libm.ts`). `Lg` and `Log` are ported digit-exact
+with glibc 2.35, `Lg` refusing where the `log` it calls lies inside
+`log`'s rounding band and the answer depends on its rounding (0.32% of the measured sample, `deferred.md`) (`libm-log10.ts`, from Sun's fdlibm; `libm-log2.ts`, from
+Arm's optimized-routines). The iteration cap is a per-call option,
 `EvaluationOptions`, defaulting to the gem's 100,000. Checked against
 port-local fixtures generated from the oracle
 (`test/formats/evaluation/evaluation-fixtures.json`,
-`scripts/generate-evaluation-fixtures.rb`). Still unported, and raising
-`UnsupportedFeatureError`: `Sinh`, `Cosh`, `Tanh`, `Sech`, `Csch`, `Coth`,
-`Lg` and `Log` (all as read from `src/evaluation/index.ts` at `39f5dd4`).
+`scripts/generate-evaluation-fixtures.rb`). `Sinh`, `Cosh`, `Tanh`, `Sech`,
+`Csch` and `Coth` are glibc's own, from fdlibm on an `expm1` that gives
+glibc's digits, and refused (`UnsupportedFeatureError`) only where they call
+`exp` inside its rounding band (`src/evaluation/libm-hyperbolic.ts`;
+`TODO.plan/deferred.md`, "Evaluation: the hyperbolic functions").
 
-**Blocks:** a licensing decision about copying C-library code, for those
-eight functions (`src/evaluation/index.ts` at `39f5dd4`). There is no shared
+**Blocks:** nothing ported is missing; the hyperbolic refusals are those of
+`exp`'s rounding band (`deferred.md`). There is no shared
 case: `calls/1` carries only `number_formatter`. The `plurimath-js` compat
 surface has no `evaluate`, so this does not affect the drop-in claim.
 
@@ -410,8 +413,8 @@ Two independent chains, sharing no prerequisite. They can run side by side.
 Status on `main`: Chain A has not started, and A2/A3 are deferred (#122). On
 Chain B, B1 landed in the testsuite as `calls/1` (`number_formatter` only), B2
 in #126, #133, #143 and #146, B3 in #132, B4 in #136, B5 in #139 and #150, and
-B6 in #152 and #155, with eight functions left unported (see Evaluation,
-above).
+B6 in #152 and #155, with every function now ported; some of them refuse
+near a rounding band (see Evaluation, above).
 
 ```
 Chain A — reading XML                Chain B — options the corpus cannot express

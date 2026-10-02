@@ -38,6 +38,7 @@ import {
 export interface ExpressionEvaluator {
   evaluateNode(node: MathNode | string | undefined | null): RubyNumeric;
   evaluateNegatedMod(node: MathNode): RubyNumeric;
+  evaluateLogWithArgument(node: MathNode, argument: MathNode | string | undefined): RubyNumeric;
   unsupported(nodeOrMessage: MathNode | string): never;
 }
 
@@ -48,6 +49,11 @@ function isNode(node: MathNode | string | undefined): node is MathNode {
 /** Ruby: `current.is_a?(Function::Mod)`. */
 function isMod(node: MathNode | string | undefined): boolean {
   return isNode(node) && node.kind === "binaryFunction" && node.name === "Mod";
+}
+
+/** Ruby: `node.is_a?(Function::Log)`. */
+function isLog(node: MathNode | string | undefined): boolean {
+  return isNode(node) && node.kind === "binaryFunction" && node.name === "Log";
 }
 
 /** Ruby: `current.is_a?(Function::Fenced)`. */
@@ -152,10 +158,9 @@ export class ExpressionParser {
    * from its argument (`parameter_one` empty, a `Fenced` group next) is bound
    * to that group first (`next_argument?`/`bind_argument`); an n-ary
    * `Sum`/`Prod` with both bounds but no body adopts the next operand as its
-   * body (`nary_body?`/`bind_nary_body`). The gem's third case,
-   * `log_argument?` (a `Log` followed by a `Fenced` group), is not ported:
-   * `Log` itself is not, and `evaluateNode` refuses it as unported whether or
-   * not the group is bound to it first.
+   * body (`nary_body?`/`bind_nary_body`); and a `Log` followed by a `Fenced`
+   * group takes that group as its argument (`log_argument?`/
+   * `bind_log_argument`), which a bare `Log` has no other way to receive.
    */
   private parseOperand(): RubyNumeric {
     if (this.eof()) this.evaluator.unsupported("empty expression");
@@ -166,6 +171,9 @@ export class ExpressionParser {
         ...(node as MathNode),
         parameterOne: this.nextToken(),
       } as MathNode);
+    }
+    if (this.logArgument(node)) {
+      return this.evaluator.evaluateLogWithArgument(node as MathNode, this.nextToken());
     }
     if (this.naryBody(node)) node = this.bindNaryBody(node as MathNode);
     return this.evaluator.evaluateNode(node);
@@ -180,6 +188,11 @@ export class ExpressionParser {
       !this.eof() &&
       isFenced(this.current())
     );
+  }
+
+  /** Ruby: `ExpressionParser#log_argument?`. */
+  private logArgument(node: MathNode | string): boolean {
+    return isLog(node) && !this.eof() && isFenced(this.current());
   }
 
   /** Ruby: `ExpressionParser#nary_body?`. */

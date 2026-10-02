@@ -36,6 +36,8 @@ require "bigdecimal"
 require "bigdecimal/math"
 require "json"
 
+abort "REFUSING: the oracle's Ruby is 4.0.1; this is #{RUBY_VERSION}" unless RUBY_VERSION == "4.0.1"
+
 module LibmReference
   DIGITS = 110
   PI = BigMath.PI(520)
@@ -120,7 +122,8 @@ module LibmReference
 
     exact_value = value.to_r
     return nil if exact_value.abs > DOUBLE_MAX
-    return [0.0, 0.5] if exact_value.zero?
+    # An exact zero is an odd function of a signed zero: keep its sign.
+    return [x.zero? ? x : 0.0, 0.5] if exact_value.zero?
 
     low = exact_value.to_f
     low = step(low, -1) while low.to_r > exact_value

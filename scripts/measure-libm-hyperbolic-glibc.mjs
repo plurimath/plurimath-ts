@@ -80,7 +80,9 @@ if (!isMainThread) {
     let answered = null;
     try {
       answered = hexOf(mod.hyperbolic(fn, x));
-    } catch {
+    } catch (error) {
+      // Only a refusal counts as no answer; anything else is a bug and stops the run.
+      if (error?.constructor?.name !== "UnsupportedFeatureError") throw error;
       answered = null;
     }
     rows.push(answered);
@@ -368,16 +370,17 @@ if (isMainThread && process.version !== "v24.18.0") {
   process.exit(1);
 }
 
+const glibcVersion = isMainThread ? process.report.getReport().header.glibcVersionRuntime : null;
+if (isMainThread && glibcVersion !== "2.35") {
+  console.error(`REFUSING: the oracle is glibc 2.35; this host runs glibc ${glibcVersion}`);
+  process.exit(1);
+}
+
 if (isMainThread && process.argv.includes("--expm1-order")) {
   await expm1Order();
 }
 
 if (isMainThread) {
-  const glibcVersion = process.report.getReport().header.glibcVersionRuntime;
-  if (glibcVersion !== "2.35") {
-    console.error(`REFUSING: the oracle is glibc 2.35; this host runs glibc ${glibcVersion}`);
-    process.exit(1);
-  }
   const writeCorpus = process.argv.includes("--write-corpus");
   const scaleArg = process.argv.indexOf("--scale");
   const scale = scaleArg >= 0 ? Number(process.argv[scaleArg + 1]) : 1;

@@ -217,7 +217,7 @@ describe("transform rule coverage", () => {
     // range are NOT registered: no input among the ~5,100 traced on the oracle
     // reaches them (see `.codex-context/tasks/unicodemath-rule-claims/G2.deferred`).
     //
-    // Plus 10 from the REMAINING increment, every id of the last 46 that a
+    // Plus 10 from the module header's REMAINING increment, every id of the last 46 that a
     // measured oracle trace fires: `:83`, `:695`, `:850`, `:880`, `:2035`,
     // `:2097`, `:2245`, `:2403` (slice F's "no reaching input" above is
     // superseded), `:3828` and `:3885` (two of the twenty-one just named) —

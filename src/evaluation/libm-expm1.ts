@@ -161,16 +161,13 @@ const Q4 = fromWords(0x3ed0cfca, 0x86e65239); /* 4.00821782732936239552e-06 */
 const Q5 = fromWords(0xbe8afdb7, 0x6e09c32d); /* -2.01099218183624371326e-07 */
 
 /**
- * fdlibm's `R1` polynomial in `z = hxs`, in the split order the module header
- * describes: the order `expm1` uses.
+ * fdlibm's `R1` polynomial in `z = hxs`, grouped as `(P1 + z²P2) + z⁴P3`, the
+ * order `expm1` uses. The grouping is the one glibc 2.35's `s_expm1.c` uses
+ * (LGPL); it was found by comparing results with glibc and confirmed by
+ * reading that file. No glibc code is copied: the expression is fdlibm's.
  */
 export function splitOrder(z: number): number {
-  const p1 = one + z * Q1;
-  const z2 = z * z;
-  const p2 = Q2 + z * Q3;
-  const z4 = z2 * z2;
-  const p3 = Q4 + z * Q5;
-  return p1 + z2 * p2 + z4 * p3;
+  return one + z * Q1 + z * z * (Q2 + z * Q3) + z * z * (z * z) * (Q4 + z * Q5);
 }
 
 /**

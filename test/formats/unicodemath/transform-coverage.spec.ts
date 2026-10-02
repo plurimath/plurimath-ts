@@ -84,7 +84,7 @@ for (const entry of fixtures.cases) {
   reached += 1;
 }
 
-const FINAL_COUNT = 473;
+const FINAL_COUNT = 483;
 
 describe("transform rule coverage", () => {
   it("drove every parseable fixture through one transform", () => {
@@ -216,6 +216,14 @@ describe("transform rule coverage", () => {
     // the ids slices A and B claim (`:191`, `:196`, `:204`, `:2055`, `:2067`). Twenty-one more rules in that
     // range are NOT registered: no input among the ~5,100 traced on the oracle
     // reaches them (see `.codex-context/tasks/unicodemath-rule-claims/G2.deferred`).
+    //
+    // Plus 10 from the REMAINING increment, every id of the last 46 that a
+    // measured oracle trace fires: `:83`, `:695`, `:850`, `:880`, `:2035`,
+    // `:2097`, `:2245`, `:2403` (slice F's "no reaching input" above is
+    // superseded), `:3828` and `:3885` (two of the twenty-one just named) —
+    // reached by the hand-picked "remaining" coverage group, except `:83`,
+    // whose only witness is a `SLICE_BOUNDARY` row. The other 36 are 26 dead
+    // and 10 unreached; the module header lists each with its evidence.
     // Slice tallies above are historical; the assertion is the one final count.
     expect(build.ruleIds.length).toBe(FINAL_COUNT);
     expect(new Set(build.ruleIds).size).toBe(FINAL_COUNT);

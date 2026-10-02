@@ -33,8 +33,10 @@ came from.
   as `calls/1`. MathML input did not start: the maintainer settled on
   continued deferral over a native port on 2026-09-16 (#122). The reasoning is
   under [Build order](#build-order).
-- **Not blocked on anything but effort:** the rest of the UnicodeMath
-  transform (473 of the gem's 519 rules registered). The OMML renderer has
+- **UnicodeMath transform:** 483 of the gem's 519 rules registered; every
+  one of the other 36 is dead in the gem (26) or fires on no input found (10),
+  each listed with its evidence in the header of
+  `src/formats/unicodemath/transform.ts`. The OMML renderer has
   been published on `./omml` since #112.
 - **Blocked on a person, not on code:** UnitsML (maintainer decision).
   Native MathML/OMML input versus further deferral is settled as deferral
@@ -71,7 +73,7 @@ The gem accepts seven parse types (`Math::VALID_TYPES`, `math.rb:16-24`):
 | AsciiMath | `parseAsciimath` | registered | complete |
 | LaTeX | `parseLatex` | registered | complete — 117 rules registered (`test/formats/latex/transform-coverage.spec.ts:81`), the transform's header recording one gem rule as dead and unported |
 | HTML | `parseHtml` | registered (#119) | complete: 78 of 78 rules (`test/formats/html/transform-coverage.spec.ts:170`) |
-| UnicodeMath | `parseUnicodemath` | registered (#119) | partial: 473 rules registered (`FINAL_COUNT`, `test/formats/unicodemath/transform-coverage.spec.ts:87`) of the gem's 519 |
+| UnicodeMath | `parseUnicodemath` | registered (#119) | partial: 483 rules registered (`FINAL_COUNT`, `test/formats/unicodemath/transform-coverage.spec.ts:87`) of the gem's 519; the other 36 are 26 dead and 10 unreached |
 | MathML | none | not registered | not started; deferred (#122) |
 | OMML | none | not registered | not started; deferred (#122) |
 | UnitsML | none | not in the compat union | deferred |
@@ -81,19 +83,22 @@ The gem accepts seven parse types (`Math::VALID_TYPES`, `math.rb:16-24`):
 **Gem:** `unicode_math/transform.rb` registers 516 rules, 519 with the three
 `BaseNumberPrefix::Transform` adds (header of `src/formats/unicodemath/transform.ts`).
 
-**Port:** 473 of the 519 rules are registered (`FINAL_COUNT`,
+**Port:** 483 of the 519 rules are registered (`FINAL_COUNT`,
 `test/formats/unicodemath/transform-coverage.spec.ts:87`). They landed as the
 corpus-derived first slice (`#83`), multiscript and fraction (`#93`), the
 table family (`#99`), the relation and operator family (`#114`), the NARY
 family minus the half behind `atoms` (`#116`), the decoration family (`#117`),
 the `atoms` combinator's directly-verifiable unwraps (`#118`), and slices C
 and D (`#131`), A, E, F, G1 and G2 (`#140`, 409 rules), H (`#141`, 422) and
-I, J and K (`#144`, 473). The compat constructor registers `unicode` (#119) on
+I, J and K (`#144`, 473), and the REMAINING increment (483), which classified
+the last 46 ids on the oracle: 10 fire and are registered, 26 are dead in the
+gem, 10 are unreached. The compat constructor registers `unicode` (#119) on
 a measured gate: a hand-written battery of 50 inputs, 49 parsed to an exact
 match with the oracle and the 50th a refusal both sides share, with
 `KNOWN_PORT_GAPS` empty (`src/compat/index.ts`, comment above `PARSERS`).
 
-**Blocks:** nothing but effort. The coverage-invariant question that shaped
+**Blocks:** nothing. No unregistered rule has a known firing input; a new
+witness for one of the 10 unreached ids would reopen it. The coverage-invariant question that shaped
 the next slice is settled: the wide reading, 2026-09-16 (#122;
 [open-decisions](open-decisions.md)).
 
@@ -505,8 +510,9 @@ and unblocks nothing; and the compat surface does not expose it.
 
 ### Alongside both chains
 
-The UnicodeMath transform's remaining rules (473 of 519 registered). None
-waits on A or B. The other items once listed here have landed: `unicode` and
+The UnicodeMath transform's remaining rules: 483 of 519 registered, and the
+other 36 dead or unreached on the oracle, so nothing is queued here unless
+one of the 10 unreached ids gains a witness. None waits on A or B. The other items once listed here have landed: `unicode` and
 `html` are registered in compat (#119), and `/omml` is published (#112).
 
 ## Open questions this page raises

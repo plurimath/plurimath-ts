@@ -4,8 +4,8 @@
 What is left of the gem once every format is ported: the
 number-formatter modes nothing earlier exercises, expression evaluation, and
 MathML/OMML *input*. On `main`: number formatting (#126, #133, #143, #146), and
-evaluation's arithmetic and function slices (#152, #155), with eight functions
-still unported pending a licensing decision (`src/evaluation/index.ts`).
+evaluation's arithmetic and function slices (#152, #155, #161; some functions
+refuse near a rounding band, see `TODO.plan/deferred.md`).
 MathML/OMML input is deferred (settled 2026-09-16, #122;
 [open decisions](../open-decisions.md)). Two of the six exit criteria below are checked.
 

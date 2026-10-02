@@ -1238,8 +1238,10 @@ RULE_COVERAGE = {
     "(n!a c)",
   ],
   # "remaining": the last unregistered ids that a measured oracle trace
-  # reaches (see the module header, "A fifteenth increment: REMAINING"), one
-  # witness per rule, plus the input that takes `:2403`'s defective first arm:
+  # reaches (see the module header, "A fifteenth increment: REMAINING"): one
+  # witness each for nine of the ten newly registered rules, plus the input
+  # that takes `:2403`'s defective first arm. The tenth rule, `:83`, has its
+  # witness `"x^−a²^b"` in `SLICE_BOUNDARY` (see the comment there):
   #
   #   "𝑊_𝛿₁𝜌ⁿ𝜎^2"     2097 {sub_script, mini_sup, operand}
   #   "𝑊_𝛿₁ⁿ𝜌ⁿⁿa_2"   2403 {base, sub SEQUENCE, sub_recursion}, Base arm

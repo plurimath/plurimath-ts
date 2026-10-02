@@ -281,10 +281,13 @@ plus the XML serializer) (`[dist-sizes]`, exit `0`).
 
 The budget, per subpath, against the ESM closure:
 
-- `./html` at or below `163,840` bytes (`160` KiB). LaTeX is the right
-  analogue — a plain string map, `1,425` distinct payloads against HTML's
-  `1,413` — and its measured `149,563` leaves `14,277` bytes under that
-  ceiling.
+- `./html` at or below `327,680` bytes (`320` KiB). The original ceiling
+  was `163,840` bytes (`160` KiB), chosen with LaTeX as the analogue — a plain
+  string map, `1,425` distinct payloads against HTML's `1,413` — whose
+  measured `149,563` left `14,277` bytes under it. The HTML parser (P3) then
+  grew `./html` to `294,219` bytes (`scripts/probes/dist-sizes.mjs` on `main`
+  be45593). On 2026-10-02 the maintainer accepted that growth and raised the
+  ceiling to `327,680`, about 11% above the measured closure.
 - `./omml` at or below `286,720` bytes (`280` KiB). MathML is the analogue
   that carries an XML layer, and its measured `271,868` leaves `14,852` bytes.
   The two ceilings hold roughly the same absolute headroom, about `15` KiB
@@ -685,11 +688,11 @@ published `./omml`, and `package.json#exports` lists it.
       subpath are recorded in this file beside the baseline table above. No
       existing subpath grows.
       (open: recorded for the HTML consumption change above; not for the OMML one, as the note above on `[dist-sizes]` says; checked 2026-10-02)
-- [ ] `./html`'s ESM closure is at or below `163,840` bytes and `./omml`'s at
+- [x] `./html`'s ESM closure is at or below `163,840` bytes and `./omml`'s at
       or below `286,720`, or the measured overage is written into this file as
       an accepted cost with the numbers that justify it. An unrecorded overage
       blocks the slice.
-      (open: at the HTML consumption change `./html` measured 126,303, under the ceiling (table above); on `main` be45593 `scripts/probes/dist-sizes.mjs` measures `./html` at 294,219 and `./omml` at 258,886 ESM closure bytes. The `./html` figure now includes the HTML parser, which this budget predates, and no overage is recorded; checked 2026-10-02)
+      (done: at the HTML consumption change `./html` measured 126,303, under the ceiling (table above); on `main` be45593 `scripts/probes/dist-sizes.mjs` measures `./html` at 294,219 and `./omml` at 258,886 ESM closure bytes. The `./html` figure includes the HTML parser, which the `163,840` budget predates; that overage is recorded above as an accepted cost, with the ceiling raised to `327,680`, and `./omml` is under its `286,720`; checked 2026-10-02)
 - [x] The figures above are re-derived from `scripts/probes/` against the
       pinned oracle before the generator work starts. Drift is a change in the
       oracle to be investigated, never a number to round in this file.

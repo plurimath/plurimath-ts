@@ -1126,7 +1126,9 @@ RULE_COVERAGE = {
   # traced-but-unreached on the oracle itself, ~2,700 candidate inputs
   # (the gem's own `unicodemath-tests`/spec examples plus hand-built
   # variants), none of which fires any of them. See the module header for the
-  # full accounting.
+  # full accounting. Superseded for three of the six: the later REMAINING
+  # increment found inputs that fire `:695`, `:850` and `:880`, and their
+  # witnesses are rows in `RULE_COVERAGE["remaining"]` below.
   "fraction_atoms_tail" => [
     "1/2a",
     "1/a2b",
@@ -1198,7 +1200,9 @@ RULE_COVERAGE = {
   # which the oracle does not fire on that string and which is ported.) `:2245`, `:2323`, `:2035`, `:2041`, `:2097`, `:1841`, `:2341`,
   # `:2777`, `:2403`, `:2787` and `:3074` carry no row anywhere — see the
   # module header's own "thirteenth increment" section for each one's
-  # disposition.
+  # disposition. Superseded for four of them: the later REMAINING increment
+  # registered `:2035`, `:2097`, `:2245` and `:2403`, and their rows are in
+  # `RULE_COVERAGE["remaining"]` below.
   "intermediate_paren_tail" => [
     "⒭ab▒c",
     "a¹²bc/d",
@@ -1237,6 +1241,41 @@ RULE_COVERAGE = {
   "fenced_tail" => [
     "(n!a c)",
   ],
+  # "remaining": the last unregistered ids that a measured oracle trace
+  # reaches (see the module header, "A fifteenth increment: REMAINING"): one
+  # witness each for nine of the ten newly registered rules, plus the input
+  # that takes `:2403`'s defective first arm. The tenth rule, `:83`, has its
+  # witness `"x^−a²^b"` in `SLICE_BOUNDARY` (see the comment there):
+  #
+  #   "𝑊_𝛿₁𝜌ⁿ𝜎^2"     2097 {sub_script, mini_sup, operand}
+  #   "𝑊_𝛿₁ⁿ𝜌ⁿⁿa_2"   2403 {base, sub SEQUENCE, sub_recursion}, Base arm
+  #   "lim_𝛿₁ⁿ𝜌ⁿⁿa_2" 2403 again, `BINARY_FUNCTIONS` arm: the gem raises
+  #                   NameError on the undefined local `sub_value`
+  #                   (`transform.rb:2407`), so the row records a refusal
+  #   "α\\overbrace∫"  2035 {atom, atoms SEQUENCE, recursive_denominator}
+  #   "sin^2∘a"       850 {operand, expr SEQUENCE}
+  #   "├b a\u0307^2 c┤" 3885 {paren_open_prefix, factor, accents_subsup, exp,
+  #                   paren_close_prefix}; the accent is a COMBINING U+0307
+  #   "(b ab_2 c)"    3828 {open_paren, factor, sub_exp SEQUENCE, exp,
+  #                   close_paren}
+  #   "(b \uFFD7(a) c)" 880 {monospace, exp}; U+FFD7 is the monospace marker
+  #   "1/\u0227b2∫"   695 {atom SEQUENCE, recursive_denominator SEQUENCE};
+  #                   U+0227 is the precomposed a-with-dot-above
+  #   "∫_S▒ρ(x,y)g(x)ⅆxⅆy" 2245 {factor, operand SEQUENCE,
+  #                   naryand_recursion SEQUENCE}. Without the `_S` the gem
+  #                   leaves the enclosing `nary` hash unmatched.
+  "remaining" => [
+    "𝑊_𝛿₁𝜌ⁿ𝜎^2",
+    "𝑊_𝛿₁ⁿ𝜌ⁿⁿa_2",
+    "lim_𝛿₁ⁿ𝜌ⁿⁿa_2",
+    "α\\overbrace∫",
+    "sin^2∘a",
+    "├b a\u0307^2 c┤",
+    "(b ab_2 c)",
+    "(b \uFFD7(a) c)",
+    "1/\u0227b2∫",
+    "∫_S▒ρ(x,y)g(x)ⅆxⅆy",
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`
@@ -1273,7 +1312,7 @@ RULE_COVERAGE = {
 #   `:1776`) parses and deep-equals the oracle's model; it is in
 #   `RULE_COVERAGE["combinators"]`.
 #
-# Two rows stay, each with the blocker that refuses it on the port now:
+# Three rows stay, each with the blocker that refuses it on the port now:
 #
 #   the "1a_ℲDa + a_ℲCa + …" row fires `:381`/`:1776` (both ported), and
 #   every rule the oracle fires on it also fires on the port. `:1776` turns
@@ -1296,6 +1335,17 @@ RULE_COVERAGE = {
 #   every action call across the whole tree, not only the ones on the path to
 #   a final node.
 #
+#   "x^−a²^b" (U+2212 minus) fires `:83` (`{sup_recursion: simple}`, the
+#   REMAINING increment), the only measured way to reach it:
+#   `recursive_baseless_sup_exp` (`sub_sup.rb:102-105`) wraps a terminal
+#   `baseless_sup` under `exp_iteration`, and the one rule in the gem that
+#   reads an `exp_iteration` key is `:2335`, which needs `sub_script` and
+#   `mini_sub` beside it. On the superscript side the parent hash is
+#   `{sup_script:, sup_recursion:, exp_iteration:}`, which no rule matches,
+#   so the gem's model carries a raw `["sup_exp", {...}]` pair and the port
+#   refuses `{sup_exp=other}`. `:83` still counts as covered by this row, the
+#   same way `:710` does above.
+#
 # Every row records a refusal the port must keep until its blocker is
 # resolved. When one is, the row's refusal stops and `model-parity.spec.ts`
 # fails until it moves into a coverage group.
@@ -1310,6 +1360,7 @@ RULE_COVERAGE = {
 SLICE_BOUNDARY = [
   '1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa',
   "1W_δ₁ρ₁σ₂^3β=U_δ₁ρ₁^3β+1/8π^2⁢∫_α₁^α₂▒dα'₂[(U_δ₁ρ₁^2β-α'₂U_δ₁ρ₁^1β)/U_δ₁ρ₁^0β]",
+  "x^−a²^b",
 ].freeze
 
 options = { oracle: nil, out: "test/formats/unicodemath", allow_dirty: false }

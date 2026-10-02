@@ -240,7 +240,7 @@ describe.skipIf(deferred.length === 0)("the rule families this slice defers", ()
  * `"1I(x,x') = …"` row, the `"1A^* = …"` row and the 101-char
  * `"1w^h^e^e^e^e+…"` row moved out once `:945`, `:1776` and `:2251` were
  * ported, and `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` moved out once `:750` was
- * ported. The two inputs still in `SLICE_BOUNDARY` were re-traced against
+ * ported. The first two inputs below in `SLICE_BOUNDARY` were re-traced against
  * the CURRENT port rather than trusted to still be blocked by the rule once
  * named beside them — see the generator's own comment above `SLICE_BOUNDARY`
  * for the measurement:
@@ -250,6 +250,11 @@ describe.skipIf(deferred.length === 0)("the rule families this slice defers", ()
  *     (`override_subsup` over a SEQUENCE `base`; `subsup_exp` with `base`,
  *     `sub` and `sup` all SEQUENCE). The gem's model carries the raw pair,
  *     and the port refuses the signature.
+ *   - `"x^−a²^b"` (U+2212 minus) is `:83`'s witness, added with the
+ *     remaining-rules increment: it fires `:83`, but its parent
+ *     `{sup_script, sup_recursion, exp_iteration}` hash matches no rule in
+ *     the gem, so the gem's model carries a raw `sup_exp` pair and the port
+ *     refuses `{sup_exp=other}`.
  */
 describe("inputs whose rules sit outside the slice", () => {
   it.each(boundary.map((entry) => [entry.input, entry] as const))(
@@ -266,11 +271,15 @@ describe("the inputs the gem refuses", () => {
     "%j: is refused here too",
     (_input, entry) => {
       // Every row here raised `Plurimath::Math::ParseError` inside `parse`
-      // (`raisedIn`), which for UnicodeMath means the grammar itself refused —
-      // there is no `rescue` under `lib/plurimath/unicode_math/`. The port's
-      // grammar throws `ParseFailed`, and this suite now stands AT the public
-      // boundary, so the refusal must arrive as a `ParseError` carrying the
-      // format token the gem names in its own message.
+      // (`raisedIn`). For most rows the grammar itself refused, and the port's
+      // grammar throws `ParseFailed`. One row is a transform-stage failure
+      // instead: `"lim_𝛿₁ⁿ𝜌ⁿⁿa_2"` takes `:2403`'s first arm, the gem raises
+      // `NameError` on the undefined local `sub_value` (`transform.rb:2407`),
+      // and `Math.parse` reports it as `ParseError`; the port's transform
+      // throws a `ReferenceError` there, which the public boundary also
+      // reports as `ParseError`. Either way this suite stands AT the public boundary,
+      // so the refusal must arrive as a `ParseError` carrying the format token
+      // the gem names in its own message.
       expect(entry.raisedIn).toBe("parse");
       let thrown: unknown;
       try {

@@ -872,7 +872,7 @@
  * `RULE_COVERAGE["remaining"]`: `:83` (`"x^−a²^b"`), `:695`
  * (`"1/ȧb2∫"`), `:850` (`"sin^2∘a"`), `:880` (`"(b ￗ(a) c)"`),
  * `:2035` (`"α\\overbrace∫"`, which the preprocessor reads as `\over` +
- * `brace`), `:2097` (`"𝑊_𝛿₁𝜌ⁿ𝜎^2"`), `:2245` (`"∫▒ρ(x,y)g(x)ⅆxⅆy"`),
+ * `brace`), `:2097` (`"𝑊_𝛿₁𝜌ⁿ𝜎^2"`), `:2245` (`"∫_S▒ρ(x,y)g(x)ⅆxⅆy"`),
  * `:2403` (`"𝑊_𝛿₁ⁿ𝜌ⁿⁿa_2"`), `:3828` (`"(b ab_2 c)"`) and `:3885`
  * (`"├b ȧ^2 c┤"`). Two need a note:
  *
@@ -4103,7 +4103,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // […] ∫_S▒ρ(x,x',x'')I(x',x'')ⅆx'']"` input, traced on the oracle to fire
   // both `:346` and `:2251` together. `:2245`, its SEQUENCE-`naryand_recursion`
   // twin, fires when the naryand ends in two or more differentials:
-  // `"∫▒ρ(x,y)g(x)ⅆxⅆy"`.
+  // `"∫_S▒ρ(x,y)g(x)ⅆxⅆy"`.
   rule(
     "2245",
     {

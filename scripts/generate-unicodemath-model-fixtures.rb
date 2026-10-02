@@ -1255,8 +1255,9 @@ RULE_COVERAGE = {
   #   "(b \uFFD7(a) c)" 880 {monospace, exp}; U+FFD7 is the monospace marker
   #   "1/\u0227b2∫"   695 {atom SEQUENCE, recursive_denominator SEQUENCE};
   #                   U+0227 is the precomposed a-with-dot-above
-  #   "∫▒ρ(x,y)g(x)ⅆxⅆy" 2245 {factor, operand SEQUENCE, naryand_recursion
-  #                   SEQUENCE}
+  #   "∫_S▒ρ(x,y)g(x)ⅆxⅆy" 2245 {factor, operand SEQUENCE,
+  #                   naryand_recursion SEQUENCE}. Without the `_S` the gem
+  #                   leaves the enclosing `nary` hash unmatched.
   "remaining" => [
     "𝑊_𝛿₁𝜌ⁿ𝜎^2",
     "𝑊_𝛿₁ⁿ𝜌ⁿⁿa_2",
@@ -1267,7 +1268,7 @@ RULE_COVERAGE = {
     "(b ab_2 c)",
     "(b \uFFD7(a) c)",
     "1/\u0227b2∫",
-    "∫▒ρ(x,y)g(x)ⅆxⅆy",
+    "∫_S▒ρ(x,y)g(x)ⅆxⅆy",
   ],
 }.freeze
 

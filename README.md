@@ -39,8 +39,9 @@ Measured against the built package (`pnpm build`, then `dist/`):
 - Seven package subpaths are built: `./core`, `./asciimath`, `./latex`,
   `./mathml`, `./html`, `./omml` and `./unicodemath`, plus the root entry and a
   `plurimath` executable.
-- `./html` renders all 89 pinned corpus cases the gem renders, 88 of them
-  byte-identical (the 89th, `text-unitsml-valid`, differs by decision; see
+- `./html` renders all 228 pinned corpus cases written in AsciiMath, LaTeX or
+  UnicodeMath that the gem renders, 227 of them byte-identical (the 228th,
+  `text-unitsml-valid`, differs by decision; see
   `test/formats/html/parity-target.ts`). The corpus is not the whole language:
   a construct it does not cover can still raise `RenderError`, for example
   `cancel(x)` in `./html` and `./omml`.

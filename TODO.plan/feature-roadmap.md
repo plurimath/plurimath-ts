@@ -154,9 +154,10 @@ records whether a single native reader makes it moot.
    match.
 
 **Oracle data already available:** the corpus at `4a8ba64` has MathML-input
-cases of its own: `corpus/mathml/` holds 299 cases, 287 with expected output
-and 12 expected to raise. Its parse cases carry 714 `mathml:` expected-output
-blocks in all (92 under `corpus/asciimath/`, 125 under `corpus/latex/`, 20
+cases of its own: `corpus/mathml/` holds 299 cases, 287 with a per-format
+`expected` map and 12 whose parse is expected to raise. Its parse cases carry
+714 `mathml:` expectations in all — a string, an `{output: …}` map, or, for 2
+of them, an `{error: …}` map recording a render the gem refuses — (92 under `corpus/asciimath/`, 125 under `corpus/latex/`, 20
 under `corpus/unicode/`, 287 under `corpus/mathml/`, 190 under
 `corpus/omml/`), plus 66 in the seven `calls/1` number-formatting files, which
 record formatted-number output rather than parse cases. Counted by loading
@@ -181,8 +182,9 @@ translating layer under `lib/plurimath/omml/`.
 **Blocks:** the same XML reader as MathML. There is no JavaScript package to
 evaluate: `npm view @plurimath/omml` returns E404 (re-run for this page on
 2026-09-14). The corpus at `4a8ba64` has OMML-input cases:
-`corpus/omml/` holds 199 cases, 190 with expected output and 9 expected to
-raise. Parse cases now carry 477 `omml:` expected-output blocks (287 under
+`corpus/omml/` holds 199 cases, 190 with a per-format `expected` map and 9
+whose parse is expected to raise. Parse cases now carry 477 `omml:`
+expectations, 2 of them `{error: …}` maps (287 under
 `corpus/mathml/`, 190 under `corpus/omml/`), besides the 64 in six `calls/1`
 number-formatting files (same measurement as the MathML figures above). The
 port's own OMML render fixtures
@@ -472,8 +474,8 @@ The four reasons it was recommended still describe what A2 carries:
 1. It is the largest remaining gap in the compat constructor, which names
    `mathml`.
 2. Its oracle data already exists: at the current pin, `4a8ba64`,
-   `corpus/mathml/` holds 299 MathML-input cases (287 with expected output,
-   12 expected to raise).
+   `corpus/mathml/` holds 299 MathML-input cases (287 with a per-format
+   `expected` map, 12 whose parse is expected to raise).
 3. It carries three things with it: its XML reader is OMML input's
    prerequisite, its model path is a UnitsML bridge's prerequisite, and it
    constructs classes that let the measured name sets widen.
@@ -498,8 +500,8 @@ Deferred as a whole (#122); this is the order if the deferral is revisited.
   (`deferred.md`, XML writer entry), then the translator port. The corpus's
   MathML strings lock the elements they reach; PR #110 lists the 25 of 44 the
   earlier pin did not reach, which need cases written for them.
-- **A3 after A2**, because it reuses the reader and has no oracle cases: they
-  are generated first, seeded from gem-emitted OMML.
+- **A3 after A2**, because it reuses the reader. Its oracle cases exist now:
+  `corpus/omml/` at `4a8ba64` holds 199 OMML-input cases (above).
 - **A4 only once the maintainer settles UnitsML.** A bridge needs A2 first; a
   native port needs it only if it mirrors the gem's MathML round trip.
 

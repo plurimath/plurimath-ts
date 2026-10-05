@@ -28,11 +28,15 @@ exercises: full locale tables (grouping separators and their digit groups),
 significant digits and precision, scientific and engineering notation, base
 notation, and the configurable formatter object itself. It is invisible until
 then by construction — `Plurimath.configuration.number_formatter` is nil by
-default, and the pinned corpus is generated with `configuration: {}`, so every
-number in it renders as its raw value.
+default, and the pinned corpus's parse cases are generated with
+`configuration: {}`, so every number in them renders as its raw value; only
+its `calls/1` cases (66 `number_formatter` calls at `4a8ba64`) pass a
+formatter.
 
-Locale data sits behind its own subpath, so a consumer who never formats
-localized numbers does not download the tables; the isolation gate proves it.
+Locale data is held to the subpaths that read it, and the isolation gate
+proves it: the decimal-marker table ships with the four subpaths that parse
+(each grammar reads the marker), and the grouping table, which nothing imports
+yet, ships with none of them.
 
 **Evaluation.** `src/evaluation/` — numeric evaluation of a formula against
 variable bindings, including bounded iteration for sums and products with a

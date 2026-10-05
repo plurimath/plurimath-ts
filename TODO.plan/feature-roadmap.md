@@ -10,7 +10,7 @@ Everything below was first measured on 2026-09-14, against the pinned oracle
 repository at `fdc043a`, whose shared corpus pin was `plurimath-testsuite` at
 `281d700`. The port's status was re-checked on 2026-09-24 against `main` at
 `70f9482`, whose corpus pin is `plurimath-testsuite` at `07bf5e3`
-(`git ls-tree HEAD submodules/plurimath-testsuite`), and the evaluation entry
+(`git ls-tree 70f9482 submodules/plurimath-testsuite`), and the evaluation entry
 against `main` at `39f5dd4`, where #155 merged. The corpus figures were
 re-measured on 2026-10-05 against `main` at `0e36296`, whose corpus pin is
 `plurimath-testsuite` at `4a8ba64`. The oracle pin is unchanged, so

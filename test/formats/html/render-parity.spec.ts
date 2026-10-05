@@ -265,9 +265,7 @@ describe(`${FORMAT} parity, the cases the gem refuses`, () => {
     "%s: the port refuses it in the same phase as the gem",
     (_id, c) => {
       if (c.raisedIn === "parse") {
-        expect(() => parse(c), `${c.id}: the gem refuses this at parse`).toThrow(
-          ParseError,
-        );
+        expect(() => parse(c), `${c.id}: the gem refuses this at parse`).toThrow(ParseError);
         return;
       }
       // The gem parsed this and refused to render it. So must the port, at the

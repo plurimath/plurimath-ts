@@ -271,7 +271,7 @@ shapes above.
 
 - [ ] `toOmml` matches the gem byte-for-byte across every reachable case in the pinned
       corpus, and the oracle expectations are generated rather than hand-typed.
-      (open: `test/formats/omml/parity-target.ts` pins all 92 gem-renderable AsciiMath-input cases from a generated fixture, with `text-unitsml-valid` a recorded divergence; the corpus's LaTeX-input cases are not swept; checked 2026-10-02)
+      (open: `test/formats/omml/parity-target.ts` pins all 237 gem-renderable cases written in AsciiMath (92), LaTeX (125) and UnicodeMath (20) from a generated fixture, with `text-unitsml-valid` a recorded divergence; the corpus's HTML-input cases are not swept; checked 2026-10-05)
 - [x] All `36` own-root kinds are measured against the oracle, not inferred from MathML
       or a sibling OMML kind; `mrow` has a separate inherited-behavior assertion
       (`[surface]`).

@@ -161,7 +161,8 @@ cases of its own: `corpus/mathml/` holds 299 cases, 287 with a per-format
 190 under `corpus/omml/`. Each is a string, an `{output: …}` map, or, for 2
 of them, an `{error: …}` map recording a render the gem refuses. Another 66
 sit in the seven `calls/1` number-formatting files, which record
-formatted-number output rather than parse cases. Counted by loading every `corpus/*/*.yaml` with Ruby's `YAML.safe_load_file` and tallying
+formatted-number output rather than parse cases. Counted by loading every
+`corpus/*/*.yaml` with Ruby's `YAML.safe_load_file` and tallying
 `cases`, `error` and the `expected` keys per directory and per `schema`, so
 the `calls/1` files under `corpus/asciimath/` are counted apart (`git grep -c
 '^    mathml:'` agrees per file, but its `corpus/asciimath/` total, 158,

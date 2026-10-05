@@ -161,8 +161,10 @@ under `corpus/unicode/`, 287 under `corpus/mathml/`, 190 under
 `corpus/omml/`), plus 66 in the seven `calls/1` number-formatting files, which
 record formatted-number output rather than parse cases. Counted by loading
 every `corpus/*/*.yaml` with Ruby's `YAML.safe_load_file` and tallying
-`cases`, `error` and the `expected` keys per directory; `git grep -c '^    mathml:'`
-agrees per directory. `test/core/corpus-pin.spec.ts` lists the `mathml/` and
+`cases`, `error` and the `expected` keys per directory and per `schema`, so
+the `calls/1` files under `corpus/asciimath/` are counted apart (`git grep -c
+'^    mathml:'` agrees per file, but its `corpus/asciimath/` total, 158,
+includes those 66). `test/core/corpus-pin.spec.ts` lists the `mathml/` and
 `omml/` payloads as pending a reader, so no spec runs them yet. PR #110
 measured 111 at an earlier pin, all of which re-parse through
 `Math.parse(text, :mathml)`, and found they reach 19 of the translator's 44

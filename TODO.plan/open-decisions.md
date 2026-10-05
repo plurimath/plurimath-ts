@@ -242,8 +242,9 @@ that call `Mml.parse` (XML text to an `Mml::V4::*` model) and then
   input needs an XML *reader* in layer 1, which the module map does not
   describe, so §3 changes before any of this code lands.
 
-Oracle available today: 111 corpus cases carry an `expected.mathml`, and all
-111 re-parse through `Math.parse(text, :mathml)` on the gem. They exercise 19
+Oracle available when this was settled (the pin before `4a8ba64`; the corpus
+now has its own MathML- and OMML-input cases, see the note above): 111 corpus
+cases carry an `expected.mathml`, and all 111 re-parse through `Math.parse(text, :mathml)` on the gem. They exercise 19
 distinct element classes of the 44 the translator dispatches on, so the corpus
 alone would lock under half the surface; the rest needs cases written for it.
 The 25 it does not reach are the ones to write for: `Mfenced`, `Mmultiscripts`,

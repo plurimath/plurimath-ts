@@ -114,7 +114,7 @@ const UNKNOWN_KEY = "nosuchoption";
  * values, not the accepted SET: nothing here is the gate's source of truth.
  */
 const ACCEPTED_SAMPLE: Readonly<Record<string, Readonly<Record<string, unknown>>>> = {
-  mathml: { displayStyle: false, unaryFunctionSpacing: false },
+  mathml: { displayStyle: false, unaryFunctionSpacing: false, splitOnLinebreak: true },
 };
 
 describe("the derivation this gate reasons over", () => {

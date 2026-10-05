@@ -100,7 +100,7 @@ function gitFileSha256AtCommit(
  */
 const FORMATS_ROOT = join(REPO_ROOT, "test", "formats");
 const MANIFEST_SCHEMA = "plurimath-corpus/manifest/2";
-const PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
+const PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/3";
 const CANONICAL_XML_ENGINE = "Plurimath::XmlEngine::OxEngine";
 const SHA256 = /^[0-9a-f]{64}$/;
 const COMMIT = /^[0-9a-f]{40}$/;
@@ -130,6 +130,37 @@ const FIXTURE_SPECS = {
     rows: "cases",
     shape: "render-parity",
     usesCorpus: true,
+    usesRenderInventory: false,
+  },
+  // Calls that pass options to a renderer. Its inputs are the gem's own spec
+  // fixtures and measured probes, not the shared corpus, so it claims none.
+  "render-options-fixtures.json": {
+    generator: "scripts/generate-render-options-fixtures.rb",
+    schema: "plurimath-corpus/render-options/1",
+    rows: "cases",
+    shape: "render-options",
+    usesCorpus: false,
+    usesRenderInventory: false,
+  },
+  // One input per row, and the gem's answer to EVERY target format for it —
+  // the `BinaryFunction` kinds no AsciiMath input builds. Claims no corpus.
+  "render-kinds-fixtures.json": {
+    generator: "scripts/generate-render-options-fixtures.rb",
+    schema: "plurimath-corpus/render-binary-kinds/1",
+    rows: "cases",
+    shape: "render-kinds",
+    usesCorpus: false,
+    usesRenderInventory: false,
+  },
+  // `evaluate(formula, bindings)` calls (B6's first slice). Hand-built
+  // AsciiMath, like `render-options`, not the shared corpus, which has no
+  // `evaluate` call kind.
+  "evaluation-fixtures.json": {
+    generator: "scripts/generate-evaluation-fixtures.rb",
+    schema: "plurimath-corpus/evaluation/1",
+    rows: "cases",
+    shape: "evaluation",
+    usesCorpus: false,
     usesRenderInventory: false,
   },
 } as const;
@@ -200,6 +231,9 @@ const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "degenerate-fixtures.json"
   | "model-fixtures.json"
   | "parity-fixtures.json"
+  | "render-options-fixtures.json"
+  | "render-kinds-fixtures.json"
+  | "evaluation-fixtures.json"
 )[];
 const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
@@ -750,6 +784,235 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         expect(integerField(record.payload, "renderedCount", record.relative)).toBe(rendered);
         expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
           rows.length - rendered,
+        );
+      } else if (record.spec.shape === "render-options") {
+        // A row is a CALL: an input, the options passed, and what the gem
+        // answered. The options are what make it a different kind from a
+        // parity row, so they are checked as data here — a row whose keys the
+        // generator's keyword map does not know would have run a different call.
+        expectExactKeys(
+          record.payload,
+          ["$comment", "schema", "format", "caseCount", "renderedCount", "raisedCount", "cases"],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        const known = ["displayStyle", "splitOnLinebreak", "unaryFunctionSpacing", "intent"];
+        const rendered = rows.filter((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          stringField(item, "group", record.relative);
+          stringField(item, "source", record.relative);
+          const input = mapField(item, "input", at);
+          expect(
+            Number("model" in input) + Number("text" in input),
+            `${at}.input is a model or a text, not both`,
+          ).toBe(1);
+          if ("text" in input) {
+            expectExactKeys(input, ["format", "text"], `${at}.input`);
+            stringField(input, "format", at);
+            stringValue(input, "text", at);
+          } else {
+            expectExactKeys(input, ["model"], `${at}.input`);
+          }
+          const options = mapField(item, "options", at);
+          for (const key of Object.keys(options))
+            expect(known, `${at}.options.${key}`).toContain(key);
+          const hasExpected = typeof item.expected === "string";
+          const hasRefusal = typeof item.raises === "string";
+          expect(Number(hasExpected) + Number(hasRefusal), `${at} outcome`).toBe(1);
+          if (item.split !== undefined) {
+            expect(
+              options.splitOnLinebreak,
+              `${at}: a split is recorded only for a split call`,
+            ).toBe(true);
+            expect(arrayField(item, "split", at).length, `${at}.split`).toBeGreaterThan(0);
+          }
+          const base = ["group", "id", "source", "input", "options"];
+          const tail = item.split === undefined ? [] : ["split"];
+          if (hasRefusal) {
+            expectExactKeys(item, [...base, ...tail, "raises", "raisedIn"], at);
+            expect(stringField(item, "raises", at)).toBe("Plurimath::Math::ParseError");
+            expect(["parse", "render"]).toContain(stringField(item, "raisedIn", at));
+          } else {
+            expectExactKeys(item, [...base, ...tail, "expected"], at);
+          }
+          return hasExpected;
+        }).length;
+        expect(integerField(record.payload, "renderedCount", record.relative)).toBe(rendered);
+        expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
+          rows.length - rendered,
+        );
+      } else if (record.spec.shape === "render-kinds") {
+        // A row is one INPUT and the gem's answer for each target format: bytes
+        // (`expected`), a refusal (`raises`), or `unreproducible` where the gem
+        // printed a node's heap address. Exactly one per target.
+        expectExactKeys(
+          record.payload,
+          [
+            "$comment",
+            "schema",
+            "format",
+            "caseCount",
+            "renderedCount",
+            "raisedCount",
+            "unreproducibleCount",
+            "cases",
+          ],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        const targets = ["asciimath", "latex", "mathml", "html", "omml", "unicodemath"];
+        let expected = 0;
+        let raised = 0;
+        let unreproducible = 0;
+        rows.forEach((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          stringField(item, "group", record.relative);
+          stringField(item, "source", record.relative);
+          const input = mapField(item, "input", at);
+          if ("text" in input) {
+            stringField(input, "format", at);
+            stringValue(input, "text", at);
+            expectExactKeys(
+              input,
+              ["format", "text", ...("model" in input ? ["model"] : [])],
+              `${at}.input`,
+            );
+          } else {
+            expectExactKeys(input, ["model"], `${at}.input`);
+          }
+          if ("model" in input) mapField(input, "model", `${at}.input`);
+          const restricted = item.formats === undefined ? targets : arrayField(item, "formats", at);
+          expect(restricted.length, `${at}.formats`).toBeGreaterThan(0);
+          for (const target of restricted) expect(targets, `${at}.formats`).toContain(target);
+          expectExactKeys(
+            item,
+            [
+              "group",
+              "id",
+              "source",
+              "input",
+              "results",
+              ...("options" in item ? ["options"] : []),
+              ...("formats" in item ? ["formats"] : []),
+            ],
+            at,
+          );
+          if ("options" in item) {
+            const options = mapField(item, "options", at);
+            expectExactKeys(options, ["displayStyle"], `${at}.options`);
+            expect(restricted, `${at}: displayStyle is an omml option`).toStrictEqual(["omml"]);
+          }
+          const results = mapField(item, "results", at);
+          expect(Object.keys(results).sort(), `${at}.results`).toStrictEqual(
+            [...restricted].sort(),
+          );
+          for (const target of restricted) {
+            const result = mapField(results, target as string, `${at}.results`);
+            const where = `${at}.results.${target as string}`;
+            if (typeof result.expected === "string") {
+              expectExactKeys(result, ["expected"], where);
+              expected += 1;
+            } else if (typeof result.raises === "string") {
+              expectExactKeys(result, ["raises", "raisedIn"], where);
+              expect(stringField(result, "raises", where)).toBe("Plurimath::Math::ParseError");
+              expect(stringField(result, "raisedIn", where)).toBe("render");
+              raised += 1;
+            } else {
+              expectExactKeys(result, ["unreproducible"], where);
+              stringField(result, "unreproducible", where);
+              unreproducible += 1;
+            }
+          }
+        });
+        expect(integerField(record.payload, "renderedCount", record.relative)).toBe(expected);
+        expect(integerField(record.payload, "raisedCount", record.relative)).toBe(raised);
+        expect(integerField(record.payload, "unreproducibleCount", record.relative)).toBe(
+          unreproducible,
+        );
+      } else if (record.spec.shape === "evaluation") {
+        // A row is an `evaluate(formula, bindings)` CALL: an AsciiMath input,
+        // the bindings passed, and the gem's answer — `render-options`'s shape,
+        // with `bindings` (arbitrary JSON scalars, including a deliberately
+        // wrong type for `InvalidBindingError` rows and the non-finite-literal
+        // strings `evaluate.spec.ts`'s header explains) standing in for
+        // `options`, and no `split`/`raisedIn` (this generator never parses a
+        // linebreak-bearing input, and every refusal it records comes from
+        // `evaluate`, never a parse). An optional `portRefusal` names why the
+        // port refuses the row with `UnsupportedFeatureError` whatever the gem
+        // answered (the generator's header). An optional `options` records the
+        // gem configuration the row ran under, as `evaluate()`'s per-call
+        // `EvaluationOptions` — today only `evaluationMaxIterations`, a
+        // number or `null` (no cap).
+        expectExactKeys(
+          record.payload,
+          ["$comment", "schema", "format", "caseCount", "evaluatedCount", "raisedCount", "cases"],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        const evaluated = rows.filter((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          stringField(item, "group", record.relative);
+          stringField(item, "source", record.relative);
+          const input = mapField(item, "input", at);
+          expectExactKeys(input, ["format", "text"], `${at}.input`);
+          stringField(input, "format", at);
+          stringValue(input, "text", at);
+          mapField(item, "bindings", at);
+          const hasExpected = typeof item.expected === "string";
+          const hasRefusal = typeof item.raises === "string";
+          expect(Number(hasExpected) + Number(hasRefusal), `${at} outcome`).toBe(1);
+          const base = ["group", "id", "source", "input", "bindings"];
+          if ("portRefusal" in item) {
+            expect(
+              [
+                "argument-error",
+                "big-integer",
+                "hyperbolic-rounding-band",
+                "libm-reduction",
+                "libm-rounding-band",
+                "pow-rounding-band",
+                "rational",
+                "size-limit",
+                "unported",
+              ],
+              `${at}.portRefusal`,
+            ).toContain(stringField(item, "portRefusal", at));
+            base.push("portRefusal");
+          }
+          if ("options" in item) {
+            const options = mapField(item, "options", at);
+            expectExactKeys(options, ["evaluationMaxIterations"], `${at}.options`);
+            const cap = options.evaluationMaxIterations;
+            expect(cap === null || Number.isInteger(cap), `${at}.options cap`).toBe(true);
+            base.push("options");
+          }
+          // Ruby's own `ArgumentError` is not an evaluation error; it appears
+          // only on a row the port refuses for exactly that reason, and the
+          // generator never records ITS message (the port does not reproduce
+          // that class's text) — every other raised row does (`evaluate.spec.ts`
+          // checks it byte-exact, not only the class and `code`).
+          const argumentError = item.portRefusal === "argument-error";
+          if (hasRefusal) {
+            expectExactKeys(
+              item,
+              argumentError ? [...base, "raises"] : [...base, "raises", "message"],
+              at,
+            );
+            expect(stringField(item, "raises", at)).toMatch(
+              argumentError ? /^ArgumentError$/ : /^Plurimath::Errors::Evaluation::[A-Za-z]+Error$/,
+            );
+            if (!argumentError) stringField(item, "message", at);
+          } else {
+            expectExactKeys(item, [...base, "expected"], at);
+          }
+          return hasExpected;
+        }).length;
+        expect(integerField(record.payload, "evaluatedCount", record.relative)).toBe(evaluated);
+        expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
+          rows.length - evaluated,
         );
       } else if (record.spec.shape === "format-model") {
         // The parse-side twin of the branch above, shared by every format whose

@@ -111,6 +111,18 @@ export class XmlElement {
   }
 
   /**
+   * The wrapper's `replace_nodes` (`xml_nodes.nodes.replace(...)`): the child
+   * list becomes exactly `children`, in place. The MathML intent
+   * post-processing (`Utility::IntentEncoding`, formula.rb:491-810) is the
+   * one consumer — it rewrites a rendered subtree after the fact — so this is
+   * the only mutation of the child list besides `append`.
+   */
+  replaceChildren(children: readonly XmlChild[]): this {
+    this.childList.splice(0, this.childList.length, ...children);
+    return this;
+  }
+
+  /**
    * Appends children — `XmlHelper.update_nodes` and the wrapper's `<<` in
    * one call. Per the gem's semantics (xml_helper.rb:29-36): a nested array
    * is recursed, nil is skipped, and everything else lands in document

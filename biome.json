@@ -11,7 +11,14 @@
       "!submodules",
       "!test/formats/**/degenerate-fixtures.json",
       "!test/formats/**/model-fixtures.json",
-      "!test/formats/**/parity-fixtures.json"
+      "!test/formats/**/parity-fixtures.json",
+      "!test/formats/**/render-options-fixtures.json",
+      "!test/formats/**/render-kinds-fixtures.json",
+      "!test/formats/**/evaluation-fixtures.json",
+      "!test/evaluation/pow-rounding-band-corpus.json",
+      "!test/evaluation/libm-rounding-band-corpus.json",
+      "!test/evaluation/libm-log-corpus.json",
+      "!test/evaluation/libm-hyperbolic-corpus.json"
     ]
   },
   "formatter": {

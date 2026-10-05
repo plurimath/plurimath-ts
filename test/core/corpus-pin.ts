@@ -21,6 +21,9 @@
  *     neither of those was generated the canonical way (ARCHITECTURE.md §7);
  *   - a payload on disk is not in the provenance list, or vice versa;
  *   - a payload's bytes or sha256 disagree with the provenance;
+ *   - a generator input (`generator.inputs`, e.g. `scripts/seeds/mathml.yaml`)
+ *     is missing from the pinned checkout, or its bytes or sha256 disagree
+ *     with the provenance;
  *   - a payload has no group, no cases, or a case whose outcomes do not cover
  *     exactly the targets its group declares;
  *   - the pin yields no payloads or no cases at all.
@@ -28,8 +31,8 @@
 
 import { type SpawnSyncReturns, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseYaml, type YamlValue } from "./corpus-yaml";
 
@@ -53,9 +56,25 @@ export const LOCAL_CORPUS_ROOT = join(REPO_ROOT, "corpus");
 /** The one command that turns an uninitialised submodule into a usable one. */
 export const SUBMODULE_FIX = "git submodule update --init --recursive";
 
-const PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
+/**
+ * Only `/3`. It differs from `/2` by one required field, `generator.inputs`,
+ * and this reader only ever reads the one pinned commit, which records `/3`;
+ * accepting `/2` too would keep a branch alive that no pin can reach.
+ */
+const PROVENANCE_SCHEMA = "plurimath-corpus/provenance/3";
 const MANIFEST_SCHEMA = "plurimath-corpus/manifest/2";
 const REJECTIONS_SCHEMA = "plurimath-corpus/rejections/1";
+const CALLS_SCHEMA = "plurimath-corpus/calls/1";
+
+/**
+ * `call.method` values `calls/1` currently declares (`schema/calls.json`).
+ * Narrow on purpose, exactly as `ERROR_CATEGORIES` is: the schema's own
+ * description names five more call kinds a later schema version will add
+ * (`intent`, `split_on_linebreak`, `display_style`, `to_display`, `evaluate`),
+ * so a method this reader has not been taught stops the load rather than
+ * being carried through as though its shape were already agreed.
+ */
+const CALL_METHODS: readonly string[] = ["number_formatter"];
 
 /**
  * The input formats a case payload's schema may name.
@@ -204,6 +223,51 @@ export interface PinnedRejectionPayload {
   readonly cases: readonly PinnedRejection[];
 }
 
+/**
+ * What a `calls/1` case invoked, beyond a plain parse-then-render. `method`
+ * names the kind of call (see `CALL_METHODS`); `args` is deliberately
+ * free-form, exactly as the schema declares it — the gem's own keyword names
+ * for whichever call kind `method` is, not independently invented ones.
+ */
+export interface PinnedCall {
+  readonly method: string;
+  /**
+   * Free-form, per the schema's own description (`schema/calls.json`): the
+   * gem's own keyword names for whichever call kind `method` is, not typed
+   * further here for the same reason `PinnedCase.model` is left as
+   * `YamlValue` — a consumer narrows the shape it expects for the one
+   * `method` it reads.
+   */
+  readonly args: YamlValue;
+}
+
+/**
+ * One case from a `calls/1` payload: structurally `PinnedCase` plus `call`,
+ * because a call case is a render case under something other than default
+ * options, and every other field means what it means there (see `PinnedCase`
+ * for `expected`/`refusals`).
+ */
+export interface PinnedCallCase {
+  readonly id: string;
+  readonly group: string;
+  readonly input: string;
+  readonly inputFormat: string;
+  readonly preprocessed: string;
+  readonly call: PinnedCall;
+  readonly expected: ReadonlyMap<string, string>;
+  readonly refusals: ReadonlyMap<string, string>;
+  readonly parseTree: YamlValue;
+  readonly model: YamlValue;
+}
+
+export interface PinnedCallsPayload {
+  readonly path: string;
+  readonly group: string;
+  readonly inputFormat: string;
+  readonly targets: readonly string[];
+  readonly cases: readonly PinnedCallCase[];
+}
+
 export interface PinnedCorpus {
   readonly root: string;
   readonly provenance: PinProvenance;
@@ -212,6 +276,14 @@ export interface PinnedCorpus {
   /** Rejection payloads, kept apart because they have no rendering at all. */
   readonly rejectionPayloads: readonly PinnedRejectionPayload[];
   readonly rejections: readonly PinnedRejection[];
+  /** `calls/1` payloads, kept apart because they carry a `call` no other kind has. */
+  readonly callsPayloads: readonly PinnedCallsPayload[];
+  readonly calls: readonly PinnedCallCase[];
+  /**
+   * Payloads in a `PENDING_READER_FORMATS` directory: byte-verified against
+   * the provenance, not parsed.
+   */
+  readonly pendingPayloads: readonly PayloadRecord[];
 }
 
 type Mapping = { readonly [key: string]: YamlValue };
@@ -324,6 +396,14 @@ function payloadFilesOnDisk(corpusDirectory: string): readonly string[] {
   const walk = (directory: string, prefix: string): void => {
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const child = join(directory, entry.name);
+      // A symbolic link is refused outright rather than skipped: `readdirSync`
+      // does not report a linked directory as a directory, so skipping it
+      // would hide every file behind it from the unrecorded-file check.
+      if (entry.isSymbolicLink()) {
+        throw new Error(
+          `${child}: a symbolic link in the pinned corpus; the pin must hold real files.`,
+        );
+      }
       if (entry.isDirectory()) walk(child, `${prefix}${entry.name}/`);
       else if (entry.name.endsWith(".yaml")) found.push(`${prefix}${entry.name}`);
     }
@@ -332,7 +412,34 @@ function payloadFilesOnDisk(corpusDirectory: string): readonly string[] {
   return found.sort();
 }
 
-function readProvenance(root: string): PinProvenance {
+/**
+ * The checkout itself must be a real directory, and so must every directory
+ * between `base` and it: every containment check below is relative to `root`,
+ * so a symlinked submodule path, or a symlinked `submodules/` above it, would
+ * move the whole pin elsewhere while each check still passed. Components
+ * above `base` are not checked, so a repository under a symlinked home
+ * directory still loads.
+ */
+function assertNoSymbolicLinkToRoot(root: string, base: string): void {
+  const below = relative(base, root);
+  if (below === "" || below === ".." || below.startsWith(`..${sep}`) || isAbsolute(below)) {
+    throw new Error(`${root} is not below ${base}; pass the directory it is checked from.`);
+  }
+  let current = base;
+  for (const segment of below.split(sep)) {
+    current = join(current, segment);
+    if (isSymbolicLink(current)) {
+      const detail =
+        current === root
+          ? `${root} is a symbolic link, not the submodule checkout`
+          : `${current} is a symbolic link above the submodule checkout ${root}`;
+      throw submoduleError(root, detail);
+    }
+  }
+}
+
+function readProvenance(root: string, base: string): PinProvenance {
+  assertNoSymbolicLinkToRoot(root, base);
   const path = join(root, "corpus", "provenance.yaml");
   if (!existsSync(path)) {
     const detail = existsSync(root)
@@ -369,17 +476,25 @@ function readProvenance(root: string): PinProvenance {
     );
   }
 
+  verifyGeneratorInputs(root, path, document);
+
   const oracle = asMapping(requiredPresent(document, "oracle", path), `${path} oracle`);
   const entries = requiredSequence(document, "payloads", path);
   if (entries.length === 0) {
     throw new Error(`${path}: "payloads" is empty; the pin records no corpus files.`);
   }
 
+  // The schema requires unique items; a path listed twice would be read, and
+  // counted, twice.
+  const seen = new Set<string>();
   const payloads = entries.map((entry, index) => {
     const where = `${path} payloads[${index}]`;
     const record = asMapping(entry, where);
+    const payloadPath = requiredString(record, "path", where);
+    if (seen.has(payloadPath)) throw new Error(`${where}: "${payloadPath}" is listed twice.`);
+    seen.add(payloadPath);
     return {
-      path: requiredString(record, "path", where),
+      path: payloadPath,
       sha256: requiredString(record, "sha256", where),
       bytes: requiredInteger(record, "bytes", where),
     };
@@ -393,6 +508,119 @@ function readProvenance(root: string): PinProvenance {
     oracleCommit: requiredString(oracle, "commit", `${path} oracle`),
     payloads,
   };
+}
+
+/**
+ * A provenance path must be a plain relative path: no leading `/`, no `\\`,
+ * and no empty, `.` or `..` segment. Stricter than the testsuite schema's
+ * pattern on purpose; every path the pin records meets it.
+ */
+function assertPlainRelativePath(path: string, where: string): void {
+  if (
+    path.startsWith("/") ||
+    path.includes("\\") ||
+    path.split("/").some((segment) => segment === "" || segment === "." || segment === "..")
+  ) {
+    throw new Error(`${where}: path "${path}" is not a plain relative path.`);
+  }
+}
+
+/**
+ * Resolves a provenance path under `root` (the testsuite checkout) and
+ * refuses anything that could point outside it: a symbolic link at ANY
+ * component below `root` (so a symlinked `corpus/` or `scripts/seeds/` is
+ * refused as well as a symlinked file), or a real path that leaves `root`.
+ * `prefix` is the fixed directory the path is relative to (`corpus` for a
+ * payload), and is checked the same way. Returns the path even when nothing
+ * is there, so each caller reports a missing file in its own words.
+ */
+function pinFile(root: string, relative: string, where: string, prefix = ""): string {
+  assertPlainRelativePath(relative, where);
+  const segments = [...(prefix === "" ? [] : prefix.split("/")), ...relative.split("/")];
+  let current = root;
+  for (const segment of segments) {
+    current = join(current, segment);
+    if (!existsSync(current) && !isSymbolicLink(current)) return join(root, ...segments);
+    if (isSymbolicLink(current)) {
+      throw new Error(
+        `${current}: ${where} passes through a symbolic link; the pin must hold real files.`,
+      );
+    }
+  }
+  const realRoot = realpathSync(root);
+  const real = realpathSync(current);
+  if (!real.startsWith(`${realRoot}${sep}`)) {
+    throw new Error(`${current}: ${where} resolves to ${real}, outside ${realRoot}.`);
+  }
+  return current;
+}
+
+function isSymbolicLink(path: string): boolean {
+  try {
+    return lstatSync(path).isSymbolicLink();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * `generator.inputs` lists the data files the generator read besides itself
+ * (the MathML and OMML seed lists), each with its sha256 and byte count,
+ * relative to the testsuite's root. Required, and may be empty. Every entry is
+ * checked against the file in the pinned checkout, exactly as a payload is: an
+ * edited seed means the payloads it produced are no longer vouched for.
+ */
+function verifyGeneratorInputs(root: string, path: string, document: Mapping): void {
+  const where = `${path} generator`;
+  const generator = asMapping(requiredPresent(document, "generator", path), where);
+  // The generator itself, which neither reader checked before `/3`: the
+  // payloads are only as trustworthy as the script that wrote them, and an
+  // input list verified against a generator nobody checked vouches for little.
+  const generatorPath = requiredString(generator, "path", where);
+  assertPlainRelativePath(generatorPath, `${where}.path`);
+  const generatorSha256 = requiredString(generator, "sha256", where);
+  const generatorFile = pinFile(root, generatorPath, where);
+  if (!existsSync(generatorFile)) {
+    throw new Error(
+      `${generatorFile}: the generator provenance names is not on disk. Restore it with ` +
+        `\`git -C ${PIN_RELATIVE_PATH} checkout .\`.`,
+    );
+  }
+  const generatorDigest = createHash("sha256").update(readFileSync(generatorFile)).digest("hex");
+  if (generatorDigest !== generatorSha256) {
+    throw new Error(
+      `${generatorFile}: sha256 ${generatorDigest}, provenance records ${generatorSha256}. ` +
+        "The pinned checkout has been edited in place; restore it with " +
+        `\`git -C ${PIN_RELATIVE_PATH} checkout .\`.`,
+    );
+  }
+  const inputs = requiredSequence(generator, "inputs", where);
+  const seen = new Set<string>();
+  const records = inputs.map((entry, index): PayloadRecord => {
+    const at = `${where}.inputs[${index}]`;
+    const record = asMapping(entry, at);
+    const inputPath = requiredString(record, "path", at);
+    assertPlainRelativePath(inputPath, at);
+    if (seen.has(inputPath)) throw new Error(`${at}: "${inputPath}" is listed twice.`);
+    seen.add(inputPath);
+    return {
+      path: inputPath,
+      sha256: requiredString(record, "sha256", at),
+      bytes: requiredInteger(record, "bytes", at),
+    };
+  });
+  // Shape first, then the files: a malformed entry is reported as such rather
+  // than as a digest mismatch on an earlier one.
+  for (const record of records) {
+    const file = pinFile(root, record.path, `${where}.inputs`);
+    if (!existsSync(file)) {
+      throw new Error(
+        `${file}: listed in generator.inputs but not on disk. Restore it with ` +
+          `\`git -C ${PIN_RELATIVE_PATH} checkout .\`.`,
+      );
+    }
+    verifyPayloadBytes(file, record);
+  }
 }
 
 function verifyPayloadBytes(path: string, record: PayloadRecord): string {
@@ -416,6 +644,31 @@ function verifyPayloadBytes(path: string, record: PayloadRecord): string {
 }
 
 /**
+ * Input formats whose corpus directories this port does not read yet: the
+ * MathML and OMML payloads plurimath-testsuite#21 added. They are pending the
+ * MathML and OMML readers; nothing here parses those notations, and several
+ * of their payloads use YAML (multi-line quoted scalars) that `corpus-yaml`
+ * does not read either. Their bytes are still checked against the provenance,
+ * so the pin stays fully vouched for; only their contents are not loaded.
+ * Removing a format from this list is how its reader starts consuming it.
+ */
+export const PENDING_READER_FORMATS: readonly string[] = ["mathml", "omml"];
+
+/** Whether a payload path (relative to `corpus/`) is in a pending format's directory. */
+export function isPendingReaderPayload(path: string): boolean {
+  const format = path.split("/")[0];
+  return format !== undefined && path.includes("/") && PENDING_READER_FORMATS.includes(format);
+}
+
+function verifyPendingPayload(root: string, record: PayloadRecord): void {
+  const path = pinFile(root, record.path, "a provenance payload path", "corpus");
+  if (!existsSync(path)) {
+    throw submoduleError(root, `${path} is listed in corpus/provenance.yaml but is not on disk`);
+  }
+  verifyPayloadBytes(path, record);
+}
+
+/**
  * Reads a payload's bytes and identifies its kind. Every payload is verified
  * against the provenance first, whatever kind it turns out to be: an unknown
  * kind must fail because nothing vouched for it, not because it parsed oddly.
@@ -424,7 +677,7 @@ function readPayloadDocument(
   root: string,
   record: PayloadRecord,
 ): { path: string; document: Mapping; schema: string } {
-  const path = join(root, "corpus", ...record.path.split("/"));
+  const path = pinFile(root, record.path, "a provenance payload path", "corpus");
   if (!existsSync(path)) {
     throw submoduleError(root, `${path} is listed in corpus/provenance.yaml but is not on disk`);
   }
@@ -677,11 +930,123 @@ function readRejectionPayload(
 }
 
 /**
+ * Reads a case's `call` field. `method` is checked against `CALL_METHODS`
+ * rather than accepted as any string, for the same reason `ERROR_CATEGORIES`
+ * is checked: a method this reader has not been taught is a shape nothing
+ * here has agreed to interpret, so it stops the load instead of being handed
+ * to a caller as though it meant something known.
+ */
+function readCall(value: YamlValue, where: string): PinnedCall {
+  const call = asMapping(value, where);
+  const method = requiredString(call, "method", where);
+  if (!CALL_METHODS.includes(method)) {
+    throw new Error(
+      `${where}: call.method is "${method}", this reader knows ` +
+        `${CALL_METHODS.map((known) => `"${known}"`).join(", ")}.`,
+    );
+  }
+  const args = asMapping(requiredPresent(call, "args", where), `${where} args`);
+  return { method, args };
+}
+
+/**
+ * A `calls/1` payload: a group of cases recording `Formula#to_<target>`
+ * invoked with a non-default option. Its envelope and `expected` shape are
+ * exactly `readPayload`'s `cases/2` handling — an outcome is a render or a
+ * refusal, and `assertTargetCoverage` applies unchanged — with one addition,
+ * `call`, which is what varies within one payload instead of the input's own
+ * notation.
+ */
+function readCallsPayload(
+  record: PayloadRecord,
+  document: Mapping,
+  path: string,
+): PinnedCallsPayload {
+  const group = requiredString(document, "group", path);
+  const stem = record.path.slice(record.path.lastIndexOf("/") + 1).replace(/\.yaml$/, "");
+  if (group !== stem) {
+    throw new Error(`${path}: group is "${group}" but the file is named "${stem}.yaml".`);
+  }
+
+  const inputFormat = requiredString(document, "input_format", path);
+
+  const targets = requiredSequence(document, "targets", path).map((target, index) => {
+    if (typeof target !== "string" || target === "") {
+      throw new Error(`${path}: targets[${index}] is not a format name`);
+    }
+    return target;
+  });
+  if (targets.length === 0) throw new Error(`${path}: "targets" is empty`);
+
+  const entries = requiredSequence(document, "cases", path);
+  if (entries.length === 0) throw new Error(`${path}: "cases" is empty; the group has no cases.`);
+
+  const cases = entries.map((entry, index) => {
+    const where = `${path} cases[${index}]`;
+    const caseRecord = asMapping(entry, where);
+    const id = requiredString(caseRecord, "id", where);
+    const at = `${path} case ${id}`;
+    const expectedMap = asMapping(requiredPresent(caseRecord, "expected", at), `${at} expected`);
+    const rendered = new Map<string, string>();
+    const refused = new Map<string, string>();
+    for (const target of Object.keys(expectedMap)) {
+      const outcome = readOutcome(expectedMap[target] ?? null, 2, `${at} expected.${target}`);
+      if ("rendered" in outcome) rendered.set(target, outcome.rendered);
+      else refused.set(target, outcome.category);
+    }
+    assertTargetCoverage(at, targets, rendered, refused);
+
+    const expected = new Map<string, string>();
+    const refusals = new Map<string, string>();
+    for (const target of targets) {
+      const output = rendered.get(target);
+      if (output !== undefined) expected.set(target, output);
+      const category = refused.get(target);
+      if (category !== undefined) refusals.set(target, category);
+    }
+
+    const caseFormat = requiredString(caseRecord, "input_format", at);
+    if (caseFormat !== inputFormat) {
+      throw new Error(
+        `${at}: input_format is "${caseFormat}" but its group declares "${inputFormat}".`,
+      );
+    }
+
+    return {
+      id,
+      group,
+      input: requiredString(caseRecord, "input", at),
+      inputFormat: caseFormat,
+      preprocessed: requiredPossiblyEmptyString(caseRecord, "preprocessed", at),
+      call: readCall(requiredPresent(caseRecord, "call", at), `${at} call`),
+      expected,
+      refusals,
+      parseTree: requiredPresent(caseRecord, "parse_tree", at),
+      model: asMapping(requiredPresent(caseRecord, "model", at), `${at} model`),
+    };
+  });
+
+  return { path: record.path, group, inputFormat, targets, cases };
+}
+
+/**
  * Loads and verifies the whole pin. `root` is a parameter so the failure paths
  * can be proven against a scratch copy rather than argued from the code.
+ * `base` is where the symbolic-link check starts: the repository root for the
+ * real pin, and the parent of `root` by default for a scratch copy outside
+ * the repository, so only the root itself is checked there unless a test
+ * passes a higher base.
  */
-export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpus {
-  const provenance = readProvenance(root);
+export function loadPinnedCorpus(given: string = PINNED_CORPUS_ROOT, base?: string): PinnedCorpus {
+  // `resolve` drops a trailing separator or `.` component without following
+  // links: `lstat` of `link/` or `link/.` follows the link and would pass the
+  // symbolic-link check below.
+  const root = resolve(given);
+  const underRepo = root.startsWith(`${REPO_ROOT}${sep}`);
+  const provenance = readProvenance(
+    root,
+    base === undefined ? (underRepo ? REPO_ROOT : dirname(root)) : resolve(base),
+  );
   const corpusDirectory = join(root, "corpus");
 
   const onDisk = payloadFilesOnDisk(corpusDirectory).filter((path) => path !== "provenance.yaml");
@@ -700,19 +1065,28 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
   // that can be ignored, it is a pin this reader is too old to read.
   const payloads: PinnedPayload[] = [];
   const rejectionPayloads: PinnedRejectionPayload[] = [];
+  const callsPayloads: PinnedCallsPayload[] = [];
+  const pendingPayloads: PayloadRecord[] = [];
   for (const record of provenance.payloads) {
+    if (isPendingReaderPayload(record.path)) {
+      verifyPendingPayload(root, record);
+      pendingPayloads.push(record);
+      continue;
+    }
     const { path, document, schema } = readPayloadDocument(root, record);
     const caseSchema = readCaseSchema(schema);
     if (caseSchema !== undefined) {
       payloads.push(readPayload(record, document, path, caseSchema));
     } else if (schema === REJECTIONS_SCHEMA) {
       rejectionPayloads.push(readRejectionPayload(record, document, path));
+    } else if (schema === CALLS_SCHEMA) {
+      callsPayloads.push(readCallsPayload(record, document, path));
     } else {
       throw new Error(
         `${path}: schema is "${schema}", this reader knows ` +
           `"plurimath-corpus/<input format>/1", "plurimath-corpus/<input format>/2" ` +
-          `(input format one of ${CASE_INPUT_FORMATS.join(", ")}) and ` +
-          `"${REJECTIONS_SCHEMA}".`,
+          `(input format one of ${CASE_INPUT_FORMATS.join(", ")}), "${REJECTIONS_SCHEMA}" and ` +
+          `"${CALLS_SCHEMA}".`,
       );
     }
   }
@@ -748,7 +1122,29 @@ export function loadPinnedCorpus(root: string = PINNED_CORPUS_ROOT): PinnedCorpu
     }
   }
 
-  return { root, provenance, payloads, cases, rejectionPayloads, rejections };
+  const calls: PinnedCallCase[] = [];
+  for (const payload of callsPayloads) {
+    for (const entry of payload.cases) {
+      const previous = seen.get(entry.id);
+      if (previous !== undefined) {
+        throw new Error(`duplicate case id "${entry.id}" in ${previous} and ${payload.path}`);
+      }
+      seen.set(entry.id, payload.path);
+      calls.push(entry);
+    }
+  }
+
+  return {
+    root,
+    provenance,
+    payloads,
+    cases,
+    rejectionPayloads,
+    rejections,
+    callsPayloads,
+    calls,
+    pendingPayloads,
+  };
 }
 
 /**

@@ -37,7 +37,7 @@ import { renderUl } from "../../render/ul/html";
 import { renderUnaryFunction } from "../../render/unary-function/html";
 import { renderUnderset } from "../../render/underset/html";
 import { renderVec } from "../../render/vec/html";
-import type { RenderContext, RenderFn } from "./render-shared";
+import type { NumberFormat, RenderContext, RenderFn } from "./render-shared";
 
 /** One measured renderer per `NodeKind`; `nary` is the gem-matching refusal entry. */
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
@@ -86,8 +86,21 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
   return render(node, context);
 }
 
-export const ROOT_CONTEXT: RenderContext = {
-  render(node) {
-    return renderNode(node, ROOT_CONTEXT);
-  },
-};
+/**
+ * Builds the one context value the html path holds for a given
+ * `numberFormat`. `toHtml` (`./renderer.ts`) calls this once per render with
+ * whatever `resolveNumberFormat` answered for the per-call `formatter:`
+ * option.
+ */
+export function createRenderContext(numberFormat: NumberFormat | null): RenderContext {
+  const context: RenderContext = {
+    numberFormat,
+    render(node) {
+      return renderNode(node, context);
+    },
+  };
+  return context;
+}
+
+/** Where `Formula#to_html` starts with no `formatter:` option — the common case. */
+export const ROOT_CONTEXT: RenderContext = createRenderContext(null);

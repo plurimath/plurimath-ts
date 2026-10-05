@@ -1072,6 +1072,23 @@ describe("OMML first vertical slice", () => {
     ).toBe(NARY_X);
   });
 
+  it("refuses a Nary whose operator is an empty Formula, as the gem raises NoMethodError", () => {
+    // Formula#nary_attr_value (formula.rb:294-296) calls value.first on an
+    // empty array; measured: "undefined method 'nary_attr_value' for nil".
+    const render = () =>
+      toOmmlWithoutMathTag(
+        new NaryNode({
+          options: {},
+          parameterOne: new FormulaNode({ value: [] }),
+          parameterFour: symbol(),
+        }),
+      );
+    expect(render).toThrow(RenderError);
+    expect(render).toThrow(
+      "nary.parameterOne: an empty Formula has no operator — the gem raises NoMethodError here",
+    );
+  });
+
   it("pins the measured Td, Tr, and two-column Table tree", () => {
     expect(toOmmlWithoutMathTag(td())).toBe(TD_X);
     expect(toOmmlWithoutMathTag(tr())).toBe(TR_X);
@@ -1612,6 +1629,20 @@ describe("OMML Ruby-falsy parity", () => {
         ? new ObraceNode({ attributes: {}, parameterOne: false as unknown as NodeParameter })
         : new UbraceNode({ attributes: {}, parameterOne: false as unknown as NodeParameter });
     expectDirectAndInsertion(node, xml("<m:r>", `  <m:t>${brace}</m:t>`, "</m:r>"));
+  });
+
+  // `Symbol#t_tag` is `return t_element unless output`, so a valueless Symbol
+  // writes a SELF-CLOSED `m:t`, where a nil Number or Text writes an empty
+  // one (`t_element << nil`). Measured on the pinned oracle `00c52783`:
+  // `FontStyle::Bold.new(<child>, "bold").to_omml_without_math_tag` for each.
+  it.each([
+    ["Symbol", () => new SymbolNode({ value: null }), "<m:t/>"],
+    ["Number", () => new NumberNode({ value: null }), "<m:t></m:t>"],
+    ["Text", () => new TextNode({ parameterOne: null as unknown as string }), "<m:t></m:t>"],
+  ] as const)("writes a nil-valued %s under Bold as the gem does", (_name, child, text) => {
+    expect(toOmmlWithoutMathTag(new FontStyleNode({ name: "Bold", parameterOne: child() }))).toBe(
+      xml("<m:r>", "  <m:rPr>", '    <m:sty m:val="b"/>', "  </m:rPr>", `  ${text}`, "</m:r>"),
+    );
   });
 
   // `Core#omml_parameter` is `return empty_tag(tag) unless field` — Ruby-falsy,
@@ -2413,6 +2444,14 @@ describe("OMML Nary operator entity decoding", () => {
  * Each row is the oracle's own `m:begChr` at `00c52783`, from a `Formula`
  * delimiter holding one string. The escaped rows are what the port used to get
  * wrong: it emitted the raw character for every one of them.
+ *
+ * A lone UTF-16 surrogate (0xD800..0xDFFF) escapes differently: Ruby's
+ * `String#inspect` byte-escapes it as `\xHH\xHH\xHH`, the standard 3-byte
+ * UTF-8 encoding formula applied without the surrogate-rejection check Ruby
+ * normally runs, because a String built with `[cp].pack("U*")` can carry
+ * those bytes even though Ruby cannot construct the code point directly.
+ * Swept over all 2,048 lone surrogates on the oracle: zero disagreements
+ * with the byte1/2/3 formula.
  */
 describe("OMML fenced delimiter Ruby #inspect escapes", () => {
   it.each([
@@ -2456,15 +2495,44 @@ describe("OMML fenced delimiter Ruby #inspect escapes", () => {
     );
   });
 
-  it("refuses a lone surrogate the gem would render as byte escapes", () => {
-    expectRefusal(
-      () => toOmmlWithoutMathTag(fencedListDelimiter([`a${String.fromCharCode(0xd800)}b`])),
-      {
-        kind: "fenced",
-        message:
-          'fenced.parameterOne[0]: a "formula" node contains the lone surrogate U+D800, ' +
-          "which this port refuses rather than emit the gem's byte escapes",
-      },
+  it.each([
+    ["a lone high surrogate", [0x61, 0xd800, 0x62], "a\\xED\\xA0\\x80b"],
+    ["a lone low surrogate", [0x61, 0xdc00, 0x62], "a\\xED\\xB0\\x80b"],
+    ["the surrogate range's high edge", [0x61, 0xdfff, 0x62], "a\\xED\\xBF\\xBFb"],
+    [
+      "two lone high surrogates adjacent, which stay ungrouped",
+      [0xd800, 0xd801],
+      "\\xED\\xA0\\x80\\xED\\xA0\\x81",
+    ],
+    [
+      "two lone low surrogates adjacent, which stay ungrouped",
+      [0xdc00, 0xdc01],
+      "\\xED\\xB0\\x80\\xED\\xB0\\x81",
+    ],
+    [
+      "a C1 control then a lone surrogate, ordering unchanged",
+      [0x80, 0xd800],
+      "\\u0080\\xED\\xA0\\x80",
+    ],
+    [
+      "a lone surrogate then a C1 control, ordering unchanged",
+      [0xd800, 0x80],
+      "\\xED\\xA0\\x80\\u0080",
+    ],
+    [
+      "a noncharacter then a lone surrogate, ordering unchanged",
+      [0xfdd0, 0xd800],
+      "\\uFDD0\\xED\\xA0\\x80",
+    ],
+    [
+      "a lone surrogate then a noncharacter, ordering unchanged",
+      [0xd800, 0xfdd0],
+      "\\xED\\xA0\\x80\\uFDD0",
+    ],
+  ] as [string, number[], string][])("escapes %s", (_case, codepoints, inspected) => {
+    expectDirectAndInsertion(
+      fencedListDelimiter([String.fromCharCode(...codepoints)]),
+      fencedXml(`[&quot;${inspected}&quot;]`, null),
     );
   });
 });
@@ -2853,19 +2921,34 @@ describe("generated OMML symbol data", () => {
     }
   });
 
-  it("refuses Text unicode substitutions, which this table does not carry", () => {
-    // Not a gap this slice can close: `Text#symbol_value` (text.rb:126-129)
-    // inverts `Mathml::Constants::UNICODE_SYMBOLS` and `SYMBOLS`, an
-    // entity-name map owned by mathml. The OMML symbol table holds symbol
-    // CLASS literals and has no entry for it.
-    expectRefusal(() => toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:kappa]" })), {
-      kind: "text",
-      message:
-        "text.parameterOne: unicode[:name] substitution reads " +
-        "Mathml::Constants::UNICODE_SYMBOLS and SYMBOLS inverted " +
-        "(text.rb:126-129), a MathML-owned entity map that no generated OMML " +
-        "table carries — the OMML symbol table holds class literals, not this",
-    });
+  it("substitutes Text's unicode[:name] tokens from the generated OMML-owned invert tables", () => {
+    // `Text#symbol_value` (text.rb:126-129) inverts
+    // `Mathml::Constants::UNICODE_SYMBOLS` and `SYMBOLS` — the SAME Ruby
+    // constant the mathml render-tables slice inverts, re-measured here as
+    // this format's own generated copy (ARCHITECTURE.md §3 rule 4). Measured
+    // on the pinned oracle: `unicode[:kappa]` hits the UNICODE_SYMBOLS
+    // invert (`&#x3ba;`). `unicode[:tilde]` also resolves to `~`, but through
+    // UNICODE_SYMBOLS, not the SYMBOLS fallback — `tilde` is the only
+    // word-shaped key `SYMBOLS.invert` carries, and the gem's own hash
+    // duplicates it in UNICODE_SYMBOLS too, so no word-shaped name currently
+    // demonstrates a genuine fallback (an oracle-side fact, not a port gap).
+    // A name in neither table is not a parity gap — the gem's own `gsub`
+    // block substitutes the empty string for the `nil` `symbol_value`
+    // answer, so this table renders it empty too.
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:kappa]" }))).toBe(
+      xml("<m:t>&#x3ba;</m:t>"),
+    );
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:tilde]" }))).toBe(
+      xml("<m:t>~</m:t>"),
+    );
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "unicode[:nosuchname]" }))).toBe(
+      xml("<m:t></m:t>"),
+    );
+    // `encodeOmmlText` turns every space into `&#xa0;` BEFORE the token
+    // substitution runs, so a space next to a token survives as the entity.
+    expect(toOmmlWithoutMathTag(new TextNode({ parameterOne: "a unicode[:kappa] b" }))).toBe(
+      xml("<m:t>a&#xa0;&#x3ba;&#xa0;b</m:t>"),
+    );
   });
 
   it("takes a Table paren from the table, never from its stored value", () => {
@@ -3386,21 +3469,6 @@ describe("OMML renderer boundary", () => {
 
   it.each([
     [
-      "displayStyle",
-      { displayStyle: false },
-      'The "displayStyle" feature of to_omml is deferred (TODO.plan/deferred.md): recursive display-style override is unmeasured across the complete OMML renderer',
-    ],
-    [
-      "splitOnLinebreak",
-      { splitOnLinebreak: true },
-      'The "splitOnLinebreak" feature of to_omml is deferred (TODO.plan/deferred.md): line-broken OMML emits multiple m:oMath siblings separated by Word break runs; unmeasured',
-    ],
-    [
-      "formatter",
-      { formatter: {} },
-      'The "formatter" feature of to_omml is deferred (TODO.plan/deferred.md): number formatting is P4 scope; only the no-formatter path is measured',
-    ],
-    [
       "unitsml",
       { unitsml: {} },
       'The "unitsml" feature of to_omml is deferred (TODO.plan/deferred.md): UnitsML is deferred wholesale (ARCHITECTURE.md section 5)',
@@ -3416,7 +3484,29 @@ describe("OMML renderer boundary", () => {
     });
   });
 
-  it("treats explicitly undefined deferred keys as absent", () => {
+  it.each([
+    [
+      "displayStyle",
+      { displayStyle: false },
+      'The "displayStyle" feature of to_omml is deferred (TODO.plan/deferred.md): the per-node entry takes no display-style keyword; the gem passes it positionally',
+    ],
+    [
+      "splitOnLinebreak",
+      { splitOnLinebreak: true },
+      'The "splitOnLinebreak" feature of to_omml is deferred (TODO.plan/deferred.md): line splitting belongs to the formula-level toOmml; the per-node entry has none',
+    ],
+  ] as const)(
+    "the per-node entry refuses %s by name; toOmml implements it",
+    (_name, options, message) => {
+      expectRefusal(() => toOmmlWithoutMathTag(symbol(), options as never), {
+        kind: "symbol",
+        message,
+      });
+      expect(toOmml(new FormulaNode({ value: [symbol()] }), options as never)).toBe(PUBLIC_X);
+    },
+  );
+
+  it("treats explicitly undefined optional keys as absent", () => {
     const options = {
       displayStyle: undefined,
       formatter: undefined,
@@ -3441,32 +3531,33 @@ describe("OMML renderer boundary", () => {
     });
   });
 
-  // `Cancel` and `Menclose` are chosen deliberately: both are real aliases the
-  // census records (`Math::Function::Cancel`, `Math::Function::Menclose`), and
+  // `Vec` and `Menclose` are chosen deliberately: both are real aliases the
+  // census records (`Math::Function::Vec`, `Math::Function::Menclose`), and
   // both OWN a `to_omml_without_math_tag` — measured on the oracle at
   // `00c52783` by reading the method's `owner` for all 48 unary and 14 binary
-  // aliases. So this pins the refusal for a class the gem really renders
+  // aliases (the 15 base names answer `UnaryFunction`; `Vec` is not one of
+  // them). So this pins the refusal for a class the gem really renders
   // differently, not for a name the gem has never heard of.
   it("refuses unmeasured carrier aliases instead of transforming their names", () => {
     expectRefusal(
-      () => toOmmlWithoutMathTag(new UnaryFunctionNode({ name: "Cancel", parameterOne: symbol() })),
+      () => toOmmlWithoutMathTag(new UnaryFunctionNode({ name: "Vec", parameterOne: symbol() })),
       {
         kind: "unaryFunction",
-        message: 'UnaryFunction alias "Cancel" has not been measured for OMML in this slice',
+        message: 'UnaryFunction alias "Vec" has not been measured for OMML in this slice',
       },
     );
     expectRefusal(
       () =>
         toOmmlWithoutMathTag(
           new BinaryFunctionNode({
-            name: "Menclose",
+            name: "Semantics",
             parameterOne: symbol(),
             parameterTwo: symbol(),
           }),
         ),
       {
         kind: "binaryFunction",
-        message: 'BinaryFunction alias "Menclose" has not been measured for OMML in this slice',
+        message: 'BinaryFunction alias "Semantics" has not been measured for OMML in this slice',
       },
     );
     expectRefusal(
@@ -4172,6 +4263,15 @@ describe("OMML Text control-character encoding", () => {
       publicText("a&#x7f;b"),
     );
   });
+
+  it("refuses a lone-surrogate entity, where the gem raises RangeError", () => {
+    expectRefusal(() => toOmmlWithoutMathTag(new TextNode({ parameterOne: "x&#xd800;y" })), {
+      kind: "text",
+      message:
+        "text.parameterOne: the entities here name a code point UTF-8 cannot hold — " +
+        "the gem raises RangeError here (invalid codepoint 0xD800 in UTF-8)",
+    });
+  });
 });
 
 const NARY_INTEGRAL_X = xml(
@@ -4304,5 +4404,54 @@ describe("OMML Ruby-false parameter slots", () => {
         }),
       ),
     ).toBe(naryContractXml([["&#8203;"], ["&#8203;"], ["&#8203;"]], [symbol(), symbol()]));
+  });
+});
+
+describe("inputs that defeat the walk itself", () => {
+  it("a Text value spelling an unpaired surrogate as a numeric entity refuses by name, not as too-deep", () => {
+    // The bug this test was written for: `render/text/omml.ts` calls
+    // `htmlEntityToUnicode` directly rather than through this format's
+    // `decodeEntities` wrapper, so `UndecodableEntityError` (core/nodes.ts,
+    // itself a `RangeError` subclass) reached `atBoundary`'s catch unwrapped.
+    // A bare `instanceof RangeError` there could not tell that refusal apart
+    // from genuine engine stack exhaustion. Seen red without the fix: this
+    // case raised "node: the tree nests too deep for the OMML walk's call
+    // stack" instead of naming the entity decode failure.
+    const formula = new FormulaNode({ value: [new TextNode({ parameterOne: "x&#xd800;y" })] });
+    let failure: string | null = null;
+    try {
+      toOmml(formula);
+    } catch (error) {
+      expect(error).toBeInstanceOf(RenderError);
+      failure = (error as RenderError).message;
+    }
+    expect(failure).not.toBeNull();
+    expect(failure).toContain("invalid codepoint 0xD800");
+    expect(failure).not.toContain("nests too deep");
+  });
+
+  it("does not relabel an unrelated RangeError as stack exhaustion", () => {
+    // Mirrors `test/adversarial/adversarial-inputs.spec.ts`'s guard test of
+    // the same name for the PARSE side, and the matching test on the other
+    // four renderers.
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new RangeError("sentinel, nothing to do with recursion");
+        return "1";
+      },
+    };
+    let failure: string | null = null;
+    try {
+      toOmmlWithoutMathTag(node as never);
+    } catch (error) {
+      expect(error).toBeInstanceOf(RenderError);
+      failure = (error as RenderError).message;
+    }
+    expect(failure).not.toBeNull();
+    expect(failure).toContain("sentinel, nothing to do with recursion");
+    expect(failure).not.toContain("nests too deep");
   });
 });

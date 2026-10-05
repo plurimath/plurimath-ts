@@ -89,7 +89,7 @@ module CorpusGenerator
   # The submodule declared in .gitmodules. The cases it holds are read, never
   # written: plurimath-testsuite owns them.
   PIN_RELATIVE_PATH = "submodules/plurimath-testsuite"
-  PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2"
+  PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/3"
   SUBMODULE_FIX = "git submodule update --init --recursive"
 
   # --- symbol data ---------------------------------------------------------
@@ -571,6 +571,15 @@ module CorpusGenerator
     klass.name.to_s.sub("Plurimath::", "")
   end
 
+  # Insertion order, not alphabetical: a hash whose iteration order the gem
+  # writes out verbatim (`Mpadded#options` straight into `set_attr`, which
+  # emits attributes in Hash order — measured, `mpadded.rb`,
+  # `xml_engine/ox_engine/element.rb:104-110`) needs that order preserved
+  # through the round trip, or a byte-exact render can never be reproduced
+  # from the recorded model no matter what the renderer does. Alphabetizing
+  # here previously hid that: for `{depth:, height:}` alphabetical happens
+  # to equal insertion order, and only `{height:, depth:}`
+  # (`unary-function-model-phantom-mpadded-smash`) exposed the mismatch.
   def serialize_hash(hash, path)
     result = {}
     hash.each do |key, value|
@@ -579,7 +588,7 @@ module CorpusGenerator
 
       result[name] = serialize_value(value, "#{path}.#{name}")
     end
-    result.sort.to_h
+    result
   end
 
   # Fails on an unrecognized type rather than falling back to `to_s`: an
@@ -664,8 +673,10 @@ module CorpusGenerator
 
   # --- the pinned shared corpus, read-only ---------------------------------
 
+  # `expand_path` drops a trailing separator or `.` component without
+  # following links, so the symbolic-link check sees the link itself.
   def pin_root
-    File.join(REPO_ROOT, PIN_RELATIVE_PATH)
+    File.expand_path(PIN_RELATIVE_PATH, REPO_ROOT)
   end
 
   def missing_pin!(detail)
@@ -681,6 +692,19 @@ module CorpusGenerator
   # here rather than yielding an empty list, which would make every check below
   # pass while inspecting nothing.
   def read_pin_cases
+    # A symlinked submodule path, or a symlinked `submodules/` above it, would
+    # move the whole pin elsewhere while every containment check below,
+    # relative to it, still passed. Components above REPO_ROOT are not
+    # checked, so a repository under a symlinked home directory still works.
+    current = REPO_ROOT
+    PIN_RELATIVE_PATH.split("/").each do |segment|
+      current = File.join(current, segment)
+      next unless File.symlink?(current)
+
+      missing_pin!("#{pin_root} is a symbolic link, not the submodule checkout") if current == pin_root
+      missing_pin!("#{current} is a symbolic link above the submodule checkout #{pin_root}")
+    end
+
     provenance_path = File.join(pin_root, "corpus", "provenance.yaml")
     missing_pin!("#{provenance_path} does not exist") unless File.exist?(provenance_path)
 
@@ -699,17 +723,158 @@ module CorpusGenerator
                    "not Ox (§7)"
     end
 
+    verify_pin_generator_inputs!(provenance, provenance_path)
+
     payloads = provenance["payloads"] || []
     raise Error, "#{provenance_path} lists no payloads" if payloads.empty?
 
-    cases = payloads.flat_map { |entry| read_pin_payload(entry) }
+    # The schema requires unique items; a path listed twice would be read twice.
+    seen = {}
+    cases = payloads.flat_map do |entry|
+      path = entry.fetch("path")
+      raise Error, "#{provenance_path}: payload #{path.inspect} is listed twice" if seen[path]
+
+      seen[path] = true
+      next verify_pending_pin_payload(entry) if pending_reader_payload?(entry.fetch("path"))
+
+      read_pin_payload(entry)
+    end
     raise Error, "the pin at #{pin_root} contains no cases" if cases.empty?
 
     cases
   end
 
+  # The MathML and OMML payloads plurimath-testsuite#21 added are pending this
+  # port's MathML and OMML readers. Their bytes are verified like any other
+  # payload's, but their cases are not returned: every consumer of
+  # `read_pin_cases` feeds the cases (or their rendered outputs) to parsers
+  # and fixtures built for the formats this port reads, and folding these in
+  # would silently widen every fixture. Mirrors `PENDING_READER_FORMATS` in
+  # test/core/corpus-pin.ts; removing a format from both is how its reader
+  # starts consuming it.
+  PENDING_READER_FORMATS = %w[mathml omml].freeze
+
+  def pending_reader_payload?(path)
+    format, rest = path.split("/", 2)
+    !rest.nil? && PENDING_READER_FORMATS.include?(format)
+  end
+
+  def verify_pending_pin_payload(entry)
+    path = pin_file(pin_root, entry.fetch("path"), "a provenance payload path", "corpus")
+    missing_pin!("#{path} is listed in corpus/provenance.yaml but is not on disk") unless
+      File.exist?(path)
+
+    bytes = File.binread(path)
+    if bytes.bytesize != entry.fetch("bytes") || sha256(bytes) != entry.fetch("sha256")
+      raise Error, "#{path} does not match corpus/provenance.yaml; the pinned corpus " \
+                   "was edited in place. Restore it with " \
+                   "`git -C #{PIN_RELATIVE_PATH} checkout .`"
+    end
+    []
+  end
+
+  # A provenance path must be plain and relative: no leading `/`, no `\\`, no
+  # empty, `.` or `..` segment. Mirrors `assertPlainRelativePath` in
+  # test/core/corpus-pin.ts.
+  def assert_plain_relative_path!(path, where)
+    return unless path.empty? || path.start_with?("/") || path.include?("\\") ||
+                  path.split("/", -1).any? { |segment| ["", ".", ".."].include?(segment) }
+
+    raise Error, "#{where}: #{path.inspect} is not a plain relative path"
+  end
+
+  # Resolves a provenance path under `root` (the testsuite checkout), refusing
+  # a symbolic link at ANY component below `root` -- `prefix` (`corpus` for a
+  # payload) included -- or a real path outside `root`. Mirrors `pinFile` in
+  # test/core/corpus-pin.ts.
+  def pin_file(root, relative, where, prefix = nil)
+    assert_plain_relative_path!(relative, where)
+    segments = (prefix ? prefix.split("/") : []) + relative.split("/")
+    current = root
+    segments.each do |segment|
+      current = File.join(current, segment)
+      raise Error, "#{current}: #{where} passes through a symbolic link" if File.symlink?(current)
+      return File.join(root, *segments) unless File.exist?(current)
+    end
+
+    real_root = File.realpath(root)
+    real = File.realpath(current)
+    unless real.start_with?("#{real_root}/")
+      raise Error, "#{current}: #{where} resolves to #{real}, outside #{real_root}"
+    end
+
+    current
+  end
+
+  # The generator the provenance names, checked against its recorded sha256.
+  def verify_pin_generator!(generator, provenance_path)
+    path, digest = generator.values_at("path", "sha256")
+    unless path.is_a?(String) && digest.is_a?(String)
+      raise Error, "#{provenance_path}: generator needs a string path and sha256"
+    end
+
+    file = pin_file(pin_root, path, "#{provenance_path}: generator.path")
+    missing_pin!("#{file} is the recorded generator but is not on disk") unless File.file?(file)
+    return if sha256(File.binread(file)) == digest
+
+    raise Error, "#{file} does not match corpus/provenance.yaml generator.sha256; the " \
+                 "pinned checkout was edited in place. Restore it with " \
+                 "`git -C #{PIN_RELATIVE_PATH} checkout .`"
+  end
+
+  # `provenance/3` lists the data files the testsuite's generator read besides
+  # itself (the MathML and OMML seed lists) under `generator.inputs`, relative
+  # to the testsuite root. Each is checked against the pinned checkout the
+  # same way a payload is; the list is required and may be empty.
+  def verify_pin_generator_inputs!(provenance, provenance_path)
+    generator = provenance["generator"]
+    raise Error, "#{provenance_path}: generator must be a mapping" unless generator.is_a?(Hash)
+
+    verify_pin_generator!(generator, provenance_path)
+    inputs = generator["inputs"]
+    raise Error, "#{provenance_path}: generator.inputs must be a list" unless inputs.is_a?(Array)
+
+    seen = {}
+    records = inputs.each_with_index.map do |entry, index|
+      at = "#{provenance_path}: generator.inputs[#{index}]"
+      raise Error, "#{at} must be a mapping" unless entry.is_a?(Hash)
+
+      path, digest, size = entry.values_at("path", "sha256", "bytes")
+      unless path.is_a?(String) && digest.is_a?(String) && size.is_a?(Integer)
+        raise Error, "#{at} needs a string path, a string sha256 and an integer bytes"
+      end
+      assert_plain_relative_path!(path, at)
+      raise Error, "#{at}: #{path.inspect} is listed twice" if seen[path]
+
+      seen[path] = true
+      [path, digest, size]
+    end
+
+    records.each do |path, digest, size|
+      file = pin_file(pin_root, path, "#{provenance_path}: generator.inputs")
+      missing_pin!("#{file} is listed in generator.inputs but is not on disk") unless File.file?(file)
+      bytes = File.binread(file)
+      next if bytes.bytesize == size && sha256(bytes) == digest
+
+      raise Error, "#{file} does not match corpus/provenance.yaml generator.inputs; the " \
+                   "pinned checkout was edited in place. Restore it with " \
+                   "`git -C #{PIN_RELATIVE_PATH} checkout .`"
+    end
+  end
+
+  # A `plurimath-corpus/calls/1` payload's cases record `Formula#to_<target>`
+  # invoked WITH a non-default option (`formatter:` today) — their
+  # `expected.<target>` values are what the gem produced from a FORMATTED
+  # call, not a plain parse-then-render. Every consumer of `read_pin_cases`
+  # (this port's four fixture generators) treats every case it returns as an
+  # ordinary plain-render round-trip input; feeding a formatted-number string
+  # like `"1.123_456_789"` back through a parser as if it were a genuine
+  # input is not a claim any of those generators mean to make. Skipped here,
+  # at the shared source, rather than in each of the four call sites.
+  CALLS_SCHEMA = "plurimath-corpus/calls/1"
+
   def read_pin_payload(entry)
-    path = File.join(pin_root, "corpus", entry.fetch("path"))
+    path = pin_file(pin_root, entry.fetch("path"), "a provenance payload path", "corpus")
     missing_pin!("#{path} is listed in corpus/provenance.yaml but is not on disk") unless
       File.exist?(path)
 
@@ -721,6 +886,8 @@ module CorpusGenerator
     end
 
     document = YAML.safe_load(bytes, aliases: false)
+    return [] if document["schema"] == CALLS_SCHEMA
+
     group = document["group"]
     raise Error, "#{path} declares no group" if group.nil? || group.empty?
 
@@ -3161,18 +3328,24 @@ module CorpusGenerator
     names.sort
   end
 
-  # The ids the corpus and sweep put in a `Color` first slot — a policy list,
-  # deliberately minimal (TODO.plan/deferred.md, "Color renders only the
-  # measured AsciiMath fragment"): the renderer refuses any other id loudly
-  # rather than importing the asciimath format (ARCHITECTURE.md §3).
-  LATEX_COLOR_SLICE_IDS = %w[Plus Eqno].freeze
-
   # Symbol id -> the `to_asciimath` value `Color#to_latex` interpolates for
   # its first slot (color.rb:41), measured per id and verified through a full
-  # Color render — the `/\s/` strip included.
+  # Color render — the `/\s/` strip included. Every static symbol class
+  # (TODO.plan/deferred.md, "Color renders only the measured AsciiMath
+  # fragment": the 2026-08-21 sweep found all 1,393 ids the corpus+sweep were
+  # missing already carried, byte-identical, by the mathml slice's own
+  # `mathml_color_symbol_literals` — same measurement, re-taken here rather
+  # than shared because per-format slices are self-contained by design
+  # (ARCHITECTURE.md §3)). The renderer still raises a parity-gap
+  # RenderError for any id this measurement cannot reach (there are none:
+  # `static_symbol_classes` is exhaustive) and, independently of this table,
+  # for a first slot whose node KIND isn't one `colorAsciimathValue` handles
+  # — the four `fontStyle`/`fenced` operands a token sweep turns up parse to
+  # a composite whose `to_asciimath` is a full sub-render this format does
+  # not own; that refusal is unrelated to symbol-id coverage and stays.
   def latex_color_asciimath_symbols
-    LATEX_COLOR_SLICE_IDS.map do |id|
-      klass = Object.const_get("Plurimath::#{SYMBOL_NAMESPACE}#{id}")
+    static_symbol_classes(symbol_classes).map do |klass|
+      id = symbol_id(klass)
       value = symbol_instance(klass).to_asciimath(options: {})
       unless value.is_a?(::String) && !value.empty?
         raise Error, "#{id}#to_asciimath returned #{value.inspect}; the color " \
@@ -3976,6 +4149,80 @@ module CorpusGenerator
       [Plurimath::Math::Function::PowerBase.new(node, render_probe_symbol("y"),
                                                 render_probe_symbol("z"))],
     ).to_omml
+  end
+
+  def omml_probe_formula(node)
+    Plurimath::Math::Formula.new([node]).to_omml
+  end
+
+  # `Text#symbol_value` (text.rb:126-129), the OMML half:
+  #
+  #     Mathml::Constants::UNICODE_SYMBOLS.invert[unicode] ||
+  #       Mathml::Constants::SYMBOLS.invert[unicode]
+  #
+  # is reached from `parse_text("omml")` exactly as it is from
+  # `parse_text("mathml")` — the same Ruby constant, the same invert, no
+  # OMML-specific data anywhere in the gem. `../generated/mathml/render-tables.ts`
+  # already carries this table for the mathml renderer, but §3 rule 4 forbids
+  # an omml kind file reading another format's generated slice, so this is a
+  # second, independently-measured OMML copy: same source constant, verified
+  # against a live `to_omml` render instead of `to_mathml`.
+  #
+  # `Mathml::Constants::UNICODE_SYMBOLS.invert`, name -> entity, in Ruby's
+  # invert order (last write wins — asserted collision-free by the mathml
+  # measurement this mirrors, so the order is not load-bearing here either).
+  def omml_unicode_invert
+    raw = Plurimath::Mathml::Constants::UNICODE_SYMBOLS
+    inverted = raw.invert.to_h { |name, entity| [name.to_s, entity.to_s] }
+    raise Error, "UNICODE_SYMBOLS is empty" if inverted.empty?
+
+    inverted.each do |name, entity|
+      next unless name.match?(/\A\w+\z/)
+
+      rendered = omml_probe_formula(Plurimath::Math::Function::Text.new("unicode[:#{name}]"))
+      next if rendered.include?("<m:t>#{entity}</m:t>")
+
+      raise Error, "Text unicode[:#{name}] rendered #{rendered.inspect}, " \
+                   "not containing <m:t>#{entity}</m:t>; the OMML invert table drifted"
+    end
+
+    inverted
+  end
+
+  # `Mathml::Constants::SYMBOLS.invert`, `Text#symbol_value`'s fallback lookup
+  # on the OMML path — the same mirror `omml_unicode_invert` documents above.
+  def omml_symbols_invert
+    inverted = Plurimath::Mathml::Constants::SYMBOLS.invert
+      .to_h { |name, text| [name.to_s, text.to_s] }
+    raise Error, "SYMBOLS is empty" if inverted.empty?
+
+    unicode_names = Plurimath::Mathml::Constants::UNICODE_SYMBOLS.values.map(&:to_s)
+    inverted.each do |name, text|
+      next unless name.match?(/\A\w+\z/)
+      # A name UNICODE_SYMBOLS also carries never reaches this fallback.
+      next if unicode_names.include?(name)
+
+      rendered = omml_probe_formula(Plurimath::Math::Function::Text.new("unicode[:#{name}]"))
+      next if rendered.include?("<m:t>#{text}</m:t>")
+
+      raise Error, "Text unicode[:#{name}] rendered #{rendered.inspect}, not containing " \
+                   "<m:t>#{text}</m:t>; the OMML SYMBOLS fallback drifted"
+    end
+
+    inverted
+  end
+
+  # `Text#symbol_value` falls through to `nil` when neither table carries the
+  # name — `parse_text`'s surrounding `gsub` block then substitutes the empty
+  # string (Ruby's block-return-nil rule), so an unmeasured
+  # `unicode[:name]` is not a parity gap: it is the gem's own miss behaviour.
+  # Measured directly: `Text.new("unicode[:nosuchname]")` on the pinned oracle
+  # renders `<m:t></m:t>`, no exception.
+  def build_omml_render_tables
+    {
+      "unicode_invert" => omml_unicode_invert,
+      "symbols_invert" => omml_symbols_invert,
+    }
   end
 
   # The two extra exports the omml slice carries beyond the payload map.
@@ -4803,6 +5050,56 @@ module CorpusGenerator
     write_ts(File.join(out_root, "unicodemath", "render-tables.ts"), sections)
   end
 
+  def emit_omml_render_tables_file(out_root, tables)
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        OMML render tables: the one lookup `Text#to_omml_without_math_tag`
+        reads that `../symbols.ts`'s per-class literals do not supply,
+        consumed by `src/render/text/omml.ts`.
+
+        `Text#symbol_value` (text.rb:126-129) inverts
+        `Mathml::Constants::UNICODE_SYMBOLS` and `SYMBOLS` — the SAME Ruby
+        constant the mathml render-tables slice inverts for its own
+        `MATHML_UNICODE_INVERT`/`MATHML_SYMBOLS_INVERT`. The two exports below
+        are byte-identical to those, but generated and verified as this
+        format's own copy: ARCHITECTURE.md §3 rule 4 forbids an omml kind file
+        importing another format's `generated/` slice, so the omml renderer
+        needs its own. Every entry whose key is reachable through the
+        grammar's `unicode[:\w+]` name syntax is re-verified through a live
+        `to_omml` render (`<m:t>…</m:t>`) rather than assumed from the mathml
+        measurement; a non-word key can't be spelled through that syntax, so
+        it is carried over unverified (measured: 95 of 144 UNICODE entries
+        and 1 of 17 SYMBOLS entries are word-shaped and live-probed).
+
+        A name absent from both tables is not a parity gap: `Text#symbol_value`
+        returns `nil` there, and the `gsub` block around it substitutes the
+        empty string (Ruby's block-return-nil rule) rather than raising —
+        measured directly, `Text.new("unicode[:nosuchname]")` on the pinned
+        oracle renders `<m:t></m:t>`.
+      TEXT
+      ts_tuple_map(
+        "OMML_UNICODE_INVERT",
+        "ReadonlyMap<string, string>",
+        tables["unicode_invert"],
+        doc: "`Mathml::Constants::UNICODE_SYMBOLS.invert`, name -> entity,\n" \
+             "Ruby's invert semantics kept: a name mapped from several\n" \
+             "entities keeps the LAST one. Read once on the OMML render path:\n" \
+             "the `unicode[:name]` lookup `Text#parse_text` reaches via\n" \
+             "`Text#symbol_value` (`text.rb:126-128`).",
+      ),
+      ts_tuple_map(
+        "OMML_SYMBOLS_INVERT",
+        "ReadonlyMap<string, string>",
+        tables["symbols_invert"],
+        doc: "`Mathml::Constants::SYMBOLS.invert`, `Text#symbol_value`'s\n" \
+             "fallback lookup (`text.rb:128`). Only word-shaped names can\n" \
+             "reach it through the `unicode[:\\w+]` token regex.",
+      ),
+    ]
+
+    write_ts(File.join(out_root, "omml", "render-tables.ts"), sections)
+  end
+
   def emit_latex_render_tables_file(out_root, tables)
     sections = [
       ts_header(<<~TEXT.chomp),
@@ -4899,10 +5196,14 @@ module CorpusGenerator
         "ReadonlyMap<string, string>",
         tables["color_asciimath"],
         doc: "Symbol id -> the `to_asciimath` value `Color#to_latex`\n" \
-             "interpolates for its first slot, for exactly the ids the\n" \
-             "corpus+sweep put there — a deliberately minimal policy slice\n" \
-             "(TODO.plan/deferred.md); the renderer raises a parity-gap\n" \
-             "RenderError for any other id.",
+             "interpolates for its first slot, for every static symbol\n" \
+             "class (TODO.plan/deferred.md, \"Color renders only the\n" \
+             "measured AsciiMath fragment\") — the same measurement\n" \
+             "`MATHML_COLOR_SYMBOL_LITERALS` re-emits mathml-side, so the\n" \
+             "two copies cannot drift. A first-slot node whose KIND is not\n" \
+             "one the renderer's asciimath fragment handles (a `fontStyle`\n" \
+             "or `fenced` composite) still raises a parity-gap RenderError,\n" \
+             "independently of this table.",
       ),
       ts_const(
         "LATEX_UNARY_CARRIER_NAMES",
@@ -5180,7 +5481,7 @@ module CorpusGenerator
 
   def write_symbol_data(out_root, data, registry, render_tables, mathml_tables,
                         latex_render_tables, unicodemath_render_tables,
-                        provenance)
+                        omml_render_tables, provenance)
     written = [
       File.join(out_root, INPUT_FORMAT, "input.ts"),
       File.join(out_root, INPUT_FORMAT, "grammar.ts"),
@@ -5189,6 +5490,7 @@ module CorpusGenerator
       File.join(out_root, "mathml", "render-tables.ts"),
       File.join(out_root, "latex", "render-tables.ts"),
       File.join(out_root, "unicodemath", "render-tables.ts"),
+      File.join(out_root, "omml", "render-tables.ts"),
     ]
     emit_input_file(out_root, data["tables"])
     emit_grammar_file(out_root, data["grammar"])
@@ -5197,6 +5499,7 @@ module CorpusGenerator
     emit_mathml_render_tables_file(out_root, mathml_tables)
     emit_latex_render_tables_file(out_root, latex_render_tables)
     emit_unicodemath_render_tables_file(out_root, unicodemath_render_tables)
+    emit_omml_render_tables_file(out_root, omml_render_tables)
 
     SYMBOL_FORMATS.each do |format|
       emit_symbols_file(out_root, format, data["static"],
@@ -5461,6 +5764,7 @@ module CorpusGenerator
     render_tables = build_render_tables(census)
     mathml_tables = build_mathml_render_tables(registry, census)
     unicodemath_render_tables = build_unicodemath_render_tables(registry)
+    omml_render_tables = build_omml_render_tables
     assert_corpus_symbols_covered!(pin_cases, exclusions, symbols)
 
     out_root = options[:out]
@@ -5485,7 +5789,7 @@ module CorpusGenerator
 
     emitted = write_symbol_data(options[:symbols_out], symbols, registry, render_tables,
                                 mathml_tables, latex_render_tables,
-                                unicodemath_render_tables, provenance)
+                                unicodemath_render_tables, omml_render_tables, provenance)
 
     written.each do |payload_path, manifest_path|
       puts "  #{relative(payload_path, REPO_ROOT)}"

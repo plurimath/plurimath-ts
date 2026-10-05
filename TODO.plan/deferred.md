@@ -151,7 +151,8 @@ this exception entry now only documents how each set came to be measured.
 `MEASURED_UNARY_NAMES` in all four `src/render/unary-function/*.ts` adds two
 names to its generated census projection the same way: `Tr`, which the
 transform constructs without `get_class`, and `Hom`, which the transform
-never constructs at all. `Hom` was admitted 2026-08-21 on this measurement
+never constructs at all. `unicodemath.ts` also adds `Scarries` (see the
+paragraph on it below). `Hom` was admitted 2026-08-21 on this measurement
 (probe-unary-carrier-defaults.rb on the pinned oracle, in the PR record): of
 the 48 classes the census aliases onto `Math::Function::UnaryFunction`, 34
 are reachable through `get_class`, `Tr` is transform-built, and of the
@@ -166,10 +167,14 @@ because the gem's LaTeX parser DOES build it — `Math.parse("\hom{x}",
 :latex)` returns a `Hom` — so the name arrives the moment P3 lands a LaTeX
 input format.
 
-One name is measured and deliberately still refused: `Scarries` inherits
-`to_unicodemath` from the carrier (`"scarries⁡x"`) while overriding the other
-three. Admitting it in one format alone would leave a name that renders in
-UnicodeMath and raises everywhere else, which is a worse trap than the gap.
+`Scarries` was the one name measured and deliberately left refused here, on
+the ground that admitting it in UnicodeMath alone — while it raised in every
+other format — would be a worse trap than the gap. That ground no longer
+holds: `asciimath.ts`, `latex.ts`, `mathml.ts` and `omml.ts` already carry
+their own `Scarries` arms (`scarries.rb` overrides all four of those
+`to_*` methods; `to_html` and `to_unicodemath` are the two the carrier
+default still owns), so UnicodeMath was the outlier, not the exception, and
+`Scarries` is now admitted there too (`"scarries⁡x"`, measured).
 
 The HTML slice hand-lists the same way, and for the same reason — no
 `src/generated/html/` slice carries a reachable-name set, and §3's
@@ -179,13 +184,18 @@ the ten aliases some corpus case constructs — `Power`, `Mod`, `Lim`, `Log`,
 `Root`, `Td` (binary), `PowerBase` (ternary), `Sin`, `Cos`, `Tr` (unary) — so
 every admitted arm is held to the gem's bytes by `render-parity.spec.ts`, and
 `power`/`powerBase` additionally by the full `degenerate-slots` slot matrix.
+The unary file has since admitted seven more carrier-default names (`Ln`,
+`Det`, `Gcd`, `Max`, `Cancel`, `Hom`, `Substack`) and arms for `Left` and
+`Mbox`, held by `test/formats/unary-function-parity.spec.ts` against the gem's
+own bytes; `Phantom` refuses because the gem raises on it.
 `MEASURED_LABELS` in the unary file is one of TWO hand-typed gem-derived tables there:
 `Core#invert_unicode_symbols` is `UNICODE_SYMBOLS.invert[class_name] ||
 class_name`, so the label is NOT reliably the downcased class name — of the
 names reachable through that carrier, `Sup` resolves to `&#x2283;` — and the
 port cannot compute it without the mathml table it may not import. Names that
-render on the gem but no case constructs (`Stackrel`, `Underover`, `Limits`,
-`Multiscript`) stay refused rather than admitted untested. Two never become
+render on the gem but no case constructs (`Stackrel`, `Underover`) stay refused
+rather than admitted untested (`Limits` and `Multiscript` are now admitted, held
+to the gem by `test/formats/ternary-function/`). Two never become
 admissible as written: `Menclose#to_html` interpolates `parameter_one` raw
 into a `notation=` attribute (a heap address, not reproducible), and
 `Rule#to_html` takes no `options:` keyword at all, so the gem itself raises
@@ -209,9 +219,9 @@ and a clear shape: a codepoint sweep in `generate-corpus.rb` beside
 named-escape set is EXACTLY those ten so completeness is enforced rather than
 claimed in prose. That is its own change, not a rider on a corpus pin.
 
-**Trigger for revisiting: a generator that owns these sets per format, the
-first consumer that needs `Scarries`, or any third hand-typed table appearing
-in that file — two is an exception, three is a habit.**
+**Trigger for revisiting: a generator that owns these sets per format, or any
+third hand-typed table appearing in that file — two is an exception, three is
+a habit.** (`Scarries` was the other named trigger; it is admitted now, above.)
 
 ### Three AsciiMath render tables — generated
 
@@ -290,22 +300,22 @@ slots it is byte-exact and pinned. The follow-up chooses: refuse admitted
 primitives in composite-feeding positions, or record these as permanent
 divergences case by case.
 
-### MathML renderer: four `to_mathml` options deferred by name
+### MathML renderer: one `to_mathml` option deferred by name
 
-**Trigger: `intent` — the P2 compat class (its only optional argument);
-`formatter` — P4 number formatting; `unitsml` — the UnitsML decision
-(ARCHITECTURE.md §5); `split_on_linebreak` — the first consumer request, or
-P2's OMML renderer, whose `to_omml` shares `new_line_support`.**
+**Trigger: `unitsml` — the UnitsML decision (ARCHITECTURE.md §5).**
 
-`toMathml` implements `display_style` and `unary_function_spacing` (both
-byte-matched against oracle probes in
-`test/formats/mathml/renderer.spec.ts`). The other four `Formula#to_mathml`
-keywords are refused BY NAME: passing `formatter`, `intent`, `unitsml` or
-`splitOnLinebreak` with any value but `undefined` — `intent: false` and
-`unitsml: {}` (the gem's inert defaults) included — raises a `RenderError`
+`toMathml` implements `display_style`, `unary_function_spacing`, `formatter`
+(B2's first slice), `split_on_linebreak` (B3, shared with `to_omml` through
+`src/core/linebreak.ts`) and `intent` (B4, the P2 compat class's only optional
+argument — `./intent-encoding.ts`, `./intent-post-processing.ts`), byte-matched
+against oracle probes in `test/formats/mathml/renderer.spec.ts`,
+`test/formats/mathml/intent-parity.spec.ts` and
+`test/formats/split-display-parity.spec.ts`. The remaining `Formula#to_mathml`
+keyword is refused BY NAME: passing `unitsml` with any value but `undefined` —
+`unitsml: {}` (the gem's inert default) included — raises a `RenderError`
 naming the option and this file. Silence was the alternative and is the one
 wrong answer: the corpus was generated with defaults, so a renderer that
-ignored `intent: true` would pass every pin and still be wrong for the first
+ignored `unitsml: {...}` would pass every pin and still be wrong for the first
 caller. The refusal extends to the tree side of unitsml: a hand-built node
 smuggling a `unitsml` ATTRIBUTE through an attributes/options hash is refused
 by the same name, which is what makes the gem's `unitsml_post_processing`
@@ -314,20 +324,35 @@ every tree this renderer emits.
 
 ### OMML renderer: generated symbol data deferred from the first slice
 
-**Trigger: the dedicated OMML symbol-data follow-up, using the repository's
-two-step generation protocol and a provenance digest from the clean pinned
-oracle.**
+**Resolved (2026-09-22), in two steps:**
 
-The first OMML vertical slice implements the shared structural wrapper for the
-base `Symbol`/abstract `Paren`, but deliberately does not hand-type the named
-symbol values measured by the OMML scope. Named symbols therefore raise
-`RenderError` instead of trusting a caller-provided value. The same refusal
-applies where another implemented kind needs that table: `Text`'s
-`unicode[:name]` substitutions, named Table parens, and a named Nary operator.
-The exact refusal contract is pinned in
-`test/formats/omml/renderer.spec.ts`. The follow-up removes these refusals only
-after generated values, an emptiness guard, provenance, and perturbed
-regeneration determinism land together.
+The per-class symbol literals (`OMML_SYMBOLS`, `OMML_SYMBOL_TAG_NAMES`) landed
+first (#63): named `Symbol` values, named Table parens (`Table#paren` reads
+the paren's class literal, never its stored value), and a named Nary
+operator's `chr` text all resolve through that table now, each pinned in
+`test/formats/omml/renderer.spec.ts`'s "generated OMML symbol data" block. An
+id the table does not carry still raises — not `RenderError` but the
+walk's own `MissingSymbolDataError` — because that IS a parity gap: the
+census found only 1,459 static classes, so anything else is one the port's
+model does not know exists.
+
+The one refusal that outlived that slice was `Text`'s `unicode[:name]`
+substitution: `Text#symbol_value` (text.rb:126-129) inverts
+`Mathml::Constants::UNICODE_SYMBOLS`/`SYMBOLS`, the SAME Ruby constant the
+mathml render-tables slice already inverted for its own renderer, but
+ARCHITECTURE.md §3 rule 4 forbids an omml kind file reading mathml's
+generated slice. The dedicated follow-up taught `scripts/generate-corpus.rb`
+to emit an independent OMML-owned copy (`OMML_UNICODE_INVERT`,
+`OMML_SYMBOLS_INVERT` in `src/generated/omml/render-tables.ts`) — measured
+against a live `to_omml` render rather than assumed from the mathml table,
+using the repository's two-step generation protocol (source commit, then a
+data commit regenerated from a clean pinned oracle checkout, with two
+independent runs proving determinism). A name absent from BOTH tables is not
+a parity gap either: `Text#symbol_value` falls through to `nil`, and the
+surrounding `gsub` block substitutes the empty string for that (Ruby's
+block-return-nil rule) rather than raising — measured directly on the pinned
+oracle — so `src/render/text/omml.ts` renders it empty, and nothing in this
+area still refuses.
 
 ### MathML renderer: `options[:mask]` supports only the inert decoding
 
@@ -418,18 +443,26 @@ through the shape walk, for a shape no parser produces. The refusal is pinned
 by `test/formats/omml/renderer.spec.ts`, "OMML fenced delimiter recursion
 markers", so it cannot drift into some other behaviour unnoticed.
 
-### OMML Fenced: a lone surrogate is refused, not rendered as the gem's byte escapes
+### OMML Fenced: a lone surrogate renders as the gem's byte escapes (resolved)
 
-**Trigger: a consumer reaching this from real input rather than a hand-built
-tree, or any decision to match Ruby's `#inspect` byte-escape spelling
-generally.**
-
-Ruby cannot BUILD the code point — `0xD800.chr(Encoding::UTF_8)` raises
-`RangeError: invalid codepoint 0xD800 in UTF-8` — but a String carries the
-bytes perfectly well. Measured on the oracle at `00c52783`,
-`[0xD800].pack("U*")` gives a UTF-8 String whose `valid_encoding?` is false,
-whose bytes are `ED A0 80`, and whose `#inspect` prints `"\xED\xA0\x80"`:
-byte escapes, not `\uD800`.
+**Resolved (2026-09-22).** Ruby cannot BUILD the code point —
+`0xD800.chr(Encoding::UTF_8)` raises `RangeError: invalid codepoint 0xD800 in
+UTF-8` — but a String carries the bytes perfectly well. Measured on the
+oracle at `00c52783`, `[0xD800].pack("U*")` gives a UTF-8 String whose
+`valid_encoding?` is false, whose bytes are `ED A0 80`, and whose `#inspect`
+prints `"\xED\xA0\x80"`: byte escapes, not `\uD800`. Swept over all 2,048
+lone surrogates (0xD800..0xDFFF), not sampled: every one agrees with the
+standard 3-byte UTF-8 encoding formula (byte1 = 0xE0|(cp>>12), byte2 =
+0x80|((cp>>6)&0x3F), byte3 = 0x80|(cp&0x3F)) applied without the
+surrogate-rejection check Ruby normally runs, zero disagreements. Three
+interactions were also measured directly rather than assumed: two lone
+surrogates adjacent (either side) stay ungrouped, matching this file's
+"consecutive escapes never grouped" finding for `\u`-escapes; a lone
+surrogate next to a C1 control or a noncharacter changes neither side's
+spelling nor their order; and the resulting ASCII text (`\`, `x`, hex digits)
+carries no `&`, so the double entity-decode pass in `delimiterAttribute` and
+the XML attribute writer are both inert on it, confirmed by reading each
+decoder's `&`-gated fast path rather than assuming.
 
 So the gem renders this. A `Fenced` whose delimiter is a Formula valued
 `["a\uD800b"]` emits, measured:
@@ -438,16 +471,9 @@ So the gem renders this. A `Fenced` whose delimiter is a Formula valued
 <m:begChr m:val="[&quot;a\xED\xA0\x80b&quot;]"/>
 ```
 
-This port refuses it instead (`src/render/fenced/omml.ts`), pinned by
-`test/formats/omml/renderer.spec.ts`, "refuses a lone surrogate the gem would
-render as byte escapes".
-
-**This entry is closable, unlike the non-UTF-8 entry above it.** That one is
-about bytes the port cannot hold at all. This output is ASCII-only, so
-JavaScript can represent it exactly; what is missing is only the decision to
-reproduce Ruby's `#inspect` byte-escape spelling, which is a wider question than
-one delimiter slot. Reachable today only from a hand-built tree — no parser
-produces a lone surrogate — which is why it is deferred rather than fixed here.
+`inspectCodepoint` in `src/render/fenced/omml.ts` now reproduces this instead
+of refusing it, pinned by `test/formats/omml/renderer.spec.ts`, "OMML fenced
+delimiter Ruby #inspect escapes" (the `it.each` surrogate rows).
 
 ### `ModelHelper.validate_left_right` is modelled at one renderer, not in the model
 
@@ -470,11 +496,235 @@ render `m:val="raw"` where the gem never gets as far as rendering. No other
 carrier or renderer models it; a hand-built tree that would have raised in a
 different gem constructor still renders here.
 
+### Evaluation: Float powers inside glibc's rounding band are refused
+
+**Decided 2026-09-23 (keep the documented bound).** The oracle's Float
+`pow` — every Float case of Ruby's `**` — comes from the platform C library:
+glibc on Linux, where the oracle is measured. glibc's `pow` documents a
+worst-case error of 0.54 ULP (`sysdeps/ieee754/dbl-64/e_pow.c`), so when the
+exact result lies within 0.04 ULP of the midpoint between two doubles it may
+return either one. `src/evaluation/pow.ts` reproduces glibc's results by
+correct rounding — outside that band the correctly rounded double is the only
+value within 0.54 ULP, so it is glibc's answer — and refuses inside the band
+with `UnsupportedFeatureError`. A refusal is recoverable; a wrong last digit is
+not. Measured: 0 wrong answers on 200,000 random pairs against glibc; about 5%
+of general Float powers fall in the band (exact results never do). Ruby on
+another libm (macOS, for example) can itself differ from the Linux oracle in
+the last digit of a Float power, so this parity is with the oracle's platform,
+not with every Ruby.
+
+### Evaluation: `Math` function results inside glibc's rounding band are refused
+
+**Measured 2026-09-24.** `Sin`, `Cos`, `Tan`, `Arcsin`, `Arccos`, `Arctan`,
+`Exp` and `Ln` call the platform C library (glibc 2.35 on the oracle's Linux
+host), which is not correctly rounded; `Cot`, `Sec` and `Csc` divide `1.0` by
+`tan`/`cos`/`sin`, which IEEE division keeps exact given the same operand.
+`src/evaluation/libm.ts` computes each result in `BigInt` fixed point,
+returns the correctly rounded double, and refuses with
+`UnsupportedFeatureError` where the exact result lies within the function's
+band of a double midpoint. `Sqrt` needs no band: IEEE 754 requires it
+correctly rounded, and glibc's and `Math.sqrt` both are.
+
+Each band is the worst glibc miss over 100,000 seeded uniform samples plus
+hand-typed values (`0.1`, `pi/4`, `90`, ...) times two, rounded up to a clean
+fraction, per argument region: `|x| < 1024` and `|x| >= 1024`, the latter
+also counting the `large` samples (`scripts/measure-libm-glibc-accuracy.mjs`,
+seed `20260924`, reference BigDecimal at 110 digits, 976,553 samples,
+976,551 of them with a result in the double range). A region with no
+measured miss keeps the other region's band. The measurement also checks the
+port's own correctly rounded result against the reference on every sample
+(0 disagreements), and that, where the port answers, it equals glibc on every
+sample (0 disagreements in every category). Refusal rates are before the
+region split (a single band, guard below 1024) and after:
+
+| Function | glibc correct (uniform) | Worst miss `<1024` / `>=1024` | Band `<1024` / `>=1024` | Uniform refused | Typed refused |
+| --- | --- | --- | --- | --- | --- |
+| sin | 99.9160% | 0.011619 / 0.011730 | 1/40 / 1/40 | 4.90% -> 4.90% | 6 -> 2 of 96 |
+| cos | 99.9400% | 0.008919 / 0.014086 | 1/50 / 1/32 (was 1/32) | 6.38% -> 4.61% | 10 -> 4 of 96 |
+| tan | 99.8380% | 0.043039 / 0.017810 | 1/11 / 1/25 (was 1/10) | 20.12% -> 15.42% | 18 -> 8 of 96 |
+| asin | 99.8660% | 0.007770 / — | 1/60 | 3.39% | 4 of 32 |
+| acos | 99.9520% | 0.009629 / — | 1/50 | 3.81% | 5 of 32 |
+| atan | 99.9670% | 0.012025 / none measured | 1/40 | 5.04% | 6 of 96 |
+| exp | 99.9210% | 0.005751 / — | 1/80 | 2.53% | 1 of 94 |
+| log | 99.9860% | 0.003879 / none measured | 1/125 | 1.61% | 0 of 48 |
+| sqrt | 100.0000% | — | none | 0% | 0 |
+
+tan's wide band below 1024 comes from one sampled miss at 0.043 ULP
+(`tan(14.072284240275621)`, whose value is 15.4); the next worst is 0.029.
+
+A band cannot fix sin/cos/tan near a multiple of `pi/2`, where the result is
+tiny (or `tan`'s huge) and glibc's error in its reduced argument `r`
+dominates: over the hardest reduction cases at every binary exponent
+(continued-fraction convergents of `pi/2`), glibc missed 450 (sin), 863
+(cos) and 1,311 (tan) of 1,971, by up to thousands of ULP. Two measurements
+now decide where the port refuses there:
+
+- **Below 1024, exhaustively** (`scripts/measure-libm-reduction-exhaustive.mjs`,
+  summary `test/evaluation/libm-reduction-exhaustive.json`): every double
+  within `2^-35` of a nonzero multiple of `pi/2` — 1,748,992 doubles near
+  651 multiples, both signs, 3,497,984 arguments per function. glibc's `sin`
+  was correctly rounded on all of them; `cos` missed 2, both outside its
+  band; `tan` missed 28, 24 inside its band and 4 outside. Those outside the
+  band are 6 arguments, 3 magnitudes in both signs — `cos(±1.5707963267948968)`
+  (the double just above `pi/2`), `tan(±3pi)` and `tan(±6pi)`. Rather than
+  refuse them, the port answers each with glibc's own double:
+  `src/evaluation/libm-measured-results.ts`, which the script generates,
+  maps each signed input's bits to the bits Ruby's `Math.cos`/`Math.tan`
+  returned for it — each sign measured on its own, not derived from `cos`
+  being even or `tan` odd (the table bears both out). Nothing else below
+  1024 is reduction-guarded, and the port refuses or returns glibc's double
+  on every argument checked. `sin(pi)`, `cos(pi/2)`, `tan(pi/2)`,
+  `sin(2pi)`, `csc(pi)`, `tan(3pi)` and `tan(6pi)` all answer, matching the
+  gem (the evaluation fixtures' `libm-measured-*` rows).
+- **From 1024 up, by a guard** (`scripts/measure-libm-reduction-error.mjs`):
+  refuse a result computed from `sin r` when `|r| < 2^-bits`, with `bits` from
+  the largest reduced-argument error measured on the hard cases, minus 67 (so
+  an admitted result's relative error from the reduction stays under
+  `2^-67`). From `2^26` up, 3,852 sin-r results: largest error `2^-91.7`,
+  guard `2^-24`. In `[1024, 2^26)` glibc was exact on all 50 sin-r hard
+  cases, so that tier's guard is sized from the whole range below `2^26`
+  (90 results, largest error `2^-102.3`, from `tan(4.712388980384691)`):
+  `2^-35`. glibc missed none of the hard cases on the `cos r` branches, which
+  are not guarded.
+
+`tan(pi/4)` and `arccos(0.5)` are still refused by the band: their exact
+results lie 0.0515 and 0.0172 ULP from a midpoint.
+`test/evaluation/libm-rounding-band.spec.ts` and
+`test/evaluation/libm-reduction-exhaustive.spec.ts` re-check the committed
+corpora without Ruby. As with `pow`, the parity is with the oracle's
+platform: another libm can differ in these last bits.
+
+### Evaluation: the hyperbolic functions
+
+**Recorded 2026-09-28, revised 2026-09-29.** `Sinh`, `Cosh`, `Tanh` and
+their reciprocals `Sech`, `Csch`, `Coth` (`1.0 / Math.cosh(x)`, and so on)
+call Ruby's `Math.sinh`/`cosh`/`tanh`, which call glibc (2.35 on the
+oracle's host). glibc's three are Sun's fdlibm routines, computed through
+`expm1` for small and moderate arguments and through `exp` for large ones.
+
+`src/evaluation/libm-hyperbolic.ts` transcribes fdlibm's `e_sinh.c`,
+`e_cosh.c` and `s_tanh.c`, and `src/evaluation/libm-expm1.ts` fdlibm's
+`s_expm1.c` (Sun's notices kept). fdlibm's `expm1` alone does not give
+glibc's digits: glibc evaluates the same polynomial in a different order.
+The port's `expm1` evaluates it as three short pieces combined with the
+even powers of its variable: fdlibm's terms, regrouped. The order came from
+comparing results against glibc 2.35 through Ruby's `Math`, and was then
+confirmed by reading glibc 2.35's `s_expm1.c`, which has the same grouping,
+keeps Sun's notice, and notes a 1997 modification by Naohiko Shimizu (Tokai
+University) "for performance improvement on pipelined processors".
+`PATH="$(mise where node@24.18.0)/bin:$(mise where ruby@4.0.1)/bin:$PATH" node scripts/measure-libm-hyperbolic-glibc.mjs --expm1-order` repeats it: over
+3,028,620 seeded arguments with `|x| < 44` (both signs, log- and
+linear-uniform, and 3,000 consecutive doubles either side of each of
+`expm1`'s branch points), the count of arguments whose `expm1` differs from
+Ruby's `Math.expm1` is 276 in fdlibm's Horner order and 0 in the split order
+(2026-09-29, seed 20260928).
+
+Every region that goes only through `expm1` therefore answers glibc's double
+and never refuses. Where `sinh` or `cosh` call `exp` (`sinh` from `|x| = 22`,
+`cosh` from `ln2/2`, and `exp(|x|/2)` from `ln(DBL_MAX)` to the overflow
+threshold), the port uses `libm.ts`'s correctly rounded `exp`, refused inside
+`exp`'s own band (1/80 ULP, "`Math` function results inside glibc's rounding
+band" above); outside it that double is glibc's, and the rest of fdlibm's
+formula is plain double arithmetic. `csch` and `coth` of a zero raise the
+gem's `DivisionByZeroError`, and an overflowing result the gem's
+`NonFiniteResultError` (probed on the gem, 0.11.6).
+
+Measured by `PATH="$(mise where node@24.18.0)/bin:$(mise where ruby@4.0.1)/bin:$PATH" node scripts/measure-libm-hyperbolic-glibc.mjs` (Ruby 4.0.1, glibc
+2.35, x86-64, 2026-09-29): seeded samples, both signs, log- and
+linear-uniform, dense near 0, near the overflow threshold and near
+saturation, 100,000 uniform and 5,000 log-uniform per computing region,
+consecutive doubles either side of every branch point of the three
+functions and of `expm1` (at `|x|` and, for `tanh`, `|x|/2`), subnormals,
+hand-typed values, `±0`, `±Infinity` and NaN. Differences from Ruby's
+`Math`, in the function or its reciprocal:
+
+| Seed (scale) | `sinh` answered / refused | `cosh` answered / refused | `tanh` answered / refused | Differences |
+| --- | --- | --- | --- | --- |
+| 20260928 (1), recorded in `test/evaluation/libm-hyperbolic-corpus.json` | 1,274,529 / 15,258 (1.183%) | 1,478,203 / 22,786 (1.518%) | 867,383 / 0 | 0 |
+| 4242 (2) | 2,549,175 / 30,212 (1.171%) | 2,955,495 / 46,294 (1.542%) | 1,734,583 / 0 | 0 |
+| 777 (2) | 2,548,609 / 30,778 (1.193%) | 2,956,287 / 45,502 (1.516%) | 1,734,583 / 0 | 0 |
+
+Per region in the recorded run, every refusal is in a region that calls
+`exp`, at about the 2.5% that `exp`'s 1/80 band covers:
+
+| Function | Region | Path | Refused |
+| --- | --- | --- | --- |
+| `sinh` | `|x| < 2^-28` (returns `x`) | none | 0% |
+| `sinh` | `2^-28 <= |x| < 22` | `expm1` | 0% |
+| `sinh` | `22 <= |x| < ln(DBL_MAX)` | `exp(|x|)` | 2.490% |
+| `sinh` | `ln(DBL_MAX) <= |x| <= 710.4758600739439` | `exp(|x|/2)` | 2.486% |
+| `cosh` | `|x| < 2^-55` (returns `1`) | none | 0% |
+| `cosh` | `2^-55 <= |x| < ln2/2` | `expm1` | 0% |
+| `cosh` | `ln2/2 <= |x| < 22` | `exp(|x|)` | 2.458% |
+| `cosh` | `22 <= |x| < ln(DBL_MAX)` | `exp(|x|)` | 2.494% |
+| `cosh` | `ln(DBL_MAX) <= |x| <= 710.4758600739439` | `exp(|x|/2)` | 2.469% |
+| `tanh` | every region | `expm1` or none | 0% |
+
+Of the 132 hand-typed values (`0.1`, `1`, `2`, `pi`, `700`, both signs),
+`sinh` and `cosh` each refuse 2 (`±22`: `exp(22)` lies 0.0068 ULP from a
+midpoint, BigDecimal) and `tanh` none. `sinh(1)`, `cosh(1)`, `tanh(0.5)` and
+`tanh(1)` answer.
+
+What remains: the `exp` band refusals, which close only with glibc's own
+`exp` digits (the same gap as `Math.exp`'s). The `expm1` order is measured,
+not proven: a glibc built to contract the polynomial into fused
+multiply-adds could round differently, and the measurement script refuses
+any glibc other than 2.35.
+
+### Evaluation: `lg` near `log`'s rounding band
+
+`Math.log10` is glibc's `log10`, Sun's fdlibm formula over glibc's `log` of
+the reduced argument (`src/evaluation/libm-log10.ts`). glibc's `log` has an
+FMA variant chosen by the CPU, so the port takes it from `libm.ts`'s
+correctly rounded `log`. When that `log` lies inside its 1/125 ULP band, the
+port still answers if the correctly rounded `log` and both its neighbours
+give the same `log10` (Arm's analysis puts glibc's `log` within about 0.52
+ULP, and the rule needs only one), and refuses otherwise.
+`scripts/measure-libm-log-glibc.mjs` (seed 20260928, 2026-09-28; Ruby
+4.0.1, glibc 2.35, x86-64 with FMA) compared 308,199 doubles: 0 mismatches
+against Ruby's `Math.log10`, 991 refused (0.32%; 783 of them among the
+50,000 arguments within 1/16 of 1). `Math.log(x, base)` needs no band: its
+`log2` is transcribed from Arm's optimized-routines exactly (0 mismatches on
+the same 308,199 `Math.log2` arguments and 200,117 `Math.log(x, base)`
+pairs). A separate, Ruby-sampled run during development (908,197 arguments, 299,508
+pairs) also found 0 mismatches.
+
+### Evaluation: exact intermediates beyond the port's size limit, and Ruby's `ArgumentError`
+
+**Decided 2026-09-23.** `src/evaluation/numeric.ts` computes Ruby's Integers
+and Rationals exactly (`bigint`) and refuses only a FINAL result a JS number
+cannot hold. Two kinds of intermediate are refused on the spot with
+`UnsupportedFeatureError` instead:
+
+- where Ruby itself raises `ArgumentError: exponent is too large` (an Integer
+  or Rational raised to an Integer outside the 62-bit Fixnum range, or a power
+  beyond Ruby's 2^34-bit result limit). That is not an evaluation error — it
+  escapes `Formula#evaluate` — and Ruby's evaluation stops there too;
+- an Integer longer than 2^22 bits, or a Rational numerator or denominator
+  longer than 2^16 bits. Ruby (linked with GMP) keeps going, but V8's `BigInt`
+  takes seconds per operation at that size and has no fast gcd. This is a
+  resource limit, not Ruby behaviour: an evaluation error Ruby would raise
+  later in the same expression is reported as this refusal instead.
+
 ## Upstream issues
 
 Defects in the Ruby gem, found while building the port. All reproduce on a
 clean checkout. None is worked around here — the corpus records the gem's
 real behaviour, including its bugs.
+
+### README documents the wrong `evaluation_max_iterations` default
+
+The gem's README (`README.adoc` lines 323-324, pinned oracle `00c52783`) says
+`Sum`/`Prod` iterations "are capped at
+`Plurimath.configuration.evaluation_max_iterations` (default 1,000,000)". The
+code says `100_000`: `lib/plurimath/configuration.rb`'s
+`DEFAULT_MAX_ITERATIONS`, and measured — `sum_(i=1)^100001 i` raises
+`UnsupportedExpressionError` ("iteration range larger than 100000 steps")
+while `sum_(i=1)^100000 1` answers `100000`
+(`scripts/generate-evaluation-fixtures.rb`'s `sum-over-cap` and `sum-at-cap`
+rows). The port follows the code: `evaluate()`'s `evaluationMaxIterations`
+option defaults to `100_000` (`src/evaluation/index.ts`). The README is what
+needs fixing upstream.
 
 ### `Matrix#to_mathml_without_math_tag` crashes on any fenced non-round matrix
 
@@ -550,7 +800,82 @@ per key, because Parslet binds on the matcher kind too — are listed as
 refused, because for this port that would mean a rule family the first slice has
 not reached.
 
+### `Formatter::Standard` ignores `locale:` for the decimal and group symbols
+
+```ruby
+Plurimath::Formatter::Standard.new(locale: "de").localized_number("1234567.891")
+# => "1,234,567.891"   (German symbols would be "1.234.567,891")
+Plurimath::NumberFormatter.new("de").localized_number("1234567.891")
+# => "1.234.567,891"   (the base class does apply the locale)
+```
+
+`Standard#set_default_options` fills every `DEFAULT_OPTIONS` key, including
+`decimal: "."` and `group: ","`, into the options hash before
+`SymbolResolver#resolve` merges the locale's `SupportedLocales` entry underneath
+it (`locale_symbols.merge(localizer_symbols_hash)`), so the locale never
+supplies anything. `decimal` and `group` are the only two keys any of the 96
+entries carries, so `locale:` is fully inert through `Standard`: measured on the
+oracle (`00c52783`) for `"1234567.891234"` in asciimath, latex, html, mathml,
+omml and unicodemath, `locale:` of `"en"`, `"de"`, `"fr"`, `"de-CH"`, `"ar"`,
+`"xx"`, `nil`, `42`, `:de` and `"DE"` all answer `1,234,567.891'234`; an
+unknown or non-string locale falls back to `:en` without raising
+(`NumberFormatter#supported_locale`).
+
+Evidence: pinned corpus cases `number-formatter-locale-de-standard-defaults`,
+`number-formatter-locale-fr-standard-defaults` and
+`number-formatter-locale-unsupported-falls-back` record the en symbols.
+Reproduce with `BUNDLE_GEMFILE=~/ruby_gems/plurimath-oracle/Gemfile mise x --
+bundle exec ruby -e 'require "plurimath"; puts Plurimath::Formatter::Standard.new(locale: "de").localized_number("1234567.891")'`.
+
+**The port reproduces this on purpose.** It stays byte-exact with the oracle
+(decision 2026-09-21): `resolveNumberFormat` accepts `locale` and ignores it,
+and `test/formatting/number-format-locales.spec.ts` plus the three corpus cases
+in `number-formatter-numeric-pipeline.spec.ts` pin it. The fix is scheduled for
+BOTH the Ruby gem and this port, after the byte-identical structure is
+complete: make `Standard` layer the locale's symbols under explicit options,
+then re-record the corpus and flip the port together. Not yet reported upstream.
+
+### Typed-options refuse the gem's numeric-String/Symbol coercions
+
+**Intentional, not a gap.** Three `formatter.options` fields the gem coerces
+from a numeric String (or Symbol) are typed as numbers/strings in this port
+and refuse a String/Symbol value instead of coercing it:
+
+- `countOption` (`src/formatting/number-format.ts:206`) — the count options
+  (`groupDigits`, `fractionGroupDigits`, `digitCount`, `paddingDigits`,
+  `paddingGroupDigits`, `significant`) — the gem's `integer_option` accepts a
+  numeric String/Symbol (`"3"`, `:"3"`) and coerces it; this port's fields are
+  typed `number`, so a string is refused rather than coerced.
+- `separatorOption` (`src/formatting/number-format.ts:275`) — the
+  decimal/group/fraction-group markers — the gem stringifies any non-Boolean
+  value (`to_s`/`inspect`) before use; this port's fields are typed `string`,
+  so a non-string (other than the handled `undefined`/`null`) is refused
+  rather than stringified.
+- `baseOption` (`src/formatting/number-format.ts:328`) — the `base` option —
+  the gem accepts a numeric String (`"16"`) and coerces it; this port's field
+  is typed `number`, so a string is refused rather than coerced.
+
+Each divergence is a typed-API boundary, the same shape as the locale
+divergence above: the gem's dynamically-typed `options` Hash accepts whatever
+Ruby can stringify, while this port's `FormatterSymbolOptions` fields are
+typed TypeScript numbers/strings. None of the three is reachable through valid
+typed TypeScript usage — only through a runtime cast or otherwise misusing the
+type system (`as never`, `any`, a `.js` caller) would a numeric-String value
+ever reach one of these functions. Not scheduled for a fix: there is no
+Ruby-gem defect to mirror here, unlike the locale case above.
+
 ## Parked ideas
+
+### One evaluation error type, instead of eight
+
+**Parked, 2026-09-23.** `TODO.plan/open-decisions.md`'s "Evaluation error family (B6, first slice)"
+settled on mirroring the gem's `Errors::Evaluation::*` one to one — eight
+classes — for this slice. The maintainer's own preference is the opposite:
+one `EvaluationError` type, most likely carrying a reason code rather than a
+class per failure. Parked rather than built now because changing it later
+means changing it in the gem too — a single-error-type design is not this
+port's call to make unilaterally against the gem's own shape — so it waits
+for that to be decided for both together, not before.
 
 ### Entity handling in the P3 input parsers
 
@@ -633,12 +958,13 @@ emits the rest of the data now measures and emits them into
   `Table::Matrix` render per `to_matrices` paren (the NoMethodError miss
   verified), a `Table::Array` render per alignment (the `.` fallback
   verified);
-- `COLOR_ASCIIMATH_SYMBOLS` — `to_asciimath` measured for exactly the ids the
-  renderer names (`Plus`, `Eqno`), each verified through a full `Color`
-  render.
+- `COLOR_ASCIIMATH_SYMBOLS` — widened to every static symbol class (1,459
+  ids, matching `MATHML_COLOR_SYMBOL_LITERALS`), each verified through a
+  full `Color` render; see "LaTeX: Color renders only the measured
+  AsciiMath fragment" below for the closure.
 
-All sixty-eight entries stay pinned by literal probe-backed tests
-(`test/generated/latex-render-tables.spec.ts` and the behavioural pins in
+All 1,525 entries across the six tables stay pinned by literal probe-backed
+tests (`test/generated/latex-render-tables.spec.ts` and the behavioural pins in
 `test/formats/latex/renderer.spec.ts`), independent of the generated data
 they check; a gem bump now re-measures the tables on regeneration.
 
@@ -766,49 +1092,40 @@ those nondeterministic bytes, matching the policy already recorded for LaTeX's
 node-valued paren slots. Constructor-normalized Symbol/Paren and Number string or nil
 values still render byte-for-byte; forged container values refuse at the runtime boundary.
 
-### LaTeX: Color renders only the measured AsciiMath fragment
+### LaTeX renderer: `Color`'s attribute is the gem's one cross-format call
 
-**Trigger: corpus or sweep growth that exercises a new color operand.**
+**Trigger: a consumer report with a color argument beyond the measured
+shapes, or the P2 renderer round deciding a shared cross-format helper.**
 
-`Color`'s first slot renders through the gem's `to_asciimath`. The port
-carries only the measured fragment (base symbols, numbers, quoted text,
-formula joins, `Plus`, `Eqno`) and raises `RenderError` for other symbol ids
-the gem would render — a loud gap, not a silent wrong byte. (The generated
-color-asciimath slice landed 2026-08-06 carrying exactly this fragment; the
-gap itself remains until the corpus exercises more operands.)
+`Color#to_latex` builds its brace argument from `parameter_one.to_asciimath`
+(color.rb:41) — the latex path calling the asciimath renderer, which §3's
+independent format slices deliberately cannot do. The port reproduces the
+measured first-slot shapes from the latex slice's own generated literal
+table (`LATEX_COLOR_ASCIIMATH_SYMBOLS`): formulas/mrows of symbols, every
+static symbol id, numbers and texts. Any other first-slot node KIND (a
+`fontStyle` or `fenced` node renders its own full asciimath in the gem)
+raises a named `RenderError` instead of approximating a full asciimath
+render this format does not own — the same policy, and the same measured
+exception, MathML's `Color` entry above already carries.
 
-**The trigger fired, 2026-08-21.** Every gem-declared AsciiMath symbol token
-swept through `color(<token>)(y)` — 3,217 of them, the measured size of
-`Utility.symbols_hash(:asciimath)` on the pinned oracle (00c52783). 3,216
-parse to a top-level `Color`; only `-:` does not, and neither does the gem
-(both sides answer `c o l o r ( - \rangle ( y )`). Of those 3,216, `toLatex`
-raises for 3,209 and `toMathml` for 4.
-
-The seven `toLatex` does render (`+`, `#`, `&#x2b;`, `&#x23;`, `"P{plus}"`,
-`"P{eqno}"`, `"P{octothorpe}"`) are byte-identical to the gem, so the
-fragment is narrow, not wrong — and narrow is all the committed inputs ask
-for: the shared corpus has two color cases (`color(red)(x)`,
-`color(blue)(x) + y`) and the 1,642-input sweep three (`color(red)(x)`,
-`color(blue)(y+1)`, `color(#ff0000)(z)`), whose first slots between them
-need only letter symbols, a number and `Eqno`. Everything past that the gem
-renders and this port refuses: `color(alpha)(y)` is `{\color{alpha} y}` from
-the gem and a `RenderError` here, and an every-40th sample of the 3,217 came
-back from the gem as a `{\color{...} y}` render, 81 out of 81.
-
-Sized, now that the trigger has fired. 3,205 of the 3,209 refusals are one
-missing symbol literal each, over 1,393 distinct ids, against the 2 entries
-(`Plus`, `Eqno`) `LATEX_COLOR_ASCIIMATH_SYMBOLS` carries — and all 1,393 are
-already carried mathml-side by `MATHML_COLOR_SYMBOL_LITERALS`, whose 1,459
-entries are identical to `ASCIIMATH_SYMBOLS` key for key and value for
-value. So closing the bulk is the re-emission `generate-corpus.rb` already
-performs for the mathml slice, not new parity measurement. The remaining 4
-(`ZZ`, `:`, `:.`, `:'` — `fontStyle` and `fenced` nodes) are exactly the
-four `toMathml` refuses as well, and stay refused for the reason the mathml
-entry gives: their operand's render is a composite's full asciimath, which
-§3 keeps out of this format.
-
-The decision is unchanged — still DEFERRED. What changed is that it is a
-sized decision, and the trigger this entry names has now fired once.
+This was previously a sized, still-open gap: a 2026-08-21 sweep of every
+gem-declared AsciiMath symbol token through `color(<token>)(y)` — 3,217 of
+them, the measured size of `Utility.symbols_hash(:asciimath)` on the pinned
+oracle (00c52783) — found `toLatex` raising for 3,209 of the 3,216 that
+parse to a top-level `Color` (only `-:` does not parse, on either side).
+3,205 of those 3,209 were one missing symbol-id literal each, over 1,393
+distinct ids, against the 2 entries (`Plus`, `Eqno`)
+`LATEX_COLOR_ASCIIMATH_SYMBOLS` carried at the time — and all 1,393 turned
+out already measured, byte-identical, by `MATHML_COLOR_SYMBOL_LITERALS`
+(1,459 entries, key for key and value for value). Closing the bulk was the
+re-emission `generate-corpus.rb` already performs for the mathml slice, not
+new parity measurement — `latex_color_asciimath_symbols` now iterates
+`static_symbol_classes` exactly as `mathml_color_symbol_literals` does,
+2026-09-22. The remaining 4 (`ZZ`, `:`, `:.`, `:'` — tokens whose parsed
+first slot is a `fontStyle` or `fenced` composite) are exactly the four
+`toMathml` refuses too, and stay refused for the reason above: their
+operand's render is a composite's full asciimath, which §3 keeps out of
+this format.
 
 ### LaTeX: no symbol-exception context axis is threaded
 
@@ -947,10 +1264,110 @@ are refused, which is a parity decision (the gem `SystemStackError`s at ~300
 nesting, so the port is far more permissive today either way), and it wants its
 own change with its own measurements rather than riding along with a test gate.
 
-The immediate risk is contained: both paths end in a typed error, the
-adversarial gate asserts `STACK_EXHAUSTED_MESSAGE` for **every** row it pins as
-rejected (driven off the case table, so the two cannot drift apart), and the two
-messages are distinct so a silent swap cannot pass unnoticed.
+The immediate risk was contained at the time this was written: both paths end
+in a typed error, and the adversarial gate asserted `STACK_EXHAUSTED_MESSAGE`
+for **every** row it pinned as rejected — true for `MAX_DEPTH`'s observed
+behaviour then, but since superseded. **This is no longer what the gate
+asserts** (see the 2026-09-23 update below): it now checks membership in the
+current three-message set (`STACK_EXHAUSTED_MESSAGE`, `DEPTH_LIMIT_MESSAGE`,
+or, for HTML, the JSON-nesting cap), driven off the case table so the
+messages still cannot drift apart, and the messages stay distinct so a silent
+swap cannot pass unnoticed.
+
+**Update 2026-09-21: the trigger fired and the gate now covers LaTeX, HTML and
+UnicodeMath.** `test/adversarial/adversarial-inputs.spec.ts` pins, per grammar,
+parses at nesting 20 and refusals at 1,000 for nested braces/`\frac`/`\sqrt`/
+parens/`\left(`/superscripts (LaTeX), `<mrow>`/`<sup>`/parens (HTML) and
+parens/brackets/roots/fractions (UnicodeMath), plus unterminated and unmatched
+closers, long runs, NUL and lone surrogates. On this measurement, every
+1,000-deep refusal was the `RangeError` path (`STACK_EXHAUSTED_MESSAGE`); HTML
+at exactly 100 levels was the JSON round trip's `nesting of 100 is too deep`,
+which the gem raises too. Against the gem (measured on `00c52783`): LaTeX and
+UnicodeMath parse at 20 and overflow the Ruby stack (`SystemStackError`) by
+100; the port's ceiling is at or above the gem's at every depth measured on
+both sides, so the port is never stricter than the gem at a measured depth
+(LaTeX `\frac` is the near-tie: refused from 70 here, gem parses 60 and
+overflows at 80). The claim that follows — that `MAX_DEPTH` never fires — did
+not survive the next trigger below and has been corrected there.
+
+**Update 2026-09-23: the "runtime change" trigger fired, and `MAX_DEPTH`
+*does* fire — the 2026-09-21 claim was wrong as a universal statement, right
+only for the one pool this repository happens to test under.** A review
+running the same gate on Node 24 saw rows that were pinned to
+`STACK_EXHAUSTED_MESSAGE` come back `DEPTH_LIMIT_MESSAGE` instead (e.g. "latex:
+1,000 nested braces"). Reproduced directly this session, isolating the
+variable: on the SAME build and the same three Node majors CI pins
+(20/22/24 — installed and measured LOCALLY, via `mise`, at patches
+20.20.2/22.23.2/24.18.0; CI's own matrix, `.github/workflows/ci.yml`, pins
+only the majors and resolves whatever patch is current at each run, so these
+exact patches are this measurement's, not a guarantee of what CI runs),
+vitest's default `forks` pool (what this repository's CI actually runs,
+unconfigured — no `pool` setting anywhere in this repo) never once produced a
+`MAX_DEPTH` refusal, on any of the 94 adversarial-gate assertions;
+`--pool=threads` flips several of them. The
+mechanism, also measured directly: a trivial recursive function with no
+grammar overhead reaches roughly 12,300–13,700 frames before `RangeError`
+under `forks` on this machine (both Node 20 and 24), comfortably BELOW
+`MAX_DEPTH` (20,000) — matching the 2026-08-17/2026-09-21 measurements exactly,
+which is why nothing here was wrong on the pool this repo actually runs — but
+roughly 49,700–55,200 frames inside a `worker_threads` worker (what a
+`threads` pool test runs inside), comfortably ABOVE it. That is the opposite
+of what this entry's own trigger note assumed ("a worker with a smaller
+stack"): on this machine a `worker_threads` worker's usable JS stack measured
+**larger** than a forked child's, not smaller, and that is what makes
+`MAX_DEPTH` win the race for some 1,000-deep rows under `threads` where it
+never did under `forks`. Under `--pool=threads`, "html: 1,000 nested parens"
+goes a step further and reaches neither depth guard at all before the JSON
+round trip's own nesting-100 cap catches the resulting tree in the post-parse
+walk — a third legitimate typed refusal for the same row.
+
+Both depth guards, and the JSON-nesting cap where HTML reaches it, are the
+same clean, typed `ParseError`/`PARSE_ERROR` refusal — the property that is
+actually invariant, and the property PORTING-STANDARDS' "refuse, don't crash
+or hang" bar cares about. The gate's own tests were rewritten (2026-09-23) to
+pin exactly that instead of a specific guard: `guardFor` in both "guard that
+says which guard it was" describe blocks now asserts the error's class
+(`instanceof ParseError`) and code (`cleanErrorCode`) before returning its
+message, and the row-level assertions check membership in the set of known
+clean-refusal messages rather than equality with one of them. **The
+`instanceof ParseError` half of that was itself a gap a follow-up review
+found and closed the same day**: the LaTeX/HTML/UnicodeMath block's `guardFor`
+originally checked `cleanErrorCode(error) !== "PARSE_ERROR"` alone, which
+(by design, for the dual ESM/CJS cross-copy case `cleanErrorCode`'s own
+comment explains) accepts any `Error` carrying a `code: "PARSE_ERROR"`
+property whether or not it is really a `ParseError` — so the claim in this
+paragraph was not yet true when first written. It is true now. One test in
+each block is still guard-specific: "does not refuse any pinned row through
+MAX_DEPTH on vitest's forks pool" is `it.skipIf`'d on
+`!isMainThread` (`node:worker_threads`) rather than merely commented as
+pool-scoped, so it SKIPS with that reason under `--pool=threads`, where the
+claim is known false, instead of failing there. `MAX_DEPTH`'s own mechanism —
+that it fires exactly one past its threshold, found by binary search rather
+than importing the private constant — is proven independently of any pool or
+engine stack size in the new `test/pegkit/depth-limit.spec.ts`, by mutating
+`ParseContext.depth` directly through the `dynamic()` atom rather than by
+constructing enough real nested atoms to reach it.
+
+One row was found to be more fragile still, and was deliberately left as
+found rather than folded into this fix: the pre-existing (2026-08-17)
+AsciiMath row `"tokens: 2,000 superscripts"` does not merely change GUARD
+under `--pool=threads` — it stops refusing altogether (`outcomeOf` returns
+`"parsed"`), because `threads`' larger stack budget on this machine is enough
+to fully parse 2,000 `^y` levels without exhausting either guard. This is a
+genuine environment-dependent OUTCOME flip, not just a message flip, on a row
+outside the LaTeX/HTML/UnicodeMath rows this update's trigger was about; it is
+recorded here rather than silently patched because closing it is a sizing
+decision (how much deeper the row needs to be pinned to clear `threads`' much
+larger budget too) that deserves its own measurement, not a rider on this
+entry.
+
+Still open: the deterministic bound itself remains undesigned (this entry's
+original "why not fix now" reasoning is unchanged), and the exact
+frames-per-real-stack-depth ratio is expected to keep moving with the engine,
+the pool, and the host — the n=20/n=1,000 pins are placed to survive that
+movement in OUTCOME, and, since 2026-09-23, the gate no longer asserts a
+specific guard for the rows in between, only that a refusal is one of the
+known clean shapes.
 
 ## AsciiMath rejection position: `right-unclosed`
 
@@ -1023,22 +1440,81 @@ entry:
 value, or a parser is added that can produce one, or the model schema gains
 Ruby type information for option values.
 
-### OMML: the four `to_omml` keywords refuse rather than render
+### OMML: the `unitsml` keyword refuses rather than renders
 
-**Trigger: any one of the four gains a measured rendering path — display style
-when the recursive override is measured across the whole renderer, line
-breaking when Word's break-run separator is measured, the formatter with P4,
-and UnitsML when [ARCHITECTURE.md](../ARCHITECTURE.md) §5 stops deferring it
-wholesale.**
+**Trigger: UnitsML when [ARCHITECTURE.md](../ARCHITECTURE.md) §5 stops
+deferring it wholesale.**
 
 `Formula#to_omml` accepts `display_style`, `split_on_linebreak`, `formatter`
-and `unitsml`. The port names each one and refuses it, rather than accepting
-the keyword and quietly ignoring what it asks for — a silently dropped option
-renders plausible OMML that is not what the caller asked for, which is the
-failure this port refuses to have.
+and `unitsml`. The first three are implemented (B3, B2); the port names
+`unitsml` and refuses it, rather than accepting the keyword and quietly
+ignoring what it asks for — a silently dropped option renders plausible OMML
+that is not what the caller asked for, which is the failure this port refuses
+to have.
 
-`src/formats/omml/renderer.ts` carries the four reasons next to the refusal and
+The per-node `toOmmlWithoutMathTag` takes `formatter` (the gem's
+`to_omml_without_math_tag` reads it from its `options:` hash) and keeps
+refusing `displayStyle` and `splitOnLinebreak` by name: the gem's per-node
+method takes the display style as a positional argument and has no line
+splitting, so neither keyword belongs on it.
+
+`src/formats/omml/renderer.ts` carries the reasons next to the refusal and
 points here; this is the entry it points at.
+
+### OMML: a semantic base renders as prefixed text on the insert path
+
+```ruby
+f = Plurimath::Formatter::Standard.new(options: { base: 16 })
+Plurimath::Math::Formula.new([Plurimath::Math::Number.new("255")]).to_omml(formatter: f)
+# => ... <m:r><m:t>0xff</m:t></m:r> ...          (asciimath: "ff_(16)")
+Plurimath::Math::Number.new("255").to_omml_without_math_tag(true, options: { formatter: f })
+# => <m:sSub> ... <m:t>ff</m:t> ... <m:sub> ... <m:t>16</m:t> ...
+```
+
+`Number` has two OMML paths. `to_omml_without_math_tag` hands the formatter's
+result to `Formatter::Numbers::OmmlRenderer.render`, which draws a semantic
+base (a base other than 10 with neither `base_prefix` nor `base_postfix`
+given) as an `m:sSub` and a `scientific`/`engineering` notation as an
+`m:sSup`. But every number inside a formula — a formula's items, a
+fraction's slots, a power's base, a root, a fence, an n-ary's limits —
+goes through `insert_t_tag`/`t_tag`, which writes
+`format_value_with_options(options).to_s`: the semantic base comes out as
+`FormattedNumber#to_s` with the default prefix (`0xff`, `0b11,111,111`,
+`0o377`), and a notation as the flat `1.234'567'891 x 10^6`. So the same
+number renders differently depending on which path reached it, and the
+insert path — the common one — drops the subscript form every other target
+keeps (`ff_(16)`, `\mathrm{ff}_{16}`, `<msub>`). Measured on the oracle
+(`00c52783`); `test/formatting/number-formatter-omml-cases.ts` pins both
+paths.
+
+**The port reproduces this on purpose** (byte-exact with the oracle,
+`src/render/number/omml.ts`). Fix in BOTH the gem and this port after the
+byte-identical structure is complete: route `insert_t_tag` through
+`OmmlRenderer` (or at least give the semantic base a subscript there), then
+re-record and flip the port together. Not yet reported upstream.
+
+### `string_format:` templates: an unanchored first match, silently ignored when absent
+
+`SymbolResolver::LOCALIZE_NUMBER_REGEX`
+(`(?<group>[^#])?(?<groupdigits>#+0)(?<decimal>.)(?<fractdigits>#+)(?<fractgroup>[^#])?`)
+is matched unanchored and only its first match is read, so, measured on the
+oracle (`00c52783`) rendering `1234567.1234567`:
+
+- a template whose fraction digits are `0` rather than `#` — `"#,##0.00"`,
+  the most familiar spreadsheet spelling — or whose integer side does not end
+  in `0` (`"#.###,##"`, `"#,###.##"`) matches nothing, and the template is
+  ignored without any error: the default `1,234,567.123'456'7` comes back;
+- any character but `"\n"` is taken as the decimal marker, `"\r"` and tab
+  included (`"#,##0\r###"` answers `1,234,567\r1234567`);
+- the first match can start inside the template: `"#0##0.##"` reads decimal
+  `"#"` and fraction group `"0"` and answers `1234567#1020304050607`, and
+  `"0##0.##"` takes `"0"` as the group marker (`102340567.1234567`).
+
+**The port reproduces this on purpose** (`src/formatting/string-format.ts`,
+cases in `test/formatting/string-format-cases.ts`). Fix in BOTH the gem and
+this port after the byte-identical structure is complete — anchor the
+pattern, accept `0` fraction digits, and raise on a template that does not
+parse — then re-record and flip the port together. Not yet reported upstream.
 
 ### OMML: `fenced` refuses the paren shapes whose gem output is not reproducible
 
@@ -1135,3 +1611,13 @@ codepoint: `#` before `{`, `$` or `@`, which Ruby escapes and JSON does not.
 it: section 3 rule 8 gives a kind file its own format's `render-shared` and no
 other's, so a shared spelling would have to move into core, which is a layering
 decision rather than a bug fix.
+
+## Number formatting: an absurd exponent fails in both implementations, differently
+
+`1e100000000000000000000` (an exponent past 64 bits) with `notation: "e"`. The
+oracle raises `RangeError` ("bignum too big to convert into 'long'"); this port
+raises `RangeError` ("Invalid string length"). Both refuse the input, so no
+output can disagree; only the message differs. Found in a strict review of the
+B2 notations branch. Not engineered around: no caller can act on the
+difference, and an exact match would mean re-implementing the gem's
+`Integer#to_i` overflow check for a value no formula holds.

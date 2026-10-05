@@ -481,22 +481,26 @@ export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
  *
  * The `power` six and the `powerBase` nine are gone: both aliases are measured
  * now, and every one of those fifteen rows reproduces the gem's own bytes from
- * this fixture. What is left is four rows and three unrelated root causes.
+ * this fixture.
+ *
+ * Three more closed by making the port byte-exact, each measured on the pinned
+ * oracle `00c52783` with bytes that do not depend on the parent.
+ * `td[0]=nil`: `Td#initialize`'s `Array()` makes nil `[]`, and the gem renders
+ * `<td></td>` alone and `<table><tr><td></td></tr></table>` inside a `Table`,
+ * as for `[]`; `BinaryFunctionNode` now coerces it too. `number[0]=zero` (`0`)
+ * and `number[0]=empty-array` (`[]`), the same alone, inside a `Frac` and
+ * inside an `Mrow`: `Number#to_html`'s `to_s`, which `renderNumber` now
+ * answers for a list and a finite number. One row is left, and it stays: the
+ * gem's own bytes for it are not reproducible.
  */
 export const DEGENERATE_REFUSES: Readonly<Record<string, string>> = {
-  // `Td#initialize` calls `super(Array(parameter_one), ...)`, so nil becomes the
-  // empty list and the gem renders `<td></td>`. `BinaryFunctionNode` assigns the
-  // slot unconditionally (nodes.ts, `assignedParameter`), leaving it null, and
-  // `renderTd` refuses a non-list. The port is missing Ruby's `Array()` coercion.
-  "td[0]=nil": "Td#initialize coerces nil to [] with Array(); BinaryFunctionNode does not",
-
-  // `Number#initialize` stores its argument as-is and `Number#to_html`
-  // interpolates it, so Ruby spells any object. `interpolatedValue`
-  // (render-shared.ts) reproduces only null, string, boolean and non-finite
-  // number, and refuses the rest rather than guess at Ruby's spelling.
-  "number[0]=zero": 'the gem interpolates 0 as "0"; interpolatedValue refuses a finite number',
-  "number[0]=empty-array": 'the gem interpolates [] as "[]"; interpolatedValue refuses an array',
-  "number[0]=node": "the gem interpolates a heap address; the port refuses unreproducible bytes",
+  // Measured: `Number.new(Symbols::Symbol.new("a")).to_html` interpolates the
+  // node's default `Object#to_s`, `#<Plurimath::Math::Symbols::Symbol:0x…>`,
+  // and the probe's two builds of the cell spelled two different addresses
+  // (`stable: false` in the fixture). No port can reproduce a heap address, so
+  // `interpolatedValue` refuses an object.
+  "number[0]=node":
+    "the gem renders #<Plurimath::Math::Symbols::Symbol:0x…>, a per-object heap address; the port refuses unreproducible bytes",
 };
 
 /**

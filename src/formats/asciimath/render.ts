@@ -46,7 +46,7 @@ import { renderUl } from "../../render/ul/asciimath";
 import { renderUnaryFunction } from "../../render/unary-function/asciimath";
 import { renderUnderset } from "../../render/underset/asciimath";
 import { renderVec } from "../../render/vec/asciimath";
-import { FORMAT, type RenderContext, type RenderFn } from "./render-shared";
+import { FORMAT, type NumberFormat, type RenderContext, type RenderFn } from "./render-shared";
 
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   abs: renderAbs,
@@ -121,26 +121,37 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
 }
 
 /**
- * The two context values the asciimath path ever holds — the axis is one
- * boolean, flipped in exactly one place (`Td`, `../../render/binary-function/asciimath.ts`, via
- * `withTable`). Each carries the dispatcher bound to itself, which is how
- * recursion reaches the table without any kind file importing it.
+ * The two `table` context values the asciimath path ever holds — the axis is
+ * one boolean, flipped in exactly one place (`Td`,
+ * `../../render/binary-function/asciimath.ts`, via `withTable`) — crossed
+ * with whichever `numberFormat` the entry point resolved from the per-call
+ * `formatter:` option (`../../formatting/number-format.ts`). Each context
+ * carries the dispatcher bound to itself, which is how recursion reaches the
+ * table without any kind file importing it; `withTable` derives the sibling
+ * with the same `numberFormat`, never resetting it.
  */
-const TABLE_CONTEXT: RenderContext = {
-  table: true,
-  render(node) {
-    return renderNode(node, TABLE_CONTEXT);
-  },
-  get withTable(): RenderContext {
-    return TABLE_CONTEXT;
-  },
-};
+function buildContext(table: boolean, numberFormat: NumberFormat | null): RenderContext {
+  const context: RenderContext = {
+    table,
+    numberFormat,
+    render(node) {
+      return renderNode(node, context);
+    },
+    get withTable(): RenderContext {
+      return table ? context : buildContext(true, numberFormat);
+    },
+  };
+  return context;
+}
 
-/** Where `Formula#to_asciimath` starts: no axis set. */
-export const ROOT_CONTEXT: RenderContext = {
-  table: false,
-  render(node) {
-    return renderNode(node, ROOT_CONTEXT);
-  },
-  withTable: TABLE_CONTEXT,
-};
+/**
+ * Where `Formula#to_asciimath` starts, for a given `formatter:` resolution —
+ * `toAsciimath` (`./renderer.ts`) calls this once per render with the
+ * `NumberFormat` `resolveNumberFormat` answered (or `null` for no formatter).
+ */
+export function createRenderContext(numberFormat: NumberFormat | null): RenderContext {
+  return buildContext(false, numberFormat);
+}
+
+/** The common case: no `formatter:` option at all. */
+export const ROOT_CONTEXT: RenderContext = createRenderContext(null);

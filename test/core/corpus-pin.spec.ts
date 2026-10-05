@@ -11,7 +11,16 @@
  */
 
 import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, sep } from "node:path";
 import { afterAll, describe, expect, it } from "vitest";
@@ -146,15 +155,21 @@ function syntheticPin(options: SyntheticOptions = {}): string {
     writeFileSync(join(root, "corpus", "asciimath", options.extraFile), TINY_PAYLOAD);
   }
 
+  const generator = "# A synthetic generator.\n";
+  mkdirSync(join(root, "scripts"), { recursive: true });
+  writeFileSync(join(root, "scripts", "generate-corpus.rb"), generator);
+
   const bytes = Buffer.from(body, "utf8");
   const provenance = [
     "# Synthetic provenance.",
     "---",
-    "schema: plurimath-corpus/provenance/2",
+    "schema: plurimath-corpus/provenance/3",
     "committable: true",
     "warnings: []",
     "generator:",
     "  path: scripts/generate-corpus.rb",
+    `  sha256: ${createHash("sha256").update(generator).digest("hex")}`,
+    "  inputs: []",
     "oracle:",
     "  gem: plurimath",
     "  version: 0.11.6",
@@ -179,10 +194,11 @@ function syntheticPin(options: SyntheticOptions = {}): string {
  * green"; the proof that it is load-bearing is at the end of this file.
  *
  * Paths, not group names. A group name is unique only within one input format,
- * and the corpus now carries two: `fences`, `numbers`, `operators` and
- * `symbols` each name an AsciiMath group AND a LaTeX one. A list of bare names
- * would have said "fences" twice and identified neither, so losing the LaTeX
- * one while keeping the AsciiMath one would still have matched.
+ * and the corpus now carries three: `fences`, `numbers`, `operators` and
+ * `symbols` each name an AsciiMath group, a LaTeX one, AND a Unicode one. A
+ * list of bare names would have said "fences" three times and identified
+ * none of them, so losing the Unicode one while keeping the other two would
+ * still have matched.
  */
 const EXPECTED_PAYLOADS = [
   "asciimath/colour.yaml",
@@ -222,6 +238,45 @@ const EXPECTED_PAYLOADS = [
   "latex/symbols.yaml",
   "latex/unary-functions.yaml",
   "latex/whitespace.yaml",
+  "unicode/fences.yaml",
+  "unicode/numbers.yaml",
+  "unicode/operators.yaml",
+  "unicode/symbols.yaml",
+];
+
+/**
+ * The pending-format payloads (`PENDING_READER_FORMATS`), named for the same
+ * reason `EXPECTED_PAYLOADS` is. Sorted as the provenance lists them.
+ */
+const EXPECTED_PENDING_PAYLOADS = [
+  "mathml/elementary-math.yaml",
+  "mathml/enclose.yaml",
+  "mathml/fences.yaml",
+  "mathml/fractions.yaml",
+  "mathml/layout.yaml",
+  "mathml/over-under.yaml",
+  "mathml/partial-render.yaml",
+  "mathml/rejections.yaml",
+  "mathml/roots.yaml",
+  "mathml/scripts.yaml",
+  "mathml/tables.yaml",
+  "mathml/text.yaml",
+  "mathml/tokens.yaml",
+  "omml/accents.yaml",
+  "omml/boxes.yaml",
+  "omml/delimiters.yaml",
+  "omml/equation-arrays.yaml",
+  "omml/fractions.yaml",
+  "omml/functions.yaml",
+  "omml/group-characters.yaml",
+  "omml/limits.yaml",
+  "omml/matrices.yaml",
+  "omml/nary.yaml",
+  "omml/partial-render.yaml",
+  "omml/rejections.yaml",
+  "omml/roots.yaml",
+  "omml/runs.yaml",
+  "omml/scripts.yaml",
 ];
 
 /**
@@ -239,26 +294,43 @@ describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every payload the provenance records, matched by path", () => {
-    // 37 case payloads (19 AsciiMath, 18 LaTeX) and 2 rejection payloads, one
-    // per input format. Counted apart on purpose: a rejection payload carries
-    // no rendering, so folding it into the case count would inflate what "the
-    // corpus covers" claims.
-    expect(corpus.payloads.length).toBe(37);
-    expect(corpus.rejectionPayloads.length).toBe(2);
-    expect(corpus.provenance.payloads.length).toBe(39);
+    // 41 case payloads (19 AsciiMath, 18 LaTeX, 4 Unicode), 4 rejection
+    // payloads (one per input format that carries rejections: AsciiMath,
+    // LaTeX, Unicode, HTML), and 7 calls/1 payloads. Counted apart on purpose: a rejection payload carries no
+    // rendering and a calls payload carries a render under something other
+    // than default options, so folding either into the case count would
+    // inflate what "the corpus covers" claims.
+    expect(corpus.payloads.length).toBe(41);
+    expect(corpus.rejectionPayloads.length).toBe(4);
+    expect(corpus.callsPayloads.length).toBe(7);
+    // Plus 28 MathML and OMML payloads (plurimath-testsuite#21), byte-verified
+    // but not parsed: they are pending the MathML and OMML readers.
+    expect(corpus.pendingPayloads.map((payload) => payload.path)).toStrictEqual(
+      EXPECTED_PENDING_PAYLOADS,
+    );
+    expect(corpus.provenance.payloads.length).toBe(80);
     assertExpectedPayloads(corpus);
   });
 
-  it("carries 217 cases with distinct ids", () => {
-    expect(corpus.cases.length).toBe(217);
-    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(217);
+  it("carries 237 cases with distinct ids", () => {
+    expect(corpus.cases.length).toBe(237);
+    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(237);
   });
 
-  it("carries both input formats, and says which cases are which", () => {
-    // The pin's headline change: a second input notation. Counted per format,
-    // because the whole point of the round-trip scoping below is that these two
-    // numbers are different, and a corpus that quietly lost its LaTeX half
-    // would otherwise only show up as a total that still looked large.
+  it("carries 66 calls/1 cases, all number_formatter, with distinct ids", () => {
+    expect(corpus.calls.length).toBe(66);
+    expect(new Set(corpus.calls.map((entry) => entry.id)).size).toBe(66);
+    for (const entry of corpus.calls) {
+      expect(entry.call.method).toBe("number_formatter");
+    }
+  });
+
+  it("carries all three input formats, and says which cases are which", () => {
+    // The pin's headline changes: a second input notation (LaTeX), and now a
+    // third (Unicode). Counted per format, because the whole point of the
+    // round-trip scoping below is that these numbers are different, and a
+    // corpus that quietly lost one format's half would otherwise only show up
+    // as a total that still looked large.
     const byFormat = new Map<string, number>();
     for (const entry of corpus.cases) {
       byFormat.set(entry.inputFormat, (byFormat.get(entry.inputFormat) ?? 0) + 1);
@@ -266,11 +338,12 @@ describe("the pin as shipped", () => {
     expect([...byFormat.entries()].sort()).toStrictEqual([
       ["asciimath", 92],
       ["latex", 125],
+      ["unicode", 20],
     ]);
-    // The rejections carry both notations too, and are counted per format for
-    // the same reason. This is what makes scoping the rejection suites
-    // load-bearing: each parser may only be handed the cases written in the
-    // notation it reads (`test/formats/*/rejection-parity.spec.ts`).
+    // The rejections carry four notations, HTML among them though HTML has no
+    // case payload, and are counted per format for the same reason. This is what makes scoping the
+    // rejection suites load-bearing: each parser may only be handed the cases
+    // written in the notation it reads (`test/formats/*/rejection-parity.spec.ts`).
     const rejectionsByFormat = new Map<string, number>();
     for (const entry of corpus.rejections) {
       rejectionsByFormat.set(
@@ -280,7 +353,9 @@ describe("the pin as shipped", () => {
     }
     expect([...rejectionsByFormat.entries()].sort()).toStrictEqual([
       ["asciimath", 13],
+      ["html", 38],
       ["latex", 14],
+      ["unicode", 52],
     ]);
   });
 
@@ -330,7 +405,7 @@ describe("what this port checks against", () => {
     // shared corpus has no case to withhold — only the valid one is in the pin.
     expect(inPin).toStrictEqual(["text-unitsml-valid"]);
     expect(readCorpusCases().length).toBe(corpus.cases.length - inPin.length);
-    expect(readCorpusCases().length).toBe(216);
+    expect(readCorpusCases().length).toBe(236);
   });
 
   it("names the deferred feature and cites the architecture note", () => {
@@ -420,10 +495,186 @@ describe("a pin that was not generated the canonical way is refused", () => {
   it("refuses a provenance schema it does not know", () => {
     const root = damagedCopy((where) => {
       editFile(join(where, "corpus", "provenance.yaml"), (text) =>
-        text.replace("plurimath-corpus/provenance/2", "plurimath-corpus/provenance/3"),
+        text.replace("plurimath-corpus/provenance/3", "plurimath-corpus/provenance/4"),
       );
     });
     expect(() => loadPinnedCorpus(root)).toThrow("this reader knows");
+  });
+
+  it("refuses provenance/2, which has no generator.inputs to check", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "corpus", "provenance.yaml"), (text) =>
+        text.replace("plurimath-corpus/provenance/3", "plurimath-corpus/provenance/2"),
+      );
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("this reader knows");
+  });
+
+  it("records the MathML and OMML seed lists as generator inputs", () => {
+    const text = readFileSync(join(PINNED_CORPUS_ROOT, "corpus", "provenance.yaml"), "utf8");
+    expect(text).toContain("  - path: scripts/seeds/mathml.yaml\n");
+    expect(text).toContain("  - path: scripts/seeds/omml.yaml\n");
+  });
+
+  it("refuses a generator input edited in place", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "scripts", "seeds", "omml.yaml"), (text) => `${text}# edited\n`);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("omml.yaml");
+    expect(() => loadPinnedCorpus(root)).toThrow("bytes on disk");
+  });
+
+  it("refuses a generator input whose digest disagrees at the same length", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "scripts", "seeds", "mathml.yaml"), (text) =>
+        text.replace(/.$/su, (last) => (last === "\n" ? "\t" : "\n")),
+      );
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("mathml.yaml: sha256");
+  });
+
+  it("refuses a generator input missing from the checkout", () => {
+    const root = damagedCopy((where) => {
+      rmSync(join(where, "scripts", "seeds", "mathml.yaml"));
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("listed in generator.inputs but not on disk");
+  });
+
+  it("refuses a generator edited in place", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "scripts", "generate-corpus.rb"), (text) => `${text}# edited\n`);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("generate-corpus.rb: sha256");
+  });
+
+  it("refuses a generator input replaced by a symbolic link", () => {
+    const root = damagedCopy((where) => {
+      const seed = join(where, "scripts", "seeds", "omml.yaml");
+      const outside = join(scratch(), "omml.yaml");
+      writeFileSync(outside, readFileSync(seed));
+      rmSync(seed);
+      symlinkSync(outside, seed);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("symbolic link");
+  });
+
+  it("refuses a generator input reached through a symbolic-link directory", () => {
+    const root = damagedCopy((where) => {
+      const seeds = join(where, "scripts", "seeds");
+      const moved = join(where, "scripts", "real-seeds");
+      cpSync(seeds, moved, { recursive: true });
+      rmSync(seeds, { recursive: true });
+      symlinkSync(moved, seeds);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("passes through a symbolic link");
+  });
+
+  it("refuses a corpus/ directory that is a symbolic link", () => {
+    const root = damagedCopy((where) => {
+      const corpus = join(where, "corpus");
+      const outside = join(scratch(), "corpus");
+      cpSync(corpus, outside, { recursive: true });
+      rmSync(corpus, { recursive: true });
+      symlinkSync(outside, corpus);
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("passes through a symbolic link");
+  });
+
+  it("refuses a pin root that is itself a symbolic link", () => {
+    const real = damagedCopy(() => {});
+    const link = join(scratch(), "linked-pin");
+    symlinkSync(real, link);
+    expect(() => loadPinnedCorpus(link)).toThrow("is a symbolic link, not the submodule checkout");
+  });
+
+  it.each(["/", "/."])("refuses a symbolic-link pin root spelled with a trailing %s", (suffix) => {
+    const real = damagedCopy(() => {});
+    const link = join(scratch(), "linked-pin");
+    symlinkSync(real, link);
+    expect(() => loadPinnedCorpus(`${link}${suffix}`)).toThrow(
+      "is a symbolic link, not the submodule checkout",
+    );
+  });
+
+  it("loads a pin root below a real directory when checked from a base", () => {
+    const real = damagedCopy(() => {});
+    const base = scratch();
+    mkdirSync(join(base, "submodules"));
+    const root = join(base, "submodules", "plurimath-testsuite");
+    renameSync(real, root);
+    expect(() => loadPinnedCorpus(root, base)).not.toThrow();
+  });
+
+  it("refuses a pin root below a symbolic-link directory", () => {
+    const real = damagedCopy(() => {});
+    const base = scratch();
+    const outside = scratch();
+    renameSync(real, join(outside, "plurimath-testsuite"));
+    symlinkSync(outside, join(base, "submodules"));
+    const root = join(base, "submodules", "plurimath-testsuite");
+    expect(() => loadPinnedCorpus(root, base)).toThrow(
+      "is a symbolic link above the submodule checkout",
+    );
+  });
+
+  it("refuses a payload listed twice", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "corpus", "provenance.yaml"), (text) => {
+        const record = /- path: mathml\/roots\.yaml\n(?: {2}.*\n)+/.exec(text);
+        if (record === null) throw new Error("fixture: no mathml/roots.yaml record");
+        return text.replace(record[0], record[0] + record[0]);
+      });
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow('"mathml/roots.yaml" is listed twice');
+  });
+
+  it("refuses a symbolic-link directory hidden inside corpus/", () => {
+    const root = damagedCopy((where) => {
+      const outside = scratch();
+      writeFileSync(join(outside, "hidden.yaml"), TINY_PAYLOAD);
+      symlinkSync(outside, join(where, "corpus", "hidden"));
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("a symbolic link in the pinned corpus");
+  });
+
+  it("refuses a pending-format payload path that leaves corpus/", () => {
+    const root = damagedCopy((where) => {
+      editFile(join(where, "corpus", "provenance.yaml"), (text) =>
+        text.replace("- path: mathml/roots.yaml", "- path: mathml/../../outside.yaml"),
+      );
+      // Moved to where the escaping path points, so only the path is wrong.
+      cpSync(join(where, "corpus", "mathml", "roots.yaml"), join(where, "outside.yaml"));
+      rmSync(join(where, "corpus", "mathml", "roots.yaml"));
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("not a plain relative path");
+  });
+
+  it("refuses a provenance with no generator.inputs", () => {
+    const root = syntheticPin({ provenance: (text) => text.replace("  inputs: []\n", "") });
+    expect(() => loadPinnedCorpus(root)).toThrow("inputs");
+  });
+
+  it("refuses a generator input path that leaves the testsuite root", () => {
+    const root = syntheticPin({
+      provenance: (text) =>
+        text.replace(
+          "  inputs: []\n",
+          "  inputs:\n  - path: ../outside.yaml\n    sha256: x\n    bytes: 0\n",
+        ),
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("not a plain relative path");
+  });
+
+  it("refuses a generator input listed twice", () => {
+    const root = syntheticPin({
+      provenance: (text) =>
+        text.replace(
+          "  inputs: []\n",
+          "  inputs:\n  - path: corpus/provenance.yaml\n    sha256: x\n    bytes: 0\n" +
+            "  - path: corpus/provenance.yaml\n    sha256: x\n    bytes: 0\n",
+        ),
+    });
+    expect(() => loadPinnedCorpus(root)).toThrow("listed twice");
   });
 });
 
@@ -613,10 +864,10 @@ describe("a pin that quietly loses a group", () => {
   );
 
   it("loads without complaint, which is the whole problem", () => {
-    // The shipped 37 payloads less the one removed, and the shipped 217 cases
+    // The shipped 41 payloads less the one removed, and the shipped 237 cases
     // less the six `asciimath/frac.yaml` carries.
-    expect(shrunk.payloads.length).toBe(36);
-    expect(shrunk.cases.length).toBe(211);
+    expect(shrunk.payloads.length).toBe(40);
+    expect(shrunk.cases.length).toBe(231);
     expect(shrunk.payloads.map((payload) => payload.path)).not.toContain("asciimath/frac.yaml");
   });
 

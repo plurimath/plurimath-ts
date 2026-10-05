@@ -1,6 +1,6 @@
 # P2 — Complete the output side
 
-**Status: active alongside P1 closeout.** Every renderer the gem has, so a formula parsed from
+**Status: active.** Every renderer the gem has, so a formula parsed from
 AsciiMath can be emitted in any supported format. Ends with the first published
 release.
 
@@ -37,8 +37,9 @@ A declaration fixture freezes that surface. One runtime test per method is
 **not** enough to hold it:
 
 - the constructor takes six formats — `asciimath`, `latex`, `mathml`, `html`,
-  `unicode`, `omml`. On the plan as it stands, only AsciiMath input exists at
-  P2, so one constructs and five raise `UnsupportedFormatError`. Which is which
+  `unicode`, `omml`. Measured against `dist/` (2026-09-21), four construct
+  (`asciimath`, `latex`, `html`, `unicode`) and two raise
+  `UnsupportedFormatError` (`mathml`, `omml`). Which is which
   is part of the staged contract, so it is asserted per format rather than
   assumed;
 - `toDisplay(lang)` dispatches on its argument. The gem's `MATH_ZONE_TYPES`
@@ -89,6 +90,8 @@ AsciiMath *to* everything, which is the most useful early capability.
       the invalid-type path, and a separate record of the native-Ruby string
       quirk; `toMathml` omitted, explicit false, and true; every other method at
       least once.
-- [ ] Isolation assertions extended to each new subpath.
+- [x] Isolation assertions extended to each new subpath. (`./html`, `./omml`
+      and `./unicodemath` each have export and forbidden-graph rows in
+      `scripts/gate-package.mjs`; `pnpm gate:package` exits 0. Checked 2026-09-21.)
 - [ ] Packaging review done and the first `0.x` published.
 - [ ] Review round with findings resolved, and sign-off recorded.

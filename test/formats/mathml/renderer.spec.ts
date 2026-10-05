@@ -78,6 +78,14 @@ describe("the options matrix (probe-mathml-edges.rb)", () => {
     expect(toMathml(sinX(), { displayStyle: null })).toBe(math(SIN_SPACED, "false"));
   });
 
+  it("an explicit undefined displayStyle is 'not given' (the oracle's omitted keyword), not the string", () => {
+    expect(toMathml(sinX(), { displayStyle: undefined })).toBe(toMathml(sinX()));
+    expect(toMathml(sinX(), { displayStyle: undefined })).toBe(math(SIN_SPACED));
+    expect(toMathml(sinX(), { displayStyle: undefined, splitOnLinebreak: true })).toBe(
+      toMathml(sinX(), { splitOnLinebreak: true }),
+    );
+  });
+
   it("the formula's own displaystyle field is the default", () => {
     const off = new FormulaNode({
       value: [new UnaryFunctionNode({ name: "Sin", parameterOne: x() })],
@@ -129,24 +137,44 @@ describe("the options argument itself", () => {
     expect((caught as RenderError).message).toContain('"nosuchoption"');
   });
 
-  it("still accepts the two implemented keywords once the guard is in front", () => {
-    // The refusal above must not have cost the options matrix: both keys
-    // render exactly as they did, alone and together.
+  it("still accepts the three implemented keywords once the guard is in front", () => {
+    // The refusal above must not have cost the options matrix: all three
+    // keys render exactly as they did, alone and together.
     expect(toMathml(sinX(), { displayStyle: false })).toBe(math(SIN_SPACED, "false"));
     expect(toMathml(sinX(), { unaryFunctionSpacing: false })).toBe(math(SIN_BARE));
     expect(toMathml(sinX(), { displayStyle: false, unaryFunctionSpacing: false })).toBe(
       math(SIN_BARE, "false"),
     );
+    expect(toMathml(sinX(), { formatter: null })).toBe(math(SIN_SPACED));
+  });
+});
+
+describe("the formatter option (B2's MathML/OMML number-formatting slice)", () => {
+  const number = () => new NumberNode({ value: "1234.5" });
+
+  it("with no formatter, a Number renders its raw value — the corpus's own path", () => {
+    expect(toMathml(formula(number()))).toBe(math("    <mn>1234.5</mn>"));
+  });
+
+  it("with a formatter, a Number is grouped and its decimal marker substituted", () => {
+    expect(
+      toMathml(formula(number()), {
+        formatter: { options: { decimal: ",", group: ".", groupDigits: 3 } },
+      }),
+    ).toBe(math("    <mn>1.234,5</mn>"));
+  });
+
+  it("a non-numeric value under an active formatter refuses, naming the value", () => {
+    const node = formula(new NumberNode({ value: "not-a-number" }));
+    expect(() => toMathml(node, { formatter: {} })).toThrow(/not-a-number/);
   });
 });
 
 describe("the deferred options, refused by name", () => {
+  // `intent` left this list with B4 (`./intent-parity.spec.ts`); `intent: false`
+  // is the gem's default, measured byte-identical to the omitted keyword.
   const cases: readonly (readonly [string, Record<string, unknown>])[] = [
-    ["formatter", { formatter: {} }],
-    ["intent", { intent: true }],
-    ["intent", { intent: false }],
     ["unitsml", { unitsml: {} }],
-    ["splitOnLinebreak", { splitOnLinebreak: true }],
   ];
   for (const [name, options] of cases) {
     it(`${JSON.stringify(options)} raises a RenderError naming "${name}"`, () => {
@@ -161,6 +189,11 @@ describe("the deferred options, refused by name", () => {
       expect((caught as RenderError).message).toContain("deferred");
     });
   }
+
+  it("intent: false and null are the default, not a refusal", () => {
+    expect(toMathml(sinX(), { intent: false })).toBe(math(SIN_SPACED));
+    expect(toMathml(sinX(), { intent: null })).toBe(math(SIN_SPACED));
+  });
 
   it("an explicitly-undefined deferred key passes through as absent", () => {
     expect(toMathml(sinX(), { formatter: undefined, intent: undefined } as never)).toBe(
@@ -562,12 +595,14 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
   });
 
   it("unmeasured carrier names raise instead of rendering a silent default", () => {
-    // Merror, not Mbox: Mbox has an arm now (below). Measured on the pinned
-    // oracle 00c52783, `Merror.instance_method(:to_mathml_without_math_tag)
-    // .owner` is Merror, so a carrier-default render of the name would diverge
-    // silently.
+    // None, not Mbox: Mbox has an arm now (below). Measured on the pinned
+    // oracle 00c52783, `None.instance_method(:to_mathml_without_math_tag)
+    // .owner` is None, so a carrier-default render of the name would diverge
+    // silently. (`Merror`, `Longdiv`, `Scarries`, `Msline`, `Msgroup`,
+    // `Mglyph` and `Ms` are the same shape but are all measured and
+    // case-armed elsewhere in this file now.)
     expect(() =>
-      toMathml(formula(new UnaryFunctionNode({ name: "Merror", parameterOne: x() }))),
+      toMathml(formula(new UnaryFunctionNode({ name: "None", parameterOne: x() }))),
     ).toThrow(RenderError);
     expect(() =>
       toMathml(formula(new TableNode({ name: "Nosuch", value: [tr(td(x()))] }))),

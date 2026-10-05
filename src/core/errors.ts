@@ -13,7 +13,19 @@ export type PlurimathErrorCode =
   | "UNSUPPORTED_FORMAT"
   | "UNSUPPORTED_FEATURE"
   | "MISSING_SYMBOL_DATA"
-  | "RENDER_ERROR";
+  | "RENDER_ERROR"
+  // `Plurimath::Errors::Evaluation::*` (src/evaluation/errors.ts). Added here,
+  // not kept local to `evaluation/`, because §3 rule 6 lets `evaluation`
+  // import `core` only — its errors extend this module's `PlurimathError` and
+  // so need a home in the one discriminator union every such error joins.
+  | "EVAL_ERROR"
+  | "EVAL_DIVISION_BY_ZERO"
+  | "EVAL_MATH_DOMAIN"
+  | "EVAL_NON_FINITE_RESULT"
+  | "EVAL_UNSUPPORTED_EXPRESSION"
+  | "EVAL_MISSING_VARIABLE"
+  | "EVAL_INVALID_BINDING"
+  | "EVAL_INVALID_BINDING_KEY";
 
 export abstract class PlurimathError extends Error {
   abstract readonly code: PlurimathErrorCode;

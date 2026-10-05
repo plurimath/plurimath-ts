@@ -1,12 +1,16 @@
 /**
  * The generated LaTeX render tables.
  *
- * Six constants, sixty-eight entries — the tables `to_latex` reads that no
- * other generated slice supplies. They are small enough to hand-type, which is
- * exactly why they are generated: a hand-typed copy drifts silently the first
- * time upstream edits one. These assertions pin what the oracle said at
- * generation time, so a regeneration that truncates, reorders or empties a
- * table fails here instead of quietly changing what the renderer emits.
+ * Six constants, 1,525 entries — the tables `to_latex` reads that no other
+ * generated slice supplies. Five of the six are small enough to hand-type,
+ * which is exactly why they are generated: a hand-typed copy drifts silently
+ * the first time upstream edits one. The sixth, the color asciimath slice,
+ * is the one exception in size — 1,459 of the 1,525, one per static symbol
+ * id (TODO.plan/deferred.md) — pinned by size and by sample rather than in
+ * full, for the same reason the mathml slice's identical-by-measurement
+ * copy is. These assertions pin what the oracle said at generation time, so
+ * a regeneration that truncates, reorders or empties a table fails here
+ * instead of quietly changing what the renderer emits.
  *
  * The expectations are deliberately literal — a test that derived them from
  * the tables under test would pass against empty tables. They were measured
@@ -241,11 +245,16 @@ describe("the alignment letters", () => {
 });
 
 describe("the color asciimath slice", () => {
-  it("holds exactly the two measured ids", () => {
-    expect([...LATEX_COLOR_ASCIIMATH_SYMBOLS]).toEqual([
-      ["Plus", "+"],
-      ["Eqno", '"P{eqno}"'],
-    ]);
+  it("re-emits the mathml slice's own measurement, over every static symbol id", () => {
+    // Widened from a 2-id policy slice (`Plus`, `Eqno`) to the full
+    // `static_symbol_classes` set the mathml slice's own
+    // `MATHML_COLOR_SYMBOL_LITERALS` already carries — the two generated
+    // copies are byte-identical (TODO.plan/deferred.md, "LaTeX renderer:
+    // Color's attribute is the gem's one cross-format call").
+    expect(LATEX_COLOR_ASCIIMATH_SYMBOLS.size).toBe(1459);
+    expect(LATEX_COLOR_ASCIIMATH_SYMBOLS.get("Plus")).toBe("+");
+    expect(LATEX_COLOR_ASCIIMATH_SYMBOLS.get("Eqno")).toBe('"P{eqno}"');
+    expect(LATEX_COLOR_ASCIIMATH_SYMBOLS.get("Alpha")).toBe("alpha");
   });
 
   it("reaches the renderer: a Color first slot renders the measured value", () => {

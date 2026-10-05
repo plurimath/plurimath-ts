@@ -316,9 +316,10 @@ counts, measured with `git grep ... | wc -l` (exit `0`):
 | `omml` | 17 |
 | `unicodemath` | 16 |
 
-The port has no `toDisplay`, `math_zone`, or `Math zone` implementation: `grep` searched
-the existing `src/` and `test/` directories, found no matches, and exited `1`. At
-`abc068a`, the dependency boundary is therefore:
+At `abc068a`, the port had no `toDisplay`, `math_zone`, or `Math zone` implementation: `grep` searched
+the existing `src/` and `test/` directories, found no matches, and exited `1`. It has one
+now (#139, #150; `src/compat/to-display.ts`), so the table below is that revision's
+boundary, not `main`'s. At `abc068a`, the dependency boundary was:
 
 | `lang` | raw renderer files at `abc068a` | full `toDisplay` branch now |
 |---|---:|---|
@@ -523,24 +524,45 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
 
 - [x] The declaration target and the `data` result are chosen: source head `ce297e2`
       and `readonly data: FormulaNode` (2026-09-04).
-- [ ] The fixture records both decisions exactly — seven methods,
+- [x] The fixture records both decisions exactly — seven methods,
       `toMathml(intent?: boolean)`, `unicode` rather than `mahtml`, and the `data`
-      member.
-- [ ] The built ESM and CJS declarations match the canonical fixture and the gate has
+      member. `test/fixtures/compat/plurimath-declaration.json`; its surface is
+      re-derived from the verbatim source-head declaration beside it
+      (`source-head-ce297e2/`, sha256-pinned), and differs from it only in the three
+      reasoned `sourceHeadDifferences`: `data` gains `readonly`, `data`'s type is
+      `FormulaNode`, and the constructor's `format` names the port's own `Format`
+      alias (same six literals, same order). `test/gates/compat-declaration.spec.ts`
+      asserts both.
+- [x] The built ESM and CJS declarations match the canonical fixture and the gate has
       non-vacuity and negative proofs for member, name, optionality, and return-type drift.
-- [ ] All six constructor formats are asserted in the source-head declaration order:
-      `asciimath` constructs; `latex`, `mathml`, `html`, `unicode`, and `omml` raise the
-      port's structured `UnsupportedFormatError` until their parsers land.
+      `scripts/gate-package.mjs` step 4 (via `scripts/lib/compat-declaration.mjs`);
+      proofs in `test/gates/compat-declaration.spec.ts`. "Match" means the type
+      surface the extractor records: the class's name, non-export modifiers, type
+      parameters and heritage clauses, and each member's kind, name, modifiers,
+      optional marker, type parameters, parameters and return or property type, one
+      entry per overload signature, with types compared as source text. JSDoc and
+      comments are not compared. The extractor refuses any TypeScript but the `7.0.2`
+      it was validated on. The spec runs 39 tests (vitest's count on the commit that
+      wrote this note).
+- [x] All six constructor formats are asserted in the source-head declaration order:
+      `asciimath`, `latex`, `html` and `unicode` construct (#76, #88, #119); `mathml`
+      and `omml` raise the port's structured `UnsupportedFormatError` until their
+      parsers land.
+      (done: `test/compat/plurimath-class.spec.ts:74` for the order, `:98-146` per format; checked 2026-09-24)
 - [ ] `toDisplay` matches the JS oracle for `omml`, `latex`, `mathml`, `asciimath`, and
       `unicodemath`, and the invalid language path matches the measured invalid-type
       behavior. The oracle fixtures also record the native-Ruby recognized-string result
       `"|_ Math zone\n"` and do not substitute that result for an Opal-wrapper measurement.
-- [ ] `toMathml()`, `toMathml(false)`, and `toMathml(true)` produce the measured default,
+      (open: #139 and #150 landed `toDisplay`; `test/compat/plurimath-class.spec.ts:247` onward pins the five lowercase values to oracle bytes, `:866` the placeholder path, and `:895-910` the invalid path. Two parts are not met as written: an invalid `lang` raises `UnsupportedFormatError`, not the gem's `InvalidTypeError` (`src/compat/index.ts:195-206`), and the native-Ruby string result is recorded in `src/compat/to-display.ts`'s module doc rather than in a fixture; checked 2026-10-02)
+- [x] `toMathml()`, `toMathml(false)`, and `toMathml(true)` produce the measured default,
       false, and intent-bearing results.
-- [ ] `toAsciimath`, `toLatex`, `toHtml`, `toOmml`, and `toUnicodemath` each have a
+      (done: `test/compat/plurimath-class.spec.ts:200`, `:933`, `:937`; checked 2026-09-24)
+- [x] `toAsciimath`, `toLatex`, `toHtml`, `toOmml`, and `toUnicodemath` each have a
       runtime assertion through a compat instance created from AsciiMath.
+      (done: `test/compat/plurimath-class.spec.ts:188-209`; checked 2026-09-24)
 - [ ] HTML and OMML corpus targets are nonempty and complete per payload; their
       cross-format and package-isolation gates pass against built artifacts.
-- [ ] The root package exports the default class under ESM and CJS, the real packed
-      artifact passes publint and attw, and review leaves no valid implementable finding
+- [x] The root package exports the default class under ESM and CJS, the package root
+      passes publint, the real packed artifact passes attw, and review leaves no valid implementable finding
       unresolved.
+      (done: #66, merged with its one review thread resolved; `scripts/gate-package.mjs:144` and `:284-302` assert the ESM and CJS default export, `:404-405` run publint on the package root and `:407-411` run attw on the packed tarball (`--pack`); `pnpm gate:package` exits 0; checked 2026-10-02)

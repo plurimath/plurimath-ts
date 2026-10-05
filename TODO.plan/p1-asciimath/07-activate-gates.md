@@ -55,14 +55,11 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
 
 ## Done when
 
-- [x] `pnpm check` reports nine active class-A gates, all passing.
-- [ ] `scripts/gate-oracle.rb repo --check` is clean against a clean gem checkout,
-  and the testsuite regeneration check is reported separately from it.
-  `testsuite --check` exits 0 against `plurimath-oracle` at the pinned
-  `00c52783`; `repo --check` exits 1 on `main` today, because #40 hand-edited
-  comments inside two generated render tables and a fresh regeneration reverts
-  them. A separate change moves those corrections into the generator; this box
-  goes back to `[x]` when it lands.
+- [x] `pnpm check` reports ten active class-A gates (P0 and P1-baseline in `gates.json`), all passing.
+- [x] `scripts/gate-oracle.rb repo --check` is clean against a clean gem checkout,
+  and the testsuite regeneration check is reported separately from it. Both
+  exit 0 on `main` a1c1755 against `plurimath-oracle` at the pinned
+  `00c52783` (re-run 2026-09-28 on a tree whose code and generated data equal a1c1755).
 - [x] Each discovery failure is demonstrated, not asserted: a deinitialized
   submodule, an empty corpus directory, a group removed from a scratch copy, a
   case missing a target key, and a corrupted payload byte each fail the run.

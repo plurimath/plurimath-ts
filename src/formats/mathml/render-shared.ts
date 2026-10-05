@@ -25,9 +25,77 @@ import {
 import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS, rubyClassName } from "../../core/normalize";
 import { assertReproducibleRubyHashOrder } from "../../core/ruby-semantics";
-import { XmlElement } from "../../xml/index";
+import { formatNumberForMathml, type NumberFormat } from "../../formatting/index";
+import { type XmlChild, XmlElement } from "../../xml/index";
 
 export const FORMAT = "mathml";
+
+/**
+ * Re-exported for `../../render/number/mathml.ts`. A kind file may import
+ * only its own format's `render-shared.ts`, never `formatting` directly
+ * (`.dependency-cruiser.cjs`, "render-kind-file-imports-allowed-set-only"),
+ * so the two helpers B2's number-formatting slices add live in `formatting/
+ * number-format.ts` and pass through here — the html render-shared.ts
+ * counterpart, verbatim.
+ */
+export type { NumberFormat } from "../../formatting/index";
+export {
+  isGemNumericValue,
+  refuseNonNumericUnderFormatter,
+} from "../../formatting/index";
+/**
+ * The intent pipeline (`to_mathml(intent: true)`), re-exported for the kind
+ * files: `intent-encoding.ts` is the gem's `Utility::IntentEncoding` and the
+ * helpers it reads a rendered subtree with, `intent-post-processing.ts` the
+ * formula-level pass (formula.rb:491-810). Kind files may import only this
+ * module (`.dependency-cruiser.cjs`, "render-kind-file-imports-allowed-set-only").
+ */
+export {
+  absIntent,
+  attrOf,
+  el,
+  encode,
+  FENCED_INTENT_NAMES,
+  type FencedIntentName,
+  fracIntent,
+  functionIntent,
+  gemCrash,
+  intervalFenceIntent,
+  nameOf,
+  naryandIntent,
+  nodesOf,
+} from "./intent-encoding";
+export { fencedPartialDerivative, intentPostProcessing } from "./intent-post-processing";
+
+/**
+ * `Formatter::Numbers::MathmlRenderer.render` for a formatted number: `<mn>`
+ * over the text (`plain_element`); a `scientific`/`engineering` notation is
+ * `<mrow><mn>coefficient</mn><mo>times</mo><msup><mn>10</mn><mn>exponent</mn>
+ * </msup></mrow>` (`render_notation`), the `e` notation one `<mn>`; a semantic
+ * base (`render_semantic_base`) is the `<msub>` of the digits over the base,
+ * in an `<mrow>` after an `<mo>` sign when there is one. `value` must satisfy
+ * `isGemNumericValue`.
+ */
+export function renderFormattedNumber(value: string, format: NumberFormat): XmlElement {
+  const number = formatNumberForMathml(value, format);
+  if (number.kind === "plain") return new XmlElement("mn").append(number.text);
+  if (number.kind === "notation") {
+    return new XmlElement("mrow").append([
+      new XmlElement("mn").append(number.coefficient),
+      new XmlElement("mo").append(number.times),
+      new XmlElement("msup").append([
+        new XmlElement("mn").append("10"),
+        new XmlElement("mn").append(number.exponent),
+      ]),
+    ]);
+  }
+  const sub = new XmlElement("msub").append([
+    new XmlElement("mn").append(number.digits),
+    new XmlElement("mn").append(String(number.base)),
+  ]);
+  if (number.sign === null) return sub;
+  return new XmlElement("mrow").append([new XmlElement("mo").append(number.sign), sub]);
+}
 
 /**
  * What one `to_mathml_without_math_tag` answers. Almost always an
@@ -46,15 +114,30 @@ export type MathmlRendered = XmlElement | string | null | MathmlRenderedList;
 export type MathmlRenderedList = readonly MathmlRendered[];
 
 /**
- * The render context. The one axis the mathml walk reads is
- * `options[:unary_function_spacing]` (unary_function.rb:48), fixed for a
- * whole render by `Formula#to_mathml`'s keyword — nothing derives a child
+ * The render context. Two axes the mathml walk reads, both fixed for a
+ * whole render by `Formula#to_mathml`'s keywords — nothing derives a child
  * context on this path (the `table:` merge is `Td`'s ASCIIMATH move;
- * `Td#to_mathml_without_math_tag` threads options through unchanged).
+ * `Td#to_mathml_without_math_tag` threads options through unchanged):
+ *
+ *   - `options[:unary_function_spacing]` (unary_function.rb:48);
+ *   - `numberFormat`, B2's `formatter:` slice: `null` with no `formatter:`
+ *     option (a `Number` renders its raw value, exactly as the whole pinned
+ *     corpus was generated), or the resolved decimal/group symbols
+ *     (`../../formatting/number-format.ts`) — the html context's own axis,
+ *     added here in the same shape.
  */
 export interface RenderContext {
   /** Ruby truthiness of `options[:unary_function_spacing]`, default true. */
   readonly unaryFunctionSpacing: boolean;
+  /**
+   * Ruby truthiness of `to_mathml`'s `intent:` keyword, the first argument of
+   * every `to_mathml_without_math_tag(intent, options:)` — fixed for the whole
+   * call. Off, no kind writes an intent attribute; on, the kinds named in
+   * `TODO.plan/feature-roadmap.md` B4 write theirs through
+   * `intent-encoding.ts`.
+   */
+  readonly intent: boolean;
+  readonly numberFormat: NumberFormat | null;
   /**
    * `child.to_mathml_without_math_tag(intent, options:)` — looks the child's
    * kind up in the render table (`./render.ts`) and renders it under THIS
@@ -173,9 +256,10 @@ export function validateMathmlFields(
  * argument before anything else, so a nil, string, or spliced-array render
  * in that slot is a gem `NoMethodError` (probed: a wrapperless formula as a
  * big operator's third slot crashes) and a `RenderError` here. With
- * `intent` false — always, intent is deferred — the surviving element
- * passes through unchanged; `Nary` alone calls it with a literal `true`
- * (nary.rb:64), wrapping anything not already an `<mrow>`.
+ * `intent` false the surviving element passes through unchanged; `Nary`
+ * alone calls it with a literal `true` (nary.rb:64), wrapping anything not
+ * already an `<mrow>`. This is the `requireElement` half; `wrapMrow` below
+ * is the whole call.
  */
 export function requireElement(rendered: MathmlRendered, kind: string, at: string): XmlElement {
   if (rendered instanceof XmlElement) return rendered;
@@ -188,19 +272,42 @@ export function requireElement(rendered: MathmlRendered, kind: string, at: strin
 }
 
 /**
+ * `wrap_mrow(node, intent)` (core.rb:488-493), whole: an `<mrow>` passes
+ * through, a falsy `intent` returns the element unchanged, and otherwise the
+ * element is wrapped in a fresh `<mrow>`. Under intent the wrap is what puts
+ * every operand of a big operator behind one `arg="naryand"` carrier.
+ */
+export function wrapMrow(
+  rendered: MathmlRendered,
+  intent: boolean,
+  kind: string,
+  at: string,
+): XmlElement {
+  const element = requireElement(rendered, kind, at);
+  if (element.name === "mrow" || !intent) return element;
+  return new XmlElement("mrow").append(element);
+}
+
+/**
  * One attribute value as `OxEngine::Element#update_attrs` writes it
  * (ox_engine/element.rb:104-110): `value.to_s`, then the entity decode. The `to_s` is
  * reproducible for exactly the shapes `interpolatedValue` accepts on the
  * asciimath side — nil → `""` (an EMPTY attribute, not a skipped one),
- * strings, booleans, the non-finite floats — and ambiguous for a finite
- * number (Ruby `5` vs `5.0`) or bytes `String()` cannot match (a hash's
- * `{a: 1}`, a node's address-bearing inspect), which raise instead.
+ * strings, booleans, the non-finite floats — a nested plain hash (Ruby's
+ * `Hash#to_s`, which is `Hash#inspect`; `Mpadded#to_mathml_without_math_tag`
+ * hands its whole `options` straight to `set_attr`, and `options[:mpadded]`
+ * is itself a hash for the `\hphantom`/`\vphantom`/`\smash` shapes — measured
+ * on the oracle, `mpadded.rb`, `unicode_math/constants.rb::PHANTOM_SYMBOLS`)
+ * — and ambiguous for a finite number (Ruby `5` vs `5.0`) or bytes
+ * `String()` cannot match (a node's address-bearing inspect), which raise
+ * instead.
  */
 export function attributeText(value: unknown, kind: string, at: string): string {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;
   if (typeof value === "boolean") return String(value);
   if (typeof value === "number" && !Number.isFinite(value)) return String(value);
+  if (isPlainHash(value)) return rubyHashInspect(value, kind, at);
   throw new RenderError(
     `${at}: attribute holds ${describeSlot(value)} — Ruby's to_s of it is bytes ` +
       "String() cannot reliably match",
@@ -217,6 +324,73 @@ export function isPlainHash(value: unknown): value is Record<string, unknown> {
     !Array.isArray(value) &&
     slotKind(value as NodeParameter) === undefined
   );
+}
+
+/**
+ * A bare Ruby symbol/method-name shape (`/^[A-Za-z_]\w*[?!]?$/`): the label
+ * syntax `Hash#inspect` prints as `key: value` (Ruby >= 3.4, the pinned
+ * oracle's 4.0.1). Every key this port ever sees here came off a fixture's
+ * JSON object, so a Ruby String key and a Ruby Symbol key are indistinguishable
+ * by the time they reach this function — this treats every key as a symbol,
+ * which is what `Mpadded#options` actually holds (`mpadded:`, `phantom:`,
+ * `depth:`, `height:`, `width:`). A string-keyed hash would print
+ * `"key" => value` instead and is not reproducible from here; nothing
+ * measured on the oracle needs one yet.
+ */
+function isRubySymbolShaped(key: string): boolean {
+  return /^[A-Za-z_]\w*[?!]?$/.test(key);
+}
+
+/**
+ * One hash ENTRY's value as `Hash#inspect` prints it — `Object#inspect`,
+ * not `#to_s`: `nil` prints `"nil"`, a string prints quoted. Recognises only
+ * the shapes measured on the oracle inside `Mpadded#options[:mpadded]`
+ * (strings and booleans); a finite number or anything else this port cannot
+ * reproduce byte-for-byte raises, same as `attributeText`'s own top level.
+ */
+function rubyInspectValue(value: unknown, kind: string, at: string): string {
+  if (value === null || value === undefined) return "nil";
+  if (typeof value === "boolean") return String(value);
+  if (typeof value === "string") {
+    if (!/^[\x20-\x7e]*$/.test(value) || value.includes('"') || value.includes("\\")) {
+      throw new RenderError(
+        `${at}: nested hash string holds bytes Ruby's String#inspect escaping ` +
+          "is not reproduced for here (only plain printable ASCII is)",
+        FORMAT,
+        kind,
+      );
+    }
+    return `"${value}"`;
+  }
+  if (isPlainHash(value)) return rubyHashInspect(value, kind, at);
+  throw new RenderError(
+    `${at}: nested hash value holds ${describeSlot(value)} — Ruby's inspect of it is ` +
+      "bytes this port does not reproduce",
+    FORMAT,
+    kind,
+  );
+}
+
+/**
+ * `Hash#to_s`/`#inspect` of a plain hash, entry order preserved (the same
+ * order `assertReproducibleRubyHashOrder` already requires of the outer
+ * hash). Measured on the oracle: `{depth: "0", height: "0"}.to_s` gives
+ * `'{depth: "0", height: "0"}'`.
+ */
+function rubyHashInspect(hash: Record<string, unknown>, kind: string, at: string): string {
+  assertReproducibleRubyHashOrder(hash, FORMAT, kind, at);
+  const entries = Object.entries(hash).map(([key, value]) => {
+    if (!isRubySymbolShaped(key)) {
+      throw new RenderError(
+        `${at}.${key}: nested hash key is not symbol-shaped — this port only reproduces ` +
+          "Hash#inspect for symbol keys",
+        FORMAT,
+        kind,
+      );
+    }
+    return `${key}: ${rubyInspectValue(value, kind, `${at}.${key}`)}`;
+  });
+  return `{${entries.join(", ")}}`;
 }
 
 /**
@@ -348,23 +522,20 @@ export function interpolatedValue(value: unknown, kind: string, at: string): str
 }
 
 /**
- * `options[:mask]` handling on `Int` (`function/int.rb:59`, key presence) and `Nary`
- * (`nary.rb:56`, truthiness): the gem decodes the mask integer into limit
- * options (`Core#get_mask_options`, core.rb:543-570 — Ruby `to_i` with
- * FLOORED modulo) and rewrites the script tag. This port supports exactly
- * the no-op decoding — a mask whose only option is `limits_default`
- * (`mask.to_i` congruent to 0 mod 4 with no %32 flag, e.g. `nil` or `0`),
- * probed as byte-identical to no mask at all (probe int-mask-key-nil) —
- * and refuses every live mask BY NAME (`mask 1` renames `msubsup` to
- * `munderover`, probed; the placeholder/opposite machinery is UnicodeMath
- * -input scope, TODO.plan/deferred.md).
+ * `options[:mask]` handling on `Int` (`function/int.rb:59`, key presence): the
+ * gem decodes the mask integer into limit options (`Core#get_mask_options`,
+ * core.rb:543-570 — Ruby `to_i` with FLOORED modulo) and rewrites the script
+ * tag. `Int` supports exactly the no-op decoding — a mask whose only option is
+ * `limits_default` (`mask.to_i` congruent to 0 mod 4 with no %32 flag, e.g.
+ * `nil` or `0`), probed as byte-identical to no mask at all (probe
+ * int-mask-key-nil) — and refuses every live mask BY NAME (`mask 1` renames
+ * `msubsup` to `munderover`, probed). `Nary` (`nary.rb:56`, truthiness) applies
+ * the rewrite: `maskedNaryScript` below.
  */
 export function assertMaskIsInert(mask: unknown, kind: string, at: string): void {
   const value = rubyToI(mask, kind, at);
-  const floored = (n: number, m: number): number => ((n % m) + m) % m;
-  const low = floored(value, 4);
-  const high = floored(value - low, 32);
-  if (low === 0 && high === 0) return;
+  const decoded = maskOptions(value);
+  if (decoded.length === 1 && decoded[0] === "limits_default") return;
   throw deferredFeatureError(
     "mask",
     `${at} holds mask ${String(value)}, which rewrites the script tag ` +
@@ -372,6 +543,137 @@ export function assertMaskIsInert(mask: unknown, kind: string, at: string): void
     kind,
   );
 }
+
+/** Ruby's floored modulo: the result takes the divisor's sign. */
+function floored(n: number, m: number): number {
+  return ((n % m) + m) % m;
+}
+
+/**
+ * `Core#get_mask_options` (core.rb:543-570): the mask integer read as a limit
+ * code in its low two bits and a placeholder/opposite code in the next three,
+ * both by FLOORED modulo, so a negative mask decodes too: `-1` is
+ * `upper_limit_as_super_script` (`-1 % 4` is 3) plus `limits_opposite` and both
+ * placeholders (`-4 % 32` is 28). A `%32` remainder outside the seven listed values (bits above 32 are
+ * ignored) adds nothing.
+ */
+function maskOptions(mask: number): string[] {
+  const options: string[] = [];
+  const low = floored(mask, 4);
+  const limits = [
+    "limits_default",
+    "limits_under_over",
+    "limits_sub_sup",
+    "upper_limit_as_super_script",
+  ];
+  options.push(limits[low] as string);
+  switch (floored(mask - low, 32)) {
+    case 4:
+      options.push("limits_opposite");
+      break;
+    case 8:
+      options.push("show_low_limit_place_holder");
+      break;
+    case 12:
+      options.push("limits_opposite", "show_low_limit_place_holder");
+      break;
+    case 16:
+      options.push("show_up_limit_place_holder");
+      break;
+    case 20:
+      options.push("limits_opposite", "show_up_limit_place_holder");
+      break;
+    case 24:
+      options.push("show_low_limit_place_holder", "show_up_limit_place_holder");
+      break;
+    case 28:
+      options.push("limits_opposite", "show_low_limit_place_holder", "show_up_limit_place_holder");
+      break;
+    default:
+      break;
+  }
+  return options;
+}
+
+/**
+ * `Core#masked_tag` (core.rb:502-541) as `Nary#to_mathml_without_math_tag`
+ * (nary.rb:56) uses it: `masked_tag(subsup_tag) if self.options[:mask]` — the
+ * return value is DISCARDED, so only what the method does to the tag IN PLACE
+ * reaches the document. That is the tag's name and node list:
+ *
+ *   - a show-upper-placeholder mask on a slot that is `nil` renames the tag
+ *     (`msub` to `msubsup`, anything else to `munderover`) and inserts
+ *     `<mo>&#x2b1a;</mo>` at index 2; the lower one likewise (`msup` to
+ *     `msubsup`) at index 1;
+ *   - `limits_opposite` swaps the last two children of an `msubsup` or
+ *     `munderover`;
+ *   - `limits_under_over` / `limits_sub_sup` rename among the msub/msup/msubsup
+ *     and munder/mover/munderover families.
+ *
+ * The `upper_limit_as_super_script` arm builds a fresh `munder` and returns it,
+ * which `Nary` throws away, so it changes nothing — but it reads
+ * `tag.nodes[1].name` first, and that read raises for a tag with no second
+ * child.
+ *
+ * Every place the gem would carry a Ruby `nil` in a node list (`Array#insert`
+ * past the end pads with one, and a swap of a missing child is one) is a place
+ * it raises: measured for a bare `Nary` (no limit slots) under masks 16, 13
+ * and 3. Those refuse here as a `RenderError` naming the mask.
+ *
+ * The tag is returned as a new element because `XmlElement.name` is read-only.
+ */
+export function maskedNaryScript(
+  script: XmlElement,
+  mask: unknown,
+  slots: { readonly lowerIsNil: boolean; readonly upperIsNil: boolean },
+  kind: string,
+  at: string,
+): XmlElement {
+  const options = maskOptions(rubyToI(mask, kind, at));
+  let name = script.name;
+  const nodes: XmlChild[] = [...script.children];
+  const refuse = (why: string): RenderError =>
+    new RenderError(`${at}: ${why} — the gem raises on the nil it would carry`, FORMAT, kind);
+  const insertPlaceholder = (index: number): void => {
+    if (index > nodes.length) throw refuse(`the placeholder goes at index ${index}, past the end`);
+    nodes.splice(index, 0, new XmlElement("mo").append("&#x2b1a;"));
+  };
+  if (options.includes("show_up_limit_place_holder") && slots.upperIsNil) {
+    name = name === "msub" ? "msubsup" : "munderover";
+    insertPlaceholder(2);
+  }
+  if (options.includes("show_low_limit_place_holder") && slots.lowerIsNil) {
+    name = name === "msup" ? "msubsup" : "munderover";
+    insertPlaceholder(1);
+  }
+  if (options.includes("limits_opposite") && (name === "munderover" || name === "msubsup")) {
+    const [first, second, third] = nodes;
+    if (first === undefined || second === undefined || third === undefined) {
+      throw refuse("limits_opposite swaps three children and one is missing");
+    }
+    nodes.splice(0, nodes.length, first, third, second);
+  }
+  if (options.includes("limits_under_over")) {
+    name = UNDER_OVER_NAMES.get(name) ?? name;
+  } else if (options.includes("limits_sub_sup")) {
+    name = SUB_SUP_NAMES.get(name) ?? name;
+  } else if (options.includes("upper_limit_as_super_script") && nodes[1] === undefined) {
+    throw refuse("upper_limit_as_super_script reads the name of a second child that is missing");
+  }
+  return new XmlElement(name).append(nodes);
+}
+
+const UNDER_OVER_NAMES: ReadonlyMap<string, string> = new Map([
+  ["msubsup", "munderover"],
+  ["msub", "munder"],
+  ["msup", "mover"],
+]);
+
+const SUB_SUP_NAMES: ReadonlyMap<string, string> = new Map([
+  ["munderover", "msubsup"],
+  ["munder", "msub"],
+  ["mover", "msup"],
+]);
 
 /** Ruby `to_i` for the mask read: nil is 0, a Float truncates, a String parses its leading integer; `true`, hashes and nodes raise NoMethodError in the gem. */
 function rubyToI(value: unknown, kind: string, at: string): number {

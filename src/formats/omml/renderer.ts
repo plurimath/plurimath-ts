@@ -1,42 +1,101 @@
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
+import { splitOnLinebreak } from "../../core/linebreak";
 import { assertKnownOptions } from "../../core/render-options";
+import { isStackOverflow } from "../../core/stack-overflow";
+import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
 import { dumpNodes, XmlElement } from "../../xml/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError, serializeRendered } from "./render-shared";
 
 /**
- * Renderer options. Empty today and typed exactly (§5), for the same reason as
- * the other renderers: the gem's `to_omml` keywords are
- * `display_style:`, `split_on_linebreak:`, `formatter:` and `unitsml:`
- * (formula.rb:157 on the pinned oracle), and none of the four is implemented
- * here — on the `toOmml` path `display_style` comes off the formula's own
- * field below, which is exactly what the gem's default for that keyword is.
+ * `Formula#to_omml`'s options (formula.rb:157 on the pinned oracle), typed
+ * exactly (§5). The three implemented keywords; `unitsml:` is deliberately
+ * NOT here — passing it (any value but `undefined`) is a named `RenderError`
+ * at runtime (`DEFERRED_OPTIONS`), and a key `to_omml` has no keyword for at
+ * all is refused as unknown at the entry.
  */
-export type OmmlOptions = Record<string, never>;
+export interface OmmlOptions {
+  /**
+   * The gem's `display_style:` keyword. Default: the formula's own
+   * `displaystyle` field. Ruby's coercion is `to_s == "true"`
+   * (`boolean_display_style`, formula.rb:415), so an explicit `null` — Ruby
+   * `nil` — is `false`, NOT the default; `MathmlOptions.displayStyle` reads
+   * the same way. Only the renderings that branch on the display style differ
+   * (limit-style `lim`/`underset`/`overset`), which is why most inputs are
+   * byte-identical either way.
+   */
+  readonly displayStyle?: boolean | string | null | undefined;
+  /**
+   * The gem's `split_on_linebreak:` keyword, default false. Ruby truthiness:
+   * `null` is off. When on, the formula is cut at each `Linebreak` into one
+   * `m:oMath` per line, separated by a Word break run, inside the one
+   * `m:oMathPara` (`src/core/linebreak.ts` holds the shared walk).
+   */
+  readonly splitOnLinebreak?: boolean | null | undefined;
+  /**
+   * `Formatter::Standard`'s symbols, numeric pipeline, notation, base and
+   * string format, resolved by `resolveNumberFormat`
+   * (`../../formatting/number-format.ts`) — the other renderers' own field.
+   * A number inside the formula renders its formatted text; see
+   * `../../render/number/omml.ts` for the two paths the gem takes.
+   */
+  readonly formatter?: FormatterOptions | null;
+}
 
-/** Public `Formula#to_omml` keywords whose rendering paths are not measured yet. */
+/**
+ * The keys `OmmlOptions` declares, as runtime data; total over the interface,
+ * for the reason `IMPLEMENTED_OPTIONS` in the MathML renderer is.
+ */
+const IMPLEMENTED_OPTIONS: { readonly [K in keyof Required<OmmlOptions>]: null } = {
+  displayStyle: null,
+  splitOnLinebreak: null,
+  formatter: null,
+};
+
+/** Public `Formula#to_omml` keywords whose rendering paths are not implemented. */
 const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
-  [
-    "displayStyle",
-    "recursive display-style override is unmeasured across the complete OMML renderer",
-  ],
-  [
-    "splitOnLinebreak",
-    "line-broken OMML emits multiple m:oMath siblings separated by Word break runs; unmeasured",
-  ],
-  ["formatter", "number formatting is P4 scope; only the no-formatter path is measured"],
   ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md section 5)"],
 ];
 
 /**
- * The option keys both entries accept. `OmmlOptions` declares no IMPLEMENTED
- * key, so the accepted set is exactly the deferred ones: a keyword the gem
- * really has is recognised here and refused by name where the reason is known
- * (below), while a key the gem does not have at all is refused as unknown by
- * `assertKnownOptions` (core/render-options.ts). Same split as MathML.
+ * `to_omml_without_math_tag` takes the display style as a positional argument
+ * and has no line splitting (that is the formula's), so on the per-node entry
+ * these two keywords are recognised and refused by name, as they were before
+ * `toOmml` implemented them.
  */
-const ACCEPTED_OPTIONS: readonly string[] = DEFERRED_OPTIONS.map(([name]) => name);
+const NODE_ENTRY_REFUSED: readonly (readonly [string, string])[] = [
+  [
+    "displayStyle",
+    "the per-node entry takes no display-style keyword; the gem passes it positionally",
+  ],
+  [
+    "splitOnLinebreak",
+    "line splitting belongs to the formula-level toOmml; the per-node entry has none",
+  ],
+  ...DEFERRED_OPTIONS,
+];
+
+/**
+ * The option keys both entries accept. A keyword the gem really has but a
+ * given entry does not implement is recognised here and refused by name where
+ * the reason is known (below), while a key the gem does not have at all is
+ * refused as unknown by `assertKnownOptions` (core/render-options.ts). Same
+ * split as MathML.
+ */
+const ACCEPTED_OPTIONS: readonly string[] = [
+  ...Object.keys(IMPLEMENTED_OPTIONS),
+  ...DEFERRED_OPTIONS.map(([name]) => name),
+];
+
+/**
+ * The per-node entry's options: `formatter:` only (`to_omml_without_math_tag`
+ * reads it from its `options:` hash, as `to_omml` does); the rest are refused
+ * by name (`NODE_ENTRY_REFUSED`).
+ */
+export interface OmmlNodeOptions {
+  readonly formatter?: FormatterOptions | null;
+}
 
 const OMML_NAMESPACES: readonly (readonly [string, string])[] = [
   ["xmlns:m", "http://schemas.openxmlformats.org/officeDocument/2006/math"],
@@ -60,15 +119,17 @@ const OMML_NAMESPACES: readonly (readonly [string, string])[] = [
 ];
 
 /** The gem's per-node `to_omml_without_math_tag` entry point. */
-export function toOmmlWithoutMathTag(node: MathNode, options?: OmmlOptions | null): string {
+export function toOmmlWithoutMathTag(node: MathNode, options?: OmmlNodeOptions | null): string {
   // The options come first, as they do in Ruby: the keyword check there is
   // part of the call, so an unknown keyword raises before the method body
   // ever looks at the receiver.
   assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
   return atBoundary(() => {
-    assertSupportedOptions(options, node.kind);
-    return serializeRendered(ROOT_CONTEXT.render(node));
+    assertSupportedOptions(options, node.kind, NODE_ENTRY_REFUSED);
+    const numberFormat = resolveNumberFormat(options?.formatter, FORMAT);
+    const context = numberFormat === null ? ROOT_CONTEXT : createRenderContext(true, numberFormat);
+    return serializeRendered(context.render(node));
   });
 }
 
@@ -77,7 +138,7 @@ export function toOmml(node: MathNode, options?: OmmlOptions | null): string {
   assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
   return atBoundary(() => {
-    assertSupportedOptions(options, node.kind);
+    assertSupportedOptions(options, node.kind, DEFERRED_OPTIONS);
     if (node.kind !== "formula" && node.kind !== "mrow") {
       throw new RenderError(
         `to_omml is defined on Formula and its subclasses only — received "${node.kind}"`,
@@ -86,15 +147,46 @@ export function toOmml(node: MathNode, options?: OmmlOptions | null): string {
       );
     }
 
+    const values: Record<string, unknown> =
+      options === null || options === undefined ? {} : (options as Record<string, unknown>);
+    // An explicit `undefined` is an absent key (the deferred keywords read the
+    // same way below), where `null` is Ruby's `nil`.
+    const displayValue =
+      Object.hasOwn(values, "displayStyle") && values.displayStyle !== undefined
+        ? values.displayStyle
+        : node.displaystyle;
+    // `boolean_display_style`: `display_style.to_s == "true"`.
+    const context = createRenderContext(
+      String(displayValue) === "true",
+      resolveNumberFormat(options?.formatter, FORMAT),
+    );
+    // Ruby truthiness: only `nil` and `false` are off (`undefined` is absent).
+    const splitValue = Object.hasOwn(values, "splitOnLinebreak")
+      ? values.splitOnLinebreak
+      : undefined;
+    const split = splitValue !== undefined && splitValue !== null && splitValue !== false;
+
     const para = new XmlElement("m:oMathPara").setAttributes(OMML_NAMESPACES);
-    const context = createRenderContext(node.displaystyle);
-    const math = new XmlElement("m:oMath").append(context.render(node));
-    para.append(math);
+    const lines = split ? splitOnLinebreak(node) : [node];
+    for (const [index, line] of lines.entries()) {
+      para.append(new XmlElement("m:oMath").append(context.render(line)));
+      // `omml_br_tag`: a Word break run between lines, never after the last.
+      if (index < lines.length - 1) para.append(BreakRun());
+    }
     return dumpNodes(para, { indent: 2 });
   });
 }
 
-function assertSupportedOptions(options: OmmlOptions | null | undefined, kind: string): void {
+/** `Formula#omml_br_tag`: `<m:r><br/></m:r>`, the bare `br` carrying no namespace. */
+function BreakRun(): XmlElement {
+  return new XmlElement("m:r").append(new XmlElement("br"));
+}
+
+function assertSupportedOptions(
+  options: OmmlOptions | OmmlNodeOptions | null | undefined,
+  kind: string,
+  refused: readonly (readonly [string, string])[],
+): void {
   if (
     options !== null &&
     options !== undefined &&
@@ -132,7 +224,7 @@ function assertSupportedOptions(options: OmmlOptions | null | undefined, kind: s
 
   const values: Record<string, unknown> =
     options === null || options === undefined ? {} : (options as Record<string, unknown>);
-  for (const [name, detail] of DEFERRED_OPTIONS) {
+  for (const [name, detail] of refused) {
     if (Object.hasOwn(values, name) && values[name] !== undefined) {
       throw new RenderError(
         `The "${name}" feature of to_omml is deferred (TODO.plan/deferred.md): ${detail}`,
@@ -157,7 +249,14 @@ function atBoundary<T>(render: () => T): T {
     // the class is constructible by the input too, and a hostile getter
     // throwing one mid-render is an input failure, not a symbol-table miss.
     if (error instanceof RenderError || isOwnMissingSymbolDataError(error)) throw error;
-    if (error instanceof RangeError) {
+    // `isStackOverflow` (pegkit/atom.ts), not a bare `instanceof RangeError`:
+    // the class alone also matches `UndecodableEntityError` (core/nodes.ts),
+    // an ordinary entity-decode refusal that is a `RangeError` subclass but
+    // has nothing to do with recursion. This format's kind files decode
+    // through `decodeEntities` (render-shared.ts), which turns that error
+    // into a `RenderError` first; the narrow check keeps any other
+    // `RangeError` from being reported as stack exhaustion.
+    if (isStackOverflow(error)) {
       throw new RenderError(
         "node: the tree nests too deep for the OMML walk's call stack",
         FORMAT,

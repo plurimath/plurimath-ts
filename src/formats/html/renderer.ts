@@ -1,30 +1,32 @@
 import { describeThrown } from "../../core/errors";
 import { assertMathNodeShape, type MathNode, RenderError } from "../../core/index";
 import { assertKnownOptions } from "../../core/render-options";
-import { ROOT_CONTEXT } from "./render";
+import { isStackOverflow } from "../../core/stack-overflow";
+import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
+import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
 
 /**
- * Renderer options. Empty today and typed exactly (§5), for the same reason as
- * `LatexOptions`: the gem's `to_html` takes `formatter:`, `unitsml:` and
- * `options:`, and the only one observable on this path is a configured number
- * formatter, which is P4 scope. No html render consults an option, so the
- * parameter's only job is the entry-point guard below, which refuses a key
- * this type does not declare instead of ignoring it
- * (core/render-options.ts).
+ * Renderer options, typed exactly (§5). `formatter` is B2's first slice
+ * (TODO.plan/feature-roadmap.md, "Number formatting"; TODO.plan/
+ * open-decisions.md, "Number-formatter API shape") — `Formatter::Standard`'s
+ * symbols and numeric pipeline (precision, significant digits, digit count,
+ * padding, number sign, notation, base, string format), resolved by
+ * `resolveNumberFormat` (`../../formatting/number-format.ts`). The
+ * gem's other two `to_html` keywords — `unitsml:`, `options:` (formula.rb:149
+ * on the pinned oracle) — are still not implemented at all.
  */
-export type HtmlOptions = Record<string, never>;
+export interface HtmlOptions {
+  readonly formatter?: FormatterOptions | null;
+}
 
 /**
- * The option keys this entry accepts. There are none: `HtmlOptions` declares
- * no key, so every key that reaches the entry is unknown and is refused BY NAME
- * (`assertKnownOptions`, core/render-options.ts) instead of ignored. The
- * gem's own `to_html` keywords — `formatter:`, `unitsml:`, `options:`
- * (formula.rb:149 on the pinned oracle) — are refused here too: none of the
- * three is implemented in this port, so accepting one silently would promise
- * a behaviour it does not have.
+ * The option keys this entry accepts. `formatter` is implemented (above);
+ * every other key — including the gem's own `unitsml:` and `options:`
+ * keywords — is unknown and refused BY NAME (`assertKnownOptions`,
+ * core/render-options.ts) instead of ignored.
  */
-const ACCEPTED_OPTIONS: readonly string[] = [];
+const ACCEPTED_OPTIONS: readonly string[] = ["formatter"];
 
 /**
  * `Formula#to_html` / any node's `to_html`, as a module function.
@@ -44,8 +46,10 @@ export function toHtml(node: MathNode, options?: HtmlOptions | null): string {
   // ever looks at the receiver.
   assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
+  const numberFormat = resolveNumberFormat(options?.formatter, FORMAT);
+  const context = numberFormat === null ? ROOT_CONTEXT : createRenderContext(numberFormat);
   try {
-    return ROOT_CONTEXT.render(node) ?? "";
+    return context.render(node) ?? "";
   } catch (error) {
     // Only this walk's own surfaces pass through: `RenderError` (the §5
     // contract) and the symbol table's `MissingSymbolDataError` — the one
@@ -57,7 +61,12 @@ export function toHtml(node: MathNode, options?: HtmlOptions | null): string {
     // the class is constructible by the input too, and a hostile getter
     // throwing one mid-render is an input failure, not a symbol-table miss.
     if (error instanceof RenderError || isOwnMissingSymbolDataError(error)) throw error;
-    if (error instanceof RangeError) {
+    // `isStackOverflow` (pegkit/atom.ts), not a bare `instanceof RangeError`:
+    // the class alone also matches `UndecodableEntityError` (core/nodes.ts),
+    // an ordinary entity-decode refusal that is a `RangeError` subclass but
+    // has nothing to do with recursion — see the asciimath/latex/unicodemath
+    // renderers' matching comment for the measured case that found this.
+    if (isStackOverflow(error)) {
       throw new RenderError(
         "node: the tree nests too deep for the HTML walk's call stack",
         FORMAT,

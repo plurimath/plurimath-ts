@@ -14,8 +14,9 @@
  * entry's own locale while refusing to under each of the other markers
  * the table holds.
  *
- * The `group` column is not carried: nothing at parse time reads it, and
- * the P4 `Formatter::Numbers` port owns that surface (ARCHITECTURE.md §9).
+ * The `group` column is emitted alongside it, in `./locale-groups.ts` —
+ * a render-time concern rather than a parse-time one, so it is a
+ * sibling file rather than a column here (ARCHITECTURE.md §9).
  */
 
 /**

@@ -8,12 +8,11 @@
 
 import {
   type NodeOf,
-  plainRun,
   type RenderContext,
   symbolOmmlValue,
-  symbolValueOrGenerated,
+  symbolTextTag,
 } from "../../formats/omml/render-shared";
-import type { XmlElement } from "../../xml/index";
+import { XmlElement } from "../../xml/index";
 
 /**
  * The one value the gem hard-codes out of both OMML paths
@@ -37,5 +36,5 @@ export function renderSymbolInserted(
   _context: RenderContext,
 ): XmlElement | null {
   if (node.value === INVISIBLE_TIMES_ENTITY) return null;
-  return plainRun(symbolValueOrGenerated(node, node.kind));
+  return new XmlElement("m:r").append(symbolTextTag(node, node.kind));
 }

@@ -5,15 +5,18 @@
  * `<msubsup>`/`<msub>`/`<msup>` by which of the first two slots are present
  * — nil slots contribute NOTHING here, no `<mrow/>` placeholders (probes
  * oint-sub / oint-sup, unlike int) — and a third slot appends behind it in
- * an outer `<mrow>` (`ternary_intentify` is identity, intent off).
+ * an outer `<mrow>`. Under intent the third slot is wrapped in `<mrow>` unless
+ * it is one (`wrap_mrow`) and `ternary_intentify` tags the result
+ * `:contour integral(...)` — on the script itself when there is no third slot.
  */
 
 import {
   type NodeOf,
+  naryandIntent,
   present,
   type RenderContext,
   renderChild,
-  requireElement,
+  wrapMrow,
 } from "../../formats/mathml/render-shared";
 import { MATHML_UNICODE_INVERT } from "../../generated/mathml/render-tables";
 import { XmlElement } from "../../xml/index";
@@ -41,11 +44,16 @@ export function renderOint(node: NodeOf<"oint">, context: RenderContext): XmlEle
       ? null
       : renderChild(node.parameterTwo, context, "oint.parameterTwo"),
   );
-  if (node.parameterThree === null || node.parameterThree === undefined) return script;
-  const third = requireElement(
+  const intentName = ":contour integral";
+  if (node.parameterThree === null || node.parameterThree === undefined) {
+    return context.intent ? naryandIntent(script, intentName) : script;
+  }
+  const third = wrapMrow(
     renderChild(node.parameterThree, context, "oint.parameterThree"),
+    context.intent,
     node.kind,
     "oint.parameterThree",
   );
-  return new XmlElement("mrow").append(script, third);
+  const mrow = new XmlElement("mrow").append(script, third);
+  return context.intent ? naryandIntent(mrow, intentName) : mrow;
 }

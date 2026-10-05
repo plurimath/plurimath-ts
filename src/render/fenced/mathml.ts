@@ -20,17 +20,27 @@
  *     fenced-invisible).
  *
  * The body is `parameter_two&.map`, nil-safe per element and `[]` for nil
- * (probe fenced-nil-body); `intentify` is identity with intent off.
+ * (probe fenced-nil-body). Under intent the body first passes the
+ * partial-derivative rewrite (`mathml_value`, :407) and the `<mrow>` is then
+ * tagged by `intentify(:interval_fence)`: `:fenced`, an interval name
+ * (`open-interval(a,b)` ...), or `binomial-coefficient(n,k)` — chosen from the
+ * paren texts and the body's shape by `intent_value` (:338) and its helpers.
  */
 
 import type { NodeParameter } from "../../core/index";
 import { RenderError } from "../../core/index";
 import {
   describeSlot,
+  type FencedIntentName,
   FORMAT,
+  fencedPartialDerivative,
+  gemCrash,
   hashOrNil,
+  intervalFenceIntent,
   type MathmlRendered,
   type NodeOf,
+  nameOf,
+  nodesOf,
   type RenderContext,
   renderChild,
   setAttributesFromHash,
@@ -70,11 +80,21 @@ export function renderFenced(node: NodeOf<"fenced">, context: RenderContext): Xm
       );
     }
     for (const item of two) {
-      if (item === null || item === undefined) continue; // `object&.` per element
-      body.push(renderChild(item, context, "fenced.parameterTwo"));
+      // `object&.` per element: a nil stays in the list (it counts toward the
+      // interval test's `value.length`) and `update_nodes` skips it.
+      body.push(
+        item === null || item === undefined
+          ? null
+          : renderChild(item, context, "fenced.parameterTwo"),
+      );
     }
   }
-  return new XmlElement("mrow").append(openMo, body, closeMo);
+  if (context.intent) fencedPartialDerivative(body);
+  const fenced = new XmlElement("mrow").append(openMo, body, closeMo);
+  if (!context.intent) return fenced;
+  // `mrow_value`: the paren `<mo>`s around the body, as the gem's list.
+  const mrowValue: MathmlRendered[] = [openMo, ...body, closeMo];
+  return intervalFenceIntent(fenced, intentValue(node, mrowValue, context));
 }
 
 function applyParenAttributes(mo: XmlElement, value: unknown, kind: string, at: string): void {
@@ -155,4 +175,140 @@ function requireParenText(value: unknown, kind: string, at: string): string {
     FORMAT,
     kind,
   );
+}
+
+/**
+ * The four `Paren` classes whose `to_latex` is a bracket `intent_value` compares
+ * against (measured: of the 25 `Symbols::Paren` classes on the pinned oracle,
+ * exactly `Lround`, `Rround`, `Lsquare`, `Rsquare` answer `(`, `)`, `[`, `]`;
+ * none of the 25 raises). Any other `Paren` answers something these
+ * comparisons never match, which is all the interval test needs.
+ */
+const PAREN_LATEX: ReadonlyMap<string, string> = new Map([
+  ["Paren::Lround", "("],
+  ["Paren::Rround", ")"],
+  ["Paren::Lsquare", "["],
+  ["Paren::Rsquare", "]"],
+]);
+
+/**
+ * `symbol_or_paren(field, lang: :latex)` (:324): a `Paren` answers its LaTeX,
+ * anything else its `value`. The value branch is `symbolOrParen`'s own.
+ */
+function latexParen(
+  node: NodeOf<"fenced">,
+  field: NodeParameter | undefined,
+  context: RenderContext,
+  at: string,
+): string | null {
+  const id = slotKind(field) === "symbol" ? (field as { readonly id?: unknown }).id : undefined;
+  if (typeof id === "string" && (id === "Paren" || id.startsWith("Paren::"))) {
+    return PAREN_LATEX.get(id) ?? "\0";
+  }
+  return symbolOrParen(node, field, context, at);
+}
+
+/** `intent_value` (:338): which `intent_names` key tags this fence. */
+function intentValue(
+  node: NodeOf<"fenced">,
+  mrowValue: readonly MathmlRendered[],
+  context: RenderContext,
+): FencedIntentName | undefined {
+  if (binomialCoefficient(node)) return "binomialCoefficient";
+  const open = latexParen(node, node.parameterOne, context, "fenced.parameterOne");
+  const close = latexParen(node, node.parameterThree, context, "fenced.parameterThree");
+  if (!intervalIntent(mrowValue, open, close)) return "fenced";
+  return intervalIntentName(open, close);
+}
+
+/** `binomial_coefficient?` (:359): the first body node is a `Frac` carrying `:choose`. */
+function binomialCoefficient(node: NodeOf<"fenced">): boolean {
+  const two = node.parameterTwo;
+  const first = Array.isArray(two) ? two[0] : undefined;
+  if (slotKind(first) !== "frac") return false;
+  const options = hashOrNil(
+    (first as { readonly options?: unknown }).options,
+    node.kind,
+    "frac.options",
+  );
+  return (
+    options !== null &&
+    options.choose !== null &&
+    options.choose !== undefined &&
+    options.choose !== false
+  );
+}
+
+/**
+ * `interval_intent` (:355-368): `nil` where the pair is not one of the
+ * interval shapes — unreachable after `interval_intent?` answered true, but the
+ * gem's `case` is kept.
+ */
+function intervalIntentName(
+  open: string | null,
+  close: string | null,
+): FencedIntentName | undefined {
+  switch (open) {
+    case "(":
+      return close === "]" ? "openClosedInterval" : undefined;
+    case "[":
+      if (close === "]") return "closedInterval";
+      return close === "[" || close === ")" ? "closedOpenInterval" : undefined;
+    case "]":
+      if (close === "]") return "openClosedInterval";
+      return close === "[" ? "openInterval" : undefined;
+    default:
+      return undefined;
+  }
+}
+
+/** `interval_intent?` (:370-379). */
+function intervalIntent(
+  value: readonly MathmlRendered[],
+  open: string | null,
+  close: string | null,
+): boolean {
+  if (value.length !== 5) return false;
+  if (!intervalIntentValue(value)) return false;
+  switch (open) {
+    case "(":
+      return close === "]";
+    case "]":
+      return close === "[" || close === "]";
+    case "[":
+      return close === "[" || close === "]" || close === ")";
+    default:
+      return false;
+  }
+}
+
+/** `interval_intent_value?` (:381-386). */
+function intervalIntentValue(value: readonly MathmlRendered[]): boolean {
+  if (nodesOf(value[2], "interval_intent_value?")[0] !== ",") return false;
+  return validIntentValue(value[1]) && validIntentValue(value[3]);
+}
+
+/** `valid_intent_value?` (:388-399): nil (falsy) for a node name the `case` does not list. */
+function validIntentValue(node: unknown): boolean {
+  const at = "valid_intent_value?";
+  switch (nameOf(node, at)) {
+    case "mrow": {
+      const names = nodesOf(node, at).map((child) => nameOf(child, at));
+      return names.every((n) => n === "mn") || names.every((n) => n === "mo" || n === "mi");
+    }
+    case "mi":
+    case "mo":
+      return matchesText(node, /[A-Za-z]/);
+    case "mn":
+      return matchesText(node, /[0-9]/);
+    default:
+      return false;
+  }
+}
+
+/** `node.nodes.first.match?(regex)`: nil and elements have no `match?`. */
+function matchesText(node: unknown, pattern: RegExp): boolean {
+  const first = nodesOf(node, "match_node_value?")[0];
+  if (typeof first !== "string") throw gemCrash("match_node_value?", "no match? on a non-String");
+  return pattern.test(first);
 }

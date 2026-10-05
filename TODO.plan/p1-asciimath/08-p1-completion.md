@@ -23,7 +23,7 @@ measures until a document breaks.
 (`test/formats/asciimath/failure-parity.spec.ts`) probes 156 candidates against
 the gem, pins the 26 it rejects with mapped positions, and runs two sweeps with
 zero accept/reject disagreement. The pinned testsuite now supplies 13 canonical
-rejection cases, and `test/formats/asciimath/rejection-parity.spec.ts` reads them
+AsciiMath rejection cases, and `test/formats/asciimath/rejection-parity.spec.ts` reads them
 through the `negative-parity` gate.
 
 Ownership follows the usual split: the **testsuite** defines the failure cases

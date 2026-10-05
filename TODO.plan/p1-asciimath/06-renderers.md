@@ -90,18 +90,23 @@ turns it into a named property with a one-line diff.
 
 ## Done when
 
-- [ ] `toAsciimath`, `toLatex` and `toMathml` match the gem byte-for-byte
+- [x] `toAsciimath`, `toLatex` and `toMathml` match the gem byte-for-byte
   across the **reachable** pinned corpus.
-- [ ] The runtime-boundary tests pass: a valid structural object renders, while an
+  (done: the corpus and round-trip layers of `test/formats/{asciimath,latex,mathml}/render-parity.spec.ts`, 236 reachable cases; checked 2026-09-24)
+- [x] The runtime-boundary tests pass: a valid structural object renders, while an
   unknown kind and a malformed known kind each raise `RenderError`.
-- [ ] The package-isolation gate shows `/asciimath` carrying no MathML or LaTeX
+  (done: `test/gates/runtime-boundary.spec.ts:79` renders a valid plain object and `:110` rejects an unknown kind, for every renderer; the gate leaves malformed slots to the format suites, where `test/formats/asciimath/renderer.spec.ts:1087` rejects a `FencedNode` with a null slot; checked 2026-09-28)
+- [x] The package-isolation gate shows `/asciimath` carrying no MathML or LaTeX
   data, and `/mathml` carrying no parser.
+  (done: `scripts/gate-package.mjs:191` and `:200`; `pnpm gate:package` exits 0 under Node 24; checked 2026-09-24)
 - [ ] The MathML option matrix lists all six options, each marked implemented
   here or deferred to a named phase, and every implemented one matches the gem
   byte-for-byte on the fixture's inputs.
-- [ ] The byte-fidelity fixture covers the six properties above, and each one
+- [x] The byte-fidelity fixture covers the six properties above, and each one
   is shown failing on its own — break one property in the serializer, watch
   exactly that assertion fail, restore. A fixture never seen failing proves
   nothing.
-- [ ] Every numeric form in the pinned corpus renders byte-identically in all
+  (done: #9; `test/xml/ox-contract.expected.json` pins `attr-order`, `namespaced`, `empty-with-attr`, the text and attribute escape sweeps, `entity-text-passthrough` and the `mixed-*` whitespace cases; the PR records every fixture family seen failing under a targeted mutation; checked 2026-10-02)
+- [x] Every numeric form in the pinned corpus renders byte-identically in all
   three formats with no formatter configured.
+  (done: the render-parity specs render all 236 reachable cases with no formatter, the `numbers` group among them; checked 2026-09-24)

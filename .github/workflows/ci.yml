@@ -6,6 +6,13 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Every job only reads: it checks out this repository and its public submodule,
+# installs dependencies and runs tests. Nothing uploads artifacts, writes checks
+# or statuses, comments or pushes, and setup-node's pnpm cache goes through the
+# Actions cache service, which does not use this token.
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true

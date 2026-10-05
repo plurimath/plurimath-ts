@@ -64,14 +64,45 @@ import {
   unicodemathParens,
 } from "../../formats/unicodemath/render-shared";
 
-const REACHABLE_TERNARY_NAMES: ReadonlySet<string> = new Set(["PowerBase"]);
-
 export function renderTernaryFunction(
   node: NodeOf<"ternaryFunction">,
   context: RenderContext,
 ): string {
-  if (!REACHABLE_TERNARY_NAMES.has(node.name)) throw missingRenderer(node.name, "ternaryFunction");
+  switch (node.name) {
+    case "PowerBase":
+      return renderPowerBase(node, context);
+    case "Limits":
+      return renderLimits(node, context);
+    case "Multiscript":
+      return renderMultiscript(node, context);
+    // `def to_unicodemath(**) = ""` (`rule.rb:37`): no slot is read at all.
+    case "Rule":
+      return "";
+    case "Underover":
+      return renderUnderover(node, context);
+    default:
+      throw missingRenderer(node.name, "ternaryFunction");
+  }
+}
 
+/**
+ * `Underover#to_unicodemath` (`underover.rb`): the base, then a subscript
+ * (`┬`) and superscript (`┴`) each through `unicodemath_parens` when its slot
+ * is truthy — no swap, and none of `PowerBase`/`Limits`'s mini/prime/Base/
+ * Power special-casing.
+ */
+function renderUnderover(node: NodeOf<"ternaryFunction">, context: RenderContext): string {
+  const base = renderOptionalChild(node.parameterOne, context);
+  const sub = present(node.parameterTwo)
+    ? `┬${unicodemathParens(slotNode(node.parameterTwo, "ternaryFunction.parameterTwo"), context) ?? ""}`
+    : "";
+  const sup = present(node.parameterThree)
+    ? `┴${unicodemathParens(slotNode(node.parameterThree, "ternaryFunction.parameterThree"), context) ?? ""}`
+    : "";
+  return `${base}${sub}${sup}`;
+}
+
+function renderPowerBase(node: NodeOf<"ternaryFunction">, context: RenderContext): string {
   // `first_value = sub_value(…) if parameter_two` — Ruby truthiness, so a nil
   // slot contributes nothing at all. Testing `!== undefined` would be wrong:
   // an absent slot arrives here as `null`, and `(x, nil, nil)` would gain an
@@ -134,4 +165,130 @@ function slotNode(field: unknown, at: string): MathNode {
   if (isNode(field)) return field;
 
   throw slotCrash(at, field, "ternaryFunction");
+}
+
+/**
+ * `Limits#to_unicodemath` (`limits.rb:35`): the base, then the superscript
+ * (`┴`) BEFORE the subscript (`┬`), each only when its slot is truthy.
+ * `Limits#sup_value` (`limits.rb:59`) drops the parens for a `Power`
+ * superscript and for any superscript when the base is a `Power` over a prime
+ * (the same two-level look `PowerBase#sup_value` takes); `sub_value` (`:71`)
+ * drops them for a `Base` subscript. Slots are read without `&.`, so one that
+ * is not a node raises.
+ */
+function renderLimits(node: NodeOf<"ternaryFunction">, context: RenderContext): string {
+  const base = renderOptionalChild(node.parameterOne, context);
+  return `${base}${limitsSup(node, context)}${limitsSub(node, context)}`;
+}
+
+function limitsSup(node: NodeOf<"ternaryFunction">, context: RenderContext): string {
+  const field = node.parameterThree;
+  if (!present(field)) return "";
+  const slot = slotNode(field, "ternaryFunction.parameterThree");
+  const rendered = renderOptionalChild(slot, context);
+  if (isPower(slot)) return `┴${rendered}`;
+  const one = node.parameterOne;
+  if (isPower(one) && isNode(one)) {
+    const inner = (one as { readonly parameterTwo?: unknown }).parameterTwo;
+    if (primeUnicode(isNode(inner) ? inner : undefined)) return `┴${rendered}`;
+  }
+  return `┴${unicodemathParens(slot, context) ?? ""}`;
+}
+
+function limitsSub(node: NodeOf<"ternaryFunction">, context: RenderContext): string {
+  const field = node.parameterTwo;
+  if (!present(field)) return "";
+  const slot = slotNode(field, "ternaryFunction.parameterTwo");
+  if (isBase(slot)) return `┬${renderOptionalChild(slot, context)}`;
+  return `┬${unicodemathParens(slot, context) ?? ""}`;
+}
+
+/**
+ * `Multiscript#to_unicodemath` (`multiscript.rb:70`): the prescript
+ * subscript, the prescript superscript, one space, then the base.
+ *
+ * `unicode_valid_value?` (`:118`) asks the script `empty?` UNGUARDED, so a nil
+ * script raises NoMethodError (an empty list is the way to say "no script");
+ * `valid_value_exist?` inside it is nil or false for every field, so the test
+ * is just "not empty". A script that answers `empty?` but not `map` also
+ * raises, so anything but a list refuses here.
+ */
+function renderMultiscript(node: NodeOf<"ternaryFunction">, context: RenderContext): string {
+  const two = scriptNodes(node.parameterTwo, "ternaryFunction.parameterTwo");
+  const three = scriptNodes(node.parameterThree, "ternaryFunction.parameterThree");
+  const sub = two.length > 0 ? multiscriptSub(two, context) : "";
+  const sup = three.length > 0 ? multiscriptSup(two, three, context) : "";
+  return `${sub}${sup} ${renderOptionalChild(node.parameterOne, context)}`;
+}
+
+/** The script as a list of nodes; anything else is a NoMethodError in the gem. */
+function scriptNodes(field: unknown, at: string): readonly unknown[] {
+  if (Array.isArray(field)) return field;
+  throw slotCrash(at, field, "ternaryFunction");
+}
+
+/**
+ * `Utility.filter_values(list)` (`utility.rb:192`): nils and nesting dropped,
+ * then one element stays itself and several become a `Formula`. Only two
+ * answers are ever asked of the result — `mini_sized?`, which a `Formula`
+ * gives from its FIRST element, and `is_a?(Power)` — so the `Formula` is not
+ * built: `miniSized` of the first element stands for it, and it is never a
+ * `Power`. An empty list gives nil, which is neither.
+ */
+function filtered(list: readonly unknown[]): {
+  readonly mini: boolean;
+  readonly power: boolean;
+  readonly node?: MathNode;
+} {
+  const items = list
+    .flat(Number.POSITIVE_INFINITY)
+    .filter((item) => item !== null && item !== undefined);
+  const first = items[0];
+  const firstNode = isNode(first) ? first : undefined;
+  if (items.length > 1) return { mini: miniSized(firstNode), power: false };
+  if (items.length === 0) return { mini: false, power: false };
+  return {
+    mini: miniSized(firstNode),
+    power: isPower(first),
+    ...(firstNode === undefined ? {} : { node: firstNode }),
+  };
+}
+
+function renderList(list: readonly unknown[], context: RenderContext, at: string): string {
+  return list
+    .map((item, index) => renderOptionalChildStrict(item, context, `${at}[${index}]`))
+    .join("");
+}
+
+/** `param.to_unicodemath(options:)` inside a `map`: a nil element raises. */
+function renderOptionalChildStrict(item: unknown, context: RenderContext, at: string): string {
+  if (!isNode(item)) throw slotCrash(at, item, "ternaryFunction");
+  return renderOptionalChild(item, context);
+}
+
+/**
+ * `Multiscript#sub_value` (`multiscript.rb:136`). The `is_a?(Base)` arm tests
+ * `parameter_two` itself, a list, so it never holds.
+ */
+function multiscriptSub(two: readonly unknown[], context: RenderContext): string {
+  const field = filtered(two);
+  const value = renderList(two, context, "ternaryFunction.parameterTwo");
+  return field.mini ? value : `_(${value})`;
+}
+
+/**
+ * `Multiscript#sup_value` (`multiscript.rb:122`). It filters `parameter_TWO`
+ * for `field` — the gem's own slip, mirrored — so the paren, `Power` and prime
+ * tests read the SUBSCRIPT while the text is the superscript's.
+ */
+function multiscriptSup(
+  two: readonly unknown[],
+  three: readonly unknown[],
+  context: RenderContext,
+): string {
+  const field = filtered(two);
+  const value = renderList(three, context, "ternaryFunction.parameterThree");
+  if (field.mini || primeUnicode(field.node)) return value;
+  if (field.power) return `^${value}`;
+  return `^(${value})`;
 }

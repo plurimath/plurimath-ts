@@ -15,6 +15,7 @@ Nothing here blocks the active phase.
 | npm package name and release line | maintainer | before first publish |
 | Bundle budgets | maintainer | during P1, from real numbers |
 | Symbol data as shared data | maintainer + gem | after P1 |
+| Root `parse(input, format, options)` function | maintainer | not yet set |
 
 ## UnitsML, and what it means for 1.0
 
@@ -165,8 +166,10 @@ port builds a native reader.
 ### What already exists here, and what does not
 
 Both formats are already OUTPUT ports and neither is an INPUT port.
-`src/formats/mathml/` and `src/formats/omml/` each contain only `renderer.ts`,
-`render-shared.ts` and `render.ts` — no parser, no transform, no grammar. The
+`src/formats/mathml/` and `src/formats/omml/` each contain `index.ts`,
+`renderer.ts`, `render-shared.ts` and `render.ts`, and `mathml/` adds the two
+`intent` modules — no parser, no transform, no grammar (`ls`, re-checked
+2026-09-24 at `70f9482`). The
 render side is oracle-locked too: `test/formats/omml/` and
 `test/formats/html/` carry generated parity and degenerate fixtures with
 provenance manifests.
@@ -264,6 +267,61 @@ Ox and Oga adapters — so there is a single answer, not an adapter-dependent on
   translator's `else` branch (`translator.rb:64-65`) has no content-element
   case, although `mml` models those elements.
 
+## Command-line interface
+
+`ARCHITECTURE.md` §10 previously listed a CLI neither in scope nor under
+YAGNI. `lib/plurimath/cli.rb` is a Thor `convert` command with input/output
+format, `--split-on-linebreak`, display style, `--math-rendering`
+(`to_display`), and an XML engine choice. The port had nothing then; its
+first slice, `plurimath convert` with `--from` and `--to` only
+(`src/cli/args.ts`), has since landed (#127).
+
+**SETTLED 2026-09-16: in scope**, direction is an idiomatic Node CLI rather
+than flag-for-flag parity with the gem's Thor command. Nothing blocks it but
+effort — everything it would call already exists once the render options in
+[feature-roadmap.md](feature-roadmap.md) land, so it has no reason to go
+first. This decision was recorded in a local session note
+(`plan-2026-09-16.md`) the same day as the MathML/OMML and coverage-invariant
+decisions below, but — unlike those — never made it into this file; this
+entry corrects that gap.
+
+## Number-formatter API shape (`formatter:` option)
+
+`feature-roadmap.md`'s number-formatting entry names this as a design
+question blocking B2's first slice: does the per-call `formatter:` option
+arrive as a class instance (mirroring the gem's `Formatter::Standard <
+NumberFormatter`) or a plain options object?
+
+**SETTLED: plain options object.** The gem's `Formatter::Standard` sets its
+config once at construction and never mutates it (`number_formatter.rb:6-16`,
+re-verified against the pinned oracle `plurimath` @ `00c52783`, v0.11.6 — not
+the unpinned v0.11.3 clone an earlier check used by mistake), so nothing
+about statelessness forces the class shape here. Weighed against that: the
+port has no existing precedent for a subclassable option — every renderer
+option today is a plain object gated by `assertKnownOptions`
+(`src/core/render-options.ts`), and the one existing pluggable-behavior
+option, `onUnsupported`, is a function field on a plain object, not a class a
+consumer subclasses. `ARCHITECTURE.md` §5 also states node classes "are not
+extension points: subclassing is unsupported" — a stated bias against adding
+a new subclassable class here. `plurimath-testsuite`'s `calls/1` schema
+already records formatter args as a flat plain object
+(`{locale, options: {...}, precision, string_format}`), agnostic to either
+choice, so it does not push either way.
+
+**Conceded tradeoff:** a class instance would 1:1-mirror the gem's own
+`NumberFormatter` subclassing extension point, giving a cleaner story for a
+consumer wanting fully custom formatting logic beyond field values. B2's
+first slice only needs to replicate `Formatter::Standard`'s behavior, and
+deeper pluggability can be added later as a function field (matching
+`onUnsupported`) if a real consumer asks — not strong enough to override the
+object shape now.
+
+This decision, like the CLI one above, was recorded in a local session note
+(`plan-2026-09-16.md`, which described it differently — "plain functions, a
+thin class binds them" — a framing about the *gem's* internals verified for
+B1's oracle generation, not the port's own option shape) but never landed
+here; this entry settles the port-specific question directly.
+
 ## What the UnicodeMath transform's coverage invariant should require
 
 `test/formats/unicodemath/transform-coverage.spec.ts` asserts that every ported
@@ -311,3 +369,73 @@ this repo — the wide reading accepts hand-picked fixtures as counting toward
 coverage, it does not relax how they are measured, and it does not close the
 per-branch gap above; a future slice that wants per-branch assurance needs a
 different invariant, not a different reading of this one.
+
+## Root `parse()` function
+
+`ARCHITECTURE.md` §4 describes a root `parse(input, format, options)` that
+forwards to a format's parser. `src/index.ts` does not export one (it exports
+`Plurimath`, `FORMATS`, `Format`, `/core` and `evaluation`), so today a caller reaches a
+parser only through a per-format subpath or the compat class. Whether to build
+it, and with what options shape, is undecided; the docs describe it as
+documented-but-unbuilt until then.
+
+## Evaluation error family (B6, first slice)
+
+`feature-roadmap.md`'s evaluation entry names eight error classes under the
+gem's `Errors::Evaluation::*` (`Error` plus `DivisionByZeroError`,
+`MathDomainError`, `NonFiniteResultError`, `UnsupportedExpressionError`,
+`MissingVariableError`, `InvalidBindingError`, `InvalidBindingKeyError`). The
+question for the port: one `EvaluationError` type carrying a reason code, or
+eight classes mirroring the gem one to one.
+
+**SETTLED 2026-09-23** (the user): mirror the gem — eight separate classes,
+each a `PlurimathError` with its own `code` joining `PlurimathErrorCode`
+(`src/core/errors.ts`), built exactly like every other error family (dual
+ESM/CJS, `code` not `instanceof`). `src/evaluation/errors.ts` has the
+implementation and the oracle-measured message text for each. The
+maintainer's own preference is the opposite — one evaluation error type — and
+is deferred rather than dropped: `TODO.plan/deferred.md`'s "Parked ideas" has
+the entry, to be changed in both the gem and the port together once the
+byte-identical structure is done.
+
+## Evaluation return type (B6, first slice)
+
+The gem's `Formula#evaluate` returns whatever Ruby's arithmetic produces: an
+`Integer` (`2+3` is `5`), a `Float` (`6/3` is `2.0`), an arbitrary-precision
+`Integer` (`2^100`), or a `Rational` (`2^(-1)` is `(1/2)`). JavaScript has one
+`number` type. The question for the port: what `evaluate` returns, and what
+happens where Ruby's answer has no exact JS `number`.
+
+**SETTLED 2026-09-23** (the user): follow Plurimath's documented behaviour.
+The gem README's "Evaluating formulas" section (`README.adoc:289-363` at the
+pinned oracle `00c52783`) documents `evaluate` as computing "numeric results"
+(examples `5.0` and `9`) and says "Division uses `Float` arithmetic"; it
+documents no arbitrary-precision Integer or Rational result. So `evaluate`
+returns a JS `number` for every documented case, and throws
+`UnsupportedFeatureError` (a port limitation, not an evaluation error) where
+Ruby's FINAL answer cannot be represented exactly: an Integer outside
+`Number.isSafeInteger`, or a Rational. Ruby's Integer-versus-Float
+distinction (`9` versus `5.0`) is not observable in JavaScript.
+
+Refined the same day (the user): intermediates are computed EXACTLY, as Ruby
+computes them, and only the final result is checked. `src/evaluation/
+numeric.ts` holds a Ruby Integer as a `bigint`, a Rational as an exact reduced
+`bigint` pair and a Float as a `number`, and follows Ruby 4.0.1's arithmetic
+for every kind pair — `2^100/2^99` is `2.0`, `2^(-1)*2.0` is `1.0`, and an
+evaluation error raised later in the expression (`2^100+x`) still wins. The
+conversions to Float reproduce Ruby's own: `Number(bigint)` for an Integer
+(round to nearest, ties to even, as `big2dbl` does) and `bignum.c`'s
+truncating `big_fdiv` for a Rational. Where Ruby raises `ArgumentError`, and
+beyond the port's size limit for exact values, the port refuses on the spot
+(`deferred.md`, "exact intermediates beyond the port's size limit").
+`test/evaluation/evaluate.spec.ts` checks the kind of every fixture row
+against the oracle. A binding holding a safe integer is read as a Ruby
+Integer, any other number as a Float.
+
+The same reasoning covers Float powers: Ruby's `**` calls the C library's
+`pow`, which JavaScript's `**` does not reproduce, and glibc's `pow` itself is
+not correctly rounded within 0.04 ULP of a midpoint (its documented 0.54 ULP
+worst case). `src/evaluation/pow.ts` returns the correctly rounded result,
+which is glibc's everywhere outside that band, and refuses inside it with
+`UnsupportedFeatureError` — the documented bound kept on purpose (the user,
+2026-09-23); `deferred.md` records it as a known divergence.

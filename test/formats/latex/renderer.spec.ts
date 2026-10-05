@@ -15,6 +15,7 @@
  * fails here by name.
  */
 
+import { isMainThread } from "node:worker_threads";
 import { describe, expect, it } from "vitest";
 import { MissingSymbolDataError, ParseError, RenderError } from "../../../src/core/errors";
 import {
@@ -100,13 +101,20 @@ describe("unary functions", () => {
   });
 
   it("refuses a class name outside the AsciiMath-reachable set", () => {
-    // Merror, not Mbox: Mbox is arm-rendered below, and the two are otherwise
+    // None, not Mbox: Mbox is arm-rendered below, and the two are otherwise
     // the same case — measured on the pinned oracle 00c52783,
-    // `Merror.instance_method(:to_latex).owner` is Merror, so a carrier-default
-    // render of the name would diverge silently.
-    expect(() => toLatex(unary("Merror", x()))).toThrow(RenderError);
-    expect(() => toLatex(new BinaryFunctionNode({ name: "Menclose" }))).toThrow(RenderError);
-    expect(() => toLatex(new TernaryFunctionNode({ name: "Multiscript" }))).toThrow(RenderError);
+    // `None.instance_method(:to_latex).owner` is None, so a carrier-default
+    // render of the name would diverge silently. (`Merror`, `Longdiv`,
+    // `Mglyph`, `Ms`, `Msgroup`, `Msline` and `Scarries` are the same shape
+    // but are all measured and case-armed elsewhere in this file now.)
+    expect(() => toLatex(unary("None", x()))).toThrow(RenderError);
+    expect(() => toLatex(new BinaryFunctionNode({ name: "Semantics" }))).toThrow(RenderError);
+    // `Underover` renders now (measured and case-armed in
+    // `src/render/ternary-function/latex.ts`); the base `TernaryFunction`
+    // class itself has no `to_latex` of its own and stays refused.
+    expect(() => toLatex(new TernaryFunctionNode({ name: "TernaryFunction" }))).toThrow(
+      RenderError,
+    );
   });
 
   /**
@@ -1131,7 +1139,7 @@ describe("a list in a value slot the gem inspects", () => {
     //   Color(Number(["a b"]),    Symbol("x")) => "{\\color{[\"ab\"]} x}"
     //   Color(Number([" "]),      Symbol("x")) => "{\\color{[\"\"]} x}"
     // A `\n` inside the inspected string survives, because inspect already
-    // turned it into the two characters `\` and `n`:
+    // turned it into the two characters `` and `n`:
     //   Color(Number(["\n"]),     Symbol("x")) => "{\\color{[\"\\n\"]} x}"
     const color = (value: unknown) =>
       ({
@@ -1345,12 +1353,31 @@ describe("color", () => {
     ).toBe("{\\color{+} z}");
   });
 
-  it("refuses an operand outside the measured fragment as a parity gap", () => {
-    expect(() =>
+  it("covers every static symbol id, not just the corpus+sweep's two (TODO.plan/deferred.md)", () => {
+    // The 2026-08-21 sweep found the port's table carrying only `Plus` and
+    // `Eqno` while the gem renders 1,393 more distinct ids; all 1,393 turned
+    // out already measured, byte-identical, by the mathml slice's own
+    // `MATHML_COLOR_SYMBOL_LITERALS` — so the table was widened to the same
+    // exhaustive `static_symbol_classes` set. `Sigma` and `Alpha` were among
+    // the 3,209 refusals the sweep counted (oracle:
+    // `Color(Sigma, Symbol("z")).to_latex(options: {})` is `{\color{sigma} z}`;
+    // `Alpha`'s own `to_asciimath` is `"alpha"`).
+    expect(
       toLatex(
         new ColorNode({ parameterOne: new SymbolNode({ id: "Sigma" }), parameterTwo: sym("z") }),
       ),
-    ).toThrow(RenderError);
+    ).toBe("{\\color{sigma} z}");
+    expect(
+      toLatex(
+        new ColorNode({ parameterOne: new SymbolNode({ id: "Alpha" }), parameterTwo: sym("z") }),
+      ),
+    ).toBe("{\\color{alpha} z}");
+  });
+
+  it("refuses an operand whose node KIND the asciimath fragment does not handle", () => {
+    // A node kind outside {symbol, number, text, formula, mrow} is a parity
+    // gap regardless of the id table's coverage — `SqrtNode` never carries a
+    // measured asciimath rendering.
     expect(() =>
       toLatex(
         new ColorNode({
@@ -1358,6 +1385,63 @@ describe("color", () => {
           parameterTwo: sym("z"),
         }),
       ),
+    ).toThrow(RenderError);
+  });
+
+  it("keeps the 4 genuine refusals the 2026-08-21 sweep found: fontStyle and fenced operands", () => {
+    // Every gem-declared asciimath token was swept through `color(<token>)(y)`
+    // on the pinned oracle (00c52783): 3,209 of 3,216 `Color` parses raised
+    // here, all but 4 for a missing symbol-id literal (now closed above). The
+    // remaining 4 — tokens `ZZ`, `:`, `:.`, `:'` — parse a first slot whose
+    // asciimath render is a COMPOSITE's full render, not a symbol literal,
+    // and stay refused because rendering it would mean importing the
+    // asciimath format (ARCHITECTURE.md §3) — the same reason `toMathml`
+    // refuses them (mathml.ts's `colorAsciimath`, `default:` branch).
+    //
+    // `ZZ` parses `parameter_one` to a Formula wrapping a
+    // `FontStyle::DoubleStruck` (oracle: its `to_asciimath` is
+    // `"mathbb(Z)"`); the nested `fontStyle` kind reaches the formula-join's
+    // recursive call, which does not handle it.
+    const zz = new FormulaNode({
+      value: [
+        new FontStyleNode({
+          name: "DoubleStruck",
+          parameterOne: sym("Z"),
+          parameterTwo: "mathbf",
+        }),
+      ],
+    });
+    expect(() => toLatex(new ColorNode({ parameterOne: zz, parameterTwo: sym("z") }))).toThrow(
+      RenderError,
+    );
+
+    // `:`, `:.` and `:'` all parse `parameter_one` DIRECTLY to a `Fenced`
+    // node (oracle `to_asciimath`: `<<)`, `<<.)`, `<<prime)` — a "<<" open
+    // paren this port's asciimath slice does not carry either way), so the
+    // top-level `fenced` kind is the one that refuses.
+    const colon = new FencedNode({
+      parameterOne: paren("Paren::Langle"),
+      parameterTwo: [],
+      parameterThree: paren("Paren::Rround"),
+    });
+    expect(() => toLatex(new ColorNode({ parameterOne: colon, parameterTwo: sym("z") }))).toThrow(
+      RenderError,
+    );
+    const colonDot = new FencedNode({
+      parameterOne: paren("Paren::Langle"),
+      parameterTwo: [new SymbolNode({ id: "Period" })],
+      parameterThree: paren("Paren::Rround"),
+    });
+    expect(() =>
+      toLatex(new ColorNode({ parameterOne: colonDot, parameterTwo: sym("z") })),
+    ).toThrow(RenderError);
+    const colonPrime = new FencedNode({
+      parameterOne: paren("Paren::Langle"),
+      parameterTwo: [new SymbolNode({ id: "Prime" })],
+      parameterThree: paren("Paren::Rround"),
+    });
+    expect(() =>
+      toLatex(new ColorNode({ parameterOne: colonPrime, parameterTwo: sym("z") })),
     ).toThrow(RenderError);
   });
 });
@@ -2035,7 +2119,13 @@ describe("inputs that defeat the walk itself", () => {
         failures.push(`depth ${depth}: ${(error as RenderError).message}`);
       }
     }
-    expect(failures).not.toEqual([]);
+    // Which depths overflow depends on the worker's stack. In vitest's
+    // fork-based pools (`forks`, the default CI uses, and `vmForks`) each test
+    // file runs in a child process, where `isMainThread` is true, and this
+    // window overflows. A `threads` or `vmThreads` worker's larger stack may
+    // not. The branding below holds on every pool; that some depth fails is
+    // asserted only in the fork-based pools.
+    if (isMainThread) expect(failures).not.toEqual([]);
     for (const failure of failures) {
       expect(failure).toContain("nests too deep");
       expect(failure).not.toContain("mid-walk");
@@ -2055,6 +2145,37 @@ describe("inputs that defeat the walk itself", () => {
       },
     };
     expect(() => toLatex(node as never)).toThrow(RenderError);
+  });
+
+  it("does not relabel an unrelated RangeError as stack exhaustion", () => {
+    // Mirrors `test/adversarial/adversarial-inputs.spec.ts`'s guard test of
+    // the same name for the PARSE side. A hostile getter throwing a
+    // `RangeError` whose message has nothing to do with recursion — the same
+    // shape `UndecodableEntityError` (core/nodes.ts) actually takes when a
+    // renderer's own entity decode refuses input mid-walk — must not take the
+    // "nests too deep" branding meant for genuine engine stack exhaustion.
+    // Seen red without the fix: this walk used a bare `instanceof RangeError`
+    // check, so the sentinel message below was replaced by "the tree nests
+    // too deep for the walk's call stack".
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new RangeError("sentinel, nothing to do with recursion");
+        return "1";
+      },
+    };
+    let failure: string | null = null;
+    try {
+      toLatex(node as never);
+    } catch (error) {
+      expect(error).toBeInstanceOf(RenderError);
+      failure = (error as RenderError).message;
+    }
+    expect(failure).not.toBeNull();
+    expect(failure).toContain("sentinel, nothing to do with recursion");
+    expect(failure).not.toContain("nests too deep");
   });
 
   it("a kind that flips to an inherited key after validation raises the unknown-kind RenderError", () => {

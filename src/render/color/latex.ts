@@ -4,10 +4,13 @@
  * no-break space stays); the second through `to_latex`; both nil-safe.
  *
  * The one render that crosses into asciimath: this file duplicates the
- * minimal asciimath fragment that path needs (base symbols, numbers, quoted
- * text, formula joins, plus the symbol ids the corpus+sweep exercise) rather
- * than importing the asciimath format (ARCHITECTURE.md §3, no cross-format
- * imports); an unmeasured operand raises rather than diverging.
+ * asciimath fragment that path needs (base symbols — every static symbol
+ * class, TODO.plan/deferred.md, "Color renders only the measured AsciiMath
+ * fragment" — numbers, quoted text, formula joins) rather than importing the
+ * asciimath format (ARCHITECTURE.md §3, no cross-format imports); an operand
+ * whose node KIND this fragment does not handle (a `fontStyle` or `fenced`
+ * composite, whose asciimath render is a full sub-render this format does
+ * not own) raises rather than diverging.
  */
 
 import { RenderError } from "../../core/index";
@@ -29,12 +32,13 @@ import { LATEX_COLOR_ASCIIMATH_SYMBOLS } from "../../generated/latex/render-tabl
 import { VALUE_RENDERED_SYMBOL_IDS } from "../symbol/latex";
 
 /**
- * The asciimath renders `Color#to_latex` needs for its first slot, for the
- * symbol ids the corpus+sweep actually put there — generated per id and
- * verified through a full Color render. Kept deliberately minimal — an id
- * outside this table raises a parity-gap RenderError rather than guessing —
- * because the full asciimath symbol table belongs to the asciimath format
- * (§3, no cross-format tables).
+ * The asciimath renders `Color#to_latex` needs for its first slot, for
+ * every static symbol id — generated per id and verified through a full
+ * Color render, the same measurement `MATHML_COLOR_SYMBOL_LITERALS`
+ * re-emits mathml-side (their two generated copies are byte-identical, so
+ * they cannot drift apart). An id outside this table would raise a
+ * parity-gap RenderError, but none is: `static_symbol_classes` is
+ * exhaustive over the ids a parsed symbol can carry.
  */
 const COLOR_ASCIIMATH_SYMBOLS: ReadonlyMap<string, string> = LATEX_COLOR_ASCIIMATH_SYMBOLS;
 

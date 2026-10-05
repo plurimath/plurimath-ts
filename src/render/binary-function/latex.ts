@@ -4,8 +4,10 @@
  * byte-equivalent ternary twin) — plus the name arms for the gem classes the
  * census folds into this carrier with their *own* `to_latex` overrides:
  * `power.rb` (:35), `mod.rb` (:50), `td.rb` (:30), `lim.rb` (:25), `log.rb`
- * (:44). Of the reachable names only `Stackrel` falls through to the carrier
- * default, and it has no override.
+ * (:44) — and for the classes the AsciiMath transform never
+ * builds (the reachability census lists none of them): `over.rb` (:28), `inf.rb` (:13) and
+ * `menclose.rb` (:39). `Stackrel` and `Mlabeledtr` fall through to the carrier
+ * default, and neither has an override.
  *
  * Measured pin worth naming, because source-reading gets it wrong: `Lim`
  * interpolates `_{…}`/`^{…}` plainly where `Log` goes through
@@ -47,9 +49,20 @@ const REACHABLE_BINARY_NAMES: ReadonlySet<string> = new Set([
 export function renderBinaryFunction(
   node: NodeOf<"binaryFunction">,
   context: RenderContext,
-): string {
+): string | null {
   const name = node.name;
   switch (name) {
+    case "Over":
+      // `"{#{first} \\over #{two}}"`, both slots `&.` (`over.rb:28`).
+      return `{${nilSafe(node.parameterOne, context, "over.parameterOne")} \\over ${nilSafe(node.parameterTwo, context, "over.parameterTwo")}}`;
+    case "Menclose":
+      // `parameter_two&.to_latex` (`menclose.rb:39`): the enclosure type is
+      // dropped, and an absent slot answers nil rather than `""`.
+      if (node.parameterTwo === null || node.parameterTwo === undefined) return null;
+      return renderChild(node.parameterTwo, context, "menclose.parameterTwo");
+    case "Mlabeledtr":
+      // No `to_latex` of its own — the carrier default, under `class_name`.
+      return carrierDefault(node, context);
     case "Power": {
       // `parameter_one.to_latex` is unguarded (`power.rb:35`); `^{…}` is
       // always appended, a nil exponent leaving `^{}` (measured).
@@ -72,15 +85,17 @@ export function renderBinaryFunction(
     }
     case "Td":
       return renderTd(node, context);
+    case "Inf":
     case "Lim": {
-      // Plain `_{…}`/`^{…}` (`lim.rb:25`) — no latex_wrapped.
+      // Plain `_{…}`/`^{…}` (`lim.rb:25`, `inf.rb:13`) — no latex_wrapped.
+      const keyword = name.toLowerCase();
       const one = present(node.parameterOne)
-        ? `_{${s(renderChild(node.parameterOne, context, "lim.parameterOne"))}}`
+        ? `_{${s(renderChild(node.parameterOne, context, `${keyword}.parameterOne`))}}`
         : "";
       const two = present(node.parameterTwo)
-        ? `^{${s(renderChild(node.parameterTwo, context, "lim.parameterTwo"))}}`
+        ? `^{${s(renderChild(node.parameterTwo, context, `${keyword}.parameterTwo`))}}`
         : "";
-      return `\\lim${one}${two}`;
+      return `\\${keyword}${one}${two}`;
     }
     case "Log": {
       // `_#{latex_wrapped(…)}` (`log.rb:44`) — measured against Lim's plain
@@ -100,16 +115,22 @@ export function renderBinaryFunction(
       if (!REACHABLE_BINARY_NAMES.has(name)) throw unreachableName(node.kind, name);
       // `BinaryFunction#to_latex` (`binary_function.rb:48`) — of the
       // reachable names only `Stackrel` lands here, and it has no override.
-      return `\\${name.toLowerCase()}${
-        present(node.parameterOne)
-          ? latexWrapped(node.parameterOne, context, `${name}.parameterOne`)
-          : ""
-      }${
-        present(node.parameterTwo)
-          ? latexWrapped(node.parameterTwo, context, `${name}.parameterTwo`)
-          : ""
-      }`;
+      return carrierDefault(node, context);
   }
+}
+
+/** `BinaryFunction#to_latex` (`binary_function.rb:48`). */
+function carrierDefault(node: NodeOf<"binaryFunction">, context: RenderContext): string {
+  const name = node.name;
+  return `\\${name.toLowerCase()}${
+    present(node.parameterOne)
+      ? latexWrapped(node.parameterOne, context, `${name}.parameterOne`)
+      : ""
+  }${
+    present(node.parameterTwo)
+      ? latexWrapped(node.parameterTwo, context, `${name}.parameterTwo`)
+      : ""
+  }`;
 }
 
 function renderTd(node: NodeOf<"binaryFunction">, context: RenderContext): string {

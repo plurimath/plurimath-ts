@@ -1,7 +1,11 @@
 # P3 — The other input formats
 
-**Status: planned.** LaTeX, UnicodeMath and HTML parsers. Each is locked by its
-own corpus before the next begins.
+**Status: started ahead of plan** (`gates.json#currentMilestone` is `P2`).
+LaTeX, UnicodeMath and HTML parsers. Each is locked by its own corpus before
+the next begins. On `main`: the LaTeX (#76) and HTML (#88) parsers, and a
+partial UnicodeMath parser registering 483 of the gem's 519 transform rules
+(`FINAL_COUNT` in `test/formats/unicodemath/transform-coverage.spec.ts`). One
+of the five exit criteria below is checked.
 
 Each format opens as its own directory here (`latex/`, `unicodemath/`,
 `html/`) with numbered work items when it starts.
@@ -96,5 +100,6 @@ Per format:
       does not exist for that format. Entities apply here, unlike in P1.
 - [ ] Locale behaviour matching the gem for that parser, or a recorded
       divergence if it is deliberately not implemented.
-- [ ] Isolation assertions for its subpath.
+- [x] Isolation assertions for its subpath.
+  (done: `scripts/gate-package.mjs:195`, `:199`, `:207` for `./html`, `./latex`, `./unicodemath`; `pnpm gate:package` exits 0; checked 2026-09-24)
 - [ ] Review round with findings resolved, and sign-off recorded.

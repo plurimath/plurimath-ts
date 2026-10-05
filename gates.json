@@ -37,7 +37,7 @@
       "class": "A",
       "activatesAt": "P0",
       "run": "pnpm gate:package",
-      "description": "Built ESM/CJS loads and exact exports for every published code entry, forbidden-layer checks for configured non-root entries, plus publint and attw; both of those pack the package first"
+      "description": "Built ESM/CJS loads and exact exports for every published code entry, forbidden-layer checks for configured non-root entries, the root compat class's built ESM and CJS declarations against test/fixtures/compat/plurimath-declaration.json, plus publint and attw; both of those pack the package first"
     },
     {
       "id": "runtime-boundary",
@@ -103,9 +103,11 @@
       "run": "pnpm test rejection",
       "selects": [
         "test/formats/asciimath/rejection-parity.spec.ts",
-        "test/formats/latex/rejection-parity.spec.ts"
+        "test/formats/html/rejection-parity.spec.ts",
+        "test/formats/latex/rejection-parity.spec.ts",
+        "test/formats/unicodemath/rejection-parity.spec.ts"
       ],
-      "description": "Inputs the gem rejects are rejected here, in both notations this port parses. Each suite reads only the rejection cases written in its own input format: the corpus carries two, and feeding one parser the other notation's source proves nothing about either"
+      "description": "Inputs the gem rejects are rejected here, in every notation the corpus carries rejections for (AsciiMath, LaTeX, UnicodeMath, HTML). Each suite reads only the rejection cases written in its own input format, since feeding one parser the other notation's source proves nothing about either"
     },
     {
       "id": "symbol-context-matrix",

@@ -19,10 +19,25 @@
 #   3. the same parse under each *other* marker the table holds does not —
 #      which is the behaviour the marker exists to switch.
 #
-# The `group` column is deliberately not emitted: nothing at parse time reads
-# it, and the P4 `Formatter::Numbers` port owns that surface (§9, §10). When
-# P4 arrives this generator grows the column; until then emitting it would be
-# dead weight in every parser bundle.
+# The `group` column IS emitted, alongside `decimal` — this is the P4
+# `Formatter::Numbers` port's number-rendering slice (§9, §10) that the
+# `decimal`-only version of this comment used to defer. Nothing at PARSE time
+# reads `group` (only `decimal` feeds the AsciiMath grammar, as above), so it
+# has no read-back-by-parse verification to reuse; it is verified instead by a
+# live RENDER call — see `measured_group` and `verify_group_entry!` below.
+# `Formatter::Standard`, the gem's public number-formatter class, cannot be
+# that live call: measured on the oracle, `Formatter::Standard.new(locale:
+# "de").localized_number("1234567")` answers `"1,234,567"`, not the German
+# `"1.234.567"`, because `Standard#set_default_options` fills every one of
+# `DEFAULT_OPTIONS`' keys — including `:decimal` and `:group` — before
+# `SymbolResolver#resolve` ever merges in the locale's own entry, so the
+# locale-specific symbols are always shadowed by `Standard`'s own hardcoded
+# `"."`/`","` unless the caller passes `decimal`/`group` explicitly. The base
+# `Plurimath::NumberFormatter` class has no such defaulting — passed an empty
+# `localizer_symbols:` hash, it renders straight off `SupportedLocales::
+# LOCALES[locale][:group]` — so THAT class is the live call this generator
+# uses to verify the column, matching what `SupportedLocales.decimal_for` and
+# the grammar already agree `decimal` means for the same locale.
 #
 # Usage, from the plurimath-ts repository root:
 #
@@ -39,7 +54,8 @@
 #
 # Outputs:
 #   src/formatting/generated/locale-decimals.ts  locale key -> decimal marker
-#   src/formatting/generated/provenance.ts       what the table was generated from
+#   src/formatting/generated/locale-groups.ts    locale key -> group marker
+#   src/formatting/generated/provenance.ts       what the tables were generated from
 #
 # The generator is deterministic: two runs over the same oracle produce
 # byte-identical output. No timestamps, no absolute paths; the table keeps the
@@ -137,6 +153,65 @@ module FormattingDataGenerator
     end
   end
 
+  # `SupportedLocales.symbols_for` is public (unlike the private `LOCALES`
+  # projection this generator used to read straight off the constant): reading
+  # through it, rather than `LOCALES[key]` directly, keeps this measurement on
+  # the same public surface `decimal_for` uses, so a future refactor of the
+  # constant's shape breaks this generator the same way it would break the
+  # gem's own `decimal_for`.
+  def measured_group(key)
+    marker = supported_locales.symbols_for(key).fetch(:group, MISSING)
+    if marker.equal?(MISSING) || !marker.is_a?(::String) || marker.empty?
+      raise Error, "#{key.inspect}: symbols_for(...).fetch(:group) answered " \
+                   "#{marker.inspect}, not a marker"
+    end
+
+    as_string = supported_locales.symbols_for(key.to_s).fetch(:group, MISSING)
+    unless as_string == marker
+      raise Error, "#{key.inspect}: the String spelling's group is " \
+                   "#{as_string.inspect}, the Symbol spelling's is #{marker.inspect}"
+    end
+
+    marker
+  end
+
+  # The live render call `Formatter::Standard` cannot serve (module doc
+  # above): the base `NumberFormatter`, given no `localizer_symbols` of its
+  # own, resolves symbols straight off the locale's `SupportedLocales` entry.
+  # A seven-digit integer exercises two group boundaries under the gem's
+  # default `group_digits: 3`, so a marker that lands in the wrong place would
+  # still be caught even if it happened to also be a substring elsewhere.
+  GROUP_PROBE_INTEGER = "1234567"
+
+  def rendered_with_locale_defaults(locale)
+    Plurimath::NumberFormatter.new(locale, localizer_symbols: {})
+      .localized_number(GROUP_PROBE_INTEGER)
+  end
+
+  def grouped_with_marker(marker)
+    "1#{marker}234#{marker}567"
+  end
+
+  # The behaviour the marker exists to switch, rendered rather than parsed:
+  # under its own marker the probe integer groups exactly as expected, and
+  # under every other marker the table holds, it does not.
+  def verify_group_entry!(locale, group, all_groups)
+    rendered = rendered_with_locale_defaults(locale)
+    expected = grouped_with_marker(group)
+    unless rendered == expected
+      raise Error, "#{locale}: rendering #{GROUP_PROBE_INTEGER.inspect} under its own " \
+                   "locale defaults gave #{rendered.inspect}, expected #{expected.inspect} " \
+                   "using group #{group.inspect}"
+    end
+
+    (all_groups - [group]).each do |other|
+      next unless rendered == grouped_with_marker(other)
+
+      raise Error, "#{locale}: also matches grouping with #{other.inspect}, so " \
+                   "#{group.inspect} is not distinguishable from it by rendering alone"
+    end
+  end
+
   def locale_rows
     keys = supported_locales::LOCALES.keys
     raise Error, "the gem's locale table is empty" if keys.empty?
@@ -145,15 +220,19 @@ module FormattingDataGenerator
       raise Error, "the gem's locale keys are no longer Symbols"
     end
 
-    rows = keys.map { |key| [key.to_s, measured_marker(key)] }
+    rows = keys.map { |key| [key.to_s, measured_marker(key), measured_group(key)] }
     locales = rows.map(&:first)
     unless locales.uniq.length == locales.length
       raise Error, "duplicate locale keys after String projection: " \
                    "#{locales.tally.select { |_, n| n > 1 }.keys.join(', ')}"
     end
 
-    markers = rows.map(&:last).uniq
-    rows.each { |locale, marker| verify_entry!(locale, marker, markers) }
+    markers = rows.map { |_, decimal, _| decimal }.uniq
+    groups = rows.map { |_, _, group| group }.uniq
+    rows.each do |locale, marker, group|
+      verify_entry!(locale, marker, markers)
+      verify_group_entry!(locale, group, groups)
+    end
     rows
   end
 
@@ -180,6 +259,36 @@ module FormattingDataGenerator
     declared
   end
 
+  # `Formatter::Standard::DEFAULT_OPTIONS[:group]` is what a `Standard`
+  # instance falls back to for every locale (module doc above — that
+  # defaulting is exactly what shadows a non-"en" locale's own group marker),
+  # and it agrees with `FormatOptions::DEFAULT_GROUP`, the fallback the render
+  # pipeline itself uses when no symbol supplies `:group` at all. Both are
+  # verified against a live default-options render, not trusted as constants.
+  def measured_default_group_marker
+    declared = Plurimath::Formatter::Standard::DEFAULT_OPTIONS.fetch(:group)
+    unless declared.is_a?(::String) && !declared.empty?
+      raise Error, "Formatter::Standard::DEFAULT_OPTIONS[:group] is " \
+                   "#{declared.inspect}, not a marker"
+    end
+
+    format_options_default = Plurimath::Formatter::Numbers::FormatOptions::DEFAULT_GROUP
+    unless format_options_default == declared
+      raise Error, "FormatOptions::DEFAULT_GROUP is #{format_options_default.inspect}, " \
+                   "not #{declared.inspect}"
+    end
+
+    rendered = Plurimath::Formatter::Standard.new.localized_number(GROUP_PROBE_INTEGER)
+    expected = grouped_with_marker(declared)
+    unless rendered == expected
+      raise Error, "Formatter::Standard.new with no options rendered " \
+                   "#{GROUP_PROBE_INTEGER.inspect} as #{rendered.inspect}, expected " \
+                   "#{expected.inspect} using the declared default group #{declared.inspect}"
+    end
+
+    declared
+  end
+
   # --- payloads ------------------------------------------------------------
 
   def ts_header(description)
@@ -195,8 +304,9 @@ module FormattingDataGenerator
   end
 
   def emit_locale_decimals_file(out_root, default_marker, rows)
-    marker_count = rows.map(&:last).uniq.length
-    tuple_lines = rows.map do |locale, marker|
+    markers = rows.map { |_, decimal, _| decimal }
+    marker_count = markers.uniq.length
+    tuple_lines = rows.map do |locale, marker, _|
       "  [#{CoreDataGenerator.ts_string(locale)}, #{CoreDataGenerator.ts_string(marker)}],"
     end
     sections = [
@@ -210,8 +320,9 @@ module FormattingDataGenerator
         entry's own locale while refusing to under each of the other markers
         the table holds.
 
-        The `group` column is not carried: nothing at parse time reads it, and
-        the P4 `Formatter::Numbers` port owns that surface (ARCHITECTURE.md §9).
+        The `group` column is emitted alongside it, in `./locale-groups.ts` —
+        a render-time concern rather than a parse-time one, so it is a
+        sibling file rather than a column here (ARCHITECTURE.md §9).
       TEXT
       [
         CoreDataGenerator.ts_doc(
@@ -234,6 +345,61 @@ module FormattingDataGenerator
       ].join("\n"),
     ]
     CoreDataGenerator.write_ts(File.join(out_root, "locale-decimals.ts"), sections)
+  end
+
+  def emit_locale_groups_file(out_root, default_group, rows)
+    groups = rows.map { |_, _, group| group }
+    group_count = groups.uniq.length
+    tuple_lines = rows.map do |locale, _, group|
+      "  [#{CoreDataGenerator.ts_string(locale)}, #{CoreDataGenerator.ts_string(group)}],"
+    end
+    sections = [
+      ts_header(<<~TEXT.chomp),
+        `Formatter::SupportedLocales::LOCALES`, projected onto its `group`
+        column, in the gem's declaration order — the same order `./
+        locale-decimals.ts` keeps for the `decimal` column, so the two tables'
+        rows line up by index as well as by key.
+
+        Nothing at PARSE time reads this column (only `decimal` feeds the
+        AsciiMath grammar), so it has no read-back-by-parse verification to
+        reuse. It is verified instead by a live RENDER call, and deliberately
+        NOT through `Formatter::Standard` — measured on the oracle,
+        `Formatter::Standard.new(locale: "de").localized_number("1234567")`
+        answers `"1,234,567"`, not the German `"1.234.567"`, because
+        `Standard#set_default_options` fills `:decimal`/`:group` from its own
+        `DEFAULT_OPTIONS` before the locale's entry is ever merged in, so a
+        `Standard` always renders the "en" symbols unless the caller passes
+        `decimal`/`group` explicitly. The base `Plurimath::NumberFormatter`
+        class has no such defaulting: given an empty `localizer_symbols:`
+        hash, it resolves symbols straight off this same `SupportedLocales`
+        entry, so that is the live call this generator verifies against —
+        rendering a seven-digit probe integer under the locale's own group
+        marker, and confirming none of the table's OTHER markers would have
+        produced the same rendering.
+      TEXT
+      [
+        CoreDataGenerator.ts_doc(
+          "Ruby: `Formatter::Standard::DEFAULT_OPTIONS[:group]`, which agrees with\n" \
+          "`Formatter::Numbers::FormatOptions::DEFAULT_GROUP` — verified as what a\n" \
+          "default-options `Formatter::Standard` actually renders a multi-group\n" \
+          "integer with.",
+        ),
+        "export const DEFAULT_GROUP_MARKER = " \
+        "#{CoreDataGenerator.ts_string(default_group)};",
+      ].join("\n"),
+      [
+        CoreDataGenerator.ts_doc(
+          "Locale key -> group marker: #{rows.length} entries, #{group_count} distinct\n" \
+          "markers. `as const`, for the same reason `./locale-decimals.ts` marks its\n" \
+          "tuples `as const` — a widened `string[][]` would erase the literal types a\n" \
+          "closed union could otherwise derive from these.",
+        ),
+        "export const LOCALE_GROUP_MARKERS = [",
+        *tuple_lines,
+        "] as const;",
+      ].join("\n"),
+    ]
+    CoreDataGenerator.write_ts(File.join(out_root, "locale-groups.ts"), sections)
   end
 
   # --- driver --------------------------------------------------------------
@@ -271,6 +437,7 @@ module FormattingDataGenerator
     dirty = CoreDataGenerator.check_checkouts!(gem_dir, options[:out], options[:allow_dirty])
 
     default_marker = measured_default_marker
+    default_group = measured_default_group_marker
     rows = locale_rows
     provenance = CoreDataGenerator.build_provenance(
       GENERATOR_PATH, generator_input_hashes, gem_dir, dirty, options[:allow_dirty],
@@ -278,6 +445,7 @@ module FormattingDataGenerator
 
     written = [
       emit_locale_decimals_file(options[:out], default_marker, rows),
+      emit_locale_groups_file(options[:out], default_group, rows),
       CoreDataGenerator.emit_provenance_file(
         options[:out], provenance,
         header_section: CoreDataGenerator.ts_doc(<<~TEXT.chomp),
@@ -307,8 +475,12 @@ module FormattingDataGenerator
       ),
     ]
     written.sort.each { |path| puts "  #{relative(path)}" }
-    puts "#{rows.length} locales, #{rows.map(&:last).uniq.length} distinct markers, " \
-         "default #{default_marker.inspect}; every entry verified by parse"
+    decimal_count = rows.map { |_, decimal, _| decimal }.uniq.length
+    group_count = rows.map { |_, _, group| group }.uniq.length
+    puts "#{rows.length} locales, #{decimal_count} distinct decimal markers " \
+         "(default #{default_marker.inspect}, verified by parse), " \
+         "#{group_count} distinct group markers " \
+         "(default #{default_group.inspect}, verified by render)"
     puts "committable: #{provenance['committable']}"
     0
   end

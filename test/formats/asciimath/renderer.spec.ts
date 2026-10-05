@@ -9,6 +9,7 @@
  * runtime-boundary mapping.
  */
 
+import { isMainThread } from "node:worker_threads";
 import { describe, expect, it } from "vitest";
 import { MissingSymbolDataError, ParseError, RenderError } from "../../../src/core/errors";
 import {
@@ -89,13 +90,16 @@ describe("unary functions", () => {
   });
 
   it("a name outside the AsciiMath-reachable set raises rather than guessing", () => {
-    // Math::Function::Merror overrides to_asciimath, so a carrier-default
+    // Math::Function::None overrides to_asciimath, so a carrier-default
     // render here would diverge silently and the gap fails loudly instead.
     // Measured on the pinned oracle 00c52783: of the twelve classes the census
     // aliases onto this carrier from outside the AsciiMath-reachable set,
-    // eleven own `to_asciimath` — Merror among them — and the twelfth, Hom, is
-    // admitted below precisely because it does not.
-    expect(() => toAsciimath(new UnaryFunctionNode({ name: "Merror", parameterOne: x() }))).toThrow(
+    // eleven own `to_asciimath` — `None` among them (`Left`, `Right`, `Lcm`,
+    // `Mbox`, `Longdiv`, `Merror`, `Mglyph`, `Ms`, `Msgroup`, `Msline` and
+    // `Scarries` are the other ten, all measured and case-armed elsewhere in
+    // this file) — and the twelfth, Hom, is admitted below precisely because
+    // it does not.
+    expect(() => toAsciimath(new UnaryFunctionNode({ name: "None", parameterOne: x() }))).toThrow(
       RenderError,
     );
   });
@@ -805,7 +809,13 @@ describe("inputs that defeat the walk itself", () => {
         failures.push(`depth ${depth}: ${(error as RenderError).message}`);
       }
     }
-    expect(failures).not.toEqual([]);
+    // Which depths overflow depends on the worker's stack. In vitest's
+    // fork-based pools (`forks`, the default CI uses, and `vmForks`) each test
+    // file runs in a child process, where `isMainThread` is true, and this
+    // window overflows. A `threads` or `vmThreads` worker's larger stack may
+    // not. The branding below holds on every pool; that some depth fails is
+    // asserted only in the fork-based pools.
+    if (isMainThread) expect(failures).not.toEqual([]);
     for (const failure of failures) {
       expect(failure).toContain("nests too deep");
       expect(failure).not.toContain("mid-walk");
@@ -825,6 +835,37 @@ describe("inputs that defeat the walk itself", () => {
       },
     };
     expect(() => toAsciimath(node as never)).toThrow(RenderError);
+  });
+
+  it("does not relabel an unrelated RangeError as stack exhaustion", () => {
+    // Mirrors `test/adversarial/adversarial-inputs.spec.ts`'s guard test of
+    // the same name for the PARSE side. A hostile getter throwing a
+    // `RangeError` whose message has nothing to do with recursion — the same
+    // shape `UndecodableEntityError` (core/nodes.ts) actually takes when a
+    // renderer's own entity decode refuses input mid-walk — must not take the
+    // "nests too deep" branding meant for genuine engine stack exhaustion.
+    // Seen red without the fix: this walk used a bare `instanceof RangeError`
+    // check, so the sentinel message below was replaced by "the tree nests
+    // too deep for the walk's call stack".
+    let reads = 0;
+    const node = {
+      kind: "number",
+      get value(): string {
+        reads += 1;
+        if (reads > 1) throw new RangeError("sentinel, nothing to do with recursion");
+        return "1";
+      },
+    };
+    let failure: string | null = null;
+    try {
+      toAsciimath(node as never);
+    } catch (error) {
+      expect(error).toBeInstanceOf(RenderError);
+      failure = (error as RenderError).message;
+    }
+    expect(failure).not.toBeNull();
+    expect(failure).toContain("sentinel, nothing to do with recursion");
+    expect(failure).not.toContain("nests too deep");
   });
 
   it("a kind that flips to an inherited key after validation raises the unknown-kind RenderError", () => {

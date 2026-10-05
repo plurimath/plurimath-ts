@@ -23,17 +23,18 @@
  *   - `Log` (`log.rb:56-60`): `<i>log</i><sub>1</sub><sup>2</sup>` — literal
  *     first, then a `<sub>`/`<sup>` pair.
  *
- * `Stackrel` and `Menclose` override too but stay unmeasured here: no corpus
- * case constructs either, so nothing in this suite would hold their bytes
- * honest. `Menclose#to_html` additionally interpolates `parameter_one` into a
- * `notation=` attribute RAW, which for a node is Ruby's default `Object#to_s`
- * — a heap address, and so not reproducible at all. An unmeasured name raises,
- * the same guard the mathml and asciimath files hold.
+ * `Stackrel` and `Menclose` override too (`stackrel.rb:29`, `menclose.rb:43`),
+ * and `Over`, `Inf` and `Mlabeledtr` inherit the carrier default.
+ * `Menclose#to_html` interpolates `parameter_one` into a `notation=` attribute
+ * RAW, which for a string or nil is exactly reproducible and for a node is
+ * Ruby's default `Object#to_s` — a heap address, and so not reproducible at
+ * all: that case raises, as an unmeasured name does.
  */
 import { RenderError } from "../../core/index";
 import {
   describeSlot,
   FORMAT,
+  interpolatedValue,
   type NodeOf,
   type RenderContext,
   renderCarrierSlot,
@@ -86,6 +87,24 @@ export function renderBinaryFunction(
     case "Root":
       return renderBinaryDefault(parameterOne, parameterTwo, context, "root");
 
+    // `stackrel.rb:29`: both slots `&.`, concatenated bare — no `<i>` wrapper.
+    case "Stackrel":
+      return (
+        nilSafeSlot(parameterOne, context, "stackrel.parameterOne") +
+        nilSafeSlot(parameterTwo, context, "stackrel.parameterTwo")
+      );
+
+    // `menclose.rb:43`: `parameter_two&.to_html` inside a `<menclose>`, the
+    // enclosure type interpolated raw into `notation`.
+    case "Menclose":
+      return `<menclose notation="${interpolatedValue(parameterOne, node.kind, "menclose.parameterOne")}">${nilSafeSlot(parameterTwo, context, "menclose.parameterTwo")}</menclose>`;
+
+    // No `to_html` of their own: the carrier default.
+    case "Over":
+    case "Inf":
+    case "Mlabeledtr":
+      return renderBinaryDefault(parameterOne, parameterTwo, context, name.toLowerCase());
+
     default:
       throw new RenderError(
         `BinaryFunction alias "${name}" has not been measured for HTML in this slice`,
@@ -93,6 +112,12 @@ export function renderBinaryFunction(
         node.kind,
       );
   }
+}
+
+/** `field&.to_html`, the nil interpolated away — `&.` guards nil and nothing else. */
+function nilSafeSlot(value: unknown, context: RenderContext, at: string): string {
+  if (value === null || value === undefined) return "";
+  return s(renderChild(value, context, at));
 }
 
 /** `Td#to_html`: cell children joined with no separator; attributes are ignored. */

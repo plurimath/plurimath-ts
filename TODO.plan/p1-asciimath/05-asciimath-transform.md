@@ -57,19 +57,22 @@ Two traps, both measured against the gem rather than inferred:
 
 ## Done when
 
-- [ ] For every **reachable** pinned corpus case, end-to-end (preprocess → grammar →
+- [x] For every **reachable** pinned corpus case, end-to-end (preprocess → grammar →
   transform → normalize) matches the gem's recorded `model`. Never by feeding
   recorded trees to the transform — see above.
+  (done: `test/formats/asciimath/model-parity.spec.ts:29-35`, all 91 reachable AsciiMath cases; checked 2026-09-24)
 - [ ] **Differential model parity beyond the corpus**: the grammar's two
   sweeps (length 1–3 exhaustive, length 4–26 seeded) extended through the
   transform — gem model and port model compared for every input the gem
   accepts, zero mismatches. This is what reaches the rules the corpus does not.
-- [ ] `registry.ts` completeness is checked, not assumed: every class name
+- [x] `registry.ts` completeness is checked, not assumed: every class name
   reachable from `transform.rb`'s actions resolves in the registry, asserted
   against a generated list rather than by hand.
-- [ ] The pegkit conformance suite gains transform tests: a later rule beating
+  (done: `test/formats/asciimath/registry.spec.ts:49-57`, against the generated census; checked 2026-09-24)
+- [x] The pegkit conformance suite gains transform tests: a later rule beating
   an earlier overlapping one on a tie, a pattern rejected because the node
   carries one key more, and a replacement not being re-visited. Each must be
   seen failing before it counts.
+  (done: #7; `test/pegkit/transform.spec.ts:31`, `:58`, `:88`; the PR records each test watched failing under a targeted perturbation; checked 2026-10-02)
 - [ ] `pnpm boundaries` shows `formats/asciimath` importing only `pegkit`, `core`,
   and its own generated data.

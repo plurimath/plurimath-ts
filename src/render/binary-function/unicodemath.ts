@@ -1,13 +1,15 @@
 /**
  * Mirrors `function/binary_function.rb` — which defines **no** `to_unicodemath`,
  * and neither does `Math::Core`. Unlike the latex carrier, nothing here falls
- * through to a carrier default: every one of the seven reachable classes
- * supplies its own override, so the `default:` arm is pure refusal (the port's
- * equivalent of the gem's `NoMethodError` on a bare `BinaryFunction`).
+ * through to a carrier default: every class supplies its own override, so the
+ * `default:` arm is pure refusal (the port's equivalent of the gem's
+ * `NoMethodError` on a bare `BinaryFunction`).
  *
  * The arms are `power.rb:64` (predicate `accented?` at :112), `log.rb:100`
  * (with its own `sup_value` :134 and `sub_value` :144), `lim.rb:65`,
- * `root.rb:49`, `mod.rb:70`, `td.rb:52` and `stackrel.rb:52`, over
+ * `root.rb:49`, `mod.rb:70`, `td.rb:52` and `stackrel.rb:52`, and — for the
+ * classes the AsciiMath transform never builds — `over.rb:50`, `inf.rb:58`,
+ * `menclose.rb:61` and `mlabeledtr.rb:19`, over
  * `Core#unicodemath_parens` (`core.rb:408`) and `Core#prime_unicode?` (:415).
  *
  * Measured pins worth naming, because source-reading gets each of them wrong:
@@ -33,6 +35,7 @@
 
 import { RenderError } from "../../core/index";
 import {
+  describeSlot,
   FORMAT,
   isNode,
   isPower,
@@ -49,7 +52,11 @@ import {
   unicodemathParens,
   unreachableName,
 } from "../../formats/unicodemath/render-shared";
-import { UNICODEMATH_BINARY_CARRIER_NAMES } from "../../generated/unicodemath/render-tables";
+import {
+  UNICODEMATH_BINARY_CARRIER_NAMES,
+  UNICODEMATH_UNARY_ARG_FUNCTIONS,
+  UNICODEMATH_UNARY_SYMBOLS,
+} from "../../generated/unicodemath/render-tables";
 
 /**
  * The class names this carrier has measured behaviour for — every `get_class`
@@ -74,11 +81,36 @@ const REACHABLE_BINARY_NAMES: ReadonlySet<string> = new Set([
 export function renderBinaryFunction(
   node: NodeOf<"binaryFunction">,
   context: RenderContext,
-): string {
+): string | null {
   const name = node.name;
   switch (name) {
     case "Power":
       return renderPower(node, context);
+    case "Over": {
+      // `over.rb:50` — each slot behind a bare `if`, through
+      // `unicodemath_parens`, around a literal `/`.
+      const first = present(node.parameterOne)
+        ? (unicodemathParens(node.parameterOne, context) ?? "")
+        : "";
+      const second = present(node.parameterTwo)
+        ? (unicodemathParens(node.parameterTwo, context) ?? "")
+        : "";
+      return `${first}/${second}`;
+    }
+    case "Inf": {
+      // `inf.rb:58` — `sub_value` (:80) and `sup_value` (:68) take the branches
+      // `Int`'s do (`int.rb:151`/:141), each behind a `return unless` on its
+      // own slot, which the `present` guards here reproduce.
+      const sub = present(node.parameterOne) ? naryandSubValue(node.parameterOne, context) : "";
+      const sup = present(node.parameterTwo) ? naryandSupValue(node.parameterTwo, context) : "";
+      return `inf${sub}${sup}`;
+    }
+    case "Mlabeledtr":
+      // `mlabeledtr.rb:19` — the first slot rendered, the second slot's RAW
+      // `value`, which is never rendered.
+      return `${renderOptionalChild(node.parameterOne, context)}#${rawValue(node.parameterTwo, node.kind, "mlabeledtr.parameterTwo")}`;
+    case "Menclose":
+      return renderMenclose(node, context);
     case "Log": {
       // `log.rb:100`. Both slots are guarded at the call site with a bare
       // `if parameter_one` / `if parameter_two`, so an absent slot contributes
@@ -141,6 +173,115 @@ export function renderBinaryFunction(
         ? missingRenderer(name, "binaryFunction")
         : unreachableName(node.kind, name);
   }
+}
+
+/**
+ * `Utility::UNICODEMATH_MENCLOSE_FUNCTIONS` (`utility.rb:111`): enclosure type
+ * to the gem class whose glyph draws it, in the gem's order, because
+ * `Hash#key` answers the FIRST entry with a given value (`underline` before
+ * `underbar`, `ellipse` before `circle`).
+ */
+const MENCLOSE_FUNCTIONS: readonly (readonly [string, string])[] = [
+  ["underline", "bottom"],
+  ["underbar", "bottom"],
+  ["longdiv", "longdiv"],
+  ["xcancel", "updiagonalstrike downdiagonalstrike"],
+  ["bcancel", "updiagonalstrike"],
+  ["ellipse", "circle"],
+  ["circle", "circle"],
+  ["cancel", "downdiagonalstrike"],
+  ["rrect", "roundedbox"],
+  ["rect", "box"],
+];
+
+/** `Utility::MASK_CLASSES` (`utility.rb:123`): the bit each named side or strike sets. */
+const MASK_CLASSES: readonly (readonly [number, string])[] = [
+  [1, "top"],
+  [2, "bottom"],
+  [4, "left"],
+  [8, "right"],
+  [16, "horizontalstrike"],
+  [32, "verticalstrike"],
+  [64, "downdiagonalstrike"],
+  [128, "updiagonalstrike"],
+];
+
+/**
+ * `Menclose#to_unicodemath` (`menclose.rb:61`) — three outcomes, the last of
+ * them nil:
+ *
+ *   - the type EQUALS one of the `UNICODEMATH_MENCLOSE_FUNCTIONS` values: the
+ *     glyph the first class of that value maps to, then the second slot
+ *     through `unicodemath_parens` (unguarded, so an absent slot raises);
+ *   - otherwise, the type CONTAINS one of the `MASK_CLASSES` names (substring,
+ *     not word): `▭(mask&body)` with the mask `ModelHelper.notations_to_mask`
+ *     computes;
+ *   - otherwise the `if`/`elsif` falls off the end and the method answers nil.
+ *
+ * Both tests read the type with `==`/`include?` and no guard, so anything but
+ * a string there — nil included — is a `NoMethodError` in the gem.
+ */
+function renderMenclose(node: NodeOf<"binaryFunction">, context: RenderContext): string | null {
+  const notation = node.parameterOne;
+  if (typeof notation !== "string") {
+    throw new RenderError(
+      `menclose.parameterOne: is ${describeSlot(notation)}, not a string — the gem raises NoMethodError here`,
+      FORMAT,
+      node.kind,
+    );
+  }
+
+  const named = MENCLOSE_FUNCTIONS.find(([, type]) => type === notation);
+  if (named !== undefined) {
+    const glyph =
+      UNICODEMATH_UNARY_ARG_FUNCTIONS.get(named[0]) ??
+      UNICODEMATH_UNARY_SYMBOLS.get(named[0]) ??
+      "";
+    return `${glyph}${unicodemathParens(node.parameterTwo, context) ?? ""}`;
+  }
+
+  if (MASK_CLASSES.some(([, mask]) => notation.includes(mask))) {
+    // `notations.split` — awk-style, on ASCII whitespace only (a NUL or a
+    // no-break space does not split; measured on the oracle at `00c52783`).
+    const bits = notation
+      .split(/[ \t\n\v\f\r]+/)
+      .filter((word) => word !== "")
+      .map((word) => MASK_CLASSES.find(([, mask]) => mask === word)?.[0])
+      .filter((bit): bit is number => bit !== undefined);
+    const mask = bits.reduce((sum, bit) => sum + bit, 0) ^ 15;
+    const body = present(node.parameterTwo) ? renderOptionalChild(node.parameterTwo, context) : "";
+    return `▭(${mask}&${body})`;
+  }
+
+  return null;
+}
+
+/**
+ * A slot's `.value`, read raw — the gem never renders it. Nil (an absent slot
+ * under `&.`, or a value never set: a bare named symbol such as `Plus.new` has
+ * none) interpolates to `""`.
+ *
+ * Only the classes whose `value` is a string are reproduced: `Symbol`,
+ * `Number` and `Text` (whose `value` is `parameter_one`). A `Formula`, `Mrow`
+ * or `Table` answers an ARRAY, whose `to_s` is `inspect` and carries object
+ * addresses — measured (`Mlabeledtr(a, Formula[c])` gives
+ * `a#[#<Plurimath::Math::Symbols::Symbol:0x… @value="c">]`), so not
+ * reproducible. Every other class has no `value` and the gem raises.
+ */
+function rawValue(field: unknown, kind: string, at: string): string {
+  if (field === null || field === undefined) return "";
+  if (isNode(field)) {
+    if ((field.kind === "symbol" || field.kind === "number") && !Array.isArray(field.value)) {
+      return field.value ?? "";
+    }
+    if (field.kind === "text" && typeof field.parameterOne === "string") return field.parameterOne;
+  }
+  throw new RenderError(
+    `${at}: its \`.value\` is not a string the gem's output can be reproduced from — ` +
+      "an array's inspect carries object addresses, and most classes have no `value`",
+    FORMAT,
+    kind,
+  );
 }
 
 /**

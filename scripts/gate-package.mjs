@@ -259,9 +259,14 @@ for (const [subpath] of subpaths) {
 // No subpath ships `locale-groups.ts`, so `REQUIRED` cannot catch a pattern
 // that has drifted from its path; tie each locale pattern to the real file.
 const generatedDir = resolve(root, "src/formatting/generated");
-const generatedFiles = readdirSync(generatedDir, { withFileTypes: true })
-  .filter((entry) => entry.isFile())
-  .map((entry) => `src/formatting/generated/${entry.name}`);
+let generatedFiles = [];
+try {
+  generatedFiles = readdirSync(generatedDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => `src/formatting/generated/${entry.name}`);
+} catch (error) {
+  fail(`cannot read src/formatting/generated: ${error.message}`);
+}
 for (const pattern of [LOCALE_DECIMALS, LOCALE_GROUPS]) {
   if (generatedFiles.filter((file) => pattern.test(file)).length !== 1) {
     fail(`${pattern} must match exactly one file in src/formatting/generated`);

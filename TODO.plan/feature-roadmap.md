@@ -156,18 +156,18 @@ records whether a single native reader makes it moot.
 **Oracle data already available:** the corpus at `4a8ba64` has MathML-input
 cases of its own: `corpus/mathml/` holds 299 cases, 287 with a per-format
 `expected` map and 12 whose parse is expected to raise. Its parse cases carry
-714 `mathml:` expectations in all — a string, an `{output: …}` map, or, for 2
-of them, an `{error: …}` map recording a render the gem refuses — (92 under `corpus/asciimath/`, 125 under `corpus/latex/`, 20
-under `corpus/unicode/`, 287 under `corpus/mathml/`, 190 under
-`corpus/omml/`), plus 66 in the seven `calls/1` number-formatting files, which
-record formatted-number output rather than parse cases. Counted by loading
-every `corpus/*/*.yaml` with Ruby's `YAML.safe_load_file` and tallying
+714 `mathml:` expectations in all: 92 under `corpus/asciimath/`, 125 under
+`corpus/latex/`, 20 under `corpus/unicode/`, 287 under `corpus/mathml/` and
+190 under `corpus/omml/`. Each is a string, an `{output: …}` map, or, for 2
+of them, an `{error: …}` map recording a render the gem refuses. Another 66
+sit in the seven `calls/1` number-formatting files, which record
+formatted-number output rather than parse cases. Counted by loading every `corpus/*/*.yaml` with Ruby's `YAML.safe_load_file` and tallying
 `cases`, `error` and the `expected` keys per directory and per `schema`, so
 the `calls/1` files under `corpus/asciimath/` are counted apart (`git grep -c
 '^    mathml:'` agrees per file, but its `corpus/asciimath/` total, 158,
 includes those 66). `test/core/corpus-pin.spec.ts` lists the `mathml/` and
 `omml/` payloads as pending a reader, so no spec runs them yet. PR #110
-measured 111 at an earlier pin, all of which re-parse through
+measured 111 at the earlier corpus pin `5182660`, all of which re-parse through
 `Math.parse(text, :mathml)`, and found they reach 19 of the translator's 44
 element classes. The cases at `4a8ba64` have not been re-parsed for this
 page.

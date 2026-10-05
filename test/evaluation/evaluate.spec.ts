@@ -147,11 +147,14 @@ describe("evaluate() against the oracle fixtures", () => {
   // cap LOWERED for the test. The count above spans every row, so this pins
   // that such a row exists: one under a numeric cap below the default that the
   // gem refuses at exactly that cap, and one under the same cap that stays
-  // within it and evaluates.
+  // within it and evaluates. Rows the port refuses are left out: the
+  // per-row test below only checks that those throw UnsupportedFeatureError.
   it("has a case that hits a lowered iteration cap, and one within it", () => {
     const lowered = rows.filter((row) => {
       const cap = row.options?.evaluationMaxIterations;
-      return typeof cap === "number" && cap < DEFAULT_MAX_ITERATIONS;
+      return (
+        row.portRefusal === undefined && typeof cap === "number" && cap < DEFAULT_MAX_ITERATIONS
+      );
     });
     const hits = lowered.filter(
       (row) =>

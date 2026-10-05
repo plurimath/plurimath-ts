@@ -188,27 +188,54 @@ const forbidOtherFormats = (allowedFormat) =>
   FORMAT_NAMES.filter((format) => format !== allowedFormat).flatMap(formatOwnedSources);
 const NO_FORBIDDEN_SOURCES = Symbol("NO_FORBIDDEN_SOURCES");
 
+/**
+ * Locale data (TODO.plan/p4-parity-modules, "Isolation assertions proving
+ * locale data stays out of unrelated subpaths"). The gem's locale table is
+ * emitted as two generated modules, one per column:
+ *
+ * - `locale-decimals.ts`, the decimal marker. Each parser reads it at parse
+ *   time (`src/formatting/locales.ts`), so the four subpaths with a parser
+ *   carry it; `/core`, `/mathml` and `/omml` have no parser and must not.
+ * - `locale-groups.ts`, the grouping separator. Nothing in `src/` imports it
+ *   yet, so no subpath may carry it; the formatter that first needs it must
+ *   change this row on purpose rather than ship it everywhere unnoticed.
+ *
+ * `REQUIRED` below is the positive control: the parser subpaths must still
+ * contain the decimal table, so a pattern that stops matching the real
+ * source path fails here instead of passing vacuously.
+ */
+const LOCALE_DECIMALS = /(?:^|\/)formatting\/generated\/locale-decimals\.ts$/;
+const LOCALE_GROUPS = /(?:^|\/)formatting\/generated\/locale-groups\.ts$/;
+
 const FORBIDDEN = {
   // The root is intentionally full-sized; only subpath imports are slim.
   ".": NO_FORBIDDEN_SOURCES,
-  "./core": [...forbidOtherFormats(), /pegkit\//],
-  "./asciimath": [...forbidOtherFormats("asciimath"), /xml\//],
+  "./core": [...forbidOtherFormats(), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
+  "./asciimath": [...forbidOtherFormats("asciimath"), /xml\//, LOCALE_GROUPS],
   // HTML parses as well as renders, so pegkit is expected here; `xml` still
   // is not, because the HTML renderer builds its markup as strings rather
   // than through the XML layer.
-  "./html": [...forbidOtherFormats("html"), /xml\//],
+  "./html": [...forbidOtherFormats("html"), /xml\//, LOCALE_GROUPS],
   // LaTeX parses as well as renders (ARCHITECTURE.md §3, "parsing *and*
   // rendering when both exist"), so pegkit is expected here; `xml` still is
   // not, because LaTeX output is text.
-  "./latex": [...forbidOtherFormats("latex"), /xml\//],
-  "./mathml": [...forbidOtherFormats("mathml"), /pegkit\//],
+  "./latex": [...forbidOtherFormats("latex"), /xml\//, LOCALE_GROUPS],
+  "./mathml": [...forbidOtherFormats("mathml"), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
   // OMML has no parser (unlike LaTeX/HTML/UnicodeMath) and its renderer
   // builds its tree through the XML layer (unlike LaTeX/HTML/UnicodeMath's
   // string output), so it forbids pegkit but, like MathML, not `xml`.
-  "./omml": [...forbidOtherFormats("omml"), /pegkit\//],
+  "./omml": [...forbidOtherFormats("omml"), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
   // UnicodeMath parses as well as renders, so pegkit is expected here on the
   // same grounds as `/latex`; `xml` still is not, because its output is text.
-  "./unicodemath": [...forbidOtherFormats("unicodemath"), /xml\//],
+  "./unicodemath": [...forbidOtherFormats("unicodemath"), /xml\//, LOCALE_GROUPS],
+};
+
+/** Sources a subpath's artifact must contain — the positive control for `FORBIDDEN`'s locale rows. */
+const REQUIRED = {
+  "./asciimath": [LOCALE_DECIMALS],
+  "./html": [LOCALE_DECIMALS],
+  "./latex": [LOCALE_DECIMALS],
+  "./unicodemath": [LOCALE_DECIMALS],
 };
 
 const failures = [];
@@ -227,6 +254,15 @@ for (const [subpath] of subpaths) {
   const forbidden = FORBIDDEN[subpath];
   if (forbidden !== NO_FORBIDDEN_SOURCES && (!Array.isArray(forbidden) || forbidden.length === 0)) {
     fail(`${subpath} must have a non-empty FORBIDDEN row`);
+  }
+}
+// No subpath ships `locale-groups.ts`, so `REQUIRED` cannot catch a pattern
+// that has drifted from its path; tie each locale pattern to the real file.
+const generatedDir = resolve(root, "src/formatting/generated");
+const generatedFiles = readdirSync(generatedDir).map((name) => `src/formatting/generated/${name}`);
+for (const pattern of [LOCALE_DECIMALS, LOCALE_GROUPS]) {
+  if (generatedFiles.filter((file) => pattern.test(file)).length !== 1) {
+    fail(`${pattern} must match exactly one file in src/formatting/generated`);
   }
 }
 if (failures.length > 0) {
@@ -364,6 +400,13 @@ for (const [subpath, conditions] of subpaths) {
         const leaked = [...sources].filter((source) => pattern.test(source));
         if (leaked.length > 0) {
           fail(`${subpath} ${moduleSystem} pulls in ${pattern}: ${leaked.join(", ")}`);
+        }
+      }
+      for (const pattern of REQUIRED[subpath] ?? []) {
+        if (![...sources].some((source) => pattern.test(source))) {
+          fail(
+            `${subpath} ${moduleSystem} no longer contains ${pattern}; the locale rows would be vacuous`,
+          );
         }
       }
       if (failures.length === failuresBeforeGraph) {

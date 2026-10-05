@@ -16,7 +16,7 @@ why that order.
 | [P1 — AsciiMath vertical](p1-asciimath/) | Corpus pin and reader, model, grammar, transform, four renderers | ✅ landed; one exit item open (class-C sign-off), see its README |
 | [P2 — Output formats](p2-output-formats/) | OMML and HTML renderers; compat class; first `0.x` | ▶ active: all six renderers, compat class and CLI exist; one of five exit criteria checked, see its README |
 | [P3 — Input formats](p3-input-formats/) | LaTeX, UnicodeMath and HTML parsers | ▶ started ahead of plan: LaTeX and HTML parsers, and a partial UnicodeMath parser, are exported; one of five exit criteria checked, see its README |
-| [P4 — Parity modules](p4-parity-modules/) | The number-format modes nothing earlier reaches, evaluation, MathML/OMML input | ▶ started ahead of plan: number formatting (#126, #133, #143, #146) and evaluation through its function slice (#152, #155) are on `main`; MathML/OMML input deferred (#122); two of six exit criteria checked, see its README |
+| [P4 — Parity modules](p4-parity-modules/) | The number-format modes nothing earlier reaches, evaluation, MathML/OMML input | ▶ started ahead of plan: number formatting (#126, #133, #143, #146) and evaluation through its function slice (#152, #155) are on `main`; MathML/OMML input deferred (#122); four of six exit criteria checked, see its README |
 | [P5 — 1.0](p5-release-1.0/) | Compat complete, `/core` locked, npm takeover | planned |
 
 Reference pages, not tied to one phase:

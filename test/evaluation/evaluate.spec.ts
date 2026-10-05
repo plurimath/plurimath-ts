@@ -143,6 +143,30 @@ describe("evaluate() against the oracle fixtures", () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
+  // The P4 exit criterion asks for a case that hits the iteration cap with the
+  // cap LOWERED for the test. The count above spans every row, so this pins
+  // that such a row exists: one under a numeric cap below the default that the
+  // gem refuses at exactly that cap, and one under the same cap that stays
+  // within it and evaluates.
+  it("has a case that hits a lowered iteration cap, and one within it", () => {
+    const lowered = rows.filter((row) => {
+      const cap = row.options?.evaluationMaxIterations;
+      return typeof cap === "number" && cap < DEFAULT_MAX_ITERATIONS;
+    });
+    const hits = lowered.filter(
+      (row) =>
+        row.raises === "Plurimath::Errors::Evaluation::UnsupportedExpressionError" &&
+        row.message ===
+          `unsupported expression: iteration range larger than ${row.options?.evaluationMaxIterations} steps`,
+    );
+    expect(hits.map((row) => row.id)).not.toEqual([]);
+    const hitCaps = new Set(hits.map((row) => row.options?.evaluationMaxIterations));
+    const within = lowered.filter(
+      (row) => row.expected !== undefined && hitCaps.has(row.options?.evaluationMaxIterations),
+    );
+    expect(within.map((row) => row.id)).not.toEqual([]);
+  });
+
   it.each(rows.map((row) => [row.id, row] as const))("%s", (_id, row) => {
     const formula = parseRowInput(row.input);
     const bindings = toBindings(row.bindings);

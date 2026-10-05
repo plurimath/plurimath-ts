@@ -7,7 +7,7 @@ MathML/OMML *input*. On `main`: number formatting (#126, #133, #143, #146), and
 evaluation's arithmetic and function slices (#152, #155), every function now
 ported; some refuse near a rounding band (see `TODO.plan/deferred.md`).
 MathML/OMML input is deferred (settled 2026-09-16, #122;
-[open decisions](../open-decisions.md)). Two of the six exit criteria below are checked.
+[open decisions](../open-decisions.md)). Four of the six exit criteria below are checked.
 
 Numbered work items are added to this directory when the phase opens.
 
@@ -74,13 +74,15 @@ land with them, and only the unused modes wait for a phase of their own.
       with a nonzero count asserted per mode, so a mode with no case fails
       rather than passing quietly.
       (done: `test/formatting/number-formatter-numeric-pipeline.spec.ts:158` over the pinned `calls/1` cases; checked 2026-09-24)
-- [ ] Evaluation: cases pairing a formula and bindings with the gem's result,
+- [x] Evaluation: cases pairing a formula and bindings with the gem's result,
       count asserted nonzero, including one that hits the iteration cap — with
       the cap lowered for the test, not by running 100,000 iterations.
-      (met except the cap assertion: #155, merged with checks green (`gh pr view 155`); at `39f5dd4`, `test/evaluation/evaluate.spec.ts:174-175`, and fixture rows `sum-custom-cap-within`/`-over` with the cap lowered to 5; but the nonzero assertion counts all rows, so removing the cap rows alone fails nothing — this box stays open until a test asserts a cap case is present; checked 2026-09-28)
+      (done: `test/evaluation/evaluate.spec.ts`, "has a case that hits a lowered iteration cap, and one within it", requires a row under a numeric cap below `DEFAULT_MAX_ITERATIONS` that raises the gem's "larger than N steps" at that cap, and a row under the same cap that evaluates — today `sum-custom-cap-over` and `sum-custom-cap-within`, cap 5; deleting either row fails it; checked 2026-10-05)
 - [ ] MathML/OMML input, if it is built here: parse-direction cases for both,
       each with a nonzero count.
-- [ ] Isolation assertions proving locale data stays out of unrelated subpaths.
+      (open: deferred, #122. The pinned corpus, `plurimath-testsuite` at `4a8ba64`, now holds the cases this would run — 299 under `corpus/mathml/` and 199 under `corpus/omml/` ([feature roadmap](../feature-roadmap.md)) — but `test/core/corpus-pin.spec.ts` lists them as pending a reader; checked 2026-10-05)
+- [x] Isolation assertions proving locale data stays out of unrelated subpaths.
+      (done: `scripts/gate-package.mjs`, run by `pnpm check`, forbids the grouping table `locale-groups.ts` in every subpath (nothing imports it yet) and the decimal table `locale-decimals.ts` in `/core`, `/mathml` and `/omml`, which have no parser; it requires the decimal table in the four parser subpaths, and ties each pattern to exactly one file in `src/formatting/generated/`, so a drifted pattern fails rather than passing vacuously; checked 2026-10-05)
 - [x] MathML/OMML input strategy decided and recorded before implementation.
   (done: `open-decisions.md`, SETTLED 2026-09-16, #122; checked 2026-09-24)
 - [ ] Review round with findings resolved, and sign-off recorded.

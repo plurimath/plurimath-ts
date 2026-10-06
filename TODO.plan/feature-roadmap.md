@@ -10,8 +10,10 @@ Everything below was first measured on 2026-09-14, against the pinned oracle
 repository at `fdc043a`, whose shared corpus pin was `plurimath-testsuite` at
 `281d700`. The port's status was re-checked on 2026-09-24 against `main` at
 `70f9482`, whose corpus pin is `plurimath-testsuite` at `07bf5e3`
-(`git ls-tree HEAD submodules/plurimath-testsuite`), and the evaluation entry
-against `main` at `39f5dd4`, where #155 merged. The oracle pin is unchanged, so
+(`git ls-tree 70f9482 submodules/plurimath-testsuite`), and the evaluation entry
+against `main` at `39f5dd4`, where #155 merged. The corpus figures were
+re-measured on 2026-10-05 against `main` at `0e36296`, whose corpus pin is
+`plurimath-testsuite` at `4a8ba64`. The oracle pin is unchanged, so
 figures about the gem stand. A figure taken from somewhere else names where it
 came from.
 
@@ -24,7 +26,7 @@ came from.
   route for number formatting, `intent`, line splitting, OMML display style,
   `toDisplay` and evaluation. `plurimath-testsuite` now has one, the
   `plurimath-corpus/calls/1` schema (testsuite #17), but its only call method
-  at `07bf5e3` is `number_formatter`, in 66 cases
+  at `4a8ba64` is `number_formatter`, in 66 cases
   (`grep -rhoE "method: [a-z_]+" corpus`). The other five have no shared
   case; each landed checked against oracle-measured expectations kept in this
   repository instead.
@@ -151,14 +153,25 @@ records whether a single native reader makes it moot.
    `UnsupportedFormatError`. The build order below marks Chain A deferred to
    match.
 
-**Oracle data already available:** the corpus at `07bf5e3` carries 237
-`mathml:` expected-output blocks in parse cases (92 under `corpus/asciimath/`,
-125 under `corpus/latex/`, 20 under `corpus/unicode/`), plus 66 in the seven
-`calls/1` number-formatting files, which record formatted-number output rather
-than parse cases; counted by `git grep -c`, not re-parsed. PR #110 measured 111
-at an earlier pin, all of which re-parse through `Math.parse(text, :mathml)`,
-and found they reach 19 of the translator's 44 element classes. The 237 have
-not been re-parsed for this page.
+**Oracle data already available:** the corpus at `4a8ba64` has MathML-input
+cases of its own: `corpus/mathml/` holds 299 cases, 287 with a per-format
+`expected` map and 12 whose parse is expected to raise. Its parse cases carry
+714 `mathml:` expectations in all: 92 under `corpus/asciimath/`, 125 under
+`corpus/latex/`, 20 under `corpus/unicode/`, 287 under `corpus/mathml/` and
+190 under `corpus/omml/`. Each is a string, an `{output: …}` map, or, for 2
+of them, an `{error: …}` map recording a render the gem refuses. Another 66
+sit in the seven `calls/1` number-formatting files, which record
+formatted-number output rather than parse cases. Counted by loading every
+`corpus/*/*.yaml` with Ruby's `YAML.safe_load_file` and tallying
+`cases`, `error` and the `expected` keys per directory and per `schema`, so
+the `calls/1` files under `corpus/asciimath/` are counted apart (`git grep -c
+'^    mathml:'` agrees per file, but its `corpus/asciimath/` total, 158,
+includes those 66). `test/core/corpus-pin.spec.ts` lists the `mathml/` and
+`omml/` payloads as pending a reader, so no spec runs them yet. PR #110
+measured 111 at the earlier corpus pin `5182660`, all of which re-parse through
+`Math.parse(text, :mathml)`, and found they reach 19 of the translator's 44
+element classes. The cases at `4a8ba64` have not been re-parsed for this
+page.
 
 #### OMML input — not started
 
@@ -169,11 +182,13 @@ translating layer under `lib/plurimath/omml/`.
 
 **Blocks:** the same XML reader as MathML. There is no JavaScript package to
 evaluate: `npm view @plurimath/omml` returns E404 (re-run for this page on
-2026-09-14). And **no parse case carries an OMML expectation.** At `07bf5e3`
-the corpus's 64 `omml:` blocks are all in six `calls/1` number-formatting
-files, which record formatted-number output, and the one other `omml` string
-is the gem version in `corpus/provenance.yaml:47`. Cases would have to be
-generated. The port's own OMML render fixtures
+2026-09-14). The corpus at `4a8ba64` has OMML-input cases:
+`corpus/omml/` holds 199 cases, 190 with a per-format `expected` map and 9
+whose parse is expected to raise. Parse cases now carry 477 `omml:`
+expectations, 2 of them `{error: …}` maps (287 under
+`corpus/mathml/`, 190 under `corpus/omml/`), besides the 64 in six `calls/1`
+number-formatting files (same measurement as the MathML figures above). The
+port's own OMML render fixtures
 (`test/formats/omml/parity-fixtures.json`) are gem-emitted OMML, so they can
 seed a round-trip slice the way the gem's own UnicodeMath output seeded that
 transform's first slice.
@@ -459,8 +474,9 @@ The four reasons it was recommended still describe what A2 carries:
 
 1. It is the largest remaining gap in the compat constructor, which names
    `mathml`.
-2. Its oracle data already exists: 237 expected-MathML strings in parse
-   cases at the current pin, `07bf5e3`.
+2. Its oracle data already exists: at the current pin, `4a8ba64`,
+   `corpus/mathml/` holds 299 MathML-input cases (287 with a per-format
+   `expected` map, 12 whose parse is expected to raise).
 3. It carries three things with it: its XML reader is OMML input's
    prerequisite, its model path is a UnitsML bridge's prerequisite, and it
    constructs classes that let the measured name sets widen.
@@ -485,8 +501,8 @@ Deferred as a whole (#122); this is the order if the deferral is revisited.
   (`deferred.md`, XML writer entry), then the translator port. The corpus's
   MathML strings lock the elements they reach; PR #110 lists the 25 of 44 the
   earlier pin did not reach, which need cases written for them.
-- **A3 after A2**, because it reuses the reader and has no oracle cases: they
-  are generated first, seeded from gem-emitted OMML.
+- **A3 after A2**, because it reuses the reader. Its oracle cases exist now:
+  `corpus/omml/` at `4a8ba64` holds 199 OMML-input cases (above).
 - **A4 only once the maintainer settles UnitsML.** A bridge needs A2 first; a
   native port needs it only if it mirrors the gem's MathML round trip.
 

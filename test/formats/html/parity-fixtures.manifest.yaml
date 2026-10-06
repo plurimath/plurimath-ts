@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-parity-fixtures.rb
-  sha256: 64a0ca15fa2c2421ef898b4bc4febb9ed0decf8fb5dc822c58e25e3ebdb60e09
+  sha256: de11ee70a8ce463ea595f2e13735b5cb197215e20c9d7ebb7577ab2c2a3d83b0
   inputs:
     scripts/generate-corpus.rb: 0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef
-    scripts/generate-parity-fixtures.rb: 64a0ca15fa2c2421ef898b4bc4febb9ed0decf8fb5dc822c58e25e3ebdb60e09
+    scripts/generate-parity-fixtures.rb: de11ee70a8ce463ea595f2e13735b5cb197215e20c9d7ebb7577ab2c2a3d83b0
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: f2cace6e1a8e466a908888c42326f3f940abfed1
+    commit: 6a8f3e6014093a8c96416b2f9264b14ed9f6106b
     clean: true
     dirty_paths: []
 oracle:

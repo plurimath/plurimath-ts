@@ -126,7 +126,7 @@ const FIXTURE_SPECS = {
   },
   "parity-fixtures.json": {
     generator: "scripts/generate-parity-fixtures.rb",
-    schema: "plurimath-corpus/render-parity/1",
+    schema: "plurimath-corpus/render-parity/2",
     rows: "cases",
     shape: "render-parity",
     usesCorpus: true,
@@ -755,6 +755,11 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         const rendered = rows.filter((row, index) => {
           const item = mapping(row, `${record.relative}.cases[${index}]`);
           stringField(item, "group", record.relative);
+          // The notation the case is written in, which picks the parser on
+          // both sides; only the three this port parses are swept.
+          expect(["asciimath", "latex", "unicode"]).toContain(
+            stringField(item, "inputFormat", record.relative),
+          );
           stringValue(item, "input", record.relative);
           const hasExpected = typeof item.expected === "string";
           const hasRefusal = typeof item.raises === "string";
@@ -765,7 +770,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           if (hasRefusal) {
             expectExactKeys(
               item,
-              ["group", "id", "input", "raises", "raisedIn"],
+              ["group", "id", "inputFormat", "input", "raises", "raisedIn"],
               `${record.relative}.cases[${index}]`,
             );
             expect(stringField(item, "raises", record.relative)).toBe(
@@ -775,7 +780,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           } else {
             expectExactKeys(
               item,
-              ["group", "id", "input", "expected"],
+              ["group", "id", "inputFormat", "input", "expected"],
               `${record.relative}.cases[${index}]`,
             );
           }

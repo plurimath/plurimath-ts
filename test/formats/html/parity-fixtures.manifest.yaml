@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-parity-fixtures.rb
-  sha256: 4123ddb81e7bfaec3cf1a61ed21efa137489f7bc197a647a253fb27b2b8bba7e
+  sha256: 64a0ca15fa2c2421ef898b4bc4febb9ed0decf8fb5dc822c58e25e3ebdb60e09
   inputs:
     scripts/generate-corpus.rb: 0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef
-    scripts/generate-parity-fixtures.rb: 4123ddb81e7bfaec3cf1a61ed21efa137489f7bc197a647a253fb27b2b8bba7e
+    scripts/generate-parity-fixtures.rb: 64a0ca15fa2c2421ef898b4bc4febb9ed0decf8fb5dc822c58e25e3ebdb60e09
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: f9ab566ca744a4ec4eef062d8cda14cf68a2deb6
+    commit: 70311f1163faf8403c26d33aa4d3d0a5182c7a60
     clean: true
     dirty_paths: []
 oracle:
@@ -114,6 +114,6 @@ corpus:
     sha256: 3456af96d813aaea418ab1a35d199b438dc83a360a2e072d7ee03feea831bb8b
 payload:
   path: parity-fixtures.json
-  schema: plurimath-corpus/render-parity/1
-  sha256: c94c8c970535926ca6e7a124016a9da142c4344dacd4b7d88b029f24c52b576f
-  bytes: 15503
+  schema: plurimath-corpus/render-parity/2
+  sha256: a9200385a760a620999a22ea11a0c8d7bc42ed711c551820c24e6f0b15c929cc
+  bytes: 59078

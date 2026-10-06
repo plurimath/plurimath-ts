@@ -128,8 +128,10 @@ describe(`calls/1 case "${CALL_CASE.id}" — fraction-side digit grouping`, () =
     });
     expect([...CALL_CASE.expected.keys()].sort()).toStrictEqual([
       "asciimath",
+      "html",
       "latex",
       "mathml",
+      "omml",
       "unicodemath",
     ]);
     expect(CALL_CASE.expected.get("asciimath")).toBe("1.123_456_789");

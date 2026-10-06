@@ -137,7 +137,7 @@ describe("the corpus itself", () => {
     ].sort();
     const found = pinned.map((path) => relative(PINNED_CORPUS_ROOT, path).split("\\").join("/"));
     expect(found).toStrictEqual(expected);
-    expect(found.length).toBe(81);
+    expect(found.length).toBe(80);
   });
 
   // The MathML and OMML payloads are pending their readers
@@ -157,7 +157,7 @@ describe("the corpus itself", () => {
 
   it("reads all of them to a mapping", () => {
     const files = [...local, ...pinned.filter((path) => !pending.includes(path))];
-    expect(files.length).toBe(57);
+    expect(files.length).toBe(56);
     for (const file of files) {
       const document = parseYaml(readFileSync(file, "utf8"));
       expect(typeof document, file).toBe("object");

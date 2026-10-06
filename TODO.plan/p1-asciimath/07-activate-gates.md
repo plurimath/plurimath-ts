@@ -28,8 +28,8 @@ so a gate can never be "active but unrunnable" (ARCHITECTURE.md §7).
   - at least one payload file loads, and at least one case loads from it —
     both counts asserted nonzero, not merely iterated over;
   - every expected AsciiMath group is present: `colour`, `fences`, `fonts`,
-    `frac`, `left-right`, `matrices`, `mixed`, `mod`, `nary`, `numbers`,
-    `operators`, `permissive`, `powers`, `quoted-text`, `roots`, `symbols`,
+    `frac`, `matrices`, `mixed`, `mod`, `nary`, `numbers`,
+    `operators`, `partial-render`, `permissive`, `powers`, `quoted-text`, `roots`, `symbols`,
     `unary-functions`, `whitespace`. The list is committed here, so a pin that
     silently loses a group fails rather than shrinking the run;
   - every group declares the target keys P1 renders — `asciimath`, `latex`,

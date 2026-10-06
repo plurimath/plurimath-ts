@@ -13,10 +13,10 @@
  * `expected.mathml` IS compared here (`src/formats/mathml/renderer.ts`'s
  * `formatter` is implemented as of the MathML/OMML number-formatting slice,
  * TODO.plan/feature-roadmap.md) — the same payload the four text renderers
- * check against. OMML has no `expected.omml` field in this payload (`targets`
- * carries only asciimath/latex/mathml/unicodemath), so OMML's `formatter` is
- * checked elsewhere (`number-formatter-numeric-pipeline.spec.ts` for the pinned
- * cases that record OMML, `number-formatter-omml.spec.ts` for measured ones).
+ * check against. The payload's `expected.omml` and `expected.html` (added by
+ * plurimath-testsuite#22) are compared in
+ * `number-formatter-numeric-pipeline.spec.ts`, which renders every pinned
+ * calls/1 case to both; `number-formatter-omml.spec.ts` covers measured ones.
  */
 
 import { describe, expect, it } from "vitest";
@@ -128,8 +128,10 @@ describe(`calls/1 case "${CALL_CASE.id}" — the formatter: option's default-sym
     });
     expect([...CALL_CASE.expected.keys()].sort()).toStrictEqual([
       "asciimath",
+      "html",
       "latex",
       "mathml",
+      "omml",
       "unicodemath",
     ]);
   });

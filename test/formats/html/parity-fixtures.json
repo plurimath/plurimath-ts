@@ -154,30 +154,6 @@
       "expected": "<i>a</i><i>b</i>"
     },
     {
-      "group": "left-right",
-      "id": "left-right-round",
-      "inputFormat": "asciimath",
-      "input": "left( x right)",
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
-    },
-    {
-      "group": "left-right",
-      "id": "left-right-square",
-      "inputFormat": "asciimath",
-      "input": "left[ x right]",
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
-    },
-    {
-      "group": "left-right",
-      "id": "left-right-around-frac",
-      "inputFormat": "asciimath",
-      "input": "left( a/b right)",
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
-    },
-    {
       "group": "matrices",
       "id": "matrix-column",
       "inputFormat": "asciimath",
@@ -372,6 +348,30 @@
       "inputFormat": "asciimath",
       "input": "sqrt(",
       "expected": "<i>sqrt</i>"
+    },
+    {
+      "group": "partial-render",
+      "id": "left-right-round",
+      "inputFormat": "asciimath",
+      "input": "left( x right)",
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
+    },
+    {
+      "group": "partial-render",
+      "id": "left-right-square",
+      "inputFormat": "asciimath",
+      "input": "left[ x right]",
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
+    },
+    {
+      "group": "partial-render",
+      "id": "left-right-around-frac",
+      "inputFormat": "asciimath",
+      "input": "left( a/b right)",
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
     },
     {
       "group": "permissive",
@@ -1017,54 +1017,6 @@
       "expected": "<i>1</i><i><i>sqrt</i><i>2</i></i>"
     },
     {
-      "group": "left-right",
-      "id": "latex-left-right-round",
-      "inputFormat": "latex",
-      "input": "\\left( a \\right)",
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
-    },
-    {
-      "group": "left-right",
-      "id": "latex-left-right-square",
-      "inputFormat": "latex",
-      "input": "\\left[ x \\right]",
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
-    },
-    {
-      "group": "left-right",
-      "id": "latex-left-right-curly",
-      "inputFormat": "latex",
-      "input": "\\left\\{ a \\right\\}",
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
-    },
-    {
-      "group": "left-right",
-      "id": "latex-left-right-bar",
-      "inputFormat": "latex",
-      "input": "\\left| x \\right|",
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
-    },
-    {
-      "group": "left-right",
-      "id": "latex-left-right-round-sum",
-      "inputFormat": "latex",
-      "input": "\\left( a + b \\right)",
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
-    },
-    {
-      "group": "left-right",
-      "id": "latex-left-right-around-frac",
-      "inputFormat": "latex",
-      "input": "\\left( \\frac{a}{b} \\right)",
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
-    },
-    {
       "group": "matrices",
       "id": "latex-matrix-plain",
       "inputFormat": "latex",
@@ -1385,6 +1337,54 @@
       "inputFormat": "latex",
       "input": "\\overparen{ab}",
       "expected": "&#x23dc; a b"
+    },
+    {
+      "group": "partial-render",
+      "id": "latex-left-right-round",
+      "inputFormat": "latex",
+      "input": "\\left( a \\right)",
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
+    },
+    {
+      "group": "partial-render",
+      "id": "latex-left-right-square",
+      "inputFormat": "latex",
+      "input": "\\left[ x \\right]",
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
+    },
+    {
+      "group": "partial-render",
+      "id": "latex-left-right-curly",
+      "inputFormat": "latex",
+      "input": "\\left\\{ a \\right\\}",
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
+    },
+    {
+      "group": "partial-render",
+      "id": "latex-left-right-bar",
+      "inputFormat": "latex",
+      "input": "\\left| x \\right|",
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
+    },
+    {
+      "group": "partial-render",
+      "id": "latex-left-right-round-sum",
+      "inputFormat": "latex",
+      "input": "\\left( a + b \\right)",
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
+    },
+    {
+      "group": "partial-render",
+      "id": "latex-left-right-around-frac",
+      "inputFormat": "latex",
+      "input": "\\left( \\frac{a}{b} \\right)",
+      "raises": "Plurimath::Math::ParseError",
+      "raisedIn": "render"
     },
     {
       "group": "powers",

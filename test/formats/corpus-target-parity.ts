@@ -17,6 +17,11 @@
  * no bytes, so it is asserted the other way round: the port must refuse it too,
  * at render, after the parse succeeds.
  *
+ * "Reachable" is `readCorpusCases()`: every pinned case except the one
+ * `corpus/exclusions.yaml` withholds, `text-unitsml-valid` (UnitsML is
+ * deferred). Its output is pinned as a known divergence in the fixture half of
+ * each `render-parity.spec.ts`, not here.
+ *
  * The generated `parity-fixtures.json` beside each spec sweeps the same inputs
  * and is kept: it also carries the corpus rejections and records the phase each
  * refusal happens in. The two are cross-checked below, so a fixture and a pin

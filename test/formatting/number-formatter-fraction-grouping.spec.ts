@@ -16,8 +16,8 @@
  * update: MathML's `formatter` support (the MathML/OMML number-formatting
  * slice) covers fraction-side grouping the same way the four text renderers
  * do, by threading the same resolved `NumberFormat` through
- * `applyNumberFormat`. OMML has no `expected.omml` field to check against in
- * this payload; its `formatter` is checked in `number-formatter-omml.spec.ts`.
+ * `applyNumberFormat`. The payload's `expected.omml` and `expected.html` are
+ * compared in `number-formatter-numeric-pipeline.spec.ts`.
  */
 
 import { describe, expect, it } from "vitest";

@@ -123,8 +123,8 @@ makes a defect, not an improvement.
 - [ ] The corpus declares an `html` target and every case carries an expectation for it —
       the reader asserts a nonzero case count for it, equal to the group's own count.
       (open: at pin `cf3c5eb` `test/gates/corpus-discovery.spec.ts` asserts this for the 40
-      AsciiMath, LaTeX and UnicodeMath case groups and the 7 `calls/1` groups; the 28
-      MathML- and OMML-input groups declare the target too but are not parsed by this
+      AsciiMath, LaTeX and UnicodeMath case groups and the 7 `calls/1` groups; the 26
+      MathML- and OMML-input case groups declare the target too but are not parsed by this
       port's reader yet (`PENDING_READER_FORMATS`); checked 2026-10-06)
 - [ ] The cross-format invariant gates cover HTML: `runtime-boundary`,
       `unsupported-fallback` and `adversarial-inputs`, plus the class-B differential

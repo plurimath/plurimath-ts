@@ -46,6 +46,7 @@ moving an alternative changes what parses.
 - [ ] Each rule that can fail has a failure-position test, not only a
   success-tree test. Two pegkit failure-position bugs survived a conformance
   suite that only tested what parses; `ParseError.index` is public contract.
-- [ ] A comma-decimal locale parses to the same model as the gem for the same
+- [x] A comma-decimal locale parses to the same model as the gem for the same
   input and locale, and the default still parses `1.5`. The shared case schema
   has no locale axis today, so this is a local fixture until one is agreed.
+  (done: `test/formats/asciimath/locale-models.spec.ts`, six rows (`1,5` under `de` and `fr`, `1,2,3` and `1.5` under `de`, `1.5` and `1,5` under the default) each deep-equal to the model the oracle at `00c52783` returned, serialized by `CorpusGenerator.serialize_node`; forcing the marker to `.` fails the four locale rows and forcing it to `,` fails the two default rows; checked 2026-10-07)

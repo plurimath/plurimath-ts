@@ -312,6 +312,9 @@ function firstMathmlText(rendered: MathmlRendered): string {
   return typeof first === "string" ? first : "";
 }
 
+/** Ruby's `/\s+/` (ASCII whitespace only), as `left.rb`/`right.rb` strip the delimiter's XML with it. */
+const RUBY_WHITESPACE_RUN = /[ \t\r\n\f\v]+/g;
+
 /**
  * `Core#dump_mathml`/the root's own newline-collapsing gsub — one line, no indentation.
  * The gem's `\n\s*` pattern uses Ruby's `\s`, which is ASCII whitespace only; JavaScript's
@@ -738,11 +741,11 @@ function mathZoneOf(
     } else if (options.format === "mathml") {
       quoted = dumpNodes(new XmlElement("mo").append(leftRightParen(node, isLeft)), {
         indent: -1,
-      });
+      }).replace(RUBY_WHITESPACE_RUN, "");
     } else if (options.format === "omml") {
       quoted = dumpNodes(new XmlElement("m:t").append(leftRightParen(node, isLeft)), {
         indent: -1,
-      });
+      }).replace(RUBY_WHITESPACE_RUN, "");
     } else {
       // asciimath/latex both go through `UnaryFunction#latex_paren`'s
       // reverse lookup, NOT `Left#left_paren`/`Right#right_paren` — see

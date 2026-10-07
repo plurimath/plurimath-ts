@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 import Plurimath, { FORMATS, type Format } from "../../src/compat/index";
 import { buildTreeDump } from "../../src/compat/to-display";
 import { equals, UnsupportedFeatureError, UnsupportedFormatError } from "../../src/core/index";
-import { NaryNode } from "../../src/core/nodes";
+import { FormulaNode, NaryNode, SymbolNode, UnaryFunctionNode } from "../../src/core/nodes";
 import { parseHtml } from "../../src/formats/html/index";
 import { parseUnicodemath } from "../../src/formats/unicodemath/index";
 import RootDefault, { Plurimath as RootNamed } from "../../src/index";
@@ -980,6 +980,58 @@ describe("toDisplay keeps a Unicode space after a line feed, as Ruby's \\s does"
         );
       });
     }
+  }
+});
+
+/**
+ * `Left#to_mathml_math_zone`/`to_omml_math_zone` (and `Right`'s) strip the
+ * delimiter's dumped XML with `gsub(/\s+/, "")`: ASCII whitespace only, so
+ * U+00A0 stays. Measured on the pinned oracle (`00c52783`):
+ *
+ *   S = ->(v) { Plurimath::Math::Symbols::Symbol.new(v) }
+ *   f = Plurimath::Math::Formula.new([Plurimath::Math::Function::Left.new(" "),
+ *     S.("x"), Plurimath::Math::Function::Right.new(" ")])
+ *   f.to_display(:mathml)
+ *   # => "|_ Math zone\n  |_ \"<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mstyle displaystyle=\"true\"><mo> </mo><mi>x</mi><mo> </mo></mstyle></math>\"\n     \"<mo></mo>\" left\n     \"<mtext>x</mtext>\" text\n     \"<mo></mo>\" right\n"
+ *   f.to_display(:omml).lines.last(3)
+ *   # => ["     \"<m:t></m:t>\" left\n", "     \"<m:t>x</m:t>\" text\n", "     \"<m:t></m:t>\" right\n"]
+ *
+ * (repeated with "\t", "\n", " \n " and " "; the root column below is
+ * the measured `<mo>` content of the root line.)
+ */
+describe("toDisplay strips ASCII whitespace from a Left/Right delimiter line", () => {
+  const nbsp = String.fromCharCode(0xa0);
+  const cases: ReadonlyArray<readonly [string, string, string]> = [
+    // [delimiter, root line's <mo> content, delimiter line's <mo> content]
+    [" ", " ", ""],
+    ["\t", "\t", ""],
+    ["\n", "", ""],
+    [" \n ", " ", ""],
+    [nbsp, nbsp, nbsp],
+  ];
+  const leftRight = (d: string) =>
+    new FormulaNode({
+      value: [
+        new UnaryFunctionNode({ name: "Left", parameterOne: d }),
+        new SymbolNode({ value: "x" }),
+        new UnaryFunctionNode({ name: "Right", parameterOne: d }),
+      ],
+    });
+
+  for (const [delimiter, root, leaf] of cases) {
+    it(`delimiter ${JSON.stringify(delimiter)}`, () => {
+      expect(buildTreeDump(leftRight(delimiter), "mathml")).toBe(
+        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
+          `<mstyle displaystyle="true"><mo>${root}</mo><mi>x</mi><mo>${root}</mo></mstyle></math>"\n` +
+          `     "<mo>${leaf}</mo>" left\n     "<mtext>x</mtext>" text\n     "<mo>${leaf}</mo>" right\n`,
+      );
+      expect(buildTreeDump(leftRight(delimiter), "omml").split("\n").slice(-4)).toEqual([
+        `     "<m:t>${leaf}</m:t>" left`,
+        '     "<m:t>x</m:t>" text',
+        `     "<m:t>${leaf}</m:t>" right`,
+        "",
+      ]);
+    });
   }
 });
 

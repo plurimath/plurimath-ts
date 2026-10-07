@@ -25,8 +25,9 @@
 #
 # `options` records the port's spelling: `displayStyle` (a boolean, passed to
 # the gem as the string "true"/"false", the only values the port accepts),
-# `splitOnLinebreak`, `mathRendering` and `intent` (each `true`, passed to the
-# gem as the string "true"; absent means the flag is not given).
+# `splitOnLinebreak` and `mathRendering` (each `true`, passed to the gem's
+# command as the string "true"), and `intent` (`true`, passed to `to_mathml`
+# as the boolean keyword). An absent key means the flag is not given.
 #
 # The oracle path MUST be a clean checkout of the pinned plurimath commit,
 # loaded through $LOAD_PATH, exactly as `generate-parity-fixtures.rb` does.

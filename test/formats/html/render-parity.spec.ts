@@ -290,6 +290,9 @@ describeCorpusTargets({
   format: "html",
   renderFormula: (formula) => toHtml(formula),
   rendered: 227,
+  // The port refuses at the `Right` node, where the gem raises ArgumentError
+  // (`Right#to_html` takes no keyword arguments).
+  refusedWith: /UnaryFunction alias "Right"/,
   refused: [
     "left-right-round",
     "left-right-square",

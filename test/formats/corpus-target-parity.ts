@@ -50,6 +50,12 @@ export interface CorpusTargetPins {
   readonly rendered: number;
   /** The ids whose `<format>` target the gem refused, in pin order. */
   readonly refused: readonly string[];
+  /**
+   * The message every refusal must carry. Required when `refused` is not
+   * empty: a bare `RenderError` check would also pass a refusal raised for an
+   * unrelated reason somewhere else in the tree.
+   */
+  readonly refusedWith?: RegExp;
   /** The generated parity fixture's rows, for the cross-check. */
   readonly fixtureRows: readonly {
     readonly id: string;
@@ -64,6 +70,10 @@ export function describeCorpusTargets(pins: CorpusTargetPins): void {
   const aliases = aliasIndex(readCensus());
   const rendered = cases.filter((entry) => entry.expected.has(format));
   const refused = cases.filter((entry) => entry.refusals.has(format));
+  const refusedWith = pins.refusedWith;
+  if (refused.length > 0 && refusedWith === undefined) {
+    throw new Error(`${format} corpus target: refusals are pinned without a refusedWith message`);
+  }
   const fixtureById = new Map(pins.fixtureRows.map((row) => [row.id, row] as const));
 
   const expectedBytes = (entry: (typeof cases)[number]): string => {
@@ -131,6 +141,7 @@ export function describeCorpusTargets(pins: CorpusTargetPins): void {
       (_id, entry) => {
         const node = buildNode(entry.model, aliases);
         expect(() => renderFormula(node as never)).toThrow(RenderError);
+        expect(() => renderFormula(node as never)).toThrow(refusedWith as RegExp);
       },
     );
   });
@@ -150,6 +161,7 @@ export function describeCorpusTargets(pins: CorpusTargetPins): void {
         // a different divergence, and must fail as such.
         const tree = parse(entry);
         expect(() => renderFormula(tree as never)).toThrow(RenderError);
+        expect(() => renderFormula(tree as never)).toThrow(refusedWith as RegExp);
       },
     );
   });

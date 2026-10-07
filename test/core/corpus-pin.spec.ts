@@ -187,20 +187,6 @@ function syntheticPin(options: SyntheticOptions = {}): string {
 }
 
 /**
- * Committed by name, not counted. A pin that loses a payload is still a valid,
- * self-consistent pin — the reader has nothing to object to and every parity
- * suite happily runs the smaller set. This list is the only thing standing
- * between "the corpus shrank" and "the corpus shrank and the suite was still
- * green"; the proof that it is load-bearing is at the end of this file.
- *
- * Paths, not group names. A group name is unique only within one input format,
- * and the corpus now carries three: `fences`, `numbers`, `operators` and
- * `symbols` each name an AsciiMath group, a LaTeX one, AND a Unicode one. A
- * list of bare names would have said "fences" three times and identified
- * none of them, so losing the Unicode one while keeping the other two would
- * still have matched.
- */
-/**
  * The `left`/`right` inputs the gem renders to every target except HTML,
  * written in AsciiMath and then LaTeX, in the order the pin lists them.
  */
@@ -215,6 +201,21 @@ const LEFT_RIGHT_HTML_REFUSALS = [
   "latex-left-right-round-sum",
   "latex-left-right-around-frac",
 ];
+
+/**
+ * Committed by name, not counted. A pin that loses a payload is still a valid,
+ * self-consistent pin — the reader has nothing to object to and every parity
+ * suite happily runs the smaller set. This list is the only thing standing
+ * between "the corpus shrank" and "the corpus shrank and the suite was still
+ * green"; the proof that it is load-bearing is at the end of this file.
+ *
+ * Paths, not group names. A group name is unique only within one input format,
+ * and the corpus now carries three: `fences`, `numbers`, `operators` and
+ * `symbols` each name an AsciiMath group, a LaTeX one, AND a Unicode one. A
+ * list of bare names would have said "fences" three times and identified
+ * none of them, so losing the Unicode one while keeping the other two would
+ * still have matched.
+ */
 
 const EXPECTED_PAYLOADS = [
   "asciimath/colour.yaml",

@@ -1,8 +1,12 @@
 /**
- * Oracle-backed parity for a format the shared corpus carries no target for.
+ * Oracle-backed HTML parity, from a generated fixture and from the corpus.
  *
  * The four P1 formats get this from `corpus-conformance`. OMML and HTML did
  * not, which is how six parity defects reached review with 2,900 tests green.
+ * Since plurimath-testsuite#22 the corpus carries an `html` target too, and
+ * `../corpus-target-parity.ts` (called at the end of this file) checks every
+ * reachable case against it. The fixture stays: it also sweeps the corpus
+ * rejections and records the phase each refusal happens in.
  *
  * Fixtures are generated, never hand-typed:
  *   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
@@ -32,11 +36,13 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { ParseError, RenderError } from "../../../src/core/index";
 import { parseAsciimath } from "../../../src/formats/asciimath/index";
+import { toHtml } from "../../../src/formats/html/renderer";
 import { parseLatex } from "../../../src/formats/latex/index";
 import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
 import { parseYaml } from "../../core/corpus-yaml";
 import { casesInInputFormat } from "../../core/model-builder";
+import { describeCorpusTargets } from "../corpus-target-parity";
 import {
   FORMAT,
   KNOWN_DIVERGENCES,
@@ -278,4 +284,25 @@ describe(`${FORMAT} parity, the cases the gem refuses`, () => {
       ).toThrow(RenderError);
     },
   );
+});
+
+describeCorpusTargets({
+  format: "html",
+  renderFormula: (formula) => toHtml(formula),
+  rendered: 227,
+  // The port refuses at the `Right` node, where the gem raises ArgumentError
+  // (`Right#to_html` takes no keyword arguments).
+  refusedWith: /UnaryFunction alias "Right"/,
+  refused: [
+    "left-right-round",
+    "left-right-square",
+    "left-right-around-frac",
+    "latex-left-right-round",
+    "latex-left-right-square",
+    "latex-left-right-curly",
+    "latex-left-right-bar",
+    "latex-left-right-round-sum",
+    "latex-left-right-around-frac",
+  ],
+  fixtureRows: fixture.cases,
 });

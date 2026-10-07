@@ -1,9 +1,11 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Emits oracle expectations for the formats the shared corpus does not carry
-# targets for (today: omml, html), so those renderers get the same executable
-# parity coverage the four P1 formats already have.
+# Emits oracle expectations for omml and html, written when the shared corpus
+# carried no target for either, so those renderers got the same executable
+# parity coverage the four P1 formats had. The corpus has carried both targets
+# since plurimath-testsuite#22; these fixtures stay because they also sweep the
+# corpus rejections and record the phase each refusal happens in.
 #
 #   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
 #     scripts/generate-parity-fixtures.rb \
@@ -11,8 +13,9 @@
 #
 # `--format` is REQUIRED and generates exactly one format. This script used to
 # loop over every name in FORMATS, so asking for html also rewrote
-# test/formats/omml/parity-fixtures.json -- a fixture no spec on this branch
-# reads, resurrected by every regeneration.
+# test/formats/omml/parity-fixtures.json, which
+# test/formats/omml/render-parity.spec.ts reads and checks against its manifest,
+# so an unrelated regeneration could change what that spec asserts.
 #
 # The oracle path MUST be a clean checkout of the pinned plurimath commit.
 # This script loads it through $LOAD_PATH and refuses to run against an

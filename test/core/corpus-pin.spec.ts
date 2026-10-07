@@ -187,6 +187,22 @@ function syntheticPin(options: SyntheticOptions = {}): string {
 }
 
 /**
+ * The `left`/`right` inputs the gem renders to every target except HTML,
+ * written in AsciiMath and then LaTeX, in the order the pin lists them.
+ */
+const LEFT_RIGHT_HTML_REFUSALS = [
+  "left-right-round",
+  "left-right-square",
+  "left-right-around-frac",
+  "latex-left-right-round",
+  "latex-left-right-square",
+  "latex-left-right-curly",
+  "latex-left-right-bar",
+  "latex-left-right-round-sum",
+  "latex-left-right-around-frac",
+];
+
+/**
  * Committed by name, not counted. A pin that loses a payload is still a valid,
  * self-consistent pin — the reader has nothing to object to and every parity
  * suite happily runs the smaller set. This list is the only thing standing
@@ -200,12 +216,12 @@ function syntheticPin(options: SyntheticOptions = {}): string {
  * none of them, so losing the Unicode one while keeping the other two would
  * still have matched.
  */
+
 const EXPECTED_PAYLOADS = [
   "asciimath/colour.yaml",
   "asciimath/fences.yaml",
   "asciimath/fonts.yaml",
   "asciimath/frac.yaml",
-  "asciimath/left-right.yaml",
   "asciimath/matrices.yaml",
   "asciimath/mixed.yaml",
   "asciimath/mod.yaml",
@@ -225,13 +241,13 @@ const EXPECTED_PAYLOADS = [
   "latex/fences.yaml",
   "latex/fonts.yaml",
   "latex/frac.yaml",
-  "latex/left-right.yaml",
   "latex/matrices.yaml",
   "latex/mod.yaml",
   "latex/nary.yaml",
   "latex/numbers.yaml",
   "latex/operators.yaml",
   "latex/over-under.yaml",
+  "latex/partial-render.yaml",
   "latex/powers.yaml",
   "latex/quoted-text.yaml",
   "latex/roots.yaml",
@@ -294,13 +310,13 @@ describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every payload the provenance records, matched by path", () => {
-    // 41 case payloads (19 AsciiMath, 18 LaTeX, 4 Unicode), 4 rejection
+    // 40 case payloads (18 AsciiMath, 18 LaTeX, 4 Unicode), 4 rejection
     // payloads (one per input format that carries rejections: AsciiMath,
     // LaTeX, Unicode, HTML), and 7 calls/1 payloads. Counted apart on purpose: a rejection payload carries no
     // rendering and a calls payload carries a render under something other
     // than default options, so folding either into the case count would
     // inflate what "the corpus covers" claims.
-    expect(corpus.payloads.length).toBe(41);
+    expect(corpus.payloads.length).toBe(40);
     expect(corpus.rejectionPayloads.length).toBe(4);
     expect(corpus.callsPayloads.length).toBe(7);
     // Plus 28 MathML and OMML payloads (plurimath-testsuite#21), byte-verified
@@ -308,7 +324,7 @@ describe("the pin as shipped", () => {
     expect(corpus.pendingPayloads.map((payload) => payload.path)).toStrictEqual(
       EXPECTED_PENDING_PAYLOADS,
     );
-    expect(corpus.provenance.payloads.length).toBe(80);
+    expect(corpus.provenance.payloads.length).toBe(79);
     assertExpectedPayloads(corpus);
   });
 
@@ -379,20 +395,47 @@ describe("the pin as shipped", () => {
     }
   });
 
-  it("records the one input the gem renders to only some targets", () => {
-    // The single `cases/2` group in the pin. Every other case renders to all
-    // four targets, so its `refusals` map is empty and every consumer written
+  it("records the inputs the gem renders to only some targets", () => {
+    // The pin's `cases/2` groups. Every other case renders to every declared
+    // target, so its `refusals` map is empty and every consumer written
     // against `cases/1` reads it unchanged.
     const partial = corpus.cases.filter((entry) => entry.refusals.size > 0);
-    expect(partial.map((entry) => entry.id)).toStrictEqual(["partial-sqrt-unclosed"]);
+    expect(partial.map((entry) => entry.id)).toStrictEqual([
+      "partial-sqrt-unclosed",
+      ...LEFT_RIGHT_HTML_REFUSALS,
+    ]);
     const entry = partial[0];
     expect(entry?.input).toBe("sqrt(");
-    expect([...(entry?.expected.keys() ?? [])]).toStrictEqual(["asciimath", "latex", "mathml"]);
+    expect([...(entry?.expected.keys() ?? [])]).toStrictEqual([
+      "asciimath",
+      "latex",
+      "mathml",
+      "omml",
+      "html",
+    ]);
     expect([...(entry?.refusals.entries() ?? [])]).toStrictEqual([["unicodemath", "parse_error"]]);
     // The input parsed, so the tree and the model are still there; only the
     // rendering of that model failed.
     expect(entry?.parseTree).not.toBe(null);
     expect(entry?.model).not.toBe(null);
+  });
+
+  it("records the left-right inputs as rendering to every target but HTML", () => {
+    // The gem's `Function::Right#to_html` takes no arguments while its caller
+    // passes one, so the `ArgumentError` surfaces as a `ParseError` from
+    // `to_html`. The corpus records that refusal as it is.
+    for (const id of LEFT_RIGHT_HTML_REFUSALS) {
+      const entry = corpus.cases.find((candidate) => candidate.id === id);
+      expect([...(entry?.expected.keys() ?? [])], id).toStrictEqual([
+        "asciimath",
+        "latex",
+        "mathml",
+        "unicodemath",
+        "omml",
+      ]);
+      expect([...(entry?.refusals.entries() ?? [])], id).toStrictEqual([["html", "parse_error"]]);
+      expect(entry?.model, id).not.toBe(null);
+    }
   });
 });
 
@@ -864,9 +907,9 @@ describe("a pin that quietly loses a group", () => {
   );
 
   it("loads without complaint, which is the whole problem", () => {
-    // The shipped 41 payloads less the one removed, and the shipped 237 cases
+    // The shipped 40 payloads less the one removed, and the shipped 237 cases
     // less the six `asciimath/frac.yaml` carries.
-    expect(shrunk.payloads.length).toBe(40);
+    expect(shrunk.payloads.length).toBe(39);
     expect(shrunk.cases.length).toBe(231);
     expect(shrunk.payloads.map((payload) => payload.path)).not.toContain("asciimath/frac.yaml");
   });

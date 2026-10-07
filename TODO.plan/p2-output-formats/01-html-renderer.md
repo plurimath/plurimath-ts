@@ -114,7 +114,7 @@ makes a defect, not an improvement.
 
 - [ ] `toHtml` matches the gem byte-for-byte across the pinned corpus, for every case the
       corpus reaches.
-      (open: `test/formats/html/parity-target.ts` pins all 228 gem-renderable cases written in AsciiMath (89), LaTeX (119) and UnicodeMath (20), 227 byte-identical and `text-unitsml-valid` a recorded divergence, and the 6 LaTeX `\left…\right` cases the gem refuses to render are refused too; the corpus's HTML-, MathML- and OMML-input cases are not swept; checked 2026-10-05)
+      (open: `test/formats/html/parity-target.ts` pins all 228 gem-renderable cases written in AsciiMath (89), LaTeX (119) and UnicodeMath (20), 227 byte-identical and `text-unitsml-valid` a recorded divergence, and the 6 LaTeX `\left…\right` cases the gem refuses to render are refused too; the corpus's HTML-, MathML- and OMML-input cases are not swept; checked 2026-10-05. Since the pin moved to plurimath-testsuite `cf3c5eb`, `test/formats/corpus-target-parity.ts` also checks all 236 reachable cases against the corpus's own `html` target, in a model layer and a round-trip layer: 227 render the gem's bytes and the 9 `left`/`right` cases the corpus records as an `html` `parse_error` refuse at render; checked 2026-10-06)
 - [x] The 15 own-override kinds are each measured against the oracle, not derived from a
       sibling format.
 - [x] The three carrier defaults are pinned by a behavioural test each, so a later change
@@ -122,6 +122,10 @@ makes a defect, not an improvement.
 - [x] `nary` raises rather than rendering, and a test pins the refusal.
 - [ ] The corpus declares an `html` target and every case carries an expectation for it —
       the reader asserts a nonzero case count for it, equal to the group's own count.
+      (open: at pin `cf3c5eb` `test/gates/corpus-discovery.spec.ts` asserts this for the 40
+      AsciiMath, LaTeX and UnicodeMath case groups and the 7 `calls/1` groups; the 26
+      MathML- and OMML-input case groups declare the target too but are not parsed by this
+      port's reader yet (`PENDING_READER_FORMATS`); checked 2026-10-06)
 - [ ] The cross-format invariant gates cover HTML: `runtime-boundary`,
       `unsupported-fallback` and `adversarial-inputs`, plus the class-B differential
       runner on both halves. All four currently cover four formats; HTML makes five.

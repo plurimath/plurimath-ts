@@ -146,13 +146,14 @@ describe("pinned calls/1 cases — the sets this spec partitions", () => {
     expect(IN_SCOPE.filter((c) => c.stringFormat !== null)).toHaveLength(2);
   });
 
-  it("records OMML for exactly the 64 cases whose payload declares it", () => {
-    // 64 is measured, not recalled: the cases of the pinned calls/1 payloads
-    // whose `targets` include omml. The other two (`number-formatting.yaml`)
-    // predate the omml target.
-    expect(OMML_CASE_IDS.size).toBe(64);
+  it("records OMML and HTML for all 66 cases, as every payload declares both", () => {
+    // 66 is measured, not recalled: since plurimath-testsuite#22 every pinned
+    // calls/1 payload declares both targets, `number-formatting.yaml` included.
+    expect(OMML_CASE_IDS.size).toBe(66);
     const withOmml = IN_SCOPE.filter((c) => c.entry.expected.get("omml") !== undefined);
     expect(withOmml.map((c) => c.entry.id).sort()).toStrictEqual([...OMML_CASE_IDS].sort());
+    const withHtml = IN_SCOPE.filter((c) => c.entry.expected.get("html") !== undefined);
+    expect(withHtml).toHaveLength(66);
   });
 
   it("covers every group of this slice (a gate that inspects nothing fails)", () => {
@@ -203,25 +204,16 @@ describe.each(IN_SCOPE.map((c) => [c.entry.id, c] as const))("%s", (_id, c) => {
   });
   it("renders html byte-identical to the oracle", () => {
     const html = expected.get("html");
-    const rendered = toHtml(buildFormula(c.entry), { formatter });
-    // The two oldest cases predate the html target and carry no html
-    // expectation: they still assert the render completes with a string.
-    if (html === undefined) expect(typeof rendered).toBe("string");
-    else expect(rendered).toBe(html);
+    // Every pinned case carries an html expectation; a missing one fails here.
+    expect(html).toBeTypeOf("string");
+    expect(toHtml(buildFormula(c.entry), { formatter })).toBe(html);
   });
-  it("renders omml byte-identical to the oracle, wherever the payload declares omml", () => {
+  it("renders omml byte-identical to the oracle", () => {
     const omml = expected.get("omml");
-    const rendered = toOmml(buildFormula(c.entry), { formatter });
-    if (OMML_CASE_IDS.has(c.entry.id)) {
-      // A declared target with no expectation fails here, never skips.
-      expect(omml).toBeTypeOf("string");
-      expect(rendered).toBe(omml);
-    } else {
-      // A payload without the omml target: no expectation to compare, but the
-      // render must still complete.
-      expect(omml).toBeUndefined();
-      expect(typeof rendered).toBe("string");
-    }
+    // A declared target with no expectation fails here, never skips.
+    expect(OMML_CASE_IDS.has(c.entry.id)).toBe(true);
+    expect(omml).toBeTypeOf("string");
+    expect(toOmml(buildFormula(c.entry), { formatter })).toBe(omml);
   });
 });
 

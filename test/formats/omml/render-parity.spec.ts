@@ -1,11 +1,14 @@
 /**
- * Oracle-backed parity for a format the shared corpus carries no target for.
+ * Oracle-backed OMML parity, from a generated fixture and from the corpus.
  *
  * The four P1 formats get this from `corpus-conformance`: `DIFFERENTIAL_FORMATS`
  * in `scripts/gate-oracle.rb` is asciimath, latex, mathml and unicodemath, and
- * the corpus payloads carry no `omml` key. Until this file landed, the whole
- * OMML renderer rested on hand-authored fixtures — which is how six parity
- * defects reached review with the suite green.
+ * until plurimath-testsuite#22 the corpus payloads carried no `omml` key. Until
+ * this file landed, the whole OMML renderer rested on hand-authored fixtures —
+ * which is how six parity defects reached review with the suite green. The
+ * corpus's own `omml` target is checked by `../corpus-target-parity.ts`, called
+ * at the end of this file. The fixture stays: it also sweeps the corpus
+ * rejections and records the phase each refusal happens in.
  *
  * Fixtures are generated, never hand-typed:
  *   ruby scripts/generate-parity-fixtures.rb --oracle <clean pinned checkout> \
@@ -36,10 +39,12 @@ import { describe, expect, it } from "vitest";
 import { ParseError, RenderError } from "../../../src/core/index";
 import { parseAsciimath } from "../../../src/formats/asciimath/index";
 import { parseLatex } from "../../../src/formats/latex/index";
+import { toOmml } from "../../../src/formats/omml/renderer";
 import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
 import { parseYaml } from "../../core/corpus-yaml";
 import { casesInInputFormat } from "../../core/model-builder";
+import { describeCorpusTargets } from "../corpus-target-parity";
 import {
   FORMAT,
   KNOWN_DIVERGENCES,
@@ -285,4 +290,12 @@ describe(`${FORMAT} parity, the cases the gem refuses`, () => {
       ).toThrow(RenderError);
     },
   );
+});
+
+describeCorpusTargets({
+  format: "omml",
+  renderFormula: (formula) => toOmml(formula),
+  rendered: 236,
+  refused: [],
+  fixtureRows: fixture.cases,
 });

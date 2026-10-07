@@ -477,7 +477,8 @@ Beyond writing the class itself, the measured blockers are:
   read-only primary submodule both resolve to
   `d2f1bea40c66c7018ede37faea0be51b307bf3af`. Across the `18` positive payloads, a
   `[corpus-targets]` measured `asciimath=18`, `latex=18`, `mathml=18`,
-  `unicodemath=18`, `html=0`, and `omml=0` (exit `0`).
+  `unicodemath=18`, `html=0`, and `omml=0` (exit `0`). Since then plurimath-testsuite#22
+  added both targets to every group, and this repository pins it at `cf3c5eb`.
 - **Set the publish identity and release metadata.** The package remains
   `@plurimath/plurimath-ts`, version `0.0.0`, and `private: true`
   (`package.json:2-4`); the distinct npm name and release line are a maintainer decision
@@ -562,6 +563,9 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
       (done: `test/compat/plurimath-class.spec.ts:188-209`; checked 2026-09-24)
 - [ ] HTML and OMML corpus targets are nonempty and complete per payload; their
       cross-format and package-isolation gates pass against built artifacts.
+      (open: the targets are nonempty and complete per parsed payload at pin `cf3c5eb`,
+      asserted in `test/gates/corpus-discovery.spec.ts`; the cross-format gates do not
+      cover HTML or OMML yet; checked 2026-10-06)
 - [x] The root package exports the default class under ESM and CJS, the package root
       passes publint, the real packed artifact passes attw, and review leaves no valid implementable finding
       unresolved.

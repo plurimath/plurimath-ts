@@ -30,7 +30,7 @@
  * ```
  *
  * The helpers below build exactly the serialized shapes that probe printed;
- * the rows were checked against its JSON output byte for byte before this
+ * the rows were checked deep-equal to its parsed JSON output before this
  * file was committed.
  */
 

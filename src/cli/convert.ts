@@ -16,8 +16,7 @@
  */
 
 import Plurimath, { type Format as CompatFormat } from "../compat/index";
-import { type MathmlOptions, toMathml } from "../formats/mathml/index";
-import { type OmmlOptions, toOmml } from "../formats/omml/index";
+import { mathmlWithOptions, ommlWithOptions } from "../compat/render-options";
 
 export const INPUT_FORMATS = ["asciimath", "latex", "html", "unicodemath"] as const;
 export type InputFormat = (typeof INPUT_FORMATS)[number];
@@ -68,7 +67,10 @@ export interface RenderOptions {
  * unless the flag says otherwise, so an absent `--display-style` is `true`
  * here too rather than the formula's own default.
  */
-function xmlOptions(options: RenderOptions): MathmlOptions & OmmlOptions {
+function xmlOptions(options: RenderOptions): {
+  readonly displayStyle: boolean;
+  readonly splitOnLinebreak?: true;
+} {
   return {
     displayStyle: options.displayStyle ?? true,
     ...(options.splitOnLinebreak === true ? { splitOnLinebreak: true } : {}),
@@ -79,13 +81,13 @@ const RENDER: Record<OutputFormat, (formula: Plurimath, options: RenderOptions) 
   asciimath: (formula) => formula.toAsciimath(),
   latex: (formula) => formula.toLatex(),
   mathml: (formula, options) =>
-    toMathml(formula.data, {
+    mathmlWithOptions(formula, {
       ...xmlOptions(options),
       ...(options.intent === true ? { intent: true } : {}),
     }),
   html: (formula) => formula.toHtml(),
   unicodemath: (formula) => formula.toUnicodemath(),
-  omml: (formula, options) => toOmml(formula.data, xmlOptions(options)),
+  omml: (formula, options) => ommlWithOptions(formula, xmlOptions(options)),
 };
 
 /**

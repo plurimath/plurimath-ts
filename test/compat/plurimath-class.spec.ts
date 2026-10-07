@@ -947,6 +947,42 @@ describe("toDisplay", () => {
   });
 });
 
+/**
+ * The gem collapses each XML line with a `\n\s*` gsub, and Ruby's `\s`
+ * is ASCII whitespace only. A text node holding a line feed followed by a
+ * Unicode space keeps that space. Measured on the pinned oracle (`00c52783`),
+ * for each character below and both inputs:
+ *
+ *   bundle exec ruby -e 'require "plurimath";
+ *     puts Plurimath::Math.parse("\"a\n\u2028b\"", :asciimath).to_display(:mathml).inspect'
+ *   # => "|_ Math zone\n  |_ \"<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mstyle displaystyle=\"true\"><mtext>a\u2028b</mtext></mstyle></math>\"\n     |_ \"<mtext>a\u2028b</mtext>\" text\n"
+ *
+ * (`\text{a\n\u2028b}` as LaTeX gives the same bytes.)
+ */
+describe("toDisplay keeps a Unicode space after a line feed, as Ruby's \\s does", () => {
+  const unicodeSpaces = [
+    0x00a0, 0x1680, 0x2000, 0x200a, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000, 0xfeff,
+  ];
+  const inputs = (c: string) =>
+    [
+      [`"a\n${c}b"`, "asciimath"],
+      [`\\text{a\n${c}b}`, "latex"],
+    ] as const;
+
+  for (const code of unicodeSpaces) {
+    const c = String.fromCharCode(code);
+    for (const [input, format] of inputs(c)) {
+      it(`U+${code.toString(16).toUpperCase().padStart(4, "0")} in ${format}`, () => {
+        expect(new Plurimath(input, format).toDisplay("mathml")).toBe(
+          '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
+            `<mstyle displaystyle="true"><mtext>a${c}b</mtext></mstyle></math>"\n` +
+            `     |_ "<mtext>a${c}b</mtext>" text\n`,
+        );
+      });
+    }
+  }
+});
+
 describe("the one method that cannot be honest yet", () => {
   /**
    * Measured on the oracle: `to_mathml(intent: false)` is byte-identical to

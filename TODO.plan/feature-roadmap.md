@@ -335,6 +335,10 @@ remaining kinds in #150; `src/compat/to-display.ts`). Measured on `70f9482`:
 (`Nary`, `FontStyle` under `unicodemath`, `Substack`), the rest as
 unreachable or out of scope (`Msgroup`, `Unitsml`, a bare string in a
 sequence); the module doc of `src/compat/to-display.ts` records each reason.
+One more is refused without a recorded reason: a formula holding a
+`Linebreak` (LaTeX `a \\ b`) raises `UnsupportedFeatureError` here, while the
+gem prints a tree (found through the CLI's `--math-rendering`, which passes
+the error through). Porting it is open.
 
 **Blocks:** nothing. It has no shared case; `calls/1` carries only
 `number_formatter`.

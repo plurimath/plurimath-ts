@@ -144,7 +144,8 @@ export function parseArgs(argv: readonly string[]): ParsedArgs {
       continue;
     }
 
-    const switchField = SWITCHES[arg];
+    // Own keys only: a filename such as `toString` is not a switch.
+    const switchField = Object.hasOwn(SWITCHES, arg) ? SWITCHES[arg] : undefined;
     if (switchField !== undefined) {
       options[switchField] = true;
       continue;

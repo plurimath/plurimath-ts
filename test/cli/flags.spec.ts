@@ -2,7 +2,7 @@
  * Argument parsing for the CLI's render options (`src/cli/args.ts`):
  * `--display-style <true|false>` and the `--split-on-linebreak`,
  * `--math-rendering` and `--intent` switches. Their output is checked against
- * the gem in `./render-options.spec.ts`.
+ * the gem in `./flag-output.spec.ts`.
  */
 
 import { describe, expect, it } from "vitest";
@@ -80,6 +80,18 @@ describe("render option flags", () => {
       args: { from: "asciimath", to: "mathml", file: "false", options: { splitOnLinebreak: true } },
     });
   });
+});
+
+describe("filenames that are object keys", () => {
+  it.each(["toString", "constructor", "__proto__", "hasOwnProperty"])(
+    "takes %s as the input file, not as a switch",
+    (name) => {
+      expect(parseArgs([...BASE, name])).toEqual({
+        kind: "convert",
+        args: { from: "asciimath", to: "mathml", file: name, options: {} },
+      });
+    },
+  );
 });
 
 describe("render option errors", () => {

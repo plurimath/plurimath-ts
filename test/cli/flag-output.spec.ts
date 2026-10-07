@@ -70,7 +70,10 @@ describe("CLI render options match the gem", () => {
     expect(fixture.cases.length).toBeGreaterThan(0);
     // Each flag is exercised by at least one row.
     for (const key of ["displayStyle", "splitOnLinebreak", "mathRendering", "intent"]) {
-      expect(fixture.cases.some((row) => key in row.options), key).toBe(true);
+      expect(
+        fixture.cases.some((row) => key in row.options),
+        key,
+      ).toBe(true);
     }
   });
 

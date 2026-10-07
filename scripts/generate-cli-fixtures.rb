@@ -112,6 +112,11 @@ CLI_ROWS = [
   ["display-linebreak-unicodemath", "latex", "a \\\\ b", "unicodemath", { "mathRendering" => true }],
   ["display-linebreak-nested", "latex", "\\frac{a \\\\ b}{c}", "latex", { "mathRendering" => true }],
   ["display-linebreak-html", "html", "a<br/>b", "asciimath", { "mathRendering" => true }],
+  # A blank line inside a text: the gem's closing `.sub(/\n$/, "")` removes
+  # the first newline that ends a line followed by an empty one, not the last.
+  ["display-blank-line-text", "latex", "\\text{x\n\ny}", "latex", { "mathRendering" => true }],
+  ["display-blank-line-linebreak", "latex", "a \\\\ \\text{x\n\ny}", "unicodemath",
+   { "mathRendering" => true }],
   # `--math-rendering` returns before the display style is read.
   ["display-mathml-ignores-display-style", "asciimath", "x^2", "mathml",
    { "mathRendering" => true, "displayStyle" => false }],

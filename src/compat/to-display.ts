@@ -1154,5 +1154,11 @@ export function buildTreeDump(node: MathNode, format: DisplayFormat): string {
   // never `ops.quoted`, which is the FRAGMENT shape field printing uses.
   const header = `  |_ "${ops.render(node, displayStyle)}"\n`;
   const body = mathZoneOf(node, "     ", false, true, options);
-  return `|_ Math zone\n${header}${body}`;
+  // `Formula#to_display` builds `"|_ Math zone\n#{math_zone}\n"` in a
+  // heredoc and calls `.sub(/\n$/, "")` on it. Ruby's `$` is end of LINE, so
+  // the `\n` removed is the first one followed by another `\n` or by the end
+  // — the trailing one only when no blank line occurs earlier (a text
+  // holding `\n\n` loses its first newline instead, and the dump keeps two
+  // at the end). Measured on the pinned oracle with LaTeX `\text{x\n\ny}`.
+  return `|_ Math zone\n${header}${body}\n`.replace(/\n(?=\n|$)/, "");
 }

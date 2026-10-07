@@ -739,7 +739,7 @@ in the gem — any matrix whose parens survive `table_tag_only?` (both present,
 not lround/rround) dies. The port raises `RenderError` at the same shape
 (probe matrix-square-parens).
 
-### `to_display(:omml)` crashes on any formula holding a line break
+### `to_display(:omml)` crashes on a line break with no operator
 
 ```ruby
 Plurimath::Math.parse('a \\\\ b', :latex).to_display(:omml)

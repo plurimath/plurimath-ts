@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-cli-fixtures.rb
-  sha256: 9a61e19fc6504748a0c830b371c1bf92ba09082455eb83309745f1197acbbd5f
+  sha256: ca6112462fc3652b5ea38ce9edae41d50189fc504935035adca151fb263f3c9f
   inputs:
-    scripts/generate-cli-fixtures.rb: 9a61e19fc6504748a0c830b371c1bf92ba09082455eb83309745f1197acbbd5f
+    scripts/generate-cli-fixtures.rb: ca6112462fc3652b5ea38ce9edae41d50189fc504935035adca151fb263f3c9f
     scripts/generate-corpus.rb: 0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: adc615092865d889368fed570832895fe35db7c5
+    commit: bfd474c2c2c93938b48dd5f1e90631fbaeb60bd5
     clean: true
     dirty_paths: []
 oracle:
@@ -105,5 +105,5 @@ dependencies:
 payload:
   path: cli-fixtures.json
   schema: plurimath-corpus/cli/1
-  sha256: c4a615d720732a200fb47b38a206365bd125266a27f29b3a1d460682f9684aab
-  bytes: 32986
+  sha256: b27837327bfe322f75a2ac7ee0f468690c2c8b1a1babfadcc3c2edbb84502025
+  bytes: 34184

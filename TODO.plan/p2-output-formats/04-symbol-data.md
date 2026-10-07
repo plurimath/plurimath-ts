@@ -618,6 +618,24 @@ passed; the isolation and size measurements this file asks for belong to the
 slice that publishes `./omml`, which had not landed then. It has since: #112
 published `./omml`, and `package.json#exports` lists it.
 
+Re-measured on 2026-10-07 as the before/after pair this file asks for:
+`scripts/probes/dist-sizes.mjs` (exit `0` both runs) against a fresh
+`pnpm build` (exit `0` both runs) of #70's squash commit `4f0f0be` and of its
+parent `017b7ed`. The two outputs are byte-identical (`diff` exit `0`), which is
+what the paragraph above predicts: the slice moved no published bytes.
+
+| subpath | ESM before | ESM after | CJS before | CJS after |
+|---|---:|---:|---:|---:|
+| `.` | 92,705 | 92,705 | 116,544 | 116,544 |
+| `./core` | 92,705 | 92,705 | 116,543 | 116,543 |
+| `./asciimath` | 477,784 | 477,784 | 504,420 | 504,420 |
+| `./html` | 127,461 | 127,461 | 174,298 | 174,298 |
+| `./latex` | 150,682 | 150,682 | 197,711 | 197,711 |
+| `./mathml` | 272,882 | 272,882 | 319,342 | 319,342 |
+| `./unicodemath` | 204,416 | 204,416 | 250,484 | 250,484 |
+
+No subpath grew. `./omml` has no row because neither commit exported it.
+
 ### Recommended slice order
 
 1. **Generator contract and source commit.** Extend the existing generator's
@@ -671,23 +689,24 @@ published `./omml`, and `package.json#exports` lists it.
 - [x] The post-data HTML corpus run reports its actual rendered/throw split;
       the function-alias remainder is tracked separately rather than credited
       to symbol data.
-      (done: #64; the "corpus split after consumption" table at line 478 of this file, which counts the cases blocked on function carriers in their own rows rather than as symbol data; checked 2026-10-02)
+      (done: #64; the "corpus split after consumption" table under "Measured after HTML consumption" in this file, which counts the cases blocked on function carriers in their own rows rather than as symbol data; checked 2026-10-02)
 - [x] `package-isolation` runs again *after* the HTML renderer imports
       `src/generated/html/` and again after OMML imports `src/generated/omml/`
       — not only on the generated-data commit, where neither table is reachable
       from any subpath and the gate would prove nothing.
       (done: `pnpm gate:package` exits 0 with both renderers importing their tables; checked 2026-09-24)
-- [ ] Each new subpath appears in both `EXPECTED_EXPORTS` and `FORBIDDEN` in
+- [x] Each new subpath appears in both `EXPECTED_EXPORTS` and `FORBIDDEN` in
       `scripts/gate-package.mjs`; a subpath missing from those tables skips
       both assertions silently. `./html` forbids `generated/omml/` and every
       P1 format's modules; `./omml` forbids `generated/html/` and the same P1
       set. Each list is proven to bite by a run that fails when the forbidden
       table is imported on purpose.
+      (done: `scripts/gate-package.mjs:147-156` and `:210-231` carry `./html` and `./omml` rows, each forbidding every other format's `formats/`, `render/<kind>/<F>.ts` and `generated/` sources through `forbidOtherFormats`, and `:247-257` fail a subpath missing from either table rather than skipping it. Proven to bite: with `src/formats/html/renderer.ts` importing `OMML_SYMBOLS` on purpose, `pnpm build` exits 0 and `pnpm gate:package` exits 1 on `./html ESM pulls in /(?:^|\/)generated\/omml\//` and its CJS twin; with `src/formats/omml/renderer.ts` importing `HTML_SYMBOLS`, it exits 1 on the same two lines for `./omml` and `generated/html/`; restored, it exits 0; checked 2026-10-07)
 - [ ] `scripts/probes/dist-sizes.mjs` is re-run before and after each
       consumption commit, and the ESM and CJS closure bytes for every published
       subpath are recorded in this file beside the baseline table above. No
       existing subpath grows.
-      (open: recorded for the HTML consumption change above; not for the OMML one, as the note above on `[dist-sizes]` says; checked 2026-10-02)
+      (open: both pairs are now recorded: the HTML consumption change's under "Measured after HTML consumption" and the OMML one (#70, `4f0f0be` against `017b7ed`) under "Measured after OMML consumption", byte-identical before and after. The last sentence is not met as written: the HTML change grew `./html`, already a published subpath, by `43,666` ESM and `43,427` CJS bytes — the consuming subpath's own table cost, which the ceiling box below bounds. Ticking this needs the sentence amended to exempt the consuming subpath, or the growth recorded as a divergence; checked 2026-10-07)
 - [x] `./html`'s ESM closure is at or below `163,840` bytes and `./omml`'s at
       or below `286,720`, or the measured overage is written into this file as
       an accepted cost with the numbers that justify it. An unrecorded overage

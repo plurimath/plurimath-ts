@@ -5,10 +5,11 @@
  * (`--from`, `--to`), one valued render option (`--display-style`), three
  * switches (`--split-on-linebreak`, `--math-rendering`, `--intent`), one
  * optional positional (an input file path; stdin otherwise) and `--help`.
- * `package.json` has no argument-parsing devDependency today, and ARCHITECTURE.md §10's restraint themes weigh
- * against adding one for a surface this small — a dependency earns its
- * keep once flags, subcommands or `--foo=bar[,baz]`-style values multiply
- * past what a ~40-line switch can read at a glance.
+ * `package.json` has no argument-parsing devDependency today, and
+ * ARCHITECTURE.md §10's restraint themes weigh against adding one for a
+ * surface this small. A dependency earns its keep once subcommands or
+ * `--foo=bar[,baz]`-style values arrive, or the flags outgrow one loop that
+ * reads at a glance.
  */
 
 import {

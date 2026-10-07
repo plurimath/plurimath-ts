@@ -120,7 +120,8 @@
  *     printed) on top of that generic shape for every OTHER format; every
  *     `UnaryFunction` subclass (generic "argument" field: `sqrt`, `ceil`,
  *     `floor`, `hat`, `dot`, `ddot`, `tilde`, `ubrace`, `ul`, `obrace`,
- *     `overleftrightarrow`, `abs`, `bar`, `mpadded`, `norm`, and the bare
+ *     `overleftrightarrow`, `abs`, `bar`, `mpadded`, `norm`, `linebreak`
+ *     (every format but omml, below), and the bare
  *     `unaryFunction`/`binaryFunction`/`ternaryFunction` alias carriers);
  *     `FontStyle` (`font_style.rb:165-240`, all 14 named subclasses plus the
  *     bare carrier reachable from LaTeX's unmapped `:fonts` keywords) under
@@ -175,7 +176,11 @@
  *     every format) — BEFORE `UnaryFunction`'s own math-zone body is even
  *     reached, at the header line that renders `parameter_one` as a field.
  *     Refusing here is PARITY with that crash, not a gap this slice chose to
- *     skip; a bare `string` entry in a node sequence (measured: the gem
+ *     skip; `Linebreak` under omml when it carries no operator (every LaTeX
+ *     `\\` and HTML `<br/>` measured) — `linebreak.rb`'s
+ *     `to_omml_without_math_tag` returns nil and the gem raises
+ *     `NoMethodError` (`xml_nodes` for nil), so this is parity too; a bare
+ *     `string` entry in a node sequence (measured: the gem
  *     parses `"left(right)"` to `[Left, "", Right]`; calling `.class_name`
  *     on that bare string is `NoMethodError` in the gem too, so this is
  *     refused as unreachable rather than silently skipped).
@@ -223,6 +228,7 @@ const MERGE_CLASS_NAMES = new Set(["symbol", "number", "text", "plus", "minus", 
 /** Dedicated `UnaryFunction`-shaped kinds (each measured `class Foo < UnaryFunction`). */
 const UNARY_CLASS_NAMES = new Set([
   "sqrt",
+  "linebreak",
   "ceil",
   "floor",
   "hat",
@@ -825,6 +831,26 @@ function mathZoneOf(
   // explicitly (kind `unaryFunction`, or a dedicated kind measured
   // `< UnaryFunction`) rather than treated as the fallback, so an alias this
   // slice has not mapped throws instead of getting the wrong header shape.
+  // `Linebreak < UnaryFunction` (`linebreak.rb`) keeps the generic shape, but
+  // its `to_omml_without_math_tag` is `parameter_one&.insert_t_tag(...)`: nil
+  // for a bare break, and `dump_omml` then calls `xml_nodes` on that nil.
+  // Measured on the oracle: LaTeX `a \\ b` and HTML `a<br/>b` raise
+  // `NoMethodError: undefined method 'xml_nodes' for nil` under
+  // `to_display(:omml)`, so this is refused as parity with that crash.
+  if (
+    name === "linebreak" &&
+    options.format === "omml" &&
+    asNodeOrNull(fieldNode(node, "parameterOne")) === null
+  ) {
+    throw new UnsupportedFeatureError(
+      FEATURE,
+      "a Linebreak with no operator under omml: linebreak.rb's " +
+        "to_omml_without_math_tag returns nil for it, and the gem raises " +
+        "NoMethodError (xml_nodes for nil) under to_display(:omml) too " +
+        "(measured), so this is refused as parity with that crash",
+    );
+  }
+
   if (node.kind === "unaryFunction" || UNARY_CLASS_NAMES.has(name)) {
     return renderUnary(node, name, spacing, last, options);
   }
@@ -1128,5 +1154,11 @@ export function buildTreeDump(node: MathNode, format: DisplayFormat): string {
   // never `ops.quoted`, which is the FRAGMENT shape field printing uses.
   const header = `  |_ "${ops.render(node, displayStyle)}"\n`;
   const body = mathZoneOf(node, "     ", false, true, options);
-  return `|_ Math zone\n${header}${body}`;
+  // `Formula#to_display` builds `"|_ Math zone\n#{math_zone}\n"` in a
+  // heredoc and calls `.sub(/\n$/, "")` on it. Ruby's `$` is end of LINE, so
+  // the `\n` removed is the first one followed by another `\n` or by the end
+  // — the trailing one only when no blank line occurs earlier (a text
+  // holding `\n\n` loses its first newline instead, and the dump keeps two
+  // at the end). Measured on the pinned oracle with LaTeX `\text{x\n\ny}`.
+  return `|_ Math zone\n${header}${body}\n`.replace(/\n(?=\n|$)/, "");
 }

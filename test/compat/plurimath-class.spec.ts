@@ -481,6 +481,28 @@ describe("toDisplay", () => {
     });
 
     /**
+     * `Linebreak < UnaryFunction`: the other formats print the generic
+     * "function apply" shape (checked byte-for-byte against the gem by the
+     * `display-linebreak-*` rows of `test/formats/cli/cli-fixtures.json`).
+     * Under omml, `Linebreak#to_omml_without_math_tag` returns nil for a
+     * break with no operator, and the gem raises `NoMethodError: undefined
+     * method 'xml_nodes' for nil` (measured on LaTeX `a \\ b` and HTML
+     * `a<br/>b`). Refusing is parity with that crash.
+     */
+    it("Linebreak prints the generic function shape, and refuses omml as the gem crashes there", () => {
+      expect(new Plurimath(String.raw`a \\ b`, "latex").toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "a \\\\  b"\n     |_ "a" text\n     |_ "\\\\ " function apply\n' +
+          '     |  |_ "linebreak" function name\n     |_ "b" text\n',
+      );
+      expect(() => new Plurimath(String.raw`a \\ b`, "latex").toDisplay("omml")).toThrow(
+        UnsupportedFeatureError,
+      );
+      expect(() => new Plurimath("a<br/>b", "html").toDisplay("omml")).toThrow(
+        UnsupportedFeatureError,
+      );
+    });
+
+    /**
      * `Vec#to_<format>_math_zone` (`vec.rb:47-95`): asciimath/latex keep the
      * generic header but rename the field "supscript"; mathml/omml swap the
      * header for "overset" and print an explicit "base" (arrow) line before

@@ -739,6 +739,19 @@ in the gem — any matrix whose parens survive `table_tag_only?` (both present,
 not lround/rround) dies. The port raises `RenderError` at the same shape
 (probe matrix-square-parens).
 
+### `to_display(:omml)` crashes on a line break with no operator
+
+```ruby
+Plurimath::Math.parse('a \\\\ b', :latex).to_display(:omml)
+# => NoMethodError: undefined method 'xml_nodes' for nil
+```
+
+`Linebreak#to_omml_without_math_tag` is `parameter_one&.insert_t_tag(...)`,
+nil for a break with no operator, and the math-zone dump then calls
+`xml_nodes` on it. The LaTeX `\\` and HTML `<br/>` breaks measured carry no
+operator, so the four other notations print a tree and omml raises. The port's
+`toDisplay` refuses omml with `UnsupportedFeatureError` at the same shape.
+
 ### Half the Paren classes crash mtable fencing
 
 `Table#mathml_parenthesis` (table.rb:211) reads `field.encoded` or

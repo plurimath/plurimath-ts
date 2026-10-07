@@ -104,6 +104,19 @@ CLI_ROWS = [
   ["display-unicodemath", "unicodemath", "x^2", "unicodemath", { "mathRendering" => true }],
   ["display-mathml", "asciimath", "x^2", "mathml", { "mathRendering" => true }],
   ["display-omml", "asciimath", "x^2", "omml", { "mathRendering" => true }],
+  # A formula holding a line break prints the break as a function node. The
+  # gem raises for it under omml, so no omml row (the port refuses it too).
+  ["display-linebreak-asciimath", "latex", "a \\\\ b", "asciimath", { "mathRendering" => true }],
+  ["display-linebreak-latex", "latex", "a \\\\ b", "latex", { "mathRendering" => true }],
+  ["display-linebreak-mathml", "latex", "a \\\\ b", "mathml", { "mathRendering" => true }],
+  ["display-linebreak-unicodemath", "latex", "a \\\\ b", "unicodemath", { "mathRendering" => true }],
+  ["display-linebreak-nested", "latex", "\\frac{a \\\\ b}{c}", "latex", { "mathRendering" => true }],
+  ["display-linebreak-html", "html", "a<br/>b", "asciimath", { "mathRendering" => true }],
+  # A blank line inside a text: the gem's closing `.sub(/\n$/, "")` removes
+  # the first newline that ends a line followed by an empty one, not the last.
+  ["display-blank-line-text", "latex", "\\text{x\n\ny}", "latex", { "mathRendering" => true }],
+  ["display-blank-line-linebreak", "latex", "a \\\\ \\text{x\n\ny}", "unicodemath",
+   { "mathRendering" => true }],
   # `--math-rendering` returns before the display style is read.
   ["display-mathml-ignores-display-style", "asciimath", "x^2", "mathml",
    { "mathRendering" => true, "displayStyle" => false }],

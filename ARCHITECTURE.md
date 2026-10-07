@@ -177,7 +177,10 @@ src/
                      Only the root entry re-exports it.
   cli/               The `plurimath` executable (package.json `bin`, built to
                      dist/cli.mjs): `plurimath convert --from F --to F`,
-                     through the compat class. Not a subpath of the library.
+                     through the compat layer (the class, and
+                     compat/render-options.ts for the MathML/OMML options
+                     the class's frozen signatures lack). Not a subpath of
+                     the library.
   generated/
     asciimath/       Input tables for the asciimath parser (own file).
     mathml/          Output descriptors for the mathml renderer (own file).

@@ -140,6 +140,20 @@ file, `ParseError`, `RenderError`). Conversion errors print as
 `plurimath: [CODE] message` on stderr; usage and file-read errors print
 `plurimath: <message>` without a code. The only command is `convert`, and there is no `--version`.
 
+Render options, named as in the gem's `plurimath convert` where it has them:
+
+- `--display-style <true|false>` sets the display style of `mathml` and
+  `omml` output. It defaults to `true`, as the gem's command does.
+- `--split-on-linebreak` splits `mathml` and `omml` output at each line break.
+- `--intent` adds intent attributes to `mathml` output (the gem's command has
+  no such flag; this is `toMathml`'s `intent` option).
+- `--math-rendering` prints the formula's display tree for the `--to` format
+  (`toDisplay`) instead of converting; `html` has no display tree.
+
+An option that does not apply to the `--to` format is ignored. The switches
+take no value, unlike the gem's, where `--split-on-linebreak false` still
+splits. There is no flag for the number formatter yet.
+
 The CLI strips one trailing newline (`\n` or `\r\n`) from its input, so
 `echo 'x^2' | plurimath convert --from unicodemath --to latex` prints `x^{2}`.
 Only that final newline is removed; any other whitespace reaches the parser

@@ -28,14 +28,14 @@ describe("parseArgs", () => {
   it("parses --from and --to with a file argument", () => {
     expect(parseArgs(["convert", "--from", "asciimath", "--to", "latex", "formula.txt"])).toEqual({
       kind: "convert",
-      args: { from: "asciimath", to: "latex", file: "formula.txt" },
+      args: { from: "asciimath", to: "latex", file: "formula.txt", options: {} },
     });
   });
 
   it("parses --from=x and --to=y form", () => {
     expect(parseArgs(["convert", "--from=latex", "--to=mathml"])).toEqual({
       kind: "convert",
-      args: { from: "latex", to: "mathml", file: undefined },
+      args: { from: "latex", to: "mathml", file: undefined, options: {} },
     });
   });
 
@@ -91,7 +91,7 @@ describe("parseArgs", () => {
     const result = parseArgs(["convert", "--from", "asciimath", "--to", "latex", "-"]);
     expect(result).toEqual({
       kind: "convert",
-      args: { from: "asciimath", to: "latex", file: "-" },
+      args: { from: "asciimath", to: "latex", file: "-", options: {} },
     });
   });
 
@@ -99,7 +99,7 @@ describe("parseArgs", () => {
     const result = parseArgs(["convert", "--from", "asciimath", "--to", "latex", "--", "--weird"]);
     expect(result).toEqual({
       kind: "convert",
-      args: { from: "asciimath", to: "latex", file: "--weird" },
+      args: { from: "asciimath", to: "latex", file: "--weird", options: {} },
     });
   });
 

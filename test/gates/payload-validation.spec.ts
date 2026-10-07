@@ -163,6 +163,17 @@ const FIXTURE_SPECS = {
     usesCorpus: false,
     usesRenderInventory: false,
   },
+  // `plurimath convert` runs: the gem's own command for each render flag the
+  // port's CLI shares with it, and `to_mathml(intent: true)` for `--intent`,
+  // which the gem's command lacks. Hand-picked inputs; claims no corpus.
+  "cli-fixtures.json": {
+    generator: "scripts/generate-cli-fixtures.rb",
+    schema: "plurimath-corpus/cli/1",
+    rows: "cases",
+    shape: "cli",
+    usesCorpus: false,
+    usesRenderInventory: false,
+  },
 } as const;
 
 /** Per-path overrides for the basenames more than one format now uses. */
@@ -234,6 +245,7 @@ const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "render-options-fixtures.json"
   | "render-kinds-fixtures.json"
   | "evaluation-fixtures.json"
+  | "cli-fixtures.json"
 )[];
 const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
@@ -1019,6 +1031,52 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
           rows.length - evaluated,
         );
+      } else if (record.spec.shape === "cli") {
+        // A row is one `plurimath convert` run: the input, the output format,
+        // the port's flags as `options`, and what the gem printed. `cli` rows
+        // also record the gem argv that printed it; `api` rows (intent) have
+        // none, because the gem's command has no intent flag.
+        expectExactKeys(
+          record.payload,
+          ["$comment", "schema", "format", "caseCount", "cases"],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        rows.forEach((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          const via = stringField(item, "via", at);
+          expect(["cli", "api"], `${at}.via`).toContain(via);
+          expectExactKeys(
+            item,
+            via === "cli"
+              ? ["group", "id", "via", "input", "to", "options", "gemArgv", "expected"]
+              : ["group", "id", "via", "input", "to", "options", "expected"],
+            at,
+          );
+          stringField(item, "group", at);
+          stringField(item, "id", at);
+          const input = mapField(item, "input", at);
+          expectExactKeys(input, ["format", "text"], `${at}.input`);
+          stringField(input, "format", at);
+          stringValue(input, "text", at);
+          stringField(item, "to", at);
+          const options = mapField(item, "options", at);
+          for (const [key, value] of Object.entries(options)) {
+            expect(
+              ["displayStyle", "splitOnLinebreak", "mathRendering", "intent"],
+              `${at}.options`,
+            ).toContain(key);
+            expect(
+              key === "displayStyle" ? typeof value === "boolean" : value === true,
+              `${at}.options.${key}`,
+            ).toBe(true);
+          }
+          if (via === "cli") {
+            for (const arg of arrayField(item, "gemArgv", at)) expect(typeof arg).toBe("string");
+          }
+          stringField(item, "expected", at);
+        });
       } else if (record.spec.shape === "format-model") {
         // The parse-side twin of the branch above, shared by every format whose
         // fixtures record a PARSE. A row records what the gem did with an input

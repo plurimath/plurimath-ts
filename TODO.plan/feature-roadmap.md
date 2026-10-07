@@ -335,6 +335,10 @@ remaining kinds in #150; `src/compat/to-display.ts`). Measured on `70f9482`:
 (`Nary`, `FontStyle` under `unicodemath`, `Substack`), the rest as
 unreachable or out of scope (`Msgroup`, `Unitsml`, a bare string in a
 sequence); the module doc of `src/compat/to-display.ts` records each reason.
+One more is refused without a recorded reason: a formula holding a
+`Linebreak` (LaTeX `a \\ b`) raises `UnsupportedFeatureError` here, while the
+gem prints a tree (found through the CLI's `--math-rendering`, which passes
+the error through). Porting it is open.
 
 **Blocks:** nothing. It has no shared case; `calls/1` carries only
 `number_formatter`.
@@ -388,7 +392,7 @@ glibc's digits, and refused (`UnsupportedFeatureError`) only where they call
 case: `calls/1` carries only `number_formatter`. The `plurimath-js` compat
 surface has no `evaluate`, so this does not affect the drop-in claim.
 
-#### Command-line interface — in scope, not yet built
+#### Command-line interface — in scope, partly built
 
 **Gem:** `lib/plurimath/cli.rb`, a Thor `convert` command with input and output
 format, `--split-on-linebreak`, display style, `--math-rendering` (which is
@@ -398,8 +402,24 @@ format, `--split-on-linebreak`, display style, `--math-rendering` (which is
 idiomatic Node CLI rather than flag-for-flag parity with the gem's Thor
 command (`ARCHITECTURE.md` §10; recorded in #125). The first slice landed in
 #127: `plurimath convert` with `--from` and `--to` only (`src/cli/args.ts`),
-and #129 strips one trailing newline from its input (`src/cli/run.ts:43`).
-**Blocks:** nothing but effort.
+and #129 strips one trailing newline from its input (`src/cli/run.ts`). The
+second slice adds the render options under the gem's long names,
+`--display-style <true|false>`, `--split-on-linebreak` and `--math-rendering`,
+plus `--intent`, which the gem's command lacks. Output for valid values is
+checked byte for byte against the gem's own command
+(`test/formats/cli/cli-fixtures.json`, `scripts/generate-cli-fixtures.rb`);
+as there, an absent `--display-style` is `true`.
+
+**Gem defect, not copied:** every option of the gem's command is a Thor
+string, so `--split-on-linebreak false` (any value) splits, and
+`--math-rendering` acts only on the exact value `true` (measured on the pinned
+oracle). The port's switches take no value, and `--display-style` accepts only
+`true` or `false`.
+
+**Remaining:** the `formatter` option (a nested object, `FormatterOptions` in
+`src/formatting/number-format.ts`; the gem's command has no equivalent, so its
+flag shape is a design question of its own). The gem's `-e/--xml-engine` stays
+out (the Oga entry below). **Blocks:** nothing but effort.
 
 #### Out of scope, recorded so it is not re-proposed
 

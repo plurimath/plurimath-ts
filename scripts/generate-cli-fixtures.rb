@@ -2,7 +2,7 @@
 # frozen_string_literal: true
 
 # Emits the oracle's answers for the `plurimath convert` options the port's CLI
-# exposes (`src/cli/args.ts`), so `test/cli/render-options.spec.ts` checks the
+# exposes (`src/cli/args.ts`), so `test/cli/flag-output.spec.ts` checks the
 # port's CLI output against the gem's bytes rather than against itself.
 #
 #   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \

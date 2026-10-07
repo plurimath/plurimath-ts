@@ -13,8 +13,9 @@
 #
 # `--format` is REQUIRED and generates exactly one format. This script used to
 # loop over every name in FORMATS, so asking for html also rewrote
-# test/formats/omml/parity-fixtures.json -- a fixture no spec on this branch
-# reads, resurrected by every regeneration.
+# test/formats/omml/parity-fixtures.json, which
+# test/formats/omml/render-parity.spec.ts reads and checks against its manifest,
+# so an unrelated regeneration could change what that spec asserts.
 #
 # The oracle path MUST be a clean checkout of the pinned plurimath commit.
 # This script loads it through $LOAD_PATH and refuses to run against an

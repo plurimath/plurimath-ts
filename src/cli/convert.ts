@@ -16,6 +16,8 @@
  */
 
 import Plurimath, { type Format as CompatFormat } from "../compat/index";
+import { type MathmlOptions, toMathml } from "../formats/mathml/index";
+import { type OmmlOptions, toOmml } from "../formats/omml/index";
 
 export const INPUT_FORMATS = ["asciimath", "latex", "html", "unicodemath"] as const;
 export type InputFormat = (typeof INPUT_FORMATS)[number];
@@ -45,21 +47,64 @@ const TO_COMPAT_INPUT_FORMAT: Record<InputFormat, CompatFormat> = {
   unicodemath: "unicode",
 };
 
-const RENDER: Record<OutputFormat, (formula: Plurimath) => string> = {
+/**
+ * The render options the CLI exposes. Each is what one flag sets
+ * (`./args.ts`); an absent field is an absent flag.
+ */
+export interface RenderOptions {
+  /** `--display-style <true|false>`; MathML and OMML only. */
+  readonly displayStyle?: boolean;
+  /** `--split-on-linebreak`; MathML and OMML only. */
+  readonly splitOnLinebreak?: boolean;
+  /** `--intent`; MathML only. */
+  readonly intent?: boolean;
+  /** `--math-rendering`: print the `toDisplay` tree instead of the output. */
+  readonly mathRendering?: boolean;
+}
+
+/**
+ * The options the gem's `plurimath convert` passes to `to_mathml`/`to_omml`
+ * (`lib/plurimath/cli.rb`): `display_style` is always given, and is "true"
+ * unless the flag says otherwise, so an absent `--display-style` is `true`
+ * here too rather than the formula's own default.
+ */
+function xmlOptions(options: RenderOptions): MathmlOptions & OmmlOptions {
+  return {
+    displayStyle: options.displayStyle ?? true,
+    ...(options.splitOnLinebreak === true ? { splitOnLinebreak: true } : {}),
+  };
+}
+
+const RENDER: Record<OutputFormat, (formula: Plurimath, options: RenderOptions) => string> = {
   asciimath: (formula) => formula.toAsciimath(),
   latex: (formula) => formula.toLatex(),
-  mathml: (formula) => formula.toMathml(),
+  mathml: (formula, options) =>
+    toMathml(formula.data, {
+      ...xmlOptions(options),
+      ...(options.intent === true ? { intent: true } : {}),
+    }),
   html: (formula) => formula.toHtml(),
   unicodemath: (formula) => formula.toUnicodemath(),
-  omml: (formula) => formula.toOmml(),
+  omml: (formula, options) => toOmml(formula.data, xmlOptions(options)),
 };
 
 /**
  * Parses `input` as `from` and renders it as `to`. Throws whatever the
  * underlying parser/renderer throws (`PlurimathError` subclasses from
  * `src/core/errors.ts`) — the CLI layer adds no error wrapping of its own.
+ *
+ * As in the gem's command, `mathRendering` returns the display tree before
+ * any other option is read, and `displayStyle`/`splitOnLinebreak` are
+ * ignored by the text formats. The display tree has no `html` form; asking
+ * for one throws the compat class's `UnsupportedFormatError`.
  */
-export function convert(input: string, from: InputFormat, to: OutputFormat): string {
+export function convert(
+  input: string,
+  from: InputFormat,
+  to: OutputFormat,
+  options: RenderOptions = {},
+): string {
   const formula = new Plurimath(input, TO_COMPAT_INPUT_FORMAT[from]);
-  return RENDER[to](formula);
+  if (options.mathRendering === true) return formula.toDisplay(to);
+  return RENDER[to](formula, options);
 }

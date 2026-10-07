@@ -35,7 +35,7 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
     return EXIT_USAGE_ERROR;
   }
 
-  const { from, to, file } = parsed.args;
+  const { from, to, file, options } = parsed.args;
 
   let input: string;
   try {
@@ -47,7 +47,7 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
   }
 
   try {
-    const output = convert(input, from, to);
+    const output = convert(input, from, to, options);
     io.writeOut(output.endsWith("\n") ? output : `${output}\n`);
     return EXIT_OK;
   } catch (error) {

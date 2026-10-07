@@ -4,8 +4,8 @@
  * Hand-rolled rather than a dependency: the surface is two required flags
  * (`--from`, `--to`), one valued render option (`--display-style`), three
  * switches (`--split-on-linebreak`, `--math-rendering`, `--intent`), one
- * optional positional (an input file path; stdin otherwise) and `--help`. `package.json` has no argument-parsing
- * devDependency today, and ARCHITECTURE.md §10's restraint themes weigh
+ * optional positional (an input file path; stdin otherwise) and `--help`.
+ * `package.json` has no argument-parsing devDependency today, and ARCHITECTURE.md §10's restraint themes weigh
  * against adding one for a surface this small — a dependency earns its
  * keep once flags, subcommands or `--foo=bar[,baz]`-style values multiply
  * past what a ~40-line switch can read at a glance.
@@ -67,7 +67,8 @@ Options:
                                  m:oMath per line for omml
   --intent                       Add intent attributes to mathml output
   --math-rendering               Print the formula's display tree for the
-                                 output format instead of converting
+                                 output format instead of converting (not
+                                 available for html)
   -h, --help                     Show this help
 
 Render options that do not apply to the output format are ignored.

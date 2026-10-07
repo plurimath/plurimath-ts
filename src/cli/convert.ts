@@ -1,6 +1,7 @@
 /**
  * The CLI's conversion core: format tokens and the function that drives them
- * through the compat `Plurimath` class (`src/compat/index.ts`).
+ * through the compat `Plurimath` class (`src/compat/index.ts`), and the
+ * MathML/OMML options through `src/compat/render-options.ts`.
  *
  * Only formats that actually work today are listed (ARCHITECTURE.md §4,
  * `feature-roadmap.md`'s input-format table): the compat constructor's

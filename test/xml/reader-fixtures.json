@@ -37,9 +37,9 @@
       "ebcdic-cp-us"
     ]
   },
-  "caseCount": 4095,
-  "readCount": 1977,
-  "raisedCount": 2118,
+  "caseCount": 4098,
+  "readCount": 1979,
+  "raisedCount": 2119,
   "cases": [
     {
       "id": "xml-f031fadb7782",
@@ -80970,6 +80970,51 @@
           ]
         ],
         "xmlns": [],
+        "children": []
+      }
+    },
+    {
+      "id": "xml-c0e274f067bf",
+      "group": "namespaces",
+      "input": "<a xmlns:m=\"&#xD800;\" m=\"\ufffd\"/>",
+      "root": {
+        "element": "a",
+        "attributes": [
+          [
+            "m",
+            "\ufffd"
+          ]
+        ],
+        "xmlns": [
+          [
+            "xmlns:m",
+            {
+              "invalidUtf8": "d8"
+            }
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
+      "id": "xml-db048f6fc7e0",
+      "group": "namespaces",
+      "input": "<a xmlns:m=\"&#xD800;\" m=\"&#xD800;\"/>",
+      "raises": "ArgumentError"
+    },
+    {
+      "id": "xml-0482c5e1c936",
+      "group": "namespaces",
+      "input": "<a xmlns:m=\"\ufffd\" m=\"\ufffd\"/>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns:m",
+            "\ufffd"
+          ]
+        ],
         "children": []
       }
     },

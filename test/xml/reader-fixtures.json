@@ -37,9 +37,9 @@
       "ebcdic-cp-us"
     ]
   },
-  "caseCount": 4104,
-  "readCount": 1984,
-  "raisedCount": 2120,
+  "caseCount": 4108,
+  "readCount": 1986,
+  "raisedCount": 2122,
   "cases": [
     {
       "id": "xml-f031fadb7782",
@@ -80757,6 +80757,40 @@
             "text": "\u0080\u009f"
           }
         ]
+      }
+    },
+    {
+      "id": "xml-c87a4bd372d8",
+      "group": "bom",
+      "input": "\ufeff<r/><a b=\"c\"",
+      "raises": "Lutaml::Model::InvalidFormatError"
+    },
+    {
+      "id": "xml-89c1a38456e9",
+      "group": "bom",
+      "input": "\ufeff<r/><a b=c ",
+      "raises": "Lutaml::Model::InvalidFormatError"
+    },
+    {
+      "id": "xml-9719330aa652",
+      "group": "bom",
+      "input": "<r/><a b=\"c\"",
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": []
+      }
+    },
+    {
+      "id": "xml-e628713a2d7c",
+      "group": "bom",
+      "input": "<r/><a b=c ",
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": []
       }
     },
     {

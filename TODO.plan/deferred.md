@@ -1074,13 +1074,16 @@ re-rendering it -- deferred until one of those exists.
 or their consuming assertions change.**
 
 The AsciiMath, LaTeX, and MathML `render-sweep.json` files are one-off oracle
-captures without checked-in generators or adjacent provenance manifests. The
-Ox contract has a generator, `scripts/generate-xml-fixtures.rb`, but only
-partial provenance embedded in `test/xml/ox-contract.expected.json`. They
+captures without checked-in generators or adjacent provenance manifests. They
 predate the section 7 sidecar contract. `test/gates/payload-validation.spec.ts`
-names the three format fixtures and the XML generator as explicit legacy gaps,
-so another untracked generated artifact cannot silently join them. Replacing
-these captures with deterministic generators and full sidecars closes the gap.
+names the three format fixtures as explicit legacy gaps, so another untracked
+generated artifact cannot silently join them. Replacing these captures with
+deterministic generators and full sidecars closes the gap.
+
+**The Ox contract half closed, 2026-10-08.** `scripts/generate-xml-fixtures.rb`
+now writes `test/xml/ox-contract.expected.manifest.yaml` through
+`scripts/render-fixture-provenance.rb`, and `payload-validation.spec.ts` checks
+it with the per-format sidecar rules and no longer lists the generator as a gap.
 
 ### HTML: Fenced refuses nondeterministic paren paths
 

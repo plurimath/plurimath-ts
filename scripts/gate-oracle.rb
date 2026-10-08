@@ -291,6 +291,7 @@ module OracleGate
       script: {
         "html" => "generate-html-model-fixtures.rb",
         "latex" => "generate-latex-model-fixtures.rb",
+        "mathml" => "generate-mathml-model-fixtures.rb",
         "unicodemath" => "generate-unicodemath-model-fixtures.rb",
       }.freeze,
       arguments: lambda do |format, regenerated_root|

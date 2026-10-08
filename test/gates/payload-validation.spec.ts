@@ -192,6 +192,18 @@ const FIXTURE_SPEC_PATHS: { readonly [path: string]: FixtureSpec } = {
     usesCorpus: true,
     usesRenderInventory: false,
   },
+  // MathML's parse in two layers: the `Mml.parse` tree as the translator
+  // reads it, then the translated model.
+  "test/formats/mathml/model-fixtures.json": {
+    generator: "scripts/generate-mathml-model-fixtures.rb",
+    schema: "plurimath-corpus/mathml-model/1",
+    rows: "cases",
+    shape: "mathml-model",
+    corpusGroup: "corpus-mathml",
+    corpusCountField: "corpusMathmlCount",
+    usesCorpus: true,
+    usesRenderInventory: false,
+  },
   "test/formats/unicodemath/model-fixtures.json": {
     generator: "scripts/generate-unicodemath-model-fixtures.rb",
     schema: "plurimath-corpus/unicodemath-model/1",
@@ -621,6 +633,30 @@ const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: strin
  * A string; or bytes the gem held as invalid UTF-8 (`{invalidUtf8}`); or bytes
  * in a declared encoding Ruby could not transcode (`{bytes, encoding}`).
  */
+/** One node of a mathml-model row's `mml` view, recursively. */
+function expectMmlView(value: unknown, at: string, readAttributes: readonly unknown[]): void {
+  const node = mapping(value, at);
+  if ("text" in node) {
+    expectExactKeys(node, ["text"], at);
+    stringField(node, "text", at);
+    return;
+  }
+  expectExactKeys(
+    node,
+    ["class", "attributes", ...("value" in node ? ["value"] : []), "children"],
+    at,
+  );
+  stringField(node, "class", at);
+  for (const name of Object.keys(mapField(node, "attributes", at))) {
+    if (!readAttributes.includes(name)) {
+      expect(readAttributes, `${at}.attributes`).toContain(name);
+    }
+  }
+  for (const [index, child] of arrayField(node, "children", at).entries()) {
+    expectMmlView(child, `${at}.children[${index}]`, readAttributes);
+  }
+}
+
 function expectXmlReaderString(value: unknown, at: string): void {
   if (typeof value === "string") return;
   const record = mapping(value, at);
@@ -1318,6 +1354,55 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         ).length;
         expect(integerField(record.payload, corpusCountField, record.relative)).toBe(fromCorpus);
         expect(fromCorpus).toBeGreaterThan(50);
+      } else if (record.spec.shape === "mathml-model") {
+        expectExactKeys(
+          record.payload,
+          [
+            "$comment",
+            "schema",
+            "format",
+            "readAttributes",
+            "caseCount",
+            "parsedCount",
+            "raisedCount",
+            "corpusMathmlCount",
+            "cases",
+          ],
+          record.relative,
+        );
+        const readAttributes = arrayField(record.payload, "readAttributes", record.relative);
+        expect(readAttributes.length).toBeGreaterThan(0);
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        const parsed = rows.filter((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          stringField(item, "group", record.relative);
+          stringValue(item, "input", record.relative);
+          if (typeof item.raises === "string") {
+            const keys =
+              item.raisedIn === "translate"
+                ? ["group", "id", "input", "mml", "raises", "raisedIn"]
+                : ["group", "id", "input", "raises", "raisedIn"];
+            expectExactKeys(item, keys, at);
+            expect(["mml", "translate"]).toContain(stringField(item, "raisedIn", at));
+            if ("mml" in item) expectMmlView(item.mml, `${at}.mml`, readAttributes);
+            return false;
+          }
+          expectExactKeys(item, ["group", "id", "input", "mml", "model"], at);
+          expectMmlView(item.mml, `${at}.mml`, readAttributes);
+          const model = mapField(item, "model", at);
+          expect(stringField(model, "class", at)).toBe("Math::Formula");
+          mapField(model, "fields", at);
+          return true;
+        }).length;
+        expect(integerField(record.payload, "parsedCount", record.relative)).toBe(parsed);
+        expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
+          rows.length - parsed,
+        );
+        const corpusRows = rows.filter(
+          (row) => mapping(row, record.relative).group === record.spec.corpusGroup,
+        ).length;
+        expect(integerField(record.payload, "corpusMathmlCount", record.relative)).toBe(corpusRows);
       } else if (record.spec.shape === "xml-reader") {
         // A row is one input and what the gem's reader did with it: the tree
         // its models receive, or the exception class it refused with.

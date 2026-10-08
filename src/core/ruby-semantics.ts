@@ -430,7 +430,7 @@ export function rubyArrayInspectOrThrow(
 /**
  * `String#to_i`: skips leading ASCII whitespace (Ruby's set, ` \t\n\v\f\r` —
  * not JS's `\s`, which also takes U+00A0 and the other Unicode spaces), reads
- * an optional sign and a run of decimal digits in which a single `_` may sit
+ * an optional sign, an optional `0d` prefix and a run of decimal digits in which a single `_` may sit
  * between two digits, and stops at the first character that is not one —
  * unlike JS's `Number()`, which fails the whole string on any trailing
  * garbage, and `parseInt`, which additionally treats a `"0x"` prefix as hex.
@@ -445,7 +445,8 @@ export function rubyArrayInspectOrThrow(
  *   "1_0"     10    one `_` between digits is a separator
  *   "1__0"    1     two in a row end the number, as does a trailing one
  *   "_10"     0     so does a leading one, before or after the sign
- *   "\u00a010" 0     U+00A0 is not whitespace to Ruby
+ *   "\u00a010" 0    U+00A0 is not whitespace to Ruby
+ *   "0d10"    10    `0d`/`0D` (decimal) is the one radix prefix it reads
  */
 export function rubyToI(text: string): number {
   return Number(rubyToInteger(text));
@@ -458,6 +459,7 @@ export function rubyToI(text: string): number {
  * takes this one instead.
  */
 export function rubyToInteger(text: string): bigint {
-  const digits = /^[\t\n\v\f\r ]*([+-]?\d+(?:_\d+)*)/.exec(text)?.[1];
-  return digits === undefined ? 0n : BigInt(digits.replaceAll("_", ""));
+  const match = /^[\t\n\v\f\r ]*([+-]?)(?:0[dD])?(\d+(?:_\d+)*)/.exec(text);
+  if (match === null) return 0n;
+  return BigInt(`${match[1]}${match[2]?.replaceAll("_", "")}`);
 }

@@ -9,7 +9,17 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { rubyToI } from "../../src/core/ruby-semantics";
+import { rubyToI, rubyToInteger } from "../../src/core/ruby-semantics";
+
+describe("rubyToInteger", () => {
+  it("is exact past 2**53 and past the double range", () => {
+    expect(rubyToInteger("9_007_199_254_740_993")).toBe(9007199254740993n);
+    expect(rubyToInteger("-1_0")).toBe(-10n);
+    expect(rubyToInteger("1".repeat(400))).toBe(BigInt("1".repeat(400)));
+    expect(rubyToI("1".repeat(400))).toBe(Infinity);
+    expect(rubyToI("-" + "1".repeat(400))).toBe(-Infinity);
+  });
+});
 
 describe("rubyToI", () => {
   it.each([
@@ -28,7 +38,7 @@ describe("rubyToI", () => {
 
   // Each expectation is `String#to_i` on Ruby 4.0.1, measured: a single `_`
   // between digits is a separator; leading, trailing or doubled ends the
-  // number. Leading whitespace is Ruby's ASCII set only, not JS's `\s`.
+  // number; a `0d` prefix after the sign is read. Leading whitespace is Ruby's ASCII set only, not JS's `\s`.
   it.each([
     ["1_0", 10],
     ["1_0_1", 101],
@@ -51,6 +61,23 @@ describe("rubyToI", () => {
     ["\u00a010", 0],
     ["\u200310", 0],
     ["\u202810", 0],
+    ["0d10", 10],
+    ["0D10", 10],
+    ["0d1_0", 10],
+    ["-0d10", -10],
+    ["+0d10", 10],
+    [" 0d1", 1],
+    ["0d_1", 0],
+    ["0d", 0],
+    ["0d-1", 0],
+    ["0_d1", 0],
+    ["00d1", 0],
+    ["0dd1", 0],
+    ["0d0d1", 0],
+    ["+ 12", 0],
+    ["1_2__3", 12],
+    ["1_.5", 1],
+    ["\u0663", 0],
   ] as const)("%j -> %i", (text, expected) => {
     expect(rubyToI(text)).toBe(expected);
   });

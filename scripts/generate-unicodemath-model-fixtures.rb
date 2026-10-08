@@ -729,7 +729,7 @@ RULE_COVERAGE = {
   #          non-numeric one), plus masks spelled with `_`, which the gem
   #          reads through `String#to_i`: one `_` between digits is a
   #          separator (`1_0` is 10), a leading, trailing or doubled one ends
-  #          the number
+  #          the number; `0d` is the one radix prefix it reads
   #   :1224  every `Constants::UNARY_SYMBOLS` name, spelled `\name(y)`: the
   #          seven `PHANTOM_SYMBOLS` names build `Phantom`/`Mpadded`, the rest
   #          a `Menclose` whose notation may be nil (`overline`); three more
@@ -776,6 +776,7 @@ RULE_COVERAGE = {
     "▭(1__0&y)",
     "▭(10_&y)",
     "▭(1_0 &y)",
+    "▭(0d5&y)",
     "\\underline(y)",
     "\\hphantom(y)",
     "\\vphantom(y)",

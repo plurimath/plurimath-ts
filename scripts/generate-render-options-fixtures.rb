@@ -434,11 +434,11 @@ TABLE_FRAC_NARY_TEXT_SOURCES = [
 # neither), and the masks tried. Chosen to hit every branch of
 # `Core#get_mask_options` (both `case` arms, all seven `% 32` values, a
 # negative mask, and each coercion `to_i` performs, including `String#to_i`'s
-# `_` digit separator, and strings past the double range, which Ruby reads
+# `_` digit separator and `0d` prefix, and strings past the double range, which Ruby reads
 # exactly) — see `nary_mask_rows`.
 NARY_MASK_FILLINGS = [%w[d u], ["d", nil], [nil, "u"], [nil, nil]].freeze
 NARY_MASK_VALUES = [0, 1, 2, 3, 4, 5, 8, 9, 12, 13, 16, 17, 20, 24, 28, 29, 32, -1, -3,
-                    "13", "1abc", "x", "1_6", "1__6", "_16", "16_",
+                    "13", "1abc", "x", "1_6", "1__6", "_16", "16_", "0d17",
                     "9_007_199_254_740_993", "1" * 400, 13.7, nil, false, true].freeze
 
 options = { oracle: nil, out: "test/formats", allow_dirty: false }

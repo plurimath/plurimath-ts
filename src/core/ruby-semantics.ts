@@ -430,15 +430,15 @@ export function rubyArrayInspectOrThrow(
 /**
  * `String#to_i`: skips leading ASCII whitespace (Ruby's set, ` \t\n\v\f\r` —
  * not JS's `\s`, which also takes U+00A0 and the other Unicode spaces), reads
- * an optional sign, an optional `0d` prefix and a run of decimal digits in which a single `_` may sit
- * between two digits, and stops at the first character that is not one —
+ * an optional sign, an optional `0d` prefix and a run of decimal digits in
+ * which a single `_` may sit between two digits, and stops at the first character that is not one —
  * unlike JS's `Number()`, which fails the whole string on any trailing
  * garbage, and `parseInt`, which additionally treats a `"0x"` prefix as hex.
  * A string with no leading integer at all reads as `0`, matching Ruby.
  *
  *   "3foo"    3     the leading prefix, trailing garbage dropped
  *   "2.5"     2     stops at the `.`; decimals are never read
- *   "0x10"    0     no radix parsing — `"0"` is the whole prefix, `"x10"` is dropped
+ *   "0x10"    0     no hex, binary or octal — `"0"` is the whole prefix, `"x10"` is dropped
  *   "1e309"   1     stops at the `e`; scientific notation is never read
  *   "  -12x"  -12   leading whitespace and a sign are both honoured
  *   "abc"     0     no leading digits at all

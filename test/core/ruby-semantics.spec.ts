@@ -38,7 +38,8 @@ describe("rubyToI", () => {
 
   // Each expectation is `String#to_i` on Ruby 4.0.1, measured: a single `_`
   // between digits is a separator; leading, trailing or doubled ends the
-  // number; a `0d` prefix after the sign is read. Leading whitespace is Ruby's ASCII set only, not JS's `\s`.
+  // number; a `0d` prefix after the sign is read. Leading whitespace is
+  // Ruby's ASCII set only, not JS's `\s`.
   it.each([
     ["1_0", 10],
     ["1_0_1", 101],

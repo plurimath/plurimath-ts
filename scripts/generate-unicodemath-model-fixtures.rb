@@ -726,7 +726,10 @@ RULE_COVERAGE = {
   #   :1201  `✎(blue&y + z)` is a CORPUS case (the group refuses an input that
   #          is also one), so it is reached there; :1252/:1261 `☁`; :1270/:1278 `▭` (masks 0, 1, 5,
   #          15, 255 — `enclosure_attrs` flips the low four bits — and a
-  #          non-numeric one)
+  #          non-numeric one), plus masks spelled with `_`, which the gem
+  #          reads through `String#to_i`: one `_` between digits is a
+  #          separator (`1_0` is 10), a leading, trailing or doubled one ends
+  #          the number; `0d` is the one radix prefix it reads
   #   :1224  every `Constants::UNARY_SYMBOLS` name, spelled `\name(y)`: the
   #          seven `PHANTOM_SYMBOLS` names build `Phantom`/`Mpadded`, the rest
   #          a `Menclose` whose notation may be nil (`overline`); three more
@@ -766,6 +769,14 @@ RULE_COVERAGE = {
     "▭(x&y)",
     "▭(256&y)",
     "▭(-1&y)",
+    "▭(1_0&y)",
+    "▭(1_0_1&y)",
+    "▭(+1_0&y)",
+    "▭(_10&y)",
+    "▭(1__0&y)",
+    "▭(10_&y)",
+    "▭(1_0 &y)",
+    "▭(0d5&y)",
     "\\underline(y)",
     "\\hphantom(y)",
     "\\vphantom(y)",

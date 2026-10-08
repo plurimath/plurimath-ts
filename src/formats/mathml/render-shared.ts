@@ -24,7 +24,7 @@ import {
 } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS, rubyClassName } from "../../core/normalize";
-import { assertReproducibleRubyHashOrder } from "../../core/ruby-semantics";
+import { assertReproducibleRubyHashOrder, rubyToInteger } from "../../core/ruby-semantics";
 import { formatNumberForMathml, type NumberFormat } from "../../formatting/index";
 import { type XmlChild, XmlElement } from "../../xml/index";
 
@@ -533,7 +533,7 @@ export function interpolatedValue(value: unknown, kind: string, at: string): str
  * the rewrite: `maskedNaryScript` below.
  */
 export function assertMaskIsInert(mask: unknown, kind: string, at: string): void {
-  const value = rubyToI(mask, kind, at);
+  const value = maskToI(mask, kind, at);
   const decoded = maskOptions(value);
   if (decoded.length === 1 && decoded[0] === "limits_default") return;
   throw deferredFeatureError(
@@ -545,8 +545,8 @@ export function assertMaskIsInert(mask: unknown, kind: string, at: string): void
 }
 
 /** Ruby's floored modulo: the result takes the divisor's sign. */
-function floored(n: number, m: number): number {
-  return ((n % m) + m) % m;
+function floored(n: bigint, m: bigint): number {
+  return Number(((n % m) + m) % m);
 }
 
 /**
@@ -557,9 +557,9 @@ function floored(n: number, m: number): number {
  * placeholders (`-4 % 32` is 28). A `%32` remainder outside the seven listed values (bits above 32 are
  * ignored) adds nothing.
  */
-function maskOptions(mask: number): string[] {
+function maskOptions(mask: bigint): string[] {
   const options: string[] = [];
-  const low = floored(mask, 4);
+  const low = floored(mask, 4n);
   const limits = [
     "limits_default",
     "limits_under_over",
@@ -567,7 +567,7 @@ function maskOptions(mask: number): string[] {
     "upper_limit_as_super_script",
   ];
   options.push(limits[low] as string);
-  switch (floored(mask - low, 32)) {
+  switch (floored(mask - BigInt(low), 32n)) {
     case 4:
       options.push("limits_opposite");
       break;
@@ -629,7 +629,7 @@ export function maskedNaryScript(
   kind: string,
   at: string,
 ): XmlElement {
-  const options = maskOptions(rubyToI(mask, kind, at));
+  const options = maskOptions(maskToI(mask, kind, at));
   let name = script.name;
   const nodes: XmlChild[] = [...script.children];
   const refuse = (why: string): RenderError =>
@@ -675,9 +675,12 @@ const SUB_SUP_NAMES: ReadonlyMap<string, string> = new Map([
   ["mover", "msup"],
 ]);
 
-/** Ruby `to_i` for the mask read: nil is 0, a Float truncates, a String parses its leading integer; `true`, hashes and nodes raise NoMethodError in the gem. */
-function rubyToI(value: unknown, kind: string, at: string): number {
-  if (value === null || value === undefined) return 0;
+/**
+ * Ruby `to_i` for the mask read: nil is 0, a Float truncates, a String parses its leading integer; `true`, hashes and nodes raise NoMethodError in the gem.
+ * A `bigint` because Ruby's integer is exact at any size and `maskOptions` reads its low bits.
+ */
+function maskToI(value: unknown, kind: string, at: string): bigint {
+  if (value === null || value === undefined) return 0n;
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
       // Float::NAN.to_i / Float::INFINITY.to_i raise FloatDomainError.
@@ -687,13 +690,9 @@ function rubyToI(value: unknown, kind: string, at: string): number {
         kind,
       );
     }
-    return Math.trunc(value);
+    return BigInt(Math.trunc(value));
   }
-  if (typeof value === "string") {
-    // Ruby's `to_i` skips ASCII whitespace only; JavaScript's `\s` would also skip U+00A0 and the other Unicode spaces.
-    const match = value.match(/^[ \t\r\n\f\v]*[+-]?\d+/);
-    return match === null ? 0 : Number.parseInt(match[0], 10);
-  }
+  if (typeof value === "string") return rubyToInteger(value);
   throw new RenderError(
     `${at}: mask holds ${describeSlot(value)} — Ruby's to_i raises NoMethodError on it`,
     FORMAT,

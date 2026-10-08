@@ -448,6 +448,6 @@ export function rubyArrayInspectOrThrow(
  *   "\u00a010" 0     U+00A0 is not whitespace to Ruby
  */
 export function rubyToI(text: string): number {
-  const match = /^[\t\n\v\f\r ]*([+-]?\d+(?:_\d+)*)/.exec(text);
-  return match === null ? 0 : Number(match[1].replaceAll("_", ""));
+  const digits = /^[\t\n\v\f\r ]*([+-]?\d+(?:_\d+)*)/.exec(text)?.[1];
+  return digits === undefined ? 0 : Number(digits.replaceAll("_", ""));
 }

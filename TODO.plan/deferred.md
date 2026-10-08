@@ -1084,6 +1084,11 @@ deterministic generators and full sidecars closes the gap.
 now writes `test/xml/ox-contract.expected.manifest.yaml` through
 `scripts/render-fixture-provenance.rb`, and `payload-validation.spec.ts` checks
 it with the per-format sidecar rules and no longer lists the generator as a gap.
+That gate checks provenance, not content: `scripts/gate-oracle.rb repo --check`
+discovers only `test/formats/*/{parity,degenerate,model}-fixtures.json`, so it
+does not regenerate and diff the Ox contract (nor the evaluation, CLI and
+render-options fixtures). Rerunning `generate-xml-fixtures.rb` against the
+pinned oracle is still the only content check for `test/xml`.
 
 ### HTML: Fenced refuses nondeterministic paren paths
 

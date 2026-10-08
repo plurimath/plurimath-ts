@@ -8,7 +8,8 @@
  * `corpus/*.manifest.yaml` sidecars. This gate covers the remaining generated
  * TypeScript under `src/`, the managed `parity-fixtures.json` and
  * `degenerate-fixtures.json` families under `test/formats/`, and the Ox
- * contract, `test/xml/ox-contract.expected.json`.
+ * contract, `test/xml/ox-contract.expected.json` (whose content the class-B
+ * gate does not yet regenerate; see `TODO.plan/deferred.md`).
  *
  *   **does this artifact bind to the recorded inputs and a valid envelope?**
  *

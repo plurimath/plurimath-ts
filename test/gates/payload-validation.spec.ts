@@ -872,12 +872,31 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
             ).toBe(true);
             expect(arrayField(item, "split", at).length, `${at}.split`).toBeGreaterThan(0);
           }
+          // A `parse-options` row is a parse CALL with options: it carries
+          // `parseOptions`, and is always a refusal, either by `Math.parse`'s
+          // own option checks (`raisedIn: "options"`) or by the parse itself.
+          const parseCall = item.group === "parse-options";
           const base = ["group", "id", "source", "input", "options"];
+          if (parseCall) base.push("parseOptions");
           const tail = item.split === undefined ? [] : ["split"];
+          if (parseCall) {
+            mapField(item, "parseOptions", at);
+            expect(hasRefusal, `${at}: a parse-options row is a refusal`).toBe(true);
+            expect(Object.keys(options), `${at}.options`).toHaveLength(0);
+            const where = stringField(item, "raisedIn", at);
+            expect(["options", "parse"]).toContain(where);
+            expect(stringField(item, "raises", at)).toMatch(
+              where === "options"
+                ? /^Plurimath::(Math::ParseOptionError|Errors::UnsupportedLocale)$/
+                : /^Plurimath::Math::ParseError$/,
+            );
+          }
           if (hasRefusal) {
             expectExactKeys(item, [...base, ...tail, "raises", "raisedIn"], at);
-            expect(stringField(item, "raises", at)).toBe("Plurimath::Math::ParseError");
-            expect(["parse", "render"]).toContain(stringField(item, "raisedIn", at));
+            if (!parseCall) {
+              expect(stringField(item, "raises", at)).toBe("Plurimath::Math::ParseError");
+              expect(["parse", "render"]).toContain(stringField(item, "raisedIn", at));
+            }
           } else {
             expectExactKeys(item, [...base, ...tail, "expected"], at);
           }

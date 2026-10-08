@@ -1633,23 +1633,6 @@ it: section 3 rule 8 gives a kind file its own format's `render-shared` and no
 other's, so a shared spelling would have to move into core, which is a layering
 decision rather than a bug fix.
 
-### AsciiMath, LaTeX and UnicodeMath accept a parse option the gem refuses
-
-**Trigger: any caller passes these parsers an option key other than `locale`,
-or the typed-API boundary for parse options is next revisited.**
-
-`Plurimath::Math.parse` checks option keys before it parses
-(`raise_unknown_parse_options!`), so `Math.parse("1,5", fmt, foo: 1)` raises
-`Plurimath::Math::ParseOptionError` for `:asciimath`, `:latex`, `:html` and
-`:unicode` alike (measured on the oracle at `00c52783`, 2026-10-08). This port
-raises `ParseOptionError` only from `parseHtml` (`validateOptions` in
-`src/formats/html/parser.ts`). `parseAsciimath`, `parseLatex` and
-`parseUnicodemath` return the default-locale model for `{ foo: 1 }`, measured
-the same day. The `locale` value itself is checked by all four, as the gem
-checks it: `"xx"`, `"DE"` and `"de_CH"` raise `UnsupportedLocaleError` in each.
-Found while measuring locale behaviour for P3; not fixed there, because it is
-option-key validation, not locale behaviour.
-
 ## Number formatting: an absurd exponent fails in both implementations, differently
 
 `1e100000000000000000000` (an exponent past 64 bits) with `notation: "e"`. The

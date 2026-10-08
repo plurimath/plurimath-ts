@@ -1115,6 +1115,73 @@ def nary_mask_rows(add)
   emit.call("nary-nil-options", build.call("d", "u", nil))
 end
 
+# The `parse-options` group: `Plurimath::Math.parse` calls that pass an
+# option the gem refuses, recorded in the payload of the INPUT format they
+# parse (the four the port has a parser for), since the call under test is the
+# parse, not a render. `Math.parse` checks its options before it parses
+# (`math.rb:34-41`): unknown keys first (`ParseOptionError`), then the
+# `locale` value (`Errors::UnsupportedLocale`), and only then builds the
+# parser, so each refusal is recorded with `raisedIn: "options"`. Every
+# format pairs those calls with one input the gem itself refuses
+# (`PARSE_OPTION_BAD_INPUTS`), so a row shows the option check winning over
+# the parse failure, and the same input with no options records that failure
+# (`raisedIn: "parse"`). Keys are spelled the same in both languages, so the
+# row's `parseOptions` is passed to the port verbatim. `onUnsupported` is a
+# port-only key the gem has no counterpart for (see `ParseOptionError` in
+# `src/core/errors.ts`), so it has no row. Messages are not recorded: the port
+# deliberately names its own option list, not the gem's.
+PARSE_OPTION_CALLS = [
+  { "foo" => 1 },
+  { "foo" => 1, "bar" => 2 },
+  { "locale" => "xx", "foo" => 1 },
+  { "locale" => "xx" },
+].freeze
+
+# One input per format that the gem refuses with `ParseError` when parsed with
+# no options, measured on the pinned oracle: LaTeX and HTML fail decoding a
+# lone-surrogate character reference, UnicodeMath fails preprocessing a bare
+# `#`, and AsciiMath (whose preprocessing cannot fail) fails parsing `a/`.
+PARSE_OPTION_BAD_INPUTS = {
+  "asciimath" => "a/",
+  "html" => "&#55296;",
+  "latex" => "&#55296;",
+  "unicodemath" => "#",
+}.freeze
+
+# The two classes `Math.parse` raises from its option checks, outside the
+# `rescue StandardError` that makes everything else a `ParseError`.
+OPTION_REFUSALS = [Plurimath::Math::ParseOptionError, Plurimath::Errors::UnsupportedLocale].freeze
+
+def parse_option_rows(rows, format)
+  type = GEM_PARSE_TYPES.fetch(format)
+  bad = PARSE_OPTION_BAD_INPUTS.fetch(format)
+  calls = PARSE_OPTION_CALLS.map { |opts| ["x", opts] } +
+          [[bad, { "foo" => 1 }], [bad, { "locale" => "xx" }], [bad, {}]]
+  calls.each do |text, opts|
+    label = opts.empty? ? "none" : opts.map { |k, v| "#{k}-#{v}" }.join("-")
+    row = {
+      "id" => "parse-options-#{text == 'x' ? 'x' : 'bad'}-#{label}",
+      "group" => "parse-options",
+      "source" => "measured on the oracle",
+      "input" => { "format" => format, "text" => text },
+      "options" => {},
+      "parseOptions" => opts,
+    }
+    begin
+      Plurimath::Math.parse(text, type, **opts.transform_keys(&:to_sym))
+      raise "#{row['id']}: the gem accepted #{opts.inspect} for #{text.inspect}; " \
+            "this group records refusals only"
+    rescue *OPTION_REFUSALS => e
+      row["raises"] = e.class.name
+      row["raisedIn"] = "options"
+    rescue ORACLE_REFUSAL => e
+      row["raises"] = e.class.name
+      row["raisedIn"] = "parse"
+    end
+    rows << row
+  end
+end
+
 def rows_for(format, oracle)
   rows = []
   # The gem's parser is slow (seconds for a table), and several rows share an
@@ -1159,6 +1226,7 @@ def rows_for(format, oracle)
   if UNARY_ONLY_FORMATS.include?(format)
     unary_function_rows(add)
     underover_rows(add)
+    parse_option_rows(rows, format)
     return rows
   end
 

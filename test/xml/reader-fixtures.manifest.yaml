@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-xml-reader-fixtures.rb
-  sha256: a5e8537c0d576dba095856defef98b3c02b19abbb0fe8e6dd7dfa847dac36815
+  sha256: c8e8c30609af5f588834fc831627c00e52244ff15a57898ef5eefd2a30438fe9
   inputs:
     scripts/generate-corpus.rb: 0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef
-    scripts/generate-xml-reader-fixtures.rb: a5e8537c0d576dba095856defef98b3c02b19abbb0fe8e6dd7dfa847dac36815
+    scripts/generate-xml-reader-fixtures.rb: c8e8c30609af5f588834fc831627c00e52244ff15a57898ef5eefd2a30438fe9
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: b3b77e884b3f90cf7535bec68919abeb790430db
+    commit: 327b7a4babd7d49caef87da6fbb80172bff8c7fa
     clean: true
     dirty_paths: []
 oracle:
@@ -102,8 +102,18 @@ dependencies:
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
+corpus:
+  path: submodules/plurimath-testsuite
+  repository:
+    commit: cf3c5ebf8b8ce35ade189b11a741f272ae93c8a0
+    clean: true
+    dirty_paths: []
+  provenance:
+    path: corpus/provenance.yaml
+    schema: plurimath-corpus/provenance/3
+    sha256: 7f6c198dd50b0dcfe8f69f2dc13083864fe03d478213dc2deaed42c7ccabc5c9
 payload:
   path: reader-fixtures.json
   schema: plurimath-corpus/xml-reader/1
-  sha256: 5f2c9a16de1749efdb61d11b75a395f4cbba2e0735e963b0c59a38f61f3debb7
-  bytes: 4665064
+  sha256: 0656e255a7710777f0cab922abe272e8c3621c63c4fa56edf198b21b93955d1c
+  bytes: 7775946

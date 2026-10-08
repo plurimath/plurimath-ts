@@ -193,7 +193,8 @@ module XmlReaderProbe
     "namespaces" => [
       # An attribute whose name matches a declared prefix is dropped when its
       # value equals that prefix's URI, compared byte for byte: a URI that is
-      # not valid UTF-8 never equals U+FFFD, and does equal the same bytes.
+      # not valid UTF-8 never equals U+FFFD. A value holding the same invalid
+      # bytes is refused before any comparison.
       "<a xmlns:m=\"&#xD800;\" m=\"\uFFFD\"/>", "<a xmlns:m=\"&#xD800;\" m=\"&#xD800;\"/>",
       "<a xmlns:m=\"\uFFFD\" m=\"\uFFFD\"/>",
       "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mi>x</mi></math>",

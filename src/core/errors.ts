@@ -57,7 +57,7 @@ export class ParseError extends PlurimathError {
  * (`UnsupportedLocaleError` in `formatting/errors.ts`, for `locale`).
  *
  * Deliberately not a `ParseError`: `Math.parse` raises this from its own body
- * (`math.rb:33-34`), OUTSIDE the `begin`/`rescue StandardError` that turns
+ * (`math.rb:34-35`), OUTSIDE the `begin`/`rescue StandardError` that turns
  * every other failure into a `ParseError` (`math.rb:44-48`). Measured:
  * `Math.parse("x", :html, nosuchoption: true)` raises
  * `Plurimath::Math::ParseOptionError`, and `e.is_a?(Plurimath::Math::
@@ -82,6 +82,27 @@ export class ParseOptionError extends PlurimathError {
         `${unknownOptions.join(", ")}; supported parse options are ${supportedOptions.join(", ")}`,
     );
   }
+}
+
+/**
+ * `Math.parse`'s first option check (`math.rb:34-35`,
+ * `raise_unknown_parse_options!`): every key outside `knownKeys` is refused
+ * with `ParseOptionError`, before the `locale` value is checked and before
+ * the input is preprocessed or parsed. Each parser passes its own options
+ * type's keys — see `ParseOptionError` for why that is the port's list and
+ * not the gem's.
+ *
+ * Only own enumerable keys are read (`Object.keys`), the closest JavaScript
+ * analogue of a Ruby keyword-argument Hash. `null` and `undefined` options
+ * carry no keys.
+ */
+export function requireKnownParseOptions(
+  options: object | null | undefined,
+  knownKeys: ReadonlySet<string>,
+): void {
+  if (options === null || options === undefined) return;
+  const unknown = Object.keys(options).filter((key) => !knownKeys.has(key));
+  if (unknown.length > 0) throw new ParseOptionError(unknown, [...knownKeys]);
 }
 
 export class UnsupportedFormatError extends PlurimathError {

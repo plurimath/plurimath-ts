@@ -29,7 +29,7 @@
  * is the boundary this function stands at, so a refusal is a `ParseError`.
  */
 
-import { describeThrown } from "../../core/errors";
+import { describeThrown, requireKnownParseOptions } from "../../core/errors";
 import { type FormulaNode, type OnUnsupported, ParseError } from "../../core/index";
 import { type LocaleOptions, requireLocaleKey } from "../../formatting/index";
 import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
@@ -62,6 +62,25 @@ const FORMAT = "unicode";
  */
 export interface UnicodemathParseOptions extends LocaleOptions {
   readonly onUnsupported?: OnUnsupported;
+}
+
+/** The keys `validateOptions` accepts: the declared keys of `UnicodemathParseOptions`. */
+const KNOWN_OPTION_KEYS: ReadonlySet<string> = new Set<keyof UnicodemathParseOptions>([
+  "locale",
+  "onUnsupported",
+]);
+
+/**
+ * `Math.parse`'s option checks (`math.rb:34-41`), in the gem's order and
+ * before preprocessing: unknown KEYS first (`ParseOptionError`), then the
+ * `locale` VALUE (`UnsupportedLocaleError`). Measured on the oracle at
+ * `00c52783`: `Math.parse(text, :unicode, locale: "xx", foo: 1)` raises
+ * `ParseOptionError`, and either option failure is reported ahead of a
+ * preprocessing or grammar failure in `text`. Same check as `parseHtml`'s.
+ */
+function validateOptions(options?: UnicodemathParseOptions | null): void {
+  requireKnownParseOptions(options, KNOWN_OPTION_KEYS);
+  requireLocaleKey(options?.locale);
 }
 
 /**
@@ -127,11 +146,7 @@ export function parseUnicodemathTree(
   input: string,
   options?: UnicodemathParseOptions | null,
 ): ParseValue {
-  // The locale is checked before preprocessing, as `Math.parse` runs `key_for!`
-  // before it builds the parser: `Plurimath::Math.parse("#", :unicode, locale:
-  // "xx")` raises `UnsupportedLocale`, not the `ParseError` that preprocessing
-  // `#` would (measured on the oracle at `00c52783`).
-  requireLocaleKey(options?.locale);
+  validateOptions(options);
   const { text, label, map } = preprocessOrParseError(input);
   const tree = parsePreprocessed(input, text, map, options);
   return label === undefined ? tree : postProcessing(tree, label);

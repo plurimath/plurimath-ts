@@ -31,7 +31,7 @@
 
 import { describeThrown } from "../../core/errors";
 import { type FormulaNode, type OnUnsupported, ParseError } from "../../core/index";
-import type { LocaleOptions } from "../../formatting/index";
+import { type LocaleOptions, requireLocaleKey } from "../../formatting/index";
 import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
 import { parseUnicodemathPreprocessed } from "./grammar";
 import { type PreprocessedUnicodemath, preprocess } from "./preprocess";
@@ -127,6 +127,11 @@ export function parseUnicodemathTree(
   input: string,
   options?: UnicodemathParseOptions | null,
 ): ParseValue {
+  // The locale is checked before preprocessing, as `Math.parse` runs `key_for!`
+  // before it builds the parser: `Plurimath::Math.parse("#", :unicode, locale:
+  // "xx")` raises `UnsupportedLocale`, not the `ParseError` that preprocessing
+  // `#` would (measured on the oracle at `00c52783`).
+  requireLocaleKey(options?.locale);
   const { text, label, map } = preprocessOrParseError(input);
   const tree = parsePreprocessed(input, text, map, options);
   return label === undefined ? tree : postProcessing(tree, label);

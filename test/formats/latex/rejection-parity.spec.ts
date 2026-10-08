@@ -28,9 +28,10 @@
  */
 
 import { describe, expect, it } from "vitest";
-import type { ParseError } from "../../../src/core/errors";
+import { ParseError } from "../../../src/core/errors";
 import { parseLatex } from "../../../src/formats/latex/parser";
 import { preprocess } from "../../../src/formats/latex/preprocess";
+import { UnsupportedLocaleError } from "../../../src/formatting/index";
 import { loadPinnedCorpus, type PinnedRejection } from "../../core/corpus-pin";
 import { casesInInputFormat } from "../../core/model-builder";
 
@@ -214,3 +215,16 @@ function mappedGemIndex(entry: PinnedRejection): number {
   if (entry.index === undefined) throw new Error(`${entry.id} has no recorded index`);
   return preprocess(entry.input).map.toOriginal(entry.index);
 }
+
+// `Plurimath::Math.parse` validates the locale (`normalize_parse_options`,
+// `SupportedLocales.key_for!`) before it builds the parser, so an unsupported
+// locale wins over an input that preprocessing would refuse. Measured on the
+// oracle at `00c52783`: `Plurimath::Math.parse("&#55296;", :latex, locale: "xx")`
+// raises `Plurimath::Errors::UnsupportedLocale`, while the same input with no
+// locale raises `Plurimath::Math::ParseError`.
+describe("an unsupported locale on an input preprocessing refuses", () => {
+  it("is reported as the unsupported locale, before preprocessing", () => {
+    expect(() => parseLatex("&#55296;")).toThrow(ParseError);
+    expect(() => parseLatex("&#55296;", { locale: "xx" })).toThrow(UnsupportedLocaleError);
+  });
+});

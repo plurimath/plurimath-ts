@@ -28,7 +28,7 @@
 import { describeThrown } from "../../core/errors";
 import { type FormulaNode, type OnUnsupported, ParseError } from "../../core/index";
 import { UndecodableEntityError } from "../../core/nodes";
-import type { LocaleOptions } from "../../formatting/index";
+import { type LocaleOptions, requireLocaleKey } from "../../formatting/index";
 import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
 import { latexGrammar } from "./grammar";
 import { preprocess } from "./preprocess";
@@ -53,6 +53,7 @@ export interface LatexParseOptions extends LocaleOptions {
  * `ParseError.index` already indexes the ORIGINAL input here.
  */
 export function parseLatexTree(input: string, options?: LatexParseOptions | null): ParseValue {
+  requireLocaleKey(options?.locale);
   const { text, map } = preprocessOrParseError(input);
   return parsePreprocessed(input, text, map, options);
 }
@@ -82,6 +83,7 @@ export function parseLatexTree(input: string, options?: LatexParseOptions | null
  * either.
  */
 export function parseLatex(input: string, options?: LatexParseOptions | null): FormulaNode {
+  requireLocaleKey(options?.locale);
   const { text, map } = preprocessOrParseError(input);
   const tree = parsePreprocessed(input, text, map, options);
   try {
@@ -101,9 +103,13 @@ export function parseLatex(input: string, options?: LatexParseOptions | null): F
 /**
  * Preprocessing failures reach the caller as `ParseError`, the same class a
  * grammar or transform failure becomes below. That is not every failure this
- * module can raise, though: an unsupported locale is rejected before parsing
- * starts, inside `parsePreprocessed`'s call to `latexGrammar`, and reaches the
- * caller as `UnsupportedLocaleError` -- never wrapped. Measured:
+ * module can raise, though: an unsupported locale is rejected first, before
+ * preprocessing, by `requireLocaleKey` at the top of `parseLatex` and
+ * `parseLatexTree`, and reaches the caller as `UnsupportedLocaleError` -- never
+ * wrapped. The order is the gem's: `Math.parse` runs `key_for!` before it
+ * builds the parser, so `Plurimath::Math.parse("&#55296;", :latex, locale:
+ * "xx")` raises `UnsupportedLocale`, not the `ParseError` preprocessing that
+ * input would otherwise raise (measured on the oracle at `00c52783`). Measured:
  * `parseLatex("x", { locale: "definitely-not-a-locale" })` throws
  * `UnsupportedLocaleError` with code `UNSUPPORTED_LOCALE`, not a `ParseError`.
  * That is deliberate, not a gap this function should close: the gem raises

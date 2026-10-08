@@ -4,9 +4,11 @@
  * recorded for `Plurimath::Math.parse(input, :unicode)`.
  *
  * The fixtures are generated, never hand-written
- * (`scripts/generate-unicodemath-model-fixtures.rb`), mainly from one source: every
- * distinct `expected.unicodemath` string in the pinned corpus — UnicodeMath the
- * gem itself emitted, fed back in as a round trip.
+ * (`scripts/generate-unicodemath-model-fixtures.rb`), from four groups of
+ * input: every distinct `expected.unicodemath` string in the pinned corpus —
+ * UnicodeMath the gem itself emitted, fed back in as a round trip — plus the
+ * rule-coverage groups for constructs the corpus never reaches, the
+ * `slice-boundary` rows, and the `locale` rows described below.
  *
  * A `locale` group adds rows parsed under the gem's `locale:` parse option
  * (`Math.parse(input, :unicode, locale:)`); each records its locale, and this suite

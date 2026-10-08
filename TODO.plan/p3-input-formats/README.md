@@ -4,8 +4,8 @@
 LaTeX, UnicodeMath and HTML parsers. Each is locked by its own corpus before
 the next begins. On `main`: the LaTeX (#76) and HTML (#88) parsers, and a
 partial UnicodeMath parser registering 483 of the gem's 519 transform rules
-(`FINAL_COUNT` in `test/formats/unicodemath/transform-coverage.spec.ts`). One
-of the five exit criteria below is checked.
+(`FINAL_COUNT` in `test/formats/unicodemath/transform-coverage.spec.ts`). Two
+of the five exit criteria below are checked.
 
 Each format opens as its own directory here (`latex/`, `unicodemath/`,
 `html/`) with numbered work items when it starts.
@@ -100,7 +100,7 @@ Per format:
       does not exist for that format. Entities apply here, unlike in P1.
 - [x] Locale behaviour matching the gem for that parser, or a recorded
       divergence if it is deliberately not implemented.
-  (done: the `locale` group of `test/formats/latex/model-fixtures.json` and `test/formats/html/model-fixtures.json` (eight rows each: `1,5` under `de` and `fr`, `1,2,3` and `1.5` under `de`, `1.5`, `1,5` and `1٫5` under `en`, `1٫5` under `ar`) and of `test/formats/unicodemath/model-fixtures.json` (six rows: `1٫5` under `ar`, `en` and `de`, `1,5`, `1.5` and `1,2,3` under `de`), generated from the oracle at `00c52783` by each format's `scripts/generate-*-model-fixtures.rb`, deep-equal the port's models in each `model-parity.spec.ts`; passing no locale to the three grammars fails exactly the eleven non-`en` rows whose model differs from the default (five LaTeX, five HTML, one UnicodeMath); an unsupported locale (`xx`, `DE`, `de_CH`) raises `UnsupportedLocaleError` in all three, as the gem raises `UnsupportedLocale`; the one difference found, unknown option keys, is option validation and is recorded in [deferred](../deferred.md); checked 2026-10-08)
+  (done: the `locale` group of `test/formats/latex/model-fixtures.json` and `test/formats/html/model-fixtures.json` (eight rows each: `1,5` under `de` and `fr`, `1,2,3` and `1.5` under `de`, `1.5`, `1,5` and `1٫5` under `en`, `1٫5` under `ar`) and of `test/formats/unicodemath/model-fixtures.json` (six rows: `1٫5` under `ar`, `en` and `de`, `1,5`, `1.5` and `1,2,3` under `de`), generated from the oracle at `00c52783` by each format's `scripts/generate-*-model-fixtures.rb`, deep-equal the port's models in each `model-parity.spec.ts`; passing no locale to the three grammars fails exactly the eleven non-`en` rows whose model differs from the default (five LaTeX, five HTML, one UnicodeMath); an unsupported locale (`xx`, `DE`, `de_CH`) raises `UnsupportedLocaleError` in all three, as the gem raises `UnsupportedLocale`, and is checked before preprocessing as the gem checks it (`test/formats/latex/rejection-parity.spec.ts` and `test/formats/unicodemath/rejection-parity.spec.ts`, `&#55296;` and `#` under `xx`; HTML's twin is in `test/formats/html/parser.spec.ts`); the one difference found, unknown option keys, is option validation and is recorded in [deferred](../deferred.md); checked 2026-10-08)
 - [x] Isolation assertions for its subpath.
   (done: `scripts/gate-package.mjs:195`, `:199`, `:207` for `./html`, `./latex`, `./unicodemath`; `pnpm gate:package` exits 0; checked 2026-09-24)
 - [ ] Review round with findings resolved, and sign-off recorded.

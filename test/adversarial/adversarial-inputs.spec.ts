@@ -28,10 +28,11 @@
 
 import { isMainThread } from "node:worker_threads";
 import { describe, expect, it } from "vitest";
-import { ParseError, type PlurimathErrorCode } from "../../src/core/errors";
+import { ParseError, type PlurimathErrorCode, RenderError } from "../../src/core/errors";
 import { parseAsciimath } from "../../src/formats/asciimath/parser";
 import { toAsciimath } from "../../src/formats/asciimath/renderer";
 import { parseHtml } from "../../src/formats/html/parser";
+import { toHtml } from "../../src/formats/html/renderer";
 import { parseLatex } from "../../src/formats/latex/parser";
 import { toLatex } from "../../src/formats/latex/renderer";
 import { toMathml } from "../../src/formats/mathml/renderer";
@@ -80,6 +81,7 @@ const RENDERERS: ReadonlyArray<readonly [string, (node: ParsedFormula) => string
   ["toLatex", toLatex],
   ["toMathml", toMathml],
   ["toUnicodemath", toUnicodemath],
+  ["toHtml", toHtml],
 ];
 
 /** Runs one input all the way to a clean outcome, or rethrows what it got. */
@@ -525,7 +527,14 @@ const GRAMMAR_CASES: ReadonlyArray<GrammarCase> = [
   ["latex", "1,000 nested \\sqrt", wrapped("\\sqrt{", "2", "}", DEEP), "PARSE_ERROR"],
   ["latex", "20 nested parens", wrapped("(", "x", ")", SHALLOW), "parsed"],
   ["latex", "1,000 nested parens", wrapped("(", "x", ")", DEEP), "PARSE_ERROR"],
-  ["latex", "20 nested \\left(", wrapped("\\left(", "x", "\\right)", SHALLOW), "parsed"],
+  // RENDER_ERROR because of `toHtml` alone; the test after this table pins
+  // that the other four renderers still render it. Measured on the pinned
+  // oracle: the gem parses this and renders it through to_asciimath,
+  // to_latex, to_mathml and to_unicodemath, but `Formula#to_html` raises (as
+  // `Math::ParseError`, from inside the render call), the same
+  // `\\left…\\right` refusal `test/formats/html/render-parity.spec.ts` pins
+  // for the corpus cases.
+  ["latex", "20 nested \\left(", wrapped("\\left(", "x", "\\right)", SHALLOW), "RENDER_ERROR"],
   ["latex", "1,000 nested \\left(", wrapped("\\left(", "x", "\\right)", DEEP), "PARSE_ERROR"],
   [
     "latex",
@@ -679,6 +688,20 @@ describe("every LaTeX, HTML and UnicodeMath adversarial input reaches the outcom
       expect(outcomes.has("parsed"), `${grammar} never parses`).toBe(true);
       expect(outcomes.has("PARSE_ERROR"), `${grammar} never refuses`).toBe(true);
     }
+  });
+});
+
+describe("20 nested \\left( is refused by toHtml alone", () => {
+  // The table row above is RENDER_ERROR, which would also hold if any of the
+  // other four renderers started refusing. This pins the split.
+  const node = parseLatex(wrapped("\\left(", "x", "\\right)", SHALLOW));
+
+  it.each(RENDERERS.filter(([name]) => name !== "toHtml"))("%s renders it", (_name, render) => {
+    expect(typeof render(node)).toBe("string");
+  });
+
+  it("toHtml refuses it with a typed RenderError", () => {
+    expect(() => toHtml(node)).toThrow(RenderError);
   });
 });
 

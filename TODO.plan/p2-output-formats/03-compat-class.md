@@ -564,8 +564,9 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
 - [ ] HTML and OMML corpus targets are nonempty and complete per payload; their
       cross-format and package-isolation gates pass against built artifacts.
       (open: the targets are nonempty and complete per parsed payload at pin `cf3c5eb`,
-      asserted in `test/gates/corpus-discovery.spec.ts`; the cross-format gates do not
-      cover HTML or OMML yet; checked 2026-10-06)
+      asserted in `test/gates/corpus-discovery.spec.ts`, checked 2026-10-06; the
+      cross-format gates cover HTML (`01-html-renderer.md`'s gate box, checked
+      2026-10-08) but not OMML yet)
 - [x] The root package exports the default class under ESM and CJS, the package root
       passes publint, the real packed artifact passes attw, and review leaves no valid implementable finding
       unresolved.

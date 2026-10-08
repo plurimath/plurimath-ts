@@ -23,12 +23,13 @@
 import { describe, expect, it } from "vitest";
 import { RenderError } from "../../src/core/errors";
 import { toAsciimath } from "../../src/formats/asciimath/renderer";
+import { toHtml } from "../../src/formats/html/renderer";
 import { toLatex } from "../../src/formats/latex/renderer";
 import { toMathml } from "../../src/formats/mathml/renderer";
 import { toUnicodemath } from "../../src/formats/unicodemath/renderer";
 
 /**
- * The four landed renderers. `toMathml` accepts only `formula` and `mrow` at
+ * The five renderers this gate covers (OMML is not covered yet). `toMathml` accepts only `formula` and `mrow` at
  * its root — `to_mathml` lives on `Formula` alone in the gem, and every other
  * kind raises `NoMethodError` there — so each format carries its own valid
  * root rather than sharing one.
@@ -46,6 +47,15 @@ const RENDERERS = [
   {
     format: "latex",
     render: toLatex as (node: unknown) => string,
+    validRoot: {
+      kind: "frac",
+      parameterOne: { kind: "number", value: "1" },
+      parameterTwo: { kind: "symbol", id: "Plus", value: null },
+    },
+  },
+  {
+    format: "html",
+    render: toHtml as (node: unknown) => string,
     validRoot: {
       kind: "frac",
       parameterOne: { kind: "number", value: "1" },

@@ -187,7 +187,7 @@ module XmlReaderProbe
     ],
     "bom" => [
       # Ox skips the BOM but keeps the full length, so its end lies 3 bytes
-      # past the buffer: an unclosed start tag that runs out in its attributes
+      # past the document's terminator: an unclosed start tag that runs out in its attributes
       # is refused after a BOM and silently dropped without one.
       "\uFEFF<r/><a b=\"c\"", "\uFEFF<r/><a b=c ", "<r/><a b=\"c\"", "<r/><a b=c ",
       "\uFEFF<a/>", "\uFEFF<?xml version=\"1.0\"?><a/>", "\uFEFF\uFEFF<a/>", "<a>\uFEFF</a>",

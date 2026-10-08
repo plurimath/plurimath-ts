@@ -338,9 +338,10 @@ class OxParser {
     this.str = start;
     this.s = start;
     // Ox is handed the Ruby string's length, and scanning also stops at a NUL.
-    // `load` skips a BOM but still passes the full length, so Ox's end sits
-    // past the buffer by the BOM's 3 bytes (`pi.end = pi.str + len`): after a
-    // BOM, the attribute loop never takes its ran-out-at-the-end exit.
+    // `to_gen` skips a BOM but keeps the string's full length (ox.c), so Ox's
+    // end (`pi.end = pi.str + len`) sits 3 bytes past the document's
+    // terminator: after a BOM, the attribute loop never takes its
+    // ran-out-at-the-end exit.
     this.end = start + bytes.length;
   }
 

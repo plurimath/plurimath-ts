@@ -45,7 +45,7 @@
  * unwrapped, never a `ParseError`. See `validateOptions` below.
  */
 
-import { describeThrown, ParseOptionError } from "../../core/errors";
+import { describeThrown, requireKnownParseOptions } from "../../core/errors";
 import { type FormulaNode, type OnUnsupported, ParseError } from "../../core/index";
 import { type LocaleOptions, requireLocaleKey } from "../../formatting/index";
 import { ParseFailed, type ParseValue, Slice, type SourceMap } from "../../pegkit/index";
@@ -92,10 +92,7 @@ const KNOWN_OPTION_KEYS: ReadonlySet<string> = new Set<keyof HtmlParseOptions>([
  * `normalize` would report the wrong failure for exactly that input.
  */
 function validateOptions(options?: HtmlParseOptions | null): void {
-  if (options !== null && options !== undefined) {
-    const unknown = Object.keys(options).filter((key) => !KNOWN_OPTION_KEYS.has(key));
-    if (unknown.length > 0) throw new ParseOptionError(unknown, [...KNOWN_OPTION_KEYS]);
-  }
+  requireKnownParseOptions(options, KNOWN_OPTION_KEYS);
   requireLocaleKey(options?.locale);
 }
 

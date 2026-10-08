@@ -210,12 +210,11 @@ describe("the parsed model, for the hand-picked coverage inputs", () => {
     expect(coverageSupported.length).toBeGreaterThan(0);
   });
 
-  it.each(coverageSupported.map((entry) => [entry.input, entry.locale ?? "default", entry] as const))(
-    "%j under %s: deep-equals the gem's",
-    (_input, _locale, entry) => {
-      expect(normalize(parseFixture(entry) as never)).toStrictEqual(entry.model);
-    },
-  );
+  it.each(
+    coverageSupported.map((entry) => [entry.input, entry.locale ?? "default", entry] as const),
+  )("%j under %s: deep-equals the gem's", (_input, _locale, entry) => {
+    expect(normalize(parseFixture(entry) as never)).toStrictEqual(entry.model);
+  });
 });
 
 // Empty now that every corpus row this list once held is ported; the suite

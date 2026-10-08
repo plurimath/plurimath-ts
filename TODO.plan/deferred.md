@@ -594,6 +594,101 @@ results lie 0.0515 and 0.0172 ULP from a midpoint.
 corpora without Ruby. As with `pow`, the parity is with the oracle's
 platform: another libm can differ in these last bits.
 
+### Evaluation: the hyperbolic functions
+
+**Recorded 2026-09-28, revised 2026-09-29.** `Sinh`, `Cosh`, `Tanh` and
+their reciprocals `Sech`, `Csch`, `Coth` (`1.0 / Math.cosh(x)`, and so on)
+call Ruby's `Math.sinh`/`cosh`/`tanh`, which call glibc (2.35 on the
+oracle's host). glibc's three are Sun's fdlibm routines, computed through
+`expm1` for small and moderate arguments and through `exp` for large ones.
+
+`src/evaluation/libm-hyperbolic.ts` transcribes fdlibm's `e_sinh.c`,
+`e_cosh.c` and `s_tanh.c`, and `src/evaluation/libm-expm1.ts` fdlibm's
+`s_expm1.c` (Sun's notices kept). fdlibm's `expm1` alone does not give
+glibc's digits: glibc evaluates the same polynomial in a different order.
+The port's `expm1` evaluates it as three short pieces combined with the
+even powers of its variable: fdlibm's terms, regrouped. The order came from
+comparing results against glibc 2.35 through Ruby's `Math`, and was then
+confirmed by reading glibc 2.35's `s_expm1.c`, which has the same grouping,
+keeps Sun's notice, and notes a 1997 modification by Naohiko Shimizu (Tokai
+University) "for performance improvement on pipelined processors".
+`PATH="$(mise where node@24.18.0)/bin:$(mise where ruby@4.0.1)/bin:$PATH" node scripts/measure-libm-hyperbolic-glibc.mjs --expm1-order` repeats it: over
+3,028,620 seeded arguments with `|x| < 44` (both signs, log- and
+linear-uniform, and 3,000 consecutive doubles either side of each of
+`expm1`'s branch points), the count of arguments whose `expm1` differs from
+Ruby's `Math.expm1` is 276 in fdlibm's Horner order and 0 in the split order
+(2026-09-29, seed 20260928).
+
+Every region that goes only through `expm1` therefore answers glibc's double
+and never refuses. Where `sinh` or `cosh` call `exp` (`sinh` from `|x| = 22`,
+`cosh` from `ln2/2`, and `exp(|x|/2)` from `ln(DBL_MAX)` to the overflow
+threshold), the port uses `libm.ts`'s correctly rounded `exp`, refused inside
+`exp`'s own band (1/80 ULP, "`Math` function results inside glibc's rounding
+band" above); outside it that double is glibc's, and the rest of fdlibm's
+formula is plain double arithmetic. `csch` and `coth` of a zero raise the
+gem's `DivisionByZeroError`, and an overflowing result the gem's
+`NonFiniteResultError` (probed on the gem, 0.11.6).
+
+Measured by `PATH="$(mise where node@24.18.0)/bin:$(mise where ruby@4.0.1)/bin:$PATH" node scripts/measure-libm-hyperbolic-glibc.mjs` (Ruby 4.0.1, glibc
+2.35, x86-64, 2026-09-29): seeded samples, both signs, log- and
+linear-uniform, dense near 0, near the overflow threshold and near
+saturation, 100,000 uniform and 5,000 log-uniform per computing region,
+consecutive doubles either side of every branch point of the three
+functions and of `expm1` (at `|x|` and, for `tanh`, `|x|/2`), subnormals,
+hand-typed values, `±0`, `±Infinity` and NaN. Differences from Ruby's
+`Math`, in the function or its reciprocal:
+
+| Seed (scale) | `sinh` answered / refused | `cosh` answered / refused | `tanh` answered / refused | Differences |
+| --- | --- | --- | --- | --- |
+| 20260928 (1), recorded in `test/evaluation/libm-hyperbolic-corpus.json` | 1,274,529 / 15,258 (1.183%) | 1,478,203 / 22,786 (1.518%) | 867,383 / 0 | 0 |
+| 4242 (2) | 2,549,175 / 30,212 (1.171%) | 2,955,495 / 46,294 (1.542%) | 1,734,583 / 0 | 0 |
+| 777 (2) | 2,548,609 / 30,778 (1.193%) | 2,956,287 / 45,502 (1.516%) | 1,734,583 / 0 | 0 |
+
+Per region in the recorded run, every refusal is in a region that calls
+`exp`, at about the 2.5% that `exp`'s 1/80 band covers:
+
+| Function | Region | Path | Refused |
+| --- | --- | --- | --- |
+| `sinh` | `|x| < 2^-28` (returns `x`) | none | 0% |
+| `sinh` | `2^-28 <= |x| < 22` | `expm1` | 0% |
+| `sinh` | `22 <= |x| < ln(DBL_MAX)` | `exp(|x|)` | 2.490% |
+| `sinh` | `ln(DBL_MAX) <= |x| <= 710.4758600739439` | `exp(|x|/2)` | 2.486% |
+| `cosh` | `|x| < 2^-55` (returns `1`) | none | 0% |
+| `cosh` | `2^-55 <= |x| < ln2/2` | `expm1` | 0% |
+| `cosh` | `ln2/2 <= |x| < 22` | `exp(|x|)` | 2.458% |
+| `cosh` | `22 <= |x| < ln(DBL_MAX)` | `exp(|x|)` | 2.494% |
+| `cosh` | `ln(DBL_MAX) <= |x| <= 710.4758600739439` | `exp(|x|/2)` | 2.469% |
+| `tanh` | every region | `expm1` or none | 0% |
+
+Of the 132 hand-typed values (`0.1`, `1`, `2`, `pi`, `700`, both signs),
+`sinh` and `cosh` each refuse 2 (`±22`: `exp(22)` lies 0.0068 ULP from a
+midpoint, BigDecimal) and `tanh` none. `sinh(1)`, `cosh(1)`, `tanh(0.5)` and
+`tanh(1)` answer.
+
+What remains: the `exp` band refusals, which close only with glibc's own
+`exp` digits (the same gap as `Math.exp`'s). The `expm1` order is measured,
+not proven: a glibc built to contract the polynomial into fused
+multiply-adds could round differently, and the measurement script refuses
+any glibc other than 2.35.
+
+### Evaluation: `lg` near `log`'s rounding band
+
+`Math.log10` is glibc's `log10`, Sun's fdlibm formula over glibc's `log` of
+the reduced argument (`src/evaluation/libm-log10.ts`). glibc's `log` has an
+FMA variant chosen by the CPU, so the port takes it from `libm.ts`'s
+correctly rounded `log`. When that `log` lies inside its 1/125 ULP band, the
+port still answers if the correctly rounded `log` and both its neighbours
+give the same `log10` (Arm's analysis puts glibc's `log` within about 0.52
+ULP, and the rule needs only one), and refuses otherwise.
+`scripts/measure-libm-log-glibc.mjs` (seed 20260928, 2026-09-28; Ruby
+4.0.1, glibc 2.35, x86-64 with FMA) compared 308,199 doubles: 0 mismatches
+against Ruby's `Math.log10`, 991 refused (0.32%; 783 of them among the
+50,000 arguments within 1/16 of 1). `Math.log(x, base)` needs no band: its
+`log2` is transcribed from Arm's optimized-routines exactly (0 mismatches on
+the same 308,199 `Math.log2` arguments and 200,117 `Math.log(x, base)`
+pairs). A separate, Ruby-sampled run during development (908,197 arguments, 299,508
+pairs) also found 0 mismatches.
+
 ### Evaluation: exact intermediates beyond the port's size limit, and Ruby's `ArgumentError`
 
 **Decided 2026-09-23.** `src/evaluation/numeric.ts` computes Ruby's Integers
@@ -643,6 +738,19 @@ Plurimath::Math::Function::Table::Matrix.new(
 in the gem — any matrix whose parens survive `table_tag_only?` (both present,
 not lround/rround) dies. The port raises `RenderError` at the same shape
 (probe matrix-square-parens).
+
+### `to_display(:omml)` crashes on a line break with no operator
+
+```ruby
+Plurimath::Math.parse('a \\\\ b', :latex).to_display(:omml)
+# => NoMethodError: undefined method 'xml_nodes' for nil
+```
+
+`Linebreak#to_omml_without_math_tag` is `parameter_one&.insert_t_tag(...)`,
+nil for a break with no operator, and the math-zone dump then calls
+`xml_nodes` on it. The LaTeX `\\` and HTML `<br/>` breaks measured carry no
+operator, so the four other notations print a tree and omml raises. The port's
+`toDisplay` refuses omml with `UnsupportedFeatureError` at the same shape.
 
 ### Half the Paren classes crash mtable fencing
 
@@ -966,13 +1074,21 @@ re-rendering it -- deferred until one of those exists.
 or their consuming assertions change.**
 
 The AsciiMath, LaTeX, and MathML `render-sweep.json` files are one-off oracle
-captures without checked-in generators or adjacent provenance manifests. The
-Ox contract has a generator, `scripts/generate-xml-fixtures.rb`, but only
-partial provenance embedded in `test/xml/ox-contract.expected.json`. They
+captures without checked-in generators or adjacent provenance manifests. They
 predate the section 7 sidecar contract. `test/gates/payload-validation.spec.ts`
-names the three format fixtures and the XML generator as explicit legacy gaps,
-so another untracked generated artifact cannot silently join them. Replacing
-these captures with deterministic generators and full sidecars closes the gap.
+names the three format fixtures as explicit legacy gaps, so another untracked
+generated artifact cannot silently join them. Replacing these captures with
+deterministic generators and full sidecars closes the gap.
+
+**The Ox contract half closed, 2026-10-08.** `scripts/generate-xml-fixtures.rb`
+now writes `test/xml/ox-contract.expected.manifest.yaml` through
+`scripts/render-fixture-provenance.rb`, and `payload-validation.spec.ts` checks
+it with the per-format sidecar rules and no longer lists the generator as a gap.
+That gate checks provenance, not content: `scripts/gate-oracle.rb repo --check`
+discovers only `test/formats/*/{parity,degenerate,model}-fixtures.json`, so it
+does not regenerate and diff the Ox contract (nor the evaluation, CLI and
+render-options fixtures). Rerunning `generate-xml-fixtures.rb` against the
+pinned oracle is still the only content check for `test/xml`.
 
 ### HTML: Fenced refuses nondeterministic paren paths
 

@@ -82,8 +82,9 @@ orientation — every key below is required, so a reader that ignores
 - [x] Every payload the reader discovers is checked against
   `corpus/provenance.yaml`, and a corrupted byte in any payload fails the run.
   (done: `test/core/corpus-pin.spec.ts:246`, and `:394` fails on a changed byte; checked 2026-09-24)
-- [ ] `corpus/census.yaml` and `corpus/exclusions.yaml` regenerate
+- [x] `corpus/census.yaml` and `corpus/exclusions.yaml` regenerate
   byte-identically on a second run from a clean checkout.
+  (done: `scripts/gate-oracle.rb repo --check --gem <plurimath gem checkout> --ruby-command "mise x -- bundle exec ruby"` regenerates both from a clean gem checkout and compares them with the committed files. Run on `main` be45593, with the `submodules/plurimath-testsuite` submodule initialised, against a clean gem checkout at `00c52783` whose bundle was already installed (`bundle install` there first if not), it exits 0; checked 2026-10-02)
 - [x] Nothing under `corpus/asciimath/` remains here, and no test path resolves
   there.
   (done: `ls corpus` lists only the census and exclusions files; `test/core/corpus-yaml.spec.ts:117`; checked 2026-09-24)

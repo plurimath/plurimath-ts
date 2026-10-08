@@ -84,6 +84,10 @@ AsciiMath *to* everything, which is the most useful early capability.
       each. The
       reader asserts a nonzero case count per target, and that it equals the
       group's own case count — so a single token case cannot satisfy this.
+      (open: at pin `cf3c5eb` every group declares both targets, and
+      `test/gates/corpus-discovery.spec.ts` asserts the per-target counts for the 40
+      case groups and 7 `calls/1` groups this port's reader parses; the 26 MathML- and
+      OMML-input case groups wait on their readers; checked 2026-10-06)
 - [ ] Compat declaration fixture passing, plus: the constructor asserted for
       all six source-head formats (constructs, or raises
       `UnsupportedFormatError`); `toDisplay` across its five recognized values,

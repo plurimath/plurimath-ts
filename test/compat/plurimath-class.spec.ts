@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 import Plurimath, { FORMATS, type Format } from "../../src/compat/index";
 import { buildTreeDump } from "../../src/compat/to-display";
 import { equals, UnsupportedFeatureError, UnsupportedFormatError } from "../../src/core/index";
-import { NaryNode } from "../../src/core/nodes";
+import { FormulaNode, NaryNode, SymbolNode, UnaryFunctionNode } from "../../src/core/nodes";
 import { parseHtml } from "../../src/formats/html/index";
 import { parseUnicodemath } from "../../src/formats/unicodemath/index";
 import RootDefault, { Plurimath as RootNamed } from "../../src/index";
@@ -481,6 +481,28 @@ describe("toDisplay", () => {
     });
 
     /**
+     * `Linebreak < UnaryFunction`: the other formats print the generic
+     * "function apply" shape (checked byte-for-byte against the gem by the
+     * `display-linebreak-*` rows of `test/formats/cli/cli-fixtures.json`).
+     * Under omml, `Linebreak#to_omml_without_math_tag` returns nil for a
+     * break with no operator, and the gem raises `NoMethodError: undefined
+     * method 'xml_nodes' for nil` (measured on LaTeX `a \\ b` and HTML
+     * `a<br/>b`). Refusing is parity with that crash.
+     */
+    it("Linebreak prints the generic function shape, and refuses omml as the gem crashes there", () => {
+      expect(new Plurimath(String.raw`a \\ b`, "latex").toDisplay("latex")).toBe(
+        '|_ Math zone\n  |_ "a \\\\  b"\n     |_ "a" text\n     |_ "\\\\ " function apply\n' +
+          '     |  |_ "linebreak" function name\n     |_ "b" text\n',
+      );
+      expect(() => new Plurimath(String.raw`a \\ b`, "latex").toDisplay("omml")).toThrow(
+        UnsupportedFeatureError,
+      );
+      expect(() => new Plurimath("a<br/>b", "html").toDisplay("omml")).toThrow(
+        UnsupportedFeatureError,
+      );
+    });
+
+    /**
      * `Vec#to_<format>_math_zone` (`vec.rb:47-95`): asciimath/latex keep the
      * generic header but rename the field "supscript"; mathml/omml swap the
      * header for "overset" and print an explicit "base" (arrow) line before
@@ -923,6 +945,94 @@ describe("toDisplay", () => {
     expect(() => buildTreeDump(new NaryNode(), "asciimath")).toThrow(UnsupportedFeatureError);
     expect(() => buildTreeDump(new NaryNode(), "asciimath")).toThrow(/nary/);
   });
+});
+
+/**
+ * The gem collapses each XML line with a `\n\s*` gsub, and Ruby's `\s`
+ * is ASCII whitespace only. A text node holding a line feed followed by a
+ * Unicode space keeps that space. Measured on the pinned oracle (`00c52783`),
+ * for each character below and both inputs:
+ *
+ *   bundle exec ruby -e 'require "plurimath";
+ *     puts Plurimath::Math.parse("\"a\n\u2028b\"", :asciimath).to_display(:mathml).inspect'
+ *   # => "|_ Math zone\n  |_ \"<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mstyle displaystyle=\"true\"><mtext>a\u2028b</mtext></mstyle></math>\"\n     |_ \"<mtext>a\u2028b</mtext>\" text\n"
+ *
+ * (`\text{a\n\u2028b}` as LaTeX gives the same bytes.)
+ */
+describe("toDisplay keeps a Unicode space after a line feed, as Ruby's \\s does", () => {
+  const unicodeSpaces = [
+    0x00a0, 0x1680, 0x2000, 0x200a, 0x2028, 0x2029, 0x202f, 0x205f, 0x3000, 0xfeff,
+  ];
+  const inputs = (c: string) =>
+    [
+      [`"a\n${c}b"`, "asciimath"],
+      [`\\text{a\n${c}b}`, "latex"],
+    ] as const;
+
+  for (const code of unicodeSpaces) {
+    const c = String.fromCharCode(code);
+    for (const [input, format] of inputs(c)) {
+      it(`U+${code.toString(16).toUpperCase().padStart(4, "0")} in ${format}`, () => {
+        expect(new Plurimath(input, format).toDisplay("mathml")).toBe(
+          '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
+            `<mstyle displaystyle="true"><mtext>a${c}b</mtext></mstyle></math>"\n` +
+            `     |_ "<mtext>a${c}b</mtext>" text\n`,
+        );
+      });
+    }
+  }
+});
+
+/**
+ * `Left#to_mathml_math_zone`/`to_omml_math_zone` (and `Right`'s) strip the
+ * delimiter's dumped XML with `gsub(/\s+/, "")`: ASCII whitespace only, so
+ * U+00A0 stays. Measured on the pinned oracle (`00c52783`):
+ *
+ *   S = ->(v) { Plurimath::Math::Symbols::Symbol.new(v) }
+ *   f = Plurimath::Math::Formula.new([Plurimath::Math::Function::Left.new(" "),
+ *     S.("x"), Plurimath::Math::Function::Right.new(" ")])
+ *   f.to_display(:mathml)
+ *   # => "|_ Math zone\n  |_ \"<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mstyle displaystyle=\"true\"><mo> </mo><mi>x</mi><mo> </mo></mstyle></math>\"\n     \"<mo></mo>\" left\n     \"<mtext>x</mtext>\" text\n     \"<mo></mo>\" right\n"
+ *   f.to_display(:omml).lines.last(3)
+ *   # => ["     \"<m:t></m:t>\" left\n", "     \"<m:t>x</m:t>\" text\n", "     \"<m:t></m:t>\" right\n"]
+ *
+ * (repeated with "\t", "\n", " \n " and " "; the root column below is
+ * the measured `<mo>` content of the root line.)
+ */
+describe("toDisplay strips ASCII whitespace from a Left/Right delimiter line", () => {
+  const nbsp = String.fromCharCode(0xa0);
+  const cases: ReadonlyArray<readonly [string, string, string]> = [
+    // [delimiter, root line's <mo> content, delimiter line's <mo> content]
+    [" ", " ", ""],
+    ["\t", "\t", ""],
+    ["\n", "", ""],
+    [" \n ", " ", ""],
+    [nbsp, nbsp, nbsp],
+  ];
+  const leftRight = (d: string) =>
+    new FormulaNode({
+      value: [
+        new UnaryFunctionNode({ name: "Left", parameterOne: d }),
+        new SymbolNode({ value: "x" }),
+        new UnaryFunctionNode({ name: "Right", parameterOne: d }),
+      ],
+    });
+
+  for (const [delimiter, root, leaf] of cases) {
+    it(`delimiter ${JSON.stringify(delimiter)}`, () => {
+      expect(buildTreeDump(leftRight(delimiter), "mathml")).toBe(
+        '|_ Math zone\n  |_ "<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">' +
+          `<mstyle displaystyle="true"><mo>${root}</mo><mi>x</mi><mo>${root}</mo></mstyle></math>"\n` +
+          `     "<mo>${leaf}</mo>" left\n     "<mtext>x</mtext>" text\n     "<mo>${leaf}</mo>" right\n`,
+      );
+      expect(buildTreeDump(leftRight(delimiter), "omml").split("\n").slice(-4)).toEqual([
+        `     "<m:t>${leaf}</m:t>" left`,
+        '     "<m:t>x</m:t>" text',
+        `     "<m:t>${leaf}</m:t>" right`,
+        "",
+      ]);
+    });
+  }
 });
 
 describe("the one method that cannot be honest yet", () => {

@@ -10,6 +10,7 @@
  * Options are the NODE's own, not the render options.
  */
 
+import { rubyToI } from "../../core/ruby-semantics";
 import type { NodeOf, RenderContext } from "../../formats/unicodemath/render-shared";
 import { present, renderChild, unicodemathParens } from "../../formats/unicodemath/render-shared";
 import { UNICODEMATH_UNICODE_FRACTIONS } from "../../generated/unicodemath/render-tables";
@@ -78,7 +79,7 @@ function unicodeFraction(node: NodeOf<"frac">): string | null {
  *   ".5"        => 0         "1.9"   => 1     "1_.5" => 1
  *   "+5"        => 5         "-5"    => -5    "+ 12" => 0   " +12" => 12
  *   "007"       => 7         "1e3"   => 1     "1 0"  => 1
- *   "0x10"      => 0         "0b11"  => 0     "0o17" => 0   (no base prefixes)
+ *   "0x10"      => 0         "0b11"  => 0     "0o17" => 0   (only `0d` is read)
  *   "12abc"     => 12        "1_0abc" => 10   "abc"  => 0   ""     => 0
  *   "--5"       => 0         "+-5"   => 0     "٣"    => 0
  *
@@ -100,8 +101,5 @@ function unicodeFraction(node: NodeOf<"frac">): string | null {
  */
 function numericValue(field: unknown): number {
   const value = (field as { readonly value?: unknown } | undefined)?.value;
-  if (typeof value !== "string") return 0;
-  const match = /^[ \t\r\n\f\v]*[+-]?\d+(?:_\d+)*/.exec(value);
-  if (match === null) return 0;
-  return Number.parseInt(match[0].replace(/_/g, ""), 10);
+  return typeof value === "string" ? rubyToI(value) : 0;
 }

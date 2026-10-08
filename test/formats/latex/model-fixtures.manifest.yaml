@@ -8,11 +8,11 @@ generator:
   path: scripts/generate-latex-model-fixtures.rb
   sha256: 340f074adc74f2e60df794e219124108b2d0c10b50afb850ab8a2ee8d4d2453d
   inputs:
-    scripts/generate-corpus.rb: e11dfe4822a0f61f2e67e817f117540dc984bc42dab12e54d795f2bd98925614
+    scripts/generate-corpus.rb: 0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef
     scripts/generate-latex-model-fixtures.rb: 340f074adc74f2e60df794e219124108b2d0c10b50afb850ab8a2ee8d4d2453d
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: a8fe7130b767bce4222aa859f047bbfc771680d6
+    commit: f2cace6e1a8e466a908888c42326f3f940abfed1
     clean: true
     dirty_paths: []
 oracle:
@@ -105,15 +105,15 @@ dependencies:
 corpus:
   path: submodules/plurimath-testsuite
   repository:
-    commit: 2ed17b9432c59bd206c2a035a00dc58a026f4024
+    commit: cf3c5ebf8b8ce35ade189b11a741f272ae93c8a0
     clean: true
     dirty_paths: []
   provenance:
     path: corpus/provenance.yaml
-    schema: plurimath-corpus/provenance/2
-    sha256: 66d2acf279a8c396812b823e0895257ee2a0dda2e775beddcaa4a5931ad10685
+    schema: plurimath-corpus/provenance/3
+    sha256: 7f6c198dd50b0dcfe8f69f2dc13083864fe03d478213dc2deaed42c7ccabc5c9
 payload:
   path: model-fixtures.json
   schema: plurimath-corpus/latex-model/1
-  sha256: 171cd8367f2cb6bf6a62d0fa48e6667dfd1ff4fb96d57e5d3d8a43cf2a85b4bd
+  sha256: 2536c410845b1fde9e2fa802ef1e83a5f30ba6f04dd68d2c6cb5a94fb99f58f1
   bytes: 409784

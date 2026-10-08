@@ -316,9 +316,10 @@ counts, measured with `git grep ... | wc -l` (exit `0`):
 | `omml` | 17 |
 | `unicodemath` | 16 |
 
-The port has no `toDisplay`, `math_zone`, or `Math zone` implementation: `grep` searched
-the existing `src/` and `test/` directories, found no matches, and exited `1`. At
-`abc068a`, the dependency boundary is therefore:
+At `abc068a`, the port had no `toDisplay`, `math_zone`, or `Math zone` implementation: `grep` searched
+the existing `src/` and `test/` directories, found no matches, and exited `1`. It has one
+now (#139, #150; `src/compat/to-display.ts`), so the table below is that revision's
+boundary, not `main`'s. At `abc068a`, the dependency boundary was:
 
 | `lang` | raw renderer files at `abc068a` | full `toDisplay` branch now |
 |---|---:|---|
@@ -476,7 +477,8 @@ Beyond writing the class itself, the measured blockers are:
   read-only primary submodule both resolve to
   `d2f1bea40c66c7018ede37faea0be51b307bf3af`. Across the `18` positive payloads, a
   `[corpus-targets]` measured `asciimath=18`, `latex=18`, `mathml=18`,
-  `unicodemath=18`, `html=0`, and `omml=0` (exit `0`).
+  `unicodemath=18`, `html=0`, and `omml=0` (exit `0`). Since then plurimath-testsuite#22
+  added both targets to every group, and this repository pins it at `cf3c5eb`.
 - **Set the publish identity and release metadata.** The package remains
   `@plurimath/plurimath-ts`, version `0.0.0`, and `private: true`
   (`package.json:2-4`); the distinct npm name and release line are a maintainer decision
@@ -552,6 +554,7 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
       `unicodemath`, and the invalid language path matches the measured invalid-type
       behavior. The oracle fixtures also record the native-Ruby recognized-string result
       `"|_ Math zone\n"` and do not substitute that result for an Opal-wrapper measurement.
+      (open: #139 and #150 landed `toDisplay`; `test/compat/plurimath-class.spec.ts:247` onward pins the five lowercase values to oracle bytes, `:866` the placeholder path, and `:895-910` the invalid path. Two parts are not met as written: an invalid `lang` raises `UnsupportedFormatError`, not the gem's `InvalidTypeError` (`src/compat/index.ts:195-206`), and the native-Ruby string result is recorded in `src/compat/to-display.ts`'s module doc rather than in a fixture; checked 2026-10-02)
 - [x] `toMathml()`, `toMathml(false)`, and `toMathml(true)` produce the measured default,
       false, and intent-bearing results.
       (done: `test/compat/plurimath-class.spec.ts:200`, `:933`, `:937`; checked 2026-09-24)
@@ -560,6 +563,10 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
       (done: `test/compat/plurimath-class.spec.ts:188-209`; checked 2026-09-24)
 - [ ] HTML and OMML corpus targets are nonempty and complete per payload; their
       cross-format and package-isolation gates pass against built artifacts.
-- [ ] The root package exports the default class under ESM and CJS, the real packed
-      artifact passes publint and attw, and review leaves no valid implementable finding
+      (open: the targets are nonempty and complete per parsed payload at pin `cf3c5eb`,
+      asserted in `test/gates/corpus-discovery.spec.ts`; the cross-format gates do not
+      cover HTML or OMML yet; checked 2026-10-06)
+- [x] The root package exports the default class under ESM and CJS, the package root
+      passes publint, the real packed artifact passes attw, and review leaves no valid implementable finding
       unresolved.
+      (done: #66, merged with its one review thread resolved; `scripts/gate-package.mjs:144` and `:284-302` assert the ESM and CJS default export, `:404-405` run publint on the package root and `:407-411` run attw on the packed tarball (`--pack`); `pnpm gate:package` exits 0; checked 2026-10-02)

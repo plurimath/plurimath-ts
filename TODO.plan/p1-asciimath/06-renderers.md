@@ -57,8 +57,10 @@ type, an interface, or a layer.
 **MathML options.** `Formula#to_mathml` takes six keyword options
 (`formula.rb`): `intent`, `formatter`, `unitsml`, `split_on_linebreak`,
 `display_style`, `unary_function_spacing`. Two of the six landed with this
-item: `MathmlOptions` implements `displayStyle` and `unaryFunctionSpacing`, and
-the other four are refused by name through `DEFERRED_OPTIONS`. `intent` is the
+item, `displayStyle` and `unaryFunctionSpacing`; `formatter`,
+`splitOnLinebreak` and `intent` followed (roadmap B2, B3, B4), so
+`MathmlOptions` implements five, and `unitsml` alone is refused by name
+through `DEFERRED_OPTIONS` (`src/formats/mathml/renderer.ts`). `intent` is the
 compat class's **only optional argument** (§4), so P2's compat class inherits
 whatever P1 does or does not do here. The fixture records, per option: the
 gem's output with it on and off for at least one input, and whether this port
@@ -102,10 +104,12 @@ turns it into a named property with a one-line diff.
 - [ ] The MathML option matrix lists all six options, each marked implemented
   here or deferred to a named phase, and every implemented one matches the gem
   byte-for-byte on the fixture's inputs.
-- [ ] The byte-fidelity fixture covers the six properties above, and each one
+  (open: `src/formats/mathml/renderer.ts:130-141` lists the five implemented keys in `IMPLEMENTED_OPTIONS` and `unitsml` in `DEFERRED_OPTIONS`, and `TODO.plan/deferred.md:303` records the deferral, which waits on the UnitsML decision that `p5-release-1.0/README.md:33` requires before 1.0 — a decision, not a named phase, so the box stays open until that decision assigns `unitsml` to one. Gem bytes per option: `displayStyle` and `unaryFunctionSpacing` at `test/formats/mathml/renderer.spec.ts:63-103` (probed values typed into the spec), and `displayStyle: false` with `unaryFunctionSpacing: false` in the 90 generated `line-break-spec-display-style` rows of `test/formats/mathml/render-options-fixtures.json`, asserted at `test/formats/split-display-parity.spec.ts:197`; `formatter` at `test/formatting/number-formatter-slice1.spec.ts:158` against the `calls/1` oracle case; `splitOnLinebreak` at `test/formats/split-display-parity.spec.ts:197`; `intent` on and off at `test/formats/mathml/intent-parity.spec.ts:138` (the generated rows, `intent-off` among them), with `:232` pinning `false`, `null` and omitted as one render; `unitsml` refused by name at `test/formats/mathml/renderer.spec.ts:173`; checked 2026-10-07)
+- [x] The byte-fidelity fixture covers the six properties above, and each one
   is shown failing on its own — break one property in the serializer, watch
   exactly that assertion fail, restore. A fixture never seen failing proves
   nothing.
+  (done: #9; `test/xml/ox-contract.expected.json` pins `attr-order`, `namespaced`, `empty-with-attr`, the text and attribute escape sweeps, `entity-text-passthrough` and the `mixed-*` whitespace cases; the PR records every fixture family seen failing under a targeted mutation; checked 2026-10-02)
 - [x] Every numeric form in the pinned corpus renders byte-identically in all
   three formats with no formatter configured.
   (done: the render-parity specs render all 236 reachable cases with no formatter, the `numbers` group among them; checked 2026-09-24)

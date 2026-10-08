@@ -1,8 +1,12 @@
 /**
- * Oracle-backed parity for a format the shared corpus carries no target for.
+ * Oracle-backed HTML parity, from a generated fixture and from the corpus.
  *
  * The four P1 formats get this from `corpus-conformance`. OMML and HTML did
  * not, which is how six parity defects reached review with 2,900 tests green.
+ * Since plurimath-testsuite#22 the corpus carries an `html` target too, and
+ * `../corpus-target-parity.ts` (called at the end of this file) checks every
+ * reachable case against it. The fixture stays: it also sweeps the corpus
+ * rejections and records the phase each refusal happens in.
  *
  * Fixtures are generated, never hand-typed:
  *   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
@@ -32,9 +36,13 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { ParseError, RenderError } from "../../../src/core/index";
 import { parseAsciimath } from "../../../src/formats/asciimath/index";
+import { toHtml } from "../../../src/formats/html/renderer";
+import { parseLatex } from "../../../src/formats/latex/index";
+import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
 import { parseYaml } from "../../core/corpus-yaml";
-import { parseableCases } from "../../core/model-builder";
+import { casesInInputFormat } from "../../core/model-builder";
+import { describeCorpusTargets } from "../corpus-target-parity";
 import {
   FORMAT,
   KNOWN_DIVERGENCES,
@@ -46,6 +54,7 @@ import {
 interface Case {
   readonly group: string;
   readonly id: string;
+  readonly inputFormat: InputFormat;
   readonly input: string;
   readonly expected?: string;
   readonly raises?: string;
@@ -81,25 +90,46 @@ const manifest = parseYaml(
 const pin = loadPinnedCorpus();
 
 /**
- * The corpus ids the generator sweeps: every conformance case plus every
- * rejection case **written in AsciiMath**.
+ * The parser for each notation the generator sweeps, keyed by the corpus's
+ * `input_format` spelling. Mirrors `PARSEABLE_INPUT_FORMATS` in
+ * `scripts/generate-parity-fixtures.rb`: the generator parses each case with
+ * the gem's parser for the notation it is WRITTEN in, and every test below runs
+ * the port's parser for that same notation. The corpus spells UnicodeMath
+ * `unicode`.
  *
- * Every test below runs `parseAsciimath(c.input)`, and so does the generator
- * that wrote the fixture — this whole file is a round-trip layer, with no
- * corpus layer beside it, because the shared corpus carries no target for this
- * format. So it takes the same scope every other round-trip layer takes. The
- * corpus is no longer AsciiMath-only: `corpus/latex/*.yaml` arrived with the
- * pin, and sweeping those inputs through the AsciiMath parser would record
- * whatever fell out as though it were the gem's answer for them.
- *
- * `parseableCases` is that filter, and it throws rather than returning an empty
- * list, so a scope that stopped matching anything cannot turn this file green
- * while it checks nothing.
+ * The corpus also carries MathML, OMML and HTML input. Those are not swept:
+ * this port reads HTML through a separate model-fixture layer, and has no
+ * MathML or OMML parser. Handing one notation's source to another's parser
+ * would record whatever fell out as though it were the gem's answer.
  */
-const pinnedInputs = new Map<string, string>([
-  ...parseableCases(pin.cases).map((c) => [c.id, c.input] as const),
-  ...parseableCases(pin.rejections).map((r) => [r.id, r.input] as const),
-]);
+const PARSERS = {
+  asciimath: parseAsciimath,
+  latex: parseLatex,
+  unicode: parseUnicodemath,
+} as const;
+type InputFormat = keyof typeof PARSERS;
+const INPUT_FORMATS = Object.keys(PARSERS) as InputFormat[];
+
+const parse = (c: Case) => PARSERS[c.inputFormat](c.input);
+
+/**
+ * The corpus cases the generator sweeps: every conformance case plus every
+ * rejection case written in one of the `PARSERS` notations, keyed by id.
+ *
+ * `casesInInputFormat` throws rather than returning an empty list, so a corpus
+ * that stopped carrying one of the three notations fails here instead of
+ * turning this file green while it checks nothing for it.
+ */
+const pinnedInputs = new Map<string, { readonly inputFormat: string; readonly input: string }>(
+  INPUT_FORMATS.flatMap((format) => [
+    ...casesInInputFormat(pin.cases, format).map(
+      (c) => [c.id, { inputFormat: c.inputFormat, input: c.input }] as const,
+    ),
+    ...casesInInputFormat(pin.rejections, format).map(
+      (r) => [r.id, { inputFormat: r.inputFormat, input: r.input }] as const,
+    ),
+  ]),
+);
 
 const renderable = fixture.cases.filter((c) => typeof c.expected === "string");
 const raising = fixture.cases.filter((c) => typeof c.raises === "string");
@@ -107,7 +137,7 @@ const renderableIds = new Set(renderable.map((c) => c.id));
 
 describe(`${FORMAT} parity fixture covers the pinned corpus`, () => {
   it("came from the pinned oracle, and is not empty", () => {
-    expect(fixture.schema).toBe("plurimath-corpus/render-parity/1");
+    expect(fixture.schema).toBe("plurimath-corpus/render-parity/2");
     expect(manifest.payload.schema).toBe(fixture.schema);
     expect(fixture.format).toBe(FORMAT);
     expect(fixture.cases.length).toBeGreaterThan(0);
@@ -123,8 +153,18 @@ describe(`${FORMAT} parity fixture covers the pinned corpus`, () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("quotes each case's input as the corpus records it", () => {
-    for (const c of fixture.cases) expect(c.input, c.id).toBe(pinnedInputs.get(c.id));
+  it("quotes each case's input and notation as the corpus records them", () => {
+    for (const c of fixture.cases) {
+      expect(c.input, c.id).toBe(pinnedInputs.get(c.id)?.input);
+      expect(c.inputFormat, c.id).toBe(pinnedInputs.get(c.id)?.inputFormat);
+    }
+  });
+
+  it.each(INPUT_FORMATS)("sweeps %s cases the gem renders", (format) => {
+    expect(
+      fixture.cases.filter((c) => c.inputFormat === format && typeof c.expected === "string")
+        .length,
+    ).toBeGreaterThan(0);
   });
 
   it("its metadata counts its own rows", () => {
@@ -148,10 +188,12 @@ describe(`${FORMAT} parity fixture covers the pinned corpus`, () => {
   });
 
   it("records every corpus rejection as a parse-phase refusal", () => {
-    // Scoped like the map above: the pin also carries LaTeX, UnicodeMath and
-    // HTML rejections, which have no fixture row here, and rightly so. The scope
-    // is what keeps them out.
-    const rejections = parseableCases(pin.rejections);
+    // Scoped like the map above: the pin also carries HTML, MathML and OMML
+    // rejections, which have no fixture row here, and rightly so. The scope is
+    // what keeps them out.
+    const rejections = INPUT_FORMATS.flatMap((format) =>
+      casesInInputFormat(pin.rejections, format),
+    );
     expect(rejections.length).toBeGreaterThan(0);
     for (const rejection of rejections) {
       const entry = fixture.cases.find((c) => c.id === rejection.id);
@@ -190,7 +232,7 @@ describe(`${FORMAT} parity, the cases the gem renders`, () => {
     (_id, c) => {
       if (PORT_REFUSES.has(c.id)) {
         expect(
-          () => RENDER(parseAsciimath(c.input) as never),
+          () => RENDER(parse(c) as never),
           `${c.id} is pinned as refused but now renders — drop it from PORT_REFUSES and raise RENDERED_BASELINE`,
         ).toThrow(RenderError);
         return;
@@ -199,7 +241,7 @@ describe(`${FORMAT} parity, the cases the gem renders`, () => {
       // Deliberately unguarded: an unexpected refusal throws out of THIS test,
       // which carries the case id in its name. The aggregate count it replaced
       // reported only "Coverage REGRESSED to 33".
-      const actual = RENDER(parseAsciimath(c.input) as never);
+      const actual = RENDER(parse(c) as never);
 
       const divergence = KNOWN_DIVERGENCES[c.id];
       if (divergence !== undefined) {
@@ -229,19 +271,38 @@ describe(`${FORMAT} parity, the cases the gem refuses`, () => {
     "%s: the port refuses it in the same phase as the gem",
     (_id, c) => {
       if (c.raisedIn === "parse") {
-        expect(() => parseAsciimath(c.input), `${c.id}: the gem refuses this at parse`).toThrow(
-          ParseError,
-        );
+        expect(() => parse(c), `${c.id}: the gem refuses this at parse`).toThrow(ParseError);
         return;
       }
       // The gem parsed this and refused to render it. So must the port, at the
       // same step: a parser that rejects it instead is a different divergence,
       // and this fails naming the case.
-      const tree = parseAsciimath(c.input);
+      const tree = parse(c);
       expect(
         () => RENDER(tree as never),
         `${c.id}: the gem parses this and refuses to render it`,
       ).toThrow(RenderError);
     },
   );
+});
+
+describeCorpusTargets({
+  format: "html",
+  renderFormula: (formula) => toHtml(formula),
+  rendered: 227,
+  // The port refuses at the `Right` node, where the gem raises ArgumentError
+  // (`Right#to_html` takes no keyword arguments).
+  refusedWith: /UnaryFunction alias "Right"/,
+  refused: [
+    "left-right-round",
+    "left-right-square",
+    "left-right-around-frac",
+    "latex-left-right-round",
+    "latex-left-right-square",
+    "latex-left-right-curly",
+    "latex-left-right-bar",
+    "latex-left-right-round-sum",
+    "latex-left-right-around-frac",
+  ],
+  fixtureRows: fixture.cases,
 });

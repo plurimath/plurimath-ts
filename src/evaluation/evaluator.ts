@@ -44,10 +44,13 @@ import {
   mathCos,
   mathExp,
   mathLog,
+  mathLog10,
+  mathLogBase,
   mathSin,
   mathSqrt,
   mathTan,
 } from "./libm";
+import { mathCosh, mathSinh, mathTanh } from "./libm-hyperbolic";
 import {
   absolute,
   ceilOf,
@@ -450,10 +453,42 @@ const FUNCTION_EVALUATORS: ReadonlyMap<string, FunctionEvaluator> = new Map<
   ["Arctan", mathFunction(mathAtan)],
   ["Exp", mathFunction(mathExp)],
   ["Ln", mathFunction(mathLog)],
+  // Ruby: `Lg#evaluate` — `::Math.log10(x)`.
+  ["Lg", mathFunction(mathLog10)],
+  // Ruby: `Log#evaluate` — `evaluator.unsupported(self)`: a `Log` evaluates
+  // only with the `Fenced` argument `ExpressionParser` binds to it
+  // (`Evaluator#evaluateLogWithArgument`).
+  ["Log", (ev, node) => ev.unsupported(node)],
   ["Cot", reciprocal(mathTan)],
   ["Sec", reciprocal(mathCos)],
   ["Csc", reciprocal(mathSin)],
+  ["Sinh", mathFunction(mathSinh)],
+  ["Cosh", mathFunction(mathCosh)],
+  ["Tanh", mathFunction(mathTanh)],
+  // Ruby: `Sech`/`Csch`/`Coth#evaluate` — `evaluator.divide(1.0, ::Math.cosh(x))`
+  // (`sinh`, `tanh`): `csch` and `coth` of a zero raise `DivisionByZeroError`.
+  ["Sech", reciprocal(mathCosh)],
+  ["Csch", reciprocal(mathSinh)],
+  ["Coth", reciprocal(mathTanh)],
 ]);
+
+/**
+ * The refusal for a node `Evaluator#dispatch` has no branch for: a port gap
+ * (`UnsupportedFeatureError`) when the gem evaluates that class
+ * (`gemEvaluatedClass`), the gem's own refusal (`UnsupportedExpressionError`)
+ * otherwise. Every class in `GEM_EVALUATED_FUNCTIONS` is dispatched now, so no
+ * parsed node reaches the port-gap branch through `evaluate`; it stays as the
+ * guard for a class listed before it is ported, and `evaluate.spec.ts` calls
+ * this directly to keep both branches tested.
+ */
+export function refuseUndispatched(node: MathNode): never {
+  const gemClass = gemEvaluatedClass(node);
+  if (gemClass === null) throw new UnsupportedExpressionError(describeUnsupportedNode(node));
+  throw new UnsupportedFeatureError(
+    "evaluate",
+    `Function::${gemClass} is evaluated by the gem but not ported to this slice yet`,
+  );
+}
 
 /**
  * Ruby: `Evaluator#split_on_commas` — a `Symbols::Comma` token starts a new
@@ -523,6 +558,24 @@ export class Evaluator {
   }
 
   /**
+   * Ruby: `Log#evaluate_with_argument`, wrapped in `bind_log_argument`'s
+   * `real_result` — the base (`parameter_one`, default the Integer `10`) is
+   * evaluated and checked first, then the argument, then `::Math.log(x,
+   * base)`, raised to the exponent (`parameter_two`) when there is one.
+   */
+  evaluateLogWithArgument(node: MathNode, argument: MathNode | string | undefined): RubyNumeric {
+    const log = node as FunctionNode;
+    const base = log.parameterOne != null ? this.evaluateNode(log.parameterOne) : integer(10n);
+    if (compare(base, integer(0n)) !== 1 || compare(base, integer(1n)) === 0) {
+      throw new MathDomainError("log base must be a positive number other than 1");
+    }
+    let result = float(mathLogBase(this.evaluateNode(argument), base));
+    const exponent = secondParameter(log);
+    if (exponent != null) result = power(result, this.evaluateNode(exponent));
+    return this.realResult(result);
+  }
+
+  /**
    * Ruby: `Evaluator#value_for`. A caller's binding's Ruby kind is inferred
    * from the JS value when the evaluator is built (`numeric.ts`'s
    * `fromBinding`: a safe integer is an Integer); an iteration index is
@@ -588,17 +641,9 @@ export class Evaluator {
     throw new UnsupportedExpressionError(detail);
   }
 
-  /**
-   * A node `dispatch` has no branch for: a port gap when the gem evaluates
-   * that class (`gemEvaluatedClass`), the gem's own refusal otherwise.
-   */
+  /** A node `dispatch` has no branch for (`refuseUndispatched`). */
   private unported(node: MathNode): never {
-    const gemClass = gemEvaluatedClass(node);
-    if (gemClass === null) return this.unsupported(node);
-    throw new UnsupportedFeatureError(
-      "evaluate",
-      `Function::${gemClass} is evaluated by the gem but not ported to this slice yet`,
-    );
+    return refuseUndispatched(node);
   }
 
   private dispatch(node: MathNode): RubyNumeric {

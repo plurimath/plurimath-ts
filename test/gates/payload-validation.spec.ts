@@ -6,8 +6,10 @@
  * `corpus-pin.ts` verifies the pinned corpus against its provenance, and
  * `local-corpus.spec.ts` does the same for this repository's own
  * `corpus/*.manifest.yaml` sidecars. This gate covers the remaining generated
- * TypeScript under `src/` and the managed `parity-fixtures.json` and
- * `degenerate-fixtures.json` families under `test/formats/`.
+ * TypeScript under `src/`, the managed `parity-fixtures.json` and
+ * `degenerate-fixtures.json` families under `test/formats/`, and the Ox
+ * contract, `test/xml/ox-contract.expected.json` (whose content the class-B
+ * gate does not yet regenerate; see `TODO.plan/deferred.md`).
  *
  *   **does this artifact bind to the recorded inputs and a valid envelope?**
  *
@@ -100,7 +102,7 @@ function gitFileSha256AtCommit(
  */
 const FORMATS_ROOT = join(REPO_ROOT, "test", "formats");
 const MANIFEST_SCHEMA = "plurimath-corpus/manifest/2";
-const PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/2";
+const PIN_PROVENANCE_SCHEMA = "plurimath-corpus/provenance/3";
 const CANONICAL_XML_ENGINE = "Plurimath::XmlEngine::OxEngine";
 const SHA256 = /^[0-9a-f]{64}$/;
 const COMMIT = /^[0-9a-f]{40}$/;
@@ -126,7 +128,7 @@ const FIXTURE_SPECS = {
   },
   "parity-fixtures.json": {
     generator: "scripts/generate-parity-fixtures.rb",
-    schema: "plurimath-corpus/render-parity/1",
+    schema: "plurimath-corpus/render-parity/2",
     rows: "cases",
     shape: "render-parity",
     usesCorpus: true,
@@ -160,6 +162,17 @@ const FIXTURE_SPECS = {
     schema: "plurimath-corpus/evaluation/1",
     rows: "cases",
     shape: "evaluation",
+    usesCorpus: false,
+    usesRenderInventory: false,
+  },
+  // `plurimath convert` runs: the gem's own command for each render flag the
+  // port's CLI shares with it, and `to_mathml(intent: true)` for `--intent`,
+  // which the gem's command lacks. Hand-picked inputs; claims no corpus.
+  "cli-fixtures.json": {
+    generator: "scripts/generate-cli-fixtures.rb",
+    schema: "plurimath-corpus/cli/1",
+    rows: "cases",
+    shape: "cli",
     usesCorpus: false,
     usesRenderInventory: false,
   },
@@ -248,6 +261,7 @@ const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "render-options-fixtures.json"
   | "render-kinds-fixtures.json"
   | "evaluation-fixtures.json"
+  | "cli-fixtures.json"
 )[];
 const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
@@ -497,9 +511,7 @@ const EXPECTED_FIXTURE_MANIFESTS = FIXTURE_PAYLOADS.map((relative) =>
   relative.replace(/\.json$/, ".manifest.yaml"),
 ).sort();
 
-const FIXTURE_RECORDS: readonly FixtureRecord[] = FIXTURE_PAYLOADS.filter((relative) =>
-  existsSync(join(REPO_ROOT, relative.replace(/\.json$/, ".manifest.yaml"))),
-).map((relative) => {
+function loadFixtureRecord(relative: string, spec: FixtureSpec): FixtureRecord {
   const manifestRelative = relative.replace(/\.json$/, ".manifest.yaml");
   const bytes = readFileSync(join(REPO_ROOT, relative));
   return {
@@ -511,9 +523,39 @@ const FIXTURE_RECORDS: readonly FixtureRecord[] = FIXTURE_PAYLOADS.filter((relat
       parseYaml(readFileSync(join(REPO_ROOT, manifestRelative), "utf8")),
       manifestRelative,
     ),
-    spec: specFor(relative),
+    spec,
   };
-});
+}
+
+const FIXTURE_RECORDS: readonly FixtureRecord[] = FIXTURE_PAYLOADS.filter((relative) =>
+  existsSync(join(REPO_ROOT, relative.replace(/\.json$/, ".manifest.yaml"))),
+).map((relative) => loadFixtureRecord(relative, specFor(relative)));
+
+/**
+ * The Ox serialization contract under `test/xml/`: oracle-printed `Ox.dump`
+ * and `Math::Core#dump_nodes` bytes, keyed by fixture name. It is not a
+ * per-format fixture — no `schema`, `format` or row list in the payload — so
+ * only the shared sidecar envelope applies; `test/xml/serializer.spec.ts`
+ * checks its entries against `test/xml/ox-contract.ts` name-for-name.
+ */
+const OX_CONTRACT_PAYLOAD = "test/xml/ox-contract.expected.json";
+const OX_CONTRACT_SPEC: FixtureSpec = {
+  generator: "scripts/generate-xml-fixtures.rb",
+  schema: "plurimath-corpus/ox-contract/1",
+  rows: "dump",
+  shape: "ox-contract",
+  usesCorpus: false,
+  usesRenderInventory: false,
+};
+const OX_CONTRACT_RECORD: FixtureRecord | undefined = existsSync(
+  join(REPO_ROOT, OX_CONTRACT_PAYLOAD.replace(/\.json$/, ".manifest.yaml")),
+)
+  ? loadFixtureRecord(OX_CONTRACT_PAYLOAD, OX_CONTRACT_SPEC)
+  : undefined;
+const SIDECAR_RECORDS: readonly FixtureRecord[] = [
+  ...FIXTURE_RECORDS,
+  ...(OX_CONTRACT_RECORD === undefined ? [] : [OX_CONTRACT_RECORD]),
+];
 
 function fixtureGeneratorInputs(record: FixtureRecord): Mapping {
   return mapField(
@@ -525,7 +567,7 @@ function fixtureGeneratorInputs(record: FixtureRecord): Mapping {
 
 const FIXTURE_GENERATOR_HASHES: ReadonlyArray<
   readonly [label: string, file: string, hash: string]
-> = FIXTURE_RECORDS.flatMap((record) =>
+> = SIDECAR_RECORDS.flatMap((record) =>
   Object.entries(fixtureGeneratorInputs(record)).map(([file, hash]) => {
     if (typeof hash !== "string") {
       throw new Error(`${record.manifestRelative}: generator.inputs.${file} must be a string`);
@@ -632,6 +674,171 @@ function expectXmlReaderElement(value: unknown, at: string): void {
   }
 }
 
+/**
+ * The sidecar envelope every generated JSON fixture shares, whatever its
+ * payload shape: manifest schema, clean/committable state, generator inputs
+ * and their current hashes, oracle/runtime/dependency record, and the payload
+ * path, schema, byte count and SHA-256.
+ */
+function expectSidecarEnvelope(record: FixtureRecord): void {
+  const at = record.manifestRelative;
+  const manifest = record.manifest;
+  expectExactKeys(
+    manifest,
+    [
+      "schema",
+      "committable",
+      "warnings",
+      "generator",
+      "oracle",
+      "ruby",
+      "xml_engine",
+      "configuration",
+      "dependencies",
+      ...(record.spec.usesCorpus ? ["corpus"] : []),
+      "payload",
+    ],
+    at,
+  );
+  expect(stringField(manifest, "schema", at)).toBe(MANIFEST_SCHEMA);
+  expect(booleanField(manifest, "committable", at)).toBe(true);
+  expect(arrayField(manifest, "warnings", at)).toStrictEqual([]);
+
+  const generator = mapField(manifest, "generator", at);
+  const inputs = mapField(generator, "inputs", `${at}.generator`);
+  expectExactKeys(
+    generator,
+    [
+      "path",
+      "sha256",
+      "inputs",
+      "repository",
+      ...(record.spec.usesRenderInventory ? ["inventory"] : []),
+    ],
+    `${at}.generator`,
+  );
+  expect(stringField(generator, "path", `${at}.generator`)).toBe(record.spec.generator);
+  expect(stringField(generator, "sha256", `${at}.generator`)).toBe(
+    stringField(inputs, record.spec.generator, `${at}.generator.inputs`),
+  );
+  expect(Object.keys(inputs).sort()).toStrictEqual(
+    [
+      "scripts/generate-corpus.rb",
+      "scripts/render-fixture-provenance.rb",
+      record.spec.generator,
+    ].sort(),
+  );
+  const generatorRepository = mapField(generator, "repository", `${at}.generator`);
+  expectExactKeys(
+    generatorRepository,
+    ["commit", "clean", "dirty_paths"],
+    `${at}.generator.repository`,
+  );
+  const generatorCommit = stringField(generatorRepository, "commit", `${at}.generator.repository`);
+  for (const [path, hash] of Object.entries(inputs)) {
+    expect(hash, `${at}.generator.inputs.${path}`).toMatch(SHA256);
+    expect(sha256OfFile(path), `${at}.generator.inputs.${path}`).toBe(hash);
+  }
+
+  expect(generatorCommit).toMatch(COMMIT);
+  expect(booleanField(generatorRepository, "clean", `${at}.generator.repository`)).toBe(true);
+  expect(arrayField(generatorRepository, "dirty_paths", `${at}.generator.repository`)).toEqual([]);
+
+  if (record.spec.usesRenderInventory) {
+    const inventory = mapField(generator, "inventory", `${at}.generator`);
+    expectExactKeys(inventory, ["glob", "paths", "sha256"], `${at}.generator.inventory`);
+    const format = stringField(record.payload, "format", record.relative);
+    expect(stringField(inventory, "glob", `${at}.generator.inventory`)).toBe(
+      `src/render/*/${format}.ts`,
+    );
+    const paths = arrayField(inventory, "paths", `${at}.generator.inventory`).map((path, index) => {
+      expect(typeof path, `${at}.generator.inventory.paths[${index}]`).toBe("string");
+      expect(String(path).length, `${at}.generator.inventory.paths[${index}]`).toBeGreaterThan(0);
+      return String(path);
+    });
+    expect(paths.length, `${at}.generator.inventory.paths`).toBeGreaterThan(0);
+    expect(paths, `${at}.generator.inventory.paths sorted`).toStrictEqual([...paths].sort());
+    expect(new Set(paths).size, `${at}.generator.inventory.paths unique`).toBe(paths.length);
+    expect(stringField(inventory, "sha256", `${at}.generator.inventory`)).toBe(
+      pathInventorySha256(paths),
+    );
+    expect(paths, `${at}.generator.inventory current tree`).toStrictEqual(
+      currentRendererPaths(format),
+    );
+    const payloadInventory = arrayField(record.payload, "inventory", record.relative)
+      .map(String)
+      .sort();
+    expect(paths.map(kindFromRendererPath).sort(), `${at}.generator.inventory kinds`).toStrictEqual(
+      payloadInventory,
+    );
+  } else {
+    expect(generator.inventory, `${at}.generator.inventory`).toBeUndefined();
+  }
+
+  expectOracleShape(manifest, at);
+
+  if (record.spec.usesCorpus) {
+    const corpus = mapField(manifest, "corpus", at);
+    expectExactKeys(corpus, ["path", "repository", "provenance"], `${at}.corpus`);
+    expect(stringField(corpus, "path", `${at}.corpus`)).toBe(PIN_RELATIVE_PATH);
+    const corpusRepository = mapField(corpus, "repository", `${at}.corpus`);
+    expectExactKeys(
+      corpusRepository,
+      ["commit", "clean", "dirty_paths"],
+      `${at}.corpus.repository`,
+    );
+    const pin = pinnedSubmoduleCommit();
+    expect(pin.mode).toBe("160000");
+    const corpusCommit = stringField(corpusRepository, "commit", `${at}.corpus.repository`);
+    expect(corpusCommit).toBe(pin.indexCommit);
+    expect(pin.headCommit).toBe(pin.indexCommit);
+    expect(booleanField(corpusRepository, "clean", `${at}.corpus.repository`)).toBe(true);
+    expect(arrayField(corpusRepository, "dirty_paths", `${at}.corpus.repository`)).toEqual([]);
+    const corpusManifest = mapField(corpus, "provenance", `${at}.corpus`);
+    expectExactKeys(corpusManifest, ["path", "schema", "sha256"], `${at}.corpus.provenance`);
+    expect(stringField(corpusManifest, "path", `${at}.corpus.provenance`)).toBe(
+      "corpus/provenance.yaml",
+    );
+    expect(stringField(corpusManifest, "schema", `${at}.corpus.provenance`)).toBe(
+      PIN_PROVENANCE_SCHEMA,
+    );
+    expect(stringField(corpusManifest, "sha256", `${at}.corpus.provenance`)).toBe(
+      sha256OfFile(`${PIN_RELATIVE_PATH}/corpus/provenance.yaml`),
+    );
+    expect(stringField(corpusManifest, "sha256", `${at}.corpus.provenance`)).toBe(
+      gitFileSha256AtCommit(
+        corpusCommit,
+        "corpus/provenance.yaml",
+        join(REPO_ROOT, PIN_RELATIVE_PATH),
+      ),
+    );
+  } else {
+    expect(
+      manifest.corpus,
+      `${at}: a non-corpus generator must not claim a corpus input`,
+    ).toBeUndefined();
+  }
+
+  const ruby = mapField(manifest, "ruby", at);
+  expectExactKeys(ruby, ["engine", "version"], `${at}.ruby`);
+  expect(stringField(ruby, "engine", `${at}.ruby`)).toBe("ruby");
+  expect(stringField(ruby, "version", `${at}.ruby`)).toMatch(/^\d+\.\d+\.\d+$/);
+  expect(stringField(manifest, "xml_engine", at)).toBe(CANONICAL_XML_ENGINE);
+  expect(mapping(manifest.configuration, `${at}.configuration`)).toStrictEqual({});
+
+  const dependencies = mapField(manifest, "dependencies", at);
+  expectDependenciesShape(dependencies, `${at}.dependencies`);
+
+  const payload = mapField(manifest, "payload", at);
+  expectExactKeys(payload, ["path", "schema", "sha256", "bytes"], `${at}.payload`);
+  expect(stringField(payload, "path", `${at}.payload`)).toBe(basename(record.relative));
+  expect(stringField(payload, "schema", `${at}.payload`)).toBe(record.spec.schema);
+  expect(stringField(payload, "sha256", `${at}.payload`)).toBe(
+    createHash("sha256").update(record.bytes).digest("hex"),
+  );
+  expect(integerField(payload, "bytes", `${at}.payload`)).toBe(record.bytes.byteLength);
+}
+
 describe("per-format generated fixtures have complete sidecar provenance", () => {
   it("pairs every discovered payload with one sidecar, and has no orphan sidecars", () => {
     expect(FIXTURE_PAYLOADS.length).toBeGreaterThan(0);
@@ -647,174 +854,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
   it.each(FIXTURE_RECORDS.map((record) => [record.relative, record] as const))(
     "%s",
     (_label, record) => {
-      const at = record.manifestRelative;
-      const manifest = record.manifest;
-      expectExactKeys(
-        manifest,
-        [
-          "schema",
-          "committable",
-          "warnings",
-          "generator",
-          "oracle",
-          "ruby",
-          "xml_engine",
-          "configuration",
-          "dependencies",
-          ...(record.spec.usesCorpus ? ["corpus"] : []),
-          "payload",
-        ],
-        at,
-      );
-      expect(stringField(manifest, "schema", at)).toBe(MANIFEST_SCHEMA);
-      expect(booleanField(manifest, "committable", at)).toBe(true);
-      expect(arrayField(manifest, "warnings", at)).toStrictEqual([]);
-
-      const generator = mapField(manifest, "generator", at);
-      const inputs = mapField(generator, "inputs", `${at}.generator`);
-      expectExactKeys(
-        generator,
-        [
-          "path",
-          "sha256",
-          "inputs",
-          "repository",
-          ...(record.spec.usesRenderInventory ? ["inventory"] : []),
-        ],
-        `${at}.generator`,
-      );
-      expect(stringField(generator, "path", `${at}.generator`)).toBe(record.spec.generator);
-      expect(stringField(generator, "sha256", `${at}.generator`)).toBe(
-        stringField(inputs, record.spec.generator, `${at}.generator.inputs`),
-      );
-      expect(Object.keys(inputs).sort()).toStrictEqual(
-        [
-          "scripts/generate-corpus.rb",
-          "scripts/render-fixture-provenance.rb",
-          record.spec.generator,
-        ].sort(),
-      );
-      const generatorRepository = mapField(generator, "repository", `${at}.generator`);
-      expectExactKeys(
-        generatorRepository,
-        ["commit", "clean", "dirty_paths"],
-        `${at}.generator.repository`,
-      );
-      const generatorCommit = stringField(
-        generatorRepository,
-        "commit",
-        `${at}.generator.repository`,
-      );
-      for (const [path, hash] of Object.entries(inputs)) {
-        expect(hash, `${at}.generator.inputs.${path}`).toMatch(SHA256);
-        expect(sha256OfFile(path), `${at}.generator.inputs.${path}`).toBe(hash);
-      }
-
-      expect(generatorCommit).toMatch(COMMIT);
-      expect(booleanField(generatorRepository, "clean", `${at}.generator.repository`)).toBe(true);
-      expect(arrayField(generatorRepository, "dirty_paths", `${at}.generator.repository`)).toEqual(
-        [],
-      );
-
-      if (record.spec.usesRenderInventory) {
-        const inventory = mapField(generator, "inventory", `${at}.generator`);
-        expectExactKeys(inventory, ["glob", "paths", "sha256"], `${at}.generator.inventory`);
-        const format = stringField(record.payload, "format", record.relative);
-        expect(stringField(inventory, "glob", `${at}.generator.inventory`)).toBe(
-          `src/render/*/${format}.ts`,
-        );
-        const paths = arrayField(inventory, "paths", `${at}.generator.inventory`).map(
-          (path, index) => {
-            expect(typeof path, `${at}.generator.inventory.paths[${index}]`).toBe("string");
-            expect(
-              String(path).length,
-              `${at}.generator.inventory.paths[${index}]`,
-            ).toBeGreaterThan(0);
-            return String(path);
-          },
-        );
-        expect(paths.length, `${at}.generator.inventory.paths`).toBeGreaterThan(0);
-        expect(paths, `${at}.generator.inventory.paths sorted`).toStrictEqual([...paths].sort());
-        expect(new Set(paths).size, `${at}.generator.inventory.paths unique`).toBe(paths.length);
-        expect(stringField(inventory, "sha256", `${at}.generator.inventory`)).toBe(
-          pathInventorySha256(paths),
-        );
-        expect(paths, `${at}.generator.inventory current tree`).toStrictEqual(
-          currentRendererPaths(format),
-        );
-        const payloadInventory = arrayField(record.payload, "inventory", record.relative)
-          .map(String)
-          .sort();
-        expect(
-          paths.map(kindFromRendererPath).sort(),
-          `${at}.generator.inventory kinds`,
-        ).toStrictEqual(payloadInventory);
-      } else {
-        expect(generator.inventory, `${at}.generator.inventory`).toBeUndefined();
-      }
-
-      expectOracleShape(manifest, at);
-
-      if (record.spec.usesCorpus) {
-        const corpus = mapField(manifest, "corpus", at);
-        expectExactKeys(corpus, ["path", "repository", "provenance"], `${at}.corpus`);
-        expect(stringField(corpus, "path", `${at}.corpus`)).toBe(PIN_RELATIVE_PATH);
-        const corpusRepository = mapField(corpus, "repository", `${at}.corpus`);
-        expectExactKeys(
-          corpusRepository,
-          ["commit", "clean", "dirty_paths"],
-          `${at}.corpus.repository`,
-        );
-        const pin = pinnedSubmoduleCommit();
-        expect(pin.mode).toBe("160000");
-        const corpusCommit = stringField(corpusRepository, "commit", `${at}.corpus.repository`);
-        expect(corpusCommit).toBe(pin.indexCommit);
-        expect(pin.headCommit).toBe(pin.indexCommit);
-        expect(booleanField(corpusRepository, "clean", `${at}.corpus.repository`)).toBe(true);
-        expect(arrayField(corpusRepository, "dirty_paths", `${at}.corpus.repository`)).toEqual([]);
-        const corpusManifest = mapField(corpus, "provenance", `${at}.corpus`);
-        expectExactKeys(corpusManifest, ["path", "schema", "sha256"], `${at}.corpus.provenance`);
-        expect(stringField(corpusManifest, "path", `${at}.corpus.provenance`)).toBe(
-          "corpus/provenance.yaml",
-        );
-        expect(stringField(corpusManifest, "schema", `${at}.corpus.provenance`)).toBe(
-          PIN_PROVENANCE_SCHEMA,
-        );
-        expect(stringField(corpusManifest, "sha256", `${at}.corpus.provenance`)).toBe(
-          sha256OfFile(`${PIN_RELATIVE_PATH}/corpus/provenance.yaml`),
-        );
-        expect(stringField(corpusManifest, "sha256", `${at}.corpus.provenance`)).toBe(
-          gitFileSha256AtCommit(
-            corpusCommit,
-            "corpus/provenance.yaml",
-            join(REPO_ROOT, PIN_RELATIVE_PATH),
-          ),
-        );
-      } else {
-        expect(
-          manifest.corpus,
-          `${at}: a non-corpus generator must not claim a corpus input`,
-        ).toBeUndefined();
-      }
-
-      const ruby = mapField(manifest, "ruby", at);
-      expectExactKeys(ruby, ["engine", "version"], `${at}.ruby`);
-      expect(stringField(ruby, "engine", `${at}.ruby`)).toBe("ruby");
-      expect(stringField(ruby, "version", `${at}.ruby`)).toMatch(/^\d+\.\d+\.\d+$/);
-      expect(stringField(manifest, "xml_engine", at)).toBe(CANONICAL_XML_ENGINE);
-      expect(mapping(manifest.configuration, `${at}.configuration`)).toStrictEqual({});
-
-      const dependencies = mapField(manifest, "dependencies", at);
-      expectDependenciesShape(dependencies, `${at}.dependencies`);
-
-      const payload = mapField(manifest, "payload", at);
-      expectExactKeys(payload, ["path", "schema", "sha256", "bytes"], `${at}.payload`);
-      expect(stringField(payload, "path", `${at}.payload`)).toBe(basename(record.relative));
-      expect(stringField(payload, "schema", `${at}.payload`)).toBe(record.spec.schema);
-      expect(stringField(payload, "sha256", `${at}.payload`)).toBe(
-        createHash("sha256").update(record.bytes).digest("hex"),
-      );
-      expect(integerField(payload, "bytes", `${at}.payload`)).toBe(record.bytes.byteLength);
+      expectSidecarEnvelope(record);
       expect(stringField(record.payload, "schema", record.relative)).toBe(record.spec.schema);
       expect(stringField(record.payload, "format", record.relative)).toBe(
         basename(dirname(record.relative)),
@@ -842,6 +882,11 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         const rendered = rows.filter((row, index) => {
           const item = mapping(row, `${record.relative}.cases[${index}]`);
           stringField(item, "group", record.relative);
+          // The notation the case is written in, which picks the parser on
+          // both sides; only the three this port parses are swept.
+          expect(["asciimath", "latex", "unicode"]).toContain(
+            stringField(item, "inputFormat", record.relative),
+          );
           stringValue(item, "input", record.relative);
           const hasExpected = typeof item.expected === "string";
           const hasRefusal = typeof item.raises === "string";
@@ -852,7 +897,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           if (hasRefusal) {
             expectExactKeys(
               item,
-              ["group", "id", "input", "raises", "raisedIn"],
+              ["group", "id", "inputFormat", "input", "raises", "raisedIn"],
               `${record.relative}.cases[${index}]`,
             );
             expect(stringField(item, "raises", record.relative)).toBe(
@@ -862,7 +907,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           } else {
             expectExactKeys(
               item,
-              ["group", "id", "input", "expected"],
+              ["group", "id", "inputFormat", "input", "expected"],
               `${record.relative}.cases[${index}]`,
             );
           }
@@ -1057,6 +1102,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               [
                 "argument-error",
                 "big-integer",
+                "hyperbolic-rounding-band",
                 "libm-reduction",
                 "libm-rounding-band",
                 "pow-rounding-band",
@@ -1100,6 +1146,52 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         expect(integerField(record.payload, "raisedCount", record.relative)).toBe(
           rows.length - evaluated,
         );
+      } else if (record.spec.shape === "cli") {
+        // A row is one `plurimath convert` run: the input, the output format,
+        // the port's flags as `options`, and what the gem printed. `cli` rows
+        // also record the gem argv that printed it; `api` rows (intent) have
+        // none, because the gem's command has no intent flag.
+        expectExactKeys(
+          record.payload,
+          ["$comment", "schema", "format", "caseCount", "cases"],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        rows.forEach((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          const via = stringField(item, "via", at);
+          expect(["cli", "api"], `${at}.via`).toContain(via);
+          expectExactKeys(
+            item,
+            via === "cli"
+              ? ["group", "id", "via", "input", "to", "options", "gemArgv", "expected"]
+              : ["group", "id", "via", "input", "to", "options", "expected"],
+            at,
+          );
+          stringField(item, "group", at);
+          stringField(item, "id", at);
+          const input = mapField(item, "input", at);
+          expectExactKeys(input, ["format", "text"], `${at}.input`);
+          stringField(input, "format", at);
+          stringValue(input, "text", at);
+          stringField(item, "to", at);
+          const options = mapField(item, "options", at);
+          for (const [key, value] of Object.entries(options)) {
+            expect(
+              ["displayStyle", "splitOnLinebreak", "mathRendering", "intent"],
+              `${at}.options`,
+            ).toContain(key);
+            expect(
+              key === "displayStyle" ? typeof value === "boolean" : value === true,
+              `${at}.options.${key}`,
+            ).toBe(true);
+          }
+          if (via === "cli") {
+            for (const arg of arrayField(item, "gemArgv", at)) expect(typeof arg).toBe("string");
+          }
+          stringField(item, "expected", at);
+        });
       } else if (record.spec.shape === "format-model") {
         // The parse-side twin of the branch above, shared by every format whose
         // fixtures record a PARSE. A row records what the gem did with an input
@@ -1347,6 +1439,29 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
   );
 });
 
+describe("the Ox contract fixture has complete sidecar provenance", () => {
+  it("pairs test/xml/ox-contract.expected.json with its sidecar", () => {
+    expect(
+      existsSync(join(REPO_ROOT, OX_CONTRACT_PAYLOAD.replace(/\.json$/, ".manifest.yaml"))),
+    ).toBe(true);
+    expect(OX_CONTRACT_RECORD).toBeDefined();
+  });
+
+  it("validates the sidecar envelope and the payload's two groups", () => {
+    const record = OX_CONTRACT_RECORD;
+    if (record === undefined) throw new Error(`${OX_CONTRACT_PAYLOAD} has no sidecar`);
+    expectSidecarEnvelope(record);
+    expectExactKeys(record.payload, ["dump", "dumpNodes"], record.relative);
+    for (const group of ["dump", "dumpNodes"]) {
+      const entries = mapField(record.payload, group, record.relative);
+      expect(Object.keys(entries).length, `${record.relative}.${group}`).toBeGreaterThan(0);
+      for (const [name, value] of Object.entries(entries)) {
+        expect(typeof value, `${record.relative}.${group}.${name}`).toBe("string");
+      }
+    }
+  });
+});
+
 describe("generated data binds to the generator inputs it names", () => {
   it("has something to check", () => {
     // The failure this file exists to catch is a silent one, so it must not be
@@ -1373,7 +1488,7 @@ describe("generated data binds to the generator inputs it names", () => {
     }
   });
 
-  it("accounts for every Ruby data-generator entrypoint, including the known XML gap", () => {
+  it("accounts for every Ruby data-generator entrypoint", () => {
     const shipped = readdirSync(join(REPO_ROOT, "scripts"))
       .filter(
         (name) =>
@@ -1382,7 +1497,7 @@ describe("generated data binds to the generator inputs it names", () => {
       )
       .map((name) => `scripts/${name}`)
       .sort();
-    const fixtureEntrypoints = FIXTURE_RECORDS.map((record) => record.spec.generator);
+    const fixtureEntrypoints = SIDECAR_RECORDS.map((record) => record.spec.generator);
     const recordedEntrypoints = [
       GENERATED_PROVENANCE.generator,
       CORE_GENERATED_PROVENANCE.generator,
@@ -1392,14 +1507,7 @@ describe("generated data binds to the generator inputs it names", () => {
       HTML_PARSER_GENERATED_PROVENANCE.generator,
       ...fixtureEntrypoints,
     ];
-    // This is an explicit gap, not a generator silently omitted from a
-    // hard-coded "complete" list. Its output predates sidecar provenance and
-    // belongs to a separate XML-contract change.
-    const knownUnmanifested = ["scripts/generate-xml-fixtures.rb"];
-    expect(new Set(recordedEntrypoints).has(knownUnmanifested[0] as string)).toBe(false);
-    expect([...new Set([...recordedEntrypoints, ...knownUnmanifested])].sort()).toStrictEqual(
-      shipped,
-    );
+    expect([...new Set(recordedEntrypoints)].sort()).toStrictEqual(shipped);
   });
 });
 
@@ -1410,7 +1518,7 @@ const COMMITTABLE_RECORDS: ReadonlyArray<readonly [string, boolean]> = [
   ["src/formats/latex/generated", LATEX_PARSER_GENERATED_PROVENANCE.committable],
   ["src/formats/unicodemath/generated", UNICODEMATH_PARSER_GENERATED_PROVENANCE.committable],
   ["src/formats/html/generated", HTML_PARSER_GENERATED_PROVENANCE.committable],
-  ...FIXTURE_RECORDS.map(
+  ...SIDECAR_RECORDS.map(
     (record) =>
       [
         record.relative,

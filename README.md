@@ -39,8 +39,9 @@ Measured against the built package (`pnpm build`, then `dist/`):
 - Seven package subpaths are built: `./core`, `./asciimath`, `./latex`,
   `./mathml`, `./html`, `./omml` and `./unicodemath`, plus the root entry and a
   `plurimath` executable.
-- `./html` renders all 89 pinned corpus cases the gem renders, 88 of them
-  byte-identical (the 89th, `text-unitsml-valid`, differs by decision; see
+- `./html` renders all 228 pinned corpus cases written in AsciiMath, LaTeX or
+  UnicodeMath that the gem renders, 227 of them byte-identical (the 228th,
+  `text-unitsml-valid`, differs by decision; see
   `test/formats/html/parity-target.ts`). The corpus is not the whole language:
   a construct it does not cover can still raise `RenderError`, for example
   `cancel(x)` in `./html` and `./omml`.
@@ -139,6 +140,20 @@ file, `ParseError`, `RenderError`). Conversion errors print as
 `plurimath: [CODE] message` on stderr; usage and file-read errors print
 `plurimath: <message>` without a code. The only command is `convert`, and there is no `--version`.
 
+Render options, named as in the gem's `plurimath convert` where it has them:
+
+- `--display-style <true|false>` sets the display style of `mathml` and
+  `omml` output. It defaults to `true`, as the gem's command does.
+- `--split-on-linebreak` splits `mathml` and `omml` output at each line break.
+- `--intent` adds intent attributes to `mathml` output (the gem's command has
+  no such flag; this is `toMathml`'s `intent` option).
+- `--math-rendering` prints the formula's display tree for the `--to` format
+  (`toDisplay`) instead of converting; `html` has no display tree.
+
+An option that does not apply to the `--to` format is ignored. The switches
+take no value, unlike the gem's, where `--split-on-linebreak false` still
+splits. There is no flag for the number formatter yet.
+
 The CLI strips one trailing newline (`\n` or `\r\n`) from its input, so
 `echo 'x^2' | plurimath convert --from unicodemath --to latex` prints `x^{2}`.
 Only that final newline is removed; any other whitespace reaches the parser
@@ -170,9 +185,14 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
 
 - Reading MathML or OMML (no parser; the compat constructor and the CLI refuse
   them).
-- `evaluate()` over the gem's `Sinh`, `Cosh`, `Tanh`, `Sech`, `Csch`, `Coth`,
-  `Lg` and `Log` nodes: they raise `UnsupportedFeatureError`
-  (`src/evaluation/index.ts`).
+- `evaluate()` of `Sinh`, `Cosh`, `Sech` and `Csch` where the platform C
+  library's `exp`, which they call for `|x| >= 22` (`cosh` from `ln2/2`), is
+  inside its rounding band, such as `sinh(22)`: they raise
+  `UnsupportedFeatureError` (`src/evaluation/libm-hyperbolic.ts`).
+- `evaluate()` of `Lg` where the `log` that glibc's `log10` calls lies inside
+  `log`'s rounding band and the answer depends on its rounding, such as
+  `\lg(0.214)`: it raises `UnsupportedFeatureError`
+  (`src/evaluation/libm.ts`).
 - A root `parse()` function.
 - UnicodeMath input beyond the grammar slice ported so far: unmatched rules
   raise `ParseError`.

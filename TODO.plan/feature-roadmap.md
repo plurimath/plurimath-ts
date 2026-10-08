@@ -10,8 +10,10 @@ Everything below was first measured on 2026-09-14, against the pinned oracle
 repository at `fdc043a`, whose shared corpus pin was `plurimath-testsuite` at
 `281d700`. The port's status was re-checked on 2026-09-24 against `main` at
 `70f9482`, whose corpus pin is `plurimath-testsuite` at `07bf5e3`
-(`git ls-tree HEAD submodules/plurimath-testsuite`), and the evaluation entry
-against `main` at `39f5dd4`, where #155 merged. The oracle pin is unchanged, so
+(`git ls-tree 70f9482 submodules/plurimath-testsuite`), and the evaluation entry
+against `main` at `39f5dd4`, where #155 merged. The corpus figures were
+re-measured on 2026-10-05 against `main` at `0e36296`, whose corpus pin is
+`plurimath-testsuite` at `4a8ba64`. The oracle pin is unchanged, so
 figures about the gem stand. A figure taken from somewhere else names where it
 came from.
 
@@ -24,7 +26,7 @@ came from.
   route for number formatting, `intent`, line splitting, OMML display style,
   `toDisplay` and evaluation. `plurimath-testsuite` now has one, the
   `plurimath-corpus/calls/1` schema (testsuite #17), but its only call method
-  at `07bf5e3` is `number_formatter`, in 66 cases
+  at `4a8ba64` is `number_formatter`, in 66 cases
   (`grep -rhoE "method: [a-z_]+" corpus`). The other five have no shared
   case; each landed checked against oracle-measured expectations kept in this
   repository instead.
@@ -33,12 +35,12 @@ came from.
   as `calls/1`. MathML input did not start: the maintainer settled on
   continued deferral over a native port on 2026-09-16 (#122). The reasoning is
   under [Build order](#build-order).
-- **Not blocked on anything but effort:** the rest of the UnicodeMath
-  transform (473 of the gem's 519 rules registered). The OMML renderer has
-  been published on `./omml` since #112.
-- **Blocked on a person, not on code:** UnitsML (maintainer decision), and
-  the evaluation functions still unported, which wait on a licensing decision
-  about copying C-library code (`src/evaluation/index.ts` at `39f5dd4`).
+- **UnicodeMath transform:** 483 of the gem's 519 rules registered; every
+  one of the other 36 is dead in the gem (26) or fires on no input found (10),
+  each listed with its evidence in the header of
+  `src/formats/unicodemath/transform.ts`.
+- **OMML renderer:** published on `./omml` since #112.
+- **Blocked on a person, not on code:** UnitsML (maintainer decision).
   Native MathML/OMML input versus further deferral is settled as deferral
   (#122), and the CLI as in scope (#125); global configuration stays out of
   scope (below).
@@ -73,7 +75,7 @@ The gem accepts seven parse types (`Math::VALID_TYPES`, `math.rb:16-24`):
 | AsciiMath | `parseAsciimath` | registered | complete |
 | LaTeX | `parseLatex` | registered | complete — 117 rules registered (`test/formats/latex/transform-coverage.spec.ts:81`), the transform's header recording one gem rule as dead and unported |
 | HTML | `parseHtml` | registered (#119) | complete: 78 of 78 rules (`test/formats/html/transform-coverage.spec.ts:170`) |
-| UnicodeMath | `parseUnicodemath` | registered (#119) | partial: 473 rules registered (`FINAL_COUNT`, `test/formats/unicodemath/transform-coverage.spec.ts:87`) of the gem's 519 |
+| UnicodeMath | `parseUnicodemath` | registered (#119) | partial: 483 rules registered (`FINAL_COUNT`, `test/formats/unicodemath/transform-coverage.spec.ts:87`) of the gem's 519; the other 36 are 26 dead and 10 unreached |
 | MathML | none | not registered | not started; deferred (#122) |
 | OMML | none | not registered | not started; deferred (#122) |
 | UnitsML | none | not in the compat union | deferred |
@@ -83,19 +85,23 @@ The gem accepts seven parse types (`Math::VALID_TYPES`, `math.rb:16-24`):
 **Gem:** `unicode_math/transform.rb` registers 516 rules, 519 with the three
 `BaseNumberPrefix::Transform` adds (header of `src/formats/unicodemath/transform.ts`).
 
-**Port:** 473 of the 519 rules are registered (`FINAL_COUNT`,
+**Port:** 483 of the 519 rules are registered (`FINAL_COUNT`,
 `test/formats/unicodemath/transform-coverage.spec.ts:87`). They landed as the
 corpus-derived first slice (`#83`), multiscript and fraction (`#93`), the
 table family (`#99`), the relation and operator family (`#114`), the NARY
 family minus the half behind `atoms` (`#116`), the decoration family (`#117`),
 the `atoms` combinator's directly-verifiable unwraps (`#118`), and slices C
 and D (`#131`), A, E, F, G1 and G2 (`#140`, 409 rules), H (`#141`, 422) and
-I, J and K (`#144`, 473). The compat constructor registers `unicode` (#119) on
+I, J and K (`#144`, 473), and the last ten firing rules (483), which classified
+the last 46 ids on the oracle: 10 fire and are registered, 26 are dead in the
+gem, 10 are unreached. The compat constructor registers `unicode` (#119) on
 a measured gate: a hand-written battery of 50 inputs, 49 parsed to an exact
 match with the oracle and the 50th a refusal both sides share, with
 `KNOWN_PORT_GAPS` empty (`src/compat/index.ts`, comment above `PARSERS`).
 
-**Blocks:** nothing but effort. The coverage-invariant question that shaped
+**Blocks:** nothing. No unregistered rule has a known firing input; a new
+witness for one of the 10 unreached ids would reopen it. The
+coverage-invariant question that shaped
 the next slice is settled: the wide reading, 2026-09-16 (#122;
 [open-decisions](open-decisions.md)).
 
@@ -149,18 +155,28 @@ records whether a single native reader makes it moot.
    ([open-decisions.md](open-decisions.md#mathmlomml-input-strategy), PR
    #122). PR #120, open, would make the compat constructor's refusal name the
    missing XML reader; on `main` it is still the generic
-   `UnsupportedFormatError`. This page's own build order below (Chain A, A2/A3) has
-   not yet been revised to reflect that a native port is deferred rather than
-   the recommended next step.
+   `UnsupportedFormatError`. The build order below marks Chain A deferred to
+   match.
 
-**Oracle data already available:** the corpus at `07bf5e3` carries 237
-`mathml:` expected-output blocks in parse cases (92 under `corpus/asciimath/`,
-125 under `corpus/latex/`, 20 under `corpus/unicode/`), plus 66 in the seven
-`calls/1` number-formatting files, which record formatted-number output rather
-than parse cases; counted by `git grep -c`, not re-parsed. PR #110 measured 111
-at an earlier pin, all of which re-parse through `Math.parse(text, :mathml)`,
-and found they reach 19 of the translator's 44 element classes. The 237 have
-not been re-parsed for this page.
+**Oracle data already available:** the corpus at `4a8ba64` has MathML-input
+cases of its own: `corpus/mathml/` holds 299 cases, 287 with a per-format
+`expected` map and 12 whose parse is expected to raise. Its parse cases carry
+714 `mathml:` expectations in all: 92 under `corpus/asciimath/`, 125 under
+`corpus/latex/`, 20 under `corpus/unicode/`, 287 under `corpus/mathml/` and
+190 under `corpus/omml/`. Each is a string, an `{output: …}` map, or, for 2
+of them, an `{error: …}` map recording a render the gem refuses. Another 66
+sit in the seven `calls/1` number-formatting files, which record
+formatted-number output rather than parse cases. Counted by loading every
+`corpus/*/*.yaml` with Ruby's `YAML.safe_load_file` and tallying
+`cases`, `error` and the `expected` keys per directory and per `schema`, so
+the `calls/1` files under `corpus/asciimath/` are counted apart (`git grep -c
+'^    mathml:'` agrees per file, but its `corpus/asciimath/` total, 158,
+includes those 66). `test/core/corpus-pin.spec.ts` lists the `mathml/` and
+`omml/` payloads as pending a reader, so no spec runs them yet. PR #110
+measured 111 at the earlier corpus pin `5182660`, all of which re-parse through
+`Math.parse(text, :mathml)`, and found they reach 19 of the translator's 44
+element classes. The cases at `4a8ba64` have not been re-parsed for this
+page.
 
 #### OMML input — not started
 
@@ -171,11 +187,13 @@ translating layer under `lib/plurimath/omml/`.
 
 **Blocks:** the same XML reader as MathML. There is no JavaScript package to
 evaluate: `npm view @plurimath/omml` returns E404 (re-run for this page on
-2026-09-14). And **no parse case carries an OMML expectation.** At `07bf5e3`
-the corpus's 64 `omml:` blocks are all in six `calls/1` number-formatting
-files, which record formatted-number output, and the one other `omml` string
-is the gem version in `corpus/provenance.yaml:47`. Cases would have to be
-generated. The port's own OMML render fixtures
+2026-09-14). The corpus at `4a8ba64` has OMML-input cases:
+`corpus/omml/` holds 199 cases, 190 with a per-format `expected` map and 9
+whose parse is expected to raise. Parse cases now carry 477 `omml:`
+expectations, 2 of them `{error: …}` maps (287 under
+`corpus/mathml/`, 190 under `corpus/omml/`), besides the 64 in six `calls/1`
+number-formatting files (same measurement as the MathML figures above). The
+port's own OMML render fixtures
 (`test/formats/omml/parity-fixtures.json`) are gem-emitted OMML, so they can
 seed a round-trip slice the way the gem's own UnicodeMath output seeded that
 transform's first slice.
@@ -322,6 +340,11 @@ remaining kinds in #150; `src/compat/to-display.ts`). Measured on `70f9482`:
 (`Nary`, `FontStyle` under `unicodemath`, `Substack`), the rest as
 unreachable or out of scope (`Msgroup`, `Unitsml`, a bare string in a
 sequence); the module doc of `src/compat/to-display.ts` records each reason.
+A `Linebreak` (LaTeX `a \\ b`, HTML `a<br/>b`) prints the generic
+function shape in asciimath, latex, mathml and unicodemath, checked against
+the gem by the `display-linebreak-*` rows of `test/formats/cli/cli-fixtures.json`;
+under omml the gem raises `NoMethodError` and the port refuses it (see
+[deferred.md](deferred.md), upstream issues).
 
 **Blocks:** nothing. It has no shared case; `calls/1` carries only
 `number_formatter`.
@@ -357,20 +380,25 @@ importing `core` only and re-exported from the root entry alone
 (#155): `Abs`, `Ceil`, `Floor`, `Gcd`, `Lcm`, `Min`, `Max`, `Mod`, `Root`,
 `Text` variable lookup, bounded `Sum`/`Prod`, and `Sin`, `Cos`, `Tan`, `Cot`,
 `Sec`, `Csc`, `Arcsin`, `Arccos`, `Arctan`, `Exp`, `Ln` and `Sqrt`, correctly
-rounded (`src/evaluation/libm.ts`). The iteration cap is a per-call option,
+rounded (`src/evaluation/libm.ts`). `Lg` and `Log` are ported digit-exact
+with glibc 2.35, `Lg` refusing where the `log` it calls lies inside
+`log`'s rounding band and the answer depends on its rounding (0.32% of the measured sample, `deferred.md`) (`libm-log10.ts`, from Sun's fdlibm; `libm-log2.ts`, from
+Arm's optimized-routines). The iteration cap is a per-call option,
 `EvaluationOptions`, defaulting to the gem's 100,000. Checked against
 port-local fixtures generated from the oracle
 (`test/formats/evaluation/evaluation-fixtures.json`,
-`scripts/generate-evaluation-fixtures.rb`). Still unported, and raising
-`UnsupportedFeatureError`: `Sinh`, `Cosh`, `Tanh`, `Sech`, `Csch`, `Coth`,
-`Lg` and `Log` (all as read from `src/evaluation/index.ts` at `39f5dd4`).
+`scripts/generate-evaluation-fixtures.rb`). `Sinh`, `Cosh`, `Tanh`, `Sech`,
+`Csch` and `Coth` are glibc's own, from fdlibm on an `expm1` that gives
+glibc's digits, and refused (`UnsupportedFeatureError`) only where they call
+`exp` inside its rounding band (`src/evaluation/libm-hyperbolic.ts`;
+`TODO.plan/deferred.md`, "Evaluation: the hyperbolic functions").
 
-**Blocks:** a licensing decision about copying C-library code, for those
-eight functions (`src/evaluation/index.ts` at `39f5dd4`). There is no shared
+**Blocks:** nothing ported is missing; the hyperbolic refusals are those of
+`exp`'s rounding band (`deferred.md`). There is no shared
 case: `calls/1` carries only `number_formatter`. The `plurimath-js` compat
 surface has no `evaluate`, so this does not affect the drop-in claim.
 
-#### Command-line interface — in scope, not yet built
+#### Command-line interface — in scope, partly built
 
 **Gem:** `lib/plurimath/cli.rb`, a Thor `convert` command with input and output
 format, `--split-on-linebreak`, display style, `--math-rendering` (which is
@@ -380,8 +408,24 @@ format, `--split-on-linebreak`, display style, `--math-rendering` (which is
 idiomatic Node CLI rather than flag-for-flag parity with the gem's Thor
 command (`ARCHITECTURE.md` §10; recorded in #125). The first slice landed in
 #127: `plurimath convert` with `--from` and `--to` only (`src/cli/args.ts`),
-and #129 strips one trailing newline from its input (`src/cli/run.ts:43`).
-**Blocks:** nothing but effort.
+and #129 strips one trailing newline from its input (`src/cli/run.ts`). The
+second slice adds the render options under the gem's long names,
+`--display-style <true|false>`, `--split-on-linebreak` and `--math-rendering`,
+plus `--intent`, which the gem's command lacks. Output for valid values is
+checked byte for byte against the gem's own command
+(`test/formats/cli/cli-fixtures.json`, `scripts/generate-cli-fixtures.rb`);
+as there, an absent `--display-style` is `true`.
+
+**Gem defect, not copied:** every option of the gem's command is a Thor
+string, so `--split-on-linebreak false` (any value) splits, and
+`--math-rendering` acts only on the exact value `true` (measured on the pinned
+oracle). The port's switches take no value, and `--display-style` accepts only
+`true` or `false`.
+
+**Remaining:** the `formatter` option (a nested object, `FormatterOptions` in
+`src/formatting/number-format.ts`; the gem's command has no equivalent, so its
+flag shape is a design question of its own). The gem's `-e/--xml-engine` stays
+out (the Oga entry below). **Blocks:** nothing but effort.
 
 #### Out of scope, recorded so it is not re-proposed
 
@@ -415,8 +459,8 @@ Two independent chains, sharing no prerequisite. They can run side by side.
 Status on `main`: Chain A has not started, and A2/A3 are deferred (#122). On
 Chain B, B1 landed in the testsuite as `calls/1` (`number_formatter` only), B2
 in #126, #133, #143 and #146, B3 in #132, B4 in #136, B5 in #139 and #150, and
-B6 in #152 and #155, with eight functions left unported (see Evaluation,
-above).
+B6 in #152 and #155, with every function now ported; some of them refuse
+near a rounding band (see Evaluation, above).
 
 ```
 Chain A — reading XML                Chain B — options the corpus cannot express
@@ -448,13 +492,17 @@ version rather than a change to existing cases. What it must carry: the input
 and format, the call (render method, options, configuration, or bindings),
 and the gem's answer or its error.
 
-**A2, MathML input, is the recommended first feature port** if the maintainer
-chooses a native port, for four reasons:
+**Chain A is deferred (#122).** A2, MathML input, was written up here as the
+recommended first feature port if the maintainer chose a native port; the
+choice was deferral, to be revisited once a working way to read MathML/OMML
+XML exists ([open-decisions](open-decisions.md#mathmlomml-input-strategy)).
+The four reasons it was recommended still describe what A2 carries:
 
 1. It is the largest remaining gap in the compat constructor, which names
    `mathml`.
-2. Its oracle data already exists: 237 expected-MathML strings in parse
-   cases at the current pin, `07bf5e3`.
+2. Its oracle data already exists: at the current pin, `4a8ba64`,
+   `corpus/mathml/` holds 299 MathML-input cases (287 with a per-format
+   `expected` map, 12 whose parse is expected to raise).
 3. It carries three things with it: its XML reader is OMML input's
    prerequisite, its model path is a UnitsML bridge's prerequisite, and it
    constructs classes that let the measured name sets widen.
@@ -473,12 +521,14 @@ and unblocks nothing; and the compat surface does not expose it.
 
 ### Chain A, in order
 
+Deferred as a whole (#122); this is the order if the deferral is revisited.
+
 - **A1 → A2.** The reader is a §3 change and a library evaluation
   (`deferred.md`, XML writer entry), then the translator port. The corpus's
   MathML strings lock the elements they reach; PR #110 lists the 25 of 44 the
   earlier pin did not reach, which need cases written for them.
-- **A3 after A2**, because it reuses the reader and has no oracle cases: they
-  are generated first, seeded from gem-emitted OMML.
+- **A3 after A2**, because it reuses the reader. Its oracle cases exist now:
+  `corpus/omml/` at `4a8ba64` holds 199 OMML-input cases (above).
 - **A4 only once the maintainer settles UnitsML.** A bridge needs A2 first; a
   native port needs it only if it mirrors the gem's MathML round trip.
 
@@ -507,8 +557,10 @@ and unblocks nothing; and the compat surface does not expose it.
 
 ### Alongside both chains
 
-The UnicodeMath transform's remaining rules (473 of 519 registered). None
-waits on A or B. The other items once listed here have landed: `unicode` and
+The UnicodeMath transform's remaining rules: 483 of 519 registered, and the
+other 36 dead or unreached on the oracle, so nothing is queued here unless
+one of the 10 unreached ids gains a witness. None waits on A or B. The
+other items once listed here have landed: `unicode` and
 `html` are registered in compat (#119), and `/omml` is published (#112).
 
 ## Open questions this page raises
@@ -520,5 +572,5 @@ waits on A or B. The other items once listed here have landed: `unicode` and
 | ~~Is `/omml` published, and does §4's subpath list gain it?~~ | published, and listed in §4 (#112) |
 | ~~Is a CLI in scope, or does it join §10's YAGNI list?~~ | settled 2026-09-16: in scope, idiomatic Node CLI over gem-flag parity (`ARCHITECTURE.md` §10) |
 | ~~Does the formatter arrive as a class instance or a plain options object?~~ | settled: a plain options object (`open-decisions.md`, #125) |
-| ~~Native MathML/OMML input, or further deferral?~~ | settled 2026-09-16: continued deferral (`open-decisions.md`); Chain A's A2/A3 ordering above still needs revising to match |
+| ~~Native MathML/OMML input, or further deferral?~~ | settled 2026-09-16: continued deferral (`open-decisions.md`); Chain A above is marked deferred to match |
 | Does the port need an equivalent of `Plurimath.mml_adapter`? | the gem picks the `mml` XML backend globally (`plurimath.rb:34-37`); one native reader may make it moot |

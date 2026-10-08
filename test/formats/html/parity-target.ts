@@ -62,11 +62,13 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([]);
  * Derived from `PORT_REFUSES`, and cross-checked against it by the spec: the
  * two disagree only when one was edited without the other.
  *
- * All 89 the gem renders. 88 match it byte for byte; the 89th is
- * `text-unitsml-valid`, which renders and diverges by decision — it is counted
- * here as rendered and pinned both ways in `KNOWN_DIVERGENCES`.
+ * All 228 the gem renders: 89 written in AsciiMath, 119 in LaTeX and 20 in
+ * UnicodeMath. 227 match it byte for byte; the 228th is `text-unitsml-valid`,
+ * which renders and diverges by decision — it is counted here as rendered and
+ * pinned both ways in `KNOWN_DIVERGENCES`. The 139 LaTeX- and UnicodeMath-input
+ * cases joined the sweep matching the gem as they stood.
  */
-export const RENDERED_BASELINE = 89;
+export const RENDERED_BASELINE = 228;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared

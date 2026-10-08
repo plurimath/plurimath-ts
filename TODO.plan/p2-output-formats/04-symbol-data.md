@@ -281,15 +281,18 @@ plus the XML serializer) (`[dist-sizes]`, exit `0`).
 
 The budget, per subpath, against the ESM closure:
 
-- `./html` at or below `163,840` bytes (`160` KiB). LaTeX is the right
-  analogue — a plain string map, `1,425` distinct payloads against HTML's
-  `1,413` — and its measured `149,563` leaves `14,277` bytes under that
-  ceiling.
+- `./html` at or below `327,680` bytes (`320` KiB). The original ceiling
+  was `163,840` bytes (`160` KiB), chosen with LaTeX as the analogue — a plain
+  string map, `1,425` distinct payloads against HTML's `1,413` — whose
+  measured `149,563` left `14,277` bytes under it. The HTML parser (P3) then
+  grew `./html` to `294,219` bytes (`scripts/probes/dist-sizes.mjs` on `main`
+  be45593). On 2026-10-02 the maintainer accepted that growth and raised the
+  ceiling to `327,680`, about 11% above the measured closure.
 - `./omml` at or below `286,720` bytes (`280` KiB). MathML is the analogue
   that carries an XML layer, and its measured `271,868` leaves `14,852` bytes.
-  The two ceilings hold roughly the same absolute headroom, about `15` KiB
-  each, not the same proportion: `9.55` percent for `./html` against `5.46`
-  percent for `./omml`.
+  The two ceilings no longer hold the same headroom: `./html` has `33,461`
+  bytes (`11.37` percent of its measured closure) against `14,852` bytes
+  (`5.46` percent) for `./omml`.
 
 Landing above a ceiling is not forbidden, but it is a decision rather than a
 rounding error: the measured number goes into this file as an accepted cost
@@ -615,6 +618,24 @@ passed; the isolation and size measurements this file asks for belong to the
 slice that publishes `./omml`, which had not landed then. It has since: #112
 published `./omml`, and `package.json#exports` lists it.
 
+Re-measured on 2026-10-07 as the before/after pair this file asks for:
+`scripts/probes/dist-sizes.mjs` (exit `0` both runs) against a fresh
+`pnpm build` (exit `0` both runs) of #70's squash commit `4f0f0be` and of its
+parent `017b7ed`. The two outputs are byte-identical (`diff` exit `0`), which is
+what the paragraph above predicts: the slice moved no published bytes.
+
+| subpath | ESM before | ESM after | CJS before | CJS after |
+|---|---:|---:|---:|---:|
+| `.` | 92,705 | 92,705 | 116,544 | 116,544 |
+| `./core` | 92,705 | 92,705 | 116,543 | 116,543 |
+| `./asciimath` | 477,784 | 477,784 | 504,420 | 504,420 |
+| `./html` | 127,461 | 127,461 | 174,298 | 174,298 |
+| `./latex` | 150,682 | 150,682 | 197,711 | 197,711 |
+| `./mathml` | 272,882 | 272,882 | 319,342 | 319,342 |
+| `./unicodemath` | 204,416 | 204,416 | 250,484 | 250,484 |
+
+No subpath grew. `./omml` has no row because neither commit exported it.
+
 ### Recommended slice order
 
 1. **Generator contract and source commit.** Extend the existing generator's
@@ -652,43 +673,51 @@ published `./omml`, and `package.json#exports` lists it.
 
 ## Done when
 
-- [ ] One existing generator emits separate HTML and OMML symbol maps with
+- [x] One existing generator emits separate HTML and OMML symbol maps with
       `1,459` static rows each from the pinned oracle; HTML has `1,413` and OMML
       `1,415` distinct payloads under the measured baseline.
+      (done: #63; `scripts/generate-corpus.rb` emits `src/generated/html/symbols.ts` (`HTML_SYMBOLS`: 1,459 rows, 1,413 distinct values) and `src/generated/omml/symbols.ts` (`OMML_SYMBOLS`: 1,459 rows, 1,415 distinct values), counted by loading both maps; checked 2026-10-02)
 - [x] The dynamic `Symbol` root stays value-driven, the abstract `Paren`
       carrier stays absent, and named `Paren::*` subclasses are present.
       (done: `src/generated/html/symbols.ts` and `src/generated/omml/symbols.ts` each carry 24 `Paren::*` ids and no bare `Paren` or `Symbol` key; the value-driven ids are routed first at `src/render/symbol/html.ts:74` and `src/formats/omml/render-shared.ts:282`; checked 2026-09-24)
 - [x] HTML consumes strings directly; OMML consumes strings through one shared
       wrapper, with no generated per-class XML templates.
       (done: `src/render/symbol/html.ts:79`; `symbolOmmlValue`, `src/formats/omml/render-shared.ts:278-289`; no `<m:` template in `src/generated/omml/symbols.ts`; checked 2026-09-24)
-- [ ] The generator source commit precedes a separate generated-data commit,
+- [x] The generator source commit precedes a separate generated-data commit,
       and all affected provenance files record clean, committable inputs.
-- [ ] The post-data HTML corpus run reports its actual rendered/throw split;
+      (done: #63's commits put the generator change (`7de6b56`) before the generated data (`8fed2f0`); the `payload-validation` gate in `gates.json` asserts that every generated-data manifest records a committable manifest (`test/gates/payload-validation.spec.ts:583`) recording a clean generator checkout with no dirty paths (`:627-630`); checked 2026-10-02)
+- [x] The post-data HTML corpus run reports its actual rendered/throw split;
       the function-alias remainder is tracked separately rather than credited
       to symbol data.
+      (done: #64; the "corpus split after consumption" table under "Measured after HTML consumption" in this file, which counts the cases blocked on function carriers in their own rows rather than as symbol data; checked 2026-10-02)
 - [x] `package-isolation` runs again *after* the HTML renderer imports
       `src/generated/html/` and again after OMML imports `src/generated/omml/`
       — not only on the generated-data commit, where neither table is reachable
       from any subpath and the gate would prove nothing.
       (done: `pnpm gate:package` exits 0 with both renderers importing their tables; checked 2026-09-24)
-- [ ] Each new subpath appears in both `EXPECTED_EXPORTS` and `FORBIDDEN` in
+- [x] Each new subpath appears in both `EXPECTED_EXPORTS` and `FORBIDDEN` in
       `scripts/gate-package.mjs`; a subpath missing from those tables skips
       both assertions silently. `./html` forbids `generated/omml/` and every
       P1 format's modules; `./omml` forbids `generated/html/` and the same P1
       set. Each list is proven to bite by a run that fails when the forbidden
       table is imported on purpose.
+      (done: `scripts/gate-package.mjs:147-156` and `:210-231` carry `./html` and `./omml` rows, each forbidding every other format's `formats/`, `render/<kind>/<F>.ts` and `generated/` sources through `forbidOtherFormats`, and `:247-257` fail a subpath missing from either table rather than skipping it. Proven to bite: with `src/formats/html/renderer.ts` importing `OMML_SYMBOLS` on purpose, `pnpm build` exits 0 and `pnpm gate:package` exits 1 on `./html ESM pulls in /(?:^|\/)generated\/omml\//` and its CJS twin; with `src/formats/omml/renderer.ts` importing `HTML_SYMBOLS`, it exits 1 on the same two lines for `./omml` and `generated/html/`; restored, it exits 0; checked 2026-10-07)
 - [ ] `scripts/probes/dist-sizes.mjs` is re-run before and after each
       consumption commit, and the ESM and CJS closure bytes for every published
       subpath are recorded in this file beside the baseline table above. No
       existing subpath grows.
-- [ ] `./html`'s ESM closure is at or below `163,840` bytes and `./omml`'s at
+      (open: both pairs are now recorded: the HTML consumption change's under "Measured after HTML consumption" and the OMML one (#70, `4f0f0be` against `017b7ed`) under "Measured after OMML consumption", byte-identical before and after. The last sentence is not met as written: the HTML change grew `./html`, already a published subpath, by `43,666` ESM and `43,427` CJS bytes — the consuming subpath's own table cost, which the ceiling box below bounds. Ticking this needs the sentence amended to exempt the consuming subpath, or the growth recorded as a divergence; checked 2026-10-07)
+- [x] `./html`'s ESM closure is at or below `163,840` bytes and `./omml`'s at
       or below `286,720`, or the measured overage is written into this file as
       an accepted cost with the numbers that justify it. An unrecorded overage
       blocks the slice.
-- [ ] The figures above are re-derived from `scripts/probes/` against the
+      (done: at the HTML consumption change `./html` measured 126,303, under the ceiling (table above); on `main` be45593 `scripts/probes/dist-sizes.mjs` measures `./html` at 294,219 and `./omml` at 258,886 ESM closure bytes. The `./html` figure includes the HTML parser, which the `163,840` budget predates; that overage is recorded above as an accepted cost, with the ceiling raised to `327,680`, and `./omml` is under its `286,720`; checked 2026-10-02)
+- [x] The figures above are re-derived from `scripts/probes/` against the
       pinned oracle before the generator work starts. Drift is a change in the
       oracle to be investigated, never a number to round in this file.
-- [ ] `node scripts/check.mjs` exits `0` with all `12` active class-A gates, and
+      (done: #62 committed the `scripts/probes/` scripts and these figures, and is an ancestor of the generator change in #63; checked 2026-10-02)
+- [x] `node scripts/check.mjs` exits `0` with all `12` active class-A gates, and
       `scripts/gate-oracle.rb repo --check --gem
       "$PLURIMATH_ORACLE"` exits `0` from the clean final
       implementation tree.
+      (done: #63's body records `pnpm check` exiting 0 with twelve active class-A gates, the count at that time, plus `repo --check` exiting 0. Measured again on `main` be45593: `repo --check` exits 0 against a clean gem checkout at `00c52783`, and `pnpm check` exits 0 with the thirteen class-A gates `gates.json` now activates; checked 2026-10-02)

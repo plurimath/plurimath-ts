@@ -158,7 +158,7 @@ Named gaps, compared against the current TypeScript XML layer:
 
 - **Namespaced element names — no gap.** `XmlElement` stores and emits its name verbatim
   (`src/xml/element.ts:48-57`), and the pinned Ox contract already byte-tests
-  `m:oMath` (`test/xml/ox-contract.ts:378-383`).
+  `m:oMath` (the `namespaced` fixture in `test/xml/ox-contract.ts`).
 - **Namespaced attributes and namespace declarations — no gap.** Attribute names and
   values are strings stored in an insertion-ordered `Map`, including bulk writes
   (`src/xml/element.ts:52-53,80-99`); the serializer emits those names verbatim in map
@@ -271,6 +271,7 @@ shapes above.
 
 - [ ] `toOmml` matches the gem byte-for-byte across every reachable case in the pinned
       corpus, and the oracle expectations are generated rather than hand-typed.
+      (open: `test/formats/omml/parity-target.ts` pins all 237 gem-renderable cases written in AsciiMath (92), LaTeX (125) and UnicodeMath (20) from a generated fixture, with `text-unitsml-valid` a recorded divergence; the corpus's HTML-, MathML- and OMML-input cases are not swept; checked 2026-10-05. Since the pin moved to plurimath-testsuite `cf3c5eb`, `test/formats/corpus-target-parity.ts` also checks all 236 reachable cases against the corpus's own `omml` target, in a model layer and a round-trip layer, and all 236 render the gem's bytes; checked 2026-10-06)
 - [x] All `36` own-root kinds are measured against the oracle, not inferred from MathML
       or a sibling OMML kind; `mrow` has a separate inherited-behavior assertion
       (`[surface]`).
@@ -286,9 +287,13 @@ shapes above.
       perturbations.
 - [ ] No XML-layer extension is added without a failing oracle-backed XML contract
       fixture naming the missing capability.
-- [ ] The corpus declares an `omml` target and every reachable case carries an
+- [x] The corpus declares an `omml` target and every reachable case carries an
       expectation for it; the reader asserts a nonzero target case count equal to each
       group's own case count.
+      (done: pin `cf3c5eb`; `test/gates/corpus-discovery.spec.ts` asserts it per group and
+      per target for the 40 case groups and the 7 `calls/1` groups, and
+      `test/formats/corpus-target-parity.ts` pins 236 reachable cases with `omml` bytes;
+      checked 2026-10-06)
 - [ ] The cross-format invariant gates cover OMML, including the differential runner on
       both halves.
 - [x] `/omml` is a published subpath with package-isolation assertions, and its expected

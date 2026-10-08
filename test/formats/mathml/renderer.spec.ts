@@ -384,6 +384,43 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     );
   });
 
+  /**
+   * The mask read is Ruby's `String#to_i`, which skips ASCII whitespace only:
+   * a mask of a Unicode space then "1" reads as 0. Measured on the pinned
+   * oracle (`00c52783`) for U+00A0, U+2028 and U+FEFF:
+   *
+   *   S = ->(v) { Plurimath::Math::Symbols::Symbol.new(v) }
+   *   Plurimath::Math::Formula.new([Plurimath::Math::Function::Nary.new(
+   *     S.("x"), S.("y"), S.("z"), nil, { mask: "\u00a01" })]).to_mathml
+   *   # => msubsup over x, y, z (a mask of " 1" or "\t1" gives munderover)
+   *   ...Function::Int.new(S.("x"), S.("y"), nil, { mask: "\u00a01" })...
+   *   # => msubsup over &#x222b;, x, y
+   */
+  it("a mask led by a Unicode space reads as 0, as Ruby's to_i does (probed)", () => {
+    for (const code of [0x00a0, 0x2028, 0xfeff]) {
+      const mask = `${String.fromCharCode(code)}1`;
+      const nary = new NaryNode({
+        parameterOne: x(),
+        parameterTwo: y(),
+        parameterThree: new SymbolNode({ value: "z" }),
+        options: { mask },
+      });
+      expect(toMathml(formula(nary))).toBe(
+        math(
+          "    <msubsup>\n      <mi>x</mi>\n      <mi>y</mi>\n      <mi>z</mi>\n" +
+            "    </msubsup>",
+        ),
+      );
+      const int = new IntNode({ parameterOne: x(), parameterTwo: y(), options: { mask } });
+      expect(toMathml(formula(int))).toBe(
+        math(
+          "    <msubsup>\n      <mo>&#x222b;</mo>\n      <mi>x</mi>\n      <mi>y</mi>\n" +
+            "    </msubsup>",
+        ),
+      );
+    }
+  });
+
   it("tables: vert column lines and the empty cell; CloseParen's columnalign (probed)", () => {
     const vertTable = new TableNode({
       value: [tr(td(new SymbolNode({ id: "Paren::Vert" })))],

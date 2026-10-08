@@ -7,9 +7,10 @@
 #   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
 #     scripts/generate-html-model-fixtures.rb --oracle /path/to/plurimath
 #
-# The shared corpus is AsciiMath-in / many-formats-out and carries no HTML
-# target at all, so unlike LaTeX's fixtures there is no `expected.html` to feed
-# back. What there is instead is the ROUND TRIP the gem's own
+# This generator was written when the shared corpus carried no HTML target, so
+# unlike LaTeX's fixtures it does not feed `expected.html` back (the corpus
+# has carried one since plurimath-testsuite#22). What it uses instead is the
+# ROUND TRIP the gem's own
 # `spec/plurimath/html/to_html_round_trip_spec.rb` performs: parse each corpus
 # case in its own input format, render it with `to_html`, strip the whitespace,
 # and hand the result back to `Plurimath::Math.parse(..., :html)`. A case that

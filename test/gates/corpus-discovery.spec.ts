@@ -140,8 +140,11 @@ function rubyConstant(script: string, name: string): string {
   return literal?.[1] ?? "";
 }
 
-/** The formats P1 renders, and so the targets every group must declare. */
-const REQUIRED_TARGETS = ["asciimath", "latex", "mathml", "unicodemath"];
+/**
+ * The formats this port renders, and so the targets every group must declare:
+ * the four P1 formats, plus OMML and HTML since plurimath-testsuite#22.
+ */
+const REQUIRED_TARGETS = ["asciimath", "html", "latex", "mathml", "omml", "unicodemath"];
 
 describe("the submodule path every reader hardcodes", () => {
   it("is the one .gitmodules declares", () => {
@@ -392,9 +395,13 @@ function assertRequiredTargets(payloads: readonly Declaring[]): void {
   }
 }
 
-describe("every pinned group declares the formats P1 renders", () => {
+describe("every pinned group declares the formats this port renders", () => {
   it("holds for the pin as shipped", () => {
     assertRequiredTargets(loadPinnedCorpus().payloads);
+  });
+
+  it("holds for the calls/1 groups too", () => {
+    assertRequiredTargets(loadPinnedCorpus().callsPayloads);
   });
 
   it("rejects a group that stopped declaring one", () => {
@@ -408,5 +415,67 @@ describe("every pinned group declares the formats P1 renders", () => {
 
   it("rejects an empty payload list rather than passing vacuously", () => {
     expect(() => assertRequiredTargets([])).toThrow();
+  });
+});
+
+/** Just enough of a group to count its expectations per target. */
+type Counting = Declaring & {
+  readonly cases: readonly {
+    readonly id: string;
+    readonly expected: ReadonlyMap<string, string>;
+    readonly refusals?: ReadonlyMap<string, string>;
+  }[];
+};
+
+/**
+ * Per group and per required target: a nonzero count of cases carrying an
+ * expectation (rendered bytes or a recorded refusal) for that target, equal to
+ * the group's own case count. One token case per target cannot satisfy it.
+ */
+function assertExpectationPerTarget(payloads: readonly Counting[]): void {
+  expect(payloads.length, "no payloads to check, so this proves nothing").toBeGreaterThan(0);
+  for (const payload of payloads) {
+    expect(payload.cases.length, payload.path).toBeGreaterThan(0);
+    for (const target of REQUIRED_TARGETS) {
+      const carrying = payload.cases.filter(
+        (entry) => entry.expected.has(target) || (entry.refusals?.has(target) ?? false),
+      ).length;
+      expect(carrying, `${payload.path} ${target}`).toBe(payload.cases.length);
+    }
+  }
+}
+
+describe("every pinned case carries an expectation for each required target", () => {
+  it("holds for the case groups as shipped", () => {
+    assertExpectationPerTarget(loadPinnedCorpus().payloads);
+  });
+
+  it("holds for the calls/1 groups as shipped", () => {
+    assertExpectationPerTarget(loadPinnedCorpus().callsPayloads);
+  });
+
+  it("rejects a group where one case lacks a target", () => {
+    const rendered = new Map(REQUIRED_TARGETS.map((target) => [target, "x"] as const));
+    const short = new Map([...rendered].filter(([target]) => target !== "html"));
+    expect(() =>
+      assertExpectationPerTarget([
+        {
+          path: "asciimath/frac.yaml",
+          targets: REQUIRED_TARGETS,
+          cases: [
+            { id: "a", expected: rendered },
+            { id: "b", expected: short },
+          ],
+        },
+      ]),
+    ).toThrow();
+  });
+
+  it("rejects a group with no cases rather than passing vacuously", () => {
+    expect(() =>
+      assertExpectationPerTarget([
+        { path: "asciimath/frac.yaml", targets: REQUIRED_TARGETS, cases: [] },
+      ]),
+    ).toThrow();
   });
 });

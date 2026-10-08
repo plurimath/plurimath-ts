@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-parity-fixtures.rb
-  sha256: 4123ddb81e7bfaec3cf1a61ed21efa137489f7bc197a647a253fb27b2b8bba7e
+  sha256: beec8d873e7bf001ca951618e7644c14bc4e26e89e7e4baa6deeb218f39bea52
   inputs:
-    scripts/generate-corpus.rb: e11dfe4822a0f61f2e67e817f117540dc984bc42dab12e54d795f2bd98925614
-    scripts/generate-parity-fixtures.rb: 4123ddb81e7bfaec3cf1a61ed21efa137489f7bc197a647a253fb27b2b8bba7e
+    scripts/generate-corpus.rb: 0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef
+    scripts/generate-parity-fixtures.rb: beec8d873e7bf001ca951618e7644c14bc4e26e89e7e4baa6deeb218f39bea52
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: a8fe7130b767bce4222aa859f047bbfc771680d6
+    commit: 8f2b5a6c4ccdeacd40bc7968501ba3eba4083968
     clean: true
     dirty_paths: []
 oracle:
@@ -105,15 +105,15 @@ dependencies:
 corpus:
   path: submodules/plurimath-testsuite
   repository:
-    commit: 2ed17b9432c59bd206c2a035a00dc58a026f4024
+    commit: cf3c5ebf8b8ce35ade189b11a741f272ae93c8a0
     clean: true
     dirty_paths: []
   provenance:
     path: corpus/provenance.yaml
-    schema: plurimath-corpus/provenance/2
-    sha256: 66d2acf279a8c396812b823e0895257ee2a0dda2e775beddcaa4a5931ad10685
+    schema: plurimath-corpus/provenance/3
+    sha256: 7f6c198dd50b0dcfe8f69f2dc13083864fe03d478213dc2deaed42c7ccabc5c9
 payload:
   path: parity-fixtures.json
-  schema: plurimath-corpus/render-parity/1
-  sha256: 84eebdd0c008fa3b32b2dba80a0c384a9ae8379bcbbb4fb0128ea08dcd60dc3a
-  bytes: 167503
+  schema: plurimath-corpus/render-parity/2
+  sha256: bfb8ca696090e0fc77c25163a9575e8c323a8def348237b3a45b8bed3c060b04
+  bytes: 444746

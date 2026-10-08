@@ -178,7 +178,10 @@ src/
                      Only the root entry re-exports it.
   cli/               The `plurimath` executable (package.json `bin`, built to
                      dist/cli.mjs): `plurimath convert --from F --to F`,
-                     through the compat class. Not a subpath of the library.
+                     through the compat layer (the class, and
+                     compat/render-options.ts for the MathML/OMML options
+                     the class's frozen signatures lack). Not a subpath of
+                     the library.
   generated/
     asciimath/       Input tables for the asciimath parser (own file).
     mathml/          Output descriptors for the mathml renderer (own file).
@@ -195,9 +198,8 @@ scripts/             Ruby extraction — generator/probe entrypoints covering
                      locale table (generate-formatting-data.rb); plus HTML
                      parity fixtures (generate-parity-fixtures.rb) and the
                      degenerate-slot sweep (probe-degenerate-slots.rb), which
-                     share render-fixture-provenance.rb. The legacy Ox contract
-                     generator records partial provenance inside its payload;
-                     its sidecar gap is explicit in TODO.plan/deferred.md.
+                     share render-fixture-provenance.rb, as does the Ox
+                     contract generator (generate-xml-fixtures.rb).
                      Alongside them, the
                      gate runners: check.mjs, gate-boundaries.mjs,
                      gate-package.mjs, gate-oracle.rb, differential-port.mjs.
@@ -1038,8 +1040,8 @@ only the model and rendered outputs.
 the gem or this repo's generator** (`--allow-dirty` exists for local experiments
 only; its output is marked non-committable and CI rejects it). For managed
 payloads, provenance lives in a **sidecar manifest** — not inside the payload —
-so hashes have an unambiguous scope. Legacy render-sweep and Ox-contract
-exceptions are named in `TODO.plan/deferred.md`. A managed manifest records
+so hashes have an unambiguous scope. The legacy render-sweep exceptions are
+named in `TODO.plan/deferred.md`. A managed manifest records
 everything that can change an output byte:
 
 - corpus/data schema version; stable case ids; and

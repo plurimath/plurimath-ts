@@ -16,8 +16,11 @@
       "!test/formats/**/render-kinds-fixtures.json",
       "!test/formats/**/evaluation-fixtures.json",
       "!test/xml/reader-fixtures.json",
+      "!test/formats/**/cli-fixtures.json",
       "!test/evaluation/pow-rounding-band-corpus.json",
-      "!test/evaluation/libm-rounding-band-corpus.json"
+      "!test/evaluation/libm-rounding-band-corpus.json",
+      "!test/evaluation/libm-log-corpus.json",
+      "!test/evaluation/libm-hyperbolic-corpus.json"
     ]
   },
   "formatter": {

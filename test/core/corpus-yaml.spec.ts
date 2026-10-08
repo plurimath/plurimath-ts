@@ -11,7 +11,12 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadPinnedCorpus, PINNED_CORPUS_ROOT, REPO_ROOT } from "./corpus-pin";
+import {
+  isPendingReaderPayload,
+  loadPinnedCorpus,
+  PINNED_CORPUS_ROOT,
+  REPO_ROOT,
+} from "./corpus-pin";
 import { parseYaml, type YamlValue } from "./corpus-yaml";
 
 /** Wraps a fragment in the smallest document the reader will start on. */
@@ -132,12 +137,27 @@ describe("the corpus itself", () => {
     ].sort();
     const found = pinned.map((path) => relative(PINNED_CORPUS_ROOT, path).split("\\").join("/"));
     expect(found).toStrictEqual(expected);
-    expect(found.length).toBe(53);
+    expect(found.length).toBe(80);
+  });
+
+  // The MathML and OMML payloads are pending their readers
+  // (`PENDING_READER_FORMATS`); several use multi-line quoted scalars this
+  // reader does not handle. They are excluded by name, and counted, so a new
+  // pending format cannot slip in unnoticed.
+  const pending = pinned.filter((path) =>
+    isPendingReaderPayload(
+      relative(join(PINNED_CORPUS_ROOT, "corpus"), path).split("\\").join("/"),
+    ),
+  );
+
+  it("sets aside exactly the pending MathML and OMML payloads", () => {
+    expect(pending.length).toBe(28);
+    expect(loadPinnedCorpus().pendingPayloads.length).toBe(28);
   });
 
   it("reads all of them to a mapping", () => {
-    const files = [...local, ...pinned];
-    expect(files.length).toBe(57);
+    const files = [...local, ...pinned.filter((path) => !pending.includes(path))];
+    expect(files.length).toBe(56);
     for (const file of files) {
       const document = parseYaml(readFileSync(file, "utf8"));
       expect(typeof document, file).toBe("object");

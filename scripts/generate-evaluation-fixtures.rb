@@ -28,17 +28,20 @@
 #
 # `portRefusal` marks a row the port refuses with `UnsupportedFeatureError`
 # although the oracle answers or raises something else, and says why:
-# `unported` (a construct the gem evaluates that this port has not ported:
-# `sinh`, `log`, ...), `rational` / `big-integer` (a FINAL result a JS
+# `unported` (a construct the gem evaluates that this port has not ported;
+# none is left, but the check stays for the next one), `rational` /
+# `big-integer` (a FINAL result a JS
 # number cannot hold exactly — intermediate ones are computed exactly, as
 # Ruby does), `pow-rounding-band` (a Float power within glibc's rounding
 # band), `libm-rounding-band` (a `Math` function result within glibc's
 # rounding band), `libm-reduction` (a sin/cos/tan argument so close to a
 # multiple of pi/2 that glibc's range reduction is not accurate enough to
-# trust), `argument-error` (Ruby raises `ArgumentError`, not an evaluation
-# error; recorded as `raises: "ArgumentError"`), or `size-limit` (an exact
+# trust), `hyperbolic-rounding-band` (a `sinh`/`cosh` whose call to `exp`
+# lies within `exp`'s rounding band, `libm-hyperbolic.ts`), `argument-error`
+# (Ruby raises `ArgumentError`, not an evaluation error; recorded as
+# `raises: "ArgumentError"`), or `size-limit` (an exact
 # intermediate beyond the port's resource limit) — `src/evaluation/numeric.ts`,
-# `pow.ts` and `libm.ts`. The oracle's own answer is still recorded, so the refusal is
+# `pow.ts`, `libm.ts` and `libm-hyperbolic.ts`. The oracle's own answer is still recorded, so the refusal is
 # visibly a refusal of THAT answer. A Rational or out-of-range Integer answer
 # without a `portRefusal` aborts generation, and so does a `rational`,
 # `big-integer` or `argument-error` marker the oracle's answer does not bear
@@ -87,6 +90,21 @@ unless Gem.loaded_specs.key?("plurimath")
         "#{oracle}/Gemfile and run #{__FILE__} with `bundle exec ruby`, under " \
         "any Ruby that has it bundled (mise, rbenv, asdf, rvm, or the system " \
         "Ruby all work)."
+end
+
+# `Math` results depend on the Ruby as well as the C library (Ruby 4.0.1's
+# two-argument `Math.log` divides `log2` results, `math.c`'s
+# `log_intermediate`; another Ruby may compute it differently). The fixtures are the oracle's Ruby's answers, so no other Ruby may
+# write them.
+ORACLE_RUBY_VERSION = "4.0.1"
+unless RUBY_VERSION == ORACLE_RUBY_VERSION
+  abort "REFUSING: the oracle's Ruby is #{ORACLE_RUBY_VERSION}; this is #{RUBY_VERSION}"
+end
+ORACLE_GLIBC_VERSION = "2.35"
+host_glibc = `getconf GNU_LIBC_VERSION 2>/dev/null`.strip
+unless host_glibc == "glibc #{ORACLE_GLIBC_VERSION}"
+  abort "REFUSING: the oracle's C library is glibc #{ORACLE_GLIBC_VERSION}; this host has " \
+        "#{host_glibc.empty? ? 'no glibc' : host_glibc}"
 end
 
 loaded = $LOADED_FEATURES.grep(%r{/plurimath\.rb\z}).first
@@ -257,7 +275,8 @@ UNPORTED_GEM_CLASSES = (GEM_EVALUATED_FUNCTION_NAMES - DISPATCHED_CLASSES).to_h 
   end
   [klass.name, name]
 end.freeze
-abort "REFUSING: evaluator.ts leaves no gem-evaluated class unported" if UNPORTED_GEM_CLASSES.empty?
+# Empty since the hyperbolic functions were ported: every class the gem
+# evaluates is dispatched, and no row may be marked `unported`.
 
 # Every node of a parsed gem formula, depth first: the `Plurimath::Math::Core`
 # values reachable through its instance variables, arrays and hashes.
@@ -357,6 +376,8 @@ LIBM_REFUSAL_OPERANDS = {
   "libm-band-sec-glibc-miss" => ["cos", -317.75792610645294],
   "libm-band-csc-glibc-miss" => ["sin", -6.428541877306998],
   "latex-libm-band-sin-glibc-miss" => ["sin", -6.428541877306998],
+  # `log10(0.214)` calls `log` on its reduced argument, `0.214 * 2^2`.
+  "latex-lg-band-glibc-log" => ["log", 0.214 * 4],
   "tan-pi-over-four" => ["tan", Math::PI / 4],
   "arccos-half" => ["acos", 0.5],
   "libm-reduction-cos-hardest-argument" => ["cos", 6_381_956_970_095_103 * 2.0**797],
@@ -389,6 +410,83 @@ def validate_libm_refusal!(id, port_refusal)
             "of pi/2, outside libm.ts's 2^-#{bits} guard"
     end
   end
+end
+
+# `libm-hyperbolic.ts`'s regions, read from its source the way `libm.ts`'s
+# bands are: per function, `[name, below, path]` in order, `below` resolved
+# through its `BRANCH` table.
+HYPERBOLIC_TS_SOURCE = File.read(File.join(__dir__, "..", "src", "evaluation", "libm-hyperbolic.ts"))
+HYPERBOLIC_BRANCH_BLOCK = HYPERBOLIC_TS_SOURCE.match(/export const BRANCH = \{\n(.*?)\n\} as const;/m)
+abort "REFUSING: could not read BRANCH out of libm-hyperbolic.ts" unless HYPERBOLIC_BRANCH_BLOCK
+
+def hyperbolic_number(text)
+  case text
+  when "Infinity" then Float::INFINITY
+  when /\A2 \*\* (-?\d+)\z/ then 2.0**Regexp.last_match(1).to_i
+  when /\ABRANCH\.(\w+)\z/ then HYPERBOLIC_BRANCH.fetch(Regexp.last_match(1))
+  else Float(text)
+  end
+end
+
+HYPERBOLIC_BRANCH = HYPERBOLIC_BRANCH_BLOCK[1].scan(/^  (\w+): ([^,\n]+),$/).to_h do |name, value|
+  [name, hyperbolic_number(value)]
+end.freeze
+HYPERBOLIC_REGIONS = HYPERBOLIC_TS_SOURCE
+                     .scan(/^    region\("(\w+)", "([^"]+)", ([^,]+), "(direct|expm1|exp|exp-half)"\),$/)
+                     .group_by(&:first)
+                     .transform_values do |list|
+                       list.map { |_fn, name, below, path| [name, hyperbolic_number(below), path] }
+                     end.freeze
+unless HYPERBOLIC_REGIONS.keys.sort == %w[cosh sinh tanh] && HYPERBOLIC_REGIONS.values.all? { |r| r.last[1] == Float::INFINITY }
+  abort "REFUSING: could not read REGIONS out of libm-hyperbolic.ts"
+end
+
+# `hyperbolic-rounding-band` rows: the C function and its double argument,
+# keyed by row id. The argument must lie in a region whose path calls `exp`
+# (`exp(|x|)`, or `exp(|x|/2)` for `exp-half`), and that call's exact result
+# must lie within `libm.ts`'s `exp` band of a double midpoint
+# (`LibmReference.rounded`, BigDecimal).
+HYPERBOLIC_REFUSAL_OPERANDS = {
+  "sinh-exp-band" => ["sinh", 22.0],
+  "cosh-exp-band" => ["cosh", 21.9],
+  "sinh-exp-half-band" => ["sinh", 709.7924],
+  "cosh-exp-half-band" => ["cosh", -709.7924],
+  "sech-exp-band" => ["cosh", 21.9],
+  "csch-exp-band" => ["sinh", -22.0],
+  "latex-sinh-exp-band" => ["sinh", 22.0],
+}.freeze
+
+# The C function each hyperbolic class calls (`Sech#evaluate` is
+# `divide(1.0, ::Math.cosh(x))`).
+HYPERBOLIC_C_FUNCTIONS = {
+  "sinh" => "sinh", "cosh" => "cosh", "tanh" => "tanh", "sech" => "cosh", "csch" => "sinh", "coth" => "tanh",
+}.freeze
+
+def validate_hyperbolic_refusal!(id, port_refusal, row)
+  fn, x = HYPERBOLIC_REFUSAL_OPERANDS[id]
+  abort "REFUSING: #{id}: marked #{port_refusal}, but no HYPERBOLIC_REFUSAL_OPERANDS entry" unless fn
+
+  # The operand table must describe the row itself: `<class>(<literal or a>)`.
+  match = row["input"]["text"].match(/\A\\?(sinh|cosh|tanh|sech|csch|coth)\((.+)\)\z/)
+  argument = match && (match[2] == "a" ? row["bindings"]["a"] : Float(match[2], exception: false))
+  unless match && HYPERBOLIC_C_FUNCTIONS[match[1]] == fn && argument.is_a?(Numeric) && argument.to_f == x
+    abort "REFUSING: #{id}: HYPERBOLIC_REFUSAL_OPERANDS says #{fn}(#{x}), but the row is " \
+          "#{row['input']['text']} with #{row['bindings'].inspect}"
+  end
+
+  name, _below, path = HYPERBOLIC_REGIONS.fetch(fn).find { |_n, below, _p| x.abs < below }
+  exp_argument = case path
+                 when "exp" then x.abs
+                 when "exp-half" then 0.5 * x.abs
+                 else abort "REFUSING: #{id}: marked #{port_refusal}, but #{fn}(#{x}) is in #{name}, which calls no exp"
+                 end
+  bands = LIBM_BAND_INVERSES.fetch("exp")
+  inverse = exp_argument < LIBM_SMALL_ARGUMENT ? bands[:small] : bands[:large]
+  _rounded, distance = LibmReference.rounded("exp", exp_argument)
+  return if distance && distance < Rational(1, inverse)
+
+  abort "REFUSING: #{id}: marked #{port_refusal}, but exp(#{exp_argument}) lies #{distance.inspect} ULP " \
+        "from a midpoint, outside libm.ts's 1/#{inverse} exp band"
 end
 
 def validate_port_refusal!(id, port_refusal, row)
@@ -429,6 +527,8 @@ def validate_port_refusal!(id, port_refusal, row)
     end
   when "libm-rounding-band", "libm-reduction"
     validate_libm_refusal!(id, port_refusal)
+  when "hyperbolic-rounding-band"
+    validate_hyperbolic_refusal!(id, port_refusal, row)
   when "pow-rounding-band"
     operands = POW_ROUNDING_BAND_OPERANDS[id]
     abort "REFUSING: #{id}: marked pow-rounding-band, but no POW_ROUNDING_BAND_OPERANDS entry" unless operands
@@ -856,6 +956,44 @@ ROWS = [
   ["ln-rational-underflows", "math-exp-log", "ln(2^(-2000))"],
   ["ln-rational-parts-overflow", "math-exp-log", "ln(2^1100*3^(-700))"],
   ["exp-of-ln", "math-exp-log", "exp(ln(2))"],
+
+  # `Log` takes the `Fenced` group after it as its argument
+  # (`ExpressionParser#bind_log_argument`), then `::Math.log(x, base)`, which
+  # is `log2(x) / log2(base)` plus the Bignum excess-bits term.
+  ["log-default-base", "math-log", "log(100)"],
+  ["log-default-base-inexact", "math-log", "log(2)"],
+  ["log-base-two", "math-log", "log_2(8)"],
+  ["log-base-two-inexact", "math-log", "log_2(10)"],
+  ["log-base-exponent", "math-log", "log_2^3(8)"],
+  ["log-base-half", "math-log", "log_0.5(8)"],
+  ["log-base-rational", "math-log", "log_(2^(-1))(8)"],
+  ["log-base-float-ten", "math-log", "log_10.0(1000)"],
+  ["log-base-e-is-a-variable", "math-log", "log_e(10)"],
+  ["log-of-one", "math-log", "log_2(1)"],
+  ["log-of-one-base-below-one", "math-log", "log_0.5(1)"],
+  ["log-zero", "math-log", "log_2(0)"],
+  ["log-negative", "math-log", "log_2(-3)"],
+  ["log-base-one", "math-log", "log_1(3)"],
+  ["log-base-float-one", "math-log", "log_1.0(3)"],
+  ["log-base-negative", "math-log", "log_(-2)(3)"],
+  ["log-base-zero", "math-log", "log_0(3)"],
+  ["log-base-nan", "math-log", "log_a(3)"],
+  ["log-base-infinity", "math-log", "log_a(3)"],
+  ["log-argument-infinity", "math-log", "log_2(a)"],
+  ["log-argument-subnormal", "math-log", "log_2(a)"],
+  ["log-base-underflows-to-zero", "math-log", "log_(2^(-2000))(3)"],
+  ["log-big-integer", "math-log", "log_3(2^2000)"],
+  ["log-big-base", "math-log", "log_(2^2000)(3)"],
+  ["log-big-both-excess-wraps", "math-log", "log_(2^2000)(3^900)"],
+  ["log-big-both", "math-log", "log_(3^900)(2^2000)"],
+  ["log-without-group", "math-log", "log_2 8"],
+  ["log-bare", "math-log", "log"],
+  ["log-in-expression", "math-log", "2 log(10)+1"],
+  ["log-nested", "math-log", "log_2(log_2(16))"],
+  ["log-missing-variable", "math-log", "log_2(x)"],
+  # The base is checked before the argument is evaluated.
+  ["log-base-checked-before-argument", "math-log", "log_0(x)"],
+  ["log-negative-zero", "math-log", "log_2(-0.0)"],
   ["sqrt-four", "math-sqrt", "sqrt(4)"],
   ["sqrt-two", "math-sqrt", "sqrt(2)"],
   ["sqrt-bare-operand", "math-sqrt", "sqrt 2"],
@@ -905,19 +1043,77 @@ ROWS = [
   ["libm-measured-cos-minus-above-half-pi", "math-measured", "cos(a)"],
   ["libm-measured-cot-three-pi", "math-measured", "cot(3pi)"],
 
-  # Gem-evaluated nodes this port has not ported: the hyperbolic functions
-  # and `Log`/`Lg`, pending a licensing decision about copying C-library
-  # code. (`lg` is AsciiMath for the variables `l` and `g`; `\lg` is LaTeX's
-  # `Lg`, in `LATEX_ROWS`.)
-  ["unported-sinh", "unported", "sinh(1)"],
-  ["unported-cosh", "unported", "cosh(1)"],
-  ["unported-tanh", "unported", "tanh(1)"],
-  ["unported-sech", "unported", "sech(1)"],
-  ["unported-csch", "unported", "csch(1)"],
-  ["unported-coth", "unported", "coth(1)"],
-  ["unported-log", "unported", "log(100)"],
-  ["unported-log-base", "unported", "log_2(8)"],
-  ["unported-sinh-missing-variable", "unported", "sinh(x)"],
+  # The hyperbolic functions (`libm-hyperbolic.ts`): the correctly rounded
+  # result where glibc's is reliably it, the gem's signed zeros, overflow
+  # and non-finite arguments, and `sech`/`csch`/`coth`'s `divide(1.0, ...)`,
+  # which raises on a zero `sinh`/`tanh`.
+  ["sinh-zero", "math-hyperbolic", "sinh(0)"],
+  ["sinh-negative-zero", "math-hyperbolic", "sinh(-0.0)"],
+  ["sinh-large", "math-hyperbolic", "sinh(30)"],
+  ["sinh-tiny", "math-hyperbolic", "sinh(a)"],
+  ["sinh-overflow", "math-hyperbolic", "sinh(1000)"],
+  ["sinh-negative-overflow", "math-hyperbolic", "sinh(-1000)"],
+  ["sinh-infinity", "math-hyperbolic", "sinh(a)"],
+  ["sinh-nan", "math-hyperbolic", "sinh(a)"],
+  ["sinh-missing-variable", "math-hyperbolic", "sinh(x)"],
+  ["cosh-zero", "math-hyperbolic", "cosh(0)"],
+  ["cosh-negative-zero", "math-hyperbolic", "cosh(-0.0)"],
+  ["cosh-small", "math-hyperbolic", "cosh(0.01)"],
+  ["cosh-large", "math-hyperbolic", "cosh(30)"],
+  ["cosh-overflow", "math-hyperbolic", "cosh(1000)"],
+  ["cosh-minus-infinity", "math-hyperbolic", "cosh(a)"],
+  ["tanh-zero", "math-hyperbolic", "tanh(0)"],
+  ["tanh-negative-zero", "math-hyperbolic", "tanh(-0.0)"],
+  ["tanh-tiny", "math-hyperbolic", "tanh(a)"],
+  ["tanh-three", "math-hyperbolic", "tanh(3)"],
+  ["tanh-saturated", "math-hyperbolic", "tanh(25)"],
+  ["tanh-negative-saturated", "math-hyperbolic", "tanh(-25)"],
+  ["tanh-infinity", "math-hyperbolic", "tanh(a)"],
+  ["tanh-minus-infinity", "math-hyperbolic", "tanh(a)"],
+  ["tanh-nan", "math-hyperbolic", "tanh(a)"],
+  ["sech-zero", "math-hyperbolic", "sech(0)"],
+  ["sech-large", "math-hyperbolic", "sech(30)"],
+  ["sech-overflow", "math-hyperbolic", "sech(1000)"],
+  ["sech-infinity", "math-hyperbolic", "sech(a)"],
+  ["csch-zero", "math-hyperbolic", "csch(0)"],
+  ["csch-negative-zero", "math-hyperbolic", "csch(-0.0)"],
+  ["csch-large", "math-hyperbolic", "csch(30)"],
+  ["csch-overflow", "math-hyperbolic", "csch(1000)"],
+  ["csch-negative-overflow", "math-hyperbolic", "csch(-1000)"],
+  ["csch-minus-infinity", "math-hyperbolic", "csch(a)"],
+  ["coth-zero", "math-hyperbolic", "coth(0)"],
+  ["coth-negative-zero", "math-hyperbolic", "coth(-0.0)"],
+  ["coth-three", "math-hyperbolic", "coth(3)"],
+  ["coth-saturated", "math-hyperbolic", "coth(25)"],
+  ["coth-negative-saturated", "math-hyperbolic", "coth(-25)"],
+  ["coth-infinity", "math-hyperbolic", "coth(a)"],
+
+  # Arguments in the `expm1` regions, answered with glibc's own double, not
+  # the correctly rounded one where the two differ: glibc's
+  # `sinh(-1.8803256074855135)` is 0.85 ULP from the exact value, and its
+  # `tanh(1e-13)` is the double after `1e-13` (BigDecimal, 2026-09-29).
+  ["sinh-one", "math-hyperbolic", "sinh(1)"],
+  ["sinh-half", "math-hyperbolic", "sinh(0.5)"],
+  ["sinh-expm1-far-from-exact", "math-hyperbolic", "sinh(a)"],
+  ["cosh-one", "math-hyperbolic", "cosh(1)"],
+  ["cosh-quarter", "math-hyperbolic", "cosh(0.25)"],
+  ["tanh-one", "math-hyperbolic", "tanh(1)"],
+  ["tanh-half", "math-hyperbolic", "tanh(0.5)"],
+  ["tanh-glibc-above-exact", "math-hyperbolic", "tanh(a)"],
+  ["sech-one", "math-hyperbolic", "sech(1)"],
+  ["csch-one", "math-hyperbolic", "csch(1)"],
+  ["coth-one", "math-hyperbolic", "coth(1)"],
+
+  # `hyperbolic-rounding-band`: a `sinh`/`cosh` argument whose `exp` call
+  # (`exp(|x|)`, or `exp(|x|/2)` near overflow) lies inside `exp`'s band; the
+  # port refuses it as `Math.exp` would be. `sech`/`csch` refuse through the
+  # `cosh`/`sinh` they divide by.
+  ["sinh-exp-band", "math-hyperbolic-refusal", "sinh(22)"],
+  ["cosh-exp-band", "math-hyperbolic-refusal", "cosh(21.9)"],
+  ["sinh-exp-half-band", "math-hyperbolic-refusal", "sinh(709.7924)"],
+  ["cosh-exp-half-band", "math-hyperbolic-refusal", "cosh(-709.7924)"],
+  ["sech-exp-band", "math-hyperbolic-refusal", "sech(21.9)"],
+  ["csch-exp-band", "math-hyperbolic-refusal", "csch(-22)"],
 
   # A sample of scripts/-generated random expressions, re-checked here.
   ["random-float-product", "random", "+12*3.14"],
@@ -989,9 +1185,28 @@ LATEX_ROWS = [
   ["latex-ln-negative", "math-exp-log", "\\ln(-1)"],
   ["latex-sqrt-two", "math-sqrt", "\\sqrt{2}"],
   ["latex-sqrt-negative", "math-sqrt", "\\sqrt{-1}"],
-  ["latex-unported-sinh", "unported", "\\sinh(1)"],
-  ["latex-unported-lg", "unported", "\\lg(100)"],
-  ["latex-unported-log", "unported", "\\log(100)"],
+  ["latex-sinh", "math-hyperbolic", "\\sinh(30)"],
+  ["latex-tanh-negative-zero", "math-hyperbolic", "\\tanh(-0.0)"],
+  ["latex-coth-zero", "math-hyperbolic", "\\coth(0)"],
+  ["latex-sinh-one", "math-hyperbolic", "\\sinh(1)"],
+  ["latex-sinh-exp-band", "math-hyperbolic-refusal", "\\sinh(22)"],
+  # `\lg` is `Lg` (in AsciiMath, `lg` is the variables `l` and `g`):
+  # `::Math.log10`, glibc's `log10` over glibc's `log`.
+  ["latex-lg", "math-lg", "\\lg(100)"],
+  ["latex-lg-inexact", "math-lg", "\\lg(2)"],
+  ["latex-lg-fraction", "math-lg", "\\lg(0.001)"],
+  ["latex-lg-rational-argument", "math-lg", "\\lg(2^{-1})"],
+  ["latex-lg-zero", "math-lg", "\\lg(0)"],
+  ["latex-lg-negative", "math-lg", "\\lg(-1)"],
+  ["latex-lg-negative-zero", "math-lg", "\\lg(-0.0)"],
+  ["latex-lg-big-integer", "math-lg", "\\lg(2^{2000})"],
+  ["latex-lg-subnormal", "math-lg", "\\lg(a)"],
+  ["latex-lg-infinity", "math-lg", "\\lg(a)"],
+  ["latex-lg-nan", "math-lg", "\\lg(a)"],
+  ["latex-lg-log-in-band-neighbours-agree", "math-lg", "\\lg(a)"],
+  ["latex-lg-band-glibc-log", "math-lg", "\\lg(a)"],
+  ["latex-log", "math-log", "\\log(100)"],
+  ["latex-log-base", "math-log", "\\log_{2}(8)"],
 ].freeze
 
 # Bindings, keyed by the row id above where non-empty; every other row
@@ -1038,6 +1253,28 @@ BINDINGS = {
   "random-minus-one-to-float" => { "c" => -1 },
   "random-mixed-kinds" => { "a" => 3, "b" => -2.5, "c" => 4 },
   "random-nested-groups" => { "a" => 1, "b" => 0.5, "c" => -3 },
+  "log-base-nan" => { "a" => Float::NAN },
+  "sinh-tiny" => { "a" => 1e-20 },
+  "sinh-infinity" => { "a" => Float::INFINITY },
+  "sinh-nan" => { "a" => Float::NAN },
+  "cosh-minus-infinity" => { "a" => -Float::INFINITY },
+  "tanh-tiny" => { "a" => 1e-20 },
+  "tanh-infinity" => { "a" => Float::INFINITY },
+  "tanh-minus-infinity" => { "a" => -Float::INFINITY },
+  "tanh-nan" => { "a" => Float::NAN },
+  "sech-infinity" => { "a" => Float::INFINITY },
+  "csch-minus-infinity" => { "a" => -Float::INFINITY },
+  "coth-infinity" => { "a" => Float::INFINITY },
+  "sinh-expm1-far-from-exact" => { "a" => -1.8803256074855135 },
+  "tanh-glibc-above-exact" => { "a" => 1e-13 },
+  "log-base-infinity" => { "a" => Float::INFINITY },
+  "log-argument-infinity" => { "a" => Float::INFINITY },
+  "log-argument-subnormal" => { "a" => 5e-324 },
+  "latex-lg-subnormal" => { "a" => 5e-324 },
+  "latex-lg-infinity" => { "a" => Float::INFINITY },
+  "latex-lg-nan" => { "a" => Float::NAN },
+  "latex-lg-log-in-band-neighbours-agree" => { "a" => 0.107 },
+  "latex-lg-band-glibc-log" => { "a" => 0.214 },
   "latex-variable-lookup" => { "a" => 2 },
   "latex-invalid-binding-string" => { "a" => "x" },
   "abs-nan" => { "a" => Float::NAN },
@@ -1115,18 +1352,14 @@ PORT_REFUSALS = {
   "argument-error-negative-fixnum-min" => "argument-error",
   "size-limit-huge-power-times-zero" => "size-limit",
   "pow-exact-halfway" => "pow-rounding-band",
-  "unported-sinh" => "unported",
-  "unported-cosh" => "unported",
-  "unported-tanh" => "unported",
-  "unported-sech" => "unported",
-  "unported-csch" => "unported",
-  "unported-coth" => "unported",
-  "unported-log" => "unported",
-  "unported-log-base" => "unported",
-  "unported-sinh-missing-variable" => "unported",
-  "latex-unported-sinh" => "unported",
-  "latex-unported-lg" => "unported",
-  "latex-unported-log" => "unported",
+  "sinh-exp-band" => "hyperbolic-rounding-band",
+  "cosh-exp-band" => "hyperbolic-rounding-band",
+  "sinh-exp-half-band" => "hyperbolic-rounding-band",
+  "cosh-exp-half-band" => "hyperbolic-rounding-band",
+  "sech-exp-band" => "hyperbolic-rounding-band",
+  "csch-exp-band" => "hyperbolic-rounding-band",
+  "latex-sinh-exp-band" => "hyperbolic-rounding-band",
+  "latex-lg-band-glibc-log" => "libm-rounding-band",
   "libm-band-sin-glibc-miss" => "libm-rounding-band",
   "libm-band-cos-glibc-miss" => "libm-rounding-band",
   "libm-band-tan-glibc-miss" => "libm-rounding-band",

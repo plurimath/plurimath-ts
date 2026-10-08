@@ -448,6 +448,16 @@ export function rubyArrayInspectOrThrow(
  *   "\u00a010" 0     U+00A0 is not whitespace to Ruby
  */
 export function rubyToI(text: string): number {
+  return Number(rubyToInteger(text));
+}
+
+/**
+ * `rubyToI` as an exact integer. Ruby's `to_i` is arbitrary precision; the
+ * `number` `rubyToI` answers rounds past 2**53 and becomes `Infinity` past
+ * the double range, so a caller that reads the result's low bits (a modulo)
+ * takes this one instead.
+ */
+export function rubyToInteger(text: string): bigint {
   const digits = /^[\t\n\v\f\r ]*([+-]?\d+(?:_\d+)*)/.exec(text)?.[1];
-  return digits === undefined ? 0 : Number(digits.replaceAll("_", ""));
+  return digits === undefined ? 0n : BigInt(digits.replaceAll("_", ""));
 }

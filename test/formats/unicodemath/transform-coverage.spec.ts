@@ -39,6 +39,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 
 interface FixtureCase {
   readonly input: string;
+  /** The `locale:` parse option the gem ran under; absent for the default. */
+  readonly locale?: string;
   readonly preprocessed?: string;
   readonly model?: unknown;
 }
@@ -80,7 +82,13 @@ const build = buildUnicodemathTransform();
 let reached = 0;
 for (const entry of fixtures.cases) {
   if (entry.model === undefined || entry.preprocessed === undefined) continue;
-  build.transform.apply(parseUnicodemathTree(entry.input));
+  // A locale row is driven under its own locale, as the gem parsed it.
+  build.transform.apply(
+    parseUnicodemathTree(
+      entry.input,
+      entry.locale === undefined ? undefined : { locale: entry.locale },
+    ),
+  );
   reached += 1;
 }
 

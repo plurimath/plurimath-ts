@@ -1145,6 +1145,10 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           const item = mapping(row, at);
           stringField(item, "group", record.relative);
           stringValue(item, "input", record.relative);
+          // A row parsed under a `locale:` parse option names it; a row with
+          // no `locale` key was parsed under the default configuration.
+          const localeKey = "locale" in item ? ["locale"] : [];
+          if ("locale" in item) stringField(item, "locale", record.relative);
           const hasModel = typeof item.model === "object" && item.model !== null;
           const hasRefusal = typeof item.raises === "string";
           expect(Number(hasModel) + Number(hasRefusal), `${at} outcome`).toBe(1);
@@ -1158,6 +1162,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
                 "raises",
                 "raisedIn",
                 ...(parseTextField in item ? [parseTextField] : []),
+                ...localeKey,
               ],
               at,
             );
@@ -1165,7 +1170,11 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               stringField(item, "raisedIn", record.relative),
             );
           } else {
-            expectExactKeys(item, ["group", "id", "input", parseTextField, "model"], at);
+            expectExactKeys(
+              item,
+              ["group", "id", "input", parseTextField, "model", ...localeKey],
+              at,
+            );
             stringValue(item, parseTextField, record.relative);
             const model = mapField(item, "model", at);
             expect(stringField(model, "class", at)).toBe("Math::Formula");

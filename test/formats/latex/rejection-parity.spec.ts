@@ -29,7 +29,7 @@
 
 import { describe, expect, it } from "vitest";
 import { ParseError } from "../../../src/core/errors";
-import { parseLatex } from "../../../src/formats/latex/parser";
+import { parseLatex, parseLatexTree } from "../../../src/formats/latex/parser";
 import { preprocess } from "../../../src/formats/latex/preprocess";
 import { UnsupportedLocaleError } from "../../../src/formatting/index";
 import { loadPinnedCorpus, type PinnedRejection } from "../../core/corpus-pin";
@@ -223,8 +223,13 @@ function mappedGemIndex(entry: PinnedRejection): number {
 // raises `Plurimath::Errors::UnsupportedLocale`, while the same input with no
 // locale raises `Plurimath::Math::ParseError`.
 describe("an unsupported locale on an input preprocessing refuses", () => {
-  it("is reported as the unsupported locale, before preprocessing", () => {
-    expect(() => parseLatex("&#55296;")).toThrow(ParseError);
-    expect(() => parseLatex("&#55296;", { locale: "xx" })).toThrow(UnsupportedLocaleError);
+  // `parseLatexTree` checks the locale on its own, not through `parseLatex`,
+  // so each entry point is asserted separately.
+  it.each([
+    ["parseLatex", parseLatex],
+    ["parseLatexTree", parseLatexTree],
+  ] as const)("%s reports the unsupported locale, before preprocessing", (_name, parse) => {
+    expect(() => parse("&#55296;")).toThrow(ParseError);
+    expect(() => parse("&#55296;", { locale: "xx" })).toThrow(UnsupportedLocaleError);
   });
 });

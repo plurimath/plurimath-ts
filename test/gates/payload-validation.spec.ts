@@ -1313,7 +1313,13 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         const read = rows.filter((row, index) => {
           const item = mapping(row, `${record.relative}.cases[${index}]`);
           stringField(item, "group", record.relative);
-          stringValue(item, "input", record.relative);
+          const input = stringValue(item, "input", record.relative);
+          // The generator's id is the input's SHA-256 prefix; a mismatch
+          // means a row was edited by hand.
+          const id = `xml-${createHash("sha256").update(input, "utf8").digest("hex").slice(0, 12)}`;
+          if (stringField(item, "id", record.relative) !== id) {
+            expect(item.id, `${record.relative}.cases[${index}].id`).toBe(id);
+          }
           const hasRoot = item.root !== undefined;
           if (hasRoot) {
             expectExactKeys(

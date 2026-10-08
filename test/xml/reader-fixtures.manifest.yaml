@@ -8,11 +8,11 @@ generator:
   path: scripts/generate-xml-reader-fixtures.rb
   sha256: a5e8537c0d576dba095856defef98b3c02b19abbb0fe8e6dd7dfa847dac36815
   inputs:
-    scripts/generate-corpus.rb: e11dfe4822a0f61f2e67e817f117540dc984bc42dab12e54d795f2bd98925614
+    scripts/generate-corpus.rb: 0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef
     scripts/generate-xml-reader-fixtures.rb: a5e8537c0d576dba095856defef98b3c02b19abbb0fe8e6dd7dfa847dac36815
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 235f47851c876228326d9788ba0d685085808c81
+    commit: b3b77e884b3f90cf7535bec68919abeb790430db
     clean: true
     dirty_paths: []
 oracle:

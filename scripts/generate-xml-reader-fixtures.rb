@@ -116,6 +116,10 @@ module XmlReaderProbe
       "<a><?pi\ndata?></a>",
     ],
     "declaration" => [
+      # Ruby folds encoding names in ASCII only: with a Kelvin sign (U+212A)
+      # for its K, an ASCII-incompatible name is an unknown one.
+      "<?xml version=\"1.0\" encoding=\"ISO-2022-JP-KDDI\"?><a/>",
+      "<?xml version=\"1.0\" encoding=\"ISO-2022-JP-\u212ADDI\"?><a/>",
       "<?xml version=\"1.0\"?><a/>", "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<a/>",
       "<?xml version='1.0' encoding='utf-8' standalone='yes'?><a/>", "<?xml?><a/>",
       " <?xml version=\"1.0\"?><a/>", "<a/><?xml version=\"1.0\"?>",
@@ -197,6 +201,10 @@ module XmlReaderProbe
       # bytes is refused before any comparison.
       "<a xmlns:m=\"&#xD800;\" m=\"\uFFFD\"/>", "<a xmlns:m=\"&#xD800;\" m=\"&#xD800;\"/>",
       "<a xmlns:m=\"\uFFFD\" m=\"\uFFFD\"/>",
+      # Moxml strips `xmlns:` from a declaration's name and Lutaml strips it
+      # again, so these file under `m` and the default namespace.
+      "<a xmlns:xmlns:m=\"u\" m=\"u\"/>", "<a xmlns:xmlns=\"u\" m=\"u\"/>",
+      "<a xmlns:xmlns:=\"u\" m=\"u\"/>", "<a xmlns:xmlns:xmlns:m=\"u\" m=\"u\"/>",
       "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mi>x</mi></math>",
       "<m:math xmlns:m=\"http://www.w3.org/1998/Math/MathML\"><m:mi>x</m:mi></m:math>",
       "<m:a/>", "<m:a><m:b/></m:a>", "<a xmlns=\"u\"><b xmlns=\"v\"><c/></b></a>",

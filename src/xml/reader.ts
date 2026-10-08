@@ -264,11 +264,19 @@ export const ASCII_INCOMPATIBLE_ENCODING_NAMES: ReadonlySet<string> = new Set(
     "UTF-32LE",
     "UTF-7",
     "ebcdic-cp-us",
-  ].map((name) => name.toLowerCase()),
+  ].map(asciiLowerCase),
 );
 
+/**
+ * Ruby's `Encoding.find` folds case in ASCII only. `toLowerCase` would also
+ * fold, for example, the Kelvin sign U+212A into `k`.
+ */
+function asciiLowerCase(name: string): string {
+  return name.replace(/[A-Z]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 32));
+}
+
 function classifyEncoding(name: string): DeclaredEncoding {
-  const key = name.toLowerCase();
+  const key = asciiLowerCase(name);
   if (UTF8_ENCODING_NAMES.has(key)) return "utf8";
   if (ASCII_INCOMPATIBLE_ENCODING_NAMES.has(key)) return "incompatible";
   // Any other name — known to Ruby or not, `""` and `" UTF-8"` included — was
@@ -1104,6 +1112,17 @@ function namespacePrefix(declared: string | null): string | null {
   return declared.startsWith("xmlns:") ? declared.slice(6) : declared;
 }
 
+/**
+ * Lutaml's `normalize_prefix`, applied to the prefix Moxml already stripped:
+ * `xmlns:xmlns:m` reaches Lutaml as `xmlns:m` and is filed under `m`; a bare
+ * `xmlns` or an empty prefix is the default namespace (null).
+ */
+function lutamlPrefix(prefix: string | null): string | null {
+  if (prefix === null || prefix === "xmlns") return null;
+  const normalized = prefix.startsWith("xmlns:") ? prefix.slice(6) : prefix;
+  return normalized === "" ? null : normalized;
+}
+
 /** `node[attr_name]` over the element and then its ancestors. */
 function lookupNamespace(
   prefix: string | null,
@@ -1137,7 +1156,7 @@ function wrapElement(element: OxElement, ancestors: readonly OxElement[]): XmlRe
     if (key.startsWith("xmlns")) xmlns.push([key, DECODER.decode(value)]);
     if (key === "xmlns" || key.startsWith("xmlns:")) {
       // Lutaml's namespace table files an empty prefix (`xmlns:=`) under nil.
-      own.set(namespacePrefix(key) || null, strictDecode(value));
+      own.set(lutamlPrefix(namespacePrefix(key)), strictDecode(value));
     }
   }
 

@@ -37,9 +37,9 @@
       "ebcdic-cp-us"
     ]
   },
-  "caseCount": 4098,
-  "readCount": 1979,
-  "raisedCount": 2119,
+  "caseCount": 4104,
+  "readCount": 1984,
+  "raisedCount": 2120,
   "cases": [
     {
       "id": "xml-f031fadb7782",
@@ -79759,6 +79759,23 @@
       }
     },
     {
+      "id": "xml-b174da2f0048",
+      "group": "declaration",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP-KDDI\"?><a/>",
+      "raises": "Encoding::CompatibilityError"
+    },
+    {
+      "id": "xml-aded7357cb29",
+      "group": "declaration",
+      "input": "<?xml version=\"1.0\" encoding=\"ISO-2022-JP-\u212aDDI\"?><a/>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": []
+      }
+    },
+    {
       "id": "xml-70378d64d305",
       "group": "declaration",
       "input": "<?xml version=\"1.0\"?><a/>",
@@ -81013,6 +81030,85 @@
           [
             "xmlns:m",
             "\ufffd"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
+      "id": "xml-8db8df6d013a",
+      "group": "namespaces",
+      "input": "<a xmlns:xmlns:m=\"u\" m=\"u\"/>",
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns:xmlns:m",
+            "u"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
+      "id": "xml-f748501e3b50",
+      "group": "namespaces",
+      "input": "<a xmlns:xmlns=\"u\" m=\"u\"/>",
+      "root": {
+        "element": "a",
+        "attributes": [
+          [
+            "m",
+            "u"
+          ]
+        ],
+        "xmlns": [
+          [
+            "xmlns:xmlns",
+            "u"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
+      "id": "xml-a1f74d730401",
+      "group": "namespaces",
+      "input": "<a xmlns:xmlns:=\"u\" m=\"u\"/>",
+      "root": {
+        "element": "a",
+        "attributes": [
+          [
+            "m",
+            "u"
+          ]
+        ],
+        "xmlns": [
+          [
+            "xmlns:xmlns:",
+            "u"
+          ]
+        ],
+        "children": []
+      }
+    },
+    {
+      "id": "xml-d4f2e5239a9f",
+      "group": "namespaces",
+      "input": "<a xmlns:xmlns:xmlns:m=\"u\" m=\"u\"/>",
+      "root": {
+        "element": "a",
+        "attributes": [
+          [
+            "m",
+            "u"
+          ]
+        ],
+        "xmlns": [
+          [
+            "xmlns:xmlns:xmlns:m",
+            "u"
           ]
         ],
         "children": []

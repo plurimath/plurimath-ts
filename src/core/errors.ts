@@ -85,7 +85,7 @@ export class ParseOptionError extends PlurimathError {
 }
 
 /**
- * `Math.parse`'s first option check (`math.rb:33-34`,
+ * `Math.parse`'s first option check (`math.rb:34-35`,
  * `raise_unknown_parse_options!`): every key outside `knownKeys` is refused
  * with `ParseOptionError`, before the `locale` value is checked and before
  * the input is preprocessed or parsed. Each parser passes its own options

@@ -1,27 +1,55 @@
-# Regenerates test/xml/ox-contract.expected.json — every expected string is
-# printed by the oracle's own Ox in this process; nothing is retyped.
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# Regenerates test/xml/ox-contract.expected.json and its sidecar provenance
+# manifest, test/xml/ox-contract.expected.manifest.yaml. Every expected string
+# is printed by the oracle's own Ox in this process; nothing is retyped.
 #
-# Run with the working directory set to a pinned oracle checkout — the script
-# only ever reads `Dir.pwd`, so no particular clone location is required —
-# emitting to stdout. For example, with the oracle cloned as a sibling
-# `../plurimath-oracle` and Ruby provisioned via mise:
-#
-#   cd ../plurimath-oracle && mise x ruby@4.0.1 -- bundle exec ruby \
-#     ../plurimath-ts/scripts/generate-xml-fixtures.rb \
-#     > ../plurimath-ts/test/xml/ox-contract.expected.json
-#
-# Activation is what matters, not that specific location or Ruby version: an
-# unactivated shell selects system Ruby and bundler exits with GemNotFound
-# (review-proven).
+#   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
+#     scripts/generate-xml-fixtures.rb --oracle /path/to/plurimath
 #
 # The tree recipes mirror test/xml/ox-contract.ts one-for-one; the three
 # MathML tree entries are byte-checked against Plurimath::Math.parse(...)
 # .to_mathml before emission and the script aborts on any mismatch, so the
 # committed fixtures cannot drift from what the gem really renders.
-# Provenance (oracle commit, Ox/Ruby versions) is embedded in the output.
-$LOAD_PATH.unshift File.expand_path("lib", Dir.pwd)
-require "plurimath"
+#
+# Provenance (oracle commit, Ruby, lockfile and dependency versions, including
+# Ox) is recorded in the adjacent sidecar by scripts/render-fixture-provenance.rb,
+# as for the per-format fixtures; the payload itself carries only the bytes.
+
 require "json"
+require "optparse"
+
+GENERATOR_RELATIVE_PATH = "scripts/generate-xml-fixtures.rb"
+SCHEMA = "plurimath-corpus/ox-contract/1"
+PAYLOAD_BASENAME = "ox-contract.expected.json"
+
+options = { oracle: nil, out: "test/xml", allow_dirty: false }
+OptionParser.new do |o|
+  o.on("--oracle PATH", "clean pinned plurimath checkout") { |v| options[:oracle] = v }
+  o.on("--out PATH", "output directory (default test/xml)") { |v| options[:out] = v }
+  o.on("--allow-dirty", "emit non-committable output from dirty checkouts") do
+    options[:allow_dirty] = true
+  end
+end.parse!
+
+abort "--oracle is required" unless options[:oracle]
+
+oracle = File.expand_path(options[:oracle])
+lib = File.join(oracle, "lib")
+abort "not a plurimath checkout: #{lib}" unless File.directory?(lib) && File.exist?(File.join(lib, "plurimath.rb"))
+
+$LOAD_PATH.unshift(lib)
+require "plurimath"
+require "plurimath/version"
+require_relative "render-fixture-provenance"
+
+unless Gem.loaded_specs.key?("plurimath")
+  abort "REFUSING: the plurimath gem is not activated. Set BUNDLE_GEMFILE=" \
+        "#{oracle}/Gemfile and run #{__FILE__} with `bundle exec ruby`, under " \
+        "any Ruby that has it bundled (mise, rbenv, asdf, rvm, or the system " \
+        "Ruby all work)."
+end
 
 ASCII = (0..127).map { |cp| cp.chr(Encoding::UTF_8) }.join
 SAMPLER = [0xA0, 0xE9, 0x3B1, 0x2211, 0x2028, 0x2029, 0xFFFD, 0x1F600, 0x80,
@@ -250,51 +278,27 @@ dn["mathml-sum-tree"] = dump_nodes(math_style_tree([sum_mrow]))
   end
 end
 
-# The oracle's commit, or a refusal.
-#
-# This used to be `%x(git rev-parse HEAD).strip`, and Ruby's backtick form does
-# NOT raise when the subprocess fails — outside a git working tree it returns
-# "" with `$?.exitstatus` 128 and no exception. This script's own header says to
-# redirect its stdout straight into the committed fixture, so that silently
-# wrote `"oracleCommit": ""` into checked-in test data: a provenance record
-# that states nothing while looking like it states something.
-#
-# `generate-corpus.rb:349` already does this correctly for the rest of the
-# repository; this file was the one generator that did not.
-def oracle_commit
-  output = IO.popen(["git", "rev-parse", "HEAD"], err: File::NULL, &:read)
-  unless $?.success?
-    abort "REFUSING: `git rev-parse HEAD` failed in #{Dir.pwd} (exit " \
-          "#{$?.exitstatus}). This script records the ORACLE's commit as " \
-          "provenance, so it must run from the oracle checkout."
-  end
+dir = File.expand_path(options[:out])
+payload_path = File.join(dir, PAYLOAD_BASENAME)
+sidecar, provenance = RenderFixtureProvenance.prepare(
+  oracle: oracle,
+  payload_path: payload_path,
+  generator_path: GENERATOR_RELATIVE_PATH,
+  allow_dirty: options[:allow_dirty],
+  corpus: false,
+)
 
-  commit = output.strip
-  unless commit.match?(/\A[0-9a-f]{40}\z/)
-    abort "REFUSING: `git rev-parse HEAD` in #{Dir.pwd} gave #{commit.inspect}, " \
-          "which is not a commit id."
-  end
-
-  commit
-end
-
-provenance = {
-  "oracle" => "plurimath",
-  "oracleVersion" => Plurimath::VERSION,
-  "oracleCommit" => oracle_commit,
-  "oxVersion" => Ox::VERSION,
-  "rubyVersion" => RUBY_VERSION,
-  "xmlEngine" => Plurimath.xml_engine.name,
-  "note" =>
-    "Oracle-printed bytes for test/xml. dump: Ox.dump(tree, indent:). " \
-    "dumpNodes: Plurimath::Math::Core#dump_nodes (Ox.dump + REPLACABLES). " \
-    "Each tree's build recipe is the probe shape recorded per fixture in " \
-    "test/xml/ox-contract.ts; the three MathML tree entries are additionally " \
-    "byte-checked against Plurimath::Math.parse(...).to_mathml before emission.",
-}
-
-out = { "_provenance" => provenance, "dump" => dump, "dumpNodes" => dn }
-json = JSON.pretty_generate(out, ascii_only: true)
+json = JSON.pretty_generate({ "dump" => dump, "dumpNodes" => dn }, ascii_only: true)
 # JSON leaves DEL (0x7F) raw; escape it so the committed file has no control bytes.
 json = json.gsub("\x7F", "\\u007f")
-puts json
+payload_bytes = "#{json}\n"
+FileUtils.mkdir_p(dir)
+File.binwrite(payload_path, payload_bytes)
+RenderFixtureProvenance.write_manifest(
+  sidecar_path: sidecar,
+  payload_path: payload_path,
+  payload_schema: SCHEMA,
+  payload_bytes: payload_bytes,
+  provenance: provenance,
+)
+puts "ox-contract: #{dump.length} dump, #{dn.length} dumpNodes -> #{payload_path}, #{sidecar}"

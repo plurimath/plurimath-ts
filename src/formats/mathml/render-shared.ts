@@ -24,7 +24,7 @@ import {
 } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS, rubyClassName } from "../../core/normalize";
-import { assertReproducibleRubyHashOrder } from "../../core/ruby-semantics";
+import { assertReproducibleRubyHashOrder, rubyToI } from "../../core/ruby-semantics";
 import { formatNumberForMathml, type NumberFormat } from "../../formatting/index";
 import { type XmlChild, XmlElement } from "../../xml/index";
 
@@ -533,7 +533,7 @@ export function interpolatedValue(value: unknown, kind: string, at: string): str
  * the rewrite: `maskedNaryScript` below.
  */
 export function assertMaskIsInert(mask: unknown, kind: string, at: string): void {
-  const value = rubyToI(mask, kind, at);
+  const value = maskToI(mask, kind, at);
   const decoded = maskOptions(value);
   if (decoded.length === 1 && decoded[0] === "limits_default") return;
   throw deferredFeatureError(
@@ -629,7 +629,7 @@ export function maskedNaryScript(
   kind: string,
   at: string,
 ): XmlElement {
-  const options = maskOptions(rubyToI(mask, kind, at));
+  const options = maskOptions(maskToI(mask, kind, at));
   let name = script.name;
   const nodes: XmlChild[] = [...script.children];
   const refuse = (why: string): RenderError =>
@@ -676,7 +676,7 @@ const SUB_SUP_NAMES: ReadonlyMap<string, string> = new Map([
 ]);
 
 /** Ruby `to_i` for the mask read: nil is 0, a Float truncates, a String parses its leading integer; `true`, hashes and nodes raise NoMethodError in the gem. */
-function rubyToI(value: unknown, kind: string, at: string): number {
+function maskToI(value: unknown, kind: string, at: string): number {
   if (value === null || value === undefined) return 0;
   if (typeof value === "number") {
     if (!Number.isFinite(value)) {
@@ -689,10 +689,7 @@ function rubyToI(value: unknown, kind: string, at: string): number {
     }
     return Math.trunc(value);
   }
-  if (typeof value === "string") {
-    const match = value.match(/^\s*[+-]?\d+/);
-    return match === null ? 0 : Number.parseInt(match[0], 10);
-  }
+  if (typeof value === "string") return rubyToI(value);
   throw new RenderError(
     `${at}: mask holds ${describeSlot(value)} — Ruby's to_i raises NoMethodError on it`,
     FORMAT,

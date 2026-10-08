@@ -428,8 +428,10 @@ export function rubyArrayInspectOrThrow(
 }
 
 /**
- * `String#to_i`: skips leading whitespace, reads an optional sign and a run
- * of decimal digits, and stops at the first character that is not one —
+ * `String#to_i`: skips leading ASCII whitespace (Ruby's set, ` \t\n\v\f\r` —
+ * not JS's `\s`, which also takes U+00A0 and the other Unicode spaces), reads
+ * an optional sign and a run of decimal digits in which a single `_` may sit
+ * between two digits, and stops at the first character that is not one —
  * unlike JS's `Number()`, which fails the whole string on any trailing
  * garbage, and `parseInt`, which additionally treats a `"0x"` prefix as hex.
  * A string with no leading integer at all reads as `0`, matching Ruby.
@@ -440,8 +442,12 @@ export function rubyArrayInspectOrThrow(
  *   "1e309"   1     stops at the `e`; scientific notation is never read
  *   "  -12x"  -12   leading whitespace and a sign are both honoured
  *   "abc"     0     no leading digits at all
+ *   "1_0"     10    one `_` between digits is a separator
+ *   "1__0"    1     two in a row end the number, as does a trailing one
+ *   "_10"     0     so does a leading one, before or after the sign
+ *   "\u00a010" 0     U+00A0 is not whitespace to Ruby
  */
 export function rubyToI(text: string): number {
-  const match = /^\s*([+-]?\d+)/.exec(text);
-  return match === null ? 0 : Number(match[1]);
+  const match = /^[\t\n\v\f\r ]*([+-]?\d+(?:_\d+)*)/.exec(text);
+  return match === null ? 0 : Number(match[1].replaceAll("_", ""));
 }

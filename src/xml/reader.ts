@@ -317,7 +317,7 @@ class OxError extends Error {}
  */
 class OxParser {
   private readonly buf: Uint8Array;
-  /** `pi->end`: the length of the input, not counting the terminator. */
+  /** `pi->end`: `pi->str` plus the whole input's length, BOM included (see the constructor). */
   private readonly end: number;
   /** The start of the string after any BOM (`pi->str`). */
   private readonly str: number;

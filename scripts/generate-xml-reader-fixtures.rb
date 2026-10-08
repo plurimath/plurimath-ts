@@ -152,11 +152,14 @@ module XmlReaderProbe
       "<!DOCTYPE a [<!ENTITY e \"x\">]><a>&e;</a>", "<!DOCTYPE a [<!ELEMENT a (#PCDATA)>]><a/>",
       "<!doctype a><a/>", "<!DOCTYPE a", "<a/><!DOCTYPE a>", "<!DOCTYPE a><!DOCTYPE b><a/>",
       "<!DOCTYPE a SYSTEM 'x>y'><a/>", "<!FOO><a/>", "<!", "<!-",
-      # Nesting deeper than a JavaScript call stack, inside and past Ox's
-      # 32767-byte prolog limit, and unterminated at depth.
+      # Nesting deeper than a JavaScript call stack, either side of the
+      # deepest nesting Ox's 32767-byte prolog limit admits (32,755 brackets
+      # here; the limit is checked on the way in, not on the closers), and
+      # unterminated at depth.
       "<!DOCTYPE a #{'[' * 12_000}#{']' * 12_000}><a/>",
       "<!DOCTYPE a #{'<' * 16_000}#{'>' * 16_000}><a/>",
-      "<!DOCTYPE a #{'[' * 20_000}#{']' * 20_000}><a/>",
+      "<!DOCTYPE a #{'[' * 32_755}#{']' * 32_755}><a/>",
+      "<!DOCTYPE a #{'[' * 32_756}#{']' * 32_756}><a/>",
       "<!DOCTYPE a #{'[' * 12_000}><a/>",
       "<!DOCTYPE a #{'[' * 12_000}\"x#{']' * 12_000}><a/>",
     ],

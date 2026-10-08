@@ -530,9 +530,10 @@ class OxParser {
 
   /**
    * Ox's `read_delimited` recurses once per nested quote, bracket or angle
-   * bracket. Its prolog limit allows about 16k levels, more than a JavaScript
-   * stack holds, so the same walk runs here over an explicit stack of the
-   * delimiters still open.
+   * bracket. Its prolog limit allows 32,755 nested brackets after
+   * `<!DOCTYPE a ` (32,756 is refused; both are in the fixtures), far more
+   * than a JavaScript stack holds, so the same walk runs here over an
+   * explicit stack of the delimiters still open.
    */
   private readDelimited(endChar: number): void {
     const open = [endChar];

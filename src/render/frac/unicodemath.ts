@@ -79,7 +79,7 @@ function unicodeFraction(node: NodeOf<"frac">): string | null {
  *   ".5"        => 0         "1.9"   => 1     "1_.5" => 1
  *   "+5"        => 5         "-5"    => -5    "+ 12" => 0   " +12" => 12
  *   "007"       => 7         "1e3"   => 1     "1 0"  => 1
- *   "0x10"      => 0         "0b11"  => 0     "0o17" => 0   (no base prefixes)
+ *   "0x10"      => 0         "0b11"  => 0     "0o17" => 0   (of the radix prefixes only `0d` is read)
  *   "12abc"     => 12        "1_0abc" => 10   "abc"  => 0   ""     => 0
  *   "--5"       => 0         "+-5"   => 0     "٣"    => 0
  *

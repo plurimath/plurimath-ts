@@ -17,7 +17,7 @@ describe("rubyToInteger", () => {
     expect(rubyToInteger("-1_0")).toBe(-10n);
     expect(rubyToInteger("1".repeat(400))).toBe(BigInt("1".repeat(400)));
     expect(rubyToI("1".repeat(400))).toBe(Infinity);
-    expect(rubyToI("-" + "1".repeat(400))).toBe(-Infinity);
+    expect(rubyToI(`-${"1".repeat(400)}`)).toBe(-Infinity);
   });
 });
 

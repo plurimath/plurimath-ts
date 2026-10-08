@@ -4,9 +4,13 @@
  * recorded for `Plurimath::Math.parse(input, :unicode)`.
  *
  * The fixtures are generated, never hand-written
- * (`scripts/generate-unicodemath-model-fixtures.rb`), from one source: every
+ * (`scripts/generate-unicodemath-model-fixtures.rb`), mainly from one source: every
  * distinct `expected.unicodemath` string in the pinned corpus — UnicodeMath the
  * gem itself emitted, fed back in as a round trip.
+ *
+ * A `locale` group adds rows parsed under the gem's `locale:` parse option
+ * (`Math.parse(input, :unicode, locale:)`); each records its locale, and this suite
+ * passes it back as `{ locale }`. A row with no `locale` ran under the default.
  *
  * **The preprocessed text is now DERIVED, not read.** This suite used to feed
  * the grammar each row's recorded `preprocessed` string, because
@@ -34,6 +38,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 interface FixtureCase {
   readonly group: string;
   readonly input: string;
+  /** The `locale:` parse option the gem ran under; absent for the default. */
+  readonly locale?: string;
   readonly preprocessed?: string;
   readonly model?: unknown;
   readonly raises?: string;
@@ -134,7 +140,10 @@ const supported = corpus.filter(
 const coverageSupported = coverage.filter((entry) => entry.model !== undefined);
 
 function parseFixture(entry: FixtureCase): unknown {
-  return parseUnicodemath(entry.input);
+  return parseUnicodemath(
+    entry.input,
+    entry.locale === undefined ? undefined : { locale: entry.locale },
+  );
 }
 
 describe("the UnicodeMath fixture set", () => {
@@ -201,9 +210,9 @@ describe("the parsed model, for the hand-picked coverage inputs", () => {
     expect(coverageSupported.length).toBeGreaterThan(0);
   });
 
-  it.each(coverageSupported.map((entry) => [entry.input, entry] as const))(
-    "%j: deep-equals the gem's",
-    (_input, entry) => {
+  it.each(coverageSupported.map((entry) => [entry.input, entry.locale ?? "default", entry] as const))(
+    "%j under %s: deep-equals the gem's",
+    (_input, _locale, entry) => {
       expect(normalize(parseFixture(entry) as never)).toStrictEqual(entry.model);
     },
   );

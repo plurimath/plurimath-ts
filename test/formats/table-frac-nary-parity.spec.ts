@@ -86,7 +86,7 @@ const GROUPS = {
 } as const;
 
 /** Rows measured at generation: [rendered by the gem, raised by the gem]. */
-const MEASURED = { omml: [156, 2], mathml: [108, 22] } as const;
+const MEASURED = { omml: [156, 2], mathml: [122, 24] } as const;
 
 /**
  * Rows the gem renders that this port used to refuse — all three now render
@@ -112,7 +112,7 @@ const PORT_REFUSES: Readonly<Record<string, ReadonlyMap<string, RegExp>>> = {
 };
 
 /** Rows the gem renders that the port renders byte-identically (a pin, not a knob). */
-const MATCHING = { omml: 156, mathml: 108 } as const;
+const MATCHING = { omml: 156, mathml: 122 } as const;
 
 const RENDERERS = {
   mathml: (node: MathNode) => toMathml(node),

@@ -26,6 +26,35 @@ describe("rubyToI", () => {
     expect(rubyToI(text)).toBe(expected);
   });
 
+  // Each expectation is `String#to_i` on Ruby 4.0.1, measured: a single `_`
+  // between digits is a separator; leading, trailing or doubled ends the
+  // number. Leading whitespace is Ruby's ASCII set only, not JS's `\s`.
+  it.each([
+    ["1_0", 10],
+    ["1_0_1", 101],
+    ["-1_0", -10],
+    ["+1_0", 10],
+    [" 1_0", 10],
+    ["0_1", 1],
+    ["1__0", 1],
+    ["10_", 10],
+    ["1_0_", 10],
+    ["1_", 1],
+    ["_10", 0],
+    ["+_10", 0],
+    ["-_10", 0],
+    ["_", 0],
+    ["1 _0", 1],
+    ["1_ 0", 1],
+    ["\t10", 10],
+    ["\v10", 10],
+    ["\u00a010", 0],
+    ["\u200310", 0],
+    ["\u202810", 0],
+  ] as const)("%j -> %i", (text, expected) => {
+    expect(rubyToI(text)).toBe(expected);
+  });
+
   it("disagrees with JS Number() on exactly the cases that matter", () => {
     expect(Number("3foo")).toBeNaN();
     expect(rubyToI("3foo")).toBe(3);

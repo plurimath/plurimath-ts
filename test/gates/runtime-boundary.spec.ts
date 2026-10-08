@@ -29,10 +29,10 @@ import { toMathml } from "../../src/formats/mathml/renderer";
 import { toUnicodemath } from "../../src/formats/unicodemath/renderer";
 
 /**
- * The five renderers this gate covers (OMML is not covered yet). `toMathml` accepts only `formula` and `mrow` at
- * its root — `to_mathml` lives on `Formula` alone in the gem, and every other
- * kind raises `NoMethodError` there — so each format carries its own valid
- * root rather than sharing one.
+ * The five renderers this gate covers; OMML is not covered yet. `toMathml`
+ * accepts only `formula` and `mrow` at its root — `to_mathml` lives on
+ * `Formula` alone in the gem, and every other kind raises `NoMethodError`
+ * there — so each format carries its own valid root rather than sharing one.
  */
 const RENDERERS = [
   {

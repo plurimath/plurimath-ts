@@ -71,7 +71,7 @@ const KNOWN_OPTION_KEYS: ReadonlySet<string> = new Set<keyof UnicodemathParseOpt
 ]);
 
 /**
- * `Math.parse`'s option checks (`math.rb:33-38`), in the gem's order and
+ * `Math.parse`'s option checks (`math.rb:34-41`), in the gem's order and
  * before preprocessing: unknown KEYS first (`ParseOptionError`), then the
  * `locale` VALUE (`UnsupportedLocaleError`). Measured on the oracle at
  * `00c52783`: `Math.parse(text, :unicode, locale: "xx", foo: 1)` raises

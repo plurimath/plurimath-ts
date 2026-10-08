@@ -7,7 +7,7 @@
  *   ruby scripts/generate-render-options-fixtures.rb --oracle <clean pinned checkout>
  * Each row is one parse call with options the gem refuses, and the class the
  * gem raised. `Math.parse` checks unknown keys, then the `locale` value, and
- * only then parses (`math.rb:33-38`), so a row with `raisedIn: "options"`
+ * only then parses (`math.rb:34-41`), so a row with `raisedIn: "options"`
  * must fail with the matching port error even where the input alone fails to
  * parse; the input's own `raisedIn: "parse"` row shows that it does.
  *

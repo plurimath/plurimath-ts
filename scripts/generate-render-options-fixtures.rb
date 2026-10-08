@@ -1119,7 +1119,7 @@ end
 # option the gem refuses, recorded in the payload of the INPUT format they
 # parse (the four the port has a parser for), since the call under test is the
 # parse, not a render. `Math.parse` checks its options before it parses
-# (`math.rb:33-38`): unknown keys first (`ParseOptionError`), then the
+# (`math.rb:34-41`): unknown keys first (`ParseOptionError`), then the
 # `locale` value (`Errors::UnsupportedLocale`), and only then builds the
 # parser, so each refusal is recorded with `raisedIn: "options"`. Every
 # format pairs those calls with one input the gem itself refuses

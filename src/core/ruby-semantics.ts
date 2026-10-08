@@ -453,7 +453,7 @@ export function rubyToI(text: string): number {
 
 /**
  * `rubyToI` as an exact integer. Ruby's `to_i` is arbitrary precision; the
- * `number` `rubyToI` answers rounds past 2**53 and becomes `Infinity` past
+ * `number` `rubyToI` answers rounds past 2**53 and becomes `Infinity` (or `-Infinity`) past
  * the double range, so a caller that reads the result's low bits (a modulo)
  * takes this one instead.
  */

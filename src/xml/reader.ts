@@ -1054,6 +1054,15 @@ const DECODER = new TextDecoder("utf-8", { ignoreBOM: true });
 // biome-ignore lint/style/useNamingConvention: the DOM option is spelled `ignoreBOM`.
 const STRICT_DECODER = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
+/** The bytes as a string when they are valid UTF-8, otherwise null. */
+function strictDecode(bytes: Uint8Array): string | null {
+  try {
+    return STRICT_DECODER.decode(bytes);
+  } catch {
+    return null;
+  }
+}
+
 /** A byte string as a key: only compared, never shown. */
 function latin(bytes: Uint8Array): string {
   let text = "";
@@ -1120,13 +1129,15 @@ function wrapElement(element: OxElement, ancestors: readonly OxElement[]): XmlRe
 
   // Own declarations, as Moxml's `namespace_definitions` lists them.
   const xmlns: (readonly [string, string])[] = [];
-  const own = new Map<string | null, string>();
+  // A URI that is not valid UTF-8 maps to null: the gem compares it with an
+  // attribute's value byte for byte, and no JavaScript string has its bytes.
+  const own = new Map<string | null, string | null>();
   for (const { name: attrName, value } of element.attributes.values()) {
     const key = DECODER.decode(attrName);
     if (key.startsWith("xmlns")) xmlns.push([key, DECODER.decode(value)]);
     if (key === "xmlns" || key.startsWith("xmlns:")) {
       // Lutaml's namespace table files an empty prefix (`xmlns:=`) under nil.
-      own.set(namespacePrefix(key) || null, DECODER.decode(value));
+      own.set(namespacePrefix(key) || null, strictDecode(value));
     }
   }
 

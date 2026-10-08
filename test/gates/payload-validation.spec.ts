@@ -210,7 +210,7 @@ const FIXTURE_SPEC_PATHS: { readonly [path: string]: FixtureSpec } = {
     schema: "plurimath-corpus/xml-reader/1",
     rows: "cases",
     shape: "xml-reader",
-    usesCorpus: false,
+    usesCorpus: true,
     usesRenderInventory: false,
   },
 };

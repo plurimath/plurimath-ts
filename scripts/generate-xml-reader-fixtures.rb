@@ -36,6 +36,7 @@
 require "digest"
 require "json"
 require "optparse"
+require "yaml"
 
 GENERATOR_RELATIVE_PATH = "scripts/generate-xml-reader-fixtures.rb"
 
@@ -269,9 +270,46 @@ module XmlReaderProbe
     { "utf8" => utf8, "asciiIncompatible" => incompatible }
   end
 
+  # Every MathML and OMML case in the pinned corpus, as `corpus-<format>`
+  # rows: the documents this reader exists to read. These formats are pending
+  # (`PENDING_READER_FORMATS`), so `read_pin_cases` byte-verifies their
+  # payloads against corpus/provenance.yaml without returning their cases;
+  # they are read here only after that check has passed.
+  CORPUS_FORMATS = %w[mathml omml].freeze
+
+  def corpus_inputs
+    CorpusGenerator.read_pin_cases
+    provenance_path = File.join(CorpusGenerator.pin_root, "corpus", "provenance.yaml")
+    provenance = YAML.safe_load(File.read(provenance_path), aliases: false)
+    paths = provenance.fetch("payloads").map { |entry| entry.fetch("path") }.sort
+    CORPUS_FORMATS.flat_map do |format|
+      inputs = paths.select { |path| path.start_with?("#{format}/") }.flat_map do |path|
+        unless CorpusGenerator.pending_reader_payload?(path)
+          abort "REFUSING: #{path} is no longer pending; read it through read_pin_cases"
+        end
+
+        file = File.join(CorpusGenerator.pin_root, "corpus", path)
+        YAML.safe_load(File.read(file), aliases: false).fetch("cases").map do |c|
+          ["corpus-#{format}", c.fetch("input")]
+        end
+      end
+      abort "REFUSING: the pinned corpus has no #{format} cases" if inputs.empty?
+
+      inputs
+    end
+  end
+
   def all_inputs
     rows = []
     seen = {}
+    # The corpus first, so a probe that happens to equal a corpus input never
+    # takes its row.
+    corpus_inputs.each do |group, input|
+      next if seen.key?(input)
+
+      seen[input] = true
+      rows << [group, input]
+    end
     CASES.each do |group, inputs|
       inputs.each do |input|
         next if seen.key?(input)
@@ -410,7 +448,7 @@ if $PROGRAM_NAME == __FILE__
     payload_path: out,
     generator_path: GENERATOR_RELATIVE_PATH,
     allow_dirty: options[:allow_dirty],
-    corpus: false,
+    corpus: true,
   )
 
   rows = XmlReaderProbe.rows

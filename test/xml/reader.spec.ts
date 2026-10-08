@@ -194,6 +194,8 @@ describe("the fixture set itself", () => {
       "long-text",
       "encoding-names",
       "fuzz",
+      "corpus-mathml",
+      "corpus-omml",
     ]) {
       expect(groups.has(group), group).toBe(true);
     }

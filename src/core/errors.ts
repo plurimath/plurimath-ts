@@ -57,7 +57,7 @@ export class ParseError extends PlurimathError {
  * (`UnsupportedLocaleError` in `formatting/errors.ts`, for `locale`).
  *
  * Deliberately not a `ParseError`: `Math.parse` raises this from its own body
- * (`math.rb:33-34`), OUTSIDE the `begin`/`rescue StandardError` that turns
+ * (`math.rb:34-35`), OUTSIDE the `begin`/`rescue StandardError` that turns
  * every other failure into a `ParseError` (`math.rb:44-48`). Measured:
  * `Math.parse("x", :html, nosuchoption: true)` raises
  * `Plurimath::Math::ParseOptionError`, and `e.is_a?(Plurimath::Math::

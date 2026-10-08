@@ -6,8 +6,8 @@
  * package exactly as a consumer would, and writes a JSON array of results.
  * One object per input, in order:
  *
- *   { "ok": true,  "asciimath": "...", "latex": "...", "mathml": "...",
- *     "unicodemath": "..." }
+ *   { "ok": true,  "asciimath": "...", "html": "...", "latex": "...",
+ *     "mathml": "...", "unicodemath": "..." }
  *   { "ok": false, "code": "PARSE_ERROR" }
  *
  * Errors are reported by `code`, not by message: the gem's message text and
@@ -32,6 +32,7 @@ if (!existsSync(entry("asciimath"))) {
 }
 
 const { parseAsciimath, toAsciimath } = await import(entry("asciimath"));
+const { toHtml } = await import(entry("html"));
 const { toLatex } = await import(entry("latex"));
 const { toMathml } = await import(entry("mathml"));
 const { toUnicodemath } = await import(entry("unicodemath"));
@@ -65,6 +66,9 @@ function render(input) {
       latex: toLatex(node),
       mathml: toMathml(node),
       unicodemath: toUnicodemath(node),
+      // Last, as on the gem half: an HTML refusal must not skip a crash in
+      // one of the four renderers above.
+      html: toHtml(node),
     };
   } catch (error) {
     const code = typedCode(error);

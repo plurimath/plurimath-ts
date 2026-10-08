@@ -351,6 +351,14 @@ function arrayField(record: Mapping, key: string, where: string): readonly unkno
 }
 
 function expectExactKeys(record: Mapping, expected: readonly string[], where: string): void {
+  // A plain comparison first: `expect` costs enough per call to time out the
+  // XML reader payload, whose trees run to tens of thousands of nodes. The
+  // assertion below only runs, and only reports, on a mismatch.
+  const actual = Object.keys(record).sort();
+  const wanted = [...expected].sort();
+  if (actual.length === wanted.length && actual.every((key, index) => key === wanted[index])) {
+    return;
+  }
   expect(Object.keys(record).sort(), `${where}: exact schema keys`).toStrictEqual(
     [...expected].sort(),
   );
@@ -647,7 +655,9 @@ function expectXmlReaderNode(value: unknown, at: string): void {
     expectXmlReaderString(node.text, `${at}.text`);
   } else {
     const kind = String(Object.keys(node)[0]);
-    expect(["text", "cdata", "comment"], `${at}: node kind`).toContain(kind);
+    if (!["text", "cdata", "comment"].includes(kind)) {
+      expect(["text", "cdata", "comment"], `${at}: node kind`).toContain(kind);
+    }
     expectExactKeys(node, [kind], at);
     expectXmlReaderString(node[kind], `${at}.${kind}`);
   }

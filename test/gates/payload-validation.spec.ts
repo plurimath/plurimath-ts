@@ -505,7 +505,11 @@ const FORMAT_FIXTURE_PAYLOADS = FORMAT_DIRECTORIES.flatMap((format) =>
 const FIXTURE_PAYLOADS = [...FORMAT_FIXTURE_PAYLOADS, ...NON_FORMAT_FIXTURE_PAYLOADS].sort();
 const FIXTURE_MANIFESTS = [
   ...filesUnder(FORMATS_ROOT, (name) => name.endsWith(".manifest.yaml")),
-  ...filesUnder(join(REPO_ROOT, "test", "xml"), (name) => name.endsWith(".manifest.yaml")),
+  // The Ox contract fixture's sidecar has its own describe block below.
+  ...filesUnder(
+    join(REPO_ROOT, "test", "xml"),
+    (name) => name.endsWith(".manifest.yaml") && name !== "ox-contract.expected.manifest.yaml",
+  ),
 ].sort();
 const EXPECTED_FIXTURE_MANIFESTS = FIXTURE_PAYLOADS.map((relative) =>
   relative.replace(/\.json$/, ".manifest.yaml"),

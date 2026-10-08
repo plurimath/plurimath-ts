@@ -72,10 +72,10 @@ function entityPattern(): RegExp {
  * `TransformUtility::HTML_ENTITY` (`html/transform_utility.rb:8`) — the SAME
  * alternation under `\A`/`\z` rather than unanchored.
  *
- * `\z` is not JavaScript's `$`: `$` also matches before a trailing newline, and
+ * `\z` is not Ruby's `$`, which also matches before a newline, and
  * `Utility.string_to_html_entity` encodes a newline to `&#xa;`, so the two
- * would disagree on `"&amp;\n"`. Matching unanchored and then checking the
- * match covers the whole string is `\A...\z` exactly.
+ * would disagree on `"&amp;\n"`. Matching with only a start anchor and then
+ * checking the match covers the whole string is `\A...\z` exactly.
  */
 const ANCHORED_ENTITY = /^&(?:#x[0-9a-f]+|#\d+|[a-z][a-z0-9]+);/i;
 

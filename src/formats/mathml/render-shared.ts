@@ -690,7 +690,8 @@ function rubyToI(value: unknown, kind: string, at: string): number {
     return Math.trunc(value);
   }
   if (typeof value === "string") {
-    const match = value.match(/^\s*[+-]?\d+/);
+    // Ruby's `to_i` skips ASCII whitespace only; JavaScript's `\s` would also skip U+00A0 and the other Unicode spaces.
+    const match = value.match(/^[ \t\r\n\f\v]*[+-]?\d+/);
     return match === null ? 0 : Number.parseInt(match[0], 10);
   }
   throw new RenderError(

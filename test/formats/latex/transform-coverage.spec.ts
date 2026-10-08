@@ -52,6 +52,8 @@ const UNREACHABLE: readonly string[] = ["46", "67", "75"];
 
 interface FixtureCase {
   readonly input: string;
+  /** The `locale:` parse option the gem ran under; absent for the default. */
+  readonly locale?: string;
   readonly model?: unknown;
 }
 
@@ -65,7 +67,13 @@ let reached = 0;
 for (const entry of fixtures.cases) {
   if (entry.model === undefined) continue;
   const { text } = preprocess(entry.input);
-  build.transform.apply(latexGrammar().root.parse(text));
+  // A locale row is driven under its own locale, as the gem parsed it: the
+  // marker changes which number and symbol rules fire.
+  build.transform.apply(
+    latexGrammar(entry.locale === undefined ? undefined : { locale: entry.locale }).root.parse(
+      text,
+    ),
+  );
   reached += 1;
 }
 

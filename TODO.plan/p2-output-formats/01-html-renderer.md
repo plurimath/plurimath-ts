@@ -126,9 +126,15 @@ makes a defect, not an improvement.
       AsciiMath, LaTeX and UnicodeMath case groups and the 7 `calls/1` groups; the 26
       MathML- and OMML-input case groups declare the target too but are not parsed by this
       port's reader yet (`PENDING_READER_FORMATS`); checked 2026-10-06)
-- [ ] The cross-format invariant gates cover HTML: `runtime-boundary`,
+- [x] The cross-format invariant gates cover HTML: `runtime-boundary`,
       `unsupported-fallback` and `adversarial-inputs`, plus the class-B differential
-      runner on both halves. All four currently cover four formats; HTML makes five.
+      runner on both halves. All four now cover five formats.
+      (done: `test/gates/runtime-boundary.spec.ts`,
+      `test/formats/asciimath/unsupported-fallback.spec.ts` and
+      `test/adversarial/adversarial-inputs.spec.ts` run `toHtml`, and
+      `scripts/gate-oracle.rb differential` compares `to_html` against `toHtml` on 429
+      inputs, 2,145 comparisons; the one changed outcome, LaTeX's 20 nested `\left(`,
+      is the gem's own `to_html` refusal; checked 2026-10-08)
 - [x] `/html` is a published subpath with package-isolation assertions, and its expected
       exports and forbidden layers are listed in `scripts/gate-package.mjs` — the runner
       enumerates subpaths from `package.json#exports`, but a subpath absent from those

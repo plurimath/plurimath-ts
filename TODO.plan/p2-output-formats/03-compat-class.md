@@ -337,9 +337,10 @@ HTML is not a `toDisplay` branch. `toHtml()` reaches a total 38-kind dispatch ta
 (`TODO.plan/p2-output-formats/01-html-renderer.md:42-47,105-111`), and it is already a
 published subpath with package-isolation assertions and expected-export and
 forbidden-layer rows in the package gate (`01-html-renderer.md:127-130`). What HTML still
-lacks for release is on the corpus and gate side, not the packaging side: byte-for-byte
-corpus parity, a corpus target carrying an expectation per case, and cross-format gate
-coverage (`01-html-renderer.md:115,122,124-126`).
+lacks for release is on the corpus side, not the packaging side: byte-for-byte
+corpus parity and a corpus target carrying an expectation per case
+(`01-html-renderer.md:115,122,124-126`). Cross-format gate coverage landed 2026-10-08
+(`01-html-renderer.md`'s gate box).
 
 #### The two measured `toMathml` contracts — source head is the selected one
 
@@ -471,8 +472,8 @@ Beyond writing the class itself, the measured blockers are:
 - **Finish HTML's release surface.** `abc068a` has HTML's total kind dispatch, and `/html`
   is already a published subpath with package-isolation assertions
   (`TODO.plan/p2-output-formats/01-html-renderer.md:127-130`). What HTML still lacks is
-  byte-for-byte corpus parity, a corpus target carrying an expectation per case, and
-  cross-format gate coverage (`01-html-renderer.md:115,122,124-126`).
+  byte-for-byte corpus parity and a corpus target carrying an expectation per case
+  (`01-html-renderer.md:115,122,124-126`); cross-format gate coverage landed 2026-10-08.
 - **Add both output targets to the corpus.** The worktree gitlink and the initialized
   read-only primary submodule both resolve to
   `d2f1bea40c66c7018ede37faea0be51b307bf3af`. Across the `18` positive payloads, a
@@ -564,8 +565,9 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
 - [ ] HTML and OMML corpus targets are nonempty and complete per payload; their
       cross-format and package-isolation gates pass against built artifacts.
       (open: the targets are nonempty and complete per parsed payload at pin `cf3c5eb`,
-      asserted in `test/gates/corpus-discovery.spec.ts`; the cross-format gates do not
-      cover HTML or OMML yet; checked 2026-10-06)
+      asserted in `test/gates/corpus-discovery.spec.ts`, checked 2026-10-06; the
+      cross-format gates cover HTML (`01-html-renderer.md`'s gate box, checked
+      2026-10-08) but not OMML yet)
 - [x] The root package exports the default class under ESM and CJS, the package root
       passes publint, the real packed artifact passes attw, and review leaves no valid implementable finding
       unresolved.

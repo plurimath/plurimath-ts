@@ -158,7 +158,7 @@ Named gaps, compared against the current TypeScript XML layer:
 
 - **Namespaced element names — no gap.** `XmlElement` stores and emits its name verbatim
   (`src/xml/element.ts:48-57`), and the pinned Ox contract already byte-tests
-  `m:oMath` (`test/xml/ox-contract.ts:378-383`).
+  `m:oMath` (the `namespaced` fixture in `test/xml/ox-contract.ts`).
 - **Namespaced attributes and namespace declarations — no gap.** Attribute names and
   values are strings stored in an insertion-ordered `Map`, including bulk writes
   (`src/xml/element.ts:52-53,80-99`); the serializer emits those names verbatim in map

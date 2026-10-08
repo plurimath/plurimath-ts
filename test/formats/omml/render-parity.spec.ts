@@ -2,7 +2,7 @@
  * Oracle-backed OMML parity, from a generated fixture and from the corpus.
  *
  * The four P1 formats get this from `corpus-conformance`: `DIFFERENTIAL_FORMATS`
- * in `scripts/gate-oracle.rb` is asciimath, latex, mathml and unicodemath, and
+ * in `scripts/gate-oracle.rb` is asciimath, html, latex, mathml and unicodemath, and
  * until plurimath-testsuite#22 the corpus payloads carried no `omml` key. Until
  * this file landed, the whole OMML renderer rested on hand-authored fixtures —
  * which is how six parity defects reached review with the suite green. The

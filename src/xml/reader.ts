@@ -528,19 +528,31 @@ class OxParser {
     );
   }
 
+  /**
+   * Ox's `read_delimited` recurses once per nested quote, bracket or angle
+   * bracket. Its prolog limit allows about 16k levels, more than a JavaScript
+   * stack holds, so the same walk runs here over an explicit stack of the
+   * delimiters still open.
+   */
   private readDelimited(endChar: number): void {
-    if (endChar === DQUOTE || endChar === SQUOTE) {
-      for (let c = this.at(this.s++); c !== endChar; c = this.at(this.s++)) {
-        if (c === 0) {
-          this.s--;
-          this.fail("invalid format, doctype not terminated");
+    const open = [endChar];
+    while (open.length !== 0) {
+      const end = open[open.length - 1];
+      if (end === DQUOTE || end === SQUOTE) {
+        for (let c = this.at(this.s++); c !== end; c = this.at(this.s++)) {
+          if (c === 0) {
+            this.s--;
+            this.fail("invalid format, doctype not terminated");
+          }
         }
+        open.pop();
+        continue;
       }
-      return;
-    }
-    for (;;) {
       const c = this.at(this.s++);
-      if (c === endChar) return;
+      if (c === end) {
+        open.pop();
+        continue;
+      }
       if (MAX_PROLOG < this.s - this.str) {
         this.s--;
         this.fail("prolog (doctype) too long");
@@ -552,13 +564,13 @@ class OxParser {
           break;
         case DQUOTE:
         case SQUOTE:
-          this.readDelimited(c);
+          open.push(c);
           break;
         case LBRACKET:
-          this.readDelimited(RBRACKET);
+          open.push(RBRACKET);
           break;
         case LT:
-          this.readDelimited(GT);
+          open.push(GT);
           break;
         default:
           break;

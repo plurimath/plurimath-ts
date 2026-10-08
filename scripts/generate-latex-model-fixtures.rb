@@ -237,6 +237,22 @@ RULE_COVERAGE = {
   ],
 }.freeze
 
+# Inputs parsed under a `locale:` parse option, as `[input, locale]` pairs.
+# `Plurimath::Math.parse` accepts `locale:` for this format
+# (`Math::LOCALIZED_PARSE_TYPES`) and sets it on the configuration for the
+# parse, which changes the decimal marker the grammar reads. Each row records
+# the locale it ran under; `en` rows are the default-marker counterparts.
+LOCALE_COVERAGE = [
+  ["1,5", "de"],
+  ["1,5", "fr"],
+  ["1,2,3", "de"],
+  ["1.5", "de"],
+  ["1.5", "en"],
+  ["1,5", "en"],
+  ["1٫5", "ar"],
+  ["1٫5", "en"],
+].freeze
+
 options = { oracle: nil, out: "test/formats/latex", allow_dirty: false }
 OptionParser.new do |o|
   o.on("--oracle PATH", "clean pinned plurimath checkout") { |v| options[:oracle] = v }
@@ -278,6 +294,18 @@ end
 # blanket rescue would launder it into an ordinary "raises" row.
 ORACLE_REFUSAL = Plurimath::Math::ParseError
 
+# Runs the block under `locale`, the way `Math.parse(..., locale:)` does
+# (`Plurimath.with_configuration`), so the text the grammar sees is recorded
+# under the same configuration as the model. `nil` is the default configuration.
+def under_locale(locale, &block)
+  return yield if locale.nil?
+
+  Plurimath.with_configuration do |config|
+    config.locale = Plurimath::Formatter::SupportedLocales.key_for!(locale)
+    block.call
+  end
+end
+
 dir = File.expand_path(options[:out])
 out = File.join(dir, "model-fixtures.json")
 sidecar, provenance = RenderFixtureProvenance.prepare(
@@ -315,22 +343,27 @@ RULE_COVERAGE.each do |group, texts|
   texts.each { |text| sources << [group, text] }
 end
 
-seen = {}
-rows = sources.filter_map do |(group, input)|
-  next if seen.key?(input)
+LOCALE_COVERAGE.each { |(text, locale)| sources << ["locale", text, locale] }
 
-  seen[input] = group
+seen = {}
+rows = sources.filter_map do |(group, input, locale)|
+  next if seen.key?([input, locale])
+
+  seen[[input, locale]] = group
   # A stable row id the payload gate can key on. Derived from the input rather
   # than from its position, so adding a coverage input appends a row instead of
-  # renumbering every row after it; unique because `seen` deduplicates inputs.
+  # renumbering every row after it. Unique because `seen` deduplicates
+  # (input, locale) pairs: a locale row hashes its locale in with the input, so
+  # a row with no locale keeps the id it had before locales were added.
   row = {
-    "id" => "latex-#{Digest::SHA256.hexdigest(input)[0, 12]}",
+    "id" => "latex-#{Digest::SHA256.hexdigest(locale ? "#{locale}\0#{input}" : input)[0, 12]}",
     "group" => group,
     "input" => input,
   }
+  row["locale"] = locale if locale
 
   begin
-    row["preprocessed"] = Plurimath::Latex::Parser.new(input).text
+    row["preprocessed"] = under_locale(locale) { Plurimath::Latex::Parser.new(input).text }
   rescue StandardError => e
     row["raises"] = e.class.name
     row["raisedIn"] = "preprocess"
@@ -339,7 +372,11 @@ rows = sources.filter_map do |(group, input)|
 
   begin
     row["model"] = CorpusGenerator.serialize_node(
-      Plurimath::Math.parse(input, :latex),
+      if locale
+        Plurimath::Math.parse(input, :latex, locale: locale)
+      else
+        Plurimath::Math.parse(input, :latex)
+      end,
       "model",
     )
   rescue ORACLE_REFUSAL => e

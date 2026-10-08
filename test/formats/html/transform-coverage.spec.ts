@@ -121,6 +121,8 @@ const ORACLE_RULE_IDS: readonly string[] = [
 
 interface FixtureCase {
   readonly input: string;
+  /** The `locale:` parse option the gem ran under; absent for the default. */
+  readonly locale?: string;
   readonly model?: unknown;
 }
 
@@ -150,7 +152,15 @@ let reached = 0;
 for (const entry of fixtures.cases) {
   if (entry.model === undefined) continue;
   const { text } = preprocess(entry.input);
-  build.transform.apply(plain(htmlGrammar().root.parse(text)));
+  // A locale row is driven under its own locale, as the gem parsed it: the
+  // marker changes which number and symbol rules fire.
+  build.transform.apply(
+    plain(
+      htmlGrammar(entry.locale === undefined ? undefined : { locale: entry.locale }).root.parse(
+        text,
+      ),
+    ),
+  );
   reached += 1;
 }
 

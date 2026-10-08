@@ -5,11 +5,15 @@
  * text must match `Latex::Parser.new(input).text` byte for byte.
  *
  * The fixtures are generated, never hand-written
- * (`scripts/generate-latex-model-fixtures.rb`), from two sources: every
+ * (`scripts/generate-latex-model-fixtures.rb`), mainly from two sources: every
  * distinct `expected.latex` string in the pinned corpus — LaTeX the gem itself
  * emitted, fed back in as a round trip — plus a rule-coverage list for the
  * constructs the corpus never reaches. `transform-coverage.spec.ts` is what
  * proves the second list is doing its job.
+ *
+ * A `locale` group adds rows parsed under the gem's `locale:` parse option
+ * (`Math.parse(input, :latex, locale:)`); each records its locale, and this suite
+ * passes it back as `{ locale }`. A row with no `locale` ran under the default.
  *
  * Refusals are pinned as first-class outcomes: a row with `raises` must throw
  * here too, and a row with a `model` must not.
@@ -28,6 +32,8 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 interface FixtureCase {
   readonly group: string;
   readonly input: string;
+  /** The `locale:` parse option the gem ran under; absent for the default. */
+  readonly locale?: string;
   readonly preprocessed?: string;
   readonly model?: unknown;
   readonly raises?: string;
@@ -47,6 +53,16 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
 
 const parsed = fixtures.cases.filter((entry) => entry.model !== undefined);
 const raised = fixtures.cases.filter((entry) => entry.raises !== undefined);
+
+/** The parse options a row was recorded under: its `locale`, when it has one. */
+function optionsFor(entry: FixtureCase): { locale: string } | undefined {
+  return entry.locale === undefined ? undefined : { locale: entry.locale };
+}
+
+/** A test label: the row's group, plus the locale it was parsed under. */
+function label(entry: FixtureCase): string {
+  return entry.locale === undefined ? entry.group : `${entry.group} ${entry.locale}`;
+}
 
 describe("the LaTeX fixture set", () => {
   it("is the schema this suite reads", () => {
@@ -89,32 +105,32 @@ describe("preprocessing", () => {
   it.each(
     fixtures.cases
       .filter((entry) => entry.preprocessed !== undefined)
-      .map((entry) => [entry.group, entry.input, entry] as const),
+      .map((entry) => [label(entry), entry.input, entry] as const),
   )("%s %j: matches Latex::Parser#text", (_group, _input, entry) => {
     expect(preprocess(entry.input).text).toBe(entry.preprocessed);
   });
 });
 
 describe("the parsed model", () => {
-  it.each(parsed.map((entry) => [entry.group, entry.input, entry] as const))(
+  it.each(parsed.map((entry) => [label(entry), entry.input, entry] as const))(
     "%s %j: deep-equals the gem's",
     (_group, _input, entry) => {
-      expect(normalize(parseLatex(entry.input))).toStrictEqual(entry.model);
+      expect(normalize(parseLatex(entry.input, optionsFor(entry)))).toStrictEqual(entry.model);
     },
   );
 });
 
 describe("the inputs the gem refuses", () => {
-  it.each(raised.map((entry) => [entry.group, entry.input, entry] as const))(
+  it.each(raised.map((entry) => [label(entry), entry.input, entry] as const))(
     "%s %j: is refused here too",
     (_group, _input, entry) => {
-      expect(() => parseLatex(entry.input)).toThrow();
+      expect(() => parseLatex(entry.input, optionsFor(entry))).toThrow();
       // Every `Plurimath::Math::ParseError` row is a parse refusal, and this
       // port's boundary raises `ParseError` for exactly those. A row that
       // raised somewhere else (`raisedIn: "preprocess"`) is a different
       // failure and is only required to throw.
       if (entry.raises === "Plurimath::Math::ParseError" && entry.raisedIn === "parse") {
-        expect(() => parseLatex(entry.input)).toThrow(ParseError);
+        expect(() => parseLatex(entry.input, optionsFor(entry))).toThrow(ParseError);
       }
     },
   );

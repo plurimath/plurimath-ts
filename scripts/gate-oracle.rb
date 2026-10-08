@@ -600,9 +600,11 @@ module OracleGate
     results = JSON.parse(STDIN.read).map do |input|
       begin
         f = Plurimath::Math.parse(input, :asciimath)
+        # `html` is evaluated last, so a refusal there cannot skip a defect
+        # in one of the four renderers that run before it.
         { "ok" => true, "asciimath" => f.to_asciimath, "latex" => f.to_latex,
-          "mathml" => f.to_mathml,
-            "unicodemath" => f.to_unicodemath }
+          "mathml" => f.to_mathml, "unicodemath" => f.to_unicodemath,
+          "html" => f.to_html }
       rescue Plurimath::Math::ParseError
         # A REFUSAL. Only the fact of it is comparable: the gem re-raises its
         # parse failures as Math::ParseError with cause: nil, so its category
@@ -713,7 +715,7 @@ module OracleGate
   # accept/reject branch does not fire, and `next unless gem["ok"]` skips the
   # input — so the run compares NOTHING and reports zero divergences.
   # Checking the count alone cannot see that; the shape has to be checked.
-  DIFFERENTIAL_FORMATS = %w[asciimath latex mathml unicodemath].freeze
+  DIFFERENTIAL_FORMATS = %w[asciimath html latex mathml unicodemath].freeze
   DIFFERENTIAL_PORT_CODES = %w[PARSE_ERROR RENDER_ERROR MISSING_SYMBOL_DATA].freeze
 
   def assert_differential_shape!(results, label, inputs)

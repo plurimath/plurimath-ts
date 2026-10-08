@@ -19,6 +19,7 @@ import {
 } from "../../../src/core/index";
 import { parseAsciimath } from "../../../src/formats/asciimath/parser";
 import { toAsciimath } from "../../../src/formats/asciimath/renderer";
+import { toHtml } from "../../../src/formats/html/renderer";
 import { toLatex } from "../../../src/formats/latex/renderer";
 import { toMathml } from "../../../src/formats/mathml/renderer";
 import { toUnicodemath } from "../../../src/formats/unicodemath/renderer";
@@ -36,7 +37,7 @@ afterEach(() => {
 });
 
 describe("unsupported UnitsML fallback", () => {
-  it("normalizes to Text and renders through asciimath, latex, mathml and unicodemath", () => {
+  it("normalizes to Text and renders through asciimath, latex, mathml, unicodemath and html", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const formula = parseAsciimath('"unitsml(kg)"');
 
@@ -64,6 +65,10 @@ describe("unsupported UnitsML fallback", () => {
     // `Text` node answers `"unitsml(kg)"`, quotes included — the same bytes as
     // to_asciimath, not the LaTeX or MathML wrapping.
     expect(toUnicodemath(formula)).toBe('"unitsml(kg)"');
+    // Measured on the pinned oracle: `Formula#to_html` over a
+    // `Text.new("unitsml(kg)")` answers the bare text, with neither quotes nor
+    // a wrapping element.
+    expect(toHtml(formula)).toBe("unitsml(kg)");
   });
 
   it("replaces the default warning when a callback is supplied", () => {

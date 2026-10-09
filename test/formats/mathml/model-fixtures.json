@@ -32,9 +32,9 @@
     "src",
     "width"
   ],
-  "caseCount": 308,
-  "parsedCount": 296,
-  "raisedCount": 12,
+  "caseCount": 345,
+  "parsedCount": 332,
+  "raisedCount": 13,
   "corpusMathmlCount": 299,
   "cases": [
     {
@@ -46517,7 +46517,7 @@
                       {
                         "class": "Math::Symbols::Symbol",
                         "fields": {
-                          "value": "#<Mml::V4::AnnotationXml:0x00007e245e61d400>"
+                          "value": "#<Mml::V4::AnnotationXml:0x00007d1555829f50>"
                         }
                       }
                     ]
@@ -46687,7 +46687,7 @@
                       {
                         "class": "Math::Symbols::Symbol",
                         "fields": {
-                          "value": "#<Mml::V4::AnnotationXml:0x00007e245e546ec8>"
+                          "value": "#<Mml::V4::AnnotationXml:0x00007d15557ffa70>"
                         }
                       }
                     ]
@@ -46737,7 +46737,7 @@
                       {
                         "class": "Math::Symbols::Symbol",
                         "fields": {
-                          "value": "#<Mml::V4::AnnotationXml:0x00007e245e29a698>"
+                          "value": "#<Mml::V4::AnnotationXml:0x00007d1554e30eb8>"
                         }
                       }
                     ]
@@ -47006,6 +47006,2097 @@
                   "alt": "w",
                   "index": 3
                 }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-a3d534171768",
+      "group": "mml-semantics",
+      "input": "<math><mrow> <mi> a </mi> \n </mrow></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mrow",
+            "attributes": {},
+            "children": [
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  " a "
+                ],
+                "children": [
+                  {
+                    "text": " a "
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mrow> <mi> a </mi> \n </mrow></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": " a "
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-84038c96b7e2",
+      "group": "mml-semantics",
+      "input": "<math><mfrac>txt<mi>a</mi>more<mi>b</mi></mfrac></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mfrac",
+            "attributes": {},
+            "children": [
+              {
+                "text": "txt"
+              },
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "a"
+                ],
+                "children": [
+                  {
+                    "text": "a"
+                  }
+                ]
+              },
+              {
+                "text": "more"
+              },
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "b"
+                ],
+                "children": [
+                  {
+                    "text": "b"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mfrac>txt<mi>a</mi>more<mi>b</mi></mfrac></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "txt"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-cd5ac681d184",
+      "group": "mml-semantics",
+      "input": "<math><mrow><foo>x</foo><mi>a</mi></mrow></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mrow",
+            "attributes": {},
+            "children": [
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "a"
+                ],
+                "children": [
+                  {
+                    "text": "a"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mrow><foo>x</foo><mi>a</mi></mrow></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "a"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-762c9243c77c",
+      "group": "mml-semantics",
+      "input": "<math><mn>1<mi>z</mi>2</mn></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mn",
+            "attributes": {},
+            "value": [
+              "1",
+              "2"
+            ],
+            "children": [
+              {
+                "text": "1"
+              },
+              {
+                "text": "2"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mn>1<mi>z</mi>2</mn></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Number",
+              "fields": {
+                "base": null,
+                "mini_sub_sized": false,
+                "mini_sup_sized": false,
+                "value": "12"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-c3336a19febf",
+      "group": "mml-semantics",
+      "input": "<math><mi>a<!--c-->b<![CDATA[c]]>d<?p q?>e</mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "a",
+              "b",
+              "d",
+              "e"
+            ],
+            "children": [
+              {
+                "text": "a"
+              },
+              {
+                "text": "b"
+              },
+              {
+                "text": "d"
+              },
+              {
+                "text": "e"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi>a<!--c-->b<![CDATA[c]]>d<?p q?>e</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "abde"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-871b03f80bf4",
+      "group": "mml-semantics",
+      "input": "<math><mi>&amp;&lt;&#x3b1;&alpha;</mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "&<α&alpha;"
+            ],
+            "children": [
+              {
+                "text": "&<α&alpha;"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi>&amp;&lt;&#x3b1;&alpha;</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "&#x26;&#x3c;&#x3b1;&#x26;alpha;"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-b4f76eed420c",
+      "group": "mml-semantics",
+      "input": "<m:math xmlns:m=\"http://www.w3.org/1998/Math/MathML\"><m:mi>a</m:mi></m:math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "a"
+            ],
+            "children": [
+              {
+                "text": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<m:math xmlns:m=\"http://www.w3.org/1998/Math/MathML\"><m:mi>a</m:mi></m:math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "a"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-09a7a0f0d4b4",
+      "group": "mml-semantics",
+      "input": "<foo><mi>a</mi></foo>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "a"
+            ],
+            "children": [
+              {
+                "text": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<foo><mi>a</mi></foo>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "a"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-2cb8123340ca",
+      "group": "mml-semantics",
+      "input": "<math xmlns=\"urn:other\"><mi>a</mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "a"
+            ],
+            "children": [
+              {
+                "text": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"urn:other\"><mi>a</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "a"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-b403082a34d4",
+      "group": "mml-semantics",
+      "input": "<math>top<mi>a</mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "text": "top"
+          },
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "a"
+            ],
+            "children": [
+              {
+                "text": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math>top<mi>a</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "top"
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "a"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-6d0754041df3",
+      "group": "mml-semantics",
+      "input": "<math><mi></mi><mi/><mo> </mo></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              ""
+            ],
+            "children": []
+          },
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              ""
+            ],
+            "children": []
+          },
+          {
+            "class": "Mo",
+            "attributes": {},
+            "value": [
+              " "
+            ],
+            "children": [
+              {
+                "text": " "
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi></mi><mi/><mo> </mo></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": " "
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-907b40c5071e",
+      "group": "mml-semantics",
+      "input": "<math><mspace>t<mi>a</mi></mspace></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mspace",
+            "attributes": {},
+            "children": []
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mspace>t<mi>a</mi></mspace></math>",
+          "left_right_wrapper": true,
+          "value": []
+        }
+      }
+    },
+    {
+      "id": "mathml-b78c2db5f89c",
+      "group": "mml-semantics",
+      "input": "<math><maligngroup>t</maligngroup><mglyph>g</mglyph></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Maligngroup",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><maligngroup>t</maligngroup><mglyph>g</mglyph></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-dd63c3f6d102",
+      "group": "mml-semantics",
+      "input": "<math><mrow>  x  <mi>a</mi> <mi>b</mi>\t\n</mrow></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mrow",
+            "attributes": {},
+            "children": [
+              {
+                "text": "  x  "
+              },
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "a"
+                ],
+                "children": [
+                  {
+                    "text": "a"
+                  }
+                ]
+              },
+              {
+                "text": " "
+              },
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "b"
+                ],
+                "children": [
+                  {
+                    "text": "b"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mrow>  x  <mi>a</mi> <mi>b</mi>\t\n</mrow></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Formula",
+              "fields": {
+                "displaystyle": true,
+                "left_right_wrapper": true,
+                "value": [
+                  {
+                    "class": "Math::Symbols::Symbol",
+                    "fields": {
+                      "value": "  x  "
+                    }
+                  },
+                  {
+                    "class": "Math::Symbols::Symbol",
+                    "fields": {
+                      "value": "a"
+                    }
+                  },
+                  {
+                    "class": "Math::Symbols::Symbol",
+                    "fields": {
+                      "value": "b"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-eb8655111285",
+      "group": "mml-semantics",
+      "input": "<math><mi>\n</mi><mo> </mo><mtext>  </mtext></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "\n"
+            ],
+            "children": [
+              {
+                "text": "\n"
+              }
+            ]
+          },
+          {
+            "class": "Mo",
+            "attributes": {},
+            "value": [
+              " "
+            ],
+            "children": [
+              {
+                "text": " "
+              }
+            ]
+          },
+          {
+            "class": "Mtext",
+            "attributes": {},
+            "value": [
+              "  "
+            ],
+            "children": [
+              {
+                "text": "  "
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi>\n</mi><mo> </mo><mtext>  </mtext></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "&#xa;"
+              }
+            },
+            {
+              "class": "Math::Symbols::Space",
+              "fields": {
+                "value": null
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "  "
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-165b0b996d3b",
+      "group": "mml-semantics",
+      "input": "<math><mi><mglyph alt=\"g\"/></mi><mi>a<mglyph alt=\"g\"/>b</mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              ""
+            ],
+            "children": [
+              {
+                "class": "Mglyph",
+                "attributes": {
+                  "alt": "g"
+                },
+                "children": []
+              }
+            ]
+          },
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "a",
+              "b"
+            ],
+            "children": [
+              {
+                "text": "a"
+              },
+              {
+                "class": "Mglyph",
+                "attributes": {
+                  "alt": "g"
+                },
+                "children": []
+              },
+              {
+                "text": "b"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi><mglyph alt=\"g\"/></mi><mi>a<mglyph alt=\"g\"/>b</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "ab"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-b226e43499ca",
+      "group": "mml-semantics",
+      "input": "<math><mglyph index=\"3x\"/><mglyph index=\"-2\"/><mglyph index=\" 4 \"/><mglyph index=\"\"/></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": -2
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 4
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mglyph index=\"3x\"/><mglyph index=\"-2\"/><mglyph index=\" 4 \"/><mglyph index=\"\"/></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": -2
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 4
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-3329d6e35c31",
+      "group": "mml-semantics",
+      "input": "<math><mglyph index=\"+3\"/><mglyph index=\"0x10\"/><mglyph index=\"1_000\"/><mglyph index=\"1.5\"/></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 3
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 1000
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 1
+            },
+            "children": []
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mglyph index=\"+3\"/><mglyph index=\"0x10\"/><mglyph index=\"1_000\"/><mglyph index=\"1.5\"/></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 3
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 1000
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 1
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-353b54beae14",
+      "group": "mml-semantics",
+      "input": "<math><mglyph index=\"010\"/><mglyph index=\"\\u0663\"/><mglyph index=\"1e2\"/><mglyph index=\"08\"/></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 8
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 100
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 8
+            },
+            "children": []
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mglyph index=\"010\"/><mglyph index=\"\\u0663\"/><mglyph index=\"1e2\"/><mglyph index=\"08\"/></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 8
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 100
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 8
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-96bb0ffd4763",
+      "group": "mml-semantics",
+      "input": "<math><mmultiscripts><mi>a</mi><mprescripts/><mi>b</mi><mprescripts/><mi>c</mi></mmultiscripts></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mmultiscripts",
+            "attributes": {},
+            "children": [
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "a"
+                ],
+                "children": [
+                  {
+                    "text": "a"
+                  }
+                ]
+              },
+              {
+                "class": "Mprescripts",
+                "attributes": {},
+                "children": []
+              },
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "b"
+                ],
+                "children": [
+                  {
+                    "text": "b"
+                  }
+                ]
+              },
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "c"
+                ],
+                "children": [
+                  {
+                    "text": "c"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mmultiscripts><mi>a</mi><mprescripts/><mi>b</mi><mprescripts/><mi>c</mi></mmultiscripts></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Multiscript",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                },
+                "parameter_three": [
+                  {
+                    "class": "Math::Symbols::Symbol",
+                    "fields": {
+                      "value": "c"
+                    }
+                  }
+                ],
+                "parameter_two": [
+                  {
+                    "class": "Math::Symbols::Symbol",
+                    "fields": {
+                      "value": "b"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-f8a0997b22a7",
+      "group": "mml-semantics",
+      "input": "<math><mi mathvariant=\"a\" mathvariant=\"b\">x</mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {
+              "mathvariant": "b"
+            },
+            "value": [
+              "x"
+            ],
+            "children": [
+              {
+                "text": "x"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi mathvariant=\"a\" mathvariant=\"b\">x</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "x"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-e571dd7b4bcb",
+      "group": "mml-semantics",
+      "input": "<math><mi xmlns=\"urn:x\">a</mi><x:mi xmlns:x=\"urn:y\">b</x:mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "a"
+            ],
+            "children": [
+              {
+                "text": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi xmlns=\"urn:x\">a</mi><x:mi xmlns:x=\"urn:y\">b</x:mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "a"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-5eed31a230c6",
+      "group": "mml-semantics",
+      "input": "<x:math xmlns:x=\"urn:y\"><x:mi>b</x:mi><mi>c</mi></x:math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "c"
+            ],
+            "children": [
+              {
+                "text": "c"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<x:math xmlns:x=\"urn:y\"><x:mi>b</x:mi><mi>c</mi></x:math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "c"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-0e6b44d56fcd",
+      "group": "mml-semantics",
+      "input": "<math><annotation encoding=\"t\">a<b>c</b>d</annotation></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Annotation",
+            "attributes": {},
+            "value": [
+              "a",
+              "d"
+            ],
+            "children": []
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><annotation encoding=\"t\">a<b>c</b>d</annotation></math>",
+          "left_right_wrapper": true,
+          "value": []
+        }
+      }
+    },
+    {
+      "id": "mathml-e23ee2e36ae6",
+      "group": "mml-semantics",
+      "input": "<math><semantics><mi>x</mi><annotation></annotation><annotation> </annotation><annotation>a<!--c-->b</annotation><annotation> <b/>q </annotation></semantics></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Semantics",
+            "attributes": {},
+            "children": [
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "x"
+                ],
+                "children": [
+                  {
+                    "text": "x"
+                  }
+                ]
+              },
+              {
+                "class": "Annotation",
+                "attributes": {},
+                "value": "",
+                "children": []
+              },
+              {
+                "class": "Annotation",
+                "attributes": {},
+                "value": " ",
+                "children": []
+              },
+              {
+                "class": "Annotation",
+                "attributes": {},
+                "value": [
+                  "a",
+                  "b"
+                ],
+                "children": []
+              },
+              {
+                "class": "Annotation",
+                "attributes": {},
+                "value": [
+                  "q "
+                ],
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><semantics><mi>x</mi><annotation></annotation><annotation> </annotation><annotation>a<!--c-->b</annotation><annotation> <b/>q </annotation></semantics></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Semantics",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "x"
+                  }
+                },
+                "parameter_two": [
+                  {
+                    "annotation": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": ""
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "annotation": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": " "
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "annotation": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "ab"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "annotation": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "q "
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-f1eb4152963c",
+      "group": "mml-semantics",
+      "input": "<math><mi x:mathvariant=\"bold\" xmlns:x=\"u\">a</mi><mi mathvariant=\"\">b</mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {
+              "mathvariant": "bold"
+            },
+            "value": [
+              "a"
+            ],
+            "children": [
+              {
+                "text": "a"
+              }
+            ]
+          },
+          {
+            "class": "Mi",
+            "attributes": {
+              "mathvariant": ""
+            },
+            "value": [
+              "b"
+            ],
+            "children": [
+              {
+                "text": "b"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi x:mathvariant=\"bold\" xmlns:x=\"u\">a</mi><mi mathvariant=\"\">b</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Bold",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                },
+                "parameter_two": "bold"
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-49367c9ec0e3",
+      "group": "mml-semantics",
+      "input": "<math><mi>a <mglyph alt=\"g\"/> b</mi><mi> <mglyph alt=\"g\"/> </mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "a ",
+              " b"
+            ],
+            "children": [
+              {
+                "text": "a "
+              },
+              {
+                "class": "Mglyph",
+                "attributes": {
+                  "alt": "g"
+                },
+                "children": []
+              },
+              {
+                "text": " b"
+              }
+            ]
+          },
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              ""
+            ],
+            "children": [
+              {
+                "class": "Mglyph",
+                "attributes": {
+                  "alt": "g"
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi>a <mglyph alt=\"g\"/> b</mi><mi> <mglyph alt=\"g\"/> </mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "a  b"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-12da5ef5ebb3",
+      "group": "mml-semantics",
+      "input": "<math><mrow><![CDATA[x]]><mi>a</mi></mrow><mi><![CDATA[only]]></mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mrow",
+            "attributes": {},
+            "children": [
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "a"
+                ],
+                "children": [
+                  {
+                    "text": "a"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              ""
+            ],
+            "children": []
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mrow><![CDATA[x]]><mi>a</mi></mrow><mi><![CDATA[only]]></mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "a"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-7ff84d211b09",
+      "group": "mml-semantics",
+      "input": "<math><mtr><mtd><mi>a</mi></mtd></mtr><mtd>z</mtd></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": []
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mtr><mtd><mi>a</mi></mtd></mtr><mtd>z</mtd></math>",
+          "left_right_wrapper": true,
+          "value": []
+        }
+      }
+    },
+    {
+      "id": "mathml-c76d6e2399e2",
+      "group": "mml-semantics",
+      "input": "<math><mi> <foo/> </mi><mi> <!--c--> </mi><mi> <![CDATA[c]]> </mi><mi> <?p?> </mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              ""
+            ],
+            "children": []
+          },
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              " "
+            ],
+            "children": [
+              {
+                "text": " "
+              }
+            ]
+          },
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              " "
+            ],
+            "children": [
+              {
+                "text": " "
+              }
+            ]
+          },
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              " "
+            ],
+            "children": [
+              {
+                "text": " "
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi> <foo/> </mi><mi> <!--c--> </mi><mi> <![CDATA[c]]> </mi><mi> <?p?> </mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": " "
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": " "
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": " "
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-57ee151fb998",
+      "group": "mml-semantics",
+      "input": "<math><mrow> </mrow><mrow> x </mrow><mrow> <!--c--> </mrow></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mrow",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mrow",
+            "attributes": {},
+            "children": [
+              {
+                "text": " x "
+              }
+            ]
+          },
+          {
+            "class": "Mrow",
+            "attributes": {},
+            "children": []
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mrow> </mrow><mrow> x </mrow><mrow> <!--c--> </mrow></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": " x "
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-e5707d101ad6",
+      "group": "mml-semantics",
+      "input": "<math> </math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": []
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math> </math>",
+          "left_right_wrapper": true,
+          "value": []
+        }
+      }
+    },
+    {
+      "id": "mathml-651630f9b563",
+      "group": "mml-semantics",
+      "input": "<math><mi>a<foo/> </mi><mi> <mglyph/>b</mi><mi> <mglyph/></mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "a"
+            ],
+            "children": [
+              {
+                "text": "a"
+              }
+            ]
+          },
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "b"
+            ],
+            "children": [
+              {
+                "class": "Mglyph",
+                "attributes": {},
+                "children": []
+              },
+              {
+                "text": "b"
+              }
+            ]
+          },
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              " "
+            ],
+            "children": [
+              {
+                "text": " "
+              },
+              {
+                "class": "Mglyph",
+                "attributes": {},
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi>a<foo/> </mi><mi> <mglyph/>b</mi><mi> <mglyph/></mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "a"
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            },
+            {
+              "class": "Math::Symbols::Space",
+              "fields": {
+                "value": null
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-9527cbc1af76",
+      "group": "mml-semantics",
+      "input": "<math><mfrac> <mi>a</mi> x <mi>b</mi> </mfrac></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mfrac",
+            "attributes": {},
+            "children": [
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "a"
+                ],
+                "children": [
+                  {
+                    "text": "a"
+                  }
+                ]
+              },
+              {
+                "text": " x "
+              },
+              {
+                "class": "Mi",
+                "attributes": {},
+                "value": [
+                  "b"
+                ],
+                "children": [
+                  {
+                    "text": "b"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mfrac> <mi>a</mi> x <mi>b</mi> </mfrac></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": " x "
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-cc8d39557f7b",
+      "group": "mml-semantics",
+      "input": "<math><mi>a&#10;b</mi><mi>&#x20;</mi><ms lquote=\"x\">s</ms><mtext>t<mglyph alt=\"g\"/></mtext></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "a\nb"
+            ],
+            "children": [
+              {
+                "text": "a\nb"
+              }
+            ]
+          },
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              " "
+            ],
+            "children": [
+              {
+                "text": " "
+              }
+            ]
+          },
+          {
+            "class": "Ms",
+            "attributes": {},
+            "value": [
+              "s"
+            ],
+            "children": [
+              {
+                "text": "s"
+              }
+            ]
+          },
+          {
+            "class": "Mtext",
+            "attributes": {},
+            "value": [
+              "t"
+            ],
+            "children": [
+              {
+                "text": "t"
+              },
+              {
+                "class": "Mglyph",
+                "attributes": {
+                  "alt": "g"
+                },
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mi>a&#10;b</mi><mi>&#x20;</mi><ms lquote=\"x\">s</ms><mtext>t<mglyph alt=\"g\"/></mtext></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "a&#xa;b"
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": " "
+              }
+            },
+            {
+              "class": "Math::Function::Ms",
+              "fields": {
+                "parameter_one": "s"
+              }
+            },
+            {
+              "class": "Math::Function::Text",
+              "fields": {
+                "lang": null,
+                "parameter_one": "t"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-2b27286f088b",
+      "group": "mml-semantics",
+      "input": "<math><mi>a</mi></math><!--tail-->",
+      "raises": "Lutaml::Model::InvalidFormatError",
+      "raisedIn": "mml"
+    },
+    {
+      "id": "mathml-605fdf7ab831",
+      "group": "mml-semantics",
+      "input": "<!--head--><math><mi>a</mi></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mi",
+            "attributes": {},
+            "value": [
+              "a"
+            ],
+            "children": [
+              {
+                "text": "a"
+              }
+            ]
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<!--head--><math><mi>a</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "a"
               }
             }
           ]

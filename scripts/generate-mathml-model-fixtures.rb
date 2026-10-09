@@ -62,6 +62,52 @@ COVERAGE = {
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph index="3" ' \
     'fontfamily="f" alt="w"/></math>',
   ],
+  # How `Mml.parse` builds its tree from the XML read, measured: the root's
+  # name and namespace are ignored; a prefixed element survives only in the
+  # MathML namespace; unmapped children are dropped; text survives in an
+  # unordered class's value only; blank text is dropped outside token content;
+  # CDATA is dropped; a non-collection value is a string, or an array when
+  # other nodes sit beside the text; integer attributes go through lutaml's cast.
+  "mml-semantics" => [
+    "<math><mrow> <mi> a </mi> \n </mrow></math>",
+    "<math><mfrac>txt<mi>a</mi>more<mi>b</mi></mfrac></math>",
+    "<math><mrow><foo>x</foo><mi>a</mi></mrow></math>",
+    "<math><mn>1<mi>z</mi>2</mn></math>",
+    "<math><mi>a<!--c-->b<![CDATA[c]]>d<?p q?>e</mi></math>",
+    "<math><mi>&amp;&lt;&#x3b1;&alpha;</mi></math>",
+    "<m:math xmlns:m=\"http://www.w3.org/1998/Math/MathML\"><m:mi>a</m:mi></m:math>",
+    "<foo><mi>a</mi></foo>",
+    '<math xmlns="urn:other"><mi>a</mi></math>',
+    "<math>top<mi>a</mi></math>",
+    "<math><mi></mi><mi/><mo> </mo></math>",
+    "<math><mspace>t<mi>a</mi></mspace></math>",
+    "<math><maligngroup>t</maligngroup><mglyph>g</mglyph></math>",
+    "<math><mrow>  x  <mi>a</mi>\u00a0<mi>b</mi>\t\n</mrow></math>",
+    "<math><mi>\n</mi><mo>\u00a0</mo><mtext>  </mtext></math>",
+    '<math><mi><mglyph alt="g"/></mi><mi>a<mglyph alt="g"/>b</mi></math>',
+    '<math><mglyph index="3x"/><mglyph index="-2"/><mglyph index=" 4 "/><mglyph index=""/></math>',
+    '<math><mglyph index="+3"/><mglyph index="0x10"/><mglyph index="1_000"/><mglyph index="1.5"/></math>',
+    '<math><mglyph index="010"/><mglyph index="\u0663"/><mglyph index="1e2"/><mglyph index="08"/></math>',
+    "<math><mmultiscripts><mi>a</mi><mprescripts/><mi>b</mi><mprescripts/><mi>c</mi></mmultiscripts></math>",
+    '<math><mi mathvariant="a" mathvariant="b">x</mi></math>',
+    '<math><mi xmlns="urn:x">a</mi><x:mi xmlns:x="urn:y">b</x:mi></math>',
+    '<x:math xmlns:x="urn:y"><x:mi>b</x:mi><mi>c</mi></x:math>',
+    '<math><annotation encoding="t">a<b>c</b>d</annotation></math>',
+    "<math><semantics><mi>x</mi><annotation></annotation><annotation> </annotation>" \
+    "<annotation>a<!--c-->b</annotation><annotation> <b/>q </annotation></semantics></math>",
+    '<math><mi x:mathvariant="bold" xmlns:x="u">a</mi><mi mathvariant="">b</mi></math>',
+    '<math><mi>a <mglyph alt="g"/> b</mi><mi> <mglyph alt="g"/> </mi></math>',
+    "<math><mrow><![CDATA[x]]><mi>a</mi></mrow><mi><![CDATA[only]]></mi></math>",
+    "<math><mtr><mtd><mi>a</mi></mtd></mtr><mtd>z</mtd></math>",
+    "<math><mi> <foo/> </mi><mi> <!--c--> </mi><mi> <![CDATA[c]]> </mi><mi> <?p?> </mi></math>",
+    "<math><mrow> </mrow><mrow> x </mrow><mrow> <!--c--> </mrow></math>",
+    "<math> </math>",
+    "<math><mi>a<foo/> </mi><mi> <mglyph/>b</mi><mi>\u00a0<mglyph/></mi></math>",
+    "<math><mfrac> <mi>a</mi> x <mi>b</mi> </mfrac></math>",
+    '<math><mi>a&#10;b</mi><mi>&#x20;</mi><ms lquote="x">s</ms><mtext>t<mglyph alt="g"/></mtext></math>',
+    "<math><mi>a</mi></math><!--tail-->",
+    "<!--head--><math><mi>a</mi></math>",
+  ],
 }.freeze
 
 options = { oracle: nil, out: "test/formats/mathml", allow_dirty: false }

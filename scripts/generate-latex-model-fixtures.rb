@@ -326,6 +326,8 @@ sidecar, provenance = RenderFixtureProvenance.prepare(
 # gem as a Hash and raised `NoMethodError` inside `pre_processing`.
 corpus_latex = []
 CorpusGenerator.read_pin_cases.each do |kase|
+  next unless CorpusGenerator.model_fixture_harvests?(kase)
+
   raw = kase.dig("expected", "latex")
   text = case raw
          when ::String then raw

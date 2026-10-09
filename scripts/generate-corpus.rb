@@ -754,6 +754,16 @@ module CorpusGenerator
   # starts consuming it.
   PENDING_READER_FORMATS = %w[omml].freeze
 
+  # Whether a parse-side model fixture (LaTeX, HTML, UnicodeMath) harvests a
+  # pinned case's rendered outputs. MathML-input cases are left out for now:
+  # their outputs would add several hundred parse-parity inputs to those
+  # parsers, which is its own slice (TODO.plan/deferred.md, "Model fixtures
+  # do not yet harvest the MathML corpus cases"). Dropping this predicate is
+  # how they start harvesting them.
+  def model_fixture_harvests?(kase)
+    kase["input_format"] != "mathml"
+  end
+
   def pending_reader_payload?(path)
     format, rest = path.split("/", 2)
     !rest.nil? && PENDING_READER_FORMATS.include?(format)

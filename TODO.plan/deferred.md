@@ -722,6 +722,27 @@ port reads MathML from its own element and attribute semantics
 `MATHML_INPUT_DIFFERENCES` in the same module lists each difference with its
 reason.
 
+### Model fixtures do not yet harvest the MathML corpus cases
+
+**Trigger: the follow-up that widens LaTeX, HTML and UnicodeMath parse parity.**
+
+The LaTeX, HTML and UnicodeMath model fixtures are built by parsing what the
+gem rendered for each pinned corpus case. The MathML-input cases are left out
+of that harvest (`CorpusGenerator.model_fixture_harvests?` in
+`scripts/generate-corpus.rb`): with them, the LaTeX fixture would grow from
+342 to 620 inputs and the HTML one from 254 to 509, all new parse-parity
+targets for those parsers. Drop the predicate, regenerate, and fix what the
+parsers miss.
+
+### The corpus YAML reader misreads a block-scalar indentation indicator
+
+**Trigger: OMML input leaving `PENDING_READER_FORMATS`.**
+
+`test/core/corpus-yaml.ts` reads a block scalar header `|2` (an explicit
+indentation indicator) as the literal text `|2`. Three OMML payloads
+(`equation-arrays.yaml`, `limits.yaml`, `matrices.yaml`) use it; they are
+pending and only byte-verified, so nothing reads them wrong today.
+
 ## Upstream issues
 
 Defects in the Ruby gem, found while building the port. All reproduce on a

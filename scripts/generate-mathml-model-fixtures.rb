@@ -224,10 +224,16 @@ raised = rows.count { |row| row.key?("raises") }
 abort "REFUSING: zero rows parsed" if parsed.zero?
 abort "REFUSING: #{rows.length} rows but #{parsed} parsed + #{raised} raised" unless parsed + raised == rows.length
 
+# Every probe group must reach the translator: a refusal group by having the
+# translator itself raise, every other group by producing a model.
 COVERAGE.each_key do |group|
-  next if rows.any? { |row| row["group"] == group && row.key?("model") }
-
-  abort "REFUSING: no #{group} probe reached the translator"
+  in_group = rows.select { |row| row["group"] == group }
+  reached = if group.end_with?("-refusals")
+              in_group.any? && in_group.all? { |row| row["raisedIn"] == "translate" }
+            else
+              in_group.any? { |row| row.key?("model") }
+            end
+  abort "REFUSING: the #{group} probes did not reach the translator as intended" unless reached
 end
 
 payload = {

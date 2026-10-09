@@ -1582,6 +1582,26 @@ def binary_kind_rows(oracle)
            "spec/plurimath/unicode_math_spec.rb menclose mixing a known and an unrecognized notation",
            { "format" => "mathml", "text" => '<math><menclose notation="top radical"><mi>x</mi></menclose></math>' })
 
+  # `Semantics`, `Intent` and `None`: built only by the MathML translator, so
+  # no AsciiMath-reachable case renders them. The sources are the pinned
+  # corpus's MathML cases that reach them (mathml-partial-008, -012, -013,
+  # -014 and mathml-tokens-008), trimmed to the construct.
+  {
+    "mathml-semantics-annotation" => "<math><semantics><mrow><mi>f</mi><mo>(</mo><mi>t</mi><mo>)</mo></mrow>" \
+                                      '<annotation encoding="MathType-MTEF">MathType@MTEF</annotation></semantics></math>',
+    "mathml-semantics-bare" => "<math><semantics><mi>x</mi><mo>+</mo><mi>y</mi></semantics></math>",
+    "mathml-none-postscripts" => "<math><mmultiscripts><mi>R</mi><mi>i</mi><none/><none/><mi>j</mi>" \
+                                 "<mi>k</mi><none/><mi>l</mi><none/></mmultiscripts></math>",
+    "mathml-none-prescripts" => "<math><mrow><mmultiscripts><mi>F</mi><mn>1</mn><none/><mprescripts/>" \
+                                "<mn>0</mn><none/></mmultiscripts><mo>&#x2061;</mo><mrow><mo>(</mo>" \
+                                "<mi>z</mi><mo>)</mo></mrow></mrow></math>",
+    "mathml-none-rtl" => '<math><mstyle dir="rtl"><mmultiscripts><mo>&#x644;</mo><mn>12</mn><none/>' \
+                         "<mprescripts/><none/><mn>5</mn></mmultiscripts></mstyle></math>",
+    "mathml-intent" => '<math><mrow intent="plus(x, y)"><mi>x</mi><mo>+</mo><mi>y</mi></mrow></math>',
+  }.each do |id, text|
+    add.call(id, "mathml-input-kinds", "pinned corpus MathML cases, trimmed", { "format" => "mathml", "text" => text })
+  end
+
   rows
 end
 

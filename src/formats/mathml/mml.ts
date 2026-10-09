@@ -120,6 +120,11 @@ export const MATHML_INPUT_DIFFERENCES: readonly (readonly [string, string])[] = 
       "inside an `mn`, a second `mprescripts`, or anything inside `mspace` or `mglyph`), " +
       "and drops blank text outside tokens.",
   ],
+  [
+    'An element in no namespace is MathML, `xmlns=""` included.',
+    'The gem drops a child that undeclares the namespace (`<mi xmlns="">`) inside a MathML ' +
+      "document, though it reads the same element in a document with no namespace at all.",
+  ],
   ["CDATA is text.", "The gem drops CDATA sections. In XML they are character data."],
   [
     "A prefixed attribute (`ext:mathvariant`) is skipped.",

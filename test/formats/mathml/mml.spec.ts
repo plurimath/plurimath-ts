@@ -26,7 +26,7 @@ function first(text: string): MmlNode {
 
 describe("the documented differences", () => {
   it("lists each one with a reason", () => {
-    expect(MATHML_INPUT_DIFFERENCES.length).toBe(7);
+    expect(MATHML_INPUT_DIFFERENCES.length).toBe(8);
     for (const [what, why] of MATHML_INPUT_DIFFERENCES) {
       expect(what.length).toBeGreaterThan(0);
       expect(why.length).toBeGreaterThan(0);

@@ -62,10 +62,11 @@ COVERAGE = {
   "whitespace" => %w[&#x85; &#xa0; &#x3000; &#xfeff; &#x200b; &#x2028;].map do |ref|
     "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mrow>#{ref}<mi>x</mi>#{ref}</mrow></math>"
   end,
-  # `xmlns=""` is no namespace, on the root and on a child.
+  # `xmlns=""` on the root is no namespace. (On a child inside a MathML
+  # document the gem drops the element; the port keeps it, see
+  # MATHML_INPUT_DIFFERENCES, so that shape is not a parity row.)
   "namespaces" => [
     '<math xmlns=""><mi>x</mi></math>',
-    '<math xmlns="http://www.w3.org/1998/Math/MathML"><mi xmlns="">x</mi><mi>y</mi></math>',
     '<m:math xmlns:m="http://www.w3.org/1998/Math/MathML"><m:mi>x</m:mi></m:math>',
   ],
   "mglyph" => [

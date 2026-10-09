@@ -294,8 +294,15 @@ shapes above.
       per target for the 40 case groups and the 7 `calls/1` groups, and
       `test/formats/corpus-target-parity.ts` pins 236 reachable cases with `omml` bytes;
       checked 2026-10-06)
-- [ ] The cross-format invariant gates cover OMML, including the differential runner on
+- [x] The cross-format invariant gates cover OMML, including the differential runner on
       both halves.
+      (done: `test/gates/runtime-boundary.spec.ts`,
+      `test/formats/asciimath/unsupported-fallback.spec.ts` and
+      `test/adversarial/adversarial-inputs.spec.ts` run `toOmml`, and
+      `scripts/gate-oracle.rb differential` compares `to_omml` against `toOmml` on 429
+      inputs, 2,574 comparisons across six formats; no adversarial outcome changed, since
+      the pinned gem's `to_omml` renders every input its other renderers render;
+      checked 2026-10-09)
 - [x] `/omml` is a published subpath with package-isolation assertions, and its expected
       exports and forbidden layers are listed explicitly in the package gate.
       (done: #112; `scripts/gate-package.mjs:150` and `:204`; `pnpm gate:package` exits 0; checked 2026-09-24)

@@ -562,12 +562,15 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
 - [x] `toAsciimath`, `toLatex`, `toHtml`, `toOmml`, and `toUnicodemath` each have a
       runtime assertion through a compat instance created from AsciiMath.
       (done: `test/compat/plurimath-class.spec.ts:188-209`; checked 2026-09-24)
-- [ ] HTML and OMML corpus targets are nonempty and complete per payload; their
+- [x] HTML and OMML corpus targets are nonempty and complete per payload; their
       cross-format and package-isolation gates pass against built artifacts.
-      (open: the targets are nonempty and complete per parsed payload at pin `cf3c5eb`,
+      (done: the targets are nonempty and complete per parsed payload at pin `cf3c5eb`,
       asserted in `test/gates/corpus-discovery.spec.ts`, checked 2026-10-06; the
       cross-format gates cover HTML (`01-html-renderer.md`'s gate box, checked
-      2026-10-08) but not OMML yet)
+      2026-10-08) and OMML (`02-omml-renderer.md`'s gate box, checked 2026-10-09);
+      of those gates only the class-B differential runs the built `dist/` artifacts —
+      `runtime-boundary`, `unsupported-fallback` and `adversarial-inputs` import `src/`
+      — and package isolation is `pnpm gate:package` over the built `dist/` artifacts)
 - [x] The root package exports the default class under ESM and CJS, the package root
       passes publint, the real packed artifact passes attw, and review leaves no valid implementable finding
       unresolved.

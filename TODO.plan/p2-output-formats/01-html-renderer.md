@@ -128,7 +128,8 @@ makes a defect, not an improvement.
       port's reader yet (`PENDING_READER_FORMATS`); checked 2026-10-06)
 - [x] The cross-format invariant gates cover HTML: `runtime-boundary`,
       `unsupported-fallback` and `adversarial-inputs`, plus the class-B differential
-      runner on both halves. All four now cover five formats.
+      runner on both halves. All four covered five formats with HTML, and six since OMML
+      joined (`02-omml-renderer.md`'s gate box).
       (done: `test/gates/runtime-boundary.spec.ts`,
       `test/formats/asciimath/unsupported-fallback.spec.ts` and
       `test/adversarial/adversarial-inputs.spec.ts` run `toHtml`, and

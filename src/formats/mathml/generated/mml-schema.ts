@@ -1,7 +1,7 @@
 /**
  * GENERATED FILE — do not edit, regenerate.
  *
- * Emitted by scripts/generate-mml-schema.rb from the mml 2.4.1 gem the oracle
+ * Emitted by scripts/generate-mathml-data.rb from the mml 2.4.1 gem the oracle
  * parses MathML with (ARCHITECTURE.md §1). What it was generated from is in
  * `src/formats/mathml/generated/provenance.ts`.
  *

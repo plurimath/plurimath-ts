@@ -1,7 +1,7 @@
 /**
  * GENERATED FILE — do not edit, regenerate.
  *
- * Emitted by scripts/generate-mml-schema.rb from the Plurimath Ruby gem, the oracle
+ * Emitted by scripts/generate-mathml-data.rb from the Plurimath Ruby gem, the oracle
  * (ARCHITECTURE.md §1).
  *
  * What every file under `src/formats/mathml/generated/` was generated from. `generatorInputs`
@@ -27,7 +27,7 @@ export interface MmlSchemaGeneratedProvenance {
  * useful while iterating, never to be committed (§7).
  */
 export const MML_SCHEMA_GENERATED_PROVENANCE: MmlSchemaGeneratedProvenance = {
-  generator: "scripts/generate-mml-schema.rb",
+  generator: "scripts/generate-mathml-data.rb",
   generatorInputs: new Map([
     [
       "scripts/generate-core-data.rb",
@@ -38,8 +38,8 @@ export const MML_SCHEMA_GENERATED_PROVENANCE: MmlSchemaGeneratedProvenance = {
       "0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef",
     ],
     [
-      "scripts/generate-mml-schema.rb",
-      "78e6029c0cf1cf00c740167f696fce4a2d27ad10cb737b51301f5c89e73c66f0",
+      "scripts/generate-mathml-data.rb",
+      "c62bbf1f01ecd6ab5817880767e82bfbb23fbae99ba7c6868b8edd9b04e4d2b4",
     ],
   ]),
   oracle: "plurimath",

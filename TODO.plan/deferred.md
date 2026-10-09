@@ -717,6 +717,7 @@ iterations: measured on the oracle at `00c52783`, `Semantics.new(x, {})` renders
 `<annotation/>`. The port's MathML renderer refuses both
 (`src/render/binary-function/mathml.ts`, `renderSemantics`). The MathML
 translator never builds either shape, so nothing reaches the difference today.
+
 ### MathML input reads MathML, not the mml gem's lutaml mapping
 
 **Trigger: a consumer needing the gem's reading of input outside ordinary

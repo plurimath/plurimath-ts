@@ -96,11 +96,10 @@ describe("unary functions", () => {
     // now, since MathML input builds it.
     // Measured on the pinned oracle 00c52783: of the twelve classes the census
     // aliases onto this carrier from outside the AsciiMath-reachable set,
-    // eleven own `to_asciimath` — `None` among them (`Left`, `Right`, `Lcm`,
-    // `Mbox`, `Longdiv`, `Merror`, `Mglyph`, `Ms`, `Msgroup`, `Msline` and
-    // `Scarries` are the other ten, all measured and case-armed elsewhere in
-    // this file) — and the twelfth, Hom, is admitted below precisely because
-    // it does not.
+    // eleven own `to_asciimath` (`Left`, `Right`, `Lcm`, `Mbox`, `Longdiv`,
+    // `Merror`, `Mglyph`, `Ms`, `Msgroup`, `Msline`, `Scarries` and `None`,
+    // all measured and case-armed elsewhere in this file) — and the twelfth,
+    // Hom, is admitted below precisely because it does not.
     expect(() => toAsciimath(new UnaryFunctionNode({ name: "Scarry", parameterOne: x() }))).toThrow(
       RenderError,
     );

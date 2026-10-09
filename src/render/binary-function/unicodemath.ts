@@ -174,6 +174,10 @@ export function renderBinaryFunction(
       )})`;
     case "Td":
       return renderTd(node, context);
+    case "Semantics":
+      // The gem has no `Semantics#to_unicodemath`, so the call raises
+      // NoMethodError (measured on the pinned oracle 00c52783).
+      throw new RenderError("Semantics has no UnicodeMath rendering", FORMAT, node.kind);
     default:
       // Nothing reaches here through the census as it stands: all seven
       // reachable names have an arm. A name the census knows but this file

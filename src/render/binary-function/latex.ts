@@ -45,8 +45,7 @@ const REACHABLE_BINARY_NAMES: ReadonlySet<string> = new Set([
   "Mod",
   "Td",
   // Outside the AsciiMath transform's reach (MathML and UnicodeMath input
-  // build it); no `to_latex` of its own, so the
-  // carrier default (`intent.rb`).
+  // build it); no `to_latex` of its own, so the carrier default (`intent.rb`).
   "Intent",
 ]);
 

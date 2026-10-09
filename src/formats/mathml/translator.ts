@@ -443,7 +443,7 @@ function isText(child: MmlChild): child is string {
   return typeof child === "string";
 }
 
-/** `ordered_children`: blank (`[[:space:]]`-only after Ruby strip) text dropped. */
+/** `ordered_children`: text that Ruby's `strip` empties (ASCII whitespace and NUL) is dropped. */
 function orderedChildren(node: MmlNode): MmlChild[] {
   return node.children.filter((child) => !(isText(child) && rubyStrip(child) === ""));
 }
@@ -672,7 +672,6 @@ function constructSame(current: Draft, one: unknown): Draft {
   const name = current.cls.slice(FUNCTION.length);
   if (ATTRIBUTE_SETTERS.has(current.cls)) return withAttributes(name, one);
   if (name === "Text") return newText(one);
-  if (name === "Mpadded") return unary(name, one);
   return unary(name, one);
 }
 

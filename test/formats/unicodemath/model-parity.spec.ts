@@ -119,9 +119,10 @@ const DEFERRED_INPUTS: readonly string[] = [
 const corpus = fixtures.cases.filter((entry) => entry.group === "corpus-unicodemath");
 const boundary = fixtures.cases.filter((entry) => entry.group === "slice-boundary");
 // Every row that is neither the corpus nor a boundary case: the RULE_COVERAGE
-// groups the generator adds, one per ported family. This started as an
-// afterthought and became the majority path — the corpus can no longer reach
-// the rules being ported, so each new family arrives with its own group here.
+// groups the generator adds, one per ported family, and the `locale` group.
+// This started as an afterthought and became the majority path — the corpus
+// can no longer reach the rules being ported, so each new family arrives with
+// its own group here.
 const coverage = fixtures.cases.filter(
   (entry) => entry.group !== "corpus-unicodemath" && entry.group !== "slice-boundary",
 );

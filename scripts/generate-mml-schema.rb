@@ -135,6 +135,33 @@ module MmlSchemaGenerator
     { child_sets: child_sets, classes: rows }
   end
 
+  # `CoreDataGenerator.ts_value`, plus the rule Biome takes from Prettier: an
+  # array of two or more elements that are all arrays of two or more elements
+  # always breaks, one element per line, even when it would fit, and so does
+  # every array around it.
+  def ts_value(value, indent, column = indent * 2)
+    flat = CoreDataGenerator.ts_flat(value)
+    return flat if !must_break?(value) && column + flat.length + 1 <= CoreDataGenerator::TS_PRINT_WIDTH
+    return flat unless value.is_a?(::Array) && !value.empty?
+
+    pad = "  " * indent
+    lines = value.map { |item| "#{pad}  #{ts_value(item, indent + 1)}," }
+    (["["] + lines + ["#{pad}]"]).join("\n")
+  end
+
+  # A broken array also breaks every array that contains it.
+  def must_break?(value)
+    return false unless value.is_a?(::Array)
+    return true if value.length > 1 && value.all? { |item| item.is_a?(::Array) && item.length > 1 }
+
+    value.any? { |item| must_break?(item) }
+  end
+
+  def ts_const(name, type, value, doc:)
+    prefix = "export const #{name}: #{type} = "
+    [CoreDataGenerator.ts_doc(doc), "#{prefix}#{ts_value(value, 0, prefix.length)};"].join("\n")
+  end
+
   def emit_schema_file(out_root, data)
     gem_version = Gem.loaded_specs.fetch("mml").version.to_s
     sections = [
@@ -164,15 +191,15 @@ module MmlSchemaGenerator
         "  readonly MmlAttributeRule[],",
         "];",
       ].join("\n"),
-      CoreDataGenerator.ts_const(
+      ts_const(
         "MML_READ_ATTRIBUTES", "readonly string[]", READ_ATTRIBUTES,
         doc: "The attributes the Plurimath translator reads; the layer exposes no others.",
       ),
-      CoreDataGenerator.ts_const(
+      ts_const(
         "MML_CHILD_SETS", "readonly (readonly MmlChildRule[])[]", data[:child_sets],
         doc: "The distinct child element rule lists, shared by index from `MML_CLASSES`.",
       ),
-      CoreDataGenerator.ts_const(
+      ts_const(
         "MML_CLASSES", "readonly MmlClassRow[]", data[:classes],
         doc: "Every class reachable from `Math`, sorted by name.",
       ),

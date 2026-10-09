@@ -159,8 +159,10 @@ function localName(element: XmlReadElement): string | null {
   return prefix === null ? name : name.slice(prefix.length + 1);
 }
 
+/** No namespace (`xmlns=""` included, which XML defines as none) or MathML's. */
 function isMathml(element: XmlReadElement): boolean {
-  return element.namespace === null || element.namespace === MATHML_NAMESPACE;
+  const { namespace } = element;
+  return namespace === null || namespace === "" || namespace === MATHML_NAMESPACE;
 }
 
 function build(element: XmlReadElement, kind: string): MmlNode {

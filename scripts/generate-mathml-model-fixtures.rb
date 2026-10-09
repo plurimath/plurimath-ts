@@ -62,6 +62,12 @@ COVERAGE = {
   "whitespace" => %w[&#x85; &#xa0; &#x3000; &#xfeff; &#x200b; &#x2028;].map do |ref|
     "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mrow>#{ref}<mi>x</mi>#{ref}</mrow></math>"
   end,
+  # `xmlns=""` is no namespace, on the root and on a child.
+  "namespaces" => [
+    '<math xmlns=""><mi>x</mi></math>',
+    '<math xmlns="http://www.w3.org/1998/Math/MathML"><mi xmlns="">x</mi><mi>y</mi></math>',
+    '<m:math xmlns:m="http://www.w3.org/1998/Math/MathML"><m:mi>x</m:mi></m:math>',
+  ],
   "mglyph" => [
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph src="a.png" alt="x"/></math>',
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph src="a.png" alt="x" ' \

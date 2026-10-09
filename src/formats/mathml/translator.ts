@@ -74,11 +74,12 @@ function isObj(value: unknown): value is Draft {
   return value instanceof Draft;
 }
 
-/** Calling a method on nil: Ruby's NoMethodError. */
-function noMethod(method: string, receiver: unknown): never {
-  throw new MathmlTranslateError(
-    `undefined method '${method}' for ${receiver === null || receiver === undefined ? "nil" : typeof receiver}`,
-  );
+/**
+ * Where the gem calls a method on nil (Ruby `NoMethodError`; `method` names
+ * it): an element is missing an operand the translation reads.
+ */
+function noMethod(_method: string, _receiver: unknown): never {
+  throw new MathmlTranslateError("MathML input is missing an operand its translation needs");
 }
 
 function recv(value: unknown, method: string): Draft {
@@ -345,8 +346,10 @@ function getClassNew(name: string): Draft {
   if (entry === undefined)
     throw new Error(`mathml translator: get_class name ${name} not measured`);
   const [cls, defaults] = entry;
-  if (cls === null)
-    throw new MathmlTranslateError(`uninitialized constant Math::Function::${name}`);
+  // The gem raises NameError: `get_class` finds no `Math::Function` class.
+  if (cls === null) {
+    throw new MathmlTranslateError(`MathML input names "${name}", which has no model class`);
+  }
   return new Draft(
     cls,
     Object.fromEntries(defaults.map(([field, value]) => [field, defaultValue(value)])),
@@ -688,34 +691,33 @@ function binaryClass(cls: string, one: unknown, two: unknown): Draft {
   return new Draft(cls, { parameter_one: one, parameter_two: two });
 }
 
-/** `FormulaTransformation#filter_values`, with `self` the receiver formula (or null). */
-function filterValues(
-  self: Draft | null,
-  value: unknown,
-  arrayToInstance = false,
-  replacingOrder = true,
-): unknown {
+/**
+ * `FormulaTransformation#filter_values(value, array_to_instance: true)`, with
+ * `self` the receiver formula. Every call the translator makes passes
+ * `array_to_instance: true` and the default `replacing_order: true`, so only
+ * that mode is ported.
+ */
+function filterValues(self: Draft | null, value: unknown): unknown {
   if (!Array.isArray(value)) return value;
-  if (value.length === 0) return arrayToInstance ? null : value;
+  if (value.length === 0) return null;
 
   if (self !== null && value.length === 1 && isMstyle(recv(value[0], "is_mstyle?"))) {
     self.f.displaystyle = (value[0] as Draft).f.displaystyle;
   }
 
   if (value.length === 1 && value.every(isFormula)) {
-    const inner = formulaValue(value[0] as Draft);
-    return arrayToInstance ? filterValues(self, inner, true) : inner;
+    return filterValues(self, formulaValue(value[0] as Draft));
   }
   if (value.some((element) => isObj(element) && isMrow(element))) {
     value.forEach((element, index) => {
       if (!(isObj(element) && isMrow(element))) return;
-      value[index] = filterValues(self, [element], true, replacingOrder);
+      value[index] = filterValues(self, [element]);
     });
     return value;
   }
   if (valueIsTernaryOrNary(value)) {
     (value[0] as Draft).f.parameter_three = deleteAt(value, 1);
-    return filterValues(self, value, arrayToInstance, replacingOrder);
+    return filterValues(self, value);
   }
   if (value.length === 2) {
     const first = recv(value[0], "parameter_one");
@@ -735,8 +737,7 @@ function filterValues(
       ];
     }
   }
-  if (arrayToInstance && replacingOrder) return value.length > 1 ? newFormula(value) : value[0];
-  return value;
+  return value.length > 1 ? newFormula(value) : value[0];
 }
 
 /* =========================================================================
@@ -809,13 +810,13 @@ function unaryFunctionUpdatable(value: unknown[], element: Draft, index: number)
 
 function updateModFunction(mrow: Draft, value: unknown[], index: number): void {
   const mod = value[index + 1] as Draft;
-  mod.f.parameter_one = filterValues(mrow, deleteAt(value, index), true);
-  mod.f.parameter_two = filterValues(mrow, deleteAt(value, index + 1), true);
+  mod.f.parameter_one = filterValues(mrow, deleteAt(value, index));
+  mod.f.parameter_two = filterValues(mrow, deleteAt(value, index + 1));
 }
 
 function unaryFunctionUpdate(mrow: Draft, value: unknown[], index: number): void {
   const element = deleteAt(value, index) as Draft;
-  element.f.parameter_one = filterValues(mrow, deleteAt(value, index), true);
+  element.f.parameter_one = filterValues(mrow, deleteAt(value, index));
   value.splice(index, 0, element);
 }
 
@@ -834,13 +835,9 @@ function organizeFencing(mrow: Draft, value: unknown[]): void {
 function newNaryElement(mrow: Draft, element: Draft, value: unknown[]): Draft {
   value.shift();
   const rest = value.splice(0, value.length);
-  return newNary(
-    element.f.parameter_two,
-    element.f.parameter_one,
-    null,
-    filterValues(mrow, rest, true),
-    { type: "undOvr" },
-  );
+  return newNary(element.f.parameter_two, element.f.parameter_one, null, filterValues(mrow, rest), {
+    type: "undOvr",
+  });
 }
 
 function replaceWithNaryFunction(
@@ -853,13 +850,15 @@ function replaceWithNaryFunction(
   // `organize_value(fourth_value)` passes an argument to a zero-arity method:
   // ArgumentError whenever the fourth value is an Mrow (gem bug, ported).
   if (isMrow(recv(fourth, "is_mrow?"))) {
-    throw new MathmlTranslateError("wrong number of arguments (given 1, expected 0)");
+    throw new MathmlTranslateError(
+      "MathML input with an under/over n-ary operator whose body is a row cannot be translated",
+    );
   }
   value[index] = newNary(
     element.f.parameter_one,
     element.f.parameter_two,
     element.f.parameter_three,
-    filterValues(mrow, fourth, true),
+    filterValues(mrow, fourth),
     { type: "undOvr" },
   );
 }
@@ -994,7 +993,7 @@ export function translate(node: MmlChild): DraftValue {
       return null;
     }
     default:
-      throw new MathmlTranslateError(`Unknown mml node type: Mml::V4::${node.kind}`);
+      throw new MathmlTranslateError(`MathML element ${node.kind} has no translation`);
   }
 }
 
@@ -1394,7 +1393,11 @@ function carrierOf(cls: string): { kind: NodeKind; identity?: string } {
   const entry = CARRIERS.get(cls);
   if (entry === undefined) throw new Error(`mathml translator: no carrier for ${cls}`);
   const [carrier, disposition] = entry;
-  if (disposition === "deferred") throw new MathmlTranslateError(`${cls} is deferred`);
+  if (disposition === "deferred") {
+    throw new MathmlTranslateError(
+      `MathML input builds a ${cls.split("::").pop()} node, which this port does not model`,
+    );
+  }
   const kind = KIND_BY_CARRIER.get(carrier);
   if (kind === undefined) throw new Error(`mathml translator: carrier ${carrier} has no node kind`);
   if (carrier === cls) return { kind };

@@ -60,6 +60,10 @@ describe("the documented differences", () => {
     expect([...mi.attributes]).toStrictEqual([["mathvariant", "normal"]]);
   });
 
+  it('reads xmlns="" as no namespace', () => {
+    expect(first('<math xmlns=""><mi xmlns="">x</mi></math>').kind).toBe("Mi");
+  });
+
   it("reads CDATA as text", () => {
     expect(first(`<math ${NS}><mi><![CDATA[x]]></mi></math>`).value).toStrictEqual(["x"]);
   });

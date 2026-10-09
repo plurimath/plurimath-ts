@@ -645,14 +645,14 @@ function verifyPayloadBytes(path: string, record: PayloadRecord): string {
 
 /**
  * Input formats whose corpus directories this port does not read yet: the
- * MathML and OMML payloads plurimath-testsuite#21 added. They are pending the
- * MathML and OMML readers; nothing here parses those notations, and several
- * of their payloads use YAML (multi-line quoted scalars) that `corpus-yaml`
- * does not read either. Their bytes are still checked against the provenance,
+ * OMML payloads plurimath-testsuite#21 added (its MathML ones are read). They
+ * are pending the OMML reader; nothing here parses that notation, and some of
+ * its payloads use a YAML block-scalar indentation indicator (`|2`) that
+ * `corpus-yaml` does not read either. Their bytes are still checked against the provenance,
  * so the pin stays fully vouched for; only their contents are not loaded.
  * Removing a format from this list is how its reader starts consuming it.
  */
-export const PENDING_READER_FORMATS: readonly string[] = ["mathml", "omml"];
+export const PENDING_READER_FORMATS: readonly string[] = ["omml"];
 
 /** Whether a payload path (relative to `corpus/`) is in a pending format's directory. */
 export function isPendingReaderPayload(path: string): boolean {

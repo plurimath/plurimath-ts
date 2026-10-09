@@ -744,15 +744,15 @@ module CorpusGenerator
     cases
   end
 
-  # The MathML and OMML payloads plurimath-testsuite#21 added are pending this
-  # port's MathML and OMML readers. Their bytes are verified like any other
+  # The OMML payloads plurimath-testsuite#21 added are pending this port's OMML
+  # reader (MathML's, added in the same change, is read). Their bytes are verified like any other
   # payload's, but their cases are not returned: every consumer of
   # `read_pin_cases` feeds the cases (or their rendered outputs) to parsers
   # and fixtures built for the formats this port reads, and folding these in
   # would silently widen every fixture. Mirrors `PENDING_READER_FORMATS` in
   # test/core/corpus-pin.ts; removing a format from both is how its reader
   # starts consuming it.
-  PENDING_READER_FORMATS = %w[mathml omml].freeze
+  PENDING_READER_FORMATS = %w[omml].freeze
 
   def pending_reader_payload?(path)
     format, rest = path.split("/", 2)

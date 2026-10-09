@@ -43,7 +43,7 @@ import { describe, expect, it } from "vitest";
 import { CORE_GENERATED_PROVENANCE } from "../../src/core/generated/provenance";
 import { HTML_PARSER_GENERATED_PROVENANCE } from "../../src/formats/html/generated/provenance";
 import { LATEX_PARSER_GENERATED_PROVENANCE } from "../../src/formats/latex/generated/provenance";
-import { MML_SCHEMA_GENERATED_PROVENANCE } from "../../src/formats/mathml/generated/provenance";
+import { MATHML_DATA_GENERATED_PROVENANCE } from "../../src/formats/mathml/generated/provenance";
 import { UNICODEMATH_PARSER_GENERATED_PROVENANCE } from "../../src/formats/unicodemath/generated/provenance";
 import { FORMATTING_GENERATED_PROVENANCE } from "../../src/formatting/generated/provenance";
 import { GENERATED_PROVENANCE } from "../../src/generated/provenance";
@@ -193,8 +193,7 @@ const FIXTURE_SPEC_PATHS: { readonly [path: string]: FixtureSpec } = {
     usesCorpus: true,
     usesRenderInventory: false,
   },
-  // MathML's parse in two layers: the `Mml.parse` tree as the translator
-  // reads it, then the translated model.
+  // MathML's parse: the gem's model per case, or which half refused.
   "test/formats/mathml/model-fixtures.json": {
     generator: "scripts/generate-mathml-model-fixtures.rb",
     schema: "plurimath-corpus/mathml-model/1",
@@ -627,7 +626,7 @@ const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: strin
   ...[...HTML_PARSER_GENERATED_PROVENANCE.generatorInputs].map(
     ([file, hash]) => ["src/formats/html/generated", file, hash] as const,
   ),
-  ...[...MML_SCHEMA_GENERATED_PROVENANCE.generatorInputs].map(
+  ...[...MATHML_DATA_GENERATED_PROVENANCE.generatorInputs].map(
     ([file, hash]) => ["src/formats/mathml/generated", file, hash] as const,
   ),
   ...FIXTURE_GENERATOR_HASHES,
@@ -637,30 +636,6 @@ const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: strin
  * A string; or bytes the gem held as invalid UTF-8 (`{invalidUtf8}`); or bytes
  * in a declared encoding Ruby could not transcode (`{bytes, encoding}`).
  */
-/** One node of a mathml-model row's `mml` view, recursively. */
-function expectMmlView(value: unknown, at: string, readAttributes: readonly unknown[]): void {
-  const node = mapping(value, at);
-  if ("text" in node) {
-    expectExactKeys(node, ["text"], at);
-    stringField(node, "text", at);
-    return;
-  }
-  expectExactKeys(
-    node,
-    ["class", "attributes", ...("value" in node ? ["value"] : []), "children"],
-    at,
-  );
-  stringField(node, "class", at);
-  for (const name of Object.keys(mapField(node, "attributes", at))) {
-    if (!readAttributes.includes(name)) {
-      expect(readAttributes, `${at}.attributes`).toContain(name);
-    }
-  }
-  for (const [index, child] of arrayField(node, "children", at).entries()) {
-    expectMmlView(child, `${at}.children[${index}]`, readAttributes);
-  }
-}
-
 function expectXmlReaderString(value: unknown, at: string): void {
   if (typeof value === "string") return;
   const record = mapping(value, at);
@@ -1365,7 +1340,6 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
             "$comment",
             "schema",
             "format",
-            "readAttributes",
             "caseCount",
             "parsedCount",
             "raisedCount",
@@ -1374,8 +1348,6 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           ],
           record.relative,
         );
-        const readAttributes = arrayField(record.payload, "readAttributes", record.relative);
-        expect(readAttributes.length).toBeGreaterThan(0);
         expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
         const parsed = rows.filter((row, index) => {
           const at = `${record.relative}.cases[${index}]`;
@@ -1383,17 +1355,11 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           stringField(item, "group", record.relative);
           stringValue(item, "input", record.relative);
           if (typeof item.raises === "string") {
-            const keys =
-              item.raisedIn === "translate"
-                ? ["group", "id", "input", "mml", "raises", "raisedIn"]
-                : ["group", "id", "input", "raises", "raisedIn"];
-            expectExactKeys(item, keys, at);
+            expectExactKeys(item, ["group", "id", "input", "raises", "raisedIn"], at);
             expect(["mml", "translate"]).toContain(stringField(item, "raisedIn", at));
-            if ("mml" in item) expectMmlView(item.mml, `${at}.mml`, readAttributes);
             return false;
           }
-          expectExactKeys(item, ["group", "id", "input", "mml", "model"], at);
-          expectMmlView(item.mml, `${at}.mml`, readAttributes);
+          expectExactKeys(item, ["group", "id", "input", "model"], at);
           const model = mapField(item, "model", at);
           expect(stringField(model, "class", at)).toBe("Math::Formula");
           mapField(model, "fields", at);
@@ -1406,7 +1372,9 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         const corpusRows = rows.filter(
           (row) => mapping(row, record.relative).group === record.spec.corpusGroup,
         ).length;
-        expect(integerField(record.payload, "corpusMathmlCount", record.relative)).toBe(corpusRows);
+        expect(integerField(record.payload, "corpusMathmlCount", record.relative)).toBe(
+          corpusRows,
+        );
       } else if (record.spec.shape === "xml-reader") {
         // A row is one input and what the gem's reader did with it: the tree
         // its models receive, or the exception class it refused with.
@@ -1642,7 +1610,7 @@ describe("generated data binds to the generator inputs it names", () => {
       LATEX_PARSER_GENERATED_PROVENANCE.generator,
       UNICODEMATH_PARSER_GENERATED_PROVENANCE.generator,
       HTML_PARSER_GENERATED_PROVENANCE.generator,
-      MML_SCHEMA_GENERATED_PROVENANCE.generator,
+      MATHML_DATA_GENERATED_PROVENANCE.generator,
       ...fixtureEntrypoints,
     ];
     expect([...new Set(recordedEntrypoints)].sort()).toStrictEqual(shipped);
@@ -1656,7 +1624,7 @@ const COMMITTABLE_RECORDS: ReadonlyArray<readonly [string, boolean]> = [
   ["src/formats/latex/generated", LATEX_PARSER_GENERATED_PROVENANCE.committable],
   ["src/formats/unicodemath/generated", UNICODEMATH_PARSER_GENERATED_PROVENANCE.committable],
   ["src/formats/html/generated", HTML_PARSER_GENERATED_PROVENANCE.committable],
-  ["src/formats/mathml/generated", MML_SCHEMA_GENERATED_PROVENANCE.committable],
+  ["src/formats/mathml/generated", MATHML_DATA_GENERATED_PROVENANCE.committable],
   ...SIDECAR_RECORDS.map(
     (record) =>
       [

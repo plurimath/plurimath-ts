@@ -1,81 +1,137 @@
 /**
- * The MathML element layer: what `Mml.parse(text, version: 4)` builds from a
- * document, as the gem's MathML translator reads it.
+ * The MathML element layer: a document read into the elements, attributes and
+ * text the translator (`./translator.ts`) works from.
  *
- * `readXml` reproduces the XML read; this module reproduces the lutaml-model
- * mapping on top of it, driven by the class schema generated from the mml gem
- * (`./generated/mml-schema.ts`). Every rule below was measured against the
- * oracle and is pinned by the `mml-semantics` rows of
- * `test/formats/mathml/model-fixtures.json`:
+ * Written from MathML's own element and attribute semantics, over the generic
+ * tree an XML reader returns. It reads element, attribute and text nodes only,
+ * so the XML reader underneath can be swapped without touching it.
  *
- * - The root element becomes `Math` whatever its name or namespace.
- * - A child element maps through its parent's child rules by local name. A
- *   prefixed element survives only when its prefix names the MathML namespace;
- *   an unprefixed one survives whatever its default namespace. Unmapped
- *   elements are dropped with their content. A non-collection child keeps its
- *   first occurrence only.
- * - Only an ordered class exposes children. Text is one of them when the class
- *   has text content (token elements), or when it is not blank (Ruby `strip`
- *   leaves something). Comments, processing instructions and CDATA are dropped.
- * - `value` collects the text children. A collection is an array, `[""]` when
- *   there is no text. A single value is `""` with no text, the string when it
- *   is the element's only node, and otherwise an array.
- * - The attributes the translator reads match by local name; integer ones go
- *   through lutaml's `Type::Integer.cast` (`castInteger`).
+ * - The root must be a `math` element; anything else is refused.
+ * - An element counts when it is in the MathML namespace or in no namespace
+ *   (a document without `xmlns`). Elements in other namespaces, and MathML
+ *   elements the translator has no rule for, are skipped with their content.
+ * - Attributes are kept by local name, as strings. `index` and `length` are
+ *   non-negative integers in MathML and are kept as numbers when they are
+ *   written as plain decimal integers.
+ * - A token element's (`mi`, `mn`, `mo`, `mtext`, `ms`, `annotation`) `value`
+ *   is its text nodes in order; CDATA is text.
+ * - Children keep document order, text included; the translator decides what
+ *   blank text means.
  *
- * `Mml.parse`'s `namespace_exist:` flag changed nothing in any probe, so it is
- * not modelled.
+ * Where this differs from the Ruby gem, which reads MathML through the mml
+ * gem's lutaml-model mapping, the differences are deliberate and confined to
+ * input outside ordinary MathML. Each is listed in `MATHML_INPUT_DIFFERENCES`
+ * below, and none occurs in the pinned corpus.
  */
 
 import { readXml, type XmlReadElement, XmlReadError } from "../../xml/index";
-import {
-  MML_CHILD_SETS,
-  MML_CLASSES,
-  type MmlAttributeRule,
-  type MmlChildRule,
-} from "./generated/mml-schema";
 
 const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
 
-/** One node of the tree: an element of an `Mml::V4` class, or a text child. */
+/** One node of the tree: an element, or a text child. */
 export type MmlChild = MmlNode | string;
 
 export interface MmlNode {
-  /** The `Mml::V4` class, without the module prefix (`Mi`, `Mrow`). */
+  /** The element, as the translator names it (`Mi`, `Mrow`, `AnnotationXml`). */
   readonly kind: string;
-  /** The read attributes that are set. Integer attributes hold numbers. */
+  /** Attributes by local name. `index` and `length` hold numbers. */
   readonly attributes: ReadonlyMap<string, string | number>;
-  /** Present exactly when the class maps text content onto `value`. */
-  readonly value?: string | readonly string[];
-  /** `each_mixed_content`, in document order. */
+  /** A token element's text nodes, in order. Absent on other elements. */
+  readonly value?: readonly string[];
+  /** Child elements and text, in document order. */
   readonly children: readonly MmlChild[];
 }
 
-/** `Mml.parse` refused the document (the XML read refused it). */
+/** The document is not a MathML expression. */
 export class MmlParseError extends Error {
   override readonly name = "MmlParseError";
 }
 
-interface ClassSchema {
-  readonly ordered: boolean;
-  readonly content: "collection" | "single" | null;
-  readonly children: ReadonlyMap<string, MmlChildRule>;
-  readonly attributes: readonly MmlAttributeRule[];
-}
+/** MathML element name -> the name the translator dispatches on. */
+const ELEMENTS: ReadonlyMap<string, string> = new Map([
+  ["math", "Math"],
+  ["mrow", "Mrow"],
+  ["mi", "Mi"],
+  ["mn", "Mn"],
+  ["mo", "Mo"],
+  ["mtext", "Mtext"],
+  ["ms", "Ms"],
+  ["mspace", "Mspace"],
+  ["mglyph", "Mglyph"],
+  ["mfrac", "Mfrac"],
+  ["mfraction", "Mfraction"],
+  ["msqrt", "Msqrt"],
+  ["mroot", "Mroot"],
+  ["mstyle", "Mstyle"],
+  ["merror", "Merror"],
+  ["mpadded", "Mpadded"],
+  ["mphantom", "Mphantom"],
+  ["mfenced", "Mfenced"],
+  ["menclose", "Menclose"],
+  ["msub", "Msub"],
+  ["msup", "Msup"],
+  ["msubsup", "Msubsup"],
+  ["munder", "Munder"],
+  ["mover", "Mover"],
+  ["munderover", "Munderover"],
+  ["mmultiscripts", "Mmultiscripts"],
+  ["mprescripts", "Mprescripts"],
+  ["none", "None"],
+  ["mtable", "Mtable"],
+  ["mlabeledtr", "Mlabeledtr"],
+  ["mtr", "Mtr"],
+  ["mtd", "Mtd"],
+  ["maligngroup", "Maligngroup"],
+  ["malignmark", "Malignmark"],
+  ["mstack", "Mstack"],
+  ["mlongdiv", "Mlongdiv"],
+  ["msgroup", "Msgroup"],
+  ["msrow", "Msrow"],
+  ["mscarries", "Mscarries"],
+  ["mscarry", "Mscarry"],
+  ["msline", "Msline"],
+  ["semantics", "Semantics"],
+  ["annotation", "Annotation"],
+  ["annotation-xml", "AnnotationXml"],
+]);
 
-const CHILD_SETS: readonly ReadonlyMap<string, MmlChildRule>[] = MML_CHILD_SETS.map(
-  (rules) => new Map(rules.map((rule) => [rule[0], rule] as const)),
-);
+const TOKENS: ReadonlySet<string> = new Set(["Mi", "Mn", "Mo", "Mtext", "Ms", "Annotation"]);
+const INTEGER_ATTRIBUTES: ReadonlySet<string> = new Set(["index", "length"]);
 
-const CLASSES: ReadonlyMap<string, ClassSchema> = new Map(
-  MML_CLASSES.map(([kind, ordered, content, childSet, attributes]) => {
-    const children = CHILD_SETS[childSet];
-    if (children === undefined) throw new Error(`${kind}: no child set ${childSet}`);
-    return [kind, { ordered, content, children, attributes }] as const;
-  }),
-);
+/**
+ * How this layer departs from the gem's `Mml.parse` (mml 2.4.1 over
+ * lutaml-model 0.8.19), each measured against the oracle. None of these occurs
+ * in the pinned corpus; all of them concern input outside ordinary MathML.
+ */
+export const MATHML_INPUT_DIFFERENCES: readonly (readonly [string, string])[] = [
+  [
+    "A root element other than `math` is refused.",
+    "The gem reads any root as `math`. A MathML expression is a `math` element.",
+  ],
+  [
+    "An unprefixed element in a non-MathML default namespace is skipped.",
+    "The gem matches it by name. Namespaces decide what an element is.",
+  ],
+  [
+    "Child elements are kept wherever they appear, and text is kept in every element.",
+    "The gem keeps only the children its per-class mapping lists (dropping, say, an `mi` " +
+      "inside an `mn`, a second `mprescripts`, or anything inside `mspace` or `mglyph`), " +
+      "and drops blank text outside tokens.",
+  ],
+  ["CDATA is text.", "The gem drops CDATA sections. In XML they are character data."],
+  [
+    "`index`/`length` are numbers only when written as plain decimal integers.",
+    "The gem applies lutaml's integer cast: `010` is 8, `1.5` is 1, `1e2` is 100, and a " +
+      "multi-line value refuses the whole document.",
+  ],
+  [
+    "A token's `value` is always a list of its text nodes.",
+    "The gem's annotation `value` is a string or a list depending on its neighbours; the " +
+      "translator joins either way, so the model is the same.",
+  ],
+];
 
-/** `Mml.parse(text, version: 4)`. Throws `MmlParseError` where the gem raises. */
+/** Reads a MathML document. Throws `MmlParseError` when it is not one. */
 export function parseMml(text: string): MmlNode {
   let root: XmlReadElement;
   try {
@@ -84,146 +140,54 @@ export function parseMml(text: string): MmlNode {
     if (error instanceof XmlReadError) throw new MmlParseError(error.message);
     throw error;
   }
+  if (!isMathml(root) || localName(root) !== "math") {
+    throw new MmlParseError("the document's root is not a MathML math element");
+  }
   return build(root, "Math");
 }
 
-function schemaFor(kind: string): ClassSchema {
-  const schema = CLASSES.get(kind);
-  if (schema === undefined) throw new Error(`no Mml schema for ${kind}`);
-  return schema;
-}
-
-function localName(name: string | null, prefix: string | null): string | null {
+function localName(element: XmlReadElement): string | null {
+  const { name, prefix } = element;
   if (name === null) return null;
   return prefix === null ? name : name.slice(prefix.length + 1);
 }
 
+function isMathml(element: XmlReadElement): boolean {
+  return element.namespace === null || element.namespace === MATHML_NAMESPACE;
+}
+
 function build(element: XmlReadElement, kind: string): MmlNode {
-  const schema = schemaFor(kind);
   const children: MmlChild[] = [];
   const texts: string[] = [];
-  let otherNodes = false;
-  const taken = new Set<string>();
-
   for (const node of element.children) {
-    if (node.kind === "text") {
+    if (node.kind === "text" || node.kind === "cdata") {
       texts.push(node.text);
-      if (schema.ordered && (schema.content !== null || !isBlank(node.text))) {
-        children.push(node.text);
-      }
+      children.push(node.text);
       continue;
     }
-    otherNodes = true;
-    if (node.kind !== "element") continue;
-    if (node.prefix !== null && node.namespace !== MATHML_NAMESPACE) continue;
-    const name = localName(node.name, node.prefix);
-    const rule = name === null ? undefined : schema.children.get(name);
-    if (rule === undefined) continue;
-    const [xmlName, childKind, collection] = rule;
-    if (!collection) {
-      if (taken.has(xmlName)) continue;
-      taken.add(xmlName);
-    }
-    const child = build(node, childKind);
-    if (schema.ordered) children.push(child);
+    if (node.kind !== "element" || !isMathml(node)) continue;
+    const name = localName(node);
+    const childKind = name === null ? undefined : ELEMENTS.get(name);
+    if (childKind === undefined || childKind === "Math") continue;
+    children.push(build(node, childKind));
   }
-
-  const attributes = readAttributes(element, schema.attributes);
-  if (schema.content === null) return { kind, attributes, children };
-  return { kind, attributes, value: contentValue(schema.content, texts, otherNodes), children };
+  const attributes = readAttributes(element);
+  return TOKENS.has(kind)
+    ? { kind, attributes, value: texts, children }
+    : { kind, attributes, children };
 }
 
-function contentValue(
-  content: "collection" | "single",
-  texts: readonly string[],
-  otherNodes: boolean,
-): string | readonly string[] {
-  if (content === "collection") return texts.length === 0 ? [""] : texts;
-  if (texts.length === 0) return "";
-  const [only] = texts;
-  if (texts.length === 1 && !otherNodes && only !== undefined) return only;
-  return texts;
-}
-
-function readAttributes(
-  element: XmlReadElement,
-  rules: readonly MmlAttributeRule[],
-): ReadonlyMap<string, string | number> {
+function readAttributes(element: XmlReadElement): ReadonlyMap<string, string | number> {
   const out = new Map<string, string | number>();
-  for (const [xmlName, type] of rules) {
-    let raw: string | undefined;
-    for (const [name, value] of element.attributes) {
-      const colon = name.indexOf(":");
-      if ((colon < 0 ? name : name.slice(colon + 1)) === xmlName) raw = value;
-    }
-    if (raw === undefined) continue;
-    if (type === "string") {
-      out.set(xmlName, raw);
+  for (const [name, value] of element.attributes) {
+    const colon = name.indexOf(":");
+    const local = colon < 0 ? name : name.slice(colon + 1);
+    if (!INTEGER_ATTRIBUTES.has(local)) {
+      out.set(local, value);
       continue;
     }
-    const cast = castInteger(raw);
-    if (cast !== null) out.set(xmlName, cast);
+    const match = /^\s*\+?(\d+)\s*$/.exec(value);
+    if (match !== null) out.set(local, Number(match[1]));
   }
   return out;
-}
-
-/** Ruby `String#strip` leaves nothing: ASCII whitespace and NUL only. */
-function isBlank(text: string): boolean {
-  return /^[\t\n\v\f\r \0]*$/.test(text);
-}
-
-/**
- * lutaml-model 0.8.19's `Type::Integer.cast` for a string:
- *
- * ```ruby
- * if value.match?(/^0[0-7]+$/) then value.to_i(8)
- * elsif value.match?(/^-?\d+(\.\d+)?(e-?\d+)?$/i) then Float(value).to_i
- * else Integer(value, 10) rescue nil
- * ```
- *
- * Ruby's `^`/`$` match at line boundaries, so a multi-line value can take the
- * first two arms on one of its lines; `Float()` of such a value raises, and
- * the gem's parse raises with it (`MmlParseError` here).
- */
-export function castInteger(value: string): number | null {
-  if (/^0[0-7]+$/m.test(value)) return rubyToI(value, 8);
-  if (/^-?\d+(\.\d+)?(e-?\d+)?$/im.test(value)) {
-    const float = rubyFloat(value);
-    if (float === null || !Number.isFinite(float)) {
-      throw new MmlParseError(`invalid value for Integer: ${JSON.stringify(value)}`);
-    }
-    return Math.trunc(float);
-  }
-  return rubyInteger(value);
-}
-
-const RUBY_SPACE = "[\\t\\n\\v\\f\\r ]";
-
-/** `String#to_i(base)`: leading whitespace, a sign, digits with single underscores. */
-function rubyToI(value: string, base: 8 | 10): number {
-  const digit = base === 8 ? "[0-7]" : "\\d";
-  const match = new RegExp(`^${RUBY_SPACE}*([+-]?)(${digit}+(?:_${digit}+)*)`).exec(value);
-  if (match === null) return 0;
-  const magnitude = Number.parseInt((match[2] ?? "0").replaceAll("_", ""), base);
-  return match[1] === "-" ? -magnitude : magnitude;
-}
-
-/** `Integer(value, 10)`, or null where it raises. */
-function rubyInteger(value: string): number | null {
-  const match = new RegExp(`^${RUBY_SPACE}*([+-]?)(?:0[dD])?(\\d+(?:_\\d+)*)${RUBY_SPACE}*$`).exec(
-    value,
-  );
-  if (match === null) return null;
-  const magnitude = Number((match[2] ?? "").replaceAll("_", ""));
-  return match[1] === "-" ? -magnitude : magnitude;
-}
-
-/** `Float(value)` for the decimal forms the cast reaches, or null where it raises. */
-function rubyFloat(value: string): number | null {
-  const digits = "\\d+(?:_\\d+)*";
-  const match = new RegExp(
-    `^${RUBY_SPACE}*([+-]?${digits}(?:\\.${digits})?(?:[eE][+-]?${digits})?)${RUBY_SPACE}*$`,
-  ).exec(value);
-  if (match === null) return null;
-  return Number((match[1] ?? "").replaceAll("_", ""));
 }

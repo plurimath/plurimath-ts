@@ -1,21 +1,19 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Emits the oracle's MathML parse in two layers, for every pinned corpus MathML
-# input and a small set of coverage probes:
+# Emits the oracle's MathML parse for every pinned corpus MathML input and a
+# small set of coverage probes: `Plurimath::Math.parse(text, :mathml)`
+# serialized like every other model fixture, or the refusal.
 #
-# - `mml`: what `Mml.parse(text, version: 4, namespace_exist:)` builds, as the
-#   translator sees it. Each element is its `Mml::V4` class, the attributes the
-#   translator reads (`READ_ATTRIBUTES`) when set, `value` for the classes that
-#   have one, and its `each_mixed_content` children in document order, with
-#   text children as `{ "text" => ... }`. A refusal here is `raisedIn: "mml"`.
-# - `model`: `Plurimath::Math.parse(text, :mathml)` serialized like every other
-#   model fixture. A refusal here is `raisedIn: "translate"`, with the class the
-#   translator raised (`Math.parse` rewraps every error as ParseError, which
-#   would hide it).
+# `Mathml::Parser#parse` is `Mml.parse` then `Translator#mml_to_plurimath`
+# (lib/plurimath/mathml/parser.rb), so a refusal records which half raised:
+# `raisedIn: "mml"` (the XML read and mapping) or `raisedIn: "translate"`, with
+# the class the translator raised (`Math.parse` rewraps every error as
+# ParseError, which would hide it).
 #
-# `Mathml::Parser#parse` is exactly `Mml.parse` then `Translator#mml_to_plurimath`
-# (lib/plurimath/mathml/parser.rb), so the two layers split one call in two.
+# Only the model is a parity target. The port reads MathML with its own element
+# layer (src/formats/mathml/mml.ts), not the mml gem's lutaml mapping, so the
+# gem's intermediate tree is not recorded.
 #
 # Usage:
 #   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
@@ -27,16 +25,6 @@ require "optparse"
 require "yaml"
 
 GENERATOR_RELATIVE_PATH = "scripts/generate-mathml-model-fixtures.rb"
-
-# Every `.name` the translator source (lib/plurimath/mathml/*.rb) calls that an
-# `Mml::V4` class declares as an attribute, less the collections it walks
-# through `each_mixed_content` anyway (`annotation_value`, `annotation_xml_value`,
-# `mprescripts_value`) and `value`, which is recorded on its own.
-READ_ATTRIBUTES = %w[
-  accent accentunder alt bevelled close columnlines depth display displaystyle
-  frame height id index intent length linebreak linebreakstyle linethickness
-  mathcolor mathvariant name notation open rowlines rspace separators src width
-].freeze
 
 # The two classes the translator dispatches on that no pinned corpus input
 # builds (measured: the corpus trees hold 42 of its 44 `when` classes).
@@ -61,68 +49,6 @@ COVERAGE = {
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph/></math>',
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph index="3" ' \
     'fontfamily="f" alt="w"/></math>',
-  ],
-  # How `Mml.parse` builds its tree from the XML read, measured: the root's
-  # name and namespace are ignored; a prefixed element survives only in the
-  # MathML namespace; unmapped children are dropped; text survives in an
-  # unordered class's value only; blank text is dropped outside token content;
-  # CDATA is dropped; a non-collection value is a string, or an array when
-  # other nodes sit beside the text; integer attributes go through lutaml's cast.
-  "mml-semantics" => [
-    "<math><mrow> <mi> a </mi> \n </mrow></math>",
-    "<math><mfrac>txt<mi>a</mi>more<mi>b</mi></mfrac></math>",
-    "<math><mrow><foo>x</foo><mi>a</mi></mrow></math>",
-    "<math><mn>1<mi>z</mi>2</mn></math>",
-    "<math><mi>a<!--c-->b<![CDATA[c]]>d<?p q?>e</mi></math>",
-    "<math><mi>&amp;&lt;&#x3b1;&alpha;</mi></math>",
-    "<m:math xmlns:m=\"http://www.w3.org/1998/Math/MathML\"><m:mi>a</m:mi></m:math>",
-    "<foo><mi>a</mi></foo>",
-    '<math xmlns="urn:other"><mi>a</mi></math>',
-    "<math>top<mi>a</mi></math>",
-    "<math><mi></mi><mi/><mo> </mo></math>",
-    "<math><mspace>t<mi>a</mi></mspace></math>",
-    "<math><maligngroup>t</maligngroup><mglyph>g</mglyph></math>",
-    "<math><mrow>  x  <mi>a</mi>\u00a0<mi>b</mi>\t\n</mrow></math>",
-    "<math><mi>\n</mi><mo>\u00a0</mo><mtext>  </mtext></math>",
-    '<math><mi><mglyph alt="g"/></mi><mi>a<mglyph alt="g"/>b</mi></math>',
-    '<math><mglyph index="3x"/><mglyph index="-2"/><mglyph index=" 4 "/><mglyph index=""/></math>',
-    '<math><mglyph index="+3"/><mglyph index="0x10"/><mglyph index="1_000"/><mglyph index="1.5"/></math>',
-    '<math><mglyph index="010"/><mglyph index="\u0663"/><mglyph index="1e2"/><mglyph index="08"/></math>',
-    "<math><mmultiscripts><mi>a</mi><mprescripts/><mi>b</mi><mprescripts/><mi>c</mi></mmultiscripts></math>",
-    '<math><mi mathvariant="a" mathvariant="b">x</mi></math>',
-    '<math><mi xmlns="urn:x">a</mi><x:mi xmlns:x="urn:y">b</x:mi></math>',
-    '<x:math xmlns:x="urn:y"><x:mi>b</x:mi><mi>c</mi></x:math>',
-    '<math><annotation encoding="t">a<b>c</b>d</annotation></math>',
-    "<math><semantics><mi>x</mi><annotation></annotation><annotation> </annotation>" \
-    "<annotation>a<!--c-->b</annotation><annotation> <b/>q </annotation></semantics></math>",
-    '<math><mi x:mathvariant="bold" xmlns:x="u">a</mi><mi mathvariant="">b</mi></math>',
-    '<math><mi>a <mglyph alt="g"/> b</mi><mi> <mglyph alt="g"/> </mi></math>',
-    "<math><mrow><![CDATA[x]]><mi>a</mi></mrow><mi><![CDATA[only]]></mi></math>",
-    "<math><mtr><mtd><mi>a</mi></mtd></mtr><mtd>z</mtd></math>",
-    "<math><mi> <foo/> </mi><mi> <!--c--> </mi><mi> <![CDATA[c]]> </mi><mi> <?p?> </mi></math>",
-    "<math><mrow> </mrow><mrow> x </mrow><mrow> <!--c--> </mrow></math>",
-    "<math> </math>",
-    "<math><mi>a<foo/> </mi><mi> <mglyph/>b</mi><mi>\u00a0<mglyph/></mi></math>",
-    "<math><mfrac> <mi>a</mi> x <mi>b</mi> </mfrac></math>",
-    '<math><mi>a&#10;b</mi><mi>&#x20;</mi><ms lquote="x">s</ms><mtext>t<mglyph alt="g"/></mtext></math>',
-    "<math><mi>a</mi></math><!--tail-->",
-    "<!--head--><math><mi>a</mi></math>",
-  ],
-  # lutaml's `Type::Integer.cast` on `index`, one `mglyph` per value: octal,
-  # float and exponent forms, underscores, `0d`, whitespace and non-ASCII
-  # digits. The last three raise (`Float()` on a multi-line value, an
-  # infinite float), and refuse the whole parse.
-  "mml-integer-cast" => [
-    "<math>#{%w[
-      3x -2 +3 0x10 1_000 1.5 010 1e2 08 0d10 0D7 1__0 _1 1_ 012 00 0 -0 1E3 1e-2
-      2.9 -2.9 1.5e3 07_7 0o7 0b1 12abc 9999999999999999999999 +1.5 -012
-    ].map { |v| %(<mglyph index="#{v}"/>) }.join}" \
-    "<mglyph index=\" 4 \"/><mglyph index=\"\"/><mglyph index=\"- 3\"/>" \
-    "<mglyph index=\"\t5\n\"/><mglyph index=\" 012\"/><mglyph index=\"012 \"/>" \
-    "<mglyph index=\"\u0663\"/><mglyph index=\"\uFF11\"/><mglyph index=\"x\n010\"/></math>",
-    "<math><mglyph index=\"1\n2\"/></math>",
-    "<math><mglyph index=\"x\n15\"/></math>",
-    "<math><mglyph index=\"1e400\"/></math>",
   ],
 }.freeze
 
@@ -180,38 +106,6 @@ module MathmlModelProbe
     Mml.parse(text, version: 4, namespace_exist: namespace_exist?(text))
   end
 
-  # A JSON form for an attribute or value the translator reads. Mml holds
-  # strings, arrays of strings, booleans and integers; anything else is a
-  # surprise this generator refuses rather than records lossily.
-  def plain(value, at)
-    case value
-    when ::String, ::Integer, true, false, nil then value
-    when ::Array then value.map.with_index { |item, index| plain(item, "#{at}[#{index}]") }
-    else raise "#{at}: unexpected #{value.class} in the Mml tree"
-    end
-  end
-
-  def view(node, at = "mml")
-    return { "text" => node } if node.is_a?(::String)
-
-    name = node.class.name
-    raise "#{at}: unexpected node #{name}" unless name&.start_with?("Mml::V4::")
-
-    declared = node.class.attributes.keys.map(&:to_s)
-    attributes = (READ_ATTRIBUTES & declared).sort.filter_map do |attr|
-      value = node.public_send(attr)
-      [attr, plain(value, "#{at}.#{attr}")] unless value.nil?
-    end.to_h
-    out = { "class" => name.delete_prefix("Mml::V4::"), "attributes" => attributes }
-    out["value"] = plain(node.value, "#{at}.value") if declared.include?("value")
-    children = []
-    if node.respond_to?(:each_mixed_content)
-      node.each_mixed_content { |child| children << view(child, "#{at}.children[#{children.length}]") }
-    end
-    out["children"] = children
-    out
-  end
-
   # The pinned corpus's MathML cases. MathML is a pending reader format, so
   # `read_pin_cases` byte-verifies these payloads without returning their
   # cases; they are read here only after that check has passed.
@@ -245,10 +139,9 @@ module MathmlModelProbe
     rescue StandardError => e
       return row.merge("raises" => e.class.name, "raisedIn" => "mml")
     end
-    row["mml"] = view(tree)
 
     begin
-      Plurimath::Mathml::Translator.new.mml_to_plurimath(mml(input))
+      Plurimath::Mathml::Translator.new.mml_to_plurimath(tree)
     rescue StandardError => e
       translate_error = e.class.name
     end
@@ -292,7 +185,7 @@ abort "REFUSING: zero rows parsed" if parsed.zero?
 abort "REFUSING: #{rows.length} rows but #{parsed} parsed + #{raised} raised" unless parsed + raised == rows.length
 
 COVERAGE.each_key do |group|
-  next if rows.any? { |row| row["group"] == group && row.key?("mml") }
+  next if rows.any? { |row| row["group"] == group && row.key?("model") }
 
   abort "REFUSING: no #{group} probe reached the translator"
 end
@@ -301,7 +194,6 @@ payload = {
   "$comment" => "GENERATED by #{GENERATOR_RELATIVE_PATH}. Do not edit.",
   "schema" => "plurimath-corpus/mathml-model/1",
   "format" => "mathml",
-  "readAttributes" => READ_ATTRIBUTES,
   "caseCount" => rows.length,
   "parsedCount" => parsed,
   "raisedCount" => raised,

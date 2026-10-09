@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-render-options-fixtures.rb
-  sha256: 477bffbf8d009d66f9cf10f8ec82c91a425789eca9f2a14827bf7d3020b776f7
+  sha256: a3edead8b0eff9d5a776dcc641c136064491bc90f00ccb313f8bce5b91f69705
   inputs:
     scripts/generate-corpus.rb: 0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef
-    scripts/generate-render-options-fixtures.rb: 477bffbf8d009d66f9cf10f8ec82c91a425789eca9f2a14827bf7d3020b776f7
+    scripts/generate-render-options-fixtures.rb: a3edead8b0eff9d5a776dcc641c136064491bc90f00ccb313f8bce5b91f69705
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 17c9e41ac7c8e4118cf6e63be0583d24e05b534c
+    commit: b0ae7f55e8506533a8cc2bf2ddf43991c8b5cc30
     clean: true
     dirty_paths: []
 oracle:
@@ -105,5 +105,5 @@ dependencies:
 payload:
   path: render-kinds-fixtures.json
   schema: plurimath-corpus/render-binary-kinds/1
-  sha256: c4a3551f430c8f7b11f7d4790405cf74e50cbfc7297c83e9d85e887cc3b27234
-  bytes: 458101
+  sha256: efc42d9a7221f4df683faf0465bd30cd0405044950106ef22718eb712a8b0ed4
+  bytes: 455764

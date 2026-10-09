@@ -3,8 +3,8 @@
   "schema": "plurimath-corpus/render-binary-kinds/1",
   "format": "binary-function",
   "caseCount": 138,
-  "renderedCount": 705,
-  "raisedCount": 78,
+  "renderedCount": 702,
+  "raisedCount": 77,
   "unreproducibleCount": 5,
   "cases": [
     {
@@ -6980,25 +6980,16 @@
           }
         }
       },
+      "formats": [
+        "asciimath",
+        "latex"
+      ],
       "results": {
         "asciimath": {
           "expected": "int"
         },
         "latex": {
           "expected": "\\int"
-        },
-        "mathml": {
-          "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow>\n      <none/>\n    </mrow>\n  </mstyle>\n</math>\n"
-        },
-        "html": {
-          "raises": "Plurimath::Math::ParseError",
-          "raisedIn": "render"
-        },
-        "omml": {
-          "expected": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:nary>\n      <m:naryPr>\n        <m:chr m:val=\"\"/>\n        <m:limLoc m:val=\"subSup\"/>\n        <m:subHide m:val=\"1\"/>\n        <m:supHide m:val=\"1\"/>\n        <m:ctrlPr>\n          <w:rPr>\n            <w:rFonts w:ascii=\"Cambria Math\" w:hAnsi=\"Cambria Math\"/>\n            <w:i/>\n          </w:rPr>\n        </m:ctrlPr>\n      </m:naryPr>\n      <m:sub>\n        <m:r>\n          <m:t>&#8203;</m:t>\n        </m:r>\n      </m:sub>\n      <m:sup>\n        <m:r>\n          <m:t>&#8203;</m:t>\n        </m:r>\n      </m:sup>\n      <m:e>\n        <m:r>\n          <m:t>&#8203;</m:t>\n        </m:r>\n      </m:e>\n    </m:nary>\n  </m:oMath>\n</m:oMathPara>\n"
-        },
-        "unicodemath": {
-          "expected": ""
         }
       }
     },

@@ -1372,9 +1372,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         const corpusRows = rows.filter(
           (row) => mapping(row, record.relative).group === record.spec.corpusGroup,
         ).length;
-        expect(integerField(record.payload, "corpusMathmlCount", record.relative)).toBe(
-          corpusRows,
-        );
+        expect(integerField(record.payload, "corpusMathmlCount", record.relative)).toBe(corpusRows);
       } else if (record.spec.shape === "xml-reader") {
         // A row is one input and what the gem's reader did with it: the tree
         // its models receive, or the exception class it refused with.

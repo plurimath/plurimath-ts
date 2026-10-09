@@ -110,7 +110,7 @@ module OracleGate
         - src/core/generated/ via scripts/generate-core-data.rb
         - src/formatting/generated/ via scripts/generate-formatting-data.rb
         - src/formats/latex/generated/ via scripts/generate-latex-parser-data.rb
-        - src/formats/mathml/generated/ via scripts/generate-mml-schema.rb
+        - src/formats/mathml/generated/ via scripts/generate-mathml-data.rb
         - every committed test/formats/<format>/parity-fixtures.json and its
           sidecar via
           scripts/generate-parity-fixtures.rb
@@ -220,7 +220,7 @@ module OracleGate
       )
 
       run_generator!(
-        File.join(snapshot_root, "scripts", "generate-mml-schema.rb"),
+        File.join(snapshot_root, "scripts", "generate-mathml-data.rb"),
         [
           "--gem", gem_dir,
           "--out", File.join(regenerated_root, "src", "formats", "mathml", "generated"),

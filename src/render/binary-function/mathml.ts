@@ -327,7 +327,10 @@ export function isVertOnly(cell: unknown): boolean {
  * `other_tags` (`:47-60`), one `<tag>` per `|tag, content|` pair of each entry
  * of `parameter_two`, its `content` nodes rendered inside. Ruby iterates a
  * hash's pairs and an array's elements alike, so an entry may be either; a
- * nil `content` adds nothing and a non-list one raises (`content&.map`). Nil
+ * nil `content` adds nothing, and content Ruby cannot `map` raises. This is
+ * narrower than the gem in one place: an empty hash as `parameter_two` or as
+ * `content` iterates as nothing in Ruby but is refused here (TODO.plan/
+ * deferred.md, "Semantics annotations: empty hashes are refused"). Nil
  * renders are skipped, as `XmlHelper.update_nodes` skips them, and `&.` skips
  * nil only, so `false` in either slot raises as it does in the gem. A tag that
  * is not a string is refused; the gem would `to_s` it into an element name.

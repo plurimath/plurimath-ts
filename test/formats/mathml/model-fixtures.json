@@ -32,9 +32,9 @@
     "src",
     "width"
   ],
-  "caseCount": 345,
-  "parsedCount": 332,
-  "raisedCount": 13,
+  "caseCount": 349,
+  "parsedCount": 333,
+  "raisedCount": 16,
   "corpusMathmlCount": 299,
   "cases": [
     {
@@ -46517,7 +46517,7 @@
                       {
                         "class": "Math::Symbols::Symbol",
                         "fields": {
-                          "value": "#<Mml::V4::AnnotationXml:0x00007d1555829f50>"
+                          "value": "#<Mml::V4::AnnotationXml:0x00007c3e6e73a220>"
                         }
                       }
                     ]
@@ -46687,7 +46687,7 @@
                       {
                         "class": "Math::Symbols::Symbol",
                         "fields": {
-                          "value": "#<Mml::V4::AnnotationXml:0x00007d15557ffa70>"
+                          "value": "#<Mml::V4::AnnotationXml:0x00007c3e70421348>"
                         }
                       }
                     ]
@@ -46737,7 +46737,7 @@
                       {
                         "class": "Math::Symbols::Symbol",
                         "fields": {
-                          "value": "#<Mml::V4::AnnotationXml:0x00007d1554e30eb8>"
+                          "value": "#<Mml::V4::AnnotationXml:0x00007c3e6e9e26a8>"
                         }
                       }
                     ]
@@ -49102,6 +49102,685 @@
           ]
         }
       }
+    },
+    {
+      "id": "mathml-2a52164e6128",
+      "group": "mml-integer-cast",
+      "input": "<math><mglyph index=\"3x\"/><mglyph index=\"-2\"/><mglyph index=\"+3\"/><mglyph index=\"0x10\"/><mglyph index=\"1_000\"/><mglyph index=\"1.5\"/><mglyph index=\"010\"/><mglyph index=\"1e2\"/><mglyph index=\"08\"/><mglyph index=\"0d10\"/><mglyph index=\"0D7\"/><mglyph index=\"1__0\"/><mglyph index=\"_1\"/><mglyph index=\"1_\"/><mglyph index=\"012\"/><mglyph index=\"00\"/><mglyph index=\"0\"/><mglyph index=\"-0\"/><mglyph index=\"1E3\"/><mglyph index=\"1e-2\"/><mglyph index=\"2.9\"/><mglyph index=\"-2.9\"/><mglyph index=\"1.5e3\"/><mglyph index=\"07_7\"/><mglyph index=\"0o7\"/><mglyph index=\"0b1\"/><mglyph index=\"12abc\"/><mglyph index=\"9999999999999999999999\"/><mglyph index=\"+1.5\"/><mglyph index=\"-012\"/><mglyph index=\" 4 \"/><mglyph index=\"\"/><mglyph index=\"- 3\"/><mglyph index=\"\t5\n\"/><mglyph index=\" 012\"/><mglyph index=\"012 \"/><mglyph index=\"٣\"/><mglyph index=\"１\"/><mglyph index=\"x\n010\"/></math>",
+      "mml": {
+        "class": "Math",
+        "attributes": {},
+        "children": [
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": -2
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 3
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 1000
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 1
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 8
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 100
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 8
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 10
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 7
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 10
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 0
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 0
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 0
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 1000
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 0
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 2
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": -2
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 1500
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 77
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 10000000000000000000000
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": -12
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 4
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 5
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 12
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 12
+            },
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {},
+            "children": []
+          },
+          {
+            "class": "Mglyph",
+            "attributes": {
+              "index": 0
+            },
+            "children": []
+          }
+        ]
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math><mglyph index=\"3x\"/><mglyph index=\"-2\"/><mglyph index=\"+3\"/><mglyph index=\"0x10\"/><mglyph index=\"1_000\"/><mglyph index=\"1.5\"/><mglyph index=\"010\"/><mglyph index=\"1e2\"/><mglyph index=\"08\"/><mglyph index=\"0d10\"/><mglyph index=\"0D7\"/><mglyph index=\"1__0\"/><mglyph index=\"_1\"/><mglyph index=\"1_\"/><mglyph index=\"012\"/><mglyph index=\"00\"/><mglyph index=\"0\"/><mglyph index=\"-0\"/><mglyph index=\"1E3\"/><mglyph index=\"1e-2\"/><mglyph index=\"2.9\"/><mglyph index=\"-2.9\"/><mglyph index=\"1.5e3\"/><mglyph index=\"07_7\"/><mglyph index=\"0o7\"/><mglyph index=\"0b1\"/><mglyph index=\"12abc\"/><mglyph index=\"9999999999999999999999\"/><mglyph index=\"+1.5\"/><mglyph index=\"-012\"/><mglyph index=\" 4 \"/><mglyph index=\"\"/><mglyph index=\"- 3\"/><mglyph index=\"\t5\n\"/><mglyph index=\" 012\"/><mglyph index=\"012 \"/><mglyph index=\"٣\"/><mglyph index=\"１\"/><mglyph index=\"x\n010\"/></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": -2
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 3
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 1000
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 1
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 8
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 100
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 8
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 10
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 7
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 10
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 0
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 0
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 0
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 1000
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 0
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 2
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": -2
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 1500
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 77
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 10000000000000000000000
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": -12
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 4
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 5
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 12
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 12
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": null
+                }
+              }
+            },
+            {
+              "class": "Math::Function::Mglyph",
+              "fields": {
+                "parameter_one": {
+                  "src": null,
+                  "alt": null,
+                  "index": 0
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "mathml-64c21cd19059",
+      "group": "mml-integer-cast",
+      "input": "<math><mglyph index=\"1\n2\"/></math>",
+      "raises": "Lutaml::Model::InvalidFormatError",
+      "raisedIn": "mml"
+    },
+    {
+      "id": "mathml-13457bb272ee",
+      "group": "mml-integer-cast",
+      "input": "<math><mglyph index=\"x\n15\"/></math>",
+      "raises": "Lutaml::Model::InvalidFormatError",
+      "raisedIn": "mml"
+    },
+    {
+      "id": "mathml-949318156937",
+      "group": "mml-integer-cast",
+      "input": "<math><mglyph index=\"1e400\"/></math>",
+      "raises": "FloatDomainError",
+      "raisedIn": "mml"
     }
   ]
 }

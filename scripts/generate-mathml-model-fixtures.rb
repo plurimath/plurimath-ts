@@ -108,6 +108,22 @@ COVERAGE = {
     "<math><mi>a</mi></math><!--tail-->",
     "<!--head--><math><mi>a</mi></math>",
   ],
+  # lutaml's `Type::Integer.cast` on `index`, one `mglyph` per value: octal,
+  # float and exponent forms, underscores, `0d`, whitespace and non-ASCII
+  # digits. The last three raise (`Float()` on a multi-line value, an
+  # infinite float), and refuse the whole parse.
+  "mml-integer-cast" => [
+    "<math>#{%w[
+      3x -2 +3 0x10 1_000 1.5 010 1e2 08 0d10 0D7 1__0 _1 1_ 012 00 0 -0 1E3 1e-2
+      2.9 -2.9 1.5e3 07_7 0o7 0b1 12abc 9999999999999999999999 +1.5 -012
+    ].map { |v| %(<mglyph index="#{v}"/>) }.join}" \
+    "<mglyph index=\" 4 \"/><mglyph index=\"\"/><mglyph index=\"- 3\"/>" \
+    "<mglyph index=\"\t5\n\"/><mglyph index=\" 012\"/><mglyph index=\"012 \"/>" \
+    "<mglyph index=\"\u0663\"/><mglyph index=\"\uFF11\"/><mglyph index=\"x\n010\"/></math>",
+    "<math><mglyph index=\"1\n2\"/></math>",
+    "<math><mglyph index=\"x\n15\"/></math>",
+    "<math><mglyph index=\"1e400\"/></math>",
+  ],
 }.freeze
 
 options = { oracle: nil, out: "test/formats/mathml", allow_dirty: false }

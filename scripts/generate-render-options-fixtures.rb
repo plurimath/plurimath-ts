@@ -1582,8 +1582,9 @@ def binary_kind_rows(oracle)
            "spec/plurimath/unicode_math_spec.rb menclose mixing a known and an unrecognized notation",
            { "format" => "mathml", "text" => '<math><menclose notation="top radical"><mi>x</mi></menclose></math>' })
 
-  # `Semantics`, `Intent` and `None`: built only by the MathML translator, so
-  # no AsciiMath-reachable case renders them. The sources are the pinned
+  # `Semantics`, `Intent` and `None`: outside the AsciiMath transform's reach
+  # (the MathML translator builds all three, and UnicodeMath input `Intent`),
+  # so no AsciiMath-reachable case renders them. The sources are the pinned
   # corpus's MathML cases that reach them (mathml-partial-008, -012, -013,
   # -014 and mathml-tokens-008), trimmed to the construct.
   {
@@ -1600,6 +1601,24 @@ def binary_kind_rows(oracle)
     "mathml-intent" => '<math><mrow intent="plus(x, y)"><mi>x</mi><mo>+</mo><mi>y</mi></mrow></math>',
   }.each do |id, text|
     add.call(id, "mathml-input-kinds", "pinned corpus MathML cases, trimmed", { "format" => "mathml", "text" => text })
+  end
+
+  # Hand-built shapes the MathML parse never produces, each measured: `None`
+  # is nil where a caller tests it, `&.` skips nil only, and `other_tags`
+  # walks a hash's pairs or an array's `[tag, content]` elements.
+  x = sym.("x")
+  y = sym.("y")
+  {
+    "none-in-nary" => formula.(fn::Nary.new(fn::None.new)),
+    "semantics-false-first" => formula.(fn::Semantics.new(false, nil)),
+    "semantics-false-annotations" => formula.(fn::Semantics.new(nil, false)),
+    "semantics-pair-annotations" => formula.(fn::Semantics.new(sym.("x"), [[["annotation", [sym.("x"), sym.("y")]]]])),
+    "semantics-empty-entries" => formula.(fn::Semantics.new(x, [[], {}])),
+    "semantics-node-content" => formula.(fn::Semantics.new(sym.("a"), [{ "annotation" => y }])),
+    "semantics-nil-content" => formula.(fn::Semantics.new(sym.("b"), [{ "annotation" => nil }])),
+  }.each do |id, built|
+    add.call("hand-#{id}", "mathml-input-kinds", "measured on the oracle",
+             { "model" => CorpusGenerator.serialize_node(built, "model") }, {}, nil, built)
   end
 
   rows

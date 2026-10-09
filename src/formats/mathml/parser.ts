@@ -7,8 +7,8 @@
  * gem's own error carries no position.
  */
 
-import { type FormulaNode, ParseError } from "../../core/index";
 import { describeThrown } from "../../core/errors";
+import { type FormulaNode, ParseError } from "../../core/index";
 import { parseMml } from "./mml";
 import { translateMml } from "./translator";
 

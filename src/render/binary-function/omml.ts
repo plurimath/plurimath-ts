@@ -92,6 +92,10 @@ export function renderBinaryFunction(
       return renderRoot(node, context);
     case "Td":
       return renderTd(node, context);
+    case "Semantics":
+      // `semantics.rb:31-33`: `Array(parameter_one.insert_t_tag(...))`, the
+      // slot unguarded and the annotations dropped.
+      return insertChild(node.parameterOne, context, "semantics.parameterOne");
     default:
       if (OMML_BASE_BINARY_CLASSES.has(node.name)) return renderBinaryCarrier(node, context);
       throw new RenderError(

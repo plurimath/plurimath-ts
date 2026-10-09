@@ -103,6 +103,8 @@ export function renderBinaryFunction(
     case "Over":
     case "Inf":
     case "Mlabeledtr":
+    case "Semantics":
+    case "Intent":
       return renderBinaryDefault(parameterOne, parameterTwo, context, name.toLowerCase());
 
     default:

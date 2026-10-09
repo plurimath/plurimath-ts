@@ -156,6 +156,9 @@ export function renderUnaryFunction(
       return renderSup(node, context);
     case "Mglyph":
       return renderMglyph(node.parameterOne, node.kind);
+    case "None":
+      // `none.rb:15-17`: `empty_tag` — a zero-width-space run.
+      return plainRun("&#8203;");
     case "Ms":
       // `ms.rb:16-18`: one bare `m:t` run, no `m:r` around it — the slot
       // interpolated raw, like the ascii/latex twins.

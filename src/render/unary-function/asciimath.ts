@@ -90,6 +90,10 @@ const MEASURED_UNARY_NAMES: ReadonlySet<string> = new Set([
 export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
   const name = node.name;
   switch (name) {
+    case "None":
+      // `none.rb:7`: `def to_asciimath(**); end` — nil, which a caller's
+      // `join`/interpolation prints as nothing.
+      return "";
     case "Left":
     case "Right": {
       // `"left#{parameter_one}"` — plain interpolation, no recursion

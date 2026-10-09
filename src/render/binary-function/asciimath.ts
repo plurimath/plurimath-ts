@@ -40,6 +40,9 @@ const REACHABLE_BINARY_NAMES: ReadonlySet<string> = new Set([
   "Power",
   "Mod",
   "Td",
+  // Built by the MathML translator only; no `to_asciimath` of its own, so the
+  // carrier default (`intent.rb`).
+  "Intent",
 ]);
 
 export function renderBinaryFunction(
@@ -48,6 +51,12 @@ export function renderBinaryFunction(
 ): string | null {
   const name = node.name;
   switch (name) {
+    case "Semantics":
+      // `semantics.rb:27`: `parameter_one&.to_asciimath` — the annotations are
+      // not rendered.
+      return present(node.parameterOne)
+        ? renderChild(node.parameterOne, context, "semantics.parameterOne")
+        : null;
     case "Power": {
       // `parameter_one.to_asciimath` is unguarded in the gem (`power.rb:13`).
       const base = renderChild(node.parameterOne ?? null, context, "power.parameterOne");

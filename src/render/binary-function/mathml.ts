@@ -146,6 +146,8 @@ export function renderBinaryFunction(
     }
     case "Intent":
       return renderIntentFunction(node, context);
+    case "Semantics":
+      return renderSemantics(node, context);
     case "Arg":
       return renderArg(node, context);
     case "Lim":
@@ -317,6 +319,48 @@ export function isVertOnly(cell: unknown): boolean {
   if (record.kind !== "symbol") return false;
   if (typeof record.id === "string" && VERT_IDS.has(record.id)) return true;
   return record.value === "|";
+}
+
+/**
+ * `Semantics#to_mathml_without_math_tag` (`semantics.rb:13-21`): a
+ * `<semantics>` holding `parameter_one&.to_mathml` and then one element per
+ * annotation entry, each `{tag => [nodes]}` hash in `parameter_two` becoming
+ * `<tag>` with its nodes rendered inside (`other_tags`, `:47-60`). Nil renders
+ * are skipped, as `XmlHelper.update_nodes` skips them.
+ */
+function renderSemantics(node: NodeOf<"binaryFunction">, context: RenderContext): XmlElement {
+  const semantics = new XmlElement("semantics");
+  if (present(node.parameterOne)) {
+    semantics.append(renderChild(node.parameterOne, context, "semantics.parameterOne"));
+  }
+  const annotations = node.parameterTwo;
+  if (!present(annotations)) return semantics;
+  if (!Array.isArray(annotations)) {
+    throw new RenderError(
+      `semantics.parameterTwo: expected a list of annotation hashes, got ${describeSlot(annotations)}`,
+      FORMAT,
+      node.kind,
+    );
+  }
+  for (const [index, entry] of annotations.entries()) {
+    if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+      throw new RenderError(
+        `semantics.parameterTwo[${index}]: expected an annotation hash, got ${describeSlot(entry)}`,
+        FORMAT,
+        node.kind,
+      );
+    }
+    for (const [tag, content] of Object.entries(entry as Record<string, unknown>)) {
+      const element = new XmlElement(tag);
+      for (const item of Array.isArray(content) ? content : []) {
+        if (item !== null && item !== undefined) {
+          element.append(renderChild(item, context, `semantics.parameterTwo[${index}].${tag}`));
+        }
+      }
+      semantics.append(element);
+    }
+  }
+  return semantics;
 }
 
 /**

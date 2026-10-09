@@ -84,6 +84,15 @@ export function renderBinaryFunction(
 ): string | null {
   const name = node.name;
   switch (name) {
+    case "Intent": {
+      // `intent.rb:14-17`: both slots unguarded inside the parens, the SECOND
+      // first, and the parens only when either slot is set.
+      const inner =
+        present(node.parameterOne) || present(node.parameterTwo)
+          ? `(${renderChild(node.parameterTwo ?? null, context, "intent.parameterTwo") ?? ""}${renderChild(node.parameterOne ?? null, context, "intent.parameterOne") ?? ""})`
+          : "";
+      return `ⓘ${inner}`;
+    }
     case "Power":
       return renderPower(node, context);
     case "Over": {

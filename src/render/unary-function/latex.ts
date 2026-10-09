@@ -246,6 +246,9 @@ function inspectString(value: string): string | null {
 export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
   const name = node.name;
   switch (name) {
+    case "None":
+      // `none.rb:9`: `def to_latex(**); end` — nil, printed as nothing.
+      return "";
     case "Left":
     case "Right": {
       // `"\\left #{latex_paren}"` (`left.rb:30`): the stored paren through

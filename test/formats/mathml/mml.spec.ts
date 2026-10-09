@@ -54,7 +54,9 @@ describe("the documented differences", () => {
   });
 
   it("skips prefixed attributes", () => {
-    const mi = first(`<math ${NS}><mi mathvariant="normal" xmlns:e="urn:e" e:mathvariant="bold">x</mi></math>`);
+    const mi = first(
+      `<math ${NS}><mi mathvariant="normal" xmlns:e="urn:e" e:mathvariant="bold">x</mi></math>`,
+    );
     expect([...mi.attributes]).toStrictEqual([["mathvariant", "normal"]]);
   });
 

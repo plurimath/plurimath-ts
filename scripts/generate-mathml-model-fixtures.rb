@@ -39,6 +39,24 @@ COVERAGE = {
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mrow><annotation-xml><ci>y</ci>' \
     "</annotation-xml><mi>a</mi></mrow></math>",
   ],
+  # `nary_check`, `fill_ternary_third_values` and `organize_value`'s n-ary arms:
+  # an n-ary symbol (measured `is_nary_symbol?`: coproduct, big wedge, double
+  # integral) under `msubsup`/`msup`/`mover`/`munder`/`munderover`, followed by
+  # a body, at the `math` level and inside `mrow`. The corpus never builds one.
+  "nary" => %w[&#x2210; &#x22c0; &#x222c;].flat_map do |op|
+    [
+      "<msubsup><mo>#{op}</mo><mi>a</mi><mi>b</mi></msubsup><mi>x</mi>",
+      "<msup><mo>#{op}</mo><mi>b</mi></msup><mi>x</mi>",
+      "<mover><mo>#{op}</mo><mi>b</mi></mover><mi>x</mi>",
+      "<munder><mo>#{op}</mo><mi>a</mi></munder><mi>x</mi>",
+      "<munderover><mo>#{op}</mo><mi>a</mi><mi>b</mi></munderover><mi>x</mi>",
+      "<munderover><mo>#{op}</mo><mi>a</mi><mi>b</mi></munderover><msub><mi>x</mi><mi>i</mi></msub>",
+      "<msubsup><mo>#{op}</mo><mi>a</mi><mi>b</mi></msubsup><mi>x</mi><mo>+</mo><mn>1</mn>",
+    ].flat_map do |body|
+      ['<math xmlns="http://www.w3.org/1998/Math/MathML">' + body + "</math>",
+       '<math xmlns="http://www.w3.org/1998/Math/MathML"><mrow>' + body + "</mrow></math>"]
+    end
+  end,
   "mglyph" => [
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph src="a.png" alt="x"/></math>',
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph src="a.png" alt="x" ' \

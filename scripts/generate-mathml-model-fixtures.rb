@@ -57,6 +57,11 @@ COVERAGE = {
        '<math xmlns="http://www.w3.org/1998/Math/MathML"><mrow>' + body + "</mrow></math>"]
     end
   end,
+  # Text between elements is dropped when Ruby's `[[:space:]]` (Unicode
+  # White_Space) covers it: U+0085 and U+3000 are, U+FEFF and U+200B are not.
+  "whitespace" => %w[&#x85; &#xa0; &#x3000; &#xfeff; &#x200b; &#x2028;].map do |ref|
+    "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mrow>#{ref}<mi>x</mi>#{ref}</mrow></math>"
+  end,
   "mglyph" => [
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph src="a.png" alt="x"/></math>',
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph src="a.png" alt="x" ' \

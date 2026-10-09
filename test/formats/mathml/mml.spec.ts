@@ -26,7 +26,7 @@ function first(text: string): MmlNode {
 
 describe("the documented differences", () => {
   it("lists each one with a reason", () => {
-    expect(MATHML_INPUT_DIFFERENCES.length).toBe(6);
+    expect(MATHML_INPUT_DIFFERENCES.length).toBe(7);
     for (const [what, why] of MATHML_INPUT_DIFFERENCES) {
       expect(what.length).toBeGreaterThan(0);
       expect(why.length).toBeGreaterThan(0);
@@ -51,6 +51,11 @@ describe("the documented differences", () => {
       "Mi",
       "2",
     ]);
+  });
+
+  it("skips prefixed attributes", () => {
+    const mi = first(`<math ${NS}><mi mathvariant="normal" xmlns:e="urn:e" e:mathvariant="bold">x</mi></math>`);
+    expect([...mi.attributes]).toStrictEqual([["mathvariant", "normal"]]);
   });
 
   it("reads CDATA as text", () => {

@@ -10,7 +10,9 @@
  * - An element counts when it is in the MathML namespace or in no namespace
  *   (a document without `xmlns`). Elements in other namespaces, and MathML
  *   elements the translator has no rule for, are skipped with their content.
- * - Attributes are kept by local name, as strings. `index` and `length` are
+ * - Attributes are MathML's when unprefixed (MathML attributes are in no
+ *   namespace); prefixed ones (`xlink:href`, `ext:mathvariant`) are skipped.
+ *   They are kept as strings. `index` and `length` are
  *   non-negative integers in MathML and are kept as numbers when they are
  *   written as plain decimal integers.
  * - A token element's (`mi`, `mn`, `mo`, `mtext`, `ms`, `annotation`) `value`
@@ -34,7 +36,7 @@ export type MmlChild = MmlNode | string;
 export interface MmlNode {
   /** The element, as the translator names it (`Mi`, `Mrow`, `AnnotationXml`). */
   readonly kind: string;
-  /** Attributes by local name. `index` and `length` hold numbers. */
+  /** Unprefixed attributes by name. `index` and `length` hold numbers. */
   readonly attributes: ReadonlyMap<string, string | number>;
   /** A token element's text nodes, in order. Absent on other elements. */
   readonly value?: readonly string[];
@@ -120,6 +122,11 @@ export const MATHML_INPUT_DIFFERENCES: readonly (readonly [string, string])[] = 
   ],
   ["CDATA is text.", "The gem drops CDATA sections. In XML they are character data."],
   [
+    "A prefixed attribute (`ext:mathvariant`) is skipped.",
+    "The gem matches attributes by local name, so a foreign-namespace attribute can stand in " +
+      "for, or override, a MathML one. MathML attributes are in no namespace.",
+  ],
+  [
     "`index`/`length` are numbers only when written as plain decimal integers.",
     "The gem applies lutaml's integer cast: `010` is 8, `1.5` is 1, `1e2` is 100, and a " +
       "multi-line value refuses the whole document.",
@@ -180,14 +187,13 @@ function build(element: XmlReadElement, kind: string): MmlNode {
 function readAttributes(element: XmlReadElement): ReadonlyMap<string, string | number> {
   const out = new Map<string, string | number>();
   for (const [name, value] of element.attributes) {
-    const colon = name.indexOf(":");
-    const local = colon < 0 ? name : name.slice(colon + 1);
-    if (!INTEGER_ATTRIBUTES.has(local)) {
-      out.set(local, value);
+    if (name.includes(":")) continue;
+    if (!INTEGER_ATTRIBUTES.has(name)) {
+      out.set(name, value);
       continue;
     }
     const match = /^\s*\+?(\d+)\s*$/.exec(value);
-    if (match !== null) out.set(local, Number(match[1]));
+    if (match !== null) out.set(name, Number(match[1]));
   }
   return out;
 }

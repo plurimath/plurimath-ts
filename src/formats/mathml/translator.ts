@@ -1000,7 +1000,9 @@ export function translate(node: MmlChild): DraftValue {
 }
 
 function textNode(text: string): DraftValue {
-  if (/^\s*$/u.test(text)) return null;
+  // Ruby's `[[:space:]]` on a UTF-8 string is Unicode White_Space (U+0085 in,
+  // U+FEFF out), which JavaScript's `\s` is not.
+  if (/^\p{White_Space}*$/u.test(text)) return null;
   return resolveToken(text);
 }
 
@@ -1414,7 +1416,7 @@ function finalizeValue(value: unknown): unknown {
   return value;
 }
 
-function toNode(o: Draft, inputString?: string): MathNode {
+function toNode(o: Draft): MathNode {
   const { kind, identity } = carrierOf(o.cls);
   const spec = NODE_SPECS[kind];
   const names = new Map(spec.fields);
@@ -1425,7 +1427,6 @@ function toNode(o: Draft, inputString?: string): MathNode {
     init[tsField] = finalizeValue(value);
   }
   if (identity !== undefined && spec.identity !== undefined) init[spec.identity.field] = identity;
-  if (inputString !== undefined) init.inputString = inputString;
   return new MATHML_NODE_CONSTRUCTORS[kind](init);
 }
 

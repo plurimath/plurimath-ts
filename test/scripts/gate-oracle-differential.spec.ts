@@ -36,7 +36,7 @@ import {
 } from "./oracle-harness";
 
 const GOOD =
-  '{"ok"=>true,"asciimath"=>"a","html"=>"e","latex"=>"b","mathml"=>"c","unicodemath"=>"d"}';
+  '{"ok"=>true,"asciimath"=>"a","html"=>"e","latex"=>"b","mathml"=>"c","omml"=>"f","unicodemath"=>"d"}';
 
 describe("the Ruby unit harness", () => {
   it("rejects plausible JSON printed by a failed subprocess", () => {
@@ -55,7 +55,7 @@ describe("the shape guard refuses what the count check could not see", () => {
 
   it("rejects an accepted result whose format field is not a string", () => {
     const r = inOracle(
-      'OracleGate.assert_differential_shape!([{"ok"=>true,"asciimath"=>"a","html"=>"e","latex"=>nil,"mathml"=>"c","unicodemath"=>"d"}], "gem", ["x"])',
+      'OracleGate.assert_differential_shape!([{"ok"=>true,"asciimath"=>"a","html"=>"e","latex"=>nil,"mathml"=>"c","omml"=>"f","unicodemath"=>"d"}], "gem", ["x"])',
     );
     expect(r.ok).toBe(false);
     expect(r.output).toContain("not a string");
@@ -63,7 +63,15 @@ describe("the shape guard refuses what the count check could not see", () => {
 
   it("rejects an accepted result with no html, so neither half can drop the format", () => {
     const r = inOracle(
-      'OracleGate.assert_differential_shape!([{"ok"=>true,"asciimath"=>"a","latex"=>"b","mathml"=>"c","unicodemath"=>"d"}], "port", ["x"])',
+      'OracleGate.assert_differential_shape!([{"ok"=>true,"asciimath"=>"a","latex"=>"b","mathml"=>"c","omml"=>"f","unicodemath"=>"d"}], "port", ["x"])',
+    );
+    expect(r.ok).toBe(false);
+    expect(r.output).toContain("has keys");
+  });
+
+  it("rejects an accepted result with no omml, so neither half can drop the format", () => {
+    const r = inOracle(
+      'OracleGate.assert_differential_shape!([{"ok"=>true,"asciimath"=>"a","html"=>"e","latex"=>"b","mathml"=>"c","unicodemath"=>"d"}], "gem", ["x"])',
     );
     expect(r.ok).toBe(false);
     expect(r.output).toContain("has keys");
@@ -254,10 +262,10 @@ describe("the comparator reports what it used to hide", () => {
   it("reports every differing format, not just the first", () => {
     const r = inOracle(
       `OracleGate.differential_divergences(["x"], [${GOOD}], ` +
-        '[{"ok"=>true,"asciimath"=>"X","html"=>"V","latex"=>"Y","mathml"=>"Z","unicodemath"=>"W"}]).map { |d| d["format"] }',
+        '[{"ok"=>true,"asciimath"=>"X","html"=>"V","latex"=>"Y","mathml"=>"Z","omml"=>"U","unicodemath"=>"W"}]).map { |d| d["format"] }',
     );
     expect(r.ok).toBe(true);
-    expect(r.output).toBe('["asciimath", "html", "latex", "mathml", "unicodemath"]');
+    expect(r.output).toBe('["asciimath", "html", "latex", "mathml", "omml", "unicodemath"]');
   });
 
   it("never scores a gem defect as agreement with a port refusal", () => {

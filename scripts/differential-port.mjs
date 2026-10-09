@@ -7,7 +7,7 @@
  * One object per input, in order:
  *
  *   { "ok": true,  "asciimath": "...", "html": "...", "latex": "...",
- *     "mathml": "...", "unicodemath": "..." }
+ *     "mathml": "...", "omml": "...", "unicodemath": "..." }
  *   { "ok": false, "code": "PARSE_ERROR" }
  *
  * Errors are reported by `code`, not by message: the gem's message text and
@@ -35,6 +35,7 @@ const { parseAsciimath, toAsciimath } = await import(entry("asciimath"));
 const { toHtml } = await import(entry("html"));
 const { toLatex } = await import(entry("latex"));
 const { toMathml } = await import(entry("mathml"));
+const { toOmml } = await import(entry("omml"));
 const { toUnicodemath } = await import(entry("unicodemath"));
 
 /** The port's typed failures. Anything else is a crash and must not be caught. */
@@ -66,8 +67,10 @@ function render(input) {
       latex: toLatex(node),
       mathml: toMathml(node),
       unicodemath: toUnicodemath(node),
-      // Last, as on the gem half: an HTML refusal must not skip a crash in
-      // one of the four renderers above.
+      // The same order as the gem half. OMML and HTML come after the four
+      // P1 renderers, so a refusal in either cannot skip a crash in one of
+      // those; whichever of the two refuses first still hides the other.
+      omml: toOmml(node),
       html: toHtml(node),
     };
   } catch (error) {

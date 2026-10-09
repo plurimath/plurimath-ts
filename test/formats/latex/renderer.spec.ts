@@ -101,14 +101,18 @@ describe("unary functions", () => {
   });
 
   it("refuses a class name outside the AsciiMath-reachable set", () => {
-    // None, not Mbox: Mbox is arm-rendered below, and the two are otherwise
+    // Scarry, not Mbox: Mbox is arm-rendered below, and the two are otherwise
     // the same case — measured on the pinned oracle 00c52783,
-    // `None.instance_method(:to_latex).owner` is None, so a carrier-default
+    // `Scarry.instance_method(:to_latex).owner` is Scarry, so a carrier-default
     // render of the name would diverge silently. (`Merror`, `Longdiv`,
     // `Mglyph`, `Ms`, `Msgroup`, `Msline` and `Scarries` are the same shape
     // but are all measured and case-armed elsewhere in this file now.)
-    expect(() => toLatex(unary("None", x()))).toThrow(RenderError);
-    expect(() => toLatex(new BinaryFunctionNode({ name: "Semantics" }))).toThrow(RenderError);
+    // `None` and `Semantics` render now (MathML input builds them). `Arg`
+    // takes the carrier default in the gem (measured: `to_latex`'s owner is
+    // BinaryFunction) but is outside the AsciiMath-reachable set, so it is
+    // still refused.
+    expect(() => toLatex(unary("Scarry", x()))).toThrow(RenderError);
+    expect(() => toLatex(new BinaryFunctionNode({ name: "Arg" }))).toThrow(RenderError);
     // `Underover` renders now (measured and case-armed in
     // `src/render/ternary-function/latex.ts`); the base `TernaryFunction`
     // class itself has no `to_latex` of its own and stays refused.

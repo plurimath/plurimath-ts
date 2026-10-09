@@ -849,10 +849,11 @@ describe("HTML measured boundary refusals", () => {
           "so the gem raises ArgumentError for every Phantom",
       },
     );
-    // `Semantics` is a binary alias no lane has measured for HTML.
-    expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Semantics" })), {
+    // `Arg` is a binary alias no lane has measured for HTML (`Semantics`
+    // renders now).
+    expectHtmlError(() => toHtml(new BinaryFunctionNode({ name: "Arg" })), {
       kind: "binaryFunction",
-      message: 'BinaryFunction alias "Semantics" has not been measured for HTML in this slice',
+      message: 'BinaryFunction alias "Arg" has not been measured for HTML in this slice',
     });
     // `Underover` renders now (measured and case-armed, the carrier default —
     // `src/render/ternary-function/html.ts`); the base `TernaryFunction`

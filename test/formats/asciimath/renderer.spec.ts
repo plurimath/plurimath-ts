@@ -99,7 +99,9 @@ describe("unary functions", () => {
     // `Scarries` are the other ten, all measured and case-armed elsewhere in
     // this file) — and the twelfth, Hom, is admitted below precisely because
     // it does not.
-    expect(() => toAsciimath(new UnaryFunctionNode({ name: "None", parameterOne: x() }))).toThrow(
+    // `None` renders now; `Scarry` (measured: `to_asciimath`'s owner is
+    // Scarry) is the same overriding shape, still unmeasured.
+    expect(() => toAsciimath(new UnaryFunctionNode({ name: "Scarry", parameterOne: x() }))).toThrow(
       RenderError,
     );
   });

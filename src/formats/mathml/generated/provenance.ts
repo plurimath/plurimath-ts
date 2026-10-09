@@ -8,7 +8,7 @@
  * hashes every Ruby file whose bytes can change the output.
  */
 
-export interface MmlSchemaGeneratedProvenance {
+export interface MathmlDataGeneratedProvenance {
   readonly generator: string;
   readonly generatorInputs: ReadonlyMap<string, string>;
   readonly oracle: string;
@@ -16,7 +16,6 @@ export interface MmlSchemaGeneratedProvenance {
   readonly oracleCommit: string;
   readonly oracleClean: boolean;
   readonly generatorClean: boolean;
-  readonly mmlVersion: string;
   readonly rubyEngine: string;
   readonly rubyVersion: string;
   readonly committable: boolean;
@@ -26,7 +25,7 @@ export interface MmlSchemaGeneratedProvenance {
  * `committable: false` marks output generated from a dirty checkout —
  * useful while iterating, never to be committed (§7).
  */
-export const MML_SCHEMA_GENERATED_PROVENANCE: MmlSchemaGeneratedProvenance = {
+export const MATHML_DATA_GENERATED_PROVENANCE: MathmlDataGeneratedProvenance = {
   generator: "scripts/generate-mathml-data.rb",
   generatorInputs: new Map([
     [
@@ -39,7 +38,7 @@ export const MML_SCHEMA_GENERATED_PROVENANCE: MmlSchemaGeneratedProvenance = {
     ],
     [
       "scripts/generate-mathml-data.rb",
-      "c62bbf1f01ecd6ab5817880767e82bfbb23fbae99ba7c6868b8edd9b04e4d2b4",
+      "0b0c0e45845578f1f6e8da204ded48dfb515a27ec1bfc0ad59f025fa2e48ae8a",
     ],
   ]),
   oracle: "plurimath",
@@ -47,7 +46,6 @@ export const MML_SCHEMA_GENERATED_PROVENANCE: MmlSchemaGeneratedProvenance = {
   oracleCommit: "00c52783877b38f6b8e6e109f1803f96bb34fc62",
   oracleClean: true,
   generatorClean: true,
-  mmlVersion: "2.4.1",
   rubyEngine: "ruby",
   rubyVersion: "4.0.1",
   committable: true,

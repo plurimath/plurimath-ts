@@ -119,6 +119,8 @@ module OracleGate
         - every committed test/formats/<format>/model-fixtures.json and its
           sidecar via that format's own generator:
           #{model_fixture_script_lines}
+        - test/xml/reader-fixtures.json and its sidecar via
+          scripts/generate-xml-reader-fixtures.rb
 
       It compares those regenerated outputs against a clean temporary snapshot
       of this repository's committed HEAD, never against live directories in
@@ -217,6 +219,7 @@ module OracleGate
       )
 
       file_comparisons = regenerate_format_fixtures!(snapshot_root, regenerated_root, gem_dir)
+      file_comparisons += regenerate_xml_reader_fixtures!(snapshot_root, regenerated_root, gem_dir)
 
       comparisons = [
         ["corpus", File.join(snapshot_root, "corpus"), File.join(regenerated_root, "corpus")],
@@ -360,6 +363,28 @@ module OracleGate
         ]
       end
     end
+  end
+
+  # The XML reader fixture and its sidecar: one file, not per format.
+  XML_READER_FIXTURE = "test/xml/reader-fixtures.json"
+
+  def regenerate_xml_reader_fixtures!(snapshot_root, regenerated_root, gem_dir)
+    committed = File.join(snapshot_root, XML_READER_FIXTURE)
+    raise Error, "the snapshot holds no #{XML_READER_FIXTURE}" unless File.file?(committed)
+
+    out = File.join(regenerated_root, "test", "xml")
+    FileUtils.mkdir_p(out)
+    run_generator!(
+      File.join(snapshot_root, "scripts", "generate-xml-reader-fixtures.rb"),
+      ["--oracle", gem_dir, "--out", out],
+      chdir: snapshot_root,
+      gem_dir: gem_dir,
+    )
+    manifest = XML_READER_FIXTURE.delete_suffix(".json") + ".manifest.yaml"
+    [
+      [XML_READER_FIXTURE, committed, File.join(out, File.basename(XML_READER_FIXTURE))],
+      [manifest, File.join(snapshot_root, manifest), File.join(out, File.basename(manifest))],
+    ]
   end
 
   def run_testsuite(argv)

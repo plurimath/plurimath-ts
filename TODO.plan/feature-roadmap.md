@@ -128,12 +128,17 @@ records whether a single native reader makes it moot.
 
 **Blocks:**
 
-1. **No XML reader.** `src/xml/index.ts` exports `XmlElement`, `dump`,
-   `dumpNodes`, `XmlDepthLimitError`, `XmlIndentError` and three types —
-   write-side only. `ARCHITECTURE.md` §3 describes that layer as a tree plus
-   serializer, so it changes before a reader lands. `deferred.md`'s XML-writer
-   entry already records that the reader is a separate decision: evaluate
-   existing parser libraries before building one.
+1. **XML reader: landed, the MathML layer on top of it has not.**
+   `src/xml/reader.ts` (`readXml`) reproduces what the gem's models receive:
+   measured, both `Mml.parse` and `Omml.parse` read through Lutaml's
+   `OxAdapter`, so Ox 2.14.28 under moxml 0.1.26. It is hand-written, with no
+   runtime dependency, and pinned row by row against
+   `test/xml/reader-fixtures.json` (`scripts/generate-xml-reader-fixtures.rb`).
+   `deferred.md`'s XML-writer entry recorded the reader as a separate decision
+   (evaluate existing parser libraries first). No library was evaluated for
+   this one: what the fixtures pin is Ox's own byte-level behaviour (the
+   31-byte `&` look-ahead, `&#0;` truncation, a later root replacing an
+   earlier one), which a general-purpose parser would not give.
 2. **The strategy is answered on evidence, and settled.** Bridging to the
    organisation's JavaScript package is closed:
    `@plurimath/mml@0.1.0` publishes three files and none of the `dist/` its

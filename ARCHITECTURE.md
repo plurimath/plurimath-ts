@@ -151,7 +151,8 @@ src/
                      sqrt in AsciiMath, where a gem reader expects
                      function/sqrt.rb. A kind file render/<kind>/<F>.ts
                      belongs to format F's module graph alone (rule 8).
-  xml/               XML element tree + Ox-compatible serializer.
+  xml/               XML element tree + Ox-compatible serializer, and a reader that
+                     reproduces the gem's Ox/Moxml/Lutaml read (input side).
                      Imports: nothing internal.
   formatting/        Format-neutral number + locale policy. Two halves, and
                      only one is a renderer concern. (a) Locale -> decimal

@@ -43,6 +43,7 @@ import { describe, expect, it } from "vitest";
 import { CORE_GENERATED_PROVENANCE } from "../../src/core/generated/provenance";
 import { HTML_PARSER_GENERATED_PROVENANCE } from "../../src/formats/html/generated/provenance";
 import { LATEX_PARSER_GENERATED_PROVENANCE } from "../../src/formats/latex/generated/provenance";
+import { MML_SCHEMA_GENERATED_PROVENANCE } from "../../src/formats/mathml/generated/provenance";
 import { UNICODEMATH_PARSER_GENERATED_PROVENANCE } from "../../src/formats/unicodemath/generated/provenance";
 import { FORMATTING_GENERATED_PROVENANCE } from "../../src/formatting/generated/provenance";
 import { GENERATED_PROVENANCE } from "../../src/generated/provenance";
@@ -625,6 +626,9 @@ const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: strin
   ),
   ...[...HTML_PARSER_GENERATED_PROVENANCE.generatorInputs].map(
     ([file, hash]) => ["src/formats/html/generated", file, hash] as const,
+  ),
+  ...[...MML_SCHEMA_GENERATED_PROVENANCE.generatorInputs].map(
+    ([file, hash]) => ["src/formats/mathml/generated", file, hash] as const,
   ),
   ...FIXTURE_GENERATOR_HASHES,
 ];
@@ -1638,6 +1642,7 @@ describe("generated data binds to the generator inputs it names", () => {
       LATEX_PARSER_GENERATED_PROVENANCE.generator,
       UNICODEMATH_PARSER_GENERATED_PROVENANCE.generator,
       HTML_PARSER_GENERATED_PROVENANCE.generator,
+      MML_SCHEMA_GENERATED_PROVENANCE.generator,
       ...fixtureEntrypoints,
     ];
     expect([...new Set(recordedEntrypoints)].sort()).toStrictEqual(shipped);
@@ -1651,6 +1656,7 @@ const COMMITTABLE_RECORDS: ReadonlyArray<readonly [string, boolean]> = [
   ["src/formats/latex/generated", LATEX_PARSER_GENERATED_PROVENANCE.committable],
   ["src/formats/unicodemath/generated", UNICODEMATH_PARSER_GENERATED_PROVENANCE.committable],
   ["src/formats/html/generated", HTML_PARSER_GENERATED_PROVENANCE.committable],
+  ["src/formats/mathml/generated", MML_SCHEMA_GENERATED_PROVENANCE.committable],
   ...SIDECAR_RECORDS.map(
     (record) =>
       [

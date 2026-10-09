@@ -8,7 +8,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { normalize, ParseError } from "../../../src/core/index";
+import { MmlParseError, parseMml } from "../../../src/formats/mathml/mml";
 import { parseMathml } from "../../../src/formats/mathml/parser";
+import { MathmlTranslateError, translateMml } from "../../../src/formats/mathml/translator";
 
 interface Row {
   readonly id: string;
@@ -16,6 +18,7 @@ interface Row {
   readonly input: string;
   readonly model?: unknown;
   readonly raises?: string;
+  readonly raisedIn?: string;
 }
 
 const FIXTURE = JSON.parse(
@@ -46,6 +49,7 @@ describe("the MathML fixture set", () => {
     expect(corpus.length).toBeGreaterThan(250);
     expect(parsed.length).toBeGreaterThan(0);
     expect(raised.length).toBeGreaterThan(0);
+    expect(raised.some((row) => row.raisedIn === "translate")).toBe(true);
   });
 });
 
@@ -63,6 +67,12 @@ describe("the inputs the gem refuses", () => {
     "%s %s: is refused here too",
     (_group, _id, row) => {
       expect(() => parseMathml(row.input)).toThrow(ParseError);
+      // The same half refuses as in the gem: the XML read, or the translation.
+      if (row.raisedIn === "mml") expect(() => parseMml(row.input)).toThrow(MmlParseError);
+      else {
+        const tree = parseMml(row.input);
+        expect(() => translateMml(tree, row.input)).toThrow(MathmlTranslateError);
+      }
     },
   );
 });

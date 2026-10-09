@@ -1030,6 +1030,16 @@ function mrowToMrow(node: MmlNode): DraftValue {
   return newFormula(list);
 }
 
+/**
+ * `obj.parameter_one = value`. A symbol, number or formula has no such writer:
+ * the gem raises `NoMethodError` (measured: `<mover><mi>x</mi><mo>&#x20D7;</mo>
+ * </mover>` reaches `Symbols::Vec`, whose `class_name` is "vec").
+ */
+function setParameterOne(o: Draft, value: unknown): void {
+  if (isSymbol(o) || o.cls === NUMBER || isFormula(o)) noMethod("parameter_one=", o);
+  o.f.parameter_one = value;
+}
+
 function moverToOverset(node: MmlNode): Draft {
   const list = contentChildren(node);
   const base = filterChild(at(list, 0));
@@ -1043,13 +1053,13 @@ function moverToOverset(node: MmlNode): Draft {
     case "obrace":
     case "ubrace":
     case "bar":
-      (over as Draft).f.parameter_one = base;
+      setParameterOne(over as Draft, base);
       return over as Draft;
     case "hat":
     case "ddot":
     case "vec":
     case "tilde":
-      (over as Draft).f.parameter_one = base;
+      setParameterOne(over as Draft, base);
       if (ATTRIBUTE_SETTERS.has((over as Draft).cls)) (over as Draft).f.attributes = options;
       return over as Draft;
     case "period":
@@ -1058,7 +1068,7 @@ function moverToOverset(node: MmlNode): Draft {
         isSymbol(over as Draft) && symbolId(over as Draft) === "Period"
           ? withAttributes("Dot", null)
           : (over as Draft);
-      element.f.parameter_one = base;
+      setParameterOne(element, base);
       if (ATTRIBUTE_SETTERS.has(element.cls)) element.f.attributes = options;
       return element;
     }
@@ -1094,7 +1104,7 @@ function munderToUnderset(node: MmlNode): Draft {
     case "ubrace":
     case "ul":
     case "underline":
-      (under as Draft).f.parameter_one = base;
+      setParameterOne(under as Draft, base);
       return under as Draft;
     case "bar":
       return withAttributes("Ul", base, options);

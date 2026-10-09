@@ -800,6 +800,21 @@ key — `Utility.symbols_class("&times;", lang: :mathml)` returns `Symbols::Time
 both Ox and Oga. Same omission in `omml/utility.rb:30,96` and
 `html/transform_utility.rb:53-57`. LaTeX and HTML input are unaffected.
 
+### MathML input raises on the vector and dot accents
+
+```ruby
+Plurimath::Math.parse('<math><mover><mi>x</mi><mo>&#x20D7;</mo></mover></math>', :mathml)
+# => ParseError (NoMethodError: undefined method 'parameter_one=' for Symbols::Vec)
+```
+
+`mover_to_overset` (`mathml/translator.rb`) switches on the overscript's
+`class_name` and, for "vec", "dot" and "ddot", writes `parameter_one` on it,
+expecting the accent function. U+20D7, U+0307 and U+0308 resolve to the symbol
+classes `Symbols::Vec`, `Symbols::Dot` and `Symbols::Ddot` instead, which have
+no such writer, so the gem refuses these common accents (in `mo` or `mi`). The
+port refuses them the same way (`translate-refusals` rows in
+`test/formats/mathml/model-fixtures.json`).
+
 ### MathML input records `annotation-xml` as an object address
 
 ```ruby

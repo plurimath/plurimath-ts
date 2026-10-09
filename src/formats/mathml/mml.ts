@@ -13,8 +13,9 @@
  * - Attributes are MathML's when unprefixed (MathML attributes are in no
  *   namespace); prefixed ones (`xlink:href`, `ext:mathvariant`) are skipped.
  *   They are kept as strings. `index` and `length` are
- *   non-negative integers in MathML and are kept as numbers when they are
- *   written as plain decimal integers.
+ *   non-negative integers in MathML: kept as numbers when written as decimal
+ *   digits (an optional `+` and surrounding whitespace allowed), and dropped
+ *   otherwise.
  * - A token element's (`mi`, `mn`, `mo`, `mtext`, `ms`, `annotation`) `value`
  *   is its text nodes in order; CDATA is text.
  * - Children keep document order, text included; the translator decides what
@@ -132,7 +133,7 @@ export const MATHML_INPUT_DIFFERENCES: readonly (readonly [string, string])[] = 
       "for, or override, a MathML one. MathML attributes are in no namespace.",
   ],
   [
-    "`index`/`length` are numbers only when written as plain decimal integers.",
+    "`index`/`length` are kept only as non-negative decimal integers; any other value is dropped.",
     "The gem applies lutaml's integer cast: `010` is 8, `1.5` is 1, `1e2` is 100, and a " +
       "multi-line value refuses the whole document.",
   ],

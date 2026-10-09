@@ -69,6 +69,13 @@ COVERAGE = {
     '<math xmlns=""><mi>x</mi></math>',
     '<m:math xmlns:m="http://www.w3.org/1998/Math/MathML"><m:mi>x</m:mi></m:math>',
   ],
+  # Refused by the translator, not the XML read: an accent token that resolves
+  # to a symbol class, not a function, gets `parameter_one=` (NoMethodError).
+  "translate-refusals" => %w[&#x20D7; &#x307; &#x308;].flat_map do |accent|
+    %w[mo mi].map do |tag|
+      "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mover><mi>x</mi><#{tag}>#{accent}</#{tag}></mover></math>"
+    end
+  end,
   "mglyph" => [
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph src="a.png" alt="x"/></math>',
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph src="a.png" alt="x" ' \

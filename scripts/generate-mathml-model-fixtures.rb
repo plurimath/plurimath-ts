@@ -29,15 +29,15 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-mathml-model-fixtures.rb"
 # The two classes the translator dispatches on that no pinned corpus input
 # builds (measured: the corpus trees hold 42 of its 44 `when` classes).
 COVERAGE = {
+  # Outside `semantics` only: inside it, `build_annotation_entries` records an
+  # `annotation-xml` through `Object#to_s`, an address that changes every run
+  # (TODO.plan/deferred.md, "MathML input records annotation-xml as an object
+  # address"), so no fixture can hold it.
   "annotation-xml" => [
-    '<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>x</mi>' \
-    '<annotation-xml encoding="MathML-Content"><ci>x</ci></annotation-xml></semantics></math>',
-    '<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>a</mi><mo>+</mo>' \
-    '<mi>b</mi></mrow><annotation encoding="TeX">a+b</annotation>' \
-    '<annotation-xml encoding="MathML-Content"><apply><plus/><ci>a</ci><ci>b</ci></apply>' \
-    "</annotation-xml></semantics></math>",
-    '<math xmlns="http://www.w3.org/1998/Math/MathML"><semantics>' \
-    '<annotation-xml encoding="text/html"><b>x</b></annotation-xml></semantics></math>',
+    '<math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi>' \
+    '<annotation-xml encoding="MathML-Content"><ci>x</ci></annotation-xml></math>',
+    '<math xmlns="http://www.w3.org/1998/Math/MathML"><mrow><annotation-xml><ci>y</ci>' \
+    "</annotation-xml><mi>a</mi></mrow></math>",
   ],
   "mglyph" => [
     '<math xmlns="http://www.w3.org/1998/Math/MathML"><mglyph src="a.png" alt="x"/></math>',
@@ -147,6 +147,9 @@ module MathmlModelProbe
     end
     begin
       row["model"] = CorpusGenerator.serialize_node(Plurimath::Math.parse(input, :mathml), "model")
+      if JSON.generate(row["model"]).match?(/#<[A-Z][\w:]*:0x\h+/)
+        abort "REFUSING: #{row['id']}'s model holds a Ruby object address, which changes every run"
+      end
     rescue ORACLE_REFUSAL
       abort "REFUSING: Math.parse refused #{row['id']} but the translator did not" unless translate_error
       return row.merge("raises" => translate_error, "raisedIn" => "translate")

@@ -706,6 +706,22 @@ cannot hold. Two kinds of intermediate are refused on the spot with
   resource limit, not Ruby behaviour: an evaluation error Ruby would raise
   later in the same expression is reported as this refusal instead.
 
+### MathML input reads MathML, not the mml gem's lutaml mapping
+
+**Trigger: a consumer needing the gem's reading of input outside ordinary
+MathML (a non-`math` root, foreign-namespace or misplaced elements, CDATA,
+lutaml's integer cast).**
+
+The gem reads MathML through `Mml.parse`, the mml gem's lutaml-model mapping,
+and that mapping has rules of its own: any root is read as `math`, children the
+per-class mapping does not list are dropped, unordered classes lose their text,
+CDATA is dropped, and `index`/`length` go through lutaml's integer cast. The
+port reads MathML from its own element and attribute semantics
+(`src/formats/mathml/mml.ts`), so it agrees with the gem on ordinary MathML
+(every pinned corpus case) and differs on that input by design.
+`MATHML_INPUT_DIFFERENCES` in the same module lists each difference with its
+reason.
+
 ## Upstream issues
 
 Defects in the Ruby gem, found while building the port. All reproduce on a
@@ -783,6 +799,23 @@ key — `Utility.symbols_class("&times;", lang: :mathml)` returns `Symbols::Time
 — the path mangles the string before it gets there. Reproduces identically under
 both Ox and Oga. Same omission in `omml/utility.rb:30,96` and
 `html/transform_utility.rb:53-57`. LaTeX and HTML input are unaffected.
+
+### MathML input records `annotation-xml` as an object address
+
+```ruby
+Plurimath::Math.parse('<math><semantics><mi>x</mi><annotation-xml>' \
+  '<ci>x</ci></annotation-xml></semantics></math>', :mathml)
+# Semantics annotations: [{"annotation-xml" => [Symbol("#<Mml::V4::AnnotationXml:0x00007893d03859f0>")]}]
+```
+
+`build_annotation_entries` (`mathml/formula_transformation.rb`) reads
+`annotation.value`, and falls back to `annotation.to_s` for an object without
+one. `Mml::V4::AnnotationXml` has no `value`, so the model holds `Object#to_s`:
+a heap address that changes on every run. The port records
+`#<Mml::V4::AnnotationXml>` (`ANNOTATION_XML_TO_S` in
+`src/formats/mathml/translator.ts`), and the MathML model fixtures probe
+`annotation-xml` only outside `semantics`, where the translator drops it; the
+generator refuses any model that holds an object address.
 
 ### UnicodeMath input returns a non-model tree instead of raising
 

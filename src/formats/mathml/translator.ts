@@ -107,7 +107,7 @@ function symbolId(o: RObj): string {
   return o.cls.slice(SYMBOLS.length);
 }
 
-function isFormula(o: unknown): o is RObj {
+function isFormula(o: unknown): boolean {
   return isObj(o) && (o.cls === FORMULA || o.cls === MROW || o.cls === MSTYLE);
 }
 
@@ -135,7 +135,7 @@ const isNarySymbol = (o: RObj) => isSymbol(o) && NARY_SYMBOLS.has(symbolId(o));
 const isParen = (o: RObj) => isSymbol(o) && MATHML_PAREN_SYMBOLS.has(symbolId(o));
 const isMstyle = (o: RObj) => o.cls === MSTYLE;
 const isMrow = (o: RObj) => o.cls === MROW;
-const is = (o: unknown, name: string): o is RObj => isObj(o) && o.cls === FUNCTION + name;
+const is = (o: unknown, name: string): boolean => isObj(o) && o.cls === FUNCTION + name;
 
 /** `is_nary_function?` per the measured rule; raises on a nil parameter. */
 function isNaryFunction(o: RObj): boolean {
@@ -184,7 +184,9 @@ function newNaryFunction(o: RObj, fourth: unknown): RObj {
 /** `ModelHelper.validate_left_right` over a constructor's fields. */
 function validateLeftRight(fields: readonly unknown[]): void {
   for (const field of fields) {
-    if (isFormula(field) && is(formulaValue(field)[0], "Left")) field.f.left_right_wrapper = true;
+    if (isFormula(field) && is(formulaValue(field as RObj)[0], "Left")) {
+      (field as RObj).f.left_right_wrapper = true;
+    }
   }
 }
 
@@ -277,7 +279,7 @@ function newTd(one: unknown = null, two: unknown = null): RObj {
 
 /** `Tr.new(p1 = [])`: an all-"@" row becomes empty cells. */
 function newTr(one: unknown[]): RObj {
-  if (one.every((cell) => cell === "@")) for (let i = 0; i < one.length; i++) one[i] = newTd([]);
+  if (!one.some((cell) => cell !== "@")) for (let i = 0; i < one.length; i++) one[i] = newTd([]);
   return unary("Tr", one);
 }
 
@@ -379,12 +381,9 @@ function contextualAccentFromToken(value: unknown): RObj | null {
 
 /** `Text#value=`: re-encode, then substitute every `UNICODE_SYMBOLS` code. */
 function setTextValue(text: RObj, value: unknown): void {
-  let string = Array.isArray(value) ? value.join("") : value;
-  if (string === null || string === undefined) {
-    // `entities.decode(nil)` raises NoMethodError on nil in htmlentities.
-    noMethod("decode", string);
-  }
-  string = stringToHtmlEntity(htmlEntityToUnicode(String(string)));
+  const raw = Array.isArray(value) ? value.join("") : value;
+  // Measured: `Text#value = nil` stores "" (htmlentities decodes nil as "").
+  let string = stringToHtmlEntity(htmlEntityToUnicode(raw === null || raw === undefined ? "" : String(raw)));
   for (const [code, name] of MATHML_UNICODE_SYMBOLS) {
     string = (string as string).replaceAll(code.toLowerCase(), `unicode[:${name}]`);
   }
@@ -504,8 +503,8 @@ function unwrapSingle(value: unknown[] | null): RValue {
 
 function preserveExplicitNaryBody(values: unknown[]): void {
   if (values.length === 0) return;
-  const first = values[0];
-  if (!is(first, "Nary")) return;
+  if (!is(values[0], "Nary")) return;
+  const first = values[0] as RObj;
   const options = first.f.options as Record<string, unknown> | null;
   if (options?.type !== "undOvr") return;
   const body = filterChild((first.f.parameter_four ?? null) as RValue);
@@ -554,8 +553,19 @@ function attachPostscripts(base: RValue, subs: RValue[], sups: RValue[]): RValue
   return ternary("PowerBase", normalized, unwrapSingle(subs), unwrapSingle(sups));
 }
 
+/**
+ * `build_annotation_entries`: `annotation.respond_to?(:value) ? annotation.value
+ * : annotation.to_s`. An `annotation-xml` has no `value`, so the gem records
+ * `Object#to_s` — `#<Mml::V4::AnnotationXml:0x...>`, an address that changes
+ * every run. The port records the same text without the address (TODO.plan/
+ * deferred.md, "MathML input records annotation-xml as an object address").
+ */
+export const ANNOTATION_XML_TO_S = "#<Mml::V4::AnnotationXml>";
+
 function buildAnnotationEntries(entries: readonly MmlNode[], tag: string): Record<string, unknown>[] {
-  return entries.map((annotation) => ({ [tag]: [newSymbol(annotation.value ?? null)] }));
+  return entries.map((annotation) => ({
+    [tag]: [newSymbol(annotation.kind === "AnnotationXml" ? ANNOTATION_XML_TO_S : (annotation.value ?? null))],
+  }));
 }
 
 function openingParen(o: RObj): boolean {
@@ -971,7 +981,7 @@ function munderToUnderset(node: MmlNode): RObj {
   const under = at(list, 1);
   const options: Record<string, unknown> = {};
   if (truthyMathmlBool(attr(node, "accentunder"))) options.accentunder = true;
-  if (is(base, "Vec") || (base !== null && isTernaryFunction(base) && !anyValueExist(base))) {
+  if (base !== null && (is(base, "Vec") || (isTernaryFunction(base) && !anyValueExist(base)))) {
     base.f.parameter_one = under;
     if (ATTRIBUTE_SETTERS.has(base.cls)) base.f.attributes = options;
     return base;
@@ -1101,7 +1111,7 @@ function normalizePhantomChild(child: RValue): RValue {
   const value =
     child.cls === `${FUNCTION}Text` || child.cls === `${FUNCTION}Ms` ? child.f.parameter_one : child.f.value;
   if (typeof value !== "string") return child;
-  if (!/^[\s\u0085   -     　]|[\s\u0085   -     　]$/u.test(value)) {
+  if (!/^\p{White_Space}|\p{White_Space}$/u.test(value)) {
     return child;
   }
   if (child.cls === `${FUNCTION}Text`) setTextValue(child, null);

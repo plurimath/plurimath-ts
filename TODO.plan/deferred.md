@@ -706,6 +706,17 @@ cannot hold. Two kinds of intermediate are refused on the spot with
   resource limit, not Ruby behaviour: an evaluation error Ruby would raise
   later in the same expression is reported as this refusal instead.
 
+### Semantics annotations: empty hashes are refused
+
+**Trigger: a parser that builds `Semantics` with hash-shaped annotations.**
+
+`Semantics#to_mathml_without_math_tag` walks `parameter_two` and each
+annotation's content with `each`/`map`, which an empty hash answers with zero
+iterations: measured on the oracle at `00c52783`, `Semantics.new(x, {})` renders
+`<semantics>` holding `x`, and `[{"annotation" => {}}]` adds an empty
+`<annotation/>`. The port's MathML renderer refuses both
+(`src/render/binary-function/mathml.ts`, `renderSemantics`). The MathML
+translator never builds either shape, so nothing reaches the difference today.
 ### MathML input reads MathML, not the mml gem's lutaml mapping
 
 **Trigger: a consumer needing the gem's reading of input outside ordinary

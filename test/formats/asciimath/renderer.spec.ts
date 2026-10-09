@@ -90,8 +90,10 @@ describe("unary functions", () => {
   });
 
   it("a name outside the AsciiMath-reachable set raises rather than guessing", () => {
-    // Math::Function::None overrides to_asciimath, so a carrier-default
-    // render here would diverge silently and the gap fails loudly instead.
+    // Math::Function::Scarry overrides to_asciimath (measured: the owner is
+    // Scarry), so a carrier-default render here would diverge silently and
+    // the gap fails loudly instead. `None`, the example before, is case-armed
+    // now, since MathML input builds it.
     // Measured on the pinned oracle 00c52783: of the twelve classes the census
     // aliases onto this carrier from outside the AsciiMath-reachable set,
     // eleven own `to_asciimath` — `None` among them (`Left`, `Right`, `Lcm`,
@@ -99,7 +101,7 @@ describe("unary functions", () => {
     // `Scarries` are the other ten, all measured and case-armed elsewhere in
     // this file) — and the twelfth, Hom, is admitted below precisely because
     // it does not.
-    expect(() => toAsciimath(new UnaryFunctionNode({ name: "None", parameterOne: x() }))).toThrow(
+    expect(() => toAsciimath(new UnaryFunctionNode({ name: "Scarry", parameterOne: x() }))).toThrow(
       RenderError,
     );
   });

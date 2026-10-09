@@ -259,6 +259,13 @@ export function buildNode(
 function buildValue(value: YamlValue, aliases: ReadonlyMap<string, string>): unknown {
   if (Array.isArray(value)) return value.map((item) => buildValue(item, aliases));
   if (isSerializedNode(value)) return buildNode(value, aliases);
+  // A hash field (`Semantics`' annotation entries, `{tag => [nodes]}`) holds
+  // nodes too.
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, buildValue(entry as YamlValue, aliases)]),
+    );
+  }
   return value;
 }
 

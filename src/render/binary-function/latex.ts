@@ -44,6 +44,10 @@ const REACHABLE_BINARY_NAMES: ReadonlySet<string> = new Set([
   "Power",
   "Mod",
   "Td",
+  // Outside the AsciiMath transform's reach (MathML and UnicodeMath input
+  // build it); no `to_latex` of its own, so the
+  // carrier default (`intent.rb`).
+  "Intent",
 ]);
 
 export function renderBinaryFunction(
@@ -52,6 +56,14 @@ export function renderBinaryFunction(
 ): string | null {
   const name = node.name;
   switch (name) {
+    case "Semantics":
+      // `semantics.rb:23`: `parameter_one&.to_latex` — the annotations are not
+      // rendered.
+      // `&.` skips nil only: any other value is rendered, and refused when it
+      // is not a node (measured: `Semantics(false, nil)` raises NoMethodError).
+      return node.parameterOne === null || node.parameterOne === undefined
+        ? null
+        : renderChild(node.parameterOne, context, "semantics.parameterOne");
     case "Over":
       // `"{#{first} \\over #{two}}"`, both slots `&.` (`over.rb:28`).
       return `{${nilSafe(node.parameterOne, context, "over.parameterOne")} \\over ${nilSafe(node.parameterTwo, context, "over.parameterTwo")}}`;

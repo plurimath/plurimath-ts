@@ -87,9 +87,17 @@ const MEASURED_UNARY_NAMES: ReadonlySet<string> = new Set([
   "Hom",
 ]);
 
-export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
+export function renderUnaryFunction(
+  node: NodeOf<"unaryFunction">,
+  context: RenderContext,
+): string | null {
   const name = node.name;
   switch (name) {
+    case "None":
+      // `none.rb:7`: `def to_asciimath(**); end` — nil, kept as nil: a caller
+      // that tests it (`Nary.new(None.new)` renders "int", measured) must see
+      // it, and one that interpolates prints nothing.
+      return null;
     case "Left":
     case "Right": {
       // `"left#{parameter_one}"` — plain interpolation, no recursion

@@ -707,6 +707,27 @@ describe("20 nested \\left( is refused by toHtml alone", () => {
   });
 });
 
+describe("a lone surrogate is refused by toUnicodemath alone", () => {
+  // The three "lone surrogate" rows above are RENDER_ERROR, which would also
+  // hold if any other renderer started refusing. This pins the split the row
+  // comments describe, for every renderer: the port's own behaviour, since the
+  // gem cannot receive an unpaired surrogate at all.
+  describe.each(["latex", "html", "unicodemath"] as const)("parsed from %s", (grammar) => {
+    const node = PARSERS[grammar]("x\uD800y");
+
+    it.each(RENDERERS.filter(([name]) => name !== "toUnicodemath"))(
+      "%s renders it",
+      (_name, render) => {
+        expect(typeof render(node)).toBe("string");
+      },
+    );
+
+    it("toUnicodemath refuses it with a typed RenderError", () => {
+      expect(() => toUnicodemath(node)).toThrow(RenderError);
+    });
+  });
+});
+
 describe("the new grammars refuse deep input through a guard that says which guard it was", () => {
   /**
    * The message of the refusal, or `"parsed"`; a non-`ParseError` is rethrown.

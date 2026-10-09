@@ -1617,8 +1617,12 @@ def binary_kind_rows(oracle)
     "semantics-node-content" => formula.(fn::Semantics.new(sym.("a"), [{ "annotation" => y }])),
     "semantics-nil-content" => formula.(fn::Semantics.new(sym.("b"), [{ "annotation" => nil }])),
   }.each do |id, built|
+    # `Nary` with a `None` operator pins the nil `None` returns where a caller
+    # tests it, which only AsciiMath and LaTeX do; the port's OMML `Nary`
+    # takes a Symbol, Sum or Prod operator only.
+    only = id == "none-in-nary" ? %w[asciimath latex] : nil
     add.call("hand-#{id}", "mathml-input-kinds", "measured on the oracle",
-             { "model" => CorpusGenerator.serialize_node(built, "model") }, {}, nil, built)
+             { "model" => CorpusGenerator.serialize_node(built, "model") }, {}, only, built)
   end
 
   rows

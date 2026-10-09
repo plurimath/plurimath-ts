@@ -110,6 +110,7 @@ module OracleGate
         - src/core/generated/ via scripts/generate-core-data.rb
         - src/formatting/generated/ via scripts/generate-formatting-data.rb
         - src/formats/latex/generated/ via scripts/generate-latex-parser-data.rb
+        - src/formats/mathml/generated/ via scripts/generate-mml-schema.rb
         - every committed test/formats/<format>/parity-fixtures.json and its
           sidecar via
           scripts/generate-parity-fixtures.rb
@@ -218,6 +219,16 @@ module OracleGate
         gem_dir: gem_dir,
       )
 
+      run_generator!(
+        File.join(snapshot_root, "scripts", "generate-mml-schema.rb"),
+        [
+          "--gem", gem_dir,
+          "--out", File.join(regenerated_root, "src", "formats", "mathml", "generated"),
+        ],
+        chdir: snapshot_root,
+        gem_dir: gem_dir,
+      )
+
       file_comparisons = regenerate_format_fixtures!(snapshot_root, regenerated_root, gem_dir)
       file_comparisons += regenerate_xml_reader_fixtures!(snapshot_root, regenerated_root, gem_dir)
 
@@ -232,6 +243,9 @@ module OracleGate
         ["src/formats/latex/generated",
          File.join(snapshot_root, "src", "formats", "latex", "generated"),
          File.join(regenerated_root, "src", "formats", "latex", "generated")],
+        ["src/formats/mathml/generated",
+         File.join(snapshot_root, "src", "formats", "mathml", "generated"),
+         File.join(regenerated_root, "src", "formats", "mathml", "generated")],
       ]
 
       diffs = comparisons.filter_map do |label, committed, regenerated|

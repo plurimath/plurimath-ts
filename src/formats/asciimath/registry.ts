@@ -275,10 +275,6 @@ export const ASCIIMATH_FONT_STYLES: ReadonlyMap<string, string> = new Map(
   ]),
 );
 
-/** The constructor every font-style keyword resolves through. */
-export const ASCIIMATH_FONT_STYLE_CONSTRUCTOR: AsciimathNodeConstructor =
-  ASCIIMATH_NODE_CONSTRUCTORS.fontStyle;
-
 /**
  * `Utility::UNARY_CLASSES` (`lib/plurimath/utility.rb:64-98`), in the gem's order — the
  * generated list itself. The transform asks membership only — whether a unary

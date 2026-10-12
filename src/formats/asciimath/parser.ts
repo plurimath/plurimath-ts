@@ -78,10 +78,7 @@ export function parseAsciimathTree(
 
 /** `Plurimath::Math.parse(input, :asciimath)`'s observable result. */
 export function parseAsciimath(input: string, options?: AsciimathParseOptions | null): FormulaNode {
-  validateOptions(options);
-  const { text, map } = preprocess(input);
-  const tree = parsePreprocessed(input, text, map, options);
-  reportDeferredUnitsml(input, text, map, options?.onUnsupported);
+  const tree = parseAsciimathTree(input, options);
   const transformed = asciimathTransform().apply(tree);
   return finalizeAsciimathParse(transformed, input);
 }

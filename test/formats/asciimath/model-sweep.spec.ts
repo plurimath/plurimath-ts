@@ -70,11 +70,11 @@ describe("the AsciiMath model sweep fixture", () => {
 
   // Literal floors, so a regeneration that empties a group and rewrites the
   // header to match cannot pass. The short sweep is the whole space of length
-  // 1-3 over sixteen characters, less the inputs the corpus already carries.
+  // 1-3 over sixteen characters (4,368), less the 6 the corpus already carries.
   it("carries both sweeps and the corpus, at their measured sizes", () => {
     expect(inGroup("corpus-asciimath").length).toBe(fixtures.corpusAsciimathCount);
     expect(inGroup("corpus-asciimath").length).toBeGreaterThan(50);
-    expect(inGroup("sweep-short").length + inGroup("corpus-asciimath").filter((entry) => [...entry.input].length <= 3).length).toBeGreaterThanOrEqual(4368);
+    expect(inGroup("sweep-short").length).toBe(4362);
     expect(inGroup("sweep-long").length).toBe(200);
     expect(parsed.length).toBeGreaterThan(0);
     expect(raised.length).toBeGreaterThan(0);

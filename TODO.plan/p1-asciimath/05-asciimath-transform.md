@@ -61,10 +61,17 @@ Two traps, both measured against the gem rather than inferred:
   transform → normalize) matches the gem's recorded `model`. Never by feeding
   recorded trees to the transform — see above.
   (done: `test/formats/asciimath/model-parity.spec.ts:29-35`, all 91 reachable AsciiMath cases; checked 2026-09-24)
-- [ ] **Differential model parity beyond the corpus**: the grammar's two
+- [x] **Differential model parity beyond the corpus**: the grammar's two
   sweeps (length 1–3 exhaustive, length 4–26 seeded) extended through the
   transform — gem model and port model compared for every input the gem
   accepts, zero mismatches. This is what reaches the rules the corpus does not.
+  (done: `test/formats/asciimath/model-sweep.spec.ts` against
+  `scripts/generate-asciimath-model-fixtures.rb`'s fixture: 4,666 inputs — all
+  4,362 length 1–3 strings not already in the corpus, 200 seeded length 4–26
+  inputs, and the 104 corpus inputs. That is a seeded 200, not the grammar
+  sweep's 1,500, which were a one-off probe: the gem took 509 s for 200 long
+  inputs in one process. 4,043 models deep-equal, 623 refusals match, zero
+  mismatches; checked 2026-10-12)
 - [x] `registry.ts` completeness is checked, not assumed: every class name
   reachable from `transform.rb`'s actions resolves in the registry, asserted
   against a generated list rather than by hand.

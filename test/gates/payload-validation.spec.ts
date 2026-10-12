@@ -188,6 +188,7 @@ const FIXTURE_SPEC_PATHS: { readonly [path: string]: FixtureSpec } = {
     shape: "format-model",
     parseTextField: "normalized",
     parseTextStage: "normalize",
+    extraRowFields: ["tree", "rendered"],
     corpusGroup: "corpus-html",
     corpusCountField: "corpusHtmlCount",
     usesCorpus: true,
@@ -250,6 +251,12 @@ interface FixtureSpec {
    * a format names its stage something else.
    */
   readonly parseTextStage?: string;
+  /**
+   * Row fields a format-model fixture may carry beyond the outcome: HTML's
+   * records the gem's grammar `tree` and its `rendered` targets. Each is
+   * optional per row and checked for shape where present.
+   */
+  readonly extraRowFields?: readonly ("tree" | "rendered")[];
   readonly corpusGroup?: string;
   readonly corpusCountField?: string;
   readonly usesCorpus: boolean;
@@ -1284,6 +1291,23 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           // no `locale` key was parsed under the default configuration.
           const localeKey = "locale" in item ? ["locale"] : [];
           if ("locale" in item) stringField(item, "locale", record.relative);
+          const extras = (record.spec.extraRowFields ?? []).filter((key) => key in item);
+          // A refused parse records `null`; a tree is a slice's text or a structure.
+          if ("tree" in item && item.tree !== null) {
+            expect(["string", "object"], `${at}.tree`).toContain(typeof item.tree);
+          }
+          if ("rendered" in item) {
+            const rendered = mapField(item, "rendered", at);
+            for (const [target, outcome] of Object.entries(rendered)) {
+              if (typeof outcome !== "string") {
+                expectExactKeys(
+                  mapping(outcome, `${at}.rendered.${target}`),
+                  ["raises"],
+                  `${at}.rendered.${target}`,
+                );
+              }
+            }
+          }
           const hasModel = typeof item.model === "object" && item.model !== null;
           const hasRefusal = typeof item.raises === "string";
           expect(Number(hasModel) + Number(hasRefusal), `${at} outcome`).toBe(1);
@@ -1298,6 +1322,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
                 "raisedIn",
                 ...(parseTextField in item ? [parseTextField] : []),
                 ...localeKey,
+                ...extras,
               ],
               at,
             );
@@ -1307,7 +1332,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           } else {
             expectExactKeys(
               item,
-              ["group", "id", "input", parseTextField, "model", ...localeKey],
+              ["group", "id", "input", parseTextField, "model", ...localeKey, ...extras],
               at,
             );
             stringValue(item, parseTextField, record.relative);

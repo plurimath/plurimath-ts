@@ -29,10 +29,12 @@ import {
   PROBE_SUMMARY,
   VALUE_DEPENDENT_SYMBOLS,
 } from "../../src/generated/context-axes";
+import { HTML_SYMBOL_EXCEPTIONS } from "../../src/generated/html/exceptions";
 import { LATEX_SYMBOL_EXCEPTIONS } from "../../src/generated/latex/exceptions";
 import { LATEX_SYMBOLS } from "../../src/generated/latex/symbols";
 import { MATHML_SYMBOL_EXCEPTIONS } from "../../src/generated/mathml/exceptions";
 import { MATHML_SYMBOLS } from "../../src/generated/mathml/symbols";
+import { OMML_SYMBOL_EXCEPTIONS } from "../../src/generated/omml/exceptions";
 import { UNICODEMATH_SYMBOL_EXCEPTIONS } from "../../src/generated/unicodemath/exceptions";
 import { UNICODEMATH_SYMBOLS } from "../../src/generated/unicodemath/symbols";
 
@@ -113,6 +115,11 @@ describe("the context-axis exception matrix", () => {
 
   it("leaves LaTeX with no exceptions at all, because nothing varies there", () => {
     expect(LATEX_SYMBOL_EXCEPTIONS).toEqual([]);
+  });
+
+  it("leaves OMML and HTML with no exceptions, because neither renderer reads them", () => {
+    expect(OMML_SYMBOL_EXCEPTIONS).toEqual([]);
+    expect(HTML_SYMBOL_EXCEPTIONS).toEqual([]);
   });
 
   it("is exactly the difference set the probe reported", () => {

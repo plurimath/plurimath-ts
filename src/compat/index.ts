@@ -62,8 +62,9 @@ export const FORMATS: readonly Format[] = [
  * `test/compat/*-battery.spec.ts` compares the port against them, with
  * provenance checks on the oracle commit and the generator script's hash):
  *
- *   - `html`: `test/compat/html-battery.spec.ts`, 50/50 hand-typed inputs
- *     parsed to an exact match against the oracle.
+ *   - `html`: `test/compat/html-battery.spec.ts`, 49/49 hand-typed inputs
+ *     parsed to an exact match against the oracle (the 50th is a shared
+ *     refusal both the port and the gem raise on).
  *   - `unicode`: `test/compat/unicodemath-battery.spec.ts`,
  *     `test/compat/unicodemath-battery-fixtures.json`, 49/49 hand-typed
  *     inputs parsed to an exact match (the 50th is a shared refusal both the

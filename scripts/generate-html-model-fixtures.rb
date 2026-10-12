@@ -344,6 +344,26 @@ MALFORMED_COVERAGE.each do |group, texts|
 end
 LOCALE_COVERAGE.each { |(text, locale)| sources << ["locale", text, locale] }
 
+# The parse tree with slices and symbols flattened to their text and hash keys
+# sorted, as plurimath-testsuite's `CorpusGenerator.serialize_tree` writes the
+# corpus's `parse_tree`, so the port compares both through one `plain` shape.
+def serialize_tree(node, path)
+  case node
+  when nil, true, false, ::String, ::Integer, ::Float then node
+  when ::Symbol, ::Parslet::Slice then node.to_s
+  when ::Array then node.each_with_index.map { |n, i| serialize_tree(n, "#{path}[#{i}]") }
+  when ::Hash
+    node.each_with_object({}) do |(key, value), result|
+      name = key.to_s
+      abort "REFUSING: duplicate key #{name.inspect} at #{path}" if result.key?(name)
+
+      result[name] = serialize_tree(value, "#{path}.#{name}")
+    end.sort.to_h
+  else
+    abort "REFUSING: cannot serialize parse tree node #{node.class} at #{path}"
+  end
+end
+
 # The P1 text and MathML targets, in the corpus's own spelling.
 RENDER_TARGETS = %w[asciimath latex mathml unicodemath].freeze
 
@@ -378,7 +398,7 @@ rows = sources.filter_map do |(group, input, locale)|
   # decimal marker, which the `locale` rows' models already pin.
   if row.key?("normalized") && !locale
     row["tree"] = begin
-      CorpusGenerator.serialize_tree(Plurimath::Html::Parse.new.parse(row["normalized"]), "tree")
+      serialize_tree(Plurimath::Html::Parse.new.parse(row["normalized"]), "tree")
     rescue Parslet::ParseFailed
       nil
     end

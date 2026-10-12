@@ -144,6 +144,21 @@ function resolveSymbolToken(value: string): Draft {
 const DIGIT = /\p{Nd}/u;
 const LATIN = /[a-zA-Z]/;
 
+/**
+ * `text_token`'s `gsub` chain, in its order. Each step runs over the previous
+ * step's output, so an entity written literally in the text is decoded as well
+ * (`&#x3c;` in the input becomes `<`, and `&#x26;#x3e;` becomes `>`). That is
+ * the gem's behaviour, pinned by the `runs` probes in `model-fixtures.json`.
+ */
+const TEXT_TOKEN_UNESCAPES: readonly (readonly [string, string])[] = [
+  ["&#x26;", "&"],
+  ["&#x3c;", "<"],
+  ["&#x27;", "'"],
+  ["&#xa0;", "\u00a0"],
+  ["&#x3e;", ">"],
+  ["&#xa;", "\n"],
+];
+
 /** `Omml::Utility.text_token`. */
 function textToken(text: string): Draft {
   const characters = [...text];
@@ -151,13 +166,10 @@ function textToken(text: string): Draft {
     return newNumber(text);
   }
   if (LATIN.test(text)) return newText(text);
-  const encoded = stringToHtmlEntity(text)
-    .replaceAll("&#x26;", "&")
-    .replaceAll("&#x3c;", "<")
-    .replaceAll("&#x27;", "'")
-    .replaceAll("&#xa0;", " ")
-    .replaceAll("&#x3e;", ">")
-    .replaceAll("&#xa;", "\n");
+  let encoded = stringToHtmlEntity(text);
+  for (const [entity, character] of TEXT_TOKEN_UNESCAPES) {
+    encoded = encoded.replaceAll(entity, character);
+  }
   return symbolsClass(encoded);
 }
 
@@ -271,9 +283,9 @@ function translatedChildren(node: OmmlNode, accepts: (kind: string) => boolean):
 
 /** `omml_text_value`. */
 function textValue(raw: string): Value {
-  const value = raw.replaceAll("&nbsp;", " ");
+  const value = raw.replaceAll("&nbsp;", "\u00a0");
   if (value === "") return newText("");
-  if (value === "​") return null;
+  if (value === "\u200b") return null;
   return functionFromToken(value) ?? textToken(value);
 }
 

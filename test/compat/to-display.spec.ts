@@ -10,9 +10,7 @@
  *     String. Recorded as native-Ruby results only; they are not an Opal
  *     measurement, and the lowercase rows are not what the port returns.
  *   - `invalid`: names outside `MATH_ZONE_TYPES`. The gem raises
- *     `Plurimath::Math::InvalidTypeError`; the port raises
- *     `UnsupportedFormatError`, a recorded divergence (no matching public
- *     error class exists here).
+ *     `Plurimath::Math::InvalidTypeError`, and so does the port.
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -20,7 +18,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import Plurimath from "../../src/compat/index";
-import { UnsupportedFormatError } from "../../src/core/index";
+import { InvalidTypeError } from "../../src/core/index";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..", "..");
@@ -121,11 +119,11 @@ describe.each(fixtures.cases)("toDisplay on $input", (row) => {
   });
 
   it.each(Object.entries(row.invalid))(
-    "%s raises InvalidTypeError in the gem and UnsupportedFormatError here (divergence)",
+    "%s raises InvalidTypeError in the gem and here",
     (lang, o) => {
       expect(o.raises).toBe("Plurimath::Math::InvalidTypeError");
       const formula = build();
-      expect(() => formula.toDisplay(lang)).toThrow(UnsupportedFormatError);
+      expect(() => formula.toDisplay(lang)).toThrow(InvalidTypeError);
     },
   );
 });

@@ -605,6 +605,10 @@ surrogate where Ruby has no such string.
 each carrying a stable string `code` (`"PARSE_ERROR"`, ...). The `code` is
 the guaranteed discriminator (immune to the ESM/CJS dual-package hazard);
 `instanceof` is supported but not the contract. Message text is never API.
+`InvalidTypeError { type, validTypes }` (`"INVALID_TYPE"`, added 2026-10-12)
+matches the gem's `Plurimath::Math::InvalidTypeError`: the compat class raises
+it for a type token the gem itself rejects, and keeps `UnsupportedFormatError`
+for a token the gem accepts but this port cannot parse yet.
 `ParseError.index` is a **UTF-16 code-unit offset** into the input string
 (JavaScript's native string index), documented as such because pegkit
 positions are not byte offsets.

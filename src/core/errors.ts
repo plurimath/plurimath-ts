@@ -11,6 +11,7 @@ export type PlurimathErrorCode =
   | "PARSE_ERROR"
   | "PARSE_OPTION_ERROR"
   | "UNSUPPORTED_FORMAT"
+  | "INVALID_TYPE"
   | "UNSUPPORTED_FEATURE"
   | "MISSING_SYMBOL_DATA"
   | "RENDER_ERROR"
@@ -110,6 +111,36 @@ export class UnsupportedFormatError extends PlurimathError {
 
   constructor(readonly format: string) {
     super(`Format "${format}" is not supported`);
+  }
+}
+
+/**
+ * Ruby: `Plurimath::Math::InvalidTypeError` (`errors/invalid_type_error.rb`),
+ * raised for a type token outside the fixed set an entry point accepts.
+ *
+ * Distinct from `UnsupportedFormatError`: that one refuses a token the gem
+ * accepts but this port has no parser for yet (`mathml`, `omml`); this one
+ * refuses a token the gem itself rejects. Measured on the oracle:
+ * `Math.parse("x", "foo")` and `Formula#to_display(:html)` both raise
+ * `InvalidTypeError`, while `Math.parse("x", "mathml")` does not.
+ *
+ * `validTypes` is the set the raising entry point accepts, in the gem's
+ * order. The message follows the gem's wording for that entry point, but
+ * message text is never API.
+ */
+export class InvalidTypeError extends PlurimathError {
+  readonly code = "INVALID_TYPE" as const;
+
+  /** A frozen copy, so a caller cannot widen the raising entry point's set. */
+  readonly validTypes: readonly string[];
+
+  constructor(
+    readonly type: string,
+    validTypes: readonly string[],
+    message: string,
+  ) {
+    super(message);
+    this.validTypes = Object.freeze([...validTypes]);
   }
 }
 

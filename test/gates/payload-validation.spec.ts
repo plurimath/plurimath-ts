@@ -181,6 +181,18 @@ const FIXTURE_SPECS = {
 
 /** Per-path overrides for the basenames more than one format now uses. */
 const FIXTURE_SPEC_PATHS: { readonly [path: string]: FixtureSpec } = {
+  // AsciiMath's parse over the grammar's two differential sweeps, plus the
+  // corpus's AsciiMath inputs.
+  "test/formats/asciimath/model-fixtures.json": {
+    generator: "scripts/generate-asciimath-model-fixtures.rb",
+    schema: "plurimath-corpus/asciimath-model/1",
+    rows: "cases",
+    shape: "format-model",
+    corpusGroup: "corpus-asciimath",
+    corpusCountField: "corpusAsciimathCount",
+    usesCorpus: true,
+    usesRenderInventory: false,
+  },
   "test/formats/html/model-fixtures.json": {
     generator: "scripts/generate-html-model-fixtures.rb",
     schema: "plurimath-corpus/html-model/1",

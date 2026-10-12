@@ -178,7 +178,10 @@ function parseScalar(raw: string): YamlValue {
  * quotes made that key a different string from the one the gem's tree holds.
  */
 function decodeKey(raw: string): string {
-  if (raw.length >= 2 && ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'")))) {
+  if (
+    raw.length >= 2 &&
+    ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'")))
+  ) {
     return raw.startsWith('"') ? parseDoubleQuoted(raw) : parseSingleQuoted(raw);
   }
   return raw;

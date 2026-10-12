@@ -42,6 +42,7 @@ describe("the repo --check help text", () => {
       "generate-html-model-fixtures.rb",
       "generate-latex-model-fixtures.rb",
       "generate-mathml-model-fixtures.rb",
+      "generate-omml-model-fixtures.rb",
       "generate-unicodemath-model-fixtures.rb",
     ]);
   });
@@ -54,7 +55,7 @@ describe("the repo --check help text", () => {
 
           generator.merge(
             script: generator[:script]
-              .merge("omml" => "generate-omml-model-fixtures.rb").freeze,
+              .merge("example" => "generate-example-model-fixtures.rb").freeze,
           )
         end
         OracleGate.send(:remove_const, :FORMAT_FIXTURE_GENERATORS)
@@ -62,6 +63,6 @@ describe("the repo --check help text", () => {
         OracleGate.repo_usage
       end
     `);
-    expect(output).toContain("scripts/generate-omml-model-fixtures.rb");
+    expect(output).toContain("scripts/generate-example-model-fixtures.rb");
   });
 });

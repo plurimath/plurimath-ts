@@ -747,6 +747,25 @@ port reads MathML from its own element and attribute semantics
 `MATHML_INPUT_DIFFERENCES` in the same module lists each difference with its
 reason.
 
+### The corpus YAML reader misreads a block-scalar indentation indicator (resolved)
+
+**Resolved (2026-10-12).** `test/core/corpus-yaml.ts` read a block scalar
+header `|2` (an explicit indentation indicator) as the plain text `|2`. In the
+pin at `cf3c5ebf` one case uses it, `omml-limits-016` in `omml/limits.yaml`,
+for three payloads (`input`, `preprocessed` and the model's `input_string`),
+each starting with a blank line. The reader now reads the indicator from the
+owning mapping's indentation, as Psych does, and refuses `|+`, `>` and a line
+indented less than the block. Comparing every OMML payload with Psych found a
+second difference: `String#trim` also removed a trailing U+00A0 that Psych
+keeps, in three plain scalars of `omml/equation-arrays.yaml` and
+`omml/matrices.yaml`; the reader now trims only spaces and tabs.
+
+`scripts/probes/corpus-yaml-psych.rb` records Psych 5.4.0's reading of all 15
+OMML payloads, as a digest per file, and of the block scalar headers in
+`test/core/corpus-yaml-psych.json`; `test/core/corpus-yaml.spec.ts` ("the OMML
+payloads, as Psych reads them") requires the same result. The OMML payloads are
+still pending their reader in `PENDING_READER_FORMATS`.
+
 ## Upstream issues
 
 Defects in the Ruby gem, found while building the port. All reproduce on a

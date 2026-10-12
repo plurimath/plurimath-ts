@@ -108,11 +108,18 @@ module AsciimathFailurePositions
 
   # `CorpusGenerator#failure_position` (generate-corpus.rb), the walk the
   # corpus rejections use: the furthest offset any leaf cause reached.
-  def deepest(cause)
-    children = cause.children || []
-    return cause.pos.charpos if children.empty?
-
-    children.map { |child| deepest(child) }.max
+  #
+  # Parslet shares cause nodes between branches, so the walk is memoized by
+  # identity; the answer is the same, without revisiting a shared subtree.
+  def deepest(cause, seen = {}.compare_by_identity)
+    seen.fetch(cause) do
+      children = cause.children || []
+      seen[cause] = if children.empty?
+                      cause.pos.charpos
+                    else
+                      children.map { |child| deepest(child, seen) }.max
+                    end
+    end
   end
 
   def row(port_name, gem_name, input)

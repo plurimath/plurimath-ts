@@ -16,6 +16,7 @@ Nothing here blocks the active phase.
 | Bundle budgets | maintainer | during P1, from real numbers |
 | Symbol data as shared data | maintainer + gem | after P1 |
 | Root `parse(input, format, options)` function | maintainer | not yet set |
+| `toDisplay` error class for an invalid type | maintainer | not yet set |
 
 ## UnitsML, and what it means for 1.0
 
@@ -449,3 +450,13 @@ worst case). `src/evaluation/pow.ts` returns the correctly rounded result,
 which is glibc's everywhere outside that band, and refuses inside it with
 `UnsupportedFeatureError` — the documented bound kept on purpose (the user,
 2026-09-23); `deferred.md` records it as a known divergence.
+
+## `toDisplay` error for an invalid type
+
+For a type outside `MATH_ZONE_TYPES` (`html`, `unicode`), the gem raises
+`Plurimath::Math::InvalidTypeError`, measured in
+`test/compat/to-display-fixtures.json`. `toDisplay` raises
+`UnsupportedFormatError` (`src/compat/index.ts:203-205`), and no public error
+class here corresponds to `InvalidTypeError`. Whether to add one, or to record
+the divergence as accepted, is undecided; until then the
+`p2-output-formats/03-compat-class.md` box stays open.

@@ -72,6 +72,11 @@ function parseValue(state: State, column: number): YamlValue {
   const rest = (state.lines[state.index] ?? "").slice(column);
   if (rest === "-" || rest.startsWith("- ")) return parseSequence(state, column);
   if (KEY_PATTERN.test(rest)) return parseMapping(state, column);
+  // A block scalar as a sequence item (`- |2`) is absent from the corpus;
+  // refused rather than read as the plain text of its header.
+  if (rest.startsWith("|") || rest.startsWith(">")) {
+    throw new Error(`unsupported block scalar header "${rest}" at line ${state.index + 1}`);
+  }
   state.index += 1;
   return parseScalar(rest);
 }

@@ -271,5 +271,6 @@ describe("block scalar headers, as Psych reads them", () => {
     expect(() => read("a: |+\n  x")).toThrow(/unsupported block scalar header "\|\+"/);
     expect(() => read("a: >\n  x")).toThrow(/unsupported block scalar header ">"/);
     expect(() => read("a: |0\n  x")).toThrow(/unsupported block scalar header/);
+    expect(() => read("- |2\n\n  x")).toThrow(/unsupported block scalar header "\|2"/);
   });
 });

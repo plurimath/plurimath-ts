@@ -22,6 +22,7 @@ import { describe, expect, it } from "vitest";
 import { ParseError, type ParseOptionError } from "../../../src/core/errors";
 import type { HtmlParseOptions } from "../../../src/formats/html/parser";
 import { parseHtml } from "../../../src/formats/html/parser";
+import { UnsupportedLocaleError } from "../../../src/formatting/index";
 
 describe("the JSON round trip's structural nesting limit", () => {
   // Measured on the oracle: `Plurimath::Html::Parser.new("x" * n).parse`
@@ -101,5 +102,14 @@ describe("option validation runs ahead of normalisation", () => {
     }
     expect(caught).toBeInstanceOf(Error);
     expect((caught as { code?: unknown }).code).toBe("UNSUPPORTED_LOCALE");
+  });
+});
+
+// The case-sensitive and region-tagged spellings are refused too. Measured on
+// the oracle at `00c52783`: `Plurimath::Math.parse("1,5", fmt, locale:)` raises
+// `Plurimath::Errors::UnsupportedLocale` for `DE` and `de_CH`.
+describe("an unsupported locale spelling refuses", () => {
+  it.each(["DE", "de_CH"])("%s", (locale) => {
+    expect(() => parseHtml("1,5", { locale })).toThrow(UnsupportedLocaleError);
   });
 });

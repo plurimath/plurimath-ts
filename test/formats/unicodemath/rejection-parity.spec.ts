@@ -285,3 +285,12 @@ describe("an unsupported locale on an input preprocessing refuses", () => {
     expect(() => parseUnicodemath("#", { locale: "xx" })).toThrow(UnsupportedLocaleError);
   });
 });
+
+// The case-sensitive and region-tagged spellings are refused too. Measured on
+// the oracle at `00c52783`: `Plurimath::Math.parse("1,5", fmt, locale:)` raises
+// `Plurimath::Errors::UnsupportedLocale` for `DE` and `de_CH`.
+describe("an unsupported locale spelling refuses", () => {
+  it.each(["DE", "de_CH"])("%s", (locale) => {
+    expect(() => parseUnicodemath("1,5", { locale })).toThrow(UnsupportedLocaleError);
+  });
+});

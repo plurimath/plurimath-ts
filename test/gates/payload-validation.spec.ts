@@ -177,6 +177,16 @@ const FIXTURE_SPECS = {
     usesCorpus: false,
     usesRenderInventory: false,
   },
+  // Each AsciiMath grammar rule run as the parse root over a fixed input
+  // list: the gem's verdict, and where a refusal points. Claims no corpus.
+  "failure-position-fixtures.json": {
+    generator: "scripts/generate-asciimath-failure-positions.rb",
+    schema: "plurimath-ts/asciimath-failure-positions/1",
+    rows: "cases",
+    shape: "failure-positions",
+    usesCorpus: false,
+    usesRenderInventory: false,
+  },
 } as const;
 
 /** Per-path overrides for the basenames more than one format now uses. */
@@ -281,6 +291,7 @@ const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "render-kinds-fixtures.json"
   | "evaluation-fixtures.json"
   | "cli-fixtures.json"
+  | "failure-position-fixtures.json"
 )[];
 const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
@@ -1398,6 +1409,61 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           (row) => mapping(row, record.relative).group === record.spec.corpusGroup,
         ).length;
         expect(integerField(record.payload, "corpusMathmlCount", record.relative)).toBe(corpusRows);
+      } else if (record.spec.shape === "failure-positions") {
+        // A row is one rule, one input, and the gem's verdict; a refusal
+        // carries the offset and the root cause Parslet reported.
+        expectExactKeys(
+          record.payload,
+          [
+            "$comment",
+            "schema",
+            "format",
+            "ruleCount",
+            "inputCount",
+            "caseCount",
+            "rejectedCount",
+            "cases",
+          ],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        const rejected = rows.filter((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          const accepts = booleanField(item, "accepts", at);
+          expectExactKeys(
+            item,
+            accepts
+              ? ["id", "rule", "gemRule", "input", "accepts"]
+              : [
+                  "id",
+                  "rule",
+                  "gemRule",
+                  "input",
+                  "accepts",
+                  "index",
+                  "prefixLength",
+                  "rootIndex",
+                  "message",
+                ],
+            at,
+          );
+          stringField(item, "id", at);
+          stringField(item, "rule", at);
+          stringField(item, "gemRule", at);
+          stringValue(item, "input", at);
+          if (!accepts) {
+            integerField(item, "index", at);
+            integerField(item, "rootIndex", at);
+            stringField(item, "message", at);
+            if (item.prefixLength !== null) integerField(item, "prefixLength", at);
+          }
+          return !accepts;
+        }).length;
+        for (const count of ["ruleCount", "inputCount"]) {
+          integerField(record.payload, count, record.relative);
+        }
+        expect(integerField(record.payload, "rejectedCount", record.relative)).toBe(rejected);
       } else if (record.spec.shape === "xml-reader") {
         // A row is one input and what the gem's reader did with it: the tree
         // its models receive, or the exception class it refused with.

@@ -75,7 +75,7 @@ Two traps, both measured against the gem rather than inferred:
 - [x] `registry.ts` completeness is checked, not assumed: every class name
   reachable from `transform.rb`'s actions resolves in the registry, asserted
   against a generated list rather than by hand.
-  (done: `test/formats/asciimath/registry.spec.ts:49-57`, against the generated census; checked 2026-09-24)
+  (done: `test/formats/asciimath/registry.spec.ts:48-56`, against the generated census; checked 2026-09-24)
 - [x] The pegkit conformance suite gains transform tests: a later rule beating
   an earlier overlapping one on a tie, a pattern rejected because the node
   carries one key more, and a replacement not being re-visited. Each must be

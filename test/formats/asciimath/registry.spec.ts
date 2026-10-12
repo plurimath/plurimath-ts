@@ -19,7 +19,6 @@ import { FontStyleNode, NODE_KINDS } from "../../../src/core/index";
 import { NODE_SPECS, rubyClassName } from "../../../src/core/normalize";
 import {
   ASCIIMATH_CLASS_REGISTRY,
-  ASCIIMATH_FONT_STYLE_CONSTRUCTOR,
   ASCIIMATH_FONT_STYLES,
   ASCIIMATH_NODE_CONSTRUCTORS,
   ASCIIMATH_UNARY_CLASS_NAMES,
@@ -86,11 +85,12 @@ describe("the font-style table against the generated census", () => {
   it("constructs every keyword through the FontStyle carrier as the gem's subclass", () => {
     // The carrier binding is hand-written (one constructor for all fifty
     // keywords); the subclass identity must survive the round trip through it.
-    expect(ASCIIMATH_FONT_STYLE_CONSTRUCTOR).toBe(FontStyleNode);
+    const FontStyle = ASCIIMATH_NODE_CONSTRUCTORS.fontStyle;
+    expect(FontStyle).toBe(FontStyleNode);
     for (const census of ASCIIMATH_TRANSFORM_FONT_STYLES) {
       const basename = ASCIIMATH_FONT_STYLES.get(census.name);
       expect(basename, census.name).toBeDefined();
-      const node = new ASCIIMATH_FONT_STYLE_CONSTRUCTOR({ name: basename });
+      const node = new FontStyle({ name: basename });
       expect(node.kind, census.name).toBe("fontStyle");
       expect(rubyClassName(node), census.name).toBe(census.rubyClass);
     }

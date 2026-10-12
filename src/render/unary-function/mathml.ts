@@ -71,6 +71,9 @@ export function renderUnaryFunction(
 ): MathmlRendered {
   const name = node.name;
   switch (name) {
+    case "None":
+      // `none.rb:11-13`: an empty `<none/>`, whatever the slot holds.
+      return new XmlElement("none");
     case "Cancel": {
       // `cancel.rb:7-15`: `<menclose notation="updiagonalstrike">`, the
       // parameter nil-safe (probe cancel-nil renders the empty element).

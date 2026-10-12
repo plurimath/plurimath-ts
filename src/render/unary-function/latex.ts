@@ -243,9 +243,16 @@ function inspectString(value: string): string | null {
   return `"${out}"`;
 }
 
-export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
+export function renderUnaryFunction(
+  node: NodeOf<"unaryFunction">,
+  context: RenderContext,
+): string | null {
   const name = node.name;
   switch (name) {
+    case "None":
+      // `none.rb:9`: `def to_latex(**); end` — nil, kept as nil (`Nary.new(
+      // None.new)` renders "\\int", measured).
+      return null;
     case "Left":
     case "Right": {
       // `"\\left #{latex_paren}"` (`left.rb:30`): the stored paren through

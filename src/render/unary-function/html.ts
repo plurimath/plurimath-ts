@@ -109,6 +109,8 @@ const MEASURED_LABELS: ReadonlyMap<string, string> = new Map(
       // `Sup` resolves through `Mathml::Constants::UNICODE_SYMBOLS.invert`
       // rather than its downcased class name (measured: `&#x2283;`, not `sup`).
       ["Sup", "&#x2283;"],
+      // Built by the MathML translator; no `to_html` of its own (`none.rb`).
+      ["None", "none"],
     ]),
 );
 

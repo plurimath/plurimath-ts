@@ -12,7 +12,7 @@
  */
 
 import type { NodeParameter } from "../../core/index";
-import { RenderError } from "../../core/index";
+import { hasNodeKind, RenderError } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
 import {
   attrOf,
@@ -146,6 +146,8 @@ export function renderBinaryFunction(
     }
     case "Intent":
       return renderIntentFunction(node, context);
+    case "Semantics":
+      return renderSemantics(node, context);
     case "Arg":
       return renderArg(node, context);
     case "Lim":
@@ -317,6 +319,75 @@ export function isVertOnly(cell: unknown): boolean {
   if (record.kind !== "symbol") return false;
   if (typeof record.id === "string" && VERT_IDS.has(record.id)) return true;
   return record.value === "|";
+}
+
+/**
+ * `Semantics#to_mathml_without_math_tag` (`semantics.rb:13-21`): a
+ * `<semantics>` holding `parameter_one&.to_mathml` and then, from
+ * `other_tags` (`:47-60`), one `<tag>` per `|tag, content|` pair of each entry
+ * of `parameter_two`, its `content` nodes rendered inside. Ruby iterates a
+ * hash's pairs and an array's elements alike, so an entry may be either; a
+ * nil `content` adds nothing, and content Ruby cannot `map` raises. This is
+ * narrower than the gem in one place: an empty hash as `parameter_two` or as
+ * `content` iterates as nothing in Ruby but is refused here (TODO.plan/
+ * deferred.md, "Semantics annotations: empty hashes are refused"). Nil
+ * renders are skipped, as `XmlHelper.update_nodes` skips them, and `&.` skips
+ * nil only, so `false` in either slot raises as it does in the gem. A tag that
+ * is not a string is refused; the gem would `to_s` it into an element name.
+ */
+function renderSemantics(node: NodeOf<"binaryFunction">, context: RenderContext): XmlElement {
+  const semantics = new XmlElement("semantics");
+  const first = node.parameterOne;
+  if (first !== null && first !== undefined) {
+    semantics.append(renderChild(first, context, "semantics.parameterOne"));
+  }
+  const entries = node.parameterTwo as unknown;
+  if (entries === null || entries === undefined) return semantics;
+  if (!Array.isArray(entries)) throw semanticsShape("semantics.parameterTwo", entries, node.kind);
+  for (const [index, entry] of entries.entries()) {
+    const at = `semantics.parameterTwo[${index}]`;
+    for (const [tag, content] of annotationPairs(entry, at, node.kind)) {
+      const element = new XmlElement(tag);
+      if (content !== null && content !== undefined) {
+        if (!Array.isArray(content)) throw semanticsShape(`${at}.${tag}`, content, node.kind);
+        // `content&.map { |object| object&.to_mathml... }`: each item rendered
+        // as it stands, so a nested list raises like any non-node.
+        for (const item of content) {
+          if (item !== null && item !== undefined) {
+            element.append(renderChild(item, context, `${at}.${tag}`));
+          }
+        }
+      }
+      semantics.append(element);
+    }
+  }
+  return semantics;
+}
+
+/** `entry.each do |tag, content|` over a hash's pairs or an array's `[tag, content]` elements. */
+function annotationPairs(entry: unknown, at: string, kind: string): (readonly [string, unknown])[] {
+  let pairs: (readonly [unknown, unknown])[];
+  if (Array.isArray(entry)) {
+    pairs = entry.map((item): readonly [unknown, unknown] =>
+      Array.isArray(item) ? [item[0], item[1]] : [item, null],
+    );
+  } else if (entry !== null && typeof entry === "object" && !hasNodeKind(entry)) {
+    pairs = Object.entries(entry as Record<string, unknown>);
+  } else {
+    throw semanticsShape(at, entry, kind);
+  }
+  return pairs.map(([tag, content]) => {
+    if (typeof tag !== "string") throw semanticsShape(`${at} tag`, tag, kind);
+    return [tag, content] as const;
+  });
+}
+
+function semanticsShape(at: string, value: unknown, kind: string): RenderError {
+  return new RenderError(
+    `${at}: expected an annotation list, hash or pair, got ${describeSlot(value)}`,
+    FORMAT,
+    kind,
+  );
 }
 
 /**

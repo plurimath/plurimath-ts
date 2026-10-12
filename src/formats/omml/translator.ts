@@ -300,7 +300,10 @@ function argumentValues(node: OmmlNode): unknown[] {
 
 /** `CTOMathArg`: `wrapped_omml_children`. */
 function translateArgument(node: OmmlNode): Value {
-  const children = translatedChildren(node, (kind) => MATH_ELEMENTS.has(kind) || kind === "m:oMath" || kind === "m:t");
+  const children = translatedChildren(
+    node,
+    (kind) => MATH_ELEMENTS.has(kind) || kind === "m:oMath" || kind === "m:t",
+  );
   if (children.length === 0) return null;
   if (children.length === 1) return children[0] ?? null;
   return newFormula(children);

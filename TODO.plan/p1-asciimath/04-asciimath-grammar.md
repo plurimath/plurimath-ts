@@ -43,9 +43,19 @@ moving an alternative changes what parses.
 - [x] Offsets in a `ParseError` index the original input, including after a
   length-changing preprocessing token.
   (done: `test/formats/asciimath/failure-parity.spec.ts:963` and `:977`, `test/formats/asciimath/preprocess.spec.ts:93`; checked 2026-09-24)
-- [ ] Each rule that can fail has a failure-position test, not only a
+- [x] Each rule that can fail has a failure-position test, not only a
   success-tree test. Two pegkit failure-position bugs survived a conformance
   suite that only tested what parses; `ParseError.index` is public contract.
+  (done: `test/formats/asciimath/failure-positions.spec.ts` runs each of the
+  grammar's 36 rules as the parse root over 98 inputs and compares verdict and
+  `ParseFailed.index` with `failure-position-fixtures.json`, which
+  `scripts/generate-asciimath-failure-positions.rb` writes from the oracle at
+  `00c52783` and `gate-oracle.rb repo --check` regenerates; all 36 rules fail
+  on at least one input, the verdict matches on all 3,528 rows, and the offset
+  matches on 2,996 of the 3,030 refusals; the other 34 are the deepest-cause
+  versus first-unconsumed definition difference `failure-parity.spec.ts`
+  already records, each pinned as still differing; breaking `hexNumber`,
+  `quotedText`, `closeTable` or `comma` fails the spec; checked 2026-10-12)
 - [x] A comma-decimal locale parses to the same model as the gem for the same
   input and locale, and the default still parses `1.5`. The shared case schema
   has no locale axis today, so this is a local fixture until one is agreed.

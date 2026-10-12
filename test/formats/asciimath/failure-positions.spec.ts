@@ -113,6 +113,20 @@ const KNOWN_DIVERGENCES: ReadonlySet<string> = new Set([
 
 const keyOf = (c: FixtureCase) => `${c.rule}|${c.input}`;
 
+/**
+ * Parslet counts characters (code points); `ParseFailed.index` counts UTF-16
+ * code units. The two agree on every input without an astral character, and
+ * this converts the gem's count so they also agree on one that has them.
+ */
+function utf16Offset(input: string, characters: number | undefined): number {
+  if (characters === undefined || !Number.isInteger(characters)) {
+    throw new Error(
+      `${JSON.stringify(input)}: the fixture's offset ${characters} is not an integer`,
+    );
+  }
+  return [...input].slice(0, characters).join("").length;
+}
+
 /** The port's verdict: `null` when the rule consumed the whole input. */
 function portFailure(c: FixtureCase): number | null {
   const atom = rules[c.rule];
@@ -177,10 +191,14 @@ describe.each(Object.keys(rules).sort())("rule %s", (rule) => {
     for (const c of cases) {
       if (c.accepts) continue;
       const index = portFailure(c);
+      const gemIndex = utf16Offset(c.input, c.index);
+      const gemPrefix = c.prefixLength === null ? null : utf16Offset(c.input, c.prefixLength);
       const known = KNOWN_DIVERGENCES.has(keyOf(c));
-      if ((index !== c.index) !== known) {
-        wrong.push(`${JSON.stringify(c.input)}: port ${index}, gem ${c.index}`);
-      } else if (known && c.prefixLength !== null && index !== c.prefixLength) {
+      if (index === null || !Number.isInteger(index)) {
+        wrong.push(`${JSON.stringify(c.input)}: port ${index} is not an offset`);
+      } else if ((index !== gemIndex) !== known) {
+        wrong.push(`${JSON.stringify(c.input)}: port ${index}, gem ${gemIndex}`);
+      } else if (known && gemPrefix !== null && index !== gemPrefix) {
         // A divergence is only tolerated as the definition difference: where
         // the gem's rule matches a prefix, the port must point exactly where
         // that prefix ends.
@@ -188,11 +206,11 @@ describe.each(Object.keys(rules).sort())("rule %s", (rule) => {
       } else if (
         known &&
         c.prefixLength === null &&
-        (index === null || c.index === undefined || index <= c.index || index > c.input.length)
+        (index <= gemIndex || index > c.input.length)
       ) {
         // Where the gem's rule matches no prefix at all, the port reports the
         // furthest offset it tried, which lies past the gem's and within the input.
-        wrong.push(`${JSON.stringify(c.input)}: port ${index}, gem ${c.index}, no prefix`);
+        wrong.push(`${JSON.stringify(c.input)}: port ${index}, gem ${gemIndex}, no prefix`);
       }
     }
     expect(wrong).toStrictEqual([]);

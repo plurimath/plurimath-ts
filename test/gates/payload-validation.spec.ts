@@ -1423,8 +1423,21 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
                 ],
             at,
           );
+          stringField(item, "id", at);
+          stringField(item, "rule", at);
+          stringField(item, "gemRule", at);
+          stringValue(item, "input", at);
+          if (!accepts) {
+            integerField(item, "index", at);
+            integerField(item, "rootIndex", at);
+            stringField(item, "message", at);
+            if (item.prefixLength !== null) integerField(item, "prefixLength", at);
+          }
           return !accepts;
         }).length;
+        for (const count of ["ruleCount", "inputCount"]) {
+          integerField(record.payload, count, record.relative);
+        }
         expect(integerField(record.payload, "rejectedCount", record.relative)).toBe(rejected);
       } else if (record.spec.shape === "xml-reader") {
         // A row is one input and what the gem's reader did with it: the tree

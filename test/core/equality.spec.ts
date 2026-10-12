@@ -378,13 +378,14 @@ describe("deep structure", () => {
  * reachable corpus formulas, which pairs satisfy `==`. Everything not listed
  * is unequal, and every case equals itself.
  *
- * 69 of the 75 cross input notations (19 of them a MathML case and its twin
+ * 61 of the 75 cross input notations (11 of them a MathML case and its twin
  * in another notation): `alpha` and `\alpha` are
  * different source text for the same formula, so the gem reports them equal and
  * so must this port. They are the evidence that `==` compares the model and not
  * the input, which nothing in a single-notation corpus could show. The other
- * six are within one notation — three AsciiMath (`a/b` against `frac(a)(b)`,
- * and two spacing pairs) and three LaTeX (`\bmod`, `\pmod` and infix `mod`).
+ * 14 are within one notation — three AsciiMath (`a/b` against `frac(a)(b)`,
+ * and two spacing pairs), three LaTeX (`\bmod`, `\pmod` and infix `mod`) and
+ * eight MathML pairs written two ways.
  * What each pair asks the projection to skip is asserted below, not assumed.
  *
  * `RubyEqualPairs` is the GEM's answer, re-measured for this pin by
@@ -406,8 +407,8 @@ describe("deep structure", () => {
  *   equal pairs:     75
  *
  * The MathML corpus cases took it from 236 cases and 56 pairs to 523 and 75:
- * the 19 new pairs are MathML-input cases equal to an AsciiMath, LaTeX or
- * UnicodeMath twin. Before that, the fixture held the 35 pairs the same sweep reported before
+ * of the 19 new pairs, 11 are a MathML case equal to an AsciiMath, LaTeX or
+ * UnicodeMath twin and eight are two MathML cases. Before that, the fixture held the 35 pairs the same sweep reported before
  * UnicodeMath joined the corpus as a third input notation (#15). All 35 are
  * still here, and the 21 that join them are exactly the UnicodeMath/LaTeX and
  * UnicodeMath/AsciiMath twins a corpus that grew a third notation would be
@@ -544,7 +545,7 @@ describe("the corpus equality matrix, as the gem reports it", () => {
    *     `-42` and `2^10` are the same bytes in LaTeX and UnicodeMath source.
    *     Nothing is being skipped there at all;
    *   - 66 differ in `input_string` and in nothing else — the field the
-   *     projection drops (the 19 MathML pairs among them);
+   *     projection drops (the 19 pairs with a MathML case among them);
    *   - 1, `font-bold|latex-font-bold`, differs in `input_string` and in one
    *     more field: its `FontStyle::Bold` carries `parameter_two: "bb"` from
    *     `bb(x)` against `"mathbf"` from `\mathbf{x}`, which the projection

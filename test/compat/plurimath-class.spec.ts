@@ -22,6 +22,7 @@ import {
 } from "../../src/core/index";
 import { FormulaNode, NaryNode, SymbolNode, UnaryFunctionNode } from "../../src/core/nodes";
 import { parseHtml } from "../../src/formats/html/index";
+import { parseMathml } from "../../src/formats/mathml/parser";
 import { parseUnicodemath } from "../../src/formats/unicodemath/index";
 import RootDefault, { Plurimath as RootNamed } from "../../src/index";
 
@@ -127,6 +128,13 @@ describe("the constructor's staged contract", () => {
   it("routes html construction to parseHtml, not some other parser", () => {
     const formula = new Plurimath(GEM_OUTPUT.toHtml, "html");
     expect(equals(formula.data, parseHtml(GEM_OUTPUT.toHtml))).toBe(true);
+  });
+
+  it("routes mathml construction to parseMathml, not some other parser", () => {
+    const input = "<math><mfrac><mn>1</mn><mn>2</mn></mfrac></math>";
+    const formula = new Plurimath(input, "mathml");
+    expect(equals(formula.data, parseMathml(input))).toBe(true);
+    expect(formula.toAsciimath()).toBe("frac(1)(2)");
   });
 
   it("routes unicode construction to parseUnicodemath, not some other parser", () => {

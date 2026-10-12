@@ -234,18 +234,18 @@ function closesSingleQuoted(text: string): boolean {
 
 /**
  * A single-quoted scalar may run onto following lines (Psych writes one when the
- * value ends in a newline). YAML folds it: each line loses its surrounding
- * whitespace, one line break becomes a space, and each empty line between two
- * lines becomes a newline. Returns the scalar as one line, still quoted, with
+ * value ends in a newline, or wraps a long one). YAML folds it: each line loses
+ * its surrounding spaces and tabs, one line break becomes a space, and each
+ * empty line between two lines becomes a newline. Returns the scalar as one line, still quoted, with
  * `state` past its last line. Anything else is returned unchanged.
  */
 function continueQuoted(state: State, inline: string): string {
-  const text = inline.trim();
+  const text = trimYaml(inline);
   if (!text.startsWith("'") || closesSingleQuoted(text)) return inline;
   let folded = text.replace(/[ \t]+$/, "");
   let breaks = 0;
   while (state.index < state.lines.length) {
-    const line = (state.lines[state.index] ?? "").trim();
+    const line = trimYaml(state.lines[state.index] ?? "");
     state.index += 1;
     if (line === "") {
       breaks += 1;

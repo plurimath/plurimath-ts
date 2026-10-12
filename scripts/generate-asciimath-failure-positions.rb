@@ -53,10 +53,11 @@ RULES = {
   "mod" => :mod, "iteration" => :iteration, "expression" => :expression,
 }.freeze
 
-# Already-preprocessed text (the rules never see `{:`; they see `ℒ`). Each
-# input is here because it makes at least one rule match a PREFIX and then
-# stop, or fail outright, at a position other than 0; the generator refuses a
-# rule that no input makes fail, below.
+# Already-preprocessed text (the rules never see `{:`; they see `ℒ`). Most
+# inputs make some rule match a prefix and then stop, so the refusal lands at
+# an offset other than 0; the empty and single-character ones cover outright
+# failure at 0. The generator refuses a rule that no input makes fail, below,
+# and the spec requires each rule to fail somewhere past offset 0.
 INPUTS = [
   "", " ", "  x", "a", "1", "1x", "x1", "a b", ",", ", ", ",x", ", x", ",  x", ",\tx",
   "(", ")", "(a", "a)", "(a)", "(a)b", "[", "]", "[a]", "[a]x",

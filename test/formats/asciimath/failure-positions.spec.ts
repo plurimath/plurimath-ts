@@ -27,11 +27,13 @@ import { createAsciimathGrammar } from "../../../src/formats/asciimath/grammar";
 import { ParseFailed } from "../../../src/pegkit/index";
 
 interface FixtureCase {
+  readonly id: string;
   readonly rule: string;
   readonly gemRule: string;
   readonly input: string;
   readonly accepts: boolean;
   readonly index?: number;
+  readonly prefixLength?: number | null;
   readonly rootIndex?: number;
   readonly message?: string;
 }
@@ -62,10 +64,10 @@ const rules = grammar.rules as unknown as Record<
  *
  * They are one difference of DEFINITION, not of behaviour: both sides agree
  * on every verdict. The gem's number is the deepest leaf in Parslet's cause
- * tree, which is Parslet's internal bookkeeping (it points past the end of
- * `left(a right`, and before the failing digit of `0x`, because Parslet prunes
- * the tree it keeps). The port's `ParseFailed.index` is the offset of the
- * first code unit the rule could not consume, the definition
+ * tree, which is Parslet's internal bookkeeping (it points at the end of
+ * `left(a right`, where the port points at the unconsumed `right`, and at the
+ * `x` of `0x`, where the port points past it). The port's `ParseFailed.index`
+ * is the offset of the first code unit the rule could not consume, the definition
  * `failure-parity.spec.ts` fixes for `ParseError.index`; the same root-level
  * difference is the "disagrees with this port on 3 of the 26" recorded there.
  *
@@ -143,6 +145,17 @@ describe("the failure-position fixture", () => {
     expect(fixture.cases.filter((c) => !c.accepts).length).toBe(fixture.rejectedCount);
   });
 
+  it("makes every rule fail somewhere other than offset 0", () => {
+    // An offset-0 refusal is what a rule that never advanced would report, so
+    // it cannot tell a correct position from a broken one.
+    for (const rule of Object.keys(rules)) {
+      expect(
+        fixture.cases.some((c) => c.rule === rule && !c.accepts && (c.index ?? 0) > 0),
+        `${rule} only fails at offset 0`,
+      ).toBe(true);
+    }
+  });
+
   it("names only divergences that exist in the fixture", () => {
     const keys = new Set(fixture.cases.map(keyOf));
     for (const key of KNOWN_DIVERGENCES) expect(keys.has(key), key).toBe(true);
@@ -164,9 +177,22 @@ describe.each(Object.keys(rules).sort())("rule %s", (rule) => {
     for (const c of cases) {
       if (c.accepts) continue;
       const index = portFailure(c);
-      const diverges = index !== c.index;
-      if (diverges !== KNOWN_DIVERGENCES.has(keyOf(c))) {
+      const known = KNOWN_DIVERGENCES.has(keyOf(c));
+      if ((index !== c.index) !== known) {
         wrong.push(`${JSON.stringify(c.input)}: port ${index}, gem ${c.index}`);
+      } else if (known && c.prefixLength !== null && index !== c.prefixLength) {
+        // A divergence is only tolerated as the definition difference: where
+        // the gem's rule matches a prefix, the port must point exactly where
+        // that prefix ends.
+        wrong.push(`${JSON.stringify(c.input)}: port ${index}, gem prefix ${c.prefixLength}`);
+      } else if (
+        known &&
+        c.prefixLength === null &&
+        (index === null || c.index === undefined || index <= c.index || index > c.input.length)
+      ) {
+        // Where the gem's rule matches no prefix at all, the port reports the
+        // furthest offset it tried, which lies past the gem's and within the input.
+        wrong.push(`${JSON.stringify(c.input)}: port ${index}, gem ${c.index}, no prefix`);
       }
     }
     expect(wrong).toStrictEqual([]);

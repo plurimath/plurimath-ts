@@ -863,10 +863,10 @@ Plurimath::Math.parse('<m:oMath xmlns:m="http://schemas.openxmlformats.org/offic
 
 `run_to_plurimath` (`omml/translator.rb`) treats the run's properties as a
 font class and applies the first one only when the run has more than one value
-and the class comes first. A run with one kind of properties and no text, or
-with its properties after the text, leaves the class itself in the formula. (A
-run with both kinds and no text builds the first style with no content, in the
-gem and the port alike.) The port drops the stray class
+and the class comes first. A run whose properties give one font class and no
+text, or whose properties follow the text, leaves the class itself in the
+formula. (A run whose two property blocks both give a font class, and no text,
+builds the first style with no content, in the gem and the port alike.) The port drops the stray class
 (`OMML_INPUT_DIFFERENCES`).
 
 ### MathML input records `annotation-xml` as an object address

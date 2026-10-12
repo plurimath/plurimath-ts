@@ -73,11 +73,12 @@ export const OMML_INPUT_DIFFERENCES: readonly (readonly [string, string])[] = [
       "is not one of them.",
   ],
   [
-    "Run properties that leave a lone font style with no text after it (a run holding only " +
-      "one kind of properties, or properties after its text) are dropped.",
+    "A font style left with no text after it (a run whose properties give one font class " +
+      "and no text, or properties after its text) is dropped.",
     "The gem puts the font style's Ruby class itself into the model (a class, not a " +
-      "node), which no format can render. A run holding both kinds and no text is unaffected: " +
-      "both implementations build the first style with no content.",
+      "node), which no format can render. A run whose two property blocks both give a font " +
+      "class and no text is unaffected: both implementations build the first style with no " +
+      "content.",
   ],
   [
     "A run's math (`m:rPr`) and Word (`w:rPr`) properties are read in document order.",

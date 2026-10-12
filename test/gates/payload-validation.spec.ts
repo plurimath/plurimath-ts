@@ -1409,8 +1409,18 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           expectExactKeys(
             item,
             accepts
-              ? ["rule", "gemRule", "input", "accepts"]
-              : ["rule", "gemRule", "input", "accepts", "index", "rootIndex", "message"],
+              ? ["id", "rule", "gemRule", "input", "accepts"]
+              : [
+                  "id",
+                  "rule",
+                  "gemRule",
+                  "input",
+                  "accepts",
+                  "index",
+                  "prefixLength",
+                  "rootIndex",
+                  "message",
+                ],
             at,
           );
           return !accepts;

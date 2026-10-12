@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-asciimath-failure-positions.rb
-  sha256: 5fccad83d49735955947b6aca7c571ff09502ba35a822842a2526560a14e8310
+  sha256: 4672ccc71c9b82000e6737dc1fe43c3ca5b29e1ee0750d1e97afda58d2a63523
   inputs:
-    scripts/generate-asciimath-failure-positions.rb: 5fccad83d49735955947b6aca7c571ff09502ba35a822842a2526560a14e8310
+    scripts/generate-asciimath-failure-positions.rb: 4672ccc71c9b82000e6737dc1fe43c3ca5b29e1ee0750d1e97afda58d2a63523
     scripts/generate-corpus.rb: 0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: ad06b8bfcb6f3b03ca4e0ff6814889ea1a245cca
+    commit: 99ecde82e7e0df793c5ddf3f95aaee3ce6d9fe26
     clean: true
     dirty_paths: []
 oracle:
@@ -105,5 +105,5 @@ dependencies:
 payload:
   path: failure-position-fixtures.json
   schema: plurimath-ts/asciimath-failure-positions/1
-  sha256: 2bd3731483ea40b2927d0e55a0383a390dd4cf9f8f30ae5f52bd9107b007d0d1
-  bytes: 13782053
+  sha256: 1c2afb3207f8cbabbb38e69f1992c97ea1b9fab9486cc2e1a14dfde6841293da
+  bytes: 14682990

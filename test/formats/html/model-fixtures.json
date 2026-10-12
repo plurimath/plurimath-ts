@@ -12,6 +12,22 @@
       "group": "corpus-html",
       "input": "<i>red</i><i>x</i>",
       "normalized": "<i>red</i><i>x</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sequence": {
+          "expression": {
+            "expression": {
+              "text": "d"
+            },
+            "text": "e"
+          },
+          "text": "r"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -62,6 +78,31 @@
       "group": "corpus-html",
       "input": "<i>blue</i><i>x</i>&#x2b;y",
       "normalized": "<i>blue</i><i>x</i>+y",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "text": "y"
+            },
+            "symbol": "+"
+          },
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sequence": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "text": "e"
+              },
+              "text": "u"
+            },
+            "text": "l"
+          },
+          "text": "b"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -146,6 +187,13 @@
       "group": "corpus-html",
       "input": "<i>(</i>x<i>)</i>",
       "normalized": "<i>(</i>x<i>)</i>",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -187,6 +235,19 @@
       "group": "corpus-html",
       "input": "<i>(</i>x&#x2b;y<i>)</i>",
       "normalized": "<i>(</i>x+y<i>)</i>",
+      "tree": {
+        "parse_parenthesis": {
+          "expression": {
+            "expression": {
+              "text": "y"
+            },
+            "symbol": "+"
+          },
+          "lparen": "(",
+          "rparen": ")",
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -241,6 +302,19 @@
       "group": "corpus-html",
       "input": "<i>[</i>a&#x2c;b<i>]</i>",
       "normalized": "<i>[</i>a,b<i>]</i>",
+      "tree": {
+        "parse_parenthesis": {
+          "expression": {
+            "expression": {
+              "text": "b"
+            },
+            "symbol": ","
+          },
+          "lparen": "[",
+          "rparen": "]",
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -295,6 +369,13 @@
       "group": "corpus-html",
       "input": "<i>{</i>x<i>}</i>",
       "normalized": "<i>{</i>x<i>}</i>",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "{",
+          "rparen": "}",
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -336,6 +417,25 @@
       "group": "corpus-html",
       "input": "<i>(</i>a&#x2c;b&#x2c;c<i>)</i>",
       "normalized": "<i>(</i>a,b,c<i>)</i>",
+      "tree": {
+        "parse_parenthesis": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "expression": {
+                  "text": "c"
+                },
+                "symbol": ","
+              },
+              "text": "b"
+            },
+            "symbol": ","
+          },
+          "lparen": "(",
+          "rparen": ")",
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -403,6 +503,22 @@
       "group": "corpus-html",
       "input": "<i>x&#x2b;y</i><i>2</i>",
       "normalized": "<i>x+y</i><i>2</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "number": "2"
+          }
+        },
+        "sequence": {
+          "expression": {
+            "expression": {
+              "text": "y"
+            },
+            "symbol": "+"
+          },
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -454,6 +570,9 @@
       "group": "corpus-html",
       "input": "x",
       "normalized": "x",
+      "tree": {
+        "text": "x"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -483,6 +602,15 @@
       "group": "corpus-html",
       "input": "A&#x2b;B",
       "normalized": "A+B",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "B"
+          },
+          "symbol": "+"
+        },
+        "text": "A"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -525,6 +653,16 @@
       "group": "corpus-html",
       "input": "<i>a</i><i>b</i>",
       "normalized": "<i>a</i><i>b</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "b"
+          }
+        },
+        "sequence": {
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -561,6 +699,16 @@
       "group": "corpus-html",
       "input": "<i>2</i><i>3</i>",
       "normalized": "<i>2</i><i>3</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "number": "3"
+          }
+        },
+        "sequence": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -601,6 +749,22 @@
       "group": "corpus-html",
       "input": "<i>a&#x2b;b</i><i>c</i>",
       "normalized": "<i>a+b</i><i>c</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "c"
+          }
+        },
+        "sequence": {
+          "expression": {
+            "expression": {
+              "text": "b"
+            },
+            "symbol": "+"
+          },
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -650,6 +814,22 @@
       "group": "corpus-html",
       "input": "<i>x</i><i>y&#x2b;z</i>",
       "normalized": "<i>x</i><i>y+z</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "expression": {
+                "text": "z"
+              },
+              "symbol": "+"
+            },
+            "text": "y"
+          }
+        },
+        "sequence": {
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -699,6 +879,29 @@
       "group": "corpus-html",
       "input": "<i>a</i><i>b</i>&#x2b;<i>c</i><i>d</i>",
       "normalized": "<i>a</i><i>b</i>+<i>c</i><i>d</i>",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "sequence": {
+                  "text": "d"
+                }
+              },
+              "sequence": {
+                "text": "c"
+              }
+            },
+            "symbol": "+"
+          },
+          "sequence": {
+            "text": "b"
+          }
+        },
+        "sequence": {
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -755,6 +958,22 @@
       "group": "corpus-html",
       "input": "<table><tr><td>a</td></tr><tr><td>b</td></tr></table>",
       "normalized": "<table><tr><td>a</td></tr><tr><td>b</td></tr></table>",
+      "tree": {
+        "table_value": {
+          "expression": {
+            "tr_value": {
+              "td_value": {
+                "text": "b"
+              }
+            }
+          },
+          "tr_value": {
+            "td_value": {
+              "text": "a"
+            }
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -831,6 +1050,32 @@
       "group": "corpus-html",
       "input": "<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>",
       "normalized": "<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>",
+      "tree": {
+        "table_value": {
+          "expression": {
+            "tr_value": {
+              "expression": {
+                "td_value": {
+                  "text": "d"
+                }
+              },
+              "td_value": {
+                "text": "c"
+              }
+            }
+          },
+          "tr_value": {
+            "expression": {
+              "td_value": {
+                "text": "b"
+              }
+            },
+            "td_value": {
+              "text": "a"
+            }
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -934,6 +1179,15 @@
       "group": "corpus-html",
       "input": "2&#x3C0;r",
       "normalized": "2&#x3c0;r",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "r"
+          },
+          "symbol": "&#x3c0;"
+        },
+        "number": "2"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -978,6 +1232,15 @@
       "group": "corpus-html",
       "input": "&#x3b1;&#x3b2;&#x3b3;",
       "normalized": "&#x3b1;&#x3b2;&#x3b3;",
+      "tree": {
+        "expression": {
+          "expression": {
+            "symbol": "&#x3b3;"
+          },
+          "symbol": "&#x3b2;"
+        },
+        "symbol": "&#x3b1;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1018,6 +1281,29 @@
       "group": "corpus-html",
       "input": "f<i>(</i>x<i>)</i>=<i>x</i><sup>2</sup>",
       "normalized": "f<i>(</i>x<i>)</i>=<i>x</i><sup>2</sup>",
+      "tree": {
+        "expression": {
+          "expression": {
+            "sub_sup": {
+              "sequence": {
+                "text": "x"
+              }
+            },
+            "sup_value": {
+              "number": "2"
+            }
+          },
+          "symbol": "="
+        },
+        "sequence": {
+          "parse_parenthesis": {
+            "lparen": "(",
+            "rparen": ")",
+            "text": "x"
+          },
+          "text": "f"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1111,6 +1397,64 @@
       "group": "corpus-html",
       "input": "<i><i>(</i>x&#x2b;y<i>)</i></i><sup>2</sup>=<i>x</i><sup>2</sup>&#x2b;2xy&#x2b;<i>y</i><sup>2</sup>",
       "normalized": "<i><i>(</i>x+y<i>)</i></i><sup>2</sup>=<i>x</i><sup>2</sup>+2xy+<i>y</i><sup>2</sup>",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "expression": {
+                  "expression": {
+                    "expression": {
+                      "expression": {
+                        "sub_sup": {
+                          "sequence": {
+                            "text": "y"
+                          }
+                        },
+                        "sup_value": {
+                          "number": "2"
+                        }
+                      },
+                      "symbol": "+"
+                    },
+                    "text": "y"
+                  },
+                  "text": "x"
+                },
+                "number": "2"
+              },
+              "symbol": "+"
+            },
+            "sub_sup": {
+              "sequence": {
+                "text": "x"
+              }
+            },
+            "sup_value": {
+              "number": "2"
+            }
+          },
+          "symbol": "="
+        },
+        "sub_sup": {
+          "sequence": {
+            "parse_parenthesis": {
+              "expression": {
+                "expression": {
+                  "text": "y"
+                },
+                "symbol": "+"
+              },
+              "lparen": "(",
+              "rparen": ")",
+              "text": "x"
+            }
+          }
+        },
+        "sup_value": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1271,6 +1615,60 @@
       "group": "corpus-html",
       "input": "<i>&sum;</i><sub>i=1</sub><sup>n</sup>=<i><i>(</i><i>n<i>(</i>n&#x2b;1<i>)</i></i><i>2</i><i>)</i></i><sup>2</sup>",
       "normalized": "<i>&#x2211;</i><sub>i=1</sub><sup>n</sup>=<i><i>(</i><i>n<i>(</i>n+1<i>)</i></i><i>2</i><i>)</i></i><sup>2</sup>",
+      "tree": {
+        "expression": {
+          "expression": {
+            "sub_sup": {
+              "sequence": {
+                "parse_parenthesis": {
+                  "expression": {
+                    "sequence": {
+                      "number": "2"
+                    }
+                  },
+                  "lparen": "(",
+                  "rparen": ")",
+                  "sequence": {
+                    "parse_parenthesis": {
+                      "expression": {
+                        "expression": {
+                          "number": "1"
+                        },
+                        "symbol": "+"
+                      },
+                      "lparen": "(",
+                      "rparen": ")",
+                      "text": "n"
+                    },
+                    "text": "n"
+                  }
+                }
+              }
+            },
+            "sup_value": {
+              "number": "2"
+            }
+          },
+          "symbol": "="
+        },
+        "sub_sup": {
+          "sequence": {
+            "sum_prod": "&#x2211;"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "expression": {
+              "number": "1"
+            },
+            "symbol": "="
+          },
+          "text": "i"
+        },
+        "sup_value": {
+          "text": "n"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1432,6 +1830,19 @@
       "group": "corpus-html",
       "input": "<i>a</i><i>mod</i><i>b</i>",
       "normalized": "<i>a</i><i>mod</i><i>b</i>",
+      "tree": {
+        "binary": "mod",
+        "first_value": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "second_value": {
+          "sequence": {
+            "text": "b"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1473,6 +1884,19 @@
       "group": "corpus-html",
       "input": "<i>x</i><i>mod</i><i>2</i>",
       "normalized": "<i>x</i><i>mod</i><i>2</i>",
+      "tree": {
+        "binary": "mod",
+        "first_value": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "second_value": {
+          "sequence": {
+            "number": "2"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1516,6 +1940,29 @@
       "group": "corpus-html",
       "input": "<i><i>(</i>a&#x2b;b<i>)</i></i><i>mod</i><i>n</i>",
       "normalized": "<i><i>(</i>a+b<i>)</i></i><i>mod</i><i>n</i>",
+      "tree": {
+        "binary": "mod",
+        "first_value": {
+          "sequence": {
+            "parse_parenthesis": {
+              "expression": {
+                "expression": {
+                  "text": "b"
+                },
+                "symbol": "+"
+              },
+              "lparen": "(",
+              "rparen": ")",
+              "text": "a"
+            }
+          }
+        },
+        "second_value": {
+          "sequence": {
+            "text": "n"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1591,6 +2038,19 @@
       "group": "corpus-html",
       "input": "<i>log</i><sub>2</sub>8",
       "normalized": "<i>log</i><sub>2</sub>8",
+      "tree": {
+        "expression": {
+          "number": "8"
+        },
+        "sub_sup": {
+          "sequence": {
+            "sum_prod": "log"
+          }
+        },
+        "sub_value": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1637,6 +2097,30 @@
       "group": "corpus-html",
       "input": "<i>lim</i><i>x&#x2192;&#x221e;</i>f<i>(</i>x<i>)</i>",
       "normalized": "<i>lim</i><i>x&#x2192;&#x221e;</i>f<i>(</i>x<i>)</i>",
+      "tree": {
+        "binary": "lim",
+        "first_value": {
+          "sequence": {
+            "expression": {
+              "expression": {
+                "symbol": "&#x221e;"
+              },
+              "symbol": "&#x2192;"
+            },
+            "text": "x"
+          }
+        },
+        "second_value": {
+          "text": "f"
+        },
+        "sequence": {
+          "parse_parenthesis": {
+            "lparen": "(",
+            "rparen": ")",
+            "text": "x"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1726,6 +2210,25 @@
       "group": "corpus-html",
       "input": "<i>&sum;</i><sub>i=1</sub><sup>n</sup>",
       "normalized": "<i>&#x2211;</i><sub>i=1</sub><sup>n</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "sum_prod": "&#x2211;"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "expression": {
+              "number": "1"
+            },
+            "symbol": "="
+          },
+          "text": "i"
+        },
+        "sup_value": {
+          "text": "n"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1792,6 +2295,27 @@
       "group": "corpus-html",
       "input": "<i>0</i><i>1</i><i>x</i>dx",
       "normalized": "<i>0</i><i>1</i><i>x</i>dx",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "text": "x"
+              },
+              "text": "d"
+            },
+            "sequence": {
+              "text": "x"
+            }
+          },
+          "sequence": {
+            "number": "1"
+          }
+        },
+        "sequence": {
+          "number": "0"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1853,6 +2377,25 @@
       "group": "corpus-html",
       "input": "<i>&prod;</i><sub>k=1</sub><sup>n</sup>",
       "normalized": "<i>&#x220f;</i><sub>k=1</sub><sup>n</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "sum_prod": "&#x220f;"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "expression": {
+              "number": "1"
+            },
+            "symbol": "="
+          },
+          "text": "k"
+        },
+        "sup_value": {
+          "text": "n"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1919,6 +2462,14 @@
       "group": "corpus-html",
       "input": "<i>&sum;</i>x",
       "normalized": "<i>&#x2211;</i>x",
+      "tree": {
+        "expression": {
+          "text": "x"
+        },
+        "sequence": {
+          "sum_prod": "&#x2211;"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1956,6 +2507,9 @@
       "group": "corpus-html",
       "input": "2",
       "normalized": "2",
+      "tree": {
+        "number": "2"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -1987,6 +2541,9 @@
       "group": "corpus-html",
       "input": "2.5",
       "normalized": "2.5",
+      "tree": {
+        "number": "2.5"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2018,6 +2575,9 @@
       "group": "corpus-html",
       "input": "0",
       "normalized": "0",
+      "tree": {
+        "number": "0"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2049,6 +2609,9 @@
       "group": "corpus-html",
       "input": "123",
       "normalized": "123",
+      "tree": {
+        "number": "123"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2080,6 +2643,9 @@
       "group": "corpus-html",
       "input": "3.14159",
       "normalized": "3.14159",
+      "tree": {
+        "number": "3.14159"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2111,6 +2677,15 @@
       "group": "corpus-html",
       "input": "x&#x2b;y",
       "normalized": "x+y",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "y"
+          },
+          "symbol": "+"
+        },
+        "text": "x"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2153,6 +2728,12 @@
       "group": "corpus-html",
       "input": "2x",
       "normalized": "2x",
+      "tree": {
+        "expression": {
+          "text": "x"
+        },
+        "number": "2"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2191,6 +2772,15 @@
       "group": "corpus-html",
       "input": "a&#x22c5;b",
       "normalized": "a&#x22c5;b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "symbol": "&#x22c5;"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2233,6 +2823,15 @@
       "group": "corpus-html",
       "input": "a&#x2212;b",
       "normalized": "a&#x2212;b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "symbol": "&#x2212;"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2275,6 +2874,15 @@
       "group": "corpus-html",
       "input": "x=y",
       "normalized": "x=y",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "y"
+          },
+          "symbol": "="
+        },
+        "text": "x"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2317,6 +2925,21 @@
       "group": "corpus-html",
       "input": "a&#x2b;b&#x2b;c",
       "normalized": "a+b+c",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "text": "c"
+              },
+              "symbol": "+"
+            },
+            "text": "b"
+          },
+          "symbol": "+"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2372,6 +2995,9 @@
       "group": "corpus-html",
       "input": "<i>sqrt</i>",
       "normalized": "<i>sqrt</i>",
+      "tree": {
+        "unary": "sqrt"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2402,6 +3028,12 @@
       "group": "corpus-html",
       "input": "x^",
       "normalized": "x^",
+      "tree": {
+        "expression": {
+          "symbol": "^"
+        },
+        "text": "x"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2437,6 +3069,7 @@
       "group": "corpus-html",
       "input": "<i>(</i>a",
       "normalized": "<i>(</i>a",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -2445,6 +3078,7 @@
       "group": "corpus-html",
       "input": "a)",
       "normalized": "a)",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -2453,6 +3087,7 @@
       "group": "corpus-html",
       "input": "))))",
       "normalized": "))))",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -2461,6 +3096,9 @@
       "group": "corpus-html",
       "input": "&#x24;",
       "normalized": "$",
+      "tree": {
+        "symbol": "$"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2489,6 +3127,19 @@
       "group": "corpus-html",
       "input": "<i>a</i><i>&#x2b;</i>b",
       "normalized": "<i>a</i><i>+</i>b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "sequence": {
+            "symbol": "+"
+          }
+        },
+        "sequence": {
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2531,6 +3182,16 @@
       "group": "corpus-html",
       "input": "<i>x</i><sup>2</sup>",
       "normalized": "<i>x</i><sup>2</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sup_value": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2574,6 +3235,22 @@
       "group": "corpus-html",
       "input": "<i>x</i><sup>n&#x2b;1</sup>",
       "normalized": "<i>x</i><sup>n+1</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sup_value": {
+          "expression": {
+            "expression": {
+              "number": "1"
+            },
+            "symbol": "+"
+          },
+          "text": "n"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2639,6 +3316,16 @@
       "group": "corpus-html",
       "input": "<i>a</i><sub>1</sub>",
       "normalized": "<i>a</i><sub>1</sub>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "number": "1"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2682,6 +3369,22 @@
       "group": "corpus-html",
       "input": "<i>a</i><sub>n&#x2b;1</sub>",
       "normalized": "<i>a</i><sub>n+1</sub>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "expression": {
+              "number": "1"
+            },
+            "symbol": "+"
+          },
+          "text": "n"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2747,6 +3450,19 @@
       "group": "corpus-html",
       "input": "<i>x</i><sub>1</sub><sup>2</sup>",
       "normalized": "<i>x</i><sub>1</sub><sup>2</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sub_value": {
+          "number": "1"
+        },
+        "sup_value": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2799,6 +3515,16 @@
       "group": "corpus-html",
       "input": "<i>e</i><sup>x</sup>",
       "normalized": "<i>e</i><sup>x</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "text": "e"
+          }
+        },
+        "sup_value": {
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2840,6 +3566,16 @@
       "group": "corpus-html",
       "input": "<i>2</i><sup>10</sup>",
       "normalized": "<i>2</i><sup>10</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "number": "2"
+          }
+        },
+        "sup_value": {
+          "number": "10"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2885,6 +3621,23 @@
       "group": "corpus-html",
       "input": "<i><i>x</i><sup>2</sup></i><i>4</i>",
       "normalized": "<i><i>x</i><sup>2</sup></i><i>4</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "number": "4"
+          }
+        },
+        "sequence": {
+          "sub_sup": {
+            "sequence": {
+              "text": "x"
+            }
+          },
+          "sup_value": {
+            "number": "2"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2937,6 +3690,21 @@
       "group": "corpus-html",
       "input": "hello",
       "normalized": "hello",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "text": "o"
+              },
+              "text": "l"
+            },
+            "text": "l"
+          },
+          "text": "e"
+        },
+        "text": "h"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2994,6 +3762,36 @@
       "group": "corpus-html",
       "input": "helloworld",
       "normalized": "helloworld",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "expression": {
+                  "expression": {
+                    "expression": {
+                      "expression": {
+                        "expression": {
+                          "text": "d"
+                        },
+                        "text": "l"
+                      },
+                      "text": "r"
+                    },
+                    "text": "o"
+                  },
+                  "text": "w"
+                },
+                "text": "o"
+              },
+              "text": "l"
+            },
+            "text": "l"
+          },
+          "text": "e"
+        },
+        "text": "h"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3086,6 +3884,12 @@
       "group": "corpus-html",
       "input": "kg",
       "normalized": "kg",
+      "tree": {
+        "expression": {
+          "text": "g"
+        },
+        "text": "k"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3122,6 +3926,16 @@
       "group": "corpus-html",
       "input": "<i>sqrt</i><i>2</i>",
       "normalized": "<i>sqrt</i><i>2</i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "number": "2"
+            }
+          },
+          "unary": "sqrt"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3158,6 +3972,22 @@
       "group": "corpus-html",
       "input": "<i>sqrt</i><i>x&#x2b;1</i>",
       "normalized": "<i>sqrt</i><i>x+1</i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "expression": {
+                "expression": {
+                  "number": "1"
+                },
+                "symbol": "+"
+              },
+              "text": "x"
+            }
+          },
+          "unary": "sqrt"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3217,6 +4047,36 @@
       "group": "corpus-html",
       "input": "<i>sqrt</i><i><i>a</i><sup>2</sup>&#x2b;<i>b</i><sup>2</sup></i>",
       "normalized": "<i>sqrt</i><i><i>a</i><sup>2</sup>+<i>b</i><sup>2</sup></i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "expression": {
+                "expression": {
+                  "sub_sup": {
+                    "sequence": {
+                      "text": "b"
+                    }
+                  },
+                  "sup_value": {
+                    "number": "2"
+                  }
+                },
+                "symbol": "+"
+              },
+              "sub_sup": {
+                "sequence": {
+                  "text": "a"
+                }
+              },
+              "sup_value": {
+                "number": "2"
+              }
+            }
+          },
+          "unary": "sqrt"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3302,6 +4162,22 @@
       "group": "corpus-html",
       "input": "<i>3</i><i>x&#x2b;1</i>",
       "normalized": "<i>3</i><i>x+1</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "expression": {
+                "number": "1"
+              },
+              "symbol": "+"
+            },
+            "text": "x"
+          }
+        },
+        "sequence": {
+          "number": "3"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3355,6 +4231,9 @@
       "group": "corpus-html",
       "input": "&#x3b1;",
       "normalized": "&#x3b1;",
+      "tree": {
+        "symbol": "&#x3b1;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3383,6 +4262,9 @@
       "group": "corpus-html",
       "input": "&#x3C0;",
       "normalized": "&#x3c0;",
+      "tree": {
+        "symbol": "&#x3c0;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3411,6 +4293,9 @@
       "group": "corpus-html",
       "input": "&#x3c3;",
       "normalized": "&#x3c3;",
+      "tree": {
+        "symbol": "&#x3c3;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3439,6 +4324,9 @@
       "group": "corpus-html",
       "input": "&#x221e;",
       "normalized": "&#x221e;",
+      "tree": {
+        "symbol": "&#x221e;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3467,6 +4355,15 @@
       "group": "corpus-html",
       "input": "xyz",
       "normalized": "xyz",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "z"
+          },
+          "text": "y"
+        },
+        "text": "x"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3510,6 +4407,12 @@
       "group": "corpus-html",
       "input": "xy",
       "normalized": "xy",
+      "tree": {
+        "expression": {
+          "text": "y"
+        },
+        "text": "x"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3546,6 +4449,20 @@
       "group": "corpus-html",
       "input": "<i>sin</i><i><i>(</i>x<i>)</i></i>",
       "normalized": "<i>sin</i><i><i>(</i>x<i>)</i></i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "parse_parenthesis": {
+                "lparen": "(",
+                "rparen": ")",
+                "text": "x"
+              }
+            }
+          },
+          "unary": "sin"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3601,6 +4518,16 @@
       "group": "corpus-html",
       "input": "<i>sin</i><i>x</i>",
       "normalized": "<i>sin</i><i>x</i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "text": "x"
+            }
+          },
+          "unary": "sin"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3635,6 +4562,23 @@
       "group": "corpus-html",
       "input": "<i>cos</i><i><i>(</i>2x<i>)</i></i>",
       "normalized": "<i>cos</i><i><i>(</i>2x<i>)</i></i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "parse_parenthesis": {
+                "expression": {
+                  "text": "x"
+                },
+                "lparen": "(",
+                "number": "2",
+                "rparen": ")"
+              }
+            }
+          },
+          "unary": "cos"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3699,6 +4643,16 @@
       "group": "corpus-html",
       "input": "<i>abs</i><i>x</i>",
       "normalized": "<i>abs</i><i>x</i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "text": "x"
+            }
+          },
+          "unary": "abs"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3733,6 +4687,16 @@
       "group": "corpus-html",
       "input": "<i>^</i><i>x</i>",
       "normalized": "<i>^</i><i>x</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sequence": {
+          "symbol": "^"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3768,6 +4732,16 @@
       "group": "corpus-html",
       "input": "<i>¯</i><i>x</i>",
       "normalized": "<i>¯</i><i>x</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sequence": {
+          "symbol": "¯"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3803,6 +4777,16 @@
       "group": "corpus-html",
       "input": "<i>&#x2192;</i><i>v</i>",
       "normalized": "<i>&#x2192;</i><i>v</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "v"
+          }
+        },
+        "sequence": {
+          "symbol": "&#x2192;"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3838,6 +4822,12 @@
       "group": "corpus-html",
       "input": "ab",
       "normalized": "ab",
+      "tree": {
+        "expression": {
+          "text": "b"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3874,6 +4864,28 @@
       "group": "corpus-html",
       "input": "<i>&sum;</i><sub>i=1</sub><sup>n</sup>i",
       "normalized": "<i>&#x2211;</i><sub>i=1</sub><sup>n</sup>i",
+      "tree": {
+        "expression": {
+          "text": "i"
+        },
+        "sub_sup": {
+          "sequence": {
+            "sum_prod": "&#x2211;"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "expression": {
+              "number": "1"
+            },
+            "symbol": "="
+          },
+          "text": "i"
+        },
+        "sup_value": {
+          "text": "n"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3947,6 +4959,16 @@
       "group": "corpus-html",
       "input": "<i>sqrt</i><i>x</i>",
       "normalized": "<i>sqrt</i><i>x</i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "text": "x"
+            }
+          },
+          "unary": "sqrt"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -3981,6 +5003,16 @@
       "group": "corpus-html",
       "input": "<i>^</i><i>a</i>",
       "normalized": "<i>^</i><i>a</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sequence": {
+          "symbol": "^"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4016,6 +5048,19 @@
       "group": "corpus-html",
       "input": "<i>^</i><i>ab</i>",
       "normalized": "<i>^</i><i>ab</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "text": "b"
+            },
+            "text": "a"
+          }
+        },
+        "sequence": {
+          "symbol": "^"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4058,6 +5103,19 @@
       "group": "corpus-html",
       "input": "<i>&#x2192;</i><i>AB</i>",
       "normalized": "<i>&#x2192;</i><i>AB</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "text": "B"
+            },
+            "text": "A"
+          }
+        },
+        "sequence": {
+          "symbol": "&#x2192;"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4100,6 +5158,22 @@
       "group": "corpus-html",
       "input": "<i>dot</i><i>x</i>",
       "normalized": "<i>dot</i><i>x</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sequence": {
+          "expression": {
+            "expression": {
+              "text": "t"
+            },
+            "text": "o"
+          },
+          "text": "d"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4150,6 +5224,19 @@
       "group": "corpus-html",
       "input": "<i>y</i><i>..</i>",
       "normalized": "<i>y</i><i>..</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "symbol": "."
+            },
+            "symbol": "."
+          }
+        },
+        "sequence": {
+          "text": "y"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4191,6 +5278,16 @@
       "group": "corpus-html",
       "input": "<i>~</i><i>n</i>",
       "normalized": "<i>~</i><i>n</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "n"
+          }
+        },
+        "sequence": {
+          "symbol": "~"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4226,6 +5323,12 @@
       "group": "corpus-html",
       "input": "&#x301;a",
       "normalized": "&#x301;a",
+      "tree": {
+        "expression": {
+          "text": "a"
+        },
+        "symbol": "&#x301;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4261,6 +5364,12 @@
       "group": "corpus-html",
       "input": "&#x300;a",
       "normalized": "&#x300;a",
+      "tree": {
+        "expression": {
+          "text": "a"
+        },
+        "symbol": "&#x300;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4296,6 +5405,12 @@
       "group": "corpus-html",
       "input": "&#x30c;a",
       "normalized": "&#x30c;a",
+      "tree": {
+        "expression": {
+          "text": "a"
+        },
+        "symbol": "&#x30c;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4331,6 +5446,12 @@
       "group": "corpus-html",
       "input": "&#x306;a",
       "normalized": "&#x306;a",
+      "tree": {
+        "expression": {
+          "text": "a"
+        },
+        "symbol": "&#x306;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4366,6 +5487,12 @@
       "group": "corpus-html",
       "input": "&#x30a;a",
       "normalized": "&#x30a;a",
+      "tree": {
+        "expression": {
+          "text": "a"
+        },
+        "symbol": "&#x30a;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4401,6 +5528,31 @@
       "group": "corpus-html",
       "input": "<i>blue</i><i>y&#x2b;z</i>",
       "normalized": "<i>blue</i><i>y+z</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "expression": {
+                "text": "z"
+              },
+              "symbol": "+"
+            },
+            "text": "y"
+          }
+        },
+        "sequence": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "text": "e"
+              },
+              "text": "u"
+            },
+            "text": "l"
+          },
+          "text": "b"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4485,6 +5637,29 @@
       "group": "corpus-html",
       "input": "<i>red</i><i><i>1</i><i>2</i></i>",
       "normalized": "<i>red</i><i><i>1</i><i>2</i></i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "sequence": {
+                "number": "2"
+              }
+            },
+            "sequence": {
+              "number": "1"
+            }
+          }
+        },
+        "sequence": {
+          "expression": {
+            "expression": {
+              "text": "d"
+            },
+            "text": "e"
+          },
+          "text": "r"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4560,6 +5735,13 @@
       "group": "corpus-html",
       "input": "<i>(</i>a<i>)</i>",
       "normalized": "<i>(</i>a<i>)</i>",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4601,6 +5783,13 @@
       "group": "corpus-html",
       "input": "<i>[</i>a<i>]</i>",
       "normalized": "<i>[</i>a<i>]</i>",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "[",
+          "rparen": "]",
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4642,6 +5831,7 @@
       "group": "corpus-html",
       "input": "<i>\\{</i>a<i>}</i>",
       "normalized": "<i>\\{</i>a<i>}</i>",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -4650,6 +5840,19 @@
       "group": "corpus-html",
       "input": "<i>&#x2329;</i>a<i>&#x232a;</i>",
       "normalized": "<i>&#x2329;</i>a<i>&#x232a;</i>",
+      "tree": {
+        "expression": {
+          "expression": {
+            "sequence": {
+              "symbol": "&#x232a;"
+            }
+          },
+          "text": "a"
+        },
+        "sequence": {
+          "symbol": "&#x2329;"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4691,6 +5894,19 @@
       "group": "corpus-html",
       "input": "<i>⌈</i>a<i>⌉</i>",
       "normalized": "<i>⌈</i>a<i>⌉</i>",
+      "tree": {
+        "expression": {
+          "expression": {
+            "sequence": {
+              "symbol": "⌉"
+            }
+          },
+          "text": "a"
+        },
+        "sequence": {
+          "symbol": "⌈"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4732,6 +5948,9 @@
       "group": "corpus-html",
       "input": "R",
       "normalized": "R",
+      "tree": {
+        "text": "R"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4761,6 +5980,15 @@
       "group": "corpus-html",
       "input": "abc",
       "normalized": "abc",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4804,6 +6032,9 @@
       "group": "corpus-html",
       "input": "L",
       "normalized": "L",
+      "tree": {
+        "text": "L"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4833,6 +6064,9 @@
       "group": "corpus-html",
       "input": "g",
       "normalized": "g",
+      "tree": {
+        "text": "g"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4862,6 +6096,9 @@
       "group": "corpus-html",
       "input": "A",
       "normalized": "A",
+      "tree": {
+        "text": "A"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4891,6 +6128,9 @@
       "group": "corpus-html",
       "input": "z",
       "normalized": "z",
+      "tree": {
+        "text": "z"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4920,6 +6160,9 @@
       "group": "corpus-html",
       "input": "d",
       "normalized": "d",
+      "tree": {
+        "text": "d"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4949,6 +6192,16 @@
       "group": "corpus-html",
       "input": "<i>1</i><i>2</i>",
       "normalized": "<i>1</i><i>2</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "number": "2"
+          }
+        },
+        "sequence": {
+          "number": "1"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -4989,6 +6242,23 @@
       "group": "corpus-html",
       "input": "<i><i>1</i><i>2</i></i><i>3</i>",
       "normalized": "<i><i>1</i><i>2</i></i><i>3</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "number": "3"
+          }
+        },
+        "sequence": {
+          "expression": {
+            "sequence": {
+              "number": "2"
+            }
+          },
+          "sequence": {
+            "number": "1"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5038,6 +6308,29 @@
       "group": "corpus-html",
       "input": "<i>1</i><i>2</i>&#x2b;<i>3</i><i>4</i>",
       "normalized": "<i>1</i><i>2</i>+<i>3</i><i>4</i>",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "sequence": {
+                  "number": "4"
+                }
+              },
+              "sequence": {
+                "number": "3"
+              }
+            },
+            "symbol": "+"
+          },
+          "sequence": {
+            "number": "2"
+          }
+        },
+        "sequence": {
+          "number": "1"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5102,6 +6395,23 @@
       "group": "corpus-html",
       "input": "<i>1</i><i><i>sqrt</i><i>2</i></i>",
       "normalized": "<i>1</i><i><i>sqrt</i><i>2</i></i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "unary_function": {
+              "first_value": {
+                "sequence": {
+                  "number": "2"
+                }
+              },
+              "unary": "sqrt"
+            }
+          }
+        },
+        "sequence": {
+          "number": "1"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5147,6 +6457,20 @@
       "group": "corpus-html",
       "input": "<table><tr><td>a</td><td>b</td></tr></table>",
       "normalized": "<table><tr><td>a</td><td>b</td></tr></table>",
+      "tree": {
+        "table_value": {
+          "tr_value": {
+            "expression": {
+              "td_value": {
+                "text": "b"
+              }
+            },
+            "td_value": {
+              "text": "a"
+            }
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5216,6 +6540,15 @@
       "group": "corpus-html",
       "input": "<table><tr><td>a</td></tr></table>",
       "normalized": "<table><tr><td>a</td></tr></table>",
+      "tree": {
+        "table_value": {
+          "tr_value": {
+            "td_value": {
+              "text": "a"
+            }
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5270,6 +6603,21 @@
       "group": "corpus-html",
       "input": "<i>0</i><i>1</i><i>x</i>",
       "normalized": "<i>0</i><i>1</i><i>x</i>",
+      "tree": {
+        "expression": {
+          "expression": {
+            "sequence": {
+              "text": "x"
+            }
+          },
+          "sequence": {
+            "number": "1"
+          }
+        },
+        "sequence": {
+          "number": "0"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5317,6 +6665,34 @@
       "group": "corpus-html",
       "input": "<i>a</i><i>b</i><i>f</i><i>(</i>x<i>)</i>dx",
       "normalized": "<i>a</i><i>b</i><i>f</i><i>(</i>x<i>)</i>dx",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "text": "x"
+              },
+              "text": "d"
+            },
+            "sequence": {
+              "parse_parenthesis": {
+                "lparen": "(",
+                "rparen": ")",
+                "text": "x"
+              },
+              "sequence": {
+                "text": "f"
+              }
+            }
+          },
+          "sequence": {
+            "text": "b"
+          }
+        },
+        "sequence": {
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5420,6 +6796,16 @@
       "group": "corpus-html",
       "input": "<i>&prod;</i><sub>k</sub>",
       "normalized": "<i>&#x220f;</i><sub>k</sub>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "sum_prod": "&#x220f;"
+          }
+        },
+        "sub_value": {
+          "text": "k"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5456,6 +6842,25 @@
       "group": "corpus-html",
       "input": "<i>&prod;</i><sub>i=1</sub><sup>n</sup>",
       "normalized": "<i>&#x220f;</i><sub>i=1</sub><sup>n</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "sum_prod": "&#x220f;"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "expression": {
+              "number": "1"
+            },
+            "symbol": "="
+          },
+          "text": "i"
+        },
+        "sup_value": {
+          "text": "n"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5522,6 +6927,16 @@
       "group": "corpus-html",
       "input": "<i>C</i><i>f</i>",
       "normalized": "<i>C</i><i>f</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "f"
+          }
+        },
+        "sequence": {
+          "text": "C"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5558,6 +6973,26 @@
       "group": "corpus-html",
       "input": "<i>&#x22c3;</i><sub>i</sub><i>A</i><sub>i</sub>",
       "normalized": "<i>&#x22c3;</i><sub>i</sub><i>A</i><sub>i</sub>",
+      "tree": {
+        "expression": {
+          "sub_sup": {
+            "sequence": {
+              "text": "A"
+            }
+          },
+          "sub_value": {
+            "text": "i"
+          }
+        },
+        "sub_sup": {
+          "sequence": {
+            "symbol": "&#x22c3;"
+          }
+        },
+        "sub_value": {
+          "text": "i"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5617,6 +7052,26 @@
       "group": "corpus-html",
       "input": "<i>&#x22c2;</i><sub>i</sub><i>A</i><sub>i</sub>",
       "normalized": "<i>&#x22c2;</i><sub>i</sub><i>A</i><sub>i</sub>",
+      "tree": {
+        "expression": {
+          "sub_sup": {
+            "sequence": {
+              "text": "A"
+            }
+          },
+          "sub_value": {
+            "text": "i"
+          }
+        },
+        "sub_sup": {
+          "sequence": {
+            "symbol": "&#x22c2;"
+          }
+        },
+        "sub_value": {
+          "text": "i"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5676,6 +7131,26 @@
       "group": "corpus-html",
       "input": "<i>&#x2210;</i><sub>i</sub><i>A</i><sub>i</sub>",
       "normalized": "<i>&#x2210;</i><sub>i</sub><i>A</i><sub>i</sub>",
+      "tree": {
+        "expression": {
+          "sub_sup": {
+            "sequence": {
+              "text": "A"
+            }
+          },
+          "sub_value": {
+            "text": "i"
+          }
+        },
+        "sub_sup": {
+          "sequence": {
+            "symbol": "&#x2210;"
+          }
+        },
+        "sub_value": {
+          "text": "i"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5735,6 +7210,12 @@
       "group": "corpus-html",
       "input": "&#x222c;f",
       "normalized": "&#x222c;f",
+      "tree": {
+        "expression": {
+          "text": "f"
+        },
+        "symbol": "&#x222c;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5770,6 +7251,26 @@
       "group": "corpus-html",
       "input": "<i>&#x2a01;</i><sub>i</sub><i>A</i><sub>i</sub>",
       "normalized": "<i>&#x2a01;</i><sub>i</sub><i>A</i><sub>i</sub>",
+      "tree": {
+        "expression": {
+          "sub_sup": {
+            "sequence": {
+              "text": "A"
+            }
+          },
+          "sub_value": {
+            "text": "i"
+          }
+        },
+        "sub_sup": {
+          "sequence": {
+            "symbol": "&#x2a01;"
+          }
+        },
+        "sub_value": {
+          "text": "i"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5829,6 +7330,9 @@
       "group": "corpus-html",
       "input": "1",
       "normalized": "1",
+      "tree": {
+        "number": "1"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5860,6 +7364,9 @@
       "group": "corpus-html",
       "input": "3.14",
       "normalized": "3.14",
+      "tree": {
+        "number": "3.14"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5891,6 +7398,15 @@
       "group": "corpus-html",
       "input": "1&#x2c;5",
       "normalized": "1,5",
+      "tree": {
+        "expression": {
+          "expression": {
+            "number": "5"
+          },
+          "symbol": ","
+        },
+        "number": "1"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5937,6 +7453,12 @@
       "group": "corpus-html",
       "input": "&#x2212;42",
       "normalized": "&#x2212;42",
+      "tree": {
+        "expression": {
+          "number": "42"
+        },
+        "symbol": "&#x2212;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -5974,6 +7496,15 @@
       "group": "corpus-html",
       "input": "a&#x2b;b",
       "normalized": "a+b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "symbol": "+"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6016,6 +7547,15 @@
       "group": "corpus-html",
       "input": "a&#xd7;b",
       "normalized": "a&#xd7;b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "symbol": "&#xd7;"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6058,6 +7598,15 @@
       "group": "corpus-html",
       "input": "a&#x2264;b",
       "normalized": "a&#x2264;b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "symbol": "&#x2264;"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6100,6 +7649,15 @@
       "group": "corpus-html",
       "input": "a&#x2261;b",
       "normalized": "a&#x2261;b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "symbol": "&#x2261;"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6142,6 +7700,15 @@
       "group": "corpus-html",
       "input": "a&#xb1;b",
       "normalized": "a&#xb1;b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "symbol": "&#xb1;"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6184,6 +7751,19 @@
       "group": "corpus-html",
       "input": "<i>¯</i><i>ab</i>",
       "normalized": "<i>¯</i><i>ab</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "text": "b"
+            },
+            "text": "a"
+          }
+        },
+        "sequence": {
+          "symbol": "¯"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6226,6 +7806,22 @@
       "group": "corpus-html",
       "input": "<i>¯</i><i>a&#x2b;b</i>",
       "normalized": "<i>¯</i><i>a+b</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "expression": {
+                "text": "b"
+              },
+              "symbol": "+"
+            },
+            "text": "a"
+          }
+        },
+        "sequence": {
+          "symbol": "¯"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6274,6 +7870,23 @@
       "group": "corpus-html",
       "input": "<i>¯</i><i><i>¯</i><i>a</i></i>",
       "normalized": "<i>¯</i><i><i>¯</i><i>a</i></i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "sequence": {
+                "text": "a"
+              }
+            },
+            "sequence": {
+              "symbol": "¯"
+            }
+          }
+        },
+        "sequence": {
+          "symbol": "¯"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6315,6 +7928,19 @@
       "group": "corpus-html",
       "input": "<i>&#x23df;</i><i>ab</i>",
       "normalized": "<i>&#x23df;</i><i>ab</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "text": "b"
+            },
+            "text": "a"
+          }
+        },
+        "sequence": {
+          "symbol": "&#x23df;"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6357,6 +7983,22 @@
       "group": "corpus-html",
       "input": "<i>&#x23df;</i><i>a&#x2b;b</i>",
       "normalized": "<i>&#x23df;</i><i>a+b</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "expression": {
+              "expression": {
+                "text": "b"
+              },
+              "symbol": "+"
+            },
+            "text": "a"
+          }
+        },
+        "sequence": {
+          "symbol": "&#x23df;"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6405,6 +8047,23 @@
       "group": "corpus-html",
       "input": "<i><i>&#x23df;</i><i>x</i></i><sub>y</sub>",
       "normalized": "<i><i>&#x23df;</i><i>x</i></i><sub>y</sub>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "expression": {
+              "sequence": {
+                "text": "x"
+              }
+            },
+            "sequence": {
+              "symbol": "&#x23df;"
+            }
+          }
+        },
+        "sub_value": {
+          "text": "y"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6459,6 +8118,16 @@
       "group": "corpus-html",
       "input": "<i>x</i><i>y</i>",
       "normalized": "<i>x</i><i>y</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "y"
+          }
+        },
+        "sequence": {
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6495,6 +8164,15 @@
       "group": "corpus-html",
       "input": "&#x332;ab",
       "normalized": "&#x332;ab",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "text": "a"
+        },
+        "symbol": "&#x332;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6537,6 +8215,15 @@
       "group": "corpus-html",
       "input": "&#x23dc;ab",
       "normalized": "&#x23dc;ab",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "text": "a"
+        },
+        "symbol": "&#x23dc;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6579,6 +8266,23 @@
       "group": "corpus-html",
       "input": "<i>x</i><sup><i>y</i><sup>z</sup></sup>",
       "normalized": "<i>x</i><sup><i>y</i><sup>z</sup></sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sup_value": {
+          "sub_sup": {
+            "sequence": {
+              "text": "y"
+            }
+          },
+          "sup_value": {
+            "text": "z"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6632,6 +8336,16 @@
       "group": "corpus-html",
       "input": "<i>x</i><sub>i</sub>",
       "normalized": "<i>x</i><sub>i</sub>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sub_value": {
+          "text": "i"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6673,6 +8387,19 @@
       "group": "corpus-html",
       "input": "<i>x</i><sub>i</sub><sup>2</sup>",
       "normalized": "<i>x</i><sub>i</sub><sup>2</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sub_value": {
+          "text": "i"
+        },
+        "sup_value": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6723,6 +8450,12 @@
       "group": "corpus-html",
       "input": "hi",
       "normalized": "hi",
+      "tree": {
+        "expression": {
+          "text": "i"
+        },
+        "text": "h"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6759,6 +8492,23 @@
       "group": "corpus-html",
       "input": "<i>sqrt</i><i><i>1</i><i>2</i></i>",
       "normalized": "<i>sqrt</i><i><i>1</i><i>2</i></i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "expression": {
+                "sequence": {
+                  "number": "2"
+                }
+              },
+              "sequence": {
+                "number": "1"
+              }
+            }
+          },
+          "unary": "sqrt"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6814,6 +8564,16 @@
       "group": "corpus-html",
       "input": "<i>3</i><i>8</i>",
       "normalized": "<i>3</i><i>8</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "number": "8"
+          }
+        },
+        "sequence": {
+          "number": "3"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6854,6 +8614,16 @@
       "group": "corpus-html",
       "input": "<i>n</i><i>x</i>",
       "normalized": "<i>n</i><i>x</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sequence": {
+          "text": "n"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6890,6 +8660,9 @@
       "group": "corpus-html",
       "input": "&#x2205;",
       "normalized": "&#x2205;",
+      "tree": {
+        "symbol": "&#x2205;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6918,6 +8691,14 @@
       "group": "corpus-html",
       "input": "<i>log</i>x",
       "normalized": "<i>log</i>x",
+      "tree": {
+        "expression": {
+          "text": "x"
+        },
+        "sequence": {
+          "sum_prod": "log"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6954,6 +8735,16 @@
       "group": "corpus-html",
       "input": "<i>ln</i><i>x</i>",
       "normalized": "<i>ln</i><i>x</i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "text": "x"
+            }
+          },
+          "unary": "ln"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -6988,6 +8779,12 @@
       "group": "corpus-html",
       "input": "<i>lim</i>x",
       "normalized": "<i>lim</i>x",
+      "tree": {
+        "binary": "lim",
+        "first_value": {
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7028,6 +8825,16 @@
       "group": "corpus-html",
       "input": "<i>det</i><i>A</i>",
       "normalized": "<i>det</i><i>A</i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "text": "A"
+            }
+          },
+          "unary": "det"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7062,6 +8869,22 @@
       "group": "corpus-html",
       "input": "<i>max</i><i>A</i>",
       "normalized": "<i>max</i><i>A</i>",
+      "tree": {
+        "expression": {
+          "sequence": {
+            "text": "A"
+          }
+        },
+        "sequence": {
+          "expression": {
+            "expression": {
+              "text": "x"
+            },
+            "text": "a"
+          },
+          "text": "m"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7112,6 +8935,26 @@
       "group": "corpus-html",
       "input": "<i>gcd</i><i><i>(</i>a&#x2c;b<i>)</i></i>",
       "normalized": "<i>gcd</i><i><i>(</i>a,b<i>)</i></i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "parse_parenthesis": {
+                "expression": {
+                  "expression": {
+                    "text": "b"
+                  },
+                  "symbol": ","
+                },
+                "lparen": "(",
+                "rparen": ")",
+                "text": "a"
+              }
+            }
+          },
+          "unary": "gcd"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7180,6 +9023,18 @@
       "group": "corpus-html",
       "input": "a&#xa0;&#xa0;b",
       "normalized": "a&#xa0;&#xa0;b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "text": "b"
+            },
+            "symbol": "&#xa0;"
+          },
+          "symbol": "&#xa0;"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7228,6 +9083,27 @@
       "group": "corpus-html",
       "input": "a&#xa0;&#xa0;b&#xa0;&#xa0;c",
       "normalized": "a&#xa0;&#xa0;b&#xa0;&#xa0;c",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "expression": {
+                  "expression": {
+                    "text": "c"
+                  },
+                  "symbol": "&#xa0;"
+                },
+                "symbol": "&#xa0;"
+              },
+              "text": "b"
+            },
+            "symbol": "&#xa0;"
+          },
+          "symbol": "&#xa0;"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7295,6 +9171,15 @@
       "group": "corpus-html",
       "input": "a&#x2c;b",
       "normalized": "a,b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "symbol": ","
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7337,6 +9222,15 @@
       "group": "corpus-html",
       "input": "a&#x3a;b",
       "normalized": "a:b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "symbol": ":"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7379,6 +9273,15 @@
       "group": "corpus-html",
       "input": "a&#x2004;b",
       "normalized": "a&#x2004;b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "symbol": "&#x2004;"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7421,6 +9324,24 @@
       "group": "corpus-html",
       "input": "a&#xa0;&#xa0;&#xa0;&#xa0;b",
       "normalized": "a&#xa0;&#xa0;&#xa0;&#xa0;b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "expression": {
+                  "text": "b"
+                },
+                "symbol": "&#xa0;"
+              },
+              "symbol": "&#xa0;"
+            },
+            "symbol": "&#xa0;"
+          },
+          "symbol": "&#xa0;"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7481,6 +9402,13 @@
       "group": "corpus-html",
       "input": "<i>{</i>a<i>}</i>",
       "normalized": "<i>{</i>a<i>}</i>",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "{",
+          "rparen": "}",
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7522,6 +9450,15 @@
       "group": "corpus-html",
       "input": "1,5",
       "normalized": "1,5",
+      "tree": {
+        "expression": {
+          "expression": {
+            "number": "5"
+          },
+          "symbol": ","
+        },
+        "number": "1"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7568,6 +9505,15 @@
       "group": "corpus-html",
       "input": "a&#x2213;b",
       "normalized": "a&#x2213;b",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "b"
+          },
+          "symbol": "&#x2213;"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7610,6 +9556,19 @@
       "group": "scripts",
       "input": "<i>a</i><sub>1</sub>b",
       "normalized": "<i>a</i><sub>1</sub>b",
+      "tree": {
+        "expression": {
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "number": "1"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7660,6 +9619,22 @@
       "group": "scripts",
       "input": "<i>a</i><sub>1</sub>bc",
       "normalized": "<i>a</i><sub>1</sub>bc",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "number": "1"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7717,6 +9692,22 @@
       "group": "scripts",
       "input": "<i>a</i><sub>xy</sub>b",
       "normalized": "<i>a</i><sub>xy</sub>b",
+      "tree": {
+        "expression": {
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "text": "y"
+          },
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7781,6 +9772,25 @@
       "group": "scripts",
       "input": "<i>a</i><sub>xy</sub>bc",
       "normalized": "<i>a</i><sub>xy</sub>bc",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "text": "y"
+          },
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7852,6 +9862,19 @@
       "group": "scripts",
       "input": "<i>a</i><sup>2</sup>b",
       "normalized": "<i>a</i><sup>2</sup>b",
+      "tree": {
+        "expression": {
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sup_value": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7902,6 +9925,25 @@
       "group": "scripts",
       "input": "<i>a</i><sup>ab</sup>bc",
       "normalized": "<i>a</i><sup>ab</sup>bc",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sup_value": {
+          "expression": {
+            "text": "b"
+          },
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -7973,6 +10015,22 @@
       "group": "scripts",
       "input": "<i>a</i><sub>1</sub><sup>2</sup>b",
       "normalized": "<i>a</i><sub>1</sub><sup>2</sup>b",
+      "tree": {
+        "expression": {
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "number": "1"
+        },
+        "sup_value": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8032,6 +10090,25 @@
       "group": "scripts",
       "input": "<i>a</i><sub>1</sub><sup>2</sup>bc",
       "normalized": "<i>a</i><sub>1</sub><sup>2</sup>bc",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "number": "1"
+        },
+        "sup_value": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8098,6 +10175,25 @@
       "group": "scripts",
       "input": "<i>a</i><sub>1</sub><sup>ab</sup>b",
       "normalized": "<i>a</i><sub>1</sub><sup>ab</sup>b",
+      "tree": {
+        "expression": {
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "number": "1"
+        },
+        "sup_value": {
+          "expression": {
+            "text": "b"
+          },
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8171,6 +10267,28 @@
       "group": "scripts",
       "input": "<i>a</i><sub>1</sub><sup>ab</sup>bc",
       "normalized": "<i>a</i><sub>1</sub><sup>ab</sup>bc",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "number": "1"
+        },
+        "sup_value": {
+          "expression": {
+            "text": "b"
+          },
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8251,6 +10369,28 @@
       "group": "scripts",
       "input": "<i>a</i><sub>xy</sub><sup>2</sup>bc",
       "normalized": "<i>a</i><sub>xy</sub><sup>2</sup>bc",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "text": "y"
+          },
+          "text": "x"
+        },
+        "sup_value": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8331,6 +10471,28 @@
       "group": "scripts",
       "input": "<i>a</i><sub>xy</sub><sup>ab</sup>b",
       "normalized": "<i>a</i><sub>xy</sub><sup>ab</sup>b",
+      "tree": {
+        "expression": {
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "text": "y"
+          },
+          "text": "x"
+        },
+        "sup_value": {
+          "expression": {
+            "text": "b"
+          },
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8418,6 +10580,31 @@
       "group": "scripts",
       "input": "<i>a</i><sub>xy</sub><sup>ab</sup>bc",
       "normalized": "<i>a</i><sub>xy</sub><sup>ab</sup>bc",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "text": "y"
+          },
+          "text": "x"
+        },
+        "sup_value": {
+          "expression": {
+            "text": "b"
+          },
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8512,6 +10699,26 @@
       "group": "scripts",
       "input": "&sum;<sub>d</sub><sup>prod</sup>",
       "normalized": "&#x2211;<sub>d</sub><sup>prod</sup>",
+      "tree": {
+        "sub_sup": {
+          "sum_prod": "&#x2211;"
+        },
+        "sub_value": {
+          "text": "d"
+        },
+        "sup_value": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "text": "d"
+              },
+              "text": "o"
+            },
+            "text": "r"
+          },
+          "text": "p"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8584,6 +10791,35 @@
       "group": "scripts",
       "input": "&sum;<sub>drop</sub><sup>prod</sup>",
       "normalized": "&#x2211;<sub>drop</sub><sup>prod</sup>",
+      "tree": {
+        "sub_sup": {
+          "sum_prod": "&#x2211;"
+        },
+        "sub_value": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "text": "p"
+              },
+              "text": "o"
+            },
+            "text": "r"
+          },
+          "text": "d"
+        },
+        "sup_value": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "text": "d"
+              },
+              "text": "o"
+            },
+            "text": "r"
+          },
+          "text": "p"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8686,6 +10922,28 @@
       "group": "scripts",
       "input": "<i>f</i><sup>-1</sup>(<i>x</i>)",
       "normalized": "<i>f</i><sup>-1</sup>(<i>x</i>)",
+      "tree": {
+        "expression": {
+          "parse_parenthesis": {
+            "lparen": "(",
+            "rparen": ")",
+            "sequence": {
+              "text": "x"
+            }
+          }
+        },
+        "sub_sup": {
+          "sequence": {
+            "text": "f"
+          }
+        },
+        "sup_value": {
+          "expression": {
+            "number": "1"
+          },
+          "symbol": "-"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8772,6 +11030,19 @@
       "group": "scripts",
       "input": "<i>ab</i><sub>1</sub>",
       "normalized": "<i>ab</i><sub>1</sub>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "expression": {
+              "text": "b"
+            },
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "number": "1"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8829,6 +11100,39 @@
       "group": "tables",
       "input": "<table><tr><td>Something</td></tr></table>",
       "normalized": "<table><tr><td>Something</td></tr></table>",
+      "tree": {
+        "table_value": {
+          "tr_value": {
+            "td_value": {
+              "expression": {
+                "expression": {
+                  "expression": {
+                    "expression": {
+                      "expression": {
+                        "expression": {
+                          "expression": {
+                            "expression": {
+                              "text": "g"
+                            },
+                            "text": "n"
+                          },
+                          "text": "i"
+                        },
+                        "text": "h"
+                      },
+                      "text": "t"
+                    },
+                    "text": "e"
+                  },
+                  "text": "m"
+                },
+                "text": "o"
+              },
+              "text": "S"
+            }
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -8939,6 +11243,36 @@
       "group": "tables",
       "input": "<table><tr><td>4</td></tr><tr><td>3</td></tr><tr><td>2</td></tr><tr><td>1</td></tr></table>",
       "normalized": "<table><tr><td>4</td></tr><tr><td>3</td></tr><tr><td>2</td></tr><tr><td>1</td></tr></table>",
+      "tree": {
+        "table_value": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "tr_value": {
+                  "td_value": {
+                    "number": "1"
+                  }
+                }
+              },
+              "tr_value": {
+                "td_value": {
+                  "number": "2"
+                }
+              }
+            },
+            "tr_value": {
+              "td_value": {
+                "number": "3"
+              }
+            }
+          },
+          "tr_value": {
+            "td_value": {
+              "number": "4"
+            }
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9067,6 +11401,17 @@
       "group": "tables",
       "input": "<td>a</td>bc",
       "normalized": "<td>a</td>bc",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "td_value": {
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9118,6 +11463,11 @@
       "group": "tables",
       "input": "<th>a</th>",
       "normalized": "<th>a</th>",
+      "tree": {
+        "td_value": {
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9155,6 +11505,19 @@
       "group": "tables",
       "input": "<tr><td>a</td></tr>bc",
       "normalized": "<tr><td>a</td></tr>bc",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "tr_value": {
+          "td_value": {
+            "text": "a"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9213,6 +11576,31 @@
       "group": "functions",
       "input": "root(<i>sth</i>)",
       "normalized": "root(<i>sth</i>)",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "parse_parenthesis": {
+                "lparen": "(",
+                "rparen": ")",
+                "sequence": {
+                  "expression": {
+                    "expression": {
+                      "text": "h"
+                    },
+                    "text": "t"
+                  },
+                  "text": "s"
+                }
+              },
+              "text": "t"
+            },
+            "text": "o"
+          },
+          "text": "o"
+        },
+        "text": "r"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9323,6 +11711,25 @@
       "group": "functions",
       "input": "<i>lim</i>(3e)(em)",
       "normalized": "<i>lim</i>(3e)(em)",
+      "tree": {
+        "binary": "lim",
+        "first_value": {
+          "expression": {
+            "text": "e"
+          },
+          "lparen": "(",
+          "number": "3",
+          "rparen": ")"
+        },
+        "second_value": {
+          "expression": {
+            "text": "m"
+          },
+          "lparen": "(",
+          "rparen": ")",
+          "text": "e"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9422,6 +11829,34 @@
       "group": "functions",
       "input": "<i>lim</i>(3am)(rest)",
       "normalized": "<i>lim</i>(3am)(rest)",
+      "tree": {
+        "binary": "lim",
+        "first_value": {
+          "expression": {
+            "expression": {
+              "text": "m"
+            },
+            "text": "a"
+          },
+          "lparen": "(",
+          "number": "3",
+          "rparen": ")"
+        },
+        "second_value": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "text": "t"
+              },
+              "text": "s"
+            },
+            "text": "e"
+          },
+          "lparen": "(",
+          "rparen": ")",
+          "text": "r"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9542,6 +11977,25 @@
       "group": "functions",
       "input": "<i>2a</i><i>mod</i><i>em</i>",
       "normalized": "<i>2a</i><i>mod</i><i>em</i>",
+      "tree": {
+        "binary": "mod",
+        "first_value": {
+          "sequence": {
+            "expression": {
+              "text": "a"
+            },
+            "number": "2"
+          }
+        },
+        "second_value": {
+          "sequence": {
+            "expression": {
+              "text": "m"
+            },
+            "text": "e"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9617,6 +12071,19 @@
       "group": "functions",
       "input": "<i>sin</i><i>b</i>d",
       "normalized": "<i>sin</i><i>b</i>d",
+      "tree": {
+        "sequence": {
+          "text": "d"
+        },
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "text": "b"
+            }
+          },
+          "unary": "sin"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9658,6 +12125,25 @@
       "group": "functions",
       "input": "<i>sin</i><i>b</i>x+1",
       "normalized": "<i>sin</i><i>b</i>x+1",
+      "tree": {
+        "sequence": {
+          "expression": {
+            "expression": {
+              "number": "1"
+            },
+            "symbol": "+"
+          },
+          "text": "x"
+        },
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "text": "b"
+            }
+          },
+          "unary": "sin"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9714,6 +12200,16 @@
       "group": "functions",
       "input": "abs(3)",
       "normalized": "abs(3)",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "lparen": "(",
+            "number": "3",
+            "rparen": ")"
+          },
+          "unary": "abs"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9771,6 +12267,16 @@
       "group": "functions",
       "input": "sqrt(4)",
       "normalized": "sqrt(4)",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "lparen": "(",
+            "number": "4",
+            "rparen": ")"
+          },
+          "unary": "sqrt"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9828,6 +12334,22 @@
       "group": "functions",
       "input": "sqrt(a+b)",
       "normalized": "sqrt(a+b)",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "expression": {
+              "expression": {
+                "text": "b"
+              },
+              "symbol": "+"
+            },
+            "lparen": "(",
+            "rparen": ")",
+            "text": "a"
+          },
+          "unary": "sqrt"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9896,6 +12418,9 @@
       "group": "functions",
       "input": "&sum;",
       "normalized": "&#x2211;",
+      "tree": {
+        "sum_prod": "&#x2211;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9926,6 +12451,9 @@
       "group": "functions",
       "input": "&prod;",
       "normalized": "&#x220f;",
+      "tree": {
+        "sum_prod": "&#x220f;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9956,6 +12484,9 @@
       "group": "functions",
       "input": "log",
       "normalized": "log",
+      "tree": {
+        "sum_prod": "log"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -9985,6 +12516,9 @@
       "group": "functions",
       "input": "lim",
       "normalized": "lim",
+      "tree": {
+        "sum_prod": "lim"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10014,6 +12548,18 @@
       "group": "parens",
       "input": "<i>f</i>(<i>x</i>)",
       "normalized": "<i>f</i>(<i>x</i>)",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "sequence": {
+            "text": "x"
+          }
+        },
+        "sequence": {
+          "text": "f"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10071,6 +12617,25 @@
       "group": "parens",
       "input": "<i>f</i>(<i>g</i>(<i>x</i>))",
       "normalized": "<i>f</i>(<i>g</i>(<i>x</i>))",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "(",
+          "parse_parenthesis": {
+            "lparen": "(",
+            "rparen": ")",
+            "sequence": {
+              "text": "x"
+            }
+          },
+          "rparen": ")",
+          "sequence": {
+            "text": "g"
+          }
+        },
+        "sequence": {
+          "text": "f"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10156,6 +12721,30 @@
       "group": "parens",
       "input": "f&sum;(<i>n</i>)(<i>2</i>)",
       "normalized": "f&#x2211;(<i>n</i>)(<i>2</i>)",
+      "tree": {
+        "expression": {
+          "expression": {
+            "parse_parenthesis": {
+              "lparen": "(",
+              "rparen": ")",
+              "sequence": {
+                "number": "2"
+              }
+            }
+          },
+          "sequence": {
+            "parse_parenthesis": {
+              "lparen": "(",
+              "rparen": ")",
+              "sequence": {
+                "text": "n"
+              }
+            },
+            "symbol": "&#x2211;"
+          }
+        },
+        "text": "f"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10249,6 +12838,22 @@
       "group": "parens",
       "input": "fib(<i>n</i>)",
       "normalized": "fib(<i>n</i>)",
+      "tree": {
+        "expression": {
+          "expression": {
+            "parse_parenthesis": {
+              "lparen": "(",
+              "rparen": ")",
+              "sequence": {
+                "text": "n"
+              }
+            },
+            "text": "b"
+          },
+          "text": "i"
+        },
+        "text": "f"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10329,6 +12934,20 @@
       "group": "parens",
       "input": "(sqrt(2))",
       "normalized": "(sqrt(2))",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "unary_function": {
+            "first_value": {
+              "lparen": "(",
+              "number": "2",
+              "rparen": ")"
+            },
+            "unary": "sqrt"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10398,6 +13017,14 @@
       "group": "parens",
       "input": "ϑ(t)",
       "normalized": "ϑ(t)",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "text": "t"
+        },
+        "symbol": "ϑ"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10454,6 +13081,13 @@
       "group": "parens",
       "input": "(x)",
       "normalized": "(x)",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10495,6 +13129,13 @@
       "group": "parens",
       "input": "(12)",
       "normalized": "(12)",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "(",
+          "number": "12",
+          "rparen": ")"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10538,6 +13179,18 @@
       "group": "parens",
       "input": "(1)y",
       "normalized": "(1)y",
+      "tree": {
+        "expression": {
+          "text": "y"
+        },
+        "sequence": {
+          "parse_parenthesis": {
+            "lparen": "(",
+            "number": "1",
+            "rparen": ")"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10597,6 +13250,19 @@
       "group": "parens",
       "input": "(x+y)",
       "normalized": "(x+y)",
+      "tree": {
+        "parse_parenthesis": {
+          "expression": {
+            "expression": {
+              "text": "y"
+            },
+            "symbol": "+"
+          },
+          "lparen": "(",
+          "rparen": ")",
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10651,6 +13317,20 @@
       "group": "parens",
       "input": "abc[0]",
       "normalized": "abc[0]",
+      "tree": {
+        "expression": {
+          "expression": {
+            "parse_parenthesis": {
+              "lparen": "[",
+              "number": "0",
+              "rparen": "]"
+            },
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10733,6 +13413,20 @@
       "group": "parens",
       "input": "abc{0}",
       "normalized": "abc{0}",
+      "tree": {
+        "expression": {
+          "expression": {
+            "parse_parenthesis": {
+              "lparen": "{",
+              "number": "0",
+              "rparen": "}"
+            },
+            "text": "c"
+          },
+          "text": "b"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10815,6 +13509,9 @@
       "group": "base-numbers",
       "input": "0x1f",
       "normalized": "0x1f",
+      "tree": {
+        "hex_number": "1f"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10846,6 +13543,9 @@
       "group": "base-numbers",
       "input": "0b101",
       "normalized": "0b101",
+      "tree": {
+        "binary_number": "101"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10877,6 +13577,9 @@
       "group": "base-numbers",
       "input": "0o17",
       "normalized": "0o17",
+      "tree": {
+        "octal_number": "17"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10908,6 +13611,15 @@
       "group": "base-numbers",
       "input": "0xff+1",
       "normalized": "0xff+1",
+      "tree": {
+        "expression": {
+          "expression": {
+            "number": "1"
+          },
+          "symbol": "+"
+        },
+        "hex_number": "ff"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10958,6 +13670,9 @@
       "group": "base-numbers",
       "input": "0b111111111111111111111111111111111111111111111111111111111111",
       "normalized": "0b111111111111111111111111111111111111111111111111111111111111",
+      "tree": {
+        "binary_number": "111111111111111111111111111111111111111111111111111111111111"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -10989,6 +13704,9 @@
       "group": "base-numbers",
       "input": "0o7777777777777777777777777",
       "normalized": "0o7777777777777777777777777",
+      "tree": {
+        "octal_number": "7777777777777777777777777"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11020,6 +13738,9 @@
       "group": "base-numbers",
       "input": "0xffffffffffffffffffff",
       "normalized": "0xffffffffffffffffffff",
+      "tree": {
+        "hex_number": "ffffffffffffffffffff"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11051,6 +13772,9 @@
       "group": "linebreak",
       "input": "<br>",
       "normalized": "<br>",
+      "tree": {
+        "linebreak": "<br>"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11080,6 +13804,15 @@
       "group": "linebreak",
       "input": "<br>xy",
       "normalized": "<br>xy",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "y"
+          },
+          "text": "x"
+        },
+        "linebreak": "<br>"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11123,6 +13856,12 @@
       "group": "linebreak",
       "input": "<br><br>",
       "normalized": "<br><br>",
+      "tree": {
+        "expression": {
+          "linebreak": "<br>"
+        },
+        "linebreak": "<br>"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11159,6 +13898,18 @@
       "group": "linebreak",
       "input": "<br>x+y",
       "normalized": "<br>x+y",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "text": "y"
+            },
+            "symbol": "+"
+          },
+          "text": "x"
+        },
+        "linebreak": "<br>"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11208,6 +13959,11 @@
       "group": "space",
       "input": " x",
       "normalized": " x",
+      "tree": {
+        "expression": {
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11237,6 +13993,17 @@
       "group": "space",
       "input": " x+y",
       "normalized": " x+y",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "text": "y"
+            },
+            "symbol": "+"
+          },
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11279,6 +14046,7 @@
       "group": "space",
       "input": " ",
       "normalized": " ",
+      "tree": " ",
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11310,6 +14078,10 @@
       "group": "space",
       "input": "x ",
       "normalized": "x ",
+      "tree": {
+        "expression": " ",
+        "text": "x"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11348,6 +14120,14 @@
       "group": "unmatched",
       "input": "1(b)",
       "normalized": "1(b)",
+      "tree": {
+        "number": "1",
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "text": "b"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11409,6 +14189,12 @@
       "group": "unmatched",
       "input": "&sum;x",
       "normalized": "&#x2211;x",
+      "tree": {
+        "expression": {
+          "text": "x"
+        },
+        "sum_prod": "&#x2211;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11449,6 +14235,15 @@
       "group": "unmatched",
       "input": "&sum;xy",
       "normalized": "&#x2211;xy",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "y"
+          },
+          "text": "x"
+        },
+        "sum_prod": "&#x2211;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11498,6 +14293,20 @@
       "group": "unmatched",
       "input": "<i>ab</i>xy",
       "normalized": "<i>ab</i>xy",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "y"
+          },
+          "text": "x"
+        },
+        "sequence": {
+          "expression": {
+            "text": "b"
+          },
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11562,6 +14371,19 @@
       "group": "unmatched",
       "input": "<i>ab</i><sup>2</sup>",
       "normalized": "<i>ab</i><sup>2</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "expression": {
+              "text": "b"
+            },
+            "text": "a"
+          }
+        },
+        "sup_value": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11619,6 +14441,22 @@
       "group": "unmatched",
       "input": "<i>ab</i><sub>1</sub><sup>2</sup>",
       "normalized": "<i>ab</i><sub>1</sub><sup>2</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "expression": {
+              "text": "b"
+            },
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "number": "1"
+        },
+        "sup_value": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11685,6 +14523,22 @@
       "group": "unmatched",
       "input": "<i>ab</i><sub>ab</sub>",
       "normalized": "<i>ab</i><sub>ab</sub>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "expression": {
+              "text": "b"
+            },
+            "text": "a"
+          }
+        },
+        "sub_value": {
+          "expression": {
+            "text": "b"
+          },
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11749,6 +14603,22 @@
       "group": "unmatched",
       "input": "<i>ab</i><sup>ab</sup>",
       "normalized": "<i>ab</i><sup>ab</sup>",
+      "tree": {
+        "sub_sup": {
+          "sequence": {
+            "expression": {
+              "text": "b"
+            },
+            "text": "a"
+          }
+        },
+        "sup_value": {
+          "expression": {
+            "text": "b"
+          },
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11813,6 +14683,19 @@
       "group": "unmatched",
       "input": "<i>ab</i>(b)",
       "normalized": "<i>ab</i>(b)",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "text": "b"
+        },
+        "sequence": {
+          "expression": {
+            "text": "b"
+          },
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11889,6 +14772,12 @@
       "group": "unmatched",
       "input": "0x1fx",
       "normalized": "0x1fx",
+      "tree": {
+        "expression": {
+          "text": "x"
+        },
+        "hex_number": "1f"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11929,6 +14818,15 @@
       "group": "unmatched",
       "input": "0x1fxy",
       "normalized": "0x1fxy",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "y"
+          },
+          "text": "x"
+        },
+        "hex_number": "1f"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -11978,6 +14876,14 @@
       "group": "unmatched",
       "input": "0x1f(b)",
       "normalized": "0x1f(b)",
+      "tree": {
+        "hex_number": "1f",
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "text": "b"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12039,6 +14945,12 @@
       "group": "unmatched",
       "input": "0b101x",
       "normalized": "0b101x",
+      "tree": {
+        "binary_number": "101",
+        "expression": {
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12079,6 +14991,15 @@
       "group": "unmatched",
       "input": "0b101xy",
       "normalized": "0b101xy",
+      "tree": {
+        "binary_number": "101",
+        "expression": {
+          "expression": {
+            "text": "y"
+          },
+          "text": "x"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12128,6 +15049,14 @@
       "group": "unmatched",
       "input": "0b101(b)",
       "normalized": "0b101(b)",
+      "tree": {
+        "binary_number": "101",
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "text": "b"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12189,6 +15118,12 @@
       "group": "unmatched",
       "input": "0o17x",
       "normalized": "0o17x",
+      "tree": {
+        "expression": {
+          "text": "x"
+        },
+        "octal_number": "17"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12229,6 +15164,15 @@
       "group": "unmatched",
       "input": "0o17xy",
       "normalized": "0o17xy",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "y"
+          },
+          "text": "x"
+        },
+        "octal_number": "17"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12278,6 +15222,14 @@
       "group": "unmatched",
       "input": "0o17(b)",
       "normalized": "0o17(b)",
+      "tree": {
+        "octal_number": "17",
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "text": "b"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12339,6 +15291,16 @@
       "group": "unmatched",
       "input": "<td>a</td>(b)",
       "normalized": "<td>a</td>(b)",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "text": "b"
+        },
+        "td_value": {
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12406,6 +15368,18 @@
       "group": "unmatched",
       "input": "<tr><td>a</td></tr>(b)",
       "normalized": "<tr><td>a</td></tr>(b)",
+      "tree": {
+        "parse_parenthesis": {
+          "lparen": "(",
+          "rparen": ")",
+          "text": "b"
+        },
+        "tr_value": {
+          "td_value": {
+            "text": "a"
+          }
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12481,6 +15455,22 @@
       "group": "unmatched",
       "input": "<i>sqrt</i><i>a+b</i>",
       "normalized": "<i>sqrt</i><i>a+b</i>",
+      "tree": {
+        "unary_function": {
+          "first_value": {
+            "sequence": {
+              "expression": {
+                "expression": {
+                  "text": "b"
+                },
+                "symbol": "+"
+              },
+              "text": "a"
+            }
+          },
+          "unary": "sqrt"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12538,6 +15528,9 @@
       "group": "entities",
       "input": "&#x3c0;",
       "normalized": "&#x3c0;",
+      "tree": {
+        "symbol": "&#x3c0;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12566,6 +15559,9 @@
       "group": "entities",
       "input": "&#960;",
       "normalized": "&#x3c0;",
+      "tree": {
+        "symbol": "&#x3c0;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12594,6 +15590,9 @@
       "group": "entities",
       "input": "&amp;",
       "normalized": "&#x26;",
+      "tree": {
+        "symbol": "&#x26;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12622,6 +15621,9 @@
       "group": "entities",
       "input": "&quot;",
       "normalized": "&#x22;",
+      "tree": {
+        "symbol": "&#x22;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12650,6 +15652,48 @@
       "group": "entities",
       "input": "&nosuchentity;",
       "normalized": "&#x26;nosuchentity;",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "expression": {
+                  "expression": {
+                    "expression": {
+                      "expression": {
+                        "expression": {
+                          "expression": {
+                            "expression": {
+                              "expression": {
+                                "expression": {
+                                  "symbol": ";"
+                                },
+                                "text": "y"
+                              },
+                              "text": "t"
+                            },
+                            "text": "i"
+                          },
+                          "text": "t"
+                        },
+                        "text": "n"
+                      },
+                      "text": "e"
+                    },
+                    "text": "h"
+                  },
+                  "text": "c"
+                },
+                "text": "u"
+              },
+              "text": "s"
+            },
+            "text": "o"
+          },
+          "text": "n"
+        },
+        "symbol": "&#x26;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12768,6 +15812,21 @@
       "group": "entities",
       "input": "&AMP;",
       "normalized": "&#x26;AMP;",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "symbol": ";"
+              },
+              "text": "P"
+            },
+            "text": "M"
+          },
+          "text": "A"
+        },
+        "symbol": "&#x26;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12823,6 +15882,9 @@
       "group": "entities",
       "input": "&a;",
       "normalized": "&a;",
+      "tree": {
+        "symbol": "&a;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12858,6 +15920,15 @@
       "group": "entities",
       "input": "2&#x3c0;r",
       "normalized": "2&#x3c0;r",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "r"
+          },
+          "symbol": "&#x3c0;"
+        },
+        "number": "2"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12902,6 +15973,12 @@
       "group": "malformed-fraction",
       "input": "a/",
       "normalized": "a/",
+      "tree": {
+        "expression": {
+          "symbol": "/"
+        },
+        "text": "a"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12937,6 +16014,12 @@
       "group": "malformed-fraction",
       "input": "/b",
       "normalized": "/b",
+      "tree": {
+        "expression": {
+          "text": "b"
+        },
+        "symbol": "/"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -12972,6 +16055,14 @@
       "group": "malformed-fraction",
       "input": "<i>a</i>/",
       "normalized": "<i>a</i>/",
+      "tree": {
+        "expression": {
+          "symbol": "/"
+        },
+        "sequence": {
+          "text": "a"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -13007,6 +16098,7 @@
       "group": "malformed-power",
       "input": "x<sup>",
       "normalized": "x<sup>",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -13015,6 +16107,7 @@
       "group": "malformed-power",
       "input": "x<sup></sup>",
       "normalized": "x<sup></sup>",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -13023,6 +16116,11 @@
       "group": "malformed-power",
       "input": "<sup>2</sup>",
       "normalized": "<sup>2</sup>",
+      "tree": {
+        "sequence": {
+          "number": "2"
+        }
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -13054,6 +16152,7 @@
       "group": "malformed-power",
       "input": "x<sub>",
       "normalized": "x<sub>",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -13062,6 +16161,7 @@
       "group": "malformed-fences",
       "input": "(a",
       "normalized": "(a",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -13070,6 +16170,7 @@
       "group": "malformed-fences",
       "input": "<i>a",
       "normalized": "<i>a",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -13078,6 +16179,7 @@
       "group": "malformed-fences",
       "input": "a</i>",
       "normalized": "a</i>",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -13086,6 +16188,7 @@
       "group": "malformed-fences",
       "input": "<table><tr><td>a",
       "normalized": "<table><tr><td>a",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -13094,6 +16197,7 @@
       "group": "malformed-trailing",
       "input": "a b )",
       "normalized": "a b )",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -13102,6 +16206,7 @@
       "group": "malformed-trailing",
       "input": "<i>a</i>)",
       "normalized": "<i>a</i>)",
+      "tree": null,
       "raises": "Plurimath::Math::ParseError",
       "raisedIn": "parse"
     },
@@ -13117,6 +16222,9 @@
       "group": "malformed-entities",
       "input": "&#x10FFFF;",
       "normalized": "&#x10ffff;",
+      "tree": {
+        "symbol": "&#x10ffff;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -13145,6 +16253,42 @@
       "group": "malformed-entities",
       "input": "&#xFFFFFFFF;",
       "normalized": "&#x26;#xFFFFFFFF;",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "expression": {
+                  "expression": {
+                    "expression": {
+                      "expression": {
+                        "expression": {
+                          "expression": {
+                            "expression": {
+                              "symbol": ";"
+                            },
+                            "text": "F"
+                          },
+                          "text": "F"
+                        },
+                        "text": "F"
+                      },
+                      "text": "F"
+                    },
+                    "text": "F"
+                  },
+                  "text": "F"
+                },
+                "text": "F"
+              },
+              "text": "F"
+            },
+            "text": "x"
+          },
+          "symbol": "#"
+        },
+        "symbol": "&#x26;"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -13248,6 +16392,24 @@
       "group": "malformed-entities",
       "input": "&#xZZ;",
       "normalized": "&#xZZ;",
+      "tree": {
+        "expression": {
+          "expression": {
+            "expression": {
+              "expression": {
+                "expression": {
+                  "symbol": ";"
+                },
+                "text": "Z"
+              },
+              "text": "Z"
+            },
+            "text": "x"
+          },
+          "symbol": "#"
+        },
+        "symbol": "&"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -13309,6 +16471,12 @@
       "group": "malformed-entities",
       "input": "&;",
       "normalized": "&;",
+      "tree": {
+        "expression": {
+          "symbol": ";"
+        },
+        "symbol": "&"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -13343,6 +16511,15 @@
       "group": "malformed-entities",
       "input": "&pi",
       "normalized": "&pi",
+      "tree": {
+        "expression": {
+          "expression": {
+            "text": "i"
+          },
+          "text": "p"
+        },
+        "symbol": "&"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -13385,6 +16562,9 @@
       "group": "malformed-entities",
       "input": "&",
       "normalized": "&",
+      "tree": {
+        "symbol": "&"
+      },
       "model": {
         "class": "Math::Formula",
         "fields": {

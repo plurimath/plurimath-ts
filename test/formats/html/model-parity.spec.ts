@@ -25,11 +25,13 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { normalize, ParseError, RenderError } from "../../../src/core/index";
 import { toAsciimath } from "../../../src/formats/asciimath/renderer";
+import { parseHtmlNormalized } from "../../../src/formats/html/grammar";
 import { parseHtml } from "../../../src/formats/html/parser";
 import { preprocess } from "../../../src/formats/html/preprocess";
 import { toLatex } from "../../../src/formats/latex/renderer";
 import { toMathml } from "../../../src/formats/mathml/renderer";
 import { toUnicodemath } from "../../../src/formats/unicodemath/renderer";
+import { ParseFailed, type ParseValue, Slice } from "../../../src/pegkit/index";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -43,6 +45,8 @@ interface FixtureCase {
   readonly raises?: string;
   readonly raisedIn?: string;
   /** The gem's render of the parsed formula per target, or the class it raised. */
+  /** The gem's grammar tree for `normalized`, flattened; `null` where it refused. */
+  readonly tree?: unknown;
   readonly rendered?: { readonly [target: string]: string | { readonly raises: string } };
 }
 
@@ -154,6 +158,42 @@ describe("the parsed model", () => {
     "%s %j: deep-equals the gem's",
     (_group, _input, entry) => {
       expect(normalize(parseHtml(entry.input, optionsFor(entry)))).toStrictEqual(entry.model);
+    },
+  );
+});
+
+type PlainTree = string | null | PlainTree[] | { [key: string]: PlainTree };
+
+/** The tree with slices flattened to their text, as the generator serializes it. */
+function plain(value: ParseValue): PlainTree {
+  if (value === null) return null;
+  if (typeof value === "string") return value;
+  if (value instanceof Slice) return value.text;
+  if (Array.isArray(value)) return value.map(plain);
+  const result: Record<string, PlainTree> = {};
+  for (const [key, nested] of Object.entries(value)) result[key] = plain(nested);
+  return result;
+}
+
+const withTree = fixtures.cases.filter(
+  (entry): entry is FixtureCase & { normalized: string } =>
+    entry.tree !== undefined && entry.normalized !== undefined,
+);
+
+describe("the parse tree", () => {
+  it("has the rows it was generated with", () => {
+    expect(withTree.length).toBe(272);
+    expect(withTree.filter((entry) => entry.tree === null).length).toBe(13);
+  });
+
+  it.each(withTree.map((entry) => [entry.group, entry.input, entry] as const))(
+    "%s %j: matches the tree Html::Parse built",
+    (_group, _input, entry) => {
+      if (entry.tree === null) {
+        expect(() => parseHtmlNormalized(entry.normalized)).toThrow(ParseFailed);
+      } else {
+        expect(plain(parseHtmlNormalized(entry.normalized))).toStrictEqual(entry.tree);
+      }
     },
   );
 });

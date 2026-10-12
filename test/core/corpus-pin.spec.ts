@@ -254,6 +254,18 @@ const EXPECTED_PAYLOADS = [
   "latex/symbols.yaml",
   "latex/unary-functions.yaml",
   "latex/whitespace.yaml",
+  "mathml/elementary-math.yaml",
+  "mathml/enclose.yaml",
+  "mathml/fences.yaml",
+  "mathml/fractions.yaml",
+  "mathml/layout.yaml",
+  "mathml/over-under.yaml",
+  "mathml/partial-render.yaml",
+  "mathml/roots.yaml",
+  "mathml/scripts.yaml",
+  "mathml/tables.yaml",
+  "mathml/text.yaml",
+  "mathml/tokens.yaml",
   "unicode/fences.yaml",
   "unicode/numbers.yaml",
   "unicode/operators.yaml",
@@ -265,19 +277,6 @@ const EXPECTED_PAYLOADS = [
  * reason `EXPECTED_PAYLOADS` is. Sorted as the provenance lists them.
  */
 const EXPECTED_PENDING_PAYLOADS = [
-  "mathml/elementary-math.yaml",
-  "mathml/enclose.yaml",
-  "mathml/fences.yaml",
-  "mathml/fractions.yaml",
-  "mathml/layout.yaml",
-  "mathml/over-under.yaml",
-  "mathml/partial-render.yaml",
-  "mathml/rejections.yaml",
-  "mathml/roots.yaml",
-  "mathml/scripts.yaml",
-  "mathml/tables.yaml",
-  "mathml/text.yaml",
-  "mathml/tokens.yaml",
   "omml/accents.yaml",
   "omml/boxes.yaml",
   "omml/delimiters.yaml",
@@ -310,17 +309,17 @@ describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every payload the provenance records, matched by path", () => {
-    // 40 case payloads (18 AsciiMath, 18 LaTeX, 4 Unicode), 4 rejection
-    // payloads (one per input format that carries rejections: AsciiMath,
-    // LaTeX, Unicode, HTML), and 7 calls/1 payloads. Counted apart on purpose: a rejection payload carries no
+    // 52 case payloads (18 AsciiMath, 18 LaTeX, 12 MathML, 4 Unicode), 5
+    // rejection payloads (one per input format that carries rejections:
+    // AsciiMath, LaTeX, MathML, Unicode, HTML), and 7 calls/1 payloads. Counted apart on purpose: a rejection payload carries no
     // rendering and a calls payload carries a render under something other
     // than default options, so folding either into the case count would
     // inflate what "the corpus covers" claims.
-    expect(corpus.payloads.length).toBe(40);
-    expect(corpus.rejectionPayloads.length).toBe(4);
+    expect(corpus.payloads.length).toBe(52);
+    expect(corpus.rejectionPayloads.length).toBe(5);
     expect(corpus.callsPayloads.length).toBe(7);
-    // Plus 28 MathML and OMML payloads (plurimath-testsuite#21), byte-verified
-    // but not parsed: they are pending the MathML and OMML readers.
+    // Plus 15 OMML payloads (plurimath-testsuite#21), byte-verified but not
+    // parsed: they are pending the OMML reader.
     expect(corpus.pendingPayloads.map((payload) => payload.path)).toStrictEqual(
       EXPECTED_PENDING_PAYLOADS,
     );
@@ -328,9 +327,9 @@ describe("the pin as shipped", () => {
     assertExpectedPayloads(corpus);
   });
 
-  it("carries 237 cases with distinct ids", () => {
-    expect(corpus.cases.length).toBe(237);
-    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(237);
+  it("carries 524 cases with distinct ids", () => {
+    expect(corpus.cases.length).toBe(524);
+    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(524);
   });
 
   it("carries 66 calls/1 cases, all number_formatter, with distinct ids", () => {
@@ -354,9 +353,10 @@ describe("the pin as shipped", () => {
     expect([...byFormat.entries()].sort()).toStrictEqual([
       ["asciimath", 92],
       ["latex", 125],
+      ["mathml", 287],
       ["unicode", 20],
     ]);
-    // The rejections carry four notations, HTML among them though HTML has no
+    // The rejections carry five notations, HTML among them though HTML has no
     // case payload, and are counted per format for the same reason. This is what makes scoping the
     // rejection suites load-bearing: each parser may only be handed the cases
     // written in the notation it reads (`test/formats/*/rejection-parity.spec.ts`).
@@ -371,6 +371,7 @@ describe("the pin as shipped", () => {
       ["asciimath", 13],
       ["html", 38],
       ["latex", 14],
+      ["mathml", 12],
       ["unicode", 52],
     ]);
   });
@@ -403,6 +404,10 @@ describe("the pin as shipped", () => {
     expect(partial.map((entry) => entry.id)).toStrictEqual([
       "partial-sqrt-unclosed",
       ...LEFT_RIGHT_HTML_REFUSALS,
+      ...Array.from(
+        { length: 27 },
+        (_, index) => `mathml-partial-${String(index + 1).padStart(3, "0")}`,
+      ),
     ]);
     const entry = partial[0];
     expect(entry?.input).toBe("sqrt(");
@@ -448,7 +453,7 @@ describe("what this port checks against", () => {
     // shared corpus has no case to withhold — only the valid one is in the pin.
     expect(inPin).toStrictEqual(["text-unitsml-valid"]);
     expect(readCorpusCases().length).toBe(corpus.cases.length - inPin.length);
-    expect(readCorpusCases().length).toBe(236);
+    expect(readCorpusCases().length).toBe(523);
   });
 
   it("names the deferred feature and cites the architecture note", () => {
@@ -907,10 +912,10 @@ describe("a pin that quietly loses a group", () => {
   );
 
   it("loads without complaint, which is the whole problem", () => {
-    // The shipped 40 payloads less the one removed, and the shipped 237 cases
+    // The shipped 52 payloads less the one removed, and the shipped 524 cases
     // less the six `asciimath/frac.yaml` carries.
-    expect(shrunk.payloads.length).toBe(39);
-    expect(shrunk.cases.length).toBe(231);
+    expect(shrunk.payloads.length).toBe(51);
+    expect(shrunk.cases.length).toBe(518);
     expect(shrunk.payloads.map((payload) => payload.path)).not.toContain("asciimath/frac.yaml");
   });
 

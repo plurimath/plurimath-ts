@@ -41,6 +41,7 @@ import { describe, expect, it } from "vitest";
 import { ParseError, RenderError } from "../../../src/core/index";
 import { parseAsciimath } from "../../../src/formats/asciimath/index";
 import { parseLatex } from "../../../src/formats/latex/index";
+import { parseMathml } from "../../../src/formats/mathml/parser";
 import { toOmml } from "../../../src/formats/omml/renderer";
 import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
@@ -105,14 +106,15 @@ const pin = loadPinnedCorpus();
  * the port's parser for that same notation. The corpus spells UnicodeMath
  * `unicode`.
  *
- * The corpus also carries MathML, OMML and HTML input. Those are not swept:
- * this port reads HTML through a separate model-fixture layer, and has no
- * MathML or OMML parser. Handing one notation's source to another's parser
+ * The corpus also carries OMML and HTML input. Those are not swept: this
+ * port reads HTML through a separate model-fixture layer, and has no OMML
+ * parser. Handing one notation's source to another's parser
  * would record whatever fell out as though it were the gem's answer.
  */
 const PARSERS = {
   asciimath: parseAsciimath,
   latex: parseLatex,
+  mathml: parseMathml,
   unicode: parseUnicodemath,
 } as const;
 type InputFormat = keyof typeof PARSERS;

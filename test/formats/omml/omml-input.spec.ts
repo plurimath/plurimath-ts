@@ -59,6 +59,19 @@ describe("the documented differences", () => {
 
   it("drops run properties that style nothing", () => {
     expect(values(omath('<m:r><m:rPr><m:sty m:val="b"/></m:rPr></m:r>'))).toStrictEqual([]);
+    // A line break is content: the style applies to it.
+    expect(values(omath('<m:r><m:rPr><m:sty m:val="i"/></m:rPr><w:br/></m:r>'))).toStrictEqual([
+      {
+        class: "Math::Function::FontStyle::Italic",
+        fields: {
+          parameter_one: {
+            class: "Math::Function::Linebreak",
+            fields: { attributes: {}, parameter_one: null },
+          },
+          parameter_two: "italic",
+        },
+      },
+    ]);
     // Word properties that give no font class leave the math one alone.
     expect(values(omath('<m:r><m:rPr><m:sty m:val="i"/></m:rPr><w:rPr/></m:r>'))).toStrictEqual([]);
     expect(values(omath('<m:r><m:t>x</m:t><m:rPr><m:sty m:val="b"/></m:rPr></m:r>'))).toStrictEqual(

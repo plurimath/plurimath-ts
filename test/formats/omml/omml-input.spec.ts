@@ -97,6 +97,16 @@ describe("elements read by namespace", () => {
   });
 });
 
+describe("text cost", () => {
+  it("stays linear on a long run of inner whitespace", () => {
+    const text = `a${" ".repeat(200_000)}b`;
+    const started = performance.now();
+    parseOmml(omath(`<m:r><m:t>${text}</m:t></m:r>`));
+    // The anchored-regex strip this replaced took over 5 s at 16 000 spaces.
+    expect(performance.now() - started).toBeLessThan(2000);
+  });
+});
+
 describe("the element layer", () => {
   it("refuses a root other than oMathPara or oMath", () => {
     expect(() => parseOmmlDocument(`<m:r ${NS}><m:t>a</m:t></m:r>`)).toThrow(OmmlParseError);

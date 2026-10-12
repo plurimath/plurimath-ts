@@ -267,9 +267,16 @@ export function stringToHtmlEntity(text: string): string {
   return text.replace(ENCODE_BASIC, hexEntity).replace(ENCODE_EXTENDED, hexEntity);
 }
 
-/** Ruby `String#strip`. */
+/** What Ruby's `String#strip` removes: ASCII whitespace and NUL. */
+const STRIPPED: ReadonlySet<string> = new Set(["\t", "\n", "\v", "\f", "\r", " ", "\0"]);
+
+/** Ruby `String#strip`, by index scans from both ends (linear in the text). */
 export function rubyStrip(text: string): string {
-  return text.replace(/^[\t\n\v\f\r \0]+|[\t\n\v\f\r \0]+$/g, "");
+  let start = 0;
+  let end = text.length;
+  while (start < end && STRIPPED.has(text.charAt(start))) start++;
+  while (end > start && STRIPPED.has(text.charAt(end - 1))) end--;
+  return text.slice(start, end);
 }
 
 /** `FunctionTokenResolver#function_from_token`. */

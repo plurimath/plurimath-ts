@@ -327,6 +327,9 @@ end
 
 LOCALE_COVERAGE.each { |(text, locale)| sources << ["locale", text, locale] }
 
+# The P1 text and MathML targets, in the corpus's own spelling.
+RENDER_TARGETS = %w[asciimath latex mathml unicodemath].freeze
+
 seen = {}
 rows = sources.filter_map do |(group, input, locale)|
   next if seen.key?([input, locale])
@@ -351,18 +354,28 @@ rows = sources.filter_map do |(group, input, locale)|
     row["raisedIn"] = "normalize"
   end
 
+  formula = nil
   begin
-    row["model"] = CorpusGenerator.serialize_node(
-      if locale
-        Plurimath::Math.parse(input, :html, locale: locale)
-      else
-        Plurimath::Math.parse(input, :html)
-      end,
-      "model",
-    )
+    formula = if locale
+                Plurimath::Math.parse(input, :html, locale: locale)
+              else
+                Plurimath::Math.parse(input, :html)
+              end
+    row["model"] = CorpusGenerator.serialize_node(formula, "model")
   rescue ORACLE_REFUSAL => e
     row["raises"] = e.class.name
     row["raisedIn"] ||= "parse"
+  end
+  # The gem's own renders of the parsed formula, so the port's HTML parser is
+  # checked end to end (parse, then render) and not only up to the model. A
+  # target the gem refuses records the error class instead of bytes. Rendered
+  # without a locale, as the corpus renders, so only the no-locale rows carry it.
+  if formula && !locale
+    row["rendered"] = RENDER_TARGETS.to_h do |target|
+      [target, formula.public_send(:"to_#{target}")]
+    rescue StandardError => e
+      [target, { "raises" => e.class.name }]
+    end
   end
   row
 end

@@ -22,7 +22,8 @@
  * gets something meaningful; one that WRITES it was broken by either choice.
  */
 
-import { type FormulaNode, UnsupportedFormatError } from "../core/index";
+import { describeThrown } from "../core/errors";
+import { type FormulaNode, InvalidTypeError, UnsupportedFormatError } from "../core/index";
 import { parseAsciimath, toAsciimath } from "../formats/asciimath/index";
 import { parseHtml, toHtml } from "../formats/html/index";
 import { parseLatex, toLatex } from "../formats/latex/index";
@@ -102,6 +103,24 @@ const PARSERS: Partial<Record<Format, (input: string) => FormulaNode>> = {
  */
 const DISPLAY_TYPES: readonly string[] = ["omml", "latex", "mathml", "asciimath", "unicodemath"];
 
+/**
+ * The gem's `Math::VALID_TYPES` keys (`math.rb:16-24`), in its order: the
+ * type tokens `Math.parse` accepts, which plurimath-js's constructor reaches.
+ * A token outside it raises `InvalidTypeError`, measured on the oracle for
+ * `"foo"`, `"unicodemath"` and `"HTML"` (the check is case-sensitive). A token
+ * inside it that has no parser here (`mathml`, `omml`, `unitsml`) still
+ * raises `UnsupportedFormatError`: the gem parses those.
+ */
+const PARSE_TYPES: readonly string[] = [
+  "omml",
+  "html",
+  "latex",
+  "mathml",
+  "unitsml",
+  "unicode",
+  "asciimath",
+];
+
 export default class Plurimath {
   /**
    * The parsed formula.
@@ -124,6 +143,13 @@ export default class Plurimath {
   declare readonly data: FormulaNode;
 
   constructor(data: string, format: Format) {
+    if (typeof format !== "string" || !PARSE_TYPES.includes(format)) {
+      throw new InvalidTypeError(
+        typeof format === "string" ? format : describeThrown(format),
+        PARSE_TYPES,
+        `\`type\` must be one of: \`${PARSE_TYPES.join("`, `")}\``,
+      );
+    }
     const parse = PARSERS[format];
     if (parse === undefined) throw new UnsupportedFormatError(format);
     Object.defineProperty(this, "data", {
@@ -197,17 +223,17 @@ export default class Plurimath {
    * so it falls through to the bare `"|_ Math zone\n"` placeholder — content
    * independent, because no renderer ever runs on that path.
    *
-   * `UnsupportedFormatError`, not `UnsupportedFeatureError`, for a bad
-   * `lang`: this is a token rejected for not being one of a fixed set,
-   * exactly what that error already means for the constructor's `format`
-   * (`PARSERS` above) -- message text is not API (`core/errors.ts:1-8`), so
-   * reusing it costs nothing and keeps the error taxonomy to two axes:
-   * format-token validation, and no-parser-yet.
+   * A `lang` outside `DISPLAY_TYPES` raises `InvalidTypeError`, as the gem
+   * does (`type_error!`, `math/formula.rb:809-811`), with its message.
    */
   toDisplay(lang: string): string {
     const lower = lang.toLowerCase();
     if (!DISPLAY_TYPES.includes(lower)) {
-      throw new UnsupportedFormatError(lang);
+      throw new InvalidTypeError(
+        lang,
+        DISPLAY_TYPES,
+        `Invalid type provided: ${lang}. Must be one of ${DISPLAY_TYPES.join(", ")}.`,
+      );
     }
     if (lang !== lower) return "|_ Math zone\n";
     return buildTreeDump(this.data, lower as DisplayFormat);

@@ -4,7 +4,8 @@
  * The package has no YAML dependency and `package.json` is not this task's to
  * change, so the suite reads `corpus/*.yaml` with this. It covers exactly the
  * subset Psych emits for those files — block mappings and sequences, plain,
- * single- and double-quoted scalars, literal block scalars, and empty flow
+ * single- and double-quoted scalars, literal block scalars (with an optional
+ * indentation indicator), and empty flow
  * collections — and **throws on anything else** rather than guessing. A silent
  * misparse here would make the corpus agree with a broken model.
  */
@@ -43,12 +44,22 @@ export function parseYaml(text: string): YamlValue {
   return parseValue(state, indentOf(lines[state.index] ?? ""));
 }
 
+/**
+ * YAML's white space is the space and the tab, nothing else. `String#trim`
+ * also takes U+00A0 and the other Unicode spaces, and the OMML corpus has
+ * plain scalars ending in U+00A0 (`0<j<n` and a non-breaking space) that
+ * Psych keeps.
+ */
+function trimYaml(text: string): string {
+  return text.replace(/^[ \t]+|[ \t]+$/g, "");
+}
+
 function indentOf(line: string): number {
-  return line.length - line.trimStart().length;
+  return line.length - line.replace(/^[ \t]+/, "").length;
 }
 
 function isBlank(line: string): boolean {
-  return line.trim() === "";
+  return trimYaml(line) === "";
 }
 
 function skipBlank(state: State): void {
@@ -61,6 +72,11 @@ function parseValue(state: State, column: number): YamlValue {
   const rest = (state.lines[state.index] ?? "").slice(column);
   if (rest === "-" || rest.startsWith("- ")) return parseSequence(state, column);
   if (KEY_PATTERN.test(rest)) return parseMapping(state, column);
+  // A block scalar as a sequence item (`- |2`) is absent from the corpus;
+  // refused rather than read as the plain text of its header.
+  if (rest.startsWith("|") || rest.startsWith(">")) {
+    throw new Error(`unsupported block scalar header "${rest}" at line ${state.index + 1}`);
+  }
   state.index += 1;
   return parseScalar(continueQuoted(state, rest));
 }
@@ -81,7 +97,7 @@ function parseMapping(state: State, column: number): { readonly [key: string]: Y
     const inline = match[2];
     if (key in result) throw new Error(`duplicate key "${key}" at line ${state.index + 1}`);
     state.index += 1;
-    if (inline !== undefined && (inline === "|" || inline === "|-" || inline === "|+")) {
+    if (inline !== undefined && (inline.startsWith("|") || inline.startsWith(">"))) {
       result[key] = parseBlockScalar(state, column, inline);
     } else if (inline !== undefined && inline !== "") {
       result[key] = parseScalar(continueQuoted(state, inline));
@@ -111,7 +127,7 @@ function parseSequence(state: State, column: number): readonly YamlValue[] {
       items.push(parseNested(state, column));
     } else {
       const after = rest.slice(1);
-      const offset = after.length - after.trimStart().length;
+      const offset = after.length - after.replace(/^[ \t]+/, "").length;
       items.push(parseValue(state, column + 1 + offset));
     }
     first = false;
@@ -133,9 +149,31 @@ function parseNested(state: State, column: number): YamlValue {
   return parseValue(state, nextIndent);
 }
 
+/**
+ * A literal block scalar header: `|`, an optional chomping indicator (`-`
+ * strip, nothing for clip) and an optional indentation indicator, a digit from
+ * 1 to 9, in either order. Psych writes `|2` when the text starts with a blank
+ * line or a space, where the indentation could not be detected; the three
+ * OMML payloads of `omml-limits-016` start with a newline and use it. Keep
+ * chomping (`+`) and folded scalars (`>`) are absent from the corpus and are
+ * refused rather than read as clip and literal.
+ */
+const BLOCK_HEADER = /^\|(?:([1-9])(-)?|(-)([1-9])?)?$/;
+
+/**
+ * `column` is the indentation of the mapping that owns the key. An explicit
+ * indentation indicator counts from there, as Psych counts it: `a: |2` at
+ * column 0 strips two spaces from each line, not the four the first line has.
+ */
 function parseBlockScalar(state: State, column: number, header: string): string {
+  const match = BLOCK_HEADER.exec(header);
+  if (match === null) {
+    throw new Error(`unsupported block scalar header "${header}" at line ${state.index}`);
+  }
+  const indicator = match[1] ?? match[4];
+  const strip = (match[2] ?? match[3]) === "-";
   const collected: string[] = [];
-  let blockIndent = -1;
+  let blockIndent = indicator === undefined ? -1 : column + Number(indicator);
   while (state.index < state.lines.length) {
     const line = state.lines[state.index] ?? "";
     if (isBlank(line)) {
@@ -146,16 +184,23 @@ function parseBlockScalar(state: State, column: number, header: string): string 
     const lineIndent = indentOf(line);
     if (lineIndent <= column) break;
     if (blockIndent === -1) blockIndent = lineIndent;
+    if (lineIndent < blockIndent) {
+      // Psych raises here; slicing would cut into the text.
+      throw new Error(
+        `block scalar line ${state.index + 1} is indented ${lineIndent}, ` +
+          `less than the block's ${blockIndent}: ${line}`,
+      );
+    }
     collected.push(line.slice(blockIndent));
     state.index += 1;
   }
   while (collected.length > 0 && collected[collected.length - 1] === "") collected.pop();
   const body = collected.join("\n");
-  return header === "|-" ? body : `${body}\n`;
+  return strip ? body : `${body}\n`;
 }
 
 function parseScalar(raw: string): YamlValue {
-  const text = raw.trim();
+  const text = trimYaml(raw);
   if (text === "" || text === "~" || text === "null") return null;
   if (text === "true") return true;
   if (text === "false") return false;

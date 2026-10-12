@@ -116,6 +116,6 @@ describe("CLI render option errors", () => {
     );
     expect(code).toBe(EXIT_RUNTIME_ERROR);
     expect(out).toEqual([]);
-    expect(err.join("")).toMatch(/^plurimath: \[/);
+    expect(err.join("")).toMatch(/^plurimath: \[INVALID_TYPE\]/);
   });
 });

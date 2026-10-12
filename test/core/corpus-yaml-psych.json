@@ -1,0 +1,87 @@
+{
+  "generator": "scripts/probes/corpus-yaml-psych.rb",
+  "ruby": "4.0.1",
+  "psych": "5.4.0",
+  "pin": "cf3c5ebf8b8ce35ade189b11a741f272ae93c8a0",
+  "payloads": {
+    "omml/accents.yaml": "64797752809b4eb54bab0b845505c1c7091a4c23c3957bba33deb3b498f9ac9a",
+    "omml/boxes.yaml": "197167a839450b5b3c566a4aa658c5f3f654cb75a67f5b256f8e3cbfa9f3cd96",
+    "omml/delimiters.yaml": "02c6fecef5e05fd0cb3bca17429f505545173e81e3896d9f9c8ceb42d7df27e9",
+    "omml/equation-arrays.yaml": "0af25994d8ab14455ea704a2c22423ee2bff9276b4dd1e39207173706024d1ef",
+    "omml/fractions.yaml": "42e152a8f234e92cf0e2d9cd5869048954850df7c10209ca2e19639b6177dc79",
+    "omml/functions.yaml": "1cce7862ac6d1dd2d070bad8116b56c565d32ff9a1ac5dc4cf7f3e151a8d8e19",
+    "omml/group-characters.yaml": "e8b2778d0d4affc3ebcdb2c3d39ff8d40aa64bd234a74b0f05bbd334968dc4e7",
+    "omml/limits.yaml": "3665f1487b7c6806b7751aee29a4465f901225b41aecaddfef50b9e658aa868a",
+    "omml/matrices.yaml": "9dfe1fc5645d4a961c3f6eae97f40fc2f1cfdcbb094e5c7d5aa4fab57ad258f6",
+    "omml/nary.yaml": "3e8b7e0ea6ccdd02d98277ffe5bd6b0f102fa155cec365af239c66e33dd5607f",
+    "omml/partial-render.yaml": "35668822f4d51ef5ca13903849de489ea1de1311a1fbc50d9d83acf941b2b79b",
+    "omml/rejections.yaml": "e859aba0fd413eb301e6a60337d6a83f270554255d11faa6a55613258c9c7795",
+    "omml/roots.yaml": "c82ba76ccadfc8033b8a0d3ee96c75d8a30f0dd8f11f2b173ebaeafc2fbc3f87",
+    "omml/runs.yaml": "71fbf40bf7909041192e1356a1fd4d126239200c4952fd6287c65ffa70012afa",
+    "omml/scripts.yaml": "b08f658906c486b0bb173aacb85eaa70a86aa65344a89d3ba7dfe39202bcf5e0"
+  },
+  "snippets": [
+    {
+      "yaml": "a: |2\n\n    x\n",
+      "value": {
+        "a": "\n  x\n"
+      }
+    },
+    {
+      "yaml": "a: |2\n  x\n    y\n",
+      "value": {
+        "a": "x\n  y\n"
+      }
+    },
+    {
+      "yaml": "a: |2-\n\n    x\n",
+      "value": {
+        "a": "\n  x"
+      }
+    },
+    {
+      "yaml": "a: |-2\n    x\n",
+      "value": {
+        "a": "  x"
+      }
+    },
+    {
+      "yaml": "a: |1\n  x\n",
+      "value": {
+        "a": " x\n"
+      }
+    },
+    {
+      "yaml": "a: |2\n\n\n    x\n\n",
+      "value": {
+        "a": "\n\n  x\n"
+      }
+    },
+    {
+      "yaml": "- id: k\n  a: |2\n\n    <m>\n      <n/>\n    </m>\n  b: c\n",
+      "value": [
+        {
+          "id": "k",
+          "a": "\n<m>\n  <n/>\n</m>\n",
+          "b": "c"
+        }
+      ]
+    },
+    {
+      "yaml": "a: |4\n  x\n",
+      "error": true
+    },
+    {
+      "yaml": "a: x \n",
+      "value": {
+        "a": "x "
+      }
+    },
+    {
+      "yaml": "a:  x\n",
+      "value": {
+        "a": " x"
+      }
+    }
+  ]
+}

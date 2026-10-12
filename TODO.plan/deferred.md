@@ -759,15 +759,6 @@ of that harvest (`CorpusGenerator.model_fixture_harvests?` in
 targets for those parsers. Drop the predicate, regenerate, and fix what the
 parsers miss.
 
-### The corpus YAML reader misreads a block-scalar indentation indicator
-
-**Trigger: OMML input leaving `PENDING_READER_FORMATS`.**
-
-`test/core/corpus-yaml.ts` reads a block scalar header `|2` (an explicit
-indentation indicator) as the literal text `|2`. Three OMML payloads
-(`equation-arrays.yaml`, `limits.yaml`, `matrices.yaml`) use it; they are
-pending and only byte-verified, so nothing reads them wrong today.
-
 ### HTML Text: unicode[:name] substitutions
 
 **Trigger: the generated HTML symbol data (the HTML renderer's phase two).**
@@ -779,6 +770,25 @@ table. The port's HTML renderer refuses a `Text` holding one
 MathML corpus cases reach it (`mathml-text-001`, `-002`, `-003`, `-004`,
 `-006`, `-007`); they are pinned as refusals in `PORT_REFUSES` and as
 `renderGaps` in `test/formats/html/render-parity.spec.ts`.
+
+### The corpus YAML reader misreads a block-scalar indentation indicator (resolved)
+
+**Resolved (2026-10-12).** `test/core/corpus-yaml.ts` read a block scalar
+header `|2` (an explicit indentation indicator) as the plain text `|2`. In the
+pin at `cf3c5ebf` one case uses it, `omml-limits-016` in `omml/limits.yaml`,
+for three payloads (`input`, `preprocessed` and the model's `input_string`),
+each starting with a blank line. The reader now reads the indicator from the
+owning mapping's indentation, as Psych does, and refuses `|+`, `>` and a line
+indented less than the block. Comparing every OMML payload with Psych found a
+second difference: `String#trim` also removed a trailing U+00A0 that Psych
+keeps, in three plain scalars of `omml/equation-arrays.yaml` and
+`omml/matrices.yaml`; the reader now trims only spaces and tabs.
+
+`scripts/probes/corpus-yaml-psych.rb` records Psych 5.4.0's reading of all 15
+OMML payloads, as a digest per file, and of the block scalar headers in
+`test/core/corpus-yaml-psych.json`; `test/core/corpus-yaml.spec.ts` ("the OMML
+payloads, as Psych reads them") requires the same result. The OMML payloads are
+still pending their reader in `PENDING_READER_FORMATS`.
 
 ## Upstream issues
 

@@ -551,11 +551,11 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
       and `omml` raise the port's structured `UnsupportedFormatError` until their
       parsers land.
       (done: `test/compat/plurimath-class.spec.ts:74` for the order, `:98-146` per format; checked 2026-09-24)
-- [ ] `toDisplay` matches the JS oracle for `omml`, `latex`, `mathml`, `asciimath`, and
+- [x] `toDisplay` matches the JS oracle for `omml`, `latex`, `mathml`, `asciimath`, and
       `unicodemath`, and the invalid language path matches the measured invalid-type
       behavior. The oracle fixtures also record the native-Ruby recognized-string result
       `"|_ Math zone\n"` and do not substitute that result for an Opal-wrapper measurement.
-      (open: #139 and #150 landed `toDisplay`; `test/compat/to-display.spec.ts` checks it against `test/compat/to-display-fixtures.json`, generated from the oracle by `scripts/battery-to-display-fixtures.rb`: the five lowercase names reproduce the gem's Symbol dispatch for six inputs, and the native-Ruby String results (`"|_ Math zone\n"`, lowercase and uppercase) sit in their own rows, not substituted for the port's lowercase result. One part is not met: for `html` and `unicode` the gem raises `Plurimath::Math::InvalidTypeError` (measured in the same fixture) and the port raises `UnsupportedFormatError` (`src/compat/index.ts:203-205`), pinned as a divergence. Matching it needs a new public error class, which is a maintainer decision; checked 2026-10-12)
+      (done: #139 and #150 landed `toDisplay`; `test/compat/to-display.spec.ts` checks it against `test/compat/to-display-fixtures.json`, generated from the oracle by `scripts/battery-to-display-fixtures.rb`: the five lowercase names reproduce the gem's Symbol dispatch for six inputs, and the native-Ruby String results (`"|_ Math zone\n"`, lowercase and uppercase) sit in their own rows, not substituted for the port's lowercase result. For `html` and `unicode` the gem raises `Plurimath::Math::InvalidTypeError` (measured in the same fixture) and the port now raises `InvalidTypeError` (`test/compat/to-display.spec.ts`, invalid rows; message pinned in `test/compat/plurimath-class.spec.ts`); checked 2026-10-12)
 - [x] `toMathml()`, `toMathml(false)`, and `toMathml(true)` produce the measured default,
       false, and intent-bearing results.
       (done: `test/compat/plurimath-class.spec.ts:200`, `:933`, `:937`; checked 2026-09-24)

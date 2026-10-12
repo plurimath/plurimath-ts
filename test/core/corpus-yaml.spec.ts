@@ -8,6 +8,7 @@
  * "escapes Psych accepts" loads to the value asserted here.
  */
 
+import { createHash } from "node:crypto";
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -15,6 +16,7 @@ import {
   isPendingReaderPayload,
   loadPinnedCorpus,
   PINNED_CORPUS_ROOT,
+  pinnedSubmoduleCommit,
   REPO_ROOT,
 } from "./corpus-pin";
 import { parseYaml, type YamlValue } from "./corpus-yaml";
@@ -177,5 +179,97 @@ describe("the corpus itself", () => {
     };
     const simple = document.cases.find((entry) => entry.id === "frac-simple");
     expect(simple?.expected.latex).toBe(String.raw`\frac{a}{b}`);
+  });
+});
+
+/**
+ * Psych's reading of the OMML payloads and of a few block scalar headers,
+ * recorded by `scripts/probes/corpus-yaml-psych.rb` against the pin. The
+ * payloads are compared through a digest of a canonical encoding the probe
+ * writes the same way, so the 1.8 MB of loaded documents need not be committed.
+ */
+interface PsychRecord {
+  readonly pin: string;
+  readonly payloads: { readonly [path: string]: string };
+  readonly snippets: readonly {
+    readonly yaml: string;
+    readonly value?: YamlValue;
+    readonly error?: true;
+  }[];
+}
+
+const PSYCH: PsychRecord = JSON.parse(
+  readFileSync(join(REPO_ROOT, "test", "core", "corpus-yaml-psych.json"), "utf8"),
+) as PsychRecord;
+
+/** The probe's `canonical`, byte for byte: type tag, length, then contents. */
+function canonicalYaml(value: YamlValue): Buffer {
+  if (value === null) return Buffer.from("n");
+  if (value === true) return Buffer.from("t");
+  if (value === false) return Buffer.from("f");
+  if (typeof value === "number") {
+    if (!Number.isInteger(value)) throw new Error(`no canonical encoding for ${value}`);
+    return Buffer.from(`i${value};`);
+  }
+  if (typeof value === "string") {
+    const bytes = Buffer.from(value, "utf8");
+    return Buffer.concat([Buffer.from(`s${bytes.length}:`), bytes]);
+  }
+  if (Array.isArray(value)) {
+    return Buffer.concat([Buffer.from(`a${value.length}:`), ...value.map(canonicalYaml)]);
+  }
+  const entries = Object.entries(value as { readonly [key: string]: YamlValue });
+  return Buffer.concat([
+    Buffer.from(`m${entries.length}:`),
+    ...entries.flatMap(([key, item]) => [canonicalYaml(key), canonicalYaml(item)]),
+  ]);
+}
+
+describe("the OMML payloads, as Psych reads them", () => {
+  it("was recorded against the pinned corpus", () => {
+    expect(PSYCH.pin).toBe(pinnedSubmoduleCommit().indexCommit);
+  });
+
+  it("covers every OMML payload the pin ships", () => {
+    const omml = yamlFiles(join(PINNED_CORPUS_ROOT, "corpus", "omml")).map((path) =>
+      relative(join(PINNED_CORPUS_ROOT, "corpus"), path).split("\\").join("/"),
+    );
+    expect(Object.keys(PSYCH.payloads).sort()).toStrictEqual(omml);
+    expect(omml.length).toBe(15);
+  });
+
+  it.each(Object.entries(PSYCH.payloads))("reads %s to Psych's document", (path, digest) => {
+    const document = parseYaml(readFileSync(join(PINNED_CORPUS_ROOT, "corpus", path), "utf8"));
+    expect(createHash("sha256").update(canonicalYaml(document)).digest("hex")).toBe(digest);
+  });
+
+  it("reads omml-limits-016's |2 payloads as text starting with a newline", () => {
+    const path = join(PINNED_CORPUS_ROOT, "corpus", "omml", "limits.yaml");
+    const document = parseYaml(readFileSync(path, "utf8")) as {
+      readonly cases: readonly { readonly id: string; readonly input: string }[];
+    };
+    const input = document.cases.find((entry) => entry.id === "omml-limits-016")?.input;
+    expect(input?.startsWith("\n<m:oMathPara ")).toBe(true);
+    expect(input?.includes("\n  <m:oMath>\n")).toBe(true);
+  });
+});
+
+describe("block scalar headers, as Psych reads them", () => {
+  it.each(PSYCH.snippets.map((snippet) => [JSON.stringify(snippet.yaml), snippet] as const))(
+    "%s",
+    (_name, snippet) => {
+      if (snippet.error === true) {
+        expect(() => parseYaml(`---\n${snippet.yaml}`)).toThrow();
+      } else {
+        expect(parseYaml(`---\n${snippet.yaml}`)).toStrictEqual(snippet.value);
+      }
+    },
+  );
+
+  it("refuses the headers the corpus does not use rather than guessing", () => {
+    expect(() => read("a: |+\n  x")).toThrow(/unsupported block scalar header "\|\+"/);
+    expect(() => read("a: >\n  x")).toThrow(/unsupported block scalar header ">"/);
+    expect(() => read("a: |0\n  x")).toThrow(/unsupported block scalar header/);
+    expect(() => read("- |2\n\n  x")).toThrow(/unsupported block scalar header "\|2"/);
   });
 });

@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  InvalidTypeError,
   MissingSymbolDataError,
   ParseError,
   PlurimathError,
@@ -16,6 +17,7 @@ describe("error contract", () => {
   it("gives every error a stable code", () => {
     expect(new ParseError("m", "x^", "asciimath", 2).code).toBe("PARSE_ERROR");
     expect(new UnsupportedFormatError("omml").code).toBe("UNSUPPORTED_FORMAT");
+    expect(new InvalidTypeError("foo", ["latex"], "m").code).toBe("INVALID_TYPE");
     expect(new MissingSymbolDataError("Sigma", "mathml").code).toBe("MISSING_SYMBOL_DATA");
     expect(new RenderError("m", "mathml", "frac").code).toBe("RENDER_ERROR");
   });
@@ -33,6 +35,17 @@ describe("error contract", () => {
     expect(error).toBeInstanceOf(PlurimathError);
     expect(error.name).toBe("UnsupportedFormatError");
     expect(error.stack).toBeDefined();
+  });
+
+  it("gives InvalidTypeError its fields, and a validTypes the caller cannot change", () => {
+    const source = ["latex", "html"];
+    const error = new InvalidTypeError("foo", source, "m");
+    expect(error).toBeInstanceOf(PlurimathError);
+    expect(error.name).toBe("InvalidTypeError");
+    expect(error.type).toBe("foo");
+    expect(error.validTypes).toEqual(["latex", "html"]);
+    expect(error.validTypes).not.toBe(source);
+    expect(Object.isFrozen(error.validTypes)).toBe(true);
   });
 
   it("lets a consumer discriminate on code alone, without instanceof", () => {

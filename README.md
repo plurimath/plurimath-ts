@@ -114,11 +114,13 @@ p.toUnicodemath(); // x^(2)
 The constructor names six formats (`FORMATS`): `asciimath`, `latex`, `mathml`,
 `html`, `unicode` and `omml`. Note `unicode`, not `unicodemath`. Four
 construct (`asciimath`, `latex`, `html`, `unicode`); `mathml` and `omml` throw
-`UnsupportedFormatError`, as does any unknown name, including `unicodemath`.
+`UnsupportedFormatError`; any name the gem rejects, including `unicodemath`,
+throws `InvalidTypeError`.
 Methods: `toAsciimath`, `toLatex`, `toMathml`, `toHtml`, `toOmml`,
 `toUnicodemath` all work. `toMathml(true)` renders the gem's `intent`
 attributes (#136). `toDisplay(lang)` returns the gem's tree dump (#139, #150),
-and throws `UnsupportedFeatureError` for the few node kinds it refuses
+throws `InvalidTypeError` for a `lang` the gem rejects (`html`, `unicode`), and
+throws `UnsupportedFeatureError` for the few node kinds it refuses
 (`src/compat/to-display.ts`, module doc).
 
 ### Command line
@@ -173,6 +175,7 @@ import { ParseError, UnsupportedFeatureError, UnsupportedFormatError } from "@pl
 |---|---|---|
 | `ParseError` | `PARSE_ERROR` | input does not parse, e.g. `parseLatex("\\frac{1")` |
 | `UnsupportedFormatError` | `UNSUPPORTED_FORMAT` | `new Plurimath("<math/>", "mathml")` |
+| `InvalidTypeError` | `INVALID_TYPE` | `new Plurimath("x", "asciimath").toDisplay("html")` |
 | `UnsupportedFeatureError` | `UNSUPPORTED_FEATURE` | `new Plurimath("mathbf(x)", "asciimath").toDisplay("unicodemath")` |
 | `RenderError` | `RENDER_ERROR` | a node the renderer refuses, e.g. `toOmml(parseAsciimath("cancel(x)"))` |
 

@@ -178,6 +178,16 @@ const FIXTURE_SPECS = {
     usesCorpus: false,
     usesRenderInventory: false,
   },
+  // Each AsciiMath grammar rule run as the parse root over a fixed input
+  // list: the gem's verdict, and where a refusal points. Claims no corpus.
+  "failure-position-fixtures.json": {
+    generator: "scripts/generate-asciimath-failure-positions.rb",
+    schema: "plurimath-ts/asciimath-failure-positions/1",
+    rows: "cases",
+    shape: "failure-positions",
+    usesCorpus: false,
+    usesRenderInventory: false,
+  },
 } as const;
 
 /** Per-path overrides for the basenames more than one format now uses. */
@@ -189,6 +199,7 @@ const FIXTURE_SPEC_PATHS: { readonly [path: string]: FixtureSpec } = {
     shape: "format-model",
     parseTextField: "normalized",
     parseTextStage: "normalize",
+    extraRowFields: ["tree", "rendered"],
     corpusGroup: "corpus-html",
     corpusCountField: "corpusHtmlCount",
     usesCorpus: true,
@@ -262,6 +273,12 @@ interface FixtureSpec {
    * a format names its stage something else.
    */
   readonly parseTextStage?: string;
+  /**
+   * Row fields a format-model fixture may carry beyond the outcome: HTML's
+   * records the gem's grammar `tree` and its `rendered` targets. Each is
+   * optional per row and checked for shape where present.
+   */
+  readonly extraRowFields?: readonly ("tree" | "rendered")[];
   readonly corpusGroup?: string;
   readonly corpusCountField?: string;
   readonly usesCorpus: boolean;
@@ -286,6 +303,7 @@ const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "render-kinds-fixtures.json"
   | "evaluation-fixtures.json"
   | "cli-fixtures.json"
+  | "failure-position-fixtures.json"
 )[];
 const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
@@ -1299,6 +1317,23 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           // no `locale` key was parsed under the default configuration.
           const localeKey = "locale" in item ? ["locale"] : [];
           if ("locale" in item) stringField(item, "locale", record.relative);
+          const extras = (record.spec.extraRowFields ?? []).filter((key) => key in item);
+          // A refused parse records `null`; a tree is a slice's text or a structure.
+          if ("tree" in item && item.tree !== null) {
+            expect(["string", "object"], `${at}.tree`).toContain(typeof item.tree);
+          }
+          if ("rendered" in item) {
+            const rendered = mapField(item, "rendered", at);
+            for (const [target, outcome] of Object.entries(rendered)) {
+              if (typeof outcome !== "string") {
+                expectExactKeys(
+                  mapping(outcome, `${at}.rendered.${target}`),
+                  ["raises"],
+                  `${at}.rendered.${target}`,
+                );
+              }
+            }
+          }
           const hasModel = typeof item.model === "object" && item.model !== null;
           const hasRefusal = typeof item.raises === "string";
           expect(Number(hasModel) + Number(hasRefusal), `${at} outcome`).toBe(1);
@@ -1313,6 +1348,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
                 "raisedIn",
                 ...(parseTextField in item ? [parseTextField] : []),
                 ...localeKey,
+                ...extras,
               ],
               at,
             );
@@ -1322,7 +1358,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           } else {
             expectExactKeys(
               item,
-              ["group", "id", "input", parseTextField, "model", ...localeKey],
+              ["group", "id", "input", parseTextField, "model", ...localeKey, ...extras],
               at,
             );
             stringValue(item, parseTextField, record.relative);
@@ -1428,6 +1464,61 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           (row) => mapping(row, record.relative).group === record.spec.corpusGroup,
         ).length;
         expect(integerField(record.payload, "corpusOmmlCount", record.relative)).toBe(corpusRows);
+      } else if (record.spec.shape === "failure-positions") {
+        // A row is one rule, one input, and the gem's verdict; a refusal
+        // carries the offset and the root cause Parslet reported.
+        expectExactKeys(
+          record.payload,
+          [
+            "$comment",
+            "schema",
+            "format",
+            "ruleCount",
+            "inputCount",
+            "caseCount",
+            "rejectedCount",
+            "cases",
+          ],
+          record.relative,
+        );
+        expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
+        const rejected = rows.filter((row, index) => {
+          const at = `${record.relative}.cases[${index}]`;
+          const item = mapping(row, at);
+          const accepts = booleanField(item, "accepts", at);
+          expectExactKeys(
+            item,
+            accepts
+              ? ["id", "rule", "gemRule", "input", "accepts"]
+              : [
+                  "id",
+                  "rule",
+                  "gemRule",
+                  "input",
+                  "accepts",
+                  "index",
+                  "prefixLength",
+                  "rootIndex",
+                  "message",
+                ],
+            at,
+          );
+          stringField(item, "id", at);
+          stringField(item, "rule", at);
+          stringField(item, "gemRule", at);
+          stringValue(item, "input", at);
+          if (!accepts) {
+            integerField(item, "index", at);
+            integerField(item, "rootIndex", at);
+            stringField(item, "message", at);
+            if (item.prefixLength !== null) integerField(item, "prefixLength", at);
+          }
+          return !accepts;
+        }).length;
+        for (const count of ["ruleCount", "inputCount"]) {
+          integerField(record.payload, count, record.relative);
+        }
+        expect(integerField(record.payload, "rejectedCount", record.relative)).toBe(rejected);
       } else if (record.spec.shape === "xml-reader") {
         // A row is one input and what the gem's reader did with it: the tree
         // its models receive, or the exception class it refused with.

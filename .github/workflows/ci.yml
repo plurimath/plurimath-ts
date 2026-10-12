@@ -93,11 +93,17 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
+      # Install on Node 24: the `prepare` script builds dist with tsdown, which
+      # does not run on Node 20. The tests then run on the matrix version.
       - uses: actions/setup-node@v5
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 24
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - run: pnpm test

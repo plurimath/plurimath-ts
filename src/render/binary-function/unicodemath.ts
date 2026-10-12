@@ -84,6 +84,15 @@ export function renderBinaryFunction(
 ): string | null {
   const name = node.name;
   switch (name) {
+    case "Intent": {
+      // `intent.rb:14-17`: both slots unguarded inside the parens, the SECOND
+      // first, and the parens only when either slot is set.
+      const inner =
+        present(node.parameterOne) || present(node.parameterTwo)
+          ? `(${renderChild(node.parameterTwo ?? null, context, "intent.parameterTwo") ?? ""}${renderChild(node.parameterOne ?? null, context, "intent.parameterOne") ?? ""})`
+          : "";
+      return `ⓘ${inner}`;
+    }
     case "Power":
       return renderPower(node, context);
     case "Over": {
@@ -165,6 +174,10 @@ export function renderBinaryFunction(
       )})`;
     case "Td":
       return renderTd(node, context);
+    case "Semantics":
+      // The gem has no `Semantics#to_unicodemath`, so the call raises
+      // NoMethodError (measured on the pinned oracle 00c52783).
+      throw new RenderError("Semantics has no UnicodeMath rendering", FORMAT, node.kind);
     default:
       // Nothing reaches here through the census as it stands: all seven
       // reachable names have an arm. A name the census knows but this file

@@ -326,6 +326,17 @@ module OracleGate
         ["--out", File.join(regenerated_root, "test", "formats", format)]
       end,
     },
+    {
+      # Per-rule failure positions. Only AsciiMath has them; the map shape
+      # stops the run if another format ever commits this basename.
+      basename: "failure-position-fixtures.json",
+      script: {
+        "asciimath" => "generate-asciimath-failure-positions.rb",
+      }.freeze,
+      arguments: lambda do |format, regenerated_root|
+        ["--out", File.join(regenerated_root, "test", "formats", format)]
+      end,
+    },
   ].freeze
 
   # The script one family runs for one format. A family names either one

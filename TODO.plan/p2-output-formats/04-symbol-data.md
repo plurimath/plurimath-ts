@@ -679,10 +679,10 @@ No subpath grew. `./omml` has no row because neither commit exported it.
       (done: #63; `scripts/generate-corpus.rb` emits `src/generated/html/symbols.ts` (`HTML_SYMBOLS`: 1,459 rows, 1,413 distinct values) and `src/generated/omml/symbols.ts` (`OMML_SYMBOLS`: 1,459 rows, 1,415 distinct values), counted by loading both maps; checked 2026-10-02)
 - [x] The dynamic `Symbol` root stays value-driven, the abstract `Paren`
       carrier stays absent, and named `Paren::*` subclasses are present.
-      (done: `src/generated/html/symbols.ts` and `src/generated/omml/symbols.ts` each carry 24 `Paren::*` ids and no bare `Paren` or `Symbol` key; the value-driven ids are routed first at `src/render/symbol/html.ts:74` and `src/formats/omml/render-shared.ts:282`; checked 2026-09-24)
+      (done: `src/generated/html/symbols.ts` and `src/generated/omml/symbols.ts` each carry 24 `Paren::*` ids and no bare `Paren` or `Symbol` key; the value-driven ids are routed first at `src/render/symbol/html.ts:74` and `src/formats/omml/render-shared.ts:266`; checked 2026-09-24)
 - [x] HTML consumes strings directly; OMML consumes strings through one shared
       wrapper, with no generated per-class XML templates.
-      (done: `src/render/symbol/html.ts:79`; `symbolOmmlValue`, `src/formats/omml/render-shared.ts:278-289`; no `<m:` template in `src/generated/omml/symbols.ts`; checked 2026-09-24)
+      (done: `src/render/symbol/html.ts:79`; `symbolOmmlValue`, `src/formats/omml/render-shared.ts:262-273`; no `<m:` template in `src/generated/omml/symbols.ts`; checked 2026-09-24)
 - [x] The generator source commit precedes a separate generated-data commit,
       and all affected provenance files record clean, committable inputs.
       (done: #63's commits put the generator change (`7de6b56`) before the generated data (`8fed2f0`); the `payload-validation` gate in `gates.json` asserts that every generated-data manifest records a committable manifest (`test/gates/payload-validation.spec.ts:583`) recording a clean generator checkout with no dirty paths (`:627-630`); checked 2026-10-02)

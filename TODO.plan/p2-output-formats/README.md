@@ -119,9 +119,9 @@ combinations match `cli.rb`; `pnpm boundaries` reports no violations.
 |---|---|---|---|
 | 1 | `src/compat/index.ts:65` said the HTML battery parses 50/50 | fixture: 49 parsed, 1 raised | fixed: 49/49 plus one shared refusal |
 | 2 | `test/compat/html-battery.spec.ts:4,14` said `html` is withheld from `PARSERS` and that no UnicodeMath battery exists | `src/compat/index.ts:87` registers `html`; `unicodemath-battery.spec.ts` exists | fixed: header rewritten |
-| 3 | `src/formats/omml/render-shared.ts` exported three functions nothing imports | grep: 0 importers each | fixed: `requireEmptyOptions` (no caller at all) deleted; `symbolValueOrGenerated` and `renderLimit` have callers in the same file (:352, :512), so they lose only `export` |
+| 3 | `src/formats/omml/render-shared.ts` exported three functions nothing imports | grep: 0 importers each | fixed: `requireEmptyOptions` (no caller at all) deleted; `symbolValueOrGenerated` and `renderLimit` have callers in the same file (:332, :492), so they lose only `export` |
 | 4 | `OMML_SYMBOL_EXCEPTIONS` and `HTML_SYMBOL_EXCEPTIONS` are read by nothing, with no emptiness guard, so a regenerated exception would be silently ignored | grep: 0 readers; LaTeX has a guard | fixed: guard rows in `test/generated/symbol-context.spec.ts` |
-| 5 | compat `toMathml`/`toOmml` tests checked substrings only | `test/compat/plurimath-class.spec.ts:200-210` | fixed: compared against the gem's `to_mathml`/`to_omml` bytes for `frac(1)(2)` |
+| 5 | compat `toMathml`/`toOmml` tests checked substrings only | `test/compat/plurimath-class.spec.ts:200-210` before this change | fixed: compared against the gem's `to_mathml`/`to_omml` bytes for `frac(1)(2)` |
 | 6 | `03-compat-class.md` cited `:933`, `:937` for `toMathml(false/true)` | those lines are `toDisplay` tests | fixed |
 | 7 | `03-compat-class.md` cited stale `gate-package.mjs` lines for default export, publint, attw | grep -n | fixed |
 | 8 | `02-omml-renderer.md` cited `gate-package.mjs:150`, `:204` for `./omml` | rows are at :154, :227 | fixed |

@@ -20,10 +20,9 @@
  * rather than repeated, so this comment cannot go stale the way a hand-copied
  * commit hash would.
  *
- * Every row's outcome is measured, not assumed passing: running this file
- * against the current port is what step 4 of the task that produced it calls
- * for, and the counts below come from that run rather than from what a
- * "complete" HTML port would be expected to do.
+ * Every row's outcome is measured, not assumed passing: the counts below come
+ * from running this file against the current port, not from what a "complete"
+ * HTML port would be expected to do.
  */
 
 import { createHash } from "node:crypto";

@@ -456,7 +456,7 @@ which is glibc's everywhere outside that band, and refuses inside it with
 For a type outside `MATH_ZONE_TYPES` (`html`, `unicode`), the gem raises
 `Plurimath::Math::InvalidTypeError`, measured in
 `test/compat/to-display-fixtures.json`. `toDisplay` raises
-`UnsupportedFormatError` (`src/compat/index.ts:203-205`), and no public error
+`UnsupportedFormatError` (`src/compat/index.ts:204-206`), and no public error
 class here corresponds to `InvalidTypeError`. Whether to add one, or to record
 the divergence as accepted, is undecided; until then the
 `p2-output-formats/03-compat-class.md` box stays open.

@@ -240,11 +240,11 @@ describe("each method renders the gem's bytes", () => {
     expect(Renderers[method](build())).toBe(GEM_OUTPUT[method]);
   });
 
-  it("toMathml", () => {
+  it("toMathml renders the gem's bytes", () => {
     expect(build().toMathml()).toBe(GEM_MATHML);
   });
 
-  it("toOmml", () => {
+  it("toOmml renders the gem's bytes", () => {
     expect(build().toOmml()).toBe(GEM_OMML);
   });
 });

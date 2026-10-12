@@ -17,8 +17,9 @@
 # fixture records the gem's MODEL for the same two input families, so the port's
 # transform is compared on every input the gem accepts:
 #
-#   - `sweep-short`: every string of length 1..3 over SWEEP_ALPHABET, in
-#     length-then-lexicographic order (16 + 256 + 4,096 = 4,368 inputs).
+#   - `sweep-short`: every string of length 1..3 over SWEEP_ALPHABET, shortest
+#     first and otherwise in SWEEP_ALPHABET's declared order (16 + 256 + 4,096 =
+#     4,368 inputs).
 #   - `sweep-long`: the first LONG_COUNT (200) distinct inputs of 4..26 characters, drawn from
 #     SWEEP_ALPHABET and SWEEP_KEYWORDS by Ruby's Mersenne Twister under the
 #     fixed LONG_SEED. The inputs are recorded in the payload, so the port never
@@ -186,24 +187,47 @@ end
 # so the payload is byte-identical whatever SWEEP_WORKERS is.
 workers = Integer(ENV.fetch("SWEEP_WORKERS", "6"))
 slices = inputs.each_slice((inputs.length + workers - 1) / workers).to_a
-children = slices.map do |slice|
-  reader, writer = IO.pipe
-  pid = fork do
-    reader.close
-    writer.binmode
-    writer.write(JSON.generate(slice.map { |(group, input)| warn("row #{input.inspect}") if ENV["SWEEP_PROGRESS"]; oracle_row(group, input) }))
+children = []
+begin
+  slices.each do |slice|
+    reader, writer = IO.pipe
+    pid = fork do
+      reader.close
+      writer.binmode
+      rows = slice.map do |(group, input)|
+        warn("row #{input.inspect}") if ENV["SWEEP_PROGRESS"]
+        oracle_row(group, input)
+      end
+      writer.write(JSON.generate(rows))
+      writer.close
+      exit!(0)
+    end
     writer.close
-    exit!(0)
+    children << [pid, reader]
   end
-  writer.close
-  [pid, reader]
-end
-rows = children.flat_map do |(pid, reader)|
-  data = reader.read
-  reader.close
-  Process.wait(pid)
-  abort "REFUSING: a worker failed (#{$?.inspect})" unless $?.success?
-  JSON.parse(data)
+  rows = children.flat_map do |child|
+    pid, reader = child
+    data = reader.read
+    reader.close
+    Process.wait(pid)
+    child[0] = nil
+    abort "REFUSING: a worker failed (#{$?.inspect})" unless $?.success?
+    JSON.parse(data)
+  end
+ensure
+  # A failed worker, or an interrupt, must not leave its siblings parsing on:
+  # they hold the caller's stdout and stderr open, so a caller waiting on those
+  # would wait for every sibling to finish.
+  children.each do |(pid, _reader)|
+    next if pid.nil?
+
+    begin
+      Process.kill("TERM", pid)
+      Process.wait(pid)
+    rescue Errno::ESRCH, Errno::ECHILD
+      nil
+    end
+  end
 end
 
 parsed = rows.count { |row| row.key?("model") }

@@ -14,7 +14,7 @@
  * `RangeError: Maximum call stack size exceeded` for genuine unbounded
  * recursion — the same, exact, whole message on all six combinations,
  * 2026-09-23. Those three patch versions were measured LOCALLY, via `mise`;
- * CI's own matrix (`.github/workflows/ci.yml`) pins only the majors 20/22/24
+ * CI's own matrix (`.github/workflows/ci.yml`) pins only the majors 22/24
  * and resolves whatever patch is current at each run, so this is evidence of
  * the wording, not a promise CI runs these exact builds.
  *

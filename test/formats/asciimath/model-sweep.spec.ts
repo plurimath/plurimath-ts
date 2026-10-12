@@ -8,7 +8,8 @@
  * The fixture is generated, never hand-written
  * (`scripts/generate-asciimath-model-fixtures.rb`): every string of length 1-3
  * over the sweep alphabet, a seeded batch of longer inputs over the same
- * alphabet plus whole keywords, and the pinned corpus's AsciiMath inputs.
+ * alphabet plus whole keywords (the first 200 of the grammar sweep's 1,500),
+ * and the pinned corpus's AsciiMath inputs.
  *
  * Divergences are collected and reported together rather than one test per
  * row: six thousand `it.each` rows cost more in reporter overhead than the
@@ -74,7 +75,7 @@ describe("the AsciiMath model sweep fixture", () => {
     expect(inGroup("corpus-asciimath").length).toBe(fixtures.corpusAsciimathCount);
     expect(inGroup("corpus-asciimath").length).toBeGreaterThan(50);
     expect(inGroup("sweep-short").length + inGroup("corpus-asciimath").filter((entry) => [...entry.input].length <= 3).length).toBeGreaterThanOrEqual(4368);
-    expect(inGroup("sweep-long").length).toBeGreaterThan(1400);
+    expect(inGroup("sweep-long").length).toBe(200);
     expect(parsed.length).toBeGreaterThan(0);
     expect(raised.length).toBeGreaterThan(0);
   });

@@ -19,7 +19,7 @@
 #
 #   - `sweep-short`: every string of length 1..3 over SWEEP_ALPHABET, in
 #     length-then-lexicographic order (16 + 256 + 4,096 = 4,368 inputs).
-#   - `sweep-long`: LONG_COUNT distinct inputs of 4..26 characters, drawn from
+#   - `sweep-long`: the first LONG_COUNT (200) distinct inputs of 4..26 characters, drawn from
 #     SWEEP_ALPHABET and SWEEP_KEYWORDS by Ruby's Mersenne Twister under the
 #     fixed LONG_SEED. The inputs are recorded in the payload, so the port never
 #     re-derives them and needs no matching generator.
@@ -62,7 +62,11 @@ SWEEP_KEYWORDS = %w[
 ].freeze
 
 LONG_SEED = 20_261_012
-LONG_COUNT = Integer(ENV.fetch("SWEEP_LONG_COUNT", "1500"))
+# The grammar sweep drew 1,500 long inputs; this records the first 200 of the
+# same seeded sequence. The gem took 509 s for those 200 in one process
+# (2026-10-12, load ~13), so the full 1,500 would put this generator, and
+# `gate-oracle.rb repo --check` with it, past an hour.
+LONG_COUNT = 200
 LONG_MIN = 4
 LONG_MAX = 26
 

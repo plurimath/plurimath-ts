@@ -1,13 +1,15 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# Emits what `Plurimath::Omml::Translator` resolves at runtime through the gem
-# beyond what the MathML translator's tables already carry
-# (src/formats/mathml/generated/transform-tables.ts, which the OMML translator
-# reuses for class facts, `function_from_token` and `Utility::FONT_STYLES`):
+# Emits what `Plurimath::Omml::Translator` resolves at runtime through the gem:
 # `Utility.symbols_class(..., lang: :omml)`, the names `Omml::Utility.valid_class`
-# accepts and the classes `Utility.get_class` reaches for them, and
-# `Omml::SUPPORTED_FONTS`.
+# accepts and the classes `Utility.get_class` reaches for them,
+# `Omml::SUPPORTED_FONTS`, and the class facts, `Mathml::Constants` tables and
+# `Utility::FONT_STYLES` it reaches through `Mathml::FunctionTokenResolver`.
+#
+# The last group is measured the same way as the MathML translator's tables
+# (scripts/generate-mathml-data.rb), whose methods this reuses; each format owns
+# its copy (ARCHITECTURE.md §3 rule 4: formats are independent).
 #
 # Usage:
 #   BUNDLE_GEMFILE=/path/to/plurimath/Gemfile mise x -- bundle exec ruby \
@@ -88,14 +90,31 @@ module OmmlDataGenerator
     Plurimath::Omml::SUPPORTED_FONTS.map { |font, style| [font.to_s, style] }
   end
 
-  def transform_data
+  def transform_data(gem_dir)
+    mathml = MathmlDataGenerator
+    constants = Plurimath::Mathml::Constants
     {
+      carriers: mathml.carrier_rows(mathml.census_index(gem_dir)),
+      functions: mathml.function_rows.map { |row| row[0, 3] },
+      symbol_class_names: mathml.symbol_class_name_rows,
+      unicode_symbols: constants::UNICODE_SYMBOLS.map { |entity, name| [entity.to_s, name] },
+      contextual_accents: constants::CONTEXTUAL_ACCENT_FUNCTIONS.map { |entity, name| [entity.to_s, name] },
+      classes: constants::CLASSES,
+      named_function_words: constants::NAMED_FUNCTION_WORDS,
+      get_class: mathml.get_class_rows,
+      font_styles: mathml.font_style_rows,
       symbol_input: symbol_input_rows,
       sub_sup_classes: sub_sup_classes,
       power_base_names: power_base_names,
       script_classes: script_class_rows,
       supported_fonts: supported_font_rows,
     }
+  end
+
+  def tuple_map(name, type, rows, doc)
+    return CoreDataGenerator.ts_tuple_map(name, type, rows, doc: doc) unless rows.empty?
+
+    [CoreDataGenerator.ts_doc(doc), "export const #{name}: #{type} = new Map([]);"].join("\n")
   end
 
   def emit_tables_file(out_root, data)
@@ -107,9 +126,62 @@ module OmmlDataGenerator
         (ARCHITECTURE.md §1). What it was generated from is in
         `#{OUT_REL}/provenance.ts`.
 
-        What `Plurimath::Omml::Translator` resolves through the gem at runtime that
-        the MathML translator's tables do not already carry.
+        What `Plurimath::Omml::Translator` resolves through the gem at runtime,
+        measured class by class.
       TEXT
+      [
+        "/** Class key, `is_a?` family, `class_name` override. */",
+        "export type OmmlFunctionRow = readonly [",
+        "  string,",
+        '  "unary" | "binary" | "ternary" | "none",',
+        "  string | null,",
+        "];",
+        "",
+        "/** A `Klass.new` default: nil, a boolean, or the empty-collection markers. */",
+        'export type OmmlDefault = boolean | null | "[]" | "{}";',
+        "",
+        "/** A `get_class` name, the class it reaches (null: NameError), and `.new`'s ivars. */",
+        "export type OmmlGetClassRow = readonly [",
+        "  string,",
+        "  string | null,",
+        "  readonly (readonly [string, OmmlDefault])[],",
+        "];",
+      ].join("\n"),
+      ts_const(
+        "OMML_CARRIERS", "readonly (readonly [string, string, string])[]", data[:carriers],
+        doc: "Each class the translator can build: its census key, carrier and disposition.",
+      ),
+      ts_const(
+        "OMML_FUNCTIONS", "readonly OmmlFunctionRow[]", data[:functions],
+        doc: "Every `Math::Function` class and the facts the translator asks of it.",
+      ),
+      tuple_map(
+        "OMML_SYMBOL_CLASS_NAMES", "ReadonlyMap<string, string>", data[:symbol_class_names],
+        "Symbol ids whose `class_name` is not their downcased basename.",
+      ),
+      tuple_map(
+        "OMML_UNICODE_SYMBOLS", "ReadonlyMap<string, string>", data[:unicode_symbols],
+        "`Mathml::Constants::UNICODE_SYMBOLS`.",
+      ),
+      tuple_map(
+        "OMML_CONTEXTUAL_ACCENT_FUNCTIONS", "ReadonlyMap<string, string>", data[:contextual_accents],
+        "`Mathml::Constants::CONTEXTUAL_ACCENT_FUNCTIONS`.",
+      ),
+      ts_const("OMML_CLASSES", "readonly string[]", data[:classes], doc: "`Mathml::Constants::CLASSES`."),
+      ts_const(
+        "OMML_NAMED_FUNCTION_WORDS", "readonly string[]", data[:named_function_words],
+        doc: "`Mathml::Constants::NAMED_FUNCTION_WORDS`.",
+      ),
+      ts_const(
+        "OMML_GET_CLASS", "readonly OmmlGetClassRow[]", data[:get_class],
+        doc: "Each name `function_from_token` and `contextual_accent_from_token` can pass\n" \
+             "`Utility.get_class`: the class it reaches (null where the gem raises NameError) and\n" \
+             "what `.new` assigns.",
+      ),
+      tuple_map(
+        "OMML_FONT_STYLES", "ReadonlyMap<string, string>", data[:font_styles],
+        "`Utility::FONT_STYLES`, in order: keyword -> FontStyle class key.",
+      ),
       CoreDataGenerator.ts_tuple_map(
         "OMML_SYMBOL_CLASS_INPUT", "ReadonlyMap<string, string>", data[:symbol_input],
         doc: "`Utility.all_symbols_classes(:omml)`: stripped text -> symbol id.",
@@ -158,8 +230,7 @@ module OmmlDataGenerator
     end
     dirty = CoreDataGenerator.check_checkouts!(gem_dir, options[:out], options[:allow_dirty])
 
-    CorpusGenerator.load_model_classes!(gem_dir)
-    data = transform_data
+    data = transform_data(gem_dir)
     provenance = CoreDataGenerator.build_provenance(
       GENERATOR_PATH, generator_input_hashes, gem_dir, dirty, options[:allow_dirty],
     )

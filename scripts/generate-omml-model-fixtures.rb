@@ -108,6 +108,9 @@ COVERAGE = {
     omath("<m:r><m:t>a</m:t><w:t>b</w:t><w:tab/></m:r>"),
     omath(r('') + r('&#x200b;') + r('&amp;nbsp;')),
     omath(r('&#x663;&#x664;') + r('&lt;') + r('&#x2212;') + r(' a  b ') + r('  ')),
+    # `text_token` un-escapes its own encoding one entity at a time, so a
+    # literal entity in the text is decoded too ("&#x3c;" becomes "<").
+    omath(r('&amp;#x3c;') + r('&amp;#x26;#x3e;')),
   ],
   # Refused by the translator, not the XML read: an accent that resolves to a
   # function class without `attributes=` (NoMethodError).

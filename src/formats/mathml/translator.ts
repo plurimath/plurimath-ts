@@ -70,7 +70,7 @@ export class Draft {
 
 type DraftValue = Draft | null;
 
-export function isObj(value: unknown): value is Draft {
+function isObj(value: unknown): value is Draft {
   return value instanceof Draft;
 }
 
@@ -87,7 +87,7 @@ function recv(value: unknown, method: string): Draft {
   return value;
 }
 
-export function truthy(value: unknown): boolean {
+function truthy(value: unknown): boolean {
   return value !== null && value !== undefined && value !== false;
 }
 
@@ -111,17 +111,17 @@ function symbolId(o: Draft): string {
   return o.cls.slice(SYMBOLS.length);
 }
 
-export function isFormula(o: unknown): boolean {
+function isFormula(o: unknown): boolean {
   return isObj(o) && (o.cls === FORMULA || o.cls === MROW || o.cls === MSTYLE);
 }
 
-export function familyOf(o: Draft): "unary" | "binary" | "ternary" | "none" {
+function familyOf(o: Draft): "unary" | "binary" | "ternary" | "none" {
   const row = FUNCTIONS.get(o.cls);
   return row === undefined ? "none" : row[1];
 }
 
 /** `Core#class_name`: the downcased basename, unless the class overrides it. */
-export function className(o: Draft): string {
+function className(o: Draft): string {
   const row = FUNCTIONS.get(o.cls);
   if (row?.[2] !== undefined && row[2] !== null) return row[2];
   if (isSymbol(o)) {
@@ -139,7 +139,7 @@ const isNarySymbol = (o: Draft) => isSymbol(o) && NARY_SYMBOLS.has(symbolId(o));
 const isParen = (o: Draft) => isSymbol(o) && MATHML_PAREN_SYMBOLS.has(symbolId(o));
 const isMstyle = (o: Draft) => o.cls === MSTYLE;
 const isMrow = (o: Draft) => o.cls === MROW;
-export const is = (o: unknown, name: string): boolean => isObj(o) && o.cls === FUNCTION + name;
+const is = (o: unknown, name: string): boolean => isObj(o) && o.cls === FUNCTION + name;
 
 /** `is_nary_function?` per the measured rule; raises on a nil parameter. */
 function isNaryFunction(o: Draft): boolean {
@@ -200,7 +200,7 @@ function validateLeftRight(fields: readonly unknown[]): void {
   }
 }
 
-export function formulaValue(o: Draft): unknown[] {
+function formulaValue(o: Draft): unknown[] {
   return o.f.value as unknown[];
 }
 
@@ -208,11 +208,7 @@ export function formulaValue(o: Draft): unknown[] {
  * 2. Constructors
  * ---------------------------------------------------------------------- */
 
-export function newFormula(
-  value: unknown = [],
-  cls = FORMULA,
-  displayStyle: unknown = true,
-): Draft {
+function newFormula(value: unknown = [], cls = FORMULA, displayStyle: unknown = true): Draft {
   const list = Array.isArray(value) ? value : [value];
   const fields: Record<string, unknown> = {
     value: list,
@@ -223,17 +219,17 @@ export function newFormula(
   return new Draft(cls, fields);
 }
 
-export function unary(name: string, one: unknown = null): Draft {
+function unary(name: string, one: unknown = null): Draft {
   validateLeftRight([one]);
   return new Draft(FUNCTION + name, { parameter_one: one });
 }
 
-export function binary(name: string, one: unknown = null, two: unknown = null): Draft {
+function binary(name: string, one: unknown = null, two: unknown = null): Draft {
   validateLeftRight([one, two]);
   return new Draft(FUNCTION + name, { parameter_one: one, parameter_two: two });
 }
 
-export function ternary(
+function ternary(
   name: string,
   one: unknown = null,
   two: unknown = null,
@@ -252,7 +248,7 @@ function withOptionsUnlessEmpty(o: Draft, options: Record<string, unknown>): Dra
   return o;
 }
 
-export function newNary(
+function newNary(
   one: unknown,
   two: unknown,
   three: unknown,
@@ -270,17 +266,17 @@ export function newNary(
   return o;
 }
 
-export function newText(one: unknown = ""): Draft {
+function newText(one: unknown = ""): Draft {
   validateLeftRight([one]);
   return new Draft(`${FUNCTION}Text`, { parameter_one: one, lang: null });
 }
 
-export function newNumber(value: unknown): Draft {
+function newNumber(value: unknown): Draft {
   return new Draft(NUMBER, { value, mini_sub_sized: false, mini_sup_sized: false, base: null });
 }
 
 /** `Symbols::Symbol.new(sym, options: {})`. */
-export function newSymbol(sym: unknown, options: Record<string, unknown> = {}): Draft {
+function newSymbol(sym: unknown, options: Record<string, unknown> = {}): Draft {
   const value = Array.isArray(sym) ? sym.join("") : sym === null ? null : String(sym);
   const o = new Draft(BARE_SYMBOL, { value });
   if (Object.keys(options).length > 0) o.f.options = options;
@@ -288,12 +284,12 @@ export function newSymbol(sym: unknown, options: Record<string, unknown> = {}): 
 }
 
 /** A symbol class's `.new`: only `@value`, nil. */
-export function newSymbolOfClass(id: string): Draft {
+function newSymbolOfClass(id: string): Draft {
   return new Draft(SYMBOLS + id, { value: null });
 }
 
 /** `Td.new(p1, p2)`: drops literal "&" cells in place, then `Array(p1)`. */
-export function newTd(one: unknown = null, two: unknown = null): Draft {
+function newTd(one: unknown = null, two: unknown = null): Draft {
   if (Array.isArray(one)) {
     for (let index = one.length - 1; index >= 0; index--)
       if (one[index] === "&") one.splice(index, 1);
@@ -302,12 +298,12 @@ export function newTd(one: unknown = null, two: unknown = null): Draft {
 }
 
 /** `Tr.new(p1 = [])`: an all-"@" row becomes empty cells. */
-export function newTr(one: unknown[]): Draft {
+function newTr(one: unknown[]): Draft {
   if (!one.some((cell) => cell !== "@")) for (let i = 0; i < one.length; i++) one[i] = newTd([]);
   return unary("Tr", one);
 }
 
-export function newTable(value: unknown): Draft {
+function newTable(value: unknown): Draft {
   return new Draft(`${FUNCTION}Table`, { value, open_paren: null, close_paren: null, options: {} });
 }
 
@@ -322,7 +318,7 @@ function newFenced(
   return o;
 }
 
-export function withAttributes(
+function withAttributes(
   name: string,
   one: unknown,
   attributes: Record<string, unknown> = {},
@@ -332,7 +328,7 @@ export function withAttributes(
   return o;
 }
 
-export function newLinebreak(one: unknown, attributes: Record<string, unknown>): Draft {
+function newLinebreak(one: unknown, attributes: Record<string, unknown>): Draft {
   const o = new Draft(`${FUNCTION}Linebreak`, { parameter_one: one, attributes });
   validateLeftRight([one]);
   return o;
@@ -361,7 +357,7 @@ function getClassNew(name: string): Draft {
 }
 
 /** The classes that `attr_accessor :attributes` (`respond_to?(:attributes=)`). */
-export const ATTRIBUTE_SETTERS: ReadonlySet<string> = new Set(
+const ATTRIBUTE_SETTERS: ReadonlySet<string> = new Set(
   [
     "Obrace",
     "Ubrace",
@@ -389,12 +385,12 @@ function hexEntity(character: string): string {
 }
 
 /** `Utility.string_to_html_entity`: htmlentities' `:hexadecimal` encode. */
-export function stringToHtmlEntity(text: string): string {
+function stringToHtmlEntity(text: string): string {
   return text.replace(ENCODE_BASIC, hexEntity).replace(ENCODE_EXTENDED, hexEntity);
 }
 
 /** Ruby `String#strip`. */
-export function rubyStrip(text: string): string {
+function rubyStrip(text: string): string {
   return text.replace(/^[\t\n\v\f\r \0]+|[\t\n\v\f\r \0]+$/g, "");
 }
 
@@ -405,7 +401,7 @@ function symbolsClass(text: string): Draft {
 }
 
 /** `FunctionTokenResolver#function_from_token`. */
-export function functionFromToken(value: string): Draft | null {
+function functionFromToken(value: string): Draft | null {
   const word = rubyStrip(value);
   const unicode = stringToHtmlEntity(value);
   const mapped = MATHML_UNICODE_SYMBOLS.get(rubyStrip(unicode));
@@ -422,7 +418,7 @@ function resolveToken(value: string): Draft {
 }
 
 /** `contextual_accent_from_token`. */
-export function contextualAccentFromToken(value: unknown): Draft | null {
+function contextualAccentFromToken(value: unknown): Draft | null {
   if (value === null || value === undefined) return null;
   const entity = stringToHtmlEntity(htmlEntityToUnicode(String(value)));
   const name = MATHML_CONTEXTUAL_ACCENT_FUNCTIONS.get(rubyStrip(entity));
@@ -523,7 +519,7 @@ function preserveSeparateNaryBody(first: unknown, second: unknown): boolean {
 }
 
 /** Ruby `Array#delete_at`: removes and returns, nil past the end. */
-export function deleteAt(values: unknown[], index: number): unknown {
+function deleteAt(values: unknown[], index: number): unknown {
   if (index >= values.length) return null;
   return values.splice(index, 1)[0] ?? null;
 }
@@ -690,7 +686,7 @@ function applyFontStyle(element: MmlNode, result: Draft): Draft {
   return binaryClass(font, result, variant);
 }
 
-export function binaryClass(cls: string, one: unknown, two: unknown): Draft {
+function binaryClass(cls: string, one: unknown, two: unknown): Draft {
   validateLeftRight([one, two]);
   return new Draft(cls, { parameter_one: one, parameter_two: two });
 }
@@ -1432,7 +1428,7 @@ function finalizeValue(value: unknown): unknown {
   return value;
 }
 
-export function toNode(o: Draft): MathNode {
+function toNode(o: Draft): MathNode {
   const { kind, identity } = carrierOf(o.cls);
   const spec = NODE_SPECS[kind];
   const names = new Map(spec.fields);

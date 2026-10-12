@@ -6,11 +6,10 @@
  * `Omml::FormulaTransformation` module it includes and `Omml::Utility`
  * (lib/plurimath/omml/formula_transformation.rb, utility.rb).
  *
- * It builds the same `Draft` objects as the MathML translator and finishes
- * them through the same `toNode`, and reuses that translator's constructors
- * and its generated tables for class facts, `function_from_token` and
- * `Utility::FONT_STYLES`. What only OMML resolves (`symbols_class(..., lang:
- * :omml)`, `valid_class`, `SUPPORTED_FONTS`) is in `./generated/input-tables.ts`.
+ * It builds the gem's objects as `Draft`s (`./draft.ts`) and finishes them
+ * into the core model. Everything the gem resolves at runtime through Ruby
+ * (symbol classes, `get_class`, class facts, `FONT_STYLES`, `SUPPORTED_FONTS`)
+ * comes from `./generated/input-tables.ts`.
  *
  * The gem dispatches on the omml gem's model classes; this dispatches on the
  * element the class maps (`CTR` is `m:r`, `CTRPR` is `m:rPr`, `CTRPr` is
@@ -21,7 +20,6 @@
  */
 
 import type { FormulaNode } from "../../core/index";
-import { MATHML_FONT_STYLES } from "../mathml/generated/transform-tables";
 import {
   ATTRIBUTE_SETTERS,
   binary,
@@ -30,13 +28,14 @@ import {
   contextualAccentFromToken,
   type Draft,
   deleteAt,
+  FORMULA,
+  FUNCTION,
   familyOf,
   formulaValue,
   functionFromToken,
   is,
   isFormula,
   isObj,
-  MathmlTranslateError,
   newFormula,
   newLinebreak,
   newNary,
@@ -47,14 +46,16 @@ import {
   newTd,
   newText,
   newTr,
+  OmmlTranslateError,
   rubyStrip,
   stringToHtmlEntity,
   ternary,
   toNode,
   truthy,
   unary,
-} from "../mathml/translator";
+} from "./draft";
 import {
+  OMML_FONT_STYLES,
   OMML_POWER_BASE_NAMES,
   OMML_SCRIPT_CLASSES,
   OMML_SUB_SUP_CLASSES,
@@ -63,13 +64,6 @@ import {
 } from "./generated/input-tables";
 import type { OmmlNode } from "./omml-input";
 
-/** The translator raised where the gem raises (a Ruby error in its code). */
-export class OmmlTranslateError extends Error {
-  override readonly name = "OmmlTranslateError";
-}
-
-const FORMULA = "Math::Formula";
-const FUNCTION = "Math::Function::";
 const FONT_STYLE = "Math::Function::FontStyle";
 
 /** A `Utility::FONT_STYLES` class, as a run's properties return it (a Ruby class). */
@@ -147,12 +141,6 @@ function resolveSymbolToken(value: string): Draft {
   return functionFromToken(value) ?? symbolsClass(stringToHtmlEntity(value));
 }
 
-function newOmmlText(value: string): Draft {
-  const text = newText(value);
-  text.f.lang = "omml";
-  return text;
-}
-
 const DIGIT = /\p{Nd}/u;
 const LATIN = /[a-zA-Z]/;
 
@@ -162,7 +150,7 @@ function textToken(text: string): Draft {
   if (characters.filter((character) => DIGIT.test(character)).length === characters.length) {
     return newNumber(text);
   }
-  if (LATIN.test(text)) return newOmmlText(text);
+  if (LATIN.test(text)) return newText(text);
   const encoded = stringToHtmlEntity(text)
     .replaceAll("&#x26;", "&")
     .replaceAll("&#x3c;", "<")
@@ -284,7 +272,7 @@ function translatedChildren(node: OmmlNode, accepts: (kind: string) => boolean):
 /** `omml_text_value`. */
 function textValue(raw: string): Value {
   const value = raw.replaceAll("&nbsp;", " ");
-  if (value === "") return newOmmlText("");
+  if (value === "") return newText("");
   if (value === "​") return null;
   return functionFromToken(value) ?? textToken(value);
 }
@@ -375,7 +363,7 @@ function run(node: OmmlNode): Value {
   const children: RunValue[] = [];
   for (const item of node.children) {
     let value: RunValue | null = null;
-    if (item.kind === "w:br") value = newLinebreak(null, {});
+    if (item.kind === "w:br") value = newLinebreak();
     else if (item.kind === "m:t") value = unwrapSingleChildFormula(textValue(item.text ?? ""));
     else if (item.kind === "m:rPr") value = mathRunFont(item);
     else if (item.kind === "w:rPr") value = wordRunFont(item);
@@ -399,12 +387,12 @@ function styledRun(children: RunValue[]): Draft {
 
 /** `Utility::FONT_STYLES.key(font).to_s`: the first keyword naming the class. */
 function fontStyleKey(cls: string): string {
-  for (const [keyword, fontClass] of MATHML_FONT_STYLES) if (fontClass === cls) return keyword;
+  for (const [keyword, fontClass] of OMML_FONT_STYLES) if (fontClass === cls) return keyword;
   throw new Error(`omml translator: ${cls} is not a FONT_STYLES class`);
 }
 
 function fontClass(keyword: string | undefined): FontClass | null {
-  const cls = keyword === undefined ? undefined : MATHML_FONT_STYLES.get(keyword);
+  const cls = keyword === undefined ? undefined : OMML_FONT_STYLES.get(keyword);
   return cls === undefined ? null : new FontClass(cls);
 }
 
@@ -565,24 +553,21 @@ function groupCharacter(node: OmmlNode): Draft {
 const ROOT_CONTENT = (kind: string): boolean => MATH_ELEMENTS.has(kind);
 
 /** `Translator#omml_to_plurimath(Omml.parse(text))` and `formula.input_string = text`. */
+export { OmmlTranslateError };
+
 export function translateOmml(root: OmmlNode, inputString: string): FormulaNode {
-  try {
-    let formula: Draft;
-    if (root.kind === "m:oMathPara") {
-      const children = translatedChildren(
-        root,
-        (kind) => kind === "m:oMath" || kind === "m:r",
-      ).flatMap((item) => (isFormula(item) ? formulaValue(item) : [item]));
-      formula = newFormula(children);
-    } else {
-      formula = newFormula(translatedChildren(root, ROOT_CONTENT));
-    }
-    formula.f.input_string = inputString;
-    return toNode(formula) as FormulaNode;
-  } catch (error) {
-    if (error instanceof MathmlTranslateError) throw new OmmlTranslateError(error.message);
-    throw error;
+  let formula: Draft;
+  if (root.kind === "m:oMathPara") {
+    const children = translatedChildren(
+      root,
+      (kind) => kind === "m:oMath" || kind === "m:r",
+    ).flatMap((item) => (isFormula(item) ? formulaValue(item) : [item]));
+    formula = newFormula(children);
+  } else {
+    formula = newFormula(translatedChildren(root, ROOT_CONTENT));
   }
+  formula.f.input_string = inputString;
+  return toNode(formula) as FormulaNode;
 }
 
 // `m:oMath` inside `m:oMathPara` is `CTOMath`: `formula_from_omml_children`.

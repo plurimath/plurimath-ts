@@ -131,12 +131,16 @@ export class UnsupportedFormatError extends PlurimathError {
 export class InvalidTypeError extends PlurimathError {
   readonly code = "INVALID_TYPE" as const;
 
+  /** A frozen copy, so a caller cannot widen the raising entry point's set. */
+  readonly validTypes: readonly string[];
+
   constructor(
     readonly type: string,
-    readonly validTypes: readonly string[],
+    validTypes: readonly string[],
     message: string,
   ) {
     super(message);
+    this.validTypes = Object.freeze([...validTypes]);
   }
 }
 

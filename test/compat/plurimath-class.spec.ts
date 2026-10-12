@@ -959,6 +959,9 @@ describe("toDisplay", () => {
    */
   it("rejects `unicode`, distinct from the constructor's own format name", () => {
     expect(() => build().toDisplay("unicode")).toThrow(InvalidTypeError);
+    expect(() => build().toDisplay("unicode")).toThrow(
+      "Invalid type provided: unicode. Must be one of omml, latex, mathml, asciimath, unicodemath.",
+    );
   });
 
   it("names the rejected lang in the thrown error", () => {

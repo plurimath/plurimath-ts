@@ -37,6 +37,17 @@ describe("error contract", () => {
     expect(error.stack).toBeDefined();
   });
 
+  it("gives InvalidTypeError its fields, and a validTypes the caller cannot change", () => {
+    const source = ["latex", "html"];
+    const error = new InvalidTypeError("foo", source, "m");
+    expect(error).toBeInstanceOf(PlurimathError);
+    expect(error.name).toBe("InvalidTypeError");
+    expect(error.type).toBe("foo");
+    expect(error.validTypes).toEqual(["latex", "html"]);
+    expect(error.validTypes).not.toBe(source);
+    expect(Object.isFrozen(error.validTypes)).toBe(true);
+  });
+
   it("lets a consumer discriminate on code alone, without instanceof", () => {
     const errors: PlurimathError[] = [
       new ParseError("m", "x", "asciimath", 0),

@@ -371,6 +371,19 @@ rows = sources.filter_map do |(group, input, locale)|
     row["raisedIn"] = "normalize"
   end
 
+  # The gem's parse tree, as `Html::Parser#parse` builds it from the normalised
+  # text, so the HTML grammar is checked over every row and not only over the
+  # strings `test/formats/html/grammar.spec.ts` carries by hand. A grammar
+  # refusal records `nil`. No-locale rows only: the tree a locale changes is the
+  # decimal marker, which the `locale` rows' models already pin.
+  if row.key?("normalized") && !locale
+    row["tree"] = begin
+      CorpusGenerator.serialize_tree(Plurimath::Html::Parse.new.parse(row["normalized"]), "tree")
+    rescue Parslet::ParseFailed
+      nil
+    end
+  end
+
   formula = nil
   begin
     formula = if locale

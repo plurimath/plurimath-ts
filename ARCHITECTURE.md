@@ -1086,7 +1086,7 @@ alias entry in the data schema, never a silent id change.
 | Build | **tsdown `0.22.14`**, pinned exactly → ESM + CJS + d.mts/d.cts, one entry per subpath | See build-tool note below |
 | Packaging correctness | `publint` on `dist`, `@arethetypeswrong/cli` on a real `npm pack` | CI gate; both green on the verification fixture |
 | Package manager | pnpm, pinned via `packageManager` | |
-| Runtimes | `mise.toml` committed (org precedent: the gem commits one); `engines.node >= 20` | |
+| Runtimes | `mise.toml` committed (org precedent: the gem commits one); `engines.node >= 22` | |
 | Corpus regen | `scripts/` + documented one-liner | Requires a local gem checkout; class-A CI never needs Ruby (generated files are committed); Ruby-backed class-B gates declare their own runtime (§7) |
 
 Conventions: kebab-case filenames; named exports only — the root default
@@ -1116,7 +1116,7 @@ Consequences pinned here so they are not rediscovered later:
 - tsdown 0.22.14 declares `engines.node: "^22.18.0 || >=24.11.0"` — note it
   is **not** a simple lower bound: Node 23 is excluded. That constrains the
   build environment only, and is separate from the published package's
-  `engines.node >= 20` runtime support. CI pins both explicitly.
+  `engines.node >= 22` runtime support. CI pins both explicitly.
 - tsdown defaults to the **Node platform**, but D2 targets browser bundlers:
   the ESM output pins an explicit browser-safe platform/target, and a
   browser-bundler smoke test is part of the isolation gate.

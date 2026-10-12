@@ -204,7 +204,7 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
 
 Building needs Node `^22.18.0 || >=24.11.0` (the range tsdown declares; Node 23
 does not satisfy it). [`mise.toml`](mise.toml) pins Node 24. The published
-package will support Node 20 and later at runtime, which is what CI's runtime
+package will support Node 22 and later at runtime, which is what CI's runtime
 matrix covers.
 
 If nvm's Node 20 comes first on `PATH`, `pnpm build` fails with

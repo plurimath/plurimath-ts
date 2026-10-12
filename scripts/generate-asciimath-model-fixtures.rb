@@ -62,8 +62,9 @@ SWEEP_KEYWORDS = %w[
 ].freeze
 
 LONG_SEED = 20_261_012
-# The grammar sweep drew 1,500 long inputs; this records the first 200 of the
-# same seeded sequence. The gem took 509 s for those 200 in one process
+# The grammar sweep's 1,500 long inputs came from a one-off probe that is not
+# committed, so these are drawn afresh under LONG_SEED, in the same shape (4-26
+# characters, the sweep alphabet plus whole keywords), and only 200 of them. The gem took 509 s for those 200 in one process
 # (2026-10-12, load ~13), so the full 1,500 would put this generator, and
 # `gate-oracle.rb repo --check` with it, past an hour.
 LONG_COUNT = 200

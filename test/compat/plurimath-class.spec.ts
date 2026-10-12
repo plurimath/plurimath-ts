@@ -14,7 +14,12 @@
 import { describe, expect, it } from "vitest";
 import Plurimath, { FORMATS, type Format } from "../../src/compat/index";
 import { buildTreeDump } from "../../src/compat/to-display";
-import { equals, UnsupportedFeatureError, UnsupportedFormatError } from "../../src/core/index";
+import {
+  equals,
+  InvalidTypeError,
+  UnsupportedFeatureError,
+  UnsupportedFormatError,
+} from "../../src/core/index";
 import { FormulaNode, NaryNode, SymbolNode, UnaryFunctionNode } from "../../src/core/nodes";
 import { parseHtml } from "../../src/formats/html/index";
 import { parseUnicodemath } from "../../src/formats/unicodemath/index";
@@ -182,6 +187,31 @@ describe("the constructor's staged contract", () => {
 
   it("names the format it refused", () => {
     expect(() => new Plurimath(INPUT, "mathml")).toThrow(/mathml/);
+  });
+
+  /**
+   * Measured on the oracle at 00c52783: `Math.parse("x", t)` raises
+   * `Plurimath::Math::InvalidTypeError` with this message for `"foo"`,
+   * `"unicodemath"`, `"HTML"` and `nil`, and `ParseError` (it parses) for
+   * `"mathml"`, `"omml"` and `"unitsml"`.
+   */
+  const parseTypeMessage =
+    "`type` must be one of: `omml`, `html`, `latex`, `mathml`, `unitsml`, `unicode`, `asciimath`";
+
+  it.each(["foo", "unicodemath", "HTML"])(
+    "raises InvalidTypeError for %s, which the gem's Math.parse rejects",
+    (format) => {
+      expect(() => new Plurimath(INPUT, format as Format)).toThrow(InvalidTypeError);
+      expect(() => new Plurimath(INPUT, format as Format)).toThrow(parseTypeMessage);
+    },
+  );
+
+  it("raises InvalidTypeError for a non-string format", () => {
+    expect(() => new Plurimath(INPUT, null as unknown as Format)).toThrow(InvalidTypeError);
+  });
+
+  it("keeps UnsupportedFormatError for unitsml, a type the gem parses", () => {
+    expect(() => new Plurimath(INPUT, "unitsml" as Format)).toThrow(UnsupportedFormatError);
   });
 
   /**
@@ -955,7 +985,11 @@ describe("toDisplay", () => {
   );
 
   it("rejects `html`, which is not one of the gem's MATH_ZONE_TYPES", () => {
-    expect(() => build().toDisplay("html")).toThrow(UnsupportedFormatError);
+    expect(() => build().toDisplay("html")).toThrow(InvalidTypeError);
+    // the gem's `type_error!` message, measured on the oracle at 00c52783
+    expect(() => build().toDisplay("html")).toThrow(
+      "Invalid type provided: html. Must be one of omml, latex, mathml, asciimath, unicodemath.",
+    );
   });
 
   /**
@@ -964,7 +998,10 @@ describe("toDisplay", () => {
    * `unicodemath`, and does not accept the constructor's name.
    */
   it("rejects `unicode`, distinct from the constructor's own format name", () => {
-    expect(() => build().toDisplay("unicode")).toThrow(UnsupportedFormatError);
+    expect(() => build().toDisplay("unicode")).toThrow(InvalidTypeError);
+    expect(() => build().toDisplay("unicode")).toThrow(
+      "Invalid type provided: unicode. Must be one of omml, latex, mathml, asciimath, unicodemath.",
+    );
   });
 
   it("names the rejected lang in the thrown error", () => {

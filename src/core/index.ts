@@ -11,6 +11,7 @@ export { reportUnsupported, resetUnsupportedWarnings } from "./diagnostics";
 export { equals } from "./equality";
 export type { PlurimathErrorCode } from "./errors";
 export {
+  InvalidTypeError,
   MissingSymbolDataError,
   ParseError,
   ParseOptionError,

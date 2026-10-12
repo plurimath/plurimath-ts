@@ -550,18 +550,18 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
       `asciimath`, `latex`, `html` and `unicode` construct (#76, #88, #119); `mathml`
       and `omml` raise the port's structured `UnsupportedFormatError` until their
       parsers land.
-      (done: `test/compat/plurimath-class.spec.ts:117` for the order, `:141-189` per format; checked 2026-09-24, line references 2026-10-12)
-- [ ] `toDisplay` matches the JS oracle for `omml`, `latex`, `mathml`, `asciimath`, and
+      (done: `test/compat/plurimath-class.spec.ts:122` for the order, `:146-227` per format; checked 2026-09-24, line references 2026-10-12)
+- [x] `toDisplay` matches the JS oracle for `omml`, `latex`, `mathml`, `asciimath`, and
       `unicodemath`, and the invalid language path matches the measured invalid-type
       behavior. The oracle fixtures also record the native-Ruby recognized-string result
       `"|_ Math zone\n"` and do not substitute that result for an Opal-wrapper measurement.
-      (open: #139 and #150 landed `toDisplay`; `test/compat/to-display.spec.ts` checks it against `test/compat/to-display-fixtures.json`, generated from the oracle by `scripts/battery-to-display-fixtures.rb`: the five lowercase names reproduce the gem's Symbol dispatch for six inputs, and the native-Ruby String results (`"|_ Math zone\n"`, lowercase and uppercase) sit in their own rows, not substituted for the port's lowercase result. One part is not met: for `html` and `unicode` the gem raises `Plurimath::Math::InvalidTypeError` (measured in the same fixture) and the port raises `UnsupportedFormatError` (`src/compat/index.ts:204-206`), pinned as a divergence. Matching it needs a new public error class, which is a maintainer decision; checked 2026-10-12)
+      (done: #139 and #150 landed `toDisplay`; `test/compat/to-display.spec.ts` checks it against `test/compat/to-display-fixtures.json`, generated from the oracle by `scripts/battery-to-display-fixtures.rb`: the five lowercase names reproduce the gem's Symbol dispatch for six inputs, and the native-Ruby String results (`"|_ Math zone\n"`, lowercase and uppercase) sit in their own rows, not substituted for the port's lowercase result. For `html` and `unicode` the gem raises `Plurimath::Math::InvalidTypeError` (measured in the same fixture) and the port now raises `InvalidTypeError` (`test/compat/to-display.spec.ts`, invalid rows; message pinned in `test/compat/plurimath-class.spec.ts`); checked 2026-10-12)
 - [x] `toMathml()`, `toMathml(false)`, and `toMathml(true)` produce the measured default,
       false, and intent-bearing results.
-      (done: `test/compat/plurimath-class.spec.ts:244`, `:1083`, `:1087`; checked 2026-10-12)
+      (done: `test/compat/plurimath-class.spec.ts:273`, `:1120`, `:1124`; checked 2026-10-12)
 - [x] `toAsciimath`, `toLatex`, `toHtml`, `toOmml`, and `toUnicodemath` each have a
       runtime assertion through a compat instance created from AsciiMath.
-      (done: `test/compat/plurimath-class.spec.ts:231-252`; checked 2026-09-24, line references 2026-10-12)
+      (done: `test/compat/plurimath-class.spec.ts:261-280`; checked 2026-09-24, line references 2026-10-12)
 - [x] HTML and OMML corpus targets are nonempty and complete per payload; their
       cross-format and package-isolation gates pass against built artifacts.
       (done: the targets are nonempty and complete per parsed payload at pin `cf3c5eb`,
@@ -574,4 +574,4 @@ P0–P2" (`ARCHITECTURE.md:1135-1142`).
 - [x] The root package exports the default class under ESM and CJS, the package root
       passes publint, the real packed artifact passes attw, and review leaves no valid implementable finding
       unresolved.
-      (done: #66, merged with its one review thread resolved; `scripts/gate-package.mjs:144` and `:327-345` assert the ESM and CJS default export, `:454-455` run publint on the package root and `:457-461` run attw on the packed tarball (`--pack`); `pnpm gate:package` exits 0; checked 2026-10-02, line references 2026-10-12)
+      (done: #66, merged with its one review thread resolved; `scripts/gate-package.mjs:145` and `:328-346` assert the ESM and CJS default export, `:455-456` run publint on the package root and `:458-462` run attw on the packed tarball (`--pack`); `pnpm gate:package` exits 0; checked 2026-10-02, line references 2026-10-12)

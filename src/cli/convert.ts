@@ -99,7 +99,7 @@ const RENDER: Record<OutputFormat, (formula: Plurimath, options: RenderOptions) 
  * As in the gem's command, `mathRendering` returns the display tree before
  * any other option is read, and `displayStyle`/`splitOnLinebreak` are
  * ignored by the text formats. The display tree has no `html` form; asking
- * for one throws the compat class's `UnsupportedFormatError`.
+ * for one throws the compat class's `InvalidTypeError`.
  */
 export function convert(
   input: string,

@@ -94,10 +94,10 @@ AsciiMath *to* everything, which is the most useful early capability.
       the invalid-type path, and a separate record of the native-Ruby string
       quirk; `toMathml` omitted, explicit false, and true; every other method at
       least once.
-      (open: everything else is asserted, and `toMathml`/`toOmml` compare the gem's
-      bytes since the 2026-10-12 review round; the `toDisplay` invalid-type path for
-      `html` and `unicode` is a pinned divergence awaiting a maintainer decision, see
-      `03-compat-class.md`; checked 2026-10-12)
+      (open: every part listed is now asserted: #192 settled the `toDisplay`
+      invalid-type path with `InvalidTypeError`, and `toMathml`/`toOmml` compare the
+      gem's bytes since the 2026-10-12 review round; see `03-compat-class.md`. The box
+      is left for whoever closes the criterion to re-check and tick; checked 2026-10-12)
 - [x] Isolation assertions extended to each new subpath. (`./html`, `./omml`
       and `./unicodemath` each have export and forbidden-graph rows in
       `scripts/gate-package.mjs`; `pnpm gate:package` exits 0. Checked 2026-09-21.)
@@ -118,13 +118,13 @@ combinations match `cli.rb`; `pnpm boundaries` reports no violations.
 | # | Finding | Evidence | Disposition |
 |---|---|---|---|
 | 1 | `src/compat/index.ts:65` said the HTML battery parses 50/50 | fixture: 49 parsed, 1 raised | fixed: 49/49 plus one shared refusal |
-| 2 | `test/compat/html-battery.spec.ts:4,14` said `html` is withheld from `PARSERS` and that no UnicodeMath battery exists | `src/compat/index.ts:87` registers `html`; `unicodemath-battery.spec.ts` exists | fixed: header rewritten |
+| 2 | `test/compat/html-battery.spec.ts:4,14` said `html` is withheld from `PARSERS` and that no UnicodeMath battery exists | `src/compat/index.ts:89` registers `html`; `unicodemath-battery.spec.ts` exists | fixed: header rewritten |
 | 3 | `src/formats/omml/render-shared.ts` exported three functions nothing imports | grep: 0 importers each | fixed: `requireEmptyOptions` (no caller at all) deleted; `symbolValueOrGenerated` and `renderLimit` have callers in the same file (:332, :492), so they lose only `export` |
 | 4 | `OMML_SYMBOL_EXCEPTIONS` and `HTML_SYMBOL_EXCEPTIONS` are read by nothing, with no emptiness guard, so a regenerated exception would be silently ignored | grep: 0 readers; LaTeX has a guard | fixed: guard rows in `test/generated/symbol-context.spec.ts` |
 | 5 | compat `toMathml`/`toOmml` tests checked substrings only | `test/compat/plurimath-class.spec.ts:200-210` before this change | fixed: compared against the gem's `to_mathml`/`to_omml` bytes for `frac(1)(2)` |
 | 6 | `03-compat-class.md` cited `:933`, `:937` for `toMathml(false/true)` | those lines are `toDisplay` tests | fixed |
 | 7 | `03-compat-class.md` cited stale `gate-package.mjs` lines for default export, publint, attw | grep -n | fixed |
-| 8 | `02-omml-renderer.md` cited `gate-package.mjs:150`, `:204` for `./omml` | rows are at :154, :227 | fixed |
+| 8 | `02-omml-renderer.md` cited `gate-package.mjs:150`, `:204` for `./omml` | rows are at :155, :228 | fixed |
 | 9 | `src/cli/convert.ts:10` said OMML input does not parse | `parseOmml` exists since #184; it is only unregistered | fixed: reworded |
 | 10 | compat exit box gave no pointer to its open part | README | fixed: open note added |
 

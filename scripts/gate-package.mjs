@@ -63,6 +63,7 @@ const CORE_EXPORTS = [
   "FracNode",
   "HatNode",
   "IntNode",
+  "InvalidTypeError",
   "LinebreakNode",
   "MissingSymbolDataError",
   "MpaddedNode",

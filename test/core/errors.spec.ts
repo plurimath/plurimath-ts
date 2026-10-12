@@ -5,6 +5,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  InvalidTypeError,
   MissingSymbolDataError,
   ParseError,
   PlurimathError,
@@ -16,6 +17,7 @@ describe("error contract", () => {
   it("gives every error a stable code", () => {
     expect(new ParseError("m", "x^", "asciimath", 2).code).toBe("PARSE_ERROR");
     expect(new UnsupportedFormatError("omml").code).toBe("UNSUPPORTED_FORMAT");
+    expect(new InvalidTypeError("foo", ["latex"], "m").code).toBe("INVALID_TYPE");
     expect(new MissingSymbolDataError("Sigma", "mathml").code).toBe("MISSING_SYMBOL_DATA");
     expect(new RenderError("m", "mathml", "frac").code).toBe("RENDER_ERROR");
   });

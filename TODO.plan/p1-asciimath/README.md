@@ -132,8 +132,8 @@ grammar lines, 149 transform rules, 10/13 class-A and 4 class-B gates) re-measur
 
 | # | Finding | Evidence | Disposition |
 |---|---|---|---|
-| 1 | `ASCIIMATH_FONT_STYLE_CONSTRUCTOR` (`src/formats/asciimath/registry.ts:278`) was documented as what every font-style keyword resolves through, but nothing in `src/` read it | grep: only `registry.spec.ts` | fixed: export removed; the spec reads `ASCIIMATH_NODE_CONSTRUCTORS.fontStyle` |
-| 2 | `parseAsciimath` repeated `parseAsciimathTree`'s four steps instead of calling it, so the failure-parity and option-parity suites tested a copy of the shipped path | `src/formats/asciimath/parser.ts:68-87` | fixed: `parseAsciimath` calls `parseAsciimathTree` |
+| 1 | `ASCIIMATH_FONT_STYLE_CONSTRUCTOR` (`src/formats/asciimath/registry.ts:279` before this change) was documented as what every font-style keyword resolves through, but nothing in `src/` read it | grep: only `registry.spec.ts` | fixed: export removed; the spec reads `ASCIIMATH_NODE_CONSTRUCTORS.fontStyle` |
+| 2 | `parseAsciimath` repeated `parseAsciimathTree`'s four steps instead of calling it, so the failure-parity and option-parity suites tested a copy of the shipped path | `src/formats/asciimath/parser.ts:68-87` before this change | fixed: `parseAsciimath` calls `parseAsciimathTree` |
 | 3 | `parseAsciimathPreprocessed` (`grammar.ts:822`) has no `src/` caller | grep: only `grammar.spec.ts` | not a defect: a documented test seam for grammar trees on preprocessed text |
 
 ## Scope discipline

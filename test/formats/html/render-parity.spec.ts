@@ -288,13 +288,62 @@ describe(`${FORMAT} parity, the cases the gem refuses`, () => {
   );
 });
 
+const RIGHT_REFUSAL = /UnaryFunction alias "Right"/;
+const MSGROUP_REFUSAL = /UnaryFunction alias "Msgroup"/;
+const TEXT_GAP = /unicode\[:name\] substitution needs generated HTML data/;
+/**
+ * MathML-input cases whose `Text` holds a `unicode[:name]` substitution, which
+ * the HTML renderer refuses until it has the generated symbol data it needs
+ * (TODO.plan/deferred.md, "HTML Text: unicode[:name] substitutions").
+ */
+const MATHML_TEXT_GAPS = [
+  "mathml-text-001",
+  "mathml-text-002",
+  "mathml-text-003",
+  "mathml-text-004",
+  "mathml-text-006",
+  "mathml-text-007",
+];
+
 describeCorpusTargets({
   format: "html",
   renderFormula: (formula) => toHtml(formula),
-  rendered: 227,
-  // The port refuses at the `Right` node, where the gem raises ArgumentError
-  // (`Right#to_html` takes no keyword arguments).
-  refusedWith: /UnaryFunction alias "Right"/,
+  rendered: 495,
+  // Each refusal names where the port stops. The left-right cases stop at the
+  // `Right` node, where the gem raises ArgumentError (`Right#to_html` takes no
+  // keyword arguments). The MathML cases stop at the node the gem raises on:
+  // an unmeasured `Msgroup`, a list where a node belongs, a bare string, a
+  // `Phantom` or an `Nary`.
+  refusedWith: new Map([
+    ["left-right-round", RIGHT_REFUSAL],
+    ["left-right-square", RIGHT_REFUSAL],
+    ["left-right-around-frac", RIGHT_REFUSAL],
+    ["latex-left-right-round", RIGHT_REFUSAL],
+    ["latex-left-right-square", RIGHT_REFUSAL],
+    ["latex-left-right-curly", RIGHT_REFUSAL],
+    ["latex-left-right-bar", RIGHT_REFUSAL],
+    ["latex-left-right-round-sum", RIGHT_REFUSAL],
+    ["latex-left-right-around-frac", RIGHT_REFUSAL],
+    ["mathml-partial-003", MSGROUP_REFUSAL],
+    ["mathml-partial-004", MSGROUP_REFUSAL],
+    ["mathml-partial-005", MSGROUP_REFUSAL],
+    ["mathml-partial-006", MSGROUP_REFUSAL],
+    ["mathml-partial-007", MSGROUP_REFUSAL],
+    ["mathml-partial-008", /semantics\.parameterTwo: cannot render a list/],
+    ["mathml-partial-009", /Phantom#to_html takes no keyword arguments/],
+    ["mathml-partial-010", /Phantom#to_html takes no keyword arguments/],
+    ["mathml-partial-012", /ternaryFunction\.parameterTwo: cannot render a list/],
+    ["mathml-partial-014", /ternaryFunction\.parameterTwo: cannot render a list/],
+    ["mathml-partial-015", /mlabeledtr\.parameterOne: cannot render a list/],
+    ["mathml-partial-016", MSGROUP_REFUSAL],
+    ["mathml-partial-017", MSGROUP_REFUSAL],
+    ["mathml-partial-018", MSGROUP_REFUSAL],
+    ["mathml-partial-019", MSGROUP_REFUSAL],
+    ["mathml-partial-020", /ms\.parameterOne: is the bare string/],
+    ["mathml-partial-021", /Nary has no HTML renderer/],
+    ["mathml-partial-022", /Nary has no HTML renderer/],
+    ["mathml-partial-023", /Nary has no HTML renderer/],
+  ]),
   refused: [
     "left-right-round",
     "left-right-square",
@@ -305,6 +354,26 @@ describeCorpusTargets({
     "latex-left-right-bar",
     "latex-left-right-round-sum",
     "latex-left-right-around-frac",
+    "mathml-partial-003",
+    "mathml-partial-004",
+    "mathml-partial-005",
+    "mathml-partial-006",
+    "mathml-partial-007",
+    "mathml-partial-008",
+    "mathml-partial-009",
+    "mathml-partial-010",
+    "mathml-partial-012",
+    "mathml-partial-014",
+    "mathml-partial-015",
+    "mathml-partial-016",
+    "mathml-partial-017",
+    "mathml-partial-018",
+    "mathml-partial-019",
+    "mathml-partial-020",
+    "mathml-partial-021",
+    "mathml-partial-022",
+    "mathml-partial-023",
   ],
+  renderGaps: new Map(MATHML_TEXT_GAPS.map((id) => [id, TEXT_GAP] as const)),
   fixtureRows: fixture.cases,
 });

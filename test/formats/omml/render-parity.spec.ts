@@ -299,7 +299,13 @@ describe(`${FORMAT} parity, the cases the gem refuses`, () => {
 describeCorpusTargets({
   format: "omml",
   renderFormula: (formula) => toOmml(formula),
-  rendered: 236,
-  refused: [],
+  rendered: 521,
+  // The two MathML cases the gem refuses: an `menclose` whose notation is nil,
+  // and an `mlabeledtr` whose label slot holds a list.
+  refusedWith: new Map([
+    ["mathml-partial-011", /menclose\.parameterOne: holds nil/],
+    ["mathml-partial-015", /binaryFunction\.parameterOne: cannot insert a list/],
+  ]),
+  refused: ["mathml-partial-011", "mathml-partial-015"],
   fixtureRows: fixture.cases,
 });

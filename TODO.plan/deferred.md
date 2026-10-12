@@ -755,6 +755,18 @@ indentation indicator) as the literal text `|2`. Three OMML payloads
 (`equation-arrays.yaml`, `limits.yaml`, `matrices.yaml`) use it; they are
 pending and only byte-verified, so nothing reads them wrong today.
 
+### HTML Text: unicode[:name] substitutions
+
+**Trigger: the generated HTML symbol data (the HTML renderer's phase two).**
+
+`Text#value=` rewrites each `UNICODE_SYMBOLS` code to `unicode[:name]`, and the
+gem's `Text#to_html` turns those back into characters through its symbol
+table. The port's HTML renderer refuses a `Text` holding one
+(`src/render/text/html.ts`) until it has that table generated. Six pinned
+MathML corpus cases reach it (`mathml-text-001`, `-002`, `-003`, `-004`,
+`-006`, `-007`); they are pinned as refusals in `PORT_REFUSES` and as
+`renderGaps` in `test/formats/html/render-parity.spec.ts`.
+
 ## Upstream issues
 
 Defects in the Ruby gem, found while building the port. All reproduce on a

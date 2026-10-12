@@ -53,11 +53,18 @@ export interface CorpusTargetPins {
   /** The ids whose `<format>` target the gem refused, in pin order. */
   readonly refused: readonly string[];
   /**
-   * The message every refusal must carry. Required when `refused` is not
-   * empty: a bare `RenderError` check would also pass a refusal raised for an
-   * unrelated reason somewhere else in the tree.
+   * The message every refusal must carry: one for all of them, or one per id.
+   * Required when `refused` is not empty: a bare `RenderError` check would
+   * also pass a refusal raised for an unrelated reason somewhere else in the
+   * tree.
    */
-  readonly refusedWith?: RegExp;
+  readonly refusedWith?: RegExp | ReadonlyMap<string, RegExp>;
+  /**
+   * Cases the gem renders that the port refuses, with the message it refuses
+   * with: known renderer gaps, each logged in TODO.plan/deferred.md. A gap
+   * that starts rendering, or refuses for another reason, fails here.
+   */
+  readonly renderGaps?: ReadonlyMap<string, RegExp>;
   /** The generated parity fixture's rows, for the cross-check. */
   readonly fixtureRows: readonly {
     readonly id: string;
@@ -76,6 +83,15 @@ export function describeCorpusTargets(pins: CorpusTargetPins): void {
   if (refused.length > 0 && refusedWith === undefined) {
     throw new Error(`${format} corpus target: refusals are pinned without a refusedWith message`);
   }
+  const refusalMessage = (id: string): RegExp => {
+    const message = refusedWith instanceof RegExp ? refusedWith : refusedWith?.get(id);
+    if (message === undefined)
+      throw new Error(`${format} corpus target: no refusal message for ${id}`);
+    return message;
+  };
+  const gaps = pins.renderGaps ?? new Map<string, RegExp>();
+  const renderedHere = rendered.filter((entry) => !gaps.has(entry.id));
+  const gapCases = rendered.filter((entry) => gaps.has(entry.id));
   const fixtureById = new Map(pins.fixtureRows.map((row) => [row.id, row] as const));
 
   const expectedBytes = (entry: (typeof cases)[number]): string => {
@@ -109,6 +125,10 @@ export function describeCorpusTargets(pins: CorpusTargetPins): void {
       }
     });
 
+    it("pins only render gaps the gem renders", () => {
+      expect(gapCases.map((entry) => entry.id).sort()).toStrictEqual([...gaps.keys()].sort());
+    });
+
     it("has a parser for every case's input format", () => {
       for (const entry of cases) {
         expect(Object.hasOwn(PARSERS, entry.inputFormat), entry.id).toBe(true);
@@ -131,7 +151,7 @@ export function describeCorpusTargets(pins: CorpusTargetPins): void {
   });
 
   describe(`${format} corpus target, corpus layer (recorded model -> bytes)`, () => {
-    it.each(rendered.map((entry) => [entry.id, entry] as const))(
+    it.each(renderedHere.map((entry) => [entry.id, entry] as const))(
       "%s: rendering the gem's model reproduces the gem's bytes",
       (_id, entry) => {
         expect(renderFormula(buildNode(entry.model, aliases) as never)).toBe(expectedBytes(entry));
@@ -143,13 +163,21 @@ export function describeCorpusTargets(pins: CorpusTargetPins): void {
       (_id, entry) => {
         const node = buildNode(entry.model, aliases);
         expect(() => renderFormula(node as never)).toThrow(RenderError);
-        expect(() => renderFormula(node as never)).toThrow(refusedWith as RegExp);
+        expect(() => renderFormula(node as never)).toThrow(refusalMessage(entry.id));
+      },
+    );
+
+    it.each(gapCases.map((entry) => [entry.id, entry] as const))(
+      "%s: a known render gap, refused where the gem renders",
+      (_id, entry) => {
+        const node = buildNode(entry.model, aliases);
+        expect(() => renderFormula(node as never)).toThrow(gaps.get(entry.id) as RegExp);
       },
     );
   });
 
   describe(`${format} corpus target, round-trip layer (input -> parse -> render)`, () => {
-    it.each(rendered.map((entry) => [entry.id, entry] as const))(
+    it.each(renderedHere.map((entry) => [entry.id, entry] as const))(
       "%s: parse + render reproduces the gem's bytes",
       (_id, entry) => {
         expect(renderFormula(parse(entry) as never)).toBe(expectedBytes(entry));
@@ -163,7 +191,15 @@ export function describeCorpusTargets(pins: CorpusTargetPins): void {
         // a different divergence, and must fail as such.
         const tree = parse(entry);
         expect(() => renderFormula(tree as never)).toThrow(RenderError);
-        expect(() => renderFormula(tree as never)).toThrow(refusedWith as RegExp);
+        expect(() => renderFormula(tree as never)).toThrow(refusalMessage(entry.id));
+      },
+    );
+
+    it.each(gapCases.map((entry) => [entry.id, entry] as const))(
+      "%s: parses, then hits the known render gap",
+      (_id, entry) => {
+        const tree = parse(entry);
+        expect(() => renderFormula(tree as never)).toThrow(gaps.get(entry.id) as RegExp);
       },
     );
   });

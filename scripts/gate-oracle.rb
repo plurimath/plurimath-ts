@@ -111,6 +111,7 @@ module OracleGate
         - src/formatting/generated/ via scripts/generate-formatting-data.rb
         - src/formats/latex/generated/ via scripts/generate-latex-parser-data.rb
         - src/formats/mathml/generated/ via scripts/generate-mathml-data.rb
+        - src/formats/omml/generated/ via scripts/generate-omml-data.rb
         - every committed test/formats/<format>/parity-fixtures.json and its
           sidecar via
           scripts/generate-parity-fixtures.rb
@@ -228,6 +229,15 @@ module OracleGate
         chdir: snapshot_root,
         gem_dir: gem_dir,
       )
+      run_generator!(
+        File.join(snapshot_root, "scripts", "generate-omml-data.rb"),
+        [
+          "--gem", gem_dir,
+          "--out", File.join(regenerated_root, "src", "formats", "omml", "generated"),
+        ],
+        chdir: snapshot_root,
+        gem_dir: gem_dir,
+      )
 
       file_comparisons = regenerate_format_fixtures!(snapshot_root, regenerated_root, gem_dir)
       file_comparisons += regenerate_xml_reader_fixtures!(snapshot_root, regenerated_root, gem_dir)
@@ -246,6 +256,9 @@ module OracleGate
         ["src/formats/mathml/generated",
          File.join(snapshot_root, "src", "formats", "mathml", "generated"),
          File.join(regenerated_root, "src", "formats", "mathml", "generated")],
+        ["src/formats/omml/generated",
+         File.join(snapshot_root, "src", "formats", "omml", "generated"),
+         File.join(regenerated_root, "src", "formats", "omml", "generated")],
       ]
 
       diffs = comparisons.filter_map do |label, committed, regenerated|
@@ -303,10 +316,23 @@ module OracleGate
       # fixtures landed.
       basename: "model-fixtures.json",
       script: {
+        "asciimath" => "generate-asciimath-model-fixtures.rb",
         "html" => "generate-html-model-fixtures.rb",
         "latex" => "generate-latex-model-fixtures.rb",
         "mathml" => "generate-mathml-model-fixtures.rb",
+        "omml" => "generate-omml-model-fixtures.rb",
         "unicodemath" => "generate-unicodemath-model-fixtures.rb",
+      }.freeze,
+      arguments: lambda do |format, regenerated_root|
+        ["--out", File.join(regenerated_root, "test", "formats", format)]
+      end,
+    },
+    {
+      # Per-rule failure positions. Only AsciiMath has them; the map shape
+      # stops the run if another format ever commits this basename.
+      basename: "failure-position-fixtures.json",
+      script: {
+        "asciimath" => "generate-asciimath-failure-positions.rb",
       }.freeze,
       arguments: lambda do |format, regenerated_root|
         ["--out", File.join(regenerated_root, "test", "formats", format)]

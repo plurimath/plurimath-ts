@@ -36,11 +36,13 @@ describe("the repo --check help text", () => {
     for (const script of scripts) expect(output).toContain(`scripts/${script}`);
   });
 
-  it("still names the four formats that have committed model fixtures", () => {
+  it("still names the five formats that have committed model fixtures", () => {
     expect(registeredModelFixtureScripts()).toEqual([
+      "generate-asciimath-model-fixtures.rb",
       "generate-html-model-fixtures.rb",
       "generate-latex-model-fixtures.rb",
       "generate-mathml-model-fixtures.rb",
+      "generate-omml-model-fixtures.rb",
       "generate-unicodemath-model-fixtures.rb",
     ]);
   });
@@ -53,7 +55,7 @@ describe("the repo --check help text", () => {
 
           generator.merge(
             script: generator[:script]
-              .merge("omml" => "generate-omml-model-fixtures.rb").freeze,
+              .merge("example" => "generate-example-model-fixtures.rb").freeze,
           )
         end
         OracleGate.send(:remove_const, :FORMAT_FIXTURE_GENERATORS)
@@ -61,6 +63,6 @@ describe("the repo --check help text", () => {
         OracleGate.repo_usage
       end
     `);
-    expect(output).toContain("scripts/generate-omml-model-fixtures.rb");
+    expect(output).toContain("scripts/generate-example-model-fixtures.rb");
   });
 });

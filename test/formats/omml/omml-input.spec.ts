@@ -33,7 +33,7 @@ const TEXT_X = { class: "Math::Function::Text", fields: { lang: "omml", paramete
 
 describe("the documented differences", () => {
   it("lists each one with a reason", () => {
-    expect(OMML_INPUT_DIFFERENCES.length).toBe(4);
+    expect(OMML_INPUT_DIFFERENCES.length).toBe(5);
     for (const [what, why] of OMML_INPUT_DIFFERENCES) {
       expect(what.length).toBeGreaterThan(0);
       expect(why.length).toBeGreaterThan(0);
@@ -74,6 +74,24 @@ describe("the documented differences", () => {
       {
         class: "Math::Function::FontStyle::Bold",
         fields: { parameter_one: TEXT_X, parameter_two: "mathbf" },
+      },
+    ]);
+  });
+});
+
+describe("elements read by namespace", () => {
+  it("skips a math-namespace proofErr or sym, which the gem refuses", () => {
+    expect(values(omath("<m:proofErr/><m:r><m:t>x</m:t></m:r>"))).toStrictEqual([TEXT_X]);
+    expect(values(omath("<m:r><m:sym/><m:t>x</m:t></m:r>"))).toStrictEqual([TEXT_X]);
+  });
+
+  it("drops a lone font style but keeps a run with both property kinds and no text", () => {
+    expect(
+      values(omath('<m:r><m:rPr><m:sty m:val="i"/></m:rPr><w:rPr><w:b/></w:rPr></m:r>')),
+    ).toStrictEqual([
+      {
+        class: "Math::Function::FontStyle::Italic",
+        fields: { parameter_one: null, parameter_two: "italic" },
       },
     ]);
   });

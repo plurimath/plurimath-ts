@@ -145,10 +145,9 @@ const DIGIT = /\p{Nd}/u;
 const LATIN = /[a-zA-Z]/;
 
 /**
- * `text_token`'s `gsub` chain, in its order. Each step runs over the previous
- * step's output, so an entity written literally in the text is decoded as well
- * (`&#x3c;` in the input becomes `<`, and `&#x26;#x3e;` becomes `>`). That is
- * the gem's behaviour, pinned by the `runs` probes in `model-fixtures.json`.
+ * `text_token`'s `gsub` chain, in its order, over the text's own encoding.
+ * Only text without a Latin letter reaches it, so no entity can be spelled
+ * literally in that text (every hexadecimal reference has an `x`).
  */
 const TEXT_TOKEN_UNESCAPES: readonly (readonly [string, string])[] = [
   ["&#x26;", "&"],
@@ -301,7 +300,7 @@ function argumentValues(node: OmmlNode): unknown[] {
 
 /** `CTOMathArg`: `wrapped_omml_children`. */
 function translateArgument(node: OmmlNode): Value {
-  const children = translatedChildren(node, (kind) => MATH_ELEMENTS.has(kind) || kind === "m:t");
+  const children = translatedChildren(node, (kind) => MATH_ELEMENTS.has(kind) || kind === "m:oMath" || kind === "m:t");
   if (children.length === 0) return null;
   if (children.length === 1) return children[0] ?? null;
   return newFormula(children);
@@ -562,7 +561,7 @@ function groupCharacter(node: OmmlNode): Draft {
  * 5. The root
  * ---------------------------------------------------------------------- */
 
-const ROOT_CONTENT = (kind: string): boolean => MATH_ELEMENTS.has(kind);
+const ROOT_CONTENT = (kind: string): boolean => MATH_ELEMENTS.has(kind) || kind === "m:oMath";
 
 /** `Translator#omml_to_plurimath(Omml.parse(text))` and `formula.input_string = text`. */
 export { OmmlTranslateError };

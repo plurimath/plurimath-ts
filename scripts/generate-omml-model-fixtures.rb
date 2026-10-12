@@ -26,8 +26,6 @@ require "yaml"
 
 GENERATOR_RELATIVE_PATH = "scripts/generate-omml-model-fixtures.rb"
 
-# The two classes the translator dispatches on that no pinned corpus input
-# builds (measured: the corpus trees hold 42 of its 44 `when` classes).
 # The OMML namespaces, for the probes below.
 OMML_NS = 'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" ' \
           'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
@@ -61,6 +59,8 @@ COVERAGE = {
     omath("<m:acc><m:accPr><m:chr m:val=\"+\"/></m:accPr>#{e(r('x'))}</m:acc>"),
     omath("<m:acc><m:accPr><m:chr m:val=\"&#x303;\"/></m:accPr>#{e(r('x'))}</m:acc>"),
     omath(e(r('x'))),
+    omath("<m:oMath>#{r('x')}</m:oMath>"),
+    omath("<m:f>#{e("<m:oMath>#{r('a')}</m:oMath>", 'num')}#{e(r('b'), 'den')}</m:f>"),
     "<m:oMathPara #{OMML_NS}>#{r('a')}#{omath(r('b') + r('c'))}</m:oMathPara>",
     '<oMath xmlns="http://schemas.openxmlformats.org/officeDocument/2006/math"><r><t>a</t></r></oMath>',
   ],
@@ -108,8 +108,8 @@ COVERAGE = {
     omath("<m:r><m:t>a</m:t><w:t>b</w:t><w:tab/></m:r>"),
     omath(r('') + r('&#x200b;') + r('&amp;nbsp;')),
     omath(r('&#x663;&#x664;') + r('&lt;') + r('&#x2212;') + r(' a  b ') + r('  ')),
-    # `text_token` un-escapes its own encoding one entity at a time, so a
-    # literal entity in the text is decoded too ("&#x3c;" becomes "<").
+    # Text that spells an entity contains a Latin letter (the `x`), so
+    # `text_token` keeps it as text and never reaches its un-escape chain.
     omath(r('&amp;#x3c;') + r('&amp;#x26;#x3e;')),
   ],
   # Refused by the translator, not the XML read: an accent that resolves to a

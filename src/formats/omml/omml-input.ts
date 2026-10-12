@@ -73,15 +73,21 @@ export const OMML_INPUT_DIFFERENCES: readonly (readonly [string, string])[] = [
       "is not one of them.",
   ],
   [
-    "A run whose only content is its properties (`<m:r><m:rPr>…</m:rPr></m:r>`), or whose " +
-      "properties follow its text, builds no font style from them.",
+    "Run properties that leave a lone font style with no text after it (a run holding only " +
+      "one kind of properties, or properties after its text) are dropped.",
     "The gem puts the font style's Ruby class itself into the model (a class, not a " +
-      "node), which no format can render. The port drops the stray properties.",
+      "node), which no format can render. A run holding both kinds and no text is unaffected: " +
+      "both implementations build the first style with no content.",
   ],
   [
     "A run's math (`m:rPr`) and Word (`w:rPr`) properties are read in document order.",
     "The gem matches both by the local name `rPr`, so it always reads the math one first, " +
       "and a run with Word's first takes its font from the math properties.",
+  ],
+  [
+    "An element is read by namespace: a math-namespace `m:proofErr` or `m:sym` is skipped.",
+    "The gem matches elements by local name, so it reads those as the WordprocessingML " +
+      "elements of the same name and then refuses them as unsupported nodes.",
   ],
 ];
 

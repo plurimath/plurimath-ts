@@ -62,7 +62,7 @@ SWEEP_KEYWORDS = %w[
 ].freeze
 
 LONG_SEED = 20_261_012
-LONG_COUNT = 1500
+LONG_COUNT = Integer(ENV.fetch("SWEEP_LONG_COUNT", "1500"))
 LONG_MIN = 4
 LONG_MAX = 26
 
@@ -186,7 +186,7 @@ children = slices.map do |slice|
   pid = fork do
     reader.close
     writer.binmode
-    writer.write(JSON.generate(slice.map { |(group, input)| oracle_row(group, input) }))
+    writer.write(JSON.generate(slice.map { |(group, input)| warn("row #{input.inspect}") if ENV["SWEEP_PROGRESS"]; oracle_row(group, input) }))
     writer.close
     exit!(0)
   end

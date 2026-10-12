@@ -13,9 +13,11 @@
 # `consume_all`), so a rule whose failure position drifts fails a test even
 # when `expression` hides it.
 #
-# Each row records the rule, the input, and either `accepts: true` or the
-# refusal: `index`, the deepest offset in Parslet's cause tree (the same walk
-# `CorpusGenerator#failure_position` uses for the corpus `rejections`),
+# Each row records an id (`<rule>-<input position>`), the rule, the input, and
+# either `accepts: true` or the refusal: `index`, the deepest offset in
+# Parslet's cause tree (the same walk `CorpusGenerator#failure_position` uses
+# for the corpus `rejections`), `prefixLength`, how much of the input the rule
+# matches without `consume_all` (null when it matches no prefix),
 # `rootIndex`, the root cause's own offset, and `message`, the root cause's
 # text. Only `index` is a parity target; `rootIndex` and `message` are recorded
 # so a reviewer can see what Parslet itself reported.
@@ -67,7 +69,7 @@ INPUTS = [
   "sum_(i=1)^n x", "0x1F", "0x1Fg", "0x", "0b10", "0b102", "0o7", "0o78",
   "1.5", "1.5x", "1.", ".5", "left(a right)", "left(a right)x", "left(a right",
   "abc", "+", "`", "x^2", "x^2 y", "x_1^2", "oo", "lim_(x->0)", "obrace(a)",
-  "overset(a)(b)", "overset(a)(b)c", "(:", "ᑕaᑐ",
+  "overset(a)(b)", "overset(a)(b)c", "(:", "ᑕaᑐ", ")x", "]x", "}x", "ℛx",
 ].freeze
 
 options = { oracle: nil, out: "test/formats/asciimath", allow_dirty: false }
@@ -122,13 +124,24 @@ module AsciimathFailurePositions
     end
   end
 
-  def row(port_name, gem_name, input)
-    row = { "rule" => port_name, "gemRule" => gem_name.to_s, "input" => input }
+  # The length of the longest prefix the rule matches, or nil when it matches
+  # none: `parse(input, prefix: true)`, Parslet's own way of running a rule
+  # without `consume_all`.
+  def prefix_length(gem_name, input)
+    tree = Plurimath::Asciimath::Parse.new.public_send(gem_name)
+    source = Parslet::Source.new(input)
+    success, = tree.apply(source, Parslet::Atoms::Context.new, false)
+    success ? input.byteslice(0, source.bytepos).length : nil
+  end
+
+  def row(id, port_name, gem_name, input)
+    row = { "id" => id, "rule" => port_name, "gemRule" => gem_name.to_s, "input" => input }
     Plurimath::Asciimath::Parse.new.public_send(gem_name).parse(input)
     row.merge("accepts" => true)
   rescue Parslet::ParseFailed => e
     cause = e.parse_failure_cause
     row.merge("accepts" => false, "index" => deepest(cause),
+              "prefixLength" => prefix_length(gem_name, input),
               "rootIndex" => cause.pos.charpos, "message" => cause.to_s)
   end
 end
@@ -154,7 +167,9 @@ sidecar, provenance = RenderFixtureProvenance.prepare(
 
 rows = RULES.flat_map do |port_name, gem_name|
   started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-  rule_rows = INPUTS.map { |input| AsciimathFailurePositions.row(port_name, gem_name, input) }
+  rule_rows = INPUTS.each_with_index.map do |input, n|
+    AsciimathFailurePositions.row("#{port_name}-#{n}", port_name, gem_name, input)
+  end
   elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
   warn format("  %-24s %6.1fs", port_name, elapsed) if ENV["FAILPOS_TIMING"]
   rule_rows

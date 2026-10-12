@@ -378,7 +378,8 @@ describe("deep structure", () => {
  * reachable corpus formulas, which pairs satisfy `==`. Everything not listed
  * is unequal, and every case equals itself.
  *
- * 50 of the 56 cross the two input notations: `alpha` and `\alpha` are
+ * 69 of the 75 cross input notations (19 of them a MathML case and its twin
+ * in another notation): `alpha` and `\alpha` are
  * different source text for the same formula, so the gem reports them equal and
  * so must this port. They are the evidence that `==` compares the model and not
  * the input, which nothing in a single-notation corpus could show. The other
@@ -394,13 +395,19 @@ describe("deep structure", () => {
  * withholds the same id `readCorpusCases` withholds, and runs `==` in both
  * directions over every pair. Its report, verbatim:
  *
- *   rows in pin:     354        rejections:     117
- *   cases pinned:    237        cases withheld:   1
- *   cases compared:  236        reflexive:      236
- *   comparisons:   27730        asymmetric:       0
- *   equal pairs:      56
+ *   rows in pin:     653
+ *   rejections:      129
+ *   cases pinned:    524
+ *   cases withheld:  1
+ *   cases compared:  523
+ *   reflexive:       523
+ *   comparisons:     136503
+ *   asymmetric:      0
+ *   equal pairs:     75
  *
- * The fixture this replaces held the 35 pairs the same sweep reported before
+ * The MathML corpus cases took it from 236 cases and 56 pairs to 523 and 75:
+ * the 19 new pairs are MathML-input cases equal to an AsciiMath, LaTeX or
+ * UnicodeMath twin. Before that, the fixture held the 35 pairs the same sweep reported before
  * UnicodeMath joined the corpus as a third input notation (#15). All 35 are
  * still here, and the 21 that join them are exactly the UnicodeMath/LaTeX and
  * UnicodeMath/AsciiMath twins a corpus that grew a third notation would be
@@ -415,17 +422,22 @@ describe("the corpus equality matrix, as the gem reports it", () => {
   ]);
 
   const RubyEqualPairs: ReadonlySet<string> = new Set([
+    "fence-round-triple|mathml-tokens-068",
     "font-bold|latex-font-bold",
     "frac-fenced-denominator|latex-frac-sum-denominator",
     "frac-fenced-numerator|latex-frac-sum-numerator",
     "frac-simple|frac-explicit",
     "latex-fence-angle|unicode-fence-angle",
+    "latex-fence-ceiling|mathml-tokens-051",
     "latex-fence-ceiling|unicode-fence-ceiling",
     "latex-fence-round|unicode-fence-round",
     "latex-fence-square|unicode-fence-square",
     "latex-mod-bmod|latex-mod-pmod",
+    "latex-mod-bmod|mathml-tokens-042",
     "latex-mod-infix|latex-mod-bmod",
     "latex-mod-infix|latex-mod-pmod",
+    "latex-mod-infix|mathml-tokens-042",
+    "latex-mod-pmod|mathml-tokens-042",
     "latex-number-braced-exponent|unicode-number-exponent",
     "latex-number-decimal|unicode-number-decimal",
     "latex-number-integer|unicode-number-integer",
@@ -435,20 +447,34 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "latex-operator-plus-minus|unicode-operator-plus-minus",
     "latex-operator-plus|unicode-operator-plus",
     "latex-operator-times|unicode-operator-times",
+    "latex-power-exponential|mathml-scripts-044",
     "latex-symbol-empty-set|unicode-symbol-empty-set",
     "latex-symbol-greek-alpha|unicode-symbol-greek-alpha",
     "latex-symbol-greek-pi|unicode-symbol-greek-pi",
     "latex-symbol-infinity|unicode-symbol-infinity",
+    "mathml-fractions-005|mathml-fractions-008",
+    "mathml-fractions-005|mathml-fractions-009",
+    "mathml-fractions-008|mathml-fractions-009",
+    "mathml-partial-001|mathml-partial-002",
+    "mathml-scripts-007|mathml-scripts-008",
+    "mathml-scripts-015|mathml-scripts-016",
+    "mathml-tokens-001|mathml-tokens-002",
+    "mathml-tokens-003|mathml-tokens-011",
+    "mathml-tokens-051|unicode-fence-ceiling",
     "mod-in-expression|latex-mod-fenced-left",
     "mod-numeric|latex-mod-numeric",
     "mod-simple|latex-mod-bmod",
     "mod-simple|latex-mod-infix",
     "mod-simple|latex-mod-pmod",
+    "mod-simple|mathml-tokens-042",
     "nary-lim|latex-nary-lim-to-infinity",
     "nary-sum-bare|latex-nary-sum-bare",
     "nary-sum-bounded|latex-nary-sum-bounded",
     "operator-plus|whitespace-around-operator",
+    "partial-sqrt-unclosed|mathml-partial-001",
+    "partial-sqrt-unclosed|mathml-partial-002",
     "power-exponential|latex-power-exponential",
+    "power-exponential|mathml-scripts-044",
     "power-fenced-exponent|latex-power-braced-exponent",
     "power-of-two|latex-number-braced-exponent",
     "power-of-two|unicode-number-exponent",
@@ -473,12 +499,12 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "unary-vec|latex-accent-vec",
   ]);
 
-  it("has the 236 cases it expects", () => {
-    expect(nodes).toHaveLength(236);
-    // The probe reported 56 over these same 236. A line lost while the
+  it("has the 523 cases it expects", () => {
+    expect(nodes).toHaveLength(523);
+    // The probe reported 75 over these same 523. A line lost while the
     // fixture was pasted in would otherwise pass green against a port that
     // had lost the same pair.
-    expect(RubyEqualPairs.size).toBe(56);
+    expect(RubyEqualPairs.size).toBe(75);
   });
 
   it("is reflexive: a rebuilt tree equals its twin", () => {
@@ -506,7 +532,7 @@ describe("the corpus equality matrix, as the gem reports it", () => {
 
   /**
    * What the projection is skipping in each pair, as an assertion rather than
-   * as prose. Measured over these 56 pairs on the pinned corpus, and each of
+   * as prose. Measured over these 75 pairs on the pinned corpus, and each of
    * the three groups is named rather than folded into one loose claim:
    *
    *   - 8 pairs have models that are identical outright, `input_string`
@@ -517,8 +543,8 @@ describe("the corpus equality matrix, as the gem reports it", () => {
    *     needs no notation-specific syntax at all: `(a)`, `[a]`, `1`, `3.14`,
    *     `-42` and `2^10` are the same bytes in LaTeX and UnicodeMath source.
    *     Nothing is being skipped there at all;
-   *   - 47 differ in `input_string` and in nothing else — the field the
-   *     projection drops;
+   *   - 66 differ in `input_string` and in nothing else — the field the
+   *     projection drops (the 19 MathML pairs among them);
    *   - 1, `font-bold|latex-font-bold`, differs in `input_string` and in one
    *     more field: its `FontStyle::Bold` carries `parameter_two: "bb"` from
    *     `bb(x)` against `"mathbf"` from `\mathbf{x}`, which the projection

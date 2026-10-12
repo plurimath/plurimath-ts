@@ -82,7 +82,7 @@ describe("the compat class matches the plurimath-js surface", () => {
   });
 });
 
-const PARSEABLE: readonly Format[] = ["asciimath", "latex", "html", "unicode"];
+const PARSEABLE: readonly Format[] = ["asciimath", "latex", "html", "mathml", "unicode"];
 
 /**
  * The same formula written in each door's own notation.
@@ -129,7 +129,7 @@ describe("the constructor's staged contract", () => {
     expect(equals(formula.data, parseUnicodemath(GEM_OUTPUT.toUnicodemath))).toBe(true);
   });
 
-  /** Two of six raise today. Asserted per format so it cannot drift quietly. */
+  /** One of six raises today. Asserted per format so it cannot drift quietly. */
   it.each(FORMATS.filter((f) => !PARSEABLE.includes(f)))(
     "raises UnsupportedFormatError for %s, which has no parser yet",
     (format: Format) => {
@@ -138,7 +138,7 @@ describe("the constructor's staged contract", () => {
   );
 
   it("names the format it refused", () => {
-    expect(() => new Plurimath(INPUT, "mathml")).toThrow(/mathml/);
+    expect(() => new Plurimath(INPUT, "omml")).toThrow(/omml/);
   });
 
   /**
@@ -1068,7 +1068,7 @@ describe("the one method that cannot be honest yet", () => {
     const codes: Record<string, string> = {};
     const fields: Record<string, string> = {};
     for (const [label, run] of [
-      ["ctor", () => new Plurimath(INPUT, "mathml")],
+      ["ctor", () => new Plurimath(INPUT, "omml")],
       ["toDisplay", () => buildTreeDump(new NaryNode(), "asciimath")],
     ] as const) {
       try {
@@ -1086,7 +1086,7 @@ describe("the one method that cannot be honest yet", () => {
     });
     // stable identifiers, not sentences
     expect(fields).toEqual({
-      ctor: "mathml",
+      ctor: "omml",
       toDisplay: "toDisplay tree dump",
     });
     for (const value of Object.values(fields)) expect(value).not.toMatch(/\s\w+\s\w+\s\w+\s/);

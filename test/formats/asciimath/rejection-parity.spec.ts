@@ -68,7 +68,7 @@ describe("the rejection corpus", () => {
     // implicit. Without this, the scoping would still pass if the LaTeX
     // rejection payload vanished from the pin, and the filter would be dead
     // code that looked like a safeguard.
-    expect(corpus.rejections.length).toBe(117);
+    expect(corpus.rejections.length).toBe(129);
     expect(rejections.length).toBeLessThan(corpus.rejections.length);
     const byFormat = new Map<string, number>();
     for (const entry of corpus.rejections) {
@@ -78,6 +78,7 @@ describe("the rejection corpus", () => {
       ["asciimath", 13],
       ["html", 38],
       ["latex", 14],
+      ["mathml", 12],
       ["unicode", 52],
     ]);
   });

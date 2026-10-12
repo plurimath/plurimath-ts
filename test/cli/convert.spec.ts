@@ -86,13 +86,13 @@ describe("convert", () => {
 });
 
 describe("compat's unregistered input formats stay unreachable from convert's own type", () => {
-  it("mathml and omml are excluded from InputFormat at compile time and at the compat layer", () => {
-    // convert()'s InputFormat type already excludes "mathml"/"omml" at compile
-    // time (isInputFormat above proves it at runtime); this asserts the layer
-    // convert() delegates to, src/compat/index.ts, still refuses them too —
-    // so a future typo in convert.ts's TO_COMPAT_INPUT_FORMAT map would fail
-    // loudly here rather than silently misrouting.
-    expect(() => new Plurimath("x", "mathml")).toThrow(UnsupportedFormatError);
+  it("omml is excluded from InputFormat at compile time and at the compat layer", () => {
+    // convert()'s InputFormat type excludes "mathml" and "omml" at compile time
+    // (isInputFormat above proves it at runtime). The layer convert() delegates
+    // to, src/compat/index.ts, now parses mathml, so only omml is still refused
+    // there; this asserts it, so a future typo in convert.ts's
+    // TO_COMPAT_INPUT_FORMAT map would fail loudly here rather than silently
+    // misrouting. Admitting mathml to the CLI is a separate change.
     expect(() => new Plurimath("x", "omml")).toThrow(UnsupportedFormatError);
   });
 });

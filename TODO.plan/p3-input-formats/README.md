@@ -104,7 +104,7 @@ Per format:
       divergence if it is deliberately not implemented.
   (done: the `locale` group of `test/formats/latex/model-fixtures.json` and `test/formats/html/model-fixtures.json` (eight rows each: `1,5` under `de` and `fr`, `1,2,3` and `1.5` under `de`, `1.5`, `1,5` and `1٫5` under `en`, `1٫5` under `ar`) and of `test/formats/unicodemath/model-fixtures.json` (six rows: `1٫5` under `ar`, `en` and `de`, `1,5`, `1.5` and `1,2,3` under `de`), generated from the oracle at `00c52783` by each format's `scripts/generate-*-model-fixtures.rb`, deep-equal the port's models in each `model-parity.spec.ts`; passing no locale to the three grammars fails exactly the eleven non-`en` rows whose model differs from the default (five LaTeX, five HTML, one UnicodeMath); an unsupported locale (`xx`, `DE`, `de_CH`) raises `UnsupportedLocaleError` in all three, as the gem raises `UnsupportedLocale` (`DE` and `de_CH` in the `an unsupported locale spelling refuses` block of each format's rejection spec, HTML's in `parser.spec.ts`), and is checked before preprocessing as the gem checks it (`test/formats/latex/rejection-parity.spec.ts` and `test/formats/unicodemath/rejection-parity.spec.ts`, `&#55296;` and `#` under `xx`; HTML's twin is in `test/formats/html/parser.spec.ts`); unknown option keys raise `ParseOptionError` before the locale is checked, as the gem raises it (the `parse-options` group of each format's `render-options-fixtures.json`, checked by `test/formats/parse-option-parity.spec.ts`); checked 2026-10-08)
 - [x] Isolation assertions for its subpath.
-  (done: `scripts/gate-package.mjs:218`, `:222`, `:230` for `./html`, `./latex`, `./unicodemath`; `pnpm gate:package` exits 0; checked 2026-09-24, line references 2026-10-12)
+  (done: `scripts/gate-package.mjs:219`, `:223`, `:231` for `./html`, `./latex`, `./unicodemath`; `pnpm gate:package` exits 0; checked 2026-09-24, line references 2026-10-12)
 - [ ] Review round with findings resolved, and sign-off recorded.
       (review round done; sign-off pending (user/maintainer). Record below.)
 
@@ -122,6 +122,6 @@ violations; every figure and gem line reference in the criteria above re-measure
 
 | # | Finding | Evidence | Disposition |
 |---|---|---|---|
-| 1 | The isolation criterion cited `scripts/gate-package.mjs:195`, `:199`, `:207` | those lines are the locale regex block; the rows are at :218, :222, :230 | fixed |
+| 1 | The isolation criterion cited `scripts/gate-package.mjs:195`, `:199`, `:207` | those lines are the locale regex block; the rows are at :219, :223, :231 | fixed |
 | 2 | The locale criterion claims `DE` and `de_CH` are refused, but only `xx` was tested | grep: no `de_CH` under `test/`; the gem raises `UnsupportedLocale` for both in all three formats | fixed: one test block per format |
 | 3 | `src/formats/unicodemath/transform.ts:1-934` is a ~930-line header narrating each increment, with running counts superseded by `FINAL_COUNT` (483); `test/formats/unicodemath/transform-coverage.spec.ts:105` keeps a historical tally the same way | `ARCHITECTURE.md` asks comments to explain constraints, not narrate | follow-up: a rewrite of 900+ lines of comment is its own change; the header's own lines 17-22 already defer to `FINAL_COUNT` |

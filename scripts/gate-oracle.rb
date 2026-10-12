@@ -303,6 +303,7 @@ module OracleGate
       # fixtures landed.
       basename: "model-fixtures.json",
       script: {
+        "asciimath" => "generate-asciimath-model-fixtures.rb",
         "html" => "generate-html-model-fixtures.rb",
         "latex" => "generate-latex-model-fixtures.rb",
         "mathml" => "generate-mathml-model-fixtures.rb",

@@ -36,8 +36,9 @@ describe("the repo --check help text", () => {
     for (const script of scripts) expect(output).toContain(`scripts/${script}`);
   });
 
-  it("still names the four formats that have committed model fixtures", () => {
+  it("still names the five formats that have committed model fixtures", () => {
     expect(registeredModelFixtureScripts()).toEqual([
+      "generate-asciimath-model-fixtures.rb",
       "generate-html-model-fixtures.rb",
       "generate-latex-model-fixtures.rb",
       "generate-mathml-model-fixtures.rb",

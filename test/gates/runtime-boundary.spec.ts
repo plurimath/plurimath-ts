@@ -26,13 +26,14 @@ import { toAsciimath } from "../../src/formats/asciimath/renderer";
 import { toHtml } from "../../src/formats/html/renderer";
 import { toLatex } from "../../src/formats/latex/renderer";
 import { toMathml } from "../../src/formats/mathml/renderer";
+import { toOmml } from "../../src/formats/omml/renderer";
 import { toUnicodemath } from "../../src/formats/unicodemath/renderer";
 
 /**
- * The five renderers this gate covers; OMML is not covered yet. `toMathml`
- * accepts only `formula` and `mrow` at its root — `to_mathml` lives on
- * `Formula` alone in the gem, and every other kind raises `NoMethodError`
- * there — so each format carries its own valid root rather than sharing one.
+ * The six landed renderers. `toMathml` and `toOmml` accept only `formula`
+ * and `mrow` at their root — `to_mathml` and `to_omml` live on `Formula`
+ * alone in the gem, and every other kind raises `NoMethodError` there — so
+ * each format carries its own valid root rather than sharing one.
  */
 const RENDERERS = [
   {
@@ -65,6 +66,14 @@ const RENDERERS = [
   {
     format: "mathml",
     render: toMathml as (node: unknown) => string,
+    validRoot: {
+      kind: "formula",
+      value: [{ kind: "number", value: "1" }],
+    },
+  },
+  {
+    format: "omml",
+    render: toOmml as (node: unknown) => string,
     validRoot: {
       kind: "formula",
       value: [{ kind: "number", value: "1" }],

@@ -511,7 +511,7 @@ changed renderer sources restored to their pre-change content):
 | `./mathml` | 271,875 | 271,875 | 317,810 | 317,810 |
 | `./unicodemath` | 203,304 | 203,304 | 248,834 | 248,834 |
 
-No existing subpath grew. `./html` gained `43,666` ESM bytes, close to the
+No subpath other than `./html` grew. `./html` gained `43,666` ESM bytes, close to the
 `43,127` unminified bytes of `src/generated/html/symbols.ts`, and its
 `126,303` sits `37,537` bytes under the `163,840` ceiling — no overage to
 accept. `package-isolation` was re-run with the table reachable from the
@@ -706,7 +706,7 @@ No subpath grew. `./omml` has no row because neither commit exported it.
       consumption commit, and the ESM and CJS closure bytes for every published
       subpath are recorded in this file beside the baseline table above. No
       existing subpath grows.
-      (open: both pairs are now recorded: the HTML consumption change's under "Measured after HTML consumption" and the OMML one (#70, `4f0f0be` against `017b7ed`) under "Measured after OMML consumption", byte-identical before and after. The last sentence is not met as written: the HTML change grew `./html`, already a published subpath, by `43,666` ESM and `43,427` CJS bytes — the consuming subpath's own table cost, which the ceiling box below bounds. Ticking this needs the sentence amended to exempt the consuming subpath, or the growth recorded as a divergence; checked 2026-10-07)
+      (open: both pairs are now recorded: the HTML consumption change's under "Measured after HTML consumption" and the OMML one (#70, `4f0f0be` against `017b7ed`) under "Measured after OMML consumption", byte-identical before and after. The last sentence is not met as written: the HTML change grew `./html`, already a published subpath, by `43,666` ESM and `43,427` CJS bytes — the consuming subpath's own table cost, which the ceiling box below bounds. Ticking this needs the sentence amended to exempt the consuming subpath, or the growth recorded as a divergence, and that choice is a maintainer decision; re-checked 2026-10-12, unchanged)
 - [x] `./html`'s ESM closure is at or below `163,840` bytes and `./omml`'s at
       or below `286,720`, or the measured overage is written into this file as
       an accepted cost with the numbers that justify it. An unrecorded overage

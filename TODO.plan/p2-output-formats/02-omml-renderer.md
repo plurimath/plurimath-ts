@@ -271,7 +271,7 @@ shapes above.
 
 - [ ] `toOmml` matches the gem byte-for-byte across every reachable case in the pinned
       corpus, and the oracle expectations are generated rather than hand-typed.
-      (open: `test/formats/omml/parity-target.ts` pins all 237 gem-renderable cases written in AsciiMath (92), LaTeX (125) and UnicodeMath (20) from a generated fixture, with `text-unitsml-valid` a recorded divergence; the corpus's HTML-, MathML- and OMML-input cases are not swept; checked 2026-10-05. Since the pin moved to plurimath-testsuite `cf3c5eb`, `test/formats/corpus-target-parity.ts` also checks all 236 reachable cases against the corpus's own `omml` target, in a model layer and a round-trip layer, and all 236 render the gem's bytes; checked 2026-10-06)
+      (open: `test/formats/omml/parity-target.ts` pins all 237 gem-renderable cases written in AsciiMath (92), LaTeX (125) and UnicodeMath (20) from a generated fixture, with `text-unitsml-valid` a recorded divergence; the corpus's HTML-, MathML- and OMML-input cases are not swept; checked 2026-10-05. Since the pin moved to plurimath-testsuite `cf3c5eb`, `test/formats/corpus-target-parity.ts` also checks all 236 reachable cases against the corpus's own `omml` target, in a model layer and a round-trip layer, and all 236 render the gem's bytes; checked 2026-10-06. Still open on two counts, both deferred: `text-unitsml-valid` waits on the UnitsML decision (`open-decisions.md`, "UnitsML, and what it means for 1.0"), and the MathML- and OMML-input cases wait on the XML-input work (`open-decisions.md`, "MathML/OMML input strategy"); the corpus's `html` directory holds only its 38 `parse_error` rejection rows, so it has no case to render; re-checked 2026-10-12)
 - [x] All `36` own-root kinds are measured against the oracle, not inferred from MathML
       or a sibling OMML kind; `mrow` has a separate inherited-behavior assertion
       (`[surface]`).
@@ -294,8 +294,15 @@ shapes above.
       per target for the 40 case groups and the 7 `calls/1` groups, and
       `test/formats/corpus-target-parity.ts` pins 236 reachable cases with `omml` bytes;
       checked 2026-10-06)
-- [ ] The cross-format invariant gates cover OMML, including the differential runner on
+- [x] The cross-format invariant gates cover OMML, including the differential runner on
       both halves.
+      (done: `test/gates/runtime-boundary.spec.ts`,
+      `test/formats/asciimath/unsupported-fallback.spec.ts` and
+      `test/adversarial/adversarial-inputs.spec.ts` run `toOmml`, and
+      `scripts/gate-oracle.rb differential` compares `to_omml` against `toOmml` on 429
+      inputs, 2,574 comparisons across six formats; no adversarial outcome changed, since
+      the pinned gem's `to_omml` renders every input its other renderers render;
+      checked 2026-10-09)
 - [x] `/omml` is a published subpath with package-isolation assertions, and its expected
       exports and forbidden layers are listed explicitly in the package gate.
       (done: #112; `scripts/gate-package.mjs:150` and `:204`; `pnpm gate:package` exits 0; checked 2026-09-24)

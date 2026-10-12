@@ -327,7 +327,47 @@ RULE_COVERAGE.each do |group, texts|
   texts.each { |text| sources << [group, text] }
 end
 
+# P1 item 8's malformed-input classes (TODO.plan/p1-asciimath/08-p1-completion.md),
+# probed for this format rather than assumed. Each candidate lands where the
+# oracle puts it: a refusal becomes a `raises` row the port must refuse too,
+# an acceptance becomes a model row that pins the leniency. A class with no
+# refusal is fine; a class nobody probed is not. The entity group carries the
+# three-way width split TODO.plan/p3-input-formats/README.md describes.
+MALFORMED_COVERAGE = {
+  "malformed-fraction" => ["a/", "/b", "<i>a</i>/"],
+  "malformed-power" => ["x<sup>", "x<sup></sup>", "<sup>2</sup>", "x<sub>"],
+  "malformed-fences" => ["(a", "a)", "<i>(</i>a", "<i>a", "a</i>", "<table><tr><td>a"],
+  "malformed-trailing" => ["a b )", "<i>a</i>)"],
+  "malformed-entities" => ["&#x110000;", "&#x10FFFF;", "&#xFFFFFFFF;", "&nosuchentity;", "&#xZZ;", "&;", "&pi", "&"],
+}.freeze
+
+MALFORMED_COVERAGE.each do |group, texts|
+  texts.each { |text| sources << [group, text] }
+end
 LOCALE_COVERAGE.each { |(text, locale)| sources << ["locale", text, locale] }
+
+# The parse tree with slices and symbols flattened to their text and hash keys
+# sorted, as plurimath-testsuite's `CorpusGenerator.serialize_tree` writes the
+# corpus's `parse_tree`, so the port compares both through one `plain` shape.
+def serialize_tree(node, path)
+  case node
+  when nil, true, false, ::String, ::Integer, ::Float then node
+  when ::Symbol, ::Parslet::Slice then node.to_s
+  when ::Array then node.each_with_index.map { |n, i| serialize_tree(n, "#{path}[#{i}]") }
+  when ::Hash
+    node.each_with_object({}) do |(key, value), result|
+      name = key.to_s
+      abort "REFUSING: duplicate key #{name.inspect} at #{path}" if result.key?(name)
+
+      result[name] = serialize_tree(value, "#{path}.#{name}")
+    end.sort.to_h
+  else
+    abort "REFUSING: cannot serialize parse tree node #{node.class} at #{path}"
+  end
+end
+
+# The P1 text and MathML targets, in the corpus's own spelling.
+RENDER_TARGETS = %w[asciimath latex mathml unicodemath].freeze
 
 seen = {}
 rows = sources.filter_map do |(group, input, locale)|
@@ -353,18 +393,41 @@ rows = sources.filter_map do |(group, input, locale)|
     row["raisedIn"] = "normalize"
   end
 
+  # The gem's parse tree, as `Html::Parser#parse` builds it from the normalised
+  # text, so the HTML grammar is checked over every row and not only over the
+  # strings `test/formats/html/grammar.spec.ts` carries by hand. A grammar
+  # refusal records `nil`. No-locale rows only: the tree a locale changes is the
+  # decimal marker, which the `locale` rows' models already pin.
+  if row.key?("normalized") && !locale
+    row["tree"] = begin
+      serialize_tree(Plurimath::Html::Parse.new.parse(row["normalized"]), "tree")
+    rescue Parslet::ParseFailed
+      nil
+    end
+  end
+
+  formula = nil
   begin
-    row["model"] = CorpusGenerator.serialize_node(
-      if locale
-        Plurimath::Math.parse(input, :html, locale: locale)
-      else
-        Plurimath::Math.parse(input, :html)
-      end,
-      "model",
-    )
+    formula = if locale
+                Plurimath::Math.parse(input, :html, locale: locale)
+              else
+                Plurimath::Math.parse(input, :html)
+              end
+    row["model"] = CorpusGenerator.serialize_node(formula, "model")
   rescue ORACLE_REFUSAL => e
     row["raises"] = e.class.name
     row["raisedIn"] ||= "parse"
+  end
+  # The gem's own renders of the parsed formula, so the port's HTML parser is
+  # checked end to end (parse, then render) and not only up to the model. A
+  # target the gem refuses records the error class instead of bytes. Rendered
+  # without a locale, as the corpus renders, so only the no-locale rows carry it.
+  if formula && !locale
+    row["rendered"] = RENDER_TARGETS.to_h do |target|
+      [target, formula.public_send(:"to_#{target}")]
+    rescue StandardError => e
+      [target, { "raises" => e.class.name }]
+    end
   end
   row
 end

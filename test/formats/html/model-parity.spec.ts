@@ -23,9 +23,15 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { normalize, ParseError } from "../../../src/core/index";
+import { normalize, ParseError, RenderError } from "../../../src/core/index";
+import { toAsciimath } from "../../../src/formats/asciimath/renderer";
+import { parseHtmlNormalized } from "../../../src/formats/html/grammar";
 import { parseHtml } from "../../../src/formats/html/parser";
 import { preprocess } from "../../../src/formats/html/preprocess";
+import { toLatex } from "../../../src/formats/latex/renderer";
+import { toMathml } from "../../../src/formats/mathml/renderer";
+import { toUnicodemath } from "../../../src/formats/unicodemath/renderer";
+import { ParseFailed, type ParseValue, Slice } from "../../../src/pegkit/index";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -38,6 +44,10 @@ interface FixtureCase {
   readonly model?: unknown;
   readonly raises?: string;
   readonly raisedIn?: string;
+  /** The gem's render of the parsed formula per target, or the class it raised. */
+  /** The gem's grammar tree for `normalized`, flattened; `null` where it refused. */
+  readonly tree?: unknown;
+  readonly rendered?: { readonly [target: string]: string | { readonly raises: string } };
 }
 
 interface Fixtures {
@@ -53,6 +63,29 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
 
 const parsed = fixtures.cases.filter((entry) => entry.model !== undefined);
 const raised = fixtures.cases.filter((entry) => entry.raises !== undefined);
+
+/** The renderers the generator's `RENDER_TARGETS` names, in the same spelling. */
+const RENDERERS = {
+  asciimath: toAsciimath,
+  latex: toLatex,
+  mathml: toMathml,
+  unicodemath: toUnicodemath,
+} as const;
+
+type Target = keyof typeof RENDERERS;
+
+/** Every (row, target) pair the gem rendered or refused, from the no-locale rows. */
+const renders = fixtures.cases.flatMap((entry) =>
+  Object.entries(entry.rendered ?? {}).map(([target, outcome]) => ({
+    entry,
+    target: target as Target,
+    outcome,
+  })),
+);
+const renderedBytes = renders.filter(
+  (row): row is typeof row & { outcome: string } => typeof row.outcome === "string",
+);
+const renderRefused = renders.filter((row) => typeof row.outcome !== "string");
 
 /** The parse options a row was recorded under: its `locale`, when it has one. */
 function optionsFor(entry: FixtureCase): { locale: string } | undefined {
@@ -125,6 +158,73 @@ describe("the parsed model", () => {
     "%s %j: deep-equals the gem's",
     (_group, _input, entry) => {
       expect(normalize(parseHtml(entry.input, optionsFor(entry)))).toStrictEqual(entry.model);
+    },
+  );
+});
+
+type PlainTree = string | null | PlainTree[] | { [key: string]: PlainTree };
+
+/** The tree with slices flattened to their text, as the generator serializes it. */
+function plain(value: ParseValue): PlainTree {
+  if (value === null) return null;
+  if (typeof value === "string") return value;
+  if (value instanceof Slice) return value.text;
+  if (Array.isArray(value)) return value.map(plain);
+  const result: Record<string, PlainTree> = {};
+  for (const [key, nested] of Object.entries(value)) result[key] = plain(nested);
+  return result;
+}
+
+const withTree = fixtures.cases.filter(
+  (entry): entry is FixtureCase & { normalized: string } =>
+    entry.tree !== undefined && entry.normalized !== undefined,
+);
+
+describe("the parse tree", () => {
+  it("has the rows it was generated with", () => {
+    expect(withTree.length).toBe(272);
+    expect(withTree.filter((entry) => entry.tree === null).length).toBe(13);
+  });
+
+  it.each(withTree.map((entry) => [entry.group, entry.input, entry] as const))(
+    "%s %j: matches the tree Html::Parse built",
+    (_group, _input, entry) => {
+      if (entry.tree === null) {
+        expect(() => parseHtmlNormalized(entry.normalized)).toThrow(ParseFailed);
+      } else {
+        expect(plain(parseHtmlNormalized(entry.normalized))).toStrictEqual(entry.tree);
+      }
+    },
+  );
+});
+
+describe("the rendered output of the parsed model", () => {
+  // Pinned as literals, so a regeneration that drops the `rendered` field, or
+  // a target, fails here rather than leaving the two blocks below vacuous.
+  it("has the rows and targets it was generated with", () => {
+    expect(fixtures.cases.filter((entry) => entry.rendered !== undefined).length).toBe(259);
+    expect(Object.keys(RENDERERS).length).toBe(4);
+    expect(renderedBytes.length).toBe(887);
+    expect(renderRefused.length).toBe(149);
+  });
+
+  it.each(renderedBytes.map((row) => [row.entry.group, row.entry.input, row.target, row] as const))(
+    "%s %j to %s: reproduces the gem's bytes",
+    (_group, _input, _target, row) => {
+      expect(RENDERERS[row.target](parseHtml(row.entry.input))).toBe(row.outcome);
+    },
+  );
+
+  it.each(renderRefused.map((row) => [row.entry.group, row.entry.input, row.target, row] as const))(
+    "%s %j to %s: is refused at render, as the gem refuses it",
+    (_group, _input, _target, row) => {
+      // The gem's renderer fails with a NoMethodError that `Formula#to_<target>`
+      // reports as `Math::ParseError`; the port reports a render failure as
+      // `RenderError`, so the class is the port's own and
+      // the phase, after a successful parse, is what is compared.
+      expect(row.outcome).toStrictEqual({ raises: "Plurimath::Math::ParseError" });
+      const formula = parseHtml(row.entry.input);
+      expect(() => RENDERERS[row.target](formula)).toThrow(RenderError);
     },
   );
 });
@@ -246,5 +346,40 @@ describe("the signatures the gem leaves unmatched", () => {
 
   it("is exactly the set recorded above", () => {
     expect([...measured].sort()).toStrictEqual([...GEM_UNMATCHED_SIGNATURES].sort());
+  });
+});
+
+/**
+ * P1 item 8's malformed-input classes, probed for HTML by the generator's
+ * `MALFORMED_COVERAGE` and pinned here as `[group, accepted, refused]`. A
+ * refused row is checked by "the inputs the gem refuses" above and an accepted
+ * one by "the parsed model", so this only guards that every class was probed
+ * and that a regeneration cannot quietly move or drop a row. A candidate that
+ * an earlier group already holds is deduplicated into that group, which is why
+ * some classes count fewer rows than the generator lists.
+ */
+describe("the malformed-input classes", () => {
+  const Classes: readonly (readonly [group: string, accepted: number, refused: number])[] = [
+    ["malformed-entities", 6, 1],
+    ["malformed-fences", 0, 4],
+    ["malformed-fraction", 3, 0],
+    ["malformed-power", 1, 3],
+    ["malformed-trailing", 0, 2],
+  ];
+
+  it("probes all five classes", () => {
+    expect(Classes.map(([group]) => group)).toStrictEqual([
+      "malformed-entities",
+      "malformed-fences",
+      "malformed-fraction",
+      "malformed-power",
+      "malformed-trailing",
+    ]);
+  });
+
+  it.each(Classes)("%s: %i accepted, %i refused", (group, accepted, refused) => {
+    const rows = fixtures.cases.filter((entry) => entry.group === group);
+    expect(rows.filter((entry) => entry.model !== undefined).length).toBe(accepted);
+    expect(rows.filter((entry) => entry.raises !== undefined).length).toBe(refused);
   });
 });

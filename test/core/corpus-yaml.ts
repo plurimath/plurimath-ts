@@ -77,7 +77,7 @@ function parseMapping(state: State, column: number): { readonly [key: string]: Y
     if (!first && (rest === "-" || rest.startsWith("- "))) break;
     const match = KEY_PATTERN.exec(rest);
     if (match === null) throw new Error(`not a mapping entry at line ${state.index + 1}: ${line}`);
-    const key = match[1] ?? "";
+    const key = decodeKey(match[1] ?? "");
     const inline = match[2];
     if (key in result) throw new Error(`duplicate key "${key}" at line ${state.index + 1}`);
     state.index += 1;
@@ -211,6 +211,22 @@ function continueQuoted(state: State, inline: string): string {
     if (closesSingleQuoted(folded)) return folded;
   }
   throw new Error(`unterminated scalar: ${text}`);
+}
+
+/**
+ * A quoted key is decoded the way a quoted value is. Psych quotes a key that
+ * would not survive plain: the LaTeX matrix row separator, two backslashes,
+ * is written as a double-quoted key with each backslash escaped. Keeping the
+ * quotes made that key a different string from the one the gem's tree holds.
+ */
+function decodeKey(raw: string): string {
+  if (
+    raw.length >= 2 &&
+    ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'")))
+  ) {
+    return raw.startsWith('"') ? parseDoubleQuoted(raw) : parseSingleQuoted(raw);
+  }
+  return raw;
 }
 
 function parseSingleQuoted(text: string): string {

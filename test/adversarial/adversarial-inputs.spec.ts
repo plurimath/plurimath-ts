@@ -36,6 +36,7 @@ import { toHtml } from "../../src/formats/html/renderer";
 import { parseLatex } from "../../src/formats/latex/parser";
 import { toLatex } from "../../src/formats/latex/renderer";
 import { toMathml } from "../../src/formats/mathml/renderer";
+import { toOmml } from "../../src/formats/omml/renderer";
 import { parseUnicodemath } from "../../src/formats/unicodemath/parser";
 import { toUnicodemath } from "../../src/formats/unicodemath/renderer";
 import { DEPTH_LIMIT_MESSAGE, dynamic, STACK_EXHAUSTED_MESSAGE } from "../../src/pegkit/atom";
@@ -82,6 +83,7 @@ const RENDERERS: ReadonlyArray<readonly [string, (node: ParsedFormula) => string
   ["toMathml", toMathml],
   ["toUnicodemath", toUnicodemath],
   ["toHtml", toHtml],
+  ["toOmml", toOmml],
 ];
 
 /** Runs one input all the way to a clean outcome, or rethrows what it got. */
@@ -528,9 +530,9 @@ const GRAMMAR_CASES: ReadonlyArray<GrammarCase> = [
   ["latex", "20 nested parens", wrapped("(", "x", ")", SHALLOW), "parsed"],
   ["latex", "1,000 nested parens", wrapped("(", "x", ")", DEEP), "PARSE_ERROR"],
   // RENDER_ERROR because of `toHtml` alone; the test after this table pins
-  // that the other four renderers still render it. Measured on the pinned
+  // that the other five renderers still render it. Measured on the pinned
   // oracle: the gem parses this and renders it through to_asciimath,
-  // to_latex, to_mathml and to_unicodemath, but `Formula#to_html` raises (as
+  // to_latex, to_mathml, to_unicodemath and to_omml, but `Formula#to_html` raises (as
   // `Math::ParseError`, from inside the render call), the same
   // `\\left…\\right` refusal `test/formats/html/render-parity.spec.ts` pins
   // for the corpus cases.
@@ -693,7 +695,7 @@ describe("every LaTeX, HTML and UnicodeMath adversarial input reaches the outcom
 
 describe("20 nested \\left( is refused by toHtml alone", () => {
   // The table row above is RENDER_ERROR, which would also hold if any of the
-  // other four renderers started refusing. This pins the split.
+  // other five renderers started refusing. This pins the split.
   const node = parseLatex(wrapped("\\left(", "x", "\\right)", SHALLOW));
 
   it.each(RENDERERS.filter(([name]) => name !== "toHtml"))("%s renders it", (_name, render) => {
@@ -702,6 +704,27 @@ describe("20 nested \\left( is refused by toHtml alone", () => {
 
   it("toHtml refuses it with a typed RenderError", () => {
     expect(() => toHtml(node)).toThrow(RenderError);
+  });
+});
+
+describe("a lone surrogate is refused by toUnicodemath alone", () => {
+  // The three "lone surrogate" rows above are RENDER_ERROR, which would also
+  // hold if any other renderer started refusing. This pins the split the row
+  // comments describe, for every renderer: the port's own behaviour, since the
+  // gem cannot receive an unpaired surrogate at all.
+  describe.each(["latex", "html", "unicodemath"] as const)("parsed from %s", (grammar) => {
+    const node = PARSERS[grammar]("x\uD800y");
+
+    it.each(RENDERERS.filter(([name]) => name !== "toUnicodemath"))(
+      "%s renders it",
+      (_name, render) => {
+        expect(typeof render(node)).toBe("string");
+      },
+    );
+
+    it("toUnicodemath refuses it with a typed RenderError", () => {
+      expect(() => toUnicodemath(node)).toThrow(RenderError);
+    });
   });
 });
 

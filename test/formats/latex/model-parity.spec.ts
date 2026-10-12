@@ -135,3 +135,38 @@ describe("the inputs the gem refuses", () => {
     },
   );
 });
+
+/**
+ * P1 item 8's malformed-input classes, probed for LaTeX by the generator's
+ * `MALFORMED_COVERAGE` and pinned here as `[group, accepted, refused]`. A
+ * refused row is checked by "the inputs the gem refuses" above and an accepted
+ * one by "the parsed model", so this only guards that every class was probed
+ * and that a regeneration cannot quietly move or drop a row. A candidate that
+ * an earlier group already holds is deduplicated into that group, which is why
+ * some classes count fewer rows than the generator lists.
+ */
+describe("the malformed-input classes", () => {
+  const Classes: readonly (readonly [group: string, accepted: number, refused: number])[] = [
+    ["malformed-entities", 6, 1],
+    ["malformed-fences", 3, 4],
+    ["malformed-fraction", 0, 5],
+    ["malformed-power", 3, 1],
+    ["malformed-trailing", 0, 3],
+  ];
+
+  it("probes all five classes", () => {
+    expect(Classes.map(([group]) => group)).toStrictEqual([
+      "malformed-entities",
+      "malformed-fences",
+      "malformed-fraction",
+      "malformed-power",
+      "malformed-trailing",
+    ]);
+  });
+
+  it.each(Classes)("%s: %i accepted, %i refused", (group, accepted, refused) => {
+    const rows = fixtures.cases.filter((entry) => entry.group === group);
+    expect(rows.filter((entry) => entry.model !== undefined).length).toBe(accepted);
+    expect(rows.filter((entry) => entry.raises !== undefined).length).toBe(refused);
+  });
+});

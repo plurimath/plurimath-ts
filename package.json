@@ -117,6 +117,7 @@
   ],
   "scripts": {
     "build": "tsdown",
+    "prepare": "tsdown",
     "check": "node scripts/check.mjs",
     "test": "vitest run",
     "test:oracle-unit": "vitest run --config vitest.oracle.config.ts",

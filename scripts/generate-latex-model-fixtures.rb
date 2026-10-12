@@ -345,6 +345,23 @@ RULE_COVERAGE.each do |group, texts|
   texts.each { |text| sources << [group, text] }
 end
 
+# P1 item 8's malformed-input classes (TODO.plan/p1-asciimath/08-p1-completion.md),
+# probed for this format rather than assumed. Each candidate lands where the
+# oracle puts it: a refusal becomes a `raises` row the port must refuse too,
+# an acceptance becomes a model row that pins the leniency. A class with no
+# refusal is fine; a class nobody probed is not. The entity group carries the
+# three-way width split TODO.plan/p3-input-formats/README.md describes.
+MALFORMED_COVERAGE = {
+  "malformed-fraction" => ["\\frac{a}", "\\frac", "a\\over", "\\over b", "\\frac{1}{"],
+  "malformed-power" => ["x^", "x_", "x^{", "^"],
+  "malformed-fences" => ["\\left( a", "a \\right)", "(a", "a)", "\\{a", "{a", "a}"],
+  "malformed-trailing" => ["a b )", "a+b}", "\\sqrt{x}}"],
+  "malformed-entities" => ["&#x110000;", "&#x10FFFF;", "&#xFFFFFFFF;", "&nosuchentity;", "&#xZZ;", "&;", "&pi", "&"],
+}.freeze
+
+MALFORMED_COVERAGE.each do |group, texts|
+  texts.each { |text| sources << [group, text] }
+end
 LOCALE_COVERAGE.each { |(text, locale)| sources << ["locale", text, locale] }
 
 seen = {}

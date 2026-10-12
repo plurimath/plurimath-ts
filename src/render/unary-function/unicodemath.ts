@@ -122,6 +122,9 @@ export function renderUnaryFunction(
 ): string | null {
   const name = node.name;
   switch (name) {
+    case "None":
+      // `none.rb:19`: `def to_unicodemath(**); end` — nil.
+      return null;
     case "Cancel":
       return renderCancel(node, context);
     case "Left":

@@ -706,6 +706,19 @@ cannot hold. Two kinds of intermediate are refused on the spot with
   resource limit, not Ruby behaviour: an evaluation error Ruby would raise
   later in the same expression is reported as this refusal instead.
 
+### OMML input reads OMML, not the omml gem's lutaml mapping
+
+**Trigger: a consumer needing the gem's reading of input outside ordinary
+OMML (text split by CDATA or comments, foreign-namespace attributes, a run
+holding only its properties, Word run properties before math ones).**
+
+The gem reads OMML through `Omml.parse`, the omml gem's lutaml-model mapping.
+The port reads OMML from its own element and attribute semantics
+(`src/formats/omml/omml-input.ts`), so it agrees with the gem on ordinary OMML
+(every pinned corpus case) and differs on that input by design.
+`OMML_INPUT_DIFFERENCES` in the same module lists each difference with its
+reason, and `test/formats/omml/omml-input.spec.ts` pins each one.
+
 ### MathML input reads MathML, not the mml gem's lutaml mapping
 
 **Trigger: a consumer needing the gem's reading of input outside ordinary
@@ -814,6 +827,32 @@ classes `Symbols::Vec`, `Symbols::Dot` and `Symbols::Ddot` instead, which have
 no such writer, so the gem refuses these common accents (in `mo` or `mi`). The
 port refuses them the same way (`translate-refusals` rows in
 `test/formats/mathml/model-fixtures.json`).
+
+### OMML input refuses an accent character that names a function
+
+```ruby
+Plurimath::Math.parse('<m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">' \
+  '<m:acc><m:accPr><m:chr m:val="sin"/></m:accPr><m:e><m:r><m:t>x</m:t></m:r></m:e></m:acc></m:oMath>', :omml)
+# => ParseError (NoMethodError: undefined method 'attributes=' for Function::Sin)
+```
+
+`accent_value` (`omml/formula_transformation.rb`) sets `attributes` on any
+unary function the accent character resolves to, but only the accent classes
+have that writer. The port refuses the same way (`translate-refusals` rows in
+`test/formats/omml/model-fixtures.json`).
+
+### OMML input puts a Ruby class into the model
+
+```ruby
+Plurimath::Math.parse('<m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">' \
+  '<m:r><m:rPr><m:sty m:val="p"/></m:rPr></m:r></m:oMath>', :omml).value
+# => [Plurimath::Math::Function::FontStyle::Normal]   (the class, not an instance)
+```
+
+`run_to_plurimath` (`omml/translator.rb`) treats the run's properties as a
+font class and only applies it when text follows; a run with no text, or with
+its properties after the text, leaves the class itself in the formula. The port
+drops the stray properties (`OMML_INPUT_DIFFERENCES`).
 
 ### MathML input records `annotation-xml` as an object address
 

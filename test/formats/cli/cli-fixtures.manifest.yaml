@@ -9,10 +9,10 @@ generator:
   sha256: ca6112462fc3652b5ea38ce9edae41d50189fc504935035adca151fb263f3c9f
   inputs:
     scripts/generate-cli-fixtures.rb: ca6112462fc3652b5ea38ce9edae41d50189fc504935035adca151fb263f3c9f
-    scripts/generate-corpus.rb: 0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef
+    scripts/generate-corpus.rb: 318fb620c77766d2b0680a87bc69994ec173e589853d1eb588f69e2b845364ef
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: bfd474c2c2c93938b48dd5f1e90631fbaeb60bd5
+    commit: eefdd5c5c0108f61758392ebb3cd0eeb1ec535b4
     clean: true
     dirty_paths: []
 oracle:

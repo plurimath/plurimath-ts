@@ -7,9 +7,9 @@
  *
  * The fixture is generated, never hand-written
  * (`scripts/generate-asciimath-model-fixtures.rb`): every string of length 1-3
- * over the sweep alphabet, a seeded batch of longer inputs over the same
- * alphabet plus whole keywords (200 seeded inputs in the
- * shape of the grammar sweep's 1,500, which were a one-off probe), and the pinned corpus's AsciiMath inputs.
+ * over the sweep alphabet; 200 seeded inputs of 4-26 characters over the same
+ * alphabet plus whole keywords, in the shape of the grammar sweep's 1,500
+ * (a one-off probe, not committed); and the pinned corpus's AsciiMath inputs.
  *
  * Divergences are collected and reported together rather than one test per
  * row: six thousand `it.each` rows cost more in reporter overhead than the

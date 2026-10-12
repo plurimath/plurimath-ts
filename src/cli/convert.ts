@@ -7,7 +7,7 @@
  * `feature-roadmap.md`'s input-format table): the compat constructor's
  * `PARSERS` map registers `asciimath`, `latex`, `html` and `unicode` (its
  * name for UnicodeMath), so those four are the CLI's input formats.
- * `mathml`/`omml`/`unitsml` input do not parse and are deliberately absent.
+ * `mathml`/`omml`/`unitsml` are not registered there, so they are absent.
  * Every compat `to<Format>()` method works, so all six are output formats.
  *
  * CLI format tokens use each format's own directory name under `src/formats`

@@ -184,22 +184,6 @@ export function requireString(value: unknown, kind: string, at: string): string 
   );
 }
 
-export function requireEmptyOptions(value: unknown, kind: string, at: string): void {
-  if (value === null || value === undefined) return;
-  if (
-    typeof value === "object" &&
-    !Array.isArray(value) &&
-    Object.keys(value as Record<string, unknown>).length === 0
-  ) {
-    return;
-  }
-  throw new RenderError(
-    `${at}: only the measured empty options hash is implemented in this slice`,
-    FORMAT,
-    kind,
-  );
-}
-
 /** The Ruby class basename — `Math::Symbols::Sigma` is `Sigma`. */
 export function classBasename(rubyClass: string): string {
   return rubyClass.slice(rubyClass.lastIndexOf(":") + 1);
@@ -321,11 +305,7 @@ export function symbolOmmlValueOrNull(
  * value is read. `font_style_t_tag` is this method verbatim
  * (`symbols/symbol.rb:97-99`), and no symbol subclass overrides either.
  */
-export function symbolValueOrGenerated(
-  node: NodeOf<"symbol">,
-  errorKind: string,
-  at?: string,
-): string {
+function symbolValueOrGenerated(node: NodeOf<"symbol">, errorKind: string, at?: string): string {
   if (node.value !== null && node.value !== undefined) {
     return requireString(node.value, errorKind, at === undefined ? "symbol.value" : `${at}.value`);
   }
@@ -487,7 +467,7 @@ export function renderFixedNary(
   );
 }
 
-export function renderLimit(
+function renderLimit(
   kind: LimitKind,
   position: "Low" | "Upp",
   base: unknown,

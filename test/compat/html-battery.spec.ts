@@ -1,20 +1,15 @@
 /**
  * The HTML registration battery for `src/compat/index.ts`'s `PARSERS` map.
  *
- * `html` is withheld from the compat constructor's `PARSERS` map (see that
- * file's own comment on `unicode`, which set the precedent this file follows):
- * a format listed there should answer what the gem answers, or say up front
- * that it cannot, and that has to be MEASURED against input nobody generated
+ * `html` is registered in the compat constructor's `PARSERS` map, and a
+ * format listed there should answer what the gem answers, or say up front
+ * that it cannot. That has to be MEASURED against input nobody generated
  * — fifty ordinary HTML math snippets, hand-typed here, none of them corpus
  * output and none of them drawn from `test/formats/html/model-fixtures.json`'s
- * round-trip or rule-coverage lists. This file is that measurement, not a
- * decision: registering `html` is a judgement for whoever reads its result,
- * not something this spec does on its own.
+ * round-trip or rule-coverage lists. This file is that measurement.
  *
- * There is no equivalent UnicodeMath file to model this on. `index.ts`'s
- * comment there cites a "50-input battery", but that battery was only ever
- * prose — measured once, in an earlier session, and never committed as a
- * test. This file's shape instead follows `test/formats/html/model-parity.spec.ts`,
+ * `test/compat/unicodemath-battery.spec.ts` is its UnicodeMath twin. This
+ * file's shape follows `test/formats/html/model-parity.spec.ts`,
  * the repository's real fixture-plus-spec convention: a generator
  * (`scripts/battery-html-fixtures.rb`) queries the oracle for every
  * input and records what it did, and this spec reads that recorded JSON and
@@ -25,10 +20,9 @@
  * rather than repeated, so this comment cannot go stale the way a hand-copied
  * commit hash would.
  *
- * Every row's outcome is measured, not assumed passing: running this file
- * against the current port is what step 4 of the task that produced it calls
- * for, and the counts below come from that run rather than from what a
- * "complete" HTML port would be expected to do.
+ * Every row's outcome is measured, not assumed passing: the counts below come
+ * from running this file against the current port, not from what a "complete"
+ * HTML port would be expected to do.
  */
 
 import { createHash } from "node:crypto";

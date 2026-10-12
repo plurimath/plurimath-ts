@@ -305,5 +305,5 @@ shapes above.
       checked 2026-10-09)
 - [x] `/omml` is a published subpath with package-isolation assertions, and its expected
       exports and forbidden layers are listed explicitly in the package gate.
-      (done: #112; `scripts/gate-package.mjs:150` and `:204`; `pnpm gate:package` exits 0; checked 2026-09-24)
+      (done: #112; `scripts/gate-package.mjs:155` and `:228`; `pnpm gate:package` exits 0; checked 2026-09-24, line references 2026-10-12)
 - [ ] Review completes with no valid implementable findings left unresolved.

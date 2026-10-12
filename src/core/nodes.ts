@@ -2012,7 +2012,7 @@ function codepointToString(code: number): string {
  * A `RangeError` subclass, deliberately: the decoder's failure is the
  * language's, not a package operation (see `codepointToString` above), and
  * several call sites already branch on `error instanceof RangeError` — the
- * OMML renderer's own decode guard (`omml/render-shared.ts:582`) and the
+ * OMML renderer's own decode guard (`decodeEntities` in `omml/render-shared.ts`) and the
  * stack-depth branding at the AsciiMath, LaTeX, HTML and UnicodeMath renderer
  * entries. Subclassing keeps every one of them matching.
  *

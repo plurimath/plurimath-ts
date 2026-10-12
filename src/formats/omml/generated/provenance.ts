@@ -42,7 +42,7 @@ export const OMML_DATA_GENERATED_PROVENANCE: OmmlDataGeneratedProvenance = {
     ],
     [
       "scripts/generate-omml-data.rb",
-      "6e7f64d042cbbe6d627c3da53ad9fce34b97222d292aa6060c23e9f8e9b42dda",
+      "a4d7dcbca70bfe06d05d6fd90c68559ed40fc379dbc9c4261d498d60450b76a0",
     ],
   ]),
   oracle: "plurimath",

@@ -22,6 +22,7 @@ import {
 } from "../../src/core/index";
 import { FormulaNode, NaryNode, SymbolNode, UnaryFunctionNode } from "../../src/core/nodes";
 import { parseHtml } from "../../src/formats/html/index";
+import { parseMathml } from "../../src/formats/mathml/parser";
 import { parseUnicodemath } from "../../src/formats/unicodemath/index";
 import RootDefault, { Plurimath as RootNamed } from "../../src/index";
 
@@ -130,7 +131,7 @@ describe("the compat class matches the plurimath-js surface", () => {
   });
 });
 
-const PARSEABLE: readonly Format[] = ["asciimath", "latex", "html", "unicode"];
+const PARSEABLE: readonly Format[] = ["asciimath", "latex", "html", "mathml", "unicode"];
 
 /**
  * The same formula written in each door's own notation.
@@ -172,12 +173,19 @@ describe("the constructor's staged contract", () => {
     expect(equals(formula.data, parseHtml(GEM_OUTPUT.toHtml))).toBe(true);
   });
 
+  it("routes mathml construction to parseMathml, not some other parser", () => {
+    const input = "<math><mfrac><mn>1</mn><mn>2</mn></mfrac></math>";
+    const formula = new Plurimath(input, "mathml");
+    expect(equals(formula.data, parseMathml(input))).toBe(true);
+    expect(formula.toAsciimath()).toBe("frac(1)(2)");
+  });
+
   it("routes unicode construction to parseUnicodemath, not some other parser", () => {
     const formula = new Plurimath(GEM_OUTPUT.toUnicodemath, "unicode");
     expect(equals(formula.data, parseUnicodemath(GEM_OUTPUT.toUnicodemath))).toBe(true);
   });
 
-  /** Two of six raise today. Asserted per format so it cannot drift quietly. */
+  /** One of six raises today. Asserted per format so it cannot drift quietly. */
   it.each(FORMATS.filter((f) => !PARSEABLE.includes(f)))(
     "raises UnsupportedFormatError for %s, which has no parser yet",
     (format: Format) => {
@@ -186,7 +194,7 @@ describe("the constructor's staged contract", () => {
   );
 
   it("names the format it refused", () => {
-    expect(() => new Plurimath(INPUT, "mathml")).toThrow(/mathml/);
+    expect(() => new Plurimath(INPUT, "omml")).toThrow(/omml/);
   });
 
   /**
@@ -1145,7 +1153,7 @@ describe("the one method that cannot be honest yet", () => {
     const codes: Record<string, string> = {};
     const fields: Record<string, string> = {};
     for (const [label, run] of [
-      ["ctor", () => new Plurimath(INPUT, "mathml")],
+      ["ctor", () => new Plurimath(INPUT, "omml")],
       ["toDisplay", () => buildTreeDump(new NaryNode(), "asciimath")],
     ] as const) {
       try {
@@ -1163,7 +1171,7 @@ describe("the one method that cannot be honest yet", () => {
     });
     // stable identifiers, not sentences
     expect(fields).toEqual({
-      ctor: "mathml",
+      ctor: "omml",
       toDisplay: "toDisplay tree dump",
     });
     for (const value of Object.values(fields)) expect(value).not.toMatch(/\s\w+\s\w+\s\w+\s/);

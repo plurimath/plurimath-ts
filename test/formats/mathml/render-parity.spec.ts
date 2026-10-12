@@ -17,10 +17,10 @@
  * Every count is pinned, because a suite that quietly loads zero cases has
  * happened to this repository once before:
  *
- *   - 236 reachable cases: the pin holds 237 and the one withheld UnitsML case
+ *   - 523 reachable cases: the pin holds 524 and the one withheld UnitsML case
  *     it actually contains is dropped. The exclusion manifest names two, but
  *     the gem raises on the invalid one, so no case for it was ever generated;
- *   - 236 of those carry `expected.mathml` bytes to compare;
+ *   - 522 of those carry `expected.mathml` bytes to compare;
  *   - 91 go through the round-trip layer, which is the AsciiMath-written
  *     subset. That says which parser the layer calls, not what this port can
  *     parse: `parseLatex` landed in #76 and drives
@@ -57,14 +57,15 @@ function expectedMathml(entry: (typeof cases)[number]): string {
 }
 
 describe("mathml render parity, corpus layer (recorded model -> bytes)", () => {
-  it("has the 236 reachable cases (237 pinned, 1 withheld as UnitsML)", () => {
+  it("has the 523 reachable cases (524 pinned, 1 withheld as UnitsML)", () => {
     // A suite that quietly loaded zero cases has happened to this repository
     // once before; both counts are pinned so it cannot happen silently.
-    expect(cases.length).toBe(236);
-    expect(rendered.length).toBe(236);
+    expect(cases.length).toBe(523);
+    // 522 rather than 523, because one MathML case records a refusal here.
+    expect(rendered.length).toBe(522);
     // The round-trip layer's scoped list is pinned too, and it is far smaller
-    // than the corpus layer: 91 of the 236 reachable cases are written in
-    // AsciiMath and 125 in LaTeX. This layer calls `parseAsciimath`, so it
+    // than the corpus layer: 91 of the 523 reachable cases are written in
+    // AsciiMath, 125 in LaTeX and 287 in MathML. This layer calls `parseAsciimath`, so it
     // takes the 91. The gap between the two numbers IS the second input
     // corpus, so a suite that stopped scoping would show up here as the two
     // converging.

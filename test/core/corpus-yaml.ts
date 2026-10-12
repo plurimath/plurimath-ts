@@ -78,7 +78,7 @@ function parseValue(state: State, column: number): YamlValue {
     throw new Error(`unsupported block scalar header "${rest}" at line ${state.index + 1}`);
   }
   state.index += 1;
-  return parseScalar(rest);
+  return parseScalar(continueQuoted(state, rest));
 }
 
 function parseMapping(state: State, column: number): { readonly [key: string]: YamlValue } {
@@ -100,7 +100,7 @@ function parseMapping(state: State, column: number): { readonly [key: string]: Y
     if (inline !== undefined && (inline.startsWith("|") || inline.startsWith(">"))) {
       result[key] = parseBlockScalar(state, column, inline);
     } else if (inline !== undefined && inline !== "") {
-      result[key] = parseScalar(inline);
+      result[key] = parseScalar(continueQuoted(state, inline));
     } else {
       result[key] = parseNested(state, column);
     }
@@ -214,6 +214,48 @@ function parseScalar(raw: string): YamlValue {
   if (/^-?\d+$/.test(text)) return Number.parseInt(text, 10);
   if (/^-?\d+\.\d+$/.test(text)) return Number.parseFloat(text);
   return text;
+}
+
+/** Whether a single-quoted scalar opened in `text` closes on it (`''` is an escaped quote). */
+function closesSingleQuoted(text: string): boolean {
+  let index = 1;
+  while (index < text.length) {
+    if (text[index] === "'") {
+      if (text[index + 1] === "'") {
+        index += 2;
+        continue;
+      }
+      return true;
+    }
+    index += 1;
+  }
+  return false;
+}
+
+/**
+ * A single-quoted scalar may run onto following lines (Psych writes one when the
+ * value ends in a newline, or wraps a long one). YAML folds it: each line loses
+ * its surrounding spaces and tabs, one line break becomes a space, and each
+ * empty line between two lines becomes a newline. Returns the scalar as one line, still quoted, with
+ * `state` past its last line. Anything else is returned unchanged.
+ */
+function continueQuoted(state: State, inline: string): string {
+  const text = trimYaml(inline);
+  if (!text.startsWith("'") || closesSingleQuoted(text)) return inline;
+  let folded = text.replace(/[ \t]+$/, "");
+  let breaks = 0;
+  while (state.index < state.lines.length) {
+    const line = trimYaml(state.lines[state.index] ?? "");
+    state.index += 1;
+    if (line === "") {
+      breaks += 1;
+      continue;
+    }
+    folded += breaks === 0 ? ` ${line}` : "\n".repeat(breaks) + line;
+    breaks = 0;
+    if (closesSingleQuoted(folded)) return folded;
+  }
+  throw new Error(`unterminated scalar: ${text}`);
 }
 
 /**

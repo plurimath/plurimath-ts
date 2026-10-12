@@ -1460,6 +1460,8 @@ sidecar, provenance = RenderFixtureProvenance.prepare(
 # rendered text is a UnicodeMath string; a refusal has none.
 corpus_unicodemath = []
 CorpusGenerator.read_pin_cases.each do |kase|
+  next unless CorpusGenerator.model_fixture_harvests?(kase)
+
   raw = kase.dig("expected", "unicodemath")
   text = case raw
          when ::String then raw

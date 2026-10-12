@@ -20,11 +20,12 @@
  * happened to this repository once before and `readCorpusCases` throwing on
  * emptiness is only belt to that brace:
  *
- *   - 236 reachable cases: the pin holds 237 and the one withheld UnitsML case
+ *   - 523 reachable cases: the pin holds 524 and the one withheld UnitsML case
  *     it actually contains is dropped. The exclusion manifest names two, but
  *     the gem raises on the invalid one, so no case for it was ever generated;
- *   - 235 of those carry `expected.unicodemath` bytes to compare; the odd one
- *     out, `partial-sqrt-unclosed`, is recorded as a refusal and has no bytes;
+ *   - 510 of those carry `expected.unicodemath` bytes to compare; the other
+ *     13, `partial-sqrt-unclosed` and 12 MathML cases, are recorded as
+ *     refusals and have no bytes;
  *   - 90 go through the round-trip layer: the AsciiMath-written subset is 91
  *     and the refusing case is one of them. That says which parser the layer
  *     calls, not what this port can parse — `parseLatex` landed in #76 and
@@ -61,15 +62,16 @@ function expectedLatex(entry: (typeof cases)[number]): string {
 }
 
 describe("unicodemath render parity, corpus layer (recorded model -> text)", () => {
-  it("has the 236 reachable cases (237 pinned, 1 withheld as UnitsML)", () => {
+  it("has the 523 reachable cases (524 pinned, 1 withheld as UnitsML)", () => {
     // A suite that quietly loaded zero cases has happened to this repository
     // once before; both counts are pinned so it cannot happen silently.
-    expect(cases.length).toBe(236);
-    // 235 rather than 236, because one case records a unicodemath refusal.
-    expect(rendered.length).toBe(235);
+    expect(cases.length).toBe(523);
+    // 510 rather than 523, because 13 cases record a unicodemath refusal: one
+    // AsciiMath case and 12 MathML ones.
+    expect(rendered.length).toBe(510);
     // The round-trip layer's scoped list is pinned too, and it is far smaller
-    // than the corpus layer: 91 of the 236 reachable cases are written in
-    // AsciiMath and 125 in LaTeX. This layer calls `parseAsciimath`, so it
+    // than the corpus layer: 91 of the 523 reachable cases are written in
+    // AsciiMath, 125 in LaTeX and 287 in MathML. This layer calls `parseAsciimath`, so it
     // takes the AsciiMath ones — 90 rather than 91, because the refusing case
     // is one of them. The gap between the two numbers IS the second input
     // corpus, so a suite that stopped scoping would show up here as the two

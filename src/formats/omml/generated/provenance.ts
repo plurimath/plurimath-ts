@@ -34,7 +34,7 @@ export const OMML_DATA_GENERATED_PROVENANCE: OmmlDataGeneratedProvenance = {
     ],
     [
       "scripts/generate-corpus.rb",
-      "0ed08c3c87a374b726fa3ddef272d420bfd476e54d270773a50f9046490cf0ef",
+      "318fb620c77766d2b0680a87bc69994ec173e589853d1eb588f69e2b845364ef",
     ],
     [
       "scripts/generate-mathml-data.rb",

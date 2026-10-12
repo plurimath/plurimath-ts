@@ -142,9 +142,8 @@ describe("the corpus itself", () => {
     expect(found.length).toBe(80);
   });
 
-  // The MathML and OMML payloads are pending their readers
-  // (`PENDING_READER_FORMATS`); several use multi-line quoted scalars this
-  // reader does not handle. They are excluded by name, and counted, so a new
+  // The OMML payloads are pending their reader (`PENDING_READER_FORMATS`);
+  // some use a block-scalar indentation indicator this reader does not handle. They are excluded by name, and counted, so a new
   // pending format cannot slip in unnoticed.
   const pending = pinned.filter((path) =>
     isPendingReaderPayload(
@@ -152,14 +151,14 @@ describe("the corpus itself", () => {
     ),
   );
 
-  it("sets aside exactly the pending MathML and OMML payloads", () => {
-    expect(pending.length).toBe(28);
-    expect(loadPinnedCorpus().pendingPayloads.length).toBe(28);
+  it("sets aside exactly the pending OMML payloads", () => {
+    expect(pending.length).toBe(15);
+    expect(loadPinnedCorpus().pendingPayloads.length).toBe(15);
   });
 
   it("reads all of them to a mapping", () => {
     const files = [...local, ...pinned.filter((path) => !pending.includes(path))];
-    expect(files.length).toBe(56);
+    expect(files.length).toBe(69);
     for (const file of files) {
       const document = parseYaml(readFileSync(file, "utf8"));
       expect(typeof document, file).toBe("object");

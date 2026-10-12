@@ -52,9 +52,20 @@ export const KNOWN_DIVERGENCES: Readonly<
  *
  * The table stays so the next case that refuses has somewhere to be named. A
  * corpus that grows can put entries back; what it must not do is put one back
- * without a reason that is TRUE of the gem.
+ * without a reason that is TRUE of the gem. The MathML corpus cases put six
+ * back, all one gap.
  */
-export const PORT_REFUSES: ReadonlySet<string> = new Set([]);
+export const PORT_REFUSES: ReadonlySet<string> = new Set([
+  // MathML input: `Text` with a `unicode[:name]` substitution, which the HTML
+  // renderer refuses until it has generated symbol data (TODO.plan/deferred.md,
+  // "HTML Text: unicode[:name] substitutions").
+  "mathml-text-001",
+  "mathml-text-002",
+  "mathml-text-003",
+  "mathml-text-004",
+  "mathml-text-006",
+  "mathml-text-007",
+]);
 
 /**
  * How many of the gem-renderable corpus cases the port renders today.
@@ -66,9 +77,11 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([]);
  * UnicodeMath. 227 match it byte for byte; the 228th is `text-unitsml-valid`,
  * which renders and diverges by decision — it is counted here as rendered and
  * pinned both ways in `KNOWN_DIVERGENCES`. The 139 LaTeX- and UnicodeMath-input
- * cases joined the sweep matching the gem as they stood.
+ * cases joined the sweep matching the gem as they stood. MathML input added
+ * 268 more the gem renders: 262 match, and six are in `PORT_REFUSES` (490 =
+ * 228 + 262).
  */
-export const RENDERED_BASELINE = 228;
+export const RENDERED_BASELINE = 490;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared

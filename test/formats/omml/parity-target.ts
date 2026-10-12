@@ -88,15 +88,16 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([]);
  *
  * Not hand-set. Both this number and the refusal set above come from running
  * every gem-renderable case in `parity-fixtures.json` through the port and
- * byte-comparing the result: 237 renderable, 0 refused, 237 rendered — 236
+ * byte-comparing the result: 522 renderable, 0 refused, 522 rendered — 521
  * reproducing the gem's exact bytes and one (`text-unitsml-valid`) pinned in
  * `KNOWN_DIVERGENCES`. Nothing rendered bytes that differ from the gem's
  * without being pinned, and nothing threw untyped. It moved 42 → 79 when the
  * generated OMML symbol table was wired in, 79 → 92 when the function carriers
- * landed, and 92 → 237 when the sweep took in the corpus's LaTeX-input (125)
- * and UnicodeMath-input (20) cases, all of which matched the gem as they stood.
+ * landed, 92 → 237 when the sweep took in the corpus's LaTeX-input (125)
+ * and UnicodeMath-input (20) cases, and 237 → 522 when it took in the MathML-
+ * input cases (285), all of which matched the gem as they stood.
  */
-export const RENDERED_BASELINE = 237;
+export const RENDERED_BASELINE = 522;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared

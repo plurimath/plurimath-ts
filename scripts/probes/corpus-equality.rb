@@ -191,6 +191,10 @@ records = pin_provenance.fetch("payloads").flat_map do |entry|
     abort "REFUSING: #{relative} at #{pin_head} does not match the digest its own " \
           "provenance records. The pinned commit is internally inconsistent."
   end
+  # A pending reader format's payloads are byte-checked above and skipped,
+  # as `readCorpusCases` skips them (`PENDING_READER_FORMATS`).
+  next [] if CorpusGenerator.pending_reader_payload?(entry.fetch("path"))
+
   document = YAML.safe_load(bytes, aliases: false)
   next [] if document["schema"] == CALLS_SCHEMA
   group = document["group"]

@@ -747,6 +747,30 @@ port reads MathML from its own element and attribute semantics
 `MATHML_INPUT_DIFFERENCES` in the same module lists each difference with its
 reason.
 
+### Model fixtures do not yet harvest the MathML corpus cases
+
+**Trigger: the follow-up that widens LaTeX, HTML and UnicodeMath parse parity.**
+
+The LaTeX, HTML and UnicodeMath model fixtures are built by parsing what the
+gem rendered for each pinned corpus case. The MathML-input cases are left out
+of that harvest (`CorpusGenerator.model_fixture_harvests?` in
+`scripts/generate-corpus.rb`): with them, the LaTeX fixture would grow from
+342 to 620 inputs and the HTML one from 254 to 509, all new parse-parity
+targets for those parsers. Drop the predicate, regenerate, and fix what the
+parsers miss.
+
+### HTML Text: unicode[:name] substitutions
+
+**Trigger: the generated HTML symbol data (the HTML renderer's phase two).**
+
+`Text#value=` rewrites each `UNICODE_SYMBOLS` code to `unicode[:name]`, and the
+gem's `Text#to_html` turns those back into characters through its symbol
+table. The port's HTML renderer refuses a `Text` holding one
+(`src/render/text/html.ts`) until it has that table generated. Six pinned
+MathML corpus cases reach it (`mathml-text-001`, `-002`, `-003`, `-004`,
+`-006`, `-007`); they are pinned as refusals in `PORT_REFUSES` and as
+`renderGaps` in `test/formats/html/render-parity.spec.ts`.
+
 ### The corpus YAML reader misreads a block-scalar indentation indicator (resolved)
 
 **Resolved (2026-10-12).** `test/core/corpus-yaml.ts` read a block scalar

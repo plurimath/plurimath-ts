@@ -143,9 +143,9 @@ module MathmlModelProbe
     Mml.parse(text, version: 4, namespace_exist: namespace_exist?(text))
   end
 
-  # The pinned corpus's MathML cases. MathML is a pending reader format, so
-  # `read_pin_cases` byte-verifies these payloads without returning their
-  # cases; they are read here only after that check has passed.
+  # The pinned corpus's MathML inputs, cases and rejections alike, in payload
+  # order. Read straight from the payloads, after `read_pin_cases` has
+  # byte-verified every one of them against corpus/provenance.yaml.
   def corpus_inputs
     CorpusGenerator.read_pin_cases
     provenance_path = File.join(CorpusGenerator.pin_root, "corpus", "provenance.yaml")
@@ -153,10 +153,6 @@ module MathmlModelProbe
     paths = provenance.fetch("payloads").map { |entry| entry.fetch("path") }.sort
                       .select { |path| path.start_with?("mathml/") }
     inputs = paths.flat_map do |path|
-      unless CorpusGenerator.pending_reader_payload?(path)
-        abort "REFUSING: #{path} is no longer pending; read it through read_pin_cases"
-      end
-
       file = File.join(CorpusGenerator.pin_root, "corpus", path)
       YAML.safe_load(File.read(file), aliases: false).fetch("cases").map { |c| c.fetch("input") }
     end

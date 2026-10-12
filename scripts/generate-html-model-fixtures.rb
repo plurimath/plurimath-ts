@@ -294,6 +294,8 @@ rendered = 0
 refused_parse = 0
 refused_render = 0
 CorpusGenerator.read_pin_cases.each do |kase|
+  next unless CorpusGenerator.model_fixture_harvests?(kase)
+
   format = kase["input_format"]
   next if format.nil?
 

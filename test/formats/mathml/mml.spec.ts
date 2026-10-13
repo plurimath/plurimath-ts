@@ -91,3 +91,13 @@ describe("annotation-xml inside semantics", () => {
     expect(JSON.stringify(model)).toContain(JSON.stringify(ANNOTATION_XML_TO_S));
   });
 });
+
+describe("text cost", () => {
+  it("stays linear on a long run of inner whitespace", () => {
+    const text = `a${" ".repeat(32_000)}b`;
+    const started = performance.now();
+    parseMathml(`<math ${NS}><mi>${text}</mi></math>`);
+    // The anchored-regex strip this replaced took tens of seconds at 32 000 spaces.
+    expect(performance.now() - started).toBeLessThan(5000);
+  });
+});

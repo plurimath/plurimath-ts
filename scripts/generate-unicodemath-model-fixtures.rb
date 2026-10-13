@@ -200,7 +200,7 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-unicodemath-model-fixtures.rb"
 #   "⒩(a@b)"  Vmatrix, capital — the `if :Vmatrix == matrix` branch, an
 #             explicit `Paren::Norm`. `get_table_class` returns the SAME class
 #             name, `"Vmatrix"`, for this and `⒱` above (`Utility.capitalize`
-#             downcases the tail) — the pair is the collapse the module header
+#             downcases the tail) — the pair is the collapse the former module header (9bbe254e)
 #             documents, reproduced rather than "fixed", and only comparable
 #             with both rows in the set.
 #   "Ⓢ(a@b)"  Bmatrix, capital — `elsif :Bmatrix == matrix`, explicit
@@ -371,7 +371,7 @@ RULE_COVERAGE_NARY_INPUTS = [
 #   :2311  "a a_b ab"
 #   :2329  "|a| a b"
 #
-# Slice H (COMBINATORS-EARLY, the module header's eleventh increment) adds
+# Slice H (COMBINATORS-EARLY, the former module header (9bbe254e)'s eleventh increment) adds
 # nine more, folded into this same group rather than opening a new one, per
 # its own character (pure unwraps and one-symbol-lookup leaves) even where a
 # couple would as easily sit beside the "symbol" group above:
@@ -1136,7 +1136,7 @@ RULE_COVERAGE = {
   # `:925`/`:930` (`expression: simple` + `expr: sequence`/simple) — all six
   # traced-but-unreached on the oracle itself, ~2,700 candidate inputs
   # (the gem's own `unicodemath-tests`/spec examples plus hand-built
-  # variants), none of which fires any of them. See the module header for the
+  # variants), none of which fires any of them. See the former module header (9bbe254e) for the
   # full accounting. Superseded for three of the six: the later REMAINING
   # increment found inputs that fire `:695`, `:850` and `:880`, and their
   # witnesses are rows in `RULE_COVERAGE["remaining"]` below.
@@ -1210,7 +1210,7 @@ RULE_COVERAGE = {
   # "fraction_atoms_tail"]` as `:750`'s witness. (This first named `:278`,
   # which the oracle does not fire on that string and which is ported.) `:2245`, `:2323`, `:2035`, `:2041`, `:2097`, `:1841`, `:2341`,
   # `:2777`, `:2403`, `:2787` and `:3074` carry no row anywhere — see the
-  # module header's own "thirteenth increment" section for each one's
+  # former module header (9bbe254e)'s own "thirteenth increment" section for each one's
   # disposition. Superseded for four of them: the later REMAINING increment
   # registered `:2035`, `:2097`, `:2245` and `:2403`, and their rows are in
   # `RULE_COVERAGE["remaining"]` below.
@@ -1245,7 +1245,7 @@ RULE_COVERAGE = {
   ],
   # "fenced_tail": slice K, G2's twenty-one deferred bracket-pair rules
   # (`transform.rb:3156`-`:3966`), re-derived by grammar and `TracePoint`
-  # rather than generation (see the module header, "A fourteenth increment:
+  # rather than generation (see the former module header (9bbe254e), "A fourteenth increment:
   # FENCED-TAIL"). Eighteen turned out DEAD and two UNREACHED; one FIRES:
   #
   #   :3966 `(n!a c)`   factor SEQUENCE (`n!` -> `[n, !]`) + operand + exp
@@ -1253,7 +1253,7 @@ RULE_COVERAGE = {
     "(n!a c)",
   ],
   # "remaining": the last unregistered ids that a measured oracle trace
-  # reaches (see the module header, "A fifteenth increment: REMAINING"): one
+  # reaches (see the former module header (9bbe254e), "A fifteenth increment: REMAINING"): one
   # witness each for nine of the ten newly registered rules, plus the input
   # that takes `:2403`'s defective first arm. The tenth rule, `:83`, has its
   # witness `"x^−a²^b"` in `SLICE_BOUNDARY` (see the comment there):

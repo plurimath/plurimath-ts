@@ -63,7 +63,7 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  * The CORPUS inputs whose rules this slice still defers.
  *
  * `transform.rb`'s table/matrix family — measured at eighteen rules, not the
- * seventeen a prior survey counted (see `transform.ts`'s module header) —
+ * seventeen a prior survey counted (see `transform.ts`'s former module header (9bbe254e)) —
  * used to be part of this list; `"⒨(a@b)"`, `"ⓢ(a&b@c&d)"` and four other
  * table/matrix-only corpus inputs below reached it (measured on the oracle: no
  * other corpus string fires any of the eighteen). The TABLE increment ported
@@ -97,7 +97,7 @@ const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf
  */
 const DEFERRED_INPUTS: readonly string[] = [
   // DECORATION (`transform.rb:1286`-`:1491`) is ported now (`transform.ts`'s
-  // module header). All the corpus rows that used to sit here have moved out
+  // former module header (9bbe254e)). All the corpus rows that used to sit here have moved out
   // to `supported` below: `"⏟(a b)"`, `"⏟(a + b)"` and `"⏟(x)_(y)"` route
   // only through `hbracket_class`; `"((a)̅)̅"` moved out with `:2640` (the
   // `accents` + paren combination, the FENCED slice); `"(y)┴(x)"`/`"(y)┬x"`

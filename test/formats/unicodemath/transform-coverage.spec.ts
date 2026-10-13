@@ -231,7 +231,7 @@ describe("transform rule coverage", () => {
     // superseded), `:3828` and `:3885` (two of the twenty-one just named) —
     // reached by the hand-picked "remaining" coverage group, except `:83`,
     // whose only witness is a `SLICE_BOUNDARY` row. The other 36 are 26 dead
-    // and 10 unreached; the module header lists each with its evidence.
+    // and 10 unreached; the former module header (`git show 9bbe254e:src/formats/unicodemath/transform.ts`) lists each with its evidence.
     // Slice tallies above are historical; the assertion is the one final count.
     expect(build.ruleIds.length).toBe(FINAL_COUNT);
     expect(new Set(build.ruleIds).size).toBe(FINAL_COUNT);

@@ -37,8 +37,8 @@ came from.
   under [Build order](#build-order).
 - **UnicodeMath transform:** 483 of the gem's 519 rules registered; every
   one of the other 36 is dead in the gem (26) or fires on no input found (10),
-  each listed with its evidence in the header of
-  `src/formats/unicodemath/transform.ts`.
+  each listed with its evidence in the former header of
+  `src/formats/unicodemath/transform.ts` (`git show 9bbe254e:src/formats/unicodemath/transform.ts`).
 - **OMML renderer:** published on `./omml` since #112.
 - **Blocked on a person, not on code:** UnitsML (maintainer decision).
   Native MathML/OMML input versus further deferral is settled as deferral

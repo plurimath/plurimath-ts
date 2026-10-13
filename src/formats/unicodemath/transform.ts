@@ -418,7 +418,7 @@ function sliceToText(value: unknown): unknown {
  * unassigned — `Plurimath::Math.parse_formula` adds it at the very end.
  *
  * The `left_right_wrapper = false if @value.first.is_a?(Function::Left)` line
- * is unreachable from UnicodeMath (see the header), so `leftRightWrapper` is
+ * is unreachable from UnicodeMath (see the former module header, 9bbe254e), so `leftRightWrapper` is
  * stored as given.
  */
 function newFormula(value: unknown = [], leftRightWrapper: unknown = true): UnicodemathDraft {
@@ -1220,7 +1220,7 @@ function supDigitNumber(digits: unknown): UnicodemathDraft {
  * keys carries an underscore, so the split is a no-op here, but Ruby's
  * `String#capitalize` DOWNCASES every character after the first — so
  * `"vmatrix"` and `"Vmatrix"` both become `"Vmatrix"`. That collapse is
- * measured on the oracle (module header) and reproduced here, not "fixed":
+ * measured on the oracle (former module header (9bbe254e)) and reproduced here, not "fixed":
  * `getTableClass` returns the same name for both, and only the extra paren
  * argument `buildMatrixTable` passes for the capital symbol tells the two
  * apart.
@@ -1286,7 +1286,7 @@ function matrixSymbol(value: unknown): string {
  * parens the lowercase names never do, `:matrix` builds the BARE carrier
  * (`table-behaviour.spec.ts`'s "`Matrix` is not special"), and everything
  * else asks `getTableClass`, which collapses `vmatrix`/`Vmatrix` and
- * `bmatrix`/`Bmatrix` onto the same subclass name — see the module header and
+ * `bmatrix`/`Bmatrix` onto the same subclass name — see the former module header (9bbe254e) and
  * `getTableClass` above.
  */
 function buildMatrixTable(matrixs: unknown, array: unknown): UnicodemathDraft {
@@ -1387,7 +1387,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // --- pass-through and leaf rules (transform.rb:8-170) -------------------
 
   // TABLE (eighteen rules total, not the seventeen a prior survey counted —
-  // see the module header): `:8`/`:9` are the base cases `:14`/`:15` below
+  // see the former module header (9bbe254e)): `:8`/`:9` are the base cases `:14`/`:15` below
   // extend to a sequence of cells.
   rule("8", { td: simple("td") }, (b) => newTd([b.td]));
   rule("9", { tr: simple("tr") }, (b) => newTr([b.tr]));
@@ -1434,7 +1434,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // below see both shapes and this unwrap only fires on the second.
   rule("40", { hbrack: simple("hbrack") }, (b) => b.hbrack);
   // Slice H: `:41`/`:42`/`:51` (`script`/`double`/`fraktur`) are NOT
-  // registered — see the module header, "COMBINATORS-EARLY". `:43`
+  // registered — see the former module header (9bbe254e), "COMBINATORS-EARLY". `:43`
   // (`mitBbb`) is their reachable sibling: `Constants::UNICODED_FONTS`'s
   // `mitBbb` entry has five keys, so `hash_values` (`constants_rules.rb`)
   // takes its multi-key branch and tags `.as(:mitBbb).as(:unicoded_font_class)`
@@ -1492,7 +1492,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("72", { decimal_number: simple("number") }, (b) => b.number);
   rule("73", { accents_subsup: simple("subsup") }, (b) => b.subsup);
   rule("74", { subsup_exp: simple("subsup_exp") }, (b) => b.subsup_exp);
-  // `:75` (`expression: simple`) is NOT registered — see the module header,
+  // `:75` (`expression: simple`) is NOT registered — see the former module header (9bbe254e),
   // "COMBINATORS-EARLY".
   rule("76", { open_paren: simple("open_paren") }, (b) => symbolsClass(b.open_paren));
   // DECORATION's three unwraps: `op_diacritic_belows`/`op_diacritic_overlays`
@@ -1978,7 +1978,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   );
 
   // TABLE continued (`transform.rb:598`-`:1691`, eighteen rules total; see
-  // the module header): `Mlabeledtr`'s pair, built from `UnicodeMath::
+  // the former module header (9bbe254e)): `Mlabeledtr`'s pair, built from `UnicodeMath::
   // Parser#post_processing`'s `{labeled_tr_value:, labeled_tr_id:}` wrap
   // (`parser.ts`'s own `postProcessing`, ported ahead of this slice) rather
   // than from the grammar directly. `:598`'s `value` is a SEQUENCE of rows —
@@ -2111,14 +2111,14 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // appears inside FRACTION's `numerator`/`denominator` grammar productions,
   // and the TOP `{numerator:, denominator:}` rule that would receive their
   // output was itself one of the ten SEQUENCE-numerator/denominator sites
-  // (`transform.rb:1619`-`:2371`, the module header's own "other ten call
+  // (`transform.rb:1619`-`:2371`, the former module header (9bbe254e)'s own "other ten call
   // sites"). That top-side blocker is gone now: all ten of those sites are
   // ported (`:1619`, `:1624`, `:1629`, `:1634`, `:1639`, `:1644`, `:2203`,
   // `:2359`, `:2365`, `:2371`), and six of the eleven ATOMS-meeting-FRACTION
   // keys are ported — `:675`/`:1756`/`:2048` alongside the prerequisites
   // that needed them, and `:680`/`:685`/`:690` above by this slice (`I`).
   // `:695` and `:2035` were registered later by the REMAINING increment (see
-  // the module header); `:2041`, `:2787` and `:3074` stay unregistered,
+  // the former module header (9bbe254e)); `:2041`, `:2787` and `:3074` stay unregistered,
   // unreached on the oracle.
 
   rule("735", { factor: simple("factor"), operand: simple("operand") }, (b) => [
@@ -2211,7 +2211,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     ...asArray(b.expr),
   ]);
   // `:845` has this exact signature and is DEAD: `rule` unshifts, so this
-  // later definition wins every tie. See the header.
+  // later definition wins every tie. See the former module header (9bbe254e).
   rule("870", { factor: simple("factor"), exp: sequence("exp") }, (b) => [
     b.factor,
     ...asArray(b.exp),
@@ -2435,7 +2435,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // `Obrace`/`Ubrace`/`Overset`/`Underset` from the eight `HORIZONTAL_
   // BRACKETS` characters, and `overlay_after`/`overlay_before`/`below_after`
   // build `Overset`/`Underset`/`Menclose` from a following or leading
-  // combining diacritic. See the module header for why this family was
+  // combining diacritic. See the former module header (9bbe254e) for why this family was
   // deferred through the first three increments, and `:81`/`:88`/`:94`
   // above for the wrapper unwraps every one of these five needs to fire.
   //
@@ -2567,7 +2567,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // when the radix is MULTI-character: `"⒭ab▒c"` (root of `a b`, over `c`) —
   // `▒` is `root_invisible_character`'s own separator, since `binary_root`
   // carries no literal delimiter between the two operands. A single-character
-  // radix leaves `root_first_value` `simple`, which the module header records
+  // radix leaves `root_first_value` `simple`, which the former module header (9bbe254e) records
   // as unreached before this slice; that sibling is still not registered.
   rule(
     "1514",
@@ -2642,7 +2642,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // option-carrying siblings, each still `numerator: simple, denominator:
   // simple` so none needs the `atoms`/`recursive_numerator` combinator the
   // other ten `Utility.fractions` call sites once depended on — those ten are
-  // ported too, registered just below (see the header).
+  // ported too, registered just below (see the former module header, 9bbe254e).
   rule(
     "1614",
     { mini_numerator: simple("numerator"), mini_denominator: simple("denominator") },
@@ -2768,7 +2768,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   rule("1796", { frac: simple("frac"), exp: simple("exp") }, (b) => [b.frac, b.exp]);
   // A fraction followed by TWO OR MORE more `naryand_recursion` items under a
   // nary (no SIMPLE sibling exists in the gem for this shape — measured, see
-  // the module header). Witness: `"∑_(k=0)^n n⒞k a^k b"`, `n⒞k` a `\choose`
+  // the former module header (9bbe254e)). Witness: `"∑_(k=0)^n n⒞k a^k b"`, `n⒞k` a `\choose`
   // `Frac` immediately followed by two bare naryand items `a^k` and `b`.
   rule("1801", { frac: simple("frac"), naryand_recursion: sequence("naryand") }, (b) => [
     b.frac,
@@ -4303,7 +4303,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => [newText(b.text), b.operand, ...asArray(b.exp)],
   );
 
-  // NARY concluded (for this slice; see the module header for the SEQUENCE
+  // NARY concluded (for this slice; see the former module header (9bbe254e) for the SEQUENCE
   // rules deferred past it) — `mask` plus BOTH a simple `sub` and a simple
   // `sup`, `:2806`'s own shape with a mask added; `Underset`/`Overset`
   // unwrap the same way `:2103`'s underover guard and `:2806` above already
@@ -4665,7 +4665,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => newMultiscript(newPowerBase(b.base), [b.pre_sub], [b.pre_sup]),
   );
 
-  // Slice K's one FIRES disposition (module header, "FENCED-TAIL"): `factor`
+  // Slice K's one FIRES disposition (former module header (9bbe254e), "FENCED-TAIL"): `factor`
   // is a SEQUENCE here only because `atom`+`exclamation_symbol` (`:1852`)
   // returns a two-element array, not because the source repeats a `factor`
   // key -- the same array-valued-inner-key mechanism `:3510`/`:3521` already

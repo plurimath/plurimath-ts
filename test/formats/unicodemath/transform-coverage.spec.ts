@@ -136,7 +136,7 @@ describe("transform rule coverage", () => {
     // `:1931`, `:1953`, `:2856`, `:2911`, `:3588`) and one small prerequisite,
     // `:255` (`{symbol:, expr:}`, the shape `:725`/`:730`/`:1874` need to
     // reach a SEQUENCE) — reached by the hand-picked "nary" coverage group —
-    // see the module header for the eight SEQUENCE-`sub`/`sup` NARY rules
+    // see the former module header (9bbe254e) for the eight SEQUENCE-`sub`/`sup` NARY rules
     // this slice still defers, gated on the same `atoms` combinator FRACTION's
     // own boundary section named.
     //
@@ -225,7 +225,7 @@ describe("transform rule coverage", () => {
     // range are NOT registered: no input among the ~5,100 traced on the oracle
     // reaches them (see `.codex-context/tasks/unicodemath-rule-claims/G2.deferred`).
     //
-    // Plus 10 from the module header's REMAINING increment, every id of the last 46 that a
+    // Plus 10 from the former module header (9bbe254e)'s REMAINING increment, every id of the last 46 that a
     // measured oracle trace fires: `:83`, `:695`, `:850`, `:880`, `:2035`,
     // `:2097`, `:2245`, `:2403` (slice F's "no reaching input" above is
     // superseded), `:3828` and `:3885` (two of the twenty-one just named) —

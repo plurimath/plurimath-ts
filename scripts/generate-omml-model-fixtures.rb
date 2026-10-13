@@ -164,20 +164,13 @@ ORACLE_REFUSAL = Plurimath::Math::ParseError
 module OmmlModelProbe
   module_function
 
+  # The pinned corpus's OMML inputs, cases and rejections alike, in payload
+  # order, through `read_pin_cases`, which byte-verifies every payload against
+  # corpus/provenance.yaml.
   def corpus_inputs
-    CorpusGenerator.read_pin_cases
-    provenance_path = File.join(CorpusGenerator.pin_root, "corpus", "provenance.yaml")
-    provenance = YAML.safe_load(File.read(provenance_path), aliases: false)
-    paths = provenance.fetch("payloads").map { |entry| entry.fetch("path") }.sort
-                      .select { |path| path.start_with?("omml/") }
-    inputs = paths.flat_map do |path|
-      unless CorpusGenerator.pending_reader_payload?(path)
-        abort "REFUSING: #{path} is no longer pending; read it through read_pin_cases"
-      end
-
-      file = File.join(CorpusGenerator.pin_root, "corpus", path)
-      YAML.safe_load(File.read(file), aliases: false).fetch("cases").map { |c| c.fetch("input") }
-    end
+    inputs = CorpusGenerator.read_pin_cases
+                            .select { |kase| kase["input_format"] == "omml" }
+                            .map { |kase| kase.fetch("input") }
     abort "REFUSING: the pinned corpus has no OMML cases" if inputs.empty?
 
     inputs

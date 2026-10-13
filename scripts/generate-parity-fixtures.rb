@@ -95,9 +95,9 @@ sidecar, provenance = RenderFixtureProvenance.prepare(
 
 # Every row is `Plurimath::Math.parse(input, <input format>)` for the format the
 # case is WRITTEN in, and only the notations this port parses are swept:
-# AsciiMath, LaTeX, MathML and UnicodeMath. Handing one notation's source to another's
+# AsciiMath, LaTeX, MathML, OMML and UnicodeMath. Handing one notation's source to another's
 # parser would record whatever fell out as though it were the gem's answer for
-# that case. The TypeScript side selects the same four formats
+# that case. The TypeScript side selects the same five formats
 # (`casesInInputFormat` in test/core/model-builder.ts, driven by
 # `PARSERS` in each format's render-parity spec); the two lists have to agree
 # or `carries exactly the pinned corpus's case ids` fails.
@@ -109,6 +109,7 @@ PARSEABLE_INPUT_FORMATS = {
   "asciimath" => :asciimath,
   "latex" => :latex,
   "mathml" => :mathml,
+  "omml" => :omml,
   "unicode" => :unicode,
 }.freeze
 

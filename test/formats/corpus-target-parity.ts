@@ -32,6 +32,7 @@ import { RenderError } from "../../src/core/index";
 import { parseAsciimath } from "../../src/formats/asciimath/index";
 import { parseLatex } from "../../src/formats/latex/index";
 import { parseMathml } from "../../src/formats/mathml/parser";
+import { parseOmml } from "../../src/formats/omml/parser";
 import { parseUnicodemath } from "../../src/formats/unicodemath/index";
 import { aliasIndex, buildNode, readCensus, readCorpusCases } from "../core/model-builder";
 
@@ -40,6 +41,7 @@ const PARSERS: Readonly<Record<string, (input: string) => unknown>> = {
   asciimath: parseAsciimath,
   latex: parseLatex,
   mathml: parseMathml,
+  omml: parseOmml,
   unicode: parseUnicodemath,
 };
 

@@ -79,9 +79,9 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  * pinned both ways in `KNOWN_DIVERGENCES`. The 139 LaTeX- and UnicodeMath-input
  * cases joined the sweep matching the gem as they stood. MathML input added
  * 268 more the gem renders: 262 match, and six are in `PORT_REFUSES` (490 =
- * 228 + 262).
+ * 228 + 262). OMML input added 168 byte-identical cases (658 = 490 + 168).
  */
-export const RENDERED_BASELINE = 490;
+export const RENDERED_BASELINE = 658;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared

@@ -23,6 +23,7 @@ import {
 import { FormulaNode, NaryNode, SymbolNode, UnaryFunctionNode } from "../../src/core/nodes";
 import { parseHtml } from "../../src/formats/html/index";
 import { parseMathml } from "../../src/formats/mathml/parser";
+import { parseOmml } from "../../src/formats/omml/parser";
 import { parseUnicodemath } from "../../src/formats/unicodemath/index";
 import RootDefault, { Plurimath as RootNamed } from "../../src/index";
 
@@ -131,7 +132,7 @@ describe("the compat class matches the plurimath-js surface", () => {
   });
 });
 
-const PARSEABLE: readonly Format[] = ["asciimath", "latex", "html", "mathml", "unicode"];
+const PARSEABLE: readonly Format[] = ["asciimath", "latex", "html", "mathml", "omml", "unicode"];
 
 /**
  * The same formula written in each door's own notation.
@@ -180,21 +181,26 @@ describe("the constructor's staged contract", () => {
     expect(formula.toAsciimath()).toBe("frac(1)(2)");
   });
 
+  it("routes omml construction to parseOmml, not some other parser", () => {
+    const input =
+      '<m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:f><m:num><m:r><m:t>1</m:t></m:r></m:num><m:den><m:r><m:t>2</m:t></m:r></m:den></m:f></m:oMath>';
+    const formula = new Plurimath(input, "omml");
+    expect(equals(formula.data, parseOmml(input))).toBe(true);
+    expect(formula.toAsciimath()).toBe("frac(1)(2)");
+  });
+
   it("routes unicode construction to parseUnicodemath, not some other parser", () => {
     const formula = new Plurimath(GEM_OUTPUT.toUnicodemath, "unicode");
     expect(equals(formula.data, parseUnicodemath(GEM_OUTPUT.toUnicodemath))).toBe(true);
   });
 
-  /** One of six raises today. Asserted per format so it cannot drift quietly. */
-  it.each(FORMATS.filter((f) => !PARSEABLE.includes(f)))(
-    "raises UnsupportedFormatError for %s, which has no parser yet",
-    (format: Format) => {
-      expect(() => new Plurimath(INPUT, format)).toThrow(UnsupportedFormatError);
-    },
-  );
+  /** All six formats parse today; asserted so a format added without a parser shows here. */
+  it("has a parser for every format", () => {
+    expect(FORMATS.filter((f) => !PARSEABLE.includes(f))).toEqual([]);
+  });
 
   it("names the format it refused", () => {
-    expect(() => new Plurimath(INPUT, "omml")).toThrow(/omml/);
+    expect(() => new Plurimath(INPUT, "unitsml" as Format)).toThrow(/unitsml/);
   });
 
   /**
@@ -1153,7 +1159,7 @@ describe("the one method that cannot be honest yet", () => {
     const codes: Record<string, string> = {};
     const fields: Record<string, string> = {};
     for (const [label, run] of [
-      ["ctor", () => new Plurimath(INPUT, "omml")],
+      ["ctor", () => new Plurimath(INPUT, "unitsml" as Format)],
       ["toDisplay", () => buildTreeDump(new NaryNode(), "asciimath")],
     ] as const) {
       try {
@@ -1171,7 +1177,7 @@ describe("the one method that cannot be honest yet", () => {
     });
     // stable identifiers, not sentences
     expect(fields).toEqual({
-      ctor: "omml",
+      ctor: "unitsml",
       toDisplay: "toDisplay tree dump",
     });
     for (const value of Object.values(fields)) expect(value).not.toMatch(/\s\w+\s\w+\s\w+\s/);

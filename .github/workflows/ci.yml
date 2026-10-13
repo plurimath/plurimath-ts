@@ -5,22 +5,26 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      oracle_artifacts:
+        description: Regenerate and verify downloadable oracle artifacts
+        type: boolean
+        default: false
 
-# Every job only reads: it checks out this repository and its public submodule,
-# installs dependencies and runs tests. Nothing uploads artifacts, writes checks
-# or statuses, comments or pushes, and setup-node's pnpm cache goes through the
-# Actions cache service, which does not use this token.
+# Repository token permissions stay read-only. The optional manual job uploads
+# artifacts and makes a runner-local verification commit; it never pushes.
 permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.oracle_artifacts && 'oracle-artifacts' || 'checks' }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts) }}
 
 jobs:
   # Every class-A gate active at the repository's current milestone
   # (gates.json). No Ruby is needed: generated payloads are committed.
   gates:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts) }}
     runs-on: ubuntu-latest
     # A whole run takes about two minutes, so this is roughly seven times the
     # observed cost -- generous for a slow runner, and still a bound. It is
@@ -54,6 +58,7 @@ jobs:
   # class-A suite and run with an explicit interpreter rather than relying on
   # whatever happens to be installed on the runner image.
   oracle-runner-unit-tests:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -76,6 +81,7 @@ jobs:
 
   # Guards the runtime support claim in package.json#engines.
   runtime-matrix:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: gates
@@ -107,3 +113,126 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - run: pnpm test
+
+  # Expensive generation is opt-in. Standard PR/push jobs above stay unchanged.
+  oracle-artifacts:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts }}
+    # Evaluation fixtures require the oracle's glibc 2.35 (Ubuntu 22.04).
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    defaults:
+      run:
+        working-directory: source
+    steps:
+      - name: Initialize failure evidence before setup
+        working-directory: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/oracle-artifacts"
+          printf '%s\n' '{"phase":"setup","verified":false,"authoritativeReport":"candidate/report.json"}' > "$RUNNER_TEMP/oracle-artifacts/setup.json"
+
+      - uses: actions/checkout@v5
+        with:
+          path: source
+          ref: ${{ github.sha }}
+          submodules: true
+          persist-credentials: false
+
+      - uses: actions/checkout@v5
+        with:
+          path: verified
+          ref: ${{ github.sha }}
+          # Retain source ancestry in the downloadable candidate Git bundle.
+          fetch-depth: 0
+          submodules: true
+          persist-credentials: false
+
+      - uses: actions/checkout@v5
+        with:
+          repository: plurimath/plurimath
+          ref: 00c52783877b38f6b8e6e109f1803f96bb34fc62
+          path: oracle
+          persist-credentials: false
+
+      # The upstream checkout ignores Gemfile.lock. These exact bytes preserve
+      # its dependency resolution without changing its pinned Git revision.
+      - name: Preserve the frozen oracle dependency resolution
+        run: cp scripts/ci/oracle/Gemfile.lock ../oracle/Gemfile.lock
+
+      # setup-ruby installs into oracle/vendor/bundle. Ignore only that local
+      # dependency tree; tracked oracle changes still fail the clean gate.
+      - name: Exclude runner-local oracle dependencies
+        working-directory: oracle
+        run: printf '%s\n' '/vendor/bundle/' >> "$(git rev-parse --git-path info/exclude)"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: source/package.json
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0.1"
+          bundler: "4.0.3"
+          working-directory: oracle
+          bundler-cache: true
+        env:
+          BUNDLE_FROZEN: "true"
+
+      # Publish the small reference measurement before the expensive sweep.
+      - name: Measure the complete Ruby equality reference
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/oracle/Gemfile
+          BUNDLE_FROZEN: "true"
+        run: |
+          bundle exec ruby scripts/probes/corpus-equality.rb --oracle "$GITHUB_WORKSPACE/oracle" > "$RUNNER_TEMP/oracle-artifacts/corpus-equality.txt" 2> "$RUNNER_TEMP/oracle-artifacts/corpus-equality.stderr"
+
+      - name: Retain the early equality reference
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-equality-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/oracle-artifacts/corpus-equality.txt
+            ${{ runner.temp }}/oracle-artifacts/corpus-equality.stderr
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Export the unverified generated candidate
+        run: >-
+          ruby scripts/ci/oracle-artifacts.rb --mode export
+          --source "$GITHUB_WORKSPACE/source"
+          --oracle "$GITHUB_WORKSPACE/oracle"
+          --verify "$GITHUB_WORKSPACE/verified"
+          --out "$RUNNER_TEMP/oracle-artifacts/candidate"
+
+      # This is a complete export, not a verified candidate. Upload before the
+      # independent regeneration/check pass so its bytes are available early.
+      - name: Retain the unverified generated export
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-export-unverified-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/oracle-artifacts/candidate
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Verify the same exported candidate
+        run: >-
+          ruby scripts/ci/oracle-artifacts.rb --mode verify
+          --source "$GITHUB_WORKSPACE/source"
+          --oracle "$GITHUB_WORKSPACE/oracle"
+          --verify "$GITHUB_WORKSPACE/verified"
+          --out "$RUNNER_TEMP/oracle-artifacts/candidate"
+
+      # report.json defaults to verified:false and records individual exits.
+      # Failed/partial raw output is useful evidence, never a passing candidate.
+      - name: Retain oracle outputs and validation evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: oracle-artifacts-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/oracle-artifacts
+          if-no-files-found: error
+          retention-days: 7

@@ -378,35 +378,31 @@ describe("deep structure", () => {
  * reachable corpus formulas, which pairs satisfy `==`. Everything not listed
  * is unequal, and every case equals itself.
  *
- * 61 of the 75 cross input notations (11 of them a MathML case and its twin
- * in another notation): `alpha` and `\alpha` are
- * different source text for the same formula, so the gem reports them equal and
- * so must this port. They are the evidence that `==` compares the model and not
- * the input, which nothing in a single-notation corpus could show. The other
- * 14 are within one notation — three AsciiMath (`a/b` against `frac(a)(b)`,
- * and two spacing pairs), three LaTeX (`\bmod`, `\pmod` and infix `mod`) and
- * eight MathML pairs written two ways.
- * What each pair asks the projection to skip is asserted below, not assumed.
+ * Cases written in different notations can be equal: `alpha` and `\alpha`
+ * are different source text for the same formula. The reference therefore
+ * checks that equality compares the model rather than the input spelling.
+ * Same-notation pairs also cover alternative spellings and whitespace.
  *
- * `RubyEqualPairs` is the GEM's answer, re-measured for this pin by
- * `scripts/probes/corpus-equality.rb` against the oracle checkout at
- * `00c52783` — never this port's own, which would leave the suite comparing
- * the port to itself and calling it parity. The probe parses each pinned case
- * in the notation it is written in (`Plurimath::Math.parse(input, format)`),
- * withholds the same id `readCorpusCases` withholds, and runs `==` in both
- * directions over every pair. Its report, verbatim:
+ * `RubyEqualPairs` is the GEM's answer over all active corpus formats,
+ * measured by `scripts/probes/corpus-equality.rb` against oracle `00c52783`
+ * in GHA run 38406986648, source commit `79422572`. Its uploaded report is
+ * the reference; expected pairs are never derived from TypeScript equality.
+ * The probe parses each input in its own notation, withholds the same id
+ * as `readCorpusCases`, and runs `==` in both directions for every pair.
+ * Its report, verbatim:
  *
- *   rows in pin:     653
- *   rejections:      129
- *   cases pinned:    524
+ *   rows in pin:     852
+ *   rejections:      138
+ *   cases pinned:    714
  *   cases withheld:  1
- *   cases compared:  523
- *   reflexive:       523
- *   comparisons:     136503
+ *   cases compared:  713
+ *   reflexive:       713
+ *   comparisons:     253828
  *   asymmetric:      0
- *   equal pairs:     75
+ *   equal pairs:     81
  *
- * The MathML corpus cases took it from 236 cases and 56 pairs to 523 and 75:
+ * The earlier MathML probe expanded the reference from 236 cases and 56 pairs
+ * to 523 cases and 75 pairs:
  * of the 19 new pairs, 11 are a MathML case equal to an AsciiMath, LaTeX or
  * UnicodeMath twin and eight are two MathML cases. Before that, the fixture held the 35 pairs the same sweep reported before
  * UnicodeMath joined the corpus as a third input notation (#15). All 35 are
@@ -433,6 +429,7 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "latex-fence-ceiling|unicode-fence-ceiling",
     "latex-fence-round|unicode-fence-round",
     "latex-fence-square|unicode-fence-square",
+    "latex-frac-simple|omml-fractions-002",
     "latex-mod-bmod|latex-mod-pmod",
     "latex-mod-bmod|mathml-tokens-042",
     "latex-mod-infix|latex-mod-bmod",
@@ -471,6 +468,11 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "nary-lim|latex-nary-lim-to-infinity",
     "nary-sum-bare|latex-nary-sum-bare",
     "nary-sum-bounded|latex-nary-sum-bounded",
+    "omml-functions-001|omml-functions-016",
+    "omml-limits-002|omml-limits-003",
+    "omml-runs-020|omml-runs-021",
+    "omml-runs-020|omml-runs-022",
+    "omml-runs-021|omml-runs-022",
     "operator-plus|whitespace-around-operator",
     "partial-sqrt-unclosed|mathml-partial-001",
     "partial-sqrt-unclosed|mathml-partial-002",
@@ -500,12 +502,11 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "unary-vec|latex-accent-vec",
   ]);
 
-  it("has the 523 cases it expects", () => {
-    expect(nodes).toHaveLength(523);
-    // The probe reported 75 over these same 523. A line lost while the
-    // fixture was pasted in would otherwise pass green against a port that
-    // had lost the same pair.
-    expect(RubyEqualPairs.size).toBe(75);
+  it("has all 713 reachable cases, including OMML", () => {
+    expect(nodes).toHaveLength(713);
+    // The hosted Ruby probe reported 81 pairs over these 713 inputs.
+    // Pinning its count catches a pair lost while copying the reference.
+    expect(RubyEqualPairs.size).toBe(81);
   });
 
   it("is reflexive: a rebuilt tree equals its twin", () => {
@@ -533,7 +534,7 @@ describe("the corpus equality matrix, as the gem reports it", () => {
 
   /**
    * What the projection is skipping in each pair, as an assertion rather than
-   * as prose. Measured over these 75 pairs on the pinned corpus, and each of
+   * as prose. Measured over these 81 pairs on the pinned corpus, and each of
    * the three groups is named rather than folded into one loose claim:
    *
    *   - 8 pairs have models that are identical outright, `input_string`
@@ -544,8 +545,8 @@ describe("the corpus equality matrix, as the gem reports it", () => {
    *     needs no notation-specific syntax at all: `(a)`, `[a]`, `1`, `3.14`,
    *     `-42` and `2^10` are the same bytes in LaTeX and UnicodeMath source.
    *     Nothing is being skipped there at all;
-   *   - 66 differ in `input_string` and in nothing else — the field the
-   *     projection drops (the 19 pairs with a MathML case among them);
+   *   - 72 differ in `input_string` and in nothing else — the field the
+   *     projection drops (including six newly measured OMML pairs);
    *   - 1, `font-bold|latex-font-bold`, differs in `input_string` and in one
    *     more field: its `FontStyle::Bold` carries `parameter_two: "bb"` from
    *     `bb(x)` against `"mathbf"` from `\mathbf{x}`, which the projection

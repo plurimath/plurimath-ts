@@ -744,24 +744,24 @@ module CorpusGenerator
     cases
   end
 
-  # The OMML payloads plurimath-testsuite#21 added are pending this port's OMML
-  # reader (MathML's, added in the same change, is read). Their bytes are verified like any other
-  # payload's, but their cases are not returned: every consumer of
-  # `read_pin_cases` feeds the cases (or their rendered outputs) to parsers
-  # and fixtures built for the formats this port reads, and folding these in
-  # would silently widen every fixture. Mirrors `PENDING_READER_FORMATS` in
-  # test/core/corpus-pin.ts; removing a format from both is how its reader
-  # starts consuming it.
-  PENDING_READER_FORMATS = %w[omml].freeze
+  # No format is pending now: the MathML and OMML payloads
+  # plurimath-testsuite#21 added are read. A format named here has its payload
+  # bytes verified like any other payload's, but its cases are not returned:
+  # every consumer of `read_pin_cases` feeds the cases (or their rendered
+  # outputs) to parsers and fixtures built for the formats this port reads,
+  # and folding an unread format in would silently widen every fixture.
+  # Mirrors `PENDING_READER_FORMATS` in test/core/corpus-pin.ts; removing a
+  # format from both is how its reader starts consuming it.
+  PENDING_READER_FORMATS = [].freeze
 
   # Whether a parse-side model fixture (LaTeX, HTML, UnicodeMath) harvests a
-  # pinned case's rendered outputs. MathML-input cases are left out for now:
-  # their outputs would add several hundred parse-parity inputs to those
-  # parsers, which is its own slice (TODO.plan/deferred.md, "Model fixtures
-  # do not yet harvest the MathML corpus cases"). Dropping this predicate is
-  # how they start harvesting them.
+  # pinned case's rendered outputs. MathML- and OMML-input cases are left out
+  # for now: their outputs would add several hundred parse-parity inputs to
+  # those parsers, which is its own slice (TODO.plan/deferred.md, "Model
+  # fixtures do not yet harvest the MathML and OMML corpus cases"). Dropping
+  # this predicate is how they start harvesting them.
   def model_fixture_harvests?(kase)
-    kase["input_format"] != "mathml"
+    !%w[mathml omml].include?(kase["input_format"])
   end
 
   def pending_reader_payload?(path)
@@ -4392,6 +4392,105 @@ module CorpusGenerator
     ]
   end
 
+  # Symbol id -> `to_html` at the baseline context, for every static symbol:
+  # the rows `HTML_SYMBOLS` holds. Shared with the HTML parser generator, which
+  # derives `HTML_SYMBOL_CLASS_INPUT` from these same rows.
+  def html_symbol_rows
+    static_symbol_classes(symbol_classes).map do |klass|
+      [symbol_id(klass), representation(klass, "html", BASELINE_CONTEXT)]
+    end
+  end
+
+  # The rule `HTML_SYMBOLS` is derived by at runtime: every code point above
+  # U+007F written as a lowercase hexadecimal character reference, every other
+  # character kept. `src/generated/html/symbols.ts` applies the same rule to
+  # `SYMBOL_CANONICAL_VALUES`; the ids where it does not reproduce `to_html`
+  # are emitted as overrides.
+  def html_encode_non_ascii(text)
+    text.each_char.map { |char| char.ord > 0x7f ? format("&#x%x;", char.ord) : char }.join
+  end
+
+  # The digest a spec recomputes over a derived table: one "key TAB value LF"
+  # line per row, the lines sorted by their UTF-8 bytes, hashed as UTF-8. Byte
+  # order, not string order, because JavaScript compares UTF-16 code units and
+  # Ruby compares bytes, and the two disagree past U+FFFF.
+  def table_sha256(rows)
+    Digest::SHA256.hexdigest(rows.map { |key, value| "#{key}\t#{value}\n" }.sort.join)
+  end
+
+  # `HTML_SYMBOLS` is not emitted row by row. 1,400-odd of its values are the
+  # symbol's canonical value (`SYMBOL_CANONICAL_VALUES`, which every subpath
+  # already carries) with non-ASCII characters entity-encoded, so only the ids
+  # where that rule does not reproduce `to_html` are emitted. The derivation is
+  # replayed here and must reproduce every row, and the digest of the full
+  # table is emitted so a spec proves the runtime derivation does too.
+  def html_symbols_sections(entries)
+    # Every class `generate-core-data.rb` measures, not just the static ones:
+    # the runtime walks all of SYMBOL_CANONICAL_VALUES, so a canonical id with
+    # no HTML row would surface as an extra row and fail the comparison below.
+    canonical = ([symbol_root] + symbol_classes).to_h do |klass|
+      value = begin
+        klass.new.send(:default_value_for_comparison)
+      rescue ::StandardError
+        nil
+      end
+      [symbol_id(klass), value.is_a?(::String) ? value : nil]
+    end
+    derived = canonical.filter_map do |id, value|
+      [id, html_encode_non_ascii(value)] unless value.nil?
+    end.to_h
+    expected = entries.to_h
+    overrides = entries.reject { |id, value| derived[id] == value }
+    rebuilt = derived.merge(overrides.to_h)
+    unless rebuilt == expected
+      raise Error, "the derived HTML_SYMBOLS has #{rebuilt.length} rows and does not equal " \
+                   "the #{expected.length} measured ones"
+    end
+
+    [
+      [
+        'import { SYMBOL_CANONICAL_VALUES } from "../../core/generated/symbol-canonical";',
+        "",
+        ts_doc("The rule `HTML_SYMBOLS` is derived by: every code point above U+007F\n" \
+               "written as a lowercase hexadecimal character reference."),
+        "function encodeNonAscii(text: string): string {",
+        "  let out = \"\";",
+        "  for (const char of text) {",
+        "    const point = char.codePointAt(0) ?? 0;",
+        "    out += point > 0x7f ? `&#x${point.toString(16)};` : char;",
+        "  }",
+        "  return out;",
+        "}",
+      ].join("\n"),
+      ts_tuple_map(
+        "HTML_SYMBOL_OVERRIDES",
+        "ReadonlyMap<string, string>",
+        overrides,
+        doc: "The #{overrides.length} of #{entries.length} symbols whose `to_html` is not their\n" \
+             "canonical value with `encodeNonAscii` applied, mostly ASCII\n" \
+             "punctuation the gem entity-encodes. Applied over the derived rows.",
+      ),
+      [
+        ts_doc("sha256 over the measured table, one \"id TAB value LF\" line per\n" \
+               "row, the lines sorted by their UTF-8 bytes, so a spec can prove the\n" \
+               "derivation below reproduces what the generator measured."),
+        "export const HTML_SYMBOLS_SHA256: string =",
+        "  #{ts_string(table_sha256(entries))};",
+      ].join("\n"),
+      [
+        ts_doc("#{entries.length} symbols. An id missing here is a parity gap: the\n" \
+               "renderer throws `MissingSymbolDataError` rather than emitting\n" \
+               "something plausible."),
+        "export const HTML_SYMBOLS: ReadonlyMap<string, string> = /* @__PURE__ */ (() => {",
+        "  const table = new Map<string, string>();",
+        "  for (const [id, value] of SYMBOL_CANONICAL_VALUES) table.set(id, encodeNonAscii(value));",
+        "  for (const [id, value] of HTML_SYMBOL_OVERRIDES) table.set(id, value);",
+        "  return table;",
+        "})();",
+      ].join("\n"),
+    ]
+  end
+
   def emit_symbols_file(out_root, format, classes, omml_tag_names:, html_fenced_parens:)
     entries = classes.map do |klass|
       [symbol_id(klass), representation(klass, format, BASELINE_CONTEXT)]
@@ -4428,14 +4527,18 @@ module CorpusGenerator
       entries = entries.map { |id, descriptor| [id, descriptor.slice("tag", "text")] }
     end
 
-    sections << ts_tuple_map(
-      "#{format_constant(format)}_SYMBOLS",
-      "ReadonlyMap<string, #{symbol_representation_type(format)}>",
-      entries,
-      doc: "#{entries.length} symbols. An id missing here is a parity gap: the\n" \
-           "renderer throws `MissingSymbolDataError` rather than emitting\n" \
-           "something plausible.",
-    )
+    if format == "html"
+      sections.concat(html_symbols_sections(entries))
+    else
+      sections << ts_tuple_map(
+        "#{format_constant(format)}_SYMBOLS",
+        "ReadonlyMap<string, #{symbol_representation_type(format)}>",
+        entries,
+        doc: "#{entries.length} symbols. An id missing here is a parity gap: the\n" \
+             "renderer throws `MissingSymbolDataError` rather than emitting\n" \
+             "something plausible.",
+      )
+    end
 
     # Two formats have a static contract wider than the payload map. For OMML
     # the same symbol also answers a tag name that changes the *structure* a

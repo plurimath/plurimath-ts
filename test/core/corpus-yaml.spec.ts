@@ -142,23 +142,22 @@ describe("the corpus itself", () => {
     expect(found.length).toBe(80);
   });
 
-  // The OMML payloads are pending their reader (`PENDING_READER_FORMATS`);
-  // some use a block-scalar indentation indicator this reader does not handle. They are excluded by name, and counted, so a new
-  // pending format cannot slip in unnoticed.
+  // A format pending its reader (`PENDING_READER_FORMATS`) is excluded by
+  // name, and counted, so a new pending format cannot slip in unnoticed.
   const pending = pinned.filter((path) =>
     isPendingReaderPayload(
       relative(join(PINNED_CORPUS_ROOT, "corpus"), path).split("\\").join("/"),
     ),
   );
 
-  it("sets aside exactly the pending OMML payloads", () => {
-    expect(pending.length).toBe(15);
-    expect(loadPinnedCorpus().pendingPayloads.length).toBe(15);
+  it("sets aside no payload", () => {
+    expect(pending.length).toBe(0);
+    expect(loadPinnedCorpus().pendingPayloads.length).toBe(0);
   });
 
   it("reads all of them to a mapping", () => {
     const files = [...local, ...pinned.filter((path) => !pending.includes(path))];
-    expect(files.length).toBe(69);
+    expect(files.length).toBe(84);
     for (const file of files) {
       const document = parseYaml(readFileSync(file, "utf8"));
       expect(typeof document, file).toBe("object");

@@ -134,7 +134,8 @@ src/
                      and `toUnicodemath`. The parser covers part of the gem's
                      grammar: a construct whose transform rule is not ported
                      raises `ParseError` naming the missing rule family.
-    mathml/          toMathml(MathNode) → string. Imports: core, xml, its slice.
+    mathml/          parseMathml(string) → FormulaNode, toMathml(MathNode) → string.
+                     Imports: core, xml, its slice.
     html/            Both halves landed: index.ts exports `parseHtml` and
                      `toHtml`; grammar.ts is ported rule for rule from
                      html/parse.rb, with transform.ts, parser.ts, renderer.ts,
@@ -142,8 +143,9 @@ src/
       generated/     The HTML grammar's own constant tables, written by
                      scripts/generate-html-parser-data.rb. Same rule-1 placement
                      and same reason as latex/generated above.
-    omml/            Output only: index.ts exports `toOmml` (renderer.ts,
-                     render.ts, render-shared.ts). It has no parser.
+    omml/            index.ts exports parseOmml and toOmml; parser.ts reads
+                     through omml-input.ts and translator.ts, while renderer.ts
+                     uses render.ts and render-shared.ts.
     ...              Every format module is independent of every other.
   render/            Renderer code, node-major (§5, "How this maps to the
                      gem"): one directory per node kind, one file per format
@@ -276,7 +278,7 @@ does exactly this — one tsup entry, one JSON blob). Therefore:
 - The build defines a **physical entry per subpath** (root, core, each format).
 - A package test bundles each published subpath in isolation and asserts its
   transitive artifact graph — e.g. `/asciimath` contains no LaTeX or MathML
-  render data; `/mathml` contains no parser.
+  render data; `/mathml` contains no other format's parser.
 - The root entry is documented as intentionally full-sized; only subpath
   imports carry the slim-bundle guarantee.
 
@@ -303,14 +305,14 @@ present: 38 kinds x 6 formats.
 
 ```
 @plurimath/plurimath-ts             → root: default-exports the compat `Plurimath`
-                                      class, plus FORMATS, the Format type, and
-                                      everything /core exports
+                                      class, plus parse, ParseOptions, FORMATS,
+                                      the Format type, /core and evaluation exports
 @plurimath/plurimath-ts/core        → FormulaNode, node types, errors
 @plurimath/plurimath-ts/asciimath   → parseAsciimath, toAsciimath
 @plurimath/plurimath-ts/html        → parseHtml, toHtml
 @plurimath/plurimath-ts/latex       → parseLatex, toLatex
-@plurimath/plurimath-ts/mathml      → toMathml (parser when ported)
-@plurimath/plurimath-ts/omml        → toOmml (output only)
+@plurimath/plurimath-ts/mathml      → parseMathml, toMathml
+@plurimath/plurimath-ts/omml        → parseOmml, toOmml
 @plurimath/plurimath-ts/unicodemath → parseUnicodemath (partial grammar), toUnicodemath
 bin: plurimath                      → dist/cli.mjs, `plurimath convert` (not a library subpath)
 @plurimath/plurimath-ts/formatting  → (NOT YET PUBLISHED — see below)
@@ -377,26 +379,27 @@ function toOmml(node: MathNode, options?: OmmlOptions | null): string;
 // LatexParseOptions, HtmlParseOptions and UnicodemathParseOptions.
 ```
 
-Root convenience — **as designed; not built.** `src/index.ts` exports the
-compat class as `default` and `Plurimath`, plus `FORMATS`, `Format` and
-everything `/core` exports (measured against `dist/index.js`, 2026-09-21). It
-does not export the `parse` function below or per-format re-exports such as
-`toMathml`; whether it should is an open decision
-([open-decisions.md](TODO.plan/open-decisions.md#root-parse-function)).
+Root convenience: `src/index.ts` exports `parse` and its `ParseOptions<F>`
+type, the compat class as `default` and `Plurimath`, `FORMATS`, `Format`,
+`/core` and evaluation. Renderers remain available through their subpaths.
 
 ```ts
-function parse(input: string, format: InputFormat, options?: ParseOptions): FormulaNode;
-export { toMathml, toLatex, ... };            // re-exports
-export default class Plurimath { ... }        // compat, below (this part exists)
+function parse<F extends Format>(
+  input: string, format: F, options?: ParseOptions<NoInfer<F>> | null,
+): FormulaNode;
+export default class Plurimath { ... } // compat, below
 ```
 
-The root `parse` forwards `options` to the selected format's parser, so root
-consumers can supply `onUnsupported` (§5) exactly like direct subpath users —
-without it the promise that "every parser accepts the callback" would be false
-at the entry most people use. `ParseOptions` is the union of the format parse
-option types, discriminated by `format`. The **compat constructor keeps the
-default warning behaviour permanently**: its ABI is frozen and cannot gain an
-options argument.
+`Format` uses `unicode`, not `unicodemath`, alongside `asciimath`, `latex`,
+`html`, `mathml` and `omml`. The root dispatches directly to those six existing
+parsers. `ParseOptions<F>` selects that format's existing text parse-options
+interface; MathML and OMML use `Record<string, never>`. Their parsers accept
+no options, so the root permits absent, null or empty options but rejects
+nonempty option keys before reading XML. Text formats forward locale and
+`onUnsupported` unchanged. Unknown runtime tokens raise `InvalidTypeError`;
+the recognized but deferred `unitsml` token raises `UnsupportedFormatError`
+and is excluded from `Format`. The compat constructor keeps its two arguments
+and existing default warning behaviour.
 
 **Compat surface — method-exact with the `plurimath-js` ABI** (declaration
 target settled 2026-09-04: source head `ce297e2`, verified against its source,
@@ -434,9 +437,8 @@ overrides it.
 
 **The compat class landed once an input format existed to wrap** (asciimath
 and latex first, then html and unicode as their batteries landed — §"The
-parser each input format uses" above). It is still not *complete*: `mathml`
-and `omml` construction still raise `UnsupportedFormatError` until their
-parsers exist (§11's availability constraint, below). `toDisplay` renders the
+parser each input format uses" above). All six constructor formats now have native parsers. UnitsML remains
+deferred (§5), so replacement parity still carries that documented gap. `toDisplay` renders the
 gem's tree dump (#139, #150); `toMathml(true)` now renders (B4, `intent`).
 
 **Availability constraint.** The compat constructor accepts six input formats,
@@ -1221,7 +1223,7 @@ feature set, each with a home in the module map (§3) and a phase (§9): number
 formatting (`formatting/` — minimal normalization in P1, locales and
 configurable formatters in P4+); the `evaluate` module (`evaluation/`);
 UnitsML (**deferred pending a maintainer decision**, §5 — the upstream JS
-package is currently unusable); MathML/OMML *input* parsing (behind the mml/omml-ts strategy decision, §11);
+package is currently unusable); MathML/OMML *input* parsing (native readers and translators now implemented);
 a command-line interface (**SETTLED 2026-09-16**: in scope, an idiomatic
 Node CLI rather than gem-flag parity with `lib/plurimath/cli.rb`'s Thor
 `convert` command — see `TODO.plan/feature-roadmap.md`'s CLI entry).
@@ -1272,16 +1274,11 @@ Decisions needed before their phase:
   bug in the org's own `unitsml/unitsml-js` repo, worth reporting regardless
   of which option wins.
 
-- ~~MathML/OMML input strategy~~ — decided 2026-09-16 by the maintainer:
-  **continued deferral, not a native port, for now**
-  ([open-decisions.md](TODO.plan/open-decisions.md#mathmlomml-input-strategy)).
-  Bridging is closed on evidence for both formats (`@plurimath/mml@0.1.0`
-  ships no `dist/` and is Opal-compiled; `@plurimath/omml` does not exist on
-  npm), leaving native-port-or-deferral as the real choice, and a native port
-  is deferred as a real undertaking with no clear timeline. The compat
-  constructor's refusal is made informative rather than generic in the
-  meantime (PR #120, open). Revisit once a working way to read MathML/OMML
-  XML exists.
+- ~~MathML/OMML input strategy~~ — the earlier deferral decision is
+  superseded by the native XML reader and translators. The compat constructor
+  and format subpaths now expose the native MathML and OMML parsers.
+  The earlier refusal proposal (#120) is superseded. UnitsML remains a
+  separate deferred feature (§5).
 - ~~Build tool~~ — decided 2026-07-29 by bake-off: **tsdown** (§8), with
   bundler-free `tsc` as the verified fallback.
 - **Bundle budgets (P1):** set measurable size ceilings per subpath once the

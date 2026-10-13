@@ -38,8 +38,8 @@ const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly
   ["./asciimath", asciimath, ["parseAsciimath", "toAsciimath"]],
   ["./html", html, ["parseHtml", "toHtml"]],
   ["./latex", latex, ["parseLatex", "toLatex"]],
-  ["./mathml", mathml, ["toMathml"]],
-  ["./omml", omml, ["toOmml"]],
+  ["./mathml", mathml, ["parseMathml", "toMathml"]],
+  ["./omml", omml, ["parseOmml", "toOmml"]],
   ["./unicodemath", unicodemath, ["parseUnicodemath", "toUnicodemath"]],
 ];
 
@@ -102,9 +102,7 @@ describe("the subpaths actually work end to end", () => {
   });
 
   it("renders a parsed formula as OMML", () => {
-    // Measured against a live run of the renderer, not guessed: OMML has no
-    // parser in this codebase (ARCHITECTURE.md §11), so there is no oracle
-    // round trip to pin, only the render side.
+    // Assert the public renderer surface independently of the OMML parser.
     const out = omml.toOmml(asciimath.parseAsciimath("frac(1)(2)"));
     expect(out).toContain("<m:f>");
     expect(out.startsWith("<m:oMathPara")).toBe(true);

@@ -29,7 +29,9 @@
  * configuration): `EvaluationOptions` below.
  */
 
+import { UnsupportedFeatureError } from "../core/errors";
 import type { FormulaNode } from "../core/nodes";
+import { isStackOverflow } from "../core/stack-overflow";
 import type { EvaluationBindings } from "./bindings";
 import { DEFAULT_MAX_ITERATIONS, Evaluator } from "./evaluator";
 
@@ -92,7 +94,7 @@ function maxIterationsOption(options: EvaluationOptions): number | null {
  *   port has not ported; a final result JavaScript cannot represent exactly;
  *   a Float power or `Math` function result inside glibc's rounding band; a
  *   Ruby `ArgumentError`; or an exact intermediate beyond the port's size
- *   limit.
+ *   limit; or a tree deeper than the runtime's evaluation call stack.
  * @throws {TypeError} `options.evaluationMaxIterations` is neither a number
  *   nor `null`.
  * @throws {EvaluationError} one of the gem's own evaluation errors
@@ -105,5 +107,16 @@ export function evaluate(
   bindings: EvaluationBindings = {},
   options: EvaluationOptions = {},
 ): number {
-  return Evaluator.run(formula, bindings, { maxIterations: maxIterationsOption(options) });
+  const settings = { maxIterations: maxIterationsOption(options) };
+  try {
+    return Evaluator.run(formula, bindings, settings);
+  } catch (error) {
+    if (isStackOverflow(error)) {
+      throw new UnsupportedFeatureError(
+        "evaluate",
+        "the tree nests too deep for the evaluation call stack; the depth limit is runtime-dependent",
+      );
+    }
+    throw error;
+  }
 }

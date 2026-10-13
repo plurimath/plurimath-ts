@@ -15,7 +15,6 @@ Nothing here blocks the active phase.
 | npm package name and release line | maintainer | before first publish |
 | Bundle budgets | maintainer | during P1, from real numbers |
 | Symbol data as shared data | maintainer + gem | after P1 |
-| Root `parse(input, format, options)` function | maintainer | not yet set |
 | `toDisplay` error class for an invalid type | maintainer | not yet set |
 
 ## UnitsML, and what it means for 1.0
@@ -148,7 +147,12 @@ them.)
 Bridging to the published package is therefore closed on evidence for MathML
 and unavailable for OMML, leaving a native port or continued deferral for both.
 
-**SETTLED 2026-09-16: continued deferral, not a native port, for now.** The
+**Superseded by the native reader ports.** MathML input is implemented on
+main, and this candidate registers OMML input and exports both native parsers.
+The dated discussion below records the earlier decision and evidence; its
+availability descriptions are historical.
+
+**Historical decision, 2026-09-16: continued deferral at that time.** The
 maintainer's reasoning: a native port is a real undertaking (an XML reader
 layer this port does not have, plus the translator) with no clear timeline,
 while the bridging option is closed on the evidence above, not on preference.
@@ -383,12 +387,14 @@ different invariant, not a different reading of this one.
 
 ## Root `parse()` function
 
-`ARCHITECTURE.md` §4 describes a root `parse(input, format, options)` that
-forwards to a format's parser. `src/index.ts` does not export one (it exports
-`Plurimath`, `FORMATS`, `Format`, `/core` and `evaluation`), so today a caller reaches a
-parser only through a per-format subpath or the compat class. Whether to build
-it, and with what options shape, is undecided; the docs describe it as
-documented-but-unbuilt until then.
+**SETTLED 2026-10-13:** implement the thin root dispatcher for the current
+release. `src/index.ts` exports `parse(input, format, options?)` and
+`ParseOptions<F>`. It delegates to the six existing parsers using the current
+`Format` tokens (`unicode`, not `unicodemath`); it adds no aliases or parser
+semantics. Text options use their existing format interfaces. XML inputs
+accept no nonempty option keys. Invalid runtime formats and deferred UnitsML
+retain their separate error classes. The compat class and CLI input list stay
+unchanged. Runtime and built-artifact verification runs on GHA.
 
 ## Evaluation error family (B6, first slice)
 
@@ -459,4 +465,5 @@ Settled 2026-10-12 (the user's decision): add `InvalidTypeError`
 measured in `test/compat/to-display-fixtures.json`, and `toDisplay` now raises
 `InvalidTypeError` too. The compat constructor raises it for a type outside the
 gem's `Math::VALID_TYPES` (`"foo"`, `"unicodemath"`, `"HTML"`), as `Math.parse`
-does; `mathml` and `omml`, which the gem parses, keep `UnsupportedFormatError`.
+does. Native MathML and OMML parsers are now registered; the deferred
+`unitsml` format still raises `UnsupportedFormatError`.

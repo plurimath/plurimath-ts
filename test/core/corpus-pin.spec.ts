@@ -266,17 +266,6 @@ const EXPECTED_PAYLOADS = [
   "mathml/tables.yaml",
   "mathml/text.yaml",
   "mathml/tokens.yaml",
-  "unicode/fences.yaml",
-  "unicode/numbers.yaml",
-  "unicode/operators.yaml",
-  "unicode/symbols.yaml",
-];
-
-/**
- * The pending-format payloads (`PENDING_READER_FORMATS`), named for the same
- * reason `EXPECTED_PAYLOADS` is. Sorted as the provenance lists them.
- */
-const EXPECTED_PENDING_PAYLOADS = [
   "omml/accents.yaml",
   "omml/boxes.yaml",
   "omml/delimiters.yaml",
@@ -288,10 +277,13 @@ const EXPECTED_PENDING_PAYLOADS = [
   "omml/matrices.yaml",
   "omml/nary.yaml",
   "omml/partial-render.yaml",
-  "omml/rejections.yaml",
   "omml/roots.yaml",
   "omml/runs.yaml",
   "omml/scripts.yaml",
+  "unicode/fences.yaml",
+  "unicode/numbers.yaml",
+  "unicode/operators.yaml",
+  "unicode/symbols.yaml",
 ];
 
 /**
@@ -309,27 +301,25 @@ describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every payload the provenance records, matched by path", () => {
-    // 52 case payloads (18 AsciiMath, 18 LaTeX, 12 MathML, 4 Unicode), 5
-    // rejection payloads (one per input format that carries rejections:
-    // AsciiMath, LaTeX, MathML, Unicode, HTML), and 7 calls/1 payloads. Counted apart on purpose: a rejection payload carries no
+    // 66 case payloads (18 AsciiMath, 18 LaTeX, 12 MathML, 14 OMML, 4
+    // Unicode), 6 rejection payloads (one per input format that carries
+    // rejections: AsciiMath, LaTeX, MathML, OMML, Unicode, HTML), and 7
+    // calls/1 payloads. Counted apart on purpose: a rejection payload carries no
     // rendering and a calls payload carries a render under something other
     // than default options, so folding either into the case count would
     // inflate what "the corpus covers" claims.
-    expect(corpus.payloads.length).toBe(52);
-    expect(corpus.rejectionPayloads.length).toBe(5);
+    expect(corpus.payloads.length).toBe(66);
+    expect(corpus.rejectionPayloads.length).toBe(6);
     expect(corpus.callsPayloads.length).toBe(7);
-    // Plus 15 OMML payloads (plurimath-testsuite#21), byte-verified but not
-    // parsed: they are pending the OMML reader.
-    expect(corpus.pendingPayloads.map((payload) => payload.path)).toStrictEqual(
-      EXPECTED_PENDING_PAYLOADS,
-    );
+    // No format is pending: every payload is parsed.
+    expect(corpus.pendingPayloads).toStrictEqual([]);
     expect(corpus.provenance.payloads.length).toBe(79);
     assertExpectedPayloads(corpus);
   });
 
-  it("carries 524 cases with distinct ids", () => {
-    expect(corpus.cases.length).toBe(524);
-    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(524);
+  it("carries 714 cases with distinct ids", () => {
+    expect(corpus.cases.length).toBe(714);
+    expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(714);
   });
 
   it("carries 66 calls/1 cases, all number_formatter, with distinct ids", () => {
@@ -453,7 +443,7 @@ describe("what this port checks against", () => {
     // shared corpus has no case to withhold — only the valid one is in the pin.
     expect(inPin).toStrictEqual(["text-unitsml-valid"]);
     expect(readCorpusCases().length).toBe(corpus.cases.length - inPin.length);
-    expect(readCorpusCases().length).toBe(523);
+    expect(readCorpusCases().length).toBe(713);
   });
 
   it("names the deferred feature and cites the architecture note", () => {
@@ -912,10 +902,10 @@ describe("a pin that quietly loses a group", () => {
   );
 
   it("loads without complaint, which is the whole problem", () => {
-    // The shipped 52 payloads less the one removed, and the shipped 524 cases
+    // The shipped 66 case payloads less the one removed, and the shipped 714 cases
     // less the six `asciimath/frac.yaml` carries.
-    expect(shrunk.payloads.length).toBe(51);
-    expect(shrunk.cases.length).toBe(518);
+    expect(shrunk.payloads.length).toBe(65);
+    expect(shrunk.cases.length).toBe(708);
     expect(shrunk.payloads.map((payload) => payload.path)).not.toContain("asciimath/frac.yaml");
   });
 

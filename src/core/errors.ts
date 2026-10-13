@@ -119,7 +119,7 @@ export class UnsupportedFormatError extends PlurimathError {
  * raised for a type token outside the fixed set an entry point accepts.
  *
  * Distinct from `UnsupportedFormatError`: that one refuses a token the gem
- * accepts but this port has no parser for yet (`mathml`, `omml`); this one
+ * accepts but this port has no parser for yet (`unitsml`); this one
  * refuses a token the gem itself rejects. Measured on the oracle:
  * `Math.parse("x", "foo")` and `Formula#to_display(:html)` both raise
  * `InvalidTypeError`, while `Math.parse("x", "mathml")` does not.

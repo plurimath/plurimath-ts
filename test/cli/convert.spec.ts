@@ -13,8 +13,6 @@ import {
   isOutputFormat,
   OUTPUT_FORMATS,
 } from "../../src/cli/convert";
-import Plurimath from "../../src/compat/index";
-import { UnsupportedFormatError } from "../../src/core/index";
 
 const ASCIIMATH_INPUT = "frac(1)(2)";
 const LATEX_INPUT = "\\frac{1}{2}";
@@ -82,17 +80,5 @@ describe("convert", () => {
 
   it("surfaces a real parser error for malformed input", () => {
     expect(() => convert("\\frac{1}", "latex", "asciimath")).toThrow();
-  });
-});
-
-describe("compat's unregistered input formats stay unreachable from convert's own type", () => {
-  it("omml is excluded from InputFormat at compile time and at the compat layer", () => {
-    // convert()'s InputFormat type excludes "mathml" and "omml" at compile time
-    // (isInputFormat above proves it at runtime). The layer convert() delegates
-    // to, src/compat/index.ts, now parses mathml, so only omml is still refused
-    // there; this asserts it, so a future typo in convert.ts's
-    // TO_COMPAT_INPUT_FORMAT map would fail loudly here rather than silently
-    // misrouting. Admitting mathml to the CLI is a separate change.
-    expect(() => new Plurimath("x", "omml")).toThrow(UnsupportedFormatError);
   });
 });

@@ -957,8 +957,8 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           const item = mapping(row, `${record.relative}.cases[${index}]`);
           stringField(item, "group", record.relative);
           // The notation the case is written in, which picks the parser on
-          // both sides; only the four this port parses are swept.
-          expect(["asciimath", "latex", "mathml", "unicode"]).toContain(
+          // both sides; only the five this port parses are swept.
+          expect(["asciimath", "latex", "mathml", "omml", "unicode"]).toContain(
             stringField(item, "inputFormat", record.relative),
           );
           stringValue(item, "input", record.relative);

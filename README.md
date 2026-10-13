@@ -30,18 +30,19 @@ package is still `private`, and nothing is published to npm under this name
 yet; the name it will publish under is an open decision
 ([open-decisions.md](TODO.plan/open-decisions.md#npm-package-name-and-release-line)).
 
-Measured against the built package (`pnpm build`, then `dist/`):
+The current source and package entries provide:
 
-- Parsers exist for AsciiMath, LaTeX, HTML and UnicodeMath. There is no MathML
-  or OMML parser.
+- Parsers exist for all six formats, exposed on their subpaths and through
+  the root `parse` function and compat constructor.
 - Renderers exist for all six output formats: AsciiMath, LaTeX, MathML, HTML,
   UnicodeMath and OMML.
 - Seven package subpaths are built: `./core`, `./asciimath`, `./latex`,
   `./mathml`, `./html`, `./omml` and `./unicodemath`, plus the root entry and a
   `plurimath` executable.
-- `./html` renders all 228 pinned corpus cases written in AsciiMath, LaTeX or
-  UnicodeMath that the gem renders, 227 of them byte-identical (the 228th,
-  `text-unitsml-valid`, differs by decision; see
+- The HTML parity fixture covers 664 gem-renderable cases written in
+  AsciiMath, LaTeX, UnicodeMath, MathML or OMML. The port renders 658 of them,
+  657 byte-identically; six MathML text cases remain explicit refusals, and
+  `text-unitsml-valid` differs by decision (see
   `test/formats/html/parity-target.ts`). The corpus is not the whole language:
   a construct it does not cover can still raise `RenderError`, for example
   `cancel(x)` in `./html` and `./omml`.
@@ -62,9 +63,9 @@ in milestones. The current one is recorded as `currentMilestone` in
 
 The package is not published, so the specifiers below are the ones
 `package.json` declares (`@plurimath/plurimath-ts`); they resolve from a local
-build (`pnpm build`), not from npm. The snippets in this section were run
-against `dist/` (the CLI file example assumes a `formula.txt` you create), and both the ESM (`import`) and CommonJS (`require`) entries
-are built.
+build (`pnpm build`), not from npm. Build locally before using the examples
+(the CLI file example assumes a `formula.txt` you create). The package declares
+both ESM (`import`) and CommonJS (`require`) entries.
 
 ### Input and output formats
 
@@ -74,13 +75,22 @@ are built.
 | LaTeX | `parseLatex` | `toLatex` | `./latex` |
 | HTML | `parseHtml` | `toHtml` | `./html` |
 | UnicodeMath | `parseUnicodemath` (partial grammar) | `toUnicodemath` | `./unicodemath` |
-| MathML | not available | `toMathml` | `./mathml` |
-| OMML | not available | `toOmml` | `./omml` |
+| MathML | `parseMathml` | `toMathml` | `./mathml` |
+| OMML | `parseOmml` | `toOmml` | `./omml` |
 
 Each parser returns a `FormulaNode` (from `./core`); each renderer takes one.
-There is no root-level `parse(input, format)` function: `ARCHITECTURE.md` §4
-describes one, but the root entry does not export it (see
-[open-decisions.md](TODO.plan/open-decisions.md#root-parse-function)).
+The root also exports `parse(input, format, options?)`, returning a
+`FormulaNode`. It uses the compat format tokens: `asciimath`, `latex`, `html`,
+`unicode`, `mathml` and `omml` (`unicode`, not `unicodemath`). Text formats
+accept their existing `locale` and `onUnsupported` options; MathML and OMML
+accept absent, `null` or empty options and reject nonempty option keys with
+`ParseOptionError`. The exported `ParseOptions<F>` type selects the options
+for format `F`; the compat constructor keeps its existing two arguments.
+
+```js
+import { parse } from "@plurimath/plurimath-ts";
+const formula = parse("1,5", "asciimath", { locale: "de" });
+```
 
 ### Per-format subpaths
 
@@ -112,9 +122,9 @@ p.toUnicodemath(); // x^(2)
 ```
 
 The constructor names six formats (`FORMATS`): `asciimath`, `latex`, `mathml`,
-`html`, `unicode` and `omml`. Note `unicode`, not `unicodemath`. Four
-construct (`asciimath`, `latex`, `html`, `unicode`); `mathml` and `omml` throw
-`UnsupportedFormatError`; any name the gem rejects, including `unicodemath`,
+`html`, `unicode` and `omml`. Note `unicode`, not `unicodemath`. All six
+construct (`asciimath`, `latex`, `html`, `unicode`, `mathml`, `omml`);
+any name the gem rejects, including `unicodemath`,
 throws `InvalidTypeError`.
 Methods: `toAsciimath`, `toLatex`, `toMathml`, `toHtml`, `toOmml`,
 `toUnicodemath` all work. `toMathml(true)` renders the gem's `intent`
@@ -174,7 +184,7 @@ import { ParseError, UnsupportedFeatureError, UnsupportedFormatError } from "@pl
 | Class | `code` | Seen when |
 |---|---|---|
 | `ParseError` | `PARSE_ERROR` | input does not parse, e.g. `parseLatex("\\frac{1")` |
-| `UnsupportedFormatError` | `UNSUPPORTED_FORMAT` | `new Plurimath("<math/>", "mathml")` |
+| `UnsupportedFormatError` | `UNSUPPORTED_FORMAT` | a recognized parse type with no parser, such as `unitsml` (outside the compat `Format` union) |
 | `InvalidTypeError` | `INVALID_TYPE` | `new Plurimath("x", "asciimath").toDisplay("html")` |
 | `UnsupportedFeatureError` | `UNSUPPORTED_FEATURE` | `new Plurimath("mathbf(x)", "asciimath").toDisplay("unicodemath")` |
 | `RenderError` | `RENDER_ERROR` | a node the renderer refuses, e.g. `toOmml(parseAsciimath("cancel(x)"))` |
@@ -186,8 +196,8 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
 
 ### Not yet supported
 
-- Reading MathML or OMML (no parser; the compat constructor and the CLI refuse
-  them).
+- MathML or OMML input in the CLI; its `--from` formats remain AsciiMath,
+  LaTeX, HTML and UnicodeMath.
 - `evaluate()` of `Sinh`, `Cosh`, `Sech` and `Csch` where the platform C
   library's `exp`, which they call for `|x| >= 22` (`cosh` from `ln2/2`), is
   inside its rounding band, such as `sinh(22)`: they raise
@@ -196,7 +206,6 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
   `log`'s rounding band and the answer depends on its rounding, such as
   `\lg(0.214)`: it raises `UnsupportedFeatureError`
   (`src/evaluation/libm.ts`).
-- A root `parse()` function.
 - UnicodeMath input beyond the grammar slice ported so far: unmatched rules
   raise `ParseError`.
 - UnitsML: `unitsml(kg)` is treated as ordinary text, by decision.

@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { normalize, ParseError } from "../../../src/core/index";
 import { OmmlParseError, parseOmmlDocument } from "../../../src/formats/omml/omml-input";
-import { parseOmml } from "../../../src/formats/omml/parser";
+import { parseOmml } from "../../../src/formats/omml/index";
 import { OmmlTranslateError, translateOmml } from "../../../src/formats/omml/translator";
 
 interface Row {

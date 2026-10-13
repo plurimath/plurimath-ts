@@ -6,7 +6,7 @@
  * failure into `ParseError` (`math.rb`), which is what this throws, at offset
  * 0: the gem's own error carries no position.
  *
- * Not registered as an input format yet: reachable by import only.
+ * Exported by the OMML subpath and registered in the compat constructor.
  */
 
 import { describeThrown } from "../../core/errors";

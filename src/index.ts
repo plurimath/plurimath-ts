@@ -6,13 +6,13 @@
  * compat class live here: it delegates to every renderer, so it cannot be
  * slim, and a consumer who wants slim imports a subpath instead.
  *
- * The constructor reads AsciiMath, LaTeX, HTML and UnicodeMath (named
- * `unicode`); the other two formats it names, MathML and OMML, still raise
- * `UnsupportedFormatError` (§4, §9).
+ * The constructor reads AsciiMath, LaTeX, HTML, UnicodeMath (named
+ * `unicode`), MathML and OMML. Per-format subpaths expose their own functions.
  */
 
 export { default as Plurimath, default, FORMATS, type Format } from "./compat/index";
 export * from "./core/index";
+export { parse, type ParseOptions } from "./parse";
 // §3 rule 6: evaluation imports core only, and only this root entry re-exports
 // it: `evaluate(formula, bindings)` takes a tree from any format's parser.
 export * from "./evaluation/index";

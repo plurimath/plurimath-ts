@@ -93,8 +93,8 @@
 #   src/formats/html/generated/provenance.ts     what they came from
 #
 # The generator is deterministic: two runs over the same oracle produce
-# byte-identical output. No timestamps, no absolute paths; every table keeps the
-# gem's own order.
+# byte-identical output. No timestamps or absolute paths. Grammar alternatives
+# keep the gem's own order; derived lookups preserve its mappings.
 
 require_relative "generate-core-data"
 
@@ -418,6 +418,35 @@ module HtmlParserDataGenerator
     end
   end
 
+  # `HTML_SYMBOL_CLASS_INPUT` is not emitted row by row: nearly every row is
+  # an `HTML_SYMBOLS` row inverted (its html text -> its id). Where several ids
+  # share one text the runtime keeps the lexically smallest id, so the result
+  # does not depend on either table's order. Only the rows that rule gets wrong
+  # are emitted (`overrides`), plus the inverted texts the gem has no row for
+  # (`removed`). The derivation is replayed here and must reproduce the
+  # measured table exactly.
+  def symbol_class_derivation(rows)
+    derived = {}
+    CorpusGenerator.html_symbol_rows.each do |id, text|
+      held = derived[text]
+      derived[text] = id if held.nil? || id < held
+    end
+    expected = rows.to_h
+    unless expected.length == rows.length
+      raise Error, "all_symbols_classes(:html) repeats a text, so a Map would collapse it"
+    end
+
+    removed = (derived.keys - expected.keys).sort
+    overrides = rows.reject { |text, id| derived[text] == id }
+    rebuilt = derived.except(*removed).merge(overrides.to_h)
+    unless rebuilt == expected
+      raise Error, "the derived HTML_SYMBOL_CLASS_INPUT does not equal the " \
+                   "#{expected.length} measured rows"
+    end
+
+    { overrides: overrides, removed: removed, sha256: CorpusGenerator.table_sha256(rows) }
+  end
+
   def symbol_class_overlap
     (Plurimath::Utility.symbols_hash(:html).keys &
       Plurimath::Utility.parens_hash(:html).keys).sort
@@ -456,6 +485,7 @@ module HtmlParserDataGenerator
       get_class: get_class_rows(census_index),
       sub_sup_classes: sub_sup_class_rows(grammar_keys),
       symbol_classes: symbol_classes,
+      symbol_class_derivation: symbol_class_derivation(symbol_classes),
       symbol_overlap: symbol_class_overlap,
       symbol_normalization: symbol_normalization_rows(symbol_classes.map(&:first)),
     }
@@ -727,6 +757,7 @@ module HtmlParserDataGenerator
         reachable from `html/transform.rb` resolves, and the generator stops if
         one stops resolving rather than emitting the gap.
       TEXT
+      'import { HTML_SYMBOLS } from "../../../generated/html/symbols";',
       [
         CoreDataGenerator.ts_doc(
           "How the census disposes of a resolved class — the same vocabulary\n" \
@@ -794,19 +825,55 @@ module HtmlParserDataGenerator
         "arrangement, not a constraint.",
       ),
       CoreDataGenerator.ts_tuple_map(
-        "HTML_SYMBOL_CLASS_INPUT", "ReadonlyMap<string, string>", data[:symbol_classes],
-        doc: "`Utility.all_symbols_classes(:html)` — the table\n" \
-             "`Utility.symbols_class(text, lang: :html)` (`utility.rb:212`)\n" \
-             "looks a STRIPPED text up in, as input text -> symbol id.\n" \
-             "\n" \
-             "Both halves of the merge are String-keyed, so a Map collapses\n" \
-             "nothing; the parens half is merged last and wins its\n" \
-             "#{data[:symbol_overlap].length} overlapping texts — see\n" \
-             "`HTML_SYMBOL_CLASS_PAREN_OVERLAP`.\n" \
-             "\n" \
-             "A miss is not an error: `symbols_class` falls back to a bare\n" \
-             "`Math::Symbols::Symbol` carrying the text.",
+        "HTML_SYMBOL_CLASS_OVERRIDES", "ReadonlyMap<string, string>",
+        data[:symbol_class_derivation][:overrides],
+        doc: "The #{data[:symbol_class_derivation][:overrides].length} of #{data[:symbol_classes].length} " \
+             "`HTML_SYMBOL_CLASS_INPUT` rows that inverting\n" \
+             "`HTML_SYMBOLS` does not produce: texts no symbol renders to, and\n" \
+             "shared texts the gem resolves to an id other than the smallest.",
       ),
+      ts_string_list(
+        "HTML_SYMBOL_CLASS_REMOVED", data[:symbol_class_derivation][:removed],
+        "Texts inverting `HTML_SYMBOLS` produces that\n" \
+        "`Utility.all_symbols_classes(:html)` has no row for.",
+      ),
+      [
+        CoreDataGenerator.ts_doc(
+          "sha256 over the measured table, one \"text TAB id LF\" line per\n" \
+          "row, the lines sorted by their UTF-8 bytes, so a spec can prove the\n" \
+          "derivation below reproduces what the generator measured.",
+        ),
+        "export const HTML_SYMBOL_CLASS_INPUT_SHA256: string =",
+        "  #{CoreDataGenerator.ts_string(data[:symbol_class_derivation][:sha256])};",
+      ].join("\n"),
+      [
+        CoreDataGenerator.ts_doc(
+          "`Utility.all_symbols_classes(:html)` — the table\n" \
+          "`Utility.symbols_class(text, lang: :html)` (`utility.rb:212`)\n" \
+          "looks a STRIPPED text up in, as input text -> symbol id.\n" \
+          "\n" \
+          "Both halves of the merge are String-keyed, so a Map collapses\n" \
+          "nothing; the parens half is merged last and wins its\n" \
+          "#{data[:symbol_overlap].length} overlapping texts — see\n" \
+          "`HTML_SYMBOL_CLASS_PAREN_OVERLAP`.\n" \
+          "\n" \
+          "Derived: `HTML_SYMBOLS` inverted, keeping the smallest id per text,\n" \
+          "then `HTML_SYMBOL_CLASS_REMOVED` and `HTML_SYMBOL_CLASS_OVERRIDES`.\n" \
+          "\n" \
+          "A miss is not an error: `symbols_class` falls back to a bare\n" \
+          "`Math::Symbols::Symbol` carrying the text.",
+        ),
+        "export const HTML_SYMBOL_CLASS_INPUT: ReadonlyMap<string, string> = /* @__PURE__ */ (() => {",
+        "  const table = new Map<string, string>();",
+        "  for (const [id, text] of HTML_SYMBOLS) {",
+        "    const held = table.get(text);",
+        "    if (held === undefined || id < held) table.set(text, id);",
+        "  }",
+        "  for (const text of HTML_SYMBOL_CLASS_REMOVED) table.delete(text);",
+        "  for (const [text, id] of HTML_SYMBOL_CLASS_OVERRIDES) table.set(text, id);",
+        "  return table;",
+        "})();",
+      ].join("\n"),
       ts_string_list(
         "HTML_SYMBOL_CLASS_PAREN_OVERLAP", data[:symbol_overlap],
         "The texts present in BOTH halves of `all_symbols_classes(:html)`.\n" \

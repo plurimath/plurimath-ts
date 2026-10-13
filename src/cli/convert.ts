@@ -3,11 +3,10 @@
  * through the compat `Plurimath` class (`src/compat/index.ts`), and the
  * MathML/OMML options through `src/compat/render-options.ts`.
  *
- * Only formats that actually work today are listed (ARCHITECTURE.md §4,
- * `feature-roadmap.md`'s input-format table): the compat constructor's
- * `PARSERS` map registers `asciimath`, `latex`, `html` and `unicode` (its
- * name for UnicodeMath), so those four are the CLI's input formats.
- * `mathml`/`omml`/`unitsml` are not registered there, so they are absent.
+ * The CLI input surface (`INPUT_FORMATS` below) deliberately accepts `asciimath`,
+ * `latex`, `html` and `unicodemath`. The compat constructor also registers
+ * MathML and OMML, but those inputs have not been exposed by the CLI.
+ * UnitsML has no registered parser.
  * Every compat `to<Format>()` method works, so all six are output formats.
  *
  * CLI format tokens use each format's own directory name under `src/formats`

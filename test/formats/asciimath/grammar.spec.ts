@@ -108,8 +108,8 @@ describe("corpus parity", () => {
   it("has the cases this port checks against", () => {
     // Guards the whole block: a reader that silently returned nothing would
     // make every `it.each` below vacuous.
-    expect(corpus.cases.length).toBe(524);
-    expect(reachable.length).toBe(523);
+    expect(corpus.cases.length).toBe(714);
+    expect(reachable.length).toBe(713);
     // The AsciiMath-input subset, which is what this grammar is asked to parse.
     expect(parseable.length).toBe(91);
   });

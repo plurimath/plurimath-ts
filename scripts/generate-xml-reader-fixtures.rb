@@ -300,22 +300,16 @@ module XmlReaderProbe
   end
 
   # Every MathML and OMML case in the pinned corpus, as `corpus-<format>`
-  # rows: the documents this reader exists to read. Read straight from the
-  # payloads, after `read_pin_cases` has byte-verified every payload against
-  # corpus/provenance.yaml (OMML's while it is still pending).
+  # rows: the documents this reader exists to read. Read through
+  # `read_pin_cases`, which byte-verifies every payload against
+  # corpus/provenance.yaml.
   CORPUS_FORMATS = %w[mathml omml].freeze
 
   def corpus_inputs
-    CorpusGenerator.read_pin_cases
-    provenance_path = File.join(CorpusGenerator.pin_root, "corpus", "provenance.yaml")
-    provenance = YAML.safe_load(File.read(provenance_path), aliases: false)
-    paths = provenance.fetch("payloads").map { |entry| entry.fetch("path") }.sort
+    pinned = CorpusGenerator.read_pin_cases
     CORPUS_FORMATS.flat_map do |format|
-      inputs = paths.select { |path| path.start_with?("#{format}/") }.flat_map do |path|
-        file = File.join(CorpusGenerator.pin_root, "corpus", path)
-        YAML.safe_load(File.read(file), aliases: false).fetch("cases").map do |c|
-          ["corpus-#{format}", c.fetch("input")]
-        end
+      inputs = pinned.select { |kase| kase["input_format"] == format }.map do |kase|
+        ["corpus-#{format}", kase.fetch("input")]
       end
       abort "REFUSING: the pinned corpus has no #{format} cases" if inputs.empty?
 

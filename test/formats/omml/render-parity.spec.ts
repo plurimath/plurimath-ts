@@ -42,6 +42,7 @@ import { ParseError, RenderError } from "../../../src/core/index";
 import { parseAsciimath } from "../../../src/formats/asciimath/index";
 import { parseLatex } from "../../../src/formats/latex/index";
 import { parseMathml } from "../../../src/formats/mathml/parser";
+import { parseOmml } from "../../../src/formats/omml/parser";
 import { toOmml } from "../../../src/formats/omml/renderer";
 import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
@@ -106,15 +107,16 @@ const pin = loadPinnedCorpus();
  * the port's parser for that same notation. The corpus spells UnicodeMath
  * `unicode`.
  *
- * The corpus also carries OMML and HTML input. Those are not swept: this
- * port reads HTML through a separate model-fixture layer, and has no OMML
- * parser. Handing one notation's source to another's parser
- * would record whatever fell out as though it were the gem's answer.
+ * The corpus also carries HTML input. It is not swept: this port reads HTML
+ * through a separate model-fixture layer. Handing one notation's source to
+ * another's parser would record whatever fell out as though it were the
+ * gem's answer.
  */
 const PARSERS = {
   asciimath: parseAsciimath,
   latex: parseLatex,
   mathml: parseMathml,
+  omml: parseOmml,
   unicode: parseUnicodemath,
 } as const;
 type InputFormat = keyof typeof PARSERS;
@@ -127,7 +129,7 @@ const parse = (c: Case) => PARSERS[c.inputFormat](c.input);
  * rejection case written in one of the `PARSERS` notations, keyed by id.
  *
  * `casesInInputFormat` throws rather than returning an empty list, so a corpus
- * that stopped carrying one of the three notations fails here instead of
+ * that stopped carrying one of the swept notations fails here instead of
  * turning this file green while it checks nothing for it.
  */
 const pinnedInputs = new Map<string, { readonly inputFormat: string; readonly input: string }>(
@@ -198,9 +200,8 @@ describe(`${FORMAT} parity fixture covers the pinned corpus`, () => {
   });
 
   it("records every corpus rejection as a parse-phase refusal", () => {
-    // Scoped like the map above: the pin also carries HTML, MathML and OMML
-    // rejections, which have no fixture row here, and rightly so. The scope is
-    // what keeps them out.
+    // Scoped like the map above: HTML rejections have no fixture row here.
+    // MathML and OMML rejections are swept with their own parsers.
     const rejections = INPUT_FORMATS.flatMap((format) =>
       casesInInputFormat(pin.rejections, format),
     );
@@ -299,7 +300,7 @@ describe(`${FORMAT} parity, the cases the gem refuses`, () => {
 describeCorpusTargets({
   format: "omml",
   renderFormula: (formula) => toOmml(formula),
-  rendered: 521,
+  rendered: 711,
   // The two MathML cases the gem refuses: an `menclose` whose notation is nil,
   // and an `mlabeledtr` whose label slot holds a list.
   refusedWith: new Map([

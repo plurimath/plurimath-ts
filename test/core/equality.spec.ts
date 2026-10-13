@@ -388,13 +388,16 @@ describe("deep structure", () => {
  * eight MathML pairs written two ways.
  * What each pair asks the projection to skip is asserted below, not assumed.
  *
- * `RubyEqualPairs` is the GEM's answer, re-measured for this pin by
+ * `RubyEqualPairs` is the GEM's previous non-OMML answer, measured by
  * `scripts/probes/corpus-equality.rb` against the oracle checkout at
  * `00c52783` — never this port's own, which would leave the suite comparing
  * the port to itself and calling it parity. The probe parses each pinned case
  * in the notation it is written in (`Plurimath::Math.parse(input, format)`),
  * withholds the same id `readCorpusCases` withholds, and runs `==` in both
- * directions over every pair. Its report, verbatim:
+ * directions over every pair. The current corpus includes OMML; this fixture
+ * must be re-measured over all 713 reachable cases before its matrix can pass.
+ * No new expected pair is inferred from TypeScript equality. Its previous
+ * non-OMML report, verbatim:
  *
  *   rows in pin:     653
  *   rejections:      129
@@ -500,9 +503,10 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "unary-vec|latex-accent-vec",
   ]);
 
-  it("has the 523 cases it expects", () => {
-    expect(nodes).toHaveLength(523);
-    // The probe reported 75 over these same 523. A line lost while the
+  it("has all 713 reachable cases, including OMML", () => {
+    expect(nodes).toHaveLength(713);
+    // The previous probe reported 75 over its 523 non-OMML inputs.
+    // This stale pair fixture awaits a full oracle remeasurement. A line lost while the
     // fixture was pasted in would otherwise pass green against a port that
     // had lost the same pair.
     expect(RubyEqualPairs.size).toBe(75);

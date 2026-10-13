@@ -39,6 +39,7 @@ import { parseAsciimath } from "../../../src/formats/asciimath/index";
 import { toHtml } from "../../../src/formats/html/renderer";
 import { parseLatex } from "../../../src/formats/latex/index";
 import { parseMathml } from "../../../src/formats/mathml/parser";
+import { parseOmml } from "../../../src/formats/omml/parser";
 import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
 import { parseYaml } from "../../core/corpus-yaml";
@@ -98,15 +99,16 @@ const pin = loadPinnedCorpus();
  * the port's parser for that same notation. The corpus spells UnicodeMath
  * `unicode`.
  *
- * The corpus also carries OMML and HTML input. Those are not swept: this
- * port reads HTML through a separate model-fixture layer, and has no OMML
- * parser. Handing one notation's source to another's parser
- * would record whatever fell out as though it were the gem's answer.
+ * The corpus also carries HTML input. It is not swept: this port reads HTML
+ * through a separate model-fixture layer. Handing one notation's source to
+ * another's parser would record whatever fell out as though it were the
+ * gem's answer.
  */
 const PARSERS = {
   asciimath: parseAsciimath,
   latex: parseLatex,
   mathml: parseMathml,
+  omml: parseOmml,
   unicode: parseUnicodemath,
 } as const;
 type InputFormat = keyof typeof PARSERS;
@@ -119,7 +121,7 @@ const parse = (c: Case) => PARSERS[c.inputFormat](c.input);
  * rejection case written in one of the `PARSERS` notations, keyed by id.
  *
  * `casesInInputFormat` throws rather than returning an empty list, so a corpus
- * that stopped carrying one of the three notations fails here instead of
+ * that stopped carrying one of the swept notations fails here instead of
  * turning this file green while it checks nothing for it.
  */
 const pinnedInputs = new Map<string, { readonly inputFormat: string; readonly input: string }>(
@@ -190,9 +192,8 @@ describe(`${FORMAT} parity fixture covers the pinned corpus`, () => {
   });
 
   it("records every corpus rejection as a parse-phase refusal", () => {
-    // Scoped like the map above: the pin also carries HTML, MathML and OMML
-    // rejections, which have no fixture row here, and rightly so. The scope is
-    // what keeps them out.
+    // Scoped like the map above: HTML rejections have no fixture row here.
+    // MathML and OMML rejections are swept with their own parsers.
     const rejections = INPUT_FORMATS.flatMap((format) =>
       casesInInputFormat(pin.rejections, format),
     );
@@ -308,12 +309,13 @@ const MATHML_TEXT_GAPS = [
 describeCorpusTargets({
   format: "html",
   renderFormula: (formula) => toHtml(formula),
-  rendered: 495,
+  rendered: 663,
   // Each refusal names where the port stops. The left-right cases stop at the
   // `Right` node, where the gem raises ArgumentError (`Right#to_html` takes no
   // keyword arguments). The MathML cases stop at the node the gem raises on:
   // an unmeasured `Msgroup`, a list where a node belongs, a bare string, a
-  // `Phantom` or an `Nary`.
+  // `Phantom` or an `Nary`. OMML partial-render cases stop at a list slot
+  // (`omml-partial-001`) or at `Nary` (the remaining cases).
   refusedWith: new Map([
     ["left-right-round", RIGHT_REFUSAL],
     ["left-right-square", RIGHT_REFUSAL],
@@ -343,6 +345,28 @@ describeCorpusTargets({
     ["mathml-partial-021", /Nary has no HTML renderer/],
     ["mathml-partial-022", /Nary has no HTML renderer/],
     ["mathml-partial-023", /Nary has no HTML renderer/],
+    ["omml-partial-001", /ternaryFunction\.parameterTwo: cannot render a list/],
+    ["omml-partial-002", /Nary has no HTML renderer/],
+    ["omml-partial-003", /Nary has no HTML renderer/],
+    ["omml-partial-004", /Nary has no HTML renderer/],
+    ["omml-partial-005", /Nary has no HTML renderer/],
+    ["omml-partial-006", /Nary has no HTML renderer/],
+    ["omml-partial-007", /Nary has no HTML renderer/],
+    ["omml-partial-008", /Nary has no HTML renderer/],
+    ["omml-partial-009", /Nary has no HTML renderer/],
+    ["omml-partial-010", /Nary has no HTML renderer/],
+    ["omml-partial-011", /Nary has no HTML renderer/],
+    ["omml-partial-012", /Nary has no HTML renderer/],
+    ["omml-partial-013", /Nary has no HTML renderer/],
+    ["omml-partial-014", /Nary has no HTML renderer/],
+    ["omml-partial-015", /Nary has no HTML renderer/],
+    ["omml-partial-016", /Nary has no HTML renderer/],
+    ["omml-partial-017", /Nary has no HTML renderer/],
+    ["omml-partial-018", /Nary has no HTML renderer/],
+    ["omml-partial-019", /Nary has no HTML renderer/],
+    ["omml-partial-020", /Nary has no HTML renderer/],
+    ["omml-partial-021", /Nary has no HTML renderer/],
+    ["omml-partial-022", /Nary has no HTML renderer/],
   ]),
   refused: [
     "left-right-round",
@@ -373,6 +397,28 @@ describeCorpusTargets({
     "mathml-partial-021",
     "mathml-partial-022",
     "mathml-partial-023",
+    "omml-partial-001",
+    "omml-partial-002",
+    "omml-partial-003",
+    "omml-partial-004",
+    "omml-partial-005",
+    "omml-partial-006",
+    "omml-partial-007",
+    "omml-partial-008",
+    "omml-partial-009",
+    "omml-partial-010",
+    "omml-partial-011",
+    "omml-partial-012",
+    "omml-partial-013",
+    "omml-partial-014",
+    "omml-partial-015",
+    "omml-partial-016",
+    "omml-partial-017",
+    "omml-partial-018",
+    "omml-partial-019",
+    "omml-partial-020",
+    "omml-partial-021",
+    "omml-partial-022",
   ],
   renderGaps: new Map(MATHML_TEXT_GAPS.map((id) => [id, TEXT_GAP] as const)),
   fixtureRows: fixture.cases,

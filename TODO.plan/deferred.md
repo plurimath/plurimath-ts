@@ -747,17 +747,17 @@ port reads MathML from its own element and attribute semantics
 `MATHML_INPUT_DIFFERENCES` in the same module lists each difference with its
 reason.
 
-### Model fixtures do not yet harvest the MathML corpus cases
+### Model fixtures do not yet harvest the MathML and OMML corpus cases
 
 **Trigger: the follow-up that widens LaTeX, HTML and UnicodeMath parse parity.**
 
 The LaTeX, HTML and UnicodeMath model fixtures are built by parsing what the
-gem rendered for each pinned corpus case. The MathML-input cases are left out
+gem rendered for each pinned corpus case. MathML- and OMML-input cases are left out
 of that harvest (`CorpusGenerator.model_fixture_harvests?` in
-`scripts/generate-corpus.rb`): with them, the LaTeX fixture would grow from
-342 to 620 inputs and the HTML one from 254 to 509, all new parse-parity
-targets for those parsers. Drop the predicate, regenerate, and fix what the
-parsers miss.
+`scripts/generate-corpus.rb`). Their rendered outputs would widen these
+parsers' verification surface; that follow-up must measure the expanded
+harvest, regenerate its fixtures and address the new parse-parity targets.
+Drop the predicate only as part of that follow-up, and fix what the parsers miss.
 
 ### HTML Text: unicode[:name] substitutions
 

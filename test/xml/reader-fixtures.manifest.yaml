@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-xml-reader-fixtures.rb
-  sha256: 40bd0c3ca6b0d982406a03e71f1daf910a276b716fe354e3cb6104e09436d2d6
+  sha256: 4c85c687452d5577b201c6d7d722882c8de9fc1539c8f0ec53b234d0c5f8341e
   inputs:
-    scripts/generate-corpus.rb: 318fb620c77766d2b0680a87bc69994ec173e589853d1eb588f69e2b845364ef
-    scripts/generate-xml-reader-fixtures.rb: 40bd0c3ca6b0d982406a03e71f1daf910a276b716fe354e3cb6104e09436d2d6
+    scripts/generate-corpus.rb: a0844eb64ca0f4c442d53534fb2e6e0dff402f96737bb3be39a052debef18559
+    scripts/generate-xml-reader-fixtures.rb: 4c85c687452d5577b201c6d7d722882c8de9fc1539c8f0ec53b234d0c5f8341e
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: bdf69fad6eb6551dbf42f227aeccb05adb080435
+    commit: 8e37abd2795717be9c6a1195429d89cb39a810c5
     clean: true
     dirty_paths: []
 oracle:

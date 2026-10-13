@@ -29,6 +29,7 @@ import { parseHtml, toHtml } from "../formats/html/index";
 import { parseLatex, toLatex } from "../formats/latex/index";
 import { toMathml } from "../formats/mathml/index";
 import { parseMathml } from "../formats/mathml/parser";
+import { parseOmml } from "../formats/omml/parser";
 import { toOmml } from "../formats/omml/renderer";
 import { parseUnicodemath, toUnicodemath } from "../formats/unicodemath/index";
 import { buildTreeDump, type DisplayFormat } from "./to-display";
@@ -56,11 +57,11 @@ export const FORMATS: readonly Format[] = [
 /**
  * The parser each input format uses, keyed by format.
  *
- * `omml` is still absent, and its constructor raises `UnsupportedFormatError`.
- * `mathml` is registered on the strength of
- * `test/formats/mathml/model-parity.spec.ts`: the gem's model for every
- * pinned corpus MathML case, or its refusal. `html` and `unicode` are
- * registered too, each
+ * `mathml` and `omml` are registered on the strength of
+ * `test/formats/mathml/model-parity.spec.ts` and
+ * `test/formats/omml/model-parity.spec.ts`: the gem's model for every
+ * pinned corpus case in that notation, or its refusal. `html` and `unicode`
+ * are registered too, each
  * on the strength of a checked-in, oracle-verified battery — not prose, not
  * a one-off measurement — that follows the same shape
  * (`scripts/battery-*-fixtures.rb` generates recorded oracle models, and a
@@ -92,6 +93,7 @@ const PARSERS: Partial<Record<Format, (input: string) => FormulaNode>> = {
   latex: parseLatex,
   html: parseHtml,
   mathml: parseMathml,
+  omml: parseOmml,
   unicode: parseUnicodemath,
 };
 
@@ -109,7 +111,7 @@ const DISPLAY_TYPES: readonly string[] = ["omml", "latex", "mathml", "asciimath"
  * type tokens `Math.parse` accepts, which plurimath-js's constructor reaches.
  * A token outside it raises `InvalidTypeError`, measured on the oracle for
  * `"foo"`, `"unicodemath"` and `"HTML"` (the check is case-sensitive). A token
- * inside it that has no parser here (`mathml`, `omml`, `unitsml`) still
+ * inside it that has no parser here (`unitsml`) still
  * raises `UnsupportedFormatError`: the gem parses those.
  */
 const PARSE_TYPES: readonly string[] = [

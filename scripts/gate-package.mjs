@@ -128,7 +128,7 @@ const EVALUATION_EXPORTS = [
  * behind a format subpath would drag all of them into that subpath's graph and
  * break the slim-bundle guarantee the subpaths exist for.
  */
-const ROOT_EXPORTS = [...CORE_EXPORTS, ...EVALUATION_EXPORTS, "FORMATS", "Plurimath"].sort();
+const ROOT_EXPORTS = [...CORE_EXPORTS, ...EVALUATION_EXPORTS, "FORMATS", "Plurimath", "parse"].sort();
 
 /**
  * Subpaths whose BUILT artifact must expose a default export, and what it must
@@ -151,8 +151,8 @@ const EXPECTED_EXPORTS = {
   "./asciimath": ["parseAsciimath", "toAsciimath"],
   "./html": ["parseHtml", "toHtml"],
   "./latex": ["parseLatex", "toLatex"],
-  "./mathml": ["toMathml"],
-  "./omml": ["toOmml"],
+  "./mathml": ["parseMathml", "toMathml"],
+  "./omml": ["parseOmml", "toOmml"],
   "./unicodemath": ["parseUnicodemath", "toUnicodemath"],
 };
 
@@ -196,7 +196,8 @@ const NO_FORBIDDEN_SOURCES = Symbol("NO_FORBIDDEN_SOURCES");
  *
  * - `locale-decimals.ts`, the decimal marker. Each parser reads it at parse
  *   time (`src/formatting/locales.ts`), so the four subpaths with a parser
- *   carry it; `/core`, `/mathml` and `/omml` have no parser and must not.
+ *   carry it; `/core` has no parser, and the XML parsers on `/mathml` and
+ *   `/omml` do not read locale options, so those subpaths must not carry it.
  * - `locale-groups.ts`, the grouping separator. Nothing in `src/` imports it
  *   yet, so no subpath may carry it; the formatter that first needs it must
  *   change this row on purpose rather than ship it everywhere unnoticed.
@@ -222,9 +223,8 @@ const FORBIDDEN = {
   // not, because LaTeX output is text.
   "./latex": [...forbidOtherFormats("latex"), /xml\//, LOCALE_GROUPS],
   "./mathml": [...forbidOtherFormats("mathml"), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
-  // OMML has no parser (unlike LaTeX/HTML/UnicodeMath) and its renderer
-  // builds its tree through the XML layer (unlike LaTeX/HTML/UnicodeMath's
-  // string output), so it forbids pegkit but, like MathML, not `xml`.
+  // OMML reads and writes through the XML layer. Its parser needs neither
+  // pegkit nor locale tables, so those remain forbidden in this subpath.
   "./omml": [...forbidOtherFormats("omml"), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
   // UnicodeMath parses as well as renders, so pegkit is expected here on the
   // same grounds as `/latex`; `xml` still is not, because its output is text.

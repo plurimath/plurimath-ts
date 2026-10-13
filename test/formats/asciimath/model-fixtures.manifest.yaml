@@ -9,10 +9,10 @@ generator:
   sha256: 12f5187599a168cf4cdf99bb11e0a918b901b611d56ceee0d29967d5e929977c
   inputs:
     scripts/generate-asciimath-model-fixtures.rb: 12f5187599a168cf4cdf99bb11e0a918b901b611d56ceee0d29967d5e929977c
-    scripts/generate-corpus.rb: a0844eb64ca0f4c442d53534fb2e6e0dff402f96737bb3be39a052debef18559
+    scripts/generate-corpus.rb: 4958f26a003c6c10da2031d109fcd85d73240f65f4392b6370c79bc111e224f5
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 5857a0de36f84597f80c5909c0456f5fc22cd3c7
+    commit: 7942257249ecde3a1f8d2a91e8face81c88fbc73
     clean: true
     dirty_paths: []
 oracle:

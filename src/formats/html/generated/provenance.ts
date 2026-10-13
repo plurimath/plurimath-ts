@@ -48,11 +48,11 @@ export const HTML_PARSER_GENERATED_PROVENANCE: HtmlParserGeneratedProvenance = {
     ],
     [
       "scripts/generate-corpus.rb",
-      "a0844eb64ca0f4c442d53534fb2e6e0dff402f96737bb3be39a052debef18559",
+      "4958f26a003c6c10da2031d109fcd85d73240f65f4392b6370c79bc111e224f5",
     ],
     [
       "scripts/generate-html-parser-data.rb",
-      "67ec5ef615a6495203cfec38f28c54d87670e7a5d1442a60fba137845080fe67",
+      "3ebfe9bb61dcdcb9bff1733ba940fa1ba292b981e83f89b5bb1a49817af4981d",
     ],
   ]),
   oracle: "plurimath",

@@ -13,9 +13,9 @@ import {
   FormulaNode,
   InvalidTypeError,
   normalize,
-  parse,
   ParseError,
   ParseOptionError,
+  parse,
   UnsupportedFormatError,
 } from "../src/index";
 
@@ -28,7 +28,11 @@ const TEXT_ROUTES = [
   ["html", "<i>x</i>", parseHtml],
   ["unicode", "(1)/(2)", parseUnicodemath],
 ] as const;
-const ROUTES = [...TEXT_ROUTES, ["mathml", MATHML, parseMathml], ["omml", OMML, parseOmml]] as const;
+const ROUTES = [
+  ...TEXT_ROUTES,
+  ["mathml", MATHML, parseMathml],
+  ["omml", OMML, parseOmml],
+] as const;
 
 describe("root parse", () => {
   it.each(ROUTES)("routes %s to its public parser", (format, input, direct) => {
@@ -39,7 +43,9 @@ describe("root parse", () => {
 
   it.each(TEXT_ROUTES)("forwards %s locale options", (format, input, direct) => {
     const options = { locale: "de" };
-    expect(normalize(parse(input, format, options))).toStrictEqual(normalize(direct(input, options)));
+    expect(normalize(parse(input, format, options))).toStrictEqual(
+      normalize(direct(input, options)),
+    );
   });
 
   it("applies the locale to a decimal whose default parse differs", () => {

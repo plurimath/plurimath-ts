@@ -128,7 +128,13 @@ const EVALUATION_EXPORTS = [
  * behind a format subpath would drag all of them into that subpath's graph and
  * break the slim-bundle guarantee the subpaths exist for.
  */
-const ROOT_EXPORTS = [...CORE_EXPORTS, ...EVALUATION_EXPORTS, "FORMATS", "Plurimath", "parse"].sort();
+const ROOT_EXPORTS = [
+  ...CORE_EXPORTS,
+  ...EVALUATION_EXPORTS,
+  "FORMATS",
+  "Plurimath",
+  "parse",
+].sort();
 
 /**
  * Subpaths whose BUILT artifact must expose a default export, and what it must

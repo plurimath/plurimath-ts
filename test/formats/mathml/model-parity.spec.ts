@@ -8,8 +8,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { normalize, ParseError } from "../../../src/core/index";
-import { MmlParseError, parseMml } from "../../../src/formats/mathml/mml";
 import { parseMathml } from "../../../src/formats/mathml/index";
+import { MmlParseError, parseMml } from "../../../src/formats/mathml/mml";
 import { MathmlTranslateError, translateMml } from "../../../src/formats/mathml/translator";
 
 interface Row {

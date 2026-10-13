@@ -330,9 +330,9 @@ describe("the pin as shipped", () => {
     }
   });
 
-  it("carries all three input formats, and says which cases are which", () => {
-    // The pin's headline changes: a second input notation (LaTeX), and now a
-    // third (Unicode). Counted per format, because the whole point of the
+  it("carries all five input formats, and says which cases are which", () => {
+    // The pin carries AsciiMath, LaTeX, Unicode, MathML and OMML inputs.
+    // Counted per format, because the whole point of the
     // round-trip scoping below is that these numbers are different, and a
     // corpus that quietly lost one format's half would otherwise only show up
     // as a total that still looked large.
@@ -344,9 +344,10 @@ describe("the pin as shipped", () => {
       ["asciimath", 92],
       ["latex", 125],
       ["mathml", 287],
+      ["omml", 190],
       ["unicode", 20],
     ]);
-    // The rejections carry five notations, HTML among them though HTML has no
+    // The rejections carry six notations, HTML among them though HTML has no
     // case payload, and are counted per format for the same reason. This is what makes scoping the
     // rejection suites load-bearing: each parser may only be handed the cases
     // written in the notation it reads (`test/formats/*/rejection-parity.spec.ts`).
@@ -362,6 +363,7 @@ describe("the pin as shipped", () => {
       ["html", 38],
       ["latex", 14],
       ["mathml", 12],
+      ["omml", 9],
       ["unicode", 52],
     ]);
   });
@@ -397,6 +399,10 @@ describe("the pin as shipped", () => {
       ...Array.from(
         { length: 27 },
         (_, index) => `mathml-partial-${String(index + 1).padStart(3, "0")}`,
+      ),
+      ...Array.from(
+        { length: 31 },
+        (_, index) => `omml-partial-${String(index + 1).padStart(3, "0")}`,
       ),
     ]);
     const entry = partial[0];

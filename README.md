@@ -47,9 +47,12 @@ The current source and package entries provide:
   whole language:
   a construct it does not cover can still raise `RenderError`, for example
   `cancel(x)` in `./html` and `./omml`.
-- The UnicodeMath parser covers part of the gem's grammar. Input outside what it
-  supports raises `ParseError` rather than returning a wrong model (see
-  [Not yet supported](#not-yet-supported)).
+- UnicodeMath input uses the pinned gem's grammar and 484 reachable transform
+  rules. The other 35 rules have source-based unreachability proofs (see
+  [rule reachability](docs/unicodemath-rule-reachability.md)). The parser
+  preserves raw trees that Ruby leaves unmatched; those models may refuse
+  rendering in both implementations. Conformance is measured against the
+  generated fixtures, rather than inferred from the rule count.
 
 Correctness is gated rather than asserted: a registry of quality gates activates
 in milestones. The current one is recorded as `currentMilestone` in
@@ -75,7 +78,7 @@ both ESM (`import`) and CommonJS (`require`) entries.
 | AsciiMath | `parseAsciimath` | `toAsciimath` | `./asciimath` |
 | LaTeX | `parseLatex` | `toLatex` | `./latex` |
 | HTML | `parseHtml` | `toHtml` | `./html` |
-| UnicodeMath | `parseUnicodemath` (partial grammar) | `toUnicodemath` | `./unicodemath` |
+| UnicodeMath | `parseUnicodemath` | `toUnicodemath` | `./unicodemath` |
 | MathML | `parseMathml` | `toMathml` | `./mathml` |
 | OMML | `parseOmml` | `toOmml` | `./omml` |
 
@@ -207,8 +210,6 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
   `log`'s rounding band and the answer depends on its rounding, such as
   `\lg(0.214)`: it raises `UnsupportedFeatureError`
   (`src/evaluation/libm.ts`).
-- UnicodeMath input beyond the grammar slice ported so far: unmatched rules
-  raise `ParseError`.
 - Standalone UnitsML input is not a public parse format. Use quoted inline
   AsciiMath, such as `parse('"unitsml(kg)"', "asciimath")`; all six renderers
   accept nested `unitsml` options.

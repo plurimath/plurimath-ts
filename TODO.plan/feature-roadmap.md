@@ -76,12 +76,12 @@ The gem accepts seven parse types (`Math::VALID_TYPES`, `math.rb:16-24`):
 | AsciiMath | `parseAsciimath` | registered | complete |
 | LaTeX | `parseLatex` | registered | complete — 117 rules registered (`test/formats/latex/transform-coverage.spec.ts:81`), the transform's header recording one gem rule as dead and unported |
 | HTML | `parseHtml` | registered (#119) | complete: 78 of 78 rules (`test/formats/html/transform-coverage.spec.ts:170`) |
-| UnicodeMath | `parseUnicodemath` | registered (#119) | 484 registered rules of the gem's 519; 35 unreachable at the pinned public parser; raw-tree model parity remains under investigation |
+| UnicodeMath | `parseUnicodemath` | registered (#119) | 484 registered rules of the gem's 519; 35 source-proven unreachable at the pinned public parser |
 | MathML | none | not registered | not started; deferred (#122) |
 | OMML | none | not registered | not started; deferred (#122) |
 | UnitsML | none | not in the compat union | deferred |
 
-#### UnicodeMath input — model parity remains bounded
+#### UnicodeMath input — reachable rules ported
 
 The port registers 484 of the pinned gem's 519 transform rules. Every registered
 rule has a public-input coverage witness. The other 35 cannot fire in the pinned
@@ -89,12 +89,13 @@ public pipeline: 26 historical grammar/order proofs and nine exact-key/type
 proofs in [rule reachability](../docs/unicodemath-rule-reachability.md).
 Rule 2323 now has measured public witnesses and is registered.
 
-The unresolved rule classifications are closed at this reference; public parser
-parity is a separate question. The current conservative unmatched-tree guard can
-reject raw Hash compositions that Ruby returns. Broader generated-output harvests
-and parser-to-renderer behavior also require their own measured checks. The
-`unicode` compat constructor remains registered; none of these facts establishes
-universal language support or every rendering path.
+All omitted-rule classifications are closed at this reference. Raw Hashes now
+materialize without a finite signature allowlist or a second transform pass,
+preserving Ruby's composition and label behavior. Generated regressions cover
+698 investigated public inputs, masks 0–31 across four integral shapes, and
+440 distinct UnicodeMath outputs from MathML/OMML-origin corpus cases. The
+`unicode` compat constructor remains registered. These are measured parity
+surfaces; they do not prove universal language support or every rendering path.
 
 #### HTML input — complete, and registered in compat
 

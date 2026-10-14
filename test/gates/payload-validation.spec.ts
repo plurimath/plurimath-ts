@@ -346,6 +346,8 @@ const NATIVE_AUXILIARY_JSON = [
   "test/formats/unicodemath/reachability-fixtures.metadata.json",
   "test/formats/unicodemath/scope-gap-fixtures.json",
   "test/formats/unicodemath/scope-gap-fixtures.metadata.json",
+  "test/formats/unicodemath/xml-origin-fixtures.json",
+  "test/formats/unicodemath/xml-origin-fixtures.metadata.json",
   "test/formats/unitsml/probe-fixtures.metadata.json",
 ] as const;
 const LEGACY_FORMAT_FIXTURES = [
@@ -1114,6 +1116,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           "test/formats/unicodemath/reachability-fixtures.json":
             "plurimath-unicodemath-reachability/1",
           "test/formats/unicodemath/scope-gap-fixtures.json": "plurimath-unicodemath-scope-gap/1",
+          "test/formats/unicodemath/xml-origin-fixtures.json": "plurimath-unicodemath-xml-origin/1",
         };
         expect(projectionSchemas[payloadPath], payloadPath).toBeDefined();
         expect(payload.schema).toBe(projectionSchemas[payloadPath]);

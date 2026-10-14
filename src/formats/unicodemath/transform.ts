@@ -1138,10 +1138,18 @@ function newMod(one: unknown, two: unknown): UnicodemathDraft {
  * `Math::Function::Td.new(parameter_one)` — a `BinaryFunction`, so
  * `parameter_two` stays Ruby's own `nil` default. Every TABLE-family call
  * site already shapes `one` the way `Td#initialize` wants it — `[td]` for a
- * single cell, an already-sequence `td` for several — so this is the plain
- * wrap, not a second `Array()`.
+ * single cell, an already-sequence `td` for several. `Td#initialize`
+ * (td.rb:7-9) first deletes direct entries equal to "&" in place: the
+ * grammar's empty-cell separator Slice equals that string, but a Symbol
+ * or Text node containing an ampersand does not.
  */
 function newTd(one: unknown): UnicodemathDraft {
+  if (Array.isArray(one)) {
+    for (let index = 0; index < one.length; ) {
+      if (textEquals(one[index], "&")) one.splice(index, 1);
+      else index += 1;
+    }
+  }
   return binaryDraft("binaryFunction", "Td", one, undefined);
 }
 

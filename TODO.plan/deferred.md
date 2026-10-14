@@ -354,7 +354,7 @@ block-return-nil rule) rather than raising — measured directly on the pinned
 oracle — so `src/render/text/omml.ts` renders it empty, and nothing in this
 area still refuses.
 
-### MathML renderer: `options[:mask]` supports only the inert decoding
+### MathML renderer: `options[:mask]` — CLOSED
 
 **Closed by the native UnicodeMath completion.** `Int` and `Nary` now apply
 `Core#get_mask_options`/`masked_tag` semantics. Their read gates stay distinct:

@@ -66,6 +66,7 @@ import {
   UlNode,
   UnaryFunctionNode,
   UndersetNode,
+  UnitsmlNode,
   VecNode,
 } from "../../core/index";
 import { NODE_SPECS } from "../../core/normalize";
@@ -150,6 +151,7 @@ export const UNICODEMATH_NODE_CONSTRUCTORS: {
   ul: UlNode,
   unaryFunction: UnaryFunctionNode,
   underset: UndersetNode,
+  unitsml: UnitsmlNode,
   vec: VecNode,
 };
 

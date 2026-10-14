@@ -152,6 +152,15 @@ module NativeCompletionReference
     pairs |= (tokens["singlePrefixes"] + tokens["doublePrefixes"]).uniq.product(composite_units)
     data["prefixedUnits"] = pairs.to_h { |prefix, unit| ["#{prefix}\u0000#{unit}", measured("#{prefix}#{unit}")] }
     data["special"] = %w[1 1/m m^-1 m^(-1/2) sqrt(m)/s].to_h { |input| [input, measured(input)] }
+    # Alias families come from the independently measured canonical census.
+    # Unary, binary and ternary aliases share a class-name prefix, so a prefix
+    # match alone cannot select the native kind faithfully.
+    census = CorpusGenerator.build_census(oracle)
+    data["modelKinds"] = census.fetch("classes").to_h do |entry|
+      carrier = entry["aliases"] || entry.fetch("name")
+      basename = carrier.split("::").last
+      [entry.fetch("name"), basename[0].downcase + basename[1..]]
+    end
     data["utility"] = { "u2d" => Unitsml::Utility::U2D, "dim2d" => Unitsml::Utility::DIM2D,
       "dimsVector" => Unitsml::Utility::DIMS_VECTOR, "prefixSymbolMethods" => Unitsml::Utility::PREFIX_SYMBOL_METHODS }
     data["dimensionVectors"] = Unitsml::Unitsdb.dimensions.dimensions.map { |dim| { "id" => dim.id, "vector" => dim.set_vector } }

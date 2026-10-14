@@ -1,3 +1,5 @@
+import { RenderError } from "../core/index";
+
 export interface UnitsmlRenderOptions {
   /** Symbol.for("space") / Symbol.for("nospace") carry Ruby's Symbol values. */
   readonly multiplier?: string | symbol | false | null | undefined;
@@ -18,11 +20,25 @@ export function unitsmlOptions(
   options: UnitsmlRenderOptions | null | undefined,
   extras: Readonly<Record<string, string>>,
 ): EffectiveUnitsmlOptions {
+  if (
+    options !== null &&
+    options !== undefined &&
+    (typeof options !== "object" || Array.isArray(options))
+  ) {
+    throw new RenderError(
+      "UnitsML options must be an object, null or undefined",
+      "unitsml",
+      "unitsml",
+    );
+  }
   return {
     ...options,
     explicitParenthesis:
-      options !== null && options !== undefined && Object.hasOwn(options, "explicitParenthesis")
-        ? options.explicitParenthesis === true
+      options !== null &&
+      options !== undefined &&
+      Object.hasOwn(options, "explicitParenthesis") &&
+      options.explicitParenthesis !== undefined
+        ? options.explicitParenthesis !== null && options.explicitParenthesis !== false
         : true,
     multiplier:
       options?.multiplier === false

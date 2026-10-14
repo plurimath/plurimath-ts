@@ -46,6 +46,7 @@ import { ASCIIMATH_LITERALS, type AsciimathLiteralKind } from "../../generated/a
 import {
   type Atom,
   alt,
+  any,
   captured,
   dynamic,
   match,

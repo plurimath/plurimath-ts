@@ -40,17 +40,7 @@ import {
   unreachableName,
 } from "./render-shared";
 
-/**
- * Renderer options, typed exactly (§5): the five implemented axes
- * (`formatter` joined `displayStyle`/`unaryFunctionSpacing` with B2's Number
- * formatting slice, `splitOnLinebreak` with B3, `intent` with B4 —
- * TODO.plan/feature-roadmap.md). The still-deferred `to_mathml` keyword —
- * `unitsml` — is deliberately NOT in this type; passing it (any value but
- * `undefined`) is a named `RenderError` at runtime (`TODO.plan/deferred.md`
- * carries the entry and its trigger). A key that is neither — one `to_mathml` has no keyword
- * for at all — is refused by name too, at the entry (`ACCEPTED_OPTIONS`
- * below).
- */
+/** Renderer options match the six implemented Formula#to_mathml axes. */
 export interface MathmlOptions {
   readonly unitsml?: UnitsmlRenderOptions | null;
   /**

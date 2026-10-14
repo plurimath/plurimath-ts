@@ -31,8 +31,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { normalize, ParseError } from "../../../src/core/index";
-import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
+import { normalize, ParseError, RenderError } from "../../../src/core/index";
+import { parseUnicodemath, toUnicodemath } from "../../../src/formats/unicodemath/index";
 import { preprocess } from "../../../src/formats/unicodemath/preprocess";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -305,26 +305,22 @@ describe("the inputs the gem refuses", () => {
  *     `Plurimath::Math::ParseError`, because no renderer branch reads a
  *     `[:nary, Hash]` pair.
  *
- * The port refuses earlier: `nary=other` is not in
- * `GEM_UNMATCHED_SIGNATURES` (measured — no pinned corpus input produces it),
- * so `assertGemLeavesUnmatched` throws at the FORMULA root, before the
- * `Kernel#Array` pair-fold equivalent in `finalizeUnicodemathParse` ever runs.
- * `parseUnicodemath` itself refuses, where the gem's `Math.parse` would not.
- *
- * This is the measured, accepted divergence Codex's review of #116 flagged as
- * undocumented: WHEN each side refuses differs (parse-time here, render-time
- * on the gem), but WHETHER either side produces usable output does not — both
- * refuse. Nothing here says the phase difference is a bug to fix; it is
- * recorded so a future change to `GEM_UNMATCHED_SIGNATURES` or to
- * `finalizeUnicodemathParse`'s ordering trips this test rather than silently
- * moving the refusal's phase.
+ * The completion probe records this model and its render refusal. The
+ * finalizer now retains the measured nary signatures, so this regression
+ * checks the same boundary: parsing returns the raw model, and rendering
+ * raises the modern API's RenderError.
  */
 describe("a doubled nary the gem parses but cannot render", () => {
   const input = "∫∫f g";
 
-  it("is refused by the port at parse time, naming the nary signature", () => {
-    expect(() => parseUnicodemath(input)).toThrow(ParseError);
-    expect(() => parseUnicodemath(input)).toThrow(/no rule matched \{nary=other\}/);
+  it("preserves the measured raw model and refuses its rendering", () => {
+    const completion = JSON.parse(readFileSync(join(HERE, "completion-fixtures.json"), "utf8")) as {
+      readonly cases: readonly FixtureCase[];
+    };
+    const entry = completion.cases.find((candidate) => candidate.input === input);
+    expect(entry?.model).toBeDefined();
+    expect(normalize(parseUnicodemath(input))).toStrictEqual(entry?.model);
+    expect(() => toUnicodemath(parseUnicodemath(input))).toThrow(RenderError);
   });
 });
 

@@ -1,37 +1,27 @@
 {
+  "measured": true,
   "verified": false,
   "oracle": "00c52783877b38f6b8e6e109f1803f96bb34fc62",
   "lockSha256": "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121",
+  "ruby": "ruby 4.0.1 (2026-01-13 revision e04267a14b) +PRISM [x86_64-linux]",
+  "generator": {
+    "path": "scripts/generate-unitsml-data.rb",
+    "sha256": "c5ddf1dc9b41b3d27a9d009c2706d0b542b032e8906e0f91ab908e8ece6406f5",
+    "inputs": {
+      "scripts/generate-corpus.rb": "620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75",
+      "scripts/generate-unitsml-data.rb": "c5ddf1dc9b41b3d27a9d009c2706d0b542b032e8906e0f91ab908e8ece6406f5",
+      "scripts/render-fixture-provenance.rb": "6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11",
+      "scripts/ci/native-completion-probe.rb": "7fd51509a598a115100f93f569c098414418528171d71f3b3ebe812b3f6b78aa"
+    }
+  },
   "stages": [
     {
       "name": "small-probe",
-      "exit": 0,
-      "unitCases": 72,
-      "unicodeCases": 36
-    },
-    {
-      "name": "unitsml-tables",
       "exit": 0
     }
   ],
-  "ruby": "ruby 4.0.1 (2026-01-13 revision e04267a14b) +PRISM [x86_64-linux]",
-  "source": "70b867c47550840c7c139e18d222c2e9f87cf35c",
-  "generators": {
-    "native-completion-probe.rb": "e95cf222a2a777fda852d6a54f1c935196026761204a751fb5140743b78dcbe0",
-    "generate-unitsml-data.rb": "bfd65330210de08ef1d908ae58a3ff955359d9cfed9de2f6dc58430fa13c4689"
-  },
-  "versions": {
-    "plurimath": "0.11.6",
-    "unitsml": "0.6.8",
-    "unitsdb": "2.2.4",
-    "bundler": "4.0.3"
-  },
   "payloads": {
-    "setup.json": "9e3f8ba00bad36338e2bdc131c56691c2898ef80b4bf621ce54d2dd68fe449da",
-    "src/unitsml/generated/data.json": "8d97d8fd155c7a70e6d550bbb0d402ec795719a83e5bc69a1bf21a02e43fc178",
-    "unicode-probe.json": "0781bdf2146145c07e9f58261b28107b0d6f4afe2b06087b254d8c8cc0162bf3",
-    "unitsml-probe.json": "146278d4fd58a92550686a3ce2970918d8f1636215aa7c65f2e395debdfe4e06",
-    "unitsml-raw-model.json": "bf7f2b8547e814671342179e5f5a762505bfe748f94fa06051c8a16514f90828"
-  },
-  "measured": true
+    "completion-fixtures.json": "0781bdf2146145c07e9f58261b28107b0d6f4afe2b06087b254d8c8cc0162bf3",
+    "unicode-probe.json": "0781bdf2146145c07e9f58261b28107b0d6f4afe2b06087b254d8c8cc0162bf3"
+  }
 }

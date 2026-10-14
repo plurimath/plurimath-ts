@@ -184,7 +184,7 @@ import { ParseError, UnsupportedFeatureError, UnsupportedFormatError } from "@pl
 | Class | `code` | Seen when |
 |---|---|---|
 | `ParseError` | `PARSE_ERROR` | input does not parse, e.g. `parseLatex("\\frac{1")` |
-| `UnsupportedFormatError` | `UNSUPPORTED_FORMAT` | a recognized parse type with no parser, such as `unitsml` (outside the compat `Format` union) |
+| `UnsupportedFormatError` | `UNSUPPORTED_FORMAT` | a recognized operation without a native implementation |
 | `InvalidTypeError` | `INVALID_TYPE` | `new Plurimath("x", "asciimath").toDisplay("html")` |
 | `UnsupportedFeatureError` | `UNSUPPORTED_FEATURE` | `new Plurimath("mathbf(x)", "asciimath").toDisplay("unicodemath")` |
 | `RenderError` | `RENDER_ERROR` | a node the renderer refuses, e.g. `toOmml(parseAsciimath("cancel(x)"))` |

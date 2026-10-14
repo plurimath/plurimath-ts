@@ -1,0 +1,26 @@
+{
+  "measured": true,
+  "verified": false,
+  "oracle": "00c52783877b38f6b8e6e109f1803f96bb34fc62",
+  "lockSha256": "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121",
+  "ruby": "ruby 4.0.1 (2026-01-13 revision e04267a14b) +PRISM [x86_64-linux]",
+  "generator": {
+    "path": "scripts/generate-unitsml-data.rb",
+    "sha256": "c5ddf1dc9b41b3d27a9d009c2706d0b542b032e8906e0f91ab908e8ece6406f5",
+    "inputs": {
+      "scripts/generate-corpus.rb": "620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75",
+      "scripts/generate-unitsml-data.rb": "c5ddf1dc9b41b3d27a9d009c2706d0b542b032e8906e0f91ab908e8ece6406f5",
+      "scripts/render-fixture-provenance.rb": "6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11",
+      "scripts/ci/native-completion-probe.rb": "7fd51509a598a115100f93f569c098414418528171d71f3b3ebe812b3f6b78aa"
+    }
+  },
+  "stages": [
+    {
+      "name": "reference-generation",
+      "exit": 0
+    }
+  ],
+  "payloads": {
+    "paren-mask-sizes.ts": "0be3c258de15c50c5c00d873a15d43dbd045abbf76d6cdd875fc8eccd7382824"
+  }
+}

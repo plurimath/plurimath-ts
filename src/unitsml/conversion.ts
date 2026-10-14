@@ -112,14 +112,14 @@ function native(expression: Expression, options: EffectiveUnitsmlOptions): reado
           : typeof multiplier === "string"
             ? multiplier
             : failure("UnitsML cannot encode this multiplier Symbol as MathML");
-      const resolved = UNITSML_DATA.resolvedTokens?.[token];
+      const resolved = resolvedToken(token);
       // The export covers every recognized symbol/function spelling; the
       // reference's remaining branch constructs a bare encoded Symbol.
       const symbol =
         token === ""
           ? new SymbolNode({ value: null })
           : resolved === undefined
-            ? new SymbolNode({ value: encodeToken(token) })
+            ? new SymbolNode({ value: encodeUnitsmlToken(token) })
             : hydrateModel(resolved);
       return [
         sentinel === "space" && symbol.kind === "symbol"
@@ -163,9 +163,11 @@ function prefixModel(base: readonly MathNode[], expression: Expression): readonl
     "",
   );
   const token = htmlEntityToUnicode(`${prefix}${plain[2]}`);
-  const model = UNITSML_DATA.resolvedTokens?.[token];
+  const model = resolvedToken(token);
   const replacement =
-    model === undefined ? new SymbolNode({ value: encodeToken(token) }) : hydrateModel(model);
+    model === undefined
+      ? new SymbolNode({ value: encodeUnitsmlToken(token) })
+      : hydrateModel(model);
   return base.map((node) =>
     node.kind === "fontStyle" ? { ...node, parameterOne: replacement } : replacement,
   );
@@ -175,11 +177,25 @@ function escapeText(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 /** The dependency's HTMLEntities :hexadecimal encoder. */
-function encodeToken(value: string): string {
+export function encodeUnitsmlToken(value: string): string {
   return value.replace(
     /[<>'"&]|[^ -~]/gu,
     (character) => `&#x${character.codePointAt(0)?.toString(16)};`,
   );
+}
+
+function resolvedToken(token: string) {
+  const exact = UNITSML_DATA.resolvedTokens?.[token];
+  if (exact !== undefined) return exact;
+  const stripChars = "\0\t\n\v\f\r ";
+  let start = 0;
+  let end = token.length;
+  while (start < end && stripChars.includes(token.charAt(start))) start++;
+  while (end > start && stripChars.includes(token.charAt(end - 1))) end--;
+  const trimmed = UNITSML_DATA.resolvedTokens?.[token.slice(start, end)];
+  // A recognized class discards surrounding whitespace. Bare Symbol keeps
+  // the complete encoded string, even when its trimmed spelling was probed.
+  return trimmed?.class === "Math::Symbols::Symbol" ? undefined : trimmed;
 }
 function mathml(expression: Expression, options: EffectiveUnitsmlOptions): string {
   switch (expression.kind) {
@@ -204,7 +220,7 @@ function mathml(expression: Expression, options: EffectiveUnitsmlOptions): strin
         sentinel !== undefined
           ? "&#x2062;"
           : typeof value === "string"
-            ? encodeToken(value)
+            ? encodeUnitsmlToken(value)
             : failure("UnitsML cannot encode this multiplier Symbol as MathML");
       return `<mo${sentinel === "space" ? ' rspace="thickmathspace"' : ""}>${token}</mo>`;
     }

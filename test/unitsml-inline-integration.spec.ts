@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import Plurimath from "../src/compat/index";
-import { ParseError, RenderError } from "../src/core/index";
+import { normalize, ParseError, RenderError } from "../src/core/index";
 import { parseAsciimath, toAsciimath } from "../src/formats/asciimath/index";
 import { toHtml } from "../src/formats/html/index";
 import { toLatex } from "../src/formats/latex/index";
@@ -19,10 +19,12 @@ interface InlineRow {
   readonly input: string;
   readonly parseInput: string;
   readonly parseFormat: "asciimath";
-  readonly options: Readonly<Record<string, unknown>>;
+  readonly options: unknown;
   readonly optionsTypes: Readonly<Record<string, string>>;
   readonly raises?: string;
   readonly renders?: Readonly<Record<string, Outcome>>;
+  readonly rawModel?: unknown;
+  readonly symbolDisplayRenders?: Readonly<Record<string, Outcome>>;
 }
 const fixture = JSON.parse(
   readFileSync(new URL("./formats/unitsml/probe-fixtures.json", import.meta.url), "utf8"),
@@ -32,7 +34,10 @@ const fixture = JSON.parse(
   readonly plurimathInlineCases: readonly InlineRow[];
 };
 
-function unitOptions(row: InlineRow): UnitsmlRenderOptions {
+function unitOptions(row: InlineRow): UnitsmlRenderOptions | null {
+  if (row.options === null || typeof row.options !== "object" || Array.isArray(row.options)) {
+    return row.options as UnitsmlRenderOptions | null;
+  }
   return Object.fromEntries(
     Object.entries(row.options).map(([key, value]) => [
       key === "explicit_parenthesis" ? "explicitParenthesis" : key,
@@ -79,6 +84,29 @@ describe("inline UnitsML against the measured Plurimath pipeline", () => {
         else expect(render(formula, { unitsml: unitOptions(row) })).toBe(result?.value);
       },
     );
+  }
+
+  const defaults = fixture.plurimathInlineCases.filter(
+    (row) =>
+      row.options !== null &&
+      typeof row.options === "object" &&
+      !Array.isArray(row.options) &&
+      Object.keys(row.options).length === 0,
+  );
+
+  it.each(defaults)("$input: inline model preserves the explicit raw-text projection", (row) => {
+    expect(row.rawModel).toBeDefined();
+    expect(normalize(parseAsciimath(row.parseInput))).toStrictEqual(row.rawModel);
+  });
+
+  for (const format of ["asciimath", "latex", "mathml", "omml", "unicodemath"] as const) {
+    it.each(defaults)(`$input: ${format} display preserves measured Symbol dispatch`, (row) => {
+      const expected = row.symbolDisplayRenders?.[format];
+      expect(expected).toBeDefined();
+      const run = () => new Plurimath(row.parseInput, "asciimath").toDisplay(format);
+      if (expected?.raises !== undefined) expect(run).toThrow();
+      else expect(run()).toBe(expected?.value);
+    });
   }
 
   it("retains outer caller context for measured invalid unit expressions", () => {

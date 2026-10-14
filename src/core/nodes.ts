@@ -1517,14 +1517,17 @@ export interface UnitsmlInit {
   readonly text: string;
 }
 
-/** `Math::Function::Unitsml`, kept unexpanded so render options remain per-call. */
+/**
+ * `Math::Function::Unitsml`, kept unexpanded so render options remain per-call.
+ * Text is required here; syntax validation belongs to the native parse boundary
+ * because the format-blind core cannot import the UnitsML leaf service.
+ */
 export class UnitsmlNode extends NodeBase {
   readonly kind = "unitsml" as const;
   readonly text: string;
 
   constructor(init: UnitsmlInit) {
     super();
-    if (typeof init.text !== "string") throw new TypeError("unitsml.text must be a string");
     this.text = init.text;
   }
 }

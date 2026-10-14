@@ -5,15 +5,47 @@ import {
   RenderError,
 } from "../core/index";
 import { NODE_SPECS } from "../core/normalize";
+import { UNITSML_DATA } from "./data";
 
 /** Reconstructs structural native nodes from measured, generated Ruby models. */
 export function hydrateModel(source: NormalizedNode): MathNode {
-  const specs = Object.entries(NODE_SPECS).sort((left, right) => {
-    if (left[1].rubyClass === source.class) return -1;
-    if (right[1].rubyClass === source.class) return 1;
-    return (right[1].identity?.prefix.length ?? 0) - (left[1].identity?.prefix.length ?? 0);
-  });
-  for (const [kind, spec] of specs) {
+  const specs = Object.entries(NODE_SPECS);
+  const measuredKind = UNITSML_DATA.modelKinds?.[source.class];
+  const exact = specs.find(([, spec]) => spec.rubyClass === source.class);
+  const candidates = specs.filter(
+    ([, spec]) =>
+      spec.identity !== undefined && source.class.startsWith(`${spec.identity.prefix}::`),
+  );
+  const longestPrefix = Math.max(
+    0,
+    ...candidates.map(([, spec]) => spec.identity?.prefix.length ?? 0),
+  );
+  const closest = candidates.filter(([, spec]) => spec.identity?.prefix.length === longestPrefix);
+  const measured =
+    measuredKind === undefined ? undefined : specs.find(([kind]) => kind === measuredKind);
+  if (exact !== undefined && measuredKind !== undefined && exact[0] !== measuredKind) {
+    throw new RenderError(
+      `UnitsML census kind ${measuredKind} conflicts with the exact carrier ${exact[0]} for ${source.class}`,
+      "unitsml",
+      "unitsml",
+    );
+  }
+  if (measuredKind !== undefined && measured === undefined) {
+    throw new RenderError(
+      `UnitsML census kind ${measuredKind} is unknown for ${source.class}`,
+      "unitsml",
+      "unitsml",
+    );
+  }
+  const selected = exact ?? measured ?? (closest.length === 1 ? closest[0] : undefined);
+  if (selected === undefined && closest.length > 1) {
+    throw new RenderError(
+      `UnitsML class ${source.class} has ambiguous carriers and no measured class-kind mapping`,
+      "unitsml",
+      "unitsml",
+    );
+  }
+  for (const [kind, spec] of selected === undefined ? [] : [selected]) {
     const exact = source.class === spec.rubyClass;
     const alias =
       spec.identity !== undefined && source.class.startsWith(`${spec.identity.prefix}::`);

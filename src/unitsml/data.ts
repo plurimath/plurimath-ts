@@ -20,6 +20,8 @@ export interface TokenRecord {
   readonly modelError?: ReferenceError;
 }
 export interface UnitsmlData {
+  /** Pinned Ruby census aliases mapped to their native carrier kind. */
+  readonly modelKinds?: Readonly<Record<string, string>>;
   readonly tokens: UnitsmlGrammarTokens;
   readonly units: Readonly<Record<string, TokenRecord>>;
   readonly prefixes: Readonly<Record<string, TokenRecord>>;

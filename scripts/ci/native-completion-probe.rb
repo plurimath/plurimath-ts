@@ -31,8 +31,8 @@ begin
   report["versions"] = %w[plurimath unitsml unitsdb bundler].to_h { |name| [name, Gem.loaded_specs.fetch(name).version.to_s] }
   save.call
   unless options[:phase] == "tables"
-  units = %w[kg m s k- da- m*s m/s m**2 m^2 m^-2 m^(1/2) sqrt(m) sqrt(m/s) 1 1/m (m/s)^2 zzz kzzz m+ s/]
-  variants = [{}, { multiplier: :space }, { multiplier: :nospace }, { multiplier: "space" }, { multiplier: "nospace" }, { multiplier: "⋅" }, { multiplier: "×" }, { explicit_parenthesis: true },
+  units = %w[kg m s k- da- m*s m/s m**2 m^2 m^-2 m^(1/2) m^10000000000000000 sqrt(m) sqrt(m/s) 1 1/m (m/s)^2 zzz kzzz m+ s/]
+  variants = [{}, { multiplier: :space }, { multiplier: :nospace }, { multiplier: "space" }, { multiplier: "nospace" }, { multiplier: "⋅" }, { multiplier: "×" }, { multiplier: " × " }, { multiplier: " + " }, { multiplier: "sin" }, { multiplier: "\t+\t" }, { multiplier: "\t sin \t" }, { explicit_parenthesis: true },
     { explicit_parenthesis: false }, { xml: true }, { name: true }, { symbol: true }, { quantity: true }]
   unit_rows = units.map { |input| NativeCompletionReference.measured(input) }
   unit_rows.concat(%w[kg m*s m/s sqrt(m)].product(variants).map { |input, opts| NativeCompletionReference.measured(input, opts) })

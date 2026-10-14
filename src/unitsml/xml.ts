@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/style/useNamingConvention: raw Unitsdb keys are the pinned database schema. */
 import { RenderError } from "../core/index";
-import { unitsmlMathml } from "./conversion";
+import { encodeUnitsmlToken, unitsmlMathml } from "./conversion";
 import { type TokenRecord, UNITSML_DATA } from "./data";
 import type { Expression } from "./expression";
 import {
@@ -216,7 +216,11 @@ function unitXml(parsed: ParsedUnitsml, options: EffectiveUnitsmlOptions): strin
     )
     .join("*");
   const whole = findUnit(normalized);
-  const id = `U_${whole === undefined ? normalized.replace(/[()*^]/g, (char) => (char === "*" ? "." : "")) : (nist(whole) ?? normalized).replaceAll("'", "_")}`;
+  // Utility.unit_id removes parentheses before its own symbol lookup. The
+  // name, dimension and quantity paths above/below use the original symbol.
+  const idText = normalized.replace(/[()]/g, "");
+  const idUnit = findUnit(idText);
+  const id = `U_${idUnit === undefined ? idText.replaceAll("*", ".").replaceAll("^", "") : (nist(idUnit) ?? idText).replaceAll("'", "_")}`;
   const terms = decomposedDimensions(all);
   const dimId = terms === null ? undefined : dimensionId(terms);
   const body =
@@ -515,7 +519,7 @@ function unitHtml(values: readonly Expression[], options: EffectiveUnitsmlOption
               ? "&#x2062;"
               : typeof options.multiplier === "symbol"
                 ? fail("UnitsML cannot encode this multiplier Symbol as HTML")
-                : (options.multiplier ?? "⋅");
+                : encodeUnitsmlToken(options.multiplier ?? "⋅");
         case "unit": {
           const unit = findUnit(value.text);
           if (unit === undefined) return fail(`UnitsML unit HTML ${value.text} is absent`);

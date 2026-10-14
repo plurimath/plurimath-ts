@@ -26,14 +26,15 @@
  *
  * The gem threads an `options:` hash through every `to_unicodemath`, which
  * looks like a context axis and mostly is not one: it is
- * `{formatter:, unitsml:, formula:}`, and on this path the only reader is
+ * `{formatter:, unitsml:, formula:}`, and the numeric reader is
  * `Number#format_value_with_options` (`number.rb:115`) — B2's first slice
  * (`../../formatting/number-format.ts`). Separately, the generated exception
  * matrix (`src/generated/unicodemath/exceptions.ts`) is empty: no symbol's
  * unicodemath value varies on any probed axis, and
  * `test/generated/unicodemath-data.spec.ts` pins that emptiness so a
  * regeneration introducing variants fails loudly. The per-node `options` the
- * kind files read is unrelated — a parser-set field on the node.
+ * kind files read is unrelated — a parser-set field on the node. UnitsML
+ * nodes also read the nested conversion options from the render context.
  *
  * Every branch is measured, never transliterated (PORTING-STANDARDS.md):
  * behaviour was read off live gem instances against the pinned oracle
@@ -50,30 +51,18 @@ import { assertMathNodeShape, type MathNode, RenderError } from "../../core/inde
 import { assertKnownOptions } from "../../core/render-options";
 import { isStackOverflow } from "../../core/stack-overflow";
 import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
+import type { UnitsmlRenderOptions } from "../../unitsml/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
 
-/**
- * Renderer options, typed exactly (§5). `formatter` is B2's first slice
- * (TODO.plan/feature-roadmap.md, "Number formatting"; TODO.plan/
- * open-decisions.md, "Number-formatter API shape") — `Formatter::Standard`'s
- * symbols and numeric pipeline (precision, significant digits, digit count,
- * padding, number sign, notation, base, string format), resolved by
- * `resolveNumberFormat` (`../../formatting/number-format.ts`). The
- * gem's other two `to_unicodemath` keywords — `unitsml:`, `options:`
- * (formula.rb:187 on the pinned oracle) — are still not implemented at all.
- */
+/** Per-call number formatting and nested UnitsML conversion options. */
 export interface UnicodemathOptions {
   readonly formatter?: FormatterOptions | null;
+  readonly unitsml?: UnitsmlRenderOptions | null;
 }
 
-/**
- * The option keys this entry accepts. `formatter` is implemented (above);
- * every other key — including the gem's own `unitsml:` and `options:`
- * keywords — is unknown and refused BY NAME (`assertKnownOptions`,
- * core/render-options.ts) instead of ignored.
- */
-const ACCEPTED_OPTIONS: readonly string[] = ["formatter"];
+/** Unknown top-level option keys are refused before rendering. */
+const ACCEPTED_OPTIONS: readonly string[] = ["formatter", "unitsml"];
 
 /**
  * `Formula#to_unicodemath` / any node's `to_unicodemath`, as a module
@@ -92,7 +81,11 @@ export function toUnicodemath(node: MathNode, options?: UnicodemathOptions | nul
   // `void`, not `asserts node is MathNode` (see core/validate.ts).
   assertMathNodeShape(node, FORMAT);
   const numberFormat = resolveNumberFormat(options?.formatter, FORMAT);
-  const context = numberFormat === null ? ROOT_CONTEXT : createRenderContext(numberFormat);
+  const unitsml = options?.unitsml ?? null;
+  const context =
+    numberFormat === null && unitsml === null
+      ? ROOT_CONTEXT
+      : createRenderContext(numberFormat, unitsml);
   try {
     // `?? ""`: the renders that return nil in Ruby map to "" at the public
     // string boundary, exactly as the latex and asciimath entries do. No

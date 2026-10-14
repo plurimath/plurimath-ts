@@ -36,11 +36,11 @@ begin
     { explicit_parenthesis: false }, { xml: true }, { name: true }, { symbol: true }, { quantity: true }]
   unit_rows = units.map { |input| NativeCompletionReference.measured(input) }
   unit_rows.concat(%w[kg m*s m/s sqrt(m)].product(variants).map { |input, opts| NativeCompletionReference.measured(input, opts) })
-  inline_options = [{}, { xml: true }, { explicit_parenthesis: false }, { multiplier: :space }]
+  inline_options = [{}, { xml: true }, { explicit_parenthesis: false }, { multiplier: :space }, nil, "space", false, 42, [], { unknown: true }]
   inline_rows = %w[kg m/s sqrt(m) k-].product(inline_options).map do |input, opts|
     actual = %Q("unitsml(#{input})")
     row = { "input" => input, "parseInput" => actual, "parseFormat" => "asciimath",
-      "options" => opts, "optionsTypes" => opts.to_h { |key, value| [key.to_s, value.is_a?(Symbol) ? "symbol" : value.class.name.downcase] } }
+      "options" => opts, "optionsTypes" => (opts.is_a?(Hash) ? opts.to_h { |key, value| [key.to_s, value.is_a?(Symbol) ? "symbol" : value.class.name.downcase] } : { "$namespace" => opts.class.name.downcase }) }
     begin
       formula = Plurimath::Math.parse(actual, :asciimath)
       begin
@@ -59,6 +59,14 @@ begin
       row["displayRenders"] = %w[asciimath latex mathml omml unicodemath].to_h do |format|
         result = begin
           { "value" => formula.to_display(format, unitsml: opts) }
+        rescue StandardError => e
+          { "raises" => e.class.name, "message" => e.message }
+        end
+        [format, result]
+      end
+      row["symbolDisplayRenders"] = %w[asciimath latex mathml omml unicodemath].to_h do |format|
+        result = begin
+          { "value" => formula.to_display(format.to_sym, unitsml: opts) }
         rescue StandardError => e
           { "raises" => e.class.name, "message" => e.message }
         end
@@ -142,6 +150,21 @@ begin
   end
   NativeCompletionReference.export(oracle, out)
   report["stages"] << { "name" => "unitsml-tables", "exit" => 0 }
+  second = File.join(out, "second-generated")
+  raise "determinism output must be fresh" if File.exist?(second)
+  driver = File.expand_path("../generate-unitsml-data.rb", __dir__)
+  success = system({ "TZ" => "Asia/Tokyo", "LC_ALL" => "C.UTF-8", "BUNDLE_FROZEN" => "true",
+    "BUNDLE_GEMFILE" => File.join(oracle, "Gemfile") }, "bundle", "exec", "ruby", driver,
+    "--oracle", oracle, "--out", second)
+  report["stages"] << { "name" => "targeted-second-generation", "exit" => $?.exitstatus }
+  save.call
+  raise "second generation failed" unless success
+  paths = Dir.glob(File.join(second, "**", "*")).select { |path| File.file?(path) }.map { |path| path.delete_prefix("#{second}/") }.sort
+  raise "empty determinism inventory" if paths.empty?
+  differences = paths.reject { |path| File.binread(File.join(out, path)) == File.binread(File.join(second, path)) }
+  report["determinism"] = { "compared" => paths.length, "differences" => differences, "secondTimezone" => "Asia/Tokyo" }
+  save.call
+  raise "targeted generation is nondeterministic: #{differences.join(', ')}" unless differences.empty?
   report["payloads"] = Dir.glob(File.join(out, "**", "*.json")).reject { |path| path.end_with?("/report.json") }.sort.to_h { |path| [path.delete_prefix("#{out}/"), Digest::SHA256.file(path).hexdigest] }
   report["measured"] = true
   report["verified"] = false

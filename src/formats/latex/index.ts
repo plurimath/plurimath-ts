@@ -23,6 +23,7 @@
  * bundler shakes `parseLatex` out of an app that never calls it.
  */
 
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
 export type { LatexParseOptions } from "./parser";
 export { parseLatex } from "./parser";
 export type { LatexOptions } from "./renderer";

@@ -45,8 +45,15 @@ import { renderUbrace } from "../../render/ubrace/asciimath";
 import { renderUl } from "../../render/ul/asciimath";
 import { renderUnaryFunction } from "../../render/unary-function/asciimath";
 import { renderUnderset } from "../../render/underset/asciimath";
+import { renderUnitsml } from "../../render/unitsml/asciimath";
 import { renderVec } from "../../render/vec/asciimath";
-import { FORMAT, type NumberFormat, type RenderContext, type RenderFn } from "./render-shared";
+import {
+  FORMAT,
+  type NumberFormat,
+  type RenderContext,
+  type RenderFn,
+  type UnitsmlRenderOptions,
+} from "./render-shared";
 
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   abs: renderAbs,
@@ -85,6 +92,7 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   ubrace: renderUbrace,
   ul: renderUl,
   unaryFunction: renderUnaryFunction,
+  unitsml: renderUnitsml,
   underset: renderUnderset,
   vec: renderVec,
 };
@@ -128,17 +136,22 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
  * `formatter:` option (`../../formatting/number-format.ts`). Each context
  * carries the dispatcher bound to itself, which is how recursion reaches the
  * table without any kind file importing it; `withTable` derives the sibling
- * with the same `numberFormat`, never resetting it.
+ * with the same formatter and UnitsML options.
  */
-function buildContext(table: boolean, numberFormat: NumberFormat | null): RenderContext {
+function buildContext(
+  table: boolean,
+  numberFormat: NumberFormat | null,
+  unitsml: UnitsmlRenderOptions | null,
+): RenderContext {
   const context: RenderContext = {
     table,
     numberFormat,
+    unitsml,
     render(node) {
       return renderNode(node, context);
     },
     get withTable(): RenderContext {
-      return table ? context : buildContext(true, numberFormat);
+      return table ? context : buildContext(true, numberFormat, unitsml);
     },
   };
   return context;
@@ -149,8 +162,11 @@ function buildContext(table: boolean, numberFormat: NumberFormat | null): Render
  * `toAsciimath` (`./renderer.ts`) calls this once per render with the
  * `NumberFormat` `resolveNumberFormat` answered (or `null` for no formatter).
  */
-export function createRenderContext(numberFormat: NumberFormat | null): RenderContext {
-  return buildContext(false, numberFormat);
+export function createRenderContext(
+  numberFormat: NumberFormat | null,
+  unitsml: UnitsmlRenderOptions | null = null,
+): RenderContext {
+  return buildContext(false, numberFormat, unitsml);
 }
 
 /** The common case: no `formatter:` option at all. */

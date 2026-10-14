@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      native_completion_test:
+        description: Run focused native UnitsML and Unicode integration checks
+        type: boolean
+        default: false
       native_completion_probe:
         description: Measure targeted UnitsML and Unicode reference data
         type: boolean
@@ -21,14 +25,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.native_completion_probe && 'native-completion' || inputs.oracle_artifacts && 'oracle-artifacts' || 'checks' }}
-  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe)) }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.native_completion_test && 'native-completion-test' || inputs.native_completion_probe && 'native-completion' || inputs.oracle_artifacts && 'oracle-artifacts' || 'checks' }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
 
 jobs:
   # Every class-A gate active at the repository's current milestone
   # (gates.json). No Ruby is needed: generated payloads are committed.
   gates:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     # A whole run takes about two minutes, so this is roughly seven times the
     # observed cost -- generous for a slow runner, and still a bound. It is
@@ -62,7 +66,7 @@ jobs:
   # class-A suite and run with an explicit interpreter rather than relying on
   # whatever happens to be installed on the runner image.
   oracle-runner-unit-tests:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -85,7 +89,7 @@ jobs:
 
   # Guards the runtime support claim in package.json#engines.
   runtime-matrix:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: gates
@@ -306,5 +310,52 @@ jobs:
         with:
           name: native-completion-${{ github.sha }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/native-completion
+          if-no-files-found: error
+          retention-days: 7
+
+  native-completion-test:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.native_completion_test }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Initialize integration evidence
+        run: mkdir -p "$RUNNER_TEMP/native-completion-test"
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          submodules: true
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Run focused integration checks and retain every exit
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/native-completion-test"
+          failed=0
+          check_stage() {
+            stage="$1"
+            shift
+            "$@" > "$evidence/$stage.log" 2>&1
+            result=$?
+            printf '{"stage":"%s","exit":%s}\n' "$stage" "$result" >> "$evidence/exits.jsonl"
+            cat "$evidence/$stage.log"
+            if [ "$result" -ne 0 ]; then failed=1; fi
+          }
+          check_stage install pnpm install --frozen-lockfile --ignore-scripts
+          check_stage biome pnpm exec biome check .
+          check_stage typecheck pnpm typecheck
+          check_stage build pnpm build
+          check_stage focused-tests pnpm exec vitest run test/unitsml-inline-integration.spec.ts test/parse.spec.ts test/compat/plurimath-class.spec.ts test/formats/unitsml test/formats/unicodemath/completion-parity.spec.ts test/formats/unicodemath/model-parity.spec.ts test/formats/unicodemath/render-parity.spec.ts test/formats/unicodemath/renderer.spec.ts
+          check_stage package pnpm gate:package
+          exit "$failed"
+      - name: Upload focused integration logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-completion-test-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-completion-test
           if-no-files-found: error
           retention-days: 7

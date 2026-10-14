@@ -824,7 +824,7 @@ describe("structural dispatch", () => {
   });
 
   it("rejects an unknown kind and non-objects", () => {
-    expect(hasNodeKind({ kind: "unitsml" })).toBe(false);
+    expect(hasNodeKind({ kind: "unregisteredNode" })).toBe(false);
     expect(hasNodeKind({ kind: 7 })).toBe(false);
     expect(hasNodeKind({})).toBe(false);
     expect(hasNodeKind(null)).toBe(false);

@@ -24,6 +24,7 @@ import {
 } from "../../core/index";
 import { NODE_SPECS } from "../../core/normalize";
 import type { NumberFormat } from "../../formatting/index";
+import type { UnitsmlRenderOptions } from "../../unitsml/index";
 
 export const FORMAT = "asciimath";
 
@@ -52,6 +53,7 @@ export {
  * implements (`../../formatting/number-format.ts`).
  */
 export interface RenderContext {
+  readonly unitsml: UnitsmlRenderOptions | null;
   readonly table: boolean;
   readonly numberFormat: NumberFormat | null;
   /**
@@ -302,3 +304,7 @@ export function unreachableName(kind: string, name: string): RenderError {
     kind,
   );
 }
+
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
+// Leaf-service access for this format's per-kind renderers.
+export { expandUnitsml } from "../../unitsml/index";

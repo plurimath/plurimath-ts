@@ -178,15 +178,11 @@ module CorpusGenerator
   # Deferred features are matched on the INPUT TEXT, never on a parsed class:
   # the gem raises while constructing an invalid UnitsML node, so no formula
   # exists to inspect for the rejection cases (ARCHITECTURE.md §5).
-  DEFERRED_INPUT_PATTERNS = {
-    "unitsml" => /unitsml\(/,
-  }.freeze
+  DEFERRED_INPUT_PATTERNS = {}.freeze
 
   # Classes the port deliberately does not implement (§5). A deferred class may
   # never appear in a generated case; that invariant is checked, not assumed.
-  DEFERRED_CLASSES = %w[
-    Math::Function::Unitsml
-  ].freeze
+  DEFERRED_CLASSES = [].freeze
 
   # The direct `Math::Core` descendants. Each is a structural family the port
   # models in its own right. A new direct descendant is an unclassified new
@@ -608,6 +604,11 @@ module CorpusGenerator
 
   def serialize_node(node, path)
     name = class_key(node.class)
+    # ARCHITECTURE.md §5: Unitsml equality/model state is raw text only.
+    # Its @unitsml parsed object is derived memoization, never public state.
+    if name == "Math::Function::Unitsml"
+      return { "class" => name, "fields" => { "text" => node.text } }
+    end
     fields = node.variables.sort.to_h do |ivar|
       field = ivar.to_s.delete_prefix("@")
       [field, serialize_value(node.get(ivar), "#{path}.#{field}")]
@@ -994,6 +995,7 @@ module CorpusGenerator
       end
     end
 
+    fields.delete("unitsml") if class_key(klass) == "Math::Function::Unitsml"
     fields.uniq.sort
   end
 
@@ -1022,7 +1024,11 @@ module CorpusGenerator
     key = class_key(klass)
 
     begin
-      instance = klass.new(*::Array.new(arity, nil))
+      # UnitsML eagerly parses its required text; nil is not a valid witness.
+      # Measure the explicit canonical constructor, then apply its raw-text
+      # projection. Do not serialize or invent defaults for the parsed cache.
+      arguments = key == "Math::Function::Unitsml" ? ["kg"] : ::Array.new(arity, nil)
+      instance = klass.new(*arguments)
     rescue StandardError, ScriptError => e
       raise Error, <<~MESSAGE
         #{key}.new(#{(['nil'] * arity).join(', ')}) raised #{e.class}: #{e.message}.
@@ -1033,7 +1039,8 @@ module CorpusGenerator
       MESSAGE
     end
 
-    assigned = instance.variables.sort.to_h do |ivar|
+    variables = key == "Math::Function::Unitsml" ? [:@text] : instance.variables
+    assigned = variables.sort.to_h do |ivar|
       field = ivar.to_s.delete_prefix("@")
       [field, serialize_value(instance.get(ivar), "#{key}.#{field}")]
     end
@@ -1051,7 +1058,9 @@ module CorpusGenerator
       "required_arguments" => arity,
       "assigned" => assigned,
       "unassigned" => (fields - assigned.keys).sort,
-    }
+    }.tap do |defaults|
+      defaults["constructor_arguments"] = arguments if key == "Math::Function::Unitsml"
+    end
   end
 
   def equality_owner(klass)
@@ -1205,8 +1214,8 @@ module CorpusGenerator
       [klass, (own_fields.fetch(klass) + inherited_fields.call(klass)).uniq.sort]
     end
 
-    # Deferred classes are not probed: the port does not model them, and
-    # `Unitsml.new(nil)` raises inside the upstream parser.
+    # Deferred classes are not probed. UnitsML uses its explicit canonical
+    # constructor witness in construction_defaults rather than invalid nil.
     defaults = descendants.reject { |klass| DEFERRED_CLASSES.include?(class_key(klass)) }
       .to_h { |klass| [klass, construction_defaults(klass, all_fields.fetch(klass))] }
 

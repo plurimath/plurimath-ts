@@ -14,6 +14,7 @@ import {
   OMML_SYMBOL_TAG_NAMES,
   OMML_SYMBOLS,
 } from "../../generated/omml/symbols";
+import type { UnitsmlRenderOptions } from "../../unitsml/index";
 import { dumpNodes, XmlElement } from "../../xml/index";
 
 export const FORMAT = "omml";
@@ -39,6 +40,7 @@ export {
 export type OmmlRendered = XmlElement | string | null | readonly OmmlRendered[];
 
 export interface RenderContext {
+  readonly unitsml: UnitsmlRenderOptions | null;
   readonly displaystyle: boolean;
   /**
    * The `formatter:` option: `null` with none (a `Number` renders its raw
@@ -655,3 +657,7 @@ export function decodeEntities(value: string, kind: string, at: string): string 
     throw error;
   }
 }
+
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
+// Leaf-service access for this format's per-kind renderers.
+export { expandUnitsml } from "../../unitsml/index";

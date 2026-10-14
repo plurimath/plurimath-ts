@@ -40,30 +40,18 @@ import { assertMathNodeShape, type MathNode, RenderError } from "../../core/inde
 import { assertKnownOptions } from "../../core/render-options";
 import { isStackOverflow } from "../../core/stack-overflow";
 import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
+import type { UnitsmlRenderOptions } from "../../unitsml/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError } from "./render-shared";
 
-/**
- * Renderer options, typed exactly (§5). `formatter` is B2's first slice
- * (TODO.plan/feature-roadmap.md, "Number formatting"; TODO.plan/
- * open-decisions.md, "Number-formatter API shape") — `Formatter::Standard`'s
- * symbols and numeric pipeline (precision, significant digits, digit count,
- * padding, number sign, notation, base, string format), resolved by
- * `resolveNumberFormat` (`../../formatting/number-format.ts`). The gem's other
- * two `to_latex` keywords — `unitsml:`, `options:` (formula.rb:141 on the
- * pinned oracle) — are still not implemented at all.
- */
+/** Per-call number formatting and nested UnitsML conversion options. */
 export interface LatexOptions {
   readonly formatter?: FormatterOptions | null;
+  readonly unitsml?: UnitsmlRenderOptions | null;
 }
 
-/**
- * The option keys this entry accepts. `formatter` is implemented (above);
- * every other key — including the gem's own `unitsml:` and `options:`
- * keywords — is unknown and refused BY NAME (`assertKnownOptions`,
- * core/render-options.ts) instead of ignored.
- */
-const ACCEPTED_OPTIONS: readonly string[] = ["formatter"];
+/** Unknown top-level option keys are refused before rendering. */
+const ACCEPTED_OPTIONS: readonly string[] = ["formatter", "unitsml"];
 
 /**
  * `Formula#to_latex` / any node's `to_latex`, as a module function.
@@ -85,7 +73,11 @@ export function toLatex(node: MathNode, options?: LatexOptions | null): string {
   // or the per-site guards behind it, as `RenderError`.
   assertMathNodeShape(node, FORMAT);
   const numberFormat = resolveNumberFormat(options?.formatter, FORMAT);
-  const context = numberFormat === null ? ROOT_CONTEXT : createRenderContext(numberFormat);
+  const unitsml = options?.unitsml ?? null;
+  const context =
+    numberFormat === null && unitsml === null
+      ? ROOT_CONTEXT
+      : createRenderContext(numberFormat, unitsml);
   try {
     // `?? ""`: the renders that return nil in Ruby (a bare `FontStyle` or
     // `Mpadded` with a nil value, a base symbol with no value) map to "" at

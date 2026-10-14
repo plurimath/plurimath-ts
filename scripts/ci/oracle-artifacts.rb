@@ -15,7 +15,7 @@ $stdout.sync = true
 module OracleArtifacts
   PIN = "00c52783877b38f6b8e6e109f1803f96bb34fc62"
   LOCK_SHA = "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121"
-  ROOTS = %w[corpus src/generated src/core/generated src/formatting/generated
+  ROOTS = %w[corpus src/unitsml/generated src/generated src/core/generated src/formatting/generated
              src/formats/html/generated src/formats/latex/generated
              src/formats/mathml/generated src/formats/omml/generated
              src/formats/unicodemath/generated].freeze
@@ -91,6 +91,7 @@ module OracleArtifacts
         "formats/omml" => "omml-data", "formats/unicodemath" => "unicodemath-parser-data" }.each do |dir, script|
         jobs << [script, "generate-#{script}.rb", ["--gem", @oracle, "--out", at.call("src/#{dir}/generated")]]
       end
+      jobs << ["unitsml-data", "generate-unitsml-data.rb", ["--oracle", @oracle, "--out", output]]
       FORMATS.each do |format|
         jobs << ["#{format}-model", "generate-#{format}-model-fixtures.rb",
                  ["--oracle", @oracle, "--out", at.call("test/formats/#{format}")]]
@@ -119,7 +120,8 @@ module OracleArtifacts
         manifest = YAML.safe_load(File.read(File.join(@source, path)), aliases: false)
         payload = File.join(File.dirname(path), manifest.fetch("payload").fetch("path"))
         raise "untracked fixture payload: #{payload}" unless files.include?(payload)
-        [path, payload]
+        metadata = payload.sub(/\.json\z/, ".metadata.json")
+        [path, payload] + (files.include?(metadata) ? [metadata] : [])
       end
       (roots + fixture_paths).uniq.sort
     end

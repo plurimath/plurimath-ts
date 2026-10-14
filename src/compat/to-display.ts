@@ -156,8 +156,7 @@
  *     genuinely UNREACHABLE from any of this compat class's supported input
  *     formats (measured: no asciimath/latex/html/unicodemath grammar or
  *     transform file in the gem references `Msgroup` at all — checked
- *     before refusing, not assumed); `Unitsml` (needs external UnitsML
- *     conversion this slice does not carry); `Substack` — NOT for the
+ *     before refusing, not assumed); `Substack` — NOT for the
  *     reason a prior version of this doc claimed. `substack.rb:6-40` defines
  *     only ordinary format serializers (`to_asciimath`, `to_latex`, …); it
  *     has NO `to_*_math_zone` overrides at all and inherits
@@ -210,6 +209,7 @@ import {
   MATHML_FONT_STYLE_VARIANTS,
 } from "../generated/mathml/render-tables";
 import { renderSymbol as renderSymbolOmml } from "../render/symbol/omml";
+import { expandUnitsml } from "../unitsml/index";
 import { dumpNodes, XmlElement } from "../xml/index";
 
 export type DisplayFormat = "asciimath" | "latex" | "mathml" | "omml" | "unicodemath";
@@ -589,11 +589,10 @@ function latexParenMathZone(node: MathNode): string {
  * overrides but no reachable TS node kind constructs one from any supported
  * input (measured: no asciimath/latex/html/unicodemath grammar file
  * references `Msgroup` at all) — refused as unreachable, not unported;
- * `unitsml` needs external UnitsML conversion this slice does not carry.
  * `fontStyle` and `vec` are handled by their own dedicated functions below,
  * not this generic refusal list.
  */
-const UNSUPPORTED_CLASS_NAMES = new Set(["nary", "substack", "msgroup", "unitsml"]);
+const UNSUPPORTED_CLASS_NAMES = new Set(["nary", "substack", "msgroup"]);
 
 function fieldNode(
   node: MathNode,
@@ -661,6 +660,11 @@ function mathZoneOf(
   indent: boolean,
   options: PrintOptions,
 ): string {
+  if (node.kind === "unitsml") {
+    // Function::Unitsml's math-zone methods delegate to formula(options),
+    // preserving the caller's spacing and indentation, without a unit header.
+    return mathZoneOf(expandUnitsml(node.text), spacing, last, indent, options);
+  }
   const name = classNameOf(node);
   const ops = FORMAT_OPS[options.format];
 

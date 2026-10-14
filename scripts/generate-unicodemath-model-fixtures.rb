@@ -28,11 +28,9 @@
 # independently of RULE_COVERAGE.
 #
 # There is a third, small BOUNDARY list, which is the opposite thing again.
-# Each of its inputs fires a rule the slice does NOT carry, so the port must
-# refuse it; the row records what the gem answered instead, which is what
-# makes "the port refuses" a measured claim rather than a restatement of the
-# port's own code. When a rule family lands, its rows move from refusal to
-# parity.
+# These historical boundary inputs also cover the oracle's unmatched trees; the row records what the gem answered instead, which is what
+# makes the remaining oracle behavior explicit. The completed port compares
+# these models in parity while retaining the boundary group for regressions.
 #
 # Rows record what the gem did, including refusing:
 #   - `preprocessed`: `UnicodeMath::Parser.new(input).text`, the string Parslet
@@ -1368,6 +1366,9 @@ RULE_COVERAGE = {
 # `:278` on this string, and `:278` is ported.) `:750` is ported now, the row
 # deep-equals the oracle's model, and it is in
 # `RULE_COVERAGE["fraction_atoms_tail"]`.
+# These rows remain historical slice-boundary witnesses. The completed port
+# compares their unmatched model structures against Ruby instead of refusing
+# them solely because their group is named slice-boundary.
 SLICE_BOUNDARY = [
   '1a_ℲDa + a_ℲCa + a_a + a_ℲAa + a_ℲBa',
   "1W_δ₁ρ₁σ₂^3β=U_δ₁ρ₁^3β+1/8π^2⁢∫_α₁^α₂▒dα'₂[(U_δ₁ρ₁^2β-α'₂U_δ₁ρ₁^1β)/U_δ₁ρ₁^0β]",

@@ -237,42 +237,23 @@ describe.skipIf(deferred.length === 0)("the rule families this slice defers", ()
 });
 
 /**
- * The slice EDGE: hand-picked inputs (`SLICE_BOUNDARY` in the fixture
- * generator) that fire a `transform.rb` rule the port still does not carry,
- * so the gem answers with a perfectly ordinary model while the port must
- * REFUSE loudly instead of answering differently.
+ * The fixture generator's historical `SLICE_BOUNDARY` group contains three
+ * inputs whose rules are all registered here, but whose final models still
+ * contain hashes the gem leaves unmatched. Their generated model answers are
+ * the contract, including those raw hashes:
  *
- * `:99`, `:745`, `:765` and `:1791` — the rules `±`, `a≤b` and `x a/b c` used
- * to prove absent here — are all ported now (RELATION and FRACTION landed);
- * those inputs moved out into `RULE_COVERAGE` groups and compare for real.
- * `"ⅇ"` moved out the same way when slice H ported `:43`, and `"ab₁^c"` was
- * added and moved out again in the same pass once it proved `:67` ported
- * clean. `"1/2a"` moved out when `:658` was ported, and `"1x₂"`, the long
- * `"1I(x,x') = …"` row, the `"1A^* = …"` row and the 101-char
- * `"1w^h^e^e^e^e+…"` row moved out once `:945`, `:1776` and `:2251` were
- * ported, and `"f̂(ξ)=∫_-∞^∞▒f(x)ⅇ^(-2πⅈxξ)ⅆx"` moved out once `:750` was
- * ported. The first two inputs below in `SLICE_BOUNDARY` were re-traced against
- * the CURRENT port rather than trusted to still be blocked by the rule once
- * named beside them — see the generator's own comment above `SLICE_BOUNDARY`
- * for the measurement:
+ * - `1a_ℲDa + ...`: a size override whose base is a sequence.
+ * - `1W_δ₁ρ₁σ₂^3β=...`: base, sub and sup are all sequences.
+ * - `x^−a²^b`: `exp_iteration` remains beside `sup_script` and `sup_recursion`.
  *
- *   - `"1a_ℲDa + …"` and `"1W_δ₁ρ₁σ₂^3β=…"` fire every rule the oracle fires
- *     on them, but each leaves a hash no rule in the gem matches either
- *     (`override_subsup` over a SEQUENCE `base`; `subsup_exp` with `base`,
- *     `sub` and `sup` all SEQUENCE). The gem's model carries the raw pair,
- *     and the port refuses the signature.
- *   - `"x^−a²^b"` (U+2212 minus) is `:83`'s witness, added with the
- *     remaining-rules increment: it fires `:83`, but its parent
- *     `{sup_script, sup_recursion, exp_iteration}` hash matches no rule in
- *     the gem, so the gem's model carries a raw `sup_exp` pair and the port
- *     refuses `{sup_exp=other}`.
+ * The finalizer admits the measured signature at each level, so these rows
+ * compare the whole model instead of merely asserting the former refusal.
  */
-describe("inputs whose rules sit outside the slice", () => {
+describe("the gem's unmatched models at the former slice boundary", () => {
   it.each(boundary.map((entry) => [entry.input, entry] as const))(
-    "%j: is refused rather than answered differently",
+    "%j: retains the same raw hashes as the gem",
     (_input, entry) => {
-      expect(() => parseFixture(entry)).toThrow(ParseError);
-      expect(() => parseFixture(entry)).toThrow(/no rule matched \{/);
+      expect(normalize(parseFixture(entry) as never)).toStrictEqual(entry.model);
     },
   );
 });

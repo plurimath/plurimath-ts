@@ -1,227 +1,26 @@
 /** biome-ignore-all lint/style/useNamingConvention: Ruby-serialized model fields stay snake_case. */
-/**
- * Deferred UnitsML fallback through the REAL AsciiMath entry point:
- * `parseAsciimath` parses `"unitsml(...)"` as text, reports the divergence,
- * and keeps caller-facing offsets in the original input.
- *
- * Oracle note: the Ruby gem does NOT do this. On the pinned oracle
- * (plurimath 0.11.6 at 00c52783), `"unitsml(kg)"` renders as `rm(kg)`,
- * `\mathrm{kg}`, and a normal-variant `<mi>kg</mi>` tree. This spec pins the
- * deliberate TypeScript divergence ARCHITECTURE.md §5 records, not a Ruby
- * output.
- */
-
-import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  normalize,
-  resetUnsupportedWarnings,
-  type UnsupportedDiagnostic,
-} from "../../../src/core/index";
+/** Native UnitsML regression tests for the old fallback boundary. */
+import { describe, expect, it, vi } from "vitest";
 import { parseAsciimath } from "../../../src/formats/asciimath/parser";
-import { toAsciimath } from "../../../src/formats/asciimath/renderer";
-import { toHtml } from "../../../src/formats/html/renderer";
-import { toLatex } from "../../../src/formats/latex/renderer";
-import { toMathml } from "../../../src/formats/mathml/renderer";
-import { toOmml } from "../../../src/formats/omml/renderer";
-import { toUnicodemath } from "../../../src/formats/unicodemath/renderer";
 
-function math(inner: string, displaystyle = "true"): string {
-  return (
-    `<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">\n` +
-    `  <mstyle displaystyle="${displaystyle}">\n${inner}\n  </mstyle>\n</math>\n`
-  );
-}
-
-/** One `to_omml` document: the gem's `m:oMathPara` open tag, the body, the close. */
-function omml(...lines: readonly string[]): string {
-  const open =
-    "<m:oMathPara " +
-    'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" ' +
-    'xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" ' +
-    'xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" ' +
-    'xmlns:mv="urn:schemas-microsoft-com:mac:vml" ' +
-    'xmlns:o="urn:schemas-microsoft-com:office:office" ' +
-    'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
-    'xmlns:v="urn:schemas-microsoft-com:vml" ' +
-    'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
-    'xmlns:w10="urn:schemas-microsoft-com:office:word" ' +
-    'xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" ' +
-    'xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" ' +
-    'xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" ' +
-    'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ' +
-    'xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" ' +
-    'xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" ' +
-    'xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" ' +
-    'xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" ' +
-    'xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">';
-  return `${[open, ...lines, "</m:oMathPara>"].join("\n")}\n`;
-}
-
-afterEach(() => {
-  resetUnsupportedWarnings();
-  vi.restoreAllMocks();
-});
-
-describe("unsupported UnitsML fallback", () => {
-  it("normalizes to Text and renders through asciimath, latex, mathml, unicodemath, html and omml", () => {
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+// Regression guard: native UnitsML must never fall back to plain text or report
+// itself as unsupported. Measured render bytes live in the inline integration suite.
+describe("native UnitsML replaces the former fallback", () => {
+  it("stores unit text without eagerly expanding render options", () => {
     const formula = parseAsciimath('"unitsml(kg)"');
-
-    expect(normalize(formula)).toStrictEqual({
-      class: "Math::Formula",
-      fields: {
-        displaystyle: true,
-        input_string: '"unitsml(kg)"',
-        left_right_wrapper: true,
-        value: [
-          {
-            class: "Math::Function::Text",
-            fields: {
-              lang: null,
-              parameter_one: "unitsml(kg)",
-            },
-          },
-        ],
-      },
-    });
-    expect(toAsciimath(formula)).toBe('"unitsml(kg)"');
-    expect(toLatex(formula)).toBe("\\text{unitsml(kg)}");
-    expect(toMathml(formula)).toBe(math("    <mtext>unitsml(kg)</mtext>"));
-    // Measured on the pinned oracle: `Formula#to_unicodemath` over the same
-    // `Text` node answers `"unitsml(kg)"`, quotes included — the same bytes as
-    // to_asciimath, not the LaTeX or MathML wrapping.
-    expect(toUnicodemath(formula)).toBe('"unitsml(kg)"');
-    // Measured on the pinned oracle: `Formula#to_html` over a
-    // `Text.new("unitsml(kg)")` answers the bare text, with neither quotes nor
-    // a wrapping element.
-    expect(toHtml(formula)).toBe("unitsml(kg)");
-    // Measured on the pinned oracle: `Formula#to_omml` over the same `Text`
-    // node answers one plain-style run carrying the bare text.
-    expect(toOmml(formula)).toBe(
-      omml(
-        "  <m:oMath>",
-        "    <m:r>",
-        "      <m:rPr>",
-        '        <m:sty m:val="p"/>',
-        "      </m:rPr>",
-        "      <m:t>unitsml(kg)</m:t>",
-        "    </m:r>",
-        "  </m:oMath>",
-      ),
-    );
+    expect(formula.value).toHaveLength(1);
+    expect(formula.value?.[0]).toMatchObject({ kind: "unitsml", text: "kg" });
   });
 
-  it("replaces the default warning when a callback is supplied", () => {
+  it("keeps onUnsupported accepted without warning for supported UnitsML", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const seen: UnsupportedDiagnostic[] = [];
-
-    parseAsciimath('"unitsml(kg)"', {
-      onUnsupported: (diagnostic) => {
-        seen.push(diagnostic);
-      },
-    });
-
-    expect(warn).not.toHaveBeenCalled();
-    expect(seen).toStrictEqual([
-      {
-        feature: "unitsml",
-        text: '"unitsml(kg)"',
-        index: 0,
-        message:
-          'UnitsML is not supported yet; "unitsml(kg)" was parsed as plain text. ' +
-          "Pass onUnsupported to silence or reroute this warning.",
-      },
-    ]);
-  });
-
-  it("is silenced by a no-op callback", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    parseAsciimath('"unitsml(kg)"', { onUnsupported: () => {} });
-
-    expect(warn).not.toHaveBeenCalled();
-  });
-
-  it("lets a caller escalate by throwing from the callback", () => {
-    expect(() =>
-      parseAsciimath('"unitsml(kg)"', {
-        onUnsupported: (diagnostic) => {
-          throw new Error(`refusing: ${diagnostic.text}`);
-        },
-      }),
-    ).toThrow('refusing: "unitsml(kg)"');
-  });
-
-  it("warns once per unique construct through parseAsciimath", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    parseAsciimath('"unitsml(kg)" + "unitsml(kg)"');
-
-    expect(warn).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalledWith(
-      'UnitsML is not supported yet; "unitsml(kg)" was parsed as plain text. ' +
-        "Pass onUnsupported to silence or reroute this warning.",
-    );
-  });
-
-  it("warns separately for distinct constructs through parseAsciimath", () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-    parseAsciimath('"unitsml(kg)" + "unitsml(m/s^2)"');
-
-    expect(warn).toHaveBeenCalledTimes(2);
-    expect(warn.mock.calls).toStrictEqual([
-      [
-        'UnitsML is not supported yet; "unitsml(kg)" was parsed as plain text. ' +
-          "Pass onUnsupported to silence or reroute this warning.",
-      ],
-      [
-        'UnitsML is not supported yet; "unitsml(m/s^2)" was parsed as plain text. ' +
-          "Pass onUnsupported to silence or reroute this warning.",
-      ],
-    ]);
-  });
-
-  it("reports the original-input offset after preprocessing rewrites", () => {
-    const input = '{:x:} + "unitsml(kg)"';
-    const seen: UnsupportedDiagnostic[] = [];
-
-    parseAsciimath(input, {
-      onUnsupported: (diagnostic) => {
-        seen.push(diagnostic);
-      },
-    });
-
-    expect(seen).toHaveLength(1);
-    expect(seen[0]).toMatchObject({
-      feature: "unitsml",
-      text: '"unitsml(kg)"',
-      index: input.indexOf('"unitsml(kg)"'),
-    });
-    const diagnostic = seen[0] as UnsupportedDiagnostic;
-    expect(input[diagnostic.index]).toBe('"');
-  });
-
-  it("cuts the reported construct at the end of input or before trailing text", () => {
-    const atEnd: UnsupportedDiagnostic[] = [];
-    parseAsciimath('"unitsml(kg)"', {
-      onUnsupported: (diagnostic) => {
-        atEnd.push(diagnostic);
-      },
-    });
-    expect(atEnd).toHaveLength(1);
-    expect(atEnd[0]?.text).toBe('"unitsml(kg)"');
-
-    const withTail: UnsupportedDiagnostic[] = [];
-    parseAsciimath('"unitsml(kg)" + x', {
-      onUnsupported: (diagnostic) => {
-        withTail.push(diagnostic);
-      },
-    });
-    expect(withTail).toHaveLength(1);
-    expect(withTail[0]).toMatchObject({
-      text: '"unitsml(kg)"',
-      index: 0,
-    });
+    const callback = vi.fn();
+    try {
+      parseAsciimath('"unitsml(kg)"', { onUnsupported: callback });
+      expect(callback).not.toHaveBeenCalled();
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

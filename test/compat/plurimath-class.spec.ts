@@ -17,8 +17,8 @@ import { buildTreeDump } from "../../src/compat/to-display";
 import {
   equals,
   InvalidTypeError,
+  ParseError,
   UnsupportedFeatureError,
-  UnsupportedFormatError,
 } from "../../src/core/index";
 import { FormulaNode, NaryNode, SymbolNode, UnaryFunctionNode } from "../../src/core/nodes";
 import { parseHtml } from "../../src/formats/html/index";
@@ -224,8 +224,8 @@ describe("the constructor's staged contract", () => {
     expect(() => new Plurimath(INPUT, null as unknown as Format)).toThrow(InvalidTypeError);
   });
 
-  it("keeps UnsupportedFormatError for unitsml, a type the gem parses", () => {
-    expect(() => new Plurimath(INPUT, "unitsml" as Format)).toThrow(UnsupportedFormatError);
+  it("preserves the standalone UnitsML source-assignment parse failure", () => {
+    expect(() => new Plurimath(INPUT, "unitsml" as Format)).toThrow(ParseError);
   });
 
   /**
@@ -1155,7 +1155,7 @@ describe("the one method that cannot be honest yet", () => {
    * consumer unable to tell "not a format" from "this port cannot do that
    * yet", and would put a sentence in a field typed as a format token.
    */
-  it("discriminates an unported feature from an unsupported format", () => {
+  it("discriminates an unported feature from a recognized parse failure", () => {
     const codes: Record<string, string> = {};
     const fields: Record<string, string> = {};
     for (const [label, run] of [
@@ -1166,13 +1166,13 @@ describe("the one method that cannot be honest yet", () => {
         run();
         throw new Error(`${label} did not throw`);
       } catch (error) {
-        const e = error as UnsupportedFormatError | UnsupportedFeatureError;
+        const e = error as ParseError | UnsupportedFeatureError;
         codes[label] = e.code;
         fields[label] = "format" in e ? e.format : e.feature;
       }
     }
     expect(codes).toEqual({
-      ctor: "UNSUPPORTED_FORMAT",
+      ctor: "PARSE_ERROR",
       toDisplay: "UNSUPPORTED_FEATURE",
     });
     // stable identifiers, not sentences

@@ -170,25 +170,10 @@ describe("the formatter option (B2's MathML/OMML number-formatting slice)", () =
   });
 });
 
-describe("the deferred options, refused by name", () => {
-  // `intent` left this list with B4 (`./intent-parity.spec.ts`); `intent: false`
-  // is the gem's default, measured byte-identical to the omitted keyword.
-  const cases: readonly (readonly [string, Record<string, unknown>])[] = [
-    ["unitsml", { unitsml: {} }],
-  ];
-  for (const [name, options] of cases) {
-    it(`${JSON.stringify(options)} raises a RenderError naming "${name}"`, () => {
-      let caught: unknown;
-      try {
-        toMathml(sinX(), options as never);
-      } catch (error) {
-        caught = error;
-      }
-      expect(caught).toBeInstanceOf(RenderError);
-      expect((caught as RenderError).message).toContain(`"${name}"`);
-      expect((caught as RenderError).message).toContain("deferred");
-    });
-  }
+describe("the accepted UnitsML and intent options", () => {
+  it("accepts UnitsML options on a formula with no unit nodes", () => {
+    expect(toMathml(sinX(), { unitsml: {} })).toBe(math(SIN_SPACED));
+  });
 
   it("intent: false and null are the default, not a refusal", () => {
     expect(toMathml(sinX(), { intent: false })).toBe(math(SIN_SPACED));
@@ -600,16 +585,11 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     expect(() => toMathml(withAttrs(["a", "b"]))).toThrow(RenderError);
   });
 
-  it("a smuggled unitsml attribute is refused by name — the gem post-processes it (probed)", () => {
+  it("post-processes a UnitsML marker rather than refusing it", () => {
     const marked = new BarNode({ parameterOne: x(), attributes: { unitsml: "true" } });
-    let caught: unknown;
-    try {
-      toMathml(formula(marked));
-    } catch (error) {
-      caught = error;
-    }
-    expect(caught).toBeInstanceOf(RenderError);
-    expect((caught as RenderError).message).toContain('"unitsml"');
+    const output = toMathml(formula(marked));
+    expect(output).not.toContain("unitsml=");
+    expect(output).toContain('<mo rspace="thickmathspace">&#x2062;</mo>');
   });
 
   it("powerbase: an underover symbol base flips the tag; a Nary base crashes (probed)", () => {

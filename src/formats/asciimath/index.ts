@@ -13,6 +13,7 @@
  * these functions work, not what a caller uses.
  */
 
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
 export type { AsciimathParseOptions } from "./parser";
 export { parseAsciimath } from "./parser";
 export type { AsciimathOptions } from "./renderer";

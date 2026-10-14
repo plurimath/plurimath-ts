@@ -63,6 +63,10 @@ import {
   type TransformValue,
 } from "../../pegkit";
 import {
+  UNICODEMATH_PAREN_MASK_OVERFLOW,
+  UNICODEMATH_PAREN_MASK_SIZES,
+} from "./generated/paren-mask-sizes";
+import {
   UNICODEMATH_BINARY_SYMBOLS,
   UNICODEMATH_BINARY_SYMBOLS_KEYS,
   UNICODEMATH_COMBINING_SYMBOLS,
@@ -836,22 +840,20 @@ function unicodeFractions(fractions: unknown): UnicodemathDraft {
 }
 
 /**
- * `"#{1.25**n}em"`, the size a paren prefix (`├1(`) names. Ruby's `Float#to_s`
- * prints `1.0` where JavaScript prints `1`; for `n` in 0..22 every other value
- * is non-integral and both print the shortest round-trip digits. Outside that
- * range `1.25**n` and its printed form are not known to agree between the two
- * runtimes, so this refuses rather than guess.
+ * `"#{1.25**n}em"`, the size a paren prefix (`├1(`) names. The generated
+ * strings measure Ruby's power and Float#to_s together: JavaScript's power
+ * starts differing at 23, and its number formatting has different thresholds.
+ * The finite domain is exhausted by the table; larger nonnegative exponents
+ * use the separately measured Infinity result.
  */
 function parenMask(prefix: string): string {
   const exponent = rubyToI(prefix);
-  if (exponent < 0 || exponent > 22) {
-    throw new Error(
-      `unicodemath transform: paren size prefix ${exponent} is outside 0..22, where 1.25**n is ` +
-        "exact and Ruby's Float#to_s and JavaScript's String() are known to agree",
-    );
-  }
-  const size = 1.25 ** exponent;
-  return `${Number.isInteger(size) ? `${size}.0` : String(size)}em`;
+  if (exponent < 0) throw new RangeError("paren size prefix must be nonnegative");
+  if (exponent >= UNICODEMATH_PAREN_MASK_SIZES.length) return UNICODEMATH_PAREN_MASK_OVERFLOW;
+  const size = UNICODEMATH_PAREN_MASK_SIZES[exponent];
+  if (size === undefined)
+    throw new Error(`unicodemath transform: no measured paren size ${exponent}`);
+  return size;
 }
 
 /**
@@ -3947,18 +3949,8 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       const options: Record<string, unknown> = {};
       const opener = asArray(b.open_paren);
       const closer = asArray(b.close_paren);
-      const openFirst = opener[0];
-      if (isDraft(openFirst) && openFirst.kind === "number") {
-        const mask = `${rubyFloatToS(1.25 ** rubyToI(rubyToS(draftValue(openFirst))))}em`;
-        options.open_prefixed = true;
-        if (draftValue(openFirst) !== "") options.open_paren = { minsize: mask, maxsize: mask };
-      }
-      const closeFirst = closer[0];
-      if (isDraft(closeFirst) && closeFirst.kind === "number") {
-        const mask = `${rubyFloatToS(1.25 ** rubyToI(rubyToS(draftValue(closeFirst))))}em`;
-        options.close_prefixed = true;
-        if (draftValue(closeFirst) !== "") options.close_paren = { minsize: mask, maxsize: mask };
-      }
+      applyParenMask(options, opener, "open");
+      applyParenMask(options, closer, "close");
       const fenced = newFenced(
         symbolsClass(opener[opener.length - 1]),
         [b.factor, ...asArray(b.exp)],
@@ -5103,22 +5095,6 @@ function subParenKey(table: ReadonlyMap<string, string>, entity: unknown): strin
   return "";
 }
 
-/**
- * Ruby `Float#to_s` for the positive powers of 1.25 the paren-size mask
- * builds: a whole value keeps its `.0` (`1.25**0` is `"1.0"`), and the
- * exponent form starts at 1e16 (`"1.0e+16"`), where JavaScript's starts at 1e21.
- */
-function rubyFloatToS(value: number): string {
-  if (!Number.isFinite(value)) return "Infinity";
-  if (value >= 1e16) {
-    const [mantissa, exponent] = value.toExponential().split("e");
-    const digits = (mantissa as string).includes(".") ? (mantissa as string) : `${mantissa}.0`;
-    return `${digits}e+${(exponent as string).replace("+", "").padStart(2, "0")}`;
-  }
-  const text = String(value);
-  return text.includes(".") ? text : `${text}.0`;
-}
-
 /** `node.parameter_x` on a draft; Ruby raises `NoMethodError` on anything else. */
 function fieldOf(node: unknown, field: string): unknown {
   if (!isDraft(node)) {
@@ -5235,6 +5211,8 @@ const GEM_UNMATCHED_SIGNATURES: ReadonlySet<string> = new Set([
   "atom=simple,atoms=other",
   "close_paren=simple,open_paren=simple,operator=simple",
   "combined_symbols=simple,expr=simple",
+  // `±+a`, measured by the GHA completion probe: the expr is a sequence.
+  "combined_symbols=simple,expr=sequence",
   "denominator=other,numerator=simple",
   "expr=other,factor=simple",
   "expr=simple,frac=other",
@@ -5263,6 +5241,29 @@ const GEM_UNMATCHED_SIGNATURES: ReadonlySet<string> = new Set([
   "int_exp=other",
   "closer=other,opener=sequence,operand=simple",
   "close_paren=sequence",
+  // The three `slice-boundary` rows in the generated model fixture set record
+  // these gem-side unmatched shapes. Every rule those inputs reach is already
+  // registered here; retaining the raw hashes reproduces their measured models
+  // rather than refusing a parse the gem returns. Each nested hash still passes
+  // this same signature check during finalization.
+  // `1a_ℲDa + ...`: a sequence base under a size override.
+  "expr=sequence,override_subsup=other",
+  "base=sequence,size_overrides=simple,sub_script=simple",
+  // `1W_δ₁ρ₁σ₂^3β=...`: base, sub and sup are all sequences.
+  "expr=sequence,subsup_exp=other",
+  "base=sequence,sub=sequence,sup=sequence",
+  // `x^−a²^b`: recursive_baseless_sup_exp leaves exp_iteration beside the
+  // script and recursion, a combination no gem transform rule consumes.
+  "sup_exp=other",
+  "base=simple,sup=other",
+  "exp_iteration=simple,sup_recursion=simple,sup_script=sequence",
+  // `∫∫f g`: the gem has no nary_class + sequence-naryand rule.
+  "nary=other",
+  "nary_class=simple,naryand=sequence",
+  // Prefix below accents (`̲a`, `̰a`) are tagged below_before by the grammar;
+  // the gem transform handles below_after only and keeps these raw hashes.
+  "diacritics_accents=other",
+  "below_before=simple,first_value=simple",
 ]);
 
 /**

@@ -244,9 +244,12 @@ describe("Ruby's constructor defaults, class by class", () => {
 
   for (const entry of implemented) {
     const defaults = entry.defaults;
-    it(`builds ${entry.name} exactly as Ruby's argument-free constructor does`, () => {
+    it(`builds ${entry.name} exactly as Ruby's measured constructor does`, () => {
       expect(defaults).toBeDefined();
-      const node = buildNode({ class: entry.name, fields: {} }, aliases);
+      const witness = defaults?.constructor_arguments;
+      const fields: SerializedNode["fields"] =
+        witness === undefined ? {} : { text: witness[0] ?? null };
+      const node = buildNode({ class: entry.name, fields }, aliases);
       const serialized = normalize(node);
       expect(serialized).toStrictEqual({ class: entry.name, fields: defaults?.assigned });
       // Stated separately because the two states are not each other's absence:
@@ -324,9 +327,9 @@ describe("failure semantics", () => {
   });
 
   it("refuses a node-shaped object carrying a kind the union does not declare", () => {
-    const forged = { kind: "unitsml", text: "kg" } as unknown as MathNode;
+    const forged = { kind: "unregisteredNode", text: "kg" } as unknown as MathNode;
     const node = new FracNode({ parameterOne: forged });
-    expect(() => normalize(node)).toThrow(/Unknown node kind "unitsml"/);
+    expect(() => normalize(node)).toThrow(/Unknown node kind "unregisteredNode"/);
   });
 
   it("carries the RenderError contract", () => {

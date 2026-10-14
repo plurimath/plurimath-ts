@@ -36,6 +36,7 @@ import {
   intentPostProcessing,
   isOwnMissingSymbolDataError,
   renderChild,
+  type UnitsmlRenderOptions,
   unreachableName,
 } from "./render-shared";
 
@@ -51,6 +52,7 @@ import {
  * below).
  */
 export interface MathmlOptions {
+  readonly unitsml?: UnitsmlRenderOptions | null;
   /**
    * The gem's `display_style:` keyword. Default: the formula's own
    * `displaystyle` field. Ruby's coercion is `to_s == "true"`
@@ -133,12 +135,11 @@ const IMPLEMENTED_OPTIONS: { readonly [K in keyof Required<MathmlOptions>]: null
   formatter: null,
   splitOnLinebreak: null,
   intent: null,
+  unitsml: null,
 };
 
 /** The still-deferred `to_mathml` keywords, each refused by name when present. */
-const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
-  ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md §5)"],
-];
+const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [];
 
 /**
  * Every option key this entry accepts: the five implemented axes plus the
@@ -228,6 +229,7 @@ function renderMath(
   if (splitValue !== undefined && splitValue !== null && splitValue !== false) {
     const inherited: Record<string, unknown> = {
       intent: Object.hasOwn(opts, "intent") ? opts.intent : undefined,
+      unitsml: opts.unitsml,
       displayStyle: hasDisplayStyle(opts)
         ? opts.displayStyle
         : (node as { readonly displaystyle?: unknown }).displaystyle,
@@ -248,11 +250,16 @@ function renderMath(
   const intentValue = Object.hasOwn(opts, "intent") ? opts.intent : undefined;
   const intent = intentValue !== undefined && intentValue !== null && intentValue !== false; // Ruby truthiness
   const context =
-    numberFormat === null && !intent
+    numberFormat === null && !intent && opts.unitsml === undefined
       ? spacing
         ? SPACING_CONTEXT
         : NO_SPACING_CONTEXT
-      : createRenderContext(spacing, numberFormat, intent);
+      : createRenderContext(
+          spacing,
+          numberFormat,
+          intent,
+          opts.unitsml as UnitsmlRenderOptions | null | undefined,
+        );
 
   const displayValue = hasDisplayStyle(opts)
     ? opts.displayStyle
@@ -283,26 +290,36 @@ function renderMath(
   style.append(nodes);
   math.append(style);
 
-  // `unitsml_post_processing` (formula.rb:450-473) rewrites elements
-  // carrying a `unitsml` attribute. No kind file ever writes one of its own
-  // — only a hand-built attributes/options hash can smuggle one in — so the
-  // pass is a proven no-op on every tree this renderer emits, enforced by
-  // refusing the marker BY NAME (unitsml is deferred wholesale).
-  assertNoUnitsmlAttribute(math);
-
+  // The gem suppresses the separator when the formula is solely UnitsML.
+  if (
+    style.children.length === 1 &&
+    style.children[0] instanceof XmlElement &&
+    style.children[0].attributes.get("unitsml") === "true"
+  ) {
+    style.children[0].removeAttribute("unitsml");
+  } else {
+    unitsmlPostProcessing(math);
+  }
   return dumpNodes(math, { indent: 2 });
 }
 
-function assertNoUnitsmlAttribute(element: XmlElement): void {
-  if (element.attributes.has("unitsml")) {
-    throw deferredFeatureError(
-      "unitsml",
-      "an element carries a unitsml attribute, which the gem's " +
-        "unitsml_post_processing rewrites (space insertion, marker stripping)",
-      "formula",
-    );
-  }
-  for (const child of element.children) {
-    if (typeof child !== "string") assertNoUnitsmlAttribute(child);
+/** Pinned formula.rb:462-473; recurse only through element-only child lists. */
+function unitsmlPostProcessing(parent: XmlElement): void {
+  const children = parent.children as (XmlElement | string)[];
+  for (let index = 0; index < children.length; index += 1) {
+    const node = children[index];
+    if (!(node instanceof XmlElement)) continue;
+    if (node.attributes.has("unitsml")) {
+      children.splice(
+        index,
+        0,
+        new XmlElement("mo").setAttribute("rspace", "thickmathspace").append("&#x2062;"),
+      );
+      index += 1;
+      node.removeAttribute("unitsml");
+    }
+    if (node.children.every((child) => typeof child !== "string")) {
+      unitsmlPostProcessing(node);
+    }
   }
 }

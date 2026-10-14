@@ -26,7 +26,11 @@ import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS, rubyClassName } from "../../core/normalize";
 import { assertReproducibleRubyHashOrder, rubyToInteger } from "../../core/ruby-semantics";
 import { formatNumberForMathml, type NumberFormat } from "../../formatting/index";
+import type { UnitsmlRenderOptions } from "../../unitsml/index";
 import { type XmlChild, XmlElement } from "../../xml/index";
+
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
+export { expandUnitsml, unitsmlXml } from "../../unitsml/index";
 
 export const FORMAT = "mathml";
 
@@ -127,6 +131,7 @@ export type MathmlRenderedList = readonly MathmlRendered[];
  *     added here in the same shape.
  */
 export interface RenderContext {
+  readonly unitsml: UnitsmlRenderOptions | null | undefined;
   /** Ruby truthiness of `options[:unary_function_spacing]`, default true. */
   readonly unaryFunctionSpacing: boolean;
   /**

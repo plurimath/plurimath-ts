@@ -11,11 +11,8 @@
  * order, and each carries the Ruby line it came from. Order is behaviour —
  * `Parslet::Transform.rule` unshifts, so matching tries rules in REVERSE
  * definition order and a later definition wins a tie (`src/pegkit/transform.ts`).
- * The two `unitsml` rules (`asciimath/transform.rb:33`, `:875`) are dropped, not ported:
- * the grammar's `unitsml` alternative is commented out (UnitsML is deferred,
- * ARCHITECTURE.md §5), so no tree can carry their key sets, and pattern
- * matching is by exact key-set equality — removing them cannot affect any
- * other rule.
+ * The quoted UnitsML rules validate the native leaf grammar and retain raw
+ * text in a UnitsmlNode; expansion belongs to the render-time service.
  *
  * ## Mutation is behaviour, so nodes are drafts until the entry point returns
  *
@@ -108,6 +105,7 @@ import {
   UlNode,
   UnaryFunctionNode,
   UndersetNode,
+  UnitsmlNode,
   VecNode,
 } from "../../core/index";
 import {
@@ -124,6 +122,7 @@ import {
   Transform,
   type TransformValue,
 } from "../../pegkit/index";
+import { validateUnitsml } from "../../unitsml/index";
 import {
   ASCIIMATH_CLASS_REGISTRY,
   ASCIIMATH_FONT_STYLES,
@@ -429,6 +428,12 @@ function ternaryDraft(
     parameterTwo: two,
     parameterThree: three,
   });
+}
+
+function newUnitsml(value: unknown): AsciimathDraft {
+  const text = rubyToS(value);
+  validateUnitsml(text);
+  return new AsciimathDraft("unitsml", undefined, { text });
 }
 
 /** `Text.new(parameter_one = "", lang: nil)` — `@lang` is always assigned. */
@@ -793,8 +798,8 @@ function buildAsciimathTransform(): Transform {
   /** `asciimath/transform.rb:31` */
   t.rule({ mod: simple("mod"), expr: simple("expr") }, (b) => [b.mod, b.expr]);
 
-  // `asciimath/transform.rb:33-35` (unitsml: simple) — DROPPED: the grammar's unitsml
-  // alternative is commented out, so no tree carries this key set.
+  /** asciimath/transform.rb:33-35 */
+  t.rule({ unitsml: simple("unitsml") }, (b) => newUnitsml(b.unitsml));
 
   /** `asciimath/transform.rb:37-42` — the special-fonts literal keeps only its first
    * character; the family keyword is hardcoded `"mathbf"` even though the
@@ -1636,7 +1641,10 @@ function buildAsciimathTransform(): Transform {
     constructClass(getClass(b.function), newText(b.text)),
   );
 
-  // `asciimath/transform.rb:875-880` (unary_class + unitsml) — DROPPED, see above.
+  /** asciimath/transform.rb:875-880 */
+  t.rule({ unary_class: simple("function"), unitsml: simple("unitsml") }, (b) =>
+    constructClass(getClass(b.function), newUnitsml(b.unitsml)),
+  );
 
   /** `asciimath/transform.rb:882-888` */
   t.rule({ number: simple("number"), comma: simple("comma") }, (b) => [
@@ -1991,6 +1999,8 @@ function finalizeDraft(draft: AsciimathDraft, inputString?: string): MathNode {
       });
     case "symbol":
       return new SymbolNode({ id: draft.identity, value: f.value as string | null });
+    case "unitsml":
+      return new UnitsmlNode({ text: f.text as string });
     case "text":
       return new TextNode({
         parameterOne: asParameter(f.parameterOne),

@@ -36,8 +36,9 @@ import { renderUbrace } from "../../render/ubrace/html";
 import { renderUl } from "../../render/ul/html";
 import { renderUnaryFunction } from "../../render/unary-function/html";
 import { renderUnderset } from "../../render/underset/html";
+import { renderUnitsml } from "../../render/unitsml/html";
 import { renderVec } from "../../render/vec/html";
-import type { NumberFormat, RenderContext, RenderFn } from "./render-shared";
+import type { NumberFormat, RenderContext, RenderFn, UnitsmlRenderOptions } from "./render-shared";
 
 /** One measured renderer per `NodeKind`; `nary` is the gem-matching refusal entry. */
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
@@ -77,6 +78,7 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   ubrace: renderUbrace,
   ul: renderUl,
   unaryFunction: renderUnaryFunction,
+  unitsml: renderUnitsml,
   underset: renderUnderset,
   vec: renderVec,
 };
@@ -92,9 +94,13 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
  * whatever `resolveNumberFormat` answered for the per-call `formatter:`
  * option.
  */
-export function createRenderContext(numberFormat: NumberFormat | null): RenderContext {
+export function createRenderContext(
+  numberFormat: NumberFormat | null,
+  unitsml: UnitsmlRenderOptions | null = null,
+): RenderContext {
   const context: RenderContext = {
     numberFormat,
+    unitsml,
     render(node) {
       return renderNode(node, context);
     },

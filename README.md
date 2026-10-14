@@ -208,7 +208,9 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
   (`src/evaluation/libm.ts`).
 - UnicodeMath input beyond the grammar slice ported so far: unmatched rules
   raise `ParseError`.
-- UnitsML: `unitsml(kg)` is treated as ordinary text, by decision.
+- Standalone UnitsML input is not a public parse format. Use quoted inline
+  AsciiMath, such as `parse('"unitsml(kg)"', "asciimath")`; all six renderers
+  accept nested `unitsml` options.
 - Constructs the renderers have not measured (for example `cancel(x)` in
   `./html` and `./omml`) raise `RenderError`.
 

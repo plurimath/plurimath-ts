@@ -104,7 +104,7 @@ const noMethodOnData = (node: MathNode): boolean => node.equals(node);
 
 // @ts-expect-error — `kind` is not a member of the closed union (§5: no
 // `kind: string` escape hatch, no runtime-registered kinds).
-const unknownKind: MathNode = { kind: "unitsml", text: "kg" };
+const unknownKind: MathNode = { kind: "unregisteredNode", text: "kg" };
 
 // @ts-expect-error — right kind, missing `Number`'s other three fields.
 const missingFields: MathNode = { kind: "number", value: "2" };
@@ -147,6 +147,8 @@ function assertNever(value: never): never {
 function everyKindNarrows(node: MathNode): string {
   switch (node.kind) {
     // Narrowing proper: each of these reads a field only that kind has.
+    case "unitsml":
+      return node.text;
     case "number":
       return node.value ?? "";
     case "symbol":
@@ -243,7 +245,7 @@ describe("the structural node type", () => {
     expect(narrowingIsReal(plainNumber)).toBeUndefined();
     // The rejected shapes are still real objects; only their *types* are wrong.
     expect(plainIsNotConstructed.kind).toBe("number");
-    expect(unknownKind.kind).toBe("unitsml");
+    expect(unknownKind.kind).toBe("unregisteredNode");
     expect(missingFields.kind).toBe("number");
     expect(wrongFieldType.kind).toBe("number");
     expect(foreignField.kind).toBe("number");
@@ -259,7 +261,7 @@ describe("the structural node type", () => {
         kind,
       ).not.toThrow();
     }
-    expect(() => everyKindNarrows({ kind: "unitsml" } as unknown as MathNode)).toThrow(
+    expect(() => everyKindNarrows({ kind: "unregisteredNode" } as unknown as MathNode)).toThrow(
       /unhandled node kind/,
     );
   });

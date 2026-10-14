@@ -36,8 +36,15 @@ import { renderUbrace } from "../../render/ubrace/omml";
 import { renderUl } from "../../render/ul/omml";
 import { renderUnaryFunction } from "../../render/unary-function/omml";
 import { renderUnderset } from "../../render/underset/omml";
+import { renderUnitsml } from "../../render/unitsml/omml";
 import { renderVec } from "../../render/vec/omml";
-import type { NumberFormat, OmmlRendered, RenderContext, RenderFn } from "./render-shared";
+import type {
+  NumberFormat,
+  OmmlRendered,
+  RenderContext,
+  RenderFn,
+  UnitsmlRenderOptions,
+} from "./render-shared";
 
 /** One measured renderer per `NodeKind`; the mapped type makes omissions compile errors. */
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
@@ -77,6 +84,7 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   ubrace: renderUbrace,
   ul: renderUl,
   unaryFunction: renderUnaryFunction,
+  unitsml: renderUnitsml,
   underset: renderUnderset,
   vec: renderVec,
 };
@@ -102,10 +110,12 @@ function insertNode(node: MathNode, context: RenderContext): OmmlRendered {
 export function createRenderContext(
   displaystyle: boolean,
   numberFormat: NumberFormat | null = null,
+  unitsml: UnitsmlRenderOptions | null = null,
 ): RenderContext {
   const context: RenderContext = {
     displaystyle,
     numberFormat,
+    unitsml,
     insert(node) {
       return insertNode(node, context);
     },
@@ -115,7 +125,7 @@ export function createRenderContext(
     withDisplaystyle(childDisplaystyle) {
       return childDisplaystyle === displaystyle
         ? context
-        : createRenderContext(childDisplaystyle, numberFormat);
+        : createRenderContext(childDisplaystyle, numberFormat, unitsml);
     },
   };
   return context;

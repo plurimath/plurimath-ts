@@ -16,18 +16,6 @@ export const RENDER = (node: never): string =>
   toOmml(new C.FormulaNode({ value: [node] }) as never);
 
 /**
- * The `m:oMathPara` open tag every `to_omml` document carries, written out here
- * rather than read back from a fixture or from `src/formats/omml/renderer.ts`.
- * A pin that sourced it from the thing under test would move with it.
- */
-const OMATH_PARA_OPEN =
-  '<m:oMathPara xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:mo="http://schemas.microsoft.com/office/mac/office/2008/main" xmlns:mv="urn:schemas-microsoft-com:mac:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:w10="urn:schemas-microsoft-com:office:word" xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml" xmlns:w15="http://schemas.microsoft.com/office/word/2012/wordml" xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing" xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas" xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup" xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">';
-
-/** One whole `to_omml` document: the open tag, the body lines, the close, a newline. */
-const doc = (...lines: readonly string[]): string =>
-  `${[OMATH_PARA_OPEN, ...lines, "</m:oMathPara>"].join("\n")}\n`;
-
-/**
  * Cases where the port deliberately differs from the gem, keyed by corpus id.
  * Each must have an entry in TODO.plan/deferred.md.
  *
@@ -39,22 +27,7 @@ const doc = (...lines: readonly string[]): string =>
  */
 export const KNOWN_DIVERGENCES: Readonly<
   Record<string, { readonly reason: string; readonly portOutput: string }>
-> = {
-  "text-unitsml-valid": {
-    reason:
-      "UnitsML is deferred wholesale (ARCHITECTURE.md §5, TODO.plan/deferred.md); the grammar rule is present but commented out, so unitsml(kg) degrades to the literal text and the gem's kg run is never reached",
-    portOutput: doc(
-      "  <m:oMath>",
-      "    <m:r>",
-      "      <m:rPr>",
-      '        <m:sty m:val="p"/>',
-      "      </m:rPr>",
-      "      <m:t>unitsml(kg)</m:t>",
-      "    </m:r>",
-      "  </m:oMath>",
-    ),
-  },
-};
+> = {};
 
 /**
  * Corpus cases the gem renders and this port refuses — the OMML slice's gap,
@@ -88,9 +61,8 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([]);
  *
  * Not hand-set. Both this number and the refusal set above come from running
  * every gem-renderable case in `parity-fixtures.json` through the port and
- * byte-comparing the result: 712 renderable, 0 refused, 712 rendered — 711
- * reproducing the gem's exact bytes and one (`text-unitsml-valid`) pinned in
- * `KNOWN_DIVERGENCES`. Nothing rendered bytes that differ from the gem's
+ * byte-comparing the result: 712 renderable, 0 refused, 712 rendered. UnitsML now delegates to its native expansion, so the former
+ * `text-unitsml-valid` text fallback is no longer an allowed divergence. Nothing rendered bytes that differ from the gem's
  * without being pinned, and nothing threw untyped. It moved 42 → 79 when the
  * generated OMML symbol table was wired in, 79 → 92 when the function carriers
  * landed, 92 → 237 when the sweep took in the corpus's LaTeX-input (125)

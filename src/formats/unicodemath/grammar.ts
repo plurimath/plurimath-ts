@@ -35,12 +35,10 @@
  * This module takes **already-preprocessed** text. `UnicodeMath::Parser`
  * entity-encodes its input, reverses five specific encodings, rewrites
  * `\uXXXX` escapes and strips the result before Parslet ever runs; that pass is
- * a separate slice, and until it lands a caller supplies the preprocessed
- * string itself. It is why `decimalMarker` matches an *encoded* marker.
- *
- * There is no transform yet: this produces the Parslet-shaped tree and stops.
- * `unicode_math/transform.rb` is 3,997 lines and is the next slice, which is
- * why `index.ts` still publishes output only and there is no `parseUnicodemath`.
+ * a separate pass in `preprocess.ts`. It is why `decimalMarker` matches an
+ * *encoded* marker. The public `parseUnicodemath` entry in `parser.ts` runs
+ * preprocessing, this grammar and the transform in that order; this module
+ * exposes the raw Parslet-shaped tree for grammar parity checks.
  */
 
 import {

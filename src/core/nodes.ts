@@ -1512,6 +1512,26 @@ export class TextNode extends NodeBase {
   }
 }
 
+/** Raw UnitsML text; parsing and render-time expansion belong to the leaf service. */
+export interface UnitsmlInit {
+  readonly text: string;
+}
+
+/**
+ * `Math::Function::Unitsml`, kept unexpanded so render options remain per-call.
+ * Text is required here; syntax validation belongs to the native parse boundary
+ * because the format-blind core cannot import the UnitsML leaf service.
+ */
+export class UnitsmlNode extends NodeBase {
+  readonly kind = "unitsml" as const;
+  readonly text: string;
+
+  constructor(init: UnitsmlInit) {
+    super();
+    this.text = init.text;
+  }
+}
+
 export interface TildeInit {
   readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
@@ -1711,6 +1731,7 @@ export type ConstructedMathNode =
   | UlNode
   | UnaryFunctionNode
   | UndersetNode
+  | UnitsmlNode
   | VecNode;
 
 /**
@@ -1780,6 +1801,7 @@ export const NODE_KINDS = [
   "ul",
   "unaryFunction",
   "underset",
+  "unitsml",
   "vec",
 ] as const satisfies readonly NodeKind[];
 
@@ -1886,6 +1908,7 @@ export const EQUALITY_FIELDS: { readonly [K in NodeKind]: readonly string[] } = 
   ul: ["parameterOne"],
   unaryFunction: ["parameterOne"],
   underset: ["parameterOne", "parameterTwo"],
+  unitsml: ["text"],
   vec: ["parameterOne"],
 };
 

@@ -69,6 +69,7 @@ import {
   UlNode,
   UnaryFunctionNode,
   UndersetNode,
+  UnitsmlNode,
   VecNode,
 } from "./nodes";
 
@@ -122,6 +123,7 @@ const CONSTRUCTORS: { readonly [kind: string]: Construct } = {
   ul: UlNode as unknown as Construct,
   unaryFunction: UnaryFunctionNode as unknown as Construct,
   underset: UndersetNode as unknown as Construct,
+  unitsml: UnitsmlNode as unknown as Construct,
   vec: VecNode as unknown as Construct,
 };
 
@@ -144,6 +146,7 @@ const NODE_SLOTS: readonly string[] = [
 
 /** Slots that carry data but never a node; copied by reference, as Ruby does. */
 const DATA_SLOTS: readonly string[] = [
+  "text",
   "options",
   "attributes",
   "lang",

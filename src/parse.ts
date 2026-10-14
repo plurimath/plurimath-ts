@@ -1,7 +1,7 @@
 /** Root input dispatcher. Format tokens match the compat constructor. */
 import type { Format } from "./compat/index";
 import { describeThrown, requireKnownParseOptions } from "./core/errors";
-import { type FormulaNode, InvalidTypeError, UnsupportedFormatError } from "./core/index";
+import { type FormulaNode, InvalidTypeError, ParseError } from "./core/index";
 import { type AsciimathParseOptions, parseAsciimath } from "./formats/asciimath/index";
 import { type HtmlParseOptions, parseHtml } from "./formats/html/index";
 import { type LatexParseOptions, parseLatex } from "./formats/latex/index";
@@ -22,14 +22,14 @@ export type ParseOptions<F extends Format> = F extends "asciimath"
 
 const NO_XML_OPTIONS: ReadonlySet<string> = new Set();
 // Same accepted-token order as Math.parse and the compat constructor; UnitsML
-// is recognized at runtime but excluded from Format while its parser is deferred.
+// is recognized at runtime but excluded from Format: standalone Math.parse fails.
 const PARSE_TYPES = ["omml", "html", "latex", "mathml", "unitsml", "unicode", "asciimath"];
 
 /**
  * Reads a formula through its format's existing parser. Text formats forward
  * locale and diagnostic options unchanged. MathML and OMML reject option keys
  * before reading XML. Unknown formats raise InvalidTypeError; the recognized
- * but deferred UnitsML parser raises UnsupportedFormatError.
+ * standalone UnitsML input raises ParseError, as its reference boundary does.
  */
 export function parse<F extends Format>(
   input: string,
@@ -53,7 +53,12 @@ export function parse(input: string, format: string, options?: object | null): F
       requireKnownParseOptions(options, NO_XML_OPTIONS);
       return parseOmml(input);
     case "unitsml":
-      throw new UnsupportedFormatError(format);
+      throw new ParseError(
+        "standalone unitsml parsing cannot retain the input string",
+        input,
+        format,
+        0,
+      );
     default:
       throw new InvalidTypeError(
         typeof format === "string" ? format : describeThrown(format),

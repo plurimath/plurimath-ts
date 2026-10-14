@@ -6,9 +6,9 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-corpus.rb
-  sha256: 4958f26a003c6c10da2031d109fcd85d73240f65f4392b6370c79bc111e224f5
+  sha256: 620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75
   repository:
-    commit: 7942257249ecde3a1f8d2a91e8face81c88fbc73
+    commit: cb5ba94c2bd52ab6f35102b3b6de447726844fe4
     clean: true
     dirty_paths: []
 oracle:
@@ -100,5 +100,5 @@ dependencies:
     source: https://rubygems.org/
 payload:
   path: exclusions.yaml
-  sha256: 67daeca13a4e449066785dc69e6f9962570ac2bec40fb70a37b5b67e7e944156
-  bytes: 1037
+  sha256: 43dda3f11dbfd20fcfc73d5bfe24eb156f00dc5dabd2b1aa2e25e89b99d5e0bc
+  bytes: 385

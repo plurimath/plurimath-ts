@@ -225,7 +225,7 @@ describe("agreement with the census", () => {
 
   it("carries no class the census defers, and says so explicitly", () => {
     const deferred = new Set(census.policy.deferred);
-    expect(deferred.size).toBeGreaterThan(0);
+    expect([...deferred]).toEqual([]);
     for (const [table, entries] of Object.entries(ENTRY_TABLES)) {
       for (const entry of entries) {
         expect(deferred.has(entry.rubyClass), `${table} ${entry.name}`).toBe(false);

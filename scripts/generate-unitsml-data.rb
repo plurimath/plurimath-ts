@@ -1,0 +1,242 @@
+# frozen_string_literal: true
+# Targeted reference export; execute only under the pinned oracle bundle.
+require "json"
+require "yaml"
+require "digest"
+require "fileutils"
+require "open3"
+require "optparse"
+require "tmpdir"
+
+module NativeCompletionReference
+  PIN = "00c52783877b38f6b8e6e109f1803f96bb34fc62"
+  LOCK_SHA = "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121"
+  module_function
+
+  def git(root, *args)
+    out, err, status = Open3.capture3("git", *args, chdir: root)
+    raise "git failed: #{err}" unless status.success?
+    out.strip
+  end
+
+  def load_oracle!(oracle)
+    raise "requires Ruby 4.0.1" unless RUBY_VERSION == "4.0.1"
+    raise "wrong oracle pin" unless git(oracle, "rev-parse", "HEAD") == PIN
+    raise "dirty oracle" unless git(oracle, "status", "--porcelain").empty?
+    raise "wrong frozen lock" unless Digest::SHA256.file(File.join(oracle, "Gemfile.lock")).hexdigest == LOCK_SHA
+    $LOAD_PATH.unshift(File.join(oracle, "lib"))
+    require "plurimath"
+    require "unitsml"
+    require "unitsdb"
+    require_relative "generate-corpus"
+    raise "wrong loaded oracle" unless Gem.loaded_specs.fetch("plurimath").full_gem_path == File.realpath(oracle)
+    raise "wrong dependency versions" unless Gem.loaded_specs.fetch("unitsml").version.to_s == "0.6.8" && Gem.loaded_specs.fetch("unitsdb").version.to_s == "2.2.4"
+  end
+
+  def measured(input, options = {})
+    formula = Unitsml.parse(input)
+    types = options.to_h { |key, value| [key.to_s, value.is_a?(Symbol) ? "symbol" : value.class.name.downcase] }
+    record = { "input" => input, "options" => options, "optionsTypes" => types }
+    { "mathml" => :to_mathml, "ascii" => :to_asciimath, "xml" => :to_xml }.each do |key, method|
+      begin
+        record[key] = formula.public_send(method, options)
+      rescue StandardError => e
+        record["#{key}Error"] = { "class" => e.class.name, "message" => e.message }
+      end
+    end
+    begin
+      record["model"] = CorpusGenerator.serialize_node(formula.to_plurimath(options), "unitsml")
+    rescue StandardError => e
+      record["modelError"] = { "class" => e.class.name, "message" => e.message }
+    end
+    record
+  rescue StandardError => e
+    { "input" => input, "options" => options, "optionsTypes" => options.to_h { |key, value| [key.to_s, value.is_a?(Symbol) ? "symbol" : value.class.name.downcase] }, "raises" => e.class.name, "message" => e.message }
+  end
+
+  # Extract XML text as nodes, never by deleting tag-looking substrings.
+  # The pinned oracle reader supplies entity-decoded text in document order.
+  # This is a model-token extractor, not an HTML sanitization API.
+  def mathml_text(xml)
+    root = Plurimath.xml_engine.load("<mrow>#{xml}</mrow>")
+    collect = lambda do |node|
+      if node.is_a?(String)
+        node
+      elsif Plurimath.xml_engine.is_xml_comment?(node)
+        ""
+      elsif node.respond_to?(:nodes)
+        node.nodes.map { |child| collect.call(child) }.join
+      else
+        raise "unsupported XML text node: #{node.class}"
+      end
+    end
+    collect.call(root)
+  end
+
+  def token_order(array)
+    array.flatten.compact.sort_by(&:length).reverse
+  end
+
+  def write_manifest(oracle, payload_path, schema)
+    require_relative "render-fixture-provenance"
+    sidecar, provenance = RenderFixtureProvenance.prepare(oracle: oracle,
+      # The shared preparer expects JSON names; TS uses the same provenance
+      # with its real basename/hash recorded by write_manifest below.
+      payload_path: payload_path.sub(/\.ts\z/, ".json"), generator_path: "scripts/generate-unitsml-data.rb",
+      allow_dirty: false, corpus: false)
+    driver = "scripts/ci/native-completion-probe.rb"
+    provenance.fetch("generator").fetch("inputs")[driver] = Digest::SHA256.file(File.join(CorpusGenerator::REPO_ROOT, driver)).hexdigest
+    RenderFixtureProvenance.write_manifest(sidecar_path: sidecar,
+      payload_path: payload_path, payload_schema: schema,
+      payload_bytes: File.binread(payload_path), provenance: provenance)
+    # Keep the imported JSON metadata readers reproducible. Commit identity
+    # lives in the authoritative YAML sidecar, whose sole volatile generator
+    # commit is normalized by the managed oracle gate.
+    metadata = { "measured" => true, "verified" => false, "oracle" => PIN, "lockSha256" => LOCK_SHA,
+      "ruby" => RUBY_DESCRIPTION, "generator" => provenance.fetch("generator").reject { |key, _| key == "repository" },
+      "stages" => [{ "name" => schema.include?("probe") ? "small-probe" : "reference-generation", "exit" => 0 }],
+      "payloads" => { File.basename(payload_path) => Digest::SHA256.file(payload_path).hexdigest } }
+    alias_name = { "completion-fixtures.json" => "unicode-probe.json", "probe-fixtures.json" => "unitsml-probe.json" }[File.basename(payload_path)]
+    metadata["payloads"][alias_name] = Digest::SHA256.file(payload_path).hexdigest if alias_name
+    metadata_path = payload_path.sub(/\.(json|ts)\z/, ".metadata.json")
+    File.write(metadata_path, JSON.pretty_generate(metadata) + "\n")
+  end
+
+  def export_unicode_sizes(oracle, out)
+    values = []
+    n = 0
+    loop do
+      value = 1.25**n
+      break unless value.finite?
+      values << "#{value}em"
+      n += 1
+    end
+    raise "empty finite Unicode fence sizes" if values.empty?
+    overflow = "#{1.25**n}em"
+    path = File.join(out, "src/formats/unicodemath/generated/paren-mask-sizes.ts")
+    FileUtils.mkdir_p(File.dirname(path))
+    bytes = "// GENERATED by scripts/generate-unitsml-data.rb. Do not edit.\n" \
+      "export const UNICODEMATH_PAREN_MASK_SIZES: readonly string[] = [\n" +
+      values.map { |value| "  #{JSON.generate(value)},\n" }.join + "] as const;\n" +
+      "export const UNICODEMATH_PAREN_MASK_OVERFLOW = #{JSON.generate(overflow)};\n"
+    File.write(path, bytes)
+    write_manifest(oracle, path, "plurimath-unicode-fence-sizes/1")
+  end
+
+  def export_fixtures(oracle, out)
+    emit = lambda do |probe_root|
+      { "unitsml-probe.json" => "test/formats/unitsml/probe-fixtures.json",
+        "unicode-probe.json" => "test/formats/unicodemath/completion-fixtures.json" }.each do |source, target|
+        path = File.join(out, target)
+        FileUtils.mkdir_p(File.dirname(path))
+        FileUtils.cp(File.join(probe_root, source), path)
+        write_manifest(oracle, path, JSON.parse(File.read(path)).fetch("schema"))
+      end
+    end
+    if File.file?(File.join(out, "unitsml-probe.json")) && File.file?(File.join(out, "unicode-probe.json"))
+      emit.call(out)
+    else
+      Dir.mktmpdir("native-completion-fixtures-") do |tmp|
+        driver = File.join(CorpusGenerator::REPO_ROOT, "scripts/ci/native-completion-probe.rb")
+        success = system({ "BUNDLE_GEMFILE" => File.join(oracle, "Gemfile"), "BUNDLE_FROZEN" => "true" },
+          "bundle", "exec", "ruby", driver, "--phase", "small", "--oracle", oracle, "--out", tmp)
+        raise "small fixture probe failed" unless success
+        emit.call(tmp)
+      end
+    end
+  end
+
+  def export(oracle, out)
+    load_oracle!(oracle)
+    tokens = { "units" => token_order(Unitsml::Unitsdb.units.filtered),
+      "singlePrefixes" => token_order(Unitsml::Unitsdb.prefixes_by_size(1)),
+      "doublePrefixes" => token_order(Unitsml::Unitsdb.prefixes_by_size(2)),
+      "dimensions" => token_order(Unitsml::Unitsdb.dimensions.parsables.keys) }
+    raise "empty token family" if tokens.values.any?(&:empty?)
+    data = { "schema" => "plurimath-unitsml-data/1", "tokens" => tokens }
+    { "units" => tokens["units"], "prefixes" => tokens["singlePrefixes"] + tokens["doublePrefixes"],
+      "dimensions" => tokens["dimensions"] }.each do |family, names|
+      data[family] = names.uniq.to_h do |name|
+        input = family == "prefixes" ? "#{name}-" : name
+        [name, measured(input)]
+      end
+      puts "#{family}: #{data[family].length} measured tokens"
+    end
+    pairs = (tokens["singlePrefixes"] + tokens["doublePrefixes"]).uniq.product(%w[m s g kg A K mol cd])
+    composite_units = data.fetch("units").select do |_, record|
+      next false unless record["mathml"]
+      body = record["mathml"].sub(/\A.*?<math[^>]*>/m, "").sub(%r{</math>.*\z}m, "").strip
+      !body.match?(%r{\A<(mi|mo|mn|mtext)(?:\s[^>]*)?>[^<]*</\1>\z})
+    end.keys
+    pairs |= (tokens["singlePrefixes"] + tokens["doublePrefixes"]).uniq.product(composite_units)
+    data["prefixedUnits"] = pairs.to_h { |prefix, unit| ["#{prefix}\u0000#{unit}", measured("#{prefix}#{unit}")] }
+    # Boundary witnesses measure the dependency's Float exponent overflow;
+    # outputs/refusals are emitted by Ruby, never predicted in native code.
+    huge_power = "9" * 400
+    special_inputs = %w[1 1/m m^-1 m^(-1/2) sqrt(m)/s] +
+      ["m^#{huge_power}", "m^#{huge_power}*m", "m^-#{huge_power}", "m^-#{huge_power}*m"]
+    data["special"] = special_inputs.to_h { |input| [input, measured(input)] }
+    # Alias families come from the independently measured canonical census.
+    # Unary, binary and ternary aliases share a class-name prefix, so a prefix
+    # match alone cannot select the native kind faithfully.
+    CorpusGenerator.load_model_classes!(oracle)
+    census = CorpusGenerator.build_census(oracle)
+    data["modelKinds"] = census.fetch("classes").to_h do |entry|
+      carrier = entry["aliases"] || entry.fetch("name")
+      basename = carrier.split("::").last
+      [entry.fetch("name"), basename[0].downcase + basename[1..]]
+    end
+    data["utility"] = { "u2d" => Unitsml::Utility::U2D, "dim2d" => Unitsml::Utility::DIM2D,
+      "dimsVector" => Unitsml::Utility::DIMS_VECTOR, "prefixSymbolMethods" => Unitsml::Utility::PREFIX_SYMBOL_METHODS }
+    data["dimensionVectors"] = Unitsml::Unitsdb.dimensions.dimensions.map { |dim| { "id" => dim.id, "vector" => dim.set_vector } }
+    data["namespace"] = { "uri" => Unitsml::Namespace.uri, "prefix" => Unitsml::Namespace.prefix_default }
+    data["resolvedTokens"] = {}
+    symbols = Unitsml::Unitsdb.units.units.flat_map { |unit| unit.symbols || [] }
+    text_values = symbols.filter_map do |symbol|
+      xml = symbol.mathml
+      next unless xml
+      mathml_text(xml)
+    end
+    # Resolve each visible prefix+unit token directly, avoiding full parser work.
+    prefix_symbols = Unitsml::Unitsdb.prefixes.prefixes.flat_map { |prefix| prefix.symbols || [] }
+    prefixes = prefix_symbols.flat_map do |symbol|
+      [symbol.unicode, symbol.mathml && mathml_text(symbol.mathml)]
+    end.compact.uniq
+    resolver_keys = Plurimath::Utility.all_symbols_classes(:mathml).keys.map(&:to_s) +
+      Plurimath::Mathml::Constants::UNICODE_SYMBOLS.keys.map(&:to_s) +
+      Plurimath::Mathml::Constants::NAMED_FUNCTION_WORDS
+    resolver_keys += resolver_keys.map { |text| Plurimath::Utility.html_entity_to_unicode(text) }
+    (text_values + prefixes.product(text_values).map { |prefix, text| "#{prefix}#{text}" } +
+      resolver_keys + ["−", "-", "·", "⋅", "⁢", "/", "*", "×", "+", " "]).uniq.each do |text|
+      begin
+        node = Plurimath::Mathml::Utility.resolve_token(text)
+        data["resolvedTokens"][text] = CorpusGenerator.serialize_node(node, "resolved-token")
+      rescue StandardError => e
+        data["resolvedTokens"][text] = { "raises" => e.class.name, "message" => e.message }
+      end
+    end
+    data["prefixedUnitsCoverage"] = { "complete" => false, "selectedUnits" => %w[m s g kg A K mol cd], "completeCompositeUnits" => composite_units }
+    metadata = Dir.glob(File.join(Unitsdb.data_dir, "**", "*.{yaml,yml}")).sort.to_h do |path|
+      [path.delete_prefix("#{Unitsdb.data_dir}/"), YAML.safe_load(File.read(path), permitted_classes: [Symbol], aliases: true)]
+    end
+    raise "empty Unitsdb metadata" if metadata.empty?
+    data["database"] = metadata
+    FileUtils.mkdir_p(File.join(out, "src/unitsml/generated"))
+    payload_path = File.join(out, "src/unitsml/generated/data.json")
+    File.write(payload_path, JSON.pretty_generate(data) + "\n")
+    write_manifest(oracle, payload_path, data.fetch("schema"))
+    export_unicode_sizes(oracle, out)
+    export_fixtures(oracle, out)
+    data
+  end
+end
+
+if $PROGRAM_NAME == __FILE__
+  options = {}
+  OptionParser.new do |p|
+    p.on("--oracle PATH") { |v| options[:oracle] = v }
+    p.on("--out PATH") { |v| options[:out] = v }
+  end.parse!
+  abort "--oracle and --out required" unless options.keys.sort == %i[oracle out]
+  NativeCompletionReference.export(File.realpath(options[:oracle]), File.expand_path(options[:out]))
+end

@@ -383,7 +383,8 @@ describe("deep structure", () => {
  * checks that equality compares the model rather than the input spelling.
  * Same-notation pairs also cover alternative spellings and whitespace.
  *
- * `RubyEqualPairs` is the GEM's answer over all active corpus formats,
+ * `RubyEqualPairs` is the GEM's 713-case answer before native UnitsML's
+ * positive case joined the reachable set,
  * measured by `scripts/probes/corpus-equality.rb` against oracle `00c52783`
  * in GHA run 38406986648, source commit `79422572`. Its uploaded report is
  * the reference; expected pairs are never derived from TypeScript equality.
@@ -502,10 +503,11 @@ describe("the corpus equality matrix, as the gem reports it", () => {
     "unary-vec|latex-accent-vec",
   ]);
 
-  it("has all 713 reachable cases, including OMML", () => {
-    expect(nodes).toHaveLength(713);
-    // The hosted Ruby probe reported 81 pairs over these 713 inputs.
-    // Pinning its count catches a pair lost while copying the reference.
+  it("has all 714 reachable cases, including native UnitsML", () => {
+    expect(nodes).toHaveLength(714);
+    // The uploaded e3c8a4f4 probe still withheld UnitsML: 81 pairs / 713 cases.
+    // A fresh hosted report over 714 cases is required; expected pairs must
+    // never be inferred from TypeScript or an assumed count increment.
     expect(RubyEqualPairs.size).toBe(81);
   });
 

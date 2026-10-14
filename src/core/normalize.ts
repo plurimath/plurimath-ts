@@ -339,6 +339,10 @@ export const NODE_SPECS: { readonly [K in NodeKind]: NodeSpec } = {
       ["parameter_one", "parameterOne"],
     ],
   },
+  unitsml: {
+    rubyClass: "Math::Function::Unitsml",
+    fields: [["text", "text"]],
+  },
   tilde: {
     rubyClass: "Math::Function::Tilde",
     fields: [

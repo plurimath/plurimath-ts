@@ -88,6 +88,7 @@ const CORE_EXPORTS = [
   "TernaryFunctionNode",
   "TextNode",
   "TildeNode",
+  "UnitsmlNode",
   "UbraceNode",
   "UlNode",
   "UnaryFunctionNode",

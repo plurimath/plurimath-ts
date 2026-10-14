@@ -49,6 +49,7 @@ import {
   UlNode,
   UnaryFunctionNode,
   UndersetNode,
+  UnitsmlNode,
   VecNode,
 } from "../../core/index";
 
@@ -96,5 +97,6 @@ export const MATHML_NODE_CONSTRUCTORS: { readonly [K in NodeKind]: MathmlNodeCon
   ul: UlNode,
   unaryFunction: UnaryFunctionNode,
   underset: UndersetNode,
+  unitsml: UnitsmlNode,
   vec: VecNode,
 };

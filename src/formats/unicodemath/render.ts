@@ -45,8 +45,15 @@ import { renderUbrace } from "../../render/ubrace/unicodemath";
 import { renderUl } from "../../render/ul/unicodemath";
 import { renderUnaryFunction } from "../../render/unary-function/unicodemath";
 import { renderUnderset } from "../../render/underset/unicodemath";
+import { renderUnitsml } from "../../render/unitsml/unicodemath";
 import { renderVec } from "../../render/vec/unicodemath";
-import { FORMAT, type NumberFormat, type RenderContext, type RenderFn } from "./render-shared";
+import {
+  FORMAT,
+  type NumberFormat,
+  type RenderContext,
+  type RenderFn,
+  type UnitsmlRenderOptions,
+} from "./render-shared";
 
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   abs: renderAbs,
@@ -85,6 +92,7 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   ubrace: renderUbrace,
   ul: renderUl,
   unaryFunction: renderUnaryFunction,
+  unitsml: renderUnitsml,
   underset: renderUnderset,
   vec: renderVec,
 };
@@ -128,21 +136,26 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
  * The gem threads an `options:` hash through every `to_unicodemath`, which
  * looks like a rendering axis and mostly is not one: `Formula#to_unicodemath`
  * (`formula.rb:187`) builds it as `{formatter:, unitsml:, formula:}`, and the
- * only place any of that is read back on this path is
+ * numeric reader of that context is
  * `Number#format_value_with_options` (`number.rb:115`) — which B2's first
  * slice now implements (`../../formatting/number-format.ts`). (Distinct from
  * the generated exception matrix, which is separately empty — no symbol's
  * unicodemath value varies on any probed axis; see
  * `test/generated/unicodemath-data.spec.ts`.)
  *
+ * UnitsML nodes also read the nested UnitsML options from this context.
  * The dispatcher bound to itself is how recursion reaches the table without
  * any kind file importing it. The per-node `options` the kind files read is a
  * different thing entirely: a field on the node, set by the parser, not
  * threaded by the renderer.
  */
-export function createRenderContext(numberFormat: NumberFormat | null): RenderContext {
+export function createRenderContext(
+  numberFormat: NumberFormat | null,
+  unitsml: UnitsmlRenderOptions | null = null,
+): RenderContext {
   const context: RenderContext = {
     numberFormat,
+    unitsml,
     render(node) {
       return renderNode(node, context);
     },

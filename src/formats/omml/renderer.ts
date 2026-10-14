@@ -4,17 +4,12 @@ import { splitOnLinebreak } from "../../core/linebreak";
 import { assertKnownOptions } from "../../core/render-options";
 import { isStackOverflow } from "../../core/stack-overflow";
 import { type FormatterOptions, resolveNumberFormat } from "../../formatting/index";
+import type { UnitsmlRenderOptions } from "../../unitsml/index";
 import { dumpNodes, XmlElement } from "../../xml/index";
 import { createRenderContext, ROOT_CONTEXT } from "./render";
 import { FORMAT, isOwnMissingSymbolDataError, serializeRendered } from "./render-shared";
 
-/**
- * `Formula#to_omml`'s options (formula.rb:157 on the pinned oracle), typed
- * exactly (§5). The three implemented keywords; `unitsml:` is deliberately
- * NOT here — passing it (any value but `undefined`) is a named `RenderError`
- * at runtime (`DEFERRED_OPTIONS`), and a key `to_omml` has no keyword for at
- * all is refused as unknown at the entry.
- */
+/** Per-call display, line splitting, number formatting and UnitsML options. */
 export interface OmmlOptions {
   /**
    * The gem's `display_style:` keyword. Default: the formula's own
@@ -41,6 +36,7 @@ export interface OmmlOptions {
    * `../../render/number/omml.ts` for the two paths the gem takes.
    */
   readonly formatter?: FormatterOptions | null;
+  readonly unitsml?: UnitsmlRenderOptions | null;
 }
 
 /**
@@ -51,12 +47,8 @@ const IMPLEMENTED_OPTIONS: { readonly [K in keyof Required<OmmlOptions>]: null }
   displayStyle: null,
   splitOnLinebreak: null,
   formatter: null,
+  unitsml: null,
 };
-
-/** Public `Formula#to_omml` keywords whose rendering paths are not implemented. */
-const DEFERRED_OPTIONS: readonly (readonly [string, string])[] = [
-  ["unitsml", "UnitsML is deferred wholesale (ARCHITECTURE.md section 5)"],
-];
 
 /**
  * `to_omml_without_math_tag` takes the display style as a positional argument
@@ -73,7 +65,6 @@ const NODE_ENTRY_REFUSED: readonly (readonly [string, string])[] = [
     "splitOnLinebreak",
     "line splitting belongs to the formula-level toOmml; the per-node entry has none",
   ],
-  ...DEFERRED_OPTIONS,
 ];
 
 /**
@@ -83,18 +74,16 @@ const NODE_ENTRY_REFUSED: readonly (readonly [string, string])[] = [
  * refused as unknown by `assertKnownOptions` (core/render-options.ts). Same
  * split as MathML.
  */
-const ACCEPTED_OPTIONS: readonly string[] = [
-  ...Object.keys(IMPLEMENTED_OPTIONS),
-  ...DEFERRED_OPTIONS.map(([name]) => name),
-];
+const ACCEPTED_OPTIONS: readonly string[] = Object.keys(IMPLEMENTED_OPTIONS);
 
 /**
- * The per-node entry's options: `formatter:` only (`to_omml_without_math_tag`
+ * The per-node entry's options: `formatter:` and `unitsml:` (`to_omml_without_math_tag`
  * reads it from its `options:` hash, as `to_omml` does); the rest are refused
  * by name (`NODE_ENTRY_REFUSED`).
  */
 export interface OmmlNodeOptions {
   readonly formatter?: FormatterOptions | null;
+  readonly unitsml?: UnitsmlRenderOptions | null;
 }
 
 const OMML_NAMESPACES: readonly (readonly [string, string])[] = [
@@ -128,7 +117,11 @@ export function toOmmlWithoutMathTag(node: MathNode, options?: OmmlNodeOptions |
   return atBoundary(() => {
     assertSupportedOptions(options, node.kind, NODE_ENTRY_REFUSED);
     const numberFormat = resolveNumberFormat(options?.formatter, FORMAT);
-    const context = numberFormat === null ? ROOT_CONTEXT : createRenderContext(true, numberFormat);
+    const unitsml = options?.unitsml ?? null;
+    const context =
+      numberFormat === null && unitsml === null
+        ? ROOT_CONTEXT
+        : createRenderContext(true, numberFormat, unitsml);
     return serializeRendered(context.render(node));
   });
 }
@@ -138,7 +131,7 @@ export function toOmml(node: MathNode, options?: OmmlOptions | null): string {
   assertKnownOptions(options, ACCEPTED_OPTIONS, FORMAT);
   assertMathNodeShape(node, FORMAT);
   return atBoundary(() => {
-    assertSupportedOptions(options, node.kind, DEFERRED_OPTIONS);
+    assertSupportedOptions(options, node.kind, []);
     if (node.kind !== "formula" && node.kind !== "mrow") {
       throw new RenderError(
         `to_omml is defined on Formula and its subclasses only — received "${node.kind}"`,
@@ -149,8 +142,7 @@ export function toOmml(node: MathNode, options?: OmmlOptions | null): string {
 
     const values: Record<string, unknown> =
       options === null || options === undefined ? {} : (options as Record<string, unknown>);
-    // An explicit `undefined` is an absent key (the deferred keywords read the
-    // same way below), where `null` is Ruby's `nil`.
+    // An explicit `undefined` is an absent key; `null` is Ruby's `nil`.
     const displayValue =
       Object.hasOwn(values, "displayStyle") && values.displayStyle !== undefined
         ? values.displayStyle
@@ -159,6 +151,7 @@ export function toOmml(node: MathNode, options?: OmmlOptions | null): string {
     const context = createRenderContext(
       String(displayValue) === "true",
       resolveNumberFormat(options?.formatter, FORMAT),
+      options?.unitsml ?? null,
     );
     // Ruby truthiness: only `nil` and `false` are off (`undefined` is absent).
     const splitValue = Object.hasOwn(values, "splitOnLinebreak")

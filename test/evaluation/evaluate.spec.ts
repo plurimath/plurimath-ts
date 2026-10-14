@@ -260,6 +260,12 @@ describe("refuseUndispatched", () => {
   it("refuses any other class as the gem does", () => {
     expect(() => refuseUndispatched(first("hat(x)"))).toThrow(UnsupportedExpressionError);
   });
+
+  it("reports the concrete Ruby UnitsML class when evaluation is unsupported", () => {
+    expect(() => evaluate(parseAsciimath('"unitsml(kg)"'))).toThrow(
+      "unsupported expression: Function::Unitsml",
+    );
+  });
 });
 
 describe("evaluate() — measurements not covered by the oracle fixtures", () => {

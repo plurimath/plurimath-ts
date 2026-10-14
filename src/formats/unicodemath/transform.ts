@@ -14,23 +14,22 @@
  * ## Rule counts
  *
  * The gem registers 516 rules, 519 counting the three that the
- * `BaseNumberPrefix::Transform` mixin adds. This module registers 483 of the
+ * `BaseNumberPrefix::Transform` mixin adds. This module registers 484 of the
  * 519 (`FINAL_COUNT` in `test/formats/unicodemath/transform-coverage.spec.ts`,
  * which asserts it; read that constant, not this comment, for the live figure).
- * The other 36 are:
- *
- *  - 26 dead in the gem: each has a grammar or ordering proof that no parse
- *    reaches it, so porting one would add a rule that could never be covered;
- *  - 10 unreached: no input fired them on the oracle, and none is proven
- *    unreachable. Their gem lines are `:760`, `:925`, `:930`, `:1841`, `:2041`,
- *    `:2323`, `:2341`, `:2777`, `:2787` and `:3074`. A witness input for one
- *    of them would reopen it.
+ * The other 35 are unreachable in the pinned public Ruby parser. The
+ * previous 26 classifications retain their grammar/ordering proofs; the
+ * remaining nine (`:760`, `:925`, `:930`, `:1841`, `:2041`, `:2341`, `:2777`,
+ * `:2787`, `:3074`) have exact-key or value-type contradictions documented in
+ * `docs/unicodemath-rule-reachability.md`, including Parslet cache semantics.
+ * A changed reference or counterexample reopens the corresponding proof.
+ * This classification does not establish every model or renderer behavior.
  *
  * ## Where the details live
  *
  * - Status and the history of the slices that grew the set to 483:
  *   `TODO.plan/feature-roadmap.md`, "UnicodeMath input".
- * - The per-rule evidence (the 26 dead-rule proofs, the 10 unreached ids, the
+ * - The per-rule evidence (the original 26 dead-rule proofs, the historical unreached ids, the
  *   model behaviours known to be absent) was recorded in this comment until
  *   it was replaced by this one. Other comments in this file and in the
  *   UnicodeMath specs that cite "the module header" mean that text; read it
@@ -62,6 +61,10 @@ import {
   Transform,
   type TransformValue,
 } from "../../pegkit";
+import {
+  UNICODEMATH_PAREN_MASK_OVERFLOW,
+  UNICODEMATH_PAREN_MASK_SIZES,
+} from "./generated/paren-mask-sizes";
 import {
   UNICODEMATH_BINARY_SYMBOLS,
   UNICODEMATH_BINARY_SYMBOLS_KEYS,
@@ -836,22 +839,20 @@ function unicodeFractions(fractions: unknown): UnicodemathDraft {
 }
 
 /**
- * `"#{1.25**n}em"`, the size a paren prefix (`├1(`) names. Ruby's `Float#to_s`
- * prints `1.0` where JavaScript prints `1`; for `n` in 0..22 every other value
- * is non-integral and both print the shortest round-trip digits. Outside that
- * range `1.25**n` and its printed form are not known to agree between the two
- * runtimes, so this refuses rather than guess.
+ * `"#{1.25**n}em"`, the size a paren prefix (`├1(`) names. The generated
+ * strings measure Ruby's power and Float#to_s together: JavaScript's power
+ * starts differing at 23, and its number formatting has different thresholds.
+ * The finite domain is exhausted by the table; larger nonnegative exponents
+ * use the separately measured Infinity result.
  */
 function parenMask(prefix: string): string {
   const exponent = rubyToI(prefix);
-  if (exponent < 0 || exponent > 22) {
-    throw new Error(
-      `unicodemath transform: paren size prefix ${exponent} is outside 0..22, where 1.25**n is ` +
-        "exact and Ruby's Float#to_s and JavaScript's String() are known to agree",
-    );
-  }
-  const size = 1.25 ** exponent;
-  return `${Number.isInteger(size) ? `${size}.0` : String(size)}em`;
+  if (exponent < 0) throw new RangeError("paren size prefix must be nonnegative");
+  if (exponent >= UNICODEMATH_PAREN_MASK_SIZES.length) return UNICODEMATH_PAREN_MASK_OVERFLOW;
+  const size = UNICODEMATH_PAREN_MASK_SIZES[exponent];
+  if (size === undefined)
+    throw new Error(`unicodemath transform: no measured paren size ${exponent}`);
+  return size;
 }
 
 /**
@@ -1137,10 +1138,18 @@ function newMod(one: unknown, two: unknown): UnicodemathDraft {
  * `Math::Function::Td.new(parameter_one)` — a `BinaryFunction`, so
  * `parameter_two` stays Ruby's own `nil` default. Every TABLE-family call
  * site already shapes `one` the way `Td#initialize` wants it — `[td]` for a
- * single cell, an already-sequence `td` for several — so this is the plain
- * wrap, not a second `Array()`.
+ * single cell, an already-sequence `td` for several. `Td#initialize`
+ * (td.rb:7-9) first deletes direct entries equal to "&" in place: the
+ * grammar's empty-cell separator Slice equals that string, but a Symbol
+ * or Text node containing an ampersand does not.
  */
 function newTd(one: unknown): UnicodemathDraft {
+  if (Array.isArray(one)) {
+    for (let index = 0; index < one.length; ) {
+      if (textEquals(one[index], "&")) one.splice(index, 1);
+      else index += 1;
+    }
+  }
   return binaryDraft("binaryFunction", "Td", one, undefined);
 }
 
@@ -1449,7 +1458,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // above, and also needed the moment `:486`/`:491`/`:496` below fold more
   // than one atom onto a `factor`: without it the resulting array is a hash
   // the gem always resolves, refused here as if it were the "factor=other"
-  // bug case `GEM_UNMATCHED_SIGNATURES` names.
+  // measured unmatched-tree case retained by finalization.
   rule("47", { backcolor: simple("color") }, (b) => b.color);
   // Slice H: `baseless_sub`'s first alternative, when no operator follows
   // the underscore, calls `baseless_sub_values(:sub_script)`
@@ -2119,7 +2128,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // that needed them, and `:680`/`:685`/`:690` above by this slice (`I`).
   // `:695` and `:2035` were registered later by the REMAINING increment (see
   // the former module header (9bbe254e)); `:2041`, `:2787` and `:3074` stay unregistered,
-  // unreached on the oracle.
+  // unreachable; see docs/unicodemath-rule-reachability.md.
 
   rule("735", { factor: simple("factor"), operand: simple("operand") }, (b) => [
     b.factor,
@@ -2814,15 +2823,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // plain-paren arm returns a resolved value directly), `"(a|bc"` (SEQUENCE
   // `expr`).
   rule("1836", { intermediate_exp: simple("exp"), expr: simple("expr") }, (b) => [b.exp, b.expr]);
-  // `:1841` (`intermediate_exp`+`operator`) is NOT registered: every
-  // `expBracket` path that pairs `intermediate_exp` with a further tag
-  // either resolves that tag to `expr` (`:1836`/`:1856`, since a bare
-  // `{operator:}` unwraps via `:62` before the parent ever sees it) or to
-  // `exclamation_symbol` (`:1846`, `factor`'s own seq). No candidate input —
-  // the 675 `unicodemath-tests` strings, the pinned corpus, and roughly a
-  // hundred hand-built paren/operator combinations — fired it; the module
-  // header's own "unreached, not proven unreachable" status applies. `:2777`,
-  // its three-key `+expr` sibling below, is unreached for the same reason.
+  // `:1841` and `:2777` cannot receive same-level intermediate_exp/operator
+  // keys. The exhaustive producer/consumer proof, including nary routes, is
+  // recorded in docs/unicodemath-rule-reachability.md.
   rule(
     "1846",
     { intermediate_exp: simple("exp"), exclamation_symbol: simple("exclamation_symbol") },
@@ -3296,9 +3299,18 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => [b.factor, b.operand, b.expr],
   );
 
-  // `:2323` (`factor`+`operand`+`recursive_denominator`) is NOT registered:
-  // no input among the 675 `unicodemath-tests` strings or this slice's own
-  // candidates fires it. Unreached, not proven unreachable.
+  // `1/a≤∫` reaches the operand branch of denominator: the relation blocks
+  // its earlier factor branch, and the following nary is parsed recursively.
+  // The calibrated Ruby trace records this rule on the projected witnesses.
+  rule(
+    "2323",
+    {
+      factor: simple("factor"),
+      operand: simple("operand"),
+      recursive_denominator: simple("denominator"),
+    },
+    (b) => [b.factor, b.operand, b.denominator],
+  );
 
   rule(
     "2329",
@@ -3833,17 +3845,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // sibling of a bare `operator` tag, only of `expr`/`exclamation_symbol`
   // through `expBracket`'s and `factor`'s own productions.
 
-  // ATOMS meeting a bare `operator` and a `frac` directly (`:2787`) and that
-  // shape's SEQUENCE-`expr` extension (`:3074`) are deferred with `:30`
-  // above: no probed input reached either. Slice J re-tried deliberately —
-  // every `BINARY_FUNCTIONS`/atom pairing this file's `element`/`atom`
-  // productions can build, ahead of a `frac`, plus the 675
-  // `unicodemath-tests` strings — and found no reaching input either;
-  // unreached, not proven unreachable.
-
-  // An operator, a `frac` and a SEQUENCE `expr` (`++¹/₂ḟa`). The ATOMS-led
-  // `:2787` and its `expr` extension `:3074` are not registered: no probed
-  // input reached either (see the E claim file).
+  // `:2787` and `:3074` require atom/operator/frac siblings that no
+  // public grammar production can combine. See the exact-key proof in
+  // docs/unicodemath-rule-reachability.md. The operator/frac/expr rule below
+  // is reachable independently (`++¹/₂ḟa`).
   rule(
     "2797",
     { operator: simple("operator"), frac: simple("frac"), expr: sequence("expr") },
@@ -3947,18 +3952,8 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       const options: Record<string, unknown> = {};
       const opener = asArray(b.open_paren);
       const closer = asArray(b.close_paren);
-      const openFirst = opener[0];
-      if (isDraft(openFirst) && openFirst.kind === "number") {
-        const mask = `${rubyFloatToS(1.25 ** rubyToI(rubyToS(draftValue(openFirst))))}em`;
-        options.open_prefixed = true;
-        if (draftValue(openFirst) !== "") options.open_paren = { minsize: mask, maxsize: mask };
-      }
-      const closeFirst = closer[0];
-      if (isDraft(closeFirst) && closeFirst.kind === "number") {
-        const mask = `${rubyFloatToS(1.25 ** rubyToI(rubyToS(draftValue(closeFirst))))}em`;
-        options.close_prefixed = true;
-        if (draftValue(closeFirst) !== "") options.close_paren = { minsize: mask, maxsize: mask };
-      }
+      applyParenMask(options, opener, "open");
+      applyParenMask(options, closer, "close");
       const fenced = newFenced(
         symbolsClass(opener[opener.length - 1]),
         [b.factor, ...asArray(b.exp)],
@@ -5103,22 +5098,6 @@ function subParenKey(table: ReadonlyMap<string, string>, entity: unknown): strin
   return "";
 }
 
-/**
- * Ruby `Float#to_s` for the positive powers of 1.25 the paren-size mask
- * builds: a whole value keeps its `.0` (`1.25**0` is `"1.0"`), and the
- * exponent form starts at 1e16 (`"1.0e+16"`), where JavaScript's starts at 1e21.
- */
-function rubyFloatToS(value: number): string {
-  if (!Number.isFinite(value)) return "Infinity";
-  if (value >= 1e16) {
-    const [mantissa, exponent] = value.toExponential().split("e");
-    const digits = (mantissa as string).includes(".") ? (mantissa as string) : `${mantissa}.0`;
-    return `${digits}e+${(exponent as string).replace("+", "").padStart(2, "0")}`;
-  }
-  const text = String(value);
-  return text.includes(".") ? text : `${text}.0`;
-}
-
 /** `node.parameter_x` on a draft; Ruby raises `NoMethodError` on anything else. */
 function fieldOf(node: unknown, field: string): unknown {
   if (!isDraft(node)) {
@@ -5165,105 +5144,14 @@ export function unicodemathTransform(): Transform {
  * ---------------------------------------------------------------------- */
 
 /**
- * The node SIGNATURES the GEM's own transform leaves unmatched, so a hash that
- * survives to the model is the gem's behaviour rather than this slice's gap.
- *
- * **A key set is not a signature.** Parslet binds on the matcher kind as well
- * as the key, so whether a rule matches depends on the SHAPE of each value:
- * `{frac:, expr:}` with both values resolved is matched by `transform.rb:1791`,
- * while the same key set with an unresolved hash under `frac` is matched by
- * nothing. An allowlist keyed only by `expr,frac` admitted both, and `x a/b c`
- * — which the gem answers `Formula([Symbol("x"), Frac(a, b), Symbol("c")])` —
- * came back from this port as folded pairs. Each entry below therefore records
- * `key=shape` per key, with `shape` computed exactly as pegkit's `simple` and
- * `sequence` matchers decide.
- *
- * Measured, not reasoned about: every registered block was wrapped on the
- * oracle and every hash that reached `transform_elt` without matching a rule
- * was recorded with its value shapes, over the 103 corpus strings the
- * fixtures carried at the time (the pinned corpus is 182 strings now; this
- * table was not re-swept against the larger set). Nine signatures came back,
- * across FIVE inputs:
- *
- *   - `(a)/(+) b` — `close_paren=simple,open_paren=simple,operator=simple`,
- *     `intermediate_exp=other`, `factor=other`,
- *     `denominator=other,numerator=simple`, `expr=simple,frac=other`;
- *   - `a ± b` — `combined_symbols=simple,expr=simple`, `expr=other,factor=simple`;
- *   - the three accent inputs — `accent_symbols=simple`, `first_value=simple`,
- *     which `transform.rb:52` consumes as a `subtree` and never leaves behind.
- *
- * The first two inputs are a GEM BUG, reproduced here rather than fixed: no
- * rule in the 519 has the signature `{combined_symbols: simple, expr: simple}`
- * or `{close_paren:, open_paren:, operator:}`, so the hash survives the
- * transform, `Kernel#Array` in `UnicodeMath::Parser#parse` folds the OUTERMOST
- * one into its `[key, value]` pairs, and
- * `Plurimath::Math.parse("a ± b", :unicode)` returns a `Formula` whose value is
- * `[["factor", Symbol("a")], ["expr", {combined_symbols: "&#xb1;", expr:
- * Symbol("b")}]]` — a tree no renderer can read, returned without raising.
- *
- * **This list is the measured corpus exceptions, not a decision procedure.** A
- * signature's absence does NOT mean the gem matches it: it means no pinned
- * corpus input produced it, so nothing here knows. Anything absent is REFUSED,
- * which is conservative in both directions — it catches a node whose rule this
- * slice has not reached, and it also refuses a handful the gem itself leaves
- * unmatched. Measured example: `±+a` leaves
- * `{combined_symbols=simple, expr=sequence}` unmatched in the gem too, which
- * answers it with folded pairs; this port refuses it. Widening the list is a
- * measurement, never a guess — every entry below came from an oracle trace.
- *
- * A second, later measurement (round-2 review, not the original 103-string
- * corpus scan) added the six `sub_exp`/`base`/`sub_script`/`int_exp`/
- * `close_paren` signatures below, from `x_├1(2┤1)` and its `x_├N(M┤K)`
- * size-prefix-plus-sub siblings: another GEM BUG of the same shape as `±`,
- * except the unmatched hash nests four levels deep rather than sitting at
- * the root alone, so `finalizeValue`'s recursion needs every level's own
- * signature admitted, not just the outermost.
+ * Nested transformed plain Hashes remain Hashes; the root folds into key/value pairs.
+ * The complete reachable rule set is registered; the pinned unreachable-rule
+ * proofs live in docs/unicodemath-rule-reachability.md. Restricting preservation
+ * to previously measured signatures rejects valid compositions (for example
+ * nested combined symbols and equation labels). Differential fixtures check
+ * the resulting public models. Finalization must not reapply transform rules:
+ * Ruby also leaves action-returned Hashes at their current level.
  */
-const GEM_UNMATCHED_SIGNATURES: ReadonlySet<string> = new Set([
-  "accent_symbols=simple",
-  // `f'(x)`: `{accents: {first_value:, prime_accent_symbols:}, expr:}`. `:1412`
-  // resolves the accents half to a `Power`; no rule of the 519 has the
-  // `accents` + `expr: simple` signature (`transform.rb:341`/`:346` need a
-  // SEQUENCE), so the gem returns the folded pairs. Oracle trace fires only
-  // `:18 :39 :71 :92 :1412 :2619`.
-  "accents=simple,expr=simple",
-  // `a·b·c`: the ATOMS combinator's `{atom:, atoms: {atom:, atoms:}}` chain.
-  // `:486`/`:496` need `atoms` simple or a sequence, so a nested hash in
-  // `atoms` binds neither; the inner `{atom: sequence, atoms: sequence}` pair
-  // matches none of `:486`/`:491`/`:496` either.
-  "atom=sequence,atoms=sequence",
-  "atom=simple,atoms=other",
-  "close_paren=simple,open_paren=simple,operator=simple",
-  "combined_symbols=simple,expr=simple",
-  "denominator=other,numerator=simple",
-  "expr=other,factor=simple",
-  "expr=simple,frac=other",
-  "factor=other",
-  "first_value=simple",
-  "intermediate_exp=other",
-  // `x_├1(2┤1)` (and every `x_├N(M┤K)` size-prefix-plus-sub variant traced:
-  // `x_├0(2┤1)`, `x_├2(2┤1)`, `x_├1(2┤0)`): the gem's own `mini_sub`/`base`/
-  // `sub` chain never reduces `sub`'s `sub_script: {int_exp: {opener:,
-  // operand:, closer:}}` shape to a leaf value the port's ported rules
-  // reach — traced on the oracle (`TracePoint :b_call` over
-  // `unicode_math/transform.rb`), NONE of its 516 rules ever fires a key
-  // named `sub_exp` for this input, so the ROOT hash `{sub_exp: {base:,
-  // sub:}}` survives the whole transform exactly as `combined_symbols` does
-  // for `±` above, and `Kernel#Array` folds it into
-  // `Formula([["sub_exp", {base: Symbol("x"), sub: {...}}]])` — a gem bug,
-  // reproduced here rather than fixed, not a slice gap. The unmatched hash
-  // nests four deep — `sub_exp`'s value is itself unmatched, and so is
-  // every hash inside it, down to the innermost `close_paren` wrap — because
-  // `finalizeValue` recurses into every hash entry once the outer one is
-  // accepted, checking each nested hash's OWN signature the same way. Every
-  // signature below is that recursion's floor, not a separate gap:
-  "sub_exp=other",
-  "base=simple,sub=other",
-  "sub_script=other",
-  "int_exp=other",
-  "closer=other,opener=sequence,operand=simple",
-  "close_paren=sequence",
-]);
 
 /**
  * What a value would bind as, in pegkit's own terms: `simple` binds anything
@@ -5282,30 +5170,6 @@ export function shapeOf(value: unknown): "simple" | "sequence" | "other" {
   return isPlainObject(value) ? "other" : "simple";
 }
 
-function signatureOf(hash: Record<string, unknown>): string {
-  return Object.entries(hash)
-    .map(([key, value]) => `${key}=${shapeOf(value)}`)
-    .sort()
-    .join(",");
-}
-
-/**
- * Refuses a hash the gem would have matched. Both the value walk below and the
- * ROOT wrap in `finalizeUnicodemathParse` go through here — the root used to
- * skip it, because `Kernel#Array` folded the hash into pairs before anything
- * looked at it, so `±` came back as `Formula([["combined_symbols", "&#xb1;"]])`
- * where the gem answers `Formula([Pm])`.
- */
-function assertGemLeavesUnmatched(hash: Record<string, unknown>): void {
-  const signature = signatureOf(hash);
-  if (!GEM_UNMATCHED_SIGNATURES.has(signature)) {
-    throw new Error(
-      `unicodemath transform: no rule matched {${signature}}; ` +
-        "that rule family is not in this slice",
-    );
-  }
-}
-
 /**
  * Finalizes one transformed value into what the immutable model can hold:
  * drafts become `core` nodes, slices become their text (the gem's serializer
@@ -5319,7 +5183,6 @@ function finalizeValue(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(finalizeValue);
   if (isDraft(value)) return finalizeDraft(value);
   if (isPlainObject(value)) {
-    assertGemLeavesUnmatched(value);
     const result: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) result[key] = finalizeValue(entry);
     return result;
@@ -5342,9 +5205,8 @@ function finalizeDraft(draft: UnicodemathDraft, inputString?: string): MathNode 
     // already-finalized primitives — `{accent: true}` (`unicode_math/
     // utility.rb:51`), and FRACTION's `displaystyle`/`linethickness`/
     // `bevelled`/`ldiv`/`choose`, singly or paired (`:1614`-`:2377`). Routing
-    // it through `finalizeValue` would put it in the unmatched-node branch,
-    // where none of these key sets is one the gem leaves behind, and it would
-    // be refused.
+    // it through `finalizeValue` would reinterpret option values as tree
+    // carriers; keep their already-finalized representation instead.
     init[key] = key === "options" ? value : finalizeValue(value);
   }
   if (draft.identity !== undefined) init[draft.kind === "symbol" ? "id" : "name"] = draft.identity;
@@ -5361,22 +5223,17 @@ function finalizeDraft(draft: UnicodemathDraft, inputString?: string): MathNode 
  * The wrap is `Math::Formula.new(Array(transformed))`, and `Kernel#Array` is
  * NOT `[x] unless Array`: nil folds to `[]`, and a Hash folds to its
  * `[key, value]` pairs (`Hash#to_a`) rather than being wrapped whole. That arm
- * is live — two corpus inputs reach it (see `GEM_UNMATCHED_SIGNATURES`) — so it
- * is transcribed, symbol keys becoming the strings the gem's serializer emits
- * for them.
- *
- * The root hash is CHECKED before it is folded. Folding first would put the
- * pairs beyond `finalizeValue`'s reach, and the refusal this port owes for a
- * node whose rule it does not carry would never fire: `±` transforms to the
- * root `{combined_symbols: Slice}`, which `transform.rb:99` matches and this
- * slice does not.
+ * is live in the measured corpus and composition probes. Symbol keys become
+ * the strings emitted by the reference serializer. Nested Hashes are preserved
+ * recursively while slices and draft nodes are materialized, without another
+ * transform pass.
+
  */
 export function finalizeUnicodemathParse(transformed: unknown, inputString: string): FormulaNode {
   let value: unknown[];
   if (transformed === null || transformed === undefined) value = [];
   else if (Array.isArray(transformed)) value = transformed;
   else if (isPlainObject(transformed) && !isDraft(transformed)) {
-    assertGemLeavesUnmatched(transformed);
     value = Object.entries(transformed).map(([key, entry]) => [key, entry]);
   } else value = [transformed];
   return finalizeDraft(newFormula(value), inputString) as FormulaNode;

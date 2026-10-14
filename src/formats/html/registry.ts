@@ -70,6 +70,7 @@ import {
   UlNode,
   UnaryFunctionNode,
   UndersetNode,
+  UnitsmlNode,
   VecNode,
 } from "../../core/index";
 import { NODE_SPECS } from "../../core/normalize";
@@ -157,6 +158,7 @@ export const HTML_NODE_CONSTRUCTORS: { readonly [K in NodeKind]: HtmlNodeConstru
   ul: UlNode,
   unaryFunction: UnaryFunctionNode,
   underset: UndersetNode,
+  unitsml: UnitsmlNode,
   vec: VecNode,
 };
 

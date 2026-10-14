@@ -9,6 +9,7 @@
  */
 import * as C from "../../../src/core/index";
 import { toHtml } from "../../../src/formats/html/renderer";
+import { validateUnitsml } from "../../../src/unitsml/index";
 
 export const FORMAT = "html";
 export const RENDER = (node: never): string =>
@@ -26,13 +27,7 @@ export const RENDER = (node: never): string =>
  */
 export const KNOWN_DIVERGENCES: Readonly<
   Record<string, { readonly reason: string; readonly portOutput: string }>
-> = {
-  "text-unitsml-valid": {
-    reason:
-      "UnitsML is deferred wholesale (ARCHITECTURE.md §5, decided 2026-07-29); the grammar rule is present but commented out, so unitsml(...) degrades to text",
-    portOutput: "unitsml(kg)",
-  },
-};
+> = {};
 
 /**
  * Corpus cases the gem renders and this port refuses — the HTML slice's gap,
@@ -74,9 +69,8 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  * two disagree only when one was edited without the other.
  *
  * All 228 the gem renders: 89 written in AsciiMath, 119 in LaTeX and 20 in
- * UnicodeMath. 227 match it byte for byte; the 228th is `text-unitsml-valid`,
- * which renders and diverges by decision — it is counted here as rendered and
- * pinned both ways in `KNOWN_DIVERGENCES`. The 139 LaTeX- and UnicodeMath-input
+ * UnicodeMath. The former `text-unitsml-valid` text fallback is now replaced by
+ * native UnitsML expansion; no fallback divergence remains permitted. The 139 LaTeX- and UnicodeMath-input
  * cases joined the sweep matching the gem as they stood. MathML input added
  * 268 more the gem renders: 262 match, and six are in `PORT_REFUSES` (490 =
  * 228 + 262). OMML input added 168 byte-identical cases (658 = 490 + 168).
@@ -142,6 +136,18 @@ export interface DegenerateKind {
  * of the expected matrix: a truncated fixture cannot agree with it.
  */
 export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
+  unitsml: {
+    renderKind: "unitsml",
+    rubyClass: "Plurimath::Math::Function::Unitsml",
+    slots: ["string"],
+    build: (s, v) => {
+      const [text] = at(s, v, ["string"]);
+      // Ruby eagerly validates in its constructor. Core stays format-blind,
+      // so this adapter exercises the equivalent native leaf parse boundary.
+      validateUnitsml(text as string);
+      return new C.UnitsmlNode({ text } as never);
+    },
+  },
   frac: {
     renderKind: "frac",
     rubyClass: "Plurimath::Math::Function::Frac",

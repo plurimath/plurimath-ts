@@ -2,8 +2,8 @@
  * Every ported transform rule is exercised by the fixture set.
  *
  * `model-parity.spec.ts` proves the port agrees with the gem on every parsed
- * input of `model-fixtures.json` (616 cases: 182 corpus, 431 coverage, 3
- * slice-boundary; 601 parsed, 15 raised). It
+ * input of `model-fixtures.json` (its metadata records the current case and
+ * outcome counts). It
  * cannot prove that a rule was ever REACHED — a rule with a typo in its action
  * passes vacuously if nothing routes to it — so `buildUnicodemathTransform`
  * counts each rule's firings, this suite drives the whole fixture set through
@@ -48,6 +48,9 @@ interface FixtureCase {
 const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf8")) as {
   readonly cases: readonly FixtureCase[];
 };
+const unreachedFixtures = JSON.parse(
+  readFileSync(join(HERE, "unreached-fixtures.json"), "utf8"),
+) as { readonly cases: readonly FixtureCase[] };
 
 /**
  * One transform, driven over every input the gem parsed, counting firings.
@@ -92,12 +95,23 @@ for (const entry of fixtures.cases) {
   reached += 1;
 }
 
-const FINAL_COUNT = 483;
+// These are real public parse witnesses projected from the calibrated Ruby
+// trace, including `1/a≤∫`; they exercise :2323 in this same counted transform.
+for (const entry of unreachedFixtures.cases) {
+  build.transform.apply(parseUnicodemathTree(entry.input));
+}
+
+const FINAL_COUNT = 484;
 
 describe("transform rule coverage", () => {
   it("drove every parseable fixture through one transform", () => {
     expect(reached).toBe(fixtures.cases.filter((entry) => entry.model !== undefined).length);
     expect(reached).toBeGreaterThan(90);
+  });
+
+  it("reaches the newly measured rule through a public parse witness", () => {
+    expect(unreachedFixtures.cases.some((entry) => entry.input === "1/a≤∫")).toBe(true);
+    expect(build.fired.get("2323")).toBeGreaterThan(0);
   });
 
   it("registers every rule the slice carries", () => {
@@ -230,8 +244,8 @@ describe("transform rule coverage", () => {
     // `:2097`, `:2245`, `:2403` (slice F's "no reaching input" above is
     // superseded), `:3828` and `:3885` (two of the twenty-one just named) —
     // reached by the hand-picked "remaining" coverage group, except `:83`,
-    // whose only witness is a `SLICE_BOUNDARY` row. The other 36 are 26 dead
-    // and 10 unreached; the former module header (`git show 9bbe254e:src/formats/unicodemath/transform.ts`) lists each with its evidence.
+    // whose only witness is a `SLICE_BOUNDARY` row. The other 35 are unreachable:
+    // 26 historical proofs plus nine in docs/unicodemath-rule-reachability.md.
     // Slice tallies above are historical; the assertion is the one final count.
     expect(build.ruleIds.length).toBe(FINAL_COUNT);
     expect(new Set(build.ruleIds).size).toBe(FINAL_COUNT);

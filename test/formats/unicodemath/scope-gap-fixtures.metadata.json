@@ -1,0 +1,70 @@
+{
+  "oracle": "00c52783877b38f6b8e6e109f1803f96bb34fc62",
+  "lockSha256": "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121",
+  "source": "2f6bae3b8db4d97b1de3fff95794b53199e82f24",
+  "sourceDirty": false,
+  "parslet": {
+    "version": "2.0.0",
+    "engineInputs": {
+      "lib/parslet/atoms/base.rb": "98a1857e3117aeca6f056ac927880347b41cce93922f544ae9f7be65492f332c",
+      "lib/parslet/atoms/alternative.rb": "f092d64ad6ed9c62a48caae791d346c11f8b3fba7775d035bfad9856cd37345c",
+      "lib/parslet/atoms/sequence.rb": "a2c0b1df5e1fcf4defa2dae5f25b6c86786ff244b59d12b247e64064211076ae",
+      "lib/parslet/atoms/named.rb": "b09e7f00a42813f10b709fb5aff659b16b2130b54b3429abbf4c6bd024341223",
+      "lib/parslet/atoms/can_flatten.rb": "6249216bbe837026dcb0060b9feae9617537e22c86c912eaa9af57ad1aa4ea07",
+      "lib/parslet/atoms/repetition.rb": "8cbf92a988b1ab7c89ba365c383ed3be41a5261854cf98327e2d33b15b0017c1",
+      "lib/parslet/atoms/entity.rb": "bf1f548821c87216fc21718923e93af7d9dee3e974e02ec56f86a795404321a6",
+      "lib/parslet/context.rb": "f7ca001b5d4f19d3075e6118e4737f2c05cb6a7a680109f1a3484dbaca89ba24",
+      "lib/parslet/atoms/context.rb": "3e2daa29f91ea7637901109b232597d1b5741fe4e2dc773792d0aac3fd7f474d",
+      "lib/parslet/pattern/binding.rb": "4def64e796ae865efc1461758cbbe8799006e2c05869dffc1d71da5347a74051",
+      "lib/parslet/pattern.rb": "32532929c127ffc25957bb878f1330b7276ca5d5d13ab5ecbd32028a18e68ce7",
+      "lib/parslet/transform.rb": "759a8d688500503f8bdedb0a60f41cc0be6c4a88cdf25d53d2a7e4facdcd699c"
+    }
+  },
+  "sourceInputs": {
+    "scripts/ci/unicode-unreached-probe.rb": "f85b0fc465d1275194ad4c4f20063b2cd028f886dc0fbe86f9c0f5491a2c688c",
+    "scripts/generate-unitsml-data.rb": "daf5853c30cf6aa9eed44faf2adb6ca431b7f4a44e47cc939f35a080a4ac2b59",
+    "scripts/generate-corpus.rb": "620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75",
+    "test/formats/unicodemath/model-fixtures.json": "3a00f89d2fbdc019849b3435f6cbbfed199156f363f039b4fda2d8bf84c04207"
+  },
+  "oracleInputs": {
+    "lib/plurimath/unicode_math/constants.rb": "efa945ac576cee32e34eec1844ff0bb43b0fe6e7f8985e64f038518f4aded716",
+    "lib/plurimath/unicode_math/parse.rb": "c6caf7398b0ed9a59dd208965653f5ca1325b49b8721cd849b706040db41a1a8",
+    "lib/plurimath/unicode_math/parser.rb": "f77f703c89bae7514d0a0e3c6e6185dbdda6f8bdbd266bf9dbaa3262a8a589f3",
+    "lib/plurimath/unicode_math/parsing_rules.rb": "7654f41231ea2b50f5b57bd1825549f10c125ad22a24a96b418a4511cb347b2d",
+    "lib/plurimath/unicode_math/parsing_rules/absence_rules.rb": "9e4dfc894e7db06b5f8ebe80c6328209fc4d286bc872e9bfd6b178f0b53fbb10",
+    "lib/plurimath/unicode_math/parsing_rules/common_rules.rb": "ca7f28d59ec28153307725f1d8ec164addd4ef5c18d5811d73b995b10ddc8468",
+    "lib/plurimath/unicode_math/parsing_rules/constants_rules.rb": "b10e62251fb349b9a8dffb1c15eba26dedb555fde2b3d9df38a28ff9d2d4ab80",
+    "lib/plurimath/unicode_math/parsing_rules/helper.rb": "b99eb72ac11b90089a0746c2e2ba11f73d6903e4b4779f1b19c75f5184b6a371",
+    "lib/plurimath/unicode_math/parsing_rules/masked.rb": "e5a9dd65e537055c1e91f3cc0ab1b0afac733e216b058d87656197cf36e0b75a",
+    "lib/plurimath/unicode_math/parsing_rules/sub_sup.rb": "e92d10ecc9678013da85bae04f9ed5d6e0e59b04fe1356b863d96c0088f4af49",
+    "lib/plurimath/unicode_math/transform.rb": "3158f78d9861a4f31e8a0b393ca3caf53c8ef696fa855fdf4079d8aea2ab7009",
+    "lib/plurimath/unicode_math/utility.rb": "7b0a7b729b0d33740971494e8badca486d288c9569b025d9945a4cd19445326c"
+  },
+  "traceControlsPassed": true,
+  "controlFirings": {
+    "18": 1095,
+    "1609": 69
+  },
+  "targetFirings": {
+    "760": 0,
+    "925": 0,
+    "930": 0,
+    "1841": 0,
+    "2041": 0,
+    "2323": 62,
+    "2341": 0,
+    "2777": 0,
+    "2787": 0,
+    "3074": 0
+  },
+  "priorityCandidateCount": 222,
+  "unattemptedPriorityInputs": [],
+  "schema": "plurimath-unicodemath-scope-gap-projection/1",
+  "sourceRun": "https://github.com/plurimath/plurimath-ts/actions/runs/38570631183",
+  "sourcePayloadSha256": "5069c809db1649b9879c75d39c31daf905d49e7141f70f86d35680ce786a09a4",
+  "payloadSha256": "a647e8a03cc90066a83a9513b6ed3c56ffb8c7ec4220f79bc4908bd56afac8fe",
+  "projection": {
+    "rowCount": 134,
+    "selection": "route begins scope-gap/; source rows retained verbatim"
+  }
+}

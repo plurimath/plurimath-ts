@@ -40,15 +40,19 @@ The current source and package entries provide:
   `./mathml`, `./html`, `./omml` and `./unicodemath`, plus the root entry and a
   `plurimath` executable.
 - The HTML parity fixture covers 664 gem-renderable cases written in
-  AsciiMath, LaTeX, UnicodeMath, MathML or OMML. The port renders 658 of them,
-  657 byte-identically; six MathML text cases remain explicit refusals, and
-  `text-unitsml-valid` differs by decision (see
-  `test/formats/html/parity-target.ts`). The corpus is not the whole language:
+  AsciiMath, LaTeX, UnicodeMath, MathML or OMML. The port renders 658 of them;
+  six MathML text cases remain explicit refusals (see
+  `test/formats/html/parity-target.ts`). Native UnitsML expansion replaces
+  the former `text-unitsml-valid` plain-text divergence. The corpus is not the
+  whole language:
   a construct it does not cover can still raise `RenderError`, for example
   `cancel(x)` in `./html` and `./omml`.
-- The UnicodeMath parser covers part of the gem's grammar. Input outside what it
-  supports raises `ParseError` rather than returning a wrong model (see
-  [Not yet supported](#not-yet-supported)).
+- UnicodeMath input uses the pinned gem's grammar and 484 reachable transform
+  rules. The other 35 rules have source-based unreachability proofs (see
+  [rule reachability](docs/unicodemath-rule-reachability.md)). The parser
+  preserves raw trees that Ruby leaves unmatched; those models may refuse
+  rendering in both implementations. Conformance is measured against the
+  generated fixtures, rather than inferred from the rule count.
 
 Correctness is gated rather than asserted: a registry of quality gates activates
 in milestones. The current one is recorded as `currentMilestone` in
@@ -74,7 +78,7 @@ both ESM (`import`) and CommonJS (`require`) entries.
 | AsciiMath | `parseAsciimath` | `toAsciimath` | `./asciimath` |
 | LaTeX | `parseLatex` | `toLatex` | `./latex` |
 | HTML | `parseHtml` | `toHtml` | `./html` |
-| UnicodeMath | `parseUnicodemath` (partial grammar) | `toUnicodemath` | `./unicodemath` |
+| UnicodeMath | `parseUnicodemath` | `toUnicodemath` | `./unicodemath` |
 | MathML | `parseMathml` | `toMathml` | `./mathml` |
 | OMML | `parseOmml` | `toOmml` | `./omml` |
 
@@ -184,7 +188,7 @@ import { ParseError, UnsupportedFeatureError, UnsupportedFormatError } from "@pl
 | Class | `code` | Seen when |
 |---|---|---|
 | `ParseError` | `PARSE_ERROR` | input does not parse, e.g. `parseLatex("\\frac{1")` |
-| `UnsupportedFormatError` | `UNSUPPORTED_FORMAT` | a recognized parse type with no parser, such as `unitsml` (outside the compat `Format` union) |
+| `UnsupportedFormatError` | `UNSUPPORTED_FORMAT` | a recognized operation without a native implementation |
 | `InvalidTypeError` | `INVALID_TYPE` | `new Plurimath("x", "asciimath").toDisplay("html")` |
 | `UnsupportedFeatureError` | `UNSUPPORTED_FEATURE` | `new Plurimath("mathbf(x)", "asciimath").toDisplay("unicodemath")` |
 | `RenderError` | `RENDER_ERROR` | a node the renderer refuses, e.g. `toOmml(parseAsciimath("cancel(x)"))` |
@@ -206,9 +210,9 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
   `log`'s rounding band and the answer depends on its rounding, such as
   `\lg(0.214)`: it raises `UnsupportedFeatureError`
   (`src/evaluation/libm.ts`).
-- UnicodeMath input beyond the grammar slice ported so far: unmatched rules
-  raise `ParseError`.
-- UnitsML: `unitsml(kg)` is treated as ordinary text, by decision.
+- Standalone UnitsML input is not a public parse format. Use quoted inline
+  AsciiMath, such as `parse('"unitsml(kg)"', "asciimath")`; all six renderers
+  accept nested `unitsml` options.
 - Constructs the renderers have not measured (for example `cancel(x)` in
   `./html` and `./omml`) raise `RenderError`.
 

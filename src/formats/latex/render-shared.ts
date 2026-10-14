@@ -25,6 +25,7 @@ import {
 import { NODE_SPECS } from "../../core/normalize";
 import type { NumberFormat } from "../../formatting/index";
 import { LATEX_PLAIN_WRAPPED_UNARY_NAMES } from "../../generated/latex/render-tables";
+import type { UnitsmlRenderOptions } from "../../unitsml/index";
 
 export const FORMAT = "latex";
 
@@ -54,6 +55,7 @@ export {
  * so a regeneration that introduces variants fails loudly.
  */
 export interface RenderContext {
+  readonly unitsml: UnitsmlRenderOptions | null;
   readonly numberFormat: NumberFormat | null;
   /**
    * `child.to_latex(options:)` — looks the child's kind up in the render
@@ -404,3 +406,7 @@ export function unreachableName(kind: string, name: string): RenderError {
     kind,
   );
 }
+
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
+// Leaf-service access for this format's per-kind renderers.
+export { expandUnitsml } from "../../unitsml/index";

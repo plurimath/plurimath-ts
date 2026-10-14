@@ -9,10 +9,10 @@ generator:
   sha256: 12f5187599a168cf4cdf99bb11e0a918b901b611d56ceee0d29967d5e929977c
   inputs:
     scripts/generate-asciimath-model-fixtures.rb: 12f5187599a168cf4cdf99bb11e0a918b901b611d56ceee0d29967d5e929977c
-    scripts/generate-corpus.rb: 4958f26a003c6c10da2031d109fcd85d73240f65f4392b6370c79bc111e224f5
+    scripts/generate-corpus.rb: 620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 7942257249ecde3a1f8d2a91e8face81c88fbc73
+    commit: cb5ba94c2bd52ab6f35102b3b6de447726844fe4
     clean: true
     dirty_paths: []
 oracle:
@@ -115,5 +115,5 @@ corpus:
 payload:
   path: model-fixtures.json
   schema: plurimath-corpus/asciimath-model/1
-  sha256: 8f312b7b6e3059d714078630762da663edf48b66351309ef7f5ab8a552fc2eda
-  bytes: 1964504
+  sha256: d05579a6218791eb8b566bec26c8b4b2dc467c08618a9fb45dfda6374ffbfdbe
+  bytes: 1964815

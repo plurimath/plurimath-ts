@@ -24,6 +24,7 @@
  * shakes `parseHtml` out of an app that never calls it.
  */
 
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
 export type { HtmlParseOptions } from "./parser";
 export { parseHtml } from "./parser";
 export type { HtmlOptions } from "./renderer";

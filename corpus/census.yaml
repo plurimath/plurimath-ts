@@ -39,13 +39,12 @@ policy:
   - Math::Function::TernaryFunction
   - Math::Function::UnaryFunction
   - Math::Symbols::Paren
-  deferred:
-  - Math::Function::Unitsml
+  deferred: []
 summary:
   total: 1591
-  implemented: 38
+  implemented: 39
   aliased: 1552
-  deferred: 1
+  deferred: 0
   abstract: 4
   concrete: 1587
 equality_definitions:
@@ -2068,19 +2067,24 @@ classes:
     - hide_function_name
 - name: Math::Function::Unitsml
   parent: Math::Core
-  disposition: deferred
+  disposition: implemented
   abstract: false
   direct_subclasses: 0
   fields:
   - text
-  - unitsml
   own_fields:
   - text
-  - unitsml
   equality:
     defined_by: Math::Function::Unitsml
     fields:
     - text
+  defaults:
+    required_arguments: 1
+    assigned:
+      text: kg
+    unassigned: []
+    constructor_arguments:
+    - kg
 - name: Math::Function::Vec
   parent: Math::Function::UnaryFunction
   disposition: implemented

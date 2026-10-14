@@ -354,18 +354,15 @@ block-return-nil rule) rather than raising — measured directly on the pinned
 oracle — so `src/render/text/omml.ts` renders it empty, and nothing in this
 area still refuses.
 
-### MathML renderer: `options[:mask]` supports only the inert decoding
+### MathML renderer: `options[:mask]` — CLOSED
 
-**Trigger: UnicodeMath input (P3), whose parser is what constructs masked
-`Int`/`Nary` nodes.**
-
-The gem decodes `options[:mask]` into limit options and rewrites the script
-tag (`Core#get_mask_options`/`masked_tag`, core.rb:502-570; probed: `mask: 1`
-renames `msubsup` to `munderover`). The port reproduces the gem's read gates
-exactly — `Int` checks the KEY (`{mask: nil}` renders, probed byte-identical
-to no mask), `Nary` checks truthiness, a nil `Nary` options hash crashes —
-and refuses any mask whose decoding is not `limits_default`-only, with a
-named `RenderError`. No parse this port supports can construct a live mask.
+**Closed by the native UnicodeMath completion.** `Int` and `Nary` now apply
+`Core#get_mask_options`/`masked_tag` semantics. Their read gates stay distinct:
+`Int` checks key presence and retains a returned replacement tag; `Nary` checks
+truthiness and retains only the in-place effects. Placeholder checks use the
+reference's literal parameter slots. The measured integral sweep covers masks
+0–31 across four public input shapes: 96 parse/render observations and 32
+reference parse refusals. The fixtures preserve both outcomes.
 
 ### MathML renderer: `Color`'s attribute is the gem's one cross-format call
 
@@ -953,11 +950,12 @@ does not survive.
 
 Not worked around: `src/formats/unicodemath/transform.ts` reproduces both trees
 and `test/formats/unicodemath/model-fixtures.json` pins them. The nine
-signatures the gem leaves unmatched over the pinned corpus — key AND value shape
-per key, because Parslet binds on the matcher kind too — are listed as
-`GEM_UNMATCHED_SIGNATURES` in that transform; anything else surviving it is
-refused, because for this port that would mean a rule family the first slice has
-not reached.
+signatures first measured over the pinned corpus were originally kept in a
+finite allowlist. That restriction is now removed: all reachable transform rules
+are registered, all 35 omissions have pinned-source proofs, and finalization
+preserves every remaining raw Hash without reapplying rules. Composition and
+label regressions pin the Ruby-returned models. This closes the port's extra
+refusals; it does not repair the reference gem's unrenderable models.
 
 ### `Formatter::Standard` ignores `locale:` for the decimal and group symbols
 

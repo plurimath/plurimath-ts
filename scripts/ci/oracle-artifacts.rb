@@ -9,13 +9,14 @@ require "open3"
 require "optparse"
 require "set"
 require "yaml"
+require "thread"
 
 $stdout.sync = true
 
 module OracleArtifacts
   PIN = "00c52783877b38f6b8e6e109f1803f96bb34fc62"
   LOCK_SHA = "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121"
-  ROOTS = %w[corpus src/generated src/core/generated src/formatting/generated
+  ROOTS = %w[corpus src/unitsml/generated src/generated src/core/generated src/formatting/generated
              src/formats/html/generated src/formats/latex/generated
              src/formats/mathml/generated src/formats/omml/generated
              src/formats/unicodemath/generated].freeze
@@ -29,6 +30,7 @@ module OracleArtifacts
       raise "artifact root must be outside all checkouts" if
         [@source, @oracle, @verify].any? { |p| @out.start_with?("#{p}/") }
       @env = { "BUNDLE_GEMFILE" => File.join(@oracle, "Gemfile"), "BUNDLE_FROZEN" => "true" }
+      @report_mutex = Mutex.new
       @mode = mode
       @logs = File.join(@out, "logs")
       if @mode == "verify"
@@ -62,10 +64,12 @@ module OracleArtifacts
       rescue SystemCallError => e
         launch_error = e.message
       end
+      @report_mutex.synchronize do
       @report["stages"] << { "name" => name, "command" => args, "cwd" => cwd,
                             "exit" => status&.exitstatus, "signal" => status&.termsig, "launchError" => launch_error,
                             "seconds" => Process.clock_gettime(Process::CLOCK_MONOTONIC) - started }
       save
+      end
       success = status&.success? == true
       puts "#{name}: #{success ? 'passed' : 'failed'} (exit #{status&.exitstatus.inspect}, signal #{status&.termsig.inspect})"
       raise "#{name} failed; see #{log}" if required && !success
@@ -91,6 +95,7 @@ module OracleArtifacts
         "formats/omml" => "omml-data", "formats/unicodemath" => "unicodemath-parser-data" }.each do |dir, script|
         jobs << [script, "generate-#{script}.rb", ["--gem", @oracle, "--out", at.call("src/#{dir}/generated")]]
       end
+      jobs << ["unitsml-data", "generate-unitsml-data.rb", ["--oracle", @oracle, "--out", output]]
       FORMATS.each do |format|
         jobs << ["#{format}-model", "generate-#{format}-model-fixtures.rb",
                  ["--oracle", @oracle, "--out", at.call("test/formats/#{format}")]]
@@ -119,16 +124,71 @@ module OracleArtifacts
         manifest = YAML.safe_load(File.read(File.join(@source, path)), aliases: false)
         payload = File.join(File.dirname(path), manifest.fetch("payload").fetch("path"))
         raise "untracked fixture payload: #{payload}" unless files.include?(payload)
-        [path, payload]
+        metadata = payload.sub(/\.json\z/, ".metadata.json")
+        [path, payload] + (files.include?(metadata) ? [metadata] : [])
       end
       (roots + fixture_paths).uniq.sort
     end
 
+    def omitted_family_paths
+      @paths.select do |path|
+        path.match?(%r{\Asrc/formats/(?:html|unicodemath)/generated/(?:parser-tables|transform-tables|provenance)\.ts\z}) ||
+          path.match?(%r{\Atest/.*(?:cli-fixtures|evaluation-fixtures|render-options-fixtures|render-kinds-fixtures|ox-contract\.expected)\.(?:json|manifest\.yaml)\z})
+      end
+    end
+
     def generate(output, pass, env, jobs: inventory(output), paths: @paths)
       FileUtils.mkdir_p(output)
-      jobs.each do |name, script, args|
+      run_job = ->(job) do
+        name, script, args = job
         command("#{pass}-#{name}", ["bundle", "exec", "ruby", "scripts/#{script}", *args], env: env)
       end
+      pending = jobs.dup
+      # The corpus owns shared census/symbol inputs and always completes first.
+      run_job.call(pending.shift) if pending.first&.first == "corpus"
+      active_roots = []
+      errors = []
+      schedule = Mutex.new
+      changed = ConditionVariable.new
+      roots_for = lambda do |job|
+        name, _, args = job
+        if name == "unitsml-data"
+          %w[src/unitsml/generated src/formats/unicodemath/generated
+             test/formats/unitsml test/formats/unicodemath].map { |path| File.join(output, path) }
+        else
+          root = args[args.index("--out") + 1]
+          root = File.dirname(root) if root.end_with?(".json")
+          root = File.join(root, name.delete_suffix("-parity")) if name.end_with?("-parity")
+          [root]
+        end
+      end
+      overlap = ->(a, b) { a == b || a.start_with?("#{b}/") || b.start_with?("#{a}/") }
+      workers = Array.new(3) do
+        Thread.new do
+          loop do
+            job = schedule.synchronize { pending.shift }
+            break unless job
+            roots = roots_for.call(job)
+            schedule.synchronize do
+              changed.wait(schedule) while roots.any? { |root| active_roots.any? { |active| overlap.call(root, active) } }
+              active_roots.concat(roots)
+            end
+            begin
+              run_job.call(job)
+            rescue StandardError => e
+              schedule.synchronize { errors << e }
+            ensure
+              schedule.synchronize do
+                roots.each { |root| active_roots.delete(root) }
+                changed.broadcast
+              end
+            end
+          end
+        end
+      end
+      workers.each(&:join)
+      workers.each(&:value)
+      raise errors.first unless errors.empty?
       actual = Dir.glob("**/*", base: output).select { |p| File.file?(File.join(output, p)) }.sort
       raise "#{pass} output inventory mismatch: #{(actual.to_set ^ paths.to_set).to_a}" unless actual == paths
       clean!(@source)
@@ -252,10 +312,7 @@ module OracleArtifacts
       second = File.join(@out, "second-generated")
       omitted_names = %w[html-parser-data unicodemath-parser-data cli-fixtures evaluation-fixtures
                          render-options-fixtures xml-fixtures]
-      omitted_paths = @paths.select do |path|
-        path.start_with?("src/formats/html/generated/", "src/formats/unicodemath/generated/") ||
-          path.match?(%r{\Atest/.*(?:cli-fixtures|evaluation-fixtures|render-options-fixtures|render-kinds-fixtures|ox-contract\.expected)\.(?:json|manifest\.yaml)\z})
-      end
+      omitted_paths = omitted_family_paths
       raise "empty omitted-family inventory" if omitted_paths.empty?
       deterministic = false
       begin
@@ -286,11 +343,13 @@ module OracleArtifacts
   end
 end
 
-options = { mode: "all" }
-OptionParser.new do |parser|
-  parser.on("--mode MODE", %w[all export verify]) { |value| options[:mode] = value }
-  %w[source oracle verify out].each { |name| parser.on("--#{name} PATH") { |value| options[name.to_sym] = value } }
-end.parse!
-abort "--source, --oracle, --verify and --out are required" unless options.keys.sort == %i[mode oracle out source verify]
-FileUtils.mkdir_p(options.fetch(:out))
-exit OracleArtifacts::Runner.new(**options).run
+if $PROGRAM_NAME == __FILE__
+  options = { mode: "all" }
+  OptionParser.new do |parser|
+    parser.on("--mode MODE", %w[all export verify]) { |value| options[:mode] = value }
+    %w[source oracle verify out].each { |name| parser.on("--#{name} PATH") { |value| options[name.to_sym] = value } }
+  end.parse!
+  abort "--source, --oracle, --verify and --out are required" unless options.keys.sort == %i[mode oracle out source verify]
+  FileUtils.mkdir_p(options.fetch(:out))
+  exit OracleArtifacts::Runner.new(**options).run
+end

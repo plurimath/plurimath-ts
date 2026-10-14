@@ -239,10 +239,22 @@ module OracleGate
         gem_dir: gem_dir,
       )
 
+      run_generator!(File.join(snapshot_root, "scripts", "generate-unitsml-data.rb"),
+        ["--oracle", gem_dir, "--out", regenerated_root], chdir: snapshot_root, gem_dir: gem_dir)
+      native_paths = %w[src/formats/unicodemath/generated/paren-mask-sizes.ts
+        src/formats/unicodemath/generated/paren-mask-sizes.manifest.yaml
+        src/formats/unicodemath/generated/paren-mask-sizes.metadata.json
+        test/formats/unitsml/probe-fixtures.json test/formats/unitsml/probe-fixtures.manifest.yaml
+        test/formats/unitsml/probe-fixtures.metadata.json
+        test/formats/unicodemath/completion-fixtures.json test/formats/unicodemath/completion-fixtures.manifest.yaml
+        test/formats/unicodemath/completion-fixtures.metadata.json]
+      native_comparisons = native_paths.map { |path| [path, File.join(snapshot_root, path), File.join(regenerated_root, path)] }
       file_comparisons = regenerate_format_fixtures!(snapshot_root, regenerated_root, gem_dir)
+      file_comparisons += native_comparisons
       file_comparisons += regenerate_xml_reader_fixtures!(snapshot_root, regenerated_root, gem_dir)
 
       comparisons = [
+        ["src/unitsml/generated", File.join(snapshot_root, "src/unitsml/generated"), File.join(regenerated_root, "src/unitsml/generated")],
         ["corpus", File.join(snapshot_root, "corpus"), File.join(regenerated_root, "corpus")],
         ["src/generated", File.join(snapshot_root, "src", "generated"),
          File.join(regenerated_root, "src", "generated")],

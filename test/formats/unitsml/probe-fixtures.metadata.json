@@ -1,0 +1,27 @@
+{
+  "measured": true,
+  "verified": false,
+  "oracle": "00c52783877b38f6b8e6e109f1803f96bb34fc62",
+  "lockSha256": "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121",
+  "ruby": "ruby 4.0.1 (2026-01-13 revision e04267a14b) +PRISM [x86_64-linux]",
+  "generator": {
+    "path": "scripts/generate-unitsml-data.rb",
+    "sha256": "daf5853c30cf6aa9eed44faf2adb6ca431b7f4a44e47cc939f35a080a4ac2b59",
+    "inputs": {
+      "scripts/generate-corpus.rb": "620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75",
+      "scripts/generate-unitsml-data.rb": "daf5853c30cf6aa9eed44faf2adb6ca431b7f4a44e47cc939f35a080a4ac2b59",
+      "scripts/render-fixture-provenance.rb": "6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11",
+      "scripts/ci/native-completion-probe.rb": "6a384b0d9349098a3ca05c515f0cf10ebddee4721cd9b4d3a6041b354cc24020"
+    }
+  },
+  "stages": [
+    {
+      "name": "small-probe",
+      "exit": 0
+    }
+  ],
+  "payloads": {
+    "probe-fixtures.json": "2b7ec017f78dc412a2d6f6ad6a889f2f9c810f7ac2601236419e158c190731e6",
+    "unitsml-probe.json": "2b7ec017f78dc412a2d6f6ad6a889f2f9c810f7ac2601236419e158c190731e6"
+  }
+}

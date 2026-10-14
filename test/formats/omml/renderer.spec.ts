@@ -3467,21 +3467,10 @@ describe("OMML renderer boundary", () => {
     );
   });
 
-  it.each([
-    [
-      "unitsml",
-      { unitsml: {} },
-      'The "unitsml" feature of to_omml is deferred (TODO.plan/deferred.md): UnitsML is deferred wholesale (ARCHITECTURE.md section 5)',
-    ],
-  ] as const)("refuses deferred %s by name on both entry points", (_name, options, message) => {
-    expectRefusal(() => toOmml(new FormulaNode({ value: [symbol()] }), options as never), {
-      kind: "formula",
-      message,
-    });
-    expectRefusal(() => toOmmlWithoutMathTag(symbol(), options as never), {
-      kind: "symbol",
-      message,
-    });
+  it("accepts UnitsML options on both OMML entry points", () => {
+    const node = new FormulaNode({ value: [symbol()] });
+    expect(toOmml(node, { unitsml: {} })).toBe(toOmml(node));
+    expect(toOmmlWithoutMathTag(symbol(), { unitsml: {} })).toBe("x");
   });
 
   it.each([

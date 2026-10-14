@@ -10,6 +10,7 @@
  * behind it is not, being plumbing rather than public API (`src/xml/index.ts`).
  */
 
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
 export { parseMathml } from "./parser";
 export type { MathmlOptions } from "./renderer";
 export { toMathml } from "./renderer";

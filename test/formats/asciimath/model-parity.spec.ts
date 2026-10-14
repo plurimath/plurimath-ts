@@ -26,10 +26,10 @@ import { parseableCases, readCorpusCases } from "../../core/model-builder";
 const cases = parseableCases(readCorpusCases());
 
 describe("the pinned corpus, end to end", () => {
-  it("has the 91 reachable cases (92 pinned, 1 withheld as UnitsML)", () => {
+  it("has all 92 AsciiMath cases including native UnitsML", () => {
     // A suite that quietly ran zero cases has already happened to this
     // repository once (the depcruise gate); the count is pinned so it cannot.
-    expect(cases.length).toBe(91);
+    expect(cases.length).toBe(92);
   });
 
   it.each(cases.map((entry) => [entry.id, entry] as const))(

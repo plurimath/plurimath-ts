@@ -6,6 +6,7 @@ import {
   RenderError,
 } from "../../core/index";
 import type { NumberFormat } from "../../formatting/index";
+import type { UnitsmlRenderOptions } from "../../unitsml/index";
 
 export const FORMAT = "html";
 
@@ -30,6 +31,7 @@ export {
  * (`../../formatting/number-format.ts`).
  */
 export interface RenderContext {
+  readonly unitsml: UnitsmlRenderOptions | null;
   readonly numberFormat: NumberFormat | null;
   readonly render: (node: MathNode) => string | null;
 }
@@ -161,3 +163,7 @@ export function isOwnMissingSymbolDataError(error: unknown): boolean {
     OWN_MISSING_SYMBOL_ERRORS.has(error as MissingSymbolDataError)
   );
 }
+
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
+// Leaf-service access for this format's per-kind renderers.
+export { expandUnitsml } from "../../unitsml/index";

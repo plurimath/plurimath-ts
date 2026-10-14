@@ -45,6 +45,7 @@ import { renderUbrace } from "../../render/ubrace/mathml";
 import { renderUl } from "../../render/ul/mathml";
 import { renderUnaryFunction } from "../../render/unary-function/mathml";
 import { renderUnderset } from "../../render/underset/mathml";
+import { renderUnitsml } from "../../render/unitsml/mathml";
 import { renderVec } from "../../render/vec/mathml";
 import {
   FORMAT,
@@ -52,6 +53,7 @@ import {
   type NumberFormat,
   type RenderContext,
   type RenderFn,
+  type UnitsmlRenderOptions,
 } from "./render-shared";
 
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
@@ -90,6 +92,7 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   tilde: renderTilde,
   ubrace: renderUbrace,
   ul: renderUl,
+  unitsml: renderUnitsml,
   unaryFunction: renderUnaryFunction,
   underset: renderUnderset,
   vec: renderVec,
@@ -122,11 +125,13 @@ export function createRenderContext(
   unaryFunctionSpacing: boolean,
   numberFormat: NumberFormat | null,
   intent = false,
+  unitsml?: UnitsmlRenderOptions | null,
 ): RenderContext {
   const context: RenderContext = {
     unaryFunctionSpacing,
     numberFormat,
     intent,
+    unitsml,
     render(node) {
       return renderNode(node, context);
     },

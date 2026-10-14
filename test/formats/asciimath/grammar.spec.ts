@@ -109,9 +109,9 @@ describe("corpus parity", () => {
     // Guards the whole block: a reader that silently returned nothing would
     // make every `it.each` below vacuous.
     expect(corpus.cases.length).toBe(714);
-    expect(reachable.length).toBe(713);
+    expect(reachable.length).toBe(714);
     // The AsciiMath-input subset, which is what this grammar is asked to parse.
-    expect(parseable.length).toBe(91);
+    expect(parseable.length).toBe(92);
   });
 
   it.each(parseable.map((entry) => [entry.id, entry] as const))(
@@ -121,17 +121,11 @@ describe("corpus parity", () => {
     },
   );
 
-  it("parses the withheld UnitsML case as plain text, which is the deferral", () => {
-    // ARCHITECTURE.md §5: the `unitsml(...)` alternative stays commented out,
-    // so the input falls through to plain quoted text. The tree therefore
-    // differs from the gem's `{unitsml: ...}` by design — which is exactly why
-    // the case is withheld rather than expected to match.
+  it("parses the UnitsML case through the gem's dedicated grammar alternative", () => {
     const excluded = corpus.cases.find((entry) => entry.id === "text-unitsml-valid");
     expect(excluded?.preprocessed).toBe('"unitsml(kg)"');
     expect(excluded?.parseTree).toStrictEqual(JSON.parse('{"expr":{"sequence":{"unitsml":"kg"}}}'));
-    expect(tree('"unitsml(kg)"')).toStrictEqual(
-      JSON.parse('{"expr":{"sequence":{"text":"unitsml(kg)"}}}'),
-    );
+    expect(tree('"unitsml(kg)"')).toStrictEqual(excluded?.parseTree);
   });
 });
 

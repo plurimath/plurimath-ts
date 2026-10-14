@@ -121,14 +121,10 @@ function preprocessOrParseError(input: string): PreprocessedUnicodemath {
  * `UnicodeMath::Parser#post_processing` (`parser.rb:36-41`), applied only when
  * the input carried a `#` label.
  *
- * The gem wraps the WHOLE tree rather than merging into it, and `transform.rb`
- * picks the wrapper up at `:598-612`. Those two rules are not in this slice, so
- * a labelled input reaches `finalizeUnicodemathParse` as an unmatched hash and
- * is refused there, naming `{labeled_tr_id=…,labeled_tr_value=…}`. That is the
- * intended outcome, not a gap being papered over: the gem ANSWERS these inputs
- * (measured — `Plurimath::Math.parse("a#b", :unicode).to_latex` is
- * `"\\mlabeledtr{a}{\\text{b}}"`), so answering them differently would be worse
- * than refusing.
+ * The gem wraps the WHOLE tree rather than merging into it. The transform's
+ * `:598` and `:606` rules consume the wrapper and build an `Mlabeledtr`, for
+ * simple and sequence label values respectively. The fixture set includes
+ * both shapes (`"a#b"` and `"a b#c"`).
  *
  * The label is a plain string, as `@splitted` is a plain Ruby `String` rather
  * than a `Parslet::Slice` — it never went through the grammar.
@@ -165,11 +161,10 @@ export function parseUnicodemathTree(
  *   raise ParseError.new(text, type), cause: nil
  * ```
  *
- * That arm is live here. `finalizeUnicodemathParse` throws a plain `Error` for
- * every rule family outside this slice — the table/matrix rules, the
- * `labeled_tr` pair above — and without this arm the port would surface that
- * bare `Error` instead of a `ParseError`, and a caller branching on `code` would
- * miss it.
+ * That arm is live here: the transform and finalization can throw for an
+ * unmatched shape or a helper restriction, as well as for inputs the gem
+ * itself refuses. Without this arm the port would surface a bare `Error`
+ * instead of a `ParseError`, and a caller branching on `code` would miss it.
  *
  * The failure is attributed to offset 0: unlike a grammar failure, a transform
  * failure carries no position — the gem's own `ParseError` for these has none

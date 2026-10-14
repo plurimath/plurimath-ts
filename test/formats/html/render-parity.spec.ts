@@ -309,7 +309,7 @@ const MATHML_TEXT_GAPS = [
 describeCorpusTargets({
   format: "html",
   renderFormula: (formula) => toHtml(formula),
-  rendered: 663,
+  rendered: 664,
   // Each refusal names where the port stops. The left-right cases stop at the
   // `Right` node, where the gem raises ArgumentError (`Right#to_html` takes no
   // keyword arguments). The MathML cases stop at the node the gem raises on:

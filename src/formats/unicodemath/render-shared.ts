@@ -35,6 +35,7 @@ import { htmlEntityToUnicode } from "../../core/nodes";
 import { assertReproducibleRubyHashOrder, rubyNumberToS } from "../../core/ruby-semantics";
 import type { NumberFormat } from "../../formatting/index";
 import { UNICODEMATH_HEXCODE_IN_INPUT } from "../../generated/unicodemath/render-tables";
+import type { UnitsmlRenderOptions } from "../../unitsml/index";
 
 export const FORMAT = "unicodemath";
 
@@ -66,6 +67,7 @@ export {
  * (`../../formatting/number-format.ts`).
  */
 export interface RenderContext {
+  readonly unitsml: UnitsmlRenderOptions | null;
   readonly numberFormat: NumberFormat | null;
   /**
    * `child.to_unicodemath(options:)`. Returns `null` exactly where the gem
@@ -871,3 +873,7 @@ export function missingRenderer(kind: string, at: string): RenderError {
   // caller can branch on the kind without parsing prose.
   return new RenderError(`${at}: no unicodemath renderer for kind "${kind}"`, FORMAT, kind);
 }
+
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
+// Leaf-service access for this format's per-kind renderers.
+export { expandUnitsml } from "../../unitsml/index";

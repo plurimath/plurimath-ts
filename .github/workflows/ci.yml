@@ -6,6 +6,22 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      unicode_probe_only:
+        description: Skip UnitsML measurements when running the Unicode reference probe
+        type: boolean
+        default: false
+      unicode_unreached_probe:
+        description: Also measure still-unreached Unicode rules in the targeted reference job
+        type: boolean
+        default: false
+      native_completion_test:
+        description: Run focused native UnitsML and Unicode integration checks
+        type: boolean
+        default: false
+      native_completion_probe:
+        description: Measure targeted UnitsML and Unicode reference data
+        type: boolean
+        default: false
       oracle_artifacts:
         description: Regenerate and verify downloadable oracle artifacts
         type: boolean
@@ -17,14 +33,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.oracle_artifacts && 'oracle-artifacts' || 'checks' }}
-  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts) }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.native_completion_test && 'native-completion-test' || inputs.native_completion_probe && 'native-completion' || inputs.oracle_artifacts && 'oracle-artifacts' || 'checks' }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
 
 jobs:
   # Every class-A gate active at the repository's current milestone
   # (gates.json). No Ruby is needed: generated payloads are committed.
   gates:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     # A whole run takes about two minutes, so this is roughly seven times the
     # observed cost -- generous for a slow runner, and still a bound. It is
@@ -58,7 +74,7 @@ jobs:
   # class-A suite and run with an explicit interpreter rather than relying on
   # whatever happens to be installed on the runner image.
   oracle-runner-unit-tests:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -81,7 +97,7 @@ jobs:
 
   # Guards the runtime support claim in package.json#engines.
   runtime-matrix:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: gates
@@ -234,5 +250,130 @@ jobs:
         with:
           name: oracle-artifacts-${{ github.sha }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/oracle-artifacts
+          if-no-files-found: error
+          retention-days: 7
+
+  native-completion-probe:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.native_completion_probe }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: source
+    steps:
+      - name: Initialize probe evidence
+        working-directory: ${{ github.workspace }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/native-completion"
+          printf '%s\n' '{"verified":false,"phase":"setup"}' > "$RUNNER_TEMP/native-completion/setup.json"
+      - uses: actions/checkout@v5
+        with:
+          path: source
+          ref: ${{ github.sha }}
+          submodules: true
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: plurimath/plurimath
+          ref: 00c52783877b38f6b8e6e109f1803f96bb34fc62
+          path: oracle
+          persist-credentials: false
+      - name: Prepare frozen oracle bundle
+        run: |
+          cp scripts/ci/oracle/Gemfile.lock ../oracle/Gemfile.lock
+          printf '%s\n' '/vendor/bundle/' >> ../oracle/.git/info/exclude
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0.1"
+          bundler: "4.0.3"
+          working-directory: oracle
+          bundler-cache: true
+        env:
+          BUNDLE_FROZEN: "true"
+      - name: Measure targeted native completion references
+        if: ${{ !inputs.unicode_probe_only }}
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/oracle/Gemfile
+          BUNDLE_FROZEN: "true"
+        run: |
+          bundle exec ruby scripts/ci/native-completion-probe.rb --phase small --oracle "$GITHUB_WORKSPACE/oracle" --out "$RUNNER_TEMP/native-completion" > "$RUNNER_TEMP/native-completion/probe.stdout" 2> "$RUNNER_TEMP/native-completion/probe.stderr"
+      - name: Upload the small reference probe immediately
+        if: ${{ !inputs.unicode_probe_only }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-completion-small-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-completion
+          if-no-files-found: error
+          retention-days: 7
+      - name: Generate targeted UnitsML tables
+        if: ${{ !inputs.unicode_probe_only }}
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/oracle/Gemfile
+          BUNDLE_FROZEN: "true"
+        run: |
+          bundle exec ruby scripts/ci/native-completion-probe.rb --phase tables --oracle "$GITHUB_WORKSPACE/oracle" --out "$RUNNER_TEMP/native-completion" > "$RUNNER_TEMP/native-completion/tables.stdout" 2> "$RUNNER_TEMP/native-completion/tables.stderr"
+      - name: Measure still-unreached Unicode rules
+        if: ${{ inputs.unicode_unreached_probe }}
+        env:
+          BUNDLE_GEMFILE: ${{ github.workspace }}/oracle/Gemfile
+          BUNDLE_FROZEN: "true"
+        run: |
+          bundle exec ruby scripts/ci/unicode-unreached-probe.rb --oracle "$GITHUB_WORKSPACE/oracle" --out "$RUNNER_TEMP/native-completion" --seconds 300 > "$RUNNER_TEMP/native-completion/unreached.stdout" 2> "$RUNNER_TEMP/native-completion/unreached.stderr"
+      - name: Retain targeted measurements and failures
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-completion-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-completion
+          if-no-files-found: error
+          retention-days: 7
+
+  native-completion-test:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.native_completion_test }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - name: Initialize integration evidence
+        run: mkdir -p "$RUNNER_TEMP/native-completion-test"
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          submodules: true
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Run focused integration checks and retain every exit
+        run: |
+          set +e
+          evidence="$RUNNER_TEMP/native-completion-test"
+          failed=0
+          check_stage() {
+            stage="$1"
+            shift
+            "$@" > "$evidence/$stage.log" 2>&1
+            result=$?
+            printf '{"stage":"%s","exit":%s}\n' "$stage" "$result" >> "$evidence/exits.jsonl"
+            cat "$evidence/$stage.log"
+            if [ "$result" -ne 0 ]; then failed=1; fi
+          }
+          check_stage install pnpm install --frozen-lockfile --ignore-scripts
+          check_stage biome pnpm exec biome check .
+          check_stage typecheck pnpm typecheck
+          check_stage build pnpm build
+          check_stage focused-tests pnpm exec vitest run test/unitsml-inline-integration.spec.ts test/parse.spec.ts test/compat/plurimath-class.spec.ts test/formats/unitsml test/formats/unicodemath/completion-parity.spec.ts test/formats/unicodemath/model-parity.spec.ts test/formats/unicodemath/render-parity.spec.ts test/formats/unicodemath/renderer.spec.ts
+          check_stage package pnpm gate:package
+          exit "$failed"
+      - name: Upload focused integration logs
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-completion-test-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/native-completion-test
           if-no-files-found: error
           retention-days: 7

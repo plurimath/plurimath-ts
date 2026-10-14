@@ -1,0 +1,4848 @@
+{
+  "schema": "plurimath-unicodemath-unreached/1",
+  "cases": [
+    {
+      "input": "1/a≤∫",
+      "preprocessed": "1/a&#x2264;&#x222b;",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∫",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∫_c d",
+      "preprocessed": "1/a&#x2264;&#x222b;_c d",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∫_c d",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∑",
+      "preprocessed": "1/a&#x2264;&#x2211;",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∑",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∑_c d",
+      "preprocessed": "1/a&#x2264;&#x2211;_c d",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∑_c d",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∫ x",
+      "preprocessed": "1/a&#x2264;&#x222b; x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∫ x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∫ a b",
+      "preprocessed": "1/a&#x2264;&#x222b; a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∫ a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∑ x",
+      "preprocessed": "1/a&#x2264;&#x2211; x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∑ x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∑ a b",
+      "preprocessed": "1/a&#x2264;&#x2211; a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∑ a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∫_c",
+      "preprocessed": "1/a&#x2264;&#x222b;_c",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∫_c",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∫_c x",
+      "preprocessed": "1/a&#x2264;&#x222b;_c x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∫_c x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∫_c a b",
+      "preprocessed": "1/a&#x2264;&#x222b;_c a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∫_c a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∫_c^d",
+      "preprocessed": "1/a&#x2264;&#x222b;_c^d",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∫_c^d",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": null,
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∫_c^d x",
+      "preprocessed": "1/a&#x2264;&#x222b;_c^d x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∫_c^d x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≤∫_c^d a b",
+      "preprocessed": "1/a&#x2264;&#x222b;_c^d a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≤∫_c^d a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Le",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∫",
+      "preprocessed": "1/a&#x2265;&#x222b;",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∫",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∫ x",
+      "preprocessed": "1/a&#x2265;&#x222b; x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∫ x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∫ a b",
+      "preprocessed": "1/a&#x2265;&#x222b; a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∫ a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∑",
+      "preprocessed": "1/a&#x2265;&#x2211;",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∑",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∑ x",
+      "preprocessed": "1/a&#x2265;&#x2211; x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∑ x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∑ a b",
+      "preprocessed": "1/a&#x2265;&#x2211; a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∑ a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∫_c",
+      "preprocessed": "1/a&#x2265;&#x222b;_c",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∫_c",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∫_c x",
+      "preprocessed": "1/a&#x2265;&#x222b;_c x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∫_c x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∫_c a b",
+      "preprocessed": "1/a&#x2265;&#x222b;_c a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∫_c a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∫_c^d",
+      "preprocessed": "1/a&#x2265;&#x222b;_c^d",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∫_c^d",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": null,
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∫_c^d x",
+      "preprocessed": "1/a&#x2265;&#x222b;_c^d x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∫_c^d x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≥∫_c^d a b",
+      "preprocessed": "1/a&#x2265;&#x222b;_c^d a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≥∫_c^d a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Ge",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∫",
+      "preprocessed": "1/a&#x2208;&#x222b;",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∫",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∫ x",
+      "preprocessed": "1/a&#x2208;&#x222b; x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∫ x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∫ a b",
+      "preprocessed": "1/a&#x2208;&#x222b; a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∫ a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∑",
+      "preprocessed": "1/a&#x2208;&#x2211;",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∑",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∑ x",
+      "preprocessed": "1/a&#x2208;&#x2211; x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∑ x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∑ a b",
+      "preprocessed": "1/a&#x2208;&#x2211; a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∑ a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∫_c",
+      "preprocessed": "1/a&#x2208;&#x222b;_c",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∫_c",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∫_c x",
+      "preprocessed": "1/a&#x2208;&#x222b;_c x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∫_c x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∫_c a b",
+      "preprocessed": "1/a&#x2208;&#x222b;_c a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∫_c a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∫_c^d",
+      "preprocessed": "1/a&#x2208;&#x222b;_c^d",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∫_c^d",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": null,
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∫_c^d x",
+      "preprocessed": "1/a&#x2208;&#x222b;_c^d x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∫_c^d x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a∈∫_c^d a b",
+      "preprocessed": "1/a&#x2208;&#x222b;_c^d a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a∈∫_c^d a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::In",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∫",
+      "preprocessed": "1/a&#x2248;&#x222b;",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∫",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∫ x",
+      "preprocessed": "1/a&#x2248;&#x222b; x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∫ x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∫ a b",
+      "preprocessed": "1/a&#x2248;&#x222b; a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∫ a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∑",
+      "preprocessed": "1/a&#x2248;&#x2211;",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∑",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∑ x",
+      "preprocessed": "1/a&#x2248;&#x2211; x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∑ x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∑ a b",
+      "preprocessed": "1/a&#x2248;&#x2211; a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∑ a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∫_c",
+      "preprocessed": "1/a&#x2248;&#x222b;_c",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∫_c",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∫_c x",
+      "preprocessed": "1/a&#x2248;&#x222b;_c x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∫_c x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∫_c a b",
+      "preprocessed": "1/a&#x2248;&#x222b;_c a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∫_c a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∫_c^d",
+      "preprocessed": "1/a&#x2248;&#x222b;_c^d",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∫_c^d",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": null,
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∫_c^d x",
+      "preprocessed": "1/a&#x2248;&#x222b;_c^d x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∫_c^d x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a≈∫_c^d a b",
+      "preprocessed": "1/a&#x2248;&#x222b;_c^d a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a≈∫_c^d a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Approx",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∫",
+      "preprocessed": "1/a&#x2192;&#x222b;",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∫",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∫ x",
+      "preprocessed": "1/a&#x2192;&#x222b; x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∫ x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∫ a b",
+      "preprocessed": "1/a&#x2192;&#x222b; a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∫ a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∑",
+      "preprocessed": "1/a&#x2192;&#x2211;",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∑",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∑ x",
+      "preprocessed": "1/a&#x2192;&#x2211; x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∑ x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∑ a b",
+      "preprocessed": "1/a&#x2192;&#x2211; a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∑ a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Sum",
+                        "fields": {
+                          "parameter_one": null,
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∫_c",
+      "preprocessed": "1/a&#x2192;&#x222b;_c",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∫_c",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": null,
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∫_c x",
+      "preprocessed": "1/a&#x2192;&#x222b;_c x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∫_c x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∫_c a b",
+      "preprocessed": "1/a&#x2192;&#x222b;_c a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∫_c a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": null
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∫_c^d",
+      "preprocessed": "1/a&#x2192;&#x222b;_c^d",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∫_c^d",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": null,
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∫_c^d x",
+      "preprocessed": "1/a&#x2192;&#x222b;_c^d x",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∫_c^d x",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "x"
+                            }
+                          },
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    },
+    {
+      "input": "1/a→∫_c^d a b",
+      "preprocessed": "1/a&#x2192;&#x222b;_c^d a b",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "1/a→∫_c^d a b",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Frac",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "1"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "a"
+                        }
+                      },
+                      {
+                        "class": "Math::Symbols::Rightarrow",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Function::Int",
+                        "fields": {
+                          "parameter_one": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "c"
+                            }
+                          },
+                          "parameter_three": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "a"
+                            }
+                          },
+                          "parameter_two": {
+                            "class": "Math::Symbols::Symbol",
+                            "fields": {
+                              "value": "d"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "b"
+              }
+            }
+          ]
+        }
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 1,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      }
+    }
+  ]
+}

@@ -20,7 +20,14 @@
       "!test/evaluation/pow-rounding-band-corpus.json",
       "!test/evaluation/libm-rounding-band-corpus.json",
       "!test/evaluation/libm-log-corpus.json",
-      "!test/evaluation/libm-hyperbolic-corpus.json"
+      "!test/evaluation/libm-hyperbolic-corpus.json",
+      "!src/unitsml/generated/*.json",
+      "!test/formats/unitsml/probe-fixtures.json",
+      "!test/formats/unicodemath/completion-fixtures.json",
+      "!test/formats/unicodemath/unreached-fixtures.json",
+      "!test/formats/unicodemath/reachability-fixtures.json",
+      "!test/formats/unicodemath/scope-gap-fixtures.json",
+      "!test/formats/unicodemath/xml-origin-fixtures.json"
     ]
   },
   "formatter": {
@@ -42,7 +49,9 @@
           "options": {
             "conventions": [
               {
-                "selector": { "kind": "typeLike" },
+                "selector": {
+                  "kind": "typeLike"
+                },
                 "formats": ["PascalCase"]
               }
             ]

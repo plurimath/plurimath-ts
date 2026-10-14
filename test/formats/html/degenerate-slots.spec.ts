@@ -45,7 +45,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { NODE_KINDS, RenderError } from "../../../src/core/index";
+import { NODE_KINDS, ParseError, RenderError, UnitsmlNode } from "../../../src/core/index";
 import { rubyClassName } from "../../../src/core/normalize";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
 import { parseYaml } from "../../core/corpus-yaml";
@@ -89,6 +89,9 @@ interface Fixture {
   readonly constructsCount: number;
   readonly rendersCount: number;
   readonly unstableCount: number;
+  readonly constructorWitnesses: Readonly<
+    Record<string, { readonly input: string; readonly model: unknown; readonly output: string }>
+  >;
   readonly rows: readonly Row[];
 }
 
@@ -159,6 +162,18 @@ const rowLabels = fixture.rows.map((r) => label(r.kind, r.slot, r.value));
 const rowLabelSet = new Set(rowLabels);
 
 describe(`${FORMAT} degenerate-slot sweep covers every landed renderer`, () => {
+  it("pins the constructor-required UnitsML witness to measured bytes", () => {
+    expect(Object.keys(fixture.constructorWitnesses)).toEqual(["unitsml"]);
+    const witness = fixture.constructorWitnesses.unitsml;
+    expect(witness).toBeDefined();
+    if (witness === undefined) throw new Error("missing UnitsML constructor witness");
+    expect(witness.model).toEqual({
+      class: "Math::Function::Unitsml",
+      fields: { text: witness.input },
+    });
+    expect(RENDER(new UnitsmlNode({ text: witness.input }) as never)).toBe(witness.output);
+  });
+
   it("finds a non-empty render inventory", () => {
     // A sweep of nothing is a failure, not a pass: this repository has shipped a
     // gate that cruised zero modules and reported success.
@@ -179,7 +194,10 @@ describe(`${FORMAT} degenerate-slot sweep covers every landed renderer`, () => {
 
   it("has a sweep entry for every landed renderer", () => {
     const covered: readonly string[] = [
-      ...new Set<string>(Object.values(NODE_FOR).map((entry) => entry.renderKind)),
+      ...new Set<string>([
+        ...Object.values(NODE_FOR).map((entry) => entry.renderKind),
+        ...Object.keys(fixture.constructorWitnesses),
+      ]),
     ].sort();
     const uncovered = landedRenderers().filter((kind) => !covered.includes(kind));
     expect(
@@ -300,6 +318,12 @@ describe(`${FORMAT} degenerate-slot parity`, () => {
       }
       const gemRenders = row.renders === true;
       const build = () => spec.build(row.slot, DEGENERATE[row.value]);
+      if (row.kind === "unitsml" && row.constructs === false) {
+        expect(build, `${at}: the measured UnitsML constructor rejects this input`).toThrow(
+          ParseError,
+        );
+        return;
+      }
 
       const typeRefusal = PORT_TYPE_REFUSES[at];
       if (typeRefusal !== undefined) {

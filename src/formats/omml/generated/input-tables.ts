@@ -147,7 +147,7 @@ export const OMML_CARRIERS: readonly (readonly [string, string, string])[] = [
   ["Math::Function::UnaryFunction", "Math::Function::UnaryFunction", "implemented"],
   ["Math::Function::Underover", "Math::Function::TernaryFunction", "aliased"],
   ["Math::Function::Underset", "Math::Function::Underset", "implemented"],
-  ["Math::Function::Unitsml", "Math::Function::Unitsml", "deferred"],
+  ["Math::Function::Unitsml", "Math::Function::Unitsml", "implemented"],
   ["Math::Function::Vec", "Math::Function::Vec", "implemented"],
   ["Math::Number", "Math::Number", "implemented"],
 ];

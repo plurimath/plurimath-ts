@@ -23,7 +23,12 @@
  */
 
 import { describeThrown } from "../core/errors";
-import { type FormulaNode, InvalidTypeError, UnsupportedFormatError } from "../core/index";
+import {
+  type FormulaNode,
+  InvalidTypeError,
+  ParseError,
+  UnsupportedFormatError,
+} from "../core/index";
 import { parseAsciimath, toAsciimath } from "../formats/asciimath/index";
 import { parseHtml, toHtml } from "../formats/html/index";
 import { parseLatex, toLatex } from "../formats/latex/index";
@@ -111,8 +116,8 @@ const DISPLAY_TYPES: readonly string[] = ["omml", "latex", "mathml", "asciimath"
  * type tokens `Math.parse` accepts, which plurimath-js's constructor reaches.
  * A token outside it raises `InvalidTypeError`, measured on the oracle for
  * `"foo"`, `"unicodemath"` and `"HTML"` (the check is case-sensitive). A token
- * inside it that has no parser here (`unitsml`) still
- * raises `UnsupportedFormatError`: the gem parses those.
+ * The recognized `unitsml` token raises ParseError: the reference standalone
+ * result cannot record input_string. Inline UnitsML uses the AsciiMath parser.
  */
 const PARSE_TYPES: readonly string[] = [
   "omml",
@@ -151,6 +156,14 @@ export default class Plurimath {
         typeof format === "string" ? format : describeThrown(format),
         PARSE_TYPES,
         `\`type\` must be one of: \`${PARSE_TYPES.join("`, `")}\``,
+      );
+    }
+    if ((format as string) === "unitsml") {
+      throw new ParseError(
+        "standalone unitsml parsing cannot retain the input string",
+        data,
+        "unitsml",
+        0,
       );
     }
     const parse = PARSERS[format];

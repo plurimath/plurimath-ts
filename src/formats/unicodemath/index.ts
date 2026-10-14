@@ -14,6 +14,7 @@
  * parser combinators are how it parses.
  */
 
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
 export type { UnicodemathParseOptions } from "./parser";
 export { parseUnicodemath } from "./parser";
 export type { UnicodemathOptions } from "./renderer";

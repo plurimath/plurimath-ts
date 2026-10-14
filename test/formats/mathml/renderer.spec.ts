@@ -9,6 +9,9 @@
  * (TODO.plan/deferred.md).
  */
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { MissingSymbolDataError, RenderError } from "../../../src/core/errors";
 import {
@@ -34,6 +37,7 @@ import {
 } from "../../../src/core/index";
 import { parseAsciimath } from "../../../src/formats/asciimath/parser";
 import { toMathml } from "../../../src/formats/mathml/renderer";
+import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
 
 const x = () => new SymbolNode({ value: "x" });
 const y = () => new SymbolNode({ value: "y" });
@@ -170,25 +174,10 @@ describe("the formatter option (B2's MathML/OMML number-formatting slice)", () =
   });
 });
 
-describe("the deferred options, refused by name", () => {
-  // `intent` left this list with B4 (`./intent-parity.spec.ts`); `intent: false`
-  // is the gem's default, measured byte-identical to the omitted keyword.
-  const cases: readonly (readonly [string, Record<string, unknown>])[] = [
-    ["unitsml", { unitsml: {} }],
-  ];
-  for (const [name, options] of cases) {
-    it(`${JSON.stringify(options)} raises a RenderError naming "${name}"`, () => {
-      let caught: unknown;
-      try {
-        toMathml(sinX(), options as never);
-      } catch (error) {
-        caught = error;
-      }
-      expect(caught).toBeInstanceOf(RenderError);
-      expect((caught as RenderError).message).toContain(`"${name}"`);
-      expect((caught as RenderError).message).toContain("deferred");
-    });
-  }
+describe("the accepted UnitsML and intent options", () => {
+  it("accepts UnitsML options on a formula with no unit nodes", () => {
+    expect(toMathml(sinX(), { unitsml: {} })).toBe(math(SIN_SPACED));
+  });
 
   it("intent: false and null are the default, not a refusal", () => {
     expect(toMathml(sinX(), { intent: false })).toBe(math(SIN_SPACED));
@@ -365,16 +354,16 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     ).toThrow(RenderError);
   });
 
-  it("a live mask is refused by name; the inert nil-key mask renders (probes int-mask-*)", () => {
-    const masked = new IntNode({ parameterOne: x(), parameterTwo: y(), options: { mask: 1 } });
-    let caught: unknown;
-    try {
-      toMathml(formula(masked));
-    } catch (error) {
-      caught = error;
-    }
-    expect(caught).toBeInstanceOf(RenderError);
-    expect((caught as RenderError).message).toContain('"mask"');
+  it("a live integral mask matches the scope probe; the inert nil-key mask renders", () => {
+    const measured = JSON.parse(
+      readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), "../unicodemath/scope-gap-fixtures.json"),
+        "utf8",
+      ),
+    ) as { readonly cases: readonly { readonly input: string; readonly mathml?: string }[] };
+    const masked = measured.cases.find((entry) => entry.input === "∫1_a");
+    expect(masked?.mathml).toBeTypeOf("string");
+    expect(toMathml(parseUnicodemath("∫1_a"))).toBe(masked?.mathml);
     const inert = new IntNode({ parameterOne: x(), parameterTwo: y(), options: { mask: null } });
     expect(toMathml(formula(inert))).toBe(
       math(
@@ -600,16 +589,19 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     expect(() => toMathml(withAttrs(["a", "b"]))).toThrow(RenderError);
   });
 
-  it("a smuggled unitsml attribute is refused by name — the gem post-processes it (probed)", () => {
+  it("post-processes a UnitsML marker rather than refusing it", () => {
     const marked = new BarNode({ parameterOne: x(), attributes: { unitsml: "true" } });
-    let caught: unknown;
-    try {
-      toMathml(formula(marked));
-    } catch (error) {
-      caught = error;
-    }
-    expect(caught).toBeInstanceOf(RenderError);
-    expect((caught as RenderError).message).toContain('"unitsml"');
+    const output = toMathml(formula(marked));
+    expect(output).not.toContain("unitsml=");
+    expect(output).not.toContain('rspace="thickmathspace"');
+    expect(output).toBe(toMathml(formula(new BarNode({ parameterOne: x() }))));
+  });
+
+  it("inserts a UnitsML multiplication marker when the unit follows another child", () => {
+    const marked = new BarNode({ parameterOne: x(), attributes: { unitsml: "true" } });
+    const output = toMathml(new FormulaNode({ value: [x(), marked] }));
+    expect(output).not.toContain("unitsml=");
+    expect(output).toContain('rspace="thickmathspace"');
   });
 
   it("powerbase: an underover symbol base flips the tag; a Nary base crashes (probed)", () => {

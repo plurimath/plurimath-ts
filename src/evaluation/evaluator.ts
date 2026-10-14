@@ -253,6 +253,7 @@ const DEFAULT_UNSUPPORTED_CLASS: Readonly<Record<string, string>> = {
   ubrace: "Function::Ubrace",
   ul: "Function::Ul",
   underset: "Function::Underset",
+  unitsml: "Function::Unitsml",
   vec: "Function::Vec",
 };
 

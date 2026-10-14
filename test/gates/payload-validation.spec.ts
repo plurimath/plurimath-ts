@@ -110,6 +110,24 @@ const SHA256 = /^[0-9a-f]{64}$/;
 const COMMIT = /^[0-9a-f]{40}$/;
 const IMMUTABLE_REVISION = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
 const FIXTURE_SPECS = {
+  "completion-fixtures.json": {
+    generator: "scripts/generate-unitsml-data.rb",
+    schema: "plurimath-unicode-probe/1",
+    rows: "cases",
+    shape: "unicode-probe",
+    usesCorpus: false,
+    usesRenderInventory: false,
+    additionalInputs: ["scripts/ci/native-completion-probe.rb"],
+  },
+  "probe-fixtures.json": {
+    generator: "scripts/generate-unitsml-data.rb",
+    schema: "plurimath-unitsml-probe/1",
+    rows: "cases",
+    shape: "unitsml-probe",
+    usesCorpus: false,
+    usesRenderInventory: false,
+    additionalInputs: ["scripts/ci/native-completion-probe.rb"],
+  },
   "degenerate-fixtures.json": {
     generator: "scripts/probe-degenerate-slots.rb",
     schema: "plurimath-corpus/degenerate-slots/1",
@@ -293,6 +311,7 @@ interface FixtureSpec {
   readonly extraRowFields?: readonly ("tree" | "rendered")[];
   readonly corpusGroup?: string;
   readonly corpusCountField?: string;
+  readonly additionalInputs?: readonly string[];
   readonly usesCorpus: boolean;
   readonly usesRenderInventory: boolean;
 }
@@ -308,6 +327,8 @@ function specFor(relative: string): FixtureSpec {
 }
 
 const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
+  | "completion-fixtures.json"
+  | "probe-fixtures.json"
   | "degenerate-fixtures.json"
   | "model-fixtures.json"
   | "parity-fixtures.json"
@@ -317,6 +338,18 @@ const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "cli-fixtures.json"
   | "failure-position-fixtures.json"
 )[];
+const NATIVE_AUXILIARY_JSON = [
+  "test/formats/unicodemath/completion-fixtures.metadata.json",
+  "test/formats/unicodemath/unreached-fixtures.json",
+  "test/formats/unicodemath/unreached-fixtures.metadata.json",
+  "test/formats/unicodemath/reachability-fixtures.json",
+  "test/formats/unicodemath/reachability-fixtures.metadata.json",
+  "test/formats/unicodemath/scope-gap-fixtures.json",
+  "test/formats/unicodemath/scope-gap-fixtures.metadata.json",
+  "test/formats/unicodemath/xml-origin-fixtures.json",
+  "test/formats/unicodemath/xml-origin-fixtures.metadata.json",
+  "test/formats/unitsml/probe-fixtures.metadata.json",
+] as const;
 const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
   "test/formats/latex/render-sweep.json",
@@ -800,6 +833,7 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
       "scripts/generate-corpus.rb",
       "scripts/render-fixture-provenance.rb",
       record.spec.generator,
+      ...(record.spec.additionalInputs ?? []),
     ].sort(),
   );
   const generatorRepository = mapField(generator, "repository", `${at}.generator`);
@@ -913,16 +947,188 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
   expect(integerField(payload, "bytes", `${at}.payload`)).toBe(record.bytes.byteLength);
 }
 
+/** Probe schemas differ from format-model fixtures; provenance stays identical. */
+function expectNativeProbe(record: FixtureRecord): void {
+  const { payload, relative: at, spec } = record;
+  const units = spec.shape === "unitsml-probe";
+  expectExactKeys(
+    payload,
+    units
+      ? ["schema", "cases", "plurimathInlineCases"]
+      : ["schema", "cases", "fenceSizes", "parenMaskSizes", "parenMaskOverflow", "parenMaskCutoff"],
+    at,
+  );
+  const rows = arrayField(payload, "cases", at);
+  expect(rows.length).toBeGreaterThan(0);
+  const identities: string[] = [];
+  const errorShape = (value: unknown, where: string): void => {
+    const error = mapping(value, where);
+    expectExactKeys(error, ["class", "message"], where);
+    stringField(error, "class", where);
+    stringField(error, "message", where);
+  };
+  for (const [index, value] of rows.entries()) {
+    const rowAt = `${at}.cases[${index}]`;
+    const row = mapping(value, rowAt);
+    const input = stringField(row, "input", rowAt);
+    if (units) {
+      const options = mapField(row, "options", rowAt);
+      const types = mapField(row, "optionsTypes", rowAt);
+      expect(Object.keys(types).sort()).toEqual(Object.keys(options).sort());
+      for (const key of Object.keys(types)) stringField(types, key, `${rowAt}.optionsTypes`);
+    }
+    identities.push(JSON.stringify([input, row.options ?? {}, row.optionsTypes ?? {}]));
+    if (row.raises !== undefined) {
+      stringField(row, "raises", rowAt);
+      stringField(row, "message", rowAt);
+      expect(row.model).toBeUndefined();
+      continue;
+    }
+    if (row.modelError !== undefined) errorShape(row.modelError, `${rowAt}.modelError`);
+    else {
+      const model = mapField(row, "model", rowAt);
+      stringField(model, "class", `${rowAt}.model`);
+      mapField(model, "fields", `${rowAt}.model`);
+    }
+    for (const channel of units
+      ? ["ascii", "mathml", "xml"]
+      : ["asciimath", "latex", "mathml", "html", "omml", "unicodemath"]) {
+      if (row[`${channel}Error`] !== undefined) {
+        expect(row[channel]).toBeUndefined();
+        errorShape(row[`${channel}Error`], `${rowAt}.${channel}Error`);
+      } else stringField(row, channel, rowAt);
+    }
+  }
+  const seen = new Map<string, unknown>();
+  rows.forEach((row, index) => {
+    const key = identities[index] as string;
+    if (seen.has(key))
+      expect(row, `${at}: repeated probe must preserve its outcome`).toStrictEqual(seen.get(key));
+    else seen.set(key, row);
+  });
+  if (!units) {
+    const cutoff = integerField(payload, "parenMaskCutoff", at);
+    expect(cutoff).toBeGreaterThan(0);
+    for (const field of ["fenceSizes", "parenMaskSizes"]) {
+      const sizes = arrayField(payload, field, at);
+      expect(sizes.length).toBe(cutoff);
+      sizes.forEach((size, index) => {
+        if (field === "fenceSizes") {
+          expect(Array.isArray(size)).toBe(true);
+          const tuple = size as readonly unknown[];
+          expect(tuple).toHaveLength(2);
+          expect(tuple[0]).toBe(index);
+          expect(typeof tuple[1]).toBe("string");
+        } else expect(typeof size).toBe("string");
+      });
+    }
+    stringField(payload, "parenMaskOverflow", at);
+    return;
+  }
+  const inline = arrayField(payload, "plurimathInlineCases", at);
+  expect(inline.length).toBeGreaterThan(0);
+  for (const [index, value] of inline.entries()) {
+    const rowAt = `${at}.plurimathInlineCases[${index}]`;
+    const row = mapping(value, rowAt);
+    stringField(row, "input", rowAt);
+    stringField(row, "parseInput", rowAt);
+    expect(stringField(row, "parseFormat", rowAt)).toBe("asciimath");
+    const types = mapField(row, "optionsTypes", rowAt);
+    const optionValue = row.options;
+    if (optionValue !== null && typeof optionValue === "object" && !Array.isArray(optionValue)) {
+      const options = mapping(optionValue, `${rowAt}.options`);
+      expect(Object.keys(types).sort()).toEqual(Object.keys(options).sort());
+      for (const key of Object.keys(types)) stringField(types, key, `${rowAt}.optionsTypes`);
+    } else {
+      expectExactKeys(types, ["$namespace"], `${rowAt}.optionsTypes`);
+      const kind =
+        optionValue === null
+          ? "nilclass"
+          : Array.isArray(optionValue)
+            ? "array"
+            : typeof optionValue === "boolean"
+              ? `${optionValue}class`
+              : typeof optionValue === "number"
+                ? Number.isInteger(optionValue)
+                  ? "integer"
+                  : "float"
+                : typeof optionValue;
+      expect(stringField(types, "$namespace", `${rowAt}.optionsTypes`)).toBe(kind);
+    }
+    if (row.raises !== undefined) {
+      stringField(row, "raises", rowAt);
+      stringField(row, "message", rowAt);
+      continue;
+    }
+    for (const field of ["renders", "displayRenders", "symbolDisplayRenders"]) {
+      const outcomes = mapField(row, field, rowAt);
+      const formats = [
+        "asciimath",
+        "latex",
+        "mathml",
+        "omml",
+        "unicodemath",
+        ...(field === "renders" ? ["html"] : []),
+      ];
+      expect(Object.keys(outcomes).sort()).toEqual(formats.sort());
+      for (const [format, value] of Object.entries(outcomes)) {
+        const outcomeAt = `${rowAt}.${field}.${format}`;
+        const outcome = mapping(value, outcomeAt);
+        if (outcome.raises !== undefined) {
+          expectExactKeys(outcome, ["raises", "message"], outcomeAt);
+          stringField(outcome, "raises", outcomeAt);
+          stringField(outcome, "message", outcomeAt);
+        } else {
+          expectExactKeys(outcome, ["value"], outcomeAt);
+          // A renderer may legitimately return the empty string.
+          expect(typeof outcome.value).toBe("string");
+        }
+      }
+    }
+  }
+}
+
 describe("per-format generated fixtures have complete sidecar provenance", () => {
   it("pairs every discovered payload with one sidecar, and has no orphan sidecars", () => {
     expect(FIXTURE_PAYLOADS.length).toBeGreaterThan(0);
     expect(FIXTURE_MANIFESTS).toStrictEqual(EXPECTED_FIXTURE_MANIFESTS);
   });
 
+  it("binds explicitly classified native metadata to its payload", () => {
+    for (const path of NATIVE_AUXILIARY_JSON.filter((path) => path.endsWith(".metadata.json"))) {
+      const metadata = mapping(JSON.parse(readFileSync(join(REPO_ROOT, path), "utf8")), path);
+      expect(stringField(metadata, "oracle", path)).toBe(
+        loadPinnedCorpus().provenance.oracleCommit,
+      );
+      expect(stringField(metadata, "lockSha256", path)).toMatch(SHA256);
+      const payloadPath = path.replace(/\.metadata\.json$/, ".json");
+      const digest = createHash("sha256")
+        .update(readFileSync(join(REPO_ROOT, payloadPath)))
+        .digest("hex");
+      if (metadata.payloadSha256 !== undefined) {
+        expect(metadata.payloadSha256).toBe(digest);
+        const payload = mapping(
+          JSON.parse(readFileSync(join(REPO_ROOT, payloadPath), "utf8")),
+          payloadPath,
+        );
+        const projectionSchemas: Readonly<Record<string, string>> = {
+          "test/formats/unicodemath/unreached-fixtures.json": "plurimath-unicodemath-unreached/1",
+          "test/formats/unicodemath/reachability-fixtures.json":
+            "plurimath-unicodemath-reachability/1",
+          "test/formats/unicodemath/scope-gap-fixtures.json": "plurimath-unicodemath-scope-gap/1",
+          "test/formats/unicodemath/xml-origin-fixtures.json": "plurimath-unicodemath-xml-origin/1",
+        };
+        expect(projectionSchemas[payloadPath], payloadPath).toBeDefined();
+        expect(payload.schema).toBe(projectionSchemas[payloadPath]);
+        expect(arrayField(payload, "cases", payloadPath).length).toBeGreaterThan(0);
+      } else expect(mapField(metadata, "payloads", path)[basename(payloadPath)]).toBe(digest);
+    }
+  });
+
   it("accounts for every other per-format JSON payload as an explicit legacy gap", () => {
-    expect([...FORMAT_FIXTURE_PAYLOADS, ...LEGACY_FORMAT_FIXTURES].sort()).toStrictEqual(
-      ALL_FORMAT_JSON_PAYLOADS,
-    );
+    expect(
+      [...FORMAT_FIXTURE_PAYLOADS, ...LEGACY_FORMAT_FIXTURES, ...NATIVE_AUXILIARY_JSON].sort(),
+    ).toStrictEqual(ALL_FORMAT_JSON_PAYLOADS);
   });
 
   it.each(FIXTURE_RECORDS.map((record) => [record.relative, record] as const))(
@@ -930,6 +1136,10 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
     (_label, record) => {
       expectSidecarEnvelope(record);
       expect(stringField(record.payload, "schema", record.relative)).toBe(record.spec.schema);
+      if (record.spec.shape === "unicode-probe" || record.spec.shape === "unitsml-probe") {
+        expectNativeProbe(record);
+        return;
+      }
       expect(stringField(record.payload, "format", record.relative)).toBe(
         basename(dirname(record.relative)),
       );
@@ -1596,10 +1806,24 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
             "constructsCount",
             "rendersCount",
             "unstableCount",
+            "constructorWitnesses",
             "rows",
           ],
           record.relative,
         );
+        const witnesses = mapField(record.payload, "constructorWitnesses", record.relative);
+        expect(Object.keys(witnesses)).toEqual(["unitsml"]);
+        for (const [kind, value] of Object.entries(witnesses)) {
+          const at = `${record.relative}.constructorWitnesses.${kind}`;
+          const witness = mapping(value, at);
+          expectExactKeys(witness, ["input", "model", "output"], at);
+          const input = stringField(witness, "input", at);
+          expect(mapField(witness, "model", at)).toEqual({
+            class: "Math::Function::Unitsml",
+            fields: { text: input },
+          });
+          stringValue(witness, "output", at);
+        }
         const inventory = arrayField(record.payload, "inventory", record.relative);
         expect(inventory.length).toBeGreaterThan(0);
         for (const [index, kind] of inventory.entries()) {
@@ -1658,7 +1882,11 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               ["kind", "slot", "value", "constructs", "constructError"],
               `${record.relative}.rows[${index}]`,
             );
-            expect(stringField(item, "constructError", record.relative)).toBe("NoMethodError");
+            expect(stringField(item, "constructError", record.relative)).toBe(
+              item.kind === "unitsml" && item.value === "empty-string"
+                ? "Parslet::ParseFailed"
+                : "NoMethodError",
+            );
             continue;
           }
           constructs += 1;
@@ -1770,6 +1998,7 @@ describe("generated data binds to the generator inputs it names", () => {
       OMML_DATA_GENERATED_PROVENANCE.generator,
       ...fixtureEntrypoints,
     ];
+    expect(recordedEntrypoints).toContain("scripts/generate-unitsml-data.rb");
     expect([...new Set(recordedEntrypoints)].sort()).toStrictEqual(shipped);
   });
 });

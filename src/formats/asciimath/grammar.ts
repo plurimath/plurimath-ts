@@ -46,6 +46,7 @@ import { ASCIIMATH_LITERALS, type AsciimathLiteralKind } from "../../generated/a
 import {
   type Atom,
   alt,
+  any,
   captured,
   dynamic,
   match,
@@ -361,16 +362,12 @@ export function createAsciimathGrammar(
 
   const quotedText = rule(() =>
     alt(
-      // UnitsML is deferred (ARCHITECTURE.md §5), so the gem's first
-      // alternative stays commented out rather than deleted — its shape, and
-      // its position in this ordered choice, are what a later change restores:
-      //
-      //   seq(str('"'), str("unitsml("),
-      //       seq(str(')"').absent(), any()).repeat().as("unitsml"),
-      //       str(')"')),
-      //
-      // With it disabled, `"unitsml(kg)"` falls through to the plain
-      // quoted-text alternative below and parses as `{text: "unitsml(kg)"}`.
+      seq(
+        str('"'),
+        str("unitsml("),
+        seq(str(')"').absent(), any()).repeat().as("unitsml"),
+        str(')"'),
+      ),
       seq(str('"'), match('[^"]').repeat().as("text"), str('"')),
       seq(str('"'), str("").as("text")),
     ),

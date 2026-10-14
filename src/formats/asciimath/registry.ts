@@ -74,6 +74,7 @@ import {
   UlNode,
   UnaryFunctionNode,
   UndersetNode,
+  UnitsmlNode,
   VecNode,
 } from "../../core/index";
 import { NODE_SPECS } from "../../core/normalize";
@@ -174,6 +175,7 @@ export const ASCIIMATH_NODE_CONSTRUCTORS: { readonly [K in NodeKind]: AsciimathN
   ul: UlNode,
   unaryFunction: UnaryFunctionNode,
   underset: UndersetNode,
+  unitsml: UnitsmlNode,
   vec: VecNode,
 };
 

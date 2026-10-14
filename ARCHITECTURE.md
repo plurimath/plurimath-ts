@@ -219,7 +219,7 @@ test/                Corpus conformance, pegkit conformance, unit tests,
    which is format-owned.
 2. **Leaf services** import only `core` and their own data, and are the sole
    modules a format may import besides the layer-1 modules. Today that is
-   `formatting`; `unitsml` joins this tier if and when it is built (§5).
+   `formatting`; `unitsml` uses this tier (§5).
 3. A format module imports only layer-1 modules, leaf services, its own
    data — `generated/<F>` and no other format's slice — and its own render
    kind files: under `src/render`, format `F` may import only
@@ -795,7 +795,7 @@ fails regeneration on an unmanifested context key is a **possible later
 addition**, deliberately not built until a real miss justifies it. A symbol id
 missing from a renderer slice throws — parity gaps fail loudly.
 
-**UnitsML node state (design, for when UnitsML lands).** `UnitsmlNode` stores
+**UnitsML node state.** `UnitsmlNode` stores
 the **raw unit text only**;
 conversion happens at render time via the `unitsml` service, which is where
 Ruby does it and where the render options apply. Projections are explicit,
@@ -810,98 +810,25 @@ excluded         : any parsed object or memoization cache
 Re-parse cost per render is accepted; an internal cache keyed by text is a
 contained, non-API-visible fallback if measurement demands it.
 
-**UnitsML — deferred (decided 2026-07-29).** UnitsML is **out of scope until
-the approach is agreed with the maintainer**. Nothing pretends to support it:
-there is no `unitsml` module, no dependency, no node kind, and the AsciiMath
-grammar's `unitsml(...)` alternative is **present but commented out**, with a
-pointer to this section. Commented-out rather than deleted so the exact shape
-of the future rule — and where it belongs in `quoted_text`'s ordered choice —
-stays visible.
+**UnitsML — native implementation (approved 2026-10-14).** The format-neutral
+`unitsml/` leaf service imports only core and its own generated reference data.
+It validates the pinned UnitsML grammar, expands raw text into native nodes at
+render time, and emits UnitsML XML metadata. All six renderers accept the nested
+`unitsml` options and delegate the new kind to that service. AsciiMath restores
+both quoted-UnitsML transform rules; invalid unit expressions fail during parsing.
+No Ruby, Opal, external package, or service is required by the runtime.
 
-> **Notice (must appear in user-facing docs, not only here): while UnitsML is
-> unsupported, `"unitsml(...)"` input is processed as ordinary text.** Parsing
-> such input emits a deduplicated warning by default; consumers can capture,
-> reroute, or silence it via the `onUnsupported` option (below).
+The raw-text projection above deliberately excludes Ruby's parsed `@unitsml`
+cache. The generator applies the same explicit projection. The standalone Ruby
+`Math.parse("kg", :unitsml)` route raises on the pinned oracle because its result
+has no `input_string=` setter; inline AsciiMath UnitsML is the supported parse
+path. A separate public UnitsML package subpath is not introduced by this work.
 
-That is the natural consequence of disabling the rule, verified against the
-POC: input falls through to the plain quoted-text alternative, so
-`"unitsml(kg)"` yields `Text("unitsml(kg)")` and renders as `"unitsml(kg)"`
-(AsciiMath), `\text{unitsml(kg)}` (LaTeX), `<mtext>unitsml(kg)</mtext>`
-(MathML).
-
-**Unsupported-construct diagnostics (decided 2026-07-29).** Silence is the
-wrong default for a deliberate divergence, so parsers report it through one
-option. `core` owns the format-blind diagnostic type; every parser accepts the
-callback:
-
-```ts
-interface UnsupportedDiagnostic {
-  readonly feature: "unitsml";   // union of currently deferred features
-  readonly text: string;         // the construct exactly as written
-  readonly index: number;        // UTF-16 offset into the ORIGINAL input
-  readonly message: string;      // the default human-readable explanation
-}
-type OnUnsupported = (diagnostic: UnsupportedDiagnostic) => void;
-```
-
-- **Default** (no callback): one `console.warn` per unique
-  `feature + text`, naming the construct, the fallback behaviour, and the docs
-  link. Deduplicated so a document with 500 unit expressions warns once, not
-  500 times.
-- **Supplying a callback replaces the default entirely** — that is also how it
-  is silenced (`onUnsupported: () => {}`), routed to a logger, collected for a
-  UI, or escalated by throwing. No second flag, no global switch: a global
-  `configure()` would be module-level mutable state (rule 7) and would
-  duplicate across the ESM and CJS copies, the same hazard the error `code`
-  contract avoids.
-- Detection is an explicit check for the `unitsml(` prefix inside quoted text.
-  That check *declares non-support*; it is not partial support.
-- The dedup cache is **call-time, module-local, advisory** state — it is never
-  touched at import time (rule 7 holds), and a duplicate warning across an
-  ESM/CJS boundary is harmless.
-- **Offsets are mapped back through preprocessing.** AsciiMath preprocessing
-  rewrites digraphs to single characters (`{:` → `ℒ`, `:)` → `ᑐ`, …), so a raw
-  parser offset indexes the *preprocessed* string, not the caller's input —
-  verified: `"{:x:} + \"unitsml(kg)\""` shifts by 2. Preprocessing therefore
-  emits an offset map, and every reported index — `UnsupportedDiagnostic.index`
-  **and `ParseError.index`** — is translated through it. Tests cover an input
-  whose construct sits after a length-changing token.
-
-Accepted consequence, stated plainly: for this input the port **diverges from
-Ruby**, which renders the units (`rm(kg)` / `\mathrm{kg}`). The divergence is
-deliberate and documented rather than hidden behind a thrown error that would
-kill an otherwise renderable document; the parse tree for that input likewise
-differs from Ruby's (`{text: ...}` instead of `{unitsml: ...}`).
-
-The shared corpus does carry one case, `text-unitsml-valid`, withheld by
-`corpus/exclusions.yaml` rather than absent. The **deferred-feature
-classifier** is local to `scripts/generate-corpus.rb`; the testsuite generator
-and the differential runner do not share it. The divergence cuts both ways:
-Ruby **rejects** malformed UnitsML during construction
-(`::Unitsml.parse` raises inside the node constructor) where the port accepts
-the same quoted string as text, and Ruby **renders** valid UnitsML where the
-port emits literal text. The classifier therefore matches on the **input
-text** (the `unitsml(` construct), not on a parsed class: for rejection cases
-Ruby never produces a formula, so post-parse class detection could not see
-them. What it flags is listed in an exclusion manifest shipped beside the
-corpus, so the gap is visible rather than implied by absence. The testsuite
-generator still emits the case (`text-unitsml-valid`), and the differential
-runner omits UnitsML from its own atom set rather than through this
-classifier — the exclusion is not one mechanism shared by three generators.
-
-Why it is deferred rather than bridged, verified 2026-07-29:
-
-1. `@unitsml/unitsml@0.6.7` publishes **only** `LICENSE`, `README.md`, and
-   `package.json` — the `dist/` its `main`, `module`, `types`, and `exports`
-   point at is absent from the tarball, so importing it fails.
-2. Upstream's README marks `Unitsml.parse()` runtime support incomplete.
-3. Even once shipped, Ruby's `to_plurimath` builds a **Ruby/Opal** formula by
-   re-parsing generated MathML; it would not return this project's native
-   model, so a bridge needs a MathML→native adapter and MathML *input* is a
-   later phase (§11).
-
-When the approach is settled, the design above (leaf service, raw-text node,
-render-time conversion, separate parser entry point) is what gets built.
+Expected values and database tables are measured on the pinned Ruby oracle in
+GHA. Probe artifacts record source, generator, lockfile, dependency versions and
+payload hashes; a measured artifact is not a TypeScript conformance verdict.
+Nested multiplier strings remain literal strings; `Symbol.for("space")` and
+`Symbol.for("nospace")` carry the corresponding Ruby Symbol sentinel options.
 
 ## 6. pegkit
 

@@ -441,27 +441,12 @@ describe("the pin as shipped", () => {
 });
 
 describe("what this port checks against", () => {
-  it("is the pin minus the deferred-construct cases", () => {
+  it("checks every pinned case now that native UnitsML has no exclusion", () => {
     const corpus = loadPinnedCorpus();
-    const withheld = new Set(readExclusions().map((entry) => entry.id));
-    const inPin = corpus.cases.filter((entry) => withheld.has(entry.id)).map((entry) => entry.id);
-    // `text-unitsml-invalid` is withheld too, but the gem raises on it, so the
-    // shared corpus has no case to withhold — only the valid one is in the pin.
-    expect(inPin).toStrictEqual(["text-unitsml-valid"]);
-    expect(readCorpusCases().length).toBe(corpus.cases.length - inPin.length);
-    expect(readCorpusCases().length).toBe(713);
-  });
-
-  it("names the deferred feature and cites the architecture note", () => {
-    const withheld = readExclusions();
-    expect(withheld.map((entry) => entry.id).sort()).toStrictEqual([
-      "text-unitsml-invalid",
-      "text-unitsml-valid",
-    ]);
-    for (const entry of withheld) {
-      expect(entry.feature).toBe("unitsml");
-      expect(entry.reason).toContain("ARCHITECTURE.md");
-    }
+    expect(readExclusions()).toStrictEqual([]);
+    expect(readCorpusCases().length).toBe(corpus.cases.length);
+    expect(readCorpusCases().length).toBe(714);
+    expect(readCorpusCases().some((entry) => entry.id === "text-unitsml-valid")).toBe(true);
   });
 });
 

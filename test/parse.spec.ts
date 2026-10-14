@@ -16,7 +16,6 @@ import {
   ParseError,
   ParseOptionError,
   parse,
-  UnsupportedFormatError,
 } from "../src/index";
 
 const MATHML = '<math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math>';
@@ -54,12 +53,12 @@ describe("root parse", () => {
     expect(localized).not.toStrictEqual(normalize(parse("1,5", "asciimath")));
   });
 
-  it("forwards the AsciiMath unsupported-construct callback", () => {
+  it("accepts the dormant AsciiMath unsupported-construct callback", () => {
     const reported: unknown[] = [];
     parse('"unitsml(kg)"', "asciimath", {
       onUnsupported: (diagnostic) => reported.push(diagnostic),
     });
-    expect(reported).toHaveLength(1);
+    expect(reported).toHaveLength(0);
   });
 
   it.each(["mathml", "omml"] as const)("%s accepts absent, null and empty options", (format) => {
@@ -92,8 +91,8 @@ describe("root parse", () => {
     },
   );
 
-  it("recognizes deferred UnitsML separately from an invalid format", () => {
-    expect(() => parse("x", "unitsml" as Format)).toThrow(UnsupportedFormatError);
+  it("preserves standalone UnitsML's reference parse failure", () => {
+    expect(() => parse("x", "unitsml" as Format)).toThrow(ParseError);
   });
 });
 
@@ -110,7 +109,7 @@ function optionTypes(): void {
   parse(OMML, "omml", { onUnsupported: () => {} });
   // @ts-expect-error The root ABI uses unicode, not unicodemath.
   parse("x", "unicodemath");
-  // @ts-expect-error UnitsML is deferred and not a typed input format.
+  // @ts-expect-error Standalone UnitsML fails at the reference parse boundary and is not a typed input format.
   parse("x", "unitsml");
 }
 void optionTypes;

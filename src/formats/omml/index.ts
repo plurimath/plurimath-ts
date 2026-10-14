@@ -11,6 +11,7 @@
  * behind it is not, being plumbing rather than public API (`src/xml/index.ts`).
  */
 
+export type { UnitsmlRenderOptions } from "../../unitsml/index";
 export { parseOmml } from "./parser";
 export type { OmmlOptions } from "./renderer";
 export { toOmml } from "./renderer";

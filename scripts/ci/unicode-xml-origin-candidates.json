@@ -1,0 +1,2321 @@
+{
+  "schema": "plurimath-unicode-xml-origin-candidates/1",
+  "corpus": "cf3c5ebf8b8ce35ade189b11a741f272ae93c8a0",
+  "sourceInputs": {
+    "corpus/mathml/elementary-math.yaml": {
+      "bytes": 47800,
+      "sha256": "a2659c9fba3b09759bae1cd4e018df286da65e128a392c77884923eae778763c"
+    },
+    "corpus/mathml/enclose.yaml": {
+      "bytes": 3729,
+      "sha256": "1b2eb76f3cfceaf9dee6263761dc9a50b9f5769d2e783bacf7e28058cedeb144"
+    },
+    "corpus/mathml/fences.yaml": {
+      "bytes": 159855,
+      "sha256": "6db69077adff35aa2f4e69fc5beeea2898fa10c8e1a351c29614af641efc969b"
+    },
+    "corpus/mathml/fractions.yaml": {
+      "bytes": 68670,
+      "sha256": "46bc29a78abc749d68a1454f91661c9e37901d2b36dbfbf4b9ec0c4a3f803140"
+    },
+    "corpus/mathml/layout.yaml": {
+      "bytes": 32195,
+      "sha256": "0c248ba217024f7caa77383218b2ac9ab5fa20bc98e757bf05400349d1d474c0"
+    },
+    "corpus/mathml/over-under.yaml": {
+      "bytes": 189075,
+      "sha256": "bd883af6f2201ace34ad913fcf702303c06adf3e76e96e5861b818d23981c478"
+    },
+    "corpus/mathml/partial-render.yaml": {
+      "bytes": 169609,
+      "sha256": "e360561831fab0f799f5a9a161ffc658ea4f91a88d0d460acd503295e70b4951"
+    },
+    "corpus/mathml/rejections.yaml": {
+      "bytes": 2964,
+      "sha256": "7848070cc5a03f14f3950d789df2ecd4c1036b375e58bac7d661ceafba90ade4"
+    },
+    "corpus/mathml/roots.yaml": {
+      "bytes": 12364,
+      "sha256": "3106e38a81e151dba3572a79212148aeb27f376b7b3ff06a89132f49238c9e8c"
+    },
+    "corpus/mathml/scripts.yaml": {
+      "bytes": 332878,
+      "sha256": "1d4ba577631dfaaa469befef7aacde4c116340154be5f2e211602440014df99f"
+    },
+    "corpus/mathml/tables.yaml": {
+      "bytes": 76086,
+      "sha256": "f2ecdc64d31489da0353354aaea3e7ec883076b8ec4ab5e792f748f3129f91dc"
+    },
+    "corpus/mathml/text.yaml": {
+      "bytes": 29368,
+      "sha256": "ac971d12c30121bfa22db80afb16e1c2d338f400ab32c292b9461d075b5fbc60"
+    },
+    "corpus/mathml/tokens.yaml": {
+      "bytes": 305211,
+      "sha256": "bbe240ef8a87af95156bb97b23aaf75c1cb95e31bd74874a0d0ab5ae6ab6dc1b"
+    },
+    "corpus/omml/accents.yaml": {
+      "bytes": 25008,
+      "sha256": "d696f6db7bf47f88b3232493ffdd20721af5808e80b77b29c7ba9125416d4907"
+    },
+    "corpus/omml/boxes.yaml": {
+      "bytes": 10555,
+      "sha256": "2522f8bc43c2341a7c361fe31670baa01b489832a01fdedd85da99d51108a9f9"
+    },
+    "corpus/omml/delimiters.yaml": {
+      "bytes": 121100,
+      "sha256": "3ba61e47f1a035d30618b83ad9363bd232708c85ef0af479ada2c2e4e4b05a05"
+    },
+    "corpus/omml/equation-arrays.yaml": {
+      "bytes": 117038,
+      "sha256": "e144c51f398891b655270613adcc0b3424599cf99b64f6546a35ed091e0d8abb"
+    },
+    "corpus/omml/fractions.yaml": {
+      "bytes": 58775,
+      "sha256": "c2ec27f1c106fc15533b6d303aa3bb93da0230b6324832f423e855d41887f699"
+    },
+    "corpus/omml/functions.yaml": {
+      "bytes": 140387,
+      "sha256": "039637381e90f3ca97f3a13df3c471d5a788d5074c194a9a2f01f99bae4eb890"
+    },
+    "corpus/omml/group-characters.yaml": {
+      "bytes": 16512,
+      "sha256": "ab5bba56ff1a2556a9e20fc99c54f42c582bc8c00b6c3fb4ed289708e8d12cd2"
+    },
+    "corpus/omml/limits.yaml": {
+      "bytes": 269889,
+      "sha256": "5cc95c71112d8de5d76b6b083295112b761a35af7f11ffddb6fab78201918e13"
+    },
+    "corpus/omml/matrices.yaml": {
+      "bytes": 270347,
+      "sha256": "22bdc33dd8fb9f41d820b53198efc670544c2d16952a507a2bb8069384e4b894"
+    },
+    "corpus/omml/nary.yaml": {
+      "bytes": 96830,
+      "sha256": "9e6e58566e6ac265cec8ca5984fa233f029d878165a3ca1ad0c2a8318077850d"
+    },
+    "corpus/omml/partial-render.yaml": {
+      "bytes": 294124,
+      "sha256": "8f37462ef54262c2de179bc76f3d63edc212b02e730b7d1219408c669843fd40"
+    },
+    "corpus/omml/rejections.yaml": {
+      "bytes": 2954,
+      "sha256": "985e31c2c66b5bc7d2b6732ae21372670768809f107368acf58c5c0d94c1fcfb"
+    },
+    "corpus/omml/roots.yaml": {
+      "bytes": 30600,
+      "sha256": "500b4a3dbd6cbcf1500bbdf16e56c62b96792c50316e1a2d0aa9aab00ed0fb37"
+    },
+    "corpus/omml/runs.yaml": {
+      "bytes": 139464,
+      "sha256": "b4c26086147c28557de0d931d3b07a0e304f4139b4b7002b87cbaddd45e3d7c8"
+    },
+    "corpus/omml/scripts.yaml": {
+      "bytes": 161595,
+      "sha256": "75b9b2319d641af627d060c98c10342bb36f2a8e100f1ac9e44bf4d9294770c3"
+    }
+  },
+  "sourceRecordCount": 454,
+  "cases": [
+    {
+      "input": "()┴(424 + 33 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-elementary-math-001"]
+    },
+    {
+      "input": "()┴(123 456 +  579)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-elementary-math-002"]
+    },
+    {
+      "input": "()┴(456 + )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-elementary-math-003"]
+    },
+    {
+      "input": "()┴(scarries⁡2 12 2,327 −  1,156  1,171)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-elementary-math-004"]
+    },
+    {
+      "input": "()┴(scarries⁡1 2,327 −  1,156  1,171)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-elementary-math-005"]
+    },
+    {
+      "input": "()┴(scarries⁡▁(10) 52 −  7  45)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-elementary-math-006"]
+    },
+    {
+      "input": "()┴(  0.3333 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-elementary-math-007"]
+    },
+    {
+      "input": "()┴(  0.142857 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-elementary-math-008"]
+    },
+    {
+      "input": "()┴( 0.142857  )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-elementary-math-009"]
+    },
+    {
+      "input": "()┴(. .  0.142857 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-elementary-math-010"]
+    },
+    {
+      "input": "(x , y) (x y)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-001"]
+    },
+    {
+      "input": "[ 0   1 ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-002"]
+    },
+    {
+      "input": " f  ⁡ ( x   y )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-003"]
+    },
+    {
+      "input": "Polar ⁡ (2 3.1415)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-004"]
+    },
+    {
+      "input": "(x 1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-005"]
+    },
+    {
+      "input": "[0 1]",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-006"]
+    },
+    {
+      "input": "(0 1]",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-007"]
+    },
+    {
+      "input": "[0 1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-008"]
+    },
+    {
+      "input": "λ x . (sin⁡⁡ (x + 1))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-009"]
+    },
+    {
+      "input": "(f ∘ g) ⁡ (x) = f ⁡ (g ⁡ (x))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-010"]
+    },
+    {
+      "input": "domain ⁡ (f) = \\BbbR",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-011"]
+    },
+    {
+      "input": "codomain ⁡ (f) = \\BbbQ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-012"]
+    },
+    {
+      "input": "image ⁡ (sin⁡) = [-1 1]",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-013"]
+    },
+    {
+      "input": "gcd⁡⁡ (a b c)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-014"]
+    },
+    {
+      "input": "∀ x . (x − x = 0)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-015"]
+    },
+    {
+      "input": "∃ x . (f ⁡ (x) = 0)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-016"]
+    },
+    {
+      "input": "∃ x . (x ∈ \\BbbZ ∧ f ⁡ (x) = 0)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-017"]
+    },
+    {
+      "input": "arg ⁡ (x + i ⁢ y)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-018"]
+    },
+    {
+      "input": "ℛ ⁡ (x + i ⁢ y)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-019"]
+    },
+    {
+      "input": "ℑ ⁡ (x + i ⁢ y)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-020"]
+    },
+    {
+      "input": "lcm⁡⁡ (a b c)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-021"]
+    },
+    {
+      "input": "div ⁡ (a)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-022"]
+    },
+    {
+      "input": "div ⁡ (E)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-023"]
+    },
+    {
+      "input": "grad ⁡ (f)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-024"]
+    },
+    {
+      "input": "∇ ⁡ (f)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-025"]
+    },
+    {
+      "input": "grad ⁡ ((x y z) ↦ x ⁢ y ⁢ z)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-026"]
+    },
+    {
+      "input": "curl ⁡ (a)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-027"]
+    },
+    {
+      "input": "σ ⁡ (3 4 2 2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-028"]
+    },
+    {
+      "input": "σ ⁡ (X)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-029"]
+    },
+    {
+      "input": "median ⁡ (3 4 2 2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-030"]
+    },
+    {
+      "input": "mode ⁡ (3 4 2 2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fences-031"]
+    },
+    {
+      "input": "\\mupΔ A = \\mup(b)/(2 ⋅ C C)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fractions-001"]
+    },
+    {
+      "input": " 2  +  3   ⁢  ⅈ ( 1 )/( 2 ) π  ⅇ ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fractions-002"]
+    },
+    {
+      "input": " 2   ⁤  ( 3 )/( 4 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fractions-003"]
+    },
+    {
+      "input": "(ⅆ)/(ⅆ  x )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fractions-004"]
+    },
+    {
+      "input": "(( a )/( b ))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fractions-005", "mathml-fractions-008", "mathml-fractions-009"]
+    },
+    {
+      "input": "(( a )¦( b )) (( a )/( b ))¦(( c )/( d ))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fractions-006"]
+    },
+    {
+      "input": "(1  + √(5 ))/(2 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fractions-007"]
+    },
+    {
+      "input": "( 1  + √( 5 ))/( 2 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fractions-010"]
+    },
+    {
+      "input": "C ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fractions-011"]
+    },
+    {
+      "input": "(d sin⁡⁡ x)/(d x) = cos⁡⁡ x",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-fractions-013"]
+    },
+    {
+      "input": "sin⁡ 1",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-layout-001"]
+    },
+    {
+      "input": "\\mfrakf",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-layout-002"]
+    },
+    {
+      "input": "\\msansf",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-layout-003"]
+    },
+    {
+      "input": "ￗ(f)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-layout-004"]
+    },
+    {
+      "input": "\\mscrf",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-layout-005"]
+    },
+    {
+      "input": "\\Bbbs",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-layout-006"]
+    },
+    {
+      "input": "\\mbfd",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-layout-007"]
+    },
+    {
+      "input": "\\mfrak✎(\"red\"&d)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-layout-008"]
+    },
+    {
+      "input": "✎(\"red\"&d)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-layout-009"]
+    },
+    {
+      "input": "a + b \n + c",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-layout-010"]
+    },
+    {
+      "input": "x ⟡(y) z",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-layout-011"]
+    },
+    {
+      "input": "(c)̃",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-001"]
+    },
+    {
+      "input": "∑_(∏)^(⋁)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-002"]
+    },
+    {
+      "input": "∑_(x)^(s)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-003"]
+    },
+    {
+      "input": "∑_(s x)^(s w) \"something\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-004"]
+    },
+    {
+      "input": "∑_(1)^(n) i^(3)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-005"]
+    },
+    {
+      "input": "∑_(1)^(n) i^(3) = (n)/(2)^(2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-006"]
+    },
+    {
+      "input": "sin⁡ (∑)┴(θ)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-007"]
+    },
+    {
+      "input": "(∑)┴(3)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-008"]
+    },
+    {
+      "input": "(∑)┴(Θ)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-009"]
+    },
+    {
+      "input": "∑_(i = (12)/(□))^(33)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-010"]
+    },
+    {
+      "input": "(i)┴(1234)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-011"]
+    },
+    {
+      "input": "∏_(θ) i",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-012"]
+    },
+    {
+      "input": "⏟(4)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-013"]
+    },
+    {
+      "input": "⏞(4)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-014"]
+    },
+    {
+      "input": "∑_(i = ✎(\"blue\"&≠))^(33)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-015"]
+    },
+    {
+      "input": "∑_(i = frac)^(33)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-016"]
+    },
+    {
+      "input": "∑_(1)^(n) i^(3) = sin⁡(n)/(2)^(2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-017"]
+    },
+    {
+      "input": "(e)̂_(r)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-018"]
+    },
+    {
+      "input": "\\mitT_(90)/\\mupK = \\mitA_(0) + ∑_(i = 1)^(9) \\mitA_(i) [(ln⁡ (p/\\mupPa) — \\mitB)/\\mitC]^(i) .",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-019"]
+    },
+    {
+      "input": "(θ)̇ ≠ (θ)̈",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-020"]
+    },
+    {
+      "input": "▁(() ( a )/( b ) ())̅",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-021"]
+    },
+    {
+      "input": " x  (\" maps to \")⃗  y ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-022"]
+    },
+    {
+      "input": "⏟( x  +  y  +  z ) \" versus \" ⏟( x  +  y  +  z )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-023"]
+    },
+    {
+      "input": "( x )̂ \" versus \" ( x )̂",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-024"]
+    },
+    {
+      "input": "⏞( x  +  y  +  z ) \" versus \" ⏞( x  +  y  +  z )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-025"]
+    },
+    {
+      "input": "(∫_( 0 ))┴(∞) \" versus \" ∫_( 0 )^(∞)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-026"]
+    },
+    {
+      "input": "(\n      Op\n      )┬ X  ∈  D  ⁡ (\n      Expression-in-X\n      )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-027"]
+    },
+    {
+      "input": "(x + ⅈ ⁢ y)̅",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-028"]
+    },
+    {
+      "input": "∑_(x = a)^(b)▒〖f ⁡ (x)〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-029"]
+    },
+    {
+      "input": "∑_(x ∈ B)▒〖f ⁡ (x)〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-030"]
+    },
+    {
+      "input": "∑_(B)▒〖f〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-031"]
+    },
+    {
+      "input": "∏_(x = a)^(b)▒〖f ⁡ (x)〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-032"]
+    },
+    {
+      "input": "∏_(x ∈ B)▒〖f ⁡ (x)〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-033"]
+    },
+    {
+      "input": "(X)̅",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-over-under-034"]
+    },
+    {
+      "input": "33\"dd\"\"0\n  \"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-003"]
+    },
+    {
+      "input": "33dd\"0\n  \"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-004"]
+    },
+    {
+      "input": "n<1",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-005"]
+    },
+    {
+      "input": "1.4",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-006"]
+    },
+    {
+      "input": "1,4",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-007"]
+    },
+    {
+      "input": "( x  +  y  +  z )/( x  ⟡(+  y ) +  z )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-009"]
+    },
+    {
+      "input": "( x  +  y  +  z )/( x  ⟡(+) ⟡( y ) +  z )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-010"]
+    },
+    {
+      "input": "_( 0 )^()  F _( 1 )^() ⁡ ( ;   a   ;   z )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-012"]
+    },
+    {
+      "input": "_()^(5) ل_(12)^()",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-014"]
+    },
+    {
+      "input": "()┴(123× 321  123246369 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-016"]
+    },
+    {
+      "input": "()┴(scarries⁡1 1 scarries⁡1 1 1,234 × 4,321  scarries⁡1 1 1 1 1 1,23424,68370,24,936  5,332,114)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-017"]
+    },
+    {
+      "input": "{\"A\" , \"B\" , \"   \"}",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-020"]
+    },
+    {
+      "input": "⋀_(i = 0)^(n)▒(a_(i) > 0)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-021"]
+    },
+    {
+      "input": "⋃_(L)▒〖S〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-022"]
+    },
+    {
+      "input": "⋂_(L)▒〖S〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-partial-023"]
+    },
+    {
+      "input": "√(∑)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-roots-001"]
+    },
+    {
+      "input": "√(s t)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-roots-002"]
+    },
+    {
+      "input": "√(x&θ)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-roots-003"]
+    },
+    {
+      "input": "√(n&a)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-roots-004"]
+    },
+    {
+      "input": "sin⁡_(∑)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-001"]
+    },
+    {
+      "input": "sin⁡^(∑)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-002"]
+    },
+    {
+      "input": "sin⁡_(∏)^(∑)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-003"]
+    },
+    {
+      "input": "log_(4)^(\"4 terms\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-004"]
+    },
+    {
+      "input": "∫_(0)^(1) f x d x",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-005"]
+    },
+    {
+      "input": "log 4^(\"4 terms\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-006"]
+    },
+    {
+      "input": "\"\"^(12)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-007", "mathml-scripts-008"]
+    },
+    {
+      "input": "\\mitD_(i) = x_(i) − x_(\\mupS \\mupR \\mupP 27)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-009"]
+    },
+    {
+      "input": "\\mitW_(t)  (\\mitT_(90))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-010"]
+    },
+    {
+      "input": "\\mupt g t '_(D C X) (Δ t_(s) , Δ f ') = \\mupt g t_(D C X) (Δ t_(s)) [1 + \\mupU F D_(D C X) ⋅ Δ f ']",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-011"]
+    },
+    {
+      "input": "x = (− b ± √(b^(2) − 4 ∏ a ∑ c))/(2 ∡ a)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-012"]
+    },
+    {
+      "input": " m _( 1   ⁣   2 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-013"]
+    },
+    {
+      "input": "f ⁡ ( x ) = (x + 1)^(4) \n= x^(4) + 4 ⁢ x^(3) + 6 ⁢ x^(2) \n+ 4 ⁢ x + 1",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-014"]
+    },
+    {
+      "input": " x ^( 2 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-015", "mathml-scripts-016"]
+    },
+    {
+      "input": "( 1 )/( x ^( 3 ) + ( x )/( 3 )) = ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-017"]
+    },
+    {
+      "input": "a_( ⁣ i)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-018"]
+    },
+    {
+      "input": "( x  +  y )^( 2 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-019"]
+    },
+    {
+      "input": "∫_( 0 )^( 1 )▒〖 ⅇ ^( x )  ⁢  ⅆ  x 〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-020"]
+    },
+    {
+      "input": "7FE0_(16)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-021"]
+    },
+    {
+      "input": "C^(2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-022"]
+    },
+    {
+      "input": "f^(-1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-023"]
+    },
+    {
+      "input": "A^(-1) ⁡ (a)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-024"]
+    },
+    {
+      "input": "f ∘ f^(-1) = id",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-025"]
+    },
+    {
+      "input": "max⁡{y | y^(3) ∈ [0 1]}",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-026"]
+    },
+    {
+      "input": "min⁡{x^(2) | x ∉ B}",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-027"]
+    },
+    {
+      "input": "x^(3)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-028"]
+    },
+    {
+      "input": "∀ p ∈ \\BbbQ ∧ q ∈ \\BbbQ ∧ (p < q) . (p < q^(2))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-029"]
+    },
+    {
+      "input": "∀ p , q . ((p ∈ \\BbbQ ∧ q ∈ \\BbbQ ∧ (p < q)) ⇒ (p < q^(2)))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-030"]
+    },
+    {
+      "input": "∫_(a)^(b)▒〖cos⁡〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-031"]
+    },
+    {
+      "input": "∫_(0)^(1)▒〖x^(2)〗 d x",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-032"]
+    },
+    {
+      "input": "f′",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-033"]
+    },
+    {
+      "input": "(d^(2) x^(4))/(d x^(2))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-034"]
+    },
+    {
+      "input": "D_(1 , 1 , 3) f",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-035"]
+    },
+    {
+      "input": "(∂^(3) f ⁡ (x y z))/(∂ x^(2) ∂ z)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-036"]
+    },
+    {
+      "input": "(∂^(2) f ⁡ (x y))/(∂ x ∂ y)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-037"]
+    },
+    {
+      "input": "(∂^(k) f ⁡ (x y))/(∂ x^(m) ∂ y^(n))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-038"]
+    },
+    {
+      "input": "∇^(2) ⁡ (E)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-039"]
+    },
+    {
+      "input": "∇^(2) ⁡ ((x y z) ↦ f ⁡ (x y))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-040"]
+    },
+    {
+      "input": "sin⁡⁡ (cos⁡⁡ x + x^(3))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-041"]
+    },
+    {
+      "input": "sin⁡^(− 1) ⁡ x",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-042"]
+    },
+    {
+      "input": "sinh⁡^(− 1) ⁡ x",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-043"]
+    },
+    {
+      "input": "e^(x)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-044"]
+    },
+    {
+      "input": "log_(3) ⁡ x",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-045"]
+    },
+    {
+      "input": "σ^(2) ⁡ (3 4 2 2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-046"]
+    },
+    {
+      "input": "σ^(2) ⁡ (X)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-047"]
+    },
+    {
+      "input": "⟨(6 4 2 2 5)^(3)⟩_(mean)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-048"]
+    },
+    {
+      "input": "⟨X^(3)⟩_(p)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-049"]
+    },
+    {
+      "input": "x′",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-scripts-050"]
+    },
+    {
+      "input": "a_(■(1))^(\"4 terms\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tables-001"]
+    },
+    {
+      "input": "a_{■(11&|)}^(\"4 terms\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tables-002"]
+    },
+    {
+      "input": "a_{■(11)}^(\"4 terms\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tables-003"]
+    },
+    {
+      "input": "⒨(1&0&0@0&1&0@0&0&1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tables-004"]
+    },
+    {
+      "input": "■( 8.44   ⁢   x  +  55   ⁢   y  =  0 @ 3.1   ⁢   x  −  0.7   ⁢   y  = −  1.1 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tables-005"]
+    },
+    {
+      "input": "{ ■(− x&\"  if  \"&x < 0@0&\"  if  \"&x = 0@x&\"  if  \"&x > 0)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tables-006"]
+    },
+    {
+      "input": "div ⁡ ( ■(x↦x + y@y↦x + z@z↦z + y) )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tables-007"]
+    },
+    {
+      "input": "\"aunicode[:beta]b\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-text-001"]
+    },
+    {
+      "input": "\"aunicode[:varsigma]b\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-text-002"]
+    },
+    {
+      "input": "\"aunicode[:omega]b\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-text-003"]
+    },
+    {
+      "input": "\"aunicode[:Omega]b\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-text-004"]
+    },
+    {
+      "input": "\"ãb\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-text-005"]
+    },
+    {
+      "input": "\"sinsumsomunicode[:Gamma]gamma\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-text-006"]
+    },
+    {
+      "input": "\"sinsumsomunicode[:Gamma]unicode[:gamma]\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-text-007"]
+    },
+    {
+      "input": "✎(\"#ff0000\"&\"Assigned value\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-text-008"]
+    },
+    {
+      "input": "\" Theorem  1:\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-text-009"]
+    },
+    {
+      "input": "\"\n    Theorem\n    1:\n  \"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-text-010"]
+    },
+    {
+      "input": "\" Theorem 1: \" \"   \" \"      \" \" /* a comment */ \"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-text-011"]
+    },
+    {
+      "input": "̃",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-001", "mathml-tokens-002"]
+    },
+    {
+      "input": "sin⁡",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-003", "mathml-tokens-011"]
+    },
+    {
+      "input": "12 mod 1234 i",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-004"]
+    },
+    {
+      "input": "| 4 |",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-005"]
+    },
+    {
+      "input": "Δ ν",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-006"]
+    },
+    {
+      "input": "\\mupGΩ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-007"]
+    },
+    {
+      "input": "ⓘ(\"plus(x, y)\"x + y)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-008"]
+    },
+    {
+      "input": "bar",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-009"]
+    },
+    {
+      "input": "\\mupbar",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-010"]
+    },
+    {
+      "input": "frac",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-012"]
+    },
+    {
+      "input": "∑",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-013"]
+    },
+    {
+      "input": " x   D  sin⁡ \\mscr L ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-014"]
+    },
+    {
+      "input": "sin⁡⁡  x ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-015"]
+    },
+    {
+      "input": " 1  + ... +  n ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-016"]
+    },
+    {
+      "input": "π ⅈ  ⅇ ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-017"]
+    },
+    {
+      "input": " 2   0.123   1,000,000   2.1e10   0xFFEF   MCMLXIX   twenty one ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-018"]
+    },
+    {
+      "input": "+ < ≤  <=   ++  ∑  .NOT.   and   ⁢  \\mbf+",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-019"]
+    },
+    {
+      "input": "( a  +  b )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-020"]
+    },
+    {
+      "input": "[ 0  ,  1 )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-021"]
+    },
+    {
+      "input": " f  ⁡ ( x  ,  y )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-022"]
+    },
+    {
+      "input": " x   ⁢   y ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-023"]
+    },
+    {
+      "input": " there exists  δ >  0   such that   f  ⁡ ( x ) <  1 ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-024"]
+    },
+    {
+      "input": " 2   ⁢   x  +  y  −  z ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-025"]
+    },
+    {
+      "input": "( x  ,  y )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-026"]
+    },
+    {
+      "input": "0x7F800000",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-027"]
+    },
+    {
+      "input": "22/7",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-028"]
+    },
+    {
+      "input": "12.3 + 5 ⁢ i",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-029"]
+    },
+    {
+      "input": "\n    F\n     ⁡ (\n      A1\n       , \n      ...\n       , \n      A2\n       , \n      An\n      )",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-030"]
+    },
+    {
+      "input": "\n    B\n     \n      x1\n       , \n      ...\n       , \n      xn\n     . \n    S\n  ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-031"]
+    },
+    {
+      "input": "x ↦ sin⁡⁡ (x + 1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-032"]
+    },
+    {
+      "input": "f ∘ g ∘ h",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-033"]
+    },
+    {
+      "input": "⌊a/b⌋",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-034"]
+    },
+    {
+      "input": "n !",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-035"]
+    },
+    {
+      "input": "a/b",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-036"]
+    },
+    {
+      "input": "max⁡{2 , 3 , 5}",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-037"]
+    },
+    {
+      "input": "min⁡{a , b}",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-038"]
+    },
+    {
+      "input": "− 3",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-039"]
+    },
+    {
+      "input": "x − y",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-040"]
+    },
+    {
+      "input": "x + y + z",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-041"]
+    },
+    {
+      "input": "amodb",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-042"]
+    },
+    {
+      "input": "a ⁢ b",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-043"]
+    },
+    {
+      "input": "a ∧ b",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-044"]
+    },
+    {
+      "input": "a ∨ b",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-045"]
+    },
+    {
+      "input": "a xor b",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-046"]
+    },
+    {
+      "input": "¬ a",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-047"]
+    },
+    {
+      "input": "A ⇒ B",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-048"]
+    },
+    {
+      "input": "|(x)|",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-049"]
+    },
+    {
+      "input": "⌊a⌋",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-050"]
+    },
+    {
+      "input": "⌈a⌉",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-051"]
+    },
+    {
+      "input": "2/4 = 1/2",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-052"]
+    },
+    {
+      "input": "3 ≠ 4",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-053"]
+    },
+    {
+      "input": "3 > 2",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-054"]
+    },
+    {
+      "input": "2 < 3 < 4",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-055"]
+    },
+    {
+      "input": "4 ≥ 3 ≥ 3",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-056"]
+    },
+    {
+      "input": "3 ≤ 3 ≤ 4",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-057"]
+    },
+    {
+      "input": "a ≡ ¬ ¬ a",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-058"]
+    },
+    {
+      "input": "π ≃ 22/7",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-059"]
+    },
+    {
+      "input": "a | b",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-060"]
+    },
+    {
+      "input": "∫ sin⁡ = cos⁡",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-061"]
+    },
+    {
+      "input": "∇ ⋅ E",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-062"]
+    },
+    {
+      "input": "∇ × a",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-063"]
+    },
+    {
+      "input": "{a , b , c}",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-064"]
+    },
+    {
+      "input": "{x | x < 5}",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-065"]
+    },
+    {
+      "input": "{S | S ∈ T}",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-066"]
+    },
+    {
+      "input": "{x | (x < 5) ∧ x ∈ \\BbbN}",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-067"]
+    },
+    {
+      "input": "(a , b , c)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-068"]
+    },
+    {
+      "input": "(x | x < 5)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-069"]
+    },
+    {
+      "input": "A ∪ B",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-070"]
+    },
+    {
+      "input": "A ∩ B",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-071"]
+    },
+    {
+      "input": "a ∈ A",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-072"]
+    },
+    {
+      "input": "a ∉ A",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-073"]
+    },
+    {
+      "input": "A ⊆ B",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-074"]
+    },
+    {
+      "input": "A ⊂ B",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-075"]
+    },
+    {
+      "input": "A ⊈ B",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-076"]
+    },
+    {
+      "input": "A ⊄ B",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-077"]
+    },
+    {
+      "input": "A ∖ B",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-078"]
+    },
+    {
+      "input": "|(A)| = 5",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-079"]
+    },
+    {
+      "input": "A × B",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-080"]
+    },
+    {
+      "input": "sin⁡⁡ x",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-081"]
+    },
+    {
+      "input": "arcsin⁡⁡ x",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-082"]
+    },
+    {
+      "input": "sinh⁡⁡ x",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-083"]
+    },
+    {
+      "input": "arcsinh ⁡ x",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-084"]
+    },
+    {
+      "input": "ln⁡⁡ a",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-085"]
+    },
+    {
+      "input": "log ⁡ x",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-086"]
+    },
+    {
+      "input": "⟨3 , 4 , 3 , 7 , 4⟩",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-087"]
+    },
+    {
+      "input": "''",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["mathml-tokens-088"]
+    },
+    {
+      "input": "(\"a\")̂",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-accents-001"]
+    },
+    {
+      "input": "⏞(\"c\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-accents-002"]
+    },
+    {
+      "input": "(\"under\")̅",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-accents-003"]
+    },
+    {
+      "input": "(\"x\")̅",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-accents-004"]
+    },
+    {
+      "input": "⟌(\"ax+b\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-boxes-001"]
+    },
+    {
+      "input": "\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-boxes-002"]
+    },
+    {
+      "input": "(1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-001"]
+    },
+    {
+      "input": "[2]",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-002"]
+    },
+    {
+      "input": "{3}",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-003"]
+    },
+    {
+      "input": "⟨4⟩",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-004"]
+    },
+    {
+      "input": "⌊5⌋",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-005"]
+    },
+    {
+      "input": "⌈6⌉",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-006"]
+    },
+    {
+      "input": "|(7)|",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-007"]
+    },
+    {
+      "input": "‖8‖",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-008"]
+    },
+    {
+      "input": "[9[",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-009"]
+    },
+    {
+      "input": "]0]",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-010"]
+    },
+    {
+      "input": "]1[",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-011"]
+    },
+    {
+      "input": "⟦2⟧",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-012"]
+    },
+    {
+      "input": "(1 2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-013"]
+    },
+    {
+      "input": "{3 4}",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-014"]
+    },
+    {
+      "input": "⟨5 6⟩",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-015"]
+    },
+    {
+      "input": "⟨7 8 9⟩",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-delimiters-016"]
+    },
+    {
+      "input": "∑_(■(\"0≤ i ≤ m\"@\"0<j<n \"))▒〖\"P\" (\"i,j\")〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-equation-arrays-001"]
+    },
+    {
+      "input": "Ⓢ(1@2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-equation-arrays-002"]
+    },
+    {
+      "input": "Ⓢ(1@2@3)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-equation-arrays-003"]
+    },
+    {
+      "input": "\"f\" (\"x\") = Ⓢ(\"-x,  &x<0\"@\"x,  &x≥0\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-equation-arrays-004"]
+    },
+    {
+      "input": "■(\"a\"@\"b\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-equation-arrays-005"]
+    },
+    {
+      "input": "■(\"a\"@\"b\"@\"c\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-equation-arrays-006"]
+    },
+    {
+      "input": "\"U=\" Ⓢ(\"Q\"_(\"e\")\"*E\",  &\"if\"\"\"\"Q\"_(\"e\")<1@\"E,  &\"\"if \"\"Q\"_(\"e\")\"<S\"@(⌊(\"Q\"_(\"e\"))/(\"S\")⌋ + ⌈(\"Q\"_(\"e\") \"mod S\")/(\"S\")⌉ \"\")\"E,  &\"\"otherwise\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-equation-arrays-007"]
+    },
+    {
+      "input": "(1 \"\")/",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-fractions-001"]
+    },
+    {
+      "input": "(1)/(2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-fractions-002"]
+    },
+    {
+      "input": "(\"a\")/(\"b\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-fractions-003"]
+    },
+    {
+      "input": "((\"n\")/(\"m\"))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-fractions-004"]
+    },
+    {
+      "input": "((\"n\")/(\"k\"))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-fractions-005"]
+    },
+    {
+      "input": "⟨(\"n\")/(\"k\")⟩",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-fractions-006"]
+    },
+    {
+      "input": "(\"x\")/(\"y\") 2",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-fractions-007"]
+    },
+    {
+      "input": "sin⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-001", "omml-functions-016"]
+    },
+    {
+      "input": "cos⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-002"]
+    },
+    {
+      "input": "tan⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-003"]
+    },
+    {
+      "input": "csc⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-004"]
+    },
+    {
+      "input": "sec⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-005"]
+    },
+    {
+      "input": "cot⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-006"]
+    },
+    {
+      "input": "sinh⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-007"]
+    },
+    {
+      "input": "cosh⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-008"]
+    },
+    {
+      "input": "tanh⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-009"]
+    },
+    {
+      "input": "csch⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-010"]
+    },
+    {
+      "input": "sech⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-011"]
+    },
+    {
+      "input": "coth⁡\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-012"]
+    },
+    {
+      "input": "sin⁡θ",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-013"]
+    },
+    {
+      "input": "cos⁡\"2x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-014"]
+    },
+    {
+      "input": "tan⁡θ = (sin⁡θ)/(cos⁡θ)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-functions-015"]
+    },
+    {
+      "input": "(\"under\")┴(_)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-group-characters-001"]
+    },
+    {
+      "input": "(\"under\")┬⏟",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-group-characters-002"]
+    },
+    {
+      "input": "(\"a\")̇",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-001"]
+    },
+    {
+      "input": "(\"a\")̈",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-002", "omml-limits-003"]
+    },
+    {
+      "input": "(\"b\")̌",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-004"]
+    },
+    {
+      "input": "(\"b\")́",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-005"]
+    },
+    {
+      "input": "(\"b\")̀",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-006"]
+    },
+    {
+      "input": "(\"b\")̆",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-007"]
+    },
+    {
+      "input": "(\"c\")̃",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-008"]
+    },
+    {
+      "input": "(\"c\")̿",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-009"]
+    },
+    {
+      "input": "⏟(\"d\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-010"]
+    },
+    {
+      "input": "⏞(\"e\")^(\"d\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-011"]
+    },
+    {
+      "input": "⏟(\"d\")_(\"e\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-012"]
+    },
+    {
+      "input": "(\"e\")⃡",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-013"]
+    },
+    {
+      "input": "(\"y\")┬\"lim\" \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-014"]
+    },
+    {
+      "input": "(\"y\")┬min⁡ \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-015"]
+    },
+    {
+      "input": "(\"y\")┬max⁡ \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-016"]
+    },
+    {
+      "input": "(\"n→∞\")┬\"lim\" (1+ (1)/(\"n\"))^(\"n\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-017"]
+    },
+    {
+      "input": "(\"0≤x≤1\")┬max⁡ \"x\" \"e\"^(- \"x\"^(2))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-018"]
+    },
+    {
+      "input": "(←)┴(\"c\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-019"]
+    },
+    {
+      "input": "(\"c\")⃗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-020"]
+    },
+    {
+      "input": "(←)┬\"c\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-021"]
+    },
+    {
+      "input": "(⇐)┴(\"d\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-022"]
+    },
+    {
+      "input": "(⇒)┴(\"d\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-023"]
+    },
+    {
+      "input": "(⇐)┬\"d\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-024"]
+    },
+    {
+      "input": "(⇒)┬\"d\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-025"]
+    },
+    {
+      "input": "(↔)┴(\"e\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-026"]
+    },
+    {
+      "input": "(↔)┬\"e\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-027"]
+    },
+    {
+      "input": "(⇔)┴(\"e\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-028"]
+    },
+    {
+      "input": "(⇔)┬\"e\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-029"]
+    },
+    {
+      "input": "(\"yields\")⃗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-030"]
+    },
+    {
+      "input": "(∆)⃗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-limits-031"]
+    },
+    {
+      "input": "■(\"a\"&\"b\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-001"]
+    },
+    {
+      "input": "■(\"a\"&\"b\"&\"c\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-002"]
+    },
+    {
+      "input": "■(\"b\"&\"c\"@\"d\"&\"e\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-003"]
+    },
+    {
+      "input": "■(\"b\"&\"c\"&\"d\"@\"e\"&\"f\"&\"g\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-004"]
+    },
+    {
+      "input": "■(\"b\"&\"c\"@\"d\"&\"e\"@\"f\"&\"g\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-005"]
+    },
+    {
+      "input": "■(1&2&3@4&5&6@7&8&9)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-006"]
+    },
+    {
+      "input": "■(1&0@0&1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-007"]
+    },
+    {
+      "input": "■(1&@&1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-008"]
+    },
+    {
+      "input": "■(1&0&0@0&1&0@0&0&1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-009"]
+    },
+    {
+      "input": "■(1&&@&1&@&&1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-010"]
+    },
+    {
+      "input": "■(1&1@0&0)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-011"]
+    },
+    {
+      "input": "ⓢ(1&1@0&0)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-012"]
+    },
+    {
+      "input": "⒱(1&1@0&0)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-013"]
+    },
+    {
+      "input": "(1&1@0&0)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-014"]
+    },
+    {
+      "input": "■(\"a\"&⋯&\"b\"@⋮&⋱&⋮@\"c\"&⋯&\"d\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-015"]
+    },
+    {
+      "input": "ⓢ(\"a\"&⋯&\"b\"@⋮&⋱&⋮@\"d\"&⋯&\"c\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-016"]
+    },
+    {
+      "input": "- ln⁡ \\mit\"R\" = Ⓢ(2\\mit\"N\"_(\"tot\")\\mitτ&\"for \"\\mitτ<\\mitτ_(\"o\")@2\\mit\"N\"_(\"tot\")\\mitτ-4\\mit\"N\"_(\"pair\")(\\mitτ - \\mitτ_(\"o\"))&'' \\mitτ>\\mitτ_(\"o\"))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-matrices-017"]
+    },
+    {
+      "input": "∮▒〖1〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-nary-001"]
+    },
+    {
+      "input": "∮_(2)^(1)▒〖3〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-nary-002"]
+    },
+    {
+      "input": "∑▒〖1〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-nary-003"]
+    },
+    {
+      "input": "∑_(3)^(1)▒〖2〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-nary-004"]
+    },
+    {
+      "input": "∑_(2)▒〖1〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-nary-005"]
+    },
+    {
+      "input": "∑_(1)▒〖2〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-nary-006"]
+    },
+    {
+      "input": "∏_(3)^(1)▒〖2〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-nary-007"]
+    },
+    {
+      "input": "∑_(\"k\")▒((\"n\")/(\"k\"))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-nary-008"]
+    },
+    {
+      "input": "∑_(\"i=0\")^(\"n\")▒〖\"x\"〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-nary-009"]
+    },
+    {
+      "input": "∏_(\"k=1\")^(\"n\")▒〖\"A\"_(\"k\")〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-nary-010"]
+    },
+    {
+      "input": "∑_(1)^(\"n\")▒〖\"x\"〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-nary-011"]
+    },
+    {
+      "input": "_(3)^(1) 2",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-001"]
+    },
+    {
+      "input": "∫▒〖1〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-002"]
+    },
+    {
+      "input": "∫_(2)^(1)▒〖3〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-003", "omml-partial-004"]
+    },
+    {
+      "input": "∬▒〖1〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-005"]
+    },
+    {
+      "input": "∬_(2)^(1)▒〖3〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-006", "omml-partial-007"]
+    },
+    {
+      "input": "∭▒〖1〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-008"]
+    },
+    {
+      "input": "∭_(2)^(1)▒〖3〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-009", "omml-partial-010"]
+    },
+    {
+      "input": "∯▒〖1〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-011"]
+    },
+    {
+      "input": "∯_(2)^(1)▒〖3〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-012", "omml-partial-013"]
+    },
+    {
+      "input": "∰▒〖1〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-014"]
+    },
+    {
+      "input": "∰_(2)^(1)▒〖3〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-015"]
+    },
+    {
+      "input": "∰_(1)^(2)▒〖3〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-016"]
+    },
+    {
+      "input": "∐_(3)^(1)▒〖2〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-017"]
+    },
+    {
+      "input": "⋃_(2)^(1)▒〖3〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-018"]
+    },
+    {
+      "input": "⋂_(3)^(1)▒〖2〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-019"]
+    },
+    {
+      "input": "⋁_(1)▒〖2〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-020"]
+    },
+    {
+      "input": "⋀_(1)^(2)▒〖3〗",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-021"]
+    },
+    {
+      "input": "⋃_(\"n=1\")^(\"m\")▒(\"X\"_(\"n\") ∩ \"Y\"_(\"n\"))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-partial-022"]
+    },
+    {
+      "input": "√(1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-roots-001"]
+    },
+    {
+      "input": "√(2&1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-roots-002"]
+    },
+    {
+      "input": "√(2&3)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-roots-003"]
+    },
+    {
+      "input": "√(3&1)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-roots-004"]
+    },
+    {
+      "input": "\"dx\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-001"]
+    },
+    {
+      "input": "\"dy\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-002"]
+    },
+    {
+      "input": "\"dθ\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-003"]
+    },
+    {
+      "input": "ln⁡ \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-004"]
+    },
+    {
+      "input": "\"x\" ∶= \"y\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-005"]
+    },
+    {
+      "input": "\"a\" == \"a\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-006"]
+    },
+    {
+      "input": "\"a\" += \"b\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-007"]
+    },
+    {
+      "input": "\"a\" -= \"b\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-008"]
+    },
+    {
+      "input": "\"a\" ≝ \"b\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-009"]
+    },
+    {
+      "input": "\"a\" ≞ \"b\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-010"]
+    },
+    {
+      "input": "\"a\" ≜ \"b\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-011"]
+    },
+    {
+      "input": "⋯",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-012"]
+    },
+    {
+      "input": "...",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-013"]
+    },
+    {
+      "input": "⋮",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-014"]
+    },
+    {
+      "input": "⋱",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-015"]
+    },
+    {
+      "input": "\\mup100 \\mbf\"a\" \\mit\"a\" \\mbfit\"a\" \\Bbb\"a\" \\mbffrak\"a\" \\mscr\"a\" \\mbfscr\"a\" \\mfrak\"a\" \\msans\"a\" \\mbfsans\"a\" \\mitsans\"a\" \\mbfitsans\"a\" ￗ(\"a\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-016"]
+    },
+    {
+      "input": "\\mup\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-017"]
+    },
+    {
+      "input": "\\mbf\"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-018"]
+    },
+    {
+      "input": "\"x\" \n",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-019"]
+    },
+    {
+      "input": "\"a\" \"b\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-020", "omml-runs-021", "omml-runs-022"]
+    },
+    {
+      "input": "\"x\" \n \"y\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-023"]
+    },
+    {
+      "input": "\"frac\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-runs-024"]
+    },
+    {
+      "input": "1^(2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-001"]
+    },
+    {
+      "input": "1_(2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-002"]
+    },
+    {
+      "input": "1_(3)^(2)",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-003"]
+    },
+    {
+      "input": "sin⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-004"]
+    },
+    {
+      "input": "cos⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-005"]
+    },
+    {
+      "input": "tan⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-006"]
+    },
+    {
+      "input": "csc⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-007"]
+    },
+    {
+      "input": "sec⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-008"]
+    },
+    {
+      "input": "cot⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-009"]
+    },
+    {
+      "input": "sinh⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-010"]
+    },
+    {
+      "input": "cosh⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-011"]
+    },
+    {
+      "input": "tanh⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-012"]
+    },
+    {
+      "input": "csch⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-013"]
+    },
+    {
+      "input": "sech⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-014"]
+    },
+    {
+      "input": "coth⁡^(-1) \"x\"",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-015"]
+    },
+    {
+      "input": "⟌(\"a\"^(2) = \"b\"^(2) + \"c\"^(2))",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-016"]
+    },
+    {
+      "input": "log_(\"a\") 2",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-017"]
+    },
+    {
+      "input": "log_(\"x\")",
+      "route": "xml-origin-harvest",
+      "sourceCaseIds": ["omml-scripts-018"]
+    }
+  ]
+}

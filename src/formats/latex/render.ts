@@ -45,8 +45,15 @@ import { renderUbrace } from "../../render/ubrace/latex";
 import { renderUl } from "../../render/ul/latex";
 import { renderUnaryFunction } from "../../render/unary-function/latex";
 import { renderUnderset } from "../../render/underset/latex";
+import { renderUnitsml } from "../../render/unitsml/latex";
 import { renderVec } from "../../render/vec/latex";
-import { FORMAT, type NumberFormat, type RenderContext, type RenderFn } from "./render-shared";
+import {
+  FORMAT,
+  type NumberFormat,
+  type RenderContext,
+  type RenderFn,
+  type UnitsmlRenderOptions,
+} from "./render-shared";
 
 const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   abs: renderAbs,
@@ -85,6 +92,7 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   ubrace: renderUbrace,
   ul: renderUl,
   unaryFunction: renderUnaryFunction,
+  unitsml: renderUnitsml,
   underset: renderUnderset,
   vec: renderVec,
 };
@@ -124,15 +132,19 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
 /**
  * Builds the one context value the latex path holds for a given
  * `numberFormat` — the generated exception matrix is otherwise empty
- * (`./render-shared.ts`), so `numberFormat` is the only thing to derive. It
+ * (`./render-shared.ts`), and both formatter and UnitsML options are retained. It
  * carries the dispatcher bound to itself, which is how recursion reaches the
  * table without any kind file importing it. `toLatex` (`./renderer.ts`)
  * calls this once per render with whatever `resolveNumberFormat` answered for
  * the per-call `formatter:` option.
  */
-export function createRenderContext(numberFormat: NumberFormat | null): RenderContext {
+export function createRenderContext(
+  numberFormat: NumberFormat | null,
+  unitsml: UnitsmlRenderOptions | null = null,
+): RenderContext {
   const context: RenderContext = {
     numberFormat,
+    unitsml,
     render(node) {
       return renderNode(node, context);
     },

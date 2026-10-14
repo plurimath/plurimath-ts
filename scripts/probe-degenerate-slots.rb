@@ -156,6 +156,7 @@ SWEEP = {
     render_kind: "ternaryFunction", klass: FN::PowerBase, slots: %w[node node node], bag: nil,
   },
   "text"     => { render_kind: "text", klass: FN::Text, slots: %w[string], bag: nil },
+  "unitsml"  => { render_kind: "unitsml", klass: FN::Unitsml, slots: %w[string], bag: nil },
 }.freeze
 
 # The only constructor failures the pinned oracle is expected to produce.
@@ -172,6 +173,16 @@ EXPECTED_CONSTRUCTION_REFUSALS = {
   "tr[0]=zero" => "all?",
   "tr[0]=empty-string" => "all?",
   "tr[0]=node" => "all?",
+  # Unitsml::Parser eagerly processes raw text before the renderer runs.
+  # Nil reaches @text.gsub; other non-strings fail extract_equation.start_with?.
+  # Empty text reaches Parslet and is an explicit syntax refusal.
+  "unitsml[0]=nil" => { "class" => "NoMethodError", "method" => "gsub" },
+  "unitsml[0]=false" => { "class" => "NoMethodError", "method" => "start_with?" },
+  "unitsml[0]=true" => { "class" => "NoMethodError", "method" => "start_with?" },
+  "unitsml[0]=zero" => { "class" => "NoMethodError", "method" => "start_with?" },
+  "unitsml[0]=empty-array" => { "class" => "NoMethodError", "method" => "start_with?" },
+  "unitsml[0]=node" => { "class" => "NoMethodError", "method" => "start_with?" },
+  "unitsml[0]=empty-string" => { "class" => "Parslet::ParseFailed" },
 }.freeze
 
 # `biome check` formats every committed .json in this repository, and it puts an
@@ -288,10 +299,13 @@ def probe_cell(id, entry, slot, label, token, format)
 
   node = begin
     entry[:klass].new(*args)
-  rescue NoMethodError => e
-    expected_name = EXPECTED_CONSTRUCTION_REFUSALS[at]
-    unless expected_name && expected_name == e.name&.to_s
-      raise "REFUSING: #{at} raised unexpected #{e.class}##{e.name}: #{e.message}"
+  rescue StandardError => e
+    expected = EXPECTED_CONSTRUCTION_REFUSALS[at]
+    expected = { "class" => "NoMethodError", "method" => expected } if expected.is_a?(String)
+    method_matches = expected && (!expected.key?("method") ||
+      (e.is_a?(NoMethodError) && expected["method"] == e.name&.to_s))
+    unless expected && expected["class"] == e.class.name && method_matches
+      raise "REFUSING: #{at} raised unexpected #{e.class}: #{e.message}"
     end
     return { "constructs" => false, "constructError" => e.class.name }
   end
@@ -318,6 +332,13 @@ end
 #
 # Disagreement on the OUTCOME (constructs, renders) is never address noise, and
 # aborts.
+# Valid UnitsML construction/rendering is measured independently as well:
+# its entire degenerate text grid refuses eagerly, so an inventory entry alone
+# must not pretend to have exercised this renderer's successful path.
+unitsml_witness = FN::Unitsml.new("kg")
+constructor_witnesses = { "unitsml" => { "input" => "kg",
+  "model" => CorpusGenerator.serialize_node(unitsml_witness, "unitsml-witness"),
+  "output" => Plurimath::Math::Formula.new([unitsml_witness]).public_send("to_#{options[:format]}") } }
 rows = []
 SWEEP.each do |id, entry|
   entry[:slots].each_index do |slot|
@@ -377,6 +398,7 @@ payload = {
   "rendersCount" => rows.count { |r| r["renders"] },
   "unstableCount" => rows.count { |r| r["stable"] == false },
   "rows" => rows,
+  "constructorWitnesses" => constructor_witnesses,
 }
 FileUtils.mkdir_p(File.dirname(out))
 payload_bytes = "#{biome_json(payload)}\n"

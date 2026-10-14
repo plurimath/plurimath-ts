@@ -69,6 +69,7 @@ export type {
   UlInit,
   UnaryFunctionInit,
   UndersetInit,
+  UnitsmlInit,
   VecInit,
 } from "./nodes";
 export {
@@ -111,6 +112,7 @@ export {
   UlNode,
   UnaryFunctionNode,
   UndersetNode,
+  UnitsmlNode,
   VecNode,
 } from "./nodes";
 export type { NormalizedNode, NormalizedValue } from "./normalize";

@@ -94,6 +94,8 @@ import {
   UnaryFunctionNode,
   type UndersetInit,
   UndersetNode,
+  type UnitsmlInit,
+  UnitsmlNode,
   type VecInit,
   VecNode,
 } from "../../src/core/nodes";
@@ -139,6 +141,7 @@ const FACTORIES: { readonly [K in NodeKind]: (init: Init) => ConstructedMathNode
   text: (init) => new TextNode(init as unknown as TextInit),
   tilde: (init) => new TildeNode(init as unknown as TildeInit),
   ubrace: (init) => new UbraceNode(init as unknown as UbraceInit),
+  unitsml: (init) => new UnitsmlNode(init as unknown as UnitsmlInit),
   ul: (init) => new UlNode(init as unknown as UlInit),
   unaryFunction: (init) => new UnaryFunctionNode(init as unknown as UnaryFunctionInit),
   underset: (init) => new UndersetNode(init as unknown as UndersetInit),
@@ -154,7 +157,7 @@ const FACTORIES: { readonly [K in NodeKind]: (init: Init) => ConstructedMathNode
  * key their constructor does not read.
  */
 export function oneOfEachKind(): readonly (readonly [NodeKind, ConstructedMathNode])[] {
-  return NODE_KINDS.map((kind) => [kind, FACTORIES[kind]({ name: "Sample" })] as const);
+  return NODE_KINDS.map((kind) => [kind, FACTORIES[kind]({ name: "Sample", text: "kg" })] as const);
 }
 
 /**
@@ -166,6 +169,8 @@ export function oneOfEachKind(): readonly (readonly [NodeKind, ConstructedMathNo
  * constructor never touches, which Ruby omits. The two are different states.
  */
 export interface CensusDefaults {
+  // biome-ignore lint/style/useNamingConvention: generated Ruby census schema
+  readonly constructor_arguments?: readonly YamlValue[];
   readonly assigned: { readonly [field: string]: YamlValue };
   readonly unassigned: readonly string[];
 }

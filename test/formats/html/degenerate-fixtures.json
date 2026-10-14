@@ -40,6 +40,7 @@
     "ul",
     "unaryFunction",
     "underset",
+    "unitsml",
     "vec"
   ],
   "kinds": {
@@ -242,9 +243,14 @@
       "renderKind": "text",
       "rubyClass": "Plurimath::Math::Function::Text",
       "slots": ["string"]
+    },
+    "unitsml": {
+      "renderKind": "unitsml",
+      "rubyClass": "Plurimath::Math::Function::Unitsml",
+      "slots": ["string"]
     }
   },
-  "rowCount": 455,
+  "rowCount": 462,
   "constructsCount": 445,
   "rendersCount": 215,
   "unstableCount": 2,
@@ -3878,6 +3884,67 @@
       "constructs": true,
       "renders": false,
       "error": "Plurimath::Math::ParseError"
+    },
+    {
+      "kind": "unitsml",
+      "slot": 0,
+      "value": "nil",
+      "constructs": false,
+      "constructError": "NoMethodError"
+    },
+    {
+      "kind": "unitsml",
+      "slot": 0,
+      "value": "false",
+      "constructs": false,
+      "constructError": "NoMethodError"
+    },
+    {
+      "kind": "unitsml",
+      "slot": 0,
+      "value": "true",
+      "constructs": false,
+      "constructError": "NoMethodError"
+    },
+    {
+      "kind": "unitsml",
+      "slot": 0,
+      "value": "zero",
+      "constructs": false,
+      "constructError": "NoMethodError"
+    },
+    {
+      "kind": "unitsml",
+      "slot": 0,
+      "value": "empty-string",
+      "constructs": false,
+      "constructError": "Parslet::ParseFailed"
+    },
+    {
+      "kind": "unitsml",
+      "slot": 0,
+      "value": "empty-array",
+      "constructs": false,
+      "constructError": "NoMethodError"
+    },
+    {
+      "kind": "unitsml",
+      "slot": 0,
+      "value": "node",
+      "constructs": false,
+      "constructError": "NoMethodError"
     }
-  ]
+  ],
+  "constructorWitnesses": {
+    "unitsml": {
+      "input": "kg",
+      "model": {
+        "class": "Math::Function::Unitsml",
+        "fields": {
+          "text": "kg"
+        }
+      },
+      "output": "kg"
+    }
+  }
 }

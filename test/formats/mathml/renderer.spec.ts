@@ -589,7 +589,15 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     const marked = new BarNode({ parameterOne: x(), attributes: { unitsml: "true" } });
     const output = toMathml(formula(marked));
     expect(output).not.toContain("unitsml=");
-    expect(output).toContain('<mo rspace="thickmathspace">&#x2062;</mo>');
+    expect(output).not.toContain('rspace="thickmathspace"');
+    expect(output).toBe(toMathml(formula(new BarNode({ parameterOne: x() }))));
+  });
+
+  it("inserts a UnitsML multiplication marker when the unit follows another child", () => {
+    const marked = new BarNode({ parameterOne: x(), attributes: { unitsml: "true" } });
+    const output = toMathml(new FormulaNode({ value: [x(), marked] }));
+    expect(output).not.toContain("unitsml=");
+    expect(output).toContain('rspace="thickmathspace"');
   });
 
   it("powerbase: an underover symbol base flips the tag; a Nary base crashes (probed)", () => {

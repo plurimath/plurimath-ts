@@ -219,7 +219,6 @@ function renderMath(
   if (splitValue !== undefined && splitValue !== null && splitValue !== false) {
     const inherited: Record<string, unknown> = {
       intent: Object.hasOwn(opts, "intent") ? opts.intent : undefined,
-      unitsml: opts.unitsml,
       displayStyle: hasDisplayStyle(opts)
         ? opts.displayStyle
         : (node as { readonly displaystyle?: unknown }).displaystyle,

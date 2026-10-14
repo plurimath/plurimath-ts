@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/probe-degenerate-slots.rb
-  sha256: ff67285d9741ce87311c506d610af80473fd4bd019e9c32c2a234b681618dab9
+  sha256: 93f73ffa8737d66b9ebd39fe3974e17dbc35bf148ec8cc6750a258353bf82bd4
   inputs:
-    scripts/generate-corpus.rb: 4958f26a003c6c10da2031d109fcd85d73240f65f4392b6370c79bc111e224f5
-    scripts/probe-degenerate-slots.rb: ff67285d9741ce87311c506d610af80473fd4bd019e9c32c2a234b681618dab9
+    scripts/generate-corpus.rb: 620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75
+    scripts/probe-degenerate-slots.rb: 93f73ffa8737d66b9ebd39fe3974e17dbc35bf148ec8cc6750a258353bf82bd4
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 7942257249ecde3a1f8d2a91e8face81c88fbc73
+    commit: cb5ba94c2bd52ab6f35102b3b6de447726844fe4
     clean: true
     dirty_paths: []
   inventory:
@@ -55,8 +55,9 @@ generator:
     - src/render/ul/omml.ts
     - src/render/unary-function/omml.ts
     - src/render/underset/omml.ts
+    - src/render/unitsml/omml.ts
     - src/render/vec/omml.ts
-    sha256: fcd97d342f68aef222f53d924637606237c3afca84d42154de31da9b040fbc4f
+    sha256: 57f97a07f64d875eea40217d5fd577dcd81325846e33d743a8f8025042b917d3
 oracle:
   gem: plurimath
   version: 0.11.6
@@ -147,5 +148,5 @@ dependencies:
 payload:
   path: degenerate-fixtures.json
   schema: plurimath-corpus/degenerate-slots/1
-  sha256: 31fd36390179914803085c78b3037982a9e3c472b26a3ab8414a5e363fdf5d77
-  bytes: 450383
+  sha256: 3056e3091ca09ea628ab99f949b10134421e86b52053a7d6caab034244ca85ba
+  bytes: 453202

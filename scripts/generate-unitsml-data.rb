@@ -54,6 +54,25 @@ module NativeCompletionReference
     { "input" => input, "options" => options, "optionsTypes" => options.to_h { |key, value| [key.to_s, value.is_a?(Symbol) ? "symbol" : value.class.name.downcase] }, "raises" => e.class.name, "message" => e.message }
   end
 
+  # Extract XML text as nodes, never by deleting tag-looking substrings.
+  # The pinned oracle reader supplies entity-decoded text in document order.
+  # This is a model-token extractor, not an HTML sanitization API.
+  def mathml_text(xml)
+    root = Plurimath.xml_engine.load("<mrow>#{xml}</mrow>")
+    collect = lambda do |node|
+      if node.is_a?(String)
+        node
+      elsif Plurimath.xml_engine.is_xml_comment?(node)
+        ""
+      elsif node.respond_to?(:nodes)
+        node.nodes.map { |child| collect.call(child) }.join
+      else
+        raise "unsupported XML text node: #{node.class}"
+      end
+    end
+    collect.call(root)
+  end
+
   def token_order(array)
     array.flatten.compact.sort_by(&:length).reverse
   end
@@ -151,7 +170,12 @@ module NativeCompletionReference
     end.keys
     pairs |= (tokens["singlePrefixes"] + tokens["doublePrefixes"]).uniq.product(composite_units)
     data["prefixedUnits"] = pairs.to_h { |prefix, unit| ["#{prefix}\u0000#{unit}", measured("#{prefix}#{unit}")] }
-    data["special"] = %w[1 1/m m^-1 m^(-1/2) sqrt(m)/s].to_h { |input| [input, measured(input)] }
+    # Boundary witnesses measure the dependency's Float exponent overflow;
+    # outputs/refusals are emitted by Ruby, never predicted in native code.
+    huge_power = "9" * 400
+    special_inputs = %w[1 1/m m^-1 m^(-1/2) sqrt(m)/s] +
+      ["m^#{huge_power}", "m^#{huge_power}*m", "m^-#{huge_power}", "m^-#{huge_power}*m"]
+    data["special"] = special_inputs.to_h { |input| [input, measured(input)] }
     # Alias families come from the independently measured canonical census.
     # Unary, binary and ternary aliases share a class-name prefix, so a prefix
     # match alone cannot select the native kind faithfully.
@@ -171,12 +195,12 @@ module NativeCompletionReference
     text_values = symbols.filter_map do |symbol|
       xml = symbol.mathml
       next unless xml
-      Plurimath::Utility.html_entity_to_unicode(xml.gsub(/<[^>]*>/, ""))
+      mathml_text(xml)
     end
     # Resolve each visible prefix+unit token directly, avoiding full parser work.
     prefix_symbols = Unitsml::Unitsdb.prefixes.prefixes.flat_map { |prefix| prefix.symbols || [] }
     prefixes = prefix_symbols.flat_map do |symbol|
-      [symbol.unicode, symbol.mathml && Plurimath::Utility.html_entity_to_unicode(symbol.mathml.gsub(/<[^>]*>/, ""))]
+      [symbol.unicode, symbol.mathml && mathml_text(symbol.mathml)]
     end.compact.uniq
     resolver_keys = Plurimath::Utility.all_symbols_classes(:mathml).keys.map(&:to_s) +
       Plurimath::Mathml::Constants::UNICODE_SYMBOLS.keys.map(&:to_s) +

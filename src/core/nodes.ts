@@ -1801,6 +1801,7 @@ export const NODE_KINDS = [
   "ul",
   "unaryFunction",
   "underset",
+  "unitsml",
   "vec",
 ] as const satisfies readonly NodeKind[];
 

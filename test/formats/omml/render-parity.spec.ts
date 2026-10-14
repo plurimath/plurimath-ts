@@ -300,7 +300,7 @@ describe(`${FORMAT} parity, the cases the gem refuses`, () => {
 describeCorpusTargets({
   format: "omml",
   renderFormula: (formula) => toOmml(formula),
-  rendered: 711,
+  rendered: 712,
   // The two MathML cases the gem refuses: an `menclose` whose notation is nil,
   // and an `mlabeledtr` whose label slot holds a list.
   refusedWith: new Map([

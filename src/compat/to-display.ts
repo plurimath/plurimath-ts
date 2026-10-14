@@ -661,6 +661,16 @@ function mathZoneOf(
   options: PrintOptions,
 ): string {
   if (node.kind === "unitsml") {
+    if (options.format === "omml") {
+      // Formula#to_omml_math_zone passes display_style, but Unitsml accepts
+      // only options. The pinned Symbol display probes raise ArgumentError
+      // before the unit formula is expanded.
+      throw new RenderError(
+        "UnitsML OMML display rendering cannot accept displayStyle",
+        "omml",
+        "unitsml",
+      );
+    }
     // Function::Unitsml's math-zone methods delegate to formula(options),
     // preserving the caller's spacing and indentation, without a unit header.
     return mathZoneOf(expandUnitsml(node.text), spacing, last, indent, options);

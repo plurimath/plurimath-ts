@@ -6,10 +6,10 @@
   "ruby": "ruby 4.0.1 (2026-01-13 revision e04267a14b) +PRISM [x86_64-linux]",
   "generator": {
     "path": "scripts/generate-unitsml-data.rb",
-    "sha256": "19294c64567750a944befdd1f7f2002d63cc57efce407b5063015aa4f6a33772",
+    "sha256": "daf5853c30cf6aa9eed44faf2adb6ca431b7f4a44e47cc939f35a080a4ac2b59",
     "inputs": {
       "scripts/generate-corpus.rb": "620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75",
-      "scripts/generate-unitsml-data.rb": "19294c64567750a944befdd1f7f2002d63cc57efce407b5063015aa4f6a33772",
+      "scripts/generate-unitsml-data.rb": "daf5853c30cf6aa9eed44faf2adb6ca431b7f4a44e47cc939f35a080a4ac2b59",
       "scripts/render-fixture-provenance.rb": "6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11",
       "scripts/ci/native-completion-probe.rb": "6a384b0d9349098a3ca05c515f0cf10ebddee4721cd9b4d3a6041b354cc24020"
     }
@@ -21,6 +21,6 @@
     }
   ],
   "payloads": {
-    "data.json": "f3eeeb3a15be6724512673fabffc6469ddccc4594f18eced502c535e73661bc7"
+    "data.json": "bd855d9707e1774a949ae63dfd8ded1ee34cc78a8a83c7f8daa6a8055b32c90c"
   }
 }

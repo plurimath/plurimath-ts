@@ -56,6 +56,7 @@ interface DimensionTerm {
   readonly symbol: string;
   /** A Ruby Unitsml::Number's default to_s cannot equal a stable DB vector. */
   readonly numberObject?: boolean;
+  readonly gatheredNumber?: boolean;
   readonly floatCarrier?: boolean;
 }
 
@@ -351,7 +352,13 @@ function decomposedDimensions(all: readonly Expression[]): readonly DimensionTer
   expanded.sort((left, right) => (left.unit < right.unit ? -1 : left.unit > right.unit ? 1 : 0));
   const gathered = new Map<
     string,
-    { exponent: number; prefix: string | null; numberObject: boolean; floatCarrier: boolean }
+    {
+      exponent: number;
+      prefix: string | null;
+      numberObject: boolean;
+      floatCarrier: boolean;
+      gatheredNumber: boolean;
+    }
   >();
   for (const entry of expanded) {
     const old = gathered.get(entry.unit);
@@ -361,6 +368,7 @@ function decomposedDimensions(all: readonly Expression[]): readonly DimensionTer
       exponent: entry.exponent + (old?.exponent ?? 0),
       prefix,
       numberObject: old !== undefined || entry.numberObject,
+      gatheredNumber: old !== undefined,
       floatCarrier: entry.floatCarrier,
     });
   }
@@ -374,6 +382,7 @@ function decomposedDimensions(all: readonly Expression[]): readonly DimensionTer
         exponent: value.exponent,
         symbol: rule.symbol,
         numberObject: value.numberObject,
+        gatheredNumber: value.gatheredNumber,
         floatCarrier: value.floatCarrier,
       };
     })
@@ -399,6 +408,10 @@ function combinePrefixes(first: string | null, second: string | null): string | 
 }
 function dimensionId(terms: readonly DimensionTerm[]): string | undefined {
   if (terms.length === 0) return undefined;
+  // The measured repeated-unit Number carrier calls Float#to_i here.
+  // Ruby refuses an infinite exponent instead of serializing a dimension ID.
+  if (terms.some((term) => term.gatheredNumber && !Number.isFinite(term.exponent)))
+    return fail("UnitsML dimension exponent is outside the finite Float range");
   const vector = UNITSML_DATA.utility?.dimsVector;
   if (vector === undefined) return fail("UnitsML dimension vector ordering is absent");
   const spelling = vector

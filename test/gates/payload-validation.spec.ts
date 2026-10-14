@@ -338,6 +338,12 @@ const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "cli-fixtures.json"
   | "failure-position-fixtures.json"
 )[];
+const NATIVE_AUXILIARY_JSON = [
+  "test/formats/unicodemath/completion-fixtures.metadata.json",
+  "test/formats/unicodemath/unreached-fixtures.json",
+  "test/formats/unicodemath/unreached-fixtures.metadata.json",
+  "test/formats/unitsml/probe-fixtures.metadata.json",
+] as const;
 const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
   "test/formats/latex/render-sweep.json",
@@ -1082,10 +1088,33 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
     expect(FIXTURE_MANIFESTS).toStrictEqual(EXPECTED_FIXTURE_MANIFESTS);
   });
 
+  it("binds explicitly classified native metadata to its payload", () => {
+    for (const path of NATIVE_AUXILIARY_JSON.filter((path) => path.endsWith(".metadata.json"))) {
+      const metadata = mapping(JSON.parse(readFileSync(join(REPO_ROOT, path), "utf8")), path);
+      expect(stringField(metadata, "oracle", path)).toBe(
+        loadPinnedCorpus().provenance.oracleCommit,
+      );
+      expect(stringField(metadata, "lockSha256", path)).toMatch(SHA256);
+      const payloadPath = path.replace(/\.metadata\.json$/, ".json");
+      const digest = createHash("sha256")
+        .update(readFileSync(join(REPO_ROOT, payloadPath)))
+        .digest("hex");
+      if (metadata.payloadSha256 !== undefined) {
+        expect(metadata.payloadSha256).toBe(digest);
+        const payload = mapping(
+          JSON.parse(readFileSync(join(REPO_ROOT, payloadPath), "utf8")),
+          payloadPath,
+        );
+        expect(payload.schema).toBe("plurimath-unicodemath-unreached/1");
+        expect(arrayField(payload, "cases", payloadPath).length).toBeGreaterThan(0);
+      } else expect(mapField(metadata, "payloads", path)[basename(payloadPath)]).toBe(digest);
+    }
+  });
+
   it("accounts for every other per-format JSON payload as an explicit legacy gap", () => {
-    expect([...FORMAT_FIXTURE_PAYLOADS, ...LEGACY_FORMAT_FIXTURES].sort()).toStrictEqual(
-      ALL_FORMAT_JSON_PAYLOADS,
-    );
+    expect(
+      [...FORMAT_FIXTURE_PAYLOADS, ...LEGACY_FORMAT_FIXTURES, ...NATIVE_AUXILIARY_JSON].sort(),
+    ).toStrictEqual(ALL_FORMAT_JSON_PAYLOADS);
   });
 
   it.each(FIXTURE_RECORDS.map((record) => [record.relative, record] as const))(
@@ -1763,10 +1792,24 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
             "constructsCount",
             "rendersCount",
             "unstableCount",
+            "constructorWitnesses",
             "rows",
           ],
           record.relative,
         );
+        const witnesses = mapField(record.payload, "constructorWitnesses", record.relative);
+        expect(Object.keys(witnesses)).toEqual(["unitsml"]);
+        for (const [kind, value] of Object.entries(witnesses)) {
+          const at = `${record.relative}.constructorWitnesses.${kind}`;
+          const witness = mapping(value, at);
+          expectExactKeys(witness, ["input", "model", "output"], at);
+          const input = stringField(witness, "input", at);
+          expect(mapField(witness, "model", at)).toEqual({
+            class: "Math::Function::Unitsml",
+            fields: { text: input },
+          });
+          stringValue(witness, "output", at);
+        }
         const inventory = arrayField(record.payload, "inventory", record.relative);
         expect(inventory.length).toBeGreaterThan(0);
         for (const [index, kind] of inventory.entries()) {

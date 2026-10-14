@@ -120,7 +120,8 @@ function syntheticExclusionRoot(): string {
   const root = scratch();
   writeFileSync(
     join(root, "exclusions.yaml"),
-    `schema: plurimath-corpus/exclusions/1
+    `---
+schema: plurimath-corpus/exclusions/1
 features:
 - synthetic-unitsml
 classes:

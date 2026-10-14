@@ -24,7 +24,9 @@
       "!src/unitsml/generated/*.json",
       "!test/formats/unitsml/probe-fixtures.json",
       "!test/formats/unicodemath/completion-fixtures.json",
-      "!test/formats/unicodemath/unreached-fixtures.json"
+      "!test/formats/unicodemath/unreached-fixtures.json",
+      "!test/formats/unicodemath/reachability-fixtures.json",
+      "!test/formats/unicodemath/scope-gap-fixtures.json"
     ]
   },
   "formatter": {

@@ -52,6 +52,9 @@ routes = {
   "2341/intermediate_expression" => ["(a|b c", "|a)b c", "(a|b c d", "(a|sin x", "(a|b)^c d", "|a)_b c", "(a|b! c", "(a|b c)", "(a|b+c d", "|a)b+c d", "(a| b c d", "|a) b c d", "(a| +b c", "|a) +b c"],
   "2787-3074/atom_operator_fraction" => ["a+²/₃", "a+²/₃ b c", "a×¹/₂", "a×¹/₂ b c", "a+1/2", "a+1/2 b c", "a+(b)/(c)", "a+(b)/(c) d e", "a≤²/₃", "a≤²/₃ b c", "a²+³/₄", "a²+³/₄ b", "α²+³/₄", "a+³/₄", "a+³/₄ b", "α+³/₄ b"],
 }
+routes.fetch("scope-gap/integral-mask").concat((0..31).flat_map do |mask|
+  ["∫#{mask}_a", "∫#{mask}^b", "∫#{mask}_a^b f", "∫#{mask}▒f"]
+end)
 priority_cases = [{ "input" => "a", "group" => "trace-control" },
   { "input" => "1/2", "group" => "trace-control" },
   { "input" => "1/a≤∫", "group" => "2323/control" }]

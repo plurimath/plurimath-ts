@@ -1,0 +1,852 @@
+{
+  "schema": "plurimath-unicodemath-scope-gap/1",
+  "cases": [
+    {
+      "input": "±±a",
+      "group": "nine-rule-route",
+      "route": "scope-gap/raw-hash",
+      "preprocessed": "&#xb1;&#xb1;a",
+      "rawTreeStage": "preprocessed grammar before equation-label wrapping, default locale",
+      "tree": {
+        "combined_symbols": "&#xb1;",
+        "expr": {
+          "combined_symbols": "&#xb1;",
+          "expr": {
+            "factor": {
+              "atom": {
+                "alphanumeric": "a"
+              }
+            }
+          }
+        }
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "±±a",
+          "left_right_wrapper": true,
+          "value": [
+            [
+              "combined_symbols",
+              "&#xb1;"
+            ],
+            [
+              "expr",
+              {
+                "combined_symbols": "&#xb1;",
+                "expr": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                }
+              }
+            ]
+          ]
+        }
+      },
+      "asciimathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `asciimath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±±a\n---- FORMULA END ----\n"
+      },
+      "latexError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `latex`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±±a\n---- FORMULA END ----\n"
+      },
+      "mathmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `mathml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±±a\n---- FORMULA END ----\n"
+      },
+      "htmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `html`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±±a\n---- FORMULA END ----\n"
+      },
+      "ommlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `omml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±±a\n---- FORMULA END ----\n"
+      },
+      "unicodemathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `unicodemath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±±a\n---- FORMULA END ----\n"
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 0,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      },
+      "controlFirings": {
+        "18": 1,
+        "1609": 0
+      }
+    },
+    {
+      "input": "̲a+a",
+      "group": "nine-rule-route",
+      "route": "scope-gap/raw-hash",
+      "preprocessed": "&#x332;a+a",
+      "rawTreeStage": "preprocessed grammar before equation-label wrapping, default locale",
+      "tree": {
+        "diacritics_accents": {
+          "below_before": {
+            "diacritic_belows": "&#x332;"
+          },
+          "first_value": {
+            "factor": {
+              "atom": {
+                "alphanumeric": "a"
+              }
+            }
+          }
+        },
+        "expr": {
+          "operator": "+",
+          "expr": {
+            "factor": {
+              "atom": {
+                "alphanumeric": "a"
+              }
+            }
+          }
+        }
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "̲a+a",
+          "left_right_wrapper": true,
+          "value": [
+            [
+              "diacritics_accents",
+              {
+                "below_before": "&#x332;",
+                "first_value": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                }
+              }
+            ],
+            [
+              "expr",
+              [
+                {
+                  "class": "Math::Symbols::Plus",
+                  "fields": {
+                    "value": null
+                  }
+                },
+                {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                }
+              ]
+            ]
+          ]
+        }
+      },
+      "asciimathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `asciimath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n̲a+a\n---- FORMULA END ----\n"
+      },
+      "latexError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `latex`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n̲a+a\n---- FORMULA END ----\n"
+      },
+      "mathmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `mathml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n̲a+a\n---- FORMULA END ----\n"
+      },
+      "htmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `html`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n̲a+a\n---- FORMULA END ----\n"
+      },
+      "ommlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `omml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n̲a+a\n---- FORMULA END ----\n"
+      },
+      "unicodemathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `unicodemath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n̲a+a\n---- FORMULA END ----\n"
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 0,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      },
+      "controlFirings": {
+        "18": 2,
+        "1609": 0
+      }
+    },
+    {
+      "input": "∫∫f g+x",
+      "group": "nine-rule-route",
+      "route": "scope-gap/raw-hash",
+      "preprocessed": "&#x222b;&#x222b;f g+x",
+      "rawTreeStage": "preprocessed grammar before equation-label wrapping, default locale",
+      "tree": {
+        "nary": {
+          "nary_class": "&#x222b;",
+          "naryand": {
+            "nary": {
+              "nary_class": "&#x222b;",
+              "naryand": {
+                "symbol": "f"
+              }
+            },
+            "naryand_recursion": {
+              "symbol": "g"
+            }
+          }
+        },
+        "expr": {
+          "operator": "+",
+          "expr": {
+            "factor": {
+              "atom": {
+                "alphanumeric": "x"
+              }
+            }
+          }
+        }
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "∫∫f g+x",
+          "left_right_wrapper": true,
+          "value": [
+            [
+              "nary",
+              {
+                "nary_class": "&#x222b;",
+                "naryand": [
+                  {
+                    "class": "Math::Function::Int",
+                    "fields": {
+                      "parameter_one": null,
+                      "parameter_three": {
+                        "class": "Math::Symbols::Symbol",
+                        "fields": {
+                          "value": "f"
+                        }
+                      },
+                      "parameter_two": null
+                    }
+                  },
+                  {
+                    "class": "Math::Symbols::Symbol",
+                    "fields": {
+                      "value": "g"
+                    }
+                  }
+                ]
+              }
+            ],
+            [
+              "expr",
+              [
+                {
+                  "class": "Math::Symbols::Plus",
+                  "fields": {
+                    "value": null
+                  }
+                },
+                {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "x"
+                  }
+                }
+              ]
+            ]
+          ]
+        }
+      },
+      "asciimathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `asciimath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n∫∫f g+x\n---- FORMULA END ----\n"
+      },
+      "latexError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `latex`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n∫∫f g+x\n---- FORMULA END ----\n"
+      },
+      "mathmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `mathml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n∫∫f g+x\n---- FORMULA END ----\n"
+      },
+      "htmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `html`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n∫∫f g+x\n---- FORMULA END ----\n"
+      },
+      "ommlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `omml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n∫∫f g+x\n---- FORMULA END ----\n"
+      },
+      "unicodemathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `unicodemath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n∫∫f g+x\n---- FORMULA END ----\n"
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 0,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      },
+      "controlFirings": {
+        "18": 1,
+        "1609": 0
+      }
+    },
+    {
+      "input": "a·b·c+d",
+      "group": "nine-rule-route",
+      "route": "scope-gap/raw-hash",
+      "preprocessed": "a&#xb7;b&#xb7;c+d",
+      "rawTreeStage": "preprocessed grammar before equation-label wrapping, default locale",
+      "tree": {
+        "factor": {
+          "atom": {
+            "alphanumeric": "a"
+          },
+          "atoms": {
+            "atom": {
+              "char": {
+                "unicode_symbols": "&#xb7;"
+              },
+              "alphanumeric": "b"
+            },
+            "atoms": {
+              "atom": {
+                "char": {
+                  "unicode_symbols": "&#xb7;"
+                },
+                "alphanumeric": "c"
+              }
+            }
+          }
+        },
+        "expr": {
+          "operator": "+",
+          "expr": {
+            "factor": {
+              "atom": {
+                "alphanumeric": "d"
+              }
+            }
+          }
+        }
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "a·b·c+d",
+          "left_right_wrapper": true,
+          "value": [
+            [
+              "factor",
+              {
+                "atom": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                },
+                "atoms": {
+                  "atom": [
+                    {
+                      "class": "Math::Symbols::Cdotp",
+                      "fields": {
+                        "value": null
+                      }
+                    },
+                    {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "b"
+                      }
+                    }
+                  ],
+                  "atoms": [
+                    {
+                      "class": "Math::Symbols::Cdotp",
+                      "fields": {
+                        "value": null
+                      }
+                    },
+                    {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "c"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            [
+              "expr",
+              [
+                {
+                  "class": "Math::Symbols::Plus",
+                  "fields": {
+                    "value": null
+                  }
+                },
+                {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "d"
+                  }
+                }
+              ]
+            ]
+          ]
+        }
+      },
+      "asciimathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `asciimath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na·b·c+d\n---- FORMULA END ----\n"
+      },
+      "latexError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `latex`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na·b·c+d\n---- FORMULA END ----\n"
+      },
+      "mathmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `mathml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na·b·c+d\n---- FORMULA END ----\n"
+      },
+      "htmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `html`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na·b·c+d\n---- FORMULA END ----\n"
+      },
+      "ommlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `omml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na·b·c+d\n---- FORMULA END ----\n"
+      },
+      "unicodemathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `unicodemath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na·b·c+d\n---- FORMULA END ----\n"
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 0,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      },
+      "controlFirings": {
+        "18": 1,
+        "1609": 0
+      }
+    },
+    {
+      "input": "±+a#eq",
+      "group": "nine-rule-route",
+      "route": "scope-gap/raw-hash",
+      "preprocessed": "&#xb1;+a",
+      "rawTreeStage": "preprocessed grammar before equation-label wrapping, default locale",
+      "tree": {
+        "combined_symbols": "&#xb1;",
+        "expr": {
+          "operator": "+",
+          "expr": {
+            "factor": {
+              "atom": {
+                "alphanumeric": "a"
+              }
+            }
+          }
+        }
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "±+a#eq",
+          "left_right_wrapper": true,
+          "value": [
+            [
+              "labeled_tr_value",
+              {
+                "combined_symbols": "&#xb1;",
+                "expr": [
+                  {
+                    "class": "Math::Symbols::Plus",
+                    "fields": {
+                      "value": null
+                    }
+                  },
+                  {
+                    "class": "Math::Symbols::Symbol",
+                    "fields": {
+                      "value": "a"
+                    }
+                  }
+                ]
+              }
+            ],
+            [
+              "labeled_tr_id",
+              "eq"
+            ]
+          ]
+        }
+      },
+      "asciimathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `asciimath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±+a#eq\n---- FORMULA END ----\n"
+      },
+      "latexError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `latex`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±+a#eq\n---- FORMULA END ----\n"
+      },
+      "mathmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `mathml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±+a#eq\n---- FORMULA END ----\n"
+      },
+      "htmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `html`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±+a#eq\n---- FORMULA END ----\n"
+      },
+      "ommlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `omml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±+a#eq\n---- FORMULA END ----\n"
+      },
+      "unicodemathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `unicodemath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\n±+a#eq\n---- FORMULA END ----\n"
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 0,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      },
+      "controlFirings": {
+        "18": 1,
+        "1609": 0
+      }
+    },
+    {
+      "input": "a ± b#eq",
+      "group": "nine-rule-route",
+      "route": "scope-gap/raw-hash",
+      "preprocessed": "a &#xb1; b",
+      "rawTreeStage": "preprocessed grammar before equation-label wrapping, default locale",
+      "tree": {
+        "factor": {
+          "atom": {
+            "alphanumeric": "a"
+          }
+        },
+        "expr": {
+          "combined_symbols": "&#xb1;",
+          "expr": {
+            "factor": {
+              "atom": {
+                "alphanumeric": "b"
+              }
+            }
+          }
+        }
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "a ± b#eq",
+          "left_right_wrapper": true,
+          "value": [
+            [
+              "labeled_tr_value",
+              {
+                "factor": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                },
+                "expr": {
+                  "combined_symbols": "&#xb1;",
+                  "expr": {
+                    "class": "Math::Symbols::Symbol",
+                    "fields": {
+                      "value": "b"
+                    }
+                  }
+                }
+              }
+            ],
+            [
+              "labeled_tr_id",
+              "eq"
+            ]
+          ]
+        }
+      },
+      "asciimathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `asciimath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na ± b#eq\n---- FORMULA END ----\n"
+      },
+      "latexError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `latex`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na ± b#eq\n---- FORMULA END ----\n"
+      },
+      "mathmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `mathml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na ± b#eq\n---- FORMULA END ----\n"
+      },
+      "htmlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `html`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na ± b#eq\n---- FORMULA END ----\n"
+      },
+      "ommlError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `omml`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na ± b#eq\n---- FORMULA END ----\n"
+      },
+      "unicodemathError": {
+        "class": "Plurimath::Math::ParseError",
+        "message": "[plurimath] Error: Failed to parse the following formula with type `unicodemath`.\n[plurimath] Please first manually validate the formula.\n[plurimath] If this is a bug, please report the formula at our issue tracker at:\n[plurimath] https://github.com/plurimath/plurimath/issues\n---- FORMULA BEGIN ----\na ± b#eq\n---- FORMULA END ----\n"
+      },
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 0,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      },
+      "controlFirings": {
+        "18": 2,
+        "1609": 0
+      }
+    },
+    {
+      "input": "∫1_a",
+      "group": "nine-rule-route",
+      "route": "scope-gap/integral-mask",
+      "preprocessed": "&#x222b;1_a",
+      "rawTreeStage": "preprocessed grammar before equation-label wrapping, default locale",
+      "tree": {
+        "nary": {
+          "nary_sub_sup": {
+            "sub_exp": {
+              "nary_class": "&#x222b;",
+              "mask": {
+                "digit": {
+                  "number": "1"
+                }
+              },
+              "sub": {
+                "sub_script": {
+                  "operand": {
+                    "factor": {
+                      "atom": {
+                        "alphanumeric": "a"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "∫1_a",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Int",
+              "fields": {
+                "options": {
+                  "mask": "1"
+                },
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                },
+                "parameter_three": null,
+                "parameter_two": null
+              }
+            }
+          ]
+        }
+      },
+      "asciimath": "int_(a)",
+      "latex": "\\int_{a}",
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <munderover>\n      <mo>&#x222b;</mo>\n      <mi>a</mi>\n      <mrow/>\n    </munderover>\n  </mstyle>\n</math>\n",
+      "html": "<i>a</i>",
+      "omml": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:nary>\n      <m:naryPr>\n        <m:chr m:val=\"∫\"/>\n        <m:limLoc m:val=\"subSup\"/>\n        <m:subHide m:val=\"0\"/>\n        <m:supHide m:val=\"1\"/>\n      </m:naryPr>\n      <m:sub>\n        <m:r>\n          <m:t>a</m:t>\n        </m:r>\n      </m:sub>\n      <m:sup>\n        <m:r>\n          <m:t>&#8203;</m:t>\n        </m:r>\n      </m:sup>\n      <m:e>\n        <m:r>\n          <m:t>&#8203;</m:t>\n        </m:r>\n      </m:e>\n    </m:nary>\n  </m:oMath>\n</m:oMathPara>\n",
+      "unicodemath": "∫1_(a)",
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 0,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      },
+      "controlFirings": {
+        "18": 1,
+        "1609": 0
+      }
+    },
+    {
+      "input": "∫1_a^b f",
+      "group": "nine-rule-route",
+      "route": "scope-gap/integral-mask",
+      "preprocessed": "&#x222b;1_a^b f",
+      "rawTreeStage": "preprocessed grammar before equation-label wrapping, default locale",
+      "tree": {
+        "nary": {
+          "nary_sub_sup": {
+            "subsup_exp": {
+              "nary_class": "&#x222b;",
+              "mask": {
+                "digit": {
+                  "number": "1"
+                }
+              },
+              "sub": {
+                "sub_script": {
+                  "operand": {
+                    "factor": {
+                      "atom": {
+                        "alphanumeric": "a"
+                      }
+                    }
+                  }
+                }
+              },
+              "sup": {
+                "sup_script": {
+                  "operand": {
+                    "factor": {
+                      "atom": {
+                        "alphanumeric": "b"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "naryand": {
+            "symbol": "f"
+          }
+        }
+      },
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "∫1_a^b f",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Int",
+              "fields": {
+                "options": {
+                  "mask": "1"
+                },
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "a"
+                  }
+                },
+                "parameter_three": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "f"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "b"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "asciimath": "int_(a)^(b) f",
+      "latex": "\\int_{a}^{b} f",
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow>\n      <munderover>\n        <mo>&#x222b;</mo>\n        <mi>a</mi>\n        <mi>b</mi>\n      </munderover>\n      <mi>f</mi>\n    </mrow>\n  </mstyle>\n</math>\n",
+      "html": "<i>a</i><i>b</i><i>f</i>",
+      "omml": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:nary>\n      <m:naryPr>\n        <m:chr m:val=\"∫\"/>\n        <m:limLoc m:val=\"subSup\"/>\n        <m:subHide m:val=\"0\"/>\n        <m:supHide m:val=\"0\"/>\n      </m:naryPr>\n      <m:sub>\n        <m:r>\n          <m:t>a</m:t>\n        </m:r>\n      </m:sub>\n      <m:sup>\n        <m:r>\n          <m:t>b</m:t>\n        </m:r>\n      </m:sup>\n      <m:e>\n        <m:r>\n          <m:t>f</m:t>\n        </m:r>\n      </m:e>\n    </m:nary>\n  </m:oMath>\n</m:oMathPara>\n",
+      "unicodemath": "∫1_(a)^(b)▒〖f〗",
+      "targetFirings": {
+        "760": 0,
+        "925": 0,
+        "930": 0,
+        "1841": 0,
+        "2041": 0,
+        "2323": 0,
+        "2341": 0,
+        "2777": 0,
+        "2787": 0,
+        "3074": 0
+      },
+      "controlFirings": {
+        "18": 2,
+        "1609": 0
+      }
+    }
+  ]
+}

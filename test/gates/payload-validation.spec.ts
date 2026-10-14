@@ -342,6 +342,10 @@ const NATIVE_AUXILIARY_JSON = [
   "test/formats/unicodemath/completion-fixtures.metadata.json",
   "test/formats/unicodemath/unreached-fixtures.json",
   "test/formats/unicodemath/unreached-fixtures.metadata.json",
+  "test/formats/unicodemath/reachability-fixtures.json",
+  "test/formats/unicodemath/reachability-fixtures.metadata.json",
+  "test/formats/unicodemath/scope-gap-fixtures.json",
+  "test/formats/unicodemath/scope-gap-fixtures.metadata.json",
   "test/formats/unitsml/probe-fixtures.metadata.json",
 ] as const;
 const LEGACY_FORMAT_FIXTURES = [
@@ -1105,7 +1109,14 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           JSON.parse(readFileSync(join(REPO_ROOT, payloadPath), "utf8")),
           payloadPath,
         );
-        expect(payload.schema).toBe("plurimath-unicodemath-unreached/1");
+        const projectionSchemas: Readonly<Record<string, string>> = {
+          "test/formats/unicodemath/unreached-fixtures.json": "plurimath-unicodemath-unreached/1",
+          "test/formats/unicodemath/reachability-fixtures.json":
+            "plurimath-unicodemath-reachability/1",
+          "test/formats/unicodemath/scope-gap-fixtures.json": "plurimath-unicodemath-scope-gap/1",
+        };
+        expect(projectionSchemas[payloadPath], payloadPath).toBeDefined();
+        expect(payload.schema).toBe(projectionSchemas[payloadPath]);
         expect(arrayField(payload, "cases", payloadPath).length).toBeGreaterThan(0);
       } else expect(mapField(metadata, "payloads", path)[basename(payloadPath)]).toBe(digest);
     }

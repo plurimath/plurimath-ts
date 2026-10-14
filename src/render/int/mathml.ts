@@ -8,13 +8,13 @@
  * is wrapped in `<mrow>` unless it is one (`wrap_mrow`) and the outer
  * `<mrow>` is tagged `:integral(...)` — a script with no third slot is
  * returned untagged. `options[:mask]` is checked by KEY (`function/int.rb:59`):
- * only the inert `limits_default` decoding is supported
- * (`assertMaskIsInert`).
+ * the shared Core mask rewrite includes its returned replacement, unlike
+ * Nary's use of the same Ruby helper, which discards that return value.
  */
 
 import {
-  assertMaskIsInert,
   hashOrNil,
+  maskedNaryScript,
   type NodeOf,
   naryandIntent,
   present,
@@ -30,14 +30,26 @@ export function renderInt(node: NodeOf<"int">, context: RenderContext): XmlEleme
   if (!present(node.parameterOne) && !present(node.parameterTwo) && !present(node.parameterThree)) {
     return base;
   }
-  const msubsup = new XmlElement("msubsup").append(
+  let msubsup = new XmlElement("msubsup").append(
     base,
     validateMathmlTag(node.parameterOne, context, "int.parameterOne"),
     validateMathmlTag(node.parameterTwo, context, "int.parameterTwo"),
   );
   const options = hashOrNil(node.options, node.kind, "int.options");
   if (options !== null && Object.hasOwn(options, "mask")) {
-    assertMaskIsInert(options.mask, node.kind, "int.options.mask");
+    msubsup = maskedNaryScript(
+      msubsup,
+      options.mask,
+      {
+        // Core#masked_tag reads these slots by position even for Int:
+        // parameterTwo is its upper limit; parameterThree is its integrand.
+        lowerIsNil: node.parameterTwo === null || node.parameterTwo === undefined,
+        upperIsNil: node.parameterThree === null || node.parameterThree === undefined,
+      },
+      node.kind,
+      "int.options.mask",
+      true,
+    );
   }
   if (node.parameterThree === null || node.parameterThree === undefined) return msubsup;
   const third = wrapMrow(

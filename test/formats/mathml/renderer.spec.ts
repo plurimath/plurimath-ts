@@ -9,6 +9,9 @@
  * (TODO.plan/deferred.md).
  */
 
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { MissingSymbolDataError, RenderError } from "../../../src/core/errors";
 import {
@@ -34,6 +37,7 @@ import {
 } from "../../../src/core/index";
 import { parseAsciimath } from "../../../src/formats/asciimath/parser";
 import { toMathml } from "../../../src/formats/mathml/renderer";
+import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
 
 const x = () => new SymbolNode({ value: "x" });
 const y = () => new SymbolNode({ value: "y" });
@@ -350,16 +354,16 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
     ).toThrow(RenderError);
   });
 
-  it("a live mask is refused by name; the inert nil-key mask renders (probes int-mask-*)", () => {
-    const masked = new IntNode({ parameterOne: x(), parameterTwo: y(), options: { mask: 1 } });
-    let caught: unknown;
-    try {
-      toMathml(formula(masked));
-    } catch (error) {
-      caught = error;
-    }
-    expect(caught).toBeInstanceOf(RenderError);
-    expect((caught as RenderError).message).toContain('"mask"');
+  it("a live integral mask matches the scope probe; the inert nil-key mask renders", () => {
+    const measured = JSON.parse(
+      readFileSync(
+        join(dirname(fileURLToPath(import.meta.url)), "../unicodemath/scope-gap-fixtures.json"),
+        "utf8",
+      ),
+    ) as { readonly cases: readonly { readonly input: string; readonly mathml?: string }[] };
+    const masked = measured.cases.find((entry) => entry.input === "∫1_a");
+    expect(masked?.mathml).toBeTypeOf("string");
+    expect(toMathml(parseUnicodemath("∫1_a"))).toBe(masked?.mathml);
     const inert = new IntNode({ parameterOne: x(), parameterTwo: y(), options: { mask: null } });
     expect(toMathml(formula(inert))).toBe(
       math(

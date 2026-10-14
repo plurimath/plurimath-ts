@@ -527,15 +527,10 @@ export function interpolatedValue(value: unknown, kind: string, at: string): str
 }
 
 /**
- * `options[:mask]` handling on `Int` (`function/int.rb:59`, key presence): the
- * gem decodes the mask integer into limit options (`Core#get_mask_options`,
- * core.rb:543-570 — Ruby `to_i` with FLOORED modulo) and rewrites the script
- * tag. `Int` supports exactly the no-op decoding — a mask whose only option is
- * `limits_default` (`mask.to_i` congruent to 0 mod 4 with no %32 flag, e.g.
- * `nil` or `0`), probed as byte-identical to no mask at all (probe
- * int-mask-key-nil) — and refuses every live mask BY NAME (`mask 1` renames
- * `msubsup` to `munderover`, probed). `Nary` (`nary.rb:56`, truthiness) applies
- * the rewrite: `maskedNaryScript` below.
+ * Inert-mask validation for callers that cannot perform the script rewrite.
+ * `limits_default` is the only no-op decoding (`mask.to_i` congruent to 0
+ * mod 4 with no %32 flag, e.g. nil or 0). Int and Nary perform the rewrite
+ * through `maskedNaryScript` below.
  */
 export function assertMaskIsInert(mask: unknown, kind: string, at: string): void {
   const value = maskToI(mask, kind, at);
@@ -619,6 +614,9 @@ function maskOptions(mask: bigint): string[] {
  * which `Nary` throws away, so it changes nothing — but it reads
  * `tag.nodes[1].name` first, and that read raises for a tag with no second
  * child.
+ * Int keeps that return value and opts into the fresh replacement with
+ * `returnRebuiltTag`; its caller supplies Core's literal parameter-two/three
+ * nil tests rather than treating them as semantic lower/upper limits.
  *
  * Every place the gem would carry a Ruby `nil` in a node list (`Array#insert`
  * past the end pads with one, and a swap of a missing child is one) is a place
@@ -633,6 +631,7 @@ export function maskedNaryScript(
   slots: { readonly lowerIsNil: boolean; readonly upperIsNil: boolean },
   kind: string,
   at: string,
+  returnRebuiltTag = false,
 ): XmlElement {
   const options = maskOptions(maskToI(mask, kind, at));
   let name = script.name;
@@ -662,8 +661,20 @@ export function maskedNaryScript(
     name = UNDER_OVER_NAMES.get(name) ?? name;
   } else if (options.includes("limits_sub_sup")) {
     name = SUB_SUP_NAMES.get(name) ?? name;
-  } else if (options.includes("upper_limit_as_super_script") && nodes[1] === undefined) {
-    throw refuse("upper_limit_as_super_script reads the name of a second child that is missing");
+  } else if (options.includes("upper_limit_as_super_script")) {
+    const lower = nodes[1];
+    if (lower === undefined) {
+      throw refuse("upper_limit_as_super_script reads the name of a second child that is missing");
+    }
+    // Int retains Core#masked_tag's returned replacement; Nary discards it.
+    if (returnRebuiltTag && lower instanceof XmlElement && lower.name === "mrow") {
+      const base = nodes[0];
+      const upper = nodes[2];
+      if (base === undefined || upper === undefined) {
+        throw refuse("upper_limit_as_super_script rebuilds a tag with a missing child");
+      }
+      return new XmlElement("munder").append(new XmlElement("msup").append(base, upper), lower);
+    }
   }
   return new XmlElement(name).append(nodes);
 }

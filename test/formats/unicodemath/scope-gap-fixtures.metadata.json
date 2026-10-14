@@ -1,7 +1,7 @@
 {
   "oracle": "00c52783877b38f6b8e6e109f1803f96bb34fc62",
   "lockSha256": "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121",
-  "source": "368667b0101696ad9f11ed0b610aae2653121a08",
+  "source": "2f6bae3b8db4d97b1de3fff95794b53199e82f24",
   "sourceDirty": false,
   "parslet": {
     "version": "2.0.0",
@@ -21,7 +21,7 @@
     }
   },
   "sourceInputs": {
-    "scripts/ci/unicode-unreached-probe.rb": "bfca95c6179934e42ded6cc996685ff4c4b123a81175290caa960a22b4c02ac7",
+    "scripts/ci/unicode-unreached-probe.rb": "f85b0fc465d1275194ad4c4f20063b2cd028f886dc0fbe86f9c0f5491a2c688c",
     "scripts/generate-unitsml-data.rb": "daf5853c30cf6aa9eed44faf2adb6ca431b7f4a44e47cc939f35a080a4ac2b59",
     "scripts/generate-corpus.rb": "620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75",
     "test/formats/unicodemath/model-fixtures.json": "3a00f89d2fbdc019849b3435f6cbbfed199156f363f039b4fda2d8bf84c04207"
@@ -42,8 +42,8 @@
   },
   "traceControlsPassed": true,
   "controlFirings": {
-    "18": 1310,
-    "1609": 86
+    "18": 1095,
+    "1609": 69
   },
   "targetFirings": {
     "760": 0,
@@ -57,14 +57,14 @@
     "2787": 0,
     "3074": 0
   },
-  "priorityCandidateCount": 96,
+  "priorityCandidateCount": 222,
   "unattemptedPriorityInputs": [],
   "schema": "plurimath-unicodemath-scope-gap-projection/1",
-  "sourceRun": "https://github.com/plurimath/plurimath-ts/actions/runs/38569305725",
-  "sourcePayloadSha256": "abcb2d3387f5185d6d84767bb767a01bc14d3b6b56338ca44bcc7c3453f95d7b",
-  "payloadSha256": "5030115c3c6d4096d4382c0ffb8deb1f6d9b75eb0ea19e024ec4ddccb2f0385e",
+  "sourceRun": "https://github.com/plurimath/plurimath-ts/actions/runs/38570631183",
+  "sourcePayloadSha256": "5069c809db1649b9879c75d39c31daf905d49e7141f70f86d35680ce786a09a4",
+  "payloadSha256": "a647e8a03cc90066a83a9513b6ed3c56ffb8c7ec4220f79bc4908bd56afac8fe",
   "projection": {
-    "rowCount": 8,
+    "rowCount": 134,
     "selection": "route begins scope-gap/; source rows retained verbatim"
   }
 }

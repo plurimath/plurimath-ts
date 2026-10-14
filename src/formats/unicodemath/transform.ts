@@ -1450,7 +1450,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // above, and also needed the moment `:486`/`:491`/`:496` below fold more
   // than one atom onto a `factor`: without it the resulting array is a hash
   // the gem always resolves, refused here as if it were the "factor=other"
-  // bug case `GEM_UNMATCHED_SIGNATURES` names.
+  // measured unmatched-tree case retained by finalization.
   rule("47", { backcolor: simple("color") }, (b) => b.color);
   // Slice H: `baseless_sub`'s first alternative, when no operator follows
   // the underscore, calls `baseless_sub_values(:sub_script)`
@@ -5136,7 +5136,7 @@ export function unicodemathTransform(): Transform {
  * ---------------------------------------------------------------------- */
 
 /**
- * Every successful transformed plain Hash remains a Hash in the Ruby model.
+ * Nested transformed plain Hashes remain Hashes; the root folds into key/value pairs.
  * The complete reachable rule set is registered; the pinned unreachable-rule
  * proofs live in docs/unicodemath-rule-reachability.md. Restricting preservation
  * to previously measured signatures rejects valid compositions (for example

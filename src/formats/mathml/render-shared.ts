@@ -670,9 +670,7 @@ export function maskedNaryScript(
     if (returnRebuiltTag && lower instanceof XmlElement && lower.name === "mrow") {
       const base = nodes[0];
       const upper = nodes[2];
-      if (base === undefined || upper === undefined) {
-        throw refuse("upper_limit_as_super_script rebuilds a tag with a missing child");
-      }
+      // Ruby XmlHelper.update_nodes skips nil children in this fresh rebuild.
       return new XmlElement("munder").append(new XmlElement("msup").append(base, upper), lower);
     }
   }

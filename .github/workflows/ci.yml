@@ -321,7 +321,7 @@ jobs:
           BUNDLE_GEMFILE: ${{ github.workspace }}/oracle/Gemfile
           BUNDLE_FROZEN: "true"
         run: |
-          bundle exec ruby scripts/ci/unicode-unreached-probe.rb --oracle "$GITHUB_WORKSPACE/oracle" --out "$RUNNER_TEMP/native-completion" --seconds 120 > "$RUNNER_TEMP/native-completion/unreached.stdout" 2> "$RUNNER_TEMP/native-completion/unreached.stderr"
+          bundle exec ruby scripts/ci/unicode-unreached-probe.rb --oracle "$GITHUB_WORKSPACE/oracle" --out "$RUNNER_TEMP/native-completion" --seconds 300 > "$RUNNER_TEMP/native-completion/unreached.stdout" 2> "$RUNNER_TEMP/native-completion/unreached.stderr"
       - name: Retain targeted measurements and failures
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

@@ -7,7 +7,7 @@
 require_relative "../generate-unitsml-data"
 require "timeout"
 
-options = { seconds: 120 }
+options = { seconds: 120, candidates: File.expand_path("unicode-xml-origin-candidates.json", __dir__) }
 OptionParser.new do |parser|
   parser.on("--oracle PATH") { |value| options[:oracle] = value }
   parser.on("--out PATH") { |value| options[:out] = value }
@@ -21,7 +21,8 @@ oracle = File.realpath(options[:oracle])
 out = File.expand_path(options[:out])
 FileUtils.mkdir_p(out)
 NativeCompletionReference.load_oracle!(oracle)
-targets = %w[760 925 930 1841 2041 2323 2341 2777 2787 3074].freeze
+targets = %w[11 12 41 42 51 75 845 1003 3156 3189 3211 3222 3244 3266 3323 3334 3356 3378 3444 3466 3488 3618 3629 3698 3780 3816
+  760 925 930 1841 2041 2323 2341 2777 2787 3074].freeze
 controls = %w[18 1609].freeze
 observed = targets + controls
 transform_path = File.join(oracle, "lib/plurimath/unicode_math/transform.rb")
@@ -37,12 +38,24 @@ Plurimath::UnicodeMath::Transform.rules.each do |_pattern, action|
   locations[[file, line]] = id
 end
 registered = locations.values.uniq
+registered_rule_ids = Plurimath::UnicodeMath::Transform.rules.map do |_pattern, action|
+  file, line = action.source_location
+  if File.realpath(file) == transform_path
+    locations.fetch([file, line])
+  elsif File.realpath(file) == File.join(oracle, "lib/plurimath/base_number_prefix.rb")
+    "bnp:#{line}"
+  else
+    abort "unknown registered transform action source: #{file}:#{line}"
+  end
+end
+abort "duplicate registered action ids" unless registered_rule_ids.uniq.length == registered_rule_ids.length
 abort "observed action locations missing" unless (observed - registered).empty?
 
 # These are hypotheses, never expected models or evidence of reachability.
 # Cover the producer routes before the larger existing-fixture sweep so a
 # bounded run cannot silently omit the nine-rule investigation.
 routes = {
+  "prior26/nary-postfix" => ["∫▒(a)₁ₐ", "∫_x▒(a)₁ₐ", "∫▒(a)ₐ₁", "∫▒(a)¹ᵃ", "∫▒(a)ᵃ¹", "∫▒(+)₁ₐ", "∫▒(½)₁ₐ", "∫▒(ab)₁ₐ", "∫▒(a_1)₁ₐ"],
   "scope-gap/raw-hash" => ["±±a", "̲a+a", "∫∫f g+x", "a·b·c+d", "±+a#eq", "a ± b#eq"],
   "scope-gap/integral-mask" => ["∫1_a", "∫1_a^b f"],
   "760/unary_subsup" => ["asin^2 x", "a sin^2 x", "a sin_a x", "a sin^a_b x", "a sin² x", "a sin₁ x", "a sin'² x", "a sin^2", "a sin_a", "sin^2 cos^3 x", "a sin_1", "a sin_1^2 b", "a sin′_1", "a sin′²", "a sinh_1^2 b"],
@@ -62,13 +75,23 @@ routes.each do |route, inputs|
   inputs.each { |input| priority_cases << { "input" => input, "group" => "nine-rule-route", "route" => route } }
 end
 if options[:candidates]
-  additions = JSON.parse(File.read(options[:candidates])).fetch("cases")
+  candidate_payload = JSON.parse(File.read(options[:candidates]))
+  if candidate_payload["schema"] == "plurimath-unicode-xml-origin-candidates/1"
+    source_root = File.expand_path("../..", __dir__)
+    abort "candidate corpus revision mismatch" unless candidate_payload.fetch("corpus") == NativeCompletionReference.git(source_root, "rev-parse", "HEAD:submodules/plurimath-testsuite")
+    candidate_payload.fetch("sourceInputs").each do |relative, recorded|
+      abort "invalid corpus input path" unless relative.match?(%r{\Acorpus/(mathml|omml)/[a-z0-9-]+\.yaml\z})
+      path = File.join(source_root, "submodules/plurimath-testsuite", relative)
+      abort "candidate corpus bytes mismatch: #{relative}" unless File.size(path) == recorded.fetch("bytes") && Digest::SHA256.file(path).hexdigest == recorded.fetch("sha256")
+    end
+  end
+  additions = candidate_payload.fetch("cases")
   abort "empty additional candidates" if additions.empty?
-  abort "additional candidates exceed bounded limit" if additions.length > 200
+  abort "additional candidates exceed bounded limit" if additions.length > 500
   additions.each do |entry|
     abort "candidate requires input and route strings" unless entry["input"].is_a?(String) && entry["route"].is_a?(String)
     abort "candidate input exceeds bounded length" if entry.fetch("input").length > 256
-    priority_cases << { "input" => entry.fetch("input"), "route" => entry.fetch("route"), "group" => "additional-route" }
+    priority_cases << { "input" => entry.fetch("input"), "route" => entry.fetch("route"), "group" => "additional-route", "sourceCaseIds" => entry["sourceCaseIds"] }
   end
 end
 
@@ -190,10 +213,11 @@ report = {
   "sourceInputs" => input_paths.to_h do |path|
     [path.sub(File.expand_path("../..", __dir__) + "/", ""), Digest::SHA256.file(path).hexdigest]
   end,
-  "oracleInputs" => Dir.glob(File.join(oracle, "lib/plurimath/unicode_math/**/*.rb")).sort.to_h do |path|
+  "oracleInputs" => (Dir.glob(File.join(oracle, "lib/plurimath/unicode_math/**/*.rb")) + [File.join(oracle, "lib/plurimath/base_number_prefix.rb")]).sort.to_h do |path|
     [path.sub(oracle + "/", ""), Digest::SHA256.file(path).hexdigest]
   end,
   "registeredRuleCount" => Plurimath::UnicodeMath::Transform.rules.length,
+  "registeredRuleIds" => registered_rule_ids,
   "targetActionLocations" => locations.filter_map { |(file, line), id| [id, line] if targets.include?(id) }.to_h,
   "candidateCount" => cases.length,
   "excludedLocaleCases" => existing.count { |entry| entry["locale"] },

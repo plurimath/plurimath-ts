@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { type FormulaNode, normalize, PlurimathError } from "../../../src/core/index";
+import { type FormulaNode, normalize, ParseError, PlurimathError } from "../../../src/core/index";
 import { toAsciimath } from "../../../src/formats/asciimath/index";
 import { toHtml } from "../../../src/formats/html/index";
 import { toLatex } from "../../../src/formats/latex/index";
@@ -43,9 +43,16 @@ const metadata = JSON.parse(
 };
 
 describe("measured UnicodeMath composition boundaries", () => {
+  it.each(
+    fixtures.cases
+      .filter((entry) => entry.raises !== undefined)
+      .map((entry) => [entry.input, entry] as const),
+  )("%j: preserves the reference parse refusal", (_input, entry) => {
+    expect(() => parseUnicodemath(entry.input)).toThrow(ParseError);
+  });
   it("binds the projection to a clean, calibrated reference measurement", () => {
     expect(metadata.oracle).toBe("00c52783877b38f6b8e6e109f1803f96bb34fc62");
-    expect(metadata.source).toBe("368667b0101696ad9f11ed0b610aae2653121a08");
+    expect(metadata.source).toBe("2f6bae3b8db4d97b1de3fff95794b53199e82f24");
     expect(metadata.sourceDirty).toBe(false);
     expect(metadata.traceControlsPassed).toBe(true);
     expect(metadata.unattemptedPriorityInputs).toStrictEqual([]);
@@ -55,21 +62,22 @@ describe("measured UnicodeMath composition boundaries", () => {
     expect(fixtures.cases.length).toBeGreaterThan(0);
   });
 
-  it.each(fixtures.cases.map((entry) => [entry.input, entry] as const))(
-    "%j: preserves Ruby's public model and measured rendering boundaries",
-    (_input, entry) => {
-      const formula: FormulaNode = parseUnicodemath(entry.input);
-      expect(normalize(formula)).toStrictEqual(entry.model);
-      for (const format of Object.keys(renderers) as Format[]) {
-        if (Object.hasOwn(entry, `${format}Error`)) {
-          expect(() => renderers[format](formula), `${entry.input}: ${format}`).toThrow(
-            PlurimathError,
-          );
-        } else {
-          expect(Object.hasOwn(entry, format), `${entry.input}: missing ${format}`).toBe(true);
-          expect(renderers[format](formula), `${entry.input}: ${format}`).toBe(entry[format]);
-        }
+  it.each(
+    fixtures.cases
+      .filter((entry) => entry.model !== undefined)
+      .map((entry) => [entry.input, entry] as const),
+  )("%j: preserves Ruby's public model and measured rendering boundaries", (_input, entry) => {
+    const formula: FormulaNode = parseUnicodemath(entry.input);
+    expect(normalize(formula)).toStrictEqual(entry.model);
+    for (const format of Object.keys(renderers) as Format[]) {
+      if (Object.hasOwn(entry, `${format}Error`)) {
+        expect(() => renderers[format](formula), `${entry.input}: ${format}`).toThrow(
+          PlurimathError,
+        );
+      } else {
+        expect(Object.hasOwn(entry, format), `${entry.input}: missing ${format}`).toBe(true);
+        expect(renderers[format](formula), `${entry.input}: ${format}`).toBe(entry[format]);
       }
-    },
-  );
+    }
+  });
 });

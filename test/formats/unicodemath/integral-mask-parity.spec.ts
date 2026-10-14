@@ -17,7 +17,9 @@ interface IntegralWitness {
 const fixtures = JSON.parse(
   readFileSync(join(dirname(fileURLToPath(import.meta.url)), "scope-gap-fixtures.json"), "utf8"),
 ) as { readonly schema: string; readonly cases: readonly IntegralWitness[] };
-const integrals = fixtures.cases.filter((entry) => entry.route === "scope-gap/integral-mask");
+const integrals = fixtures.cases.filter(
+  (entry) => entry.route === "scope-gap/integral-mask" && entry.model !== undefined,
+);
 
 describe("the measured public integral-mask MathML routes", () => {
   it("includes both measured mask-one shapes and their successful outputs", () => {

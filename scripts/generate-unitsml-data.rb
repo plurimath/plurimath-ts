@@ -34,7 +34,8 @@ module NativeCompletionReference
 
   def measured(input, options = {})
     formula = Unitsml.parse(input)
-    record = { "input" => input, "options" => options }
+    types = options.to_h { |key, value| [key.to_s, value.is_a?(Symbol) ? "symbol" : value.class.name.downcase] }
+    record = { "input" => input, "options" => options, "optionsTypes" => types }
     { "mathml" => :to_mathml, "ascii" => :to_asciimath, "xml" => :to_xml }.each do |key, method|
       begin
         record[key] = formula.public_send(method, options)
@@ -49,7 +50,7 @@ module NativeCompletionReference
     end
     record
   rescue StandardError => e
-    { "input" => input, "options" => options, "raises" => e.class.name, "message" => e.message }
+    { "input" => input, "options" => options, "optionsTypes" => options.to_h { |key, value| [key.to_s, value.is_a?(Symbol) ? "symbol" : value.class.name.downcase] }, "raises" => e.class.name, "message" => e.message }
   end
 
   def token_order(array)
@@ -75,6 +76,10 @@ module NativeCompletionReference
     pairs = (tokens["singlePrefixes"] + tokens["doublePrefixes"]).uniq.product(%w[m s g kg A K mol cd])
     data["prefixedUnits"] = pairs.to_h { |prefix, unit| ["#{prefix}\u0000#{unit}", measured("#{prefix}#{unit}")] }
     data["special"] = %w[1 1/m m^-1 m^(-1/2) sqrt(m)/s].to_h { |input| [input, measured(input)] }
+    data["utility"] = { "u2d" => Unitsml::Utility::U2D, "dim2d" => Unitsml::Utility::DIM2D,
+      "dimsVector" => Unitsml::Utility::DIMS_VECTOR, "prefixSymbolMethods" => Unitsml::Utility::PREFIX_SYMBOL_METHODS }
+    data["dimensionVectors"] = Unitsml::Unitsdb.dimensions.dimensions.map { |dim| { "id" => dim.id, "vector" => dim.set_vector } }
+    data["namespace"] = { "uri" => Unitsml::Namespace.uri, "prefix" => Unitsml::Namespace.prefix_default }
     data["resolvedTokens"] = {}
     symbols = Unitsml::Unitsdb.units.units.flat_map { |unit| unit.symbols || [] }
     text_values = symbols.filter_map do |symbol|
@@ -84,7 +89,12 @@ module NativeCompletionReference
     end
     # Resolve each visible prefix+unit token directly, avoiding full parser work.
     prefixes = Unitsml::Unitsdb.prefixes.prefixes.flat_map { |prefix| prefix.symbols || [] }.filter_map(&:unicode)
-    (text_values + prefixes.product(text_values).map { |prefix, text| "#{prefix}#{text}" } + ["−", "-", "·", " "]).uniq.each do |text|
+    resolver_keys = Plurimath::Utility.all_symbols_classes(:mathml).keys.map(&:to_s) +
+      Plurimath::Mathml::Constants::UNICODE_SYMBOLS.keys.map(&:to_s) +
+      Plurimath::Mathml::Constants::NAMED_FUNCTION_WORDS
+    resolver_keys += resolver_keys.map { |text| Plurimath::Utility.html_entity_to_unicode(text) }
+    (text_values + prefixes.product(text_values).map { |prefix, text| "#{prefix}#{text}" } +
+      resolver_keys + ["−", "-", "·", "⋅", "⁢", "/", "*", "×", "+", " "]).uniq.each do |text|
       begin
         node = Plurimath::Mathml::Utility.resolve_token(text)
         data["resolvedTokens"][text] = CorpusGenerator.serialize_node(node, "resolved-token")

@@ -24,7 +24,7 @@ export function renderUnitsml(node: NodeOf<"unitsml">, context: RenderContext): 
       (child): child is XmlReadElement => child.kind === "element",
     );
     const first = elements[0];
-    const xref = first?.attributes.find(([name]) => name === "id")?.[1];
+    const xref = first?.attributes.find(([name]) => localName(name) === "id")?.[1];
     if (xref !== undefined) rendered.setAttribute("xref", xref);
     rendered.append(elements.map(copyElement));
   }
@@ -33,10 +33,19 @@ export function renderUnitsml(node: NodeOf<"unitsml">, context: RenderContext): 
 
 function copyElement(node: XmlReadElement): XmlElement {
   if (node.name === null) throw new RenderError("Unnamed UnitsML XML element", "mathml", "unitsml");
-  const result = new XmlElement(node.name).setAttributes(node.xmlns).setAttributes(node.attributes);
+  // This path uses the gem's raw Ox loader with strip_namespace: true,
+  // independently of the Lutaml reader used for MathML/OMML input.
+  const attributes = node.attributes.map(([name, value]) => [localName(name), value] as const);
+  const result = new XmlElement(localName(node.name))
+    .setAttributes(node.xmlns)
+    .setAttributes(attributes);
   for (const child of node.children) {
     if (child.kind === "element") result.append(copyElement(child));
     else if (child.kind === "text" || child.kind === "cdata") result.append(child.text);
   }
   return result;
+}
+
+function localName(name: string): string {
+  return name.slice(name.indexOf(":") + 1);
 }

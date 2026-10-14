@@ -203,6 +203,25 @@ describe("the fixture set itself", () => {
 });
 
 describe("readXml reproduces the gem's read", () => {
+  // Moxml::Adapter::Ox#inner_text joins direct String children before
+  // Entity.restore_entities runs; Lutaml reads it while wrapping each element.
+  it("restores joined direct text without joining descendants", () => {
+    expect(() => readXml("<a>&alpha;<b/>&#xD800;</a>")).toThrow(XmlReadError);
+    expect(() => readXml("<a>&#xD800;<b/>&alpha;</a>")).toThrow(XmlReadError);
+    const nested = readXml("<a>&alpha;<b>&#xD800;</b></a>");
+    expect(nested.children).toStrictEqual([
+      { kind: "text", text: "&alpha;" },
+      {
+        kind: "element",
+        name: "b",
+        prefix: null,
+        namespace: null,
+        attributes: [],
+        xmlns: [],
+        children: [{ kind: "text", text: "?" }],
+      },
+    ]);
+  });
   const groups = [...new Set(FIXTURE.cases.map((row) => row.group))];
   it.each(groups)("%s", (group) => {
     const mismatches: string[] = [];

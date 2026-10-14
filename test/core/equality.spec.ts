@@ -522,15 +522,17 @@ describe("the corpus equality matrix, as the gem reports it", () => {
 
   it("matches the gem pair for pair", () => {
     const found: string[] = [];
+    const asymmetric: string[] = [];
     for (let i = 0; i < nodes.length; i += 1) {
       for (let j = i + 1; j < nodes.length; j += 1) {
         const [leftId, left] = nodes[i] as readonly [string, MathNode];
         const [rightId, right] = nodes[j] as readonly [string, MathNode];
         const result = equals(left, right);
-        expect(equals(right, left), `${leftId} vs ${rightId} is asymmetric`).toBe(result);
+        if (equals(right, left) !== result) asymmetric.push(`${leftId}|${rightId}`);
         if (result) found.push(`${leftId}|${rightId}`);
       }
     }
+    expect(asymmetric).toStrictEqual([]);
     expect([...found].sort()).toStrictEqual([...RubyEqualPairs].sort());
   });
 

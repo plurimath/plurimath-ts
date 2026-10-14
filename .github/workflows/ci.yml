@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [main, chore/oracle-security-baseline]
+    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -40,7 +40,7 @@ jobs:
   # Every class-A gate active at the repository's current milestone
   # (gates.json). No Ruby is needed: generated payloads are committed.
   gates:
-    if: ${{ github.ref != 'refs/heads/chore/oracle-security-baseline' && !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     # A whole run takes about two minutes, so this is roughly seven times the
     # observed cost -- generous for a slow runner, and still a bound. It is
@@ -74,7 +74,7 @@ jobs:
   # class-A suite and run with an explicit interpreter rather than relying on
   # whatever happens to be installed on the runner image.
   oracle-runner-unit-tests:
-    if: ${{ github.ref != 'refs/heads/chore/oracle-security-baseline' && !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -97,7 +97,7 @@ jobs:
 
   # Guards the runtime support claim in package.json#engines.
   runtime-matrix:
-    if: ${{ github.ref != 'refs/heads/chore/oracle-security-baseline' && !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: gates
@@ -132,7 +132,7 @@ jobs:
 
   # Expensive generation is opt-in. Standard PR/push jobs above stay unchanged.
   oracle-artifacts:
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts) || (github.event_name == 'push' && github.ref == 'refs/heads/chore/oracle-security-baseline') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts }}
     # Evaluation fixtures require the oracle's glibc 2.35 (Ubuntu 22.04).
     runs-on: ubuntu-22.04
     timeout-minutes: 120

@@ -9,7 +9,7 @@
  * `Moxml::Adapter::Ox.parse` and then `Ox.parse` once, and nothing else
  * (a TracePoint over Ox, Nokogiri, REXML and Oga load/parse calls), with
  * `Lutaml::Model::Config.xml_adapter` = `Lutaml::Xml::Adapter::OxAdapter`.
- * So the stack is Ox 2.14.28 under moxml 0.1.26 and lutaml-model 0.8.19, and
+ * So the stack is Ox 2.14.28 under moxml 0.5.56 and lutaml-model 0.8.30, and
  * what the models walk is Lutaml's wrapper of Moxml's view of Ox's tree. This
  * module reproduces all four layers, in order:
  *
@@ -32,7 +32,9 @@
  * 4. **Lutaml's wrapper**: empty text and CDATA nodes are dropped, an
  *    unresolved prefix is dropped from a name, and an attribute is dropped
  *    when its local name starts with `xmlns` or it restates one of its own
- *    element's namespace declarations.
+ *    element's namespace declarations. Invalid UTF-8 in marker-free text is
+ *    normalized with `?`; marker-bearing invalid values still raise during
+ *    Moxml's regex restoration. The `xml` prefix is implicitly bound.
  *
  * Every rule is pinned by `test/xml/reader-fixtures.json`, which
  * `scripts/generate-xml-reader-fixtures.rb` measures on the oracle.
@@ -46,8 +48,8 @@
  *
  * ## Refusals
  *
- * Everything the gem's reader raises on — Ox parse errors, the invalid UTF-8
- * that a numeric reference can produce, a document with no root element — is
+ * Everything the gem's reader raises on — Ox parse errors, invalid UTF-8 in
+ * a marker-bearing value, a document with no root element — is
  * one {@link XmlReadError} here, because `Plurimath::Math.parse` turns every
  * one of them into the same `ParseError`. Nesting deeper than Ox's limit of
  * 1000 levels below the root is refused as Ox refuses it; between roughly 700
@@ -60,7 +62,7 @@
  *   changes how Ruby labels the strings. Two consequences are reproduced:
  *   text and attribute values still read as UTF-8, and a numeric reference
  *   above U+007F writes a single raw byte in text (above U+00FF it is
- *   refused), so it survives only where the bytes happen to form valid UTF-8
+ *   refused), with invalid UTF-8 in marker-free text normalized to `?`
  *   (`&#195;&#169;` is `é`); in an attribute value it is refused. Not
  *   reproduced: the gem re-reads every element name, comment, processing
  *   instruction (target and text), CDATA section and namespace URI through
@@ -75,8 +77,10 @@
  * - `locale`, `external`, `filesystem` and `internal` resolve through the Ruby
  *   process's environment; they are read as UTF-8, which is what they are in
  *   the oracle's environment (under `LC_ALL=C` the gem would differ).
- * - Invalid UTF-8 can reach a namespace URI (`xmlns:m="&#xD800;"`) in the gem;
- *   a JavaScript string cannot hold it, so those bytes decode to U+FFFD.
+ * - Invalid UTF-8 can reach namespace URIs and marker-free attribute values
+ *   (`xmlns:m="&#xD800;"` or `x="&#xD800;"`) in the gem; a JavaScript string
+ *   cannot hold it, so those bytes decode to U+FFFD. Namespace-restatement
+ *   comparisons still use the original bytes.
  * - A JavaScript string with a lone surrogate has no UTF-8 form and no Ruby
  *   counterpart; it is refused.
  *
@@ -1083,17 +1087,62 @@ function latin(bytes: Uint8Array): string {
 }
 
 /**
- * Text and attribute values go through Moxml's `restore_entities`, a regex
- * substitution, and Ruby refuses a regex over invalid UTF-8 (`ArgumentError`).
+ * Moxml skips restoration unless its literal or serialized marker prefix is
+ * present. Only that regex path refuses invalid UTF-8 (`ArgumentError`).
+ * Lutaml normalizes text afterwards; attributes retain their original bytes.
  */
-function restoredValue(bytes: Uint8Array): string {
-  let text: string;
-  try {
-    text = STRICT_DECODER.decode(bytes);
-  } catch {
-    throw new XmlReadError("invalid byte sequence in UTF-8");
+function restoredValue(bytes: Uint8Array, normalizeText = false): string {
+  const decoded = DECODER.decode(bytes);
+  if (!hasEntityMarker(decoded)) {
+    return normalizeText ? (strictDecode(bytes) ?? scrubUtf8(bytes)) : decoded;
   }
+  const text = strictDecode(bytes);
+  if (text === null) throw new XmlReadError("invalid byte sequence in UTF-8");
   return restoreEntities(text);
+}
+
+function hasEntityMarker(text: string): boolean {
+  return text.includes(ENTITY_MARKER) || text.includes("&#xFFFC;");
+}
+
+/** UTF-8 invalid subsequences become `?`, without changing a valid U+FFFD. */
+function scrubUtf8(bytes: Uint8Array): string {
+  const out: number[] = [];
+  for (let i = 0; i < bytes.length; ) {
+    const first = bytes[i] ?? 0;
+    if (first < 0x80) {
+      out.push(first);
+      i++;
+      continue;
+    }
+    const width =
+      first >= 0xc2 && first <= 0xdf
+        ? 2
+        : first >= 0xe0 && first <= 0xef
+          ? 3
+          : first >= 0xf0 && first <= 0xf4
+            ? 4
+            : 0;
+    if (width === 0) {
+      out.push(QUESTION);
+      i++;
+      continue;
+    }
+    let consumed = 1;
+    while (consumed < width && i + consumed < bytes.length) {
+      const next = bytes[i + consumed] ?? 0;
+      const low =
+        consumed === 1 && first === 0xe0 ? 0xa0 : consumed === 1 && first === 0xf0 ? 0x90 : 0x80;
+      const high =
+        consumed === 1 && first === 0xed ? 0x9f : consumed === 1 && first === 0xf4 ? 0x8f : 0xbf;
+      if (next < low || next > high) break;
+      consumed++;
+    }
+    if (consumed === width) out.push(...bytes.subarray(i, i + width));
+    else out.push(QUESTION);
+    i += consumed;
+  }
+  return DECODER.decode(Uint8Array.from(out));
 }
 
 /** Ruby's `String#split(":")`: trailing empty fields removed. */
@@ -1133,6 +1182,7 @@ function lookupNamespace(
   element: OxElement,
   ancestors: readonly OxElement[],
 ): Uint8Array | null {
+  if (prefix === "xml") return ENCODER.encode("http://www.w3.org/XML/1998/namespace");
   const key = prefix === null ? "xmlns" : `xmlns:${prefix}`;
   const latinKey = latin(ENCODER.encode(key));
   for (const node of [element, ...ancestors]) {
@@ -1152,15 +1202,15 @@ function wrapElement(element: OxElement, ancestors: readonly OxElement[]): XmlRe
 
   // Own declarations, as Moxml's `namespace_definitions` lists them.
   const xmlns: (readonly [string, string])[] = [];
-  // A URI that is not valid UTF-8 maps to null: the gem compares it with an
-  // attribute's value byte for byte, and no JavaScript string has its bytes.
-  const own = new Map<string | null, string | null>();
+  // Compare declarations with attribute values byte for byte, including
+  // invalid UTF-8 that cannot be represented by a JavaScript string.
+  const own = new Map<string | null, Uint8Array>();
   for (const { name: attrName, value } of element.attributes.values()) {
     const key = DECODER.decode(attrName);
     if (key.startsWith("xmlns")) xmlns.push([key, DECODER.decode(value)]);
     if (key === "xmlns" || key.startsWith("xmlns:")) {
       // Lutaml's namespace table files an empty prefix (`xmlns:=`) under nil.
-      own.set(lutamlPrefix(namespacePrefix(key)), strictDecode(value));
+      own.set(lutamlPrefix(namespacePrefix(key)), value);
     }
   }
 
@@ -1172,7 +1222,7 @@ function wrapElement(element: OxElement, ancestors: readonly OxElement[]): XmlRe
         children.push(wrapElement(node, inner));
         break;
       case "text": {
-        const text = restoredValue(node.value);
+        const text = restoredValue(node.value, true);
         if (text !== "") children.push({ kind: "text", text });
         break;
       }
@@ -1217,11 +1267,27 @@ function wrapElement(element: OxElement, ancestors: readonly OxElement[]): XmlRe
     // checked for valid UTF-8.
     if (attrLocal.startsWith("xmlns")) continue;
     const restored = restoredValue(value);
-    if (own.size > 0 && own.has(attrLocal) && own.get(attrLocal) === restored) continue;
+    const declaration = own.get(attrLocal);
+    const restoredBytes = hasEntityMarker(DECODER.decode(value)) ? ENCODER.encode(restored) : value;
+    if (declaration !== undefined && bytesEqual(declaration, restoredBytes)) continue;
     const resolved =
       lookupNamespace(attrPrefix, element, ancestors) === null ? null : namespacePrefix(attrPrefix);
     const key = resolved === null || resolved === "" ? attrLocal : `${resolved}:${attrLocal}`;
     attributes.set(key, restored);
+  }
+
+  // Lutaml also reads Moxml's inner_text after children and attributes:
+  // Ox joins only direct String children before marker restoration. A marker
+  // and invalid bytes in different text nodes must still refuse together.
+  const directText = element.nodes.filter((node) => node.kind === "text");
+  if (directText.length > 1) {
+    const joined = new Uint8Array(directText.reduce((size, node) => size + node.value.length, 0));
+    let offset = 0;
+    for (const node of directText) {
+      joined.set(node.value, offset);
+      offset += node.value.length;
+    }
+    restoredValue(joined);
   }
 
   return {

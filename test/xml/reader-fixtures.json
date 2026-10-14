@@ -5,8 +5,8 @@
   "adapter": {
     "lutaml": "Lutaml::Xml::Adapter::OxAdapter",
     "ox": "2.14.28",
-    "moxml": "0.1.26",
-    "lutamlModel": "0.8.19"
+    "moxml": "0.5.56",
+    "lutamlModel": "0.8.30"
   },
   "fuzzSeed": 20260928,
   "encodingTable": {
@@ -38,8 +38,8 @@
     ]
   },
   "caseCount": 4108,
-  "readCount": 1986,
-  "raisedCount": 2122,
+  "readCount": 2168,
+  "raisedCount": 1940,
   "cases": [
     {
       "id": "xml-f031fadb7782",
@@ -78125,7 +78125,19 @@
       "id": "xml-6861005bdf84",
       "group": "attributes",
       "input": "<a x=\"&#xD800;\"/>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [
+          [
+            "x",
+            {
+              "invalidUtf8": "d8"
+            }
+          ]
+        ],
+        "xmlns": [],
+        "children": []
+      }
     },
     {
       "id": "xml-f8625947f956",
@@ -78533,13 +78545,31 @@
       "id": "xml-a18a171a66fd",
       "group": "entities",
       "input": "<a>&#xD800;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-25c00331f3ef",
       "group": "entities",
       "input": "<a>&#xDFFF;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "??"
+          }
+        ]
+      }
     },
     {
       "id": "xml-b39c72872a1b",
@@ -78590,19 +78620,46 @@
       "id": "xml-19473feee7ac",
       "group": "entities",
       "input": "<a>&#x7FFFFFFF;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "???"
+          }
+        ]
+      }
     },
     {
       "id": "xml-f0c5c407fd7b",
       "group": "entities",
       "input": "<a>&#9999999999;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "\u0002T\u000b??"
+          }
+        ]
+      }
     },
     {
       "id": "xml-4afb80019309",
       "group": "entities",
       "input": "<a>&#99999999999999999999999;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "\u0002??J???"
+          }
+        ]
+      }
     },
     {
       "id": "xml-af92b799d7ac",
@@ -79852,13 +79909,31 @@
       "id": "xml-5df528e95117",
       "group": "declaration",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><a>\u00e9&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "\u00e9?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-2b9bfd3b8783",
       "group": "declaration",
       "input": "<?xml version=\"1.0\" encoding=\"US-ASCII\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-3bddcdb82dba",
@@ -79870,7 +79945,16 @@
       "id": "xml-75e8b01a3680",
       "group": "declaration",
       "input": "<?xml version=\"1.0\" encoding=\"bogus\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-715da812ff44",
@@ -79978,7 +80062,16 @@
       "id": "xml-414dceb0abdf",
       "group": "declaration",
       "input": "<?xml encoding=\"ISO-8859-1\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-e6136e840b45",
@@ -80020,7 +80113,16 @@
       "id": "xml-409d70dc511f",
       "group": "declaration",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-8\" encoding=\"ISO-8859-1\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-69b123d7adf7",
@@ -80058,7 +80160,16 @@
       "id": "xml-af44e80073a7",
       "group": "declaration",
       "input": "<?xml version=\"1.0\"encoding=\"ISO-8859-1\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-dfa8ba96306a",
@@ -80115,13 +80226,31 @@
       "id": "xml-42bf1a4737ce",
       "group": "declaration",
       "input": "<?xml version=\"1.0\" encoding=\" UTF-8\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-5e01bfd3a3de",
       "group": "declaration",
       "input": "<?xml version=\"1.0\" encoding=\"\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-f7a5d1e8f62f",
@@ -81051,7 +81180,19 @@
       "id": "xml-db048f6fc7e0",
       "group": "namespaces",
       "input": "<a xmlns:m=\"&#xD800;\" m=\"&#xD800;\"/>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns:m",
+            {
+              "invalidUtf8": "d8"
+            }
+          ]
+        ],
+        "children": []
+      }
     },
     {
       "id": "xml-0482c5e1c936",
@@ -81364,7 +81505,7 @@
                 "namespace": "http://schemas.openxmlformats.org/officeDocument/2006/math",
                 "attributes": [
                   [
-                    "space",
+                    "xml:space",
                     "preserve"
                   ]
                 ],
@@ -81418,7 +81559,7 @@
         "element": "a",
         "attributes": [
           [
-            "lang",
+            "xml:lang",
             "en"
           ]
         ],
@@ -85638,7 +85779,16 @@
       "id": "xml-722e58b42d0a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"646\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-e74417ca9949",
@@ -85748,7 +85898,16 @@
       "id": "xml-ffec0e655845",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ANSI_X3.4-1968\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-14aa2faac200",
@@ -85858,7 +86017,16 @@
       "id": "xml-b3d1ee18041a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ASCII\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-51f4482e81ad",
@@ -85968,7 +86136,16 @@
       "id": "xml-3a63417a4cff",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ASCII-8BIT\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-b3d44fd8e85d",
@@ -86096,7 +86273,16 @@
       "id": "xml-402d1789170f",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"BINARY\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-c18dec2368fb",
@@ -86224,7 +86410,16 @@
       "id": "xml-4c84766e86cf",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Big5\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-28ba4c6015e2",
@@ -86340,7 +86535,16 @@
       "id": "xml-356ce790538d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Big5-HKSCS\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-83fdd9df8072",
@@ -86456,7 +86660,16 @@
       "id": "xml-268c9bae6b63",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Big5-HKSCS:2008\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-3b8486ee86e6",
@@ -86572,7 +86785,16 @@
       "id": "xml-0c6375636dd2",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Big5-UAO\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-f2a74cabe602",
@@ -86688,7 +86910,16 @@
       "id": "xml-fb1a58fe0e8a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CESU-8\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-ca6046604c13",
@@ -86804,7 +87035,16 @@
       "id": "xml-c993bd2ebd9c",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1250\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-b83607edec46",
@@ -86920,7 +87160,16 @@
       "id": "xml-7ae9c5a4dc97",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1251\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-d3646977a8e0",
@@ -87036,7 +87285,16 @@
       "id": "xml-dcb6239d6cbd",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1252\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-ed7927680a97",
@@ -87152,7 +87410,16 @@
       "id": "xml-19fed961d662",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1253\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-9179ddc15dbd",
@@ -87268,7 +87535,16 @@
       "id": "xml-14c791c00d89",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1254\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-522a10c1fe69",
@@ -87384,7 +87660,16 @@
       "id": "xml-58260cd87bd4",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1255\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-86d542900d0e",
@@ -87500,7 +87785,16 @@
       "id": "xml-981127af79e7",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1256\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-1df37ba00c61",
@@ -87616,7 +87910,16 @@
       "id": "xml-dfb255542807",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1257\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-dc43720180d4",
@@ -87732,7 +88035,16 @@
       "id": "xml-500739a7ad52",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP1258\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-ea3d83ba1c74",
@@ -87832,7 +88144,16 @@
       "id": "xml-c69611a628b4",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP437\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-861fcb51aad2",
@@ -88044,7 +88365,16 @@
       "id": "xml-eeec86341af3",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP51932\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-506455d37108",
@@ -88333,7 +88663,16 @@
       "id": "xml-1426b98b8283",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP720\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-9a43153a13ba",
@@ -88449,7 +88788,16 @@
       "id": "xml-241dc9a2555b",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP737\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-b79de776bcb1",
@@ -88565,7 +88913,16 @@
       "id": "xml-3de7263f4f90",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP775\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-b69978289973",
@@ -88681,7 +89038,16 @@
       "id": "xml-0b390c6b52fa",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP850\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-17f92e0698f4",
@@ -88797,7 +89163,16 @@
       "id": "xml-b1c6972304ef",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP852\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-7da563997b0f",
@@ -88913,7 +89288,16 @@
       "id": "xml-eb2ee0d3ff28",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP855\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-189b2340c57c",
@@ -89029,7 +89413,16 @@
       "id": "xml-4ecb5c4ce385",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP857\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-a0379271d00a",
@@ -89145,7 +89538,16 @@
       "id": "xml-fe631011595b",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP860\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-dd04064c62bf",
@@ -89261,7 +89663,16 @@
       "id": "xml-d9b7753ea6e2",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP861\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-7729ad0d0b2e",
@@ -89377,7 +89788,16 @@
       "id": "xml-4621bcb85ff2",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP862\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-5234cdfc37cb",
@@ -89493,7 +89913,16 @@
       "id": "xml-a4f1d43491c4",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP863\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-60a052c56c5f",
@@ -89609,7 +90038,16 @@
       "id": "xml-ff8b97673eec",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP864\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-8b68892d4ff7",
@@ -89725,7 +90163,16 @@
       "id": "xml-c0e3dbeb3f12",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP865\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-46af3b2d28f7",
@@ -89841,7 +90288,16 @@
       "id": "xml-1b0be2a2ea26",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP866\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-fe245d44104e",
@@ -89957,7 +90413,16 @@
       "id": "xml-22ccbce15c30",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP869\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-9a720352408f",
@@ -90073,7 +90538,16 @@
       "id": "xml-c7ae08934ea0",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP874\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-bd15e2d0d139",
@@ -90189,7 +90663,16 @@
       "id": "xml-8d7593f299fe",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP878\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-0f30c0da4882",
@@ -90305,7 +90788,16 @@
       "id": "xml-1188c8107405",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP932\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-933780780708",
@@ -90421,7 +90913,16 @@
       "id": "xml-4427d0ddd0d6",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP936\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-10766397cbc1",
@@ -90537,7 +91038,16 @@
       "id": "xml-c7b718bf8d89",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP949\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-7d172c1bf5b6",
@@ -90653,7 +91163,16 @@
       "id": "xml-51964b8f6299",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP950\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-fa292cde36a9",
@@ -90769,7 +91288,16 @@
       "id": "xml-f3acc4025c62",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"CP951\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-022ad6d71d6b",
@@ -90885,7 +91413,16 @@
       "id": "xml-63554be521a9",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"EUC-CN\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-3c5f0fb5873f",
@@ -91001,7 +91538,16 @@
       "id": "xml-a6d5a30e2982",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"EUC-JIS-2004\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-7b7602dbe863",
@@ -91117,7 +91663,16 @@
       "id": "xml-dbc928a98346",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"EUC-JISX0213\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-28ff67f6fe4a",
@@ -91233,7 +91788,16 @@
       "id": "xml-9efce48b2fc0",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"EUC-JP\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-7ff4788f22f6",
@@ -91349,7 +91913,16 @@
       "id": "xml-330986a7a557",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"EUC-KR\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-927e70e8afb3",
@@ -91465,7 +92038,16 @@
       "id": "xml-373d783a4331",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"EUC-TW\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-6b95ea116f64",
@@ -91565,7 +92147,16 @@
       "id": "xml-937c3762b544",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Emacs-Mule\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-3f0ddf5fead6",
@@ -91657,7 +92248,16 @@
       "id": "xml-b40c6dd06a3f",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"GB12345\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-74e2a5329e7c",
@@ -91773,7 +92373,16 @@
       "id": "xml-1e97a66d199e",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"GB18030\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-4341aa535708",
@@ -91889,7 +92498,16 @@
       "id": "xml-9cb5a4dd2634",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"GB1988\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-62eff2761923",
@@ -91989,7 +92607,16 @@
       "id": "xml-3f0f6739d2a2",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"GB2312\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-cebc3c0d1db2",
@@ -92105,7 +92732,16 @@
       "id": "xml-73e97088159f",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"GBK\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-1523c4ad56a5",
@@ -92269,7 +92905,16 @@
       "id": "xml-a334e30f08bf",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM437\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-3828921800dd",
@@ -92385,7 +93030,16 @@
       "id": "xml-83cf3dc30337",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM720\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-c889019a4f99",
@@ -92501,7 +93155,16 @@
       "id": "xml-7b2bb8633c5e",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM737\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-4f21df69519a",
@@ -92617,7 +93280,16 @@
       "id": "xml-e483b25f3d8c",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM775\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-d42da4ce8eb1",
@@ -92733,7 +93405,16 @@
       "id": "xml-4cdcf53b2687",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM850\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-aff51501115c",
@@ -92849,7 +93530,16 @@
       "id": "xml-4becd141c3c2",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM852\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-30989c50226c",
@@ -92965,7 +93655,16 @@
       "id": "xml-2d3b2a456dfe",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM855\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-981d400d2ebc",
@@ -93081,7 +93780,16 @@
       "id": "xml-316364815472",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM857\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-0b5c8770d356",
@@ -93197,7 +93905,16 @@
       "id": "xml-8fac97d2a5b7",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM860\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-fc5564577302",
@@ -93313,7 +94030,16 @@
       "id": "xml-82f93639cdaf",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM861\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-c85eeed65110",
@@ -93429,7 +94155,16 @@
       "id": "xml-c7e87e5f9377",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM862\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-732188028dac",
@@ -93545,7 +94280,16 @@
       "id": "xml-a716410fe21a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM863\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-c1c9876545ed",
@@ -93661,7 +94405,16 @@
       "id": "xml-ef2c35b0aa53",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM864\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-0914baeb75e8",
@@ -93777,7 +94530,16 @@
       "id": "xml-00e49c6c6236",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM865\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-7682ecdf4b3e",
@@ -93893,7 +94655,16 @@
       "id": "xml-5d2b398217ed",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM866\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-1eb96ebee15c",
@@ -94009,7 +94780,16 @@
       "id": "xml-b7928169b02f",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"IBM869\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-cda28d55e31d",
@@ -94269,7 +95049,16 @@
       "id": "xml-b1e175edf6b1",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-8e1c2db1e614",
@@ -94359,7 +95148,16 @@
       "id": "xml-b29d81e00bc4",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-10\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-21fc2deaa24c",
@@ -94475,7 +95273,16 @@
       "id": "xml-167296e149fb",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-11\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-c75f577548ea",
@@ -94591,7 +95398,16 @@
       "id": "xml-c0e371cf8340",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-13\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-8b9e990e7e43",
@@ -94707,7 +95523,16 @@
       "id": "xml-4124f2347913",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-14\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-af4eab0675ca",
@@ -94823,7 +95648,16 @@
       "id": "xml-bb183a0109e1",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-15\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-80017173e9e4",
@@ -94939,7 +95773,16 @@
       "id": "xml-b4b2f1f71dd6",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-16\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-fa5df770a9bb",
@@ -95055,7 +95898,16 @@
       "id": "xml-818ed5e00032",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-2\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-aed91172a5d4",
@@ -95171,7 +96023,16 @@
       "id": "xml-8ee64730916e",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-3\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-8dd4c0117b1f",
@@ -95299,7 +96160,16 @@
       "id": "xml-a8347e5bbb24",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-4\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-93325edaba94",
@@ -95415,7 +96285,16 @@
       "id": "xml-cbd59e4c0d1a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-5\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-16f71c633ca7",
@@ -95531,7 +96410,16 @@
       "id": "xml-4fdf6d5d1df1",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-6\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-af15483aaf4a",
@@ -95659,7 +96547,16 @@
       "id": "xml-5b7301e6faa3",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-7\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-fbd6f2e9481a",
@@ -95775,7 +96672,16 @@
       "id": "xml-56e9674ef90e",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-8\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-48678c21cf0a",
@@ -95903,7 +96809,16 @@
       "id": "xml-1246e990c164",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO-8859-9\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-7a9a0313bb08",
@@ -96115,7 +97030,16 @@
       "id": "xml-0ce042ba383a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-1\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-54603e60b379",
@@ -96231,7 +97155,16 @@
       "id": "xml-981e303a686f",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-10\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-2b8b81eb162e",
@@ -96347,7 +97280,16 @@
       "id": "xml-8cb008d1ba3f",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-11\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-4911d93bece5",
@@ -96463,7 +97405,16 @@
       "id": "xml-d107618b8ed7",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-13\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-f32c9acb4af3",
@@ -96579,7 +97530,16 @@
       "id": "xml-909832c5380a",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-14\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-634b3241e6e1",
@@ -96695,7 +97655,16 @@
       "id": "xml-cfddabfddd92",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-15\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-c27c03ea5ff0",
@@ -96811,7 +97780,16 @@
       "id": "xml-d9c453ea7808",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-16\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-dc7a54d10043",
@@ -96927,7 +97905,16 @@
       "id": "xml-1676227f8b47",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-2\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-93b2a312a86e",
@@ -97043,7 +98030,16 @@
       "id": "xml-ce33b31f8bca",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-3\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-29e2c6051e80",
@@ -97171,7 +98167,16 @@
       "id": "xml-ed8ad566d2bb",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-4\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-4a0bbf40d203",
@@ -97287,7 +98292,16 @@
       "id": "xml-6ef62c6f1d1b",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-5\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-72c5e74c73e5",
@@ -97403,7 +98417,16 @@
       "id": "xml-3d04aec71741",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-6\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-43b65c2ee4bf",
@@ -97531,7 +98554,16 @@
       "id": "xml-fd80e4ad4f27",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-7\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-02bc1702699c",
@@ -97647,7 +98679,16 @@
       "id": "xml-edbcf6c05b36",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-8\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-75cf26c54e3e",
@@ -97775,7 +98816,16 @@
       "id": "xml-ae65111ec8ad",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"ISO8859-9\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-6397acc9f629",
@@ -97891,7 +98941,16 @@
       "id": "xml-6772732ea70c",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"KOI8-R\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-9c51b3906c1a",
@@ -98007,7 +99066,16 @@
       "id": "xml-c6cd7b9256f3",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"KOI8-U\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-cb5a977b3a37",
@@ -98123,7 +99191,16 @@
       "id": "xml-534f3f685d79",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"MacJapan\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-c0cc56392545",
@@ -98223,7 +99300,16 @@
       "id": "xml-7d6f1946a770",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"MacJapanese\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-12668e3d6de3",
@@ -98323,7 +99409,16 @@
       "id": "xml-1faf86de399e",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"PCK\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-b9aa62a519ef",
@@ -98439,7 +99534,16 @@
       "id": "xml-3964343cf73b",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"SJIS\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-8f4a7b8a71f9",
@@ -98555,7 +99659,16 @@
       "id": "xml-da2d1a8b408f",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"SJIS-DoCoMo\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-3c9cb130b007",
@@ -98671,7 +99784,16 @@
       "id": "xml-767d5891d13d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"SJIS-KDDI\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-4d381b39d0f8",
@@ -98787,7 +99909,16 @@
       "id": "xml-2b4b16688941",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"SJIS-SoftBank\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-bdacdcce8e52",
@@ -98903,7 +100034,16 @@
       "id": "xml-e2b64f3e5af6",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Shift_JIS\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-14083e0dc868",
@@ -99019,7 +100159,16 @@
       "id": "xml-61d7b048f205",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"TIS-620\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-46d86d90c66d",
@@ -99823,7 +100972,16 @@
       "id": "xml-9d10ab2b8fb9",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-8-HFS\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-f00fc40d4199",
@@ -99939,7 +101097,16 @@
       "id": "xml-704c6aedd14d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF-8-MAC\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-0196c193afa9",
@@ -100055,7 +101222,16 @@
       "id": "xml-a1c8547943cc",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF8-DoCoMo\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-0dffaef9466e",
@@ -100171,7 +101347,16 @@
       "id": "xml-3a6a68599ca6",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF8-KDDI\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-dcf6da76d998",
@@ -100287,7 +101472,16 @@
       "id": "xml-4e9a8cf9d212",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF8-MAC\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-f39c956b488a",
@@ -100403,7 +101597,16 @@
       "id": "xml-768af694f27c",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"UTF8-SoftBank\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-5c8b11c1d893",
@@ -100519,7 +101722,16 @@
       "id": "xml-6c6ed9cf1517",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1250\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-4b1ece8eb38e",
@@ -100635,7 +101847,16 @@
       "id": "xml-70ad9c42b1b4",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1251\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-e1d20ef38a47",
@@ -100751,7 +101972,16 @@
       "id": "xml-4cd76601a69f",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1252\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-7ce818f0207e",
@@ -100867,7 +102097,16 @@
       "id": "xml-88b2719d1150",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1253\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-2dfbc36f27c5",
@@ -100983,7 +102222,16 @@
       "id": "xml-48d534e17ef7",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1254\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-1eb3a1253419",
@@ -101099,7 +102347,16 @@
       "id": "xml-06f95f8c48b1",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1255\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-bf33a2a6d14f",
@@ -101215,7 +102472,16 @@
       "id": "xml-e14560b20b99",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1256\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-2d29e1f3c9a6",
@@ -101331,7 +102597,16 @@
       "id": "xml-126a46464ea4",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1257\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-749225ff3dd5",
@@ -101447,7 +102722,16 @@
       "id": "xml-c1eb216c269f",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-1258\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-86d69bc59fec",
@@ -101547,7 +102831,16 @@
       "id": "xml-473a138b66e1",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-31J\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-a2120fc58a45",
@@ -101663,7 +102956,16 @@
       "id": "xml-8ef9ab285c38",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"Windows-874\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-2b64fa1be614",
@@ -101779,7 +103081,16 @@
       "id": "xml-16046a8534fd",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"csWindows31J\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-4c9a0979bb01",
@@ -101943,7 +103254,16 @@
       "id": "xml-b513890efc08",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"euc-jp-ms\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-9e628412f3e4",
@@ -102059,7 +103379,16 @@
       "id": "xml-dcc549782937",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"eucCN\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-d814a12aa73e",
@@ -102175,7 +103504,16 @@
       "id": "xml-cb1e1d599f3d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"eucJP\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-f46e900bb70f",
@@ -102291,7 +103629,16 @@
       "id": "xml-d13e9cb7c42c",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"eucJP-ms\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-84e53e4ee86d",
@@ -102407,7 +103754,16 @@
       "id": "xml-49fa4aea79fa",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"eucKR\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-bda6b247bdb2",
@@ -102523,7 +103879,16 @@
       "id": "xml-f7897751cda1",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"eucTW\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-a1eeae23eddc",
@@ -102623,7 +103988,16 @@
       "id": "xml-f39f89c5c163",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macCentEuro\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-19e93a3ed310",
@@ -102723,7 +104097,16 @@
       "id": "xml-d52a1fdbbc94",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macCroatian\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-4f59c5782aef",
@@ -102839,7 +104222,16 @@
       "id": "xml-2dff8867fe58",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macCyrillic\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-5c33b68f174a",
@@ -102955,7 +104347,16 @@
       "id": "xml-50d5b8b1120d",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macGreek\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-d51c57b47dd3",
@@ -103071,7 +104472,16 @@
       "id": "xml-f46420475199",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macIceland\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-9fe2189244d9",
@@ -103187,7 +104597,16 @@
       "id": "xml-3895631450f3",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macRoman\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-6576c18b7950",
@@ -103303,7 +104722,16 @@
       "id": "xml-d8ed8a4719b0",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macRomania\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-21f5966d65b1",
@@ -103419,7 +104847,16 @@
       "id": "xml-25d1ef4274db",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macThai\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-0b1f1cf50cc8",
@@ -103519,7 +104956,16 @@
       "id": "xml-ab2c5fad39fb",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macTurkish\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-0cc9c9522f09",
@@ -103635,7 +105081,16 @@
       "id": "xml-a466c7104d37",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"macUkraine\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-99231b0ec1cc",
@@ -103751,7 +105206,16 @@
       "id": "xml-30d59964bafc",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"stateless-ISO-2022-JP\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-c77e8e1fcdfa",
@@ -103861,7 +105325,16 @@
       "id": "xml-3919c3ae406e",
       "group": "encoding-names",
       "input": "<?xml version=\"1.0\" encoding=\"stateless-ISO-2022-JP-KDDI\"?><a>&#233;</a>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "a",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-771b3e8c0431",
@@ -104554,7 +106027,20 @@
       "id": "xml-f6a42bb32c23",
       "group": "fuzz",
       "input": "<r>&#xD800;\r\n&#0;<?p d?></r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          },
+          {
+            "pi": "p",
+            "text": "d"
+          }
+        ]
+      }
     },
     {
       "id": "xml-e4c3b142a1c4",
@@ -104803,7 +106289,16 @@
       "id": "xml-2a94ea6a3f04",
       "group": "fuzz",
       "input": "<r>;yz&#xD800;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": ";yz?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-bb74954652e6",
@@ -104903,7 +106398,16 @@
       "id": "xml-14f2926a3224",
       "group": "fuzz",
       "input": "<r>&#xD800;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-32fdc23367d7",
@@ -106356,7 +107860,16 @@
       "id": "xml-4f6485d86998",
       "group": "fuzz",
       "input": "<r>&#xD800;></r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-10a596c2a62d",
@@ -107810,7 +109323,27 @@
       "id": "xml-903f2968f092",
       "group": "fuzz",
       "input": "<r>/'=<?p x=\"1\"?>  &#xD800;&#xD800;<?p x=\"1\"?></r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "/'="
+          },
+          {
+            "pi": "p",
+            "text": ""
+          },
+          {
+            "text": "  ?"
+          },
+          {
+            "pi": "p",
+            "text": ""
+          }
+        ]
+      }
     },
     {
       "id": "xml-595b355de56c",
@@ -107906,7 +109439,16 @@
       "id": "xml-223211ebdc92",
       "group": "fuzz",
       "input": "<r>&#xD800;&#xD800;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-b28bdc2e113a",
@@ -108678,7 +110220,16 @@
       "id": "xml-3e9587624c13",
       "group": "fuzz",
       "input": "<r>&amp;&lt;&#xD800;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "&<?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-2ce29f0c971a",
@@ -109550,7 +111101,29 @@
       "id": "xml-656e723485bf",
       "group": "fuzz",
       "input": "<r><b>&#xD800;\ud83d\ude00'<a x=\"&#xZZ;\">\n</b>&#xD800;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "element": "b",
+            "attributes": [],
+            "xmlns": [],
+            "children": [
+              {
+                "text": "?"
+              },
+              {
+                "text": ">\n"
+              }
+            ]
+          },
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-f7112bece0ea",
@@ -109841,7 +111414,16 @@
       "id": "xml-80ecae215942",
       "group": "fuzz",
       "input": "<r>\ud83d\ude00/&#xD800;&#xD800;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "\ud83d\ude00/?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-6b5c2bdb54e3",
@@ -111741,7 +113323,16 @@
       "id": "xml-4313bac64a7e",
       "group": "fuzz",
       "input": "<r>&#xD800;x</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-f086903af989",
@@ -112680,7 +114271,19 @@
       "id": "xml-e0311c88869c",
       "group": "fuzz",
       "input": "<r>&#xD800;<!--c--></r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          },
+          {
+            "comment": "c"
+          }
+        ]
+      }
     },
     {
       "id": "xml-d174d0270fa5",
@@ -115691,7 +117294,22 @@
       "id": "xml-21e966b37870",
       "group": "fuzz",
       "input": "<r>\r\n&#x3B1;<!-- d -->&#xD800;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "\n\u03b1"
+          },
+          {
+            "comment": "d "
+          },
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-541ec8878a02",
@@ -115844,7 +117462,22 @@
       "id": "xml-8d38363cf2ac",
       "group": "fuzz",
       "input": "<r><a/>/&#xD800;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "element": "a",
+            "attributes": [],
+            "xmlns": [],
+            "children": []
+          },
+          {
+            "text": "/?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-dc1c27f8cac2",
@@ -116384,7 +118017,19 @@
       "id": "xml-fa3533cffeaf",
       "group": "fuzz",
       "input": "<r><![CDATA[q]]>&#xD800;\";&#x3B1;&#65;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "cdata": "q"
+          },
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-a13073a0c0a5",
@@ -116435,7 +118080,19 @@
       "id": "xml-4a5ddc14fc5d",
       "group": "fuzz",
       "input": "<r><!-- d -->&#xD800;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "comment": "d "
+          },
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-44a29a3ea8f0",
@@ -116949,7 +118606,16 @@
       "id": "xml-0fb26c59e6bc",
       "group": "fuzz",
       "input": "<r>\t&#xD800;&#65;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "\t?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-500aeb5d8159",
@@ -117235,7 +118901,16 @@
       "id": "xml-835e222da998",
       "group": "fuzz",
       "input": "<r>&#xD800;\n'x  </r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-2867450b2705",
@@ -117569,7 +119244,19 @@
       "id": "xml-b43edede956e",
       "group": "fuzz",
       "input": "<r>&#xD800;<a x=\"&#xZZ;\"></r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "text": "?"
+          },
+          {
+            "text": ">"
+          }
+        ]
+      }
     },
     {
       "id": "xml-4d04ee578dc2",
@@ -117776,7 +119463,19 @@
       "id": "xml-c208ff67a6df",
       "group": "fuzz",
       "input": "<r><!---->&#xD800;</r>",
-      "raises": "ArgumentError"
+      "root": {
+        "element": "r",
+        "attributes": [],
+        "xmlns": [],
+        "children": [
+          {
+            "comment": ""
+          },
+          {
+            "text": "?"
+          }
+        ]
+      }
     },
     {
       "id": "xml-c31bfd354ecf",

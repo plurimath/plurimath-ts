@@ -6,14 +6,14 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-unitsml-data.rb
-  sha256: daf5853c30cf6aa9eed44faf2adb6ca431b7f4a44e47cc939f35a080a4ac2b59
+  sha256: 0b218e82544021ada8a6c5881ba525fc2b1fc59cf782a8817b2504175c23a0cb
   inputs:
     scripts/generate-corpus.rb: 620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75
-    scripts/generate-unitsml-data.rb: daf5853c30cf6aa9eed44faf2adb6ca431b7f4a44e47cc939f35a080a4ac2b59
+    scripts/generate-unitsml-data.rb: 0b218e82544021ada8a6c5881ba525fc2b1fc59cf782a8817b2504175c23a0cb
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
     scripts/ci/native-completion-probe.rb: 6a384b0d9349098a3ca05c515f0cf10ebddee4721cd9b4d3a6041b354cc24020
   repository:
-    commit: 12873325fbe74dc91e805d8e2afa925a08f833ee
+    commit: 189f3d70205615cf67dcb4d01358fc6197211f2f
     clean: true
     dirty_paths: []
 oracle:
@@ -31,7 +31,7 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: 03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121
+    sha256: a07b033c4e199d7324e2e0c6c15063df08f840f3234d3c874ede809d6750bed4
     resolved_gems: 77
     platforms:
     - aarch64-linux-gnu
@@ -64,7 +64,7 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: lutaml-model
-    version: 0.8.19
+    version: 0.8.30
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
@@ -74,7 +74,7 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: omml
-    version: 0.2.5
+    version: 0.2.6
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/

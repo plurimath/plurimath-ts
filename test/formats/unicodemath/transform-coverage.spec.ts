@@ -244,8 +244,8 @@ describe("transform rule coverage", () => {
     // `:2097`, `:2245`, `:2403` (slice F's "no reaching input" above is
     // superseded), `:3828` and `:3885` (two of the twenty-one just named) —
     // reached by the hand-picked "remaining" coverage group, except `:83`,
-    // whose only witness is a `SLICE_BOUNDARY` row. The other 36 are 26 dead
-    // and 10 unreached; the former module header (`git show 9bbe254e:src/formats/unicodemath/transform.ts`) lists each with its evidence.
+    // whose only witness is a `SLICE_BOUNDARY` row. The other 35 are unreachable:
+    // 26 historical proofs plus nine in docs/unicodemath-rule-reachability.md.
     // Slice tallies above are historical; the assertion is the one final count.
     expect(build.ruleIds.length).toBe(FINAL_COUNT);
     expect(new Set(build.ruleIds).size).toBe(FINAL_COUNT);

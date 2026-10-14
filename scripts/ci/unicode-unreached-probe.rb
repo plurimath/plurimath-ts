@@ -43,6 +43,8 @@ abort "observed action locations missing" unless (observed - registered).empty?
 # Cover the producer routes before the larger existing-fixture sweep so a
 # bounded run cannot silently omit the nine-rule investigation.
 routes = {
+  "scope-gap/raw-hash" => ["±±a", "̲a+a", "∫∫f g+x", "a·b·c+d", "±+a#eq", "a ± b#eq"],
+  "scope-gap/integral-mask" => ["∫1_a", "∫1_a^b f"],
   "760/unary_subsup" => ["asin^2 x", "a sin^2 x", "a sin_a x", "a sin^a_b x", "a sin² x", "a sin₁ x", "a sin'² x", "a sin^2", "a sin_a", "sin^2 cos^3 x", "a sin_1", "a sin_1^2 b", "a sin′_1", "a sin′²", "a sinh_1^2 b"],
   "925-930/expression" => ["a b", "a b c", "1 2", 'a "b"', "a (b)", "a 𝛼", "a \\alpha", "a Ⓐ", "a |b|", "a sin x", "a + b c"],
   "1841-2777/intermediate_operator" => ["(a|+", "|a)+", "(a|+b", "|a)+b", "(a|b)+c", "(a|=b", "(a|≤b", "|a)×b", "(a|b)!+c", "(a|+b c", "(a| +b", "|a) +b", "(a| !+b", "(a| b+c", "(a| b c+d"],
@@ -142,6 +144,15 @@ cases.each do |entry|
   ensure
     trace.disable
   end
+  if entry.fetch("route", "").start_with?("scope-gap/") && row.key?("model")
+    %w[asciimath latex mathml html omml unicodemath].each do |format|
+      begin
+        row[format] = Timeout.timeout(2) { formula.public_send("to_#{format}") }
+      rescue StandardError, SystemStackError => error
+        row["#{format}Error"] = { "class" => error.class.name, "message" => error.message }
+      end
+    end
+  end
   row["targetFirings"] = targets.to_h { |id| [id, fired[id]] }
   row["controlFirings"] = controls.to_h { |id| [id, fired[id]] }
   targets.each { |id| counts[id] += fired[id] }
@@ -158,6 +169,7 @@ parslet_inputs = %w[lib/parslet/atoms/base.rb lib/parslet/atoms/alternative.rb
   lib/parslet/atoms/sequence.rb lib/parslet/atoms/named.rb
   lib/parslet/atoms/can_flatten.rb lib/parslet/atoms/repetition.rb
   lib/parslet/atoms/entity.rb lib/parslet/context.rb
+  lib/parslet/atoms/context.rb lib/parslet/pattern/binding.rb
   lib/parslet/pattern.rb lib/parslet/transform.rb]
 report = {
   "schema" => "plurimath-unicode-unreached-probe/2",

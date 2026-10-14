@@ -17,20 +17,19 @@
  * `BaseNumberPrefix::Transform` mixin adds. This module registers 484 of the
  * 519 (`FINAL_COUNT` in `test/formats/unicodemath/transform-coverage.spec.ts`,
  * which asserts it; read that constant, not this comment, for the live figure).
- * The other 35 are:
- *
- *  - 26 dead in the gem: each has a grammar or ordering proof that no parse
- *    reaches it, so porting one would add a rule that could never be covered;
- *  - 9 unreached: no input fired them on the oracle, and none is proven
- *    unreachable. Their gem lines are `:760`, `:925`, `:930`, `:1841`, `:2041`,
- *    `:2341`, `:2777`, `:2787` and `:3074`. A witness input for one
- *    of them would reopen it.
+ * The other 35 are unreachable in the pinned public Ruby parser. The
+ * previous 26 classifications retain their grammar/ordering proofs; the
+ * remaining nine (`:760`, `:925`, `:930`, `:1841`, `:2041`, `:2341`, `:2777`,
+ * `:2787`, `:3074`) have exact-key or value-type contradictions documented in
+ * `docs/unicodemath-rule-reachability.md`, including Parslet cache semantics.
+ * A changed reference or counterexample reopens the corresponding proof.
+ * This classification does not establish every model or renderer behavior.
  *
  * ## Where the details live
  *
  * - Status and the history of the slices that grew the set to 483:
  *   `TODO.plan/feature-roadmap.md`, "UnicodeMath input".
- * - The per-rule evidence (the 26 dead-rule proofs, the 10 unreached ids, the
+ * - The per-rule evidence (the original 26 dead-rule proofs, the historical unreached ids, the
  *   model behaviours known to be absent) was recorded in this comment until
  *   it was replaced by this one. Other comments in this file and in the
  *   UnicodeMath specs that cite "the module header" mean that text; read it
@@ -2121,7 +2120,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // that needed them, and `:680`/`:685`/`:690` above by this slice (`I`).
   // `:695` and `:2035` were registered later by the REMAINING increment (see
   // the former module header (9bbe254e)); `:2041`, `:2787` and `:3074` stay unregistered,
-  // unreached on the oracle.
+  // unreachable; see docs/unicodemath-rule-reachability.md.
 
   rule("735", { factor: simple("factor"), operand: simple("operand") }, (b) => [
     b.factor,
@@ -2816,15 +2815,9 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // plain-paren arm returns a resolved value directly), `"(a|bc"` (SEQUENCE
   // `expr`).
   rule("1836", { intermediate_exp: simple("exp"), expr: simple("expr") }, (b) => [b.exp, b.expr]);
-  // `:1841` (`intermediate_exp`+`operator`) is NOT registered: every
-  // `expBracket` path that pairs `intermediate_exp` with a further tag
-  // either resolves that tag to `expr` (`:1836`/`:1856`, since a bare
-  // `{operator:}` unwraps via `:62` before the parent ever sees it) or to
-  // `exclamation_symbol` (`:1846`, `factor`'s own seq). No candidate input —
-  // the 675 `unicodemath-tests` strings, the pinned corpus, and roughly a
-  // hundred hand-built paren/operator combinations — fired it; the module
-  // header's own "unreached, not proven unreachable" status applies. `:2777`,
-  // its three-key `+expr` sibling below, is unreached for the same reason.
+  // `:1841` and `:2777` cannot receive same-level intermediate_exp/operator
+  // keys. The exhaustive producer/consumer proof, including nary routes, is
+  // recorded in docs/unicodemath-rule-reachability.md.
   rule(
     "1846",
     { intermediate_exp: simple("exp"), exclamation_symbol: simple("exclamation_symbol") },
@@ -3844,17 +3837,10 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
   // sibling of a bare `operator` tag, only of `expr`/`exclamation_symbol`
   // through `expBracket`'s and `factor`'s own productions.
 
-  // ATOMS meeting a bare `operator` and a `frac` directly (`:2787`) and that
-  // shape's SEQUENCE-`expr` extension (`:3074`) are deferred with `:30`
-  // above: no probed input reached either. Slice J re-tried deliberately —
-  // every `BINARY_FUNCTIONS`/atom pairing this file's `element`/`atom`
-  // productions can build, ahead of a `frac`, plus the 675
-  // `unicodemath-tests` strings — and found no reaching input either;
-  // unreached, not proven unreachable.
-
-  // An operator, a `frac` and a SEQUENCE `expr` (`++¹/₂ḟa`). The ATOMS-led
-  // `:2787` and its `expr` extension `:3074` are not registered: no probed
-  // input reached either (see the E claim file).
+  // `:2787` and `:3074` require atom/operator/frac siblings that no
+  // public grammar production can combine. See the exact-key proof in
+  // docs/unicodemath-rule-reachability.md. The operator/frac/expr rule below
+  // is reachable independently (`++¹/₂ḟa`).
   rule(
     "2797",
     { operator: simple("operator"), frac: simple("frac"), expr: sequence("expr") },

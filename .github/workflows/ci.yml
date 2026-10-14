@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      unicode_probe_only:
+        description: Skip UnitsML measurements when running the Unicode reference probe
+        type: boolean
+        default: false
       unicode_unreached_probe:
         description: Also measure still-unreached Unicode rules in the targeted reference job
         type: boolean
@@ -290,12 +294,14 @@ jobs:
         env:
           BUNDLE_FROZEN: "true"
       - name: Measure targeted native completion references
+        if: ${{ !inputs.unicode_probe_only }}
         env:
           BUNDLE_GEMFILE: ${{ github.workspace }}/oracle/Gemfile
           BUNDLE_FROZEN: "true"
         run: |
           bundle exec ruby scripts/ci/native-completion-probe.rb --phase small --oracle "$GITHUB_WORKSPACE/oracle" --out "$RUNNER_TEMP/native-completion" > "$RUNNER_TEMP/native-completion/probe.stdout" 2> "$RUNNER_TEMP/native-completion/probe.stderr"
       - name: Upload the small reference probe immediately
+        if: ${{ !inputs.unicode_probe_only }}
         uses: actions/upload-artifact@v4
         with:
           name: native-completion-small-${{ github.sha }}-${{ github.run_attempt }}
@@ -303,6 +309,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Generate targeted UnitsML tables
+        if: ${{ !inputs.unicode_probe_only }}
         env:
           BUNDLE_GEMFILE: ${{ github.workspace }}/oracle/Gemfile
           BUNDLE_FROZEN: "true"

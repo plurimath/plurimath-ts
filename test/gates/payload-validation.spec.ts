@@ -1868,7 +1868,11 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               ["kind", "slot", "value", "constructs", "constructError"],
               `${record.relative}.rows[${index}]`,
             );
-            expect(stringField(item, "constructError", record.relative)).toBe("NoMethodError");
+            expect(stringField(item, "constructError", record.relative)).toBe(
+              item.kind === "unitsml" && item.value === "empty-string"
+                ? "Parslet::ParseFailed"
+                : "NoMethodError",
+            );
             continue;
           }
           constructs += 1;

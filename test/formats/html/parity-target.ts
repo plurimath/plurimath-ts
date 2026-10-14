@@ -9,6 +9,7 @@
  */
 import * as C from "../../../src/core/index";
 import { toHtml } from "../../../src/formats/html/renderer";
+import { validateUnitsml } from "../../../src/unitsml/index";
 
 export const FORMAT = "html";
 export const RENDER = (node: never): string =>
@@ -135,6 +136,18 @@ export interface DegenerateKind {
  * of the expected matrix: a truncated fixture cannot agree with it.
  */
 export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
+  unitsml: {
+    renderKind: "unitsml",
+    rubyClass: "Plurimath::Math::Function::Unitsml",
+    slots: ["string"],
+    build: (s, v) => {
+      const [text] = at(s, v, ["string"]);
+      // Ruby eagerly validates in its constructor. Core stays format-blind,
+      // so this adapter exercises the equivalent native leaf parse boundary.
+      validateUnitsml(text as string);
+      return new C.UnitsmlNode({ text } as never);
+    },
+  },
   frac: {
     renderKind: "frac",
     rubyClass: "Plurimath::Math::Function::Frac",

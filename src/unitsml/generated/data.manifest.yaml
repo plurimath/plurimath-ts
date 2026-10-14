@@ -6,14 +6,14 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-unitsml-data.rb
-  sha256: c5ddf1dc9b41b3d27a9d009c2706d0b542b032e8906e0f91ab908e8ece6406f5
+  sha256: 66803856147d025adfd7bcdb78688cfd290146c337b76471bf10e91c0277dfd8
   inputs:
     scripts/generate-corpus.rb: 620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75
-    scripts/generate-unitsml-data.rb: c5ddf1dc9b41b3d27a9d009c2706d0b542b032e8906e0f91ab908e8ece6406f5
+    scripts/generate-unitsml-data.rb: 66803856147d025adfd7bcdb78688cfd290146c337b76471bf10e91c0277dfd8
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
-    scripts/ci/native-completion-probe.rb: 7fd51509a598a115100f93f569c098414418528171d71f3b3ebe812b3f6b78aa
+    scripts/ci/native-completion-probe.rb: 6a384b0d9349098a3ca05c515f0cf10ebddee4721cd9b4d3a6041b354cc24020
   repository:
-    commit: dbbf90bb8fa7f5b30b63996609045ca9e22f11f2
+    commit: e3c8a4f43c7f6ea5bf11fd8804b40ad555fb09b0
     clean: true
     dirty_paths: []
 oracle:
@@ -106,5 +106,5 @@ dependencies:
 payload:
   path: data.json
   schema: plurimath-unitsml-data/1
-  sha256: 2256f1b60dab50634ad7fa68aa3bb09d9de20db04b945e82fee79e45f4b34695
-  bytes: 4047571
+  sha256: 6673d9c8f9b054becc124c187fc7e0c3502bc6a178ca2b9b29ea0d1cfae62c84
+  bytes: 4110776

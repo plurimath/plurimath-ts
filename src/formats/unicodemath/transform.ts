@@ -14,16 +14,16 @@
  * ## Rule counts
  *
  * The gem registers 516 rules, 519 counting the three that the
- * `BaseNumberPrefix::Transform` mixin adds. This module registers 483 of the
+ * `BaseNumberPrefix::Transform` mixin adds. This module registers 484 of the
  * 519 (`FINAL_COUNT` in `test/formats/unicodemath/transform-coverage.spec.ts`,
  * which asserts it; read that constant, not this comment, for the live figure).
- * The other 36 are:
+ * The other 35 are:
  *
  *  - 26 dead in the gem: each has a grammar or ordering proof that no parse
  *    reaches it, so porting one would add a rule that could never be covered;
- *  - 10 unreached: no input fired them on the oracle, and none is proven
+ *  - 9 unreached: no input fired them on the oracle, and none is proven
  *    unreachable. Their gem lines are `:760`, `:925`, `:930`, `:1841`, `:2041`,
- *    `:2323`, `:2341`, `:2777`, `:2787` and `:3074`. A witness input for one
+ *    `:2341`, `:2777`, `:2787` and `:3074`. A witness input for one
  *    of them would reopen it.
  *
  * ## Where the details live
@@ -3298,9 +3298,18 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => [b.factor, b.operand, b.expr],
   );
 
-  // `:2323` (`factor`+`operand`+`recursive_denominator`) is NOT registered:
-  // no input among the 675 `unicodemath-tests` strings or this slice's own
-  // candidates fires it. Unreached, not proven unreachable.
+  // `1/a≤∫` reaches the operand branch of denominator: the relation blocks
+  // its earlier factor branch, and the following nary is parsed recursively.
+  // The calibrated Ruby trace records this rule on the projected witnesses.
+  rule(
+    "2323",
+    {
+      factor: simple("factor"),
+      operand: simple("operand"),
+      recursive_denominator: simple("denominator"),
+    },
+    (b) => [b.factor, b.operand, b.denominator],
+  );
 
   rule(
     "2329",

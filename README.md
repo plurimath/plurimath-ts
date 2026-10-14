@@ -40,10 +40,11 @@ The current source and package entries provide:
   `./mathml`, `./html`, `./omml` and `./unicodemath`, plus the root entry and a
   `plurimath` executable.
 - The HTML parity fixture covers 664 gem-renderable cases written in
-  AsciiMath, LaTeX, UnicodeMath, MathML or OMML. The port renders 658 of them,
-  657 byte-identically; six MathML text cases remain explicit refusals, and
-  `text-unitsml-valid` differs by decision (see
-  `test/formats/html/parity-target.ts`). The corpus is not the whole language:
+  AsciiMath, LaTeX, UnicodeMath, MathML or OMML. The port renders 658 of them;
+  six MathML text cases remain explicit refusals (see
+  `test/formats/html/parity-target.ts`). Native UnitsML expansion replaces
+  the former `text-unitsml-valid` plain-text divergence. The corpus is not the
+  whole language:
   a construct it does not cover can still raise `RenderError`, for example
   `cancel(x)` in `./html` and `./omml`.
 - The UnicodeMath parser covers part of the gem's grammar. Input outside what it

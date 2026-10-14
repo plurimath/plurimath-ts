@@ -1,0 +1,39 @@
+{
+  "lockSha256": "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121",
+  "oracle": "00c52783877b38f6b8e6e109f1803f96bb34fc62",
+  "payloadSha256": "825e38a2ee283f66b542e191ca7477f2f160d534c3b5c5a7b1aef0b0dc5daca1",
+  "projection": {
+    "fields": ["input", "preprocessed", "model", "targetFirings"],
+    "filter": "cases where targetFirings[\"2323\"] > 0 and model exists",
+    "rowCount": 62
+  },
+  "ruby": "ruby 4.0.1 (2026-01-13 revision e04267a14b) +PRISM [x86_64-linux]",
+  "schema": "plurimath-unicodemath-unreached-projection/1",
+  "scope": "Faithful diagnostic projection; no renderer measurements or full-regeneration claim.",
+  "source": "e3c8a4f43c7f6ea5bf11fd8804b40ad555fb09b0",
+  "sourceAttemptedCount": 743,
+  "sourceInputs": {
+    "scripts/ci/unicode-unreached-probe.rb": "699b587826f38c8930bd468bce10da5389b504e15a689ea7d171dfd9cd096a11",
+    "scripts/generate-corpus.rb": "620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75",
+    "scripts/generate-unitsml-data.rb": "66803856147d025adfd7bcdb78688cfd290146c337b76471bf10e91c0277dfd8",
+    "test/formats/unicodemath/model-fixtures.json": "3a00f89d2fbdc019849b3435f6cbbfed199156f363f039b4fda2d8bf84c04207"
+  },
+  "sourcePayloadSha256": "f14fbfd169a2c9f3544f2db4bc32336841a26737f1b4bb756c65dfbc4c3e1bd4",
+  "sourceTargetFirings": {
+    "1841": 0,
+    "2041": 0,
+    "2323": 62,
+    "2341": 0,
+    "2777": 0,
+    "2787": 0,
+    "3074": 0,
+    "760": 0,
+    "925": 0,
+    "930": 0
+  },
+  "sourceUnattemptedCount": 189,
+  "tracePositiveControls": {
+    "1609": 69,
+    "18": 1091
+  }
+}

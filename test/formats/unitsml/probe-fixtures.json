@@ -425,6 +425,50 @@
       }
     },
     {
+      "input": "m^10000000000000000",
+      "options": {},
+      "optionsTypes": {},
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>10000000000000000</mn></msup></math>",
+      "ascii": "m^10000000000000000",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_L1.0e+16\" xml:id=\"U_m10000000000000000\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m^10000000000000000</UnitName><UnitSymbol type=\"HTML\">m<sup>10000000000000000</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>10000000000000000</mn></msup></math></UnitSymbol></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_L1.0e+16\"><Length symbol=\"L\" powerNumerator=\"1.0e+16\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>10000000000000000</mn></msup></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::FontStyle::Normal",
+                  "fields": {
+                    "parameter_one": {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "m"
+                      }
+                    },
+                    "parameter_two": "normal"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "10000000000000000"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "input": "sqrt(m)",
       "options": {},
       "optionsTypes": {},
@@ -890,6 +934,176 @@
       "input": "kg",
       "options": {
         "multiplier": "×"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
+      "ascii": "kg",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#NISTd2\" xml:id=\"U_NISTu2\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">kilogram</UnitName><UnitSymbol type=\"HTML\">kg</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"gram\" prefix=\"k\"/></RootUnits></Unit><Prefix xmlns=\"https://schema.unitsml.org/unitsml/1.0\" prefixBase=\"10\" prefixPower=\"3\" xml:id=\"NISTp10_3\"><PrefixName xml:lang=\"en\">kilo</PrefixName><PrefixSymbol type=\"ASCII\">k</PrefixSymbol><PrefixSymbol type=\"unicode\">k</PrefixSymbol><PrefixSymbol type=\"LaTeX\">k</PrefixSymbol><PrefixSymbol type=\"HTML\">k</PrefixSymbol></Prefix><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd2\"><Mass symbol=\"M\" powerNumerator=\"1\"/></Dimension><Quantity xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTq2\" quantityType=\"base\" dimensionURL=\"#NISTd2\"><QuantityName xml:lang=\"en\">mass</QuantityName></Quantity>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "kg"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "kg",
+      "options": {
+        "multiplier": " × "
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
+      "ascii": "kg",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#NISTd2\" xml:id=\"U_NISTu2\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">kilogram</UnitName><UnitSymbol type=\"HTML\">kg</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"gram\" prefix=\"k\"/></RootUnits></Unit><Prefix xmlns=\"https://schema.unitsml.org/unitsml/1.0\" prefixBase=\"10\" prefixPower=\"3\" xml:id=\"NISTp10_3\"><PrefixName xml:lang=\"en\">kilo</PrefixName><PrefixSymbol type=\"ASCII\">k</PrefixSymbol><PrefixSymbol type=\"unicode\">k</PrefixSymbol><PrefixSymbol type=\"LaTeX\">k</PrefixSymbol><PrefixSymbol type=\"HTML\">k</PrefixSymbol></Prefix><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd2\"><Mass symbol=\"M\" powerNumerator=\"1\"/></Dimension><Quantity xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTq2\" quantityType=\"base\" dimensionURL=\"#NISTd2\"><QuantityName xml:lang=\"en\">mass</QuantityName></Quantity>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "kg"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "kg",
+      "options": {
+        "multiplier": " + "
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
+      "ascii": "kg",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#NISTd2\" xml:id=\"U_NISTu2\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">kilogram</UnitName><UnitSymbol type=\"HTML\">kg</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"gram\" prefix=\"k\"/></RootUnits></Unit><Prefix xmlns=\"https://schema.unitsml.org/unitsml/1.0\" prefixBase=\"10\" prefixPower=\"3\" xml:id=\"NISTp10_3\"><PrefixName xml:lang=\"en\">kilo</PrefixName><PrefixSymbol type=\"ASCII\">k</PrefixSymbol><PrefixSymbol type=\"unicode\">k</PrefixSymbol><PrefixSymbol type=\"LaTeX\">k</PrefixSymbol><PrefixSymbol type=\"HTML\">k</PrefixSymbol></Prefix><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd2\"><Mass symbol=\"M\" powerNumerator=\"1\"/></Dimension><Quantity xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTq2\" quantityType=\"base\" dimensionURL=\"#NISTd2\"><QuantityName xml:lang=\"en\">mass</QuantityName></Quantity>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "kg"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "kg",
+      "options": {
+        "multiplier": "sin"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
+      "ascii": "kg",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#NISTd2\" xml:id=\"U_NISTu2\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">kilogram</UnitName><UnitSymbol type=\"HTML\">kg</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"gram\" prefix=\"k\"/></RootUnits></Unit><Prefix xmlns=\"https://schema.unitsml.org/unitsml/1.0\" prefixBase=\"10\" prefixPower=\"3\" xml:id=\"NISTp10_3\"><PrefixName xml:lang=\"en\">kilo</PrefixName><PrefixSymbol type=\"ASCII\">k</PrefixSymbol><PrefixSymbol type=\"unicode\">k</PrefixSymbol><PrefixSymbol type=\"LaTeX\">k</PrefixSymbol><PrefixSymbol type=\"HTML\">k</PrefixSymbol></Prefix><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd2\"><Mass symbol=\"M\" powerNumerator=\"1\"/></Dimension><Quantity xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTq2\" quantityType=\"base\" dimensionURL=\"#NISTd2\"><QuantityName xml:lang=\"en\">mass</QuantityName></Quantity>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "kg"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "kg",
+      "options": {
+        "multiplier": "\t+\t"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
+      "ascii": "kg",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#NISTd2\" xml:id=\"U_NISTu2\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">kilogram</UnitName><UnitSymbol type=\"HTML\">kg</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"gram\" prefix=\"k\"/></RootUnits></Unit><Prefix xmlns=\"https://schema.unitsml.org/unitsml/1.0\" prefixBase=\"10\" prefixPower=\"3\" xml:id=\"NISTp10_3\"><PrefixName xml:lang=\"en\">kilo</PrefixName><PrefixSymbol type=\"ASCII\">k</PrefixSymbol><PrefixSymbol type=\"unicode\">k</PrefixSymbol><PrefixSymbol type=\"LaTeX\">k</PrefixSymbol><PrefixSymbol type=\"HTML\">k</PrefixSymbol></Prefix><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd2\"><Mass symbol=\"M\" powerNumerator=\"1\"/></Dimension><Quantity xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTq2\" quantityType=\"base\" dimensionURL=\"#NISTd2\"><QuantityName xml:lang=\"en\">mass</QuantityName></Quantity>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "kg"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "kg",
+      "options": {
+        "multiplier": "\t sin \t"
       },
       "optionsTypes": {
         "multiplier": "string"
@@ -1469,6 +1683,266 @@
               "class": "Math::Symbols::Times",
               "fields": {
                 "value": null
+              }
+            },
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "s"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "m*s",
+      "options": {
+        "multiplier": " × "
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> &#xd7; </mo><mi mathvariant=\"normal\">s</mi></math>",
+      "ascii": "m × s",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT\" xml:id=\"U_m.s\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m*s</UnitName><UnitSymbol type=\"HTML\">m &#xd7; s</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> &#xd7; </mo><mi mathvariant=\"normal\">s</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"1\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> &#xd7; </mo><mi mathvariant=\"normal\">s</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "m"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            },
+            {
+              "class": "Math::Symbols::Times",
+              "fields": {
+                "value": null
+              }
+            },
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "s"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "m*s",
+      "options": {
+        "multiplier": " + "
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> + </mo><mi mathvariant=\"normal\">s</mi></math>",
+      "ascii": "m + s",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT\" xml:id=\"U_m.s\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m*s</UnitName><UnitSymbol type=\"HTML\">m + s</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> + </mo><mi mathvariant=\"normal\">s</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"1\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> + </mo><mi mathvariant=\"normal\">s</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "m"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            },
+            {
+              "class": "Math::Symbols::Plus",
+              "fields": {
+                "value": null
+              }
+            },
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "s"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "m*s",
+      "options": {
+        "multiplier": "sin"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>sin</mo><mi mathvariant=\"normal\">s</mi></math>",
+      "ascii": "msins",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT\" xml:id=\"U_m.s\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m*s</UnitName><UnitSymbol type=\"HTML\">msins</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>sin</mo><mi mathvariant=\"normal\">s</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"1\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>sin</mo><mi mathvariant=\"normal\">s</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "m"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            },
+            {
+              "class": "Math::Function::Sin",
+              "fields": {
+                "parameter_one": null
+              }
+            },
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "s"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "m*s",
+      "options": {
+        "multiplier": "\t+\t"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9;+&amp;#x9;</mo><mi mathvariant=\"normal\">s</mi></math>",
+      "ascii": "m\t+\ts",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT\" xml:id=\"U_m.s\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m*s</UnitName><UnitSymbol type=\"HTML\">m&#x9;+&#x9;s</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9;+&amp;#x9;</mo><mi mathvariant=\"normal\">s</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"1\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9;+&amp;#x9;</mo><mi mathvariant=\"normal\">s</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "m"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "&#x9;+&#x26;#x9;"
+              }
+            },
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "s"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "m*s",
+      "options": {
+        "multiplier": "\t sin \t"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9; sin &amp;#x9;</mo><mi mathvariant=\"normal\">s</mi></math>",
+      "ascii": "m\t sin \ts",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT\" xml:id=\"U_m.s\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m*s</UnitName><UnitSymbol type=\"HTML\">m&#x9; sin &#x9;s</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9; sin &amp;#x9;</mo><mi mathvariant=\"normal\">s</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"1\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9; sin &amp;#x9;</mo><mi mathvariant=\"normal\">s</mi></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "m"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "&#x9; sin &#x26;#x9;"
               }
             },
             {
@@ -2368,6 +2842,411 @@
     {
       "input": "m/s",
       "options": {
+        "multiplier": " × "
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> &#xd7; </mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
+      "ascii": "m × s^-1",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT-1\" xml:id=\"U_NISTu1.u3e-1/1\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">meter per second</UnitName><UnitSymbol type=\"HTML\">m &#xd7; s<sup>&#x2212;1</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> &#xd7; </mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\" powerNumerator=\"-1\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd11\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT-1\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> &#xd7; </mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "m"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            },
+            {
+              "class": "Math::Symbols::Times",
+              "fields": {
+                "value": null
+              }
+            },
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::FontStyle::Normal",
+                  "fields": {
+                    "parameter_one": {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "s"
+                      }
+                    },
+                    "parameter_two": "normal"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Minus",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Number",
+                        "fields": {
+                          "base": null,
+                          "mini_sub_sized": false,
+                          "mini_sup_sized": false,
+                          "value": "1"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "m/s",
+      "options": {
+        "multiplier": " + "
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> + </mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
+      "ascii": "m + s^-1",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT-1\" xml:id=\"U_NISTu1.u3e-1/1\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">meter per second</UnitName><UnitSymbol type=\"HTML\">m + s<sup>&#x2212;1</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> + </mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\" powerNumerator=\"-1\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd11\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT-1\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo> + </mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "m"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            },
+            {
+              "class": "Math::Symbols::Plus",
+              "fields": {
+                "value": null
+              }
+            },
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::FontStyle::Normal",
+                  "fields": {
+                    "parameter_one": {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "s"
+                      }
+                    },
+                    "parameter_two": "normal"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Minus",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Number",
+                        "fields": {
+                          "base": null,
+                          "mini_sub_sized": false,
+                          "mini_sup_sized": false,
+                          "value": "1"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "m/s",
+      "options": {
+        "multiplier": "sin"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>sin</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
+      "ascii": "msins^-1",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT-1\" xml:id=\"U_NISTu1.u3e-1/1\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">meter per second</UnitName><UnitSymbol type=\"HTML\">msins<sup>&#x2212;1</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>sin</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\" powerNumerator=\"-1\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd11\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT-1\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>sin</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "m"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            },
+            {
+              "class": "Math::Function::Sin",
+              "fields": {
+                "parameter_one": null
+              }
+            },
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::FontStyle::Normal",
+                  "fields": {
+                    "parameter_one": {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "s"
+                      }
+                    },
+                    "parameter_two": "normal"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Minus",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Number",
+                        "fields": {
+                          "base": null,
+                          "mini_sub_sized": false,
+                          "mini_sup_sized": false,
+                          "value": "1"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "m/s",
+      "options": {
+        "multiplier": "\t+\t"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9;+&amp;#x9;</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
+      "ascii": "m\t+\ts^-1",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT-1\" xml:id=\"U_NISTu1.u3e-1/1\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">meter per second</UnitName><UnitSymbol type=\"HTML\">m&#x9;+&#x9;s<sup>&#x2212;1</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9;+&amp;#x9;</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\" powerNumerator=\"-1\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd11\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT-1\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9;+&amp;#x9;</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "m"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "&#x9;+&#x26;#x9;"
+              }
+            },
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::FontStyle::Normal",
+                  "fields": {
+                    "parameter_one": {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "s"
+                      }
+                    },
+                    "parameter_two": "normal"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Minus",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Number",
+                        "fields": {
+                          "base": null,
+                          "mini_sub_sized": false,
+                          "mini_sup_sized": false,
+                          "value": "1"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "m/s",
+      "options": {
+        "multiplier": "\t sin \t"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9; sin &amp;#x9;</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
+      "ascii": "m\t sin \ts^-1",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT-1\" xml:id=\"U_NISTu1.u3e-1/1\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">meter per second</UnitName><UnitSymbol type=\"HTML\">m&#x9; sin &#x9;s<sup>&#x2212;1</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9; sin &amp;#x9;</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\" powerNumerator=\"-1\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd11\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT-1\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x9; sin &amp;#x9;</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::FontStyle::Normal",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Symbols::Symbol",
+                  "fields": {
+                    "value": "m"
+                  }
+                },
+                "parameter_two": "normal"
+              }
+            },
+            {
+              "class": "Math::Symbols::Symbol",
+              "fields": {
+                "value": "&#x9; sin &#x26;#x9;"
+              }
+            },
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::FontStyle::Normal",
+                  "fields": {
+                    "parameter_one": {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "s"
+                      }
+                    },
+                    "parameter_two": "normal"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Formula",
+                  "fields": {
+                    "displaystyle": true,
+                    "left_right_wrapper": true,
+                    "value": [
+                      {
+                        "class": "Math::Symbols::Minus",
+                        "fields": {
+                          "value": null
+                        }
+                      },
+                      {
+                        "class": "Math::Number",
+                        "fields": {
+                          "base": null,
+                          "mini_sub_sized": false,
+                          "mini_sup_sized": false,
+                          "value": "1"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "m/s",
+      "options": {
         "explicit_parenthesis": true
       },
       "optionsTypes": {
@@ -3139,6 +4018,246 @@
       "input": "sqrt(m)",
       "options": {
         "multiplier": "×"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
+      "ascii": "m^0.5",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_L0.5\" xml:id=\"U_m0.5\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m^0.5</UnitName><UnitSymbol type=\"HTML\">m<sup>0.5</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math></UnitSymbol></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_L0.5\"><Length symbol=\"L\" powerNumerator=\"0.5\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::FontStyle::Normal",
+                  "fields": {
+                    "parameter_one": {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "m"
+                      }
+                    },
+                    "parameter_two": "normal"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "0.5"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "sqrt(m)",
+      "options": {
+        "multiplier": " × "
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
+      "ascii": "m^0.5",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_L0.5\" xml:id=\"U_m0.5\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m^0.5</UnitName><UnitSymbol type=\"HTML\">m<sup>0.5</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math></UnitSymbol></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_L0.5\"><Length symbol=\"L\" powerNumerator=\"0.5\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::FontStyle::Normal",
+                  "fields": {
+                    "parameter_one": {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "m"
+                      }
+                    },
+                    "parameter_two": "normal"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "0.5"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "sqrt(m)",
+      "options": {
+        "multiplier": " + "
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
+      "ascii": "m^0.5",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_L0.5\" xml:id=\"U_m0.5\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m^0.5</UnitName><UnitSymbol type=\"HTML\">m<sup>0.5</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math></UnitSymbol></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_L0.5\"><Length symbol=\"L\" powerNumerator=\"0.5\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::FontStyle::Normal",
+                  "fields": {
+                    "parameter_one": {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "m"
+                      }
+                    },
+                    "parameter_two": "normal"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "0.5"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "sqrt(m)",
+      "options": {
+        "multiplier": "sin"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
+      "ascii": "m^0.5",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_L0.5\" xml:id=\"U_m0.5\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m^0.5</UnitName><UnitSymbol type=\"HTML\">m<sup>0.5</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math></UnitSymbol></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_L0.5\"><Length symbol=\"L\" powerNumerator=\"0.5\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::FontStyle::Normal",
+                  "fields": {
+                    "parameter_one": {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "m"
+                      }
+                    },
+                    "parameter_two": "normal"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "0.5"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "sqrt(m)",
+      "options": {
+        "multiplier": "\t+\t"
+      },
+      "optionsTypes": {
+        "multiplier": "string"
+      },
+      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
+      "ascii": "m^0.5",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_L0.5\" xml:id=\"U_m0.5\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m^0.5</UnitName><UnitSymbol type=\"HTML\">m<sup>0.5</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math></UnitSymbol></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_L0.5\"><Length symbol=\"L\" powerNumerator=\"0.5\"/></Dimension>",
+      "model": {
+        "class": "Math::Formula",
+        "fields": {
+          "displaystyle": true,
+          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
+          "left_right_wrapper": true,
+          "value": [
+            {
+              "class": "Math::Function::Power",
+              "fields": {
+                "parameter_one": {
+                  "class": "Math::Function::FontStyle::Normal",
+                  "fields": {
+                    "parameter_one": {
+                      "class": "Math::Symbols::Symbol",
+                      "fields": {
+                        "value": "m"
+                      }
+                    },
+                    "parameter_two": "normal"
+                  }
+                },
+                "parameter_two": {
+                  "class": "Math::Number",
+                  "fields": {
+                    "base": null,
+                    "mini_sub_sized": false,
+                    "mini_sup_sized": false,
+                    "value": "0.5"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "input": "sqrt(m)",
+      "options": {
+        "multiplier": "\t sin \t"
       },
       "optionsTypes": {
         "multiplier": "string"

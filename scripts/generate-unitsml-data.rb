@@ -155,6 +155,7 @@ module NativeCompletionReference
     # Alias families come from the independently measured canonical census.
     # Unary, binary and ternary aliases share a class-name prefix, so a prefix
     # match alone cannot select the native kind faithfully.
+    CorpusGenerator.load_model_classes!(oracle)
     census = CorpusGenerator.build_census(oracle)
     data["modelKinds"] = census.fetch("classes").to_h do |entry|
       carrier = entry["aliases"] || entry.fetch("name")

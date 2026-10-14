@@ -28,7 +28,7 @@ function activeLocalCorpusRoot(): string {
 
 function damagedCopy(mutate: (root: string) => void): string {
   const root = scratch();
-  cpSync(LOCAL_CORPUS_ROOT, root, { recursive: true });
+  cpSync(activeLocalCorpusRoot(), root, { recursive: true });
   mutate(root);
   return root;
 }
@@ -115,6 +115,38 @@ function assertExclusionRaisesHold(root: string): void {
   }
 }
 
+/** Validator witnesses, independent of the intentionally empty production list. */
+function syntheticExclusionRoot(): string {
+  const root = scratch();
+  writeFileSync(
+    join(root, "exclusions.yaml"),
+    `schema: plurimath-corpus/exclusions/1
+features:
+- synthetic-unitsml
+classes:
+- Math::Function::Unitsml
+excluded:
+- id: text-unitsml-valid
+  group: quoted-text
+  input: '"unitsml(kg)"'
+  input_format: asciimath
+  feature: synthetic-unitsml
+  matched: unitsml
+  raises: false
+  reason: Synthetic witness with a model in the shared pin
+- id: text-unitsml-invalid
+  group: quoted-text
+  input: '"unitsml(zzz)"'
+  input_format: asciimath
+  feature: synthetic-unitsml
+  matched: unitsml
+  raises: true
+  reason: Synthetic witness without a model in the shared pin
+`,
+  );
+  return root;
+}
+
 function setRaisesForId(text: string, id: string, value: boolean): string {
   const lines = text.split("\n");
   let inEntry = false;
@@ -144,8 +176,15 @@ describe("local corpus manifests as shipped", () => {
     expect(() => assertNoDuplicateManifestEntries(activeLocalCorpusRoot())).not.toThrow();
   });
 
-  it("record raises for every excluded case, agreeing with the shared pin", () => {
+  it("records no production exclusions after native UnitsML landed", () => {
+    expect(readExclusions(join(activeLocalCorpusRoot(), "exclusions.yaml"))).toStrictEqual([]);
     expect(() => assertExclusionRaisesHold(activeLocalCorpusRoot())).not.toThrow();
+  });
+
+  it("accepts a nonempty synthetic exclusion set agreeing with the shared pin", () => {
+    const root = syntheticExclusionRoot();
+    expect(readExclusions(join(root, "exclusions.yaml"))).toHaveLength(2);
+    expect(() => assertExclusionRaisesHold(root)).not.toThrow();
   });
 });
 
@@ -187,20 +226,34 @@ describe("the local-manifest guards prove their own failure modes", () => {
     // The defect this guards: `text-unitsml-valid` is `"unitsml(kg)"`, which
     // the gem parses fine. Claiming it raised is exactly what the old shared
     // reason string did, and what nothing caught.
-    const root = damagedCopy((where) => {
-      editFile(join(where, "exclusions.yaml"), (text) =>
-        setRaisesForId(text, "text-unitsml-valid", true),
-      );
-    });
+    const root = syntheticExclusionRoot();
+    editFile(join(root, "exclusions.yaml"), (text) =>
+      setRaisesForId(text, "text-unitsml-valid", true),
+    );
     expect(() => assertExclusionRaisesHold(root)).toThrow(/recorded as raising/);
   });
 
   it("fails when a case that raises is recorded as parsing", () => {
-    const root = damagedCopy((where) => {
-      editFile(join(where, "exclusions.yaml"), (text) =>
-        setRaisesForId(text, "text-unitsml-invalid", false),
-      );
-    });
+    const root = syntheticExclusionRoot();
+    editFile(join(root, "exclusions.yaml"), (text) =>
+      setRaisesForId(text, "text-unitsml-invalid", false),
+    );
     expect(() => assertExclusionRaisesHold(root)).toThrow(/recorded as not raising/);
+  });
+
+  it("fails when a synthetic exclusion pattern is malformed", () => {
+    const root = syntheticExclusionRoot();
+    editFile(join(root, "exclusions.yaml"), (text) =>
+      text.replace("matched: unitsml", 'matched: "["'),
+    );
+    expect(() => assertExclusionRaisesHold(root)).toThrow(/matched is not a valid regex/);
+  });
+
+  it("fails when a synthetic exclusion pattern does not match its input", () => {
+    const root = syntheticExclusionRoot();
+    editFile(join(root, "exclusions.yaml"), (text) =>
+      text.replace("matched: unitsml", "matched: does-not-match"),
+    );
+    expect(() => assertExclusionRaisesHold(root)).toThrow(/matched does not match the input/);
   });
 });

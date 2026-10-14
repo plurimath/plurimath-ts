@@ -112,14 +112,18 @@ function native(expression: Expression, options: EffectiveUnitsmlOptions): reado
           : typeof multiplier === "string"
             ? multiplier
             : failure("UnitsML cannot encode this multiplier Symbol as MathML");
-      const resolved = resolvedToken(token);
+      // Lutaml escapes each entity, then Formula#to_mathml's gsub restores
+      // only the first ampersand in each text node. The XML input reader
+      // therefore sees later references as literal text, not characters.
+      const readToken = htmlEntityToUnicode(mathmlToken(token));
+      const resolved = resolvedToken(readToken);
       // The export covers every recognized symbol/function spelling; the
       // reference's remaining branch constructs a bare encoded Symbol.
       const symbol =
-        token === ""
+        readToken === ""
           ? new SymbolNode({ value: null })
           : resolved === undefined
-            ? new SymbolNode({ value: encodeUnitsmlToken(token) })
+            ? new SymbolNode({ value: encodeUnitsmlToken(readToken) })
             : hydrateModel(resolved);
       return [
         sentinel === "space" && symbol.kind === "symbol"
@@ -184,6 +188,10 @@ export function encodeUnitsmlToken(value: string): string {
   );
 }
 
+function mathmlToken(value: string): string {
+  return encodeUnitsmlToken(value).replaceAll("&", "&amp;").replace("&amp;", "&");
+}
+
 function resolvedToken(token: string) {
   const exact = UNITSML_DATA.resolvedTokens?.[token];
   if (exact !== undefined) return exact;
@@ -220,7 +228,7 @@ function mathml(expression: Expression, options: EffectiveUnitsmlOptions): strin
         sentinel !== undefined
           ? "&#x2062;"
           : typeof value === "string"
-            ? encodeUnitsmlToken(value)
+            ? mathmlToken(value)
             : failure("UnitsML cannot encode this multiplier Symbol as MathML");
       return `<mo${sentinel === "space" ? ' rspace="thickmathspace"' : ""}>${token}</mo>`;
     }

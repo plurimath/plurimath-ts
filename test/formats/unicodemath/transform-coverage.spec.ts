@@ -48,6 +48,9 @@ interface FixtureCase {
 const fixtures = JSON.parse(readFileSync(join(HERE, "model-fixtures.json"), "utf8")) as {
   readonly cases: readonly FixtureCase[];
 };
+const unreachedFixtures = JSON.parse(
+  readFileSync(join(HERE, "unreached-fixtures.json"), "utf8"),
+) as { readonly cases: readonly FixtureCase[] };
 
 /**
  * One transform, driven over every input the gem parsed, counting firings.
@@ -92,12 +95,23 @@ for (const entry of fixtures.cases) {
   reached += 1;
 }
 
-const FINAL_COUNT = 483;
+// These are real public parse witnesses projected from the calibrated Ruby
+// trace, including `1/a≤∫`; they exercise :2323 in this same counted transform.
+for (const entry of unreachedFixtures.cases) {
+  build.transform.apply(parseUnicodemathTree(entry.input));
+}
+
+const FINAL_COUNT = 484;
 
 describe("transform rule coverage", () => {
   it("drove every parseable fixture through one transform", () => {
     expect(reached).toBe(fixtures.cases.filter((entry) => entry.model !== undefined).length);
     expect(reached).toBeGreaterThan(90);
+  });
+
+  it("reaches the newly measured rule through a public parse witness", () => {
+    expect(unreachedFixtures.cases.some((entry) => entry.input === "1/a≤∫")).toBe(true);
+    expect(build.fired.get("2323")).toBeGreaterThan(0);
   });
 
   it("registers every rule the slice carries", () => {

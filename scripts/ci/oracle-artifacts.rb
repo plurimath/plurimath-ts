@@ -9,6 +9,7 @@ require "open3"
 require "optparse"
 require "set"
 require "yaml"
+require "thread"
 
 $stdout.sync = true
 
@@ -29,6 +30,7 @@ module OracleArtifacts
       raise "artifact root must be outside all checkouts" if
         [@source, @oracle, @verify].any? { |p| @out.start_with?("#{p}/") }
       @env = { "BUNDLE_GEMFILE" => File.join(@oracle, "Gemfile"), "BUNDLE_FROZEN" => "true" }
+      @report_mutex = Mutex.new
       @mode = mode
       @logs = File.join(@out, "logs")
       if @mode == "verify"
@@ -62,10 +64,12 @@ module OracleArtifacts
       rescue SystemCallError => e
         launch_error = e.message
       end
+      @report_mutex.synchronize do
       @report["stages"] << { "name" => name, "command" => args, "cwd" => cwd,
                             "exit" => status&.exitstatus, "signal" => status&.termsig, "launchError" => launch_error,
                             "seconds" => Process.clock_gettime(Process::CLOCK_MONOTONIC) - started }
       save
+      end
       success = status&.success? == true
       puts "#{name}: #{success ? 'passed' : 'failed'} (exit #{status&.exitstatus.inspect}, signal #{status&.termsig.inspect})"
       raise "#{name} failed; see #{log}" if required && !success
@@ -128,9 +132,56 @@ module OracleArtifacts
 
     def generate(output, pass, env, jobs: inventory(output), paths: @paths)
       FileUtils.mkdir_p(output)
-      jobs.each do |name, script, args|
+      run_job = ->(job) do
+        name, script, args = job
         command("#{pass}-#{name}", ["bundle", "exec", "ruby", "scripts/#{script}", *args], env: env)
       end
+      pending = jobs.dup
+      # The corpus owns shared census/symbol inputs and always completes first.
+      run_job.call(pending.shift) if pending.first&.first == "corpus"
+      active_roots = []
+      errors = []
+      schedule = Mutex.new
+      changed = ConditionVariable.new
+      roots_for = lambda do |job|
+        name, _, args = job
+        if name == "unitsml-data"
+          %w[src/unitsml/generated src/formats/unicodemath/generated
+             test/formats/unitsml test/formats/unicodemath].map { |path| File.join(output, path) }
+        else
+          root = args[args.index("--out") + 1]
+          root = File.dirname(root) if root.end_with?(".json")
+          root = File.join(root, name.delete_suffix("-parity")) if name.end_with?("-parity")
+          [root]
+        end
+      end
+      overlap = ->(a, b) { a == b || a.start_with?("#{b}/") || b.start_with?("#{a}/") }
+      workers = Array.new(3) do
+        Thread.new do
+          loop do
+            job = schedule.synchronize { pending.shift }
+            break unless job
+            roots = roots_for.call(job)
+            schedule.synchronize do
+              changed.wait(schedule) while roots.any? { |root| active_roots.any? { |active| overlap.call(root, active) } }
+              active_roots.concat(roots)
+            end
+            begin
+              run_job.call(job)
+            rescue StandardError => e
+              schedule.synchronize { errors << e }
+            ensure
+              schedule.synchronize do
+                roots.each { |root| active_roots.delete(root) }
+                changed.broadcast
+              end
+            end
+          end
+        end
+      end
+      workers.each(&:join)
+      workers.each(&:value)
+      raise errors.first unless errors.empty?
       actual = Dir.glob("**/*", base: output).select { |p| File.file?(File.join(output, p)) }.sort
       raise "#{pass} output inventory mismatch: #{(actual.to_set ^ paths.to_set).to_a}" unless actual == paths
       clean!(@source)

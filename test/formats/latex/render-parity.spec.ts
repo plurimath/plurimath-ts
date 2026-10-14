@@ -20,11 +20,9 @@
  * happened to this repository once before and `readCorpusCases` throwing on
  * emptiness is only belt to that brace:
  *
- *   - 713 reachable cases: the pin holds 714 and the one withheld UnitsML case
- *     it actually contains is dropped. The exclusion manifest names two, but
- *     the gem raises on the invalid one, so no case for it was ever generated;
- *   - 712 of those carry `expected.latex` bytes to compare;
- *   - 91 go through the round-trip layer, which is the AsciiMath-written
+ *   - 714 reachable cases: every pinned model is included now that UnitsML is native;
+ *   - 713 of those carry `expected.latex` bytes to compare;
+ *   - 92 go through the round-trip layer, which is the AsciiMath-written
  *     subset. That says which parser the layer calls, not what this port can
  *     parse: `parseLatex` landed in #76 and drives
  *     `./rejection-parity.spec.ts`. Widening this layer to the other 125 is a
@@ -60,19 +58,19 @@ function expectedLatex(entry: (typeof cases)[number]): string {
 }
 
 describe("latex render parity, corpus layer (recorded model -> text)", () => {
-  it("has the 713 reachable cases (714 pinned, 1 withheld as UnitsML)", () => {
+  it("has all 714 reachable cases with native UnitsML", () => {
     // A suite that quietly loaded zero cases has happened to this repository
     // once before; both counts are pinned so it cannot happen silently.
-    expect(cases.length).toBe(713);
-    // 712 rather than 713: one MathML case records a refusal here.
-    expect(rendered.length).toBe(712);
+    expect(cases.length).toBe(714);
+    // 713 rather than 714: one MathML case records a refusal here.
+    expect(rendered.length).toBe(713);
     // The round-trip layer's scoped list is pinned too, and it is far smaller
-    // than the corpus layer: 91 of the 713 reachable cases are written in
+    // than the corpus layer: 92 of the 714 reachable cases are written in
     // AsciiMath, 125 in LaTeX, 20 in UnicodeMath, 287 in MathML and 190 in
     // OMML. This layer calls `parseAsciimath`, so it
-    // takes the 91. The gap is the other input notations; a suite that
+    // takes the 92. The gap is the other input notations; a suite that
     // stopped scoping would expose the wrong parser to those inputs.
-    expect(roundTrip.length).toBe(91);
+    expect(roundTrip.length).toBe(92);
   });
 
   it("accounts for every case, as a rendering or as a refusal", () => {

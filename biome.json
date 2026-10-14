@@ -23,7 +23,8 @@
       "!test/evaluation/libm-hyperbolic-corpus.json",
       "!src/unitsml/generated/*.json",
       "!test/formats/unitsml/probe-fixtures.json",
-      "!test/formats/unicodemath/completion-fixtures.json"
+      "!test/formats/unicodemath/completion-fixtures.json",
+      "!test/formats/unicodemath/unreached-fixtures.json"
     ]
   },
   "formatter": {

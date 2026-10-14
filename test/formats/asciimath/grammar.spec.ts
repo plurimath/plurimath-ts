@@ -109,9 +109,9 @@ describe("corpus parity", () => {
     // Guards the whole block: a reader that silently returned nothing would
     // make every `it.each` below vacuous.
     expect(corpus.cases.length).toBe(714);
-    expect(reachable.length).toBe(713);
+    expect(reachable.length).toBe(714);
     // The AsciiMath-input subset, which is what this grammar is asked to parse.
-    expect(parseable.length).toBe(91);
+    expect(parseable.length).toBe(92);
   });
 
   it.each(parseable.map((entry) => [entry.id, entry] as const))(

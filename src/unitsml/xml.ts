@@ -420,7 +420,17 @@ function dimensionId(terms: readonly DimensionTerm[]): string | undefined {
     : found.id;
 }
 function displayFloat(value: number): string {
-  return String((Math.sign(value) * Math.round(Math.abs(value) * 10)) / 10);
+  // Number#float_to_display does Float#round(1), Float#to_s, then removes a
+  // terminal '.0'. Large grammar exponents are integral Floats; multiplying
+  // them by ten merely risks overflow and cannot change their rounded value.
+  const rounded =
+    Math.abs(value) >= 1e15 ? value : (Math.sign(value) * Math.round(Math.abs(value) * 10)) / 10;
+  if (Object.is(rounded, -0)) return "-0";
+  if (Number.isFinite(rounded) && Math.abs(rounded) >= 1e15) {
+    const [mantissa, exponent] = rounded.toExponential().split("e");
+    return `${mantissa?.includes(".") ? mantissa : `${mantissa}.0`}e${exponent}`;
+  }
+  return String(rounded);
 }
 function dimensionXml(id: string | undefined, terms?: readonly DimensionTerm[]): string {
   if (id === undefined) return "";

@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      unicode_unreached_probe:
+        description: Also measure still-unreached Unicode rules in the targeted reference job
+        type: boolean
+        default: false
       native_completion_test:
         description: Run focused native UnitsML and Unicode integration checks
         type: boolean
@@ -305,6 +309,7 @@ jobs:
         run: |
           bundle exec ruby scripts/ci/native-completion-probe.rb --phase tables --oracle "$GITHUB_WORKSPACE/oracle" --out "$RUNNER_TEMP/native-completion" > "$RUNNER_TEMP/native-completion/tables.stdout" 2> "$RUNNER_TEMP/native-completion/tables.stderr"
       - name: Measure still-unreached Unicode rules
+        if: ${{ inputs.unicode_unreached_probe }}
         env:
           BUNDLE_GEMFILE: ${{ github.workspace }}/oracle/Gemfile
           BUNDLE_FROZEN: "true"

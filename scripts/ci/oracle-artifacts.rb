@@ -130,6 +130,13 @@ module OracleArtifacts
       (roots + fixture_paths).uniq.sort
     end
 
+    def omitted_family_paths
+      @paths.select do |path|
+        path.match?(%r{\Asrc/formats/(?:html|unicodemath)/generated/(?:parser-tables|transform-tables|provenance)\.ts\z}) ||
+          path.match?(%r{\Atest/.*(?:cli-fixtures|evaluation-fixtures|render-options-fixtures|render-kinds-fixtures|ox-contract\.expected)\.(?:json|manifest\.yaml)\z})
+      end
+    end
+
     def generate(output, pass, env, jobs: inventory(output), paths: @paths)
       FileUtils.mkdir_p(output)
       run_job = ->(job) do
@@ -305,10 +312,7 @@ module OracleArtifacts
       second = File.join(@out, "second-generated")
       omitted_names = %w[html-parser-data unicodemath-parser-data cli-fixtures evaluation-fixtures
                          render-options-fixtures xml-fixtures]
-      omitted_paths = @paths.select do |path|
-        path.start_with?("src/formats/html/generated/", "src/formats/unicodemath/generated/") ||
-          path.match?(%r{\Atest/.*(?:cli-fixtures|evaluation-fixtures|render-options-fixtures|render-kinds-fixtures|ox-contract\.expected)\.(?:json|manifest\.yaml)\z})
-      end
+      omitted_paths = omitted_family_paths
       raise "empty omitted-family inventory" if omitted_paths.empty?
       deterministic = false
       begin
@@ -339,11 +343,13 @@ module OracleArtifacts
   end
 end
 
-options = { mode: "all" }
-OptionParser.new do |parser|
-  parser.on("--mode MODE", %w[all export verify]) { |value| options[:mode] = value }
-  %w[source oracle verify out].each { |name| parser.on("--#{name} PATH") { |value| options[name.to_sym] = value } }
-end.parse!
-abort "--source, --oracle, --verify and --out are required" unless options.keys.sort == %i[mode oracle out source verify]
-FileUtils.mkdir_p(options.fetch(:out))
-exit OracleArtifacts::Runner.new(**options).run
+if $PROGRAM_NAME == __FILE__
+  options = { mode: "all" }
+  OptionParser.new do |parser|
+    parser.on("--mode MODE", %w[all export verify]) { |value| options[:mode] = value }
+    %w[source oracle verify out].each { |name| parser.on("--#{name} PATH") { |value| options[name.to_sym] = value } }
+  end.parse!
+  abort "--source, --oracle, --verify and --out are required" unless options.keys.sort == %i[mode oracle out source verify]
+  FileUtils.mkdir_p(options.fetch(:out))
+  exit OracleArtifacts::Runner.new(**options).run
+end

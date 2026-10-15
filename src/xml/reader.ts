@@ -162,14 +162,16 @@ const ENTITY_NAME = "[a-zA-Z_][\\w.:-]*";
 const STANDARD_ENTITIES = new Set(["amp", "lt", "gt", "quot", "apos"]);
 const ENTITY_MARKER = "￼﻿";
 
-function markEntities(input: string): string {
+/** Internal compatibility transform shared with the experimental XML adapter. */
+export function markEntities(input: string): string {
   if (!input.includes("&")) return input;
   return input.replace(new RegExp(`&(${ENTITY_NAME});`, "g"), (match, name: string) =>
     STANDARD_ENTITIES.has(name) ? match : `${ENTITY_MARKER}${name};`,
   );
 }
 
-function restoreEntities(text: string): string {
+/** Internal inverse for text and ordinary attributes, not namespace values. */
+export function restoreEntities(text: string): string {
   return text
     .replace(new RegExp(`${ENTITY_MARKER}(${ENTITY_NAME});`, "g"), "&$1;")
     .replace(new RegExp(`&#xFFFC;&#xFEFF;(${ENTITY_NAME});`, "g"), "&$1;");

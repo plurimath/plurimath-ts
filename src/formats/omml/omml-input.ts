@@ -93,10 +93,13 @@ export const OMML_INPUT_DIFFERENCES: readonly (readonly [string, string])[] = [
 ];
 
 /** Reads an OMML document. Throws `OmmlParseError` when it is not one. */
-export function parseOmmlDocument(text: string): OmmlNode {
+export function parseOmmlDocument(
+  text: string,
+  read: (input: string) => XmlReadElement = readXml,
+): OmmlNode {
   let root: XmlReadElement;
   try {
-    root = readXml(text);
+    root = read(text);
   } catch (error) {
     if (error instanceof XmlReadError) throw new OmmlParseError(error.message);
     throw error;

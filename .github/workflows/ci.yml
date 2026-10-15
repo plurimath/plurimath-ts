@@ -6,6 +6,18 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      leptris_probe:
+        description: Build a candidate Leptris binding and run the opt-in XML consumer gate
+        type: boolean
+        default: false
+      leptris_repository:
+        description: Candidate binding repository
+        type: string
+        default: leptris/leptris-ts
+      leptris_ref:
+        description: Candidate binding commit or ref
+        type: string
+        default: main
       unicode_probe_only:
         description: Skip UnitsML measurements when running the Unicode reference probe
         type: boolean
@@ -33,8 +45,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.native_completion_test && 'native-completion-test' || inputs.native_completion_probe && 'native-completion' || inputs.oracle_artifacts && 'oracle-artifacts' || 'checks' }}
-  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.leptris_probe && 'leptris-probe' || inputs.native_completion_test && 'native-completion-test' || inputs.native_completion_probe && 'native-completion' || inputs.oracle_artifacts && 'oracle-artifacts' || 'checks' }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.leptris_probe || inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
 
 jobs:
   # Every class-A gate active at the repository's current milestone
@@ -377,3 +389,43 @@ jobs:
           path: ${{ runner.temp }}/native-completion-test
           if-no-files-found: error
           retention-days: 7
+
+  leptris-consumer:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.leptris_probe }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: actions/checkout@v5
+        with:
+          repository: ${{ inputs.leptris_repository }}
+          ref: ${{ inputs.leptris_ref }}
+          path: .leptris-binding
+      - uses: actions/checkout@v5
+        with:
+          repository: leptris/leptris
+          ref: v1.9.356
+          path: .leptris-engine
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.74
+      - name: Candidate provenance
+        run: |
+          git -C .leptris-binding rev-parse HEAD
+          git -C .leptris-engine rev-parse HEAD
+      - name: Build candidate WASM
+        working-directory: .leptris-binding
+        run: ENGINESRC="$GITHUB_WORKSPACE/.leptris-engine/src" ./build.sh
+      - name: Binding regressions
+        working-directory: .leptris-binding
+        run: npm test
+      - run: pnpm install --frozen-lockfile
+      - name: Real MathML and OMML consumer gate
+        run: node scripts/probe-leptris.mjs .leptris-binding/src/index.js

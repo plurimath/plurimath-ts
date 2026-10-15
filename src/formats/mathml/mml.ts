@@ -145,10 +145,10 @@ export const MATHML_INPUT_DIFFERENCES: readonly (readonly [string, string])[] = 
 ];
 
 /** Reads a MathML document. Throws `MmlParseError` when it is not one. */
-export function parseMml(text: string): MmlNode {
+export function parseMml(text: string, read: (input: string) => XmlReadElement = readXml): MmlNode {
   let root: XmlReadElement;
   try {
-    root = readXml(text);
+    root = read(text);
   } catch (error) {
     if (error instanceof XmlReadError) throw new MmlParseError(error.message);
     throw error;

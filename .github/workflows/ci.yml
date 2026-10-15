@@ -524,9 +524,16 @@ jobs:
         run: |
           set -o pipefail
           failed=0
+          native_bundle="$GITHUB_WORKSPACE/.leptris-ruby/lib/leptris/xml/native_3_3.so"
+          ffi_bundle="$RUNNER_TEMP/leptris-ruby-native_3_3.so"
           for mode in native ffi; do
             no_native=0
-            if [ "$mode" = ffi ]; then no_native=1; fi
+            if [ "$mode" = ffi ]; then
+              no_native=1
+              # Moxml explicitly requires the optional native layer. Model an
+              # FFI-only install by withholding the bundle this job just built.
+              mv "$native_bundle" "$ffi_bundle"
+            fi
             for suite in ruby moxml; do
               evidence="$RUNNER_TEMP/leptris-ruby-evidence/$suite-$mode"
               mkdir -p "$evidence"
@@ -541,6 +548,7 @@ jobs:
               if [ "$result" -ne 0 ]; then failed=1; fi
             done
           done
+          if [ -f "$ffi_bundle" ]; then mv "$ffi_bundle" "$native_bundle"; fi
           exit "$failed"
       - uses: actions/checkout@v5
         if: ${{ always() }}

@@ -497,6 +497,7 @@ jobs:
           RUBY
           bundle install --jobs 2
       - name: Ruby FFI and Moxml Leptris adapter regressions
+        id: native-ruby
         env:
           GEM_HOME: ${{ runner.temp }}/leptris-ruby-gems
           GEM_PATH: ${{ runner.temp }}/leptris-ruby-gems
@@ -512,6 +513,39 @@ jobs:
         run: |
           set -o pipefail
           bundle exec ruby -I .moxml/spec scripts/probe-leptris-ruby.rb 2>&1 | tee "$LEPTRIS_RUBY_EVIDENCE/native-ruby.log"
+      # Diagnose upstream failures without weakening the candidate gate.
+      - uses: actions/checkout@v5
+        if: ${{ failure() && steps.native-ruby.outcome == 'failure' }}
+        with:
+          repository: leptris/leptris
+          ref: 49dde18a88cdbdd7288e475b90e60c82b7f16619
+          path: .leptris-baseline
+          persist-credentials: false
+      - name: Compare Moxml failures against the unchanged upstream engine
+        if: ${{ failure() && steps.native-ruby.outcome == 'failure' }}
+        env:
+          GEM_HOME: ${{ runner.temp }}/leptris-ruby-gems
+          GEM_PATH: ${{ runner.temp }}/leptris-ruby-gems
+          GEM_SPEC_CACHE: ${{ runner.temp }}/leptris-ruby-gem-cache
+          BUNDLE_USER_HOME: ${{ runner.temp }}/leptris-ruby-bundle
+          BUNDLE_PATH: ${{ runner.temp }}/leptris-ruby-gems
+          BUNDLE_APP_CONFIG: ${{ runner.temp }}/leptris-ruby-bundle/config
+          BUNDLE_GEMFILE: ${{ runner.temp }}/leptris-ruby-Gemfile
+          LEPTRIS_LIB_PATH: ${{ runner.temp }}/leptris-native-baseline/src/libleptris.so
+          LEPTRIS_NO_NATIVE: "1"
+          MOXML_SOURCE: ${{ github.workspace }}/.moxml
+          LEPTRIS_RUBY_EVIDENCE: ${{ runner.temp }}/leptris-ruby-evidence/baseline
+        run: |
+          set -o pipefail
+          mkdir -p "$LEPTRIS_RUBY_EVIDENCE"
+          git -C .leptris-baseline rev-parse HEAD
+          cmake -S .leptris-baseline -B "$RUNNER_TEMP/leptris-native-baseline" \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+            -DBUILD_SHARED_LIBS=ON -DLEPTRIS_BUILD_SHARED=ON \
+            -DLEPTRIS_BUILD_STATIC=OFF -DLEPTRIS_BUILD_CLI=OFF \
+            -DLEPTRIS_ENABLE_UTF8PROC=OFF -DLEPTRIS_ENABLE_ICONV=OFF
+          cmake --build "$RUNNER_TEMP/leptris-native-baseline" --parallel 2
+          bundle exec ruby -I .moxml/spec scripts/probe-leptris-ruby.rb --spec-only 2>&1 | tee "$LEPTRIS_RUBY_EVIDENCE/native-ruby.log"
       - name: Retain native Ruby evidence including pending examples
         if: ${{ always() }}
         uses: actions/upload-artifact@v4

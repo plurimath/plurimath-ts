@@ -442,3 +442,81 @@ jobs:
           node scripts/probe-leptris.mjs .leptris-binding/src/index.js
           node scripts/probe-leptris.mjs .leptris-binding/src/index.js --built
           node scripts/probe-leptris.mjs .leptris-binding/src/index.js --built-cjs
+      # Separate native evidence: the Ruby FFI surface and actual Moxml
+      # Leptris adapter. Other Ruby suites select different adapters.
+      - uses: actions/checkout@v5
+        with:
+          repository: leptris/leptris-ruby
+          ref: 612ad29a630e2f2ac2e5218ffc16fdef778e2333
+          path: .leptris-ruby
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: lutaml/moxml
+          ref: d6a8797d51458509c8fcfd6aad7755b2999ff508
+          path: .moxml
+          persist-credentials: false
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+      - name: Build the same candidate as a native shared library
+        run: |
+          mkdir -p "$RUNNER_TEMP/leptris-ruby-evidence"
+          git -C .leptris-engine rev-parse HEAD
+          git -C .leptris-ruby rev-parse HEAD
+          git -C .moxml rev-parse HEAD
+          cmake -S .leptris-engine -B "$RUNNER_TEMP/leptris-native" \
+            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
+            -DBUILD_SHARED_LIBS=ON -DLEPTRIS_BUILD_SHARED=ON \
+            -DLEPTRIS_BUILD_STATIC=OFF -DLEPTRIS_BUILD_CLI=OFF \
+            -DLEPTRIS_ENABLE_UTF8PROC=OFF -DLEPTRIS_ENABLE_ICONV=OFF
+          cmake --build "$RUNNER_TEMP/leptris-native" --parallel 2
+          test -f "$RUNNER_TEMP/leptris-native/src/libleptris.so"
+          sha256sum "$RUNNER_TEMP/leptris-native/src/libleptris.so"
+      - name: Install isolated Ruby verification dependencies
+        env:
+          GEM_HOME: ${{ runner.temp }}/leptris-ruby-gems
+          GEM_PATH: ${{ runner.temp }}/leptris-ruby-gems
+          GEM_SPEC_CACHE: ${{ runner.temp }}/leptris-ruby-gem-cache
+          BUNDLE_USER_HOME: ${{ runner.temp }}/leptris-ruby-bundle
+          BUNDLE_PATH: ${{ runner.temp }}/leptris-ruby-gems
+          BUNDLE_APP_CONFIG: ${{ runner.temp }}/leptris-ruby-bundle/config
+          BUNDLE_GEMFILE: ${{ runner.temp }}/leptris-ruby-Gemfile
+        run: |
+          cat > "$BUNDLE_GEMFILE" <<RUBY
+          source "https://rubygems.org"
+          gem "leptris", "1.9.355.0", path: "$GITHUB_WORKSPACE/.leptris-ruby"
+          gem "moxml", path: "$GITHUB_WORKSPACE/.moxml"
+          gem "rspec", "~> 3.13"
+          gem "nokogiri", "~> 1.18"
+          gem "benchmark"
+          gem "benchmark-ips"
+          gem "get_process_mem"
+          gem "tempfile"
+          gem "rexml"
+          RUBY
+          bundle install --jobs 2
+      - name: Ruby FFI and Moxml Leptris adapter regressions
+        env:
+          GEM_HOME: ${{ runner.temp }}/leptris-ruby-gems
+          GEM_PATH: ${{ runner.temp }}/leptris-ruby-gems
+          GEM_SPEC_CACHE: ${{ runner.temp }}/leptris-ruby-gem-cache
+          BUNDLE_USER_HOME: ${{ runner.temp }}/leptris-ruby-bundle
+          BUNDLE_PATH: ${{ runner.temp }}/leptris-ruby-gems
+          BUNDLE_APP_CONFIG: ${{ runner.temp }}/leptris-ruby-bundle/config
+          BUNDLE_GEMFILE: ${{ runner.temp }}/leptris-ruby-Gemfile
+          LEPTRIS_LIB_PATH: ${{ runner.temp }}/leptris-native/src/libleptris.so
+          LEPTRIS_NO_NATIVE: "1"
+          MOXML_SOURCE: ${{ github.workspace }}/.moxml
+          LEPTRIS_RUBY_EVIDENCE: ${{ runner.temp }}/leptris-ruby-evidence
+        run: |
+          set -o pipefail
+          bundle exec ruby -I .moxml/spec scripts/probe-leptris-ruby.rb 2>&1 | tee "$LEPTRIS_RUBY_EVIDENCE/native-ruby.log"
+      - name: Retain native Ruby evidence including pending examples
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: leptris-native-ruby-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/leptris-ruby-evidence
+          if-no-files-found: warn
+          retention-days: 7

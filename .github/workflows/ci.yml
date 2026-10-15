@@ -14,6 +14,14 @@ on:
         description: Candidate binding repository
         type: string
         default: leptris/leptris-ts
+      engine_repository:
+        description: Candidate XML engine repository
+        type: string
+        default: leptris/leptris
+      engine_ref:
+        description: Candidate XML engine commit or ref
+        type: string
+        default: v1.9.356
       leptris_ref:
         description: Candidate binding commit or ref
         type: string
@@ -52,7 +60,7 @@ jobs:
   # Every class-A gate active at the repository's current milestone
   # (gates.json). No Ruby is needed: generated payloads are committed.
   gates:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.leptris_probe || inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     # A whole run takes about two minutes, so this is roughly seven times the
     # observed cost -- generous for a slow runner, and still a bound. It is
@@ -86,7 +94,7 @@ jobs:
   # class-A suite and run with an explicit interpreter rather than relying on
   # whatever happens to be installed on the runner image.
   oracle-runner-unit-tests:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.leptris_probe || inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -109,7 +117,7 @@ jobs:
 
   # Guards the runtime support claim in package.json#engines.
   runtime-matrix:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.leptris_probe || inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: gates
@@ -405,8 +413,8 @@ jobs:
           path: .leptris-binding
       - uses: actions/checkout@v5
         with:
-          repository: leptris/leptris
-          ref: v1.9.356
+          repository: ${{ inputs.engine_repository }}
+          ref: ${{ inputs.engine_ref }}
           path: .leptris-engine
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v5
@@ -427,5 +435,10 @@ jobs:
         working-directory: .leptris-binding
         run: npm test
       - run: pnpm install --frozen-lockfile
+      - name: Build optional consumer package entries
+        run: pnpm build
       - name: Real MathML and OMML consumer gate
-        run: node scripts/probe-leptris.mjs .leptris-binding/src/index.js
+        run: |
+          node scripts/probe-leptris.mjs .leptris-binding/src/index.js
+          node scripts/probe-leptris.mjs .leptris-binding/src/index.js --built
+          node scripts/probe-leptris.mjs .leptris-binding/src/index.js --built-cjs

@@ -5,12 +5,15 @@
  */
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "esbuild";
 
 const bindingPath = process.argv[2];
+const builtMode = process.argv[3];
+assert.ok([undefined, "--built", "--built-cjs"].includes(builtMode), "Unknown probe mode");
 assert.ok(bindingPath, "Pass the built Leptris JavaScript module entry path");
 const binding = await import(pathToFileURL(resolve(bindingPath)).href);
 for (const name of ["init", "loadSync", "treeSync", "closeSync"]) {
@@ -21,25 +24,74 @@ await binding.init();
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const scratch = await mkdtemp(join(tmpdir(), "plurimath-leptris-probe-"));
 try {
-  const result = await build({
-    stdin: {
-      contents: `
-        export * from './src/experimental/leptris.ts';
-        export { normalize, ParseError } from './src/core/index.ts';
+  let consumer;
+  if (builtMode) {
+    const require = createRequire(import.meta.url);
+    const extension = builtMode === "--built-cjs" ? "cjs" : "js";
+    const modules = await Promise.all(
+      [
+        "core",
+        "asciimath",
+        "latex",
+        "html",
+        "mathml",
+        "omml",
+        "unicodemath",
+        "mathml-leptris",
+        "omml-leptris",
+      ].map((name) =>
+        extension === "cjs"
+          ? require(join(root, `dist/${name}.cjs`))
+          : import(pathToFileURL(join(root, `dist/${name}.js`)).href),
+      ),
+    );
+    consumer = Object.assign({}, ...modules);
+  } else {
+    const result = await build({
+      stdin: {
+        contents: `
+        export { createMathmlParser } from './src/formats/mathml/leptris.ts';
+        export { createOmmlParser } from './src/formats/omml/leptris.ts';
+          export { normalize, ParseError, PlurimathError } from './src/core/index.ts';
+        export { toAsciimath } from './src/formats/asciimath/index.ts';
+        export { toLatex } from './src/formats/latex/index.ts';
+        export { toHtml } from './src/formats/html/index.ts';
+        export { toUnicodemath } from './src/formats/unicodemath/index.ts';
         export { parseMathml, toMathml } from './src/formats/mathml/index.ts';
         export { parseOmml, toOmml } from './src/formats/omml/index.ts';
       `,
-      resolveDir: root,
-    },
-    bundle: true,
-    format: "esm",
-    platform: "node",
-    target: "node20",
-    write: false,
-  });
-  const entry = join(scratch, "consumer.mjs");
-  await writeFile(entry, result.outputFiles[0].contents);
-  const consumer = await import(pathToFileURL(entry).href);
+        resolveDir: root,
+      },
+      bundle: true,
+      format: "esm",
+      platform: "node",
+      target: "node20",
+      write: false,
+    });
+    const entry = join(scratch, "consumer.mjs");
+    await writeFile(entry, result.outputFiles[0].contents);
+    consumer = await import(pathToFileURL(entry).href);
+  }
+  const renderers = [
+    consumer.toAsciimath,
+    consumer.toLatex,
+    consumer.toHtml,
+    consumer.toMathml,
+    consumer.toOmml,
+    consumer.toUnicodemath,
+  ];
+  const renderOutcome = (render, node) => {
+    try {
+      return { output: render(node) };
+    } catch (error) {
+      if (!(error instanceof consumer.PlurimathError)) throw error;
+      return { error: error.name, message: error.message };
+    }
+  };
+  for (const render of renderers) assert.equal(typeof render, "function");
+  const rendering = Object.fromEntries(
+    renderers.map((render) => [render.name, { outputs: 0, refusals: 0 }]),
+  );
   const open = new Set();
   let loaded = 0;
   let closed = 0;
@@ -58,7 +110,10 @@ try {
       closed++;
     },
   };
-  const experimental = consumer.createLeptrisParsers(tracked);
+  const experimental = {
+    parseMathml: consumer.createMathmlParser(tracked),
+    parseOmml: consumer.createOmmlParser(tracked),
+  };
   const counts = {};
   for (const format of ["mathml", "omml"]) {
     const fixture = JSON.parse(
@@ -79,10 +134,17 @@ try {
         refused++;
         continue;
       }
-      const actual = experimental[parseName](row.input);
+      let actual;
+      try {
+        actual = experimental[parseName](row.input);
+      } catch (error) {
+        throw new Error(`${row.id}: optional parser failed`, { cause: error });
+      }
       assert.deepEqual(consumer.normalize(actual), consumer.normalize(native), row.id);
-      for (const render of [consumer.toMathml, consumer.toOmml]) {
-        assert.equal(render(actual), render(native), `${row.id}: ${render.name}`);
+      for (const render of renderers) {
+        const expected = renderOutcome(render, native);
+        assert.deepEqual(renderOutcome(render, actual), expected, `${row.id}: ${render.name}`);
+        rendering[render.name]["output" in expected ? "outputs" : "refusals"]++;
       }
       accepted++;
     }
@@ -117,21 +179,20 @@ try {
     const expected = consumer[name](input);
     const actual = experimental[name](input);
     assert.deepEqual(consumer.normalize(actual), consumer.normalize(expected), input);
-    assert.equal(consumer.toMathml(actual), consumer.toMathml(expected), input);
-    assert.equal(consumer.toOmml(actual), consumer.toOmml(expected), input);
+    for (const render of renderers)
+      assert.deepEqual(renderOutcome(render, actual), renderOutcome(render, expected), input);
   }
 
-  const read = consumer.createLeptrisXmlReader(tracked);
-  const tree = read(`<q:math xmlns:q="${math}" custom="v"><q:mi>x</q:mi></q:math>`);
-  assert.deepEqual(tree.xmlns, [["xmlns:q", math]]);
-  assert.deepEqual(tree.attributes, [["custom", "v"]]);
-  assert.equal(tree.children[0].namespace, math);
-  assert.equal(tree.children[0].prefix, "q");
+  const qualified = `<q:math xmlns:q="${math}" custom="v"><q:mi>x</q:mi></q:math>`;
+  assert.deepEqual(
+    consumer.normalize(experimental.parseMathml(qualified)),
+    consumer.normalize(consumer.parseMathml(qualified)),
+  );
   for (const input of ["<math><mi></math>", "<math>", "", "<other/>"]) {
     assert.throws(() => experimental.parseMathml(input), consumer.ParseError, input);
     assert.equal(open.size, 0, "handles must close after input refusal");
   }
-  const failedSnapshot = consumer.createLeptrisXmlReader({
+  const failedSnapshot = consumer.createMathmlParser({
     ...tracked,
     treeSync() {
       throw new Error("snapshot failure");
@@ -140,7 +201,17 @@ try {
   assert.throws(() => failedSnapshot("<math/>"), /snapshot failure/);
   assert.equal(open.size, 0, "handles must close after snapshot failure");
   assert.equal(loaded, closed);
-  console.log(JSON.stringify({ corpus: counts, extraProbes: probes.length, loaded, closed }));
+  console.log(
+    JSON.stringify({
+      mode: builtMode ?? "source",
+      renderers: renderers.length,
+      rendering,
+      corpus: counts,
+      extraProbes: probes.length,
+      loaded,
+      closed,
+    }),
+  );
 } finally {
   await rm(scratch, { recursive: true, force: true });
 }

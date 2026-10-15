@@ -160,6 +160,8 @@ const EXPECTED_EXPORTS = {
   "./latex": ["parseLatex", "toLatex"],
   "./mathml": ["parseMathml", "toMathml"],
   "./omml": ["parseOmml", "toOmml"],
+  "./mathml/leptris": ["createMathmlParser"],
+  "./omml/leptris": ["createOmmlParser"],
   "./unicodemath": ["parseUnicodemath", "toUnicodemath"],
 };
 
@@ -215,6 +217,10 @@ const NO_FORBIDDEN_SOURCES = Symbol("NO_FORBIDDEN_SOURCES");
  */
 const LOCALE_DECIMALS = /(?:^|\/)formatting\/generated\/locale-decimals\.ts$/;
 const LOCALE_GROUPS = /(?:^|\/)formatting\/generated\/locale-groups\.ts$/;
+// Optional readers must contain only their own format, its generated tables,
+// core and XML. This also excludes runtime dependencies, renderers and WASM.
+const optionalReaderOutside = (format) =>
+  new RegExp(`^(?!(?:src/)?(?:core|xml)/|(?:src/)?(?:formats|generated)/${format}/)`);
 
 const FORBIDDEN = {
   // The root is intentionally full-sized; only subpath imports are slim.
@@ -233,6 +239,8 @@ const FORBIDDEN = {
   // OMML reads and writes through the XML layer. Its parser needs neither
   // pegkit nor locale tables, so those remain forbidden in this subpath.
   "./omml": [...forbidOtherFormats("omml"), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
+  "./mathml/leptris": [optionalReaderOutside("mathml")],
+  "./omml/leptris": [optionalReaderOutside("omml")],
   // UnicodeMath parses as well as renders, so pegkit is expected here on the
   // same grounds as `/latex`; `xml` still is not, because its output is text.
   "./unicodemath": [...forbidOtherFormats("unicodemath"), /xml\//, LOCALE_GROUPS],
@@ -240,6 +248,8 @@ const FORBIDDEN = {
 
 /** Sources a subpath's artifact must contain — the positive control for `FORBIDDEN`'s locale rows. */
 const REQUIRED = {
+  "./mathml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/mathml\/translator\.ts$/],
+  "./omml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/omml\/translator\.ts$/],
   "./asciimath": [LOCALE_DECIMALS],
   "./html": [LOCALE_DECIMALS],
   "./latex": [LOCALE_DECIMALS],
@@ -382,6 +392,16 @@ for (const [subpath, conditions] of subpaths) {
       // that was tree-shaken out leaves no sourcemap entry, and one that
       // survived does.
       const inputs = result.metafile.inputs;
+      if (subpath.endsWith("/leptris")) {
+        const external = Object.values(result.metafile.outputs)
+          .flatMap((output) => output.imports)
+          .filter((entry) => entry.external);
+        if (external.length > 0) {
+          fail(
+            `${subpath} ${moduleSystem} imports external runtime modules: ${external.map((entry) => entry.path).join(", ")}`,
+          );
+        }
+      }
       const chunks = Object.keys(inputs).filter((input) => input.endsWith(extension));
       const analysed = new Set(chunks);
       const sources = new Set();
@@ -419,9 +439,7 @@ for (const [subpath, conditions] of subpaths) {
       }
       for (const pattern of REQUIRED[subpath] ?? []) {
         if (![...sources].some((source) => pattern.test(source))) {
-          fail(
-            `${subpath} ${moduleSystem} no longer contains ${pattern}; the locale rows would be vacuous`,
-          );
+          fail(`${subpath} ${moduleSystem} no longer contains required source ${pattern}`);
         }
       }
       if (failures.length === failuresBeforeGraph) {

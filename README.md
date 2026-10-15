@@ -110,6 +110,34 @@ Converting the other way, `parseLatex("\\frac{1}{2}")` rendered with
 does not pull in the other formats' renderers (`pnpm gate:package` inspects the
 built artifacts for this); only the root entry is batteries-included.
 
+### Optional Leptris XML input
+
+`./mathml/leptris` and `./omml/leptris` expose parser factories for an
+already initialized Leptris binding. The regular package and format entries
+use the native reader and do not require a Leptris installation. The optional
+entries also leave loading and initialization of WASM to your application:
+
+```js
+import * as leptris from "/path/to/built/leptris/index.js";
+import { createMathmlParser } from "@plurimath/plurimath-ts/mathml/leptris";
+import { createOmmlParser } from "@plurimath/plurimath-ts/omml/leptris";
+import { toMathml } from "@plurimath/plurimath-ts/mathml";
+
+await leptris.init();
+const parseMathml = createMathmlParser(leptris);
+const parseOmml = createOmmlParser(leptris);
+const formula = parseMathml("<math><mfrac><mi>x</mi><mn>2</mn></mfrac></math>");
+console.log(toMathml(formula));
+```
+
+Both factories return synchronous parsers with the usual `FormulaNode` result
+and `ParseError` failures. Creating a parser does not initialize the binding
+or load XML. Each parse closes its document after copying the tree, including
+when snapshot retrieval fails. There is no native-reader fallback. Plurimath
+keeps its named-entity compatibility in the adapter; other XML semantics come
+from Leptris. See [the integration notes](docs/leptris-experiment.md) for the
+binding contract and real-WASM verification command.
+
 ### The compat class
 
 The root entry also default-exports `Plurimath`, shaped after the

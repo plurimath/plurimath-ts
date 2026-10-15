@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { ParseError } from "../../src/core/index";
-import {
-  createLeptrisParsers,
-  createLeptrisXmlReader,
-  type LeptrisElement,
-} from "../../src/experimental/leptris";
 import { parseMathml, toMathml } from "../../src/formats/mathml/index";
+import { createMathmlParser } from "../../src/formats/mathml/leptris";
+import { parseOmml } from "../../src/formats/omml/index";
+import { createOmmlParser } from "../../src/formats/omml/leptris";
+import type { LeptrisNode } from "../../src/xml/leptris";
+import { createLeptrisXmlReader, type LeptrisElement } from "../../src/xml/leptris";
 
 const namespace = "http://www.w3.org/1998/Math/MathML";
 const snapshot: LeptrisElement = {
@@ -41,7 +41,66 @@ function binding() {
   };
 }
 
-describe("experimental Leptris consumer adapter", () => {
+describe("optional Leptris consumer adapter", () => {
+  it("uses the public OMML factory with the existing translator", () => {
+    const ommlNamespace = "http://schemas.openxmlformats.org/officeDocument/2006/math";
+    const element = (name: string, children: readonly LeptrisNode[]): LeptrisElement => ({
+      kind: "element",
+      name: `m:${name}`,
+      localName: name,
+      prefix: "m",
+      // biome-ignore lint/style/useNamingConvention: Leptris's public snapshot field.
+      namespaceURI: ommlNamespace,
+      attributes: [["xmlns:m", ommlNamespace]],
+      children,
+    });
+    const upstream = binding();
+    upstream.treeSync.mockReturnValue(
+      element("oMath", [element("r", [element("t", [{ kind: "text", text: "x" }])])]),
+    );
+    const input = `<m:oMath xmlns:m="${ommlNamespace}"><m:r><m:t>x</m:t></m:r></m:oMath>`;
+    expect(toMathml(createOmmlParser(upstream)(input))).toBe(toMathml(parseOmml(input)));
+    expect(upstream.closeSync).toHaveBeenCalledExactlyOnceWith(42);
+  });
+
+  it("preserves the shared ParseError contract and original input on binding failure", () => {
+    for (const [format, factory] of [
+      ["mathml", createMathmlParser],
+      ["omml", createOmmlParser],
+    ] as const) {
+      const upstream = binding();
+      upstream.loadSync.mockImplementation(() => {
+        throw new Error("binding failure");
+      });
+      const input = "<math><mi>&alpha;</mi></math>";
+      expect(() => factory(upstream)(input)).toThrowError(
+        expect.objectContaining({
+          code: "PARSE_ERROR",
+          message: "binding failure",
+          input,
+          format,
+          index: 0,
+        }),
+      );
+      expect(upstream.closeSync).not.toHaveBeenCalled();
+    }
+  });
+
+  it("does not initialize or load a binding when creating either public parser", () => {
+    const upstream = { ...binding(), init: vi.fn() };
+    const mathml = createMathmlParser(upstream);
+    const omml = createOmmlParser(upstream);
+    expect(typeof mathml).toBe("function");
+    expect(typeof omml).toBe("function");
+    expect(upstream.init).not.toHaveBeenCalled();
+    expect(upstream.loadSync).not.toHaveBeenCalled();
+    expect(upstream.treeSync).not.toHaveBeenCalled();
+    expect(upstream.closeSync).not.toHaveBeenCalled();
+    parseMathml("<math><mi>x</mi></math>");
+    expect(upstream.init).not.toHaveBeenCalled();
+    expect(upstream.loadSync).not.toHaveBeenCalled();
+  });
+
   it("keeps Moxml entity compatibility in the consumer, restoring only text and attributes", () => {
     const upstream = binding();
     const marker = "\uFFFC\uFEFFalpha;";
@@ -111,7 +170,10 @@ describe("experimental Leptris consumer adapter", () => {
 
   it("runs the actual MathML translator and renderer while preserving native parsing", () => {
     const upstream = binding();
-    const parsers = createLeptrisParsers(upstream);
+    const parsers = {
+      parseMathml: createMathmlParser(upstream),
+      parseOmml: createOmmlParser(upstream),
+    };
     expect(toMathml(parsers.parseMathml("input sent to binding"))).toBe(
       toMathml(parseMathml("<math><mi>x</mi></math>")),
     );

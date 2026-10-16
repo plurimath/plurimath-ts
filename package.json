@@ -110,7 +110,27 @@
         "default": "./dist/unicodemath.cjs"
       }
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./mathml/leptris": {
+      "import": {
+        "types": "./dist/mathml-leptris.d.ts",
+        "default": "./dist/mathml-leptris.js"
+      },
+      "require": {
+        "types": "./dist/mathml-leptris.d.cts",
+        "default": "./dist/mathml-leptris.cjs"
+      }
+    },
+    "./omml/leptris": {
+      "import": {
+        "types": "./dist/omml-leptris.d.ts",
+        "default": "./dist/omml-leptris.js"
+      },
+      "require": {
+        "types": "./dist/omml-leptris.d.cts",
+        "default": "./dist/omml-leptris.cjs"
+      }
+    }
   },
   "files": [
     "dist"

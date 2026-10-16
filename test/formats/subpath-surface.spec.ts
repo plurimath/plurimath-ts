@@ -30,7 +30,9 @@ import * as asciimath from "../../src/formats/asciimath/index";
 import * as html from "../../src/formats/html/index";
 import * as latex from "../../src/formats/latex/index";
 import * as mathml from "../../src/formats/mathml/index";
+import * as mathmlLeptris from "../../src/formats/mathml/leptris";
 import * as omml from "../../src/formats/omml/index";
+import * as ommlLeptris from "../../src/formats/omml/leptris";
 import * as unicodemath from "../../src/formats/unicodemath/index";
 
 /** Runtime exports only — types erase, so they cannot be asserted here. */
@@ -40,6 +42,8 @@ const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly
   ["./latex", latex, ["parseLatex", "toLatex"]],
   ["./mathml", mathml, ["parseMathml", "toMathml"]],
   ["./omml", omml, ["parseOmml", "toOmml"]],
+  ["./mathml/leptris", mathmlLeptris, ["createMathmlParser"]],
+  ["./omml/leptris", ommlLeptris, ["createOmmlParser"]],
   ["./unicodemath", unicodemath, ["parseUnicodemath", "toUnicodemath"]],
 ];
 

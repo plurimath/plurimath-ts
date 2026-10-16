@@ -36,9 +36,10 @@ The current source and package entries provide:
   the root `parse` function and compat constructor.
 - Renderers exist for all six output formats: AsciiMath, LaTeX, MathML, HTML,
   UnicodeMath and OMML.
-- Seven package subpaths are built: `./core`, `./asciimath`, `./latex`,
-  `./mathml`, `./html`, `./omml` and `./unicodemath`, plus the root entry and a
-  `plurimath` executable.
+- Nine package subpaths are built: `./core`, `./asciimath`, `./latex`,
+  `./mathml`, `./html`, `./omml`, `./unicodemath`, `./mathml/leptris` and
+  `./omml/leptris`, plus the root entry and a `plurimath` executable. The two
+  Leptris entries require a caller-initialized binding, as described below.
 - The HTML parity fixture covers 664 gem-renderable cases written in
   AsciiMath, LaTeX, UnicodeMath, MathML or OMML. The port renders 658 of them;
   six MathML text cases remain explicit refusals (see
@@ -109,6 +110,40 @@ Converting the other way, `parseLatex("\\frac{1}{2}")` rendered with
 `toAsciimath` gives `frac(1)(2)`. Subpaths are built so that importing one
 does not pull in the other formats' renderers (`pnpm gate:package` inspects the
 built artifacts for this); only the root entry is batteries-included.
+
+### Optional Leptris XML input
+
+`./mathml/leptris` and `./omml/leptris` expose parser factories for an
+already initialized Leptris binding. The regular package and format entries
+use the native reader and do not require a Leptris installation. The optional
+entries also leave loading and initialization of WASM to your application.
+
+This requires the structured-tree binding API proposed in
+[leptris-ts#9](https://github.com/leptris/leptris-ts/pull/9), backed by an
+engine containing [leptris#1742](https://github.com/leptris/leptris/pull/1742).
+Those upstream changes are pending; the existing published binding is insufficient.
+With a compatible binding:
+
+```js
+import * as leptris from "leptris";
+import { createMathmlParser } from "@plurimath/plurimath-ts/mathml/leptris";
+import { createOmmlParser } from "@plurimath/plurimath-ts/omml/leptris";
+import { toMathml } from "@plurimath/plurimath-ts/mathml";
+
+await leptris.init();
+const parseMathml = createMathmlParser(leptris);
+const parseOmml = createOmmlParser(leptris);
+const formula = parseMathml("<math><mfrac><mi>x</mi><mn>2</mn></mfrac></math>");
+console.log(toMathml(formula));
+```
+
+Both factories return synchronous parsers with the usual `FormulaNode` result
+and `ParseError` failures. Creating a parser does not initialize the binding
+or load XML. Each parse closes its document after copying the tree, including
+when snapshot retrieval fails. There is no native-reader fallback. Plurimath
+keeps its named-entity compatibility in the adapter; other XML semantics come
+from Leptris. See [the integration notes](docs/leptris-experiment.md) for the
+binding contract and real-WASM verification command.
 
 ### The compat class
 

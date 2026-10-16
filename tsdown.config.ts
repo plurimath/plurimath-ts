@@ -18,6 +18,8 @@ export default defineConfig([
       latex: "src/formats/latex/index.ts",
       mathml: "src/formats/mathml/index.ts",
       omml: "src/formats/omml/index.ts",
+      "mathml-leptris": "src/formats/mathml/leptris.ts",
+      "omml-leptris": "src/formats/omml/leptris.ts",
       unicodemath: "src/formats/unicodemath/index.ts",
     },
     format: ["esm", "cjs"],

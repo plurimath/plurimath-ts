@@ -74,3 +74,18 @@ tables, core and XML modules; opposite formats, PEG parsers, locale data,
 renderers, external runtime imports and bundled dependencies are forbidden.
 The required-source policies ensure the reader and actual format translator
 survive in each artifact.
+
+## Before merging
+
+After the upstream changes are available, use the official binding built with
+an engine containing the namespace-cache fix. Record the binding and engine
+versions or commits with the verification results; an earlier fork artifact
+is not evidence for the final upstream build. If the accepted binding API
+changes, update the adapter and its tests before proceeding.
+
+After #199 is merged, retarget the Plurimath PR to `main` and test the resulting
+combined source. Run the normal CI gates and runtime suites on the supported
+Node versions, then run all three real-binding probe commands above against
+the official artifact. Require every command to exit successfully, no excluded
+corpus cases and equal loaded/closed handle counts. The unit tests with injected
+snapshots do not replace those real-binding probes.

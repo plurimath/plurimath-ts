@@ -36,9 +36,10 @@ The current source and package entries provide:
   the root `parse` function and compat constructor.
 - Renderers exist for all six output formats: AsciiMath, LaTeX, MathML, HTML,
   UnicodeMath and OMML.
-- Seven package subpaths are built: `./core`, `./asciimath`, `./latex`,
-  `./mathml`, `./html`, `./omml` and `./unicodemath`, plus the root entry and a
-  `plurimath` executable.
+- Nine package subpaths are built: `./core`, `./asciimath`, `./latex`,
+  `./mathml`, `./html`, `./omml`, `./unicodemath`, `./mathml/leptris` and
+  `./omml/leptris`, plus the root entry and a `plurimath` executable. The two
+  Leptris entries require a caller-initialized binding, as described below.
 - The HTML parity fixture covers 664 gem-renderable cases written in
   AsciiMath, LaTeX, UnicodeMath, MathML or OMML. The port renders 658 of them;
   six MathML text cases remain explicit refusals (see

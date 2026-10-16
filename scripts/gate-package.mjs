@@ -239,8 +239,8 @@ const FORBIDDEN = {
   // OMML reads and writes through the XML layer. Its parser needs neither
   // pegkit nor locale tables, so those remain forbidden in this subpath.
   "./omml": [...forbidOtherFormats("omml"), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
-  "./mathml/leptris": [optionalReaderOutside("mathml")],
-  "./omml/leptris": [optionalReaderOutside("omml")],
+  "./mathml/leptris": [optionalReaderOutside("mathml"), /(?:^|\/)render(?:er|-shared)?\.ts$/],
+  "./omml/leptris": [optionalReaderOutside("omml"), /(?:^|\/)render(?:er|-shared)?\.ts$/],
   // UnicodeMath parses as well as renders, so pegkit is expected here on the
   // same grounds as `/latex`; `xml` still is not, because its output is text.
   "./unicodemath": [...forbidOtherFormats("unicodemath"), /xml\//, LOCALE_GROUPS],

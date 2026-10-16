@@ -22,6 +22,7 @@ export interface LeptrisElement {
   readonly prefix: string | null;
   // biome-ignore lint/style/useNamingConvention: Leptris's public snapshot field.
   readonly namespaceURI: string | null;
+  /** Ordinary values are engine-decoded; xmlns values retain lexical spelling. */
   readonly attributes: readonly (readonly [name: string, value: string])[];
   readonly children: readonly LeptrisNode[];
 }

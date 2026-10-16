@@ -162,7 +162,7 @@ const ENTITY_NAME = "[a-zA-Z_][\\w.:-]*";
 const STANDARD_ENTITIES = new Set(["amp", "lt", "gt", "quot", "apos"]);
 const ENTITY_MARKER = "￼﻿";
 
-/** Internal compatibility transform shared with the experimental XML adapter. */
+/** Internal compatibility transform shared with the optional XML adapter. */
 export function markEntities(input: string): string {
   if (!input.includes("&")) return input;
   return input.replace(new RegExp(`&(${ENTITY_NAME});`, "g"), (match, name: string) =>

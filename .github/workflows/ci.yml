@@ -6,26 +6,6 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      leptris_probe:
-        description: Build a candidate Leptris binding and run the opt-in XML consumer gate
-        type: boolean
-        default: false
-      leptris_repository:
-        description: Candidate binding repository
-        type: string
-        default: leptris/leptris-ts
-      engine_repository:
-        description: Candidate XML engine repository
-        type: string
-        default: leptris/leptris
-      engine_ref:
-        description: Candidate XML engine commit or ref
-        type: string
-        default: v1.9.356
-      leptris_ref:
-        description: Candidate binding commit or ref
-        type: string
-        default: main
       unicode_probe_only:
         description: Skip UnitsML measurements when running the Unicode reference probe
         type: boolean
@@ -53,14 +33,14 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.leptris_probe && 'leptris-probe' || inputs.native_completion_test && 'native-completion-test' || inputs.native_completion_probe && 'native-completion' || inputs.oracle_artifacts && 'oracle-artifacts' || 'checks' }}
-  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.leptris_probe || inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.native_completion_test && 'native-completion-test' || inputs.native_completion_probe && 'native-completion' || inputs.oracle_artifacts && 'oracle-artifacts' || 'checks' }}
+  cancel-in-progress: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
 
 jobs:
   # Every class-A gate active at the repository's current milestone
   # (gates.json). No Ruby is needed: generated payloads are committed.
   gates:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.leptris_probe || inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     # A whole run takes about two minutes, so this is roughly seven times the
     # observed cost -- generous for a slow runner, and still a bound. It is
@@ -94,7 +74,7 @@ jobs:
   # class-A suite and run with an explicit interpreter rather than relying on
   # whatever happens to be installed on the runner image.
   oracle-runner-unit-tests:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.leptris_probe || inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -117,7 +97,7 @@ jobs:
 
   # Guards the runtime support claim in package.json#engines.
   runtime-matrix:
-    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.leptris_probe || inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: gates
@@ -397,233 +377,3 @@ jobs:
           path: ${{ runner.temp }}/native-completion-test
           if-no-files-found: error
           retention-days: 7
-
-  leptris-consumer:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.leptris_probe }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          submodules: true
-      - uses: actions/checkout@v5
-        with:
-          repository: ${{ inputs.leptris_repository }}
-          ref: ${{ inputs.leptris_ref }}
-          path: .leptris-binding
-      - uses: actions/checkout@v5
-        with:
-          repository: ${{ inputs.engine_repository }}
-          ref: ${{ inputs.engine_ref }}
-          path: .leptris-engine
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-      - uses: mymindstorm/setup-emsdk@v14
-        with:
-          version: 3.1.74
-      - name: Candidate provenance
-        run: |
-          git -C .leptris-binding rev-parse HEAD
-          git -C .leptris-engine rev-parse HEAD
-      - name: Build candidate WASM
-        working-directory: .leptris-binding
-        run: ENGINESRC="$GITHUB_WORKSPACE/.leptris-engine/src" ./build.sh
-      - name: Binding regressions
-        working-directory: .leptris-binding
-        run: npm test
-      - run: pnpm install --frozen-lockfile
-      - name: Build optional consumer package entries
-        run: pnpm build
-      - name: Real MathML and OMML consumer gate
-        run: |
-          node scripts/probe-leptris.mjs .leptris-binding/src/index.js
-          node scripts/probe-leptris.mjs .leptris-binding/src/index.js --built
-          node scripts/probe-leptris.mjs .leptris-binding/src/index.js --built-cjs
-      # Separate native evidence: the Ruby FFI surface and actual Moxml
-      # Leptris adapter. Other Ruby suites select different adapters.
-      - uses: actions/checkout@v5
-        with:
-          repository: suleman-uzair/leptris-ruby
-          ref: 7743d896d0bdc2d586080911db3e335cdf549057
-          path: .leptris-ruby
-          persist-credentials: false
-      - uses: actions/checkout@v5
-        with:
-          repository: lutaml/moxml
-          ref: 97e0572a5b8a7a3936304a3eebd3919271510759
-          path: .moxml
-          persist-credentials: false
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3"
-      - name: Build the same candidate as a native shared library
-        run: |
-          mkdir -p "$RUNNER_TEMP/leptris-ruby-evidence"
-          git -C .leptris-engine rev-parse HEAD
-          git -C .leptris-ruby rev-parse HEAD
-          git -C .moxml rev-parse HEAD
-          cmake -S .leptris-engine -B "$RUNNER_TEMP/leptris-native" \
-            -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF \
-            -DBUILD_SHARED_LIBS=ON -DLEPTRIS_BUILD_SHARED=ON \
-            -DLEPTRIS_BUILD_STATIC=OFF -DLEPTRIS_BUILD_CLI=OFF \
-            -DLEPTRIS_ENABLE_UTF8PROC=OFF -DLEPTRIS_ENABLE_ICONV=OFF
-          cmake --build "$RUNNER_TEMP/leptris-native" --parallel 2
-          test -f "$RUNNER_TEMP/leptris-native/src/libleptris.so"
-          sha256sum "$RUNNER_TEMP/leptris-native/src/libleptris.so"
-      - name: Install isolated Ruby verification dependencies
-        env:
-          GEM_HOME: ${{ runner.temp }}/leptris-ruby-gems
-          GEM_PATH: ${{ runner.temp }}/leptris-ruby-gems
-          GEM_SPEC_CACHE: ${{ runner.temp }}/leptris-ruby-gem-cache
-          BUNDLE_USER_HOME: ${{ runner.temp }}/leptris-ruby-bundle
-          BUNDLE_PATH: ${{ runner.temp }}/leptris-ruby-gems
-          BUNDLE_APP_CONFIG: ${{ runner.temp }}/leptris-ruby-bundle/config
-          BUNDLE_GEMFILE: ${{ runner.temp }}/leptris-ruby-Gemfile
-        run: |
-          cat > "$BUNDLE_GEMFILE" <<RUBY
-          source "https://rubygems.org"
-          gem "leptris", "1.9.365.0", path: "$GITHUB_WORKSPACE/.leptris-ruby"
-          gem "moxml", path: "$GITHUB_WORKSPACE/.moxml"
-          gem "rspec", "~> 3.13"
-          gem "nokogiri", "~> 1.18"
-          gem "benchmark"
-          gem "benchmark-ips"
-          gem "get_process_mem"
-          gem "tempfile"
-          gem "rexml"
-          RUBY
-          bundle install --jobs 2
-      - name: Build the Ruby native extension against the existing engine
-        run: |
-          ln -s "$RUNNER_TEMP/leptris-native/src/libleptris.so" .leptris-ruby/lib/libleptris.so
-          cd .leptris-ruby/ext/leptris/native
-          ruby extconf.rb
-          make native.o
-          cc -shared -fPIC -o native.so native.o
-          readelf -d native.so > "$RUNNER_TEMP/leptris-ruby-evidence/native-linkage.txt"
-          if grep -q libruby "$RUNNER_TEMP/leptris-ruby-evidence/native-linkage.txt"; then
-            echo "native extension unexpectedly links libruby"
-            exit 1
-          fi
-          cp native.so "$GITHUB_WORKSPACE/.leptris-ruby/lib/leptris/xml/native_3_3.so"
-      - name: Focused Ruby and complete Moxml adapter regressions in both modes
-        env:
-          GEM_HOME: ${{ runner.temp }}/leptris-ruby-gems
-          GEM_PATH: ${{ runner.temp }}/leptris-ruby-gems
-          GEM_SPEC_CACHE: ${{ runner.temp }}/leptris-ruby-gem-cache
-          BUNDLE_USER_HOME: ${{ runner.temp }}/leptris-ruby-bundle
-          BUNDLE_PATH: ${{ runner.temp }}/leptris-ruby-gems
-          BUNDLE_APP_CONFIG: ${{ runner.temp }}/leptris-ruby-bundle/config
-          BUNDLE_GEMFILE: ${{ runner.temp }}/leptris-ruby-Gemfile
-          LEPTRIS_LIB_PATH: ${{ runner.temp }}/leptris-native/src/libleptris.so
-          LEPTRIS_RUBY_SOURCE: ${{ github.workspace }}/.leptris-ruby
-          MOXML_SOURCE: ${{ github.workspace }}/.moxml
-        run: |
-          set -o pipefail
-          failed=0
-          native_bundle="$GITHUB_WORKSPACE/.leptris-ruby/lib/leptris/xml/native_3_3.so"
-          ffi_bundle="$RUNNER_TEMP/leptris-ruby-native_3_3.so"
-          for mode in native ffi; do
-            no_native=0
-            if [ "$mode" = ffi ]; then
-              no_native=1
-              # Moxml explicitly requires the optional native layer. Model an
-              # FFI-only install by withholding the bundle this job just built.
-              mv "$native_bundle" "$ffi_bundle"
-            fi
-            for suite in ruby moxml; do
-              evidence="$RUNNER_TEMP/leptris-ruby-evidence/$suite-$mode"
-              mkdir -p "$evidence"
-              args=()
-              if [ "$suite" = ruby ]; then args+=(--ruby-specs); fi
-              set +e
-              LEPTRIS_EXPECT_NATIVE="$mode" LEPTRIS_NO_NATIVE="$no_native" LEPTRIS_RUBY_EVIDENCE="$evidence" \
-                bundle exec ruby scripts/probe-leptris-ruby.rb "${args[@]}" 2>&1 | tee "$evidence/run.log"
-              result=$?
-              set -e
-              printf '{"suite":"%s","mode":"%s","exit":%s}\n' "$suite" "$mode" "$result" >> "$RUNNER_TEMP/leptris-ruby-evidence/exits.jsonl"
-              if [ "$result" -ne 0 ]; then failed=1; fi
-            done
-          done
-          if [ -f "$ffi_bundle" ]; then mv "$ffi_bundle" "$native_bundle"; fi
-          exit "$failed"
-      - uses: actions/checkout@v5
-        if: ${{ always() }}
-        with:
-          repository: leptris/leptris-ruby
-          ref: c19b88b779dceb9d3edf7812cbd44b20775a2dd0
-          path: .leptris-ruby-baseline
-          persist-credentials: false
-      - name: Prove the new HTML serialization assertions fail on unchanged Ruby source
-        if: ${{ always() }}
-        env:
-          GEM_HOME: ${{ runner.temp }}/leptris-ruby-gems
-          GEM_PATH: ${{ runner.temp }}/leptris-ruby-gems
-          GEM_SPEC_CACHE: ${{ runner.temp }}/leptris-ruby-gem-cache
-          BUNDLE_USER_HOME: ${{ runner.temp }}/leptris-ruby-bundle
-          BUNDLE_PATH: ${{ runner.temp }}/leptris-ruby-gems
-          BUNDLE_APP_CONFIG: ${{ runner.temp }}/leptris-ruby-bundle/config
-          BUNDLE_GEMFILE: ${{ runner.temp }}/leptris-ruby-Gemfile
-          LEPTRIS_LIB_PATH: ${{ runner.temp }}/leptris-native/src/libleptris.so
-          LEPTRIS_RUBY_SOURCE: ${{ github.workspace }}/.leptris-ruby
-          MOXML_SOURCE: ${{ github.workspace }}/.moxml
-          LEPTRIS_EXPECT_NATIVE: ffi
-          LEPTRIS_NO_NATIVE: "1"
-          LEPTRIS_RUBY_EVIDENCE: ${{ runner.temp }}/leptris-ruby-evidence/html-baseline
-        run: |
-          set -o pipefail
-          mkdir -p "$LEPTRIS_RUBY_EVIDENCE"
-          git -C .leptris-ruby-baseline rev-parse HEAD
-          bundle exec ruby scripts/probe-leptris-ruby.rb --html-baseline "$GITHUB_WORKSPACE/.leptris-ruby-baseline" 2>&1 | tee "$LEPTRIS_RUBY_EVIDENCE/run.log"
-      - name: Retain native Ruby evidence including pending examples
-        if: ${{ always() }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: leptris-native-ruby-${{ github.sha }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/leptris-ruby-evidence
-          if-no-files-found: warn
-          retention-days: 7
-
-  leptris-ruby-suite:
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.leptris_probe }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      BUNDLE_WITHOUT: benchmark
-      LEPTRIS_PGO: "0"
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          repository: suleman-uzair/leptris-ruby
-          ref: 7743d896d0bdc2d586080911db3e335cdf549057
-          persist-credentials: false
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.3"
-      - name: Configure isolated Ruby dependency paths
-        run: |
-          printf '%s\n' "BUNDLE_PATH=$RUNNER_TEMP/ruby-suite-gems" \
-            "BUNDLE_APP_CONFIG=$RUNNER_TEMP/ruby-suite-config" \
-            "BUNDLE_USER_HOME=$RUNNER_TEMP/ruby-suite-bundle" \
-            "GEM_SPEC_CACHE=$RUNNER_TEMP/ruby-suite-gem-cache" >> "$GITHUB_ENV"
-      - name: Install the Ruby repository's own test dependencies
-        run: bundle install --jobs 2
-      - name: Compile and audit using the Ruby repository's canonical engine pin
-        run: |
-          git rev-parse HEAD
-          bundle exec rake compile audit:symbols
-      - name: Verify native mode and run the complete Ruby suite
-        run: |
-          bundle exec ruby -rleptris -rjson -rdigest -e '
-            abort "native layer unavailable" unless defined?(Leptris::XML::NATIVE_FAST) && Leptris::XML::NATIVE_FAST
-            expected = File.realpath("lib/libleptris.so")
-            libraries = Leptris::XML::FFI.ffi_libraries.map(&:name)
-            abort "wrong engine loaded" unless libraries.any? { |name| File.file?(name) && File.realpath(name) == expected }
-            Leptris::XML::NativeNode.resolve!(expected)
-            puts JSON.generate(binding: Leptris::VERSION, engine: Leptris::XML::FFI.leptris_version,
-                               library: expected, sha256: Digest::SHA256.file(expected).hexdigest)
-          '
-          bundle exec rspec

@@ -5,8 +5,14 @@ initialized Leptris binding to the existing element layers, translators and
 formula trees. Regular format and root parsers keep the native reader. The
 optional entries do not import a Leptris runtime or add a WASM dependency.
 
+The required binding API is proposed in
+[leptris-ts#9](https://github.com/leptris/leptris-ts/pull/9), and the engine
+must include [leptris#1742](https://github.com/leptris/leptris/pull/1742).
+Both upstream changes are pending. An existing published binding without
+`loadSync`, `treeSync` and `closeSync` cannot be used with these factories.
+
 ```ts
-import * as leptris from "/path/to/built/leptris/index.js";
+import * as leptris from "leptris";
 import { createMathmlParser } from "@plurimath/plurimath-ts/mathml/leptris";
 import { createOmmlParser } from "@plurimath/plurimath-ts/omml/leptris";
 import { toMathml } from "@plurimath/plurimath-ts/mathml";
@@ -37,10 +43,10 @@ refused; there is no native-reader fallback. Parse failures use `ParseError`.
 After building the actual Leptris WASM and JavaScript binding, run:
 
 ```sh
-node scripts/probe-leptris.mjs /absolute/path/to/leptris/js/index.js
+node scripts/probe-leptris.mjs /absolute/path/to/leptris/src/index.js
 pnpm build
-node scripts/probe-leptris.mjs /absolute/path/to/leptris/js/index.js --built
-node scripts/probe-leptris.mjs /absolute/path/to/leptris/js/index.js --built-cjs
+node scripts/probe-leptris.mjs /absolute/path/to/leptris/src/index.js --built
+node scripts/probe-leptris.mjs /absolute/path/to/leptris/src/index.js --built-cjs
 ```
 
 The probe uses the existing esbuild dev dependency and loads

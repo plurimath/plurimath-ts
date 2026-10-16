@@ -1,6 +1,6 @@
 /**
- * Real-binding downstream gate, intended for GHA after building Leptris WASM.
- * Usage: node scripts/probe-leptris.mjs /absolute/path/to/leptris/js/index.js
+ * Real-binding downstream gate, run after building Leptris WASM.
+ * Usage: node scripts/probe-leptris.mjs /absolute/path/to/leptris/src/index.js
  * Uses the existing esbuild dev dependency; no package or lockfile changes.
  */
 import assert from "node:assert/strict";
@@ -65,7 +65,7 @@ try {
       bundle: true,
       format: "esm",
       platform: "node",
-      target: "node20",
+      target: "node22",
       write: false,
     });
     const entry = join(scratch, "consumer.mjs");

@@ -115,10 +115,16 @@ built artifacts for this); only the root entry is batteries-included.
 `./mathml/leptris` and `./omml/leptris` expose parser factories for an
 already initialized Leptris binding. The regular package and format entries
 use the native reader and do not require a Leptris installation. The optional
-entries also leave loading and initialization of WASM to your application:
+entries also leave loading and initialization of WASM to your application.
+
+This requires the structured-tree binding API proposed in
+[leptris-ts#9](https://github.com/leptris/leptris-ts/pull/9), backed by an
+engine containing [leptris#1742](https://github.com/leptris/leptris/pull/1742).
+Those upstream changes are pending; the existing published binding is insufficient.
+With a compatible binding:
 
 ```js
-import * as leptris from "/path/to/built/leptris/index.js";
+import * as leptris from "leptris";
 import { createMathmlParser } from "@plurimath/plurimath-ts/mathml/leptris";
 import { createOmmlParser } from "@plurimath/plurimath-ts/omml/leptris";
 import { toMathml } from "@plurimath/plurimath-ts/mathml";

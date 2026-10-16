@@ -4,20 +4,21 @@
  *
  * ## Which reader this is
  *
- * Measured, not read off the Gemfile: under the pinned oracle's lockfile,
- * `Plurimath::Math.parse(text, :mathml)` and `(text, :omml)` both call
- * `Moxml::Adapter::Ox.parse` and then `Ox.parse` once, and nothing else
- * (a TracePoint over Ox, Nokogiri, REXML and Oga load/parse calls), with
- * `Lutaml::Model::Config.xml_adapter` = `Lutaml::Xml::Adapter::OxAdapter`.
- * So the stack is Ox 2.14.28 under moxml 0.5.56 and lutaml-model 0.8.30, and
- * what the models walk is Lutaml's wrapper of Moxml's view of Ox's tree. This
- * module reproduces all four layers, in order:
+ * The original TracePoint measurement with moxml 0.1.26 and lutaml-model
+ * 0.8.19 reached `Moxml::Adapter::Ox.parse` and then `Ox.parse` for both
+ * MathML and OMML, using `Lutaml::Xml::Adapter::OxAdapter`.
+ * The current frozen stack uses Ox 2.14.28, moxml 0.5.56 and lutaml-model
+ * 0.8.30. In that Moxml version, `Adapter::Ox.parse` calls `Ox.load` with
+ * configured whitespace and mode options. The regenerated reader fixtures
+ * measure the resulting wrapped trees; the earlier trace is historical.
+ * What the models walk is Lutaml's wrapper of Moxml's view of Ox's tree.
+ * This module reproduces all four layers, in order:
  *
  * 1. **Moxml's entity marking.** Before Ox sees the string, every
  *    `&name;` whose name matches `[a-zA-Z_][\w.:-]*` and is not one of `amp
  *    lt gt quot apos` becomes `U+FFFC U+FEFF name;` — everywhere in the
  *    document, comments and CDATA included.
- * 2. **Ox's parse** (`Ox.parse`, generic mode, the options plurimath sets),
+ * 2. **Ox's parse** (`Ox.load`, generic mode, the options plurimath sets),
  *    ported step for step over UTF-8 bytes, because its quirks are
  *    byte-level: numeric references write raw bytes and a `&#0;` truncates
  *    the string at that point; an unterminated `&` looks ahead exactly 31

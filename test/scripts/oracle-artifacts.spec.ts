@@ -33,6 +33,11 @@ describe("oracle artifact second-generation ownership", () => {
       "test/formats/asciimath/render-options-fixtures.json",
       "test/formats/binary-function/render-kinds-fixtures.manifest.yaml",
       "test/xml/ox-contract.expected.json",
+      "src/formats/html/generated-text/symbols.ts",
+      "src/formats/html/generated-text/provenance.json",
+      "src/formats/mathml/generated-recognition/elements.ts",
+      "src/formats/mathml/generated-recognition/context-probes.json",
+      "src/formats/mathml/generated-recognition/provenance.json",
     ];
     const covered = [
       "test/formats/unitsml/probe-fixtures.json",
@@ -41,5 +46,41 @@ describe("oracle artifact second-generation ownership", () => {
       "test/xml/reader-fixtures.json",
     ];
     expect(classify([...omitted, ...covered])).toEqual(omitted);
+  });
+});
+
+describe("format lookup artifact replay", () => {
+  it("includes the new generated lookups in both export and verification", () => {
+    const result = runRuby(`
+      require_relative "scripts/ci/oracle-artifacts"
+      runner = OracleArtifacts::Runner.allocate
+      runner.instance_variable_set(:@oracle, "/oracle")
+      jobs = runner.inventory("/output").select { |name, _, _| %w[html-text-data mathml-recognition-data].include?(name) }
+      puts JSON.generate({ jobs: jobs, roots: OracleArtifacts::ROOTS })
+    `);
+    expect(result.status).toBe(0);
+    const recorded = JSON.parse(result.stdout.trim()) as {
+      jobs: readonly [string, string, readonly string[]][];
+      roots: readonly string[];
+    };
+    expect(recorded.jobs).toEqual([
+      [
+        "html-text-data",
+        "generate-html-text-data.rb",
+        ["--source-checkout", "/oracle", "--out", "/output/src/formats/html/generated-text"],
+      ],
+      [
+        "mathml-recognition-data",
+        "generate-mathml-recognition-data.rb",
+        [
+          "--source-checkout",
+          "/oracle",
+          "--out",
+          "/output/src/formats/mathml/generated-recognition",
+        ],
+      ],
+    ]);
+    expect(recorded.roots).toContain("src/formats/html/generated-text");
+    expect(recorded.roots).toContain("src/formats/mathml/generated-recognition");
   });
 });

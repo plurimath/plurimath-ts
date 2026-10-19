@@ -756,17 +756,16 @@ parsers' verification surface; that follow-up must measure the expanded
 harvest, regenerate its fixtures and address the new parse-parity targets.
 Drop the predicate only as part of that follow-up, and fix what the parsers miss.
 
-### HTML Text: unicode[:name] substitutions
+### HTML Text: unicode[:name] substitutions (resolved)
 
-**Trigger: the generated HTML symbol data (the HTML renderer's phase two).**
-
-`Text#value=` rewrites each `UNICODE_SYMBOLS` code to `unicode[:name]`, and the
-gem's `Text#to_html` turns those back into characters through its symbol
-table. The port's HTML renderer refuses a `Text` holding one
-(`src/render/text/html.ts`) until it has that table generated. Six pinned
-MathML corpus cases reach it (`mathml-text-001`, `-002`, `-003`, `-004`,
-`-006`, `-007`); they are pinned as refusals in `PORT_REFUSES` and as
-`renderGaps` in `test/formats/html/render-parity.spec.ts`.
+**Resolved (2026-10-19).** The HTML renderer substitutes word-shaped
+`unicode[:name]` tokens using its own generated lookup under
+`src/formats/html/generated-text/`. `scripts/generate-html-text-data.rb`
+verifies all 95 reachable names and seven edge probes through the pinned
+Ruby `Text#to_html`, preserving inverse-table precedence and deleting unknown
+names. The HTML runtime imports no MathML module or generated table. The six formerly refused MathML text cases
+now match the gem's exact HTML bytes; all 664 gem-renderable HTML fixture cases
+match, with no `PORT_REFUSES` entries or text `renderGaps` remaining.
 
 ### The corpus YAML reader misreads a block-scalar indentation indicator (resolved)
 

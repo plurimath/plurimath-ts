@@ -45,22 +45,10 @@ export const KNOWN_DIVERGENCES: Readonly<
  * `src/render/{binary,ternary,unary}-function/html.ts`, and each of the
  * seventeen cases produces the gem's exact bytes.
  *
- * The table stays so the next case that refuses has somewhere to be named. A
- * corpus that grows can put entries back; what it must not do is put one back
- * without a reason that is TRUE of the gem. The MathML corpus cases put six
- * back, all one gap.
+ * The table stays so a future refusal must be named. The six MathML Text
+ * cases now match through the HTML format's Ruby-generated token lookup.
  */
-export const PORT_REFUSES: ReadonlySet<string> = new Set([
-  // MathML input: `Text` with a `unicode[:name]` substitution, which the HTML
-  // renderer refuses until it has generated symbol data (TODO.plan/deferred.md,
-  // "HTML Text: unicode[:name] substitutions").
-  "mathml-text-001",
-  "mathml-text-002",
-  "mathml-text-003",
-  "mathml-text-004",
-  "mathml-text-006",
-  "mathml-text-007",
-]);
+export const PORT_REFUSES: ReadonlySet<string> = new Set();
 
 /**
  * How many of the gem-renderable corpus cases the port renders today.
@@ -68,14 +56,11 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set([
  * Derived from `PORT_REFUSES`, and cross-checked against it by the spec: the
  * two disagree only when one was edited without the other.
  *
- * All 228 the gem renders: 89 written in AsciiMath, 119 in LaTeX and 20 in
- * UnicodeMath. The former `text-unitsml-valid` text fallback is now replaced by
- * native UnitsML expansion; no fallback divergence remains permitted. The 139 LaTeX- and UnicodeMath-input
- * cases joined the sweep matching the gem as they stood. MathML input added
- * 268 more the gem renders: 262 match, and six are in `PORT_REFUSES` (490 =
- * 228 + 262). OMML input added 168 byte-identical cases (658 = 490 + 168).
+ * All 664 gem-renderable fixture cases now match, including the six MathML
+ * Text cases formerly pinned in PORT_REFUSES. Native UnitsML expansion also
+ * replaces the former text-unitsml-valid fallback divergence.
  */
-export const RENDERED_BASELINE = 658;
+export const RENDERED_BASELINE = 664;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared

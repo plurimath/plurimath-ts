@@ -303,17 +303,17 @@ describe("the pin as shipped", () => {
   it("loads every payload the provenance records, matched by path", () => {
     // 66 case payloads (18 AsciiMath, 18 LaTeX, 12 MathML, 14 OMML, 4
     // Unicode), 6 rejection payloads (one per input format that carries
-    // rejections: AsciiMath, LaTeX, MathML, OMML, Unicode, HTML), and 7
-    // calls/1 payloads. Counted apart on purpose: a rejection payload carries no
+    // rejections: AsciiMath, LaTeX, MathML, OMML, Unicode, HTML), and 8
+    // calls payloads (seven calls/1 and one calls/2). Counted apart on purpose: a rejection payload carries no
     // rendering and a calls payload carries a render under something other
     // than default options, so folding either into the case count would
     // inflate what "the corpus covers" claims.
     expect(corpus.payloads.length).toBe(66);
     expect(corpus.rejectionPayloads.length).toBe(6);
-    expect(corpus.callsPayloads.length).toBe(7);
+    expect(corpus.callsPayloads.length).toBe(8);
     // No format is pending: every payload is parsed.
     expect(corpus.pendingPayloads).toStrictEqual([]);
-    expect(corpus.provenance.payloads.length).toBe(79);
+    expect(corpus.provenance.payloads.length).toBe(80);
     assertExpectedPayloads(corpus);
   });
 
@@ -322,12 +322,13 @@ describe("the pin as shipped", () => {
     expect(new Set(corpus.cases.map((entry) => entry.id)).size).toBe(714);
   });
 
-  it("carries 66 calls/1 cases, all number_formatter, with distinct ids", () => {
-    expect(corpus.calls.length).toBe(66);
-    expect(new Set(corpus.calls.map((entry) => entry.id)).size).toBe(66);
-    for (const entry of corpus.calls) {
-      expect(entry.call.method).toBe("number_formatter");
-    }
+  it("carries 66 formatter calls and two UnitsML embedding calls, with distinct ids", () => {
+    expect(corpus.calls.length).toBe(68);
+    expect(new Set(corpus.calls.map((entry) => entry.id)).size).toBe(68);
+    expect(corpus.calls.filter((entry) => entry.call.method === "number_formatter")).toHaveLength(
+      66,
+    );
+    expect(corpus.calls.filter((entry) => entry.call.method === "unitsml")).toHaveLength(2);
   });
 
   it("carries all five input formats, and says which cases are which", () => {
@@ -362,7 +363,7 @@ describe("the pin as shipped", () => {
       ["asciimath", 13],
       ["html", 38],
       ["latex", 14],
-      ["mathml", 12],
+      ["mathml", 14],
       ["omml", 9],
       ["unicode", 52],
     ]);
@@ -906,5 +907,66 @@ describe("a pin that quietly loses a group", () => {
     // would show the expectation rejects anything.
     expect(() => assertExpectedPayloads(loadPinnedCorpus())).not.toThrow();
     expect(() => assertExpectedPayloads(shrunk)).toThrow();
+  });
+});
+
+describe("versioned option calls", () => {
+  function callsPin(
+    version: number,
+    method: string,
+    edit = (body: string): string => body,
+  ): string {
+    const root = syntheticPin();
+    const body = edit(
+      TINY_PAYLOAD_2.replace("plurimath-corpus/asciimath/2", `plurimath-corpus/calls/${version}`)
+        .replace("group: tiny", "group: option-call")
+        .replace("targets:\n- asciimath\n- latex", "targets:\n- mathml")
+        .replace(
+          "    asciimath:\n      output: x\n    latex:\n      error:\n        category: parse_error",
+          "    mathml:\n      output: x",
+        )
+        .replace(
+          "  expected:",
+          `  call:\n    method: ${method}\n    args:\n      xml: true\n  expected:`,
+        ),
+    );
+    writeFileSync(join(root, "corpus", "asciimath", "option-call.yaml"), body);
+    editFile(
+      join(root, "corpus", "provenance.yaml"),
+      (text) =>
+        `${text}- path: asciimath/option-call.yaml\n  sha256: ${createHash("sha256").update(body).digest("hex")}\n  bytes: ${Buffer.byteLength(body)}\n`,
+    );
+    return root;
+  }
+
+  it("loads a v2 UnitsML call with its original arguments and outcomes", () => {
+    const corpus = loadPinnedCorpus(callsPin(2, "unitsml"));
+    expect(corpus.calls).toHaveLength(1);
+    expect(corpus.calls[0]?.call).toEqual({ method: "unitsml", args: { xml: true } });
+    expect(corpus.calls[0]?.expected.get("mathml")).toBe("x");
+  });
+
+  it("keeps UnitsML outside the v1 method contract", () => {
+    expect(() => loadPinnedCorpus(callsPin(1, "unitsml"))).toThrow('call.method is "unitsml"');
+  });
+
+  it("rejects unmeasured UnitsML arguments and targets", () => {
+    expect(() =>
+      loadPinnedCorpus(callsPin(2, "unitsml", (body) => body.replace("xml: true", "xml: false"))),
+    ).toThrow("unitsml args must be exactly");
+    expect(() =>
+      loadPinnedCorpus(
+        callsPin(2, "unitsml", (body) =>
+          body.replace("- mathml", "- html").replace("    mathml:", "    html:"),
+        ),
+      ),
+    ).toThrow("unitsml calls must declare only");
+  });
+
+  it("rejects unknown v2 methods and unknown future versions", () => {
+    expect(() => loadPinnedCorpus(callsPin(2, "evaluate"))).toThrow('call.method is "evaluate"');
+    expect(() => loadPinnedCorpus(callsPin(3, "unitsml"))).toThrow(
+      'schema is "plurimath-corpus/calls/3"',
+    );
   });
 });

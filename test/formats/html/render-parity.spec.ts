@@ -291,20 +291,6 @@ describe(`${FORMAT} parity, the cases the gem refuses`, () => {
 
 const RIGHT_REFUSAL = /UnaryFunction alias "Right"/;
 const MSGROUP_REFUSAL = /UnaryFunction alias "Msgroup"/;
-const TEXT_GAP = /unicode\[:name\] substitution needs generated HTML data/;
-/**
- * MathML-input cases whose `Text` holds a `unicode[:name]` substitution, which
- * the HTML renderer refuses until it has the generated symbol data it needs
- * (TODO.plan/deferred.md, "HTML Text: unicode[:name] substitutions").
- */
-const MATHML_TEXT_GAPS = [
-  "mathml-text-001",
-  "mathml-text-002",
-  "mathml-text-003",
-  "mathml-text-004",
-  "mathml-text-006",
-  "mathml-text-007",
-];
 
 describeCorpusTargets({
   format: "html",
@@ -420,6 +406,5 @@ describeCorpusTargets({
     "omml-partial-021",
     "omml-partial-022",
   ],
-  renderGaps: new Map(MATHML_TEXT_GAPS.map((id) => [id, TEXT_GAP] as const)),
   fixtureRows: fixture.cases,
 });

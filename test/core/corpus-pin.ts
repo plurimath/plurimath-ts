@@ -65,16 +65,20 @@ const PROVENANCE_SCHEMA = "plurimath-corpus/provenance/3";
 const MANIFEST_SCHEMA = "plurimath-corpus/manifest/2";
 const REJECTIONS_SCHEMA = "plurimath-corpus/rejections/1";
 const CALLS_SCHEMA = "plurimath-corpus/calls/1";
+const UNITSML_CALLS_SCHEMA = "plurimath-corpus/calls/2";
 
 /**
- * `call.method` values `calls/1` currently declares (`schema/calls.json`).
+ * Per-version methods from `schema/calls.json` and `schema/calls2.json`.
  * Narrow on purpose, exactly as `ERROR_CATEGORIES` is: the schema's own
  * description names five more call kinds a later schema version will add
  * (`intent`, `split_on_linebreak`, `display_style`, `to_display`, `evaluate`),
  * so a method this reader has not been taught stops the load rather than
  * being carried through as though its shape were already agreed.
  */
-const CALL_METHODS: readonly string[] = ["number_formatter"];
+const CALL_METHODS: Readonly<Record<string, readonly string[]>> = {
+  [CALLS_SCHEMA]: ["number_formatter"],
+  [UNITSML_CALLS_SCHEMA]: ["number_formatter", "unitsml"],
+};
 
 /**
  * The input formats a case payload's schema may name.
@@ -224,25 +228,22 @@ export interface PinnedRejectionPayload {
 }
 
 /**
- * What a `calls/1` case invoked, beyond a plain parse-then-render. `method`
- * names the kind of call (see `CALL_METHODS`); `args` is deliberately
- * free-form, exactly as the schema declares it — the gem's own keyword names
- * for whichever call kind `method` is, not independently invented ones.
+ * What a versioned call case invoked, beyond a plain parse-then-render. `method`
+ * names the kind of call (see `CALL_METHODS`). Formatter arguments retain the
+ * schema's free-form keyword mapping; UnitsML arguments are restricted to
+ * the measured `{ xml: true }` shape in version 2.
  */
 export interface PinnedCall {
   readonly method: string;
   /**
-   * Free-form, per the schema's own description (`schema/calls.json`): the
-   * gem's own keyword names for whichever call kind `method` is, not typed
-   * further here for the same reason `PinnedCase.model` is left as
-   * `YamlValue` — a consumer narrows the shape it expects for the one
-   * `method` it reads.
+   * The gem's own keyword names. The reader validates the version-specific
+   * UnitsML shape; formatter consumers narrow their free-form mapping.
    */
   readonly args: YamlValue;
 }
 
 /**
- * One case from a `calls/1` payload: structurally `PinnedCase` plus `call`,
+ * One case from a versioned calls payload: structurally `PinnedCase` plus `call`,
  * because a call case is a render case under something other than default
  * options, and every other field means what it means there (see `PinnedCase`
  * for `expected`/`refusals`).
@@ -276,7 +277,7 @@ export interface PinnedCorpus {
   /** Rejection payloads, kept apart because they have no rendering at all. */
   readonly rejectionPayloads: readonly PinnedRejectionPayload[];
   readonly rejections: readonly PinnedRejection[];
-  /** `calls/1` payloads, kept apart because they carry a `call` no other kind has. */
+  /** Versioned calls payloads, kept apart because they carry a `call` no other kind has. */
   readonly callsPayloads: readonly PinnedCallsPayload[];
   readonly calls: readonly PinnedCallCase[];
   /**
@@ -936,21 +937,25 @@ function readRejectionPayload(
  * here has agreed to interpret, so it stops the load instead of being handed
  * to a caller as though it meant something known.
  */
-function readCall(value: YamlValue, where: string): PinnedCall {
+function readCall(value: YamlValue, where: string, schema: string): PinnedCall {
   const call = asMapping(value, where);
   const method = requiredString(call, "method", where);
-  if (!CALL_METHODS.includes(method)) {
+  const methods = CALL_METHODS[schema] ?? [];
+  if (!methods.includes(method)) {
     throw new Error(
       `${where}: call.method is "${method}", this reader knows ` +
-        `${CALL_METHODS.map((known) => `"${known}"`).join(", ")}.`,
+        `${methods.map((known) => `"${known}"`).join(", ")}.`,
     );
   }
   const args = asMapping(requiredPresent(call, "args", where), `${where} args`);
+  if (method === "unitsml" && (Object.keys(args).length !== 1 || args.xml !== true)) {
+    throw new Error(`${where}: unitsml args must be exactly { xml: true }.`);
+  }
   return { method, args };
 }
 
 /**
- * A `calls/1` payload: a group of cases recording `Formula#to_<target>`
+ * A versioned calls payload: a group of cases recording `Formula#to_<target>`
  * invoked with a non-default option. Its envelope and `expected` shape are
  * exactly `readPayload`'s `cases/2` handling — an outcome is a render or a
  * refusal, and `assertTargetCoverage` applies unchanged — with one addition,
@@ -961,6 +966,7 @@ function readCallsPayload(
   record: PayloadRecord,
   document: Mapping,
   path: string,
+  schema: string,
 ): PinnedCallsPayload {
   const group = requiredString(document, "group", path);
   const stem = record.path.slice(record.path.lastIndexOf("/") + 1).replace(/\.yaml$/, "");
@@ -1018,7 +1024,7 @@ function readCallsPayload(
       input: requiredString(caseRecord, "input", at),
       inputFormat: caseFormat,
       preprocessed: requiredPossiblyEmptyString(caseRecord, "preprocessed", at),
-      call: readCall(requiredPresent(caseRecord, "call", at), `${at} call`),
+      call: readCall(requiredPresent(caseRecord, "call", at), `${at} call`, schema),
       expected,
       refusals,
       parseTree: requiredPresent(caseRecord, "parse_tree", at),
@@ -1026,6 +1032,12 @@ function readCallsPayload(
     };
   });
 
+  if (
+    cases.some((entry) => entry.call.method === "unitsml") &&
+    (targets.length !== 1 || targets[0] !== "mathml")
+  ) {
+    throw new Error(`${path}: unitsml calls must declare only the mathml target.`);
+  }
   return { path: record.path, group, inputFormat, targets, cases };
 }
 
@@ -1079,14 +1091,14 @@ export function loadPinnedCorpus(given: string = PINNED_CORPUS_ROOT, base?: stri
       payloads.push(readPayload(record, document, path, caseSchema));
     } else if (schema === REJECTIONS_SCHEMA) {
       rejectionPayloads.push(readRejectionPayload(record, document, path));
-    } else if (schema === CALLS_SCHEMA) {
-      callsPayloads.push(readCallsPayload(record, document, path));
+    } else if (schema === CALLS_SCHEMA || schema === UNITSML_CALLS_SCHEMA) {
+      callsPayloads.push(readCallsPayload(record, document, path, schema));
     } else {
       throw new Error(
         `${path}: schema is "${schema}", this reader knows ` +
           `"plurimath-corpus/<input format>/1", "plurimath-corpus/<input format>/2" ` +
           `(input format one of ${CASE_INPUT_FORMATS.join(", ")}), "${REJECTIONS_SCHEMA}" and ` +
-          `"${CALLS_SCHEMA}".`,
+          `"${CALLS_SCHEMA}", "${UNITSML_CALLS_SCHEMA}".`,
       );
     }
   }

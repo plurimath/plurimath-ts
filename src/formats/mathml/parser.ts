@@ -9,12 +9,21 @@
 
 import { describeThrown } from "../../core/errors";
 import { type FormulaNode, ParseError } from "../../core/index";
+import { readXml, type XmlReadElement } from "../../xml/index";
 import { parseMml } from "./mml";
 import { translateMml } from "./translator";
 
 export function parseMathml(input: string): FormulaNode {
+  return parseMathmlWithReader(input, readXml);
+}
+
+/** Internal shared parse/error path for the native and optional XML readers. */
+export function parseMathmlWithReader(
+  input: string,
+  read: (input: string) => XmlReadElement,
+): FormulaNode {
   try {
-    return translateMml(parseMml(input), input);
+    return translateMml(parseMml(input, read), input);
   } catch (error) {
     if (error instanceof ParseError) throw error;
     throw new ParseError(

@@ -5,11 +5,14 @@ initialized Leptris binding to the existing element layers, translators and
 formula trees. Regular format and root parsers keep the native reader. The
 optional entries do not import a Leptris runtime or add a WASM dependency.
 
-The required binding API is proposed in
+The required binding API was added in
 [leptris-ts#9](https://github.com/leptris/leptris-ts/pull/9), and the engine
 must include [leptris#1742](https://github.com/leptris/leptris/pull/1742).
-Both upstream changes are pending. An existing published binding without
-`loadSync`, `treeSync` and `closeSync` cannot be used with these factories.
+Both changes are merged. The binding must provide `loadSync`, `treeSync` and
+`closeSync`, with a working WASM tree export. Published `leptris@0.1.16`
+provides the JavaScript methods but its `treeSync()` fails because that export
+is missing. [leptris-ts#21](https://github.com/leptris/leptris-ts/pull/21)
+tracks the build fix; final integration verification must use a build containing it.
 
 ```ts
 import * as leptris from "leptris";
@@ -77,14 +80,13 @@ survive in each artifact.
 
 ## Before merging
 
-After the upstream changes are available, use the official binding built with
-an engine containing the namespace-cache fix. Record the binding and engine
+Use the official binding built with the WASM tree-export fix and an engine
+containing the namespace-cache fix. Record the binding and engine
 versions or commits with the verification results; an earlier fork artifact
 is not evidence for the final upstream build. If the accepted binding API
 changes, update the adapter and its tests before proceeding.
 
-After #199 is merged, retarget the Plurimath PR to `main` and test the resulting
-combined source. Run the normal CI gates and runtime suites on the supported
+Retarget the Plurimath PR to `main` and test the resulting combined source. Run the normal CI gates and runtime suites on the supported
 Node versions, then run all three real-binding probe commands above against
 the official artifact. Require every command to exit successfully, no excluded
 corpus cases and equal loaded/closed handle counts. The unit tests with injected

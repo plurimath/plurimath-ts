@@ -118,11 +118,12 @@ already initialized Leptris binding. The regular package and format entries
 use the native reader and do not require a Leptris installation. The optional
 entries also leave loading and initialization of WASM to your application.
 
-This requires the structured-tree binding API proposed in
+This requires the structured-tree binding API added in
 [leptris-ts#9](https://github.com/leptris/leptris-ts/pull/9), backed by an
 engine containing [leptris#1742](https://github.com/leptris/leptris/pull/1742).
-Those upstream changes are pending; the existing published binding is insufficient.
-With a compatible binding:
+Both changes are merged. Published `leptris@0.1.16` still lacks the required
+WASM tree export; [leptris-ts#21](https://github.com/leptris/leptris-ts/pull/21)
+tracks that build fix. With a binding containing the export fix:
 
 ```js
 import * as leptris from "leptris";

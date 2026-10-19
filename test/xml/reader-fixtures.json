@@ -37,8 +37,8 @@
       "ebcdic-cp-us"
     ]
   },
-  "caseCount": 4108,
-  "readCount": 2168,
+  "caseCount": 4110,
+  "readCount": 2170,
   "raisedCount": 1940,
   "cases": [
     {
@@ -12881,6 +12881,56 @@
                 ]
               }
             ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-2eb6caae6cd0",
+      "group": "corpus-mathml",
+      "input": "<math xmlns='http://www.w3.org/1998/Math/MathML'><pi/></math>",
+      "root": {
+        "element": "math",
+        "namespace": "http://www.w3.org/1998/Math/MathML",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "http://www.w3.org/1998/Math/MathML"
+          ]
+        ],
+        "children": [
+          {
+            "element": "pi",
+            "namespace": "http://www.w3.org/1998/Math/MathML",
+            "attributes": [],
+            "xmlns": [],
+            "children": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "xml-775d2b29294b",
+      "group": "corpus-mathml",
+      "input": "<math xmlns='http://www.w3.org/1998/Math/MathML'><apply/></math>",
+      "root": {
+        "element": "math",
+        "namespace": "http://www.w3.org/1998/Math/MathML",
+        "attributes": [],
+        "xmlns": [
+          [
+            "xmlns",
+            "http://www.w3.org/1998/Math/MathML"
+          ]
+        ],
+        "children": [
+          {
+            "element": "apply",
+            "namespace": "http://www.w3.org/1998/Math/MathML",
+            "attributes": [],
+            "xmlns": [],
+            "children": []
           }
         ]
       }

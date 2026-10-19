@@ -1,0 +1,74 @@
+[
+  {
+    "name": "recognized pi",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><pi/></math>",
+    "parsed": false,
+    "error": "Plurimath::Math::ParseError"
+  },
+  {
+    "name": "recognized apply",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><apply><plus/><ci>x</ci><cn>1</cn></apply></math>",
+    "parsed": false,
+    "error": "Plurimath::Math::ParseError"
+  },
+  {
+    "name": "recognized inside mrow",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mrow><pi/></mrow></math>",
+    "parsed": false,
+    "error": "Plurimath::Math::ParseError"
+  },
+  {
+    "name": "recognized between supported siblings",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mi>a</mi><pi/><mi>b</mi></math>",
+    "parsed": false,
+    "error": "Plurimath::Math::ParseError"
+  },
+  {
+    "name": "unknown subtree",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><foo><mi>x</mi></foo></math>",
+    "parsed": true,
+    "asciimath": ""
+  },
+  {
+    "name": "unknown with supported sibling",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><foo><mi>z</mi></foo><mi>x</mi></math>",
+    "parsed": true,
+    "asciimath": "x"
+  },
+  {
+    "name": "recognized inside unknown subtree",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><foo><pi/></foo><mi>x</mi></math>",
+    "parsed": true,
+    "asciimath": "x"
+  },
+  {
+    "name": "recognized inside token",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mi>a<pi/>b</mi></math>",
+    "parsed": true,
+    "asciimath": "ab"
+  },
+  {
+    "name": "recognized inside mspace",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><mspace><pi/></mspace></math>",
+    "parsed": true,
+    "asciimath": ""
+  },
+  {
+    "name": "recognized inside annotation",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><annotation><pi/></annotation><mi>x</mi></math>",
+    "parsed": true,
+    "asciimath": "x"
+  },
+  {
+    "name": "recognized inside annotation-xml",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><annotation-xml><ci>x</ci></annotation-xml><mi>x</mi></math>",
+    "parsed": true,
+    "asciimath": "x"
+  },
+  {
+    "name": "recognized inside semantics annotation-xml",
+    "input": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\"><semantics><mi>x</mi><annotation-xml><ci>x</ci></annotation-xml></semantics></math>",
+    "parsed": true,
+    "asciimath": "x"
+  }
+]

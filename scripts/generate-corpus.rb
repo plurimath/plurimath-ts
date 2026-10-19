@@ -873,8 +873,8 @@ module CorpusGenerator
     end
   end
 
-  # A `plurimath-corpus/calls/1` payload's cases record `Formula#to_<target>`
-  # invoked WITH a non-default option (`formatter:` today) — their
+  # Versioned `plurimath-corpus/calls/*` payloads record `Formula#to_<target>`
+  # invoked WITH a non-default option (`formatter:` or `unitsml:`) — their
   # `expected.<target>` values are what the gem produced from a FORMATTED
   # call, not a plain parse-then-render. Every consumer of `read_pin_cases`
   # (this port's four fixture generators) treats every case it returns as an
@@ -882,7 +882,7 @@ module CorpusGenerator
   # like `"1.123_456_789"` back through a parser as if it were a genuine
   # input is not a claim any of those generators mean to make. Skipped here,
   # at the shared source, rather than in each of the four call sites.
-  CALLS_SCHEMA = "plurimath-corpus/calls/1"
+  CALLS_SCHEMAS = %w[plurimath-corpus/calls/1 plurimath-corpus/calls/2].freeze
 
   def read_pin_payload(entry)
     path = pin_file(pin_root, entry.fetch("path"), "a provenance payload path", "corpus")
@@ -897,7 +897,7 @@ module CorpusGenerator
     end
 
     document = YAML.safe_load(bytes, aliases: false)
-    return [] if document["schema"] == CALLS_SCHEMA
+    return [] if CALLS_SCHEMAS.include?(document["schema"])
 
     group = document["group"]
     raise Error, "#{path} declares no group" if group.nil? || group.empty?

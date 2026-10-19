@@ -19,7 +19,8 @@ module OracleArtifacts
   ROOTS = %w[corpus src/unitsml/generated src/generated src/core/generated src/formatting/generated
              src/formats/html/generated src/formats/latex/generated
              src/formats/mathml/generated src/formats/omml/generated
-             src/formats/unicodemath/generated].freeze
+             src/formats/unicodemath/generated src/formats/html/generated-text
+             src/formats/mathml/generated-recognition].freeze
   FORMATS = %w[asciimath html latex mathml omml unicodemath].freeze
 
   class Runner
@@ -96,6 +97,10 @@ module OracleArtifacts
         jobs << [script, "generate-#{script}.rb", ["--gem", @oracle, "--out", at.call("src/#{dir}/generated")]]
       end
       jobs << ["unitsml-data", "generate-unitsml-data.rb", ["--oracle", @oracle, "--out", output]]
+      { "html-text-data" => "src/formats/html/generated-text",
+        "mathml-recognition-data" => "src/formats/mathml/generated-recognition" }.each do |name, dir|
+        jobs << [name, "generate-#{name}.rb", ["--source-checkout", @oracle, "--out", at.call(dir)]]
+      end
       FORMATS.each do |format|
         jobs << ["#{format}-model", "generate-#{format}-model-fixtures.rb",
                  ["--oracle", @oracle, "--out", at.call("test/formats/#{format}")]]
@@ -133,6 +138,7 @@ module OracleArtifacts
     def omitted_family_paths
       @paths.select do |path|
         path.match?(%r{\Asrc/formats/(?:html|unicodemath)/generated/(?:parser-tables|transform-tables|provenance)\.ts\z}) ||
+          path.start_with?("src/formats/html/generated-text/", "src/formats/mathml/generated-recognition/") ||
           path.match?(%r{\Atest/.*(?:cli-fixtures|evaluation-fixtures|render-options-fixtures|render-kinds-fixtures|ox-contract\.expected)\.(?:json|manifest\.yaml)\z})
       end
     end
@@ -272,6 +278,7 @@ module OracleArtifacts
         save
         command("runtime-versions", ["bundle", "exec", "ruby", "-e", "require 'bundler'; abort unless Bundler::VERSION == '4.0.3'; puts RUBY_DESCRIPTION; puts Bundler::VERSION"])
         command("node-version", ["node", "--version"])
+        command("source-node-install", ["pnpm", "install", "--frozen-lockfile"])
         raw = File.join(@out, "raw-generated")
         generate(raw, "first", { "TZ" => "UTC", "LC_ALL" => "C.UTF-8" })
         @paths.grep(/\.manifest\.yaml\z/).each do |path|
@@ -310,8 +317,8 @@ module OracleArtifacts
       # The existing gate independently regenerates every other family. Re-run
       # only its omissions here, avoiding a third pass over the full corpus.
       second = File.join(@out, "second-generated")
-      omitted_names = %w[html-parser-data unicodemath-parser-data cli-fixtures evaluation-fixtures
-                         render-options-fixtures xml-fixtures]
+      omitted_names = %w[html-parser-data unicodemath-parser-data html-text-data mathml-recognition-data
+                         cli-fixtures evaluation-fixtures render-options-fixtures xml-fixtures]
       omitted_paths = omitted_family_paths
       raise "empty omitted-family inventory" if omitted_paths.empty?
       deterministic = false

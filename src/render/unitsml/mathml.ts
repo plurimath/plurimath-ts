@@ -5,6 +5,7 @@ import {
   type NodeOf,
   type RenderContext,
   unitsmlXml,
+  unitsmlXmlForEmbedding,
 } from "../../formats/mathml/render-shared";
 import { readXml, XmlElement, type XmlReadElement } from "../../xml/index";
 
@@ -19,7 +20,9 @@ export function renderUnitsml(node: NodeOf<"unitsml">, context: RenderContext): 
     context.unitsml?.xml !== undefined &&
     context.unitsml.xml !== false
   ) {
-    const fragment = readXml(`<mrow>${unitsmlXml(node.text, context.unitsml)}</mrow>`);
+    const fragment = readXml(
+      `<mrow>${unitsmlXmlForEmbedding(unitsmlXml(node.text, context.unitsml))}</mrow>`,
+    );
     const elements = fragment.children.filter(
       (child): child is XmlReadElement => child.kind === "element",
     );

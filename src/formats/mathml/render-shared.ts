@@ -15,6 +15,7 @@
  * the module graph acyclic (`no-circular` is an error in the boundary gate).
  */
 
+import { XHTML1_ENTITY_CODEPOINTS } from "../../core/generated/html-entities";
 import {
   type MathNode,
   MissingSymbolDataError,
@@ -33,6 +34,30 @@ export type { UnitsmlRenderOptions } from "../../unitsml/index";
 export { expandUnitsml, unitsmlXml } from "../../unitsml/index";
 
 export const FORMAT = "mathml";
+
+// Raw Ox resolves named entities case-insensitively; the last table entry wins.
+// Its pinned 253-entry table matches this generated table, including collision order.
+const UNITSML_XML_ENTITY_CODES: ReadonlyMap<string, number> = new Map(
+  [...XHTML1_ENTITY_CODEPOINTS].map(([name, code]) => [name.toLowerCase(), code]),
+);
+
+/**
+ * UnitsML metadata alone passes through raw Ox, rather than Moxml's entity
+ * marking. Numeric references reproduce that one decode without turning an
+ * encoded `<` into markup or decoding `&amp;micro;` twice. Standalone UnitsML
+ * XML and HTML retain their dependency bytes. Unknown names stay with the
+ * existing reader; this helper is not a general Ox reader.
+ */
+export function unitsmlXmlForEmbedding(xml: string): string {
+  return xml.replace(
+    /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|&([a-zA-Z_][\w.:-]*);/g,
+    (token: string, name: string | undefined) => {
+      if (name === undefined || /^(?:amp|lt|gt|quot|apos)$/.test(name)) return token;
+      const code = UNITSML_XML_ENTITY_CODES.get(name.toLowerCase());
+      return code === undefined ? token : `&#${code};`;
+    },
+  );
+}
 
 /**
  * Re-exported for `../../render/number/mathml.ts`. A kind file may import

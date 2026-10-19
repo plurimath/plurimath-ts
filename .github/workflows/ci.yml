@@ -62,7 +62,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           # Build-time requirement of tsdown 0.22.14 (^22.18.0 || >=24.11.0);
-          # the published package supports Node 20+ at runtime.
+          # the published package supports Node 22+ at runtime.
           node-version: 24
           cache: pnpm
 
@@ -104,7 +104,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [20, 22, 24]
+        node-version: [22, 24]
     steps:
       # The conformance cases live in the plurimath-testsuite submodule. Without
       # this the reader finds nothing — and fails loudly rather than passing an
@@ -115,18 +115,12 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
-      # Install on Node 24: the `prepare` script builds dist with tsdown, which
-      # does not run on Node 20. The tests then run on the matrix version.
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node-version }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
 
       - run: pnpm test
 

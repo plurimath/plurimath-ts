@@ -684,7 +684,23 @@ const FIXTURE_GENERATOR_HASHES: ReadonlyArray<
  * fixture records the one script that wrote it. Every shape reduces to the
  * same claim, so all are checked the same way.
  */
+const FORMAT_LOOKUP_PROVENANCE = [
+  "src/formats/html/generated-text/provenance.json",
+  "src/formats/mathml/generated-recognition/provenance.json",
+].map((path) => ({
+  path,
+  metadata: mapping(JSON.parse(readFileSync(join(REPO_ROOT, path), "utf8")), path),
+}));
+
 const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: string]> = [
+  ...FORMAT_LOOKUP_PROVENANCE.map(
+    ({ path, metadata }) =>
+      [
+        path,
+        stringField(metadata, "generator", path),
+        stringField(metadata, "generatorSha256", path),
+      ] as const,
+  ),
   ["src/generated", GENERATED_PROVENANCE.generator, GENERATED_PROVENANCE.generatorSha256],
   ...[...CORE_GENERATED_PROVENANCE.generatorInputs].map(
     ([file, hash]) => ["src/core/generated", file, hash] as const,
@@ -1971,6 +1987,20 @@ describe("generated data binds to the generator inputs it names", () => {
     },
   );
 
+  it.each(FORMAT_LOOKUP_PROVENANCE)(
+    "binds $path to the oracle and formatter inputs",
+    ({ path, metadata }) => {
+      expect(stringField(metadata, "oracleCommit", path)).toBe(
+        loadPinnedCorpus().provenance.oracleCommit,
+      );
+      expect(stringField(metadata, "formatterConfigSha256", path)).toBe(sha256OfFile("biome.json"));
+      const formatter = JSON.parse(
+        readFileSync(join(REPO_ROOT, "node_modules/@biomejs/biome/package.json"), "utf8"),
+      );
+      expect(stringField(metadata, "formatterVersion", path)).toBe(formatter.version);
+    },
+  );
+
   it("records each generator it names as an existing file", () => {
     for (const [, file] of RECORDED) {
       expect(existsSync(join(REPO_ROOT, file))).toBe(true);
@@ -1996,6 +2026,9 @@ describe("generated data binds to the generator inputs it names", () => {
       HTML_PARSER_GENERATED_PROVENANCE.generator,
       MATHML_DATA_GENERATED_PROVENANCE.generator,
       OMML_DATA_GENERATED_PROVENANCE.generator,
+      ...FORMAT_LOOKUP_PROVENANCE.map(({ path, metadata }) =>
+        stringField(metadata, "generator", path),
+      ),
       ...fixtureEntrypoints,
     ];
     expect(recordedEntrypoints).toContain("scripts/generate-unitsml-data.rb");

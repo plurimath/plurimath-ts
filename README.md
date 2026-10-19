@@ -41,9 +41,9 @@ The current source and package entries provide:
   `./omml/leptris`, plus the root entry and a `plurimath` executable. The two
   Leptris entries require a caller-initialized binding, as described below.
 - The HTML parity fixture covers 664 gem-renderable cases written in
-  AsciiMath, LaTeX, UnicodeMath, MathML or OMML. The port renders 658 of them;
-  six MathML text cases remain explicit refusals (see
-  `test/formats/html/parity-target.ts`). Native UnitsML expansion replaces
+  AsciiMath, LaTeX, UnicodeMath, MathML or OMML. All 664 now match, including
+  the six MathML text cases that previously refused Unicode substitutions
+  (see `test/formats/html/parity-target.ts`). Native UnitsML expansion replaces
   the former `text-unitsml-valid` plain-text divergence. The corpus is not the
   whole language:
   a construct it does not cover can still raise `RenderError`, for example
@@ -255,7 +255,7 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
 
 Building needs Node `^22.18.0 || >=24.11.0` (the range tsdown declares; Node 23
 does not satisfy it). [`mise.toml`](mise.toml) pins Node 24. The published
-package will support Node 20 and later at runtime, which is what CI's runtime
+package will support Node 22 and later at runtime, which is what CI's runtime
 matrix covers.
 
 If nvm's Node 20 comes first on `PATH`, `pnpm build` fails with

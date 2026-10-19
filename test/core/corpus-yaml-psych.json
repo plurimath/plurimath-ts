@@ -2,7 +2,7 @@
   "generator": "scripts/probes/corpus-yaml-psych.rb",
   "ruby": "4.0.1",
   "psych": "5.4.0",
-  "pin": "cf3c5ebf8b8ce35ade189b11a741f272ae93c8a0",
+  "pin": "2b4aa4e52882a83ce901edfa8be7652ec19f0201",
   "payloads": {
     "omml/accents.yaml": "64797752809b4eb54bab0b845505c1c7091a4c23c3957bba33deb3b498f9ac9a",
     "omml/boxes.yaml": "197167a839450b5b3c566a4aa658c5f3f654cb75a67f5b256f8e3cbfa9f3cd96",

@@ -167,3 +167,6 @@ export function isOwnMissingSymbolDataError(error: unknown): boolean {
 export type { UnitsmlRenderOptions } from "../../unitsml/index";
 // Leaf-service access for this format's per-kind renderers.
 export { expandUnitsml } from "../../unitsml/index";
+
+// Format-owned leaf data passes through the allowed per-kind helper boundary.
+export { HTML_TEXT_SYMBOLS } from "./generated-text/symbols";

@@ -9,7 +9,9 @@
  * - The root must be a `math` element; anything else is refused.
  * - An element counts when it is in the MathML namespace or in no namespace
  *   (a document without `xmlns`). Elements in other namespaces, and MathML
- *   elements the translator has no rule for, are skipped with their content.
+ *   elements absent from the Ruby model mapping, are skipped with their content.
+ *   Recognized elements reach the translator, which decides whether to visit or
+ *   ignore them and rejects a visited kind it cannot translate.
  * - Attributes are MathML's when unprefixed (MathML attributes are in no
  *   namespace); prefixed ones (`xlink:href`, `ext:mathvariant`) are skipped.
  *   They are kept as strings. `index` and `length` are
@@ -28,6 +30,7 @@
  */
 
 import { readXml, type XmlReadElement, XmlReadError } from "../../xml/index";
+import { MATHML_RECOGNIZED_ELEMENTS } from "./generated-recognition/elements";
 
 const MATHML_NAMESPACE = "http://www.w3.org/1998/Math/MathML";
 
@@ -182,7 +185,8 @@ function build(element: XmlReadElement, kind: string): MmlNode {
     }
     if (node.kind !== "element" || !isMathml(node)) continue;
     const name = localName(node);
-    const childKind = name === null ? undefined : ELEMENTS.get(name);
+    const childKind =
+      name === null ? undefined : (ELEMENTS.get(name) ?? MATHML_RECOGNIZED_ELEMENTS.get(name));
     if (childKind === undefined || childKind === "Math") continue;
     children.push(build(node, childKind));
   }

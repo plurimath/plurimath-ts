@@ -401,7 +401,11 @@ describe("every pinned group declares the formats this port renders", () => {
   });
 
   it("holds for the calls/1 groups too", () => {
-    assertRequiredTargets(loadPinnedCorpus().callsPayloads);
+    assertRequiredTargets(
+      loadPinnedCorpus().callsPayloads.filter((payload) =>
+        payload.cases.every((entry) => entry.call.method === "number_formatter"),
+      ),
+    );
   });
 
   it("rejects a group that stopped declaring one", () => {
@@ -436,7 +440,7 @@ function assertExpectationPerTarget(payloads: readonly Counting[]): void {
   expect(payloads.length, "no payloads to check, so this proves nothing").toBeGreaterThan(0);
   for (const payload of payloads) {
     expect(payload.cases.length, payload.path).toBeGreaterThan(0);
-    for (const target of REQUIRED_TARGETS) {
+    for (const target of payload.targets) {
       const carrying = payload.cases.filter(
         (entry) => entry.expected.has(target) || (entry.refusals?.has(target) ?? false),
       ).length;

@@ -110,7 +110,7 @@ function reduce(entry: PinnedCallCase): Reduced {
 }
 
 const CORPUS = loadPinnedCorpus();
-const ALL = CORPUS.calls.map(reduce);
+const ALL = CORPUS.calls.filter((entry) => entry.call.method === "number_formatter").map(reduce);
 
 /**
  * The ids of the cases whose payload declares an `omml` target — every case in

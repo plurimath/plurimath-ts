@@ -55,6 +55,10 @@ import {
   VecNode,
 } from "../../../src/core/nodes";
 import { parseAsciimath } from "../../../src/formats/asciimath/parser";
+import {
+  HTML_TEXT_PROBES,
+  HTML_TEXT_SYMBOLS,
+} from "../../../src/formats/html/generated-text/symbols";
 import { toHtml } from "../../../src/formats/html/renderer";
 import { HTML_SYMBOLS } from "../../../src/generated/html/symbols";
 
@@ -368,14 +372,12 @@ describe("HTML leaf and formula rendering", () => {
     expect(toHtml(new NumberNode({ value: "&#x32;" }))).toBe("&#x32;");
   });
 
-  it("refuses Text unicode substitutions whose HTML data is deferred", () => {
-    for (const parameterOne of ["unicode[:kappa]", "preunicode[:Gamma]post"]) {
-      expectHtmlError(() => toHtml(new TextNode({ parameterOne })), {
-        kind: "text",
-        message:
-          "text.parameterOne: unicode[:name] substitution needs generated HTML data from phase two",
-      });
-    }
+  it.each([...HTML_TEXT_SYMBOLS])("renders the Ruby-measured Text token %s", (name, expected) => {
+    expect(toHtml(new TextNode({ parameterOne: `unicode[:${name}]` }))).toBe(expected);
+  });
+
+  it.each(HTML_TEXT_PROBES)("matches Ruby Text substitution for %s", (input, expected) => {
+    expect(toHtml(new TextNode({ parameterOne: input }))).toBe(expected);
   });
 
   it("joins Formula and Mrow children with spaces", () => {

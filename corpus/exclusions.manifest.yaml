@@ -8,7 +8,7 @@ generator:
   path: scripts/generate-corpus.rb
   sha256: 620f6e3db8b3966e2780dad8e86356637a2f59b98366debeca707a6fdc97ea75
   repository:
-    commit: cb5ba94c2bd52ab6f35102b3b6de447726844fe4
+    commit: 189f3d70205615cf67dcb4d01358fc6197211f2f
     clean: true
     dirty_paths: []
 oracle:
@@ -26,7 +26,7 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: 03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121
+    sha256: a07b033c4e199d7324e2e0c6c15063df08f840f3234d3c874ede809d6750bed4
     resolved_gems: 77
     platforms:
     - aarch64-linux-gnu
@@ -59,7 +59,7 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: lutaml-model
-    version: 0.8.19
+    version: 0.8.30
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
@@ -69,7 +69,7 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: omml
-    version: 0.2.5
+    version: 0.2.6
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/

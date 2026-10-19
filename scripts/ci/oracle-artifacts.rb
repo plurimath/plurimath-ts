@@ -15,7 +15,7 @@ $stdout.sync = true
 
 module OracleArtifacts
   PIN = "00c52783877b38f6b8e6e109f1803f96bb34fc62"
-  LOCK_SHA = "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121"
+  LOCK_SHA = "a07b033c4e199d7324e2e0c6c15063df08f840f3234d3c874ede809d6750bed4"
   ROOTS = %w[corpus src/unitsml/generated src/generated src/core/generated src/formatting/generated
              src/formats/html/generated src/formats/latex/generated
              src/formats/mathml/generated src/formats/omml/generated

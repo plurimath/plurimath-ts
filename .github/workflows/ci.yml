@@ -70,6 +70,9 @@ jobs:
 
       - run: pnpm check
 
+      - name: Verify packed installation
+        run: node scripts/smoke-package.mjs
+
   # Ruby-backed unit regressions are class B, isolated from the Node-only
   # class-A suite and run with an explicit interpreter rather than relying on
   # whatever happens to be installed on the runner image.

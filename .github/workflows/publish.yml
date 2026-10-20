@@ -37,7 +37,7 @@ jobs:
           const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
           const requested = process.env.GITHUB_REF_TYPE === 'tag'
             ? process.env.GITHUB_REF_NAME.slice(1) : process.env.REQUESTED_VERSION;
-          assert.equal(pkg.name, 'plurimath-ts');
+          assert.equal(pkg.name, '@plurimath/plurimath-ts');
           assert.notEqual(pkg.private, true);
           assert.equal(requested, pkg.version, 'Requested version must match package.json');
           JS

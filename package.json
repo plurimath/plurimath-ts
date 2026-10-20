@@ -1,5 +1,5 @@
 {
-  "name": "plurimath-ts",
+  "name": "@plurimath/plurimath-ts",
   "version": "0.1.0",
   "description": "Native TypeScript implementation of Plurimath",
   "license": "BSD-2-Clause",

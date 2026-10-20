@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-assert.equal(manifest.name, "plurimath-ts");
+assert.equal(manifest.name, "@plurimath/plurimath-ts");
 assert.notEqual(manifest.private, true);
 const scratch = mkdtempSync(join(tmpdir(), "plurimath-package-"));
 const env = { ...process.env };
@@ -36,7 +36,7 @@ const tarball = join(scratch, packed.filename);
 writeFileSync(join(scratch, "package.json"), JSON.stringify({ private: true, type: "module" }));
 run("npm", ["install", "--no-audit", "--no-fund", "--omit=dev", tarball]);
 const installed = JSON.parse(
-  readFileSync(join(scratch, "node_modules/plurimath-ts/package.json"), "utf8"),
+  readFileSync(join(scratch, "node_modules/@plurimath/plurimath-ts/package.json"), "utf8"),
 );
 assert.equal(installed.version, manifest.version);
 const entries = Object.keys(manifest.exports)
@@ -47,19 +47,19 @@ for (const mode of ["module", "commonjs"]) {
     mode === "module"
       ? `import assert from 'node:assert/strict';
        for (const name of ${JSON.stringify(entries)}) assert.ok(Object.keys(await import(name)).length);
-       const {parseAsciimath}=await import('plurimath-ts/asciimath');
-       const {toLatex}=await import('plurimath-ts/latex');
+       const {parseAsciimath}=await import('@plurimath/plurimath-ts/asciimath');
+       const {toLatex}=await import('@plurimath/plurimath-ts/latex');
        assert.equal(toLatex(parseAsciimath('2')), '2');`
       : `const assert=require('node:assert/strict');
        for (const name of ${JSON.stringify(entries)}) assert.ok(Object.keys(require(name)).length);
-       const {parseAsciimath}=require('plurimath-ts/asciimath');
-       const {toLatex}=require('plurimath-ts/latex');
+       const {parseAsciimath}=require('@plurimath/plurimath-ts/asciimath');
+       const {toLatex}=require('@plurimath/plurimath-ts/latex');
        assert.equal(toLatex(parseAsciimath('2')), '2');`;
   run(process.execPath, [`--input-type=${mode}`, "-e", script]);
 }
-const source = `import {parse} from 'plurimath-ts';
-import {toLatex} from 'plurimath-ts/latex';
-import {createMathmlParser} from 'plurimath-ts/mathml/leptris';
+const source = `import {parse} from '@plurimath/plurimath-ts';
+import {toLatex} from '@plurimath/plurimath-ts/latex';
+import {createMathmlParser} from '@plurimath/plurimath-ts/mathml/leptris';
 const formula = parse('2', 'asciimath');
 const result: string = toLatex(formula);
 void result; void createMathmlParser;\n`;

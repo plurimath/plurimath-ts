@@ -23,12 +23,10 @@ drift apart silently.
 
 ## Status
 
-Early development. The AsciiMath vertical has landed — corpus, model, grammar
-and transform — along with six renderers, exported as the `./asciimath`,
-`./html`, `./latex`, `./mathml`, `./omml` and `./unicodemath` subpaths. The
-package is still `private`, and nothing is published to npm under this name
-yet; the name it will publish under is an open decision
-([open-decisions.md](TODO.plan/open-decisions.md#npm-package-name-and-release-line)).
+The initial release is `plurimath-ts@0.1.0`, with native TypeScript parsers
+and renderers for all six formats. This release exposes format subpaths within
+one npm package. Separate language packages and remaining shared-fixture
+organization are deferred.
 
 The current source and package entries provide:
 
@@ -66,11 +64,14 @@ in milestones. The current one is recorded as `currentMilestone` in
 
 ## Usage
 
-The package is not published, so the specifiers below are the ones
-`package.json` declares (`@plurimath/plurimath-ts`); they resolve from a local
-build (`pnpm build`), not from npm. Build locally before using the examples
-(the CLI file example assumes a `formula.txt` you create). The package declares
-both ESM (`import`) and CommonJS (`require`) entries.
+Install the package with Node.js 22 or later:
+
+```sh
+npm install plurimath-ts
+```
+
+Both ESM (`import`) and CommonJS (`require`) entries are provided. The CLI file
+example assumes a `formula.txt` you create.
 
 ### Input and output formats
 
@@ -93,15 +94,15 @@ accept absent, `null` or empty options and reject nonempty option keys with
 for format `F`; the compat constructor keeps its existing two arguments.
 
 ```js
-import { parse } from "@plurimath/plurimath-ts";
+import { parse } from "plurimath-ts";
 const formula = parse("1,5", "asciimath", { locale: "de" });
 ```
 
 ### Per-format subpaths
 
 ```js
-import { parseAsciimath } from "@plurimath/plurimath-ts/asciimath";
-import { toLatex } from "@plurimath/plurimath-ts/latex";
+import { parseAsciimath } from "plurimath-ts/asciimath";
+import { toLatex } from "plurimath-ts/latex";
 
 toLatex(parseAsciimath("x^2 + frac(1)(2)")); // x^{2} + \frac{1}{2}
 ```
@@ -127,9 +128,9 @@ tracks that build fix. With a binding containing the export fix:
 
 ```js
 import * as leptris from "leptris";
-import { createMathmlParser } from "@plurimath/plurimath-ts/mathml/leptris";
-import { createOmmlParser } from "@plurimath/plurimath-ts/omml/leptris";
-import { toMathml } from "@plurimath/plurimath-ts/mathml";
+import { createMathmlParser } from "plurimath-ts/mathml/leptris";
+import { createOmmlParser } from "plurimath-ts/omml/leptris";
+import { toMathml } from "plurimath-ts/mathml";
 
 await leptris.init();
 const parseMathml = createMathmlParser(leptris);
@@ -153,7 +154,7 @@ The root entry also default-exports `Plurimath`, shaped after the
 `to*` method.
 
 ```js
-import Plurimath from "@plurimath/plurimath-ts";
+import Plurimath from "plurimath-ts";
 
 const p = new Plurimath("x^2", "asciimath");
 p.toLatex();       // x^{2}
@@ -218,7 +219,7 @@ rather than on `instanceof` where a caller may load two copies of the package.
 Exported from `./core`:
 
 ```js
-import { ParseError, UnsupportedFeatureError, UnsupportedFormatError } from "@plurimath/plurimath-ts/core";
+import { ParseError, UnsupportedFeatureError, UnsupportedFormatError } from "plurimath-ts/core";
 ```
 
 | Class | `code` | Seen when |

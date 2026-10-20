@@ -23,12 +23,10 @@ drift apart silently.
 
 ## Status
 
-Early development. The AsciiMath vertical has landed — corpus, model, grammar
-and transform — along with six renderers, exported as the `./asciimath`,
-`./html`, `./latex`, `./mathml`, `./omml` and `./unicodemath` subpaths. The
-package is still `private`, and nothing is published to npm under this name
-yet; the name it will publish under is an open decision
-([open-decisions.md](TODO.plan/open-decisions.md#npm-package-name-and-release-line)).
+The initial release is `@plurimath/plurimath-ts@0.1.0`, with native TypeScript parsers
+and renderers for all six formats. This release exposes format subpaths within
+one npm package. Separate language packages and remaining shared-fixture
+organization are deferred.
 
 The current source and package entries provide:
 
@@ -66,11 +64,14 @@ in milestones. The current one is recorded as `currentMilestone` in
 
 ## Usage
 
-The package is not published, so the specifiers below are the ones
-`package.json` declares (`@plurimath/plurimath-ts`); they resolve from a local
-build (`pnpm build`), not from npm. Build locally before using the examples
-(the CLI file example assumes a `formula.txt` you create). The package declares
-both ESM (`import`) and CommonJS (`require`) entries.
+Install the package with Node.js 22 or later:
+
+```sh
+npm install @plurimath/plurimath-ts
+```
+
+Both ESM (`import`) and CommonJS (`require`) entries are provided. The CLI file
+example assumes a `formula.txt` you create.
 
 ### Input and output formats
 

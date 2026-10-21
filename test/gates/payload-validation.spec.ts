@@ -92,9 +92,9 @@ function gitFileSha256AtCommit(
  * These managed families are generated data exactly as `src/generated` is, and
  * they were outside this gate entirely: nothing hashed the generators that
  * wrote them, so a fixture and its generator could be edited together and the
- * suite would stay green. Their basenames are explicit because three older
- * `render-sweep.json` files are one-off fixtures with no reproducible generator
- * or sidecar yet; the inventory assertion below keeps that exception closed.
+ * suite would stay green. Their basenames are explicit because the three
+ * older `render-sweep.json` files carry inline generator/seed provenance
+ * rather than sidecars; that provenance is validated separately below.
  *
  * A basename alone stopped identifying a family once a SECOND format grew a
  * `model-fixtures.json`: LaTeX's and UnicodeMath's have the same shape but
@@ -350,6 +350,50 @@ const NATIVE_AUXILIARY_JSON = [
   "test/formats/unicodemath/xml-origin-fixtures.metadata.json",
   "test/formats/unitsml/probe-fixtures.metadata.json",
 ] as const;
+// Immutable historical bounded projections retain their measured reference.
+// Fresh completion and UnitsML artifacts remain bound to the current oracle.
+const HISTORICAL_NATIVE_PROJECTIONS = new Map<
+  string,
+  { metadataSha256: string; oracle: string; lockSha256: string; source: string }
+>([
+  [
+    "test/formats/unicodemath/unreached-fixtures.metadata.json",
+    {
+      metadataSha256: "100e685723540751a78d914334bf01895c9b13a9c40be84135a6c2e4bda7bb6d",
+      oracle: "00c52783877b38f6b8e6e109f1803f96bb34fc62",
+      lockSha256: "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121",
+      source: "e3c8a4f43c7f6ea5bf11fd8804b40ad555fb09b0",
+    },
+  ],
+  [
+    "test/formats/unicodemath/reachability-fixtures.metadata.json",
+    {
+      metadataSha256: "b74cd9e6a7d71a686a17b32eb4a10997276329244b8347f7a349c7078dacb832",
+      oracle: "00c52783877b38f6b8e6e109f1803f96bb34fc62",
+      lockSha256: "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121",
+      source: "0fa4603fec369c61283712ee750157dda24c14d2",
+    },
+  ],
+  [
+    "test/formats/unicodemath/scope-gap-fixtures.metadata.json",
+    {
+      metadataSha256: "7f560aa875aa9a05102dc24200c347f69c7ab033d95792d55c9bc8e017badf3a",
+      oracle: "00c52783877b38f6b8e6e109f1803f96bb34fc62",
+      lockSha256: "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121",
+      source: "2f6bae3b8db4d97b1de3fff95794b53199e82f24",
+    },
+  ],
+  [
+    "test/formats/unicodemath/xml-origin-fixtures.metadata.json",
+    {
+      metadataSha256: "a306352628e72b4e2cd6484ded5c1cd4c93133e27856308f179ef46de724b40a",
+      oracle: "00c52783877b38f6b8e6e109f1803f96bb34fc62",
+      lockSha256: "03bdd3de3d9bcd911e87a7d37605f2e8ee5d003a511881779a82490425f18121",
+      source: "f5627717558f7d6c99bd0c113c70994f330a62c5",
+    },
+  ],
+]);
+
 const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
   "test/formats/latex/render-sweep.json",
@@ -692,7 +736,23 @@ const FORMAT_LOOKUP_PROVENANCE = [
   metadata: mapping(JSON.parse(readFileSync(join(REPO_ROOT, path), "utf8")), path),
 }));
 
+const LEGACY_SWEEP_PROVENANCE = LEGACY_FORMAT_FIXTURES.map((path) => {
+  const payload = mapping(JSON.parse(readFileSync(join(REPO_ROOT, path), "utf8")), path);
+  const inputs = mapField(payload, "inputs", path);
+  return {
+    path,
+    generator: mapField(inputs, "generator", path),
+    seed: mapField(inputs, "seed", path),
+  };
+});
+
 const RECORDED: ReadonlyArray<readonly [label: string, file: string, hash: string]> = [
+  ...LEGACY_SWEEP_PROVENANCE.flatMap(({ path, generator, seed }) =>
+    [generator, seed].map(
+      (input) =>
+        [path, stringField(input, "path", path), stringField(input, "sha256", path)] as const,
+    ),
+  ),
   ...FORMAT_LOOKUP_PROVENANCE.map(
     ({ path, metadata }) =>
       [
@@ -1111,11 +1171,18 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
   });
 
   it("binds explicitly classified native metadata to its payload", () => {
+    const currentOracle = loadPinnedCorpus().provenance.oracleCommit;
     for (const path of NATIVE_AUXILIARY_JSON.filter((path) => path.endsWith(".metadata.json"))) {
       const metadata = mapping(JSON.parse(readFileSync(join(REPO_ROOT, path), "utf8")), path);
-      expect(stringField(metadata, "oracle", path)).toBe(
-        loadPinnedCorpus().provenance.oracleCommit,
-      );
+      const historical = HISTORICAL_NATIVE_PROJECTIONS.get(path);
+      if (historical === undefined) {
+        expect(stringField(metadata, "oracle", path)).toBe(currentOracle);
+      } else {
+        expect(sha256OfFile(path), path).toBe(historical.metadataSha256);
+        expect(stringField(metadata, "oracle", path)).toBe(historical.oracle);
+        expect(stringField(metadata, "lockSha256", path)).toBe(historical.lockSha256);
+        expect(stringField(metadata, "source", path)).toBe(historical.source);
+      }
       expect(stringField(metadata, "lockSha256", path)).toMatch(SHA256);
       const payloadPath = path.replace(/\.metadata\.json$/, ".json");
       const digest = createHash("sha256")
@@ -2029,6 +2096,7 @@ describe("generated data binds to the generator inputs it names", () => {
       ...FORMAT_LOOKUP_PROVENANCE.map(({ path, metadata }) =>
         stringField(metadata, "generator", path),
       ),
+      ...LEGACY_SWEEP_PROVENANCE.map(({ path, generator }) => stringField(generator, "path", path)),
       ...fixtureEntrypoints,
     ];
     expect(recordedEntrypoints).toContain("scripts/generate-unitsml-data.rb");

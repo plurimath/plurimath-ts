@@ -123,6 +123,15 @@ function childrenOf(node: OmmlNode, kind: string): OmmlNode[] {
   return node.children.filter((item) => item.kind === kind);
 }
 
+/** `CTSSub` scalar slots become arrays in Ruby when repeated. */
+function subscriptChild(node: OmmlNode, kind: "m:e" | "m:sub"): OmmlNode | null {
+  const matches = childrenOf(node, kind);
+  if (matches.length > 1) {
+    throw new OmmlTranslateError(`OMML input has repeated ${kind} in m:sSub`);
+  }
+  return matches[0] ?? null;
+}
+
 /** `first_omml_child(prop)&.val`: the property's `m:val`, null when absent. */
 function val(node: OmmlNode | null): string | null {
   return node?.attributes.get("m:val") ?? null;
@@ -328,7 +337,11 @@ function translateContent(node: OmmlNode): Value {
     case "m:sSup":
       return binary("Power", argument(child(node, "m:e")), argument(child(node, "m:sup")));
     case "m:sSub":
-      return binary("Base", argument(child(node, "m:e")), argument(child(node, "m:sub")));
+      return binary(
+        "Base",
+        argument(subscriptChild(node, "m:e")),
+        argument(subscriptChild(node, "m:sub")),
+      );
     case "m:sSubSup":
       return subSup(node);
     case "m:sPre":

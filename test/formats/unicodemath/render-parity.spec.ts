@@ -21,8 +21,8 @@
  * emptiness is only belt to that brace:
  *
  *   - 714 reachable cases: every pinned model is included now that UnitsML is native;
- *   - 692 of those carry `expected.unicodemath` bytes to compare; the other
- *     22, `partial-sqrt-unclosed`, 12 MathML cases and 9 OMML cases, are recorded as
+ *   - 687 of those carry `expected.unicodemath` bytes to compare; the other
+ *     27, `partial-sqrt-unclosed`, 12 MathML cases and 14 OMML cases, are recorded as
  *     refusals and have no bytes;
  *   - 91 go through the round-trip layer: the AsciiMath-written subset is 92
  *     and the refusing case is one of them. That says which parser the layer
@@ -64,9 +64,9 @@ describe("unicodemath render parity, corpus layer (recorded model -> text)", () 
     // A suite that quietly loaded zero cases has happened to this repository
     // once before; both counts are pinned so it cannot happen silently.
     expect(cases.length).toBe(714);
-    // 692 rather than 714: one AsciiMath, 12 MathML and 9 OMML cases
+    // 687 rather than 714: one AsciiMath, 12 MathML and 14 OMML cases
     // record a unicodemath refusal.
-    expect(rendered.length).toBe(692);
+    expect(rendered.length).toBe(687);
     // The round-trip layer's scoped list is pinned too, and it is far smaller
     // than the corpus layer: 92 of the 714 reachable cases are written in
     // AsciiMath, 125 in LaTeX, 20 in UnicodeMath, 287 in MathML and 190 in

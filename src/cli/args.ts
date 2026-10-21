@@ -80,6 +80,8 @@ even if it starts with "-". A bare "-" is accepted as a literal filename.
 Examples:
   plurimath convert --from asciimath --to latex formula.txt
   echo "frac(1)(2)" | plurimath convert --from asciimath --to mathml
+  plurimath convert --from mathml --to latex formula.mml
+  plurimath convert --from omml --to asciimath formula.omml
   plurimath convert --from latex --to omml --display-style false --split-on-linebreak f.tex
 `;
 

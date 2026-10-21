@@ -182,10 +182,12 @@ the package is linked or installed.
 ```sh
 plurimath convert --from asciimath --to latex formula.txt
 printf 'frac(1)(2)' | plurimath convert --from asciimath --to mathml
+plurimath convert --from mathml --to latex formula.mml
+plurimath convert --from omml --to asciimath formula.omml
 ```
 
-`--from` accepts `asciimath`, `latex`, `html`, `unicodemath`; `--to` accepts
-those plus `mathml` and `omml`. Input comes from the file argument, or from
+`--from` and `--to` accept `asciimath`, `latex`, `mathml`, `html`,
+`unicodemath` and `omml`. Input comes from the file argument, or from
 stdin when there is none. Exit codes: `0` success, `2` usage error (missing or
 unknown option or format, unknown command), `1` for anything else (unreadable
 file, `ParseError`, `RenderError`). Conversion errors print as
@@ -236,8 +238,6 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
 
 ### Not yet supported
 
-- MathML or OMML input in the CLI; its `--from` formats remain AsciiMath,
-  LaTeX, HTML and UnicodeMath.
 - `evaluate()` of `Sinh`, `Cosh`, `Sech` and `Csch` where the platform C
   library's `exp`, which they call for `|x| >= 22` (`cosh` from `ln2/2`), is
   inside its rounding band, such as `sinh(22)`: they raise

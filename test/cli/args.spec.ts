@@ -58,9 +58,16 @@ describe("parseArgs", () => {
   });
 
   it("rejects an unknown input format", () => {
-    const result = parseArgs(["convert", "--from", "mathml", "--to", "latex"]);
+    const result = parseArgs(["convert", "--from", "unitsml", "--to", "latex"]);
     expect(result.kind).toBe("error");
-    expect(result.kind === "error" && result.message).toMatch(/Unknown input format "mathml"/);
+    expect(result.kind === "error" && result.message).toMatch(/Unknown input format "unitsml"/);
+  });
+
+  it.each(["mathml", "omml"])("accepts %s as an input format", (from) => {
+    expect(parseArgs(["convert", `--from=${from}`, "--to", "latex"])).toEqual({
+      kind: "convert",
+      args: { from, to: "latex", file: undefined, options: {} },
+    });
   });
 
   it("rejects an unknown output format", () => {

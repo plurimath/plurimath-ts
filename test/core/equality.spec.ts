@@ -383,33 +383,24 @@ describe("deep structure", () => {
  * checks that equality compares the model rather than the input spelling.
  * Same-notation pairs also cover alternative spellings and whitespace.
  *
- * `RubyEqualPairs` is the GEM's 713-case answer before native UnitsML's
- * positive case joined the reachable set,
- * measured by `scripts/probes/corpus-equality.rb` against oracle `00c52783`
- * in GHA run 38406986648, source commit `79422572`. Its uploaded report is
- * the reference; expected pairs are never derived from TypeScript equality.
- * The probe parses each input in its own notation, withholds the same id
- * as `readCorpusCases`, and runs `==` in both directions for every pair.
+ * `RubyEqualPairs` is the gem's answer measured by
+ * `scripts/probes/corpus-equality.rb` against Ruby 0.11.12 at `ae20be11`,
+ * GHA run 39587502711, source commit `f9898e6`. The uploaded report is the
+ * reference; expected pairs are never derived from TypeScript equality.
+ * That report includes two calls/2 option-call models. Neither occurs in an
+ * equal pair, so restricting its measured pairs to the 714 plain cases below
+ * preserves all 81 pairs. The probe now skips both calls schema versions.
  * Its report, verbatim:
  *
- *   rows in pin:     852
- *   rejections:      138
- *   cases pinned:    714
- *   cases withheld:  1
- *   cases compared:  713
- *   reflexive:       713
- *   comparisons:     253828
+ *   rows in pin:     856
+ *   rejections:      140
+ *   cases pinned:    716
+ *   cases withheld:  0
+ *   cases compared:  716
+ *   reflexive:       716
+ *   comparisons:     255970
  *   asymmetric:      0
  *   equal pairs:     81
- *
- * The earlier MathML probe expanded the reference from 236 cases and 56 pairs
- * to 523 cases and 75 pairs:
- * of the 19 new pairs, 11 are a MathML case equal to an AsciiMath, LaTeX or
- * UnicodeMath twin and eight are two MathML cases. Before that, the fixture held the 35 pairs the same sweep reported before
- * UnicodeMath joined the corpus as a third input notation (#15). All 35 are
- * still here, and the 21 that join them are exactly the UnicodeMath/LaTeX and
- * UnicodeMath/AsciiMath twins a corpus that grew a third notation would be
- * expected to add — none of the original 35 pairs' own membership changed.
  */
 describe("the corpus equality matrix, as the gem reports it", () => {
   const cases = readCorpusCases();
@@ -505,9 +496,7 @@ describe("the corpus equality matrix, as the gem reports it", () => {
 
   it("has all 714 reachable cases, including native UnitsML", () => {
     expect(nodes).toHaveLength(714);
-    // The uploaded e3c8a4f4 probe still withheld UnitsML: 81 pairs / 713 cases.
-    // A fresh hosted report over 714 cases is required; expected pairs must
-    // never be inferred from TypeScript or an assumed count increment.
+    // Counts and pair membership come from the hosted Ruby reference above.
     expect(RubyEqualPairs.size).toBe(81);
   });
 

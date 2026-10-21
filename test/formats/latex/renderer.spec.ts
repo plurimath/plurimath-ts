@@ -1955,7 +1955,7 @@ describe("named tables", () => {
     );
     expect(toLatex(carrier("Array", null, null))).toBe("\\begin{array}.x\\end{array}");
     expect(toLatex(carrier("Cases", null, null))).toBe(
-      "\\left .\\begin{matrix}{a}x\\end{matrix}\\right .",
+      "\\left .\\begin{matrix}x\\end{matrix}\\right .",
     );
   });
 

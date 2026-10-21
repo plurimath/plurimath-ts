@@ -27,6 +27,9 @@ describe("oracle artifact second-generation ownership", () => {
 
   it("retains every omitted fixture family and excludes already regenerated fixtures", () => {
     const omitted = [
+      "test/formats/asciimath/render-sweep.json",
+      "test/formats/latex/render-sweep.json",
+      "test/formats/mathml/render-sweep.json",
       "test/formats/cli/cli-fixtures.json",
       "test/formats/cli/cli-fixtures.manifest.yaml",
       "test/formats/evaluation/evaluation-fixtures.json",

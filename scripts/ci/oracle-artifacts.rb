@@ -14,8 +14,8 @@ require "thread"
 $stdout.sync = true
 
 module OracleArtifacts
-  PIN = "00c52783877b38f6b8e6e109f1803f96bb34fc62"
-  LOCK_SHA = "a07b033c4e199d7324e2e0c6c15063df08f840f3234d3c874ede809d6750bed4"
+  PIN = "ae20be111a26fdd988c58be0bfb2b7f6fe6e352f"
+  LOCK_SHA = "4aafd7162d8b10a8a841fb30c89bc0ff9b2429ea0ec6379c7931c3b9093dca0b"
   ROOTS = %w[corpus src/unitsml/generated src/generated src/core/generated src/formatting/generated
              src/formats/html/generated src/formats/latex/generated
              src/formats/mathml/generated src/formats/omml/generated
@@ -117,6 +117,7 @@ module OracleArtifacts
         "xml-fixtures" => "test/xml", "xml-reader-fixtures" => "test/xml" }.each do |script, dir|
         jobs << [script, "generate-#{script}.rb", ["--oracle", @oracle, "--out", at.call(dir)]]
       end
+      jobs << ["render-sweeps", "generate-render-sweeps.rb", ["--oracle", @oracle, "--out", at.call("test/formats")]]
       jobs
     end
 
@@ -132,13 +133,16 @@ module OracleArtifacts
         metadata = payload.sub(/\.json\z/, ".metadata.json")
         [path, payload] + (files.include?(metadata) ? [metadata] : [])
       end
-      (roots + fixture_paths).uniq.sort
+      sweeps = %w[asciimath latex mathml].map { |format| "test/formats/#{format}/render-sweep.json" }
+      raise "untracked render sweep" unless (sweeps - files).empty?
+      (roots + fixture_paths + sweeps).uniq.sort
     end
 
     def omitted_family_paths
       @paths.select do |path|
         path.match?(%r{\Asrc/formats/(?:html|unicodemath)/generated/(?:parser-tables|transform-tables|provenance)\.ts\z}) ||
           path.start_with?("src/formats/html/generated-text/", "src/formats/mathml/generated-recognition/") ||
+          path.match?(%r{\Atest/formats/(?:asciimath|latex|mathml)/render-sweep\.json\z}) ||
           path.match?(%r{\Atest/.*(?:cli-fixtures|evaluation-fixtures|render-options-fixtures|render-kinds-fixtures|ox-contract\.expected)\.(?:json|manifest\.yaml)\z})
       end
     end
@@ -317,7 +321,7 @@ module OracleArtifacts
       # The existing gate independently regenerates every other family. Re-run
       # only its omissions here, avoiding a third pass over the full corpus.
       second = File.join(@out, "second-generated")
-      omitted_names = %w[html-parser-data unicodemath-parser-data html-text-data mathml-recognition-data
+      omitted_names = %w[render-sweeps html-parser-data unicodemath-parser-data html-text-data mathml-recognition-data
                          cli-fixtures evaluation-fixtures render-options-fixtures xml-fixtures]
       omitted_paths = omitted_family_paths
       raise "empty omitted-family inventory" if omitted_paths.empty?

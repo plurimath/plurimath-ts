@@ -573,7 +573,8 @@ ROWS = [
   ["power-non-real", "power", "(-1)^0.5"],
   ["power-non-real-root", "power", "(-8)^(1/3)"],
   ["power-zero-base-negative-exponent", "power", "0^(-1)"],
-  ["power-bare-negative-exponent-unsupported", "power", "2^-1"],
+  ["power-bare-negative-integer-exponent", "power", "2^-1"],
+  ["power-bare-negative-float-exponent", "power", "2^-1.0"],
 
   # Implicit multiplication.
   ["implicit-mul-number-symbol", "implicit-multiplication", "2a"],
@@ -1339,6 +1340,7 @@ OPTIONS = {
 # Rows the port refuses with `UnsupportedFeatureError`, each with its reason
 # (see the header).
 PORT_REFUSALS = {
+  "power-bare-negative-integer-exponent" => "rational",
   "rational-integer-negative-power" => "rational",
   "rational-zero-numerator" => "rational",
   "rational-in-sum" => "rational",

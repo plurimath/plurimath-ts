@@ -636,11 +636,10 @@ describe("unary shapes", () => {
     expect(() => toLatex(new FloorNode({ parameterOne: [x()] }))).toThrow(RenderError);
   });
 
-  it("norm writes \\lVert on BOTH sides, as the gem does", () => {
-    // Probes shape/Norm/sym => "{\lVert x \lVert}"; shape/Norm/nil =>
-    // "{\lVert  \lVert}"; shape/Norm/array => NoMethodError.
-    expect(toLatex(new NormNode({ parameterOne: x() }))).toBe("{\\lVert x \\lVert}");
-    expect(toLatex(new NormNode({}))).toBe("{\\lVert  \\lVert}");
+  it("norm pairs left and right double bars", () => {
+    // Ruby 0.11.12 pairs \lVert and \rVert; array operands still raise.
+    expect(toLatex(new NormNode({ parameterOne: x() }))).toBe("{\\lVert x \\rVert}");
+    expect(toLatex(new NormNode({}))).toBe("{\\lVert  \\rVert}");
     expect(() => toLatex(new NormNode({ parameterOne: [x()] }))).toThrow(RenderError);
   });
 
@@ -1625,24 +1624,22 @@ describe("generic tables", () => {
     ).toBe("\\left [\\begin{matrix}x\\end{matrix}\\right \\Vert");
   });
 
-  it("a NIL open paren takes the array-environment branch: dot parens and a column descriptor", () => {
-    // Probes table/nil-parens => "\left .\begin{matrix}{a}x\end{matrix}\right .";
-    // table/nil-open (close kept) => "...{a}x...\right ]"; table/pipe-col =>
-    // "{a|a}a & b" (the pipe td vanishes from the row via Tr).
+  it("a NIL open paren uses invisible delimiters without an array column descriptor", () => {
+    // Ruby 0.11.12 removes generic matrix column descriptors.
     expect(toLatex(new TableNode({ value: [tr(x())] }))).toBe(
-      "\\left .\\begin{matrix}{a}x\\end{matrix}\\right .",
+      "\\left .\\begin{matrix}x\\end{matrix}\\right .",
     );
     expect(toLatex(new TableNode({ value: [tr(x())], closeParen: paren("Paren::Rsquare") }))).toBe(
-      "\\left .\\begin{matrix}{a}x\\end{matrix}\\right ]",
+      "\\left .\\begin{matrix}x\\end{matrix}\\right ]",
     );
     const pipeRow = new UnaryFunctionNode({
       name: "Tr",
       parameterOne: [td(sym("a")), tdOf([vert()]), td(sym("b"))],
     });
     expect(toLatex(new TableNode({ value: [pipeRow] }))).toBe(
-      "\\left .\\begin{matrix}{a|a}a & b\\end{matrix}\\right .",
+      "\\left .\\begin{matrix}a & b\\end{matrix}\\right .",
     );
-    // With a paren present there is no descriptor and no crash surface.
+    // Explicit delimiters use the same matrix environment.
     expect(
       toLatex(
         new TableNode({
@@ -1692,8 +1689,12 @@ describe("generic tables", () => {
         }),
       ),
     ).toBe("\\left [\\begin{matrix}\\end{matrix}\\right ]");
-    expect(() => toLatex(new TableNode({ value: null }))).toThrow(RenderError);
-    expect(() => toLatex(new TableNode({ value: [] }))).toThrow(RenderError);
+    expect(toLatex(new TableNode({ value: null }))).toBe(
+      "\\left .\\begin{matrix}\\end{matrix}\\right .",
+    );
+    expect(toLatex(new TableNode({ value: [] }))).toBe(
+      "\\left .\\begin{matrix}\\end{matrix}\\right .",
+    );
   });
 
   it("a defined name outside the measured subclass set raises rather than guessing", () => {
@@ -1954,7 +1955,7 @@ describe("named tables", () => {
     );
     expect(toLatex(carrier("Array", null, null))).toBe("\\begin{array}.x\\end{array}");
     expect(toLatex(carrier("Cases", null, null))).toBe(
-      "\\left .\\begin{matrix}{a}x\\end{matrix}\\right .",
+      "\\left .\\begin{matrix}x\\end{matrix}\\right .",
     );
   });
 

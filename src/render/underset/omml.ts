@@ -12,12 +12,12 @@ import { XmlElement } from "../../xml/index";
 export function renderUnderset(node: NodeOf<"underset">, context: RenderContext): OmmlRendered {
   if (!context.displaystyle) {
     return context.render(
-      new BaseNode({ parameterOne: node.parameterOne, parameterTwo: node.parameterTwo }),
+      new BaseNode({ parameterOne: node.parameterTwo, parameterTwo: node.parameterOne }),
     );
   }
 
   if (!present(node.options?.accentunder)) {
-    return renderOverUnder(node.kind, "Low", node.parameterOne, node.parameterTwo, context);
+    return renderOverUnder(node.kind, "Low", node.parameterTwo, node.parameterOne, context);
   }
 
   // `m:groupChrPR`, not `m:groupChrPr`. That capitalisation is the GEM's, and it

@@ -44,8 +44,7 @@ The current source and package entries provide:
   (see `test/formats/html/parity-target.ts`). Native UnitsML expansion replaces
   the former `text-unitsml-valid` plain-text divergence. The corpus is not the
   whole language:
-  a construct it does not cover can still raise `RenderError`, for example
-  `cancel(x)` in `./html` and `./omml`.
+  a construct it does not cover can still raise `RenderError`.
 - UnicodeMath input uses the pinned gem's grammar and 484 reachable transform
   rules. The other 35 rules have source-based unreachability proofs (see
   [rule reachability](docs/unicodemath-rule-reachability.md)). The parser
@@ -230,7 +229,7 @@ import { ParseError, UnsupportedFeatureError, UnsupportedFormatError } from "@pl
 | `UnsupportedFormatError` | `UNSUPPORTED_FORMAT` | a recognized operation without a native implementation |
 | `InvalidTypeError` | `INVALID_TYPE` | `new Plurimath("x", "asciimath").toDisplay("html")` |
 | `UnsupportedFeatureError` | `UNSUPPORTED_FEATURE` | `new Plurimath("mathbf(x)", "asciimath").toDisplay("unicodemath")` |
-| `RenderError` | `RENDER_ERROR` | a node the renderer refuses, e.g. `toOmml(parseAsciimath("cancel(x)"))` |
+| `RenderError` | `RENDER_ERROR` | a node or option the renderer refuses |
 
 `ParseError` and `RenderError` are different failures: the first means the
 input was not read, the second means it was read and this renderer will not
@@ -250,8 +249,7 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
 - Standalone UnitsML input is not a public parse format. Use quoted inline
   AsciiMath, such as `parse('"unitsml(kg)"', "asciimath")`; all six renderers
   accept nested `unitsml` options.
-- Constructs the renderers have not measured (for example `cancel(x)` in
-  `./html` and `./omml`) raise `RenderError`.
+- Constructs the renderers have not measured raise `RenderError`.
 
 ## Development
 

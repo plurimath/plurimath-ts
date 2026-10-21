@@ -37,6 +37,9 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-asciimath-failure-positions.rb"
 RULES = {
   "td" => :td, "base" => :base, "power" => :power, "space" => :space,
   "comma" => :comma, "spaceOptional" => :space?, "number" => :number,
+  "decimalNumber" => :decimal_number, "decimalOperand" => :decimal_operand,
+  "signedNumber" => :signed_number, "scriptOperand" => :script_operand,
+  "modOperand" => :mod_operand,
   "hexNumber" => :hex_number, "binaryNumber" => :binary_number,
   "octalNumber" => :octal_number, "controversialSymbols" => :controversial_symbols,
   "leftRightOpenParen" => :left_right_open_paren,
@@ -68,7 +71,8 @@ INPUTS = [
   "root(3)(x)", "root(3)(x)y", "color", "color(red)(x)", "color(red)",
   "red", "red)", "mod", "a mod b", "a mod", "sum", "sum_(i=1)^n",
   "sum_(i=1)^n x", "0x1F", "0x1Fg", "0x", "0b10", "0b102", "0o7", "0o78",
-  "1.5", "1.5x", "1.", ".5", "left(a right)", "left(a right)x", "left(a right",
+  "1.5", "1.5x", "1.", ".5", "-1", "-1x", "-1.5", "-1.5x", "-0x1",
+  "left(a right)", "left(a right)x", "left(a right",
   "abc", "+", "`", "x^2", "x^2 y", "x_1^2", "oo", "lim_(x->0)", "obrace(a)",
   "overset(a)(b)", "overset(a)(b)c", "(:", "ᑕaᑐ", ")x", "]x", "}x", "ℛx",
 ].freeze

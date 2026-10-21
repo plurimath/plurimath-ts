@@ -1175,8 +1175,8 @@ describe("OMML scripts and limits slice", () => {
     ({ displaystyle, expectedOne, expectedTwo, parameterOne, parameterTwo }) => {
       const node = new UndersetNode({ options: {}, parameterOne, parameterTwo });
       const expected = displaystyle
-        ? lowLimitContractXml(expectedOne, expectedTwo)
-        : baseContractXml(expectedOne, expectedTwo);
+        ? lowLimitContractXml(expectedTwo, expectedOne)
+        : baseContractXml(expectedTwo, expectedOne);
       expect(toOmml(new FormulaNode({ displaystyle, value: [node] }))).toBe(
         publicFragment(expected),
       );

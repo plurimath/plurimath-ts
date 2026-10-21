@@ -175,9 +175,9 @@ function renderMod(node: NodeOf<"binaryFunction">, context: RenderContext): Omml
  *   return power_base.to_omml_without_math_tag(display_style, options: options)
  * end
  *
- * overset = Overset.new(first_value, parameter_two)
+ * overset = Overset.new(parameter_two, first_value)
  * return Array(overset.to_omml_without_math_tag(...)) unless parameter_one
- * underset = Underset.new(overset, parameter_one)
+ * underset = Underset.new(parameter_one, overset)
  * ```
  *
  * The structure is built out of OTHER nodes and those are rendered, so this
@@ -224,10 +224,10 @@ function renderUnderover(
     );
   }
 
-  const overset = new OversetNode({ parameterOne: base, parameterTwo: node.parameterTwo });
+  const overset = new OversetNode({ parameterOne: node.parameterTwo, parameterTwo: base });
   if (!present(node.parameterOne)) return context.render(overset);
   return context.render(
-    new UndersetNode({ parameterOne: overset, parameterTwo: node.parameterOne }),
+    new UndersetNode({ parameterOne: node.parameterOne, parameterTwo: overset }),
   );
 }
 

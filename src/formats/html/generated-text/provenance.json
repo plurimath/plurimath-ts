@@ -1,13 +1,13 @@
 {
   "generator": "scripts/generate-html-text-data.rb",
   "generatorSha256": "6053cf96b5d8dbf6bfa5033161a562efd3bee279bc68e935220663d4b9b120df",
-  "oracleCommit": "00c52783877b38f6b8e6e109f1803f96bb34fc62",
-  "oracleVersion": "0.11.6",
+  "oracleCommit": "ae20be111a26fdd988c58be0bfb2b7f6fe6e352f",
+  "oracleVersion": "0.11.12",
   "oracleSourceSha256": {
     "lib/plurimath/math/function/text.rb": "5b2e602c665851cd5ea6601e855c8e25918f026917dbefc3b967dd27552c7323",
     "lib/plurimath/mathml/constants.rb": "b9cff559b355632fbf805da291723ae892c303dd4a0c4725af8b7d5cb0ee2b16"
   },
-  "bundleLockSha256": "a07b033c4e199d7324e2e0c6c15063df08f840f3234d3c874ede809d6750bed4",
+  "bundleLockSha256": "4aafd7162d8b10a8a841fb30c89bc0ff9b2429ea0ec6379c7931c3b9093dca0b",
   "formatterVersion": "2.5.6",
   "formatterConfigSha256": "290abde229e6ad16b152963c05ba8840f9ac4be6c4842ebea2e84362b16e7d06",
   "rubyVersion": "4.0.1",

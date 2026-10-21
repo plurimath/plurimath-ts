@@ -245,7 +245,7 @@ describe("degenerate-slot guards, each measured (probe files in the PR record)",
   it('base Symbol: rspace attribute, {: empty mi, "" long form (probes symbol-*)', () => {
     expect(
       toMathml(formula(new SymbolNode({ value: "x", options: { rspace: "thickmathspace" } }))),
-    ).toBe(math('    <mi rspace="thickmathspace">x</mi>'));
+    ).toBe(math('    <mo rspace="thickmathspace">x</mo>'));
     expect(toMathml(formula(new SymbolNode({ value: "{:" })))).toBe(math("    <mi/>"));
     expect(toMathml(formula(new SymbolNode({ value: "" })))).toBe(math("    <mi></mi>"));
     expect(toMathml(formula(new SymbolNode({ value: null })))).toBe(math("    <mi/>"));

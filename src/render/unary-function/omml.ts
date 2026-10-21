@@ -1,5 +1,6 @@
 import type { NodeOptions, NodeParameter } from "../../core/index";
 import { RenderError, TableNode, TextNode } from "../../core/index";
+import { BinaryFunctionNode } from "../../core/nodes";
 import {
   controlProperties,
   describeSlot,
@@ -52,9 +53,8 @@ import { renderText } from "../text/omml";
  * The overriders this file carries beyond the base set are `Left`, `Right`,
  * `Tr`, and the twenty named at their arms in `renderUnaryFunction` — `Ln`, `Det`,
  * `Gcd`, `Max`, `Hom`, `Exp`, `Lcm`, `Min`, `Dim`, `Glb`, `Lub`, `Lg`, `Ker`, `Deg`,
- * `Liminf` and `Limsup` (a name run then the value), `Cancel` (the value
- * alone), `Phantom`, `Substack` and `Mbox` — plus `Longdiv`, `Scarries` and
- * `Msgroup` (`omml_value` alone, like `Cancel`, no strict-list requirement),
+ * `Liminf` and `Limsup` (a name run then the value), `Cancel` (a diagonal-strike enclosure), `Phantom`, `Substack` and `Mbox` — plus `Longdiv`, `Scarries` and
+ * `Msgroup` (`omml_value` alone, no strict-list requirement),
  * `Merror` and `Msline` (always empty), `Sup` (a `sup` run unless hidden, then
  * the value — no empty-slot guard), `Mglyph` (one run, alt text or a numeric
  * entity) and `Ms` (one bare `m:t`, no `m:r` around it).
@@ -106,8 +106,7 @@ export function renderUnaryFunction(
     case "Limsup":
       return renderNamedRun(node, context);
     case "Cancel":
-      // `cancel.rb:17`: `omml_value` alone — no name run, so an absent slot leaves nothing.
-      return renderUnaryValue(node.parameterOne, context, node.kind, "cancel.parameterOne");
+      return renderCancel(node, context);
     case "Phantom":
       return renderPhantom(node, context);
     case "Substack":
@@ -173,6 +172,29 @@ export function renderUnaryFunction(
         node.kind,
       );
   }
+}
+
+/** Ruby 0.11.12 preserves the diagonal strike and suppresses an empty enclosure. */
+function renderCancel(node: NodeOf<"unaryFunction">, context: RenderContext): OmmlRendered {
+  const value = Array.isArray(node.parameterOne)
+    ? node.parameterOne.filter((item) => item !== null && item !== undefined)
+    : node.parameterOne;
+  if (value === null || value === undefined || (Array.isArray(value) && value.length === 0)) {
+    return [];
+  }
+  const enclosure = requireElement(
+    context.render(
+      new BinaryFunctionNode({
+        name: "Menclose",
+        parameterOne: "updiagonalstrike",
+        parameterTwo: value,
+      }),
+    ),
+    node.kind,
+    "cancel.enclosure",
+  );
+  const body = enclosure.children[enclosure.children.length - 1];
+  return body instanceof XmlElement && body.children.length === 0 ? [] : enclosure;
 }
 
 /**

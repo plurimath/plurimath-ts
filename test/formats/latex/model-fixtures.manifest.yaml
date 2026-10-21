@@ -12,14 +12,14 @@ generator:
     scripts/generate-latex-model-fixtures.rb: e90b3fc2f7b7a30f53058fb1f2d841b857d8b994c079c0689186bcf6255ec2b2
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 250099d9e766fe64fcc193ccc1893429a0fd9eee
+    commit: 63c958536477de8e1011a81da6479e30a3f4fbba
     clean: true
     dirty_paths: []
 oracle:
   gem: plurimath
-  version: 0.11.6
+  version: 0.11.12
   kind: git-checkout
-  commit: 00c52783877b38f6b8e6e109f1803f96bb34fc62
+  commit: ae20be111a26fdd988c58be0bfb2b7f6fe6e352f
   clean: true
   dirty_paths: []
 ruby:
@@ -30,7 +30,7 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: a07b033c4e199d7324e2e0c6c15063df08f840f3234d3c874ede809d6750bed4
+    sha256: 4aafd7162d8b10a8a841fb30c89bc0ff9b2429ea0ec6379c7931c3b9093dca0b
     resolved_gems: 77
     platforms:
     - aarch64-linux-gnu
@@ -63,12 +63,12 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: lutaml-model
-    version: 0.8.30
+    version: 0.8.65
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
   - name: mml
-    version: 2.4.1
+    version: 2.4.2
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
@@ -105,13 +105,13 @@ dependencies:
 corpus:
   path: submodules/plurimath-testsuite
   repository:
-    commit: 2b4aa4e52882a83ce901edfa8be7652ec19f0201
+    commit: b6c7802a6fd48b862f8dd2c0fc7bb65c8b9b7faf
     clean: true
     dirty_paths: []
   provenance:
     path: corpus/provenance.yaml
     schema: plurimath-corpus/provenance/3
-    sha256: c438e39753163da23c841a00ae5a8c563ea5cd7f0ae416ad675a8c39255f23d5
+    sha256: 4a212fd1e5cdb0223e19b573ed22dbadd28f8d6fd1ef730c678b1d449248019a
 payload:
   path: model-fixtures.json
   schema: plurimath-corpus/latex-model/1

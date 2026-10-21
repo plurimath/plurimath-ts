@@ -600,8 +600,8 @@ describe("the decimal marker comes from formatting, not a hardcoded dot", () => 
 
 describe("the rule inventory", () => {
   it("names every rule parse.rb defines, plus the three from the mixin", () => {
-    // 33 rules in parse.rb + hex/binary/octal from BaseNumberPrefix::Parser.
-    expect(Object.keys(grammar.rules).length).toBe(36);
+    // 38 rules in parse.rb + hex/binary/octal from BaseNumberPrefix::Parser.
+    expect(Object.keys(grammar.rules).length).toBe(41);
   });
 
   it("shares one atom per rule, so the packrat cache is shared as Parslet's is", () => {

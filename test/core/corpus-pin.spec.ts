@@ -372,8 +372,8 @@ describe("the pin as shipped", () => {
   it("was generated the canonical way", () => {
     expect(corpus.provenance.committable).toBe(true);
     expect(corpus.provenance.xmlEngine).toBe("Plurimath::XmlEngine::OxEngine");
-    expect(corpus.provenance.oracleVersion).toBe("0.11.6");
-    expect(corpus.provenance.oracleCommit).toBe("00c52783877b38f6b8e6e109f1803f96bb34fc62");
+    expect(corpus.provenance.oracleVersion).toBe("0.11.12");
+    expect(corpus.provenance.oracleCommit).toBe("ae20be111a26fdd988c58be0bfb2b7f6fe6e352f");
   });
 
   it("accounts for every declared target on every case", () => {
@@ -402,8 +402,16 @@ describe("the pin as shipped", () => {
         (_, index) => `mathml-partial-${String(index + 1).padStart(3, "0")}`,
       ),
       ...Array.from(
-        { length: 31 },
+        { length: 23 },
         (_, index) => `omml-partial-${String(index + 1).padStart(3, "0")}`,
+      ),
+      ...Array.from(
+        { length: 4 },
+        (_, index) => `omml-partial-${String(index + 28).padStart(3, "0")}`,
+      ),
+      ...Array.from(
+        { length: 9 },
+        (_, index) => `omml-limits-${String(index + 1).padStart(3, "0")}`,
       ),
     ]);
     const entry = partial[0];

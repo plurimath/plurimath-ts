@@ -11,8 +11,8 @@
  *   - `Plurimath::Math.parse_formula` (`math.rb:62-66`): the returned formula
  *     carries `input_string` — the CALLER's text, not the preprocessed form.
  *
- * Failure positions: `ParseFailed.index` is an offset into the preprocessed
- * text, and four of the five preprocessing rewrites change lengths, so every
+ * Failure positions use the root-prefix boundary in the preprocessed text.
+ * Four of the five preprocessing rewrites change lengths, so every
  * position is mapped back through the `SourceMap` before it reaches a caller
  * as `ParseError.index` (§5). `test/formats/asciimath/failure-parity.spec.ts`
  * pins that contract against the gem's 156-input failure sweep; this module
@@ -22,7 +22,13 @@
 import { requireKnownParseOptions } from "../../core/errors";
 import { type FormulaNode, type OnUnsupported, ParseError } from "../../core/index";
 import { type LocaleOptions, requireLocaleKey } from "../../formatting/index";
-import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
+import {
+  isStackOverflow,
+  type ParseContext,
+  ParseFailed,
+  type ParseValue,
+  type SourceMap,
+} from "../../pegkit/index";
 import { asciimathGrammar } from "./grammar";
 import { preprocess } from "./preprocess";
 import { asciimathTransform, finalizeAsciimathParse } from "./transform";
@@ -91,11 +97,32 @@ function parsePreprocessed(
   map: SourceMap,
   options?: AsciimathParseOptions | null,
 ): ParseValue {
+  const grammar = asciimathGrammar(options ?? undefined);
   try {
-    return asciimathGrammar(options ?? undefined).root.parse(text);
+    return grammar.root.parse(text);
   } catch (error) {
     if (error instanceof ParseFailed) {
-      throw new ParseError(error.message, input, "asciimath", map.toOriginal(error.index));
+      // AsciiMath reports where its root prefix ends, rather than the furthest
+      // leftover match attempted by another alternative inside the PEG engine.
+      let index = error.index;
+      const context: ParseContext = {
+        input: text,
+        captures: [new Map()],
+        maxPos: 0,
+        unconsumed: -1,
+        cache: new Map(),
+        depth: 0,
+      };
+      try {
+        const prefix = grammar.root.apply(0, context, false);
+        if (prefix.ok) index = prefix.pos;
+      } catch (diagnosticError) {
+        // A diagnostic retry must preserve the original typed resource failure.
+        if (!(diagnosticError instanceof ParseFailed) && !isStackOverflow(diagnosticError)) {
+          throw diagnosticError;
+        }
+      }
+      throw new ParseError(error.message, input, "asciimath", map.toOriginal(index));
     }
     throw error;
   }

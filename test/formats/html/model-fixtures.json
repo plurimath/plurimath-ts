@@ -1040,7 +1040,7 @@
       },
       "rendered": {
         "asciimath": "[[\"a\"], [\"b\"]]",
-        "latex": "\\left .\\begin{matrix}{a}\\text{a} \\\\ \\text{b}\\end{matrix}\\right .",
+        "latex": "\\left .\\begin{matrix}\\text{a} \\\\ \\text{b}\\end{matrix}\\right .",
         "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mtable>\n      <mtr>\n        <mtd>\n          <mtext>a</mtext>\n        </mtd>\n      </mtr>\n      <mtr>\n        <mtd>\n          <mtext>b</mtext>\n        </mtd>\n      </mtr>\n    </mtable>\n  </mstyle>\n</math>\n",
         "unicodemath": "■(\"a\"@\"b\")"
       }
@@ -6530,7 +6530,7 @@
       },
       "rendered": {
         "asciimath": "[[\"a\", \"b\"]]",
-        "latex": "\\left .\\begin{matrix}{aa}\\text{a} & \\text{b}\\end{matrix}\\right .",
+        "latex": "\\left .\\begin{matrix}\\text{a} & \\text{b}\\end{matrix}\\right .",
         "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mtable>\n      <mtr>\n        <mtd>\n          <mtext>a</mtext>\n        </mtd>\n        <mtd>\n          <mtext>b</mtext>\n        </mtd>\n      </mtr>\n    </mtable>\n  </mstyle>\n</math>\n",
         "unicodemath": "■(\"a\"&\"b\")"
       }
@@ -6593,7 +6593,7 @@
       },
       "rendered": {
         "asciimath": "[[\"a\"]]",
-        "latex": "\\left .\\begin{matrix}{a}\\text{a}\\end{matrix}\\right .",
+        "latex": "\\left .\\begin{matrix}\\text{a}\\end{matrix}\\right .",
         "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mtable>\n      <mtr>\n        <mtd>\n          <mtext>a</mtext>\n        </mtd>\n      </mtr>\n    </mtable>\n  </mstyle>\n</math>\n",
         "unicodemath": "■(\"a\")"
       }
@@ -7201,7 +7201,7 @@
       "rendered": {
         "asciimath": "\"P{coprod}\"_(\"i\") \"A\"_(\"i\")",
         "latex": "\\coprod_{\\text{i}} \\text{A}_{\\text{i}}",
-        "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <msub>\n      <mi>&#x2210;</mi>\n      <mtext>i</mtext>\n    </msub>\n    <msub>\n      <mtext>A</mtext>\n      <mtext>i</mtext>\n    </msub>\n  </mstyle>\n</math>\n",
+        "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <msub>\n      <mo>&#x2210;</mo>\n      <mtext>i</mtext>\n    </msub>\n    <msub>\n      <mtext>A</mtext>\n      <mtext>i</mtext>\n    </msub>\n  </mstyle>\n</math>\n",
         "unicodemath": "∐_(\"i\") \"A\"_(\"i\")"
       }
     },
@@ -7321,7 +7321,7 @@
       "rendered": {
         "asciimath": "\"P{bigoplus}\"_(\"i\") \"A\"_(\"i\")",
         "latex": "\\bigoplus_{\\text{i}} \\text{A}_{\\text{i}}",
-        "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <msub>\n      <mi>&#x2a01;</mi>\n      <mtext>i</mtext>\n    </msub>\n    <msub>\n      <mtext>A</mtext>\n      <mtext>i</mtext>\n    </msub>\n  </mstyle>\n</math>\n",
+        "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <msub>\n      <mo>&#x2a01;</mo>\n      <mtext>i</mtext>\n    </msub>\n    <msub>\n      <mtext>A</mtext>\n      <mtext>i</mtext>\n    </msub>\n  </mstyle>\n</math>\n",
         "unicodemath": "⨁_(\"i\") \"A\"_(\"i\")"
       }
     },
@@ -11233,7 +11233,7 @@
       },
       "rendered": {
         "asciimath": "[[\"S\" \"o\" \"m\" \"e\" \"t\" \"h\" \"i\" \"n\" \"g\"]]",
-        "latex": "\\left .\\begin{matrix}{a}\\text{S} \\text{o} \\text{m} \\text{e} \\text{t} \\text{h} \\text{i} \\text{n} \\text{g}\\end{matrix}\\right .",
+        "latex": "\\left .\\begin{matrix}\\text{S} \\text{o} \\text{m} \\text{e} \\text{t} \\text{h} \\text{i} \\text{n} \\text{g}\\end{matrix}\\right .",
         "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mtable>\n      <mtr>\n        <mtd>\n          <mtext>S</mtext>\n          <mtext>o</mtext>\n          <mtext>m</mtext>\n          <mtext>e</mtext>\n          <mtext>t</mtext>\n          <mtext>h</mtext>\n          <mtext>i</mtext>\n          <mtext>n</mtext>\n          <mtext>g</mtext>\n        </mtd>\n      </mtr>\n    </mtable>\n  </mstyle>\n</math>\n",
         "unicodemath": "■(\"S\"\"o\"\"m\"\"e\"\"t\"\"h\"\"i\"\"n\"\"g\")"
       }
@@ -11391,7 +11391,7 @@
       },
       "rendered": {
         "asciimath": "[[4], [3], [2], [1]]",
-        "latex": "\\left .\\begin{matrix}{a}4 \\\\ 3 \\\\ 2 \\\\ 1\\end{matrix}\\right .",
+        "latex": "\\left .\\begin{matrix}4 \\\\ 3 \\\\ 2 \\\\ 1\\end{matrix}\\right .",
         "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mtable>\n      <mtr>\n        <mtd>\n          <mn>4</mn>\n        </mtd>\n      </mtr>\n      <mtr>\n        <mtd>\n          <mn>3</mn>\n        </mtd>\n      </mtr>\n      <mtr>\n        <mtd>\n          <mn>2</mn>\n        </mtd>\n      </mtr>\n      <mtr>\n        <mtd>\n          <mn>1</mn>\n        </mtd>\n      </mtr>\n    </mtable>\n  </mstyle>\n</math>\n",
         "unicodemath": "■(4@3@2@1)"
       }

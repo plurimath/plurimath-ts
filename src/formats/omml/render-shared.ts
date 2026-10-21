@@ -479,8 +479,8 @@ function renderLimit(
   const name = `lim${position}`;
   return new XmlElement(`m:${name}`).append(
     new XmlElement(`m:${name}Pr`).append(controlProperties()),
-    ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
-    ommlSlot(limit, "lim", context, kind, `${kind}.parameterTwo`),
+    ommlSlot(base, "e", context, kind, `${kind}.parameterTwo`),
+    ommlSlot(limit, "lim", context, kind, `${kind}.parameterOne`),
   );
 }
 
@@ -497,8 +497,8 @@ export function renderOverUnder(
   const scriptSlot = position === "Upp" ? "sup" : "sub";
   return new XmlElement(`m:${name}`).append(
     structuralProperties(name),
-    ommlSlot(base, "e", context, kind, `${kind}.parameterOne`),
-    ommlSlot(limit, scriptSlot, context, kind, `${kind}.parameterTwo`),
+    ommlSlot(base, "e", context, kind, `${kind}.parameterTwo`),
+    ommlSlot(limit, scriptSlot, context, kind, `${kind}.parameterOne`),
   );
 }
 

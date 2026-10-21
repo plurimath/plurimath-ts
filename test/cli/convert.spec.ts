@@ -16,20 +16,22 @@ import {
 
 const ASCIIMATH_INPUT = "frac(1)(2)";
 const LATEX_INPUT = "\\frac{1}{2}";
+const MATHML_INPUT =
+  '<math xmlns="http://www.w3.org/1998/Math/MathML"><mfrac><mn>1</mn><mn>2</mn></mfrac></math>';
+const OMML_INPUT =
+  '<m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:f><m:num><m:r><m:t>1</m:t></m:r></m:num><m:den><m:r><m:t>2</m:t></m:r></m:den></m:f></m:oMath>';
 
 describe("format token guards", () => {
-  it("names exactly the four working input formats", () => {
-    expect(INPUT_FORMATS).toEqual(["asciimath", "latex", "html", "unicodemath"]);
+  it("names exactly the six working input formats", () => {
+    expect(INPUT_FORMATS).toEqual(["asciimath", "latex", "mathml", "html", "unicodemath", "omml"]);
   });
 
   it("names exactly the six working output formats", () => {
     expect(OUTPUT_FORMATS).toEqual(["asciimath", "latex", "mathml", "html", "unicodemath", "omml"]);
   });
 
-  it("isInputFormat accepts input formats and rejects output-only ones", () => {
-    expect(isInputFormat("asciimath")).toBe(true);
-    expect(isInputFormat("mathml")).toBe(false);
-    expect(isInputFormat("omml")).toBe(false);
+  it("isInputFormat accepts every input format and rejects unsupported ones", () => {
+    for (const format of INPUT_FORMATS) expect(isInputFormat(format)).toBe(true);
     expect(isInputFormat("bogus")).toBe(false);
   });
 
@@ -72,6 +74,13 @@ describe("convert", () => {
     const out = convert(ASCIIMATH_INPUT, "asciimath", "mathml");
     expect(out).toContain("<mfrac>");
     expect(out).toContain("<mn>1</mn>");
+  });
+
+  it.each([
+    ["mathml", MATHML_INPUT],
+    ["omml", OMML_INPUT],
+  ] as const)("converts %s input through the compat parser", (from, input) => {
+    expect(convert(input, from, "latex")).toBe(LATEX_INPUT);
   });
 
   it("converts asciimath to omml", () => {

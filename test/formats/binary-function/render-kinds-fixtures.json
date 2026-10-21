@@ -4149,7 +4149,7 @@
           "expected": "3"
         },
         "mathml": {
-          "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <menclose notation=\"top&#x0000;left\">\n      <mn>3</mn>\n    </menclose>\n  </mstyle>\n</math>\n"
+          "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <menclose notation=\"topleft\">\n      <mn>3</mn>\n    </menclose>\n  </mstyle>\n</math>\n"
         },
         "html": {
           "expected": "<menclose notation=\"top\u0000left\">3</menclose>"

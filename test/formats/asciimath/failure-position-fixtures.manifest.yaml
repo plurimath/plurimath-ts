@@ -6,20 +6,20 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-asciimath-failure-positions.rb
-  sha256: 4672ccc71c9b82000e6737dc1fe43c3ca5b29e1ee0750d1e97afda58d2a63523
+  sha256: bc931aba4cf21bcdf2b41e47b237eb2fe9002415efa185c03a4744253828755c
   inputs:
-    scripts/generate-asciimath-failure-positions.rb: 4672ccc71c9b82000e6737dc1fe43c3ca5b29e1ee0750d1e97afda58d2a63523
+    scripts/generate-asciimath-failure-positions.rb: bc931aba4cf21bcdf2b41e47b237eb2fe9002415efa185c03a4744253828755c
     scripts/generate-corpus.rb: d22603531c0f5205c4d6a29fa002963317acf1a7d42bc8b8f6a01827e86d3a5c
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 250099d9e766fe64fcc193ccc1893429a0fd9eee
+    commit: 63c958536477de8e1011a81da6479e30a3f4fbba
     clean: true
     dirty_paths: []
 oracle:
   gem: plurimath
-  version: 0.11.6
+  version: 0.11.12
   kind: git-checkout
-  commit: 00c52783877b38f6b8e6e109f1803f96bb34fc62
+  commit: ae20be111a26fdd988c58be0bfb2b7f6fe6e352f
   clean: true
   dirty_paths: []
 ruby:
@@ -30,7 +30,7 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: a07b033c4e199d7324e2e0c6c15063df08f840f3234d3c874ede809d6750bed4
+    sha256: 4aafd7162d8b10a8a841fb30c89bc0ff9b2429ea0ec6379c7931c3b9093dca0b
     resolved_gems: 77
     platforms:
     - aarch64-linux-gnu
@@ -63,12 +63,12 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: lutaml-model
-    version: 0.8.30
+    version: 0.8.65
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
   - name: mml
-    version: 2.4.1
+    version: 2.4.2
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
@@ -105,5 +105,5 @@ dependencies:
 payload:
   path: failure-position-fixtures.json
   schema: plurimath-ts/asciimath-failure-positions/1
-  sha256: 1c2afb3207f8cbabbb38e69f1992c97ea1b9fab9486cc2e1a14dfde6841293da
-  bytes: 14682990
+  sha256: 8906537db3551848feab34f78888eb51eb0406330dac6af1f9a50a744d9adcb6
+  bytes: 15732939

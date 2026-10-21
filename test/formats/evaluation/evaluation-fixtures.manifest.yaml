@@ -6,20 +6,20 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-evaluation-fixtures.rb
-  sha256: bf6618f59159b99db8288cc2ddd92e387d89db7177e79677d4ac0847e494809f
+  sha256: 6e987d029ecaf88400089dddde18a597a58a31defd5b5c138f08103589cc5717
   inputs:
     scripts/generate-corpus.rb: d22603531c0f5205c4d6a29fa002963317acf1a7d42bc8b8f6a01827e86d3a5c
-    scripts/generate-evaluation-fixtures.rb: bf6618f59159b99db8288cc2ddd92e387d89db7177e79677d4ac0847e494809f
+    scripts/generate-evaluation-fixtures.rb: 6e987d029ecaf88400089dddde18a597a58a31defd5b5c138f08103589cc5717
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 250099d9e766fe64fcc193ccc1893429a0fd9eee
+    commit: 63c958536477de8e1011a81da6479e30a3f4fbba
     clean: true
     dirty_paths: []
 oracle:
   gem: plurimath
-  version: 0.11.6
+  version: 0.11.12
   kind: git-checkout
-  commit: 00c52783877b38f6b8e6e109f1803f96bb34fc62
+  commit: ae20be111a26fdd988c58be0bfb2b7f6fe6e352f
   clean: true
   dirty_paths: []
 ruby:
@@ -30,7 +30,7 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: a07b033c4e199d7324e2e0c6c15063df08f840f3234d3c874ede809d6750bed4
+    sha256: 4aafd7162d8b10a8a841fb30c89bc0ff9b2429ea0ec6379c7931c3b9093dca0b
     resolved_gems: 77
     platforms:
     - aarch64-linux-gnu
@@ -63,12 +63,12 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: lutaml-model
-    version: 0.8.30
+    version: 0.8.65
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
   - name: mml
-    version: 2.4.1
+    version: 2.4.2
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
@@ -105,5 +105,5 @@ dependencies:
 payload:
   path: evaluation-fixtures.json
   schema: plurimath-corpus/evaluation/1
-  sha256: 16f3e31f8023d83747c5b4234205ad4daed18494ae3e2958c8f5feb38c83cf18
-  bytes: 179775
+  sha256: ef1f166df26a8f21cdb925ed41572fe4aa542f8338d9b6149d20eba4b7d3f781
+  bytes: 179872

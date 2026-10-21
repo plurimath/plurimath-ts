@@ -385,20 +385,18 @@ describe("deep structure", () => {
  *
  * `RubyEqualPairs` is the gem's answer measured by
  * `scripts/probes/corpus-equality.rb` against Ruby 0.11.12 at `ae20be11`,
- * GHA run 39587502711, source commit `f9898e6`. The uploaded report is the
+ * GHA run 39591817643, source commit `63c9585`. The uploaded report is the
  * reference; expected pairs are never derived from TypeScript equality.
- * That report includes two calls/2 option-call models. Neither occurs in an
- * equal pair, so restricting its measured pairs to the 714 plain cases below
- * preserves all 81 pairs. The probe now skips both calls schema versions.
+ * The probe skips both calls schema versions and compares all 714 plain cases.
  * Its report, verbatim:
  *
- *   rows in pin:     856
+ *   rows in pin:     854
  *   rejections:      140
- *   cases pinned:    716
+ *   cases pinned:    714
  *   cases withheld:  0
- *   cases compared:  716
- *   reflexive:       716
- *   comparisons:     255970
+ *   cases compared:  714
+ *   reflexive:       714
+ *   comparisons:     254541
  *   asymmetric:      0
  *   equal pairs:     81
  */

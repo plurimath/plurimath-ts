@@ -7214,7 +7214,8 @@
               {
                 "class": "Math::Function::Overset",
                 "fields": {
-                  "parameter_one": {
+                  "parameter_one": null,
+                  "parameter_two": {
                     "class": "Math::Formula",
                     "fields": {
                       "displaystyle": true,
@@ -7234,8 +7235,7 @@
                         }
                       ]
                     }
-                  },
-                  "parameter_two": null
+                  }
                 }
               }
             ]
@@ -25843,7 +25843,7 @@
       "options": {
         "intent": true
       },
-      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\":coproduct($l,n,1)\">\n      <msubsup>\n        <mi>&#x2210;</mi>\n        <mrow arg=\"l\">\n          <mi>i</mi>\n          <mo>=</mo>\n          <mn>1</mn>\n        </mrow>\n        <mi>n</mi>\n      </msubsup>\n      <mrow>\n        <mn>1</mn>\n      </mrow>\n    </mrow>\n  </mstyle>\n</math>\n"
+      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\":coproduct($l,n,1)\">\n      <msubsup>\n        <mo>&#x2210;</mo>\n        <mrow arg=\"l\">\n          <mi>i</mi>\n          <mo>=</mo>\n          <mn>1</mn>\n        </mrow>\n        <mi>n</mi>\n      </msubsup>\n      <mrow>\n        <mn>1</mn>\n      </mrow>\n    </mrow>\n  </mstyle>\n</math>\n"
     },
     {
       "id": "intent-nary-22",
@@ -25856,7 +25856,7 @@
       "options": {
         "intent": true
       },
-      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\":n-ary($l,n,1)\">\n      <msubsup>\n        <mi>&#x22c0;</mi>\n        <mrow arg=\"l\">\n          <mi>i</mi>\n          <mo>=</mo>\n          <mn>1</mn>\n        </mrow>\n        <mi>n</mi>\n      </msubsup>\n      <mrow>\n        <mn>1</mn>\n      </mrow>\n    </mrow>\n  </mstyle>\n</math>\n"
+      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\":n-ary($l,n,1)\">\n      <msubsup>\n        <mo>&#x22c0;</mo>\n        <mrow arg=\"l\">\n          <mi>i</mi>\n          <mo>=</mo>\n          <mn>1</mn>\n        </mrow>\n        <mi>n</mi>\n      </msubsup>\n      <mrow>\n        <mn>1</mn>\n      </mrow>\n    </mrow>\n  </mstyle>\n</math>\n"
     },
     {
       "id": "intent-nary-23",
@@ -28286,7 +28286,7 @@
       "options": {
         "intent": true
       },
-      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\":n-ary(i,n,$naryand)\">\n      <msubsup>\n        <mi>&#x22c0;</mi>\n        <mi>i</mi>\n        <mi>n</mi>\n      </msubsup>\n      <mrow arg=\"naryand\">\n        <mi>x</mi>\n      </mrow>\n    </mrow>\n  </mstyle>\n</math>\n"
+      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\":n-ary(i,n,$naryand)\">\n      <msubsup>\n        <mo>&#x22c0;</mo>\n        <mi>i</mi>\n        <mi>n</mi>\n      </msubsup>\n      <mrow arg=\"naryand\">\n        <mi>x</mi>\n      </mrow>\n    </mrow>\n  </mstyle>\n</math>\n"
     },
     {
       "id": "intent-nary-symbol-clockoint",
@@ -28436,7 +28436,7 @@
       "options": {
         "intent": true
       },
-      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\":coproduct(i,n,$naryand)\">\n      <msubsup>\n        <mi>&#x2210;</mi>\n        <mi>i</mi>\n        <mi>n</mi>\n      </msubsup>\n      <mrow arg=\"naryand\">\n        <mi>x</mi>\n      </mrow>\n    </mrow>\n  </mstyle>\n</math>\n"
+      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\":coproduct(i,n,$naryand)\">\n      <msubsup>\n        <mo>&#x2210;</mo>\n        <mi>i</mi>\n        <mi>n</mi>\n      </msubsup>\n      <mrow arg=\"naryand\">\n        <mi>x</mi>\n      </mrow>\n    </mrow>\n  </mstyle>\n</math>\n"
     },
     {
       "id": "intent-nary-symbol-dint",

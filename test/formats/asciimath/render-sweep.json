@@ -2,8 +2,8 @@
   "description": "Gem-verified AsciiMath render sweep: input -> Plurimath::Math.parse(input, :asciimath).to_asciimath, or the refusal.",
   "oracle": {
     "gem": "plurimath",
-    "version": "0.11.6",
-    "commit": "00c52783877b38f6b8e6e109f1803f96bb34fc62"
+    "version": "0.11.12",
+    "commit": "ae20be111a26fdd988c58be0bfb2b7f6fe6e352f"
   },
   "count": 1642,
   "cases": [
@@ -306,7 +306,7 @@
     },
     {
       "input": "x^-1",
-      "render": "x^(-) 1"
+      "render": "x^(-1)"
     },
     {
       "input": "e_(ij)",
@@ -6581,5 +6581,19 @@
       "input": "\"P{rBrack}\"",
       "render": "\"P{Rbrack}\""
     }
-  ]
+  ],
+  "inputs": {
+    "seed": {
+      "path": "scripts/seeds/render-sweep-inputs.json",
+      "sha256": "5f1714f10e3f7a3f774402c6381aa300689171bf52537f3c4a942224a7d42b24"
+    },
+    "generator": {
+      "path": "scripts/generate-render-sweeps.rb",
+      "sha256": "21151252db9c5d32288841af9c5e9258356af9854d842a52a4e7abaf323e6f6f"
+    },
+    "lockfile": {
+      "path": "Gemfile.lock",
+      "sha256": "4aafd7162d8b10a8a841fb30c89bc0ff9b2429ea0ec6379c7931c3b9093dca0b"
+    }
+  }
 }

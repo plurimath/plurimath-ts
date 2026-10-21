@@ -46,7 +46,7 @@
     "crlf-blank-text": "<mtext>a\r\nb</mtext>\n",
     "line-separator-text": "<mtext>a\u2028\nb</mtext>\n",
     "entity-text-passthrough": "<mo>&#x2211;</mo>\n",
-    "ascii-sweep": "<mtext>&#x0000;&#x0001;&#x0002;&#x0003;&#x0004;&#x0005;&#x0006;&#x0007;&#x0008;\t\n&#x000b;&#x000c;\r&#x000e;&#x000f;&#x0010;&#x0011;&#x0012;&#x0013;&#x0014;&#x0015;&#x0016;&#x0017;&#x0018;&#x0019;&#x001a;&#x001b;&#x001c;&#x001d;&#x001e;&#x001f; !\"#$%&'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f</mtext>\n",
+    "ascii-sweep": "<mtext>\t\n\r !\"#$%&'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f</mtext>\n",
     "update-nodes-shape": "<mrow>\n  <mi>x</mi>\n  <mo>+</mo>\n  <mn>1</mn>tail</mrow>\n",
     "math-tree": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mi>x</mi>\n  </mstyle>\n</math>\n",
     "mathml-specials-tree": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mtext>a&b&lt;c</mtext>\n  </mstyle>\n</math>\n",

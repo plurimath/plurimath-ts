@@ -560,6 +560,17 @@ describe("failure positions", () => {
     }
   });
 
+  it("a repeated prefix keeps its failure offset when a later alternative matches less", () => {
+    const signed = seq(str("-"), match("[0-9]").repeat(1));
+    try {
+      alt(signed, str("-")).parse("-1x");
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ParseFailed);
+      expect((error as ParseFailed).index).toBe(2);
+    }
+  });
+
   it("maybe's leftover conversion records the unconsumed index", () => {
     // Same family as the lookahead leak. When `maybe` succeeds by consuming
     // nothing and consume-all turns that into a failure, `pos` is the first

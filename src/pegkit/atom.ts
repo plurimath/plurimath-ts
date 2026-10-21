@@ -558,7 +558,12 @@ class RepeatAtom extends Atom {
       cursor = result.pos;
     }
     if (values.length < this.min) return FAIL;
-    if (consumeAll && cursor < ctx.input.length) return FAIL;
+    if (consumeAll && cursor < ctx.input.length) {
+      // Repetition performs its own leftover check, so retain the consumed
+      // prefix before a later alternative can record a shorter one.
+      if (cursor > ctx.unconsumed) ctx.unconsumed = cursor;
+      return FAIL;
+    }
     if (values.length === 0) {
       return { ok: true, pos: cursor, value: new Slice("", pos), emptyRepetition: true };
     }

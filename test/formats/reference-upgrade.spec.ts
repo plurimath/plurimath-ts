@@ -1,6 +1,7 @@
 /** Focused branches measured with clean Ruby ae20be11 (0.11.12), frozen lock
  * 4aafd716; full generated render fixtures cover the broader model inventory. */
 import { describe, expect, it } from "vitest";
+import { ParseError } from "../../src/core/errors";
 import type { NodeParameter } from "../../src/core/nodes";
 import {
   FormulaNode,
@@ -18,6 +19,11 @@ import { toOmml } from "../../src/formats/omml/renderer";
 import { dump, dumpNodes, XmlElement } from "../../src/xml/index";
 
 describe("Ruby 0.11.12 changes", () => {
+  it("keeps deeply nested AsciiMath failures typed during diagnostic recovery", () => {
+    const input = `${"sqrt(".repeat(2_000)}x${")".repeat(2_000)}`;
+    expect(() => parseAsciimath(input)).toThrow(ParseError);
+  });
+
   it("pairs the norm delimiters", () => {
     expect(toLatex(parseAsciimath("norm(x)"))).toBe("{\\lVert x \\rVert}");
   });
@@ -45,6 +51,26 @@ describe("Ruby 0.11.12 changes", () => {
         );
         expect(value).toMatch(/<m:e>\s*<m:r>\s*<m:t>BASE<\/m:t>/);
         expect(value).toMatch(/<m:(?:lim|sup|sub)>\s*<m:r>\s*<m:t>SCRIPT<\/m:t>/);
+      }
+    },
+  );
+
+  it.each([
+    { nodeType: OversetNode, displayStyle: true, label: "overset" },
+    { nodeType: OversetNode, displayStyle: false, label: "overset" },
+    { nodeType: UndersetNode, displayStyle: true, label: "underset" },
+  ] as const)(
+    "names the invalid $label operand, display=$displayStyle",
+    ({ nodeType: Node, displayStyle }) => {
+      for (const field of ["parameterOne", "parameterTwo"] as const) {
+        const node = new Node({
+          parameterOne: new SymbolNode({ value: "SCRIPT" }),
+          parameterTwo: new SymbolNode({ value: "BASE" }),
+          [field]: 42 as unknown as NodeParameter,
+        });
+        expect(() => toOmml(new FormulaNode({ value: [node] }), { displayStyle })).toThrow(
+          `${node.kind}.${field}: cannot insert`,
+        );
       }
     },
   );

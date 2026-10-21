@@ -103,7 +103,7 @@ import { ParseError } from "../../../src/core/errors";
 import { createAsciimathGrammar } from "../../../src/formats/asciimath/grammar";
 import { parseAsciimathTree } from "../../../src/formats/asciimath/parser";
 import { preprocess } from "../../../src/formats/asciimath/preprocess";
-import { ParseFailed, type ParseValue, Slice } from "../../../src/pegkit/index";
+import { type ParseValue, Slice } from "../../../src/pegkit/index";
 import type { YamlValue } from "../../core/corpus-yaml";
 
 const grammar = createAsciimathGrammar();
@@ -336,7 +336,7 @@ const CANDIDATES: readonly Candidate[] = [
 /**
  * The 26 the gem rejects, with the position this port reports.
  *
- * `preprocessedIndex` is what `ParseFailed` carries — an offset into
+ * `preprocessedIndex` is the root-prefix boundary in
  * `Asciimath::Parser#text`. `index` is that offset mapped back through the
  * `SourceMap`, and is what `ParseError` carries. `remainder` is the rest of the
  * ORIGINAL input from `index` on: it is the same claim as `index` stated in a
@@ -919,17 +919,25 @@ describe("failure positions index the original input", () => {
     (id, preprocessed, preprocessedIndex, index, remainder) => {
       const input = inputFor(id);
 
-      // The raw parser offset, into the preprocessed text.
-      let raw: number | null = null;
-      try {
-        grammar.root.parse(preprocessed);
-      } catch (error) {
-        if (!(error instanceof ParseFailed)) throw error;
-        raw = error.index;
-      }
-      expect(raw, `${id} preprocessed offset`).toBe(preprocessedIndex);
+      // The root prefix boundary, into the preprocessed text. The generic
+      // PEG's furthest attempted alternative can end later; AsciiMath exposes
+      // this boundary instead, then maps it back to the caller's input.
+      const prefix = grammar.root.apply(
+        0,
+        {
+          input: preprocessed,
+          captures: [new Map()],
+          maxPos: 0,
+          unconsumed: -1,
+          cache: new Map(),
+          depth: 0,
+        },
+        false,
+      );
+      expect(prefix.ok).toBe(true);
+      expect(prefix.ok ? prefix.pos : null, `${id} preprocessed offset`).toBe(preprocessedIndex);
 
-      // The same failure after the SourceMap, which is what a caller sees.
+      // The public failure after the SourceMap, which is what a caller sees.
       const error = rejectionOf(input) as ParseError;
       expect(error.index, `${id} original offset`).toBe(index);
 
@@ -1027,7 +1035,7 @@ describe("the position the gem exposes", () => {
 
   it("never hard-fails: every rejection is unconsumed input, not a dead end", () => {
     // `expression`'s fifth alternative is `str("")`, which always succeeds, so
-    // the root always matches a prefix and `Atom#parse` reports `result.pos`.
+    // the root always matches a prefix and the format reports `result.pos`.
     // The observable consequence: the reported index is always the start of a
     // suffix the parser did not consume, so it is strictly less than the
     // preprocessed length whenever the input is non-empty.

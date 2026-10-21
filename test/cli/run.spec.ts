@@ -6,6 +6,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { EXIT_OK, EXIT_RUNTIME_ERROR, EXIT_USAGE_ERROR, run } from "../../src/cli/run";
 
+const MATHML_INPUT =
+  '<math xmlns="http://www.w3.org/1998/Math/MathML"><mfrac><mn>1</mn><mn>2</mn></mfrac></math>';
+const OMML_INPUT =
+  '<m:oMath xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"><m:f><m:num><m:r><m:t>1</m:t></m:r></m:num><m:den><m:r><m:t>2</m:t></m:r></m:den></m:f></m:oMath>';
+
 function fakeIo(opts: { stdin?: string; files?: Record<string, string> } = {}) {
   const out: string[] = [];
   const err: string[] = [];
@@ -49,6 +54,36 @@ describe("run", () => {
     expect(out.join("")).toBe("\\frac{1}{2}\n");
     expect(io.readFile).toHaveBeenCalledWith("formula.txt");
     expect(io.readStdin).not.toHaveBeenCalled();
+  });
+
+  it("converts MathML from stdin, removing one trailing newline", async () => {
+    const { io, out, err } = fakeIo({ stdin: `${MATHML_INPUT}\n` });
+    expect(await run(["convert", "--from", "mathml", "--to", "latex"], io)).toBe(EXIT_OK);
+    expect(out.join("")).toBe("\\frac{1}{2}\n");
+    expect(err).toEqual([]);
+    expect(io.readStdin).toHaveBeenCalledOnce();
+    expect(io.readFile).not.toHaveBeenCalled();
+  });
+
+  it("converts OMML from a file", async () => {
+    const { io, out, err } = fakeIo({ files: { "formula.omml": OMML_INPUT } });
+    expect(await run(["convert", "--from", "omml", "--to", "latex", "formula.omml"], io)).toBe(
+      EXIT_OK,
+    );
+    expect(out.join("")).toBe("\\frac{1}{2}\n");
+    expect(err).toEqual([]);
+    expect(io.readFile).toHaveBeenCalledWith("formula.omml");
+    expect(io.readStdin).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["mathml", "<math"],
+    ["omml", '<math xmlns="http://www.w3.org/1998/Math/MathML"/>'],
+  ])("reports malformed %s input as a runtime parser error", async (from, stdin) => {
+    const { io, out, err } = fakeIo({ stdin });
+    expect(await run(["convert", "--from", from, "--to", "latex"], io)).toBe(EXIT_RUNTIME_ERROR);
+    expect(out).toEqual([]);
+    expect(err.join("")).toMatch(/^plurimath: \[PARSE_ERROR\]/);
   });
 
   it("does not double up a trailing newline the renderer already produced", async () => {

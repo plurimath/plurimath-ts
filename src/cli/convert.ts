@@ -3,10 +3,8 @@
  * through the compat `Plurimath` class (`src/compat/index.ts`), and the
  * MathML/OMML options through `src/compat/render-options.ts`.
  *
- * The CLI input surface (`INPUT_FORMATS` below) deliberately accepts `asciimath`,
- * `latex`, `html` and `unicodemath`. The compat constructor also registers
- * MathML and OMML, but those inputs have not been exposed by the CLI.
- * UnitsML has no registered parser.
+ * The CLI input surface (`INPUT_FORMATS` below) accepts the six formats
+ * registered by the compat constructor. UnitsML has no registered parser.
  * Every compat `to<Format>()` method works, so all six are output formats.
  *
  * CLI format tokens use each format's own directory name under `src/formats`
@@ -18,7 +16,14 @@
 import Plurimath, { type Format as CompatFormat } from "../compat/index";
 import { mathmlWithOptions, ommlWithOptions } from "../compat/render-options";
 
-export const INPUT_FORMATS = ["asciimath", "latex", "html", "unicodemath"] as const;
+export const INPUT_FORMATS = [
+  "asciimath",
+  "latex",
+  "mathml",
+  "html",
+  "unicodemath",
+  "omml",
+] as const;
 export type InputFormat = (typeof INPUT_FORMATS)[number];
 
 export const OUTPUT_FORMATS = [
@@ -42,8 +47,10 @@ export function isOutputFormat(value: string): value is OutputFormat {
 const TO_COMPAT_INPUT_FORMAT: Record<InputFormat, CompatFormat> = {
   asciimath: "asciimath",
   latex: "latex",
+  mathml: "mathml",
   html: "html",
   unicodemath: "unicode",
+  omml: "omml",
 };
 
 /**

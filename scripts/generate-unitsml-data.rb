@@ -9,8 +9,8 @@ require "optparse"
 require "tmpdir"
 
 module NativeCompletionReference
-  PIN = "00c52783877b38f6b8e6e109f1803f96bb34fc62"
-  LOCK_SHA = "a07b033c4e199d7324e2e0c6c15063df08f840f3234d3c874ede809d6750bed4"
+  PIN = "ae20be111a26fdd988c58be0bfb2b7f6fe6e352f"
+  LOCK_SHA = "4aafd7162d8b10a8a841fb30c89bc0ff9b2429ea0ec6379c7931c3b9093dca0b"
   module_function
 
   def git(root, *args)

@@ -144,11 +144,11 @@ function renderPowerBase(node: NodeOf<"ternaryFunction">, context: RenderContext
  */
 function underover(node: NodeOf<"ternaryFunction">, context: RenderContext): OmmlRendered {
   const overset = new OversetNode({
-    parameterOne: node.parameterOne,
-    parameterTwo: node.parameterThree,
+    parameterOne: node.parameterThree,
+    parameterTwo: node.parameterOne,
   });
   if (!present(node.parameterTwo)) return context.render(overset);
   return context.render(
-    new UndersetNode({ parameterOne: overset, parameterTwo: node.parameterTwo }),
+    new UndersetNode({ parameterOne: node.parameterTwo, parameterTwo: overset }),
   );
 }

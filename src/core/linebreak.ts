@@ -693,7 +693,7 @@ const hat: Handler = (self, obj) => {
   if (valueExists(obj)) {
     updateValue(
       obj,
-      make("overset", undefined, { parameterOne: filterValues(obj.value), parameterTwo: null }),
+      make("overset", undefined, { parameterOne: null, parameterTwo: filterValues(obj.value) }),
     );
   }
 };

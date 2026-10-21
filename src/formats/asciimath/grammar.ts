@@ -1,6 +1,7 @@
 /**
  * The AsciiMath grammar, ported rule for rule from the gem's Parslet parser
- * (`lib/plurimath/asciimath/parse.rb`, plurimath 0.11.6 at `00c52783`).
+ * (`lib/plurimath/asciimath/parse.rb`, plurimath 0.11.6 at `00c52783`),
+ * with signed operand rules from plurimath 0.11.12 at `ae20be11`.
  *
  * The port is deliberately structural: every `rule(:name)` in `asciimath/parse.rb` is one
  * `rule(() => ...)` here, in the same source order, with the same alternatives
@@ -167,6 +168,11 @@ export interface AsciimathRules {
   /** `asciimath/parse.rb:12` */ readonly comma: Atom;
   /** `asciimath/parse.rb:13` — Ruby's `space?` */ readonly spaceOptional: Atom;
   /** `asciimath/parse.rb:14` */ readonly number: Atom;
+  /** `asciimath/parse.rb:22` */ readonly decimalNumber: Atom;
+  /** `asciimath/parse.rb:27` */ readonly decimalOperand: Atom;
+  /** `asciimath/parse.rb:31` */ readonly signedNumber: Atom;
+  /** `asciimath/parse.rb:32` */ readonly scriptOperand: Atom;
+  /** `asciimath/parse.rb:33` */ readonly modOperand: Atom;
   /** `base_number_prefix.rb:15` */ readonly hexNumber: Atom;
   /** `base_number_prefix.rb:19` */ readonly binaryNumber: Atom;
   /** `base_number_prefix.rb:23` */ readonly octalNumber: Atom;
@@ -250,12 +256,26 @@ export function createAsciimathGrammar(
       hexNumber,
       binaryNumber,
       octalNumber,
-      seq(match("[0-9]").repeat(1), decimalMarkerAtom(), match("[0-9]").repeat(1)).as("number"),
-      match("[0-9]").repeat(1).as("number"),
+      decimalNumber.as("number"),
       // Ruby hardcodes `str(".")` here rather than calling `decimal_marker`, so
       // a bare `.` is a symbol under every locale. Transcribed, not corrected.
       str(".").as("symbol"),
     ),
+  );
+
+  const decimalNumber = rule(() =>
+    alt(
+      seq(match("[0-9]").repeat(1), decimalMarkerAtom(), match("[0-9]").repeat(1)),
+      match("[0-9]").repeat(1),
+    ),
+  );
+  const decimalOperand = rule(() =>
+    seq(alt(hexNumber, binaryNumber, octalNumber).absent(), decimalNumber),
+  );
+  const signedNumber = rule(() => seq(str("-"), decimalOperand).as("number"));
+  const scriptOperand = rule(() => alt(signedNumber, sequence));
+  const modOperand = rule(() =>
+    alt(seq(str("-"), decimalOperand.present(), iteration).as("negative_mod_operand"), iteration),
   );
 
   // --- base_number_prefix.rb:15-25 (included at asciimath/parse.rb:6) ----------------
@@ -412,19 +432,19 @@ export function createAsciimathGrammar(
       seq(
         base,
         spaceOptional,
-        sequence.as("base_value"),
+        scriptOperand.as("base_value"),
         power,
         seq(power, power.maybe()).absent(),
         spaceOptional,
-        sequence.as("power_value"),
+        scriptOperand.as("power_value"),
       ),
-      seq(spaceOptional, base, spaceOptional, sequence.as("base_value")).as("base"),
+      seq(spaceOptional, base, spaceOptional, scriptOperand.as("base_value")).as("base"),
       seq(
         spaceOptional,
         power,
         seq(power, power.maybe()).absent(),
         spaceOptional,
-        sequence.as("power_value"),
+        scriptOperand.as("power_value"),
       ).as("power"),
       seq(spaceOptional, base, spaceOptional, power.as("symbol").as("base_value")).as("base"),
       seq(
@@ -572,21 +592,21 @@ export function createAsciimathGrammar(
         spaceOptional,
         str("mod").as("mod"),
         spaceOptional,
-        iteration.as("divisor"),
+        modOperand.as("divisor"),
       ).as("mod"),
       seq(
         seq(powerBaseRules, powerBase).as("dividend"),
         spaceOptional,
         str("mod").as("mod"),
         spaceOptional,
-        iteration.as("divisor"),
+        modOperand.as("divisor"),
       ).as("mod"),
       seq(
         powerBaseRules.as("dividend"),
         spaceOptional,
         str("mod").as("mod"),
         spaceOptional,
-        iteration.as("divisor"),
+        modOperand.as("divisor"),
       ).as("mod"),
     ),
   );
@@ -752,6 +772,11 @@ export function createAsciimathGrammar(
     comma,
     spaceOptional,
     number,
+    decimalNumber,
+    decimalOperand,
+    signedNumber,
+    scriptOperand,
+    modOperand,
     hexNumber,
     binaryNumber,
     octalNumber,

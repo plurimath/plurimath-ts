@@ -233,9 +233,8 @@ function renderArrayTable(node: NodeOf<"table">, context: RenderContext): string
 
 /**
  * `Table#to_latex` (`table.rb:79`): `Paren::Norm` as open paren
- * short-circuits to `Vmatrix`; a NIL open paren takes the
- * `environment == "array"` branch (`MATRICES.invert[nil]` is `:array`) and
- * inserts the measured `{a…|…}` column descriptor; parens render through
+ * short-circuits to `Vmatrix`; generic matrices carry no array column
+ * descriptor. Parens render through
  * `to_latex` with `\left`/`\right` prefixes spliced off and `.` standing in
  * for nil (or a nil RENDER — Ruby's `|| "."`).
  */
@@ -243,10 +242,6 @@ function renderGenericTable(node: NodeOf<"table">, context: RenderContext): stri
   const open = node.openParen;
   if (isNode(open) && open.kind === "symbol" && open.id === "Paren::Norm") {
     return `\\begin{Vmatrix}${latexContent(node, context)}\\end{Vmatrix}`;
-  }
-  let separator = "";
-  if (open === null || open === undefined) {
-    separator = `{${latexColumnDescriptor(node)}}`;
   }
   const openRender =
     open === null || open === undefined
@@ -258,7 +253,7 @@ function renderGenericTable(node: NodeOf<"table">, context: RenderContext): stri
       : (renderChild(node.closeParen, context, "table.closeParen") ?? ".");
   const left = `\\left ${deletePrefix(openRender, "\\left")}\\begin{matrix}`;
   const right = `\\end{matrix}\\right ${deletePrefix(closeRender, "\\right")}`;
-  return `${left}${separator}${latexContent(node, context)}${right}`;
+  return `${left}${latexContent(node, context)}${right}`;
 }
 
 /** `Table#latex_content`: nil-safe rows joined with ` \\ ` (`table.rb:253`). */
@@ -277,57 +272,6 @@ function latexContent(node: NodeOf<"table">, context: RenderContext): string {
       row === null || row === undefined ? "" : s(renderChild(row, context, "table.value")),
     )
     .join(" \\\\ ");
-}
-
-/**
- * `table_attribute(:latex)` over `column_lines` (`table.rb:215-240`),
- * measured: one flag per pipe-free td of the FIRST row (`"a"`), a pipe td
- * marking the previous column solid (`"|"`), and a leading `"a"` inserted
- * whenever any solid exists. A table with no first row, or a first row
- * without a cell list, crashes in the gem — RenderError here.
- */
-function latexColumnDescriptor(node: NodeOf<"table">): string {
-  const firstRow = Array.isArray(node.value) ? node.value[0] : undefined;
-  const cells = isNode(firstRow)
-    ? (firstRow as { readonly parameterOne?: unknown }).parameterOne
-    : undefined;
-  if (!Array.isArray(cells)) {
-    throw new RenderError(
-      "table.value: the column descriptor reads value.first.parameter_one — " +
-        "the gem raises NoMethodError here (a paren-less table needs a first row)",
-      FORMAT,
-      node.kind,
-    );
-  }
-  const columns: (string | null)[] = [];
-  cells.forEach((td, index) => {
-    const tdCells = isNode(td)
-      ? (td as { readonly parameterOne?: unknown }).parameterOne
-      : undefined;
-    if (!Array.isArray(tdCells)) {
-      throw new RenderError(
-        "table.value: the column descriptor reads each td's parameter_one — " +
-          "the gem raises NoMethodError here",
-        FORMAT,
-        node.kind,
-      );
-    }
-    if (tdCells.some((cell) => isPipeSymbol(cell))) {
-      if (columns.length === 0) {
-        columns.push("solid");
-      } else {
-        // Ruby's `columns_array[i - 1] = "solid"` pads with nil when the
-        // index runs past the end; keep the padding explicit so no JS array
-        // hole changes the join.
-        while (columns.length < index - 1) columns.push(null);
-        columns[index - 1] = "solid";
-      }
-    } else {
-      columns.push("none");
-    }
-  });
-  if (columns.includes("solid")) columns.unshift("none");
-  return columns.map((flag) => (flag === "solid" ? "|" : "a")).join("");
 }
 
 /** Ruby's `String#delete_prefix`, for the `\left`/`\right` paren splices. */

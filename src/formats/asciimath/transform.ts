@@ -4,6 +4,7 @@
 /**
  * The AsciiMath transform, ported rule for rule from the gem
  * (`lib/plurimath/asciimath/transform.rb`, plurimath 0.11.6 at `00c52783`),
+ * with the signed modulo rule from plurimath 0.11.12 at `ae20be11`,
  * plus the three rules `BaseNumberPrefix::Transform` mixes in ahead of them.
  *
  * The port is deliberately structural, exactly like the grammar's: every
@@ -769,6 +770,14 @@ function buildAsciimathTransform(): Transform {
   t.rule({ rparen: simple("rparen") }, (b) => asciimathSymbolObject(b.rparen));
   /** `asciimath/transform.rb:16` */
   t.rule({ number: simple("number") }, (b) => newNumber(b.number));
+
+  /** `asciimath/transform.rb:18-25` */
+  t.rule({ negative_mod_operand: simple("operand") }, (b) => {
+    if (isDraft(b.operand) && b.operand.kind === "number") {
+      return newNumber(`-${rubyToS(b.operand.fields.value)}`);
+    }
+    return newFormula([newSymbolOfClass("Minus"), b.operand]);
+  });
 
   /** `asciimath/transform.rb:18` */
   t.rule({ ternary: simple("ternary") }, (b) => b.ternary);

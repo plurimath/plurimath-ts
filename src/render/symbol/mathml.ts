@@ -120,7 +120,9 @@ export function renderSymbol(node: NodeOf<"symbol">, context: RenderContext): Xm
  * `intent` first, then `rspace`.
  */
 function renderBaseSymbol(node: NodeOf<"symbol">): XmlElement {
-  const mi = new XmlElement("mi");
+  const options = hashOrNil(node.options, node.kind, "symbol.options");
+  const rspace = options?.rspace;
+  const mi = new XmlElement(rspace === null || rspace === undefined ? "mi" : "mo");
   const value =
     node.value === null || node.value === undefined
       ? null
@@ -145,13 +147,9 @@ function renderBaseSymbol(node: NodeOf<"symbol">): XmlElement {
     // write-side pass, exactly as the `rspace` write below already does.
     setDecodedAttribute(mi, "intent", htmlEntityToUnicode(value), node.kind, "symbol.value");
   }
-  const options = hashOrNil(node.options, node.kind, "symbol.options");
-  if (options !== null && Object.hasOwn(options, "rspace")) {
-    // `attributes[:rspace] = @options[:rspace] if @options&.key?(:rspace)` —
-    // key presence, not truthiness, so `rspace: nil` writes `rspace=""`.
-    // The wrapper's to_s + entity decode; a non-primitive value takes the
-    // same reproducibility guard every attribute write does.
-    setDecodedAttribute(mi, "rspace", options.rspace, node.kind, "symbol.options.rspace");
+  if (rspace !== null && rspace !== undefined) {
+    // Ruby 0.11.12 uses an operator only for non-nil spacing, including false.
+    setDecodedAttribute(mi, "rspace", rspace, node.kind, "symbol.options.rspace");
   }
   if (value === "{:" || value === ":}") return mi;
   if (value !== null) mi.append(value);

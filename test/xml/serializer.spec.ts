@@ -40,8 +40,8 @@ describe("the fixture set itself", () => {
   });
 
   it("was generated from the pinned oracle, not some other checkout", () => {
-    expect(EXPECTED_PROVENANCE.oracleCommit).toBe("00c52783877b38f6b8e6e109f1803f96bb34fc62");
-    expect(EXPECTED_PROVENANCE.oracleVersion).toBe("0.11.6");
+    expect(EXPECTED_PROVENANCE.oracleCommit).toBe("ae20be111a26fdd988c58be0bfb2b7f6fe6e352f");
+    expect(EXPECTED_PROVENANCE.oracleVersion).toBe("0.11.12");
     expect(EXPECTED_PROVENANCE.oxVersion).toBe("2.14.28");
     expect(EXPECTED_PROVENANCE.xmlEngine).toBe("Plurimath::XmlEngine::OxEngine");
   });

@@ -99,9 +99,13 @@ export interface DumpOptions {
  * not modelled: the renderers always dump a root element.
  */
 export function dump(root: XmlElement, options: DumpOptions = {}): string {
+  return serialize(root, options, false);
+}
+
+function serialize(root: XmlElement, options: DumpOptions, dropInvalid: boolean): string {
   const indent = normalizeIndent(options.indent);
   const parts: string[] = [];
-  writeElement(root, 0, indent, parts);
+  writeElement(root, 0, indent, parts, dropInvalid);
   if (indent >= 0) parts.push("\n");
   return parts.join("");
 }
@@ -180,7 +184,8 @@ export class XmlIndentError extends Error {
  *   `"a\u2028\nb"` → unchanged text).
  */
 export function dumpNodes(root: XmlElement, options: DumpOptions = {}): string {
-  return replacableValues(dump(root, options));
+  // The formula engine forces Ox invalid_replace: ""; raw dump keeps its Ox contract.
+  return replacableValues(serialize(root, options, true));
 }
 
 /** `REPLACABLES[/&amp;/] = "&"` — plain alternatives, no lookaround needed. */
@@ -207,14 +212,20 @@ function normalizeIndent(indent: number | null | undefined): number {
   return indent;
 }
 
-function writeElement(element: XmlElement, depth: number, indent: number, parts: string[]): void {
+function writeElement(
+  element: XmlElement,
+  depth: number,
+  indent: number,
+  parts: string[],
+  dropInvalid: boolean,
+): void {
   // `depth` is the element's own nesting level, root at 0.
   if (indent >= 0) {
     parts.push(`\n${" ".repeat(indent * depth)}`);
   }
   parts.push(`<${element.name}`);
   for (const [name, value] of element.attributes) {
-    parts.push(` ${name}="${escapeValue(value, true)}"`);
+    parts.push(` ${name}="${escapeValue(value, true, dropInvalid)}"`);
   }
   const children = element.children;
   if (children.length === 0) {
@@ -240,9 +251,9 @@ function writeElement(element: XmlElement, depth: number, indent: number, parts:
   parts.push(">");
   for (const child of children) {
     if (typeof child === "string") {
-      parts.push(escapeValue(child, false));
+      parts.push(escapeValue(child, false, dropInvalid));
     } else {
-      writeElement(child, depth + 1, indent, parts);
+      writeElement(child, depth + 1, indent, parts, dropInvalid);
     }
   }
   const last = children[children.length - 1];
@@ -261,7 +272,7 @@ function writeElement(element: XmlElement, depth: number, indent: number, parts:
  * UTF-16 offsets cannot split them (PORTING-STANDARDS.md, code-point trap —
  * inapplicable here by construction, which the scan makes visible).
  */
-function escapeValue(value: string, escapeQuote: boolean): string {
+function escapeValue(value: string, escapeQuote: boolean, dropInvalid: boolean): string {
   let out = "";
   let plainFrom = 0;
   for (let i = 0; i < value.length; i += 1) {
@@ -279,7 +290,7 @@ function escapeValue(value: string, escapeQuote: boolean): string {
       // Ox writes C0 controls as numeric references, lowercase, zero-padded
       // to four hex digits: NUL → `&#x0000;`, VT → `&#x000b;` (measured over
       // the full 0x00-0x1F range; \t \n \r are the three literal exceptions).
-      replacement = `&#x${code.toString(16).padStart(4, "0")};`;
+      replacement = dropInvalid ? "" : `&#x${code.toString(16).padStart(4, "0")};`;
     }
     if (replacement !== undefined) {
       out += value.slice(plainFrom, i) + replacement;

@@ -56,6 +56,7 @@ import {
 } from "./draft";
 import {
   OMML_FONT_STYLES,
+  OMML_NAMED_FUNCTION_WORDS,
   OMML_POWER_BASE_NAMES,
   OMML_SCRIPT_CLASSES,
   OMML_SUB_SUP_CLASSES,
@@ -81,6 +82,7 @@ function noMethod(method: string): never {
 const SUB_SUP_CLASSES: ReadonlySet<string> = new Set(OMML_SUB_SUP_CLASSES);
 const POWER_BASE_NAMES: ReadonlySet<string> = new Set(OMML_POWER_BASE_NAMES);
 const SCRIPT_CLASSES: ReadonlyMap<string, string | null> = new Map(OMML_SCRIPT_CLASSES);
+const NAMED_FUNCTION_WORDS: ReadonlySet<string> = new Set(OMML_NAMED_FUNCTION_WORDS);
 
 /* =========================================================================
  * 1. The element tree
@@ -517,11 +519,11 @@ function delimiter(node: OmmlNode): Draft {
 function limit(node: OmmlNode, name: "Overset" | "Underset"): Draft {
   const base = argument(child(node, "m:e"));
   const lim = argument(child(node, "m:lim"));
-  if (isUnary(lim) && !truthy(lim.f.parameter_one)) {
+  if (isUnary(lim) && !truthy(lim.f.parameter_one) && !NAMED_FUNCTION_WORDS.has(className(lim))) {
     lim.f.parameter_one = base;
     return lim;
   }
-  return binary(name, base, lim);
+  return binary(name, lim, base);
 }
 
 function accent(node: OmmlNode): Draft {

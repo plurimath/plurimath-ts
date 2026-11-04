@@ -70,6 +70,15 @@ export interface RenderContext {
   readonly unitsml: UnitsmlRenderOptions | null;
   readonly numberFormat: NumberFormat | null;
   /**
+   * The gem's `options[:unicodemath_unit]`, which `Unitsml#to_unicodemath`
+   * merges in before rendering its expanded formula. It travels down the
+   * whole unit subtree, and `FontStyle::Normal#to_unicodemath` reads it to
+   * write a multi-letter unit symbol as quoted upright text.
+   */
+  readonly unicodemathUnit: boolean;
+  /** This context with `unicodemathUnit` set, as `options.merge(unicodemath_unit: true)`. */
+  readonly withUnicodemathUnit: () => RenderContext;
+  /**
    * `child.to_unicodemath(options:)`. Returns `null` exactly where the gem
    * returns nil, which callers observe: `Frac#to_unicodemath` falls off its
    * `elsif` chain returning nil when `options` names none of `:linethickness`,

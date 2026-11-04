@@ -1,8 +1,9 @@
 /**
  * Mirrors `function/font_style.rb` — `FontStyle#to_unicodemath` (:57) — and the
- * **one** subclass that overrides it, `Monospace` (`monospace.rb:37`). The
- * other thirteen inherit the carrier's body and differ only in the font prefix
- * `font_family(unicode: true)` resolves for them.
+ * two subclasses that override it: `Monospace` (`monospace.rb:37`), and
+ * `Normal` (`normal.rb`), whose override only changes a multi-letter symbol
+ * inside a unit. The other twelve inherit the carrier's body and differ only
+ * in the font prefix `font_family(unicode: true)` resolves for them.
  *
  * ## How the gem picks the font
  *
@@ -129,26 +130,36 @@ export function renderFontStyle(node: NodeOf<"fontStyle">, context: RenderContex
   if (name === "Monospace")
     return `${MONOSPACE_MARK}${monospaceParens(node.parameterOne, context)}`;
 
-  if (name === "Normal" && isUnitText(node, context))
-    return `${fontPrefix(node)}"${htmlEntityToUnicode(node.parameterOne.value as string)}"`;
+  // `Normal#to_unicodemath` (`normal.rb`) — inside a unit, a symbol of more
+  // than one character is written as quoted text, `\mup"kg"`, because
+  // UnicodeMath reads `\mupkg` as an upright `k` followed by `g`.
+  const unitText = name === "Normal" ? unicodemathUnitText(node, context) : null;
+  if (unitText !== null) return `${fontPrefix(node)}"${htmlEntityToUnicode(unitText)}"`;
 
   return `${fontPrefix(node)}${renderOptionalChild(node.parameterOne, context)}`;
 }
 
 /**
- * `Normal#unicodemath_unit_text?`: inside a UnitsML node, a generic symbol of
- * more than one character is written as quoted text, `\mup"kg"`, because
- * UnicodeMath reads `\mupkg` as an upright k followed by g.
+ * `Normal#unicodemath_unit_text?`: the symbol text to quote, or `null` when
+ * the gem falls back to `super`.
+ *
+ * `parameter_one.instance_of?(Symbols::Symbol)` is the base class alone, so
+ * the census subclasses (`id` other than `"Symbol"`) keep the `\mupx` form.
+ * The length is Ruby's `String#length` after entity decoding, which counts
+ * code points, not UTF-16 units: one astral letter is one character.
+ * `Text.new(value).to_unicodemath` then quotes the decoded text; the
+ * backslash case it passes through raw is already excluded here.
  */
-function isUnitText(
-  node: NodeOf<"fontStyle">,
-  context: RenderContext,
-): node is NodeOf<"fontStyle"> & { readonly parameterOne: NodeOf<"symbol"> } {
-  const child = node.parameterOne;
-  if (!context.unicodemathUnit || !isNode(child) || child.kind !== "symbol") return false;
-  if (child.id !== "Symbol") return false;
-  const value = String(child.value ?? "");
-  return !value.startsWith("\\") && [...htmlEntityToUnicode(value)].length > 1;
+function unicodemathUnitText(node: NodeOf<"fontStyle">, context: RenderContext): string | null {
+  if (!context.unicodemathUnit) return null;
+
+  const symbol = node.parameterOne;
+  if (!isNode(symbol) || symbol.kind !== "symbol" || symbol.id !== "Symbol") return null;
+
+  const value = symbol.value ?? "";
+  if (value.startsWith("\\")) return null;
+
+  return [...htmlEntityToUnicode(value)].length > 1 ? value : null;
 }
 
 /**

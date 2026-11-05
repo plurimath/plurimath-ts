@@ -87,6 +87,8 @@
 # gem, which would silently answer from a different version.
 
 require "json"
+require "open3"
+require "yaml"
 require "optparse"
 
 GENERATOR_RELATIVE_PATH = "scripts/generate-render-options-fixtures.rb"
@@ -475,8 +477,85 @@ unless loaded&.start_with?(lib)
         "An installed gem answers from a different version."
 end
 
-require "plurimath/fixtures/formula_modules/line_break_values"
-require "plurimath/fixtures/formula_modules/expected_values"
+# The LineBreakValues and ExpectedValues formulas. plurimath 2bfe7fe4 (#492)
+# replaced the Ruby fixture modules with the shared testsuite's
+# `fixtures/renderer-expectations.yaml`, which records each constant as a
+# constructor recipe (`constant:LineBreakValues::LineBreak_076`). The oracle
+# reads that file from its testsuite submodule, which an oracle checkout does
+# not initialise, so it is read from this repository's testsuite submodule
+# after checking that the file is byte-identical at the commit the oracle
+# pins. Each recipe is built with the oracle's own decoder,
+# `spec/support/shared_model_recipes.rb`, so the formulas are the oracle's.
+module SharedRenderConstants
+  module_function
+
+  FIXTURE = "fixtures/renderer-expectations.yaml"
+  SUBMODULE = "submodules/plurimath-testsuite"
+
+  def git(dir, *args)
+    out, status = Open3.capture2("git", "-C", dir, *args)
+    abort "REFUSING: git #{args.join(' ')} failed in #{dir}" unless status.success?
+    out
+  end
+
+  # The shared fixture's bytes, refused unless identical at the oracle's pin.
+  def verified_text(path)
+    pinned = git(@local, "show", "#{@pin}:#{path}")
+    text = File.binread(File.join(@local, path))
+    abort "REFUSING: #{SUBMODULE}/#{path} differs from the oracle's pinned #{@pin[0, 8]}" unless pinned.b == text
+
+    text
+  end
+
+  def document(name)
+    @documents[name] ||= YAML.safe_load(verified_text("fixtures/#{name}"), aliases: false)
+  end
+
+  def document_at(path)
+    @documents[path] ||= YAML.safe_load(verified_text(path), aliases: false)
+  end
+
+  def load!(oracle, repo_root)
+    pin = git(oracle, "ls-tree", "HEAD", SUBMODULE).split[2]
+    abort "REFUSING: the oracle pins no #{SUBMODULE}" unless pin&.match?(/\A\h{40}\z/)
+    local = File.join(repo_root, SUBMODULE)
+    # A shallow submodule checkout (CI) may lack the oracle's pin; fetch it.
+    _, present = Open3.capture2e("git", "-C", local, "cat-file", "-e", "#{pin}^{commit}")
+    git(local, "fetch", "--quiet", "--depth=1", "origin", pin) unless present.success?
+    @local = local
+    @pin = pin
+    @documents = {}
+    text = verified_text(FIXTURE)
+
+    require File.join(oracle, "spec", "support", "shared_model_recipes")
+    recipes = {}
+    collect = lambda do |node|
+      case node
+      when Hash
+        id = node["id"]
+        if node["kind"] == "memo" && id.is_a?(String) && id.start_with?("constant:")
+          previous = recipes[id]
+          abort "REFUSING: conflicting recipes for #{id}" if previous && previous != node
+          recipes[id] = node
+        end
+        node.each_value { |value| collect.call(value) }
+      when Array then node.each { |value| collect.call(value) }
+      end
+    end
+    @documents[File.basename(FIXTURE)] = YAML.safe_load(text, aliases: false)
+    collect.call(@documents[File.basename(FIXTURE)])
+    { "LineBreakValues" => Module.new, "ExpectedValues" => Module.new }.each do |name, mod|
+      found = recipes.select { |id, _| id.start_with?("constant:#{name}::") }
+      abort "REFUSING: #{FIXTURE} records no #{name} constants" if found.empty?
+      found.sort.each do |id, recipe|
+        mod.const_set(id.delete_prefix("constant:#{name}::"), SharedModelRecipes.build(recipe, {}))
+      end
+      Object.const_set(name, mod)
+    end
+  end
+end
+
+SharedRenderConstants.load!(oracle, File.expand_path("..", __dir__))
 
 # The ONE exception the oracle is documented to raise across this surface:
 # `Formula#wrap_render_error` funnels every StandardError from a `to_<format>`
@@ -488,24 +567,20 @@ ORACLE_REFUSAL = Plurimath::Math::ParseError
 # context's number and its `let(:string)` literal. The literal is evaluated
 # because two of them are `do ... end` blocks holding a quoted string with
 # escapes; the file is the pinned oracle's own.
-def asciimath_spec_omml_inputs(oracle)
-  path = File.join(oracle, "spec/plurimath/asciimath_spec.rb")
-  lines = File.readlines(path)
-  start = lines.index { |l| l.start_with?('  describe ".to_omml" do') }
-  abort "REFUSING: no .to_omml describe in #{path}" unless start
-
-  stop = ((start + 1)...lines.length).find { |i| lines[i].match?(/\A  describe /) } || lines.length
-  found = []
-  current = nil
-  lines[start...stop].each_with_index do |line, offset|
-    if (m = line.match(/\A\s*context "contains (.+?) example #(\d+)" do\s*\z/))
-      current = { number: m[2], name: m[1] }
-    elsif current && (m = line.match(/\A\s*let\(:string\)\s*(\{\s*(.+?)\s*\}|do)\s*\z/))
-      literal = m[2] || lines[start + offset + 1].strip
-      found << current.merge(text: eval(literal)) # rubocop:disable Security/Eval
-      current = nil
-    end
+def asciimath_spec_omml_inputs(_oracle)
+  # The spec's `.to_omml` contexts now live in the shared renderer fixture; the
+  # row description keeps each context title, and the program its `let(:string)`.
+  rows = SharedRenderConstants.document("renderer-expectations.yaml").fetch("cases").select do |row|
+    row.dig("source", "path") == "spec/plurimath/asciimath_spec.rb" &&
+      row["description"].to_s.start_with?("Plurimath::Asciimath / .to_omml / ")
   end
+  found = rows.sort_by { |row| row.dig("source", "line") }.filter_map do |row|
+    m = row["description"].match(%r{ / contains (.+?) example #(\d+) / }) or next
+    text = shared_row_text(row) or abort "REFUSING: #{row['id']} carries no input text"
+    { number: m[2], name: m[1], text: text.chomp }
+  end
+  abort "REFUSING: no .to_omml rows for spec/plurimath/asciimath_spec.rb" if found.empty?
+
   found
 end
 
@@ -515,45 +590,42 @@ end
 # (`submodules/unicodemath-tests`) this checkout does not carry, so it is not
 # read; the second is the `.to_mathml(intent: true, unary_function_spacing:
 # false)` describe of eight literal inputs, which is.
-def intent_spec_inputs(oracle)
-  path = File.join(oracle, "spec/plurimath/math/formula/intent_encoding_spec.rb")
-  lines = File.readlines(path)
-  start = lines.index { |l| l.start_with?('  describe ".to_mathml(intent: true, unary_function_spacing: false)"') }
-  abort "REFUSING: no static describe in #{path}" unless start
-
-  found = []
-  lang = nil
-  lines[start..].each do |line|
-    if (m = line.match(/let\(:lang\) \{ :(\w+) \}/))
-      lang = m[1]
-    elsif lang && (m = line.match(/let\(:string\) \{ (".*") \}/))
-      found << { lang: lang, text: eval(m[1]) } # rubocop:disable Security/Eval
-      lang = nil
-    end
+def intent_spec_inputs(_oracle)
+  found = SharedRenderConstants.document("renderer-expectations.yaml").fetch("cases").select do |row|
+    row.dig("source", "path") == "spec/plurimath/math/formula/intent_encoding_spec.rb" &&
+      row.fetch("id").start_with?("formula-intent_encoding-")
+  end
+  found = found.sort_by { |row| row.dig("source", "line") }.map do |row|
+    input = row.fetch("input")
+    abort "REFUSING: #{row['id']} is not a parse input" unless input.fetch("kind") == "parse"
+    { lang: input.fetch("format"), text: input.fetch("text") }
   end
   abort "REFUSING: expected the spec's 8 static inputs, found #{found.length}" unless found.length == 8
 
   found
 end
 
-# The `ⓘ` (intent) examples of `unicode_math_parse_values.rb`: the parse trees
-# carrying `intent: "&#x24d8;"`, and the UnicodeMath strings that produce them
-# (`unicode_math_string_values.rb`, same EXAMPLE_n numbering). The file mentions
+# The `ⓘ` (intent) examples of the shared `unicode-expectations.yaml`: the raw
+# parse trees carrying `intent: "&#x24d8;"`, and the unicodemath-tests inputs
+# that produce them (EXAMPLE_n is the row's index). The trees mention
 # "intent" 28 times (each `ⓘ` node carries `intent:` plus `intent_arguments:` or
 # `intent_expr:`), which is 14 `ⓘ` nodes across 12 examples — counted below.
 def unicode_intent_examples
-  require "plurimath/fixtures/formula_modules/unicode_math_parse_values"
-  require "plurimath/fixtures/formula_modules/unicode_math_string_values"
   mentions = 0
   nodes = 0
-  examples = UnicodeMathParseValues.constants.sort_by { |c| c.to_s[/\d+/].to_i }.filter_map do |name|
-    tree = UnicodeMathParseValues.const_get(name).inspect
+  rows = SharedRenderConstants.document("unicode-expectations.yaml").fetch("cases")
+  examples = rows.sort_by { |row| row.fetch("index") }.filter_map do |row|
+    tree = SharedModelRecipes.build(row.fetch("expected").fetch("raw"), {}).inspect
     count = tree.scan(/intent(?::|=>)\s*"&#x24d8;"/).length
     next if count.zero?
 
     nodes += count
     mentions += tree.scan("intent").length
-    { name: name.to_s, text: UnicodeMathStringValues.const_get(name) }
+    # The oracle's model specs parse `remove_prefix(input)` (spec_helper.rb):
+    # the unicodemath-tests line without its leading 1 or 0 outcome digit.
+    text = row.fetch("input").dup
+    text.delete_prefix!("1") || text.delete_prefix!("0")
+    { name: "EXAMPLE_#{row.fetch('index')}", text: text }
   end
   unless mentions == 28 && nodes == 14 && examples.length == 12
     abort "REFUSING: expected 28 intent mentions (14 nodes) in 12 examples, found " \
@@ -995,8 +1067,11 @@ end
 # file (each `let(:exp) { ExpectedValues::EX_NNN }`), that hold a Table, Nary or
 # Frac.
 def omml_spec_table_frac_nary_values(oracle)
-  path = File.join(oracle, "spec/plurimath/math/formula/omml_spec.rb")
-  names = File.read(path).scan(/ExpectedValues::(\w+)/).flatten.uniq.sort
+  # The spec now names shared renderer cases; their recipes name the constants.
+  path = "spec/plurimath/math/formula/omml_spec.rb"
+  rows = SharedRenderConstants.document("renderer-expectations.yaml").fetch("cases")
+    .select { |row| row.dig("source", "path") == path }
+  names = rows.flat_map { |row| row.to_s.scan(/constant:ExpectedValues::(\w+)/) }.flatten.uniq.sort
   abort "REFUSING: no ExpectedValues constants in #{path}" if names.empty?
 
   names.filter_map do |name|
@@ -1341,25 +1416,60 @@ def ternary_rows_for(format)
 end
 
 
-# One input's text, read from a spec of the pinned oracle rather than retyped:
-# the `let(:...)` that follows the `nth` context called `title` — a one-line
-# `{ "..." }` literal or a heredoc — evaluated (the file is the oracle's own)
-# and stripped of its trailing newline.
-def spec_input(oracle, relative, title, nth = 0)
-  path = File.join(oracle, "spec/plurimath", relative)
-  lines = File.readlines(path)
-  starts = lines.each_index.select { |i| lines[i].strip == %(context "#{title}" do) }
-  start = starts[nth] or abort "REFUSING: no context #{title.inspect} (##{nth}) in #{path}"
-  at = ((start + 1)..(start + 4)).find { |i| lines[i].match?(/\A\s*let\(:\w+\)/) }
-  abort "REFUSING: no let after #{title.inspect} in #{path}" unless at
+# One input's text, read from the shared testsuite row that now holds it.
+# plurimath #492 moved these spec inputs into the shared fixtures and removed
+# the RSpec context titles the generator used to find them by, so each title is
+# mapped to its row id once, here. The id is the oracle's source of truth; the
+# title stays only as the human label in the fixture.
+SHARED_SPEC_INPUTS = {
+  ["latex/parser_spec.rb", "contains simple use of over"] => ["fixtures/parser-expectations.yaml", "latex-parser-399"],
+  ["latex/parser_spec.rb", "contains over with base value"] => ["fixtures/parser-expectations.yaml", "latex-parser-1137"],
+  ["latex/parser_spec.rb", "contains over with power value"] => ["fixtures/parser-expectations.yaml", "latex-parser-1166"],
+  ["latex/parser_spec.rb", "contains latex equation #42"] => ["fixtures/parser-expectations.yaml", "latex-parser-7417"],
+  ["latex/metanorma_examples_spec.rb", "contains example #9"] =>
+    ["fixtures/parser-expectations.yaml", "latex-metanorma-examples-166"],
+  ["latex_spec.rb", "contains example #35"] => ["fixtures/renderer-expectations.yaml", "renderer-latex-latex-1462-1"],
+  ["latex_spec.rb", "contains inf with power base values example #53"] =>
+    ["fixtures/renderer-expectations.yaml", "renderer-latex-latex-2585-1"],
+  ["latex_spec.rb", "contains simple inf example #05"] =>
+    ["fixtures/renderer-expectations.yaml", "renderer-latex-latex-3053-1"],
+  ["mathml_spec.rb", "contains menclose tag Mathml"] => ["fixtures/renderer-expectations.yaml", "renderer-pretty-mathml-396"],
+  ["mathml_spec.rb", "contains menclose tags in Mathml"] =>
+    ["fixtures/renderer-expectations.yaml", "renderer-mathml-mathml-820-1"],
+  ["mathml/v3/section_3_spec.rb", "contains mathml v3 #3 example #41"] => ["corpus/mathml/enclose.yaml", "mathml-enclose-001"],
+  ["mathml/v3/section_3_spec.rb", "contains mathml v3 #3 example #42"] =>
+    ["corpus/mathml/partial-render.yaml", "mathml-partial-011"],
+  ["mathml/v3/section_3_spec.rb", "contains mathml v3 #3 example #43"] => ["corpus/mathml/scripts.yaml", "mathml-scripts-018"],
+  ["mathml/v3/section_3_spec.rb", "contains mathml v3 #3 example #55"] =>
+    ["corpus/mathml/partial-render.yaml", "mathml-partial-015"],
+}.freeze
 
-  if (m = lines[at].match(/\{\s*(.+?)\s*\}\s*\z/))
-    eval(m[1]).strip # rubocop:disable Security/Eval
-  else
-    tag = lines[at + 1][/<<~(\w+)/, 1] or abort "REFUSING: no heredoc after #{title.inspect} in #{path}"
-    stop = ((at + 2)..lines.length).find { |i| lines[i].match?(/\A\s*#{tag}\s*\z/) }
-    eval(lines[(at + 1)..stop].join).strip # rubocop:disable Security/Eval
+def spec_input(_oracle, relative, title, nth = 0)
+  abort "REFUSING: only the first context is mapped, not ##{nth}" unless nth.zero?
+  path, id = SHARED_SPEC_INPUTS.fetch([relative, title]) do
+    abort "REFUSING: no shared row mapped for #{relative} #{title.inspect}"
   end
+  rows = SharedRenderConstants.document_at(path).fetch("cases").select { |row| row["id"] == id }
+  abort "REFUSING: expected one #{id} in #{path}, found #{rows.length}" unless rows.length == 1
+
+  text = shared_row_text(rows.first) or abort "REFUSING: #{path} #{id} carries no input text"
+  text.strip
+end
+
+# A shared row's input text: the plain `input`, a parse input's `text`, or the
+# first literal a program builds (its `let:` memo, else its first build).
+def shared_row_text(row)
+  input = row["input"]
+  return input if input.is_a?(String)
+  return input["text"] if input.is_a?(Hash) && input["text"].is_a?(String)
+
+  steps = (row.dig("program", "steps") || []).select { |step| step["kind"] == "build" }
+  literal = lambda do |recipe|
+    recipe = recipe["value"] if recipe.is_a?(Hash) && recipe["kind"] == "memo"
+    recipe["value"] if recipe.is_a?(Hash) && recipe["kind"] == "literal" && recipe["value"].is_a?(String)
+  end
+  memo = steps.find { |step| step.dig("recipe", "kind") == "memo" && step.dig("recipe", "id").to_s.start_with?("let:") }
+  (memo && literal.call(memo["recipe"])) || (steps.first && literal.call(steps.first["recipe"]))
 end
 
 # The rows of the `binary-function-kinds` group.

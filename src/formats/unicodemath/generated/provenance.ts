@@ -48,11 +48,11 @@ export const UNICODEMATH_PARSER_GENERATED_PROVENANCE: UnicodemathParserGenerated
     ],
     [
       "scripts/generate-corpus.rb",
-      "d22603531c0f5205c4d6a29fa002963317acf1a7d42bc8b8f6a01827e86d3a5c",
+      "7a75f45b8ba8c774cc990cf2d68d9f2a5c328c66d570df1e177b5a7a3d86554e",
     ],
     [
       "scripts/generate-unicodemath-parser-data.rb",
-      "75cb95b71870f6307512823f5606dda2a94d151aa86126117ecb06005c4cba77",
+      "c007522529b320d29240f4b32cd8903cd8cd2da13059178d7ad2806d1ffc8ca3",
     ],
   ]),
   oracle: "plurimath",

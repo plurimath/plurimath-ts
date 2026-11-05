@@ -13,7 +13,7 @@ generator:
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
     scripts/ci/native-completion-probe.rb: 6a384b0d9349098a3ca05c515f0cf10ebddee4721cd9b4d3a6041b354cc24020
   repository:
-    commit: 312972fdcacf177d666cf0046b6aca66bc1b48a8
+    commit: 5c685cb83dfc65e32cba67a2473af986022392e8
     clean: true
     dirty_paths: []
 oracle:

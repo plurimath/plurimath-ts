@@ -193,6 +193,7 @@ module CorpusGenerator
     Math::Function::Nary
     Math::Function::Table
     Math::Function::TernaryFunction
+    Math::Function::Uncertainty
     Math::Function::UnaryFunction
     Math::Function::Unitsml
     Math::Number

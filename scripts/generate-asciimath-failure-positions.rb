@@ -134,8 +134,8 @@ module AsciimathFailurePositions
   # without `consume_all`.
   def prefix_length(gem_name, input)
     tree = Plurimath::Asciimath::Parse.new.public_send(gem_name)
-    source = Parslet::Source.new(input)
-    success, = tree.apply(source, Parslet::Atoms::Context.new, false)
+    source = CorpusGenerator::PEG::Source.new(input)
+    success, = tree.apply(source, CorpusGenerator::PEG::Atoms::Context.new, false)
     success ? input.byteslice(0, source.bytepos).length : nil
   end
 
@@ -143,7 +143,7 @@ module AsciimathFailurePositions
     row = { "id" => id, "rule" => port_name, "gemRule" => gem_name.to_s, "input" => input }
     Plurimath::Asciimath::Parse.new.public_send(gem_name).parse(input)
     row.merge("accepts" => true)
-  rescue Parslet::ParseFailed => e
+  rescue *CorpusGenerator::PARSE_FAILED => e
     cause = e.parse_failure_cause
     row.merge("accepts" => false, "index" => deepest(cause),
               "prefixLength" => prefix_length(gem_name, input),

@@ -352,7 +352,7 @@ LOCALE_COVERAGE.each { |(text, locale)| sources << ["locale", text, locale] }
 def serialize_tree(node, path)
   case node
   when nil, true, false, ::String, ::Integer, ::Float then node
-  when ::Symbol, ::Parslet::Slice then node.to_s
+  when ::Symbol, *CorpusGenerator::SLICE_CLASSES then node.to_s
   when ::Array then node.each_with_index.map { |n, i| serialize_tree(n, "#{path}[#{i}]") }
   when ::Hash
     node.each_with_object({}) do |(key, value), result|
@@ -401,7 +401,7 @@ rows = sources.filter_map do |(group, input, locale)|
   if row.key?("normalized") && !locale
     row["tree"] = begin
       serialize_tree(Plurimath::Html::Parse.new.parse(row["normalized"]), "tree")
-    rescue Parslet::ParseFailed
+    rescue *CorpusGenerator::PARSE_FAILED
       nil
     end
   end

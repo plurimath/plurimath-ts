@@ -152,10 +152,15 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
 export function createRenderContext(
   numberFormat: NumberFormat | null,
   unitsml: UnitsmlRenderOptions | null = null,
+  unicodemathUnit = false,
 ): RenderContext {
   const context: RenderContext = {
     numberFormat,
     unitsml,
+    unicodemathUnit,
+    withUnicodemathUnit() {
+      return unicodemathUnit ? context : createRenderContext(numberFormat, unitsml, true);
+    },
     render(node) {
       return renderNode(node, context);
     },

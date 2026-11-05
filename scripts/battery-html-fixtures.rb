@@ -131,6 +131,10 @@ end
 
 $LOAD_PATH.unshift(lib)
 require "plurimath"
+
+# Parslet up to plurimath 0.9.x, Parsanol from then on.
+SLICE_CLASSES = %w[Parsanol::Slice Parslet::Slice]
+  .select { |name| Object.const_defined?(name) }.map { |name| Object.const_get(name) }.freeze
 require "plurimath/version"
 
 unless Gem.loaded_specs.key?("plurimath")
@@ -157,7 +161,7 @@ module Serializer
     case value
     when nil, true, false, ::String, ::Integer, ::Float then value
     when ::Symbol then value.to_s
-    when ::Parslet::Slice then value.to_s
+    when *SLICE_CLASSES then value.to_s
     when ::Array then value.each_with_index.map { |v, i| serialize_value(v, "#{path}[#{i}]") }
     when ::Hash then serialize_hash(value, path)
     when Plurimath::Math::Core then serialize_node(value, path)

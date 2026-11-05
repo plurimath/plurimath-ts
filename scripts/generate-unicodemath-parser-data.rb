@@ -250,7 +250,7 @@ module UnicodeMathParserDataGenerator
   # `consume_all`, and answers the tree or nil.
   def rule_parse(text, rule, on: parser)
     on.public_send(rule).parse(text)
-  rescue Parslet::ParseFailed
+  rescue *CorpusGenerator::PARSE_FAILED
     nil
   end
 

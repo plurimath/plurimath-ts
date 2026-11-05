@@ -338,6 +338,16 @@ module CorpusGenerator
 
   class Error < StandardError; end
 
+  # The oracle's grammars run on Parslet up to plurimath 0.9.x and on
+  # Parsanol from then on. Both expose the same Slice, ParseFailed, Source and
+  # Atoms API, so the generators reach them through these names and run
+  # against either pin.
+  PEG = defined?(::Parsanol) ? ::Parsanol : ::Parslet
+  SLICE_CLASSES = %w[Parsanol::Slice Parslet::Slice]
+    .select { |name| Object.const_defined?(name) }.map { |name| Object.const_get(name) }.freeze
+  PARSE_FAILED = %w[Parsanol::ParseFailed Parslet::ParseFailed]
+    .select { |name| Object.const_defined?(name) }.map { |name| Object.const_get(name) }.freeze
+
   module_function
 
   # --- shell out to git, read-only ----------------------------------------
@@ -593,7 +603,7 @@ module CorpusGenerator
     case value
     when nil, true, false, ::String, ::Integer, ::Float then value
     when ::Symbol then value.to_s
-    when ::Parslet::Slice then value.to_s
+    when *SLICE_CLASSES then value.to_s
     when ::Array then value.each_with_index.map { |v, i| serialize_value(v, "#{path}[#{i}]") }
     when ::Hash then serialize_hash(value, path)
     when Plurimath::Math::Core then serialize_node(value, path)
@@ -1999,9 +2009,9 @@ module CorpusGenerator
   # (Slice#initialize's signature is parslet's private business).
   def transform_sentinel_slice
     @transform_sentinel_slice ||= begin
-      slice = Parslet::Atoms::Str.new(TRANSFORM_SLICE_SENTINEL)
+      slice = PEG::Atoms::Str.new(TRANSFORM_SLICE_SENTINEL)
         .parse(TRANSFORM_SLICE_SENTINEL)
-      unless slice.is_a?(Parslet::Slice)
+      unless SLICE_CLASSES.any? { |klass| slice.is_a?(klass) }
         raise Error, "parslet no longer parses to a Slice (got #{slice.class}); " \
                      "the Slice-conversion probe below would prove nothing"
       end

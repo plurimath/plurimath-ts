@@ -143,7 +143,7 @@ module LatexParserDataGenerator
   # `consume_all`, and answers the tree or nil.
   def rule_parse(text, rule, on: parser)
     on.public_send(rule).parse(text)
-  rescue Parslet::ParseFailed
+  rescue *CorpusGenerator::PARSE_FAILED
     nil
   end
 
@@ -156,7 +156,7 @@ module LatexParserDataGenerator
     return nil unless tree.is_a?(::Hash) && tree.length == 1
 
     key, value = tree.first
-    return nil unless value.is_a?(::Parslet::Slice)
+    return nil unless CorpusGenerator::SLICE_CLASSES.any? { |klass| value.is_a?(klass) }
 
     [key.to_s, value.to_s]
   end

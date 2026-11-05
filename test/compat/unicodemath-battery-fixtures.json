@@ -3,7 +3,7 @@
   "schema": "plurimath-compat/unicodemath-battery/1",
   "oracleCommit": "ae20be111a26fdd988c58be0bfb2b7f6fe6e352f",
   "oracleClean": true,
-  "generatorSha256": "2623eda0c2275744bc7301355170989cab80ad7a8b3d3807823569c993e5e024",
+  "generatorSha256": "43f01b8adc978c88b36baa82c769563b54c8248a499808f0f15f386e0b55cea4",
   "caseCount": 50,
   "parsedCount": 49,
   "raisedCount": 1,

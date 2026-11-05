@@ -30,8 +30,14 @@
     "newline-text": "\n<t>\n</t>\n",
     "crlf-text": "\n<t>a\r\nb</t>\n",
     "specials-text": "\n<mtext>a&amp;b&lt;c&gt;d\"e'f</mtext>\n",
-    "ascii-text-sweep": "\n<t>&#x0000;&#x0001;&#x0002;&#x0003;&#x0004;&#x0005;&#x0006;&#x0007;&#x0008;\t\n&#x000b;&#x000c;\r&#x000e;&#x000f;&#x0010;&#x0011;&#x0012;&#x0013;&#x0014;&#x0015;&#x0016;&#x0017;&#x0018;&#x0019;&#x001a;&#x001b;&#x001c;&#x001d;&#x001e;&#x001f; !\"#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f</t>\n",
-    "ascii-attr-sweep": "\n<t k=\"&#x0000;&#x0001;&#x0002;&#x0003;&#x0004;&#x0005;&#x0006;&#x0007;&#x0008;\t\n&#x000b;&#x000c;\r&#x000e;&#x000f;&#x0010;&#x0011;&#x0012;&#x0013;&#x0014;&#x0015;&#x0016;&#x0017;&#x0018;&#x0019;&#x001a;&#x001b;&#x001c;&#x001d;&#x001e;&#x001f; !&quot;#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f\"/>\n",
+    "ascii-text-sweep": {
+      "raises": "Ox::SyntaxError",
+      "message": "'\\#x00' is not a valid XML character."
+    },
+    "ascii-attr-sweep": {
+      "raises": "Ox::SyntaxError",
+      "message": "'\\#x00' is not a valid XML character."
+    },
     "nonascii-text-sampler": "\n<t>\u00a0\u00e9\u03b1\u2211\u2028\u2029\ufffd\ud83d\ude00\u0080\u009f\ud7ff\ue000\udbff\udfff</t>\n",
     "nonascii-attr-sampler": "\n<t k=\"\u00a0\u00e9\u03b1\u2211\u2028\u2029\ufffd\ud83d\ude00\u0080\u009f\ud7ff\ue000\udbff\udfff\"/>\n",
     "namespaced": "\n<m:oMath m:val=\"x\"/>\n"

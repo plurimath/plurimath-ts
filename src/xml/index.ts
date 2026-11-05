@@ -26,4 +26,10 @@ export type {
 } from "./reader";
 export { ASCII_INCOMPATIBLE_ENCODING_NAMES, readXml, XmlReadError } from "./reader";
 export type { DumpOptions } from "./serializer";
-export { dump, dumpNodes, XmlDepthLimitError, XmlIndentError } from "./serializer";
+export {
+  dump,
+  dumpNodes,
+  XmlDepthLimitError,
+  XmlIndentError,
+  XmlInvalidCharacterError,
+} from "./serializer";

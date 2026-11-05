@@ -11,7 +11,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { dump, dumpNodes, type XmlElement } from "../../src/xml/index";
+import { dump, dumpNodes, type XmlElement, XmlInvalidCharacterError } from "../../src/xml/index";
 import {
   DUMP_FIXTURE_COUNT,
   DUMP_FIXTURES,
@@ -19,6 +19,7 @@ import {
   DUMP_NODES_FIXTURES,
   EXPECTED_PROVENANCE,
   expectedBytes,
+  expectedOutcome,
   expectedNames,
   type OxContractFixture,
 } from "./ox-contract";
@@ -40,9 +41,9 @@ describe("the fixture set itself", () => {
   });
 
   it("was generated from the pinned oracle, not some other checkout", () => {
-    expect(EXPECTED_PROVENANCE.oracleCommit).toBe("ae20be111a26fdd988c58be0bfb2b7f6fe6e352f");
-    expect(EXPECTED_PROVENANCE.oracleVersion).toBe("0.11.12");
-    expect(EXPECTED_PROVENANCE.oxVersion).toBe("2.14.28");
+    expect(EXPECTED_PROVENANCE.oracleCommit).toBe("2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256");
+    expect(EXPECTED_PROVENANCE.oracleVersion).toBe("0.11.17");
+    expect(EXPECTED_PROVENANCE.oxVersion).toBe("2.14.29");
     expect(EXPECTED_PROVENANCE.xmlEngine).toBe("Plurimath::XmlEngine::OxEngine");
   });
 
@@ -60,7 +61,7 @@ describe("the fixture set itself", () => {
   it("carries a probe and expected bytes for every fixture", () => {
     for (const fixture of DUMP_FIXTURES) {
       expect(fixture.probe).not.toBe("");
-      expect(expectedBytes("dump", fixture.name)).not.toBe("");
+      expect(expectedOutcome("dump", fixture.name)).not.toBe("");
     }
     for (const fixture of DUMP_NODES_FIXTURES) {
       expect(fixture.probe).not.toBe("");
@@ -70,12 +71,27 @@ describe("the fixture set itself", () => {
 });
 
 describe("dump — the raw Ox.dump contract", () => {
-  it.each(DUMP_FIXTURES)("reproduces $name byte for byte", (fixture) => {
-    expect(serialize(fixture, dump)).toBe(expectedBytes("dump", fixture.name));
+  it.each(DUMP_FIXTURES)("reproduces $name byte for byte, or raises where Ox does", (fixture) => {
+    const outcome = expectedOutcome("dump", fixture.name);
+    if (typeof outcome === "string") {
+      expect(serialize(fixture, dump)).toBe(outcome);
+      return;
+    }
+    expect(outcome.raises).toBe("Ox::SyntaxError");
+    expect(() => serialize(fixture, dump)).toThrow(XmlInvalidCharacterError);
+    expect(() => serialize(fixture, dump)).toThrow(outcome.message);
+  });
+
+  it("records at least one raise, so the refusal path is exercised", () => {
+    const raises = DUMP_FIXTURES.filter(
+      (fixture) => typeof expectedOutcome("dump", fixture.name) !== "string",
+    );
+    expect(raises.length).toBeGreaterThan(0);
   });
 
   it("is deterministic — a rebuilt tree dumps the same bytes", () => {
     for (const fixture of DUMP_FIXTURES) {
+      if (typeof expectedOutcome("dump", fixture.name) !== "string") continue;
       expect(serialize(fixture, dump)).toBe(serialize(fixture, dump));
     }
   });

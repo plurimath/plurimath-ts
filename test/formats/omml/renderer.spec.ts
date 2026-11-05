@@ -4170,11 +4170,19 @@ describe("OMML BinaryFunction aliases", () => {
     expect(toOmmlWithoutMathTag(binary("Lim", null, null))).toBe(LIM_LABEL_ONLY_X);
   });
 
-  it("renders the three aliases that inherit the base carrier's own shape", () => {
-    for (const name of ["Arg", "Intent", "Mlabeledtr", "BinaryFunction"]) {
+  it("renders the aliases that inherit the base carrier's own shape", () => {
+    for (const name of ["Arg", "Mlabeledtr", "BinaryFunction"]) {
       expect(toOmmlWithoutMathTag(binary(name, symbol(), symbol())), name).toBe(BINARY_X);
       expect(toOmmlWithoutMathTag(binary(name, null, null)), name).toBe(BINARY_CARRIER_EMPTY_X);
     }
+  });
+
+  // plurimath#505 (`intent.rb:38-42`): the intent string is metadata, so only
+  // the content is written; measured on plurimath 2967dcc4, `Intent.new(x, x)`
+  // gives the content's one run and `Intent.new(nil, nil)` gives `[]`.
+  it("writes only Intent's content", () => {
+    expect(toOmmlWithoutMathTag(binary("Intent", symbol(), symbol()))).toBe(RUN_X);
+    expect(toOmmlWithoutMathTag(binary("Intent", null, null))).toBe("");
   });
 });
 

@@ -31,6 +31,8 @@ import { XmlElement } from "../../xml/index";
  * `instance_method(:to_omml_without_math_tag).owner` for each (exit 0):
  * exactly `Arg`, `Intent` and `Mlabeledtr` answer
  * `Plurimath::Math::Function::BinaryFunction`; the other 11 own the method.
+ * `Intent` has owned it since plurimath#505 and is handled before this set
+ * is consulted; it stays listed for the oracle measured here.
  * Rendered live, all three give the same nested
  * `<m:r><m:r><m:t>a</m:t></m:r><m:r><m:t>b</m:t></m:r></m:r>` the bare carrier
  * does — that nesting is the gem's, not a transcription slip — and all three
@@ -96,6 +98,12 @@ export function renderBinaryFunction(
       // `semantics.rb:31-33`: `Array(parameter_one.insert_t_tag(...))`, the
       // slot unguarded and the annotations dropped.
       return insertChild(node.parameterOne, context, "semantics.parameterOne");
+    case "Intent":
+      // `intent.rb:38-42` (plurimath#505): the intent string is metadata OMML
+      // has no slot for, so only the wrapped content is written, and nothing
+      // when the slot is nil.
+      if (node.parameterOne === null || node.parameterOne === undefined) return [];
+      return insertChild(node.parameterOne, context, "intent.parameterOne");
     default:
       if (OMML_BASE_BINARY_CLASSES.has(node.name)) return renderBinaryCarrier(node, context);
       throw new RenderError(

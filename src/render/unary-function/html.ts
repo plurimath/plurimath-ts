@@ -30,10 +30,12 @@
  * (`"<i>#{parameter_one}</i>"`, `left.rb:26`) and interpolates the slot RAW,
  * so it takes the shared interpolation judge: a string, nil, a boolean or a
  * non-finite number reproduces Ruby's bytes, and a node — Ruby's default
- * `Object#to_s`, a heap address — is refused. `Right#to_html` and
- * `Phantom#to_html` take NO keyword arguments while `Formula#to_html` passes
- * `options:`, so the gem raises ArgumentError on every call; `Phantom` refuses
- * with that reason, and `Right` stays unadmitted. The remaining
+ * `Object#to_s`, a heap address — is refused. `Right#to_html` is the same
+ * method since plurimath#508 (`def to_html(**)`, `right.rb:26`); before it,
+ * `Right` took no keyword arguments and raised. `Phantom#to_html` still takes
+ * NO keyword arguments while `Formula#to_html` passes `options:`, so the gem
+ * raises ArgumentError on every call, and `Phantom` refuses with that reason.
+ * The remaining
  * trigonometric and `log`-family names take the same carrier shape as `Sin`
  * and `Cos`, but no case exercises them; an unmeasured name raises.
  */
@@ -116,7 +118,7 @@ const MEASURED_LABELS: ReadonlyMap<string, string> = new Map(
 
 export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: RenderContext): string {
   if (node.name === "Tr") return renderTr(node.parameterOne, context);
-  if (node.name === "Left") return renderLeft(node);
+  if (node.name === "Left" || node.name === "Right") return renderLeftRight(node);
   if (node.name === "Mbox") return renderMbox(node);
   if (node.name === "Ms") return renderMs(node);
   if (node.name === "Phantom") {
@@ -139,9 +141,13 @@ export function renderUnaryFunction(node: NodeOf<"unaryFunction">, context: Rend
   return renderUnaryDefault(label, node.parameterOne, context, "unaryFunction.parameterOne");
 }
 
-/** `Left#to_html` (`left.rb:26`): `"<i>#{parameter_one}</i>"`, the slot interpolated raw. */
-function renderLeft(node: NodeOf<"unaryFunction">): string {
-  return `<i>${interpolatedValue(node.parameterOne, node.kind, "left.parameterOne")}</i>`;
+/**
+ * `Left#to_html` (`left.rb:26`) and `Right#to_html` (`right.rb:26`, since
+ * plurimath#508): `"<i>#{parameter_one}</i>"`, the slot interpolated raw.
+ */
+function renderLeftRight(node: NodeOf<"unaryFunction">): string {
+  const at = `${node.name.toLowerCase()}.parameterOne`;
+  return `<i>${interpolatedValue(node.parameterOne, node.kind, at)}</i>`;
 }
 
 /**

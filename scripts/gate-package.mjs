@@ -92,6 +92,7 @@ const CORE_EXPORTS = [
   "UbraceNode",
   "UlNode",
   "UnaryFunctionNode",
+  "UncertaintyNode",
   "UndersetNode",
   "UnsupportedFeatureError",
   "UnsupportedFormatError",

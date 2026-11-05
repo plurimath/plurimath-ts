@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/generate-html-model-fixtures.rb
-  sha256: 8d2ba7c1c228d0b5d471805a401ab2222c6945e8e05bf103ac02ffd774b11dcd
+  sha256: d6d124f3260ad909a7510a0f4be4ab2e9e2b02c14ff5060490e3f7f0769f87e7
   inputs:
-    scripts/generate-corpus.rb: d22603531c0f5205c4d6a29fa002963317acf1a7d42bc8b8f6a01827e86d3a5c
-    scripts/generate-html-model-fixtures.rb: 8d2ba7c1c228d0b5d471805a401ab2222c6945e8e05bf103ac02ffd774b11dcd
+    scripts/generate-corpus.rb: 7a75f45b8ba8c774cc990cf2d68d9f2a5c328c66d570df1e177b5a7a3d86554e
+    scripts/generate-html-model-fixtures.rb: d6d124f3260ad909a7510a0f4be4ab2e9e2b02c14ff5060490e3f7f0769f87e7
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 63c958536477de8e1011a81da6479e30a3f4fbba
+    commit: deb21ce3c729c12e13d1b70dec6703fd40d6532e
     clean: true
     dirty_paths: []
 oracle:

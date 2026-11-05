@@ -8,7 +8,7 @@
     "path": "scripts/generate-unitsml-data.rb",
     "sha256": "ef1a49892fd798d5b644c1c5586c377be0843db820266e3469cab5e96ab03e8f",
     "inputs": {
-      "scripts/generate-corpus.rb": "d22603531c0f5205c4d6a29fa002963317acf1a7d42bc8b8f6a01827e86d3a5c",
+      "scripts/generate-corpus.rb": "7a75f45b8ba8c774cc990cf2d68d9f2a5c328c66d570df1e177b5a7a3d86554e",
       "scripts/generate-unitsml-data.rb": "ef1a49892fd798d5b644c1c5586c377be0843db820266e3469cab5e96ab03e8f",
       "scripts/render-fixture-provenance.rb": "6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11",
       "scripts/ci/native-completion-probe.rb": "6a384b0d9349098a3ca05c515f0cf10ebddee4721cd9b4d3a6041b354cc24020"

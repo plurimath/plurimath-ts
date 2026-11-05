@@ -47,11 +47,11 @@ export const LATEX_PARSER_GENERATED_PROVENANCE: LatexParserGeneratedProvenance =
     ],
     [
       "scripts/generate-corpus.rb",
-      "d22603531c0f5205c4d6a29fa002963317acf1a7d42bc8b8f6a01827e86d3a5c",
+      "7a75f45b8ba8c774cc990cf2d68d9f2a5c328c66d570df1e177b5a7a3d86554e",
     ],
     [
       "scripts/generate-latex-parser-data.rb",
-      "befe44ef3595335bd7eff5c6f37e703285bf4a160e9fc058b7cab1f9d6060166",
+      "fad276ff98728bf2a9acc768b9ed65f473ba180d78eabf684c183ee5a29dcbb6",
     ],
   ]),
   oracle: "plurimath",

@@ -39,6 +39,7 @@
     "ubrace",
     "ul",
     "unaryFunction",
+    "uncertainty",
     "underset",
     "unitsml",
     "vec"
@@ -248,9 +249,14 @@
       "renderKind": "unitsml",
       "rubyClass": "Plurimath::Math::Function::Unitsml",
       "slots": ["string"]
+    },
+    "uncertainty": {
+      "renderKind": "uncertainty",
+      "rubyClass": "Plurimath::Math::Function::Uncertainty",
+      "slots": ["number", "number"]
     }
   },
-  "rowCount": 462,
+  "rowCount": 476,
   "constructsCount": 445,
   "rendersCount": 234,
   "unstableCount": 2,
@@ -3918,7 +3924,7 @@
       "slot": 0,
       "value": "empty-string",
       "constructs": false,
-      "constructError": "Parslet::ParseFailed"
+      "constructError": "Unitsml::Errors::ParseError"
     },
     {
       "kind": "unitsml",
@@ -3933,6 +3939,104 @@
       "value": "node",
       "constructs": false,
       "constructError": "NoMethodError"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "nil",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "false",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "true",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "zero",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "empty-string",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "empty-array",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "node",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "nil",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "false",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "true",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "zero",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "empty-string",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "empty-array",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "node",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
     }
   ],
   "constructorWitnesses": {
@@ -3945,6 +4049,45 @@
         }
       },
       "output": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>kg</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
+    },
+    "uncertainty": {
+      "input": {
+        "value": "1",
+        "category": "standard",
+        "magnitude": "1"
+      },
+      "model": {
+        "class": "Math::Function::Uncertainty",
+        "fields": {
+          "category": "standard",
+          "coverage_factor": null,
+          "coverage_probability": null,
+          "interval_kind": null,
+          "lower": null,
+          "magnitude": {
+            "class": "Math::Number",
+            "fields": {
+              "base": null,
+              "mini_sub_sized": false,
+              "mini_sup_sized": false,
+              "value": "1"
+            }
+          },
+          "notation": "absolute",
+          "unit": null,
+          "upper": null,
+          "value": {
+            "class": "Math::Number",
+            "fields": {
+              "base": null,
+              "mini_sub_sized": false,
+              "mini_sup_sized": false,
+              "value": "1"
+            }
+          }
+        }
+      },
+      "output": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:box>\n      <m:e>\n        <m:phant>\n          <m:phantPr>\n            <m:show m:val=\"off\"/>\n            <m:zeroWid m:val=\"on\"/>\n            <m:zeroAsc m:val=\"on\"/>\n            <m:zeroDesc m:val=\"on\"/>\n          </m:phantPr>\n          <m:e>\n            <m:r>\n              <m:rPr>\n                <m:sty m:val=\"p\"/>\n              </m:rPr>\n              <m:t>standard-uncertainty(1,1)</m:t>\n            </m:r>\n          </m:e>\n        </m:phant>\n        <m:r>\n          <m:t>1</m:t>\n        </m:r>\n        <m:d>\n          <m:dPr>\n            <m:begChr m:val=\"(\"/>\n            <m:sepChr m:val=\"\"/>\n            <m:endChr m:val=\")\"/>\n          </m:dPr>\n          <m:e>\n            <m:r>\n              <m:t>1</m:t>\n            </m:r>\n          </m:e>\n        </m:d>\n      </m:e>\n    </m:box>\n  </m:oMath>\n</m:oMathPara>\n"
     }
   }
 }

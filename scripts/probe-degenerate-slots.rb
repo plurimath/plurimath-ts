@@ -95,6 +95,7 @@ FILLERS = {
   "node" => -> { S.new("a") },
   "sequence" => -> { [S.new("a")] },
   "string" => -> { "a" },
+  "number" => -> { Plurimath::Math::Number.new("1") },
 }.freeze
 
 # One sweep entry per Ruby class swept.
@@ -157,6 +158,14 @@ SWEEP = {
   },
   "text"     => { render_kind: "text", klass: FN::Text, slots: %w[string], bag: nil },
   "unitsml"  => { render_kind: "unitsml", klass: FN::Unitsml, slots: %w[string], bag: nil },
+  # Uncertainty takes its value positionally and everything else by keyword,
+  # and validates in its constructor. The sweep uses the corpus generator's
+  # minimal valid witness, a standard uncertainty of 1 with magnitude 1, and
+  # sweeps its two numeric fields: the value and the magnitude.
+  "uncertainty" => {
+    render_kind: "uncertainty", klass: FN::Uncertainty, slots: %w[number number], bag: nil,
+    construct: ->(value, magnitude) { FN::Uncertainty.new(value, category: :standard, magnitude: magnitude) },
+  },
 }.freeze
 
 # The only constructor failures the pinned oracle is expected to produce.
@@ -175,14 +184,19 @@ EXPECTED_CONSTRUCTION_REFUSALS = {
   "tr[0]=node" => "all?",
   # Unitsml::Parser eagerly processes raw text before the renderer runs.
   # Nil reaches @text.gsub; other non-strings fail extract_equation.start_with?.
-  # Empty text reaches Parslet and is an explicit syntax refusal.
+  # Empty text reaches the unitsml parser and is an explicit syntax refusal.
   "unitsml[0]=nil" => { "class" => "NoMethodError", "method" => "gsub" },
   "unitsml[0]=false" => { "class" => "NoMethodError", "method" => "start_with?" },
   "unitsml[0]=true" => { "class" => "NoMethodError", "method" => "start_with?" },
   "unitsml[0]=zero" => { "class" => "NoMethodError", "method" => "start_with?" },
   "unitsml[0]=empty-array" => { "class" => "NoMethodError", "method" => "start_with?" },
   "unitsml[0]=node" => { "class" => "NoMethodError", "method" => "start_with?" },
-  "unitsml[0]=empty-string" => { "class" => "Parslet::ParseFailed" },
+  "unitsml[0]=empty-string" => { "class" => "Unitsml::Errors::ParseError" },
+  # Uncertainty validates that its value and magnitude are each a plain
+  # decimal Number, so no degenerate value in either slot builds.
+  **[0, 1].product(%w[nil false true zero empty-string empty-array node]).to_h do |slot, label|
+    ["uncertainty[#{slot}]=#{label}", { "class" => "Plurimath::Errors::InvalidUncertainty" }]
+  end,
 }.freeze
 
 # `biome check` formats every committed .json in this repository, and it puts an
@@ -298,7 +312,7 @@ def probe_cell(id, entry, slot, label, token, format)
   at = "#{id}[#{slot}]=#{label}"
 
   node = begin
-    entry[:klass].new(*args)
+    entry[:construct] ? entry[:construct].call(*args) : entry[:klass].new(*args)
   rescue StandardError => e
     expected = EXPECTED_CONSTRUCTION_REFUSALS[at]
     expected = { "class" => "NoMethodError", "method" => expected } if expected.is_a?(String)
@@ -339,6 +353,14 @@ unitsml_witness = FN::Unitsml.new("kg")
 constructor_witnesses = { "unitsml" => { "input" => "kg",
   "model" => CorpusGenerator.serialize_node(unitsml_witness, "unitsml-witness"),
   "output" => Plurimath::Math::Formula.new([unitsml_witness]).public_send("to_#{options[:format]}") } }
+uncertainty_witness = SWEEP.fetch("uncertainty")[:construct].call(
+  Plurimath::Math::Number.new("1"), Plurimath::Math::Number.new("1"),
+)
+constructor_witnesses["uncertainty"] = {
+  "input" => { "value" => "1", "category" => "standard", "magnitude" => "1" },
+  "model" => CorpusGenerator.serialize_node(uncertainty_witness, "uncertainty-witness"),
+  "output" => Plurimath::Math::Formula.new([uncertainty_witness]).public_send("to_#{options[:format]}"),
+}
 rows = []
 SWEEP.each do |id, entry|
   entry[:slots].each_index do |slot|

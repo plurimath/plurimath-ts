@@ -9,6 +9,7 @@
  * while naming neither, which is the shape of defect these tables exist to catch.
  */
 import * as C from "../../../src/core/index";
+import { InvalidUncertaintyError, uncertaintyProblem } from "../../../src/core/uncertainty";
 import { toOmml } from "../../../src/formats/omml/renderer";
 import { validateUnitsml } from "../../../src/unitsml/index";
 
@@ -79,12 +80,13 @@ export const RENDERED_BASELINE = 712;
  * sweep entry, so a builder that fills a sequence slot with a bare node fails
  * in a test that names the entry rather than as a byte mismatch further down.
  */
-export type SlotFiller = "node" | "sequence" | "string";
+export type SlotFiller = "node" | "number" | "sequence" | "string";
 
 const sym = () => new C.SymbolNode({ value: "a" });
 const FILL: Readonly<Record<SlotFiller, () => unknown>> = {
   node: () => sym(),
   sequence: () => [sym()],
+  number: () => new C.NumberNode({ value: "1" }),
   string: () => "a",
 };
 
@@ -131,6 +133,20 @@ export interface DegenerateKind {
  * of the expected matrix: a truncated fixture cannot agree with it.
  */
 export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
+  uncertainty: {
+    renderKind: "uncertainty",
+    rubyClass: "Plurimath::Math::Function::Uncertainty",
+    slots: ["number", "number"],
+    build: (s, v) => {
+      const [value, magnitude] = at(s, v, ["number", "number"]);
+      const node = new C.UncertaintyNode({ value, category: "standard", magnitude } as never);
+      // Ruby validates in its constructor; the port's node is permissive and
+      // carries the same checks in `uncertaintyProblem`.
+      const problem = uncertaintyProblem(node);
+      if (problem !== null) throw new InvalidUncertaintyError(problem);
+      return node;
+    },
+  },
   unitsml: {
     renderKind: "unitsml",
     rubyClass: "Plurimath::Math::Function::Unitsml",

@@ -23,6 +23,22 @@ module OracleArtifacts
              src/formats/mathml/generated-recognition].freeze
   FORMATS = %w[asciimath html latex mathml omml unicodemath].freeze
 
+  # Generator jobs that are deliberately not run, with the reason. A blocked job
+  # produces nothing: its committed files stay as they are, are left out of the
+  # export and the determinism pass, and the report lists the skip. Nothing is
+  # generated in its place.
+  #
+  # evaluation-fixtures: plurimath 0.11.13+ evaluates through an
+  # accuracy-aware evaluator whose guarded mode computes BigDecimal
+  # transcendentals to a declared number of digits. Porting it needs a
+  # decision on arbitrary-precision decimals in TypeScript.
+  BLOCKED_JOBS = {
+    "evaluation-fixtures" => {
+      "reason" => "blocked: decimal library decision",
+      "paths" => %r{\Atest/formats/evaluation/},
+    },
+  }.freeze
+
   class Runner
     def initialize(source:, oracle:, verify:, out:, mode:)
       @source, @oracle, @verify, @out = [source, oracle, verify, out].map { |p| File.realpath(p) }
@@ -118,7 +134,7 @@ module OracleArtifacts
         jobs << [script, "generate-#{script}.rb", ["--oracle", @oracle, "--out", at.call(dir)]]
       end
       jobs << ["render-sweeps", "generate-render-sweeps.rb", ["--oracle", @oracle, "--out", at.call("test/formats")]]
-      jobs
+      jobs.reject { |name, _, _| BLOCKED_JOBS.key?(name) }
     end
 
     def expected_paths
@@ -135,7 +151,9 @@ module OracleArtifacts
       end
       sweeps = %w[asciimath latex mathml].map { |format| "test/formats/#{format}/render-sweep.json" }
       raise "untracked render sweep" unless (sweeps - files).empty?
-      (roots + fixture_paths + sweeps).uniq.sort
+      (roots + fixture_paths + sweeps).uniq.sort.reject do |path|
+        BLOCKED_JOBS.values.any? { |job| path.match?(job.fetch("paths")) }
+      end
     end
 
     def omitted_family_paths
@@ -278,6 +296,7 @@ module OracleArtifacts
         @report["ruby"] = RUBY_DESCRIPTION
         @report["submodule"] = git(@source, "rev-parse", "HEAD:submodules/plurimath-testsuite").strip
         @paths = expected_paths
+        @report["skipped"] = BLOCKED_JOBS.transform_values { |job| job.fetch("reason") }
         File.write(File.join(@out, "generated-paths.json"), JSON.pretty_generate(@paths) + "\n")
         save
         command("runtime-versions", ["bundle", "exec", "ruby", "-e", "require 'bundler'; abort unless Bundler::VERSION == '4.0.3'; puts RUBY_DESCRIPTION; puts Bundler::VERSION"])

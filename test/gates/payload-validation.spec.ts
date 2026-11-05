@@ -196,11 +196,11 @@ const FIXTURE_SPECS = {
     usesCorpus: false,
     usesRenderInventory: false,
   },
-  // Each AsciiMath grammar rule run as the parse root over a fixed input
-  // list: the gem's verdict, and where a refusal points. Claims no corpus.
+  // The AsciiMath root parse over a fixed input list: the gem's verdict, and
+  // where a refusal points. Claims no corpus.
   "failure-position-fixtures.json": {
     generator: "scripts/generate-asciimath-failure-positions.rb",
-    schema: "plurimath-ts/asciimath-failure-positions/1",
+    schema: "plurimath-ts/asciimath-failure-positions/2",
     rows: "cases",
     shape: "failure-positions",
     usesCorpus: false,
@@ -1773,20 +1773,11 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         ).length;
         expect(integerField(record.payload, "corpusOmmlCount", record.relative)).toBe(corpusRows);
       } else if (record.spec.shape === "failure-positions") {
-        // A row is one rule, one input, and the gem's verdict; a refusal
-        // carries the offset and the root cause Parslet reported.
+        // A row is one input at the root rule and the gem's verdict; a refusal
+        // carries the offset and the message amath reported.
         expectExactKeys(
           record.payload,
-          [
-            "$comment",
-            "schema",
-            "format",
-            "ruleCount",
-            "inputCount",
-            "caseCount",
-            "rejectedCount",
-            "cases",
-          ],
+          ["$comment", "schema", "format", "rule", "inputCount", "caseCount", "rejectedCount", "cases"],
           record.relative,
         );
         expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);
@@ -1797,35 +1788,21 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           expectExactKeys(
             item,
             accepts
-              ? ["id", "rule", "gemRule", "input", "accepts"]
-              : [
-                  "id",
-                  "rule",
-                  "gemRule",
-                  "input",
-                  "accepts",
-                  "index",
-                  "prefixLength",
-                  "rootIndex",
-                  "message",
-                ],
+              ? ["id", "rule", "input", "accepts"]
+              : ["id", "rule", "input", "accepts", "index", "message"],
             at,
           );
           stringField(item, "id", at);
           stringField(item, "rule", at);
-          stringField(item, "gemRule", at);
           stringValue(item, "input", at);
           if (!accepts) {
             integerField(item, "index", at);
-            integerField(item, "rootIndex", at);
             stringField(item, "message", at);
-            if (item.prefixLength !== null) integerField(item, "prefixLength", at);
           }
           return !accepts;
         }).length;
-        for (const count of ["ruleCount", "inputCount"]) {
-          integerField(record.payload, count, record.relative);
-        }
+        stringField(record.payload, "rule", record.relative);
+        integerField(record.payload, "inputCount", record.relative);
         expect(integerField(record.payload, "rejectedCount", record.relative)).toBe(rejected);
       } else if (record.spec.shape === "xml-reader") {
         // A row is one input and what the gem's reader did with it: the tree
@@ -1898,16 +1875,25 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           record.relative,
         );
         const witnesses = mapField(record.payload, "constructorWitnesses", record.relative);
-        expect(Object.keys(witnesses)).toEqual(["unitsml"]);
+        expect(Object.keys(witnesses)).toEqual(["unitsml", "uncertainty"]);
         for (const [kind, value] of Object.entries(witnesses)) {
           const at = `${record.relative}.constructorWitnesses.${kind}`;
           const witness = mapping(value, at);
           expectExactKeys(witness, ["input", "model", "output"], at);
-          const input = stringField(witness, "input", at);
-          expect(mapField(witness, "model", at)).toEqual({
-            class: "Math::Function::Unitsml",
-            fields: { text: input },
-          });
+          if (kind === "unitsml") {
+            const input = stringField(witness, "input", at);
+            expect(mapField(witness, "model", at)).toEqual({
+              class: "Math::Function::Unitsml",
+              fields: { text: input },
+            });
+          } else {
+            expect(mapField(witness, "input", at)).toEqual({
+              value: "1",
+              category: "standard",
+              magnitude: "1",
+            });
+            expect(mapField(witness, "model", at).class).toBe("Math::Function::Uncertainty");
+          }
           stringValue(witness, "output", at);
         }
         const inventory = arrayField(record.payload, "inventory", record.relative);
@@ -1935,7 +1921,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           expect(slots.length, `${record.relative}.kinds.${kind}.slots`).toBeGreaterThan(0);
           for (const [index, slot] of slots.entries()) {
             expect(typeof slot, `${record.relative}.kinds.${kind}.slots[${index}]`).toBe("string");
-            expect(["node", "sequence", "string"]).toContain(slot);
+            expect(["node", "number", "sequence", "string"]).toContain(slot);
           }
         }
         expect(
@@ -1969,9 +1955,11 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
               `${record.relative}.rows[${index}]`,
             );
             expect(stringField(item, "constructError", record.relative)).toBe(
-              item.kind === "unitsml" && item.value === "empty-string"
-                ? "Parslet::ParseFailed"
-                : "NoMethodError",
+              item.kind === "uncertainty"
+                ? "Plurimath::Errors::InvalidUncertainty"
+                : item.kind === "unitsml" && item.value === "empty-string"
+                  ? "Unitsml::Errors::ParseError"
+                  : "NoMethodError",
             );
             continue;
           }
@@ -2031,7 +2019,14 @@ describe("the Ox contract fixture has complete sidecar provenance", () => {
       const entries = mapField(record.payload, group, record.relative);
       expect(Object.keys(entries).length, `${record.relative}.${group}`).toBeGreaterThan(0);
       for (const [name, value] of Object.entries(entries)) {
-        expect(typeof value, `${record.relative}.${group}.${name}`).toBe("string");
+        const at = `${record.relative}.${group}.${name}`;
+        if (typeof value === "string") continue;
+        // A raw dump Ox refused: the raise, never bytes, and only in `dump`.
+        expect(group, at).toBe("dump");
+        const raise = mapping(value, at);
+        expectExactKeys(raise, ["raises", "message"], at);
+        expect(stringField(raise, "raises", at)).toBe("Ox::SyntaxError");
+        stringField(raise, "message", at);
       }
     }
   });

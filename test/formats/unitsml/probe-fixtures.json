@@ -274,8 +274,8 @@
       "input": "m**2",
       "options": {},
       "optionsTypes": {},
-      "raises": "Parslet::ParseFailed",
-      "message": "Expected one of [PREFIXES_UNITS_INT_EXP, DIMENSION_RULES_INT_EXP, SINGLE_LETTER_PREFIXES HYPHEN, DOUBLE_LETTER_PREFIXES HYPHEN] at line 1 char 1."
+      "raises": "Unitsml::Errors::ParseError",
+      "message": "[unitsml] Error: cannot parse \"m**2\" as a UnitsML expression."
     },
     {
       "input": "m^2",
@@ -685,50 +685,36 @@
       "input": "(m/s)^2",
       "options": {},
       "optionsTypes": {},
-      "raises": "Parslet::ParseFailed",
-      "message": "Expected one of [PREFIXES_UNITS_INT_EXP, DIMENSION_RULES_INT_EXP, SINGLE_LETTER_PREFIXES HYPHEN, DOUBLE_LETTER_PREFIXES HYPHEN] at line 1 char 1."
+      "raises": "Unitsml::Errors::ParseError",
+      "message": "[unitsml] Error: cannot parse \"(m/s)^2\" as a UnitsML expression."
     },
     {
       "input": "zzz",
       "options": {},
       "optionsTypes": {},
-      "raises": "Parslet::ParseFailed",
-      "message": "Expected one of [PREFIXES_UNITS_INT_EXP, DIMENSION_RULES_INT_EXP, SINGLE_LETTER_PREFIXES HYPHEN, DOUBLE_LETTER_PREFIXES HYPHEN] at line 1 char 1."
+      "raises": "Unitsml::Errors::ParseError",
+      "message": "[unitsml] Error: cannot parse \"zzz\" as a UnitsML expression."
     },
     {
       "input": "kzzz",
       "options": {},
       "optionsTypes": {},
-      "raises": "Parslet::ParseFailed",
-      "message": "Expected one of [PREFIXES_UNITS_INT_EXP, DIMENSION_RULES_INT_EXP, SINGLE_LETTER_PREFIXES HYPHEN, DOUBLE_LETTER_PREFIXES HYPHEN] at line 1 char 1."
+      "raises": "Unitsml::Errors::ParseError",
+      "message": "[unitsml] Error: cannot parse \"kzzz\" as a UnitsML expression."
     },
     {
       "input": "m+",
       "options": {},
       "optionsTypes": {},
-      "raises": "Parslet::ParseFailed",
-      "message": "Expected one of [PREFIXES_UNITS_INT_EXP, DIMENSION_RULES_INT_EXP, SINGLE_LETTER_PREFIXES HYPHEN, DOUBLE_LETTER_PREFIXES HYPHEN] at line 1 char 1."
+      "raises": "Unitsml::Errors::ParseError",
+      "message": "[unitsml] Error: cannot parse \"m+\" as a UnitsML expression."
     },
     {
       "input": "s/",
       "options": {},
       "optionsTypes": {},
-      "mathmlError": {
-        "class": "NoMethodError",
-        "message": "undefined method 'to_mathml' for an instance of Hash"
-      },
-      "asciiError": {
-        "class": "NoMethodError",
-        "message": "undefined method 'to_asciimath' for an instance of Hash"
-      },
-      "xmlError": {
-        "class": "NoMethodError",
-        "message": "undefined method 'to_html' for an instance of Hash"
-      },
-      "modelError": {
-        "class": "NoMethodError",
-        "message": "undefined method 'to_mathml' for an instance of Hash"
-      }
+      "raises": "Unitsml::Errors::ParseError",
+      "message": "[unitsml] Error: cannot parse \"s/\" as a UnitsML expression."
     },
     {
       "input": "kg",
@@ -1244,30 +1230,21 @@
       "optionsTypes": {
         "name": "trueclass"
       },
-      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
-      "ascii": "kg",
-      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#NISTd2\" xml:id=\"U_NISTu2\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">kilogram</UnitName><UnitSymbol type=\"HTML\">kg</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"gram\" prefix=\"k\"/></RootUnits></Unit><Prefix xmlns=\"https://schema.unitsml.org/unitsml/1.0\" prefixBase=\"10\" prefixPower=\"3\" xml:id=\"NISTp10_3\"><PrefixName xml:lang=\"en\">kilo</PrefixName><PrefixSymbol type=\"ASCII\">k</PrefixSymbol><PrefixSymbol type=\"unicode\">k</PrefixSymbol><PrefixSymbol type=\"LaTeX\">k</PrefixSymbol><PrefixSymbol type=\"HTML\">k</PrefixSymbol></Prefix><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd2\"><Mass symbol=\"M\" powerNumerator=\"1\"/></Dimension><Quantity xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTq2\" quantityType=\"base\" dimensionURL=\"#NISTd2\"><QuantityName xml:lang=\"en\">mass</QuantityName></Quantity>",
-      "model": {
-        "class": "Math::Formula",
-        "fields": {
-          "displaystyle": true,
-          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
-          "left_right_wrapper": true,
-          "value": [
-            {
-              "class": "Math::Function::FontStyle::Normal",
-              "fields": {
-                "parameter_one": {
-                  "class": "Math::Symbols::Symbol",
-                  "fields": {
-                    "value": "kg"
-                  }
-                },
-                "parameter_two": "normal"
-              }
-            }
-          ]
-        }
+      "mathmlError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "asciiError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "xmlError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "modelError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
       }
     },
     {
@@ -1314,7 +1291,7 @@
       },
       "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math>",
       "ascii": "kg",
-      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#NISTd2\" xml:id=\"U_NISTu2\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">kilogram</UnitName><UnitSymbol type=\"HTML\">kg</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"gram\" prefix=\"k\"/></RootUnits></Unit><Prefix xmlns=\"https://schema.unitsml.org/unitsml/1.0\" prefixBase=\"10\" prefixPower=\"3\" xml:id=\"NISTp10_3\"><PrefixName xml:lang=\"en\">kilo</PrefixName><PrefixSymbol type=\"ASCII\">k</PrefixSymbol><PrefixSymbol type=\"unicode\">k</PrefixSymbol><PrefixSymbol type=\"LaTeX\">k</PrefixSymbol><PrefixSymbol type=\"HTML\">k</PrefixSymbol></Prefix><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd2\"><Mass symbol=\"M\" powerNumerator=\"1\"/></Dimension><Quantity xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTq2\" quantityType=\"base\" dimensionURL=\"#NISTd2\"><QuantityName xml:lang=\"en\">mass</QuantityName></Quantity>",
+      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#NISTd2\" xml:id=\"U_NISTu2\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">kilogram</UnitName><UnitSymbol type=\"HTML\">kg</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">kg</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"gram\" prefix=\"k\"/></RootUnits></Unit><Prefix xmlns=\"https://schema.unitsml.org/unitsml/1.0\" prefixBase=\"10\" prefixPower=\"3\" xml:id=\"NISTp10_3\"><PrefixName xml:lang=\"en\">kilo</PrefixName><PrefixSymbol type=\"ASCII\">k</PrefixSymbol><PrefixSymbol type=\"unicode\">k</PrefixSymbol><PrefixSymbol type=\"LaTeX\">k</PrefixSymbol><PrefixSymbol type=\"HTML\">k</PrefixSymbol></Prefix><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd2\"><Mass symbol=\"M\" powerNumerator=\"1\"/></Dimension>",
       "model": {
         "class": "Math::Formula",
         "fields": {
@@ -2125,48 +2102,21 @@
       "optionsTypes": {
         "name": "trueclass"
       },
-      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x22c5;</mo><mi mathvariant=\"normal\">s</mi></math>",
-      "ascii": "m*s",
-      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT\" xml:id=\"U_m.s\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m*s</UnitName><UnitSymbol type=\"HTML\">m&#x22c5;s</UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x22c5;</mo><mi mathvariant=\"normal\">s</mi></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"1\"/></Dimension>",
-      "model": {
-        "class": "Math::Formula",
-        "fields": {
-          "displaystyle": true,
-          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x22c5;</mo><mi mathvariant=\"normal\">s</mi></math>",
-          "left_right_wrapper": true,
-          "value": [
-            {
-              "class": "Math::Function::FontStyle::Normal",
-              "fields": {
-                "parameter_one": {
-                  "class": "Math::Symbols::Symbol",
-                  "fields": {
-                    "value": "m"
-                  }
-                },
-                "parameter_two": "normal"
-              }
-            },
-            {
-              "class": "Math::Symbols::Cdot",
-              "fields": {
-                "value": null
-              }
-            },
-            {
-              "class": "Math::Function::FontStyle::Normal",
-              "fields": {
-                "parameter_one": {
-                  "class": "Math::Symbols::Symbol",
-                  "fields": {
-                    "value": "s"
-                  }
-                },
-                "parameter_two": "normal"
-              }
-            }
-          ]
-        }
+      "mathmlError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "asciiError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "xmlError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "modelError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
       }
     },
     {
@@ -3495,77 +3445,21 @@
       "optionsTypes": {
         "name": "trueclass"
       },
-      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x22c5;</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
-      "ascii": "m/s^-1",
-      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_LT-1\" xml:id=\"U_NISTu1.u3e-1/1\"><UnitSystem name=\"SI\" type=\"SI_derived\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">meter per second</UnitName><UnitSymbol type=\"HTML\">m&#x22c5;s<sup>&#x2212;1</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x22c5;</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math></UnitSymbol><RootUnits><EnumeratedRootUnit unit=\"metre\"/><EnumeratedRootUnit unit=\"second\" powerNumerator=\"-1\"/></RootUnits></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"NISTd11\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_LT-1\"><Length symbol=\"L\" powerNumerator=\"1\"/><Time symbol=\"T\" powerNumerator=\"-1\"/></Dimension>",
-      "model": {
-        "class": "Math::Formula",
-        "fields": {
-          "displaystyle": true,
-          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><mi mathvariant=\"normal\">m</mi><mo>&#x22c5;</mo><msup><mi mathvariant=\"normal\">s</mi><mrow><mo>&#x2212;</mo><mn>1</mn></mrow></msup></math>",
-          "left_right_wrapper": true,
-          "value": [
-            {
-              "class": "Math::Function::FontStyle::Normal",
-              "fields": {
-                "parameter_one": {
-                  "class": "Math::Symbols::Symbol",
-                  "fields": {
-                    "value": "m"
-                  }
-                },
-                "parameter_two": "normal"
-              }
-            },
-            {
-              "class": "Math::Symbols::Cdot",
-              "fields": {
-                "value": null
-              }
-            },
-            {
-              "class": "Math::Function::Power",
-              "fields": {
-                "parameter_one": {
-                  "class": "Math::Function::FontStyle::Normal",
-                  "fields": {
-                    "parameter_one": {
-                      "class": "Math::Symbols::Symbol",
-                      "fields": {
-                        "value": "s"
-                      }
-                    },
-                    "parameter_two": "normal"
-                  }
-                },
-                "parameter_two": {
-                  "class": "Math::Formula",
-                  "fields": {
-                    "displaystyle": true,
-                    "left_right_wrapper": true,
-                    "value": [
-                      {
-                        "class": "Math::Symbols::Minus",
-                        "fields": {
-                          "value": null
-                        }
-                      },
-                      {
-                        "class": "Math::Number",
-                        "fields": {
-                          "base": null,
-                          "mini_sub_sized": false,
-                          "mini_sup_sized": false,
-                          "value": "1"
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          ]
-        }
+      "mathmlError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "asciiError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "xmlError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "modelError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
       }
     },
     {
@@ -4454,44 +4348,21 @@
       "optionsTypes": {
         "name": "trueclass"
       },
-      "mathml": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
-      "ascii": "m^0.5",
-      "xml": "<Unit xmlns=\"https://schema.unitsml.org/unitsml/1.0\" dimensionURL=\"#D_L0.5\" xml:id=\"U_m0.5\"><UnitSystem name=\"SI\" type=\"SI_base\" xml:lang=\"en\"/><UnitName xml:lang=\"en\">m^0.5</UnitName><UnitSymbol type=\"HTML\">m<sup>0.5</sup></UnitSymbol><UnitSymbol type=\"MathMl\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math></UnitSymbol></Unit><Dimension xmlns=\"https://schema.unitsml.org/unitsml/1.0\" xml:id=\"D_L0.5\"><Length symbol=\"L\" powerNumerator=\"0.5\"/></Dimension>",
-      "model": {
-        "class": "Math::Formula",
-        "fields": {
-          "displaystyle": true,
-          "input_string": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\"><msup><mi mathvariant=\"normal\">m</mi><mn>0.5</mn></msup></math>",
-          "left_right_wrapper": true,
-          "value": [
-            {
-              "class": "Math::Function::Power",
-              "fields": {
-                "parameter_one": {
-                  "class": "Math::Function::FontStyle::Normal",
-                  "fields": {
-                    "parameter_one": {
-                      "class": "Math::Symbols::Symbol",
-                      "fields": {
-                        "value": "m"
-                      }
-                    },
-                    "parameter_two": "normal"
-                  }
-                },
-                "parameter_two": {
-                  "class": "Math::Number",
-                  "fields": {
-                    "base": null,
-                    "mini_sub_sized": false,
-                    "mini_sup_sized": false,
-                    "value": "0.5"
-                  }
-                }
-              }
-            }
-          ]
-        }
+      "mathmlError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "asciiError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "xmlError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
+      },
+      "modelError": {
+        "class": "Unitsml::Errors::InvalidUnitEntryError",
+        "message": "[unitsml] Invalid name: true — expected a String or Symbol."
       }
     },
     {
@@ -4631,7 +4502,7 @@
           "value": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>kg</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
         },
         "unicodemath": {
-          "value": "\\mupkg"
+          "value": "\\mup\"kg\""
         }
       },
       "displayRenders": {
@@ -4714,7 +4585,7 @@
           "value": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>kg</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
         },
         "unicodemath": {
-          "value": "\\mupkg"
+          "value": "\\mup\"kg\""
         }
       },
       "displayRenders": {
@@ -4797,7 +4668,7 @@
           "value": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>kg</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
         },
         "unicodemath": {
-          "value": "\\mupkg"
+          "value": "\\mup\"kg\""
         }
       },
       "displayRenders": {
@@ -4880,7 +4751,7 @@
           "value": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>kg</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
         },
         "unicodemath": {
-          "value": "\\mupkg"
+          "value": "\\mup\"kg\""
         }
       },
       "displayRenders": {
@@ -4961,7 +4832,7 @@
           "value": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>kg</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
         },
         "unicodemath": {
-          "value": "\\mupkg"
+          "value": "\\mup\"kg\""
         }
       },
       "displayRenders": {
@@ -5407,7 +5278,7 @@
           "value": "<m:oMathPara xmlns:m=\"http://schemas.openxmlformats.org/officeDocument/2006/math\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:mo=\"http://schemas.microsoft.com/office/mac/office/2008/main\" xmlns:mv=\"urn:schemas-microsoft-com:mac:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\" xmlns:w10=\"urn:schemas-microsoft-com:office:word\" xmlns:w14=\"http://schemas.microsoft.com/office/word/2010/wordml\" xmlns:w15=\"http://schemas.microsoft.com/office/word/2012/wordml\" xmlns:wne=\"http://schemas.microsoft.com/office/word/2006/wordml\" xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" xmlns:wp14=\"http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing\" xmlns:wpc=\"http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas\" xmlns:wpg=\"http://schemas.microsoft.com/office/word/2010/wordprocessingGroup\" xmlns:wpi=\"http://schemas.microsoft.com/office/word/2010/wordprocessingInk\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\">\n  <m:oMath>\n    <m:r>\n      <m:rPr>\n        <m:sty m:val=\"p\"/>\n      </m:rPr>\n      <m:t>kg</m:t>\n    </m:r>\n  </m:oMath>\n</m:oMathPara>\n"
         },
         "unicodemath": {
-          "value": "\\mupkg"
+          "value": "\\mup\"kg\""
         }
       },
       "displayRenders": {

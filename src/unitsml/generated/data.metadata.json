@@ -1,15 +1,15 @@
 {
   "measured": true,
   "verified": false,
-  "oracle": "ae20be111a26fdd988c58be0bfb2b7f6fe6e352f",
-  "lockSha256": "4aafd7162d8b10a8a841fb30c89bc0ff9b2429ea0ec6379c7931c3b9093dca0b",
+  "oracle": "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256",
+  "lockSha256": "6051573ea50bb473fb12ccacb4e2ca48d5e06b9dce0dff6d2647042e76f48ebd",
   "ruby": "ruby 4.0.1 (2026-01-13 revision e04267a14b) +PRISM [x86_64-linux]",
   "generator": {
     "path": "scripts/generate-unitsml-data.rb",
-    "sha256": "ef1a49892fd798d5b644c1c5586c377be0843db820266e3469cab5e96ab03e8f",
+    "sha256": "1015d1f7195e816d4170090e58c372676b1f529d805b99997cfcbec8bd79ee81",
     "inputs": {
-      "scripts/generate-corpus.rb": "7a75f45b8ba8c774cc990cf2d68d9f2a5c328c66d570df1e177b5a7a3d86554e",
-      "scripts/generate-unitsml-data.rb": "ef1a49892fd798d5b644c1c5586c377be0843db820266e3469cab5e96ab03e8f",
+      "scripts/generate-corpus.rb": "82630cc145295b12b23443c853b5d2841cd7e293c607092409a050e67fc27868",
+      "scripts/generate-unitsml-data.rb": "1015d1f7195e816d4170090e58c372676b1f529d805b99997cfcbec8bd79ee81",
       "scripts/render-fixture-provenance.rb": "6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11",
       "scripts/ci/native-completion-probe.rb": "6a384b0d9349098a3ca05c515f0cf10ebddee4721cd9b4d3a6041b354cc24020"
     }
@@ -21,6 +21,6 @@
     }
   ],
   "payloads": {
-    "data.json": "bd855d9707e1774a949ae63dfd8ded1ee34cc78a8a83c7f8daa6a8055b32c90c"
+    "data.json": "0c3068af1af337744a1ac90259c3b5a38dcedf0961a8339cbbeeea5da5ac6402"
   }
 }

@@ -375,6 +375,21 @@ export const NODE_SPECS: { readonly [K in NodeKind]: NodeSpec } = {
       ["parameter_one", "parameterOne"],
     ],
   },
+  uncertainty: {
+    rubyClass: "Math::Function::Uncertainty",
+    fields: [
+      ["category", "category"],
+      ["coverage_factor", "coverageFactor"],
+      ["coverage_probability", "coverageProbability"],
+      ["interval_kind", "intervalKind"],
+      ["lower", "lower"],
+      ["magnitude", "magnitude"],
+      ["notation", "notation"],
+      ["unit", "unit"],
+      ["upper", "upper"],
+      ["value", "value"],
+    ],
+  },
   underset: {
     rubyClass: "Math::Function::Underset",
     fields: [

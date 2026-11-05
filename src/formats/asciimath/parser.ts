@@ -21,6 +21,7 @@
 
 import { requireKnownParseOptions } from "../../core/errors";
 import { type FormulaNode, type OnUnsupported, ParseError } from "../../core/index";
+import { InvalidUncertaintyError } from "../../core/uncertainty";
 import { type LocaleOptions, requireLocaleKey } from "../../formatting/index";
 import {
   isStackOverflow,
@@ -82,6 +83,11 @@ export function parseAsciimath(input: string, options?: AsciimathParseOptions | 
     const transformed = asciimathTransform().apply(tree);
     return finalizeAsciimathParse(transformed, input);
   } catch (error) {
+    if (error instanceof InvalidUncertaintyError) {
+      // The gem's constructor raises during the transform; `Math.parse`
+      // reports it as `Math::ParseError`, with no position.
+      throw new ParseError(error.message, input, "asciimath", 0);
+    }
     if (error instanceof ParseError && error.format === "unitsml") {
       // Inline UnitsML construction fails at Math.parse's outer boundary.
       // The reference carries no position for this transform failure.

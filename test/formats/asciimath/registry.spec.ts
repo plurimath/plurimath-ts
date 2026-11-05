@@ -32,9 +32,10 @@ import {
 
 describe("the hand-written kind → constructor map", () => {
   it("binds every declared kind to the class that declares it", () => {
-    // The census-complete model has 39 kinds; a shorter walk here would mean
-    // the loop below quietly proved less than the whole map.
-    expect(NODE_KINDS.length).toBe(39);
+    // The model has 40 kinds (the census's 39 plus Uncertainty, which the
+    // census gains on the re-pin); a shorter walk here would mean the loop
+    // below quietly proved less than the whole map.
+    expect(NODE_KINDS.length).toBe(40);
     for (const kind of NODE_KINDS) {
       const node = new ASCIIMATH_NODE_CONSTRUCTORS[kind]({});
       // The node's own discriminant, not the map's key: `abs: BarNode` type

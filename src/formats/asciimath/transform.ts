@@ -105,10 +105,13 @@ import {
   UbraceNode,
   UlNode,
   UnaryFunctionNode,
+  UncertaintyNode,
   UndersetNode,
   UnitsmlNode,
   VecNode,
 } from "../../core/index";
+import type { UncertaintyCategory, UncertaintyIntervalKind } from "../../core/nodes";
+import { InvalidUncertaintyError, uncertaintyProblem } from "../../core/uncertainty";
 import {
   ASCIIMATH_INPUT_COLLISIONS,
   ASCIIMATH_PAREN_INPUTS,
@@ -435,6 +438,160 @@ function newUnitsml(value: unknown): AsciimathDraft {
   const text = rubyToS(value);
   validateUnitsml(text);
   return new AsciimathDraft("unitsml", undefined, { text });
+}
+
+/* -------------------------------------------------------------------------
+ * `Asciimath::Transform::UncertaintyTree` (plurimath#493): builds
+ * `Math::Function::Uncertainty` from the fields of an `uncertainty:` tree.
+ * Every leaf is the text exactly as written; the node's own validation
+ * (`uncertaintyProblem`) does the checks the gem's constructor does.
+ * ---------------------------------------------------------------------- */
+
+const UNCERTAINTY_TREE_CATEGORIES: ReadonlyMap<string, UncertaintyCategory> = new Map([
+  ["ustd", "standard"],
+  ["uexp", "expanded"],
+  ["ucov", "coverage_interval"],
+]);
+
+const UNCERTAINTY_TREE_FIELDS: { readonly [K in UncertaintyCategory]: readonly string[] } = {
+  standard: ["value", "magnitude", "concise_digits", "unit"],
+  expanded: ["value", "magnitude", "coverage_factor", "coverage_probability", "unit"],
+  coverage_interval: ["value", "lower", "upper", "coverage_probability", "interval_kind", "unit"],
+};
+
+/** `probabilistically-symmetric` would read as a subtraction, so AsciiMath spells it `symmetric`. */
+const UNCERTAINTY_TREE_INTERVAL_KINDS: ReadonlyMap<string, UncertaintyIntervalKind> = new Map([
+  ["shortest", "shortest"],
+  ["symmetric", "probabilistically_symmetric"],
+]);
+
+/** `MAX_SCALED_DECIMAL_LENGTH`: bounds what a shared exponent may allocate. */
+const MAX_SCALED_DECIMAL_LENGTH = 1_000_000;
+
+function invalidUncertainty(detail: string): never {
+  throw new InvalidUncertaintyError(detail);
+}
+
+/** `UncertaintyTree.node`. */
+function newUncertainty(tree: unknown): AsciimathDraft {
+  const fields = uncertaintyLeaves(tree);
+  const className = fields.get("uncertainty_class");
+  fields.delete("uncertainty_class");
+  const category = className === undefined ? undefined : UNCERTAINTY_TREE_CATEGORIES.get(className);
+  if (category === undefined) return invalidUncertainty("unknown uncertainty class");
+  const exponent = fields.get("shared_exponent");
+  fields.delete("shared_exponent");
+  const unknown = [...fields.keys()].filter(
+    (key) => !UNCERTAINTY_TREE_FIELDS[category].includes(key),
+  );
+  if (unknown.length > 0) invalidUncertainty(`unexpected ${unknown.join(", ")}`);
+
+  // Concise digits describe the unscaled value's last decimal place, so their
+  // magnitude is derived before either decimal point moves.
+  let magnitude = fields.get("magnitude") ?? null;
+  let notation: "absolute" | "concise" = "absolute";
+  if (fields.has("concise_digits")) {
+    if (fields.has("magnitude")) {
+      invalidUncertainty("ustd takes a magnitude or concise digits, not both");
+    }
+    const digits = fields.get("concise_digits") ?? "";
+    if (!/^[0-9]+$/.test(digits)) {
+      invalidUncertainty(`concise digits "${digits}" must be digits only`);
+    }
+    magnitude = conciseMagnitude(fields.get("value") ?? "", digits);
+    notation = "concise";
+  }
+  let value = fields.get("value") ?? null;
+  let lower = fields.get("lower") ?? null;
+  let upper = fields.get("upper") ?? null;
+  if (exponent !== undefined) {
+    if (!/^[+-]?[0-9]+$/.test(exponent)) {
+      invalidUncertainty(`invalid shared exponent "${exponent}"`);
+    }
+    const power = Number.parseInt(exponent, 10);
+    value = scaleDecimal(value, power);
+    magnitude = scaleDecimal(magnitude, power);
+    lower = scaleDecimal(lower, power);
+    upper = scaleDecimal(upper, power);
+  }
+  const kindName = fields.get("interval_kind");
+  let intervalKind: UncertaintyIntervalKind | null = null;
+  if (kindName !== undefined) {
+    intervalKind =
+      UNCERTAINTY_TREE_INTERVAL_KINDS.get(kindName) ??
+      invalidUncertainty(`unknown interval kind "${kindName}"`);
+  }
+  const unitText = fields.get("unit");
+  const draft = new AsciimathDraft("uncertainty", undefined, {
+    value: uncertaintyNumber(value),
+    category,
+    magnitude: uncertaintyNumber(magnitude),
+    coverageFactor: uncertaintyNumber(fields.get("coverage_factor") ?? null),
+    coverageProbability: uncertaintyNumber(fields.get("coverage_probability") ?? null),
+    lower: uncertaintyNumber(lower),
+    upper: uncertaintyNumber(upper),
+    intervalKind,
+    notation: category === "standard" ? notation : null,
+    unit: unitText === undefined ? null : newUnitsml(unitText),
+  });
+  // The gem validates in the constructor, during the transform.
+  const problem = uncertaintyProblem(finalizeDraft(draft) as never);
+  if (problem !== null) invalidUncertainty(problem);
+  return draft;
+}
+
+function uncertaintyNumber(text: string | null): AsciimathDraft | null {
+  return text === null ? null : newNumber(text);
+}
+
+/** `UncertaintyTree.leaves`: every leaf must be text. */
+function uncertaintyLeaves(tree: unknown): Map<string, string> {
+  if (!isPlainObject(tree)) return invalidUncertainty("expected a hash of text fields");
+  const fields = new Map<string, string>();
+  for (const [key, leaf] of Object.entries(tree)) {
+    if (leaf === null || leaf === undefined) continue;
+    if (leaf instanceof Slice) fields.set(key, leaf.text);
+    else if (typeof leaf === "string") fields.set(key, leaf);
+    else invalidUncertainty("expected a hash of text fields");
+  }
+  return fields;
+}
+
+/** `concise_magnitude`: 4 after 1.230 is 0.004. */
+function conciseMagnitude(value: string, digits: string): string {
+  const point = value.indexOf(".");
+  const places = point === -1 ? 0 : value.length - point - 1;
+  const padded = digits.padStart(places + 1, "0");
+  const whole = padded.slice(0, padded.length - places).replace(/^0+(?=[0-9])/, "");
+  return places === 0 ? whole : `${whole}.${padded.slice(-places)}`;
+}
+
+/**
+ * `scale_number`: shifts the decimal point by `power` places on the digit
+ * string, never through floating point, keeping every written digit.
+ */
+function scaleDecimal(text: string | null, power: number): string | null {
+  if (text === null || power === 0) return text;
+  const match = /^(-?)([0-9]+)(?:\.([0-9]+))?$/.exec(text);
+  if (match === null) return invalidUncertainty(`invalid scaled decimal "${text}"`);
+  const sign = match[1] ?? "";
+  const whole = match[2] ?? "";
+  const digits = whole + (match[3] ?? "");
+  const point = whole.length + power;
+  let length: number;
+  if (point <= 0) length = 2 - point + digits.length;
+  else if (point >= digits.length) length = point;
+  else length = digits.length + 1;
+  if (length + sign.length > MAX_SCALED_DECIMAL_LENGTH) {
+    invalidUncertainty(
+      `shared exponent expands beyond ${MAX_SCALED_DECIMAL_LENGTH} decimal characters`,
+    );
+  }
+  let scaled: string;
+  if (point <= 0) scaled = `0.${"0".repeat(-point)}${digits}`;
+  else if (point >= digits.length) scaled = digits + "0".repeat(point - digits.length);
+  else scaled = `${digits.slice(0, point)}.${digits.slice(point)}`;
+  return sign + scaled.replace(/^0+(?=[0-9])/, "");
 }
 
 /** `Text.new(parameter_one = "", lang: nil)` — `@lang` is always assigned. */
@@ -809,6 +966,9 @@ function buildAsciimathTransform(): Transform {
 
   /** asciimath/transform.rb:33-35 */
   t.rule({ unitsml: simple("unitsml") }, (b) => newUnitsml(b.unitsml));
+
+  /** ustd(...), uexp(...) and ucov(...) (plurimath#493): the amath tree. */
+  t.rule({ uncertainty: subtree("uncertainty") }, (b) => newUncertainty(b.uncertainty));
 
   /** `asciimath/transform.rb:37-42` — the special-fonts literal keeps only its first
    * character; the family keyword is hardcoded `"mathbf"` even though the
@@ -1655,6 +1815,14 @@ function buildAsciimathTransform(): Transform {
     constructClass(getClass(b.function), newUnitsml(b.unitsml)),
   );
 
+  /**
+   * `sqrt ustd(1,2)`, `sin ustd(1,2)`: the unary rule splices its unnamed
+   * operand next to `unary_class`, so the uncertainty tree is a sibling key.
+   */
+  t.rule({ unary_class: simple("function"), uncertainty: subtree("uncertainty") }, (b) =>
+    constructClass(getClass(b.function), newUncertainty(b.uncertainty)),
+  );
+
   /** `asciimath/transform.rb:882-888` */
   t.rule({ number: simple("number"), comma: simple("comma") }, (b) => [
     newNumber(b.number),
@@ -2010,6 +2178,19 @@ function finalizeDraft(draft: AsciimathDraft, inputString?: string): MathNode {
       return new SymbolNode({ id: draft.identity, value: f.value as string | null });
     case "unitsml":
       return new UnitsmlNode({ text: f.text as string });
+    case "uncertainty":
+      return new UncertaintyNode({
+        value: finalizeValue(f.value) as MathNode,
+        category: f.category as UncertaintyCategory,
+        magnitude: finalizeValue(f.magnitude) as MathNode | null,
+        coverageFactor: finalizeValue(f.coverageFactor) as MathNode | null,
+        coverageProbability: finalizeValue(f.coverageProbability) as MathNode | null,
+        lower: finalizeValue(f.lower) as MathNode | null,
+        upper: finalizeValue(f.upper) as MathNode | null,
+        intervalKind: f.intervalKind as UncertaintyIntervalKind | null,
+        notation: f.notation as "absolute" | "concise" | null,
+        unit: finalizeValue(f.unit) as MathNode | null,
+      });
     case "text":
       return new TextNode({
         parameterOne: asParameter(f.parameterOne),

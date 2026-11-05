@@ -398,6 +398,9 @@ const LEGACY_FORMAT_FIXTURES = [
   "test/formats/asciimath/render-sweep.json",
   "test/formats/latex/render-sweep.json",
   "test/formats/mathml/render-sweep.json",
+  // Generated against the uncertainty oracle (plurimath 0.11.13+), which the
+  // pinned corpus does not record yet; it gains a sidecar on the re-pin.
+  "test/formats/uncertainty/uncertainty-fixtures.json",
 ] as const;
 
 function filesUnder(root: string, accept: (name: string) => boolean): string[] {

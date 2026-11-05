@@ -44,6 +44,7 @@ import { renderTilde } from "../../render/tilde/unicodemath";
 import { renderUbrace } from "../../render/ubrace/unicodemath";
 import { renderUl } from "../../render/ul/unicodemath";
 import { renderUnaryFunction } from "../../render/unary-function/unicodemath";
+import { renderUncertainty } from "../../render/uncertainty/unicodemath";
 import { renderUnderset } from "../../render/underset/unicodemath";
 import { renderUnitsml } from "../../render/unitsml/unicodemath";
 import { renderVec } from "../../render/vec/unicodemath";
@@ -92,6 +93,7 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   ubrace: renderUbrace,
   ul: renderUl,
   unaryFunction: renderUnaryFunction,
+  uncertainty: renderUncertainty,
   unitsml: renderUnitsml,
   underset: renderUnderset,
   vec: renderVec,

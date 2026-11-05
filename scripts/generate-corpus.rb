@@ -71,6 +71,7 @@ require "plurimath"
 require "digest"
 require "fileutils"
 require "yaml"
+require "json"
 
 module CorpusGenerator
   REPO_ROOT = File.expand_path("..", __dir__)
@@ -199,6 +200,12 @@ module CorpusGenerator
     Math::Number
     Math::Symbols::Symbol
   ].freeze
+
+  # The minimal valid Uncertainty construction (a standard uncertainty), used
+  # only to measure constructor defaults. The witnessed fields are excluded
+  # from the recorded defaults because their values come from the witness.
+  UNCERTAINTY_WITNESS_KEYWORDS = { category: :standard, magnitude: "1" }.freeze
+  UNCERTAINTY_WITNESSED_FIELDS = %w[category magnitude value].freeze
 
   # Base classes the gem never instantiates. Declared, then machine-checked:
   # each must still have subclasses, must never be constructed anywhere in the
@@ -1038,8 +1045,17 @@ module CorpusGenerator
       # UnitsML eagerly parses its required text; nil is not a valid witness.
       # Measure the explicit canonical constructor, then apply its raw-text
       # projection. Do not serialize or invent defaults for the parsed cache.
+      # Uncertainty validates its required value and category, and a standard
+      # uncertainty also requires a magnitude; nil is not a valid witness.
+      # Measure the minimal valid standard construction, then drop the
+      # witnessed fields so only genuine defaults are recorded.
       arguments = key == "Math::Function::Unitsml" ? ["kg"] : ::Array.new(arity, nil)
-      instance = klass.new(*arguments)
+      if key == "Math::Function::Uncertainty"
+        keywords = UNCERTAINTY_WITNESS_KEYWORDS.transform_values { |v| v.is_a?(String) ? Plurimath::Math::Number.new(v) : v }
+        instance = klass.new(Plurimath::Math::Number.new("1"), **keywords)
+      else
+        instance = klass.new(*arguments)
+      end
     rescue StandardError, ScriptError => e
       raise Error, <<~MESSAGE
         #{key}.new(#{(['nil'] * arity).join(', ')}) raised #{e.class}: #{e.message}.
@@ -1051,6 +1067,9 @@ module CorpusGenerator
     end
 
     variables = key == "Math::Function::Unitsml" ? [:@text] : instance.variables
+    if key == "Math::Function::Uncertainty"
+      variables -= UNCERTAINTY_WITNESSED_FIELDS.map { |field| :"@#{field}" }
+    end
     assigned = variables.sort.to_h do |ivar|
       field = ivar.to_s.delete_prefix("@")
       [field, serialize_value(instance.get(ivar), "#{key}.#{field}")]
@@ -1071,6 +1090,9 @@ module CorpusGenerator
       "unassigned" => (fields - assigned.keys).sort,
     }.tap do |defaults|
       defaults["constructor_arguments"] = arguments if key == "Math::Function::Unitsml"
+      if key == "Math::Function::Uncertainty"
+        defaults["witnessed_fields"] = UNCERTAINTY_WITNESSED_FIELDS
+      end
     end
   end
 
@@ -1814,7 +1836,7 @@ module CorpusGenerator
     lib/plurimath/asciimath/transform.rb
     lib/plurimath/asciimath/utility.rb
   ].freeze
-  PARSE_SOURCE_FILE = "lib/plurimath/asciimath/parse.rb"
+  AMATH_GRAMMAR_ARTIFACT = "amath artifacts/asciimath.json"
 
   # Where each measured name came from. `unary_class`, `binary_class` and
   # `ternary_class` are the grammar capture tags whose token ranges are
@@ -1908,28 +1930,34 @@ module CorpusGenerator
     keys.first
   end
 
-  # What each capture tag can hold, measured from the grammar's own sources:
-  # parse.rb tags the three Constants class lists via
-  # `arr_to_expression(Constants::X, :tag)` (sub_sup and binary share
-  # `:binary_class`), and tags every `precompile_constants` literal of kind
-  # `:unary_class` via `dynamic_parser_rules` -> `unary_functions`. A capture
-  # feeding `get_class` outside these tags has no enumerable range and fails
-  # generation rather than being guessed at.
-  def transform_capture_ranges(gem_dir)
-    source = File.read(File.join(gem_dir, PARSE_SOURCE_FILE))
+  # What each capture tag can hold, measured from the grammar the oracle
+  # actually parses with. Since plurimath 0.11.13 (#498) that grammar lives in
+  # the `amath` gem, compiled into `artifacts/asciimath.json`, whose `source`
+  # field holds the grammar text. Its class-list rules read
+  # `binary_classes = ("underset") as binary_class / ...` (sub_sup and binary
+  # share `binary_class`), and every unary literal is captured inline as
+  # `("sin") as unary_class`. The unary range is the `precompile_constants`
+  # literals of kind `:unary_class`, cross-checked against those grammar
+  # captures. A capture feeding `get_class` outside these tags has no
+  # enumerable range and fails generation rather than being guessed at.
+  def transform_capture_ranges(_gem_dir)
+    source = amath_grammar_source
     constants = Plurimath::Asciimath::Constants
 
     tagged = Hash.new { |hash, key| hash[key] = [] }
-    source.scan(/arr_to_expression\(Constants::([A-Z_]+)(?:\.\w+)?,\s*:([a-z_]+)\)/) do |name, tag|
-      tagged[tag] << name
+    source.scan(/^\s*[a-z_]+_classes\s*=\s*(.+)$/) do |(body)|
+      body.scan(/\("([^"]+)"\)\s+as\s+(binary_class|ternary_class)\b/) do |name, tag|
+        tagged[tag] << name
+      end
     end
     %w[binary_class ternary_class].each do |tag|
       next unless tagged[tag].empty?
 
-      raise Error, "#{PARSE_SOURCE_FILE} no longer tags any class list :#{tag}"
+      raise Error, "#{AMATH_GRAMMAR_ARTIFACT} no longer tags any class list :#{tag}"
     end
-    unless source.include?(".as(:unary_class)")
-      raise Error, "#{PARSE_SOURCE_FILE} no longer captures :unary_class; " \
+    grammar_unary = source.scan(/\("([^"]+)"\)\s+as\s+unary_class\b/).flatten.uniq
+    if grammar_unary.empty?
+      raise Error, "#{AMATH_GRAMMAR_ARTIFACT} no longer captures :unary_class; " \
                    "the unary range cannot be enumerated from the grammar"
     end
 
@@ -1939,12 +1967,27 @@ module CorpusGenerator
       raise Error, "precompile_constants has no :unary_class literals"
     end
 
+    unless unary.sort == grammar_unary.sort
+      raise Error, "precompile_constants :unary_class literals differ from the " \
+                   "amath grammar's unary_class captures: only in constants " \
+                   "#{(unary - grammar_unary).sort}, only in grammar " \
+                   "#{(grammar_unary - unary).sort}"
+    end
+
     {
       "unary_class" => unary,
-      "binary_class" => tagged["binary_class"].flat_map { |name| constants.const_get(name) },
-      "ternary_class" => tagged["ternary_class"].flat_map { |name| constants.const_get(name) },
+      "binary_class" => tagged["binary_class"].uniq,
+      "ternary_class" => tagged["ternary_class"].uniq,
       "fonts" => by_kind.fetch(:fonts, []),
     }
+  end
+
+  def amath_grammar_source
+    spec = Gem.loaded_specs["amath"]
+    raise Error, "the amath gem is not loaded; the AsciiMath grammar cannot be measured" unless spec
+
+    path = File.join(spec.full_gem_path, "artifacts", "asciimath.json")
+    JSON.parse(File.read(path)).fetch("source")
   end
 
   def resolve_transform_class(utility, name)

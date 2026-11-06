@@ -1,7 +1,8 @@
 /**
  * `Uncertainty#to_unicodemath` (`function/uncertainty.rb`, plurimath#493): the
  * visible form wrapped in the intent form `ⓘ("marker"…)`, which the
- * UnicodeMath reader takes back. A unit is written `ⓐ(unit …)`.
+ * UnicodeMath reader takes back. A unit is written `ⓐ(unit …)`, rendered with
+ * `unicodemath_unit: true` merged into the options, as `Function::Unitsml` does.
  */
 import { RenderError } from "../../core/index";
 import {
@@ -16,7 +17,7 @@ import { FORMAT, type NodeOf, type RenderContext } from "../../formats/unicodema
 export function renderUncertainty(node: NodeOf<"uncertainty">, context: RenderContext): string {
   const problem = uncertaintyProblem(node);
   if (problem !== null) throw new RenderError(problem, FORMAT, node.kind);
-  const unit = node.unit === null ? "" : `ⓐ(unit ${context.render(node.unit) ?? ""})`;
+  const unit = node.unit === null ? "" : `ⓐ(unit ${context.renderUnit(node.unit) ?? ""})`;
   const value = uncertaintyText(node.value) ?? "";
   // The reader cannot take `"marker"-…`, so a negative leading value goes in
   // an invisible 〖〗 group; the marker is unchanged.

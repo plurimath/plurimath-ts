@@ -45,8 +45,15 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { NODE_KINDS, ParseError, RenderError, UnitsmlNode } from "../../../src/core/index";
+import {
+  NODE_KINDS,
+  NumberNode,
+  ParseError,
+  RenderError,
+  UnitsmlNode,
+} from "../../../src/core/index";
 import { rubyClassName } from "../../../src/core/normalize";
+import { InvalidUncertaintyError } from "../../../src/core/uncertainty";
 import { loadPinnedCorpus } from "../../core/corpus-pin";
 import { parseYaml } from "../../core/corpus-yaml";
 import {
@@ -90,7 +97,7 @@ interface Fixture {
   readonly rendersCount: number;
   readonly unstableCount: number;
   readonly constructorWitnesses: Readonly<
-    Record<string, { readonly input: string; readonly model: unknown; readonly output: string }>
+    Record<string, { readonly input: unknown; readonly model: unknown; readonly output: string }>
   >;
   readonly rows: readonly Row[];
 }
@@ -163,15 +170,26 @@ const rowLabelSet = new Set(rowLabels);
 
 describe(`${FORMAT} degenerate-slot sweep covers every landed renderer`, () => {
   it("pins the constructor-required UnitsML witness to measured bytes", () => {
-    expect(Object.keys(fixture.constructorWitnesses)).toEqual(["unitsml"]);
+    expect(Object.keys(fixture.constructorWitnesses)).toEqual(["unitsml", "uncertainty"]);
     const witness = fixture.constructorWitnesses.unitsml;
     expect(witness).toBeDefined();
     if (witness === undefined) throw new Error("missing UnitsML constructor witness");
     expect(witness.model).toEqual({
       class: "Math::Function::Unitsml",
-      fields: { text: witness.input },
+      fields: { text: witness.input as string },
     });
-    expect(RENDER(new UnitsmlNode({ text: witness.input }) as never)).toBe(witness.output);
+    expect(RENDER(new UnitsmlNode({ text: witness.input as string }) as never)).toBe(
+      witness.output,
+    );
+  });
+
+  it("pins the constructor-required Uncertainty witness to measured bytes", () => {
+    const witness = fixture.constructorWitnesses.uncertainty;
+    expect(witness).toBeDefined();
+    if (witness === undefined) throw new Error("missing Uncertainty constructor witness");
+    const node = NODE_FOR.uncertainty?.build(0, new NumberNode({ value: "1" }));
+    expect(node).toBeDefined();
+    expect(RENDER(node as never)).toBe(witness.output);
   });
 
   it("finds a non-empty render inventory", () => {
@@ -318,6 +336,12 @@ describe(`${FORMAT} degenerate-slot parity`, () => {
       }
       const gemRenders = row.renders === true;
       const build = () => spec.build(row.slot, DEGENERATE[row.value]);
+      if (row.kind === "uncertainty" && row.constructs === false) {
+        expect(build, `${at}: the measured Uncertainty constructor rejects this input`).toThrow(
+          InvalidUncertaintyError,
+        );
+        return;
+      }
       if (row.kind === "unitsml" && row.constructs === false) {
         expect(build, `${at}: the measured UnitsML constructor rejects this input`).toThrow(
           ParseError,

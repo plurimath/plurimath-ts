@@ -92,6 +92,8 @@ import {
   UlNode,
   type UnaryFunctionInit,
   UnaryFunctionNode,
+  type UncertaintyInit,
+  UncertaintyNode,
   type UndersetInit,
   UndersetNode,
   type UnitsmlInit,
@@ -144,6 +146,7 @@ const FACTORIES: { readonly [K in NodeKind]: (init: Init) => ConstructedMathNode
   unitsml: (init) => new UnitsmlNode(init as unknown as UnitsmlInit),
   ul: (init) => new UlNode(init as unknown as UlInit),
   unaryFunction: (init) => new UnaryFunctionNode(init as unknown as UnaryFunctionInit),
+  uncertainty: (init) => new UncertaintyNode(init as unknown as UncertaintyInit),
   underset: (init) => new UndersetNode(init as unknown as UndersetInit),
   vec: (init) => new VecNode(init as unknown as VecInit),
 };
@@ -173,6 +176,13 @@ export interface CensusDefaults {
   readonly constructor_arguments?: readonly YamlValue[];
   readonly assigned: { readonly [field: string]: YamlValue };
   readonly unassigned: readonly string[];
+  /**
+   * Fields the probe had to pass because `nil` is not a valid witness
+   * (`Math::Function::Uncertainty`). They are left out of `assigned`, so a
+   * comparison builds the same witness and ignores them.
+   */
+  // biome-ignore lint/style/useNamingConvention: generated Ruby census schema
+  readonly witnessed_fields?: readonly string[];
 }
 
 export interface CensusEntry {

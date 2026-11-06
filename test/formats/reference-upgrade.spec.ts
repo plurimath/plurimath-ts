@@ -16,7 +16,7 @@ import { toLatex } from "../../src/formats/latex/renderer";
 import { toMathml } from "../../src/formats/mathml/renderer";
 import { parseOmml } from "../../src/formats/omml/parser";
 import { toOmml } from "../../src/formats/omml/renderer";
-import { dump, dumpNodes, XmlElement } from "../../src/xml/index";
+import { dump, dumpNodes, XmlElement, XmlInvalidCharacterError } from "../../src/xml/index";
 
 describe("Ruby 0.11.12 changes", () => {
   it("keeps deeply nested AsciiMath failures typed during diagnostic recovery", () => {
@@ -153,7 +153,9 @@ describe("Ruby 0.11.12 changes", () => {
     const tree = new XmlElement("t")
       .setAttribute("k", "a\u0000\u000bb\tc\nd\re")
       .append("a\u0000\u000bb\tc\nd\re");
-    expect(dump(tree)).toContain("a&#x0000;&#x000b;b\tc\nd\re");
+    // A raw dump refuses them since Ox 2.14.29, on the first in document order.
+    expect(() => dump(tree)).toThrow(XmlInvalidCharacterError);
+    expect(() => dump(tree)).toThrow("'\\#x00' is not a valid XML character.");
     expect(dumpNodes(tree)).toBe('<t k="ab\tc\nd\re">ab\tc\nd\re</t>\n');
   });
 });

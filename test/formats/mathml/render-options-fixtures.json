@@ -23666,13 +23666,13 @@
     {
       "id": "intent-unicodemath-528",
       "group": "intent-unicodemath-spec",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_528 (ⓘ(\"$op($a)\"ⓐ(a 𝐴)^(ⓐ(op ⓘ(\"transpose\"𝑇)))) = 0)",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_528 (ⓘ(\"$op($a)\"ⓐ(a 𝐴)^ⓐopⓘ(\"transpose\"𝑇))=0)",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"$op($a)\"ⓐ(a 𝐴)^(ⓐ(op ⓘ(\"transpose\"𝑇)))) = 0",
+            "input_string": "ⓘ(\"$op($a)\"ⓐ(a 𝐴)^ⓐopⓘ(\"transpose\"𝑇))=0",
             "left_right_wrapper": true,
             "value": [
               {
@@ -23765,13 +23765,13 @@
     {
       "id": "intent-unicodemath-528-off",
       "group": "intent-unicodemath-spec-off",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_528 (ⓘ(\"$op($a)\"ⓐ(a 𝐴)^(ⓐ(op ⓘ(\"transpose\"𝑇)))) = 0)",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_528 (ⓘ(\"$op($a)\"ⓐ(a 𝐴)^ⓐopⓘ(\"transpose\"𝑇))=0)",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"$op($a)\"ⓐ(a 𝐴)^(ⓐ(op ⓘ(\"transpose\"𝑇)))) = 0",
+            "input_string": "ⓘ(\"$op($a)\"ⓐ(a 𝐴)^ⓐopⓘ(\"transpose\"𝑇))=0",
             "left_right_wrapper": true,
             "value": [
               {
@@ -23862,13 +23862,13 @@
     {
       "id": "intent-unicodemath-529",
       "group": "intent-unicodemath-spec",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_529 (ⓘ(\"Ackermann\"𝜙 (𝑚 , 𝑛 , 𝑝)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_529 (ⓘ(\"Ackermann\"𝜙(𝑚,𝑛,𝑝)))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"Ackermann\"𝜙 (𝑚 , 𝑛 , 𝑝))",
+            "input_string": "ⓘ(\"Ackermann\"𝜙(𝑚,𝑛,𝑝))",
             "left_right_wrapper": true,
             "value": [
               {
@@ -23960,13 +23960,13 @@
     {
       "id": "intent-unicodemath-529-off",
       "group": "intent-unicodemath-spec-off",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_529 (ⓘ(\"Ackermann\"𝜙 (𝑚 , 𝑛 , 𝑝)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_529 (ⓘ(\"Ackermann\"𝜙(𝑚,𝑛,𝑝)))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"Ackermann\"𝜙 (𝑚 , 𝑛 , 𝑝))",
+            "input_string": "ⓘ(\"Ackermann\"𝜙(𝑚,𝑛,𝑝))",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24056,13 +24056,13 @@
     {
       "id": "intent-unicodemath-530",
       "group": "intent-unicodemath-spec",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_530 (ⓘ(\"Differential d\"ⅆ) + ⅆ + ⓘ(\"Euler's number\"ⅇ) + ⅇ)",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_530 (ⓘ(\"Differential d\"ⅆ)+ⅆ+ⓘ(\"Euler's number\" ⅇ)+ⅇ)",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"Differential d\"ⅆ) + ⅆ + ⓘ(\"Euler's number\"ⅇ) + ⅇ",
+            "input_string": "ⓘ(\"Differential d\"ⅆ)+ⅆ+ⓘ(\"Euler's number\" ⅇ)+ⅇ",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24143,13 +24143,13 @@
     {
       "id": "intent-unicodemath-530-off",
       "group": "intent-unicodemath-spec-off",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_530 (ⓘ(\"Differential d\"ⅆ) + ⅆ + ⓘ(\"Euler's number\"ⅇ) + ⅇ)",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_530 (ⓘ(\"Differential d\"ⅆ)+ⅆ+ⓘ(\"Euler's number\" ⅇ)+ⅇ)",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"Differential d\"ⅆ) + ⅆ + ⓘ(\"Euler's number\"ⅇ) + ⅇ",
+            "input_string": "ⓘ(\"Differential d\"ⅆ)+ⅆ+ⓘ(\"Euler's number\" ⅇ)+ⅇ",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24228,13 +24228,13 @@
     {
       "id": "intent-unicodemath-531",
       "group": "intent-unicodemath-spec",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_531 (ⓘ(\"binom\"(𝑛)⒞(𝑘)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_531 (ⓘ(\"binom\"𝑛⒞𝑘))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"binom\"(𝑛)⒞(𝑘))",
+            "input_string": "ⓘ(\"binom\"𝑛⒞𝑘)",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24302,13 +24302,13 @@
     {
       "id": "intent-unicodemath-531-off",
       "group": "intent-unicodemath-spec-off",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_531 (ⓘ(\"binom\"(𝑛)⒞(𝑘)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_531 (ⓘ(\"binom\"𝑛⒞𝑘))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"binom\"(𝑛)⒞(𝑘))",
+            "input_string": "ⓘ(\"binom\"𝑛⒞𝑘)",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24374,13 +24374,13 @@
     {
       "id": "intent-unicodemath-532",
       "group": "intent-unicodemath-spec",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_532 (ⓘ(\"binom\"(𝑛)¦(𝑘)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_532 (ⓘ(\"binom\"𝑛¦𝑘))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"binom\"(𝑛)¦(𝑘))",
+            "input_string": "ⓘ(\"binom\"𝑛¦𝑘)",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24427,13 +24427,13 @@
     {
       "id": "intent-unicodemath-532-off",
       "group": "intent-unicodemath-spec-off",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_532 (ⓘ(\"binom\"(𝑛)¦(𝑘)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_532 (ⓘ(\"binom\"𝑛¦𝑘))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"binom\"(𝑛)¦(𝑘))",
+            "input_string": "ⓘ(\"binom\"𝑛¦𝑘)",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24478,13 +24478,13 @@
     {
       "id": "intent-unicodemath-533",
       "group": "intent-unicodemath-spec",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_533 (ⓘ(\"cardinality\"|(𝑥)|))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_533 (ⓘ(\"cardinality\"|𝑥|))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"cardinality\"|(𝑥)|)",
+            "input_string": "ⓘ(\"cardinality\"|𝑥|)",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24537,13 +24537,13 @@
     {
       "id": "intent-unicodemath-533-off",
       "group": "intent-unicodemath-spec-off",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_533 (ⓘ(\"cardinality\"|(𝑥)|))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_533 (ⓘ(\"cardinality\"|𝑥|))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"cardinality\"|(𝑥)|)",
+            "input_string": "ⓘ(\"cardinality\"|𝑥|)",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24594,13 +24594,13 @@
     {
       "id": "intent-unicodemath-534",
       "group": "intent-unicodemath-spec",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_534 (ⓘ(\":derivative\"𝑓′ (𝑥)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_534 (ⓘ(\":derivative\"𝑓′(𝑥)))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\":derivative\"𝑓′ (𝑥))",
+            "input_string": "ⓘ(\":derivative\"𝑓′(𝑥))",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24679,13 +24679,13 @@
     {
       "id": "intent-unicodemath-534-off",
       "group": "intent-unicodemath-spec-off",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_534 (ⓘ(\":derivative\"𝑓′ (𝑥)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_534 (ⓘ(\":derivative\"𝑓′(𝑥)))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\":derivative\"𝑓′ (𝑥))",
+            "input_string": "ⓘ(\":derivative\"𝑓′(𝑥))",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24763,13 +24763,13 @@
     {
       "id": "intent-unicodemath-535",
       "group": "intent-unicodemath-spec",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_535 (ⓘ(\"index\"a^(2)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_535 (ⓘ(\"index\"a^2))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"index\"a^(2))",
+            "input_string": "ⓘ(\"index\"a^2)",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24816,13 +24816,13 @@
     {
       "id": "intent-unicodemath-535-off",
       "group": "intent-unicodemath-spec-off",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_535 (ⓘ(\"index\"a^(2)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_535 (ⓘ(\"index\"a^2))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"index\"a^(2))",
+            "input_string": "ⓘ(\"index\"a^2)",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24867,13 +24867,13 @@
     {
       "id": "intent-unicodemath-536",
       "group": "intent-unicodemath-spec",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_536 (ⓘ(\"power($base,$exp)\"ⓐ(base 𝑥)^(ⓐ(exp 𝑛))) = 0)",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_536 (ⓘ(\"power($base,$exp)\"ⓐ(base 𝑥)^(ⓐexp𝑛))=0)",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"power($base,$exp)\"ⓐ(base 𝑥)^(ⓐ(exp 𝑛))) = 0",
+            "input_string": "ⓘ(\"power($base,$exp)\"ⓐ(base 𝑥)^(ⓐexp𝑛))=0",
             "left_right_wrapper": true,
             "value": [
               {
@@ -24954,13 +24954,13 @@
     {
       "id": "intent-unicodemath-536-off",
       "group": "intent-unicodemath-spec-off",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_536 (ⓘ(\"power($base,$exp)\"ⓐ(base 𝑥)^(ⓐ(exp 𝑛))) = 0)",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_536 (ⓘ(\"power($base,$exp)\"ⓐ(base 𝑥)^(ⓐexp𝑛))=0)",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"power($base,$exp)\"ⓐ(base 𝑥)^(ⓐ(exp 𝑛))) = 0",
+            "input_string": "ⓘ(\"power($base,$exp)\"ⓐ(base 𝑥)^(ⓐexp𝑛))=0",
             "left_right_wrapper": true,
             "value": [
               {
@@ -25039,13 +25039,13 @@
     {
       "id": "intent-unicodemath-537",
       "group": "intent-unicodemath-spec",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_537 (ⓘ(\"quadratic equation\"𝑥 = (− 𝑏 ± √(𝑏² − 4 𝑎 𝑐))/(2 𝑎)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_537 (ⓘ(\"quadratic equation\"𝑥=(−𝑏±√(𝑏²−4𝑎𝑐))/2𝑎))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"quadratic equation\"𝑥 = (− 𝑏 ± √(𝑏² − 4 𝑎 𝑐))/(2 𝑎))",
+            "input_string": "ⓘ(\"quadratic equation\"𝑥=(−𝑏±√(𝑏²−4𝑎𝑐))/2𝑎)",
             "left_right_wrapper": true,
             "value": [
               {
@@ -25088,6 +25088,12 @@
                                     "class": "Math::Symbols::Symbol",
                                     "fields": {
                                       "value": "&#x1d44f;"
+                                    }
+                                  },
+                                  {
+                                    "class": "Math::Symbols::Pm",
+                                    "fields": {
+                                      "value": null
                                     }
                                   },
                                   {
@@ -25199,18 +25205,18 @@
       "options": {
         "intent": true
       },
-      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\"quadratic equation\">\n      <mi>&#x1d465;</mi>\n      <mo>=</mo>\n      <mfrac>\n        <mrow>\n          <mo>&#x2212;</mo>\n          <mi>&#x1d44f;</mi>\n          <msqrt>\n            <mrow>\n              <msup>\n                <mi>&#x1d44f;</mi>\n                <mn>2</mn>\n              </msup>\n              <mo>&#x2212;</mo>\n              <mn>4</mn>\n              <mi>&#x1d44e;</mi>\n              <mi>&#x1d450;</mi>\n            </mrow>\n          </msqrt>\n        </mrow>\n        <mrow>\n          <mn>2</mn>\n          <mi>&#x1d44e;</mi>\n        </mrow>\n      </mfrac>\n    </mrow>\n  </mstyle>\n</math>\n"
+      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\"quadratic equation\">\n      <mi>&#x1d465;</mi>\n      <mo>=</mo>\n      <mfrac>\n        <mrow>\n          <mo>&#x2212;</mo>\n          <mi>&#x1d44f;</mi>\n          <mo>&#xb1;</mo>\n          <msqrt>\n            <mrow>\n              <msup>\n                <mi>&#x1d44f;</mi>\n                <mn>2</mn>\n              </msup>\n              <mo>&#x2212;</mo>\n              <mn>4</mn>\n              <mi>&#x1d44e;</mi>\n              <mi>&#x1d450;</mi>\n            </mrow>\n          </msqrt>\n        </mrow>\n        <mrow>\n          <mn>2</mn>\n          <mi>&#x1d44e;</mi>\n        </mrow>\n      </mfrac>\n    </mrow>\n  </mstyle>\n</math>\n"
     },
     {
       "id": "intent-unicodemath-537-off",
       "group": "intent-unicodemath-spec-off",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_537 (ⓘ(\"quadratic equation\"𝑥 = (− 𝑏 ± √(𝑏² − 4 𝑎 𝑐))/(2 𝑎)))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_537 (ⓘ(\"quadratic equation\"𝑥=(−𝑏±√(𝑏²−4𝑎𝑐))/2𝑎))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"quadratic equation\"𝑥 = (− 𝑏 ± √(𝑏² − 4 𝑎 𝑐))/(2 𝑎))",
+            "input_string": "ⓘ(\"quadratic equation\"𝑥=(−𝑏±√(𝑏²−4𝑎𝑐))/2𝑎)",
             "left_right_wrapper": true,
             "value": [
               {
@@ -25253,6 +25259,12 @@
                                     "class": "Math::Symbols::Symbol",
                                     "fields": {
                                       "value": "&#x1d44f;"
+                                    }
+                                  },
+                                  {
+                                    "class": "Math::Symbols::Pm",
+                                    "fields": {
+                                      "value": null
                                     }
                                   },
                                   {
@@ -25362,7 +25374,7 @@
         }
       },
       "options": {},
-      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\"quadratic equation\">\n      <mi>&#x1d465;</mi>\n      <mo>=</mo>\n      <mfrac>\n        <mrow>\n          <mo>&#x2212;</mo>\n          <mi>&#x1d44f;</mi>\n          <msqrt>\n            <mrow>\n              <msup>\n                <mi>&#x1d44f;</mi>\n                <mn>2</mn>\n              </msup>\n              <mo>&#x2212;</mo>\n              <mn>4</mn>\n              <mi>&#x1d44e;</mi>\n              <mi>&#x1d450;</mi>\n            </mrow>\n          </msqrt>\n        </mrow>\n        <mrow>\n          <mn>2</mn>\n          <mi>&#x1d44e;</mi>\n        </mrow>\n      </mfrac>\n    </mrow>\n  </mstyle>\n</math>\n"
+      "expected": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\" display=\"block\">\n  <mstyle displaystyle=\"true\">\n    <mrow intent=\"quadratic equation\">\n      <mi>&#x1d465;</mi>\n      <mo>=</mo>\n      <mfrac>\n        <mrow>\n          <mo>&#x2212;</mo>\n          <mi>&#x1d44f;</mi>\n          <mo>&#xb1;</mo>\n          <msqrt>\n            <mrow>\n              <msup>\n                <mi>&#x1d44f;</mi>\n                <mn>2</mn>\n              </msup>\n              <mo>&#x2212;</mo>\n              <mn>4</mn>\n              <mi>&#x1d44e;</mi>\n              <mi>&#x1d450;</mi>\n            </mrow>\n          </msqrt>\n        </mrow>\n        <mrow>\n          <mn>2</mn>\n          <mi>&#x1d44e;</mi>\n        </mrow>\n      </mfrac>\n    </mrow>\n  </mstyle>\n</math>\n"
     },
     {
       "id": "intent-unicodemath-538",
@@ -25471,13 +25483,13 @@
     {
       "id": "intent-unicodemath-539",
       "group": "intent-unicodemath-spec",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_539 (ⓘ(\"time derivative\"(𝜌)̇))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_539 (ⓘ(\"time derivative\"𝜌̇))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"time derivative\"(𝜌)̇)",
+            "input_string": "ⓘ(\"time derivative\"𝜌̇)",
             "left_right_wrapper": true,
             "value": [
               {
@@ -25524,13 +25536,13 @@
     {
       "id": "intent-unicodemath-539-off",
       "group": "intent-unicodemath-spec-off",
-      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_539 (ⓘ(\"time derivative\"(𝜌)̇))",
+      "source": "spec/plurimath/fixtures/formula_modules/unicode_math_parse_values.rb EXAMPLE_539 (ⓘ(\"time derivative\"𝜌̇))",
       "input": {
         "model": {
           "class": "Math::Formula",
           "fields": {
             "displaystyle": true,
-            "input_string": "ⓘ(\"time derivative\"(𝜌)̇)",
+            "input_string": "ⓘ(\"time derivative\"𝜌̇)",
             "left_right_wrapper": true,
             "value": [
               {

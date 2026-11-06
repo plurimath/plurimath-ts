@@ -35,6 +35,7 @@ import { renderTilde } from "../../render/tilde/omml";
 import { renderUbrace } from "../../render/ubrace/omml";
 import { renderUl } from "../../render/ul/omml";
 import { renderUnaryFunction } from "../../render/unary-function/omml";
+import { renderUncertainty } from "../../render/uncertainty/omml";
 import { renderUnderset } from "../../render/underset/omml";
 import { renderUnitsml } from "../../render/unitsml/omml";
 import { renderVec } from "../../render/vec/omml";
@@ -84,6 +85,7 @@ const RENDERERS: { readonly [K in NodeKind]: RenderFn<K> } = {
   ubrace: renderUbrace,
   ul: renderUl,
   unaryFunction: renderUnaryFunction,
+  uncertainty: renderUncertainty,
   unitsml: renderUnitsml,
   underset: renderUnderset,
   vec: renderVec,

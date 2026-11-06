@@ -3,8 +3,8 @@
   "schema": "plurimath-corpus/render-options/1",
   "format": "html",
   "caseCount": 323,
-  "renderedCount": 233,
-  "raisedCount": 90,
+  "renderedCount": 256,
+  "raisedCount": 67,
   "cases": [
     {
       "id": "unary-function-text-001",
@@ -214,8 +214,7 @@
         "text": "\\left ( a + b \\right )"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>(</i> a &#x2b; b <i>)</i>"
     },
     {
       "id": "unary-function-text-020",
@@ -226,8 +225,7 @@
         "text": "\\left ( a \\right )"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>(</i> a <i>)</i>"
     },
     {
       "id": "unary-function-text-021",
@@ -238,8 +236,7 @@
         "text": "\\left \\{ a \\right \\}"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>{</i> a <i>}</i>"
     },
     {
       "id": "unary-function-text-022",
@@ -250,8 +247,7 @@
         "text": "\\left ( \\frac{a}{b} \\right )"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>(</i> <i>a</i><i>b</i> <i>)</i>"
     },
     {
       "id": "unary-function-text-023",
@@ -262,8 +258,7 @@
         "text": "\\left(\\right"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>(</i> <i></i>"
     },
     {
       "id": "unary-function-text-024",
@@ -274,8 +269,7 @@
         "text": "\\left(\\right)"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>(</i> <i>)</i>"
     },
     {
       "id": "unary-function-text-025",
@@ -286,8 +280,7 @@
         "text": "\\left(x\\right)^2"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i><i>(</i> x <i>)</i></i><sup>2</sup>"
     },
     {
       "id": "unary-function-text-026",
@@ -298,8 +291,7 @@
         "text": "\\left ( x \\right )"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>(</i> x <i>)</i>"
     },
     {
       "id": "unary-function-text-027",
@@ -310,8 +302,7 @@
         "text": "\\left [ x \\right ]"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>[</i> x <i>]</i>"
     },
     {
       "id": "unary-function-text-028",
@@ -322,8 +313,7 @@
         "text": "\\left | x \\right |"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>|</i> x <i>|</i>"
     },
     {
       "id": "unary-function-text-029",
@@ -334,8 +324,7 @@
         "text": "\\left(x\\right"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>(</i> x <i></i>"
     },
     {
       "id": "unary-function-text-030",
@@ -346,8 +335,7 @@
         "text": "\\left(x\\right)"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>(</i> x <i>)</i>"
     },
     {
       "id": "unary-function-text-031",
@@ -358,8 +346,7 @@
         "text": "\\left(x\\right]"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>(</i> x <i>]</i>"
     },
     {
       "id": "unary-function-text-032",
@@ -370,8 +357,7 @@
         "text": "\\left.x\\right."
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i></i> x <i></i>"
     },
     {
       "id": "unary-function-text-033",
@@ -382,8 +368,7 @@
         "text": "\\left\\{x\\right\\}"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>{</i> x <i>}</i>"
     },
     {
       "id": "unary-function-text-034",
@@ -394,8 +379,7 @@
         "text": "\\left(x\\right)^{y}"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i><i>(</i> x <i>)</i></i><sup>y</sup>"
     },
     {
       "id": "unary-function-text-035",
@@ -406,8 +390,7 @@
         "text": "\\left(x\\right)^y"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i><i>(</i> x <i>)</i></i><sup>y</sup>"
     },
     {
       "id": "unary-function-text-036",
@@ -418,8 +401,7 @@
         "text": "\\left(x\\right)_{y}"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i><i>(</i> x <i>)</i></i><sub>y</sub>"
     },
     {
       "id": "unary-function-text-037",
@@ -430,8 +412,7 @@
         "text": "\\left(x\\right)^{y+z}"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i><i>(</i> x <i>)</i></i><sup>y &#x2b; z</sup>"
     },
     {
       "id": "unary-function-text-038",
@@ -442,8 +423,7 @@
         "text": "\\left(x\\right)_{y+z}"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i><i>(</i> x <i>)</i></i><sub>y &#x2b; z</sub>"
     },
     {
       "id": "unary-function-text-039",
@@ -454,8 +434,7 @@
         "text": "\\left(x+y\\right"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>(</i> x &#x2b; y <i></i>"
     },
     {
       "id": "unary-function-text-040",
@@ -466,8 +445,7 @@
         "text": "\\left(x+y\\right)"
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i>(</i> x &#x2b; y <i>)</i>"
     },
     {
       "id": "unary-function-text-041",
@@ -478,8 +456,7 @@
         "text": "\\left.x+y\\right."
       },
       "options": {},
-      "raises": "Plurimath::Math::ParseError",
-      "raisedIn": "render"
+      "expected": "<i></i> x &#x2b; y <i></i>"
     },
     {
       "id": "unary-function-text-042",

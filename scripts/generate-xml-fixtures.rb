@@ -84,6 +84,14 @@ def deep_tree
   a
 end
 
+# A raw dump Ox refuses is recorded as its raise. Ox 2.14.29 raises
+# Ox::SyntaxError on a C0 control other than tab, newline or carriage return.
+def dump_outcome
+  yield
+rescue Ox::SyntaxError => e
+  { "raises" => e.class.name, "message" => e.message }
+end
+
 dump = {}
 dump["nested-indent-2"] = Ox.dump(nested_tree, indent: 2)
 dump["nested-indent-nil"] = Ox.dump(nested_tree, indent: nil)
@@ -182,11 +190,11 @@ dump["whitespace-text"] = Ox.dump(text_el("t", "  "), indent: 2)
 dump["newline-text"] = Ox.dump(text_el("t", "\n"), indent: 2)
 dump["crlf-text"] = Ox.dump(text_el("t", "a\r\nb"), indent: 2)
 dump["specials-text"] = Ox.dump(text_el("mtext", "a&b<c>d\"e'f"), indent: 2)
-dump["ascii-text-sweep"] = Ox.dump(text_el("t", ASCII), indent: 2)
+dump["ascii-text-sweep"] = dump_outcome { Ox.dump(text_el("t", ASCII), indent: 2) }
 
 asciiattr = el("t")
 asciiattr["k"] = ASCII
-dump["ascii-attr-sweep"] = Ox.dump(asciiattr, indent: 2)
+dump["ascii-attr-sweep"] = dump_outcome { Ox.dump(asciiattr, indent: 2) }
 
 dump["nonascii-text-sampler"] = Ox.dump(text_el("t", SAMPLER), indent: 2)
 

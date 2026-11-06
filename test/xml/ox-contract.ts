@@ -91,18 +91,35 @@ export const EXPECTED_PROVENANCE = {
   xmlEngine: stringAt(MANIFEST, "xml_engine", "document"),
 } as const;
 
-const EXPECTED_GROUPS: Record<"dump" | "dumpNodes", Record<string, string>> = {
+/** A raw dump the oracle's Ox refuses: the raise it printed, not bytes. */
+export interface ExpectedRaise {
+  readonly raises: string;
+  readonly message: string;
+}
+
+type ExpectedOutcome = string | ExpectedRaise;
+
+const EXPECTED_GROUPS: Record<"dump" | "dumpNodes", Record<string, ExpectedOutcome>> = {
   dump: expected.dump,
   dumpNodes: expected.dumpNodes,
 };
 
-/** The oracle bytes for one fixture; throws rather than comparing nothing. */
-export function expectedBytes(group: "dump" | "dumpNodes", name: string): string {
-  const bytes = EXPECTED_GROUPS[group][name];
-  if (bytes === undefined) {
+/** The oracle outcome for one fixture; throws rather than comparing nothing. */
+export function expectedOutcome(group: "dump" | "dumpNodes", name: string): ExpectedOutcome {
+  const outcome = EXPECTED_GROUPS[group][name];
+  if (outcome === undefined) {
     throw new Error(`ox-contract.expected.json has no "${group}" entry named "${name}"`);
   }
-  return bytes;
+  return outcome;
+}
+
+/** The oracle bytes for one fixture; throws if the oracle raised instead. */
+export function expectedBytes(group: "dump" | "dumpNodes", name: string): string {
+  const outcome = expectedOutcome(group, name);
+  if (typeof outcome !== "string") {
+    throw new Error(`ox-contract.expected.json "${group}.${name}" is a raise, not bytes`);
+  }
+  return outcome;
 }
 
 /** Every name the JSON carries for a group, for both-directions coverage. */

@@ -8,6 +8,7 @@
  * instead, and equal-sized swaps (one case regressed, one improved) passed.
  */
 import * as C from "../../../src/core/index";
+import { InvalidUncertaintyError, uncertaintyProblem } from "../../../src/core/uncertainty";
 import { toHtml } from "../../../src/formats/html/renderer";
 import { validateUnitsml } from "../../../src/unitsml/index";
 
@@ -56,11 +57,12 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set();
  * Derived from `PORT_REFUSES`, and cross-checked against it by the spec: the
  * two disagree only when one was edited without the other.
  *
- * All 664 gem-renderable fixture cases now match, including the six MathML
+ * All 673 gem-renderable fixture cases now match (the nine left-right cases
+ * render at plurimath 2967dcc4), including the six MathML
  * Text cases formerly pinned in PORT_REFUSES. Native UnitsML expansion also
  * replaces the former text-unitsml-valid fallback divergence.
  */
-export const RENDERED_BASELINE = 664;
+export const RENDERED_BASELINE = 673;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared
@@ -68,12 +70,13 @@ export const RENDERED_BASELINE = 664;
  * sweep entry, so a builder that fills a sequence slot with a bare node fails
  * in a test that names the entry rather than as a byte mismatch further down.
  */
-export type SlotFiller = "node" | "sequence" | "string";
+export type SlotFiller = "node" | "number" | "sequence" | "string";
 
 const sym = () => new C.SymbolNode({ value: "a" });
 const FILL: Readonly<Record<SlotFiller, () => unknown>> = {
   node: () => sym(),
   sequence: () => [sym()],
+  number: () => new C.NumberNode({ value: "1" }),
   string: () => "a",
 };
 
@@ -121,6 +124,20 @@ export interface DegenerateKind {
  * of the expected matrix: a truncated fixture cannot agree with it.
  */
 export const NODE_FOR: Readonly<Record<string, DegenerateKind>> = {
+  uncertainty: {
+    renderKind: "uncertainty",
+    rubyClass: "Plurimath::Math::Function::Uncertainty",
+    slots: ["number", "number"],
+    build: (s, v) => {
+      const [value, magnitude] = at(s, v, ["number", "number"]);
+      const node = new C.UncertaintyNode({ value, category: "standard", magnitude } as never);
+      // Ruby validates in its constructor; the port's node is permissive and
+      // carries the same checks in `uncertaintyProblem`.
+      const problem = uncertaintyProblem(node);
+      if (problem !== null) throw new InvalidUncertaintyError(problem);
+      return node;
+    },
+  },
   unitsml: {
     renderKind: "unitsml",
     rubyClass: "Plurimath::Math::Function::Unitsml",

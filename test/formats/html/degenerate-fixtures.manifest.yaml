@@ -6,13 +6,13 @@ committable: true
 warnings: []
 generator:
   path: scripts/probe-degenerate-slots.rb
-  sha256: 93f73ffa8737d66b9ebd39fe3974e17dbc35bf148ec8cc6750a258353bf82bd4
+  sha256: c8dfce6d289831bfae6f30d51d2b0ac97e03e8429c1fc0757f068ba64056e559
   inputs:
-    scripts/generate-corpus.rb: 7a75f45b8ba8c774cc990cf2d68d9f2a5c328c66d570df1e177b5a7a3d86554e
-    scripts/probe-degenerate-slots.rb: 93f73ffa8737d66b9ebd39fe3974e17dbc35bf148ec8cc6750a258353bf82bd4
+    scripts/generate-corpus.rb: 82630cc145295b12b23443c853b5d2841cd7e293c607092409a050e67fc27868
+    scripts/probe-degenerate-slots.rb: c8dfce6d289831bfae6f30d51d2b0ac97e03e8429c1fc0757f068ba64056e559
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 5c685cb83dfc65e32cba67a2473af986022392e8
+    commit: 2592625584cf51ba1da6e24833715f3af8c429ce
     clean: true
     dirty_paths: []
   inventory:
@@ -54,15 +54,16 @@ generator:
     - src/render/ubrace/html.ts
     - src/render/ul/html.ts
     - src/render/unary-function/html.ts
+    - src/render/uncertainty/html.ts
     - src/render/underset/html.ts
     - src/render/unitsml/html.ts
     - src/render/vec/html.ts
-    sha256: 70bbf19b36524eb9fdaf8721d4b21ba5e839f470aa49691c5138b9d06f18aafa
+    sha256: 68b8af259287c1f8002d389ca1caba775ecce47f93cbb5e8e6c82f7a3cce27e6
 oracle:
   gem: plurimath
-  version: 0.11.12
+  version: 0.11.17
   kind: git-checkout
-  commit: ae20be111a26fdd988c58be0bfb2b7f6fe6e352f
+  commit: 2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256
   clean: true
   dirty_paths: []
 ruby:
@@ -73,8 +74,8 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: 4aafd7162d8b10a8a841fb30c89bc0ff9b2429ea0ec6379c7931c3b9093dca0b
-    resolved_gems: 77
+    sha256: 6051573ea50bb473fb12ccacb4e2ca48d5e06b9dce0dff6d2647042e76f48ebd
+    resolved_gems: 83
     platforms:
     - aarch64-linux-gnu
     - aarch64-linux-musl
@@ -86,6 +87,12 @@ dependencies:
     - x86_64-linux-musl
     bundler: 4.0.3
   sources:
+  - kind: git
+    remote: https://github.com/plurimath/lasem-ruby.git
+    gems: 1
+    gem_names:
+    - lasem
+    revision: b6f2c47368980fb95e9c1c3f9ffb0d0f4f1861f0
   - kind: path
     remote: "."
     gems: 1
@@ -93,10 +100,15 @@ dependencies:
     - plurimath
   - kind: gem
     remote: https://rubygems.org/
-    gems: 76
+    gems: 81
   direct_runtime:
+  - name: amath
+    version: 0.1.0
+    platform: ruby
+    source_kind: gem
+    source: https://rubygems.org/
   - name: bigdecimal
-    version: 4.1.2
+    version: 4.1.3
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
@@ -106,17 +118,17 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: lutaml-model
-    version: 0.8.65
+    version: 0.8.169
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
   - name: mml
-    version: 2.4.2
+    version: 2.4.7
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
   - name: omml
-    version: 0.2.6
+    version: 0.2.11
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
@@ -126,8 +138,13 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: ox
-    version: 2.14.28
+    version: 2.14.29
     platform: ruby
+    source_kind: gem
+    source: https://rubygems.org/
+  - name: parsanol
+    version: 1.3.134
+    platform: x86_64-linux-musl
     source_kind: gem
     source: https://rubygems.org/
   - name: parslet
@@ -141,12 +158,12 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: unitsml
-    version: 0.6.8
+    version: 0.6.13
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
 payload:
   path: degenerate-fixtures.json
   schema: plurimath-corpus/degenerate-slots/1
-  sha256: 4adbeec0ee312227d3e53fb14326bf4052ba01193457da726773fe4f106de9c7
-  bytes: 83746
+  sha256: 55cac211fa9cbd83b330c2a0493e1a0f6bdf0738c8376b8a3f3141732a28dfb5
+  bytes: 87381

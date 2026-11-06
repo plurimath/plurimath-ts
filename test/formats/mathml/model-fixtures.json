@@ -9833,7 +9833,7 @@
       "id": "mathml-36a9e7f1c95b",
       "group": "corpus-mathml",
       "input": " ",
-      "raises": "RuntimeError",
+      "raises": "Lutaml::Model::InvalidFormatError",
       "raisedIn": "mml"
     },
     {

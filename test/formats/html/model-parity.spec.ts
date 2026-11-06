@@ -182,7 +182,7 @@ const withTree = fixtures.cases.filter(
 
 describe("the parse tree", () => {
   it("has the rows it was generated with", () => {
-    expect(withTree.length).toBe(272);
+    expect(withTree.length).toBe(276);
     expect(withTree.filter((entry) => entry.tree === null).length).toBe(13);
   });
 
@@ -202,10 +202,10 @@ describe("the rendered output of the parsed model", () => {
   // Pinned as literals, so a regeneration that drops the `rendered` field, or
   // a target, fails here rather than leaving the two blocks below vacuous.
   it("has the rows and targets it was generated with", () => {
-    expect(fixtures.cases.filter((entry) => entry.rendered !== undefined).length).toBe(259);
+    expect(fixtures.cases.filter((entry) => entry.rendered !== undefined).length).toBe(263);
     expect(Object.keys(RENDERERS).length).toBe(4);
-    expect(renderedBytes.length).toBe(887);
-    expect(renderRefused.length).toBe(149);
+    expect(renderedBytes.length).toBe(899);
+    expect(renderRefused.length).toBe(153);
   });
 
   it.each(renderedBytes.map((row) => [row.entry.group, row.entry.input, row.target, row] as const))(

@@ -739,6 +739,8 @@ export function createUnicodemathGrammar(
         opAlphanumericFonts,
         ordered(match("[A-Za-z]").as("symbol"), match("[0-9]").as("number")),
       ),
+      // plurimath 2967dcc4: a font over quoted text, `\mup"kg"` (plurimath#493).
+      seq(ordered(opFonts, opAlphanumericFonts), parsingText),
     ),
   );
 

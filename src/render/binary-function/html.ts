@@ -36,6 +36,7 @@ import {
   FORMAT,
   interpolatedValue,
   type NodeOf,
+  present,
   type RenderContext,
   renderCarrierSlot,
   renderChild,
@@ -104,8 +105,13 @@ export function renderBinaryFunction(
     case "Inf":
     case "Mlabeledtr":
     case "Semantics":
-    case "Intent":
       return renderBinaryDefault(parameterOne, parameterTwo, context, name.toLowerCase());
+
+    // `intent.rb:45-47` (plurimath#505): the intent string is metadata, so
+    // only the content is written, and nothing at all when the slot is nil.
+    case "Intent":
+      if (!present(parameterOne)) return "";
+      return `<i>${s(renderChild(parameterOne, context, "intent.parameterOne"))}</i>`;
 
     default:
       throw new RenderError(

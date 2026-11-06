@@ -78,6 +78,7 @@ import { RenderError } from "../../core/index";
 import {
   describeSlot,
   FORMAT,
+  htmlEntityToUnicode,
   isNode,
   missingRenderer,
   type NodeOf,
@@ -128,7 +129,26 @@ export function renderFontStyle(node: NodeOf<"fontStyle">, context: RenderContex
   if (name === "Monospace")
     return `${MONOSPACE_MARK}${monospaceParens(node.parameterOne, context)}`;
 
+  if (name === "Normal" && isUnitText(node, context))
+    return `${fontPrefix(node)}"${htmlEntityToUnicode(node.parameterOne.value as string)}"`;
+
   return `${fontPrefix(node)}${renderOptionalChild(node.parameterOne, context)}`;
+}
+
+/**
+ * `Normal#unicodemath_unit_text?`: inside a UnitsML node, a generic symbol of
+ * more than one character is written as quoted text, `\mup"kg"`, because
+ * UnicodeMath reads `\mupkg` as an upright k followed by g.
+ */
+function isUnitText(
+  node: NodeOf<"fontStyle">,
+  context: RenderContext,
+): node is NodeOf<"fontStyle"> & { readonly parameterOne: NodeOf<"symbol"> } {
+  const child = node.parameterOne;
+  if (!context.unicodemathUnit || !isNode(child) || child.kind !== "symbol") return false;
+  if (child.id !== "Symbol") return false;
+  const value = String(child.value ?? "");
+  return !value.startsWith("\\") && [...htmlEntityToUnicode(value)].length > 1;
 }
 
 /**

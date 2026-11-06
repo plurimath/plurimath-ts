@@ -189,6 +189,7 @@ function everyKindNarrows(node: MathNode): string {
     case "ubrace":
     case "ul":
     case "unaryFunction":
+    case "uncertainty":
     case "underset":
     case "vec":
       return node.kind;

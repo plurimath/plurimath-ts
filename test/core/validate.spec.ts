@@ -42,7 +42,7 @@ function failure(value: unknown): RenderError {
 describe("assertMathNodeShape, positive direction", () => {
   it("accepts one constructed node of every kind", () => {
     const nodes = oneOfEachKind();
-    expect(nodes.length).toBe(39);
+    expect(nodes.length).toBe(40);
     for (const [kind, node] of nodes) {
       expect(() => assertMathNodeShape(node, FORMAT), kind).not.toThrow();
     }

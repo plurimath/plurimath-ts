@@ -39,6 +39,7 @@
     "ubrace",
     "ul",
     "unaryFunction",
+    "uncertainty",
     "underset",
     "unitsml",
     "vec"
@@ -248,9 +249,14 @@
       "renderKind": "unitsml",
       "rubyClass": "Plurimath::Math::Function::Unitsml",
       "slots": ["string"]
+    },
+    "uncertainty": {
+      "renderKind": "uncertainty",
+      "rubyClass": "Plurimath::Math::Function::Uncertainty",
+      "slots": ["number", "number"]
     }
   },
-  "rowCount": 462,
+  "rowCount": 476,
   "constructsCount": 445,
   "rendersCount": 215,
   "unstableCount": 2,
@@ -3918,7 +3924,7 @@
       "slot": 0,
       "value": "empty-string",
       "constructs": false,
-      "constructError": "Parslet::ParseFailed"
+      "constructError": "Unitsml::Errors::ParseError"
     },
     {
       "kind": "unitsml",
@@ -3933,6 +3939,104 @@
       "value": "node",
       "constructs": false,
       "constructError": "NoMethodError"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "nil",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "false",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "true",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "zero",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "empty-string",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "empty-array",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 0,
+      "value": "node",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "nil",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "false",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "true",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "zero",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "empty-string",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "empty-array",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
+    },
+    {
+      "kind": "uncertainty",
+      "slot": 1,
+      "value": "node",
+      "constructs": false,
+      "constructError": "Plurimath::Errors::InvalidUncertainty"
     }
   ],
   "constructorWitnesses": {
@@ -3945,6 +4049,45 @@
         }
       },
       "output": "kg"
+    },
+    "uncertainty": {
+      "input": {
+        "value": "1",
+        "category": "standard",
+        "magnitude": "1"
+      },
+      "model": {
+        "class": "Math::Function::Uncertainty",
+        "fields": {
+          "category": "standard",
+          "coverage_factor": null,
+          "coverage_probability": null,
+          "interval_kind": null,
+          "lower": null,
+          "magnitude": {
+            "class": "Math::Number",
+            "fields": {
+              "base": null,
+              "mini_sub_sized": false,
+              "mini_sup_sized": false,
+              "value": "1"
+            }
+          },
+          "notation": "absolute",
+          "unit": null,
+          "upper": null,
+          "value": {
+            "class": "Math::Number",
+            "fields": {
+              "base": null,
+              "mini_sub_sized": false,
+              "mini_sup_sized": false,
+              "value": "1"
+            }
+          }
+        }
+      },
+      "output": "1(1)"
     }
   }
 }

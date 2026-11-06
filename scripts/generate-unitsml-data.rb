@@ -9,14 +9,20 @@ require "optparse"
 require "tmpdir"
 
 module NativeCompletionReference
-  PIN = "ae20be111a26fdd988c58be0bfb2b7f6fe6e352f"
-  LOCK_SHA = "4aafd7162d8b10a8a841fb30c89bc0ff9b2429ea0ec6379c7931c3b9093dca0b"
+  PIN = "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256"
+  LOCK_SHA = "6051573ea50bb473fb12ccacb4e2ca48d5e06b9dce0dff6d2647042e76f48ebd"
   module_function
 
   def git(root, *args)
     out, err, status = Open3.capture3("git", *args, chdir: root)
     raise "git failed: #{err}" unless status.success?
     out.strip
+  end
+
+  # Ruby's default #inspect embeds the object's heap address, which differs
+  # on every run. Drop it so a refusal message is a stable measurement.
+  def error_message(error)
+    error.message.gsub(/(#<[A-Z][\w:]*):0x\h+/, "\\1")
   end
 
   def load_oracle!(oracle)
@@ -30,7 +36,7 @@ module NativeCompletionReference
     require "unitsdb"
     require_relative "generate-corpus"
     raise "wrong loaded oracle" unless Gem.loaded_specs.fetch("plurimath").full_gem_path == File.realpath(oracle)
-    raise "wrong dependency versions" unless Gem.loaded_specs.fetch("unitsml").version.to_s == "0.6.8" && Gem.loaded_specs.fetch("unitsdb").version.to_s == "2.2.5"
+    raise "wrong dependency versions" unless Gem.loaded_specs.fetch("unitsml").version.to_s == "0.6.13" && Gem.loaded_specs.fetch("unitsdb").version.to_s == "2.2.13"
   end
 
   def measured(input, options = {})
@@ -41,17 +47,17 @@ module NativeCompletionReference
       begin
         record[key] = formula.public_send(method, options)
       rescue StandardError => e
-        record["#{key}Error"] = { "class" => e.class.name, "message" => e.message }
+        record["#{key}Error"] = { "class" => e.class.name, "message" => error_message(e) }
       end
     end
     begin
       record["model"] = CorpusGenerator.serialize_node(formula.to_plurimath(options), "unitsml")
     rescue StandardError => e
-      record["modelError"] = { "class" => e.class.name, "message" => e.message }
+      record["modelError"] = { "class" => e.class.name, "message" => error_message(e) }
     end
     record
   rescue StandardError => e
-    { "input" => input, "options" => options, "optionsTypes" => options.to_h { |key, value| [key.to_s, value.is_a?(Symbol) ? "symbol" : value.class.name.downcase] }, "raises" => e.class.name, "message" => e.message }
+    { "input" => input, "options" => options, "optionsTypes" => options.to_h { |key, value| [key.to_s, value.is_a?(Symbol) ? "symbol" : value.class.name.downcase] }, "raises" => e.class.name, "message" => error_message(e) }
   end
 
   # Extract XML text as nodes, never by deleting tag-looking substrings.
@@ -212,7 +218,7 @@ module NativeCompletionReference
         node = Plurimath::Mathml::Utility.resolve_token(text)
         data["resolvedTokens"][text] = CorpusGenerator.serialize_node(node, "resolved-token")
       rescue StandardError => e
-        data["resolvedTokens"][text] = { "raises" => e.class.name, "message" => e.message }
+        data["resolvedTokens"][text] = { "raises" => e.class.name, "message" => error_message(e) }
       end
     end
     data["prefixedUnitsCoverage"] = { "complete" => false, "selectedUnits" => %w[m s g kg A K mol cd], "completeCompositeUnits" => composite_units }

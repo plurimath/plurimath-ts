@@ -187,10 +187,10 @@ function syntheticPin(options: SyntheticOptions = {}): string {
 }
 
 /**
- * The `left`/`right` inputs the gem renders to every target except HTML,
- * written in AsciiMath and then LaTeX, in the order the pin lists them.
+ * The `left`/`right` inputs, written in AsciiMath and then LaTeX, in the
+ * order the pin lists them. Rendered to HTML too since plurimath 2967dcc4.
  */
-const LEFT_RIGHT_HTML_REFUSALS = [
+const LEFT_RIGHT_CASES = [
   "left-right-round",
   "left-right-square",
   "left-right-around-frac",
@@ -222,6 +222,7 @@ const EXPECTED_PAYLOADS = [
   "asciimath/fences.yaml",
   "asciimath/fonts.yaml",
   "asciimath/frac.yaml",
+  "asciimath/left-right.yaml",
   "asciimath/matrices.yaml",
   "asciimath/mixed.yaml",
   "asciimath/mod.yaml",
@@ -241,13 +242,13 @@ const EXPECTED_PAYLOADS = [
   "latex/fences.yaml",
   "latex/fonts.yaml",
   "latex/frac.yaml",
+  "latex/left-right.yaml",
   "latex/matrices.yaml",
   "latex/mod.yaml",
   "latex/nary.yaml",
   "latex/numbers.yaml",
   "latex/operators.yaml",
   "latex/over-under.yaml",
-  "latex/partial-render.yaml",
   "latex/powers.yaml",
   "latex/quoted-text.yaml",
   "latex/roots.yaml",
@@ -301,19 +302,19 @@ describe("the pin as shipped", () => {
   const corpus = loadPinnedCorpus();
 
   it("loads every payload the provenance records, matched by path", () => {
-    // 66 case payloads (18 AsciiMath, 18 LaTeX, 12 MathML, 14 OMML, 4
+    // 67 case payloads (19 AsciiMath, 18 LaTeX, 12 MathML, 14 OMML, 4
     // Unicode), 6 rejection payloads (one per input format that carries
     // rejections: AsciiMath, LaTeX, MathML, OMML, Unicode, HTML), and 8
     // calls payloads (seven calls/1 and one calls/2). Counted apart on purpose: a rejection payload carries no
     // rendering and a calls payload carries a render under something other
     // than default options, so folding either into the case count would
     // inflate what "the corpus covers" claims.
-    expect(corpus.payloads.length).toBe(66);
+    expect(corpus.payloads.length).toBe(67);
     expect(corpus.rejectionPayloads.length).toBe(6);
     expect(corpus.callsPayloads.length).toBe(8);
     // No format is pending: every payload is parsed.
     expect(corpus.pendingPayloads).toStrictEqual([]);
-    expect(corpus.provenance.payloads.length).toBe(80);
+    expect(corpus.provenance.payloads.length).toBe(81);
     assertExpectedPayloads(corpus);
   });
 
@@ -372,8 +373,8 @@ describe("the pin as shipped", () => {
   it("was generated the canonical way", () => {
     expect(corpus.provenance.committable).toBe(true);
     expect(corpus.provenance.xmlEngine).toBe("Plurimath::XmlEngine::OxEngine");
-    expect(corpus.provenance.oracleVersion).toBe("0.11.12");
-    expect(corpus.provenance.oracleCommit).toBe("ae20be111a26fdd988c58be0bfb2b7f6fe6e352f");
+    expect(corpus.provenance.oracleVersion).toBe("0.11.17");
+    expect(corpus.provenance.oracleCommit).toBe("2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256");
   });
 
   it("accounts for every declared target on every case", () => {
@@ -396,7 +397,6 @@ describe("the pin as shipped", () => {
     const partial = corpus.cases.filter((entry) => entry.refusals.size > 0);
     expect(partial.map((entry) => entry.id)).toStrictEqual([
       "partial-sqrt-unclosed",
-      ...LEFT_RIGHT_HTML_REFUSALS,
       ...Array.from(
         { length: 27 },
         (_, index) => `mathml-partial-${String(index + 1).padStart(3, "0")}`,
@@ -430,20 +430,20 @@ describe("the pin as shipped", () => {
     expect(entry?.model).not.toBe(null);
   });
 
-  it("records the left-right inputs as rendering to every target but HTML", () => {
-    // The gem's `Function::Right#to_html` takes no arguments while its caller
-    // passes one, so the `ArgumentError` surfaces as a `ParseError` from
-    // `to_html`. The corpus records that refusal as it is.
-    for (const id of LEFT_RIGHT_HTML_REFUSALS) {
+  it("records the left-right inputs as rendering to every target", () => {
+    // testsuite#31 moved them out of `partial-render`: at plurimath 2967dcc4
+    // `Function::Right#to_html` accepts its caller's argument, so HTML renders.
+    for (const id of LEFT_RIGHT_CASES) {
       const entry = corpus.cases.find((candidate) => candidate.id === id);
-      expect([...(entry?.expected.keys() ?? [])], id).toStrictEqual([
+      expect([...(entry?.expected.keys() ?? [])].sort(), id).toStrictEqual([
         "asciimath",
+        "html",
         "latex",
         "mathml",
-        "unicodemath",
         "omml",
+        "unicodemath",
       ]);
-      expect([...(entry?.refusals.entries() ?? [])], id).toStrictEqual([["html", "parse_error"]]);
+      expect(entry?.refusals.size, id).toBe(0);
       expect(entry?.model, id).not.toBe(null);
     }
   });
@@ -902,9 +902,9 @@ describe("a pin that quietly loses a group", () => {
   );
 
   it("loads without complaint, which is the whole problem", () => {
-    // The shipped 66 case payloads less the one removed, and the shipped 714 cases
+    // The shipped 67 case payloads less the one removed, and the shipped 714 cases
     // less the six `asciimath/frac.yaml` carries.
-    expect(shrunk.payloads.length).toBe(65);
+    expect(shrunk.payloads.length).toBe(66);
     expect(shrunk.cases.length).toBe(708);
     expect(shrunk.payloads.map((payload) => payload.path)).not.toContain("asciimath/frac.yaml");
   });

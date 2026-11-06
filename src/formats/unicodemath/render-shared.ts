@@ -77,6 +77,13 @@ export interface RenderContext {
    * `return`.
    */
   readonly render: (node: MathNode) => string | null;
+  /**
+   * `Function::Unitsml#to_unicodemath` re-renders its expansion with
+   * `options.merge(unicodemath_unit: true)`; this is `render` under that flag.
+   */
+  readonly renderUnit: (node: MathNode) => string | null;
+  /** True below a UnitsML node: the `:unicodemath_unit` option is set. */
+  readonly unicodemathUnit: boolean;
 }
 
 export type NodeOf<K extends NodeKind> = Extract<MathNode, { readonly kind: K }>;

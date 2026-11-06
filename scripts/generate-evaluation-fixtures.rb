@@ -20,19 +20,23 @@
 # A row that raises records `message` (`Exception#message`) alongside
 # `raises` (the class name): `evaluate.spec.ts` checks both, byte-exact, not
 # only the class and its `code` — a wrong phrase with the right class would
-# otherwise pass silently. `expected` is recorded as a STRING (`Integer#inspect` /
-# `Float#inspect`), never a JSON number: Ruby's `Integer`/`Float` distinction
-# (`2+3` => `5`, `6/3` => `2.0`) would be lost the instant a JSON number
-# round-tripped through a JS parser. `evaluate.spec.ts` checks both the value
-# and the Ruby kind the string records against the port's internal kind.
+# otherwise pass silently. `Formula#evaluate` returns an `Evaluation::Result`
+# (plurimath 0.11.13+): `expected` is its `value`, recorded as a STRING
+# (`#inspect`: `5`, `2.0`, `(1/3)`, `0.84147e0`, or `nil` where strict mode
+# deferred) with its class in `valueClass`, never as a JSON number: Ruby's
+# `Integer`/`Float` distinction (`2+3` => `5`, `6/3` => `2.0`) would be lost the
+# instant a JSON number round-tripped through a JS parser. `boundaries` and
+# `unevaluated` are the Result's other two fields (`boundary_records`).
+# `evaluate.spec.ts` checks all three through `evaluateResult`, and that
+# `evaluate` returns a number exactly where the value is an Integer in the safe
+# range or a Float.
 #
 # `portRefusal` marks a row the port refuses with `UnsupportedFeatureError`
 # although the oracle answers or raises something else, and says why:
 # `unported` (a construct the gem evaluates that this port has not ported;
-# none is left, but the check stays for the next one), `rational` /
-# `big-integer` (a FINAL result a JS
-# number cannot hold exactly — intermediate ones are computed exactly, as
-# Ruby does), `pow-rounding-band` (a Float power within glibc's rounding
+# none is left, but the check stays for the next one), `decimal-exponent` (a
+# BigDecimal whose exponent passes `Number.MAX_SAFE_INTEGER`,
+# `big-decimal.ts`), `pow-rounding-band` (a Float power within glibc's rounding
 # band), `libm-rounding-band` (a `Math` function result within glibc's
 # rounding band), `libm-reduction` (a sin/cos/tan argument so close to a
 # multiple of pi/2 that glibc's range reduction is not accurate enough to
@@ -42,10 +46,8 @@
 # `raises: "ArgumentError"`), or `size-limit` (an exact
 # intermediate beyond the port's resource limit) — `src/evaluation/numeric.ts`,
 # `pow.ts`, `libm.ts` and `libm-hyperbolic.ts`. The oracle's own answer is still recorded, so the refusal is
-# visibly a refusal of THAT answer. A Rational or out-of-range Integer answer
-# without a `portRefusal` aborts generation, and so does a `rational`,
-# `big-integer` or `argument-error` marker the oracle's answer does not bear
-# out.
+# visibly a refusal of THAT answer. An `argument-error` or `decimal-exponent`
+# marker the oracle's answer does not bear out aborts generation.
 #
 # A binding value is either an Integer or a non-integral Float (or a
 # non-finite Float): JavaScript cannot express `2.0` apart from `2`, and the
@@ -58,6 +60,7 @@
 # invalid case left to reach through it — recorded there, not manufactured
 # here as a fixture that would need an untyped call to produce.
 
+require "bigdecimal"
 require "json"
 require "optparse"
 
@@ -161,6 +164,40 @@ def with_options(options)
   end
 end
 
+# The keyword arguments `Formula#evaluate` takes besides the bindings
+# (`formula.rb`): `mode:` (`:approximate`, the default, or `:strict`) and
+# `guard_digits:`. A row's `options` carries them under the port's own names,
+# `mode` and `guardDigits` (`src/evaluation/index.ts`'s `EvaluationOptions`).
+def evaluate_keywords(options)
+  keywords = {}
+  keywords[:mode] = options.fetch("mode").to_sym if options.key?("mode")
+  keywords[:guard_digits] = options.fetch("guardDigits") if options.key?("guardDigits")
+  keywords
+end
+
+# `Evaluation::Result#boundaries` (`result.rb`), one record per accuracy
+# boundary in the order the evaluator met them. Every Ruby value is recorded
+# as its `#inspect` string, for the same reason `expected` is: the class
+# (`Integer`, `Rational`, `Float`, `BigDecimal`, the literal's `String`) is
+# part of the answer, and a JSON number would lose it.
+def boundary_records(result)
+  result.boundaries.map do |boundary|
+    {
+      "operation" => boundary.fetch(:operation),
+      "operands" => boundary.fetch(:operands).map(&:inspect),
+      "operandAccuracy" => boundary.fetch(:operand_accuracy).to_s,
+      "action" => boundary.fetch(:action).to_s,
+      "result" => boundary.fetch(:result).inspect,
+    }
+  end
+end
+
+RESULT_VALUE_CLASSES = [Integer, Float, Rational, BigDecimal, NilClass].freeze
+
+# `Number.MAX_SAFE_INTEGER`, the largest BigDecimal exponent the port holds
+# exactly (`big-decimal.ts`'s `checkExponent`).
+MAX_SAFE_INTEGER = (2**53) - 1
+
 def evaluate_row(id, group, source, format, text, bindings, port_refusal, options = {})
   bindings.each do |name, value|
     next unless value.is_a?(Float) && value.finite? && value == value.round
@@ -179,20 +216,18 @@ def evaluate_row(id, group, source, format, text, bindings, port_refusal, option
   }
   row["options"] = options unless options.empty?
   begin
-    result = with_options(options) { formula.evaluate(symbolize(bindings)) }
-    unless result.is_a?(Integer) || result.is_a?(Float)
-      abort "REFUSING: #{id}: #{result.inspect} is a #{result.class}" unless port_refusal
+    result = with_options(options) { formula.evaluate(symbolize(bindings), **evaluate_keywords(options)) }
+    unless result.is_a?(Plurimath::Math::Evaluation::Result)
+      abort "REFUSING: #{id}: Formula#evaluate returned a #{result.class}, not an Evaluation::Result"
     end
-    if result.is_a?(Integer) && result.abs > MAX_SAFE_INTEGER && !port_refusal
-      abort "REFUSING: #{id}: #{result} is beyond Number.MAX_SAFE_INTEGER"
+    unless RESULT_VALUE_CLASSES.any? { |klass| result.value.is_a?(klass) }
+      abort "REFUSING: #{id}: #{result.value.inspect} is a #{result.value.class}"
     end
-    if port_refusal == "rational" && !result.is_a?(Rational)
-      abort "REFUSING: #{id}: marked rational, but the oracle answered #{result.inspect}"
-    end
-    if port_refusal == "big-integer" && !(result.is_a?(Integer) && result.abs > MAX_SAFE_INTEGER)
-      abort "REFUSING: #{id}: marked big-integer, but the oracle answered #{result.inspect}"
-    end
-    row["expected"] = result.inspect
+    row["expected"] = result.value.inspect
+    # `0.0` is both a Float's and a BigDecimal's `#inspect`; the class settles it.
+    row["valueClass"] = result.value.class.name
+    row["boundaries"] = boundary_records(result)
+    row["unevaluated"] = result.unevaluated.dup
   rescue EVALUATION_ERROR => e
     row["raises"] = e.class.name
     row["message"] = e.message
@@ -200,17 +235,12 @@ def evaluate_row(id, group, source, format, text, bindings, port_refusal, option
     abort "REFUSING: #{id}: ArgumentError #{e.message} without an argument-error marker" unless port_refusal == "argument-error"
     row["raises"] = "ArgumentError"
   end
-  if %w[rational big-integer].include?(port_refusal) && row.key?("raises")
-    abort "REFUSING: #{id}: marked #{port_refusal}, but the oracle raised #{row['raises']}"
-  end
   if port_refusal == "argument-error" && row["raises"] != "ArgumentError"
     abort "REFUSING: #{id}: marked argument-error, but the oracle did not raise ArgumentError"
   end
   row["portRefusal"] = port_refusal if port_refusal
   row
 end
-
-MAX_SAFE_INTEGER = (2**53) - 1
 
 # `numeric.ts`'s own `INTEGER_BIT_LIMIT` (`1 << 22`), read from its source
 # rather than restated as a literal, so a `size-limit` row is validated
@@ -516,6 +546,12 @@ def validate_port_refusal!(id, port_refusal, row)
     if unported.empty?
       abort "REFUSING: #{id}: marked unported, but its formula contains no gem-evaluated class " \
             "evaluator.ts leaves unported (#{UNPORTED_GEM_CLASSES.values.sort.join(', ')})"
+    end
+  when "decimal-exponent"
+    value = row["expected"]
+    exponent = value&.match(/e(-?\d+)\z/)&.[](1)&.to_i
+    unless value == "Infinity" || (exponent && exponent.abs > MAX_SAFE_INTEGER)
+      abort "REFUSING: #{id}: marked decimal-exponent, but the oracle answered #{value.inspect}"
     end
   when "size-limit"
     intermediate = SIZE_LIMIT_INTERMEDIATES[id]
@@ -1340,16 +1376,6 @@ OPTIONS = {
 # Rows the port refuses with `UnsupportedFeatureError`, each with its reason
 # (see the header).
 PORT_REFUSALS = {
-  "power-bare-negative-integer-exponent" => "rational",
-  "rational-integer-negative-power" => "rational",
-  "rational-zero-numerator" => "rational",
-  "rational-in-sum" => "rational",
-  "rational-den-one-final" => "rational",
-  "rational-power-den-one-exponent" => "rational",
-  "rational-one-to-rational" => "rational",
-  "big-integer-power" => "big-integer",
-  "big-integer-literal" => "big-integer",
-  "big-integer-just-past-safe" => "big-integer",
   "argument-error-bignum-exponent" => "argument-error",
   "argument-error-negative-fixnum-min" => "argument-error",
   "size-limit-huge-power-times-zero" => "size-limit",
@@ -1377,18 +1403,169 @@ PORT_REFUSALS = {
   "tan-pi-over-four" => "libm-rounding-band",
   "arccos-half" => "libm-rounding-band",
   "libm-reduction-cos-hardest-argument" => "libm-reduction",
-  "abs-rational" => "rational",
-  "floor-huge-float" => "big-integer",
-  "lcm-big-result" => "big-integer",
-  "max-rational-result" => "rational",
   "max-nan-first" => "argument-error",
   "min-nan-last" => "argument-error",
-  "mod-rational-dividend" => "rational",
-  "sum-rational-body" => "rational",
-  "prod-big-integer" => "big-integer",
-  "latex-big-integer-power" => "big-integer",
-  "latex-rational-integer-negative-power" => "rational",
 }.freeze
+
+# Accuracy-aware evaluation (plurimath 0.11.13+, `evaluator.rb`): `mode:
+# :strict` never crosses an exactness boundary — the first one defers, and the
+# result carries the boundary and the unevaluated formula — and `mode:
+# :strict, guard_digits: n` crosses a transcendental boundary through a
+# BigDecimal computed to `n` digits (`Evaluator#guard_digit_value`: BigMath
+# `sin`, `cos`, `exp`, `log`, `atan` and `BigDecimal#sqrt`, and the `log_base`
+# and `log10` quotients built from `BigMath.log`). Each entry is `[id, group,
+# format, text, options, bindings, port_refusal]`.
+STRICT = { "mode" => "strict" }.freeze
+GUARDED = { "mode" => "strict", "guardDigits" => 20 }.freeze
+GUARD_FUNCTIONS = { "sin" => "sin", "cos" => "cos", "exp" => "exp", "ln" => "ln",
+                    "sqrt" => "sqrt", "arctan" => "arctan" }.freeze
+GUARD_ARGUMENTS = { "zero" => "0", "one" => "1", "two" => "2", "three" => "3", "minus-one" => "-1",
+                    "minus-seven" => "-7", "ten" => "10", "hundred" => "100",
+                    "five-digit" => "12345" }.freeze
+GUARD_DIGIT_SWEEP = [1, 2, 3, 5, 9, 10, 16, 17, 18, 27, 32, 50, 100].freeze
+
+ACCURACY_ROWS = [].tap do |rows|
+  GUARD_FUNCTIONS.each do |name, function|
+    GUARD_ARGUMENTS.each do |label, argument|
+      rows << ["guarded-#{name}-#{label}", "guarded-#{name}", "asciimath", "#{function}(#{argument})", GUARDED, {}, nil]
+    end
+    GUARD_DIGIT_SWEEP.each do |digits|
+      rows << ["guarded-#{name}-two-digits-#{digits}", "guarded-digits", "asciimath", "#{function}(2)",
+               { "mode" => "strict", "guardDigits" => digits }, {}, nil]
+    end
+  end
+  [
+    ["guarded-sin-large", "guarded-sin", "sin(10^30)"],
+    ["guarded-cos-large", "guarded-cos", "cos(10^30)"],
+    ["guarded-sin-near-multiple-of-pi", "guarded-sin", "sin(355)"],
+    ["guarded-cos-near-odd-multiple-of-half-pi", "guarded-cos", "cos(11)"],
+    ["guarded-sin-negative-large", "guarded-sin", "sin(-12345678901234567890)"],
+    ["guarded-cos-million", "guarded-cos", "cos(1000000)"],
+    ["guarded-exp-thousand", "guarded-exp", "exp(1000)"],
+    ["guarded-exp-minus-thousand", "guarded-exp", "exp(-1000)"],
+    ["guarded-exp-overflow", "guarded-exp", "exp(10^21)"],
+    ["guarded-exp-underflow", "guarded-exp", "exp(-10^21)"],
+    ["guarded-exp-largest-finite-exponent", "guarded-exp", "exp(10^15)"],
+    ["guarded-ln-large", "guarded-ln", "ln(10^50)"],
+    ["guarded-ln-zero-plus-one", "guarded-ln", "ln(0)+1"],
+    ["guarded-sqrt-near-square", "guarded-sqrt", "sqrt(10^40+1)"],
+    ["guarded-sqrt-large-odd-exponent", "guarded-sqrt", "sqrt(2*10^99)"],
+    ["guarded-arctan-large", "guarded-arctan", "arctan(10^20)"],
+    ["guarded-arctan-minus-large", "guarded-arctan", "arctan(-10^20)"],
+    ["guarded-log-default-base", "guarded-log", "log(2)"],
+    ["guarded-log-base-two", "guarded-log", "log_2(8)"],
+    ["guarded-log-base-three", "guarded-log", "log_3(10)"],
+    ["guarded-log-base-ten", "guarded-log", "log_10(1000)"],
+    ["guarded-log-of-one", "guarded-log", "log_2(1)"],
+    ["guarded-log-exponent", "guarded-log", "log_2^3(5)"],
+    ["guarded-sum-of-guarded", "guarded-arithmetic", "sin(1)+cos(1)"],
+    ["guarded-integer-times", "guarded-arithmetic", "2*sin(1)"],
+    ["guarded-minus-integer", "guarded-arithmetic", "sin(1)-1"],
+    ["guarded-negated", "guarded-arithmetic", "-sin(1)"],
+    ["guarded-divided-by-integer", "guarded-arithmetic", "sin(1)/3"],
+    ["guarded-integer-divided-by", "guarded-arithmetic", "3/sin(1)"],
+    ["guarded-divided-by-guarded", "guarded-arithmetic", "sin(1)/cos(1)"],
+    ["guarded-squared", "guarded-power", "sin(1)^2"],
+    ["guarded-negative-power", "guarded-power", "sin(1)^(-2)"],
+    ["guarded-rational-power", "guarded-power", "sin(1)^(1/2)"],
+    ["guarded-integer-to-guarded", "guarded-power", "2^sin(1)"],
+    ["guarded-to-guarded", "guarded-power", "exp(1)^sin(1)"],
+    ["guarded-negative-to-rational", "guarded-power", "(-sin(1))^(1/2)"],
+    ["guarded-zero-power", "guarded-power", "sin(1)^0"],
+    ["guarded-sqrt-squared", "guarded-arithmetic", "sqrt(2)*sqrt(2)"],
+    ["guarded-cancels-to-zero", "guarded-arithmetic", "sqrt(2)-sqrt(2)"],
+    ["guarded-zero-divisor", "guarded-arithmetic", "1/(sqrt(2)-sqrt(2))"],
+    ["guarded-plus-decimal-literal", "guarded-arithmetic", "sin(1)+0.5"],
+    ["guarded-times-decimal-literal", "guarded-arithmetic", "sin(1)*1.5"],
+    ["guarded-plus-rational", "guarded-arithmetic", "sin(1)+1/3"],
+    ["guarded-abs", "guarded-functions", "abs(-sin(1))"],
+    ["guarded-floor", "guarded-functions", "floor(exp(1))"],
+    ["guarded-ceil", "guarded-functions", "ceil(-exp(1))"],
+    ["guarded-max", "guarded-functions", "max(sin(1),cos(1))"],
+    ["guarded-min", "guarded-functions", "min(sin(1),cos(1),1)"],
+    ["guarded-mod", "guarded-functions", "exp(2) mod 3"],
+    ["guarded-mod-by-guarded", "guarded-functions", "7 mod exp(1)"],
+    ["guarded-gcd", "guarded-functions", "gcd(sqrt(2),2)"],
+    ["guarded-sum", "guarded-functions", "sum_(i=1)^4 sqrt(i)"],
+    ["guarded-prod", "guarded-functions", "prod_(i=1)^3 exp(i)"],
+    ["guarded-sin-of-guarded", "guarded-limited-operand", "sin(sin(1))"],
+    ["guarded-sqrt-of-guarded", "guarded-limited-operand", "sqrt(exp(1))"],
+    ["guarded-ln-of-guarded", "guarded-limited-operand", "ln(exp(2))"],
+    ["guarded-log-base-guarded", "guarded-limited-operand", "log_(exp(1))(10)"],
+    ["guarded-sec", "guarded-reciprocal", "sec(1)"],
+    ["guarded-csc", "guarded-reciprocal", "csc(2)"],
+    ["guarded-csc-zero", "guarded-reciprocal", "csc(0)"],
+    ["guarded-root", "guarded-unsupported", "root(3)(2)"],
+    ["guarded-unsupported-tan", "guarded-unsupported", "tan(1)"],
+    ["guarded-unsupported-cot", "guarded-unsupported", "cot(1)"],
+    ["guarded-unsupported-sinh", "guarded-unsupported", "sinh(1)"],
+    ["guarded-unsupported-arcsin", "guarded-unsupported", "arcsin(1)"],
+    ["guarded-unsupported-power", "guarded-unsupported", "2^(1/2)"],
+    ["guarded-exact-sqrt", "guarded-exact", "sqrt(4)"],
+    ["guarded-exact-arithmetic", "guarded-exact", "1/3+0.25"],
+    ["guarded-sqrt-negative", "guarded-errors", "sqrt(-2)"],
+  ].each { |id, group, text| rows << [id, group, "asciimath", text, GUARDED, {}, nil] }
+  # The gem's algorithms round twice — to the requested digits plus 16, then
+  # to the requested digits — so a value within those 16 digits of a rounding
+  # midpoint keeps the gem's own last digit, not the correctly rounded one:
+  # `sqrt(10^40+1)` is `10^20 + 5*10^-21 - ...`, which BigDecimal#sqrt rounds
+  # up to 41 digits where correct rounding would not.
+  [
+    ["guarded-sqrt-double-rounding-up", "sqrt(10^40+1)", 41],
+    ["guarded-sqrt-double-rounding-down", "sqrt(10^40-1)", 40],
+    ["guarded-sqrt-double-rounding-small", "sqrt(4*10^30+1)", 32],
+  ].each do |id, text, digits|
+    rows << [id, "guarded-sqrt", "asciimath", text, { "mode" => "strict", "guardDigits" => digits }, {}, nil]
+  end
+  [
+    ["guarded-decimal-literal-operand", "guarded-errors", "sin(0.5)"],
+    ["guarded-rational-operand", "guarded-errors", "sin(1/2)"],
+    ["guarded-rational-sqrt-operand", "guarded-errors", "sqrt(1/2)"],
+  ].each { |id, group, text| rows << [id, group, "asciimath", text, GUARDED, {}, "argument-error"] }
+  rows << ["guarded-exp-exponent-beyond-safe", "guarded-exp", "asciimath", "exp(10^19)", GUARDED, {}, "decimal-exponent"]
+  rows << ["guarded-float-binding", "guarded-limited-operand", "asciimath", "sin(x)", GUARDED, { "x" => 0.5 }, nil]
+  rows << ["guarded-integer-binding", "guarded-bindings", "asciimath", "sin(x)", GUARDED, { "x" => 2 }, nil]
+  rows << ["guarded-plus-float-binding", "guarded-bindings", "asciimath", "sin(1)+x", GUARDED, { "x" => 0.25 }, nil]
+  rows << ["guarded-divided-by-float-binding", "guarded-bindings", "asciimath", "sin(1)/x", GUARDED, { "x" => 0.25 }, nil]
+  rows << ["guarded-float-binding-divided-by", "guarded-bindings", "asciimath", "x/sin(1)", GUARDED, { "x" => 0.25 }, nil]
+  rows << ["guarded-string-binding", "guarded-bindings", "asciimath", "sin(x)", GUARDED, { "x" => "2" }, "argument-error"]
+  rows << ["guarded-latex-lg", "guarded-log", "latex", "\\lg(2)", GUARDED, {}, nil]
+  rows << ["guarded-latex-lg-thousand", "guarded-log", "latex", "\\lg(1000)", GUARDED, {}, nil]
+  rows << ["guarded-latex-sqrt", "guarded-sqrt", "latex", "\\sqrt{3}", GUARDED, {}, nil]
+  rows << ["guarded-latex-frac", "guarded-arithmetic", "latex", "\\frac{\\sin(1)}{2}", GUARDED, {}, nil]
+  [
+    ["strict-deferred-sin", "strict-deferred", "sin(1)"],
+    ["strict-deferred-sqrt", "strict-deferred", "sqrt(2)"],
+    ["strict-deferred-power", "strict-deferred", "2^(1/2)"],
+    ["strict-deferred-inside-sum", "strict-deferred", "1+exp(1)"],
+    ["strict-deferred-log-base", "strict-deferred", "log_2(8)"],
+    ["strict-deferred-after-exact", "strict-deferred", "1/3+sin(2)"],
+    ["strict-deferred-root", "strict-deferred", "root(3)(8)"],
+    ["strict-exact-division", "strict-exact", "1/3"],
+    ["strict-exact-decimal-literals", "strict-exact", "0.1+0.2"],
+    ["strict-exact-decimal-literal", "strict-exact", "2.5"],
+    ["strict-exact-sqrt", "strict-exact", "sqrt(9/4)"],
+    ["strict-exact-sqrt-zero", "strict-exact", "sqrt(0)"],
+    ["strict-exact-power", "strict-exact", "(2/3)^3"],
+    ["strict-exact-negative-power", "strict-exact", "2^(-3)"],
+    ["strict-exact-mod", "strict-exact", "7.5 mod 2"],
+    ["strict-exact-floor", "strict-exact", "floor(7/2)"],
+    ["strict-exact-sum", "strict-exact", "sum_(i=1)^4 1/i"],
+    ["strict-negative-root", "strict-errors", "(-8)^(1/3)"],
+    ["strict-division-by-zero", "strict-errors", "1/0"],
+  ].each { |id, group, text| rows << [id, group, "asciimath", text, STRICT, {}, nil] }
+  rows << ["strict-float-binding", "strict-limited-operand", "asciimath", "sin(x)", STRICT, { "x" => 0.5 }, nil]
+  rows << ["strict-float-binding-divided", "strict-limited-operand", "asciimath", "x/3", STRICT, { "x" => 0.5 }, nil]
+  rows << ["strict-infinite-binding-divided", "strict-errors", "asciimath", "x/3", STRICT, { "x" => Float::INFINITY }, nil]
+  rows << ["strict-string-binding", "strict-bindings", "asciimath", "x+1", STRICT, { "x" => "0.5" }, nil]
+  rows << ["strict-negative-string-binding", "strict-bindings", "asciimath", "x*2", STRICT, { "x" => "-12.75" }, nil]
+  rows << ["approximate-string-binding", "string-bindings", "asciimath", "x+1", {}, { "x" => "0.5" }, nil]
+  rows << ["approximate-integer-string-binding", "string-bindings", "asciimath", "x+1", {}, { "x" => "7" }, nil]
+  rows << ["approximate-exponent-string-binding", "error-invalid-binding", "asciimath", "x+1", {}, { "x" => "1e5" }, nil]
+  rows << ["approximate-plus-signed-string-binding", "error-invalid-binding", "asciimath", "x+1", {}, { "x" => "+1" }, nil]
+  rows << ["approximate-guard-digits-ignored", "approximate-guard-digits", "asciimath", "sin(1)", { "guardDigits" => 20 }, {}, nil]
+  rows << ["approximate-explicit-mode", "approximate-mode", "asciimath", "sqrt(2)+0.5", { "mode" => "approximate" }, {}, nil]
+end.freeze
 
 ALL_ROW_IDS = (ROWS + LATEX_ROWS).map(&:first)
 unknown = (BINDINGS.keys + PORT_REFUSALS.keys + OPTIONS.keys) - ALL_ROW_IDS
@@ -1404,6 +1581,11 @@ rows = ROWS.map { |id, group, text| [id, group, text, "asciimath"] }
     validate_port_refusal!(id, PORT_REFUSALS[id], row)
     row
   end
+  .concat(ACCURACY_ROWS.map do |id, group, format, text, options, bindings, port_refusal|
+    row = evaluate_row(id, group, SOURCE, format, text, bindings, port_refusal, options)
+    validate_port_refusal!(id, port_refusal, row)
+    row
+  end)
 
 ids = rows.map { |r| r["id"] }
 duplicates = ids.tally.select { |_, n| n > 1 }.keys

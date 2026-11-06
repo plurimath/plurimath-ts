@@ -59,22 +59,18 @@
  *
  * ## Known divergences
  *
- * - An XML declaration naming an ASCII-compatible encoding other than UTF-8
- *   changes how Ruby labels the strings. Two consequences are reproduced:
+ * - Moxml rewrites the first quoted `encoding` value of a leading XML
+ *   declaration to UTF-8 (`rewriteDeclaredEncoding`), so a declared encoding
+ *   reaches Ox only from a second `encoding` attribute in the same
+ *   declaration. When that names an ASCII-compatible encoding other than
+ *   UTF-8, Ruby labels the strings with it. Two consequences are reproduced:
  *   text and attribute values still read as UTF-8, and a numeric reference
  *   above U+007F writes a single raw byte in text (above U+00FF it is
- *   refused), with invalid UTF-8 in marker-free text normalized to `?`
- *   (`&#195;&#169;` is `é`); in an attribute value it is refused. Not
- *   reproduced: the gem re-reads every element name, comment, processing
- *   instruction (target and text), CDATA section and namespace URI through
- *   the declared encoding, wherever it sits in the tree, so non-ASCII in any
- *   of them comes out transcoded, as `?`, or as a refusal, depending on the
- *   encoding. This reader keeps UTF-8 in all of them. The fixtures probe an
- *   element name, a comment, PI text (not a PI target), CDATA, a default and
- *   a prefixed namespace URI, each singly, under every encoding name Ruby
- *   knows except the four environment-dependent ones below, and pin each
- *   such row to the gem's own `encoding="UTF-8"` answer for the same body.
- *   PI targets and documents combining several places are not probed.
+ *   refused), with invalid UTF-8 in marker-free text normalized to `?`; in an
+ *   attribute value it is refused. Not reproduced: the gem then re-reads
+ *   element names, comments, processing instructions, CDATA sections and
+ *   namespace URIs through that encoding. This reader keeps UTF-8 in all of
+ *   them. The fixtures probe only a numeric reference in text this way.
  * - `locale`, `external`, `filesystem` and `internal` resolve through the Ruby
  *   process's environment; they are read as UTF-8, which is what they are in
  *   the oracle's environment (under `LC_ALL=C` the gem would differ).
@@ -146,7 +142,10 @@ export function readXml(input: string): XmlReadElement {
   if (hasLoneSurrogate(input)) {
     throw new XmlReadError("input contains a lone surrogate and has no UTF-8 form");
   }
-  const parser = new OxParser(ENCODER.encode(markEntities(input)));
+  if (input.includes("\u0000")) {
+    throw new XmlReadError("input contains a NUL character");
+  }
+  const parser = new OxParser(ENCODER.encode(markEntities(rewriteDeclaredEncoding(input))));
   const result = parser.parse();
   if (result === null) throw new XmlReadError("empty document");
   if (parser.encoding === "incompatible") {
@@ -155,6 +154,19 @@ export function readXml(input: string): XmlReadElement {
   const root = result.kind === "document" ? result.nodes.find(isOxElement) : result;
   if (root === undefined) throw new XmlReadError("document has no root element");
   return wrapElement(root, []);
+}
+
+/**
+ * Moxml's `Entity.rewrite_declared_encoding`: Moxml always hands the engine
+ * UTF-8, so it rewrites the first quoted `encoding=` value of a leading XML
+ * declaration to `"UTF-8"`. Only that one value is rewritten; a second
+ * `encoding` attribute in the same declaration still reaches Ox.
+ */
+const DECLARED_ENCODING = /^(<\?xml[^>]*?encoding=)['"][^'"]*['"]/;
+
+function rewriteDeclaredEncoding(input: string): string {
+  if (!input.startsWith("<?xml") || !input.includes("encoding=")) return input;
+  return input.replace(DECLARED_ENCODING, (_match, head: string) => `${head}"UTF-8"`);
 }
 
 // --- layer 1: Moxml's entity marking ---------------------------------------
@@ -324,7 +336,7 @@ class OxError extends Error {}
  */
 class OxParser {
   private readonly buf: Uint8Array;
-  /** `pi->end`: `pi->str` plus the whole input's length, BOM included (see the constructor). */
+  /** `pi->end`: the input's terminating NUL, after any BOM (see the constructor). */
   private readonly end: number;
   /** The start of the string after any BOM (`pi->str`). */
   private readonly str: number;
@@ -345,11 +357,9 @@ class OxParser {
     this.str = start;
     this.s = start;
     // Ox is handed the Ruby string's length, and scanning also stops at a NUL.
-    // `to_gen` skips a BOM but keeps the string's full length (ox.c), so Ox's
-    // end (`pi.end = pi.str + len`) sits 3 bytes past the document's
-    // terminator: after a BOM, the attribute loop never takes its
-    // ran-out-at-the-end exit.
-    this.end = start + bytes.length;
+    // `Ox.load` shortens that length by the BOM it skips (ox.c `load`), so
+    // `pi.end` is the document's own terminator, with or without a BOM.
+    this.end = bytes.length;
   }
 
   private at(i: number): number {

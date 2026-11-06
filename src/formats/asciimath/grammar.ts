@@ -393,10 +393,84 @@ export function createAsciimathGrammar(
     ),
   );
 
+  // --- amath 0.1 `uncertainty` (plurimath#493) ---------------------------------------
+  // ustd(y, u) / ustd(y(d)) / uexp(y, U, k[, p]) / ucov(y, lo, hi, p[, kind]),
+  // each with an optional last "unitsml(...)" argument; the tree contract is
+  // plurimath's docs/uncertainty-asciimath-tree.md. The oracle's AsciiMath
+  // grammar is amath, which tries `uncertainty` first in
+  // symbol_text_or_integer; a call that is not a well-formed uncertainty form
+  // fails here and falls back to the ordinary alternatives. Numbers always use
+  // a full stop, whatever the decimal marker.
+
+  const uncSpace = rule(() => match(`[${RUBY_SPACE}]`).repeat());
+  const uncDigits = rule(() => match("[0-9]").repeat(1));
+  const uncNumber = rule(() => seq(uncDigits, seq(str("."), uncDigits).maybe()));
+  const uncValue = rule(() => seq(str("-").maybe(), uncNumber).as("value"));
+  const uncSep = rule(() => seq(uncSpace, str(","), uncSpace));
+  const uncUnit = rule(() =>
+    seq(uncSep, str('"unitsml('), seq(str(')"').absent(), any()).repeat().as("unit"), str(')"')),
+  );
+  const uncOpen = rule(() => seq(str("("), uncSpace));
+  const uncClose = rule(() => seq(uncSpace, str(")")));
+  const uncSharedExponent = rule(() =>
+    seq(str("e"), seq(alt(str("+"), str("-")).maybe(), uncDigits).as("shared_exponent")),
+  );
+  const uncMeasuredPair = rule(() => seq(uncValue, uncSep, uncNumber.as("magnitude")));
+  const uncScaledPair = rule(() => seq(uncOpen, uncMeasuredPair, uncClose, uncSharedExponent));
+  const uncMeasuredInterval = rule(() =>
+    seq(uncValue, uncSep, uncNumber.as("lower"), uncSep, uncNumber.as("upper")),
+  );
+  const uncScaledInterval = rule(() =>
+    seq(uncOpen, uncMeasuredInterval, uncClose, uncSharedExponent),
+  );
+  const uncStandard = rule(() =>
+    alt(
+      uncScaledPair,
+      seq(
+        uncValue,
+        alt(
+          seq(uncSep, uncNumber.as("magnitude")),
+          seq(str("("), uncDigits.as("concise_digits"), str(")"), uncSharedExponent.maybe()),
+        ),
+      ),
+    ),
+  );
+  const uncertaintyStd = rule(() =>
+    seq(str("ustd").as("uncertainty_class"), uncOpen, uncStandard, uncUnit.maybe(), uncClose),
+  );
+  const uncertaintyExp = rule(() =>
+    seq(
+      str("uexp").as("uncertainty_class"),
+      uncOpen,
+      alt(uncScaledPair, uncMeasuredPair),
+      uncSep,
+      uncNumber.as("coverage_factor"),
+      seq(uncSep, uncNumber.as("coverage_probability")).maybe(),
+      uncUnit.maybe(),
+      uncClose,
+    ),
+  );
+  const uncertaintyCov = rule(() =>
+    seq(
+      str("ucov").as("uncertainty_class"),
+      uncOpen,
+      alt(uncScaledInterval, uncMeasuredInterval),
+      uncSep,
+      uncNumber.as("coverage_probability"),
+      seq(uncSep, alt(str("shortest"), str("symmetric")).as("interval_kind")).maybe(),
+      uncUnit.maybe(),
+      uncClose,
+    ),
+  );
+  const uncertainty = rule(() =>
+    alt(uncertaintyStd, uncertaintyExp, uncertaintyCov).as("uncertainty"),
+  );
+
   // --- asciimath/parse.rb:81-92 ------------------------------------------------------
 
   const symbolTextOrInteger = rule(() =>
     alt(
+      uncertainty,
       subSupClasses,
       binaryClasses,
       ternaryClasses,

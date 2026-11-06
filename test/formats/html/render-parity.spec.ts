@@ -289,29 +289,17 @@ describe(`${FORMAT} parity, the cases the gem refuses`, () => {
   );
 });
 
-const RIGHT_REFUSAL = /UnaryFunction alias "Right"/;
 const MSGROUP_REFUSAL = /UnaryFunction alias "Msgroup"/;
 
 describeCorpusTargets({
   format: "html",
   renderFormula: (formula) => toHtml(formula),
-  rendered: 664,
-  // Each refusal names where the port stops. The left-right cases stop at the
-  // `Right` node, where the gem raises ArgumentError (`Right#to_html` takes no
-  // keyword arguments). The MathML cases stop at the node the gem raises on:
+  rendered: 673,
+  // Each refusal names where the port stops. The MathML cases stop at the node the gem raises on:
   // an unmeasured `Msgroup`, a list where a node belongs, a bare string, a
   // `Phantom` or an `Nary`. OMML partial-render cases stop at a list slot
   // (`omml-partial-001`) or at `Nary` (the remaining cases).
   refusedWith: new Map([
-    ["left-right-round", RIGHT_REFUSAL],
-    ["left-right-square", RIGHT_REFUSAL],
-    ["left-right-around-frac", RIGHT_REFUSAL],
-    ["latex-left-right-round", RIGHT_REFUSAL],
-    ["latex-left-right-square", RIGHT_REFUSAL],
-    ["latex-left-right-curly", RIGHT_REFUSAL],
-    ["latex-left-right-bar", RIGHT_REFUSAL],
-    ["latex-left-right-round-sum", RIGHT_REFUSAL],
-    ["latex-left-right-around-frac", RIGHT_REFUSAL],
     ["mathml-partial-003", MSGROUP_REFUSAL],
     ["mathml-partial-004", MSGROUP_REFUSAL],
     ["mathml-partial-005", MSGROUP_REFUSAL],
@@ -355,15 +343,6 @@ describeCorpusTargets({
     ["omml-partial-022", /Nary has no HTML renderer/],
   ]),
   refused: [
-    "left-right-round",
-    "left-right-square",
-    "left-right-around-frac",
-    "latex-left-right-round",
-    "latex-left-right-square",
-    "latex-left-right-curly",
-    "latex-left-right-bar",
-    "latex-left-right-round-sum",
-    "latex-left-right-around-frac",
     "mathml-partial-003",
     "mathml-partial-004",
     "mathml-partial-005",

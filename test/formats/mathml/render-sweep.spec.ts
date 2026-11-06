@@ -47,7 +47,7 @@ describe("the gem-verified mathml render sweep", () => {
   it("is complete and non-empty (an empty sweep is a failure, not a pass)", () => {
     expect(fixture.cases.length).toBe(1642);
     expect(fixture.cases.length).toBe(fixture.count);
-    expect(fixture.oracle.commit).toBe("ae20be111a26fdd988c58be0bfb2b7f6fe6e352f");
+    expect(fixture.oracle.commit).toBe("2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256");
     for (const entry of fixture.cases) {
       expect(typeof entry.input, JSON.stringify(entry)).toBe("string");
       expect(entry.render !== undefined || entry.error !== undefined).toBe(true);

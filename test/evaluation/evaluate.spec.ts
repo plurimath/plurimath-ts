@@ -1,22 +1,25 @@
 /**
- * Oracle-backed parity for `evaluate(formula, bindings, options)` (roadmap
- * B6: arithmetic, the exact functions and iterations, and the `Math` module
- * functions).
+ * Oracle-backed parity for `evaluate(formula, bindings, options)` and
+ * `evaluateResult` (roadmap B6: arithmetic, the exact functions and
+ * iterations, the `Math` module functions, and plurimath 0.11.13's
+ * accuracy-aware evaluation with its strict and guarded modes).
  *
  * The rows are `test/formats/evaluation/evaluation-fixtures.json`, written by
- * `scripts/generate-evaluation-fixtures.rb` from the pinned gem (plurimath
- * 0.11.6, `00c52783`). `expected` is Ruby's `Integer#inspect`/`Float#inspect`
- * STRING, so each row checks two things: the value (`Object.is`, so `-0.0`
- * and `0` stay apart) and the Ruby kind the string records (`5` is an
- * Integer, `2.0` a Float) against the kind the port tracks internally
- * (`src/evaluation/numeric.ts`) — the tracking that decides where the port
- * must refuse. A row with `portRefusal` is one the port refuses with
- * `UnsupportedFeatureError` whatever the oracle answered: a FINAL result a JS
- * number cannot hold exactly, a Float power or `Math` function result inside
- * glibc's rounding band, a sin/cos/tan argument inside `libm.ts`'s reduction
- * guard, a `sinh`/`cosh` argument whose `exp` call is inside `exp`'s band
- * (`libm-hyperbolic.ts`), a Ruby `ArgumentError`, or an
- * exact intermediate beyond the port's size limit (the generator's header).
+ * `scripts/generate-evaluation-fixtures.rb` from the pinned gem. Each
+ * evaluated row records the gem's `Evaluation::Result`: `expected` is the
+ * value's `#inspect` STRING with its class in `valueClass`, `boundaries` every
+ * boundary record (each Ruby value as its `#inspect`), and `unevaluated` the
+ * AsciiMath of a deferred formula. `evaluateResult` must give all three, the
+ * value's class included; `evaluate` must give the same `number` (`Object.is`,
+ * so `-0.0` and `0` stay apart) where the value is a Float or a safe Integer,
+ * and refuse with `UnsupportedFeatureError` where it is a Rational, a
+ * BigDecimal, an unsafe Integer or deferred. A row with `portRefusal` is one
+ * both refuse whatever the oracle answered: a Float power or `Math` function
+ * result inside glibc's rounding band, a sin/cos/tan argument inside
+ * `libm.ts`'s reduction guard, a `sinh`/`cosh` argument whose `exp` call is
+ * inside `exp`'s band (`libm-hyperbolic.ts`), a Ruby `ArgumentError`, an
+ * exact intermediate beyond the port's size limit, or a BigDecimal exponent
+ * beyond `Number.MAX_SAFE_INTEGER` (the generator's header).
  */
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -35,15 +38,18 @@ import {
   type EvaluationBindings,
   type EvaluationErrorCode,
   type EvaluationOptions,
+  type EvaluationResult,
   evaluate,
+  evaluateResult,
   InvalidBindingError,
   InvalidBindingKeyError,
+  inspectEvaluationValue,
   MathDomainError,
   MissingVariableError,
   NonFiniteResultError,
   UnsupportedExpressionError,
 } from "../../src/evaluation/index";
-import { parseAsciimath } from "../../src/formats/asciimath/index";
+import { parseAsciimath, toAsciimath } from "../../src/formats/asciimath/index";
 import { parseLatex } from "../../src/formats/latex/index";
 
 interface Row {
@@ -53,16 +59,55 @@ interface Row {
   readonly input: { readonly format: string; readonly text: string };
   readonly bindings: Readonly<Record<string, number | string | boolean | null>>;
   readonly expected?: string;
+  readonly valueClass?: string;
+  readonly boundaries?: readonly BoundaryRow[];
+  readonly unevaluated?: readonly string[];
   readonly raises?: string;
   readonly message?: string;
   readonly portRefusal?: string;
   readonly options?: EvaluationOptions;
 }
 
+interface BoundaryRow {
+  readonly operation: string;
+  readonly operands: readonly string[];
+  readonly operandAccuracy: string;
+  readonly action: string;
+  readonly result: string;
+}
+
 /** The evaluator settings a row's `options` (the gem configuration it ran under) resolve to. */
 function toSettings(row: Row): EvaluatorSettings {
   const cap = row.options?.evaluationMaxIterations;
-  return { maxIterations: cap === undefined ? DEFAULT_MAX_ITERATIONS : cap };
+  return {
+    maxIterations: cap === undefined ? DEFAULT_MAX_ITERATIONS : cap,
+    mode: row.options?.mode,
+    guardDigits: row.options?.guardDigits,
+  };
+}
+
+/** Ruby's class name for each `EvaluationValue` kind. */
+const VALUE_CLASSES: Readonly<Record<string, string>> = {
+  integer: "Integer",
+  rational: "Rational",
+  float: "Float",
+  decimal: "BigDecimal",
+};
+
+/** A Result in the fixture's own shape: every value as Ruby's `#inspect`. */
+function asRecorded(result: EvaluationResult) {
+  return {
+    expected: inspectEvaluationValue(result.value),
+    valueClass: result.value === null ? "NilClass" : VALUE_CLASSES[result.value.kind],
+    boundaries: result.boundaries.map((boundary) => ({
+      operation: boundary.operation,
+      operands: boundary.operands.map(inspectEvaluationValue),
+      operandAccuracy: boundary.operandAccuracy,
+      action: boundary.action,
+      result: inspectEvaluationValue(boundary.result),
+    })),
+    unevaluated: result.unevaluated.map((formula) => toAsciimath(formula)),
+  };
 }
 
 /** The parser for a row's `input.format` — every format `evaluate()` fixtures cover so far. */
@@ -178,18 +223,33 @@ describe("evaluate() against the oracle fixtures", () => {
       expect(() => evaluate(formula, bindings, row.options), row.id).toThrow(
         UnsupportedFeatureError,
       );
+      expect(() => evaluateResult(formula, bindings, row.options), row.id).toThrow(
+        UnsupportedFeatureError,
+      );
       return;
     }
     if (row.expected !== undefined) {
-      // Only an Integer or a Float in the safe range may go unrefused; the
-      // generator aborts otherwise, and this keeps that promise checked.
-      expect(row.expected, row.id).toMatch(/^-?\d+$|[.eIN]/);
-      const rubyKind = /^-?\d+$/.test(row.expected) ? "integer" : "float";
-      const result = Evaluator.runWithKind(formula, bindings, toSettings(row));
-      expect(result.value, row.id).toBe(Number(row.expected));
-      expect(result.kind, row.id).toBe(rubyKind);
-      if (rubyKind === "integer") expect(Number.isSafeInteger(result.value), row.id).toBe(true);
-      expect(evaluate(formula, bindings, row.options), row.id).toBe(result.value);
+      const result = evaluateResult(formula, bindings, row.options);
+      expect(asRecorded(result), row.id).toEqual({
+        expected: row.expected,
+        valueClass: row.valueClass,
+        boundaries: row.boundaries,
+        unevaluated: row.unevaluated,
+      });
+      // `evaluate` answers with a number exactly where one holds the value.
+      const representable =
+        row.valueClass === "Float" ||
+        (row.valueClass === "Integer" && Number.isSafeInteger(Number(row.expected)));
+      if (!representable) {
+        expect(() => evaluate(formula, bindings, row.options), row.id).toThrow(
+          UnsupportedFeatureError,
+        );
+        return;
+      }
+      const final = Evaluator.runWithKind(formula, bindings, toSettings(row));
+      expect(final.value, row.id).toBe(Number(row.expected));
+      expect(final.kind, row.id).toBe(row.valueClass === "Integer" ? "integer" : "float");
+      expect(evaluate(formula, bindings, row.options), row.id).toBe(final.value);
       return;
     }
     const raises = row.raises as string;
@@ -198,14 +258,6 @@ describe("evaluate() against the oracle fixtures", () => {
     if (errorClass === undefined || expectedCode === undefined) {
       throw new Error(`${row.id}: no port error class mapped for ${raises}`);
     }
-    let thrown: unknown;
-    try {
-      evaluate(formula, bindings, row.options);
-    } catch (error) {
-      thrown = error;
-    }
-    expect(thrown, row.id).toBeInstanceOf(errorClass);
-    expect((thrown as { code: string }).code, row.id).toBe(expectedCode);
     // Byte-exact, not merely "some message": a wrong phrase behind the right
     // class and `code` would otherwise pass silently (item 2's finding —
     // `describeUnsupportedNode`'s old `linebreak` vs the gem's own
@@ -213,24 +265,35 @@ describe("evaluate() against the oracle fixtures", () => {
     // (the generator's header); a missing one here is the generator failing
     // to keep that promise, not something to skip past.
     expect(row.message, row.id).toBeDefined();
-    expect((thrown as Error).message, row.id).toBe(row.message);
+    for (const call of [evaluate, evaluateResult]) {
+      let thrown: unknown;
+      try {
+        call(formula, bindings, row.options);
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown, `${row.id} (${call.name})`).toBeInstanceOf(errorClass);
+      expect((thrown as { code: string }).code, row.id).toBe(expectedCode);
+      expect((thrown as Error).message, row.id).toBe(row.message);
+    }
   });
 
   it("covers every refusal reason and both kinds", () => {
     const reasons = new Set(rows.flatMap((row) => (row.portRefusal ? [row.portRefusal] : [])));
     expect([...reasons].sort()).toEqual([
       "argument-error",
-      "big-integer",
+      "decimal-exponent",
       "hyperbolic-rounding-band",
       "libm-reduction",
       "libm-rounding-band",
       "pow-rounding-band",
-      "rational",
       "size-limit",
     ]);
     const plain = rows.filter((row) => row.portRefusal === undefined && row.expected !== undefined);
-    expect(plain.some((row) => /^-?\d+$/.test(row.expected as string))).toBe(true);
-    expect(plain.some((row) => !/^-?\d+$/.test(row.expected as string))).toBe(true);
+    const classes = new Set(plain.map((row) => row.valueClass));
+    expect([...classes].sort()).toEqual(["BigDecimal", "Float", "Integer", "NilClass", "Rational"]);
+    const actions = new Set(plain.flatMap((row) => (row.boundaries ?? []).map((b) => b.action)));
+    expect([...actions].sort()).toEqual(["approximated", "deferred", "guarded"]);
   });
 });
 
@@ -283,6 +346,28 @@ describe("evaluate() — measurements not covered by the oracle fixtures", () =>
   it("rejects an evaluationMaxIterations that is neither a number nor null", () => {
     const options = { evaluationMaxIterations: "5" } as unknown as EvaluationOptions;
     expect(() => evaluate(parseAsciimath("sum_(i=1)^3 i"), {}, options)).toThrow(TypeError);
+  });
+
+  // The gem's `Evaluator#initialize` raises `ArgumentError` with these messages.
+  it("rejects a mode or guardDigits the gem's ArgumentError rejects", () => {
+    const formula = parseAsciimath("sin(1)");
+    const mode = { mode: "exact" } as unknown as EvaluationOptions;
+    expect(() => evaluateResult(formula, {}, mode)).toThrow(
+      new TypeError("mode must be one of [:approximate, :strict]"),
+    );
+    for (const guardDigits of [0, -3, 2.5]) {
+      expect(() => evaluateResult(formula, {}, { mode: "strict", guardDigits })).toThrow(
+        new TypeError("guard_digits must be a positive Integer"),
+      );
+    }
+  });
+
+  it("returns the deferred formula itself as unevaluated", () => {
+    const formula = parseAsciimath("1+exp(1)");
+    const result = evaluateResult(formula, {}, { mode: "strict" });
+    expect(result.value).toBeNull();
+    expect(result.unevaluated).toEqual([formula]);
+    expect(result.unevaluated[0]).toBe(formula);
   });
 
   /**

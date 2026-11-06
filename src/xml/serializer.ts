@@ -45,9 +45,10 @@
  * Established by dumping every ASCII character 0x00-0x7F plus a non-ASCII
  * sampler in both positions (single-string sweeps, oracle-printed):
  *
- * - both positions: `&` → `&amp;`, `<` → `&lt;`, `>` → `&gt;`; C0 controls
- *   except `\t` `\n` `\r` → `&#x00NN;` (lowercase hex, zero-padded to four
- *   digits); `\t` `\n` `\r` literal.
+ * - both positions: `&` → `&amp;`, `<` → `&lt;`, `>` → `&gt;`; `\t` `\n`
+ *   `\r` literal. Any other C0 control makes Ox 2.14.29 raise
+ *   `Ox::SyntaxError` ({@link XmlInvalidCharacterError}); the formula
+ *   engine's `invalid_replace: ""` drops them instead.
  * - attribute values additionally: `"` → `&quot;`.
  * - everything else is emitted verbatim: `'`, DEL 0x7F, and all non-ASCII
  *   (U+00A0, U+2028/9, surrogate-pair astral characters, U+E000, U+10FFFF
@@ -145,6 +146,21 @@ export class XmlDepthLimitError extends Error {
     super(`maximum depth exceeded — Ox serializes at most ${limit} levels below the root`);
     this.name = "XmlDepthLimitError";
     this.limit = limit;
+  }
+}
+
+/**
+ * `Ox::SyntaxError` from a raw `Ox.dump` of text or an attribute value holding
+ * a C0 control other than tab, newline or carriage return. The message is
+ * Ox 2.14.29's, byte for byte: `'\#x00' is not a valid XML character.`
+ */
+export class XmlInvalidCharacterError extends Error {
+  readonly codePoint: number;
+
+  constructor(codePoint: number) {
+    super(`'\\#x${codePoint.toString(16).padStart(2, "0")}' is not a valid XML character.`);
+    this.name = "XmlInvalidCharacterError";
+    this.codePoint = codePoint;
   }
 }
 
@@ -287,10 +303,12 @@ function escapeValue(value: string, escapeQuote: boolean, dropInvalid: boolean):
     } else if (code === 0x22 && escapeQuote) {
       replacement = "&quot;";
     } else if (code < 0x20 && code !== 0x09 && code !== 0x0a && code !== 0x0d) {
-      // Ox writes C0 controls as numeric references, lowercase, zero-padded
-      // to four hex digits: NUL → `&#x0000;`, VT → `&#x000b;` (measured over
-      // the full 0x00-0x1F range; \t \n \r are the three literal exceptions).
-      replacement = dropInvalid ? "" : `&#x${code.toString(16).padStart(4, "0")};`;
+      // Ox 2.14.29 refuses C0 controls in a raw dump (measured over the full
+      // 0x00-0x1F range; \t \n \r are the three accepted exceptions) and
+      // raises on the first one in document order. The formula engine's
+      // `invalid_replace: ""` drops them instead.
+      if (!dropInvalid) throw new XmlInvalidCharacterError(code);
+      replacement = "";
     }
     if (replacement !== undefined) {
       out += value.slice(plainFrom, i) + replacement;

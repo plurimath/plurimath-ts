@@ -1532,6 +1532,65 @@ export class UnitsmlNode extends NodeBase {
   }
 }
 
+/** The three categories `Uncertainty::CATEGORIES` names, as Ruby symbols. */
+export type UncertaintyCategory = "standard" | "expanded" | "coverage_interval";
+/** `Uncertainty::NOTATIONS`; `nil` for every category but `standard`. */
+export type UncertaintyNotation = "absolute" | "concise";
+/** `Uncertainty::INTERVAL_KINDS`. */
+export type UncertaintyIntervalKind = "shortest" | "probabilistically_symmetric";
+
+export interface UncertaintyInit {
+  readonly value: MathNode;
+  readonly category: UncertaintyCategory;
+  readonly magnitude?: MathNode | null | undefined;
+  readonly coverageFactor?: MathNode | null | undefined;
+  readonly coverageProbability?: MathNode | null | undefined;
+  readonly lower?: MathNode | null | undefined;
+  readonly upper?: MathNode | null | undefined;
+  readonly intervalKind?: UncertaintyIntervalKind | null | undefined;
+  readonly notation?: UncertaintyNotation | null | undefined;
+  readonly unit?: MathNode | null | undefined;
+}
+
+/**
+ * `Math::Function::Uncertainty` (plurimath#493): a measured value with a
+ * standard uncertainty, an expanded uncertainty and its coverage factor, or a
+ * coverage interval. Every number is a `Number` holding the text as written.
+ *
+ * Ruby's `initialize` assigns all ten instance variables, and stores
+ * `notation` only for the standard category (`nil` otherwise), so the
+ * constructor does the same. The gem validates in `initialize`; here, per the
+ * module contract, the constructor is permissive and `uncertaintyProblem`
+ * (`./uncertainty`) carries the gem's checks for the parse and render paths.
+ */
+export class UncertaintyNode extends NodeBase {
+  readonly kind = "uncertainty" as const;
+  readonly category: UncertaintyCategory;
+  readonly coverageFactor: MathNode | null;
+  readonly coverageProbability: MathNode | null;
+  readonly intervalKind: UncertaintyIntervalKind | null;
+  readonly lower: MathNode | null;
+  readonly magnitude: MathNode | null;
+  readonly notation: UncertaintyNotation | null;
+  readonly unit: MathNode | null;
+  readonly upper: MathNode | null;
+  readonly value: MathNode;
+
+  constructor(init: UncertaintyInit) {
+    super();
+    this.category = init.category;
+    this.coverageFactor = init.coverageFactor ?? null;
+    this.coverageProbability = init.coverageProbability ?? null;
+    this.intervalKind = init.intervalKind ?? null;
+    this.lower = init.lower ?? null;
+    this.magnitude = init.magnitude ?? null;
+    this.notation = init.category === "standard" ? (init.notation ?? "absolute") : null;
+    this.unit = init.unit ?? null;
+    this.upper = init.upper ?? null;
+    this.value = init.value;
+  }
+}
+
 export interface TildeInit {
   readonly attributes?: NodeOptions | null | undefined;
   readonly hideFunctionName?: boolean | undefined;
@@ -1730,6 +1789,7 @@ export type ConstructedMathNode =
   | UbraceNode
   | UlNode
   | UnaryFunctionNode
+  | UncertaintyNode
   | UndersetNode
   | UnitsmlNode
   | VecNode;
@@ -1800,6 +1860,7 @@ export const NODE_KINDS = [
   "ubrace",
   "ul",
   "unaryFunction",
+  "uncertainty",
   "underset",
   "unitsml",
   "vec",
@@ -1907,6 +1968,18 @@ export const EQUALITY_FIELDS: { readonly [K in NodeKind]: readonly string[] } = 
   ubrace: ["parameterOne"],
   ul: ["parameterOne"],
   unaryFunction: ["parameterOne"],
+  uncertainty: [
+    "category",
+    "coverageFactor",
+    "coverageProbability",
+    "intervalKind",
+    "lower",
+    "magnitude",
+    "notation",
+    "unit",
+    "upper",
+    "value",
+  ],
   underset: ["parameterOne", "parameterTwo"],
   unitsml: ["text"],
   vec: ["parameterOne"],

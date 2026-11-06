@@ -529,14 +529,11 @@ const GRAMMAR_CASES: ReadonlyArray<GrammarCase> = [
   ["latex", "1,000 nested \\sqrt", wrapped("\\sqrt{", "2", "}", DEEP), "PARSE_ERROR"],
   ["latex", "20 nested parens", wrapped("(", "x", ")", SHALLOW), "parsed"],
   ["latex", "1,000 nested parens", wrapped("(", "x", ")", DEEP), "PARSE_ERROR"],
-  // RENDER_ERROR because of `toHtml` alone; the test after this table pins
-  // that the other five renderers still render it. Measured on the pinned
-  // oracle: the gem parses this and renders it through to_asciimath,
-  // to_latex, to_mathml, to_unicodemath and to_omml, but `Formula#to_html` raises (as
-  // `Math::ParseError`, from inside the render call), the same
-  // `\\left…\\right` refusal `test/formats/html/render-parity.spec.ts` pins
-  // for the corpus cases.
-  ["latex", "20 nested \\left(", wrapped("\\left(", "x", "\\right)", SHALLOW), "RENDER_ERROR"],
+  // Renders in every format since plurimath#508 gave `Right#to_html` the
+  // keyword arguments `Formula#to_html` passes (measured on plurimath
+  // 2967dcc4; at 0.11.12 `toHtml` alone refused it). The test after this
+  // table pins all six renderers.
+  ["latex", "20 nested \\left(", wrapped("\\left(", "x", "\\right)", SHALLOW), "parsed"],
   ["latex", "1,000 nested \\left(", wrapped("\\left(", "x", "\\right)", DEEP), "PARSE_ERROR"],
   [
     "latex",
@@ -693,17 +690,13 @@ describe("every LaTeX, HTML and UnicodeMath adversarial input reaches the outcom
   });
 });
 
-describe("20 nested \\left( is refused by toHtml alone", () => {
-  // The table row above is RENDER_ERROR, which would also hold if any of the
-  // other five renderers started refusing. This pins the split.
+describe("20 nested \\left( renders in every format", () => {
+  // The table row above is "parsed"; this pins each renderer, toHtml among
+  // them, which refused it before plurimath#508.
   const node = parseLatex(wrapped("\\left(", "x", "\\right)", SHALLOW));
 
-  it.each(RENDERERS.filter(([name]) => name !== "toHtml"))("%s renders it", (_name, render) => {
+  it.each(RENDERERS)("%s renders it", (_name, render) => {
     expect(typeof render(node)).toBe("string");
-  });
-
-  it("toHtml refuses it with a typed RenderError", () => {
-    expect(() => toHtml(node)).toThrow(RenderError);
   });
 });
 

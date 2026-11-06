@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { normalize, ParseError } from "../../../src/core/index";
 import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
 import { buildUnicodemathTransform } from "../../../src/formats/unicodemath/transform";
+import { expectSupersededAtPin, SUPERSEDED_AT_PIN } from "./superseded-at-pin";
 
 interface Witness {
   readonly input: string;
@@ -60,8 +61,9 @@ const fixtures = JSON.parse(payload) as {
 const metadata = JSON.parse(
   readFileSync(join(here, "xml-origin-fixtures.metadata.json"), "utf8"),
 ) as Metadata;
-const parsed = fixtures.cases.filter((entry) => entry.model !== undefined);
-const refused = fixtures.cases.filter((entry) => entry.raises !== undefined);
+const current = fixtures.cases.filter((entry) => !SUPERSEDED_AT_PIN.has(entry.input));
+const parsed = current.filter((entry) => entry.model !== undefined);
+const refused = current.filter((entry) => entry.raises !== undefined);
 
 describe("the XML-origin UnicodeMath observations", () => {
   it("retains the pinned measurement and candidate provenance", () => {
@@ -97,11 +99,14 @@ describe("the XML-origin UnicodeMath observations", () => {
     expect(fixtures.cases.length).toBe(440);
     expect(fixtures.cases.length).toBe(metadata.candidates.rowCount);
     expect(fixtures.cases.length).toBe(metadata.projection.rowCount);
-    expect(parsed.length).toBe(354);
-    expect(parsed.length).toBe(metadata.projection.modelCount);
-    expect(refused.length).toBe(86);
-    expect(refused.length).toBe(metadata.projection.refusalCount);
-    expect(parsed.length + refused.length).toBe(fixtures.cases.length);
+    const recordedModels = fixtures.cases.filter((entry) => entry.model !== undefined);
+    const recordedRefusals = fixtures.cases.filter((entry) => entry.raises !== undefined);
+    expect(recordedModels.length).toBe(354);
+    expect(recordedModels.length).toBe(metadata.projection.modelCount);
+    expect(recordedRefusals.length).toBe(86);
+    expect(recordedRefusals.length).toBe(metadata.projection.refusalCount);
+    expect(recordedModels.length + recordedRefusals.length).toBe(fixtures.cases.length);
+    expect(expectSupersededAtPin(fixtures.cases)).toBe(3);
     expect(new Set(fixtures.cases.map((entry) => entry.input)).size).toBe(fixtures.cases.length);
     for (const entry of fixtures.cases) {
       expect(entry.model !== undefined, entry.input).not.toBe(entry.raises !== undefined);
@@ -111,7 +116,11 @@ describe("the XML-origin UnicodeMath observations", () => {
   });
 
   it("partitions every measured Ruby registration into ported or unreachable rules", () => {
-    const ported = buildUnicodemathTransform().ruleIds;
+    // Rules added at plurimath 2967dcc4 carry that prefix; the measured
+    // registration below is 00c52783's, which has none of them.
+    const all = buildUnicodemathTransform().ruleIds;
+    const ported = all.filter((id) => !id.startsWith("2967dcc4:"));
+    expect(all.length - ported.length).toBe(3);
     const unreachable = metadata.unreachableRuleIds;
     const registered = metadata.registeredRuleIds;
     expect(ported.length).toBe(484);

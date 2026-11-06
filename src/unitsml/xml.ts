@@ -191,7 +191,7 @@ function explicitDimensions(values: readonly Expression[]): string {
   );
 }
 
-function prefixXml(parsed: ParsedUnitsml, _options: EffectiveUnitsmlOptions): string {
+function prefixXml(parsed: ParsedUnitsml, options: EffectiveUnitsmlOptions): string {
   const name = parsed.normalized.split("-")[0] ?? "";
   const record = UNITSML_DATA.prefixes[name];
   if (record?.xmlError !== undefined)
@@ -200,7 +200,11 @@ function prefixXml(parsed: ParsedUnitsml, _options: EffectiveUnitsmlOptions): st
   const prefix = record.xml.match(/<(?:\w+:)?Prefix\b[^>]*>[\s\S]*?<\/(?:\w+:)?Prefix>/)?.[0];
   if (prefix === undefined) return fail(`UnitsML prefix XML is missing for ${name}`);
   const unit = findUnit(name);
-  return prefix + dimensionXml(dimensionIdOf(unit)) + quantityXml(unit, parsed.extras.quantity);
+  return (
+    prefix +
+    dimensionXml(dimensionIdOf(unit)) +
+    quantityXml(unit, quantityReference(parsed, options))
+  );
 }
 
 function unitXml(parsed: ParsedUnitsml, options: EffectiveUnitsmlOptions): string {
@@ -260,7 +264,7 @@ function unitXml(parsed: ParsedUnitsml, options: EffectiveUnitsmlOptions): strin
   const originalDimension = dimensionXml(dimensionIdOf(whole));
   const derivedDimension = terms === null || terms.length === 0 ? "" : dimensionXml(dimId, terms);
   const dims = [...new Set([originalDimension, derivedDimension])].join("");
-  return `${unit}${prefix}${dims}${quantityXml(whole, parsed.extras.quantity)}`
+  return `${unit}${prefix}${dims}${quantityXml(whole, quantityReference(parsed, options))}`
     .replaceAll("−", "&#x2212;")
     .replaceAll("⋅", "&#x22c5;");
 }
@@ -490,6 +494,16 @@ function dimensionXml(id: string | undefined, terms?: readonly DimensionTerm[]):
       )
       .join(""),
   );
+}
+/** Formula#units: options[:quantity] || explicit_value[:quantity], by Ruby truthiness. */
+function quantityReference(
+  parsed: ParsedUnitsml,
+  options: EffectiveUnitsmlOptions,
+): string | undefined {
+  const option = options.quantity;
+  return option !== undefined && option !== null && option !== false
+    ? String(option)
+    : parsed.extras.quantity;
 }
 function quantityXml(unit: RawUnit | undefined, override: string | undefined): string {
   if (

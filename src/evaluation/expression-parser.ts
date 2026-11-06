@@ -22,7 +22,7 @@
 
 import type { MathNode, NodeSequence } from "../core/nodes";
 import { UnsupportedExpressionError } from "./errors";
-import { add, divide, multiply, negate, power, type RubyNumeric, subtract } from "./numeric";
+import { add, multiply, negate, type RubyNumeric, subtract } from "./numeric";
 import {
   isCloseParen,
   isDivideOperator,
@@ -39,6 +39,10 @@ export interface ExpressionEvaluator {
   evaluateNode(node: MathNode | string | undefined | null): RubyNumeric;
   evaluateNegatedMod(node: MathNode): RubyNumeric;
   evaluateLogWithArgument(node: MathNode, argument: MathNode | string | undefined): RubyNumeric;
+  /** Ruby: `Evaluator#divide`, which records the boundary it crosses (or, in strict mode, divides exactly). */
+  divide(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric;
+  /** Ruby: `Evaluator#power`, which records the boundary it crosses (or defers it, in strict mode). */
+  power(base: RubyNumeric, exponent: RubyNumeric): RubyNumeric;
   unsupported(nodeOrMessage: MathNode | string): never;
 }
 
@@ -107,7 +111,8 @@ export class ExpressionParser {
     let result = this.parseUnary();
     for (;;) {
       if (this.take(isMultiplyOperator)) result = multiply(result, this.parseUnary());
-      else if (this.take(isDivideOperator)) result = divide(result, this.parseUnary());
+      else if (this.take(isDivideOperator))
+        result = this.evaluator.divide(result, this.parseUnary());
       else if (this.implicitMultiplication()) result = multiply(result, this.parsePower());
       else return result;
     }
@@ -134,7 +139,7 @@ export class ExpressionParser {
   /** Ruby: `ExpressionParser#parse_power` — a loose `^` chain, left to right. */
   private parsePower(): RubyNumeric {
     let result = this.parseOperand();
-    while (this.take(isPowerOperator)) result = power(result, this.parseExponent());
+    while (this.take(isPowerOperator)) result = this.evaluator.power(result, this.parseExponent());
     return result;
   }
 

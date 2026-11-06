@@ -42,6 +42,8 @@ import type { FormulaNode, MathNode, NodeKind, NodeOptions } from "../../core/in
 import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS } from "../../core/normalize";
 import { rubyToI } from "../../core/ruby-semantics";
+import { InvalidUncertaintyError, uncertaintyProblem } from "../../core/uncertainty";
+import { isUncertaintyMarker, uncertaintyMarkerFields } from "../../core/uncertainty-marker";
 import {
   UNICODEMATH_ACCENT_SYMBOLS,
   UNICODEMATH_HEXCODE_IN_INPUT,
@@ -1072,6 +1074,60 @@ function newMpadded(one: unknown, options: NodeOptions): UnicodemathDraft {
 /** `Math::Function::Intent.new(p1, p2)` — a `BinaryFunction` subclass, so an alias on it. */
 function newIntent(one: unknown, two: unknown): UnicodemathDraft {
   return binaryDraft("binaryFunction", "Intent", one, two);
+}
+
+/**
+ * `Utility.intent_or_uncertainty(content, intent)` (`unicode_math/utility.rb`):
+ * `ⓘ("marker" content)` is a measurement uncertainty (plurimath#493) when the
+ * marker uses one of its concept names; any other intent stays a
+ * `Function::Intent`. The marker is authoritative, so only the `ⓐ(unit ...)`
+ * argument of the content is read. The gem validates the node in
+ * `Uncertainty.new`.
+ */
+function intentOrUncertainty(content: unknown, intent: unknown): unknown {
+  const marker =
+    isDraft(intent) && intent.kind === "text"
+      ? sliceToText(intent.fields.parameterOne)
+      : sliceToText(intent);
+  if (!isUncertaintyMarker(marker)) return newIntent(content, intent);
+  const draft = new UnicodemathDraft(
+    "uncertainty",
+    undefined,
+    uncertaintyMarkerFields(
+      marker,
+      (text) => newNumber(text),
+      () => uncertaintyUnit(content, marker),
+    ),
+  );
+  const problem = uncertaintyProblem(finalizeDraft(draft) as never);
+  if (problem !== null) throw new InvalidUncertaintyError(problem);
+  return draft;
+}
+
+/** `Utility.uncertainty_unit`: the content of the one `ⓐ(unit ...)` argument. */
+function uncertaintyUnit(content: unknown, marker: string): UnicodemathDraft | null {
+  const values = isFormulaDraft(content)
+    ? formulaValue(content)
+    : Array.isArray(content)
+      ? content
+      : content === null || content === undefined
+        ? []
+        : [content];
+  const units = values.filter((value): value is UnicodemathDraft => {
+    if (!isDraft(value) || value.kind !== "binaryFunction" || value.identity !== "Arg") {
+      return false;
+    }
+    const name = value.fields.parameterTwo;
+    return isDraft(name) && name.kind === "symbol" && sliceToText(name.fields.value) === "unit";
+  });
+  if (units.length > 1) {
+    throw new InvalidUncertaintyError(
+      `marker ${JSON.stringify(marker)}: more than one ⓐ(unit ...) argument`,
+    );
+  }
+  const unit = units[0]?.fields.parameterOne ?? null;
+  if (unit === null || isFormulaDraft(unit)) return unit as UnicodemathDraft | null;
+  return newFormula([unit]);
 }
 
 /**
@@ -2324,7 +2380,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       );
     }
     const intentString = list.shift();
-    return newIntent(filterValues(list), intentString);
+    return intentOrUncertainty(filterValues(list), intentString);
   });
 
   // `:969`/`:977`: a bare `over`/`under` operator carrying only a script — the
@@ -3210,6 +3266,20 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       first_value: simple("first_value"),
     },
     (b) => binaryDraft("binaryFunction", "Arg", b.first_value, b.args),
+  );
+
+  // plurimath 2967dcc4 `transform.rb:2258`: ⓐ(unit \mupkg) reads its
+  // content as several nodes (the grammar's middle `arg_function` form); keep
+  // them together so the argument (e.g. an uncertainty unit, plurimath#493)
+  // is not lost.
+  rule(
+    "2967dcc4:2258",
+    {
+      arg: simple("arg"),
+      arg_arguments: simple("args"),
+      first_value: sequence("first_value"),
+    },
+    (b) => binaryDraft("binaryFunction", "Arg", newFormula(b.first_value), b.args),
   );
 
   rule(
@@ -4325,6 +4395,20 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     (b) => [newText(b.text), b.operand, ...asArray(b.exp)],
   );
 
+  // plurimath 2967dcc4 `transform.rb:3637`: the same with a SEQUENCE operand
+  // and a SEQUENCE exp, as in `ⓘ("marker"(…)ⓐ(unit \mupg), k=2)`
+  // (plurimath#493). Its sibling `:3625` (a SEQUENCE operand and a simple
+  // exp) is not ported: no pinned input reaches it.
+  fenced(
+    "2967dcc4:3637",
+    {
+      text: simple("text"),
+      operand: sequence("operand"),
+      exp: sequence("exp"),
+    },
+    (b) => [newText(b.text), ...asArray(b.operand), ...asArray(b.exp)],
+  );
+
   // NARY concluded (for this slice; see the former module header (9bbe254e) for the SEQUENCE
   // rules deferred past it) — `mask` plus BOTH a simple `sub` and a simple
   // `sup`, `:2806`'s own shape with a mask added; `Underset`/`Overset`
@@ -4566,7 +4650,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       first_value: simple("value"),
       close_paren: simple("close_paren"),
     },
-    (b) => newIntent(b.value, b.args),
+    (b) => intentOrUncertainty(b.value, b.args),
   );
 
   rule(
@@ -4578,7 +4662,7 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
       first_value: sequence("value"),
       close_paren: simple("close_paren"),
     },
-    (b) => newIntent(filterValues(b.value), b.args),
+    (b) => intentOrUncertainty(filterValues(b.value), b.args),
   );
 
   // `:3885`: a BARE size prefix pair (`├`/`┤`, `\open`/`\close`, with no

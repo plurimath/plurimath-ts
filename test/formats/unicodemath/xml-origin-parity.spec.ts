@@ -120,7 +120,7 @@ describe("the XML-origin UnicodeMath observations", () => {
     // registration below is 00c52783's, which has none of them.
     const all = buildUnicodemathTransform().ruleIds;
     const ported = all.filter((id) => !id.startsWith("2967dcc4:"));
-    expect(all.length - ported.length).toBe(3);
+    expect(all.length - ported.length).toBe(5);
     const unreachable = metadata.unreachableRuleIds;
     const registered = metadata.registeredRuleIds;
     expect(ported.length).toBe(484);

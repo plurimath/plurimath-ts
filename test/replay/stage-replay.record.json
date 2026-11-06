@@ -189,12 +189,12 @@
     "generation": 4,
     "snapshotDigest": "sha256:cc02870fb6ee5a46c64271733b716f00469d0af46847851ad3db9249ad2571ed",
     "rows": 216,
-    "equal": 191,
-    "differing": 5,
+    "equal": 192,
+    "differing": 4,
     "unsupported": 20,
     "kinds": {
       "facade": [20, 20, 0, 0],
-      "typed-model": [72, 49, 3, 20],
+      "typed-model": [72, 50, 2, 20],
       "raw-tree": [72, 70, 2, 0],
       "rejection": [52, 52, 0, 0]
     },
@@ -228,7 +228,6 @@
     "differingRows": {
       "unicode-trailing-broken-bar.model": "refused at byte 1, the gem at byte 3",
       "unicode-greek-broken-bar.model": "refused at byte 2, the gem at byte 4",
-      "unicode-whitespace-only.model": "refused at byte 1, the gem at byte 0",
       "unicode-trailing-broken-bar.raw": "refused at byte 2, the gem at byte 7",
       "unicode-greek-broken-bar.raw": "refused at byte 8, the gem at byte 13"
     }
@@ -781,51 +780,13 @@
     "generation": 1,
     "snapshotDigest": "sha256:7ee63e894f86a139899623f2b04f32228893ea3b0f77da55333c2927b630c337",
     "rows": 46,
-    "equal": 9,
-    "differing": 37,
+    "equal": 46,
+    "differing": 0,
     "unsupported": 0,
     "kinds": {
-      "roundtrip": [46, 9, 37, 0]
+      "roundtrip": [46, 46, 0, 0]
     },
     "unsupportedRows": {},
-    "differingRows": {
-      "asciimath-coverage-interval.unspecified": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-coverage-interval.shortest": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-coverage-interval.symmetric": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-coverage-interval.negative": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-expanded.k": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-expanded.k-p": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-expanded.negative": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-locale.fr-dot": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-locale.fr-comma": "asciimath: the gem refuses, the port parses the source and renders it; unicode: the gem refuses, the port parses the source and renders it; mathml: the gem refuses, the port parses the source and renders it; omml: the gem refuses, the port parses the source and renders it",
-      "asciimath-locale.fr-comma-pair": "asciimath: the gem refuses, the port parses the source and renders it; unicode: the gem refuses, the port parses the source and renders it; mathml: the gem refuses, the port parses the source and renders it; omml: the gem refuses, the port parses the source and renders it",
-      "asciimath-shared-exponent.standard": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-shared-exponent.concise": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-shared-exponent.expanded": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-shared-exponent.interval": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-standard.absolute": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-standard.concise": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-standard.concise-long": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-standard.negative": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-standard.negative-concise": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "asciimath-standard.zero-magnitude": "unicode read back lossy, the gem's lossless; mathml read back lossy, the gem's lossless; omml read back lossy, the gem's lossless",
-      "mathml-markers.standard": "asciimath output differs; unicode output differs; omml output differs",
-      "mathml-markers.concise": "asciimath output differs; unicode output differs; omml output differs",
-      "mathml-markers.expanded": "asciimath output differs; unicode output differs; omml output differs",
-      "mathml-markers.unit-kg": "asciimath output differs; unicode output differs; mathml output differs; omml output differs",
-      "mathml-markers.unit-kg-m2": "asciimath output differs; unicode output differs; mathml output differs; omml output differs",
-      "unicode-markers.standard": "asciimath output differs; unicode output differs; omml output differs",
-      "unicode-markers.concise": "asciimath output differs; unicode output differs; omml output differs",
-      "unicode-markers.expanded-p": "asciimath output differs; unicode output differs; omml output differs",
-      "unicode-markers.expanded-spaced": "asciimath refused: RenderError: fenced.parameterTwo: cannot render nil — the gem raises NoMethodError here; unicode refused: RenderError: fenced.parameterTwo: cannot render nil — the gem raises NoMethodError here; mathml output differs; omml refused: RenderError: fenced.parameterTwo[1]: cannot insert nil — the gem raises NoMethodError here",
-      "unicode-markers.interval-shortest": "asciimath output differs; unicode output differs; omml output differs",
-      "unicode-markers.negative": "asciimath output differs; unicode output differs; mathml output differs; omml output differs",
-      "unicode-markers.unit-g": "asciimath refused: RenderError: formula.value: cannot render a bare list — the gem raises NoMethodError here; unicode refused: RenderError: formula.value[0]: a bare list does not answer mini_sized?, and the gem's `&.` guards nil only — it raises NoMethodError here; mathml refused: RenderError: formula.value: cannot render a bare list — the gem raises NoMethodError here; omml refused: RenderError: formula.value[0]: cannot insert a list — the gem raises NoMethodError here",
-      "unicode-markers.unit-kg": "asciimath refused: RenderError: formula.value: cannot render a bare list — the gem raises NoMethodError here; unicode refused: RenderError: formula.value[0]: a bare list does not answer mini_sized?, and the gem's `&.` guards nil only — it raises NoMethodError here; mathml refused: RenderError: formula.value: cannot render a bare list — the gem raises NoMethodError here; omml refused: RenderError: formula.value[0]: cannot insert a list — the gem raises NoMethodError here",
-      "unicode-markers.unit-kg-quoted": "asciimath refused: RenderError: No measured asciimath rendering for binaryFunction name \"Arg\" — it is not reachable from the AsciiMath transform, and the gem class may override to; unicode refused: RenderError: No measured unicodemath rendering for binaryFunction name \"Arg\" — it is not reachable from the AsciiMath transform, and the gem class may override ; mathml output differs; omml output differs",
-      "unicode-markers.unit-m-per-s": "asciimath refused: RenderError: formula.value: cannot render a bare list — the gem raises NoMethodError here; unicode refused: RenderError: formula.value[0]: a bare list does not answer mini_sized?, and the gem's `&.` guards nil only — it raises NoMethodError here; mathml refused: RenderError: formula.value: cannot render a bare list — the gem raises NoMethodError here; omml refused: RenderError: formula.value[0]: cannot insert a list — the gem raises NoMethodError here",
-      "unicode-markers.unit-um": "asciimath refused: RenderError: formula.value: cannot render a bare list — the gem raises NoMethodError here; unicode refused: RenderError: formula.value[0]: a bare list does not answer mini_sized?, and the gem's `&.` guards nil only — it raises NoMethodError here; mathml refused: RenderError: formula.value: cannot render a bare list — the gem raises NoMethodError here; omml refused: RenderError: formula.value[0]: cannot insert a list — the gem raises NoMethodError here",
-      "unicode-markers.unit-kg-m2": "asciimath refused: RenderError: formula.value: cannot render a bare list — the gem raises NoMethodError here; unicode refused: RenderError: formula.value[0]: a bare list does not answer mini_sized?, and the gem's `&.` guards nil only — it raises NoMethodError here; mathml refused: RenderError: formula.value: cannot render a bare list — the gem raises NoMethodError here; omml refused: RenderError: formula.value[0]: cannot insert a list — the gem raises NoMethodError here"
-    }
+    "differingRows": {}
   }
 }

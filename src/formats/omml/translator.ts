@@ -20,13 +20,15 @@
  */
 
 import type { FormulaNode } from "../../core/index";
+import { InvalidUncertaintyError, uncertaintyProblem } from "../../core/uncertainty";
+import { isUncertaintyMarker, uncertaintyMarkerRubyFields } from "../../core/uncertainty-marker";
 import {
   ATTRIBUTE_SETTERS,
   binary,
   binaryClass,
   className,
   contextualAccentFromToken,
-  type Draft,
+  Draft,
   deleteAt,
   FORMULA,
   FUNCTION,
@@ -380,8 +382,9 @@ function translateContent(node: OmmlNode): Value {
     case "m:groupChr":
       return groupCharacter(node);
     case "m:phant":
-    case "m:box":
       return argument(child(node, "m:e"));
+    case "m:box":
+      return box(node);
     default:
       return null;
   }
@@ -555,6 +558,79 @@ function accent(node: OmmlNode): Draft {
   if (!ATTRIBUTE_SETTERS.has(mark.cls)) noMethod("attributes=");
   mark.f.attributes = { accent: true };
   return mark;
+}
+
+/** `box_to_plurimath`. */
+function box(node: OmmlNode): Value {
+  const content = child(node, "m:e");
+  const children = content?.children ?? [];
+  const marker = uncertaintyMarkerText(children[0]);
+  if (marker !== null) return boxToUncertainty(marker, children.slice(1));
+  return argument(content);
+}
+
+/**
+ * `box_to_uncertainty`: an `m:box` whose first child is a hidden `m:phant`
+ * holding an uncertainty marker (plurimath#493). The marker is
+ * authoritative; the visible content is regenerated on output, so only the
+ * inner `m:box` holding the unit is read. The gem validates the node in
+ * `Uncertainty.new`.
+ */
+function boxToUncertainty(marker: string, visible: readonly OmmlNode[]): Draft {
+  const fields = uncertaintyMarkerRubyFields(marker, newNumber, () => {
+    const units = visible.filter((item) => item.kind === "m:box");
+    if (units.length > 1) {
+      throw new InvalidUncertaintyError(
+        `marker ${JSON.stringify(marker)}: more than one m:box could hold the unit`,
+      );
+    }
+    const unit = units[0] === undefined ? null : box(units[0]);
+    return unit === null || isFormula(unit) ? unit : newFormula([unit]);
+  });
+  const draft = new Draft(`${FUNCTION}Uncertainty`, fields);
+  const problem = uncertaintyProblem(toNode(draft) as never);
+  if (problem !== null) throw new InvalidUncertaintyError(problem);
+  return draft;
+}
+
+/** `uncertainty_marker_text`: a hidden phantom's marker text, or null. */
+function uncertaintyMarkerText(phantom: OmmlNode | undefined): string | null {
+  if (phantom?.kind !== "m:phant" || !hiddenPhantom(phantom)) return null;
+  const text = phantomRunText(phantom);
+  return isUncertaintyMarker(text) ? text : null;
+}
+
+/**
+ * `phantom_run_text`: the text of a phantom made only of runs, or null. A
+ * phantom whose leading runs spell a marker but which also holds anything
+ * other than runs is a malformed marker: it raises rather than being read as
+ * ordinary content (`reject_mixed_phantom`).
+ */
+function phantomRunText(phantom: OmmlNode): string | null {
+  const children = child(phantom, "m:e")?.children ?? [];
+  let count = 0;
+  while (count < children.length && children[count]?.kind === "m:r") count++;
+  const text = children
+    .slice(0, count)
+    .map((item) =>
+      childrenOf(item, "m:t")
+        .map((t) => t.text ?? "")
+        .join(""),
+    )
+    .join("");
+  if (count > 0 && count === children.length) return text;
+  if (isUncertaintyMarker(text)) {
+    throw new InvalidUncertaintyError(
+      `marker ${JSON.stringify(text)}: the hidden m:phant must hold only m:r runs`,
+    );
+  }
+  return null;
+}
+
+/** `hidden_phantom?`: `m:phantPr/m:show` is off. */
+function hiddenPhantom(phantom: OmmlNode): boolean {
+  const show = child(child(phantom, "m:phantPr"), "m:show");
+  return show !== null && ["0", "false", "off"].includes(val(show) ?? "");
 }
 
 function matrixRow(row: OmmlNode): Draft {

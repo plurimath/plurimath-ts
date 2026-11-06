@@ -34,6 +34,7 @@ import { describe, expect, it } from "vitest";
 import { parseUnicodemathTree } from "../../../src/formats/unicodemath/parser";
 import { buildUnicodemathTransform, shapeOf } from "../../../src/formats/unicodemath/transform";
 import { Slice, sequence, simple, Transform } from "../../../src/pegkit/index";
+import { asMapping, asString, loadStageGeneration, pinPath } from "../../replay/stage-pin";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -101,7 +102,20 @@ for (const entry of unreachedFixtures.cases) {
   build.transform.apply(parseUnicodemathTree(entry.input));
 }
 
-const FINAL_COUNT = 487;
+// The pinned roundtrip stage's UnicodeMath sources (plurimath#493), which the
+// oracle parsed when the testsuite generated them. They are the witnesses for
+// the uncertainty-unit rules added at 2967dcc4, `:2258` (`ⓐ(unit \mupkg)`)
+// and `:3637` (`ⓘ("…"(…)ⓐ(unit \mupg), k=2)`), which no row of
+// `model-fixtures.json` reaches.
+for (const payload of loadStageGeneration(pinPath("roundtrip")).payloads) {
+  for (const row of payload.cases) {
+    const source = asMapping(row.source, `${payload.path} source`);
+    if (source.language !== "unicode") continue;
+    build.transform.apply(parseUnicodemathTree(asString(source.input, `${payload.path} input`)));
+  }
+}
+
+const FINAL_COUNT = 489;
 
 describe("transform rule coverage", () => {
   it("drove every parseable fixture through one transform", () => {
@@ -246,6 +260,10 @@ describe("transform rule coverage", () => {
     // reached by the hand-picked "remaining" coverage group, except `:83`,
     // whose only witness is a `SLICE_BOUNDARY` row. The other 35 are unreachable:
     // 26 historical proofs plus nine in docs/unicodemath-rule-reachability.md.
+    //
+    // Plus 5 added at plurimath 2967dcc4 (ids prefixed `2967dcc4:`): `:238`,
+    // `:540` and `:546`, reached by `model-fixtures.json`'s "pin-2967dcc4"
+    // group, and `:2258` and `:3637`, reached by the pinned roundtrip stage.
     // Slice tallies above are historical; the assertion is the one final count.
     expect(build.ruleIds.length).toBe(FINAL_COUNT);
     expect(new Set(build.ruleIds).size).toBe(FINAL_COUNT);

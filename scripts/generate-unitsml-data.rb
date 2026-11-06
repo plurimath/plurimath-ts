@@ -158,6 +158,11 @@ module NativeCompletionReference
       "singlePrefixes" => token_order(Unitsml::Unitsdb.prefixes_by_size(1)),
       "doublePrefixes" => token_order(Unitsml::Unitsdb.prefixes_by_size(2)),
       "dimensions" => token_order(Unitsml::Unitsdb.dimensions.parsables.keys) }
+    # The grammar's prefixed_units rule lists these whole names, tried as a
+    # unit only after every prefix-plus-unit reading fails. They come from the
+    # asciiunits table the pinned grammar was built from, in table order.
+    prefixed_table = File.join(Gem.loaded_specs.fetch("asciiunits").full_gem_path, "tables/prefixed_units.yaml")
+    tokens["prefixedUnitNames"] = YAML.safe_load_file(prefixed_table).map { |entry| entry.fetch("name") }
     raise "empty token family" if tokens.values.any?(&:empty?)
     data = { "schema" => "plurimath-unitsml-data/1", "tokens" => tokens }
     { "units" => tokens["units"], "prefixes" => tokens["singlePrefixes"] + tokens["doublePrefixes"],
@@ -168,6 +173,8 @@ module NativeCompletionReference
       end
       puts "#{family}: #{data[family].length} measured tokens"
     end
+    data["prefixedUnitNames"] = tokens["prefixedUnitNames"].to_h { |name| [name, measured(name)] }
+    puts "prefixedUnitNames: #{data["prefixedUnitNames"].length} measured tokens"
     pairs = (tokens["singlePrefixes"] + tokens["doublePrefixes"]).uniq.product(%w[m s g kg A K mol cd])
     composite_units = data.fetch("units").select do |_, record|
       next false unless record["mathml"]

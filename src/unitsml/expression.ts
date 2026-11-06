@@ -30,7 +30,7 @@ const formula = (...values: Expression[]) => new Expression("formula", "", value
 const fence = (value: Expression) =>
   value.kind === "fenced" ? value : new Expression("fenced", "()", [value]);
 
-/** Unitsml::Transform's exact-key, bottom-up rules; later Ruby rules win. */
+/** Unitsml::Parg::TreeMapper's exact-key, bottom-up rules. */
 export function transformExpression(tree: Tree): Expression {
   const transformed = transform(tree);
   // Parslet keeps unmatched hashes. The dependency accepts these at parse time
@@ -93,6 +93,13 @@ function transform(tree: unknown): unknown {
       return formula(child("first_set"), child("second_set"));
     case "first_set,second_int_exp_set":
       return formula(child("first_set"), fence(child("second_int_exp_set")));
+    case "sequence,unit":
+    case "prefix,sequence,unit":
+      return formula(atomic("unit"), child("sequence"));
+    case "sequence,sqrt":
+      return formula(new Expression("sqrt", "", [child("sqrt")]), child("sequence"));
+    case "implicit_extended,sequence":
+      return formula(child("implicit_extended"), child("sequence"));
     case "prefix,unit":
     case "power_numerator,unit":
     case "power_numerator,prefix,unit":

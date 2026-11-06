@@ -1,4 +1,7 @@
-/** Unitsml 0.6.8's Parse and IntermediateExpRules, in source choice order. */
+/**
+ * Unitsml 0.6.13's expression grammar, the asciiunits 0.1.6 transcription of
+ * Parse and IntermediateExpRules, in source choice order.
+ */
 import { type Atom, alt, any, match, rule, seq, str } from "./parser-atoms";
 
 export interface UnitsmlGrammarTokens {
@@ -9,6 +12,24 @@ export interface UnitsmlGrammarTokens {
   readonly dimensions: readonly string[];
 }
 
+/**
+ * asciiunits 0.1.6 tables/prefixed_units.yaml, in table order. These names are
+ * tried as units only after every prefix-plus-unit reading has failed.
+ */
+const PREFIXED_UNIT_NAMES: readonly string[] = [
+  "kcal_IT",
+  "kcal_th",
+  "mbar",
+  "cSt",
+  "kgf",
+  "uin",
+  "cP",
+  "dB",
+  "kg",
+  "mL",
+  "ml",
+];
+
 export function unitsmlGrammar(tokens: UnitsmlGrammarTokens): { readonly root: Atom } {
   const literals = (values: readonly string[], name: string): Atom => {
     if (values.length === 0) throw new Error(`UnitsML ${name} token census is empty`);
@@ -17,6 +38,7 @@ export function unitsmlGrammar(tokens: UnitsmlGrammarTokens): { readonly root: A
   const units = rule(() => literals(tokens.units, "unit"));
   const singlePrefixes = rule(() => literals(tokens.singlePrefixes, "prefix"));
   const doublePrefixes = rule(() => literals(tokens.doublePrefixes, "prefix"));
+  const prefixedUnits = rule(() => literals(PREFIXED_UNIT_NAMES, "unit"));
   const dimensions = rule(() => literals(tokens.dimensions, "dimension"));
   const sqrt = str("sqrt");
   const hyphen = str("-");
@@ -38,6 +60,9 @@ export function unitsmlGrammar(tokens: UnitsmlGrammarTokens): { readonly root: A
     ),
   );
   const power = rule(() => seq(str("^"), slashedNumberIntExp.as("power_numerator")));
+  const endGuard = rule(() =>
+    alt(any().absent(), alt(extender, opening, closing, spaces).present()),
+  );
   const unitAndPower = rule(() => seq(units, power.maybe()));
   const extendedPrefixedUnits: Atom = rule(() =>
     seq(extender, spacesOptional, prefixesUnitsIntExp.as("sequence")),
@@ -50,11 +75,12 @@ export function unitsmlGrammar(tokens: UnitsmlGrammarTokens): { readonly root: A
       seq(sqrtSequence, extendedPrefixedUnits.maybe()),
       seq(str("1").as("unit"), extendedPrefixedUnits.maybe()),
       seq(unitAndPower, extendedPrefixedUnits),
-      seq(unitAndPower, alt(any().absent(), alt(extender, opening, closing, spaces).present())),
+      seq(unitAndPower, endGuard),
       seq(doublePrefixes, unitAndPower, extendedPrefixedUnits),
       seq(doublePrefixes, unitAndPower),
       seq(singlePrefixes, unitAndPower, extendedPrefixedUnits),
       seq(singlePrefixes, unitAndPower),
+      seq(prefixedUnits, power.maybe(), endGuard),
     ),
   );
   const intExpPrefixesUnits: Atom = rule(() =>
@@ -92,21 +118,21 @@ export function unitsmlGrammar(tokens: UnitsmlGrammarTokens): { readonly root: A
         spacesOptional,
         extender,
         spacesOptional,
-        prefixesUnitsIntExp.as("sequence").maybe(),
+        prefixesUnitsIntExp.as("sequence"),
       ),
       seq(
         intExpPrefixesUnits,
         spacesOptional,
         extender,
         spacesOptional,
-        prefixesUnitsIntExp.as("sequence").maybe(),
+        prefixesUnitsIntExp.as("sequence"),
       ),
       seq(
         prefixesUnits,
         spacesOptional,
         extender,
         spacesOptional,
-        prefixesUnitsIntExp.as("sequence").maybe(),
+        prefixesUnitsIntExp.as("sequence"),
       ),
       seq(intExpPrefixesUnits, prefixesUnitsIntExp.as("sequence").maybe()),
       seq(prefixesUnits, prefixesUnitsIntExp.as("sequence").maybe()),

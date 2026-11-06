@@ -5,9 +5,7 @@
  * oracle's stack (Ox under Moxml under Lutaml, the `OxAdapter` that
  * `Mml.parse` and `Omml.parse` use) did with it: the tree its models receive,
  * or a refusal. `scripts/generate-xml-reader-fixtures.rb` measured them; the
- * sidecar manifest pins how. Every row must match, except the one documented
- * divergence (`divergenceBaseline`), whose rows must instead match the gem's
- * own UTF-8 answer for the same body.
+ * sidecar manifest pins how. Every row must match.
  */
 
 import { readFileSync } from "node:fs";
@@ -123,44 +121,14 @@ function actualOutcome(input: string): Outcome {
 
 const DECLARATION = /^<\?xml version="1\.0" encoding="([^"]*)"\?>(.*)$/s;
 
-/** The bodies that put non-ASCII where the gem re-reads through the declared encoding. */
-const REENCODED_BODIES = new Set([
-  "<\u00e9/>",
-  "<a><!--\u00e9--></a>",
-  "<a><?p \u00e9?></a>",
-  "<a><![CDATA[\u00e9]]></a>",
-  '<a xmlns="\u00e9"/>',
-  '<a xmlns:p="\u00e9" p:x="1"/>',
-]);
-
-const UTF8_NAMES = new Set(FIXTURE.encodingTable.utf8.map((name) => name.toLowerCase()));
-const INCOMPATIBLE_NAMES = new Set(
-  FIXTURE.encodingTable.asciiIncompatible.map((name) => name.toLowerCase()),
-);
 const ROWS_BY_INPUT = new Map(FIXTURE.cases.map((row) => [row.input, row] as const));
 
-/**
- * The one documented divergence (see `src/xml/reader.ts`): a declaration
- * naming an ASCII-compatible, non-UTF-8 encoding makes the gem re-read element
- * names, comments, PIs, CDATA and namespace URIs through it; the reader keeps UTF-8. For such a row,
- * returns the gem's row for the same body under `encoding="UTF-8"` — what the
- * reader must produce instead — or `undefined` when the row is not one.
- */
-function divergenceBaseline(row: FixtureRow): FixtureRow | undefined {
+/** For a row that declares an encoding, the gem's row for the same body under `encoding="UTF-8"`. */
+function utf8Baseline(row: FixtureRow): FixtureRow | undefined {
   const match = DECLARATION.exec(row.input);
   if (match === null) return undefined;
-  const [, name = "", body = ""] = match;
-  const key = name.toLowerCase();
-  if (UTF8_NAMES.has(key) || INCOMPATIBLE_NAMES.has(key) || !REENCODED_BODIES.has(body)) {
-    return undefined;
-  }
-  const baseline = ROWS_BY_INPUT.get(`<?xml version="1.0" encoding="UTF-8"?>${body}`);
-  if (baseline === undefined) throw new Error(`no UTF-8 baseline row for ${row.id}`);
-  const same = JSON.stringify(expectedOutcome(baseline)) === JSON.stringify(expectedOutcome(row));
-  return same ? undefined : baseline;
+  return ROWS_BY_INPUT.get(`<?xml version="1.0" encoding="UTF-8"?>${match[2] ?? ""}`);
 }
-
-const DIVERGENT = FIXTURE.cases.filter((row) => divergenceBaseline(row) !== undefined);
 
 describe("the fixture set itself", () => {
   it("loads every row the payload declares, and a real mix of outcomes", () => {
@@ -226,7 +194,7 @@ describe("readXml reproduces the gem's read", () => {
   it.each(groups)("%s", (group) => {
     const mismatches: string[] = [];
     for (const row of FIXTURE.cases) {
-      if (row.group !== group || divergenceBaseline(row) !== undefined) continue;
+      if (row.group !== group) continue;
       const expected = expectedOutcome(row);
       const actual = actualOutcome(row.input);
       if (JSON.stringify(actual) !== JSON.stringify(expected)) {
@@ -239,36 +207,32 @@ describe("readXml reproduces the gem's read", () => {
   });
 });
 
-describe("the documented encoding divergence", () => {
-  it("exists in the fixtures for every probe body, so its handling is exercised", () => {
-    // Every body diverges under at least one declared encoding; the exact
-    // counts per body are whatever the oracle measured, never asserted by hand.
-    const bodies = new Set(DIVERGENT.map((row) => DECLARATION.exec(row.input)?.[2]));
-    expect([...bodies].sort()).toStrictEqual([...REENCODED_BODIES].sort());
+describe("a declared encoding", () => {
+  it("never changes the gem's read: every such row matches its UTF-8 row", () => {
+    // Measured by the fixtures, not asserted by hand: Moxml rewrites a
+    // declaration's (first) encoding to UTF-8 before Ox reads it, so the
+    // declared name, known to Ruby or not, has no effect on the result.
+    const declared = FIXTURE.cases.filter((row) => utf8Baseline(row) !== undefined);
+    expect(declared.length).toBeGreaterThan(1000);
+    const differing = declared.filter((row) => {
+      const baseline = utf8Baseline(row) as FixtureRow;
+      return JSON.stringify(expectedOutcome(row)) !== JSON.stringify(expectedOutcome(baseline));
+    });
+    expect(differing.map((row) => row.id)).toStrictEqual([]);
   });
 
-  it("reads every such row exactly as the gem reads the body under UTF-8", () => {
-    const mismatches: string[] = [];
-    for (const row of DIVERGENT) {
-      const baseline = divergenceBaseline(row);
-      if (baseline === undefined) continue;
-      const actual = JSON.stringify(actualOutcome(row.input));
-      if (actual !== JSON.stringify(expectedOutcome(baseline))) mismatches.push(row.id);
-    }
-    expect(mismatches).toStrictEqual([]);
-  });
-});
-
-describe("the encoding tables match the oracle's Ruby", () => {
   it("lists exactly Ruby's ASCII-incompatible encoding names", () => {
+    // Still consulted for a second `encoding` attribute, which Moxml leaves.
     expect([...ASCII_INCOMPATIBLE_ENCODING_NAMES].sort()).toStrictEqual(
       FIXTURE.encodingTable.asciiIncompatible.map((name) => name.toLowerCase()).sort(),
     );
   });
 
-  it("reads a declared UTF-8 alias as UTF-8", () => {
+  it("reads every encoding name Ruby knows as UTF-8", () => {
+    const names = [...FIXTURE.encodingTable.utf8, ...FIXTURE.encodingTable.asciiIncompatible];
     expect(FIXTURE.encodingTable.utf8.length).toBeGreaterThan(0);
-    for (const name of FIXTURE.encodingTable.utf8) {
+    expect(FIXTURE.encodingTable.asciiIncompatible.length).toBeGreaterThan(0);
+    for (const name of names) {
       const root = readXml(`<?xml version="1.0" encoding="${name}"?><a>&#233;</a>`);
       expect(root.children, name).toStrictEqual([{ kind: "text", text: "é" }]);
     }

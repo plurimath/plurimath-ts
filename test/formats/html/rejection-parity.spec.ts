@@ -77,53 +77,19 @@ describe("every recorded HTML rejection is refused here too", () => {
 });
 
 /**
- * The cases where the port's failure position does not reproduce the gem's,
- * recorded rather than hidden. They share one cause, the one the LaTeX suite
- * pins for `latex-right-without-left`: the two sides measure different things.
- * The corpus records the furthest position any leaf of Parslet's failure tree
- * reached, while the port reports the first code unit its root rule could not
- * consume (`Atom#parse` in `src/pegkit/atom.ts`). Where the grammar gave up
- * after trying something past the last consumed character, the two differ.
- *
- *   html-extra-close-tag               `<i>a</i></i>`     gem 9,  port 8
- *   html-lt-between-letters            `a<b`              gem 3,  port 1
- *   html-sup-without-close             `2<sup>`           gem 6,  port 1
- *   html-empty-sup                     `2<sup></sup>`     gem 7,  port 1
- *   html-function-unclosed-paren       `sqrt(`            gem 5,  port 4
- *   html-entity-then-lone-sub          `&alpha;<sub>`     gem 12, port 7
- *   html-entity-sum-then-lone-sub      `&sum;<sub>`       gem 10, port 5
- *   html-numeric-entity-then-sup       `&#x3b1;<sup>`     gem 12, port 7
- *   html-entity-then-open-tag          `&infin;<i>`       gem 10, port 7
- *   html-entity-then-mismatched-close  `&alpha;<i>a</b>`  gem 13, port 7
- *
- * (gem offsets already mapped back to the input). Measured when this file was
- * written: the deepest position the port's own grammar TRIED (`ctx.maxPos`)
- * equals the recorded offset on all 37 HTML cases that carry one, so the
- * grammar agrees with the gem's and only the reported metric differs. It is
- * not changed here because the metric is shared by every format: measured the
- * same way, reporting `maxPos` would also fix LaTeX's two pinned cases, but
- * would break 6 of the 12 AsciiMath rejections that agree today, so neither
- * metric is the gem's and matching it needs Parslet's failure tree modelled.
+ * What the port actually reports, per case, measured against this pin. Every
+ * indexed case equals the gem's recorded offset mapped through the port's
+ * source map: the corpus records the deepest leaf of Parslet's failure tree,
+ * and pegkit's `ParseFailed.index` is the same leaf. Where the grammar gave up
+ * after trying something past the last consumed character — `2<sup>` looks
+ * for content after the tag, so it fails at 6, not at the `<` — that deeper
+ * leaf is the one reported.
  */
-const KNOWN_POSITION_DIVERGENCES: readonly string[] = [
-  "html-empty-sup",
-  "html-entity-sum-then-lone-sub",
-  "html-entity-then-lone-sub",
-  "html-entity-then-mismatched-close",
-  "html-entity-then-open-tag",
-  "html-extra-close-tag",
-  "html-function-unclosed-paren",
-  "html-lt-between-letters",
-  "html-numeric-entity-then-sup",
-  "html-sup-without-close",
-];
-
-/** What the port actually reports, per case, measured against this pin. */
 const PORT_INDEX: ReadonlyMap<string, number> = new Map([
   ["html-unclosed-tag", 4],
   ["html-stray-close-tag", 1],
   ["html-stray-close-then-text", 1],
-  ["html-extra-close-tag", 8],
+  ["html-extra-close-tag", 9],
   ["html-mismatched-close", 6],
   ["html-crossed-tags", 9],
   ["html-empty-element", 4],
@@ -133,28 +99,28 @@ const PORT_INDEX: ReadonlyMap<string, number> = new Map([
   ["html-comment", 1],
   ["html-lone-lt", 1],
   ["html-lone-gt", 0],
-  ["html-lt-between-letters", 1],
+  ["html-lt-between-letters", 3],
   ["html-gt-between-letters", 1],
   ["html-lone-sub", 5],
   ["html-unclosed-sub", 6],
-  ["html-sup-without-close", 1],
-  ["html-empty-sup", 1],
+  ["html-sup-without-close", 6],
+  ["html-empty-sup", 7],
   ["html-unclosed-paren", 2],
   ["html-unclosed-paren-space", 3],
   ["html-stray-close-paren", 1],
   ["html-stray-close-paren-space", 2],
-  ["html-function-unclosed-paren", 4],
+  ["html-function-unclosed-paren", 5],
   ["html-unclosed-table", 7],
   ["html-empty-table", 8],
   ["html-empty-row", 12],
   ["html-table-without-close", 26],
-  ["html-entity-then-lone-sub", 7],
-  ["html-entity-sum-then-lone-sub", 5],
-  ["html-numeric-entity-then-sup", 7],
+  ["html-entity-then-lone-sub", 12],
+  ["html-entity-sum-then-lone-sub", 10],
+  ["html-numeric-entity-then-sup", 12],
   ["html-entity-then-close-paren", 7],
   ["html-paren-then-entity", 8],
-  ["html-entity-then-open-tag", 7],
-  ["html-entity-then-mismatched-close", 7],
+  ["html-entity-then-open-tag", 10],
+  ["html-entity-then-mismatched-close", 13],
   ["html-unclosed-tag-around-entity", 10],
   ["html-table-without-close-entity", 32],
   // No grammar offset exists on the gem's side (see NO_GRAMMAR_OFFSET); the
@@ -187,10 +153,8 @@ describe("the port maps the HTML failure position back to the original input", (
     expect(shifted.length).toBe(8);
 
     const diverging = indexed.filter((entry) => mappedGemIndex(entry) !== PORT_INDEX.get(entry.id));
-    expect(diverging.map((entry) => entry.id).sort()).toStrictEqual([
-      ...KNOWN_POSITION_DIVERGENCES,
-    ]);
-    expect(indexed.length - diverging.length).toBe(27);
+    expect(diverging.map((entry) => entry.id)).toStrictEqual([]);
+    expect(indexed.length - diverging.length).toBe(37);
   });
 
   it.each(rejections.map((entry) => [entry.id, entry] as const))(
@@ -208,10 +172,8 @@ describe("the port maps the HTML failure position back to the original input", (
   );
 
   it("reproduces the gem's recorded offset wherever the two agree", () => {
-    const comparable = rejections.filter(
-      (entry) => entry.index !== undefined && !KNOWN_POSITION_DIVERGENCES.includes(entry.id),
-    );
-    expect(comparable.length).toBe(27);
+    const comparable = rejections.filter((entry) => entry.index !== undefined);
+    expect(comparable.length).toBe(37);
     for (const entry of comparable) {
       expect(PORT_INDEX.get(entry.id), entry.id).toBe(mappedGemIndex(entry));
     }

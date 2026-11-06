@@ -53,6 +53,8 @@ interface CacheEntry {
   readonly advance: number;
   readonly value: ParseValue;
   readonly emptyRepetition: boolean;
+  /** The cached failure, so a cache hit reports the cause Parslet cached with it. */
+  readonly failure: Failure | null;
 }
 
 export interface ParseContext {
@@ -61,13 +63,6 @@ export interface ParseContext {
   captures: Map<string, string>[];
   /** Deepest position reached, for error reporting. */
   maxPos: number;
-  /**
-   * The furthest position at which an atom succeeded but left input behind
-   * under `consumeAll` — Parslet's `offending_pos` in `Atoms::Base#apply`.
-   * `-1` when no such check ever failed. See `Atom#parse` for why this, and
-   * not `maxPos`, is the index a caller wants.
-   */
-  unconsumed: number;
   /**
    * Packrat cache, keyed by (atom, position) as in Parslet's Atoms::Context —
    * with `consume_all` deliberately EXCLUDED from the key, see `Atom#apply`.
@@ -112,8 +107,37 @@ type ParseResult =
        */
       emptyRepetition?: true;
     }
-  | { ok: false };
-const FAIL: ParseResult = { ok: false };
+  | Failure;
+
+/**
+ * A failed application, carrying the one fact about its Parslet cause that a
+ * caller reads: the deepest LEAF of the cause tree Parslet's `Tree` reporter
+ * builds (`Parslet::Cause`; a node with children reports no position of its
+ * own). Parslet re-runs a rejected parse with that reporter and raises the
+ * root cause, so the deepest leaf is the position the gem reports.
+ *
+ * Every combinator's cause is a node over its children's causes, so its
+ * deepest leaf is the maximum over those children, and a failure can be
+ * passed up unchanged rather than wrapped. Leaves are shared per position.
+ */
+interface Failure {
+  readonly ok: false;
+  readonly deepest: number;
+}
+const LEAVES: Failure[] = [];
+/** A leaf cause at `pos`: a terminal that did not match, or a lookahead that refused. */
+function leaf(pos: number): Failure {
+  let failure = LEAVES[pos];
+  if (failure === undefined) {
+    failure = Object.freeze({ ok: false, deepest: pos });
+    LEAVES[pos] = failure;
+  }
+  return failure;
+}
+/** An alternative's cause: a node over every branch's cause. */
+function deeper(left: Failure, right: Failure): Failure {
+  return right.deepest > left.deepest ? right : left;
+}
 
 /**
  * Parslet's sequence flattening: named results (hashes) survive and merge,
@@ -223,7 +247,7 @@ export abstract class Atom {
         ? hit.emptyRepetition
           ? { ok: true, pos: pos + hit.advance, value: hit.value, emptyRepetition: true }
           : { ok: true, pos: pos + hit.advance, value: hit.value }
-        : FAIL;
+        : (hit.failure as Failure);
     } else {
       if (++ctx.depth > MAX_DEPTH) {
         throw new ParseFailed(DEPTH_LIMIT_MESSAGE, pos);
@@ -261,14 +285,15 @@ export abstract class Atom {
                 advance: result.pos - pos,
                 value: result.value,
                 emptyRepetition: result.emptyRepetition === true,
+                failure: null,
               }
-            : { ok: false, advance: 0, value: null, emptyRepetition: false },
+            : { ok: false, advance: 0, value: null, emptyRepetition: false, failure: result },
         );
       }
     }
     if (result.ok && consumeAll && result.pos < ctx.input.length) {
-      if (result.pos > ctx.unconsumed) ctx.unconsumed = result.pos;
-      return FAIL;
+      // Parslet's `err_at(..., offending_pos)`: a leaf where the match stopped.
+      return leaf(result.pos);
     }
     return result;
   }
@@ -318,19 +343,19 @@ export abstract class Atom {
    * applied with `consume_all` true, so a partial match is a failure rather
    * than something to detect afterwards.
    *
-   * The reported index keeps its contract — *the first code unit the parser
-   * could not consume*. Under `consume_all` that is `ctx.unconsumed`, the
-   * furthest point some atom reached before the leftover check rejected it,
-   * not `ctx.maxPos`, which is the deepest position a leaf was *tried* at and
-   * is usually end-of-input. `maxPos` remains the answer when nothing ever
-   * matched a prefix (`str("a").parse("b")` still reports 0).
+   * A rejected root reports the deepest leaf of its failure cause — what
+   * Parslet's `parse` raises after re-running the input with its `Tree`
+   * reporter, and what the gem reads as the failure position. Under
+   * `consume_all` a branch that matched a prefix is one such leaf, at the
+   * first code unit it left behind, but a deeper refusal inside a branch that
+   * was given up (`left(a right` reaching its end looking for a closing
+   * paren) is deeper still, and wins.
    */
   parse(input: string): ParseValue {
     const ctx: ParseContext = {
       input,
       captures: [new Map()],
       maxPos: 0,
-      unconsumed: -1,
       cache: new Map(),
       depth: 0,
     };
@@ -354,7 +379,7 @@ export abstract class Atom {
     // `consume_all` guarantees a successful root reached the end of the input.
     if (result.ok) return result.value;
 
-    const at = ctx.unconsumed >= 0 ? ctx.unconsumed : ctx.maxPos;
+    const at = result.deepest;
     throw new ParseFailed(
       `Failed to match at index ${at}: ${JSON.stringify(input.slice(at, at + 12))}...`,
       at,
@@ -372,7 +397,7 @@ class StrAtom extends Atom {
       return { ok: true, pos: pos + this.literal.length, value: new Slice(this.literal, pos) };
     }
     if (pos > ctx.maxPos) ctx.maxPos = pos;
-    return FAIL;
+    return leaf(pos);
   }
 }
 
@@ -431,7 +456,7 @@ class ReAtom extends Atom {
       }
     }
     if (pos > ctx.maxPos) ctx.maxPos = pos;
-    return FAIL;
+    return leaf(pos);
   }
 }
 
@@ -447,7 +472,7 @@ class AnyAtom extends Atom {
       };
     }
     if (pos > ctx.maxPos) ctx.maxPos = pos;
-    return FAIL;
+    return leaf(pos);
   }
 }
 
@@ -468,9 +493,9 @@ class SeqAtom extends Atom {
    */
   tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
     const left = this.left.apply(pos, ctx, false);
-    if (!left.ok) return FAIL;
+    if (!left.ok) return left;
     const right = this.right.apply(left.pos, ctx, consumeAll);
-    if (!right.ok) return FAIL;
+    if (!right.ok) return right;
     const value = combineSeq(left.value, right.value);
     // `flatten_sequence` never yields nil: `foldl` of an all-vanished list
     // starts (and ends) at `''`, a plain string — see `ParseValue`. Measured:
@@ -497,7 +522,8 @@ class AltAtom extends Atom {
   tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
     const left = this.left.apply(pos, ctx, consumeAll);
     if (left.ok) return left;
-    return this.right.apply(pos, ctx, consumeAll);
+    const right = this.right.apply(pos, ctx, consumeAll);
+    return right.ok ? right : deeper(left, right);
   }
 }
 
@@ -520,15 +546,9 @@ class MaybeAtom extends Atom {
     // Rebuilt rather than returned: `flatten` re-folds a `:maybe` around its
     // child, so an empty repetition inside one is no longer a bare `[]`.
     if (result.ok) return { ok: true, pos: result.pos, value: result.value };
-    if (consumeAll && pos < ctx.input.length) {
-      // The same leftover conversion `Atom#apply` performs, with the same
-      // bookkeeping: this success-consuming-nothing becomes a failure, and
-      // `pos` is the first unit the parse could not consume. Without the
-      // recording, `parse` falls back to `maxPos`, which the failed inner
-      // attempt pushed deeper — reporting an index past the truth.
-      if (pos > ctx.unconsumed) ctx.unconsumed = pos;
-      return FAIL;
-    }
+    // Parslet's `maybe` is a repetition, whose leftover refusal under
+    // `consume_all` is `err(..., [break_on])`: the inner attempt's cause.
+    if (consumeAll && pos < ctx.input.length) return result;
     return { ok: true, pos, value: null };
   }
 }
@@ -550,20 +570,22 @@ class RepeatAtom extends Atom {
   tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
     const values: ParseValue[] = [];
     let cursor = pos;
+    // Parslet's `break_on`: the cause of the attempt that ended the loop.
+    let breakOn: Failure | null = null;
     for (;;) {
       const result = this.inner.apply(cursor, ctx, false);
-      if (!result.ok) break;
+      if (!result.ok) {
+        breakOn = result;
+        break;
+      }
       if (result.pos === cursor) break; // zero-width match: stop, do not livelock
       values.push(result.value);
       cursor = result.pos;
     }
-    if (values.length < this.min) return FAIL;
-    if (consumeAll && cursor < ctx.input.length) {
-      // Repetition performs its own leftover check, so retain the consumed
-      // prefix before a later alternative can record a shorter one.
-      if (cursor > ctx.unconsumed) ctx.unconsumed = cursor;
-      return FAIL;
-    }
+    // Both refusals are `err(..., [break_on])`. A zero-width stop has no cause
+    // (Parslet would loop instead), so it reports a leaf where it stood.
+    if (values.length < this.min) return breakOn ?? leaf(cursor);
+    if (consumeAll && cursor < ctx.input.length) return breakOn ?? leaf(cursor);
     if (values.length === 0) {
       return { ok: true, pos: cursor, value: new Slice("", pos), emptyRepetition: true };
     }
@@ -594,17 +616,13 @@ class AbsentAtom extends Atom {
   tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
     // The inner parse is speculation: whatever it does, this atom consumes
     // nothing. `consumeAll` still reaches it (Parslet propagates the flag to
-    // the looked-at atom, and cache parity depends on that), but the
-    // `unconsumed` watermark — "the first code unit the parser could not
-    // consume" — must not move for input only a lookahead touched. Restoring
-    // it makes the speculation traceless without hiding recordings made
-    // outside this window.
-    const unconsumedBefore = ctx.unconsumed;
+    // the looked-at atom, and cache parity depends on that). Parslet's
+    // refusal is `err_at(..., error_pos)` with no children: the inner cause
+    // is dropped, and the lookahead is a leaf where it started.
     const result = this.inner.apply(pos, ctx, consumeAll);
-    ctx.unconsumed = unconsumedBefore;
     if (result.ok) {
       if (pos > ctx.maxPos) ctx.maxPos = pos;
-      return FAIL;
+      return leaf(pos);
     }
     return { ok: true, pos, value: null };
   }
@@ -616,12 +634,9 @@ class PresentAtom extends Atom {
   }
 
   tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
-    // Same traceless-speculation rule as `AbsentAtom`, and for the same
-    // reason: a positive lookahead consumes nothing either.
-    const unconsumedBefore = ctx.unconsumed;
+    // Same rule as `AbsentAtom`: a refusal is a leaf where it started.
     const result = this.inner.apply(pos, ctx, consumeAll);
-    ctx.unconsumed = unconsumedBefore;
-    if (!result.ok) return FAIL;
+    if (!result.ok) return leaf(pos);
     return { ok: true, pos, value: null };
   }
 }
@@ -640,7 +655,7 @@ class AsAtom extends Atom {
 
   tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
     const result = this.inner.apply(pos, ctx, consumeAll);
-    if (!result.ok) return FAIL;
+    if (!result.ok) return result;
     // `flatten(value, named: true)`: a repetition that matched nothing keeps an
     // empty list under a name instead of collapsing to an empty string.
     const value = result.emptyRepetition ? [] : result.value;
@@ -662,7 +677,7 @@ class CaptureAtom extends Atom {
 
   tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
     const result = this.inner.apply(pos, ctx, consumeAll);
-    if (!result.ok) return FAIL;
+    if (!result.ok) return result;
     const scope = ctx.captures[ctx.captures.length - 1] as Map<string, string>;
     scope.set(this.name, ctx.input.slice(pos, result.pos));
     return result;
@@ -725,11 +740,13 @@ class ChoiceAtom extends Atom {
   }
 
   tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
+    let failure: Failure | null = null;
     for (const atom of this.atoms) {
       const result = atom.apply(pos, ctx, consumeAll);
       if (result.ok) return result;
+      failure = failure === null ? result : deeper(failure, result);
     }
-    return FAIL;
+    return failure ?? leaf(pos);
   }
 }
 
@@ -800,17 +817,20 @@ export function tokenChoice(entries: ReadonlyArray<readonly [key: string, atom: 
   class TokenChoiceAtom extends Atom {
     tryParse(pos: number, ctx: ParseContext, consumeAll: boolean): ParseResult {
       const bucket = buckets.get(ctx.input[pos] ?? "");
+      // Every entry outside the bucket fails on its first character, which
+      // in the alternative this stands for is a leaf at `pos`.
+      let failure = leaf(pos);
       if (bucket) {
         for (const atom of bucket) {
           const result = atom.apply(pos, ctx, consumeAll);
           if (result.ok) return result;
+          failure = deeper(failure, result);
         }
       }
       // Record the position like every other leaf atom: with no bucket, no
-      // inner atom runs, so nothing else would advance maxPos and the reported
-      // failure index could point earlier than the real one.
+      // inner atom runs, so nothing else would advance maxPos.
       if (pos > ctx.maxPos) ctx.maxPos = pos;
-      return FAIL;
+      return failure;
     }
   }
   return new TokenChoiceAtom();

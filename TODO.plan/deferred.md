@@ -1533,37 +1533,14 @@ movement in OUTCOME, and, since 2026-09-23, the gate no longer asserts a
 specific guard for the rows in between, only that a refusal is one of the
 known clean shapes.
 
-## AsciiMath rejection position: `right-unclosed`
+## AsciiMath rejection position: `right-unclosed` — CLOSED
 
-The port's `ParseError.index` disagrees with the gem's recorded offset for one
-rejection, measured 2026-08-19 against the pinned oracle (00c52783):
-
-| input | gem | port |
-|---|---|---|
-| `left( x right` | 13 (end of input) | 8 (where `right` begins) |
-
-Both are defensible readings of "where it failed" — Parslet reports the
-furthest position it reached after consuming the whole input, the port reports
-where the unsatisfiable construct began — but PORTING-STANDARDS.md makes the
-gem's answer the specification, so this is a divergence, not a choice.
-
-Every other recorded rejection agrees: six unshifted cases reproduce the gem's
-offset exactly, and all four cases whose preprocessing changes length map back
-to the correct ORIGINAL-input offset. The divergence is pinned by name in
-`test/formats/asciimath/rejection-parity.spec.ts` (`KNOWN_POSITION_DIVERGENCE`)
-so it cannot drift further unnoticed, and so that closing it is a visible
-change to that constant rather than a silent one.
-
-Deferred because closing it means changing where the grammar reports failure
-for unclosed `left(` groups, which is parser surgery well beyond the gate that
-found it.
-
-**Trigger:** the first of — a second rejection case is measured whose position
-also disagrees (making this a class rather than a single case), or any consumer
-depends on `ParseError.index` for an unclosed-fence input, or the AsciiMath
-grammar's failure reporting is touched for any other reason. Whichever comes
-first reopens it; `KNOWN_POSITION_DIVERGENCE` in
-`test/formats/asciimath/rejection-parity.spec.ts` is the one place to change.
+`left( x right` now reports 13, the end of the input, as the gem does. pegkit's
+`ParseFailed.index` is the deepest leaf of the failure cause Parslet's `Tree`
+reporter builds, which is what both Parslet (HTML, LaTeX, UnicodeMath) and
+amath (AsciiMath, `Amath::ErrorPosition`) report. The same change closed every
+other pinned position divergence: `left(a right` in the AsciiMath root
+fixture, LaTeX's two, HTML's ten and UnicodeMath's eighteen.
 
 ## Ruby Float vs JavaScript number in option interpolation
 

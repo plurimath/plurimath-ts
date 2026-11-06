@@ -88,35 +88,21 @@ describe("every recorded LaTeX rejection is refused here too", () => {
 });
 
 /**
- * The two cases where the port's failure position does not reproduce the gem's,
- * recorded rather than hidden. Both are the same shape:
- *
- *   latex-right-without-left  `x \right)`       gem→3 (`r` of `right`), port 2 (`\`)
- *   latex-end-without-begin   `a \end{matrix}`  gem→3 (`e` of `end`),   port 2 (`\`)
- *
- * Both readings of "where it failed" are defensible — Parslet reports the
- * furthest position any branch reached, which lands one character into the
- * command name, while the port reports where the unsatisfiable construct began,
- * which is its backslash — but they are not the same number. This is the same
- * divergence the AsciiMath suite pins for `right-unclosed`, and
- * PORTING-STANDARDS.md makes the gem's number the specification, so it is
- * recorded here with its measured values rather than asserted away.
+ * What the port actually reports, per case, measured against this pin. Every
+ * value equals the gem's recorded offset mapped through the port's source map:
+ * both report the deepest leaf of the root's failure cause. That includes
+ * `x \right)` and `a \end{matrix}`, which fail one character into the
+ * command name (3), where a branch that matched the backslash looked further.
  */
-const KNOWN_POSITION_DIVERGENCES: readonly string[] = [
-  "latex-end-without-begin",
-  "latex-right-without-left",
-];
-
-/** What the port actually reports, per case, measured against this pin. */
 const PORT_INDEX: ReadonlyMap<string, number> = new Map([
   ["latex-unclosed-brace", 7],
   ["latex-stray-close-brace", 1],
   ["latex-unknown-command", 1],
   ["latex-frac-no-args", 5],
   ["latex-frac-one-arg", 8],
-  ["latex-right-without-left", 2],
+  ["latex-right-without-left", 3],
   ["latex-begin-without-end", 16],
-  ["latex-end-without-begin", 2],
+  ["latex-end-without-begin", 3],
   ["latex-whitespace-only", 3],
   ["latex-lone-backslash", 1],
   ["latex-unclosed-text", 9],
@@ -141,7 +127,7 @@ describe("the port maps the LaTeX failure position back to the original input", 
   });
 
   it("the counts this file names are derived, not recited", () => {
-    // 10 unshifted / 4 shifted / 12 of 14 agreeing, computed from the corpus
+    // 10 unshifted / 4 shifted / all 14 agreeing, computed from the corpus
     // and the map rather than restated from the prose above.
     const unshifted = rejections.filter((entry) => entry.input === entry.preprocessed);
     const shifted = rejections.filter((entry) => entry.input !== entry.preprocessed);
@@ -151,10 +137,8 @@ describe("the port maps the LaTeX failure position back to the original input", 
     const diverging = rejections.filter(
       (entry) => mappedGemIndex(entry) !== PORT_INDEX.get(entry.id),
     );
-    expect(diverging.map((entry) => entry.id).sort()).toStrictEqual([
-      ...KNOWN_POSITION_DIVERGENCES,
-    ]);
-    expect(rejections.length - diverging.length).toBe(12);
+    expect(diverging.map((entry) => entry.id)).toStrictEqual([]);
+    expect(rejections.length - diverging.length).toBe(14);
   });
 
   it.each(rejections.map((entry) => [entry.id, entry] as const))(
@@ -172,12 +156,10 @@ describe("the port maps the LaTeX failure position back to the original input", 
   );
 
   it("reproduces the gem's recorded offset wherever the two agree", () => {
-    // Every case except the two pinned divergences, mapped through the port's
-    // own source map. This is the assertion that would break if the port
-    // stopped mapping offsets at all.
-    const comparable = rejections.filter((entry) => !KNOWN_POSITION_DIVERGENCES.includes(entry.id));
-    expect(comparable.length).toBe(12);
-    for (const entry of comparable) {
+    // Every case, mapped through the port's own source map. This is the
+    // assertion that would break if the port stopped mapping offsets at all.
+    expect(rejections.length).toBe(14);
+    for (const entry of rejections) {
       expect(PORT_INDEX.get(entry.id), entry.id).toBe(mappedGemIndex(entry));
     }
   });

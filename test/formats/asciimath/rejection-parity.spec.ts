@@ -145,23 +145,16 @@ describe("every recorded rejection is refused here too", () => {
 /**
  * The port's `ParseError.index` per case, measured against this pin.
  *
- * Eight of the nine unshifted cases reproduce the gem's recorded offset
- * exactly, and all four shifted cases map back to the right position in the
- * ORIGINAL input. Those counts are checked rather than merely stated: "the
- * counts this header names are derived, not recited" below computes all three
- * from the corpus and this map, so a rejection case added to the pin fails
- * there instead of ageing this paragraph. One case does not reproduce the
- * gem's offset, and is recorded rather than hidden:
+ * All nine unshifted cases reproduce the gem's recorded offset exactly, and
+ * all four shifted cases map back to the right position in the ORIGINAL
+ * input. Those counts are checked rather than merely stated: "the counts this
+ * header names are derived, not recited" below computes all three from the
+ * corpus and this map, so a rejection case added to the pin fails there
+ * instead of ageing this paragraph.
  *
- *   right-unclosed  `left( x right`  gem 13 (end of input), port 8 (at `right`)
- *
- * Both are defensible readings of "where it failed" — Parslet reports the
- * furthest position it reached after consuming everything, the port reports
- * where the unsatisfiable construct began — but they are not the same number,
- * and PORTING-STANDARDS.md makes the gem's the specification. It is pinned
- * here as a KNOWN DIVERGENCE with its measured values so it cannot drift
- * further unnoticed, and TODO.plan carries the decision about closing it.
- * Asserting agreement here would be false; asserting nothing hid it entirely.
+ * `right-unclosed` (`left( x right`) reports 13, the end of the input, as the
+ * gem does: both report the deepest leaf of the failure cause, and the
+ * `left ... right` branch reaches the end looking for its closing paren.
  */
 const MAPPED_INDEX: ReadonlyMap<string, number> = new Map([
   ["frac-trailing", 1],
@@ -170,20 +163,16 @@ const MAPPED_INDEX: ReadonlyMap<string, number> = new Map([
   ["frac-trailing-space", 2],
   ["backtick-bare", 0],
   ["right-without-left", 0],
-  ["right-unclosed", 8],
+  ["right-unclosed", 13],
   ["frac-trailing-after-brace", 3],
   ["frac-trailing-after-braces", 6],
   ["frac-trailing-after-parens", 6],
   ["frac-trailing-after-both", 11],
   // The widened corpus's two explicit-fence rejections. The gem records 8 for
-  // both and the port reports 8 for both, so these agree — unlike
-  // `right-unclosed`, whose disagreement is pinned below.
+  // both and the port reports 8 for both.
   ["left-right-curly", 8],
   ["left-right-vert", 8],
 ]);
-
-/** The one case whose mapped index does not reproduce the gem's. */
-const KNOWN_POSITION_DIVERGENCE = "right-unclosed";
 
 describe("the port maps the failure position back to the original input", () => {
   it("covers every recorded rejection, so a new case cannot skip the check", () => {
@@ -193,23 +182,17 @@ describe("the port maps the failure position back to the original input", () => 
   });
 
   it("the counts this header names are derived, not recited", () => {
-    // 9 unshifted / 4 shifted / 8 of the 9 agreeing, computed from the corpus
-    // and MAPPED_INDEX rather than restated from the paragraph above. On this
-    // pin, `right-unclosed` is the only unshifted case where the two numbers
-    // differ (gem 13, port 8); every shifted case differs from its recorded
-    // offset by construction, because the recorded one indexes `preprocessed`.
+    // 9 unshifted / 4 shifted / all 9 agreeing, computed from the corpus and
+    // MAPPED_INDEX rather than restated from the paragraph above. Every shifted
+    // case differs from its recorded offset by construction, because the
+    // recorded one indexes `preprocessed`.
     const unshifted = rejections.filter((entry) => entry.input === entry.preprocessed);
     const shifted = rejections.filter((entry) => entry.input !== entry.preprocessed);
     expect(unshifted.length).toBe(9);
     expect(shifted.length).toBe(4);
 
     const agreeing = unshifted.filter((entry) => MAPPED_INDEX.get(entry.id) === entry.index);
-    expect(agreeing.length).toBe(8);
-    expect(
-      unshifted
-        .filter((entry) => MAPPED_INDEX.get(entry.id) !== entry.index)
-        .map((entry) => entry.id),
-    ).toStrictEqual([KNOWN_POSITION_DIVERGENCE]);
+    expect(agreeing.length).toBe(9);
   });
 
   it.each(rejections.map((entry) => [entry.id, entry] as const))(
@@ -238,9 +221,7 @@ describe("the port maps the failure position back to the original input", () => 
     // An earlier version looped over every case and, for the shifted ones,
     // compared `MAPPED_INDEX.get(id)` to itself. That branch could not fail,
     // while the comment above it claimed it was the one that would.
-    const comparable = rejections.filter(
-      (entry) => entry.input === entry.preprocessed && entry.id !== KNOWN_POSITION_DIVERGENCE,
-    );
+    const comparable = rejections.filter((entry) => entry.input === entry.preprocessed);
     expect(comparable.length).toBeGreaterThan(0);
     for (const entry of comparable) {
       expect(MAPPED_INDEX.get(entry.id), entry.id).toBe(entry.index);

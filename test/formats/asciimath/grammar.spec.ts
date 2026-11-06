@@ -470,16 +470,14 @@ describe("failure positions", () => {
     }
   }
 
-  // Parslet is *not* the oracle for the index: its reporter blames the root
-  // atom and says "line 1 char 1" for every one of these. What is checked
-  // against the gem is which inputs fail at all — `bundle exec ruby tree.rb
-  // 'a/' 'x/' 'right' 'left(x right'` raises `Parslet::ParseFailed` for all
-  // four. The index is pegkit's own contract: how far the parse got.
+  // The index is the deepest leaf of the root's failure cause, which is what
+  // `Plurimath::Asciimath::Parse#parse` reports (amath, plurimath 2967dcc4):
+  // 1, 1, 0 and 12 for these four.
   it.each([
     ["a/", 1],
     ["x/", 1],
     ["right", 0],
-    ["left(x right", 7],
+    ["left(x right", 12],
   ])("%j fails at index %i", (input, index) => {
     expect(failureIndex(input)).toBe(index);
   });

@@ -496,7 +496,6 @@ describe("packrat and consume_all interact", () => {
       input: "ab",
       captures: [new Map()],
       maxPos: 0,
-      unconsumed: -1,
       cache: new Map(),
       depth: 0,
     };
@@ -506,6 +505,13 @@ describe("packrat and consume_all interact", () => {
   });
 });
 
+/**
+ * `ParseFailed.index` is the deepest leaf of the failure cause that Parslet's
+ * `Tree` reporter builds. Every expected index below was measured on parslet
+ * 2.0.0 with the same expression, by `parse` and a walk to the deepest leaf
+ * (`Amath::ErrorPosition#deepest_leaf`'s rule: a cause with children reports
+ * no position of its own).
+ */
 describe("failure positions", () => {
   it("tokenChoice records its position when no bucket matches", () => {
     // Regression: with no bucket for the current character, no inner atom runs,
@@ -537,17 +543,15 @@ describe("failure positions", () => {
     }
   });
 
-  it("a negative lookahead's speculation does not move the unconsumed index", () => {
-    // Regression: `absent()` passes `consumeAll` into its inner atom (as
-    // Parslet does), and the inner match's leftover conversion recorded a
-    // watermark for input the lookahead never consumed. `ParseFailed.index`
-    // is "the first code unit the parser could not consume" — a lookahead
-    // consumes nothing, so index must stay at the composite's own position.
+  it("a negative lookahead refuses as a leaf at its own position", () => {
+    // `absent()` passes `consumeAll` into its inner atom (as Parslet does), but
+    // Parslet's refusal is `err_at(..., error_pos)` with no children, so the
+    // inner match's leftover never reaches the reported index.
     try {
       str("a").absent().parse("ab");
       expect.unreachable("should have thrown");
     } catch (error) {
-      expect((error as ParseFailed).index).toBe(0); // was 1: the leak
+      expect((error as ParseFailed).index).toBe(0);
     }
   });
 
@@ -556,7 +560,7 @@ describe("failure positions", () => {
       seq(str("x"), str("a").absent()).parse("xab");
       expect.unreachable("should have thrown");
     } catch (error) {
-      expect((error as ParseFailed).index).toBe(1); // was 2: the leak
+      expect((error as ParseFailed).index).toBe(1);
     }
   });
 
@@ -571,30 +575,42 @@ describe("failure positions", () => {
     }
   });
 
-  it("maybe's leftover conversion records the unconsumed index", () => {
-    // Same family as the lookahead leak. When `maybe` succeeds by consuming
-    // nothing and consume-all turns that into a failure, `pos` is the first
-    // unit the parse could not consume — without recording it, the index
-    // fell back to `maxPos`, which the failed inner attempt pushed deeper.
+  it("maybe's leftover refusal reports its inner attempt's cause", () => {
+    // Parslet's `maybe` is a repetition; when it matches nothing under
+    // consume-all with input left, it refuses with `err(..., [break_on])`, so
+    // the cause is the failed inner attempt, whose leaf is `b` expected at 1.
     try {
       seq(str("a"), str("b")).maybe().parse("ax");
       expect.unreachable("should have thrown");
     } catch (error) {
-      expect((error as ParseFailed).index).toBe(0); // was 1: the inner attempt's maxPos
+      expect((error as ParseFailed).index).toBe(1);
     }
   });
 
-  it("a recording made before the lookahead survives its restore", () => {
-    // The restore must be a snapshot of the speculation window, not a reset.
+  it.each([
+    ["str('a') on b", () => str("a"), "b", 0],
+    ["str('a').repeat(1) on aab", () => str("a").repeat(1), "aab", 2],
+    ["str('a').repeat(2) on ab", () => str("a").repeat(2), "ab", 1],
+    ["str('a').present? >> str('b') on ab", () => seq(str("a").present(), str("b")), "ab", 0],
+    ["str('a') >> str('b').maybe on axy", () => seq(str("a"), str("b").maybe()), "axy", 1],
+  ] as const)("%s reports Parslet's deepest leaf", (_name, build, input, index) => {
+    try {
+      build().parse(input);
+      expect.unreachable("should have thrown");
+    } catch (error) {
+      expect((error as ParseFailed).index).toBe(index);
+    }
+  });
+
+  it("an alternative reports its deepest branch", () => {
     // The first branch matches "ab" of "abz" and fails the consume-all check,
-    // honestly recording index 2; the second branch's lookahead speculation
-    // must not erase that on its way through.
+    // a leaf at 2; the second branch's lookahead refuses as a leaf at 1.
     const grammar = choice([seq(str("a"), str("b")), seq(str("a"), str("z").absent())]);
     try {
       grammar.parse("abz");
       expect.unreachable("should have thrown");
     } catch (error) {
-      expect((error as ParseFailed).index).toBe(2); // the first branch's honest mark
+      expect((error as ParseFailed).index).toBe(2);
     }
   });
 });

@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { normalize, ParseError } from "../../../src/core/index";
 import { parseUnicodemath } from "../../../src/formats/unicodemath/index";
+import { expectSupersededAtPin, SUPERSEDED_AT_PIN } from "./superseded-at-pin";
 
 interface Witness {
   readonly input: string;
@@ -50,8 +51,9 @@ const fixtures = JSON.parse(payload) as {
 const metadata = JSON.parse(
   readFileSync(join(here, "reachability-fixtures.metadata.json"), "utf8"),
 ) as Metadata;
-const parsed = fixtures.cases.filter((entry) => entry.model !== undefined);
-const refused = fixtures.cases.filter((entry) => entry.raises !== undefined);
+const current = fixtures.cases.filter((entry) => !SUPERSEDED_AT_PIN.has(entry.input));
+const parsed = current.filter((entry) => entry.model !== undefined);
+const refused = current.filter((entry) => entry.raises !== undefined);
 
 describe("the measured public inputs from the nine-rule investigation", () => {
   it("retains the historical source, payload and engine calibration", () => {
@@ -88,16 +90,22 @@ describe("the measured public inputs from the nine-rule investigation", () => {
   it("preserves every attempted model or public refusal", () => {
     expect(fixtures.cases.length).toBe(metadata.attemptedCount);
     expect(fixtures.cases.length).toBe(metadata.projection.rowCount);
-    expect(parsed.length).toBe(metadata.projection.modelCount);
-    expect(refused.length).toBe(metadata.projection.refusalCount);
-    expect(parsed.length).toBe(671);
-    expect(refused.length).toBe(27);
-    expect(parsed.length + refused.length).toBe(fixtures.cases.length);
+    const recordedModels = fixtures.cases.filter((entry) => entry.model !== undefined);
+    const recordedRefusals = fixtures.cases.filter((entry) => entry.raises !== undefined);
+    expect(recordedModels.length).toBe(metadata.projection.modelCount);
+    expect(recordedRefusals.length).toBe(metadata.projection.refusalCount);
+    expect(recordedModels.length).toBe(671);
+    expect(recordedRefusals.length).toBe(27);
+    expect(recordedModels.length + recordedRefusals.length).toBe(fixtures.cases.length);
     expect(new Set(fixtures.cases.map((entry) => entry.input)).size).toBe(fixtures.cases.length);
     for (const entry of fixtures.cases) {
       expect(entry.model !== undefined, entry.input).not.toBe(entry.raises !== undefined);
       if (entry.raises !== undefined) expect(entry.raises).toBe("Plurimath::Math::ParseError");
     }
+  });
+
+  it("leaves the inputs plurimath 2967dcc4 changed to the current model fixtures", () => {
+    expect(expectSupersededAtPin(fixtures.cases)).toBe(2);
   });
 
   it.each(parsed.map((entry) => [entry.input, entry] as const))(

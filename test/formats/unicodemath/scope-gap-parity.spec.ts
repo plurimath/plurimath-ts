@@ -11,6 +11,7 @@ import { toLatex } from "../../../src/formats/latex/index";
 import { toMathml } from "../../../src/formats/mathml/index";
 import { toOmml } from "../../../src/formats/omml/index";
 import { parseUnicodemath, toUnicodemath } from "../../../src/formats/unicodemath/index";
+import { expectSupersededAtPin, SUPERSEDED_AT_PIN } from "./superseded-at-pin";
 
 const renderers = {
   asciimath: toAsciimath,
@@ -62,9 +63,13 @@ describe("measured UnicodeMath composition boundaries", () => {
     expect(fixtures.cases.length).toBeGreaterThan(0);
   });
 
+  it("leaves the inputs plurimath 2967dcc4 changed to the current model fixtures", () => {
+    expect(expectSupersededAtPin(fixtures.cases)).toBe(3);
+  });
+
   it.each(
     fixtures.cases
-      .filter((entry) => entry.model !== undefined)
+      .filter((entry) => entry.model !== undefined && !SUPERSEDED_AT_PIN.has(entry.input))
       .map((entry) => [entry.input, entry] as const),
   )("%j: preserves Ruby's public model and measured rendering boundaries", (_input, entry) => {
     const formula: FormulaNode = parseUnicodemath(entry.input);

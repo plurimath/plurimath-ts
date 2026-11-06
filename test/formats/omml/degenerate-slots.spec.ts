@@ -182,7 +182,9 @@ describe(`${FORMAT} degenerate-slot sweep covers every landed renderer`, () => {
       class: "Math::Function::Unitsml",
       fields: { text: witness.input as string },
     });
-    expect(RENDER(new UnitsmlNode({ text: witness.input as string }) as never)).toBe(witness.output);
+    expect(RENDER(new UnitsmlNode({ text: witness.input as string }) as never)).toBe(
+      witness.output,
+    );
   });
 
   it("pins the constructor-required Uncertainty witness to measured bytes", () => {

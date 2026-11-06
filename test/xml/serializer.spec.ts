@@ -19,8 +19,8 @@ import {
   DUMP_NODES_FIXTURES,
   EXPECTED_PROVENANCE,
   expectedBytes,
-  expectedOutcome,
   expectedNames,
+  expectedOutcome,
   type OxContractFixture,
 } from "./ox-contract";
 

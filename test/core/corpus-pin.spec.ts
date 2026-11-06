@@ -435,9 +435,14 @@ describe("the pin as shipped", () => {
     // `Function::Right#to_html` accepts its caller's argument, so HTML renders.
     for (const id of LEFT_RIGHT_CASES) {
       const entry = corpus.cases.find((candidate) => candidate.id === id);
-      expect([...(entry?.expected.keys() ?? [])].sort(), id).toStrictEqual(
-        ["asciimath", "html", "latex", "mathml", "omml", "unicodemath"],
-      );
+      expect([...(entry?.expected.keys() ?? [])].sort(), id).toStrictEqual([
+        "asciimath",
+        "html",
+        "latex",
+        "mathml",
+        "omml",
+        "unicodemath",
+      ]);
       expect(entry?.refusals.size, id).toBe(0);
       expect(entry?.model, id).not.toBe(null);
     }

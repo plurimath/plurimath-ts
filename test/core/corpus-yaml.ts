@@ -3,10 +3,12 @@
  *
  * The package has no YAML dependency and `package.json` is not this task's to
  * change, so the suite reads `corpus/*.yaml` with this. It covers exactly the
- * subset Psych emits for those files — block mappings and sequences, plain,
- * single- and double-quoted scalars, literal block scalars (with an optional
- * indentation indicator), and empty flow
- * collections — and **throws on anything else** rather than guessing. A silent
+ * subset Psych emits for those files and for the stage ledgers and payloads
+ * (`test/replay/stage-pin.ts`) — block mappings and sequences, plain, single-
+ * and double-quoted scalars (each may be wrapped onto continuation lines),
+ * literal and folded block scalars (with an optional indentation indicator),
+ * and empty flow collections — and **throws on anything else** rather than
+ * guessing, including any line left over once the document is read. A silent
  * misparse here would make the corpus agree with a broken model.
  */
 
@@ -41,7 +43,15 @@ export function parseYaml(text: string): YamlValue {
   }
   skipBlank(state);
   if (state.index >= lines.length) return null;
-  return parseValue(state, indentOf(lines[state.index] ?? ""));
+  const value = parseValue(state, indentOf(lines[state.index] ?? ""));
+  // A line the grammar above stopped at is a line it did not understand.
+  // Returning what was read so far would hand the caller a silently truncated
+  // document, so the whole input must have been consumed.
+  skipBlank(state);
+  if (state.index < lines.length) {
+    throw new Error(`unexpected content at line ${state.index + 1}: ${lines[state.index]}`);
+  }
+  return value;
 }
 
 /**
@@ -78,7 +88,7 @@ function parseValue(state: State, column: number): YamlValue {
     throw new Error(`unsupported block scalar header "${rest}" at line ${state.index + 1}`);
   }
   state.index += 1;
-  return parseScalar(continueQuoted(state, rest));
+  return parseScalar(continueScalar(state, rest, column - 1));
 }
 
 function parseMapping(state: State, column: number): { readonly [key: string]: YamlValue } {
@@ -100,7 +110,7 @@ function parseMapping(state: State, column: number): { readonly [key: string]: Y
     if (inline !== undefined && (inline.startsWith("|") || inline.startsWith(">"))) {
       result[key] = parseBlockScalar(state, column, inline);
     } else if (inline !== undefined && inline !== "") {
-      result[key] = parseScalar(continueQuoted(state, inline));
+      result[key] = parseScalar(continueScalar(state, inline, column));
     } else {
       result[key] = parseNested(state, column);
     }
@@ -150,15 +160,16 @@ function parseNested(state: State, column: number): YamlValue {
 }
 
 /**
- * A literal block scalar header: `|`, an optional chomping indicator (`-`
- * strip, nothing for clip) and an optional indentation indicator, a digit from
- * 1 to 9, in either order. Psych writes `|2` when the text starts with a blank
- * line or a space, where the indentation could not be detected; the three
- * OMML payloads of `omml-limits-016` start with a newline and use it. Keep
- * chomping (`+`) and folded scalars (`>`) are absent from the corpus and are
- * refused rather than read as clip and literal.
+ * A block scalar header: `|` (literal) or `>` (folded), an optional chomping
+ * indicator (`-` strip, nothing for clip) and an optional indentation
+ * indicator, a digit from 1 to 9, in either order. Psych writes `|2` when the
+ * text starts with a blank line or a space, where the indentation could not be
+ * detected; the three OMML payloads of `omml-limits-016` start with a newline
+ * and use it. Psych writes `>-` for a long value it folds, as the latex stage
+ * ledger does. Keep chomping (`+`) is absent from every file read and is
+ * refused rather than read as clip.
  */
-const BLOCK_HEADER = /^\|(?:([1-9])(-)?|(-)([1-9])?)?$/;
+const BLOCK_HEADER = /^([|>])(?:([1-9])(-)?|(-)([1-9])?)?$/;
 
 /**
  * `column` is the indentation of the mapping that owns the key. An explicit
@@ -170,8 +181,9 @@ function parseBlockScalar(state: State, column: number, header: string): string 
   if (match === null) {
     throw new Error(`unsupported block scalar header "${header}" at line ${state.index}`);
   }
-  const indicator = match[1] ?? match[4];
-  const strip = (match[2] ?? match[3]) === "-";
+  const folded = match[1] === ">";
+  const indicator = match[2] ?? match[5];
+  const strip = (match[3] ?? match[4]) === "-";
   const collected: string[] = [];
   let blockIndent = indicator === undefined ? -1 : column + Number(indicator);
   while (state.index < state.lines.length) {
@@ -195,8 +207,34 @@ function parseBlockScalar(state: State, column: number, header: string): string 
     state.index += 1;
   }
   while (collected.length > 0 && collected[collected.length - 1] === "") collected.pop();
-  const body = collected.join("\n");
+  const body = folded ? foldLines(collected, state.index) : collected.join("\n");
   return strip ? body : `${body}\n`;
+}
+
+/**
+ * Folding: a line break between two text lines becomes a space, and each
+ * empty line between them a newline. A more-indented line keeps its breaks in
+ * YAML; none occurs in any file read, so one is refused rather than folded.
+ */
+function foldLines(lines: readonly string[], at: number): string {
+  let body = "";
+  let breaks = 0;
+  let started = false;
+  for (const line of lines) {
+    if (line === "") {
+      breaks += 1;
+      continue;
+    }
+    if (line.startsWith(" ") || line.startsWith("\t")) {
+      throw new Error(`a more-indented line in the folded block scalar ending at line ${at}`);
+    }
+    if (started) body += breaks === 0 ? " " : "\n".repeat(breaks);
+    else body += "\n".repeat(breaks);
+    body += line;
+    breaks = 0;
+    started = true;
+  }
+  return body;
 }
 
 function parseScalar(raw: string): YamlValue {
@@ -254,6 +292,78 @@ function continueQuoted(state: State, inline: string): string {
     folded += breaks === 0 ? ` ${line}` : "\n".repeat(breaks) + line;
     breaks = 0;
     if (closesSingleQuoted(folded)) return folded;
+  }
+  throw new Error(`unterminated scalar: ${text}`);
+}
+
+/**
+ * A scalar that runs onto the following lines: single-quoted (`continueQuoted`),
+ * double-quoted, or plain. Psych wraps a long plain or double-quoted value onto
+ * continuation lines indented past `column`, the column of the key (or dash)
+ * that owns it — the stage ledgers' `rationale:` and the stage payloads'
+ * `description:` are written that way. YAML folds all three the same way: each
+ * continuation line loses its surrounding white space, one line break becomes a
+ * space and each empty line between two lines becomes a newline. A
+ * double-quoted line ending in an unescaped backslash joins the next line with
+ * nothing in between. Returns the scalar as one line, still quoted if it was.
+ */
+function continueScalar(state: State, inline: string, column: number): string {
+  const text = trimYaml(inline);
+  if (text.startsWith("'")) return continueQuoted(state, inline);
+  if (text.startsWith('"')) return continueDoubleQuoted(state, text);
+  if (text.startsWith("{") || text.startsWith("[")) return inline;
+  let folded = text;
+  let breaks = 0;
+  let index = state.index;
+  while (index < state.lines.length) {
+    const line = state.lines[index] ?? "";
+    if (isBlank(line)) {
+      breaks += 1;
+      index += 1;
+      continue;
+    }
+    if (indentOf(line) <= column) break;
+    folded += breaks === 0 ? ` ${trimYaml(line)}` : "\n".repeat(breaks) + trimYaml(line);
+    breaks = 0;
+    index += 1;
+    state.index = index;
+  }
+  return folded;
+}
+
+/** Whether a double-quoted scalar opened in `text` closes on it. */
+function closesDoubleQuoted(text: string): boolean {
+  for (let index = 1; index < text.length; index += 1) {
+    if (text[index] === "\\") {
+      index += 1;
+      continue;
+    }
+    if (text[index] === '"') {
+      return index === text.length - 1 || trimYaml(text.slice(index + 1)) === "";
+    }
+  }
+  return false;
+}
+
+function continueDoubleQuoted(state: State, text: string): string {
+  if (closesDoubleQuoted(text)) return text;
+  let folded = text.replace(/[ \t]+$/, "");
+  let breaks = 0;
+  while (state.index < state.lines.length) {
+    const line = trimYaml(state.lines[state.index] ?? "");
+    state.index += 1;
+    if (line === "") {
+      breaks += 1;
+      continue;
+    }
+    if (breaks === 0 && /(?:^|[^\\])(?:\\\\)*\\$/.test(folded)) {
+      // An escaped line break: the backslash and the break both go.
+      folded = folded.slice(0, -1) + line;
+    } else {
+      folded += breaks === 0 ? ` ${line}` : "\n".repeat(breaks) + line;
+    }
+    breaks = 0;
+    if (closesDoubleQuoted(folded)) return folded;
   }
   throw new Error(`unterminated scalar: ${text}`);
 }

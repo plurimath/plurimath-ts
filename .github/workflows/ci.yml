@@ -127,6 +127,107 @@ jobs:
 
       - run: pnpm test
 
+  # Replays the plurimath-testsuite stage generation pinned for each language
+  # in test/fixtures/testsuite-pins/, the way the Ruby stage gems replay their
+  # own pins (amath, latexmath, umath, mml, omml: .github/workflows/corpus.yml).
+  # The testsuite's own validator checks every pin, tampered copies of each pin
+  # must fail it, and test/replay replays every row of every pinned generation
+  # against test/replay/stage-replay.record.json.
+  stage-replay:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    # A literal, as in the gems' corpus.yml, so this file fixes the commit; a
+    # step checks it against every pin and against the submodule gitlink.
+    env:
+      TESTSUITE_COMMIT: 85c7be8fd56f0cc64b4869e74716acc4f0dbe746
+      TESTSUITE: submodules/plurimath-testsuite
+      PINS: test/fixtures/testsuite-pins
+    steps:
+      - name: Keep line endings as committed
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+
+      # The validator is plain Ruby with no gems.
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0.1"
+
+      - name: Check TESTSUITE_COMMIT matches the submodule and every pin
+        run: |
+          head=$(git -C "$TESTSUITE" rev-parse HEAD)
+          test "$head" = "$TESTSUITE_COMMIT" || { echo "TESTSUITE_COMMIT=$TESTSUITE_COMMIT but $TESTSUITE is at $head"; exit 1; }
+          for pin in "$PINS"/*.yml; do
+            pinned=$(ruby -ryaml -e 'puts YAML.safe_load_file(ARGV[0]).fetch("commit")' "$pin")
+            test "$pinned" = "$TESTSUITE_COMMIT" || { echo "TESTSUITE_COMMIT=$TESTSUITE_COMMIT but $pin has $pinned"; exit 1; }
+          done
+
+      - name: Validate every pin with the testsuite's validator
+        run: |
+          for pin in "$PINS"/*.yml; do
+            ruby "$TESTSUITE/scripts/validate-stages.rb" "$TESTSUITE" --pin "$pin"
+          done
+
+      - name: A wrong commit, digest or generation fails the validator
+        run: |
+          mkdir -p tmp/pins
+          tamper() {
+            ruby -ryaml -e '
+              pin = YAML.safe_load_file(ARGV[0])
+              pin[ARGV[1]] = ARGV[1] == "generation" ? Integer(ARGV[2]) : ARGV[2]
+              File.write(ARGV[3], YAML.dump(pin))
+            ' "$1" "$2" "$3" "tmp/pins/$4.yml"
+            if ruby "$TESTSUITE/scripts/validate-stages.rb" "$TESTSUITE" --pin "tmp/pins/$4.yml" > "tmp/pins/$4.log" 2>&1; then
+              echo "the validator accepted $1 with a wrong $2"; exit 1
+            fi
+            # The failure must be the pin's, not some other file's.
+            grep -A2 "FAIL  tmp/pins/$4.yml" "tmp/pins/$4.log" || { cat "tmp/pins/$4.log"; exit 1; }
+            echo "ok: $1 with a wrong $2 rejected"
+          }
+          for pin in "$PINS"/*.yml; do
+            language=$(basename "$pin" .yml)
+            generation=$(ruby -ryaml -e 'puts YAML.safe_load_file(ARGV[0]).fetch("generation")' "$pin")
+            tamper "$pin" commit 0000000000000000000000000000000000000000 "$language-commit"
+            tamper "$pin" snapshot_digest "sha256:$(printf '0%.0s' {1..64})" "$language-digest"
+            tamper "$pin" generation 99 "$language-generation-99"
+            if [ "$generation" -gt 1 ]; then
+              tamper "$pin" generation "$((generation - 1))" "$language-generation-previous"
+            fi
+          done
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # `shell: bash` runs with pipefail, so a failing replay fails the step.
+      - name: Replay every row of every pinned generation
+        env:
+          STAGE_REPLAY_REPORT: ${{ github.workspace }}/tmp/replay/replay-report.json
+        run: |
+          mkdir -p tmp/replay
+          pnpm exec vitest run test/replay 2>&1 | tee tmp/replay/replay.log
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stage-replay-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            tmp/replay
+            tmp/pins
+          if-no-files-found: warn
+          retention-days: 7
+
   # Expensive generation is opt-in. Standard PR/push jobs above stay unchanged.
   oracle-artifacts:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.oracle_artifacts }}

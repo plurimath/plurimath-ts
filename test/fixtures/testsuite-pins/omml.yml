@@ -1,0 +1,13 @@
+# The plurimath-testsuite stage generation this port replays for omml
+# (test/replay/stage-replay.spec.ts; CI job stage-replay in
+# .github/workflows/ci.yml). Commit, generation and digest change together,
+# in one deliberate upgrade, and the commit is the submodules/plurimath-testsuite
+# gitlink. The testsuite's own
+# `ruby scripts/validate-stages.rb <checkout> --pin <this file>` checks them.
+---
+schema: plurimath-stage/pin/1
+repository: https://github.com/plurimath/plurimath-testsuite
+commit: 85c7be8fd56f0cc64b4869e74716acc4f0dbe746
+language: omml
+generation: 2
+snapshot_digest: sha256:1d8307a72fa48acfae8fd3e5f5bebecb941e02282aa265f3e9c168b96761d439

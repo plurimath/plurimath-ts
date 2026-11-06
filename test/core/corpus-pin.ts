@@ -1041,6 +1041,37 @@ function readCallsPayload(
   return { path: record.path, group, inputFormat, targets, cases };
 }
 
+/** One legacy corpus payload, read by the reader for its declared kind. */
+export type CorpusPayload =
+  | { readonly kind: "cases"; readonly payload: PinnedPayload }
+  | { readonly kind: "rejections"; readonly payload: PinnedRejectionPayload }
+  | { readonly kind: "calls"; readonly payload: PinnedCallsPayload };
+
+/**
+ * Reads one already-parsed legacy corpus payload (`plurimath-corpus/...`)
+ * with the same per-kind readers `loadPinnedCorpus` uses, or returns
+ * `undefined` for a schema that is not a legacy corpus kind. The caller owns
+ * verifying the bytes: the stage replay (`test/replay/stage-pin.ts`) checks
+ * them against the stage generation's provenance, not `corpus/provenance.yaml`.
+ * `path` is the payload's file path; its stem must be the group.
+ */
+export function readCorpusPayload(path: string, document: YamlValue): CorpusPayload | undefined {
+  const mapping = asMapping(document, path);
+  const schema = requiredString(mapping, "schema", path);
+  const record: PayloadRecord = { path, sha256: "", bytes: 0 };
+  const caseSchema = readCaseSchema(schema);
+  if (caseSchema !== undefined) {
+    return { kind: "cases", payload: readPayload(record, mapping, path, caseSchema) };
+  }
+  if (schema === REJECTIONS_SCHEMA) {
+    return { kind: "rejections", payload: readRejectionPayload(record, mapping, path) };
+  }
+  if (schema === CALLS_SCHEMA || schema === UNITSML_CALLS_SCHEMA) {
+    return { kind: "calls", payload: readCallsPayload(record, mapping, path, schema) };
+  }
+  return undefined;
+}
+
 /**
  * Loads and verifies the whole pin. `root` is a parameter so the failure paths
  * can be proven against a scratch copy rather than argued from the code.

@@ -19,6 +19,12 @@ module NativeCompletionReference
     out.strip
   end
 
+  # Ruby's default #inspect embeds the object's heap address, which differs
+  # on every run. Drop it so a refusal message is a stable measurement.
+  def error_message(error)
+    error.message.gsub(/(#<[A-Z][\w:]*):0x\h+/, "\\1")
+  end
+
   def load_oracle!(oracle)
     raise "requires Ruby 4.0.1" unless RUBY_VERSION == "4.0.1"
     raise "wrong oracle pin" unless git(oracle, "rev-parse", "HEAD") == PIN
@@ -41,17 +47,17 @@ module NativeCompletionReference
       begin
         record[key] = formula.public_send(method, options)
       rescue StandardError => e
-        record["#{key}Error"] = { "class" => e.class.name, "message" => e.message }
+        record["#{key}Error"] = { "class" => e.class.name, "message" => error_message(e) }
       end
     end
     begin
       record["model"] = CorpusGenerator.serialize_node(formula.to_plurimath(options), "unitsml")
     rescue StandardError => e
-      record["modelError"] = { "class" => e.class.name, "message" => e.message }
+      record["modelError"] = { "class" => e.class.name, "message" => error_message(e) }
     end
     record
   rescue StandardError => e
-    { "input" => input, "options" => options, "optionsTypes" => options.to_h { |key, value| [key.to_s, value.is_a?(Symbol) ? "symbol" : value.class.name.downcase] }, "raises" => e.class.name, "message" => e.message }
+    { "input" => input, "options" => options, "optionsTypes" => options.to_h { |key, value| [key.to_s, value.is_a?(Symbol) ? "symbol" : value.class.name.downcase] }, "raises" => e.class.name, "message" => error_message(e) }
   end
 
   # Extract XML text as nodes, never by deleting tag-looking substrings.
@@ -212,7 +218,7 @@ module NativeCompletionReference
         node = Plurimath::Mathml::Utility.resolve_token(text)
         data["resolvedTokens"][text] = CorpusGenerator.serialize_node(node, "resolved-token")
       rescue StandardError => e
-        data["resolvedTokens"][text] = { "raises" => e.class.name, "message" => e.message }
+        data["resolvedTokens"][text] = { "raises" => e.class.name, "message" => error_message(e) }
       end
     end
     data["prefixedUnitsCoverage"] = { "complete" => false, "selectedUnits" => %w[m s g kg A K mol cd], "completeCompositeUnits" => composite_units }

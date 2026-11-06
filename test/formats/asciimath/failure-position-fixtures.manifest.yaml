@@ -12,7 +12,7 @@ generator:
     scripts/generate-corpus.rb: 82630cc145295b12b23443c853b5d2841cd7e293c607092409a050e67fc27868
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 5a15a4d7bed4ef487e2951e07185b5893fe1a2fe
+    commit: 2592625584cf51ba1da6e24833715f3af8c429ce
     clean: true
     dirty_paths: []
 oracle:

@@ -34,7 +34,7 @@ export const MATHML_DATA_GENERATED_PROVENANCE: MathmlDataGeneratedProvenance = {
     ],
     [
       "scripts/generate-corpus.rb",
-      "7a75f45b8ba8c774cc990cf2d68d9f2a5c328c66d570df1e177b5a7a3d86554e",
+      "82630cc145295b12b23443c853b5d2841cd7e293c607092409a050e67fc27868",
     ],
     [
       "scripts/generate-mathml-data.rb",
@@ -42,8 +42,8 @@ export const MATHML_DATA_GENERATED_PROVENANCE: MathmlDataGeneratedProvenance = {
     ],
   ]),
   oracle: "plurimath",
-  oracleVersion: "0.11.12",
-  oracleCommit: "ae20be111a26fdd988c58be0bfb2b7f6fe6e352f",
+  oracleVersion: "0.11.17",
+  oracleCommit: "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256",
   oracleClean: true,
   generatorClean: true,
   rubyEngine: "ruby",

@@ -30,6 +30,7 @@ policy:
   - Math::Function::Nary
   - Math::Function::Table
   - Math::Function::TernaryFunction
+  - Math::Function::Uncertainty
   - Math::Function::UnaryFunction
   - Math::Function::Unitsml
   - Math::Number
@@ -41,12 +42,12 @@ policy:
   - Math::Symbols::Paren
   deferred: []
 summary:
-  total: 1591
-  implemented: 39
+  total: 1592
+  implemented: 40
   aliased: 1552
   deferred: 0
   abstract: 4
-  concrete: 1587
+  concrete: 1588
 equality_definitions:
   Math::Formula:
     class: Math::Formula
@@ -351,6 +352,47 @@ equality_definitions:
       end
     fields:
     - parameter_one
+  Math::Function::Uncertainty:
+    class: Math::Function::Uncertainty
+    compares_class: true
+    calls_super: false
+    own_fields:
+    - category
+    - coverage_factor
+    - coverage_probability
+    - interval_kind
+    - lower
+    - magnitude
+    - notation
+    - unit
+    - upper
+    - value
+    normalized_by: {}
+    source: |-
+      def ==(other)
+        other.class == self.class &&
+          other.category == category &&
+          other.value == value &&
+          other.magnitude == magnitude &&
+          other.coverage_factor == coverage_factor &&
+          other.coverage_probability == coverage_probability &&
+          other.lower == lower &&
+          other.upper == upper &&
+          other.interval_kind == interval_kind &&
+          other.notation == notation &&
+          other.unit == unit
+      end
+    fields:
+    - category
+    - coverage_factor
+    - coverage_probability
+    - interval_kind
+    - lower
+    - magnitude
+    - notation
+    - unit
+    - upper
+    - value
   Math::Function::Unitsml:
     class: Math::Function::Unitsml
     compares_class: false
@@ -2034,6 +2076,64 @@ classes:
       parameter_one:
     unassigned:
     - hide_function_name
+- name: Math::Function::Uncertainty
+  parent: Math::Core
+  disposition: implemented
+  abstract: false
+  direct_subclasses: 0
+  fields:
+  - category
+  - coverage_factor
+  - coverage_probability
+  - interval_kind
+  - lower
+  - magnitude
+  - notation
+  - unit
+  - upper
+  - value
+  own_fields:
+  - category
+  - coverage_factor
+  - coverage_probability
+  - interval_kind
+  - lower
+  - magnitude
+  - notation
+  - unit
+  - upper
+  - value
+  equality:
+    defined_by: Math::Function::Uncertainty
+    fields:
+    - category
+    - coverage_factor
+    - coverage_probability
+    - interval_kind
+    - lower
+    - magnitude
+    - notation
+    - unit
+    - upper
+    - value
+  defaults:
+    required_arguments: 1
+    assigned:
+      coverage_factor:
+      coverage_probability:
+      interval_kind:
+      lower:
+      notation: absolute
+      unit:
+      upper:
+    unassigned:
+    - category
+    - magnitude
+    - value
+    witnessed_fields:
+    - category
+    - magnitude
+    - value
 - name: Math::Function::Underover
   parent: Math::Function::TernaryFunction
   disposition: aliased

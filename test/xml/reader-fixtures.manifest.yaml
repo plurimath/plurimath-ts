@@ -8,18 +8,18 @@ generator:
   path: scripts/generate-xml-reader-fixtures.rb
   sha256: 4c85c687452d5577b201c6d7d722882c8de9fc1539c8f0ec53b234d0c5f8341e
   inputs:
-    scripts/generate-corpus.rb: 7a75f45b8ba8c774cc990cf2d68d9f2a5c328c66d570df1e177b5a7a3d86554e
+    scripts/generate-corpus.rb: 82630cc145295b12b23443c853b5d2841cd7e293c607092409a050e67fc27868
     scripts/generate-xml-reader-fixtures.rb: 4c85c687452d5577b201c6d7d722882c8de9fc1539c8f0ec53b234d0c5f8341e
     scripts/render-fixture-provenance.rb: 6ce40d8c5e498b42cbb90cf79bee8461666560ccd9d5db58bb0ff0341e7afb11
   repository:
-    commit: 5c685cb83dfc65e32cba67a2473af986022392e8
+    commit: 2592625584cf51ba1da6e24833715f3af8c429ce
     clean: true
     dirty_paths: []
 oracle:
   gem: plurimath
-  version: 0.11.12
+  version: 0.11.17
   kind: git-checkout
-  commit: ae20be111a26fdd988c58be0bfb2b7f6fe6e352f
+  commit: 2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256
   clean: true
   dirty_paths: []
 ruby:
@@ -30,8 +30,8 @@ configuration: {}
 dependencies:
   lockfile:
     path: Gemfile.lock
-    sha256: 4aafd7162d8b10a8a841fb30c89bc0ff9b2429ea0ec6379c7931c3b9093dca0b
-    resolved_gems: 77
+    sha256: 6051573ea50bb473fb12ccacb4e2ca48d5e06b9dce0dff6d2647042e76f48ebd
+    resolved_gems: 83
     platforms:
     - aarch64-linux-gnu
     - aarch64-linux-musl
@@ -43,6 +43,12 @@ dependencies:
     - x86_64-linux-musl
     bundler: 4.0.3
   sources:
+  - kind: git
+    remote: https://github.com/plurimath/lasem-ruby.git
+    gems: 1
+    gem_names:
+    - lasem
+    revision: b6f2c47368980fb95e9c1c3f9ffb0d0f4f1861f0
   - kind: path
     remote: "."
     gems: 1
@@ -50,10 +56,15 @@ dependencies:
     - plurimath
   - kind: gem
     remote: https://rubygems.org/
-    gems: 76
+    gems: 81
   direct_runtime:
+  - name: amath
+    version: 0.1.0
+    platform: ruby
+    source_kind: gem
+    source: https://rubygems.org/
   - name: bigdecimal
-    version: 4.1.2
+    version: 4.1.3
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
@@ -63,17 +74,17 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: lutaml-model
-    version: 0.8.65
+    version: 0.8.169
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
   - name: mml
-    version: 2.4.2
+    version: 2.4.7
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
   - name: omml
-    version: 0.2.6
+    version: 0.2.11
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
@@ -83,8 +94,13 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: ox
-    version: 2.14.28
+    version: 2.14.29
     platform: ruby
+    source_kind: gem
+    source: https://rubygems.org/
+  - name: parsanol
+    version: 1.3.134
+    platform: x86_64-linux-musl
     source_kind: gem
     source: https://rubygems.org/
   - name: parslet
@@ -98,22 +114,22 @@ dependencies:
     source_kind: gem
     source: https://rubygems.org/
   - name: unitsml
-    version: 0.6.8
+    version: 0.6.13
     platform: ruby
     source_kind: gem
     source: https://rubygems.org/
 corpus:
   path: submodules/plurimath-testsuite
   repository:
-    commit: b6c7802a6fd48b862f8dd2c0fc7bb65c8b9b7faf
+    commit: 75eb73edf2e656f15744d9fe876860609e4933ef
     clean: true
     dirty_paths: []
   provenance:
     path: corpus/provenance.yaml
     schema: plurimath-corpus/provenance/3
-    sha256: 4a212fd1e5cdb0223e19b573ed22dbadd28f8d6fd1ef730c678b1d449248019a
+    sha256: 4f7f379f3994eba5c33c5117c0084b7e0cc9b51a860474813a87de68a5c67130
 payload:
   path: reader-fixtures.json
   schema: plurimath-corpus/xml-reader/1
-  sha256: 4dec2796ae925954aad4607d7ce4c9077516de4fc1edcc8d082ca7b0ca83db39
-  bytes: 8032300
+  sha256: a79aefc4944a7877a58dab2eaf3dc09634719e703d6ed6aa05b175dd8bc95b4f
+  bytes: 8049875

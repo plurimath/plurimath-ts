@@ -147,6 +147,7 @@ export const MATHML_CARRIERS: readonly (readonly [string, string, string])[] = [
   ["Math::Function::Ubrace", "Math::Function::Ubrace", "implemented"],
   ["Math::Function::Ul", "Math::Function::Ul", "implemented"],
   ["Math::Function::UnaryFunction", "Math::Function::UnaryFunction", "implemented"],
+  ["Math::Function::Uncertainty", "Math::Function::Uncertainty", "implemented"],
   ["Math::Function::Underover", "Math::Function::TernaryFunction", "aliased"],
   ["Math::Function::Underset", "Math::Function::Underset", "implemented"],
   ["Math::Function::Unitsml", "Math::Function::Unitsml", "implemented"],
@@ -270,6 +271,7 @@ export const MATHML_FUNCTIONS: readonly MathmlFunctionRow[] = [
   ["Math::Function::Ubrace", "unary", null, "never", null],
   ["Math::Function::Ul", "unary", "underline", "never", null],
   ["Math::Function::UnaryFunction", "unary", null, "never", null],
+  ["Math::Function::Uncertainty", "none", null, "never", null],
   [
     "Math::Function::Underover",
     "ternary",

@@ -16,8 +16,17 @@
  * `Core#evaluate`'s default (`UnsupportedExpressionError`, as the gem raises).
  *
  * Every intermediate value is a `RubyNumeric` (`numeric.ts`): the exact
- * Integer, Rational or Float the gem would hold, combined by Ruby's own
- * promotion rules. Only the final value is checked for an exact JS `number`.
+ * Integer, Rational, Float or BigDecimal the gem would hold, combined by
+ * Ruby's own promotion rules.
+ *
+ * Accuracy-aware evaluation (plurimath 0.11.13+): every operation whose
+ * result is not exact — a number literal read as a Float, a Float division,
+ * an inexact power, a `Math` function, an irrational square root — goes
+ * through one of `numberValue`, `divide`, `power`, `limitedOperation` and
+ * `squareRoot`, which record the boundary (`result.ts`). In `"approximate"`
+ * mode each records the Float it computes; in `"strict"` mode an operation
+ * on exact operands is deferred (the evaluation stops, `value` is `null`), or
+ * with `guardDigits` computed as a BigDecimal (`guardDigitValue`).
  */
 
 import { UnsupportedFeatureError } from "../core/errors";
@@ -28,8 +37,11 @@ import {
   type NodeParameter,
   type NodeSequence,
 } from "../core/nodes";
+import * as Decimal from "./big-decimal";
+import * as BigMath from "./big-math";
 import { type EvaluationBindings, normalizeBindings } from "./bindings";
 import {
+  DivisionByZeroError,
   MathDomainError,
   MissingVariableError,
   NonFiniteResultError,
@@ -56,6 +68,8 @@ import {
   ceilOf,
   compare,
   divide,
+  divideAsRuby,
+  exactPowerOrNull,
   type FinalNumeric,
   finalResult,
   float,
@@ -64,12 +78,24 @@ import {
   integer,
   integerGcd,
   integerLcm,
+  isExact,
+  isFiniteValue,
+  isZero,
   modulo,
   negate,
   power,
   type RubyNumeric,
+  rational,
+  toRational,
 } from "./numeric";
 import { reservedConstant, type SymbolData, variableName } from "./operators";
+import {
+  type BoundaryAction,
+  combineAccuracy,
+  type EvaluationBoundary,
+  type EvaluationResult,
+  toEvaluationValue,
+} from "./result";
 
 /**
  * The `number`-kind slice of `MathNode` (ARCHITECTURE.md §5's data type, not
@@ -128,11 +154,19 @@ const INTEGER_PATTERN = /^[+-]?\d+$/;
 // 1 ms for this form. Both forms accept the same language.
 const FLOAT_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 
-function evaluateNumber(node: NumberData): RubyNumeric {
-  const raw = String(node.value ?? "");
-  if (INTEGER_PATTERN.test(raw)) return integer(BigInt(raw));
-  if (FLOAT_PATTERN.test(raw)) return float(Number(raw));
-  throw new UnsupportedExpressionError(`number \`${raw}\``);
+/**
+ * Ruby's `Rational(raw)` for a literal `FLOAT_PATTERN` accepts: the digits,
+ * the decimal point and the exponent read exactly (`Rational("2.5")` is
+ * `(5/2)`, `Rational("1e3")` is `(1000/1)`).
+ */
+function exactLiteral(raw: string): RubyNumeric {
+  const match = /^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/.exec(raw) as RegExpExecArray;
+  const [, sign = "", whole = "", fraction = "", exponentText = "0"] = match;
+  const digits = BigInt(`${whole}${fraction}` || "0") * (sign === "-" ? -1n : 1n);
+  const scale = Number(exponentText) - fraction.length;
+  return scale >= 0
+    ? rational(digits * 10n ** BigInt(scale), 1n)
+    : rational(digits, 10n ** BigInt(-scale));
 }
 
 /**
@@ -320,12 +354,92 @@ export interface EvaluatorSettings {
    * the code, which is what runs, says 100,000 — `TODO.plan/deferred.md`).
    */
   readonly maxIterations: number | null;
+  /** Ruby: `Evaluator.new(mode:)` — `"approximate"` (the default) or `"strict"`. */
+  readonly mode?: EvaluationMode | undefined;
+  /** Ruby: `Evaluator.new(guard_digits:)` — a positive integer, or `null`. */
+  readonly guardDigits?: number | null | undefined;
 }
+
+/** Ruby: `Evaluator::MODES`. */
+export type EvaluationMode = "approximate" | "strict";
 
 /** Ruby: `Configuration::DEFAULT_MAX_ITERATIONS` (`configuration.rb`). */
 export const DEFAULT_MAX_ITERATIONS = 100_000;
 
 const DEFAULT_SETTINGS: EvaluatorSettings = { maxIterations: DEFAULT_MAX_ITERATIONS };
+
+/**
+ * Ruby: `Evaluator::GUARD_DIGIT_FUNCTIONS` — the BigMath-backed operations
+ * strict mode can compute to guard digits; any other boundary is refused
+ * there with `UnsupportedExpressionError`.
+ */
+const GUARD_DIGIT_FUNCTIONS: ReadonlySet<string> = new Set([
+  "sin",
+  "cos",
+  "exp",
+  "log",
+  "log_base",
+  "log10",
+  "sqrt",
+  "atan",
+]);
+
+/** Ruby: `Evaluator::BoundaryReached` — strict mode stopping at a boundary; never escapes `run`. */
+class BoundaryReached extends Error {}
+
+/** An internal boundary record: `result.ts`'s `EvaluationBoundary` before its values are made public. */
+interface BoundaryRecord {
+  readonly operation: string;
+  readonly operands: readonly (RubyNumeric | string)[];
+  readonly operandAccuracy: string;
+  readonly action: BoundaryAction;
+  readonly result: RubyNumeric | null;
+}
+
+/**
+ * Ruby's `BigDecimal(value.to_s)` for an exact operand (`guard_digit_value`):
+ * an Integer's digits read exactly; a Rational's `to_s` (`"1/2"`, `"2/1"`)
+ * is not a decimal, so `BigDecimal()` raises `ArgumentError`, which is not an
+ * evaluation error and escapes `Formula#evaluate` — refused here at the same
+ * point.
+ */
+function guardOperand(value: RubyNumeric): Decimal.BigDecimal {
+  if (value.kind === "decimal") return value;
+  if (value.kind === "integer") return Decimal.fromInteger(value.value);
+  throw new UnsupportedFeatureError(
+    "evaluate",
+    `Ruby raises ArgumentError (invalid value for BigDecimal(): "${
+      value.kind === "rational" ? `${value.num}/${value.den}` : String(value.value)
+    }") here, which is not an evaluation error`,
+  );
+}
+
+/**
+ * Ruby: `Evaluator#exact_square_root` — the root of an exact non-negative
+ * value when numerator and denominator are both perfect squares, as a
+ * Rational (`sqrt(4)` is `(2/1)`); `null` otherwise.
+ */
+function exactSquareRoot(value: RubyNumeric): RubyNumeric | null {
+  const exact = toRational(value);
+  if (exact.kind !== "rational" || exact.num < 0n) return null;
+  const rootNum = integerSqrt(exact.num);
+  const rootDen = integerSqrt(exact.den);
+  if (rootNum * rootNum !== exact.num || rootDen * rootDen !== exact.den) return null;
+  return rational(rootNum, rootDen);
+}
+
+/** Ruby: `Integer.sqrt` — the floor of the square root of a non-negative integer. */
+function integerSqrt(n: bigint): bigint {
+  if (n < 2n) return n;
+  // Newton's method from a power of two at or above the root decreases to it.
+  let x = 1n << BigInt(Math.ceil(n.toString(2).length / 2));
+  let y = (x + n / x) >> 1n;
+  while (y < x) {
+    x = y;
+    y = (x + n / x) >> 1n;
+  }
+  return x;
+}
 
 /** The `binaryFunction`/`unaryFunction` carriers, whose `name` is the gem class basename. */
 type FunctionNode = Extract<MathNode, { kind: "binaryFunction" | "unaryFunction" }>;
@@ -339,12 +453,17 @@ function secondParameter(node: FunctionNode): NodeParameter | undefined {
 }
 
 /**
- * Ruby: a `Math` module function applied to the evaluated operand
- * (`Sin#evaluate` is `::Math.sin(evaluator.evaluate_node(parameter_one))`),
- * always a Float.
+ * Ruby: a `Math` module function behind a limited-accuracy boundary —
+ * `Sin#evaluate` is `evaluator.limited_operation("sin",
+ * [evaluator.evaluate_node(parameter_one)]) {
+ * ::Math.sin(evaluator.evaluate_node(parameter_one)) }`. The block evaluates
+ * the operand a second time, boundaries and all, whenever it runs.
  */
-function mathFunction(apply: (x: RubyNumeric) => number): FunctionEvaluator {
-  return (ev, node) => float(apply(ev.evaluateNode(node.parameterOne)));
+function mathFunction(label: string, apply: (x: RubyNumeric) => number): FunctionEvaluator {
+  return (ev, node) =>
+    ev.limitedOperation(label, [ev.evaluateNode(node.parameterOne)], () =>
+      float(apply(ev.evaluateNode(node.parameterOne))),
+    );
 }
 
 /**
@@ -354,8 +473,9 @@ function mathFunction(apply: (x: RubyNumeric) => number): FunctionEvaluator {
  * which is exact given the same operand — so the band of the `Math` function
  * underneath is the only refusal these need.
  */
-function reciprocal(apply: (x: RubyNumeric) => number): FunctionEvaluator {
-  return (ev, node) => divide(float(1), float(apply(ev.evaluateNode(node.parameterOne))));
+function reciprocal(label: string, apply: (x: RubyNumeric) => number): FunctionEvaluator {
+  const inner = mathFunction(label, apply);
+  return (ev, node) => ev.divide(float(1), inner(ev, node));
 }
 
 /**
@@ -424,7 +544,8 @@ const FUNCTION_EVALUATORS: ReadonlyMap<string, FunctionEvaluator> = new Map<
   // Ruby: `Power#evaluate` — `evaluator.power(base, exponent)`.
   [
     "Power",
-    (ev, node) => power(ev.evaluateNode(node.parameterOne), ev.evaluateNode(secondParameter(node))),
+    (ev, node) =>
+      ev.power(ev.evaluateNode(node.parameterOne), ev.evaluateNode(secondParameter(node))),
   ],
   // Ruby: `Mod#evaluate` — `evaluator.modulo(a, b)`.
   [
@@ -439,38 +560,38 @@ const FUNCTION_EVALUATORS: ReadonlyMap<string, FunctionEvaluator> = new Map<
     "Root",
     (ev, node) => {
       const radicand = ev.evaluateNode(secondParameter(node));
-      return power(radicand, divide(float(1), ev.evaluateNode(node.parameterOne)));
+      return ev.power(radicand, ev.divide(float(1), ev.evaluateNode(node.parameterOne)));
     },
   ],
   ["Gcd", (ev, node) => reduceIntegers(ev, node, "gcd", integerGcd)],
   ["Lcm", (ev, node) => reduceIntegers(ev, node, "lcm", integerLcm)],
   ["Max", (ev, node) => extremum(ev, node, 1)],
   ["Min", (ev, node) => extremum(ev, node, -1)],
-  ["Sin", mathFunction(mathSin)],
-  ["Cos", mathFunction(mathCos)],
-  ["Tan", mathFunction(mathTan)],
-  ["Arcsin", mathFunction(mathAsin)],
-  ["Arccos", mathFunction(mathAcos)],
-  ["Arctan", mathFunction(mathAtan)],
-  ["Exp", mathFunction(mathExp)],
-  ["Ln", mathFunction(mathLog)],
+  ["Sin", mathFunction("sin", mathSin)],
+  ["Cos", mathFunction("cos", mathCos)],
+  ["Tan", mathFunction("tan", mathTan)],
+  ["Arcsin", mathFunction("asin", mathAsin)],
+  ["Arccos", mathFunction("acos", mathAcos)],
+  ["Arctan", mathFunction("atan", mathAtan)],
+  ["Exp", mathFunction("exp", mathExp)],
+  ["Ln", mathFunction("log", mathLog)],
   // Ruby: `Lg#evaluate` — `::Math.log10(x)`.
-  ["Lg", mathFunction(mathLog10)],
+  ["Lg", mathFunction("log10", mathLog10)],
   // Ruby: `Log#evaluate` — `evaluator.unsupported(self)`: a `Log` evaluates
   // only with the `Fenced` argument `ExpressionParser` binds to it
   // (`Evaluator#evaluateLogWithArgument`).
   ["Log", (ev, node) => ev.unsupported(node)],
-  ["Cot", reciprocal(mathTan)],
-  ["Sec", reciprocal(mathCos)],
-  ["Csc", reciprocal(mathSin)],
-  ["Sinh", mathFunction(mathSinh)],
-  ["Cosh", mathFunction(mathCosh)],
-  ["Tanh", mathFunction(mathTanh)],
+  ["Cot", reciprocal("tan", mathTan)],
+  ["Sec", reciprocal("cos", mathCos)],
+  ["Csc", reciprocal("sin", mathSin)],
+  ["Sinh", mathFunction("sinh", mathSinh)],
+  ["Cosh", mathFunction("cosh", mathCosh)],
+  ["Tanh", mathFunction("tanh", mathTanh)],
   // Ruby: `Sech`/`Csch`/`Coth#evaluate` — `evaluator.divide(1.0, ::Math.cosh(x))`
   // (`sinh`, `tanh`): `csch` and `coth` of a zero raise `DivisionByZeroError`.
-  ["Sech", reciprocal(mathCosh)],
-  ["Csch", reciprocal(mathSinh)],
-  ["Coth", reciprocal(mathTanh)],
+  ["Sech", reciprocal("cosh", mathCosh)],
+  ["Csch", reciprocal("sinh", mathSinh)],
+  ["Coth", reciprocal("tanh", mathTanh)],
 ]);
 
 /**
@@ -510,12 +631,181 @@ function splitOnCommas(nodes: readonly (MathNode | string)[]): (MathNode | strin
 export class Evaluator {
   private readonly bindings: Map<string, RubyNumeric>;
   readonly maxIterations: number | null;
+  private readonly mode: EvaluationMode;
+  private readonly guardDigits: number | null;
+  private readonly boundaries: BoundaryRecord[] = [];
 
   constructor(bindings: EvaluationBindings = {}, settings: EvaluatorSettings = DEFAULT_SETTINGS) {
+    this.mode = settings.mode ?? "approximate";
+    this.guardDigits = settings.guardDigits ?? null;
+    // Ruby: `binding_value` — an exact decimal string is a Rational in strict
+    // mode and a Float otherwise.
+    const bindingValue = (value: number | string): RubyNumeric => {
+      if (typeof value === "number") return fromBinding(value);
+      return this.mode === "strict" ? exactLiteral(value) : float(Number(value));
+    };
     this.bindings = new Map(
-      [...normalizeBindings(bindings)].map(([name, value]) => [name, fromBinding(value)] as const),
+      [...normalizeBindings(bindings)].map(([name, value]) => [name, bindingValue(value)] as const),
     );
     this.maxIterations = settings.maxIterations;
+  }
+
+  /**
+   * Ruby: `Evaluator#number_value` — an integer literal stays an exact
+   * Integer in both modes; any other literal is an exact Rational in strict
+   * mode, and in approximate mode a Float, with the crossing recorded.
+   */
+  private numberValue(node: NumberData): RubyNumeric {
+    const raw = String(node.value ?? "");
+    if (INTEGER_PATTERN.test(raw)) return integer(BigInt(raw));
+    if (!FLOAT_PATTERN.test(raw)) throw new UnsupportedExpressionError(`number \`${raw}\``);
+    if (this.mode === "strict") return exactLiteral(raw);
+    const value = float(Number(raw));
+    this.boundaries.push({
+      operation: "number literal",
+      operands: [raw],
+      operandAccuracy: "exact",
+      action: "approximated",
+      result: value,
+    });
+    return value;
+  }
+
+  /**
+   * Ruby: `Evaluator#divide` — `DivisionByZeroError` for a zero divisor;
+   * strict mode divides exactly (`Rational(dividend) / divisor`), approximate
+   * mode records the Float division it makes.
+   */
+  divide(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric {
+    if (isZero(divisor)) throw new DivisionByZeroError();
+    if (this.mode === "strict") return divideAsRuby(toRational(dividend), divisor);
+    return this.recordCrossing("divide", [dividend, divisor], divide(dividend, divisor));
+  }
+
+  /**
+   * Ruby: `Evaluator#power` — an exact result is returned as it is; a Complex
+   * one is `MathDomainError`; strict mode stops at an inexact power of two
+   * exact operands (or refuses it with guard digits, which `power` has none
+   * of); anything else is a recorded crossing.
+   */
+  power(base: RubyNumeric, exponent: RubyNumeric): RubyNumeric {
+    if (this.mode === "strict" && isExact(base) && isExact(exponent)) {
+      const exact = exactPowerOrNull(base, exponent);
+      if (exact !== null) return exact;
+      return this.strictExactBoundary("power", [base, exponent]);
+    }
+    const value = power(base, exponent);
+    if (isExact(value)) return value;
+    return this.recordCrossing("power", [base, exponent], value);
+  }
+
+  /**
+   * Ruby: `Evaluator#limited_operation` — strict mode on exact operands goes
+   * to `strictExactBoundary` without computing `compute`; otherwise
+   * `compute` runs and its value is a recorded crossing.
+   */
+  limitedOperation(
+    label: string,
+    values: readonly RubyNumeric[],
+    compute: () => RubyNumeric,
+  ): RubyNumeric {
+    if (this.mode === "strict" && values.every(isExact)) {
+      return this.strictExactBoundary(label, values);
+    }
+    return this.recordCrossing(label, values, compute());
+  }
+
+  /**
+   * Ruby: `Evaluator#square_root` — an exact operand with a rational root
+   * gives that Rational in both modes; anything else is a limited operation
+   * on the value already evaluated (`::Math.sqrt(value)`).
+   */
+  squareRoot(node: NodeParameter | undefined): RubyNumeric {
+    const value = this.evaluateNode(node);
+    if (isExact(value)) {
+      const exact = exactSquareRoot(value);
+      if (exact !== null) return exact;
+    }
+    return this.limitedOperation("sqrt", [value], () => float(mathSqrt(value)));
+  }
+
+  private recordCrossing(
+    label: string,
+    operands: readonly RubyNumeric[],
+    value: RubyNumeric,
+  ): RubyNumeric {
+    this.boundaries.push({
+      operation: label,
+      operands,
+      operandAccuracy: combineAccuracy(operands),
+      action: "approximated",
+      result: value,
+    });
+    return value;
+  }
+
+  /**
+   * Ruby: `Evaluator#strict_exact_boundary` — with guard digits, a
+   * `GUARD_DIGIT_FUNCTIONS` operation computed as a BigDecimal (`guarded`)
+   * and any other refused; without them, the boundary is recorded as
+   * `deferred` and evaluation stops.
+   */
+  private strictExactBoundary(label: string, operands: readonly RubyNumeric[]): RubyNumeric {
+    const digits = this.guardDigits;
+    if (digits !== null) {
+      if (!GUARD_DIGIT_FUNCTIONS.has(label)) {
+        throw new UnsupportedExpressionError(
+          `no guard-digit implementation for \`${label}\`; use approximate mode or an exact reformulation`,
+        );
+      }
+      const guarded = this.guardDigitValue(label, operands, digits);
+      this.boundaries.push({
+        operation: label,
+        operands,
+        operandAccuracy: combineAccuracy(operands),
+        action: "guarded",
+        result: guarded,
+      });
+      return guarded;
+    }
+    this.boundaries.push({
+      operation: label,
+      operands,
+      operandAccuracy: combineAccuracy(operands),
+      action: "deferred",
+      result: null,
+    });
+    throw new BoundaryReached();
+  }
+
+  /** Ruby: `Evaluator#guard_digit_value`, on `big-math.ts`'s port of BigMath. */
+  private guardDigitValue(
+    label: string,
+    operands: readonly RubyNumeric[],
+    digits: number,
+  ): Decimal.BigDecimal {
+    const [x, y] = operands.map(guardOperand) as [
+      Decimal.BigDecimal,
+      Decimal.BigDecimal | undefined,
+    ];
+    switch (label) {
+      case "sqrt":
+        return Decimal.sqrt(x, digits);
+      case "log":
+        return BigMath.log(x, digits);
+      case "log_base":
+        return Decimal.quo(BigMath.log(x, digits), BigMath.log(y as Decimal.BigDecimal, digits));
+      case "log10":
+        return Decimal.quo(BigMath.log(x, digits), BigMath.log(Decimal.fromInteger(10n), digits));
+      case "atan":
+        return BigMath.atan(x, digits);
+      case "sin":
+        return BigMath.sin(x, digits);
+      case "cos":
+        return BigMath.cos(x, digits);
+      default:
+        return BigMath.exp(x, digits);
+    }
   }
 
   evaluateFormula(formula: FormulaNode | Extract<MathNode, { kind: "formula" }>): RubyNumeric {
@@ -570,9 +860,12 @@ export class Evaluator {
     if (compare(base, integer(0n)) !== 1 || compare(base, integer(1n)) === 0) {
       throw new MathDomainError("log base must be a positive number other than 1");
     }
-    let result = float(mathLogBase(this.evaluateNode(argument), base));
+    const argumentValue = this.evaluateNode(argument);
+    let result = this.limitedOperation("log_base", [argumentValue, base], () =>
+      float(mathLogBase(argumentValue, base)),
+    );
     const exponent = secondParameter(log);
-    if (exponent != null) result = power(result, this.evaluateNode(exponent));
+    if (exponent != null) result = this.power(result, this.evaluateNode(exponent));
     return this.realResult(result);
   }
 
@@ -650,7 +943,7 @@ export class Evaluator {
   private dispatch(node: MathNode): RubyNumeric {
     switch (node.kind) {
       case "number":
-        return evaluateNumber(node);
+        return this.numberValue(node);
       case "symbol":
         return this.evaluateSymbol(node);
       case "fenced":
@@ -663,7 +956,10 @@ export class Evaluator {
       // `FracNode` (`parseAsciimath("6/3")`), never a loose divide-operator
       // token — `ExpressionParser`'s header has the rest of this finding.
       case "frac":
-        return divide(this.evaluateNode(node.parameterOne), this.evaluateNode(node.parameterTwo));
+        return this.divide(
+          this.evaluateNode(node.parameterOne),
+          this.evaluateNode(node.parameterTwo),
+        );
       // Ruby: `Abs`/`Ceil`/`Floor#evaluate` — the operand's own `abs`/`ceil`/`floor`.
       case "abs":
         return absolute(this.evaluateNode(node.parameterOne));
@@ -671,9 +967,9 @@ export class Evaluator {
         return ceilOf(this.evaluateNode(node.parameterOne));
       case "floor":
         return floorOf(this.evaluateNode(node.parameterOne));
-      // Ruby: `Sqrt#evaluate` — `::Math.sqrt(operand)`.
+      // Ruby: `Sqrt#evaluate` — `evaluator.square_root(parameter_one)`.
       case "sqrt":
-        return float(mathSqrt(this.evaluateNode(node.parameterOne)));
+        return this.squareRoot(node.parameterOne);
       // Ruby: `Sum`/`Prod#evaluate` — all three slots are required
       // (`unsupported(self)` otherwise), then `Iteration#accumulate(0, :+)` /
       // `(1, :*)`.
@@ -715,19 +1011,60 @@ export class Evaluator {
   }
 
   /**
-   * Ruby: `Evaluator#evaluate` — the entry point `index.ts`'s `evaluate`
-   * calls (through `run`). Returns the Ruby kind of the final value alongside
-   * it, so the oracle fixtures can check the kind tracking itself; the kind
-   * is not part of the public result. A final Rational or unsafe Integer is
-   * refused in `finalResult`.
+   * Ruby: `Evaluator#evaluate` — the final value after its finite check, or
+   * `null` when strict mode deferred, with every boundary met on the way.
+   */
+  private static runInternal(
+    formula: FormulaNode,
+    bindings: EvaluationBindings,
+    settings: EvaluatorSettings,
+  ): { readonly value: RubyNumeric | null; readonly boundaries: readonly BoundaryRecord[] } {
+    const evaluator = new Evaluator(bindings, settings);
+    try {
+      const value = evaluator.evaluateFormula(formula);
+      if (!isFiniteValue(value)) throw new NonFiniteResultError();
+      return { value, boundaries: evaluator.boundaries };
+    } catch (error) {
+      if (error instanceof BoundaryReached)
+        return { value: null, boundaries: evaluator.boundaries };
+      throw error;
+    }
+  }
+
+  /** Ruby: `Formula#evaluate`'s `Evaluation::Result`, in `result.ts`'s public form. */
+  static runResult(
+    formula: FormulaNode,
+    bindings: EvaluationBindings = {},
+    settings: EvaluatorSettings = DEFAULT_SETTINGS,
+  ): EvaluationResult {
+    const { value, boundaries } = Evaluator.runInternal(formula, bindings, settings);
+    return {
+      value: value === null ? null : toEvaluationValue(value),
+      boundaries: boundaries.map(publicBoundary),
+      unevaluated: value === null ? [formula] : [],
+    };
+  }
+
+  /**
+   * The final value as a JS `number`, with the Ruby kind it had (so the
+   * oracle fixtures can check the kind tracking). A final Rational,
+   * BigDecimal or unsafe Integer is refused in `finalResult`, and a deferred
+   * evaluation here.
    */
   static runWithKind(
     formula: FormulaNode,
     bindings: EvaluationBindings = {},
     settings: EvaluatorSettings = DEFAULT_SETTINGS,
   ): FinalNumeric {
-    const evaluator = new Evaluator(bindings, settings);
-    return finalResult(evaluator.evaluateFormula(formula), () => {
+    const { value } = Evaluator.runInternal(formula, bindings, settings);
+    if (value === null) {
+      throw new UnsupportedFeatureError(
+        "evaluate",
+        "strict mode deferred the evaluation at an accuracy boundary, so there is no number; " +
+          "evaluateResult returns the boundary",
+      );
+    }
+    return finalResult(value, () => {
       throw new NonFiniteResultError();
     });
   }
@@ -739,4 +1076,19 @@ export class Evaluator {
   ): number {
     return Evaluator.runWithKind(formula, bindings, settings).value;
   }
+}
+
+/** A boundary record with its values in `result.ts`'s public form. */
+function publicBoundary(record: BoundaryRecord): EvaluationBoundary {
+  return {
+    operation: record.operation,
+    operands: record.operands.map((operand) =>
+      typeof operand === "string"
+        ? { kind: "literal" as const, text: operand }
+        : toEvaluationValue(operand),
+    ),
+    operandAccuracy: record.operandAccuracy,
+    action: record.action,
+    result: record.result === null ? null : toEvaluationValue(record.result),
+  };
 }

@@ -106,8 +106,8 @@ const CORE_EXPORTS = [
 ];
 
 /**
- * `evaluate(formula, bindings)` and its `Errors::Evaluation::*` family
- * (`src/evaluation/index.ts`) — root-only, like the compat class below: §3
+ * `evaluate(formula, bindings)`, `evaluateResult` with its value formatter, and
+ * the `Errors::Evaluation::*` family (`src/evaluation/index.ts`) — root-only, like the compat class below: §3
  * rule 6 lets `evaluation` import `core` but nothing reaches it from a format
  * subpath, so it has no home there, only at the root `export * from
  * "./evaluation/index"` (`src/index.ts`).
@@ -122,6 +122,8 @@ const EVALUATION_EXPORTS = [
   "NonFiniteResultError",
   "UnsupportedExpressionError",
   "evaluate",
+  "evaluateResult",
+  "inspectEvaluationValue",
 ];
 
 /**

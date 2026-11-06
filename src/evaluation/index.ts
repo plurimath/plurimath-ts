@@ -24,16 +24,32 @@
  * token, and a node class with no `#evaluate` of its own —
  * `TODO.plan/feature-roadmap.md`'s evaluation entry has the rest of the plan.
  *
- * `options` is the port's own (the gem's `Formula#evaluate` takes only
- * `bindings`, and reads its one evaluation setting from global
- * configuration): `EvaluationOptions` below.
+ * `options` stands in for the gem's keyword arguments (`mode:`,
+ * `guard_digits:`) and for the one evaluation setting it reads from global
+ * configuration: `EvaluationOptions` below.
+ *
+ * **Accuracy-aware evaluation** (plurimath 0.11.13+): the gem's
+ * `Formula#evaluate` returns an `Evaluation::Result` — the value, every
+ * accuracy boundary crossed or deferred, and the formula left unevaluated —
+ * and `evaluateResult` returns the same (`result.ts`). `mode: "strict"`
+ * keeps exact values exact (decimal literals and division as Rationals) and
+ * stops at the first inexact operation; with `guardDigits` it computes the
+ * BigMath functions as BigDecimals to that many digits instead
+ * (`big-decimal.ts`, `big-math.ts`). `evaluate` keeps returning a `number`,
+ * and refuses where the value is not one.
  */
 
 import { UnsupportedFeatureError } from "../core/errors";
 import type { FormulaNode } from "../core/nodes";
 import { isStackOverflow } from "../core/stack-overflow";
 import type { EvaluationBindings } from "./bindings";
-import { DEFAULT_MAX_ITERATIONS, Evaluator } from "./evaluator";
+import {
+  DEFAULT_MAX_ITERATIONS,
+  type EvaluationMode,
+  Evaluator,
+  type EvaluatorSettings,
+} from "./evaluator";
+import type { EvaluationResult } from "./result";
 
 export type { EvaluationBindings } from "./bindings";
 export type { EvaluationErrorCode } from "./errors";
@@ -47,6 +63,15 @@ export {
   NonFiniteResultError,
   UnsupportedExpressionError,
 } from "./errors";
+export type { EvaluationMode } from "./evaluator";
+export {
+  type BoundaryAction,
+  type EvaluationBoundary,
+  type EvaluationOperand,
+  type EvaluationResult,
+  type EvaluationValue,
+  inspectEvaluationValue,
+} from "./result";
 
 /** Per-call evaluation settings. */
 export interface EvaluationOptions {
@@ -66,6 +91,47 @@ export interface EvaluationOptions {
    * current host; its figures depend on the machine and its load.
    */
   readonly evaluationMaxIterations?: number | null | undefined;
+  /**
+   * Ruby: `Formula#evaluate(mode:)` — `"approximate"` (the default) crosses
+   * every accuracy boundary and records each crossing; `"strict"` never
+   * crosses one: the first defers the evaluation (`evaluateResult`'s `value`
+   * is `null`).
+   */
+  readonly mode?: EvaluationMode | undefined;
+  /**
+   * Ruby: `Formula#evaluate(guard_digits:)` — with `mode: "strict"`, the
+   * digits a `sin`, `cos`, `exp`, `ln`/`log`, `lg`, `sqrt` or `arctan`
+   * boundary is computed to, as a BigDecimal. Ignored in approximate mode, as
+   * in the gem. A positive integer; the work grows with it.
+   */
+  readonly guardDigits?: number | null | undefined;
+}
+
+/** Ruby: `Evaluator#initialize`'s argument checks, raised as `TypeError` here. */
+function settingsFor(options: EvaluationOptions): EvaluatorSettings {
+  const mode = options.mode ?? "approximate";
+  if (mode !== "approximate" && mode !== "strict") {
+    throw new TypeError("mode must be one of [:approximate, :strict]");
+  }
+  const guardDigits = options.guardDigits ?? null;
+  if (guardDigits !== null && !(Number.isSafeInteger(guardDigits) && guardDigits > 0)) {
+    throw new TypeError("guard_digits must be a positive Integer");
+  }
+  return { maxIterations: maxIterationsOption(options), mode, guardDigits };
+}
+
+function stackGuarded<T>(run: () => T): T {
+  try {
+    return run();
+  } catch (error) {
+    if (isStackOverflow(error)) {
+      throw new UnsupportedFeatureError(
+        "evaluate",
+        "the tree nests too deep for the evaluation call stack; the depth limit is runtime-dependent",
+      );
+    }
+    throw error;
+  }
 }
 
 /** The cap an `EvaluationOptions` asks for, checked for an untyped caller. */
@@ -91,12 +157,15 @@ function maxIterationsOption(options: EvaluationOptions): number | null {
  * number as a Float, since JavaScript cannot tell `2` from `2.0`.
  *
  * @throws {UnsupportedFeatureError} a construct the gem evaluates that this
- *   port has not ported; a final result JavaScript cannot represent exactly;
- *   a Float power or `Math` function result inside glibc's rounding band; a
- *   Ruby `ArgumentError`; or an exact intermediate beyond the port's size
- *   limit; or a tree deeper than the runtime's evaluation call stack.
+ *   port has not ported; a final result JavaScript cannot represent exactly
+ *   (a Rational, a BigDecimal, an unsafe Integer, or no value because strict
+ *   mode deferred); a Float power or `Math` function result inside glibc's
+ *   rounding band; a Ruby `ArgumentError`; or an exact intermediate beyond
+ *   the port's size limit; or a tree deeper than the runtime's evaluation
+ *   call stack.
  * @throws {TypeError} `options.evaluationMaxIterations` is neither a number
- *   nor `null`.
+ *   nor `null`, `options.mode` is neither `"approximate"` nor `"strict"`, or
+ *   `options.guardDigits` is not a positive integer.
  * @throws {EvaluationError} one of the gem's own evaluation errors
  *   (`DivisionByZeroError`, `MathDomainError`, `NonFiniteResultError`,
  *   `UnsupportedExpressionError`, `MissingVariableError`,
@@ -107,16 +176,30 @@ export function evaluate(
   bindings: EvaluationBindings = {},
   options: EvaluationOptions = {},
 ): number {
-  const settings = { maxIterations: maxIterationsOption(options) };
-  try {
-    return Evaluator.run(formula, bindings, settings);
-  } catch (error) {
-    if (isStackOverflow(error)) {
-      throw new UnsupportedFeatureError(
-        "evaluate",
-        "the tree nests too deep for the evaluation call stack; the depth limit is runtime-dependent",
-      );
-    }
-    throw error;
-  }
+  const settings = settingsFor(options);
+  return stackGuarded(() => Evaluator.run(formula, bindings, settings));
+}
+
+/**
+ * Ruby: `Formula#evaluate(bindings, mode:, guard_digits:)` — the whole
+ * `Evaluation::Result`: the value with its Ruby class (an Integer or
+ * Rational exactly, a Float, or a BigDecimal as its `#to_s`), or `null`
+ * where strict mode deferred; every boundary, in order; and the formula left
+ * unevaluated. The gem returns that formula as AsciiMath text; here it is
+ * the `FormulaNode` itself (`toAsciimath` renders it).
+ *
+ * @throws {UnsupportedFeatureError} as `evaluate`, except that a Rational,
+ *   BigDecimal or unsafe Integer value is returned rather than refused; and
+ *   where Ruby raises `ArgumentError` from `BigDecimal()` (a guarded
+ *   function of a Rational operand, `sin(1/2)`).
+ * @throws {TypeError} an option the gem's `ArgumentError` would reject.
+ * @throws {EvaluationError} one of the gem's own evaluation errors.
+ */
+export function evaluateResult(
+  formula: FormulaNode,
+  bindings: EvaluationBindings = {},
+  options: EvaluationOptions = {},
+): EvaluationResult {
+  const settings = settingsFor(options);
+  return stackGuarded(() => Evaluator.runResult(formula, bindings, settings));
 }

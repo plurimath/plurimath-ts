@@ -111,6 +111,31 @@ Converting the other way, `parseLatex("\\frac{1}{2}")` rendered with
 does not pull in the other formats' renderers (`pnpm gate:package` inspects the
 built artifacts for this); only the root entry is batteries-included.
 
+### Evaluation
+
+The root entry's `evaluate(formula, bindings, options)` returns the numeric
+value of a formula as a `number`. `evaluateResult` takes the same arguments
+and returns the gem's whole evaluation result instead: the value with its Ruby
+class, every accuracy boundary the evaluation crossed or deferred, and the
+formula left unevaluated. With `mode: "strict"`, decimal literals and division
+stay exact, and the first inexact operation stops the evaluation. Adding
+`guardDigits` computes `sin`, `cos`, `exp`, `ln`, `log`, `lg`, `sqrt` and
+`arctan` of exact integer arguments as BigDecimals to that many digits, using
+the same algorithms as Ruby's bigdecimal gem, so the last digit matches the
+gem's.
+
+```js
+import { evaluateResult, parse } from "@plurimath/plurimath-ts";
+
+const options = { mode: "strict", guardDigits: 20 };
+evaluateResult(parse("sin(1)", "asciimath"), {}, options).value;
+// { kind: "decimal", value: "0.84147098480789650665e0", precision: 20 }
+```
+
+`evaluate` refuses with `UnsupportedFeatureError` where the value is not a
+JavaScript number: a Rational, a BigDecimal, an integer beyond the safe range,
+or a strict evaluation that stopped.
+
 ### Optional Leptris XML input
 
 `./mathml/leptris` and `./omml/leptris` expose parser factories for an
@@ -246,6 +271,9 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
   `log`'s rounding band and the answer depends on its rounding, such as
   `\lg(0.214)`: it raises `UnsupportedFeatureError`
   (`src/evaluation/libm.ts`).
+- Guarded evaluation of a value whose decimal exponent passes
+  `Number.MAX_SAFE_INTEGER`, such as `exp(10^19)`, raises
+  `UnsupportedFeatureError` (`src/evaluation/big-decimal.ts`).
 - Standalone UnitsML input is not a public parse format. Use quoted inline
   AsciiMath, such as `parse('"unitsml(kg)"', "asciimath")`; all six renderers
   accept nested `unitsml` options.

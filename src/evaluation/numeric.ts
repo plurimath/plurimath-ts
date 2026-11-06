@@ -13,11 +13,12 @@
  * (`test/evaluation/evaluate.spec.ts`'s fixtures check the kind of every
  * row).
  *
- * The public result is a `number` (`index.ts`'s `evaluate`). Only the FINAL
- * value decides whether that is possible: a final Rational, or a final Integer
+ * `index.ts`'s `evaluate` returns a `number`. Only the FINAL value decides
+ * whether that is possible: a final Rational or BigDecimal, or a final Integer
  * outside `Number.isSafeInteger`, is refused with `UnsupportedFeatureError`
  * (`finalResult`); an intermediate one is carried exactly, so an evaluation
- * error Ruby raises later in the expression still wins.
+ * error Ruby raises later in the expression still wins. `evaluateResult`
+ * returns the final value with its kind instead (`result.ts`).
  * `TODO.plan/open-decisions.md`'s "Evaluation return type" has the decision.
  *
  * Two further refusals are port limits, not Ruby answers, and are recorded in
@@ -66,17 +67,24 @@
  */
 
 import { UnsupportedFeatureError } from "../core/errors";
+import * as Decimal from "./big-decimal";
+import { power as decimalPower } from "./big-math";
 import { DivisionByZeroError, MathDomainError, NonFiniteResultError } from "./errors";
 import { correctlyRoundedPow, ldexp } from "./pow";
 
-/** Ruby's `Integer`, `Rational` or `Float`. */
-export type RubyKind = "integer" | "rational" | "float";
+/** Ruby's `Integer`, `Rational`, `Float` or `BigDecimal`. */
+export type RubyKind = "integer" | "rational" | "float" | "decimal";
 
-/** A value and the Ruby class it has. A Rational is always reduced, with a positive denominator. */
+/**
+ * A value and the Ruby class it has. A Rational is always reduced, with a
+ * positive denominator. A BigDecimal (`big-decimal.ts`) appears only past a
+ * guarded boundary (`mode: "strict"` with `guardDigits`).
+ */
 export type RubyNumeric =
   | { readonly kind: "integer"; readonly value: bigint }
   | { readonly kind: "rational"; readonly num: bigint; readonly den: bigint }
-  | { readonly kind: "float"; readonly value: number };
+  | { readonly kind: "float"; readonly value: number }
+  | Decimal.BigDecimal;
 
 /** The value `evaluate` returns, with the kind Ruby's answer had. */
 export interface FinalNumeric {
@@ -86,7 +94,7 @@ export interface FinalNumeric {
 
 type IntegerValue = Extract<RubyNumeric, { kind: "integer" }>;
 type RationalValue = Extract<RubyNumeric, { kind: "rational" }>;
-type Exact = IntegerValue | RationalValue;
+export type Exact = IntegerValue | RationalValue;
 
 /** The `feature` identifier every refusal from this module carries. */
 const FEATURE = "evaluate";
@@ -229,7 +237,7 @@ function rationalToDouble(num: bigint, den: bigint): number {
  * even, as `Number(bigint)` does, and a Bignum beyond the double range is
  * `Infinity`), `Rational#to_f`, or the Float itself.
  */
-function toDouble(x: RubyNumeric): number {
+export function toDouble(x: RubyNumeric): number {
   switch (x.kind) {
     case "integer":
       return Number(x.value);
@@ -237,11 +245,43 @@ function toDouble(x: RubyNumeric): number {
       return rationalToDouble(x.num, x.den);
     case "float":
       return x.value;
+    case "decimal":
+      return Decimal.toFloat(x);
   }
 }
 
-function isExact(x: RubyNumeric): x is Exact {
-  return x.kind !== "float";
+/** Integers and Rationals: `Accuracy.exact?`. */
+export function isExact(x: RubyNumeric): x is Exact {
+  return x.kind === "integer" || x.kind === "rational";
+}
+
+/**
+ * The BigDecimal an operand becomes when it meets the BigDecimal `other`:
+ * `BigDecimal#coerce` and the C extension's `GetBDValueWithPrec` — an Integer
+ * exactly, a Float to its first 16 shortest digits, a Rational to
+ * `GetCoercePrec(other)` digits (`big-decimal.ts`).
+ */
+export function toDecimal(x: RubyNumeric, other: Decimal.BigDecimal): Decimal.BigDecimal {
+  switch (x.kind) {
+    case "integer":
+      return Decimal.fromInteger(x.value);
+    case "rational":
+      return Decimal.fromRational(x.num, x.den, Decimal.coercePrecision(other));
+    case "float":
+      return Decimal.fromFloat(x.value);
+    case "decimal":
+      return x;
+  }
+}
+
+/** Both operands as BigDecimals, when either is one (Ruby's coercion through `BigDecimal#coerce`). */
+function decimalPair(
+  left: RubyNumeric,
+  right: RubyNumeric,
+): readonly [Decimal.BigDecimal, Decimal.BigDecimal] | null {
+  if (left.kind === "decimal") return [left, toDecimal(right, left)];
+  if (right.kind === "decimal") return [toDecimal(left, right), right];
+  return null;
 }
 
 /** Numerator and denominator of an exact value. */
@@ -281,6 +321,8 @@ export function productCertainlyExceeds(x: bigint, y: bigint, limit: number): bo
  * included.
  */
 export function add(left: RubyNumeric, right: RubyNumeric): RubyNumeric {
+  const decimals = decimalPair(left, right);
+  if (decimals !== null) return Decimal.add(decimals[0], decimals[1]);
   if (left.kind === "integer" && right.kind === "integer") return integer(left.value + right.value);
   if (!isExact(left) || !isExact(right)) return float(toDouble(left) + toDouble(right));
   const [an, ad] = parts(left);
@@ -290,6 +332,8 @@ export function add(left: RubyNumeric, right: RubyNumeric): RubyNumeric {
 
 /** Ruby `-`, with `add`'s promotion rules. */
 export function subtract(left: RubyNumeric, right: RubyNumeric): RubyNumeric {
+  const decimals = decimalPair(left, right);
+  if (decimals !== null) return Decimal.sub(decimals[0], decimals[1]);
   if (left.kind === "integer" && right.kind === "integer") return integer(left.value - right.value);
   if (!isExact(left) || !isExact(right)) return float(toDouble(left) - toDouble(right));
   const [an, ad] = parts(left);
@@ -309,6 +353,8 @@ export function subtract(left: RubyNumeric, right: RubyNumeric): RubyNumeric {
  * `2 * RATIONAL_BIT_LIMIT`.
  */
 export function multiply(left: RubyNumeric, right: RubyNumeric): RubyNumeric {
+  const decimals = decimalPair(left, right);
+  if (decimals !== null) return Decimal.mult(decimals[0], decimals[1]);
   if (left.kind === "integer" && right.kind === "integer") {
     if (productCertainlyExceeds(left.value, right.value, INTEGER_BIT_LIMIT)) tooLarge();
     return integer(left.value * right.value);
@@ -329,10 +375,13 @@ export function negate(operand: RubyNumeric): RubyNumeric {
       return rational(-operand.num, operand.den);
     case "float":
       return float(-operand.value);
+    case "decimal":
+      return Decimal.negate(operand);
   }
 }
 
-function isZero(x: RubyNumeric): boolean {
+/** Ruby `zero?`: true for `0`, `0.0`, `-0.0` and a zero BigDecimal, never for `NaN`. */
+export function isZero(x: RubyNumeric): boolean {
   switch (x.kind) {
     case "integer":
       return x.value === 0n;
@@ -340,7 +389,16 @@ function isZero(x: RubyNumeric): boolean {
       return x.num === 0n;
     case "float":
       return x.value === 0;
+    case "decimal":
+      return Decimal.isZero(x);
   }
+}
+
+/** Ruby `finite?`: an Integer or Rational always is. */
+export function isFiniteValue(x: RubyNumeric): boolean {
+  if (x.kind === "float") return Number.isFinite(x.value);
+  if (x.kind === "decimal") return Decimal.isFiniteDecimal(x);
+  return true;
 }
 
 /**
@@ -351,6 +409,10 @@ function isZero(x: RubyNumeric): boolean {
  */
 export function divide(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric {
   if (isZero(divisor)) throw new DivisionByZeroError();
+  // `BigDecimal / Float` stays a BigDecimal (`BigDecimal#/`).
+  if (dividend.kind === "decimal") {
+    return Decimal.quo(dividend, Decimal.fromFloat(toDouble(divisor)));
+  }
   return float(toDouble(dividend) / toDouble(divisor));
 }
 
@@ -511,7 +573,12 @@ function isNegative(x: Exact): boolean {
  * `ArgumentError`; a Float or non-integral Rational exponent goes through
  * `Float#**` on `self.to_f`.
  */
-function rationalBasePower(num: bigint, den: bigint, exponent: RubyNumeric): RubyNumeric {
+function rationalBasePower(
+  num: bigint,
+  den: bigint,
+  exponent: RubyNumeric,
+  deferInexact = false,
+): RubyNumeric | null {
   let power = exponent;
   if (isExact(power) && isZero(power)) return rational(1n, 1n);
   if (power.kind === "rational" && power.den === 1n) power = integer(power.num);
@@ -540,7 +607,26 @@ function rationalBasePower(num: bigint, den: bigint, exponent: RubyNumeric): Rub
     if (e > 0n) return rational(raise(num, e), raise(den, e));
     return rational(raise(den, -e), raise(num, -e));
   }
+  if (deferInexact) {
+    if (rationalToDouble(num, den) < 0 && hasFractionalPart(toDouble(power))) return notReal();
+    return null;
+  }
   return floatBasePower(rationalToDouble(num, den), power);
+}
+
+/**
+ * `base ** exponent` for two exact operands when Ruby's answer is exact (an
+ * Integer or Rational), `null` when it is a Float — without computing that
+ * Float, which the strict evaluator never uses (it defers there, or refuses
+ * for want of a guard-digit `power`). A Complex answer is still the
+ * `MathDomainError` `real_result` raises first.
+ */
+export function exactPowerOrNull(base: Exact, exponent: Exact): RubyNumeric | null {
+  if (base.kind === "integer" && exponent.kind === "integer") {
+    return integerPower(base.value, exponent.value);
+  }
+  const [num, den] = parts(base);
+  return rationalBasePower(num, den, exponent, true);
 }
 
 /**
@@ -549,16 +635,55 @@ function rationalBasePower(num: bigint, den: bigint, exponent: RubyNumeric): Rub
  * `MathDomainError` `real_result` raises.
  */
 export function power(base: RubyNumeric, exponent: RubyNumeric): RubyNumeric {
+  if (base.kind === "decimal") return decimalPower(base, decimalExponent(exponent, base));
+  if (exponent.kind === "decimal") return powerToDecimal(base, exponent);
   switch (base.kind) {
     case "integer":
       if (exponent.kind === "integer") return integerPower(base.value, exponent.value);
       if (exponent.kind === "float") return integerBaseFloatPower(base.value, exponent.value);
-      return rationalBasePower(base.value, 1n, exponent);
+      return rationalBasePower(base.value, 1n, exponent) as RubyNumeric;
     case "rational":
-      return rationalBasePower(base.num, base.den, exponent);
+      return rationalBasePower(base.num, base.den, exponent) as RubyNumeric;
     case "float":
       return floatBasePower(base.value, exponent);
   }
+}
+
+/**
+ * `BigDecimal#**`'s `coerce_to_bigdecimal(y, n_significant_digits)`: an
+ * Integer exactly, a Float to 16 digits, a Rational to the base's significant
+ * digits, at least 32.
+ */
+function decimalExponent(exponent: RubyNumeric, base: Decimal.BigDecimal): Decimal.BigDecimal {
+  if (exponent.kind === "rational") {
+    const digits = Math.max(Decimal.significantDigits(base), 2 * Decimal.DOUBLE_FIG);
+    return Decimal.fromRational(exponent.num, exponent.den, digits);
+  }
+  return toDecimal(exponent, base);
+}
+
+/**
+ * An Integer, Rational or Float raised to a BigDecimal: `Integer#**` and
+ * `Float#**` coerce the base (`rb_num_coerce_bin`, so `BigDecimal(base) **
+ * exponent`); `Rational#**` (`nurat_expt`) first takes a zero exponent as
+ * `(1/1)` — a BigDecimal counts as exact there (`k_exact_p` is "not a
+ * Float") — and an integral base of `1` or `0` as `(1/1)` and `(0/1)`
+ * (`ZeroDivisionError` for a negative exponent), then coerces.
+ */
+function powerToDecimal(base: RubyNumeric, exponent: Decimal.BigDecimal): RubyNumeric {
+  if (base.kind === "rational") {
+    if (Decimal.isZero(exponent)) return rational(1n, 1n);
+    if (base.den === 1n) {
+      if (base.num === 1n) return rational(1n, 1n);
+      if (base.num === 0n) {
+        if (Decimal.compare(exponent, Decimal.fromInteger(0n)) === -1) {
+          throw new DivisionByZeroError();
+        }
+        return rational(0n, 1n);
+      }
+    }
+  }
+  return decimalPower(toDecimal(base, exponent), exponent);
 }
 
 /**
@@ -585,6 +710,12 @@ export function finalResult(result: RubyNumeric, nonFinite: () => never): FinalN
         `the result is the Ruby Rational (${result.num}/${result.den}), which a JS number ` +
           "cannot hold exactly",
       );
+    case "decimal":
+      if (!Decimal.isFiniteDecimal(result)) nonFinite();
+      return refuse(
+        `the result is the Ruby BigDecimal ${Decimal.inspect(result)}, which a JS number ` +
+          "cannot hold exactly; evaluateResult returns it",
+      );
   }
 }
 
@@ -600,6 +731,8 @@ export function absolute(x: RubyNumeric): RubyNumeric {
       return rational(abs(x.num), x.den);
     case "float":
       return float(Math.abs(x.value));
+    case "decimal":
+      return Decimal.absolute(x);
   }
 }
 
@@ -633,6 +766,8 @@ export function floorOf(x: RubyNumeric): RubyNumeric {
       return integer(floorDiv(x.num, x.den));
     case "float":
       return floatToInteger(Math.floor(x.value));
+    case "decimal":
+      return integer(Decimal.floor(x));
   }
 }
 
@@ -645,6 +780,8 @@ export function ceilOf(x: RubyNumeric): RubyNumeric {
       return integer(-floorDiv(-x.num, x.den));
     case "float":
       return floatToInteger(Math.ceil(x.value));
+    case "decimal":
+      return integer(Decimal.ceil(x));
   }
 }
 
@@ -678,9 +815,47 @@ function numericModulo(x: Exact, y: RubyNumeric): RubyNumeric {
     return subtract(x, multiply(y, quotient));
   }
   const [an, ad] = parts(x);
-  const [bn, bd] = parts(y);
+  const [bn, bd] = parts(y as Exact);
   const quotient = integer(floorDiv(an * bd, ad * bn));
   return subtract(x, multiply(y, quotient));
+}
+
+/**
+ * `%` with a BigDecimal on either side. `BigDecimal#%` (`BigDecimal_DoDivmod`)
+ * converts the divisor against the dividend; an Integer or Float dividend is
+ * coerced first (`fix_mod`, `flo_mod`: `rb_num_coerce_bin`); a Rational
+ * dividend takes `Numeric#%`, `x - y * (x / y).floor`, each step coercing
+ * through `BigDecimal#coerce`.
+ */
+function decimalModulo(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric {
+  if (dividend.kind === "rational") {
+    const quotient = floorOf(divideAsRuby(dividend, divisor));
+    return subtract(dividend, multiply(divisor, quotient));
+  }
+  const [x, y] = decimalPair(dividend, divisor) as readonly [
+    Decimal.BigDecimal,
+    Decimal.BigDecimal,
+  ];
+  return Decimal.divmod(x, y)[1];
+}
+
+/**
+ * Ruby's own `/` between two values, as `Numeric#%` and the strict
+ * evaluator's exact division call it (not `Evaluator#divide`'s Float
+ * division): Integer and Rational pairs are exact Rationals (`Rational#/`;
+ * an Integer pair here always arrives with a Rational dividend), a Float on
+ * either side gives a Float, and a BigDecimal on either side gives
+ * `BigDecimal#/`. A zero divisor is rejected by the caller first.
+ */
+export function divideAsRuby(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric {
+  const decimals = decimalPair(dividend, divisor);
+  if (decimals !== null) return Decimal.quo(decimals[0], decimals[1]);
+  if (isExact(dividend) && isExact(divisor)) {
+    const [an, ad] = parts(dividend);
+    const [bn, bd] = parts(divisor);
+    return rational(an * bd, ad * bn);
+  }
+  return float(toDouble(dividend) / toDouble(divisor));
 }
 
 /**
@@ -696,6 +871,9 @@ function numericModulo(x: Exact, y: RubyNumeric): RubyNumeric {
  */
 export function modulo(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric {
   if (isZero(divisor)) throw new DivisionByZeroError();
+  if (dividend.kind === "decimal" || divisor.kind === "decimal") {
+    return decimalModulo(dividend, divisor);
+  }
   if (dividend.kind === "integer" && divisor.kind === "integer") {
     const r = dividend.value % divisor.value;
     return integer(r !== 0n && r < 0n !== divisor.value < 0n ? r + divisor.value : r);
@@ -717,6 +895,9 @@ export function modulo(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric
  * comparison with `NaN` — on which `Array#max` raises `ArgumentError`.
  */
 export function compare(a: RubyNumeric, b: RubyNumeric): -1 | 0 | 1 | null {
+  // `BigDecimal#<=>`, and the other classes' `<=>` through `rb_num_coerce_cmp`.
+  const decimals = decimalPair(a, b);
+  if (decimals !== null) return Decimal.compare(decimals[0], decimals[1]);
   if (isExact(a) && isExact(b)) {
     const [an, ad] = parts(a);
     const [bn, bd] = parts(b);
@@ -777,4 +958,44 @@ export function integerLcm(a: bigint, b: bigint): bigint {
  */
 export function mathArgument(x: RubyNumeric): number {
   return x.kind === "rational" ? Number(x.num) / Number(x.den) : toDouble(x);
+}
+
+/**
+ * `Kernel#Rational(x)`, the strict evaluator's exact division's first step:
+ * an Integer or Rational as itself, a Float exactly (its dyadic value), a
+ * BigDecimal by `to_r`; a non-finite Float or BigDecimal raises
+ * `FloatDomainError` (`NonFiniteResultError`).
+ */
+export function toRational(x: RubyNumeric): RubyNumeric {
+  switch (x.kind) {
+    case "integer":
+      return rational(x.value, 1n);
+    case "rational":
+      return x;
+    case "float": {
+      if (!Number.isFinite(x.value)) throw new NonFiniteResultError();
+      return floatToRational(x.value);
+    }
+    case "decimal": {
+      const [num, den] = Decimal.toRational(x);
+      return rational(num, den);
+    }
+  }
+}
+
+/** A finite double as the exact Rational it is (`float_to_r`). */
+function floatToRational(value: number): RubyNumeric {
+  if (value === 0) return rational(0n, 1n);
+  const view = new DataView(new ArrayBuffer(8));
+  view.setFloat64(0, value);
+  const bits = view.getBigUint64(0);
+  const negative = bits >> 63n === 1n;
+  const biased = Number((bits >> 52n) & 0x7ffn);
+  const fraction = bits & ((1n << 52n) - 1n);
+  const mantissa = biased === 0 ? fraction : fraction | (1n << 52n);
+  const exponent2 = (biased === 0 ? 1 : biased) - 1075;
+  const signedMantissa = negative ? -mantissa : mantissa;
+  return exponent2 >= 0
+    ? rational(signedMantissa << BigInt(exponent2), 1n)
+    : rational(signedMantissa, 1n << BigInt(-exponent2));
 }

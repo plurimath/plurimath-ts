@@ -19,15 +19,24 @@
  * `InvalidBindingError`). `typeof value === "number"` is the faithful JS
  * mirror of `Numeric && real?` for exactly that reason — it admits `NaN` and
  * `Infinity` and rejects everything JS has no `number` for.
+ *
+ * plurimath 0.11.13 also accepts an exact decimal string
+ * (`exact_decimal_string?`: `/\A-?[0-9]+(\.[0-9]+)?\z/`, so `"0.5"` and
+ * `"-12"`, not `"1e5"` or `"+1"`), read as a Rational in strict mode and a
+ * Float otherwise (`evaluator.ts`); any other string is still an
+ * `InvalidBindingError`.
  */
 
 import { InvalidBindingError } from "./errors";
 
 /** Ruby: `Formula#evaluate(bindings = {})`'s Hash-like argument. */
-export type EvaluationBindings = Readonly<Record<string, number>>;
+export type EvaluationBindings = Readonly<Record<string, number | string>>;
 
-/** `Map<string, number>`, keyed by the gem's own normalized `key.to_s`. */
-export type NormalizedBindings = ReadonlyMap<string, number>;
+/** `Map<string, number | string>`, keyed by the gem's own normalized `key.to_s`. */
+export type NormalizedBindings = ReadonlyMap<string, number | string>;
+
+/** Ruby: `Evaluator#exact_decimal_string?`. */
+const EXACT_DECIMAL_STRING = /^-?[0-9]+(?:\.[0-9]+)?$/;
 
 /**
  * The Ruby class name `InvalidBindingError` interpolates for `value.class`
@@ -67,9 +76,10 @@ export function describeBindingValueType(value: unknown): string {
 }
 
 export function normalizeBindings(bindings: EvaluationBindings): NormalizedBindings {
-  const normalized = new Map<string, number>();
+  const normalized = new Map<string, number | string>();
   for (const [key, value] of Object.entries(bindings)) {
-    if (typeof value !== "number") {
+    const exactString = typeof value === "string" && EXACT_DECIMAL_STRING.test(value);
+    if (typeof value !== "number" && !exactString) {
       throw new InvalidBindingError(key, describeBindingValueType(value));
     }
     normalized.set(key, value);

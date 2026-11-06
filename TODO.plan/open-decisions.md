@@ -457,6 +457,36 @@ which is glibc's everywhere outside that band, and refuses inside it with
 `UnsupportedFeatureError` — the documented bound kept on purpose (the user,
 2026-09-23); `deferred.md` records it as a known divergence.
 
+## Arbitrary-precision decimals for guarded evaluation
+
+plurimath 0.11.13 made `Formula#evaluate` accuracy-aware: it returns an
+`Evaluation::Result`, and `mode: :strict, guard_digits: n` computes `sin`,
+`cos`, `exp`, `log`, `log_base`, `log10`, `sqrt` and `atan` of exact operands
+as Ruby BigDecimals (bigdecimal 4.1.3 in the oracle's lockfile).
+
+**SETTLED 2026-11-06, by measurement.** The candidates were decimal.js
+10.4.3, big.js 6.2.2, and a BigInt port of the bigdecimal gem's own
+algorithms. Over the 190 fixture rows with a guarded value at the pinned
+oracle 2967dcc4:
+
+| Candidate | Rows matching | Runtime size |
+|---|---|---|
+| BigInt port (`big-decimal.ts`, `big-math.ts`) | 189 of 190; the other refused | no dependency |
+| decimal.js 10.4.3 | 185 of 190 | 32,161 bytes minified, 12,810 gzipped |
+| big.js 6.2.2 | 23 of 190 (it has `sqrt` only) | 6,837 bytes minified, 2,969 gzipped |
+
+decimal.js rounds correctly; the gem computes 16 guard digits and rounds
+twice, so where the exact value sits within those digits of a midpoint the
+gem's last digit differs (`sqrt(10^40+1)` to 41 digits, the three
+`guarded-sqrt-double-rounding-*` rows), and it runs out of a 2 GB heap on
+`exp(10^15)` and `exp(10^19)`. The port refuses only `exp(10^19)`, whose
+exponent passes `Number.MAX_SAFE_INTEGER`. On 2,000 random guarded calls
+answered by the oracle, the port matched 1,992 and refused 8 (the same
+exponent limit), and decimal.js matched all 1,541 it could compute. The
+package also has no runtime dependency today. The port is used; `evaluate`
+keeps returning a `number` (the decision above), and `evaluateResult` returns
+the whole Result.
+
 ## `toDisplay` error for an invalid type
 
 Settled 2026-10-12 (the user's decision): add `InvalidTypeError`

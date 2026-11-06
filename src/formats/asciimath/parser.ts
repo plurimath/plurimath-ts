@@ -23,13 +23,7 @@ import { requireKnownParseOptions } from "../../core/errors";
 import { type FormulaNode, type OnUnsupported, ParseError } from "../../core/index";
 import { InvalidUncertaintyError } from "../../core/uncertainty";
 import { type LocaleOptions, requireLocaleKey } from "../../formatting/index";
-import {
-  isStackOverflow,
-  type ParseContext,
-  ParseFailed,
-  type ParseValue,
-  type SourceMap,
-} from "../../pegkit/index";
+import { ParseFailed, type ParseValue, type SourceMap } from "../../pegkit/index";
 import { asciimathGrammar } from "./grammar";
 import { preprocess } from "./preprocess";
 import { asciimathTransform, finalizeAsciimathParse } from "./transform";
@@ -107,29 +101,10 @@ function parsePreprocessed(
   try {
     return grammar.root.parse(text);
   } catch (error) {
-    if (error instanceof ParseFailed) {
-      // AsciiMath reports where its root prefix ends, rather than the furthest
-      // leftover match attempted by another alternative inside the PEG engine.
-      let index = error.index;
-      const context: ParseContext = {
-        input: text,
-        captures: [new Map()],
-        maxPos: 0,
-        unconsumed: -1,
-        cache: new Map(),
-        depth: 0,
-      };
-      try {
-        const prefix = grammar.root.apply(0, context, false);
-        if (prefix.ok) index = prefix.pos;
-      } catch (diagnosticError) {
-        // A diagnostic retry must preserve the original typed resource failure.
-        if (!(diagnosticError instanceof ParseFailed) && !isStackOverflow(diagnosticError)) {
-          throw diagnosticError;
-        }
-      }
-      throw new ParseError(error.message, input, "asciimath", map.toOriginal(index));
-    }
+    // amath reports the deepest leaf of the root's failure cause, which is
+    // pegkit's `ParseFailed.index`; it indexes the preprocessed text.
+    if (error instanceof ParseFailed)
+      throw new ParseError(error.message, input, "asciimath", map.toOriginal(error.index));
     throw error;
   }
 }

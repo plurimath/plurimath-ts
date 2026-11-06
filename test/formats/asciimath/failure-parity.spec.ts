@@ -62,40 +62,27 @@
  *
  * ## Positions: what the gem exposes, measured
  *
- * The gem exposes **no usable failure position at all**, at either layer:
+ * `Plurimath::Math.parse` exposes no position: it rescues `StandardError` and
+ * re-raises `Math::ParseError.new(text, type)` with `cause: nil`
+ * (`math.rb:43-50`), carrying the input text and the format and nothing else.
  *
- * 1. `Plurimath::Math.parse` rescues `StandardError` and re-raises
- *    `Math::ParseError.new(text, type)` with `cause: nil` (`math.rb:43-50`).
- *    Measured on all 26 rejections: `e.cause` is `nil`, and the error does not
- *    respond to `parse_failure_cause`. It carries the input text and the format
- *    and nothing else.
- * 2. Underneath, `Parslet::ParseFailed#parse_failure_cause.pos.charpos` is
- *    **0 for all 26**, and the message is byte-identical for all 26 —
- *    "Expected one of [...] at line 1 char 1." Parslet's reporter blames the
- *    root atom, which for this grammar is always `expression` at offset 0.
+ * Underneath, since plurimath 0.11.13, `Plurimath::Asciimath::Parse#parse`
+ * raises a `Parslet::ParseFailed` whose cause is amath's position: the deepest
+ * leaf of the failure cause a Parslet `Tree` reporter builds
+ * (`Amath::ErrorPosition`), as a character offset into the preprocessed text.
+ * pegkit's `ParseFailed.index` is the same quantity on this port's grammar, and
+ * on all 26 rejections below it equals amath's offset at plurimath 2967dcc4.
  *
- * A per-input position exists only by walking `Cause#children` recursively (up
- * to 120,965 nodes for one of these inputs) and taking the deepest offset. That
- * is Parslet's internal bookkeeping, not an interface, and it disagrees with
- * this port on 3 of the 26 anyway.
- *
- * So `ParseError.index` cannot mean "what the gem said". It is defined here,
- * and this file is what defines it:
- *
- *   **`ParseError.index` is the offset, in the ORIGINAL input, of the first
- *   code unit the parser could not consume.**
- *
- * Two consequences the tests below pin:
+ * `ParseError.index` is that offset mapped back to the ORIGINAL input:
  *
  * - It is a UTF-16 code-unit offset into the string the caller passed, so it
  *   goes through the `SourceMap` that `preprocess` returns. `{:` → `ℒ` shortens
  *   the text by one unit per rewrite, so a failure sitting after any rewrite has
- *   a *different* number before and after the map — 11 of the 26 rejections do,
- *   and they are what separates a correct implementation from a plausible one.
- * - For this grammar it is always `result.pos` and never pegkit's `maxPos`:
- *   `expression`'s fifth alternative is `str("")`, which always succeeds, so the
- *   root never hard-fails. Verified by driving `Atom#apply` directly on all 26 —
- *   `result.ok` was true every time, with `result.pos < input.length`.
+ *   a *different* number before and after the map — 13 of the 26 rejections
+ *   do, and they are what separates a correct implementation from a plausible
+ *   one.
+ * - It can be the end of the input: `left(x right` reports 12, because the
+ *   `left ... right` branch reaches the end looking for its closing paren.
  */
 
 import { describe, expect, it } from "vitest";
@@ -103,7 +90,7 @@ import { ParseError } from "../../../src/core/errors";
 import { createAsciimathGrammar } from "../../../src/formats/asciimath/grammar";
 import { parseAsciimathTree } from "../../../src/formats/asciimath/parser";
 import { preprocess } from "../../../src/formats/asciimath/preprocess";
-import { type ParseValue, Slice } from "../../../src/pegkit/index";
+import { ParseFailed, type ParseValue, Slice } from "../../../src/pegkit/index";
 import type { YamlValue } from "../../core/corpus-yaml";
 
 const grammar = createAsciimathGrammar();
@@ -336,8 +323,8 @@ const CANDIDATES: readonly Candidate[] = [
 /**
  * The 26 the gem rejects, with the position this port reports.
  *
- * `preprocessedIndex` is the root-prefix boundary in
- * `Asciimath::Parser#text`. `index` is that offset mapped back through the
+ * `preprocessedIndex` is the failure position in `Asciimath::Parser#text`,
+ * which is amath's measured offset (in code units). `index` is that offset mapped back through the
  * `SourceMap`, and is what `ParseError` carries. `remainder` is the rest of the
  * ORIGINAL input from `index` on: it is the same claim as `index` stated in a
  * form a reviewer can check without counting, and an off-by-one breaks it.
@@ -363,7 +350,7 @@ const REJECTIONS: readonly Rejection[] = [
   ["frac-paren-trailing", "(a)/", 3, 3, "/"],
   ["op-backtick-lone", "`", 0, 0, "`"],
   ["kw-right-lone", "right", 0, 0, "right"],
-  ["kw-left-x-right", "left(x right", 7, 7, "right"],
+  ["kw-left-x-right", "left(x right", 12, 12, ""],
   // Below here every input contains a length-changing rewrite BEFORE the
   // failure, so `index` and `preprocessedIndex` differ. Reporting the raw
   // parser offset would point at the wrong character in the caller's string.
@@ -382,8 +369,8 @@ const REJECTIONS: readonly Rejection[] = [
   ["prep-pipe-close-frac", "x|y/", 3, 4, "/"],
   // The failure lands ON a rewritten digraph rather than after one, so the
   // reported offset is the digraph's first character, not its second.
-  ["prep-brace-close-frac", "xℛy/", 1, 1, ":}y/"],
-  ["prep-paren-close-frac", "xᑐy/", 1, 1, ":)y/"],
+  ["prep-brace-close-frac", "xℛy/", 3, 4, "/"],
+  ["prep-paren-close-frac", "xᑐy/", 3, 4, "/"],
 ];
 
 /**
@@ -919,23 +906,15 @@ describe("failure positions index the original input", () => {
     (id, preprocessed, preprocessedIndex, index, remainder) => {
       const input = inputFor(id);
 
-      // The root prefix boundary, into the preprocessed text. The generic
-      // PEG's furthest attempted alternative can end later; AsciiMath exposes
-      // this boundary instead, then maps it back to the caller's input.
-      const prefix = grammar.root.apply(
-        0,
-        {
-          input: preprocessed,
-          captures: [new Map()],
-          maxPos: 0,
-          unconsumed: -1,
-          cache: new Map(),
-          depth: 0,
-        },
-        false,
-      );
-      expect(prefix.ok).toBe(true);
-      expect(prefix.ok ? prefix.pos : null, `${id} preprocessed offset`).toBe(preprocessedIndex);
+      // The root's failure position, into the preprocessed text.
+      let failed: unknown;
+      try {
+        grammar.root.parse(preprocessed);
+      } catch (error) {
+        failed = error;
+      }
+      expect(failed, `${id} was accepted`).toBeInstanceOf(ParseFailed);
+      expect((failed as ParseFailed).index, `${id} preprocessed offset`).toBe(preprocessedIndex);
 
       // The public failure after the SourceMap, which is what a caller sees.
       const error = rejectionOf(input) as ParseError;
@@ -969,11 +948,11 @@ describe("failure positions index the original input", () => {
   });
 
   it("is not the raw parser offset — the SourceMap is load-bearing", () => {
-    // The guard against an implementation that forgets to map. Eleven of the
+    // The guard against an implementation that forgets to map. Thirteen of the
     // 26 rejections have a length-changing rewrite before the failure, so
-    // returning `ParseFailed.index` unchanged would be wrong for all eleven.
+    // returning `ParseFailed.index` unchanged would be wrong for all thirteen.
     const shifted = REJECTIONS.filter(([, , preIndex, index]) => preIndex !== index);
-    expect(shifted.length).toBe(11);
+    expect(shifted.length).toBe(13);
     for (const [id, , preIndex, index] of shifted) {
       const input = inputFor(id);
       expect(index, id).toBeGreaterThan(preIndex);
@@ -982,45 +961,38 @@ describe("failure positions index the original input", () => {
     }
   });
 
-  it("points at the first character of a rewritten digraph, not its second", () => {
-    // `x:}y/` preprocesses to `xℛy/` and stops at the `ℛ`. The digraph occupies
-    // original offsets 1 and 2; the reported index must be 1, so that
-    // `input.slice(index)` starts with the whole token.
+  it("maps an offset on a rewritten digraph to its first character, not its second", () => {
+    // `x:}y/` preprocesses to `xℛy/`. The digraph occupies original offsets 1
+    // and 2, so offset 1 in the rewritten text must map to 1, and
+    // `input.slice(index)` then starts with the whole token.
     for (const [id, digraph] of [
       ["prep-brace-close-frac", ":}"],
       ["prep-paren-close-frac", ":)"],
     ] as const) {
       const input = inputFor(id);
-      const error = rejectionOf(input) as ParseError;
-      expect(error.index, id).toBe(1);
+      const index = preprocess(input).map.toOriginal(1);
+      expect(index, id).toBe(1);
       // Reporting 2 — the digraph's second character — would slice the token in
       // half, which is the `SourceMap` bug that clamped past-end offsets into
       // the middle of a token (`test/pegkit/source-map.spec.ts` pins the
       // engine-side regression).
-      expect(input.slice(error.index, error.index + 2), id).toBe(digraph);
+      expect(input.slice(index, index + 2), id).toBe(digraph);
     }
   });
 });
 
 describe("the position the gem exposes", () => {
-  // Measured, not assumed — the three facts the header records, restated as
+  // Measured, not assumed — the facts the header records, restated as
   // assertions about this port so a future change has to confront them.
   //
-  //   Math::ParseError            no position at all (cause: nil)
-  //   Parslet cause.pos.charpos   0 for all 26, message identical for all 26
-  //   deepest cause in the tree   an internal walk, and disagrees on 3 of 26
-  //
-  // So the index is this port's own contract, and these are its terms.
+  //   Math::ParseError                         no position at all (cause: nil)
+  //   Asciimath::Parse cause.pos.charpos       amath's offset, equal on all 26
 
-  it("reports a distinct position per input, which the gem's own error does not", () => {
+  it("reports a distinct position per input", () => {
     const positions = new Set(REJECTIONS.map(([, , , index]) => index));
-    // Parslet reports char 1 for every one of these; this port reports ten
-    // different offsets — 0, 1, 2, 3, 4, 5, 6, 7, 11 and 17. That difference is
-    // the whole value of the contract.
-    expect(positions.size).toBeGreaterThan(1);
-    expect(positions.size).toBe(10);
+    expect(positions.size).toBe(11);
     expect([...positions].sort((left, right) => left - right)).toStrictEqual([
-      0, 1, 2, 3, 4, 5, 6, 7, 11, 17,
+      0, 1, 2, 3, 4, 5, 6, 7, 11, 12, 17,
     ]);
   });
 
@@ -1033,50 +1005,30 @@ describe("the position the gem exposes", () => {
     expect(error.code).toBe("PARSE_ERROR");
   });
 
-  it("never hard-fails: every rejection is unconsumed input, not a dead end", () => {
-    // `expression`'s fifth alternative is `str("")`, which always succeeds, so
-    // the root always matches a prefix and the format reports `result.pos`.
-    // The observable consequence: the reported index is always the start of a
-    // suffix the parser did not consume, so it is strictly less than the
-    // preprocessed length whenever the input is non-empty.
-    for (const [id, preprocessed, preprocessedIndex] of REJECTIONS) {
-      expect(preprocessedIndex, id).toBeLessThan(preprocessed.length);
-    }
-  });
-
   /**
-   * The three cases where this port's offset differs from the deepest position
-   * anywhere in Parslet's cause tree. Recorded because they were measured and
-   * are not a bug — the two are different quantities, and they coincide on the
-   * other 23 only because the deepest failing atom usually sits exactly where
-   * the consumed prefix ends.
+   * The three cases where the deepest leaf lies past where the winning
+   * alternative stopped. amath measured at plurimath 2967dcc4, as character
+   * offsets into the preprocessed text:
    *
-   * Deepest-cause figures from walking `Cause#children` on the oracle, as
-   * character offsets into the preprocessed text:
+   *   left(x right      12 (end of input)
+   *   x:}y/  ->  xℛy/   3 (`/`)
+   *   x:)y/  ->  xᑐy/   3 (`/`)
    *
-   *   left(x right   this port 7 (`right` begins)   Parslet's deepest 12 (end)
-   *   x:}y/  ->  xℛy/   this port 1 (`ℛ`)           Parslet's deepest 3 (`/`)
-   *   x:)y/  ->  xᑐy/   this port 1 (`ᑐ`)           Parslet's deepest 3 (`/`)
-   *
-   * In each, the parse legitimately consumed only a prefix; the deeper offset
-   * was reached by an alternative that was then discarded. `left(x right` is
-   * the clearest: the `left ... right` branch does reach the end of the input
-   * looking for a closing paren, but the branch that *wins* stops at `right`.
-   * Reporting 12 there would name a character the accepted parse never used.
+   * The `left ... right` branch reaches the end of the input looking for a
+   * closing paren and the `/` branches look for a denominator; those leaves
+   * are deeper than the prefix any alternative consumed, so they are the ones
+   * reported.
    */
   it.each([
-    ["kw-left-x-right", 7, "right"],
-    ["prep-brace-close-frac", 1, ":}y/"],
-    ["prep-paren-close-frac", 1, ":)y/"],
-  ] as const)(
-    "%s stops where the prefix ends (%i), not at Parslet's deepest cause",
-    (id, index, remainder) => {
-      const input = inputFor(id);
-      const error = rejectionOf(input) as ParseError;
-      expect(error.index).toBe(index);
-      expect(input.slice(index)).toBe(remainder);
-    },
-  );
+    ["kw-left-x-right", 12, ""],
+    ["prep-brace-close-frac", 4, "/"],
+    ["prep-paren-close-frac", 4, "/"],
+  ] as const)("%s reports the deepest leaf of its failure cause (%i)", (id, index, remainder) => {
+    const input = inputFor(id);
+    const error = rejectionOf(input) as ParseError;
+    expect(error.index).toBe(index);
+    expect(input.slice(index)).toBe(remainder);
+  });
 });
 
 /**

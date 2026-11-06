@@ -57,17 +57,6 @@ const RENDERERS: Readonly<Record<string, (node: MathNode) => string>> = {
   html: (node) => toHtml(node),
 };
 
-/**
- * Renderings that depend on work outside the uncertainty port, keyed
- * `input|format`. Value: the reason.
- */
-const UNIT_RULE = 'multi-letter unit as \\mup"kg" (plurimath#549), ported by plurimath-ts#205';
-const KNOWN_RENDER_GAPS: ReadonlyMap<string, string> = new Map([
-  ['ustd(680(41)e-3, "unitsml(kg)")|unicodemath', UNIT_RULE],
-  ['ucov(1.0, 0.9, 1.1, 0.95, shortest, "unitsml(kg)")|unicodemath', UNIT_RULE],
-  ['uexp(1, 0.2, 2, 0.95, "unitsml(kg)")|unicodemath', UNIT_RULE],
-]);
-
 describe("uncertainty fixtures", () => {
   it("come from an oracle with the uncertainty node", () => {
     expect(fixture.oracle.version >= "0.11.13").toBe(true);
@@ -87,9 +76,7 @@ describe("uncertainty fixtures", () => {
         expect(normalize(parseAsciimath(row.input))).toStrictEqual(row.model);
       });
       for (const [format, expected] of Object.entries(row.render ?? {})) {
-        const gap = KNOWN_RENDER_GAPS.get(`${row.input}|${format}`);
-        const title = `renders ${format}${gap === undefined ? "" : ` (known gap: ${gap})`}`;
-        it.skipIf(gap !== undefined)(title, () => {
+        it(`renders ${format}`, () => {
           const formula = parseAsciimath(row.input);
           const render = RENDERERS[format];
           if (render === undefined) throw new Error(`no renderer for ${format}`);

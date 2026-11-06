@@ -234,7 +234,9 @@ function unitXml(parsed: ParsedUnitsml, options: EffectiveUnitsmlOptions): strin
       "UnitName",
       { "xml:lang": "en" },
       xmlEscape(
-        parsed.extras.name ?? (whole === undefined ? undefined : english(whole)) ?? normalized,
+        unitName(parsed, options) ??
+          (whole === undefined ? undefined : english(whole)) ??
+          normalized,
       ),
     ) +
     tag("UnitSymbol", { type: "HTML" }, unitHtml(parsed.values, options)) +
@@ -494,6 +496,17 @@ function dimensionXml(id: string | undefined, terms?: readonly DimensionTerm[]):
       )
       .join(""),
   );
+}
+/**
+ * Formula#units: options[:name] || explicit_value[:name], by Ruby truthiness.
+ * `Compose.validate_name!` already limited the option to nil, a String or a
+ * Symbol, and a Symbol is written as its name.
+ */
+function unitName(parsed: ParsedUnitsml, options: EffectiveUnitsmlOptions): string | undefined {
+  const option = options.name;
+  if (typeof option === "string") return option;
+  if (typeof option === "symbol") return option.description ?? "";
+  return parsed.extras.name;
 }
 /** Formula#units: options[:quantity] || explicit_value[:quantity], by Ruby truthiness. */
 function quantityReference(

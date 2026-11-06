@@ -2,10 +2,10 @@ import { RenderError } from "../core/index";
 
 export interface UnitsmlRenderOptions {
   /** Symbol.for("space") / Symbol.for("nospace") carry Ruby's Symbol values. */
-  readonly multiplier?: string | symbol | false | null | undefined;
+  readonly multiplier?: string | symbol | null | undefined;
   readonly explicitParenthesis?: boolean | null | undefined;
   readonly xml?: boolean | null | undefined;
-  readonly name?: string | boolean | null | undefined;
+  readonly name?: string | symbol | boolean | null | undefined;
   readonly symbol?: string | boolean | null | undefined;
   readonly quantity?: string | boolean | null | undefined;
 }
@@ -40,6 +40,19 @@ export function unitsmlOptions(
       "unitsml",
       "unitsml",
     );
+  // Compose.validate_multiplier!: nil, a String, :space or :nospace.
+  const multiplier: unknown = options?.multiplier;
+  if (
+    multiplier !== undefined &&
+    multiplier !== null &&
+    typeof multiplier !== "string" &&
+    !(typeof multiplier === "symbol" && multiplierSymbol(multiplier) !== undefined)
+  )
+    throw new RenderError(
+      `Unitsml::Errors::InvalidUnitEntryError: [unitsml] Invalid multiplier: ${rubyInspect(multiplier)} — expected a String, :space, or :nospace.`,
+      "unitsml",
+      "unitsml",
+    );
   return {
     ...options,
     explicitParenthesis:
@@ -49,11 +62,14 @@ export function unitsmlOptions(
       options.explicitParenthesis !== undefined
         ? options.explicitParenthesis !== null && options.explicitParenthesis !== false
         : true,
-    multiplier:
-      options?.multiplier === false
-        ? (extras.multiplier ?? null)
-        : (options?.multiplier ?? extras.multiplier ?? null),
+    multiplier: (multiplier as string | symbol | null | undefined) ?? extras.multiplier ?? null,
   };
+}
+
+/** `value.inspect` for the values a JavaScript caller can pass where Ruby expects a multiplier. */
+function rubyInspect(value: unknown): string {
+  if (typeof value === "symbol") return `:${value.description ?? ""}`;
+  return String(value);
 }
 
 export function multiplierSymbol(value: string | symbol | null): "space" | "nospace" | undefined {

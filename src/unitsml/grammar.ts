@@ -10,25 +10,12 @@ export interface UnitsmlGrammarTokens {
   readonly singlePrefixes: readonly string[];
   readonly doublePrefixes: readonly string[];
   readonly dimensions: readonly string[];
+  /**
+   * asciiunits 0.1.6 tables/prefixed_units.yaml, in table order. These names
+   * are tried as units only after every prefix-plus-unit reading has failed.
+   */
+  readonly prefixedUnitNames: readonly string[];
 }
-
-/**
- * asciiunits 0.1.6 tables/prefixed_units.yaml, in table order. These names are
- * tried as units only after every prefix-plus-unit reading has failed.
- */
-const PREFIXED_UNIT_NAMES: readonly string[] = [
-  "kcal_IT",
-  "kcal_th",
-  "mbar",
-  "cSt",
-  "kgf",
-  "uin",
-  "cP",
-  "dB",
-  "kg",
-  "mL",
-  "ml",
-];
 
 export function unitsmlGrammar(tokens: UnitsmlGrammarTokens): { readonly root: Atom } {
   const literals = (values: readonly string[], name: string): Atom => {
@@ -38,7 +25,7 @@ export function unitsmlGrammar(tokens: UnitsmlGrammarTokens): { readonly root: A
   const units = rule(() => literals(tokens.units, "unit"));
   const singlePrefixes = rule(() => literals(tokens.singlePrefixes, "prefix"));
   const doublePrefixes = rule(() => literals(tokens.doublePrefixes, "prefix"));
-  const prefixedUnits = rule(() => literals(PREFIXED_UNIT_NAMES, "unit"));
+  const prefixedUnits = rule(() => literals(tokens.prefixedUnitNames, "unit"));
   const dimensions = rule(() => literals(tokens.dimensions, "dimension"));
   const sqrt = str("sqrt");
   const hyphen = str("-");

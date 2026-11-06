@@ -11,10 +11,11 @@
  * recorded in the fixture but are not compared: message text is not API
  * (ARCHITECTURE.md §5).
  *
- * The port's grammar is a port of the pre-amath Parslet grammar, so it does
- * not agree with amath everywhere. Each disagreement is listed in
- * `KNOWN_PARITY_GAPS` with its kind, and the list is asserted exactly: a gap
- * that closes, or a new one, fails here.
+ * The port's grammar is a port of the pre-amath Parslet grammar. Both report
+ * the deepest leaf of the root's failure cause, so the positions agree even
+ * where the two grammars are shaped differently. Each disagreement would be
+ * listed in `KNOWN_PARITY_GAPS` with its kind, and the list is asserted
+ * exactly: a gap that closes, or a new one, fails here.
  */
 
 import { readFileSync } from "node:fs";
@@ -58,14 +59,10 @@ const root = (grammar.rules as unknown as Record<string, { parse(input: string):
  * `verdict`: one side accepts what the other refuses. `offset`: both refuse,
  * at different offsets.
  */
-const KNOWN_PARITY_GAPS: Readonly<Record<string, "verdict" | "offset">> = {
-  // amath points at the end of the input (12); the port points at the
-  // unconsumed `right` (7). Measured at plurimath 2967dcc4.
-  "left(a right": "offset",
-};
+const KNOWN_PARITY_GAPS: Readonly<Record<string, "verdict" | "offset">> = {};
 
 /** The gap count, pinned so a change to the list is a visible decision. */
-const KNOWN_PARITY_GAP_COUNT = 1;
+const KNOWN_PARITY_GAP_COUNT = 0;
 
 /** amath counts characters (code points); `ParseFailed.index` counts UTF-16 code units. */
 function utf16Offset(input: string, characters: number): number {

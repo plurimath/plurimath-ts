@@ -29,7 +29,10 @@ function record(expression: Expression): TokenRecord {
       : expression.kind === "prefix"
         ? UNITSML_DATA.prefixes
         : UNITSML_DATA.units;
-  const result = family[expression.text] ?? UNITSML_DATA.special?.[expression.text];
+  const result =
+    family[expression.text] ??
+    (expression.kind === "unit" ? UNITSML_DATA.prefixedUnitNames[expression.text] : undefined) ??
+    UNITSML_DATA.special?.[expression.text];
   if (result === undefined) return failure(`UnitsML token data is missing for ${expression.text}`);
   return result;
 }

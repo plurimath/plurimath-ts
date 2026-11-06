@@ -77,72 +77,22 @@ describe("every recorded UnicodeMath rejection is refused here too", () => {
 });
 
 /**
- * The cases where the port's failure position does not reproduce the gem's,
- * recorded rather than hidden. They share the cause the HTML and LaTeX suites
- * pin: the corpus records the furthest position any leaf of Parslet's failure
- * tree reached, while the port reports the first code unit its root rule could
- * not consume (`Atom#parse` in `src/pegkit/atom.ts`). Almost all are an
- * operator with nothing valid after it — the gem's offset is past the
- * operator, the port's is on it.
- *
- *   unicode-unclosed-paren-after-operator  `a+(b`   gem 4, port 2
- *   unicode-stray-close-square             `a]`     gem 2, port 1
- *   unicode-trailing-sup                   `a^`     gem 2, port 1
- *   unicode-greek-trailing-sup             `α^`     gem 2, port 1
- *   unicode-trailing-sub                   `a_`     gem 2, port 1
- *   unicode-infinity-trailing-sub          `∞_`     gem 2, port 1
- *   unicode-doubled-sup                    `a^^b`   gem 2, port 1
- *   unicode-doubled-sub                    `a__b`   gem 2, port 1
- *   unicode-sub-then-sup                   `a_^b`   gem 2, port 1
- *   unicode-trailing-slash                 `a/`     gem 2, port 1
- *   unicode-number-trailing-slash          `1/`     gem 2, port 1
- *   unicode-greek-trailing-slash           `α/`     gem 2, port 1
- *   unicode-double-trailing-slash          `a/b/`   gem 4, port 3
- *   unicode-ampersand-operator             `a&b`    gem 2, port 1
- *   unicode-greek-ampersand                `α&b`    gem 2, port 1
- *   unicode-trailing-down-tack             `a┬`     gem 2, port 1
- *   unicode-trailing-function-apply        `a⁡`     gem 2, port 1
- *   unicode-greek-function-apply           `α⁡`     gem 2, port 1
- *
- * (gem offsets already mapped back to the input; the last two inputs end in
- * U+2061 FUNCTION APPLICATION, which is invisible). Measured when this file
- * was written: the deepest position the port's own grammar TRIED
- * (`ctx.maxPos`) equals the recorded offset on 50 of the 52 cases, so the
- * grammar agrees with the gem's and, here, it is the reported metric that
- * differs. The metric is shared by every format and is not changed here; see
- * the HTML suite's note for why neither metric is the gem's.
+ * What the port actually reports, per case, measured against this pin. Every
+ * value equals the gem's recorded offset mapped through the port's source map:
+ * the corpus records the deepest leaf of Parslet's failure tree, and pegkit's
+ * `ParseFailed.index` is the same leaf. An operator with nothing valid after
+ * it (`a^`, `a/`, `a&b`) therefore fails past the operator, where its operand
+ * was looked for, not on it.
  */
-const KNOWN_POSITION_DIVERGENCES: readonly string[] = [
-  "unicode-ampersand-operator",
-  "unicode-double-trailing-slash",
-  "unicode-doubled-sub",
-  "unicode-doubled-sup",
-  "unicode-greek-ampersand",
-  "unicode-greek-function-apply",
-  "unicode-greek-trailing-slash",
-  "unicode-greek-trailing-sup",
-  "unicode-infinity-trailing-sub",
-  "unicode-number-trailing-slash",
-  "unicode-stray-close-square",
-  "unicode-sub-then-sup",
-  "unicode-trailing-down-tack",
-  "unicode-trailing-function-apply",
-  "unicode-trailing-slash",
-  "unicode-trailing-sub",
-  "unicode-trailing-sup",
-  "unicode-unclosed-paren-after-operator",
-];
-
-/** What the port actually reports, per case, measured against this pin. */
 const PORT_INDEX: ReadonlyMap<string, number> = new Map([
   ["unicode-unclosed-paren", 2],
   ["unicode-stray-close-paren", 1],
   ["unicode-lone-close-paren", 0],
   ["unicode-close-paren-mid", 1],
-  ["unicode-unclosed-paren-after-operator", 2],
+  ["unicode-unclosed-paren-after-operator", 4],
   ["unicode-close-paren-after-operator", 2],
   ["unicode-unclosed-square", 2],
-  ["unicode-stray-close-square", 1],
+  ["unicode-stray-close-square", 2],
   ["unicode-unclosed-curly", 2],
   ["unicode-stray-close-curly", 1],
   ["unicode-unclosed-angle", 2],
@@ -153,23 +103,23 @@ const PORT_INDEX: ReadonlyMap<string, number> = new Map([
   ["unicode-greek-stray-close-paren", 1],
   ["unicode-greek-unclosed-paren", 2],
   ["unicode-lone-sup", 1],
-  ["unicode-trailing-sup", 1],
-  ["unicode-greek-trailing-sup", 1],
+  ["unicode-trailing-sup", 2],
+  ["unicode-greek-trailing-sup", 2],
   ["unicode-lone-sub", 1],
-  ["unicode-trailing-sub", 1],
-  ["unicode-infinity-trailing-sub", 1],
-  ["unicode-doubled-sup", 1],
-  ["unicode-doubled-sub", 1],
-  ["unicode-sub-then-sup", 1],
+  ["unicode-trailing-sub", 2],
+  ["unicode-infinity-trailing-sub", 2],
+  ["unicode-doubled-sup", 2],
+  ["unicode-doubled-sub", 2],
+  ["unicode-sub-then-sup", 2],
   ["unicode-lone-slash", 1],
-  ["unicode-trailing-slash", 1],
-  ["unicode-number-trailing-slash", 1],
+  ["unicode-trailing-slash", 2],
+  ["unicode-number-trailing-slash", 2],
   ["unicode-leading-slash", 1],
-  ["unicode-greek-trailing-slash", 1],
-  ["unicode-double-trailing-slash", 3],
+  ["unicode-greek-trailing-slash", 2],
+  ["unicode-double-trailing-slash", 4],
   ["unicode-lone-ampersand", 1],
-  ["unicode-ampersand-operator", 1],
-  ["unicode-greek-ampersand", 1],
+  ["unicode-ampersand-operator", 2],
+  ["unicode-greek-ampersand", 2],
   ["unicode-unclosed-quote", 4],
   ["unicode-greek-unclosed-quote", 4],
   ["unicode-matrix-unclosed", 5],
@@ -178,13 +128,13 @@ const PORT_INDEX: ReadonlyMap<string, number> = new Map([
   ["unicode-greek-at-operator", 1],
   ["unicode-lone-naryand", 0],
   ["unicode-lone-right-tack", 0],
-  ["unicode-trailing-down-tack", 1],
+  ["unicode-trailing-down-tack", 2],
   ["unicode-lone-broken-bar", 0],
   ["unicode-trailing-broken-bar", 1],
   ["unicode-greek-broken-bar", 1],
   ["unicode-lone-function-apply", 1],
-  ["unicode-trailing-function-apply", 1],
-  ["unicode-greek-function-apply", 1],
+  ["unicode-trailing-function-apply", 2],
+  ["unicode-greek-function-apply", 2],
   ["unicode-lone-parenthesized-letter", 1],
   ["unicode-whitespace-only", 1],
 ]);
@@ -211,10 +161,8 @@ describe("the port maps the UnicodeMath failure position back to the original in
     const diverging = rejections.filter(
       (entry) => mappedGemIndex(entry) !== PORT_INDEX.get(entry.id),
     );
-    expect(diverging.map((entry) => entry.id).sort()).toStrictEqual([
-      ...KNOWN_POSITION_DIVERGENCES,
-    ]);
-    expect(rejections.length - diverging.length).toBe(34);
+    expect(diverging.map((entry) => entry.id)).toStrictEqual([]);
+    expect(rejections.length - diverging.length).toBe(52);
   });
 
   it.each(rejections.map((entry) => [entry.id, entry] as const))(
@@ -232,9 +180,8 @@ describe("the port maps the UnicodeMath failure position back to the original in
   );
 
   it("reproduces the gem's recorded offset wherever the two agree", () => {
-    const comparable = rejections.filter((entry) => !KNOWN_POSITION_DIVERGENCES.includes(entry.id));
-    expect(comparable.length).toBe(34);
-    for (const entry of comparable) {
+    expect(rejections.length).toBe(52);
+    for (const entry of rejections) {
       expect(PORT_INDEX.get(entry.id), entry.id).toBe(mappedGemIndex(entry));
     }
   });

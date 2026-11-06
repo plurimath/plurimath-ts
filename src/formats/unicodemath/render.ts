@@ -154,12 +154,20 @@ function renderNode(node: MathNode, context: RenderContext): string | null {
 export function createRenderContext(
   numberFormat: NumberFormat | null,
   unitsml: UnitsmlRenderOptions | null = null,
+  unicodemathUnit = false,
 ): RenderContext {
+  let unitContext: RenderContext | undefined;
   const context: RenderContext = {
     numberFormat,
     unitsml,
+    unicodemathUnit,
     render(node) {
       return renderNode(node, context);
+    },
+    renderUnit(node) {
+      if (unicodemathUnit) return renderNode(node, context);
+      unitContext ??= createRenderContext(numberFormat, unitsml, true);
+      return renderNode(node, unitContext);
     },
   };
   return context;

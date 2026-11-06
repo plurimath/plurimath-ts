@@ -176,6 +176,13 @@ export interface CensusDefaults {
   readonly constructor_arguments?: readonly YamlValue[];
   readonly assigned: { readonly [field: string]: YamlValue };
   readonly unassigned: readonly string[];
+  /**
+   * Fields the probe had to pass because `nil` is not a valid witness
+   * (`Math::Function::Uncertainty`). They are left out of `assigned`, so a
+   * comparison builds the same witness and ignores them.
+   */
+  // biome-ignore lint/style/useNamingConvention: generated Ruby census schema
+  readonly witnessed_fields?: readonly string[];
 }
 
 export interface CensusEntry {

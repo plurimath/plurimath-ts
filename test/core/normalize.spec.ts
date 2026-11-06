@@ -234,6 +234,17 @@ describe("field presence", () => {
  * read off its source. A node built with no arguments must serialize to
  * exactly that, or every hand-built tree is a field or two away from Ruby's.
  */
+/**
+ * The witness `scripts/generate-corpus.rb` passes where `nil` is not valid
+ * (`UNCERTAINTY_WITNESS_KEYWORDS`): `Uncertainty.new(Number("1"),
+ * category: :standard, magnitude: Number("1"))`.
+ */
+function witnessFields(name: string): SerializedNode["fields"] {
+  if (name !== "Math::Function::Uncertainty") throw new Error(`no census witness for ${name}`);
+  const one = { class: "Math::Number", fields: { value: "1" } };
+  return { value: one, category: "standard", magnitude: one };
+}
+
 describe("Ruby's constructor defaults, class by class", () => {
   const implemented = census.classes.filter((entry) => entry.disposition === "implemented");
 
@@ -247,15 +258,26 @@ describe("Ruby's constructor defaults, class by class", () => {
     it(`builds ${entry.name} exactly as Ruby's measured constructor does`, () => {
       expect(defaults).toBeDefined();
       const witness = defaults?.constructor_arguments;
+      const witnessed = defaults?.witnessed_fields ?? [];
       const fields: SerializedNode["fields"] =
-        witness === undefined ? {} : { text: witness[0] ?? null };
+        witness !== undefined
+          ? { text: witness[0] ?? null }
+          : witnessed.length > 0
+            ? witnessFields(entry.name)
+            : {};
       const node = buildNode({ class: entry.name, fields }, aliases);
       const serialized = normalize(node);
-      expect(serialized).toStrictEqual({ class: entry.name, fields: defaults?.assigned });
+      const compared = Object.fromEntries(
+        Object.entries(serialized.fields).filter(([field]) => !witnessed.includes(field)),
+      );
+      expect({ class: serialized.class, fields: compared }).toStrictEqual({
+        class: entry.name,
+        fields: defaults?.assigned,
+      });
       // Stated separately because the two states are not each other's absence:
       // a field Ruby assigned nil is emitted as null, one it never touched is
       // gone. Collapsing them is the bug this whole block exists to catch.
-      for (const field of defaults?.unassigned ?? []) {
+      for (const field of (defaults?.unassigned ?? []).filter((f) => !witnessed.includes(f))) {
         expect(Object.keys(serialized.fields), `${entry.name}.${field}`).not.toContain(field);
       }
     });

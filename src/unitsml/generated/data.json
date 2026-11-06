@@ -30075,7 +30075,7 @@
       "ascii": "m^9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999*m",
       "xmlError": {
         "class": "Unitsml::Errors::InvalidPowerError",
-        "message": "[unitsml] Invalid Number power: #<Unitsml::Number:0x00007b9cc8dbf8b8 @value=\"Infinity\"> — a Number exponent must hold an integer or n/m fraction (e.g. \"2\", \"1/2\")."
+        "message": "[unitsml] Invalid Number power: #<Unitsml::Number @value=\"Infinity\"> — a Number exponent must hold an integer or n/m fraction (e.g. \"2\", \"1/2\")."
       },
       "model": {
         "class": "Math::Formula",
@@ -30199,7 +30199,7 @@
       "ascii": "m^-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999*m",
       "xmlError": {
         "class": "Unitsml::Errors::InvalidPowerError",
-        "message": "[unitsml] Invalid Number power: #<Unitsml::Number:0x00007b9cc88c82b0 @value=\"-Infinity\"> — a Number exponent must hold an integer or n/m fraction (e.g. \"2\", \"1/2\")."
+        "message": "[unitsml] Invalid Number power: #<Unitsml::Number @value=\"-Infinity\"> — a Number exponent must hold an integer or n/m fraction (e.g. \"2\", \"1/2\")."
       },
       "model": {
         "class": "Math::Formula",

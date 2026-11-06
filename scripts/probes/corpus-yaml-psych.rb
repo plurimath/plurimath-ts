@@ -88,7 +88,30 @@ SNIPPETS = [
   "a: |4\n  x\n",
   "a: x\u00a0\n",
   "a: \u00a0x\n",
+  "a: >-\n  one\n  two\n\n  three\nb: c\n",
+  "a: >\n  one\n  two\n",
+  "a: >-\n\n  one\n",
+  "a: one\n  two\n\n  three\nb: c\n",
+  "- one\n  two\n- three\n",
+  "a: \"one\n  two\\\n  three\"\nb: c\n",
+  "a: \"one\n\n  two\"\n",
+  "a: one\nb\n",
 ].freeze
+
+# The stage ledgers and every file of the newest generation of each language:
+# what test/replay/stage-pin.ts reads, digested the same way.
+stage_files = git(pin_root, "ls-tree", "-r", "--name-only", pin_head, "generations").split("\n")
+git(pin_root, "ls-tree", "-d", "--name-only", pin_head, "stages/").split("\n").each do |language|
+  latest = git(pin_root, "ls-tree", "-d", "--name-only", pin_head, "#{language}/generations/")
+           .split("\n").max
+  stage_files += git(pin_root, "ls-tree", "-r", "--name-only", pin_head, latest).split("\n")
+end
+stage_files = stage_files.select { |path| path.end_with?(".yaml") }.sort
+abort "REFUSING: no stage files in the pin" if stage_files.empty?
+stages = stage_files.to_h do |path|
+  document = load(git(pin_root, "show", "#{pin_head}:#{path}"))
+  [path, Digest::SHA256.hexdigest(canonical(document).b)]
+end
 
 snippets = SNIPPETS.map do |yaml|
   { "yaml" => yaml, "value" => load(yaml) }
@@ -102,5 +125,6 @@ puts JSON.pretty_generate(
   "psych" => Psych::VERSION,
   "pin" => pin_head,
   "payloads" => digests,
+  "stages" => stages,
   "snippets" => snippets,
 )

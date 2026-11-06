@@ -182,14 +182,17 @@ describe("the corpus itself", () => {
 });
 
 /**
- * Psych's reading of the OMML payloads and of a few block scalar headers,
+ * Psych's reading of the OMML payloads, of the stage ledgers and newest stage
+ * generations, and of a few block scalar headers and wrapped scalars,
  * recorded by `scripts/probes/corpus-yaml-psych.rb` against the pin. The
- * payloads are compared through a digest of a canonical encoding the probe
- * writes the same way, so the 1.8 MB of loaded documents need not be committed.
+ * documents are compared through a digest of a canonical encoding the probe
+ * writes the same way, so the loaded documents need not be committed.
  */
 interface PsychRecord {
   readonly pin: string;
   readonly payloads: { readonly [path: string]: string };
+  /** Paths relative to the testsuite root, e.g. `generations/latex.yaml`. */
+  readonly stages: { readonly [path: string]: string };
   readonly snippets: readonly {
     readonly yaml: string;
     readonly value?: YamlValue;
@@ -253,6 +256,27 @@ describe("the OMML payloads, as Psych reads them", () => {
   });
 });
 
+describe("the stage ledgers and newest stage generations, as Psych reads them", () => {
+  it("covers every ledger and every file of each language's newest generation", () => {
+    const expected = [...yamlFiles(join(PINNED_CORPUS_ROOT, "generations"))];
+    for (const language of readdirSync(join(PINNED_CORPUS_ROOT, "stages")).sort()) {
+      const generations = join(PINNED_CORPUS_ROOT, "stages", language, "generations");
+      const newest = readdirSync(generations).sort().at(-1) as string;
+      expected.push(...yamlFiles(join(generations, newest)));
+    }
+    const paths = expected
+      .map((path) => relative(PINNED_CORPUS_ROOT, path).split("\\").join("/"))
+      .sort();
+    expect(Object.keys(PSYCH.stages).sort()).toStrictEqual(paths);
+    expect(paths.length).toBeGreaterThan(100);
+  });
+
+  it.each(Object.entries(PSYCH.stages))("reads %s to Psych's document", (path, digest) => {
+    const document = parseYaml(readFileSync(join(PINNED_CORPUS_ROOT, path), "utf8"));
+    expect(createHash("sha256").update(canonicalYaml(document)).digest("hex")).toBe(digest);
+  });
+});
+
 describe("block scalar headers, as Psych reads them", () => {
   it.each(PSYCH.snippets.map((snippet) => [JSON.stringify(snippet.yaml), snippet] as const))(
     "%s",
@@ -267,7 +291,7 @@ describe("block scalar headers, as Psych reads them", () => {
 
   it("refuses the headers the corpus does not use rather than guessing", () => {
     expect(() => read("a: |+\n  x")).toThrow(/unsupported block scalar header "\|\+"/);
-    expect(() => read("a: >\n  x")).toThrow(/unsupported block scalar header ">"/);
+    expect(() => read("a: >+\n  x")).toThrow(/unsupported block scalar header ">\+"/);
     expect(() => read("a: |0\n  x")).toThrow(/unsupported block scalar header/);
     expect(() => read("- |2\n\n  x")).toThrow(/unsupported block scalar header "\|2"/);
   });

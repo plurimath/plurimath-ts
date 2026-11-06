@@ -57,11 +57,12 @@ export const PORT_REFUSES: ReadonlySet<string> = new Set();
  * Derived from `PORT_REFUSES`, and cross-checked against it by the spec: the
  * two disagree only when one was edited without the other.
  *
- * All 664 gem-renderable fixture cases now match, including the six MathML
+ * All 673 gem-renderable fixture cases now match (the nine left-right cases
+ * render at plurimath 2967dcc4), including the six MathML
  * Text cases formerly pinned in PORT_REFUSES. Native UnitsML expansion also
  * replaces the former text-unitsml-valid fallback divergence.
  */
-export const RENDERED_BASELINE = 664;
+export const RENDERED_BASELINE = 673;
 
 /**
  * What fills a slot that is NOT the one being swept, by the slot's declared

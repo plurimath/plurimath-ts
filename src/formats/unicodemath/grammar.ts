@@ -1046,6 +1046,8 @@ export function createUnicodemathGrammar(
     ordered(str("&#x24ad;"), str("&#x221a;"), str("\\root"), str("\\surd")),
   );
 
+  // The middle form takes content of several terms, e.g. ⓐ(unit \mupkg);
+  // `expression` alone stops after the first term (plurimath#493).
   const argFunction = rule(() =>
     ordered(
       seq(
@@ -1054,6 +1056,15 @@ export function createUnicodemathGrammar(
         aAscii.as("arg_arguments").maybe(),
         spaceMaybe,
         expression.as("first_value").maybe(),
+        str(")"),
+      ),
+      seq(
+        str("&#x24d0;").as("arg"),
+        str("("),
+        aAscii.as("arg_arguments"),
+        spaceMaybe,
+        maskedRecursiveValue.as("first_value"),
+        spaceMaybe,
         str(")"),
       ),
       seq(

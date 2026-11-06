@@ -23,6 +23,8 @@
 import type { FormulaNode, MathNode, NodeKind } from "../../core/index";
 import { htmlEntityToUnicode } from "../../core/nodes";
 import { NODE_SPECS } from "../../core/normalize";
+import { InvalidUncertaintyError, uncertaintyProblem } from "../../core/uncertainty";
+import { isUncertaintyMarker, uncertaintyMarkerRubyFields } from "../../core/uncertainty-marker";
 import {
   MATHML_CARRIERS,
   MATHML_CLASSES,
@@ -1023,6 +1025,8 @@ function mathToFormula(node: MmlNode): Draft {
 }
 
 function mrowToMrow(node: MmlNode): DraftValue {
+  const marker = attr(node, "intent");
+  if (isUncertaintyMarker(marker)) return mrowToUncertainty(node, marker);
   const values = children(node);
   if (values.length === 0) return null;
   const combined = naryCheck(combineFunctionWithParens(values));
@@ -1035,6 +1039,38 @@ function mrowToMrow(node: MmlNode): DraftValue {
   const intent = attr(node, "intent");
   if (intent !== null && intent !== "") return binary("Intent", mrow, newText(intent));
   return newFormula(list);
+}
+
+/**
+ * `mrow_to_uncertainty`: an mrow whose intent is an uncertainty marker
+ * (plurimath#493). The marker is authoritative; the visible children are
+ * regenerated on output, so only the child marked `arg="unit"` is read.
+ * The gem validates the node in `Uncertainty.new`.
+ */
+function mrowToUncertainty(node: MmlNode, marker: string): Draft {
+  const draft = new Draft(
+    `${FUNCTION}Uncertainty`,
+    uncertaintyMarkerRubyFields(marker, newNumber, () => uncertaintyUnit(node, marker)),
+  );
+  const problem = uncertaintyProblem(toNode(draft) as never);
+  if (problem !== null) throw new InvalidUncertaintyError(problem);
+  return draft;
+}
+
+/** `uncertainty_unit`. */
+function uncertaintyUnit(node: MmlNode, marker: string): Draft | null {
+  const units = orderedChildren(node).filter(
+    (child): child is MmlNode => !isText(child) && attr(child, "arg") === "unit",
+  );
+  if (units.length === 0) return null;
+  if (units.length > 1) {
+    throw new InvalidUncertaintyError(
+      `intent ${JSON.stringify(marker)}: more than one arg="unit" child`,
+    );
+  }
+  const unit = translate(units[0] as MmlNode);
+  if (unit === null) return null;
+  return isFormula(unit) ? unit : newFormula([unit]);
 }
 
 /**

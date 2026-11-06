@@ -609,12 +609,8 @@ function expectDependenciesShape(dependencies: Mapping, at: string): void {
  * the pinned conformance corpus's own record of the same oracle so the two
  * cannot silently disagree.
  */
-function expectOracleShape(
-  manifest: Mapping,
-  at: string,
-  pin: { readonly oracleVersion: string; readonly oracleCommit: string } = loadPinnedCorpus()
-    .provenance,
-): void {
+function expectOracleShape(manifest: Mapping, at: string): void {
+  const pin = loadPinnedCorpus().provenance;
   const oracle = mapField(manifest, "oracle", at);
   expectExactKeys(
     oracle,
@@ -715,49 +711,14 @@ function fixtureGeneratorInputs(record: FixtureRecord): Mapping {
   );
 }
 
-/**
- * Fixtures whose generator job `scripts/ci/oracle-artifacts.rb` lists in
- * `BLOCKED_JOBS`: they are not regenerated, so their sidecar keeps the oracle
- * and the shared-generator hashes they were measured with. Each entry names
- * that oracle and the inputs allowed to have moved since; the exemption stops
- * matching once the fixture is regenerated at another oracle.
- *
- * evaluation-fixtures: plurimath 0.11.13+ evaluates to an
- * `Evaluation::Result` through an accuracy-aware evaluator, and porting it
- * waits on a decision about arbitrary-precision decimals in TypeScript.
- */
-const BLOCKED_FIXTURES: Readonly<
-  Record<
-    string,
-    {
-      readonly oracle: string;
-      readonly oracleVersion: string;
-      readonly staleInputs: readonly string[];
-    }
-  >
-> = {
-  "test/formats/evaluation/evaluation-fixtures.json": {
-    oracle: "ae20be111a26fdd988c58be0bfb2b7f6fe6e352f",
-    oracleVersion: "0.11.12",
-    staleInputs: ["scripts/generate-corpus.rb"],
-  },
-};
-
-function blockedStaleInput(record: FixtureRecord, file: string): boolean {
-  const blocked = BLOCKED_FIXTURES[record.relative];
-  if (blocked === undefined || !blocked.staleInputs.includes(file)) return false;
-  const oracle = mapField(record.manifest, "oracle", record.manifestRelative);
-  return stringField(oracle, "commit", record.manifestRelative) === blocked.oracle;
-}
-
 const FIXTURE_GENERATOR_HASHES: ReadonlyArray<
   readonly [label: string, file: string, hash: string]
 > = SIDECAR_RECORDS.flatMap((record) =>
-  Object.entries(fixtureGeneratorInputs(record)).flatMap(([file, hash]) => {
+  Object.entries(fixtureGeneratorInputs(record)).map(([file, hash]) => {
     if (typeof hash !== "string") {
       throw new Error(`${record.manifestRelative}: generator.inputs.${file} must be a string`);
     }
-    return blockedStaleInput(record, file) ? [] : [[record.relative, file, hash] as const];
+    return [record.relative, file, hash] as const;
   }),
 );
 
@@ -963,7 +924,6 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
   const generatorCommit = stringField(generatorRepository, "commit", `${at}.generator.repository`);
   for (const [path, hash] of Object.entries(inputs)) {
     expect(hash, `${at}.generator.inputs.${path}`).toMatch(SHA256);
-    if (blockedStaleInput(record, path)) continue;
     expect(sha256OfFile(path), `${at}.generator.inputs.${path}`).toBe(hash);
   }
 
@@ -1002,14 +962,7 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
     expect(generator.inventory, `${at}.generator.inventory`).toBeUndefined();
   }
 
-  const blocked = BLOCKED_FIXTURES[record.relative];
-  expectOracleShape(
-    manifest,
-    at,
-    blocked === undefined
-      ? undefined
-      : { oracleVersion: blocked.oracleVersion, oracleCommit: blocked.oracle },
-  );
+  expectOracleShape(manifest, at);
 
   if (record.spec.usesCorpus) {
     const corpus = mapField(manifest, "corpus", at);
@@ -1511,8 +1464,11 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         // port refuses the row with `UnsupportedFeatureError` whatever the gem
         // answered (the generator's header). An optional `options` records the
         // gem configuration the row ran under, as `evaluate()`'s per-call
-        // `EvaluationOptions` — today only `evaluationMaxIterations`, a
-        // number or `null` (no cap).
+        // `EvaluationOptions`: `evaluationMaxIterations` (a number or `null`,
+        // no cap), `mode` (`"approximate"` or `"strict"`) and `guardDigits` (a
+        // positive integer). An evaluated row records the gem's whole
+        // `Evaluation::Result`: `expected` and its `valueClass`, `boundaries`
+        // and `unevaluated`.
         expectExactKeys(
           record.payload,
           ["$comment", "schema", "format", "caseCount", "evaluatedCount", "raisedCount", "cases"],
@@ -1537,12 +1493,11 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
             expect(
               [
                 "argument-error",
-                "big-integer",
+                "decimal-exponent",
                 "hyperbolic-rounding-band",
                 "libm-reduction",
                 "libm-rounding-band",
                 "pow-rounding-band",
-                "rational",
                 "size-limit",
                 "unported",
               ],
@@ -1552,9 +1507,26 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
           }
           if ("options" in item) {
             const options = mapField(item, "options", at);
-            expectExactKeys(options, ["evaluationMaxIterations"], `${at}.options`);
-            const cap = options.evaluationMaxIterations;
-            expect(cap === null || Number.isInteger(cap), `${at}.options cap`).toBe(true);
+            const keys = Object.keys(options);
+            expect(keys.length, `${at}.options`).toBeGreaterThan(0);
+            for (const key of keys) {
+              expect(["evaluationMaxIterations", "mode", "guardDigits"], `${at}.options`).toContain(
+                key,
+              );
+            }
+            if ("evaluationMaxIterations" in options) {
+              const cap = options.evaluationMaxIterations;
+              expect(cap === null || Number.isInteger(cap), `${at}.options cap`).toBe(true);
+            }
+            if ("mode" in options) {
+              expect(["approximate", "strict"], `${at}.options.mode`).toContain(options.mode);
+            }
+            if ("guardDigits" in options) {
+              const digits = options.guardDigits;
+              expect(Number.isInteger(digits) && (digits as number) > 0, `${at}.guardDigits`).toBe(
+                true,
+              );
+            }
             base.push("options");
           }
           // Ruby's own `ArgumentError` is not an evaluation error; it appears
@@ -1574,7 +1546,43 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
             );
             if (!argumentError) stringField(item, "message", at);
           } else {
-            expectExactKeys(item, [...base, "expected"], at);
+            expectExactKeys(
+              item,
+              [...base, "expected", "valueClass", "boundaries", "unevaluated"],
+              at,
+            );
+            expect(["Integer", "Rational", "Float", "BigDecimal", "NilClass"], at).toContain(
+              stringField(item, "valueClass", at),
+            );
+            const boundaries = item.boundaries;
+            expect(Array.isArray(boundaries), `${at}.boundaries`).toBe(true);
+            (boundaries as unknown[]).forEach((entry, position) => {
+              const where = `${at}.boundaries[${position}]`;
+              const boundary = mapping(entry, where);
+              expectExactKeys(
+                boundary,
+                ["operation", "operands", "operandAccuracy", "action", "result"],
+                where,
+              );
+              stringField(boundary, "operation", where);
+              expect(stringField(boundary, "operandAccuracy", where)).toMatch(
+                /^(?:exact|limited_float|limited_\d+)$/,
+              );
+              expect(["approximated", "guarded", "deferred"], where).toContain(
+                stringField(boundary, "action", where),
+              );
+              stringField(boundary, "result", where);
+              const operands = boundary.operands;
+              expect(
+                Array.isArray(operands) && operands.every((o) => typeof o === "string"),
+                `${where}.operands`,
+              ).toBe(true);
+            });
+            const unevaluated = item.unevaluated;
+            expect(
+              Array.isArray(unevaluated) && unevaluated.every((u) => typeof u === "string"),
+              `${at}.unevaluated`,
+            ).toBe(true);
           }
           return hasExpected;
         }).length;

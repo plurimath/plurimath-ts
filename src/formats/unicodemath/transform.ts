@@ -1702,6 +1702,13 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     symbolsClass(unicodedFont(b.unicoded, b.symbol) ?? b.symbol),
   );
 
+  // plurimath 2967dcc4 `transform.rb:238`: `\mup"g"`, a font over text
+  // (plurimath#493). Ids for rules added at that pin carry its prefix, since
+  // the bare ids here are line numbers of the earlier transform.
+  rule("2967dcc4:238", { font_class: simple("fonts"), text: simple("text") }, (b) =>
+    newFontStyle(b.fonts, newText(b.text)),
+  );
+
   rule("236", { font_class: simple("fonts"), symbol: simple("symbol") }, (b) =>
     newFontStyle(b.fonts, symbolsClass(b.symbol)),
   );
@@ -1967,6 +1974,26 @@ export function buildUnicodemathTransform(): UnicodemathTransformBuild {
     symbolsClass(COMBINING_SYMBOLS.get(rubyToS(b.combined_symbols)) ?? null),
     b.exp,
   ]);
+
+  // plurimath 2967dcc4 `transform.rb:540`/`:546`: a combined symbol (`±`,
+  // `∓`) followed by the rest of the expression, with `:99`'s fallback to
+  // the raw text when `COMBINING_SYMBOLS` has no entry.
+  rule(
+    "2967dcc4:540",
+    { combined_symbols: simple("combined_symbols"), expr: simple("expr") },
+    (b) => [
+      symbolsClass(COMBINING_SYMBOLS.get(rubyToS(b.combined_symbols)) ?? b.combined_symbols),
+      b.expr,
+    ],
+  );
+  rule(
+    "2967dcc4:546",
+    { combined_symbols: simple("combined_symbols"), expr: sequence("expr") },
+    (b) => [
+      symbolsClass(COMBINING_SYMBOLS.get(rubyToS(b.combined_symbols)) ?? b.combined_symbols),
+      ...asArray(b.expr),
+    ],
+  );
 
   rule("543", { pre_script: simple("pre_script"), expr: sequence("expr") }, (b) => [
     b.pre_script,

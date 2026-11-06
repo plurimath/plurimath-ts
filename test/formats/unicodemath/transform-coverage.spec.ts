@@ -101,7 +101,7 @@ for (const entry of unreachedFixtures.cases) {
   build.transform.apply(parseUnicodemathTree(entry.input));
 }
 
-const FINAL_COUNT = 484;
+const FINAL_COUNT = 487;
 
 describe("transform rule coverage", () => {
   it("drove every parseable fixture through one transform", () => {

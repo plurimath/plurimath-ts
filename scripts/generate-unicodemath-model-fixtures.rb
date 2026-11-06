@@ -1285,6 +1285,21 @@ RULE_COVERAGE = {
     "1/\u0227b2∫",
     "∫_S▒ρ(x,y)g(x)ⅆxⅆy",
   ],
+  # "pin-2967dcc4": inputs whose oracle model changed when the pin moved from
+  # ae20be11 to 2967dcc4. The historical reachability, scope-gap and
+  # XML-origin projections (oracle 00c52783) record the old model; these rows
+  # record the current one. `transform.rb:540`/`:546` now fold a combined
+  # symbol followed by more expression, and `:238` reads a font over quoted
+  # text (plurimath#493).
+  "pin-2967dcc4" => [
+    "±±a",
+    "±+a",
+    "±+a#eq",
+    "a ± b#eq",
+    "\\mup\"x\"",
+    "\\mbf\"x\"",
+    "\\mup100 \\mbf\"a\" \\mit\"a\" \\mbfit\"a\" \\Bbb\"a\" \\mbffrak\"a\" \\mscr\"a\" \\mbfscr\"a\" \\mfrak\"a\" \\msans\"a\" \\mbfsans\"a\" \\mitsans\"a\" \\mbfitsans\"a\" \uFFD7(\"a\")",
+  ],
 }.freeze
 
 # Inputs whose rules sit OUTSIDE the ported slice, each with the `transform.rb`

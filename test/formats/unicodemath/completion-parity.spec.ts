@@ -48,7 +48,7 @@ const renderRefused = parsed.filter((entry) => entry.unicodemathError !== undefi
 describe("the generated UnicodeMath completion witnesses", () => {
   it("retains the measured payload and pinned oracle provenance", () => {
     expect(metadata.measured).toBe(true);
-    expect(metadata.oracle).toBe("ae20be111a26fdd988c58be0bfb2b7f6fe6e352f");
+    expect(metadata.oracle).toBe("2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256");
     expect(metadata.stages.find((stage) => stage.name === "small-probe")?.exit).toBe(0);
     expect(createHash("sha256").update(payload).digest("hex")).toBe(
       metadata.payloads["unicode-probe.json"],

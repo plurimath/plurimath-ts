@@ -288,7 +288,7 @@ describe("the generated tables' provenance", () => {
   it("records the oracle the rest of this repository is pinned to", () => {
     expect(LATEX_PARSER_GENERATED_PROVENANCE.oracle).toBe("plurimath");
     expect(LATEX_PARSER_GENERATED_PROVENANCE.oracleCommit).toBe(
-      "ae20be111a26fdd988c58be0bfb2b7f6fe6e352f",
+      "2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256",
     );
     expect(LATEX_PARSER_GENERATED_PROVENANCE.oracleClean).toBe(true);
   });

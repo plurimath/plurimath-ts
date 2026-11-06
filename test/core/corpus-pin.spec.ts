@@ -372,8 +372,8 @@ describe("the pin as shipped", () => {
   it("was generated the canonical way", () => {
     expect(corpus.provenance.committable).toBe(true);
     expect(corpus.provenance.xmlEngine).toBe("Plurimath::XmlEngine::OxEngine");
-    expect(corpus.provenance.oracleVersion).toBe("0.11.12");
-    expect(corpus.provenance.oracleCommit).toBe("ae20be111a26fdd988c58be0bfb2b7f6fe6e352f");
+    expect(corpus.provenance.oracleVersion).toBe("0.11.17");
+    expect(corpus.provenance.oracleCommit).toBe("2967dcc47a9f37d5b9a2dd13d94a2ad35d4cc256");
   });
 
   it("accounts for every declared target on every case", () => {

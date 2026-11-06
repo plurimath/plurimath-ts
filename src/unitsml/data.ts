@@ -27,6 +27,8 @@ export interface UnitsmlData {
   readonly prefixes: Readonly<Record<string, TokenRecord>>;
   readonly dimensions: Readonly<Record<string, TokenRecord>>;
   readonly prefixedUnits: Readonly<Record<string, TokenRecord>>;
+  /** The grammar's prefixed unit names, each measured as a whole unit. */
+  readonly prefixedUnitNames: Readonly<Record<string, TokenRecord>>;
   readonly resolvedTokens?: Readonly<Record<string, NormalizedNode>>;
   readonly special?: Readonly<Record<string, TokenRecord>>;
   readonly database: Readonly<Record<string, unknown>>;

@@ -443,10 +443,14 @@ export function preprocess(input: string): PreprocessedUnicodemath {
   // `:21`
   working = stripWorking(working);
 
+  // When nothing survives (`" "`), there is no character to point past, and a
+  // refusal lands at the start of the input: the umath stage gem reports byte
+  // 0 for `" "`, and the gem's own rejection corpus records offset 0 into ''.
+  // Closing the tail here would clamp it to the input's end instead.
   return {
     text: working.text,
     label,
-    map: SourceMap.fromSegments(toSegments(working, input.length)),
+    map: SourceMap.fromSegments(toSegments(working, working.text === "" ? 0 : input.length)),
   };
 }
 

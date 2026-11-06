@@ -136,7 +136,7 @@ const PORT_INDEX: ReadonlyMap<string, number> = new Map([
   ["unicode-trailing-function-apply", 2],
   ["unicode-greek-function-apply", 2],
   ["unicode-lone-parenthesized-letter", 1],
-  ["unicode-whitespace-only", 1],
+  ["unicode-whitespace-only", 0],
 ]);
 
 describe("the port maps the UnicodeMath failure position back to the original input", () => {
@@ -190,7 +190,12 @@ describe("the port maps the UnicodeMath failure position back to the original in
     // Without a case whose preprocessing changes length, every assertion above
     // is satisfied by a port that ignores its source map. Every shifted case
     // here changes length, and for each the mapped offset MOVED.
-    const shifted = rejections.filter((entry) => entry.input !== entry.preprocessed);
+    // An input that preprocesses to nothing (`" "`) is excluded: with no
+    // character left to point past, its map anchors a refusal at 0, which is
+    // where the gem records it too.
+    const shifted = rejections.filter(
+      (entry) => entry.input !== entry.preprocessed && entry.preprocessed !== "",
+    );
     expect(shifted.length).toBeGreaterThan(0);
     for (const entry of shifted) {
       expect(mappedGemIndex(entry), entry.id).not.toBe(entry.index);

@@ -31,6 +31,15 @@ export function unitsmlOptions(
       "unitsml",
     );
   }
+  // Formula#update_options: a render name is embedded in <UnitName>, so only
+  // nil, a String or a Symbol is accepted, on every render path.
+  const name: unknown = options?.name;
+  if (name !== undefined && name !== null && typeof name !== "string" && typeof name !== "symbol")
+    throw new RenderError(
+      `Unitsml::Errors::InvalidUnitEntryError: [unitsml] Invalid name: ${String(name)} — expected a String or Symbol.`,
+      "unitsml",
+      "unitsml",
+    );
   return {
     ...options,
     explicitParenthesis:

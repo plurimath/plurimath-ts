@@ -609,8 +609,12 @@ function expectDependenciesShape(dependencies: Mapping, at: string): void {
  * the pinned conformance corpus's own record of the same oracle so the two
  * cannot silently disagree.
  */
-function expectOracleShape(manifest: Mapping, at: string): void {
-  const pin = loadPinnedCorpus().provenance;
+function expectOracleShape(
+  manifest: Mapping,
+  at: string,
+  pin: { readonly oracleVersion: string; readonly oracleCommit: string } = loadPinnedCorpus()
+    .provenance,
+): void {
   const oracle = mapField(manifest, "oracle", at);
   expectExactKeys(
     oracle,
@@ -711,14 +715,49 @@ function fixtureGeneratorInputs(record: FixtureRecord): Mapping {
   );
 }
 
+/**
+ * Fixtures whose generator job `scripts/ci/oracle-artifacts.rb` lists in
+ * `BLOCKED_JOBS`: they are not regenerated, so their sidecar keeps the oracle
+ * and the shared-generator hashes they were measured with. Each entry names
+ * that oracle and the inputs allowed to have moved since; the exemption stops
+ * matching once the fixture is regenerated at another oracle.
+ *
+ * evaluation-fixtures: plurimath 0.11.13+ evaluates to an
+ * `Evaluation::Result` through an accuracy-aware evaluator, and porting it
+ * waits on a decision about arbitrary-precision decimals in TypeScript.
+ */
+const BLOCKED_FIXTURES: Readonly<
+  Record<
+    string,
+    {
+      readonly oracle: string;
+      readonly oracleVersion: string;
+      readonly staleInputs: readonly string[];
+    }
+  >
+> = {
+  "test/formats/evaluation/evaluation-fixtures.json": {
+    oracle: "ae20be111a26fdd988c58be0bfb2b7f6fe6e352f",
+    oracleVersion: "0.11.12",
+    staleInputs: ["scripts/generate-corpus.rb"],
+  },
+};
+
+function blockedStaleInput(record: FixtureRecord, file: string): boolean {
+  const blocked = BLOCKED_FIXTURES[record.relative];
+  if (blocked === undefined || !blocked.staleInputs.includes(file)) return false;
+  const oracle = mapField(record.manifest, "oracle", record.manifestRelative);
+  return stringField(oracle, "commit", record.manifestRelative) === blocked.oracle;
+}
+
 const FIXTURE_GENERATOR_HASHES: ReadonlyArray<
   readonly [label: string, file: string, hash: string]
 > = SIDECAR_RECORDS.flatMap((record) =>
-  Object.entries(fixtureGeneratorInputs(record)).map(([file, hash]) => {
+  Object.entries(fixtureGeneratorInputs(record)).flatMap(([file, hash]) => {
     if (typeof hash !== "string") {
       throw new Error(`${record.manifestRelative}: generator.inputs.${file} must be a string`);
     }
-    return [record.relative, file, hash] as const;
+    return blockedStaleInput(record, file) ? [] : [[record.relative, file, hash] as const];
   }),
 );
 
@@ -924,6 +963,7 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
   const generatorCommit = stringField(generatorRepository, "commit", `${at}.generator.repository`);
   for (const [path, hash] of Object.entries(inputs)) {
     expect(hash, `${at}.generator.inputs.${path}`).toMatch(SHA256);
+    if (blockedStaleInput(record, path)) continue;
     expect(sha256OfFile(path), `${at}.generator.inputs.${path}`).toBe(hash);
   }
 
@@ -962,7 +1002,14 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
     expect(generator.inventory, `${at}.generator.inventory`).toBeUndefined();
   }
 
-  expectOracleShape(manifest, at);
+  const blocked = BLOCKED_FIXTURES[record.relative];
+  expectOracleShape(
+    manifest,
+    at,
+    blocked === undefined
+      ? undefined
+      : { oracleVersion: blocked.oracleVersion, oracleCommit: blocked.oracle },
+  );
 
   if (record.spec.usesCorpus) {
     const corpus = mapField(manifest, "corpus", at);
@@ -1777,7 +1824,16 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         // carries the offset and the message amath reported.
         expectExactKeys(
           record.payload,
-          ["$comment", "schema", "format", "rule", "inputCount", "caseCount", "rejectedCount", "cases"],
+          [
+            "$comment",
+            "schema",
+            "format",
+            "rule",
+            "inputCount",
+            "caseCount",
+            "rejectedCount",
+            "cases",
+          ],
           record.relative,
         );
         expect(integerField(record.payload, "caseCount", record.relative)).toBe(rows.length);

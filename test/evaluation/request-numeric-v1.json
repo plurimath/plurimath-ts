@@ -1,9 +1,6 @@
 {
   "schema": "plurimath.numeric-request-vectors/1",
-  "source_requirements": [
-    "plurimath/plurimath#513 R-B3/R-B4",
-    "plurimath/plurimath#514 R-C5"
-  ],
+  "source_requirements": ["plurimath/plurimath#513 R-B3/R-B4", "plurimath/plurimath#514 R-C5"],
   "profile": "Closed numeric AST only; not the full quantity/GUM vector corpus",
   "cases": [
     {

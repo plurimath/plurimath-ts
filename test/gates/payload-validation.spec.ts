@@ -609,8 +609,12 @@ function expectDependenciesShape(dependencies: Mapping, at: string): void {
  * the pinned conformance corpus's own record of the same oracle so the two
  * cannot silently disagree.
  */
-function expectOracleShape(manifest: Mapping, at: string): void {
-  const pin = loadPinnedCorpus().provenance;
+function expectOracleShape(
+  manifest: Mapping,
+  at: string,
+  pin: { readonly oracleVersion: string; readonly oracleCommit: string } = loadPinnedCorpus()
+    .provenance,
+): void {
   const oracle = mapField(manifest, "oracle", at);
   expectExactKeys(
     oracle,
@@ -634,15 +638,21 @@ interface FixtureRecord {
   readonly spec: FixtureSpec;
 }
 
-const FORMAT_DIRECTORIES = readdirSync(FORMATS_ROOT, { withFileTypes: true })
-  .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name)
-  .sort();
+const ARCHIVED_EVALUATION = "test/formats/evaluation/evaluation-fixtures.json";
+const CURRENT_EVALUATION = "test/formats/evaluation/ruby-8916961-v1/evaluation-fixtures.json";
+const EVALUATION_GENERATOR = "scripts/generate-evaluation-fixtures.rb";
+const ARCHIVED_EVALUATION_GENERATOR =
+  "test/formats/evaluation/archive-16c28cb/generate-evaluation-fixtures.rb";
+
+function fixtureInputPath(payload: string, input: string): string {
+  return payload === ARCHIVED_EVALUATION && input === EVALUATION_GENERATOR
+    ? ARCHIVED_EVALUATION_GENERATOR
+    : input;
+}
+
 const ALL_FORMAT_JSON_PAYLOADS = filesUnder(FORMATS_ROOT, (name) => name.endsWith(".json"));
-const FORMAT_FIXTURE_PAYLOADS = FORMAT_DIRECTORIES.flatMap((format) =>
-  FIXTURE_BASENAMES.filter((name) => existsSync(join(FORMATS_ROOT, format, name))).map(
-    (name) => `test/formats/${format}/${name}`,
-  ),
+const FORMAT_FIXTURE_PAYLOADS = ALL_FORMAT_JSON_PAYLOADS.filter((path) =>
+  FIXTURE_BASENAMES.some((name) => name === basename(path)),
 );
 const FIXTURE_PAYLOADS = [...FORMAT_FIXTURE_PAYLOADS, ...NON_FORMAT_FIXTURE_PAYLOADS].sort();
 const FIXTURE_MANIFESTS = [
@@ -718,7 +728,7 @@ const FIXTURE_GENERATOR_HASHES: ReadonlyArray<
     if (typeof hash !== "string") {
       throw new Error(`${record.manifestRelative}: generator.inputs.${file} must be a string`);
     }
-    return [record.relative, file, hash] as const;
+    return [record.relative, fixtureInputPath(record.relative, file), hash] as const;
   }),
 );
 
@@ -860,6 +870,56 @@ function expectXmlReaderElement(value: unknown, at: string): void {
   }
 }
 
+function expectEvaluationSourceCandidate(manifest: Mapping, at: string): void {
+  const candidate = mapField(manifest, "source_candidate", at);
+  expectExactKeys(
+    candidate,
+    [
+      "schema",
+      "released",
+      "oracle_repository",
+      "active_lock_sha256",
+      "verified_active_versions",
+      "git_payloads",
+      "native_extensions",
+    ],
+    `${at}.source_candidate`,
+  );
+  expect(candidate.schema).toBe("plurimath/evaluation-source-candidate/1");
+  expect(candidate.released).toBe(false);
+  expect(candidate.oracle_repository).toBe("https://github.com/plurimath/plurimath.git");
+
+  const dependencies = mapField(manifest, "dependencies", at);
+  const lock = mapField(dependencies, "lockfile", at);
+  expect(candidate.active_lock_sha256).toBe(lock.sha256);
+  expect(candidate.verified_active_versions).toBe(lock.resolved_gems);
+
+  const expectedGit = arrayField(dependencies, "sources", at)
+    .map((value) => mapping(value, at))
+    .filter((source) => source.kind === "git")
+    .flatMap((source) =>
+      arrayField(source, "gem_names", at).map((gem) => [gem, source.remote, source.revision]),
+    );
+  const verifiedGit = arrayField(candidate, "git_payloads", at).map((value) => {
+    const pin = mapping(value, at);
+    expectExactKeys(pin, ["gem", "url", "revision", "tree", "bundler_serialized_gemspec"], at);
+    expect(stringField(pin, "url", at)).toMatch(/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/);
+    expect(stringField(pin, "tree", at)).toMatch(COMMIT);
+    if (pin.bundler_serialized_gemspec !== null) {
+      const generated = mapField(pin, "bundler_serialized_gemspec", at);
+      expectExactKeys(generated, ["path", "sha256"], at);
+      expect(stringField(generated, "path", at)).toMatch(/\.gemspec$/);
+      expect(stringField(generated, "sha256", at)).toMatch(SHA256);
+    }
+    return [pin.gem, pin.url, pin.revision];
+  });
+  expect(verifiedGit.length).toBeGreaterThan(0);
+  expect(verifiedGit).toStrictEqual(expectedGit);
+  const extensions = mapField(candidate, "native_extensions", at);
+  expect(Object.keys(extensions)).toContain("parsanol_native.so");
+  for (const hash of Object.values(extensions)) expect(hash).toMatch(SHA256);
+}
+
 /**
  * The sidecar envelope every generated JSON fixture shares, whatever its
  * payload shape: manifest schema, clean/committable state, generator inputs
@@ -869,6 +929,7 @@ function expectXmlReaderElement(value: unknown, at: string): void {
 function expectSidecarEnvelope(record: FixtureRecord): void {
   const at = record.manifestRelative;
   const manifest = record.manifest;
+  const isSourceCandidate = record.relative === CURRENT_EVALUATION;
   expectExactKeys(
     manifest,
     [
@@ -882,6 +943,7 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
       "configuration",
       "dependencies",
       ...(record.spec.usesCorpus ? ["corpus"] : []),
+      ...(isSourceCandidate ? ["source_candidate"] : []),
       "payload",
     ],
     at,
@@ -924,10 +986,16 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
   const generatorCommit = stringField(generatorRepository, "commit", `${at}.generator.repository`);
   for (const [path, hash] of Object.entries(inputs)) {
     expect(hash, `${at}.generator.inputs.${path}`).toMatch(SHA256);
-    expect(sha256OfFile(path), `${at}.generator.inputs.${path}`).toBe(hash);
+    expect(
+      sha256OfFile(fixtureInputPath(record.relative, path)),
+      `${at}.generator.inputs.${path}`,
+    ).toBe(hash);
   }
 
   expect(generatorCommit).toMatch(COMMIT);
+  if (record.relative === ARCHIVED_EVALUATION) {
+    expect(generatorCommit).toBe("16c28cb992afd790c398344ac1fe7b4bc087e60a");
+  }
   expect(booleanField(generatorRepository, "clean", `${at}.generator.repository`)).toBe(true);
   expect(arrayField(generatorRepository, "dirty_paths", `${at}.generator.repository`)).toEqual([]);
 
@@ -962,7 +1030,14 @@ function expectSidecarEnvelope(record: FixtureRecord): void {
     expect(generator.inventory, `${at}.generator.inventory`).toBeUndefined();
   }
 
-  expectOracleShape(manifest, at);
+  expectOracleShape(
+    manifest,
+    at,
+    isSourceCandidate
+      ? { oracleVersion: "0.11.17", oracleCommit: "8916961a69dc1f586e915790c4fb052b910efa86" }
+      : undefined,
+  );
+  if (isSourceCandidate) expectEvaluationSourceCandidate(manifest, at);
 
   if (record.spec.usesCorpus) {
     const corpus = mapField(manifest, "corpus", at);
@@ -1227,7 +1302,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
         return;
       }
       expect(stringField(record.payload, "format", record.relative)).toBe(
-        basename(dirname(record.relative)),
+        record.relative === CURRENT_EVALUATION ? "evaluation" : basename(dirname(record.relative)),
       );
       stringField(record.payload, "$comment", record.relative);
 

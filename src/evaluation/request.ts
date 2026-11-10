@@ -11,7 +11,7 @@ import {
   UnaryFunctionNode,
 } from "../core/nodes";
 import { EvaluationError } from "./errors";
-import { evaluateResult } from "./index";
+import { evaluateResult } from "./evaluate";
 import type { EvaluationBoundary, EvaluationOperand, EvaluationValue } from "./result";
 
 const SCHEMA = "plurimath.evaluate.numeric/1";

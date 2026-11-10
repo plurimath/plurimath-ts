@@ -129,6 +129,16 @@
         "types": "./dist/omml-leptris.d.cts",
         "default": "./dist/omml-leptris.cjs"
       }
+    },
+    "./asciimath/amath": {
+      "import": {
+        "types": "./dist/asciimath-amath.d.ts",
+        "default": "./dist/asciimath-amath.js"
+      },
+      "require": {
+        "types": "./dist/asciimath-amath.d.cts",
+        "default": "./dist/asciimath-amath.cjs"
+      }
     }
   },
   "files": [

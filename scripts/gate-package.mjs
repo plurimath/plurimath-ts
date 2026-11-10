@@ -159,6 +159,7 @@ const EXPECTED_EXPORTS = {
   ".": ROOT_EXPORTS,
   "./core": CORE_EXPORTS,
   "./asciimath": ["parseAsciimath", "toAsciimath"],
+  "./asciimath/amath": ["createAsciimathParser"],
   "./html": ["parseHtml", "toHtml"],
   "./latex": ["parseLatex", "toLatex"],
   "./mathml": ["parseMathml", "toMathml"],
@@ -230,6 +231,12 @@ const FORBIDDEN = {
   ".": NO_FORBIDDEN_SOURCES,
   "./core": [...forbidOtherFormats(), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
   "./asciimath": [...forbidOtherFormats("asciimath"), /xml\//, LOCALE_GROUPS],
+  "./asciimath/amath": [
+    ...forbidOtherFormats("asciimath"),
+    /xml\//,
+    LOCALE_GROUPS,
+    /formats\/asciimath\/grammar\.ts$/,
+  ],
   // HTML parses as well as renders, so pegkit is expected here; `xml` still
   // is not, because the HTML renderer builds its markup as strings rather
   // than through the XML layer.
@@ -254,6 +261,7 @@ const REQUIRED = {
   "./mathml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/mathml\/translator\.ts$/],
   "./omml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/omml\/translator\.ts$/],
   "./asciimath": [LOCALE_DECIMALS],
+  "./asciimath/amath": [LOCALE_DECIMALS, /formats\/asciimath\/amath\.ts$/],
   "./html": [LOCALE_DECIMALS],
   "./latex": [LOCALE_DECIMALS],
   "./unicodemath": [LOCALE_DECIMALS],

@@ -26,6 +26,7 @@
 
 import { describe, expect, it } from "vitest";
 import packageJson from "../../package.json";
+import * as amath from "../../src/formats/asciimath/amath";
 import * as asciimath from "../../src/formats/asciimath/index";
 import * as html from "../../src/formats/html/index";
 import * as latex from "../../src/formats/latex/index";
@@ -38,6 +39,7 @@ import * as unicodemath from "../../src/formats/unicodemath/index";
 /** Runtime exports only — types erase, so they cannot be asserted here. */
 const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly string[]]> = [
   ["./asciimath", asciimath, ["parseAsciimath", "toAsciimath"]],
+  ["./asciimath/amath", amath, ["createAsciimathParser"]],
   ["./html", html, ["parseHtml", "toHtml"]],
   ["./latex", latex, ["parseLatex", "toLatex"]],
   ["./mathml", mathml, ["parseMathml", "toMathml"]],

@@ -279,6 +279,24 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
   accept nested `unitsml` options.
 - Constructs the renderers have not measured raise `RenderError`.
 
+### Shared AsciiMath PARG/WASM parser
+
+The `asciimath/amath` entry accepts an initialized `amath-ts` parser. It keeps
+Plurimath's preprocessing, locale options, Formula tree and writers; the stage
+owns the shared grammar and WASM engine. Initialization remains caller-owned.
+
+```ts
+import { initialize } from "@plurimath/amath-ts";
+import { createAsciimathParser } from "@plurimath/plurimath-ts/asciimath/amath";
+import { toLatex } from "@plurimath/plurimath-ts/latex";
+
+const parseAsciimath = createAsciimathParser(await initialize());
+console.log(toLatex(parseAsciimath("x^2")));
+```
+
+The optional stage package must be available separately. Its browser binding can
+be supplied through the same factory after browser runtime initialization.
+
 ## Development
 
 Building needs Node `^22.18.0 || >=24.11.0` (the range tsdown declares; Node 23

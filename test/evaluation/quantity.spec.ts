@@ -36,10 +36,12 @@ interface Runtime extends UnitsmlQuantityRuntime<Quantity> {
   readonly ParseError: ErrorClass;
 }
 
-const RUNTIME_SPECIFIER = "unitsml";
-const runtime = (await import(/* @vite-ignore */ RUNTIME_SPECIFIER).catch(
-  () => null,
-)) as Runtime | null;
+const runtimeEntry = process.env.PLURIMATH_UNITSML_TEST_ENTRY;
+const runtimeSpecifier = runtimeEntry ?? "unitsml";
+const runtime = (await import(/* @vite-ignore */ runtimeSpecifier).catch((error) => {
+  if (runtimeEntry) throw error;
+  return null;
+})) as Runtime | null;
 
 function run(input: string, target?: string): Promise<Quantity> {
   return evaluateQuantity(parseAsciimath(input), runtime ? { runtime, target } : (null as never));

@@ -136,6 +136,13 @@ evaluateResult(parse("sin(1)", "asciimath"), {}, options).value;
 JavaScript number: a Rational, a BigDecimal, an integer beyond the safe range,
 or a strict evaluation that stopped.
 
+For exact quantities, call `evaluateQuantity(formula, { runtime, bindings, target })`
+with the UnitsML module as `runtime`. It uses UnitsML for dimension checks,
+scale-aware arithmetic, and conversion. For example, a formula multiplying
+`2 unitsml(kV)` by `3 unitsml(A)` evaluates to `6 kW` with `target: "kW"`.
+The runtime is supplied by the caller so numeric-only consumers need no
+additional dependency.
+
 ### Optional Leptris XML input
 
 `./mathml/leptris` and `./omml/leptris` expose parser factories for an

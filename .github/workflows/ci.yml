@@ -105,6 +105,14 @@ jobs:
           node scripts/check-amath-runtime.mjs "$PWD/.stage-deps/amath/dist/index.js"
           node scripts/check-text-stage-runtimes.mjs "$PWD/.stage-deps/latexmath/dist/index.js" "$PWD/.stage-deps/umath/dist/index.js"
 
+      - name: Verify the official Leptris XML binding
+        run: |
+          npm --prefix .stage-deps/leptris install --ignore-scripts --no-audit --no-fund leptris@0.1.48
+          binding="$PWD/.stage-deps/leptris/node_modules/leptris"
+          printf '%s  %s\n' a2a64d48b26c8468f1238ffecaef1c276cd80e33b8ee37880f1a381f1df64e1d "$binding/dist/leptris.wasm" | sha256sum --check
+          node scripts/probe-leptris.mjs "$binding/src/index.js" --built
+          node scripts/probe-leptris.mjs "$binding/src/index.js" --built-cjs
+
       - name: Verify packed installation
         run: node scripts/smoke-package.mjs
 

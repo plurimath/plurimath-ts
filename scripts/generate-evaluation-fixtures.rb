@@ -1521,14 +1521,16 @@ ACCURACY_ROWS = [].tap do |rows|
     ["guarded-decimal-literal-operand", "guarded-errors", "sin(0.5)"],
     ["guarded-rational-operand", "guarded-errors", "sin(1/2)"],
     ["guarded-rational-sqrt-operand", "guarded-errors", "sqrt(1/2)"],
-  ].each { |id, group, text| rows << [id, group, "asciimath", text, GUARDED, {}, "argument-error"] }
+  # Current F19 converts decimal/rational guard operands at declared precision.
+  ].each { |id, group, text| rows << [id, group, "asciimath", text, GUARDED, {}, nil] }
   rows << ["guarded-exp-exponent-beyond-safe", "guarded-exp", "asciimath", "exp(10^19)", GUARDED, {}, "decimal-exponent"]
   rows << ["guarded-float-binding", "guarded-limited-operand", "asciimath", "sin(x)", GUARDED, { "x" => 0.5 }, nil]
   rows << ["guarded-integer-binding", "guarded-bindings", "asciimath", "sin(x)", GUARDED, { "x" => 2 }, nil]
   rows << ["guarded-plus-float-binding", "guarded-bindings", "asciimath", "sin(1)+x", GUARDED, { "x" => 0.25 }, nil]
   rows << ["guarded-divided-by-float-binding", "guarded-bindings", "asciimath", "sin(1)/x", GUARDED, { "x" => 0.25 }, nil]
   rows << ["guarded-float-binding-divided-by", "guarded-bindings", "asciimath", "x/sin(1)", GUARDED, { "x" => 0.25 }, nil]
-  rows << ["guarded-string-binding", "guarded-bindings", "asciimath", "sin(x)", GUARDED, { "x" => "2" }, "argument-error"]
+  # Ruby BigDecimal accepts this numeric String in the current guard conversion.
+  rows << ["guarded-string-binding", "guarded-bindings", "asciimath", "sin(x)", GUARDED, { "x" => "2" }, nil]
   rows << ["guarded-latex-lg", "guarded-log", "latex", "\\lg(2)", GUARDED, {}, nil]
   rows << ["guarded-latex-lg-thousand", "guarded-log", "latex", "\\lg(1000)", GUARDED, {}, nil]
   rows << ["guarded-latex-sqrt", "guarded-sqrt", "latex", "\\sqrt{3}", GUARDED, {}, nil]

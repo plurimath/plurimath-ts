@@ -122,6 +122,7 @@ const EVALUATION_EXPORTS = [
   "NonFiniteResultError",
   "UnsupportedExpressionError",
   "evaluate",
+  "evaluateRequest",
   "evaluateResult",
   "inspectEvaluationValue",
 ];

@@ -12,7 +12,7 @@ export {
 } from "./errors";
 export { type EvaluationOptions, evaluate, evaluateResult } from "./evaluate";
 export type { EvaluationMode } from "./evaluator";
-export { evaluateRequest, formulaFromRequestAst } from "./request";
+export { evaluateRequest } from "./request";
 export {
   type BoundaryAction,
   type EvaluationBoundary,

@@ -203,3 +203,5 @@ export function evaluateResult(
   const settings = settingsFor(options);
   return stackGuarded(() => Evaluator.runResult(formula, bindings, settings));
 }
+
+export { evaluateRequest, formulaFromRequestAst } from "./request";

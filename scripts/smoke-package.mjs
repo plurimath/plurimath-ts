@@ -49,18 +49,27 @@ for (const mode of ["module", "commonjs"]) {
        for (const name of ${JSON.stringify(entries)}) assert.ok(Object.keys(await import(name)).length);
        const {parseAsciimath}=await import('@plurimath/plurimath-ts/asciimath');
        const {toLatex}=await import('@plurimath/plurimath-ts/latex');
-       assert.equal(toLatex(parseAsciimath('2')), '2');`
+       assert.equal(toLatex(parseAsciimath('2')), '2');
+        const {evaluateRequest}=await import('@plurimath/plurimath-ts');
+        const result=JSON.parse(evaluateRequest(JSON.stringify({schema:'plurimath.evaluate.numeric/1',ast:{type:'number',text:'2.10'}})));
+        assert.deepEqual(result.result.value,{kind:'rational',numerator:'21',denominator:'10'});`
       : `const assert=require('node:assert/strict');
        for (const name of ${JSON.stringify(entries)}) assert.ok(Object.keys(require(name)).length);
        const {parseAsciimath}=require('@plurimath/plurimath-ts/asciimath');
        const {toLatex}=require('@plurimath/plurimath-ts/latex');
-       assert.equal(toLatex(parseAsciimath('2')), '2');`;
+       assert.equal(toLatex(parseAsciimath('2')), '2');
+        const {evaluateRequest}=require('@plurimath/plurimath-ts');
+        const result=JSON.parse(evaluateRequest(JSON.stringify({schema:'plurimath.evaluate.numeric/1',ast:{type:'number',text:'2.10'}})));
+        assert.deepEqual(result.result.value,{kind:'rational',numerator:'21',denominator:'10'});`;
   run(process.execPath, [`--input-type=${mode}`, "-e", script]);
 }
 const source = `import {parse} from '@plurimath/plurimath-ts';
 import {toLatex} from '@plurimath/plurimath-ts/latex';
 import {createMathmlParser} from '@plurimath/plurimath-ts/mathml/leptris';
 const formula = parse('2', 'asciimath');
+import {evaluateRequest} from '@plurimath/plurimath-ts';
+const wire: string = evaluateRequest('{}');
+void wire;
 const result: string = toLatex(formula);
 void result; void createMathmlParser;\n`;
 for (const extension of ["mts", "cts"]) {

@@ -1,14 +1,14 @@
 {
   "amath": {
     "repository": "suleman-uzair/amath-ts",
-    "revision": "88619958eb858c7dcf6044e011a3a5b90dbdfd55"
+    "revision": "bb1a60293da76f051ce10190763670080d9eee5f"
   },
   "latexmath": {
     "repository": "plurimath/latexmath-ts",
-    "revision": "c1c389f7bbeece4ca1654004df8e07dbf140b097"
+    "revision": "5bbadaaa16c8b841c1fdf037552feab3f25573c4"
   },
   "umath": {
     "repository": "plurimath/umath-ts",
-    "revision": "e60b7bae5d169bc06399444dd0f3a2dd3450138c"
+    "revision": "a9f9c137756d5562c850da37e09b5ffeb39a6186"
   }
 }

@@ -15,6 +15,12 @@ export interface StageParseError extends Error {
 export function isStageParseError(error: unknown): error is StageParseError {
   return (
     error instanceof Error &&
+    ![
+      "NestingTooDeep",
+      "RecursionLimitExceeded",
+      "CallDepthLimitExceeded",
+      "ShapeDepthLimitExceeded",
+    ].includes(error.name) &&
     "byteOffset" in error &&
     "charOffset" in error &&
     (error.byteOffset === null ||

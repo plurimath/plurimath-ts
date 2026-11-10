@@ -78,7 +78,7 @@ jobs:
   # whatever happens to be installed on the runner image.
   oracle-runner-unit-tests:
     if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
@@ -135,7 +135,7 @@ jobs:
   # against test/replay/stage-replay.record.json.
   stage-replay:
     if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     defaults:
       run:

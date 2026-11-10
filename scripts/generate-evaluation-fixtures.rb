@@ -278,7 +278,8 @@ def source_candidate_provenance(oracle, payload_path)
   end
 
   public_git = /\Ahttps:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\z/
-  oracle_url = CorpusGenerator.git(oracle, "remote", "get-url", "origin").strip
+  oracle_url = CorpusGenerator.git(oracle, "config", "--get", "remote.origin.url").strip
+    .sub(/\Agit@(?:[A-Za-z0-9-]+\.)?github\.com:/, "https://github.com/")
   abort "REFUSING: expected a public HTTPS oracle repository" unless public_git.match?(oracle_url)
   verified = []
   primary_paths = 0

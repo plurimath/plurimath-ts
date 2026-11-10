@@ -663,8 +663,8 @@ export class Evaluator {
 
   /**
    * Ruby: `Evaluator#divide` — `DivisionByZeroError` for a zero divisor;
-   * strict mode divides exactly (`Rational(dividend) / divisor`), approximate
-   * mode records the Float division it makes.
+   * strict mode rationalizes two exact operands and preserves the numeric
+   * kinds of limited operands. Approximate mode records the Float division.
    */
   divide(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric {
     if (isZero(divisor)) throw new DivisionByZeroError();

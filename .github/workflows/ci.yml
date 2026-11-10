@@ -73,7 +73,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: suleman-uzair/amath-ts
-          ref: bb1a60293da76f051ce10190763670080d9eee5f
+          ref: 061b19b5cc3aef4458e7bb770dc018beebf4fe87
           path: .stage-deps/amath
       - name: Build pinned amath stage
         run: |
@@ -83,7 +83,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: plurimath/latexmath-ts
-          ref: 5bbadaaa16c8b841c1fdf037552feab3f25573c4
+          ref: 4d0356160502c604c26148f85518faa6d67b0602
           path: .stage-deps/latexmath
       - name: Build pinned latexmath stage
         run: |
@@ -93,7 +93,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: plurimath/umath-ts
-          ref: a9f9c137756d5562c850da37e09b5ffeb39a6186
+          ref: 6ff33b54fc9e72c445d8efa626ba2ae17bc8c9ec
           path: .stage-deps/umath
       - name: Build pinned umath stage
         run: |

@@ -12,6 +12,12 @@ export {
 } from "./errors";
 export { type EvaluationOptions, evaluate, evaluateResult } from "./evaluate";
 export type { EvaluationMode } from "./evaluator";
+export {
+  evaluateQuantity,
+  type QuantityEvaluationOptions,
+  type UnitsmlQuantity,
+  type UnitsmlQuantityRuntime,
+} from "./quantity";
 export { evaluateRequest } from "./request";
 export {
   type BoundaryAction,

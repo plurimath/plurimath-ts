@@ -15,6 +15,8 @@ export default defineConfig([
       core: "src/core/index.ts",
       asciimath: "src/formats/asciimath/index.ts",
       "asciimath-amath": "src/formats/asciimath/amath.ts",
+      "unicodemath-umath": "src/formats/unicodemath/umath.ts",
+      "latex-latexmath": "src/formats/latex/latexmath.ts",
       html: "src/formats/html/index.ts",
       latex: "src/formats/latex/index.ts",
       mathml: "src/formats/mathml/index.ts",

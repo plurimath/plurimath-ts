@@ -139,6 +139,26 @@
         "types": "./dist/asciimath-amath.d.cts",
         "default": "./dist/asciimath-amath.cjs"
       }
+    },
+    "./latex/latexmath": {
+      "import": {
+        "types": "./dist/latex-latexmath.d.ts",
+        "default": "./dist/latex-latexmath.js"
+      },
+      "require": {
+        "types": "./dist/latex-latexmath.d.cts",
+        "default": "./dist/latex-latexmath.cjs"
+      }
+    },
+    "./unicodemath/umath": {
+      "import": {
+        "types": "./dist/unicodemath-umath.d.ts",
+        "default": "./dist/unicodemath-umath.js"
+      },
+      "require": {
+        "types": "./dist/unicodemath-umath.d.cts",
+        "default": "./dist/unicodemath-umath.cjs"
+      }
     }
   },
   "files": [

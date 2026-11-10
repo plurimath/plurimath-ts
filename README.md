@@ -337,3 +337,9 @@ depends on the milestone, like every other gate.
 ## Copyright and license
 
 Copyright Ribose. BSD 2-clause license.
+
+### Initialized LaTeX and Unicode stage parsers
+
+`plurimath/latex/latexmath` exports `createLatexParser(binding)` and `plurimath/unicodemath/umath` exports `createUnicodemathParser(binding)`. Pass an initialized stage binding exposing `parsePreparedTree`; the facade handles its own preprocessing, locale validation, source offsets and equation labels. The returned synchronous parser yields the regular Formula tree for every existing writer. Initialization/artifact failures propagate without a handwritten-grammar fallback.
+
+Run `node scripts/check-text-stage-runtimes.mjs /absolute/latexmath-ts/dist/index.js /absolute/umath-ts/dist/index.js` after building both stage packages to check the actual WASM stages against the established Formula and writer behavior. Browser readiness depends on a browser-capable initialized engine.

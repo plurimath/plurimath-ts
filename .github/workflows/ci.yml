@@ -70,6 +70,41 @@ jobs:
 
       - run: pnpm check
 
+      - uses: actions/checkout@v5
+        with:
+          repository: suleman-uzair/amath-ts
+          ref: 88619958eb858c7dcf6044e011a3a5b90dbdfd55
+          path: .stage-deps/amath
+      - name: Build pinned amath stage
+        run: |
+          npm --prefix .stage-deps/amath install --ignore-scripts
+          npm --prefix .stage-deps/amath run check:artifacts
+          npm --prefix .stage-deps/amath run build
+      - uses: actions/checkout@v5
+        with:
+          repository: plurimath/latexmath-ts
+          ref: c1c389f7bbeece4ca1654004df8e07dbf140b097
+          path: .stage-deps/latexmath
+      - name: Build pinned latexmath stage
+        run: |
+          npm --prefix .stage-deps/latexmath install --ignore-scripts
+          npm --prefix .stage-deps/latexmath run check:artifacts
+          npm --prefix .stage-deps/latexmath run build
+      - uses: actions/checkout@v5
+        with:
+          repository: plurimath/umath-ts
+          ref: e60b7bae5d169bc06399444dd0f3a2dd3450138c
+          path: .stage-deps/umath
+      - name: Build pinned umath stage
+        run: |
+          npm --prefix .stage-deps/umath install --ignore-scripts
+          npm --prefix .stage-deps/umath run check:artifacts
+          npm --prefix .stage-deps/umath run build
+      - name: Compare initialized stages through every writer
+        run: |
+          node scripts/check-amath-runtime.mjs "$PWD/.stage-deps/amath/dist/index.js"
+          node scripts/check-text-stage-runtimes.mjs "$PWD/.stage-deps/latexmath/dist/index.js" "$PWD/.stage-deps/umath/dist/index.js"
+
       - name: Verify packed installation
         run: node scripts/smoke-package.mjs
 

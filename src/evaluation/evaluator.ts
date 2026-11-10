@@ -396,22 +396,12 @@ interface BoundaryRecord {
   readonly result: RubyNumeric | null;
 }
 
-/**
- * Ruby's `BigDecimal(value.to_s)` for an exact operand (`guard_digit_value`):
- * an Integer's digits read exactly; a Rational's `to_s` (`"1/2"`, `"2/1"`)
- * is not a decimal, so `BigDecimal()` raises `ArgumentError`, which is not an
- * evaluation error and escapes `Formula#evaluate` — refused here at the same
- * point.
- */
-function guardOperand(value: RubyNumeric): Decimal.BigDecimal {
+/** Current Ruby converts exact rational guard operands at the declared precision. */
+function guardOperand(value: RubyNumeric, digits: number): Decimal.BigDecimal {
   if (value.kind === "decimal") return value;
   if (value.kind === "integer") return Decimal.fromInteger(value.value);
-  throw new UnsupportedFeatureError(
-    "evaluate",
-    `Ruby raises ArgumentError (invalid value for BigDecimal(): "${
-      value.kind === "rational" ? `${value.num}/${value.den}` : String(value.value)
-    }") here, which is not an evaluation error`,
-  );
+  if (value.kind === "rational") return Decimal.fromRational(value.num, value.den, digits);
+  throw new Error("inexact operand reached exact guard conversion");
 }
 
 /**
@@ -678,7 +668,11 @@ export class Evaluator {
    */
   divide(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric {
     if (isZero(divisor)) throw new DivisionByZeroError();
-    if (this.mode === "strict") return divideAsRuby(toRational(dividend), divisor);
+    if (this.mode === "strict") {
+      return isExact(dividend) && isExact(divisor)
+        ? divideAsRuby(toRational(dividend), divisor)
+        : divideAsRuby(dividend, divisor);
+    }
     return this.recordCrossing("divide", [dividend, divisor], divide(dividend, divisor));
   }
 
@@ -784,7 +778,7 @@ export class Evaluator {
     operands: readonly RubyNumeric[],
     digits: number,
   ): Decimal.BigDecimal {
-    const [x, y] = operands.map(guardOperand) as [
+    const [x, y] = operands.map((value) => guardOperand(value, digits)) as [
       Decimal.BigDecimal,
       Decimal.BigDecimal | undefined,
     ];

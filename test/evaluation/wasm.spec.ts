@@ -24,12 +24,35 @@ interface Vector {
   request_json: string;
   expected_wire: string;
 }
+// The pinned vector files stay the frozen UnitsDB 2.2.0 profile byte for byte.
+// Rows whose result changes with the bundled UnitsDB data are listed in the
+// source-versioned profile, which pins each legacy expectation and gives the
+// expectation for the bundled data.
+const sourceProfile = (() => {
+  const body = readFileSync(join(fixtures, manifest.source_profile.file));
+  expect(createHash("sha256").update(body).digest("hex")).toBe(manifest.source_profile.sha256);
+  return JSON.parse(body.toString("utf8")) as {
+    superseded_legacy_rows: {
+      id: string;
+      request_json: string;
+      legacy_expected_wire: string;
+      expected_wire: string;
+    }[];
+  };
+})();
+const superseded = new Map(sourceProfile.superseded_legacy_rows.map((row) => [row.id, row]));
 const vectors: Vector[] = Object.keys(manifest.vectors).flatMap((file) => {
   const body = readFileSync(join(fixtures, file));
   expect(createHash("sha256").update(body).digest("hex")).toBe(manifest.vectors[file].sha256);
   const rows = JSON.parse(body.toString("utf8")).cases as Vector[];
   expect(rows).toHaveLength(manifest.vectors[file].cases);
-  return rows;
+  return rows.map((row) => {
+    const next = superseded.get(row.id);
+    if (!next || file !== manifest.source_profile.legacy_file) return row;
+    expect(next.legacy_expected_wire).toBe(row.expected_wire);
+    expect(next.request_json).toBe(row.request_json);
+    return { ...row, expected_wire: next.expected_wire };
+  });
 });
 const responseSchema = (row: Vector): string => JSON.parse(row.expected_wire).schema;
 const sha = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
@@ -60,6 +83,7 @@ describe("evaluation/wasm", () => {
 
   it("accounts for every pinned wire profile", () => {
     expect(vectors).toHaveLength(manifest.vectors_total);
+    expect([...superseded.keys()].sort()).toEqual(manifest.source_profile.superseded);
     expect(manifest.vectors["quantity-wasm-v1.json"].cases).toBe(162);
     expect(
       vectors.filter((v) => responseSchema(v) === "plurimath.evaluate.numeric/1"),

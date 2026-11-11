@@ -185,7 +185,9 @@ and pass the bundled `@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm`
 bytes or a `URL` object pointing to them. The evaluator's `evaluateRequest(json)` accepts
 numeric, quantity, and GUM v1 requests. The kernel supports uncertainty
 propagation, series statistics, coverage factors, conformance decisions, and
-Monte Carlo propagation for independent polynomial models. Conformance results
+Monte Carlo propagation for independent and joint-normal inputs, including the
+supported certified rational models. Caller registers supply exact conversion
+factors, offsets and dimensions in the quantity request. Conformance results
 include signed residuals and the selected rule's boundary decision. The
 kernel returns typed refusals for unsupported sampling profiles. The pinned request and response examples are in
 [`test/fixtures/evaluation-wasm`](test/fixtures/evaluation-wasm).

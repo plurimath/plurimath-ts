@@ -20,15 +20,18 @@ const bytes = readFileSync(join(root, "assets/wasm", manifest.file));
 const fixtures = join(root, "test/fixtures/evaluation-wasm");
 interface Vector {
   id: string;
-  profile?: "numeric" | "quantity" | "conformity";
+  profile?: string;
   request_json: string;
   expected_wire: string;
 }
 const vectors: Vector[] = Object.keys(manifest.vectors).flatMap((file) => {
   const body = readFileSync(join(fixtures, file));
   expect(createHash("sha256").update(body).digest("hex")).toBe(manifest.vectors[file].sha256);
-  return JSON.parse(body.toString("utf8")).cases as Vector[];
+  const rows = JSON.parse(body.toString("utf8")).cases as Vector[];
+  expect(rows).toHaveLength(manifest.vectors[file].cases);
+  return rows;
 });
+const responseSchema = (row: Vector): string => JSON.parse(row.expected_wire).schema;
 const sha = (data: Uint8Array) => createHash("sha256").update(data).digest("hex");
 const code = (promise: Promise<unknown>) =>
   promise.then(
@@ -57,21 +60,27 @@ describe("evaluation/wasm", () => {
 
   it("accounts for every pinned wire profile", () => {
     expect(vectors).toHaveLength(manifest.vectors_total);
-    expect(vectors.filter((v) => v.profile === "numeric")).toHaveLength(159);
-    expect(vectors.filter((v) => v.profile === "quantity")).toHaveLength(32);
-    expect(vectors.filter((v) => v.profile === undefined)).toHaveLength(41);
-    expect(vectors.filter((v) => v.profile === "conformity")).toHaveLength(25);
+    expect(manifest.vectors["quantity-wasm-v1.json"].cases).toBe(162);
+    expect(
+      vectors.filter((v) => responseSchema(v) === "plurimath.evaluate.numeric/1"),
+    ).toHaveLength(204);
+    expect(
+      vectors.filter((v) => responseSchema(v) === "plurimath.evaluate.quantity/1"),
+    ).toHaveLength(64);
+    expect(vectors.filter((v) => responseSchema(v) === "plurimath.evaluate.gum/1")).toHaveLength(
+      100,
+    );
   });
 
   it("reproduces the numeric and quantity wires on repeated calls", () => {
-    const baseline = vectors.filter((v) => v.profile === "numeric" || v.profile === "quantity");
+    const baseline = vectors.filter((v) => responseSchema(v) !== "plurimath.evaluate.gum/1");
     for (const vector of [...baseline, ...baseline]) {
       expect(kernel.evaluateRequest(vector.request_json), vector.id).toBe(vector.expected_wire);
     }
   }, 30_000);
 
   it("reproduces every GUM wire on the same engine", () => {
-    const gum = vectors.filter((v) => v.profile === undefined || v.profile === "conformity");
+    const gum = vectors.filter((v) => responseSchema(v) === "plurimath.evaluate.gum/1");
     for (const vector of gum) {
       expect(kernel.evaluateRequest(vector.request_json), vector.id).toBe(vector.expected_wire);
     }

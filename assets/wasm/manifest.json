@@ -1,8 +1,8 @@
 {
   "schema": "plurimath-ts.numeric-wasm-asset/2",
   "file": "plurimath_numeric.wasm",
-  "sha256": "60afca0baa879222325d32e5d7ab5541e44ca87088f2d7f3a3d0f604a1d7a087",
-  "bytes": 7350045,
+  "sha256": "cf8afc63e1f6062207d11da2383fe249a03cf4d71e17724585322873761198c9",
+  "bytes": 7260978,
   "abi": 1,
   "request_schemas": [
     "plurimath.evaluate.numeric/1",
@@ -16,15 +16,16 @@
   ],
   "quantity": true,
   "claims": {
-    "gum": "66 sealed GUM wires including 25 conformity decisions and portable coverage",
-    "named_power_class": "not asserted"
+    "gum": "100 sealed scientific-method wires including coverage, conformance, calibration, implicit propagation and 13 published Monte Carlo profiles",
+    "named_power_class": "not asserted",
+    "caller_register": "32 exact declared-register value and refusal wires"
   },
   "source": {
     "crate": "plurimath-numeric",
     "version": "0.1.0",
-    "crate_sha256": "c6d6990749a3b754545b9ed310af6ca92db39dc3236e549ad0004ca74f09f0c8",
-    "revision": "e9dd4eafc6584f6daa0f6132287446f721e9d319",
-    "base": "808dfe1402e264d4388f3238bc0643931c0c22db",
+    "crate_sha256": "24a3659313ebb80ec8d6aaa3b6f40fc6ad1f1353a480000e1b83a849e14c45b4",
+    "revision": "86ece1b9004b1ae09e25b5f962987b6e1067e87c",
+    "base": "6c09171bd987b64c81076d9d741b3faabf75f801",
     "feature": "quantity",
     "wasm_target": "wasm32-unknown-unknown",
     "compiler": "rustc 1.95.0 (59807616e 2026-04-14)",
@@ -43,7 +44,7 @@
         }
       },
       "unitsml": {
-        "source": "fd3b3cbdd3bb91f732e5c8f2d76ff86a8168ec49"
+        "source": "c0a1bb5e1b5f35f03ce7eac9557ddfedabba3353"
       },
       "unitsdb": {
         "source": "c631488e03f58c5cfd0ada369948b946a23a4f42",
@@ -57,7 +58,8 @@
         "source": "20d5e6cebcade3cf2111a00a7ef3f5b69d673481"
       }
     },
-    "artifact_receipt_sha256": "358eca78d3093f08b5e02ed5e6793cbe84ef8e44484eb4000ce2796277370656"
+    "artifact_receipt_sha256": "0bb523188b066e0cb5a05eb581b60bd1e0460121b9d35585ae3d162473abfc18",
+    "wasm_metadata_sha256": "2e6574dd60450222bce96f641463d75876ae01a44a694d59972319342b1987e5"
   },
   "glue": {
     "origin": "plurimath_numeric.js (wasm-bindgen 0.2.130 --target web)",
@@ -90,16 +92,13 @@
         "numeric": 159,
         "quantity": 3
       },
-      "native_sha256": "0fb25423e8ddf0e62ec6a2d7591b8d277b4eda5bc9adafda9263a7b9409e3746"
+      "native_sha256": "b2aac863f12a72de1f658971378c8ca8149643167bab2dcab4f96b794cd949be"
     },
     "gum-wasm-v1.json": {
-      "sha256": "ef3b42f762e210c42add38bdc21f669f9552fd995ec40d5e078c4d819f674e0c",
-      "cases": 66,
-      "profiles": {
-        "gum": 41,
-        "conformity": 25
-      },
-      "native_sha256": "6cdc07b4186e2e1a2c80d7a7747ae956f61dd7fb35ede5a00b663e78b224ce00"
+      "sha256": "cdcd219e17a95128c6f67e151f8de0b7e362a37e256898930f2157c5fae933e7",
+      "cases": 100,
+      "request_schema": "plurimath.evaluate.gum/1",
+      "native_sha256": "b2aac863f12a72de1f658971378c8ca8149643167bab2dcab4f96b794cd949be"
     },
     "extended-quantity-v1.json": {
       "sha256": "c634739ff686579f6db918d93f15c2de9f7f200ba8e907e09cf8fe0aeaf23224",
@@ -107,8 +106,20 @@
       "profiles": {
         "quantity": 29
       },
-      "native_sha256": "6cdc07b4186e2e1a2c80d7a7747ae956f61dd7fb35ede5a00b663e78b224ce00"
+      "native_sha256": "b2aac863f12a72de1f658971378c8ca8149643167bab2dcab4f96b794cd949be"
+    },
+    "numeric-annex-v1.json": {
+      "sha256": "d261c77c5f1bf3e845c289fbc62a423cc4127b21437f458e11f426ff0ce3082a",
+      "cases": 45,
+      "request_schema": "plurimath.evaluate.numeric/1",
+      "native_sha256": "b2aac863f12a72de1f658971378c8ca8149643167bab2dcab4f96b794cd949be"
+    },
+    "quantity-register-v1.json": {
+      "sha256": "d51a6a05a1cd218b373a5fcde89c76ed86a5df5f92109047e76796ac089d9cc3",
+      "cases": 32,
+      "request_schema": "plurimath.evaluate.quantity/1",
+      "native_sha256": "b2aac863f12a72de1f658971378c8ca8149643167bab2dcab4f96b794cd949be"
     }
   },
-  "vectors_total": 257
+  "vectors_total": 368
 }

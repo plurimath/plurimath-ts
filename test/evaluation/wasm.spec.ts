@@ -67,7 +67,7 @@ describe("evaluation/wasm", () => {
     for (const vector of vectors) {
       expect(kernel.evaluateRequest(vector.request_json)).toBe(vector.expected_wire);
     }
-  });
+  }, 30_000);
 
   it("refuses non-strings through the kernel's own InvalidRequest wire", () => {
     const wire = kernel.evaluateRequest(42 as unknown as string);

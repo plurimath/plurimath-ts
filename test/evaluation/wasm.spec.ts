@@ -68,7 +68,7 @@ describe("evaluation/wasm", () => {
       vectors.filter((v) => responseSchema(v) === "plurimath.evaluate.quantity/1"),
     ).toHaveLength(64);
     expect(vectors.filter((v) => responseSchema(v) === "plurimath.evaluate.gum/1")).toHaveLength(
-      100,
+      149,
     );
   });
 

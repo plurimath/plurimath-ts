@@ -1,8 +1,8 @@
 {
   "schema": "plurimath-ts.numeric-wasm-asset/2",
   "file": "plurimath_numeric.wasm",
-  "sha256": "cf8afc63e1f6062207d11da2383fe249a03cf4d71e17724585322873761198c9",
-  "bytes": 7260978,
+  "sha256": "2a433d2f46b231f2a2fbf549b5276bdb0b8afb1d0676cffaeaa3a77d6958a1b6",
+  "bytes": 7275562,
   "abi": 1,
   "request_schemas": [
     "plurimath.evaluate.numeric/1",
@@ -16,16 +16,17 @@
   ],
   "quantity": true,
   "claims": {
-    "gum": "100 sealed scientific-method wires including coverage, conformance, calibration, implicit propagation and 13 published Monte Carlo profiles",
+    "gum": "149 sealed scientific and caller-metadata diagnostic wires, including13 published Monte Carlo profiles",
     "named_power_class": "not asserted",
-    "caller_register": "32 exact declared-register value and refusal wires"
+    "caller_register": "32 exact declared-register value and refusal wires",
+    "coverage_validation": "48 source-compatible caller-metadata diagnostics plus one actual170000-sample MCM regression; no provenance or physical adequacy certification"
   },
   "source": {
     "crate": "plurimath-numeric",
     "version": "0.1.0",
-    "crate_sha256": "24a3659313ebb80ec8d6aaa3b6f40fc6ad1f1353a480000e1b83a849e14c45b4",
-    "revision": "86ece1b9004b1ae09e25b5f962987b6e1067e87c",
-    "base": "6c09171bd987b64c81076d9d741b3faabf75f801",
+    "crate_sha256": "0b5547ada284ef8e70a69de125b385d1688c9c803a48491b0ca7d8cb753b5164",
+    "revision": "8f9273968a9e17dc604eb1ae66a84b9c4fa30f1c",
+    "base": "86ece1b9004b1ae09e25b5f962987b6e1067e87c",
     "feature": "quantity",
     "wasm_target": "wasm32-unknown-unknown",
     "compiler": "rustc 1.95.0 (59807616e 2026-04-14)",
@@ -58,7 +59,7 @@
         "source": "20d5e6cebcade3cf2111a00a7ef3f5b69d673481"
       }
     },
-    "artifact_receipt_sha256": "0bb523188b066e0cb5a05eb581b60bd1e0460121b9d35585ae3d162473abfc18",
+    "artifact_receipt_sha256": "2de35e69171c658f6b7e66763d94f7a8886d0c289d4c8f03f127fe741acfc5f5",
     "wasm_metadata_sha256": "2e6574dd60450222bce96f641463d75876ae01a44a694d59972319342b1987e5"
   },
   "glue": {
@@ -119,7 +120,13 @@
       "cases": 32,
       "request_schema": "plurimath.evaluate.quantity/1",
       "native_sha256": "b2aac863f12a72de1f658971378c8ca8149643167bab2dcab4f96b794cd949be"
+    },
+    "coverage-validation-wires.json": {
+      "sha256": "9d1335826628737976c927715c27225003ba501061a3397e9069c7b9519cbc7b",
+      "cases": 49,
+      "request_schema": "plurimath.evaluate.gum/1",
+      "native_sha256": "790731b4a1dd21ca1a5e9b165e1e848ad91579dea359c2dcb412dd2686575803"
     }
   },
-  "vectors_total": 368
+  "vectors_total": 417
 }

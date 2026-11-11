@@ -364,3 +364,5 @@ Copyright Ribose. BSD 2-clause license.
 `plurimath/latex/latexmath` exports `createLatexParser(binding)` and `plurimath/unicodemath/umath` exports `createUnicodemathParser(binding)`. Pass an initialized stage binding exposing `parsePreparedTree`; the facade handles its own preprocessing, locale validation, source offsets and equation labels. The returned synchronous parser yields the regular Formula tree for every existing writer. Initialization/artifact failures propagate without a handwritten-grammar fallback.
 
 Run `node scripts/check-text-stage-runtimes.mjs /absolute/latexmath-ts/dist/index.js /absolute/umath-ts/dist/index.js` after building both stage packages to check the actual WASM stages against the established Formula and writer behavior. Browser readiness depends on a browser-capable initialized engine.
+
+The GUM `validate_coverage` operation compares caller-supplied coverage metadata with the documented Ruby compatibility semantics and metadata trust boundary.

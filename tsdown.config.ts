@@ -13,6 +13,7 @@ export default defineConfig([
     entry: {
       index: "src/index.ts",
       core: "src/core/index.ts",
+      "evaluation-wasm": "src/evaluation/wasm.ts",
       asciimath: "src/formats/asciimath/index.ts",
       "asciimath-amath": "src/formats/asciimath/amath.ts",
       "unicodemath-umath": "src/formats/unicodemath/umath.ts",
@@ -32,6 +33,14 @@ export default defineConfig([
     sourcemap: true,
     clean: true,
     treeshake: true,
+    // The canonical kernel binary and its licence ship beside the
+    // `./evaluation/wasm` entry; package.json exports the binary as
+    // `./evaluation/plurimath_numeric.wasm`. assets/wasm/manifest.json pins it.
+    copy: [
+      { from: "assets/wasm/plurimath_numeric.wasm", to: "dist" },
+      { from: "assets/wasm/LICENSE", to: "dist", rename: "plurimath_numeric.LICENSE" },
+      { from: "assets/wasm/NOTICE", to: "dist", rename: "plurimath_numeric.NOTICE" },
+    ],
   },
   /**
    * The `plurimath` bin (package.json `bin`), built separately: it is a Node

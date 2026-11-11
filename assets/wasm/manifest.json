@@ -1,0 +1,55 @@
+{
+  "schema": "plurimath-ts.numeric-wasm-asset/1",
+  "file": "plurimath_numeric.wasm",
+  "sha256": "5c1412d8eb7456bc7bf766cad3255a7bf44954b5f5965f6b05a73b3c42c53cea",
+  "bytes": 790352,
+  "abi": 1,
+  "request_schema": "plurimath.evaluate.numeric/1",
+  "engine": "plurimath.numeric/1",
+  "quantity": false,
+  "source": {
+    "crate": "plurimath-numeric",
+    "version": "0.1.0",
+    "crate_sha256": "b310a6968a4c17496357b910fd9e05cb67591e7c102e0efc33a80807bbe1a718",
+    "revision": "7f986456",
+    "packet": "r32-packet",
+    "packet_manifest_sha256": "e1ec4cd11fc65987b64aba10561dde3f7584f5a23eb37d2d067fe507b68c8213"
+  },
+  "adapter": {
+    "origin": "bindings/js/kernel.js",
+    "sha256": "792fac770dd28b1f3896f0a310ec5ba8f02e8d314155e526242e27bf2b42f5ea",
+    "types_sha256": "2c1a9e2514ce0ca67cbd0b66d5892449054700b25460cc6cb09d64566131b47d"
+  },
+  "license": {
+    "file": "LICENSE",
+    "sha256": "8bb27670459027923124649be6582f3325a3ac9b1df5503130f2633a66f97938",
+    "spdx": "BSD-2-Clause"
+  },
+  "notice": {
+    "file": "NOTICE",
+    "sha256": "07f8146e32963ed2960fd26041f13d95f2511a1b1b6dec0e7ebcadb0ef9fae64"
+  },
+  "vectors": {
+    "numeric-bignum-v1.json": {
+      "sha256": "d410af65f4f58d859c709754c09be51bef3d8aedf7e3404ac659bce22f24bd1f",
+      "cases": 9
+    },
+    "numeric-nonfinite-v1.json": {
+      "sha256": "fefb21a7c6803582593403573bfe7f886d5b5e9b6daa3ddd18e216b020ddbe1d",
+      "cases": 13
+    },
+    "numeric-supplemental-v1.json": {
+      "sha256": "f888c50611573e0992f37088126e8b89bfcd0688c109ff727fa34275bf19394d",
+      "cases": 105
+    },
+    "numeric-v1.json": {
+      "sha256": "0abf939a3c37fcf71e7a2c6a9e8b1ce554cf8378374fc18443355d4bf2352818",
+      "cases": 29
+    },
+    "numeric-validation-v1.json": {
+      "sha256": "c7be94172ac72328680e5dd96af957c0283ea6d1d04d49529dbc9b6bb580f5ed",
+      "cases": 3
+    }
+  },
+  "vectors_total": 159
+}

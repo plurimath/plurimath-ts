@@ -21,6 +21,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
@@ -160,6 +161,7 @@ const EXPECTED_DEFAULT = {
 const EXPECTED_EXPORTS = {
   ".": ROOT_EXPORTS,
   "./core": CORE_EXPORTS,
+  "./evaluation/wasm": ["NUMERIC_WASM_ASSET", "NumericWasmError", "initNumericWasm"],
   "./asciimath": ["parseAsciimath", "toAsciimath"],
   "./asciimath/amath": ["createAsciimathParser"],
   "./latex/latexmath": ["createLatexParser"],
@@ -230,9 +232,14 @@ const LOCALE_GROUPS = /(?:^|\/)formatting\/generated\/locale-groups\.ts$/;
 const optionalReaderOutside = (format) =>
   new RegExp(`^(?!(?:src/)?(?:core|xml)/|(?:src/)?(?:formats|generated)/${format}/)`);
 
+// The WASM facade is transport only: no format, parser, XML, locale table or
+// TypeScript evaluator module may ship in it (no independent evaluator).
+const WASM_FACADE_ONLY = /^(?!(?:src\/)?evaluation\/wasm\.ts$)/;
+
 const FORBIDDEN = {
   // The root is intentionally full-sized; only subpath imports are slim.
   ".": NO_FORBIDDEN_SOURCES,
+  "./evaluation/wasm": [WASM_FACADE_ONLY],
   "./core": [...forbidOtherFormats(), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
   "./asciimath": [...forbidOtherFormats("asciimath"), /xml\//, LOCALE_GROUPS],
   "./latex/latexmath": [
@@ -274,6 +281,7 @@ const FORBIDDEN = {
 
 /** Sources a subpath's artifact must contain — the positive control for `FORBIDDEN`'s locale rows. */
 const REQUIRED = {
+  "./evaluation/wasm": [/(?:^|\/)evaluation\/wasm\.ts$/],
   "./mathml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/mathml\/translator\.ts$/],
   "./omml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/omml\/translator\.ts$/],
   "./asciimath": [LOCALE_DECIMALS],
@@ -291,7 +299,20 @@ const fail = (message) => {
   failures.push(message);
 };
 
-const subpaths = Object.entries(pkg.exports).filter(([key]) => key !== "./package.json");
+/**
+ * Non-code exports: published files a consumer resolves by specifier. Each must
+ * exist in `dist` after the build with the digest its pin manifest records.
+ */
+const ASSET_EXPORTS = {
+  "./evaluation/plurimath_numeric.wasm": "assets/wasm/manifest.json",
+};
+const subpaths = Object.entries(pkg.exports).filter(
+  ([key]) => key !== "./package.json" && !Object.hasOwn(ASSET_EXPORTS, key),
+);
+for (const [key, target] of Object.entries(pkg.exports)) {
+  if (typeof target === "string" && key !== "./package.json" && !Object.hasOwn(ASSET_EXPORTS, key))
+    fail(`${key} is a string export without an ASSET_EXPORTS row`);
+}
 for (const [subpath] of subpaths) {
   const expected = EXPECTED_EXPORTS[subpath];
   if (!Array.isArray(expected) || expected.length === 0) {
@@ -477,6 +498,37 @@ for (const [subpath, conditions] of subpaths) {
         );
       }
     }
+  }
+}
+
+// 3. every asset export ships the exact pinned bytes
+console.log("\nasset exports");
+for (const [key, manifestPath] of Object.entries(ASSET_EXPORTS)) {
+  const target = pkg.exports[key];
+  const pin = JSON.parse(readFileSync(resolve(root, manifestPath), "utf8"));
+  if (
+    typeof target !== "string" ||
+    !target.startsWith("./dist/") ||
+    !target.endsWith(`/${pin.file}`)
+  ) {
+    fail(`${key} must map to ./dist/${pin.file}`);
+    continue;
+  }
+  const file = resolve(root, target);
+  if (!existsSync(file)) {
+    fail(`${key}: ${target} was not built`);
+    continue;
+  }
+  const bytes = readFileSync(file);
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  if (digest !== pin.sha256 || bytes.length !== pin.bytes) {
+    fail(`${key}: ${target} is ${digest}/${bytes.length}, pinned ${pin.sha256}/${pin.bytes}`);
+  } else {
+    console.log(`  ✓ ${key} → ${target} sha256 ${digest}`);
+  }
+  const source = readFileSync(resolve(root, "src/evaluation/wasm.ts"), "utf8");
+  if (!source.includes(`sha256: "${pin.sha256}"`) || !source.includes(`bytes: ${pin.bytes},`)) {
+    fail(`src/evaluation/wasm.ts NUMERIC_WASM_ASSET does not pin ${manifestPath}`);
   }
 }
 

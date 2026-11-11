@@ -49,6 +49,17 @@
         "default": "./dist/core.cjs"
       }
     },
+    "./evaluation/wasm": {
+      "import": {
+        "types": "./dist/evaluation-wasm.d.ts",
+        "default": "./dist/evaluation-wasm.js"
+      },
+      "require": {
+        "types": "./dist/evaluation-wasm.d.cts",
+        "default": "./dist/evaluation-wasm.cjs"
+      }
+    },
+    "./evaluation/plurimath_numeric.wasm": "./dist/plurimath_numeric.wasm",
     "./asciimath": {
       "import": {
         "types": "./dist/asciimath.d.ts",

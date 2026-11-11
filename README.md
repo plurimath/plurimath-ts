@@ -182,7 +182,7 @@ binding contract and real-WASM verification command.
 
 Import `initNumericWasm` from `@plurimath/plurimath-ts/evaluation/wasm`
 and pass the bundled `@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm`
-bytes or a URL to them. The evaluator's `evaluateRequest(json)` accepts
+bytes or a `URL` object pointing to them. The evaluator's `evaluateRequest(json)` accepts
 numeric, quantity, and GUM v1 requests. The kernel supports uncertainty
 propagation, series statistics, coverage factors, and Monte Carlo propagation
 for independent polynomial models. It returns typed refusals for unsupported

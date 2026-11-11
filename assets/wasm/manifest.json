@@ -1,8 +1,8 @@
 {
   "schema": "plurimath-ts.numeric-wasm-asset/2",
   "file": "plurimath_numeric.wasm",
-  "sha256": "aa216d1b98af9c4cd36ec444d08d631a76cca8752a091fa2926307f88ede9bb1",
-  "bytes": 7319517,
+  "sha256": "60afca0baa879222325d32e5d7ab5541e44ca87088f2d7f3a3d0f604a1d7a087",
+  "bytes": 7350045,
   "abi": 1,
   "request_schemas": [
     "plurimath.evaluate.numeric/1",
@@ -16,15 +16,15 @@
   ],
   "quantity": true,
   "claims": {
-    "gum": "41 exact native, Node and Chrome wires including portable coverage",
+    "gum": "66 sealed GUM wires including 25 conformity decisions and portable coverage",
     "named_power_class": "not asserted"
   },
   "source": {
     "crate": "plurimath-numeric",
     "version": "0.1.0",
-    "crate_sha256": "a97362d591c43b4fedb4304dc7b9ab54b3e423e1651a419a456b51507a3b0bb7",
-    "revision": "808dfe1402e264d4388f3238bc0643931c0c22db",
-    "base": "d89dc8737d22610526c7762ba64c938e47815056",
+    "crate_sha256": "c6d6990749a3b754545b9ed310af6ca92db39dc3236e549ad0004ca74f09f0c8",
+    "revision": "e9dd4eafc6584f6daa0f6132287446f721e9d319",
+    "base": "808dfe1402e264d4388f3238bc0643931c0c22db",
     "feature": "quantity",
     "wasm_target": "wasm32-unknown-unknown",
     "compiler": "rustc 1.95.0 (59807616e 2026-04-14)",
@@ -57,7 +57,7 @@
         "source": "20d5e6cebcade3cf2111a00a7ef3f5b69d673481"
       }
     },
-    "artifact_receipt_sha256": "0ea420b93aa449604322b5445c08bf7fcb6137b4dc50c8f9934f0a50a58d7413"
+    "artifact_receipt_sha256": "358eca78d3093f08b5e02ed5e6793cbe84ef8e44484eb4000ce2796277370656"
   },
   "glue": {
     "origin": "plurimath_numeric.js (wasm-bindgen 0.2.130 --target web)",
@@ -93,13 +93,22 @@
       "native_sha256": "0fb25423e8ddf0e62ec6a2d7591b8d277b4eda5bc9adafda9263a7b9409e3746"
     },
     "gum-wasm-v1.json": {
-      "sha256": "f74ec89ae274fd1c3406c0b1a9517874c8d8b3bc715a740f690308ddbe5bdc8e",
-      "cases": 41,
+      "sha256": "ef3b42f762e210c42add38bdc21f669f9552fd995ec40d5e078c4d819f674e0c",
+      "cases": 66,
       "profiles": {
-        "gum": 41
+        "gum": 41,
+        "conformity": 25
       },
-      "native_sha256": "a4cf5e152b79f881b504707ab1bb0030749ca22b264f5689d374c1a080e22aa3"
+      "native_sha256": "6cdc07b4186e2e1a2c80d7a7747ae956f61dd7fb35ede5a00b663e78b224ce00"
+    },
+    "extended-quantity-v1.json": {
+      "sha256": "c634739ff686579f6db918d93f15c2de9f7f200ba8e907e09cf8fe0aeaf23224",
+      "cases": 29,
+      "profiles": {
+        "quantity": 29
+      },
+      "native_sha256": "6cdc07b4186e2e1a2c80d7a7747ae956f61dd7fb35ede5a00b663e78b224ce00"
     }
   },
-  "vectors_total": 203
+  "vectors_total": 257
 }

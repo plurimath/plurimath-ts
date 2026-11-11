@@ -20,7 +20,7 @@ const bytes = readFileSync(join(root, "assets/wasm", manifest.file));
 const fixtures = join(root, "test/fixtures/evaluation-wasm");
 interface Vector {
   id: string;
-  profile?: "numeric" | "quantity";
+  profile?: "numeric" | "quantity" | "conformity";
   request_json: string;
   expected_wire: string;
 }
@@ -58,19 +58,20 @@ describe("evaluation/wasm", () => {
   it("accounts for every pinned wire profile", () => {
     expect(vectors).toHaveLength(manifest.vectors_total);
     expect(vectors.filter((v) => v.profile === "numeric")).toHaveLength(159);
-    expect(vectors.filter((v) => v.profile === "quantity")).toHaveLength(3);
+    expect(vectors.filter((v) => v.profile === "quantity")).toHaveLength(32);
     expect(vectors.filter((v) => v.profile === undefined)).toHaveLength(41);
+    expect(vectors.filter((v) => v.profile === "conformity")).toHaveLength(25);
   });
 
   it("reproduces the numeric and quantity wires on repeated calls", () => {
-    const baseline = vectors.filter((v) => v.profile !== undefined);
+    const baseline = vectors.filter((v) => v.profile === "numeric" || v.profile === "quantity");
     for (const vector of [...baseline, ...baseline]) {
       expect(kernel.evaluateRequest(vector.request_json), vector.id).toBe(vector.expected_wire);
     }
   }, 30_000);
 
   it("reproduces every GUM wire on the same engine", () => {
-    const gum = vectors.filter((v) => v.profile === undefined);
+    const gum = vectors.filter((v) => v.profile === undefined || v.profile === "conformity");
     for (const vector of gum) {
       expect(kernel.evaluateRequest(vector.request_json), vector.id).toBe(vector.expected_wire);
     }

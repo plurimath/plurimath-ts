@@ -54,7 +54,12 @@ const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly
 ];
 
 const PUBLISHED_FORMAT_SUBPATHS = Object.keys(packageJson.exports).filter(
-  (subpath) => subpath !== "." && subpath !== "./core" && subpath !== "./package.json",
+  (subpath) =>
+    subpath !== "." &&
+    subpath !== "./core" &&
+    subpath !== "./package.json" &&
+    subpath !== "./evaluation/wasm" &&
+    subpath !== "./evaluation/plurimath_numeric.wasm",
 );
 
 it("publishes every declared format surface as a package subpath", () => {

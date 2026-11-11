@@ -161,7 +161,12 @@ const EXPECTED_DEFAULT = {
 const EXPECTED_EXPORTS = {
   ".": ROOT_EXPORTS,
   "./core": CORE_EXPORTS,
-  "./evaluation/wasm": ["NUMERIC_WASM_ASSET", "NumericWasmError", "initNumericWasm"],
+  "./evaluation/wasm": [
+    "NUMERIC_WASM_ASSET",
+    "NumericWasmError",
+    "initNumericWasm",
+    "numericWasmFromExports",
+  ],
   "./asciimath": ["parseAsciimath", "toAsciimath"],
   "./asciimath/amath": ["createAsciimathParser"],
   "./latex/latexmath": ["createLatexParser"],

@@ -189,6 +189,43 @@ export async function initNumericWasm(
   return createEvaluator(native, { sha256: actual, bytes: bytes.length, abi: 1 });
 }
 
+/** The ABI-v1 instance exports the transport reads. */
+export interface NumericWasmKernelExports {
+  readonly memory: { readonly buffer: ArrayBuffer };
+  plurimath_numeric_abi_version(): number;
+  plurimath_numeric_alloc(length: number): number;
+  plurimath_numeric_dealloc(pointer: number, length: number): void;
+  plurimath_numeric_evaluate(pointer: number, length: number): number;
+  plurimath_numeric_result_free(pointer: number): void;
+}
+
+/**
+ * Explicit asset-replacement path: wrap ABI-v1 exports that the caller's own
+ * host glue already initialized (for example a separately built kernel whose
+ * generated `init` needs host imports). The caller owns that asset's
+ * verification and states its digest and size; nothing is fetched or checked
+ * here beyond the ABI. Returns the same evaluator as `initNumericWasm`.
+ */
+export function numericWasmFromExports(
+  exports: NumericWasmKernelExports,
+  asset: { readonly sha256: string; readonly bytes: number },
+): NumericWasmEvaluator {
+  if (!SHA256.test(asset?.sha256 ?? "") || !Number.isInteger(asset.bytes) || asset.bytes <= 0)
+    throw new NumericWasmError(
+      "InvalidAssetSource",
+      "asset needs a lowercase hex sha256 and a byte size",
+    );
+  const native = exports as unknown as KernelExports;
+  if (
+    !(native?.memory?.buffer instanceof ArrayBuffer) ||
+    KERNEL_FUNCTIONS.some((name) => typeof native[name] !== "function")
+  )
+    throw new NumericWasmError("InvalidModule", "the exports lack the numeric kernel ABI");
+  if (native.plurimath_numeric_abi_version() !== 1)
+    throw new NumericWasmError("UnsupportedAbi", "unsupported numeric kernel ABI");
+  return createEvaluator(native, { sha256: asset.sha256, bytes: asset.bytes, abi: 1 });
+}
+
 /** ABI-v1 transport, as in the kernel's `bindings/js/kernel.js`. */
 function createEvaluator(
   native: KernelExports,

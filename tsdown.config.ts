@@ -13,7 +13,6 @@ export default defineConfig([
     entry: {
       index: "src/index.ts",
       core: "src/core/index.ts",
-      "evaluation-wasm": "src/evaluation/wasm.ts",
       asciimath: "src/formats/asciimath/index.ts",
       "asciimath-amath": "src/formats/asciimath/amath.ts",
       "unicodemath-umath": "src/formats/unicodemath/umath.ts",
@@ -33,13 +32,36 @@ export default defineConfig([
     sourcemap: true,
     clean: true,
     treeshake: true,
-    // The canonical kernel binary and its licence ship beside the
-    // `./evaluation/wasm` entry; package.json exports the binary as
+  },
+  /**
+   * `./evaluation/wasm`, built on its own so its bundled verbatim wasm-bindgen
+   * glue can be compiled without host shims: the glue's default-asset branch
+   * (`new URL("plurimath_numeric_bg.wasm", import.meta.url)`) is unreachable
+   * because the facade always hands it a verified, compiled module, and in
+   * CJS rolldown would otherwise rewrite it to `require("url")`. `clean: false`
+   * keeps the outputs the config above just wrote.
+   */
+  {
+    entry: { "evaluation-wasm": "src/evaluation/wasm.ts" },
+    format: ["esm", "cjs"],
+    platform: "neutral",
+    target: "es2022",
+    dts: true,
+    sourcemap: true,
+    clean: false,
+    treeshake: true,
+    define: { "import.meta.url": "undefined" },
+    // The quantity-enabled kernel binary, its licence, the exact notices of
+    // every crate compiled into it and its Cargo.lock source pin ship beside
+    // the `./evaluation/wasm` entry (which bundles the verbatim wasm-bindgen
+    // glue); package.json exports the binary as
     // `./evaluation/plurimath_numeric.wasm`. assets/wasm/manifest.json pins it.
     copy: [
       { from: "assets/wasm/plurimath_numeric.wasm", to: "dist" },
       { from: "assets/wasm/LICENSE", to: "dist", rename: "plurimath_numeric.LICENSE" },
       { from: "assets/wasm/NOTICE", to: "dist", rename: "plurimath_numeric.NOTICE" },
+      { from: "assets/wasm/Cargo.lock", to: "dist", rename: "plurimath_numeric.Cargo.lock" },
+      { from: "assets/wasm/licenses", to: "dist", rename: "plurimath_numeric.licenses" },
     ],
   },
   /**

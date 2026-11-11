@@ -239,7 +239,10 @@ const optionalReaderOutside = (format) =>
 
 // The WASM facade is transport only: no format, parser, XML, locale table or
 // TypeScript evaluator module may ship in it (no independent evaluator).
-const WASM_FACADE_ONLY = /^(?!(?:src\/)?evaluation\/wasm\.ts$)/;
+// The only other module is the kernel's verbatim wasm-bindgen glue.
+const WASM_GLUE = /(?:^|\/)evaluation\/quantity-wasm\/plurimath_numeric\.js$/;
+const WASM_FACADE_ONLY =
+  /^(?!(?:src\/)?evaluation\/(?:wasm\.ts|quantity-wasm\/plurimath_numeric\.js)$)/;
 
 const FORBIDDEN = {
   // The root is intentionally full-sized; only subpath imports are slim.
@@ -286,7 +289,7 @@ const FORBIDDEN = {
 
 /** Sources a subpath's artifact must contain — the positive control for `FORBIDDEN`'s locale rows. */
 const REQUIRED = {
-  "./evaluation/wasm": [/(?:^|\/)evaluation\/wasm\.ts$/],
+  "./evaluation/wasm": [/(?:^|\/)evaluation\/wasm\.ts$/, WASM_GLUE],
   "./mathml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/mathml\/translator\.ts$/],
   "./omml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/omml\/translator\.ts$/],
   "./asciimath": [LOCALE_DECIMALS],
@@ -535,6 +538,37 @@ for (const [key, manifestPath] of Object.entries(ASSET_EXPORTS)) {
   if (!source.includes(`sha256: "${pin.sha256}"`) || !source.includes(`bytes: ${pin.bytes},`)) {
     fail(`src/evaluation/wasm.ts NUMERIC_WASM_ASSET does not pin ${manifestPath}`);
   }
+  // Pinned companions: verbatim glue (bundled into the entry), licence,
+  // notice, Cargo.lock and every dependency notice, byte-exact in dist.
+  const sha = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+  const assetDir = dirname(resolve(root, manifestPath));
+  const pinned = [];
+  if (pin.glue) {
+    pinned.push([resolve(root, pin.glue.file), pin.glue.sha256]);
+    pinned.push([resolve(root, pin.glue.types_file), pin.glue.types_sha256]);
+    if (!source.includes(`sha256: "${pin.glue.sha256}"`))
+      fail(`src/evaluation/wasm.ts NUMERIC_WASM_ASSET does not pin the glue digest`);
+  }
+  pinned.push([resolve(root, "dist/plurimath_numeric.LICENSE"), pin.license.sha256]);
+  pinned.push([resolve(root, "dist/plurimath_numeric.NOTICE"), pin.notice.sha256]);
+  if (pin.source?.cargo_lock)
+    pinned.push([resolve(root, "dist/plurimath_numeric.Cargo.lock"), pin.source.cargo_lock.sha256]);
+  if (pin.dependency_notices) {
+    const listing = resolve(assetDir, pin.dependency_notices.manifest);
+    pinned.push([listing, pin.dependency_notices.sha256]);
+    const groups = JSON.parse(readFileSync(listing, "utf8"));
+    if (groups.length !== pin.dependency_notices.groups)
+      fail(`${pin.dependency_notices.manifest} lists ${groups.length} groups`);
+    for (const group of groups)
+      for (const notice of group.notices)
+        pinned.push([
+          resolve(root, "dist/plurimath_numeric.licenses", notice.file.slice(9)),
+          notice.sha256,
+        ]);
+  }
+  const drift = pinned.filter(([path, digest]) => !existsSync(path) || sha(path) !== digest);
+  for (const [path] of drift) fail(`${path} is missing or differs from ${manifestPath}`);
+  if (drift.length === 0) console.log(`  ✓ ${pinned.length} pinned companion files byte-exact`);
 }
 
 // 4. the compat class's declaration surface, from the BUILT declaration files

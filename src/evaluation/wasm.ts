@@ -10,29 +10,45 @@
  * `fetch` response or a URL. Nothing here touches `node:*`, the filesystem or
  * ambient configuration, so the same entry runs in browsers and in Node.
  *
- * The Rust library owns every numeric answer. This module is transport only:
- * there is no TypeScript fallback, and it does not import the TypeScript
- * evaluator. The asset's SHA-256 is checked before compilation; a different
- * (for example quantity-enabled) build is accepted only when the caller names
- * its digest explicitly through `options.sha256`.
+ * The Rust library owns every numeric and quantity answer. This module is
+ * transport only: there is no TypeScript fallback, and it does not import the
+ * TypeScript evaluator. The shipped asset is the quantity-enabled kernel build
+ * (one engine for `plurimath.evaluate.numeric/1` and
+ * `plurimath.evaluate.quantity/1`); it is instantiated through its own
+ * verbatim wasm-bindgen glue (`quantity-wasm/plurimath_numeric.js`). The
+ * asset's SHA-256 is checked before compilation; a different build is accepted
+ * only when the caller names its digest explicitly through `options.sha256`.
+ *
+ * The generated glue holds one instance per module realm, so the first
+ * successful `initNumericWasm` owns this realm's engine: later calls with the
+ * same verified digest reuse it, and a different digest is refused with
+ * `AlreadyInitialized`.
  */
+import initGlue from "./quantity-wasm/plurimath_numeric.js";
 
 /** The asset this release ships and pins (`assets/wasm/manifest.json`). */
 export const NUMERIC_WASM_ASSET = Object.freeze({
   file: "plurimath_numeric.wasm",
   specifier: "@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm",
-  sha256: "5c1412d8eb7456bc7bf766cad3255a7bf44954b5f5965f6b05a73b3c42c53cea",
-  bytes: 790352,
+  sha256: "410edf2f2a459295f8f984035c35e9abe7066ac2fc3882e45483fce6f63b9b52",
+  bytes: 6664007,
   abi: 1,
   schema: "plurimath.evaluate.numeric/1",
+  schemas: Object.freeze(["plurimath.evaluate.numeric/1", "plurimath.evaluate.quantity/1"]),
   source: Object.freeze({
     crate: "plurimath-numeric",
     version: "0.1.0",
-    crateSha256: "b310a6968a4c17496357b910fd9e05cb67591e7c102e0efc33a80807bbe1a718",
-    revision: "7f986456",
+    crateSha256: "bc79163e081cb18f48e6c84217d415a93e2e721aecb1ec2f7ad595b10af15232",
+    revision: "3970b8194080c94e0190bf7b3f61fd1a2e265565",
+    feature: "quantity",
   }),
-  /** The pinned build evaluates `plurimath.evaluate.numeric/1` only. */
-  quantity: false,
+  /** wasm-bindgen 0.2.130 `--target web` glue, bundled verbatim. */
+  glue: Object.freeze({
+    file: "plurimath_numeric.js",
+    sha256: "7455faeb6e8aa4f77680f54e6fa2a40ab8eee8e57c3e499b32dc6cc8f24962e6",
+  }),
+  /** The pinned build also evaluates `plurimath.evaluate.quantity/1`. */
+  quantity: true,
 } as const);
 
 export type NumericWasmErrorCode =
@@ -43,6 +59,7 @@ export type NumericWasmErrorCode =
   | "AssetDigestMismatch"
   | "InvalidModule"
   | "UnsupportedAbi"
+  | "AlreadyInitialized"
   | "KernelFailure";
 
 /** Typed refusal from the WASM transport; never a numeric answer. */
@@ -86,11 +103,16 @@ export interface NumericWasmEvaluator {
 }
 
 /** The WebAssembly JS API surface used here (the project's lib is ES2022 only). */
+interface WasmModuleDescriptor {
+  readonly module: string;
+  readonly name: string;
+}
 interface WasmApi {
-  instantiate(
-    bytes: Uint8Array,
-    imports: object,
-  ): Promise<{ instance: { exports: Record<string, unknown> } }>;
+  compile(bytes: Uint8Array): Promise<object>;
+  Module: {
+    exports(module: object): readonly WasmModuleDescriptor[];
+    imports(module: object): readonly WasmModuleDescriptor[];
+  };
   Memory: abstract new (...args: never[]) => { readonly buffer: ArrayBuffer };
 }
 interface KernelExports {
@@ -109,6 +131,16 @@ const KERNEL_FUNCTIONS = [
   "plurimath_numeric_result_free",
 ] as const;
 const SHA256 = /^[0-9a-f]{64}$/;
+/** Host imports the bundled glue provides (`__wbg_get_imports`). */
+const GLUE_MODULE = "./plurimath_numeric_bg.js";
+const GLUE_IMPORTS = new Set([
+  "__wbg___wbindgen_throw_4c88d8bf264fd984",
+  "__wbg_getRandomValues_5d8c030b527203a6",
+  "__wbindgen_init_externref_table",
+]);
+
+/** This realm's engine: the glue instantiates once per module realm. */
+let engine: { readonly sha256: string; readonly ready: Promise<NumericWasmEvaluator> } | undefined;
 
 async function bytesOf(source: NumericWasmSource): Promise<Uint8Array> {
   if (source instanceof ArrayBuffer) return new Uint8Array(source.slice(0));
@@ -149,8 +181,9 @@ async function sha256(bytes: Uint8Array): Promise<string> {
 }
 
 /**
- * Verify, compile and instantiate the kernel. Each call returns an
- * independent instance; one instance serves any number of requests.
+ * Verify, compile and instantiate the kernel through the bundled glue. The
+ * first success owns this realm's engine; later calls with the same digest
+ * return that same evaluator, which serves any number of requests.
  */
 export async function initNumericWasm(
   source: NumericWasmSource,
@@ -169,24 +202,53 @@ export async function initNumericWasm(
       "AssetDigestMismatch",
       `WASM asset sha256 ${actual} does not match the expected ${expected}`,
     );
-  const wasm = (globalThis as { WebAssembly?: WasmApi }).WebAssembly;
-  if (typeof wasm?.instantiate !== "function")
-    throw new NumericWasmError("WasmUnavailable", "this runtime has no WebAssembly API");
-  let native: KernelExports;
-  try {
-    const { instance } = await wasm.instantiate(bytes, {});
-    native = instance.exports as unknown as KernelExports;
-  } catch (error) {
-    throw new NumericWasmError("InvalidModule", `cannot instantiate the WASM asset: ${error}`);
+  if (engine) {
+    if (engine.sha256 !== actual)
+      throw new NumericWasmError(
+        "AlreadyInitialized",
+        `this realm already runs the WASM asset ${engine.sha256}; it cannot also load ${actual}`,
+      );
+    return engine.ready;
   }
+  const wasm = (globalThis as { WebAssembly?: WasmApi }).WebAssembly;
+  if (typeof wasm?.compile !== "function")
+    throw new NumericWasmError("WasmUnavailable", "this runtime has no WebAssembly API");
+  let module: object;
+  try {
+    module = await wasm.compile(bytes);
+  } catch (error) {
+    throw new NumericWasmError("InvalidModule", `cannot compile the WASM asset: ${error}`);
+  }
+  const exported = new Set(wasm.Module.exports(module).map((entry) => entry.name));
   if (
-    !(native.memory instanceof wasm.Memory) ||
-    KERNEL_FUNCTIONS.some((name) => typeof native[name] !== "function")
+    !exported.has("memory") ||
+    !exported.has("__wbindgen_start") ||
+    KERNEL_FUNCTIONS.some((name) => !exported.has(name)) ||
+    wasm.Module.imports(module).some(
+      (entry) => entry.module !== GLUE_MODULE || !GLUE_IMPORTS.has(entry.name),
+    )
   )
-    throw new NumericWasmError("InvalidModule", "the WASM asset lacks the numeric kernel ABI");
-  if (native.plurimath_numeric_abi_version() !== 1)
-    throw new NumericWasmError("UnsupportedAbi", "unsupported numeric kernel ABI");
-  return createEvaluator(native, { sha256: actual, bytes: bytes.length, abi: 1 });
+    throw new NumericWasmError(
+      "InvalidModule",
+      "the WASM asset does not match the bundled glue and numeric kernel ABI",
+    );
+  // A concurrent call may have claimed the realm while this one compiled.
+  if (engine) return initNumericWasm(bytes, { sha256: actual });
+  const ready = (async () => {
+    let native: KernelExports;
+    try {
+      native = (await initGlue({
+        module_or_path: module as never,
+      })) as unknown as KernelExports;
+    } catch (error) {
+      throw new NumericWasmError("InvalidModule", `cannot instantiate the WASM asset: ${error}`);
+    }
+    if (native.plurimath_numeric_abi_version() !== 1)
+      throw new NumericWasmError("UnsupportedAbi", "unsupported numeric kernel ABI");
+    return createEvaluator(native, { sha256: actual, bytes: bytes.length, abi: 1 });
+  })();
+  engine = { sha256: actual, ready };
+  return ready;
 }
 
 /** The ABI-v1 instance exports the transport reads. */
@@ -238,7 +300,7 @@ function createEvaluator(
     if (failed)
       throw new NumericWasmError(
         "KernelFailure",
-        "this kernel instance failed earlier; initialize a new one",
+        "this kernel instance failed earlier; load a fresh module realm",
       );
     const data = encoder.encode(input);
     let source = 0;

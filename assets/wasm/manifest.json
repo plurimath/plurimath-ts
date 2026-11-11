@@ -1,37 +1,38 @@
 {
   "schema": "plurimath-ts.numeric-wasm-asset/2",
   "file": "plurimath_numeric.wasm",
-  "sha256": "410edf2f2a459295f8f984035c35e9abe7066ac2fc3882e45483fce6f63b9b52",
-  "bytes": 6664007,
+  "sha256": "aa216d1b98af9c4cd36ec444d08d631a76cca8752a091fa2926307f88ede9bb1",
+  "bytes": 7319517,
   "abi": 1,
   "request_schemas": [
     "plurimath.evaluate.numeric/1",
-    "plurimath.evaluate.quantity/1"
+    "plurimath.evaluate.quantity/1",
+    "plurimath.evaluate.gum/1"
   ],
   "engines": [
     "plurimath.numeric/1",
-    "plurimath.quantity/1"
+    "plurimath.quantity/1",
+    "plurimath.gum/1"
   ],
   "quantity": true,
   "claims": {
-    "gum": "not asserted",
+    "gum": "41 exact native, Node and Chrome wires including portable coverage",
     "named_power_class": "not asserted"
   },
   "source": {
     "crate": "plurimath-numeric",
     "version": "0.1.0",
-    "crate_sha256": "bc79163e081cb18f48e6c84217d415a93e2e721aecb1ec2f7ad595b10af15232",
-    "revision": "3970b8194080c94e0190bf7b3f61fd1a2e265565",
-    "base": "03b0f4861ec374d704ec79de418e362f8f218386",
+    "crate_sha256": "a97362d591c43b4fedb4304dc7b9ab54b3e423e1651a419a456b51507a3b0bb7",
+    "revision": "808dfe1402e264d4388f3238bc0643931c0c22db",
+    "base": "d89dc8737d22610526c7762ba64c938e47815056",
     "feature": "quantity",
     "wasm_target": "wasm32-unknown-unknown",
     "compiler": "rustc 1.95.0 (59807616e 2026-04-14)",
     "wasm_bindgen": "wasm-bindgen 0.2.130",
     "cargo_lock": {
       "file": "Cargo.lock",
-      "sha256": "0347774edb6cc50e0b2a2af46b9efa3a045d75fa922bf54dcaef93c92a6dbfc7"
+      "sha256": "98f5ce4d6416371c045ca826ff153ba1c28743eeb105029c8b7b049669a5613d"
     },
-    "source_tar_gz_sha256": "294e8c5319ebb83a919789c7a621245ce2f36476f56091e2dac938e75b8bdd1d",
     "dependency_pins": {
       "asciiunits": {
         "source": "498cec2ce946c7bcb3b1b26313667b188ddf76aa",
@@ -56,10 +57,7 @@
         "source": "20d5e6cebcade3cf2111a00a7ef3f5b69d673481"
       }
     },
-    "packet": "r32-packet/quantity-wasm",
-    "engine_manifest_sha256": "fc9184391e18da46f3fd5d4feeceabcbf4519709d985faaabd3ac1cdf2af8af6",
-    "receipt": "r32-full-packet/quantity-wasm-result.json",
-    "receipt_sha256": "7bb794a51f1e65ffd2fae536190c53efe0cac69748cb5e93832a7a5f19bb486b"
+    "artifact_receipt_sha256": "0ea420b93aa449604322b5445c08bf7fcb6137b4dc50c8f9934f0a50a58d7413"
   },
   "glue": {
     "origin": "plurimath_numeric.js (wasm-bindgen 0.2.130 --target web)",
@@ -80,9 +78,9 @@
   },
   "dependency_notices": {
     "manifest": "licenses/license-manifest.json",
-    "sha256": "a71e4db155abca77d955b777fdb749509cd36b5ba5853fa04d77dd1786d024ae",
-    "groups": 51,
-    "files": 98
+    "sha256": "f0f56050c6ff58111b5a80c29516326ceeecb321420a99e637b364c227564f1b",
+    "groups": 52,
+    "files": 99
   },
   "vectors": {
     "quantity-wasm-v1.json": {
@@ -93,7 +91,15 @@
         "quantity": 3
       },
       "native_sha256": "0fb25423e8ddf0e62ec6a2d7591b8d277b4eda5bc9adafda9263a7b9409e3746"
+    },
+    "gum-wasm-v1.json": {
+      "sha256": "f74ec89ae274fd1c3406c0b1a9517874c8d8b3bc715a740f690308ddbe5bdc8e",
+      "cases": 41,
+      "profiles": {
+        "gum": 41
+      },
+      "native_sha256": "a4cf5e152b79f881b504707ab1bb0030749ca22b264f5689d374c1a080e22aa3"
     }
   },
-  "vectors_total": 162
+  "vectors_total": 203
 }

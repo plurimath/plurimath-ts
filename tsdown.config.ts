@@ -51,7 +51,7 @@ export default defineConfig([
     clean: false,
     treeshake: true,
     define: { "import.meta.url": "undefined" },
-    // The quantity-enabled kernel binary, its licence, the exact notices of
+    // The evaluator kernel binary, its licence, the exact notices of
     // every crate compiled into it and its Cargo.lock source pin ship beside
     // the `./evaluation/wasm` entry (which bundles the verbatim wasm-bindgen
     // glue); package.json exports the binary as

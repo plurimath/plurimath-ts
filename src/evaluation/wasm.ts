@@ -10,11 +10,10 @@
  * `fetch` response or a URL. Nothing here touches `node:*`, the filesystem or
  * ambient configuration, so the same entry runs in browsers and in Node.
  *
- * The Rust library owns every numeric and quantity answer. This module is
+ * The Rust library evaluates the serialized requests. This module is
  * transport only: there is no TypeScript fallback, and it does not import the
- * TypeScript evaluator. The shipped asset is the quantity-enabled kernel build
- * (one engine for `plurimath.evaluate.numeric/1` and
- * `plurimath.evaluate.quantity/1`); it is instantiated through its own
+ * TypeScript evaluator. The shipped kernel handles numeric, quantity, and GUM
+ * requests through its own
  * verbatim wasm-bindgen glue (`quantity-wasm/plurimath_numeric.js`). The
  * asset's SHA-256 is checked before compilation; a different build is accepted
  * only when the caller names its digest explicitly through `options.sha256`.
@@ -30,16 +29,20 @@ import initGlue from "./quantity-wasm/plurimath_numeric.js";
 export const NUMERIC_WASM_ASSET = Object.freeze({
   file: "plurimath_numeric.wasm",
   specifier: "@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm",
-  sha256: "410edf2f2a459295f8f984035c35e9abe7066ac2fc3882e45483fce6f63b9b52",
-  bytes: 6664007,
+  sha256: "aa216d1b98af9c4cd36ec444d08d631a76cca8752a091fa2926307f88ede9bb1",
+  bytes: 7319517,
   abi: 1,
   schema: "plurimath.evaluate.numeric/1",
-  schemas: Object.freeze(["plurimath.evaluate.numeric/1", "plurimath.evaluate.quantity/1"]),
+  schemas: Object.freeze([
+    "plurimath.evaluate.numeric/1",
+    "plurimath.evaluate.quantity/1",
+    "plurimath.evaluate.gum/1",
+  ]),
   source: Object.freeze({
     crate: "plurimath-numeric",
     version: "0.1.0",
-    crateSha256: "bc79163e081cb18f48e6c84217d415a93e2e721aecb1ec2f7ad595b10af15232",
-    revision: "3970b8194080c94e0190bf7b3f61fd1a2e265565",
+    crateSha256: "a97362d591c43b4fedb4304dc7b9ab54b3e423e1651a419a456b51507a3b0bb7",
+    revision: "808dfe1402e264d4388f3238bc0643931c0c22db",
     feature: "quantity",
   }),
   /** wasm-bindgen 0.2.130 `--target web` glue, bundled verbatim. */

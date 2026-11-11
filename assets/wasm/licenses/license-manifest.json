@@ -315,6 +315,19 @@
     ]
   },
   {
+    "package": "libm",
+    "version": "0.2.16",
+    "source": "registry+https://github.com/rust-lang/crates.io-index",
+    "license": "MIT",
+    "declared_license_file": null,
+    "notices": [
+      {
+        "file": "licenses/libm-0.2.16/LICENSE.txt",
+        "sha256": "3823dda7cf046602f4b4e77ec8e227863dc4736037cc85bb33d9f19febe16bb7"
+      }
+    ]
+  },
+  {
     "package": "memchr",
     "version": "2.8.3",
     "source": "registry+https://github.com/rust-lang/crates.io-index",

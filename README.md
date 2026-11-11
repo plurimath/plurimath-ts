@@ -178,6 +178,17 @@ keeps its named-entity compatibility in the adapter; other XML semantics come
 from Leptris. See [the integration notes](docs/leptris-experiment.md) for the
 binding contract and real-WASM verification command.
 
+### Serialized evaluation with WASM
+
+Import `initNumericWasm` from `@plurimath/plurimath-ts/evaluation/wasm`
+and pass the bundled `@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm`
+bytes or a URL to them. The evaluator's `evaluateRequest(json)` accepts
+numeric, quantity, and GUM v1 requests. The kernel supports uncertainty
+propagation, series statistics, coverage factors, and Monte Carlo propagation
+for independent polynomial models. It returns typed refusals for unsupported
+sampling profiles. The pinned request and response examples are in
+[`test/fixtures/evaluation-wasm`](test/fixtures/evaluation-wasm).
+
 ### The compat class
 
 The root entry also default-exports `Plurimath`, shaped after the

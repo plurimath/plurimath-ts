@@ -1,9 +1,7 @@
 /** biome-ignore-all lint/style/useNamingConvention: vector keys are the kernel fixtures' snake_case. */
 /**
- * The `./evaluation/wasm` facade against the pinned quantity-enabled Rust
- * kernel asset and the kernel's own frozen wire vectors (159 numeric + 3
- * quantity; assets/wasm/manifest.json pins both). Every expected wire is the
- * kernel's; nothing here is computed in TypeScript.
+ * Replay the pinned Rust kernel's numeric, quantity, and GUM wire fixtures
+ * through one WASM instance. The Rust evaluator supplies every expected wire.
  */
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -22,7 +20,7 @@ const bytes = readFileSync(join(root, "assets/wasm", manifest.file));
 const fixtures = join(root, "test/fixtures/evaluation-wasm");
 interface Vector {
   id: string;
-  profile: "numeric" | "quantity";
+  profile?: "numeric" | "quantity";
   request_json: string;
   expected_wire: string;
 }
@@ -45,7 +43,7 @@ describe("evaluation/wasm", () => {
     kernel = await initNumericWasm(bytes);
   });
 
-  it("pins the quantity-enabled asset and glue the manifest records", () => {
+  it("pins the evaluator asset and glue the manifest records", () => {
     expect(sha(bytes)).toBe(manifest.sha256);
     expect(NUMERIC_WASM_ASSET.sha256).toBe(manifest.sha256);
     expect(NUMERIC_WASM_ASSET.bytes).toBe(manifest.bytes);
@@ -57,17 +55,26 @@ describe("evaluation/wasm", () => {
     expect(kernel.asset).toEqual({ sha256: manifest.sha256, bytes: manifest.bytes, abi: 1 });
   });
 
-  it(`reproduces all ${manifest.vectors_total} exact wires on one reused engine`, () => {
+  it("accounts for every pinned wire profile", () => {
     expect(vectors).toHaveLength(manifest.vectors_total);
+    expect(vectors.filter((v) => v.profile === "numeric")).toHaveLength(159);
     expect(vectors.filter((v) => v.profile === "quantity")).toHaveLength(3);
-    for (const vector of vectors) {
+    expect(vectors.filter((v) => v.profile === undefined)).toHaveLength(41);
+  });
+
+  it("reproduces the numeric and quantity wires on repeated calls", () => {
+    const baseline = vectors.filter((v) => v.profile !== undefined);
+    for (const vector of [...baseline, ...baseline]) {
       expect(kernel.evaluateRequest(vector.request_json), vector.id).toBe(vector.expected_wire);
     }
-    // A second pass on the same instance: reuse does not drift.
-    for (const vector of vectors) {
-      expect(kernel.evaluateRequest(vector.request_json)).toBe(vector.expected_wire);
-    }
   }, 30_000);
+
+  it("reproduces every GUM wire on the same engine", () => {
+    const gum = vectors.filter((v) => v.profile === undefined);
+    for (const vector of gum) {
+      expect(kernel.evaluateRequest(vector.request_json), vector.id).toBe(vector.expected_wire);
+    }
+  }, 120_000);
 
   it("refuses non-strings through the kernel's own InvalidRequest wire", () => {
     const wire = kernel.evaluateRequest(42 as unknown as string);

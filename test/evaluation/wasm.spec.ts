@@ -32,6 +32,7 @@ const sourceProfile = (() => {
   const body = readFileSync(join(fixtures, manifest.source_profile.file));
   expect(createHash("sha256").update(body).digest("hex")).toBe(manifest.source_profile.sha256);
   return JSON.parse(body.toString("utf8")) as {
+    definition_probes: Vector[];
     superseded_legacy_rows: {
       id: string;
       request_json: string;
@@ -102,6 +103,13 @@ describe("evaluation/wasm", () => {
       expect(kernel.evaluateRequest(vector.request_json), vector.id).toBe(vector.expected_wire);
     }
   }, 30_000);
+
+  it("reproduces the source-versioned definition and registration probes", () => {
+    expect(sourceProfile.definition_probes).toHaveLength(17);
+    for (const vector of sourceProfile.definition_probes) {
+      expect(kernel.evaluateRequest(vector.request_json), vector.id).toBe(vector.expected_wire);
+    }
+  });
 
   it("reproduces every GUM wire on the same engine", () => {
     const gum = vectors.filter((v) => responseSchema(v) === "plurimath.evaluate.gum/1");

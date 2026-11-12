@@ -172,6 +172,7 @@ const EXPECTED_EXPORTS = {
   "./latex/latexmath": ["createLatexParser"],
   "./unicodemath/umath": ["createUnicodemathParser"],
   "./html": ["parseHtml", "toHtml"],
+  "./html/parsanol": ["createHtmlParser"],
   "./latex": ["parseLatex", "toLatex"],
   "./mathml": ["parseMathml", "toMathml"],
   "./omml": ["parseOmml", "toOmml"],
@@ -272,6 +273,12 @@ const FORBIDDEN = {
   // is not, because the HTML renderer builds its markup as strings rather
   // than through the XML layer.
   "./html": [...forbidOtherFormats("html"), /xml\//, LOCALE_GROUPS],
+  "./html/parsanol": [
+    ...forbidOtherFormats("html"),
+    /xml\//,
+    LOCALE_GROUPS,
+    /formats\/html\/grammar\.ts$/,
+  ],
   // LaTeX parses as well as renders (ARCHITECTURE.md §3, "parsing *and*
   // rendering when both exist"), so pegkit is expected here; `xml` still is
   // not, because LaTeX output is text.
@@ -297,6 +304,7 @@ const REQUIRED = {
   "./latex/latexmath": [LOCALE_DECIMALS, /formats\/latex\/latexmath\.ts$/],
   "./unicodemath/umath": [LOCALE_DECIMALS, /formats\/unicodemath\/umath\.ts$/],
   "./html": [LOCALE_DECIMALS],
+  "./html/parsanol": [LOCALE_DECIMALS, /formats\/html\/parsanol\.ts$/],
   "./latex": [LOCALE_DECIMALS],
   "./unicodemath": [LOCALE_DECIMALS],
 };
@@ -314,11 +322,19 @@ const fail = (message) => {
 const ASSET_EXPORTS = {
   "./evaluation/plurimath_numeric.wasm": "assets/wasm/manifest.json",
 };
+const HTML_ASSET_EXPORTS = JSON.parse(
+  readFileSync(resolve(root, "assets/html/manifest.json"), "utf8"),
+).artifacts;
+const NON_CODE_EXPORTS = { ...ASSET_EXPORTS, ...HTML_ASSET_EXPORTS };
 const subpaths = Object.entries(pkg.exports).filter(
-  ([key]) => key !== "./package.json" && !Object.hasOwn(ASSET_EXPORTS, key),
+  ([key]) => key !== "./package.json" && !Object.hasOwn(NON_CODE_EXPORTS, key),
 );
 for (const [key, target] of Object.entries(pkg.exports)) {
-  if (typeof target === "string" && key !== "./package.json" && !Object.hasOwn(ASSET_EXPORTS, key))
+  if (
+    typeof target === "string" &&
+    key !== "./package.json" &&
+    !Object.hasOwn(NON_CODE_EXPORTS, key)
+  )
     fail(`${key} is a string export without an ASSET_EXPORTS row`);
 }
 for (const [subpath] of subpaths) {
@@ -506,6 +522,22 @@ for (const [subpath, conditions] of subpaths) {
         );
       }
     }
+  }
+}
+
+// HTML artifacts are exact source exports; never reserialize them before runtime loading.
+for (const [key, pin] of Object.entries(HTML_ASSET_EXPORTS)) {
+  const target = pkg.exports[key];
+  if (target !== `./dist/html-artifacts/${pin.file}`) {
+    fail(`${key}: unexpected artifact export target`);
+    continue;
+  }
+  const bytes = readFileSync(resolve(root, target));
+  if (
+    createHash("sha256").update(bytes).digest("hex") !== pin.sha256 ||
+    bytes.length !== pin.bytes
+  ) {
+    fail(`${key}: source artifact bytes changed`);
   }
 }
 

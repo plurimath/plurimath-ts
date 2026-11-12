@@ -116,6 +116,64 @@ jobs:
       - name: Verify packed installation
         run: node scripts/smoke-package.mjs
 
+  # Qualify initialized public runtime boundaries separately from cold API tests.
+  initialized-runtimes:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && (inputs.oracle_artifacts || inputs.native_completion_probe || inputs.native_completion_test)) }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest, macos-latest]
+        node: [22, 24]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/checkout@v5
+        with:
+          repository: suleman-uzair/amath-ts
+          ref: 061b19b5cc3aef4458e7bb770dc018beebf4fe87
+          path: .stage-deps/amath
+      - uses: actions/checkout@v5
+        with:
+          repository: plurimath/latexmath-ts
+          ref: 4d0356160502c604c26148f85518faa6d67b0602
+          path: .stage-deps/latexmath
+      - uses: actions/checkout@v5
+        with:
+          repository: plurimath/umath-ts
+          ref: 6ff33b54fc9e72c445d8efa626ba2ae17bc8c9ec
+          path: .stage-deps/umath
+      - uses: actions/checkout@v5
+        with:
+          repository: parsanol/parsanol-ts
+          ref: 7ce2e27a201de90e6b35a4090ae3c906d7b9cb7f
+          path: .stage-deps/parsanol
+      - name: Build the pinned runtime packages
+        run: |
+          for stage in amath latexmath umath parsanol; do
+            npm --prefix ".stage-deps/$stage" ci --ignore-scripts --no-audit --no-fund
+            npm --prefix ".stage-deps/$stage" run build
+          done
+          npm --prefix .stage-deps/leptris install --ignore-scripts --no-audit --no-fund leptris@0.1.48
+      - name: Replay source models, calls and all writers through initialized stages
+        run: |
+          node --experimental-strip-types scripts/check-initialized-corpus.mjs "$PWD/.stage-deps/amath/dist/index.js" "$PWD/.stage-deps/latexmath/dist/index.js" "$PWD/.stage-deps/umath/dist/index.js" "$PWD/.stage-deps/leptris/node_modules/leptris/src/index.js"
+          node scripts/check-html-runtime.mjs "$PWD/.stage-deps/parsanol/dist/runtime.js" "$PWD/.stage-deps/parsanol/dist/browser.js" "$PWD/.stage-deps/parsanol/vendor/parsanol-web/parsanol_bg.wasm"
+      - name: Replay initialized HTML in actual Chrome
+        if: ${{ matrix.os == 'ubuntu-24.04' && matrix.node == 24 }}
+        run: node scripts/check-html-browser.mjs "$PWD/.stage-deps/parsanol"
+
   # Ruby-backed unit regressions are class B, isolated from the Node-only
   # class-A suite and run with an explicit interpreter rather than relying on
   # whatever happens to be installed on the runner image.

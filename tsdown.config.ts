@@ -18,6 +18,7 @@ export default defineConfig([
       "unicodemath-umath": "src/formats/unicodemath/umath.ts",
       "latex-latexmath": "src/formats/latex/latexmath.ts",
       html: "src/formats/html/index.ts",
+      "html-parsanol": "src/formats/html/parsanol.ts",
       latex: "src/formats/latex/index.ts",
       mathml: "src/formats/mathml/index.ts",
       omml: "src/formats/omml/index.ts",
@@ -32,6 +33,7 @@ export default defineConfig([
     sourcemap: true,
     clean: true,
     treeshake: true,
+    copy: [{ from: "assets/html", to: "dist", rename: "html-artifacts" }],
   },
   /**
    * `./evaluation/wasm`, built on its own so its bundled verbatim wasm-bindgen

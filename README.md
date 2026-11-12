@@ -318,6 +318,33 @@ console.log(toLatex(parseAsciimath("x^2")));
 The optional stage package must be available separately. Its browser binding can
 be supplied through the same factory after browser runtime initialization.
 
+### Initialized HTML PARG parser
+
+`html/parsanol` consumes initialized Parsanol runtimes without loading WASM or
+falling back to the default parser. Initialize the SDK once, load the exact
+artifact text from the `html/artifacts/dot.json`, `comma.json` and `arabic.json`
+exports, and construct each runtime with entry `document`. Keep the artifact
+text unchanged: parsing and reserializing JSON can invalidate its checksum.
+
+```ts
+import { createHtmlParser } from "@plurimath/plurimath-ts/html/parsanol";
+
+// Each value is an initialized SDK PargRuntime for the corresponding asset.
+const runtimes = new Map([[".", dotRuntime], [",", commaRuntime], ["٫", arabicRuntime]]);
+const parseHtml = createHtmlParser((decimal) => {
+  const runtime = runtimes.get(decimal);
+  if (!runtime) throw new Error(`HTML runtime not initialized for ${decimal}`);
+  return runtime;
+});
+const formula = parseHtml("<b>1,5</b>", { locale: "de" });
+```
+
+The caller owns runtime initialization and disposal. Parsing stays synchronous;
+engine/resource errors propagate unchanged. Parse options, entity normalization,
+the source 100-container capture limit and Formula mapping share the ordinary
+HTML consumer implementation. Artifact manifests record source provenance and
+exact file hashes. This optional entry does not change the root parser default.
+
 ## Development
 
 Building needs Node `^22.18.0 || >=24.11.0` (the range tsdown declares; Node 23

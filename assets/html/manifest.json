@@ -1,0 +1,26 @@
+{
+  "schema": "plurimath-html-parg-assets/1",
+  "artifacts": {
+    "./html/artifacts/dot.json": {
+      "file": "dot.json",
+      "sha256": "cb4f01907252d2ffd1d9858adbafab400da499030222d9eddf7123ff8739293d",
+      "bytes": 74360,
+      "artifact_checksum": "sha256:5e59f93b5a9deea45772e43760e28254d7e86c9ba15ad40ee7ca7c81e2601b36",
+      "decimal": "."
+    },
+    "./html/artifacts/comma.json": {
+      "file": "comma.json",
+      "sha256": "1c07606dcd987fd6a89c8a30060c049d5609c5194d0b87fb165dcf5a17a1efb7",
+      "bytes": 74360,
+      "artifact_checksum": "sha256:5ea0a822bac93bf52a3dca159c561647c8910d29fb783feaee3de092c2af0e6d",
+      "decimal": ","
+    },
+    "./html/artifacts/arabic.json": {
+      "file": "arabic.json",
+      "sha256": "e098c7dece3f252e815f03ed16d9cb5d1f2a3e485b4611d42c23f9d0d1092b75",
+      "bytes": 74362,
+      "artifact_checksum": "sha256:028402983dcd42085b0887592010dd5bcb70b48282155c56da0ab172fd2f663c",
+      "decimal": "\u066b"
+    }
+  }
+}

@@ -30,7 +30,11 @@
       "!test/formats/unicodemath/unreached-fixtures.json",
       "!test/formats/unicodemath/reachability-fixtures.json",
       "!test/formats/unicodemath/scope-gap-fixtures.json",
-      "!test/formats/unicodemath/xml-origin-fixtures.json"
+      "!test/formats/unicodemath/xml-origin-fixtures.json",
+      "!assets/html/dot.json",
+      "!assets/html/comma.json",
+      "!assets/html/arabic.json",
+      "!test/formats/html/initialized-source.json"
     ]
   },
   "formatter": {

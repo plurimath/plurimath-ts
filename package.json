@@ -170,7 +170,20 @@
         "types": "./dist/unicodemath-umath.d.cts",
         "default": "./dist/unicodemath-umath.cjs"
       }
-    }
+    },
+    "./html/parsanol": {
+      "import": {
+        "types": "./dist/html-parsanol.d.ts",
+        "default": "./dist/html-parsanol.js"
+      },
+      "require": {
+        "types": "./dist/html-parsanol.d.cts",
+        "default": "./dist/html-parsanol.cjs"
+      }
+    },
+    "./html/artifacts/dot.json": "./dist/html-artifacts/dot.json",
+    "./html/artifacts/comma.json": "./dist/html-artifacts/comma.json",
+    "./html/artifacts/arabic.json": "./dist/html-artifacts/arabic.json"
   },
   "files": [
     "dist"

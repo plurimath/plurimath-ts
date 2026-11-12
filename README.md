@@ -136,6 +136,13 @@ evaluateResult(parse("sin(1)", "asciimath"), {}, options).value;
 JavaScript number: a Rational, a BigDecimal, an integer beyond the safe range,
 or a strict evaluation that stopped.
 
+For exact quantities, call `evaluateQuantity(formula, { runtime, bindings, target })`
+with the UnitsML module as `runtime`. It uses UnitsML for dimension checks,
+scale-aware arithmetic, and conversion. For example, a formula multiplying
+`2 unitsml(kV)` by `3 unitsml(A)` evaluates to `6 kW` with `target: "kW"`.
+The runtime is supplied by the caller so numeric-only consumers need no
+additional dependency.
+
 ### Optional Leptris XML input
 
 `./mathml/leptris` and `./omml/leptris` expose parser factories for an
@@ -170,6 +177,20 @@ when snapshot retrieval fails. There is no native-reader fallback. Plurimath
 keeps its named-entity compatibility in the adapter; other XML semantics come
 from Leptris. See [the integration notes](docs/leptris-experiment.md) for the
 binding contract and real-WASM verification command.
+
+### Serialized evaluation with WASM
+
+Import `initNumericWasm` from `@plurimath/plurimath-ts/evaluation/wasm`
+and pass the bundled `@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm`
+bytes or a `URL` object pointing to them. The evaluator's `evaluateRequest(json)` accepts
+numeric, quantity, and GUM v1 requests. The kernel supports uncertainty
+propagation, series statistics, coverage factors, conformance decisions, and
+Monte Carlo propagation for independent and joint-normal inputs, including the
+supported certified rational models. Caller registers supply exact conversion
+factors, offsets and dimensions in the quantity request. Conformance results
+include signed residuals and the selected rule's boundary decision. The
+kernel returns typed refusals for unsupported sampling profiles. The pinned request and response examples are in
+[`test/fixtures/evaluation-wasm`](test/fixtures/evaluation-wasm).
 
 ### The compat class
 
@@ -279,6 +300,54 @@ write it. `ParseOptionError` (`PARSE_OPTION_ERROR`) and
   accept nested `unitsml` options.
 - Constructs the renderers have not measured raise `RenderError`.
 
+### Shared AsciiMath PARG/WASM parser
+
+The `asciimath/amath` entry accepts an initialized `amath-ts` parser. It keeps
+Plurimath's preprocessing, locale options, Formula tree and writers; the stage
+owns the shared grammar and WASM engine. Initialization remains caller-owned.
+
+```ts
+import { initialize } from "@plurimath/amath-ts";
+import { createAsciimathParser } from "@plurimath/plurimath-ts/asciimath/amath";
+import { toLatex } from "@plurimath/plurimath-ts/latex";
+
+const parseAsciimath = createAsciimathParser(await initialize());
+console.log(toLatex(parseAsciimath("x^2")));
+```
+
+The optional stage package must be available separately. Its browser binding can
+be supplied through the same factory after browser runtime initialization.
+
+### Initialized HTML PARG parser
+
+The HTML artifact profile is qualified with `parsanol-ts` commit
+`7ce2e27a201de90e6b35a4090ae3c906d7b9cb7f` and Parsanol engine 0.20.15.
+
+`html/parsanol` consumes initialized Parsanol runtimes without loading WASM or
+falling back to the default parser. Initialize the SDK once, load the exact
+artifact text from the `html/artifacts/dot.json`, `comma.json` and `arabic.json`
+exports, and construct each runtime with entry `document`. Keep the artifact
+text unchanged: parsing and reserializing JSON can invalidate its checksum.
+
+```ts
+import { createHtmlParser } from "@plurimath/plurimath-ts/html/parsanol";
+
+// Each value is an initialized SDK PargRuntime for the corresponding asset.
+const runtimes = new Map([[".", dotRuntime], [",", commaRuntime], ["٫", arabicRuntime]]);
+const parseHtml = createHtmlParser((decimal) => {
+  const runtime = runtimes.get(decimal);
+  if (!runtime) throw new Error(`HTML runtime not initialized for ${decimal}`);
+  return runtime;
+});
+const formula = parseHtml("<b>1,5</b>", { locale: "de" });
+```
+
+The caller owns runtime initialization and disposal. Parsing stays synchronous;
+engine/resource errors propagate unchanged. Parse options, entity normalization,
+the source 100-container capture limit and Formula mapping share the ordinary
+HTML consumer implementation. Artifact manifests record source provenance and
+exact file hashes. This optional entry does not change the root parser default.
+
 ## Development
 
 Building needs Node `^22.18.0 || >=24.11.0` (the range tsdown declares; Node 23
@@ -319,3 +388,11 @@ depends on the milestone, like every other gate.
 ## Copyright and license
 
 Copyright Ribose. BSD 2-clause license.
+
+### Initialized LaTeX and Unicode stage parsers
+
+`plurimath/latex/latexmath` exports `createLatexParser(binding)` and `plurimath/unicodemath/umath` exports `createUnicodemathParser(binding)`. Pass an initialized stage binding exposing `parsePreparedTree`; the facade handles its own preprocessing, locale validation, source offsets and equation labels. The returned synchronous parser yields the regular Formula tree for every existing writer. Initialization/artifact failures propagate without a handwritten-grammar fallback.
+
+Run `node scripts/check-text-stage-runtimes.mjs /absolute/latexmath-ts/dist/index.js /absolute/umath-ts/dist/index.js` after building both stage packages to check the actual WASM stages against the established Formula and writer behavior. Browser readiness depends on a browser-capable initialized engine.
+
+The GUM `validate_coverage` operation compares caller-supplied coverage metadata with the documented Ruby compatibility semantics and metadata trust boundary.

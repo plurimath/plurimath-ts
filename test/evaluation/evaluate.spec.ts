@@ -4,8 +4,8 @@
  * iterations, the `Math` module functions, and plurimath 0.11.13's
  * accuracy-aware evaluation with its strict and guarded modes).
  *
- * The rows are `test/formats/evaluation/evaluation-fixtures.json`, written by
- * `scripts/generate-evaluation-fixtures.rb` from the pinned gem. Each
+ * The rows are the Ruby 8916961 profile under `test/formats/evaluation`,
+ * written by `scripts/generate-evaluation-fixtures.rb` from the pinned source. Each
  * evaluated row records the gem's `Evaluation::Result`: `expected` is the
  * value's `#inspect` STRING with its class in `valueClass`, `boundaries` every
  * boundary record (each Ruby value as its `#inspect`), and `unevaluated` the
@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { UnsupportedFeatureError } from "../../src/core/errors";
 import { FormulaNode, type MathNode, NumberNode, TextNode } from "../../src/core/nodes";
+import { fromRational } from "../../src/evaluation/big-decimal";
 import {
   DEFAULT_MAX_ITERATIONS,
   Evaluator,
@@ -49,6 +50,8 @@ import {
   NonFiniteResultError,
   UnsupportedExpressionError,
 } from "../../src/evaluation/index";
+import { float, integer, rational } from "../../src/evaluation/numeric";
+import { combineAccuracy } from "../../src/evaluation/result";
 import { parseAsciimath, toAsciimath } from "../../src/formats/asciimath/index";
 import { parseLatex } from "../../src/formats/latex/index";
 
@@ -123,9 +126,13 @@ function parseRowInput(input: Row["input"]): ReturnType<typeof parseAsciimath> {
 }
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+const FIXTURES = join(HERE, "..", "formats", "evaluation");
 const fixture = JSON.parse(
-  readFileSync(join(HERE, "..", "formats", "evaluation", "evaluation-fixtures.json"), "utf8"),
+  readFileSync(join(FIXTURES, "ruby-8916961-v1", "evaluation-fixtures.json"), "utf8"),
 ) as { readonly cases: readonly Row[] };
+const historical = JSON.parse(readFileSync(join(FIXTURES, "evaluation-fixtures.json"), "utf8")) as {
+  readonly cases: readonly Row[];
+};
 const rows = fixture.cases;
 
 /**
@@ -184,8 +191,27 @@ function toBindings(raw: Row["bindings"]): EvaluationBindings {
 }
 
 describe("evaluate() against the oracle fixtures", () => {
-  it("has fixture rows to check", () => {
-    expect(rows.length).toBeGreaterThan(0);
+  it("retains every historical input, binding, option and supported refusal", () => {
+    const inputs = (row: Row) => ({
+      id: row.id,
+      group: row.group,
+      source: row.source,
+      input: row.input,
+      bindings: row.bindings,
+      options: row.options,
+    });
+    expect(rows.map(inputs)).toEqual(historical.cases.map(inputs));
+    const refusals = (cases: readonly Row[]) =>
+      cases.flatMap((row) => (row.portRefusal === undefined ? [] : [[row.id, row.portRefusal]]));
+    const acceptedGuardOperands = new Set([
+      "guarded-decimal-literal-operand",
+      "guarded-rational-operand",
+      "guarded-rational-sqrt-operand",
+      "guarded-string-binding",
+    ]);
+    expect(refusals(rows)).toEqual(
+      refusals(historical.cases.filter((row) => !acceptedGuardOperands.has(row.id))),
+    );
   });
 
   // The P4 exit criterion asks for a case that hits the iteration cap with the
@@ -417,5 +443,73 @@ describe("evaluate's Text variable-name strip", () => {
     // with "missing value for variable `a\u0000\u0000a`".
     const inner = new FormulaNode({ value: [new TextNode({ parameterOne: "\0a\0\0a\0" })] });
     expect(() => evaluate(inner)).toThrow("missing value for variable `a\0\0a`");
+  });
+});
+
+describe("Ruby F19 accuracy invariants", () => {
+  it("preserves limited Float and BigDecimal accuracy when adding exact operands", () => {
+    const decimal = fromRational(12345n, 10000n, 5);
+    for (const [limited, label] of [
+      [float(0.5), "limited_float"],
+      [decimal, "limited_5"],
+    ] as const) {
+      for (const exact of [integer(1n), rational(1n, 3n)]) {
+        expect(combineAccuracy([exact, limited])).toBe(label);
+        expect(combineAccuracy([limited, exact])).toBe(label);
+      }
+    }
+    expect(combineAccuracy([decimal, integer(1n), float(0.5)])).toBe("limited_float");
+  });
+
+  it.each([
+    { guardDigits: 7, expected: "0.3271947e0" },
+    { guardDigits: 20, expected: "0.32719469679615224417e0" },
+  ])(
+    "converts a nonterminating rational guard operand at $guardDigits digits",
+    ({ guardDigits, expected }) => {
+      const result = evaluateResult(
+        parseAsciimath("sin(1/3)"),
+        {},
+        { mode: "strict", guardDigits },
+      );
+      expect(asRecorded(result)).toEqual({
+        expected,
+        valueClass: "BigDecimal",
+        boundaries: [
+          {
+            operation: "sin",
+            operands: ["(1/3)"],
+            operandAccuracy: "exact",
+            action: "guarded",
+            result: expected,
+          },
+        ],
+        unevaluated: [],
+      });
+    },
+  );
+
+  it("retains limited Float accuracy when division recovers from infinity", () => {
+    expect(asRecorded(evaluateResult(parseAsciimath("1/exp(1000)")))).toEqual({
+      expected: "0.0",
+      valueClass: "Float",
+      boundaries: [
+        {
+          operation: "exp",
+          operands: ["1000"],
+          operandAccuracy: "exact",
+          action: "approximated",
+          result: "Infinity",
+        },
+        {
+          operation: "divide",
+          operands: ["1", "Infinity"],
+          operandAccuracy: "limited_float",
+          action: "approximated",
+          result: "0.0",
+        },
+      ],
+      unevaluated: [],
+    });
   });
 });

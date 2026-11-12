@@ -1,0 +1,132 @@
+{
+  "schema": "plurimath-ts.numeric-wasm-asset/2",
+  "file": "plurimath_numeric.wasm",
+  "sha256": "2a433d2f46b231f2a2fbf549b5276bdb0b8afb1d0676cffaeaa3a77d6958a1b6",
+  "bytes": 7275562,
+  "abi": 1,
+  "request_schemas": [
+    "plurimath.evaluate.numeric/1",
+    "plurimath.evaluate.quantity/1",
+    "plurimath.evaluate.gum/1"
+  ],
+  "engines": [
+    "plurimath.numeric/1",
+    "plurimath.quantity/1",
+    "plurimath.gum/1"
+  ],
+  "quantity": true,
+  "claims": {
+    "gum": "149 sealed scientific and caller-metadata diagnostic wires, including13 published Monte Carlo profiles",
+    "named_power_class": "not asserted",
+    "caller_register": "32 exact declared-register value and refusal wires",
+    "coverage_validation": "48 source-compatible caller-metadata diagnostics plus one actual170000-sample MCM regression; no provenance or physical adequacy certification"
+  },
+  "source": {
+    "crate": "plurimath-numeric",
+    "version": "0.1.0",
+    "crate_sha256": "0b5547ada284ef8e70a69de125b385d1688c9c803a48491b0ca7d8cb753b5164",
+    "revision": "8f9273968a9e17dc604eb1ae66a84b9c4fa30f1c",
+    "base": "86ece1b9004b1ae09e25b5f962987b6e1067e87c",
+    "feature": "quantity",
+    "wasm_target": "wasm32-unknown-unknown",
+    "compiler": "rustc 1.95.0 (59807616e 2026-04-14)",
+    "wasm_bindgen": "wasm-bindgen 0.2.130",
+    "cargo_lock": {
+      "file": "Cargo.lock",
+      "sha256": "98f5ce4d6416371c045ca826ff153ba1c28743eeb105029c8b7b049669a5613d"
+    },
+    "dependency_pins": {
+      "asciiunits": {
+        "source": "498cec2ce946c7bcb3b1b26313667b188ddf76aa",
+        "data": {
+          "path": "workspace/units-native/asciiunits-rs/artifacts/unitsml.json",
+          "sha256": "139d91337a0944d60f36bc144a205625349f4b3b8b7ff1a0fba3c61e70c57804",
+          "bytes": 45393
+        }
+      },
+      "unitsml": {
+        "source": "c0a1bb5e1b5f35f03ce7eac9557ddfedabba3353"
+      },
+      "unitsdb": {
+        "source": "c631488e03f58c5cfd0ada369948b946a23a4f42",
+        "data": {
+          "path": "workspace/units-native/unitsdb-rs/data/unitsdb.json",
+          "sha256": "660b471fd895d99a74849adaf1cfb0ec4570cd5dbcd9ebf695970af0dc0b3c97",
+          "bytes": 535123
+        }
+      },
+      "parsanol": {
+        "source": "20d5e6cebcade3cf2111a00a7ef3f5b69d673481"
+      }
+    },
+    "artifact_receipt_sha256": "2de35e69171c658f6b7e66763d94f7a8886d0c289d4c8f03f127fe741acfc5f5",
+    "wasm_metadata_sha256": "2e6574dd60450222bce96f641463d75876ae01a44a694d59972319342b1987e5"
+  },
+  "glue": {
+    "origin": "plurimath_numeric.js (wasm-bindgen 0.2.130 --target web)",
+    "file": "src/evaluation/quantity-wasm/plurimath_numeric.js",
+    "sha256": "7455faeb6e8aa4f77680f54e6fa2a40ab8eee8e57c3e499b32dc6cc8f24962e6",
+    "types_file": "src/evaluation/quantity-wasm/plurimath_numeric.d.ts",
+    "types_sha256": "4e62a95047500526aa8eee5304a363a8d48266e305f47a926329d8b39b06d13f",
+    "wasm_types_sha256": "abb55d27f6e78c78e5b714a88a3de927967ab71298af086d6c29c8859fc8a52b"
+  },
+  "license": {
+    "file": "LICENSE",
+    "sha256": "8bb27670459027923124649be6582f3325a3ac9b1df5503130f2633a66f97938",
+    "spdx": "BSD-2-Clause"
+  },
+  "notice": {
+    "file": "NOTICE",
+    "sha256": "07f8146e32963ed2960fd26041f13d95f2511a1b1b6dec0e7ebcadb0ef9fae64"
+  },
+  "dependency_notices": {
+    "manifest": "licenses/license-manifest.json",
+    "sha256": "f0f56050c6ff58111b5a80c29516326ceeecb321420a99e637b364c227564f1b",
+    "groups": 52,
+    "files": 99
+  },
+  "vectors": {
+    "quantity-wasm-v1.json": {
+      "sha256": "640760792eb51f378af8f52cba7d942534b2b22dfaf9ee99195d0af3100a728a",
+      "cases": 162,
+      "profiles": {
+        "numeric": 159,
+        "quantity": 3
+      },
+      "native_sha256": "b2aac863f12a72de1f658971378c8ca8149643167bab2dcab4f96b794cd949be"
+    },
+    "gum-wasm-v1.json": {
+      "sha256": "cdcd219e17a95128c6f67e151f8de0b7e362a37e256898930f2157c5fae933e7",
+      "cases": 100,
+      "request_schema": "plurimath.evaluate.gum/1",
+      "native_sha256": "b2aac863f12a72de1f658971378c8ca8149643167bab2dcab4f96b794cd949be"
+    },
+    "extended-quantity-v1.json": {
+      "sha256": "c634739ff686579f6db918d93f15c2de9f7f200ba8e907e09cf8fe0aeaf23224",
+      "cases": 29,
+      "profiles": {
+        "quantity": 29
+      },
+      "native_sha256": "b2aac863f12a72de1f658971378c8ca8149643167bab2dcab4f96b794cd949be"
+    },
+    "numeric-annex-v1.json": {
+      "sha256": "d261c77c5f1bf3e845c289fbc62a423cc4127b21437f458e11f426ff0ce3082a",
+      "cases": 45,
+      "request_schema": "plurimath.evaluate.numeric/1",
+      "native_sha256": "b2aac863f12a72de1f658971378c8ca8149643167bab2dcab4f96b794cd949be"
+    },
+    "quantity-register-v1.json": {
+      "sha256": "d51a6a05a1cd218b373a5fcde89c76ed86a5df5f92109047e76796ac089d9cc3",
+      "cases": 32,
+      "request_schema": "plurimath.evaluate.quantity/1",
+      "native_sha256": "b2aac863f12a72de1f658971378c8ca8149643167bab2dcab4f96b794cd949be"
+    },
+    "coverage-validation-wires.json": {
+      "sha256": "9d1335826628737976c927715c27225003ba501061a3397e9069c7b9519cbc7b",
+      "cases": 49,
+      "request_schema": "plurimath.evaluate.gum/1",
+      "native_sha256": "790731b4a1dd21ca1a5e9b165e1e848ad91579dea359c2dcb412dd2686575803"
+    }
+  },
+  "vectors_total": 417
+}

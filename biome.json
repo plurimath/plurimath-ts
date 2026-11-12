@@ -22,12 +22,19 @@
       "!test/evaluation/libm-log-corpus.json",
       "!test/evaluation/libm-hyperbolic-corpus.json",
       "!src/unitsml/generated/*.json",
+      "!src/evaluation/quantity-wasm",
+      "!assets/wasm",
+      "!test/fixtures/evaluation-wasm",
       "!test/formats/unitsml/probe-fixtures.json",
       "!test/formats/unicodemath/completion-fixtures.json",
       "!test/formats/unicodemath/unreached-fixtures.json",
       "!test/formats/unicodemath/reachability-fixtures.json",
       "!test/formats/unicodemath/scope-gap-fixtures.json",
-      "!test/formats/unicodemath/xml-origin-fixtures.json"
+      "!test/formats/unicodemath/xml-origin-fixtures.json",
+      "!assets/html/dot.json",
+      "!assets/html/comma.json",
+      "!assets/html/arabic.json",
+      "!test/formats/html/initialized-source.json"
     ]
   },
   "formatter": {

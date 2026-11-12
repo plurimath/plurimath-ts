@@ -95,15 +95,15 @@ export function accuracyOf(value: RubyNumeric): string {
 }
 
 function accuracyRank(label: string): number {
-  if (label === "exact") return 0;
-  if (label === "limited_float") return Number.POSITIVE_INFINITY;
+  if (label === "exact") return Number.POSITIVE_INFINITY;
+  if (label === "limited_float") return Number.NEGATIVE_INFINITY;
   return Number(label.slice("limited_".length));
 }
 
 /**
- * Ruby: `Accuracy.combine(*values)` — `min_by` over the ranks `exact` 0,
- * `limited_<n>` n, `limited_float` infinity, keeping the first of equal
- * ranks. (So an exact operand beside a BigDecimal one gives `exact`.)
+ * Ruby: `Accuracy.combine(*values)` — exact operands cannot improve a
+ * limited result. Float limitations dominate; otherwise the least declared
+ * decimal precision wins. Keep the first of equal ranks.
  */
 export function combineAccuracy(values: readonly RubyNumeric[]): string {
   let best: string | null = null;

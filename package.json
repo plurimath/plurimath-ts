@@ -49,6 +49,17 @@
         "default": "./dist/core.cjs"
       }
     },
+    "./evaluation/wasm": {
+      "import": {
+        "types": "./dist/evaluation-wasm.d.ts",
+        "default": "./dist/evaluation-wasm.js"
+      },
+      "require": {
+        "types": "./dist/evaluation-wasm.d.cts",
+        "default": "./dist/evaluation-wasm.cjs"
+      }
+    },
+    "./evaluation/plurimath_numeric.wasm": "./dist/plurimath_numeric.wasm",
     "./asciimath": {
       "import": {
         "types": "./dist/asciimath.d.ts",
@@ -129,7 +140,50 @@
         "types": "./dist/omml-leptris.d.cts",
         "default": "./dist/omml-leptris.cjs"
       }
-    }
+    },
+    "./asciimath/amath": {
+      "import": {
+        "types": "./dist/asciimath-amath.d.ts",
+        "default": "./dist/asciimath-amath.js"
+      },
+      "require": {
+        "types": "./dist/asciimath-amath.d.cts",
+        "default": "./dist/asciimath-amath.cjs"
+      }
+    },
+    "./latex/latexmath": {
+      "import": {
+        "types": "./dist/latex-latexmath.d.ts",
+        "default": "./dist/latex-latexmath.js"
+      },
+      "require": {
+        "types": "./dist/latex-latexmath.d.cts",
+        "default": "./dist/latex-latexmath.cjs"
+      }
+    },
+    "./unicodemath/umath": {
+      "import": {
+        "types": "./dist/unicodemath-umath.d.ts",
+        "default": "./dist/unicodemath-umath.js"
+      },
+      "require": {
+        "types": "./dist/unicodemath-umath.d.cts",
+        "default": "./dist/unicodemath-umath.cjs"
+      }
+    },
+    "./html/parsanol": {
+      "import": {
+        "types": "./dist/html-parsanol.d.ts",
+        "default": "./dist/html-parsanol.js"
+      },
+      "require": {
+        "types": "./dist/html-parsanol.d.cts",
+        "default": "./dist/html-parsanol.cjs"
+      }
+    },
+    "./html/artifacts/dot.json": "./dist/html-artifacts/dot.json",
+    "./html/artifacts/comma.json": "./dist/html-artifacts/comma.json",
+    "./html/artifacts/arabic.json": "./dist/html-artifacts/arabic.json"
   },
   "files": [
     "dist"

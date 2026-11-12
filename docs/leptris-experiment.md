@@ -78,16 +78,11 @@ renderers, external runtime imports and bundled dependencies are forbidden.
 The required-source policies ensure the reader and actual format translator
 survive in each artifact.
 
-## Before merging
+## Verified binding
 
-Use the official binding built with the WASM tree-export fix and an engine
-containing the namespace-cache fix. Record the binding and engine
-versions or commits with the verification results; an earlier fork artifact
-is not evidence for the final upstream build. If the accepted binding API
-changes, update the adapter and its tests before proceeding.
-
-Retarget the Plurimath PR to `main` and test the resulting combined source. Run the normal CI gates and runtime suites on the supported
-Node versions, then run all three real-binding probe commands above against
-the official artifact. Require every command to exit successfully, no excluded
-corpus cases and equal loaded/closed handle counts. The unit tests with injected
-snapshots do not replace those real-binding probes.
+The package gate installs the official `leptris@0.1.48` binding
+(`leptris-ts` commit `63cb9cd43c7736857e985071c8e7bace80ccae7d`), verifies its
+WASM digest, and runs the real binding against the built ESM and CommonJS
+entries. Both modes cover 301 MathML and 199 OMML rows, including parse
+refusals and matching writer outcomes. If the binding API changes, update
+the adapter and rerun both package probes.

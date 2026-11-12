@@ -26,19 +26,27 @@
 
 import { describe, expect, it } from "vitest";
 import packageJson from "../../package.json";
+import * as amath from "../../src/formats/asciimath/amath";
 import * as asciimath from "../../src/formats/asciimath/index";
 import * as html from "../../src/formats/html/index";
+import * as htmlParsanol from "../../src/formats/html/parsanol";
 import * as latex from "../../src/formats/latex/index";
+import * as latexmath from "../../src/formats/latex/latexmath";
 import * as mathml from "../../src/formats/mathml/index";
 import * as mathmlLeptris from "../../src/formats/mathml/leptris";
 import * as omml from "../../src/formats/omml/index";
 import * as ommlLeptris from "../../src/formats/omml/leptris";
 import * as unicodemath from "../../src/formats/unicodemath/index";
+import * as umath from "../../src/formats/unicodemath/umath";
 
 /** Runtime exports only — types erase, so they cannot be asserted here. */
 const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly string[]]> = [
   ["./asciimath", asciimath, ["parseAsciimath", "toAsciimath"]],
+  ["./asciimath/amath", amath, ["createAsciimathParser"]],
+  ["./latex/latexmath", latexmath, ["createLatexParser"]],
+  ["./unicodemath/umath", umath, ["createUnicodemathParser"]],
   ["./html", html, ["parseHtml", "toHtml"]],
+  ["./html/parsanol", htmlParsanol, ["createHtmlParser"]],
   ["./latex", latex, ["parseLatex", "toLatex"]],
   ["./mathml", mathml, ["parseMathml", "toMathml"]],
   ["./omml", omml, ["parseOmml", "toOmml"]],
@@ -48,7 +56,13 @@ const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly
 ];
 
 const PUBLISHED_FORMAT_SUBPATHS = Object.keys(packageJson.exports).filter(
-  (subpath) => subpath !== "." && subpath !== "./core" && subpath !== "./package.json",
+  (subpath) =>
+    subpath !== "." &&
+    subpath !== "./core" &&
+    subpath !== "./package.json" &&
+    subpath !== "./evaluation/wasm" &&
+    subpath !== "./evaluation/plurimath_numeric.wasm" &&
+    !subpath.startsWith("./html/artifacts/"),
 );
 
 it("publishes every declared format surface as a package subpath", () => {

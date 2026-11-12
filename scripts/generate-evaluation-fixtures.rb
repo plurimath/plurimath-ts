@@ -68,16 +68,26 @@ GENERATOR_RELATIVE_PATH = "scripts/generate-evaluation-fixtures.rb"
 SCHEMA = "plurimath-corpus/evaluation/1"
 PAYLOAD_BASENAME = "evaluation-fixtures.json"
 
-options = { oracle: nil, out: "test/formats/evaluation", allow_dirty: false }
+options = { oracle: nil, out: "test/formats/evaluation", allow_dirty: false, source_candidate: false }
 OptionParser.new do |o|
   o.on("--oracle PATH", "clean pinned plurimath checkout") { |v| options[:oracle] = v }
-  o.on("--out PATH", "output directory (default test/formats/evaluation)") { |v| options[:out] = v }
+  o.on("--out PATH", "output directory (default test/formats/evaluation)") do |v|
+    options[:out] = v
+    options[:explicit_out] = true
+  end
+  o.on("--source-candidate", "seal a clean oracle with the active public Git-pinned bundle") do
+    options[:source_candidate] = true
+  end
   o.on("--allow-dirty", "emit non-committable output from dirty checkouts") do
     options[:allow_dirty] = true
   end
 end.parse!
 
 abort "--oracle is required" unless options[:oracle]
+if options[:source_candidate]
+  abort "--source-candidate cannot be combined with --allow-dirty" if options[:allow_dirty]
+  abort "--source-candidate requires a separate explicit --out directory" unless options[:explicit_out]
+end
 
 oracle = File.expand_path(options[:oracle])
 lib = File.join(oracle, "lib")
@@ -241,6 +251,106 @@ def evaluate_row(id, group, source, format, text, bindings, port_refusal, option
   row["portRefusal"] = port_refusal if port_refusal
   row
 end
+
+# The canonical helper deliberately reads the oracle checkout's Gemfile.lock.
+# A source candidate instead uses a separate, active Bundler lock with an
+# explicit oracle path and public Git-pinned stage gems. Keep that distinction
+# visible in the manifest and apply the same clean-checkout requirements.
+def source_candidate_provenance(oracle, payload_path)
+  generator_root = CorpusGenerator::REPO_ROOT
+  CorpusGenerator.require_ox_engine!
+  dirty = CorpusGenerator.check_checkouts!(
+    oracle, oracle, RenderFixtureProvenance.managed_output_paths(payload_path), false,
+  )
+  spec = Gem.loaded_specs.fetch("plurimath")
+  abort "REFUSING: loaded oracle does not match --oracle" unless File.realpath(spec.full_gem_path) == File.realpath(oracle)
+
+  lockfile = Bundler.default_lockfile
+  unless lockfile.basename.to_s == "Gemfile.lock" && lockfile.file?
+    abort "REFUSING: source candidates require the active Bundler Gemfile.lock"
+  end
+  dependency = CorpusGenerator.dependency_provenance(lockfile.dirname.to_s, spec).fetch(:provenance)
+  lock = CorpusGenerator.parse_lockfile(lockfile.to_s)
+  lock.fetch(:specs).each do |name, locked|
+    unless Gem.loaded_specs.fetch(name).version.to_s == locked.fetch("version")
+      abort "REFUSING: activated #{name} version disagrees with the active lockfile"
+    end
+  end
+
+  public_git = /\Ahttps:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\z/
+  oracle_url = CorpusGenerator.git(oracle, "config", "--get", "remote.origin.url").strip
+    .sub(/\Agit@(?:[A-Za-z0-9-]+\.)?github\.com:/, "https://github.com/")
+  abort "REFUSING: expected a public HTTPS oracle repository" unless public_git.match?(oracle_url)
+  verified = []
+  primary_paths = 0
+  dependency.fetch("sources").each do |source|
+    case source.fetch("kind")
+    when "path"
+      directory = File.expand_path(source.fetch("remote"), lockfile.dirname.to_s)
+      unless File.realpath(directory) == File.realpath(oracle) && source.fetch("gem_names") == ["plurimath"]
+        abort "REFUSING: only the explicit primary oracle may be a path dependency"
+      end
+      primary_paths += 1
+      source["remote"] = "."
+    when "git"
+      url, revision = source.values_at("remote", "revision")
+      unless public_git.match?(url) && revision&.match?(/\A[0-9a-f]{40}\z/)
+        abort "REFUSING: source candidate Git dependencies require public HTTPS and exact revisions"
+      end
+      source.fetch("gem_names").each do |name|
+        loaded = Gem.loaded_specs.fetch(name)
+        checkout = CorpusGenerator.git(loaded.full_gem_path, "rev-parse", "--show-toplevel").strip
+        raise CorpusGenerator::Error, "#{name} does not match #{revision}" unless CorpusGenerator.git(checkout, "rev-parse", "HEAD").strip == revision
+        changed = CorpusGenerator.dirty_paths(checkout)
+        generated = nil
+        unless changed.empty?
+          # Bundler serializes the loaded gemspec. Only its exact generated
+          # bytes may differ; all runtime files still match the Git tree.
+          path = CorpusGenerator.relative(loaded.loaded_from, checkout)
+          bytes = File.binread(loaded.loaded_from)
+          unless changed == [path] && path.end_with?(".gemspec") && bytes == loaded.to_ruby.b
+            abort "REFUSING: #{name} Git payload differs from its locked revision"
+          end
+          generated = { "path" => path, "sha256" => CorpusGenerator.sha256(bytes) }
+        end
+        verified << {
+          "gem" => name, "url" => url, "revision" => revision,
+          "tree" => CorpusGenerator.git(checkout, "rev-parse", "HEAD^{tree}").strip,
+          "bundler_serialized_gemspec" => generated,
+        }
+      end
+    end
+  end
+  abort "REFUSING: source candidate requires one explicit oracle and public Git dependencies" unless primary_paths == 1 && !verified.empty?
+
+  inputs = RenderFixtureProvenance.generator_inputs(GENERATOR_RELATIVE_PATH)
+  manifest = {
+    "schema" => CorpusGenerator::MANIFEST_SCHEMA,
+    "committable" => true, "warnings" => [],
+    "generator" => {
+      "path" => GENERATOR_RELATIVE_PATH, "sha256" => inputs.fetch(GENERATOR_RELATIVE_PATH),
+      "inputs" => inputs,
+      "repository" => CorpusGenerator.checkout_provenance(generator_root, dirty.fetch("generator")),
+    },
+    "oracle" => {
+      "gem" => "plurimath", "version" => spec.version.to_s, "kind" => "git-checkout",
+    }.merge(CorpusGenerator.checkout_provenance(oracle, dirty.fetch("gem"))),
+    "ruby" => { "engine" => RUBY_ENGINE, "version" => RUBY_VERSION },
+    "xml_engine" => Plurimath.xml_engine.to_s,
+    "configuration" => CorpusGenerator.configuration_provenance,
+    "dependencies" => dependency,
+    "source_candidate" => {
+      "schema" => "plurimath/evaluation-source-candidate/1", "released" => false,
+      "oracle_repository" => oracle_url, "active_lock_sha256" => dependency.fetch("lockfile").fetch("sha256"),
+      "verified_active_versions" => lock.fetch(:specs).size, "git_payloads" => verified,
+    },
+  }
+  [RenderFixtureProvenance.manifest_path(payload_path), manifest]
+end
+
+candidate_provenance = source_candidate_provenance(
+  oracle, File.expand_path(File.join(options[:out], PAYLOAD_BASENAME)),
+) if options[:source_candidate]
 
 # `numeric.ts`'s own `INTEGER_BIT_LIMIT` (`1 << 22`), read from its source
 # rather than restated as a literal, so a `size-limit` row is validated
@@ -1521,14 +1631,16 @@ ACCURACY_ROWS = [].tap do |rows|
     ["guarded-decimal-literal-operand", "guarded-errors", "sin(0.5)"],
     ["guarded-rational-operand", "guarded-errors", "sin(1/2)"],
     ["guarded-rational-sqrt-operand", "guarded-errors", "sqrt(1/2)"],
-  ].each { |id, group, text| rows << [id, group, "asciimath", text, GUARDED, {}, "argument-error"] }
+  # Current F19 converts decimal/rational guard operands at declared precision.
+  ].each { |id, group, text| rows << [id, group, "asciimath", text, GUARDED, {}, nil] }
   rows << ["guarded-exp-exponent-beyond-safe", "guarded-exp", "asciimath", "exp(10^19)", GUARDED, {}, "decimal-exponent"]
   rows << ["guarded-float-binding", "guarded-limited-operand", "asciimath", "sin(x)", GUARDED, { "x" => 0.5 }, nil]
   rows << ["guarded-integer-binding", "guarded-bindings", "asciimath", "sin(x)", GUARDED, { "x" => 2 }, nil]
   rows << ["guarded-plus-float-binding", "guarded-bindings", "asciimath", "sin(1)+x", GUARDED, { "x" => 0.25 }, nil]
   rows << ["guarded-divided-by-float-binding", "guarded-bindings", "asciimath", "sin(1)/x", GUARDED, { "x" => 0.25 }, nil]
   rows << ["guarded-float-binding-divided-by", "guarded-bindings", "asciimath", "x/sin(1)", GUARDED, { "x" => 0.25 }, nil]
-  rows << ["guarded-string-binding", "guarded-bindings", "asciimath", "sin(x)", GUARDED, { "x" => "2" }, "argument-error"]
+  # Ruby BigDecimal accepts this numeric String in the current guard conversion.
+  rows << ["guarded-string-binding", "guarded-bindings", "asciimath", "sin(x)", GUARDED, { "x" => "2" }, nil]
   rows << ["guarded-latex-lg", "guarded-log", "latex", "\\lg(2)", GUARDED, {}, nil]
   rows << ["guarded-latex-lg-thousand", "guarded-log", "latex", "\\lg(1000)", GUARDED, {}, nil]
   rows << ["guarded-latex-sqrt", "guarded-sqrt", "latex", "\\sqrt{3}", GUARDED, {}, nil]
@@ -1615,13 +1727,20 @@ abort "REFUSING: fixtures never reached #{missing.join(', ')}" unless missing.em
 
 dir = File.expand_path(options[:out])
 payload_path = File.join(dir, PAYLOAD_BASENAME)
-sidecar, provenance = RenderFixtureProvenance.prepare(
+sidecar, provenance = candidate_provenance || RenderFixtureProvenance.prepare(
   oracle: oracle,
   payload_path: payload_path,
   generator_path: GENERATOR_RELATIVE_PATH,
   allow_dirty: options[:allow_dirty],
   corpus: false,
 )
+
+if candidate_provenance
+  provenance.fetch("source_candidate")["native_extensions"] =
+    $LOADED_FEATURES.grep(/parsanol.*\.(so|bundle)\z/).to_h do |path|
+      [File.basename(path), CorpusGenerator.sha256(File.binread(path))]
+    end
+end
 
 payload = {
   "$comment" => "GENERATED by #{GENERATOR_RELATIVE_PATH}. Do not edit.",

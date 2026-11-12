@@ -1,0 +1,5 @@
+# Pinned bytes: never convert line endings (manifests record exact SHA-256).
+*.wasm binary
+assets/wasm/** -text
+src/evaluation/quantity-wasm/** -text
+test/fixtures/evaluation-wasm/** -text

@@ -21,6 +21,7 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
@@ -122,6 +123,8 @@ const EVALUATION_EXPORTS = [
   "NonFiniteResultError",
   "UnsupportedExpressionError",
   "evaluate",
+  "evaluateQuantity",
+  "evaluateRequest",
   "evaluateResult",
   "inspectEvaluationValue",
 ];
@@ -158,8 +161,18 @@ const EXPECTED_DEFAULT = {
 const EXPECTED_EXPORTS = {
   ".": ROOT_EXPORTS,
   "./core": CORE_EXPORTS,
+  "./evaluation/wasm": [
+    "NUMERIC_WASM_ASSET",
+    "NumericWasmError",
+    "initNumericWasm",
+    "numericWasmFromExports",
+  ],
   "./asciimath": ["parseAsciimath", "toAsciimath"],
+  "./asciimath/amath": ["createAsciimathParser"],
+  "./latex/latexmath": ["createLatexParser"],
+  "./unicodemath/umath": ["createUnicodemathParser"],
   "./html": ["parseHtml", "toHtml"],
+  "./html/parsanol": ["createHtmlParser"],
   "./latex": ["parseLatex", "toLatex"],
   "./mathml": ["parseMathml", "toMathml"],
   "./omml": ["parseOmml", "toOmml"],
@@ -225,15 +238,47 @@ const LOCALE_GROUPS = /(?:^|\/)formatting\/generated\/locale-groups\.ts$/;
 const optionalReaderOutside = (format) =>
   new RegExp(`^(?!(?:src/)?(?:core|xml)/|(?:src/)?(?:formats|generated)/${format}/)`);
 
+// The WASM facade is transport only: no format, parser, XML, locale table or
+// TypeScript evaluator module may ship in it (no independent evaluator).
+// The only other module is the kernel's verbatim wasm-bindgen glue.
+const WASM_GLUE = /(?:^|\/)evaluation\/quantity-wasm\/plurimath_numeric\.js$/;
+const WASM_FACADE_ONLY =
+  /^(?!(?:src\/)?evaluation\/(?:wasm\.ts|quantity-wasm\/plurimath_numeric\.js)$)/;
+
 const FORBIDDEN = {
   // The root is intentionally full-sized; only subpath imports are slim.
   ".": NO_FORBIDDEN_SOURCES,
+  "./evaluation/wasm": [WASM_FACADE_ONLY],
   "./core": [...forbidOtherFormats(), /pegkit\//, LOCALE_DECIMALS, LOCALE_GROUPS],
   "./asciimath": [...forbidOtherFormats("asciimath"), /xml\//, LOCALE_GROUPS],
+  "./latex/latexmath": [
+    ...forbidOtherFormats("latex"),
+    /xml\//,
+    LOCALE_GROUPS,
+    /formats\/latex\/grammar\.ts$/,
+  ],
+  "./unicodemath/umath": [
+    ...forbidOtherFormats("unicodemath"),
+    /xml\//,
+    LOCALE_GROUPS,
+    /formats\/unicodemath\/grammar\.ts$/,
+  ],
+  "./asciimath/amath": [
+    ...forbidOtherFormats("asciimath"),
+    /xml\//,
+    LOCALE_GROUPS,
+    /formats\/asciimath\/grammar\.ts$/,
+  ],
   // HTML parses as well as renders, so pegkit is expected here; `xml` still
   // is not, because the HTML renderer builds its markup as strings rather
   // than through the XML layer.
   "./html": [...forbidOtherFormats("html"), /xml\//, LOCALE_GROUPS],
+  "./html/parsanol": [
+    ...forbidOtherFormats("html"),
+    /xml\//,
+    LOCALE_GROUPS,
+    /formats\/html\/grammar\.ts$/,
+  ],
   // LaTeX parses as well as renders (ARCHITECTURE.md §3, "parsing *and*
   // rendering when both exist"), so pegkit is expected here; `xml` still is
   // not, because LaTeX output is text.
@@ -251,10 +296,15 @@ const FORBIDDEN = {
 
 /** Sources a subpath's artifact must contain — the positive control for `FORBIDDEN`'s locale rows. */
 const REQUIRED = {
+  "./evaluation/wasm": [/(?:^|\/)evaluation\/wasm\.ts$/, WASM_GLUE],
   "./mathml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/mathml\/translator\.ts$/],
   "./omml/leptris": [/(?:^|\/)xml\/leptris\.ts$/, /(?:^|\/)formats\/omml\/translator\.ts$/],
   "./asciimath": [LOCALE_DECIMALS],
+  "./asciimath/amath": [LOCALE_DECIMALS, /formats\/asciimath\/amath\.ts$/],
+  "./latex/latexmath": [LOCALE_DECIMALS, /formats\/latex\/latexmath\.ts$/],
+  "./unicodemath/umath": [LOCALE_DECIMALS, /formats\/unicodemath\/umath\.ts$/],
   "./html": [LOCALE_DECIMALS],
+  "./html/parsanol": [LOCALE_DECIMALS, /formats\/html\/parsanol\.ts$/],
   "./latex": [LOCALE_DECIMALS],
   "./unicodemath": [LOCALE_DECIMALS],
 };
@@ -265,7 +315,28 @@ const fail = (message) => {
   failures.push(message);
 };
 
-const subpaths = Object.entries(pkg.exports).filter(([key]) => key !== "./package.json");
+/**
+ * Non-code exports: published files a consumer resolves by specifier. Each must
+ * exist in `dist` after the build with the digest its pin manifest records.
+ */
+const ASSET_EXPORTS = {
+  "./evaluation/plurimath_numeric.wasm": "assets/wasm/manifest.json",
+};
+const HTML_ASSET_EXPORTS = JSON.parse(
+  readFileSync(resolve(root, "assets/html/manifest.json"), "utf8"),
+).artifacts;
+const NON_CODE_EXPORTS = { ...ASSET_EXPORTS, ...HTML_ASSET_EXPORTS };
+const subpaths = Object.entries(pkg.exports).filter(
+  ([key]) => key !== "./package.json" && !Object.hasOwn(NON_CODE_EXPORTS, key),
+);
+for (const [key, target] of Object.entries(pkg.exports)) {
+  if (
+    typeof target === "string" &&
+    key !== "./package.json" &&
+    !Object.hasOwn(NON_CODE_EXPORTS, key)
+  )
+    fail(`${key} is a string export without an ASSET_EXPORTS row`);
+}
 for (const [subpath] of subpaths) {
   const expected = EXPECTED_EXPORTS[subpath];
   if (!Array.isArray(expected) || expected.length === 0) {
@@ -452,6 +523,84 @@ for (const [subpath, conditions] of subpaths) {
       }
     }
   }
+}
+
+// HTML artifacts are exact source exports; never reserialize them before runtime loading.
+for (const [key, pin] of Object.entries(HTML_ASSET_EXPORTS)) {
+  const target = pkg.exports[key];
+  if (target !== `./dist/html-artifacts/${pin.file}`) {
+    fail(`${key}: unexpected artifact export target`);
+    continue;
+  }
+  const bytes = readFileSync(resolve(root, target));
+  if (
+    createHash("sha256").update(bytes).digest("hex") !== pin.sha256 ||
+    bytes.length !== pin.bytes
+  ) {
+    fail(`${key}: source artifact bytes changed`);
+  }
+}
+
+// 3. every asset export ships the exact pinned bytes
+console.log("\nasset exports");
+for (const [key, manifestPath] of Object.entries(ASSET_EXPORTS)) {
+  const target = pkg.exports[key];
+  const pin = JSON.parse(readFileSync(resolve(root, manifestPath), "utf8"));
+  if (
+    typeof target !== "string" ||
+    !target.startsWith("./dist/") ||
+    !target.endsWith(`/${pin.file}`)
+  ) {
+    fail(`${key} must map to ./dist/${pin.file}`);
+    continue;
+  }
+  const file = resolve(root, target);
+  if (!existsSync(file)) {
+    fail(`${key}: ${target} was not built`);
+    continue;
+  }
+  const bytes = readFileSync(file);
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  if (digest !== pin.sha256 || bytes.length !== pin.bytes) {
+    fail(`${key}: ${target} is ${digest}/${bytes.length}, pinned ${pin.sha256}/${pin.bytes}`);
+  } else {
+    console.log(`  ✓ ${key} → ${target} sha256 ${digest}`);
+  }
+  const source = readFileSync(resolve(root, "src/evaluation/wasm.ts"), "utf8");
+  if (!source.includes(`sha256: "${pin.sha256}"`) || !source.includes(`bytes: ${pin.bytes},`)) {
+    fail(`src/evaluation/wasm.ts NUMERIC_WASM_ASSET does not pin ${manifestPath}`);
+  }
+  // Pinned companions: verbatim glue (bundled into the entry), licence,
+  // notice, Cargo.lock and every dependency notice, byte-exact in dist.
+  const sha = (path) => createHash("sha256").update(readFileSync(path)).digest("hex");
+  const assetDir = dirname(resolve(root, manifestPath));
+  const pinned = [];
+  if (pin.glue) {
+    pinned.push([resolve(root, pin.glue.file), pin.glue.sha256]);
+    pinned.push([resolve(root, pin.glue.types_file), pin.glue.types_sha256]);
+    if (!source.includes(`sha256: "${pin.glue.sha256}"`))
+      fail(`src/evaluation/wasm.ts NUMERIC_WASM_ASSET does not pin the glue digest`);
+  }
+  pinned.push([resolve(root, "dist/plurimath_numeric.LICENSE"), pin.license.sha256]);
+  pinned.push([resolve(root, "dist/plurimath_numeric.NOTICE"), pin.notice.sha256]);
+  if (pin.source?.cargo_lock)
+    pinned.push([resolve(root, "dist/plurimath_numeric.Cargo.lock"), pin.source.cargo_lock.sha256]);
+  if (pin.dependency_notices) {
+    const listing = resolve(assetDir, pin.dependency_notices.manifest);
+    pinned.push([listing, pin.dependency_notices.sha256]);
+    const groups = JSON.parse(readFileSync(listing, "utf8"));
+    if (groups.length !== pin.dependency_notices.groups)
+      fail(`${pin.dependency_notices.manifest} lists ${groups.length} groups`);
+    for (const group of groups)
+      for (const notice of group.notices)
+        pinned.push([
+          resolve(root, "dist/plurimath_numeric.licenses", notice.file.slice(9)),
+          notice.sha256,
+        ]);
+  }
+  const drift = pinned.filter(([path, digest]) => !existsSync(path) || sha(path) !== digest);
+  for (const [path] of drift) fail(`${path} is missing or differs from ${manifestPath}`);
+  if (drift.length === 0) console.log(`  ✓ ${pinned.length} pinned companion files byte-exact`);
 }
 
 // 4. the compat class's declaration surface, from the BUILT declaration files

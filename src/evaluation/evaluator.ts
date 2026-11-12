@@ -118,7 +118,7 @@ type NumberData = Extract<MathNode, { kind: "number" }>;
  * this checks that the value the discriminant holds is one of `NODE_KINDS`
  * rather than merely present.
  */
-function isMathNode(node: unknown): node is MathNode {
+export function isMathNode(node: unknown): node is MathNode {
   return (
     typeof node === "object" &&
     node !== null &&
@@ -145,14 +145,14 @@ function isMathNode(node: unknown): node is MathNode {
  * the gem's own `rescue ArgumentError` is unreached by any input its
  * `number` grammar rule accepts.
  */
-const INTEGER_PATTERN = /^[+-]?\d+$/;
+export const INTEGER_PATTERN = /^[+-]?\d+$/;
 // The fractional digits are allowed only after a literal dot, so every
 // accepted string has one way to match. The earlier `\d+\.?\d*` let both
 // digit runs claim the same digits when no dot is present, so a long digit
 // run that then failed backtracked quadratically: 4.6-20 s for
 // `"0".repeat(50000) + "x"` across runs on this repo's host, against under
 // 1 ms for this form. Both forms accept the same language.
-const FLOAT_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+export const FLOAT_PATTERN = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 
 /**
  * Ruby's `Rational(raw)` for a literal `FLOAT_PATTERN` accepts: the digits,
@@ -304,7 +304,7 @@ const DEFAULT_UNSUPPORTED_CLASS: Readonly<Record<string, string>> = {
  * `Symbols::Equal` has its own phrase in the gem's `unsupported_message`
  * ("equation"; measured: `1=1`), reproduced here.
  */
-function describeUnsupportedNode(node: MathNode): string {
+export function describeUnsupportedNode(node: MathNode): string {
   switch (node.kind) {
     case "number":
       return `number \`${node.value}\``;
@@ -337,7 +337,7 @@ function describeUnsupportedNode(node: MathNode): string {
  * evaluates as `UnsupportedExpressionError("empty expression")` — the same
  * refusal an actually-empty `Fenced` body gets.
  */
-function toNodeArray(nodes: NodeParameter | NodeSequence): NodeSequence {
+export function toNodeArray(nodes: NodeParameter | NodeSequence): NodeSequence {
   if (nodes === null) return [];
   if (Array.isArray(nodes)) return nodes as NodeSequence;
   if (typeof nodes === "string") return [nodes];
@@ -396,22 +396,12 @@ interface BoundaryRecord {
   readonly result: RubyNumeric | null;
 }
 
-/**
- * Ruby's `BigDecimal(value.to_s)` for an exact operand (`guard_digit_value`):
- * an Integer's digits read exactly; a Rational's `to_s` (`"1/2"`, `"2/1"`)
- * is not a decimal, so `BigDecimal()` raises `ArgumentError`, which is not an
- * evaluation error and escapes `Formula#evaluate` — refused here at the same
- * point.
- */
-function guardOperand(value: RubyNumeric): Decimal.BigDecimal {
+/** Current Ruby converts exact rational guard operands at the declared precision. */
+function guardOperand(value: RubyNumeric, digits: number): Decimal.BigDecimal {
   if (value.kind === "decimal") return value;
   if (value.kind === "integer") return Decimal.fromInteger(value.value);
-  throw new UnsupportedFeatureError(
-    "evaluate",
-    `Ruby raises ArgumentError (invalid value for BigDecimal(): "${
-      value.kind === "rational" ? `${value.num}/${value.den}` : String(value.value)
-    }") here, which is not an evaluation error`,
-  );
+  if (value.kind === "rational") return Decimal.fromRational(value.num, value.den, digits);
+  throw new Error("inexact operand reached exact guard conversion");
 }
 
 /**
@@ -673,12 +663,16 @@ export class Evaluator {
 
   /**
    * Ruby: `Evaluator#divide` — `DivisionByZeroError` for a zero divisor;
-   * strict mode divides exactly (`Rational(dividend) / divisor`), approximate
-   * mode records the Float division it makes.
+   * strict mode rationalizes two exact operands and preserves the numeric
+   * kinds of limited operands. Approximate mode records the Float division.
    */
   divide(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric {
     if (isZero(divisor)) throw new DivisionByZeroError();
-    if (this.mode === "strict") return divideAsRuby(toRational(dividend), divisor);
+    if (this.mode === "strict") {
+      return isExact(dividend) && isExact(divisor)
+        ? divideAsRuby(toRational(dividend), divisor)
+        : divideAsRuby(dividend, divisor);
+    }
     return this.recordCrossing("divide", [dividend, divisor], divide(dividend, divisor));
   }
 
@@ -784,7 +778,7 @@ export class Evaluator {
     operands: readonly RubyNumeric[],
     digits: number,
   ): Decimal.BigDecimal {
-    const [x, y] = operands.map(guardOperand) as [
+    const [x, y] = operands.map((value) => guardOperand(value, digits)) as [
       Decimal.BigDecimal,
       Decimal.BigDecimal | undefined,
     ];

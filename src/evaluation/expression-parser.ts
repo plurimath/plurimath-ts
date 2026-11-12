@@ -34,15 +34,30 @@ import {
   isPowerOperator,
 } from "./operators";
 
+/**
+ * The four value operations the precedence ladder applies itself. The
+ * default is Ruby's numeric tower (`numeric.ts`); the unit-aware evaluator
+ * (`quantity.ts`) passes the UnitsML quantity runtime's own operations, so
+ * this one parser resolves precedence for both value kinds.
+ */
+export interface ExpressionArithmetic<V> {
+  add(left: V, right: V): V;
+  subtract(left: V, right: V): V;
+  multiply(left: V, right: V): V;
+  negate(value: V): V;
+}
+
+const NUMERIC_ARITHMETIC: ExpressionArithmetic<RubyNumeric> = { add, subtract, multiply, negate };
+
 /** The subset of `Evaluator` this parser calls back into. */
-export interface ExpressionEvaluator {
-  evaluateNode(node: MathNode | string | undefined | null): RubyNumeric;
-  evaluateNegatedMod(node: MathNode): RubyNumeric;
-  evaluateLogWithArgument(node: MathNode, argument: MathNode | string | undefined): RubyNumeric;
+export interface ExpressionEvaluator<V = RubyNumeric> {
+  evaluateNode(node: MathNode | string | undefined | null): V;
+  evaluateNegatedMod(node: MathNode): V;
+  evaluateLogWithArgument(node: MathNode, argument: MathNode | string | undefined): V;
   /** Ruby: `Evaluator#divide`, which records the boundary it crosses (or, in strict mode, divides exactly). */
-  divide(dividend: RubyNumeric, divisor: RubyNumeric): RubyNumeric;
+  divide(dividend: V, divisor: V): V;
   /** Ruby: `Evaluator#power`, which records the boundary it crosses (or defers it, in strict mode). */
-  power(base: RubyNumeric, exponent: RubyNumeric): RubyNumeric;
+  power(base: V, exponent: V): V;
   unsupported(nodeOrMessage: MathNode | string): never;
 }
 
@@ -84,41 +99,46 @@ const UNARY_FUNCTION_KINDS: ReadonlySet<string> = new Set([
 
 type Predicate = (node: MathNode | string) => boolean;
 
-export class ExpressionParser {
+export class ExpressionParser<V = RubyNumeric> {
   private index = 0;
 
   constructor(
-    private readonly evaluator: ExpressionEvaluator,
+    private readonly evaluator: ExpressionEvaluator<V>,
     private readonly tokens: NodeSequence,
+    private readonly arithmetic: ExpressionArithmetic<V> = NUMERIC_ARITHMETIC as unknown as ExpressionArithmetic<V>,
   ) {}
 
-  parse(): RubyNumeric {
+  parse(): V {
     const result = this.parseAdditive();
     if (!this.eof()) this.evaluator.unsupported(this.current());
     return result;
   }
 
-  private parseAdditive(): RubyNumeric {
+  private parseAdditive(): V {
     let result = this.parseMultiplicative();
     for (;;) {
-      if (this.take(isPlusOperator)) result = add(result, this.parseMultiplicative());
-      else if (this.take(isMinusOperator)) result = subtract(result, this.parseMultiplicative());
+      if (this.take(isPlusOperator))
+        result = this.arithmetic.add(result, this.parseMultiplicative());
+      else if (this.take(isMinusOperator))
+        result = this.arithmetic.subtract(result, this.parseMultiplicative());
       else return result;
     }
   }
 
-  private parseMultiplicative(): RubyNumeric {
+  private parseMultiplicative(): V {
     let result = this.parseUnary();
     for (;;) {
-      if (this.take(isMultiplyOperator)) result = multiply(result, this.parseUnary());
+      if (this.take(isMultiplyOperator))
+        result = this.arithmetic.multiply(result, this.parseUnary());
       else if (this.take(isDivideOperator))
         result = this.evaluator.divide(result, this.parseUnary());
-      else if (this.implicitMultiplication()) result = multiply(result, this.parsePower());
+      else if (this.implicitMultiplication())
+        result = this.arithmetic.multiply(result, this.parsePower());
       else return result;
     }
   }
 
-  private parseUnary(): RubyNumeric {
+  private parseUnary(): V {
     if (this.take(isPlusOperator)) return this.parseUnary();
     if (this.take(isMinusOperator)) return this.negatedUnary();
     return this.parsePower();
@@ -129,33 +149,33 @@ export class ExpressionParser {
    * `mod`, so `-7 mod 3` negates the dividend: `(-7) mod 3` is `2`, not
    * `-(7 mod 3)`.
    */
-  private negatedUnary(): RubyNumeric {
+  private negatedUnary(): V {
     if (!this.eof() && isMod(this.current())) {
       return this.evaluator.evaluateNegatedMod(this.nextToken() as MathNode);
     }
-    return negate(this.parseUnary());
+    return this.arithmetic.negate(this.parseUnary());
   }
 
   /** Ruby: `ExpressionParser#parse_power` — a loose `^` chain, left to right. */
-  private parsePower(): RubyNumeric {
+  private parsePower(): V {
     let result = this.parseOperand();
     while (this.take(isPowerOperator)) result = this.evaluator.power(result, this.parseExponent());
     return result;
   }
 
   /** Ruby: `ExpressionParser#parse_exponent` — an exponent may carry its own signs. */
-  private parseExponent(): RubyNumeric {
+  private parseExponent(): V {
     if (this.take(isPlusOperator)) return this.parseExponent();
     if (this.take(isMinusOperator)) return this.negatedExponent();
     return this.parseOperand();
   }
 
   /** Ruby: `ExpressionParser#negated_exponent` — `negatedUnary`'s rule, in exponent position. */
-  private negatedExponent(): RubyNumeric {
+  private negatedExponent(): V {
     if (!this.eof() && isMod(this.current())) {
       return this.evaluator.evaluateNegatedMod(this.nextToken() as MathNode);
     }
-    return negate(this.parseExponent());
+    return this.arithmetic.negate(this.parseExponent());
   }
 
   /**
@@ -167,7 +187,7 @@ export class ExpressionParser {
    * group takes that group as its argument (`log_argument?`/
    * `bind_log_argument`), which a bare `Log` has no other way to receive.
    */
-  private parseOperand(): RubyNumeric {
+  private parseOperand(): V {
     if (this.eof()) this.evaluator.unsupported("empty expression");
     if (isOpenParen(this.current())) return this.parseGroup();
     let node = this.nextToken();
@@ -228,7 +248,7 @@ export class ExpressionParser {
    * the next close paren. A token other than a close paren is reported as
    * itself; "unmatched parenthesis" is reserved for the end of input.
    */
-  private parseGroup(): RubyNumeric {
+  private parseGroup(): V {
     this.advance();
     const result = this.parseAdditive();
     if (this.eof()) this.evaluator.unsupported("unmatched parenthesis");

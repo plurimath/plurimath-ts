@@ -11,8 +11,10 @@ const receipt = {
   browserEntry: process.argv[3] ? resolve(process.argv[3]) : undefined,
   webWasm: process.argv[4] ? resolve(process.argv[4]) : undefined,
 };
-const { createHtmlParser } = await import(`${repo}/dist/html-parsanol.js`);
-const { normalize } = await import(`${repo}/dist/core.js`);
+const { createHtmlParser } = await import(
+  pathToFileURL(resolve(repo, "dist/html-parsanol.js")).href
+);
+const { normalize } = await import(pathToFileURL(resolve(repo, "dist/core.js")).href);
 const rows = JSON.parse(readFileSync(`${repo}/test/formats/html/initialized-source.json`)).cases;
 const results = [];
 for (const target of receipt.browserEntry ? ["node", "web-target-in-node"] : ["node"]) {

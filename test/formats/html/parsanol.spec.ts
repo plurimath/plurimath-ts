@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { normalize, ParseError } from "../../../src/core/index";
 import { lowerHtmlCaptures } from "../../../src/formats/html/parg-captures";
@@ -84,4 +88,29 @@ it("retains the source 100-container capture limit", () => {
     parseShapeWithCompatibility: () => ({ ok: true, shape }),
   }));
   expect(() => parse("x")).toThrow(/nesting of 100 is too deep/);
+});
+
+it("binds the independent source profile to its measured inputs and producer", () => {
+  const root = fileURLToPath(new URL("../../../", import.meta.url));
+  const sha = (path: string): string =>
+    createHash("sha256")
+      .update(readFileSync(resolve(root, path)))
+      .digest("hex");
+  expect(source.profile).toBe("source-normalized-html-captures-v1");
+  expect(source.source_commit).toBe("0a1df68a5903d43da13b1e1ef85b6c0523feb1b4");
+  const provenance = source.provenance;
+  expect(sha(provenance.generator)).toBe(provenance.generator_sha256);
+  expect(sha(provenance.serializer)).toBe(provenance.serializer_sha256);
+  expect(sha(provenance.inputs)).toBe(provenance.inputs_sha256);
+  const inputs = JSON.parse(readFileSync(resolve(root, provenance.inputs), "utf8")) as {
+    cases: { id: string; input: string }[];
+  };
+  expect(inputs.cases.length).toBe(567);
+  expect(source.cases.length).toBe(567);
+  expect(source.cases.filter((row) => "model" in row).length).toBe(544);
+  expect(source.cases.filter((row) => "error" in row).length).toBe(23);
+  expect(new Set(source.cases.map((row) => row.id)).size).toBe(567);
+  expect(source.cases.map(({ id, input }) => ({ id, input }))).toStrictEqual(
+    inputs.cases.map(({ id, input }) => ({ id, input })),
+  );
 });

@@ -1,0 +1,2840 @@
+{
+  "schema": "plurimath-html-parg-inputs/1",
+  "cases": [
+    {
+      "id": "colour-named",
+      "input": "<i>r e d</i><i>x</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "colour-in-sum",
+      "input": "<i>b l u e</i><i>x</i> &#x2b; y",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "fence-round-single",
+      "input": "<i>(</i>x<i>)</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "fence-round-expression",
+      "input": "<i>(</i>x&#x2b;y<i>)</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "fence-square-pair",
+      "input": "<i>[</i>a&#x2c;b<i>]</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "fence-curly-single",
+      "input": "<i>{</i>x<i>}</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "fence-round-triple",
+      "input": "<i>(</i>a&#x2c;b&#x2c;c<i>)</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "fence-over-number",
+      "input": "<i>x &#x2b; y</i><i>2</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "font-bold",
+      "input": "x",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "font-mixed",
+      "input": "A &#x2b; B",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "frac-simple",
+      "input": "<i>a</i><i>b</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "frac-numeric",
+      "input": "<i>2</i><i>3</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "frac-fenced-numerator",
+      "input": "<i>a &#x2b; b</i><i>c</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "frac-fenced-denominator",
+      "input": "<i>x</i><i>y &#x2b; z</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "frac-sum-of-fracs",
+      "input": "<i>a</i><i>b</i> &#x2b; <i>c</i><i>d</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "left-right-round",
+      "input": "<i>(</i> x <i>)</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "left-right-square",
+      "input": "<i>[</i> x <i>]</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "left-right-around-frac",
+      "input": "<i>(</i> <i>a</i><i>b</i> <i>)</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "matrix-column",
+      "input": "<table><tr><td>a</td></tr><tr><td>b</td></tr></table>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "matrix-two-by-two",
+      "input": "<table><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "mixed-implicit-product",
+      "input": "2 &#x3C0; r",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "mixed-greek-sequence",
+      "input": "&#x3b1; &#x3b2; &#x3b3;",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "mixed-function-definition",
+      "input": "f <i>(</i>x<i>)</i> = <i>x</i><sup>2</sup>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "mixed-binomial-square",
+      "input": "<i><i>(</i>x&#x2b;y<i>)</i></i><sup>2</sup> = <i>x</i><sup>2</sup> &#x2b; 2 x y &#x2b; <i>y</i><sup>2</sup>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "mixed-sum-of-cubes",
+      "input": "<i>&sum;</i><sub>i = 1</sub><sup>n</sup> = <i><i>(</i><i>n <i>(</i>n&#x2b;1<i>)</i></i><i>2</i><i>)</i></i><sup>2</sup>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "mod-simple",
+      "input": "<i>a</i><i>mod</i><i>b</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "mod-numeric",
+      "input": "<i>x</i><i>mod</i><i>2</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "mod-in-expression",
+      "input": "<i><i>(</i>a&#x2b;b<i>)</i></i><i>mod</i><i>n</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "nary-log-base",
+      "input": "<i>log</i><sub>2</sub> 8",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "nary-lim",
+      "input": "<i>lim</i><i>x &#x2192; &#x221e;</i> f <i>(</i>x<i>)</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "nary-sum-bounded",
+      "input": "<i>&sum;</i><sub>i = 1</sub><sup>n</sup>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "nary-int-bounded",
+      "input": "<i>0</i><i>1</i><i>x</i> d x",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "nary-prod-bounded",
+      "input": "<i>&prod;</i><sub>k = 1</sub><sup>n</sup>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "nary-sum-bare",
+      "input": "<i>&sum;</i> x",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "number-integer",
+      "input": "2",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "number-decimal",
+      "input": "2.5",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "number-zero",
+      "input": "0",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "number-multi-digit",
+      "input": "123",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "number-decimal-long",
+      "input": "3.14159",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "operator-plus",
+      "input": "x &#x2b; y",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "operator-implicit-product",
+      "input": "2 x",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "operator-asterisk",
+      "input": "a &#x22c5; b",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "operator-minus",
+      "input": "a &#x2212; b",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "operator-equals",
+      "input": "x = y",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "operator-plus-chain",
+      "input": "a &#x2b; b &#x2b; c",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "permissive-trailing-caret",
+      "input": "x ^",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "permissive-unclosed-paren",
+      "input": "<i>(</i>a",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "permissive-unopened-paren",
+      "input": "a )",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "permissive-closing-run",
+      "input": ") ) ) )",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "permissive-bare-dollar",
+      "input": "&#x24;",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "permissive-frac-then-operator",
+      "input": "<i>a</i><i>&#x2b;</i> b",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "power-square",
+      "input": "<i>x</i><sup>2</sup>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "power-fenced-exponent",
+      "input": "<i>x</i><sup>n &#x2b; 1</sup>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "subscript-digit",
+      "input": "<i>a</i><sub>1</sub>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "subscript-fenced",
+      "input": "<i>a</i><sub>n &#x2b; 1</sub>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "power-and-subscript",
+      "input": "<i>x</i><sub>1</sub><sup>2</sup>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "power-exponential",
+      "input": "<i>e</i><sup>x</sup>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "power-of-two",
+      "input": "<i>2</i><sup>10</sup>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "power-over-number",
+      "input": "<i><i>x</i><sup>2</sup></i><i>4</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "text-function",
+      "input": "hello",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "text-quoted",
+      "input": "hello world",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "text-unitsml-valid",
+      "input": "kg",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "root-sqrt-number",
+      "input": "<i>sqrt</i><i>2</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "root-sqrt-expression",
+      "input": "<i>sqrt</i><i>x &#x2b; 1</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "root-sqrt-pythagoras",
+      "input": "<i>sqrt</i><i><i>a</i><sup>2</sup> &#x2b; <i>b</i><sup>2</sup></i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "root-cube",
+      "input": "<i>3</i><i>x &#x2b; 1</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "symbol-greek-alpha",
+      "input": "&#x3b1;",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "symbol-greek-pi",
+      "input": "&#x3C0;",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "symbol-greek-sigma",
+      "input": "&#x3c3;",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "symbol-infinity",
+      "input": "&#x221e;",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "symbol-adjacent-letters",
+      "input": "x y z",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "symbol-spaced-letters",
+      "input": "x y",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "unary-sin-fenced",
+      "input": "<i>sin</i><i><i>(</i>x<i>)</i></i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "unary-sin-bare",
+      "input": "<i>sin</i><i>x</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "unary-cos-product",
+      "input": "<i>cos</i><i><i>(</i>2x<i>)</i></i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "unary-abs",
+      "input": "<i>abs</i><i>x</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "unary-hat",
+      "input": "<i>^</i><i>x</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "unary-bar",
+      "input": "<i>¯</i><i>x</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "unary-vec",
+      "input": "<i>&#x2192;</i><i>v</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "whitespace-between-letters",
+      "input": "a b",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "whitespace-in-subscript",
+      "input": "<i>&sum;</i><sub>i = 1</sub><sup>n</sup> i",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "whitespace-inside-fence",
+      "input": "<i>sqrt</i><i>x</i>",
+      "source_family": "asciimath"
+    },
+    {
+      "id": "latex-accent-hat",
+      "input": "<i>^</i><i>a</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-accent-hat-multi",
+      "input": "<i>^</i><i>a b</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-accent-vec-multi",
+      "input": "<i>&#x2192;</i><i>A B</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-accent-dot",
+      "input": "<i>dot</i><i>x</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-accent-ddot",
+      "input": "<i>y</i><i>..</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-accent-tilde",
+      "input": "<i>~</i><i>n</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-accent-acute",
+      "input": "&#x301; a",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-accent-grave",
+      "input": "&#x300; a",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-accent-check",
+      "input": "&#x30c; a",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-accent-breve",
+      "input": "&#x306; a",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-accent-mathring",
+      "input": "&#x30a; a",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-colour-named",
+      "input": "<i>red</i><i>x</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-colour-in-sum",
+      "input": "<i>blue</i><i>y &#x2b; z</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-colour-over-frac",
+      "input": "<i>red</i><i><i>1</i><i>2</i></i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-fence-round",
+      "input": "<i>(</i>a<i>)</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-fence-square",
+      "input": "<i>[</i>a<i>]</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-fence-curly-escaped",
+      "input": "<i>\\{</i>a<i>}</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-fence-angle",
+      "input": "<i>&#x2329;</i>a<i>&#x232a;</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-fence-ceiling",
+      "input": "<i>⌈</i>a<i>⌉</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-font-blackboard",
+      "input": "R",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-font-roman-text",
+      "input": "a b c",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-font-script",
+      "input": "L",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-font-fraktur",
+      "input": "g",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-font-sans-serif",
+      "input": "A",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-font-typewriter",
+      "input": "z",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-font-roman",
+      "input": "d",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-frac-simple",
+      "input": "<i>1</i><i>2</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-frac-nested",
+      "input": "<i><i>1</i><i>2</i></i><i>3</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-frac-sum-of-fracs",
+      "input": "<i>1</i><i>2</i> &#x2b; <i>3</i><i>4</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-frac-root-denominator",
+      "input": "<i>1</i><i><i>sqrt</i><i>2</i></i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-left-right-round",
+      "input": "<i>(</i> a <i>)</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-left-right-curly",
+      "input": "<i>{</i> a <i>}</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-left-right-bar",
+      "input": "<i>|</i> x <i>|</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-left-right-round-sum",
+      "input": "<i>(</i> a &#x2b; b <i>)</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-matrix-plain",
+      "input": "<table><tr><td>a</td><td>b</td></tr></table>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-matrix-brackets",
+      "input": "<table><tr><td>a</td></tr></table>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-nary-int-bounded",
+      "input": "<i>0</i><i>1</i><i>x</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-nary-int-definite",
+      "input": "<i>a</i><i>b</i><i>f</i> <i>(</i>x<i>)</i> d x",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-nary-prod-subscript",
+      "input": "<i>&prod;</i><sub>k</sub>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-nary-prod-bounded",
+      "input": "<i>&prod;</i><sub>i = 1</sub><sup>n</sup>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-nary-oint-subscript",
+      "input": "<i>C</i><i>f</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-nary-bigcup-subscript",
+      "input": "<i>&#x22c3;</i><sub>i</sub> <i>A</i><sub>i</sub>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-nary-bigcap-subscript",
+      "input": "<i>&#x22c2;</i><sub>i</sub> <i>A</i><sub>i</sub>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-nary-coprod-subscript",
+      "input": "<i>&#x2210;</i><sub>i</sub> <i>A</i><sub>i</sub>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-nary-iint-bare",
+      "input": "&#x222c; f",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-nary-bigoplus-subscript",
+      "input": "<i>&#x2a01;</i><sub>i</sub> <i>A</i><sub>i</sub>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-number-integer",
+      "input": "1",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-number-decimal",
+      "input": "3.14",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-number-decimal-comma",
+      "input": "1 &#x2c; 5",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-number-negative",
+      "input": "&#x2212; 42",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-operator-plus",
+      "input": "a &#x2b; b",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-operator-times",
+      "input": "a &#xd7; b",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-operator-leq",
+      "input": "a &#x2264; b",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-operator-equiv",
+      "input": "a &#x2261; b",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-operator-plus-minus",
+      "input": "a &#xb1; b",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-over-under-overline",
+      "input": "<i>¯</i><i>a b</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-over-under-overline-sum",
+      "input": "<i>¯</i><i>a &#x2b; b</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-over-under-overline-nested",
+      "input": "<i>¯</i><i><i>¯</i><i>a</i></i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-over-under-underbrace",
+      "input": "<i>&#x23df;</i><i>a b</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-over-under-underbrace-sum",
+      "input": "<i>&#x23df;</i><i>a &#x2b; b</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-over-under-underbrace-labelled",
+      "input": "<i><i>&#x23df;</i><i>x</i></i><sub>y</sub>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-over-under-overset",
+      "input": "<i>x</i><i>y</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-over-under-stackrel",
+      "input": "xy",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-over-under-underline",
+      "input": "&#x332; a b",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-over-under-overparen",
+      "input": "&#x23dc; a b",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-power-nested",
+      "input": "<i>x</i><sup><i>y</i><sup>z</sup></sup>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-subscript-letter",
+      "input": "<i>x</i><sub>i</sub>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-subscript-and-power",
+      "input": "<i>x</i><sub>i</sub><sup>2</sup>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-text-mbox",
+      "input": "hi",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-root-sqrt-frac",
+      "input": "<i>sqrt</i><i><i>1</i><i>2</i></i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-root-cube",
+      "input": "<i>3</i><i>8</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-root-nth-symbolic",
+      "input": "<i>n</i><i>x</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-symbol-empty-set",
+      "input": "&#x2205;",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-unary-log-bare",
+      "input": "<i>log</i> x",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-unary-ln-bare",
+      "input": "<i>ln</i><i>x</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-unary-lim-bare",
+      "input": "<i>lim</i> x",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-unary-det",
+      "input": "<i>det</i><i>A</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-unary-max",
+      "input": "<i>max</i><i>A</i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-unary-gcd-fenced",
+      "input": "<i>gcd</i><i><i>(</i>a&#x2c;b<i>)</i></i>",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-whitespace-quad",
+      "input": "a &#xa0;&#xa0; b",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-whitespace-two-quads",
+      "input": "a &#xa0;&#xa0; b &#xa0;&#xa0; c",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-comma-from-thin-space",
+      "input": "a &#x2c; b",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-whitespace-medium",
+      "input": "a &#x3a; b",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-whitespace-thick",
+      "input": "a &#x2004; b",
+      "source_family": "latex"
+    },
+    {
+      "id": "latex-whitespace-qquad",
+      "input": "a &#xa0;&#xa0;&#xa0;&#xa0; b",
+      "source_family": "latex"
+    },
+    {
+      "id": "mathml-elementary-math-001",
+      "input": "424 &#x2b; 33 <i>msline</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-elementary-math-002",
+      "input": "123 456 &#x2b; <i>msline</i> 579",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-elementary-math-003",
+      "input": "456 &#x2b; <i>msline</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-elementary-math-004",
+      "input": "<i>scarries</i><i>2 12</i> 2,327 &#x2212;  1,156 <i>msline</i> 1,171",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-elementary-math-005",
+      "input": "<i>scarries</i><i>1</i> 2,327 &#x2212;  1,156 <i>msline</i> 1,171",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-elementary-math-006",
+      "input": "<i>scarries</i><i><menclose notation=\"bottom\">10</menclose></i> 52 &#x2212;  7 <i>msline</i> 45",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-elementary-math-007",
+      "input": "<i>msline</i>  0.3333 ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-elementary-math-008",
+      "input": "<i>msline</i>  0.142857 ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-elementary-math-009",
+      "input": " 0.142857  <i>msline</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-elementary-math-010",
+      "input": "&#x2e; &#x2e;  0.142857 ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-enclose-001",
+      "input": "<menclose notation=\"circle box\"> x  &#x2b;  y </menclose>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-001",
+      "input": "<i>(</i>x &#x2c; y<i>)</i> <i>(</i>xy<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-002",
+      "input": "<i>[</i> 0  1 ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-003",
+      "input": " f  &#x2061; <i>(</i> x  y <i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-004",
+      "input": "Polar &#x2061; <i>(</i>23.1415<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-005",
+      "input": "<i>(</i>x1<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-006",
+      "input": "<i>[</i>01<i>]</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-007",
+      "input": "<i>(</i>01<i>]</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-008",
+      "input": "<i>[</i>01<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-009",
+      "input": "&#x3bb; x &#x2e; <i>(</i><i>sin</i><i>&#x2061;</i> <i>(</i>x&#x2b;1<i>)</i><i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-010",
+      "input": "<i>(</i>f&#x2218;g<i>)</i> &#x2061; <i>(</i>x<i>)</i> = f &#x2061; <i>(</i>g &#x2061; <i>(</i>x<i>)</i><i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-011",
+      "input": "domain &#x2061; <i>(</i>f<i>)</i> = R",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-012",
+      "input": "codomain &#x2061; <i>(</i>f<i>)</i> = Q",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-013",
+      "input": "image &#x2061; <i>(</i><i>sin</i><i>)</i> = <i>[</i>-11<i>]</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-014",
+      "input": "<i>gcd</i><i>&#x2061;</i> <i>(</i>abc<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-015",
+      "input": "&#x2200; x &#x2e; <i>(</i>x &#x2212; x = 0<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-016",
+      "input": "&#x2203; x &#x2e; <i>(</i>f &#x2061; <i>(</i>x<i>)</i> = 0<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-017",
+      "input": "&#x2203; x &#x2e; <i>(</i>x &#x2208; Z&#x2227;f &#x2061; <i>(</i>x<i>)</i> = 0<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-018",
+      "input": "arg &#x2061; <i>(</i>x &#x2b; i &#x2062; y<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-019",
+      "input": "&#x211b; &#x2061; <i>(</i>x &#x2b; i &#x2062; y<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-020",
+      "input": "&#x2111; &#x2061; <i>(</i>x &#x2b; i &#x2062; y<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-021",
+      "input": "<i>lcm</i><i>&#x2061;</i> <i>(</i>abc<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-022",
+      "input": "div &#x2061; <i>(</i>a<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-023",
+      "input": "div &#x2061; <i>(</i>E<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-024",
+      "input": "grad &#x2061; <i>(</i>f<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-025",
+      "input": "&#x2207; &#x2061; <i>(</i>f<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-026",
+      "input": "grad &#x2061; <i>(</i><i>(</i>xyz<i>)</i>&#x21a6;x &#x2062; y &#x2062; z<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-027",
+      "input": "curl &#x2061; <i>(</i>a<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-028",
+      "input": "&#x3c3; &#x2061; <i>(</i>3422<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-029",
+      "input": "&#x3c3; &#x2061; <i>(</i>X<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-030",
+      "input": "median &#x2061; <i>(</i>3422<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fences-031",
+      "input": "mode &#x2061; <i>(</i>3422<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fractions-001",
+      "input": "&#x394; A = <i>b</i><i>2 &#x22c5; C C</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fractions-002",
+      "input": " 2  &#x2b;  3   &#x2062;  &#x2148; <i> 1 </i><i> 2 </i> &#x3C0;  &#x2147; ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fractions-003",
+      "input": " 2   &#x2064;  <i> 3 </i><i> 4 </i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fractions-004",
+      "input": "<i>&#x2146;</i><i>&#x2146;  x </i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fractions-005",
+      "input": "<i>(</i><i> a </i><i> b </i><i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fractions-006",
+      "input": "<i>(</i><i> a </i><i> b </i><i>)</i> <i><i> a </i><i> b </i></i><i><i> c </i><i> d </i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fractions-007",
+      "input": "<i>1  &#x2b; <i>sqrt</i><i>5 </i></i><i>2 </i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fractions-010",
+      "input": "<i> 1  &#x2b; <i>sqrt</i><i> 5 </i></i><i> 2 </i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fractions-011",
+      "input": "C <menclose notation=\"phasorangle\">&#x2212; <i>&#x3C0;</i><i>2</i></menclose>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fractions-012",
+      "input": "<i>merror</i><i>DivisionByZero:&#xa0; <i>x</i><i>0</i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-fractions-013",
+      "input": "<i>d <i>sin</i><i>&#x2061;</i> x</i><i>d x</i> = <i>cos</i><i>&#x2061;</i> x",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-layout-001",
+      "input": "<i>sin</i> 1",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-layout-002",
+      "input": "f",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-layout-006",
+      "input": "s",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-layout-008",
+      "input": "<i>red</i><i>d</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-layout-010",
+      "input": "a &#x2b; b <br/> &#x2b; c",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-layout-011",
+      "input": "x <i>mpadded</i><i>y</i> z",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-001",
+      "input": "<i>~</i><i>c</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-002",
+      "input": "<i>&sum;</i><sub><i>&prod;</i></sub><sup>&#x22c1;</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-003",
+      "input": "<i>&sum;</i><sub>x</sub><sup>s</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-004",
+      "input": "<i>&sum;</i><sub>s x</sub><sup>s w</sup> something",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-005",
+      "input": "<i>&sum;</i><sub>1</sub><sup>n</sup> <i>i</i><sup>3</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-006",
+      "input": "<i>&sum;</i><sub>1</sub><sup>n</sup> <i>i</i><sup>3</sup> = <i><i>n</i><i>2</i></i><sup>2</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-007",
+      "input": "<i>sin</i> <i>&#x3b8;</i><i><i>&sum;</i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-008",
+      "input": "<i>3</i><i><i>&sum;</i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-009",
+      "input": "<i>&#x398;</i><i><i>&sum;</i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-010",
+      "input": "<i>&sum;</i><sub>i = <i>12</i><i>&#x25a1;</i></sub><sup>33</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-011",
+      "input": "<i>1234</i><i>i</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-012",
+      "input": "<i>&prod;</i><sub>&#x3b8;</sub> i",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-013",
+      "input": "<i>&#x23df;</i><i>4</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-014",
+      "input": "<i>&#x23de;</i><i>4</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-015",
+      "input": "<i>&sum;</i><sub>i = <i>blue</i><i>&#x2260;</i></sub><sup>33</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-016",
+      "input": "<i>&sum;</i><sub>i = frac</sub><sup>33</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-017",
+      "input": "<i>&sum;</i><sub>1</sub><sup>n</sup> <i>i</i><sup>3</sup> = <i><i>sin</i><i><i>n</i><i>2</i></i></i><sup>2</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-018",
+      "input": "<i><i>^</i><i>e</i></i><sub>r</sub>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-019",
+      "input": "<i>T</i><sub>90</sub> / K = <i>A</i><sub>0</sub> &#x2b; <i>&sum;</i><sub>i = 1</sub><sup>9</sup> <i>A</i><sub>i</sub> <i><i>[</i><i>(</i><i>ln</i><i></i> <i>(</i>p / Pa<i>)</i> &#x2014; B<i>)</i> / C<i>]</i></i><sup>i</sup> &#x2e;",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-020",
+      "input": "<i>dot</i><i>&#x3b8;</i> &#x2260; <i>&#x3b8;</i><i>..</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-021",
+      "input": "<i>underline</i><i>(</i> <i> a </i><i> b </i> <i>¯</i><i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-022",
+      "input": " x  <i>&#x2192;</i><i> maps to </i>  y ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-023",
+      "input": "<i>&#x23df;</i><i> x  &#x2b;  y  &#x2b;  z </i> &#xa0;versus&#xa0; <i>&#x23df;</i><i> x  &#x2b;  y  &#x2b;  z </i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-024",
+      "input": "<i>^</i><i> x </i> &#xa0;versus&#xa0; <i>^</i><i> x </i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-025",
+      "input": "<i>&#x23de;</i><i> x  &#x2b;  y  &#x2b;  z </i> &#xa0;versus&#xa0; <i>&#x23de;</i><i> x  &#x2b;  y  &#x2b;  z </i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-026",
+      "input": "<i>&#x221e;</i><i><i> 0 </i></i> &#xa0;versus&#xa0; <i> 0 </i><i>&#x221e;</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-027",
+      "input": "<i> X  &#x2208;  D </i><i>&#xa;      Op&#xa;      </i> &#x2061; <i>(</i>&#xa;      Expression-in-X&#xa;      <i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-028",
+      "input": "<i>¯</i><i>x &#x2b; ⅈ &#x2062; y</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-029",
+      "input": "<i>&sum;</i><sub>x = a</sub><sup>b</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-030",
+      "input": "<i>&sum;</i><sub>x &#x2208; B</sub>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-031",
+      "input": "<i>&sum;</i><sub>B</sub>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-032",
+      "input": "<i>&prod;</i><sub>x = a</sub><sup>b</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-033",
+      "input": "<i>&prod;</i><sub>x &#x2208; B</sub>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-over-under-034",
+      "input": "<i>¯</i><i>X</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-roots-001",
+      "input": "<i>sqrt</i><i><i>&sum;</i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-roots-002",
+      "input": "<i>sqrt</i><i>s t</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-roots-003",
+      "input": "<i>x</i><i>&#x3b8;</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-roots-004",
+      "input": "<i>n</i><i>a</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-001",
+      "input": "<i><i>sin</i></i><sub><i>&sum;</i></sub>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-002",
+      "input": "<i><i>sin</i></i><sup><i>&sum;</i></sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-003",
+      "input": "<i><i>sin</i></i><sub><i>&prod;</i></sub><sup><i>&sum;</i></sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-004",
+      "input": "<i>log</i><sub>4</sub><sup>4 terms</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-005",
+      "input": "<i>0</i><i>1</i> f x d x",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-006",
+      "input": "<i><i>log</i> 4</i><sup>4 terms</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-007",
+      "input": "<i></i><sup>12</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-009",
+      "input": "<i>D</i><sub>i</sub> = <i>x</i><sub>i</sub> &#x2212; <i>x</i><sub>S R P 27</sub>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-010",
+      "input": "<i>W</i><sub>t</sub>  <i>(</i><i>T</i><sub>90</sub><i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-011",
+      "input": "t g t <i>&#x27;</i><sub>D C X</sub> <i>(</i>&#x394;<i>t</i><sub>s</sub>&#x2c;&#x394;f&#x27;<i>)</i> = t g <i>t</i><sub>D C X</sub> <i>(</i>&#x394;<i>t</i><sub>s</sub><i>)</i> <i>[</i>1&#x2b;U F <i>D</i><sub>D C X</sub>&#x22c5;&#x394;f&#x27;<i>]</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-012",
+      "input": "x = <i>&#x2212; b &#xb1; <i>sqrt</i><i><i>b</i><sup>2</sup> &#x2212; 4 <i>&prod;</i> a <i>&sum;</i> c</i></i><i>2 &#x2221; a</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-013",
+      "input": "<i> m </i><sub> 1   &#x2063;   2 </sub>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-014",
+      "input": "f &#x2061; ( x ) = <i><i>(</i>x &#x2b; 1<i>)</i></i><sup>4</sup> <br/>= <i>x</i><sup>4</sup> &#x2b; 4 &#x2062; <i>x</i><sup>3</sup> &#x2b; 6 &#x2062; <i>x</i><sup>2</sup> <br/>&#x2b; 4 &#x2062; x &#x2b; 1",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-015",
+      "input": "<i> x </i><sup> 2 </sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-017",
+      "input": "<i> 1 </i><i><i> x </i><sup> 3 </sup> &#x2b; <i> x </i><i> 3 </i></i> = <i> 1 </i><i><i> x </i><sup> 3 </sup> &#x2b; <i> x </i><i> 3 </i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-018",
+      "input": "<i>a</i><sub><menclose notation=\"actuarial\">n</menclose> &#x2063; i</sub>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-019",
+      "input": "<i><i>(</i> x  &#x2b;  y <i>)</i></i><sup> 2 </sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-020",
+      "input": "<i> 0 </i><i> 1 </i><i><i> &#x2147; </i><sup> x </sup>  &#x2062;  &#x2146;  x </i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-021",
+      "input": "<i>7FE0</i><sub>16</sub>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-022",
+      "input": "<i>C</i><sup>2</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-023",
+      "input": "<i>f</i><sup><i>(</i>-1<i>)</i></sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-024",
+      "input": "<i>A</i><sup><i>(</i>-1<i>)</i></sup> &#x2061; <i>(</i>a<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-025",
+      "input": "f &#x2218; <i>f</i><sup><i>(</i>-1<i>)</i></sup> = id",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-026",
+      "input": "<i>max</i><i><i>{</i>y|<i>y</i><sup>3</sup> &#x2208; <i>[</i>01<i>]</i><i>}</i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-027",
+      "input": "<i>min</i><i><i>{</i><i>x</i><sup>2</sup>|x &#x2209; B<i>}</i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-028",
+      "input": "<i>x</i><sup>3</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-029",
+      "input": "&#x2200; p &#x2208; Q &#x2227; q &#x2208; Q &#x2227; <i>(</i>p&#x3c;q<i>)</i> &#x2e; <i>(</i>p &#x3c; <i>q</i><sup>2</sup><i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-030",
+      "input": "&#x2200; p &#x2c; q &#x2e; <i>(</i><i>(</i>p &#x2208; Q&#x2227;q &#x2208; Q&#x2227;<i>(</i>p&#x3c;q<i>)</i><i>)</i> &#x21d2; <i>(</i>p&#x3c;<i>q</i><sup>2</sup><i>)</i><i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-031",
+      "input": "<i>a</i><i>b</i><i><i>cos</i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-032",
+      "input": "<i>0</i><i>1</i><i><i>x</i><sup>2</sup></i> d x",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-033",
+      "input": "<i>f</i><sup>&#x2032;</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-034",
+      "input": "<i><i>d</i><sup>2</sup> <i>x</i><sup>4</sup></i><i>d <i>x</i><sup>2</sup></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-035",
+      "input": "<i>D</i><sub>1 &#x2c; 1 &#x2c; 3</sub> f",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-036",
+      "input": "<i><i>&#x2202;</i><sup>3</sup> f &#x2061; <i>(</i>xyz<i>)</i></i><i>&#x2202; <i>x</i><sup>2</sup> &#x2202; z</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-037",
+      "input": "<i><i>&#x2202;</i><sup>2</sup> f &#x2061; <i>(</i>xy<i>)</i></i><i>&#x2202; x &#x2202; y</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-038",
+      "input": "<i><i>&#x2202;</i><sup>k</sup> f &#x2061; <i>(</i>xy<i>)</i></i><i>&#x2202; <i>x</i><sup>m</sup> &#x2202; <i>y</i><sup>n</sup></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-039",
+      "input": "<i>&#x2207;</i><sup>2</sup> &#x2061; <i>(</i>E<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-040",
+      "input": "<i>&#x2207;</i><sup>2</sup> &#x2061; <i>(</i><i>(</i>xyz<i>)</i>&#x21a6;f &#x2061; <i>(</i>xy<i>)</i><i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-041",
+      "input": "<i>sin</i><i>&#x2061;</i> <i>(</i><i>cos</i><i>&#x2061;</i> x&#x2b;<i>x</i><sup>3</sup><i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-042",
+      "input": "<i><i>sin</i></i><sup>&#x2212; 1</sup> &#x2061; x",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-043",
+      "input": "<i><i>sinh</i></i><sup>&#x2212; 1</sup> &#x2061; x",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-045",
+      "input": "<i>log</i><sub>3</sub> &#x2061; x",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-046",
+      "input": "<i>&#x3c3;</i><sup>2</sup> &#x2061; <i>(</i>3422<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-047",
+      "input": "<i>&#x3c3;</i><sup>2</sup> &#x2061; <i>(</i>X<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-048",
+      "input": "<i><i>&#x2329;</i><i><i>(</i>64225<i>)</i></i><sup>3</sup><i>&#x232a;</i></i><sub>mean</sub>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-049",
+      "input": "<i><i>&#x2329;</i><i>X</i><sup>3</sup><i>&#x232a;</i></i><sub>p</sub>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-scripts-050",
+      "input": "<i>x</i><sup>&#x2032;</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tables-001",
+      "input": "<i>a</i><sub><table><tr><td>1</td></tr></table></sub><sup>4 terms</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tables-002",
+      "input": "<i>a</i><sub><i>{</i><table><tr><td>11</td><td>|</td></tr></table><i>}</i></sub><sup>4 terms</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tables-003",
+      "input": "<i>a</i><sub><i>{</i><table><tr><td>11</td></tr></table><i>}</i></sub><sup>4 terms</sup>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tables-004",
+      "input": "<table><tr><td>1</td><td>0</td><td>0</td></tr><tr><td>0</td><td>1</td><td>0</td></tr><tr><td>0</td><td>0</td><td>1</td></tr></table>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tables-005",
+      "input": "<table><tr><td> 8.44   &#x2062;   x  &#x2b;  55   &#x2062;   y  =  0 </td></tr><tr><td> 3.1   &#x2062;   x  &#x2212;  0.7   &#x2062;   y  = &#x2212;  1.1 </td></tr></table>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tables-006",
+      "input": "{ <table><tr><td>&#x2212; x</td><td>&#xa0; if &#xa0;</td><td>x &#x3c; 0</td></tr><tr><td>0</td><td>&#xa0; if &#xa0;</td><td>x = 0</td></tr><tr><td>x</td><td>&#xa0; if &#xa0;</td><td>x &#x3e; 0</td></tr></table>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tables-007",
+      "input": "div &#x2061; ( <table><tr><td>x&#x21a6;x &#x2b; y</td></tr><tr><td>y&#x21a6;x &#x2b; z</td></tr><tr><td>z&#x21a6;z &#x2b; y</td></tr></table> )",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-text-001",
+      "input": "a&#x3b2;b",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-text-002",
+      "input": "a&#x3c2;b",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-text-003",
+      "input": "a&#x3c9;b",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-text-004",
+      "input": "a&#x3a9;b",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-text-005",
+      "input": "a&#x303;b",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-text-006",
+      "input": "sinsumsom&#x393;gamma",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-text-007",
+      "input": "sinsumsom&#x393;&#x3b3;",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-text-008",
+      "input": "<i>#ff0000</i><i>Assigned value</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-text-009",
+      "input": "&#xa0;Theorem &#xa0;1:",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-text-010",
+      "input": "&#xa;    Theorem&#xa;    1:&#xa;  ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-text-011",
+      "input": " Theorem 1:   &#x2009;   &#x205f;&#x200a;&#x205f;&#x200a;   /* a comment */ ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-001",
+      "input": "&#x303;",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-003",
+      "input": "<i>sin</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-004",
+      "input": "12 <i>mod</i> 1234 i",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-005",
+      "input": "| 4 |",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-006",
+      "input": "&#x394; &#x3bd;",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-007",
+      "input": "G&#x2126;",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-008",
+      "input": "<i>x &#x2b; y</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-009",
+      "input": "bar",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-012",
+      "input": "frac",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-013",
+      "input": "<i>&sum;</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-014",
+      "input": " x   D  <i>sin</i>  L ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-015",
+      "input": "<i>sin</i><i>&#x2061;</i>  x ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-016",
+      "input": " 1  &#x2b; &#x2026; &#x2b;  n ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-017",
+      "input": "&#x3C0; &#x2148;  &#x2147; ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-018",
+      "input": " 2   0.123   1,000,000   2.1e10   0xFFEF   MCMLXIX   twenty one ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-019",
+      "input": "&#x2b; &#x3c; &#x2264;  &#x3c;=   ++  <i>&sum;</i>  .NOT.   and   &#x2062;  &#x2b;",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-020",
+      "input": "<i>(</i> a  &#x2b;  b <i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-021",
+      "input": "<i>[</i> 0  &#x2c;  1 <i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-022",
+      "input": " f  &#x2061; <i>(</i> x  &#x2c;  y <i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-023",
+      "input": " x   &#x2062;   y ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-024",
+      "input": " there exists  &#x3b4; &#x3e;  0   such that   f  &#x2061; <i>(</i> x <i>)</i> &#x3c;  1 ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-025",
+      "input": " 2   &#x2062;   x  &#x2b;  y  &#x2212;  z ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-026",
+      "input": "<i>(</i> x  &#x2c;  y <i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-027",
+      "input": "0x7F800000",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-028",
+      "input": "22 / 7",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-029",
+      "input": "12.3 &#x2b; 5 &#x2062; i",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-030",
+      "input": "&#xa;    F&#xa;     &#x2061; <i>(</i>&#xa;      A1&#xa;      &#x2c;&#xa;      ...&#xa;      &#x2c;&#xa;      A2&#xa;      &#x2c;&#xa;      An&#xa;      <i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-031",
+      "input": "&#xa;    B&#xa;     &#xa;      x1&#xa;       &#x2c; &#xa;      ...&#xa;       &#x2c; &#xa;      xn&#xa;     &#x2e; &#xa;    S&#xa;  ",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-032",
+      "input": "x &#x21a6; <i>sin</i><i>&#x2061;</i> <i>(</i>x&#x2b;1<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-033",
+      "input": "f &#x2218; g &#x2218; h",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-034",
+      "input": "<i>⌊</i>a/b<i>⌋</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-035",
+      "input": "n !",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-036",
+      "input": "a / b",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-037",
+      "input": "<i>max</i><i><i>{</i>2&#x2c;3&#x2c;5<i>}</i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-038",
+      "input": "<i>min</i><i><i>{</i>a&#x2c;b<i>}</i></i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-039",
+      "input": "&#x2212; 3",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-040",
+      "input": "x &#x2212; y",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-041",
+      "input": "x &#x2b; y &#x2b; z",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-043",
+      "input": "a &#x2062; b",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-044",
+      "input": "a &#x2227; b",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-045",
+      "input": "a &#x2228; b",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-046",
+      "input": "a xor b",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-047",
+      "input": "&#xac; a",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-048",
+      "input": "A &#x21d2; B",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-049",
+      "input": "<i>|</i>x<i>|</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-050",
+      "input": "<i>⌊</i>a<i>⌋</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-052",
+      "input": "2 / 4 = 1 / 2",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-053",
+      "input": "3 &#x2260; 4",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-054",
+      "input": "3 &#x3e; 2",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-055",
+      "input": "2 &#x3c; 3 &#x3c; 4",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-056",
+      "input": "4 &#x2265; 3 &#x2265; 3",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-057",
+      "input": "3 &#x2264; 3 &#x2264; 4",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-058",
+      "input": "a &#x2261; &#xac; &#xac; a",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-059",
+      "input": "&#x3C0; &#x2243; 22 / 7",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-060",
+      "input": "a | b",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-061",
+      "input": " <i>sin</i> = <i>cos</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-062",
+      "input": "&#x2207; &#x22c5; E",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-063",
+      "input": "&#x2207; &#xd7; a",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-064",
+      "input": "<i>{</i>a&#x2c;b&#x2c;c<i>}</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-065",
+      "input": "<i>{</i>x|x &#x3c; 5<i>}</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-066",
+      "input": "<i>{</i>S|S &#x2208; T<i>}</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-067",
+      "input": "<i>{</i>x|<i>(</i>x&#x3c;5<i>)</i> &#x2227; x &#x2208; N<i>}</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-069",
+      "input": "<i>(</i>x|x &#x3c; 5<i>)</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-070",
+      "input": "A &#x222a; B",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-071",
+      "input": "A &#x2229; B",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-072",
+      "input": "a &#x2208; A",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-073",
+      "input": "a &#x2209; A",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-074",
+      "input": "A &#x2286; B",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-075",
+      "input": "A &#x2282; B",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-076",
+      "input": "A &#x2288; B",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-077",
+      "input": "A &#x2284; B",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-078",
+      "input": "A &#x2216; B",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-079",
+      "input": "<i>|</i>A<i>|</i> = 5",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-080",
+      "input": "A &#xd7; B",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-081",
+      "input": "<i>sin</i><i>&#x2061;</i> x",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-082",
+      "input": "<i>arcsin</i><i>&#x2061;</i> x",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-083",
+      "input": "<i>sinh</i><i>&#x2061;</i> x",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-084",
+      "input": "arcsinh &#x2061; x",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-085",
+      "input": "<i>ln</i><i>&#x2061;</i> a",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-086",
+      "input": "<i>log</i> &#x2061; x",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-087",
+      "input": "<i>&#x2329;</i>3&#x2c;4&#x2c;3&#x2c;7&#x2c;4<i>&#x232a;</i>",
+      "source_family": "mathml"
+    },
+    {
+      "id": "mathml-tokens-088",
+      "input": "&#x27;&#x27;",
+      "source_family": "mathml"
+    },
+    {
+      "id": "omml-accents-002",
+      "input": "<i>&#x23de;</i><i>c</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-accents-003",
+      "input": "<i>¯</i><i>under</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-boxes-001",
+      "input": "<menclose notation=\"longdiv\">ax+b</menclose>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-001",
+      "input": "<i>(</i>1<i>)</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-002",
+      "input": "<i>[</i>2<i>]</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-003",
+      "input": "<i>{</i>3<i>}</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-004",
+      "input": "<i>&#x2329;</i>4<i>&#x232a;</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-005",
+      "input": "<i>⌊</i>5<i>⌋</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-006",
+      "input": "<i>⌈</i>6<i>⌉</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-007",
+      "input": "<i>|</i>7<i>|</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-008",
+      "input": "<i>‖</i>8<i>‖</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-009",
+      "input": "<i>[</i>9<i>[</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-010",
+      "input": "<i>]</i>0<i>]</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-011",
+      "input": "<i>]</i>1<i>[</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-012",
+      "input": "<i>⟦</i>2<i>⟧</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-013",
+      "input": "<i>(</i>12<i>)</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-014",
+      "input": "<i>{</i>34<i>}</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-015",
+      "input": "<i>&#x2329;</i>56<i>&#x232a;</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-delimiters-016",
+      "input": "<i>&#x2329;</i>789<i>&#x232a;</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-equation-arrays-001",
+      "input": "<i>&sum;</i><sub><table><tr><td>0≤ i ≤ m</td></tr><tr><td>0<j<n </td></tr></table></sub>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-equation-arrays-002",
+      "input": "<table><tr><td>1</td></tr><tr><td>2</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-equation-arrays-003",
+      "input": "<table><tr><td>1</td></tr><tr><td>2</td></tr><tr><td>3</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-equation-arrays-004",
+      "input": "f <i>(</i>x<i>)</i> = <table><tr><td>-x,  &x<0</td></tr><tr><td>x,  &x≥0</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-equation-arrays-006",
+      "input": "<table><tr><td>a</td></tr><tr><td>b</td></tr><tr><td>c</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-equation-arrays-007",
+      "input": "U= <table><tr><td><i>Q</i><sub>e</sub>*E,  &if<i>Q</i><sub>e</sub><1</td></tr><tr><td>E,  &if <i>Q</i><sub>e</sub><S</td></tr><tr><td><i>(</i><i>⌊</i><i><i>Q</i><sub>e</sub></i><i>S</i><i>⌋</i>&#x2b;<i>⌈</i><i><i>Q</i><sub>e</sub> mod S</i><i>S</i><i>⌉</i><i>)</i>E,  &otherwise</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-fractions-001",
+      "input": "<i>1 </i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-fractions-004",
+      "input": "<i>(</i><i>n</i><i>m</i><i>)</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-fractions-005",
+      "input": "<i>(</i><i>n</i><i>k</i><i>)</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-fractions-006",
+      "input": "<i>&#x2329;</i><i>n</i><i>k</i><i>&#x232a;</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-fractions-007",
+      "input": "<i>x</i><i>y</i> 2",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-002",
+      "input": "<i>cos</i><i>x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-003",
+      "input": "<i>tan</i><i>x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-004",
+      "input": "<i>csc</i><i>x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-005",
+      "input": "<i>sec</i><i>x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-006",
+      "input": "<i>cot</i><i>x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-007",
+      "input": "<i>sinh</i><i>x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-008",
+      "input": "<i>cosh</i><i>x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-009",
+      "input": "<i>tanh</i><i>x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-010",
+      "input": "<i>csch</i><i>x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-011",
+      "input": "<i>sech</i><i>x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-012",
+      "input": "<i>coth</i><i>x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-013",
+      "input": "<i>sin</i><i>&#x3b8;</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-014",
+      "input": "<i>cos</i><i>2x</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-functions-015",
+      "input": "<i>tan</i><i>&#x3b8;</i> = <i><i>sin</i><i>&#x3b8;</i></i><i><i>cos</i><i>&#x3b8;</i></i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-group-characters-001",
+      "input": "<i>_</i><i>under</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-group-characters-002",
+      "input": "<i>⏟</i><i>under</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-010",
+      "input": "<i>&#x23df;</i><i>d</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-011",
+      "input": "<i><i>&#x23de;</i><i>e</i></i><i>d</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-012",
+      "input": "<i><i>&#x23df;</i><i>d</i></i><i>e</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-013",
+      "input": "<i>&#x20e1;</i><i>e</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-014",
+      "input": "<i>y</i><i>lim</i> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-015",
+      "input": "<i>y</i><i><i>min</i></i> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-016",
+      "input": "<i>y</i><i><i>max</i></i> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-017",
+      "input": "<i>n→∞</i><i>lim</i> <i><i>(</i>1+<i>1</i><i>n</i><i>)</i></i><sup>n</sup>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-018",
+      "input": "<i>0≤x≤1</i><i><i>max</i></i> x <i>e</i><sup>- <i>x</i><sup>2</sup></sup>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-019",
+      "input": "<i>&#x2190;</i><i>c</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-020",
+      "input": "<i>&#x2192;</i><i>c</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-022",
+      "input": "<i>&#x21d0;</i><i>d</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-023",
+      "input": "<i>&#x21d2;</i><i>d</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-026",
+      "input": "<i>&#x2194;</i><i>e</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-028",
+      "input": "<i>&#x21d4;</i><i>e</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-030",
+      "input": "<i>&#x2192;</i><i>yields</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-limits-031",
+      "input": "<i>&#x2192;</i><i>&#x2206;</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-partial-024",
+      "input": "<i>&#x20d6;</i><i>d</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-partial-025",
+      "input": "<i>&#x20d7;</i><i>e</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-partial-026",
+      "input": "<i>&#x20d0;</i><i>e</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-partial-027",
+      "input": "<i>&#x20d1;</i><i>e</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-002",
+      "input": "<table><tr><td>a</td><td>b</td><td>c</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-003",
+      "input": "<table><tr><td>b</td><td>c</td></tr><tr><td>d</td><td>e</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-004",
+      "input": "<table><tr><td>b</td><td>c</td><td>d</td></tr><tr><td>e</td><td>f</td><td>g</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-005",
+      "input": "<table><tr><td>b</td><td>c</td></tr><tr><td>d</td><td>e</td></tr><tr><td>f</td><td>g</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-006",
+      "input": "<table><tr><td>1</td><td>2</td><td>3</td></tr><tr><td>4</td><td>5</td><td>6</td></tr><tr><td>7</td><td>8</td><td>9</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-007",
+      "input": "<table><tr><td>1</td><td>0</td></tr><tr><td>0</td><td>1</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-008",
+      "input": "<table><tr><td>1</td><td></td></tr><tr><td></td><td>1</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-010",
+      "input": "<table><tr><td>1</td><td></td><td></td></tr><tr><td></td><td>1</td><td></td></tr><tr><td></td><td></td><td>1</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-011",
+      "input": "<table><tr><td>1</td><td>1</td></tr><tr><td>0</td><td>0</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-015",
+      "input": "<table><tr><td>a</td><td>&#x22ef;</td><td>b</td></tr><tr><td>&#x22ee;</td><td>&#x22f1;</td><td>&#x22ee;</td></tr><tr><td>c</td><td>&#x22ef;</td><td>d</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-016",
+      "input": "<table><tr><td>a</td><td>&#x22ef;</td><td>b</td></tr><tr><td>&#x22ee;</td><td>&#x22f1;</td><td>&#x22ee;</td></tr><tr><td>d</td><td>&#x22ef;</td><td>c</td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-matrices-017",
+      "input": "- <i>ln</i> R = <table><tr><td>2<i>N</i><sub>tot</sub>&#x3c4;</td><td>for &#x3c4;<<i>&#x3c4;</i><sub>o</sub></td></tr><tr><td>2<i>N</i><sub>tot</sub>&#x3c4;-4<i>N</i><sub>pair</sub><i>(</i>&#x3c4;-<i>&#x3c4;</i><sub>o</sub><i>)</i></td><td>'' &#x3c4;><i>&#x3c4;</i><sub>o</sub></td></tr></table>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-nary-001",
+      "input": "<i>1</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-nary-002",
+      "input": "<i>2</i><i>1</i><i>3</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-nary-004",
+      "input": "<i>&sum;</i><sub>3</sub><sup>1</sup>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-nary-005",
+      "input": "<i>&sum;</i><sub>2</sub>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-nary-006",
+      "input": "<i>&sum;</i><sub>1</sub>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-nary-007",
+      "input": "<i>&prod;</i><sub>3</sub><sup>1</sup>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-nary-008",
+      "input": "<i>&sum;</i><sub>k</sub>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-nary-009",
+      "input": "<i>&sum;</i><sub>i=0</sub><sup>n</sup>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-nary-010",
+      "input": "<i>&prod;</i><sub>k=1</sub><sup>n</sup>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-nary-011",
+      "input": "<i>&sum;</i><sub>1</sub><sup>n</sup>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-roots-001",
+      "input": "<i>sqrt</i><i>1</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-roots-002",
+      "input": "<i>2</i><i>1</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-roots-004",
+      "input": "<i>3</i><i>1</i>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-001",
+      "input": "dx",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-002",
+      "input": "dy",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-003",
+      "input": "dθ",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-004",
+      "input": "<i>ln</i> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-005",
+      "input": "x &#x2236;= y",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-006",
+      "input": "a == a",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-007",
+      "input": "a += b",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-008",
+      "input": "a -= b",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-009",
+      "input": "a &#x225d; b",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-010",
+      "input": "a &#x225e; b",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-011",
+      "input": "a &#x225c; b",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-012",
+      "input": "&#x22ef;",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-013",
+      "input": "&#x2026;",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-014",
+      "input": "&#x22ee;",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-015",
+      "input": "&#x22f1;",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-016",
+      "input": "100 a a a a a a a a a a a a a",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-019",
+      "input": "x <br/>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-runs-023",
+      "input": "x <br/> y",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-001",
+      "input": "<i>1</i><sup>2</sup>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-002",
+      "input": "<i>1</i><sub>2</sub>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-003",
+      "input": "<i>1</i><sub>3</sub><sup>2</sup>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-004",
+      "input": "<i><i>sin</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-005",
+      "input": "<i><i>cos</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-006",
+      "input": "<i><i>tan</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-007",
+      "input": "<i><i>csc</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-008",
+      "input": "<i><i>sec</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-009",
+      "input": "<i><i>cot</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-010",
+      "input": "<i><i>sinh</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-011",
+      "input": "<i><i>cosh</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-012",
+      "input": "<i><i>tanh</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-013",
+      "input": "<i><i>csch</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-014",
+      "input": "<i><i>sech</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-015",
+      "input": "<i><i>coth</i></i><sup>-1</sup> x",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-016",
+      "input": "<menclose notation=\"longdiv\"><i>a</i><sup>2</sup> = <i>b</i><sup>2</sup> &#x2b; <i>c</i><sup>2</sup></menclose>",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-017",
+      "input": "<i><i>log</i></i><sub>a</sub> 2",
+      "source_family": "omml"
+    },
+    {
+      "id": "omml-scripts-018",
+      "input": "<i>log</i><sub>x</sub>",
+      "source_family": "omml"
+    },
+    {
+      "id": "unicode-fence-curly",
+      "input": "<i>{</i>a<i>}</i>",
+      "source_family": "unicode"
+    },
+    {
+      "id": "unicode-number-decimal-comma",
+      "input": "1,5",
+      "source_family": "unicode"
+    },
+    {
+      "id": "unicode-operator-minus-plus",
+      "input": "a &#x2213; b",
+      "source_family": "unicode"
+    },
+    {
+      "id": "scope-1",
+      "input": "<B>x</b>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-2",
+      "input": "<b>x</B>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-3",
+      "input": "<Div><SPAN>x</span></dIv>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-4",
+      "input": "<a-b>x</A-B>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-5",
+      "input": "<ns:TAG>x</NS:tag>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-6",
+      "input": "<A_1>x</a_1>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-7",
+      "input": "<x.y>x</X.Y>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-8",
+      "input": "<b>x</bb>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-9",
+      "input": "<b><i>x</b></i>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-10",
+      "input": "<B>x</b >",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-11",
+      "input": "<b data-x='v'>x</b>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-12",
+      "input": "<B/>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-13",
+      "input": "<a><b>x</b>y</a>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-14",
+      "input": "<a><b>x</b>y</b>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-15",
+      "input": "<ab><a>x</A></aB>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-16",
+      "input": "<ab><a>x</Ab></aB>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-17",
+      "input": "<B>sin(x)</b>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-18",
+      "input": "<b>0xFF</b>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-19",
+      "input": "<span>&Alpha;+&#x03b2;</SPAN>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-20",
+      "input": "<B><i>x</I><SUP>2</sup></b>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-21",
+      "input": "<math><mi>x</mi></math>",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-22",
+      "input": "<br/>x",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-23",
+      "input": "<BR>x",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-24",
+      "input": "0b101010",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    },
+    {
+      "id": "scope-25",
+      "input": "0o77",
+      "source_family": "targeted source grammar scope/case/base-prefix probes"
+    }
+  ]
+}

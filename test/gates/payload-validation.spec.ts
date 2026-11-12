@@ -339,6 +339,9 @@ const FIXTURE_BASENAMES = Object.keys(FIXTURE_SPECS) as readonly (
   | "failure-position-fixtures.json"
 )[];
 const NATIVE_AUXILIARY_JSON = [
+  // Independently pinned HTML PARG source observations; its inline provenance
+  // is validated by parsanol.spec.ts rather than the legacy oracle envelope.
+  "test/formats/html/initialized-source.json",
   "test/formats/unicodemath/completion-fixtures.metadata.json",
   "test/formats/unicodemath/unreached-fixtures.json",
   "test/formats/unicodemath/unreached-fixtures.metadata.json",
@@ -1286,7 +1289,7 @@ describe("per-format generated fixtures have complete sidecar provenance", () =>
     }
   });
 
-  it("accounts for every other per-format JSON payload as an explicit legacy gap", () => {
+  it("accounts for every per-format JSON payload under an explicit provenance policy", () => {
     expect(
       [...FORMAT_FIXTURE_PAYLOADS, ...LEGACY_FORMAT_FIXTURES, ...NATIVE_AUXILIARY_JSON].sort(),
     ).toStrictEqual(ALL_FORMAT_JSON_PAYLOADS);

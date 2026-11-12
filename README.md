@@ -320,6 +320,9 @@ be supplied through the same factory after browser runtime initialization.
 
 ### Initialized HTML PARG parser
 
+The HTML artifact profile is qualified with `parsanol-ts` commit
+`7ce2e27a201de90e6b35a4090ae3c906d7b9cb7f` and Parsanol engine 0.20.15.
+
 `html/parsanol` consumes initialized Parsanol runtimes without loading WASM or
 falling back to the default parser. Initialize the SDK once, load the exact
 artifact text from the `html/artifacts/dot.json`, `comma.json` and `arabic.json`

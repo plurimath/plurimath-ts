@@ -29,6 +29,7 @@ import packageJson from "../../package.json";
 import * as amath from "../../src/formats/asciimath/amath";
 import * as asciimath from "../../src/formats/asciimath/index";
 import * as html from "../../src/formats/html/index";
+import * as htmlParsanol from "../../src/formats/html/parsanol";
 import * as latex from "../../src/formats/latex/index";
 import * as latexmath from "../../src/formats/latex/latexmath";
 import * as mathml from "../../src/formats/mathml/index";
@@ -45,6 +46,7 @@ const SURFACE: ReadonlyArray<readonly [string, Record<string, unknown>, readonly
   ["./latex/latexmath", latexmath, ["createLatexParser"]],
   ["./unicodemath/umath", umath, ["createUnicodemathParser"]],
   ["./html", html, ["parseHtml", "toHtml"]],
+  ["./html/parsanol", htmlParsanol, ["createHtmlParser"]],
   ["./latex", latex, ["parseLatex", "toLatex"]],
   ["./mathml", mathml, ["parseMathml", "toMathml"]],
   ["./omml", omml, ["parseOmml", "toOmml"]],
@@ -59,7 +61,8 @@ const PUBLISHED_FORMAT_SUBPATHS = Object.keys(packageJson.exports).filter(
     subpath !== "./core" &&
     subpath !== "./package.json" &&
     subpath !== "./evaluation/wasm" &&
-    subpath !== "./evaluation/plurimath_numeric.wasm",
+    subpath !== "./evaluation/plurimath_numeric.wasm" &&
+    !subpath.startsWith("./html/artifacts/"),
 );
 
 it("publishes every declared format surface as a package subpath", () => {

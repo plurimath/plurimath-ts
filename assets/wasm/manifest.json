@@ -1,8 +1,8 @@
 {
   "schema": "plurimath-ts.numeric-wasm-asset/2",
   "file": "plurimath_numeric.wasm",
-  "sha256": "d0e71c901d8ff93a9547b56a7addba57ce441349d23797270a3ac4850d0b5e20",
-  "bytes": 7301273,
+  "sha256": "2c973c9e7c4403cd9a0f7bed2ca3605beb7735838e671675f5a9d2ede417a368",
+  "bytes": 7301547,
   "abi": 1,
   "request_schemas": [
     "plurimath.evaluate.numeric/1",
@@ -18,15 +18,15 @@
   "claims": {
     "gum": "149 sealed scientific and caller-metadata diagnostic wires, including13 published Monte Carlo profiles",
     "named_power_class": "not asserted",
-    "caller_register": "32 exact declared-register value and refusal wires; 2 superseded under UnitsDB bc089c0 by the source profile",
+    "caller_register": "32 exact declared-register value and refusal wires; 2 superseded under UnitsDB b210137 by the source profile",
     "coverage_validation": "48 source-compatible caller-metadata diagnostics plus one actual170000-sample MCM regression; no provenance or physical adequacy certification",
     "quantity_kinds": "data-declared quantity kinds (UnitsDB equivalence_class) and flag-based primary quantities, replaying the 124 kind and 95 primary rows of the Ruby oracle generation ruby-unitsml-features/v1"
   },
   "source": {
     "crate": "plurimath-numeric",
     "version": "0.1.0",
-    "crate_sha256": "21b6911831e844737fd69ea58a0a8a9c20fced537e0e4d860beff09db195c1cb",
-    "revision": "d08503fcbfb6760599c8e86c3e18c4c979b1b6c4",
+    "crate_sha256": "09fe6954bfc62c2f9588a2afcc0152e8b985de1e39d7070d045ac2b6e2531f5d",
+    "revision": "f8b3f2c84105efd6e0291c1a247c2a450d692720",
     "base": "8f9273968a9e17dc604eb1ae66a84b9c4fa30f1c",
     "feature": "quantity",
     "wasm_target": "wasm32-unknown-unknown",
@@ -34,7 +34,7 @@
     "wasm_bindgen": "wasm-bindgen 0.2.130",
     "cargo_lock": {
       "file": "Cargo.lock",
-      "sha256": "98f5ce4d6416371c045ca826ff153ba1c28743eeb105029c8b7b049669a5613d"
+      "sha256": "2e9f800c4b157403d88e418128268b1f1186bec9a4b2e574b4cac69a6d084a09"
     },
     "dependency_pins": {
       "asciiunits": {
@@ -46,23 +46,23 @@
         }
       },
       "unitsml": {
-        "source": "5a4c77d2e2705cb5402c6953193d223722786a74"
+        "source": "14c17076b7199940acaf9ce1f0272f3808b389bd"
       },
       "unitsdb": {
-        "source": "9f1e87e705955360538923136e938c5275051834",
+        "source": "969a131b8992930a6ff6f869291f1f0d7cb68d33",
         "data": {
           "path": "workspace/units-native/unitsdb-rs/data/unitsdb.json",
-          "sha256": "3e02e237cdc5e18c7c82b00e5f2040f823cff1dc755298612b3040e506bc035a",
-          "bytes": 535365,
-          "candidate": "unitsml/unitsdb#142 branch (060b566) plus local bc089c0; untagged; do not merge before #142 is approved and released"
+          "sha256": "595e987112aed69d06ac2e68fda4b12e58266d5577ccd8cd8aa2cdc56eb765d4",
+          "bytes": 535455,
+          "candidate": "unitsml/unitsdb#143 head b210137 (public, immutable, untagged); #142 merged as main 035665f"
         }
       },
       "parsanol": {
         "source": "20d5e6cebcade3cf2111a00a7ef3f5b69d673481"
       }
     },
-    "artifact_receipt_sha256": "e6c94cab2d184665b9e508c2278a6a9aa3a980113ac36e99cc53f707956a9b07",
-    "wasm_metadata_sha256": "99da11a068d12c5de626fec087e675a77a54771e94426359c86f927fc61333e2"
+    "artifact_receipt_sha256": "c0b2140c2e4952615caf0befb0f562fe05478a9765fde077c8f5259b2795a99c",
+    "wasm_metadata_sha256": "a02b01bc3fdf2182fcad3588d43d5aa410cef0eb6ed06387e10a4fc4859b408f"
   },
   "glue": {
     "origin": "plurimath_numeric.js (wasm-bindgen 0.2.130 --target web)",
@@ -132,8 +132,8 @@
   },
   "vectors_total": 417,
   "source_profile": {
-    "file": "source-profile-unitsdb-bc089c0.json",
-    "sha256": "d4de9573bc30326275641436cda6f4f2cdb4a4de7146145a75118306a47ce2a2",
+    "file": "source-profile-unitsdb-b210137.json",
+    "sha256": "a82918b9b32235f985bd69921642db812ee3b4681eb5691086b55635e17642cc",
     "legacy_file": "quantity-register-v1.json",
     "superseded": [
       "caller-referenced-id",

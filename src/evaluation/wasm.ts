@@ -29,8 +29,8 @@ import initGlue from "./quantity-wasm/plurimath_numeric.js";
 export const NUMERIC_WASM_ASSET = Object.freeze({
   file: "plurimath_numeric.wasm",
   specifier: "@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm",
-  sha256: "d0e71c901d8ff93a9547b56a7addba57ce441349d23797270a3ac4850d0b5e20",
-  bytes: 7301273,
+  sha256: "2c973c9e7c4403cd9a0f7bed2ca3605beb7735838e671675f5a9d2ede417a368",
+  bytes: 7301547,
   abi: 1,
   schema: "plurimath.evaluate.numeric/1",
   schemas: Object.freeze([
@@ -41,8 +41,8 @@ export const NUMERIC_WASM_ASSET = Object.freeze({
   source: Object.freeze({
     crate: "plurimath-numeric",
     version: "0.1.0",
-    crateSha256: "21b6911831e844737fd69ea58a0a8a9c20fced537e0e4d860beff09db195c1cb",
-    revision: "d08503fcbfb6760599c8e86c3e18c4c979b1b6c4",
+    crateSha256: "09fe6954bfc62c2f9588a2afcc0152e8b985de1e39d7070d045ac2b6e2531f5d",
+    revision: "f8b3f2c84105efd6e0291c1a247c2a450d692720",
     feature: "quantity",
   }),
   /** wasm-bindgen 0.2.130 `--target web` glue, bundled verbatim. */

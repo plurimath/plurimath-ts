@@ -65,7 +65,9 @@ const server = createServer((req, res) => {
     requests.push(url.pathname);
   } catch (e) {
     res.statusCode = 404;
-    res.end(String(e));
+    console.error("HTML probe request failed", e);
+    res.setHeader("Content-Type", "application/json");
+    res.end('{"error":"not_found"}');
   }
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
@@ -113,20 +115,39 @@ try {
     ws.onerror = j;
   });
   let seq = 0;
-  const pending = new Map();
+  let expectedResponseId = 0;
+  let pendingResponse;
   ws.onmessage = (e) => {
-    const msg = JSON.parse(e.data);
-    if (msg.id) {
-      pending.get(msg.id)?.(msg);
-      pending.delete(msg.id);
+    let msg;
+    try {
+      msg = JSON.parse(e.data);
+    } catch {
+      return;
     }
+    if (
+      msg === null ||
+      typeof msg !== "object" ||
+      !Number.isSafeInteger(msg.id) ||
+      msg.id !== expectedResponseId ||
+      pendingResponse === undefined
+    )
+      return;
+    const resolveResponse = pendingResponse;
+    pendingResponse = undefined;
+    expectedResponseId = 0;
+    resolveResponse(msg);
   };
-  const send = (method, params = {}) =>
-    new Promise((r) => {
+  const allowedMethods = new Set(["Runtime.evaluate", "Browser.close"]);
+  const send = (method, params = {}) => {
+    if (!allowedMethods.has(method)) throw new Error("unsupported probe command");
+    if (pendingResponse !== undefined) throw new Error("probe command already pending");
+    return new Promise((resolveResponse) => {
       const id = ++seq;
-      pending.set(id, r);
+      expectedResponseId = id;
+      pendingResponse = resolveResponse;
       ws.send(JSON.stringify({ id, method, params }));
     });
+  };
   let result;
   while (Date.now() < deadline) {
     const msg = await send("Runtime.evaluate", {

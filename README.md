@@ -192,6 +192,56 @@ include signed residuals and the selected rule's boundary decision. The
 kernel returns typed refusals for unsupported sampling profiles. The pinned request and response examples are in
 [`test/fixtures/evaluation-wasm`](test/fixtures/evaluation-wasm).
 
+### Typed quantity values
+
+Use `evaluateQuantityRequest(kernel, request)` from the same WASM entry after
+explicitly initializing the kernel. It preserves the complete request and native
+response, including the numeric class and accuracy. The raw `evaluateRequest(json)`
+API and the separate UnitsML-runtime `evaluateQuantity` API remain unchanged.
+
+```ts
+import {
+  initNumericWasm,
+  evaluateQuantityRequest,
+} from "@plurimath/plurimath-ts/evaluation/wasm";
+
+const kernel = await initNumericWasm(wasmBytes);
+const response = evaluateQuantityRequest(kernel, {
+  schema: "plurimath.evaluate.quantity/1",
+  ast: {
+    type: "binary", operator: "*",
+    left: { type: "variable", name: "x" },
+    right: { type: "variable", name: "y" },
+  },
+  bindings: {
+    x: { value: { decimal: "2.5" }, unit: "m" },
+    y: { value: "3", unit: "s" },
+  },
+});
+if (response.ok) {
+  console.log(response.result.value.numeric_value, response.result.accuracy.symbol);
+} else {
+  console.error(response.error.code);
+}
+```
+
+Binding values are plain strings for exact Rational values (including integers),
+`{ decimal: "2.5" }` for a BigDecimal, `{ rational: ["5", "2"] }` for an exact
+Rational, or `{ binary64: "4004000000000000" }` for a Float. Binary64 tags contain
+16 big-endian IEEE 754 hexadecimal digits. Decimal text and rational components
+stay strings; the client does not convert them to JavaScript numbers.
+
+On a kernel supporting these explicit tags, a tagged request includes
+`numeric_value` on `result.value` and on a non-null `result.converted`. The value
+has `kind: "rational"` with string `numerator`/`denominator`, `kind: "decimal"`
+with the source BigDecimal's scientific `value` string and integer `precision`,
+or `kind: "float"` with its `bits`. It describes the snapshot's `magnitude`,
+not `canonical_magnitude`; converted values can have a different numeric kind.
+Accuracy remains the separate `result.accuracy` object. Plain-string requests
+retain their legacy response without the new field. Unsupported or invalid
+requests return the kernel's error response; this helper does not fall back to
+another evaluator.
+
 ### The compat class
 
 The root entry also default-exports `Plurimath`, shaped after the

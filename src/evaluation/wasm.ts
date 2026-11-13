@@ -337,3 +337,14 @@ function createEvaluator(
       evaluateJson(typeof json === "string" ? json : "null"),
   });
 }
+
+export {
+  evaluateQuantityRequest,
+  type QuantityBinding,
+  type QuantityBindingValue,
+  type QuantityNumericValue,
+  type QuantityRequest,
+  type QuantityResponse,
+  type QuantityResult,
+  type QuantitySnapshot,
+} from "./quantity-wire";

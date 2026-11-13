@@ -70,6 +70,7 @@
         "default": "./dist/facade-wasm.cjs"
       }
     },
+    "./facade/plurimath_facade.wasm": "./dist/plurimath_facade.wasm",
     "./asciimath": {
       "import": {
         "types": "./dist/asciimath.d.ts",

@@ -1,0 +1,7 @@
+{
+  "path": "plurimath-rs fixtures/source-values/typed-collisions.json (lossless-wire producer b2681543f2de85b56fd20d9bc9d0fac3110f286c)",
+  "sha256": "739025586d04c6d43ef3d2d1b6d9ae3c3411a906067eb1cfb683a2f27790ee78",
+  "ruby_source_commit": "0a1df68a5903d43da13b1e1ef85b6c0523feb1b4",
+  "status": "byte-identical to plurimath-python tests/source-values-reference.json at b8fc9cc8cbca58d58771498f28a2daff45092281",
+  "use": "plurimath.ruby-values/1 documents and their measured Ruby writer outputs and refusal classes"
+}

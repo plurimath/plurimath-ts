@@ -1,0 +1,17 @@
+{
+  "schema": "plurimath-ts.facade-fixtures/1",
+  "status": "Every file is byte-identical to the merged plurimath-python fixture set at b8fc9cc8cbca58d58771498f28a2daff45092281, itself pinned to plurimath-rs 7f1226364033e69075586d3f43a1a696dfa5f35b; no expectation is edited here.",
+  "files": {
+    "corpus/writer-reference-2928.json.gz": "03e18fd5ca1a91f83b78e861c6a0a01b8921c8ef611a324a4c57f957b3fd9bcb",
+    "corpus/ruby-full-text-oracle.json.gz": "e11816f41ad8d9c1b213f8785a988e331505279ea9c1201a495087211af461ce",
+    "corpus/parser-jobs.json.gz": "650beb9b2f60ec14155642dfbdcefbb082fdd5eb06e938a2c12e7cc9b5672989",
+    "corpus/provenance.json": "ad5a18c8cd30c044fe604d654845589b2470cf59abc80022f59ee1af9c3072a2",
+    "source-profile-ruby0a1/cases.json": "9e306817799f4aa335cbaf0739072dc74a30d0bef15da53f84bd5ccef2815c35",
+    "source-profile-ruby0a1/source.json": "432284f20e70e7ecef8ab59ac29722044aff0124e11da1c44bd4c61bf5656aab",
+    "parser-negative23/parser-negative23-public-ruby.json": "72db2b6308e375c73c116ce190ca4cf5441032f6b85365e6bf4766ab7c2a2855",
+    "parser-negative23/parser-negative23-provenance.json": "1d60b697ec09c4199386494e01a6fb04b2544b04f7de9f418eeacd8cf6cfac20",
+    "text-closure-followup-87/residual-shapes.json": "2b3605445e94025125f8155e7642dcd9919cb8f658baf54c8d6da5ad7ec238a0",
+    "text-closure-followup-87/source.json": "534ffd3ce2904b3a6cc5f2a642cc21455f068a99d3a9fc7c78038041979fc16e",
+    "source-values/typed-collisions.json": "739025586d04c6d43ef3d2d1b6d9ae3c3411a906067eb1cfb683a2f27790ee78"
+  }
+}

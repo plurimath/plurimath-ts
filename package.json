@@ -60,6 +60,16 @@
       }
     },
     "./evaluation/plurimath_numeric.wasm": "./dist/plurimath_numeric.wasm",
+    "./facade/wasm": {
+      "import": {
+        "types": "./dist/facade-wasm.d.ts",
+        "default": "./dist/facade-wasm.js"
+      },
+      "require": {
+        "types": "./dist/facade-wasm.d.cts",
+        "default": "./dist/facade-wasm.cjs"
+      }
+    },
     "./asciimath": {
       "import": {
         "types": "./dist/asciimath.d.ts",

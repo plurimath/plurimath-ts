@@ -1,8 +1,8 @@
 {
   "schema": "plurimath-ts.numeric-wasm-asset/2",
   "file": "plurimath_numeric.wasm",
-  "sha256": "2c973c9e7c4403cd9a0f7bed2ca3605beb7735838e671675f5a9d2ede417a368",
-  "bytes": 7301547,
+  "sha256": "2114cccd5e47b0c8884a0d03e993dd006ded9f0405f77585e6577b2273aaeb7c",
+  "bytes": 7502250,
   "abi": 1,
   "request_schemas": [
     "plurimath.evaluate.numeric/1",
@@ -25,20 +25,18 @@
   "source": {
     "crate": "plurimath-numeric",
     "version": "0.1.0",
-    "crate_sha256": "09fe6954bfc62c2f9588a2afcc0152e8b985de1e39d7070d045ac2b6e2531f5d",
-    "revision": "f8b3f2c84105efd6e0291c1a247c2a450d692720",
-    "base": "8f9273968a9e17dc604eb1ae66a84b9c4fa30f1c",
+    "revision": "f6ba2bad60f20d82a6f763e1a7a4f82141426e51",
     "feature": "quantity",
     "wasm_target": "wasm32-unknown-unknown",
     "compiler": "rustc 1.95.0 (59807616e 2026-04-14)",
     "wasm_bindgen": "wasm-bindgen 0.2.130",
     "cargo_lock": {
       "file": "Cargo.lock",
-      "sha256": "2e9f800c4b157403d88e418128268b1f1186bec9a4b2e574b4cac69a6d084a09"
+      "sha256": "65169a36e87a15e0a6a5bb2cdaba17fbf7e606621c25ce1d4df143dc3a0c00b4"
     },
     "dependency_pins": {
       "asciiunits": {
-        "source": "498cec2ce946c7bcb3b1b26313667b188ddf76aa",
+        "source": "1f771caef878b9d383a5f29b02f434b8b614b780",
         "data": {
           "path": "workspace/units-native/asciiunits-rs/artifacts/unitsml.json",
           "sha256": "139d91337a0944d60f36bc144a205625349f4b3b8b7ff1a0fba3c61e70c57804",
@@ -46,7 +44,7 @@
         }
       },
       "unitsml": {
-        "source": "14c17076b7199940acaf9ce1f0272f3808b389bd"
+        "source": "cdfbcc3087f271d8723b3c3d1e4764860601e570"
       },
       "unitsdb": {
         "source": "969a131b8992930a6ff6f869291f1f0d7cb68d33",
@@ -58,17 +56,27 @@
         }
       },
       "parsanol": {
-        "source": "20d5e6cebcade3cf2111a00a7ef3f5b69d673481"
+        "source": "crates.io",
+        "version": "0.20.14"
       }
     },
-    "artifact_receipt_sha256": "c0b2140c2e4952615caf0befb0f562fe05478a9765fde077c8f5259b2795a99c",
-    "wasm_metadata_sha256": "a02b01bc3fdf2182fcad3588d43d5aa410cef0eb6ed06387e10a4fc4859b408f"
+    "repository": "https://github.com/plurimath/plurimath-rs",
+    "publication": {
+      "branch": "retained-source/numeric151-f40-register-scope-20261112",
+      "pull_request": "https://github.com/plurimath/plurimath-rs/pull/1"
+    },
+    "build": {
+      "raw_wasm_sha256": "68edabf44f9f63f5feca70fec66d4f90a3cb70844b1ea32e3cc5df8c64741a0b",
+      "raw_wasm_bytes": 8284995,
+      "wasm_bindgen_tool_sha256": "ca4df773020dae87d92b9eadb2b85412bea7a9cf6318ab9999dd119fd9f46931",
+      "profile": "dev with plurimath-numeric opt-level=2"
+    }
   },
   "glue": {
-    "origin": "plurimath_numeric.js (wasm-bindgen 0.2.130 --target web)",
-    "file": "src/evaluation/quantity-wasm/plurimath_numeric.js",
-    "sha256": "7455faeb6e8aa4f77680f54e6fa2a40ab8eee8e57c3e499b32dc6cc8f24962e6",
-    "types_file": "src/evaluation/quantity-wasm/plurimath_numeric.d.ts",
+    "origin": "numeric.js (wasm-bindgen 0.2.130 --target web --out-name numeric)",
+    "file": "src/evaluation/quantity-wasm/numeric.js",
+    "sha256": "0a65bad4561c6f4f87534f13c9e208a61907e5e80e75df57b936b947e7f6698a",
+    "types_file": "src/evaluation/quantity-wasm/numeric.d.ts",
     "types_sha256": "4e62a95047500526aa8eee5304a363a8d48266e305f47a926329d8b39b06d13f",
     "wasm_types_sha256": "abb55d27f6e78c78e5b714a88a3de927967ab71298af086d6c29c8859fc8a52b"
   },
@@ -83,9 +91,9 @@
   },
   "dependency_notices": {
     "manifest": "licenses/license-manifest.json",
-    "sha256": "f0f56050c6ff58111b5a80c29516326ceeecb321420a99e637b364c227564f1b",
-    "groups": 52,
-    "files": 99
+    "sha256": "272a5550000531167d344973db73a74910c1e7b494f6a6b7bd19e1187c3da007",
+    "groups": 53,
+    "files": 102
   },
   "vectors": {
     "quantity-wasm-v1.json": {
@@ -138,6 +146,24 @@
     "superseded": [
       "caller-referenced-id",
       "register-does-not-persist"
+    ]
+  },
+  "scale_source_profile": {
+    "file": "source-profile-scale-transitions-v3.json",
+    "sha256": "8ee64b94fec9e863726b57b89820025cc1afc9d2a5571232cd0c327e6c06c74a",
+    "superseded": [
+      {
+        "file": "extended-quantity-v1.json",
+        "id": "difference-plus-absolute"
+      },
+      {
+        "file": "extended-quantity-v1.json",
+        "id": "difference-minus-absolute"
+      },
+      {
+        "file": "quantity-register-v1.json",
+        "id": "registered-difference-minus-point-refusal"
+      }
     ]
   }
 }

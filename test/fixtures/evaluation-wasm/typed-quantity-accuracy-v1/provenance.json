@@ -1,0 +1,37 @@
+{
+  "schema": "plurimath-ts.typed-quantity-source-profile/1",
+  "generation": "ruby-typed-quantity-accuracy/v1",
+  "source_revision": "7b33dc2ca04acff78455e163467850e02157a48e",
+  "vectors_sha256": "f578a7e9cfa7cb906643c76835ae2d79c2a089ff731005953fb5ea7c89e5bbe8",
+  "source_profile_index_sha256": "f9bec867666aca4946f95bbfb2c23a63e3e3f40ea1d17f0e55080cd5dc873e8a",
+  "relationship": "New additive generation; no earlier file changed. ruby-feature-additions/v1 and evaluator-reference/v1 (including the 660-case numeric profile inputs) are untouched. The six accuracy_classes_typed rows reuse the ids and Ruby values of the ruby-feature-additions/v1 accuracy rows; their library results are identical.",
+  "reason": "A request builder that flattens {decimal: \"2.5\"} into the plain String \"2.5\" turns a limited BigDecimal binding into an exact Rational one. These rows carry the binding class in the request so both classes are pinned.",
+  "binding_value_tags": {
+    "decimal": "{\"decimal\": \"2.5\"} = Ruby BigDecimal, limited_<precision>; text is BigDecimal#to_s(\"F\")",
+    "rational": "{\"rational\": [\"5\", \"2\"]} = Ruby Rational, exact",
+    "binary64": "{\"binary64\": \"4004000000000000\"} = Ruby Float (big-endian IEEE 754 hex), limited_float",
+    "plain_string": "\"2.5\" = exact Rational (Ruby request decoder Rational(text)); Integer bindings are sent as plain Strings"
+  },
+  "producer": {
+    "script": "archive/capture-typed-quantity-accuracy.rb",
+    "runs": [
+      {
+        "payload": "archive/typed-quantity-accuracy-0a1df68.jsonl"
+      },
+      {
+        "payload": "archive/typed-quantity-accuracy-0a1df68-rerun.jsonl"
+      }
+    ],
+    "plurimath_ruby": "0a1df68a5903d43da13b1e1ef85b6c0523feb1b4",
+    "unitsml": "unitsml-ruby de4f5b9de08760ed124e10eb3cf1f5ee0f3450cd",
+    "bigdecimal": "4.1.3",
+    "runtime": "ruby 4.0.1 +PRISM x86_64-linux, TZ=UTC LC_ALL=C.UTF-8, two separate processes, both clean checkouts"
+  },
+  "numeric_values_sha256": "4bf0e3502a9397218f666e46fd9eae645cb8b5170b595a10317944fe5560641f",
+  "comparison": "expected records the observed Ruby library result; ruby_wire preserves the historical decoder response and is not a typed-kernel success oracle",
+  "unit_maps_sha256": "ef9a6e951f205fa54fa805c84a2784a0ea963f63dcfe9be75748bd3a79f63f78",
+  "converted_sha256": "d2a9271a11bcc0ee63fd11564177aa574f9ec1e5df8446a936f9d8809c81557a",
+  "converted_generation": "additive extra two observed Ruby converted-tagged quantities; original36unchanged",
+  "final_source_38_sha256": "e527a1eed583620eb85a4dc1fff7c1f30c748a2a34598844928f4aceacb52846",
+  "final_source_38": "Copy of the plurimath.final-typed-quantity-consumer/1 packet (sha256 91015c84bde4479661280effc3dd790fcac29243c7436e41bf46097df1eeead5; 36 typed + 2 converted) with source.path reduced to its file name. Each expected value is the complete kernel response at plurimath-rs f6ba2bad, derived from final-quantity-source-v3.json (sha256 a944397cb1c4a6974b5876ad7e21aef680330448580d370db4843fc516fd7f74)."
+}

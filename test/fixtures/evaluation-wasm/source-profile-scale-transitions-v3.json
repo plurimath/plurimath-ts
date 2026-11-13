@@ -1,0 +1,97 @@
+{
+  "schema": "plurimath-numeric.source-scale-profile/1",
+  "profile": "quantity-scale-transitions-v3",
+  "source": {
+    "generation": "plurimath-final-quantity-source/2",
+    "sha256": "a944397cb1c4a6974b5876ad7e21aef680330448580d370db4843fc516fd7f74",
+    "ruby": "ruby 4.0.1 (2026-01-13 revision e04267a14b) +PRISM [x86_64-linux]",
+    "plurimath_ruby": "0a1df68a5903d43da13b1e1ef85b6c0523feb1b4",
+    "unitsml_ruby": "de4f5b9de08760ed124e10eb3cf1f5ee0f3450cd",
+    "files": [
+      "lib/unitsml/quantity.rb",
+      "lib/plurimath/math/evaluation/quantity_evaluator.rb"
+    ]
+  },
+  "kernel": {
+    "repository": "https://github.com/plurimath/plurimath-rs",
+    "revision": "f6ba2bad60f20d82a6f763e1a7a4f82141426e51"
+  },
+  "source_rationale": "A difference binding combined with an absolute (point) temperature follows the Ruby source scale transitions: difference plus point is a point in the kernel reference unit, and difference minus point is a difference, not a ScaleOperationError. Each row names the scale24 source row with the same operands, units and difference flags (an absent flag is false); the kernel value equals that row's value. The legacy files stay byte for byte; these rows pin each legacy expectation and give the source-governed one.",
+  "superseded_legacy_rows": [
+    {
+      "file": "extended-quantity-v1.json",
+      "id": "difference-plus-absolute",
+      "request_json": "{\"schema\":\"plurimath.evaluate.quantity/1\",\"ast\":{\"type\":\"binary\",\"operator\":\"+\",\"left\":{\"type\":\"variable\",\"name\":\"x\"},\"right\":{\"type\":\"variable\",\"name\":\"y\"}},\"bindings\":{\"x\":{\"value\":\"5\",\"unit\":\"K\",\"difference\":true},\"y\":{\"value\":\"20\",\"unit\":\"degC\"}},\"convert_to\":\"K\"}",
+      "legacy_expected_wire": "{\"engine\":\"plurimath.quantity/1\",\"grammar\":\"plurimath.numeric-ast/1\",\"ok\":true,\"result\":{\"accuracy\":{\"symbol\":\"exact\"},\"converted\":{\"canonical_magnitude\":\"5963/20\",\"dimension_id\":\"NISTd5\",\"dimensions\":{\"ThermodynamicTemperature\":\"1\"},\"magnitude\":\"5963/20\",\"scale\":\"ratio\",\"terms\":[{\"power\":\"1\",\"prefix\":null,\"unit\":\"NISTu5\"}]},\"value\":{\"canonical_magnitude\":\"5963/20\",\"dimension_id\":\"NISTd5\",\"dimensions\":{\"ThermodynamicTemperature\":\"1\"},\"magnitude\":\"25\",\"scale\":\"interval\",\"terms\":[{\"power\":\"1\",\"prefix\":null,\"unit\":\"NISTu23\"}]}},\"schema\":\"plurimath.evaluate.quantity/1\"}",
+      "expected_wire": "{\"engine\":\"plurimath.quantity/1\",\"grammar\":\"plurimath.numeric-ast/1\",\"ok\":true,\"result\":{\"accuracy\":{\"symbol\":\"exact\"},\"converted\":{\"canonical_magnitude\":\"5963/20\",\"dimension_id\":\"NISTd5\",\"dimensions\":{\"ThermodynamicTemperature\":\"1\"},\"magnitude\":\"5963/20\",\"scale\":\"ratio\",\"terms\":[{\"power\":\"1\",\"prefix\":null,\"unit\":\"NISTu5\"}]},\"value\":{\"canonical_magnitude\":\"5963/20\",\"dimension_id\":\"NISTd5\",\"dimensions\":{\"ThermodynamicTemperature\":\"1\"},\"magnitude\":\"5963/20\",\"scale\":\"ratio\",\"terms\":[{\"power\":\"1\",\"prefix\":null,\"unit\":\"NISTu5\"}]}},\"schema\":\"plurimath.evaluate.quantity/1\"}",
+      "source_row": "scale24:12",
+      "source_request_json": "{\"schema\":\"plurimath.evaluate.quantity/1\",\"ast\":{\"type\":\"binary\",\"operator\":\"+\",\"left\":{\"type\":\"variable\",\"name\":\"x\"},\"right\":{\"type\":\"variable\",\"name\":\"y\"}},\"bindings\":{\"x\":{\"value\":\"5\",\"unit\":\"K\",\"difference\":true},\"y\":{\"value\":\"20\",\"unit\":\"degC\",\"difference\":false}}}",
+      "source_value": {
+        "magnitude": "5963/20",
+        "canonical_magnitude": "5963/20",
+        "dimension_id": "NISTd5",
+        "dimensions": {
+          "ThermodynamicTemperature": "1"
+        },
+        "scale": "ratio",
+        "terms": [
+          {
+            "unit": "NISTu5",
+            "prefix": null,
+            "power": "1"
+          }
+        ]
+      }
+    },
+    {
+      "file": "extended-quantity-v1.json",
+      "id": "difference-minus-absolute",
+      "request_json": "{\"schema\":\"plurimath.evaluate.quantity/1\",\"ast\":{\"type\":\"binary\",\"operator\":\"-\",\"left\":{\"type\":\"variable\",\"name\":\"x\"},\"right\":{\"type\":\"variable\",\"name\":\"y\"}},\"bindings\":{\"x\":{\"value\":\"5\",\"unit\":\"K\",\"difference\":true},\"y\":{\"value\":\"20\",\"unit\":\"degC\"}}}",
+      "legacy_expected_wire": "{\"engine\":\"plurimath.quantity/1\",\"error\":{\"class\":\"error\",\"code\":\"ScaleOperationError\",\"detail\":\"ScaleOperation { scale: Difference, operation: \\\"difference minus absolute\\\" }\"},\"grammar\":\"plurimath.numeric-ast/1\",\"ok\":false,\"schema\":\"plurimath.evaluate.quantity/1\"}",
+      "expected_wire": "{\"engine\":\"plurimath.quantity/1\",\"grammar\":\"plurimath.numeric-ast/1\",\"ok\":true,\"result\":{\"accuracy\":{\"symbol\":\"exact\"},\"converted\":null,\"value\":{\"canonical_magnitude\":\"-5763/20\",\"dimension_id\":\"NISTd5\",\"dimensions\":{\"ThermodynamicTemperature\":\"1\"},\"magnitude\":\"-5763/20\",\"scale\":\"difference\",\"terms\":[{\"power\":\"1\",\"prefix\":null,\"unit\":\"NISTu5\"}]}},\"schema\":\"plurimath.evaluate.quantity/1\"}",
+      "source_row": "scale24:13",
+      "source_request_json": "{\"schema\":\"plurimath.evaluate.quantity/1\",\"ast\":{\"type\":\"binary\",\"operator\":\"-\",\"left\":{\"type\":\"variable\",\"name\":\"x\"},\"right\":{\"type\":\"variable\",\"name\":\"y\"}},\"bindings\":{\"x\":{\"value\":\"5\",\"unit\":\"K\",\"difference\":true},\"y\":{\"value\":\"20\",\"unit\":\"degC\",\"difference\":false}}}",
+      "source_value": {
+        "magnitude": "-5763/20",
+        "canonical_magnitude": "-5763/20",
+        "dimension_id": "NISTd5",
+        "dimensions": {
+          "ThermodynamicTemperature": "1"
+        },
+        "scale": "difference",
+        "terms": [
+          {
+            "unit": "NISTu5",
+            "prefix": null,
+            "power": "1"
+          }
+        ]
+      }
+    },
+    {
+      "file": "quantity-register-v1.json",
+      "id": "registered-difference-minus-point-refusal",
+      "request_json": "{\"ast\":{\"left\":{\"name\":\"x\",\"type\":\"variable\"},\"operator\":\"-\",\"right\":{\"name\":\"y\",\"type\":\"variable\"},\"type\":\"binary\"},\"bindings\":{\"x\":{\"difference\":true,\"unit\":\"degC\",\"value\":\"20\"},\"y\":{\"unit\":\"degC\",\"value\":\"15\"}},\"register\":[{\"dimensions\":{\"ThermodynamicTemperature\":\"1\"},\"factor\":\"1\",\"offset\":\"273.15\",\"unit\":\"degC\"}],\"schema\":\"plurimath.evaluate.quantity/1\"}",
+      "legacy_expected_wire": "{\"engine\":\"plurimath.quantity/1\",\"error\":{\"class\":\"error\",\"code\":\"ScaleOperationError\",\"detail\":\"ScaleOperation { scale: Difference, operation: \\\"difference minus absolute\\\" }\"},\"grammar\":\"plurimath.numeric-ast/1\",\"ok\":false,\"schema\":\"plurimath.evaluate.quantity/1\"}",
+      "expected_wire": "{\"engine\":\"plurimath.quantity/1\",\"grammar\":\"plurimath.numeric-ast/1\",\"ok\":true,\"result\":{\"accuracy\":{\"symbol\":\"exact\"},\"converted\":null,\"value\":{\"canonical_magnitude\":\"5\",\"dimension_id\":\"NISTd5\",\"dimensions\":{\"ThermodynamicTemperature\":\"1\"},\"magnitude\":\"5\",\"scale\":\"difference\",\"terms\":[{\"power\":\"1\",\"prefix\":null,\"unit\":\"NISTu23\"}]}},\"schema\":\"plurimath.evaluate.quantity/1\"}",
+      "source_row": "scale24:5",
+      "source_request_json": "{\"schema\":\"plurimath.evaluate.quantity/1\",\"ast\":{\"type\":\"binary\",\"operator\":\"-\",\"left\":{\"type\":\"variable\",\"name\":\"x\"},\"right\":{\"type\":\"variable\",\"name\":\"y\"}},\"bindings\":{\"x\":{\"value\":\"20\",\"unit\":\"degC\",\"difference\":true},\"y\":{\"value\":\"15\",\"unit\":\"degC\",\"difference\":false}}}",
+      "source_value": {
+        "magnitude": "5",
+        "canonical_magnitude": "5",
+        "dimension_id": "NISTd5",
+        "dimensions": {
+          "ThermodynamicTemperature": "1"
+        },
+        "scale": "difference",
+        "terms": [
+          {
+            "unit": "NISTu23",
+            "prefix": null,
+            "power": "1"
+          }
+        ]
+      }
+    }
+  ]
+}

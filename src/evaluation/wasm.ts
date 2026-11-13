@@ -14,7 +14,7 @@
  * transport only: there is no TypeScript fallback, and it does not import the
  * TypeScript evaluator. The shipped kernel handles numeric, quantity, and GUM
  * requests through its own
- * verbatim wasm-bindgen glue (`quantity-wasm/plurimath_numeric.js`). The
+ * verbatim wasm-bindgen glue (`quantity-wasm/numeric.js`). The
  * asset's SHA-256 is checked before compilation; a different build is accepted
  * only when the caller names its digest explicitly through `options.sha256`.
  *
@@ -23,14 +23,14 @@
  * same verified digest reuse it, and a different digest is refused with
  * `AlreadyInitialized`.
  */
-import initGlue from "./quantity-wasm/plurimath_numeric.js";
+import initGlue from "./quantity-wasm/numeric.js";
 
 /** The asset this release ships and pins (`assets/wasm/manifest.json`). */
 export const NUMERIC_WASM_ASSET = Object.freeze({
   file: "plurimath_numeric.wasm",
   specifier: "@plurimath/plurimath-ts/evaluation/plurimath_numeric.wasm",
-  sha256: "2c973c9e7c4403cd9a0f7bed2ca3605beb7735838e671675f5a9d2ede417a368",
-  bytes: 7301547,
+  sha256: "2114cccd5e47b0c8884a0d03e993dd006ded9f0405f77585e6577b2273aaeb7c",
+  bytes: 7502250,
   abi: 1,
   schema: "plurimath.evaluate.numeric/1",
   schemas: Object.freeze([
@@ -41,14 +41,13 @@ export const NUMERIC_WASM_ASSET = Object.freeze({
   source: Object.freeze({
     crate: "plurimath-numeric",
     version: "0.1.0",
-    crateSha256: "09fe6954bfc62c2f9588a2afcc0152e8b985de1e39d7070d045ac2b6e2531f5d",
-    revision: "f8b3f2c84105efd6e0291c1a247c2a450d692720",
+    revision: "f6ba2bad60f20d82a6f763e1a7a4f82141426e51",
     feature: "quantity",
   }),
   /** wasm-bindgen 0.2.130 `--target web` glue, bundled verbatim. */
   glue: Object.freeze({
-    file: "plurimath_numeric.js",
-    sha256: "7455faeb6e8aa4f77680f54e6fa2a40ab8eee8e57c3e499b32dc6cc8f24962e6",
+    file: "numeric.js",
+    sha256: "0a65bad4561c6f4f87534f13c9e208a61907e5e80e75df57b936b947e7f6698a",
   }),
   /** The pinned build also evaluates `plurimath.evaluate.quantity/1`. */
   quantity: true,
@@ -135,7 +134,7 @@ const KERNEL_FUNCTIONS = [
 ] as const;
 const SHA256 = /^[0-9a-f]{64}$/;
 /** Host imports the bundled glue provides (`__wbg_get_imports`). */
-const GLUE_MODULE = "./plurimath_numeric_bg.js";
+const GLUE_MODULE = "./numeric_bg.js";
 const GLUE_IMPORTS = new Set([
   "__wbg___wbindgen_throw_4c88d8bf264fd984",
   "__wbg_getRandomValues_5d8c030b527203a6",
@@ -337,3 +336,14 @@ function createEvaluator(
       evaluateJson(typeof json === "string" ? json : "null"),
   });
 }
+
+export {
+  evaluateQuantityRequest,
+  type QuantityBinding,
+  type QuantityBindingValue,
+  type QuantityNumericValue,
+  type QuantityRequest,
+  type QuantityResponse,
+  type QuantityResult,
+  type QuantitySnapshot,
+} from "./quantity-wire";

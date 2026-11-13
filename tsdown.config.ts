@@ -38,7 +38,7 @@ export default defineConfig([
   /**
    * `./evaluation/wasm`, built on its own so its bundled verbatim wasm-bindgen
    * glue can be compiled without host shims: the glue's default-asset branch
-   * (`new URL("plurimath_numeric_bg.wasm", import.meta.url)`) is unreachable
+   * (`new URL("numeric_bg.wasm", import.meta.url)`) is unreachable
    * because the facade always hands it a verified, compiled module, and in
    * CJS rolldown would otherwise rewrite it to `require("url")`. `clean: false`
    * keeps the outputs the config above just wrote.
